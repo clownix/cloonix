@@ -3,7 +3,7 @@ AGPLv3 tool to create networks of kvm virtual machines.
 
 See directory cloonix for the LICENCE
 
-See cloonix.fr for documentation that may not be up to date.
+See clownix.net for documentation that may not be up to date.
 
 The version 01-00 follows the 42-07, 42 is the end of part 1.
 
@@ -12,7 +12,7 @@ will from now on be stored at clownix.net/cloonix-<major>/targz_store.tar.gz
 In the first version of this new git, this will be at:
 clownix.net/cloonix-01/targz_store.tar.gz
 
-It was wrong to include those open-sources in the cloonix git tree.
+It was wrong to include those open-sources in the cloonix github tree.
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
