@@ -1,0 +1,105 @@
+#!/bin/bash
+HERE=`pwd`
+TMPBUILD=${HERE}/tmpbuild
+TMPBUILD_BIS=${HERE}/tmpbuild_bis
+#----------------------------------------------------------
+if [ ! -e ${TMPBUILD}/cloonix/cloonix_config ]; then
+  echo NOT FOUND:
+  echo ${TMPBUILD}/cloonix/cloonix_config
+  exit
+fi
+#----------------------------------------------------------
+if [ ! -e ./cloonix/cloonix_config ]; then
+  echo NOT FOUND:
+  echo cloonix_config
+  exit
+fi
+CLOONIX_VERSION=$(cat ./cloonix/cloonix_config | grep CLOONIX_VERSION)
+CLOONIX_VERSION=${CLOONIX_VERSION#*=}
+#----------------------------------------------------------
+cp -rf ${TMPBUILD} ${TMPBUILD_BIS}
+#----------------------------------------------------------
+CLOONIX_COMMON=${TMPBUILD_BIS}/cloonix/common
+CLOONIX_SERVER=${TMPBUILD_BIS}/cloonix/server
+CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
+#----------------------------------------------------------
+  for i in cloonix_agent cloonix_dropbear \
+           cmd cmd_i386 cmd_armv7l cmd_aarch64; do
+    rm -rf ${CLOONIX_COMMON}/agent_dropbear/${i}
+  done
+#----------------------------------------------------------
+  for i in cmd spice_protocol spice_usb virglrenderer; do
+    rm -rf ${CLOONIX_COMMON}/spice/${i}
+  done
+#----------------------------------------------------------
+  for i in share spice_client spice-protocol \
+           spice_server usbredir include virglrenderer ; do
+    rm -rf ${CLOONIX_COMMON}/spice/spice_lib/${i}
+  done
+#----------------------------------------------------------
+  rm -rf ${CLOONIX_COMMON}/glob_include
+#----------------------------------------------------------
+  for i in lib_io_clownix lib_rpc_doors lib_rpct \
+           lib_rpc_c2c lib_rpc_layout lib_utils \
+           lib_blkd lib_rpc_clownix lib_rpc_qmonitor \
+           lib_zor ; do
+    rm -rf ${CLOONIX_COMMON}/${i}
+  done
+#----------------------------------------------------------
+  for i in  muswitch/lib_ioc \
+            muswitch/lib_mulan \
+            muswitch/lib_muend \
+            muswitch/munat/clo_tcp \
+            spice ; do
+    rm -rf ${CLOONIX_SERVER}/${i}
+  done
+#----------------------------------------------------------
+  for i in  doorways \
+            uml_cloonix_switch \
+            qmonitor \
+            muswitch/mutap \
+            muswitch/musnf \
+            muswitch/munat \
+            muswitch/muc2c \
+            muswitch/mua2b \
+            muswitch/mutst \
+            muswitch/mulan ; do
+    rm -f ${CLOONIX_SERVER}/${i}/cmd
+    rm -f ${CLOONIX_SERVER}/${i}/Makefile
+    rm -rf ${CLOONIX_SERVER}/${i}/obj
+    rm -rf ${CLOONIX_SERVER}/${i}/src
+    rm -rf ${CLOONIX_SERVER}/${i}/include
+  done
+#----------------------------------------------------------
+  rm -f ${CLOONIX_SERVER}/qemu/cmd
+  rm -rf ${CLOONIX_SERVER}/qemu/sources
+  rm -rf ${CLOONIX_SERVER}/qemu/qemu_bin/tainted_qemu
+#----------------------------------------------------------
+  rm -f ${CLOONIX_SERVER}/dtach/cmd
+  rm -f ${CLOONIX_SERVER}/dtach/dtach_source.tar.gz
+#----------------------------------------------------------
+  rm -rf ${CLOONIX_CLIENT}/lib_client
+  rm -rf ${CLOONIX_CLIENT}/lib_zor
+  rm -rf ${CLOONIX_CLIENT}/spice
+#----------------------------------------------------------
+  for i in crcanvas_gtk Makefile obj src ; do 
+    rm -rf ${CLOONIX_CLIENT}/cairo_canvas/${i}
+  done
+#----------------------------------------------------------
+  for i in  ctrl \
+            hyperzor ; do
+    rm -f ${CLOONIX_CLIENT}/${i}/Makefile
+    rm -rf ${CLOONIX_CLIENT}/${i}/obj
+    rm -rf ${CLOONIX_CLIENT}/${i}/include
+    rm -rf ${CLOONIX_CLIENT}/${i}/src
+  done
+#----------------------------------------------------------
+  rm -rf ${CLOONIX_CLIENT}/openssh/tainted_openssh
+  for i in all_clean cmd mkpatch openssh* patched_create ; do
+    rm -f ${CLOONIX_CLIENT}/openssh/$i
+  done
+#----------------------------------------------------------
+cd ${TMPBUILD_BIS}
+tar zcvf ../cloonix-${CLOONIX_VERSION}.tar.gz .
+rm -rf ${TMPBUILD_BIS}
+#----------------------------------------------------------

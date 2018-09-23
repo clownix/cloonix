@@ -1,0 +1,43 @@
+#!/bin/bash
+HERE=`pwd`
+./all_clean
+
+cd ${HERE}/../../common/lib_blkd
+make clean
+make
+cd ${HERE}/../../common/lib_rpct
+make clean
+make
+cd ${HERE}/../../common/lib_io_clownix
+make clean
+make
+cd ${HERE}/lib_doorways
+mkdir -p obj
+make clean
+make
+cd ${HERE}
+path_openssl=$(which openssl)
+if [ -z $path_openssl ]; then
+  echo openssl dev required
+  exit 1
+fi
+version_openssl=$(openssl version | awk "{print \$2}")
+version_openssl=${version_openssl%\.*}
+if [ "$version_openssl" = "1.1" ]; then
+  ./patched_create $version_openssl 
+else 
+  if [ "$version_openssl" = "1.0" ]; then
+    ./patched_create
+  else
+    echo openssl dev unknown
+    exit 1
+  fi
+fi
+cd tainted_openssh
+./configure
+make
+mv ssh cloonix_u2i_ssh
+mv scp cloonix_u2i_scp
+mv cloonix_u2i_ssh $HERE
+mv cloonix_u2i_scp $HERE
+

@@ -1,0 +1,49 @@
+#!/bin/bash
+set -e
+HERE=`pwd`
+TARGZ=${HERE}/../../../targz_store
+TARGET=${HERE}/spice_lib
+rm -rf ${TARGET}
+mkdir -p ${TARGET}
+
+cd $TARGET
+tar xvf ${TARGZ}/spice-protocol.tar.gz
+cd spice-protocol
+./configure --prefix=${TARGET} \
+            --datarootdir=${TARGET} \
+            --enable-python-checks
+make clean
+make
+make install
+
+export PKG_CONFIG_PATH=${TARGET}/pkgconfig
+SPICE_PC=${TARGET}/spice-protocol/spice-protocol.pc
+mkdir -p $PKG_CONFIG_PATH
+cp -f ${SPICE_PC} $PKG_CONFIG_PATH
+sed -i s"%prefix}/share%prefix}%" ${PKG_CONFIG_PATH}/spice-protocol.pc
+
+cd ${TARGET}
+tar xvf ${TARGZ}/usbredir.tar.gz
+cd usbredir
+
+./configure --prefix=${TARGET} \
+            --libdir=${TARGET} \
+            --enable-python-checks
+
+make clean
+make
+make install
+
+
+cd ${TARGET}
+tar xvf ${TARGZ}/virglrenderer.tar.gz
+cd virglrenderer
+
+./configure --prefix=${TARGET} \
+            --libdir=${TARGET} \
+            --enable-python-checks
+
+make clean
+make
+make install
+

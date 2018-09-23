@@ -1,0 +1,57 @@
+#!/bin/bash
+set -e
+HERE=`pwd`
+CLOONIX_COMMON=${HERE}/../../../cloonix/common
+TARGET=${CLOONIX_COMMON}/spice/spice_lib
+if [ ! -d ${TARGET} ]; then
+  echo
+  echo NOT FOUND:
+  echo ${TARGET}
+  echo
+  exit
+fi
+
+cd ${HERE}/spice_client
+./patched_create
+mv tainted_spice spice_client
+rm -rf ${TARGET}/spice_client
+mv spice_client ${TARGET}
+
+
+SPICE_LIB=/usr/local/bin/cloonix/common/spice/spice_lib
+
+cd ${TARGET}/spice_client
+export PKG_CONFIG_PATH=${TARGET}/pkgconfig 
+
+set +e
+  export NOCONFIGURE=yes
+  ./autogen.sh 
+set -e
+  ./configure --prefix=${TARGET} \
+              --libdir=${TARGET} \
+              --datarootdir=${TARGET} \
+              --with-usb-acl-helper-dir=${SPICE_LIB} \
+              --enable-polkit \
+              --enable-usbredir \
+              --enable-gstaudio=yes \
+              --enable-gstvideo=yes \
+              --disable-pulse \
+              --disable-gtk-doc \
+              --disable-gtk-doc-html \
+              --disable-gtk-doc-pdf \
+              --disable-dbus \
+              --disable-vala \
+              --disable-webdav \
+              --disable-smartcard \
+              --disable-lz4 \
+              --enable-python-checks
+
+make clean
+make
+for i in Makefile doc/Makefile data/Makefile man/Makefile src/Makefile ; do
+  sed -i s"%POLICYDIR = .*%POLICYDIR = ${TARGET}%" $i
+  sed -i s"%ACL_HELPER_DIR = .*%ACL_HELPER_DIR = ${TARGET}%" $i
+done
+make install
+
+

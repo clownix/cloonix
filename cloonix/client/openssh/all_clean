@@ -1,0 +1,13 @@
+#!/bin/bash
+HERE=`pwd`
+cd ${HERE}/lib_doorways
+make clean
+cd ${HERE}/lib_doorways/tst
+make clean
+cd ${HERE}/lib_doorways/tst/serv
+make clean
+cd ${HERE}
+rm -f cloonix_u2i_ssh
+rm -f cloonix_u2i_scp
+rm -rf openssh-7.5p1
+rm -rf tainted_openssh

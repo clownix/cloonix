@@ -1,0 +1,32 @@
+#!/bin/bash
+HERE=`pwd`
+#----------------------------------------------------------
+if [ $# != 1 ]; then
+  echo Give cloonix to install as param
+  exit
+fi
+#----------------------------------------------------------
+CLOONIX=$1
+if [ ! -e $CLOONIX ]; then
+  echo NOT FOUND:
+  echo $CLOONIX
+  exit
+fi
+#----------------------------------------------------------
+rm -f /usr/local/bin/cloonix/cloonix_config
+rm -f /usr/local/bin/cloonix/LICENCE
+rm -rf /usr/local/bin/cloonix/client
+rm -rf /usr/local/bin/cloonix/server
+rm -rf /usr/local/bin/cloonix/common
+mkdir -p /usr/local/bin
+cd /usr/local/bin
+tar zxvf ${HERE}/${CLOONIX}
+chown -R root:root /usr/local/bin/cloonix*
+MUTAP=/usr/local/bin/cloonix/server/muswitch/mutap/cloonix_mutap
+chmod u+s ${MUTAP}
+USBHELP=/usr/local/bin/cloonix/common/spice
+USBHELP+=/spice_lib/spice-client-glib-usb-acl-helper
+if [ -e ${USBHELP} ]; then
+  chmod u+s ${USBHELP}
+fi
+#----------------------------------------------------------

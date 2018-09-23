@@ -1,0 +1,19 @@
+#!/bin/bash
+HERE=`pwd`
+#
+#cd ${HERE}/../lib_ioc
+#make clean
+#make
+#
+#cd ${HERE}/../../../common/lib_blkd
+#make clean
+#make
+#
+#cd ${HERE}/../../../common/lib_rpct
+#make clean
+#make
+#
+cd ${HERE}
+make clean
+make 
+

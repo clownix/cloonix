@@ -1,0 +1,85 @@
+#!/bin/bash
+HERE=`pwd`
+set -e
+
+
+# dpkg --add-architecture i386
+# apt-get update
+# apt-get install libnl-3-dev:i386
+# apt-get install libnl-genl-3-dev:i386
+
+AGENT_BIN_ALIEN=${HERE}/agent_bin_alien
+AGENT_LIB_ALIEN=${AGENT_BIN_ALIEN}/lib_i386/
+mkdir -p ${AGENT_LIB_ALIEN}
+
+HWSIM=${HERE}/hwsim
+IOC=${HWSIM}/lib_ioc
+BLKD=${HWSIM}/lib_blkd
+
+
+export CC=gcc
+export AR=ar
+export RANLIB=ranlib
+export CFLAGS=""
+
+cd ${IOC}
+export CFLAGS=-m32
+export LDFLAGS=-m32
+make clean
+make
+
+cd ${BLKD}
+export CFLAGS=-m32
+export LDFLAGS=-m32
+make clean
+make
+
+cd ${HWSIM}
+export CFLAGS=-m32
+export LDFLAGS=-m32
+make clean
+make
+
+
+LIBNL=$(ldd cloonix_hwsim | grep libnl-3.so |awk '{print $3}')
+LIBGENL=$(ldd cloonix_hwsim | grep libnl-genl-3.so |awk '{print $3}')
+LIBTHREAD=$(ldd cloonix_hwsim | grep libpthread.so |awk '{print $3}')
+LIBC=$(ldd cloonix_hwsim | grep libc.so |awk '{print $3}')
+LIBM=$(ldd cloonix_hwsim | grep libm.so |awk '{print $3}')
+LIBD=$(ldd cloonix_hwsim | grep ld-linux.so |awk '{print $1}')
+LDLINUX=$(basename $LIBD)
+
+
+echo
+echo
+for i in $LIBNL $LIBGENL $LIBTHREAD $LIBC $LIBM $LIBD $LDLINUX; do
+  echo $i
+done 
+echo
+echo
+echo
+
+cd ${HWSIM}
+LIB_DST=/mnt/cloonix_config_fs/lib_i386
+export CFLAGS=-m32
+export LDFLAGS="-m32 -Wl,-rpath -Wl,${LIB_DST}"
+export LDFLAGS="${LDFLAGS} -Wl,--dynamic-linker -Wl,${LIB_DST}/${LDLINUX}"
+make clean
+make
+
+cp cloonix_hwsim ${AGENT_BIN_ALIEN}/cloonix_hwsim_i386
+for i in $LIBNL $LIBGENL $LIBTHREAD $LIBC $LIBM $LIBD; do
+  cp -vf $i ${AGENT_LIB_ALIEN}
+done 
+
+
+cd ${IOC}
+make clean
+
+cd ${BLKD}
+make clean
+
+cd ${HWSIM}
+make clean
+
+

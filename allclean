@@ -1,0 +1,63 @@
+#!/bin/bash
+HERE=`pwd`
+CLOONIX_COMMON=${HERE}/cloonix/common
+CLOONIX_SERVER=${HERE}/cloonix/server
+CLOONIX_CLIENT=${HERE}/cloonix/client
+CLOONIX_CONFIG=${HERE}/cloonix/cloonix_config
+if [ ! -e $CLOONIX_CONFIG ]; then
+  echo NOT FOUND:
+  echo $CLOONIX_CONFIG
+  exit
+fi
+CLOONIX_VERSION=$(cat ./cloonix/cloonix_config | grep CLOONIX_VERSION)
+CLOONIX_VERSION=${CLOONIX_VERSION#*=}
+rm -f cloonix-${CLOONIX_VERSION}.tar.gz
+rm -rf tmpbuild
+#----------------------------------------------------------
+  for i in agent_dropbear \
+           spice \
+           lib_rpc_clownix \
+           lib_rpc_qmonitor \
+           lib_rpc_doors \
+           lib_rpc_c2c \
+           lib_rpc_layout ; do
+
+    cd ${CLOONIX_COMMON}/${i}
+    ./allclean
+  done
+#----------------------------------------------------------
+  for i in  doorways \
+            uml_cloonix_switch \
+            muswitch/lib_ioc \
+            muswitch/lib_mulan \
+            muswitch/lib_muend \
+            muswitch/mutap \
+            muswitch/musnf \
+            muswitch/munat/clo_tcp \
+            muswitch/munat \
+            muswitch/muc2c \
+            muswitch/mua2b \
+            muswitch/mutst \
+            muswitch/muwlan \
+            muswitch/mulan; do 
+    cd ${CLOONIX_SERVER}/${i}
+    make clean
+  done
+#----------------------------------------------------------
+  for i in  lib_client \
+            ctrl \
+            qmonitor \
+            cairo_canvas/crcanvas_gtk \
+            cairo_canvas/src/bank \
+            cairo_canvas/src/interface \
+            cairo_canvas/src/subsets \
+            cairo_canvas/src/bdplot \
+            cairo_canvas \
+            lib_zor \
+            hyperzor ; do
+    cd ${CLOONIX_CLIENT}/${i}
+    make clean
+  done
+  cd ${CLOONIX_CLIENT}/openssh
+  ./all_clean
+#----------------------------------------------------------

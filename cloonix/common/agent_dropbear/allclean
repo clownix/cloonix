@@ -1,0 +1,34 @@
+#!/bin/bash
+HERE=`pwd`
+set -e
+AGENT_BIN=${HERE}/agent_bin
+rm -rf ${AGENT_BIN}
+
+LIB_CLOWNIX=${HERE}/../lib_io_clownix
+BLKD=${HERE}/../lib_blkd
+RPCT=${HERE}/../lib_rpct
+
+cd $LIB_CLOWNIX
+make clean
+
+cd $BLKD
+make clean
+
+cd $RPCT
+make clean
+
+cd ${HERE}/cloonix_dropbear
+make clean
+
+cd ${HERE}/cloonix_agent
+make clean
+
+cd ${HERE}/hwsim/lib_blkd
+make clean
+
+cd ${HERE}/hwsim/lib_ioc
+make clean
+
+cd ${HERE}/hwsim
+make clean
+

@@ -1,0 +1,2288 @@
+diff -Naur qemu-3.0.0-rc4/audio/audio.c tainted_qemu/audio/audio.c
+--- qemu-3.0.0-rc4/audio/audio.c	2018-08-07 23:33:02.000000000 +0200
++++ tainted_qemu/audio/audio.c	2018-08-12 22:52:38.116204890 +0200
+@@ -1896,6 +1896,7 @@
+     {
+         int def;
+         drvname = audio_get_conf_str ("QEMU_AUDIO_DRV", NULL, &def);
++        drvname = "spice";
+     }
+ 
+     if (drvname) {
+diff -Naur qemu-3.0.0-rc4/configure tainted_qemu/configure
+--- qemu-3.0.0-rc4/configure	2018-08-07 23:33:02.000000000 +0200
++++ tainted_qemu/configure	2018-08-12 22:52:38.116204890 +0200
+@@ -350,6 +350,7 @@
+ vnc="yes"
+ sparse="no"
+ vde=""
++mueth="no"
+ vnc_sasl=""
+ vnc_jpeg=""
+ vnc_png=""
+@@ -1013,6 +1014,8 @@
+   ;;
+   --firmwarepath=*) firmwarepath="$optarg"
+   ;;
++  --muethdir=*) muethdir="$optarg"
++  ;;
+   --host=*|--build=*|\
+   --disable-dependency-tracking|\
+   --sbindir=*|--sharedstatedir=*|\
+@@ -1093,6 +1096,10 @@
+   ;;
+   --enable-vde) vde="yes"
+   ;;
++  --disable-mueth) mueth="no"
++  ;;
++  --enable-mueth) mueth="yes"
++  ;;
+   --disable-netmap) netmap="no"
+   ;;
+   --enable-netmap) netmap="yes"
+@@ -3218,6 +3225,84 @@
+   fi
+ fi
+ 
++ ##########################################
++# spice
++if test "$spice" != "no" ; then
++  spice_cflags=$($pkg_config --cflags spice-protocol spice-server 2>/dev/null)
++  spice_libs=$($pkg_config --libs spice-protocol spice-server 2>/dev/null)
++  spice="yes"
++  libs_softmmu="$libs_softmmu $spice_libs"
++  QEMU_CFLAGS="$QEMU_CFLAGS $spice_cflags"
++  spice_protocol_version=$($pkg_config --modversion spice-protocol)
++  spice_server_version=$($pkg_config --modversion spice-server)
++  libs_softmmu="$libs_softmmu -ljpeg -lsasl2 -lopus"
++  openssl_libs=$($pkg_config --libs openssl 2>/dev/null)
++  libs_softmmu="$libs_softmmu $openssl_libs"
++fi
++
++# mueth libraries probe
++if test "$mueth" != "no" ; then
++  IOC=$muethdir/server/muswitch/lib_ioc
++  BLKD=$muethdir/common/lib_blkd
++  RPCT=$muethdir/common/lib_rpct
++  GLOB_INCLUDE=$muethdir/common/glob_include
++  MUETH=$muethdir/server/muswitch/lib_muend
++  mueth_incs="-g -funwind-tables -I$IOC/include"
++  mueth_incs="$mueth_incs -I$MUETH/include"
++  mueth_incs="$mueth_incs -I$GLOB_INCLUDE"
++
++  mueth_libs="-rdynamic"
++  mueth_libs="$mueth_libs -L$IOC -lioc"
++  mueth_libs="$mueth_libs -L$BLKD -lblkd"
++  mueth_libs="$mueth_libs -L$RPCT -lrpct"
++  mueth_libs="$mueth_libs -L$MUETH -lmuend"
++  mueth_libs="$mueth_libs -lrt -lpthread"
++
++  cat > $TMPC << EOF
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <stdint.h>
++#include <pthread.h>
++
++#include "ioc.h"
++#include "mueth.h"
++
++/*****************************************************************************/
++void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line){ KOUT(" ");}
++int  tap_fd_open(t_all_ctx *all_ctx, char *tap_name) { KOUT(" "); }
++int  wif_fd_open(t_all_ctx *all_ctx, char *tap_name) { KOUT(" "); }
++int  raw_fd_open(t_all_ctx *all_ctx, char *tap_name) { KOUT(" "); }
++void rx_from_traffic_sock(t_all_ctx *all_ctx, int tidx, t_blkd *bd) { KOUT(" "); }
++/*---------------------------------------------------------------------------*/
++
++void rpct_recv_cli_req(void *ptr, int llid, int tid,
++                       int cli_llid, int cli_tid, char *line)
++{
++int tx, rx;
++blkd_get_tx_rx_queues(ptr, llid, &tx, &rx);
++}
++
++int main(void)
++{
++  msg_mngt_init((char *) "tst", 0, IO_MAX_BUF_LEN);
++  return 0;
++}
++EOF
++  if compile_prog "$mueth_incs" "$mueth_libs" ; then
++    mueth=yes
++    libs_softmmu="$mueth_libs $libs_softmmu"
++    libs_tools="$mueth_libs $libs_tools"
++    QEMU_INCLUDES="$mueth_incs $QEMU_INCLUDES"
++  else
++    if test "$mueth" = "yes" ; then
++      feature_not_found "mueth"
++    fi
++    mueth=no
++  fi
++fi
++##########################################
++
+ ##########################################
+ # netmap support probe
+ # Apart from looking for netmap headers, we make sure that the host API version
+@@ -4513,29 +4598,18 @@
+ fi
+ 
+ ##########################################
+-# spice probe
++# spice
+ if test "$spice" != "no" ; then
+-  cat > $TMPC << EOF
+-#include <spice.h>
+-int main(void) { spice_server_new(); return 0; }
+-EOF
+   spice_cflags=$($pkg_config --cflags spice-protocol spice-server 2>/dev/null)
+   spice_libs=$($pkg_config --libs spice-protocol spice-server 2>/dev/null)
+-  if $pkg_config --atleast-version=0.12.0 spice-server && \
+-     $pkg_config --atleast-version=0.12.3 spice-protocol && \
+-     compile_prog "$spice_cflags" "$spice_libs" ; then
+-    spice="yes"
+-    libs_softmmu="$libs_softmmu $spice_libs"
+-    QEMU_CFLAGS="$QEMU_CFLAGS $spice_cflags"
+-    spice_protocol_version=$($pkg_config --modversion spice-protocol)
+-    spice_server_version=$($pkg_config --modversion spice-server)
+-  else
+-    if test "$spice" = "yes" ; then
+-      feature_not_found "spice" \
+-          "Install spice-server(>=0.12.0) and spice-protocol(>=0.12.3) devel"
+-    fi
+-    spice="no"
+-  fi
++  spice="yes"
++  libs_softmmu="$libs_softmmu $spice_libs"
++  QEMU_CFLAGS="$QEMU_CFLAGS $spice_cflags"
++  spice_protocol_version=$($pkg_config --modversion spice-protocol)
++  spice_server_version=$($pkg_config --modversion spice-server)
++  libs_softmmu="$libs_softmmu -ljpeg -lsasl2 -lopus"
++  openssl_libs=$($pkg_config --libs openssl 2>/dev/null)
++  libs_softmmu="$libs_softmmu $openssl_libs"
+ fi
+ 
+ # check for smartcard support
+@@ -5937,6 +6011,7 @@
+ echo "Documentation     $docs"
+ echo "PIE               $pie"
+ echo "vde support       $vde"
++echo "mueth support     $mueth"
+ echo "netmap support    $netmap"
+ echo "Linux AIO support $linux_aio"
+ echo "ATTR/XATTR support $attr"
+@@ -6154,6 +6229,9 @@
+   echo "CONFIG_VDE=y" >> $config_host_mak
+   echo "VDE_LIBS=$vde_libs" >> $config_host_mak
+ fi
++if test "$mueth" = "yes" ; then
++  echo "CONFIG_MUETH=y" >> $config_host_mak
++fi
+ if test "$netmap" = "yes" ; then
+   echo "CONFIG_NETMAP=y" >> $config_host_mak
+ fi
+diff -Naur qemu-3.0.0-rc4/hmp-commands.hx tainted_qemu/hmp-commands.hx
+--- qemu-3.0.0-rc4/hmp-commands.hx	2018-08-07 23:33:02.000000000 +0200
++++ tainted_qemu/hmp-commands.hx	2018-08-12 22:52:38.116204890 +0200
+@@ -1346,7 +1346,7 @@
+     {
+         .name       = "netdev_add",
+         .args_type  = "netdev:O",
+-        .params     = "[user|tap|socket|vde|bridge|hubport|netmap|vhost-user],id=str[,prop=value][,...]",
++        .params     = "[user|tap|socket|vde|mueth|bridge|hubport|netmap|vhost-user],id=str[,prop=value][,...]",
+         .help       = "add host network device",
+         .cmd        = hmp_netdev_add,
+         .command_completion = netdev_add_completion,
+diff -Naur qemu-3.0.0-rc4/hw/net/Makefile.objs tainted_qemu/hw/net/Makefile.objs
+--- qemu-3.0.0-rc4/hw/net/Makefile.objs	2018-08-07 23:33:02.000000000 +0200
++++ tainted_qemu/hw/net/Makefile.objs	2018-08-12 22:52:38.116204890 +0200
+@@ -37,6 +37,8 @@
+ obj-$(CONFIG_XILINX_ETHLITE) += xilinx_ethlite.o
+ 
+ obj-$(CONFIG_VIRTIO_NET) += virtio-net.o
++obj-$(CONFIG_MUETH) += virtio-muethnet.o
++
+ obj-y += vhost_net.o
+ 
+ obj-$(CONFIG_ETSEC) += fsl_etsec/etsec.o fsl_etsec/registers.o \
+diff -Naur qemu-3.0.0-rc4/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet.c
+--- qemu-3.0.0-rc4/hw/net/virtio-muethnet.c	1970-01-01 01:00:00.000000000 +0100
++++ tainted_qemu/hw/net/virtio-muethnet.c	2018-08-12 22:52:38.116204890 +0200
+@@ -0,0 +1,1149 @@
++/*
++ * Modifications for cloonix mueth
++ */
++
++#include "qemu/osdep.h"
++#include "qemu/iov.h"
++#include "hw/virtio/virtio.h"
++#include "net/net.h"
++#include "net/checksum.h"
++#include "net/tap.h"
++#include "qemu/error-report.h"
++#include "qemu/timer.h"
++#include "hw/virtio/virtio-net.h"
++#include "net/vhost_net.h"
++#include "hw/virtio/virtio-bus.h"
++#include "qapi/error.h"
++#include "qapi/qapi-events-net.h"
++#include "hw/virtio/virtio-access.h"
++#include "migration/misc.h"
++#include "standard-headers/linux/ethtool.h"
++
++#include "cpu.h"
++#include "ioc.h"
++#include "mueth.h"
++#include "sock_fd.h"
++#include "net/cloonix_mueth.h"
++
++#define VIRTIOQRXMAX 256
++#define VIRTIOQTXMAX 256
++
++#define VIRTIO_NET_VM_VERSION    11
++
++#define MAC_TABLE_ENTRIES    64
++#define MAX_VLAN    (1 << 12)   /* Per 802.1Q definition */
++
++/*
++ * Calculate the number of bytes up to and including the given 'field' of
++ * 'container'.
++ */
++#define endof(container, field) \
++    (offsetof(container, field) + sizeof(((container *)0)->field))
++
++typedef struct VirtIOFeature {
++    uint32_t flags;
++    size_t end;
++} VirtIOFeature;
++
++static VirtIOFeature feature_sizes[] = {
++    {.flags = 1 << VIRTIO_NET_F_MAC,
++     .end = endof(struct virtio_net_config, mac)},
++    {.flags = 1 << VIRTIO_NET_F_STATUS,
++     .end = endof(struct virtio_net_config, status)},
++    {.flags = 1 << VIRTIO_NET_F_MQ,
++     .end = endof(struct virtio_net_config, max_virtqueue_pairs)},
++    {}
++};
++
++
++
++static void virtio_net_rx_timer(void *opaque);
++static void virtio_net_tx_timer(void *opaque);
++static void virtio_net_handle_tx(VirtIODevice *vdev, VirtQueue *vq);
++static void virtio_net_handle_rx(VirtIODevice *vdev, VirtQueue *vq);
++
++
++
++/****************************************************************************/
++static int virtio_queue_set_notification_rx(VirtIONetQueue *q, int val)
++{
++  int result = 0;
++  if (val)
++    {
++    if (!virtio_queue_get_notification(q->rx_vq))
++      virtio_queue_set_notification(q->rx_vq, 1);
++    else
++      result = -1;
++    }
++  else 
++    {
++    if (virtio_queue_get_notification(q->rx_vq))
++      virtio_queue_set_notification(q->rx_vq, 0);
++    else
++      result = -1;
++    }
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static int virtio_queue_set_notification_tx(VirtIONetQueue *q, int val)
++{
++  int result = 0;
++  if (val) 
++    {
++    if (!virtio_queue_get_notification(q->tx_vq))
++      virtio_queue_set_notification(q->tx_vq, 1);
++    else
++      result = -1;
++    }
++  else 
++    {
++    if (virtio_queue_get_notification(q->tx_vq))
++      virtio_queue_set_notification(q->tx_vq, 0);
++    else
++      result = -1;
++    }
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++static void pool_elem_init(t_async_rx_el *ael)
++{
++  int i;
++  for(i = 0; i < CLOONIX_CIRC_ELEM + 1; i++)
++    ael->elem[i] = NULL;
++  ael->pool_put = 0;
++  ael->pool_get = CLOONIX_CIRC_ELEM;
++  ael->pool_qty = 0;
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++static void pool_elem_put(t_async_rx_el *ael, VirtQueueElement *elem)
++{
++  while (__sync_lock_test_and_set(&(ael->pool_put_lock), 1));
++  if(ael->pool_put == ael->pool_get)
++    KOUT(" ");
++  if (ael->elem[ael->pool_put])
++    KOUT(" ");
++  ael->elem[ael->pool_put] = elem;
++  ael->pool_put = (ael->pool_put + 1) & CLOONIX_CIRC_ELEM;
++  ael->pool_qty += 1;
++  __sync_lock_release(&(ael->pool_put_lock));
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++static VirtQueueElement *pool_elem_get(VirtIONetQueue *q,
++                                       t_async_rx_el *ael)
++{
++  VirtQueueElement *elem = NULL;
++  if (ael->pool_qty > 0)
++    {
++    ael->pool_get = (ael->pool_get + 1) & CLOONIX_CIRC_ELEM;
++    elem = ael->elem[ael->pool_get];
++    if (!elem)
++      KOUT(" ");
++    ael->elem[ael->pool_get] = NULL;
++    ael->pool_qty -= 1;
++    }
++  return (elem);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void pool_elem_fill(VirtIONetQueue *q)
++{
++  VirtQueueElement *elem = NULL;
++  while(1)
++    {
++    elem = virtqueue_pop(q->rx_vq, sizeof(VirtQueueElement));
++    if (!elem)
++      break;
++    pool_elem_put(&(q->async_rx_el), elem);
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static VirtIONetQueue *virtio_net_get_subqueue(VirtIONet *n, int queue_index)
++{
++  return &n->vqs[queue_index];
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static int vq2q(int queue_index)
++{
++  return queue_index / 2;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static int cannot_get_ctx(t_all_ctx *all_ctx, VirtIONet **n,
++                          NetClientState **nc, VirtIONetQueue **q,
++                          VirtIODevice **vdev, MUETHState **s)
++{
++  int result = -1;
++  NetClientState *peer_nc;
++  peer_nc = (NetClientState *) all_ctx->qemu_mueth_state;
++  if (peer_nc)
++    {
++    *s = (MUETHState *) all_ctx->qemu_mueth_state;
++    *nc = peer_nc->peer;
++    if (!*nc)
++      KERR("NOT READY");
++    else
++      {
++      *n = qemu_get_nic_opaque(*nc);
++      if (!(*n))
++        KOUT(" ");
++      *q = virtio_net_get_subqueue(*n, (*nc)->queue_index);
++      if (!(*q))
++        KOUT(" ");
++      *vdev = VIRTIO_DEVICE(*n);
++      if (!(*vdev))
++        KOUT(" ");
++      result = 0;
++      }
++    }
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++void cloonix_clean_to_quit(t_all_ctx *all_ctx)
++{
++  VirtIONet *n;
++  VirtIONetQueue *q;
++  VirtIODevice *vdev;
++  NetClientState *nc;
++  MUETHState *s;
++  if (cannot_get_ctx(all_ctx, &n, &nc, &q, &vdev, &s))
++    {
++    KERR(" ");
++    return;
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void pool_elem_purge_empty(t_all_ctx *all_ctx)
++{
++  VirtIONet *n;
++  VirtIONetQueue *q;
++  VirtIODevice *vdev;
++  NetClientState *nc;
++  MUETHState *s;
++  VirtQueueElement *elem;
++  if (cannot_get_ctx(all_ctx, &n, &nc, &q, &vdev, &s))
++    {
++    KERR(" ");
++    return;
++    }
++  elem = pool_elem_get(q, &(q->async_rx_el));
++  while(elem)
++    {
++    virtqueue_unpop(q->rx_vq, elem, 0);
++    g_free(elem);
++    elem = pool_elem_get(q, &(q->async_rx_el));
++    }
++  q->rx_waiting = 1;
++  sock_fd_local_flow_control(all_ctx, 1);
++  timer_mod(n->vqs[0].rx_timer,
++            qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+1000000);
++  all_ctx->g_nb_elem_rx_ready = q->async_rx_el.pool_qty;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void pool_elem_refill_empty(t_all_ctx *all_ctx)
++{
++  VirtIONet *n;
++  VirtIONetQueue *q;
++  VirtIODevice *vdev;
++  NetClientState *nc;
++  MUETHState *s;
++  VirtQueueElement *elem;
++  if (cannot_get_ctx(all_ctx, &n, &nc, &q, &vdev, &s))
++    {
++    KERR(" ");
++    return;
++    }
++  while(1)
++    {
++    elem = virtqueue_pop(q->rx_vq, sizeof(VirtQueueElement));
++    if (!elem)
++      break;
++    pool_elem_put(&(q->async_rx_el), elem);
++    }
++  all_ctx->g_nb_elem_rx_ready = q->async_rx_el.pool_qty;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static t_all_ctx *cloonix_get_all_ctx(VirtIONet *n, MUETHState **s)
++{
++  NetClientState *nc;
++  t_all_ctx *all_ctx = NULL;
++  if (!n)
++    KOUT(" ");
++  if (!n->nic)
++    KOUT(" ");
++  nc = qemu_get_queue(n->nic);
++  if (!nc)
++    KOUT(" ");
++  if (nc->peer)
++    {
++    if (nc->peer->info->type != NET_CLIENT_DRIVER_MUETH)
++      KOUT(" ");
++    *s = DO_UPCAST(MUETHState, nc, nc->peer);
++    if (!(*s))
++      KOUT(" ");
++    all_ctx = (*s)->all_ctx;
++    if (!all_ctx)
++      KOUT(" ");
++    }
++  return all_ctx;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_get_config(VirtIODevice *vdev, uint8_t *config)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  struct virtio_net_config netcfg;
++  stw_p(&netcfg.status, n->status);
++  stw_p(&netcfg.max_virtqueue_pairs, n->max_queues);
++  memcpy(netcfg.mac, n->mac, ETH_ALEN);
++  memcpy(config, &netcfg, n->config_size);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_set_config(VirtIODevice *vdev, const uint8_t *config)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  struct virtio_net_config netcfg = {};
++  memcpy(&netcfg, config, n->config_size);
++  if (!(vdev->guest_features >> VIRTIO_NET_F_CTRL_MAC_ADDR & 1) &&
++       memcmp(netcfg.mac, n->mac, ETH_ALEN)) 
++    {
++    memcpy(n->mac, netcfg.mac, ETH_ALEN);
++    qemu_format_nic_info_str(qemu_get_queue(n->nic), n->mac);
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static bool virtio_net_started(VirtIONet *n, uint8_t status)
++{
++    VirtIODevice *vdev = VIRTIO_DEVICE(n);
++    return (status & VIRTIO_CONFIG_S_DRIVER_OK) &&
++        (n->status & VIRTIO_NET_S_LINK_UP) && vdev->vm_running;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_set_status(struct VirtIODevice *vdev, uint8_t status)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  MUETHState *s;
++  t_all_ctx *all_ctx;
++  all_ctx = cloonix_get_all_ctx(n, &s);
++  if (virtio_net_started(n, status))
++    {
++    if (all_ctx->g_qemu_net_status_ok == 0) 
++      {
++      all_ctx->g_qemu_net_status_ok = 1;
++      pool_elem_refill_empty(all_ctx);
++      }
++    }
++  else
++    {
++    if (all_ctx->g_qemu_net_status_ok == 1)
++      {
++      all_ctx->g_qemu_net_status_ok = 0;
++      pool_elem_purge_empty(all_ctx);
++      }
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_set_link_status(NetClientState *nc)
++{
++    VirtIONet *n = qemu_get_nic_opaque(nc);
++    VirtIODevice *vdev = VIRTIO_DEVICE(n);
++    uint16_t old_status = n->status;
++
++    if (nc->link_down)
++      {
++      n->status &= ~VIRTIO_NET_S_LINK_UP;
++      }
++    else
++      {
++      n->status |= VIRTIO_NET_S_LINK_UP;
++      }
++
++    if (n->status != old_status)
++        virtio_notify_config(vdev);
++
++    virtio_net_set_status(vdev, vdev->status);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void rxfilter_notify(NetClientState *nc)
++{
++  VirtIONet *n = qemu_get_nic_opaque(nc);
++  if (nc->rxfilter_notify_enabled) 
++    {
++    gchar *path = object_get_canonical_path(OBJECT(n->qdev));
++    qapi_event_send_nic_rx_filter_changed(!!n->netclient_name,
++                                        n->netclient_name, path, &error_abort);
++    g_free(path);
++    nc->rxfilter_notify_enabled = 0;
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_reset(VirtIODevice *vdev)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  n->promisc = 0;
++  n->curr_queues = 1;
++
++
++  memcpy(&n->mac[0], &n->nic->conf->macaddr, sizeof(n->mac));
++  qemu_format_nic_info_str(qemu_get_queue(n->nic), n->mac);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static uint64_t virtio_net_get_features(VirtIODevice *vdev, 
++                                        uint64_t features, 
++                                        Error **errp)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  features |= n->host_features;
++  features |= (1 << VIRTIO_NET_F_MAC);
++  features &= ~(0x1 << VIRTIO_NET_F_CSUM);
++  features &= ~(0x1 << VIRTIO_NET_F_HOST_TSO4);
++  features &= ~(0x1 << VIRTIO_NET_F_HOST_TSO6);
++  features &= ~(0x1 << VIRTIO_NET_F_HOST_ECN);
++  features &= ~(0x1 << VIRTIO_NET_F_GUEST_CSUM);
++  features &= ~(0x1 << VIRTIO_NET_F_GUEST_TSO4);
++  features &= ~(0x1 << VIRTIO_NET_F_GUEST_TSO6);
++  features &= ~(0x1 << VIRTIO_NET_F_GUEST_ECN);
++  features &= ~(0x1 << VIRTIO_NET_F_GUEST_UFO);
++  features &= ~(0x1 << VIRTIO_NET_F_HOST_UFO);
++  return features;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static uint64_t virtio_net_bad_features(VirtIODevice *vdev)
++{
++  uint64_t features = 0;
++  features |= (1 << VIRTIO_NET_F_MAC);
++  features |= (1 << VIRTIO_NET_F_CSUM);
++  features |= (1 << VIRTIO_NET_F_HOST_TSO4);
++  features |= (1 << VIRTIO_NET_F_HOST_TSO6);
++  features |= (1 << VIRTIO_NET_F_HOST_ECN);
++  return features;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_set_features(VirtIODevice *vdev, uint64_t features)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  MUETHState *s;
++  t_all_ctx *all_ctx = cloonix_get_all_ctx(n, &s);
++  n->mergeable_rx_bufs = 1;
++  n->guest_hdr_len = sizeof(struct virtio_net_hdr_mrg_rxbuf);
++  all_ctx->qemu_guest_hdr_len = n->guest_hdr_len;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static int virtio_net_handle_rx_mode(VirtIONet *n, uint8_t cmd,
++                                     struct iovec *iov, unsigned int iov_cnt)
++{
++  uint8_t on;
++  size_t s;
++  NetClientState *nc = qemu_get_queue(n->nic);
++  int result = VIRTIO_NET_ERR;
++  s = iov_to_buf(iov, iov_cnt, 0, &on, sizeof(on));
++  if (s == sizeof(on)) 
++    {
++    if (cmd == VIRTIO_NET_CTRL_RX_PROMISC) 
++      {
++      n->promisc = on;
++      result = VIRTIO_NET_OK;
++      }
++    else if (cmd ==  VIRTIO_NET_CTRL_RX_ALLMULTI)
++      {
++      result = VIRTIO_NET_OK;
++      }
++    else
++      KERR("%d", cmd);
++    rxfilter_notify(nc);
++    }
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static int virtio_net_handle_mac(VirtIONet *n, uint8_t cmd,
++                                 struct iovec *iov, unsigned int iov_cnt)
++{
++    size_t s;
++    NetClientState *nc = qemu_get_queue(n->nic);
++
++    if (cmd == VIRTIO_NET_CTRL_MAC_ADDR_SET) {
++        if (iov_size(iov, iov_cnt) != sizeof(n->mac)) {
++            return VIRTIO_NET_ERR;
++        }
++        s = iov_to_buf(iov, iov_cnt, 0, &n->mac, sizeof(n->mac));
++        assert(s == sizeof(n->mac));
++        qemu_format_nic_info_str(qemu_get_queue(n->nic), n->mac);
++        rxfilter_notify(nc);
++
++        return VIRTIO_NET_OK;
++    } else if (cmd == VIRTIO_NET_CTRL_MAC_TABLE_SET) {
++        rxfilter_notify(nc);
++        return VIRTIO_NET_OK;
++    } else {
++        KERR("%d", cmd & 0xFF);
++    }
++    return VIRTIO_NET_ERR;
++}
++/*--------------------------------------------------------------------------*/
++
++
++/****************************************************************************/
++static void virtio_net_handle_ctrl(VirtIODevice *vdev, VirtQueue *vq)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  struct virtio_net_ctrl_hdr ctrl;
++  virtio_net_ctrl_ack status = VIRTIO_NET_ERR;
++  VirtQueueElement *elem;
++  size_t s;
++  struct iovec *iov, *iov2;
++  unsigned int iov_cnt;
++  for(;;)
++    {
++    elem = virtqueue_pop(vq, sizeof(VirtQueueElement));
++    if (!elem)
++      break;
++    if ((iov_size(elem->in_sg, elem->in_num) < sizeof(status)) ||
++        (iov_size(elem->out_sg, elem->out_num) < sizeof(ctrl))) 
++      KOUT("virtio-net ctrl missing headers");
++    iov2 = iov = g_memdup(elem->out_sg, sizeof(struct iovec) * elem->out_num);
++    iov_cnt = elem->out_num;
++    s = iov_to_buf(iov, iov_cnt, 0, &ctrl, sizeof(ctrl));
++    iov_discard_front(&iov, &iov_cnt, sizeof(ctrl));
++    if (s != sizeof(ctrl))
++      status = VIRTIO_NET_ERR;
++    else if (ctrl.class == VIRTIO_NET_CTRL_RX) 
++      status = virtio_net_handle_rx_mode(n, ctrl.cmd, iov, iov_cnt);
++    else if (ctrl.class == VIRTIO_NET_CTRL_MAC)
++      status = virtio_net_handle_mac(n, ctrl.cmd, iov, iov_cnt);
++    else
++      KERR("%d", ctrl.class);
++    s = iov_from_buf(elem->in_sg, elem->in_num, 0, &status, sizeof(status));
++    assert(s == sizeof(status));
++    virtqueue_push(vq, elem, sizeof(status));
++    virtio_notify(vdev, vq);
++    g_free(iov2);
++    g_free(elem);
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_handle_rx(VirtIODevice *vdev, VirtQueue *vq)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  VirtIONetQueue *q = &n->vqs[vq2q(virtio_get_queue_index(vq))];
++  MUETHState *s;
++  t_all_ctx *all_ctx = cloonix_get_all_ctx(n, &s);
++  virtio_queue_set_notification_rx(q, 0);
++  if (all_ctx)
++    {
++    cloonix_rx_activate(all_ctx);
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_rx_timer(void *opaque)
++{
++  VirtIONetQueue *q = opaque;
++  VirtIONet *n = q->n;
++  MUETHState *s;
++  t_all_ctx *all_ctx = cloonix_get_all_ctx(n, &s);
++  if (!all_ctx->g_qemu_net_status_ok)
++    {
++    timer_mod(n->vqs[0].rx_timer,
++              qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+10000000);
++    }
++  else
++    {
++    sock_fd_local_flow_control(all_ctx, 0);
++    if (virtio_queue_set_notification_rx(q, 1))
++      {
++      if (q->rx_waiting)
++        {
++        if (q->rx_waiting < 10)
++          {
++          q->rx_waiting += 1;
++          timer_mod(n->vqs[0].rx_timer,
++                    qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+100000);
++          }
++        else
++          timer_mod(n->vqs[0].rx_timer,
++                    qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+10000000);
++        }
++      }
++    else 
++      q->rx_waiting = 0;
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++int cloonix_prepare_rx(t_all_ctx *all_ctx)
++{
++  int result = -1;
++  int pool_empty_before_fill = 0;
++  VirtIONet *n;
++  VirtIONetQueue *q;
++  VirtIODevice *vdev;
++  NetClientState *nc;
++  MUETHState *s;
++    
++
++  if (cannot_get_ctx(all_ctx, &n, &nc, &q, &vdev, &s))
++    {
++    KERR(" ");
++    }
++  else if (!all_ctx->g_qemu_net_status_ok)
++    {
++    pool_elem_purge_empty(all_ctx);
++    KERR(" ");
++    }
++  else if ((virtio_queue_ready(q->rx_vq)) &&
++           (vdev->status & VIRTIO_CONFIG_S_DRIVER_OK) && 
++           (vdev->vm_running))
++    {
++    if (q->rx_waiting)
++      result = 0;
++    else
++      {
++      if (q->async_rx_el.pool_qty < MAX_ELEM_PER_PKT)
++        pool_empty_before_fill = 1;
++      pool_elem_fill(q);
++      result = q->async_rx_el.pool_qty;
++      if ((pool_empty_before_fill) &&
++          (q->async_rx_el.pool_qty < 50))
++        {
++        q->rx_waiting = 1;
++        sock_fd_local_flow_control(all_ctx, 1);
++        timer_mod(q->rx_timer,
++                  qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+100000);
++        }
++      }
++    }
++  else
++    KERR(" ");
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++void cloonix_set_link_status(t_all_ctx *all_ctx, int on)
++{
++  VirtIONet *n;
++  VirtIONetQueue *q;
++  VirtIODevice *vdev;
++  NetClientState *nc;
++  MUETHState *s;
++  if (cannot_get_ctx(all_ctx, &n, &nc, &q, &vdev, &s))
++    {
++    KERR(" ");
++    }
++  else
++    {
++    if (on)
++      nc->link_down = 0;
++    else
++      nc->link_down = 1;
++    virtio_net_set_link_status(nc);
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++void cloonix_set_promisc(t_all_ctx *all_ctx, int on)
++{
++  VirtIONet *n;
++  VirtIONetQueue *q;
++  VirtIODevice *vdev;
++  NetClientState *nc;
++  MUETHState *s;
++  if (cannot_get_ctx(all_ctx, &n, &nc, &q, &vdev, &s))
++    {
++    KERR(" ");
++    }
++  else
++    {
++    if (on)
++      n->promisc = 1;
++    else
++      n->promisc = 0;
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++int cloonix_rx_packet(t_all_ctx *all_ctx, 
++                      uint32_t packlen, uint8_t *packdata)
++{
++  VirtIONet *n;
++  VirtIONetQueue *q;
++  VirtIODevice *vdev;
++  NetClientState *nc;
++  MUETHState *s;
++  VirtQueueElement *elem;
++  struct iovec *sg;
++  struct virtio_net_hdr_mrg_rxbuf mhdr;
++  unsigned mhdr_cnt = 0;
++  struct iovec mhdr_sg[VIRTQUEUE_MAX_SIZE];
++  int nb = 0, len1, len2, len3;
++
++  if (cannot_get_ctx(all_ctx, &n, &nc, &q, &vdev, &s))
++    {
++    KERR(" ");
++    }
++  else 
++    {
++    if ((n->promisc) || (packdata[0] & 1) || 
++        (!memcmp(packdata, n->mac, ETH_ALEN))) 
++      {
++      if (q->async_rx_el.pool_qty >= MAX_ELEM_PER_PKT)
++        {  
++        elem = pool_elem_get(q, &(q->async_rx_el));
++        if (!elem)
++          KOUT(" ");
++        memset(&mhdr, 0, sizeof(struct virtio_net_hdr_mrg_rxbuf));
++        mhdr.hdr.flags = 0;
++        mhdr.hdr.gso_type = VIRTIO_NET_HDR_GSO_NONE;
++        sg = elem->in_sg;
++
++        mhdr_cnt = iov_copy(mhdr_sg, ARRAY_SIZE(mhdr_sg),
++                            sg, elem->in_num,
++                            offsetof(typeof(mhdr), num_buffers),
++                            sizeof(mhdr.num_buffers));
++
++        iov_from_buf(sg, elem->in_num, 0, &(mhdr.hdr), sizeof(mhdr.hdr));
++        len1 = iov_from_buf(sg, elem->in_num, n->guest_hdr_len,
++                            packdata, packlen);
++        virtqueue_fill(q->rx_vq, elem, n->guest_hdr_len + len1, nb);
++        g_free(elem);
++        nb += 1;
++        if (len1 != packlen)
++          {
++          elem = pool_elem_get(q, &(q->async_rx_el));
++          if (!elem)
++            KOUT(" ");
++          sg = elem->in_sg;
++          len2 = iov_from_buf(sg, elem->in_num, 0,
++                              packdata + len1, packlen - len1);
++          virtqueue_fill(q->rx_vq, elem, len2, nb);
++          g_free(elem);
++          nb += 1;
++          if (len1 + len2 != packlen)
++            {
++            elem = pool_elem_get(q, &(q->async_rx_el));
++            if (!elem)
++              KOUT(" ");
++            sg = elem->in_sg;
++            len3 = iov_from_buf(sg, elem->in_num, 0,
++                                packdata+len1+len2, packlen-len1-len2);
++            virtqueue_fill(q->rx_vq, elem, len3, nb);
++            g_free(elem);
++            nb += 1;
++            if (len1 + len2 + len3 != packlen)
++              KERR("BIG BIG BIG PROBLEM: %d %d %d %d", packlen, len1, len2, len3);
++            }
++          }
++
++       if (mhdr_cnt)
++         {
++         virtio_stw_p(vdev, &mhdr.num_buffers, nb);
++         iov_from_buf(mhdr_sg, mhdr_cnt, 0,
++                      &mhdr.num_buffers, sizeof mhdr.num_buffers);
++         }
++
++        virtqueue_flush(q->rx_vq, nb);
++        virtio_notify(vdev, q->rx_vq);
++        }
++      }
++    }
++  return nb;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static int tx_send_all(t_all_ctx *all_ctx, VirtIONet *n,
++                       VirtIONetQueue *q, VirtIODevice *vdev,
++                       int *tx_done)
++{
++  int result = 0;
++  VirtQueueElement *elem;
++  *tx_done = 0;
++  while (!virtio_queue_empty(q->tx_vq)) 
++    {
++    elem = virtqueue_pop(q->tx_vq, sizeof(VirtQueueElement));
++    if (elem == NULL)
++      break;
++    if (!*tx_done)
++      *tx_done = 1;
++    if (cloonix_tx_packet(all_ctx, elem))
++      {
++      result = -1;
++      break;
++      }
++    }
++  cloonix_end_tx(all_ctx);
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++void purge_tx_elem_free_pool(t_all_ctx *all_ctx)
++{
++  VirtIONetQueue *q;
++  VirtIODevice *vdev;
++  VirtQueueElement *elem;
++  while(tx_elem_free_pool_get(&(all_ctx->tx_elem_free_pool), 
++                              (void **) &elem, 
++                              (void **) &q, 
++                              (void **) &vdev))
++    {
++    virtqueue_push(q->tx_vq, elem, 0);
++    virtio_notify(vdev, q->tx_vq);
++    g_free(elem);
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_drop_tx_queue_data(VirtIODevice *vdev, VirtQueue *vq)
++{
++  unsigned int dropped = virtqueue_drop_all(vq);
++  if (dropped)
++    virtio_notify(vdev, vq);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void tx_timer_mod(VirtIONetQueue *q, int delay_ns)
++{
++  timer_mod(q->tx_timer, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + delay_ns);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_tx_timer(void *opaque)
++{
++  VirtIONetQueue *q = opaque;
++  VirtIONet *n = q->n;
++  VirtIODevice *vdev = VIRTIO_DEVICE(n);
++  MUETHState *s;
++  int tx_done;
++  t_all_ctx *all_ctx = cloonix_get_all_ctx(n, &s);
++
++  if (unlikely((n->status & VIRTIO_NET_S_LINK_UP) == 0))
++    {
++    virtio_net_drop_tx_queue_data(vdev, q->tx_vq);
++    tx_timer_mod(q, 10000000);
++    tx_unix_sock_shaping_timer(all_ctx);
++    }
++  else if (cloonix_queue_is_overloaded(all_ctx))
++    {
++    tx_timer_mod(q, 500000);
++    tx_unix_sock_shaping_timer(all_ctx);
++    }
++  else
++    {
++    if (tx_send_all(all_ctx, n, q, vdev, &tx_done))
++      {
++      tx_timer_mod(q, 200000);
++      if (!tx_done)
++        tx_unix_sock_shaping_timer(all_ctx);
++      }
++    else
++      {
++      if (!tx_done)
++        tx_unix_sock_shaping_timer(all_ctx);
++      if (!virtio_queue_empty(q->tx_vq))
++        {
++        tx_timer_mod(q, 200000);
++        }
++      else
++        {
++        if ((virtio_queue_set_notification_tx(q, 1)) && (!tx_done))
++          {
++          tx_timer_mod(q, 10000000);
++          }
++        else
++          {
++          tx_timer_mod(q, 200000);
++          }
++        }
++      }
++    }
++
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_handle_tx(VirtIODevice *vdev, VirtQueue *vq)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  VirtIONetQueue *q = &n->vqs[vq2q(virtio_get_queue_index(vq))];
++  MUETHState *s;
++  t_all_ctx *all_ctx = cloonix_get_all_ctx(n, &s);
++
++  if (unlikely((n->status & VIRTIO_NET_S_LINK_UP) == 0))
++    {
++    virtio_net_drop_tx_queue_data(vdev, vq);
++    tx_timer_mod(q, 10000000);
++    }
++  else
++    {
++    virtio_queue_set_notification_tx(q, 0);
++    if (!cloonix_queue_is_overloaded(all_ctx))
++      tx_timer_mod(q, 0);
++    else
++      tx_timer_mod(q, 500000);
++    }
++
++}
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++void cloonix_qemu_group_clean_cb(void *ptr, void *data)
++{
++  t_all_ctx *all_ctx = (t_all_ctx *) ptr;
++  VirtIONet *n;
++  VirtIONetQueue *q;
++  VirtIODevice *vdev;
++  NetClientState *nc;
++  MUETHState *s;
++  VirtQueueElement *elem = (VirtQueueElement *) data;
++  if (cannot_get_ctx(all_ctx, &n, &nc, &q, &vdev, &s))
++    {
++    KERR(" ");
++    }
++  else
++    {
++    tx_elem_free_pool_put(&(all_ctx->tx_elem_free_pool), 
++                          (void *) elem, (void *) q, (void *) vdev);
++    qemu_bh_schedule((QEMUBH *) (all_ctx->bh_trigger));
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_cleanup(NetClientState *nc)
++{
++  VirtIONet *n = qemu_get_nic_opaque(nc);
++  MUETHState *s;
++  t_all_ctx *all_ctx = cloonix_get_all_ctx(n, &s);
++  if (all_ctx)
++    {
++    KERR("%s", __FUNCTION__);
++    n->nic = NULL;
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static NetClientInfo net_virtio_info = {
++    .type = NET_CLIENT_DRIVER_NIC,
++    .size = sizeof(NICState),
++    .cleanup = virtio_net_cleanup,
++    .link_status_changed = virtio_net_set_link_status,
++};
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++void cloonix_change_virtio_queue(t_all_ctx *all_ctx)
++{
++//TODO
++}
++/*--------------------------------------------------------------------------*/
++
++
++/****************************************************************************/
++void virtio_muethnet_set_config_size(VirtIONet *n, uint32_t host_features)
++{
++  int i, config_size = 0;
++  host_features |= (1 << VIRTIO_NET_F_MAC);
++  for (i = 0; feature_sizes[i].flags != 0; i++) 
++    {
++    if (host_features & feature_sizes[i].flags) 
++      config_size = MAX(feature_sizes[i].end, config_size);
++    }
++  n->config_size = config_size;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++void virtio_muethnet_set_netclient_name(VirtIONet *n, const char *name,
++                                        const char *type)
++{
++  assert(type != NULL);
++  if (n->netclient_name) 
++    {
++    g_free(n->netclient_name);
++    n->netclient_name = NULL;
++    }
++  if (n->netclient_type) 
++    {
++    g_free(n->netclient_type);
++    n->netclient_type = NULL;
++    }
++  if (name != NULL)
++    n->netclient_name = g_strdup(name);
++  n->netclient_type = g_strdup(type);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_device_realize(DeviceState *dev, Error **errp)
++{
++  VirtIODevice *vdev;
++  VirtIONet *n;
++  NetClientState *nc;
++
++  vdev = VIRTIO_DEVICE(dev);
++  n = VIRTIO_MUETHNET(dev);
++  virtio_init(vdev, "virtio-muethnet", VIRTIO_ID_NET, n->config_size);
++  n->max_queues = 1;
++  n->vqs = g_malloc0(sizeof(VirtIONetQueue));
++  n->vqs[0].rx_vq = virtio_add_queue(vdev, VIRTIOQRXMAX, virtio_net_handle_rx);
++  n->vqs[0].tx_vq = virtio_add_queue(vdev, VIRTIOQTXMAX, virtio_net_handle_tx);
++  n->vqs[0].n = n;
++  pool_elem_init(&(n->vqs[0].async_rx_el));
++  n->curr_queues = 1;
++  n->ctrl_vq = virtio_add_queue(vdev, 32, virtio_net_handle_ctrl);
++  qemu_macaddr_default_if_unset(&n->nic_conf.macaddr);
++  memcpy(&n->mac[0], &n->nic_conf.macaddr, sizeof(n->mac));
++  n->status = VIRTIO_NET_S_LINK_UP;
++  if (!n->netclient_type)
++    KOUT(" ");
++  n->nic = qemu_new_nic(&net_virtio_info, &n->nic_conf,
++                        n->netclient_type, n->netclient_name, n);
++  qemu_format_nic_info_str(qemu_get_queue(n->nic), n->nic_conf.macaddr.a);
++  n->host_hdr_len = 0;
++  n->promisc = 0;
++  nc = qemu_get_queue(n->nic);
++  nc->rxfilter_notify_enabled = 1;
++  n->qdev = dev;
++  n->vqs[0].tx_timer = timer_new_ns(QEMU_CLOCK_VIRTUAL,
++                                    virtio_net_tx_timer,
++                                    &n->vqs[0]);
++  n->vqs[0].rx_timer = timer_new_ns(QEMU_CLOCK_VIRTUAL,
++                                    virtio_net_rx_timer,
++                                    &n->vqs[0]);
++  timer_mod(n->vqs[0].tx_timer,qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+1000000);
++  timer_mod(n->vqs[0].rx_timer,qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+1000000);
++}
++/*--------------------------------------------------------------------------*/
++
++
++/****************************************************************************/
++static void virtio_net_device_unrealize(DeviceState *dev, Error **errp)
++{
++  KOUT(" ");
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_net_instance_init(Object *obj)
++{
++    VirtIONet *n = VIRTIO_MUETHNET(obj);
++    n->config_size = sizeof(struct virtio_net_config);
++    device_add_bootindex_property(obj, &n->nic_conf.bootindex,
++                                  "bootindex", "/ethernet-phy@0",
++                                  DEVICE(n), NULL);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static Property virtio_net_properties[] = {
++    DEFINE_PROP_BIT64("mrg_rxbuf", VirtIONet, host_features,
++                    VIRTIO_NET_F_MRG_RXBUF, true),
++    DEFINE_PROP_BIT64("status", VirtIONet, host_features,
++                    VIRTIO_NET_F_STATUS, true),
++    DEFINE_PROP_BIT64("ctrl_vq", VirtIONet, host_features,
++                    VIRTIO_NET_F_CTRL_VQ, true),
++    DEFINE_PROP_BIT64("ctrl_rx", VirtIONet, host_features,
++                    VIRTIO_NET_F_CTRL_RX, true),
++    DEFINE_NIC_PROPERTIES(VirtIONet, nic_conf),
++    DEFINE_PROP_STRING("tx", VirtIONet, net_conf.tx),
++    DEFINE_PROP_UINT16("rx_queue_size", VirtIONet, 
++                       net_conf.rx_queue_size, VIRTIOQRXMAX),
++    DEFINE_PROP_END_OF_LIST(),
++};
++/*--------------------------------------------------------------------------*/
++
++
++/****************************************************************************/
++static void virtio_net_class_init(ObjectClass *klass, void *data)
++{
++  DeviceClass *dc = DEVICE_CLASS(klass);
++  VirtioDeviceClass *vdc = VIRTIO_DEVICE_CLASS(klass);
++  dc->props = virtio_net_properties;
++  set_bit(DEVICE_CATEGORY_NETWORK, dc->categories);
++  vdc->realize = virtio_net_device_realize;
++  vdc->unrealize = virtio_net_device_unrealize;
++  vdc->get_config = virtio_net_get_config;
++  vdc->set_config = virtio_net_set_config;
++  vdc->get_features = virtio_net_get_features;
++  vdc->set_features = virtio_net_set_features;
++  vdc->bad_features = virtio_net_bad_features;
++  vdc->reset = virtio_net_reset;
++  vdc->set_status = virtio_net_set_status;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static const TypeInfo virtio_net_info = {
++    .name = TYPE_VIRTIO_MUETHNET,
++    .parent = TYPE_VIRTIO_DEVICE,
++    .instance_size = sizeof(VirtIONet),
++    .instance_init = virtio_net_instance_init,
++    .class_init = virtio_net_class_init,
++};
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void virtio_register_types(void)
++{
++  type_register_static(&virtio_net_info);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++type_init(virtio_register_types)
++/*--------------------------------------------------------------------------*/
+diff -Naur qemu-3.0.0-rc4/hw/virtio/virtio.c tainted_qemu/hw/virtio/virtio.c
+--- qemu-3.0.0-rc4/hw/virtio/virtio.c	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/hw/virtio/virtio.c	2018-08-12 22:52:38.116204890 +0200
+@@ -325,6 +325,12 @@
+     address_space_cache_invalidate(&caches->used, pa, sizeof(val));
+ }
+ 
++unsigned int virtio_queue_get_notification(VirtQueue *vq)
++{
++  return vq->notification;
++}
++
++
+ void virtio_queue_set_notification(VirtQueue *vq, int enable)
+ {
+     vq->notification = enable;
+diff -Naur qemu-3.0.0-rc4/hw/virtio/virtio-pci.c tainted_qemu/hw/virtio/virtio-pci.c
+--- qemu-3.0.0-rc4/hw/virtio/virtio-pci.c	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/hw/virtio/virtio-pci.c	2018-08-12 22:52:38.116204890 +0200
+@@ -2436,6 +2436,21 @@
+     object_property_set_bool(OBJECT(vdev), true, "realized", errp);
+ }
+ 
++#ifdef CONFIG_MUETH
++static void virtio_muethnet_pci_realize(VirtIOPCIProxy *vpci_dev, Error **errp)
++{
++    DeviceState *qdev = DEVICE(vpci_dev);
++    VirtIONetPCI *dev = VIRTIO_MUETHNET_PCI(vpci_dev);
++    DeviceState *vdev = DEVICE(&dev->vdev);
++
++    virtio_muethnet_set_netclient_name(&dev->vdev, qdev->id,
++                                  object_get_typename(OBJECT(qdev)));
++    qdev_set_parent_bus(vdev, BUS(&vpci_dev->bus));
++    object_property_set_bool(OBJECT(vdev), true, "realized", errp);
++}
++#endif
++
++
+ static void virtio_net_pci_class_init(ObjectClass *klass, void *data)
+ {
+     DeviceClass *dc = DEVICE_CLASS(klass);
+@@ -2452,6 +2467,26 @@
+     vpciklass->realize = virtio_net_pci_realize;
+ }
+ 
++#ifdef CONFIG_MUETH
++static void virtio_muethnet_pci_class_init(ObjectClass *klass, void *data)
++{
++    DeviceClass *dc = DEVICE_CLASS(klass);
++    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
++    VirtioPCIClass *vpciklass = VIRTIO_PCI_CLASS(klass);
++
++    k->romfile = "efi-virtio.rom";
++    k->vendor_id = PCI_VENDOR_ID_REDHAT_QUMRANET;
++    k->device_id = PCI_DEVICE_ID_VIRTIO_NET;
++    k->revision = VIRTIO_PCI_ABI_VERSION;
++    k->class_id = PCI_CLASS_NETWORK_ETHERNET;
++    set_bit(DEVICE_CATEGORY_NETWORK, dc->categories);
++    dc->props = virtio_net_properties;
++    vpciklass->realize = virtio_muethnet_pci_realize;
++}
++#endif
++
++
++
+ static void virtio_net_pci_instance_init(Object *obj)
+ {
+     VirtIONetPCI *dev = VIRTIO_NET_PCI(obj);
+@@ -2462,6 +2497,18 @@
+                               "bootindex", &error_abort);
+ }
+ 
++#ifdef CONFIG_MUETH
++static void virtio_muethnet_pci_instance_init(Object *obj)
++{
++    VirtIONetPCI *dev = VIRTIO_MUETHNET_PCI(obj);
++    virtio_instance_init_common(obj, &dev->vdev, sizeof(dev->vdev),
++                                TYPE_VIRTIO_MUETHNET);
++    object_property_add_alias(obj, "bootindex", OBJECT(&dev->vdev),
++                              "bootindex", &error_abort);
++
++}
++#endif
++
+ static const TypeInfo virtio_net_pci_info = {
+     .name          = TYPE_VIRTIO_NET_PCI,
+     .parent        = TYPE_VIRTIO_PCI,
+@@ -2470,6 +2517,17 @@
+     .class_init    = virtio_net_pci_class_init,
+ };
+ 
++#ifdef CONFIG_MUETH
++static const TypeInfo virtio_muethnet_pci_info = {
++    .name          = TYPE_VIRTIO_MUETHNET_PCI,
++    .parent        = TYPE_VIRTIO_PCI,
++    .instance_size = sizeof(VirtIONetPCI),
++    .instance_init = virtio_muethnet_pci_instance_init,
++    .class_init    = virtio_muethnet_pci_class_init,
++};
++#endif
++
++
+ /* virtio-rng-pci */
+ 
+ static void virtio_rng_pci_realize(VirtIOPCIProxy *vpci_dev, Error **errp)
+@@ -2714,6 +2772,9 @@
+     type_register_static(&virtio_balloon_pci_info);
+     type_register_static(&virtio_serial_pci_info);
+     type_register_static(&virtio_net_pci_info);
++#ifdef CONFIG_MUETH
++    type_register_static(&virtio_muethnet_pci_info);
++#endif
+ #ifdef CONFIG_VHOST_SCSI
+     type_register_static(&vhost_scsi_pci_info);
+ #endif
+diff -Naur qemu-3.0.0-rc4/hw/virtio/virtio-pci.h tainted_qemu/hw/virtio/virtio-pci.h
+--- qemu-3.0.0-rc4/hw/virtio/virtio-pci.h	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/hw/virtio/virtio-pci.h	2018-08-12 22:52:38.120202759 +0200
+@@ -310,6 +310,12 @@
+     VirtIONet vdev;
+ };
+ 
++#ifdef CONFIG_MUETH
++#define TYPE_VIRTIO_MUETHNET_PCI "virtio-muethnet-pci"
++#define VIRTIO_MUETHNET_PCI(obj) \
++        OBJECT_CHECK(VirtIONetPCI, (obj), TYPE_VIRTIO_MUETHNET_PCI)
++#endif
++
+ /*
+  * virtio-9p-pci: This extends VirtioPCIProxy.
+  */
+diff -Naur qemu-3.0.0-rc4/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/virtio.h
+--- qemu-3.0.0-rc4/include/hw/virtio/virtio.h	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/include/hw/virtio/virtio.h	2018-08-12 22:52:38.120202759 +0200
+@@ -293,6 +293,8 @@
+                                                 VirtIOHandleAIOOutput handle_output);
+ VirtQueue *virtio_vector_first_queue(VirtIODevice *vdev, uint16_t vector);
+ VirtQueue *virtio_vector_next_queue(VirtQueue *vq);
++unsigned int virtio_queue_get_notification(VirtQueue *vq);
++
+ 
+ static inline void virtio_add_feature(uint64_t *features, unsigned int fbit)
+ {
+diff -Naur qemu-3.0.0-rc4/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virtio/virtio-net.h
+--- qemu-3.0.0-rc4/include/hw/virtio/virtio-net.h	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/include/hw/virtio/virtio-net.h	2018-08-12 22:52:38.120202759 +0200
+@@ -22,6 +22,14 @@
+ #define VIRTIO_NET(obj) \
+         OBJECT_CHECK(VirtIONet, (obj), TYPE_VIRTIO_NET)
+ 
++#ifdef CONFIG_MUETH
++#define TYPE_VIRTIO_MUETHNET "virtio-muethnet-device"
++#define VIRTIO_MUETHNET(obj) \
++       OBJECT_CHECK(VirtIONet, (obj), TYPE_VIRTIO_MUETHNET)
++#endif
++
++
++
+ #define TX_TIMER_INTERVAL 150000 /* 150 us */
+ 
+ /* Limit the number of packets that can be sent via a single flush
+@@ -31,6 +39,8 @@
+  * and latency. */
+ #define TX_BURST 256
+ 
++#define CLOONIX_CIRC_ELEM 0x1FF
++
+ typedef struct virtio_net_conf
+ {
+     uint32_t txtimer;
+@@ -47,15 +57,28 @@
+ /* Maximum packet size we can receive from tap device: header + 64k */
+ #define VIRTIO_NET_MAX_BUFSIZE (sizeof(struct virtio_net_hdr) + (64 * KiB))
+ 
++typedef struct t_async_rx_el
++{
++  uint32_t volatile pool_put_lock;
++  int pool_put;
++  int pool_get;
++  int pool_qty;
++  VirtQueueElement *elem[CLOONIX_CIRC_ELEM + 1];
++} t_async_rx_el;
++
++
+ typedef struct VirtIONetQueue {
+     VirtQueue *rx_vq;
+     VirtQueue *tx_vq;
+     QEMUTimer *tx_timer;
++    QEMUTimer *rx_timer;
+     QEMUBH *tx_bh;
+     uint32_t tx_waiting;
++    int rx_waiting;
+     struct {
+         VirtQueueElement *elem;
+     } async_tx;
++    t_async_rx_el async_rx_el;
+     struct VirtIONet *n;
+ } VirtIONetQueue;
+ 
+@@ -108,4 +131,10 @@
+ void virtio_net_set_netclient_name(VirtIONet *n, const char *name,
+                                    const char *type);
+ 
++#ifdef CONFIG_MUETH
++void virtio_muethnet_set_config_size(VirtIONet *n, uint32_t host_features);
++void virtio_muethnet_set_netclient_name(VirtIONet *n, const char *name,
++                                        const char *type);
++#endif
++
+ #endif
+diff -Naur qemu-3.0.0-rc4/include/net/cloonix_mueth.h tainted_qemu/include/net/cloonix_mueth.h
+--- qemu-3.0.0-rc4/include/net/cloonix_mueth.h	1970-01-01 01:00:00.000000000 +0100
++++ tainted_qemu/include/net/cloonix_mueth.h	2018-08-12 22:52:38.120202759 +0200
+@@ -0,0 +1,43 @@
++
++void cloonix_set_link_status(t_all_ctx *all_ctx, int on);
++void cloonix_set_promisc(t_all_ctx *all_ctx, int on);
++
++
++void purge_tx_elem_free_pool(t_all_ctx *all_ctx);
++
++void tx_elem_free_pool_put(t_tx_elem_free_pool *pool_tx,
++                           void *elem, void *q, void *vdev);
++
++int tx_elem_free_pool_get(t_tx_elem_free_pool *pool_tx,
++                           void **elem, void **q, void **vdev);
++
++void mueth_tx_packs_event(t_all_ctx *all_ctx);
++int cloonix_tx_packet(t_all_ctx *all_ctx, VirtQueueElement *elem); 
++void cloonix_end_tx(t_all_ctx *all_ctx);
++
++int cloonix_prepare_rx(t_all_ctx *all_ctx);
++int cloonix_rx_packet(t_all_ctx *all_ctx, 
++                      uint32_t packlen, uint8_t *packdata);
++
++void cloonix_set_notification_switch_on_off(t_all_ctx *all_ctx, int on);
++void cloonix_clean_to_quit(t_all_ctx *all_ctx);
++void cloonix_rx_activate(t_all_ctx *all_ctx);
++int cloonix_queue_is_overloaded(t_all_ctx *all_ctx);
++void cloonix_qemu_group_clean_cb(void *ptr, void *data);
++void cloonix_change_virtio_queue(t_all_ctx *all_ctx);
++
++
++
++
++typedef struct MUETHState {
++    NetClientState nc;
++    char munetname[MAX_NAME_LEN];
++    char muname[MAX_NAME_LEN];
++    char musock[MAX_PATH_LEN];
++    int munum;
++    int mutype;
++    t_all_ctx *all_ctx;
++    int eth;
++} MUETHState;
++
++#define MAX_ELEM_PER_PKT 3
+diff -Naur qemu-3.0.0-rc4/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
+--- qemu-3.0.0-rc4/include/qemu/error-report.h	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/include/qemu/error-report.h	2018-08-12 22:52:38.120202759 +0200
+@@ -13,6 +13,26 @@
+ #ifndef QEMU_ERROR_REPORT_H
+ #define QEMU_ERROR_REPORT_H
+ 
++#include <syslog.h>
++#define error_report(format, a...)                    \
++ do {                                                    \
++    printf("\n%s line:%d " format,         \
++    __FUNCTION__,__LINE__, ## a);                \
++    syslog(LOG_ERR, "%s line:%d " format, \
++    __FUNCTION__,__LINE__, ## a);              \
++    exit(-1);                                            \
++    } while (0)
++
++#define warn_report(format, a...)             \
++ do {                                         \
++     printf("\n%s line:%d " format,         \
++      __FUNCTION__,__LINE__, ## a);           \
++     syslog(LOG_ERR, "%s line:%d " format, \
++     __FUNCTION__,__LINE__, ## a);            \
++     } while (0)
++
++
++
+ typedef struct Location {
+     /* all members are private to qemu-error.c */
+     enum { LOC_NONE, LOC_CMDLINE, LOC_FILE } kind;
+@@ -40,8 +60,8 @@
+ void warn_vreport(const char *fmt, va_list ap) GCC_FMT_ATTR(1, 0);
+ void info_vreport(const char *fmt, va_list ap) GCC_FMT_ATTR(1, 0);
+ 
+-void error_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
+-void warn_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
++//void error_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
++//void warn_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
+ void info_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
+ 
+ const char *error_get_progname(void);
+diff -Naur qemu-3.0.0-rc4/include/qemu-common.h tainted_qemu/include/qemu-common.h
+--- qemu-3.0.0-rc4/include/qemu-common.h	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/include/qemu-common.h	2018-08-12 22:52:38.120202759 +0200
+@@ -160,4 +160,13 @@
+  * returned. */
+ bool dump_in_progress(void);
+ 
++
++
++#include <syslog.h>
++#define DKERR(format, a...)              \
++ do {                                                   \
++    syslog(LOG_ERR, "%s line:%d " format, \
++    __FUNCTION__,__LINE__, ## a);              \
++    } while (0)
++
+ #endif
+diff -Naur qemu-3.0.0-rc4/net/clients.h tainted_qemu/net/clients.h
+--- qemu-3.0.0-rc4/net/clients.h	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/net/clients.h	2018-08-12 22:52:38.120202759 +0200
+@@ -53,6 +53,12 @@
+                  NetClientState *peer, Error **errp);
+ #endif
+ 
++#ifdef CONFIG_MUETH
++int net_init_mueth(const Netdev *netdev, const char *name,
++                   NetClientState *peer, Error **errp);
++#endif
++
++
+ #ifdef CONFIG_NETMAP
+ int net_init_netmap(const Netdev *netdev, const char *name,
+                     NetClientState *peer, Error **errp);
+diff -Naur qemu-3.0.0-rc4/net/cloonix_mueth.c tainted_qemu/net/cloonix_mueth.c
+--- qemu-3.0.0-rc4/net/cloonix_mueth.c	1970-01-01 01:00:00.000000000 +0100
++++ tainted_qemu/net/cloonix_mueth.c	2018-08-12 22:52:38.120202759 +0200
+@@ -0,0 +1,367 @@
++/*****************************************************************************/
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <string.h>
++#include <stdint.h>
++
++
++#include "qemu/osdep.h"
++
++#include "net/net.h"
++#include "clients.h"
++#include "hw/virtio/virtio.h"
++#include "linux/virtio_net.h"
++
++
++#include "ioc.h"
++#include "mueth.h"
++#include "sock_fd.h"
++#include "net/cloonix_mueth.h"
++
++
++static void mueth_cleanup(NetClientState *nc);
++
++
++
++
++static NetClientInfo net_mueth_info = {
++    .type = NET_CLIENT_DRIVER_MUETH,
++    .size = sizeof(MUETHState),
++    .receive = NULL,
++    .cleanup = mueth_cleanup,
++};
++
++
++/*****************************************************************************/
++int  tap_fd_open(t_all_ctx *all_ctx, char *tap_name);
++int  wif_fd_open(t_all_ctx *all_ctx, char *tap_name);
++int  raw_fd_open(t_all_ctx *all_ctx, char *tap_name);
++void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line) { KOUT(" "); }
++int  tap_fd_open(t_all_ctx *all_ctx, char *tap_name) { KOUT(" "); }
++int  wif_fd_open(t_all_ctx *all_ctx, char *tap_name) { KOUT(" "); }
++int  raw_fd_open(t_all_ctx *all_ctx, char *tap_name) { KOUT(" "); }
++/*---------------------------------------------------------------------------*/
++
++
++/*****************************************************************************/
++static void fill_blkd_chain(t_blkd_chain **head, t_blkd *blkd)
++{
++  t_blkd_chain *cur = *head;
++  t_blkd_chain *el = (t_blkd_chain *) malloc(sizeof(t_blkd_chain));
++  memset(el, 0, sizeof(t_blkd_chain));
++  el->blkd = blkd;
++  if (!cur)
++    *head = el;
++  else
++    {
++    while(cur)
++      {
++      if (cur->next == NULL)
++        {
++        cur->next = el;
++        break;
++        }
++      cur = cur->next;
++      }
++    }
++}
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++static t_blkd_chain *get_blkd_from_elem(t_all_ctx *all_ctx, void *ptrelem) 
++{
++  t_blkd_group *blkd_group = NULL;
++  t_blkd *blkd;
++  t_blkd_chain *head = NULL;
++  VirtQueueElement *elem = (VirtQueueElement *) ptrelem;
++  struct iovec *iov;
++  int i, out_num;
++  int guest_hdr_len = all_ctx->qemu_guest_hdr_len;
++  uint32_t len;
++  uint8_t *packet;
++  out_num = elem->out_num;
++  out_num -= 1;
++  if (out_num < 0)
++    KOUT("%d", out_num);
++  iov = &(elem->out_sg[0]);
++  if (iov[0].iov_len != guest_hdr_len)
++    {
++    len = iov[0].iov_len - guest_hdr_len;
++    packet = iov[0].iov_base + guest_hdr_len;
++    blkd = blkd_create_tx_qemu_group(&blkd_group, 
++                                     cloonix_qemu_group_clean_cb,
++                                      (void *) elem,
++                                      len, (char *) packet,
++                                      0, 0, 0);
++    fill_blkd_chain(&head, blkd);
++    }
++  for (i=0; i<out_num; i++)
++    {
++    iov = &(elem->out_sg[i+1]);
++    len = iov[0].iov_len;
++    packet = iov[0].iov_base;
++    if (blkd_group)
++      blkd = blkd_create_tx_qemu_group(&blkd_group, NULL, NULL,
++                                        len, (char *) packet,
++                                        0, 0, 0);
++    else
++      blkd = blkd_create_tx_qemu_group(&blkd_group, 
++                                     cloonix_qemu_group_clean_cb,
++                                        (void *) elem,
++                                        len, (char *) packet,
++                                        0, 0, 0);
++    fill_blkd_chain(&head, blkd);
++    }
++  return head;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static int get_elem_len(VirtQueueElement *elem)
++{
++  struct iovec *iov;
++  int i, len = 0;
++  for (i=0; i<elem->out_num; i++)
++    {
++    iov = &(elem->out_sg[i]);
++    len += iov[0].iov_len;
++    }
++  len -= sizeof(struct virtio_net_hdr);
++  if (len < 0)
++    KOUT("%d %d", len, len + (int)sizeof(struct virtio_net_hdr));
++  return len;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++int cloonix_queue_is_overloaded(t_all_ctx *all_ctx)
++{
++  int pool_tx_queue, result = 0;
++  if (tx_unix_sock_shaping_overload(all_ctx))
++    {
++    result = -1;
++    stop_tx_counter_increment(all_ctx, 0);
++    }
++  else
++    {
++    pool_tx_queue = tx_unix_sock_pool_len(all_ctx);
++    if (pool_tx_queue > MAX_TX_BLKD_QUEUED_BYTES/3)
++      {
++      result = -1;
++      stop_tx_counter_increment(all_ctx, 0);
++      }
++    }
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++int cloonix_tx_packet(t_all_ctx *all_ctx, VirtQueueElement *elem)
++{
++  int result, len = get_elem_len(elem);
++  tx_unix_sock(all_ctx, (void *) elem, len);
++  result = cloonix_queue_is_overloaded(all_ctx);
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++void cloonix_end_tx(t_all_ctx *all_ctx)
++{
++  tx_unix_sock_end(all_ctx);
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++void cloonix_rx_activate(t_all_ctx *all_ctx)
++{
++  unix_sock_rx_activate(all_ctx);
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++static void prepare_rx_packet(struct t_all_ctx *all_ctx, int *can_rx)
++{
++  int result;
++  result = cloonix_prepare_rx(all_ctx);
++  if (result >= 0)
++    *can_rx = result;
++  else
++    *can_rx = 0;
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++int rx_from_traffic_sock(t_all_ctx *all_ctx, int tidx, t_blkd *bd)
++{
++  int result = 0;
++  int nb;
++  if (!bd)
++    {
++    if (all_ctx->g_nb_elem_rx_ready < MAX_ELEM_PER_PKT)
++      prepare_rx_packet(all_ctx, &all_ctx->g_nb_elem_rx_ready);
++    if (all_ctx->g_nb_elem_rx_ready < MAX_ELEM_PER_PKT)
++      result = -1;
++    }
++  else
++    {
++    if (all_ctx->g_nb_elem_rx_ready < MAX_ELEM_PER_PKT)
++      prepare_rx_packet(all_ctx, &all_ctx->g_nb_elem_rx_ready);
++    if (all_ctx->g_nb_elem_rx_ready < MAX_ELEM_PER_PKT)
++      result = -1;
++    else
++      {
++      nb = cloonix_rx_packet(all_ctx, (uint32_t) bd->payload_len,
++                                      (uint8_t *) bd->payload_blkd);
++      all_ctx->g_nb_elem_rx_ready -= nb;
++      }
++    blkd_free((void *) all_ctx, bd);
++    }
++  return result;
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++static void mueth_cleanup(NetClientState *nc)
++{
++  MUETHState *s = DO_UPCAST(MUETHState, nc, nc);
++  t_all_ctx *all_ctx = s->all_ctx; 
++  cloonix_clean_to_quit(all_ctx);
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++void rpct_recv_cli_req(void *ptr, int llid, int tid,
++                       int cli_llid, int cli_tid, char *line)
++{
++  char resp[MAX_RPC_MSG_LEN];
++  int val;
++  if (sscanf(line, "set_shaping %d", &val) == 1)
++    tx_unix_sock_shaping_value((t_all_ctx *) ptr, val);
++  else if (sscanf(line, "set_link %d", &val) == 1)
++    cloonix_set_link_status((t_all_ctx *) ptr, val);
++  else if (sscanf(line, "set_promisc %d", &val) == 1)
++    cloonix_set_promisc((t_all_ctx *) ptr, val);
++  else
++    KERR("%s", line);
++  memset(resp, 0, MAX_RPC_MSG_LEN);
++  snprintf(resp, MAX_RPC_MSG_LEN-1, "ETH MUCLI RESP to %s", line);
++  rpct_send_cli_resp(ptr, llid, tid, cli_llid, cli_tid, resp);
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++static void *thread_main_mueth(void *arg)
++{
++  t_all_ctx *all_ctx = (t_all_ctx *) arg;
++  MUETHState *state = (MUETHState *) all_ctx->qemu_mueth_state;
++  mueth_main_endless_loop(all_ctx, state->munetname,
++                          state->muname, state->eth, 
++                          state->musock, get_blkd_from_elem,
++                          cloonix_change_virtio_queue);
++  return NULL;
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++static void tx_elem_free_pool_init(t_tx_elem_free_pool *pool_tx)
++{
++  int i;
++  for(i = 0; i < MASK_TX_ELEM_FREE_POOL + 1; i++)
++    {
++    pool_tx->elem[i] = NULL;
++    }
++  pool_tx->pool_put = 0;
++  pool_tx->pool_get = MASK_TX_ELEM_FREE_POOL;
++  pool_tx->pool_qty = 0;
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++void tx_elem_free_pool_put(t_tx_elem_free_pool *pool_tx,
++                           void *elem, void *q, void *vdev)
++{
++  while (__sync_lock_test_and_set(&(pool_tx->pool_lock), 1));
++  if(pool_tx->pool_put == pool_tx->pool_get)
++    KOUT(" ");
++  if (pool_tx->elem[pool_tx->pool_put] != NULL)
++    KOUT(" ");
++  pool_tx->elem[pool_tx->pool_put] = elem;
++  pool_tx->q[pool_tx->pool_put]    = q;
++  pool_tx->vdev[pool_tx->pool_put] = vdev;
++  pool_tx->pool_put = (pool_tx->pool_put + 1) & MASK_TX_ELEM_FREE_POOL;
++  pool_tx->pool_qty += 1;
++  __sync_lock_release(&(pool_tx->pool_lock));
++}
++/*---------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++int tx_elem_free_pool_get(t_tx_elem_free_pool *pool_tx,
++                           void **elem, void **q, void **vdev)
++{
++  int result = 0;
++  while (__sync_lock_test_and_set(&(pool_tx->pool_lock), 1));
++  if (pool_tx->pool_qty > 0)
++    {
++    pool_tx->pool_get = (pool_tx->pool_get + 1) & MASK_TX_ELEM_FREE_POOL;
++    *elem = pool_tx->elem[pool_tx->pool_get];
++    *q = pool_tx->q[pool_tx->pool_get];
++    *vdev = pool_tx->vdev[pool_tx->pool_get];
++    if (!(*elem))
++      KOUT(" ");
++    pool_tx->elem[pool_tx->pool_get] = NULL;
++    pool_tx->pool_qty -= 1;
++    result = 1;
++    }
++  __sync_lock_release(&(pool_tx->pool_lock));
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++static void elem_free_pool_trigger(void *opaque)
++{
++  t_all_ctx *all_ctx = (t_all_ctx *) opaque;
++  purge_tx_elem_free_pool(all_ctx);
++}
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++int net_init_mueth(const Netdev *netdev, const char *name,
++                   NetClientState *peer, Error **errp)
++{
++  const NetdevMuethOptions *mueth;
++  NetClientState *nc;
++  t_all_ctx *all_ctx;
++  MUETHState *state;
++  pthread_t thread;
++  QEMUBH *bh;
++
++  assert(netdev->type == NET_CLIENT_DRIVER_MUETH);
++  mueth = &netdev->u.mueth;
++  nc = qemu_new_net_client(&net_mueth_info, peer, "mueth", name);
++  state = DO_UPCAST(MUETHState, nc, nc);
++  all_ctx = msg_mngt_init((char *) mueth->muname, (int) mueth->munum, IO_MAX_BUF_LEN); 
++  tx_elem_free_pool_init(&(all_ctx->tx_elem_free_pool));
++  bh = qemu_bh_new(elem_free_pool_trigger, all_ctx);
++  all_ctx->bh_trigger = (void *) bh;
++  state->all_ctx = all_ctx;
++  all_ctx->qemu_mueth_state = (void *) state;
++  memset(state->munetname, 0, MAX_NAME_LEN);
++  memset(state->muname, 0, MAX_NAME_LEN);
++  memset(state->musock, 0, MAX_PATH_LEN);
++  strncpy(state->munetname, mueth->munetname, MAX_NAME_LEN-1);
++  strncpy(state->muname, mueth->muname, MAX_NAME_LEN-1);
++  strncpy(state->musock, mueth->sock, MAX_PATH_LEN-1);
++  state->mutype = mueth->mutype;
++  state->eth = mueth->munum;
++  snprintf(nc->info_str, sizeof(nc->info_str), 
++           "munetname=%s,muname=%s,munum=%d,musock=%s",
++           state->munetname, state->muname, state->eth, state->musock);
++  if (pthread_create(&thread, NULL, thread_main_mueth,(void *)all_ctx) != 0)
++    KOUT("thread main");
++  return 0;
++}
++/*--------------------------------------------------------------------------*/
++
+diff -Naur qemu-3.0.0-rc4/net/hub.c tainted_qemu/net/hub.c
+--- qemu-3.0.0-rc4/net/hub.c	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/net/hub.c	2018-08-12 22:52:38.120202759 +0200
+@@ -336,6 +336,7 @@
+             case NET_CLIENT_DRIVER_TAP:
+             case NET_CLIENT_DRIVER_SOCKET:
+             case NET_CLIENT_DRIVER_VDE:
++            case NET_CLIENT_DRIVER_MUETH:
+             case NET_CLIENT_DRIVER_VHOST_USER:
+                 has_host_dev = 1;
+                 break;
+diff -Naur qemu-3.0.0-rc4/net/Makefile.objs tainted_qemu/net/Makefile.objs
+--- qemu-3.0.0-rc4/net/Makefile.objs	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/net/Makefile.objs	2018-08-12 22:52:38.120202759 +0200
+@@ -7,6 +7,7 @@
+ common-obj-$(CONFIG_SLIRP) += slirp.o
+ common-obj-$(CONFIG_VDE) += vde.o
+ common-obj-$(CONFIG_NETMAP) += netmap.o
++common-obj-$(CONFIG_MUETH) += cloonix_mueth.o
+ common-obj-y += filter.o
+ common-obj-y += filter-buffer.o
+ common-obj-y += filter-mirror.o
+diff -Naur qemu-3.0.0-rc4/net/net.c tainted_qemu/net/net.c
+--- qemu-3.0.0-rc4/net/net.c	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/net/net.c	2018-08-12 22:52:38.120202759 +0200
+@@ -943,6 +943,9 @@
+ #ifdef CONFIG_VDE
+         [NET_CLIENT_DRIVER_VDE]       = net_init_vde,
+ #endif
++#ifdef CONFIG_MUETH
++        [NET_CLIENT_DRIVER_MUETH]     = net_init_mueth,
++#endif
+ #ifdef CONFIG_NETMAP
+         [NET_CLIENT_DRIVER_NETMAP]    = net_init_netmap,
+ #endif
+@@ -1012,6 +1015,10 @@
+             legacy.type = NET_CLIENT_DRIVER_VDE;
+             legacy.u.vde = opts->u.vde;
+             break;
++        case NET_LEGACY_OPTIONS_TYPE_MUETH:
++            legacy.type = NET_CLIENT_DRIVER_MUETH;
++            legacy.u.mueth = opts->u.mueth;
++            break;
+         case NET_LEGACY_OPTIONS_TYPE_BRIDGE:
+             legacy.type = NET_CLIENT_DRIVER_BRIDGE;
+             legacy.u.bridge = opts->u.bridge;
+@@ -1069,6 +1076,9 @@
+ #ifdef CONFIG_VDE
+         "vde",
+ #endif
++#ifdef CONFIG_MUETH
++    "mueth",
++#endif
+ #ifdef CONFIG_NET_BRIDGE
+         "bridge",
+ #endif
+diff -Naur qemu-3.0.0-rc4/qapi/net.json tainted_qemu/qapi/net.json
+--- qemu-3.0.0-rc4/qapi/net.json	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/qapi/net.json	2018-08-12 22:52:38.120202759 +0200
+@@ -366,6 +366,30 @@
+     '*mode':  'uint16' } }
+ 
+ ##
++# @NetdevMuethOptions:
++#
++# Connect the VLAN to a cloonix muswitch running on the host.
++#
++# @munetname: #cloonix name
++#
++# @muname: # interface name
++#
++# @munum:  #index number of eth
++#
++# @sock: #socket path
++#
++# @mutype: #type of socket
++#
++##
++{ 'struct': 'NetdevMuethOptions',
++  'data': {
++    '*munetname':  'str',
++    '*muname':  'str',
++    '*munum': 'int32',
++    '*sock':  'str',
++    '*mutype': 'int32'  } }
++
++##
+ # @NetdevBridgeOptions:
+ #
+ # Connect a host TAP network interface to a host bridge device.
+@@ -447,7 +471,7 @@
+ # 'dump': dropped in 2.12
+ ##
+ { 'enum': 'NetClientDriver',
+-  'data': [ 'none', 'nic', 'user', 'tap', 'l2tpv3', 'socket', 'vde',
++  'data': [ 'none', 'nic', 'user', 'tap', 'l2tpv3', 'socket', 'vde', 'mueth',
+             'bridge', 'hubport', 'netmap', 'vhost-user' ] }
+ 
+ ##
+@@ -473,6 +497,7 @@
+     'l2tpv3':   'NetdevL2TPv3Options',
+     'socket':   'NetdevSocketOptions',
+     'vde':      'NetdevVdeOptions',
++    'mueth':    'NetdevMuethOptions',
+     'bridge':   'NetdevBridgeOptions',
+     'hubport':  'NetdevHubPortOptions',
+     'netmap':   'NetdevNetmapOptions',
+@@ -505,7 +530,7 @@
+ # Since: 1.2
+ ##
+ { 'enum': 'NetLegacyOptionsType',
+-  'data': ['none', 'nic', 'user', 'tap', 'l2tpv3', 'socket', 'vde',
++  'data': ['none', 'nic', 'user', 'tap', 'l2tpv3', 'socket', 'vde', 'mueth',
+            'bridge', 'netmap', 'vhost-user'] }
+ 
+ ##
+@@ -525,6 +550,7 @@
+     'l2tpv3':   'NetdevL2TPv3Options',
+     'socket':   'NetdevSocketOptions',
+     'vde':      'NetdevVdeOptions',
++    'mueth':    'NetdevMuethOptions',
+     'bridge':   'NetdevBridgeOptions',
+     'netmap':   'NetdevNetmapOptions',
+     'vhost-user': 'NetdevVhostUserOptions' } }
+diff -Naur qemu-3.0.0-rc4/qdev-monitor.c tainted_qemu/qdev-monitor.c
+--- qemu-3.0.0-rc4/qdev-monitor.c	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/qdev-monitor.c	2018-08-12 22:52:38.120202759 +0200
+@@ -69,6 +69,7 @@
+     { "virtio-mouse-pci", "virtio-mouse", QEMU_ARCH_ALL & ~QEMU_ARCH_S390X },
+     { "virtio-net-ccw", "virtio-net", QEMU_ARCH_S390X },
+     { "virtio-net-pci", "virtio-net", QEMU_ARCH_ALL & ~QEMU_ARCH_S390X },
++    { "virtio-muethnet-pci", "virtio-muethnet", QEMU_ARCH_ALL & ~QEMU_ARCH_S390X },
+     { "virtio-rng-ccw", "virtio-rng", QEMU_ARCH_S390X },
+     { "virtio-rng-pci", "virtio-rng", QEMU_ARCH_ALL & ~QEMU_ARCH_S390X },
+     { "virtio-scsi-ccw", "virtio-scsi", QEMU_ARCH_S390X },
+diff -Naur qemu-3.0.0-rc4/qemu-options.hx tainted_qemu/qemu-options.hx
+--- qemu-3.0.0-rc4/qemu-options.hx	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/qemu-options.hx	2018-08-12 22:52:38.120202759 +0200
+@@ -1992,6 +1992,11 @@
+     "                Use group 'groupname' and mode 'octalmode' to change default\n"
+     "                ownership and permissions for communication port.\n"
+ #endif
++#ifdef CONFIG_MUETH
++    "-net mueth,id=str,munetname=str,muname=str,munum=n,sock=socketpath,mutype=n\n"
++    "                Use cloonix muswitch.\n"
++#endif
++
+ #ifdef CONFIG_NETMAP
+     "-netdev netmap,id=str,ifname=name[,devname=nmname]\n"
+     "                attach to the existing netmap-enabled network interface 'name', or to a\n"
+@@ -2015,6 +2020,9 @@
+ #ifdef CONFIG_VDE
+     "vde|"
+ #endif
++#ifdef CONFIG_MUETH
++    "mueth|"
++#endif
+ #ifdef CONFIG_NETMAP
+     "netmap|"
+ #endif
+diff -Naur qemu-3.0.0-rc4/util/memfd.c tainted_qemu/util/memfd.c
+--- qemu-3.0.0-rc4/util/memfd.c	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/util/memfd.c	2018-08-12 22:52:38.120202759 +0200
+@@ -45,6 +45,7 @@
+ }
+ #endif
+ 
++
+ #ifndef MFD_CLOEXEC
+ #define MFD_CLOEXEC 0x0001U
+ #endif
+diff -Naur qemu-3.0.0-rc4/util/qemu-error.c tainted_qemu/util/qemu-error.c
+--- qemu-3.0.0-rc4/util/qemu-error.c	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/util/qemu-error.c	2018-08-12 22:52:38.120202759 +0200
+@@ -269,6 +269,7 @@
+  * Prepend the current location and append a newline.
+  * It's wrong to call this in a QMP monitor.  Use error_setg() there.
+  */
++/*
+ void error_report(const char *fmt, ...)
+ {
+     va_list ap;
+@@ -277,6 +278,7 @@
+     vreport(REPORT_TYPE_ERROR, fmt, ap);
+     va_end(ap);
+ }
++*/
+ 
+ /*
+  * Print a warning message to current monitor if we have one, else to stderr.
+@@ -285,6 +287,7 @@
+  * Prepend the current location and append a newline.
+  * It's wrong to call this in a QMP monitor.  Use error_setg() there.
+  */
++/*
+ void warn_report(const char *fmt, ...)
+ {
+     va_list ap;
+@@ -293,6 +296,7 @@
+     vreport(REPORT_TYPE_WARNING, fmt, ap);
+     va_end(ap);
+ }
++*/
+ 
+ /*
+  * Print an information message to current monitor if we have one, else to
+diff -Naur qemu-3.0.0-rc4/vl.c tainted_qemu/vl.c
+--- qemu-3.0.0-rc4/vl.c	2018-08-07 23:33:03.000000000 +0200
++++ tainted_qemu/vl.c	2018-08-12 22:52:38.120202759 +0200
+@@ -130,6 +130,7 @@
+ #include "qapi/qapi-commands-run-state.h"
+ #include "qapi/qmp/qerror.h"
+ #include "sysemu/iothread.h"
++#include "glob_common.h"
+ 
+ #define MAX_VIRTIO_CONSOLES 1
+ 
+@@ -3990,6 +3991,7 @@
+     set_memory_options(&ram_slots, &maxram_size, machine_class);
+ 
+     os_daemonize();
++    cloonix_set_pid(getpid());
+     rcu_disable_atfork();
+ 
+     if (pid_file && qemu_create_pidfile(pid_file) != 0) {

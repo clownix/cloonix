@@ -1,0 +1,89 @@
+##################################################
+CLOONIX_VERSION=01-00
+CLOONIX_TREE=/usr/local/bin/cloonix
+CLOONIX_WORK=${HOME}/cloonix_data
+CLOONIX_BULK=${HOME}/cloonix_data/bulk
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: nemo {
+  cloonix_ip       127.0.0.1
+  cloonix_port     43211
+  cloonix_passwd   nemoclown
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: mito {
+  cloonix_ip       127.0.0.1
+  cloonix_port     43212
+  cloonix_passwd   mitoclown
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: fido {
+  cloonix_ip       172.16.0.92
+  cloonix_port     43213
+  cloonix_passwd   fidoclown
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: pipo {
+  cloonix_ip       172.16.0.92
+  cloonix_port     43214
+  cloonix_passwd   pipoclown
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: soyou {
+  cloonix_ip       94.23.212.5
+  cloonix_port     43215
+  cloonix_passwd   sclown
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: coco {
+  cloonix_ip       172.16.0.92
+  cloonix_port     43216
+  cloonix_passwd   cococlown
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: cucu {
+  cloonix_ip       10.7.7.1
+  cloonix_port     43217
+  cloonix_passwd   cucuclown
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: lolo {
+  cloonix_ip       127.0.0.1
+  cloonix_port     43218
+  cloonix_passwd   loloclown
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: vnb8 {
+  cloonix_ip       172.16.0.184
+  cloonix_port     43219
+  cloonix_passwd   vnb8
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: kiki {
+  cloonix_ip       172.16.0.92
+  cloonix_port     43220
+  cloonix_passwd   kiki
+}
+#-------------------------------------------------
+
+
+

@@ -1,0 +1,108 @@
+#!/bin/bash
+set -e
+HERE=`pwd`
+TMPBUILD=${HERE}/tmpbuild
+CLOONIX_COMMON=${TMPBUILD}/cloonix/common
+CLOONIX_SERVER=${TMPBUILD}/cloonix/server
+CLOONIX_CLIENT=${TMPBUILD}/cloonix/client
+#----------------------------------------------------------
+echo TARGET:
+echo $TMPBUILD
+#----------------------------------------------------------
+rm -rf ${TMPBUILD}
+mkdir -p ${TMPBUILD}
+cp -r ${HERE}/targz_store ${TMPBUILD}
+cp -r ${HERE}/cloonix ${TMPBUILD}
+#----------------------------------------------------------
+for i in cloonix_net cloonix_ssh cloonix_scp \
+         cloonix_cli  cloonix_gui cloonix_zor \
+         cloonix_osh cloonix_ocp \
+         cloonix_dta cloonix_ice cloonix_mon ; do
+  mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
+done
+#----------------------------------------------------------
+  echo
+  echo BUILDING COMMON
+  echo
+  sleep 1
+#----------------------------------------------------------
+  for i in agent_dropbear \
+           spice \
+           lib_rpc_clownix \
+           lib_utils \
+           lib_rpc_qmonitor \
+           lib_rpc_doors \
+           lib_rpc_c2c \
+           lib_rpc_layout ; do
+
+    cd ${CLOONIX_COMMON}/${i}
+    echo
+    echo DOING:
+    echo ${CLOONIX_COMMON}/${i}
+    echo
+    echo
+    ./cmd
+  done
+#----------------------------------------------------------
+  echo
+  echo BUILDING SERVER
+  echo
+  sleep 1
+#----------------------------------------------------------
+  for i in  doorways \
+            uml_cloonix_switch \
+            muswitch/lib_ioc \
+            muswitch/lib_mulan \
+            muswitch/lib_muend \
+            muswitch/mutap \
+            muswitch/musnf \
+            muswitch/munat/clo_tcp \
+            muswitch/munat \
+            muswitch/muc2c \
+            muswitch/mua2b \
+            muswitch/mutst \
+            muswitch/muwlan \
+            muswitch/mulan \
+            spice \
+            qemu \
+            dtach; do
+
+    echo
+    echo DOING:
+    echo ${CLOONIX_SERVER}/${i}
+    echo
+    echo
+    cd ${CLOONIX_SERVER}/${i}
+    ./cmd
+  done
+
+#----------------------------------------------------------
+  echo
+  echo BUILDING CLIENT
+  echo
+  sleep 1
+#----------------------------------------------------------
+  for i in  lib_client \
+            ctrl \
+            qmonitor \
+            cairo_canvas/crcanvas_gtk \
+            cairo_canvas/src/bank \
+            cairo_canvas/src/interface \
+            cairo_canvas/src/subsets \
+            cairo_canvas/src/bdplot \
+            cairo_canvas \
+            lib_zor \
+            hyperzor \
+            spice \
+            openssh; do
+
+    echo
+    echo DOING:
+    echo ${CLOONIX_CLIENT}/${i}
+    echo
+    echo
+    cd ${CLOONIX_CLIENT}/${i}
+    ./cmd
+  done
+#----------------------------------------------------------
+

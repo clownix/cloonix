@@ -1,0 +1,12 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=${HERE}/../../../targz_store
+OPENSSH=openssh-7.6p1
+rm -rf ${OPENSSH}
+if [ ! -e tainted_openssh ]; then
+  echo tainted_openssh directory must exist 
+  exit 1
+fi
+tar xvf ${TARGZ}/${OPENSSH}.tar.gz
+diff -Naur ${OPENSSH} tainted_openssh > tmp_openssh_patch
+rm -rf ${OPENSSH}

@@ -1,0 +1,135 @@
+#!/bin/bash
+set -e
+if [ -z $CLOONIX_CONFIG ]; then
+  CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
+fi
+
+if [ ! -f $CLOONIX_CONFIG ]; then
+  echo "ERROR: $CLOONIX_CONFIG not found"
+  exit 1
+fi
+CLOONIX_TREE=$(cat $CLOONIX_CONFIG |grep CLOONIX_TREE | awk -F = '{print $2}')
+CLOONIX_WORK=$(cat $CLOONIX_CONFIG |grep CLOONIX_WORK | awk -F = '{print $2}')
+CLOONIX_WORK=$(eval echo $CLOONIX_WORK)
+
+
+
+if [ ! -d ${CLOONIX_TREE} ]; then
+  echo "ERROR: ${CLOONIX_TREE} not found"
+  exit 1
+fi
+
+LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
+
+if (( ${#} < 1 )); then
+  echo  cloonix_name needed as parameter.
+  echo $LIST
+  exit 1
+fi
+
+cloonix_name=$1
+
+found=no
+for i in $LIST ; do
+  if [ "$cloonix_name" == "$i" ]; then
+    found=yes
+  fi
+done
+
+if [ "$found" == "no" ]; then
+  echo "ERROR: $cloonix_name not found in $CLOONIX_CONFIG"
+  echo $LIST
+  exit 1
+fi
+
+if (( ${#} < 4 )); then
+  echo error input params
+  echo  "cloonix_osh <nemo> <nat> <user@vm_name:files> files"
+  echo  "cloonix_osh <nemo> <nat> files <user@vm_name:files>"
+  exit 1
+fi
+nat_name=$2
+if (( ${#} == 5 )); then
+  if [ "$3" != "-r" ]; then
+    echo error input params
+    exit 1
+  fi
+  recurs="-r"
+  src_side=$4
+  dst_side=$5
+else
+  recurs=" "
+  src_side=$3
+  dst_side=$4
+fi
+
+case $src_side in
+
+  *[@]*[:]* )
+    user_name=${src_side%%@*}
+    vm_name=${src_side##*@}
+    vm_name=${vm_name%%:*}
+    file_src=${src_side##*:}
+    case $dst_side in
+      *[@]*[:]* )
+        echo Bad input
+        exit 1
+      ;;
+      *)
+      file_source=dist
+      file_dst=$dst_side
+      ;;
+    esac
+  ;;
+
+  *)
+  file_src=${src_side}
+  case $dst_side in
+    *[@]*[:]* )
+      user_name=${dst_side%%@*}
+      vm_name=${dst_side##*@}
+      vm_name=${vm_name%%:*}
+      file_dst=${dst_side##*:}
+      file_source=loc
+    ;;
+    *)
+        echo Bad input
+        exit 1
+    ;;
+  esac
+  ;;
+esac
+
+LINE_CLOONIX_CONFIG=$(cat $CLOONIX_CONFIG)
+LINE_CLOONIX_CONFIG=$(echo $LINE_CLOONIX_CONFIG)
+cloonix_info="${LINE_CLOONIX_CONFIG##*CLOONIX_NET: $cloonix_name \{}"
+cloonix_info="${cloonix_info%%\}*}"
+
+ip=$(echo $cloonix_info |awk '{print $2}')
+port=$(echo $cloonix_info |awk '{print $4}')
+passwd=$(echo $cloonix_info |awk '{print $6}')
+
+set +e
+get_ip=$(cloonix_cli ${cloonix_name} cnf sat ${nat_name} "whatip ${vm_name}")
+resp=${get_ip%% *}
+ip_vm=${get_ip##* }
+if [ "${resp}" != "RESPOK" ]; then
+  echo ${get_ip}
+  exit
+fi
+
+PARAMS="${ip}=${port}=${passwd}=${nat_name}@user=${user_name}=ip=${ip_vm}=port=22=cloonix_info_end"
+SOCK=${CLOONIX_WORK}/${cloonix_name}/cli
+if [ ! -e $SOCK ]; then
+  mkdir -p $SOCK
+fi
+BIN_SSH=${CLOONIX_TREE}/client/openssh/cloonix_u2i_scp
+
+
+if [ "${file_source}" = "dist" ]; then
+  ${BIN_SSH} ${SOCK} -i ${CLOONIX_TREE}/id_rsa $recurs ${PARAMS}:$file_src $file_dst
+else
+  ${BIN_SSH} ${SOCK} -i ${CLOONIX_TREE}/id_rsa $recurs $file_src ${PARAMS}:$file_dst
+fi
+
+

@@ -1,0 +1,62 @@
+#!/bin/bash
+set -e
+if [ -z $CLOONIX_CONFIG ]; then
+  CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
+fi
+
+if [ ! -f $CLOONIX_CONFIG ]; then
+  echo "ERROR: $CLOONIX_CONFIG not found"
+  exit 1
+fi
+CLOONIX_TREE=$(cat $CLOONIX_CONFIG |grep  CLOONIX_TREE | awk -F = '{print $2}')
+
+if [ ! -d ${CLOONIX_TREE} ]; then
+  echo "ERROR: ${CLOONIX_TREE} not found"
+  exit 1
+fi
+
+LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
+
+if (( ${#} < 1 )); then
+  echo
+  echo "cloonix_mon <net> <vm_name>"
+  echo
+  echo net:
+  echo $LIST
+  echo
+  exit 1
+fi
+
+cloonix_name=$1
+found=no
+for i in $LIST ; do
+  if [ "$cloonix_name" == "$i" ]; then
+    found=yes
+  fi
+done
+
+if [ "$found" == "no" ]; then
+  echo "ERROR: $cloonix_name not found in $CLOONIX_CONFIG"
+  echo $LIST
+  exit 1
+fi
+
+LINE_CLOONIX_CONFIG=$(cat $CLOONIX_CONFIG)
+LINE_CLOONIX_CONFIG=$(echo $LINE_CLOONIX_CONFIG)
+cloonix_info="${LINE_CLOONIX_CONFIG##*CLOONIX_NET: $cloonix_name \{}"
+cloonix_info="${cloonix_info%%\}*}"
+
+ip=$(echo $cloonix_info |awk '{print $2}')
+port=$(echo $cloonix_info |awk '{print $4}')
+passwd=$(echo $cloonix_info |awk '{print $6}')
+
+
+shift 1
+
+BIN_MON=${CLOONIX_TREE}/client/qmonitor/qmonitor
+echo
+echo "  Use Ctrl-C and return to quit"
+echo "  ============================="
+echo
+${BIN_MON} ${ip}:${port} ${passwd} "$@"
+

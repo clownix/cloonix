@@ -1,0 +1,12 @@
+#!/bin/bash
+HERE=`pwd`
+tar zxvf dtach_source.tar.gz
+cd ${HERE}/dtach_source
+./configure
+make
+cd ${HERE}
+mv ${HERE}/dtach_source/dtach .
+rm -rf ${HERE}/dtach_source
+
+
+

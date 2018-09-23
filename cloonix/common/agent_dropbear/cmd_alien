@@ -1,0 +1,10 @@
+#!/bin/bash
+HERE=`pwd`
+set -e
+AGENT_BIN_ALIEN=${HERE}/agent_bin_alien/
+rm -rf ${AGENT_BIN_ALIEN}
+mkdir -p ${AGENT_BIN_ALIEN}
+${HERE}/cmd_hwsim_i386
+${HERE}/cmd_hwsim_x86_64
+${HERE}/cmd_i386
+${HERE}/cmd_x86_64

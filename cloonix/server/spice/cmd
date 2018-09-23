@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+HERE=`pwd`
+TARGZ=${HERE}/../../../targz_store
+CLOONIX_COMMON=${HERE}/../../../cloonix/common
+TARGET=${CLOONIX_COMMON}/spice/spice_lib
+if [ ! -d ${TARGET} ]; then
+  echo
+  echo NOT FOUND:
+  echo ${TARGET}
+  echo
+  exit
+fi
+#----------------------------------------------------------
+cd ${TARGET}
+tar xvf ${TARGZ}/spice.tar.gz
+cd ${TARGET}/spice
+export PKG_CONFIG_PATH=${TARGET}/pkgconfig
+sed -i s"/PACKAGE_VERSION='UNKNOWN'/PACKAGE_VERSION='0.14.0'/" configure
+./configure --prefix=${TARGET} \
+            --enable-gstreamer=yes \
+            --libdir=${TARGET} \
+            --datarootdir=${TARGET} \
+            --disable-celt051 \
+            --disable-smartcard \
+            --disable-client \
+            --disable-static \
+            --disable-lz4 \
+            --enable-python-checks
+make clean
+make
+make install
+

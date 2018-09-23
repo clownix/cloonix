@@ -1,0 +1,85 @@
+#!/bin/bash
+HERE=`pwd`
+set -e
+
+AGENT_BIN_ALIEN=${HERE}/agent_bin_alien
+AGENT_LIB_ALIEN=${AGENT_BIN_ALIEN}/lib_i386/
+mkdir -p ${AGENT_LIB_ALIEN}
+
+LIB_CLOWNIX=${HERE}/../lib_io_clownix
+BLKD=${HERE}/../lib_blkd
+RPCT=${HERE}/../lib_rpct
+
+export CC=gcc
+export AR=ar
+export RANLIB=ranlib
+export CFLAGS=""
+
+cd $LIB_CLOWNIX
+export CFLAGS="-m32 -DNO_HMAC_CIPHER"
+export LDFLAGS=-m32
+make clean
+make
+
+cd $BLKD
+export CFLAGS="-m32 -DNO_HMAC_CIPHER"
+export LDFLAGS=-m32
+make clean
+make
+
+cd $RPCT
+export CFLAGS="-m32 -DNO_HMAC_CIPHER"
+export LDFLAGS=-m32
+make clean
+make
+
+
+cd ${HERE}/cloonix_dropbear
+export CFLAGS="-m32"
+export LDFLAGS="-m32"
+make clean
+make dropbear
+
+LIBU=$(ldd dropbear | grep libutil.so |awk '{print $3}')
+LIBC=$(ldd dropbear | grep libc.so |awk '{print $3}')
+LIBD=$(ldd dropbear | grep ld-linux.so |awk '{print $1}')
+
+echo
+echo
+echo $LIBU
+echo $LIBC
+echo $LIBD
+echo
+echo
+echo
+
+cd ${HERE}/cloonix_dropbear
+LIB_DST=/mnt/cloonix_config_fs/lib_i386
+export CFLAGS="-m32"
+export LDFLAGS="-m32 -Wl,-rpath -Wl,${LIB_DST}"
+export LDFLAGS="${LDFLAGS} -Wl,--dynamic-linker -Wl,${LIB_DST}/ld-linux.so.2"
+make clean
+make dropbear
+
+cp dropbear ${AGENT_BIN_ALIEN}/dropbear_cloonix_sshd_i386
+cp -vf $LIBU ${AGENT_LIB_ALIEN}
+cp -vf $LIBC ${AGENT_LIB_ALIEN}
+cp -vf $LIBD ${AGENT_LIB_ALIEN}
+
+cd ${HERE}/cloonix_agent
+make clean
+make
+
+cp cloonix_agent ${AGENT_BIN_ALIEN}/cloonix_agent_i386
+make clean
+
+cd $LIB_CLOWNIX
+make clean
+
+cd $BLKD
+make clean
+
+cd $RPCT
+make clean
+
+

@@ -1,0 +1,51 @@
+-----------------------------------------------------------------------------
+AGPLv3 tool to create networks of kvm virtual machines.
+
+See directory cloonix for the LICENCE
+
+See cloonix.fr for documentation that may not be up to date.
+
+The version 01-00 follows the 42-07, 42 is the end of part 1.
+
+All open source compiled within cloonix such as qemu, spice, openssh...
+will from now on be stored at clownix.net/cloonix-<major>/targz_store.tar.gz
+In the first version of this new git, this will be at:
+clownix.net/cloonix-01/targz_store.tar.gz
+
+It was wrong to include those open-sources in the cloonix git tree.
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+HOWTO INSTALL:
+It is assumed that sudo makes the command run as root.
+
+cd cloonix
+sudo ./install_depends build
+wget clownix.net/cloonix-01/targz_store.tar.gz
+tar xvf targz_store.tar.gz
+./doitall
+cd -
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+HOWTO GET A WORKING VM:
+
+mkdir -p ${HOME}/cloonix_data/bulk
+cd ${HOME}/cloonix_data/bulk
+wget clownix.net/cloonix-01/stretch.qcow2.gz
+gunzip stretch.qcow2.gz 
+cd -
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+HOWTO START BASIC NET:
+cd cloonix/quickstart
+./ping.sh
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+HOWTO TEST MAC80211_HWSIM:
+cd cloonix/mac80211_hwsim
+./hwsim.sh
+-----------------------------------------------------------------------------
+

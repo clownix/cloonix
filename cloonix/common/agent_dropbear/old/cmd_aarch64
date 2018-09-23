@@ -1,0 +1,65 @@
+#!/bin/bash
+HERE=`pwd`
+set -e
+
+if [ -z $AGENT_BIN_ALIEN ]; then
+  echo Variable AGENT_BIN_ALIEN must be defined
+  exit -1
+fi
+
+export STAGING_DIR=/home/perrier/lede03/staging_dir
+TOOLCHAIN_ARM=toolchain-aarch64_generic_gcc-5.4.0_musl
+CROSS_ARM=${STAGING_DIR}/${TOOLCHAIN_ARM}
+export CC=${CROSS_ARM}/bin/aarch64-openwrt-linux-gcc
+export AR=${CROSS_ARM}/bin/aarch64-openwrt-linux-gcc-ar
+export RANLIB=${CROSS_ARM}/bin/aarch64-openwrt-linux-ranlib
+export CFLAGS="-DNO_HMAC_CIPHER"
+
+if [ ! -e ${CROSS_ARM} ]; then
+  echo Cross-compile dir:
+  echo ${CROSS_ARM}
+  echo must exist
+  exit -1
+fi
+
+LIB_CLOWNIX=${HERE}/../lib_io_clownix
+BLKD=${HERE}/../lib_blkd
+RPCT=${HERE}/../lib_rpct
+
+cd $LIB_CLOWNIX
+make clean
+cd $BLKD
+make clean
+cd $RPCT
+make clean
+cd ${HERE}/cloonix_dropbear
+make clean
+cd ${HERE}/cloonix_agent
+make clean
+
+
+cd $LIB_CLOWNIX
+make
+cd $BLKD
+make
+cd $RPCT
+make
+cd ${HERE}/cloonix_dropbear
+make dropbear
+cp dropbear ${AGENT_BIN_ALIEN}/dropbear_cloonix_sshd_aarch64
+cd ${HERE}/cloonix_agent
+make
+cp cloonix_agent ${AGENT_BIN_ALIEN}/cloonix_agent_aarch64
+
+cd $LIB_CLOWNIX
+make clean
+cd $BLKD
+make clean
+cd $RPCT
+make clean
+cd ${HERE}/cloonix_dropbear
+make clean
+cd ${HERE}/cloonix_agent
+make clean
+
+
