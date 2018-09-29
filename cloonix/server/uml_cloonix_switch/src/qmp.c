@@ -728,7 +728,8 @@ static void dialog_resp(char *name, int llid, int tid, char *req, char *resp)
       }
     else
       {
-      if (!strncmp(resp, "{\"return\":", strlen("{\"return\":")))
+      if ((!strncmp(resp, "{\"return\":", strlen("{\"return\":"))) ||
+          (!strncmp(resp, "{\"timestamp\":", strlen("{\"timestamp\":"))))
         dialog_resp_return(qmp, llid, tid, 0);
       else if (!strncmp(resp, "{\"error\":", strlen("{\"error\":")))
         dialog_resp_return(qmp, llid, tid, -1);

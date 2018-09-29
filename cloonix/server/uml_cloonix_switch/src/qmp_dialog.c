@@ -155,7 +155,17 @@ static int message_braces_complete(char *whole_rx)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void call_cb_and_reset(t_qrec *q, int is_timeout)
+static void reset_diag(t_qrec *q)
+{
+  q->ref_id += 1;
+  memset(q->req, 0, MAX_RPC_MSG_LEN);
+  memset(q->resp, 0, MAX_RPC_MSG_LEN);
+  q->resp_offset = 0;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void call_cb(t_qrec *q, int is_timeout)
 {
   t_dialog_resp cb;
   if ((strlen(q->req)) && (q->resp_cb))
@@ -170,7 +180,8 @@ static void call_cb_and_reset(t_qrec *q, int is_timeout)
     else
       {
       if ((!strncmp(q->resp, "{\"return\":", strlen("{\"return\":"))) ||
-          (!strncmp(q->resp, "{\"error\":", strlen("{\"error\":"))))
+          (!strncmp(q->resp, "{\"error\":", strlen("{\"error\":"))) ||
+          (!strncmp(q->resp, "{\"timestamp\":", strlen("{\"timestamp\":"))))
         {
         cb = q->resp_cb;
         q->resp_cb = NULL;
@@ -186,10 +197,6 @@ static void call_cb_and_reset(t_qrec *q, int is_timeout)
     q->resp_cb = NULL;
     cb(q->name, q->resp_llid, q->resp_tid, q->req, q->resp);
     }
-  q->ref_id += 1;
-  memset(q->req, 0, MAX_RPC_MSG_LEN);
-  memset(q->resp, 0, MAX_RPC_MSG_LEN);
-  q->resp_offset = 0;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -221,8 +228,18 @@ static int qmp_rx_cb(void *ptr, int llid, int fd)
         {
         if (message_braces_complete(qrec->resp))
           {
-          qmp_msg_recv(qrec->name, qrec->resp);
-          call_cb_and_reset(qrec, 0);
+          if ((!strncmp(qrec->resp, "{\"timestamp\":", strlen("{\"timestamp\":"))) &&
+              (strstr(qrec->resp, "JOB_STATUS_CHANGE")))
+            {
+//            KERR("DROP %s", qrec->resp);
+            reset_diag(qrec);
+            }
+          else
+            {
+            qmp_msg_recv(qrec->name, qrec->resp);
+            call_cb(qrec, 0);
+            reset_diag(qrec);
+            }
           }
         else
           qrec->resp_offset += len;
@@ -318,7 +335,8 @@ static void timeout_resp_qmp(void *data)
   t_qrec *qrec = get_qrec_with_name(timeout->name);
   if ((qrec) && (qrec->ref_id == timeout->ref_id))
     {
-    call_cb_and_reset(qrec, 1);
+    call_cb(qrec, 1);
+    reset_diag(qrec);
     }
   clownix_free(timeout, __FUNCTION__);
 }
