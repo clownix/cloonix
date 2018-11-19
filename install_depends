@@ -41,7 +41,7 @@ fi
 #--------------------------------------------------------------------------
 fct_build_get_arch_packages()
 {
-  sed -i s"%#\[multilib\]%\[multilib\]\nInclude = /etc/pacman.d/mirrorlist%" /etc/pacman.conf
+  sed -i s"%#\[multilib\]%#\[multilib\]\nInclude = /etc/pacman.d/mirrorlist%" /etc/pacman.conf
   pacman --noconfirm --force -Syu \
              tar cdrkit rxvt-unicode base-devel \
              readline libevent gtk3 python2 python2-pyparsing \
@@ -61,14 +61,14 @@ fct_run_get_arch_packages()
 fct_build_get_debian_packages()
 {
   apt-get -y install tar genisoimage rxvt-unicode build-essential \
-                     gcc-multilib intltool libncurses5-dev \
+                     intltool libncurses5-dev \
                      libjpeg-dev libusb-1.0-0-dev libsasl2-dev \
                      libopus-dev openssl libssl-dev libgtk-3-dev libcap-dev \
                      libevent-dev libreadline-dev python-pyparsing python-six \
                      libgstreamer-plugins-base1.0-dev libepoxy-dev libdrm-dev \
                      libgbm-dev libpolkit-gobject-1-dev libacl1-dev \
 		     sudo zlib1g-dev liborc-0.4-dev libegl1-mesa-dev \
-                     bison flex
+                     bison flex libjson-glib-dev
 }
 #--------------------------------------------------------------------------
 fct_run_get_debian_packages()
@@ -82,8 +82,7 @@ fct_build_get_centos_packages()
 {
   yum -y install \
          tar genisoimage xterm make gcc gcc-c++ m4 bc \
-         glibc-devel.i686 glibc-devel.x86_64 libstdc++-devel.i686 \
-         libstdc++-devel.x86_64 \
+         glibc-devel.x86_64 libstdc++-devel.x86_64 \
          intltool ncurses-devel libjpeg-turbo-devel libusb-devel \
          libgusb-devel cyrus-sasl-devel opus-devel openssl openssl-devel \
          gtk3-devel libcap-devel libevent-devel readline-devel \
@@ -105,8 +104,7 @@ fct_build_get_fedora_packages()
 {
   dnf -y install \
          tar genisoimage rxvt-unicode make gcc gcc-c++ m4 bc \
-         glibc-devel.i686 glibc-devel.x86_64 libstdc++-devel.i686 \
-         libstdc++-devel.x86_64 \
+         glibc-devel.x86_64 libstdc++-devel.x86_64 \
          libtool intltool ncurses-devel libjpeg-turbo-devel \
          libusb-devel cyrus-sasl-devel opus-devel openssl openssl-devel \
          gtk3-devel libcap-devel libevent-devel readline-devel \
@@ -128,7 +126,7 @@ fct_build_get_opensuse_packages()
 {
   zypper --non-interactive install \
          tar genisoimage rxvt-unicode make gcc gcc-c++ m4 bc \
-         gcc-32bit libtool intltool ncurses-devel libjpeg62-devel \
+         libtool intltool ncurses-devel libjpeg62-devel \
          libusb-devel cyrus-sasl-devel libopus-devel openssl openssl-devel \
          gtk3-devel libcap-devel libevent-devel readline-devel \
          python python-pyparsing python-six dejavu-fonts patch \

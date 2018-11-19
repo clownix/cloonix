@@ -25,7 +25,7 @@ typedef struct t_custom_vm
   char kvm_used_rootfs[MAX_PATH_LEN];
   char kvm_p9_host_share[MAX_PATH_LEN];
   int  type;
-  int  is_ballooning;
+  int  is_uefi;
   int  is_full_virt;
   int  is_persistent;
   int  is_sda_disk;

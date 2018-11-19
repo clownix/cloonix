@@ -215,7 +215,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   static char title[MAX_TITLE];
   static char text[MAX_TEXT];
   int is_persistent, is_backed, is_inside_cloonix;
-  int has_p9_host_share, is_cisco, has_vhost_vsock; 
+  int has_p9_host_share, is_cisco, has_vhost_vsock, is_uefi; 
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
   int is_full_virt, has_no_reboot, has_added_disk, len = 0;
   bitem = look_for_node_with_id(pm->name);
@@ -229,6 +229,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     is_persistent = vm_config_flags & VM_CONFIG_FLAG_PERSISTENT;
     is_full_virt  = vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT;
     has_vhost_vsock = vm_config_flags & VM_CONFIG_FLAG_VHOST_VSOCK;
+    is_uefi = vm_config_flags & VM_CONFIG_FLAG_UEFI;
     is_backed   = vm_config_flags & VM_FLAG_DERIVED_BACKING;
     is_inside_cloonix = vm_config_flags & VM_FLAG_IS_INSIDE_CLOONIX;
     has_install_cdrom = vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM;
@@ -250,6 +251,8 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
       len += sprintf(text + len, "\n\t\tFULL VIRT");
     if (has_vhost_vsock)
       len += sprintf(text + len, "\n\t\tVHOST_VSOCK");
+    if (is_uefi)
+      len += sprintf(text + len, "\n\t\tUEFI");
     if (is_backed)
       {
       len += sprintf(text + len, "\n\t\tDERIVED FROM BACKING");

@@ -109,13 +109,13 @@ static void is_full_virt_toggle(GtkToggleButton *togglebutton,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void is_ballooning_toggle(GtkToggleButton *togglebutton,         
+static void is_uefi_toggle(GtkToggleButton *togglebutton,         
                                  gpointer user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton))
-    custom_vm.is_ballooning = 1;
+    custom_vm.is_uefi = 1;
   else
-    custom_vm.is_ballooning = 0;
+    custom_vm.is_uefi = 0;
   arm_timer_relaunch_dialog();
 }
 /*--------------------------------------------------------------------------*/
@@ -217,7 +217,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
   GtkWidget *entry_p9_host_share; 
   GtkWidget *entry_cpu=NULL, *entry_eth_nb, *entry_wlan_nb;
   GtkWidget *grid, *parent, *numadd;
-  GtkWidget *is_persistent, *is_ballooning;
+  GtkWidget *is_persistent, *is_uefi;
   GtkWidget *is_full_virt;
   GtkWidget *has_p9_host_share;
 
@@ -247,13 +247,13 @@ static void custom_vm_dialog(t_custom_vm *cust)
 
 
 
-  is_ballooning = gtk_check_button_new_with_label("ballooning");
-  if (custom_vm.is_ballooning)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_ballooning), TRUE);
+  is_uefi = gtk_check_button_new_with_label("uefi");
+  if (custom_vm.is_uefi)
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_uefi), TRUE);
   else
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_ballooning), FALSE);
-  g_signal_connect(is_ballooning,"toggled",
-                   G_CALLBACK(is_ballooning_toggle),NULL);
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_uefi), FALSE);
+  g_signal_connect(is_uefi,"toggled",
+                   G_CALLBACK(is_uefi_toggle),NULL);
 
   is_full_virt = gtk_check_button_new_with_label("full virt");
   if (custom_vm.is_full_virt)
@@ -284,7 +284,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
   append_grid(grid, numadd, "Append:", line_nb++);
 
   append_grid(grid, is_persistent, "remanence of file-system:", line_nb++);
-  append_grid(grid, is_ballooning, "ballooning:", line_nb++);
+  append_grid(grid, is_uefi, "uefi:", line_nb++);
   append_grid(grid, is_full_virt, "full virt:", line_nb++);
   append_grid(grid, has_p9_host_share, "9p host share files:", line_nb++);
 
@@ -363,7 +363,7 @@ void menu_dialog_vm_init(void)
   custom_vm.add_number = 1;
   custom_vm.is_persistent = 0;
   custom_vm.is_sda_disk = 0;
-  custom_vm.is_ballooning = 0;
+  custom_vm.is_uefi = 0;
   custom_vm.is_full_virt = 0;
   custom_vm.has_p9_host_share = 0;
   custom_vm.cpu = 4;

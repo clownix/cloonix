@@ -52,7 +52,10 @@
 #define VIRTIO_9P " -fsdev local,id=fsdev0,security_model=passthrough,path=%s"\
                   " -device virtio-9p-pci,id=fs0,fsdev=fsdev0,mount_tag=%s"
 
-#define DRIVE_FULL_VIRT " -drive file=%s,index=%d,media=disk,if=ide"
+#define DRIVE_FULL_VIRT " -blockdev node-name=%s,driver=qcow2,"\
+                        "file.driver=file,file.node-name=file,file.filename=%s" \
+                        " -device ide-hd,bus=ide.0,unit=0,drive=%s"
+
 
 #define INSTALL_DISK " -boot d -drive file=%s,index=%d,media=disk,if=virtio"
 
@@ -70,7 +73,9 @@
 
 #define BLOCKNAME " -blockdev node-name=%s,driver=qcow2,"\
                   "file.driver=file,file.node-name=file,file.filename=%s" \
-                  " -device virtio-blk,drive=%s,id=virtio0"
+                  " -device virtio-blk,drive=%s"
+
+#define FLAG_UEFI " -bios %s/server/qemu/%s/OVMF.fd"
 
 
 typedef struct t_cprootfs_config
@@ -333,6 +338,7 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
    " -device intel-hda"\
    " -device hda-micro"\
    " -device ich9-usb-ehci1,id=usb,bus=pci.0"\
+   " -device usb-tablet,bus=usb.0"\
    " -device ich9-usb-uhci1,masterbus=usb.0,firstport=0,bus=pci.0,multifunction=on"\
    " -chardev spicevmc,id=charredir0,name=usbredir"\
    " -device usb-redir,chardev=charredir0,id=redir0"\
@@ -413,6 +419,8 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
                 utils_get_qmp_path(vm->kvm.vm_id));
 
  
+  if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_UEFI)
+    len += sprintf(cmd_start+len, FLAG_UEFI, cfg_get_bin_dir(), QEMU_BIN_DIR);
   if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
     {
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VHOST_VSOCK)
@@ -474,7 +482,8 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
   else
     {
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT)
-      len += sprintf(linux_cmd+len, DRIVE_FULL_VIRT, rootfs, 0);
+      len += sprintf(linux_cmd+len, DRIVE_FULL_VIRT, 
+                     vm->kvm.name, rootfs, vm->kvm.name );
     else
       {
       if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)

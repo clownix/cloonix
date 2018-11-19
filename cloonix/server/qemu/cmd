@@ -10,6 +10,7 @@ MUETH=${HERE}/../../
 rm -rf ${HERE}/qemu_bin
 mkdir -p ${HERE}/qemu_bin
 
+mv ${HERE}/OVMF.fd ${HERE}/qemu_bin
 cd ${HERE}/sources
 ./patched_create
 mv tainted_qemu ${HERE}/qemu_bin

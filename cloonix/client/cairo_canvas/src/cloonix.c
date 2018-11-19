@@ -146,8 +146,8 @@ int get_vm_config_flags(t_custom_vm *cust_vm)
   int vm_config_flags = 0;
   if (cust_vm->is_full_virt)
     vm_config_flags |= VM_CONFIG_FLAG_FULL_VIRT;
-  if (cust_vm->is_ballooning)
-    vm_config_flags |= VM_CONFIG_FLAG_BALLOONING;
+  if (cust_vm->is_uefi)
+    vm_config_flags |= VM_CONFIG_FLAG_UEFI;
   if (cust_vm->is_persistent)
     {
     vm_config_flags |= VM_CONFIG_FLAG_PERSISTENT;
