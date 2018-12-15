@@ -3,15 +3,18 @@ AGPLv3 tool to create networks of kvm virtual machines.
 
 See directory cloonix for the LICENCE
 
-See clownix.net for documentation that may not be up to date.
-
-The version v01-01 is after the v42-07...
+See clownix.net for a documentation which may not be up to date.
 
 All open source compiled within cloonix such as qemu, spice, openssh...
 is stored at clownix.net/cloonix-v<major>-<minor>/targz_store.tar.gz
 
-Qemu version has changed between v01-00 and v01-01, targz_store.tar.gz
-must be downloaded again for this new version.
+You must get the targz_store.tar.gz matching the cloonix-v<major>-<minor>.
+This version v01-02, is the latest since the re-numbering from 42 to 01.
+
+Get the open sources associated to this version (qemu, spice...) from:
+
+   clownix.net/cloonix-v01-02/targz_store.tar.gz
+
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -20,7 +23,7 @@ It is assumed that sudo makes the command run as root.
 
 cd cloonix
 sudo ./install_depends build
-wget clownix.net/cloonix-v01-01/targz_store.tar.gz
+wget clownix.net/cloonix-v01-02/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 ./doitall
 cd -

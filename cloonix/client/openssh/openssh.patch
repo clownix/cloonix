@@ -1,7 +1,7 @@
-diff -Naur openssh-7.6p1/Makefile.in tainted_openssh/Makefile.in
---- openssh-7.6p1/Makefile.in	2017-10-02 21:34:26.000000000 +0200
-+++ tainted_openssh/Makefile.in	2018-01-06 11:55:01.620282325 +0100
-@@ -43,7 +43,7 @@
+diff -Naur openssh-7.9p1/Makefile.in tainted_openssh/Makefile.in
+--- openssh-7.9p1/Makefile.in	2018-10-17 02:01:20.000000000 +0200
++++ tainted_openssh/Makefile.in	2018-12-15 13:31:56.660304237 +0100
+@@ -41,7 +41,7 @@
  CC=@CC@
  LD=@LD@
  CFLAGS=@CFLAGS@
@@ -10,7 +10,7 @@ diff -Naur openssh-7.6p1/Makefile.in tainted_openssh/Makefile.in
  LIBS=@LIBS@
  K5LIBS=@K5LIBS@
  GSSLIBS=@GSSLIBS@
-@@ -58,11 +58,11 @@
+@@ -55,12 +55,13 @@
  SED=@SED@
  ENT=@ENT@
  XAUTH_PATH=@XAUTH_PATH@
@@ -18,16 +18,18 @@ diff -Naur openssh-7.6p1/Makefile.in tainted_openssh/Makefile.in
 +LDFLAGS=-L../lib_doorways/ -ldoorways -L../../../common/lib_io_clownix/ -lio_clownix -L../../../common/lib_blkd -lblkd -L../../../common/lib_rpct -lrpct -ldoorways -L. -Lopenbsd-compat/ @LDFLAGS@
  EXEEXT=@EXEEXT@
  MANFMT=@MANFMT@
+ MKDIR_P=@MKDIR_P@
  
 -TARGETS=ssh$(EXEEXT) sshd$(EXEEXT) ssh-add$(EXEEXT) ssh-keygen$(EXEEXT) ssh-keyscan${EXEEXT} ssh-keysign${EXEEXT} ssh-pkcs11-helper$(EXEEXT) ssh-agent$(EXEEXT) scp$(EXEEXT) sftp-server$(EXEEXT) sftp$(EXEEXT)
 +TARGETS=ssh scp
++
  
- LIBOPENSSH_OBJS=\
- 	ssh_api.o \
-diff -Naur openssh-7.6p1/misc.c tainted_openssh/misc.c
---- openssh-7.6p1/misc.c	2017-10-02 21:34:26.000000000 +0200
-+++ tainted_openssh/misc.c	2018-01-06 11:55:01.620282325 +0100
-@@ -446,23 +446,16 @@
+ XMSS_OBJS=\
+ 	ssh-xmss.o \
+diff -Naur openssh-7.9p1/misc.c tainted_openssh/misc.c
+--- openssh-7.9p1/misc.c	2018-10-17 02:01:20.000000000 +0200
++++ tainted_openssh/misc.c	2018-12-15 13:31:56.660304237 +0100
+@@ -545,23 +545,16 @@
  char *
  colon(char *cp)
  {
@@ -59,10 +61,10 @@ diff -Naur openssh-7.6p1/misc.c tainted_openssh/misc.c
  	return NULL;
  }
  
-diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
---- openssh-7.6p1/scp.c	2017-10-02 21:34:26.000000000 +0200
-+++ tainted_openssh/scp.c	2018-01-06 11:55:01.620282325 +0100
-@@ -118,11 +118,15 @@
+diff -Naur openssh-7.9p1/scp.c tainted_openssh/scp.c
+--- openssh-7.9p1/scp.c	2018-10-17 02:01:20.000000000 +0200
++++ tainted_openssh/scp.c	2018-12-15 15:43:37.424975238 +0100
+@@ -119,11 +119,15 @@
  #include "misc.h"
  #include "progressmeter.h"
  #include "utf8.h"
@@ -75,10 +77,10 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
 +#define MAX_INFO_LEN 256
 +static char g_cloonix_path[MAX_INFO_LEN];
 +
- int do_cmd(char *host, char *remuser, char *cmd, int *fdin, int *fdout);
- int do_cmd2(char *host, char *remuser, char *cmd, int fdin, int fdout);
+ int do_cmd(char *host, char *remuser, int port, char *cmd, int *fdin, int *fdout);
+ int do_cmd2(char *host, char *remuser, int port, char *cmd, int fdin, int fdout);
  
-@@ -182,6 +186,7 @@
+@@ -186,6 +190,7 @@
  	}
  }
  
@@ -86,7 +88,7 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
  static int
  do_local_cmd(arglist *a)
  {
-@@ -223,6 +228,7 @@
+@@ -227,6 +232,7 @@
  
  	return (0);
  }
@@ -94,11 +96,12 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
  
  /*
   * This function executes the given command as the specified user on the
-@@ -368,16 +374,55 @@
+@@ -386,17 +392,59 @@
  void source(int, char *[]);
  void tolocal(int, char *[]);
- void toremote(char *, int, char *[]);
+ void toremote(int, char *[]);
 -void usage(void);
++
 +void usage(int line);
 +
 +/****************************************************************************/
@@ -122,15 +125,17 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
  main(int argc, char **argv)
  {
 -	int ch, fflag, tflag, status, n;
--	char *targ, **newargv;
-+	int pid, ch, fflag, tflag, status, n;
-+	char *targ, **newargv, *ptr;
+-	char **newargv;
++       int pid, ch, fflag, tflag, status, n;
++       char **newargv, *ptr;
++
  	const char *errstr;
  	extern char *optarg;
  	extern int optind;
-+	char *u2i_ssh_path = get_cloonix_u2i_ssh_path(argv[0]);
+ 
++       char *u2i_ssh_path = get_cloonix_u2i_ssh_path(argv[0]);
 +
-+	ssh_program = u2i_ssh_path;
++       ssh_program = u2i_ssh_path;
 +
 +        memset(g_cloonix_path, 0, MAX_INFO_LEN);
 +        ptr = argv[1];
@@ -150,10 +155,11 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
 +
 +        argv++;
 +        argc--;
- 
++
  	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
  	sanitise_stdfd();
-@@ -396,6 +441,7 @@
+ 
+@@ -414,6 +462,7 @@
  	memset(&remote_remote_args, '\0', sizeof(remote_remote_args));
  	args.list = remote_remote_args.list = NULL;
  	addargs(&args, "%s", ssh_program);
@@ -161,7 +167,7 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
  	addargs(&args, "-x");
  	addargs(&args, "-oForwardAgent=no");
  	addargs(&args, "-oPermitLocalCommand=no");
-@@ -443,7 +489,7 @@
+@@ -462,7 +511,7 @@
  			limit_kbps = strtonum(optarg, 1, 100 * 1024 * 1024,
  			    &errstr);
  			if (errstr != NULL)
@@ -170,7 +176,7 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
  			limit_kbps *= 1024; /* kbps */
  			bandwidth_limit_init(&bwlimit, limit_kbps, COPY_BUFLEN);
  			break;
-@@ -454,7 +500,6 @@
+@@ -473,7 +522,6 @@
  			iamrecursive = 1;
  			break;
  		case 'S':
@@ -178,7 +184,7 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
  			break;
  		case 'v':
  			addargs(&args, "-v");
-@@ -483,7 +528,7 @@
+@@ -502,7 +550,7 @@
  #endif
  			break;
  		default:
@@ -187,7 +193,7 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
  		}
  	argc -= optind;
  	argv += optind;
-@@ -519,7 +564,7 @@
+@@ -538,7 +586,7 @@
  		exit(errs != 0);
  	}
  	if (argc < 2)
@@ -196,75 +202,79 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
  	if (argc > 2)
  		targetshouldbedirectory = 1;
  
-@@ -592,10 +637,9 @@
+@@ -623,181 +671,70 @@
  void
- toremote(char *targ, int argc, char **argv)
+ toremote(int argc, char **argv)
  {
--	char *bp, *host, *src, *suser, *thost, *tuser, *arg;
-+	char *bp, *src, *thost, *tuser, *arg;
- 	arglist alist;
- 	int i;
+-	char *suser = NULL, *host = NULL, *src = NULL;
+-	char *bp, *tuser, *thost, *targ;
+-	int sport = -1, tport = -1;
+-	arglist alist;
+-	int i, r;
 -	u_int j;
- 
- 	memset(&alist, '\0', sizeof(alist));
- 	alist.list = NULL;
-@@ -605,16 +649,10 @@
- 		targ = ".";
- 
- 	arg = xstrdup(argv[argc - 1]);
--	if ((thost = strrchr(arg, '@'))) {
--		/* user@host */
--		*thost++ = 0;
--		tuser = arg;
--		if (*tuser == '\0')
--			tuser = NULL;
--	} else {
--		thost = arg;
--		tuser = NULL;
+-
+-	memset(&alist, '\0', sizeof(alist));
+-	alist.list = NULL;
+-
+-	/* Parse target */
+-	r = parse_scp_uri(argv[argc - 1], &tuser, &thost, &tport, &targ);
+-	if (r == -1) {
+-		fmprintf(stderr, "%s: invalid uri\n", argv[argc - 1]);
+-		++errs;
+-		goto out;
 -	}
-+
-+	//cloonix
-+	thost = arg;
-+	tuser = NULL;
- 
- 	if (tuser != NULL && !okname(tuser)) {
- 		free(arg);
-@@ -623,80 +661,14 @@
- 
- 	for (i = 0; i < argc - 1; i++) {
- 		src = colon(argv[i]);
--		if (src && throughlocal) {	/* extended remote to remote */
--			*src++ = 0;
--			if (*src == 0)
--				src = ".";
--			host = strrchr(argv[i], '@');
--			if (host) {
--				*host++ = 0;
--				host = cleanhostname(host);
--				suser = argv[i];
--				if (*suser == '\0')
--					suser = pwd->pw_name;
--				else if (!okname(suser))
--					continue;
--			} else {
--				host = cleanhostname(argv[i]);
--				suser = NULL;
--			}
+-	if (r != 0) {
+-		if (parse_user_host_path(argv[argc - 1], &tuser, &thost,
+-		    &targ) == -1) {
+-			fmprintf(stderr, "%s: invalid target\n", argv[argc - 1]);
+-			++errs;
+-			goto out;
+-		}
+-	}
+-	if (tuser != NULL && !okname(tuser)) {
+-		++errs;
+-		goto out;
+-	}
+-
+-	/* Parse source files */
+-	for (i = 0; i < argc - 1; i++) {
+-		free(suser);
+-		free(host);
+-		free(src);
+-		r = parse_scp_uri(argv[i], &suser, &host, &sport, &src);
+-		if (r == -1) {
+-			fmprintf(stderr, "%s: invalid uri\n", argv[i]);
+-			++errs;
+-			continue;
+-		}
+-		if (r != 0) {
+-			parse_user_host_path(argv[i], &suser, &host, &src);
+-		}
+-		if (suser != NULL && !okname(suser)) {
+-			++errs;
+-			continue;
+-		}
+-		if (host && throughlocal) {	/* extended remote to remote */
 -			xasprintf(&bp, "%s -f %s%s", cmd,
 -			    *src == '-' ? "-- " : "", src);
--			if (do_cmd(host, suser, bp, &remin, &remout) < 0)
+-			if (do_cmd(host, suser, sport, bp, &remin, &remout) < 0)
 -				exit(1);
 -			free(bp);
--			host = cleanhostname(thost);
 -			xasprintf(&bp, "%s -t %s%s", cmd,
 -			    *targ == '-' ? "-- " : "", targ);
--			if (do_cmd2(host, tuser, bp, remin, remout) < 0)
+-			if (do_cmd2(thost, tuser, tport, bp, remin, remout) < 0)
 -				exit(1);
 -			free(bp);
 -			(void) close(remin);
 -			(void) close(remout);
 -			remin = remout = -1;
--		} else if (src) {	/* standard remote to remote */
+-		} else if (host) {	/* standard remote to remote */
+-			if (tport != -1 && tport != SSH_DEFAULT_PORT) {
+-				/* This would require the remote support URIs */
+-				fatal("target port not supported with two "
+-				    "remote hosts without the -3 option");
+-			}
+-
 -			freeargs(&alist);
 -			addargs(&alist, "%s", ssh_program);
 -			addargs(&alist, "-x");
@@ -274,23 +284,14 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
 -				addargs(&alist, "%s",
 -				    remote_remote_args.list[j]);
 -			}
--			*src++ = 0;
--			if (*src == 0)
--				src = ".";
--			host = strrchr(argv[i], '@');
 -
--			if (host) {
--				*host++ = 0;
--				host = cleanhostname(host);
--				suser = argv[i];
--				if (*suser == '\0')
--					suser = pwd->pw_name;
--				else if (!okname(suser))
--					continue;
+-			if (sport != -1) {
+-				addargs(&alist, "-p");
+-				addargs(&alist, "%d", sport);
+-			}
+-			if (suser) {
 -				addargs(&alist, "-l");
 -				addargs(&alist, "%s", suser);
--			} else {
--				host = cleanhostname(argv[i]);
 -			}
 -			addargs(&alist, "--");
 -			addargs(&alist, "%s", host);
@@ -302,24 +303,89 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
 -			if (do_local_cmd(&alist) != 0)
 -				errs = 1;
 -		} else {	/* local to remote */
-+		if (src) {
-+        		fprintf(stderr, "REMOTE TO REMOTE NOT IMPLEMENTED\n");
-+        		exit(255);
-+		} else {
- 			if (remin == -1) {
- 				xasprintf(&bp, "%s -t %s%s", cmd,
- 				    *targ == '-' ? "-- " : "", targ);
--				host = cleanhostname(thost);
--				if (do_cmd(host, tuser, bp, &remin,
-+				if (do_cmd(thost, tuser, bp, &remin,
- 				    &remout) < 0)
- 					exit(1);
- 				if (response() < 0)
-@@ -720,33 +692,16 @@
- 	alist.list = NULL;
+-			if (remin == -1) {
+-				xasprintf(&bp, "%s -t %s%s", cmd,
+-				    *targ == '-' ? "-- " : "", targ);
+-				if (do_cmd(thost, tuser, tport, bp, &remin,
+-				    &remout) < 0)
+-					exit(1);
+-				if (response() < 0)
+-					exit(1);
+-				free(bp);
+-			}
+-			source(1, argv + i);
+-		}
+-	}
+-out:
+-	free(tuser);
+-	free(thost);
+-	free(targ);
+-	free(suser);
+-	free(host);
+-	free(src);
++  char *bp, *src, *targ, *tuser, *thost;
++  int i;
++  targ = colon(argv[argc - 1]);
++  *targ++ = 0;
++  if (*targ == 0)
++    targ = ".";
++  thost = xstrdup(argv[argc - 1]);
++  tuser = NULL;
++  for (i = 0; i < argc - 1; i++)
++    {
++    src = colon(argv[i]);
++    if (src)
++      {
++      fprintf(stderr, "REMOTE TO REMOTE NOT IMPLEMENTED\n");
++      exit(255);
++      }
++    if (remin == -1)
++      {
++      xasprintf(&bp, "%s -t %s%s", cmd, *targ == '-' ? "-- " : "", targ);
++      if (do_cmd(thost, tuser, -1, bp, &remin, &remout) < 0)
++        {
++        fmprintf(stderr, "%s: invalid do_cmd\n", thost);
++        exit(1);
++        }
++      if (response() < 0)
++        {
++        fmprintf(stderr, "%s: invalid response\n", thost);
++        exit(1);
++        }
++      free(bp);
++      }
++    source(1, argv + i);
++    }
++  free(thost);
+ }
  
- 	for (i = 0; i < argc - 1; i++) {
--		if (!(src = colon(argv[i]))) {	/* Local to local. */
+ void
+ tolocal(int argc, char **argv)
+ {
+-	char *bp, *host = NULL, *src = NULL, *suser = NULL;
+-	arglist alist;
+-	int i, r, sport = -1;
+-
+-	memset(&alist, '\0', sizeof(alist));
+-	alist.list = NULL;
+-
+-	for (i = 0; i < argc - 1; i++) {
+-		free(suser);
+-		free(host);
+-		free(src);
+-		r = parse_scp_uri(argv[i], &suser, &host, &sport, &src);
+-		if (r == -1) {
+-			fmprintf(stderr, "%s: invalid uri\n", argv[i]);
+-			++errs;
+-			continue;
+-		}
+-		if (r != 0)
+-			parse_user_host_path(argv[i], &suser, &host, &src);
+-		if (suser != NULL && !okname(suser)) {
+-			++errs;
+-			continue;
+-		}
+-		if (!host) {	/* Local to local. */
 -			freeargs(&alist);
 -			addargs(&alist, "%s", _PATH_CP);
 -			if (iamrecursive)
@@ -332,49 +398,77 @@ diff -Naur openssh-7.6p1/scp.c tainted_openssh/scp.c
 -			if (do_local_cmd(&alist))
 -				++errs;
 -			continue;
-+		if (!(src = colon(argv[i]))) {
-+        		fprintf(stderr, "LOCAL TO LOCAL NOT IMPLEMENTED\n");
-+        		exit(255);
- 		}
- 		*src++ = 0;
- 		if (*src == 0)
- 			src = ".";
--		if ((host = strrchr(argv[i], '@')) == NULL) {
--			host = argv[i];
--			suser = NULL;
--		} else {
--			*host++ = 0;
--			suser = argv[i];
--			if (*suser == '\0')
--				suser = pwd->pw_name;
 -		}
--		host = cleanhostname(host);
-+		//cloonix
-+		host = argv[i];
-+		suser = NULL;
- 		xasprintf(&bp, "%s -f %s%s",
- 		    cmd, *src == '-' ? "-- " : "", src);
- 		if (do_cmd(host, suser, bp, &remin, &remout) < 0) {
-@@ -1271,12 +1226,12 @@
+-		/* Remote to local. */
+-		xasprintf(&bp, "%s -f %s%s",
+-		    cmd, *src == '-' ? "-- " : "", src);
+-		if (do_cmd(host, suser, sport, bp, &remin, &remout) < 0) {
+-			free(bp);
+-			++errs;
+-			continue;
+-		}
+-		free(bp);
+-		sink(1, argv + argc - 1);
+-		(void) close(remin);
+-		remin = remout = -1;
+-	}
+-	free(suser);
+-	free(host);
+-	free(src);
++  char *bp, *host = NULL, *src = NULL, *suser = NULL;
++  int i;
++  for (i = 0; i < argc - 1; i++)
++    {
++    if (!(src = colon(argv[i])))
++      {
++      fprintf(stderr, "LOCAL TO LOCAL NOT IMPLEMENTED\n");
++      exit(255);
++      }
++    *src++ = 0;
++    if (*src == 0)
++      src = ".";
++    host = argv[i];
++    suser = NULL;
++    xasprintf(&bp, "%s -f %s%s", cmd, *src == '-' ? "-- " : "", src);
++    if (do_cmd(host, suser, -1, bp, &remin, &remout) < 0)
++      {
++      fprintf(stderr, "do_cmd error TOLOOK\n");
++      exit(255);
++      }
++    free(bp);
++    sink(1, argv + argc - 1);
++    (void) close(remin);
++    remin = remout = -1;
++    }
+ }
+ 
+ void
+@@ -1312,13 +1249,14 @@
  }
  
  void
 -usage(void)
-+usage(int line)
- {
- 	(void) fprintf(stderr,
+-{
+-	(void) fprintf(stderr,
 -	    "usage: scp [-346BCpqrv] [-c cipher] [-F ssh_config] [-i identity_file]\n"
-+	    "line:%d usage: scp [-346BCpqrv] [-c cipher] [-F ssh_config] [-i identity_file]\n"
- 	    "           [-l limit] [-o ssh_option] [-P port] [-S program]\n"
--	    "           [[user@]host1:]file1 ... [[user@]host2:]file2\n");
-+	    "           [[user@]host1:]file1 ... [[user@]host2:]file2\n", line);
- 	exit(1);
- }
+-	    "           [-l limit] [-o ssh_option] [-P port] [-S program] source ... target\n");
+-	exit(1);
+-}
++usage(int line)
++ {
++        (void) fprintf(stderr,
++           "line:%d usage: scp [-346BCpqrv] [-c cipher] [-F ssh_config] [-i identity_file]\n"
++            "           [-l limit] [-o ssh_option] [-P port] [-S program]\n"
++           "           [[user@]host1:]file1 ... [[user@]host2:]file2\n", line);
++        exit(1);
++ }
  
-diff -Naur openssh-7.6p1/ssh.c tainted_openssh/ssh.c
---- openssh-7.6p1/ssh.c	2017-10-02 21:34:26.000000000 +0200
-+++ tainted_openssh/ssh.c	2018-01-06 11:55:01.624282344 +0100
-@@ -114,6 +114,8 @@
+ void
+ run_err(const char *fmt,...)
+diff -Naur openssh-7.9p1/ssh.c tainted_openssh/ssh.c
+--- openssh-7.9p1/ssh.c	2018-10-17 02:01:20.000000000 +0200
++++ tainted_openssh/ssh.c	2018-12-15 13:31:56.660304237 +0100
+@@ -113,6 +113,8 @@
  #include "ssh-pkcs11.h"
  #endif
  
@@ -383,7 +477,7 @@ diff -Naur openssh-7.6p1/ssh.c tainted_openssh/ssh.c
  extern char *__progname;
  
  /* Saves a copy of argv for setproctitle emulation */
-@@ -502,6 +504,45 @@
+@@ -573,6 +575,45 @@
  	}
  }
  
@@ -429,7 +523,7 @@ diff -Naur openssh-7.6p1/ssh.c tainted_openssh/ssh.c
  /*
   * Main program for the ssh client.
   */
-@@ -522,6 +563,12 @@
+@@ -592,6 +633,12 @@
  	struct addrinfo *addrs = NULL;
  	struct ssh_digest_ctx *md;
  	u_char conn_hash[SSH_DIGEST_MAX_LENGTH];
@@ -442,7 +536,7 @@ diff -Naur openssh-7.6p1/ssh.c tainted_openssh/ssh.c
  
  	ssh_malloc_init();	/* must be called before any mallocs */
  	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
-@@ -529,6 +576,33 @@
+@@ -599,6 +646,33 @@
  
  	__progname = ssh_get_progname(av[0]);
  
@@ -476,28 +570,34 @@ diff -Naur openssh-7.6p1/ssh.c tainted_openssh/ssh.c
  #ifndef HAVE_SETPROCTITLE
  	/* Prepare for later setproctitle emulation */
  	/* Save argv so it isn't clobbered by setproctitle() emulation */
-@@ -934,13 +1008,13 @@
- 
- 	if (ac > 0 && !host) {
- 		if (strrchr(*av, '@')) {
+@@ -1007,20 +1081,12 @@
+ 				options.port = tport;
+ 			break;
+ 		default:
 -			p = xstrdup(*av);
 -			cp = strrchr(p, '@');
--			if (cp == NULL || cp == p)
--				usage();
--			options.user = p;
--			*cp = '\0';
--			host = xstrdup(++cp);
+-			if (cp != NULL) {
+-				if (cp == p)
+-					usage();
+-				if (options.user == NULL) {
+-					options.user = p;
+-					p = NULL;
+-				}
+-				*cp++ = '\0';
+-				host = xstrdup(cp);
+-				free(p);
+-			} else
+-				host = p;
 +
-+			get_cloonix_info(ac, av, cloonix_init_string,
++                       get_cloonix_info(ac, av, cloonix_init_string,
 +                                         cloonix_user, cloonix_ip,
 +                                         &cloonix_port);
-+			host = cloonix_ip;
-+			options.user = cloonix_user;
-+
- 		} else
- 			host = xstrdup(*av);
++                       host = cloonix_ip;
++                       options.user = cloonix_user;
+ 			break;
+ 		}
  		if (ac > 1 && !opt_terminated) {
-@@ -950,10 +1024,6 @@
+@@ -1030,10 +1096,6 @@
  		ac--, av++;
  	}
  
@@ -508,16 +608,18 @@ diff -Naur openssh-7.6p1/ssh.c tainted_openssh/ssh.c
  	host_arg = xstrdup(host);
  
  #ifdef WITH_OPENSSL
-@@ -1282,7 +1352,7 @@
+@@ -1363,9 +1425,7 @@
  	timeout_ms = options.connection_timeout * 1000;
  
  	/* Open a connection to the remote host. */
 -	if (ssh_connect(ssh, host, addrs, &hostaddr, options.port,
-+        if (ssh_connect(cloonix_path, host, addrs, &hostaddr, options.port,
- 	    options.address_family, options.connection_attempts,
- 	    &timeout_ms, options.tcp_keep_alive,
- 	    options.use_privileged_port) != 0)
-@@ -1429,8 +1499,8 @@
+-	    options.address_family, options.connection_attempts,
+-	    &timeout_ms, options.tcp_keep_alive) != 0)
++        if (ssh_connect(cloonix_path) != 0)
+  		exit(255);
+ 
+ 	if (addrs != NULL)
+@@ -1486,8 +1546,8 @@
  	signal(SIGCHLD, main_sigchld_handler);
  
  	/* Log into the remote system.  Never returns if the login fails. */
@@ -528,12 +630,12 @@ diff -Naur openssh-7.6p1/ssh.c tainted_openssh/ssh.c
  
  	if (packet_connection_is_on_socket()) {
  		verbose("Authenticated to %s ([%s]:%d).", host,
-diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
---- openssh-7.6p1/sshconnect.c	2017-10-02 21:34:26.000000000 +0200
-+++ tainted_openssh/sshconnect.c	2018-01-06 11:56:27.648702674 +0100
-@@ -44,6 +44,11 @@
- #include <string.h>
- #include <unistd.h>
+diff -Naur openssh-7.9p1/sshconnect.c tainted_openssh/sshconnect.c
+--- openssh-7.9p1/sshconnect.c	2018-10-17 02:01:20.000000000 +0200
++++ tainted_openssh/sshconnect.c	2018-12-15 13:31:56.660304237 +0100
+@@ -48,6 +48,11 @@
+ # include <ifaddrs.h>
+ #endif
  
 +#include <sys/socket.h>
 +#include <sys/un.h>
@@ -541,9 +643,9 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
 +
 +
  #include "xmalloc.h"
- #include "key.h"
  #include "hostfile.h"
-@@ -66,6 +71,7 @@
+ #include "ssh.h"
+@@ -68,6 +73,7 @@
  #include "authfile.h"
  #include "ssherr.h"
  #include "authfd.h"
@@ -559,7 +661,7 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  /* Expand a proxy command */
  static char *
  expand_proxy_command(const char *proxy_command, const char *user,
-@@ -258,6 +265,7 @@
+@@ -252,6 +259,7 @@
  
  	return 0;
  }
@@ -567,15 +669,15 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  
  void
  ssh_kill_proxy_command(void)
-@@ -270,6 +278,7 @@
- 		kill(proxy_command_pid, SIGHUP);
+@@ -327,6 +335,7 @@
  }
+ #endif
  
 +#if 0 //cloonix
  /*
-  * Creates a (possibly privileged) socket for use as the ssh connection.
+  * Creates a socket for use as the ssh connection.
   */
-@@ -332,6 +341,7 @@
+@@ -419,6 +428,7 @@
  	return sock;
  }
  
@@ -583,7 +685,7 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  /*
   * Wait up to *timeoutp milliseconds for fd to be readable. Updates
   * *timeoutp with time remaining.
-@@ -364,6 +374,7 @@
+@@ -451,6 +461,7 @@
  	return -1;
  }
  
@@ -591,22 +693,22 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  static int
  timeout_connect(int sockfd, const struct sockaddr *serv_addr,
      socklen_t addrlen, int *timeoutp)
-@@ -490,37 +501,53 @@
+@@ -583,36 +594,56 @@
  
          return 0;
  }
 +#endif //cloonix
++
  
  int
 -ssh_connect(struct ssh *ssh, const char *host, struct addrinfo *addrs,
-+ssh_connect(char *cloonix_path, const char *host, struct addrinfo *addrs,
-     struct sockaddr_storage *hostaddr, u_short port, int family,
-     int connection_attempts, int *timeout_ms, int want_keepalive, int needpriv)
+-    struct sockaddr_storage *hostaddr, u_short port, int family,
+-    int connection_attempts, int *timeout_ms, int want_keepalive)
++ssh_connect(char *cloonix_path)
  {
 -	if (options.proxy_command == NULL) {
 -		return ssh_connect_direct(ssh, host, addrs, hostaddr, port,
--		    family, connection_attempts, timeout_ms, want_keepalive,
--		    needpriv);
+-		    family, connection_attempts, timeout_ms, want_keepalive);
 -	} else if (strcmp(options.proxy_command, "-") == 0) {
 -		if ((ssh_packet_set_connection(ssh,
 -		    STDIN_FILENO, STDOUT_FILENO)) == NULL)
@@ -653,17 +755,21 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  	/* Send our own protocol version identification. */
 -	xasprintf(&client_version_string, "SSH-%d.%d-%.100s\r\n",
 -	    PROTOCOL_MAJOR_2, PROTOCOL_MINOR_2, SSH_VERSION);
-+	xasprintf(&client_version_string, "%sSSH-%d.%d-%.100s\r\n",
-+	   cloonix_info, PROTOCOL_MAJOR_2, PROTOCOL_MINOR_2, SSH_VERSION);
++
++       xasprintf(&client_version_string, "%sSSH-%d.%d-%.100s\r\n",
++          cloonix_info, PROTOCOL_MAJOR_2, PROTOCOL_MINOR_2, SSH_VERSION);
++
  	if (atomicio(vwrite, connection_out, client_version_string,
  	    strlen(client_version_string)) != strlen(client_version_string))
  		fatal("write: %.100s", strerror(errno));
-+	xasprintf(&client_version_string, "SSH-%d.%d-%.100s\r\n",
-+	          PROTOCOL_MAJOR_2, PROTOCOL_MINOR_2, SSH_VERSION);
++
++       xasprintf(&client_version_string, "SSH-%d.%d-%.100s\r\n",
++                 PROTOCOL_MAJOR_2, PROTOCOL_MINOR_2, SSH_VERSION);
++
  	chop(client_version_string);
  	debug("Local version string %.100s", client_version_string);
  }
-@@ -530,7 +557,7 @@
+@@ -622,7 +653,7 @@
   * identification string.
   */
  void
@@ -672,7 +778,7 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  {
  	char buf[256], remote_version[256];	/* must be same size! */
  	int remote_major, remote_minor, mismatch;
-@@ -540,7 +567,7 @@
+@@ -632,7 +663,7 @@
  	size_t len;
  	int rc;
  
@@ -681,7 +787,7 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  
  	/* Read other side's version identification. */
  	for (n = 0;;) {
-@@ -1190,6 +1217,7 @@
+@@ -1288,6 +1319,7 @@
  	int r = -1, flags = 0;
  	char valid[64], *fp = NULL, *cafp = NULL;
  	struct sshkey *plain = NULL;
@@ -689,7 +795,7 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  
  	if ((fp = sshkey_fingerprint(host_key,
  	    options.fingerprint_hash, SSH_FP_DEFAULT)) == NULL) {
-@@ -1303,8 +1331,9 @@
+@@ -1401,8 +1433,9 @@
   * This function does not require super-user privileges.
   */
  void
@@ -701,7 +807,7 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  {
  	char *host;
  	char *server_user, *local_user;
-@@ -1317,7 +1346,7 @@
+@@ -1415,7 +1448,7 @@
  	lowercase(host);
  
  	/* Exchange protocol version identification strings with the server. */
@@ -710,24 +816,24 @@ diff -Naur openssh-7.6p1/sshconnect.c tainted_openssh/sshconnect.c
  
  	/* Put the connection into non-blocking mode. */
  	packet_set_nonblocking();
-diff -Naur openssh-7.6p1/sshconnect.h tainted_openssh/sshconnect.h
---- openssh-7.6p1/sshconnect.h	2017-10-02 21:34:26.000000000 +0200
-+++ tainted_openssh/sshconnect.h	2018-01-06 11:55:01.624282344 +0100
-@@ -34,14 +34,22 @@
+diff -Naur openssh-7.9p1/sshconnect.h tainted_openssh/sshconnect.h
+--- openssh-7.9p1/sshconnect.h	2018-10-17 02:01:20.000000000 +0200
++++ tainted_openssh/sshconnect.h	2018-12-15 13:31:56.660304237 +0100
+@@ -33,14 +33,21 @@
  struct addrinfo;
  struct ssh;
  
 -int	 ssh_connect(struct ssh *, const char *, struct addrinfo *,
--	    struct sockaddr_storage *, u_short, int, int, int *, int, int);
+-	    struct sockaddr_storage *, u_short, int, int, int *, int);
 +int
-+ssh_connect(char *cloonix_path, const char *host, struct addrinfo *addrs,
-+    struct sockaddr_storage *hostaddr, u_short port, int family,
-+    int connection_attempts, int *timeout_ms, int want_keepalive, int needpriv);
++ssh_connect(char *cloonix_path);
 +
  void	 ssh_kill_proxy_command(void);
  
 -void	 ssh_login(Sensitive *, const char *, struct sockaddr *, u_short,
 -    struct passwd *, int);
+ 
+-void	 ssh_exchange_identification(int);
 +void
 +ssh_login(char *cloonix_info, Sensitive *sensitive, const char *orighost,
 +          struct sockaddr *hostaddr, u_short port,
@@ -736,8 +842,7 @@ diff -Naur openssh-7.6p1/sshconnect.h tainted_openssh/sshconnect.h
 +
 +void
 +ssh_exchange_identification(char *cloonix_info, int timeout_ms);
- 
--void	 ssh_exchange_identification(int);
++
  
  int	 verify_host_key(char *, struct sockaddr *, struct sshkey *);
  

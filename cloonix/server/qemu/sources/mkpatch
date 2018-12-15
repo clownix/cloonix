@@ -2,7 +2,7 @@
 HERE=`pwd`
 TARGZ=${HERE}/../../../../targz_store
 
-QEMU_NAME=qemu-3.1.0-rc1
+QEMU_NAME=qemu-3.1.0
 
 rm -rf ${QEMU_NAME}
 
