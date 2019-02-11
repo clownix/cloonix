@@ -848,18 +848,18 @@ void channel_loop(int once)
         slipery_select = 0;
       }
 
-    if (pb || (slipery_select >= 5))
+    if (pb || (slipery_select >= 50))
       {
       for(k=0; k<result; k++) 
         {
         cidx = events[k].data.fd + 1;
         evt = events[k].events;
         KERR( "%d %d %d %d %d %08X %d", slipery_select, g_channel[cidx].kind,
-                                     cidx, (evt & EPOLLOUT),
-                                     (evt & EPOLLIN), evt, get_llid(cidx));
+                                        cidx, (evt & EPOLLOUT),
+                                        (evt & EPOLLIN), evt, get_llid(cidx));
         }
-      if (slipery_select >= 5)
-        KOUT(" %d %d", result, channel_modification_occurence);
+      KERR(" %d %d", result, channel_modification_occurence);
+      slipery_select = 0;
       }
     if (once)
       break;
