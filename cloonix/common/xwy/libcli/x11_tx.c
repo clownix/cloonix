@@ -233,8 +233,8 @@ void x11_tx_close(int fd)
     g_x11_tx[fd] = NULL;
     if (pr->fd != fd)
       KOUT("DIALOG FD INCOHERENT %d %d", pr->fd, fd);
-    if (pr->first)
-      KERR("CLOSE PURGE LEFT DATA %d  %d el", fd, pr->nb_els);
+//    if (pr->first)
+//      KERR("CLOSE PURGE LEFT DATA %d  %d el", fd, pr->nb_els);
     while(pr->first)
       free_first_el(pr);
     wrap_free(pr, __LINE__);

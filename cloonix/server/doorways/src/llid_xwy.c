@@ -99,7 +99,6 @@ int llid_xwy_ctrl(void)
       llid = msg_watch_fd(fd, xwy_rx_cb, in_err_gene, "xwy");
       if (llid == 0)
         KOUT(" ");
-      KERR("CONNECTED %s", g_xwy_path);
       }
     else
       KERR("COULD NOT CONNECT %s", g_xwy_path);

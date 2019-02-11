@@ -486,7 +486,7 @@ static int fct_after_epoll(int nb, struct epoll_event *events)
   struct Channel *channel = &ses.channel;
   int i, fd;
   uint32_t evt;
-  int result = -1;
+  int result = 0;
   if (exitflag)
     {
     cli_finished(__LINE__); 
@@ -517,7 +517,7 @@ static int fct_after_epoll(int nb, struct epoll_event *events)
             cli_finished(__LINE__); 
             }
           }
-        result = 0;
+        result += 1;
         }
       if (evt & EPOLLOUT)
         {
@@ -539,17 +539,17 @@ static int fct_after_epoll(int nb, struct epoll_event *events)
             cli_finished(__LINE__); 
             }
           }
-        result = 0;
+        result += 1;
         }
       if (evt & EPOLLERR)
         {
         cli_finished(__LINE__); 
-        result = 0;
+        result += 1;
         }
       if (evt & EPOLLHUP)
         {
         cli_finished(__LINE__); 
-        result = 0;
+        result += 1;
         }
       else if (evt)
         {

@@ -155,7 +155,6 @@ static void alloc_transfert(int dido_llid, int inside_llid, int type)
 static void free_transfert(int dido_llid, int inside_llid)
 {
   t_transfert *olt, *ilt;
-KERR("free_transfert %d %d", dido_llid, inside_llid);
   olt = g_dido_llid[dido_llid];
   ilt = g_inside_llid[inside_llid];
   g_dido_llid[dido_llid] = NULL;
@@ -226,10 +225,6 @@ void in_err_gene(void *ptr, int inside_llid, int err, int from)
       KOUT(" ");
     dido_llid = ilt->dido_llid;
     free_transfert(dido_llid, inside_llid);
-if (ilt->type == doors_type_xwy_main_traf)
-KERR("free_transfert doors_type_xwy_main_traf %d %d", dido_llid, inside_llid);
-if (ilt->type == doors_type_xwy_x11_flow)
-KERR("free_transfert doors_type_xwy_x11_flow %d %d", dido_llid, inside_llid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -338,10 +333,6 @@ void dispach_door_end(int dido_llid)
       KOUT(" ");
     inside_llid = olt->inside_llid;
     free_transfert(dido_llid, inside_llid);
-if (olt->type == doors_type_xwy_main_traf)
-KERR("free_transfert doors_type_xwy_main_traf %d %d", dido_llid, inside_llid);
-if (olt->type == doors_type_xwy_x11_flow)
-KERR("free_transfert doors_type_xwy_x11_flow %d %d", dido_llid, inside_llid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -467,7 +458,6 @@ static void dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
       {
       doorways_tx(dido_llid,inside_llid,type,doors_val_link_ok,3,"OK");
       alloc_transfert(dido_llid, inside_llid, type);
-KERR("alloc_transfert %d %d", dido_llid, inside_llid);
       }
     }
   else if (val == doors_val_xwy)
@@ -493,7 +483,6 @@ KERR("alloc_transfert %d %d", dido_llid, inside_llid);
         {
         doorways_tx(dido_llid, 0, type, doors_val_link_ko, 3, "KO");
         free_transfert(ilt->dido_llid, ilt->inside_llid);
-KERR("free_transfert %d %d", dido_llid, ilt->inside_llid);
         }
       }
     }

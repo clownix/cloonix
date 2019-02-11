@@ -795,10 +795,6 @@ static int handle_io_on_fd(int nb, struct epoll_event *events)
 }
 /*---------------------------------------------------------------------------*/
 
-
-
-
-
 /*****************************************************************************/
 void channel_loop(int once)
 {
@@ -848,7 +844,7 @@ void channel_loop(int once)
         slipery_select = 0;
       }
 
-    if (pb || (slipery_select >= 50))
+    if (pb || (slipery_select >= 10))
       {
       for(k=0; k<result; k++) 
         {
@@ -858,8 +854,7 @@ void channel_loop(int once)
                                         cidx, (evt & EPOLLOUT),
                                         (evt & EPOLLIN), evt, get_llid(cidx));
         }
-      KERR(" %d %d", result, channel_modification_occurence);
-      slipery_select = 0;
+      KOUT(" %d %d", result, channel_modification_occurence);
       }
     if (once)
       break;
