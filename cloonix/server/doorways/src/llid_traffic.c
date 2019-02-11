@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -40,7 +40,6 @@
 #include "llid_backdoor.h"
 #include "dispach.h"
 #include "doorways_sock.h"
-#include "local_dropbear.h"
 
 
 enum {
@@ -131,12 +130,11 @@ static void cookie_info_store(t_llid_traf *lt, char *cookie)
 static void fill_200_char_resp(char *buf, char *start, 
                                char *name, int display_sock_x11) 
 {
-  char empyness[MAX_AUTO_RESP];
-  memset(buf, 0, MAX_AUTO_RESP);
-  memset(empyness, ' ', MAX_AUTO_RESP);
-  snprintf(buf, 200, "%s DBSSH_CLI_DOORS_RESP name=%s display_sock_x11=%d%s", 
+  char empyness[200];
+  memset(empyness, ' ', 200);
+  snprintf(buf, MAX_AUTO_RESP, "%s DBSSH_CLI_DOORS_RESP name=%s display_sock_x11=%d%s", 
            start, name, display_sock_x11, empyness);
-  buf[200] = 0;
+  buf[199] = 0;
   if (strlen(buf) != 199)
     KOUT("%d ", (int) strlen(buf));
 }
@@ -230,7 +228,7 @@ static void traf_shutdown(int dido_llid, int line)
     clean_auto_timer(lt);
     if (lt->auto_must_send_resp)
       {
-      send_to_traf_client(lt->dido_llid, doors_val_init_link_ko,
+      send_to_traf_client(lt->dido_llid, doors_val_link_ko,
                           strlen(lt->auto_resp) + 1, lt->auto_resp);
       }
     clownix_free(lt, __FUNCTION__);
@@ -376,12 +374,6 @@ static int start_link2agent_auto(t_llid_traf *lt, int len, char *data)
       res = llid_backdoor_get_info(name, &llid_backdoor);
       if (res)
         {
-        if (!strcmp(name, "local_host_dropbear")) 
-          {
-          link_associate(lt, cookie, name, 0);
-          local_dropbear_init_dido(lt->dido_llid);
-          result = 0;
-          }
         if (res == -2)
           fill_200_char_resp(lt->auto_resp,"KO_bad_connection",name,0);
         else
@@ -422,7 +414,7 @@ void send_resp_ok_to_traf_client(int dido_llid, int display_sock_x11)
     clean_auto_timer(lt);
     fill_200_char_resp(lt->auto_resp, "OK", lt->name, lt->display_sock_x11); 
     lt->auto_must_send_resp = 0;
-    send_to_traf_client(lt->dido_llid, doors_val_init_link_ok,
+    send_to_traf_client(lt->dido_llid, doors_val_link_ok,
                         strlen(lt->auto_resp)+1,lt->auto_resp);
     }
 }
@@ -534,10 +526,7 @@ void llid_traf_rx_from_client(int dido_llid, int len, char *buf)
                          header_val_none, g_buf);
         }
       else
-        local_dropbear_receive_from_client(lt->dido_llid, 
-                                           chosen_len, g_buf+headsize);
-
-         
+        KOUT(" ");
       len_done += chosen_len;
       len_to_do -= chosen_len;
       }

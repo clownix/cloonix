@@ -1,4 +1,31 @@
 #!/bin/bash
+HERE=`pwd`
+for i in ${HERE}/../lib_client \
+         ${HERE}/crcanvas_gtk \
+         ${HERE}/src/bank \
+         ${HERE}/src/interface \
+         ${HERE}/src/subsets \
+         ${HERE}/src/bdplot ;
+do 
+  echo
+  echo DOING:
+  echo ${i}
+  echo
+  echo
+  sleep 1
+  cd ${i}
+  ./cmd
+done
+
+echo
+echo DOING:
+echo ${HERE}
+echo
+echo
+sleep 1
+cd ${HERE}
+
 make clean
-make -j 5
+make
+
 

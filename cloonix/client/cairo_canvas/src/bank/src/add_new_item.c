@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -239,9 +239,7 @@ static t_bank_item *centralized_item_creation(int bank_type, char *name,
 /****************************************************************************/
 static void centralized_item_deletion(t_bank_item *bitem, int eorig)
 {
-  t_bank_item *currently_in_item_surface = get_currently_in_item_surface();
-  if (bitem == currently_in_item_surface)
-    leave_item_surface(currently_in_item_surface);
+  leave_item_action_surface(bitem);
   if (bitem->bank_type == bank_type_node) 
     eventfull_obj_delete(bitem->name);
   else if (bitem->bank_type == bank_type_sat)
@@ -854,33 +852,33 @@ void enter_item_surface(t_bank_item *bitem)
     centralized_item_z_pos(bitem);
     bitem->pbi.grabbed = 1;
     }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void leave_item_surface_action(t_bank_item *bitem)
-{
-  if (!bitem->pbi.menu_on)
+  else if (bitem != currently_in_item_surface)
     {
+    leave_item_surface();
+    currently_in_item_surface = bitem;
     centralized_item_z_pos(bitem);
-    bitem->pbi.grabbed = 0;
+    bitem->pbi.grabbed = 1;
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-/*      leave_item_surface                                                  */
-/*--------------------------------------------------------------------------*/
-void leave_item_surface(t_bank_item *bitem)
+void leave_item_action_surface(t_bank_item *bitem)
 {
-  if (bitem && (currently_in_item_surface == bitem))
+  if (bitem == currently_in_item_surface)
+    leave_item_surface();
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void leave_item_surface(void)
+{
+  if (currently_in_item_surface)
     {
+    if (currently_in_item_surface->pbi.menu_on == 0)
+      currently_in_item_surface->pbi.grabbed = 0;
+    centralized_item_z_pos(currently_in_item_surface);
     currently_in_item_surface = NULL;
-    leave_item_surface_action(bitem);
-    }
-  else if (currently_in_item_surface)
-    {
-    leave_item_surface(currently_in_item_surface);
     }
 }
 /*--------------------------------------------------------------------------*/

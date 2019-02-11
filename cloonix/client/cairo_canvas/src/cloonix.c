@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -54,7 +54,6 @@
 #include "bdplot.h"
 
 
-extern char **environ;
 
 
 /*--------------------------------------------------------------------------*/
@@ -78,41 +77,6 @@ static char g_doors_client_addr[MAX_PATH_LEN];
 static char g_cloonix_root_tree[MAX_PATH_LEN];
 static char g_dtach_work_path[MAX_PATH_LEN];
 static char g_password[MSG_DIGEST_LEN];
-static char **g_saved_environ;
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int wireshark_qt_present_in_server(void)
-{
-  int result = 0;
-  if (g_clc.flags_config & FLAGS_CONFIG_WIRESHARK_QT_PRESENT) 
-    result = 1;
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int wireshark_present_in_server(void)
-{
-  int result = 0;
-  if ((g_clc.flags_config & FLAGS_CONFIG_WIRESHARK_QT_PRESENT) ||
-      (g_clc.flags_config & FLAGS_CONFIG_WIRESHARK_PRESENT))
-    result = 1;
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *get_wireshark_present_in_server(void)
-{
-  if (g_clc.flags_config & FLAGS_CONFIG_WIRESHARK_QT_PRESENT)
-    return (WIRESHARK_BINARY_QT);
-  else if (g_clc.flags_config & FLAGS_CONFIG_WIRESHARK_PRESENT)
-    return (WIRESHARK_BINARY);
-  else
-    KERR("NO WIRESHARK ON SERVER");
-  return "NO_WIRESHARK";
-}
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -220,38 +184,43 @@ char *get_distant_cloonix_tree(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char **get_argv_local_dbssh(char *name)
+char **get_argv_local_xwy(char *name)
 {
   static char bin_path[MAX_PATH_LEN];
-  static char doors_addr[MAX_PATH_LEN];
-  static char username[2*MAX_NAME_LEN];
-  static char cmd[2*MAX_PATH_LEN];
+  static char config[MAX_PATH_LEN];
+  static char cloonix_name[MAX_NAME_LEN];
+  static char cmd[MAX_PATH_LEN];
   static char nm[MAX_NAME_LEN];
-  static char title[2*MAX_NAME_LEN];
+  static char title[MAX_PATH_LEN];
   static char xvt[MAX_PATH_LEN];
-  static char *argv[] = {xvt, "-T", title, "-e",  
-                         bin_path, doors_addr, g_password, 
-                         "-t", username, cmd, NULL};
-  memset(cmd, 0, 2*MAX_PATH_LEN);
+  static char *argv[]={bin_path, config, cloonix_name, "-cmd",
+                       xvt, "-T", title, "-e", cmd,
+                       "1>/dev/null", "2>&1", NULL};
   memset(bin_path, 0, MAX_PATH_LEN);
-  memset(doors_addr, 0, MAX_PATH_LEN);
-  memset(username, 0, 2*MAX_NAME_LEN);
+  memset(config, 0, MAX_PATH_LEN);
+  memset(cloonix_name, 0, MAX_NAME_LEN);
+  memset(cmd, 0, MAX_PATH_LEN);
   memset(nm, 0, MAX_NAME_LEN);
-  memset(title, 0, 2*MAX_NAME_LEN);
+  memset(title, 0, MAX_PATH_LEN);
+  memset(xvt, 0, MAX_PATH_LEN);
   cloonix_get_xvt(xvt);
-
-
   strncpy(nm, name, MAX_NAME_LEN-1);
-  snprintf(title, 2*MAX_NAME_LEN-1, "%s/%s", local_get_cloonix_name(), nm); 
-  snprintf(bin_path,  MAX_PATH_LEN-1, 
-           "%s/common/agent_dropbear/agent_bin/dropbear_cloonix_ssh", 
-           get_local_cloonix_tree());
-  strncpy(doors_addr, get_doors_client_addr(), MAX_PATH_LEN-1);
-  snprintf(username, MAX_PATH_LEN-1, "local_host_dropbear");
+  snprintf(title, MAX_PATH_LEN-1, "%s/%s", local_get_cloonix_name(), nm); 
+  snprintf(bin_path, MAX_PATH_LEN-1,
+                     "%s/client/xwycli/xwycli", get_local_cloonix_tree());
+
+  snprintf(config, MAX_PATH_LEN-1,
+                     "%s/cloonix_config", get_local_cloonix_tree());
+
+  snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
+
   snprintf(cmd, 2*MAX_PATH_LEN-1, 
            "%s/server/dtach/dtach -a %s/%s; sleep 10", 
            get_distant_cloonix_tree(), get_dtach_work_path(), nm);
-//  KERR("%s %s %s -t %s %s\n", bin_path, doors_addr, g_password, username, cmd);
+
+  KERR("%s %s %s -cmd %s -T %s -e %s", bin_path, config, cloonix_name,
+                                       xvt, title,  cmd);
+
   return (argv);
 }
 /*--------------------------------------------------------------------------*/
@@ -267,10 +236,10 @@ GtkWidget *get_main_window(void)
 /*****************************************************************************/
 char *get_spice_vm_path(int vm_id)
 {
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path,MAX_PATH_LEN-1, "%s/vm/vm%d/%s", 
+  static char path[2*MAX_PATH_LEN];
+  snprintf(path, 2*MAX_PATH_LEN, "%s/vm/vm%d/%s", 
            g_clc.work_dir, vm_id, SPICE_SOCK);
+  path[2*MAX_PATH_LEN-1] = 0;
   return(path);
 }
 /*---------------------------------------------------------------------------*/
@@ -302,8 +271,6 @@ char *get_path_to_nemo_icon(void)
 }
 /*---------------------------------------------------------------------------*/
 
-
-
 /*****************************************************************************/
 char *get_current_directory(void)
 {
@@ -330,7 +297,6 @@ static void init_set_main_window_coords(void)
                       &main_win_width, &main_win_height);
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 void get_main_window_coords(gint *x, gint *y, gint *width, gint *heigh)
@@ -369,7 +335,6 @@ void destroy_handler (GtkWidget *win, gpointer data)
     g_print ("KO\n"); 
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void my_mkdir(char *dst_dir)
@@ -428,7 +393,8 @@ void main_timer_activation(void)
 /****************************************************************************/
 void work_dir_resp(int tid, t_topo_clc *conf)
 {
-  char title[MAX_NAME_LEN];
+  char title[2*MAX_NAME_LEN];
+  char tmp_dtach_work_path[2*MAX_PATH_LEN];
   GtkWidget *window, *vbox;
   GtkWidget *scrolled;
   eth_choice = 0;
@@ -438,13 +404,15 @@ void work_dir_resp(int tid, t_topo_clc *conf)
            cloonix_conf_info_get_version(), conf->version);
     exit(-1);
     }
-  daemon(0,0);
+  daemon(0,1);
   move_init();
   menu_init();
   popup_init();
   memcpy(&g_clc, conf, sizeof(t_topo_clc));
-  snprintf(g_dtach_work_path, MAX_PATH_LEN-1, "%s/%s",
-                             g_clc.work_dir, DTACH_SOCK);
+  snprintf(tmp_dtach_work_path, 2*MAX_PATH_LEN, "%s/%s",
+                                g_clc.work_dir, DTACH_SOCK);
+  tmp_dtach_work_path[MAX_PATH_LEN-1] = 0;
+  strcpy(g_dtach_work_path, tmp_dtach_work_path); 
   if (gtk_init_check(NULL, NULL) == FALSE)
     KOUT("Error in gtk_init_check function");
 
@@ -455,10 +423,11 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   g_signal_connect (G_OBJECT (window), "destroy",
 		      (GCallback) destroy_handler, NULL);
   if (g_i_am_in_cloonix)
-    snprintf(title, MAX_NAME_LEN, "%s/%s", 
+    snprintf(title, 2*MAX_NAME_LEN, "%s/%s", 
              g_i_am_in_cloonix_name, local_get_cloonix_name());
   else
     snprintf(title, MAX_NAME_LEN, "%s", local_get_cloonix_name());
+  title[MAX_NAME_LEN-1] = 0;
   gtk_window_set_title (GTK_WINDOW (window), title);
   gtk_window_set_default_size (GTK_WINDOW (window), WIDTH, HEIGH);
   put_top_left_icon(window);
@@ -475,14 +444,17 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 /****************************************************************************/
 static void init_local_cloonix_bin_path(char *curdir, char *callbin)
 {
-  char path[MAX_PATH_LEN];
+  char path[2*MAX_PATH_LEN];
   char *ptr;
   memset(g_cloonix_root_tree, 0, MAX_PATH_LEN);
   memset(path, 0, MAX_PATH_LEN);
+
   if (callbin[0] == '/')
-    snprintf(path, MAX_PATH_LEN-1, "%s", callbin);
+    snprintf(path, MAX_PATH_LEN, "%s", callbin);
+  else if ((callbin[0] == '.') && (callbin[1] == '/'))
+    snprintf(path, MAX_PATH_LEN, "%s/%s", curdir, &(callbin[2]));
   else
-    snprintf(path, MAX_PATH_LEN-1, "%s/%s", curdir, callbin);
+    KOUT("%s", callbin);
 
   ptr = strrchr(path, '/');
   if (!ptr)
@@ -497,67 +469,13 @@ static void init_local_cloonix_bin_path(char *curdir, char *callbin)
     KOUT("%s", path);
   *ptr = 0;
   strncpy(g_cloonix_root_tree, path, MAX_PATH_LEN-1);
-  snprintf(path, MAX_PATH_LEN-1,
+  snprintf(path, 2*MAX_PATH_LEN,
            "%s/client/cairo_canvas/cloonix_gui", g_cloonix_root_tree);
+  path[MAX_PATH_LEN-1] = 0;
   if (access(path, X_OK))
     KOUT("%s", path);
-
 }
 /*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char **get_saved_environ(void)
-{
-  return (g_saved_environ);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static char **save_environ(void)
-{
-  return environ;
-/*
-  char *tree;
-  char *xauthority;
-  char ld_lib[MAX_PATH_LEN];
-  static char lib_path[MAX_PATH_LEN];
-  static char xauth[MAX_PATH_LEN];
-  static char username[MAX_NAME_LEN];
-  static char home[MAX_PATH_LEN];
-  static char logname[MAX_NAME_LEN];
-  static char display[MAX_NAME_LEN];
-  char **environ;
-  static char *environ_simple[]={lib_path, xauth, username,
-                                 logname, home, display, NULL};
-  tree = get_local_cloonix_tree();
-  memset(lib_path, 0, MAX_PATH_LEN);
-  memset(xauth, 0, MAX_PATH_LEN);
-  if(!getenv("HOME"))
-    KOUT(" ");
-  if(!getenv("USER"))
-    KOUT(" ");
-  if(!getenv("DISPLAY"))
-    KOUT(" ");
-  snprintf(ld_lib, MAX_PATH_LEN-1,
-           "%s/common/spice/spice_lib", tree);
-  snprintf(lib_path, MAX_PATH_LEN-1, "LD_LIBRARY_PATH=%s", ld_lib);
-  setenv("LD_LIBRARY_PATH", ld_lib, 1);
-  environ = environ_simple; 
-  xauthority = getenv("XAUTHORITY");
-  if ((xauthority) && (!access(xauthority, W_OK)))
-    snprintf(xauth, MAX_PATH_LEN-1, "XAUTHORITY=%s", xauthority);
-  else
-    snprintf(xauth,MAX_PATH_LEN-1,"XAUTHORITY=%s/.Xauthority",getenv("HOME"));
-  memset(home, 0, MAX_PATH_LEN);
-  snprintf(home, MAX_PATH_LEN-1, "HOME=%s", getenv("HOME"));
-  memset(display, 0, MAX_NAME_LEN);
-  snprintf(display, MAX_NAME_LEN-1, "DISPLAY=%s", getenv("DISPLAY"));
-  memset(username, 0, MAX_NAME_LEN);
-  snprintf(username, MAX_NAME_LEN-1, "USER=%s", getenv("USER"));
-  return environ;
-*/
-}
-/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int main(int argc, char *argv[])
@@ -598,7 +516,6 @@ int main(int argc, char *argv[])
   if(!getenv("DISPLAY"))
     KOUT("No DISPLAY env");
 
-  g_saved_environ = save_environ();
   memset(g_doors_client_addr, 0, MAX_PATH_LEN);
   strncpy(g_doors_client_addr, cnf->doors, MAX_PATH_LEN-1);
   printf("CONNECT TO UNIX SERVER: %s\n", g_doors_client_addr);

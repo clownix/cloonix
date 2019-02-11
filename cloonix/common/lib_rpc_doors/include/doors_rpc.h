@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -26,6 +26,7 @@
 #define CLOONIX_UP_VPORT_AND_RUNNING "cloonix_up_vport_and_running"
 #define CLOONIX_DOWN_AND_NOT_RUNNING "cloonix_down_and_not_running"
 #define STOP_DOORS_LISTENING "stop_doors_listening"
+#define XWY_CONNECT "xwy_connect %s"
 
 /*---------------------------------------------------------------------------*/
 #define FIFREEZE_FITHAW_FREEZE "fifreeze_fithaw_freeze"

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -427,10 +427,10 @@ static void stub_rx_cb(int llid,int tid,int type,int val,int len,char *buf)
 {
   if (type == doors_type_switch)
     {
-    if (val == doors_val_init_link_ok)
+    if (val == doors_val_link_ok)
       {
       }
-    else if (val == doors_val_init_link_ko)
+    else if (val == doors_val_link_ko)
       {
       KOUT(" ");
       }
@@ -510,9 +510,11 @@ static char *init_local_cloonix_bin_path(char *curdir, char *callbin)
   memset(g_cloonix_root_tree, 0, MAX_PATH_LEN);
   memset(path, 0, MAX_PATH_LEN);
   if (callbin[0] == '/')
-    snprintf(path, MAX_PATH_LEN-1, "%s", callbin);
+    snprintf(path, MAX_PATH_LEN, "%s", callbin);
+  else if ((callbin[0] == '.') && (callbin[1] == '/'))
+    snprintf(path, MAX_PATH_LEN, "%s/%s", curdir, &(callbin[2]));
   else
-    snprintf(path, MAX_PATH_LEN-1, "%s/%s", curdir, callbin);
+    KOUT("%s", callbin);
 
   ptr = strrchr(path, '/');
   if (!ptr)

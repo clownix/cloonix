@@ -6,7 +6,7 @@ GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 OBJ_DIR=obj/
 LIB = libbdplot.a
 VPATH=./src
-WARNINGS=-Wall
+WARNINGS=-Wall 
 INCLUDES= -I. $(shell pkg-config --cflags gtk+-3.0) \
           -I${IO_CLOWNIX}/include \
           -I$(GLOB_INCLUDE) \

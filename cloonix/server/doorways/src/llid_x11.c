@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -32,7 +32,6 @@
 #include "llid_x11.h"
 #include "llid_backdoor.h"
 #include "doorways_sock.h"
-#include "local_dropbear.h"
 
 
 
@@ -249,9 +248,7 @@ void receive_traf_x11_from_client(int dido_llid, int sub_dido_idx,
       if (cur->backdoor_llid)
         x11_tx_to_agent(cur, chosen_len, buf+len_done);
       else
-        local_dropbear_receive_x11_from_client(cur->display_sock_x11, 
-                                               sub_dido_idx,
-                                               chosen_len, buf+len_done);
+        KOUT(" ");
       len_done += chosen_len;
       len_to_do -= chosen_len;
       }
@@ -277,9 +274,7 @@ void receive_ctrl_x11_from_client(int dido_llid, int sub_dido_idx,
                                            dido_llid, sub_dido_idx);
         }
       else
-        {
-        local_dropbear_x11_open_to_agent(dido_llid, sub_dido_idx);
-        } 
+        KOUT(" ");
       }
     else if (!strcmp(buf, DOOR_X11_OPENKO))
       {

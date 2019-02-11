@@ -62,14 +62,14 @@ cloonix_ssh ${NET} ${i} "rm /dev/random; ln -s /dev/urandom /dev/random"
 #----------------------------------------------------------------------
 done
 sleep 1
-urxvt -title one -e cloonix_ssh ${NET} -t one "hostapd /root/hostapd.conf" &
+urxvt -title one -e cloonix_ssh ${NET} one "hostapd /root/hostapd.conf" &
 sleep 1
 #----------------------------------------------------------------------
-urxvt -title two -e cloonix_ssh ${NET} -t two "\
+urxvt -title two -e cloonix_ssh ${NET} two "\
                           wpa_supplicant -Dnl80211 -iwlan1 \
                           -c /root/wpa_supplicant.conf" &
 #----------------------------------------------------------------------
-urxvt -title three -e cloonix_ssh ${NET} -t three "\
+urxvt -title three -e cloonix_ssh ${NET} three "\
                           wpa_supplicant -Dnl80211 -iwlan2 \
                           -c /root/wpa_supplicant.conf" &
 #----------------------------------------------------------------------

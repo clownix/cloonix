@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -140,8 +140,8 @@ t_bank_item *bank_get_item(int bank_type, char *name, int num, char *lan);
 void attached_edge_update_all(t_bank_item *bitem);
 /*--------------------------------------------------------------------------*/
 void enter_item_surface(t_bank_item *bitem);
-void leave_item_surface(t_bank_item *bitem);
-void leave_item_surface_action(t_bank_item *bitem);
+void leave_item_surface(void);
+void leave_item_action_surface(t_bank_item *bitem);
 /*--------------------------------------------------------------------------*/
 void selectioned_flip_flop(t_bank_item *bitem);
 void selectioned_mouse_button_1_press(t_bank_item *bitem, double x, double y);

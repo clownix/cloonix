@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -20,8 +20,8 @@
 #define DOORS_CTRL_SOCK "doors_ctrl_sock"
 #define SPICE_SOCK "spice_sock"
 #define CLOONIX_SWITCH "cloonix_switch"
-#define DROPBEAR_SOCK "dropbear"
-#define DROPBEAR_PID "dropbear_pid"
+#define XWY_TRAFFIC_SOCK "xwy_traf"
+#define XWY_CONTROL_SOCK "xwy_ctrl"
 #define MUSWITCH_SOCK_DIR "mu"
 #define MUSWITCH_TRAF_DIR "tmu"
 #define ENDP_SOCK_DIR "endp"
@@ -111,6 +111,7 @@ enum
   type_llid_trace_endp_a2b,
   type_llid_trace_jfs,
   type_llid_trace_unix_qmonitor,
+  type_llid_trace_unix_xwy,
   type_llid_max,
 };
 /*---------------------------------------------------------------------------*/

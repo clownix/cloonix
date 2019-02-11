@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -442,10 +442,11 @@ void machine_recv_kill_clownix(void)
 /*****************************************************************************/
 static void dtach_duplicate_clone_msg(void *data, char *msg)
 {
-  char dtach_name[MAX_NAME_LEN+2];
+  char dtach_name[2*MAX_NAME_LEN];
   t_check_dtach_duplicate *dtach = (t_check_dtach_duplicate *) data;
-  memset(dtach_name, 0, MAX_NAME_LEN+2);
-  snprintf(dtach_name, MAX_NAME_LEN+1, "%s: ", dtach->name);
+  memset(dtach_name, 0, 2*MAX_NAME_LEN);
+  snprintf(dtach_name, 2*MAX_NAME_LEN, "%s: ", dtach->name);
+  dtach_name[2*MAX_NAME_LEN-1] = 0;
   if (!strncmp(msg, dtach_name, strlen(dtach_name)))
     strcpy(dtach->msg, "DUPLICATE");
 }

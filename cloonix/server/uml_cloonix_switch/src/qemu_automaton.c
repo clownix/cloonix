@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -149,8 +149,9 @@ static void cprootfs_clone_death(void *data, int status, char *name)
       {
       if (!status)
         KOUT("%d", status);
-      snprintf(wake_up_eths->error_report, MAX_PRINT_LEN-1, 
+      snprintf(wake_up_eths->error_report, MAX_PRINT_LEN, 
                "%s", cprootfs->msg);
+      wake_up_eths->error_report[MAX_PRINT_LEN-1] = 0;
       KERR("%s", name);
       }
     else

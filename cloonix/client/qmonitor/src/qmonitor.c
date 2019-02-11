@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -49,6 +49,7 @@ static char g_password[MSG_DIGEST_LEN];
 static char g_cloonix_doors[MAX_PATH_LEN];
 /*****************************************************************************/
 
+void rpct_recv_kil_req(void *ptr, int llid, int tid) {KOUT();}
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num) {KOUT();}
 void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num, 
                        int toppid, int pid){KOUT();}
@@ -166,10 +167,10 @@ static void rx_cb(int llid, int tid, int type, int val, int len, char *buf)
 {
   if (type == doors_type_switch)
     {
-    if (val == doors_val_init_link_ok)
+    if (val == doors_val_link_ok)
       {
       }
-    else if (val == doors_val_init_link_ko)
+    else if (val == doors_val_link_ko)
       {
       KERR(" ");
       }

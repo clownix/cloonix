@@ -43,7 +43,7 @@ SRC = \
       qmp_dialog.c \
       qmp.c \
       qhvc0.c \
-      dropbear.c \
+      xwy.c \
       timeout_service.c \
       mulan_mngt.c \
       endp_mngt.c \

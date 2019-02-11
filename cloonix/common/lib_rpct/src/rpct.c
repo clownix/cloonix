@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -144,6 +144,16 @@ void rpct_send_pid_req(void *ptr, int llid, int tid, char *name, int num)
   if (!name || !strlen(name))
     KOUT(" ");
   len = sprintf(buf, HOP_PID_REQ, tid, name, num);
+  msg_tx(ptr, llid, len, buf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_send_kil_req(void *ptr, int llid, int tid)
+{
+  int len;
+  char *buf = get_buf_tx(ptr);
+  len = sprintf(buf, HOP_KIL_REQ, tid);
   msg_tx(ptr, llid, len, buf);
 }
 /*---------------------------------------------------------------------------*/
@@ -341,6 +351,12 @@ static void dispatcher(void *ptr, int llid, int bnd_evt, char *msg)
       if (sscanf(msg, HOP_PID_REQ, &tid, name, &num) != 3)
         KOUT("%s", msg);
       rpct_recv_pid_req(ptr, llid, tid, name, num);
+      break;
+
+    case bnd_rpct_kil_req:
+      if (sscanf(msg, HOP_KIL_REQ, &tid) != 1)
+        KOUT("%s", msg);
+      rpct_recv_kil_req(ptr, llid, tid);
       break;
 
     case bnd_rpct_pid_resp:
@@ -575,6 +591,7 @@ void rpct_init(void *ptr, t_rpct_tx rpc_tx)
   extract_boundary(MUCLI_REQ_O,    ctx->g_bound_list[bnd_rpct_cli_req]);
   extract_boundary(MUCLI_RESP_O,   ctx->g_bound_list[bnd_rpct_cli_resp]);
   extract_boundary(HOP_PID_REQ,    ctx->g_bound_list[bnd_rpct_pid_req]);
+  extract_boundary(HOP_KIL_REQ,    ctx->g_bound_list[bnd_rpct_kil_req]);
   extract_boundary(HOP_PID_RESP,   ctx->g_bound_list[bnd_rpct_pid_resp]);
   extract_boundary(HOP_EVT_SUB,    ctx->g_bound_list[bnd_rpct_hop_evt_sub]);
   extract_boundary(HOP_EVT_UNSUB,  ctx->g_bound_list[bnd_rpct_hop_evt_unsub]);

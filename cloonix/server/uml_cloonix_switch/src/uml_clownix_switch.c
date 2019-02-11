@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -56,7 +56,7 @@
 #include "doorways_mngt.h"
 #include "timeout_service.h"
 #include "doorways_sock.h"
-#include "dropbear.h"
+#include "xwy.h"
 #include "c2c.h"
 #include "mulan_mngt.h"
 #include "endp_mngt.h"
@@ -343,7 +343,7 @@ static void launching(void)
   doorways_first_start();
   sprintf(clownlock, "%s/cloonix_lock", cfg_get_root_work());
   check_for_another_instance(clownlock, 1);
-  init_dropbear();
+  init_xwy();
 }
 /*---------------------------------------------------------------------------*/
 
@@ -413,8 +413,10 @@ static t_topo_clc *get_parsed_config(char *name)
     conf = &g_clc;
     memset(conf, 0, sizeof(t_topo_clc));
     snprintf(conf->version,MAX_NAME_LEN-1,"%s",cloonix_conf_info_get_version());
-    snprintf(conf->username, MAX_NAME_LEN-1, "%s", g_user); 
-    snprintf(conf->network, MAX_NAME_LEN-1, "%s", cloonix_conf->name); 
+    snprintf(conf->username, MAX_NAME_LEN, "%s", g_user); 
+    conf->username[MAX_NAME_LEN-1] = 0;
+    snprintf(conf->network, MAX_NAME_LEN, "%s", cloonix_conf->name); 
+    conf->network[MAX_NAME_LEN-1] = 0;
     conf->server_port = cloonix_conf->port; 
     snprintf(input, 2*MAX_PATH_LEN-1,"echo %s/%s/endofline",
              cloonix_conf_info_get_work(), 
@@ -504,7 +506,7 @@ char **get_saved_environ(void)
 static char **save_environ(void)
 {
   char ld_lib[MAX_PATH_LEN];
-  static char lib_path[MAX_PATH_LEN];
+  static char lib_path[MAX_PATH_LEN+MAX_NAME_LEN];
   static char username[MAX_NAME_LEN];
   static char home[MAX_PATH_LEN];
   static char *environ_normal[] = { lib_path, username, home, NULL };
@@ -518,7 +520,7 @@ static char **save_environ(void)
   snprintf(ld_lib, MAX_PATH_LEN-1,
            "%s/common/spice/spice_lib", cfg_get_bin_dir());
   environ = environ_normal;
-  snprintf(lib_path, MAX_PATH_LEN-1, "LD_LIBRARY_PATH=%s", ld_lib);
+  snprintf(lib_path,MAX_PATH_LEN+MAX_NAME_LEN-1,"LD_LIBRARY_PATH=%s", ld_lib);
   return environ;
 }
 /*---------------------------------------------------------------------------*/

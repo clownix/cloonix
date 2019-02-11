@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -359,7 +359,7 @@ static int callback_connect(void *ptr, int llid, int fd)
 {
   t_c2c *c2c = find_with_connect_llid(llid);
   int dido_llid;
-  char hello[MAX_NAME_LEN];
+  char hello[2*MAX_NAME_LEN];
   if (!c2c)
     KERR("%d %d", llid, fd);
   else
@@ -378,8 +378,8 @@ static int callback_connect(void *ptr, int llid, int fd)
       {
       set_llid_ctx(dido_llid, c2c);
       c2c->dido_llid = dido_llid;
-      memset(hello, 0, MAX_NAME_LEN);
-      snprintf(hello, MAX_NAME_LEN-1, "hello_%s", c2c->name);
+      snprintf(hello, 2*MAX_NAME_LEN, "hello_%s", c2c->name);
+      hello[MAX_NAME_LEN-1] = 0;
       if (doorways_tx(dido_llid, 0, doors_type_c2c_init,
                 c2c->peer_idx, strlen(hello)+1 , hello))
         {
@@ -441,14 +441,13 @@ void c2c_from_switch_req_conx(char *name, int peer_idx,
 void c2c_server_dispach_rx_init(int dido_llid, int val, int len, char *buf)
 {
   t_c2c *cur = find_with_idx(val);
-  char hello[MAX_NAME_LEN];
-  memset(hello, 0, MAX_NAME_LEN);
-
+  char hello[2*MAX_NAME_LEN];
   if (!cur)
     KERR(" ");
   else
     {
-    snprintf(hello, MAX_NAME_LEN-1, "hello_%s", cur->name);
+    snprintf(hello, 2*MAX_NAME_LEN, "hello_%s", cur->name);
+    hello[MAX_NAME_LEN-1] = 0;
     set_llid_ctx(dido_llid, cur);
     cur->dido_llid = dido_llid;
     if (strcmp(buf, hello)) 
@@ -542,6 +541,7 @@ void doors_recv_c2c_clone_birth(int llid, int tid,  char *net_name,
                                 char *name, int fd, int endp_type,
                                 char *bin_path, char *sock)
 {
+  char tmp_addr_port[2*MAX_NAME_LEN];
   int doors_llid = get_doorways_llid();
   int pid = 0;
   t_mu_arg *mu;
@@ -561,7 +561,9 @@ void doors_recv_c2c_clone_birth(int llid, int tid,  char *net_name,
     if (c2c->peer_ip)
       {
       int_to_ip_string (c2c->peer_ip, peer_ip);
-      snprintf(mu->addr_port, MAX_NAME_LEN-1, "%s:%d", peer_ip, c2c->peer_port);
+      snprintf(tmp_addr_port, 2*MAX_NAME_LEN, "%s:%d", peer_ip, c2c->peer_port);
+      tmp_addr_port[MAX_NAME_LEN-1] = 0;
+      strcpy(mu->addr_port, tmp_addr_port);
       }
     else
       {

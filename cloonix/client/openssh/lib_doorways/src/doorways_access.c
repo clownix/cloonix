@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -150,7 +150,7 @@ static void cb_doors_rx(int llid, int tid, int type, int val,
   (void) tid;
   if (type == doors_type_openssh)
     {
-    if ((val == doors_val_init_link_ok) || (val == doors_val_init_link_ko))
+    if ((val == doors_val_link_ok) || (val == doors_val_link_ko))
       {
       if (sscanf(buf,"OPENSSH_DOORWAYS_RESP nat=%s", nat_name) == 1)
         {

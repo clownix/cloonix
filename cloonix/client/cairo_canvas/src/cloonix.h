@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -61,19 +61,13 @@ char *get_spice_vm_path(int vm_id);
 char *get_cmd_path(void);
 int inside_cloonix(char **name);
 
-char **get_argv_local_dbssh(char *name);
+char **get_argv_local_xwy(char *name);
 
 int get_vm_config_flags(t_custom_vm *cust_vm);
 void cloonix_get_xvt(char *xvt);
 char *local_get_cloonix_name(void);
 char *get_password(void);
-int wireshark_present_in_server(void);
-int wireshark_qt_present_in_server(void);
-char *get_wireshark_present_in_server(void);
 char *get_doors_client_addr(void);
-char **get_saved_environ(void);
-
-
 /*****************************************************************************/
 
 

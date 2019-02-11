@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -460,16 +460,63 @@ static void fct_button_1_double_click(t_bank_item *bitem, int hit)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void print_event_item(GdkEventType type, char *from)
+{
+  switch (type)
+    {
+    case GDK_MOTION_NOTIFY:
+    break;
+    case GDK_ENTER_NOTIFY:
+      //printf("%s %d GDK_ENTER_NOTIFY\n", from, type);
+    break;
+    case GDK_LEAVE_NOTIFY:
+      //printf("%s %d GDK_LEAVE_NOTIFY\n", from, type);
+    break;
+    case GDK_BUTTON_PRESS:
+      //printf("%s %d GDK_BUTTON_PRESS\n", from, type);
+    break;
+    case GDK_BUTTON_RELEASE:
+      //printf("%s %d GDK_BUTTON_RELEASE\n", from, type);
+    break;
+    case GDK_2BUTTON_PRESS:
+      //printf("%s %d GDK_2BUTTON_PRESS\n", from, type);
+    break;
+    case GDK_FOCUS_CHANGE:
+      //printf("%s %d GDK_FOCUS_CHANGE\n", from, type);
+    break;
+    case GDK_KEY_PRESS:
+      //printf("%s %d GDK_KEY_PRESS\n", from, type);
+    break;
+    case GDK_KEY_RELEASE:
+      //printf("%s %d GDK_KEY_RELEASE\n", from, type);
+    break;
+    case GDK_GRAB_BROKEN:
+      //printf("%s %d GDK_GRAB_BROKEN\n", from, type);
+    break;
+    case GDK_VISIBILITY_NOTIFY:
+      //printf("%s %d GDK_VISIBILITY_NOTIFY\n", from, type);
+    break;
+    case GDK_MAP:
+      //printf("%s %d GDK_MAP\n", from, type);
+    break;
+    default:
+      KERR("%s MUSTADD %d", from, type);
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static gboolean on_item_event(CrItem *item, GdkEvent *event, 
                               cairo_matrix_t *matrix, CrItem *pick_item) 
 {
+  gboolean result = FALSE;
   t_bank_item *bitem = from_critem_to_bank_item(item);
   if (!bitem)
     KOUT(" ");
   if (!pick_item)
     KOUT(" ");
+  print_event_item(event->type, "ON_ITEM");
   switch (event->type)
     {
     case GDK_BUTTON_PRESS:
@@ -479,10 +526,12 @@ static gboolean on_item_event(CrItem *item, GdkEvent *event,
         fct_button_1_moved(bitem, 0);
         fct_button_1_double_click(bitem, 0);
         selectioned_mouse_button_1_press(bitem,event->button.x,event->button.y); 
+        result = TRUE;
         }
       else if (event->button.button == 3)
         {
         menu_caller(bitem);
+        result = TRUE;
         }
       break;
     case GDK_2BUTTON_PRESS:
@@ -490,6 +539,7 @@ static gboolean on_item_event(CrItem *item, GdkEvent *event,
         {
         fct_button_1_double_click(bitem, 1);
         process_mouse_double_click(bitem);
+        result = TRUE;
         }
       break;
     case GDK_3BUTTON_PRESS:
@@ -499,13 +549,16 @@ static gboolean on_item_event(CrItem *item, GdkEvent *event,
         {
         process_mouse_motion(event, matrix, bitem);
         fct_button_1_moved(bitem, 1);
+        result = TRUE;
         }
       break;
     case GDK_ENTER_NOTIFY:
         enter_item_surface(bitem);
+        result = TRUE;
       break;
     case GDK_LEAVE_NOTIFY:
-        leave_item_surface(bitem);
+        leave_item_surface();
+        result = TRUE;
       break;
     case GDK_BUTTON_RELEASE:
       if (event->button.button == 1)
@@ -514,16 +567,21 @@ static gboolean on_item_event(CrItem *item, GdkEvent *event,
         if (bitem->button_1_moved)
           fct_bitem_moved_by_operator(bitem);
         fct_button_1_moved(bitem, 0);
+        result = TRUE;
         }
       else if (event->button.button == 3)
         {
+        printf("UNHANDLED 3 GDK_BUTTON_RELEASE\n");
         }
       break;
+    case GDK_KEY_PRESS:
+    case GDK_KEY_RELEASE:
+    break;
     default:
       printf("UNHANDLED: %d\n", event->type);
       break;
     }
-  return TRUE;
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1118,26 +1176,42 @@ static gboolean on_canvas_event(GtkWidget* widget,
                                 GdkEvent *event, 
                                 gpointer data)
 {
+  gboolean result = FALSE;
   if (widget != gtkwidget_canvas)
     KOUT(" ");
   (void) data;
-  if ((!(get_currently_in_item_surface())) && (event->button.button == 1))
+  print_event_item(event->type, "ON_CANVAS");
+  if (event->type == GDK_BUTTON_PRESS)
     {
-    if (event->type == GDK_BUTTON_PRESS)
+    if (!(get_currently_in_item_surface()))
       {
-      g_object_set(G_OBJECT(glob_panner), "button", 1, NULL);
+      if (event->button.button == 1)
+        {
+        g_object_set(G_OBJECT(glob_panner), "button", 1, NULL);
+        result = TRUE;
+        }
+      else if (event->button.button == 3)
+        {
+        canvas_ctx_menu(event->button.x, event->button.y);
+        result = TRUE;
+        }
       }
-    else if (event->type == GDK_BUTTON_RELEASE)
+    }
+  if (event->type == GDK_BUTTON_RELEASE)
+    {
+    if ((!(get_currently_in_item_surface())) && (event->button.button == 1))
       {
       g_object_set(G_OBJECT(glob_panner), "button", 2, NULL);
       update_layout_center_scale(__FUNCTION__);
+      result = TRUE;
       }
     }
-  else if ((!(get_currently_in_item_surface())) && (event->button.button == 3))
-    { 
-    canvas_ctx_menu(event->button.x, event->button.y);
+  if (event->type == GDK_LEAVE_NOTIFY)
+    {
+    cr_glob_focus_out(widget, (GdkEventFocus *)event);
+    result = TRUE;
     }
-  return FALSE;
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 

@@ -16,7 +16,7 @@ PID_CLONE=../uml_cloonix_switch/src
 VPATH=./src:${PID_CLONE}
 
 SRC = doorways.c llid_backdoor.c llid_traffic.c sock.c \
-      llid_x11.c stats.c dispach.c local_dropbear.c \
+      llid_x11.c stats.c dispach.c llid_xwy.c \
       stub_doorways.c c2c.c pid_clone.c openssh_traf.c
 
 WARNINGS=-Wall -Wstrict-prototypes -Wdeclaration-after-statement

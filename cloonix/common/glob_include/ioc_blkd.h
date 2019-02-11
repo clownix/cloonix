@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -26,6 +26,7 @@ long long cloonix_get_usec(void);
 void cloonix_set_pid(int pid);
 int cloonix_get_pid(void);
 
+#ifndef KERR
 #define KERR(format, a...)                               \
  do {                                                    \
     syslog(LOG_ERR | LOG_USER, "%s"                      \
@@ -36,7 +37,9 @@ int cloonix_get_pid(void);
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
      __LINE__, ## a);                                    \
     } while (0)
+#endif
 
+#ifndef KOUT
 #define KOUT(format, a...)                               \
  do {                                                    \
     syslog(LOG_ERR | LOG_USER, "KILL %s"                 \
@@ -48,6 +51,7 @@ int cloonix_get_pid(void);
      __LINE__, ## a);                                    \
     exit(-1);                                            \
     } while (0)
+#endif
 
 #define MAX_NAME_LEN 64
 #define MAX_PATH_LEN 256

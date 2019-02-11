@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -37,7 +37,7 @@
 #include "qmonitor.h"
 #include "qmp.h"
 #include "qhvc0.h"
-#include "dropbear.h"
+#include "xwy.h"
 #include "llid_trace.h"
 #include "doorways_mngt.h"
 
@@ -215,6 +215,9 @@ static void action_self_destruction(void *data)
   static int count = 0;
   int nb;
   t_llid_tid *llid_tid = (t_llid_tid *) data;
+
+  if (count == 0)
+    kill_xwy();
   if ((self_destruction_ok()) || (count > 500))
     {
     if ((count < 300) && 
@@ -261,7 +264,7 @@ void auto_self_destruction(int llid, int tid)
   llid_tid->tid = tid;
   clownix_timeout_add(10, action_self_destruction, (void *)llid_tid, 
                       NULL, NULL);
-  kill_dropbear();
+  kill_doors();
 }
 /*---------------------------------------------------------------------------*/
 

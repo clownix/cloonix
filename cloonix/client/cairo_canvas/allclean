@@ -1,0 +1,20 @@
+#!/bin/bash
+HERE=`pwd`
+for i in ${HERE}/../lib_client \
+         ${HERE}/crcanvas_gtk \
+         ${HERE}/src/bank \
+         ${HERE}/src/interface \
+         ${HERE}/src/subsets \
+         ${HERE}/src/bdplot ;
+do 
+  echo
+  echo CLEAN:
+  echo ${i}
+  echo
+  cd ${i}
+  make clean
+done
+cd ${HERE}
+make clean
+
+

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -119,7 +119,7 @@ static void do_drawing(t_gtk_plot_ctx *gp, cairo_t *cr)
   float basedecaly = h-gp->marginY;
   float tempdx, scaleY, mintime, maxtime, minkb, maxkb;
   t_Dot *bali;
-  char output[7];
+  char output[400];
   int64_t j, precisionkb, mink, maxk;
 
   if(w<50)
@@ -224,8 +224,8 @@ static void do_drawing(t_gtk_plot_ctx *gp, cairo_t *cr)
   cairo_set_font_size(cr, 8);
   for(i = mint; i<maxt; i++)
     {
+    snprintf(output, 400, "%f", (float)i*gp->precision_graph/1000);
     output[6] = 0;
-    snprintf(output, 6, "%f", (float)i*gp->precision_graph/1000);
 
     cairo_move_to(cr, decalagex + i*gp->scaleX/1000*gp->precision_graph,
                       h-gp->marginY + 3);
@@ -255,7 +255,8 @@ static void do_drawing(t_gtk_plot_ctx *gp, cairo_t *cr)
   cairo_set_font_size(cr, 8);
   for(j = mink; j<maxk; j++)
     {
-    snprintf(output, 7, "%f", j*precisionkb/1000/(float)multiple);
+    snprintf(output, 400, "%f", j*precisionkb/1000/(float)multiple);
+    output[6] = 0;
     cairo_move_to(cr, gp->marginX-3, h-gp->marginY-j*scaleY/1000*precisionkb);
     cairo_line_to(cr, gp->marginX+3, h-gp->marginY-j*scaleY/1000*precisionkb);
     cairo_stroke(cr);

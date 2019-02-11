@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -36,7 +36,6 @@
 #include "llid_backdoor.h"
 #include "stats.h"
 #include "dispach.h"
-#include "local_dropbear.h"
 
 
 int get_doorways_llid(void);
@@ -1022,7 +1021,7 @@ void llid_backdoor_add_traf(char *name, int llid_backdoor, int dido_llid)
       }
     }
   else
-    local_dropbear_add_llid(dido_llid);
+    KOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1045,7 +1044,7 @@ void llid_backdoor_del_traf(char *name, int llid_backdoor, int dido_llid)
       }
     }
   else
-    local_dropbear_del_llid(dido_llid);
+    KOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -50,14 +50,16 @@
 void my_cp_file(char *dsrc, char *ddst, char *name)
 {
   char err[MAX_PRINT_LEN];
-  char src_file[MAX_PATH_LEN];
-  char dst_file[MAX_PATH_LEN];
+  char src_file[MAX_PATH_LEN+MAX_NAME_LEN];
+  char dst_file[MAX_PATH_LEN+MAX_NAME_LEN];
   struct stat stat_file;
   int len;
   char *buf;
   err[0] = 0;
-  sprintf(src_file,"%s/%s", dsrc, name);
-  sprintf(dst_file,"%s/%s", ddst, name);
+  snprintf(src_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dsrc, name);
+  snprintf(dst_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", ddst, name);
+  src_file[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
+  dst_file[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
   if (!stat(src_file, &stat_file))
     {
     buf = read_whole_file(src_file, &len, err);
@@ -75,11 +77,12 @@ void my_cp_file(char *dsrc, char *ddst, char *name)
 /****************************************************************************/
 void my_cp_link(char *dir_src, char *dir_dst, char *name)
 {
-  char link_name[MAX_PATH_LEN];
-  char link_val[MAX_PATH_LEN];
+  char link_name[MAX_PATH_LEN+MAX_NAME_LEN];
+  char link_val[MAX_PATH_LEN+MAX_NAME_LEN];
   int len;
-  memset(link_val, 0, MAX_PATH_LEN);
-  sprintf(link_name, "%s/%s", dir_src, name);
+  memset(link_val, 0, MAX_PATH_LEN+MAX_NAME_LEN);
+  snprintf(link_name, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dir_src, name);
+  link_name[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
   len = readlink(link_name, link_val, MAX_PATH_LEN-1);
   if ((len != -1) && (len < MAX_PATH_LEN-1))
     {
@@ -96,11 +99,12 @@ void my_cp_link(char *dir_src, char *dir_dst, char *name)
 /****************************************************************************/
 void my_mv_link(char *dir_src, char *dir_dst, char *name)
 {
-  char link_name[MAX_PATH_LEN];
-  char link_val[MAX_PATH_LEN];
+  char link_name[MAX_PATH_LEN+MAX_NAME_LEN];
+  char link_val[MAX_PATH_LEN+MAX_NAME_LEN];
   int len;
-  memset(link_val, 0, MAX_PATH_LEN);
-  sprintf(link_name, "%s/%s", dir_src, name);
+  memset(link_val, 0, MAX_PATH_LEN+MAX_NAME_LEN);
+  snprintf(link_name, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dir_src, name);
+  link_name[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
   len = readlink(link_name, link_val, MAX_PATH_LEN-1);
   unlink(link_name);
   if ((len != -1) && (len < MAX_PATH_LEN-1))
@@ -324,7 +328,7 @@ int unlink_sub_dir_files_except_dir(char *dir, char *err)
 {
   int result = 0;
   int end_result = 0;
-  char pth[MAX_PATH_LEN];
+  char pth[MAX_PATH_LEN+MAX_NAME_LEN];
   DIR *dirptr;
   struct dirent *ent;
   dirptr = opendir(dir);
@@ -336,7 +340,8 @@ int unlink_sub_dir_files_except_dir(char *dir, char *err)
         continue;
       if (!strcmp(ent->d_name, ".."))
         continue;
-      sprintf(pth, "%s/%s", dir, ent->d_name);
+      snprintf(pth, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dir, ent->d_name);
+      pth[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
       if(ent->d_type == DT_DIR)
         {
         sprintf(err, "%s Directory Found: %s will not delete\n", dir, pth);
@@ -374,7 +379,7 @@ int unlink_sub_dir_files_except_dir(char *dir, char *err)
 int unlink_sub_dir_files(char *dir, char *err)
 {
   int result = 0;
-  char pth[MAX_PATH_LEN];
+  char pth[MAX_PATH_LEN+MAX_NAME_LEN];
   DIR *dirptr;
   struct dirent *ent;
   dirptr = opendir(dir);
@@ -386,7 +391,8 @@ int unlink_sub_dir_files(char *dir, char *err)
         continue;
       if (!strcmp(ent->d_name, ".."))
         continue;
-      sprintf(pth, "%s/%s", dir, ent->d_name);
+      snprintf(pth, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dir, ent->d_name);
+      pth[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
       if(ent->d_type == DT_DIR)
         result = unlink_sub_dir_files(pth, err);
       else if (unlink(pth))
@@ -414,9 +420,10 @@ int rm_machine_dirs(int vm_id, char *err)
 {
   int result = 0;
   char dir[MAX_PATH_LEN];
-  char pth[MAX_PATH_LEN];
+  char pth[MAX_PATH_LEN+MAX_NAME_LEN];
   DIR *dirptr;
   struct dirent *ent;
+  int maxlenpth = MAX_PATH_LEN+MAX_NAME_LEN;
   strcpy(err, "NO_ERROR\n");
   sprintf(dir,"%s", cfg_get_work_vm(vm_id));
   dirptr = opendir(dir);
@@ -433,13 +440,15 @@ int rm_machine_dirs(int vm_id, char *err)
         result = unlink_sub_dir_files(utils_dir_conf_tmp(vm_id), err);
         if (!result)
           {
-          sprintf(pth,"%s/%s", cfg_get_work_vm(vm_id), DIR_CONF);
+          snprintf(pth, maxlenpth, "%s/%s", cfg_get_work_vm(vm_id), DIR_CONF);
+          pth[maxlenpth-1] = 0;
           result = unlink_sub_dir_files(pth, err);
           }
         }
       else if (!strncmp(FILE_COW, ent->d_name, strlen(FILE_COW)))
         {
-        sprintf(pth,"%s/%s", cfg_get_work_vm(vm_id), ent->d_name);
+        snprintf(pth, maxlenpth, "%s/%s", cfg_get_work_vm(vm_id), ent->d_name);
+        pth[maxlenpth-1] = 0;
         if (unlink(pth))
           {
           sprintf(err, "File: %s could not be deleted\n", pth);
@@ -448,52 +457,62 @@ int rm_machine_dirs(int vm_id, char *err)
         }
       else if (!strcmp(DIR_CLOONIX_DISKS, ent->d_name))
         {
-        sprintf(pth,"%s", utils_get_disks_path_name(vm_id));
+        snprintf(pth, maxlenpth, "%s", utils_get_disks_path_name(vm_id));
+        pth[maxlenpth-1] = 0;
         result = unlink_sub_dir_files(pth, err);
         }
       else if (!strcmp(DIR_UMID, ent->d_name))
         {
-        sprintf(pth,"%s/%s", cfg_get_work_vm(vm_id), DIR_UMID);
+        snprintf(pth, maxlenpth, "%s/%s", cfg_get_work_vm(vm_id), DIR_UMID);
+        pth[maxlenpth-1] = 0;
         result = unlink_sub_dir_files(pth, err);
         }
       else if (!strcmp(CLOONIX_FILE_NAME, ent->d_name))
         {
-        sprintf(pth,"%s/%s", cfg_get_work_vm(vm_id),  CLOONIX_FILE_NAME);
+        snprintf(pth, maxlenpth, "%s/%s", cfg_get_work_vm(vm_id),  CLOONIX_FILE_NAME);
+        pth[maxlenpth-1] = 0;
         unlink(pth);
         }
       else if (!strcmp(QMONITOR_UNIX, ent->d_name))
         {
-        sprintf(pth,"%s", utils_get_qmonitor_path(vm_id));
+        snprintf(pth, maxlenpth, "%s", utils_get_qmonitor_path(vm_id));
+        pth[maxlenpth-1] = 0;
         unlink(pth);
         }
      else if (!strcmp(QMP_UNIX, ent->d_name))
         {
-        sprintf(pth,"%s", utils_get_qmp_path(vm_id));
+        snprintf(pth, maxlenpth, "%s", utils_get_qmp_path(vm_id));
+        pth[maxlenpth-1] = 0;
         unlink(pth);
         }
      else if (!strcmp(QHVCO_UNIX, ent->d_name))
         {
-        sprintf(pth,"%s", utils_get_qhvc0_path(vm_id));
+        snprintf(pth, maxlenpth, "%s", utils_get_qhvc0_path(vm_id));
+        pth[maxlenpth-1] = 0;
         unlink(pth);
         }
      else if (!strcmp(QBACKDOOR_UNIX, ent->d_name))
         {
-        sprintf(pth,"%s", utils_get_qbackdoor_path(vm_id));
+        snprintf(pth, maxlenpth, "%s", utils_get_qbackdoor_path(vm_id));
+        pth[maxlenpth-1] = 0;
         unlink(pth);
         }
      else if (!strcmp(QBACKDOOR_HVCO_UNIX, ent->d_name))
         {
-        sprintf(pth,"%s", utils_get_qbackdoor_hvc0_path(vm_id));
+        snprintf(pth, maxlenpth, "%s", utils_get_qbackdoor_hvc0_path(vm_id));
+        pth[maxlenpth-1] = 0;
         unlink(pth);
         }
      else if (!strcmp(SPICE_SOCK, ent->d_name))
         {
-        sprintf(pth,"%s", utils_get_spice_path(vm_id));
+        snprintf(pth, maxlenpth, "%s", utils_get_spice_path(vm_id));
+        pth[maxlenpth-1] = 0;
         unlink(pth);
         }
       else
         {
-        sprintf(err, "UNEXPECTED: %s found\n", ent->d_name);
+        snprintf(err, MAX_PRINT_LEN, "UNEXPECTED: %s found\n", ent->d_name);
+        err[MAX_PRINT_LEN-1] = 0;
         result = -1;
         }
       }
@@ -503,7 +522,8 @@ int rm_machine_dirs(int vm_id, char *err)
       {
       if (rmdir(dir))
         {
-        sprintf(err, "Dir %s could not be deleted\n", dir);
+        snprintf(err, MAX_PRINT_LEN, "Dir %s could not be deleted\n", dir);
+        err[MAX_PRINT_LEN-1] = 0;
         result = -1;
         }
       }
@@ -516,10 +536,12 @@ int rm_machine_dirs(int vm_id, char *err)
 int machine_read_umid_pid(int vm_id)
 {
   FILE *fhd;
-  char path[MAX_PATH_LEN];
+  char path[MAX_PATH_LEN+MAX_NAME_LEN];
   int pid;
   int result = 0;
-  sprintf(path,"%s/%s/pid", cfg_get_work_vm(vm_id), DIR_UMID);
+  snprintf(path, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s/pid",
+                                            cfg_get_work_vm(vm_id), DIR_UMID);
+  path[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
   fhd = fopen(path, "r");
   if (fhd)
     {

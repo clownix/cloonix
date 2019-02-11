@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -72,9 +72,9 @@ static int g_nb_hop_allocated;
 /*****************************************************************************/
 static char *hop_name(t_hop_record *hop)
 {
-  static char name[MAX_NAME_LEN];
-  memset(name, 0, MAX_NAME_LEN);
-  snprintf(name, MAX_NAME_LEN-1, "%s,%d", hop->name, hop->num);
+  static char name[2*MAX_NAME_LEN];
+  memset(name, 0, 2*MAX_NAME_LEN);
+  snprintf(name, 2*MAX_NAME_LEN-1, "%s,%d", hop->name, hop->num);
   return name;
 }
 /*---------------------------------------------------------------------------*/

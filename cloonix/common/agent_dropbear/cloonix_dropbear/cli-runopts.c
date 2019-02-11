@@ -51,7 +51,7 @@ void cli_getopts(int argc, char ** argv)
   argv++;
   cli_opts.vmname = NULL;
   cli_opts.cmd = NULL;
-  cli_opts.wantpty = 9;
+  cli_opts.wantpty = 1;
   opts.recv_window = DEFAULT_RECV_WINDOW;
 
   for (i = 1; i < argc; i++) 
@@ -68,8 +68,8 @@ void cli_getopts(int argc, char ** argv)
       {
       switch (argv[i][1]) 
         {
-        case 't':
-          cli_opts.wantpty = 1;
+        case 'Z':
+          cli_opts.wantpty = 0;
         break;
         default:
           KOUT("unknown argument '%s'\n", argv[i]);
@@ -101,13 +101,6 @@ void cli_getopts(int argc, char ** argv)
         break;
         }
       }
-    }
-  if (cli_opts.wantpty == 9) 
-    {
-    if (cli_opts.cmd == NULL) 
-      cli_opts.wantpty = 1;
-    else 
-      cli_opts.wantpty = 0;
     }
   parse_hostname(host_arg);
 }

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -844,7 +844,7 @@ void channel_loop(int once)
 
     if (g_fct_after_epoll)
       {
-      if (!g_fct_after_epoll(result, events))
+      if (g_fct_after_epoll(result, events))
         slipery_select = 0;
       }
 
@@ -854,9 +854,9 @@ void channel_loop(int once)
         {
         cidx = events[k].data.fd + 1;
         evt = events[k].events;
-        KERR( "%d %d %d %d %d %08X", slipery_select, g_channel[cidx].kind,
+        KERR( "%d %d %d %d %d %08X %d", slipery_select, g_channel[cidx].kind,
                                      cidx, (evt & EPOLLOUT),
-                                     (evt & EPOLLIN), evt);
+                                     (evt & EPOLLIN), evt, get_llid(cidx));
         }
       if (slipery_select >= 5)
         KOUT(" %d %d", result, channel_modification_occurence);
@@ -873,6 +873,13 @@ void channel_add_epoll_hooks(t_fct_before_epoll beopll,
 {
   g_fct_before_epoll = beopll;
   g_fct_after_epoll  = aepoll;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int channel_get_epfd(void)
+{
+  return g_epfd;
 }
 /*---------------------------------------------------------------------------*/
 

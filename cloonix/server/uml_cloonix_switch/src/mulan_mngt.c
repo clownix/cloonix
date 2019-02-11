@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -679,10 +679,10 @@ static char **mulan_birth_argv(t_mulan_arg *mu, int is_wlan)
   static char bin_path[MAX_PATH_LEN];
   static char sock[MAX_PATH_LEN];
   static char *argv[] = {bin_path, sock, NULL};
-  memset(sock, 0, MAX_PATH_LEN);
-  snprintf(sock, MAX_PATH_LEN-1, "%s", mu->sock);
-  memset(bin_path, 0, MAX_PATH_LEN);
-  snprintf(bin_path,MAX_PATH_LEN-1,"%s",utils_get_muswitch_bin_path(is_wlan));
+  snprintf(sock, MAX_PATH_LEN, "%s", mu->sock);
+  snprintf(bin_path,MAX_PATH_LEN,"%s",utils_get_muswitch_bin_path(is_wlan));
+  sock[MAX_PATH_LEN-1] = 0;
+  bin_path[MAX_PATH_LEN-1] = 0;
   return argv;
 }
 /*--------------------------------------------------------------------------*/
@@ -781,7 +781,7 @@ void mulan_test_stop(char *lan)
 static void timer_mulan_beat(void *data)
 {
   t_mulan *cur = g_head_mulan;
-  char cmd[MAX_PATH_LEN];
+  char cmd[2*MAX_PATH_LEN];
   while(cur)
     {
     if (cur->llid == 0)
@@ -791,9 +791,9 @@ static void timer_mulan_beat(void *data)
     else if ((cur->is_wlan == 0) && 
              (cur->traffic_lan_link_state == traffic_lan_link_idle))
       {
-      memset(cmd, 0, MAX_PATH_LEN);
-      snprintf(cmd,MAX_PATH_LEN-1,"cloonix_req_listen=%s lan=%s",
-                                  cur->traf, cur->lan);
+      memset(cmd, 0, 2*MAX_PATH_LEN);
+      snprintf(cmd,2*MAX_PATH_LEN-1,"cloonix_req_listen=%s lan=%s",
+                                     cur->traf, cur->lan);
       if (!try_rpct_send_diag_msg(cur->llid, cur->pid, cmd))
         cur->traffic_lan_link_state = traffic_lan_link_wait; 
       }

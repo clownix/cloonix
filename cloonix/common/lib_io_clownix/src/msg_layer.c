@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -783,6 +783,12 @@ static void signal_pipe(int no_use)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+int msg_mngt_get_epfd(void)
+{
+  return channel_get_epfd();
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void msg_mngt_init (char *name, int max_len_per_read)

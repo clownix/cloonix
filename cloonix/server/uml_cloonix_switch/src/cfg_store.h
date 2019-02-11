@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -77,15 +77,15 @@ typedef struct t_cfg
   t_vm *vm_head;
   } t_cfg;
 /*---------------------------------------------------------------------------*/
-t_topo_clc *cfg_get_topo_clc(void);
 char *cfg_get_work(void);
 char *cfg_get_work_vm(int vm_id);
 char *cfg_get_root_work(void);
 char *cfg_get_bulk(void);
 char *cfg_get_bin_dir(void);
 
-
 void cfg_set_host_conf(t_topo_clc *config);
+t_topo_clc *cfg_get_topo_clc(void);
+
 int  cfg_get_server_port(void);
 
 char *cfg_get_ctrl_doors_sock(void);

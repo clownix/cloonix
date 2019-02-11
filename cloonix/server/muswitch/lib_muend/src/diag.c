@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -247,6 +247,13 @@ void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop)
 void rpct_recv_hop_unsub(void *ptr, int llid, int tid)
 {
   rpct_hop_print_del_sub(ptr, llid);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_recv_kil_req(void *ptr, int llid, int tid)
+{
+  KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -43,6 +43,7 @@ int channel_check_llid(int llid, int *is_blkd, const char *fct);
 /*---------------------------------------------------------------------------*/
 int get_fd_with_cidx(int cidx);
 /*---------------------------------------------------------------------------*/
+int channel_get_epfd(void);
 void channel_heartbeat_ms_set (int heartbeat_ms);
 /*---------------------------------------------------------------------------*/
 

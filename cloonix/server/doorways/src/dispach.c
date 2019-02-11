@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -27,20 +27,11 @@
 #include "openssh_traf.h"
 #include "llid_x11.h"
 #include "c2c.h"
+#include "llid_xwy.h"
+#include "dispach.h"
 
 char *get_switch_path(void);
 
-typedef struct t_transfert
-{
-  int type;
-  int dido_llid;
-  int inside_llid;
-  int beat_count;
-  int init_done;
-  int ident_flow_timeout;
-  struct t_transfert *prev;
-  struct t_transfert *next;
-} t_transfert;
 
 typedef struct t_flow_ctrl
 {
@@ -164,6 +155,7 @@ static void alloc_transfert(int dido_llid, int inside_llid, int type)
 static void free_transfert(int dido_llid, int inside_llid)
 {
   t_transfert *olt, *ilt;
+KERR("free_transfert %d %d", dido_llid, inside_llid);
   olt = g_dido_llid[dido_llid];
   ilt = g_inside_llid[inside_llid];
   g_dido_llid[dido_llid] = NULL;
@@ -196,6 +188,27 @@ static void free_transfert(int dido_llid, int inside_llid)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void dispach_free_transfert(int dido_llid, int inside_llid)
+{
+  free_transfert(dido_llid, inside_llid);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+t_transfert *dispach_get_dido_transfert(int dido_llid)
+{
+  return (g_dido_llid[dido_llid]);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+t_transfert *dispach_get_inside_transfert(int inside_llid)
+{
+  return (g_inside_llid[inside_llid]);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void in_err_gene(void *ptr, int inside_llid, int err, int from)
 {
   int dido_llid;
@@ -203,7 +216,7 @@ void in_err_gene(void *ptr, int inside_llid, int err, int from)
   ilt = get_inside_transfert(inside_llid);
   if (!ilt)
     {
-    KERR(" ");
+    KERR("%d", inside_llid);
     if (msg_exist_channel(inside_llid))
       msg_delete_channel(inside_llid);
     }
@@ -213,6 +226,10 @@ void in_err_gene(void *ptr, int inside_llid, int err, int from)
       KOUT(" ");
     dido_llid = ilt->dido_llid;
     free_transfert(dido_llid, inside_llid);
+if (ilt->type == doors_type_xwy_main_traf)
+KERR("free_transfert doors_type_xwy_main_traf %d %d", dido_llid, inside_llid);
+if (ilt->type == doors_type_xwy_x11_flow)
+KERR("free_transfert doors_type_xwy_x11_flow %d %d", dido_llid, inside_llid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -247,7 +264,6 @@ static void in_rx_switch(int inside_llid, int len, char *buf)
     }
 }
 /*--------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static int in_rx_spice(void *ptr, int inside_llid, int fd)
@@ -322,6 +338,10 @@ void dispach_door_end(int dido_llid)
       KOUT(" ");
     inside_llid = olt->inside_llid;
     free_transfert(dido_llid, inside_llid);
+if (olt->type == doors_type_xwy_main_traf)
+KERR("free_transfert doors_type_xwy_main_traf %d %d", dido_llid, inside_llid);
+if (olt->type == doors_type_xwy_x11_flow)
+KERR("free_transfert doors_type_xwy_x11_flow %d %d", dido_llid, inside_llid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -343,13 +363,13 @@ static void dispach_door_rx_switch(int dido_llid, int val, int len, char *buf)
       {
       KERR(" ");
       doorways_tx(dido_llid, 0, doors_type_switch,
-                  doors_val_init_link_ko, len, buf);
+                  doors_val_link_ko, len, buf);
       }
     else
       {
       alloc_transfert(dido_llid, inside_llid, doors_type_switch);
       doorways_tx(dido_llid, 0, doors_type_switch,
-                  doors_val_init_link_ok, len, buf);
+                  doors_val_link_ok, len, buf);
       }
     }
   else if (val == doors_val_none)
@@ -383,7 +403,7 @@ static void dispach_door_rx_spice(int dido_llid, int val, int len, char *buf)
       {
       KERR("%s", buf);
       doorways_tx(dido_llid, 0, doors_type_spice,
-                  doors_val_init_link_ko, strlen("KO") + 1, "KO");
+                  doors_val_link_ko, strlen("KO") + 1, "KO");
       }
     else
       {
@@ -392,13 +412,13 @@ static void dispach_door_rx_spice(int dido_llid, int val, int len, char *buf)
         {
         KERR(" ");
         doorways_tx(dido_llid, 0, doors_type_spice,
-                    doors_val_init_link_ko, strlen("KO") + 1, "KO");
+                    doors_val_link_ko, strlen("KO") + 1, "KO");
         }
       else
         {
         alloc_transfert(dido_llid, inside_llid, doors_type_spice);
         doorways_tx(dido_llid, 0, doors_type_spice,
-                    doors_val_init_link_ok,  strlen("OK") + 1, "OK");
+                    doors_val_link_ok,  strlen("OK") + 1, "OK");
         }
       }
     }
@@ -423,6 +443,65 @@ static void dispach_door_rx_spice(int dido_llid, int val, int len, char *buf)
     KERR("%d", val);
 }
 /*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
+                                int len, char *buf)
+{
+  int inside_llid;
+  t_transfert *ilt, *olt;
+  if (val == doors_val_init_link)
+    {
+    olt = get_dido_transfert(dido_llid);
+    if (olt)
+      KOUT("%d %d type:%d beat:%d", olt->dido_llid, olt->inside_llid,
+                                    olt->type, olt->beat_count);
+    inside_llid = llid_xwy_ctrl();
+    ilt = get_inside_transfert(inside_llid);
+    if (ilt)
+      KOUT("%d %d type:%d beat:%d", ilt->dido_llid, ilt->inside_llid,
+                                    ilt->type, ilt->beat_count);
+    if (!inside_llid)
+      doorways_tx(dido_llid, 0, type, doors_val_link_ko, 3, "KO");
+    else
+      {
+      doorways_tx(dido_llid,inside_llid,type,doors_val_link_ok,3,"OK");
+      alloc_transfert(dido_llid, inside_llid, type);
+KERR("alloc_transfert %d %d", dido_llid, inside_llid);
+      }
+    }
+  else if (val == doors_val_xwy)
+    {
+    ilt = get_inside_transfert(tid);
+    olt = get_dido_transfert(dido_llid);
+    if ((!ilt) || (!olt) || (ilt != olt))
+      {
+      doorways_tx(dido_llid, 0, type,doors_val_link_ko, 3, "KO");
+      KERR("%d %d  %p  %p", dido_llid, tid, ilt, olt);
+      }
+    else
+      {
+      if (tid != ilt->inside_llid)
+        KOUT(" ");
+      if (dido_llid != ilt->dido_llid)
+        KOUT("%d %d", dido_llid, ilt->dido_llid);
+      if (msg_exist_channel(ilt->inside_llid))
+        {
+        watch_tx(ilt->inside_llid, len, buf);
+        }
+      else
+        {
+        doorways_tx(dido_llid, 0, type, doors_val_link_ko, 3, "KO");
+        free_transfert(ilt->dido_llid, ilt->inside_llid);
+KERR("free_transfert %d %d", dido_llid, ilt->inside_llid);
+        }
+      }
+    }
+  else
+    KOUT("%d", val);
+}
+/*--------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 static void dispach_door_rx_openssh(int dido_llid, int val, int len, char *buf)
@@ -466,6 +545,7 @@ void dispach_door_rx(int dido_llid, int tid, int type, int val,
 
   switch (type)
     {
+
     case doors_type_switch:
       dispach_door_rx_switch(dido_llid, val, len, buf);
       break;
@@ -492,6 +572,11 @@ void dispach_door_rx(int dido_llid, int tid, int type, int val,
 
     case doors_type_openssh:
       dispach_door_rx_openssh(dido_llid, val, len, buf);
+      break;
+
+    case doors_type_xwy_main_traf:
+    case doors_type_xwy_x11_flow:
+      dispach_door_rx_xwy(type, dido_llid, tid, val, len, buf);
       break;
 
     default:

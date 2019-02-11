@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -33,10 +33,10 @@
 #include "llid_traffic.h"
 #include "llid_x11.h"
 #include "llid_backdoor.h"
+#include "llid_xwy.h"
 #include "stats.h"
 #include "doorways_sock.h"
 #include "dispach.h"
-#include "local_dropbear.h"
 #include "c2c.h"
 #include "pid_clone.h"
 /*--------------------------------------------------------------------------*/
@@ -50,19 +50,9 @@ static int g_server_inet_port;
 /*****************************************************************************/
 char *get_u2i_nat_path_with_name(char *nat)
 {
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/endp/%s_0_u2i", g_root_work, nat);
-  return path;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *get_local_dropbear_sock(void)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s", g_root_work, DROPBEAR_SOCK);
+  static char path[2*MAX_PATH_LEN];
+  snprintf(path, 2*MAX_PATH_LEN, "%s/endp/%s_0_u2i", g_root_work, nat);
+  path[MAX_PATH_LEN-1] = 0;
   return path;
 }
 /*--------------------------------------------------------------------------*/
@@ -70,9 +60,9 @@ char *get_local_dropbear_sock(void)
 /*****************************************************************************/
 char *get_switch_path(void)
 {
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,  "%s/%s", g_root_work, CLOONIX_SWITCH);
+  static char path[2*MAX_PATH_LEN];
+  snprintf(path, 2*MAX_PATH_LEN,  "%s/%s", g_root_work, CLOONIX_SWITCH);
+  path[MAX_PATH_LEN-1] = 0;
   return path;
 }
 /*---------------------------------------------------------------------------*/
@@ -80,9 +70,9 @@ char *get_switch_path(void)
 /*****************************************************************************/
 static char *get_ctrl_doors(void)
 {
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s", g_root_work, DOORS_CTRL_SOCK);
+  static char path[2*MAX_PATH_LEN];
+  snprintf(path, 2*MAX_PATH_LEN, "%s/%s", g_root_work, DOORS_CTRL_SOCK);
+  path[MAX_PATH_LEN-1] = 0;
   return path;
 }
 /*---------------------------------------------------------------------------*/
@@ -168,6 +158,8 @@ void doors_recv_command(int llid, int tid, char *name, char *cmd)
     llid_backdoor_cloonix_down_and_not_running(name);
   else if (sscanf(cmd, REBOOT_REQUEST, &job_idx) == 1)
     llid_backdoor_tx_reboot_to_agent(name, job_idx);
+  else if (sscanf(cmd, XWY_CONNECT, addr) == 1)
+    llid_xwy_connect_info(addr);
   else if (sscanf(cmd, HALT_REQUEST, &job_idx) == 1)
     llid_backdoor_tx_halt_to_agent(name, job_idx);
   else if (!strcmp(cmd, FIFREEZE_FITHAW_FREEZE))
@@ -188,6 +180,13 @@ void doors_recv_command(int llid, int tid, char *name, char *cmd)
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
 {
   rpct_send_pid_resp(ptr, llid, tid, name, num, cloonix_get_pid(), getpid());
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_recv_kil_req(void *ptr, int llid, int tid)
+{
+  exit(0);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -256,6 +255,7 @@ static void end_of_init(char *passwd)
       KOUT(" ");
     g_llid_doors_listen = llid;
     llid_backdoor_init();
+    llid_xwy_init();
     done = 1;
     }
 }
@@ -348,7 +348,6 @@ int main (int argc, char *argv[])
   doors_xml_init();
   x11_init();
   c2c_init();
-  local_dropbear_init();
   msg_mngt_init(get_name(argv[1]), IO_MAX_BUF_LEN);
   dispach_init();
   pid_clone_init();

@@ -40,6 +40,7 @@ void rpct_recv_cli_req(void *ptr, int llid, int tid,
                     int cli_llid, int cli_tid, char *line){KOUT(" ");}
 void rpct_recv_cli_resp(void *ptr, int llid, int tid,
                      int cli_llid, int cli_tid, char *line){KOUT(" ");}
+void rpct_recv_kil_req(void *ptr, int llid, int tid){KOUT();}
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num){KOUT(" ");}
 void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num, 
                         int toppid, int pid){KOUT(" ");}

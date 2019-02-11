@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -93,6 +93,7 @@ static int count_app_msg = 0;
 static int count_diag_msg = 0;
 static int count_mucli_req = 0;
 static int count_mucli_resp = 0;
+static int count_rpc_kil_req  = 0;
 static int count_rpc_pid_req  = 0;
 static int count_rpc_pid_resp = 0;
 static int count_cmd_resp_txt = 0;
@@ -586,6 +587,27 @@ void rpct_recv_pid_req(void *ptr, int llid, int itid,
   count_rpc_pid_req++;
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_recv_kil_req(void *ptr, int llid, int itid)
+{
+  static int tid;
+  if (i_am_client)
+    {
+    if (count_rpc_kil_req)
+      {
+      if (tid != itid)
+        KOUT(" ");
+      }
+    tid = rand();
+    rpct_send_kil_req(ptr, llid, tid);
+    }
+  else
+    rpct_send_kil_req(ptr, llid, itid);
+  count_rpc_kil_req++;
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 void rpct_recv_pid_resp(void *ptr, int llid, int itid,
@@ -2148,6 +2170,15 @@ void recv_list_pid_resp(int llid, int itid, int iqty, t_pid_lst *ilst)
       {
       if (itid != tid)
         KOUT(" ");
+      if (iqty != qty)
+        KOUT("%d %d ", iqty, qty);
+      for (i=0; i<qty; i++)
+         {
+         if (strcmp(lst[i].name, ilst[i].name))
+           KOUT("%d %s %s ", i, lst[i].name, ilst[i].name);
+         if (lst[i].pid != ilst[i].pid)
+           KOUT("%d %d %d ", i, lst[i].pid, ilst[i].pid);
+         }
       if (memcmp(lst, ilst, qty*sizeof(t_pid_lst)))
         KOUT(" ");
       clownix_free(lst, __FUNCTION__);
@@ -2155,6 +2186,7 @@ void recv_list_pid_resp(int llid, int itid, int iqty, t_pid_lst *ilst)
     tid = rand();
     qty = my_rand(50);
     lst = (t_pid_lst *)clownix_malloc(qty*sizeof(t_pid_lst),7);
+    memset (lst, 0, qty * sizeof(t_pid_lst));
     for (i=0; i<qty; i++)
       {
       random_choice_str(lst[i].name, MAX_NAME_LEN);
@@ -2522,6 +2554,7 @@ static void send_first_burst(int llid)
   rpct_recv_cli_req(NULL, llid, 0, 0, 0, NULL);
   rpct_recv_cli_resp(NULL, llid, 0, 0, 0, NULL);
   rpct_recv_pid_req(NULL, llid, 0, NULL, 0);
+  rpct_recv_kil_req(NULL, llid, 0);
   rpct_recv_pid_resp(NULL, llid, 0, NULL, 0, 0, 0);
   rpct_recv_hop_sub(NULL, llid, 0, 0);
   rpct_recv_hop_unsub(NULL, llid, 0);

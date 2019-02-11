@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -46,6 +46,7 @@
 #include "header_sock.h"
 #include "stats_counters.h"
 #include "stats_counters_sysinfo.h"
+#include "xwy.h"
 
 void uml_clownix_switch_error_cb(void *ptr, int llid, int err, int from);
 void uml_clownix_switch_rx_cb(int llid, int len, char *buf);
@@ -250,7 +251,14 @@ void doors_pid_resp(int llid, char *name, int pid)
   if (strcmp(name, "doors"))
     KERR("%s", name); 
   if (g_doorways_pid != pid)
+    {
     event_print("DOORWAYS PID CHANGE: %d to %d", g_doorways_pid, pid);
+    if (g_this_is_a_restart)
+      {
+      KERR("DOORWAYS PID CHANGE: %d to %d", g_doorways_pid, pid);
+      xwy_request_doors_connect();
+      }
+    }
   g_doorways_pid = pid;
   g_nb_pid_resp++;
 }
@@ -372,6 +380,13 @@ void doorways_first_start(void)
 {
   g_this_is_a_restart = 0;
   doorways_start();
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void kill_doors(void)
+{
+  rpct_send_kil_req(NULL, g_doorways_llid, 0);
 }
 /*---------------------------------------------------------------------------*/
 

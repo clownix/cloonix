@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,6 +15,18 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+typedef struct t_transfert
+{
+  int type;
+  int dido_llid;
+  int inside_llid;
+  int beat_count;
+  int init_done;
+  int ident_flow_timeout;
+  struct t_transfert *prev;
+  struct t_transfert *next;
+} t_transfert;
+
 int dispatch_get_dido_llid_with_inside_llid(int inside_llid, int *init_done);
 void dispatch_set_init_done_with_inside_llid(int inside_llid);
 char *get_g_buf(void);
@@ -27,6 +39,9 @@ int  dispach_send_to_traf_client(int llid, int val, int len, char *buf);
 int dispach_send_to_openssh_client(int dido_llid, int val, int len, char *buf);
 void in_rx_c2c(int inside_llid, int idx, int len, char *buf);
 void in_err_gene(void *ptr, int inside_llid, int err, int from);
+void dispach_free_transfert(int dido_llid, int inside_llid);
+t_transfert *dispach_get_dido_transfert(int dido_llid);
+t_transfert *dispach_get_inside_transfert(int inside_llid);
 void dispach_init(void);
 /*--------------------------------------------------------------------------*/
 

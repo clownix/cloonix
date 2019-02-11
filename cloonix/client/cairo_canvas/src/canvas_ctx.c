@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -53,7 +53,6 @@
 
 static double g_x_mouse, g_y_mouse;
 GtkWidget *get_main_window(void);
-GtkWidget *topo_canvas(void);
 
 void topo_get_matrix_inv_transform_point(double *x, double *y);
 void put_top_left_icon(GtkWidget *mainwin);
@@ -193,12 +192,18 @@ static void hidden_visible_check_toggled(GtkToggleButton *check,
 static GtkWidget *hidden_visible_check_button(t_bank_item *bi, int is_eth)
 {
   GtkWidget *check;
-  char label[MAX_PATH_LEN];
-  memset(label, 0, MAX_PATH_LEN);
+  char label[2*MAX_PATH_LEN];
+  memset(label, 0, 2*MAX_PATH_LEN);
   if (is_eth)
-    snprintf(label, MAX_PATH_LEN-1, "%s intf %d", bi->name, bi->num);
+    {
+    snprintf(label, 2*MAX_PATH_LEN, "%s intf %d", bi->name, bi->num);
+    label[MAX_PATH_LEN-1] = 0;
+    }
   else
-    snprintf(label, MAX_PATH_LEN-1, bi->name);
+    {
+    snprintf(label, MAX_PATH_LEN, bi->name);
+    label[MAX_PATH_LEN-1] = 0;
+    }
   check = gtk_check_button_new_with_label(label);
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(check), TRUE);
   g_signal_connect(G_OBJECT(check), "toggled", 
@@ -492,7 +497,6 @@ static void c2c_cact(GtkWidget *mn)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 void canvas_ctx_menu(gdouble x, gdouble y)
 {
@@ -522,6 +526,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *hidden_visible = gtk_menu_item_new_with_label("Hidden/Visible");
   GtkWidget *separator1 = gtk_separator_menu_item_new();
   GtkWidget *separator2 = gtk_separator_menu_item_new();
+
   g_x_mouse = (double) x;
   g_y_mouse = (double) y;
 
@@ -585,11 +590,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), stop);
   stop_go_command(stop);
   gtk_widget_show_all(menu);
-#if GTK_MINOR_VERSION >= 22
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
-#else
-  gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 0, 0);
-#endif
 }
 /*--------------------------------------------------------------------------*/
 

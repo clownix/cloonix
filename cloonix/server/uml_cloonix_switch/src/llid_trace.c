@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -129,6 +129,9 @@ static char *llid_trace_translate_type(int type_llid_trace)
       break;
     case type_llid_trace_unix_qmonitor:
       result = "trace_unix_qmonitor";
+      break;
+    case type_llid_trace_unix_xwy:
+      result = "trace_unix_xwy";
       break;
     }
   return result;

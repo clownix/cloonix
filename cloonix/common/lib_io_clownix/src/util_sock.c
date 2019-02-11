@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -99,7 +99,7 @@ int util_read (char *ptr, int max, int fd)
     if ((errno == EAGAIN) || (errno ==EINTR))
       rx_len = 0;
     }
-  if (rx_len == 0)
+  else if (rx_len == 0)
     rx_len = -1;
   return rx_len;
 }

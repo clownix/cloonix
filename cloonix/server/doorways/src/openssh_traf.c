@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -158,7 +158,7 @@ int openssh_rx_from_client_init(int dido_llid, int len, char *buf_rx)
     }
   else
     snprintf(resp, MAX_PATH_LEN-1, "KOSCAN"); 
-  send_to_openssh_client(dido_llid, doors_val_init_link_ko, 
+  send_to_openssh_client(dido_llid, doors_val_link_ko, 
                          strlen(resp) + 1, resp);
   return result;
 }

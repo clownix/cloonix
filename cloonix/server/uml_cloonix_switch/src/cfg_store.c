@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -96,7 +96,8 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
     result = 1;
     }
   else if ((!strcmp(name, "doors")) ||
-           (!strcmp(name, "uml_cloonix_switch")))
+           (!strcmp(name, "uml_cloonix_switch")) ||
+           (!strcmp(name, "cloonix")))
     {
     snprintf(use, MAX_NAME_LEN, "%s is for system use", name);
     result = 1;
@@ -476,10 +477,6 @@ void cfg_set_host_conf(t_topo_clc *conf)
   if (cfg.clc.network[0])
     KOUT(" ");
   memcpy(&(cfg.clc), conf, sizeof(t_topo_clc));
-  if (file_exists(WIRESHARK_BINARY_QT, X_OK))
-    cfg.clc.flags_config |= FLAGS_CONFIG_WIRESHARK_QT_PRESENT;
-  else if (file_exists(WIRESHARK_BINARY, X_OK))
-    cfg.clc.flags_config |= FLAGS_CONFIG_WIRESHARK_PRESENT;
 }
 /*---------------------------------------------------------------------------*/
 

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -261,10 +261,10 @@ static void doorways_client_rx(int llid, int tid, int type, int val,
         KERR(" TOTALY ABNORMAL %d %d %s", llid, len, buf);
         try_repairing_abnormal(llid);
         }
-      else if (val == doors_val_init_link_ok)
+      else if (val == doors_val_link_ok)
         {
         }
-      else if (val == doors_val_init_link_ko)
+      else if (val == doors_val_link_ko)
         {
         KERR(" ");
         }

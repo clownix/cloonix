@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -94,11 +94,6 @@
 #define VM_FLAG_CLOONIX_AGENT_PING_OK  0x80000
 
 
-#define WIRESHARK_BINARY_QT "/usr/bin/wireshark-qt"
-#define WIRESHARK_BINARY "/usr/bin/wireshark"
-#define FLAGS_CONFIG_WIRESHARK_QT_PRESENT 0x0001
-#define FLAGS_CONFIG_WIRESHARK_PRESENT 0x0002
-
 #define MSG_DIGEST_LEN 32
 
 
@@ -122,16 +117,20 @@ enum{
   doors_type_dbssh_x11_traf,
   doors_type_low_prio_end,
 
+  doors_type_xwy_main_traf,
+  doors_type_xwy_x11_flow,
+
   doors_type_max,
 };
 
 enum{
   doors_val_min = 200,
   doors_val_none,
+  doors_val_xwy,
   doors_val_sig,
   doors_val_init_link,
-  doors_val_init_link_ok,
-  doors_val_init_link_ko,
+  doors_val_link_ok,
+  doors_val_link_ko,
   doors_val_max,
 };
 /*---------------------------------------------------------------------------*/

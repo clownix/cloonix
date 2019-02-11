@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -956,7 +956,7 @@ int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
     KOUT(" ");
   fd = get_fd_with_llid(llid);
   if (fd == -1)
-    KERR(" ");
+    KOUT(" ");
   else
     {
     lid = g_llid_data[llid];

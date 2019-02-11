@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -26,6 +26,7 @@ enum
   bnd_rpct_app_msg,
   bnd_rpct_cli_req,
   bnd_rpct_cli_resp,
+  bnd_rpct_kil_req,
   bnd_rpct_pid_req,
   bnd_rpct_pid_resp,
   bnd_rpct_hop_evt_sub,
@@ -113,6 +114,10 @@ enum
                        "  name:%s num:%d toppid:%d pid:%d \n"\
                        "</hop_resp_pid>"
 /*---------------------------------------------------------------------------*/
+#define HOP_KIL_REQ   "<hop_req_kil>\n"\
+                       "  <tid> %d </tid>\n"\
+                       "</hop_req_kil>"
+/*---------------------------------------------------------------------------*/
 #define HOP_EVT_O "<hop_event_txt>\n"\
                   "  <tid> %d </tid>\n"\
                   "  <flags_hop> %d </flags_hop>\n"
@@ -149,6 +154,9 @@ void rpct_recv_cli_resp(void *ptr, int llid, int tid,
 /*---------------------------------------------------------------------------*/
 void rpct_send_pid_req(void *ptr, int llid, int tid, char *name, int num);
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num);
+/*---------------------------------------------------------------------------*/
+void rpct_send_kil_req(void *ptr, int llid, int tid);
+void rpct_recv_kil_req(void *ptr, int llid, int tid);
 /*---------------------------------------------------------------------------*/
 void rpct_send_pid_resp(void *ptr, int llid, int tid,
                         char *name, int num, int toppid, int pid);

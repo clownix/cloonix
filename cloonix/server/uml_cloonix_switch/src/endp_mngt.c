@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -880,11 +880,16 @@ static char **muendp_birth_argv(t_argendp *mu)
   memset(name, 0, MAX_NAME_LEN);
   memset(bin_path, 0, MAX_PATH_LEN);
   memset(sock, 0, MAX_PATH_LEN);
-  snprintf(endp_type, MAX_NAME_LEN-1, "%d", mu->endp_type);
-  snprintf(net_name, MAX_NAME_LEN-1, "%s", mu->net_name);
-  snprintf(name, MAX_NAME_LEN-1, "%s", mu->name);
-  snprintf(bin_path, MAX_PATH_LEN-1, "%s", mu->bin_path);
-  snprintf(sock, MAX_PATH_LEN-1, "%s", mu->sock);
+  snprintf(endp_type, MAX_NAME_LEN, "%d", mu->endp_type);
+  snprintf(net_name, MAX_NAME_LEN, "%s", mu->net_name);
+  snprintf(name, MAX_NAME_LEN, "%s", mu->name);
+  snprintf(bin_path, MAX_PATH_LEN, "%s", mu->bin_path);
+  snprintf(sock, MAX_PATH_LEN, "%s", mu->sock);
+  endp_type[MAX_NAME_LEN-1] = 0;
+  net_name[MAX_NAME_LEN-1] = 0;
+  name[MAX_NAME_LEN-1] = 0;
+  bin_path[MAX_PATH_LEN-1] = 0;
+  sock[MAX_PATH_LEN-1] = 0;
   return argv;
 }
 /*--------------------------------------------------------------------------*/
@@ -1083,7 +1088,7 @@ int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type)
 /****************************************************************************/
 static void timer_lan_connect(void *data)
 {
-  char cmd[MAX_PATH_LEN];
+  char cmd[2*MAX_PATH_LEN];
   t_lan_connect *mc = ( t_lan_connect *) data;
   t_priv_endp *mu;
   if (!mc)
@@ -1093,8 +1098,8 @@ static void timer_lan_connect(void *data)
     KERR("%s %s", mc->name, mc->lan);
   else
     {
-    memset(cmd, 0, MAX_PATH_LEN);
-    snprintf(cmd, MAX_PATH_LEN-1, 
+    memset(cmd, 0, 2*MAX_PATH_LEN);
+    snprintf(cmd, 2*MAX_PATH_LEN-1, 
              "cloonix_req_connect sock=%s lan=%s name=%s num=%d tidx=%d",
              mc->lan_sock, mc->lan, mc->name, mc->num, mc->tidx);
     if (try_send_endp(mu, cmd))

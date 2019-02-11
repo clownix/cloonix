@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -160,8 +160,7 @@ static t_qemu_spice_item *qemu_spice_reserve_name(char *vm_name)
 static int start_launch(void *ptr)
 {
   char **argv = (char **) ptr;
-  char **environ = get_saved_environ();
-  execvpe(argv[0], argv, environ);
+  execvp(argv[0], argv);
   return 0;
 }
 /*---------------------------------------------------------------------------*/
@@ -349,8 +348,10 @@ static void start_qemu_spice(char *password, char *path, t_qemu_spice_item *it)
   char *argv[] = { "cloonix_ice", net, name, NULL }; 
   memset(name, 0, MAX_NAME_LEN);
   memset(net, 0, MAX_NAME_LEN);
-  snprintf (name, MAX_NAME_LEN-1, "%s", it->vm_name);
-  snprintf (net, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
+  snprintf (name, MAX_NAME_LEN, "%s", it->vm_name);
+  snprintf (net, MAX_NAME_LEN, "%s", local_get_cloonix_name());
+  name[MAX_NAME_LEN-1] = 0;
+  net[MAX_NAME_LEN-1] = 0;
   launch_pid_wait(type_pid_spicy_gtk, it->vm_name, argv);
 }
 /*--------------------------------------------------------------------------*/
@@ -359,19 +360,27 @@ static void start_qemu_spice(char *password, char *path, t_qemu_spice_item *it)
 void start_wireshark(char *name, t_bank_item *bitem)
 {
   char bin_path[MAX_PATH_LEN];
-  char cmd[2*MAX_PATH_LEN];
-  char *doors = get_doors_client_addr();
-  char *password = get_password();
+  char config[MAX_PATH_LEN];
+  char cloonix_name[MAX_NAME_LEN];
+  char cmd[MAX_PATH_LEN];
   char *recpath = bitem->pbi.pbi_sat->topo_snf.recpath;
-  char *argv[] = {bin_path, doors, password, "-t", "local_host_dropbear", cmd,
-                  "1>/dev/null", "2>&1", NULL}; 
+  char *argv[]={bin_path, config, cloonix_name, "-cmd",
+                cmd, "1>/dev/null", "2>&1", NULL}; 
   memset(bin_path, 0, MAX_PATH_LEN);
-  memset(cmd, 0, 2*MAX_PATH_LEN);
-  snprintf(bin_path,  MAX_PATH_LEN-1,
-                      "%s/common/agent_dropbear/agent_bin/dropbear_cloonix_ssh",
-                      get_local_cloonix_tree());
-  snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -r %s", 
-           get_wireshark_present_in_server(), recpath);
+  memset(config, 0, MAX_PATH_LEN);
+  memset(cloonix_name, 0, MAX_NAME_LEN);
+  memset(cmd, 0, MAX_PATH_LEN);
+
+  snprintf(bin_path, MAX_PATH_LEN-1,
+                     "%s/client/xwycli/xwycli", get_local_cloonix_tree());
+
+  snprintf(config, MAX_PATH_LEN-1,
+                     "%s/cloonix_config", get_local_cloonix_tree());
+
+  snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
+
+  snprintf(cmd, 2*MAX_PATH_LEN-1, "wireshark -r %s", recpath);
+
   if (check_before_start_launch(argv))
     launch_pid_wait(type_pid_wireshark, name, argv);
 }
@@ -385,8 +394,10 @@ void start_local_wireshark(char *name, t_bank_item *bitem)
   char *argv[] = {bin_path, "-r", rec, NULL};
   memset(bin_path, 0, MAX_PATH_LEN);
   memset(rec, 0, MAX_PATH_LEN);
-  snprintf(bin_path, MAX_PATH_LEN-1, "%s", get_wireshark_present_in_server());
-  snprintf(rec, MAX_PATH_LEN-1, "%s", bitem->pbi.pbi_sat->topo_snf.recpath);
+  snprintf(bin_path, MAX_PATH_LEN, "wireshark");
+  snprintf(rec, MAX_PATH_LEN, "%s", bitem->pbi.pbi_sat->topo_snf.recpath);
+  bin_path[MAX_PATH_LEN-1] = 0;
+  rec[MAX_PATH_LEN-1] = 0;
   if (check_before_start_launch(argv))
     launch_pid_wait(type_pid_wireshark, name, argv);
 }
@@ -440,7 +451,7 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
 void node_dtach_console(GtkWidget *mn, t_item_ident *pm)
 {
   char *nm = pm->name;
-  char **argv = get_argv_local_dbssh(nm);
+  char **argv = get_argv_local_xwy(nm);
   if (check_before_start_launch(argv))
     launch_pid_wait(type_pid_dtach, nm, argv);
 }

@@ -245,12 +245,9 @@ static gboolean
 on_repaint_revert_idle(CrCanvas *canvas)
 {
         cairo_t *cr;
-
-#if GTK_MINOR_VERSION >= 22
 	GdkDrawingContext *context;
 	GdkWindow *window;
 	cairo_region_t *cairo_region;
-#endif
 
         /* This is a high priority update that gets called
          * before the expose event.
@@ -262,26 +259,16 @@ on_repaint_revert_idle(CrCanvas *canvas)
                         (GSourceFunc) repaint_revert,
                         canvas, NULL);
 
-#if GTK_MINOR_VERSION >= 22
 	window = gtk_widget_get_window(GTK_WIDGET(canvas));
 	cairo_region = gdk_window_get_clip_region(window);
 	context = gdk_window_begin_draw_frame(window, cairo_region);
 	cr = gdk_drawing_context_get_cairo_context(context);
-#else
-	cr = gdk_cairo_create (gtk_widget_get_window(GTK_WIDGET(canvas)));
-#endif
-
-
 
         g_signal_emit(canvas, cr_canvas_signals[BEFORE_PAINT], 0, cr,
                         (canvas->flags & CR_CANVAS_VIEWPORT_CHANGED) != 0);
 
         canvas->flags &= ~CR_CANVAS_VIEWPORT_CHANGED;
-#if GTK_MINOR_VERSION >= 22
 	gdk_window_end_draw_frame(window, context);
-#else
-	cairo_destroy(cr);
-#endif
         return FALSE;
 }
 
@@ -298,23 +285,16 @@ static void
 update(CrCanvas *canvas)
 {
         cairo_t *cr;
-#if GTK_MINOR_VERSION >= 22
 	GdkDrawingContext *context;
 	GdkWindow *window;
 	cairo_region_t *cairo_region;
-#endif
 
 	if (!gtk_widget_get_mapped (GTK_WIDGET(canvas)))
 		return;
-#if GTK_MINOR_VERSION >= 22
 	window = gtk_widget_get_window(GTK_WIDGET(canvas));
 	cairo_region = gdk_window_get_clip_region(window);
 	context = gdk_window_begin_draw_frame(window, cairo_region);
 	cr = gdk_drawing_context_get_cairo_context(context);
-#else
-	cr = gdk_cairo_create (gtk_widget_get_window(GTK_WIDGET(canvas)));
-#endif
-
 
         if (canvas->update_idle_id) {
                 g_source_remove(canvas->update_idle_id);
@@ -339,11 +319,7 @@ update(CrCanvas *canvas)
                         (canvas->flags & CR_CANVAS_VIEWPORT_CHANGED) != 0);
 
         canvas->flags &= ~CR_CANVAS_VIEWPORT_CHANGED;
-#if GTK_MINOR_VERSION >= 22
 	gdk_window_end_draw_frame(window, context);
-#else
-	cairo_destroy(cr);
-#endif
 
         if (!(canvas->flags & CR_CANVAS_REPAINT_MODE) &&
                         canvas->flags & CR_CANVAS_NEED_UPDATE) {
@@ -379,21 +355,15 @@ static void
 quick_update(CrCanvas *canvas) 
 {
         cairo_t *cr;
-#if GTK_MINOR_VERSION >= 22
 	GdkDrawingContext *context;
 	GdkWindow *window;
 	cairo_region_t *cairo_region;
-#endif
 	if (!gtk_widget_get_mapped(GTK_WIDGET(canvas)))
 		return;
-#if GTK_MINOR_VERSION >= 22
 	window = gtk_widget_get_window(GTK_WIDGET(canvas));
 	cairo_region = gdk_window_get_clip_region(window);
 	context = gdk_window_begin_draw_frame(window, cairo_region);
 	cr = gdk_drawing_context_get_cairo_context(context);
-#else
-	cr = gdk_cairo_create (gtk_widget_get_window(GTK_WIDGET(canvas)));
-#endif
 
         if (canvas->update_idle_id) {
                 g_source_remove(canvas->update_idle_id);
@@ -408,11 +378,7 @@ quick_update(CrCanvas *canvas)
 
         canvas->flags &= ~CR_CANVAS_NEED_UPDATE;
         canvas->flags &= ~CR_CANVAS_IGNORE_INVALIDATE;
-#if GTK_MINOR_VERSION >= 22
 	gdk_window_end_draw_frame(window, context);
-#else
-	cairo_destroy(cr);
-#endif
 }
 
 static void
@@ -965,27 +931,18 @@ motion_event(GtkWidget *widget, GdkEventMotion *event)
         GdkEvent event_copy;
         gboolean state;
         cairo_matrix_t pick_matrix;
-#if GTK_MINOR_VERSION >= 22
 	GdkDrawingContext *context;
 	GdkWindow *window;
 	cairo_region_t *cairo_region;
-#endif
-
         canvas = CR_CANVAS(widget);
         root_item = CR_ITEM(canvas->root);
         state = FALSE;
         event_copy = *((GdkEvent *) event);
         new_item = NULL;
-
-#if GTK_MINOR_VERSION >= 22
 	window = gtk_widget_get_window(widget);
 	cairo_region = gdk_window_get_clip_region(window);
 	context = gdk_window_begin_draw_frame(window, cairo_region);
 	cr = gdk_drawing_context_get_cairo_context(context);
-#else
-	cr = gdk_cairo_create (gtk_widget_get_window(GTK_WIDGET(widget)));
-#endif
-
         cairo_matrix_init_identity(&pick_matrix);
         if (canvas->pick_item)
                 cr_item_find_child(root_item, &pick_matrix, canvas->pick_item);
@@ -1007,11 +964,7 @@ motion_event(GtkWidget *widget, GdkEventMotion *event)
                                 event->y);
 
                 if (new_item == canvas->pick_item) {
-#if GTK_MINOR_VERSION >= 22
 	gdk_window_end_draw_frame(window, context);
-#else
-	cairo_destroy(cr);
-#endif
                         return state;
                 }
                 /* should i send motion events to the item?*/
@@ -1051,11 +1004,7 @@ motion_event(GtkWidget *widget, GdkEventMotion *event)
                         canvas->pick_item = NULL;
                 }
         }
-#if GTK_MINOR_VERSION >= 22
 	gdk_window_end_draw_frame(window, context);
-#else
-	cairo_destroy(cr);
-#endif
         return state;
 }
 
@@ -1133,8 +1082,8 @@ focus_in(GtkWidget *widget, GdkEventFocus *event)
         return FALSE;
 }
 
-static gint
-focus_out(GtkWidget *widget, GdkEventFocus *event)
+gint
+cr_glob_focus_out(GtkWidget *widget, GdkEventFocus *event)
 {
         CrCanvas *canvas;
         CrItem *root_item;
@@ -1143,7 +1092,7 @@ focus_out(GtkWidget *widget, GdkEventFocus *event)
 
         canvas = CR_CANVAS(widget);
         root_item = CR_ITEM(canvas->root);
-	gtk_widget_set_can_focus(widget, FALSE);
+        gtk_widget_set_can_focus(widget, FALSE);
         if (canvas->pick_item) {
 
                 cairo_matrix_init_identity(&pick_matrix);
@@ -1213,7 +1162,7 @@ cr_canvas_class_init(CrCanvasClass *klass)
         widget_class->key_press_event = key_event;
         widget_class->key_release_event = key_event;
         widget_class->focus_in_event = focus_in;
-        widget_class->focus_out_event = focus_out;
+        widget_class->focus_out_event = cr_glob_focus_out;
         widget_class->enter_notify_event = enter_notify;
 
         /*

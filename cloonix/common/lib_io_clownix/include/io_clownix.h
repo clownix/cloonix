@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -106,6 +106,8 @@ typedef void  (*t_llid_tx)(int llid, int len, char *buf);
 typedef int  (*t_fd_event_glib)(int llid, int fd, int *data_fd);
 
 /*---------------------------------------------------------------------------*/
+int msg_mngt_get_epfd(void);
+
 void msg_mngt_init (char *name, int max_len_per_read);
 int  msg_exist_channel(int llid);
 void msg_delete_channel(int llid);

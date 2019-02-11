@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -86,8 +86,7 @@ int get_vm_id_from_topo(char *name)
 static int start_launch(void *ptr)
 {
   char **argv = (char **) ptr;
-  char **environ = get_saved_environ();
-  execve(argv[0], argv, environ);
+  execv(argv[0], argv);
   return 0;
 }
 /*---------------------------------------------------------------------------*/
@@ -95,7 +94,7 @@ static int start_launch(void *ptr)
 /****************************************************************************/
 void launch_xterm_double_click(char *name_vm, int vm_config_flags)
 {
-  static char title[2*MAX_NAME_LEN];
+  static char title[2*MAX_NAME_LEN+1];
   static char net[MAX_NAME_LEN];
   static char name[MAX_NAME_LEN];
   static char cmd[2*MAX_PATH_LEN];
@@ -106,7 +105,7 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
                               "/usr/local/bin/cloonix_osh",
                               net, "nat", cmd, NULL};
   memset(cmd, 0, 2*MAX_PATH_LEN);
-  memset(title, 0, 2*MAX_NAME_LEN);
+  memset(title, 0, 2*MAX_NAME_LEN+1);
   memset(name, 0, MAX_NAME_LEN);
   memset(net, 0, MAX_NAME_LEN);
   cloonix_get_xvt(xvt);
@@ -115,7 +114,7 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
 
   if (vm_config_flags & VM_CONFIG_FLAG_CISCO)
     {
-    snprintf(title, 2*MAX_NAME_LEN-1, "%s/%s", net, name);
+    snprintf(title, 2*MAX_NAME_LEN, "%s/%s", net, name);
     sprintf(cmd, "cisco@%s",  name);
     if (check_before_start_launch(argvcisco))
       pid_clone_launch(start_launch, NULL, NULL, (void *)(argvcisco),
@@ -123,7 +122,7 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
     }
   else
     {
-    snprintf(title, 2*MAX_NAME_LEN-1, "%s/%s", local_get_cloonix_name(), name);
+    snprintf(title, 2*MAX_NAME_LEN, "%s/%s", local_get_cloonix_name(), name);
     snprintf(cmd, 2*MAX_PATH_LEN-1,
              "%s/common/agent_dropbear/agent_bin/dropbear_cloonix_ssh %s %s %s",
              get_local_cloonix_tree(),  get_doors_client_addr(),

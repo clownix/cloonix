@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -444,8 +444,8 @@ static void peer_err_cb (int llid)
 static void peer_rx_cb(int llid, int tid, int type, int val, int len, char *buf)
 {
   if ((type == doors_type_switch) &&
-      (val != doors_val_init_link_ok) &&
-      (val != doors_val_init_link_ko))
+      (val != doors_val_link_ok) &&
+      (val != doors_val_link_ko))
     {
     if (doors_io_c2c_decoder(llid, len, buf))
       KERR("%d %s", len, buf);

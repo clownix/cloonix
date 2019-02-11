@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -100,6 +100,8 @@ static void display_info(char *title, char *text)
 }
 /*--------------------------------------------------------------------------*/
 
+extern GtkWidget *gtkwidget_canvas;
+
 /****************************************************************************/
 static void menu_hidden(GtkWidget *mn, t_item_ident *pm)
 {
@@ -107,8 +109,11 @@ static void menu_hidden(GtkWidget *mn, t_item_ident *pm)
   bitem = bank_get_item(pm->bank_type, pm->name, pm->num, pm->lan);
   if (bitem)
     {
-    bitem->pbi.menu_on = 0;
-    leave_item_surface_action(bitem);
+    if (bitem->pbi.menu_on)
+      {
+      bitem->pbi.menu_on = 0;
+      bitem->pbi.grabbed = 0;
+      }
     }
   differed_clownix_free((void *) pm);
 }
@@ -212,7 +217,7 @@ static void node_sav_derived(GtkWidget *mn, t_item_ident *pm)
 static void node_item_info(GtkWidget *mn, t_item_ident *pm)
 {
   t_bank_item *bitem;
-  static char title[MAX_TITLE];
+  static char title[MAX_PATH_LEN];
   static char text[MAX_TEXT];
   int is_persistent, is_backed, is_inside_cloonix;
   int has_p9_host_share, is_cisco, has_vhost_vsock, is_uefi; 
@@ -221,10 +226,13 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   bitem = look_for_node_with_id(pm->name);
   if (bitem)
     {
-    sprintf(title, "%s", bitem->name);
+    snprintf(title, MAX_PATH_LEN, "%s", bitem->name);
+    title[MAX_TITLE-1] = 0;
     if (bitem->bank_type == bank_type_node)
-      len += sprintf(text + len, "\t\tQEMU_KVM");
-
+      {
+      len += snprintf(text + len, MAX_TEXT-len, "\t\tQEMU_KVM");
+      text[MAX_TEXT-1] = 0;
+      }
     vm_config_flags = bitem->pbi.pbi_node->node_vm_config_flags;
     is_persistent = vm_config_flags & VM_CONFIG_FLAG_PERSISTENT;
     is_full_virt  = vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT;
@@ -240,47 +248,46 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     has_p9_host_share = vm_config_flags & VM_CONFIG_FLAG_9P_SHARED;
 
     if (is_cisco)
-      len += sprintf(text + len, "\n\t\tCISCO");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tCISCO");
     if (has_p9_host_share)
-      len += sprintf(text + len, "\n\t\tP9_HOST_SHARE");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tP9_HOST_SHARE");
     if (is_persistent)
-      len += sprintf(text + len, "\n\t\tPERSISTENT");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tPERSISTENT");
     else
-      len += sprintf(text + len, "\n\t\tEVANESCENT");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tEVANESCENT");
     if (is_full_virt)
-      len += sprintf(text + len, "\n\t\tFULL VIRT");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tFULL VIRT");
     if (has_vhost_vsock)
-      len += sprintf(text + len, "\n\t\tVHOST_VSOCK");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tVHOST_VSOCK");
     if (is_uefi)
-      len += sprintf(text + len, "\n\t\tUEFI");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tUEFI");
     if (is_backed)
       {
-      len += sprintf(text + len, "\n\t\tDERIVED FROM BACKING");
-      len += sprintf(text + len, "\nDerived: %s", 
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tDERIVED FROM BACKING");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\nDerived: %s", 
                      bitem->pbi.pbi_node->node_rootfs_sod);
-      len += sprintf(text + len, "\nBacking: %s", 
+      len += snprintf(text + len, MAX_TEXT-len-1, "\nBacking: %s", 
                      bitem->pbi.pbi_node->node_rootfs_backing_file);
       }
     else
       {
-      len += sprintf(text + len, "\n\t\tSOLO ROOTFS");
-      len += sprintf(text + len, "\nRootfs: %s", 
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tSOLO ROOTFS");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\nRootfs: %s", 
                      bitem->pbi.pbi_node->node_rootfs_sod);
       }
     if (is_inside_cloonix)
-      len += sprintf(text + len, "\n\t\tIS INSIDE CLOONIX");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tIS INSIDE CLOONIX");
     if (has_install_cdrom)
-      len += sprintf(text + len, "\n INSTALL_CDROM: %s",
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n INSTALL_CDROM: %s",
                      bitem->pbi.pbi_node->install_cdrom);
     if (has_no_reboot)
-      len += sprintf(text + len, "\n NO_REBOOT");
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n NO_REBOOT");
     if (has_added_cdrom)
-      len += sprintf(text + len, "\n ADDED_CDROM: %s",
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n ADDED_CDROM: %s",
                      bitem->pbi.pbi_node->added_cdrom);
     if (has_added_disk)
-      len += sprintf(text + len, "\n ADDED_DISK: %s",
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n ADDED_DISK: %s",
                      bitem->pbi.pbi_node->added_disk);
-
 
     display_info(title, text);
     }
@@ -310,13 +317,14 @@ static int c2c_item_info(char *text,  t_bank_item *bitem)
 static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
 {
   t_bank_item *bitem;
-  char title[2*MAX_NAME_LEN];
+  char title[MAX_PATH_LEN];
   char text[4*MAX_PATH_LEN];
   int len = 0;
   bitem = look_for_sat_with_id(pm->name);
   if (bitem)
     {
-    sprintf(title, "%s", bitem->name);
+    snprintf(title, MAX_PATH_LEN, "%s", bitem->name);
+    title[2*MAX_NAME_LEN-1] = 0;
     if (bitem->pbi.mutype == endp_type_tap)
       len += sprintf(text + len, "\nTAP");
     else if (bitem->pbi.mutype == endp_type_snf)
@@ -560,26 +568,13 @@ static void hidden_visible_node(GtkWidget *mn, t_item_ident *pm)
 /****************************************************************************/
 static void sat_item_wireshark(GtkWidget *mn, t_item_ident *pm)
 {
-  char err[MAX_PATH_LEN];
   t_bank_item *bitem;
   bitem = look_for_sat_with_id(pm->name);
   if (bitem)
     {
     if (bitem->pbi.mutype == endp_type_snf)
       {
-      if (!wireshark_present_in_server())
-        {
-        memset(err, 0, MAX_PATH_LEN);
-        snprintf(err, MAX_PATH_LEN-1, 
-                 "%s or %s NOT ON SERVER %s AT SERVER START", 
-                 WIRESHARK_BINARY_QT, WIRESHARK_BINARY, 
-                 get_doors_client_addr()); 
-        insert_next_warning(err, 1);
-        }
-      else
-        {  
-        start_wireshark(pm->name, bitem);
-        }
+      start_wireshark(pm->name, bitem);
       }
     }
 }
@@ -634,11 +629,7 @@ void edge_ctx_menu(t_bank_item *bitem)
                    G_CALLBACK(menu_hidden), (gpointer) pm);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_widget_show_all(menu);
-#if GTK_MINOR_VERSION >= 22
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
-#else
-  gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 0, 0);
-#endif
 }
 /*--------------------------------------------------------------------------*/
 
@@ -673,11 +664,7 @@ void lan_ctx_menu(t_bank_item *bitem)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_widget_show_all(menu);
-#if GTK_MINOR_VERSION >= 22
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
-#else
-  gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 0, 0);
-#endif
 }
 /*--------------------------------------------------------------------------*/
 
@@ -692,10 +679,7 @@ void sat_ctx_menu(t_bank_item *bitem)
   if (bitem->pbi.mutype == endp_type_snf)
     {
     memset(cmd, 0, MAX_PATH_LEN);
-    if (wireshark_qt_present_in_server())
-      snprintf(cmd, MAX_PATH_LEN-1, "wireshark-qt");
-    else
-      snprintf(cmd, MAX_PATH_LEN-1, "wireshark");
+    snprintf(cmd, MAX_PATH_LEN-1, "wireshark");
     item_wireshark = gtk_menu_item_new_with_label(cmd);
     }
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
@@ -718,11 +702,7 @@ void sat_ctx_menu(t_bank_item *bitem)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
   gtk_widget_show_all(menu);
-#if GTK_MINOR_VERSION >= 22
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
-#else
-  gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 0, 0);
-#endif
 }
 /*--------------------------------------------------------------------------*/
 
@@ -730,11 +710,12 @@ void sat_ctx_menu(t_bank_item *bitem)
 static void intf_item_info(GtkWidget *mn, t_item_ident *pm)
 {
   t_bank_item *bitem;
-  char title[2*MAX_NAME_LEN];
+  char title[2*MAX_PATH_LEN];
   bitem = look_for_eth_with_id(pm->name, pm->num);
   if (bitem)
     {
-    sprintf(title, "%s eth%d", bitem->name, pm->num);
+    snprintf(title, 2*MAX_PATH_LEN, "%s eth%d", bitem->name, pm->num);
+    title[2*MAX_NAME_LEN-1] = 0;
     display_info(title, " ");
     }
 }
@@ -745,11 +726,10 @@ static void intf_item_info(GtkWidget *mn, t_item_ident *pm)
 void intf_ctx_menu(t_bank_item *bitem)
 {
   GtkWidget *item_promisc_on, *item_promisc_off, *item_monitor; 
-  GtkWidget *separator, *menu;
+  GtkWidget *separator, *menu = gtk_menu_new();
   GtkWidget *item_hidden, *item_info;
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
-  menu = gtk_menu_new();
   item_promisc_on = gtk_menu_item_new_with_label("Promisc on");
   item_promisc_off = gtk_menu_item_new_with_label("Promisc off");
   item_monitor = gtk_menu_item_new_with_label("Monitor");
@@ -776,11 +756,7 @@ void intf_ctx_menu(t_bank_item *bitem)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
   gtk_widget_show_all(menu);
-#if GTK_MINOR_VERSION >= 22
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
-#else
-  gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 0, 0);
-#endif
 }
 /*--------------------------------------------------------------------------*/
 
@@ -860,11 +836,7 @@ void node_ctx_menu(t_bank_item *bitem)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   node_item_color(item_color, pm);
   gtk_widget_show_all(menu);
-#if GTK_MINOR_VERSION >= 22
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
-#else
-  gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 0, 0);
-#endif
 }
 /*--------------------------------------------------------------------------*/
 

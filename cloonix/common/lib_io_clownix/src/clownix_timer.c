@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -22,9 +22,6 @@
 #include "io_clownix.h"
 
 /*****************************************************************************/
-#define LONG_CPU_STORE    30
-#define MEDIUM_CPU_STORE 10
-#define SHORT_CPU_STORE   3
 #define MAX_TIMEOUT_BEATS 0x3FFFF
 #define MIN_TIMEOUT_BEATS 1
 /*---------------------------------------------------------------------------*/
@@ -44,237 +41,6 @@ static int current_ref;
 static long long current_beat;
 static int plugged_elem;
 
-static int glob_cpu_idle[LONG_CPU_STORE];
-static int glob_cpu_sum[LONG_CPU_STORE];
-static int glob_current_cpu_idx = 0;
-static int glob_sum_bogomips;
-
-void doorways_sock_refresh_second_beat(void);
-
-/*****************************************************************************/
-/*                      clownix_get_sum_bogomips                             */
-/*---------------------------------------------------------------------------*/
-int clownix_get_sum_bogomips(void)
-{
-  return (glob_sum_bogomips);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-/*                      get_sum_bogomips                             */
-/*---------------------------------------------------------------------------*/
-static int get_sum_bogomips(void)
-{
-  char line[1024];
-  int val, result = -1;
-  FILE *fp;
-  char *ptr, *eptr;
-  glob_sum_bogomips = 0;
-  if ((fp = fopen("/proc/cpuinfo", "r")) != NULL)
-    {
-    while (fgets(line, 1024, fp) != NULL)
-      {
-      if (!strncmp(line, "bogomips", strlen("bogomips")))
-        {
-        ptr = strchr(line,':');
-        if (ptr)
-          {
-          ptr++;
-          eptr = strchr(line,'.');
-          if (eptr)
-            *eptr = 0;
-          if (sscanf(ptr, "%d", &val) == 1)
-            {
-            glob_sum_bogomips += val;
-            result = 0;
-            }
-          }
-        }
-      }
-    fclose(fp);
-    }
-  return result;
-}
-
-/*****************************************************************************/
-/*                      read_cpu_proc_stat                                   */
-/*---------------------------------------------------------------------------*/
-static int read_cpu_proc_stat(unsigned long long *cpu_user,
-                              unsigned long long *cpu_nice,
-                              unsigned long long *cpu_sys,
-                              unsigned long long *cpu_idle,
-                              unsigned long long *cpu_iowait,
-                              unsigned long long *cpu_hardirq,
-                              unsigned long long *cpu_softirq,
-                              unsigned long long *cpu_steal,
-                              unsigned long long *cpu_guest)
-{
-  int result = -1;
-  FILE *fp;
-  char line[1024];
-  if ((fp = fopen("/proc/stat", "r")) != NULL)
-    {
-    while (fgets(line, 1024, fp) != NULL)
-      {
-      if (!strncmp(line, "cpu ", 4))
-        {
-        if (sscanf(line + 5, "%llu %llu %llu %llu %llu %llu %llu %llu %llu",
-                             cpu_user, cpu_nice, cpu_sys, cpu_idle, cpu_iowait,
-                             cpu_hardirq,cpu_softirq,cpu_steal,cpu_guest) == 9)
-          {
-          result = 0;
-          }
-        break;
-        }
-      }
-    fclose(fp);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-/*                      refresh_cpu_idle                                     */
-/*---------------------------------------------------------------------------*/
-static void refresh_cpu_idle(void)
-{
-  unsigned long long llsum;
-  static unsigned long long prev_cpu_user;
-  static unsigned long long prev_cpu_nice;
-  static unsigned long long prev_cpu_sys;
-  static unsigned long long prev_cpu_idle;
-  static unsigned long long prev_cpu_iowait;
-  static unsigned long long prev_cpu_hardirq;
-  static unsigned long long prev_cpu_softirq;
-  static unsigned long long prev_cpu_steal;
-  static unsigned long long prev_cpu_guest;
-  unsigned long long cpu_user, delta_cpu_user;
-  unsigned long long cpu_nice, delta_cpu_nice;
-  unsigned long long cpu_sys, delta_cpu_sys;
-  unsigned long long cpu_idle, delta_cpu_idle;
-  unsigned long long cpu_iowait, delta_cpu_iowait;
-  unsigned long long cpu_hardirq, delta_cpu_hardirq;
-  unsigned long long cpu_softirq, delta_cpu_softirq;
-  unsigned long long cpu_steal, delta_cpu_steal;
-  unsigned long long cpu_guest, delta_cpu_guest;
-  if (!read_cpu_proc_stat(&cpu_user, &cpu_nice, &cpu_sys,
-                          &cpu_idle, &cpu_iowait, &cpu_hardirq,
-                         &cpu_softirq, &cpu_steal, &cpu_guest))
-    {
-    delta_cpu_user    = cpu_user    - prev_cpu_user;
-    delta_cpu_nice    = cpu_nice    - prev_cpu_nice;
-    delta_cpu_sys     = cpu_sys     - prev_cpu_sys;
-    delta_cpu_idle    = cpu_idle    - prev_cpu_idle;
-    delta_cpu_iowait  = cpu_iowait  - prev_cpu_iowait;
-    delta_cpu_hardirq = cpu_hardirq - prev_cpu_hardirq;
-    delta_cpu_softirq = cpu_softirq - prev_cpu_softirq;
-    delta_cpu_steal   = cpu_steal   - prev_cpu_steal;
-    delta_cpu_guest   = cpu_guest   - prev_cpu_guest;
-    prev_cpu_user    = cpu_user;
-    prev_cpu_nice    = cpu_nice;
-    prev_cpu_sys     = cpu_sys;
-    prev_cpu_idle    = cpu_idle;
-    prev_cpu_iowait  = cpu_iowait;
-    prev_cpu_hardirq = cpu_hardirq;
-    prev_cpu_softirq = cpu_softirq;
-    prev_cpu_steal   = cpu_steal;
-    prev_cpu_guest   = cpu_guest;
-    llsum = delta_cpu_user + delta_cpu_nice + delta_cpu_sys + delta_cpu_idle +
-            delta_cpu_iowait + delta_cpu_hardirq + delta_cpu_softirq +
-            delta_cpu_steal + delta_cpu_guest;
-    glob_cpu_idle[glob_current_cpu_idx] = (int) delta_cpu_idle;
-    glob_cpu_sum[glob_current_cpu_idx] = (int) llsum;
-    glob_current_cpu_idx += 1;
-    if (glob_current_cpu_idx == LONG_CPU_STORE)
-      glob_current_cpu_idx = 0;
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-/*                      get_current_long_cpu                                 */
-/*---------------------------------------------------------------------------*/
-static int get_current_long_cpu(void)
-{
-  int result, i, idle = 0, sum = 0;
-  for (i=0; i < LONG_CPU_STORE; i++)
-    {
-    idle += glob_cpu_idle[i];
-    sum  += glob_cpu_sum[i];
-    }
-  if (sum)
-    {
-    idle *= 1000;
-    result = idle/sum;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-/*                      get_current_medium_cpu                               */
-/*---------------------------------------------------------------------------*/
-static int get_current_medium_cpu(void)
-{
-  int idx, result, i, idle = 0, sum = 0;
-  idx = glob_current_cpu_idx - MEDIUM_CPU_STORE;
-  if (idx < 0)
-    idx += LONG_CPU_STORE;
-  for (i=0; i < MEDIUM_CPU_STORE; i++)
-    {
-    idle += glob_cpu_idle[idx];
-    sum  += glob_cpu_sum[idx];
-    idx++;
-    if (idx == LONG_CPU_STORE)
-      idx = 0;
-    }
-  if (sum)
-    {
-    idle *= 1000;
-    result = idle/sum;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-/*                      get_current_short_cpu                                */
-/*---------------------------------------------------------------------------*/
-static int get_current_short_cpu(void)
-{
-  int idx, result, i, idle = 0, sum = 0;
-  idx = glob_current_cpu_idx - SHORT_CPU_STORE;
-  if (idx < 0)
-    idx += LONG_CPU_STORE;
-  for (i=0; i < SHORT_CPU_STORE; i++)
-    {
-    idle += glob_cpu_idle[idx];
-    sum  += glob_cpu_sum[idx];
-    idx++;
-    if (idx == LONG_CPU_STORE)
-      idx = 0;
-    }
-  if (sum)
-    {
-    idle *= 1000;
-    result = idle/sum;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-
-
-/*****************************************************************************/
-/*                      clownix_get_current_cpu                              */
-/*---------------------------------------------------------------------------*/
-void clownix_get_current_cpu(int *long_cpu, int *medium_cpu, int *short_cpu)
-{
-  *long_cpu   = get_current_long_cpu();
-  *medium_cpu = get_current_medium_cpu();
-  *short_cpu  = get_current_short_cpu();
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int clownix_get_nb_timeouts(void)
@@ -441,14 +207,7 @@ void clownix_timeout_del_all(void)
 /*****************************************************************************/
 void clownix_timer_beat(void)
 {
-  static int count = 0;
   int idx;
-  count++;
-  if (count == 10)
-    {
-    refresh_cpu_idle();
-    count = 0;
-    }
   current_beat++;
   idx = (int) (current_beat % MAX_TIMEOUT_BEATS);
   process_all_current_grape_idx(&(grape[idx]));
@@ -458,8 +217,6 @@ void clownix_timer_beat(void)
 /*****************************************************************************/
 void clownix_timer_init(void)
 {
-  refresh_cpu_idle();
-  get_sum_bogomips();
   memset(grape, 0, MAX_TIMEOUT_BEATS * sizeof(t_timeout_elem *));
   current_ref = 0;
   current_beat = 0;

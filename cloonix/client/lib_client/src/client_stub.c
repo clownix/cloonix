@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -343,6 +343,7 @@ void recv_sav_vm_all(int llid, int tid, int type, char *path)
 }
 /*--------------------------------------------------------------------------*/
 
+void rpct_recv_kil_req(void *ptr, int llid, int tid){KOUT();}
 /*****************************************************************************/
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
 {

@@ -204,7 +204,7 @@ void sink(int, char *[]);
 void source(int, char *[]);
 void tolocal(int, char *[]);
 void toremote(char *, int, char *[]);
-void usage(void);
+void usage(int line);
 
 #define MAX_PATH_LEN 256
 static char g_path_to_scp_ssh[MAX_PATH_LEN];
@@ -237,10 +237,12 @@ ssh_program = g_path_to_scp_ssh;
         addargs(&args, "%s", argv[1]);
         argc--;
         argv++;
+
         addargs(&args, "%s", argv[1]);
         argc--;
         argv++;
 
+        addargs(&args, "-Z");
 
 	fflag = tflag = 0;
 	while ((ch = getopt(argc, argv, "dfl:prtvBCc:i:P:q1246S:o:F:")) != -1)
@@ -268,7 +270,7 @@ ssh_program = g_path_to_scp_ssh;
 		case 'l':
 			speed = strtod(optarg, &endp);
 			if (speed <= 0 || *endp != '\0')
-				usage();
+				usage(__LINE__);
 			limit_rate = speed * 1024;
 			break;
 		case 'p':
@@ -299,7 +301,7 @@ ssh_program = g_path_to_scp_ssh;
 			tflag = 1;
 			break;
 		default:
-			usage();
+			usage(__LINE__);
 		}
 	argc -= optind;
 	argv += optind;
@@ -322,7 +324,7 @@ ssh_program = g_path_to_scp_ssh;
 		KOUT("%d", errs);
 	}
 	if (argc < 2)
-		usage();
+		usage(__LINE__);
 	if (argc > 2)
 		targetshouldbedirectory = 1;
 
@@ -1002,14 +1004,14 @@ KOUT(" ");
 }
 
 void
-usage(void)
+usage(int line)
 {
 	(void) fprintf(stderr,"\n\n"
 	    "usage: cloonix_scp <network_name> [-r] <source> <destination> \n\n"
 	    "source and destination are either\n"
 	    " - a host file (or dir) path\n"
 	    " - <cloonix_name>:<path> \n\n");
-        exit(1);
+KOUT("%d", line);
 }
 
 void

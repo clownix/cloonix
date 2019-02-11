@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -23,6 +23,7 @@ void doorways_first_start(void);
 void doorways_init(char *root_work, int server_port, char *password); 
 void doorways_err_cb (int llid);
 void doors_pid_resp(int llid, char *name, int pid);
+void kill_doors(void);
 /*---------------------------------------------------------------------------*/
 
 

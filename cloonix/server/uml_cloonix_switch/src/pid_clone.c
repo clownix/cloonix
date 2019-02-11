@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -131,7 +131,7 @@ int check_pid_exists(int pid)
   char path[MAX_PATH_LEN];
   sprintf(path, "/proc/%d/cmdline", pid);
   fd = open(path, O_RDONLY);
-  if (fd > 0)
+  if (fd >= 0)
     {
     result = 1;
     if (close(fd))

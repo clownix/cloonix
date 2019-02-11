@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -450,8 +450,7 @@ void look_for_lan_and_del_all(void)
   while (cur)
     {
     next = cur->next;
-    cur->pbi.menu_on = 0;
-    leave_item_surface_action(cur);
+    leave_item_action_surface(cur);
     from_cloonix_switch_delete_lan(cur->name);
     cur = next;
     }

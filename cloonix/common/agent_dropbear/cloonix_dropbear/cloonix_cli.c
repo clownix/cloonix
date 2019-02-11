@@ -90,6 +90,7 @@ void rpct_recv_cli_req(void *ptr, int llid, int tid,
 void rpct_recv_cli_resp(void *ptr, int llid, int tid,
                      int cli_llid, int cli_tid, char *line){KOUT(" ");}
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num){KOUT(" ");}
+void rpct_recv_kil_req(void *ptr, int llid, int tid){KOUT();}
 void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
                         int toppid, int pid){KOUT(" ");}
 void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop){KOUT(" ");}
@@ -615,7 +616,7 @@ void cb_doors_rx(int llid, int tid, int type, int val, int len, char *buf)
     }
   else if (type == doors_type_dbssh)  
     {
-    if ((val == doors_val_init_link_ok) || (val == doors_val_init_link_ko))
+    if ((val == doors_val_link_ok) || (val == doors_val_link_ko))
       {
       if (!strncmp(buf, "OK", 2))
         {

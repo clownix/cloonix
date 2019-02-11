@@ -1,0 +1,21 @@
+#!/bin/bash
+HERE=`pwd`
+
+cd ${HERE}/libmdl
+make clean
+make
+
+cd ${HERE}/libcli
+make clean
+make
+
+cd ${HERE}/cli
+make clean
+make
+mv cloonix_xwy_cli ${HERE}
+
+cd ${HERE}/srv
+make clean
+make
+mv cloonix_xwy_srv ${HERE}
+

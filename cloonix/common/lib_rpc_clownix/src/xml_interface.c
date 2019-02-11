@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -2250,6 +2250,9 @@ char *llid_trace_lib(int type)
       break;
     case type_llid_trace_unix_qmonitor:
       result = "unix qemu monitor";
+      break;
+    case type_llid_trace_unix_xwy:
+      result = "unix xwy control";
       break;
     case type_llid_trace_doorways:
       result = "doorways";

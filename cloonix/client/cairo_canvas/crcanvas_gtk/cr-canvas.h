@@ -161,6 +161,8 @@ GType cr_canvas_get_type(void);
 
 GtkWidget *cr_canvas_new(const gchar *first_arg_name, ...);
 
+gint cr_glob_focus_out(GtkWidget *widget, GdkEventFocus *event);
+
 enum {
         CR_CANVAS_NEED_UPDATE = 1 << 0,
         CR_CANVAS_IN_EXPOSE = 1 << 1,

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -46,7 +46,7 @@
 #include "doors_rpc.h"
 #include "timeout_service.h"
 #include "c2c.h"
-#include "dropbear.h"
+#include "xwy.h"
 #include "mulan_mngt.h"
 #include "endp_mngt.h"
 #include "endp_evt.h"
@@ -765,7 +765,7 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
 static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info)
 {
   int result = 0;
-  char rootfs[MAX_PATH_LEN];
+  char rootfs[2*MAX_PATH_LEN];
   if (kvm->cpu == 0)
     kvm->cpu =  1;
   if (kvm->mem == 0)
@@ -796,7 +796,7 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info)
     }
   if (result == 0)
     {
-    memset(rootfs, 0, MAX_PATH_LEN);
+    memset(rootfs, 0, 2*MAX_PATH_LEN);
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
       {
       if (file_exists(kvm->rootfs_input, F_OK))
@@ -806,8 +806,9 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info)
         }
       else
         {
-        snprintf(rootfs, MAX_PATH_LEN-1, "%s/%s", 
+        snprintf(rootfs, 2*MAX_PATH_LEN, "%s/%s", 
                  cfg_get_bulk(), kvm->rootfs_input);
+        rootfs[MAX_PATH_LEN-1] = 0;
         strncpy(kvm->rootfs_used, rootfs, MAX_PATH_LEN-1);
         }
       }
@@ -816,16 +817,19 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info)
       kvm->vm_config_flags |= VM_FLAG_DERIVED_BACKING;
       if (file_exists(kvm->rootfs_input, F_OK))
         {
-        snprintf(kvm->rootfs_backing, MAX_PATH_LEN-1, 
+        snprintf(kvm->rootfs_backing, MAX_PATH_LEN, 
                  "%s", kvm->rootfs_input);
+        kvm->rootfs_backing[MAX_PATH_LEN-1] = 0;
         }
       else
         {
-        snprintf(kvm->rootfs_backing, MAX_PATH_LEN-1, 
+        snprintf(kvm->rootfs_backing, MAX_PATH_LEN, 
                  "%s", utils_get_root_fs(kvm->rootfs_input));
+        kvm->rootfs_backing[MAX_PATH_LEN-1] = 0;
         }
-      snprintf(kvm->rootfs_used,MAX_PATH_LEN-1,"%s/derived.qcow2",
+      snprintf(kvm->rootfs_used,MAX_PATH_LEN,"%s/derived.qcow2",
                utils_get_disks_path_name(vm_id));
+      kvm->rootfs_used[MAX_PATH_LEN-1] = 0;
       strncpy(rootfs, kvm->rootfs_backing, MAX_PATH_LEN-1); 
       }
     else
@@ -884,14 +888,17 @@ static void cow_look_clone_msg(void *data, char *msg)
 static void cow_look_clone_death(void *data, int status, char *name)
 {
   t_add_vm_cow_look *add_vm = (t_add_vm_cow_look *) data;
+  char msg[MAX_PATH_LEN];
   if (add_vm->msg[0] == '/')
     {
     if (add_vm->kvm.rootfs_backing[0])
       KERR("%s %s", add_vm->msg,  add_vm->kvm.rootfs_backing);
     else
       {
-      snprintf(add_vm->kvm.rootfs_backing, MAX_PATH_LEN-1, 
-               "%s", add_vm->msg);
+      memset(msg, 0, MAX_PATH_LEN);
+      strncpy(msg, add_vm->msg, MAX_PATH_LEN-1);
+      snprintf(add_vm->kvm.rootfs_backing, MAX_PATH_LEN, "%s", msg);
+      add_vm->kvm.rootfs_backing[MAX_PATH_LEN-1] = 0;
       add_vm->kvm.vm_config_flags |= VM_FLAG_DERIVED_BACKING;
       }
     }
@@ -910,9 +917,15 @@ static int cow_look_clone(void *data)
   char *argv[] = { cmd, "info", rootfs, NULL, };
   memset(rootfs, 0, MAX_PATH_LEN);
   if (add_vm->kvm.vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
-    snprintf(rootfs, MAX_PATH_LEN-1, "%s", add_vm->kvm.rootfs_used);
+    {
+    snprintf(rootfs, MAX_PATH_LEN, "%s", add_vm->kvm.rootfs_used);
+    rootfs[MAX_PATH_LEN-1] = 0;
+    }
   else if (add_vm->kvm.vm_config_flags & VM_FLAG_DERIVED_BACKING)
-    snprintf(rootfs, MAX_PATH_LEN-1, "%s", add_vm->kvm.rootfs_backing); 
+    {
+    snprintf(rootfs, MAX_PATH_LEN, "%s", add_vm->kvm.rootfs_backing); 
+    rootfs[MAX_PATH_LEN-1] = 0;
+    }
   else
     KOUT("%X", add_vm->kvm.vm_config_flags);
   my_popen(cmd, argv);
@@ -1074,8 +1087,8 @@ void recv_list_pid_req(int llid, int tid)
   strcpy(lst[j].name, "doors");
   lst[j].pid = doorways_get_distant_pid();
   j++;
-  strcpy(lst[j].name, "bear");
-  lst[j].pid = dropbear_pid();
+  strcpy(lst[j].name, "xwy");
+  lst[j].pid = xwy_pid();
   j++;
   strcpy(lst[j].name, "switch");
   lst[j].pid = getpid();

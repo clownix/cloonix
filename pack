@@ -17,22 +17,30 @@ fi
 CLOONIX_VERSION=$(cat ./cloonix/cloonix_config | grep CLOONIX_VERSION)
 CLOONIX_VERSION=${CLOONIX_VERSION#*=}
 #----------------------------------------------------------
-cp -rf ${TMPBUILD} ${TMPBUILD_BIS}
+mkdir -p ${TMPBUILD_BIS}
+cp -rf ${TMPBUILD}/cloonix* ${TMPBUILD_BIS}
 #----------------------------------------------------------
 CLOONIX_COMMON=${TMPBUILD_BIS}/cloonix/common
 CLOONIX_SERVER=${TMPBUILD_BIS}/cloonix/server
 CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
 #----------------------------------------------------------
-  for i in cloonix_agent cloonix_dropbear \
-           cmd cmd_i386 cmd_armv7l cmd_aarch64; do
+  for i in allclean cli cmd libmdl libxwycli srv; do
+    rm -rf ${CLOONIX_COMMON}/xwy/${i}
+  done
+#----------------------------------------------------------
+  for i in cloonix_agent cmd cmd_hwsim_i386 \
+           cmd_i386 hwsim allclean cloonix_dropbear \
+           cmd_alien cmd_hwsim_x86_64  cmd_x86_64; do
     rm -rf ${CLOONIX_COMMON}/agent_dropbear/${i}
   done
 #----------------------------------------------------------
-  for i in cmd spice_protocol spice_usb virglrenderer; do
+  for i in cmd allclean spice_protocol spice_usb \
+           virglrenderer get_new_spice_protocol.sh \
+           get_new_usbredir.sh  get_new_virglrenderer.sh; do
     rm -rf ${CLOONIX_COMMON}/spice/${i}
   done
 #----------------------------------------------------------
-  for i in share spice_client spice-protocol \
+  for i in spice share spice_client spice-protocol \
            spice_server usbredir include virglrenderer ; do
     rm -rf ${CLOONIX_COMMON}/spice/spice_lib/${i}
   done
@@ -56,13 +64,13 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
 #----------------------------------------------------------
   for i in  doorways \
             uml_cloonix_switch \
-            qmonitor \
             muswitch/mutap \
             muswitch/musnf \
             muswitch/munat \
             muswitch/muc2c \
             muswitch/mua2b \
             muswitch/mutst \
+            muswitch/muwlan \
             muswitch/mulan ; do
     rm -f ${CLOONIX_SERVER}/${i}/cmd
     rm -f ${CLOONIX_SERVER}/${i}/Makefile
@@ -82,19 +90,25 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -rf ${CLOONIX_CLIENT}/lib_zor
   rm -rf ${CLOONIX_CLIENT}/spice
 #----------------------------------------------------------
-  for i in crcanvas_gtk Makefile obj src ; do 
+  for i in crcanvas_gtk Makefile obj src allclean cmd ; do 
     rm -rf ${CLOONIX_CLIENT}/cairo_canvas/${i}
   done
 #----------------------------------------------------------
   for i in  ctrl \
+            xwycli \
+            qmonitor \
             hyperzor ; do
     rm -f ${CLOONIX_CLIENT}/${i}/Makefile
     rm -rf ${CLOONIX_CLIENT}/${i}/obj
     rm -rf ${CLOONIX_CLIENT}/${i}/include
     rm -rf ${CLOONIX_CLIENT}/${i}/src
+    rm -rf ${CLOONIX_CLIENT}/${i}/cmd
+    rm -rf ${CLOONIX_CLIENT}/${i}/allclean
   done
 #----------------------------------------------------------
-  rm -rf ${CLOONIX_CLIENT}/openssh/tainted_openssh
+  for i in tainted_openssh lib_doorways ; do
+    rm -rf ${CLOONIX_CLIENT}/openssh/$i
+  done
   for i in all_clean cmd mkpatch openssh* patched_create ; do
     rm -f ${CLOONIX_CLIENT}/openssh/$i
   done

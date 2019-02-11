@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2018 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -44,6 +44,7 @@ void rpct_recv_cli_req(void *ptr, int llid, int tid,
                     int cli_llid, int cli_tid, char *line){KOUT(" ");};
 void rpct_recv_cli_resp(void *ptr, int llid, int tid,
                      int cli_llid, int cli_tid, char *line){KOUT(" ");};
+void rpct_recv_kil_req(void *ptr, int llid, int tid){KOUT(" ");};
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num){KOUT(" ");};
 void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
                         int toppid, int pid){KOUT(" ");};
