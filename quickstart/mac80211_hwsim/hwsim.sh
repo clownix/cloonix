@@ -1,7 +1,7 @@
 #!/bin/bash
 
 MIRROR=http://deb.debian.org/debian
-DIST=stretch
+DIST=buster
 NET=nemo
 VM_NAME=hwsim
 

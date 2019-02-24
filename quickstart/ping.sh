@@ -1,6 +1,6 @@
 #!/bin/bash
 NET=nemo
-DIST=stretch
+DIST=buster
 
 #######################################################################
 is_started=$(cloonix_cli $NET lst |grep cloonix_net)

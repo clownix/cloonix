@@ -9,11 +9,11 @@ All open source compiled within cloonix such as qemu, spice, openssh...
 is stored at clownix.net/cloonix-v<major>-<minor>/targz_store.tar.gz
 
 You must get the targz_store.tar.gz matching the cloonix-v<major>-<minor>.
-This version v02-00 is the latest since the re-numbering from 42 to 01.
+This version v02-01 is the latest.
 
 Get the open sources associated to this version (qemu, spice...) from:
 
-   clownix.net/cloonix-v02-00/targz_store.tar.gz
+   clownix.net/cloonix-v02-01/targz_store.tar.gz
 
 -----------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ It is assumed that sudo makes the command run as root.
 
 cd cloonix
 sudo ./install_depends build
-wget clownix.net/cloonix-v02-00/targz_store.tar.gz
+wget clownix.net/cloonix-v02-01/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 ./doitall
 cd -
@@ -34,8 +34,8 @@ HOWTO GET A WORKING VM:
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget clownix.net/cloonix-01/stretch.qcow2.gz
-gunzip stretch.qcow2.gz 
+wget clownix.net/cloonix-v02-01/buster.qcow2.gz
+gunzip buster.qcow2.gz
 cd -
 -----------------------------------------------------------------------------
 
