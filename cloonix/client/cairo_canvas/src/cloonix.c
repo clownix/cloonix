@@ -190,16 +190,17 @@ char **get_argv_local_xwy(char *name)
   static char config[MAX_PATH_LEN];
   static char cloonix_name[MAX_NAME_LEN];
   static char cmd[MAX_PATH_LEN];
+  static char path[MAX_PATH_LEN];
   static char nm[MAX_NAME_LEN];
   static char title[MAX_PATH_LEN];
   static char xvt[MAX_PATH_LEN];
-  static char *argv[]={bin_path, config, cloonix_name, "-cmd",
-                       xvt, "-T", title, "-e", cmd,
-                       "1>/dev/null", "2>&1", NULL};
+  static char *argv[]={xvt, "-T", title, "-e",bin_path, config,
+                       cloonix_name, "-cmd", cmd, "-a", path, NULL}; 
   memset(bin_path, 0, MAX_PATH_LEN);
   memset(config, 0, MAX_PATH_LEN);
   memset(cloonix_name, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_PATH_LEN);
+  memset(path, 0, MAX_PATH_LEN);
   memset(nm, 0, MAX_NAME_LEN);
   memset(title, 0, MAX_PATH_LEN);
   memset(xvt, 0, MAX_PATH_LEN);
@@ -214,13 +215,9 @@ char **get_argv_local_xwy(char *name)
 
   snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
 
-  snprintf(cmd, 2*MAX_PATH_LEN-1, 
-           "%s/server/dtach/dtach -a %s/%s; sleep 10", 
-           get_distant_cloonix_tree(), get_dtach_work_path(), nm);
-
-  KERR("%s %s %s -cmd %s -T %s -e %s", bin_path, config, cloonix_name,
-                                       xvt, title,  cmd);
-
+  snprintf(cmd, MAX_PATH_LEN-1, "%s/server/dtach/dtach",
+           get_distant_cloonix_tree()); 
+  snprintf(path, MAX_PATH_LEN-1, "%s/%s", get_dtach_work_path(), nm);
   return (argv);
 }
 /*--------------------------------------------------------------------------*/

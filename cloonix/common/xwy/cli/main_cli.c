@@ -49,8 +49,11 @@ static void usage(char *name)
 {
   printf("\n%s <ip> <port>", name);
   printf("\n%s <ip> <port> -cmd <params>", name);
+  printf("\n%s <ip> <port> -dae <params>", name);
   printf("\n%s <ip> <port> -get <distant-file> <local-dir>", name);
   printf("\n%s <ip> <port> -put <local-file> <distant-dir>", name);
+  printf("\n");
+  printf("\n -dae daemonizes the command, -cmd has a controlling term");
   printf("\n\n");
   exit(1);
 }
@@ -71,6 +74,8 @@ int main(int argc, char **argv)
 
   if (action == action_cmd)
     printf("\n-cmd %s\n", cmd);
+  else if (action == action_dae)
+    printf("\n-dae %s\n", cmd);
   else if (action == action_get)
     printf("\n-get %s %s\n", src, dst);
   else if (action == action_put)

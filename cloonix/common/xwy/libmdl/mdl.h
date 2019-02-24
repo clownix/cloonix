@@ -65,6 +65,15 @@ int debug_get_trunc_usec(void);
 
 enum
 {
+  action_bash = 0,
+  action_cmd,
+  action_dae,
+  action_get,
+  action_put,
+};
+
+enum
+{
   thread_type_min = 57,
   thread_type_tx,
   thread_type_x11,
@@ -113,6 +122,7 @@ enum
   msg_type_data_pty,
   msg_type_open_bash,
   msg_type_open_cmd,
+  msg_type_open_dae,
   msg_type_win_size,
   msg_type_data_cli_pty,
   msg_type_end_cli_pty,

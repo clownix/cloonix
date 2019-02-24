@@ -34,6 +34,9 @@
 #include "low_write.h"
 #include "wrap.h"
 
+
+#define MAX_ARGC 100
+
 typedef struct t_pty_cli
 {
   int pty_fd;
@@ -50,7 +53,6 @@ static t_pty_cli *g_pty_cli_head;
 static int g_sig_write_fd;
 static int g_sig_read_fd;
 static int g_listen_sock_cloonix;
-static int g_sock_cloonix;
 static char g_home[MAX_TXT_LEN];
 static char g_user[MAX_TXT_LEN];
 static char g_xdg_runtime_dir[MAX_TXT_LEN];
@@ -60,6 +62,7 @@ static char g_shell[MAX_TXT_LEN];
 static char g_xauthority[MAX_TXT_LEN];
 static char g_xauthority_file[MAX_TXT_LEN];
 static struct timeval g_last_cloonix_tv;
+
 
 /****************************************************************************/
 static void pty_cli_alloc(int pty_fd, int pid, int sock_fd, uint32_t randid)
@@ -191,7 +194,7 @@ static void init_all_env(void)
   if (!home)
     {
     snprintf(g_home, MAX_TXT_LEN-1, "HOME=%s", "/root");
-    sprintf(g_xauthority_file, "/root/.CloonixXauthority"); 
+    sprintf(g_xauthority_file, "/root/.CloonixXauthority_root"); 
     snprintf(g_xauthority, MAX_TXT_LEN-1, "XAUTHORITY=%s", g_xauthority_file); 
     }
   else
@@ -199,7 +202,8 @@ static void init_all_env(void)
     snprintf(g_home, MAX_TXT_LEN-1, "HOME=%s", home);
     snprintf(g_xdg_runtime_dir, MAX_TXT_LEN-1,
              "XDG_RUNTIME_DIR=%s", xdg_runtime_dir);
-    snprintf(g_xauthority_file, MAX_TXT_LEN-1, "/tmp/.CloonixXauthority"); 
+    snprintf(g_xauthority_file, MAX_TXT_LEN-1, 
+             "/tmp/.CloonixXauthority_%s", user); 
     snprintf(g_xauthority, MAX_TXT_LEN-1, "XAUTHORITY=%s", g_xauthority_file); 
     }
   unlink(g_xauthority_file);
@@ -217,16 +221,6 @@ static void init_all_env(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void go_on_with_main_program(uint32_t randid, int sock_fd, int pty_fd,
-                                    char *cmd, int pid)
-{
-  pty_cli_alloc(pty_fd, pid, sock_fd, randid);
-  mdl_open(pty_fd, fd_type_pty, wrap_write_pty, wrap_read_kout);
-  wrap_nonblock(pty_fd);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static char **create_env(int display_val, char *ttyname)
 {
   int i;
@@ -240,18 +234,22 @@ static char **create_env(int display_val, char *ttyname)
     {
     memset(disp_str, 0, MAX_TXT_LEN);
     snprintf(disp_str, MAX_TXT_LEN-1, LOCALHOST_X11_DISPLAY, display_val);
-    strcpy (envttyname, "SSH_TTY=");
-    strcat (envttyname, ttyname);
+    if (strlen(ttyname))
+      { 
+      strcpy (envttyname, "SSH_TTY=");
+      strcat (envttyname, ttyname);
+      }
     i = 4;
     env[i++] = g_xauthority;
     env[i++] = g_xdg_runtime_dir;
     env[i++] = disp_str;
-    env[i++] = envttyname;
     env[i++] = "LIBGL_ALWAYS_INDIRECT=1";
     env[i++] = "LIBGL_ALWAYS_SOFTWARE=1";
     env[i++] = "LIBGL_DRI3_DISABLE=1";
     env[i++] = "QT_X11_NO_MITSHM=1";
     env[i++] = "QT_XCB_NO_MITSHM=1"; 
+    if (strlen(ttyname))
+      env[i++] = envttyname;
     }
   else
     KERR("Problem setting DISPLAY");
@@ -259,68 +257,128 @@ static char **create_env(int display_val, char *ttyname)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void create_argv_from_cmd(char *cmd, char **argv)
+{
+  int len, i, nb;
+  char *cmd_ptr, *ptr[MAX_ARGC];
+  memset(ptr, 0, MAX_ARGC * sizeof(char *));
+  cmd_ptr = cmd;
+  for (i=0; i<MAX_ARGC-1; i++)
+    {
+    if (strlen(cmd_ptr) == 0)
+      break;
+    len = strspn(cmd_ptr, " \t"); 
+    if (len)
+      *cmd_ptr = 0;
+    ptr[i] = cmd_ptr + len;
+    if (ptr[i][0] == '"')
+      {
+      cmd_ptr = strchr(ptr[i]+1, '"');
+      if (!cmd_ptr)
+        {
+        KERR("%s", cmd);
+        break;
+        }
+      ptr[i] += 1;
+      *cmd_ptr = 0;
+      cmd_ptr += 1;
+      }
+    else
+      {
+      len = strcspn(ptr[i], " \t"); 
+      cmd_ptr = ptr[i] + len;
+      }
+    argv[i] = ptr[i];
+    nb = i;
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void helper_wrap_forkpty(uint32_t randid, int sock_fd,
+static void helper_wrap_forkpty(int action, uint32_t randid, int sock_fd,
                                 char *cmd, int display_val)
 {
-  char ttyname[MAX_TXT_LEN], *argv[10];
-  int i, pty_fd, ttyfd, pid;
+  char ttyname[MAX_TXT_LEN], *argv[MAX_ARGC];
+  int i, pty_fd=-1, ttyfd, pid;
   char **env;
-  if (wrap_openpty(&pty_fd, &ttyfd, ttyname, fd_type_fork_pty))
-    KOUT(" ");
+  memset(argv, 0, MAX_ARGC * sizeof(char *));
+  memset(ttyname, 0, MAX_TXT_LEN);
+  if ((action == action_bash) || (action == action_cmd))
+    {
+    if (wrap_openpty(&pty_fd, &ttyfd, ttyname, fd_type_fork_pty))
+      KOUT(" ");
+    }
   env = create_env(display_val, ttyname); 
-  prctl(PR_SET_PDEATHSIG, SIGKILL);
+  prctl(PR_SET_PDEATHSIG, SIGHUP);
   pid = fork();
   if (pid == 0)
     {
+    signal(SIGPIPE, SIG_DFL);
+    signal(SIGCHLD, SIG_DFL);
     prctl(PR_SET_CHILD_SUBREAPER);
-    prctl(PR_SET_PDEATHSIG, SIGKILL);
+    prctl(PR_SET_PDEATHSIG, SIGHUP);
     if (setsid() < 0)
       KOUT("setsid: %s", strerror(errno));
 
-    for (i=0; i<MAX_FD_NUM; i++)
+    if (action == action_dae)
       {
-      if (i != ttyfd)
+      for (i=0; i<MAX_FD_NUM; i++)
         close(i);
       }
-    wrap_pty_make_controlling_tty(ttyfd, ttyname);
-    if (dup2(ttyfd, 0) < 0)
-      KERR("dup2 stdin: %s", strerror(errno));
-    if (dup2(ttyfd, 1) < 0)
-      KERR("dup2 stdout: %s", strerror(errno));
-    if (dup2(ttyfd, 2) < 0)
-      KERR("dup2 stderr: %s", strerror(errno));
-
-    close(ttyfd);
-
-    wrap_nonnonblock(0);
-    wrap_nonnonblock(1);
-    wrap_nonnonblock(2);
-
-    signal(SIGPIPE, SIG_DFL);
-    signal(SIGCHLD, SIG_DFL);
-
-    if (cmd)
-      {
-      argv[0] = "/bin/bash";
-      argv[1] = "-c";
-      argv[2] = (char *) cmd;
-      argv[3] = NULL;
-      }
     else
+      {
+      for (i=0; i<MAX_FD_NUM; i++)
+        {
+        if (i != ttyfd)
+          close(i);
+        }
+      wrap_pty_make_controlling_tty(ttyfd, ttyname);
+
+      if (dup2(ttyfd, 0) < 0)
+        KERR("dup2 stdin: %s", strerror(errno));
+      if (dup2(ttyfd, 1) < 0)
+        KERR("dup2 stdout: %s", strerror(errno));
+      if (dup2(ttyfd, 2) < 0)
+        KERR("dup2 stderr: %s", strerror(errno));
+      close(ttyfd);
+      wrap_nonnonblock(0);
+      wrap_nonnonblock(1);
+      wrap_nonnonblock(2);
+      }
+    if (action == action_dae)
+      {
+      create_argv_from_cmd(cmd, argv);
+      }
+    else if (action == action_bash)
       {
       argv[0] = "/bin/bash";
       argv[1] = NULL;
       }
+    else
+      {
+      argv[0] = "/bin/bash";
+      argv[1] = "-c";
+      argv[2] = cmd;
+      argv[3] = NULL;
+      }
     execve(argv[0], argv, env);
+    for (i=0; (argv[i] != NULL) && (i < MAX_ARGC); i++)
+      KERR("ARG %d : %s", i, argv[i]);
+    KOUT("%s", strerror(errno));
     }
   else if (pid < 0)
     KOUT("%s", strerror(errno));
-  else if (pty_fd < 0)
-    KOUT("%s", strerror(errno));
-  wrap_close(ttyfd, __FUNCTION__);
-  go_on_with_main_program(randid, sock_fd, pty_fd, cmd, pid);
+  else
+    {
+    pty_cli_alloc(pty_fd, pid, sock_fd, randid);
+    if (action != action_dae)
+      {
+      wrap_close(ttyfd, __FUNCTION__);
+      mdl_open(pty_fd, fd_type_pty, wrap_write_pty, wrap_read_kout);
+      wrap_nonblock(pty_fd);
+      }
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -412,16 +470,19 @@ void pty_fork_fdset(fd_set *readfds, fd_set *writefds)
 {
   t_pty_cli *cur = g_pty_cli_head;
   int ret;
-  while(cur && (cur->pty_fd != -1))
+  while(cur)
     {
-    ret = low_write_levels_above_thresholds(cur->sock_fd);
-    if (ret == 0)
+    if (cur->pty_fd != -1)
       {
-      FD_SET(cur->pty_fd, readfds);
-      }
-    if (low_write_not_empty(cur->pty_fd))
-      {
-      FD_SET(cur->pty_fd, writefds);
+      ret = low_write_levels_above_thresholds(cur->sock_fd);
+      if (ret == 0)
+        {
+        FD_SET(cur->pty_fd, readfds);
+        }
+      if (low_write_not_empty(cur->pty_fd))
+        {
+        FD_SET(cur->pty_fd, writefds);
+        }
       }
     cur = cur->next;
     }
@@ -433,16 +494,19 @@ void pty_fork_fdset(fd_set *readfds, fd_set *writefds)
 void pty_fork_fdisset(fd_set *readfds, fd_set *writefds)
 {
  t_pty_cli *cur = g_pty_cli_head;
-  while(cur && (cur->pty_fd != -1))
+  while(cur)
     {
-    if (FD_ISSET(cur->pty_fd, readfds))
+    if (cur->pty_fd != -1)
       {
-      cli_pty_fd_action(cur);
-      }
-    if (FD_ISSET(cur->pty_fd, writefds))
-      {
-      if (low_write_fd(cur->pty_fd))
-        KERR(" ");
+      if (FD_ISSET(cur->pty_fd, readfds))
+        {
+        cli_pty_fd_action(cur);
+        }
+      if (FD_ISSET(cur->pty_fd, writefds))
+        {
+        if (low_write_fd(cur->pty_fd))
+          KERR(" ");
+        }
       }
     cur = cur->next;
     }
@@ -456,58 +520,59 @@ int pty_fork_get_max_fd(int val)
 {
   int result = val;
   t_pty_cli *cur = g_pty_cli_head;
-  while(cur && (cur->pty_fd != -1))
+  while(cur)
     {
-    if (cur->pty_fd > result)
-      result = cur->pty_fd;
+    if (cur->pty_fd != -1)
+      {
+      if (cur->pty_fd > result)
+        result = cur->pty_fd;
+      }
     cur = cur->next;
     }
   if (g_sig_read_fd > result)
     result = g_sig_read_fd;
-  if (g_sock_cloonix > result)
-    result = g_sock_cloonix;
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void pty_fork_bin_bash(uint32_t randid, int sock_fd,
+void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
                          char *cmd, int display_val)
 {
- helper_wrap_forkpty(randid, sock_fd, cmd, display_val);
+ helper_wrap_forkpty(action, randid, sock_fd, cmd, display_val);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int pty_fork_msg_type_win_size(int sock_fd, int len, char *buf)
+void pty_fork_msg_type_win_size(int sock_fd, int len, char *buf)
 {
-  int result = -1;
   char win_size_buf[16];
   t_pty_cli *cli = find_with_sock_fd(sock_fd);
   if (cli)
     {
     if (len > 16)
       KOUT("%d", len);
-    memcpy(win_size_buf, buf, 16);
-    ioctl(cli->pty_fd, TIOCSWINSZ, win_size_buf);
-    ioctl(cli->pty_fd, TIOCSIG, SIGWINCH);
-    result = 0;
+    if (cli->pty_fd != -1)
+      {
+      memcpy(win_size_buf, buf, 16);
+      ioctl(cli->pty_fd, TIOCSWINSZ, win_size_buf);
+      ioctl(cli->pty_fd, TIOCSIG, SIGWINCH);
+      }
     }
-  return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int pty_fork_msg_type_data_pty(int sock_fd, t_msg *msg)
+void pty_fork_msg_type_data_pty(int sock_fd, t_msg *msg)
 {
-  int result = -1;
   t_pty_cli *cli = find_with_sock_fd(sock_fd);
-  if (cli && (cli->pty_fd != -1))
+  if (cli)
     {
-    if (!low_write_raw(cli->pty_fd, msg, 0))
-      result = 0;
+    if (cli->pty_fd != -1)
+      {
+      low_write_raw(cli->pty_fd, msg, 0);
+      }
     }
-  return result;
 }
 /*--------------------------------------------------------------------------*/
 

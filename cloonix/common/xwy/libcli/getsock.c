@@ -46,7 +46,14 @@ static char *make_cmd_msg(int argc, char **argv)
   memset(result, 0, len);
   for (i=0; i<argc; i++)
     {
-    strcat(result, argv[i]);
+    if (strchr(argv[i], ' '))
+      {
+      strcat(result, "\"");
+      strcat(result, argv[i]);
+      strcat(result, "\"");
+      }
+    else
+      strcat(result, argv[i]);
     if (i != argc-1)
       strcat(result, " ");
     }
@@ -114,7 +121,20 @@ int get_input_params_cloonix(int argc, char **argv, int *action,
                              char **src, char **dst, char **cmd)
 {
   int result = 0;
-  if (!strcmp(argv[0], "-cmd"))
+  if (!strcmp(argv[0], "-dae"))
+    {
+    if (argc > 1)
+      {
+      *action = action_dae;
+      *cmd = make_cmd_msg(argc-1, &(argv[1]));
+      }
+    else
+      {
+      printf("\n\nMissing arg command\n\n");
+      result = -1;
+      }
+    }
+  else if (!strcmp(argv[0], "-cmd"))
     {
     if (argc > 1)
       {

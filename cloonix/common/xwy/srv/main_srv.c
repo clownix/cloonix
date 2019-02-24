@@ -75,7 +75,6 @@ static int g_listen_sock_fd;
 static struct timeval g_timeout;
 static struct timeval g_last_heartbeat_tv;
 
-
 /****************************************************************************/
 static void cli_alloc(int fd)
 {
@@ -349,29 +348,26 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
     {
 
     case msg_type_data_pty:
-      if (pty_fork_msg_type_data_pty(sock_fd, msg))
-        set_inhibited_to_be_destroyed(cli, __LINE__);
+      pty_fork_msg_type_data_pty(sock_fd, msg);
       break;
 
     case msg_type_open_bash:
-      display_val = x11_alloc_display(randid, srv_idx);
-      cli->srv_idx = display_val;
-      pty_fork_bin_bash(randid, sock_fd, NULL, display_val);
-      cli->has_pty_fork = 1;
-      wrap_free(msg, __LINE__); 
-      break;
-
+    case msg_type_open_dae:
     case msg_type_open_cmd:
       display_val = x11_alloc_display(randid, srv_idx);
       cli->srv_idx = display_val;
-      pty_fork_bin_bash(randid, sock_fd, msg->buf, display_val);
+      if (type == msg_type_open_bash)
+        pty_fork_bin_bash(action_bash, randid, sock_fd, NULL, display_val);
+      else if (type == msg_type_open_cmd)
+        pty_fork_bin_bash(action_cmd, randid, sock_fd, msg->buf, display_val);
+      else
+        pty_fork_bin_bash(action_dae, randid, sock_fd, msg->buf, display_val);
       cli->has_pty_fork = 1;
       wrap_free(msg, __LINE__); 
       break;
 
     case msg_type_win_size:
-      if (pty_fork_msg_type_win_size(sock_fd, msg->len, msg->buf))
-        set_inhibited_to_be_destroyed(cli, __LINE__);
+      pty_fork_msg_type_win_size(sock_fd, msg->len, msg->buf);
       wrap_free(msg, __LINE__); 
       break;
 
@@ -615,10 +611,6 @@ int main(int argc, char **argv)
   get_listen_sock_fd(argc, argv);
   pty_fork_init();
   cloonix_init(argv[2]);
-
-//  if (daemon(0, 0) == -1)
-//    KOUT("daemon(): %s", strerror(errno));
-
   gettimeofday(&g_last_heartbeat_tv, NULL);
   g_timeout.tv_sec = 0;
   g_timeout.tv_usec = 10000;

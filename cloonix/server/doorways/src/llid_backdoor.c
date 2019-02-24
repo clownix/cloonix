@@ -877,7 +877,7 @@ static void action_ga_heartbeat_on_working_llid(t_backdoor_vm *bvm)
       }
     else
       bvm->fail_ping_agent_rx = 0;
-    if (bvm->fail_ping_agent_rx > 100)
+    if (bvm->fail_ping_agent_rx > 30)
       {
       bvm->fail_ping_agent_rx = 0;
       doors_send_event(get_doorways_llid(), 0, bvm->name, PING_KO);

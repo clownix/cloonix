@@ -40,8 +40,8 @@
 #include "x11_tx.h"
 
 
-static struct epoll_event *g_zero_fd_epev=NULL;
-static struct epoll_event *g_win_chg_fd_epev=NULL;
+static struct epoll_event *g_zero_fd_epev;
+static struct epoll_event *g_win_chg_fd_epev;
 static struct termios g_orig_term;
 static struct termios g_cur_term;
 static int g_win_chg_write_fd;
@@ -108,17 +108,21 @@ static void send_msg_type_x11_init(uint32_t randid, char *magic)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void send_msg_type_open_pty(uint32_t randid,
+static void send_msg_type_open_pty(int action, uint32_t randid,
                                    int srv_idx, char *cmd)
 {
   int len = MAX_MSG_LEN+g_msg_header_len;
   t_msg *msg = (t_msg *) wrap_malloc(len);
+  int type;
   if (cmd)
     {
     if (strlen(cmd) > MAX_MSG_LEN - 1)
       KOUT("%d", strlen(cmd));
-    mdl_set_header_vals(msg, randid, msg_type_open_cmd, fd_type_cli,
-                        srv_idx, 0);
+    if (action == action_cmd)
+      type = msg_type_open_cmd;
+    else
+      type = msg_type_open_dae;
+    mdl_set_header_vals(msg, randid, type, fd_type_cli, srv_idx, 0);
     msg->len = sprintf(msg->buf, "%s", cmd) + 1;
     }
   else
@@ -239,11 +243,13 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
 
     case msg_type_x11_init:
       x11_init_resp(srv_idx, msg);
-      send_msg_type_open_pty(g_randid, srv_idx, g_bash_cmd);
-      if (g_action == action_bash)
+      send_msg_type_open_pty(g_action, g_randid, srv_idx, g_bash_cmd);
+      if ((g_action == action_bash) || 
+          (g_action == action_dae)  ||
+          (g_action == action_cmd))
         send_msg_type_win_size(g_randid);
-      else if (g_action != action_cmd)
-        KOUT(" ");
+      else
+        KOUT("%d", g_action);
       break;
 
     case msg_type_x11_info_flow:
@@ -372,9 +378,11 @@ void xcli_fct_before_epoll(int epfd)
     {
     scp_send_data();
     }
-  if ((g_action == action_bash) || (g_action == action_cmd))
+  if ((g_action == action_bash) ||
+      (g_action == action_dae)  ||
+      (g_action == action_cmd))
     {
-    if (g_win_chg_fd_epev)
+    if (g_action != action_dae)
       {
       zero_fd = g_zero_fd_epev->data.fd;
       win_chg_fd = g_win_chg_fd_epev->data.fd;
@@ -407,7 +415,9 @@ void xcli_x11_doors_rx(int cli_idx, int len, char *buf)
 /*****************************************************************************/
 void xcli_traf_doors_rx(int llid, int len, char *buf)
 {
-  if ((g_action == action_bash) || (g_action == action_cmd))
+  if ((g_action == action_bash) ||
+      (g_action == action_dae)  ||
+      (g_action == action_cmd))
     mdl_read_data(NULL, llid, 0, len, buf, rx_bash_msg_cb, rx_bash_err_cb);
   else
     mdl_read_data(NULL, llid, 0, len, buf, rx_scp_msg_cb, rx_scp_err_cb);
@@ -417,46 +427,33 @@ void xcli_traf_doors_rx(int llid, int len, char *buf)
 /*****************************************************************************/
 int xcli_fct_after_epoll(int nb, struct epoll_event *events)
 {
-  int win_chg_fd, zero_fd, i, fd, result = 0;
+  int i, fd, result = 0;
   uint32_t evts; 
 
-  if ((g_action == action_bash) || (g_action == action_cmd))
+  if ((g_action == action_bash) ||
+      (g_action == action_dae)  ||
+      (g_action == action_cmd))
     {
-    if (g_win_chg_fd_epev)
+    for(i=0; i<nb; i++)
       {
-      win_chg_fd = g_win_chg_fd_epev->data.fd;
-      zero_fd = g_zero_fd_epev->data.fd;
-      for(i=0; i<nb; i++)
+      fd = events[i].data.fd;
+      evts = events[i].events;
+      if (evts & EPOLLIN)
         {
-        fd = events[i].data.fd;
-        evts = events[i].events;
-        if (evts & EPOLLIN)
+        if (g_action != action_dae)
           {
-          if (g_action == action_bash)
-            {
-            if (fd == win_chg_fd)
-              win_chg_input_rx(fd);
-              result += 1;
-            if (fd == zero_fd)
-              zero_input_rx();
-              result += 1;
-            }
+          if (fd == g_win_chg_fd_epev->data.fd)
+            win_chg_input_rx(fd);
+            result += 1;
+          if (fd == g_zero_fd_epev->data.fd)
+            zero_input_rx();
+            result += 1;
           }
-        if ((fd != win_chg_fd) && (fd != zero_fd))
-          result += x11_fd_epollin_epollout_action(evts, fd);
         }
-      if (low_write_fd(1))
-        KOUT(" ");
+      result += x11_fd_epollin_epollout_action(evts, fd);
       }
-    else
-      {
-      for(i=0; i<nb; i++)
-        {
-        fd = events[i].data.fd;
-        evts = events[i].events;
-        result += x11_fd_epollin_epollout_action(evts, fd);
-        }
-      }
+    if (low_write_fd(1))
+      KOUT(" ");
     }
   return result;
 }
@@ -471,6 +468,8 @@ void xcli_init(int epfd, int llid, int tid, int type,
   struct timeval tv;
   int win_chg_fd;
 
+  g_zero_fd_epev = NULL;
+  g_win_chg_fd_epev = NULL;
   g_llid = llid;
   g_tid = tid;
   g_type = type;
@@ -495,10 +494,16 @@ void xcli_init(int epfd, int llid, int tid, int type,
   send_msg_type_randid(g_randid);
   if (clearenv())
     KOUT("Bad Clear ENV ");
-  if ((action == action_bash) || (action == action_cmd))
+  if ((action == action_bash) ||
+      (action == action_dae)  ||
+      (action == action_cmd))
     {
     send_msg_type_x11_init(g_randid, get_x11_magic());
-    if (action == action_bash)
+    if (action == action_dae)
+      {
+      daemon(0, 0);
+      }
+    else
       {
       if (setup_win_pipe(&win_chg_fd))
         KOUT(" ");

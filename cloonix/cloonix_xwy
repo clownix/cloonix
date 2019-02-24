@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+
 if [ -z $CLOONIX_CONFIG ]; then
   CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 fi
@@ -8,6 +9,32 @@ if [ ! -f $CLOONIX_CONFIG ]; then
   echo "ERROR: $CLOONIX_CONFIG not found"
   exit 1
 fi
+
+LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
+
+if (( ${#} < 1 )); then
+  echo
+  echo "$0 <net>"
+  echo
+  echo net:
+  echo $LIST
+  echo
+  exit 1
+fi
+cloonix_name=$1
+found=no
+for i in $LIST ; do
+  if [ "$cloonix_name" == "$i" ]; then
+    found=yes
+  fi
+done
+
+if [ "$found" == "no" ]; then
+  echo "ERROR: $cloonix_name not found in $CLOONIX_CONFIG"
+  echo $LIST
+  exit 1
+fi
+
 CLOONIX_TREE=$(cat $CLOONIX_CONFIG |grep  CLOONIX_TREE | awk -F = '{print $2}')
 
 if [ ! -d ${CLOONIX_TREE} ]; then

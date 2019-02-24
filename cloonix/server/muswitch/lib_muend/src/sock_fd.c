@@ -144,8 +144,8 @@ void rx_blkd_sock_cb(void *ptr, int llid)
     blkd = blkd_get_rx((void *) all_ctx, llid);
     if (blkd)
       {
-      KERR("RX DROP %s %s %d len:%d", all_ctx->g_net_name, all_ctx->g_name, 
-                                      all_ctx->g_num, blkd->payload_len);
+      //KERR("RX DROP %s %s %d len:%d", all_ctx->g_net_name, all_ctx->g_name,
+      //                                all_ctx->g_num, blkd->payload_len);
       blkd_free((void *) all_ctx, blkd);
       }
     }

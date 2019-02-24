@@ -16,7 +16,7 @@ cp -r ${HERE}/cloonix ${TMPBUILD}
 #----------------------------------------------------------
 for i in cloonix_net cloonix_ssh cloonix_scp \
          cloonix_cli  cloonix_gui cloonix_zor \
-         cloonix_osh cloonix_ocp \
+         cloonix_osh cloonix_ocp cloonix_dta \
          cloonix_xwy cloonix_ice cloonix_mon ; do
   mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
 done

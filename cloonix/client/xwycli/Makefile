@@ -25,8 +25,8 @@ INCLUDES= -I./src \
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
        -L${BLKD} -lblkd \
        -L${RPCT} -lrpct \
-       -L${LIBMDL} -lmdl \
        -L${LIBCLI} -lcli \
+       -L${LIBMDL} -lmdl \
        -lssl -lcrypto -lrt -lm -lutil -lpthread 
 
 

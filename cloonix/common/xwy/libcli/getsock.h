@@ -15,13 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-enum
-{
-  action_bash = 0,
-  action_cmd,
-  action_get,
-  action_put,
-};
 int get_input_params(int argc, char **argv, int *action, int *ip, int *port,
                      char **src, char **dst, char **cmd);
 

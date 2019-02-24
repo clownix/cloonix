@@ -358,7 +358,7 @@ void menu_dialog_vm_init(void)
     snprintf(custom_vm.name, MAX_NAME_LEN-3, "IN_%s_n", name);
   else
     strcpy(custom_vm.name, "Cloon");
-  strcpy(custom_vm.kvm_used_rootfs, "stretch.qcow2");
+  strcpy(custom_vm.kvm_used_rootfs, "buster.qcow2");
   custom_vm.current_number = 0;
   custom_vm.add_number = 1;
   custom_vm.is_persistent = 0;

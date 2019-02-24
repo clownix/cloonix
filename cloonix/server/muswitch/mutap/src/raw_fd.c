@@ -116,6 +116,7 @@ static int get_intf_ifindex(t_all_ctx *all_ctx, char *name)
       else
         {
         ifr.ifr_flags |= IFF_PROMISC;
+        ifr.ifr_flags |= IFF_UP;
         io = ioctl(s, SIOCSIFFLAGS, &ifr);
         if(io != 0)
           KERR("Error %s line %d errno %d\n",__FUNCTION__,__LINE__,errno);

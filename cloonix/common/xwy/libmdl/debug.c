@@ -267,6 +267,10 @@ char *debug_get_evt_type_txt(int type)
     result = "msg_type_open_bash";
     break;
     
+    case msg_type_open_dae:
+    result = "msg_type_open_dae";
+    break;
+    
     case msg_type_open_cmd:
     result = "msg_type_open_cmd";
     break;

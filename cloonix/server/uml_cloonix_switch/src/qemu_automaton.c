@@ -334,9 +334,9 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
    " -device virtio-rng-pci"
 
 #define QEMU_SPICE \
-   " -device qxl-vga,id=video0,ram_size=67108864,"\
-   "vram_size=67108864,vram64_size_mb=0,vgamem_mb=16"\
-   " -device intel-hda"\
+   " -device qxl-vga,id=video0,ram_size=134217728,"\
+   "vram_size=134217728,vram64_size_mb=0,vgamem_mb=32"\
+   " -device ich9-intel-hda"\
    " -device hda-micro"\
    " -device ich9-usb-ehci1,id=usb,bus=pci.0"\
    " -device usb-tablet,bus=usb.0"\

@@ -16,7 +16,7 @@
 /*                                                                           */
 /*****************************************************************************/
 
-#define DEBUG
+//#define DEBUG
 
 
 
@@ -94,7 +94,7 @@ void debug_init(int is_srv);
 #define DEBUG_WRAP_READ_WRITE(is_read, fd, len, from, buf) 
 #define DEBUG_DUMP_ENQUEUE(fd_dst, msg, all, th)
 #define DEBUG_DUMP_ENQUEUE_LEVELS(fd_dst, slots, bytes)
-#define DEBUG_DUMP_RXMSG(fd_dst, msg)
+#define DEBUG_DUMP_RXMSG(msg)
 #define DEBUG_DUMP_THREAD(x11_fd, sock_fd_ass, srv_idx, cli_idx)
 #endif
 

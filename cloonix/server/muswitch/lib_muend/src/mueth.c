@@ -185,7 +185,7 @@ void tx_unix_sock(t_all_ctx *all_ctx, void *elem, int len)
   futur_idx = get_idx_add(idx, 1);
   if (all_ctx->bytes_persec_tab[futur_idx])
     {
-    KERR("%d", all_ctx->bytes_persec_tab[futur_idx]); 
+    KERR("%s %d", all_ctx->g_name, all_ctx->bytes_persec_tab[futur_idx]); 
     all_ctx->bytes_persec_cur -= all_ctx->bytes_persec_tab[futur_idx];
     all_ctx->bytes_persec_tab[futur_idx] = 0;
     }
