@@ -13,7 +13,7 @@ This version v02-03 is the latest.
 
 Get the open sources associated to this version (qemu, spice...) from:
 
-   clownix.net/downloads/cloonix-02-03/targz_store.tar.gz
+   http://clownix.net/downloads/cloonix-02-03/targz_store.tar.gz
 
 -----------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ It is assumed that sudo makes the command run as root.
 
 cd cloonix
 sudo ./install_depends build
-wget clownix.net/downloads/cloonix-02-03/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-02-03/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 ./doitall
 cd -
@@ -51,3 +51,7 @@ cd cloonix/mac80211_hwsim
 ./hwsim.sh
 -----------------------------------------------------------------------------
 
+-----------------------------------------------------------------------------
+COMPLETE FREESWITCH DEMO ON GITHUB:
+https://github.com/clownix/freeswitch
+-----------------------------------------------------------------------------
