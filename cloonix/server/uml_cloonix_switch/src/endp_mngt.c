@@ -80,6 +80,7 @@ typedef struct t_priv_endp
   char name[MAX_NAME_LEN];
   int num;
   int clone_start_pid;
+  int clone_start_pid_just_done;
   int pid;
   int getsuidroot;
   int open_endp;
@@ -758,6 +759,18 @@ static void send_type_req(t_priv_endp *cur)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void set_clone_start_pid(char *name, t_priv_endp *endp, int pid)
+{
+  if (!pid)
+    KERR("BADPID");
+  if (endp->clone_start_pid)
+    KERR("CLONEPID %s %d %d", name, pid, endp->clone_start_pid);
+  endp->clone_start_pid = pid;
+  endp->clone_start_pid_just_done = 1;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void timer_endp_beat(void *data)
 {
   char line[2*MAX_PATH_LEN];
@@ -767,47 +780,57 @@ static void timer_endp_beat(void *data)
     next = cur->next;
     if (cur->clone_start_pid)
       {
-      if (cur->trace_alloc_count == 0)
-        cur->trace_alloc_count = 1;
-      else if (cur->llid == 0)
-        {
-        cur->llid = trace_alloc(cur);
-        cur->trace_alloc_count += 1;
-        if (cur->trace_alloc_count > 10)
-          {
-          KERR("ENDP %s %d NOT LISTENING", cur->name, cur->num);
-          endp_mngt_send_quit(cur->name, cur->num);
-          }
-        }
-      else if (cur->pid == 0) 
-        rpct_send_pid_req(NULL, cur->llid, type_hop_endp, cur->name, cur->num);
-      else if ((cur->getsuidroot == 0) && 
-               ((cur->endp_type == endp_type_tap) ||
-                (cur->endp_type == endp_type_raw) ||
-                (cur->endp_type == endp_type_wif)))
-        try_send_endp(cur, "cloonix_req_suidroot");
-      else if (cur->open_endp == 0)
-        send_type_req(cur);
+      if (cur->clone_start_pid_just_done == 1)
+        cur->clone_start_pid_just_done = 0;
       else
         {
-        if ((cur->endp_type == endp_type_snf) &&
-            (cur->init_pcap_snf == 0))
+        if (cur->trace_alloc_count == 0)
+          cur->trace_alloc_count = 1;
+        else if (cur->llid == 0)
           {
-          snprintf(line, 2*MAX_PATH_LEN - 1, "-set_conf %s/%s.pcap",
-                   utils_get_snf_pcap_dir(), cur->name);
-          rpct_send_cli_req(NULL, cur->llid, 0, 0, 0, line);
-          cur->init_pcap_snf = 1;
-          }
-        cur->periodic_count += 1;
-        if (cur->periodic_count >= 5)
-          {
-          rpct_send_pid_req(NULL,cur->llid,type_hop_endp,cur->name,cur->num);
-          cur->periodic_count = 1;
-          cur->unanswered_pid_req += 1;
-          if (cur->unanswered_pid_req > 2)
+          cur->llid = trace_alloc(cur);
+          cur->trace_alloc_count += 1;
+          if (cur->trace_alloc_count == 5)
+            KERR("ENDP %s %d WARN 1 NOT LISTENING", cur->name, cur->num);
+          if (cur->trace_alloc_count == 10)
+            KERR("ENDP %s %d WARN 2 NOT LISTENING", cur->name, cur->num);
+          if (cur->trace_alloc_count > 20)
             {
-            KERR("ENDP %s %d NOT RESPONDING KILLING IT", cur->name, cur->num);
+            KERR("ENDP %s %d ERR NOT LISTENING", cur->name, cur->num);
             endp_mngt_send_quit(cur->name, cur->num);
+            }
+          }
+        else if (cur->pid == 0) 
+          rpct_send_pid_req(NULL,cur->llid,type_hop_endp,cur->name,cur->num);
+        else if ((cur->getsuidroot == 0) && 
+                 ((cur->endp_type == endp_type_tap) ||
+                  (cur->endp_type == endp_type_raw) ||
+                  (cur->endp_type == endp_type_wif)))
+          try_send_endp(cur, "cloonix_req_suidroot");
+        else if (cur->open_endp == 0)
+          send_type_req(cur);
+        else
+          {
+          if ((cur->endp_type == endp_type_snf) &&
+              (cur->init_pcap_snf == 0))
+            {
+            snprintf(line, 2*MAX_PATH_LEN - 1, "-set_conf %s/%s.pcap",
+                     utils_get_snf_pcap_dir(), cur->name);
+            rpct_send_cli_req(NULL, cur->llid, 0, 0, 0, line);
+            cur->init_pcap_snf = 1;
+            }
+          cur->periodic_count += 1;
+          if (cur->periodic_count >= 5)
+            {
+            rpct_send_pid_req(NULL,cur->llid,type_hop_endp,
+                              cur->name,cur->num);
+            cur->periodic_count = 1;
+            cur->unanswered_pid_req += 1;
+            if (cur->unanswered_pid_req > 2)
+              {
+              KERR("ENDP %s %d NOT RESPONDING KILLING IT",cur->name,cur->num);
+              endp_mngt_send_quit(cur->name, cur->num);
+              }
             }
           }
         }
@@ -960,9 +983,7 @@ void doors_recv_c2c_clone_birth_pid(int llid, int tid, char *name, int pid)
     {
     if (mu->clone_start_pid)
       KERR("%s %d %d", name, pid, mu->clone_start_pid);
-    mu->clone_start_pid = pid;
-    if (!mu->clone_start_pid)
-      KERR(" ");
+    set_clone_start_pid(name, mu, pid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1022,7 +1043,7 @@ static void fd_ready_doors_clone(void *data)
 /****************************************************************************/
 int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type)
 {
-  int nb_eth, result = -1;
+  int pid, nb_eth, result = -1;
   char *sock = utils_get_endp_path(name, num);
   t_priv_endp *mu = muendp_find_with_name(name, num);
   t_priv_endp *mu0;
@@ -1057,11 +1078,9 @@ int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type)
       create_two_endp_arg(name, num, endp_type, &mua1, &mua2);
       argv = muendp_birth_argv(mua2);
       utils_send_creation_info("muendp", argv);
-      mu->clone_start_pid = pid_clone_launch(muendp_birth, muendp_death, 
-                                             NULL, mua2, mua2, NULL, 
-                                             name, -1, 1);
-      if (!mu->clone_start_pid)
-        KERR(" ");
+      pid = pid_clone_launch(muendp_birth, muendp_death, NULL,
+                             mua2, mua2, NULL, name, -1, 1);
+      set_clone_start_pid(name, mu, pid);
       clownix_timeout_add(500, muendp_watchdog, (void *) mua1, NULL, NULL);
       }
     else if ((num == 1) && (mu->endp_type == endp_type_a2b))
@@ -1070,7 +1089,7 @@ int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type)
       if (!mu0) 
         KERR("%s %d", name, num);
       else
-        mu->clone_start_pid = mu0->clone_start_pid;
+        set_clone_start_pid(name, mu, mu0->clone_start_pid);
       }
     else if (mu->endp_type == endp_type_kvm_wlan)
       {
@@ -1409,7 +1428,7 @@ int endp_mngt_kvm_pid_clone(char *name, int num, int pid)
       KERR("%s %d %d", name, num, mu->endp_type);
     else
       {
-      mu->clone_start_pid = pid;
+      set_clone_start_pid(name, mu, pid);
       result = 0;
       }
     }

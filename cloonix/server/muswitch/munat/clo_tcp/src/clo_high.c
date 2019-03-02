@@ -842,10 +842,12 @@ static void non_activ_count_inc(void)
       }
     if (cur->syn_sent_non_activ_count > 10)
       {
+      KERR(" ");
       clo_high_close_tx(&(cur->tcpid));
       }
     if (cur->tx_repeat_failure_count > 10)
       {
+      KERR(" ");
       clo_high_close_tx(&(cur->tcpid));
       }
     cur = next;

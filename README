@@ -34,7 +34,7 @@ HOWTO GET A WORKING VM:
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget clownix.net/downloads/cloonix-02-03/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-02-03/buster.qcow2.gz
 gunzip buster.qcow2.gz
 cd -
 -----------------------------------------------------------------------------

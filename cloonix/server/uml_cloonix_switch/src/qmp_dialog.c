@@ -288,10 +288,16 @@ static void timer_connect_qmp(void *data)
       if (!utils_get_pid_of_machine(vm))
         {
         qrec->count_conn_timeout += 1;
-        if (qrec->count_conn_timeout > 50)
-          KERR("FAILED START KVM TIMEOUT %s", pname);
+        if (qrec->count_conn_timeout > 100)
+          {
+          KERR("ERR FAILED START KVM TIMEOUT %s", pname);
+          }
         else
           {
+          if (qrec->count_conn_timeout == 50)
+            KERR("WARN 1 FAILED START KVM TIMEOUT %s", pname);
+          if (qrec->count_conn_timeout == 70)
+            KERR("WARN 2 FAILED START KVM TIMEOUT %s", pname);
           clownix_timeout_add(10,timer_connect_qmp,(void *) pname,NULL,NULL);
           timer_restarted = 1;
           }
