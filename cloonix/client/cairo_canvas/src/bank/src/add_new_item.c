@@ -188,7 +188,7 @@ static void get_object_mass(t_bank_item *bitem)
     break;
     case bank_type_eth:
     case bank_type_lan:
-      bitem->pbi.mass = (double) 2;
+      bitem->pbi.mass = (double) 1;
     break;
     case bank_type_sat:
       bitem->pbi.mass = (double) 8;

@@ -31,12 +31,12 @@
 
 #define REPULSE_K 300.0
 #define SPRING_K 5.0
-#define FRICTION  10.0
+#define FRICTION  15.0
 #define SPRING_SIZE 35
 #define SPRING_MIN_ACTIV 1 
-#define HORIZON_DIA 10000000.0 
+#define HORIZON_DIA 1000000.0 
 #define MAX_ACCEL 3
-#define MAX_SPEED 20
+#define MAX_SPEED 10
 #define MIN_SPEED 0.1 
 
 extern CrCanvas *glob_canvas;

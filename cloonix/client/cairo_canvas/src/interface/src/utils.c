@@ -32,6 +32,8 @@
 /****************************************************************************/
 void process_all_diffs(t_topo_differences *diffs)
 {
+  int pid;
+
   t_topo_kvm_chain   *add_kvm = diffs->add_kvm;
   t_topo_kvm_chain   *del_kvm = diffs->del_kvm;
   t_topo_c2c_chain   *add_c2c = diffs->add_c2c;
@@ -104,6 +106,9 @@ void process_all_diffs(t_topo_differences *diffs)
 
   while(del_snf)
     {
+    pid = bank_get_wireshark_pid(del_snf->snf.name);
+    if (pid)
+      pid_clone_kill_single(pid);
     from_cloonix_switch_delete_sat(del_snf->snf.name);
     del_snf = del_snf->next;
     }

@@ -74,7 +74,6 @@ static void sat_lozange(cairo_t *c, double x0, double y0, double d0)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void update_layout_center_scale(const char *from)
 {
@@ -91,7 +90,6 @@ static void update_layout_center_scale(const char *from)
     }
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void topo_zoom_in_out_canvas(int in, int val)
@@ -147,7 +145,6 @@ void snf_add_recpath_and_capture_on(t_bank_item *bitem)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static t_bank_item *from_critem_to_bank_item(CrItem *item)
 {
@@ -174,12 +171,10 @@ void topo_get_matrix_inv_transform_point(double *x, double *y)
 }
 /*--------------------------------------------------------------------------*/
 
-
-
 /****************************************************************************/
 static void init_colors(void)
 {
-  orange.r        = 0.99;  orange.g        = 0.33;  orange.b        = 0.00;
+  orange.r       = 0.99;  orange.g       = 0.33;  orange.b       = 0.00;
   black.r        = 0.00;  black.g        = 0.00;  black.b        = 0.00;
   blue.r         = 0.00;  blue.g         = 0.00;  blue.b         = 0.66;
   green.r        = 0.00;  green.g        = 0.66;  green.b        = 0.00;
@@ -208,7 +203,6 @@ void modif_position_layout(t_bank_item *bitem, double xi, double yi)
   move_manager_update_item(bitem);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void modif_position_generic(t_bank_item *bitem, double xi, double yi)
@@ -294,6 +288,7 @@ static void process_mouse_double_click(t_bank_item *bitem)
   int config_flags;
   switch(bitem->bank_type)
     {
+
     case bank_type_lan:
       selectioned_flip_flop(bitem);
       break;
@@ -328,7 +323,7 @@ static void process_mouse_motion(GdkEvent *event,
   x = event->motion.x;
   y = event->motion.y;
   if ((bitem->bank_type == bank_type_node) ||
-      (bitem->bank_type == bank_type_lan)   ||
+      (bitem->bank_type == bank_type_lan)  ||
       (bitem->bank_type == bank_type_sat))
     {
     modif_position_generic(bitem, x, y);
@@ -346,7 +341,6 @@ static void process_mouse_motion(GdkEvent *event,
     KOUT("%d", bitem->bank_type);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void menu_caller(t_bank_item *bitem)
@@ -610,7 +604,6 @@ static void paint_select(cairo_t *c, int flag, int flag_trace,
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void paint_select_source_color(t_bank_item *bitem, cairo_t *c)
 {
@@ -645,7 +638,6 @@ static void paint_select_source_color(t_bank_item *bitem, cairo_t *c)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void cairo_elem(cairo_t *c, int bank_type, double x0, double y0,
                                                   double x1, double y1)
@@ -666,7 +658,6 @@ static void cairo_elem(cairo_t *c, int bank_type, double x0, double y0,
     }
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void on_item_paint_snf(CrItem *item, cairo_t *c)
@@ -747,8 +738,6 @@ static void on_item_paint_nat(CrItem *item, cairo_t *c)
   cairo_stroke(c);
 }
 /*--------------------------------------------------------------------------*/
-
-
 
 /****************************************************************************/
 static void on_item_paint_eth(CrItem *item, cairo_t *c)
@@ -899,7 +888,6 @@ static void sat_rectangle(cairo_t *c, double x0, double y0, double d0)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void on_item_paint_sat(CrItem *item, cairo_t *c)
 {
@@ -977,9 +965,6 @@ static void on_item_paint_a2b(CrItem *item, cairo_t *c)
 }
 /*--------------------------------------------------------------------------*/
 
-
-
-
 /****************************************************************************/
 static void on_item_paint_c2c(CrItem *item, cairo_t *c)
 {
@@ -1025,8 +1010,6 @@ static void on_item_paint_c2c(CrItem *item, cairo_t *c)
   cairo_stroke(c);
 }
 /*--------------------------------------------------------------------------*/
-
-
 
 /****************************************************************************/
 static void on_item_paint(CrItem *item, cairo_t *c)
@@ -1182,7 +1165,6 @@ static gboolean on_canvas_event(GtkWidget* widget,
       {
       if (event->button.button == 1)
         {
-        g_object_set(G_OBJECT(glob_panner), "button", 1, NULL);
         result = TRUE;
         }
       else if (event->button.button == 3)
@@ -1196,7 +1178,6 @@ static gboolean on_canvas_event(GtkWidget* widget,
     {
     if ((!(get_currently_in_item_surface())) && (event->button.button == 1))
       {
-      g_object_set(G_OBJECT(glob_panner), "button", 2, NULL);
       update_layout_center_scale(__FUNCTION__);
       result = TRUE;
       }
@@ -1267,7 +1248,6 @@ GtkWidget *topo_canvas(void)
   gtk_widget_set_size_request(canvas, WIDTH, HEIGH);
   gtk_box_pack_start (GTK_BOX (vbox), canvas, TRUE, TRUE, 0);
   glob_panner = cr_panner_new(glob_canvas, NULL);
-  g_object_set(G_OBJECT(glob_panner), "button", 2, NULL);
   cr_canvas_center_scale(CR_CANVAS(gtkwidget_canvas), WIDTH/2, HEIGH/2, WIDTH/3, HEIGH/3);
   cr_canvas_set_repaint_mode(glob_canvas, TRUE);
   cr_canvas_set_min_scale_factor (glob_canvas,0.2,0.2);
@@ -1355,7 +1335,6 @@ void topo_bitem_show(t_bank_item *bitem)
   cr_item_show(CR_ITEM(bitem->cr_item));
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void topo_remove_cr_item(t_bank_item *bitem)
