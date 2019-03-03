@@ -197,17 +197,7 @@ static void update_snf(char *name, char *line)
     KERR("%s", name);
   else
     {
-    if (!strcmp(line, "REC_START_OK"))
-      {
-      endp_mngt_snf_set_capture(name, 0, 1); 
-      snf_globtopo_small_event(name, snf_evt_capture_on, NULL);
-      }
-    else if (!strcmp(line, "REC_STOP_OK"))
-      {
-      endp_mngt_snf_set_capture(name, 0, 0); 
-      snf_globtopo_small_event(name, snf_evt_capture_off, NULL);
-      }
-    else if (!strncmp(line, "SET_CONF_OK", strlen("SET_CONF_OK")))
+    if (!strncmp(line, "SET_CONF_OK", strlen("SET_CONF_OK")))
       {
       ptr = line + strlen("SET_CONF_OK");
       endp_mngt_snf_set_recpath(name, 0, ptr);
@@ -237,6 +227,8 @@ static void update_snf(char *name, char *line)
           }
         }
       }
+    else
+      KERR("%s %s", name, line);
     }
 }
 /*---------------------------------------------------------------------------*/

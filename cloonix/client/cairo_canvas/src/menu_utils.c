@@ -357,14 +357,14 @@ static void start_qemu_spice(char *password, char *path, t_qemu_spice_item *it)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void start_wireshark(char *name, t_bank_item *bitem)
+void start_wireshark(t_bank_item *bitem)
 {
   char bin_path[MAX_PATH_LEN];
   char config[MAX_PATH_LEN];
   char cloonix_name[MAX_NAME_LEN];
   char *recpath = bitem->pbi.pbi_sat->topo_snf.recpath;
   char *argv[]={bin_path, config, cloonix_name, "-dae",
-               "/usr/bin/wireshark", "-r", recpath, NULL}; 
+               "/usr/bin/wireshark", "-k", "-i", recpath, NULL}; 
   memset(bin_path, 0, MAX_PATH_LEN);
   memset(config, 0, MAX_PATH_LEN);
   memset(cloonix_name, 0, MAX_NAME_LEN);
@@ -378,24 +378,7 @@ void start_wireshark(char *name, t_bank_item *bitem)
   snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
 
   if (check_before_start_launch(argv))
-    launch_pid_wait(type_pid_wireshark, name, argv);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void start_local_wireshark(char *name, t_bank_item *bitem)
-{
-  char bin_path[MAX_PATH_LEN];
-  char rec[MAX_PATH_LEN];
-  char *argv[] = {bin_path, "-r", rec, NULL};
-  memset(bin_path, 0, MAX_PATH_LEN);
-  memset(rec, 0, MAX_PATH_LEN);
-  snprintf(bin_path, MAX_PATH_LEN, "wireshark");
-  snprintf(rec, MAX_PATH_LEN, "%s", bitem->pbi.pbi_sat->topo_snf.recpath);
-  bin_path[MAX_PATH_LEN-1] = 0;
-  rec[MAX_PATH_LEN-1] = 0;
-  if (check_before_start_launch(argv))
-    launch_pid_wait(type_pid_wireshark, name, argv);
+    launch_pid_wait(type_pid_wireshark, bitem->name, argv);
 }
 /*--------------------------------------------------------------------------*/
 

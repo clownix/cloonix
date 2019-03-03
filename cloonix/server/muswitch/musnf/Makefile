@@ -14,7 +14,8 @@ VPATH=src
 
 SRC = main.c \
       msg_recv.c \
-      pcap_file.c
+      pcap_file.c \
+      inotify_open.c
 
 WARNINGS=-Wall -Wstrict-prototypes -Wdeclaration-after-statement
 

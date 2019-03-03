@@ -254,8 +254,6 @@ static void listen_socket_action(void)
     mdl_open(sock_fd, fd_type_srv, wrap_write_srv, wrap_read_srv);
     cli_alloc(sock_fd);
     }
-  else
-    KERR(" ");
 }
 /*--------------------------------------------------------------------------*/
 

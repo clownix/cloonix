@@ -397,8 +397,6 @@ int wrap_accept(int fd_listen, int fd_type, int is_tcp, const char *fct)
       fd = -1;
       }
     }
-  else
-    KERR("accept4 error: %s %s", strerror(errno), fct);
   return fd;
 }
 /*--------------------------------------------------------------------------*/

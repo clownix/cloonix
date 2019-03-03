@@ -310,12 +310,7 @@ static void process_mouse_double_click(t_bank_item *bitem)
     case bank_type_sat:
       bitem->pbi.flag = flag_normal;
       if (is_a_snf(bitem))
-        {
-        if (bitem->pbi.pbi_sat->topo_snf.capture_on)
-          client_mud_cli_cmd(0, bitem->name, 0, "-rec_stop");
-        else
-          client_mud_cli_cmd(0, bitem->name, 0, "-rec_start");
-        }
+        start_wireshark(bitem);
       break;
 
     default:

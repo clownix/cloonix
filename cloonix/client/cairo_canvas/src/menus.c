@@ -574,7 +574,7 @@ static void sat_item_wireshark(GtkWidget *mn, t_item_ident *pm)
     {
     if (bitem->pbi.mutype == endp_type_snf)
       {
-      start_wireshark(pm->name, bitem);
+      start_wireshark(bitem);
       }
     }
 }

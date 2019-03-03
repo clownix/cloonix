@@ -47,21 +47,8 @@ static void local_process_cmd(t_all_ctx *all_ctx, char *cmd, char *resp)
 {
   char *path;
   strcpy(resp, "KO UNKNOWN");
-  if (!strcmp(cmd, "-rec_start"))
-    {
-    if (!pcap_file_start(all_ctx))
-      strcpy(resp, "REC_START_OK");
-    else
-      strcpy(resp, "REC_START_KO");
-    }
-  else if (!strcmp(cmd, "-rec_stop"))
-    {
-    if (!pcap_file_end(all_ctx))
-      strcpy(resp, "REC_STOP_OK");
-    else
-      strcpy(resp, "REC_STOP_KO");
-    }
-  else if (!strncmp(cmd, "-set_conf", strlen("-set_conf")))
+  DOUT((void *)all_ctx, FLAG_HOP_DIAG, "%s %s KO1", __FUNCTION__, cmd);
+  if (!strncmp(cmd, "-set_conf", strlen("-set_conf")))
     {
     path = cmd + strlen("-set_conf");
     path = path + strspn(path, " \t\r\n");
