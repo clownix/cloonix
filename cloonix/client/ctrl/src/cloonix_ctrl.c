@@ -137,18 +137,6 @@ struct cmd_struct level_vm_cmd[] = {
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-struct cmd_struct level_snf_cmd[] = {
-{"on",   "Start pcap recording",  NULL, cmd_snf_on, help_snf_on},
-{"off",  "Stop pcap recording",   NULL, cmd_snf_off, help_snf_off},
-{"get",  "Get name of pcap file", NULL, cmd_snf_get_file, 
-                                        help_snf_get_file},
-{"set",  "Change name of pcap file", NULL, cmd_snf_set_file, 
-                                           help_snf_set_file},
-{"help",  "",                     level_snf_cmd, NULL, NULL},
-};
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
 struct cmd_struct level_a2b_cmd[] = {
 {"mod",  "A2b config modify", NULL, cmd_a2b_config, help_a2b_config},
 {"dmp",  "A2b config dump", NULL, cmd_a2b_dump, help_a2b_dump},
@@ -167,7 +155,6 @@ struct cmd_struct level_hwsim_cmd[] = {
 /****************************************************************************/
 struct cmd_struct level_cnf_cmd[] = {
 {"kvm",  "Virtual machine actions",    level_vm_cmd, NULL, NULL},
-{"snf",  "Sniffer actions", level_snf_cmd, NULL, NULL},
 {"a2b",  "A2b actions", level_a2b_cmd, NULL, NULL},
 {"hws",  "Hwsim actions", level_hwsim_cmd, NULL, NULL},
 {"lay",  "Layout modifications on canvas", level_layout_cmd, NULL, NULL},
