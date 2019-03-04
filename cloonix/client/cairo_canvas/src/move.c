@@ -29,15 +29,15 @@
 #include "external_bank.h"
 #include "main_timer_loop.h"
 
-#define REPULSE_K 300.0
-#define SPRING_K 5.0
+#define REPULSE_K 800.0
+#define SPRING_K 10.0
 #define FRICTION  15.0
 #define SPRING_SIZE 35
 #define SPRING_MIN_ACTIV 1 
 #define HORIZON_DIA 1000000.0 
-#define MAX_ACCEL 3
-#define MAX_SPEED 10
-#define MIN_SPEED 0.1 
+#define MAX_ACCEL 1
+#define MAX_SPEED 5
+#define MIN_SPEED 0.2 
 
 extern CrCanvas *glob_canvas;
 
@@ -118,10 +118,10 @@ static void eth_repulse_force(t_bank_item *eth, t_bank_item *neigh)
   vx = eth->pbi.tx - neigh->pbi.tx;
   vy = eth->pbi.ty - neigh->pbi.ty;
   dist = vx*vx + vy*vy;
-  if (dist)
+  if (dist > 1)
     {
-    eth->pbi.force_x += (vx/dist)*500;
-    eth->pbi.force_y += (vy/dist)*500;
+    eth->pbi.force_x += (vx/dist)*100;
+    eth->pbi.force_y += (vy/dist)*100;
     }
   else
     {
@@ -267,32 +267,10 @@ static double accel_control(double accel)
 void move_single_step (t_bank_item *bitem)
 {
   double acceleration_x, acceleration_y;
-  double frict;
-  frict = friction;
-  if (bitem->pbi.force_x > 0)
-    {
-    bitem->pbi.force_x -= bitem->pbi.velocity_x * frict;
-    if (bitem->pbi.force_x < 0)
-      bitem->pbi.force_x /= 2;
-    }
-  else if (bitem->pbi.force_x < 0)
-    {
-    bitem->pbi.force_x -= bitem->pbi.velocity_x * frict;
-    if (bitem->pbi.force_x > 0)
-      bitem->pbi.force_x /= 2;
-    }
-  if (bitem->pbi.force_y > 0)
-    {
-    bitem->pbi.force_y -= bitem->pbi.velocity_y * frict;
-    if (bitem->pbi.force_y < 0)
-      bitem->pbi.force_y /= 2;
-    }
-  else if (bitem->pbi.force_y < 0)
-    {
-    bitem->pbi.force_y -= bitem->pbi.velocity_y * frict;
-    if (bitem->pbi.force_y > 0)
-      bitem->pbi.force_y /= 2;
-    }
+  bitem->pbi.force_x -= bitem->pbi.velocity_x * friction;
+  bitem->pbi.force_x -= bitem->pbi.velocity_x * friction;
+  bitem->pbi.force_y -= bitem->pbi.velocity_y * friction;
+  bitem->pbi.force_y -= bitem->pbi.velocity_y * friction;
   if (is_lan(bitem)) 
     {
     bitem->pbi.force_x /= 20;
@@ -457,7 +435,7 @@ static void set_close_range_repulse_force(t_bank_item *bitem, t_bank_item *cur)
   vx = bitem->pbi.position_x - cur->pbi.position_x;
   vy = bitem->pbi.position_y - cur->pbi.position_y;
   dist = vx*vx + vy*vy;
-  factor = repulse_k/100;
+  factor = repulse_k/10;
   if (bitem->bank_type == bank_type_node) 
     min_dist = 2000;
   else

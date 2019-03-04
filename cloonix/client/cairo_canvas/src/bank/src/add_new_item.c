@@ -184,17 +184,17 @@ static void get_object_mass(t_bank_item *bitem)
   switch(bitem->bank_type)
     {
     case bank_type_node:
-      bitem->pbi.mass = (double) 20;
+      bitem->pbi.mass = (double) 200;
     break;
     case bank_type_eth:
     case bank_type_lan:
-      bitem->pbi.mass = (double) 1;
+      bitem->pbi.mass = (double) 10;
     break;
     case bank_type_sat:
-      bitem->pbi.mass = (double) 8;
+      bitem->pbi.mass = (double) 80;
     break;
     default:
-      bitem->pbi.mass = (double) 1;
+      bitem->pbi.mass = (double) 10;
     break;
     }
 }
