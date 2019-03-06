@@ -116,19 +116,16 @@ void topo_repaint_request(void)
 /****************************************************************************/
 void snf_add_recpath_and_capture_on(t_bank_item *bitem)
 {
-  CrItem *item, *child1, *child2;
+  CrItem *item, *child1;
   char onoff[5];
   item = (CrItem *) bitem->cr_item;
   child1 = (CrItem *) bitem->pbi.pbi_sat->snf_cr_item_onoff;
-  child2 = (CrItem *) bitem->pbi.pbi_sat->snf_cr_item_recpath;
   if (bitem->pbi.pbi_sat->topo_snf.capture_on)
     strcpy(onoff, "ON"); 
   else
     strcpy(onoff, "OFF"); 
   if (child1)
     cr_item_remove(item, child1);
-  if (child2)
-    cr_item_remove(item, child2);
   bitem->pbi.pbi_sat->snf_cr_item_onoff = 
                               (void *) cr_text_new (CR_ITEM(bitem->cr_item),
                                        bitem->pbi.x0 -12,
@@ -136,12 +133,6 @@ void snf_add_recpath_and_capture_on(t_bank_item *bitem)
                                        onoff,
                                        "font", "Sans 7", NULL);
 
-  bitem->pbi.pbi_sat->snf_cr_item_recpath = 
-                               (void *) cr_text_new (CR_ITEM(bitem->cr_item),
-                                        bitem->pbi.x0 -13,
-                                        bitem->pbi.y0 + 3,
-                                        bitem->pbi.pbi_sat->topo_snf.recpath,
-                                        "font", "Sans 7", NULL);
 }
 /*--------------------------------------------------------------------------*/
 

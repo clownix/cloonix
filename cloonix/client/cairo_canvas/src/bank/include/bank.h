@@ -36,7 +36,6 @@ typedef struct t_pbi_node
 
 typedef struct t_pbi_sat
 {
-  void *snf_cr_item_recpath;
   void *snf_cr_item_onoff;
   t_topo_snf topo_snf;
   t_topo_c2c topo_c2c;

@@ -280,6 +280,19 @@ static int rx_from_raw(void *ptr, int llid, int fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timer_heartbeat(t_all_ctx *all_ctx, void *data)
+{
+  int queue_size;
+  if ((g_llid_raw) && (g_fd_raw != -1))
+    {
+    if (ioctl(g_fd_raw, SIOCINQ, &queue_size))
+      KERR("IOCTL");
+    }
+  clownix_timeout_add(all_ctx, 100, timer_heartbeat, NULL, NULL, NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int  raw_fd_open(t_all_ctx *all_ctx, char *name)
 { 
   int result = -1;
@@ -300,5 +313,6 @@ void raw_fd_init(t_all_ctx *all_ctx)
   memset(g_raw_name, 0, MAX_NAME_LEN);
   g_fd_raw = -1;
   g_fd_raw_tx = -1;
+  clownix_timeout_add(all_ctx, 100, timer_heartbeat, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/

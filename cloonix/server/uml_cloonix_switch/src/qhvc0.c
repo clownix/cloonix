@@ -99,13 +99,11 @@
   "if [ \"$DPID\" != \"\" ]; then\n"\
   "  kill $DPID\n"\
   "fi\n"\
-  "if [ ! -e ${CONFIG}/$AGT ]; then\n"\
-  "  mkdir -p /mnt/cloonix_config_fs\n"\
-  "  umount /dev/${AGD}\n"\
-  "  umount /dev/${AGD}\n"\
-  "  mount /dev/${AGD} /mnt/cloonix_config_fs\n"\
-  "  mount -o remount,exec /dev/${AGD}\n"\
-  "fi\n"\
+  "mkdir -p /mnt/cloonix_config_fs\n"\
+  "umount /dev/${AGD}\n"\
+  "umount /dev/${AGD}\n"\
+  "mount /dev/${AGD} /mnt/cloonix_config_fs\n"\
+  "mount -o remount,exec /dev/${AGD}\n"\
   "${CONFIG}/$AGT\n"\
   "${CONFIG}/$DRP\n"\
   "APID=\"$(pidof $AGT )\"\n"\
