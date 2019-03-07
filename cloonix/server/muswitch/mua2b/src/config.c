@@ -39,28 +39,28 @@ void config_fill_resp(char *resp, int max_len)
   if ((max_len-len) > 20)
     len += sprintf(resp+len, "CONFIG A2B:\n");
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tdelay:%d ms\n", g_sideB.conf_delay);
+    len += sprintf(resp+len, "\tdelay:%lld ms\n", g_sideB.conf_delay);
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tloss:%d/10000\n", g_sideA.conf_loss);
+    len += sprintf(resp+len, "\tloss:%lld/10000\n", g_sideA.conf_loss);
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tqsize:%d bytes\n", g_sideB.conf_qsize);
+    len += sprintf(resp+len, "\tqsize:%lld bytes\n", g_sideB.conf_qsize);
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tbsize:%d bytes\n", g_sideB.conf_bsize);
+    len += sprintf(resp+len, "\tbsize:%lld bytes\n", g_sideB.conf_bsize);
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tbrate:%d bytes/sec\n", g_sideB.conf_brate);
+    len += sprintf(resp+len, "\tbrate:%lld bytes/sec\n", g_sideB.conf_brate);
 
   if ((max_len-len) > 20)
     len += sprintf(resp+len, "CONFIG B2A:\n");
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tdelay:%d\n ms", g_sideA.conf_delay);
+    len += sprintf(resp+len, "\tdelay:%lld\n ms", g_sideA.conf_delay);
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tloss:%d/10000\n", g_sideB.conf_loss);
+    len += sprintf(resp+len, "\tloss:%lld/10000\n", g_sideB.conf_loss);
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tqsize:%d bytes\n", g_sideA.conf_qsize);
+    len += sprintf(resp+len, "\tqsize:%lld bytes\n", g_sideA.conf_qsize);
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tbsize:%d bytes\n", g_sideA.conf_bsize);
+    len += sprintf(resp+len, "\tbsize:%lld bytes\n", g_sideA.conf_bsize);
   if ((max_len-len) > 20)
-    len += sprintf(resp+len, "\tbrate:%d bytes/sec\n", g_sideA.conf_brate);
+    len += sprintf(resp+len, "\tbrate:%lld bytes/sec\n", g_sideA.conf_brate);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -79,28 +79,43 @@ return (&g_sideB);
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void clean_queue_data(t_connect_side *side)
+{
+  side->enqueue = 0;
+  side->dequeue = 0;
+  side->dropped = 0;
+  side->tockens = 0;
+  side->stored = 0;
+  side->lost = 0;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int config_recv_command(int input_cmd, int input_dir, int val)
 {
   int result = 0;
-  KERR("%d %d %d", input_cmd, input_dir, val);
+  long long lval = ((long long) val) & 0xFFFFFFFF;
   if (input_dir == input_dir_a2b)
     {
     switch (input_cmd)
       {
       case input_cmd_delay:
-        g_sideB.conf_delay = val;
+        g_sideB.conf_delay = lval;
         break;
       case input_cmd_loss:
-        g_sideA.conf_loss = val;
+        g_sideA.conf_loss = lval;
         break;
       case input_cmd_qsize:
-        g_sideB.conf_qsize = val;
+        g_sideB.conf_qsize = lval;
+        clean_queue_data(&g_sideB);
         break;
       case input_cmd_bsize:
-        g_sideB.conf_bsize = val;
+        g_sideB.conf_bsize = lval;
+        clean_queue_data(&g_sideB);
         break;
       case input_cmd_rate:
-        g_sideB.conf_brate = val;
+        g_sideB.conf_brate = lval;
+        clean_queue_data(&g_sideB);
         break;
       default:
         KOUT("%d", input_cmd);
@@ -111,19 +126,22 @@ int config_recv_command(int input_cmd, int input_dir, int val)
     switch (input_cmd)
       {
       case input_cmd_delay:
-        g_sideA.conf_delay = val;
+        g_sideA.conf_delay = lval;
         break;
       case input_cmd_loss:
-        g_sideB.conf_loss = val;
+        g_sideB.conf_loss = lval;
         break;
       case input_cmd_qsize:
-        g_sideA.conf_qsize = val;
+        g_sideA.conf_qsize = lval;
+        clean_queue_data(&g_sideA);
         break;
       case input_cmd_bsize:
-        g_sideA.conf_bsize = val;
+        g_sideA.conf_bsize = lval;
+        clean_queue_data(&g_sideA);
         break;
       case input_cmd_rate:
-        g_sideA.conf_brate = val;
+        g_sideA.conf_brate = lval;
+        clean_queue_data(&g_sideA);
         break;
       default:
         KOUT("%d", input_cmd);
@@ -134,8 +152,6 @@ int config_recv_command(int input_cmd, int input_dir, int val)
   return result;
 }
 /*---------------------------------------------------------------------------*/
-
-
 
 /*****************************************************************************/
 void config_init(void)
@@ -151,5 +167,4 @@ void config_init(void)
 
 }
 /*---------------------------------------------------------------------------*/
-
 

@@ -28,6 +28,7 @@
 #include "sock_fd.h"
 #include "circ_slot.h"
 
+#define FACTOR_USEC 1000000
 /****************************************************************************/
 typedef struct t_queue
 {
@@ -81,7 +82,8 @@ static void dec_queue_size(t_connect_side *side, int len)
 static int tocken_authorization(t_connect_side *side, int len)
 {
   int result = 0;
-  if (side->tockens > (len * 1000))
+  long long llen = ((long long) len) & 0xFFFF;
+  if (side->tockens > llen * FACTOR_USEC)
     result = 1;
   return result;
 }
@@ -90,17 +92,17 @@ static int tocken_authorization(t_connect_side *side, int len)
 /****************************************************************************/
 static void update_remove_tockens(t_connect_side *side, int len)
 {
-  side->tockens -= (len * 1000);
+  side->tockens -= (len * FACTOR_USEC);
   if (side->tockens < 0)
     KOUT("%lld %d", side->tockens, len);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void update_add_tockens(t_connect_side *side, int ms_delta)
+static void update_add_tockens(t_connect_side *side, long long us_delta)
 {
-  long long conf_bsize = (1000 * side->conf_bsize);
-  side->tockens += side->conf_brate * ms_delta;
+  long long conf_bsize = (side->conf_bsize * FACTOR_USEC);
+  side->tockens += (side->conf_brate * us_delta);
   if (side->tockens > conf_bsize)
     side->tockens = conf_bsize;
 }
@@ -142,19 +144,19 @@ static t_blkd *action_dequeue_if_ok(int num, t_connect_side *side, int len)
 
 /****************************************************************************/
 static void activate_tx(int num, long long now, 
-                        t_connect_side *side, int ms_delta)
+                        t_connect_side *side,
+                        long long us_delta)
 {
   t_blkd *blkd;
-  int delta;
+  long long delta;
   t_queue *q = circ_slot_lookat(num);
-  update_add_tockens(side, ms_delta);
+  update_add_tockens(side, us_delta);
   while(q)
     {
-    delta = (int) (now - q->arrival_date_us);
+    delta = now - q->arrival_date_us;
     delta /= 1000;
     if (delta < side->conf_delay)
       {
-      KERR("Delay not reached, must wait");
       break;
       }
     else
@@ -169,7 +171,6 @@ static void activate_tx(int num, long long now,
         }
       else
         {
-        KERR("NO TOCKEN BUCKET");
         break;
         }
       }
@@ -182,38 +183,37 @@ static void activate_tx(int num, long long now,
 static void timer_sched(long delta_ns, void *data)
 {
   long long date_us;
-  int delta, ms_delta;
+  long long delta;
   int num = (int)((unsigned long) data);
   t_connect_side *side;
-  if (clownix_real_timer_add(num, 1000, timer_sched, data, &date_us))
+  if (clownix_real_timer_add(num, 500, timer_sched, data, &date_us))
     KOUT(" ");
   if (num == 0)
     {
     side = get_sideA();
-    delta = (int) (date_us - g_prev_date_us_a);
+    delta = date_us - g_prev_date_us_a;
     g_prev_date_us_a = date_us;
-    ms_delta = delta/1000;
     }
   else if (num == 1)
     {
     side = get_sideB();
-    delta = (int) (date_us - g_prev_date_us_b);
+    delta = date_us - g_prev_date_us_b;
     g_prev_date_us_b = date_us;
-    ms_delta = delta/1000;
     }
   else
     KOUT(" ");
-  activate_tx(num, date_us, side, ms_delta);
+  activate_tx(num, date_us, side, delta);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int is_lost(int loss)
+static int is_lost(long long loss)
 {
-  int cmp_loss, lost_pkt = 0;
+  long long cmp_loss;
+  int lost_pkt = 0;
   if (loss)
     {
-    cmp_loss = rand()%TOTAL_LOSS_VALUE;
+    cmp_loss = (long long ) (rand()%TOTAL_LOSS_VALUE);
     if (cmp_loss <= loss)
       lost_pkt = 1;
     }
@@ -228,11 +228,10 @@ static int can_enqueue(int num, int len, t_connect_side *side)
   if (is_lost(side->conf_loss))
     {
     side->lost += len;
-    KERR("loss: %d", len);
     }
   else
     {
-    if (side->stored + len < side->conf_qsize)
+    if (side->stored + (((long long) len) & 0xFFFF) < side->conf_qsize)
       {
       inc_queue_size(side, len);
       result = 1;
@@ -240,7 +239,6 @@ static int can_enqueue(int num, int len, t_connect_side *side)
     else
       {
       side->dropped += len;
-      KERR("Q big: %d + %lld and %d", len, side->stored, side->conf_qsize);
       }
     }
   return result;
@@ -273,26 +271,22 @@ static void do_enqueue(int num, long long now,
 /*****************************************************************************/
 void sched_tx0_activate(t_all_ctx *all_ctx)
 {
-  int delta, ms_delta;
-  long long now = get_date_us();
+  long long delta, now = get_date_us();
   t_connect_side *side = get_sideA();
-  delta = (int) (now - g_prev_date_us_a);
+  delta = now - g_prev_date_us_a;
   g_prev_date_us_a = now;
-  ms_delta = delta/1000;
-  activate_tx(0, now, side, ms_delta);
+  activate_tx(0, now, side, delta);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void sched_tx1_activate(t_all_ctx *all_ctx)
 {
-  int delta, ms_delta;
-  long long now = get_date_us();
+  long long delta, now = get_date_us();
   t_connect_side *side = get_sideB();
   delta = (int) (now - g_prev_date_us_b);
   g_prev_date_us_b = now;
-  ms_delta = delta/1000;
-  activate_tx(1, now, side, ms_delta);
+  activate_tx(1, now, side, delta);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -326,8 +320,10 @@ void sched_init(int num, t_all_ctx *all_ctx)
   circ_slot_init(num);
   if (clownix_real_timer_add(num,1000,timer_sched,(void *)data_num,&date_us)) 
     KOUT(" ");
-  g_prev_date_us_a = date_us;
-  g_prev_date_us_b = date_us;
+  if (num == 0)
+    g_prev_date_us_a = date_us;
+  else
+    g_prev_date_us_b = date_us;
 }
 /*---------------------------------------------------------------------------*/
 

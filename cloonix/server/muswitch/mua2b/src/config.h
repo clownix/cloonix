@@ -41,11 +41,11 @@ typedef struct t_connect_side
   long long tockens;
   long long stored;
   long long lost;
-  int conf_loss;
-  int conf_delay;
-  int conf_qsize;
-  int conf_bsize;
-  int conf_brate;
+  long long conf_loss;
+  long long conf_delay;
+  long long conf_qsize;
+  long long conf_bsize;
+  long long conf_brate;
 } t_connect_side;
 /*---------------------------------------------------------------------------*/
 t_connect_side *get_sideA(void);
