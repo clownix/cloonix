@@ -46,7 +46,8 @@ fct_build_get_arch_packages()
              tar cdrkit rxvt-unicode base-devel \
              readline libevent gtk3 python2 python2-pyparsing \
              python2-six intltool opus polkit acl mesa libusb \
-             gst-plugins-base ttf-dejavu orc python bison flex
+             gst-plugins-base ttf-dejavu orc python bison flex \
+             wireshark
 
 }
 #--------------------------------------------------------------------------
@@ -55,7 +56,7 @@ fct_run_get_arch_packages()
   pacman --noconfirm --force -Syu \
              tar cdrkit rxvt-unicode readline libevent gtk3 \
              opus polkit acl mesa libusb gst-plugins-base \
-             ttf-dejavu orc
+             ttf-dejavu orc wireshark
 }
 #--------------------------------------------------------------------------
 fct_build_get_debian_packages()
@@ -68,14 +69,16 @@ fct_build_get_debian_packages()
                      libgstreamer-plugins-base1.0-dev libepoxy-dev libdrm-dev \
                      libgbm-dev libpolkit-gobject-1-dev libacl1-dev \
 		     sudo zlib1g-dev liborc-0.4-dev libegl1-mesa-dev \
-                     bison flex libjson-glib-dev
+                     bison flex libjson-glib-dev wireshark
+# libpcap-dev
 }
 #--------------------------------------------------------------------------
 fct_run_get_debian_packages()
 {
   apt-get -y install tar genisoimage rxvt-unicode libusb-1.0 libopus0 \
                      libgtk-3-0 libepoxy0 libsasl2-2 \
-                     libgstreamer-plugins-base1.0 liborc-0.4-0 libgbm1
+                     libgstreamer-plugins-base1.0 liborc-0.4-0 libgbm1 \
+                     wireshark
 }
 #--------------------------------------------------------------------------
 fct_build_get_centos_packages()
@@ -89,7 +92,8 @@ fct_build_get_centos_packages()
          pyparsing python-six gstreamer1-plugins-base-devel \
          libepoxy-devel polkit-devel libacl-devel \
          dejavu-serif-fonts mesa-libgbm-devel orc-devel \
-         mesa-libEGL-devel bison flex
+         mesa-libEGL-devel bison flex wireshark
+# libpcap-devel
 }
 #--------------------------------------------------------------------------
 fct_run_get_centos_packages()
@@ -97,7 +101,8 @@ fct_run_get_centos_packages()
   yum -y install \
          tar genisoimage gtk3 xterm libevent libusb opus \
          cyrus-sasl dejavu-serif-fonts libepoxy polkit libacl \
-         gstreamer1-plugins-base libjpeg-turbo orc mesa-libgbm
+         gstreamer1-plugins-base libjpeg-turbo orc mesa-libgbm \
+         wireshark
 }
 #--------------------------------------------------------------------------
 fct_build_get_fedora_packages()
@@ -111,7 +116,8 @@ fct_build_get_fedora_packages()
          python pyparsing python-six gstreamer1-plugins-base-devel \
          libepoxy-devel libdrm-devel polkit-devel \
 	 libacl-devel dejavu-serif-fonts mesa-libgbm-devel orc-devel \
-         mesa-libEGL-devel bison flex
+         mesa-libEGL-devel bison flex wireshark
+# libpcap-devel
 }
 #--------------------------------------------------------------------------
 fct_run_get_fedora_packages()
@@ -119,7 +125,8 @@ fct_run_get_fedora_packages()
   dnf -y install \
          tar genisoimage gtk3 rxvt-unicode libevent libusb opus \
          cyrus-sasl dejavu-serif-fonts libepoxy polkit libacl \
-         gstreamer1-plugins-base libjpeg-turbo orc mesa-libgbm
+         gstreamer1-plugins-base libjpeg-turbo orc mesa-libgbm \
+         wireshark
 }
 #--------------------------------------------------------------------------
 fct_build_get_opensuse_packages()
@@ -132,7 +139,8 @@ fct_build_get_opensuse_packages()
          python python-pyparsing python-six dejavu-fonts patch \
          gstreamer-plugins-base-devel libepoxy-devel polkit-devel \
          libacl-devel glibc-locale libgbm-devel orc-devel \
-         Mesa-libEGL-devel bison flex
+         Mesa-libEGL-devel bison flex wireshark
+# libpcap-devel
 }
 #--------------------------------------------------------------------------
 fct_run_get_opensuse_packages()
@@ -141,7 +149,7 @@ fct_run_get_opensuse_packages()
          tar genisoimage gtk3 rxvt-unicode libevent libusb \
          libopus0 cyrus-sasl dejavu-fonts libepoxy0 polkit libacl \
          gstreamer-plugins-base glibc-locale libgthread-2_0-0 \
-         libjpeg62 libgbm1 liborc-0_4-0
+         libjpeg62 libgbm1 liborc-0_4-0 wireshark
 }
 #--------------------------------------------------------------------------
 if [ $UID != 0 ]; then

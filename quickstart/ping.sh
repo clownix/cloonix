@@ -8,17 +8,13 @@ if [ "x$is_started" == "x" ]; then
   printf "\nServer Not started, launching:"
   printf "\ncloonix_net $NET:\n"
   cloonix_net $NET
+  echo waiting 2 sec
   sleep 2
 else
   cloonix_cli $NET rma
-  sleep 5
+  echo waiting 10 sec
+  sleep 10
 fi
-
-echo waiting 5 sec
-echo
-sleep 5 
-cloonix_net $NET
-#----------------------------------------------------------------------
 
 #######################################################################
 cloonix_gui $NET
@@ -60,10 +56,6 @@ cloonix_ssh $NET two "ip addr add dev eth0 11.11.11.2/24"
 for i in one two ; do
   cloonix_ssh $NET ${i} "ip link set dev eth0 up"
 done
-#----------------------------------------------------------------------
-
-#######################################################################
-cloonix_cli $NET cnf snf on sniffer 
 #----------------------------------------------------------------------
 
 #######################################################################

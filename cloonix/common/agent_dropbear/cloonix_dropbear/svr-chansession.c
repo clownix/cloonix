@@ -164,7 +164,6 @@ static void run_shell_command(char *cmd, unsigned int maxfd,
   char *baseshell = NULL;
   unsigned int i;
   int len;
-  int is_login=0;
 
   baseshell = basename(usershell);
   if (cmd != NULL) 
@@ -178,12 +177,10 @@ static void run_shell_command(char *cmd, unsigned int maxfd,
     {
     if (login)
       {
-      is_login = 1;
-      argv[0] = login;
-      argv[1] = "-p";
-      argv[2] = "-f";
-      argv[3] = "root";
-      argv[4] = NULL;
+      argv[0] = baseshell;
+      argv[1] = "-c";
+      argv[2] = login;
+      argv[3] = NULL;
       }
     else
       {
@@ -196,13 +193,8 @@ static void run_shell_command(char *cmd, unsigned int maxfd,
   if (signal(SIGPIPE, SIG_DFL) == SIG_ERR)
     KOUT("signal() error");
   for (i = 3; i <= maxfd; i++)
-    {
     m_close(i);
-    }
-  if (is_login)
-    execv(login, argv);
-  else
-    execv(usershell, argv);
+  execv(usershell, argv);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -672,7 +664,7 @@ static void execchild(struct ChanSess *chansess)
     if (chdir("/root") < 0)
       KOUT("Error changing directory");
     if (!access("/bin/login", X_OK))
-      login = m_strdup("/bin/login");
+      login = m_strdup("/bin/login -p -f root");
     }
   else
     {
@@ -682,6 +674,11 @@ static void execchild(struct ChanSess *chansess)
     if (chansess->cloonix_display)
       addnewvar("DISPLAY", chansess->cloonix_display);
     }
+  addnewvar("LIBGL_ALWAYS_INDIRECT", "1");
+  addnewvar("LIBGL_ALWAYS_SOFTWARE", "1");
+  addnewvar("LIBGL_DRI3_DISABLE", "1");
+  addnewvar("QT_X11_NO_MITSHM", "1");
+  addnewvar("QT_XCB_NO_MITSHM", "1");
   if (chansess->tty)
     addnewvar("SSH_TTY", (char *) chansess->tty);
 

@@ -37,13 +37,25 @@
 #include <linux/sockios.h>
 
 
+struct vlan_tag {
+        uint16_t        vlan_tpid;              /* ETH_P_8021Q */
+        uint16_t        vlan_tci;               /* VLAN TCI */
+};
+
+# define VLAN_TPID(hdr, hv)     (((hv)->tp_vlan_tpid || ((hdr)->tp_status & TP_STATUS_VLAN_TPID_VALID)) ? (hv)->tp_vlan_tpid : ETH_P_8021Q)
+
+#define VLAN_VALID(hdr, hv)   ((hv)->tp_vlan_tci != 0 || ((hdr)->tp_status & TP_STATUS_VLAN_VALID))
+#define VLAN_TAG_LEN	4
+#define VLAN_OFFSET     (2 * ETH_ALEN)
+
+
 
 #include "ioc.h"
 #include "tun_tap.h"
 #include "sock_fd.h"
 
 /*--------------------------------------------------------------------------*/
-static int glob_ifindex;
+static int g_ifindex;
 static int g_llid_raw;
 static int g_fd_raw;
 static int g_fd_raw_tx;
@@ -58,35 +70,16 @@ static int rx_from_raw(void *ptr, int llid, int fd);
 static void err_raw (void *ptr, int llid, int err, int from);
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-static void init_raw_sockaddr(int is_tx)
-{
-  if (is_tx)
-    {
-    memset(&g_raw_sockaddr_tx, 0, sizeof(struct sockaddr_ll));
-    g_raw_sockaddr_tx.sll_family = AF_PACKET;
-    g_raw_sockaddr_tx.sll_protocol = htons(ETH_P_ALL);
-    g_raw_sockaddr_tx.sll_ifindex = glob_ifindex;
-    g_raw_sockaddr_tx.sll_pkttype = PACKET_OUTGOING;
-    g_raw_socklen_tx = sizeof(struct sockaddr_ll);
-    }
-  else
-    {
-    memset(&g_raw_sockaddr_rx, 0, sizeof(struct sockaddr_ll));
-    g_raw_sockaddr_rx.sll_family = AF_PACKET;
-    g_raw_sockaddr_rx.sll_protocol = htons(ETH_P_ALL);
-    g_raw_sockaddr_rx.sll_ifindex = glob_ifindex;
-    g_raw_sockaddr_rx.sll_pkttype = PACKET_HOST;
-    g_raw_socklen_rx = sizeof(struct sockaddr_ll);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
 /****************************************************************************/
 static int bind_raw_sock(int fd)
 {
   int result;
-  init_raw_sockaddr(0);
+  memset(&g_raw_sockaddr_rx, 0, sizeof(struct sockaddr_ll));
+  g_raw_sockaddr_rx.sll_family = AF_PACKET;
+  g_raw_sockaddr_rx.sll_protocol = htons(ETH_P_ALL);
+  g_raw_sockaddr_rx.sll_ifindex = g_ifindex;
+  g_raw_sockaddr_rx.sll_pkttype = PACKET_HOST;
+  g_raw_socklen_rx = sizeof(struct sockaddr_ll);
   result = bind(fd, (struct sockaddr*) &g_raw_sockaddr_rx, g_raw_socklen_rx); 
   return result;
 }
@@ -109,7 +102,7 @@ static int get_intf_ifindex(t_all_ctx *all_ctx, char *name)
       KERR("Error %s line %d errno %d\n",__FUNCTION__,__LINE__,errno);
     else
       {
-      glob_ifindex = ifr.ifr_ifindex;
+      g_ifindex = ifr.ifr_ifindex;
       io = ioctl (s, SIOCGIFFLAGS, &ifr);
       if(io != 0)
         KERR("Error %s line %d errno %d\n",__FUNCTION__,__LINE__,errno);
@@ -133,7 +126,7 @@ static int get_intf_ifindex(t_all_ctx *all_ctx, char *name)
 /****************************************************************************/
 static int raw_socket_open(t_all_ctx *all_ctx)
 {
-  int result = 0;
+  int val = 1, result = 0;
   if (g_llid_raw)
     KOUT(" ");
   result = get_intf_ifindex(all_ctx, g_raw_name);
@@ -147,8 +140,8 @@ static int raw_socket_open(t_all_ctx *all_ctx)
       KOUT("%d %d", g_fd_raw, errno);
     if (bind_raw_sock(g_fd_raw))
       KOUT("%d %d", g_fd_raw, errno);
-    if (bind_raw_sock(g_fd_raw_tx))
-      KOUT("%d %d", g_fd_raw_tx, errno);
+    if (setsockopt(g_fd_raw, SOL_PACKET, PACKET_AUXDATA, &val, sizeof(val)))
+      KOUT("%d %d", g_fd_raw, errno);
     g_llid_raw = msg_watch_fd(all_ctx, g_fd_raw, rx_from_raw, err_raw);
     nonblock_fd(g_fd_raw);
     }
@@ -160,7 +153,12 @@ static int raw_socket_open(t_all_ctx *all_ctx)
 void raw_fd_tx(t_all_ctx *all_ctx, t_blkd *blkd)
 {
   int len;
-  init_raw_sockaddr(1);
+  memset(&g_raw_sockaddr_tx, 0, sizeof(struct sockaddr_ll));
+  g_raw_sockaddr_tx.sll_family = AF_PACKET;
+  g_raw_sockaddr_tx.sll_protocol = htons(ETH_P_ALL);
+  g_raw_sockaddr_tx.sll_ifindex = g_ifindex;
+  g_raw_sockaddr_tx.sll_pkttype = PACKET_OUTGOING;
+  g_raw_socklen_tx = sizeof(struct sockaddr_ll);
   len = sendto(g_fd_raw_tx, blkd->payload_blkd, blkd->payload_len, 0,
               (struct sockaddr *)&(g_raw_sockaddr_tx), g_raw_socklen_tx);
   if(blkd->payload_len != len)
@@ -201,7 +199,7 @@ static void purge_raw_sock(void *ptr, int fd)
   int len;
   bd = blkd_create_tx_empty(0,0,0);
   data = bd->payload_blkd;
-  init_raw_sockaddr(0);
+  KERR(" ");
   len = recvfrom(fd, data, PAYLOAD_BLKD_SIZE, 0,
                  (struct sockaddr *)&(g_raw_sockaddr_rx),
                  &g_raw_socklen_rx);
@@ -218,18 +216,56 @@ static void purge_raw_sock(void *ptr, int fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static struct tpacket_auxdata *look_for_vlan(struct msghdr *msg)
+{
+  struct cmsghdr *cmsg;
+  struct tpacket_auxdata *aux = NULL;
+  for (cmsg = CMSG_FIRSTHDR(msg); cmsg; cmsg = CMSG_NXTHDR(msg, cmsg))
+    {
+    if (cmsg->cmsg_len < CMSG_LEN(sizeof(struct tpacket_auxdata)) ||
+                         cmsg->cmsg_level != SOL_PACKET ||
+                         cmsg->cmsg_type != PACKET_AUXDATA)
+      {
+      KERR(" ");
+      aux = NULL;
+      break;
+      }
+    else
+      {
+      aux = (struct tpacket_auxdata *)CMSG_DATA(cmsg);
+      if (!VLAN_VALID(aux, aux))
+        {
+        aux = NULL;
+        break;
+        }  
+      }
+    }
+  return aux;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static int rx_from_raw(void *ptr, int llid, int fd)
 {
   t_all_ctx *all_ctx = (t_all_ctx *) ptr;
   t_blkd *bd;
   char *data;
+  struct vlan_tag *tag;
+  struct tpacket_auxdata *aux;
   int len, queue_size;
+  struct iovec            iov;
+  struct msghdr           msg;
+  union {
+        struct cmsghdr  cmsg;
+        char   buf[CMSG_SPACE(sizeof(struct tpacket_auxdata))];
+        } cmsg_buf;
+
   if (ioctl(fd, SIOCINQ, &queue_size))
     {
     KERR("DROP");
     return 0;
     }
-  if (queue_size > PAYLOAD_BLKD_SIZE)
+  if (queue_size > PAYLOAD_BLKD_SIZE - VLAN_TAG_LEN)
     {
     if (g_inhibit_kerr == 0)
       {
@@ -240,12 +276,22 @@ static int rx_from_raw(void *ptr, int llid, int fd)
     purge_raw_sock(ptr, fd);
     return 0;
     }
+
   bd = blkd_create_tx_empty(0,0,0);
   data = bd->payload_blkd;
-  init_raw_sockaddr(0);
-  len = recvfrom(fd, data, PAYLOAD_BLKD_SIZE, 0, 
-                 (struct sockaddr *)&(g_raw_sockaddr_rx),
-                 &g_raw_socklen_rx);
+
+  msg.msg_name            = &g_raw_sockaddr_rx;
+  msg.msg_namelen         = sizeof(g_raw_sockaddr_rx);
+  msg.msg_iov             = &iov;
+  msg.msg_iovlen          = 1;
+  msg.msg_control         = &cmsg_buf;
+  msg.msg_controllen      = sizeof(cmsg_buf);
+  msg.msg_flags           = 0;
+  iov.iov_len             = PAYLOAD_BLKD_SIZE - VLAN_TAG_LEN;
+  iov.iov_base            = data;
+
+  len = recvmsg(fd, &msg, 0);
+
   if (len == 0)
     KOUT(" ");
   if (len < 0)
@@ -266,13 +312,25 @@ static int rx_from_raw(void *ptr, int llid, int fd)
        (g_raw_sockaddr_rx.sll_pkttype != PACKET_BROADCAST) &&
        (g_raw_sockaddr_rx.sll_pkttype != PACKET_MULTICAST) &&
        (g_raw_sockaddr_rx.sll_pkttype != PACKET_OTHERHOST)) ||
-      (g_raw_sockaddr_rx.sll_ifindex != glob_ifindex))
+      (g_raw_sockaddr_rx.sll_ifindex != g_ifindex))
     {
     blkd_free(ptr, bd);
     }
   else
     {
-    bd->payload_len = len;
+    aux = look_for_vlan(&msg);
+    if (aux)
+      {
+      if (len <= VLAN_OFFSET)
+        KOUT("%d", len); 
+      memmove(data + VLAN_OFFSET + VLAN_TAG_LEN, data + VLAN_OFFSET, len - VLAN_OFFSET);
+      tag = (struct vlan_tag *)(data + VLAN_OFFSET);
+      tag->vlan_tpid = htons(VLAN_TPID(aux, aux));
+      tag->vlan_tci = htons(aux->tp_vlan_tci);
+      bd->payload_len = len + VLAN_TAG_LEN;
+      }
+    else
+      bd->payload_len = len;
     sock_fd_tx(all_ctx, bd);
     }
   return len;
@@ -308,7 +366,7 @@ int  raw_fd_open(t_all_ctx *all_ctx, char *name)
 /****************************************************************************/
 void raw_fd_init(t_all_ctx *all_ctx)
 {
-  glob_ifindex = 0;
+  g_ifindex = 0;
   g_llid_raw = 0;
   memset(g_raw_name, 0, MAX_NAME_LEN);
   g_fd_raw = -1;

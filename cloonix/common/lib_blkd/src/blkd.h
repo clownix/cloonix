@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define MASK_RX_BLKD_POOL 0x3FFF
+#define MASK_RX_BLKD_POOL 0x7FFF
 #define MASK_TX_BLKD_POOL 0x7FFF
 #define STORED_SLOTS 30
 #define STORED_SLOTS_IN_HALF_SEC 10
