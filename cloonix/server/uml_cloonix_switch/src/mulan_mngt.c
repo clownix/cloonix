@@ -513,10 +513,8 @@ void mulan_pid_resp(int llid, char *lan, int pid)
 static int llid_flow_to_restrict(char *name, int num, int tidx)
 {
   int type, llid = endp_mngt_can_be_found_with_name(name, num, &type);
-  if (llid)
-KERR("FLOW TO RESTRICT: %s num:%d tidx:%d", name, num, tidx);
-else
-KERR("FLOW TO RESTRICT NOT FOUND!!! %s num:%d tidx:%d", name, num, tidx);
+  if (!llid)
+    KERR("FLOW TO RESTRICT NOT FOUND!!! %s num:%d tidx:%d", name, num, tidx);
   llid = 0;
 //TODO
   return llid;
