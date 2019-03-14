@@ -123,12 +123,29 @@ static int get_tidx(t_all_ctx *all_ctx, int llid, int line)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int drop_one(t_all_ctx *all_ctx, int llid)
+{
+  int result = -1;
+  t_blkd *blkd = blkd_get_rx((void *) all_ctx, llid);
+  if (blkd)
+    {
+    //KERR("RX DROP %s %s %d len:%d", all_ctx->g_net_name, all_ctx->g_name,
+    //                                all_ctx->g_num, blkd->payload_len);
+    blkd_free((void *) all_ctx, blkd);
+    result = 0;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void rx_blkd_sock_cb(void *ptr, int llid)
 {
   t_all_ctx *all_ctx = (t_all_ctx *) ptr;
-  int tidx = get_tidx(all_ctx, llid, __LINE__);
+  int result, tidx = get_tidx(all_ctx, llid, __LINE__);
   t_blkd *blkd;
-  if (!rx_from_traffic_sock(all_ctx, tidx, NULL))
+  result = rx_from_traffic_sock(all_ctx, tidx, NULL);
+  if (!result)
     {
     blkd = blkd_get_rx((void *) all_ctx, llid);
     while(blkd)
@@ -141,13 +158,7 @@ void rx_blkd_sock_cb(void *ptr, int llid)
     }
   else
     {
-    blkd = blkd_get_rx((void *) all_ctx, llid);
-    if (blkd)
-      {
-      //KERR("RX DROP %s %s %d len:%d", all_ctx->g_net_name, all_ctx->g_name,
-      //                                all_ctx->g_num, blkd->payload_len);
-      blkd_free((void *) all_ctx, blkd);
-      }
+    while(!drop_one(all_ctx, llid));
     }
 }
 /*---------------------------------------------------------------------------*/

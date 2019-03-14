@@ -121,17 +121,22 @@ void llid_clo_low_output(int mac_len, u8_t *mac_data)
 int llid_clo_data_rx_possible(t_tcp_id *tcpid)
 {
   int is_blkd, result = 0;
-  if (msg_exist_channel(get_all_ctx(), tcpid->llid, &is_blkd, __FUNCTION__))
-    {
-    if ((tcpid->llid_unlocked) &&
-        (msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid) < 5000))
-      result = 1; 
-    else
-      KERR("%d", msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid));
-    }
+  if ((tcpid->llid == 0) && (tcpid->llid_unlocked == 0))
+    KERR("Time chaos, llid not yet established, in-between events!");
   else
     {
-    result = -1;
+    if (msg_exist_channel(get_all_ctx(), tcpid->llid, &is_blkd, __FUNCTION__))
+      {
+      if ((tcpid->llid_unlocked) &&
+          (msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid) < 5000))
+        result = 1; 
+      else
+        KERR("%d", msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid));
+      }
+    else
+      {
+      result = -1;
+      }
     }
   return result;
 }

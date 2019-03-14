@@ -953,7 +953,6 @@ void blkd_drop_rx_counter_increment(void *ptr, int llid, int val)
     KERR(" ");
   else
     {
-    KERR("INC DROP RX");
     cur->report_item.drop_rx += val;
     }
 }

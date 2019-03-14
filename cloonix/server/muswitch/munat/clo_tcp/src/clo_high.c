@@ -61,10 +61,15 @@ static void ackno_send(t_clo *clo, int force)
   u32_t ackno, seqno;
   u16_t loc_wnd, dist_wnd;
   clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
-  if ((force) || (ackno != clo->ackno_sent))
+  if ((force == 1) || (ackno != clo->ackno_sent))
     {
     util_send_ack(&(clo->tcpid), ackno, seqno, loc_wnd);
     clo->ackno_sent = ackno;
+    }
+  else if ((force == 2) || (ackno != clo->ackno_sent))
+    {
+    util_send_ack(&(clo->tcpid), ackno + 1, seqno, loc_wnd);
+    clo->ackno_sent = ackno + 1;
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -101,14 +106,14 @@ static int timed_send_ack(t_clo *clo)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void local_send_finack_state_fin(t_clo *clo)
+static void local_send_finack_state_fin(t_clo *clo, int add_ackno)
 {
   u32_t ackno, seqno;
   u16_t loc_wnd, dist_wnd;
   if (clo->has_been_closed_from_outside_socket == 1)
     {
     clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
-    util_send_finack(&(clo->tcpid), ackno, seqno, loc_wnd);
+    util_send_finack(&(clo->tcpid), ackno+add_ackno, seqno, loc_wnd);
     clo_mngt_adjust_send_next(clo, seqno, 1);
     clo_mngt_set_state(clo, state_fin_wait1);
     }
@@ -221,7 +226,7 @@ static void timer_fct_call(t_all_ctx *all_ctx, void *param)
           }
         else
           {
-          local_send_finack_state_fin(clo);
+          local_send_finack_state_fin(clo, 0);
           }
         }
       break;
@@ -451,7 +456,9 @@ int clo_high_close_tx(t_tcp_id *tcpid)
                          0, NULL);
           }
         else
-          local_send_finack_state_fin(clo);
+          {
+          local_send_finack_state_fin(clo, 1);
+          }
         break;
       case state_created:
         local_send_reset_state_closed(clo);
@@ -517,6 +524,14 @@ static void non_existing_tcp_low_input(t_tcp_id *tcpid, t_low *low,
     }
   else
     {
+    if ((low->flags & TH_FIN) ==  TH_FIN)
+      {
+      clo = clo_mngt_create_tcp(tcpid);
+      if (clo)
+        KERR(" ");
+      else
+        KERR(" ");
+      }
     if ((!(low->flags & TH_RST)) && (low->tcplen != 0))
       {
       if ((!(low->flags & TH_FIN)) && (low->tcplen != 1))
@@ -564,8 +579,6 @@ static int existing_tcp_low_input(t_clo *clo, t_low *low)
         {
         clo_mngt_set_state(clo, state_established);
         fct_high_synack_rx(&(clo->tcpid));
-//        async_fct_call(num_fct_high_synack_rx, clo->id_tcpid, &(clo->tcpid), 
-//                       0, NULL);
         result = 0;
         }
       else
@@ -588,7 +601,7 @@ static int existing_tcp_low_input(t_clo *clo, t_low *low)
         if (clo->has_been_closed_from_outside_socket == 1)
           clo->has_been_closed_from_outside_socket = 0; 
         clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
-        util_send_finack(&(clo->tcpid), ackno, seqno, loc_wnd);
+        util_send_finack(&(clo->tcpid), ackno+1, seqno, loc_wnd);
         clo_mngt_adjust_send_next(clo, seqno, 1);
         clo_mngt_set_state(clo, state_fin_wait_last_ack);
         }
@@ -604,6 +617,7 @@ static int existing_tcp_low_input(t_clo *clo, t_low *low)
           {
           if (clo->head_hdata)
             KERR("%p", clo);
+          KERR("state_fin_wait1");
           ackno_send(clo, 1);
           async_fct_call(num_fct_high_close_rx, clo->id_tcpid, &(clo->tcpid),
                          0, NULL);
@@ -618,7 +632,7 @@ static int existing_tcp_low_input(t_clo *clo, t_low *low)
         {
         if (clo->head_hdata)
           KERR("%p", clo);
-        ackno_send(clo, 1);
+        ackno_send(clo, 2);
         async_fct_call(num_fct_high_close_rx, clo->id_tcpid, &(clo->tcpid), 
                        0, NULL);
         clo_mngt_set_state(clo, state_closed);
