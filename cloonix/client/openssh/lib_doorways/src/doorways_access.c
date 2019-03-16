@@ -73,7 +73,7 @@ static void heartbeat(int delta)
   static int count = 0;
   (void) delta;
   count++;
-  if (count == 300)
+  if (count == 600)
     {
     if (!g_door_llid)
       {

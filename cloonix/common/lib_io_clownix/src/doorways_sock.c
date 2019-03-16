@@ -740,8 +740,14 @@ int doorways_sock_server_inet(int ip, int port, char *passwd,
 /****************************************************************************/
 static void doorways_connect_error(void *ptr, int llid, int err, int from)
 {
+  int fd;
   if (msg_exist_channel(llid))
+    {
+    fd = get_fd_with_llid(llid);
     channel_delete(llid);
+    if (fd != -1)
+      close(fd);
+    }
 }
 /*---------------------------------------------------------------------------*/
 

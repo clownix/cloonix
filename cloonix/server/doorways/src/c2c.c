@@ -502,7 +502,7 @@ static int musat_c2c_birth(void *data)
   char *argv[] = {mu->bin_path, mu->net_name, mu->name, 
                   mu->sock, mu->endp_type, fd, mu->addr_port, NULL};
   int fd_not_closed =  get_fd_not_to_close();
-  if ((fd_not_closed == 0) || (fd_not_closed == -1)) 
+  if (fd_not_closed == -1)
     KERR("%d", fd_not_closed);
   else
     {
