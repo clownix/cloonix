@@ -5,25 +5,27 @@ See directory cloonix for the LICENCE
 
 See clownix.net for a documentation which may not be up to date.
 
-All open source compiled within cloonix such as qemu, spice, openssh...
-is stored at clownix.net/downloads/cloonix-<major>-<minor>/targz_store.tar.gz
+All opens sources compiled within cloonix such as dpdk, openvswitch, qemu,
+spice, openssh... are stored at:
+clownix.net/downloads/cloonix-<major>-<minor>/targz_store.tar.gz
 
-You must get the targz_store.tar.gz matching the cloonix-<major>-<minor>.
-This version v02-04 is the latest.
-
-Get the open sources associated to this version (qemu, spice...) from:
-
-   http://clownix.net/downloads/cloonix-02-04/targz_store.tar.gz
-
+This version v03-00 is the latest (if this README is up to date).
+The version v03-00 uses dpdk/ovs for latency and throughput, it is a
+work-going-on version missing some features. But the base is working.
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
 HOWTO INSTALL:
 It is assumed that sudo makes the command run as root.
+For those on buster, no problem ahead but for other distributions, you
+must complete the ./install_depends package list for your needs, the
+names of the packages for the debian buster can help you in the package
+selection.
+Futur versions will have the correct ./install_depends for other distros.
 
 cd cloonix
 sudo ./install_depends build
-wget http://clownix.net/downloads/cloonix-02-04/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-03-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 ./doitall
 cd -
@@ -34,7 +36,7 @@ HOWTO GET A WORKING VM:
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget http://clownix.net/downloads/cloonix-02-04/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-03-00/buster.qcow2.gz
 gunzip buster.qcow2.gz
 cd -
 -----------------------------------------------------------------------------
@@ -43,6 +45,22 @@ cd -
 HOWTO START BASIC NET:
 cd cloonix/quickstart
 ./ping.sh
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+HOWTO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
+-----------------------------------------------------------------------------
+  First, the host must have a hugepage mount.
+  If the cloonix software is going to be run as user <user>, do:
+-----------------------------------------------------------------------------
+  sudo echo "vm.nr_hugepages = 4096" >> /etc/sysctl.conf
+  sudo apt-get install libhugetlbfs-bin
+  sudo hugeadm --create-user-mounts <user>
+  hugeadm --list-all-mounts
+-----------------------------------------------------------------------------
+  Then reboot to have the hugepage mount and call the test script:
+  cd cloonix/quickstart
+  ./dpdk_ping.sh
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -55,3 +73,6 @@ cd cloonix/mac80211_hwsim
 COMPLETE FREESWITCH DEMO ON GITHUB:
 https://github.com/clownix/freeswitch
 -----------------------------------------------------------------------------
+
+
+

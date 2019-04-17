@@ -55,9 +55,10 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
   t_list_commands *list = &(hlist[offset]);
   if (can_increment_index(result))
     {
-    len += sprintf(list->cmd + len, "cloonix_cli %s add kvm %s %d %d %d %d",
-                   cfg_get_cloonix_name(), para->name, 
-                   para->mem, para->cpu, para->nb_eth, para->nb_wlan);
+    len += sprintf(list->cmd + len, 
+           "cloonix_cli %s add kvm %s ram=%d cpu=%d dpdk=%d sock=%d hwsim=%d",
+            cfg_get_cloonix_name(), para->name, para->mem, para->cpu,
+            para->nb_dpdk, para->nb_eth, para->nb_wlan);
     len += sprintf(list->cmd + len, " %s", para->rootfs_input);
     if (para->vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
       len += sprintf(list->cmd + len, " --persistent");
@@ -405,7 +406,8 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
       {
       result = build_add_nat_cmd(result, hlist, cur);
       }
-    else if ((cur->endp_type == endp_type_kvm_eth) ||
+    else if ((cur->endp_type == endp_type_kvm_dpdk)||
+             (cur->endp_type == endp_type_kvm_eth) ||
              (cur->endp_type == endp_type_kvm_wlan))
       {
       }

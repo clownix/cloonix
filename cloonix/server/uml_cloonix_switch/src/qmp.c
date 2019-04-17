@@ -36,6 +36,9 @@
 #include "qmp.h"
 #include "qmp_dialog.h"
 #include "llid_trace.h"
+#include "doors_rpc.h"
+#include "doorways_mngt.h"
+#include "dpdk_ovs.h"
 
 int produce_list_commands(t_list_commands *list);
 
@@ -125,7 +128,7 @@ static char g_all_path[MAX_PATH_LEN];
 /****************************************************************************/
 static void alloc_tail_qmp_req(t_qmp *qmp, int llid, int tid, char *msg)
 {
-  t_qmp_req *req = (t_qmp_req *) clownix_malloc(sizeof(t_qmp_req), 7);
+  t_qmp_req *req = (t_qmp_req *) clownix_malloc(sizeof(t_qmp_req), 3);
   t_qmp_req *next, *cur = qmp->head_qmp_req;
   memset(req, 0, sizeof(t_qmp_req));
   if (!cur)
@@ -177,7 +180,7 @@ static t_qmp *find_qmp(char *name)
 /****************************************************************************/
 static void alloc_qmp(char *name)
 {
-  t_qmp *cur = (t_qmp *) clownix_malloc(sizeof(t_qmp), 7);
+  t_qmp *cur = (t_qmp *) clownix_malloc(sizeof(t_qmp), 3);
   memset(cur, 0, sizeof(t_qmp));
   strncpy(cur->name, name, MAX_NAME_LEN);
   if (g_head_qmp)
@@ -226,7 +229,7 @@ static void alloc_qmp_sub(t_qmp *qmp, int llid, int tid)
     KERR(" ");
   else
     {
-    cur = (t_qmp_sub *) clownix_malloc(sizeof(t_qmp_sub), 7);
+    cur = (t_qmp_sub *) clownix_malloc(sizeof(t_qmp_sub), 3);
     memset(cur, 0, sizeof(t_qmp_sub));
     cur->llid = llid;
     cur->tid = tid;
@@ -328,10 +331,13 @@ void qmp_conn_end(char *name)
   t_qmp *qmp = find_qmp(name);
   t_qmp_sub *cur, *next;
   t_qmp_req *req;
+  t_vm   *vm = cfg_get_vm(name);
   if (!qmp)
     KERR("%s", name);
   else
     {
+    if ((vm) && (vm->kvm.nb_dpdk))
+      dpdk_ovs_end_vm_qmp_shutdown(name);
     cur = qmp->head_qmp_sub;
     while(cur)
       {
@@ -471,8 +477,8 @@ static void fprintf_add_kvm(FILE *fhd, char *line, char *dir_path)
 {
   int i, len = strlen(line) + 1;
   char *ptr;
-  char *spare1 = (char *) clownix_malloc(len, 7);
-  char *spare2 = (char *) clownix_malloc(len, 7);
+  char *spare1 = (char *) clownix_malloc(len, 3);
+  char *spare2 = (char *) clownix_malloc(len, 3);
   char rootfs[MAX_PATH_LEN];
   memcpy(spare1, line, len);
   memcpy(spare2, line, len);
@@ -556,7 +562,7 @@ static void create_replay_script(char *dir_path)
   memset(script, 0, MAX_PATH_LEN);
   snprintf(script,MAX_PATH_LEN-1,"%s/%s.sh",dir_path,cfg_get_cloonix_name());
   alloc_len = MAX_LIST_COMMANDS_QTY * sizeof(t_list_commands);
-  list = (t_list_commands *) clownix_malloc(alloc_len, 7);
+  list = (t_list_commands *) clownix_malloc(alloc_len, 3);
   memset(list, 0, alloc_len);
   qty = produce_list_commands(list);
   write_script_file(dir_path, script, qty, list);
@@ -629,8 +635,14 @@ static void save_ok_return(t_qmp *qmp, int llid, int tid)
 static void dialog_resp_return(t_qmp *qmp, int llid, int tid, int status)
 {
   char *pname;
+  t_vm *vm = cfg_get_vm(qmp->name);
   if (qmp->waiting_for == waiting_for_capa_return)
     {
+    if (!vm)
+      KERR("%s", qmp->name);
+    else
+      doors_send_add_vm(get_doorways_llid(), 0, vm->kvm.name,
+                        utils_get_qbackdoor_path(vm->kvm.vm_id));
     qmp->capa_acked = 1;
     qmp->waiting_for = waiting_for_nothing;
     }
@@ -664,7 +676,7 @@ static void dialog_resp_return(t_qmp *qmp, int llid, int tid, int status)
       if (status)
         KERR("%s", qmp->name);
       }
-    pname = (char *) clownix_malloc(MAX_NAME_LEN, 7);
+    pname = (char *) clownix_malloc(MAX_NAME_LEN, 3);
     memset(pname, 0, MAX_NAME_LEN);
     strncpy(pname, qmp->name, MAX_NAME_LEN-1);
     clownix_timeout_add(250, timer_waiting_for_shutdown, pname, NULL, NULL);
@@ -933,9 +945,19 @@ void qmp_request_qemu_halt(char *name, int llid, int tid)
 {
   t_qmp *qmp = find_qmp(name);
   if (!qmp)
-    send_status_ko(llid, tid, "error qmp not found");
+    {
+    if (llid)
+      send_status_ko(llid, tid, "error qmp not found");
+    else
+      KERR(" ");
+    }
   else if (qmp->waiting_for != waiting_for_nothing)
-    send_status_ko(llid, tid, "error qmp doing something");
+    {
+    if (llid)
+      send_status_ko(llid, tid, "error qmp doing something");
+    else
+      KERR("%d ", qmp->waiting_for);
+    }
   else
     {
     alloc_tail_qmp_req(qmp, llid, tid, QMP_SHUTDOWN);

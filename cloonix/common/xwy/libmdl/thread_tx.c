@@ -112,21 +112,23 @@ static int transmit_circ_tx(int sock_fd)
     if (tx->current_el)
       {
       tx->count += 1;
-      if (tx->count > 100)
+      if (tx->count > 50000)
         {
         tx->thread_tx_on = 0;
-        KERR("%d", sock_fd);
-        }
-      el = tx->current_el;
-      result = try_send_el_successfull(el);
-      if (result == 1)
-        {
-        circ_free_slot_put(tx->circ_ctx, el);
-        tx->current_el = NULL;
-        result = 0;
+        KERR("%d %d", tx->current_el->offst, tx->current_el->payload);
+        result = -1;
         }
       else
-        DEBUG_EVT("WRITE NOT COMPLETE %d %d", el->payload, el->offst);
+        {
+        el = tx->current_el;
+        result = try_send_el_successfull(el);
+        if (result == 1)
+          {
+          circ_free_slot_put(tx->circ_ctx, el);
+          tx->current_el = NULL;
+          result = 0;
+          }
+        }
       }
     }
   return result;

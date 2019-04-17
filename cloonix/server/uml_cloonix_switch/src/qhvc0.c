@@ -74,6 +74,7 @@
   "cat > /tmp/dropbear_cloonix_agent.sh << \"INSIDE_EOF\"\n"\
   "#!/bin/sh\n"\
   "set +e\n"\
+  "echo try >> /tmp/try_dropbear_cloonix_agent\n"\
   "if [ ! -d /dev/virtio-ports ]; then\n"\
     "mkdir -p /dev/virtio-ports\n"\
     "cd  /dev/virtio-ports\n"\
@@ -366,7 +367,6 @@ static void qhvc0_rx(t_qhvc0_vm *cvm, int len, char  *buf)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void clean_connect_timer(t_qhvc0_vm *cvm)
 {
@@ -388,7 +388,6 @@ static void clean_heartbeat_timer(t_qhvc0_vm *cvm)
   cvm->heartbeat_ref = 0;
 }
 /*--------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static void timer_hvc0_tx(void *data)
@@ -468,7 +467,6 @@ static void err_llid_retry(int llid, t_qhvc0_vm *cvm)
   clean_heartbeat_timer(cvm);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static void vm_err_cb (void *ptr, int llid, int err, int from)
@@ -589,7 +587,6 @@ static void ga_qhvc0_heartbeat_init(t_qhvc0_vm *cvm)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 static void timer_cvm_connect_qhvc0(void *data)
 { 
@@ -606,9 +603,11 @@ static void timer_cvm_connect_qhvc0(void *data)
     {
     cvm->pid = utils_get_pid_of_machine(vm);
     if (!cvm->pid)
-      clownix_timeout_add(10, timer_cvm_connect_qhvc0, (void *) cvm,
+      {
+      clownix_timeout_add(30, timer_cvm_connect_qhvc0, (void *) cvm,
                           &(cvm->connect_abs_beat_timer),
                           &(cvm->connect_ref_timer));
+      }
     else if (!cvm->ready_to_connect_hvc0)
       {
       clownix_timeout_add(30, timer_cvm_connect_qhvc0, (void *) cvm,
@@ -635,7 +634,11 @@ static void timer_cvm_connect_qhvc0(void *data)
           protected_tx(cvm, strlen("\r\n"), "\r\n");
           }
         else
-          KERR("%s", cvm->name);
+          {
+          clownix_timeout_add(30, timer_cvm_connect_qhvc0, (void *) cvm,
+                              &(cvm->connect_abs_beat_timer),
+                              &(cvm->connect_ref_timer));
+          }
         }
       else
         KERR("%s", cvm->name);

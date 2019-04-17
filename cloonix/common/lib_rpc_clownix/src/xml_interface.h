@@ -125,6 +125,7 @@
                          "  <vm_config_flags> %d </vm_config_flags>\n"\
                          "  <cpu> %d </cpu>\n"\
                          "  <mem> %d </mem>\n"\
+                         "  <nb_dpdk> %d </nb_dpdk>\n"\
                          "  <nb_eth> %d </nb_eth>\n"\
                          "  <nb_wlan> %d </nb_wlan>"
 
@@ -328,7 +329,8 @@
                               "  rootfs_used: %s \n"\
                               "  rootfs_backing: %s \n"\
                               "  vm_id: %d vm_config_flags: %d \n"\
-                              "  nb_eth: %d nb_wlan: %d mem: %d cpu: %d \n"
+                              "  nb_dpdk: %d nb_eth: %d nb_wlan: %d \n"\
+                              "  mem: %d cpu: %d \n"
 
 #define EVENT_TOPO_KVM_C      "</kvm>\n"
                         

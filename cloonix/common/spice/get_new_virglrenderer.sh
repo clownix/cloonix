@@ -3,7 +3,7 @@ HERE=`pwd`
 TARGZ=${HERE}/../../../targz_store
 rm -rf virglrenderer
 rm -f virglrenderer.tar.gz
-git clone git://anongit.freedesktop.org/virglrenderer
+git clone https://github.com/freedesktop/virglrenderer.git
 cd virglrenderer
 ./autogen.sh
 cd $HERE

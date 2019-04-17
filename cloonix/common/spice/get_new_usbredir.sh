@@ -3,7 +3,7 @@ HERE=`pwd`
 TARGZ=${HERE}/../../../targz_store
 rm -rf usbredir
 rm -f usbredir.tar.gz
-git clone git://anongit.freedesktop.org/spice/usbredir
+git clone https://gitlab.freedesktop.org/spice/usbredir.git
 cd usbredir
 ./autogen.sh
 cd $HERE

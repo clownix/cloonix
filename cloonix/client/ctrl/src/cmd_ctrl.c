@@ -125,6 +125,9 @@ static char *get_type_endp(int type)
   char *result = "notfound";
   switch (type)
     {
+    case endp_type_kvm_dpdk:
+      result = "kvm_dpdk"; 
+      break;
     case endp_type_kvm_eth:
       result = "kvm_eth"; 
       break;

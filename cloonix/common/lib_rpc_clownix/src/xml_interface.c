@@ -732,11 +732,12 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
                                        kvm.rootfs_backing,  
                                        kvm.vm_id, 
                                        kvm.vm_config_flags,  
+                                       kvm.nb_dpdk,
                                        kvm.nb_eth,
                                        kvm.nb_wlan,
                                        kvm.mem, 
                                        kvm.cpu); 
-  for (i=0; i<kvm.nb_eth; i++)
+  for (i=0; i<kvm.nb_dpdk + kvm.nb_eth; i++)
     len += topo_eth_format(buf+len, kvm.eth_params[i].mac_addr);
   len += sprintf(buf+len, EVENT_TOPO_KVM_C);
   return len;
@@ -1032,11 +1033,10 @@ void send_add_vm(int llid, int tid, t_topo_kvm *ikvm)
   topo_kvm_check_str(ikvm, __LINE__);
   topo_kvm_swapon(&kvm, ikvm); 
 
-  len = sprintf(sndbuf, ADD_VM_O, tid, kvm.name, 
-                kvm.vm_config_flags, kvm.cpu,  
-                kvm.mem, kvm.nb_eth, kvm.nb_wlan);
+  len = sprintf(sndbuf, ADD_VM_O, tid, kvm.name, kvm.vm_config_flags, kvm.cpu,  
+                kvm.mem, kvm.nb_dpdk, kvm.nb_eth, kvm.nb_wlan);
 
-  len += make_eth_params(sndbuf+len, kvm.nb_eth, kvm.eth_params);
+  len += make_eth_params(sndbuf+len, kvm.nb_dpdk + kvm.nb_eth, kvm.eth_params);
 
   len += sprintf(sndbuf+len, ADD_VM_C, kvm.linux_kernel, 
                              kvm.rootfs_input, 
@@ -1434,12 +1434,13 @@ static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
                                     ikvm.rootfs_backing,  
                                     &(ikvm.vm_id), 
                                     &(ikvm.vm_config_flags),  
+                                    &(ikvm.nb_dpdk),
                                     &(ikvm.nb_eth),
                                     &(ikvm.nb_wlan),
                                     &(ikvm.mem), 
-                                    &(ikvm.cpu)) != 14)
+                                    &(ikvm.cpu)) != 15)
     KOUT("%s", msg);
-  get_eth_params(msg, ikvm.nb_eth, ikvm.eth_params);
+  get_eth_params(msg, ikvm.nb_dpdk + ikvm.nb_eth, ikvm.eth_params);
   topo_kvm_swapoff(kvm, &ikvm); 
 }
 /*---------------------------------------------------------------------------*/
@@ -2018,10 +2019,10 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       memset(&ikvm, 0, sizeof(t_topo_kvm));
       if (sscanf(msg, ADD_VM_O, &tid, ikvm.name, 
                  &(ikvm.vm_config_flags),
-                 &(ikvm.cpu), &(ikvm.mem), 
-                 &(ikvm.nb_eth), &(ikvm.nb_wlan)) != 7)
+                 &(ikvm.cpu), &(ikvm.mem), &(ikvm.nb_dpdk), 
+                 &(ikvm.nb_eth), &(ikvm.nb_wlan)) != 8)
         KOUT("%s", msg);
-      get_eth_params(msg, ikvm.nb_eth, ikvm.eth_params);
+      get_eth_params(msg, ikvm.nb_dpdk + ikvm.nb_eth, ikvm.eth_params);
       ptr = strstr(msg, "<linux_kernel>");
       if (!ptr)
         KOUT("%s", msg);
@@ -2241,6 +2242,12 @@ char *llid_trace_lib(int type)
       break;
     case type_llid_trace_endp_a2b:
       result = "mua2b";
+      break;
+    case type_llid_trace_endp_ovs:
+      result = "ovs";
+      break;
+    case type_llid_trace_endp_ovsdb:
+      result = "ovsdb";
       break;
     case type_llid_trace_endp_wif:
       result = "muwif";

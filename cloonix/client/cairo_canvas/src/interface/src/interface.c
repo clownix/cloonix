@@ -194,8 +194,8 @@ static void topo_small_event_cb(int tid, char *name,
 {
   if ((evt == c2c_evt_connection_ok)    ||
       (evt == c2c_evt_connection_ko)    ||
-      (evt == vm_evt_dtach_launch_ok)    || 
-      (evt == vm_evt_dtach_launch_ko)    ||
+      (evt == vm_evt_qmp_conn_ok)       || 
+      (evt == vm_evt_qmp_conn_ko)       ||
       (evt == vm_evt_cloonix_ga_ping_ok)||
       (evt == vm_evt_cloonix_ga_ping_ko))
     ping_enqueue_evt(name, evt);

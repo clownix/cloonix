@@ -32,7 +32,6 @@ GtkWidget *get_main_window(void);
 
 static t_custom_vm custom_vm;
 
-static int g_timer_relaunch_dialog;
 static GtkWidget *g_custom_dialog;
 
 void menu_choice_kvm(void);
@@ -73,52 +72,27 @@ static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void timer_relaunch_dialog(void *data)
-{
-  if (!g_custom_dialog)
-    KOUT(" ");
-  gtk_widget_destroy(g_custom_dialog);
-  g_timer_relaunch_dialog = 0;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void arm_timer_relaunch_dialog(void)
-{
-  if (!g_custom_dialog)
-    KOUT(" ");
-  if (!g_timer_relaunch_dialog)
-    {
-    clownix_timeout_add(1, timer_relaunch_dialog, NULL, NULL, NULL);
-    g_timer_relaunch_dialog = 1;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void is_full_virt_toggle(GtkToggleButton *togglebutton,
-                                gpointer user_data)
-{
-  if (gtk_toggle_button_get_active(togglebutton))
-    custom_vm.is_full_virt = 1;
-  else
-    custom_vm.is_full_virt = 0;
-  arm_timer_relaunch_dialog();
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void is_uefi_toggle(GtkToggleButton *togglebutton,         
-                                 gpointer user_data)
-{
-  if (gtk_toggle_button_get_active(togglebutton))
-    custom_vm.is_uefi = 1;
-  else
-    custom_vm.is_uefi = 0;
-  arm_timer_relaunch_dialog();
-}
-/*--------------------------------------------------------------------------*/
+///****************************************************************************/
+//static void is_full_virt_toggle(GtkToggleButton *togglebutton,
+//                                gpointer user_data)
+//{
+//  if (gtk_toggle_button_get_active(togglebutton))
+//    custom_vm.is_full_virt = 1;
+//  else
+//    custom_vm.is_full_virt = 0;
+//}
+///*--------------------------------------------------------------------------*/
+//
+///****************************************************************************/
+//static void is_uefi_toggle(GtkToggleButton *togglebutton,         
+//                                 gpointer user_data)
+//{
+//  if (gtk_toggle_button_get_active(togglebutton))
+//    custom_vm.is_uefi = 1;
+//  else
+//    custom_vm.is_uefi = 0;
+//}
+///*--------------------------------------------------------------------------*/
 
 
 /****************************************************************************/
@@ -129,7 +103,6 @@ static void has_p9_host_share_toggle(GtkToggleButton *togglebutton,
     custom_vm.has_p9_host_share = 1;
   else
     custom_vm.has_p9_host_share = 0;
-  arm_timer_relaunch_dialog();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -160,7 +133,8 @@ static void numadd_toggle (GtkToggleButton *togglebutton, gpointer user_data)
 static void update_cust(t_custom_vm *cust, GtkWidget *entry_name, 
                         GtkWidget *entry_rootfs, GtkWidget *entry_p9_host_share,
                         GtkWidget *entry_cpu, GtkWidget *entry_ram,
-                        GtkWidget *entry_eth_nb, GtkWidget *entry_wlan_nb) 
+                        GtkWidget *entry_dpdk_nb, GtkWidget *entry_eth_nb,
+                        GtkWidget *entry_wlan_nb) 
 {
   char *tmp;
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_name));
@@ -182,6 +156,7 @@ static void update_cust(t_custom_vm *cust, GtkWidget *entry_name,
 
   cust->cpu = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_cpu));
   cust->mem = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_ram));
+  cust->nb_dpdk=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_dpdk_nb));
   cust->nb_eth=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_eth_nb));
   cust->nb_wlan=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_wlan_nb));
 }
@@ -193,7 +168,6 @@ static void nb_eth_activate_cb(GtkWidget *entry_eth_nb)
 
   int nb_eth=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_eth_nb));
   custom_vm.nb_eth = nb_eth;
-  arm_timer_relaunch_dialog();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -203,11 +177,17 @@ static void nb_wlan_activate_cb(GtkWidget *entry_wlan_nb)
 
   int nb_wlan=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_wlan_nb));
   custom_vm.nb_wlan = nb_wlan;
-  arm_timer_relaunch_dialog();
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void nb_dpdk_activate_cb(GtkWidget *entry_dpdk_nb)
+{
 
+  int nb_dpdk=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_dpdk_nb));
+  custom_vm.nb_dpdk = nb_dpdk;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void custom_vm_dialog(t_custom_vm *cust)
@@ -215,10 +195,8 @@ static void custom_vm_dialog(t_custom_vm *cust)
   int response, line_nb = 0;
   GtkWidget *entry_name, *entry_rootfs, *entry_ram; 
   GtkWidget *entry_p9_host_share; 
-  GtkWidget *entry_cpu=NULL, *entry_eth_nb, *entry_wlan_nb;
-  GtkWidget *grid, *parent, *numadd;
-  GtkWidget *is_persistent, *is_uefi;
-  GtkWidget *is_full_virt;
+  GtkWidget *entry_cpu=NULL, *entry_dpdk_nb, *entry_eth_nb, *entry_wlan_nb;
+  GtkWidget *grid, *parent, *numadd, *is_persistent;
   GtkWidget *has_p9_host_share;
 
   if (g_custom_dialog)
@@ -247,22 +225,22 @@ static void custom_vm_dialog(t_custom_vm *cust)
 
 
 
-  is_uefi = gtk_check_button_new_with_label("uefi");
-  if (custom_vm.is_uefi)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_uefi), TRUE);
-  else
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_uefi), FALSE);
-  g_signal_connect(is_uefi,"toggled",
-                   G_CALLBACK(is_uefi_toggle),NULL);
-
-  is_full_virt = gtk_check_button_new_with_label("full virt");
-  if (custom_vm.is_full_virt)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_full_virt), TRUE);
-  else
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_full_virt), FALSE);
-  g_signal_connect(is_full_virt,"toggled",
-                   G_CALLBACK(is_full_virt_toggle),NULL);
-
+//  is_uefi = gtk_check_button_new_with_label("uefi");
+//  if (custom_vm.is_uefi)
+//    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_uefi), TRUE);
+//  else
+//    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_uefi), FALSE);
+//  g_signal_connect(is_uefi,"toggled",
+//                   G_CALLBACK(is_uefi_toggle),NULL);
+//
+//  is_full_virt = gtk_check_button_new_with_label("full virt");
+//  if (custom_vm.is_full_virt)
+//    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_full_virt), TRUE);
+//  else
+//    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_full_virt), FALSE);
+//  g_signal_connect(is_full_virt,"toggled",
+//                   G_CALLBACK(is_full_virt_toggle),NULL);
+//
 
   has_p9_host_share = gtk_check_button_new_with_label("9p share host files");
 
@@ -284,8 +262,8 @@ static void custom_vm_dialog(t_custom_vm *cust)
   append_grid(grid, numadd, "Append:", line_nb++);
 
   append_grid(grid, is_persistent, "remanence of file-system:", line_nb++);
-  append_grid(grid, is_uefi, "uefi:", line_nb++);
-  append_grid(grid, is_full_virt, "full virt:", line_nb++);
+//  append_grid(grid, is_uefi, "uefi:", line_nb++);
+//  append_grid(grid, is_full_virt, "full virt:", line_nb++);
   append_grid(grid, has_p9_host_share, "9p host share files:", line_nb++);
 
   entry_cpu = gtk_spin_button_new_with_range(1, 32, 1);
@@ -308,17 +286,23 @@ static void custom_vm_dialog(t_custom_vm *cust)
     append_grid(grid,entry_p9_host_share,"Path to host share:",line_nb++);
     }
 
-  entry_eth_nb = gtk_spin_button_new_with_range(1, MAX_ETH_VM, 1);
+  entry_dpdk_nb = gtk_spin_button_new_with_range(0, MAX_DPDK_VM, 1);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_dpdk_nb), cust->nb_dpdk);
+  g_signal_connect(G_OBJECT(entry_dpdk_nb),"value-changed",
+                  (GCallback) nb_dpdk_activate_cb, (gpointer) cust);
+  append_grid(grid, entry_dpdk_nb, "Nb dpdk eth:", line_nb++);
+
+  entry_eth_nb = gtk_spin_button_new_with_range(0, MAX_ETH_VM, 1);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_eth_nb), cust->nb_eth);
   g_signal_connect(G_OBJECT(entry_eth_nb),"value-changed", 
                   (GCallback) nb_eth_activate_cb, (gpointer) cust);
-  append_grid(grid, entry_eth_nb, "Max eth:", line_nb++);
+  append_grid(grid, entry_eth_nb, "Nb classic eth:", line_nb++);
 
   entry_wlan_nb = gtk_spin_button_new_with_range(0, MAX_WLAN_VM, 1);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_wlan_nb), cust->nb_wlan);
   g_signal_connect(G_OBJECT(entry_wlan_nb),"value-changed", 
                   (GCallback) nb_wlan_activate_cb, (gpointer) cust);
-  append_grid(grid, entry_wlan_nb, "Max wlan:", line_nb++);
+  append_grid(grid, entry_wlan_nb, "Nb hwsim wlan:", line_nb++);
 
   gtk_container_set_border_width(GTK_CONTAINER(grid), 5);
   gtk_box_pack_start(
@@ -335,7 +319,8 @@ static void custom_vm_dialog(t_custom_vm *cust)
   else
     {
     update_cust(cust, entry_name,   entry_rootfs, entry_p9_host_share, 
-                entry_cpu, entry_ram, entry_eth_nb, entry_wlan_nb); 
+                entry_cpu, entry_ram, entry_dpdk_nb, entry_eth_nb,
+                entry_wlan_nb);
     gtk_widget_destroy(g_custom_dialog);
     g_custom_dialog = NULL;
     }
@@ -368,9 +353,9 @@ void menu_dialog_vm_init(void)
   custom_vm.has_p9_host_share = 0;
   custom_vm.cpu = 4;
   custom_vm.mem = 2000;
+  custom_vm.nb_dpdk = 0;
   custom_vm.nb_eth = 3;
   custom_vm.nb_wlan = 0;
-  g_timer_relaunch_dialog = 0;
   g_custom_dialog = NULL;
 }
 /*--------------------------------------------------------------------------*/

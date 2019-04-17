@@ -69,14 +69,16 @@ void topo_info_update(t_topo_info *topo)
 void timer_create_item_node_req(void *data)
 {
   char *ptr_p9_host_share = NULL;
-  int32_t thidden_on_graph[MAX_ETH_VM+MAX_WLAN_VM];
+  int32_t thidden_on_graph[MAX_DPDK_VM+MAX_ETH_VM+MAX_WLAN_VM];
   int i, vm_config_flags;
   t_custom_vm *cust_vm;
   t_item_node_req *pa = (t_item_node_req *) data;
   get_custom_vm (&cust_vm);
-  for (i=0; i<MAX_ETH_VM+MAX_WLAN_VM; i++)
+  for (i=0; i<MAX_DPDK_VM+MAX_ETH_VM+MAX_WLAN_VM; i++)
     thidden_on_graph[i] = 0;
-  if ((cust_vm->nb_eth > MAX_ETH_VM) || (cust_vm->nb_eth < 1))
+  if ((cust_vm->nb_dpdk > MAX_DPDK_VM) || (cust_vm->nb_dpdk < 0))
+    KOUT("%d", cust_vm->nb_dpdk);
+  if ((cust_vm->nb_eth > MAX_ETH_VM) || (cust_vm->nb_eth < 0))
     KOUT("%d", cust_vm->nb_eth);
   if ((cust_vm->nb_wlan > MAX_WLAN_VM) || (cust_vm->nb_wlan < 0))
     KOUT("%d", cust_vm->nb_wlan);
@@ -87,9 +89,9 @@ void timer_create_item_node_req(void *data)
     vm_config_flags = get_vm_config_flags(cust_vm);
     set_node_layout_x_y(cust_vm->name, 0, pa->x, pa->y, 0, 
                         pa->tx, pa->ty, thidden_on_graph);
-    client_add_vm(0, callback_end, cust_vm->name, cust_vm->nb_eth, 
-                  cust_vm->nb_wlan, vm_config_flags, cust_vm->cpu,
-                  cust_vm->mem,
+    client_add_vm(0, callback_end, cust_vm->name, cust_vm->nb_dpdk,
+                  cust_vm->nb_eth, cust_vm->nb_wlan, vm_config_flags,
+                  cust_vm->cpu, cust_vm->mem,
                   NULL, cust_vm->kvm_used_rootfs, NULL, NULL, 
                   NULL, ptr_p9_host_share, NULL);
     }

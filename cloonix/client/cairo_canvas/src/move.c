@@ -84,7 +84,7 @@ static void set_repulse_force(t_bank_item *bitem, t_bank_item *cur)
     factor = repulse_k/100;
   else
     factor = repulse_k;
-  if (dist)
+  if (dist > 1)
     {
     cvx = (vx/dist)*factor;
     cvy = (vy/dist)*factor;
@@ -129,12 +129,12 @@ static void eth_repulse_force(t_bank_item *eth, t_bank_item *neigh)
       neg = -1;
     else
       neg = 1;
-    eth->pbi.force_x += neg * 0.1;
+    eth->pbi.force_x += neg * 10;
     if (rand() % 2)
       neg = -1;
     else
       neg = 1;
-    eth->pbi.force_y += neg * 0.1;
+    eth->pbi.force_y += neg * 10;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -147,7 +147,7 @@ static void edge_exert_forces (t_bank_item *eth, t_bank_item *lan)
   vx = eth->pbi.position_x - lan->pbi.position_x;
   vy = eth->pbi.position_y - lan->pbi.position_y;
   dist = sqrt(vx*vx + vy*vy);
-  if (dist)
+  if (dist > 1)
     {
     vx = ((dist - spring_size) * vx * spring_k)/dist;
     vy = ((dist - spring_size) * vy * spring_k)/dist;
@@ -442,7 +442,7 @@ static void set_close_range_repulse_force(t_bank_item *bitem, t_bank_item *cur)
     min_dist = 300;
 
 
-  if (dist == 0)
+  if (dist < 1)
     {
     if (rand() % 2)
       neg = -1;

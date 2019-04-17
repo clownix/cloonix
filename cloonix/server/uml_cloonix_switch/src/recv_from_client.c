@@ -53,6 +53,8 @@
 #include "hop_event.h"
 #include "c2c_utils.h"
 #include "qmp.h"
+#include "dpdk_ovs.h"
+#include "dpdk_dyn.h"
 
 
 
@@ -238,7 +240,7 @@ static void recv_promiscious(int llid, int tid, char *name, int eth, int on)
     sprintf( info, "Machine %s does not exist", name);
     send_status_ko(llid, tid, info);
     }
-  else if ((eth < 0) || (eth >= vm->kvm.nb_eth))
+  else if ((eth < 0) || (eth >= vm->kvm.nb_dpdk + vm->kvm.nb_eth))
     {
     sprintf( info, "eth%d for machine %s does not exist", eth, name);
     send_status_ko(llid, tid, info);
@@ -301,6 +303,11 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
   else if (cfg_name_is_in_use(1, lan, info))
     send_status_ko(llid, tid, info);
+  else if (dpdk_dyn_eth_exists(name, num))
+    {
+    if (dpdk_dyn_add_lan_to_eth(llid, tid, lan, name, num, info))
+      send_status_ko(llid, tid, info);
+    }
   else if (mulan_is_zombie(lan))
     {
     sprintf( info, "lan %s is zombie",  lan);
@@ -390,7 +397,8 @@ static void timer_endp(void *data)
 {
   t_timer_endp *te = (t_timer_endp *) data;
   char err[MAX_PATH_LEN];
-  if (endp_evt_exists(te->name, te->num))
+  if ((endp_evt_exists(te->name, te->num)) ||
+      (dpdk_dyn_eth_exists(te->name, te->num)))
     {
     local_add_lan(te->llid, te->tid, te->name, te->num, te->lan);
     timer_free(te);
@@ -444,7 +452,8 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     }
   else
     {
-    if (!endp_evt_exists(name, num)) 
+    if ((!endp_evt_exists(name, num)) &&
+        (!dpdk_dyn_eth_exists(name, num)))
       timer_endp_init(llid, tid, name, num, lan);
     else
       local_add_lan(llid, tid, name, num, lan);
@@ -459,10 +468,15 @@ void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan)
   int type;
   event_print("Rx Req add lan %s in %s %d", lan, name, num);
   if (get_inhib_new_clients())
+    {
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    }
   else if (cfg_name_is_in_use(1, lan, info))
+    {
     send_status_ko(llid, tid, info);
-  else if (!endp_mngt_exists(name, num, &type))
+    }
+  else if ((!endp_mngt_exists(name, num, &type)) &&
+           (!dpdk_ovs_eth_exists(name, num)))
     {
     snprintf(info, MAX_PATH_LEN, "endp %s %d not found", name, num);
     send_status_ko(llid, tid, info);
@@ -509,7 +523,12 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   char info[MAX_PRINT_LEN];
   int tidx;
   event_print("Rx Req del lan %s of %s %d", lan, name, num);
-  if (!lan_get_with_name(lan))
+  if (dpdk_ovs_eth_exists(name, num))
+    {
+    if (dpdk_dyn_del_lan_from_eth(llid, tid, lan, name, num, info))
+      send_status_ko(llid, tid, info);
+    }
+  else if (!lan_get_with_name(lan))
     {
     sprintf(info, "lan %s does not exist", lan);
     send_status_ko(llid, tid, info);
@@ -846,14 +865,20 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info)
       }
     }
     if (result == 0)
-      sprintf(info, "Rx Req add kvm machine %s with %d eth %d wlan, FLAGS:%s",
-              kvm->name, kvm->nb_eth, kvm->nb_wlan, 
-              prop_flags_ascii_get(kvm->vm_config_flags));
+      sprintf(info, 
+      "Rx Req add kvm machine %s with dpdk=%d eth=%d wlan=%d, FLAGS:%s",
+       kvm->name, kvm->nb_dpdk, kvm->nb_eth, kvm->nb_wlan, 
+       prop_flags_ascii_get(kvm->vm_config_flags));
   if (!result)
     {
+    if (kvm->nb_dpdk > MAX_DPDK_VM)
+      {
+      sprintf(info, "Maximum dpdk ethernet %d per machine", MAX_DPDK_VM);
+      result = -1;
+      }
     if (kvm->nb_eth > MAX_ETH_VM)
       {
-      sprintf(info, "Maximum ethernet %d per machine", MAX_ETH_VM);
+      sprintf(info, "Maximum classic ethernet %d per machine", MAX_ETH_VM);
       result = -1;
       }
     if (kvm->nb_wlan > MAX_WLAN_VM)
@@ -934,6 +959,17 @@ static int cow_look_clone(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int adjust_for_nb_dpdk(int mem, int nb_dpdk)
+{
+  int mod = mem % nb_dpdk;
+  int result = mem + (nb_dpdk - mod);
+  if (result % nb_dpdk)
+    KOUT("%d %d %d", mem, nb_dpdk, mod);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
 {
   int i, vm_id, result = 0;
@@ -971,7 +1007,7 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
     cfg_add_newborn(kvm->name);
     vm_id = cfg_alloc_vm_id();
     event_print("%s was allocated number %d", kvm->name, vm_id);
-    for (i=0; i<kvm->nb_eth; i++)
+    for (i=0; i<kvm->nb_dpdk + kvm->nb_eth; i++)
       {
       if (!memcmp(kvm->eth_params[i].mac_addr, mac, 6))
         { 
@@ -1000,6 +1036,12 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
     else 
       {
       recv_coherency_lock();
+      if (kvm->nb_dpdk)
+        {
+        kvm->mem = adjust_for_nb_dpdk(kvm->mem, kvm->nb_dpdk);
+        recv_coherency_lock();
+        dpdk_ovs_start_vm(kvm->name, kvm->nb_dpdk);
+        }
       cow_look = (t_add_vm_cow_look *) 
                  clownix_malloc(sizeof(t_add_vm_cow_look), 7);
       memset(cow_look, 0, sizeof(t_add_vm_cow_look));
@@ -1046,26 +1088,27 @@ void recv_list_commands_req(int llid, int tid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_list_pid_req(int llid, int tid)
+t_pid_lst *create_list_pid(int *nb)
 {
-  int i,j, nb_vm, nb_endp, nb_sum, nb_mulan;
+  int i,j, nb_vm, nb_endp, nb_sum, nb_mulan, nb_ovs;
+  t_lst_pid *ovs_pid = NULL;
   t_lst_pid *endp_pid = NULL;
   t_lst_pid *mulan_pid = NULL;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_pid_lst *lst;
-  event_print("Rx Req list pid");
-  nb_endp = endp_mngt_get_all_pid(&endp_pid);
+  nb_endp  = endp_mngt_get_all_pid(&endp_pid);
   nb_mulan = mulan_get_all_pid(&mulan_pid);
-  nb_sum = nb_vm + nb_endp + nb_mulan + 10;
+  nb_ovs   = dpdk_ovs_get_all_pid(&ovs_pid);
+  nb_sum   = nb_ovs + nb_vm + nb_endp + nb_mulan + 10;
   lst = (t_pid_lst *)clownix_malloc(nb_sum*sizeof(t_pid_lst),18);
   memset(lst, 0, nb_sum*sizeof(t_pid_lst));
   for (i=0, j=0; i<nb_vm; i++)
     {
     if (!vm)
       KOUT(" ");
-    strncpy(lst[j].name, vm->kvm.name, MAX_NAME_LEN-1); 
+    strncpy(lst[j].name, vm->kvm.name, MAX_NAME_LEN-1);
     lst[j].pid = machine_read_umid_pid(vm->kvm.vm_id);
-    j++;
+    j++; 
     vm = vm->next;
     }
   if (vm)
@@ -1084,6 +1127,13 @@ void recv_list_pid_req(int llid, int tid)
     j++;
     }
   clownix_free(mulan_pid, __FUNCTION__);
+  for (i=0 ; i<nb_ovs; i++)
+    {
+    strncpy(lst[j].name, ovs_pid[i].name, MAX_NAME_LEN-1);
+    lst[j].pid = ovs_pid[i].pid;
+    j++;
+    }
+  clownix_free(ovs_pid, __FUNCTION__);
   strcpy(lst[j].name, "doors");
   lst[j].pid = doorways_get_distant_pid();
   j++;
@@ -1093,7 +1143,19 @@ void recv_list_pid_req(int llid, int tid)
   strcpy(lst[j].name, "switch");
   lst[j].pid = getpid();
   j++;
-  send_list_pid_resp(llid, tid, j, lst);
+  *nb = j;
+  return lst;
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+void recv_list_pid_req(int llid, int tid)
+{
+  int nb;
+  t_pid_lst *lst = create_list_pid(&nb);
+  event_print("Rx Req list pid");
+  send_list_pid_resp(llid, tid, nb, lst);
   clownix_free(lst, __FUNCTION__);
 }
 /*---------------------------------------------------------------------------*/
@@ -1183,12 +1245,12 @@ void recv_topo_small_event_sub(int llid, int tid)
       if (!cur)
         KOUT(" ");
 
-      if (cur->dtach_launch == 1)
+      if (cur->qmp_conn == 1)
         send_topo_small_event(llid, tid, cur->kvm.name, 
-                              NULL, NULL, vm_evt_dtach_launch_ok);
+                              NULL, NULL, vm_evt_qmp_conn_ok);
       else
         send_topo_small_event(llid, tid, cur->kvm.name,
-                              NULL, NULL, vm_evt_dtach_launch_ko);
+                              NULL, NULL, vm_evt_qmp_conn_ko);
 
       if (cur->kvm.vm_config_flags & VM_FLAG_CLOONIX_AGENT_PING_OK)
         send_topo_small_event(llid, tid, cur->kvm.name,

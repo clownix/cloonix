@@ -40,6 +40,7 @@
 #include "xwy.h"
 #include "llid_trace.h"
 #include "doorways_mngt.h"
+#include "dpdk_ovs.h"
 
 #define MAX_CALLBACK_END 50
 
@@ -50,6 +51,8 @@ typedef struct t_callback_end
   int safety_counter;
 } t_callback_end;
 
+
+t_pid_lst *create_list_pid(int *nb);
 
 static t_callback_end callback_end_tab[MAX_CALLBACK_END];
 static t_cb_end_automate callback_rm_cloonix_ok = NULL;
@@ -156,22 +159,38 @@ void check_for_work_dir_inexistance(t_cb_end_automate cb)
 void extremely_last_action(void *data)
 {
   static int count_time=0;
-  if (get_nb_running_pids())
+  int i, nb, tot;
+  t_pid_lst *lst = create_list_pid(&nb);
+  (void) lst;
+  if (nb)
     {
     count_time += 1;
-    KERR(" %d", get_nb_running_pids());
     if (count_time > 3)
       {
-      KERR("clone wont die %d", get_nb_running_pids());
+      for (i=0; i<nb; i++)
+        KERR("process %s %d", lst[i].name, lst[i].pid);
+      KERR("clone number %d", get_nb_running_pids());
       kerr_running_pids();
       pid_clone_kill_all();
       } 
     if (count_time > 5)
       exit(0);
+    tot = nb;
+    for (i=0; i<nb; i++)
+      {
+      if (!strcmp(lst[i].name, "doors"))
+        tot -= 1;
+      if (!strcmp(lst[i].name, "xwy"))
+        tot -= 1;
+      if (!strcmp(lst[i].name, "switch"))
+        tot -= 1;
+      }
+    if (tot == 0)
+      exit(0);
     }
   else
-    exit(0);
-  clownix_timeout_add(20, extremely_last_action, NULL, NULL, NULL);
+    KOUT(" ");
+  clownix_timeout_add(30, extremely_last_action, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -187,6 +206,12 @@ void last_action_self_destruction(void *data)
   unlink(path);
   sprintf(path, "%s", pid_get_clone_internal_com());
   unlink(path);
+  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_ovs_db_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_qemu_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_cloonix_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_endp_sock_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dtach_sock_dir(), err))
@@ -222,7 +247,8 @@ static void action_self_destruction(void *data)
     {
     if ((count < 300) && 
         ((qmonitor_still_present()) || 
-          qhvc0_still_present())) 
+         (dpdk_ovs_still_present()) ||
+         (qhvc0_still_present()))) 
       {
       count++;
       clownix_timeout_add(20, action_self_destruction, (void *)llid_tid, 

@@ -83,8 +83,8 @@ int endp_is_wlan(char *name, int num, int *nb_eth)
   t_vm *vm = cfg_get_vm(name);
   if (vm)
     {
-    *nb_eth = vm->kvm.nb_eth;
-    if (num >= vm->kvm.nb_eth)
+    *nb_eth = vm->kvm.nb_dpdk + vm->kvm.nb_eth;
+    if (num >= vm->kvm.nb_dpdk + vm->kvm.nb_eth)
       result = 1;
     }
   else
@@ -495,7 +495,8 @@ void endp_evt_add_lan(int llid, int tid, char *name, int num,
            (endp_type != endp_type_nat) &&
            (endp_type != endp_type_a2b) &&
            (endp_type != endp_type_raw) &&
-           (endp_type != endp_type_kvm_eth) &&
+           (endp_type != endp_type_kvm_dpdk) &&
+           (endp_type != endp_type_kvm_eth)  &&
            (endp_type != endp_type_kvm_wlan) &&
            (endp_type != endp_type_wif))
     KOUT("%d", endp_type);

@@ -63,11 +63,11 @@ void eventfull_has_arrived(void)
 
 
 /****************************************************************************/
-static int choice_pbi_flag(int ping_ok, int cga_ping_ok, int dtach_launch_ok)
+static int choice_pbi_flag(int ping_ok, int cga_ping_ok, int qmp_conn_ok)
 {
-  int result = flag_dtach_launch_ko;
-  if (dtach_launch_ok)
-    result = flag_dtach_launch_ok;
+  int result = flag_qmp_conn_ko;
+  if (qmp_conn_ok)
+    result = flag_qmp_conn_ok;
   if ((ping_ok) || (cga_ping_ok))
     result = flag_ping_ok;
   return result;
@@ -92,18 +92,18 @@ static void timer_ping_evt_node(t_bank_item *bitem, int evt)
     case vm_evt_cloonix_ga_ping_ko:
       bitem->pbi.pbi_node->node_evt_cga_ping_ok = 0;
       break;
-    case vm_evt_dtach_launch_ok:
-      bitem->pbi.pbi_node->node_evt_dtach_launch_ok = 1;
+    case vm_evt_qmp_conn_ok:
+      bitem->pbi.pbi_node->node_evt_qmp_conn_ok = 1;
       break;
-    case vm_evt_dtach_launch_ko:
-      bitem->pbi.pbi_node->node_evt_dtach_launch_ok = 0;
+    case vm_evt_qmp_conn_ko:
+      bitem->pbi.pbi_node->node_evt_qmp_conn_ok = 0;
       break;
     default:
       KOUT(" ");
     }
   bitem->pbi.flag = choice_pbi_flag(bitem->pbi.pbi_node->node_evt_ping_ok, 
                                bitem->pbi.pbi_node->node_evt_cga_ping_ok,
-                               bitem->pbi.pbi_node->node_evt_dtach_launch_ok);
+                               bitem->pbi.pbi_node->node_evt_qmp_conn_ok);
 }
 /*--------------------------------------------------------------------------*/
 

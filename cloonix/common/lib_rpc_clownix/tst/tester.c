@@ -343,25 +343,14 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
     KERR("%d %d", kvm->nb_wlan, ikvm->nb_wlan);
     result = -1;
     }
-  if (kvm->nb_eth != ikvm->nb_eth)
+  if ((kvm->nb_eth != ikvm->nb_eth) || (kvm->nb_dpdk != ikvm->nb_dpdk))
     {
-    KERR("%d %d", kvm->nb_eth, ikvm->nb_eth);
+    KERR("%d %d    %d %d", kvm->nb_eth, ikvm->nb_eth, kvm->nb_dpdk, ikvm->nb_dpdk);
     result = -1;
     }
   else
     {
-    for (k=0; k < ikvm->nb_eth; k++)
-      {
-      for (l=0; l < 6; l++)
-        {
-        if (kvm->eth_params[k].mac_addr[l] != ikvm->eth_params[k].mac_addr[l])
-          {
-          KERR(" ");
-          result = -1;
-          }
-        }
-      }
-    for (k=0; k < MAX_ETH_VM; k++)
+    for (k=0; k < MAX_DPDK_VM + MAX_ETH_VM; k++)
       {
       for (l=0; l < 6; l++)
         {
@@ -376,7 +365,7 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
 
 
     if (memcmp(kvm->eth_params, ikvm->eth_params,
-               MAX_ETH_VM*sizeof(t_eth_params)))
+               (MAX_DPDK_VM + MAX_ETH_VM)*sizeof(t_eth_params)))
       KERR(" ");
     }
   return result;
@@ -409,9 +398,10 @@ static void random_kvm(t_topo_kvm *kvm)
   kvm->cpu = rand();
   kvm->mem = rand();
   kvm->vm_config_flags = rand();
+  kvm->nb_dpdk = my_rand(MAX_DPDK_VM);
   kvm->nb_eth = my_rand(MAX_ETH_VM);
-  kvm->nb_wlan = my_rand(MAX_ETH_VM);
-  for (k=0; k < kvm->nb_eth; k++)
+  kvm->nb_wlan = my_rand(MAX_WLAN_VM);
+  for (k=0; k < kvm->nb_dpdk + kvm->nb_eth; k++)
     for (l=0; l < 6; l++)
       kvm->eth_params[k].mac_addr[l] = rand() & 0xFF;
 }

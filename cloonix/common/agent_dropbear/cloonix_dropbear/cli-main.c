@@ -34,14 +34,14 @@ char *main_cloonix_tree_dir(void)
 /****************************************************************************/
 static void init_local_cloonix_bin_path(char *curdir, char *callbin)
 {
-  char path[MAX_PATH_LEN];
+  char path[2*MAX_PATH_LEN];
   char *ptr;
   memset(g_cloonix_tree, 0, MAX_PATH_LEN);
-  memset(path, 0, MAX_PATH_LEN);
+  memset(path, 0, 2*MAX_PATH_LEN);
   if (callbin[0] == '/')
-    snprintf(path, MAX_PATH_LEN-1, "%s", callbin);
+    snprintf(path, 2*MAX_PATH_LEN-1, "%s", callbin);
   else
-    snprintf(path, MAX_PATH_LEN-1, "%s/%s", curdir, callbin);
+    snprintf(path, 2*MAX_PATH_LEN-1, "%s/%s", curdir, callbin);
 
   ptr = strrchr(path, '/');
   if (!ptr)
@@ -60,9 +60,10 @@ static void init_local_cloonix_bin_path(char *curdir, char *callbin)
     KOUT("%s", path);
   *ptr = 0;
   strncpy(g_cloonix_tree, path, MAX_PATH_LEN-1);
-  snprintf(path, MAX_PATH_LEN-1,
+  snprintf(path, 2*MAX_PATH_LEN-1,
            "%s/common/agent_dropbear/agent_bin/dropbear_cloonix_ssh", 
             g_cloonix_tree);
+  path[MAX_PATH_LEN-1] = 0;
   if (access(path, X_OK))
     KOUT("%s", path);
 }

@@ -20,7 +20,9 @@ cd ${HERE}/qemu_bin/tainted_qemu
 
  CONFIGURATION_OPTS="--prefix=/usr/local
                      --target-list=x86_64-softmmu
-                     --python=/usr/bin/python2
+                     --enable-mueth
+                     --muethdir=${MUETH}
+                     --python=/usr/bin/python3
                      --enable-fdt
                      --enable-kvm
                      --enable-spice
@@ -29,16 +31,16 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --enable-coroutine-pool
                      --enable-usb-redir
                      --enable-opengl
-                     --enable-mueth
                      --enable-gtk
-                     --enable-virglrenderer
                      --enable-vhost-net
                      --enable-vhost-vsock
                      --enable-vhost-user
-                     --muethdir=${MUETH}
-                     --disable-libusb
-                     --disable-linux-aio
+                     --enable-numa
+                     --enable-virglrenderer
+                     --disable-modules
                      --disable-libiscsi
+                     --disable-linux-aio
+                     --disable-libusb
                      --disable-slirp
                      --disable-tcg-interpreter
                      --disable-bsd-user
@@ -46,7 +48,6 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --disable-guest-agent
                      --disable-guest-agent-msi
                      --disable-pie
-                     --disable-modules
                      --disable-debug-tcg
                      --disable-debug-info
                      --disable-sparse
@@ -82,7 +83,6 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --disable-glusterfs
                      --disable-tpm
                      --disable-libssh2
-                     --disable-numa
                      --disable-tcmalloc
                      --disable-jemalloc"
 

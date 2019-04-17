@@ -1063,12 +1063,14 @@ void layout_add_vm(char *name, int llid)
 {
   t_vm *vm;
   t_layout_node layout;
+  int num_interfaces;
   vm = cfg_get_vm(name);
   if (!vm)
     KERR("%s", name);
   else
     {
-    make_default_layout_node(&layout, name, vm->kvm.nb_eth+vm->kvm.nb_wlan);
+    num_interfaces = vm->kvm.nb_dpdk + vm->kvm.nb_eth + vm->kvm.nb_wlan;
+    make_default_layout_node(&layout, name, num_interfaces); 
     add_layout_node(&layout);
     if (!(g_head_layout_sub) ||
          ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))

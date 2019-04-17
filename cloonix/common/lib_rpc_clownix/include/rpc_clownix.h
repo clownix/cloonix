@@ -52,6 +52,8 @@
 
 enum {
     type_hop_unused = 0,
+    type_hop_ovs,
+    type_hop_ovsdb,
     type_hop_mulan,
     type_hop_endp,
     type_hop_snf,
@@ -75,8 +77,8 @@ enum
 {
   vm_evt_none = 0,
   vm_evt_poll_not_used,
-  vm_evt_dtach_launch_ok,
-  vm_evt_dtach_launch_ko,
+  vm_evt_qmp_conn_ok,
+  vm_evt_qmp_conn_ko,
   vm_evt_ping_ok,
   vm_evt_ping_ko,
   vm_evt_cloonix_ga_ping_ok,
@@ -109,6 +111,8 @@ enum
   type_llid_trace_endp_c2c,
   type_llid_trace_endp_nat,
   type_llid_trace_endp_a2b,
+  type_llid_trace_endp_ovs,
+  type_llid_trace_endp_ovsdb,
   type_llid_trace_jfs,
   type_llid_trace_unix_qmonitor,
   type_llid_trace_unix_xwy,

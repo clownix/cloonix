@@ -65,11 +65,18 @@ char *utils_get_endp_sock_dir(void);
 char *utils_get_cli_sock_dir(void);
 char *utils_get_snf_pcap_dir(void);
 char *utils_get_endp_path(char *name, int num);
+char *utils_get_dpdk_endp_path(char *name, int num);
+char *utils_get_dpdk_ovs_path(char *name);
 char *utils_get_endp_name(char *name, int num);
 /*--------------------------------------------------------------------------*/
 void utils_format_gene(char *start, char *err, char *name, char **argv);
 /*--------------------------------------------------------------------------*/
 char *util_get_genisoimage(void);
+/*--------------------------------------------------------------------------*/
+char *utils_get_dpdk_ovs_bin_dir(void);
+char *utils_get_dpdk_ovs_db_dir(void);
+char *utils_get_dpdk_qemu_dir(void);
+char *utils_get_dpdk_cloonix_dir(void);
 /****************************************************************************/
 
 

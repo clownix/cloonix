@@ -365,6 +365,7 @@ static void trig_dist_flow_control(void *ptr, t_blkd_fifo_rx *pool, int llid)
   int num, tidx, rank, our_mutype = blkd_get_our_mutype(ptr);
   char name[MAX_NAME_LEN];
   if ((our_mutype == mulan_type)     ||
+      (our_mutype == endp_type_kvm_dpdk) ||
       (our_mutype == endp_type_kvm_eth)  ||
       (our_mutype == endp_type_kvm_wlan) ||
       (our_mutype == endp_type_tap)  ||

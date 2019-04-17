@@ -26,6 +26,7 @@
 #include "clo_mngt.h"
 #include "clo_utils.h"
 #include "clo_low.h"
+#include "unix2inet.h"
 /*---------------------------------------------------------------------------*/
 
 static t_all_ctx *g_all_ctx;
@@ -106,7 +107,7 @@ static int timed_send_ack(t_clo *clo)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void local_send_finack_state_fin(t_clo *clo, int add_ackno)
+static void local_send_finack_state_fin(t_clo *clo, int add_ackno, int line)
 {
   u32_t ackno, seqno;
   u16_t loc_wnd, dist_wnd;
@@ -117,6 +118,11 @@ static void local_send_finack_state_fin(t_clo *clo, int add_ackno)
     clo_mngt_adjust_send_next(clo, seqno, 1);
     clo_mngt_set_state(clo, state_fin_wait1);
     }
+  else
+    {
+    clo_mngt_set_state(clo, state_fin_wait1);
+    }
+  unix2inet_finack_state(&(clo->tcpid), line);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -226,7 +232,7 @@ static void timer_fct_call(t_all_ctx *all_ctx, void *param)
           }
         else
           {
-          local_send_finack_state_fin(clo, 0);
+          local_send_finack_state_fin(clo, 0, __LINE__);
           }
         }
       break;
@@ -366,14 +372,7 @@ int clo_high_data_tx(t_tcp_id *tcpid, int hlen, u8_t *hdata)
     clo_mngt_high_input(clo, hlen, hdata);
     if (state != state_closed)
       {
-      if (!clo_mngt_authorised_to_send_nexttx(clo))
-        {
-        result = error_not_authorized;
-        }
-      else
-        {
-        try_send_data2low(clo);
-        }
+      try_send_data2low(clo);
       }
     }
   return result;
@@ -431,7 +430,7 @@ void clo_high_free_tcpid(t_tcp_id *tcpid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int clo_high_close_tx(t_tcp_id *tcpid)
+int clo_high_close_tx(t_tcp_id *tcpid, int trace)
 {
   int is_blkd, llid, state, result = -1;
   t_clo *clo;
@@ -446,18 +445,24 @@ int clo_high_close_tx(t_tcp_id *tcpid)
       util_detach_llid_clo(clo->tcpid.llid, clo);
     local_rx_data_purge(clo);
     state = clo_mngt_get_state(clo);
+    if (trace)
+      KERR("%d", state);
     switch(state)
       {
       case state_established:
       case state_first_syn_sent:
         if (clo->has_been_closed_from_outside_socket == 1)
           {
+          if (trace)
+            KERR("%d", state);
           async_fct_call(num_fct_send_finack, clo->id_tcpid, &(clo->tcpid), 
                          0, NULL);
           }
         else
           {
-          local_send_finack_state_fin(clo, 1);
+          if (trace)
+            KERR("%d", state);
+          local_send_finack_state_fin(clo, 1, __LINE__);
           }
         break;
       case state_created:
@@ -795,6 +800,11 @@ static void clo_clean_closed(void)
           async_fct_call(num_fct_high_close_rx_send_rst, 
                          cur->id_tcpid, &(cur->tcpid), 0, NULL);
           }
+        else
+          {
+          async_fct_call(num_fct_high_close_rx,
+                         cur->id_tcpid, &(cur->tcpid), 0, NULL);
+          }
         }
       }
     cur = next;
@@ -851,18 +861,15 @@ static void non_activ_count_inc(void)
       }
     if (cur->non_activ_count > 500000) 
       {
-      KERR(" ");
-      clo_high_close_tx(&(cur->tcpid));
+      clo_high_close_tx(&(cur->tcpid), 1);
       }
     if (cur->syn_sent_non_activ_count > 10)
       {
-      KERR(" ");
-      clo_high_close_tx(&(cur->tcpid));
+      clo_high_close_tx(&(cur->tcpid), 1);
       }
-    if (cur->tx_repeat_failure_count > 10)
+    if (cur->tx_repeat_failure_count > 20)
       {
-      KERR(" ");
-      clo_high_close_tx(&(cur->tcpid));
+      clo_high_close_tx(&(cur->tcpid), 0);
       }
     cur = next;
     }

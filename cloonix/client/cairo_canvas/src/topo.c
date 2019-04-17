@@ -37,6 +37,7 @@
 #include "make_layout.h"
 #include "layout_topo.h"
 #include "bdplot.h"
+#include "menu_utils.h"
 
 
 
@@ -760,7 +761,11 @@ static void on_item_paint_eth(CrItem *item, cairo_t *c)
       }
     else
       {
-      if (bitem->num >= bitem->att_node->pbi.pbi_node->node_vm_nb_eth)
+      if (bitem->num < bitem->att_node->pbi.pbi_node->node_vm_nb_dpdk)
+        paint_select(c,flag,flag_trace,&lightred,&red,&lightmagenta);
+      else if (bitem->num >= 
+               (bitem->att_node->pbi.pbi_node->node_vm_nb_dpdk + 
+                bitem->att_node->pbi.pbi_node->node_vm_nb_eth))
         paint_select(c,flag,flag_trace,&lightblue,&red,&lightmagenta);
       else
         paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
@@ -829,7 +834,7 @@ static void on_item_paint_node(CrItem *item, cairo_t *c)
   cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, NODE_DIA/2, 0, 2*M_PI);
   if (bitem->pbi.flag_trace)
     paint_yellow(c);
-  else if ((bitem->pbi.flag == flag_dtach_launch_ko) || 
+  else if ((bitem->pbi.flag == flag_qmp_conn_ko) || 
            (bitem->pbi.flag == flag_normal))
     cairo_set_source_rgba (c, 0.50, 0.30, 0.30, 1.0);
   else
@@ -840,7 +845,7 @@ static void on_item_paint_node(CrItem *item, cairo_t *c)
         cairo_set_source_rgba (c, brown.r, brown.g, brown.b, 1.0);
     else
       {
-      if (bitem->pbi.flag == flag_dtach_launch_ok)
+      if (bitem->pbi.flag == flag_qmp_conn_ok)
         cairo_set_source_rgba (c, 0.90, 0.10, 0.10, 1.0);
       else if (bitem->pbi.flag == flag_ping_ok)
         {

@@ -249,7 +249,7 @@ static void doorways_rx(int llid,int tid,int type,int val,int len,char *buf)
       (type == doors_type_xwy_x11_flow))
     {
     if (val == doors_val_link_ko)
-      KOUT(" ");
+      KOUT("%d %d %s %d", type, val, buf, len);
     else if ((val == doors_val_link_ok) && (tid > 0))
       {
       cli_idx = check_doors_link(1, llid, tid, type);

@@ -91,6 +91,7 @@ typedef struct t_backdoor_vm
   int fifreeze_id;
   int halt_job_idx;
   int cloonix_up_and_running;
+  int cloonix_not_yet_connected;
   int cloonix_is_fifreezed;
   struct t_backdoor_vm *prev;
   struct t_backdoor_vm *next;
@@ -98,6 +99,7 @@ typedef struct t_backdoor_vm
 /*--------------------------------------------------------------------------*/
 
 
+static void action_bvm_connect_backdoor(t_backdoor_vm *bvm);
 static void timer_bvm_connect_backdoor(void *data);
 static t_backdoor_vm *g_llid_backdoor[CLOWNIX_MAX_CHANNELS];
 static t_backdoor_vm *head_bvm;
@@ -358,7 +360,6 @@ static void bvm_traf_del_llid(t_backdoor_vm *bvm, t_llid_traf *cur)
   clownix_free(cur, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void llid_setup(t_backdoor_vm *bvm, int llid, int fd)
@@ -691,10 +692,10 @@ static void rearm_timer_bvm_connect_backdoor(t_backdoor_vm *bvm)
 {
   clean_connect_timer(bvm);
   bvm->connect_count += 1;
-  if (bvm->connect_count < 30)
+  if (bvm->connect_count < 60)
     {
     clean_connect_timer(bvm);
-    clownix_timeout_add(20, timer_bvm_connect_backdoor, (void *) bvm,
+    clownix_timeout_add(30, timer_bvm_connect_backdoor, (void *) bvm,
                         &(bvm->connect_abs_beat_timer),
                         &(bvm->connect_ref_timer));
     }
@@ -907,10 +908,18 @@ static void timer_ga_heartbeat(void *data)
     {
     bvm->heartbeat_abeat = 0;
     bvm->heartbeat_ref = 0;
-    if (bvm->cloonix_up_and_running)
+    if (bvm->cloonix_not_yet_connected)
       {
-      if (working_backdoor_llid(bvm))
-        action_ga_heartbeat_on_working_llid(bvm);
+      bvm->cloonix_not_yet_connected = 0;
+      action_bvm_connect_backdoor(bvm);
+      }
+    else
+      {
+      if (bvm->cloonix_up_and_running)
+        {
+        if (working_backdoor_llid(bvm))
+          action_ga_heartbeat_on_working_llid(bvm);
+        }
       }
     clownix_timeout_add(50, timer_ga_heartbeat, (void *) name,
                         &(bvm->heartbeat_abeat), &(bvm->heartbeat_ref));
@@ -926,7 +935,12 @@ int llid_backdoor_ping_status_is_ok(char *name)
   int result = 0;
   t_backdoor_vm *bvm = vm_get_with_name(name);
   if ((bvm) && (bvm->ping_status == ping_ok))
-    result = 1;
+    {
+    if (bvm->ping_agent_rx > 5)
+      result = 1;
+    else
+      KERR("%s", name);
+    }
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -1056,10 +1070,10 @@ void llid_backdoor_begin_unix(char *name, char *path)
   if (!bvm)
     {
     bvm = vm_alloc(name, path);
-    action_bvm_connect_backdoor(bvm);
     vmname = (char *) clownix_malloc(MAX_NAME_LEN, 8);
     memset(vmname, 0, MAX_NAME_LEN);
     strncpy(vmname, name, MAX_NAME_LEN-1);
+    bvm->cloonix_not_yet_connected = 1;
     clownix_timeout_add(300, timer_ga_heartbeat, (void *) vmname,
                         &(bvm->heartbeat_abeat), &(bvm->heartbeat_ref));
     }

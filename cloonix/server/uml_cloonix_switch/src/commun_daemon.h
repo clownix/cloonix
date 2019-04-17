@@ -58,6 +58,7 @@ typedef struct t_pid_info
 #define QEMU_AARCH64_EXE "qemu-system-aarch64"
 #define QEMU_IMG "qemu-img"
 #define DIR_CLOONIX_DISKS "disks"
+#define DIR_DPDK "dpdk"
 #define CLOONIX_VM_WORKDIR "vm"
 #define QMONITOR_UNIX "mon"
 #define QMP_UNIX "qmp"

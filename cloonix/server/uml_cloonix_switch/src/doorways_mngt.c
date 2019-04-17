@@ -47,9 +47,9 @@
 #include "stats_counters.h"
 #include "stats_counters_sysinfo.h"
 #include "xwy.h"
+#include "uml_clownix_switch.h"
 
-void uml_clownix_switch_error_cb(void *ptr, int llid, int err, int from);
-void uml_clownix_switch_rx_cb(int llid, int len, char *buf);
+
 void timer_utils_finish_vm_init(char *name, int val);
 
 

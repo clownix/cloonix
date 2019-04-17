@@ -2,7 +2,7 @@
 HERE=`pwd`
 TARGZ=${HERE}/../../../targz_store
 rm -rf spice
-git clone git://anongit.freedesktop.org/spice/spice
+git clone https://gitlab.freedesktop.org/spice/spice.git
 cd spice
 ./autogen.sh
 cd $HERE

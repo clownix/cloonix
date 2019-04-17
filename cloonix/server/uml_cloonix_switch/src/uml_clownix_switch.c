@@ -66,6 +66,7 @@
 #include "cloonix_conf_info.h"
 #include "unix2inet.h"
 #include "qmp_dialog.h"
+#include "dpdk_ovs.h"
 
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
@@ -255,6 +256,7 @@ static void mk_and_tst_work_path(void)
   my_mkdir(cfg_get_root_work());
   mk_endp_dir();
   mk_dtach_dir();
+  mk_dpdk_dir();
   sprintf(path1, "%s/cloonix_lock",  cfg_get_root_work());
   check_for_another_instance(path1, 0);
 }
@@ -508,8 +510,9 @@ static char **save_environ(void)
   char ld_lib[MAX_PATH_LEN];
   static char lib_path[MAX_PATH_LEN+MAX_NAME_LEN];
   static char username[MAX_NAME_LEN];
+  static char spice_env[MAX_NAME_LEN];
   static char home[MAX_PATH_LEN];
-  static char *environ_normal[] = { lib_path, username, home, NULL };
+  static char *environ_normal[] = {lib_path,username,home,spice_env,NULL };
   char **environ;
   memset(home, 0, MAX_PATH_LEN);
   snprintf(home, MAX_PATH_LEN-1, "HOME=%s", getenv("HOME"));
@@ -521,6 +524,7 @@ static char **save_environ(void)
            "%s/common/spice/spice_lib", cfg_get_bin_dir());
   environ = environ_normal;
   snprintf(lib_path,MAX_PATH_LEN+MAX_NAME_LEN-1,"LD_LIBRARY_PATH=%s", ld_lib);
+  snprintf(spice_env, MAX_NAME_LEN-1, "SPICE_DEBUG_ALLOW_MC=1");
   return environ;
 }
 /*---------------------------------------------------------------------------*/
@@ -596,6 +600,7 @@ int main (int argc, char *argv[])
   timeout_service_init();
   mulan_init();
   endp_mngt_init();
+  dpdk_ovs_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
   msg_mngt_loop();

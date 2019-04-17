@@ -124,6 +124,12 @@ static char *llid_trace_translate_type(int type_llid_trace)
     case type_llid_trace_endp_a2b:
       result = "trace_endp_a2b";
       break;
+    case type_llid_trace_endp_ovs:
+      result = "trace_endp_ovs";
+      break;
+    case type_llid_trace_endp_ovsdb:
+      result = "trace_endp_ovsdb";
+      break;
     case type_llid_trace_jfs:
       result = "trace_jfs";
       break;

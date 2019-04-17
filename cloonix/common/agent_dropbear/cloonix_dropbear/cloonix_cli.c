@@ -41,13 +41,13 @@ void cli_sessionloop_winchange();
 extern int exitflag;
 
 extern struct sshsession ses; 
-
+#define MAX_CHARBUF_SIZE 100
 #define MAX_XAUTH_COOKIE 300
 static char g_xauth_cookie_format[MAX_XAUTH_COOKIE];
 static char g_xauth_cookie_key[MAX_XAUTH_COOKIE];
-static char g_cloonix_name_prompt[100];
-static char g_cloonix_name[100];
-static char g_cloonix_display[100];
+static char g_cloonix_name_prompt[2*MAX_CHARBUF_SIZE];
+static char g_cloonix_name[MAX_CHARBUF_SIZE];
+static char g_cloonix_display[MAX_CHARBUF_SIZE];
 static int g_door_llid;
 static int g_connect_llid;
 
@@ -627,9 +627,10 @@ void cb_doors_rx(int llid, int tid, int type, int val, int len, char *buf)
           }
         else
           {
-          memset(g_cloonix_name_prompt, 0, 100);
-          snprintf(g_cloonix_name_prompt, 99, "PS1=\"%s# \"", g_cloonix_name); 
-          snprintf(g_cloonix_display, 99, "unix:%d.0", 
+          memset(g_cloonix_name_prompt, 0, 2*MAX_CHARBUF_SIZE);
+          snprintf(g_cloonix_name_prompt, 2*MAX_CHARBUF_SIZE-1,
+                   "PS1=\"%s# \"", g_cloonix_name); 
+          snprintf(g_cloonix_display, MAX_CHARBUF_SIZE-1, "unix:%d.0", 
                    display + IDX_X11_DISPLAY_ADD);
           cli_session(-1, -1); 
           }

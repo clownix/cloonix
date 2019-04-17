@@ -38,6 +38,7 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "pid_clone.h"
+#include "uml_clownix_switch.h"
 
 #if defined(IS_DOORWAYS)
   #include "doorways_sock.h"
@@ -84,7 +85,6 @@ typedef struct t_clone_ctx
 } t_clone_ctx;
 
 
-void uml_clownix_switch_error_cb(void *ptr, int llid, int err, int from);
 static int pid_dead_clone(int pid, int status);
 static void pid_clone_harvest_death(void);
 

@@ -52,6 +52,7 @@
 #include "endp_mngt.h"
 #include "stats_counters.h"
 #include "stats_counters_sysinfo.h"
+#include "dpdk_ovs.h"
 
 
 
@@ -162,6 +163,8 @@ static void delayed_vm_cutoff(void *data)
       KERR("Brutal kill of %s", vm->kvm.name);
       kill(pid, SIGTERM);
       }
+    if (vm->kvm.nb_dpdk)
+      dpdk_ovs_end_vm_kill_shutdown(vm->kvm.name);
     vm_id = cfg_unset_vm(vm);
     cfg_free_vm_id(vm_id);
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
@@ -346,7 +349,7 @@ static int mkdir_clone(void *data)
 void machine_recv_add_vm(int llid, int tid, t_topo_kvm *kvm, int vm_id)
 {
   t_vm_building *vm_building;
-  vm_building = (t_vm_building *) clownix_malloc(sizeof(t_vm_building), 16);
+  vm_building = (t_vm_building *) clownix_malloc(sizeof(t_vm_building), 19);
   memset(vm_building, 0, sizeof(t_vm_building));
   vm_building->llid = llid;
   vm_building->tid  = tid;
@@ -370,36 +373,38 @@ int machine_death( char *name, int error_death)
       (error_death != error_death_qmonitor))
     {
     if (error_death == error_death_timeout_hvc0_silent)
-      KERR("%s KILLED BECAUSE OF NO hvc0 IN GUEST", name);
+      KERR("%s KILLED BECAUSE OF NO hvc0 IN GUEST", vm->kvm.name);
     else if (error_death == error_death_timeout_hvc0_conf)
-      KERR("%s KILLED BECAUSE OF NO AUTOLOGING IN hvc0 CONF", name);
+      KERR("%s KILLED BECAUSE OF NO AUTOLOGING IN hvc0 CONF", vm->kvm.name);
     else
-      KERR("%s %s %d ", __FUNCTION__, name, error_death);
+      KERR("%s %s %d ", __FUNCTION__, vm->kvm.name, error_death);
     }
   if (vm->vm_to_be_killed == 0)
     {
+    if (vm->kvm.nb_dpdk)
+      dpdk_ovs_end_vm(vm->kvm.name, vm->kvm.nb_dpdk);
     vm->vm_to_be_killed = 1;
-    doors_send_del_vm(get_doorways_llid(), 0, name);
-    qhvc0_end_qemu_unix(name);
-    qmonitor_end_qemu_unix(name);
-    qmp_request_qemu_halt(name, 0, 0);
-    arm_delayed_vm_cutoff(name);
+    doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
+    qhvc0_end_qemu_unix(vm->kvm.name);
+    qmonitor_end_qemu_unix(vm->kvm.name);
+    qmp_request_qemu_halt(vm->kvm.name, 0, 0);
+    arm_delayed_vm_cutoff(vm->kvm.name);
     if (vm->pid_of_cp_clone)
       {
-      KERR("CP ROOTFS SIGKILL %s, PID %d", name, vm->pid_of_cp_clone);
+      KERR("CP ROOTFS SIGKILL %s, PID %d", vm->kvm.name, vm->pid_of_cp_clone);
       kill(vm->pid_of_cp_clone, SIGKILL);
       vm->pid_of_cp_clone = 0;
       }
-    if (!cfg_is_a_zombie(name))
+    if (!cfg_is_a_zombie(vm->kvm.name))
       {
       result = 0;
-      stats_counters_sysinfo_vm_death(name);
-      cfg_add_zombie(vm->kvm.vm_id, name);
+      stats_counters_sysinfo_vm_death(vm->kvm.name);
+      cfg_add_zombie(vm->kvm.vm_id, vm->kvm.name);
       if (!cfg_get_vm_locked(vm))
         {
         if (vm->wake_up_eths != NULL)
           KOUT(" ");
-        timeout_erase_dir_zombie(vm->kvm.vm_id, name);
+        timeout_erase_dir_zombie(vm->kvm.vm_id, vm->kvm.name);
         }
       else
         {

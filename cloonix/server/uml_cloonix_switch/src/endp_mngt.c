@@ -45,10 +45,10 @@
 #include "layout_rpc.h"
 #include "layout_topo.h"
 #include "unix2inet.h"
+#include "murpc_dispatch.h"
+#include "uml_clownix_switch.h"
 
-void uml_clownix_switch_error_cb(void *ptr, int llid, int err, int from);
-void uml_clownix_switch_rx_cb(int llid, int len, char *buf);
-void murpc_dispatch_send_tx_flow_control(int llid, int rank, int stop);
+
 void local_add_sat(int llid, int tid, char *name, int type, 
                    t_c2c_req_info *c2c_info);
 
@@ -790,11 +790,11 @@ static void timer_endp_beat(void *data)
           {
           cur->llid = trace_alloc(cur);
           cur->trace_alloc_count += 1;
-          if (cur->trace_alloc_count == 5)
+          if (cur->trace_alloc_count == 50)
             KERR("ENDP %s %d WARN 1 NOT LISTENING", cur->name, cur->num);
-          if (cur->trace_alloc_count == 10)
+          if (cur->trace_alloc_count == 100)
             KERR("ENDP %s %d WARN 2 NOT LISTENING", cur->name, cur->num);
-          if (cur->trace_alloc_count > 20)
+          if (cur->trace_alloc_count > 200)
             {
             KERR("ENDP %s %d ERR NOT LISTENING", cur->name, cur->num);
             endp_mngt_send_quit(cur->name, cur->num);
@@ -837,7 +837,7 @@ static void timer_endp_beat(void *data)
       }
     cur = next;
     }
-  clownix_timeout_add(50, timer_endp_beat, NULL, NULL, NULL);
+  clownix_timeout_add(10, timer_endp_beat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1255,6 +1255,7 @@ void endp_mngt_stop_all_sat(void)
         (cur->endp_type == endp_type_wif) ||
         (cur->endp_type == endp_type_raw) ||
         (cur->endp_type == endp_type_a2b) ||
+        (cur->endp_type == endp_type_snf) ||
         (cur->endp_type == endp_type_nat))
       {
       endp_mngt_stop(cur->name, cur->num);
@@ -1526,7 +1527,7 @@ void endp_mngt_init(void)
   g_head_muendp = NULL;
   g_nb_muendp = 0;
   endp_evt_init();
-  clownix_timeout_add(50, timer_endp_beat, NULL, NULL, NULL);
+  clownix_timeout_add(10, timer_endp_beat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

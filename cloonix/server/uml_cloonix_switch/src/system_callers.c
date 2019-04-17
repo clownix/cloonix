@@ -259,18 +259,31 @@ void mk_dtach_dir(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void mk_dpdk_dir(void)
+{
+  my_mkdir(utils_get_dpdk_qemu_dir());
+  my_mkdir(utils_get_dpdk_cloonix_dir());
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int mk_machine_dirs(char *name, int vm_id)
 {
   char err[MAX_PRINT_LEN];
   char path[MAX_PATH_LEN];
+
   sprintf(path,"%s", cfg_get_work_vm(vm_id));
   my_mkdir(path);
+
   sprintf(path,"%s/%s", cfg_get_work_vm(vm_id), DIR_CONF);
   my_mkdir(path);
+
   my_mkdir(utils_dir_conf_tmp(vm_id));
   my_mkdir(utils_get_disks_path_name(vm_id));
+
   sprintf(path,"%s/%s", cfg_get_work_vm(vm_id),  DIR_UMID);
   my_mkdir(path);
+
   sprintf(path,"%s/%s", cfg_get_work_vm(vm_id),  CLOONIX_FILE_NAME);
   if (write_whole_file(path, name, strlen(name) + 1, err))
     KERR("%s", err);

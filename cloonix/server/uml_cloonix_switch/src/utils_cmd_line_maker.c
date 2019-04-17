@@ -142,6 +142,28 @@ char *utils_get_endp_path(char *name, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char *utils_get_dpdk_ovs_path(char *name)
+{
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1, "%s/%s", utils_get_dpdk_cloonix_dir(), name);
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+char *utils_get_dpdk_endp_path(char *name, int num)
+{
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1, "%s/%s_%d", 
+                                 utils_get_dpdk_qemu_dir(), name, num);
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char *utils_get_qmonitor_path(int vm_id)
 {
   static char path[MAX_PATH_LEN];
@@ -218,6 +240,15 @@ char *utils_get_muswitch_bin_path(int is_wlan)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char *utils_get_dpdk_ovs_bin_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  sprintf(path, "%s/server/dpdk", cfg_get_bin_dir());
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char *utils_get_endp_bin_path(int type)
 {
   static char path[MAX_PATH_LEN];
@@ -230,14 +261,11 @@ char *utils_get_endp_bin_path(int type)
   else if (type == endp_type_c2c)
     sprintf(path, "%s/server/muswitch/muc2c/cloonix_muc2c", cfg_get_bin_dir());
   else if (type == endp_type_a2b)
-    {
-    //KERR("BEWARE!!! mutst instead of mua2b");
-    //sprintf(path, "%s/server/muswitch/mutst/cloonix_mutst", cfg_get_bin_dir());
-    sprintf(path, "%s/server/muswitch/mua2b/cloonix_mua2b", 
-            cfg_get_bin_dir());
-    }
+    sprintf(path, "%s/server/muswitch/mua2b/cloonix_mua2b", cfg_get_bin_dir());
   else if (type == endp_type_nat)
     sprintf(path, "%s/server/muswitch/munat/cloonix_munat", cfg_get_bin_dir());
+  else if ((type == endp_type_ovs) || (type == endp_type_ovsdb))
+    sprintf(path, "%s/server/muswitch/muovs/cloonix_muovs", cfg_get_bin_dir());
   else
     KOUT("%d", type);
   return path;
@@ -279,6 +307,33 @@ char *utils_get_dtach_sock_dir(void)
   static char dtach_sock[MAX_PATH_LEN];
   sprintf(dtach_sock, "%s/%s", cfg_get_root_work(), DTACH_SOCK);
   return dtach_sock;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_dpdk_ovs_db_dir(void)
+{
+  static char dpdk[MAX_PATH_LEN];
+  sprintf(dpdk, "%s/%s", cfg_get_root_work(), DIR_DPDK);
+  return dpdk;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_dpdk_qemu_dir(void)
+{
+  static char dpdk[MAX_PATH_LEN];
+  sprintf(dpdk, "%s/%s_qemu", cfg_get_root_work(), DIR_DPDK);
+  return dpdk;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_dpdk_cloonix_dir(void)
+{
+  static char dpdk[MAX_PATH_LEN];
+  sprintf(dpdk, "%s/%s_cloonix", cfg_get_root_work(), DIR_DPDK);
+  return dpdk;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -403,7 +458,9 @@ static void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death)
     else if (error_death == error_death_timeout_hvc0_conf)
       snprintf(err, MAX_PATH_LEN-1, "ERROR, hvc0 of machine not usable"); 
     else
-      snprintf(err, MAX_PATH_LEN-1, "ERROR %d WHILE CREATION", error_death); 
+      snprintf(err, MAX_PATH_LEN-1, 
+               "ERROR %d WHILE CREATION try \"sudo cat /var/log/user.log\"",
+               error_death); 
     send_status_ko(llid, tid, err);
     }
   event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());

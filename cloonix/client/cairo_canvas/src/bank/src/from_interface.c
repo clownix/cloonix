@@ -73,8 +73,8 @@ void bank_edge_create(char *name, int num, char *lan)
 /****************************************************************************/
 void bank_node_create(char *name, char *kernel, char *rootfs_used,
                       char *rootfs_backing, char *install_cdrom,
-                      char *added_cdrom, char *added_disk, int nb_eth,   
-                      int nb_wlan,
+                      char *added_cdrom, char *added_disk,
+                      int nb_dpdk,  int nb_eth, int nb_wlan,
                       int color_choice, int vm_id, int vm_config_flags,
                       double x, double y, int hidden_on_graph,
                       double *tx, double *ty, int32_t *thidden_on_graph)
@@ -82,11 +82,14 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
   int i;
   add_new_node(name, kernel, rootfs_used, rootfs_backing, install_cdrom,
                added_cdrom, added_disk, x, y, hidden_on_graph, color_choice,
-               vm_id, vm_config_flags, nb_eth);
-  for (i=0; i<nb_eth+nb_wlan; i++)
-    {
-    add_new_eth(name, i, 1, tx[i], ty[i], thidden_on_graph[i]);
-    }
+               vm_id, vm_config_flags, nb_dpdk, nb_eth);
+
+  for (i=0; i<nb_dpdk; i++)
+    add_new_eth(name,i,endp_type_kvm_dpdk,tx[i],ty[i], thidden_on_graph[i]);
+  for (i=nb_dpdk; i<nb_dpdk+nb_eth; i++)
+    add_new_eth(name,i,endp_type_kvm_eth, tx[i],ty[i], thidden_on_graph[i]);
+  for (i=nb_dpdk+nb_eth; i<nb_dpdk+nb_eth+nb_wlan; i++)
+    add_new_eth(name,i,endp_type_kvm_wlan,tx[i],ty[i], thidden_on_graph[i]);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -108,8 +111,8 @@ void bank_sat_create(char *name, int mutype,
     add_new_sat(name, mutype, c2c, snf, x, y, hidden);
     if (mutype == endp_type_a2b)
       {
-      add_new_eth(name, 0, 1, xa, ya, hidden);
-      add_new_eth(name, 1, 1, xb, yb, hidden);
+      add_new_eth(name, 0, endp_type_kvm_eth, xa, ya, hidden);
+      add_new_eth(name, 1, endp_type_kvm_eth, xb, yb, hidden);
       }
     }
 }

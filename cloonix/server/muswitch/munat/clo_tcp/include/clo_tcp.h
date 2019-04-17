@@ -181,7 +181,7 @@ int  clo_high_data_tx(t_tcp_id *tcpid, int len, u8_t *data);
 int  clo_high_data_tx_possible(t_tcp_id *tcpid);
 int  clo_high_syn_tx(t_tcp_id *tcpid);
 int  clo_high_synack_tx(t_tcp_id *tcpid);
-int  clo_high_close_tx(t_tcp_id *tcpid);
+int  clo_high_close_tx(t_tcp_id *tcpid, int trace);
 void clo_heartbeat_timer(void);
 void clo_high_free_tcpid(t_tcp_id *tcpid);
 /*---------------------------------------------------------------------------*/

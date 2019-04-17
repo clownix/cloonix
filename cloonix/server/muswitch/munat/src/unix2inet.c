@@ -43,6 +43,7 @@ enum {
   state_wait_syn_ack,
   state_running_half,
   state_running_full,
+  state_finack,
 };
 
 typedef struct t_ctx_unix2inet
@@ -521,6 +522,10 @@ static void unix2inet_ssh_rx_cb(t_all_ctx *all_ctx, int llid,
       if (clo_high_data_tx(&(ctx->tcpid), len, (u8_t *) buf))
         KERR("%s %s", ctx->remote_user, ctx->remote_ip);
       }
+    else if (ctx->state == state_finack)
+      {
+        KERR("FINACK VM SIDE");
+      }
    else
       {
       KERR(" ");
@@ -596,6 +601,30 @@ void unix2inet_arp_resp(char *mac, char *ip)
     }
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void unix2inet_finack_state(t_tcp_id *tcpid, int line)
+{
+  int llid;
+  t_ctx_unix2inet *ctx;
+  if (!tcpid)
+    KOUT(" ");
+  llid = tcpid->local_port - OFFSET_PORT;
+  if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
+    KERR("%d %d", llid, line);
+  else
+    {
+    ctx = find_ctx(llid);
+    if (ctx)
+      {
+      if (!tcpid_are_the_same(tcpid, &(ctx->tcpid)))
+        KERR("%d", llid);
+      ctx->state = state_finack;
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 int unix2inet_ssh_syn_ack_arrival(t_tcp_id *tcpid)

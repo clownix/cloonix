@@ -25,13 +25,14 @@ typedef struct t_pbi_node
   char added_cdrom[MAX_PATH_LEN];
   char added_disk[MAX_PATH_LEN];
   int  node_vm_id;
+  int  node_vm_nb_dpdk;
   int  node_vm_nb_eth;
   int  node_vm_config_flags;
   int  node_ram;
   int  node_cpu;
   int  node_evt_ping_ok;
   int  node_evt_cga_ping_ok;
-  int  node_evt_dtach_launch_ok;
+  int  node_evt_qmp_conn_ok;
 } t_pbi_node;
 
 typedef struct t_pbi_sat
@@ -160,8 +161,8 @@ t_bank_item *look_for_eth_with_id(char *name, int num);
 /*--------------------------------------------------------------------------*/
 void bank_node_create(char *name, char *kernel, char *rootfs_used,
                       char *rootfs_backing, char *install_cdrom,
-                      char *added_cdrom, char *added_disk, int nb_eth,
-                      int nb_wlan, 
+                      char *added_cdrom, char *added_disk,
+                      int nb_dpdk, int nb_eth, int nb_wlan, 
                       int color_choice, int vm_id, int vm_config_flags,
                       double x, double y, int hidden_on_graph,
                       double *tx, double *ty, int32_t *thidden_on_graph);

@@ -46,8 +46,9 @@
 
 
 #define MAX_VM             100
-#define MAX_ETH_VM         15
-#define MAX_WLAN_VM        5
+#define MAX_DPDK_VM        4
+#define MAX_ETH_VM         12
+#define MAX_WLAN_VM        4
 
 #define MAX_TRAF_ENDPOINT 4
 
@@ -170,10 +171,11 @@ typedef struct t_topo_kvm
   int  vm_config_flags;
   int  cpu;
   int  mem;
+  int  nb_dpdk; 
   int  nb_eth; 
   int  nb_wlan; 
   int  vm_id;
-  t_eth_params eth_params[MAX_ETH_VM];
+  t_eth_params eth_params[MAX_DPDK_VM+MAX_ETH_VM];
   char linux_kernel[MAX_NAME_LEN];
   char rootfs_input[MAX_PATH_LEN];
   char rootfs_used[MAX_PATH_LEN];

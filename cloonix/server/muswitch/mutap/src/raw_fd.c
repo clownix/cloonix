@@ -55,6 +55,7 @@ struct vlan_tag {
 #include "sock_fd.h"
 
 /*--------------------------------------------------------------------------*/
+static int g_raw_fd_open;
 static int g_ifindex;
 static int g_llid_raw;
 static int g_fd_raw;
@@ -176,8 +177,13 @@ static void err_raw (void *ptr, int llid, int err, int from)
     msg_delete_channel(all_ctx, llid);
   if (llid == g_llid_raw)
     {
+    close(g_fd_raw_tx);
+    close(g_fd_raw);
     KERR(" ");
+    g_ifindex = 0;
     g_llid_raw = 0;
+    g_fd_raw = -1;
+    g_fd_raw_tx = -1;
     }
   else
     KOUT("%d %d", llid, g_llid_raw);
@@ -338,10 +344,20 @@ static int rx_from_raw(void *ptr, int llid, int fd)
 static void timer_heartbeat(t_all_ctx *all_ctx, void *data)
 {
   int queue_size;
-  if ((g_llid_raw) && (g_fd_raw != -1))
+  if (g_llid_raw)
     {
+    if (g_fd_raw == -1)
+      KOUT(" ");
     if (ioctl(g_fd_raw, SIOCINQ, &queue_size))
       KERR("IOCTL");
+    }
+  else if (g_raw_fd_open == 1)
+    {
+    if (!raw_socket_open(all_ctx))
+      {
+      KERR(" ");
+      g_raw_fd_open = 0;
+      }
     }
   clownix_timeout_add(all_ctx, 100, timer_heartbeat, NULL, NULL, NULL);
 }
@@ -353,7 +369,10 @@ int  raw_fd_open(t_all_ctx *all_ctx, char *name)
   int result = -1;
   strncpy(g_raw_name, name, MAX_NAME_LEN-1);
   if (!raw_socket_open(all_ctx))
+    {
     result = 0;
+    g_raw_fd_open = 1;
+    }
   else
     KERR("%s", name);
   return result;
@@ -363,6 +382,7 @@ int  raw_fd_open(t_all_ctx *all_ctx, char *name)
 /****************************************************************************/
 void raw_fd_init(t_all_ctx *all_ctx)
 {
+  g_raw_fd_open = 0;
   g_ifindex = 0;
   g_llid_raw = 0;
   memset(g_raw_name, 0, MAX_NAME_LEN);

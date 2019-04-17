@@ -28,19 +28,19 @@
 #include "cmd_help_fn.h"
 /*---------------------------------------------------------------------------*/
 
-int param_tester(char *param, int min, int max);
 void callback_end(int tid, int status, char *err);
 
 
 /***************************************************************************/
 void help_add_vm_kvm(char *line)
 {
-  printf("\n\n\n %s <name> <mem> <cpu> <eth> <wlan> <rootfs> [options]\n",
+  printf("\n\n\n %s <name> ram=<mem_qty> cpu=<nb_proc> dpdk=<nb_eth> sock=<nb_eth> hwsim=<nb_wlan> <rootfs> [options]\n",
   line);
-  printf("\n\tmem is in mega");
-  printf("\n\tcpu is the processor qty");
-  printf("\n\teth is the ethernet qty max:%d", MAX_ETH_VM);
-  printf("\n\twlan is the wifi qty max:%d\n", MAX_WLAN_VM);
+  printf("\n\tram is the mem_qty in mega");
+  printf("\n\tcpu is the number of processors");
+  printf("\n\tdpdk: number of eth provided with dhcp (low latency and high throughput), max:%d", MAX_DPDK_VM);
+  printf("\n\tsock: number of eth provided with classic unix socket, max:%d", MAX_ETH_VM);
+  printf("\n\thwsim: number of wlan provided with hwsim modules and unix sockets, max:%d\n", MAX_WLAN_VM);
   printf("\n\t[options]");
   printf("\n\t       --vhost-vsock");
   printf("\n\t       --persistent ");
@@ -60,9 +60,10 @@ void help_add_vm_kvm(char *line)
   printf("\n\tnote: for the 9p_share, the shared dir mount point is");
   printf("\n\t      /mnt/p9_host_share in the guest kvm.\n\n");
   printf("\n\nexample:\n\n");
-  printf("%s jessie 1000 1 3 0 jessie.qcow2\n", line);
-  printf("%s cloon 1000 1 1 0 /tmp/jessie.qcow2 --persistent\n", line);
-  printf("%s clown 1000 1 2 0 stretch.qcow2 --9p_share=/tmp\n", line);
+
+  printf("%s vm_name ram=2000 cpu=4 dpdk=2 sock=2 hwsim=2 buster.qcow2\n", line);
+  printf("%s vm_name ram=2000 cpu=4 dpdk=0 sock=3 hwsim=0 buster.qcow2\n", line);
+  printf("%s vm_name ram=2000 cpu=4 dpdk=0 sock=3 hwsim=0 buster.qcow2 --persistent\n", line);
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
@@ -108,8 +109,8 @@ static int fill_eth_params_from_argv(char *input, int eth_max,
 /*-------------------------------------------------------------------------*/
 
 /***************************************************************************/
-static int local_add_kvm(char *name, int mem, int cpu, int eth, int wlan, 
-                         char *rootfs, int argc, char **argv)
+static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
+                         int wlan, char *rootfs, int argc, char **argv)
 {
   int i, result = 0, prop_flags = 0;
   char *img_linux = NULL;
@@ -194,8 +195,8 @@ static int local_add_kvm(char *name, int mem, int cpu, int eth, int wlan,
   if (result == 0)
     {
     init_connection_to_uml_cloonix_switch();
-    client_add_vm(0, callback_end, name, eth, wlan, prop_flags, cpu, mem,
-                  img_linux, rootfs, install_cdrom, added_cdrom,
+    client_add_vm(0, callback_end, name, dpdk, eth, wlan, prop_flags, cpu,
+                  mem, img_linux, rootfs, install_cdrom, added_cdrom,
                   added_disk, p9_host_shared, eth_params);
     }
   return result;
@@ -206,29 +207,42 @@ static int local_add_kvm(char *name, int mem, int cpu, int eth, int wlan,
 /***************************************************************************/
 int cmd_add_vm_kvm(int argc, char **argv)
 {
-  int cpu, mem, eth, wlan, result = -1;
-  char *name, *rootfs;
-  if (argc >= 6) 
+  int cpu, mem, dpdk, eth, wlan, result = -1;
+  char *rootfs, *name;
+  if (argc < 7) 
+    printf("\nNot enough parameters for add kvm\n");
+
+  else if (sscanf(argv[1], "ram=%d", &mem) != 1)
+    printf("\nBad ram= parameter\n");
+  else if ((mem < 1) || (mem > 500000))
+    printf("\nBad ram range, must be between 1 and 500000 (in mega)\n");
+
+  else if (sscanf(argv[2], "cpu=%d", &cpu) != 1)
+    printf("\nBad cpu= parameter\n");
+  else if ((cpu < 1) || (cpu > 128))
+    printf("\nBad cpu range, must be between 1 and 128\n");
+
+  else if (sscanf(argv[3], "dpdk=%d", &dpdk) != 1)
+    printf("\nBad dpdk= parameter\n");
+  else if ((dpdk < 0) || (dpdk > MAX_DPDK_VM))
+    printf("\nBad dpdk range, must be between 0 and %d\n", MAX_DPDK_VM);
+
+  else if (sscanf(argv[4], "sock=%d", &eth) != 1)
+    printf("\nBad sock= parameter\n");
+  else if ((eth < 0) || (eth > MAX_ETH_VM))
+    printf("\nBad sock range, must be between 0 and %d\n", MAX_ETH_VM);
+
+  else if (sscanf(argv[5], "hwsim=%d", &wlan) != 1)
+    printf("\nBad hwsim= parameter\n");
+  else if ((wlan < 0) || (wlan > MAX_ETH_VM))
+    printf("\nBad hwsim range, must be between 0 and %d\n", MAX_WLAN_VM);
+
+  else
     {
     name = argv[0];
-    mem = param_tester(argv[1], 1, 50000);
-    if (mem != -1)
-      {
-      cpu = param_tester(argv[2], 1, 32);
-      if (cpu != -1)
-        {
-        eth = param_tester(argv[3], 0, MAX_ETH_VM);
-          {
-          if (eth != -1)
-            {
-            wlan = param_tester(argv[4], 0, MAX_WLAN_VM);
-            rootfs = argv[5];
-            result = local_add_kvm(name, mem, cpu, eth, wlan, 
-                                   rootfs, argc-6, &(argv[6])); 
-            }
-          }
-        }
-      }
+    rootfs = argv[6];
+    result = local_add_kvm(name, mem, cpu, dpdk, eth, wlan, rootfs,
+                           argc-7, &(argv[7])); 
     }
   return result;
 }

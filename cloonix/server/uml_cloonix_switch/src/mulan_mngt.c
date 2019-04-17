@@ -38,11 +38,9 @@
 #include "endp_evt.h"
 #include "automates.h"
 #include "hop_event.h"
+#include "murpc_dispatch.h"
+#include "uml_clownix_switch.h"
 
-
-void uml_clownix_switch_error_cb(void *ptr, int llid, int err, int from);
-void uml_clownix_switch_rx_cb(int llid, int len, char *buf);
-void murpc_dispatch_send_tx_flow_control(int llid, int rank, int stop);
 
 enum {
   traffic_lan_link_idle = 0,
@@ -221,7 +219,6 @@ static void timer_zombie_kill(void *data)
   int is_wlan;
   if (mulan_exists(zk->lan, &is_wlan))
     {
-    KERR("Retime for zombie: %s", zk->lan);
     clownix_timeout_add(500, timer_zombie_kill, (void *) zk, NULL, NULL);
     zk->count += 1;
     if (zk->count > 3)

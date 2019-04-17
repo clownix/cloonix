@@ -401,19 +401,16 @@ int util_extract_clo(t_clo **head, t_clo *clo)
     result = -1;
     KERR("closed_state_count_line:%d", clo->closed_state_count_line);
     }
-  if (result == 0)
-    {
-    if (clo->tcpid.llid)
-      util_detach_llid_clo(clo->tcpid.llid, clo);
-    delete_fast(clo);
-    if (clo->prev)
-      clo->prev->next = clo->next;
-    if (clo->next)
-      clo->next->prev = clo->prev;
-    if (clo == (*head))
-      (*head) = clo->next;
-    free(clo);
-    }
+  if (clo->tcpid.llid)
+    util_detach_llid_clo(clo->tcpid.llid, clo);
+  delete_fast(clo);
+  if (clo->prev)
+    clo->prev->next = clo->next;
+  if (clo->next)
+    clo->next->prev = clo->prev;
+  if (clo == (*head))
+    (*head) = clo->next;
+  free(clo);
   return result;
 }
 /*---------------------------------------------------------------------------*/

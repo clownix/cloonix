@@ -600,6 +600,7 @@ int main(int argc, char **argv)
   if(argc != 3)
     usage(argv[0]);
 
+  daemon(0,0);
   DEBUG_INIT(1);
   g_nb_cli = 0;
   mdl_init();

@@ -45,8 +45,8 @@ static void create_node_resp(t_topo_kvm *kvm)
                       tx, ty, thidden_on_graph);
   bank_node_create(kvm->name, kvm->linux_kernel, kvm->rootfs_used, 
                    kvm->rootfs_backing,  kvm->install_cdrom,
-                   kvm->added_cdrom, kvm->added_disk, kvm->nb_eth,
-                   kvm->nb_wlan, 
+                   kvm->added_cdrom, kvm->added_disk, 
+                   kvm->nb_dpdk, kvm->nb_eth, kvm->nb_wlan, 
                    color_choice, kvm->vm_id, kvm->vm_config_flags,
                    x, y, hidden_on_graph, tx, ty, thidden_on_graph);
 }

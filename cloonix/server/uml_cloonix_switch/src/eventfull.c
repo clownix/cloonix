@@ -261,24 +261,26 @@ static int collect(t_eventfull_endp *eventfull, int nb, t_endp *endp)
       KOUT(" ");
     if (strlen(cur->name) == 0)
       KERR("%d", cur->endp_type);
-    else if ((!((cur->endp_type == endp_type_kvm_eth) && (!cfg_get_vm(cur->name)))) &&
+    else if ((!((cur->endp_type == endp_type_kvm_dpdk) && (!cfg_get_vm(cur->name)))) &&
+             (!((cur->endp_type == endp_type_kvm_eth)  && (!cfg_get_vm(cur->name)))) &&
              (!((cur->endp_type == endp_type_kvm_wlan) && (!cfg_get_vm(cur->name)))))
       {
-      strncpy(eventfull[i].name, cur->name, MAX_NAME_LEN-1);
-      eventfull[i].num  = cur->num;
-      eventfull[i].type = cur->endp_type;
-      if ((cur->endp_type == endp_type_kvm_eth) && (cur->num == 0)) 
+      strncpy(eventfull[real_nb].name, cur->name, MAX_NAME_LEN-1);
+      eventfull[real_nb].num  = cur->num;
+      eventfull[real_nb].type = cur->endp_type;
+      if (((cur->endp_type == endp_type_kvm_dpdk) && (cur->num == 0)) || 
+          ((cur->endp_type == endp_type_kvm_eth)  && (cur->num == 0)))
         {
         vm = cfg_get_vm(cur->name);
-        eventfull[i].ram  = vm->ram;
-        eventfull[i].cpu  = vm->cpu;
+        eventfull[real_nb].ram  = vm->ram;
+        eventfull[real_nb].cpu  = vm->cpu;
         }
-      eventfull[i].ok   = cur->c2c.is_peered;
-      eventfull[i].ptx  = add_all_tidx_ptx(cur->lan_attached);
-      eventfull[i].prx  = add_all_tidx_prx(cur->lan_attached);
-      eventfull[i].btx  = add_all_tidx_btx(cur->lan_attached);
-      eventfull[i].brx  = add_all_tidx_brx(cur->lan_attached);
-      eventfull[i].ms   = get_last_ms(cur->lan_attached);
+      eventfull[real_nb].ok   = cur->c2c.is_peered;
+      eventfull[real_nb].ptx  = add_all_tidx_ptx(cur->lan_attached);
+      eventfull[real_nb].prx  = add_all_tidx_prx(cur->lan_attached);
+      eventfull[real_nb].btx  = add_all_tidx_btx(cur->lan_attached);
+      eventfull[real_nb].brx  = add_all_tidx_brx(cur->lan_attached);
+      eventfull[real_nb].ms   = get_last_ms(cur->lan_attached);
       real_nb += 1;
       }
     next = endp_mngt_get_next(cur);

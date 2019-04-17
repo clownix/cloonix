@@ -382,7 +382,7 @@ int wrap_accept(int fd_listen, int fd_type, int is_tcp, const char *fct)
 {
   int fd, opt=1;
 
-  fd = accept4(fd_listen, NULL, NULL, SOCK_CLOEXEC);
+  fd = accept4(fd_listen, NULL, NULL, SOCK_CLOEXEC|SOCK_NONBLOCK);
   if (fd >= 0)
     {
     if (is_tcp)

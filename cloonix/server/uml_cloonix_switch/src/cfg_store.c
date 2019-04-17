@@ -44,6 +44,7 @@
 #include "layout_rpc.h"
 #include "layout_topo.h"
 #include "file_read_write.h"
+#include "dpdk_ovs.h"
 
 
 
@@ -300,7 +301,7 @@ int cfg_unset_vm(t_vm *vm)
     KERR("BUG %s", vm->kvm.name);
     free_wake_up_eths(vm);
     }
-  muendp_wlan_death(vm->kvm.name, vm->kvm.nb_eth);
+  muendp_wlan_death(vm->kvm.name, vm->kvm.nb_dpdk + vm->kvm.nb_eth);
   layout_del_vm(vm->kvm.name);
   extract_vm(&cfg, vm);
   clownix_free(vm, __FUNCTION__);
@@ -645,7 +646,7 @@ static void fill_topo_endp(t_topo_endp *topo_endp, t_endp *endp)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static t_topo_info *alloc_all_fields(int nb_vm)
+static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_ovs_endp)
 {
   t_topo_info *topo = (t_topo_info *) clownix_malloc(sizeof(t_topo_info), 3);
   memset(topo, 0, sizeof(t_topo_info));
@@ -653,7 +654,7 @@ static t_topo_info *alloc_all_fields(int nb_vm)
   topo->nb_c2c = endp_mngt_get_nb(endp_type_c2c);
   topo->nb_snf = endp_mngt_get_nb(endp_type_snf);
   topo->nb_sat = endp_mngt_get_nb_sat();
-  topo->nb_endp = endp_mngt_get_nb_all();
+  topo->nb_endp = endp_mngt_get_nb_all() + nb_dpdk_ovs_endp;
  if (topo->nb_kvm)
     {
     topo->kvm =
@@ -693,13 +694,28 @@ static t_topo_info *alloc_all_fields(int nb_vm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void copy_ovs_endp(t_topo_endp *dst, t_topo_endp *src)
+{
+  int len, i;
+  memcpy(dst, src, sizeof(t_topo_endp));
+  len = src->lan.nb_lan * sizeof(t_lan_group_item);
+  dst->lan.lan = (t_lan_group_item *) clownix_malloc(len, 19);
+  memset(dst->lan.lan, 0, len);
+  for (i=0; i<src->lan.nb_lan; i++)
+    strncpy(dst->lan.lan[i].lan, src->lan.lan[i].lan, MAX_NAME_LEN-1);
+  clownix_free(src->lan.lan, __FUNCTION__);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 t_topo_info *cfg_produce_topo_info(void)
 {
-  int i, nb_vm, nb_endp;
+  int i, nb_vm, nb_endp, nb_dpdk_ovs_endp;
   int i_c2c=0, i_snf=0, i_sat=0, i_endp=0; 
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
   t_endp *next, *cur;
-  t_topo_info *topo = alloc_all_fields(nb_vm);
+  t_topo_endp *dpdk_ovs_endp=dpdk_ovs_translate_topo_endp(&nb_dpdk_ovs_endp);
+  t_topo_info *topo = alloc_all_fields(nb_vm, nb_dpdk_ovs_endp);
 
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
 
@@ -760,6 +776,7 @@ t_topo_info *cfg_produce_topo_info(void)
             }
           break;
 
+        case endp_type_kvm_dpdk:
         case endp_type_kvm_eth:
         case endp_type_kvm_wlan:
           break;
@@ -779,6 +796,12 @@ t_topo_info *cfg_produce_topo_info(void)
     }
   if (cur)
     KOUT(" ");
+  for (i=0; i<nb_dpdk_ovs_endp; i++)
+    {
+    copy_ovs_endp(&(topo->endp[i_endp]), &(dpdk_ovs_endp[i]));
+    i_endp += 1;
+    }
+  clownix_free(dpdk_ovs_endp, __FUNCTION__);
   topo->nb_c2c = i_c2c;
   topo->nb_snf = i_snf;
   topo->nb_sat = i_sat;
@@ -822,7 +845,7 @@ int cfg_get_name_with_mac(char *mac, char *vmname)
     if (!cur)
       KOUT(" ");
     topo_kvm = &(cur->kvm); 
-    nb_eth = topo_kvm->nb_eth;
+    nb_eth = topo_kvm->nb_dpdk + topo_kvm->nb_eth;
     eth_params = topo_kvm->eth_params;
     for (j=0; j<nb_eth; j++)
       {

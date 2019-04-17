@@ -34,6 +34,7 @@ typedef struct t_custom_vm
   int  current_number;
   int  cpu;
   int  mem;
+  int  nb_dpdk;
   int  nb_eth;
   int  nb_wlan;
 } t_custom_vm;

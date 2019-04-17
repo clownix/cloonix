@@ -9,6 +9,7 @@ VPATH = ./src/
 WARNINGS=-Wall
 INCLUDES= -I${IOC}/include \
           -I./include \
+          -I../src \
           -I${GLOB_INCLUDE} \
           -I./src \
 

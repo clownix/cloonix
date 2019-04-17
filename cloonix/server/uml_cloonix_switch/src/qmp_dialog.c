@@ -28,6 +28,7 @@
 #include "llid_trace.h"
 #include "qmp_dialog.h"
 #include "qmp.h"
+#include "event_subscriber.h"
 
 
 typedef struct t_timeout_resp
@@ -93,7 +94,7 @@ static void set_qrec_with_llid(int llid, t_qrec *q)
 /****************************************************************************/
 static void qrec_alloc(char *name, t_end_conn end_cb)
 {
-  t_qrec *q = (t_qrec *) clownix_malloc(sizeof(t_qrec), 7);
+  t_qrec *q = (t_qrec *) clownix_malloc(sizeof(t_qrec), 6);
   memset(q, 0, sizeof(t_qrec));
   strncpy(q->name, name, MAX_NAME_LEN-1);
   q->end_cb = end_cb;
@@ -129,6 +130,7 @@ static void qrec_free(t_qrec *qrec, int transmit)
     g_head_qrec = qrec->next;
   if (transmit)
     end_cb(name);
+  clownix_free(qrec, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -269,6 +271,7 @@ static void timer_connect_qmp(void *data)
   char *qmp_path;
   int fd, timer_restarted = 0;;
   t_vm *vm;
+  t_small_evt vm_evt;
   t_qrec *qrec = get_qrec_with_name(pname);
   if (!qrec)
     KERR("%s", pname);
@@ -280,7 +283,6 @@ static void timer_connect_qmp(void *data)
     if (!vm)
       {
       KERR("%s", pname);
-      clownix_free(pname, __FUNCTION__);
       qrec_free(qrec, 1);
       }
     else
@@ -294,11 +296,11 @@ static void timer_connect_qmp(void *data)
           }
         else
           {
-          if (qrec->count_conn_timeout == 50)
+          if (qrec->count_conn_timeout == 40)
             KERR("WARN 1 FAILED START KVM TIMEOUT %s", pname);
           if (qrec->count_conn_timeout == 70)
             KERR("WARN 2 FAILED START KVM TIMEOUT %s", pname);
-          clownix_timeout_add(10,timer_connect_qmp,(void *) pname,NULL,NULL);
+          clownix_timeout_add(20,timer_connect_qmp,(void *) pname,NULL,NULL);
           timer_restarted = 1;
           }
         }
@@ -308,11 +310,11 @@ static void timer_connect_qmp(void *data)
         if (util_nonblock_client_socket_unix(qmp_path, &fd))
           {
           qrec->count_conn_timeout += 1;
-          if (qrec->count_conn_timeout > 10)
+          if (qrec->count_conn_timeout > 150)
             KERR("%s", pname);
           else
             {
-            clownix_timeout_add(10,timer_connect_qmp,(void *) pname,NULL,NULL);
+            clownix_timeout_add(20,timer_connect_qmp,(void *) pname,NULL,NULL);
             timer_restarted = 1;
             }
           }
@@ -325,6 +327,11 @@ static void timer_connect_qmp(void *data)
             KOUT(" ");
           llid_trace_alloc(qrec->llid,"QMP",0,0,type_llid_trace_unix_qmonitor);
           set_qrec_with_llid(qrec->llid, qrec);
+          vm->qmp_conn = 1;
+          memset(&vm_evt, 0, sizeof(t_small_evt));
+          strncpy(vm_evt.name, vm->kvm.name, MAX_NAME_LEN-1);
+          vm_evt.evt = vm_evt_qmp_conn_ok;
+          event_subscriber_send(topo_small_event, (void *) &vm_evt);
           }
         }
       }
@@ -368,7 +375,7 @@ int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_resp cb)
     {
     if (strlen(req))
       {
-      timeout = (t_timeout_resp *) clownix_malloc(sizeof(t_timeout_resp), 7);
+      timeout = (t_timeout_resp *) clownix_malloc(sizeof(t_timeout_resp), 6);
       memset(timeout, 0, sizeof(t_timeout_resp));
       strncpy(timeout->name, name, MAX_NAME_LEN-1);
       timeout->ref_id = qrec->ref_id;
@@ -414,7 +421,7 @@ void qmp_dialog_alloc(char *name, t_end_conn cb)
     else
       {
       qrec_alloc(name, cb);
-      pname = (char *) clownix_malloc(MAX_NAME_LEN, 7);
+      pname = (char *) clownix_malloc(MAX_NAME_LEN, 6);
       memset(pname, 0, MAX_NAME_LEN);
       strncpy(pname, name, MAX_NAME_LEN-1);
       clownix_timeout_add(10, timer_connect_qmp, (void *) pname, NULL, NULL);

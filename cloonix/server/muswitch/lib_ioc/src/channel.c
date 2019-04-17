@@ -578,6 +578,7 @@ static void evt_set_blkd_epoll(t_all_ctx *all_ctx, int cidx,
       else
         blkd_stop_rx_counter_increment((void *) all_ctx, llid);
       break;
+    case endp_type_kvm_dpdk:
     case endp_type_kvm_eth:
     case endp_type_kvm_wlan:
       if (ioc_ctx->g_channel[cidx].red_to_stop_reading == 0)

@@ -352,7 +352,7 @@ static void dispach_door_rx_switch(int dido_llid, int val, int len, char *buf)
     inside_llid = string_client_unix(path, in_err_gene, in_rx_switch, "switch");
     if (!inside_llid)
       {
-      KERR(" ");
+      KOUT(" ");
       doorways_tx(dido_llid, 0, doors_type_switch,
                   doors_val_link_ko, len, buf);
       }
@@ -367,7 +367,7 @@ static void dispach_door_rx_switch(int dido_llid, int val, int len, char *buf)
     {
     olt = get_dido_transfert(dido_llid);
     if (!olt)
-      KERR(" ");
+      KOUT(" ");
     else
       {
       if (dido_llid != olt->dido_llid)

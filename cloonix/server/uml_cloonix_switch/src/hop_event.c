@@ -29,6 +29,7 @@
 #include "doorways_mngt.h"
 #include "mulan_mngt.h"
 #include "endp_mngt.h"
+#include "dpdk_ovs.h"
 
 
 /*---------------------------------------------------------------------------*/
@@ -466,6 +467,8 @@ void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
     mulan_pid_resp(llid, name, pid);
   else if (tid == type_hop_endp)
     endp_mngt_pid_resp(llid, name, toppid, pid);
+  else if ((tid == type_hop_ovs) || (tid == type_hop_ovsdb)) 
+    dpdk_ovs_pid_resp(llid, name, toppid, pid);
   else
     KERR("%d %s %d", tid, name, pid);
 }

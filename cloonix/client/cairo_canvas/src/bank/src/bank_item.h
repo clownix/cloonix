@@ -35,7 +35,7 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
                  char *added_cdrom, char *added_disk,
                  double x, double y, int hidden_on_graph, 
                  int color_choice, int vm_id,
-                 int vm_config_flags, int nb_eth);
+                 int vm_config_flags, int nb_dpdk, int nb_eth);
 
 int add_new_eth(char *name, int num, int is_eth,
                  double x, double y, int hidden_on_graph);

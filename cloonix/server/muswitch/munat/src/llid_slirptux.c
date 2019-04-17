@@ -47,7 +47,7 @@ void llid_clo_high_close_rx(t_tcp_id *tcpid)
 
   if (clo)
     {
-    clo_high_close_tx(&(clo->tcpid));
+    clo_high_close_tx(&(clo->tcpid), 0);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -60,7 +60,7 @@ void llid_slirptux_tcp_close_llid(int llid)
   if (clo)
     {
     clo->has_been_closed_from_outside_socket = 1;
-    if (clo_high_close_tx(&(clo->tcpid)))
+    if (clo_high_close_tx(&(clo->tcpid), 0))
       KOUT(" ");
     }
 }

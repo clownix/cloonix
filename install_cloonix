@@ -24,6 +24,8 @@ tar zxvf ${HERE}/${CLOONIX}
 chown -R root:root /usr/local/bin/cloonix*
 MUTAP=/usr/local/bin/cloonix/server/muswitch/mutap/cloonix_mutap
 chmod u+s ${MUTAP}
+MUOVS=/usr/local/bin/cloonix/server/muswitch/muovs/cloonix_muovs
+chmod u+s ${MUOVS}
 USBHELP=/usr/local/bin/cloonix/common/spice
 USBHELP+=/spice_lib/spice-client-glib-usb-acl-helper
 if [ -e ${USBHELP} ]; then

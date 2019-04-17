@@ -744,25 +744,21 @@ void modify_snf(char *name, int evt, char *path)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int add_new_eth(char *name, int num, int is_eth, 
+int add_new_eth(char *name, int num, int mutype, 
                  double x, double y, int hidden_on_graph)
 {
-  int mutype, result = 0;
+  int result = 0;
   t_bank_item *bnode, *bitem;
   t_list_bank_item *lst_eth;
   int bank_type = bank_type_eth;
   double x0, y0;
-  if (is_eth)
-    mutype = endp_type_kvm_eth;
-  else
-    mutype = endp_type_kvm_wlan;
+  
   bnode = look_for_node_with_id(name);
   if (!bnode)
      {
      bnode = look_for_sat_with_id(name);
      if (bnode->pbi.mutype != endp_type_a2b)
        KOUT("%s", name);
-     mutype = endp_type_a2b;
      }
   if ((num <0) || (num > MAX_ETH_VM+MAX_WLAN_VM))
     KOUT(" ");
@@ -777,8 +773,8 @@ int add_new_eth(char *name, int num, int is_eth,
                                       x0, y0, hidden_on_graph, 0, 
                                       x, y, 0, 0,  0,
                                       eorig_noedge);
-    bitem->att_node = bnode;
     bitem->pbi.mutype = mutype;
+    bitem->att_node = bnode;
     lst_eth=(t_list_bank_item *)clownix_malloc(sizeof(t_list_bank_item), 12);
     memset(lst_eth, 0, sizeof(t_list_bank_item));
     lst_eth->bitem = bitem;
@@ -804,7 +800,7 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
                  char *added_cdrom, char *added_disk,
                  double x, double y, int hidden_on_graph,
                  int color_choice, int vm_id, 
-                 int vm_config_flags, int nb_eth)
+                 int vm_config_flags, int nb_dpdk, int nb_eth)
 {
   int result = 0;
   t_bank_item *bitem;
@@ -828,9 +824,10 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
     strncpy(bitem->pbi.pbi_node->added_disk, added_disk, MAX_PATH_LEN-1); 
     bitem->pbi.color_choice = color_choice;
     bitem->pbi.pbi_node->node_vm_id = vm_id;
+    bitem->pbi.pbi_node->node_vm_nb_dpdk = nb_dpdk;
     bitem->pbi.pbi_node->node_vm_nb_eth = nb_eth;
     bitem->pbi.pbi_node->node_vm_config_flags = vm_config_flags;
-    bitem->pbi.flag = flag_dtach_launch_ko;
+    bitem->pbi.flag = flag_qmp_conn_ko;
     topo_add_cr_item_to_canvas(bitem, NULL);
     write_node_name(bitem);
     topo_get_absolute_coords(bitem);

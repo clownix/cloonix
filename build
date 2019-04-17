@@ -62,10 +62,12 @@ done
             muswitch/muc2c \
             muswitch/mua2b \
             muswitch/mutst \
+            muswitch/muovs \
             muswitch/muwlan \
             muswitch/mulan \
             spice \
             qemu \
+            dpdk \
             dtach; do
 
     echo

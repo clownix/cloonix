@@ -19,6 +19,7 @@ void unix2inet_close_tcpid(t_tcp_id *tcpid);
 void unix2inet_arp_resp(char *mac, char *ip);
 int unix2inet_ssh_syn_ack_arrival(t_tcp_id *tcp_id);
 void free_unix2inet_conpath(t_all_ctx *all_ctx, int llid_con);
+void unix2inet_finack_state(t_tcp_id *tcpid, int line);
 void unix2inet_init(t_all_ctx *all_ctx);
 /*--------------------------------------------------------------------------*/
 

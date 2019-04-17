@@ -446,7 +446,7 @@ void client_req_eventfull(t_eventfull_cb cb)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_add_vm(int tid, t_end_cb cb, char *nm, 
+void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_dpdk, 
                    int nb_eth, int nb_wlan, int vm_config_flags,
                    int cpu_qty, int mem_qty, 
                    char *kernel, char *root_fs, 
@@ -466,6 +466,7 @@ void client_add_vm(int tid, t_end_cb cb, char *nm,
   kvm.vm_config_flags = vm_config_flags;
   kvm.cpu = cpu_qty;
   kvm.mem = mem_qty;
+  kvm.nb_dpdk = nb_dpdk;
   kvm.nb_eth = nb_eth;
   kvm.nb_wlan = nb_wlan;
   if (eth_params)
@@ -804,7 +805,7 @@ static void rx_cb(int llid, int tid, int type, int val, int len, char *buf)
       }
     else if (val == doors_val_link_ko)
       {
-      KOUT(" ");
+      KERR(" ");
       }
     else
       {

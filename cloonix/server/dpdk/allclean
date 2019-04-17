@@ -1,0 +1,14 @@
+#!/bin/bash
+HERE=`pwd`
+
+for i in dpdk-19.02 openvswitch-2.11.0; do
+  rm -rf ${HERE}/$i
+done
+
+for i in etc bin include lib sbin share var; do
+  rm -rf ${HERE}/$i
+done
+
+
+
+

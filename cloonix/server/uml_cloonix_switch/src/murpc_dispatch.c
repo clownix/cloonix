@@ -32,6 +32,9 @@
 #include "endp_mngt.h"
 #include "mulan_mngt.h"
 #include "unix2inet.h"
+#include "dpdk_ovs.h"
+#include "dpdk_fmt.h"
+#include "murpc_dispatch.h"
 
 
 /****************************************************************************/
@@ -271,6 +274,11 @@ void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line)
     mulan_rpct_recv_evt_msg(llid, tid, line);
     hop_event_hook(llid, FLAG_HOP_EVT, line);
     }
+  else if (dpdk_ovs_find_with_llid(llid))
+    {
+    dpdk_fmt_rx_rpct_recv_evt_msg(llid, tid, line);
+    hop_event_hook(llid, FLAG_HOP_EVT, line);
+    }
   else
     KERR("CANNOT DISPATCH %s", line);
 }
@@ -327,6 +335,10 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   else if (mulan_can_be_found_with_llid(llid, name))
     {
     mulan_rpct_recv_diag_msg(llid, tid, line);
+    }
+  else if (dpdk_ovs_find_with_llid(llid))
+    {
+    dpdk_ovs_rpct_recv_diag_msg(llid, tid, line);
     }
   else
     {

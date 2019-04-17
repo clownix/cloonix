@@ -149,7 +149,7 @@ static int fill_mac_field(char *ifname, uint8_t *mac)
 
 
 /****************************************************************************/
-static int set_new_mac_addr(uint8_t *mac_eth0, char *if_name, int idx)
+static int set_new_mac_addr(uint8_t *mac_rand, char *if_name, int idx)
 { 
   int i, s, result = -1;
   struct ifreq ifr;
@@ -159,7 +159,7 @@ static int set_new_mac_addr(uint8_t *mac_eth0, char *if_name, int idx)
   memset(&ifr, 0, sizeof(struct ifreq));
   strcpy(ifr.ifr_name, if_name);
   for (i=0; i<ETH_ALEN; i++)
-    ifr.ifr_hwaddr.sa_data[i] = mac_eth0[i];
+    ifr.ifr_hwaddr.sa_data[i] = mac_rand[i];
   ifr.ifr_hwaddr.sa_data[5] = 0x42+idx;
   ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
   if (ioctl(s, SIOCSIFHWADDR, &ifr) != -1)
@@ -174,19 +174,23 @@ static int set_new_mac_addr(uint8_t *mac_eth0, char *if_name, int idx)
 /****************************************************************************/
 static void change_wlan_mac(int idx)
 {
-  uint8_t *mac_eth0 = iface_get_mac("eth0");
   t_iface *ifc;
   char if_name[IFNAMSIZ + 1];
+  uint8_t mac_rand[ETH_ALEN];
   memset(if_name, 0, IFNAMSIZ + 1);
   snprintf(if_name, IFNAMSIZ, "wlan%d", idx);
   ifc = iface_get(if_name);
-  if (!mac_eth0)
-    KOUT(" ");
+  mac_rand[0] = 0x2;
+  mac_rand[1] = 0xFF & rand();
+  mac_rand[2] = 0xFF & rand();
+  mac_rand[3] = 0xFF & rand();
+  mac_rand[4] = 0xFF & rand();
+  mac_rand[5] = idx;
   if (!ifc)
     KOUT("%s interface not found", if_name);
   if (set_intf_flags_iff_up_down(if_name, 0))
     KOUT("%s interface down error", if_name);
-  if (set_new_mac_addr(mac_eth0, if_name, idx))
+  if (set_new_mac_addr(mac_rand, if_name, idx))
     KOUT("%s interface set mac error", if_name);
   if (set_intf_flags_iff_up_down(if_name, 1))
     KOUT("%s interface up error", if_name);

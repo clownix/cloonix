@@ -3,7 +3,7 @@ HERE=`pwd`
 TARGZ=${HERE}/../../../../targz_store
 rm -rf spice-gtk
 rm -f ${TARGZ}/spice-gtk.tar.gz
-git clone git://anongit.freedesktop.org/spice/spice-gtk
+git clone https://gitlab.freedesktop.org/spice/spice-gtk.git
 cd spice-gtk
 sed -i s/--enable-gtk-doc/--disable-gtk-doc/ autogen.sh
 sed -i s/--enable-vala/--disable-vala/ autogen.sh

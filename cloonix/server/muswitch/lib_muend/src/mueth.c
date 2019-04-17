@@ -147,7 +147,7 @@ static int get_idx_from_time(long long ms)
   long long tmp;
   unsigned int target_ms;
   int idx;
-  tmp = ms / 5;
+  tmp = ms / 20;
   target_ms = (unsigned int) tmp; 
   idx = target_ms % MAX_PERSEC_ELEMS;
   return idx;
@@ -177,23 +177,16 @@ static int get_idx_add(int idx, int offset)
 /*****************************************************************************/
 void tx_unix_sock(t_all_ctx *all_ctx, void *elem, int len)
 {
-  int i, j, idx, zero_idx, futur_idx;
+  int idx, futur_idx;
   long long ms;
   ms = cloonix_get_msec();
   idx = get_idx_from_time(ms);
-  zero_idx = get_idx_sub(idx, 230);
   futur_idx = get_idx_add(idx, 1);
   if (all_ctx->bytes_persec_tab[futur_idx])
     {
     KERR("%s %d", all_ctx->g_name, all_ctx->bytes_persec_tab[futur_idx]); 
     all_ctx->bytes_persec_cur -= all_ctx->bytes_persec_tab[futur_idx];
     all_ctx->bytes_persec_tab[futur_idx] = 0;
-    }
-  for (i=0; i<30; i++)
-    {
-    j = get_idx_add(zero_idx, i);
-    all_ctx->bytes_persec_cur -= all_ctx->bytes_persec_tab[j];
-    all_ctx->bytes_persec_tab[j] = 0;  
     }
   if (len > 1600)
     KERR("%d", len);
@@ -210,11 +203,11 @@ void tx_unix_sock_shaping_timer(t_all_ctx *all_ctx)
   int i, j, idx, zero_idx;
   long long ms;
   ms = cloonix_get_msec();
-  if ((ms - last_process_ms) > 50)
+  if ((ms - last_process_ms) > 100)
     {
     idx = get_idx_from_time(ms);
-    zero_idx = get_idx_add(idx, 49);
-    for (i=0; i<250; i++)
+    zero_idx = get_idx_add(idx, 30);
+    for (i=0; i<400; i++)
       {
       j = get_idx_add(zero_idx, i);
       if (all_ctx->bytes_persec_tab[j])

@@ -56,6 +56,10 @@ SRC = \
       c2c_utils.c \
       blkd_sub.c \
       blkd_data.c \
+      dpdk_ovs.c \
+      dpdk_dyn.c \
+      dpdk_msg.c \
+      dpdk_fmt.c \
       unix2inet.c
 
 INCLUDES= -I./src \

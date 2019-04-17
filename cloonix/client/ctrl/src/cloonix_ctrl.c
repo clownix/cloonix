@@ -310,7 +310,7 @@ struct cmd_struct *get_command(struct cmd_struct *command, char *cmd)
 int handle_command(struct cmd_struct *command, int level, int argc, char **argv)
 {
   struct cmd_struct *p;
-  int result=-1; 
+  int i, result=-1; 
   char **current_argv = &argv[level];
 
   if (!current_argv || !*current_argv) 
@@ -330,8 +330,16 @@ int handle_command(struct cmd_struct *command, int level, int argc, char **argv)
       else
         {
         result = p->cmd_fn(argc-level-1, &(argv[level+1]));
+        if (result < 0)
+          {
+          printf("\nERROR:");
+          for (i=0; i<argc; i++)
+            printf(" %s", argv[i]);  
+          }
         if ((result < 0) && (p->help_fn))
+          {
           p->help_fn(good_cmd_line_start(level+1, argv, 1));
+          }
         }
       }
     }
@@ -492,14 +500,14 @@ static int callback_connect(void *ptr, int llid, int fd)
 /****************************************************************************/
 static char *init_local_cloonix_bin_path(char *curdir, char *callbin)
 {
-  char path[MAX_PATH_LEN];
+  char path[2*MAX_PATH_LEN];
   char *ptr;
   memset(g_cloonix_root_tree, 0, MAX_PATH_LEN);
-  memset(path, 0, MAX_PATH_LEN);
+  memset(path, 0, 2*MAX_PATH_LEN);
   if (callbin[0] == '/')
-    snprintf(path, MAX_PATH_LEN, "%s", callbin);
+    snprintf(path, 2*MAX_PATH_LEN, "%s", callbin);
   else if ((callbin[0] == '.') && (callbin[1] == '/'))
-    snprintf(path, MAX_PATH_LEN, "%s/%s", curdir, &(callbin[2]));
+    snprintf(path, 2*MAX_PATH_LEN, "%s/%s", curdir, &(callbin[2]));
   else
     KOUT("%s", callbin);
 
@@ -516,7 +524,7 @@ static char *init_local_cloonix_bin_path(char *curdir, char *callbin)
     KOUT("%s", path);
   *ptr = 0;
   strncpy(g_cloonix_root_tree, path, MAX_PATH_LEN-1);
-  snprintf(path, MAX_PATH_LEN-1,
+  snprintf(path, 2*MAX_PATH_LEN-1,
            "%s/client/ctrl/cloonix_ctrl", g_cloonix_root_tree);
   if (access(path, X_OK))
     KOUT("%s", path);
