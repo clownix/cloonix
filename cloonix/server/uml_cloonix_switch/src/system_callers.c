@@ -148,10 +148,24 @@ void my_mv_file(char *dsrc, char *ddst, char *name)
 
 
 /****************************************************************************/
-void my_mkdir(char *dst_dir)
+void my_mkdir(char *dst_dir, int wr_all)
 {
+  int result;
+  mode_t old_mask, mode_mkdir;
   struct stat stat_file;
-  if (mkdir(dst_dir, 0700))
+  if (wr_all)
+    {
+    old_mask = umask (0000);
+    mode_mkdir = 0777;
+    result = mkdir(dst_dir, mode_mkdir);
+    }
+  else
+    {
+    old_mask = umask (0077);
+    mode_mkdir = 0700;
+    result = mkdir(dst_dir, mode_mkdir);
+    }
+  if (result)
     {
     if (errno != EEXIST)
       KOUT("%s, %d", dst_dir, errno);
@@ -163,11 +177,12 @@ void my_mkdir(char *dst_dir)
         {
         KERR("%s", dst_dir);
         unlink(dst_dir);
-        if (mkdir(dst_dir, 0700))
+        if (mkdir(dst_dir, mode_mkdir))
           KOUT("%s, %d", dst_dir, errno);
         }
       }
     }
+  umask (old_mask);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -181,7 +196,7 @@ void my_cp_dir(char *src_dir, char *dst_dir, char *src_name, char *dst_name)
   char dst_sub_dir[MAX_PATH_LEN];
   sprintf(src_sub_dir, "%s/%s", src_dir, src_name);
   sprintf(dst_sub_dir, "%s/%s", dst_dir, dst_name);
-  my_mkdir(dst_sub_dir);
+  my_mkdir(dst_sub_dir, 0);
   dirptr = opendir(src_sub_dir);
   if (dirptr)
     {
@@ -216,7 +231,7 @@ void my_mv_dir(char *src_dir,char *dst_dir, char *src_name,char *dst_name)
   char dst_sub_dir[MAX_PATH_LEN];
   sprintf(src_sub_dir, "%s/%s", src_dir, src_name);
   sprintf(dst_sub_dir, "%s/%s", dst_dir, dst_name);
-  my_mkdir(dst_sub_dir);
+  my_mkdir(dst_sub_dir, 0);
   dirptr = opendir(src_sub_dir);
   if (dirptr)
     {
@@ -245,24 +260,26 @@ void my_mv_dir(char *src_dir,char *dst_dir, char *src_name,char *dst_name)
 /*****************************************************************************/
 void mk_endp_dir(void)
 {
-  my_mkdir(utils_get_endp_sock_dir());
-  my_mkdir(utils_get_cli_sock_dir());
-  my_mkdir(utils_get_snf_pcap_dir());
+  my_mkdir(utils_get_endp_sock_dir(), 0);
+  my_mkdir(utils_get_cli_sock_dir(), 0);
+  my_mkdir(utils_get_snf_pcap_dir(), 0);
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void mk_dtach_dir(void)
 {
-  my_mkdir(utils_get_dtach_sock_dir());
+  my_mkdir(utils_get_dtach_sock_dir(), 0);
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void mk_dpdk_dir(void)
 {
-  my_mkdir(utils_get_dpdk_qemu_dir());
-  my_mkdir(utils_get_dpdk_cloonix_dir());
+  my_mkdir(utils_get_dpdk_ovs_db_dir(), 1);
+  my_mkdir(utils_get_dpdk_huge_dir(), 0);
+  my_mkdir(utils_get_dpdk_qemu_dir(), 0);
+  my_mkdir(utils_get_dpdk_cloonix_dir(), 0);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -273,16 +290,16 @@ int mk_machine_dirs(char *name, int vm_id)
   char path[MAX_PATH_LEN];
 
   sprintf(path,"%s", cfg_get_work_vm(vm_id));
-  my_mkdir(path);
+  my_mkdir(path, 0);
 
   sprintf(path,"%s/%s", cfg_get_work_vm(vm_id), DIR_CONF);
-  my_mkdir(path);
+  my_mkdir(path, 0);
 
-  my_mkdir(utils_dir_conf_tmp(vm_id));
-  my_mkdir(utils_get_disks_path_name(vm_id));
+  my_mkdir(utils_dir_conf_tmp(vm_id), 0);
+  my_mkdir(utils_get_disks_path_name(vm_id), 0);
 
   sprintf(path,"%s/%s", cfg_get_work_vm(vm_id),  DIR_UMID);
-  my_mkdir(path);
+  my_mkdir(path, 0);
 
   sprintf(path,"%s/%s", cfg_get_work_vm(vm_id),  CLOONIX_FILE_NAME);
   if (write_whole_file(path, name, strlen(name) + 1, err))

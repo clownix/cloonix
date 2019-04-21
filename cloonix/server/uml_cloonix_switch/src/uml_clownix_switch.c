@@ -106,6 +106,12 @@ static void init_g_user(void)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+char *get_user(void)
+{
+  return g_user;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void cloonix_lock_fd_close(void)
@@ -246,14 +252,14 @@ static void mk_and_tst_work_path(void)
       printf("%d Bad work dir in config: %s\n",__LINE__,cfg_get_root_work());
       KOUT("%s", cfg_get_root_work());
       }
-    my_mkdir(path2);
+    my_mkdir(path2, 0);
     }
   if (!file_exists(path2, W_OK))
     {
     printf("%d Bad work dir in config: %s\n", __LINE__, cfg_get_root_work());
     KOUT("%s", cfg_get_root_work());
     }
-  my_mkdir(cfg_get_root_work());
+  my_mkdir(cfg_get_root_work(), 0);
   mk_endp_dir();
   mk_dtach_dir();
   mk_dpdk_dir();
@@ -364,7 +370,7 @@ static void callback_after_work_dir_clean(void *data, int status, char *nm)
     printf("%s %d\n", __FUNCTION__, __LINE__);
     KOUT("%d", status);
     }
-  my_mkdir(cfg_get_work());
+  my_mkdir(cfg_get_work(), 0);
   layout_topo_init();
   llid = string_server_unix(utils_get_cloonix_switch_path(),
                             connect_from_client_unix, "main_unix");

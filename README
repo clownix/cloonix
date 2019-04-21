@@ -50,17 +50,22 @@ cd cloonix/quickstart
 -----------------------------------------------------------------------------
 HOWTO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
 -----------------------------------------------------------------------------
-  First, the host must have a hugepage mount.
-  If the cloonix software is going to be run as user <user>, do:
+  The host must have 1 Giga hugepages, i chose to have 10 hugepages:
 -----------------------------------------------------------------------------
-  sudo echo "vm.nr_hugepages = 4096" >> /etc/sysctl.conf
-  sudo apt-get install libhugetlbfs-bin
-  sudo hugeadm --create-user-mounts <user>
-  hugeadm --list-all-mounts
------------------------------------------------------------------------------
-  Then reboot to have the hugepage mount and call the test script:
+In /etc/default/grub, put:
+
+GRUB_CMDLINE_LINUX="kvm-intel.nested=1 hugepagesz=1G hugepages=10 default_hugepagesz=1G"
+
+update-grub
+
+reboot
+
   cd cloonix/quickstart
   ./dpdk_ping.sh
+
+  To track errors in case of failure:
+  cat /var/log/user.log
+  cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------

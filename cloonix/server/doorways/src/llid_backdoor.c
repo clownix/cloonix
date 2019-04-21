@@ -733,7 +733,6 @@ void llid_backdoor_cloonix_down_and_not_running(char *name)
     llid_traf_end_all(bvm);
     clean_connect_timer(bvm);
     bvm->cloonix_up_and_running = 0;
-    KERR("%s", name);
     }
   else
     KERR("%s", name);
@@ -788,8 +787,6 @@ static void vm_err_cb (void *ptr, int llid, int err, int from)
   if (bvm)
     {
     if ((llid != bvm->backdoor_llid))
-      KERR("%s", bvm->name);
-    else
       KERR("%s", bvm->name);
     if (bvm->backdoor_llid)
       {

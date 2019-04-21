@@ -1,0 +1,19 @@
+diff -Naur dpdk-19.02/lib/librte_eal/linuxapp/eal/eal.c dpdk_tainted/lib/librte_eal/linuxapp/eal/eal.c
+--- dpdk-19.02/lib/librte_eal/linuxapp/eal/eal.c	2019-02-01 15:25:17.000000000 +0100
++++ dpdk_tainted/lib/librte_eal/linuxapp/eal/eal.c	2019-04-20 17:52:47.107958689 +0200
+@@ -109,13 +109,13 @@
+ 	char tmp[PATH_MAX];
+ 	int ret;
+ 
+-	if (getuid() != 0) {
++//cloonix	if (getuid() != 0) {
+ 		/* try XDG path first, fall back to /tmp */
+ 		if (xdg_runtime_dir != NULL)
+ 			directory = xdg_runtime_dir;
+ 		else
+ 			directory = fallback;
+-	}
++//cloonix	}
+ 	/* create DPDK subdirectory under runtime dir */
+ 	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
+ 	if (ret < 0 || ret == sizeof(tmp)) {

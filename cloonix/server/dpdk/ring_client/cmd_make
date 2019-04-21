@@ -1,0 +1,8 @@
+#!/bin/bash
+HERE=`pwd`
+export RTE_SDK=${HERE}/../../../../tmpbuild/cloonix/server/dpdk/dpdk-19.02/
+cp ${RTE_SDK}/x86_64-native-linuxapp-gcc/include/rte_config.h ${HERE}
+make
+mv build/ring_client .
+rm -rf build
+

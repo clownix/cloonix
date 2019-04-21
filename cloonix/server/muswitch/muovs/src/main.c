@@ -22,6 +22,11 @@
 #include <stdint.h>
 #include <signal.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <libgen.h>
+
+
 
 #include "ioc.h"
 #include "ovs_execv.h"
@@ -30,8 +35,13 @@
 
 static char g_ovsx_bin[MAX_PATH_LEN];
 static char g_dpdk_db_dir[MAX_PATH_LEN];
+static int g_ovsdb_launched;
 static int g_ovs_launched;
+static int g_cloonix_listen_fd;
+static int g_cloonix_fd;
+static int g_ovsdb_pid;
 static int g_ovs_pid;
+
 
 /*****************************************************************************/
 void linker_helper1_fct(void)
@@ -39,6 +49,94 @@ void linker_helper1_fct(void)
   printf("useless");
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int get_cloonix_listen_fd(void)
+{
+  return g_cloonix_listen_fd;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int get_cloonix_fd(void)
+{
+  return g_cloonix_fd;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static char *mydirname(char *path)
+{
+  static char tmp[MAX_PATH_LEN];
+  char *pdir;
+  memset(tmp, 0, MAX_PATH_LEN);
+  strncpy(tmp, path, MAX_PATH_LEN - 1);
+  pdir = dirname(tmp);
+  return (pdir);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int is_directory_writable(char *path)
+{
+  int result = 0;
+  struct stat stat_file;
+  if (!stat(path, &stat_file))
+    {
+    if ((stat_file.st_mode & S_IFMT) == S_IFDIR)
+      if (!access(path, W_OK))
+        result = 1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int file_exists(char *path)
+{
+  int err, result = 0;
+  err = access(path, F_OK);
+  if (!err)
+    result = 1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void unlink_files(char *dpdk_db_dir)
+{
+  char arg[NB_ARG][MAX_ARG_LEN];
+  if (!access(dpdk_db_dir, F_OK))
+    {
+    memset(arg, 0, MAX_ARG_LEN * NB_ARG);
+    snprintf(arg[0], MAX_PATH_LEN-1,"/bin/rm");
+    snprintf(arg[1], MAX_PATH_LEN-1,"-fdR");
+    snprintf(arg[2], MAX_PATH_LEN-1,"%s/*", dpdk_db_dir);
+    if (call_my_popen(dpdk_db_dir, 3, arg)) 
+      KERR(" ");
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void unlink_dir(char *dpdk_db_dir)
+{
+  char arg[NB_ARG][MAX_ARG_LEN];
+  memset(arg, 0, MAX_ARG_LEN * NB_ARG);
+  snprintf(arg[0], MAX_PATH_LEN-1,"/bin/rm");
+  snprintf(arg[1], MAX_PATH_LEN-1,"-fdR");
+  snprintf(arg[2], MAX_PATH_LEN-1,"%s/dpdk", dpdk_db_dir);
+  if (call_my_popen(dpdk_db_dir, 3, arg)) 
+    KERR(" ");
+  while (!access(arg[2], F_OK))
+    {
+    if (call_my_popen(dpdk_db_dir, 3, arg)) 
+      KERR(" ");
+    usleep(10000);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 static void timeout_rpct_heartbeat(t_all_ctx *all_ctx, void *data)
@@ -180,7 +278,10 @@ void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
   if (all_ctx->g_num != num)
     KERR("%s %d %d", name, num, all_ctx->g_num);
   DOUT(all_ctx, FLAG_HOP_DIAG, "%s %s", __FUNCTION__, name);
-  rpct_send_pid_resp(ptr, llid, tid, name, num, g_ovs_pid, getpid());
+  if ((g_ovs_pid == 0) && (g_ovsdb_pid == 0)) 
+    rpct_send_pid_resp(ptr, llid, tid, name, num, 0, getpid());
+  else
+    rpct_send_pid_resp(ptr, llid, tid, name, num, g_ovs_pid, g_ovsdb_pid);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -211,12 +312,15 @@ static int check_uid(void)
 void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 {
   t_all_ctx *all_ctx = (t_all_ctx *) ptr;
-  int num, cloonix_llid, launch_ovs = 0;
+  int num, cloonix_llid, dpdkr, launch_ovsdb = 0, launch_ovs = 0;
   char respb[MAX_PATH_LEN];
   char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   DOUT(all_ctx, FLAG_HOP_DIAG, "%s", line);
-
+  if (!file_exists(g_dpdk_db_dir))
+    KOUT("%s", g_dpdk_db_dir);
+  if (!is_directory_writable(g_dpdk_db_dir))
+    KOUT("%s", g_dpdk_db_dir);
   memset(respb, 0, MAX_PATH_LEN); 
 
   if (!mycmp(line, "cloonixovs_req_suidroot"))
@@ -225,6 +329,15 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_suidroot_ko");
     else
       snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_suidroot_ok");
+    }
+  else if (!mycmp(line, "cloonixovs_req_ovsdb"))
+    {
+    snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovsdb_ok");
+    if (g_ovsdb_launched == 0)
+      {
+      g_ovsdb_launched = 1;
+      launch_ovsdb = 1;
+      }
     }
   else if (!mycmp(line, "cloonixovs_req_ovs"))
     {
@@ -235,18 +348,9 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       launch_ovs = 1;
       }
     }
-  else if (!mycmp(line, "cloonixovs_req_ovsdb"))
-    {
-    snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovsdb_ok");
-    if (g_ovs_launched == 0)
-      {
-      g_ovs_launched = 1;
-      launch_ovs = 1;
-      }
-    }
   else if (sscanf(line, "cloonixovs_add_eth name=%s num=%d", name, &num) == 2)
     {
-    if (ovs_execv_add_eth(all_ctx, g_ovsx_bin, g_dpdk_db_dir, name, num))
+    if (ovs_execv_add_eth(all_ctx,g_ovsx_bin,g_dpdk_db_dir,name,num,&dpdkr))
       snprintf(respb, MAX_PATH_LEN-1,
                "KO cloonixovs_add_eth name=%s num=%d", name, num);
     else
@@ -304,6 +408,16 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
                "OK cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
                lan, name, num);
     }
+  else if (!strcmp(line, "cloonixovs_req_destroy"))
+    { 
+    if (g_ovs_pid)
+      kill(g_ovs_pid, SIGKILL);
+    if (g_ovsdb_pid)
+      kill(g_ovsdb_pid, SIGKILL);
+    unlink_dir(g_dpdk_db_dir);
+    sync();
+    exit(0);
+    }
   else
     KOUT("%s", line);
   cloonix_llid = blkd_get_cloonix_llid((void *) all_ctx);
@@ -316,9 +430,15 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 
   rpct_send_diag_msg(all_ctx, llid, tid, respb);
 
+  if (launch_ovsdb == 1)
+    {
+    unlink_files(g_dpdk_db_dir);
+    g_ovsdb_pid = ovs_execv_daemon(all_ctx, 0, g_ovsx_bin, g_dpdk_db_dir);
+    }
+
   if (launch_ovs == 1)
     {
-    g_ovs_pid = ovs_execv_daemon(all_ctx,g_ovsx_bin,g_dpdk_db_dir);
+    g_ovs_pid = ovs_execv_daemon(all_ctx, 1, g_ovsx_bin, g_dpdk_db_dir);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -376,6 +496,7 @@ static void cloonix_connect(void *ptr, int llid, int llid_new)
   if (!cloonix_llid)
     blkd_set_cloonix_llid(ptr, llid_new);
   msg_mngt_set_callbacks (all_ctx, llid_new, cloonix_err_cb, rx_cloonix_cb);
+  g_cloonix_fd = get_fd_with_llid(all_ctx, llid_new);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -383,19 +504,28 @@ static void cloonix_connect(void *ptr, int llid, int llid_new)
 static t_all_ctx *cloonix_part_init(char **argv)
 {
   t_all_ctx *all_ctx;
+  int llid;
+  char *dir_sock;
   cloonix_set_pid(getpid());
-  all_ctx = msg_mngt_init((char *) argv[2], 0, IO_MAX_BUF_LEN);
-  if (!strcmp(argv[1], "ovs"))
-    blkd_set_our_mutype((void *) all_ctx, endp_type_ovs);
-  else if (!strcmp(argv[1], "ovsdb"))
+  all_ctx = msg_mngt_init((char *) argv[1], 0, IO_MAX_BUF_LEN);
+  if (!strcmp(argv[1], "ovsdb"))
     blkd_set_our_mutype((void *) all_ctx, endp_type_ovsdb);
   else
     KOUT("%s", argv[1]); 
   strncpy(all_ctx->g_net_name, argv[0], MAX_NAME_LEN-1);
   strncpy(all_ctx->g_name, argv[1], MAX_NAME_LEN-1);
   strncpy(all_ctx->g_path, argv[2], MAX_PATH_LEN-1);
-  if (string_server_unix(all_ctx, all_ctx->g_path, cloonix_connect) == 0)
+  if (file_exists(all_ctx->g_path))
+    KOUT("PROBLEM WITH: %s EXISTS!", all_ctx->g_path);
+  dir_sock = mydirname(all_ctx->g_path);
+  if (!file_exists(dir_sock))
+    KOUT("PROBLEM WITH: %s DOES NOT EXIST!", dir_sock);
+  if (!is_directory_writable(dir_sock))
+    KOUT("PROBLEM WITH: %s NOT WRITABLE!", dir_sock);
+  llid = string_server_unix(all_ctx, all_ctx->g_path, cloonix_connect);
+  if (llid == 0)
     KOUT("PROBLEM WITH: %s", all_ctx->g_path);
+  g_cloonix_listen_fd = get_fd_with_llid(all_ctx, llid);
   return all_ctx;
 }
 /*---------------------------------------------------------------------------*/
@@ -408,10 +538,15 @@ int main (int argc, char *argv[])
   char name[MAX_NAME_LEN];
   char sock[MAX_PATH_LEN];
   char *ctl_argv[4] = {net, name, sock, NULL};
+  g_ovsdb_launched = 0;
+  g_ovsdb_pid = 0;
   g_ovs_launched = 0;
   g_ovs_pid = 0;
-  seteuid(getuid());
-  setegid(getgid());
+  seteuid(0);
+  setegid(0);
+//  seteuid(getuid());
+//  setegid(getgid());
+  umask(0000);
   if (argc != 6)
     KOUT("wrong params nb: net,name,sock,ovsx_bin,dpdk_db_dir as params");
   memset(net, 0, MAX_NAME_LEN);

@@ -30,7 +30,7 @@ void my_cp_file(char *dsrc, char *ddst, char *name);
 void my_cp_link(char *dir_src, char *dir_dst, char *name);
 void my_mv_link(char *dir_src, char *dir_dst, char *name);
 void my_mv_file(char *dsrc, char *ddst, char *name);
-void my_mkdir(char *dst_dir);
+void my_mkdir(char *dst_dir, int wr_all);
 void my_cp_dir(char *src_dir, char *dst_dir,
                       char *src_name, char *dst_name);
 void my_mv_dir(char *src_dir,char *dst_dir,

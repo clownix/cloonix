@@ -124,7 +124,6 @@ enum {
   endp_type_kvm_eth,
   endp_type_kvm_wlan,
   endp_type_ovsdb,
-  endp_type_ovs,
 };
 
 typedef void (*t_fd_local_flow_ctrl)(void *ptr, int llid, int stop);

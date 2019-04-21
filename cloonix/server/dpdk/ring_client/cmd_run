@@ -1,0 +1,11 @@
+#!/bin/bash
+HERE=`pwd`
+export LD_LIBRARY_PATH=/usr/local/bin/cloonix/server/dpdk/lib/
+XDG_RUNTIME_DIR=/home/perrier/cloonix_data/nemo/dpdk
+${HERE}/ring_client \
+--proc-type secondary \
+-- \
+-n 0
+
+exit
+--huge-dir /home/perrier/cloonix_data/nemo/dpdk_huge/ \

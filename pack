@@ -87,7 +87,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -f ${CLOONIX_SERVER}/dtach/cmd
   rm -f ${CLOONIX_SERVER}/dtach/dtach_source.tar.gz
 #----------------------------------------------------------
-  for i in allclean cmd dpdk.sh openvswitch.sh dpdk-19.02 openvswitch-2.11.0; do
+  for i in allclean cmd dpdk.sh openvswitch.sh dpdk-19.02 openvswitch-2.11.1; do
     rm -rf ${CLOONIX_SERVER}/dpdk/${i}
   done
 #----------------------------------------------------------

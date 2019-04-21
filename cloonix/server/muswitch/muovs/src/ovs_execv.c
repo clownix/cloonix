@@ -42,17 +42,12 @@
 #define OVS_VSWITCHD_CTL  "ovs-vswitchd.ctl"
 
 
-#define MAX_ARG_LEN 400
-#define MAX_ENV_LEN 100
-#define NB_ENV 5
-#define NB_ARG 30
 
 
 /*****************************************************************************/
-int my_popen(char *dpdk_db_dir, char *argv[], char *env[], int *child_pid);
+int call_my_popen(char *dpdk_db_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN]);
 /*---------------------------------------------------------------------------*/
 
-static char *g_environ[NB_ENV];
 
 /*****************************************************************************/
 static void wait_for_server_sock(char *dpdk_db_dir)
@@ -100,22 +95,6 @@ static int wait_read_pid_file(char *dpdk_db_dir, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void init_environ(char *dpdk_db_dir)
-{
-  int i;
-  static char env[NB_ENV][MAX_ENV_LEN];
-  memset(env, 0, NB_ENV * MAX_ENV_LEN * sizeof(char)); 
-  memset(g_environ, 0, NB_ENV * sizeof(char *));
-  snprintf(env[0], MAX_ENV_LEN-1, "OVS_BINDIR=%s", dpdk_db_dir);
-  snprintf(env[1], MAX_ENV_LEN-1, "OVS_RUNDIR=%s", dpdk_db_dir);
-  snprintf(env[2], MAX_ENV_LEN-1, "OVS_LOGDIR=%s", dpdk_db_dir);
-  snprintf(env[3], MAX_ENV_LEN-1, "OVS_DBDIR=%s", dpdk_db_dir);
-  for (i=0; i<NB_ENV-1; i++)
-    g_environ[i] = env[i];
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int make_cmd_argv(char cmd_argv[NB_ARG][MAX_ARG_LEN], char *multi_arg_cmd)
 {
   int cmd_argc;
@@ -143,45 +122,6 @@ static int make_cmd_argv(char cmd_argv[NB_ARG][MAX_ARG_LEN], char *multi_arg_cmd
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static char *make_cmd_str(char **argv)
-{
-  int i;
-  static char result[10*MAX_ARG_LEN];
-  memset(result, 0, 10*MAX_ARG_LEN);
-  for (i=0;  (argv[i] != NULL); i++)
-    {
-    strcat(result, argv[i]);
-    if (strlen(result) >= 8*MAX_ARG_LEN)
-      {
-      KERR("NOT POSSIBLE");
-      break;
-      }
-    strcat(result, " ");
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
-static int call_my_popen(char *dpdk_db_dir, int nb,
-                         char arg[NB_ARG][MAX_ARG_LEN])
-{
-  int i, child_pid, result = 0;
-  char *argv[NB_ARG];
-  memset(argv, 0, NB_ARG * sizeof(char *));
-  for (i=0; i<nb; i++)
-    argv[i] = arg[i];
-  if (my_popen(dpdk_db_dir, argv, g_environ, &child_pid))
-    {
-    KERR("%s %d", make_cmd_str(argv), child_pid);
-    result = -1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int ovs_vsctl(t_all_ctx *all_ctx, char *ovsx_bin,
                      char *dpdk_db_dir, char *multi_arg_cmd)
 {
@@ -199,29 +139,6 @@ static int ovs_vsctl(t_all_ctx *all_ctx, char *ovsx_bin,
     strncpy(arg[2+i], cmd_argv[i], MAX_ARG_LEN-1);
     }
   return (call_my_popen(dpdk_db_dir, cmd_argc+2, arg));
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void unlink_files(char *dpdk_db_dir)
-{ 
-  char pth[MAX_ARG_LEN];
-  if (!access(dpdk_db_dir, F_OK))
-    {
-    memset(pth, 0, MAX_ARG_LEN);
-    snprintf(pth, MAX_ARG_LEN-1,"/bin/rm -rf %s", dpdk_db_dir);
-    system(pth);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void create_dpdk_dir(char *dpdk_db_dir)
-{
-  char pth[MAX_ARG_LEN];
-  memset(pth, 0, MAX_ARG_LEN);
-  snprintf(pth, MAX_ARG_LEN-1,"/bin/mkdir -vp %s", dpdk_db_dir);
-  system(pth);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -357,23 +274,39 @@ int ovs_execv_del_lan_eth(t_all_ctx *all_ctx, char *ovsx_bin,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int get_next_dpdkr(void)
+{
+  static int dpdkr = 0;
+  int result = dpdkr;
+  dpdkr += 1;
+  return result; 
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovsx_bin,
-                      char *dpdk_db_dir, char *name, int num)
+                      char *dpdk_db_dir, char *name, int num, int *dpdkr)
 {
   char cmd[MAX_ARG_LEN];
-  int i, result = 0;
+  int idx_dpdkr, i, result = 0;
   
   for (i=0; i<num; i++)
     {
+    idx_dpdkr = get_next_dpdkr(); 
+    *dpdkr = idx_dpdkr;
     memset(cmd, 0, MAX_ARG_LEN);
     snprintf(cmd, MAX_ARG_LEN-1,
              "-- add-br br_%s_%d "
              "-- set bridge br_%s_%d datapath_type=netdev "
+             "-- add-port br_%s_%d dpdkr%u "
+             "-- set Interface dpdkr%u type=dpdkr "
              "-- add-port br_%s_%d %s_%d "
              "-- set Interface %s_%d type=dpdkvhostuserclient "
              "options:vhost-server-path=%s_qemu/%s_%d",
-             name, i, name, i, name, i, name, i,
-             name, i, dpdk_db_dir, name, i);
+             name, i, name, i,
+             name, i, idx_dpdkr, idx_dpdkr,
+             name, i, name, i, name, i,
+             dpdk_db_dir, name, i);
     if (ovs_vsctl(all_ctx, ovsx_bin, dpdk_db_dir, cmd)) 
       result = -1;
     }
@@ -399,22 +332,18 @@ int ovs_execv_del_eth(t_all_ctx *all_ctx, char *ovsx_bin,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_daemon(t_all_ctx *all_ctx, char *ovsx_bin, char *dpdk_db_dir)
+int ovs_execv_daemon(t_all_ctx *all_ctx, int is_switch,
+                     char *ovsx_bin, char *dpdk_db_dir)
 {
   int pid;
   init_environ(dpdk_db_dir);
-  if (!strcmp(all_ctx->g_name, "ovs"))
+  if (is_switch)
     {
-    umask (0000);
-    seteuid(0);
-    setegid(0);
     wait_for_server_sock(dpdk_db_dir);
     pid = launch_ovs_vswitchd(all_ctx, ovsx_bin, dpdk_db_dir);
     }
   else
     {
-    unlink_files(dpdk_db_dir);
-    create_dpdk_dir(dpdk_db_dir);
     create_ovsdb_server_conf(all_ctx, ovsx_bin, dpdk_db_dir);
     pid = launch_ovs_server(all_ctx, ovsx_bin, dpdk_db_dir);
     ovs_vsctl(all_ctx, ovsx_bin, dpdk_db_dir, 

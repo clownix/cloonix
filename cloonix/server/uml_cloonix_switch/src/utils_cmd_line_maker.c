@@ -264,7 +264,7 @@ char *utils_get_endp_bin_path(int type)
     sprintf(path, "%s/server/muswitch/mua2b/cloonix_mua2b", cfg_get_bin_dir());
   else if (type == endp_type_nat)
     sprintf(path, "%s/server/muswitch/munat/cloonix_munat", cfg_get_bin_dir());
-  else if ((type == endp_type_ovs) || (type == endp_type_ovsdb))
+  else if (type == endp_type_ovsdb)
     sprintf(path, "%s/server/muswitch/muovs/cloonix_muovs", cfg_get_bin_dir());
   else
     KOUT("%d", type);
@@ -324,6 +324,15 @@ char *utils_get_dpdk_qemu_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];
   sprintf(dpdk, "%s/%s_qemu", cfg_get_root_work(), DIR_DPDK);
+  return dpdk;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_dpdk_huge_dir(void)
+{
+  static char dpdk[MAX_PATH_LEN];
+  sprintf(dpdk, "%s/%s_huge", cfg_get_root_work(), DIR_DPDK);
   return dpdk;
 }
 /*---------------------------------------------------------------------------*/

@@ -1,8 +1,8 @@
 #!/bin/bash
 HERE=`pwd`
 TARGZSTORE=../../../targz_store
-NAMEZ=openvswitch-2.11.0.tar.gz
-NAME=openvswitch-2.11.0
+NAMEZ=openvswitch-2.11.1.tar.gz
+NAME=openvswitch-2.11.1
 
 tar xvf ${TARGZSTORE}/${NAMEZ}
 cd ${NAME}

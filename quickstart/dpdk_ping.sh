@@ -61,11 +61,16 @@ for i in one two ; do
 done
 #----------------------------------------------------------------------
 
+  cloonix_ssh $NET one "ping 11.11.11.2"
 
+exit
 set -e
 #######################################################################
 while [ 1 ]; do
-  cloonix_ssh $NET one "ping -c 10000 -f 11.11.11.2"
+#  cloonix_cli $NET add kvm cloon ram=2048 cpu=2 dpdk=3 sock=0 hwsim=0 ${DIST}.qcow2 & 
+  cloonix_ssh $NET one "ping -c 500000 -f 11.11.11.2"
+#  cloonix_cli $NET del kvm cloon 
+  cloonix_ssh $NET one "ping -c 200000 -f 11.11.11.2"
   for i in one two; do
     echo cloonix_cli $NET del lan $i 1 lan1
     cloonix_cli $NET del lan $i 1 lan1

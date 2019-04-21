@@ -358,9 +358,17 @@ static void timeout_resp_qmp(void *data)
 /****************************************************************************/
 int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_resp cb)
 {
+  t_vm *vm;
   int result = -1;
   t_qrec *qrec = get_qrec_with_name(name);
   t_timeout_resp *timeout;
+  vm = cfg_get_vm(name);
+  if (!vm)
+    {
+    KERR("%s", name);
+    qrec_free(qrec, 1);
+    return result;
+    }
   if (!qrec)
     KERR("%s", name);
   else if (qrec->resp_cb)

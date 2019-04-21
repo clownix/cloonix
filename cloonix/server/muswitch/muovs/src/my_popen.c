@@ -26,8 +26,17 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include "ioc.h"
-#define MAX_ARG_LEN 400
+
+#include "ovs_execv.h"
+
 #define CLOONIX_CMD_LOG  "cloonix_ovs_req.log"
+
+/*****************************************************************************/
+int get_cloonix_listen_fd(void);
+int get_cloonix_fd(void);
+/*---------------------------------------------------------------------------*/
+
+static char *g_environ[NB_ENV];
 
 /*****************************************************************************/
 static char *make_cmd_str(char **argv)
@@ -66,7 +75,8 @@ static void add_cmd_to_log(char *dpdk_db_dir, char *argv[])
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int my_popen(char *dpdk_db_dir, char *argv[], char *env[], int *child_pid)
+static int my_popen(char *dpdk_db_dir, char *argv[], char *env[],
+                    int *child_pid)
 {
   int chld_state, pid, status=97;
   pid_t rc_pid;
@@ -74,6 +84,8 @@ int my_popen(char *dpdk_db_dir, char *argv[], char *env[], int *child_pid)
     KOUT(" ");
   if (pid == 0)
     {
+    close(get_cloonix_listen_fd());
+    close(get_cloonix_fd());
     execve(argv[0], argv, env);
     KOUT("FORK error %s", strerror(errno));
     }
@@ -95,4 +107,40 @@ int my_popen(char *dpdk_db_dir, char *argv[], char *env[], int *child_pid)
   return status;
 }
 /*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+int call_my_popen(char *dpdk_db_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
+{
+  int i, child_pid, result = 0;
+  char *argv[NB_ARG];
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  for (i=0; i<nb; i++)
+    argv[i] = arg[i];
+  if (my_popen(dpdk_db_dir, argv, g_environ, &child_pid))
+    {
+    KERR("%s %d", make_cmd_str(argv), child_pid);
+    result = -1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void init_environ(char *dpdk_db_dir)
+{
+  int i;
+  static char env[NB_ENV][MAX_ENV_LEN];
+  memset(env, 0, NB_ENV * MAX_ENV_LEN * sizeof(char));
+  memset(g_environ, 0, NB_ENV * sizeof(char *));
+  snprintf(env[0], MAX_ENV_LEN-1, "OVS_BINDIR=%s", dpdk_db_dir);
+  snprintf(env[1], MAX_ENV_LEN-1, "OVS_RUNDIR=%s", dpdk_db_dir);
+  snprintf(env[2], MAX_ENV_LEN-1, "OVS_LOGDIR=%s", dpdk_db_dir);
+  snprintf(env[3], MAX_ENV_LEN-1, "OVS_DBDIR=%s", dpdk_db_dir);
+  snprintf(env[4], MAX_ENV_LEN-1, "XDG_RUNTIME_DIR=%s", dpdk_db_dir);
+  for (i=0; i<NB_ENV-1; i++)
+    g_environ[i] = env[i];
+}
+/*---------------------------------------------------------------------------*/
+
 

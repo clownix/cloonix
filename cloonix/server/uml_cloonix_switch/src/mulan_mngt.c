@@ -686,8 +686,8 @@ static char **mulan_birth_argv(t_mulan_arg *mu, int is_wlan)
 static int mulan_birth(void *data)
 {
   char **argv = (char **) data;
-  my_mkdir(utils_get_muswitch_sock_dir());
-  my_mkdir(utils_get_muswitch_traf_dir());
+  my_mkdir(utils_get_muswitch_sock_dir(), 0);
+  my_mkdir(utils_get_muswitch_traf_dir(), 0);
 //VIP
 //sleep(10000000);
   execv(argv[0], argv);
