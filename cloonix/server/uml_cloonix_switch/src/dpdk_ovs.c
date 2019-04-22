@@ -43,6 +43,7 @@
 #include "dpdk_msg.h"
 #include "dpdk_fmt.h"
 #include "qmp.h"
+#include "system_callers.h"
 
 enum{
   msg_type_diag = 1,
@@ -280,6 +281,7 @@ static void ovs_end_part(char *name)
     kill(mu->ovs_pid, SIGKILL);
   unlink(sock);
   ovs_free(name);
+  mk_dpdk_ovs_db_dir();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -757,7 +759,12 @@ void dpdk_ovs_end_vm(char *name, int num)
 {
   t_dpdk_vm *vm = vm_find(name);
   if (!vm)
+    {
     KERR("%s", name);
+    if (dpdk_dyn_del_all_lan(name))
+      KERR("%s", name);
+    wrapper_vm_free(name, num);
+    }
   else
     {
     if (vm->destroy_done == 0)

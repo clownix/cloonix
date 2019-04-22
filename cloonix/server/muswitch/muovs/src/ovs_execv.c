@@ -274,37 +274,22 @@ int ovs_execv_del_lan_eth(t_all_ctx *all_ctx, char *ovsx_bin,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int get_next_dpdkr(void)
-{
-  static int dpdkr = 0;
-  int result = dpdkr;
-  dpdkr += 1;
-  return result; 
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovsx_bin,
-                      char *dpdk_db_dir, char *name, int num, int *dpdkr)
+                      char *dpdk_db_dir, char *name, int num)
 {
   char cmd[MAX_ARG_LEN];
-  int idx_dpdkr, i, result = 0;
+  int i, result = 0;
   
   for (i=0; i<num; i++)
     {
-    idx_dpdkr = get_next_dpdkr(); 
-    *dpdkr = idx_dpdkr;
     memset(cmd, 0, MAX_ARG_LEN);
     snprintf(cmd, MAX_ARG_LEN-1,
              "-- add-br br_%s_%d "
              "-- set bridge br_%s_%d datapath_type=netdev "
-             "-- add-port br_%s_%d dpdkr%u "
-             "-- set Interface dpdkr%u type=dpdkr "
              "-- add-port br_%s_%d %s_%d "
              "-- set Interface %s_%d type=dpdkvhostuserclient "
              "options:vhost-server-path=%s_qemu/%s_%d",
              name, i, name, i,
-             name, i, idx_dpdkr, idx_dpdkr,
              name, i, name, i, name, i,
              dpdk_db_dir, name, i);
     if (ovs_vsctl(all_ctx, ovsx_bin, dpdk_db_dir, cmd)) 
@@ -313,6 +298,34 @@ int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovsx_bin,
   return result;
 }
 /*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+int ovs_execv_add_spy(t_all_ctx *all_ctx, char *ovsx_bin,
+                      char *dpdk_db_dir, char *name, int num, int dpdkr)
+{
+  char cmd[MAX_ARG_LEN];
+  int i, result = 0;
+
+  for (i=0; i<num; i++)
+    {
+    memset(cmd, 0, MAX_ARG_LEN);
+    snprintf(cmd, MAX_ARG_LEN-1,
+           "-- add-port br_%s_%d dpdkr%u "
+           "-- set Interface dpdkr%u type=dpdkr "
+           "-- --id=@p get port dpdkr%u "
+           "-- --id=@m create mirror name=m%u select-all=true output-port=@p "
+           "-- set bridge br_%s_%d mirrors=@m",
+           name, i, dpdkr+i, dpdkr+i, dpdkr+i, dpdkr+i, name, i);
+    if (ovs_vsctl(all_ctx, ovsx_bin, dpdk_db_dir, cmd))
+      result = -1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+
+
 
 /*****************************************************************************/
 int ovs_execv_del_eth(t_all_ctx *all_ctx, char *ovsx_bin,
@@ -353,7 +366,7 @@ int ovs_execv_daemon(t_all_ctx *all_ctx, int is_switch,
     ovs_vsctl(all_ctx, ovsx_bin, dpdk_db_dir,
     "--verbose --no-wait set Open_vSwitch . other_config:dpdk-lcore-mask=0x01");
     ovs_vsctl(all_ctx, ovsx_bin, dpdk_db_dir,
-    "--verbose --no-wait set Open_vSwitch . other_config:dpdk-socket-mem=512");
+    "--verbose --no-wait set Open_vSwitch . other_config:dpdk-socket-mem=1024");
     ovs_vsctl(all_ctx, ovsx_bin, dpdk_db_dir,
     "--verbose --no-wait set Open_vSwitch . other_config:dpdk-init=true");
     }

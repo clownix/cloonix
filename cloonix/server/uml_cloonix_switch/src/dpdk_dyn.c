@@ -500,7 +500,10 @@ void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num)
   else
     {
     if (vlan_exists_in_vm(name))
+      {
+      all_lan_del_req(vm);
       KERR("%s", name);
+      }
     dpdk_msg_send_del_eth(name, num);
     vm_free(name);
     }

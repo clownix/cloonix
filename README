@@ -21,7 +21,6 @@ For those on buster, no problem ahead but for other distributions, you
 must complete the ./install_depends package list for your needs, the
 names of the packages for the debian buster can help you in the package
 selection.
-Futur versions will have the correct ./install_depends for other distros.
 
 cd cloonix
 sudo ./install_depends build
@@ -60,23 +59,18 @@ update-grub
 
 reboot
 
-  cd cloonix/quickstart
-  ./dpdk_ping.sh
+cd cloonix/quickstart
+./dpdk_ping.sh
 
-  To track errors in case of failure:
-  cat /var/log/user.log
-  cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
+To track errors in case of failure:
+cat /var/log/user.log
+cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
 HOWTO TEST MAC80211_HWSIM:
 cd cloonix/mac80211_hwsim
 ./hwsim.sh
------------------------------------------------------------------------------
-
------------------------------------------------------------------------------
-COMPLETE FREESWITCH DEMO ON GITHUB:
-https://github.com/clownix/freeswitch
 -----------------------------------------------------------------------------
 
 

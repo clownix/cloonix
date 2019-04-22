@@ -269,14 +269,51 @@ void mk_endp_dir(void)
 /*****************************************************************************/
 void mk_dtach_dir(void)
 {
+
   my_mkdir(utils_get_dtach_sock_dir(), 0);
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void mk_dpdk_ovs_db_dir(void)
+{
+  char pth[MAX_PATH_LEN+MAX_NAME_LEN];
+  DIR *dirptr;
+  struct dirent *ent;
+  char *ovsdb_dir = utils_get_dpdk_ovs_db_dir();
+  if (!access(ovsdb_dir, F_OK))
+    {
+    dirptr = opendir(ovsdb_dir);
+    if (dirptr)
+      {
+      while ((ent = readdir(dirptr)) != NULL)
+        {
+        if (!strcmp(ent->d_name, "."))
+          continue;
+        if (!strcmp(ent->d_name, ".."))
+          continue;
+        if (!strcmp(ent->d_name, "ovs-vswitchd.log"))
+          continue;
+        if (!strcmp(ent->d_name, "cloonix_ovs_req.log"))
+          continue;
+        snprintf(pth,MAX_PATH_LEN+MAX_NAME_LEN,"%s/%s",ovsdb_dir,ent->d_name);
+        pth[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
+        if(ent->d_type == DT_DIR)
+          KERR("%s Directory Found: %s will not delete\n", ovsdb_dir, pth);
+        else if (unlink(pth))
+          KERR("File: %s could not be deleted\n", pth);
+        }
+      if (closedir(dirptr))
+        KOUT("%d", errno);
+      }
+   }
+  my_mkdir(ovsdb_dir, 1);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void mk_dpdk_dir(void)
 {
-  my_mkdir(utils_get_dpdk_ovs_db_dir(), 1);
   my_mkdir(utils_get_dpdk_huge_dir(), 0);
   my_mkdir(utils_get_dpdk_qemu_dir(), 0);
   my_mkdir(utils_get_dpdk_cloonix_dir(), 0);

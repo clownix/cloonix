@@ -6,6 +6,7 @@ NAME=openvswitch-2.11.1
 
 tar xvf ${TARGZSTORE}/${NAMEZ}
 cd ${NAME}
+sed -i s"/DPDK_RING_SIZE = 256/DPDK_RING_SIZE = 128/" lib/netdev-dpdk.c
 ./boot.sh
 export DPDK_CFLAGS=-I./include
 export DPDK_LDFLAGS=-L./lib

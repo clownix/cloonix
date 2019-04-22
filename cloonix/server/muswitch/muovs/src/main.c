@@ -65,6 +65,16 @@ int get_cloonix_fd(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int get_next_dpdkr(int num)
+{
+  static int dpdkr = 0;
+  int result = dpdkr;
+  dpdkr += num;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static char *mydirname(char *path)
 {
   static char tmp[MAX_PATH_LEN];
@@ -309,10 +319,34 @@ static int check_uid(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void add_eth_and_spy(t_all_ctx *all_ctx, char *respb,
+                            char *name, int num, int spy)
+{
+  if (ovs_execv_add_eth(all_ctx, g_ovsx_bin, g_dpdk_db_dir, name, num))
+    {
+    KERR("%s %d", name, num);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_eth name=%s num=%d", name, num);
+    }
+  else if (ovs_execv_add_spy(all_ctx,g_ovsx_bin,g_dpdk_db_dir,name,num,spy))
+    {
+    KERR("%s %d", name, num);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_eth name=%s num=%d", name, num);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_add_eth name=%s num=%d", name, num);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 {
   t_all_ctx *all_ctx = (t_all_ctx *) ptr;
-  int num, cloonix_llid, dpdkr, launch_ovsdb = 0, launch_ovs = 0;
+  int num, cloonix_llid, launch_ovsdb = 0, launch_ovs = 0;
   char respb[MAX_PATH_LEN];
   char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
@@ -350,12 +384,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     }
   else if (sscanf(line, "cloonixovs_add_eth name=%s num=%d", name, &num) == 2)
     {
-    if (ovs_execv_add_eth(all_ctx,g_ovsx_bin,g_dpdk_db_dir,name,num,&dpdkr))
-      snprintf(respb, MAX_PATH_LEN-1,
-               "KO cloonixovs_add_eth name=%s num=%d", name, num);
-    else
-      snprintf(respb, MAX_PATH_LEN-1,
-               "OK cloonixovs_add_eth name=%s num=%d", name, num);
+    add_eth_and_spy(all_ctx, respb, name, num, get_next_dpdkr(num));
     }
   else if (sscanf(line, "cloonixovs_del_eth name=%s num=%d", name, &num) == 2) 
     {

@@ -262,6 +262,7 @@ static void mk_and_tst_work_path(void)
   my_mkdir(cfg_get_root_work(), 0);
   mk_endp_dir();
   mk_dtach_dir();
+  mk_dpdk_ovs_db_dir();
   mk_dpdk_dir();
   sprintf(path1, "%s/cloonix_lock",  cfg_get_root_work());
   check_for_another_instance(path1, 0);

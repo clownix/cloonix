@@ -75,10 +75,9 @@ static void add_cmd_to_log(char *dpdk_db_dir, char *argv[])
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int my_popen(char *dpdk_db_dir, char *argv[], char *env[],
-                    int *child_pid)
+static int my_popen(char *dpdk_db_dir, char *argv[], char *env[])
 {
-  int chld_state, pid, status=97;
+  int exited_pid, timeout_pid, worker_pid, chld_state, pid, status=97;
   pid_t rc_pid;
   if ((pid = fork()) < 0)
     KOUT(" ");
@@ -86,10 +85,33 @@ static int my_popen(char *dpdk_db_dir, char *argv[], char *env[],
     {
     close(get_cloonix_listen_fd());
     close(get_cloonix_fd());
-    execve(argv[0], argv, env);
-    KOUT("FORK error %s", strerror(errno));
+    worker_pid = fork();
+
+    if (worker_pid == 0)
+      {
+      execve(argv[0], argv, env);
+      KOUT("FORK error %s", strerror(errno));
+      }
+    timeout_pid = fork();
+    if (timeout_pid == 0)
+      {
+      sleep(5);
+      exit(1);
+      }
+    exited_pid = wait(&chld_state);
+    if (exited_pid == worker_pid)
+      {
+      if (WIFEXITED(chld_state))
+        status = WEXITSTATUS(chld_state);
+      if (WIFSIGNALED(chld_state))
+        KERR("Child exited via signal %d\n",WTERMSIG(chld_state));
+      kill(timeout_pid, SIGKILL);
+      }
+    else
+      kill(worker_pid, SIGKILL);
+    wait(NULL);
+    exit(status);
     }
-  *child_pid = pid;
   add_cmd_to_log(dpdk_db_dir, argv);
   rc_pid = waitpid(pid, &chld_state, 0);
   if (rc_pid > 0)
@@ -112,14 +134,14 @@ static int my_popen(char *dpdk_db_dir, char *argv[], char *env[],
 /*****************************************************************************/
 int call_my_popen(char *dpdk_db_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
 {
-  int i, child_pid, result = 0;
+  int i, result = 0;
   char *argv[NB_ARG];
   memset(argv, 0, NB_ARG * sizeof(char *));
   for (i=0; i<nb; i++)
     argv[i] = arg[i];
-  if (my_popen(dpdk_db_dir, argv, g_environ, &child_pid))
+  if (my_popen(dpdk_db_dir, argv, g_environ))
     {
-    KERR("%s %d", make_cmd_str(argv), child_pid);
+    KERR("%s", make_cmd_str(argv));
     result = -1;
     }
   return result;

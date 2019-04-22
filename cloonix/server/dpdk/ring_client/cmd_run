@@ -5,7 +5,4 @@ XDG_RUNTIME_DIR=/home/perrier/cloonix_data/nemo/dpdk
 ${HERE}/ring_client \
 --proc-type secondary \
 -- \
--n 0
-
-exit
---huge-dir /home/perrier/cloonix_data/nemo/dpdk_huge/ \
+-n 1

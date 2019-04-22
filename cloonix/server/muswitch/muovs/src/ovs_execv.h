@@ -36,7 +36,10 @@ int ovs_execv_del_lan_eth(t_all_ctx *all_ctx, char *ovsx_bin,
                           char *vm_name, int num);
 
 int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovsx_bin, char *dpdk_db_dir,
-                                          char *name, int num, int *dpdkr);
+                                          char *name, int num);
+
+int ovs_execv_add_spy(t_all_ctx *all_ctx, char *ovsx_bin, char *dpdk_db_dir,
+                                          char *name, int num, int dpdkr);
 
 int ovs_execv_del_eth(t_all_ctx *all_ctx, char *ovsx_bin, char *dpdk_db_dir,
                                           char *name, int num);
