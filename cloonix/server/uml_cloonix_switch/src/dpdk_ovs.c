@@ -57,6 +57,7 @@ typedef struct t_dpdk_vm
 {
   char name[MAX_NAME_LEN];
   int  num;
+  int  base_spy;
   int  must_unlock_coherency;
   int  dyn_vm_add_done;
   int  dyn_vm_add_done_acked;
@@ -85,6 +86,8 @@ typedef struct t_ovs
   int unanswered_pid_req;
   int connect_try_count;
   int destroy_requested;
+  int nb_resp_ovs_ko;
+  int nb_resp_ovsdb_ko;
 } t_ovs;
 /*--------------------------------------------------------------------------*/
 
@@ -137,7 +140,7 @@ static t_dpdk_vm *vm_find(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void vm_alloc(char *name, int num, int must_unlock_coherency)
+static void vm_alloc(char *name, int num, int base_spy, int must_unlock)
 {
   t_dpdk_vm *vm = vm_find(name);
   if (vm)
@@ -147,7 +150,8 @@ static void vm_alloc(char *name, int num, int must_unlock_coherency)
     vm = (t_dpdk_vm *) clownix_malloc(sizeof(t_dpdk_vm), 8);
     memset(vm, 0, sizeof(t_dpdk_vm));
     strncpy(vm->name, name, MAX_NAME_LEN-1);
-    vm->must_unlock_coherency = must_unlock_coherency;
+    vm->must_unlock_coherency = must_unlock;
+    vm->base_spy = base_spy;
     vm->num = num;
     if (g_head_vm)
       g_head_vm->prev = vm;
@@ -421,7 +425,7 @@ static void timer_vm_add_beat(void *data)
         {
         if (test_if_dpdk_qemu_path_is_ok(vm->name, vm->num))
           {
-          dpdk_dyn_add_eth(vm->name, vm->num);
+          dpdk_dyn_add_eth(vm->name, vm->num, vm->base_spy);
           vm->dyn_vm_add_done = 1;
           }
         }
@@ -663,10 +667,30 @@ void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
       KERR(" destroy_requested for %s", cur->name);
       cur->destroy_requested = 1;
       }
+    else if (!strcmp(line, "cloonixovs_resp_ovsdb_ko"))
+      {
+      KERR("cloonixovs_resp_ovsdb_ko");
+      cur->nb_resp_ovsdb_ko += 1;
+      if (cur->nb_resp_ovsdb_ko > 3)
+        {
+        KERR(" destroy_requested for %s", cur->name);
+        cur->destroy_requested = 1;
+        }
+      }
     else if (!strcmp(line, "cloonixovs_resp_ovsdb_ok"))
       {
       cur->open_ovsdb = 1;
       event_print("Start OpenVSwitch %s open_ovsdb = 1", cur->name);
+      }
+    else if (!strcmp(line, "cloonixovs_resp_ovs_ko"))
+      {
+      KERR("cloonixovs_resp_ovs_ko");
+      cur->nb_resp_ovs_ko += 1;
+      if (cur->nb_resp_ovs_ko > 3)
+        {
+        KERR(" destroy_requested for %s", cur->name);
+        cur->destroy_requested = 1;
+        }
       }
     else if (!strcmp(line, "cloonixovs_resp_ovs_ok"))
       {
@@ -694,18 +718,18 @@ int dpdk_ovs_find_with_llid(int llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_ovs_start_vm(char *name, int num)
+void dpdk_ovs_start_vm(char *name, int num, int base_spy)
 {
   t_ovs *cur = g_head_ovs;
   erase_dpdk_qemu_path(name, num);
   if (cur != NULL)
     {
     recv_coherency_unlock();
-    vm_alloc(name, num, 0);
+    vm_alloc(name, num, base_spy, 0);
     }
   else
     {
-    vm_alloc(name, num, 1);
+    vm_alloc(name, num, base_spy, 1);
     event_print("Start OpenVSwitch");
     cur = ovs_alloc("ovsdb");
     cur->clone_start_pid = create_muovs_process("ovsdb");
@@ -825,7 +849,7 @@ char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_eth)
   len += sprintf(net_cmd+len,
   " -object memory-backend-file,id=mem%d,size=%dM,share=on,mem-path=%s"
   " -numa node,memdev=mem%d -mem-prealloc",
-  eth, vm->kvm.mem/tot_eth, utils_get_dpdk_huge_dir(), eth);
+  eth, vm->kvm.mem/tot_eth, cfg_get_root_work(), eth);
   return net_cmd;
 }
 /*--------------------------------------------------------------------------*/

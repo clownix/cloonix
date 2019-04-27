@@ -11,7 +11,8 @@ clownix.net/downloads/cloonix-<major>-<minor>/targz_store.tar.gz
 
 This version v03-00 is the latest (if this README is up to date).
 The version v03-00 uses dpdk/ovs for latency and throughput, it is a
-work-going-on version missing some features. But the base is working.
+work-going-on version missing some features and with experimental code.
+But the basic ping is working.
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -42,6 +43,34 @@ cd -
 
 -----------------------------------------------------------------------------
 HOWTO START BASIC NET:
+Check that your cpu is equiped with the necessary option:
+    egrep -c '(vmx|svm)' /proc/cpuinfo
+The result must be non-zero
+
+To have the kvm_intel loaded at each start of your host (for an intel):
+
+    echo kvm_intel >> /etc/modules 
+
+For the rights of a user to use the kvm module, you can use the following
+which opens kvm to be used by "other" at each start of your machine:
+
+    cat > /etc/udev/rules.d/65-kvm.rules << EOF
+    KERNEL=="kvm", NAME="%k", GROUP="kvm", MODE="0666"
+    EOF 
+
+If you need the nested function of kvm, to put a cloonix network inside a
+cloonix vm guest, you can test if you have the necessary config:
+
+    cat /sys/module/kvm_intel/parameters/nested
+
+If you do not hav Y after this cat, then you can do:
+
+    echo 'GRUB_CMDLINE_LINUX="kvm-intel.nested=1"' >> /etc/default/grub
+    update-grub
+
+
+After any of the above commands, the host must be rebooted, then:
+
 cd cloonix/quickstart
 ./ping.sh
 -----------------------------------------------------------------------------
@@ -51,16 +80,20 @@ HOWTO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
 -----------------------------------------------------------------------------
   The host must have 1 Giga hugepages, i chose to have 10 hugepages:
 -----------------------------------------------------------------------------
-In /etc/default/grub, put:
+To have the correct hugepage configuration, if you have 10 giga to spare for
+dpdk, you can do:
 
-GRUB_CMDLINE_LINUX="kvm-intel.nested=1 hugepagesz=1G hugepages=10 default_hugepagesz=1G"
+    printf '\nGRUB_CMDLINE_LINUX="%s %s %s"\n', \
+                               "kvm-intel.nested=1" \
+                               "hugepagesz=1G hugepages=10" \
+                               "default_hugepagesz=1G" >> /etc/default/grub
+    update-grub
 
-update-grub
+After any of the above commands, the host must be rebooted, then:
 
-reboot
 
-cd cloonix/quickstart
-./dpdk_ping.sh
+    cd cloonix/quickstart
+    ./dpdk_ping.sh
 
 To track errors in case of failure:
 cat /var/log/user.log

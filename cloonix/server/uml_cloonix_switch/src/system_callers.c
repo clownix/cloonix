@@ -314,7 +314,6 @@ void mk_dpdk_ovs_db_dir(void)
 /*****************************************************************************/
 void mk_dpdk_dir(void)
 {
-  my_mkdir(utils_get_dpdk_huge_dir(), 0);
   my_mkdir(utils_get_dpdk_qemu_dir(), 0);
   my_mkdir(utils_get_dpdk_cloonix_dir(), 0);
 }

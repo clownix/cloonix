@@ -1,0 +1,11 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZSTORE=../../../targz_store
+NAMEZ=openvswitch-2.11.1.tar.gz
+NAME=openvswitch-2.11.1
+tar xvf ${TARGZSTORE}/${NAMEZ}
+mv ${NAME} openvswitch_tainted
+cd openvswitch_tainted
+patch -p1 < ${HERE}/openvswitch.patch
+
+

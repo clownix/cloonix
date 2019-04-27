@@ -1040,7 +1040,7 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
         {
         kvm->mem = adjust_for_nb_dpdk(kvm->mem, kvm->nb_dpdk);
         recv_coherency_lock();
-        dpdk_ovs_start_vm(kvm->name, kvm->nb_dpdk);
+        dpdk_ovs_start_vm(kvm->name, kvm->nb_dpdk, MAX_VM * vm_id);
         }
       cow_look = (t_add_vm_cow_look *) 
                  clownix_malloc(sizeof(t_add_vm_cow_look), 7);

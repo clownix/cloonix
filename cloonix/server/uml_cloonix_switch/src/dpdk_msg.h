@@ -22,7 +22,7 @@ void dpdk_msg_ack_lan_eth(int tid, char *lan_name, char *name, int num,
 void dpdk_msg_ack_eth(int tid, char *name, int num,
                       int is_ko, int is_add, char *lab);
 /*--------------------------------------------------------------------------*/
-int dpdk_msg_send_add_eth(char *name, int num);
+int dpdk_msg_send_add_eth(char *name, int num, int spy);
 void dpdk_msg_send_del_eth(char *name, int num);
 int dpdk_msg_send_add_lan_eth(char *lan_name, char *vm_name, int num);
 int dpdk_msg_send_del_lan_eth(char *lan_name, char *vm_name, int num);

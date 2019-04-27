@@ -19,31 +19,34 @@
 #define MAX_ENV_LEN 100
 #define NB_ENV 10
 #define NB_ARG 50
-void init_environ(char *dpdk_db_dir);
-int call_my_popen(char *dpdk_db_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN]);
-int ovs_execv_add_lan(t_all_ctx *all_ctx, char *ovsx_bin,
-                      char *dpdk_db_dir, char *lan_name);
+void init_environ(char *ovs_bin, char *dpdk_dir);
+int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN]);
+int ovs_execv_add_lan(t_all_ctx *all_ctx, char *ovs_bin,
+                      char *dpdk_dir, char *lan_name);
 
-int ovs_execv_del_lan(t_all_ctx *all_ctx, char *ovsx_bin,
-                      char *dpdk_db_dir, char *lan_name);
+int ovs_execv_del_lan(t_all_ctx *all_ctx, char *ovs_bin,
+                      char *dpdk_dir, char *lan_name);
 
-int ovs_execv_add_lan_eth(t_all_ctx *all_ctx, char *ovsx_bin,
-                          char *dpdk_db_dir, char *lan_name,
+int ovs_execv_add_lan_eth(t_all_ctx *all_ctx, char *ovs_bin,
+                          char *dpdk_dir, char *lan_name,
                           char *vm_name, int num);
 
-int ovs_execv_del_lan_eth(t_all_ctx *all_ctx, char *ovsx_bin,
-                          char *dpdk_db_dir, char *lan_name,
+int ovs_execv_del_lan_eth(t_all_ctx *all_ctx, char *ovs_bin,
+                          char *dpdk_dir, char *lan_name,
                           char *vm_name, int num);
 
-int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovsx_bin, char *dpdk_db_dir,
+int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
                                           char *name, int num);
 
-int ovs_execv_add_spy(t_all_ctx *all_ctx, char *ovsx_bin, char *dpdk_db_dir,
-                                          char *name, int num, int dpdkr);
+int ovs_execv_add_spy(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
+                                          char *name, int num, int spy);
 
-int ovs_execv_del_eth(t_all_ctx *all_ctx, char *ovsx_bin, char *dpdk_db_dir,
+int ovs_execv_add_spy_eth(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
+                          char *name, int num);
+
+int ovs_execv_del_eth(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
                                           char *name, int num);
 
 int ovs_execv_daemon(t_all_ctx *all_ctx, int is_switch,
-                     char *ovsx_bin, char *dpdk_db_dir);
+                     char *ovs_bin, char *dpdk_dir);
 

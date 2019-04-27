@@ -59,11 +59,11 @@ static char *make_cmd_str(char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void add_cmd_to_log(char *dpdk_db_dir, char *argv[])
+static void add_cmd_to_log(char *dpdk_dir, char *argv[])
 {
   FILE *fp_log;
   char pth[MAX_ARG_LEN];
-  snprintf(pth, MAX_ARG_LEN-1, "%s/%s", dpdk_db_dir, CLOONIX_CMD_LOG);
+  snprintf(pth, MAX_ARG_LEN-1, "%s/%s", dpdk_dir, CLOONIX_CMD_LOG);
   fp_log = fopen(pth, "a+");
   if (!fp_log) 
     KERR("%s", strerror(errno));
@@ -75,10 +75,11 @@ static void add_cmd_to_log(char *dpdk_db_dir, char *argv[])
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int my_popen(char *dpdk_db_dir, char *argv[], char *env[])
+static int my_popen(char *dpdk_dir, char *argv[], char *env[])
 {
   int exited_pid, timeout_pid, worker_pid, chld_state, pid, status=97;
   pid_t rc_pid;
+  add_cmd_to_log(dpdk_dir, argv);
   if ((pid = fork()) < 0)
     KOUT(" ");
   if (pid == 0)
@@ -108,11 +109,12 @@ static int my_popen(char *dpdk_db_dir, char *argv[], char *env[])
       kill(timeout_pid, SIGKILL);
       }
     else
+      {
       kill(worker_pid, SIGKILL);
+      }
     wait(NULL);
     exit(status);
     }
-  add_cmd_to_log(dpdk_db_dir, argv);
   rc_pid = waitpid(pid, &chld_state, 0);
   if (rc_pid > 0)
     {
@@ -132,14 +134,14 @@ static int my_popen(char *dpdk_db_dir, char *argv[], char *env[])
 
 
 /*****************************************************************************/
-int call_my_popen(char *dpdk_db_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
+int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
 {
   int i, result = 0;
   char *argv[NB_ARG];
   memset(argv, 0, NB_ARG * sizeof(char *));
   for (i=0; i<nb; i++)
     argv[i] = arg[i];
-  if (my_popen(dpdk_db_dir, argv, g_environ))
+  if (my_popen(dpdk_dir, argv, g_environ))
     {
     KERR("%s", make_cmd_str(argv));
     result = -1;
@@ -149,17 +151,17 @@ int call_my_popen(char *dpdk_db_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void init_environ(char *dpdk_db_dir)
+void init_environ(char *ovs_bin, char *dpdk_dir)
 {
   int i;
   static char env[NB_ENV][MAX_ENV_LEN];
   memset(env, 0, NB_ENV * MAX_ENV_LEN * sizeof(char));
   memset(g_environ, 0, NB_ENV * sizeof(char *));
-  snprintf(env[0], MAX_ENV_LEN-1, "OVS_BINDIR=%s", dpdk_db_dir);
-  snprintf(env[1], MAX_ENV_LEN-1, "OVS_RUNDIR=%s", dpdk_db_dir);
-  snprintf(env[2], MAX_ENV_LEN-1, "OVS_LOGDIR=%s", dpdk_db_dir);
-  snprintf(env[3], MAX_ENV_LEN-1, "OVS_DBDIR=%s", dpdk_db_dir);
-  snprintf(env[4], MAX_ENV_LEN-1, "XDG_RUNTIME_DIR=%s", dpdk_db_dir);
+  snprintf(env[0], MAX_ENV_LEN-1, "OVS_BINDIR=%s", ovs_bin);
+  snprintf(env[1], MAX_ENV_LEN-1, "OVS_RUNDIR=%s", dpdk_dir);
+  snprintf(env[2], MAX_ENV_LEN-1, "OVS_LOGDIR=%s", dpdk_dir);
+  snprintf(env[3], MAX_ENV_LEN-1, "OVS_DBDIR=%s", dpdk_dir);
+  snprintf(env[4], MAX_ENV_LEN-1, "XDG_RUNTIME_DIR=%s", dpdk_dir);
   for (i=0; i<NB_ENV-1; i++)
     g_environ[i] = env[i];
 }

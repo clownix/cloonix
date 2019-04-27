@@ -17,7 +17,7 @@
 /*****************************************************************************/
 int dpdk_fmt_tx_add_lan(int tid, char *lan);
 int dpdk_fmt_tx_del_lan(int tid, char *lan);
-int dpdk_fmt_tx_add_eth(int tid, char *name, int num);
+int dpdk_fmt_tx_add_eth(int tid, char *name, int num, int spy);
 int dpdk_fmt_tx_del_eth(int tid, char *name, int num);
 int dpdk_fmt_tx_add_lan_eth(int tid, char *lan_name, char *vm_name, int num);
 int dpdk_fmt_tx_del_lan_eth(int tid, char *lan_name, char *vm_name, int num);

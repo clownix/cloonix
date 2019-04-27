@@ -321,6 +321,8 @@ static void recv_ack(int is_add, int is_ko,
         if (lan->waiting_ack_add != 1)
           KERR("addlan ko:%d %s %s %d", is_ko, lan_name, name, num);
         lan->waiting_ack_add = 0; 
+        if (is_ko)
+          vlan_free(eth, lan);
         event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
         }
       else
@@ -458,13 +460,13 @@ int dpdk_dyn_del_lan_from_eth(int llid, int tid, char *lan_name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_add_eth(char *name, int num)
+void dpdk_dyn_add_eth(char *name, int num, int base_spy)
 {
   t_dvm *vm = vm_find(name);
   if (vm)
     KERR("%s %d", name, num);
   event_print("Send vm dyn add eth %s %d",name, num);
-  if (dpdk_msg_send_add_eth(name, num))
+  if (dpdk_msg_send_add_eth(name, num, base_spy))
     {
     machine_death(name, error_death_noovs);
     KERR("%s %d", name, num);

@@ -1,6 +1,6 @@
 diff -Naur dpdk-19.02/lib/librte_eal/linuxapp/eal/eal.c dpdk_tainted/lib/librte_eal/linuxapp/eal/eal.c
 --- dpdk-19.02/lib/librte_eal/linuxapp/eal/eal.c	2019-02-01 15:25:17.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/linuxapp/eal/eal.c	2019-04-22 21:45:05.861014627 +0200
++++ dpdk_tainted/lib/librte_eal/linuxapp/eal/eal.c	2019-04-28 00:42:36.148569337 +0200
 @@ -109,13 +109,13 @@
  	char tmp[PATH_MAX];
  	int ret;
@@ -19,26 +19,24 @@ diff -Naur dpdk-19.02/lib/librte_eal/linuxapp/eal/eal.c dpdk_tainted/lib/librte_
  	if (ret < 0 || ret == sizeof(tmp)) {
 diff -Naur dpdk-19.02/lib/librte_vhost/virtio_net.c dpdk_tainted/lib/librte_vhost/virtio_net.c
 --- dpdk-19.02/lib/librte_vhost/virtio_net.c	2019-02-01 15:25:17.000000000 +0100
-+++ dpdk_tainted/lib/librte_vhost/virtio_net.c	2019-04-22 21:46:38.133490482 +0200
-@@ -1406,8 +1406,8 @@
- 
- 		pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
- 		if (unlikely(pkts[i] == NULL)) {
--			RTE_LOG(ERR, VHOST_DATA,
--				"Failed to allocate memory for mbuf.\n");
-+//cloonix			RTE_LOG(ERR, VHOST_DATA,
-+//				"Failed to allocate memory for mbuf.\n");
- 			break;
++++ dpdk_tainted/lib/librte_vhost/virtio_net.c	2019-04-28 00:46:08.521205671 +0200
+@@ -1365,8 +1365,10 @@
  		}
+ 	}
  
-@@ -1517,8 +1517,8 @@
++
+ 	free_entries = *((volatile uint16_t *)&vq->avail->idx) -
+ 			vq->last_avail_idx;
++
+ 	if (free_entries == 0)
+ 		return 0;
  
+@@ -1407,7 +1409,7 @@
  		pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
  		if (unlikely(pkts[i] == NULL)) {
--			RTE_LOG(ERR, VHOST_DATA,
+ 			RTE_LOG(ERR, VHOST_DATA,
 -				"Failed to allocate memory for mbuf.\n");
-+//cloonix			RTE_LOG(ERR, VHOST_DATA,
-+//			"Failed to allocate memory for mbuf.\n");
++				"Failed1 to allocate memory for mbuf.\n");
  			break;
  		}
  

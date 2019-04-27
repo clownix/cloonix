@@ -47,6 +47,9 @@ endif
 # Default target, can be overridden by command line or environment
 RTE_TARGET ?= x86_64-native-linuxapp-gcc
 
+LDLIBS  += -lrte_pmd_tap
+LDLIBS  += -lrte_pmd_ring
+
 include $(RTE_SDK)/mk/rte.vars.mk
 
 CFLAGS += -O3

@@ -60,12 +60,12 @@ int dpdk_fmt_tx_del_lan(int tid, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_fmt_tx_add_eth(int tid, char *name, int num)
+int dpdk_fmt_tx_add_eth(int tid, char *name, int num, int spy)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
-  sprintf(cmd, "cloonixovs_add_eth name=%s num=%d", name, num);
+  sprintf(cmd, "cloonixovs_add_eth name=%s num=%d spy=%d", name, num, spy);
   result = dpdk_ovs_try_send_diag_msg(tid, cmd);
   return result;
 }
@@ -113,7 +113,7 @@ int dpdk_fmt_tx_del_lan_eth(int tid, char *lan_name, char *name, int num)
 /****************************************************************************/
 void dpdk_fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
 {
-  int num;
+  int num, spy;
   char lan_name[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   if (sscanf(line,
@@ -123,8 +123,9 @@ void dpdk_fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
     dpdk_msg_ack_eth(tid, name, num, 1, 1, "cloonixovs");
     }
   else if (sscanf(line,
-      "OK cloonixovs_add_eth name=%s num=%d", name, &num) == 2)
+      "OK cloonixovs_add_eth name=%s num=%d spy=%d", name, &num, &spy) == 3)
     {
+KERR("%s %d spy:%d", name, num, spy);
     dpdk_msg_ack_eth(tid, name, num, 1, 0, "cloonixovs");
     }
   else if (sscanf(line,

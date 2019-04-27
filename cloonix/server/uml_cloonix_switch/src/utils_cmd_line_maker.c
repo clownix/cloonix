@@ -329,15 +329,6 @@ char *utils_get_dpdk_qemu_dir(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_huge_dir(void)
-{
-  static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s_huge", cfg_get_root_work(), DIR_DPDK);
-  return dpdk;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 char *utils_get_dpdk_cloonix_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];

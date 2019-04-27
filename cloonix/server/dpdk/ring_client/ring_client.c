@@ -1,16 +1,28 @@
 
 #include "rte_config.h"
 #include <getopt.h>
+#include <rte_net.h>
+#include <rte_mbuf.h>
+#include <rte_ether.h>
+#include <rte_ethdev.h>
+#include <rte_flow.h>
+
 #include <rte_config.h>
 #include <rte_mbuf.h>
 #include <rte_ether.h>
 #include <rte_string_fns.h>
 #include <rte_ip.h>
 #include <rte_byteorder.h>
+#include <unistd.h>
+
 
 #define RTE_LOGTYPE_APP RTE_LOGTYPE_USER1
 #define MP_CLIENT_RXQ_NAME "dpdkr%u_tx"
-#define PKT_READ_SIZE  ((uint16_t)32)
+#define PKT_READ_SIZE  ((uint16_t)1)
+
+#define RTE_BE_TO_CPU_16(be_16_v)  rte_be_to_cpu_16((be_16_v))
+#define RTE_CPU_TO_BE_16(cpu_16_v) rte_cpu_to_be_16((cpu_16_v))
+
 
 static unsigned int client_id;
 
@@ -103,17 +115,49 @@ static int parse_app_args(int argc, char *argv[])
     return 0;
 }
 
-static void my_process_bulk(void *pkts)
+
+static inline void
+print_ether_addr(const char *what, struct ether_addr *eth_addr)
 {
-  printf("TODO\n");
+        char buf[ETHER_ADDR_FMT_SIZE];
+        ether_format_addr(buf, ETHER_ADDR_FMT_SIZE, eth_addr);
+        printf("%s%s", what, buf);
 }
+
+
+static void my_process_bulk(struct rte_mbuf *pkts[], uint16_t nb_pkts)
+{
+        struct rte_mbuf  *mb;
+        struct ether_hdr *eth_hdr;
+        uint16_t i, eth_type;
+        struct rte_net_hdr_lens;
+
+        if (!nb_pkts)
+                return;
+        printf("%u packets\n", (unsigned int) nb_pkts);
+        for (i = 0; i < nb_pkts; i++) {
+                mb = pkts[i];
+                eth_hdr = rte_pktmbuf_mtod(mb, struct ether_hdr *);
+                eth_type = RTE_BE_TO_CPU_16(eth_hdr->ether_type);
+                print_ether_addr("  src=", &eth_hdr->s_addr);
+                print_ether_addr(" - dst=", &eth_hdr->d_addr);
+                printf(" - type=0x%04x - length=%u - nb_segs=%d",
+                       eth_type, (unsigned int) mb->pkt_len,
+                       (int)mb->nb_segs);
+                }
+        printf("\n");
+}
+
+
+
 
 int main(int argc, char *argv[])
 {
   struct rte_ring *rx_ring = NULL;
-  int avail, free_count, retval = 0;
+  unsigned avail;
+  int retval = 0;
   unsigned rx_pkts = PKT_READ_SIZE;
-  void *pkts[PKT_READ_SIZE];
+  struct rte_mbuf *pkts[PKT_READ_SIZE];
   if ((retval = rte_eal_init(argc, argv)) < 0)
     return -1;
   argc -= retval;
@@ -128,18 +172,10 @@ int main(int argc, char *argv[])
   for (;;)
     {
     rx_pkts = (uint16_t)RTE_MIN(rte_ring_count(rx_ring), PKT_READ_SIZE);
-    retval = rte_ring_dequeue_bulk(rx_ring, pkts, rx_pkts, &avail);
+    retval = rte_ring_dequeue_bulk(rx_ring, (void *) pkts, rx_pkts, &avail);
     if (retval)
-      {
-      if (retval == PKT_READ_SIZE)
-        usleep(10000);
-      else
-        usleep(1000);
-      my_process_bulk(pkts);
-      free_count = rte_ring_free_count(rx_ring);
-      printf("ret: %d %d\n", retval, free_count);
-      }
+      my_process_bulk(pkts, retval);
     else
-      usleep(500);
+      usleep(10);
      }
 }

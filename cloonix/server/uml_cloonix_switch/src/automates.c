@@ -208,8 +208,6 @@ void last_action_self_destruction(void *data)
   unlink(path);
   if (unlink_sub_dir_files_except_dir(utils_get_dpdk_ovs_db_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_huge_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dpdk_qemu_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dpdk_cloonix_dir(), err))

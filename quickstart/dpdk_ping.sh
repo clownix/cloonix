@@ -23,7 +23,7 @@ cloonix_gui $NET
 
 #######################################################################
 for i in one two; do
-  cloonix_cli $NET add kvm ${i} ram=2048 cpu=2 dpdk=3 sock=0 hwsim=0 ${DIST}.qcow2 & 
+  cloonix_cli $NET add kvm ${i} ram=2048 cpu=2 dpdk=1 sock=0 hwsim=0 ${DIST}.qcow2 & 
 done
 #----------------------------------------------------------------------
 
@@ -31,8 +31,8 @@ sleep 0.1
 
 #######################################################################
 for i in one two; do
-  echo cloonix_cli $NET add lan $i 1 lan1
-  cloonix_cli $NET add lan $i 1 lan1
+  echo cloonix_cli $NET add lan $i 0 ooo
+  cloonix_cli $NET add lan $i 0 ooo
 done
 #----------------------------------------------------------------------
 
@@ -49,15 +49,15 @@ set -e
 #----------------------------------------------------------------------
 
 #######################################################################
-echo cloonix_ssh $NET one "ip addr add dev eth1 11.11.11.1/24"
-cloonix_ssh $NET one "ip addr add dev eth1 11.11.11.1/24"
+echo cloonix_ssh $NET one "ip addr add dev eth0 11.11.11.1/24"
+cloonix_ssh $NET one "ip addr add dev eth0 11.11.11.1/24"
 
-echo cloonix_ssh $NET two "ip addr add dev eth1 11.11.11.2/24"
-cloonix_ssh $NET two "ip addr add dev eth1 11.11.11.2/24"
+echo cloonix_ssh $NET two "ip addr add dev eth0 11.11.11.2/24"
+cloonix_ssh $NET two "ip addr add dev eth0 11.11.11.2/24"
 
 for i in one two ; do
-  echo cloonix_ssh $NET ${i} "ip link set dev eth1 up"
-  cloonix_ssh $NET ${i} "ip link set dev eth1 up"
+  echo cloonix_ssh $NET ${i} "ip link set dev eth0 up"
+  cloonix_ssh $NET ${i} "ip link set dev eth0 up"
 done
 #----------------------------------------------------------------------
 

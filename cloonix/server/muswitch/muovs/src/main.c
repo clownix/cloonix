@@ -33,8 +33,8 @@
 
 #define CLOONIX_DIAG_LOG  "cloonix_diag.log"
 
-static char g_ovsx_bin[MAX_PATH_LEN];
-static char g_dpdk_db_dir[MAX_PATH_LEN];
+static char g_ovs_bin[MAX_PATH_LEN];
+static char g_dpdk_dir[MAX_PATH_LEN];
 static int g_ovsdb_launched;
 static int g_ovs_launched;
 static int g_cloonix_listen_fd;
@@ -61,16 +61,6 @@ int get_cloonix_listen_fd(void)
 int get_cloonix_fd(void)
 {
   return g_cloonix_fd;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int get_next_dpdkr(int num)
-{
-  static int dpdkr = 0;
-  int result = dpdkr;
-  dpdkr += num;
-  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -113,34 +103,34 @@ static int file_exists(char *path)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void unlink_files(char *dpdk_db_dir)
+static void unlink_files(char *dpdk_dir)
 {
   char arg[NB_ARG][MAX_ARG_LEN];
-  if (!access(dpdk_db_dir, F_OK))
+  if (!access(dpdk_dir, F_OK))
     {
     memset(arg, 0, MAX_ARG_LEN * NB_ARG);
     snprintf(arg[0], MAX_PATH_LEN-1,"/bin/rm");
     snprintf(arg[1], MAX_PATH_LEN-1,"-fdR");
-    snprintf(arg[2], MAX_PATH_LEN-1,"%s/*", dpdk_db_dir);
-    if (call_my_popen(dpdk_db_dir, 3, arg)) 
+    snprintf(arg[2], MAX_PATH_LEN-1,"%s/*", dpdk_dir);
+    if (call_my_popen(dpdk_dir, 3, arg)) 
       KERR(" ");
     }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void unlink_dir(char *dpdk_db_dir)
+static void unlink_dir(char *dpdk_dir)
 {
   char arg[NB_ARG][MAX_ARG_LEN];
   memset(arg, 0, MAX_ARG_LEN * NB_ARG);
   snprintf(arg[0], MAX_PATH_LEN-1,"/bin/rm");
   snprintf(arg[1], MAX_PATH_LEN-1,"-fdR");
-  snprintf(arg[2], MAX_PATH_LEN-1,"%s/dpdk", dpdk_db_dir);
-  if (call_my_popen(dpdk_db_dir, 3, arg)) 
+  snprintf(arg[2], MAX_PATH_LEN-1,"%s/dpdk", dpdk_dir);
+  if (call_my_popen(dpdk_dir, 3, arg)) 
     KERR(" ");
   while (!access(arg[2], F_OK))
     {
-    if (call_my_popen(dpdk_db_dir, 3, arg)) 
+    if (call_my_popen(dpdk_dir, 3, arg)) 
       KERR(" ");
     usleep(10000);
     }
@@ -211,7 +201,7 @@ static void log_write_req_resp(char *line, char *respb)
   FILE *fp_log;
   char pth[MAX_PATH_LEN];
   memset(pth, 0, MAX_PATH_LEN);
-  snprintf(pth, MAX_PATH_LEN, "%s", g_dpdk_db_dir);
+  snprintf(pth, MAX_PATH_LEN, "%s", g_dpdk_dir);
   if ((strlen(pth) + MAX_NAME_LEN) >= MAX_PATH_LEN)
     KOUT("%d", (int) strlen(pth));
   strcat(pth, "/");
@@ -319,16 +309,24 @@ static int check_uid(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void add_eth_and_spy(t_all_ctx *all_ctx, char *respb,
-                            char *name, int num, int spy)
+static void add_eth_br(t_all_ctx *all_ctx, char *respb,
+                                           char *name, int num, int spy)
 {
-  if (ovs_execv_add_eth(all_ctx, g_ovsx_bin, g_dpdk_db_dir, name, num))
+  char *bin = g_ovs_bin;
+  char *db = g_dpdk_dir;
+  if (ovs_execv_add_eth(all_ctx, bin, db, name, num))
     {
     KERR("%s %d", name, num);
     snprintf(respb, MAX_PATH_LEN-1,
              "KO cloonixovs_add_eth name=%s num=%d", name, num);
     }
-  else if (ovs_execv_add_spy(all_ctx,g_ovsx_bin,g_dpdk_db_dir,name,num,spy))
+  else if (ovs_execv_add_spy(all_ctx, bin, db, name, num, spy))
+    {
+    KERR("%s", name);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_eth name=%s num=%d", name, num);
+    }
+  else if (ovs_execv_add_spy_eth(all_ctx, bin, db, name, num))
     {
     KERR("%s %d", name, num);
     snprintf(respb, MAX_PATH_LEN-1,
@@ -337,7 +335,44 @@ static void add_eth_and_spy(t_all_ctx *all_ctx, char *respb,
   else
     {
     snprintf(respb, MAX_PATH_LEN-1,
-             "OK cloonixovs_add_eth name=%s num=%d", name, num);
+             "OK cloonixovs_add_eth name=%s num=%d spy=%d", name, num, spy);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void add_lan_br(t_all_ctx *all_ctx, char *respb, char *name)
+{
+  if (ovs_execv_add_lan(all_ctx, g_ovs_bin, g_dpdk_dir, name))
+    {
+    KERR("%s", name);
+    snprintf(respb, MAX_PATH_LEN-1,
+               "KO cloonixovs_add_lan lan_name=%s", name);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_add_lan lan_name=%s", name);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void add_lan_eth_br(t_all_ctx *all_ctx, char *respb,
+                           char *lan, char *name, int num)
+{
+  if (ovs_execv_add_lan_eth(all_ctx,g_ovs_bin,g_dpdk_dir,lan,name,num))
+    {
+    KERR("%s %s %d", lan, name, num);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
+             lan, name, num);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
+             lan, name, num);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -346,17 +381,16 @@ static void add_eth_and_spy(t_all_ctx *all_ctx, char *respb,
 void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 {
   t_all_ctx *all_ctx = (t_all_ctx *) ptr;
-  int num, cloonix_llid, launch_ovsdb = 0, launch_ovs = 0;
+  int num, spy, cloonix_llid;
   char respb[MAX_PATH_LEN];
   char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   DOUT(all_ctx, FLAG_HOP_DIAG, "%s", line);
-  if (!file_exists(g_dpdk_db_dir))
-    KOUT("%s", g_dpdk_db_dir);
-  if (!is_directory_writable(g_dpdk_db_dir))
-    KOUT("%s", g_dpdk_db_dir);
+  if (!file_exists(g_dpdk_dir))
+    KOUT("%s", g_dpdk_dir);
+  if (!is_directory_writable(g_dpdk_dir))
+    KOUT("%s", g_dpdk_dir);
   memset(respb, 0, MAX_PATH_LEN); 
-
   if (!mycmp(line, "cloonixovs_req_suidroot"))
     {
     if (check_uid())
@@ -370,7 +404,10 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     if (g_ovsdb_launched == 0)
       {
       g_ovsdb_launched = 1;
-      launch_ovsdb = 1;
+      unlink_files(g_dpdk_dir);
+      g_ovsdb_pid = ovs_execv_daemon(all_ctx, 0, g_ovs_bin, g_dpdk_dir);
+      if (g_ovsdb_pid <= 0)
+        snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovsdb_ko");
       }
     }
   else if (!mycmp(line, "cloonixovs_req_ovs"))
@@ -379,16 +416,19 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     if (g_ovs_launched == 0)
       {
       g_ovs_launched = 1;
-      launch_ovs = 1;
+      g_ovs_pid = ovs_execv_daemon(all_ctx, 1, g_ovs_bin, g_dpdk_dir);
+      if (g_ovs_pid <= 0)
+        snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ko");
       }
     }
-  else if (sscanf(line, "cloonixovs_add_eth name=%s num=%d", name, &num) == 2)
+  else if (sscanf(line, "cloonixovs_add_eth name=%s num=%d spy=%d",
+                        name, &num, &spy) == 3)
     {
-    add_eth_and_spy(all_ctx, respb, name, num, get_next_dpdkr(num));
+    add_eth_br(all_ctx, respb, name, num, spy);
     }
   else if (sscanf(line, "cloonixovs_del_eth name=%s num=%d", name, &num) == 2) 
     {
-    if (ovs_execv_del_eth(all_ctx, g_ovsx_bin, g_dpdk_db_dir, name, num))
+    if (ovs_execv_del_eth(all_ctx, g_ovs_bin, g_dpdk_dir, name, num))
       snprintf(respb, MAX_PATH_LEN-1,
                "KO cloonixovs_del_eth name=%s num=%d", name, num);
     else
@@ -397,16 +437,11 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     }
   else if (sscanf(line, "cloonixovs_add_lan lan_name=%s", name) == 1)
     {
-    if (ovs_execv_add_lan(all_ctx, g_ovsx_bin, g_dpdk_db_dir, name))
-      snprintf(respb, MAX_PATH_LEN-1,
-               "KO cloonixovs_add_lan lan_name=%s", name);
-    else
-      snprintf(respb, MAX_PATH_LEN-1,
-               "OK cloonixovs_add_lan lan_name=%s", name);
+    add_lan_br(all_ctx, respb, name);
     }
   else if (sscanf(line, "cloonixovs_del_lan lan_name=%s", name) == 1)
     {
-    if (ovs_execv_del_lan(all_ctx, g_ovsx_bin, g_dpdk_db_dir, name))
+    if (ovs_execv_del_lan(all_ctx, g_ovs_bin, g_dpdk_dir, name))
       snprintf(respb, MAX_PATH_LEN-1,
                "KO cloonixovs_del_lan lan_name=%s", name);
     else
@@ -416,19 +451,12 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   else if (sscanf(line, "cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
                         lan, name, &num) == 3)
     {
-    if (ovs_execv_add_lan_eth(all_ctx,g_ovsx_bin,g_dpdk_db_dir,lan,name,num))
-      snprintf(respb, MAX_PATH_LEN-1,
-               "KO cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
-               lan, name, num);
-    else
-      snprintf(respb, MAX_PATH_LEN-1,
-               "OK cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
-               lan, name, num);
+    add_lan_eth_br(all_ctx, respb, lan, name, num);
     }
   else if (sscanf(line, "cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
                         lan, name, &num) == 3)
     {
-    if (ovs_execv_del_lan_eth(all_ctx,g_ovsx_bin,g_dpdk_db_dir,lan,name,num))
+    if (ovs_execv_del_lan_eth(all_ctx,g_ovs_bin,g_dpdk_dir,lan,name,num))
       snprintf(respb, MAX_PATH_LEN-1,
                "KO cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
                lan, name, num);
@@ -443,7 +471,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       kill(g_ovs_pid, SIGKILL);
     if (g_ovsdb_pid)
       kill(g_ovsdb_pid, SIGKILL);
-    unlink_dir(g_dpdk_db_dir);
+    unlink_dir(g_dpdk_dir);
     sync();
     exit(0);
     }
@@ -459,16 +487,6 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 
   rpct_send_diag_msg(all_ctx, llid, tid, respb);
 
-  if (launch_ovsdb == 1)
-    {
-    unlink_files(g_dpdk_db_dir);
-    g_ovsdb_pid = ovs_execv_daemon(all_ctx, 0, g_ovsx_bin, g_dpdk_db_dir);
-    }
-
-  if (launch_ovs == 1)
-    {
-    g_ovs_pid = ovs_execv_daemon(all_ctx, 1, g_ovsx_bin, g_dpdk_db_dir);
-    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -577,17 +595,17 @@ int main (int argc, char *argv[])
 //  setegid(getgid());
   umask(0000);
   if (argc != 6)
-    KOUT("wrong params nb: net,name,sock,ovsx_bin,dpdk_db_dir as params");
+    KOUT("wrong params nb: net,name,sock,ovs_bin,dpdk_dir as params");
   memset(net, 0, MAX_NAME_LEN);
   memset(name, 0, MAX_NAME_LEN);
   memset(sock, 0, MAX_PATH_LEN);
-  memset(g_ovsx_bin, 0, MAX_PATH_LEN);
-  memset(g_dpdk_db_dir, 0, MAX_PATH_LEN);
+  memset(g_ovs_bin, 0, MAX_PATH_LEN);
+  memset(g_dpdk_dir, 0, MAX_PATH_LEN);
   strncpy(net,  argv[1], MAX_NAME_LEN-1);
   strncpy(name, argv[2], MAX_NAME_LEN-1);
   strncpy(sock, argv[3], MAX_PATH_LEN-1);
-  strncpy(g_ovsx_bin, argv[4], MAX_PATH_LEN-1);
-  strncpy(g_dpdk_db_dir, argv[5], MAX_PATH_LEN-1);
+  strncpy(g_ovs_bin, argv[4], MAX_PATH_LEN-1);
+  strncpy(g_dpdk_dir, argv[5], MAX_PATH_LEN-1);
   all_ctx = cloonix_part_init(ctl_argv);
   clownix_timeout_add(all_ctx, 500, eventfull_can_be_sent, NULL, NULL, NULL);
   clownix_timeout_add(all_ctx, 100, timeout_rpct_heartbeat, NULL, NULL, NULL);
