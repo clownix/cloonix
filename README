@@ -83,14 +83,17 @@ HOWTO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
 To have the correct hugepage configuration, if you have 10 giga to spare for
 dpdk, you can do:
 
-    printf '\nGRUB_CMDLINE_LINUX="%s %s %s"\n', \
+    printf '\nGRUB_CMDLINE_LINUX="%s %s %s %s"\n' \
                                "kvm-intel.nested=1" \
+                               "default_hugepagesz=1G" \
                                "hugepagesz=1G hugepages=10" \
-                               "default_hugepagesz=1G" >> /etc/default/grub
+                                >> /etc/default/grub
     update-grub
 
-After any of the above commands, the host must be rebooted, then:
+After any of the above commands, the host must be rebooted, then check:
 
+    mount |grep hugepages
+    cat /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
 
     cd cloonix/quickstart
     ./dpdk_ping.sh

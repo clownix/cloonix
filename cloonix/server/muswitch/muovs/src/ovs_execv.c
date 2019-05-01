@@ -211,7 +211,10 @@ static int launch_ovs_vswitchd(t_all_ctx *all_ctx, char *ovs_bin,
     KERR(" ");
     } 
   else
+    {
     result = wait_read_pid_file(dpdk_dir, OVS_VSWITCHD_PID);
+    sleep(2);
+    }
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -352,8 +355,9 @@ int ovs_execv_add_spy_eth(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
     memset(cmd, 0, MAX_ARG_LEN);
     snprintf(cmd, MAX_ARG_LEN-1,
         "-- --id=@p get port %s_%d "
+        "-- add mirror mir_%s_%d select_dst_port @p "
         "-- add mirror mir_%s_%d select_src_port @p",
-        name, i, name, i);
+        name, i, name, i, name, i);
     if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
       result = -1;
     }

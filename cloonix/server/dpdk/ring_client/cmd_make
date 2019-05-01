@@ -1,8 +1,26 @@
 #!/bin/bash
 HERE=`pwd`
-export RTE_SDK=${HERE}/../../../../tmpbuild/cloonix/server/dpdk/dpdk-19.02/
 export RTE_TARGET=x86_64-native-linuxapp-gcc
+export RUN_LIB=/usr/local/bin/cloonix/server/dpdk/lib
+
+if [ ! -d ../../../../tmpbuild/cloonix/server/dpdk/dpdk-19.02 ]; then
+  if [ ! -d ../../dpdk/dpdk-19.02 ]; then
+    cd ${HERE}/../../dpdk
+    ./dpdk.sh
+    cd ${HERE}
+  fi
+fi
+
+if [ -d ../../dpdk/dpdk-19.02 ]; then
+  export RTE_SDK=${HERE}/../../dpdk/dpdk-19.02/
+else 
+  if [ -d ../../../../tmpbuild/cloonix/server/dpdk/dpdk-19.02 ]; then
+    export RTE_SDK=${HERE}/../../../../tmpbuild/cloonix/server/dpdk/dpdk-19.02/
+  else
+    echo PROBLEME
+    exit 1
+  fi
+fi
+
 make
-mv build/ring_client .
-rm -rf build
 

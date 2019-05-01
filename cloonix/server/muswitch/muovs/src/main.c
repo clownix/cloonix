@@ -30,6 +30,8 @@
 
 #include "ioc.h"
 #include "ovs_execv.h"
+#include "pcap_fifo.h"
+#include "ring_client.h"
 
 #define CLOONIX_DIAG_LOG  "cloonix_diag.log"
 
@@ -70,7 +72,7 @@ static char *mydirname(char *path)
   static char tmp[MAX_PATH_LEN];
   char *pdir;
   memset(tmp, 0, MAX_PATH_LEN);
-  strncpy(tmp, path, MAX_PATH_LEN - 1);
+  memcpy(tmp, path, MAX_PATH_LEN-1);
   pdir = dirname(tmp);
   return (pdir);
 }
@@ -111,7 +113,7 @@ static void unlink_files(char *dpdk_dir)
     memset(arg, 0, MAX_ARG_LEN * NB_ARG);
     snprintf(arg[0], MAX_PATH_LEN-1,"/bin/rm");
     snprintf(arg[1], MAX_PATH_LEN-1,"-fdR");
-    snprintf(arg[2], MAX_PATH_LEN-1,"%s/*", dpdk_dir);
+    snprintf(arg[2], MAX_ARG_LEN-1,"%s/*", dpdk_dir);
     if (call_my_popen(dpdk_dir, 3, arg)) 
       KERR(" ");
     }
@@ -125,7 +127,7 @@ static void unlink_dir(char *dpdk_dir)
   memset(arg, 0, MAX_ARG_LEN * NB_ARG);
   snprintf(arg[0], MAX_PATH_LEN-1,"/bin/rm");
   snprintf(arg[1], MAX_PATH_LEN-1,"-fdR");
-  snprintf(arg[2], MAX_PATH_LEN-1,"%s/dpdk", dpdk_dir);
+  snprintf(arg[2], MAX_ARG_LEN-1,"%s/dpdk", dpdk_dir);
   if (call_my_popen(dpdk_dir, 3, arg)) 
     KERR(" ");
   while (!access(arg[2], F_OK))
@@ -136,7 +138,6 @@ static void unlink_dir(char *dpdk_dir)
     }
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static void timeout_rpct_heartbeat(t_all_ctx *all_ctx, void *data)
@@ -153,7 +154,6 @@ static void timeout_blkd_heartbeat(t_all_ctx *all_ctx, void *data)
   clownix_timeout_add(all_ctx, 1, timeout_blkd_heartbeat, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static void collect_eventfull(t_all_ctx *all_ctx, int tidx,
@@ -318,24 +318,56 @@ static void add_eth_br(t_all_ctx *all_ctx, char *respb,
     {
     KERR("%s %d", name, num);
     snprintf(respb, MAX_PATH_LEN-1,
-             "KO cloonixovs_add_eth name=%s num=%d", name, num);
+             "KO cloonixovs_add_eth name=%s num=%d spy=%d", name, num, spy);
     }
   else if (ovs_execv_add_spy(all_ctx, bin, db, name, num, spy))
     {
     KERR("%s", name);
     snprintf(respb, MAX_PATH_LEN-1,
-             "KO cloonixovs_add_eth name=%s num=%d", name, num);
+             "KO cloonixovs_add_eth name=%s num=%d spy=%d", name, num, spy);
     }
   else if (ovs_execv_add_spy_eth(all_ctx, bin, db, name, num))
     {
     KERR("%s %d", name, num);
     snprintf(respb, MAX_PATH_LEN-1,
-             "KO cloonixovs_add_eth name=%s num=%d", name, num);
+             "KO cloonixovs_add_eth name=%s num=%d spy=%d", name, num, spy);
+    }
+  else if (ring_add_dpdkr(spy))
+    {
+    KERR("%s %d", name, num);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_eth name=%s num=%d spy=%d", name, num, spy);
     }
   else
     {
     snprintf(respb, MAX_PATH_LEN-1,
              "OK cloonixovs_add_eth name=%s num=%d spy=%d", name, num, spy);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void del_eth_br(t_all_ctx *all_ctx, char *respb,
+                                           char *name, int num, int spy)
+{
+  char *bin = g_ovs_bin;
+  char *db = g_dpdk_dir;
+  if (ovs_execv_del_eth(all_ctx, bin, db, name, num))
+    {
+    KERR("%s %d", name, num);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_eth name=%s num=%d spy=%d", name, num, spy);
+    }
+  else if (ring_add_dpdkr(spy))
+    {
+    KERR("%s %d", name, num);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_eth name=%s num=%d spy=%d", name, num, spy);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_del_eth name=%s num=%d spy=%d", name, num, spy);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -353,7 +385,9 @@ static void add_lan_br(t_all_ctx *all_ctx, char *respb, char *name)
     {
     snprintf(respb, MAX_PATH_LEN-1,
              "OK cloonixovs_add_lan lan_name=%s", name);
+    pcap_fifo_init(all_ctx, g_dpdk_dir, name);
     }
+  usleep(100000);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -419,6 +453,9 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       g_ovs_pid = ovs_execv_daemon(all_ctx, 1, g_ovs_bin, g_dpdk_dir);
       if (g_ovs_pid <= 0)
         snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ko");
+      else if (ring_dpdkr_init(all_ctx, g_dpdk_dir))
+        snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ko");
+      sleep(1);
       }
     }
   else if (sscanf(line, "cloonixovs_add_eth name=%s num=%d spy=%d",
@@ -426,14 +463,10 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     {
     add_eth_br(all_ctx, respb, name, num, spy);
     }
-  else if (sscanf(line, "cloonixovs_del_eth name=%s num=%d", name, &num) == 2) 
+  else if (sscanf(line, "cloonixovs_del_eth name=%s num=%d spy=%d",
+                        name, &num, &spy) == 3) 
     {
-    if (ovs_execv_del_eth(all_ctx, g_ovs_bin, g_dpdk_dir, name, num))
-      snprintf(respb, MAX_PATH_LEN-1,
-               "KO cloonixovs_del_eth name=%s num=%d", name, num);
-    else
-      snprintf(respb, MAX_PATH_LEN-1,
-               "OK cloonixovs_del_eth name=%s num=%d", name, num);
+    del_eth_br(all_ctx, respb, name, num, spy);
     }
   else if (sscanf(line, "cloonixovs_add_lan lan_name=%s", name) == 1)
     {
@@ -488,14 +521,14 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   rpct_send_diag_msg(all_ctx, llid, tid, respb);
 
 }
-/*---------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
+/****************************************************************************/
 void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line)
 {
   KERR("%s", line);
 }
-/*---------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void rpct_recv_cli_req(void *ptr, int llid, int tid,
@@ -559,9 +592,12 @@ static t_all_ctx *cloonix_part_init(char **argv)
     blkd_set_our_mutype((void *) all_ctx, endp_type_ovsdb);
   else
     KOUT("%s", argv[1]); 
-  strncpy(all_ctx->g_net_name, argv[0], MAX_NAME_LEN-1);
-  strncpy(all_ctx->g_name, argv[1], MAX_NAME_LEN-1);
-  strncpy(all_ctx->g_path, argv[2], MAX_PATH_LEN-1);
+  memset(all_ctx->g_net_name, 0, MAX_NAME_LEN);
+  memset(all_ctx->g_name, 0, MAX_NAME_LEN);
+  memset(all_ctx->g_path, 0, MAX_PATH_LEN);
+  memcpy(all_ctx->g_net_name, argv[0], MAX_NAME_LEN-1);
+  memcpy(all_ctx->g_name, argv[1], MAX_NAME_LEN-1);
+  memcpy(all_ctx->g_path, argv[2], MAX_PATH_LEN-1);
   if (file_exists(all_ctx->g_path))
     KOUT("PROBLEM WITH: %s EXISTS!", all_ctx->g_path);
   dir_sock = mydirname(all_ctx->g_path);
@@ -581,9 +617,9 @@ static t_all_ctx *cloonix_part_init(char **argv)
 int main (int argc, char *argv[])
 {
   t_all_ctx *all_ctx;
-  char net[MAX_NAME_LEN];
-  char name[MAX_NAME_LEN];
-  char sock[MAX_PATH_LEN];
+  char net[2*MAX_NAME_LEN];
+  char name[2*MAX_NAME_LEN];
+  char sock[2*MAX_PATH_LEN];
   char *ctl_argv[4] = {net, name, sock, NULL};
   g_ovsdb_launched = 0;
   g_ovsdb_pid = 0;
@@ -591,8 +627,6 @@ int main (int argc, char *argv[])
   g_ovs_pid = 0;
   seteuid(0);
   setegid(0);
-//  seteuid(getuid());
-//  setegid(getgid());
   umask(0000);
   if (argc != 6)
     KOUT("wrong params nb: net,name,sock,ovs_bin,dpdk_dir as params");
@@ -601,11 +635,11 @@ int main (int argc, char *argv[])
   memset(sock, 0, MAX_PATH_LEN);
   memset(g_ovs_bin, 0, MAX_PATH_LEN);
   memset(g_dpdk_dir, 0, MAX_PATH_LEN);
-  strncpy(net,  argv[1], MAX_NAME_LEN-1);
-  strncpy(name, argv[2], MAX_NAME_LEN-1);
-  strncpy(sock, argv[3], MAX_PATH_LEN-1);
-  strncpy(g_ovs_bin, argv[4], MAX_PATH_LEN-1);
-  strncpy(g_dpdk_dir, argv[5], MAX_PATH_LEN-1);
+  memcpy(net,  argv[1], MAX_NAME_LEN-1);
+  memcpy(name, argv[2], MAX_NAME_LEN-1);
+  memcpy(sock, argv[3], MAX_PATH_LEN-1);
+  memcpy(g_ovs_bin, argv[4], MAX_PATH_LEN-1);
+  memcpy(g_dpdk_dir, argv[5], MAX_PATH_LEN-1);
   all_ctx = cloonix_part_init(ctl_argv);
   clownix_timeout_add(all_ctx, 500, eventfull_can_be_sent, NULL, NULL, NULL);
   clownix_timeout_add(all_ctx, 100, timeout_rpct_heartbeat, NULL, NULL, NULL);

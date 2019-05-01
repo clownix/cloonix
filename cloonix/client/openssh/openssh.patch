@@ -1,6 +1,6 @@
 diff -Naur openssh-7.9p1/Makefile.in tainted_openssh/Makefile.in
 --- openssh-7.9p1/Makefile.in	2018-10-17 02:01:20.000000000 +0200
-+++ tainted_openssh/Makefile.in	2019-03-15 13:15:08.204560842 +0100
++++ tainted_openssh/Makefile.in	2019-04-29 20:17:58.663869103 +0200
 @@ -41,7 +41,7 @@
  CC=@CC@
  LD=@LD@
@@ -28,7 +28,7 @@ diff -Naur openssh-7.9p1/Makefile.in tainted_openssh/Makefile.in
  	ssh-xmss.o \
 diff -Naur openssh-7.9p1/misc.c tainted_openssh/misc.c
 --- openssh-7.9p1/misc.c	2018-10-17 02:01:20.000000000 +0200
-+++ tainted_openssh/misc.c	2019-03-15 13:15:08.204560842 +0100
++++ tainted_openssh/misc.c	2019-04-29 20:17:58.675869104 +0200
 @@ -545,23 +545,16 @@
  char *
  colon(char *cp)
@@ -63,7 +63,7 @@ diff -Naur openssh-7.9p1/misc.c tainted_openssh/misc.c
  
 diff -Naur openssh-7.9p1/scp.c tainted_openssh/scp.c
 --- openssh-7.9p1/scp.c	2018-10-17 02:01:20.000000000 +0200
-+++ tainted_openssh/scp.c	2019-03-15 13:16:20.844562566 +0100
++++ tainted_openssh/scp.c	2019-04-29 20:17:58.675869104 +0200
 @@ -119,11 +119,15 @@
  #include "misc.h"
  #include "progressmeter.h"
@@ -467,7 +467,7 @@ diff -Naur openssh-7.9p1/scp.c tainted_openssh/scp.c
  run_err(const char *fmt,...)
 diff -Naur openssh-7.9p1/ssh.c tainted_openssh/ssh.c
 --- openssh-7.9p1/ssh.c	2018-10-17 02:01:20.000000000 +0200
-+++ tainted_openssh/ssh.c	2019-03-15 13:15:08.204560842 +0100
++++ tainted_openssh/ssh.c	2019-04-29 20:18:37.959870036 +0200
 @@ -113,6 +113,8 @@
  #include "ssh-pkcs11.h"
  #endif
@@ -561,7 +561,7 @@ diff -Naur openssh-7.9p1/ssh.c tainted_openssh/ssh.c
 +            doorways_access_init(cloonix_path);
 +            exit(1);
 +            }
-+  	  usleep(10000);
++  	  usleep(100000);
 +	  }
 +
 +	av++;
@@ -632,7 +632,7 @@ diff -Naur openssh-7.9p1/ssh.c tainted_openssh/ssh.c
  		verbose("Authenticated to %s ([%s]:%d).", host,
 diff -Naur openssh-7.9p1/sshconnect.c tainted_openssh/sshconnect.c
 --- openssh-7.9p1/sshconnect.c	2018-10-17 02:01:20.000000000 +0200
-+++ tainted_openssh/sshconnect.c	2019-03-15 13:15:08.204560842 +0100
++++ tainted_openssh/sshconnect.c	2019-04-29 20:17:58.675869104 +0200
 @@ -48,6 +48,11 @@
  # include <ifaddrs.h>
  #endif
@@ -818,7 +818,7 @@ diff -Naur openssh-7.9p1/sshconnect.c tainted_openssh/sshconnect.c
  	packet_set_nonblocking();
 diff -Naur openssh-7.9p1/sshconnect.h tainted_openssh/sshconnect.h
 --- openssh-7.9p1/sshconnect.h	2018-10-17 02:01:20.000000000 +0200
-+++ tainted_openssh/sshconnect.h	2019-03-15 13:15:08.204560842 +0100
++++ tainted_openssh/sshconnect.h	2019-04-29 20:17:58.675869104 +0200
 @@ -33,14 +33,21 @@
  struct addrinfo;
  struct ssh;

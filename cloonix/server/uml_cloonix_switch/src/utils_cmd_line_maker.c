@@ -320,6 +320,15 @@ char *utils_get_dpdk_ovs_db_dir(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char *utils_get_dpdk_snf_dir(void)
+{
+  static char dpdk[MAX_PATH_LEN];
+  sprintf(dpdk, "%s/%s_snf", cfg_get_root_work(), DIR_DPDK);
+  return dpdk;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char *utils_get_dpdk_qemu_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];

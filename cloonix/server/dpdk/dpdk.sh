@@ -33,6 +33,6 @@ sed -i s/CONFIG_RTE_LIBRTE_PMD_KNI=y/CONFIG_RTE_LIBRTE_PMD_KNI=n/ \
 
 
 make config T=x86_64-native-linuxapp-gcc
-make -j 6 install T=x86_64-native-linuxapp-gcc DESTDIR=${HERE}
+make -j 6 install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS='-g -ggdb' DESTDIR=${HERE}
 cp ./usertools/dpdk-devbind.py ${HERE}/bin
 

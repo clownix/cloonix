@@ -493,7 +493,7 @@ int dpdk_dyn_del_all_lan(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num)
+void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num, int base_spy)
 {
   t_dvm *vm = vm_find(name);
   event_print("Send vm eth del %s %d", name, num);
@@ -506,7 +506,7 @@ void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num)
       all_lan_del_req(vm);
       KERR("%s", name);
       }
-    dpdk_msg_send_del_eth(name, num);
+    dpdk_msg_send_del_eth(name, num, base_spy);
     vm_free(name);
     }
 }

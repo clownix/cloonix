@@ -40,15 +40,18 @@ rm -rf tmpbuild_bis
             muswitch/muc2c \
             muswitch/mua2b \
             muswitch/mutst \
-            muswitch/muovs \
             muswitch/muwlan \
+            muswitch/muovs \
             muswitch/mulan; do 
     cd ${CLOONIX_SERVER}/${i}
     make clean
   done 
   rm -f ${CLOONIX_SERVER}/dtach/dtach
-  cd ${CLOONIX_SERVER}/dpdk/
-  ./allclean
+
+  for i in dpdk ; do
+    cd ${CLOONIX_SERVER}/${i}
+    ./allclean
+  done
 #----------------------------------------------------------
   for i in  lib_client \
             ctrl \

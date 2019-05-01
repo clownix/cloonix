@@ -75,6 +75,7 @@ char *util_get_genisoimage(void);
 /*--------------------------------------------------------------------------*/
 char *utils_get_dpdk_ovs_bin_dir(void);
 char *utils_get_dpdk_ovs_db_dir(void);
+char *utils_get_dpdk_snf_dir(void);
 char *utils_get_dpdk_qemu_dir(void);
 char *utils_get_dpdk_cloonix_dir(void);
 /****************************************************************************/

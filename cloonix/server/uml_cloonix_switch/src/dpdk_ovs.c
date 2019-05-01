@@ -747,7 +747,7 @@ void dpdk_ovs_end_vm_qmp_shutdown(char *name)
   t_dpdk_vm *vm = vm_find(name);
   if (vm)
     {
-    dpdk_dyn_end_vm_qmp_shutdown(name, vm->num);
+    dpdk_dyn_end_vm_qmp_shutdown(name, vm->num, vm->base_spy);
     event_print("Free ovs vm %s %d", name, vm->num);
     wrapper_vm_free(name, vm->num);
     }

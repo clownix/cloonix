@@ -219,10 +219,10 @@ int dpdk_msg_send_add_eth(char *name, int num, int spy)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_msg_send_del_eth(char *name, int num)
+void dpdk_msg_send_del_eth(char *name, int num, int spy)
 {
   int tid = get_next_tid();
-  if (dpdk_fmt_tx_del_eth(tid, name, num))
+  if (dpdk_fmt_tx_del_eth(tid, name, num, spy))
     KERR("%s %d", name, num);
   else
     ovsreq_alloc(tid, ovsreq_del_eth, "none", name, num);

@@ -363,7 +363,7 @@ int  clo_mngt_authorised_to_send_nexttx(t_clo *clo)
   diff = (clo->send_next - clo->send_unack);
   if (diff < 0)
     KOUT(" %d %d", clo->send_unack, clo->send_next); 
-  diff += g_tcp_max_size + 1;
+  diff += g_tcp_max_size + 200;
   if (diff < clo->dist_wnd)
     result = 1;
   return result;

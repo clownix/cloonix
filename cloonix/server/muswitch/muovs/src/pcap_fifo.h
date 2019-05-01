@@ -15,28 +15,9 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void dpdk_dyn_add_eth(char *name, int num, int base_spy);
-int  dpdk_dyn_del_all_lan(char *name);
-void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num, int base_spy);
-
-int dpdk_dyn_add_lan_to_eth(int llid, int tid, char *lan_name,
-                            char *name, int num, char *info);
-int dpdk_dyn_del_lan_from_eth(int llid, int tid, char *lan_name,
-                              char *name, int num, char *info);
-
-void dpdk_dyn_ack_add_lan_eth_OK(char *lan, char *name, int num, char *lab);
-void dpdk_dyn_ack_add_lan_eth_KO(char *lan, char *name, int num, char *lab);
-void dpdk_dyn_ack_del_lan_eth_OK(char *lan, char *name, int num, char *lab);
-void dpdk_dyn_ack_del_lan_eth_KO(char *lan, char *name, int num, char *lab);
-
-void dpdk_dyn_ack_add_eth_OK(char *name, int num, char *lab);
-void dpdk_dyn_ack_add_eth_KO(char *name, int num, char *lab);
-
-int dpdk_dyn_topo_endp(char *name, int num, t_topo_endp *endp);
-
-int dpdk_dyn_eth_exists(char *name, int num);
-void dpdk_dyn_init(void);
+void pcap_fifo_rx_packet(t_all_ctx *all_ctx, long long usec, 
+                         int len, char *buf);
+void pcap_fifo_init(t_all_ctx *all_ctx, char *dpdk_dir, char *name);
 /*--------------------------------------------------------------------------*/
-
 
 
