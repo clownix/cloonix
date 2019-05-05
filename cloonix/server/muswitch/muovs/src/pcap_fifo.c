@@ -31,7 +31,7 @@
 #include "ioc.h"
 #include "pcap_fifo.h"
 
-static int g_wd, g_fdnotify;
+static int g_wd, g_fdnotify, g_llid_notify;
 static int g_fd;
 static char g_path_file[2*MAX_PATH_LEN];
 
@@ -58,6 +58,16 @@ static void pcap_close_and_reinit(t_all_ctx *all_ctx);
 static void pcap_fifo_start_end(t_all_ctx *all_ctx);
 
 /****************************************************************************/
+static void reset_all_fd(void)
+{
+  g_fd = -1;
+  g_wd = -1;
+  g_fdnotify = -1;
+  g_llid_notify = 0;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void inotify_read_event(t_all_ctx *all_ctx, int llid, int fdnotify)
 {
   char buffer[2048];
@@ -79,10 +89,6 @@ static void inotify_read_event(t_all_ctx *all_ctx, int llid, int fdnotify)
         }
       else if (event->mask & IN_CLOSE)
         {
-        msg_delete_channel(all_ctx, llid);
-        inotify_rm_watch(g_fdnotify, g_wd);
-        close(g_wd);
-        close(g_fdnotify);
         pcap_close_and_reinit(all_ctx);
         }
       else
@@ -126,7 +132,7 @@ static void inotify_upon_open(t_all_ctx *all_ctx, char *path_file)
   g_wd = inotify_add_watch(g_fdnotify, path_file, IN_OPEN | IN_CLOSE);
   if (g_wd == -1)
     KOUT("%s", strerror(errno));
-  msg_watch_fd(all_ctx, g_fdnotify, rx_inot, err_inot);
+  g_llid_notify = msg_watch_fd(all_ctx, g_fdnotify, rx_inot, err_inot);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -169,6 +175,15 @@ static void pcap_close_and_reinit(t_all_ctx *all_ctx)
 {
   if (g_fd != -1)
     close(g_fd);
+  if (g_wd != -1)
+    inotify_rm_watch(g_fdnotify, g_wd);
+  if (g_llid_notify != 0)
+    msg_delete_channel(all_ctx, g_llid_notify);
+  if (g_wd != -1)
+    close(g_wd);
+  if (g_fdnotify != -1)
+    close(g_fdnotify);
+  reset_all_fd();
   pcap_fifo_start_begin(all_ctx);
 }
 /*--------------------------------------------------------------------------*/
@@ -206,7 +221,7 @@ void pcap_fifo_rx_packet(t_all_ctx *all_ctx, long long usec, int len, char *buf)
 /*****************************************************************************/
 void pcap_fifo_init(t_all_ctx *all_ctx, char *dpdk_dir, char *name)
 {
-  g_fd = -1;
+  reset_all_fd();
   memset(g_path_file, 0, 2*MAX_PATH_LEN);
   snprintf(g_path_file, 2*MAX_PATH_LEN-1, "%s_snf/%s", dpdk_dir, name);
   pcap_fifo_start_begin(all_ctx);

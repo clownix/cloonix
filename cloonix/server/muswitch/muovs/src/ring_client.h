@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int get_rte_eal_init_done(void);
 int ring_add_dpdkr(int ring);
 int ring_del_dpdkr(int ring);
 int ring_dpdkr_init(t_all_ctx *all_ctx, char *dpdk_dir);

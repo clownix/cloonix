@@ -45,6 +45,7 @@ static t_dpdkr_ring *g_dpdkr_ring_head;
 static pthread_t g_thread;
 
 static uint32_t volatile g_sync_lock;
+static int g_rte_eal_init_done;
 
 
 /****************************************************************************/
@@ -184,12 +185,14 @@ static void *dpdkr_monitor(void *arg)
   t_dpdkr_ring *cur;
   char *dpdk_dir = (char *) arg;
   char *argv[] = {"dpdkr_monitor", "--proc-type", "secondary", "--", NULL};
+  usleep(100000);
+  KERR("dpdkr_monitor STARTING %s", dpdk_dir);
   if (setenv("XDG_RUNTIME_DIR", dpdk_dir, 1))
     KERR("ERROR SETENV XDG_RUNTIME_DIR=%s", dpdk_dir);
-  KERR("dpdkr_monitor STARTING %s", dpdk_dir);
   if ((rte_eal_init(4, argv)) < 0)
     KERR("dpdkr_monitor");
   KERR("dpdkr_monitor STARTED");
+  g_rte_eal_init_done = 1;
   for (;;)
     {
     if (mutex_test_and_lock())
@@ -207,15 +210,12 @@ static void *dpdkr_monitor(void *arg)
           for (i = 0; i < retval; i++)
             { 
             m = pkts[i];
-            while (__sync_lock_test_and_set(&(m->pool->cloonix_lock), 1));
             rte_pktmbuf_free(m);
-             __sync_lock_release(&(m->pool->cloonix_lock));
             }
           }
         cur = cur->next;
         }
       mutex_unlock();
-      usleep(1);
       }
     }
   KERR("THREAD EXIT");
@@ -230,36 +230,52 @@ int ring_add_dpdkr(int ring)
   struct rte_ring *rx_ring;
   int idx, result;
   t_dpdkr_ring *cur;
-  mutex_lock();
-  cur = dpdkr_ring_find(ring);
-  rx_ring = rte_ring_lookup(get_rx_queue_name(ring));
-  if (cur)
-    { 
-    KERR("%s %d", __FUNCTION__, ring);
-    result = -1; 
-    }
-  else if (rx_ring == NULL)
+  if (g_rte_eal_init_done == 0)
     { 
     KERR("%s %d", __FUNCTION__, ring);
     result = -1; 
     }
   else
     {
-    idx = pool_alloc();
-    if (!idx) 
+    mutex_lock();
+    cur = dpdkr_ring_find(ring);
+    rx_ring = rte_ring_lookup(get_rx_queue_name(ring));
+    if (cur)
+      { 
+      KERR("%s %d", __FUNCTION__, ring);
+      result = -1; 
+      }
+    else if (rx_ring == NULL)
       { 
       KERR("%s %d", __FUNCTION__, ring);
       result = -1; 
       }
     else
       {
-      dpdkr_ring_alloc(idx, ring, rx_ring);
-      result = 0; 
+      idx = pool_alloc();
+      if (!idx) 
+        { 
+        KERR("%s %d", __FUNCTION__, ring);
+        result = -1; 
+        }
+      else
+        {
+        dpdkr_ring_alloc(idx, ring, rx_ring);
+        result = 0; 
+        }
       }
+    mutex_unlock();
     }
-  mutex_unlock();
 KERR("%s %d", __FUNCTION__, ring);
   return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int get_rte_eal_init_done(void)
+{
+return 1;
+  return g_rte_eal_init_done;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -285,6 +301,7 @@ KERR("%s %d", __FUNCTION__, ring);
 int ring_dpdkr_init(t_all_ctx *all_ctx, char *dpdk_dir)
 {
   int result = 0;
+  g_rte_eal_init_done = 0;
   pool_init();
   mutex_init();
   g_dpdkr_ring_head = NULL;

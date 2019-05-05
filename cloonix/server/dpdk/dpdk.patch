@@ -1,6 +1,6 @@
-diff -Naur dpdk-19.02/lib/librte_eal/linuxapp/eal/eal.c dpdk_tainted/lib/librte_eal/linuxapp/eal/eal.c
---- dpdk-19.02/lib/librte_eal/linuxapp/eal/eal.c	2019-02-01 15:25:17.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/linuxapp/eal/eal.c	2019-05-01 22:37:47.252372597 +0200
+diff -Naur dpdk/lib/librte_eal/linux/eal/eal.c dpdk_tainted/lib/librte_eal/linux/eal/eal.c
+--- dpdk/lib/librte_eal/linux/eal/eal.c	2019-05-02 16:35:51.000000000 +0200
++++ dpdk_tainted/lib/librte_eal/linux/eal/eal.c	2019-05-04 21:13:03.610359510 +0200
 @@ -109,13 +109,13 @@
  	char tmp[PATH_MAX];
  	int ret;
@@ -17,16 +17,3 @@ diff -Naur dpdk-19.02/lib/librte_eal/linuxapp/eal/eal.c dpdk_tainted/lib/librte_
  	/* create DPDK subdirectory under runtime dir */
  	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
  	if (ret < 0 || ret == sizeof(tmp)) {
-diff -Naur dpdk-19.02/lib/librte_mempool/rte_mempool.h dpdk_tainted/lib/librte_mempool/rte_mempool.h
---- dpdk-19.02/lib/librte_mempool/rte_mempool.h	2019-02-01 15:25:17.000000000 +0100
-+++ dpdk_tainted/lib/librte_mempool/rte_mempool.h	2019-05-01 22:42:03.050145239 +0200
-@@ -211,6 +212,9 @@
-  * The RTE mempool structure.
-  */
- struct rte_mempool {
-+                    
-+        uint32_t volatile cloonix_lock;
-+
- 	/*
- 	 * Note: this field kept the RTE_MEMZONE_NAMESIZE size due to ABI
- 	 * compatibility requirements, it could be changed to

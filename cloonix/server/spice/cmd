@@ -16,7 +16,7 @@ cd ${TARGET}
 tar xvf ${TARGZ}/spice.tar.gz
 cd ${TARGET}/spice
 export PKG_CONFIG_PATH=${TARGET}/pkgconfig
-sed -i s"/PACKAGE_VERSION='UNKNOWN'/PACKAGE_VERSION='0.14.2'/" configure
+sed -i s"/PACKAGE_VERSION=\(.*\)/PACKAGE_VERSION='0.14.2'/" configure
 ./configure --prefix=${TARGET} \
             --enable-gstreamer=yes \
             --libdir=${TARGET} \

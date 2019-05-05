@@ -1,12 +1,12 @@
 #!/bin/bash
 HERE=`pwd`
 
-for i in dpdk_tainted openvswitch_tainted \
-         dpdk-19.02 openvswitch-2.11.1; do
+for i in dpdk_tainted ovs_tainted \
+         dpdk ovs; do
   rm -rf ${HERE}/$i
 done
 
-for i in etc bin include lib sbin share var; do
+for i in usr etc bin include lib sbin share var x86_64-linux-gnu; do
   rm -rf ${HERE}/$i
 done
 

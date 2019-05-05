@@ -31,6 +31,7 @@
 #define OVSDB_SERVER_BIN  "sbin/ovsdb-server"
 #define OVS_VSWITCHD_BIN  "sbin/ovs-vswitchd"
 #define OVSDB_TOOL_BIN    "bin/ovsdb-tool"
+#define OVSDB_APPCTL_BIN  "bin/ovs-appctl"
 #define SCHEMA_TEMPLATE   "share/openvswitch/vswitch.ovsschema"
 
 #define OVSDB_SERVER_SOCK "ovsdb_server.sock"
@@ -190,32 +191,67 @@ static int launch_ovs_server(t_all_ctx *all_ctx, char *ovs_bin,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int launch_ovs_vswitchd(t_all_ctx *all_ctx, char *ovs_bin,
-                               char *dpdk_dir)
+static void appctl_debug_fix(char *bin, char *db, char *debug_cmd)
+{
+  char arg[NB_ARG][MAX_ARG_LEN];
+  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+  snprintf(arg[0],MAX_ARG_LEN-1, "%s/%s", bin, OVSDB_APPCTL_BIN);
+  snprintf(arg[1],MAX_ARG_LEN-1, "--target=%s/%s", db, OVS_VSWITCHD_CTL);
+  snprintf(arg[2],MAX_ARG_LEN-1, "vlog/set");
+  snprintf(arg[3],MAX_ARG_LEN-1, "%s", debug_cmd);
+  if (call_my_popen(db, 4, arg))
+    KERR("%s", debug_cmd);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int launch_ovs_vswitchd(t_all_ctx *all_ctx, char *bin, char *db)
 {
   char arg[NB_ARG][MAX_ARG_LEN];
   int result;
   memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
-  snprintf(arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVS_VSWITCHD_BIN);
-  snprintf(arg[1],MAX_ARG_LEN-1,"unix:%s/%s", dpdk_dir, OVSDB_SERVER_SOCK);
-  snprintf(arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s",
-                                dpdk_dir, OVS_VSWITCHD_PID);
-  snprintf(arg[3],MAX_ARG_LEN-1,"--log-file=%s/%s",
-                                dpdk_dir, OVS_VSWITCHD_LOG);
-  snprintf(arg[4],MAX_ARG_LEN-1,"--unixctl=%s/%s",
-                                dpdk_dir, OVS_VSWITCHD_CTL);
+  snprintf(arg[0],MAX_ARG_LEN-1,"%s/%s", bin, OVS_VSWITCHD_BIN);
+  snprintf(arg[1],MAX_ARG_LEN-1,"unix:%s/%s", db, OVSDB_SERVER_SOCK);
+  snprintf(arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s", db, OVS_VSWITCHD_PID);
+  snprintf(arg[3],MAX_ARG_LEN-1,"--log-file=%s/%s", db, OVS_VSWITCHD_LOG);
+  snprintf(arg[4],MAX_ARG_LEN-1,"--unixctl=%s/%s", db, OVS_VSWITCHD_CTL);
   snprintf(arg[5], MAX_ARG_LEN-1, "--detach");
-  if (call_my_popen(dpdk_dir, 6, arg))
+  if (call_my_popen(db, 6, arg))
     {
     result = -1;
     KERR(" ");
     } 
   else
     {
-    result = wait_read_pid_file(dpdk_dir, OVS_VSWITCHD_PID);
+    result = wait_read_pid_file(db, OVS_VSWITCHD_PID);
     sleep(2);
+    appctl_debug_fix(bin, db, "ANY:syslog:err");
+    appctl_debug_fix(bin, db, "netdev_dpdk:syslog:warn");
+    appctl_debug_fix(bin, db, "netdev_dpdk:file:dbg");
+    appctl_debug_fix(bin, db, "dpdk:syslog:warn");
+    appctl_debug_fix(bin, db, "dpdk:file:dbg");
+    appctl_debug_fix(bin, db, "memory:syslog:warn");
+    appctl_debug_fix(bin, db, "memory:file:dbg");
     }
   return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static char *get_cmd_mirror(int spy, char *br)
+{
+  static char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1,
+        "-- add-port %s dpdkr%u "
+        "-- set Interface dpdkr%u type=dpdkr "
+        "-- --id=@p get port dpdkr%u "
+        "-- --id=@m create mirror name=mir_%s "
+        "-- set mirror mir_%s select-all=1 "
+        "-- set mirror mir_%s output-port=@p "
+        "-- set bridge %s mirrors=@m",
+        br, spy, spy, spy, br, br, br, br);
+  return cmd;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -227,8 +263,8 @@ int ovs_execv_add_lan(t_all_ctx *all_ctx, char *ovs_bin,
   char cmd[MAX_ARG_LEN];
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
-           "-- add-br brlan_%s "
-           "-- set bridge brlan_%s datapath_type=netdev", 
+           "-- add-br %s "
+           "-- set bridge %s datapath_type=netdev", 
            lan_name, lan_name);
   if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
     result = -1;
@@ -243,7 +279,7 @@ int ovs_execv_del_lan(t_all_ctx *all_ctx, char *ovs_bin,
   int result = 0;
   char cmd[MAX_ARG_LEN]; 
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- del-br brlan_%s", lan_name);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-br %s", lan_name);
   if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
     result = -1;
   return result;
@@ -259,7 +295,7 @@ int ovs_execv_add_lan_eth(t_all_ctx *all_ctx, char *ovs_bin,
   char cmd[MAX_ARG_LEN]; 
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
-  "-- add-port brlan_%s patch_%s_%s_%d "
+  "-- add-port %s patch_%s_%s_%d "
   "-- set interface patch_%s_%s_%d type=patch options:peer=patch_%s_%d_%s "
   "-- add-port br_%s_%d patch_%s_%d_%s "
   "-- set interface patch_%s_%d_%s type=patch options:peer=patch_%s_%s_%d",
@@ -282,7 +318,7 @@ int ovs_execv_del_lan_eth(t_all_ctx *all_ctx, char *ovs_bin,
   char cmd[MAX_ARG_LEN];
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
-                "-- del-port brlan_%s patch_%s_%s_%d "
+                "-- del-port %s patch_%s_%s_%d "
                 "-- del-port br_%s_%d patch_%s_%d_%s",
                 lan_name, lan_name, vm_name, num,
                 vm_name, num, vm_name, num, lan_name);
@@ -298,6 +334,8 @@ int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovs_bin,
 {
   char cmd[MAX_ARG_LEN];
   int i, result = 0;
+static int s=0;
+s+=1;
   
   for (i=0; i<num; i++)
     {
@@ -314,53 +352,40 @@ int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovs_bin,
     if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd)) 
       result = -1;
     }
+
   return result;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_add_spy(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
-                                          char *name, int num, int spy)
+int ovs_execv_add_spy(t_all_ctx *all_ctx,
+                      char *ovs_bin, char *dpdk_dir,
+                      char *lan, int spy)
 {
-  char cmd[MAX_ARG_LEN];
-  int i, result = 0;
-  for (i=0; (result==0) && (i<num); i++)
-    {
-    memset(cmd, 0, MAX_ARG_LEN);
-    snprintf(cmd, MAX_ARG_LEN-1,
-        "-- add-port br_%s_%d dpdkr%u "
-        "-- set Interface dpdkr%u type=dpdkr "
-        "-- --id=@p get port dpdkr%u "
-        "-- --id=@m create mirror name=mir_%s_%d "
-        "-- set mirror mir_%s_%d select-all=0 "
-        "-- set mirror mir_%s_%d output-port=@p "
-        "-- set bridge br_%s_%d mirrors=@m",
-        name, i, spy+i, spy+i, spy+i,
-        name, i, name, i, name, i, name, i);
-    if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
-      result = -1;
-    }
+  char *cmd;
+  int result = 0;
+  cmd = get_cmd_mirror(spy, lan);
+  if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
+    result = -1;
   return result;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_add_spy_eth(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
-                          char *name, int num)
+int ovs_execv_add_spy_eth(t_all_ctx *all_ctx,
+                          char *ovs_bin, char *dpdk_dir,
+                          char *lan, char *name, int num)
 {
   char cmd[MAX_ARG_LEN];
-  int i, result = 0;
-  for (i=0; (result==0) && (i<num); i++)
-    {
-    memset(cmd, 0, MAX_ARG_LEN);
-    snprintf(cmd, MAX_ARG_LEN-1,
-        "-- --id=@p get port %s_%d "
-        "-- add mirror mir_%s_%d select_dst_port @p "
-        "-- add mirror mir_%s_%d select_src_port @p",
-        name, i, name, i, name, i);
-    if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
-      result = -1;
-    }
+  int result = 0;
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1,
+        "-- --id=@p get port patch_%s_%s_%d "
+        "-- add mirror mir_%s select_dst_port @p "
+        "-- add mirror mir_%s select_src_port @p",
+        lan, name, num, lan, lan);
+  if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
+    result = -1;
   return result;
 }
 /*---------------------------------------------------------------------------*/

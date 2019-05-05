@@ -74,7 +74,7 @@ fct_build_get_debian_packages()
    apt-get -y install build-essential coreutils linux-headers-amd64 \
                       libnuma-dev autoconf libtool pkg-config python3 \
                       python3-six libglib2.0-dev libpixman-1-dev \
-                      libpcap-dev libmnl-dev libibverbs-dev 
+                      libpcap-dev libmnl-dev libibverbs-dev meson 
 }
 #--------------------------------------------------------------------------
 fct_run_get_debian_packages()

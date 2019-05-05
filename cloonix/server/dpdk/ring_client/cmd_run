@@ -1,7 +1,3 @@
 #!/bin/bash
-HERE=`pwd`
-XDG_RUNTIME_DIR=/home/perrier/cloonix_data/nemo/dpdk
 
-${HERE}/ring \
---proc-type secondary -- 200 100
-
+sudo ./ring --proc-type secondary -- $1

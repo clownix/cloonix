@@ -35,17 +35,21 @@ int ovs_execv_del_lan_eth(t_all_ctx *all_ctx, char *ovs_bin,
                           char *dpdk_dir, char *lan_name,
                           char *vm_name, int num);
 
-int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
-                                          char *name, int num);
+int ovs_execv_add_eth(t_all_ctx *all_ctx,
+                      char *ovs_bin, char *dpdk_dir,
+                      char *name, int num);
 
-int ovs_execv_add_spy(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
-                                          char *name, int num, int spy);
+int ovs_execv_add_spy(t_all_ctx *all_ctx,
+                      char *ovs_bin, char *dpdk_dir,
+                      char *lan, int spy);
 
-int ovs_execv_add_spy_eth(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
-                          char *name, int num);
+int ovs_execv_add_spy_eth(t_all_ctx *all_ctx,
+                          char *ovs_bin, char *dpdk_dir,
+                          char *lan, char *name, int num);
 
-int ovs_execv_del_eth(t_all_ctx *all_ctx, char *ovs_bin, char *dpdk_dir,
-                                          char *name, int num);
+int ovs_execv_del_eth(t_all_ctx *all_ctx,
+                      char *ovs_bin, char *dpdk_dir,
+                      char *name, int num);
 
 int ovs_execv_daemon(t_all_ctx *all_ctx, int is_switch,
                      char *ovs_bin, char *dpdk_dir);

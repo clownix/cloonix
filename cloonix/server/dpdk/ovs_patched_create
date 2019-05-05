@@ -1,0 +1,11 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZSTORE=../../../targz_store
+NAMEZ=ovs.tar.gz
+NAME=ovs
+tar xvf ${TARGZSTORE}/${NAMEZ}
+mv ${NAME} ovs_tainted
+cd ovs_tainted
+patch -p1 < ${HERE}/ovs.patch
+
+

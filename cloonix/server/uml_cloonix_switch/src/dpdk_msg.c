@@ -57,15 +57,56 @@ typedef struct t_ovsreq
 typedef struct t_ovslan
 {
   char lan_name[MAX_NAME_LEN];
+  int spy;
   int refcount;
   struct t_ovslan *prev;
   struct t_ovslan *next;
 } t_ovslan;
 
 
+#define MAX_SPY_IDX 100
+
+static int pool_fifo_free_idx[MAX_SPY_IDX];
+static int pool_read_idx;
+static int pool_write_idx;
+
 static int g_tid;
 static t_ovsreq *g_head_ovsreq;
 static t_ovslan *g_head_ovslan;
+
+
+/****************************************************************************/
+static void pool_init(void)
+{
+  int i;
+  for(i = 0; i < MAX_SPY_IDX; i++)
+    pool_fifo_free_idx[i] = i+100;
+  pool_read_idx = 0;
+  pool_write_idx = MAX_SPY_IDX - 1;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int pool_alloc(void)
+{
+  int idx = 0;
+  if(pool_read_idx != pool_write_idx)
+    {
+    idx = pool_fifo_free_idx[pool_read_idx];
+    pool_read_idx = (pool_read_idx + 1)%MAX_SPY_IDX;
+    }
+  return idx;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void pool_free(int idx)
+{
+  pool_fifo_free_idx[pool_write_idx] =  idx;
+  pool_write_idx=(pool_write_idx + 1)%MAX_SPY_IDX;
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 static int get_next_tid(void)
@@ -118,7 +159,7 @@ static int lan_refcount_dec(char *lan_name)
 
 
 /****************************************************************************/
-static void lan_alloc(char *lan_name)
+static void lan_alloc(char *lan_name, int spy)
 {
   t_ovslan *cur = (t_ovslan *) clownix_malloc(sizeof(t_ovslan), 18);
   memset(cur, 0, sizeof(t_ovslan));
@@ -142,6 +183,7 @@ static void lan_free(char *lan_name)
       KERR("NOT FREEABLE %s %d", lan_name, cur->refcount);
     else
       {
+      pool_free(cur->spy);
       if (cur->next)
         cur->next->prev = cur->prev;
       if (cur->prev)
@@ -206,10 +248,10 @@ static void ovsreq_free(int tid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_msg_send_add_eth(char *name, int num, int spy)
+int dpdk_msg_send_add_eth(char *name, int num)
 {
   int result, tid = get_next_tid();
-  result = dpdk_fmt_tx_add_eth(tid, name, num, spy);
+  result = dpdk_fmt_tx_add_eth(tid, name, num);
   if (result)
     KERR("%s %d", name, num);
   else
@@ -219,10 +261,10 @@ int dpdk_msg_send_add_eth(char *name, int num, int spy)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_msg_send_del_eth(char *name, int num, int spy)
+void dpdk_msg_send_del_eth(char *name, int num)
 {
   int tid = get_next_tid();
-  if (dpdk_fmt_tx_del_eth(tid, name, num, spy))
+  if (dpdk_fmt_tx_del_eth(tid, name, num))
     KERR("%s %d", name, num);
   else
     ovsreq_alloc(tid, ovsreq_del_eth, "none", name, num);
@@ -256,17 +298,21 @@ static void delay_add_lan_eth(void *data)
 /****************************************************************************/
 int dpdk_msg_send_add_lan_eth(char *lan_name, char *name, int num)
 {
-  int result, tid = get_next_tid();
+  int spy, result, tid = get_next_tid();
   t_ovslan *cur = lan_find(lan_name);
   t_ovsreq *ovsreq;
-  if (!cur)
+  if (cur == NULL)
     {
-    result = dpdk_fmt_tx_add_lan(tid, lan_name);
+    spy = pool_alloc();
+    result = dpdk_fmt_tx_add_lan(tid, lan_name, spy);
     if (result)
+      {
+      pool_free(spy);
       KERR("%s %s %d", lan_name, name, num);
+      }
     else
       {
-      lan_alloc(lan_name);
+      lan_alloc(lan_name, spy);
       ovsreq_alloc(tid, ovsreq_add_lan_eth, lan_name, name, num);
       }
     }
@@ -347,6 +393,10 @@ void dpdk_msg_ack_lan_eth(int tid, char *lan_name, char *name, int num,
 {
   int ntid;
   t_ovsreq *cur = ovsreq_find(tid);
+  t_ovslan *lan = lan_find(lan_name);
+  int spy = 0;
+  if (lan)
+    spy = lan->spy;
   if (!cur)
     {
     KERR("%d %s %s %d is_add:%d is_ko:%d",tid,lan_name,name,num,is_add,is_ko);
@@ -382,9 +432,9 @@ void dpdk_msg_ack_lan_eth(int tid, char *lan_name, char *name, int num,
         {
         ntid = get_next_tid();
         ovsreq_alloc(ntid,ovsreq_del_lan_eth,cur->lan_name,cur->name,cur->num);
-        if (dpdk_fmt_tx_del_lan(ntid, lan_name))
+        if (dpdk_fmt_tx_del_lan(ntid, lan_name, spy))
           {
-          KERR("%s", lan_name);
+          KERR("%s %d", lan_name, spy);
           dpdk_dyn_ack_del_lan_eth_KO(lan_name, name, num, "badlandel");
           ovsreq_free(ntid);
           lan_refcount_dec(lan_name);
@@ -507,6 +557,7 @@ void dpdk_msg_init(void)
   g_tid = 0;
   g_head_ovsreq = NULL;
   g_head_ovslan = NULL;
+  pool_init();
   clownix_timeout_add(50, timer_msg_beat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/

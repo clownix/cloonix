@@ -1,5 +1,5 @@
 #!/bin/bash
 HERE=`pwd`
-XDG_RUNTIME_DIR=/home/perrier/cloonix_data/nemo/dpdk
+XDG_RUNTIME_DIR=${HOME}/cloonix_data/nemo/dpdk
 /usr/local/bin/cloonix/server/dpdk/bin/dpdk-procinfo "$@"
 

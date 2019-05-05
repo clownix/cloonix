@@ -466,7 +466,7 @@ void dpdk_dyn_add_eth(char *name, int num, int base_spy)
   if (vm)
     KERR("%s %d", name, num);
   event_print("Send vm dyn add eth %s %d",name, num);
-  if (dpdk_msg_send_add_eth(name, num, base_spy))
+  if (dpdk_msg_send_add_eth(name, num))
     {
     machine_death(name, error_death_noovs);
     KERR("%s %d", name, num);
@@ -506,7 +506,7 @@ void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num, int base_spy)
       all_lan_del_req(vm);
       KERR("%s", name);
       }
-    dpdk_msg_send_del_eth(name, num, base_spy);
+    dpdk_msg_send_del_eth(name, num);
     vm_free(name);
     }
 }

@@ -9,8 +9,8 @@ All opens sources compiled within cloonix such as dpdk, openvswitch, qemu,
 spice, openssh... are stored at:
 clownix.net/downloads/cloonix-<major>-<minor>/targz_store.tar.gz
 
-This version v03-00 is the latest (if this README is up to date).
-The version v03-00 uses dpdk/ovs for latency and throughput, it is a
+This version v03-01 is the latest (if this README is up to date).
+The version v03-01 uses dpdk/ovs for latency and throughput, it is a
 work-going-on version missing some features and with experimental code.
 But the basic ping is working.
 -----------------------------------------------------------------------------
@@ -25,7 +25,7 @@ selection.
 
 cd cloonix
 sudo ./install_depends build
-wget http://clownix.net/downloads/cloonix-03-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-03-01/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 ./doitall
 cd -
@@ -36,7 +36,7 @@ HOWTO GET A WORKING VM:
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget http://clownix.net/downloads/cloonix-03-00/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-03-01/buster.qcow2.gz
 gunzip buster.qcow2.gz
 cd -
 -----------------------------------------------------------------------------
@@ -68,7 +68,6 @@ If you do not hav Y after this cat, then you can do:
     echo 'GRUB_CMDLINE_LINUX="kvm-intel.nested=1"' >> /etc/default/grub
     update-grub
 
-
 After any of the above commands, the host must be rebooted, then:
 
 cd cloonix/quickstart
@@ -78,7 +77,7 @@ cd cloonix/quickstart
 -----------------------------------------------------------------------------
 HOWTO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
 -----------------------------------------------------------------------------
-  The host must have 1 Giga hugepages, i chose to have 10 hugepages:
+  The host must have 1 Giga size hugepages, i chose to have 10 hugepages:
 -----------------------------------------------------------------------------
 To have the correct hugepage configuration, if you have 10 giga to spare for
 dpdk, you can do:
@@ -93,7 +92,13 @@ dpdk, you can do:
 After any of the above commands, the host must be rebooted, then check:
 
     mount |grep hugepages
+Check pagesize=1024M
+
     cat /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
+Check the number
+
+    grep Huge /proc/meminfo 
+Check the number
 
     cd cloonix/quickstart
     ./dpdk_ping.sh
@@ -101,6 +106,10 @@ After any of the above commands, the host must be rebooted, then check:
 To track errors in case of failure:
 cat /var/log/user.log
 cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
+
+NOTE: The sources used in cloonix for dpdk and ovs come from:
+git clone --depth=1 https://github.com/openvswitch/ovs.git
+git clone --depth=1 https://github.com/DPDK/dpdk.git
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
