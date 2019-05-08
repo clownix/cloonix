@@ -332,6 +332,11 @@ static void doorways_start()
                        NULL
                        };
   char *ctrl_doors_sock = cfg_get_ctrl_doors_sock();
+  if ((!strlen(g_bin_doorways)) ||
+      (!strlen(g_root_work))    ||
+      (!strlen(g_server_port))  || 
+      (!strlen(g_password)))
+    KOUT(" ");
 
   if (!get_glob_req_self_destruction())
     {

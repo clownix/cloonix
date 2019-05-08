@@ -144,7 +144,7 @@ static t_evt_eth *get_eth_with_mac(t_evt_lan *lane, char *mac)
   while (cur)
     {
     mc = cur->eth_params.mac_addr;
-    if (!memcmp(cur->eth_params.mac_addr, mac, 6))
+    if (!memcmp(mc, mac, 6))
       {
       break;
       }
@@ -160,7 +160,7 @@ static void update_stats(t_evt_lan *lane, int flag_allcast,
 {
   t_evt_eth *cur = lane->head_lan_eth;
   src->pkt_tx += 1;
-  src->bytes_tx += 1;
+  src->bytes_tx += len;
   if (flag_allcast)
     {
     while (cur)
@@ -206,13 +206,15 @@ static void create_chain_eth(t_evt_vm *vme, char *name, int num, int vm_id,
 /****************************************************************************/
 static void unchain_eth_lan(t_evt_lan *lane, t_evt_eth *cur)
 {
-  cur->idx = 0;
   if (cur->lanprev)
     cur->lanprev->lannext = cur->lannext;
   if (cur->lannext)
     cur->lannext->lanprev = cur->lanprev;
   if (lane->head_lan_eth==cur)
     lane->head_lan_eth = cur->lannext;
+  cur->idx = 0;
+  cur->lanprev = NULL;
+  cur->lannext = NULL;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -220,10 +222,11 @@ static void unchain_eth_lan(t_evt_lan *lane, t_evt_eth *cur)
 static void delete_chain_eth(t_evt_vm *vme)
 {
   int i;
-  t_evt_eth *cur = vme->head_evt_eth;
+  t_evt_eth *cur;
   t_evt_lan *lane;
   for (i=0; i<vme->num; i++)
     {
+    cur = vme->head_evt_eth;
     if (cur->idx != 0)
       {
       lane = g_lan_head_tab[cur->idx];
@@ -321,7 +324,13 @@ int eventfull_lan_add_eth(char *lan, char *name, int num)
       result = 0;
       } 
     else
-      KERR("%s %s %d", lan, name, num);
+      {
+      if (ethe == NULL)
+        KERR("%s %s %d", lan, name, num);
+      else
+        KERR("%s %s %d %d %p %p", lan, name, num, ethe->idx,
+                                  ethe->lanprev, ethe->lannext);
+      }
     }
   return result;
 }
@@ -391,10 +400,12 @@ void eventfull_lan_close(int idx)
     cur = lane->head_lan_eth;
     while(cur)
       {
-      next = cur->next;
+      next = cur->lannext;
       unchain_eth_lan(lane, cur);
       cur = next;
       }
+    if (lane->head_lan_eth)
+      KOUT(" ");
     g_lan_head_tab[idx] = NULL;
     if (lane->prev)
       lane->prev->next = lane->next;

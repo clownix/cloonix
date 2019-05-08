@@ -911,13 +911,17 @@ t_topo_endp *dpdk_ovs_translate_topo_endp(int *nb)
 /****************************************************************************/
 int dpdk_ovs_get_nb(void)
 {
-  int result = 0;
-  t_dpdk_vm *vm = g_head_vm;
-  while(vm)
+  int nb_vm, i, result = 0;
+  t_vm *vm = cfg_get_first_vm(&nb_vm);
+  for (i=0; i<nb_vm; i++)
     {
-    result += vm->num;
+    if (!vm)
+      KOUT(" ");
+    result += vm->kvm.nb_dpdk;
     vm = vm->next;
     }
+  if (vm)
+    KOUT(" ");
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -925,33 +929,40 @@ int dpdk_ovs_get_nb(void)
 /*****************************************************************************/
 int dpdk_ovs_collect_dpdk(int nb_dpdk, t_eventfull_endp *eventfull)
 {
-  int i, nb = 0;
-  t_dpdk_vm *cur = g_head_vm;
-  t_vm *vm;
-  while (cur)
+  int nb_vm, i, j, result = 0;; 
+  t_vm *vm = cfg_get_first_vm(&nb_vm);
+  t_dpdk_vm *cur;
+  for (i=0; i<nb_vm; i++)
     {
-    for (i=0; i<cur->num; i++)
+    if (!vm)
+      KOUT(" ");
+    cur = vm_find(vm->kvm.name);
+    for (j=0; j<vm->kvm.nb_dpdk; j++)
       {
-      strncpy(eventfull[nb].name, cur->name, MAX_NAME_LEN-1);
-      eventfull[nb].num  = i;
-      eventfull[nb].type = endp_type_kvm_dpdk;
-      if (i == 0)
+      strncpy(eventfull[result].name, vm->kvm.name, MAX_NAME_LEN-1);
+      eventfull[result].num  = j;
+      eventfull[result].type = endp_type_kvm_dpdk;
+      if (j == 0)
         {
-        vm = cfg_get_vm(cur->name);
-        eventfull[nb].ram  = vm->ram;
-        eventfull[nb].cpu  = vm->cpu;
+        eventfull[result].ram  = vm->ram;
+        eventfull[result].cpu  = vm->cpu;
         }
-      eventfull[nb].ptx  = cur->eth[i].pkt_tx;
-      eventfull[nb].prx  = cur->eth[i].pkt_rx;
-      eventfull[nb].btx  = cur->eth[i].byte_tx;
-      eventfull[nb].brx  = cur->eth[i].byte_rx; 
-      eventfull[nb].ms   = cur->eth[i].ms;
-      memset(&(cur->eth[i]), 0, sizeof(t_dpdk_eth)); 
-      nb += 1;
+      if (cur)
+        {
+        eventfull[result].ptx  = cur->eth[j].pkt_tx;
+        eventfull[result].prx  = cur->eth[j].pkt_rx;
+        eventfull[result].btx  = cur->eth[j].byte_tx;
+        eventfull[result].brx  = cur->eth[j].byte_rx;
+        eventfull[result].ms   = cur->eth[j].ms;
+        memset(&(cur->eth[j]), 0, sizeof(t_dpdk_eth));
+        }
+      result += 1;
       }
-    cur = cur->next;
+    vm = vm->next;
     }
-  return nb;
+  if (vm)
+    KOUT(" ");
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -968,7 +979,6 @@ void dpdk_ovs_fill_eventfull(char *name, int num, int ms,
   stats_counters_update_endp_tx_rx(name, num, ms, ptx, btx, prx, brx);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void dpdk_ovs_init(void)

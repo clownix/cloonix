@@ -578,6 +578,33 @@ int dpdk_dyn_topo_endp(char *name, int num, t_topo_endp *endp)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int dpdk_dyn_lan_exists(char *name)
+{
+  t_dvm *vm = g_head_vm;
+  t_deth *eth;
+  t_dlan *cur;
+  int result = 0;
+  while(vm && (result == 0))
+    {
+    eth = vm->head_eth;
+    while(eth && (result == 0))
+      {
+      cur = eth->head_lan;
+      while(cur && (result == 0))
+        {
+        if (!strcmp(name, cur->lan))
+          result = 1;
+        cur = cur->next;
+        }
+      eth = eth->next;
+      }
+    vm = vm->next;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void dpdk_dyn_init(void)
 {
   g_head_vm = NULL;

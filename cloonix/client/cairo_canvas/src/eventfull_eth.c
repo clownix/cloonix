@@ -165,7 +165,7 @@ static void eventfull_arrival(int nb_endp, t_eventfull_endp *endp)
       num = endp[i].num;
       if ((num < 0) || (num > MAX_ETH_VM+MAX_WLAN_VM))
         KOUT("%d", num);
-      if (cur->bitem->pbi.pbi_node)
+      if ((cur->bitem->pbi.pbi_node) && (num == 0))
         {
         cur->bitem->pbi.pbi_node->node_cpu = endp[i].cpu;
         cur->bitem->pbi.pbi_node->node_ram = endp[i].ram;

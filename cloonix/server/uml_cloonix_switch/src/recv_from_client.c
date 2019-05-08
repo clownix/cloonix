@@ -465,7 +465,8 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
 void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan)
 {
   char info[MAX_PATH_LEN];
-  int type;
+  int type, is_dpdk = 0;
+  t_vm *vm = cfg_get_vm(name);
   event_print("Rx Req add lan %s in %s %d", lan, name, num);
   if (get_inhib_new_clients())
     {
@@ -475,15 +476,32 @@ void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     {
     send_status_ko(llid, tid, info);
     }
-  else if ((!endp_mngt_exists(name, num, &type)) &&
-           (!dpdk_ovs_eth_exists(name, num)))
+  else 
     {
-    snprintf(info, MAX_PATH_LEN, "endp %s %d not found", name, num);
-    send_status_ko(llid, tid, info);
-    }
-  else
-    {
-    add_lan_endp(llid, tid, name, num, lan);
+    if ((vm) && (num < vm->kvm.nb_dpdk))
+      is_dpdk = 1; 
+    if ((!endp_mngt_exists(name, num, &type)) &&
+        (!dpdk_ovs_eth_exists(name, num)))
+      {
+      snprintf(info, MAX_PATH_LEN, "endp %s %d not found", name, num);
+      send_status_ko(llid, tid, info);
+      }
+    else
+      {
+      if ((is_dpdk == 1) && 
+          (mulan_can_be_found_with_name(lan)))
+        {
+        snprintf(info, MAX_PATH_LEN, "eth %s %d is DPDK", name, num);
+        send_status_ko(llid, tid, info);
+        }
+      else if ((is_dpdk == 0) && (dpdk_dyn_lan_exists(lan)))
+        {
+        snprintf(info, MAX_PATH_LEN, "eth %s %d is NOT DPDK", name, num);
+        send_status_ko(llid, tid, info);
+        }
+      else
+        add_lan_endp(llid, tid, name, num, lan);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/

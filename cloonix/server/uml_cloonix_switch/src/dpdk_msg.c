@@ -164,10 +164,12 @@ static void lan_alloc(char *lan_name, int spy)
   t_ovslan *cur = (t_ovslan *) clownix_malloc(sizeof(t_ovslan), 18);
   memset(cur, 0, sizeof(t_ovslan));
   strncpy(cur->lan_name, lan_name, MAX_NAME_LEN-1);
+  cur->spy = spy;
   if (g_head_ovslan)
     g_head_ovslan->prev = cur;
   cur->next = g_head_ovslan;
   g_head_ovslan = cur;
+KERR("ALLOC: %s %d", lan_name, spy);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -183,6 +185,7 @@ static void lan_free(char *lan_name)
       KERR("NOT FREEABLE %s %d", lan_name, cur->refcount);
     else
       {
+KERR("FREE: %s %d", lan_name, cur->spy);
       pool_free(cur->spy);
       if (cur->next)
         cur->next->prev = cur->prev;
@@ -289,7 +292,7 @@ static void delay_add_lan_eth(void *data)
   else
     {
     KERR("%s %s %d", req->lan_name, req->name, req->num);
-    dpdk_dyn_ack_add_lan_eth_KO(req->lan_name,req->name,req->num,"delayed");
+    dpdk_dyn_ack_add_lan_eth_KO(req->lan_name,req->name,req->num,"PB delayed");
     ovsreq_free(req->tid);
     }
 }
@@ -328,7 +331,7 @@ int dpdk_msg_send_add_lan_eth(char *lan_name, char *name, int num)
     {
     result = 0;
     ovsreq = ovsreq_alloc(tid, ovsreq_add_lan_eth, lan_name, name, num);
-    clownix_timeout_add(1, delay_add_lan_eth,(void *) ovsreq, NULL, NULL);
+    clownix_timeout_add(10, delay_add_lan_eth,(void *) ovsreq, NULL, NULL);
     }
   return result;
 }
@@ -438,7 +441,6 @@ void dpdk_msg_ack_lan_eth(int tid, char *lan_name, char *name, int num,
           dpdk_dyn_ack_del_lan_eth_KO(lan_name, name, num, "badlandel");
           ovsreq_free(ntid);
           lan_refcount_dec(lan_name);
-          lan_free(cur->lan_name);
           }
         }
       else
@@ -485,7 +487,7 @@ void dpdk_msg_ack_lan(int tid, char *lan_name,
         ovsreq = ovsreq_alloc(ntid, ovsreq_add_lan_eth,
                               cur->lan_name, cur->name, cur->num);
         ovsreq_free(tid);
-        clownix_timeout_add(1,delay_add_lan_eth,(void *)ovsreq,NULL,NULL);
+        clownix_timeout_add(10,delay_add_lan_eth,(void *)ovsreq,NULL,NULL);
         }
       }
     else

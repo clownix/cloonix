@@ -35,6 +35,7 @@ void dpdk_dyn_ack_add_eth_KO(char *name, int num, char *lab);
 int dpdk_dyn_topo_endp(char *name, int num, t_topo_endp *endp);
 
 int dpdk_dyn_eth_exists(char *name, int num);
+int dpdk_dyn_lan_exists(char *name);
 void dpdk_dyn_init(void);
 /*--------------------------------------------------------------------------*/
 

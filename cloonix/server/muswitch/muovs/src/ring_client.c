@@ -268,7 +268,6 @@ int ring_open_dpdkr(char *lan, int ring)
       }
     mutex_unlock();
     }
-KERR("%s %d", __FUNCTION__, ring);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -276,7 +275,6 @@ KERR("%s %d", __FUNCTION__, ring);
 /****************************************************************************/
 int get_rte_eal_init_done(void)
 {
-return 1;
   return g_rte_eal_init_done;
 }
 /*--------------------------------------------------------------------------*/
@@ -284,20 +282,22 @@ return 1;
 /****************************************************************************/
 int ring_close_dpdkr(int ring)
 {
-  int result = -1;
+  int idx, result = -1;
   t_dpdkr_ring *cur = dpdkr_ring_find(ring);
   if (cur)
     {
+    idx = cur->idx;
+    if ((idx <= 0) || (idx > CIRC_MAX_TAB))
+      KOUT("%d", idx);
     mutex_lock();
-    pool_free(cur->idx);
+    pool_free(idx);
     dpdkr_ring_free(cur);
-    cirspy_close(cur->idx);
-    pcap_fifo_close(cur->idx);
-    eventfull_lan_close(cur->idx);
+    cirspy_close(idx);
+    pcap_fifo_close(idx);
+    eventfull_lan_close(idx);
     mutex_unlock();
     result = 0; 
     }
-KERR("%s %d", __FUNCTION__, ring);
   return result;
 }
 /*--------------------------------------------------------------------------*/
