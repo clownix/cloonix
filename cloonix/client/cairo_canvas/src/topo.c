@@ -762,7 +762,7 @@ static void on_item_paint_eth(CrItem *item, cairo_t *c)
     else
       {
       if (bitem->num < bitem->att_node->pbi.pbi_node->node_vm_nb_dpdk)
-        paint_select(c,flag,flag_trace,&lightred,&red,&lightmagenta);
+        paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
       else if (bitem->num >= 
                (bitem->att_node->pbi.pbi_node->node_vm_nb_dpdk + 
                 bitem->att_node->pbi.pbi_node->node_vm_nb_eth))

@@ -30,8 +30,10 @@
 
 #include "ioc.h"
 #include "ovs_execv.h"
-#include "pcap_fifo.h"
 #include "ring_client.h"
+#include "pcap_fifo.h"
+#include "cirspy.h"
+#include "eventfull.h"
 
 #define CLOONIX_DIAG_LOG  "cloonix_diag.log"
 
@@ -152,38 +154,6 @@ static void timeout_blkd_heartbeat(t_all_ctx *all_ctx, void *data)
 {
   blkd_heartbeat((void *) all_ctx);
   clownix_timeout_add(all_ctx, 1, timeout_blkd_heartbeat, NULL, NULL, NULL);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void collect_eventfull(t_all_ctx *all_ctx, int tidx,
-                              int *nb_pkt_tx, int *nb_bytes_tx,
-                              int *nb_pkt_rx, int *nb_bytes_rx)
-{
-  *nb_pkt_tx = all_ctx->g_traf_endp[tidx].nb_pkt_tx;
-  *nb_bytes_tx = all_ctx->g_traf_endp[tidx].nb_bytes_tx;
-  *nb_pkt_rx = all_ctx->g_traf_endp[tidx].nb_pkt_rx;
-  *nb_bytes_rx = all_ctx->g_traf_endp[tidx].nb_bytes_rx;
-  all_ctx->g_traf_endp[tidx].nb_pkt_tx = 0;
-  all_ctx->g_traf_endp[tidx].nb_bytes_tx = 0;
-  all_ctx->g_traf_endp[tidx].nb_pkt_rx = 0;
-  all_ctx->g_traf_endp[tidx].nb_bytes_rx = 0;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void eventfull_endp(t_all_ctx *all_ctx, int cloonix_llid, int tidx)
-{
-  int nb_pkt_tx, nb_pkt_rx, nb_bytes_tx, nb_bytes_rx;
-  char txt[2*MAX_NAME_LEN];
-  collect_eventfull(all_ctx, tidx, &nb_pkt_tx, &nb_bytes_tx,
-                                   &nb_pkt_rx, &nb_bytes_rx);
-  memset(txt, 0, 2*MAX_NAME_LEN);
-  snprintf(txt, (2*MAX_NAME_LEN) - 1,
-           "endp_eventfull_tx_rx %u %d %d %d %d %d",
-           (unsigned int) cloonix_get_msec(), tidx, nb_pkt_tx, nb_bytes_tx,
-           nb_pkt_rx, nb_bytes_rx);
-  rpct_send_evt_msg(all_ctx, cloonix_llid, 0, txt);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -309,7 +279,8 @@ static int check_uid(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void add_eth_br(t_all_ctx *all_ctx, char *respb, char *name, int num)
+static void add_eth_br(t_all_ctx *all_ctx, char *respb, char *name, int num,
+                       int vm_id, t_eth_params eth_params[MAX_DPDK_VM])
 {
   char *bin = g_ovs_bin;
   char *db = g_dpdk_dir;
@@ -323,6 +294,7 @@ static void add_eth_br(t_all_ctx *all_ctx, char *respb, char *name, int num)
     {
     snprintf(respb, MAX_PATH_LEN-1,
              "OK cloonixovs_add_eth name=%s num=%d", name, num);
+    eventfull_vm_add(name, num, vm_id, eth_params);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -342,6 +314,7 @@ static void del_eth_br(t_all_ctx *all_ctx, char *respb, char *name, int num)
     {
     snprintf(respb, MAX_PATH_LEN-1,
              "OK cloonixovs_del_eth name=%s num=%d", name, num);
+    eventfull_vm_del(name);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -363,7 +336,7 @@ static void add_lan_br(t_all_ctx *all_ctx, char *respb, char *lan, int spy)
     snprintf(respb, MAX_PATH_LEN-1,
                "KO cloonixovs_add_lan lan_name=%s spy=%d", lan, spy);
     }
-  else if (ring_add_dpdkr(spy))
+  else if (ring_open_dpdkr(lan, spy))
     {
     KERR("%s", lan);
     snprintf(respb, MAX_PATH_LEN-1,
@@ -373,11 +346,34 @@ static void add_lan_br(t_all_ctx *all_ctx, char *respb, char *lan, int spy)
     {
     snprintf(respb, MAX_PATH_LEN-1,
                "OK cloonixovs_add_lan lan_name=%s spy=%d", lan, spy);
-    pcap_fifo_init(all_ctx, db, lan);
     }
   usleep(100000);
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void del_lan_br(t_all_ctx *all_ctx, char *respb, char *lan, int spy)
+{
+  char *bin = g_ovs_bin;
+  char *db = g_dpdk_dir;
+  if (ovs_execv_del_lan(all_ctx, bin, db, lan))
+    {
+    KERR("%s", lan);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_lan lan_name=%s spy=%d", lan, spy);
+    }
+  else if (ring_close_dpdkr(spy))
+    {
+    KERR("%s", lan);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_lan lan_name=%s spy=%d", lan, spy);
+    }
+  else
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_del_lan lan_name=%s spy=%d", lan, spy);
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 static void add_lan_eth_br(t_all_ctx *all_ctx, char *respb,
@@ -394,7 +390,14 @@ static void add_lan_eth_br(t_all_ctx *all_ctx, char *respb,
     }
   else if (ovs_execv_add_spy_eth(all_ctx, bin, db, lan, name, num))
     {
-    KERR("%s %d", name, num);
+    KERR("%s %s %d", lan, name, num);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
+             lan, name, num);
+    }
+  else if(eventfull_lan_add_eth(lan, name, num))
+    {
+    KERR("%s %s %d", lan, name, num);
     snprintf(respb, MAX_PATH_LEN-1,
              "KO cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
              lan, name, num);
@@ -409,15 +412,92 @@ static void add_lan_eth_br(t_all_ctx *all_ctx, char *respb,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void del_lan_eth_br(t_all_ctx *all_ctx, char *respb,
+                           char *lan, char *name, int num)
+{
+  char *bin = g_ovs_bin;
+  char *db = g_dpdk_dir;
+  if (ovs_execv_del_lan_eth(all_ctx, bin, db, lan, name, num))
+    {
+    KERR("%s %s %d", lan, name, num);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
+             lan, name, num);
+    }
+  else if(eventfull_lan_del_eth(lan, name, num))
+    {
+    KERR("%s %s %d", lan, name, num);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
+             lan, name, num);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
+             lan, name, num);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+static int add_eth_req(char *line, char *name, int *num, int *vm_id,
+                       t_eth_params eth_params[MAX_DPDK_VM])
+{
+  int i, j, result = 0;
+  char *mac, *ptr = line;
+  int mc[6];
+  if (!strncmp("cloonixovs_add_eth", line, strlen("cloonixovs_add_eth")))
+    {
+    if (sscanf(line, "cloonixovs_add_eth name=%s num=%d vm_id=%d",
+               name, num, vm_id) == 3)
+      {
+      if (*num > MAX_DPDK_VM)
+        KERR("TOO MANY DPDK ETH %s %d", name, *num);
+      else
+        {
+        result = 1;
+        for (i=0; i<*num; i++)
+          {
+          ptr = strstr(ptr, "mac");
+          if (ptr == NULL)
+            {
+            result = 0;
+            KERR("NOT ENOUGH MAC FOR DPDK ETH %s %d", name, *num);
+            break;
+            }
+          if (sscanf(ptr, "mac=%02X:%02X:%02X:%02X:%02X:%02X",
+                           &(mc[0]), &(mc[1]), &(mc[2]),
+                           &(mc[3]), &(mc[4]), &(mc[5])) != 6)
+            {
+            result = 0;
+            KERR("BAD MAC FORMAT DPDK ETH %s %d", name, *num);
+            break;
+            }
+          mac = eth_params[i].mac_addr;
+          for (j=0; j<6; j++)
+            mac[j] = (mc[j] & 0xFF);
+          ptr = ptr + strlen("mac");
+          }
+        }
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 {
   t_all_ctx *all_ctx = (t_all_ctx *) ptr;
   char *bin = g_ovs_bin;
   char *db = g_dpdk_dir;
-  int num, spy, cloonix_llid;
+  int vm_id, num, spy, cloonix_llid;
   char respb[MAX_PATH_LEN];
   char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
+  t_eth_params eth_params[MAX_DPDK_VM];
   DOUT(all_ctx, FLAG_HOP_DIAG, "%s", line);
   if (!file_exists(g_dpdk_dir))
     KOUT("%s", g_dpdk_dir);
@@ -452,15 +532,14 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       g_ovs_pid = ovs_execv_daemon(all_ctx, 1, bin, db);
       if (g_ovs_pid <= 0)
         snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ko");
-      else if (ring_dpdkr_init(all_ctx, db))
-        snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ko");
+      else 
+        ring_dpdkr_init(db);
       usleep(300000);
       }
     }
-  else if (sscanf(line, "cloonixovs_add_eth name=%s num=%d",
-                        name, &num) == 2)
+  else if (add_eth_req(line, name, &num, &vm_id, eth_params))
     {
-    add_eth_br(all_ctx, respb, name, num);
+    add_eth_br(all_ctx, respb, name, num, vm_id, eth_params);
     }
   else if (sscanf(line, "cloonixovs_del_eth name=%s num=%d",
                         name, &num) == 2) 
@@ -480,12 +559,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   else if (sscanf(line, "cloonixovs_del_lan lan_name=%s spy=%d",
                         name, &spy) == 2)
     {
-    if (ovs_execv_del_lan(all_ctx, bin, db, name))
-      snprintf(respb, MAX_PATH_LEN-1,
-               "KO cloonixovs_del_lan lan_name=%s spy=%d", name, spy);
-    else
-      snprintf(respb, MAX_PATH_LEN-1,
-               "OK cloonixovs_del_lan lan_name=%s spy=%d", name, spy);
+    del_lan_br(all_ctx, respb, name, spy);
     }
   else if (sscanf(line, "cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
                         lan, name, &num) == 3)
@@ -495,14 +569,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   else if (sscanf(line, "cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
                         lan, name, &num) == 3)
     {
-    if (ovs_execv_del_lan_eth(all_ctx, bin, db, lan, name, num))
-      snprintf(respb, MAX_PATH_LEN-1,
-               "KO cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
-               lan, name, num);
-    else
-      snprintf(respb, MAX_PATH_LEN-1,
-               "OK cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
-               lan, name, num);
+    del_lan_eth_br(all_ctx, respb, lan, name, num);
     }
   else if (!strcmp(line, "cloonixovs_req_destroy"))
     { 
@@ -568,7 +635,7 @@ static void eventfull_can_be_sent(t_all_ctx *all_ctx, void *data)
   int is_blkd, cidx = msg_exist_channel(all_ctx, llid, &is_blkd, __FUNCTION__);
   if (cidx)
     {
-    eventfull_endp(all_ctx, llid, 0);
+    eventfull_collect_send(all_ctx, llid);
     }
   clownix_timeout_add(all_ctx, 5, eventfull_can_be_sent, NULL, NULL, NULL);
 }
@@ -650,6 +717,9 @@ int main (int argc, char *argv[])
   clownix_timeout_add(all_ctx, 500, eventfull_can_be_sent, NULL, NULL, NULL);
   clownix_timeout_add(all_ctx, 100, timeout_rpct_heartbeat, NULL, NULL, NULL);
   clownix_timeout_add(all_ctx, 100, timeout_blkd_heartbeat, NULL, NULL, NULL);
+  pcap_fifo_init(all_ctx, g_dpdk_dir);
+  cirspy_init();
+  eventfull_init();
   msg_mngt_loop(all_ctx);
   return 0;
 }

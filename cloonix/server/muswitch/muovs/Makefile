@@ -19,7 +19,7 @@ VPATH=src
 
 SRC = main.c ovs_execv.c \
       my_popen.c ring_client.c \
-      pcap_fifo.c
+      pcap_fifo.c cirspy.c eventfull.c
 
 WARNINGS=-Wall -Wdeprecated -Wstrict-prototypes -Wdeclaration-after-statement
 

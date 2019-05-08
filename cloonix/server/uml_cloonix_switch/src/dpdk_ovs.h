@@ -15,6 +15,10 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int dpdk_ovs_collect_dpdk(int nb_dpdk, t_eventfull_endp *eventfull);
+int dpdk_ovs_get_nb(void);
+void dpdk_ovs_fill_eventfull(char *name, int num, int ms,
+                             int ptx, int prx, int btx, int brx);
 int  dpdk_ovs_try_send_diag_msg(int tid, char *cmd);
 void dpdk_ovs_erase_endp_path(char *name, int nb_dpdk);
 void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line);

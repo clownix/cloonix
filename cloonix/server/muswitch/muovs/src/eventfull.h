@@ -15,10 +15,13 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void pcap_fifo_rx_packet(int idx, long long usec, int len, char *buf);
-void pcap_fifo_open(int idx, char *name);
-void pcap_fifo_close(int idx);
-void pcap_fifo_init(t_all_ctx *all_ctx, char *dpdk_dir);
-/*--------------------------------------------------------------------------*/
-
-
+void eventfull_hook_spy(int idx, int len, char *buf);
+void eventfull_collect_send(t_all_ctx *all_ctx, int cloonix_llid);
+void eventfull_vm_add(char *name, int num, int vm_id,
+                      t_eth_params eth_params[MAX_DPDK_VM]);
+void eventfull_vm_del(char *name);
+int eventfull_lan_add_eth(char *lan, char *name, int num);
+int eventfull_lan_del_eth(char *lan, char *name, int num);
+void eventfull_lan_close(int idx);
+void eventfull_lan_open(int idx, char *lan);
+void eventfull_init(void);

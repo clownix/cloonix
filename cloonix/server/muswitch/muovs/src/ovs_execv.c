@@ -334,8 +334,6 @@ int ovs_execv_add_eth(t_all_ctx *all_ctx, char *ovs_bin,
 {
   char cmd[MAX_ARG_LEN];
   int i, result = 0;
-static int s=0;
-s+=1;
   
   for (i=0; i<num; i++)
     {

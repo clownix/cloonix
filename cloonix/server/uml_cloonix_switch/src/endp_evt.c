@@ -495,7 +495,6 @@ void endp_evt_add_lan(int llid, int tid, char *name, int num,
            (endp_type != endp_type_nat) &&
            (endp_type != endp_type_a2b) &&
            (endp_type != endp_type_raw) &&
-           (endp_type != endp_type_kvm_dpdk) &&
            (endp_type != endp_type_kvm_eth)  &&
            (endp_type != endp_type_kvm_wlan) &&
            (endp_type != endp_type_wif))

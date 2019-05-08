@@ -29,6 +29,7 @@
 #include "machine_create.h"
 #include "utils_cmd_line_maker.h"
 #include "endp_mngt.h"
+#include "dpdk_ovs.h"
 
 
 /*****************************************************************************/
@@ -250,7 +251,7 @@ static int get_last_ms(t_lan_attached *lan_attached)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int collect(t_eventfull_endp *eventfull, int nb, t_endp *endp)
+static int collect_endp(t_eventfull_endp *eventfull, int nb, t_endp *endp)
 {
   int i, real_nb = 0;
   t_endp *next, *cur = endp;
@@ -261,15 +262,13 @@ static int collect(t_eventfull_endp *eventfull, int nb, t_endp *endp)
       KOUT(" ");
     if (strlen(cur->name) == 0)
       KERR("%d", cur->endp_type);
-    else if ((!((cur->endp_type == endp_type_kvm_dpdk) && (!cfg_get_vm(cur->name)))) &&
-             (!((cur->endp_type == endp_type_kvm_eth)  && (!cfg_get_vm(cur->name)))) &&
+    else if ((!((cur->endp_type == endp_type_kvm_eth)  && (!cfg_get_vm(cur->name)))) &&
              (!((cur->endp_type == endp_type_kvm_wlan) && (!cfg_get_vm(cur->name)))))
       {
       strncpy(eventfull[real_nb].name, cur->name, MAX_NAME_LEN-1);
       eventfull[real_nb].num  = cur->num;
       eventfull[real_nb].type = cur->endp_type;
-      if (((cur->endp_type == endp_type_kvm_dpdk) && (cur->num == 0)) || 
-          ((cur->endp_type == endp_type_kvm_eth)  && (cur->num == 0)))
+      if ((cur->endp_type == endp_type_kvm_eth)  && (cur->num == 0))
         {
         vm = cfg_get_vm(cur->name);
         eventfull[real_nb].ram  = vm->ram;
@@ -319,21 +318,24 @@ static void timeout_collect_eventfull(void *data)
 {
   static int count = 0;
   t_eventfull_endp *eventfull_endp;
-  int nb_endp, nb_vm, llid, tid;
+  int nb_dpdk, nb_endp, nb_vm, llid, tid, tot_evt;
   t_vm *vm   = cfg_get_first_vm(&nb_vm);
   t_endp *endp   = endp_mngt_get_first(&nb_endp);
   t_eventfull_subs *cur = head_eventfull_subs;
   int nb;
+  nb_dpdk = dpdk_ovs_get_nb();
+  tot_evt = nb_endp + nb_dpdk;
   eventfull_endp = 
-  (t_eventfull_endp *) clownix_malloc(nb_endp * sizeof(t_eventfull_endp), 13);
-  memset(eventfull_endp, 0, nb_endp * sizeof(t_eventfull_endp));
+  (t_eventfull_endp *) clownix_malloc(tot_evt * sizeof(t_eventfull_endp), 13);
+  memset(eventfull_endp, 0, tot_evt * sizeof(t_eventfull_endp));
   count++;
   if (count == 10)
     {
     refresh_ram_cpu_vm(nb_vm, vm);
     count = 0;
     }
-  nb = collect(eventfull_endp, nb_endp, endp); 
+  nb = collect_endp(eventfull_endp, nb_endp, endp); 
+  nb += dpdk_ovs_collect_dpdk(nb_dpdk, &(eventfull_endp[nb]));
   while (cur)
     {
     llid = cur->llid;

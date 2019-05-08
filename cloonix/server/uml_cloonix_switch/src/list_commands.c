@@ -406,8 +406,7 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
       {
       result = build_add_nat_cmd(result, hlist, cur);
       }
-    else if ((cur->endp_type == endp_type_kvm_dpdk)||
-             (cur->endp_type == endp_type_kvm_eth) ||
+    else if ((cur->endp_type == endp_type_kvm_eth) ||
              (cur->endp_type == endp_type_kvm_wlan))
       {
       }

@@ -62,12 +62,24 @@ int dpdk_fmt_tx_del_lan(int tid, char *lan, int spy)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_fmt_tx_add_eth(int tid, char *name, int num)
+int dpdk_fmt_tx_add_eth(int tid, t_vm *kvm, char *name, int num)
 {
-  int result;
-  char cmd[MAX_PATH_LEN];
-  memset(cmd, 0, MAX_PATH_LEN);
-  sprintf(cmd, "cloonixovs_add_eth name=%s num=%d", name, num);
+  int i, result;
+  char cmd[2*MAX_PATH_LEN];
+  char strmac[MAX_NAME_LEN];
+  char *mc;
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  sprintf(cmd, "cloonixovs_add_eth name=%s num=%d vm_id=%d",
+               name, num, kvm->kvm.vm_id);
+  for (i=0; i<num; i++)
+    {
+    mc = kvm->kvm.eth_params[i].mac_addr;
+    sprintf(strmac, " mac=%02X:%02X:%02X:%02X:%02X:%02X",
+    mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF, mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF);
+    if ((strlen(cmd) + strlen(strmac)) > 2*MAX_PATH_LEN)
+      KOUT("%d %d", (int)strlen(cmd), (int)strlen(strmac));
+    strcat(cmd, strmac);
+    }
   result = dpdk_ovs_try_send_diag_msg(tid, cmd);
   return result;
 }
@@ -186,12 +198,19 @@ void dpdk_fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
 /****************************************************************************/
 void dpdk_fmt_rx_rpct_recv_evt_msg(int llid, int tid, char *line)
 {
-  int tidx, ptx, btx, prx, brx;
-  unsigned int ms;
-    if (sscanf(line,"endp_eventfull_tx_rx %u %d %d %d %d %d",
-                         &ms, &tidx, &ptx, &btx, &prx, &brx) == 6)
-      {
-      }
+  int ms, tidx, ptx, btx, prx, brx, vm_id, num;
+  t_vm *vm;
+  if (sscanf(line,"endp_eventfull_tx_rx %u %d %d %d %d %d",
+                   &ms, &tidx, &ptx, &btx, &prx, &brx) == 6)
+    {
+    vm_id = tidx/MAX_VM;
+    num = tidx%MAX_VM;
+    vm = find_vm_with_id(vm_id);
+    if (vm && (num >= 0) && (num < vm->kvm.nb_dpdk))
+      dpdk_ovs_fill_eventfull(vm->kvm.name, num, ms, ptx, prx, btx, brx);
+    else
+      KERR("%d %d %d", tidx, vm_id, num);
+    }
     else
       KERR("%s", line);
 }

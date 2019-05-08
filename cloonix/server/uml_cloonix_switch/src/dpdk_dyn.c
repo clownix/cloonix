@@ -397,6 +397,8 @@ int dpdk_dyn_add_lan_to_eth(int llid, int tid, char *lan_name,
     {
     if(vlan_find(eth, lan_name))
       sprintf(info, "Lan already attached: %s %s %d", lan_name, name, num);
+    else if (eth->head_lan)
+      sprintf(info, "Eth is in lan: %s %s %d",eth->head_lan->lan,name,num);
     else
       {
       if (vm->is_zombie)
@@ -460,13 +462,13 @@ int dpdk_dyn_del_lan_from_eth(int llid, int tid, char *lan_name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_add_eth(char *name, int num, int base_spy)
+void dpdk_dyn_add_eth(t_vm *kvm, char *name, int num, int base_spy)
 {
   t_dvm *vm = vm_find(name);
   if (vm)
     KERR("%s %d", name, num);
   event_print("Send vm dyn add eth %s %d",name, num);
-  if (dpdk_msg_send_add_eth(name, num))
+  if (dpdk_msg_send_add_eth(kvm, name, num))
     {
     machine_death(name, error_death_noovs);
     KERR("%s %d", name, num);

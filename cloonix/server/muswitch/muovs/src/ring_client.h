@@ -16,7 +16,7 @@
 /*                                                                           */
 /*****************************************************************************/
 int get_rte_eal_init_done(void);
-int ring_add_dpdkr(int ring);
-int ring_del_dpdkr(int ring);
-int ring_dpdkr_init(t_all_ctx *all_ctx, char *dpdk_dir);
+int ring_close_dpdkr(int ring);
+int ring_open_dpdkr(char *lan, int ring);
+void ring_dpdkr_init(char *dpdk_dir);
 /*---------------------------------------------------------------------------*/

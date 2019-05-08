@@ -12,8 +12,8 @@ if [ "x$is_started" == "x" ]; then
   sleep 2
 else
   cloonix_cli $NET rma
-  echo waiting 10 sec
-  sleep 8
+  echo waiting 15 sec
+  sleep 15 
 fi
 
 #######################################################################

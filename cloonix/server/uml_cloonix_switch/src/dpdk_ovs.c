@@ -44,6 +44,7 @@
 #include "dpdk_fmt.h"
 #include "qmp.h"
 #include "system_callers.h"
+#include "stats_counters.h"
 
 enum{
   msg_type_diag = 1,
@@ -51,6 +52,15 @@ enum{
 };
 
 char *get_user(void);
+
+typedef struct t_dpdk_eth
+{
+  int pkt_tx;
+  int pkt_rx;
+  int byte_tx;
+  int byte_rx;
+  int ms;
+} t_dpdk_eth;
 
 /****************************************************************************/
 typedef struct t_dpdk_vm
@@ -63,6 +73,7 @@ typedef struct t_dpdk_vm
   int  dyn_vm_add_done_acked;
   int  dyn_vm_add_done_notacked;
   int  destroy_done;
+  t_dpdk_eth eth[MAX_DPDK_VM];
   struct t_dpdk_vm *prev;
   struct t_dpdk_vm *next;
 } t_dpdk_vm;
@@ -411,13 +422,17 @@ static void check_on_destroy_requested(void)
 /****************************************************************************/
 static void timer_vm_add_beat(void *data)
 {
+  t_vm *kvm;
   t_dpdk_vm *nvm, *vm;
   t_ovs *ovsdb = ovs_find("ovsdb");
   vm = g_head_vm;
   while(vm)
     {
+    kvm = cfg_get_vm(vm->name);
+    if (!kvm)
+      KERR("%s", vm->name);
     nvm = vm->next;
-    if (vm->dyn_vm_add_done == 0)
+    if (kvm && (vm->dyn_vm_add_done == 0))
       {
       if ((ovsdb != NULL) &&
           (ovsdb->ovs_pid_ready == 1) &&
@@ -425,12 +440,12 @@ static void timer_vm_add_beat(void *data)
         {
         if (test_if_dpdk_qemu_path_is_ok(vm->name, vm->num))
           {
-          dpdk_dyn_add_eth(vm->name, vm->num, vm->base_spy);
+          dpdk_dyn_add_eth(kvm, vm->name, vm->num, vm->base_spy);
           vm->dyn_vm_add_done = 1;
           }
         }
       }
-    if (vm->dyn_vm_add_done_acked == 0)
+    if (kvm && (vm->dyn_vm_add_done_acked == 0))
       {
       vm->dyn_vm_add_done_notacked += 1;
       if (vm->dyn_vm_add_done_notacked == 200)
@@ -892,6 +907,68 @@ t_topo_endp *dpdk_ovs_translate_topo_endp(int *nb)
   return result;
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_ovs_get_nb(void)
+{
+  int result = 0;
+  t_dpdk_vm *vm = g_head_vm;
+  while(vm)
+    {
+    result += vm->num;
+    vm = vm->next;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int dpdk_ovs_collect_dpdk(int nb_dpdk, t_eventfull_endp *eventfull)
+{
+  int i, nb = 0;
+  t_dpdk_vm *cur = g_head_vm;
+  t_vm *vm;
+  while (cur)
+    {
+    for (i=0; i<cur->num; i++)
+      {
+      strncpy(eventfull[nb].name, cur->name, MAX_NAME_LEN-1);
+      eventfull[nb].num  = i;
+      eventfull[nb].type = endp_type_kvm_dpdk;
+      if (i == 0)
+        {
+        vm = cfg_get_vm(cur->name);
+        eventfull[nb].ram  = vm->ram;
+        eventfull[nb].cpu  = vm->cpu;
+        }
+      eventfull[nb].ptx  = cur->eth[i].pkt_tx;
+      eventfull[nb].prx  = cur->eth[i].pkt_rx;
+      eventfull[nb].btx  = cur->eth[i].byte_tx;
+      eventfull[nb].brx  = cur->eth[i].byte_rx; 
+      eventfull[nb].ms   = cur->eth[i].ms;
+      memset(&(cur->eth[i]), 0, sizeof(t_dpdk_eth)); 
+      nb += 1;
+      }
+    cur = cur->next;
+    }
+  return nb;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void dpdk_ovs_fill_eventfull(char *name, int num, int ms,
+                             int ptx, int prx, int btx, int brx)
+{
+  t_dpdk_vm *vm = vm_find(name);
+  vm->eth[num].ms      = ms;
+  vm->eth[num].pkt_tx  += ptx;
+  vm->eth[num].pkt_rx  += prx;
+  vm->eth[num].byte_tx += btx;
+  vm->eth[num].byte_rx += brx;
+  stats_counters_update_endp_tx_rx(name, num, ms, ptx, btx, prx, brx);
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 void dpdk_ovs_init(void)

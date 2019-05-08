@@ -23,11 +23,12 @@
 #include "ioc.h"
 #include "pcap_fifo.h"
 #include "ring_client.h"
+#include "cirspy.h"
+#include "eventfull.h"
 
-#define MAX_THREAD_RING 100
 #define PKT_READ_SIZE  ((uint16_t)32)
 
-static int pool_fifo_free_idx[MAX_THREAD_RING];
+static int pool_fifo_free_idx[CIRC_MAX_TAB];
 static int pool_read_idx;
 static int pool_write_idx;
 
@@ -40,20 +41,12 @@ typedef struct t_dpdkr_ring
   struct t_dpdkr_ring *next;
 } t_dpdkr_ring;
 
-static t_all_ctx *g_all_ctx;
 static t_dpdkr_ring *g_dpdkr_ring_head;
 static pthread_t g_thread;
 
 static uint32_t volatile g_sync_lock;
 static int g_rte_eal_init_done;
 
-
-/****************************************************************************/
-static int mutex_test_and_lock(void)
-{
-   return (__sync_lock_test_and_set(&g_sync_lock, 1));
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void mutex_lock(void)
@@ -80,10 +73,10 @@ static void mutex_init(void)
 static void pool_init(void)
 {
   int i;
-  for(i = 0; i < MAX_THREAD_RING; i++)
+  for(i = 0; i < CIRC_MAX_TAB; i++)
     pool_fifo_free_idx[i] = i+1;
   pool_read_idx = 0;
-  pool_write_idx = MAX_THREAD_RING - 1;
+  pool_write_idx = CIRC_MAX_TAB - 1;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -94,7 +87,7 @@ static int pool_alloc(void)
   if(pool_read_idx != pool_write_idx)
     {
     idx = pool_fifo_free_idx[pool_read_idx];
-    pool_read_idx = (pool_read_idx + 1)%MAX_THREAD_RING;
+    pool_read_idx = (pool_read_idx + 1) % CIRC_MAX_TAB;
     }
   return idx;
 }
@@ -104,7 +97,7 @@ static int pool_alloc(void)
 static void pool_free(int idx)
 {
   pool_fifo_free_idx[pool_write_idx] =  idx;
-  pool_write_idx=(pool_write_idx + 1)%MAX_THREAD_RING;
+  pool_write_idx=(pool_write_idx + 1) % CIRC_MAX_TAB;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -160,18 +153,24 @@ static inline const char *get_rx_queue_name(unsigned int id)
 /*--------------------------------------------------------------------------*/
  
 /****************************************************************************/
-static void my_process_bulk(int nb_pkts, struct rte_mbuf *pkts[])
+static void my_process_bulk(int idx, long long usec, 
+                            int nb_pkts, struct rte_mbuf *pkts[])
 {
   struct rte_mbuf  *mb;
   int i, len;
   char *buf;
-  long long usec = cloonix_get_usec();
   for (i = 0; i < nb_pkts; i++)
     {
     mb = pkts[i];
     len = (int) mb->pkt_len;
     buf = rte_pktmbuf_mtod(mb, char *);
-    pcap_fifo_rx_packet(g_all_ctx, usec, len, buf);
+    if (len >= CIRC_MAX_LEN)
+      KERR("BIG PACKET: %d", len);
+    else
+      {
+      eventfull_hook_spy(idx, len, buf);
+      cirspy_put(idx, usec, len, buf);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -185,6 +184,7 @@ static void *dpdkr_monitor(void *arg)
   t_dpdkr_ring *cur;
   char *dpdk_dir = (char *) arg;
   char *argv[] = {"dpdkr_monitor", "--proc-type", "secondary", "--", NULL};
+  long long usec;
   usleep(100000);
   KERR("dpdkr_monitor STARTING %s", dpdk_dir);
   if (setenv("XDG_RUNTIME_DIR", dpdk_dir, 1))
@@ -195,28 +195,27 @@ static void *dpdkr_monitor(void *arg)
   g_rte_eal_init_done = 1;
   for (;;)
     {
-    if (mutex_test_and_lock())
-      usleep(1);
-    else
+    mutex_lock();
+    usec = cloonix_get_usec();
+    cur = g_dpdkr_ring_head;
+    while (cur)
       {
-      cur = g_dpdkr_ring_head;
-      while (cur)
+      rx_pkts = (int) RTE_MIN(rte_ring_count(cur->rx_ring),PKT_READ_SIZE);
+      retval=rte_ring_dequeue_bulk(cur->rx_ring,(void *)pkts,rx_pkts,NULL);
+      if (retval>0)
         {
-        rx_pkts = (int) RTE_MIN(rte_ring_count(cur->rx_ring),PKT_READ_SIZE);
-        retval=rte_ring_dequeue_bulk(cur->rx_ring,(void *)pkts,rx_pkts,NULL);
-        if (retval>0)
-          {
-          my_process_bulk(retval, pkts);
-          for (i = 0; i < retval; i++)
-            { 
-            m = pkts[i];
-            rte_pktmbuf_free(m);
-            }
+        my_process_bulk(cur->idx, usec, retval, pkts);
+        for (i = 0; i < retval; i++)
+          { 
+          m = pkts[i];
+          rte_pktmbuf_free(m);
           }
-        cur = cur->next;
+        usleep(100);
         }
-      mutex_unlock();
+      cur = cur->next;
       }
+    mutex_unlock();
+    usleep(10000);
     }
   KERR("THREAD EXIT");
   pthread_exit(NULL);
@@ -225,7 +224,7 @@ static void *dpdkr_monitor(void *arg)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int ring_add_dpdkr(int ring)
+int ring_open_dpdkr(char *lan, int ring)
 {
   struct rte_ring *rx_ring;
   int idx, result;
@@ -261,6 +260,9 @@ int ring_add_dpdkr(int ring)
       else
         {
         dpdkr_ring_alloc(idx, ring, rx_ring);
+        cirspy_open(idx);
+        pcap_fifo_open(idx, lan);
+        eventfull_lan_open(idx, lan);
         result = 0; 
         }
       }
@@ -280,7 +282,7 @@ return 1;
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int ring_del_dpdkr(int ring)
+int ring_close_dpdkr(int ring)
 {
   int result = -1;
   t_dpdkr_ring *cur = dpdkr_ring_find(ring);
@@ -289,6 +291,9 @@ int ring_del_dpdkr(int ring)
     mutex_lock();
     pool_free(cur->idx);
     dpdkr_ring_free(cur);
+    cirspy_close(cur->idx);
+    pcap_fifo_close(cur->idx);
+    eventfull_lan_close(cur->idx);
     mutex_unlock();
     result = 0; 
     }
@@ -298,18 +303,13 @@ KERR("%s %d", __FUNCTION__, ring);
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int ring_dpdkr_init(t_all_ctx *all_ctx, char *dpdk_dir)
+void ring_dpdkr_init(char *dpdk_dir)
 {
-  int result = 0;
   g_rte_eal_init_done = 0;
   pool_init();
   mutex_init();
   g_dpdkr_ring_head = NULL;
   if (pthread_create(&g_thread, NULL, dpdkr_monitor, (void *) dpdk_dir) != 0)
-    {
-    KERR("THREAD BAD START");
-    result = -1;
-    }
-  return result;
+    KOUT("THREAD BAD START");
 }
 /*--------------------------------------------------------------------------*/

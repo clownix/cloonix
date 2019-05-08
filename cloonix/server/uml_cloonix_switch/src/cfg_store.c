@@ -776,7 +776,6 @@ t_topo_info *cfg_produce_topo_info(void)
             }
           break;
 
-        case endp_type_kvm_dpdk:
         case endp_type_kvm_eth:
         case endp_type_kvm_wlan:
           break;

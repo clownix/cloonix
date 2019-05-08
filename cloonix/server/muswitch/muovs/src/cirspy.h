@@ -15,10 +15,12 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void pcap_fifo_rx_packet(int idx, long long usec, int len, char *buf);
-void pcap_fifo_open(int idx, char *name);
-void pcap_fifo_close(int idx);
-void pcap_fifo_init(t_all_ctx *all_ctx, char *dpdk_dir);
+#define CIRC_MAX_TAB 100
+#define CIRC_MAX_LEN 2048
+
+/****************************************************************************/
+void  cirspy_put(int idx, long long usec, int len, char *pkt);
+void  cirspy_open(int idx);
+void  cirspy_close(int idx);
+void  cirspy_init(void);
 /*--------------------------------------------------------------------------*/
-
-

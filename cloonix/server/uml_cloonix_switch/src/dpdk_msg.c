@@ -248,10 +248,10 @@ static void ovsreq_free(int tid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_msg_send_add_eth(char *name, int num)
+int dpdk_msg_send_add_eth(t_vm *kvm, char *name, int num)
 {
   int result, tid = get_next_tid();
-  result = dpdk_fmt_tx_add_eth(tid, name, num);
+  result = dpdk_fmt_tx_add_eth(tid, kvm, name, num);
   if (result)
     KERR("%s %d", name, num);
   else
