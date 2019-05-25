@@ -790,11 +790,11 @@ static void timer_endp_beat(void *data)
           {
           cur->llid = trace_alloc(cur);
           cur->trace_alloc_count += 1;
-          if (cur->trace_alloc_count == 50)
-            KERR("ENDP %s %d WARN 1 NOT LISTENING", cur->name, cur->num);
           if (cur->trace_alloc_count == 100)
+            KERR("ENDP %s %d WARN 1 NOT LISTENING", cur->name, cur->num);
+          if (cur->trace_alloc_count == 200)
             KERR("ENDP %s %d WARN 2 NOT LISTENING", cur->name, cur->num);
-          if (cur->trace_alloc_count > 200)
+          if (cur->trace_alloc_count > 300)
             {
             KERR("ENDP %s %d ERR NOT LISTENING", cur->name, cur->num);
             endp_mngt_send_quit(cur->name, cur->num);

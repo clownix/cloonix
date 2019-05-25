@@ -15,6 +15,10 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int dpdk_fmt_tx_add_tap(int tid, char *name, int tap_id);
+int dpdk_fmt_tx_del_tap(int tid, char *name);
+int dpdk_fmt_tx_add_lan_tap(int tid, char *lan, char *name);
+int dpdk_fmt_tx_del_lan_tap(int tid, char *lan, char *name);
 int dpdk_fmt_tx_add_lan(int tid, char *lan, int spy);
 int dpdk_fmt_tx_del_lan(int tid, char *lan, int spy);
 int dpdk_fmt_tx_add_eth(int tid, t_vm *kvm, char *name, int num);

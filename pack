@@ -87,7 +87,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -f ${CLOONIX_SERVER}/dtach/cmd
   rm -f ${CLOONIX_SERVER}/dtach/dtach_source.tar.gz
 #----------------------------------------------------------
-for i in allclean cmd dpdk dpdk_mkpatch dpdk.patch \
+for i in allclean cmd dpdk ovs dpdk_mkpatch dpdk.patch \
          dpdk_patched_create dpdk.sh ovs_mkpatch \
          ovs.patch ovs_patched_create ovs.sh ring_client; do
     rm -rf ${CLOONIX_SERVER}/dpdk/${i}

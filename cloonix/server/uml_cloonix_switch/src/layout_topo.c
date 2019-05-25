@@ -28,6 +28,7 @@
 #include "endp_mngt.h"
 #include "lan_to_name.h"
 #include "llid_trace.h"
+#include "dpdk_tap.h"
 
 #define MAX_MS_OF_INSERT 3600000
 
@@ -164,23 +165,29 @@ void make_default_layout_lan(t_layout_lan *layout, char *name)
 static void make_default_layout_sat(t_layout_sat *layout, char *name, int type)
 {
   int mutype;
-  if (!endp_mngt_exists(name, 0, &mutype))
+  if ((!endp_mngt_exists(name, 0, &mutype)) &&
+      (!dpdk_tap_exist(name)))
     KERR("%s", name);
-  else if (mutype != type)
-    KERR("%s %d %d", name, mutype, type);
   else
     {
-    memset(layout, 0, sizeof(t_layout_sat));
-    strncpy(layout->name, name, MAX_NAME_LEN-1);
-    layout->mutype = type;
-    layout->x = 50;
-    layout->y = 50;
-    if (type == endp_type_a2b)
+    if (dpdk_tap_exist(name))
+      mutype = endp_type_dpdk_tap;
+    if (mutype != type)
+      KERR("%s %d %d", name, mutype, type);
+    else
       {
-      layout->xa = A2B_DIA * VAL_INTF_POS_A2B;
-      layout->ya = A2B_DIA * VAL_INTF_POS_A2B;
-      layout->xb = -A2B_DIA * VAL_INTF_POS_A2B;
-      layout->yb = A2B_DIA * VAL_INTF_POS_A2B;
+      memset(layout, 0, sizeof(t_layout_sat));
+      strncpy(layout->name, name, MAX_NAME_LEN-1);
+      layout->mutype = type;
+      layout->x = 50;
+      layout->y = 50;
+      if (type == endp_type_a2b)
+        {
+        layout->xa = A2B_DIA * VAL_INTF_POS_A2B;
+        layout->ya = A2B_DIA * VAL_INTF_POS_A2B;
+        layout->xb = -A2B_DIA * VAL_INTF_POS_A2B;
+        layout->yb = A2B_DIA * VAL_INTF_POS_A2B;
+        }
       }
     }
 }
@@ -418,7 +425,6 @@ static void send_node(int llid, int tid, t_layout_node_xml *node_xml)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 static void send_sat(int llid, int tid, t_layout_sat_xml *sat_xml)
 {
@@ -548,10 +554,13 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
   t_layout_sub *cur = g_head_layout_sub;
   t_layout_sat_xml *xml;
   int type;
-  if (!endp_mngt_exists(layout->name, 0, &type))
+  if ((!endp_mngt_exists(layout->name, 0, &type)) &&
+      (!dpdk_tap_exist(layout->name)))
     KERR("%s", layout->name);
   else
     {
+    if (dpdk_tap_exist(layout->name))
+      type = endp_type_dpdk_tap;
     if (authorized_to_modify_data_bank_layout(llid, tid, 0))
       {
       while(cur)
@@ -800,13 +809,16 @@ static void layout_modif_sat(int llid, int tid, char *name, int kind,
   int mutype;
   t_layout_sat_xml *cur;
   cur = find_sat_xml(name);
-  if (!endp_mngt_exists(name, 0, &mutype))
+  if ((!endp_mngt_exists(name, 0, &mutype)) &&
+      (!dpdk_tap_exist(name)))
     {
     sprintf(info, "KO %s not found", name);
     send_status_ko(llid, tid, info);
     }
   else
     {
+    if (dpdk_tap_exist(name))
+      mutype = endp_type_dpdk_tap;
     if (!cur)
       KERR("%s", name);
     else
@@ -1097,10 +1109,13 @@ void layout_add_sat(char *name, int llid)
 {
   t_layout_sat layout;
   int type;
-  if (!endp_mngt_exists(name, 0, &type))
+  if ((!endp_mngt_exists(name, 0, &type)) &&
+      (!dpdk_tap_exist(name)))
     KERR("%s", name);
   else
     {
+    if (dpdk_tap_exist(name))
+      type = endp_type_dpdk_tap;
     make_default_layout_sat(&layout, name, type);
     add_layout_sat(&layout);
     if (!(g_head_layout_sub) ||

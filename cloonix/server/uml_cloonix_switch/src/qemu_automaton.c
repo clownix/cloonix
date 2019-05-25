@@ -338,9 +338,9 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
    " -device qemu-xhci"\
    " -device usb-tablet"\
    " -chardev spicevmc,id=charredir0,name=usbredir"\
-   " -device usb-redir,chardev=charredir0,id=redir0"\
+   " -device usb-redir,chardev=charredir0"\
    " -chardev spicevmc,id=charredir1,name=usbredir"\
-   " -device usb-redir,chardev=charredir1,id=redir1"\
+   " -device usb-redir,chardev=charredir1"\
    " -spice unix,addr=%s,disable-ticketing"\
    " -device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0"\
    " -chardev spicevmc,id=spicechannel0,name=vdagent"

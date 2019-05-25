@@ -45,6 +45,7 @@ static int g_cloonix_listen_fd;
 static int g_cloonix_fd;
 static int g_ovsdb_pid;
 static int g_ovs_pid;
+static char g_arg[NB_ARG][MAX_ARG_LEN];
 
 
 /*****************************************************************************/
@@ -109,14 +110,13 @@ static int file_exists(char *path)
 /*****************************************************************************/
 static void unlink_files(char *dpdk_dir)
 {
-  char arg[NB_ARG][MAX_ARG_LEN];
   if (!access(dpdk_dir, F_OK))
     {
-    memset(arg, 0, MAX_ARG_LEN * NB_ARG);
-    snprintf(arg[0], MAX_PATH_LEN-1,"/bin/rm");
-    snprintf(arg[1], MAX_PATH_LEN-1,"-fdR");
-    snprintf(arg[2], MAX_ARG_LEN-1,"%s/*", dpdk_dir);
-    if (call_my_popen(dpdk_dir, 3, arg)) 
+    memset(g_arg, 0, MAX_ARG_LEN * NB_ARG);
+    snprintf(g_arg[0], MAX_PATH_LEN-1,"/bin/rm");
+    snprintf(g_arg[1], MAX_PATH_LEN-1,"-fdR");
+    snprintf(g_arg[2], MAX_ARG_LEN-1,"%s/*", dpdk_dir);
+    if (call_my_popen(dpdk_dir, 3, g_arg)) 
       KERR(" ");
     }
 }
@@ -125,16 +125,15 @@ static void unlink_files(char *dpdk_dir)
 /*****************************************************************************/
 static void unlink_dir(char *dpdk_dir)
 {
-  char arg[NB_ARG][MAX_ARG_LEN];
-  memset(arg, 0, MAX_ARG_LEN * NB_ARG);
-  snprintf(arg[0], MAX_PATH_LEN-1,"/bin/rm");
-  snprintf(arg[1], MAX_PATH_LEN-1,"-fdR");
-  snprintf(arg[2], MAX_ARG_LEN-1,"%s/dpdk", dpdk_dir);
-  if (call_my_popen(dpdk_dir, 3, arg)) 
+  memset(g_arg, 0, MAX_ARG_LEN * NB_ARG);
+  snprintf(g_arg[0], MAX_PATH_LEN-1,"/bin/rm");
+  snprintf(g_arg[1], MAX_PATH_LEN-1,"-fdR");
+  snprintf(g_arg[2], MAX_ARG_LEN-1,"%s/dpdk", dpdk_dir);
+  if (call_my_popen(dpdk_dir, 3, g_arg)) 
     KERR(" ");
-  while (!access(arg[2], F_OK))
+  while (!access(g_arg[2], F_OK))
     {
-    if (call_my_popen(dpdk_dir, 3, arg)) 
+    if (call_my_popen(dpdk_dir, 3, g_arg)) 
       KERR(" ");
     usleep(10000);
     }
@@ -294,7 +293,7 @@ static void add_eth_br(t_all_ctx *all_ctx, char *respb, char *name, int num,
     {
     snprintf(respb, MAX_PATH_LEN-1,
              "OK cloonixovs_add_eth name=%s num=%d", name, num);
-    eventfull_vm_add(name, num, vm_id, eth_params);
+    eventfull_obj_add(name, num, vm_id, eth_params);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -314,7 +313,7 @@ static void del_eth_br(t_all_ctx *all_ctx, char *respb, char *name, int num)
     {
     snprintf(respb, MAX_PATH_LEN-1,
              "OK cloonixovs_del_eth name=%s num=%d", name, num);
-    eventfull_vm_del(name);
+    eventfull_obj_del(name);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -395,7 +394,7 @@ static void add_lan_eth_br(t_all_ctx *all_ctx, char *respb,
              "KO cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
              lan, name, num);
     }
-  else if(eventfull_lan_add_eth(lan, name, num))
+  else if(eventfull_lan_add_endp(lan, name, num, NULL))
     {
     KERR("%s %s %d", lan, name, num);
     snprintf(respb, MAX_PATH_LEN-1,
@@ -424,7 +423,7 @@ static void del_lan_eth_br(t_all_ctx *all_ctx, char *respb,
              "KO cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
              lan, name, num);
     }
-  else if(eventfull_lan_del_eth(lan, name, num))
+  else if(eventfull_lan_del_endp(lan, name, num))
     {
     KERR("%s %s %d", lan, name, num);
     snprintf(respb, MAX_PATH_LEN-1,
@@ -440,6 +439,66 @@ static void del_lan_eth_br(t_all_ctx *all_ctx, char *respb,
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+static void add_lan_tap_br(t_all_ctx *all_ctx, char *respb,
+                           char *lan, char *name)
+{
+  char *bin = g_ovs_bin;
+  char *db = g_dpdk_dir;
+  t_eth_params eth_params;
+  if (ovs_execv_add_lan_tap(all_ctx, bin, db, lan, name))
+    {
+    KERR("KO add_lan_tap %s %s", lan, name);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_lan_tap lan_name=%s name=%s", lan, name);
+    }
+  else if (ovs_execv_add_spy_tap(all_ctx, bin, db, lan, name))
+    {
+    KERR("KO add_lan_tap spy %s %s", lan, name);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_lan_tap lan_name=%s name=%s", lan, name);
+    }
+  else if (ovs_execv_get_tap_mac(name, &eth_params))
+    {
+    KERR("KO add_lan_tap spy %s %s", lan, name);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_lan_tap lan_name=%s name=%s", lan, name);
+    }
+  else if(eventfull_lan_add_endp(lan, name, 0, &eth_params))
+    {
+    KERR("%s %s", lan, name);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_lan_tap lan_name=%s name=%s", lan, name);
+    }
+  else
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_add_lan_tap lan_name=%s name=%s", lan, name);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void del_lan_tap_br(t_all_ctx *all_ctx, char *respb,
+                           char *lan, char *name)
+{
+  char *bin = g_ovs_bin;
+  char *db = g_dpdk_dir;
+  if (ovs_execv_del_lan_tap(all_ctx, bin, db, lan, name))
+    {
+    KERR("del_lan_tap %s %s", lan, name);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_lan_tap lan_name=%s name=%s", lan, name);
+    }
+  else if(eventfull_lan_del_endp(lan, name, 0))
+    {
+    KERR("%s %s", lan, name);
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_lan_tap lan_name=%s name=%s", lan, name);
+    }
+  else
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_del_lan_tap lan_name=%s name=%s", lan, name);
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static int add_eth_req(char *line, char *name, int *num, int *vm_id,
@@ -581,6 +640,24 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     sync();
     exit(0);
     }
+  else if (sscanf(line, "cloonixovs_add_tap name=%s tap_id=%d",name,&vm_id))
+    {
+    eventfull_obj_add(name, 1, vm_id, NULL);
+    snprintf(respb, MAX_PATH_LEN-1, "OK cloonixovs_add_tap name=%s", name);
+    }
+  else if (sscanf(line, "cloonixovs_del_tap name=%s", name))
+    {
+    eventfull_obj_del(name);
+    snprintf(respb, MAX_PATH_LEN-1, "OK cloonixovs_del_tap name=%s", name);
+    }
+  else if(sscanf(line,"cloonixovs_add_lan_tap lan_name=%s name=%s",lan,name))
+    {
+    add_lan_tap_br(all_ctx, respb, lan, name);
+    }
+  else if(sscanf(line,"cloonixovs_del_lan_tap lan_name=%s name=%s",lan,name))
+    {
+    del_lan_tap_br(all_ctx, respb, lan, name);
+    }
   else
     KOUT("%s", line);
   cloonix_llid = blkd_get_cloonix_llid((void *) all_ctx);
@@ -713,6 +790,9 @@ int main (int argc, char *argv[])
   memcpy(sock, argv[3], MAX_PATH_LEN-1);
   memcpy(g_ovs_bin, argv[4], MAX_PATH_LEN-1);
   memcpy(g_dpdk_dir, argv[5], MAX_PATH_LEN-1);
+  if (strncmp("/home/", g_dpdk_dir, strlen("/home/")))
+    KOUT("Too risky to erase %s/dpdk", g_dpdk_dir);
+  unlink_dir(g_dpdk_dir);
   all_ctx = cloonix_part_init(ctl_argv);
   clownix_timeout_add(all_ctx, 500, eventfull_can_be_sent, NULL, NULL, NULL);
   clownix_timeout_add(all_ctx, 100, timeout_rpct_heartbeat, NULL, NULL, NULL);

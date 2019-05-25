@@ -45,10 +45,7 @@
 #include "layout_topo.h"
 #include "file_read_write.h"
 #include "dpdk_ovs.h"
-
-
-
-
+#include "dpdk_tap.h"
 
 
 /*---------------------------------------------------------------------------*/
@@ -59,7 +56,6 @@ static int nb_zombie;
 static int glob_vm_id;
 static t_newborn *head_newborn;
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static t_vm *find_vm(char *name)
@@ -122,6 +118,8 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
     {
     if (type == endp_type_tap)
       snprintf(use, MAX_NAME_LEN, "%s is used by a tap", name);
+    else if (type == endp_type_dpdk_tap)
+      snprintf(use, MAX_NAME_LEN, "%s is used by a dpdk_tap", name);
     else if (type == endp_type_wif)
       snprintf(use, MAX_NAME_LEN, "%s is used by a wif", name);
     else if (type == endp_type_raw)
@@ -548,7 +546,6 @@ char *cfg_get_bin_dir(void)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 char *cfg_get_bulk(void)
 {
@@ -654,6 +651,7 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_ovs_endp)
   topo->nb_c2c = endp_mngt_get_nb(endp_type_c2c);
   topo->nb_snf = endp_mngt_get_nb(endp_type_snf);
   topo->nb_sat = endp_mngt_get_nb_sat();
+  topo->nb_sat += dpdk_tap_get_qty();
   topo->nb_endp = endp_mngt_get_nb_all() + nb_dpdk_ovs_endp;
  if (topo->nb_kvm)
     {
@@ -797,8 +795,22 @@ t_topo_info *cfg_produce_topo_info(void)
     KOUT(" ");
   for (i=0; i<nb_dpdk_ovs_endp; i++)
     {
-    copy_ovs_endp(&(topo->endp[i_endp]), &(dpdk_ovs_endp[i]));
-    i_endp += 1;
+    if ((dpdk_ovs_endp[i].type == endp_type_kvm_dpdk) ||
+        (dpdk_ovs_endp[i].type == endp_type_dpdk_tap))
+      {
+      if (i_endp == topo->nb_endp)
+        KOUT(" ");
+      copy_ovs_endp(&(topo->endp[i_endp]), &(dpdk_ovs_endp[i]));
+      i_endp += 1;
+      }
+    if (dpdk_ovs_endp[i].type == endp_type_dpdk_tap)
+      {
+      if (i_sat == topo->nb_sat)
+        KOUT(" ");
+      strncpy(topo->sat[i_sat].name, dpdk_ovs_endp[i].name, MAX_NAME_LEN-1);
+      topo->sat[i_sat].type = dpdk_ovs_endp[i].type;
+      i_sat += 1;
+      }
     }
   clownix_free(dpdk_ovs_endp, __FUNCTION__);
   topo->nb_c2c = i_c2c;

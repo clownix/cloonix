@@ -23,7 +23,7 @@ t_clo *clo_mngt_create_tcp(t_tcp_id *tcpid);
 int clo_mngt_delete_tcp(t_clo *clo);
 void clo_mngt_set_state(t_clo *clo, int state);
 int clo_mngt_get_state(t_clo *clo);
-u32_t get_g_250ms_count(void);
+u32_t get_g_50ms_count(void);
 void clo_mngt_get_ackno_seqno_wnd(t_clo *clo, u32_t *ackno, u32_t *seqno, 
                                   u16_t *rwnd, u16_t *twnd);
 int  clo_mngt_adjust_loc_wnd(t_clo *clo, u16_t loc_wnd);

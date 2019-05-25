@@ -217,6 +217,7 @@ static void alloc_record_sat(t_record_net *net, char *name, int type)
   send_evt_stats_sysinfo_sub(net->llid, 0, name, 1);
   send_evt_stats_endp_sub(net->llid, 0, name, 0, 1);
   if ((type == endp_type_tap)  ||
+      (type == endp_type_dpdk_tap)  ||
       (type == endp_type_wif)  || 
       (type == endp_type_raw)  || 
       (type == endp_type_c2c)  ||
@@ -241,6 +242,7 @@ static void free_record_sat(t_record_net *net, t_record_sat *sat)
   if (sat == net->head_sat)
     net->head_sat = sat->next;
   if ((sat->type == endp_type_tap)  ||
+      (sat->type == endp_type_dpdk_tap)  ||
       (sat->type == endp_type_wif)  || 
       (sat->type == endp_type_raw)  || 
       (sat->type == endp_type_c2c)  ||
@@ -499,6 +501,7 @@ void recv_evt_stats_endp(int llid, int tid, char *network,
     if (sat)
       {
       if ((sat->type == endp_type_tap) ||
+          (sat->type == endp_type_dpdk_tap)  ||
           (sat->type == endp_type_wif) ||
           (sat->type == endp_type_raw) ||
           (sat->type == endp_type_c2c) ||

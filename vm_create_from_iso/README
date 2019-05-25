@@ -1,0 +1,38 @@
+
+#----------------------------------------------------------------------------
+Prereq: Cloonix must be installed in your host machine.
+To create om iso a cloonix-capable VM:
+
+Go into confvars and:
+Modify NAME, TYPE, LANG, ISO and BULK in confvars to suit your needs.
+
+TYPE can be only: buster stretch, opensuse, ubuntu,
+                  centos8 redhat8 fedora30.
+LANG can be only: us, fr.
+
+#----------------------------------------------------------------------------
+1)
+call ./iso_install.sh and proceed with the installation as usual.
+#----------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------
+2)
+./run.sh optionnaly, for the welcome and setting of the root password to root.
+
+On some distributions, you have to run the VM a first time to finish the
+installation, on some, the password for root is not configured, for the redhat,
+you have to accept the licence before start. For all these cases, call the
+./run.sh script and do the necessary, the password for root must be root for the
+next step that is done with ./backdoor_install.sh.
+Note that you may choose another root password, but in that case, before
+launching ./backdoor_install.sh, you must put this password in the C code 
+file src/oper_auto.c (where "root" is written twice)and call ./cmd to build.
+#----------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------
+3)
+call ./backdoor_install.sh and wait for shutdown.
+#----------------------------------------------------------------------------
+
+For the VM available on clownix.net site user "cloonix", password "cloonix" and
+user "root" password "root".

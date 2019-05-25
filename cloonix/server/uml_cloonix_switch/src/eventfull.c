@@ -30,6 +30,7 @@
 #include "utils_cmd_line_maker.h"
 #include "endp_mngt.h"
 #include "dpdk_ovs.h"
+#include "dpdk_tap.h"
 
 
 /*****************************************************************************/
@@ -318,13 +319,12 @@ static void timeout_collect_eventfull(void *data)
 {
   static int count = 0;
   t_eventfull_endp *eventfull_endp;
-  int nb_dpdk, nb_endp, nb_vm, llid, tid, tot_evt;
+  int nb_endp, nb_vm, llid, tid, tot_evt;
   t_vm *vm   = cfg_get_first_vm(&nb_vm);
   t_endp *endp   = endp_mngt_get_first(&nb_endp);
   t_eventfull_subs *cur = head_eventfull_subs;
   int nb;
-  nb_dpdk = dpdk_ovs_get_nb();
-  tot_evt = nb_endp + nb_dpdk;
+  tot_evt = nb_endp + dpdk_ovs_get_nb() + dpdk_tap_get_qty();
   eventfull_endp = 
   (t_eventfull_endp *) clownix_malloc(tot_evt * sizeof(t_eventfull_endp), 13);
   memset(eventfull_endp, 0, tot_evt * sizeof(t_eventfull_endp));
@@ -335,7 +335,8 @@ static void timeout_collect_eventfull(void *data)
     count = 0;
     }
   nb = collect_endp(eventfull_endp, nb_endp, endp); 
-  nb += dpdk_ovs_collect_dpdk(nb_dpdk, &(eventfull_endp[nb]));
+  nb += dpdk_ovs_collect_dpdk(&(eventfull_endp[nb]));
+  nb += dpdk_tap_collect_dpdk(&(eventfull_endp[nb]));
   while (cur)
     {
     llid = cur->llid;

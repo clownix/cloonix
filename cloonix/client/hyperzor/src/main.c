@@ -257,7 +257,6 @@ void store_evt_lan_exists(char *net_name, char *name, int exists)
 /****************************************************************************/
 int main(int argc, char *argv[])
 {
-  char ld_lib[MAX_PATH_LEN];
   char current_directory[MAX_PATH_LEN];
   memset(g_cloonix_root_tree, 0, MAX_PATH_LEN);
   memset(g_cloonix_gui_bin, 0, MAX_PATH_LEN);
@@ -274,10 +273,6 @@ int main(int argc, char *argv[])
     KOUT(" ");
 
   init_local_cloonix_paths(current_directory, argv[0], argv[1]);
-  snprintf(ld_lib, MAX_PATH_LEN-1, "%s/common/spice/spice_lib",
-           g_cloonix_root_tree);
-  setenv("LD_LIBRARY_PATH", ld_lib, 1);
-
   gtk_init(NULL, NULL);
   connect_cloonix_init(g_cloonix_config_file, 
                        store_evt_net_exists,

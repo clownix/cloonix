@@ -47,15 +47,15 @@ typedef struct t_evt_eth
   struct t_evt_eth *lannext;
 } t_evt_eth;
 /*--------------------------------------------------------------------------*/
-typedef struct t_evt_vm
+typedef struct t_evt_obj
 {
   char name[MAX_NAME_LEN];
   int vm_id;
   int num;
   t_evt_eth *head_evt_eth;
-  struct t_evt_vm *prev;
-  struct t_evt_vm *next;
-} t_evt_vm;  
+  struct t_evt_obj *prev;
+  struct t_evt_obj *next;
+} t_evt_obj;  
 /*--------------------------------------------------------------------------*/
 typedef struct t_evt_lan
 {
@@ -68,7 +68,7 @@ typedef struct t_evt_lan
 
 /*---------------------------------------------------------------------------*/
 static t_evt_lan *g_lan_head_tab[CIRC_MAX_TAB + 1];
-static t_evt_vm *g_vm_head;
+static t_evt_obj *g_obj_head;
 static t_evt_lan *g_lan_head;
 static uint32_t volatile g_sync_lock;
 
@@ -88,9 +88,9 @@ static t_evt_lan *find_lan(char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_evt_vm *find_evt_vm(char *name)
+static t_evt_obj *find_evt_obj(char *name)
 {
-  t_evt_vm *cur = g_vm_head;
+  t_evt_obj *cur = g_obj_head;
   while(cur)
     {
     if (!strcmp(cur->name, name))
@@ -102,7 +102,7 @@ static t_evt_vm *find_evt_vm(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_evt_eth *find_evt_eth(t_evt_vm *vme, int eth)
+static t_evt_eth *find_evt_eth(t_evt_obj *vme, int eth)
 {
   t_evt_eth *cur = vme->head_evt_eth;
   while(cur)
@@ -182,8 +182,8 @@ static void update_stats(t_evt_lan *lane, int flag_allcast,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_chain_eth(t_evt_vm *vme, char *name, int num, int vm_id,
-                             t_eth_params eth_params[MAX_DPDK_VM])
+static void create_chain_eth(t_evt_obj *vme, char *name, int num, int vm_id,
+                             t_eth_params *eth_params)
 {
   int i;
   t_evt_eth *cur;
@@ -219,7 +219,7 @@ static void unchain_eth_lan(t_evt_lan *lane, t_evt_eth *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void delete_chain_eth(t_evt_vm *vme)
+static void delete_chain_eth(t_evt_obj *vme)
 {
   int i;
   t_evt_eth *cur;
@@ -227,20 +227,23 @@ static void delete_chain_eth(t_evt_vm *vme)
   for (i=0; i<vme->num; i++)
     {
     cur = vme->head_evt_eth;
-    if (cur->idx != 0)
+    if (cur)
       {
-      lane = g_lan_head_tab[cur->idx];
-      if ((lane == NULL) || (lane->head_lan_eth == NULL))
-        KERR(" ");
-      else
-        unchain_eth_lan(lane, cur);
+      if (cur->idx != 0)
+        {
+        lane = g_lan_head_tab[cur->idx];
+        if ((lane == NULL) || (lane->head_lan_eth == NULL))
+          KERR(" ");
+        else
+          unchain_eth_lan(lane, cur);
+        }
+      if (cur->prev) 
+        cur->prev->next = cur->next;
+      if (cur->next) 
+        cur->next->prev = cur->prev;
+      if (cur==vme->head_evt_eth)
+        vme->head_evt_eth = cur->next;
       }
-    if (cur->prev) 
-      cur->prev->next = cur->next;
-    if (cur->next) 
-      cur->next->prev = cur->prev;
-    if (cur==vme->head_evt_eth)
-      vme->head_evt_eth = cur->next;
     }
   if (vme->head_evt_eth != NULL)
     KOUT(" ");
@@ -248,34 +251,40 @@ static void delete_chain_eth(t_evt_vm *vme)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void eventfull_vm_add(char *name, int num, int vm_id,
-                      t_eth_params eth_params[MAX_DPDK_VM])
+void eventfull_obj_add(char *name, int num, int vm_id,
+                       t_eth_params *eth_params)
 {
-  t_evt_vm *cur = find_evt_vm(name);
+  t_evt_obj *cur = find_evt_obj(name);
   if (cur)
     KERR("%s", name);
   else
     {
-    cur = malloc(sizeof(t_evt_vm));
-    memset(cur, 0, sizeof(t_evt_vm));
+    cur = malloc(sizeof(t_evt_obj));
+    memset(cur, 0, sizeof(t_evt_obj));
     memcpy(cur->name, name, MAX_NAME_LEN-1);
     cur->num = num;
     cur->vm_id = vm_id;
-    create_chain_eth(cur, name, num, vm_id, eth_params);
+    if (eth_params)
+      {
+      create_chain_eth(cur, name, num, vm_id, eth_params);
+KERR("ADD VM %s %d", name, num);
+      }
+else
+KERR("ADD TAP %s %d", name, num);
     mutex_lock();
-    if (g_vm_head) 
-      g_vm_head->prev = cur;
-    cur->next = g_vm_head;
-    g_vm_head = cur;
+    if (g_obj_head) 
+      g_obj_head->prev = cur;
+    cur->next = g_obj_head;
+    g_obj_head = cur;
     mutex_unlock();
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void eventfull_vm_del(char *name)
+void eventfull_obj_del(char *name)
 {
-  t_evt_vm *cur = find_evt_vm(name);
+  t_evt_obj *cur = find_evt_obj(name);
   if (!cur)
     KERR("%s", name);
   else
@@ -286,20 +295,22 @@ void eventfull_vm_del(char *name)
       cur->prev->next = cur->next;
     if (cur->next) 
       cur->next->prev = cur->prev;
-    if (cur==g_vm_head) 
-      g_vm_head = cur->next;
+    if (cur==g_obj_head) 
+      g_obj_head = cur->next;
     mutex_unlock();
     free(cur);
+KERR("DEL VM %s ", name);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int eventfull_lan_add_eth(char *lan, char *name, int num)
+int  eventfull_lan_add_endp(char *lan, char *name, int num,
+                            t_eth_params *eth_params)
 {
   int result = -1;
   t_evt_lan *lane = find_lan(lan);
-  t_evt_vm *vme = find_evt_vm(name);
+  t_evt_obj *vme = find_evt_obj(name);
   t_evt_eth *ethe;
   if (!lane)
     KERR("%s %s %d", lan, name, num);
@@ -309,6 +320,12 @@ int eventfull_lan_add_eth(char *lan, char *name, int num)
     KERR("%s %s %d", lan, name, num);
   else
     {
+    if (eth_params)
+      {
+      mutex_lock();
+      create_chain_eth(vme, name, 1, vme->vm_id, eth_params);
+      mutex_unlock();
+      }
     ethe = find_evt_eth(vme, num);
     if ((ethe) && (ethe->idx == 0) && 
         (ethe->lanprev == NULL) &&
@@ -337,11 +354,11 @@ int eventfull_lan_add_eth(char *lan, char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int eventfull_lan_del_eth(char *lan, char *name, int num)
+int eventfull_lan_del_endp(char *lan, char *name, int num)
 {
   int result = -1;
   t_evt_lan *lane = find_lan(lan);
-  t_evt_vm *vme = find_evt_vm(name);
+  t_evt_obj *vme = find_evt_obj(name);
   t_evt_eth *ethe;
   if (!lane)
     KERR("%s", lan);
@@ -422,7 +439,7 @@ void eventfull_lan_close(int idx)
 /****************************************************************************/
 void eventfull_collect_send(t_all_ctx *all_ctx, int cloonix_llid)
 {
-  t_evt_vm *curvm = g_vm_head;
+  t_evt_obj *curvm = g_obj_head;
   t_evt_eth *cureth;
   int tidx;
   unsigned int ms = (unsigned int) cloonix_get_msec();
@@ -475,7 +492,7 @@ void eventfull_hook_spy(int idx, int len, char *buf)
 /****************************************************************************/
 void eventfull_init(void)
 {
-  g_vm_head = NULL;
+  g_obj_head = NULL;
   mutex_init();
   memset(g_lan_head_tab, 0, (CIRC_MAX_TAB + 1) * sizeof(t_evt_lan *));
 }

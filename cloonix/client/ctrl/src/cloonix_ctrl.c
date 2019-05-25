@@ -90,6 +90,8 @@ struct cmd_struct level_add_cmd[] = {
 {"lan",  "Add lan (emulated cable)", NULL, cmd_add_vl2sat, help_add_vl2sat},
 {"kvm",  "Add kvm (virtualized machine)", NULL,cmd_add_vm_kvm,help_add_vm_kvm},
 {"tap",  "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_sat},
+{"dpdk_tap",  "Add dpdk_tap (host network interface)",NULL, cmd_add_dpdk_tap,
+                                                            help_add_sat},
 {"snf",  "Add snf (emulated cable sniffer)",  NULL, cmd_add_snf, help_add_sat},
 {"c2c",  "Add c2c (cloonix to cloonix cable)",NULL,cmd_add_c2c,help_add_c2c},
 {"nat",  "Add nat (slirp to access ip)",NULL, cmd_add_nat, help_add_sat},
@@ -532,18 +534,6 @@ static char *init_local_cloonix_bin_path(char *curdir, char *callbin)
 }
 /*--------------------------------------------------------------------------*/
 
-
-/*****************************************************************************/
-static void fix_ld_library_path(char *cloonix_tree)
-{
-  char ld_lib[MAX_PATH_LEN];
-  snprintf(ld_lib, MAX_PATH_LEN-1, 
-           "%s/common/spice/spice_lib",
-           cloonix_tree);
-  setenv("LD_LIBRARY_PATH", ld_lib, 1);
-}
-/*--------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 int main (int argc, char *argv[])
 {
@@ -559,8 +549,6 @@ int main (int argc, char *argv[])
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
   cloonix_tree = init_local_cloonix_bin_path(g_current_directory, argv[0]);
-  fix_ld_library_path(cloonix_tree);
-
   if (argc < 3)
     {
     doorways_sock_init();

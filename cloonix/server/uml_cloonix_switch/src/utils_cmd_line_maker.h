@@ -71,7 +71,7 @@ char *utils_get_endp_name(char *name, int num);
 /*--------------------------------------------------------------------------*/
 void utils_format_gene(char *start, char *err, char *name, char **argv);
 /*--------------------------------------------------------------------------*/
-char *util_get_genisoimage(void);
+char *util_get_xorrisofs(void);
 /*--------------------------------------------------------------------------*/
 char *utils_get_dpdk_ovs_bin_dir(void);
 char *utils_get_dpdk_ovs_db_dir(void);

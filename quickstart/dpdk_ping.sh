@@ -23,7 +23,7 @@ cloonix_gui $NET
 
 #######################################################################
 for i in one two; do
-  cloonix_cli $NET add kvm ${i} ram=2048 cpu=2 dpdk=1 sock=0 hwsim=0 ${DIST}.qcow2 & 
+  cloonix_cli $NET add kvm ${i} ram=2000 cpu=2 dpdk=1 sock=0 hwsim=0 ${DIST}.qcow2 & 
 done
 #----------------------------------------------------------------------
 

@@ -52,6 +52,8 @@ GtkWidget *get_main_window(void);
 
 static char g_sav_whole[MAX_PATH_LEN];
 static char g_sav_derived[MAX_PATH_LEN];
+char *get_distant_dpdk_snf_dir(void);
+
 
 /****************************************************************************/
 void call_cloonix_interface_edge_delete(t_bank_item *bitem)
@@ -327,6 +329,8 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
     title[2*MAX_NAME_LEN-1] = 0;
     if (bitem->pbi.mutype == endp_type_tap)
       len += sprintf(text + len, "\nTAP");
+    else if (bitem->pbi.mutype == endp_type_dpdk_tap)
+      len += sprintf(text + len, "\nDPDK_TAP");
     else if (bitem->pbi.mutype == endp_type_snf)
       len += sprintf(text + len, "\nSNF");
     else if (bitem->pbi.mutype == endp_type_nat)
@@ -344,7 +348,6 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
     }
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void rad_node_color_cb(t_item_ident *pm, int choice)
@@ -458,7 +461,6 @@ static void intf_item_promisc_off(GtkWidget *mn, t_item_ident *pm)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void intf_item_monitor(GtkWidget *mn, t_item_ident *pm)
 {
@@ -478,6 +480,21 @@ static void node_item_delete(GtkWidget *mn, t_item_ident *pm)
   bitem = look_for_node_with_id(pm->name);
   if (bitem)
     to_cloonix_switch_delete_node(pm->name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void lan_item_wireshark(GtkWidget *mn, t_item_ident *pm)
+{
+  t_bank_item *bitem;
+  char path[MAX_PATH_LEN+MAX_NAME_LEN];
+  bitem = look_for_lan_with_id(pm->name);
+  if (bitem)
+    {
+    memset(path, 0, MAX_PATH_LEN+MAX_NAME_LEN);
+    sprintf(path, "%s/%s", get_distant_dpdk_snf_dir(), pm->name);
+    start_wireshark(pm->name, path);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -564,17 +581,18 @@ static void hidden_visible_node(GtkWidget *mn, t_item_ident *pm)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void sat_item_wireshark(GtkWidget *mn, t_item_ident *pm)
 {
   t_bank_item *bitem;
+  char *recpath;
   bitem = look_for_sat_with_id(pm->name);
   if (bitem)
     {
     if (bitem->pbi.mutype == endp_type_snf)
       {
-      start_wireshark(bitem);
+      recpath = bitem->pbi.pbi_sat->topo_snf.recpath;
+      start_wireshark(pm->name, recpath);
       }
     }
 }
@@ -633,7 +651,6 @@ void edge_ctx_menu(t_bank_item *bitem)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 void focus_back_to_main (GtkWidget *win, gpointer data)
 {
@@ -642,25 +659,28 @@ void focus_back_to_main (GtkWidget *win, gpointer data)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 void lan_ctx_menu(t_bank_item *bitem)
 {
-  GtkWidget *item_delete, *item_hidden;
+  GtkWidget *item_delete, *item_hidden, *item_wireshark;
   GtkWidget *menu = gtk_menu_new();
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
+  if(bitem->pbi.mutype == endp_type_kvm_dpdk)
+    item_wireshark = gtk_menu_item_new_with_label("Wireshark");
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
   item_delete = gtk_menu_item_new_with_label("Delete");
+  if(bitem->pbi.mutype == endp_type_kvm_dpdk)
+    g_signal_connect(G_OBJECT(item_wireshark), "activate",
+                     G_CALLBACK(lan_item_wireshark), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_delete), "activate",
                    G_CALLBACK(lan_item_delete), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_hidden), "activate",
                    G_CALLBACK(hidden_visible_lan), (gpointer) pm);
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
-
-
-
+  if(bitem->pbi.mutype == endp_type_kvm_dpdk)
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_widget_show_all(menu);
@@ -721,7 +741,6 @@ static void intf_item_info(GtkWidget *mn, t_item_ident *pm)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 void intf_ctx_menu(t_bank_item *bitem)
 {
@@ -759,7 +778,6 @@ void intf_ctx_menu(t_bank_item *bitem)
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void node_ctx_menu(t_bank_item *bitem)
@@ -839,8 +857,6 @@ void node_ctx_menu(t_bank_item *bitem)
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
 }
 /*--------------------------------------------------------------------------*/
-
-
 
 /****************************************************************************/
 void menu_init(void)

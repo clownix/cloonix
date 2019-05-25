@@ -47,6 +47,10 @@ int ovs_execv_add_spy_eth(t_all_ctx *all_ctx,
                           char *ovs_bin, char *dpdk_dir,
                           char *lan, char *name, int num);
 
+int ovs_execv_add_spy_tap(t_all_ctx *all_ctx,
+                          char *ovs_bin, char *dpdk_dir,
+                          char *lan, char *name);
+
 int ovs_execv_del_eth(t_all_ctx *all_ctx,
                       char *ovs_bin, char *dpdk_dir,
                       char *name, int num);
@@ -54,3 +58,10 @@ int ovs_execv_del_eth(t_all_ctx *all_ctx,
 int ovs_execv_daemon(t_all_ctx *all_ctx, int is_switch,
                      char *ovs_bin, char *dpdk_dir);
 
+int ovs_execv_add_lan_tap(t_all_ctx *all_ctx, char *ovs_bin,
+                          char *dpdk_dir, char *lan, char *name);
+
+int ovs_execv_del_lan_tap(t_all_ctx *all_ctx, char *ovs_bin,
+                          char *dpdk_dir, char *lan, char *name);
+
+int ovs_execv_get_tap_mac(char *name, t_eth_params *eth_params);

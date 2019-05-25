@@ -15,7 +15,15 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int dpdk_ovs_collect_dpdk(int nb_dpdk, t_eventfull_endp *eventfull);
+void dpdk_ovs_evt_no_tap(void);
+int dpdk_ovs_muovs_ready(void);
+int dpdk_ovs_add_lan_tap(int llid, int tid, char *lan, char *name);
+int dpdk_ovs_del_lan_tap(int llid, int tid, char *lan, char *name);
+int dpdk_ovs_add_tap(int llid, int tid, char *name);
+int dpdk_ovs_del_tap(int llid, int tid, char *name);
+int dpdk_ovs_exist_tap(char *name);
+
+int dpdk_ovs_collect_dpdk(t_eventfull_endp *eventfull);
 int dpdk_ovs_get_nb(void);
 void dpdk_ovs_fill_eventfull(char *name, int num, int ms,
                              int ptx, int prx, int btx, int brx);

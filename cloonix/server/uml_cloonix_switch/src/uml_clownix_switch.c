@@ -149,10 +149,10 @@ static void  check_used_binaries_presence(t_topo_clc *conf)
       }
     i++;
     } 
-  if (!file_exists(util_get_genisoimage(), X_OK))
+  if (!file_exists(util_get_xorrisofs(), X_OK))
     {
-    printf("\"%s\" not found or not executable\n", util_get_genisoimage());
-    KOUT("\"%s\" not found or not executable\n", util_get_genisoimage());
+    printf("\"%s\" not found or not executable\n", util_get_xorrisofs());
+    KOUT("\"%s\" not found or not executable\n", util_get_xorrisofs());
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -514,12 +514,10 @@ char **get_saved_environ(void)
 /*****************************************************************************/
 static char **save_environ(void)
 {
-  char ld_lib[MAX_PATH_LEN];
-  static char lib_path[MAX_PATH_LEN+MAX_NAME_LEN];
   static char username[MAX_NAME_LEN];
   static char spice_env[MAX_NAME_LEN];
   static char home[MAX_PATH_LEN];
-  static char *environ_normal[] = {lib_path,username,home,spice_env,NULL };
+  static char *environ_normal[] = {username,home,spice_env,NULL };
   char **environ;
   memset(home, 0, MAX_PATH_LEN);
   snprintf(home, MAX_PATH_LEN-1, "HOME=%s", getenv("HOME"));
@@ -527,10 +525,7 @@ static char **save_environ(void)
   snprintf(username, MAX_NAME_LEN-1, "USER=%s", getenv("USER"));
   if (!spice_libs_exists())
     KOUT(" ");
-  snprintf(ld_lib, MAX_PATH_LEN-1,
-           "%s/common/spice/spice_lib", cfg_get_bin_dir());
   environ = environ_normal;
-  snprintf(lib_path,MAX_PATH_LEN+MAX_NAME_LEN-1,"LD_LIBRARY_PATH=%s", ld_lib);
   snprintf(spice_env, MAX_NAME_LEN-1, "SPICE_DEBUG_ALLOW_MC=1");
   return environ;
 }

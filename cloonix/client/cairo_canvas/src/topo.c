@@ -278,6 +278,7 @@ void move_manager_rotate(t_bank_item *bitem, double x1, double y1)
 static void process_mouse_double_click(t_bank_item *bitem)
 {
   int config_flags;
+  char *recpath;
   switch(bitem->bank_type)
     {
 
@@ -297,7 +298,10 @@ static void process_mouse_double_click(t_bank_item *bitem)
     case bank_type_sat:
       bitem->pbi.flag = flag_normal;
       if (is_a_snf(bitem))
-        start_wireshark(bitem);
+        {
+        recpath = bitem->pbi.pbi_sat->topo_snf.recpath;
+        start_wireshark(bitem->name, recpath);
+        }
       break;
 
     default:

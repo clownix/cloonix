@@ -478,29 +478,58 @@ void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     }
   else 
     {
-    if ((vm) && (num < vm->kvm.nb_dpdk))
-      is_dpdk = 1; 
-    if ((!endp_mngt_exists(name, num, &type)) &&
-        (!dpdk_ovs_eth_exists(name, num)))
+    if (dpdk_ovs_exist_tap(name))
       {
-      snprintf(info, MAX_PATH_LEN, "endp %s %d not found", name, num);
-      send_status_ko(llid, tid, info);
-      }
-    else
-      {
-      if ((is_dpdk == 1) && 
-          (mulan_can_be_found_with_name(lan)))
+      if (!dpdk_ovs_muovs_ready())
         {
-        snprintf(info, MAX_PATH_LEN, "eth %s %d is DPDK", name, num);
+        snprintf(info, MAX_PATH_LEN, "Problem dpdk muovs not ready");
         send_status_ko(llid, tid, info);
         }
-      else if ((is_dpdk == 0) && (dpdk_dyn_lan_exists(lan)))
+      else if (num != 0)
         {
-        snprintf(info, MAX_PATH_LEN, "eth %s %d is NOT DPDK", name, num);
+        snprintf(info, MAX_PATH_LEN, "Problem dpdk tap %s %d", name, num);
+        send_status_ko(llid, tid, info);
+        }
+      else if (mulan_can_be_found_with_name(lan))
+        {
+        snprintf(info, MAX_PATH_LEN, "tap %s is DPDK", name);
         send_status_ko(llid, tid, info);
         }
       else
-        add_lan_endp(llid, tid, name, num, lan);
+        {
+        if (dpdk_ovs_add_lan_tap(llid, tid, lan, name))
+          {
+          snprintf(info, MAX_PATH_LEN, "add lan tap %s %s", lan, name);
+          send_status_ko(llid, tid, info);
+          }
+        }
+      }
+    else
+      {
+      if ((vm) && (num < vm->kvm.nb_dpdk))
+        is_dpdk = 1; 
+      if ((!endp_mngt_exists(name, num, &type)) &&
+          (!dpdk_ovs_eth_exists(name, num)))
+        {
+        snprintf(info, MAX_PATH_LEN, "endp %s %d not found", name, num);
+        send_status_ko(llid, tid, info);
+        }
+      else
+        {
+        if ((is_dpdk == 1) && 
+            (mulan_can_be_found_with_name(lan)))
+          {
+          snprintf(info, MAX_PATH_LEN, "eth %s %d is DPDK", name, num);
+          send_status_ko(llid, tid, info);
+          }
+        else if ((is_dpdk == 0) && (dpdk_dyn_lan_exists(lan)))
+          {
+          snprintf(info, MAX_PATH_LEN, "eth %s %d is NOT DPDK", name, num);
+          send_status_ko(llid, tid, info);
+          }
+        else
+          add_lan_endp(llid, tid, name, num, lan);
+        }
       }
     }
 }
@@ -541,7 +570,33 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   char info[MAX_PRINT_LEN];
   int tidx;
   event_print("Rx Req del lan %s of %s %d", lan, name, num);
-  if (dpdk_ovs_eth_exists(name, num))
+  if (dpdk_ovs_exist_tap(name))
+    {
+    if (num != 0)
+      {
+      snprintf(info, MAX_PATH_LEN, "Problem dpdk tap %s %d", name, num);
+      send_status_ko(llid, tid, info);
+      }
+    else if (mulan_can_be_found_with_name(lan))
+      {
+      snprintf(info, MAX_PATH_LEN, "tap %s is DPDK", name);
+      send_status_ko(llid, tid, info);
+      }
+    else if (!dpdk_dyn_lan_exists(lan))
+      {
+      snprintf(info, MAX_PATH_LEN, "dpdk lan %s does not exist", lan);
+      send_status_ko(llid, tid, info);
+      }
+    else
+      {
+      if (dpdk_ovs_del_lan_tap(llid, tid, lan, name))
+        {
+        snprintf(info, MAX_PATH_LEN, "del lan tap %s %s", lan, name);
+        send_status_ko(llid, tid, info);
+        }
+      }
+    }
+  else if (dpdk_ovs_eth_exists(name, num))
     {
     if (dpdk_dyn_del_lan_from_eth(llid, tid, lan, name, num, info))
       send_status_ko(llid, tid, info);
@@ -1308,13 +1363,20 @@ void local_add_sat(int llid, int tid, char *name, int type,
   char info[MAX_PATH_LEN];
   char recpath[MAX_PATH_LEN];
   int capture_on=0;
-  int abort_upon_err = 0;
-  snprintf(recpath, MAX_PATH_LEN-1, "%s/%s.pcap", utils_get_snf_pcap_dir(), name);
-  if (endp_mngt_start(llid, tid, name, 0, type))
+  snprintf(recpath,MAX_PATH_LEN-1,"%s/%s.pcap",utils_get_snf_pcap_dir(),name);
+  if (type == endp_type_dpdk_tap)
+    {
+    recv_coherency_lock();
+    if (dpdk_ovs_add_tap(llid, tid, name))
+      {
+      snprintf( info, MAX_PATH_LEN-1, "Error dpdk_tap %s", name);
+      send_status_ko(llid, tid, info);
+      }
+    }
+  else if (endp_mngt_start(llid, tid, name, 0, type))
     {
     snprintf( info, MAX_PATH_LEN-1, "Bad start of %s", name);
     send_status_ko(llid, tid, info);
-    abort_upon_err = 1;
     }
   else
     {
@@ -1332,7 +1394,6 @@ void local_add_sat(int llid, int tid, char *name, int type,
         sprintf( info, "Bad c2c param info %s", name);
         send_status_ko(llid, tid, info);
         endp_mngt_stop(name, 0);
-        abort_upon_err = 1;
         }
       else  if (c2c_create_master_begin(name, c2c_info->ip_slave,
                                               c2c_info->port_slave,
@@ -1342,7 +1403,6 @@ void local_add_sat(int llid, int tid, char *name, int type,
         sprintf( info, "Bad c2c begin %s", name);
         send_status_ko(llid, tid, info);
         endp_mngt_stop(name, 0);
-        abort_upon_err = 1;
         }
       }
     else if (type == endp_type_a2b)
@@ -1352,12 +1412,8 @@ void local_add_sat(int llid, int tid, char *name, int type,
         endp_mngt_stop(name, 0);
         sprintf( info, "Bad start of %s", name);
         send_status_ko(llid, tid, info);
-        abort_upon_err = 1;
         }
       }
-    }
-  if (abort_upon_err == 0)
-    {
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -1383,6 +1439,7 @@ void recv_add_sat(int llid, int tid, char *name, int type,
       send_status_ko(llid, tid, info);
       }
     else if ((type != endp_type_tap) &&
+             (type != endp_type_dpdk_tap) &&
              (type != endp_type_snf) &&
              (type != endp_type_c2c) &&
              (type != endp_type_nat) &&
@@ -1407,7 +1464,15 @@ void recv_del_sat(int llid, int tid, char *name)
   int type;
   char info[MAX_PATH_LEN];
   event_print("Rx Req del %s", name);
-  if (!endp_mngt_exists(name, 0, &type))
+  if (dpdk_ovs_exist_tap(name))
+    {
+    if (dpdk_ovs_del_tap(llid, tid, name))
+      {
+      snprintf( info, MAX_PATH_LEN-1, "Error dpdk_tap %s", name);
+      send_status_ko(llid, tid, info);
+      }
+    }
+  else if (!endp_mngt_exists(name, 0, &type))
     {
     snprintf(info, MAX_PATH_LEN-1, "sat %s not found", name);
     send_status_ko(llid, tid, info);

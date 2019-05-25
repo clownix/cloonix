@@ -1,6 +1,6 @@
 diff -Naur ovs/include/openvswitch/vlog.h ovs_tainted/include/openvswitch/vlog.h
---- ovs/include/openvswitch/vlog.h	2019-05-02 15:56:55.000000000 +0200
-+++ ovs_tainted/include/openvswitch/vlog.h	2019-05-04 17:06:39.837970854 +0200
+--- ovs/include/openvswitch/vlog.h	2019-05-21 21:24:46.000000000 +0200
++++ ovs_tainted/include/openvswitch/vlog.h	2019-05-25 17:53:18.123684656 +0200
 @@ -178,7 +178,7 @@
          static struct vlog_module this_module = {                       \
              OVS_LIST_INITIALIZER(&this_module.list),                    \
@@ -11,9 +11,9 @@ diff -Naur ovs/include/openvswitch/vlog.h ovs_tainted/include/openvswitch/vlog.h
              true                               /* honor_rate_limits */  \
          };                                                              \
 diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
---- ovs/lib/netdev-dpdk.c	2019-05-02 15:56:55.000000000 +0200
-+++ ovs_tainted/lib/netdev-dpdk.c	2019-05-04 17:17:23.040074675 +0200
-@@ -732,6 +734,7 @@
+--- ovs/lib/netdev-dpdk.c	2019-05-21 21:24:46.000000000 +0200
++++ ovs_tainted/lib/netdev-dpdk.c	2019-05-25 17:53:18.123684656 +0200
+@@ -732,6 +732,7 @@
  {
      struct dpdk_mp *dmp, *next;
      bool reuse = false;
@@ -21,7 +21,7 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
  
      ovs_mutex_lock(&dpdk_mp_mutex);
      /* Check if shared memory is being used, if so check existing mempools
-@@ -2030,8 +2036,8 @@
+@@ -2030,8 +2031,8 @@
  {
      uint32_t pkt_len = rte_pktmbuf_pkt_len(pkt) - sizeof(struct ether_hdr);
  
@@ -32,7 +32,7 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
  }
  
  static int
-@@ -3446,18 +3452,18 @@
+@@ -3446,18 +3447,18 @@
          }
      }
  
@@ -64,8 +64,8 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
      free(enabled_queues);
  }
 diff -Naur ovs/lib/vlog.c ovs_tainted/lib/vlog.c
---- ovs/lib/vlog.c	2019-05-02 15:56:55.000000000 +0200
-+++ ovs_tainted/lib/vlog.c	2019-05-04 17:06:39.837970854 +0200
+--- ovs/lib/vlog.c	2019-05-21 21:24:46.000000000 +0200
++++ ovs_tainted/lib/vlog.c	2019-05-25 17:53:18.123684656 +0200
 @@ -572,7 +572,7 @@
              ovs_fatal(0, "processing \"%s\": %s", arg, msg);
          }
@@ -76,8 +76,8 @@ diff -Naur ovs/lib/vlog.c ovs_tainted/lib/vlog.c
  }
  
 diff -Naur ovs/ofproto/ofproto-dpif-xlate.c ovs_tainted/ofproto/ofproto-dpif-xlate.c
---- ovs/ofproto/ofproto-dpif-xlate.c	2019-05-02 15:56:55.000000000 +0200
-+++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2019-05-04 17:06:39.837970854 +0200
+--- ovs/ofproto/ofproto-dpif-xlate.c	2019-05-21 21:24:46.000000000 +0200
++++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2019-05-25 17:53:18.127684673 +0200
 @@ -4049,6 +4049,12 @@
             xlate_report_error(ctx, "Cannot truncate output to patch port");
         }

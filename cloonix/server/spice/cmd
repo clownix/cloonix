@@ -26,6 +26,7 @@ sed -i s"/PACKAGE_VERSION=\(.*\)/PACKAGE_VERSION='0.14.2'/" configure
             --disable-client \
             --disable-static \
             --disable-lz4 \
+            --disable-opus \
             --enable-python-checks
 make clean
 make

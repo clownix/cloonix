@@ -85,6 +85,9 @@ static int build_add_tap_cmd(int offset, t_list_commands *hlist, t_endp *endp)
     if (endp->endp_type == endp_type_tap)
       sprintf(list->cmd, "cloonix_cli %s add tap %s", 
                          cfg_get_cloonix_name(), endp->name);
+    else if (endp->endp_type == endp_type_dpdk_tap)
+      sprintf(list->cmd, "cloonix_cli %s add dpdk_tap %s", 
+                         cfg_get_cloonix_name(), endp->name);
     else if (endp->endp_type == endp_type_wif)
       sprintf(list->cmd, "cloonix_cli %s add wif %s", 
                          cfg_get_cloonix_name(), endp->name);
@@ -383,6 +386,7 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
     if (!cur)
       KOUT(" ");
     if ((cur->endp_type == endp_type_tap) ||
+        (cur->endp_type == endp_type_dpdk_tap) ||
         (cur->endp_type == endp_type_raw) ||
         (cur->endp_type == endp_type_wif))
       {

@@ -175,30 +175,40 @@ static void local_send_data_to_low(t_clo *clo, t_hdata *cur, int adjust)
 /*****************************************************************************/
 static void try_send_data2low_timer(t_clo *clo)
 {
-  u32_t current_250ms = get_g_250ms_count();
+  u32_t current_50ms = get_g_50ms_count();
   t_hdata *cur = clo->head_hdata;
   while (cur)
     {
-    if (cur->count_250ms == 0)
+    if (cur->count_50ms == 0)
       {
       if (!clo_mngt_authorised_to_send_nexttx(clo))
         {
-        KERR(" ");
+        cur->count_stuck += 1;
+        if (cur->count_stuck > 20)
+          {
+          KERR("CONNECTION BIG PROBLEM");
+          local_send_reset_state_closed(clo);
+          }
         break;
         }
-      KERR(" ");
+      cur->count_stuck = 0;
       local_send_data_to_low(clo, cur, 1);
       }
     else
       {
-      if (current_250ms - cur->count_250ms >= 1)
+      if (current_50ms - cur->count_50ms >= 1)
         {
         if (!clo_mngt_authorised_to_send_nexttx(clo))
           {
-          KERR(" ");
+          cur->count_stuck += 1;
+          if (cur->count_stuck > 20)
+            {
+            KERR("CONNECTION BIG PROBLEM");
+            local_send_reset_state_closed(clo);
+            }
           break;
           }
-        KERR(" ");
+        cur->count_stuck = 0;
         local_send_data_to_low(clo, cur, 0);
         }
       else
@@ -329,34 +339,38 @@ static void local_rx_data_purge(t_clo *clo)
 /*****************************************************************************/
 static void try_send_data2low(t_clo *clo)
 {
-  u32_t current_250ms = get_g_250ms_count();
+  u32_t current_50ms = get_g_50ms_count();
   t_hdata *cur = clo->head_hdata;
   while (cur)
     {
-    if (!cur->count_250ms) 
+    if (!cur->count_50ms) 
       {
       if (!clo_mngt_authorised_to_send_nexttx(clo))
         {
-        KERR(" ");
         break;
         }
       local_send_data_to_low(clo, cur, 1);
       }
     else
       {
-      if (current_250ms - cur->count_250ms >= 1)
+      if (current_50ms - cur->count_50ms >= 1)
         {
         if (!clo_mngt_authorised_to_send_nexttx(clo))
           {
+          cur->count_stuck += 1;
           KERR(" ");
+          if (cur->count_stuck > 20)
+            {
+            KERR("CONNECTION BIG PROBLEM");
+            local_send_reset_state_closed(clo);
+            }
           break;
           }
-        KERR(" ");
+        cur->count_stuck = 0;
         local_send_data_to_low(clo, cur, 0);
         }
       else
         {
-        KERR(" ");
         break;
         }
       }

@@ -112,7 +112,8 @@ typedef struct t_hdata
 {
   int len;
   int max_len;
-  int count_250ms;
+  int count_50ms;
+  int count_stuck;
   int count_tries_tx;
   u32_t seqno;
   u8_t *data;

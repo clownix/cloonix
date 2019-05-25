@@ -342,6 +342,7 @@ static void doorways_start()
     {
     g_killed = 0;
 //VIP
+    KERR("Cloonix doorways launching\n");
     pid_clone_launch(utils_execve, killed, NULL, (void *) argv,
                      NULL, NULL, "doorways", -1, 1);
 

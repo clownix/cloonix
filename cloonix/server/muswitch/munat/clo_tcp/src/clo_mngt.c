@@ -29,7 +29,7 @@
 /*---------------------------------------------------------------------------*/
 
 static t_clo *head_clo;
-static u32_t g_250ms_count;
+static u32_t g_50ms_count;
 
 static int g_tcp_max_size;
 
@@ -42,7 +42,7 @@ void set_g_tcp_max_size(int max_tcp)
 static u32_t clo_next_iss(void)
 {
   static u32_t iss = 0x100000;
-  iss += g_250ms_count;
+  iss += g_50ms_count;
   return iss;
 }
 /*--------------------------------------------------------------------------*/
@@ -55,7 +55,7 @@ static void update_unack_release_past_hdata(t_clo *clo, u32_t ackno)
   while (cur)
     {
     next = cur->next;
-    if (cur->count_250ms != 0)
+    if (cur->count_50ms != 0)
       {
       if ((cur->seqno + TCP_WND ) < cur->seqno)
         add = 0x10000000;
@@ -69,9 +69,9 @@ static void update_unack_release_past_hdata(t_clo *clo, u32_t ackno)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-u32_t get_g_250ms_count(void)
+u32_t get_g_50ms_count(void)
 {
-  return g_250ms_count;
+  return g_50ms_count;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -101,7 +101,7 @@ int clo_mngt_get_state(t_clo *clo)
 /*****************************************************************************/
 void clo_mngt_timer(void)
 {
-  g_250ms_count++;
+  g_50ms_count++;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -363,7 +363,7 @@ int  clo_mngt_authorised_to_send_nexttx(t_clo *clo)
   diff = (clo->send_next - clo->send_unack);
   if (diff < 0)
     KOUT(" %d %d", clo->send_unack, clo->send_next); 
-  diff += g_tcp_max_size + 200;
+//  diff += g_tcp_max_size + 200;
   if (diff < clo->dist_wnd)
     result = 1;
   return result;
@@ -379,9 +379,9 @@ void clo_mngt_get_txdata(t_clo *clo, t_hdata *hd, u32_t *seqno,
     KOUT(" ");
   *data = (u8_t *) malloc(hd->len);
   memcpy(*data, hd->data, hd->len);
-  if (hd->count_250ms == 0)
+  if (hd->count_50ms == 0)
     hd->seqno = clo->send_next;
-  hd->count_250ms = g_250ms_count;
+  hd->count_50ms = g_50ms_count;
   hd->count_tries_tx += 1;
   if (hd->count_tries_tx > clo->tx_repeat_failure_count)
     clo->tx_repeat_failure_count = hd->count_tries_tx;
@@ -394,7 +394,7 @@ void clo_mngt_get_txdata(t_clo *clo, t_hdata *hd, u32_t *seqno,
 void clo_mngt_init(void)
 {
   head_clo = NULL;
-  g_250ms_count = 0;
+  g_50ms_count = 0;
   g_tcp_max_size = TCP_MAX_SIZE;
 }
 /*---------------------------------------------------------------------------*/

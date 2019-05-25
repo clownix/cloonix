@@ -224,10 +224,10 @@ static void timeout_blkd_heartbeat(t_all_ctx *all_ctx, void *data)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void beat_250ms_timeout(t_all_ctx *all_ctx, void *data)
+static void beat_50ms_timeout(t_all_ctx *all_ctx, void *data)
 {
   clo_heartbeat_timer();
-  clownix_timeout_add(all_ctx, 25, beat_250ms_timeout, 
+  clownix_timeout_add(all_ctx, 5, beat_50ms_timeout, 
                       NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
@@ -235,7 +235,7 @@ static void beat_250ms_timeout(t_all_ctx *all_ctx, void *data)
 /*****************************************************************************/
 void llid_slirptux_tcp_init(void)
 {
-  clownix_timeout_add(get_all_ctx(), 25, beat_250ms_timeout, 
+  clownix_timeout_add(get_all_ctx(), 5, beat_50ms_timeout, 
                       NULL, NULL, NULL);
   clownix_timeout_add(get_all_ctx(), 100, timeout_rpct_heartbeat, 
                       NULL, NULL, NULL);

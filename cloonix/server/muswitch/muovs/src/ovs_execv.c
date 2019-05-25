@@ -24,6 +24,11 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <net/if_arp.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+
 
 #include "ioc.h"
 #include "ovs_execv.h"
@@ -43,6 +48,7 @@
 #define OVS_VSWITCHD_CTL  "ovs-vswitchd.ctl"
 
 
+static char g_arg[NB_ARG][MAX_ARG_LEN];
 
 
 /*****************************************************************************/
@@ -96,7 +102,7 @@ static int wait_read_pid_file(char *dpdk_dir, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int make_cmd_argv(char cmd_argv[NB_ARG][MAX_ARG_LEN], char *multi_arg_cmd)
+static int make_cmd_argv(char cmd_argv[NB_ARG][MAX_ARG_LEN],char *multi_arg_cmd)
 {
   int cmd_argc;
   char *ptr, *cur=multi_arg_cmd;
@@ -123,23 +129,44 @@ static int make_cmd_argv(char cmd_argv[NB_ARG][MAX_ARG_LEN], char *multi_arg_cmd
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int ovs_execv_get_tap_mac(char *ifname, t_eth_params *eth_params)
+{
+  int result = -1;
+  struct ifreq ifr;
+  int i, s = socket(AF_INET, SOCK_DGRAM, 0);
+  if (s == -1)
+    KOUT(" ");
+  memset(&ifr, 0, sizeof(struct ifreq));
+  strcpy(ifr.ifr_name, ifname);
+  ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+  if (ioctl(s, SIOCGIFHWADDR, &ifr) != -1)
+    {
+    for (i=0; i<MAC_ADDR_LEN; i++)
+      eth_params->mac_addr[i] = ifr.ifr_hwaddr.sa_data[i];
+    result = 0;
+    }
+  close(s);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static int ovs_vsctl(t_all_ctx *all_ctx, char *ovs_bin,
                      char *dpdk_dir, char *multi_arg_cmd)
 {
   int i, cmd_argc;
-  char arg[NB_ARG][MAX_ARG_LEN];
   char cmd_argv[NB_ARG][MAX_ARG_LEN];
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+  memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   memset(cmd_argv, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   cmd_argc = make_cmd_argv(cmd_argv, multi_arg_cmd);
-  snprintf(arg[0],MAX_ARG_LEN-1,"%s/bin/ovs-vsctl", ovs_bin);
-  snprintf(arg[1],MAX_ARG_LEN-1,"--db=unix:%s/%s",
+  snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/bin/ovs-vsctl", ovs_bin);
+  snprintf(g_arg[1],MAX_ARG_LEN-1,"--db=unix:%s/%s",
                                 dpdk_dir, OVSDB_SERVER_SOCK);
   for (i=0; i<cmd_argc; i++)
     {
-    strncpy(arg[2+i], cmd_argv[i], MAX_ARG_LEN-1);
+    strncpy(g_arg[2+i], cmd_argv[i], MAX_ARG_LEN-1);
     }
-  return (call_my_popen(dpdk_dir, cmd_argc+2, arg));
+  return (call_my_popen(dpdk_dir, cmd_argc+2, g_arg));
 }
 /*---------------------------------------------------------------------------*/
 
@@ -147,14 +174,13 @@ static int ovs_vsctl(t_all_ctx *all_ctx, char *ovs_bin,
 static int create_ovsdb_server_conf(t_all_ctx *all_ctx, char *ovs_bin,
                                     char *dpdk_dir)
 {
-  char arg[NB_ARG][MAX_ARG_LEN];
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
-  snprintf(arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVSDB_TOOL_BIN);
-  snprintf(arg[1],MAX_ARG_LEN-1,"-v");
-  snprintf(arg[2],MAX_ARG_LEN-1,"create");
-  snprintf(arg[3],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, OVSDB_SERVER_CONF);
-  snprintf(arg[4],MAX_ARG_LEN-1,"%s/%s", ovs_bin, SCHEMA_TEMPLATE);
-  return (call_my_popen(dpdk_dir, 5, arg));
+  memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
+  snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVSDB_TOOL_BIN);
+  snprintf(g_arg[1],MAX_ARG_LEN-1,"-v");
+  snprintf(g_arg[2],MAX_ARG_LEN-1,"create");
+  snprintf(g_arg[3],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, OVSDB_SERVER_CONF);
+  snprintf(g_arg[4],MAX_ARG_LEN-1,"%s/%s", ovs_bin, SCHEMA_TEMPLATE);
+  return (call_my_popen(dpdk_dir, 5, g_arg));
 }
 /*---------------------------------------------------------------------------*/
 
@@ -162,22 +188,21 @@ static int create_ovsdb_server_conf(t_all_ctx *all_ctx, char *ovs_bin,
 static int launch_ovs_server(t_all_ctx *all_ctx, char *ovs_bin,
                              char *dpdk_dir)
 {
-  char arg[NB_ARG][MAX_ARG_LEN];
   int result;
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  snprintf(arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVSDB_SERVER_BIN);
-  snprintf(arg[1],MAX_ARG_LEN-1,"%s/%s",
+  memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+  snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVSDB_SERVER_BIN);
+  snprintf(g_arg[1],MAX_ARG_LEN-1,"%s/%s",
                                 dpdk_dir, OVSDB_SERVER_CONF);
-  snprintf(arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s",
+  snprintf(g_arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s",
                                 dpdk_dir, OVSDB_SERVER_PID);
-  snprintf(arg[3],MAX_ARG_LEN-1,"--remote=punix:%s/%s",
+  snprintf(g_arg[3],MAX_ARG_LEN-1,"--remote=punix:%s/%s",
                                 dpdk_dir, OVSDB_SERVER_SOCK);
-  snprintf(arg[4], MAX_ARG_LEN-1,
+  snprintf(g_arg[4], MAX_ARG_LEN-1,
            "--remote=db:Open_vSwitch,Open_vSwitch,manager_options");
-  snprintf(arg[5], MAX_ARG_LEN-1,"--unixctl=%s/%s",
+  snprintf(g_arg[5], MAX_ARG_LEN-1,"--unixctl=%s/%s",
                                  dpdk_dir, OVSDB_SERVER_CTL);
-  snprintf(arg[6], MAX_ARG_LEN-1, "--detach");
-  if (call_my_popen(dpdk_dir, 7, arg))
+  snprintf(g_arg[6], MAX_ARG_LEN-1, "--detach");
+  if (call_my_popen(dpdk_dir, 7, g_arg))
     {
     result = -1;
     KERR(" ");
@@ -193,13 +218,12 @@ static int launch_ovs_server(t_all_ctx *all_ctx, char *ovs_bin,
 /*****************************************************************************/
 static void appctl_debug_fix(char *bin, char *db, char *debug_cmd)
 {
-  char arg[NB_ARG][MAX_ARG_LEN];
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  snprintf(arg[0],MAX_ARG_LEN-1, "%s/%s", bin, OVSDB_APPCTL_BIN);
-  snprintf(arg[1],MAX_ARG_LEN-1, "--target=%s/%s", db, OVS_VSWITCHD_CTL);
-  snprintf(arg[2],MAX_ARG_LEN-1, "vlog/set");
-  snprintf(arg[3],MAX_ARG_LEN-1, "%s", debug_cmd);
-  if (call_my_popen(db, 4, arg))
+  memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/%s", bin, OVSDB_APPCTL_BIN);
+  snprintf(g_arg[1],MAX_ARG_LEN-1, "--target=%s/%s", db, OVS_VSWITCHD_CTL);
+  snprintf(g_arg[2],MAX_ARG_LEN-1, "vlog/set");
+  snprintf(g_arg[3],MAX_ARG_LEN-1, "%s", debug_cmd);
+  if (call_my_popen(db, 4, g_arg))
     KERR("%s", debug_cmd);
 }
 /*---------------------------------------------------------------------------*/
@@ -207,16 +231,15 @@ static void appctl_debug_fix(char *bin, char *db, char *debug_cmd)
 /*****************************************************************************/
 static int launch_ovs_vswitchd(t_all_ctx *all_ctx, char *bin, char *db)
 {
-  char arg[NB_ARG][MAX_ARG_LEN];
   int result;
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
-  snprintf(arg[0],MAX_ARG_LEN-1,"%s/%s", bin, OVS_VSWITCHD_BIN);
-  snprintf(arg[1],MAX_ARG_LEN-1,"unix:%s/%s", db, OVSDB_SERVER_SOCK);
-  snprintf(arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s", db, OVS_VSWITCHD_PID);
-  snprintf(arg[3],MAX_ARG_LEN-1,"--log-file=%s/%s", db, OVS_VSWITCHD_LOG);
-  snprintf(arg[4],MAX_ARG_LEN-1,"--unixctl=%s/%s", db, OVS_VSWITCHD_CTL);
-  snprintf(arg[5], MAX_ARG_LEN-1, "--detach");
-  if (call_my_popen(db, 6, arg))
+  memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
+  snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", bin, OVS_VSWITCHD_BIN);
+  snprintf(g_arg[1],MAX_ARG_LEN-1,"unix:%s/%s", db, OVSDB_SERVER_SOCK);
+  snprintf(g_arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s", db, OVS_VSWITCHD_PID);
+  snprintf(g_arg[3],MAX_ARG_LEN-1,"--log-file=%s/%s", db, OVS_VSWITCHD_LOG);
+  snprintf(g_arg[4],MAX_ARG_LEN-1,"--unixctl=%s/%s", db, OVS_VSWITCHD_CTL);
+  snprintf(g_arg[5], MAX_ARG_LEN-1, "--detach");
+  if (call_my_popen(db, 6, g_arg))
     {
     result = -1;
     KERR(" ");
@@ -388,6 +411,56 @@ int ovs_execv_add_spy_eth(t_all_ctx *all_ctx,
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+int ovs_execv_add_spy_tap(t_all_ctx *all_ctx,
+                          char *ovs_bin, char *dpdk_dir,
+                          char *lan, char *name)
+{
+  char cmd[MAX_ARG_LEN];
+  int result = 0;
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1,
+        "-- --id=@p get port %s "
+        "-- add mirror mir_%s select_dst_port @p "
+        "-- add mirror mir_%s select_src_port @p",
+        name, lan, lan);
+  if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_add_lan_tap(t_all_ctx *all_ctx, char *ovs_bin,
+                          char *dpdk_dir, char *lan, char *name)
+{
+  char cmd[MAX_ARG_LEN];
+  int result = 0;
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1,
+           "-- add-port %s %s "
+           "-- set Interface %s type=dpdk "
+           "options:dpdk-devargs=eth_%s,iface=%s",
+           lan, name, name, name, name); 
+  if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_del_lan_tap(t_all_ctx *all_ctx, char *ovs_bin,
+                          char *dpdk_dir, char *lan, char *name)
+{
+  char cmd[MAX_ARG_LEN];
+  int result = 0;
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1, "del-port %s %s", lan, name);
+  if (ovs_vsctl(all_ctx, ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int ovs_execv_del_eth(t_all_ctx *all_ctx, char *ovs_bin,

@@ -140,6 +140,9 @@ static char *get_type_endp(int type)
     case endp_type_snf:
       result = "snf"; 
       break;
+    case endp_type_dpdk_tap:
+      result = "dpdk_tap"; 
+      break;
     case endp_type_tap:
       result = "tap"; 
       break;
@@ -194,6 +197,8 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
     type = topo->sat[i].type;
     if (type == endp_type_tap) 
       printf("\ntap:%s", topo->sat[i].name);
+    else if (type == endp_type_dpdk_tap) 
+      printf("\ndpdk_tap:%s", topo->sat[i].name);
     else if (type == endp_type_nat) 
       printf("\nnat:%s", topo->sat[i].name);
     else if (type == endp_type_a2b) 
@@ -421,6 +426,20 @@ int cmd_del_vm(int argc, char **argv)
     name = argv[0];
     init_connection_to_uml_cloonix_switch();
     client_del_vm(0, callback_end, name);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_add_dpdk_tap(int argc, char **argv)
+{
+  int result = -1;
+  if (argc == 1)
+    {
+    result = 0;
+    init_connection_to_uml_cloonix_switch();
+    client_add_sat(0, callback_end, argv[0], endp_type_dpdk_tap, NULL);
     }
   return result;
 }

@@ -22,6 +22,8 @@ SPICE_LIB=/usr/local/bin/cloonix/common/spice/spice_lib
 
 cd ${TARGET}/spice_client
 export PKG_CONFIG_PATH=${TARGET}/pkgconfig 
+export LDFLAGS="-Wl,-rpath,${SPICE_LIB}" ;
+
 
 set +e
   export NOCONFIGURE=yes

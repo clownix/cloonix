@@ -78,16 +78,6 @@ static char *init_local_cloonix_bin_path(char *callbin)
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-static void fix_ld_library_path(char *cloonix_tree)
-{
-  char ld_lib[MAX_PATH_LEN];
-  snprintf(ld_lib, MAX_PATH_LEN-1, 
-           "%s/common/spice/spice_lib",
-           cloonix_tree);
-  setenv("LD_LIBRARY_PATH", ld_lib, 1);
-}
-/*--------------------------------------------------------------------------*/
 /****************************************************************************/
 static void usage(void)
 {
@@ -120,7 +110,6 @@ int main (int argc, char *argv[])
     }
   DEBUG_INIT(0);
   cloonix_tree = init_local_cloonix_bin_path(argv[0]);
-  fix_ld_library_path(cloonix_tree);
   doorways_sock_init();
   msg_mngt_init("ctrl", IO_MAX_BUF_LEN);
   cloonix_conf_info_get_all(&nb_cloonix, &cloonix_conf);

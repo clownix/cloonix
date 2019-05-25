@@ -38,10 +38,13 @@ make install
 cd ${TARGET}
 tar xvf ${TARGZ}/virglrenderer.tar.gz
 cd virglrenderer
+patch -p1 < ${HERE}/virglrenderer.patch
 
 ./configure --prefix=${TARGET} \
             --libdir=${TARGET} \
+            --disable-tests \
             --enable-python-checks
+
 
 make clean
 make

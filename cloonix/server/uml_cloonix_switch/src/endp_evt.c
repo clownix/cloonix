@@ -490,6 +490,7 @@ void endp_evt_add_lan(int llid, int tid, char *name, int num,
       }
     }
   else if ((endp_type != endp_type_tap) &&
+           (endp_type != endp_type_dpdk_tap) &&
            (endp_type != endp_type_snf) &&
            (endp_type != endp_type_c2c) &&
            (endp_type != endp_type_nat) &&

@@ -34,6 +34,59 @@
 #include "dpdk_dyn.h"
 #include "dpdk_msg.h"
 #include "dpdk_fmt.h"
+#include "dpdk_tap.h"
+
+
+/****************************************************************************/
+int dpdk_fmt_tx_add_tap(int tid, char *name, int tap_id)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "cloonixovs_add_tap name=%s tap_id=%d",
+           name, tap_id);
+  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_fmt_tx_del_tap(int tid, char *name)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "cloonixovs_del_tap name=%s", name);
+  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_fmt_tx_add_lan_tap(int tid, char *lan, char *name)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "cloonixovs_add_lan_tap lan_name=%s name=%s",
+           lan, name);
+  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_fmt_tx_del_lan_tap(int tid, char *lan, char *name)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "cloonixovs_del_lan_tap lan_name=%s name=%s",
+           lan, name);
+  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int dpdk_fmt_tx_add_lan(int tid, char *lan, int spy)
@@ -177,19 +230,37 @@ void dpdk_fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
   else if (sscanf(line,
       "KO cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
       lan_name, name, &num) == 3)
-    dpdk_msg_ack_lan_eth(tid, lan_name, name, num, 1, 1, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 1, 1, "cloonixovs");
   else if (sscanf(line,
       "OK cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
       lan_name, name, &num) == 3)
-    dpdk_msg_ack_lan_eth(tid, lan_name, name, num, 1, 0, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 1, 0, "cloonixovs");
   else if (sscanf(line,
       "KO cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
       lan_name, name, &num) == 3)
-    dpdk_msg_ack_lan_eth(tid, lan_name, name, num, 0, 1, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 0, 1, "cloonixovs");
   else if (sscanf(line,
        "OK cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
       lan_name, name, &num) == 3)
-    dpdk_msg_ack_lan_eth(tid, lan_name, name, num, 0, 0, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 0, 0, "cloonixovs");
+  else if (sscanf(line, "OK cloonixovs_add_tap name=%s", name) == 1)
+    dpdk_tap_resp_add(0, name);
+  else if (sscanf(line, "KO cloonixovs_add_tap name=%s", name) == 1)
+    dpdk_tap_resp_add(1, name);
+  else if (sscanf(line, "OK cloonixovs_del_tap name=%s", name) == 1)
+    dpdk_tap_resp_del(name);
+  else if (sscanf(line, "OK cloonixovs_add_lan_tap lan_name=%s name=%s",
+                         lan_name, name) == 2)
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 1, 0, "cloonixovs");
+  else if (sscanf(line, "KO cloonixovs_add_lan_tap lan_name=%s name=%s",
+                         lan_name, name) == 2)
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 1, 1, "cloonixovs");
+  else if (sscanf(line, "OK cloonixovs_del_lan_tap lan_name=%s name=%s", 
+                         lan_name, name) == 2)
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 0, 0, "cloonixovs");
+  else if (sscanf(line, "KO cloonixovs_del_lan_tap lan_name=%s name=%s",
+                         lan_name, name) == 2)
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 0, 1, "cloonixovs");
   else
     KERR("%s", line);
 }
@@ -208,7 +279,7 @@ void dpdk_fmt_rx_rpct_recv_evt_msg(int llid, int tid, char *line)
     vm = find_vm_with_id(vm_id);
     if (vm && (num >= 0) && (num < vm->kvm.nb_dpdk))
       dpdk_ovs_fill_eventfull(vm->kvm.name, num, ms, ptx, prx, btx, brx);
-    else
+    else if (dpdk_tap_eventfull(vm_id, num, ms, ptx, btx, prx, brx))
       KERR("%d %d %d", tidx, vm_id, num);
     }
     else

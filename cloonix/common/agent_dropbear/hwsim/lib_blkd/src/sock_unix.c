@@ -42,7 +42,10 @@ int sock_unix_read (char *buf, int max, int fd)
   int rx_len = -1;
   rx_len = read (fd, buf, max);
   if (rx_len == 0)
+    {
     KERR(" ");
+    rx_len = -1;
+    }
   else if (rx_len < 0)
     {
     if ((errno == EAGAIN) || (errno ==EINTR))

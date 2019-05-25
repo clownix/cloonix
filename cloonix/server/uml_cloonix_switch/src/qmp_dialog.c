@@ -29,6 +29,7 @@
 #include "qmp_dialog.h"
 #include "qmp.h"
 #include "event_subscriber.h"
+#include "machine_create.h"
 
 
 typedef struct t_timeout_resp
@@ -230,7 +231,8 @@ static int qmp_rx_cb(void *ptr, int llid, int fd)
         {
         if (message_braces_complete(qrec->resp))
           {
-          if ((!strncmp(qrec->resp, "{\"timestamp\":", strlen("{\"timestamp\":"))) &&
+          if ((!strncmp(qrec->resp, "{\"timestamp\":", 
+                        strlen("{\"timestamp\":"))) &&
               (strstr(qrec->resp, "JOB_STATUS_CHANGE")))
             {
 //            KERR("DROP %s", qrec->resp);
@@ -311,7 +313,11 @@ static void timer_connect_qmp(void *data)
           {
           qrec->count_conn_timeout += 1;
           if (qrec->count_conn_timeout > 150)
+            {
             KERR("%s", pname);
+            machine_death(pname, error_death_noovstime);
+            qrec_free(qrec, 1);
+            }
           else
             {
             clownix_timeout_add(20,timer_connect_qmp,(void *) pname,NULL,NULL);

@@ -5,7 +5,7 @@ CLOONIX_COMMON=${HERE}/../../../cloonix/common
 PKGCONFIG=${CLOONIX_COMMON}/spice/spice_lib/pkgconfig
 export PKG_CONFIG_PATH=${PKGCONFIG}
 export LDFLAGS="-L${CLOONIX_COMMON}/spice/spice_lib \
-                -Wl,-rpath=${CLOONIX_COMMON}/spice/spice_lib" ;
+                -Wl,-rpath,/usr/local/bin/cloonix/common/spice/spice_lib" ;
 MUETH=${HERE}/../../
 rm -rf ${HERE}/qemu_bin
 mkdir -p ${HERE}/qemu_bin
@@ -41,7 +41,6 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --disable-libiscsi
                      --disable-linux-aio
                      --disable-libusb
-                     --disable-slirp
                      --disable-tcg-interpreter
                      --disable-bsd-user
                      --disable-docs

@@ -81,7 +81,7 @@ static int create_tmp_config(int vm_id, char *name,
 /*****************************************************************************/
 static int fct_in_clone_context(void *data)
 {
-  char *genisobin = util_get_genisoimage();
+  char *genisobin = util_get_xorrisofs();
   int result;
   char err[MAX_PRINT_LEN];
   t_cdrom_config *cdrom_conf = (t_cdrom_config *) data;
@@ -101,7 +101,7 @@ static int fct_in_clone_context(void *data)
   else
     {
     KERR("%s -J -o %s %s", genisobin, cdrom_conf->cdrom_path, cdrom_conf->tmp_conf);
-    send_to_daddy("Error genisoimage");
+    send_to_daddy("Error xorrisofs");
     }
   return result;
 }
@@ -155,7 +155,7 @@ static void death_of_clone_in_main_context(void *data, int status, char *name)
 /*****************************************************************************/
 static void cdrom_config_creation(t_vm *vm) 
 {
-  char *genisobin = util_get_genisoimage();
+  char *genisobin = util_get_xorrisofs();
   t_cdrom_config *cdrom_conf;
   char *tmp_conf  = utils_dir_conf_tmp(vm->kvm.vm_id);
   char *cdrom_path = utils_get_cdrom_path_name(vm->kvm.vm_id);

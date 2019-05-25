@@ -51,6 +51,7 @@ int is_a_snf(t_bank_item *bitem)
 {
   int result;
   if ((bitem->pbi.mutype == endp_type_tap) ||
+      (bitem->pbi.mutype == endp_type_dpdk_tap) ||
       (bitem->pbi.mutype == endp_type_wif) ||
       (bitem->pbi.mutype == endp_type_raw) ||
       (bitem->pbi.mutype == endp_type_c2c) ||
@@ -74,6 +75,7 @@ int is_a_nat(t_bank_item *bitem)
 {
   int result;
   if ((bitem->pbi.mutype == endp_type_tap) ||
+      (bitem->pbi.mutype == endp_type_dpdk_tap) ||
       (bitem->pbi.mutype == endp_type_wif) ||
       (bitem->pbi.mutype == endp_type_raw) ||
       (bitem->pbi.mutype == endp_type_c2c) ||
@@ -97,6 +99,7 @@ int is_a_c2c(t_bank_item *bitem)
 {
   int result;
   if ((bitem->pbi.mutype == endp_type_tap) ||
+      (bitem->pbi.mutype == endp_type_dpdk_tap) ||
       (bitem->pbi.mutype == endp_type_wif) ||
       (bitem->pbi.mutype == endp_type_raw) ||
       (bitem->pbi.mutype == endp_type_snf) ||
@@ -120,6 +123,7 @@ int is_a_a2b(t_bank_item *bitem)
 {
   int result;
   if ((bitem->pbi.mutype == endp_type_tap) ||
+      (bitem->pbi.mutype == endp_type_dpdk_tap) ||
       (bitem->pbi.mutype == endp_type_wif) ||
       (bitem->pbi.mutype == endp_type_raw) ||
       (bitem->pbi.mutype == endp_type_snf) ||
@@ -199,7 +203,6 @@ static void get_object_mass(t_bank_item *bitem)
     }
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static t_bank_item *centralized_item_creation(int bank_type, char *name,
@@ -576,9 +579,11 @@ void delete_bitem(t_bank_item *bitem)
 /****************************************************************************/
 void add_new_edge(t_bank_item *bi_eth, t_bank_item *bi_lan, int eorig)
 {
-  int bank_type;
+  int bank_type, nb_dpdk;
   t_bank_item *bi_edge;
+  t_bank_item *bitem;
   double x0, y0, x1, y1, dist;
+  int mutype = mutype_none;
   if ((!bi_lan) || (!bi_eth) || 
       (bi_lan->bank_type != bank_type_lan))
     KOUT(" ");
@@ -599,6 +604,12 @@ void add_new_edge(t_bank_item *bi_eth, t_bank_item *bi_lan, int eorig)
       KOUT(" ");
     topo_get_matrix_transform_point(bi_eth->att_node, &x0, &y0);
     topo_get_matrix_transform_point(bi_eth, &x0, &y0);
+    bitem = bi_eth->att_node;
+    nb_dpdk = bitem->pbi.pbi_node->node_vm_nb_dpdk;
+    if (bi_eth->num < nb_dpdk)
+      {
+      mutype = endp_type_kvm_dpdk;
+      }
     }
   else if (bi_eth->bank_type == bank_type_sat) 
     {
@@ -621,6 +632,7 @@ void add_new_edge(t_bank_item *bi_eth, t_bank_item *bi_lan, int eorig)
       bank_type = bank_type_edge;
     else
       KOUT("%d", bi_eth->bank_type);
+    bi_lan->pbi.mutype = mutype;
     }
   else
     KOUT("%d", bi_eth->bank_type);

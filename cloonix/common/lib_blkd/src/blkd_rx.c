@@ -368,6 +368,7 @@ static void trig_dist_flow_control(void *ptr, t_blkd_fifo_rx *pool, int llid)
       (our_mutype == endp_type_kvm_dpdk) ||
       (our_mutype == endp_type_kvm_eth)  ||
       (our_mutype == endp_type_kvm_wlan) ||
+      (our_mutype == endp_type_dpdk_tap)  ||
       (our_mutype == endp_type_tap)  ||
       (our_mutype == endp_type_snf)  ||
       (our_mutype == endp_type_c2c)  ||

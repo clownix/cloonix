@@ -18,7 +18,7 @@ export LDFLAGS="-Wl,-rpath,/usr/local/bin/cloonix/server/dpdk/lib"
 
 
 sed -i s"%-ldpdk%${DPDK_LIBS}%" ./configure
-./configure --prefix=${HERE} --with-dpdk=${HERE} --disable-ssl
+./configure --prefix=${HERE} --with-dpdk=${HERE}
 
 
 make -j 6

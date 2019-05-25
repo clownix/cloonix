@@ -1,27 +1,6 @@
 #!/bin/bash
 #--------------------------------------------------------------------------
-if [ $# == 1 ]; then
-  action=$1 
-  case "$1" in
-    "run")
-      printf "\n\tPackages to run cloonix will be installed.\n\n"
-      depends_build=0
-    ;;
-    "build")
-      printf "\n\tPackages to build cloonix will be installed.\n\n"
-      depends_build=1
-    ;;
-    *)
-     echo ERROR: bad input param \"run\" \"build\"
-     exit
-  esac
-else
-  echo
-  echo ERROR: missing input param \"run\" or \"build\"
-  echo if you want to compile cloonix choose build.
-  echo
-  exit
-fi
+printf "\n\tPackages to build cloonix will be installed.\n\n"
 #--------------------------------------------------------------------------
 if [ ! -e /etc/os-release ]; then 
   printf "\n\tERROR: Not able to determine your distribution."
@@ -39,121 +18,57 @@ if [ -z $name ]; then
   exit
 fi
 #--------------------------------------------------------------------------
-fct_build_get_arch_packages()
+fct_get_debian_packages()
 {
-  sed -i s"%#\[multilib\]%#\[multilib\]\nInclude = /etc/pacman.d/mirrorlist%" /etc/pacman.conf
-  pacman --noconfirm --force -Syu \
-             tar cdrkit rxvt-unicode base-devel \
-             readline libevent gtk3 python2 python2-pyparsing \
-             python2-six intltool opus polkit acl mesa libusb \
-             gst-plugins-base ttf-dejavu orc python bison flex \
-             wireshark
+  apt-get -y install tar xorriso rxvt-unicode build-essential pkg-config \
+                     intltool libtool autoconf libncurses5-dev coreutils \
+                     libopus-dev libjpeg-dev libusb-1.0-0-dev libgtk-3-dev \
+                     openssl libssl-dev libcap-dev libevent-dev \
+                     libreadline-dev python3 python3-pyparsing python3-six \
+                     libepoxy-dev libgstreamer-plugins-base1.0-dev \
+                     libgbm-dev libpolkit-gobject-1-dev libacl1-dev \
+		     sudo zlib1g-dev liborc-0.4-dev libegl1-mesa-dev \
+                     libdrm-dev bison flex libjson-glib-dev libsasl2-dev \
+                     libnuma-dev libpixman-1-dev libpcap-dev libmnl-dev \
+                     libibverbs-dev wireshark
+case "$name" in
+  "Ubuntu")
+   apt-get -y install linux-headers-generic
+  ;;
+
+  *)
+   apt-get -y install linux-headers-amd64 
+  ;;
+esac
 
 }
 #--------------------------------------------------------------------------
-fct_run_get_arch_packages()
-{
-  pacman --noconfirm --force -Syu \
-             tar cdrkit rxvt-unicode readline libevent gtk3 \
-             opus polkit acl mesa libusb gst-plugins-base \
-             ttf-dejavu orc wireshark
-}
-#--------------------------------------------------------------------------
-fct_build_get_debian_packages()
-{
-  apt-get -y install tar genisoimage rxvt-unicode build-essential \
-                     intltool libncurses5-dev \
-                     libjpeg-dev libusb-1.0-0-dev libsasl2-dev \
-                     libopus-dev openssl libssl-dev libgtk-3-dev libcap-dev \
-                     libevent-dev libreadline-dev python-pyparsing python-six \
-                     libgstreamer-plugins-base1.0-dev libepoxy-dev libdrm-dev \
-                     libgbm-dev libpolkit-gobject-1-dev libacl1-dev \
-		     sudo zlib1g-dev liborc-0.4-dev libegl1-mesa-dev \
-                     bison flex libjson-glib-dev wireshark
-# For DPDK
-   apt-get -y install build-essential coreutils linux-headers-amd64 \
-                      libnuma-dev autoconf libtool pkg-config python3 \
-                      python3-six libglib2.0-dev libpixman-1-dev \
-                      libpcap-dev libmnl-dev libibverbs-dev meson 
-}
-#--------------------------------------------------------------------------
-fct_run_get_debian_packages()
-{
-  apt-get -y install tar genisoimage rxvt-unicode libusb-1.0 libopus0 \
-                     libgtk-3-0 libepoxy0 libsasl2-2 \
-                     libgstreamer-plugins-base1.0 liborc-0.4-0 libgbm1 \
-                     wireshark
-}
-#--------------------------------------------------------------------------
-fct_build_get_centos_packages()
-{
-  yum -y install \
-         tar genisoimage xterm make gcc gcc-c++ m4 bc \
-         glibc-devel.x86_64 libstdc++-devel.x86_64 \
-         intltool ncurses-devel libjpeg-turbo-devel libusb-devel \
-         libgusb-devel cyrus-sasl-devel opus-devel openssl openssl-devel \
-         gtk3-devel libcap-devel libevent-devel readline-devel \
-         pyparsing python-six gstreamer1-plugins-base-devel \
-         libepoxy-devel polkit-devel libacl-devel \
-         dejavu-serif-fonts mesa-libgbm-devel orc-devel \
-         mesa-libEGL-devel bison flex wireshark
-# libpcap-devel
-}
-#--------------------------------------------------------------------------
-fct_run_get_centos_packages()
-{
-  yum -y install \
-         tar genisoimage gtk3 xterm libevent libusb opus \
-         cyrus-sasl dejavu-serif-fonts libepoxy polkit libacl \
-         gstreamer1-plugins-base libjpeg-turbo orc mesa-libgbm \
-         wireshark
-}
-#--------------------------------------------------------------------------
-fct_build_get_fedora_packages()
+fct_get_redhat_packages()
 {
   dnf -y install \
-         tar genisoimage rxvt-unicode make gcc gcc-c++ m4 bc \
-         glibc-devel.x86_64 libstdc++-devel.x86_64 \
-         libtool intltool ncurses-devel libjpeg-turbo-devel \
-         libusb-devel cyrus-sasl-devel opus-devel openssl openssl-devel \
-         gtk3-devel libcap-devel libevent-devel readline-devel \
-         python pyparsing python-six gstreamer1-plugins-base-devel \
-         libepoxy-devel libdrm-devel polkit-devel \
-	 libacl-devel dejavu-serif-fonts mesa-libgbm-devel orc-devel \
-         mesa-libEGL-devel bison flex wireshark
-# libpcap-devel
+         tar xorriso xterm make gcc gcc-c++ m4 bc glibc-devel libtool \
+         libstdc++-devel intltool ncurses-devel libjpeg-turbo-devel \
+         pkg-config autoconf cyrus-sasl-devel openssl openssl-devel \
+         gtk3-devel libcap-devel libevent-devel readline-devel python3 \
+         python3-six gstreamer1-plugins-base-devel libepoxy-devel \
+         polkit-devel libacl-devel dejavu-serif-fonts orc-devel \
+         mesa-libEGL-devel bison flex wireshark libusbx-devel \
+         python3-pyparsing numactl-devel kernel-headers json-glib-devel \
+         mesa-libgbm-devel opus-devel
 }
 #--------------------------------------------------------------------------
-fct_run_get_fedora_packages()
-{
-  dnf -y install \
-         tar genisoimage gtk3 rxvt-unicode libevent libusb opus \
-         cyrus-sasl dejavu-serif-fonts libepoxy polkit libacl \
-         gstreamer1-plugins-base libjpeg-turbo orc mesa-libgbm \
-         wireshark
-}
-#--------------------------------------------------------------------------
-fct_build_get_opensuse_packages()
+fct_get_opensuse_packages()
 {
   zypper --non-interactive install \
-         tar genisoimage rxvt-unicode make gcc gcc-c++ m4 bc \
-         libtool intltool ncurses-devel libjpeg62-devel \
-         libusb-devel cyrus-sasl-devel libopus-devel openssl openssl-devel \
-         gtk3-devel libcap-devel libevent-devel readline-devel \
-         python python-pyparsing python-six dejavu-fonts patch \
-         gstreamer-plugins-base-devel libepoxy-devel polkit-devel \
-         libacl-devel glibc-locale libgbm-devel orc-devel \
-         Mesa-libEGL-devel bison flex wireshark
-# libpcap-devel
-}
-#--------------------------------------------------------------------------
-fct_run_get_opensuse_packages()
-{
-  zypper --non-interactive install \
-         tar genisoimage gtk3 rxvt-unicode libevent libusb \
-         libopus0 cyrus-sasl dejavu-fonts libepoxy0 polkit libacl \
-         gstreamer-plugins-base glibc-locale libgthread-2_0-0 \
-         libjpeg62 libgbm1 liborc-0_4-0 wireshark
+         tar xorriso rxvt-unicode make gcc gcc-c++ m4 bc glibc-devel \
+         libtool libstdc++-devel intltool ncurses-devel libjpeg62-devel \
+         patch pkg-config autoconf cyrus-sasl-devel openssl openssl-devel \
+         gtk3-devel libcap-devel libevent-devel readline-devel python3 \
+         python3-six gstreamer-plugins-base-devel libepoxy-devel \
+         polkit-devel libacl-devel orc-devel libusb-1_0-devel \
+         Mesa-libEGL-devel bison flex wireshark python3-pyparsing \
+         libnuma-devel kernel-headers json-glib-devel \
+         libgbm-devel libopus-devel rxvt-unicode xorriso
 }
 #--------------------------------------------------------------------------
 if [ $UID != 0 ]; then
@@ -164,47 +79,17 @@ case "$name" in
   "Debian" | "Ubuntu" | "Kali")
     printf "\n\tInstall tool is apt-get.\n\n"
     apt-get --assume-yes update
-    if [ $depends_build = 1 ]; then
-      fct_build_get_debian_packages
-    else
-      fct_run_get_debian_packages
-    fi
+    fct_get_debian_packages
   ;;
-  "CentOS")
-    printf "\n\tInstall tool is yum.\n\n"
-    yum update -y
-    if [ $depends_build = 1 ]; then
-      fct_build_get_centos_packages
-    else
-      fct_run_get_centos_packages
-    fi
-  ;;
-  "Fedora")
+  "Red" | "CentOS" | "Fedora")
     printf "\n\tInstall tool is dnf.\n\n"
     dnf update -y
-    if [ $depends_build = 1 ]; then
-      fct_build_get_fedora_packages
-    else
-      fct_run_get_fedora_packages
-    fi
+    fct_get_redhat_packages
   ;;
   "openSUSE")
     printf "\n\tInstall tool is zypper.\n\n"
     zypper update -y
-    if [ $depends_build = 1 ]; then
-      fct_build_get_opensuse_packages
-    else
-      fct_run_get_opensuse_packages
-    fi
-  ;;
-  "Arch")
-    printf "\n\tInstall tool is pacman.\n\n"
-    pacman -Syu
-    if [ $depends_build = 1 ]; then
-      fct_build_get_arch_packages
-    else
-      fct_run_get_arch_packages
-    fi
+    fct_get_opensuse_packages
   ;;
   *)
   printf "\n\tERROR: Your distribution: $name is not supported"

@@ -352,7 +352,7 @@ void menu_dialog_vm_init(void)
   custom_vm.is_full_virt = 0;
   custom_vm.has_p9_host_share = 0;
   custom_vm.cpu = 4;
-  custom_vm.mem = 2000;
+  custom_vm.mem = 3000;
   custom_vm.nb_dpdk = 0;
   custom_vm.nb_eth = 3;
   custom_vm.nb_wlan = 0;

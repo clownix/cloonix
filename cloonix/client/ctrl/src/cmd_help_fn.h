@@ -38,6 +38,7 @@ int cmd_qreboot_vm(int argc, char **argv);
 int cmd_halt_vm(int argc, char **argv);
 int cmd_del_vm(int argc, char **argv);
 int cmd_add_tap(int argc, char **argv);
+int cmd_add_dpdk_tap(int argc, char **argv);
 int cmd_add_wif(int argc, char **argv);
 int cmd_add_raw(int argc, char **argv);
 int cmd_add_snf(int argc, char **argv);

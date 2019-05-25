@@ -564,6 +564,7 @@ static void evt_set_blkd_epoll(t_all_ctx *all_ctx, int cidx,
   switch (our_mutype)
     {
     case mulan_type:
+    case endp_type_dpdk_tap:
     case endp_type_tap:
     case endp_type_wif:
     case endp_type_raw:

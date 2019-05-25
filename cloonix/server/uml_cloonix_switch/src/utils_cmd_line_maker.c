@@ -692,10 +692,10 @@ char *utils_get_uname_r_mod_path(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *util_get_genisoimage(void)
+char *util_get_xorrisofs(void)
 {
   static char path[MAX_PATH_LEN];
-  snprintf(path, MAX_PATH_LEN-1, "/usr/bin/genisoimage");
+  snprintf(path, MAX_PATH_LEN-1, "/usr/bin/xorrisofs");
   return path;
 }
 /*---------------------------------------------------------------------------*/

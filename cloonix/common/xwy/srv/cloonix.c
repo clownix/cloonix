@@ -141,7 +141,7 @@ void cloonix_beat(struct timeval *tv)
 {
   if (g_sock_cloonix != -1)
     {
-    if ((tv->tv_sec - g_last_cloonix_tv.tv_sec) > 5)
+    if ((tv->tv_sec - g_last_cloonix_tv.tv_sec) > 15)
       KOUT(" ");
     }
 }

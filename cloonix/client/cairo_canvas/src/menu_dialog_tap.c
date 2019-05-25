@@ -41,7 +41,8 @@ t_custom_tap *get_custom_tap (void)
   memcpy(&cust, &g_custom_tap, sizeof(t_custom_tap));
   if (g_custom_tap.append_number)
     {
-    if (g_custom_tap.mutype == endp_type_tap)
+    if ((g_custom_tap.mutype == endp_type_tap) ||
+        (g_custom_tap.mutype == endp_type_dpdk_tap))
       {
       g_custom_tap.number += 1;
       sprintf(cust.name, "%s%d", g_custom_tap.name, g_custom_tap.number);
@@ -73,7 +74,8 @@ static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
 /****************************************************************************/
 static void numadd_toggle(GtkToggleButton *togglebutton, gpointer user_data)
 {
-  if (g_custom_tap.mutype != endp_type_tap)
+  if ((g_custom_tap.mutype != endp_type_tap) &&
+      (g_custom_tap.mutype != endp_type_dpdk_tap))
     {
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(togglebutton), FALSE);
     }
@@ -89,7 +91,8 @@ static void rad_tap_type_cb(GtkWidget *check, gpointer user_data)
 {
   unsigned long tap_type = (unsigned long) user_data;
   g_custom_tap.mutype = tap_type;
-  if (g_custom_tap.mutype == endp_type_tap)
+  if ((g_custom_tap.mutype == endp_type_tap) ||
+      (g_custom_tap.mutype == endp_type_dpdk_tap))
     {
     if (g_custom_tap.append_number)
       gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(g_numadd), TRUE);
@@ -99,7 +102,8 @@ static void rad_tap_type_cb(GtkWidget *check, gpointer user_data)
   else
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(g_numadd), FALSE);
 
-  if (g_custom_tap.mutype == endp_type_tap)
+  if ((g_custom_tap.mutype == endp_type_tap) ||
+      (g_custom_tap.mutype == endp_type_dpdk_tap))
     gtk_entry_set_text(GTK_ENTRY(g_entry_name), g_custom_tap.name);
   else if (g_custom_tap.mutype == endp_type_raw)
     gtk_entry_set_text(GTK_ENTRY(g_entry_name), "eth0");
@@ -112,17 +116,17 @@ static void rad_tap_type_cb(GtkWidget *check, gpointer user_data)
 static void flags_tap_check_button(GtkWidget *grid, int *line_nb)
 {
   unsigned long int i;
-  GtkWidget *rad[4];
-  char *lib[5] = {"tap", "raw", "wif"}; 
-  unsigned long int endp_type[3] = {endp_type_tap, endp_type_raw, 
-                                     endp_type_wif};
+  GtkWidget *rad[5];
+  char *lib[5] = {"tap", "raw", "wif", "dpdk_tap"}; 
+  unsigned long int endp_type[5] = {endp_type_tap, endp_type_raw, 
+                                     endp_type_wif, endp_type_dpdk_tap};
   GtkWidget *hbox;
   GSList *group = NULL;
   char label[MAX_NAME_LEN];
   memset(label, 0, MAX_NAME_LEN);
   sprintf(label, "tap_type");
 
-  for (i=0; i<3; i++)
+  for (i=0; i<4; i++)
     {
     rad[i] = gtk_radio_button_new_with_label(group, lib[i]);
     group  = gtk_radio_button_get_group(GTK_RADIO_BUTTON(rad[i]));
@@ -133,8 +137,10 @@ static void flags_tap_check_button(GtkWidget *grid, int *line_nb)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[1]),TRUE);
   else if (g_custom_tap.mutype == endp_type_wif)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[2]),TRUE);
+  else if (g_custom_tap.mutype == endp_type_dpdk_tap)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[3]),TRUE);
   hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  for (i=0; i<3; i++)
+  for (i=0; i<4; i++)
     {
     gtk_box_pack_start(GTK_BOX(hbox), rad[i], TRUE, TRUE, 10);
     g_signal_connect(G_OBJECT(rad[i]),"clicked",
@@ -178,6 +184,8 @@ static void custom_tap_dialog(void)
 
   if (g_custom_tap.mutype == endp_type_tap)
     gtk_entry_set_text(GTK_ENTRY(g_entry_name), g_custom_tap.name);
+  else if (g_custom_tap.mutype == endp_type_dpdk_tap)
+    gtk_entry_set_text(GTK_ENTRY(g_entry_name), g_custom_tap.name);
   else if (g_custom_tap.mutype == endp_type_raw)
     gtk_entry_set_text(GTK_ENTRY(g_entry_name), "eth0");
   else if (g_custom_tap.mutype == endp_type_wif)
@@ -186,7 +194,8 @@ static void custom_tap_dialog(void)
   append_grid(grid, entry_name, "name:", line_nb++);
   numadd = gtk_check_button_new_with_label("add number at end");
   g_numadd = numadd;
-  if (g_custom_tap.mutype == endp_type_tap)
+  if ((g_custom_tap.mutype == endp_type_tap) ||
+      (g_custom_tap.mutype == endp_type_dpdk_tap))
     {
     if (g_custom_tap.append_number)
       gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(g_numadd), TRUE);
