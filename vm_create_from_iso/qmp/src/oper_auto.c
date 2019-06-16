@@ -44,6 +44,43 @@ static int g_i;
 static char g_lines[MAX_LINES][MAX_LINES_LEN];
 
 
+/****************************************************************************/
+static void lines_csr1000v(void)
+{
+  strcpy(g_lines[g_i++], "enable");
+  strcpy(g_lines[g_i++], "show platform software vnic-if interface-mapping");
+  strcpy(g_lines[g_i++], "clear platform software vnic-if nvtable");
+  strcpy(g_lines[g_i++], "conf t");
+  strcpy(g_lines[g_i++], "username cisco privilege 15 secret 0 cisco");
+  strcpy(g_lines[g_i++], "line vty 0 4");
+  strcpy(g_lines[g_i++], "login local");
+  strcpy(g_lines[g_i++], "exit");
+  strcpy(g_lines[g_i++], "hostname cisco");
+  strcpy(g_lines[g_i++], "ip domain name demo.net");
+  strcpy(g_lines[g_i++], "crypto key generate rsa");
+  strcpy(g_lines[g_i++], "1024");
+  strcpy(g_lines[g_i++], "ip ssh version 2");
+  strcpy(g_lines[g_i++], "ip ssh rsa keypair-name cisco.demo.net");
+  strcpy(g_lines[g_i++], "ip scp server enable");
+  strcpy(g_lines[g_i++], "interface GigabitEthernet1");
+  strcpy(g_lines[g_i++], "ip address 10.0.0.1 255.255.255.0");
+  strcpy(g_lines[g_i++], "no shutdown");
+  strcpy(g_lines[g_i++], "exit");
+  strcpy(g_lines[g_i++], "ip ssh pubkey-chain");
+  strcpy(g_lines[g_i++], "username cisco");
+  strcpy(g_lines[g_i++], "key-string");
+  strcpy(g_lines[g_i++], "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGR6miK5hkP8eelcvitoRqsmLsSwwWSvk2gL9y/1IXwI/B4gUkzrqp7QJR30nD3s6/26VMs+ehRBgVuNv9ps5");
+  strcpy(g_lines[g_i++], "rt62KNHHe+y9qGBBKNik4FcKeCR3OigC9bKYtiwGxlCjRA21d1qA/SWa2Ll4Rf7+4K//4hYYXHu0FPxQXyznwOu4NGmZ3DMaCH9+vYXA6SXGNA7vWCQjN39+lBd6+yP3cKxQfdTNOu9OfwGt+soAE");
+  strcpy(g_lines[g_i++], "AB4fZB3XLFMdE9x/2zITMwwDxi3AI887y+qhsy3W0fpiuX9zsOTGoJ+1aM9XHSYwn9IcE5A/g0xWv58TpHRjVa5ZXCiOzzq4sC04UGXmL5Wb cisco@debian");
+  strcpy(g_lines[g_i++], "exit");
+  strcpy(g_lines[g_i++], "exit");
+  strcpy(g_lines[g_i++], "exit");
+  strcpy(g_lines[g_i++], "exit");
+  strcpy(g_lines[g_i++], "write");
+  strcpy(g_lines[g_i++], "reload");
+  strcpy(g_lines[g_i++], "");
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void lines_opensuse(void)
@@ -214,7 +251,9 @@ static void init_lines_start(void)
                          "console=ttyS0 console=tty1 earlyprintk=serial "
                          "net.ifnames=0 kvm-intel.nested=1 "
                          "default_hugepagesz=1G hugepagesz=1G "
-                         "hugepages=2\\\"\" >> /etc/default/grub");
+                         "hugepages=3\\\"\" >> /etc/default/grub");
+
+  strcpy(g_lines[g_i++], "rm -f /etc/udev/rules.d/70-persistent-net.rules");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -345,6 +384,8 @@ void oper_automate_rx_msg(int type_rx_msg, char *qmp_string)
         key = g_lines[g_count_lines][g_count_keys];
         if (!key)
           {
+          printf("\n");
+          printf("Waiting 6 secs...\n");
           qmp_send(QMP_SENDKEY_RET);
           g_count_lines += 1;
           g_count_keys = 0;
@@ -355,6 +396,8 @@ void oper_automate_rx_msg(int type_rx_msg, char *qmp_string)
           usleep(100000);
           send_char_qmp(key);
           g_count_keys += 1;
+          printf("%c", key);
+          fflush(stdout);
           }
         if (g_count_lines == g_max_lines)
           set_g_state(state_end_oper_setup);
@@ -400,14 +443,24 @@ void oper_automate_sheduling(void)
 
     case state_capa_done:
       if (count == 0)
-        printf("waiting 20 sec\n");
-      if ((count == 5)||(count == 10)  ||
-          (count == 15)||(count == 20) ||
-          (count == 25)||(count == 30) ||
-          (count == 35)||(count == 40) )
+        {
+        if (type_distro == type_csr1000v)
+          printf("waiting 180 sec\n");
+        else
+          printf("waiting 20 sec\n");
+        }
+      if ((count % 5) == 0)
         printf("%d\n", count);
       count++;
-      if (type_distro == type_redhat8)
+      if (type_distro == type_csr1000v)
+        {
+        if (count == 180)
+          {
+          qmp_send(QMP_SENDKEY_RET);
+          set_g_state(state_waiting_return);
+          }
+        }
+      else if (type_distro == type_redhat8)
         {
         if (count == 21)
           {
@@ -486,7 +539,6 @@ static void init_lines_end(void)
 {
   strcpy(g_lines[g_i++], "chmod +x /tmp/file_to_exec.sh");
   strcpy(g_lines[g_i++], "/bin/bash /tmp/file_to_exec.sh");
-  g_max_lines = g_i;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -500,9 +552,13 @@ void oper_automate_init(void)
   g_count_lines = 0;
   g_i = 0;
   memset(g_lines, 0, MAX_LINES * MAX_LINES_LEN);
-  init_lines_start();
+  if (type_distro != type_csr1000v)
+    init_lines_start();
   switch (type_distro)
     {
+    case type_csr1000v:
+      lines_csr1000v();
+      break;
     case type_buster:
       lines_buster();
       break;
@@ -527,6 +583,8 @@ void oper_automate_init(void)
     default:
       KOUT(" ");
     }
-  init_lines_end();
+  if (type_distro != type_csr1000v)
+    init_lines_end();
+  g_max_lines = g_i;
 }
 /*--------------------------------------------------------------------------*/

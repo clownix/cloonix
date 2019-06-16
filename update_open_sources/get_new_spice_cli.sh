@@ -1,8 +1,10 @@
 #!/bin/bash
 HERE=`pwd`
-TARGZ=${HERE}/../../../../targz_store
+TARGZ=${HERE}/../targz_store
 rm -rf spice-gtk
+rm -f spice-gtk.tar.gz
 rm -f ${TARGZ}/spice-gtk.tar.gz
+
 git clone https://gitlab.freedesktop.org/spice/spice-gtk.git
 cd spice-gtk
 sed -i s/--enable-gtk-doc/--disable-gtk-doc/ autogen.sh

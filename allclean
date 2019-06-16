@@ -17,6 +17,7 @@ rm -rf tmpbuild_bis
 #----------------------------------------------------------
   for i in agent_dropbear \
            xwy \
+           lan_spy \
            spice \
            lib_rpc_clownix \
            lib_rpc_qmonitor \

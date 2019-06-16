@@ -1,7 +1,10 @@
 #!/bin/bash
 HERE=`pwd`
-TARGZ=${HERE}/../../../targz_store
+TARGZ=${HERE}/../targz_store
 rm -rf spice
+rm -f spice/.tar.gz
+rm -f ${TARGZ}/spice/.tar.gz
+
 git clone https://gitlab.freedesktop.org/spice/spice.git
 cd spice
 ./autogen.sh

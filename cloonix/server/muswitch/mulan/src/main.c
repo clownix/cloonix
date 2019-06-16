@@ -54,19 +54,30 @@ static void timeout_blkd_heartbeat(t_all_ctx *all_ctx, void *data)
 /*****************************************************************************/
 int main (int argc, char *argv[])
 {
-  char *name;
+  char *dirc, *basec, *bname, *dname;
+  char spy_path[MAX_PATH_LEN];
   t_all_ctx *all_ctx;
   if (argc != 2)
     KOUT(" ");
-  name = basename(argv[1]);
+  dirc = strdup(argv[1]);
+  basec = strdup(argv[1]);
+  dname = dirname(dirc);
+  bname = basename(basec);
   cloonix_set_pid(getpid());
-  all_ctx = msg_mngt_init(name, 0, IO_MAX_BUF_LEN);
+  all_ctx = msg_mngt_init(bname, 0, IO_MAX_BUF_LEN);
   blkd_set_our_mutype((void *) all_ctx, mulan_type);
-  strncpy(all_ctx->g_name, name, MAX_NAME_LEN-1);  
+  strncpy(all_ctx->g_name, bname, MAX_NAME_LEN-1);  
   strncpy(all_ctx->g_path, argv[1], MAX_PATH_LEN-1);  
+  if (strlen(dname) + strlen("spy_") + strlen(bname) + 3 >= MAX_PATH_LEN)
+    KOUT("%s/spy_%s", dname, bname);
+  memset(spy_path, 0, MAX_PATH_LEN);
+  snprintf(spy_path, MAX_PATH_LEN-1, "%s/spy_%s", dname, bname);
+  free(dirc);
+  free(basec);
   if (string_server_unix(all_ctx, all_ctx->g_path, client_connect) == 0)
     KOUT(" ");
   init_lib_mulan(all_ctx);
+  blkd_server_listen((void *) all_ctx, spy_path, spy_traf_connection);
   clownix_timeout_add(all_ctx, 100, timeout_rpct_heartbeat, NULL, NULL, NULL);
   clownix_timeout_add(all_ctx, 100, timeout_blkd_heartbeat, NULL, NULL, NULL);
   msg_mngt_loop(all_ctx);

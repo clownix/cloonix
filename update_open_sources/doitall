@@ -1,0 +1,8 @@
+#!/bin/bash
+./get_new_qemu.sh
+./get_new_spice_protocol.sh
+./get_new_usbredir.sh
+./get_new_spice_cli.sh
+./get_new_spice_serv.sh
+./get_new_virglrenderer.sh
+./get_new_ovs_dpdk.sh

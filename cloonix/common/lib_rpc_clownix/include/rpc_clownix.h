@@ -244,10 +244,13 @@ typedef struct t_eventfull_endp
   int  ms;
 } t_eventfull_endp;
 /*---------------------------------------------------------------------------*/
+typedef struct t_slowperiodic
+{
+  char name[MAX_NAME_LEN];
+} t_slowperiodic;
+/*---------------------------------------------------------------------------*/
 void doors_io_basic_xml_init(t_llid_tx llid_tx);
 int  doors_io_basic_decoder (int llid, int len, char *buf);
-/*---------------------------------------------------------------------------*/
-
 /*---------------------------------------------------------------------------*/
 void send_hop_evt_doors_sub(int llid, int tid, int flags_hop,
                             int nb, t_hop_list *list);
@@ -302,6 +305,11 @@ void send_eventfull_sub(int llid, int tid);
 void recv_eventfull_sub(int llid, int tid);
 void send_eventfull(int llid, int tid, int nb_endp, t_eventfull_endp *endp); 
 void recv_eventfull(int llid, int tid, int nb_endp, t_eventfull_endp *endp);
+
+void send_slowperiodic_sub(int llid, int tid);
+void recv_slowperiodic_sub(int llid, int tid);
+void send_slowperiodic(int llid, int tid, int nb, t_slowperiodic *spic); 
+void recv_slowperiodic(int llid, int tid, int nb, t_slowperiodic *spic);
 
 void send_list_pid_req(int llid, int tid);
 void recv_list_pid_req(int llid, int tid);

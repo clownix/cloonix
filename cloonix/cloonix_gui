@@ -15,5 +15,5 @@ if [ ! -d ${CLOONIX_TREE} ]; then
   exit 1
 fi
 
-${CLOONIX_TREE}/client/cairo_canvas/cloonix_gui $CLOONIX_CONFIG "$@" 1>/dev/null 2>&1
+${CLOONIX_TREE}/client/cairo_canvas/cloonix_gui $CLOONIX_CONFIG "$@"
 

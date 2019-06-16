@@ -46,6 +46,7 @@ static t_evt_stats_sysinfo_cb clownix_evt_stats_sysinfo_cb;
 static t_evt_blkd_reports_cb clownix_evt_blkd_reports_cb;
 
 static t_eventfull_cb clownix_eventfull_cb;
+static t_slowperiodic_cb clownix_slowperiodic_cb;
 
 static t_get_path_cb clownix_get_path_cb;
 
@@ -263,7 +264,21 @@ void recv_eventfull(int llid, int tid, int nb_endp, t_eventfull_endp *endp)
 }
 /*---------------------------------------------------------------------------*/
 
-
+/*****************************************************************************/
+void recv_slowperiodic(int llid, int tid, int nb, t_slowperiodic *spic)
+{
+  if (!msg_exist_channel(llid))
+    KOUT(" ");
+  if (tid != 777)
+    KOUT(" ");
+  if (!clownix_slowperiodic_cb)
+    KOUT(" ");
+  clownix_slowperiodic_cb(nb, spic);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void recv_evt_print(int llid, int tid, char *info)
@@ -431,7 +446,6 @@ void client_list_commands(int tid,  t_list_commands_cb cb)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 void client_req_eventfull(t_eventfull_cb cb)
 {
@@ -439,6 +453,19 @@ void client_req_eventfull(t_eventfull_cb cb)
     KOUT(" ");
   clownix_eventfull_cb = cb;
   send_eventfull_sub(g_llid, 777);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void client_req_slowperiodic(t_slowperiodic_cb cb)
+{
+  if (!g_llid)
+    KOUT(" ");
+  clownix_slowperiodic_cb = cb;
+  send_slowperiodic_sub(g_llid, 777);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif

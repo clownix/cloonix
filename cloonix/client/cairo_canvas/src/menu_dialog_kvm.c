@@ -31,12 +31,56 @@
 GtkWidget *get_main_window(void);
 
 static t_custom_vm custom_vm;
-
-static GtkWidget *g_custom_dialog;
+static t_slowperiodic g_bulkvm[MAX_BULK_FILES];
+static t_slowperiodic g_bulkvm_photo[MAX_BULK_FILES];
+static int g_nb_bulkvm;
+static GtkWidget *g_custom_dialog, *g_entry_rootfs;
 
 void menu_choice_kvm(void);
 
+/****************************************************************************/
+static void qcow2_get(GtkWidget *check, gpointer data)
+{
+  char *name = (char *) data;
+  gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), name);
+}
+/*--------------------------------------------------------------------------*/
+
 /*****************************************************************************/
+void set_bulkvm(int nb, t_slowperiodic *slowperiodic)
+{
+  if (nb<0 || nb >= MAX_BULK_FILES)
+    KOUT("%d", nb);
+  g_nb_bulkvm = nb;
+  memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  memcpy(g_bulkvm, slowperiodic, g_nb_bulkvm * sizeof(t_slowperiodic));
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static GtkWidget *get_bulkvm(void)
+{
+  int i;
+  GtkWidget *el, *menu = NULL;
+  GSList *group = NULL;
+  gpointer data;
+  memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  if (g_nb_bulkvm > 0)
+    {
+    menu = gtk_menu_new();
+    for (i=0; i<g_nb_bulkvm; i++)
+      {
+      el = gtk_radio_menu_item_new_with_label(group, g_bulkvm_photo[i].name);
+      if (i == 0)
+        group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(el));
+      gtk_menu_shell_append(GTK_MENU_SHELL(menu), el);
+      data = (gpointer) g_bulkvm_photo[i].name;
+      g_signal_connect(G_OBJECT(el),"activate",(GCallback)qcow2_get,data);
+      }
+    }
+  return menu;
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 t_custom_vm *get_ptr_custom_vm (void)
@@ -131,7 +175,7 @@ static void numadd_toggle (GtkToggleButton *togglebutton, gpointer user_data)
 
 /****************************************************************************/
 static void update_cust(t_custom_vm *cust, GtkWidget *entry_name, 
-                        GtkWidget *entry_rootfs, GtkWidget *entry_p9_host_share,
+                        GtkWidget *entry_p9_host_share,
                         GtkWidget *entry_cpu, GtkWidget *entry_ram,
                         GtkWidget *entry_dpdk_nb, GtkWidget *entry_eth_nb,
                         GtkWidget *entry_wlan_nb) 
@@ -143,7 +187,7 @@ static void update_cust(t_custom_vm *cust, GtkWidget *entry_name,
   memset(cust->name, 0, MAX_NAME_LEN);
   strncpy(cust->name, tmp, MAX_NAME_LEN-1);
 
-  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_rootfs));
+  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(g_entry_rootfs));
   memset(cust->kvm_used_rootfs, 0, MAX_NAME_LEN);
   strncpy(cust->kvm_used_rootfs, tmp, MAX_NAME_LEN-1);
 
@@ -193,11 +237,11 @@ static void nb_dpdk_activate_cb(GtkWidget *entry_dpdk_nb)
 static void custom_vm_dialog(t_custom_vm *cust)
 {
   int response, line_nb = 0;
-  GtkWidget *entry_name, *entry_rootfs, *entry_ram; 
+  GtkWidget *entry_name, *entry_ram; 
   GtkWidget *entry_p9_host_share; 
   GtkWidget *entry_cpu=NULL, *entry_dpdk_nb, *entry_eth_nb, *entry_wlan_nb;
   GtkWidget *grid, *parent, *numadd, *is_persistent;
-  GtkWidget *has_p9_host_share;
+  GtkWidget *has_p9_host_share, *qcow2_rootfs, *bulkvm_menu;
 
   if (g_custom_dialog)
     return;
@@ -274,10 +318,15 @@ static void custom_vm_dialog(t_custom_vm *cust)
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_ram), cust->mem);
   append_grid(grid, entry_ram, "Ram:", line_nb++);
 
-  entry_rootfs = gtk_entry_new();
+  g_entry_rootfs = gtk_entry_new();
+  gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), cust->kvm_used_rootfs);
+  append_grid(grid, g_entry_rootfs, "Rootfs:", line_nb++);
 
-  gtk_entry_set_text(GTK_ENTRY(entry_rootfs), cust->kvm_used_rootfs);
-  append_grid(grid, entry_rootfs, "Rootfs:", line_nb++);
+  qcow2_rootfs = gtk_menu_button_new ();
+  append_grid(grid, qcow2_rootfs, "Choice:", line_nb++);
+  bulkvm_menu = get_bulkvm();
+  gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
+  gtk_widget_show_all(bulkvm_menu);
 
   if (custom_vm.has_p9_host_share)
     {
@@ -318,7 +367,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
     }
   else
     {
-    update_cust(cust, entry_name,   entry_rootfs, entry_p9_host_share, 
+    update_cust(cust, entry_name, entry_p9_host_share, 
                 entry_cpu, entry_ram, entry_dpdk_nb, entry_eth_nb,
                 entry_wlan_nb);
     gtk_widget_destroy(g_custom_dialog);
@@ -351,12 +400,14 @@ void menu_dialog_vm_init(void)
   custom_vm.is_uefi = 0;
   custom_vm.is_full_virt = 0;
   custom_vm.has_p9_host_share = 0;
-  custom_vm.cpu = 4;
-  custom_vm.mem = 3000;
+  custom_vm.cpu = 2;
+  custom_vm.mem = 2000;
   custom_vm.nb_dpdk = 0;
   custom_vm.nb_eth = 3;
   custom_vm.nb_wlan = 0;
   g_custom_dialog = NULL;
+  memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  g_nb_bulkvm = 0;
 }
 /*--------------------------------------------------------------------------*/
 

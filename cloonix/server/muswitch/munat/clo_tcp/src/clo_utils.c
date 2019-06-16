@@ -391,15 +391,15 @@ int util_extract_clo(t_clo **head, t_clo *clo)
   int result = 0;
   while (clo->head_hdata)
     {
+    KERR("closed_state_count_line:%d", clo->closed_state_count_line);
     util_extract_hdata(&(clo->head_hdata), clo->head_hdata);
     result = -1;
-    KERR("closed_state_count_line:%d", clo->closed_state_count_line);
     }
   while (clo->head_ldata)
     {
+    KERR("closed_state_count_line:%d", clo->closed_state_count_line);
     util_extract_ldata(&(clo->head_ldata), clo->head_ldata);
     result = -1;
-    KERR("closed_state_count_line:%d", clo->closed_state_count_line);
     }
   if (clo->tcpid.llid)
     util_detach_llid_clo(clo->tcpid.llid, clo);

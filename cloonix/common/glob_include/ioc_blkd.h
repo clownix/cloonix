@@ -125,6 +125,8 @@ enum {
   endp_type_kvm_wlan,
   endp_type_ovsdb,
   endp_type_dpdk_tap,
+  endp_type_mtcp,
+  endp_type_lan_spy,
 };
 
 typedef void (*t_fd_local_flow_ctrl)(void *ptr, int llid, int stop);

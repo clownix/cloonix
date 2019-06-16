@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void spy_traf_connection(void *ptr, int llid, int llidnew);
 void client_connect(void *ptr, int llid, int llid_new);
 void init_lib_mulan(t_all_ctx *all_ctx);
 /*---------------------------------------------------------------------------*/

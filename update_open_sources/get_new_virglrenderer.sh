@@ -1,8 +1,10 @@
 #!/bin/bash
 HERE=`pwd`
-TARGZ=${HERE}/../../../targz_store
+TARGZ=${HERE}/../targz_store
 rm -rf virglrenderer
 rm -f virglrenderer.tar.gz
+rm -f ${TARGZ}/virglrenderer.tar.gz
+
 git clone https://github.com/freedesktop/virglrenderer.git
 cd virglrenderer
 ./autogen.sh

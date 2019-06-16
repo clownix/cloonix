@@ -41,6 +41,7 @@
 #include "llid_trace.h"
 #include "doorways_mngt.h"
 #include "dpdk_ovs.h"
+#include "doors_rpc.h"
 
 #define MAX_CALLBACK_END 50
 
@@ -63,10 +64,10 @@ static int glob_req_self_destruction;
 /*****************************************************************************/
 static int self_destruction_ok(void)
 {
-  if (lock_self_destruction_dir == 0 ) 
+  if ((dpdk_ovs_still_present() == 0) &&
+      (lock_self_destruction_dir == 0)) 
     return 1;
-  else
-    return 0;
+  return 0;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -162,6 +163,7 @@ void extremely_last_action(void *data)
   int i, nb, tot;
   t_pid_lst *lst = create_list_pid(&nb);
   (void) lst;
+  doors_send_command(get_doorways_llid(), 0, "noname", STOP_DOORS_LISTENING);
   if (nb)
     {
     count_time += 1;
@@ -244,7 +246,10 @@ static void action_self_destruction(void *data)
   t_llid_tid *llid_tid = (t_llid_tid *) data;
 
   if (count == 0)
+    {
+    kill_doors();
     kill_xwy();
+    }
   if ((self_destruction_ok()) || (count > 500))
     {
     if ((count < 300) && 
@@ -292,7 +297,6 @@ void auto_self_destruction(int llid, int tid)
   llid_tid->tid = tid;
   clownix_timeout_add(10, action_self_destruction, (void *)llid_tid, 
                       NULL, NULL);
-  kill_doors();
 }
 /*---------------------------------------------------------------------------*/
 

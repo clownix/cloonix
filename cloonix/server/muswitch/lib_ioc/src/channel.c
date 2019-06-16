@@ -582,6 +582,7 @@ static void evt_set_blkd_epoll(t_all_ctx *all_ctx, int cidx,
     case endp_type_kvm_dpdk:
     case endp_type_kvm_eth:
     case endp_type_kvm_wlan:
+    case endp_type_mtcp:
       if (ioc_ctx->g_channel[cidx].red_to_stop_reading == 0)
         (*evt) |= EPOLLIN;
       else

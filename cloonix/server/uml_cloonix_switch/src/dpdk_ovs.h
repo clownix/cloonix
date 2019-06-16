@@ -15,7 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void dpdk_ovs_evt_no_tap(void);
 int dpdk_ovs_muovs_ready(void);
 int dpdk_ovs_add_lan_tap(int llid, int tid, char *lan, char *name);
 int dpdk_ovs_del_lan_tap(int llid, int tid, char *lan, char *name);
@@ -43,6 +42,7 @@ int  dpdk_ovs_get_all_pid(t_lst_pid **lst_pid);
 char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_eth);
 int dpdk_ovs_still_present(void);
 t_topo_endp *dpdk_ovs_translate_topo_endp(int *nb);
+void dpdk_ovs_urgent_client_destruct(void);
 /*--------------------------------------------------------------------------*/
 
 

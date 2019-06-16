@@ -98,6 +98,7 @@ typedef struct t_ovs
   int unanswered_pid_req;
   int connect_try_count;
   int destroy_requested;
+  int destroy_msg_sent;
   int nb_resp_ovs_ko;
   int nb_resp_ovsdb_ko;
 } t_ovs;
@@ -119,6 +120,53 @@ typedef struct t_arg_ovsx
 static t_dpdk_vm *g_head_vm;
 static t_ovs *g_head_ovs;
 
+/****************************************************************************/
+static void erase_dpdk_qemu_path(char *name, int nb_dpdk)
+{
+  int i;
+  char *endp_path;
+  for (i=0; i<nb_dpdk; i++)
+    {
+    endp_path = utils_get_dpdk_endp_path(name, i);
+    unlink(endp_path);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void test_and_end_ovs(void)
+{
+  t_ovs *cur = g_head_ovs;
+  int nb_tap = dpdk_tap_get_qty();
+  if ((g_head_vm == NULL) && (nb_tap == 0))
+    {
+    if (cur)
+      {
+      if (cur->destroy_requested == 0)
+        {
+        KERR("No more clients for ovs");
+        cur->destroy_requested = 4;
+        }
+      }
+    }
+  else
+    {
+    if (cur)
+      {
+      if (cur->destroy_requested)
+        {
+        KERR("Contradiction states");
+        cur->destroy_requested = 0;
+        }
+      }
+    else
+      {
+      KERR("Not normal ovs absent");
+      dpdk_ovs_urgent_client_destruct();
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void vm_check_unlock_coherency(void)
@@ -181,6 +229,13 @@ static void vm_free(char *name)
     KERR("%s", name);
   else
     {
+    erase_dpdk_qemu_path(name, vm->num);
+    if (vm->destroy_done == 0)
+      {
+      KERR("%s", name);
+      if (dpdk_dyn_del_all_lan(name))
+        KERR("%s", name);
+      }
     if (vm->prev)
       vm->prev->next = vm->next;
     if (vm->next)
@@ -282,42 +337,6 @@ static void ovs_free(char *name)
 }
 /*---------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void ovs_end_part(char *name)
-{
-  t_ovs *mu = ovs_find();
-  char *sock = utils_get_dpdk_ovs_path(name);
-  if (!mu)
-    KOUT("%s", name);
-  if (mu->llid)
-    llid_trace_free(mu->llid, 0, __FUNCTION__);
-  if (mu->ovsdb_pid)
-    kill(mu->ovsdb_pid, SIGKILL);
-  if (mu->ovs_pid)
-    kill(mu->ovs_pid, SIGKILL);
-  unlink(sock);
-  ovs_free(name);
-  mk_dpdk_ovs_db_dir();
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void ovs_end(void)
-{
-  t_dpdk_vm *nvm, *vm = g_head_vm;
-  t_ovs *cur = g_head_ovs;
-  while(vm)
-    {
-    KERR("%s", vm->name);
-    nvm = vm->next;
-    machine_death(vm->name, error_death_noovs);
-    vm = nvm;
-    }
-  if (cur)
-    ovs_end_part(cur->name);
-}
-/*--------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 static char **make_argv(t_arg_ovsx *arg_ovsx)
 {
@@ -333,59 +352,19 @@ static char **make_argv(t_arg_ovsx *arg_ovsx)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void erase_dpdk_qemu_path(char *name, int nb_dpdk)
-{
-  int i;
-  char *endp_path;
-  for (i=0; i<nb_dpdk; i++)
-    {
-    endp_path = utils_get_dpdk_endp_path(name, i);
-    unlink(endp_path);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void test_and_end_ovs(void)
-{
-  t_ovs *cur = g_head_ovs;
-  if ((g_head_vm == NULL) && (dpdk_tap_get_qty()))
-    {
-    if (cur)
-      cur->destroy_requested = 3;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void wrapper_vm_free(char *name, int num)
-{
-  vm_free(name);
-  erase_dpdk_qemu_path(name, num);
-  test_and_end_ovs();
-}
-/*--------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 static void ovs_death(void *data, int status, char *name)
 {
-  t_dpdk_vm *nvm, *vm = g_head_vm;
   t_arg_ovsx *mu = (t_arg_ovsx *) data;
   t_ovs *cur = ovs_find();
   if (strcmp(name, mu->name))
     KOUT("%s %s", name, mu->name);
   if (cur)
-    cur->destroy_requested = 1;
-  KERR("OVS PREMATURE DEATH %s", mu->name);
-  dpdk_tap_end_ovs();
-  while(vm)
     {
-    nvm = vm->next;
-    dpdk_dyn_del_all_lan(vm->name);
-    wrapper_vm_free(vm->name, vm->num);
-    vm = nvm;
+    if (cur->destroy_msg_sent == 0)
+      KERR("OVS PREMATURE DEATH %s", mu->name);
     }
+  dpdk_ovs_urgent_client_destruct();
   clownix_free(mu, __FUNCTION__);
 }
 /*---------------------------------------------------------------------------*/
@@ -400,7 +379,6 @@ static void ovs_watchdog(void *data)
               (!cur->periodic_count)))
     {
     cur->destroy_requested = 1;
-    dpdk_tap_end_ovs();
     KERR("OVS %s TIMEOUT %s %d %d %d", cur->name, mu->name,
                                    cur->llid, cur->pid, cur->periodic_count);
     }
@@ -431,21 +409,38 @@ static int test_if_dpdk_qemu_path_is_ok(char *name, int nb_dpdk)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void check_on_destroy_requested(void)
+static void check_on_destroy_requested(t_ovs *cur)
 {
-  t_ovs *cur = g_head_ovs;
-  if (cur)
+  char *sock;
+  test_and_end_ovs();
+  if (cur->destroy_requested == 4)
     {
-    if (cur->destroy_requested == 2)
-      try_send_msg_ovs(cur, msg_type_diag, 0, "cloonixovs_req_destroy");
-    if (cur->destroy_requested == 1)
-      { 
-      event_print("End OpenVSwitch %s", cur->name);
-      ovs_end();
+    cur->destroy_msg_sent = 1;
+    try_send_msg_ovs(cur, msg_type_diag, 0, "cloonixovs_req_destroy");
+    }
+  if (cur->destroy_requested == 1)
+    { 
+    event_print("End OpenVSwitch %s", cur->name);
+    sock = utils_get_dpdk_ovs_path(cur->name);
+    dpdk_ovs_urgent_client_destruct();
+    if (cur->llid)
+      llid_trace_free(cur->llid, 0, __FUNCTION__);
+    if (cur->ovsdb_pid)
+      {
+      if (!kill(cur->ovsdb_pid, SIGKILL))
+        KERR("ERR: ovsdb was alive");
       }
-    else if (cur->destroy_requested > 1)
-      cur->destroy_requested -= 1;
-    } 
+    if (cur->ovs_pid)
+      {
+      if (!kill(cur->ovs_pid, SIGKILL))
+        KERR("ERR: ovs was alive");
+      }
+    unlink(sock);
+    mk_dpdk_ovs_db_dir();
+    ovs_free(cur->name);
+    }
+  else if (cur->destroy_requested > 1)
+    cur->destroy_requested -= 1;
 } 
 /*--------------------------------------------------------------------------*/
 
@@ -478,7 +473,7 @@ static void timer_vm_add_beat(void *data)
     if (kvm && (vm->dyn_vm_add_done_acked == 0))
       {
       vm->dyn_vm_add_done_notacked += 1;
-      if (vm->dyn_vm_add_done_notacked == 200)
+      if (vm->dyn_vm_add_done_notacked == 400)
         {
         KERR("%s", vm->name);
         machine_death(vm->name, error_death_noovstime);
@@ -510,7 +505,6 @@ static void timer_ovs_beat(void *data)
       if (cur->connect_try_count == 16)
         {
         cur->destroy_requested = 1;
-        dpdk_tap_end_ovs();
         KERR("OVS %s NOT LISTENING destroy_requeste", cur->name);
         }
       }
@@ -533,12 +527,11 @@ static void timer_ovs_beat(void *data)
         if (cur->unanswered_pid_req > 3)
           {
           cur->destroy_requested = 1;
-          dpdk_tap_end_ovs();
           KERR("OVS %s NOT RESPONDING destroy_requested", cur->name);
           }
         }
       }
-    check_on_destroy_requested();
+    check_on_destroy_requested(cur);
     if (cur->periodic_count)
       clownix_timeout_add(100, timer_ovs_beat, NULL, NULL, NULL);
     else
@@ -585,7 +578,7 @@ static int create_muovs_process(char *name)
   strncpy(arg_ovsx->sock, sock, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->ovsx_bin, ovsx_bin, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->dpdk_db_dir, dpdk_db_dir, MAX_PATH_LEN-1);
-  clownix_timeout_add(500, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
+  clownix_timeout_add(1500, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
   return pid;
 }
 /*--------------------------------------------------------------------------*/
@@ -699,7 +692,6 @@ void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
                  "/server/dpdk/sbin/ovs-vswitchd\"");
       KERR(" destroy_requested for %s", cur->name);
       cur->destroy_requested = 1;
-      dpdk_tap_end_ovs();
       }
     else if (!strcmp(line, "cloonixovs_resp_ovsdb_ko"))
       {
@@ -709,7 +701,6 @@ void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
         {
         KERR(" destroy_requested for %s", cur->name);
         cur->destroy_requested = 1;
-        dpdk_tap_end_ovs();
         }
       }
     else if (!strcmp(line, "cloonixovs_resp_ovsdb_ok"))
@@ -725,7 +716,6 @@ void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
         {
         KERR(" destroy_requested for %s", cur->name);
         cur->destroy_requested = 1;
-        dpdk_tap_end_ovs();
         }
       }
     else if (!strcmp(line, "cloonixovs_resp_ovs_ok"))
@@ -795,7 +785,7 @@ void dpdk_ovs_end_vm_qmp_shutdown(char *name)
     {
     dpdk_dyn_end_vm_qmp_shutdown(name, vm->num, vm->base_spy);
     event_print("Free ovs vm %s %d", name, vm->num);
-    wrapper_vm_free(name, vm->num);
+    vm_free(name);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -832,7 +822,6 @@ void dpdk_ovs_end_vm(char *name, int num)
     KERR("%s", name);
     if (dpdk_dyn_del_all_lan(name))
       KERR("%s", name);
-    wrapper_vm_free(name, num);
     }
   else
     {
@@ -842,7 +831,7 @@ void dpdk_ovs_end_vm(char *name, int num)
       if (dpdk_dyn_del_all_lan(name))
         {
         KERR("%s", name);
-        wrapper_vm_free(name, num);
+        vm_free(name);
         }
       }
     }
@@ -903,7 +892,9 @@ char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_eth)
 int dpdk_ovs_still_present(void)
 {
   int result = 0;
-  if ((g_head_vm != NULL) || (g_head_ovs != NULL))
+  if ((g_head_vm != NULL) || 
+      (dpdk_tap_get_qty() != 0) ||
+      (g_head_ovs != NULL))
     result = 1;
   return result;
 }
@@ -1006,12 +997,15 @@ void dpdk_ovs_fill_eventfull(char *name, int num, int ms,
                              int ptx, int prx, int btx, int brx)
 {
   t_dpdk_vm *vm = vm_find(name);
-  vm->eth[num].ms      = ms;
-  vm->eth[num].pkt_tx  += ptx;
-  vm->eth[num].pkt_rx  += prx;
-  vm->eth[num].byte_tx += btx;
-  vm->eth[num].byte_rx += brx;
-  stats_counters_update_endp_tx_rx(name, num, ms, ptx, btx, prx, brx);
+  if (vm)
+    {
+    vm->eth[num].ms      = ms;
+    vm->eth[num].pkt_tx  += ptx;
+    vm->eth[num].pkt_rx  += prx;
+    vm->eth[num].byte_tx += btx;
+    vm->eth[num].byte_rx += brx;
+    stats_counters_update_endp_tx_rx(name, num, ms, ptx, btx, prx, brx);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1084,10 +1078,19 @@ int dpdk_ovs_exist_tap(char *name)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-void dpdk_ovs_evt_no_tap(void)
+/*****************************************************************************/
+void dpdk_ovs_urgent_client_destruct(void)
 {
-  test_and_end_ovs();
+  t_dpdk_vm *nvm, *vm = g_head_vm;
+  if (dpdk_tap_get_qty())
+    dpdk_tap_end_ovs();
+  while(vm)
+    {
+    KERR("%s", vm->name);
+    nvm = vm->next;
+    machine_death(vm->name, error_death_noovs);
+    vm = nvm;
+    }
 }
 /*--------------------------------------------------------------------------*/
 

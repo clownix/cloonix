@@ -26,6 +26,7 @@
 #include "event_subscriber.h"
 #include "llid_trace.h"
 #include "eventfull.h"
+#include "slowperiodic.h"
 #include "layout_topo.h"
 #include "file_read_write.h"
 #include "qmonitor.h"
@@ -402,6 +403,7 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
   qmp_event_free(llid);
   hop_event_free(llid);
   eventfull_llid_delete(llid);
+  slowperiodic_llid_delete(llid);
   layout_llid_destroy(llid);
   stats_counters_llid_close(llid);
   stats_counters_sysinfo_llid_close(llid);

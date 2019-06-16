@@ -1,6 +1,6 @@
 diff -Naur ovs/include/openvswitch/vlog.h ovs_tainted/include/openvswitch/vlog.h
---- ovs/include/openvswitch/vlog.h	2019-05-21 21:24:46.000000000 +0200
-+++ ovs_tainted/include/openvswitch/vlog.h	2019-05-25 17:53:18.123684656 +0200
+--- ovs/include/openvswitch/vlog.h	2019-06-15 12:10:31.000000000 +0200
++++ ovs_tainted/include/openvswitch/vlog.h	2019-06-15 13:13:01.871037757 +0200
 @@ -178,7 +178,7 @@
          static struct vlog_module this_module = {                       \
              OVS_LIST_INITIALIZER(&this_module.list),                    \
@@ -11,9 +11,34 @@ diff -Naur ovs/include/openvswitch/vlog.h ovs_tainted/include/openvswitch/vlog.h
              true                               /* honor_rate_limits */  \
          };                                                              \
 diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
---- ovs/lib/netdev-dpdk.c	2019-05-21 21:24:46.000000000 +0200
-+++ ovs_tainted/lib/netdev-dpdk.c	2019-05-25 17:53:18.123684656 +0200
-@@ -732,6 +732,7 @@
+--- ovs/lib/netdev-dpdk.c	2019-06-15 12:10:31.000000000 +0200
++++ ovs_tainted/lib/netdev-dpdk.c	2019-06-15 13:14:33.783877911 +0200
+@@ -83,12 +83,12 @@
+  * The minimum mbuf size is limited to avoid scatter behaviour and drop in
+  * performance for standard Ethernet MTU.
+  */
+-#define ETHER_HDR_MAX_LEN           (ETHER_HDR_LEN + ETHER_CRC_LEN \
++#define ETHER_HDR_MAX_LEN           (RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN \
+                                      + (2 * VLAN_HEADER_LEN))
+-#define MTU_TO_FRAME_LEN(mtu)       ((mtu) + ETHER_HDR_LEN + ETHER_CRC_LEN)
++#define MTU_TO_FRAME_LEN(mtu)       ((mtu) + RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN)
+ #define MTU_TO_MAX_FRAME_LEN(mtu)   ((mtu) + ETHER_HDR_MAX_LEN)
+ #define FRAME_LEN_TO_MTU(frame_len) ((frame_len)                    \
+-                                     - ETHER_HDR_LEN - ETHER_CRC_LEN)
++                                     - RTE_ETHER_HDR_LEN - RTE_ETHER_CRC_LEN)
+ #define NETDEV_DPDK_MBUF_ALIGN      1024
+ #define NETDEV_DPDK_MAX_PKT_LEN     9728
+ 
+@@ -593,7 +593,7 @@
+          * can change dynamically at runtime. For now, use this rough
+          * heurisitic.
+          */
+-        if (mtu >= ETHER_MTU) {
++        if (mtu >= RTE_ETHER_MTU) {
+             n_mbufs = MAX_NB_MBUF;
+         } else {
+             n_mbufs = MIN_NB_MBUF;
+@@ -731,6 +731,7 @@
  {
      struct dpdk_mp *dmp, *next;
      bool reuse = false;
@@ -21,9 +46,48 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
  
      ovs_mutex_lock(&dpdk_mp_mutex);
      /* Check if shared memory is being used, if so check existing mempools
-@@ -2030,8 +2031,8 @@
+@@ -908,7 +909,7 @@
+      * scatter to support jumbo RX.
+      * Setting scatter for the device is done after checking for
+      * scatter support in the device capabilites. */
+-    if (dev->mtu > ETHER_MTU) {
++    if (dev->mtu > RTE_ETHER_MTU) {
+         if (dev->hw_ol_features & NETDEV_RX_HW_SCATTER) {
+             conf.rxmode.offloads |= DEV_RX_OFFLOAD_SCATTER;
+         }
+@@ -1020,7 +1021,7 @@
  {
-     uint32_t pkt_len = rte_pktmbuf_pkt_len(pkt) - sizeof(struct ether_hdr);
+     struct rte_pktmbuf_pool_private *mbp_priv;
+     struct rte_eth_dev_info info;
+-    struct ether_addr eth_addr;
++    struct rte_ether_addr eth_addr;
+     int diag;
+     int n_rxq, n_txq;
+     uint32_t rx_chksm_offload_capa = DEV_RX_OFFLOAD_UDP_CKSUM |
+@@ -1145,7 +1146,7 @@
+     dev->port_id = port_no;
+     dev->type = type;
+     dev->flags = 0;
+-    dev->requested_mtu = ETHER_MTU;
++    dev->requested_mtu = RTE_ETHER_MTU;
+     dev->max_packet_len = MTU_TO_FRAME_LEN(dev->mtu);
+     dev->requested_lsc_interrupt_mode = 0;
+     ovsrcu_index_init(&dev->vid, -1);
+@@ -1661,7 +1662,7 @@
+     }
+ 
+     RTE_ETH_FOREACH_DEV (port_id) {
+-        struct ether_addr ea;
++        struct rte_ether_addr ea;
+ 
+         rte_eth_macaddr_get(port_id, &ea);
+         memcpy(port_mac.ea, ea.addr_bytes, ETH_ADDR_LEN);
+@@ -2030,10 +2031,10 @@
+                                struct rte_meter_srtcm_profile *profile,
+                                struct rte_mbuf *pkt, uint64_t time)
+ {
+-    uint32_t pkt_len = rte_pktmbuf_pkt_len(pkt) - sizeof(struct ether_hdr);
++    uint32_t pkt_len = rte_pktmbuf_pkt_len(pkt) - sizeof(struct rte_ether_hdr);
  
 -    return rte_meter_srtcm_color_blind_check(meter, profile, time, pkt_len) ==
 -                                             e_RTE_METER_GREEN;
@@ -32,7 +96,16 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
  }
  
  static int
-@@ -3446,18 +3447,18 @@
+@@ -2559,7 +2560,7 @@
+      * a method to retrieve the upper bound MTU for a given device.
+      */
+     if (MTU_TO_MAX_FRAME_LEN(mtu) > NETDEV_DPDK_MAX_PKT_LEN
+-        || mtu < ETHER_MIN_MTU) {
++        || mtu < RTE_ETHER_MIN_MTU) {
+         VLOG_WARN("%s: unsupported MTU %d\n", dev->up.name, mtu);
+         return EINVAL;
+     }
+@@ -3448,18 +3449,18 @@
          }
      }
  
@@ -64,8 +137,8 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
      free(enabled_queues);
  }
 diff -Naur ovs/lib/vlog.c ovs_tainted/lib/vlog.c
---- ovs/lib/vlog.c	2019-05-21 21:24:46.000000000 +0200
-+++ ovs_tainted/lib/vlog.c	2019-05-25 17:53:18.123684656 +0200
+--- ovs/lib/vlog.c	2019-06-15 12:10:31.000000000 +0200
++++ ovs_tainted/lib/vlog.c	2019-06-15 13:13:01.871037757 +0200
 @@ -572,7 +572,7 @@
              ovs_fatal(0, "processing \"%s\": %s", arg, msg);
          }
@@ -76,9 +149,9 @@ diff -Naur ovs/lib/vlog.c ovs_tainted/lib/vlog.c
  }
  
 diff -Naur ovs/ofproto/ofproto-dpif-xlate.c ovs_tainted/ofproto/ofproto-dpif-xlate.c
---- ovs/ofproto/ofproto-dpif-xlate.c	2019-05-21 21:24:46.000000000 +0200
-+++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2019-05-25 17:53:18.127684673 +0200
-@@ -4049,6 +4049,12 @@
+--- ovs/ofproto/ofproto-dpif-xlate.c	2019-06-15 12:10:31.000000000 +0200
++++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2019-06-15 13:13:01.871037757 +0200
+@@ -4061,6 +4061,12 @@
             xlate_report_error(ctx, "Cannot truncate output to patch port");
         }
         patch_port_output(ctx, xport, xport->peer);

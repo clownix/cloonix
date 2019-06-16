@@ -119,6 +119,20 @@
                          "ptx:%d prx:%d btx:%d brx:%d ms:%d \n"\
                          "</eventfull_endp>"
 /*---------------------------------------------------------------------------*/
+#define SLOWPERIODIC_SUB   "<slowperiodic_sub>\n"\
+                           "  <tid> %d </tid>\n"\
+                           "</slowperiodic_sub>"
+/*---------------------------------------------------------------------------*/
+#define SLOWPERIODIC_O     "<slowperiodic>\n"\
+                           "  <tid> %d </tid>\n"\
+                           "  nb:%d \n"
+
+#define SLOWPERIODIC_C     "</slowperiodic>"
+/*---------------------------------------------------------------------------*/
+#define SLOWPERIODIC_SPIC  "<slowperiodic_spic>\n"\
+                           "  name:%s \n"\
+                           "</slowperiodic_spic>"
+/*---------------------------------------------------------------------------*/
 #define ADD_VM_O         "<add_vm>\n"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\

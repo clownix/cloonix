@@ -74,6 +74,8 @@ void recv_event_spy(int llid, int tid, char *name, char *intf, char *dir,
                     int secs, int usecs, int len, char *msg){KOUT(" ");}
 void recv_eventfull_sub(int llid, int tid){KOUT(" ");}
 void recv_eventfull(int llid, int tid, int nb_endp, t_eventfull_endp *endp){KOUT(" ");} 
+void recv_slowperiodic_sub(int llid, int tid){KOUT(" ");}
+void recv_slowperiodic(int llid, int tid, int nb_endp, t_slowperiodic *spic){KOUT(" ");} 
 void recv_list_pid_req(int llid, int tid){KOUT(" ");}
 void recv_list_pid_resp(int llid, int tid, int qty, t_pid_lst *pid){KOUT(" ");}
 void recv_list_commands_req(int llid, int tid){KOUT(" ");}

@@ -61,6 +61,7 @@ SRC = \
       dpdk_msg.c \
       dpdk_fmt.c \
       dpdk_tap.c \
+      slowperiodic.c \
       unix2inet.c
 
 INCLUDES= -I./src \

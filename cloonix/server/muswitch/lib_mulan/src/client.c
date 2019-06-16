@@ -28,12 +28,14 @@
 #include "rank_mngt.h"
 #include "llid_rank.h"
 
+static int g_spy_llid;
  
+/*****************************************************************************/
 void linker_helper1_fct(void)
 {
-printf("useless");
+  printf("useless");
 }
-
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void rpct_recv_report(void *ptr, int llid, t_blkd_item *item)
@@ -78,6 +80,7 @@ void rpct_recv_kil_req(void *ptr, int llid, int tid)
 {
   KOUT(" ");
 }
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
@@ -138,6 +141,62 @@ void client_connect(void *ptr, int llid, int llid_new)
   if (!cloonix_llid)
     blkd_set_cloonix_llid(ptr, llid_new);
   msg_mngt_set_callbacks (all_ctx, llid_new, client_err_cb, client_rx_cb);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void spy_err_cb(void *ptr, int llid, int err, int from)
+{
+  int is_blkd;
+  t_all_ctx *all_ctx = (t_all_ctx *) ptr;
+  if (msg_exist_channel(all_ctx, llid, &is_blkd, __FUNCTION__))
+    msg_delete_channel(all_ctx, llid);
+  if (g_spy_llid == 0)
+    KERR(" ");
+  else
+    {
+    if (llid != g_spy_llid)
+      KERR("%d %d", llid, g_spy_llid);
+    else  
+      {
+      traf_chain_extract(llid);
+      g_spy_llid = 0;
+      KERR(" ");
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void spy_rx_cb(void *ptr, int llid)
+{
+  t_blkd *blkd;
+  blkd = blkd_get_rx(ptr, llid);
+  while(blkd)
+    {
+    KERR("%d", blkd->payload_len);
+    blkd_free(ptr, blkd);
+    blkd = blkd_get_rx(ptr, llid);
+    }
+  KERR(" ");
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void spy_traf_connection(void *ptr, int llid, int llidnew)
+{
+  t_all_ctx *all_ctx = (t_all_ctx *) ptr;
+  if (g_spy_llid == 0)
+    {
+    if (llidnew <= 0)
+      KOUT("%d", llidnew);
+    blkd_server_set_callbacks(all_ctx, llidnew, spy_rx_cb, spy_err_cb);
+    traf_chain_insert(llidnew);
+    g_spy_llid = llidnew;
+    KERR(" ");
+    }
+  else
+    KERR(" ");
 }
 /*---------------------------------------------------------------------------*/
 

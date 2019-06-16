@@ -70,6 +70,7 @@
 
 
 #define MAX_RPC_MSG_LEN 5000
+#define MAX_BULK_FILES 100
 
 #define MAX_CLOWNIX_BOUND_LEN      64
 #define MIN_CLOWNIX_BOUND_LEN      2

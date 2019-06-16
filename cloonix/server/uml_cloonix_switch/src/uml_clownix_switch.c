@@ -46,6 +46,7 @@
 #include "rpc_c2c.h"
 #include "layout_rpc.h"
 #include "eventfull.h"
+#include "slowperiodic.h"
 #include "file_read_write.h"
 #include "utils_cmd_line_maker.h"
 #include "layout_topo.h"
@@ -580,6 +581,7 @@ int main (int argc, char *argv[])
   doorways_init(cfg_get_root_work(), cfg_get_server_port(), 
                 g_cloonix_conf_info->passwd);
   eventfull_init();
+  slowperiodic_init();
   if (!file_exists(get_doorways_bin(), X_OK))
     {
     printf("\n\nFile: \"%s\" not found or not executable\n\n", 

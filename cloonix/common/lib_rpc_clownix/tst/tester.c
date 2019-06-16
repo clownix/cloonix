@@ -69,6 +69,9 @@ static int count_vmcmd=0;
 
 static int count_eventfull=0;
 static int count_eventfull_sub=0;
+static int count_slowperiodic=0;
+static int count_slowperiodic_sub=0;
+
 static int count_mucli_dialog_req = 0;
 static int count_mucli_dialog_resp = 0;
 
@@ -140,6 +143,8 @@ static void print_all_count(void)
   printf("%d\n", count_vmcmd);
   printf("%d\n", count_eventfull_sub);
   printf("%d\n", count_eventfull);
+  printf("%d (slow)\n", count_slowperiodic_sub);
+  printf("%d (slow)\n", count_slowperiodic);
   printf("%d\n", count_sav_vm);
   printf("%d\n", count_sav_vm_all);
 
@@ -2278,8 +2283,6 @@ void recv_vmcmd(int llid, int itid, char *iname, int icmd, int iparam)
 }
 /*---------------------------------------------------------------------------*/
 
-
-
 /*****************************************************************************/
 void recv_eventfull_sub(int llid, int itid)
 {
@@ -2330,6 +2333,55 @@ void recv_eventfull(int llid, int itid, int inb_endp, t_eventfull_endp *iendp)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+void recv_slowperiodic_sub(int llid, int itid)
+{
+  static int tid;
+  if (i_am_client)
+    {
+    if (count_slowperiodic_sub)
+      {
+      if (itid != tid)
+        KOUT(" ");
+      }
+    tid = rand();
+    send_slowperiodic_sub(llid, tid);
+    }
+  else
+    send_slowperiodic_sub(llid, itid);
+  count_slowperiodic_sub++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_slowperiodic(int llid, int itid, int inb, t_slowperiodic *ispic)
+{
+  int i;
+  static int nb, tid;
+  static t_slowperiodic spic[MAX_TEST_TUX];
+  if (i_am_client)
+    {
+    if (count_slowperiodic)
+      {
+      if (itid != tid)
+        KOUT(" ");
+      if (inb != nb)
+        KOUT(" ");
+      if (memcmp(spic, ispic, nb * sizeof(t_slowperiodic)))
+        KOUT(" ");
+      }
+    tid = rand();
+    nb = rand() % MAX_TEST_TUX;
+    memset(spic, 0, MAX_TEST_TUX * sizeof(t_slowperiodic));
+    for (i=0; i<nb; i++)
+      random_choice_str(spic[i].name, MAX_NAME_LEN);
+    send_slowperiodic(llid, tid, nb, spic);
+    }
+  else
+    send_slowperiodic(llid, itid, inb, ispic);
+  count_slowperiodic++;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void recv_mucli_dialog_req(int llid, int itid, char *iname, int ieth, 
@@ -2518,6 +2570,8 @@ static void send_first_burst(int llid)
   recv_vmcmd(llid, 0, NULL, 0, 0);
   recv_eventfull_sub(llid, 0);
   recv_eventfull(llid, 0, 0, NULL);
+  recv_slowperiodic_sub(llid, 0);
+  recv_slowperiodic(llid, 0, 0, NULL);
   recv_sav_vm(llid, 0, NULL, 0, NULL);
   recv_sav_vm_all(llid, 0, 0, NULL);
   recv_mucli_dialog_req(llid, 0, NULL, 0, NULL);

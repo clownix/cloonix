@@ -1,19 +1,25 @@
-diff -Naur dpdk/drivers/net/tap/rte_eth_tap.c dpdk_tainted/drivers/net/tap/rte_eth_tap.c
---- dpdk/drivers/net/tap/rte_eth_tap.c	2019-05-21 21:25:10.000000000 +0200
-+++ dpdk_tainted/drivers/net/tap/rte_eth_tap.c	2019-05-23 01:21:05.219187865 +0200
-@@ -926,7 +926,8 @@
- 	dev_info->max_mac_addrs = 1;
- 	dev_info->max_rx_pktlen = (uint32_t)ETHER_MAX_VLAN_FRAME_LEN;
- 	dev_info->max_rx_queues = RTE_PMD_TAP_MAX_QUEUES;
--	dev_info->max_tx_queues = RTE_PMD_TAP_MAX_QUEUES;
-+//	dev_info->max_tx_queues = RTE_PMD_TAP_MAX_QUEUES;
-+	dev_info->max_tx_queues = 1;
- 	dev_info->min_rx_bufsize = 0;
- 	dev_info->speed_capa = tap_dev_speed_capa();
- 	dev_info->rx_queue_offload_capa = tap_rx_offload_get_queue_capa();
+diff -Naur dpdk/drivers/net/tap/rte_eth_tap.h dpdk_tainted/drivers/net/tap/rte_eth_tap.h
+--- dpdk/drivers/net/tap/rte_eth_tap.h	2019-05-25 18:48:13.000000000 +0200
++++ dpdk_tainted/drivers/net/tap/rte_eth_tap.h	2019-05-28 14:52:48.381979132 +0200
+@@ -18,11 +18,11 @@
+ #include <rte_gso.h>
+ #include "tap_log.h"
+ 
+-#ifdef IFF_MULTI_QUEUE
+-#define RTE_PMD_TAP_MAX_QUEUES	TAP_MAX_QUEUES
+-#else
++// #ifdef IFF_MULTI_QUEUE
++// #define RTE_PMD_TAP_MAX_QUEUES	TAP_MAX_QUEUES
++// #else
+ #define RTE_PMD_TAP_MAX_QUEUES	1
+-#endif
++// #endif
+ #define MAX_GSO_MBUFS 64
+ 
+ enum rte_tuntap_type {
 diff -Naur dpdk/lib/librte_eal/linux/eal/eal.c dpdk_tainted/lib/librte_eal/linux/eal/eal.c
---- dpdk/lib/librte_eal/linux/eal/eal.c	2019-05-21 21:25:10.000000000 +0200
-+++ dpdk_tainted/lib/librte_eal/linux/eal/eal.c	2019-05-23 01:15:18.577669016 +0200
+--- dpdk/lib/librte_eal/linux/eal/eal.c	2019-05-25 18:48:13.000000000 +0200
++++ dpdk_tainted/lib/librte_eal/linux/eal/eal.c	2019-05-28 14:51:27.653977216 +0200
 @@ -109,13 +109,13 @@
  	char tmp[PATH_MAX];
  	int ret;

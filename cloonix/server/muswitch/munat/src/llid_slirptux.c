@@ -128,7 +128,7 @@ int llid_clo_data_rx_possible(t_tcp_id *tcpid)
     if (msg_exist_channel(get_all_ctx(), tcpid->llid, &is_blkd, __FUNCTION__))
       {
       if ((tcpid->llid_unlocked) &&
-          (msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid) < 5000))
+          (msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid) < 20000))
         result = 1; 
       else
         KERR("%d", msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid));

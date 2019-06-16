@@ -309,7 +309,7 @@ static void recv_ack(int is_add, int is_ko,
           if (is_ko)
             send_status_ko(lan->llid, lan->tid, lab);
           else
-            send_status_ok(lan->llid, lan->tid, lab);
+            send_status_ok(lan->llid, lan->tid, "OK");
           }
         else
           KERR("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);

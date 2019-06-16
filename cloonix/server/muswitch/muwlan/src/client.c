@@ -207,3 +207,4 @@ void client_connect(void *ptr, int llid, int llid_new)
   msg_mngt_set_callbacks (all_ctx, llid_new, client_err_cb, client_rx_cb);
 }
 /*---------------------------------------------------------------------------*/
+

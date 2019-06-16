@@ -144,6 +144,7 @@ void usage(char *name)
   printf("\n%s <distro> <lang>", name);
   printf("\n<lang> can be \"us\" or \"fr\", it is for the keyboard conf");
   printf("\n <distro> can be:");
+  printf("\n                  csr1000v");
   printf("\n                  buster");
   printf("\n                  stretch");
   printf("\n                  opensuse");
@@ -178,7 +179,9 @@ int main(int argc, char *argv[])
   g_lang_distro = 0;
   if (argc != 3)
     usage(argv[0]);
-  if (!strcmp(argv[1], "buster"))
+  if (!strcmp(argv[1], "csr1000v"))
+    g_type_distro = type_csr1000v;
+  else if (!strcmp(argv[1], "buster"))
     g_type_distro = type_buster;
   else if (!strcmp(argv[1], "stretch"))
     g_type_distro = type_stretch;

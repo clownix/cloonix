@@ -831,6 +831,7 @@ static void send_all_data_to_send(void)
 static void clo_clean_closed(void)
 {
   t_clo *next, *cur = get_head_clo();
+  t_clo tmp;
   while (cur)
     {
     next = cur->next;
@@ -839,15 +840,16 @@ static void clo_clean_closed(void)
       cur->closed_state_count -= 1;
       if (cur->closed_state_count == 0) 
         {
+        memcpy(&tmp, cur, sizeof(t_clo));
         if (clo_mngt_delete_tcp(cur))
           {
           async_fct_call(num_fct_high_close_rx_send_rst, 
-                         cur->id_tcpid, &(cur->tcpid), 0, NULL);
+                         tmp.id_tcpid, &(tmp.tcpid), 0, NULL);
           }
         else
           {
           async_fct_call(num_fct_high_close_rx,
-                         cur->id_tcpid, &(cur->tcpid), 0, NULL);
+                         tmp.id_tcpid, &(tmp.tcpid), 0, NULL);
           }
         }
       }

@@ -187,62 +187,62 @@ void dpdk_fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
       "KO cloonixovs_add_eth name=%s num=%d", name, &num) == 2)
     {
     KERR("%s", line);
-    dpdk_msg_ack_eth(tid, name, num, 1, 1, "cloonixovs");
+    dpdk_msg_ack_eth(tid, name, num, 1, 1, "KO");
     }
   else if (sscanf(line,
       "OK cloonixovs_add_eth name=%s num=%d", name, &num) == 2)
     {
-    dpdk_msg_ack_eth(tid, name, num, 1, 0, "cloonixovs");
+    dpdk_msg_ack_eth(tid, name, num, 1, 0, "OK");
     }
   else if (sscanf(line,
       "KO cloonixovs_del_eth name=%s num=%d", name, &num) == 2)
     {
     KERR("%s", line);
-    dpdk_msg_ack_eth(tid, name, num, 0, 1, "cloonixovs");
+    dpdk_msg_ack_eth(tid, name, num, 0, 1, "KO");
     }
   else if (sscanf(line,
       "OK cloonixovs_del_eth name=%s num=%d", name, &num) == 2)
     {
-    dpdk_msg_ack_eth(tid, name, num, 0, 0, "cloonixovs");
+    dpdk_msg_ack_eth(tid, name, num, 0, 0, "OK");
     }
   else if (sscanf(line,
       "KO cloonixovs_add_lan lan_name=%s spy=%d", lan_name, &spy) == 2)
     {
     KERR("%s", line);
-    dpdk_msg_ack_lan(tid, lan_name, 1, 1, "cloonixovs");
+    dpdk_msg_ack_lan(tid, lan_name, 1, 1, "KO");
     }
   else if (sscanf(line,
       "OK cloonixovs_add_lan lan_name=%s spy=%d", lan_name, &spy) == 2)
     {
-    dpdk_msg_ack_lan(tid, lan_name, 1, 0, "cloonixovs");
+    dpdk_msg_ack_lan(tid, lan_name, 1, 0, "OK");
     }
   else if (sscanf(line,
       "KO cloonixovs_del_lan lan_name=%s spy=%d", lan_name, &spy) == 2)
     {
     KERR("%s", line);
-    dpdk_msg_ack_lan(tid, lan_name, 0, 1, "cloonixovs");
+    dpdk_msg_ack_lan(tid, lan_name, 0, 1, "KO");
     }
   else if (sscanf(line,
       "OK cloonixovs_del_lan lan_name=%s spy=%d", lan_name, &spy) == 2)
     {
-    dpdk_msg_ack_lan(tid, lan_name, 0, 0, "cloonixovs");
+    dpdk_msg_ack_lan(tid, lan_name, 0, 0, "OK");
     }
   else if (sscanf(line,
       "KO cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
       lan_name, name, &num) == 3)
-    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 1, 1, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 1, 1, "KO");
   else if (sscanf(line,
       "OK cloonixovs_add_lan_eth lan_name=%s name=%s num=%d",
       lan_name, name, &num) == 3)
-    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 1, 0, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 1, 0, "OK");
   else if (sscanf(line,
       "KO cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
       lan_name, name, &num) == 3)
-    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 0, 1, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 0, 1, "KO");
   else if (sscanf(line,
        "OK cloonixovs_del_lan_eth lan_name=%s name=%s num=%d",
       lan_name, name, &num) == 3)
-    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 0, 0, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, num, 0, 0, "OK");
   else if (sscanf(line, "OK cloonixovs_add_tap name=%s", name) == 1)
     dpdk_tap_resp_add(0, name);
   else if (sscanf(line, "KO cloonixovs_add_tap name=%s", name) == 1)
@@ -251,16 +251,16 @@ void dpdk_fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
     dpdk_tap_resp_del(name);
   else if (sscanf(line, "OK cloonixovs_add_lan_tap lan_name=%s name=%s",
                          lan_name, name) == 2)
-    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 1, 0, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 1, 0, "OK");
   else if (sscanf(line, "KO cloonixovs_add_lan_tap lan_name=%s name=%s",
                          lan_name, name) == 2)
-    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 1, 1, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 1, 1, "KO");
   else if (sscanf(line, "OK cloonixovs_del_lan_tap lan_name=%s name=%s", 
                          lan_name, name) == 2)
-    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 0, 0, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 0, 0, "OK");
   else if (sscanf(line, "KO cloonixovs_del_lan_tap lan_name=%s name=%s",
                          lan_name, name) == 2)
-    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 0, 1, "cloonixovs");
+    dpdk_msg_ack_lan_endp(tid, lan_name, name, 0, 0, 1, "KO");
   else
     KERR("%s", line);
 }

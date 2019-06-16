@@ -22,6 +22,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <libgen.h>
+
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
@@ -638,10 +640,29 @@ void mulan_err_cb (int llid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void get_spy_with_path(char *spy_path, char *path)
+{
+  char *dirc, *basec, *bname, *dname;
+  dirc = strdup(path);
+  basec = strdup(path);
+  dname = dirname(dirc);
+  bname = basename(basec);
+  if (strlen(dname) + strlen("spy_") + strlen(bname) + 3 >= MAX_PATH_LEN)
+    KOUT("%s/spy_%s", dname, bname);
+  memset(spy_path, 0, MAX_PATH_LEN);
+  snprintf(spy_path, MAX_PATH_LEN-1, "%s/spy_%s", dname, bname);
+  free(dirc);
+  free(basec);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void mulan_death(void *data, int status, char *lan)
 {
   t_mulan_arg *mu = (t_mulan_arg *) data;
   t_mulan *mulan = mulan_find_with_name(mu->lan);
+  char spy_path[MAX_PATH_LEN];
+
   if (strcmp(lan, mu->lan))
     KOUT("%s %s", lan, mu->lan);
   event_print("End muswitch %s", lan);
@@ -653,6 +674,8 @@ static void mulan_death(void *data, int status, char *lan)
       llid_trace_free(mulan->llid, 0, __FUNCTION__);
     endp_evt_mulan_death(mulan->lan);
     unlink(mulan->sock);
+    get_spy_with_path(spy_path, mulan->sock);
+    unlink(spy_path);
     if (!mulan->is_wlan)
       unlink(mulan->traf);
     if (mulan->prev)
@@ -767,7 +790,9 @@ void mulan_test_stop(char *lan)
   if (mulan)
     {
     if (!endp_evt_lan_is_in_use(lan))
+      {
       mulan_request_quit(mulan);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

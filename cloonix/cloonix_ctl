@@ -1,7 +1,51 @@
 #!/bin/bash
-export OVS_BINDIR="/usr/local/bin/cloonix/server/dpdk"
-export OVS_RUNDIR="${HOME}/cloonix_data/nemo/dpdk"
-export OVS_LOGDIR="${HOME}/cloonix_data/nemo/dpdk"
-export OVS_DBDIR="${HOME}/cloonix_data/nemo/dpdk"
-export XDG_RUNTIME_DIR="${HOME}/cloonix_data/nemo/dpdk"
+set -e
+if [ -z $CLOONIX_CONFIG ]; then
+  CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
+fi
+
+if [ ! -f $CLOONIX_CONFIG ]; then
+  echo "ERROR: $CLOONIX_CONFIG not found"
+  exit 1
+fi
+CLOONIX_TREE=$(cat $CLOONIX_CONFIG |grep  CLOONIX_TREE | awk -F = '{print $2}')
+
+if [ ! -d ${CLOONIX_TREE} ]; then
+  echo "ERROR: ${CLOONIX_TREE} not found"
+  exit 1
+fi
+
+CLOONIX_WORK=$(cat $CLOONIX_CONFIG |grep CLOONIX_WORK | awk -F = '{print $2}')
+CLOONIX_WORK=$(eval echo $CLOONIX_WORK)
+
+LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
+
+if (( ${#} < 1 )); then
+  echo  cloonix_name needed as parameter.
+  echo $LIST
+  exit 1
+fi
+
+cloonix_name=$1
+found=no
+for i in $LIST ; do
+  if [ "$cloonix_name" == "$i" ]; then
+    found=yes
+  fi
+done
+
+if [ "$found" == "no" ]; then
+  echo "ERROR: $cloonix_name not found in $CLOONIX_CONFIG"
+  echo $LIST
+  exit 1
+fi
+
+shift 1
+
+export OVS_BINDIR="${CLOONIX_TREE}/server/dpdk"
+DPDK_WORK="${CLOONIX_WORK}/${cloonix_name}/dpdk"
+export OVS_RUNDIR=${DPDK_WORK}
+export OVS_LOGDIR=${DPDK_WORK}
+export OVS_DBDIR=${DPDK_WORK}
+export XDG_RUNTIME_DIR=${DPDK_WORK}
 sudo ${OVS_BINDIR}/bin/ovs-vsctl --db=unix:${OVS_DBDIR}/ovsdb_server.sock "$@"

@@ -206,8 +206,6 @@ static void free_dtap(char *name)
       g_head_dtap = dtap->next;
     clownix_free(dtap, __FUNCTION__);
     }
-  if (g_head_dtap == NULL)
-    dpdk_ovs_evt_no_tap();
   event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
@@ -686,7 +684,7 @@ void dpdk_tap_end_ovs(void)
     cur = dtap->head_lan;
     while(cur)
       {
-      if (dpdk_fmt_tx_del_lan_tap(0, cur->lan, dtap->name))
+      if (dpdk_msg_send_del_lan_tap(cur->lan, dtap->name))
         KERR("%s %s", cur->lan, dtap->name);
       cur = cur->next;
       }

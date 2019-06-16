@@ -636,7 +636,9 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       kill(g_ovs_pid, SIGKILL);
     if (g_ovsdb_pid)
       kill(g_ovsdb_pid, SIGKILL);
+    usleep(10000);
     unlink_dir(g_dpdk_dir);
+    KERR("Done processing ovs Destroy request");
     sync();
     exit(0);
     }

@@ -42,6 +42,8 @@ typedef void (*t_eventfull_cb)(int nb_endp, t_eventfull_endp *endp);
 typedef void (*t_hop_event_cb)(int tid, char *name, char *txt);
 typedef void (*t_hop_name_list_cb)(int nb, t_hop_list *list);
 
+typedef void (*t_slowperiodic_cb)(int nb, t_slowperiodic *spic);
+
 /*---------------------------------------------------------------------------*/
 
 void client_init(char *name, char *path, char *password);
@@ -109,7 +111,7 @@ void client_sav_list_commands(int tid, t_list_commands_cb cb, char *dirpath);
 void client_req_pids(int tid, t_pid_cb cb);
 
 void client_req_eventfull(t_eventfull_cb cb);
-
+void client_req_slowperiodic(t_slowperiodic_cb cb);
 
 int cmd_ftopo_recv(char *topo_dir, t_progress_txt_cb pcb);
 

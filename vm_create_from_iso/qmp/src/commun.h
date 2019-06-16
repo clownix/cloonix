@@ -34,6 +34,7 @@ enum {
 
 enum {
   type_none = 0, 
+  type_csr1000v, 
   type_buster, 
   type_stretch, 
   type_ubuntu,

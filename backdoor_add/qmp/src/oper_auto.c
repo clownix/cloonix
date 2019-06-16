@@ -67,6 +67,14 @@ static void init_lines_start(void)
   strcpy(g_lines[g_i++], "cat /etc/systemd/system/getty.target.wants/"
                          "serial-getty@hvc0.service");
 
+  strcpy(g_lines[g_i++], "echo \"GRUB_CMDLINE_LINUX_DEFAULT=\\\"noquiet "
+                         "console=ttyS0 console=tty1 earlyprintk=serial "
+                         "net.ifnames=0\\\"\" >> /etc/default/grub");
+
+  strcpy(g_lines[g_i++], "grub-mkconfig -o /boot/grub/grub.cfg");
+
+  strcpy(g_lines[g_i++], "sync");
+
   strcpy(g_lines[g_i++], "shutdown now");
 
   g_max_lines = g_i;
@@ -200,7 +208,8 @@ void oper_automate_rx_msg(int type_rx_msg, char *qmp_string)
         key = g_lines[g_count_lines][g_count_keys];
         if (!key)
           {
-printf("sending %c\n", key);
+          printf("\n");
+          printf("Waiting 6 secs...\n");
           qmp_send(QMP_SENDKEY_RET);
           g_count_lines += 1;
           g_count_keys = 0;
@@ -211,6 +220,8 @@ printf("sending %c\n", key);
           usleep(100000);
           send_char_qmp(key);
           g_count_keys += 1;
+          printf("%c", key);
+          fflush(stdout);
           }
         if (g_count_lines == g_max_lines)
           set_g_state(state_end_oper_setup);

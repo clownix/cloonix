@@ -15,8 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void eventfull_llid_delete(int llid);
-void eventfull_init(void);
+void slowperiodic_llid_delete(int llid);
+void slowperiodic_init(void);
 /*---------------------------------------------------------------------------*/
 
 

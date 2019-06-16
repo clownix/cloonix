@@ -75,6 +75,8 @@ enum
   bnd_vmcmd,
   bnd_eventfull_sub,
   bnd_eventfull,
+  bnd_slowperiodic_sub,
+  bnd_slowperiodic,
   bnd_mucli_dialog_req,
   bnd_mucli_dialog_resp,
   bnd_sub_evt_stats_endp,
@@ -1663,6 +1665,46 @@ static void helper_eventfull_endp(char *msg, int nb, t_eventfull_endp *endp)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void send_slowperiodic_sub(int llid, int tid)
+{
+  int len = 0;
+  len = sprintf(sndbuf, SLOWPERIODIC_SUB, tid);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_slowperiodic(int llid, int tid, int nb, t_slowperiodic *spic)
+{
+  int i, len = 0;
+  len += sprintf(sndbuf+len, SLOWPERIODIC_O, tid, nb);
+  for (i=0; i<nb; i++)
+    len += sprintf(sndbuf+len, SLOWPERIODIC_SPIC, spic[i].name);
+  len += sprintf(sndbuf+len, SLOWPERIODIC_C);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void helper_slowperiodic(char *msg, int nb, t_slowperiodic *spic)
+{
+  char *ptr = msg;
+  int i;
+  for (i=0; i<nb; i++)
+    {
+    ptr = strstr (ptr, "<slowperiodic_spic>");
+    if (!ptr)
+      KOUT("%s", msg);
+    if (sscanf(ptr, SLOWPERIODIC_SPIC, spic[i].name) != 1)
+      KOUT("%s", msg);
+    ptr = strstr (ptr, "</slowperiodic_spic>");
+    if (!ptr)
+      KOUT("%s", msg);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void helper_fill_blkd_reports(char *msg, t_blkd_reports *blkd)
 {
   char *ptr = msg;
@@ -1787,12 +1829,13 @@ static char *extract_rpc_msg(char *msg, char *bound)
 /*****************************************************************************/
 static void dispatcher(int llid, int bnd_evt, char *msg)
 {
-  int len, nb_endp, flags_hop, num;
+  int len, nb, flags_hop, num;
   int vmcmd, param, status, sub;
   int mutype, type, eth, qty, tid; 
   t_topo_clc  icf;
   t_topo_clc  cf;
   t_eventfull_endp *eventfull_endp;
+  t_slowperiodic *slowperiodic;
   char *parm1, *parm2;
   t_topo_kvm ikvm;
   t_topo_kvm kvm;
@@ -2161,14 +2204,31 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       break;
 
     case bnd_eventfull:
-      if (sscanf(msg, EVENTFULL_O, &tid, &nb_endp) != 2)
+      if (sscanf(msg, EVENTFULL_O, &tid, &nb) != 2)
         KOUT("%s", msg);
-      len = nb_endp * sizeof(t_eventfull_endp);
+      len = nb * sizeof(t_eventfull_endp);
       eventfull_endp = (t_eventfull_endp *)clownix_malloc(len, 23); 
       memset(eventfull_endp, 0, len);
-      helper_eventfull_endp(msg, nb_endp, eventfull_endp);
-      recv_eventfull(llid, tid, nb_endp, eventfull_endp); 
+      helper_eventfull_endp(msg, nb, eventfull_endp);
+      recv_eventfull(llid, tid, nb, eventfull_endp); 
       clownix_free(eventfull_endp, __FUNCTION__);
+      break;
+
+    case bnd_slowperiodic_sub:
+      if (sscanf(msg, SLOWPERIODIC_SUB, &tid) != 1)
+        KOUT("%s", msg);
+      recv_slowperiodic_sub(llid, tid);
+      break;
+
+    case bnd_slowperiodic:
+      if (sscanf(msg, SLOWPERIODIC_O, &tid, &nb) != 2)
+        KOUT("%s", msg);
+      len = nb * sizeof(t_slowperiodic);
+      slowperiodic = (t_slowperiodic *)clownix_malloc(len, 23);
+      memset(slowperiodic, 0, len);
+      helper_slowperiodic(msg, nb, slowperiodic);
+      recv_slowperiodic(llid, tid, nb, slowperiodic);
+      clownix_free(slowperiodic, __FUNCTION__);
       break;
 
     case bnd_qmp_all_sub:
@@ -2347,6 +2407,8 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary (VMCMD, bound_list[bnd_vmcmd]);
   extract_boundary (EVENTFULL_SUB, bound_list[bnd_eventfull_sub]);
   extract_boundary (EVENTFULL_O, bound_list[bnd_eventfull]);
+  extract_boundary (SLOWPERIODIC_SUB, bound_list[bnd_slowperiodic_sub]);
+  extract_boundary (SLOWPERIODIC_O, bound_list[bnd_slowperiodic]);
   extract_boundary (MUCLI_DIALOG_REQ_O, bound_list[bnd_mucli_dialog_req]);
   extract_boundary (MUCLI_DIALOG_RESP_O, bound_list[bnd_mucli_dialog_resp]);
   extract_boundary (SUB_EVT_STATS_ENDP, bound_list[bnd_sub_evt_stats_endp]);

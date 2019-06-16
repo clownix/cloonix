@@ -30,5 +30,8 @@ int  llid_rank_traf_connect(t_all_ctx *all_ctx, int llid,
                             char *name, int num, int tidx);
 int get_llid_traf_tab(t_all_ctx *all_ctx, int llid, int32_t **llid_tab);
 /*---------------------------------------------------------------------------*/
+void traf_chain_insert(int llid);
+void traf_chain_extract(int llid);
+/*---------------------------------------------------------------------------*/
 void init_llid_rank(void);
 /*---------------------------------------------------------------------------*/

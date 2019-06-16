@@ -1,8 +1,26 @@
 #!/bin/bash
-NET=nemo
+HERE=`pwd`
+NET=$1
 NAME=cloon
 CLOONIX=/home/cloonix
-TARGET=$1
+TARGET=$2
+
+case "${NET}" in
+  "nemo")
+  ;;
+  "mito")
+  ;;
+  "fido")
+  ;;
+  "pipo")
+  ;;
+  *)
+  echo Missing param 1:
+  echo nemo mito fido pipo
+  exit 1
+  ;;
+esac
+
 case "${TARGET}" in
   "xubuntu_fr")
   ;;
@@ -25,7 +43,7 @@ case "${TARGET}" in
   "opensuseweed_fr")
   ;;
   *)
-  echo Missing param:
+  echo Missing param 2:
   echo redhat8_fr centos8_fr fedora30_fr
   echo ubuntu-18.04_fr ubuntu-19.04_fr stretch_fr buster_fr
   echo opensuse15_fr opensuseweed_fr
@@ -87,11 +105,13 @@ while ! cloonix_ssh $NET ${NAME} "echo" 2>/dev/null; do
 done
 set -e
 #----------------------------------------------------------------------
-
-#######################################################################
-tar zcvf /tmp/sources.tar.gz ../../sources
-cloonix_scp $NET /tmp/sources.tar.gz ${NAME}:${CLOONIX}
-rm /tmp/sources.tar.gz
+cd ${HERE}/..
+./allclean
+mkdir -p /tmp/${NET}
+tar zcvf /tmp/${NET}/sources.tar.gz ${HERE}/../../sources
+cloonix_scp $NET /tmp/${NET}/sources.tar.gz ${NAME}:${CLOONIX}
+rm -rf /tmp/${NET}
+cd ${HERE}
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "mkdir -p ${CLOONIX}/cloonix_data/bulk"
 cloonix_scp $NET ${BULK}/buster.qcow2 ${NAME}:${CLOONIX}/cloonix_data/bulk

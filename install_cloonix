@@ -13,11 +13,13 @@ if [ ! -e $CLOONIX ]; then
   exit
 fi
 #----------------------------------------------------------
-rm -f /usr/local/bin/cloonix/cloonix_config
-rm -f /usr/local/bin/cloonix/LICENCE
-rm -rf /usr/local/bin/cloonix/client
-rm -rf /usr/local/bin/cloonix/server
-rm -rf /usr/local/bin/cloonix/common
+for i in cloonix_dta cloonix_mon cloonix_osh cloonix_xwy \
+         cloonix_cli cloonix_gui cloonix_net cloonix_scp \
+         cloonix_zor cloonix_ctl cloonix_ice cloonix_ocp \
+         cloonix_ssh; do 
+  rm -f /usr/local/bin/${i}
+done
+rm -rf /usr/local/bin/cloonix
 mkdir -p /usr/local/bin
 cd /usr/local/bin
 tar zxvf ${HERE}/${CLOONIX}
@@ -31,4 +33,6 @@ USBHELP+=/spice_lib/spice-client-glib-usb-acl-helper
 if [ -e ${USBHELP} ]; then
   chmod u+s ${USBHELP}
 fi
+#----------------------------------------------------------
+rm -f ${HERE}/${CLOONIX}
 #----------------------------------------------------------

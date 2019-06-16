@@ -37,6 +37,7 @@
 #include "utils.h"
 
 int check_before_start_launch(char **argv);
+void set_bulkvm(int nb, t_slowperiodic *slowperiodic);
 
 /*---------------------------------------------------------------------------*/
 typedef struct t_vm_config
@@ -168,6 +169,13 @@ static void timeout_eventfull(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void slowperiodic_cb(int nb, t_slowperiodic *spic)
+{
+  set_bulkvm(nb, spic);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void eventfull_cb(int nb_endp, t_eventfull_endp *endp)
 {
   t_eventfull *eventfull;
@@ -220,6 +228,7 @@ void timer_topo_subscribe(void *data)
   client_topo_small_event_sub(0, topo_small_event_cb);
   layout_set_ready_for_send();
   client_req_eventfull(eventfull_cb);
+  client_req_slowperiodic(slowperiodic_cb);
 }
 /*--------------------------------------------------------------------------*/
 

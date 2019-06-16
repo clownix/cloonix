@@ -39,12 +39,11 @@ int g_llid_unix_sock_traf_nb;
 
 
 /*****************************************************************************/
-static void traf_chain_insert(int llid)
+void traf_chain_insert(int llid)
 {
   t_unix_traf_chain *cur;
   if (llid <= 0)
     KOUT(" ");
-
   cur = g_unix_traf_chain_head;
   while (cur)
     {
@@ -52,7 +51,6 @@ static void traf_chain_insert(int llid)
       break;
     cur = cur->next;
     }
-
   if (cur)
     KOUT(" ");
   cur = (t_unix_traf_chain *) malloc(sizeof(t_unix_traf_chain));
@@ -63,12 +61,11 @@ static void traf_chain_insert(int llid)
   cur->next = g_unix_traf_chain_head;
   g_unix_traf_chain_head = cur;
   g_llid_unix_sock_traf_nb += 1;
-
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void traf_chain_extract(int llid)
+void traf_chain_extract(int llid)
 {
   t_unix_traf_chain *cur;
   if (llid <= 0)
@@ -95,7 +92,6 @@ static void traf_chain_extract(int llid)
     free(cur);
     g_llid_unix_sock_traf_nb -= 1;
     }
-
 }
 /*---------------------------------------------------------------------------*/
 
