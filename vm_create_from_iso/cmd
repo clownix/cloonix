@@ -1,8 +1,0 @@
-#!/bin/bash
-HERE=`pwd`
-rm -f qmp_cnf
-cd qmp
-make clean
-make
-mv qmp_cnf $HERE
-make clean

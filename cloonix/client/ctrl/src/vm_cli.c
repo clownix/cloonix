@@ -176,6 +176,10 @@ static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
       {
       prop_flags |= VM_CONFIG_FLAG_CISCO;
       }
+    else if (!strcmp(argv[i], "--vmware"))
+      {
+      prop_flags |= VM_CONFIG_FLAG_VMWARE;
+      }
     else if (!strncmp(argv[i], "--mac_addr=eth", strlen("--mac_addr=eth")))
       {
       if (fill_eth_params_from_argv(argv[i], eth, eth_params))

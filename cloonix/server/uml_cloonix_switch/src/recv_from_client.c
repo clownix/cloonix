@@ -1076,6 +1076,13 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
     event_print("%s", info);
     send_status_ko(llid, tid, info);
     }
+  else if ((kvm->vm_config_flags & VM_CONFIG_FLAG_VMWARE) &&
+           ((kvm->nb_eth != 3) || (kvm->nb_dpdk != 0))) 
+    {
+    sprintf( info, "Hardcoded 3 eth in VMWARE TYPE for  \"%s\"", kvm->name);
+    event_print("%s", info);
+    send_status_ko(llid, tid, info);
+    }
   else
     {
     cfg_add_newborn(kvm->name);

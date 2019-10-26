@@ -242,6 +242,8 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
       break;
 
     case msg_type_x11_init:
+      if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+        KOUT("%d %s", srv_idx, msg->buf);
       x11_init_resp(srv_idx, msg);
       send_msg_type_open_pty(g_action, g_randid, srv_idx, g_bash_cmd);
       if ((g_action == action_bash) || 
@@ -255,6 +257,8 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
     case msg_type_x11_info_flow:
     case msg_type_x11_connect:
     case msg_type_randid_associated_ack:
+      if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+        KOUT("%d %d", srv_idx, cli_idx);
       rx_x11_msg_cb(randid, llid, type, srv_idx, cli_idx, msg);
       break;
 

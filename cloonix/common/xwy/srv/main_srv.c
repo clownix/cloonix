@@ -352,16 +352,21 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
     case msg_type_open_bash:
     case msg_type_open_dae:
     case msg_type_open_cmd:
-      display_val = x11_alloc_display(randid, srv_idx);
-      cli->srv_idx = display_val;
-      if (type == msg_type_open_bash)
-        pty_fork_bin_bash(action_bash, randid, sock_fd, NULL, display_val);
-      else if (type == msg_type_open_cmd)
-        pty_fork_bin_bash(action_cmd, randid, sock_fd, msg->buf, display_val);
+      if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+        KERR("%d", srv_idx);
       else
-        pty_fork_bin_bash(action_dae, randid, sock_fd, msg->buf, display_val);
-      cli->has_pty_fork = 1;
-      wrap_free(msg, __LINE__); 
+        {
+        display_val = x11_alloc_display(randid, srv_idx);
+        cli->srv_idx = display_val;
+        if (type == msg_type_open_bash)
+          pty_fork_bin_bash(action_bash, randid, sock_fd, NULL, display_val);
+        else if (type == msg_type_open_cmd)
+          pty_fork_bin_bash(action_cmd, randid, sock_fd, msg->buf, display_val);
+        else
+          pty_fork_bin_bash(action_dae, randid, sock_fd, msg->buf, display_val);
+        cli->has_pty_fork = 1;
+        wrap_free(msg, __LINE__); 
+        }
       break;
 
     case msg_type_win_size:

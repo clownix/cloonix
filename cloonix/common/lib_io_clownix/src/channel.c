@@ -530,7 +530,7 @@ unsigned long channel_get_tx_queue_len(int llid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void apply_epoll_ctl(int cidx, uint32_t evt)
+static void apply_epoll_ctl(int llid, int cidx, uint32_t evt)
 {
   int res, fd;
   g_channel[cidx].epev.events = evt;
@@ -544,7 +544,16 @@ static void apply_epoll_ctl(int cidx, uint32_t evt)
         KERR(" %s %d ", g_channel[cidx].little_name, errno);
       }
     else
-      KERR(" %s %d ", g_channel[cidx].little_name, errno);
+      {
+      if (errno == EBADF)
+        {
+        if (msg_exist_channel(llid))
+          channel_delete(llid);
+        KERR(" %s %d (bad fd) ", g_channel[cidx].little_name, errno);
+        }
+      else
+        KERR(" %s %d ", g_channel[cidx].little_name, errno);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -552,7 +561,7 @@ static void apply_epoll_ctl(int cidx, uint32_t evt)
 /*****************************************************************************/
 static void prepare_rx_tx_events(void)
 {
-  int cidx, fd;
+  int llid, cidx, fd;
   uint32_t evt;
   for (cidx=1; cidx<=current_max_channels; cidx++)
     {
@@ -560,7 +569,8 @@ static void prepare_rx_tx_events(void)
     if ((fd != -1) && (g_channel[cidx].kind != kind_glib_managed))
       {
       evt = 0;
-      if (!(get_llid(cidx)))
+      llid = get_llid(cidx);
+      if (!llid)
         KOUT("%d %d %d", cidx, fd, g_channel[cidx].kind);
       if ((fd + 1) != cidx)
         KOUT(" %d %d ", fd, cidx);
@@ -587,7 +597,7 @@ static void prepare_rx_tx_events(void)
             KERR(" ");
           }
         }
-      apply_epoll_ctl(cidx, evt);
+      apply_epoll_ctl(llid, cidx, evt);
       }
     }
 }

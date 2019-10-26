@@ -19,7 +19,7 @@ LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
 
 if (( ${#} < 1 )); then
   echo
-  echo "cloonix_mon <net> <vm_name>"
+  echo "$0 <net> <vm_name>"
   echo
   echo net:
   echo $LIST
@@ -59,7 +59,7 @@ if [ -z $ID ]; then
   exit 1
 fi
 
-
+export LD_LIBRARY_PATH=${CLOONIX_TREE}/common/spice/spice_lib
 BIN_ICE=${CLOONIX_TREE}/common/spice/spice_lib/bin/spicy
 ${BIN_ICE} --title=${1}/${2} -d ${ip}:${port} -c ${DIST_CLOONIX_WORK}/vm/vm${ID}/spice_sock -w ${passwd}
 

@@ -549,7 +549,12 @@ static void unix2inet_ssh_err_cb(void *ptr, int llid, int err, int from)
 static void unix2inet_ssh_connect(void *ptr, int llid, int llid_new)
 {
   t_all_ctx *all_ctx = (t_all_ctx *) ptr;
-  t_ctx_unix2inet *ctx = find_ctx(llid_new);
+  t_ctx_unix2inet *ctx;
+  if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
+    KOUT("%d", llid);
+  if ((llid_new <= 0) || (llid_new >= CLOWNIX_MAX_CHANNELS))
+    KOUT("%d", llid_new);
+  ctx = find_ctx(llid_new);
   if (ctx)
     KOUT(" ");
   ctx = alloc_ctx(all_ctx, llid_new);

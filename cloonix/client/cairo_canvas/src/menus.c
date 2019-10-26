@@ -221,7 +221,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   t_bank_item *bitem;
   static char title[MAX_PATH_LEN];
   static char text[MAX_TEXT];
-  int is_persistent, is_backed, is_inside_cloonix;
+  int is_persistent, is_backed, is_inside_cloonix, is_vmware;
   int has_p9_host_share, is_cisco, has_vhost_vsock, is_uefi; 
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
   int is_full_virt, has_no_reboot, has_added_disk, len = 0;
@@ -247,10 +247,13 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     has_added_cdrom = vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM;
     has_added_disk = vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK;
     is_cisco = vm_config_flags & VM_CONFIG_FLAG_CISCO;
+    is_vmware = vm_config_flags & VM_CONFIG_FLAG_VMWARE;
     has_p9_host_share = vm_config_flags & VM_CONFIG_FLAG_9P_SHARED;
 
     if (is_cisco)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tCISCO");
+    if (is_vmware)
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tVMWARE");
     if (has_p9_host_share)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tP9_HOST_SHARE");
     if (is_persistent)

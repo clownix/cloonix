@@ -78,7 +78,7 @@ static t_glib_to_llid g_glt;
 static void main_err_cb (int llid)
 {
   pid_clone_kill_all();
-  printf("\nREJECTED BY SERVER, CLOSED CONNECTION\n\n");
+  printf("\nCLOSED CONNECTION\n\n");
   exit(1);
 }
 /*--------------------------------------------------------------------------*/

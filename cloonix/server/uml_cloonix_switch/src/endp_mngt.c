@@ -84,6 +84,7 @@ typedef struct t_priv_endp
   int pid;
   int getsuidroot;
   int open_endp;
+  int open_endp_req_sent;
   int init_pcap_snf;
   int endp_type;
   int llid;
@@ -808,7 +809,15 @@ static void timer_endp_beat(void *data)
                   (cur->endp_type == endp_type_wif)))
           try_send_endp(cur, "cloonix_req_suidroot");
         else if (cur->open_endp == 0)
-          send_type_req(cur);
+          {
+          if (cur->open_endp_req_sent)
+            KERR("ENDP %s %d", cur->name, cur->num);
+          else
+            {
+            cur->open_endp_req_sent = 1;
+            send_type_req(cur);
+            }
+          }
         else
           {
           if ((cur->endp_type == endp_type_snf) &&

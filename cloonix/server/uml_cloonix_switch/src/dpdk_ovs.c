@@ -155,8 +155,8 @@ static void test_and_end_ovs(void)
       {
       if (cur->destroy_requested)
         {
-        KERR("Contradiction states");
-        cur->destroy_requested = 0;
+        KERR("Bad ovs start, destroy vm");
+        dpdk_ovs_urgent_client_destruct();
         }
       }
     else
@@ -710,13 +710,8 @@ void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
       }
     else if (!strcmp(line, "cloonixovs_resp_ovs_ko"))
       {
-      KERR("cloonixovs_resp_ovs_ko");
-      cur->nb_resp_ovs_ko += 1;
-      if (cur->nb_resp_ovs_ko > 3)
-        {
-        KERR(" destroy_requested for %s", cur->name);
-        cur->destroy_requested = 1;
-        }
+      KERR("cloonixovs_resp_ovs_ko ovs-vswitchd FAIL huge page memory?");
+      cur->destroy_requested = 1;
       }
     else if (!strcmp(line, "cloonixovs_resp_ovs_ok"))
       {

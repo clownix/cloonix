@@ -1,16 +1,16 @@
-diff -Naur virglrenderer/src/vrend_renderer.c patched_virglrenderer/src/vrend_renderer.c
---- virglrenderer/src/vrend_renderer.c	2019-05-25 18:52:24.000000000 +0200
-+++ patched_virglrenderer/src/vrend_renderer.c	2019-05-25 18:53:26.966545537 +0200
-@@ -2389,9 +2389,9 @@
-          ctx->sub->vps[idx].far_val = far_val;
+diff -Naur virglrenderer/src/vrend_renderer.c virglrenderer_new/src/vrend_renderer.c
+--- virglrenderer/src/vrend_renderer.c	2019-10-04 10:27:46.000000000 +0200
++++ virglrenderer_new/src/vrend_renderer.c	2019-10-04 10:53:18.361479634 +0200
+@@ -3686,9 +3686,9 @@
+          glViewport(ctx->sub->vps[idx].cur_x, cy, ctx->sub->vps[idx].width, ctx->sub->vps[idx].height);
  
-          if (idx && has_feature(feat_viewport_array))
--            if (vrend_state.use_gles) {
--               glDepthRangeIndexedfOES(idx, ctx->sub->vps[idx].near_val, ctx->sub->vps[idx].far_val);
--            } else
-+//            if (vrend_state.use_gles) {
-+//               glDepthRangeIndexedfOES(idx, ctx->sub->vps[idx].near_val, ctx->sub->vps[idx].far_val);
-+//            } else
-                glDepthRangeIndexed(idx, ctx->sub->vps[idx].near_val, ctx->sub->vps[idx].far_val);
-          else
-             if (vrend_state.use_gles)
+       if (idx && has_feature(feat_viewport_array))
+-         if (vrend_state.use_gles) {
+-            glDepthRangeIndexedfOES(idx, ctx->sub->vps[idx].near_val, ctx->sub->vps[idx].far_val);
+-         } else
++//         if (vrend_state.use_gles) {
++//            glDepthRangeIndexedfOES(idx, ctx->sub->vps[idx].near_val, ctx->sub->vps[idx].far_val);
++//         } else
+             glDepthRangeIndexed(idx, ctx->sub->vps[idx].near_val, ctx->sub->vps[idx].far_val);
+       else
+          if (vrend_state.use_gles)

@@ -512,7 +512,7 @@ cr_canvas_dispose(GObject *object)
         canvas = CR_CANVAS(object);
 
         if (canvas->update_idle_id) { 
-		g_source_remove(canvas->update_idle_id);
+//		g_source_remove(canvas->update_idle_id);
                 canvas->update_idle_id = 0;
 	}
 

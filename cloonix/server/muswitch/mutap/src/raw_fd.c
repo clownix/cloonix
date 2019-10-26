@@ -368,7 +368,9 @@ int  raw_fd_open(t_all_ctx *all_ctx, char *name)
 { 
   int result = -1;
   strncpy(g_raw_name, name, MAX_NAME_LEN-1);
-  if (!raw_socket_open(all_ctx))
+  if (g_raw_fd_open != 0)
+    KERR("%s", name);
+  else if (!raw_socket_open(all_ctx))
     {
     result = 0;
     g_raw_fd_open = 1;

@@ -428,8 +428,8 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 
   g_main_window = window;
   init_set_main_window_coords();
-  g_signal_connect (G_OBJECT (window), "destroy",
-		      (GCallback) destroy_handler, NULL);
+//  g_signal_connect (G_OBJECT (window), "destroy",
+//		      (GCallback) destroy_handler, NULL);
   if (g_i_am_in_cloonix)
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", 
              g_i_am_in_cloonix_name, local_get_cloonix_name());
@@ -533,7 +533,6 @@ int main(int argc, char *argv[])
   eventfull_init();
   client_get_path(0, work_dir_resp);
   printf("CONNECTED\n");
-  printf("GRAPH PID: %d\n", getpid());
   layout_topo_init();
   request_move_stop_go(1);
   bdplot_init();

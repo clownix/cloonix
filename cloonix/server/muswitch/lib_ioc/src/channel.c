@@ -523,9 +523,11 @@ static void get_max_tx_rx_queues(t_all_ctx *all_ctx, int ref_llid,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void apply_epoll_ctl(t_ioc_ctx *ioc_ctx, int cidx, uint32_t evt)
+static void apply_epoll_ctl(t_all_ctx *all_ctx, int llid,
+                            int cidx, uint32_t evt)
 {
-  int res, fd;
+  int res, fd, is_blkd;
+  t_ioc_ctx *ioc_ctx = all_ctx->ctx_head.ioc_ctx;
   fd = ioc_ctx->g_channel[cidx].fd;
   ioc_ctx->g_channel[cidx].epev.events = evt;
   res = epoll_ctl(ioc_ctx->g_epfd, EPOLL_CTL_MOD, fd,
@@ -539,7 +541,16 @@ static void apply_epoll_ctl(t_ioc_ctx *ioc_ctx, int cidx, uint32_t evt)
         KERR("%d", errno);
       }
     else
-      KERR("%d ", errno);
+      {
+      if (errno == EBADF)
+        {
+        if (msg_exist_channel(all_ctx, llid, &is_blkd, __FUNCTION__))
+          channel_delete(all_ctx, llid);
+        KERR("%d (bad fd) ", errno);
+        }
+      else
+        KERR("%d ", errno);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -621,7 +632,7 @@ static void prepare_rx_tx_events(t_all_ctx *all_ctx)
           evt |= EPOLLOUT;
         evt |= EPOLLIN;
         }
-      apply_epoll_ctl(ioc_ctx, cidx, evt);
+      apply_epoll_ctl(all_ctx, llid, cidx, evt);
       }
     }
 }

@@ -81,7 +81,6 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --disable-seccomp
                      --disable-glusterfs
                      --disable-tpm
-                     --disable-libssh2
                      --disable-tcmalloc
                      --disable-jemalloc"
 
@@ -106,6 +105,7 @@ cp ./pc-bios/efi-virtio.rom     ${HERE}/qemu_bin
 cp ./pc-bios/efi-e1000.rom      ${HERE}/qemu_bin
 cp ./pc-bios/efi-ne2k_pci.rom   ${HERE}/qemu_bin
 cp ./pc-bios/efi-rtl8139.rom    ${HERE}/qemu_bin
+cp ./pc-bios/efi-vmxnet3.rom    ${HERE}/qemu_bin
 
 
 

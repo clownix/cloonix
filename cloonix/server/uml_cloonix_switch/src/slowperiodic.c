@@ -75,7 +75,7 @@ static int get_bulk_files(t_slowperiodic **slowperiodic)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void timeout_collect_slowperiodic(void *data)
+static void action_send_slowperiodic(void)
 {
   int llid, tid, nb;
   t_slowperiodic *slowperiodic;
@@ -87,14 +87,21 @@ static void timeout_collect_slowperiodic(void *data)
     tid = cur->tid;
     if (msg_exist_channel(llid))
       {
-      send_slowperiodic(llid, tid, nb, slowperiodic); 
+      send_slowperiodic(llid, tid, nb, slowperiodic);
       }
     else
       event_print ("SLOWPERIODIC ERROR!!!!!!");
     cur = cur->next;
     }
+  clownix_free(slowperiodic, __FUNCTION__);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void timeout_collect_slowperiodic(void *data)
+{
+  action_send_slowperiodic();
   clownix_timeout_add(500, timeout_collect_slowperiodic, NULL, NULL, NULL);
-  clownix_free(slowperiodic, __FUNCTION__); 
 }
 /*---------------------------------------------------------------------------*/
 
@@ -110,6 +117,7 @@ void recv_slowperiodic_sub(int llid, int tid)
     head_slowperiodic_subs->prev = sub;
   sub->next = head_slowperiodic_subs;
   head_slowperiodic_subs = sub;
+  action_send_slowperiodic();
 }
 /*---------------------------------------------------------------------------*/
 

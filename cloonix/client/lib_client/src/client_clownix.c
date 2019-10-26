@@ -885,7 +885,7 @@ int callback_connect_glib(void *ptr, int llid, int fd)
 /*****************************************************************************/
 static void err_cb (int llid)
 {
-  printf("\nREJECTED BY SERVER, CLOSED CONNECTION\n\n");
+  printf("\nCLOSED CONNECTION\n\n");
   exit(-1);
 }
 /*--------------------------------------------------------------------------*/

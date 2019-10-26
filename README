@@ -9,23 +9,19 @@ All opens sources compiled within cloonix such as dpdk, openvswitch, qemu,
 spice, openssh... are stored at:
 clownix.net/downloads/cloonix-<major>-<minor>/targz_store.tar.gz
 
-This version v03-05 is the latest (if this README is up to date).
-The version v03-05 uses dpdk/ovs for latency and throughput, it is a
-work-going-on version missing some features and with experimental code.
-But the basic ping is working.
+This version v04-00 is the latest (if this README is up to date).
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
 HOWTO INSTALL:
 It is assumed that sudo makes the command run as root.
-For those on buster, no problem ahead but for other distributions, you
-must complete the ./install_depends package list for your needs, the
-names of the packages for the debian buster can help you in the package
-selection.
+For those on buster, no problem ahead because it is the distro I am using,
+but for other distributions, you may have to work on the ./install_depends
+file to ajust needed packages.
 
 cd cloonix
 sudo ./install_depends build
-wget http://clownix.net/downloads/cloonix-03-05/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-04-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 ./doitall
 cd -
@@ -36,13 +32,13 @@ HOWTO GET A WORKING VM:
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget http://clownix.net/downloads/cloonix-03-05/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-04-00/bulk/buster.qcow2.gz
 gunzip buster.qcow2.gz
-cd -
 
-or if you want a cloonix vm from an iso cdrom, go to the directory
-vm_create_from_iso and follow the README there.
+You can try another distro at http://clownix.net/downloads/cloonix-04-00/bulk
 
+If you want to create your own distribution, go to the directory
+tools/distro_create_from_script and try making your own VM.
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -77,55 +73,4 @@ After any of the above commands, the host must be rebooted, then:
 cd cloonix/quickstart
 ./ping.sh
 -----------------------------------------------------------------------------
-
------------------------------------------------------------------------------
-HOWTO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
------------------------------------------------------------------------------
-  The host must have 1 Giga size hugepages, i chose to have 5 hugepages:
------------------------------------------------------------------------------
-To have the correct hugepage configuration, if you have 5 giga to spare for
-dpdk, you can do:
-
-    printf '\nGRUB_CMDLINE_LINUX="%s %s %s %s"\n' \
-                               "kvm-intel.nested=1" \
-                               "default_hugepagesz=1G" \
-                               "hugepagesz=1G hugepages=5" \
-                                >> /etc/default/grub
-    update-grub
-
-After any of the above commands, the host must be rebooted, then check:
-
-    mount |grep hugepages
-Check pagesize=1024M
-
-    cat /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
-Check the number
-
-    grep Huge /proc/meminfo 
-Check the number
-
-    cd cloonix/quickstart
-    ./dpdk_ping.sh
-
-To track errors in case of failure:
-MOST FREQUENT PB: Not enough Huge pages, 2 Huge pages are hardcoded in
-                  file ovs_execv.c (search for 2048).
-cat /var/log/user.log
-cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
-
-NOTE: The sources used in cloonix for dpdk and ovs come from:
-git clone --depth=1 https://github.com/openvswitch/ovs.git
-git clone --depth=1 https://github.com/DPDK/dpdk.git
-git clone --depth=1 https://github.com/mesonbuild/meson.git
-git clone --depth=1 https://github.com/ninja-build/ninja.git
-
------------------------------------------------------------------------------
-
------------------------------------------------------------------------------
-HOWTO TEST MAC80211_HWSIM:
-cd cloonix/mac80211_hwsim
-./hwsim.sh
------------------------------------------------------------------------------
-
-
 

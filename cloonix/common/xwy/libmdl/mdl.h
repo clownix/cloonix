@@ -48,8 +48,8 @@ int debug_get_trunc_usec(void);
 
 #define MAX_IDX_X11 10
 #define X11_OFFSET_PORT 6000
-#define SRV_IDX_MIN 250
-#define SRV_IDX_MAX 500
+#define SRV_IDX_MIN 50
+#define SRV_IDX_MAX 250
 
 #define MAGIC_COOKIE "MIT-MAGIC-COOKIE-1"
 #define MAGIC_COOKIE_LEN 16

@@ -14,7 +14,7 @@ INCLUDES= -I./src \
           -I$(IOC)/src
 
 LIBS = -L$(BLKD) -lblkd \
-       -L$(IOC) -lioc
+       -L$(IOC) -lioc 
 
 
 #libnl-3-dev libnl-genl-3-dev 
@@ -22,7 +22,7 @@ LIBS = -L$(BLKD) -lblkd \
 CFLAGS += $(shell pkg-config --cflags libnl-3.0)
 CFLAGS += $(WARNINGS) $(INCLUDES)
 
-LDFLAGS += $(shell pkg-config --libs libnl-3.0)
+LDFLAGS += -lnl-3
 LDFLAGS += -lnl-genl-3
 
 

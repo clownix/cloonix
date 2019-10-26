@@ -196,7 +196,7 @@ void mdl_set_header_vals(t_msg *msg, uint32_t randid, int type, int from,
   if (srv_idx > 0)
     {
     if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-      KOUT("%d %d", type, from);
+      KOUT("%d %d %d", type, from, srv_idx);
     }
   msg->type = (((srv_idx << 24) & 0xFF000000) |
                ((cli_idx << 16) & 0x00FF0000) |

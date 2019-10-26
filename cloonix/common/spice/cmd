@@ -39,7 +39,8 @@ cd ${TARGET}
 tar xvf ${TARGZ}/virglrenderer.tar.gz
 cd virglrenderer
 patch -p1 < ${HERE}/virglrenderer.patch
-
+echo sleep 3
+sleep 3
 ./configure --prefix=${TARGET} \
             --libdir=${TARGET} \
             --disable-tests \

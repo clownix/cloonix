@@ -605,10 +605,13 @@ void add_new_edge(t_bank_item *bi_eth, t_bank_item *bi_lan, int eorig)
     topo_get_matrix_transform_point(bi_eth->att_node, &x0, &y0);
     topo_get_matrix_transform_point(bi_eth, &x0, &y0);
     bitem = bi_eth->att_node;
-    nb_dpdk = bitem->pbi.pbi_node->node_vm_nb_dpdk;
-    if (bi_eth->num < nb_dpdk)
+    if (bitem && bitem->pbi.pbi_node)
       {
-      mutype = endp_type_kvm_dpdk;
+      nb_dpdk = bitem->pbi.pbi_node->node_vm_nb_dpdk;
+      if (bi_eth->num < nb_dpdk)
+        {
+        mutype = endp_type_kvm_dpdk;
+        }
       }
     }
   else if (bi_eth->bank_type == bank_type_sat) 

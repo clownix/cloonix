@@ -203,6 +203,10 @@ static void try_send_data2low_timer(t_clo *clo)
           cur->count_stuck += 1;
           if (cur->count_stuck > 20)
             {
+            KERR("CONNECTION PROBLEM");
+            }
+          else if (cur->count_stuck > 100)
+            {
             KERR("CONNECTION BIG PROBLEM");
             local_send_reset_state_closed(clo);
             }

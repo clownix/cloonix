@@ -4,9 +4,12 @@ set -e
 
 
 # dpkg --add-architecture i386
-# apt-get update
-# apt-get install libnl-3-dev:i386
-# apt-get install libnl-genl-3-dev:i386
+# sudo apt-get install g++-multilib libc6-dev-i386
+# sudo apt-get install libnl-3-dev:i386
+# sudo apt-get install libnl-genl-3-dev:i386
+# cd /usr/lib/i386-linux-gnu/
+# sudo ln -s libnl-3.so.200 libnl-3.so
+
 
 AGENT_BIN_ALIEN=${HERE}/agent_bin_alien
 AGENT_LIB_ALIEN=${AGENT_BIN_ALIEN}/lib_i386/
@@ -16,11 +19,9 @@ HWSIM=${HERE}/hwsim
 IOC=${HWSIM}/lib_ioc
 BLKD=${HWSIM}/lib_blkd
 
-
 export CC=gcc
 export AR=ar
 export RANLIB=ranlib
-export CFLAGS=""
 
 cd ${IOC}
 export CFLAGS=-m32

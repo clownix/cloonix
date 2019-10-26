@@ -47,6 +47,27 @@
 #include "endp_mngt.h"
 #include "dpdk_ovs.h"
 
+//sudo ip tuntap add dev vmwa0 mode tap
+//cloonix_cli nemo add kvm  vm_name ram=6000 cpu=4 dpdk=0 sock=3 hwsim=0 \
+//                          vmware.qcow2 --vmware \
+//                          --added_disk=/home/perrier/cloonix_data/bulk/vmware_store.qcow2
+
+#define NETWORK_PARAMS_VMWARE " -netdev type=tap,id=vmware0,ifname=vmwa0"\
+                              " -device e1000,netdev=vmware0"\
+                              " -netdev type=tap,id=vmware1,ifname=vmwa1"\
+                              " -device e1000,netdev=vmware1"\
+                              " -netdev type=tap,id=vmware2,ifname=vmwa2"\
+                              " -device e1000,netdev=vmware2"
+
+
+
+#define DRIVE_VMWARE0 " -drive file=%s,index=0,media=disk,if=none,id=sata0"\
+                      " -device ich9-ahci,id=ahci"\
+                      " -device ide-drive,drive=sata0,bus=ahci.0"
+
+#define DRIVE_VMWARE1 " -drive file=%s,index=1,media=disk,if=none,id=sata1"\
+                      " -device ide-drive,drive=sata1,bus=ahci.1"
+
 #define DRIVE_PARAMS_CISCO " -drive file=%s,index=%d,media=disk,if=virtio,cache=directsync"
 #define DRIVE_PARAMS " -drive file=%s,index=%d,media=disk,if=virtio"
 
@@ -75,6 +96,10 @@
 #define BLOCKNAME " -blockdev node-name=%s,driver=qcow2,"\
                   "file.driver=file,file.node-name=file,file.filename=%s" \
                   " -device virtio-blk,drive=%s"
+
+//#define BLOCKNAME_VMWARE " -blockdev node-name=vmwdatab,driver=qcow2,"\
+//                  "file.driver=file,file.node-name=vmwdatab0,file.filename=%s" \
+//                  " -device virtio-blk,drive=vmwdatab"
 
 #define FLAG_UEFI " -bios %s/server/qemu/%s/OVMF.fd"
 
@@ -332,7 +357,7 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
    " -device virtio-rng-pci"
 
 #define QEMU_SPICE \
-   " -device virtio-vga,virgl=on"\
+   " -device virtio-vga"\
    " -device ich9-intel-hda"\
    " -device hda-micro"\
    " -device qemu-xhci"\
@@ -415,9 +440,20 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
   tot_dpdk = vm->kvm.nb_dpdk;
   for (i=0; i < tot_dpdk; i++)
     len+=sprintf(cmd_start+len, "%s", dpdk_ovs_format_net(vm, i, tot_dpdk));
-  for (i=vm->kvm.nb_dpdk; i<vm->kvm.nb_dpdk+vm->kvm.nb_eth; i++)
-    len+=sprintf(cmd_start+len, "%s",format_virtkvm_net(vm,i));
 
+  if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VMWARE)
+    {
+    if (vm->kvm.nb_eth != 3)
+      KOUT("%d", vm->kvm.nb_eth);
+    if (vm->kvm.nb_dpdk != 0)
+      KOUT("%d", vm->kvm.nb_dpdk);
+    len+=sprintf(cmd_start+len, "%s", NETWORK_PARAMS_VMWARE);
+    }
+  else
+    {
+    for (i=vm->kvm.nb_dpdk; i<vm->kvm.nb_dpdk+vm->kvm.nb_eth; i++)
+      len+=sprintf(cmd_start+len, "%s",format_virtkvm_net(vm,i));
+    }
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_UEFI)
     len += sprintf(cmd_start+len, FLAG_UEFI, cfg_get_bin_dir(), QEMU_BIN_DIR);
   if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
@@ -491,6 +527,12 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
         len += sprintf(linux_cmd+len,
         " -uuid 3824cca6-7603-423b-8e5c-84d15d9b0a6a");
         }
+      else if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VMWARE)
+        {
+        len += sprintf(linux_cmd+len, DRIVE_VMWARE0, rootfs);
+        if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK)
+          len += sprintf(linux_cmd+len, DRIVE_VMWARE1, added_disk);
+        }
       else
         {
         len += sprintf(linux_cmd+len, BLOCKNAME, 
@@ -501,8 +543,12 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     len += sprintf(linux_cmd+len, AGENT_CDROM, cdrom);
   
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK)
-      len += sprintf(linux_cmd+len, DRIVE_PARAMS, added_disk, 1);
+      {
+      if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VMWARE))
+        len += sprintf(linux_cmd+len, DRIVE_PARAMS, added_disk, 1);
+      }
     }
+
 
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM)
     {

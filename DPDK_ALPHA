@@ -1,0 +1,43 @@
+-----------------------------------------------------------------------------
+HOWTO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
+This is an experimental try to use DPDK, not as reliable as classic lan.
+-----------------------------------------------------------------------------
+  The host must have 1 Giga size hugepages, i chose to have 5 hugepages:
+-----------------------------------------------------------------------------
+To have the correct hugepage configuration, if you have 5 giga to spare for
+dpdk, you can do:
+
+    printf '\nGRUB_CMDLINE_LINUX="%s %s %s %s"\n' \
+                               "kvm-intel.nested=1" \
+                               "default_hugepagesz=1G" \
+                               "hugepagesz=1G hugepages=5" \
+                                >> /etc/default/grub
+    update-grub
+
+After any of the above commands, the host must be rebooted, then check:
+
+    mount |grep hugepages
+Check pagesize=1024M
+
+    cat /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
+Check the number
+
+    grep Huge /proc/meminfo 
+Check the number
+
+    cd cloonix/quickstart
+    ./dpdk_ping.sh
+
+To track errors in case of failure:
+MOST FREQUENT PB: Not enough Huge pages, 2 Huge pages are hardcoded in
+                  file ovs_execv.c (search for 2048).
+cat /var/log/user.log
+cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
+
+NOTE: The sources used in cloonix are updated with:
+cd update_open_sources
+./doitall
+-----------------------------------------------------------------------------
+
+
+

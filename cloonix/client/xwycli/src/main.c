@@ -113,7 +113,6 @@ int main (int argc, char *argv[])
   doorways_sock_init();
   msg_mngt_init("ctrl", IO_MAX_BUF_LEN);
   cloonix_conf_info_get_all(&nb_cloonix, &cloonix_conf);
-  printf("\nVersion:%s\n\n", cloonix_conf_info_get_version());
   for (i=0; i<nb_cloonix; i++)
     {
     if (!strcmp(argv[2], cloonix_conf[i].name))

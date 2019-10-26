@@ -10,50 +10,27 @@ if [ ! -d ${TARGET} ]; then
   echo
   exit
 fi
-
 cd ${HERE}/spice_client
 ./patched_create
 mv tainted_spice spice_client
 rm -rf ${TARGET}/spice_client
 mv spice_client ${TARGET}
-
-
-SPICE_LIB=/usr/local/bin/cloonix/common/spice/spice_lib
-
+cd ${TARGET}/spice_client/tests
+patch meson.build ${HERE}/tests_meson.build.patch
 cd ${TARGET}/spice_client
+sed -i s/UNKNOWN/0.37/ ./build-aux/git-version-gen
+sed -i s"%'-Wextra',%'-Wextra',\n'-Wl,-rpath',\n'-Wl,/usr/local/bin/cloonix/common/spice/spice_lib',%" meson.build
 export PKG_CONFIG_PATH=${TARGET}/pkgconfig 
-export LDFLAGS="-Wl,-rpath,${SPICE_LIB}" ;
-
-
-set +e
-  export NOCONFIGURE=yes
-  ./autogen.sh 
-set -e
-  ./configure --prefix=${TARGET} \
-              --libdir=${TARGET} \
-              --datarootdir=${TARGET} \
-              --with-usb-acl-helper-dir=${SPICE_LIB} \
-              --enable-polkit \
-              --enable-usbredir \
-              --enable-gstaudio=yes \
-              --enable-gstvideo=yes \
-              --disable-pulse \
-              --disable-gtk-doc \
-              --disable-gtk-doc-html \
-              --disable-gtk-doc-pdf \
-              --disable-dbus \
-              --disable-vala \
-              --disable-webdav \
-              --disable-smartcard \
-              --disable-lz4 \
-              --enable-python-checks
-
-make clean
-make
-for i in Makefile doc/Makefile data/Makefile man/Makefile src/Makefile ; do
-  sed -i s"%POLICYDIR = .*%POLICYDIR = ${TARGET}%" $i
-  sed -i s"%ACL_HELPER_DIR = .*%ACL_HELPER_DIR = ${TARGET}%" $i
-done
-make install
+export DESTDIR=${TARGET}
+meson build
+cd build
+ninja install
+cp -rf ${TARGET}/usr/local/* ${TARGET}
+rm -rf ${TARGET}/usr/local
+mv ${TARGET}/lib/x86_64-linux-gnu/pkgconfig/* ${TARGET}/pkgconfig
+rmdir ${TARGET}/lib/x86_64-linux-gnu/pkgconfig
+mv ${TARGET}/lib/x86_64-linux-gnu/* ${TARGET}
+rmdir ${TARGET}/lib/x86_64-linux-gnu
+rmdir ${TARGET}/lib
 
 

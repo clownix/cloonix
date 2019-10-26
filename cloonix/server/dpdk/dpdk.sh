@@ -8,9 +8,9 @@ tar xvf ${TARGZSTORE}/${NAMEZ}
 cd ${HERE}/${NAME}
 echo patch -p1 < ${HERE}/dpdk.patch
 patch -p1 < ${HERE}/dpdk.patch
+sleep 2
 sed -i s'%-rpath=$(RTE_SDK_BIN)/lib%-rpath=/usr/local/bin/cloonix/server/dpdk/lib%' mk/rte.app.mk
 echo "LDFLAGS+=\"-rpath=/usr/local/bin/cloonix/server/dpdk/lib\"" >> mk/rte.vars.mk
-
 tar xvf ${TARGZSTORE}/meson.tar.gz
 tar xvf ${TARGZSTORE}/ninja.tar.gz
 
@@ -22,6 +22,7 @@ cd ${HERE}/${NAME}
 export PATH=${HERE}/${NAME}/ninja:$PATH
 ${HERE}/${NAME}/meson/meson.py build
 cd build
+cp rte_build_config.h ../config
 ninja
 DESTDIR=${HERE} ninja install
 

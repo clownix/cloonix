@@ -1,17 +1,6 @@
-diff -Naur spice-gtk/configure tainted_spice/configure
---- spice-gtk/configure	2019-06-15 11:48:36.000000000 +0200
-+++ tainted_spice/configure	2019-06-15 11:48:49.621642160 +0200
-@@ -20188,6 +20188,7 @@
- else
-   enable_vala="no"
- fi
-+  enable_vala="no"
- 
- 
- VALA_REQUIRED=0.14
 diff -Naur spice-gtk/src/cloonix.c tainted_spice/src/cloonix.c
 --- spice-gtk/src/cloonix.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloonix.c	2019-06-15 11:48:49.625642134 +0200
++++ tainted_spice/src/cloonix.c	2019-10-04 10:58:39.976067069 +0200
 @@ -0,0 +1,613 @@
 +#include <unistd.h>
 +#include <stdlib.h>
@@ -628,7 +617,7 @@ diff -Naur spice-gtk/src/cloonix.c tainted_spice/src/cloonix.c
 +
 diff -Naur spice-gtk/src/cloonix.h tainted_spice/src/cloonix.h
 --- spice-gtk/src/cloonix.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloonix.h	2019-06-15 11:48:49.625642134 +0200
++++ tainted_spice/src/cloonix.h	2019-10-04 10:58:39.976067069 +0200
 @@ -0,0 +1,22 @@
 +
 +
@@ -654,7 +643,7 @@ diff -Naur spice-gtk/src/cloonix.h tainted_spice/src/cloonix.h
 +
 diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 --- spice-gtk/src/hmac_cipher.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.c	2019-06-15 11:48:49.625642134 +0200
++++ tainted_spice/src/hmac_cipher.c	2019-10-04 10:58:39.976067069 +0200
 @@ -0,0 +1,146 @@
 +/****************************************************************************/
 +/* Copyright (C) 2006-2014 Cloonix <clownix@clownix.net>  License RPL       */
@@ -804,7 +793,7 @@ diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 +
 diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 --- spice-gtk/src/hmac_cipher.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.h	2019-06-15 11:48:49.625642134 +0200
++++ tainted_spice/src/hmac_cipher.h	2019-10-04 10:58:39.976067069 +0200
 @@ -0,0 +1,28 @@
 +/*****************************************************************************/
 +/*    Copyright (C)  2006-2012    Cloonix,    <clownix@clownix.net>          */
@@ -834,92 +823,21 @@ diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 +
 +
 +
-diff -Naur spice-gtk/src/Makefile.am tainted_spice/src/Makefile.am
---- spice-gtk/src/Makefile.am	2019-06-15 11:48:17.000000000 +0200
-+++ tainted_spice/src/Makefile.am	2019-06-15 11:48:49.625642134 +0200
-@@ -231,6 +231,8 @@
- 							\
- 	spice-client.c					\
- 	spice-session.c					\
-+	cloonix.c					\
-+        hmac_cipher.c                                   \
- 	spice-session-priv.h				\
- 	spice-channel.c					\
- 	spice-channel-cache.h				\
-@@ -515,6 +517,8 @@
- 	spice-audio.c					\
- 	spice-client.c					\
- 	spice-session.c					\
-+	cloonix.c					\
-+        hmac_cipher.c                                   \
- 	spice-channel.c					\
- 	spice-glib-enums.c				\
- 	spice-option.c					\
-diff -Naur spice-gtk/src/Makefile.in tainted_spice/src/Makefile.in
---- spice-gtk/src/Makefile.in	2019-06-15 11:48:38.000000000 +0200
-+++ tainted_spice/src/Makefile.in	2019-06-15 11:48:49.625642134 +0200
-@@ -217,6 +217,7 @@
- 	spice-gstaudio.h spice-common.h spice-util.c spice-util-priv.h \
- 	spice-option.h spice-option.c spice-client.c spice-session.c \
- 	spice-session-priv.h spice-channel.c spice-channel-cache.h \
-+        cloonix.c cloonix.h hmac_cipher.c hmac_cipher.h \
- 	spice-channel-priv.h spice-file-transfer-task.c \
- 	spice-file-transfer-task-priv.h coroutine.h gio-coroutine.c \
- 	gio-coroutine.h channel-base.c channel-webdav.c \
-@@ -253,6 +254,7 @@
- 	spice-file-transfer-task.lo gio-coroutine.lo channel-base.lo \
- 	channel-webdav.lo channel-cursor.lo channel-display.lo \
- 	channel-display-gst.lo channel-inputs.lo channel-main.lo \
-+        cloonix.lo hmac_cipher.lo \
- 	channel-playback.lo channel-port.lo channel-record.lo \
- 	channel-smartcard.lo channel-usbredir.lo qmp-port.lo \
- 	smartcard-manager.lo spice-uri.lo usb-device-manager.lo \
-@@ -342,6 +344,7 @@
- 	./$(DEPDIR)/gio-coroutine.Plo ./$(DEPDIR)/giopipe.Plo \
- 	./$(DEPDIR)/qmp-port.Plo ./$(DEPDIR)/smartcard-manager.Plo \
- 	./$(DEPDIR)/spice-audio.Plo ./$(DEPDIR)/spice-channel.Plo \
-+	./$(DEPDIR)/cloonix.Plo ./$(DEPDIR)/hmac_cipher.Plo \
- 	./$(DEPDIR)/spice-client.Plo \
- 	./$(DEPDIR)/spice-file-transfer-task.Plo \
- 	./$(DEPDIR)/spice-glib-enums.Plo \
-@@ -857,6 +860,7 @@
- 	spice-gstaudio.h spice-common.h spice-util.c spice-util-priv.h \
- 	spice-option.h spice-option.c spice-client.c spice-session.c \
- 	spice-session-priv.h spice-channel.c spice-channel-cache.h \
-+        cloonix.c cloonix.h hmac_cipher.c hmac_cipher.h \
- 	spice-channel-priv.h spice-file-transfer-task.c \
- 	spice-file-transfer-task-priv.h coroutine.h gio-coroutine.c \
- 	gio-coroutine.h channel-base.c channel-webdav.c \
-@@ -948,6 +952,8 @@
- @HAVE_INTROSPECTION_TRUE@	spice-audio.c					\
- @HAVE_INTROSPECTION_TRUE@	spice-client.c					\
- @HAVE_INTROSPECTION_TRUE@	spice-session.c					\
-+@HAVE_INTROSPECTION_TRUE@	cloonix.c					\
-+@HAVE_INTROSPECTION_TRUE@	hmac_cipher.c					\
- @HAVE_INTROSPECTION_TRUE@	spice-channel.c					\
- @HAVE_INTROSPECTION_TRUE@	spice-glib-enums.c				\
- @HAVE_INTROSPECTION_TRUE@	spice-option.c					\
-@@ -1172,6 +1178,8 @@
- @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smartcard-manager.Plo@am__quote@ # am--include-marker
- @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spice-audio.Plo@am__quote@ # am--include-marker
- @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spice-channel.Plo@am__quote@ # am--include-marker
-+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cloonix.Plo@am__quote@ # am--include-marker
-+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hmac_cipher.Plo@am__quote@ # am--include-marker
- @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spice-client.Plo@am__quote@ # am--include-marker
- @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spice-file-transfer-task.Plo@am__quote@ # am--include-marker
- @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spice-glib-enums.Plo@am__quote@ # am--include-marker
-@@ -1608,6 +1616,8 @@
- 	-rm -f ./$(DEPDIR)/smartcard-manager.Plo
- 	-rm -f ./$(DEPDIR)/spice-audio.Plo
- 	-rm -f ./$(DEPDIR)/spice-channel.Plo
-+	-rm -f ./$(DEPDIR)/cloonix.Plo
-+	-rm -f ./$(DEPDIR)/hmac_cipher.Plo
- 	-rm -f ./$(DEPDIR)/spice-client.Plo
- 	-rm -f ./$(DEPDIR)/spice-file-transfer-task.Plo
- 	-rm -f ./$(DEPDIR)/spice-glib-enums.Plo
+diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
+--- spice-gtk/src/meson.build	2019-10-04 10:26:51.000000000 +0200
++++ tainted_spice/src/meson.build	2019-10-04 10:58:39.976067069 +0200
+@@ -78,6 +78,8 @@
+   'spice-client.c',
+   'spice-option.c',
+   'spice-session.c',
++  'cloonix.c',
++  'hmac_cipher.c',
+   'spice-util.c',
+   'usb-device-manager.c',
+ ]
 diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
---- spice-gtk/src/spice-channel.c	2019-06-15 11:48:17.000000000 +0200
-+++ tainted_spice/src/spice-channel.c	2019-06-15 11:48:49.625642134 +0200
+--- spice-gtk/src/spice-channel.c	2019-10-04 10:26:51.000000000 +0200
++++ tainted_spice/src/spice-channel.c	2019-10-04 10:58:39.980066018 +0200
 @@ -47,6 +47,11 @@
  
  #include "gio-coroutine.h"
@@ -994,12 +912,13 @@ diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
      c->conn = spice_session_channel_open_host(c->session, channel, &c->tls, &c->error);
      if (c->conn == NULL) {
 diff -Naur spice-gtk/src/spice-common.h tainted_spice/src/spice-common.h
---- spice-gtk/src/spice-common.h	2019-06-15 11:48:17.000000000 +0200
-+++ tainted_spice/src/spice-common.h	2019-06-15 11:48:49.625642134 +0200
-@@ -33,4 +33,13 @@
+--- spice-gtk/src/spice-common.h	2019-10-04 10:26:51.000000000 +0200
++++ tainted_spice/src/spice-common.h	2019-10-04 10:58:39.980066018 +0200
+@@ -31,3 +31,13 @@
+ #include "common/marshaller.h"
  
  #include "spice-util.h"
- 
++
 +
 +#include <syslog.h>
 +#define DKERR(format, a...)              \
@@ -1009,10 +928,9 @@ diff -Naur spice-gtk/src/spice-common.h tainted_spice/src/spice-common.h
 +    } while (0)
 +
 +
- #endif // SPICE_COMMON_H_
 diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
---- spice-gtk/src/spice-session.c	2019-06-15 11:48:17.000000000 +0200
-+++ tainted_spice/src/spice-session.c	2019-06-15 11:48:49.625642134 +0200
+--- spice-gtk/src/spice-session.c	2019-10-04 10:26:51.000000000 +0200
++++ tainted_spice/src/spice-session.c	2019-10-04 10:58:39.980066018 +0200
 @@ -21,9 +21,8 @@
  #include <gio/gnetworking.h>
  #include <gio/gio.h>
@@ -1223,7 +1141,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
                   "host", &c->host,
                   "unix-path", &c->unix_path,
                   "tls-port", &c->tls_port,
-@@ -2079,14 +2159,37 @@
+@@ -2076,14 +2156,37 @@
      GSocketClient *client = G_SOCKET_CLIENT(source_object);
      spice_open_host *open_host = data;
      GSocketConnection *connection = NULL;
@@ -1263,7 +1181,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
      open_host->connection = connection;
  
  end:
-@@ -2094,10 +2197,12 @@
+@@ -2091,10 +2194,12 @@
  }
  
  /* main context */
@@ -1277,7 +1195,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
      g_socket_client_connect_async(open_host->client, connectable,
                                    open_host->cancellable,
                                    socket_client_connect_ready, open_host);
-@@ -2143,6 +2248,12 @@
+@@ -2140,6 +2245,12 @@
  {
      spice_open_host *open_host = data;
      SpiceSessionPrivate *s;
@@ -1290,7 +1208,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
  
      g_return_val_if_fail(open_host != NULL, FALSE);
      g_return_val_if_fail(open_host->connection == NULL, FALSE);
-@@ -2162,28 +2273,19 @@
+@@ -2159,28 +2270,19 @@
                                          spice_uri_get_hostname(open_host->proxy),
                                          open_host->cancellable,
                                          proxy_lookup_ready, open_host);
@@ -1332,7 +1250,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
          g_object_unref(address);
      }
  
-@@ -2200,15 +2302,18 @@
+@@ -2197,15 +2299,18 @@
  
  /* coroutine context */
  G_GNUC_INTERNAL
@@ -1354,7 +1272,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
  
      // FIXME: make open_host() cancellable
      open_host.from = coroutine_self();
-@@ -2220,31 +2325,6 @@
+@@ -2217,31 +2322,6 @@
          spice_strv_contains(s->secure_channels, name))
          *use_tls = TRUE;
  
@@ -1386,7 +1304,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
  
      open_host.client = g_socket_client_new();
      g_socket_client_set_enable_proxy(open_host.client, s->proxy != NULL);
-@@ -2503,6 +2583,27 @@
+@@ -2500,6 +2580,27 @@
  }
  
  G_GNUC_INTERNAL
@@ -1415,9 +1333,9 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
  {
      g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-priv.h
---- spice-gtk/src/spice-session-priv.h	2019-06-15 11:48:17.000000000 +0200
-+++ tainted_spice/src/spice-session-priv.h	2019-06-15 11:48:49.625642134 +0200
-@@ -63,6 +63,8 @@
+--- spice-gtk/src/spice-session-priv.h	2019-10-04 10:26:51.000000000 +0200
++++ tainted_spice/src/spice-session-priv.h	2019-10-04 10:58:39.980066018 +0200
+@@ -62,6 +62,8 @@
  void spice_session_get_pubkey(SpiceSession *session, guint8 **pubkey, guint *size);
  guint spice_session_get_verify(SpiceSession *session);
  const gchar* spice_session_get_username(SpiceSession *session);
@@ -1427,8 +1345,8 @@ diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-pr
  const gchar* spice_session_get_host(SpiceSession *session);
  const gchar* spice_session_get_cert_subject(SpiceSession *session);
 diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
---- spice-gtk/src/spice-widget-egl.c	2019-06-15 11:48:17.000000000 +0200
-+++ tainted_spice/src/spice-widget-egl.c	2019-06-15 11:48:49.625642134 +0200
+--- spice-gtk/src/spice-widget-egl.c	2019-10-04 10:26:51.000000000 +0200
++++ tainted_spice/src/spice-widget-egl.c	2019-10-04 10:58:39.980066018 +0200
 @@ -220,7 +220,7 @@
  #endif
  
@@ -1479,7 +1397,7 @@ diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
  
          /* do not call eglterminate() since egl may be used by
           * somebody else code */
-@@ -670,7 +670,7 @@
+@@ -656,7 +656,7 @@
                    (int)(format >> 16) & 0xff, (int)format >> 24);
  
      d->egl.image = eglCreateImageKHR(d->egl.display,
@@ -1489,8 +1407,8 @@ diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
                                         (EGLClientBuffer)NULL,
                                         attrs);
 diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
---- spice-gtk/tools/spice-cmdline.c	2019-06-15 11:48:17.000000000 +0200
-+++ tainted_spice/tools/spice-cmdline.c	2019-06-15 11:48:49.625642134 +0200
+--- spice-gtk/tools/spice-cmdline.c	2019-10-04 10:26:51.000000000 +0200
++++ tainted_spice/tools/spice-cmdline.c	2019-10-04 10:58:39.980066018 +0200
 @@ -27,9 +27,25 @@
  static char *tls_port;
  static char *password;
@@ -1530,30 +1448,62 @@ diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
          g_object_set(session, "uri", uri, NULL);
      if (host)
 diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
---- spice-gtk/tools/spicy.c	2019-06-15 11:48:17.000000000 +0200
-+++ tainted_spice/tools/spicy.c	2019-06-15 11:48:49.625642134 +0200
-@@ -1251,12 +1251,14 @@
-     SPICE_DEBUG("%s: %s", __FUNCTION__, uri);
+--- spice-gtk/tools/spicy.c	2019-10-04 10:26:51.000000000 +0200
++++ tainted_spice/tools/spicy.c	2019-10-04 10:58:39.980066018 +0200
+@@ -1266,29 +1266,29 @@
  
-     recent = gtk_recent_manager_get_default();
+ static void recent_add(SpiceSession *session)
+ {
+-    GtkRecentManager *recent;
+-    GtkRecentData meta = {
+-        .mime_type    = (char*)"application/x-spice",
+-        .app_name     = (char*)"spicy",
+-        .app_exec     = (char*)"spicy --uri=%u",
+-    };
+-    char *uri;
+-
+-    g_object_get(session, "uri", &uri, NULL);
+-    SPICE_DEBUG("%s: %s", __FUNCTION__, uri);
+-
+-    recent = gtk_recent_manager_get_default();
 -    if (g_str_has_prefix(uri, "spice://"))
 -        meta.display_name = uri + 8;
 -    else if (g_str_has_prefix(uri, "spice+unix://"))
 -        meta.display_name = uri + 13;
 -    else
 -        g_return_if_reached();
-+
+-
+-    if (!gtk_recent_manager_add_full(recent, uri, &meta))
+-        g_warning("Recent item couldn't be added successfully");
+-
+-    g_free(uri);
 +//cloonix suppress error
++//    GtkRecentManager *recent;
++//    GtkRecentData meta = {
++//        .mime_type    = (char*)"application/x-spice",
++//        .app_name     = (char*)"spicy",
++//        .app_exec     = (char*)"spicy --uri=%u",
++//    };
++//    char *uri;
++//
++//    g_object_get(session, "uri", &uri, NULL);
++//    SPICE_DEBUG("%s: %s", __FUNCTION__, uri);
++//
++//    recent = gtk_recent_manager_get_default();
++//
 +//    if (g_str_has_prefix(uri, "spice://"))
 +//        meta.display_name = uri + 8;
 +//    else if (g_str_has_prefix(uri, "spice+unix://"))
 +//        meta.display_name = uri + 13;
 +//    else
 +//        g_return_if_reached();
++//    if (!gtk_recent_manager_add_full(recent, uri, &meta))
++//        g_warning("Recent item couldn't be added successfully");
++//    g_free(uri);
+ }
  
-     if (!gtk_recent_manager_add_full(recent, uri, &meta))
-         g_warning("Recent item couldn't be added successfully");
-@@ -1971,7 +1973,6 @@
+ static void main_channel_event(SpiceChannel *channel, SpiceChannelEvent event,
+@@ -1998,7 +1998,6 @@
      GOptionContext *context;
      spice_connection *conn;
      gchar *conf_file, *conf;
@@ -1561,7 +1511,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  
      keyfile = g_key_file_new();
  
-@@ -2016,23 +2017,6 @@
+@@ -2042,23 +2041,6 @@
      spice_set_session_option(conn->session);
      spice_cmdline_session_setup(conn->session);
  

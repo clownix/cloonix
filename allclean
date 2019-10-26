@@ -17,7 +17,6 @@ rm -rf tmpbuild_bis
 #----------------------------------------------------------
   for i in agent_dropbear \
            xwy \
-           lan_spy \
            spice \
            lib_rpc_clownix \
            lib_rpc_qmonitor \
@@ -31,6 +30,9 @@ rm -rf tmpbuild_bis
 #----------------------------------------------------------
   for i in  doorways \
             uml_cloonix_switch \
+            lan_spy \
+            lan_spy/lib_ioc \
+            lan_spy/lib_blkd \
             muswitch/lib_ioc \
             muswitch/lib_mulan \
             muswitch/lib_muend \

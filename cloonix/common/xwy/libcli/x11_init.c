@@ -200,10 +200,14 @@ char *get_x11_magic(void)
 /****************************************************************************/
 void x11_init_resp(int srv_idx, t_msg *msg)
 {
+  g_x11_ok = 0;
+  g_x11_srv_idx = 0;
   if (!strcmp(msg->buf, "OK"))
     {
     if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-      KERR("%d", srv_idx);
+      {
+      KOUT("%d", srv_idx);
+      }
     else
       {
       g_x11_ok = 1;
@@ -211,7 +215,9 @@ void x11_init_resp(int srv_idx, t_msg *msg)
       }
     }
   else
-    KERR("%s", msg->buf);
+    {
+    KOUT("%s", msg->buf);
+    }
   wrap_free(msg, __LINE__);
 }
 /*--------------------------------------------------------------------------*/

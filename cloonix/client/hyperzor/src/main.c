@@ -111,14 +111,14 @@ gboolean refresh_request_timeout (gpointer data)
 static void init_local_cloonix_paths(char *curdir, char *callbin, char *conf)
 {
   int err;
-  char path[MAX_PATH_LEN];
+  char path[2*MAX_PATH_LEN];
   char *ptr;
   memset(g_cloonix_root_tree, 0, MAX_PATH_LEN);
-  memset(path, 0, MAX_PATH_LEN);
+  memset(path, 0, 2*MAX_PATH_LEN);
   if (callbin[0] == '/')
-    snprintf(path, MAX_PATH_LEN-1, "%s", callbin);
+    snprintf(path, 2*MAX_PATH_LEN-1, "%s", callbin);
   else
-    snprintf(path, MAX_PATH_LEN-1, "%s/%s", curdir, callbin);
+    snprintf(path, 2*MAX_PATH_LEN-1, "%s/%s", curdir, callbin);
   ptr = strrchr(path, '/');
   if (!ptr)
     KOUT("%s", path);
@@ -131,39 +131,42 @@ static void init_local_cloonix_paths(char *curdir, char *callbin, char *conf)
   if (!ptr)
     KOUT("%s", path);
   *ptr = 0;
-
+  path[MAX_PATH_LEN-1] = 0;
   strncpy(g_cloonix_root_tree, path, MAX_PATH_LEN-1);
-
-  snprintf(path, MAX_PATH_LEN-1,
+  snprintf(path, 2*MAX_PATH_LEN-1,
            "%s/client/hyperzor/hyperzor", g_cloonix_root_tree);
+  path[MAX_PATH_LEN-1] = 0;
   err = access(path, X_OK);
   if (err)
     {
     printf("\nBAD INSTALL, NOT FOUND:\n%s\n", path);
     KOUT("%s %d", path, err);
     }
-
-  snprintf(g_cloonix_gui_bin, MAX_PATH_LEN-1,
+  snprintf(path, 2*MAX_PATH_LEN-1,
            "%s/client/cairo_canvas/cloonix_gui", g_cloonix_root_tree);
+  path[MAX_PATH_LEN-1] = 0;
+  strcpy(g_cloonix_gui_bin, path);
   err = access(g_cloonix_gui_bin, X_OK);
   if (err)
     {
     printf("\nBAD INSTALL, NOT FOUND:\n%s\n", g_cloonix_gui_bin);
     KOUT("%s %d", g_cloonix_gui_bin, err);
     }
-
-  snprintf(g_cloonix_cli_bin, MAX_PATH_LEN-1,
+  snprintf(path, 2*MAX_PATH_LEN-1,
            "%s/client/ctrl/cloonix_ctrl", g_cloonix_root_tree);
+  path[MAX_PATH_LEN-1] = 0;
+  strcpy(g_cloonix_cli_bin, path);
   err = access(g_cloonix_cli_bin, X_OK);
   if (err)
     {
     printf("\nBAD INSTALL, NOT FOUND:\n%s\n", g_cloonix_cli_bin);
     KOUT("%s %d", g_cloonix_cli_bin, err);
     }
-
-  snprintf(g_cloonix_ssh_bin, MAX_PATH_LEN-1,
+  snprintf(path, 2*MAX_PATH_LEN-1,
            "%s/common/agent_dropbear/agent_bin/dropbear_cloonix_ssh",
            g_cloonix_root_tree);
+  path[MAX_PATH_LEN-1] = 0;
+  strcpy(g_cloonix_ssh_bin, path);
   err = access(g_cloonix_ssh_bin, X_OK);
   if (err)
     {
@@ -171,9 +174,10 @@ static void init_local_cloonix_paths(char *curdir, char *callbin, char *conf)
     KOUT("%s %d", g_cloonix_ssh_bin, err);
     }
 
-
-  snprintf(g_cloonix_spice_bin, MAX_PATH_LEN-1,
+  snprintf(path, 2*MAX_PATH_LEN-1,
            "%s/common/spice/spice_lib/bin/spicy", g_cloonix_root_tree);
+  path[MAX_PATH_LEN-1] = 0;
+  strcpy(g_cloonix_spice_bin, path);
   err = access(g_cloonix_spice_bin, X_OK);
   if (err)
     {
