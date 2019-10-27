@@ -15,7 +15,7 @@ This version v04-00 is the latest (if this README is up to date).
 -----------------------------------------------------------------------------
 HOWTO INSTALL:
 It is assumed that sudo makes the command run as root.
-For those on buster, no problem ahead because it is the distro I am using,
+For those on buster or centos8, no problem ahead, compilation and run work,
 but for other distributions, you may have to work on the ./install_depends
 file to ajust needed packages.
 

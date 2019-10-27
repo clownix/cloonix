@@ -106,6 +106,14 @@ baseurl=${MIRROR}/extras/x86_64/os
 gpgcheck=0
 EOF
 
+cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-PowerTools.repo << EOF
+[PowerTools]
+name=CentOS-8 - PowerTools
+baseurl=${MIRROR}/PowerTools/x86_64/os
+gpgcheck=0
+EOF
+
+
 
 yum --releasever=8 --installroot=/tmp/wkmntloops -y install dnf
 #-----------------------------------------------------------------------#

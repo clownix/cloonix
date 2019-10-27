@@ -52,9 +52,11 @@ fct_get_redhat_packages()
          gtk3-devel libcap-devel libevent-devel readline-devel python3 \
          python3-six gstreamer1-plugins-base-devel libepoxy-devel \
          polkit-devel libacl-devel dejavu-serif-fonts orc-devel \
-         mesa-libEGL-devel bison flex wireshark libusbx-devel \
-         python3-pyparsing numactl-devel kernel-headers json-glib-devel \
-         mesa-libgbm-devel opus-devel meson ninja
+         mesa-libEGL-devel bison flex wireshark libusbx-devel bzip2 \
+         python3-pyparsing numactl-devel kernel-headers meson \
+         json-glib-devel mesa-libgbm-devel opus-devel 
+
+# meson ninja
 }
 #--------------------------------------------------------------------------
 fct_get_opensuse_packages()

@@ -27,10 +27,27 @@ cd build
 ninja install
 cp -rf ${TARGET}/usr/local/* ${TARGET}
 rm -rf ${TARGET}/usr/local
-mv ${TARGET}/lib/x86_64-linux-gnu/pkgconfig/* ${TARGET}/pkgconfig
-rmdir ${TARGET}/lib/x86_64-linux-gnu/pkgconfig
-mv ${TARGET}/lib/x86_64-linux-gnu/* ${TARGET}
-rmdir ${TARGET}/lib/x86_64-linux-gnu
-rmdir ${TARGET}/lib
+if [ -d ${TARGET}/lib/x86_64-linux-gnu/pkgconfig ]; then
+  mv ${TARGET}/lib/x86_64-linux-gnu/pkgconfig/* ${TARGET}/pkgconfig
+  rmdir ${TARGET}/lib/x86_64-linux-gnu/pkgconfig
+  mv ${TARGET}/lib/x86_64-linux-gnu/* ${TARGET}
+  rmdir ${TARGET}/lib/x86_64-linux-gnu
+  rmdir ${TARGET}/lib
+else
+  if [ -d ${TARGET}/lib64/pkgconfig ]; then
+    mv ${TARGET}/lib64/pkgconfig/* ${TARGET}/pkgconfig
+    rmdir ${TARGET}/lib64/pkgconfig
+    mv ${TARGET}/lib64/* ${TARGET}
+    rmdir ${TARGET}/lib64
+  else
+    echo ERROR NO:
+    echo ${TARGET}/lib/x86_64-linux-gnu/pkgconfig
+    echo ${TARGET}/lib64/pkgconfig
+    exit 1
+  fi
+fi
+
+
+
 
 
