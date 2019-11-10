@@ -116,7 +116,7 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
   if (vm_config_flags & VM_CONFIG_FLAG_CISCO)
     {
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", net, name);
-    sprintf(cmd, "cisco@%s",  name);
+    sprintf(cmd, "root@%s",  name);
     if (check_before_start_launch(argvcisco))
       pid_clone_launch(start_launch, NULL, NULL, (void *)(argvcisco),
                        NULL, NULL, name_vm, -1, 0);

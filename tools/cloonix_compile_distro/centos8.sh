@@ -5,7 +5,7 @@ NAME=tool
 CLOONIX=/home/cloonix
 QCOW2=centos8.qcow2
 CLOONIX_CENTOS8_REPO=https://mirrors.edge.kernel.org/centos/8
-CLOONIX_CENTOS8_REPO=http://172.17.0.2/centos8
+#CLOONIX_CENTOS8_REPO=http://172.17.0.2/centos8
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 CLOONIX_BULK=$(cat $CLOONIX_CONFIG |grep CLOONIX_BULK | awk -F = "{print \$2}")
