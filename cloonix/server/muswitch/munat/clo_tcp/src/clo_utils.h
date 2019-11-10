@@ -15,7 +15,9 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-char *util_state2ascii(int state);
+t_clo *util_get_fast_clo(t_tcp_id *tid);
+void util_init(void);
+void util_trace_tcpid(t_tcp_id *t, char *fct);
 int util_low_tcpid_comp(t_low *low, t_tcp_id *tcpid);
 void util_low2tcpid(t_tcp_id *tcpid, t_low *low);
 void util_tcpid2low(t_low *low, t_tcp_id *tcpid);
@@ -38,6 +40,7 @@ void util_send_finack(t_tcp_id *tcpid, u32_t ackno, u32_t seqno, u16_t wnd);
 void util_send_fin(t_tcp_id *tcpid, u32_t ackno, u32_t seqno, u16_t wnd);
 void util_send_data(t_tcp_id *tcpid, u32_t ackno, u32_t seqno, u16_t wnd,
                     int hlen, u8_t *hdata);
-void util_silent_purge_hdata_and_ldata(t_clo *clo);
+int util_purge_hdata(t_clo *clo);
+int util_purge_ldata(t_clo *clo);
 /*--------------------------------------------------------------------------*/
 

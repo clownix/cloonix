@@ -16,7 +16,6 @@
 /*                                                                           */
 /*****************************************************************************/
 t_clo *get_head_clo(void);
-t_clo *clo_mngt_find(t_tcp_id *tcpid);
 int clo_mngt_low_input(t_clo *clo, t_low *low, int *inserted);
 void clo_mngt_high_input(t_clo *clo, int hlen, u8_t *hdata);
 t_clo *clo_mngt_create_tcp(t_tcp_id *tcpid);
@@ -28,9 +27,10 @@ void clo_mngt_get_ackno_seqno_wnd(t_clo *clo, u32_t *ackno, u32_t *seqno,
                                   u16_t *rwnd, u16_t *twnd);
 int  clo_mngt_adjust_loc_wnd(t_clo *clo, u16_t loc_wnd);
 void clo_mngt_adjust_send_next(t_clo *clo, u32_t seqno, int len);
+void clo_mngt_adjust_recv_next(t_clo *clo, u32_t ackno, int len);
 int  clo_mngt_get_new_rxdata(t_clo *clo, int *len, u8_t **data);
 int  clo_mngt_authorised_to_send_nexttx(t_clo *clo);
-void clo_mngt_get_txdata(t_clo *clo, t_hdata *hd, u32_t *seqno, 
+int clo_mngt_get_txdata(t_clo *clo, t_hdata *hd, u32_t *seqno, 
                          int *len, u8_t **data);
 void clo_mngt_timer(void);
 void clo_mngt_init(void);

@@ -20,8 +20,8 @@ fi
 #--------------------------------------------------------------------------
 fct_get_debian_packages()
 {
-  apt-get -y install tar xorriso rxvt-unicode build-essential pkg-config \
-                     intltool libtool autoconf libncurses5-dev coreutils \
+  apt-get -y install tar build-essential pkg-config intltool libtool \
+                     rxvt-unicode autoconf libncurses5-dev coreutils \
                      libopus-dev libjpeg-dev libusb-1.0-0-dev libgtk-3-dev \
                      openssl libssl-dev libcap-dev libevent-dev \
                      libreadline-dev python3 python3-pyparsing python3-six \
@@ -30,14 +30,14 @@ fct_get_debian_packages()
 		     sudo zlib1g-dev liborc-0.4-dev libegl1-mesa-dev \
                      libdrm-dev bison flex libjson-glib-dev libsasl2-dev \
                      libnuma-dev libpixman-1-dev libpcap-dev libmnl-dev \
-                     libibverbs-dev wireshark meson ninja-build
+                     libibverbs-dev xorriso ninja-build meson wireshark 
 case "$name" in
   "Ubuntu")
    apt-get -y install linux-headers-generic
   ;;
 
   *)
-   apt-get -y install linux-headers-amd64 
+   apt-get -y install linux-headers-amd64
   ;;
 esac
 

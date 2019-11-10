@@ -57,70 +57,43 @@ typedef struct t_timer_fct
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void ackno_send(t_clo *clo, int force)
+static void ackno_send(t_clo *clo)
 {
   u32_t ackno, seqno;
   u16_t loc_wnd, dist_wnd;
   clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
-  if ((force == 1) || (ackno != clo->ackno_sent))
-    {
+  if (clo->ackno_sent < ackno)
     util_send_ack(&(clo->tcpid), ackno, seqno, loc_wnd);
-    clo->ackno_sent = ackno;
-    }
-  else if ((force == 2) || (ackno != clo->ackno_sent))
-    {
-    util_send_ack(&(clo->tcpid), ackno + 1, seqno, loc_wnd);
-    clo->ackno_sent = ackno + 1;
-    }
+  clo->ackno_sent = ackno;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void send_ack_cb(long delta_ns, void *data)
-{
-  t_tcp_id *time_tcpid = (t_tcp_id *) data;
-  t_clo *clo = util_get_fast_clo(time_tcpid);
-  if (clo)
-    {
-    ackno_send(clo, 0);
-    clo->send_ack_active = 0;
-    }
-  free(data);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int timed_send_ack(t_clo *clo)
-{
-  int result = 0;
-  t_tcp_id *time_tcpid;
-  if (clo->send_ack_active == 0)
-    {
-    result = 1;
-    time_tcpid = (t_tcp_id *) malloc(sizeof(t_tcp_id));
-    memcpy(time_tcpid, &(clo->tcpid), sizeof(t_tcp_id));
-    clo->send_ack_active = 1;
-    clownix_real_timer_add(0, 1, send_ack_cb, (void *) time_tcpid, NULL);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void local_send_finack_state_fin(t_clo *clo, int add_ackno, int line)
+static void local_send_finack_state_fin(t_clo *clo, int line)
 {
   u32_t ackno, seqno;
   u16_t loc_wnd, dist_wnd;
-  if (clo->has_been_closed_from_outside_socket == 1)
+  int state = clo_mngt_get_state(clo);
+  if (clo->fin_ack_has_been_sent == 0)
     {
     clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
-    util_send_finack(&(clo->tcpid), ackno+add_ackno, seqno, loc_wnd);
+    util_send_finack(&(clo->tcpid), ackno, seqno, loc_wnd);
+    clo->fin_ack_has_been_sent = 1; 
     clo_mngt_adjust_send_next(clo, seqno, 1);
-    clo_mngt_set_state(clo, state_fin_wait1);
+    if (clo->has_been_closed_from_outside_socket == 0)
+      {
+      if (state != state_established)
+        KERR("LLID%d FINACK MISS %d %d %s", clo->tcpid.history_llid,
+             clo->tcpid.local_port & 0xFFFF, clo->tcpid.remote_port & 0xFFFF,
+             util_state2ascii(clo->state));
+      clo_mngt_set_state(clo, state_fin_wait_last_ack);
+      }
     }
   else
     {
-    clo_mngt_set_state(clo, state_fin_wait1);
+    KERR("LLID%d FINACK MISS %d %d %s", clo->tcpid.history_llid,
+          clo->tcpid.local_port & 0xFFFF, clo->tcpid.remote_port & 0xFFFF,
+          util_state2ascii(clo->state));
     }
   unix2inet_finack_state(&(clo->tcpid), line);
 }
@@ -146,7 +119,7 @@ static void local_send_reset_state_closed(t_clo *clo)
   clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
   util_send_reset(&(clo->tcpid), ackno, seqno, loc_wnd, __FUNCTION__, __LINE__);
   clo_mngt_set_state(clo, state_closed);
-  init_closed_state_count_if_not_done(clo, 20, __LINE__);
+  init_closed_state_count_if_not_done(clo, 1, __LINE__);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -157,36 +130,40 @@ static void local_send_data_to_low(t_clo *clo, t_hdata *cur, int adjust)
   u32_t ackno, seqno, unused_seqno;
   u16_t loc_wnd, dist_wnd;
   u8_t *data;
-  if(clo_mngt_get_state(clo) == state_established)
+  if ((clo_mngt_get_state(clo) == state_established) ||
+      (clo_mngt_get_state(clo) == state_fin_wait_last_ack))
     {
     clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &unused_seqno,
                                  &loc_wnd, &dist_wnd);
-    clo_mngt_get_txdata(clo, cur, &seqno, &len, &data);
-    util_send_data(&(clo->tcpid), ackno, seqno, loc_wnd, len, data);
-    if (adjust)
-      clo_mngt_adjust_send_next(clo, seqno, len);
-    clo->ackno_sent = ackno;
-    if (clo->have_to_ack > 0)
-      clo->have_to_ack -= 1;
+    if (!clo_mngt_get_txdata(clo, cur, &seqno, &len, &data))
+      {
+      util_send_data(&(clo->tcpid), ackno, seqno, loc_wnd, len, data);
+      if (adjust)
+        clo_mngt_adjust_send_next(clo, seqno, len);
+      clo->ackno_sent = ackno;
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void try_send_data2low_timer(t_clo *clo)
+static int try_send_data2low(t_clo *clo)
 {
-  u32_t current_50ms = get_g_50ms_count();
-  t_hdata *cur = clo->head_hdata;
+  t_hdata *next, *cur = clo->head_hdata;
+  int result = -1;
   while (cur)
     {
+    next = cur->next;
     if (cur->count_50ms == 0)
       {
       if (!clo_mngt_authorised_to_send_nexttx(clo))
         {
         cur->count_stuck += 1;
-        if (cur->count_stuck > 20)
+        if (cur->count_stuck > 100)
           {
-          KERR("CONNECTION BIG PROBLEM");
+          KERR("LLID%d CONNECTION %d %d %s", clo->tcpid.history_llid,
+                clo->tcpid.local_port & 0xFFFF, clo->tcpid.remote_port & 0xFFFF,
+                util_state2ascii(clo->state));
           local_send_reset_state_closed(clo);
           }
         break;
@@ -196,36 +173,28 @@ static void try_send_data2low_timer(t_clo *clo)
       }
     else
       {
-      if (current_50ms - cur->count_50ms >= 1)
+      if (!clo_mngt_authorised_to_send_nexttx(clo))
         {
-        if (!clo_mngt_authorised_to_send_nexttx(clo))
+        cur->count_stuck += 1;
+        if (cur->count_stuck > 1000)
           {
-          cur->count_stuck += 1;
-          if (cur->count_stuck > 20)
-            {
-            KERR("CONNECTION PROBLEM");
-            }
-          else if (cur->count_stuck > 100)
-            {
-            KERR("CONNECTION BIG PROBLEM");
-            local_send_reset_state_closed(clo);
-            }
-          break;
+          KERR("LLID%d CONNECTION %d %d %s", clo->tcpid.history_llid,
+                clo->tcpid.local_port & 0xFFFF, clo->tcpid.remote_port & 0xFFFF,
+                util_state2ascii(clo->state));
+          local_send_reset_state_closed(clo);
           }
-        cur->count_stuck = 0;
-        local_send_data_to_low(clo, cur, 0);
-        }
-      else
-        {
-        KERR(" ");
         break;
         }
+      cur->count_stuck = 0;
+      local_send_data_to_low(clo, cur, 0);
       }
-    cur = cur->next;
+    cur = next;
     }
+  if (clo->head_hdata == NULL)
+    result = 0;
+  return result;
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static void timer_fct_call(t_all_ctx *all_ctx, void *param)
@@ -250,8 +219,6 @@ static void timer_fct_call(t_all_ctx *all_ctx, void *param)
         util_send_reset(&(clo->tcpid),ackno,seqno,loc_wnd,
                         __FUNCTION__,__LINE__);
         }
-      else
-        KERR(" ");
       break;
 
     case num_fct_send_finack:
@@ -264,7 +231,7 @@ static void timer_fct_call(t_all_ctx *all_ctx, void *param)
           }
         else
           {
-          local_send_finack_state_fin(clo, 0, __LINE__);
+          local_send_finack_state_fin(clo, __LINE__);
           }
         }
       break;
@@ -292,7 +259,7 @@ static void async_fct_call(int num_fct, int id, t_tcp_id *tcpid,
   fct->len = len;
   fct->data = data;
   if (num_fct == num_fct_send_finack)
-    clownix_timeout_add(get_all_ctx(),5,timer_fct_call,(void *)fct,NULL,NULL);
+    clownix_timeout_add(get_all_ctx(),1,timer_fct_call,(void *)fct,NULL,NULL);
   else if (num_fct == num_fct_high_close_rx)
     clownix_timeout_add(get_all_ctx(),3,timer_fct_call,(void *)fct,NULL,NULL);
   else if (num_fct == num_fct_high_close_rx_send_rst)
@@ -316,69 +283,28 @@ static void local_rx_data_purge(t_clo *clo)
 {
   int len, res;
   u8_t *data;
-  t_ldata *next, *cur = clo->head_ldata;
-  res = fct_high_data_rx_possible(&(clo->tcpid));
-  if (res == 1)
+  if (clo->head_ldata)
     {
-    if (!clo_mngt_get_new_rxdata(clo, &len, &data))
+    res = fct_high_data_rx_possible(&(clo->tcpid));
+    if (res == 1)
       {
-      fct_high_data_rx(&(clo->tcpid), len, data);
-      }
-    }
-  cur = clo->head_ldata;
-  if (res != -1)
-    {
-    if (cur)
-      KERR(" TOLOOKINTO %d", res);
-    }
-  while (cur)
-    {
-    next = cur->next;
-    util_extract_ldata(&(clo->head_ldata), cur);
-    cur = next;
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void try_send_data2low(t_clo *clo)
-{
-  u32_t current_50ms = get_g_50ms_count();
-  t_hdata *cur = clo->head_hdata;
-  while (cur)
-    {
-    if (!cur->count_50ms) 
-      {
-      if (!clo_mngt_authorised_to_send_nexttx(clo))
+      while(clo->head_ldata)
         {
-        break;
+        if (clo_mngt_get_new_rxdata(clo, &len, &data))
+          {
+          KERR("LLID%d", clo->tcpid.history_llid);
+          break;
+          }
+        else
+          fct_high_data_rx(&(clo->tcpid), len, data);
         }
-      local_send_data_to_low(clo, cur, 1);
       }
     else
       {
-      if (current_50ms - cur->count_50ms >= 1)
-        {
-        if (!clo_mngt_authorised_to_send_nexttx(clo))
-          {
-          cur->count_stuck += 1;
-          KERR(" ");
-          if (cur->count_stuck > 20)
-            {
-            KERR("CONNECTION BIG PROBLEM");
-            local_send_reset_state_closed(clo);
-            }
-          break;
-          }
-        cur->count_stuck = 0;
-        local_send_data_to_low(clo, cur, 0);
-        }
-      else
-        {
-        break;
-        }
+      KERR("LLID%d %d", clo->tcpid.history_llid, res);
+      while(clo->head_ldata)
+        clo_mngt_get_new_rxdata(clo, &len, &data);
       }
-    cur = cur->next;
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -400,27 +326,31 @@ int  clo_high_data_tx_possible(t_tcp_id *tcpid)
 /*****************************************************************************/
 int clo_high_data_tx(t_tcp_id *tcpid, int hlen, u8_t *hdata)
 {
-  int result = error_not_established;
+  int is_blkd,  state, llid, result = error_not_established;
   t_clo *clo = clo_mngt_find(tcpid);
-  int state;
   if (!clo)
     KOUT(" ");
+  llid = clo->tcpid.llid;
   state = clo_mngt_get_state(clo);
   if ((state != state_established) && 
-      (state != state_fin_wait1) && 
       (state != state_fin_wait_last_ack) && 
-      (state != state_fin_wait2) &&
       (state != state_closed))
     {
     KERR("%d", state);
     }
   else
     {
-    result = error_none;
-    clo_mngt_high_input(clo, hlen, hdata);
-    if (state != state_closed)
+    if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS) ||
+        (!msg_exist_channel(get_all_ctx(), llid, &is_blkd, __FUNCTION__))) 
+      KERR("%d", llid);
+    else
       {
-      try_send_data2low(clo);
+      result = error_none;
+      clo_mngt_high_input(clo, hlen, hdata);
+      if (state != state_closed)
+        {
+        try_send_data2low(clo);
+        }
       }
     }
   return result;
@@ -434,14 +364,14 @@ int clo_high_syn_tx(t_tcp_id *tcpid)
   t_clo *clo;
   u32_t ackno, seqno;
   u16_t loc_wnd, dist_wnd;
-  clo = clo_mngt_find(tcpid);
-  if (!clo)
+  clo = clo_mngt_create_tcp(tcpid);
+  if (clo)
     {
-    clo = clo_mngt_create_tcp(tcpid);
     clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
     util_send_syn(tcpid, ackno, seqno, loc_wnd);
     clo_mngt_adjust_send_next(clo, seqno, 1);
     clo_mngt_set_state(clo, state_first_syn_sent);
+//    util_trace_tcpid(tcpid, (char *) __FUNCTION__);
     result = 0;
     }
   return result;
@@ -453,13 +383,20 @@ static void reset_rx_close_all(t_clo *clo)
 {
   int is_blkd, llid;
   llid = clo->tcpid.llid;
-  if (msg_exist_channel(get_all_ctx(), llid, &is_blkd, __FUNCTION__))
-    msg_delete_channel(get_all_ctx(), llid);
-  if (clo->tcpid.llid)
-    util_detach_llid_clo(clo->tcpid.llid, clo);
+  if (llid)
+    {
+    if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
+      KERR("%d", llid);
+    if (msg_exist_channel(get_all_ctx(), llid, &is_blkd, __FUNCTION__))
+      msg_delete_channel(get_all_ctx(), llid);
+    if (clo->tcpid.llid)
+      util_detach_llid_clo(clo->tcpid.llid, clo);
+    }
   clo_mngt_set_state(clo, state_closed);
-  util_silent_purge_hdata_and_ldata(clo);
-  init_closed_state_count_if_not_done(clo, 1, __LINE__);
+  util_purge_hdata(clo);
+  util_purge_ldata(clo);
+  init_closed_state_count_if_not_done(clo, 50, __LINE__);
+  clo->reset_rx_close_all_done = 1;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -467,70 +404,117 @@ static void reset_rx_close_all(t_clo *clo)
 void clo_high_free_tcpid(t_tcp_id *tcpid)
 {
   t_clo *clo;
+  int state;
   clo = clo_mngt_find(tcpid);
   if (clo)
     {
+    state = clo_mngt_get_state(clo);
+    KERR("LLID%d %d %s", clo->tcpid.history_llid,
+                         clo->has_been_closed_from_outside_socket,
+                         util_state2ascii(state));
+    if ((clo->head_hdata) && (clo->tcpid.llid_unlocked) &&
+        ((state == state_established) || (state == state_fin_wait_last_ack)))
+      {
+      if (try_send_data2low(clo))
+        KERR("LLID%d FAIL PURGE", clo->tcpid.history_llid);
+      }
     clo_mngt_set_state(clo, state_closed);
-    util_silent_purge_hdata_and_ldata(clo);
-    init_closed_state_count_if_not_done(clo, 1, __LINE__);
+    if (util_purge_hdata(clo))
+      KERR("LLID%d", clo->tcpid.history_llid);
+    if (util_purge_ldata(clo))
+      KERR("LLID%d", clo->tcpid.history_llid);
+    init_closed_state_count_if_not_done(clo, 50, __LINE__);
     }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int clo_high_close_tx(t_tcp_id *tcpid, int trace)
+static int clo_high_close_tx(t_tcp_id *tcpid)
 {
-  int is_blkd, llid, state, result = -1;
+  int state, result = 0;
   t_clo *clo;
   clo = clo_mngt_find(tcpid);
-  if (clo)
+  if (clo == NULL)
+    KERR(" ");
+  else
     {
-    result = 0;
-    llid = clo->tcpid.llid;
-    if (msg_exist_channel(get_all_ctx(), llid, &is_blkd, __FUNCTION__))
-      msg_delete_channel(get_all_ctx(), llid);
-    if (clo->tcpid.llid)
-      util_detach_llid_clo(clo->tcpid.llid, clo);
-    local_rx_data_purge(clo);
     state = clo_mngt_get_state(clo);
-    if (trace)
-      KERR("%d", state);
+    if ((clo->head_hdata) && (clo->tcpid.llid_unlocked))
+      {
+      if (try_send_data2low(clo))
+        {
+        result = -1;
+        clo->try_send_data2low += 1;
+        if (clo->try_send_data2low > 3)
+          init_closed_state_count_if_not_done(clo, 50, __LINE__);
+        return result;
+        }
+      }
     switch(state)
       {
       case state_established:
       case state_first_syn_sent:
+      case state_closed:
+      case state_fin_wait_last_ack:
         if (clo->has_been_closed_from_outside_socket == 1)
+          clo->must_call_fin = 1;
+        if (util_purge_hdata(clo))
           {
-          if (trace)
-            KERR("%d", state);
-          async_fct_call(num_fct_send_finack, clo->id_tcpid, &(clo->tcpid), 
-                         0, NULL);
+          KERR("LLID%d FAIL PURGE out_close:%d %s", clo->tcpid.history_llid,
+               clo->has_been_closed_from_outside_socket, util_state2ascii(state));
+          result = -1;
           }
-        else
+        if (util_purge_ldata(clo))
           {
-          if (trace)
-            KERR("%d", state);
-          local_send_finack_state_fin(clo, 1, __LINE__);
+          KERR("LLID%d FAIL PURGE out_close:%d %s", clo->tcpid.history_llid,
+               clo->has_been_closed_from_outside_socket, util_state2ascii(state));
+          result = -1;
           }
         break;
       case state_created:
+        KERR("LLID%d %d %s", clo->tcpid.history_llid,
+                             clo->has_been_closed_from_outside_socket,
+                             util_state2ascii(state));
         local_send_reset_state_closed(clo);
-        break;
-      case state_fin_wait1:
-      case state_fin_wait2:
-        init_closed_state_count_if_not_done(clo, 20, __LINE__);
-        break;
-      case state_closed:
-      case state_fin_wait_last_ack:
-        clo_mngt_set_state(clo, state_closed);
-        util_silent_purge_hdata_and_ldata(clo);
-        init_closed_state_count_if_not_done(clo, 4, __LINE__);
         break;
       default:
         KOUT(" %d", state);
+      init_closed_state_count_if_not_done(clo, 50, __LINE__);
       }
     }
   return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void timer_delayed_close(t_all_ctx *all_ctx, void *data)
+{
+  t_tcp_id *tcpid = (t_tcp_id *) data;
+  t_clo *clo = clo_mngt_find(tcpid);
+  if (!clo)
+    {
+    free(data);
+    }
+  else
+    {
+    if (!clo_high_close_tx(tcpid))
+      free(data);
+    else
+      {
+      clownix_timeout_add(get_all_ctx(), 100, timer_delayed_close,
+                      (void *)data, NULL, NULL);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void  clo_delayed_high_close_tx(t_tcp_id *tcpid)
+{
+  t_tcp_id *tmp_tcpid = (t_tcp_id *) malloc(sizeof(t_tcp_id));
+  memcpy(tmp_tcpid, tcpid, sizeof(t_tcp_id)); 
+  clownix_timeout_add(get_all_ctx(), 100, timer_delayed_close, 
+                      (void *)tmp_tcpid, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -547,6 +531,7 @@ int  clo_high_synack_tx(t_tcp_id *tcpid)
     util_send_synack(tcpid, ackno, seqno, loc_wnd);
     clo_mngt_adjust_send_next(clo, seqno, 1);
     clo_mngt_set_state(clo, state_established);
+//    util_trace_tcpid(tcpid, (char *) __FUNCTION__);
     result = 0;
     }
   return result;
@@ -564,40 +549,53 @@ static void non_existing_tcp_low_input(t_tcp_id *tcpid, t_low *low,
   if (low->flags == TH_SYN)
     {
     clo = clo_mngt_create_tcp(tcpid);
+    if (!clo)
+      KOUT(" ");
     if (!clo_mngt_low_input(clo, low, inserted))
+      {
       fct_high_syn_rx(&(clo->tcpid));
+      }
     else
       {
-      KERR(" ");
+      KERR("%d %d", tcpid->local_port & 0xFFFF, tcpid->remote_port & 0xFFFF);
       clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
       util_send_reset(tcpid, ackno, seqno, loc_wnd, __FUNCTION__, __LINE__);
       clo_mngt_set_state(clo, state_closed);
-      init_closed_state_count_if_not_done(clo, 20, __LINE__);
+      init_closed_state_count_if_not_done(clo, 50, __LINE__);
       }
+    }
+  else if ((low->flags & (TH_SYN | TH_ACK)) == (TH_SYN | TH_ACK))
+    {
+    KERR("%d %d %X %d", tcpid->local_port & 0xFFFF,
+                        tcpid->remote_port & 0xFFFF,
+                        low->flags, low->tcplen);
+    }
+  else if ((low->flags & (TH_FIN | TH_ACK)) == (TH_FIN | TH_ACK))
+    {
+    KERR("%d %d %X %d", tcpid->local_port & 0xFFFF,
+                        tcpid->remote_port & 0xFFFF,
+                        low->flags, low->tcplen);
+    ackno = low->seqno + low->tcplen+1;
+    seqno = low->ackno;
+    util_send_ack(tcpid, ackno, seqno, TCP_WND);
+    }
+  else if ((low->flags & TH_FIN) ==  TH_FIN)
+    {
+    KERR("%d %d %X %d", tcpid->local_port & 0xFFFF,
+                        tcpid->remote_port & 0xFFFF,
+                        low->flags, low->tcplen);
+    ackno = low->seqno + low->tcplen+1;
+    seqno = low->ackno;
+    util_send_reset(tcpid, ackno, seqno, TCP_WND, __FUNCTION__, __LINE__);
     }
   else
     {
-    if ((low->flags & TH_FIN) ==  TH_FIN)
-      {
-      clo = clo_mngt_create_tcp(tcpid);
-      if (clo)
-        KERR(" ");
-      else
-        KERR(" ");
-      }
-    if ((!(low->flags & TH_RST)) && (low->tcplen != 0))
-      {
-      if ((!(low->flags & TH_FIN)) && (low->tcplen != 1))
-        {
-        KERR("%X  %d ", low->flags, low->tcplen);
-        if ((low->flags & TH_FIN) ==  TH_FIN)
-          ackno = low->seqno + low->tcplen+1;
-        else
-          ackno = low->seqno + low->tcplen;
-        seqno = low->ackno;
-        util_send_reset(tcpid, ackno, seqno, TCP_WND, __FUNCTION__, __LINE__);
-        }
-      }
+    KERR("%d %d %X %d", tcpid->local_port & 0xFFFF,
+                        tcpid->remote_port & 0xFFFF,
+                        low->flags, low->tcplen);
+    ackno = low->seqno + low->tcplen;
+    seqno = low->ackno;
+    util_send_reset(tcpid, ackno, seqno, TCP_WND, __FUNCTION__, __LINE__);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -624,7 +622,7 @@ static int existing_tcp_low_input(t_clo *clo, t_low *low)
         util_send_reset(&(clo->tcpid),ackno,seqno,loc_wnd,
                         __FUNCTION__,__LINE__);
         clo_mngt_set_state(clo, state_closed);
-        init_closed_state_count_if_not_done(clo, 20, __LINE__);
+        init_closed_state_count_if_not_done(clo, 50, __LINE__);
         }
       break;
     case state_first_syn_sent:
@@ -643,62 +641,41 @@ static int existing_tcp_low_input(t_clo *clo, t_low *low)
         async_fct_call(num_fct_high_close_rx, clo->id_tcpid, &(clo->tcpid),
                        0, NULL);
         clo_mngt_set_state(clo, state_closed);
-        init_closed_state_count_if_not_done(clo, 20, __LINE__);
+        init_closed_state_count_if_not_done(clo, 50, __LINE__);
         }
       break;
 
     case state_established:
       if ((low->flags & TH_FIN) ==  TH_FIN)
         {
-        local_rx_data_purge(clo);
-        if (clo->has_been_closed_from_outside_socket == 1)
-          clo->has_been_closed_from_outside_socket = 0; 
         clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
-        util_send_finack(&(clo->tcpid), ackno+1, seqno, loc_wnd);
-        clo_mngt_adjust_send_next(clo, seqno, 1);
-        clo_mngt_set_state(clo, state_fin_wait_last_ack);
-        }
-      result = 0;
-      break;
-
-    case state_fin_wait1:
-
-      if ((low->flags & TH_ACK) ==  TH_ACK)
-        {
-        clo_mngt_set_state(clo, state_fin_wait2);
-        if ((low->flags & TH_FIN) ==  TH_FIN)
+        clo_mngt_adjust_recv_next(clo, ackno, 1);
+        clo_mngt_get_ackno_seqno_wnd(clo, &ackno, &seqno, &loc_wnd, &dist_wnd);
+        if (clo->has_been_closed_from_outside_socket == 1)
           {
-          if (clo->head_hdata)
-            KERR("%p", clo);
-          KERR("state_fin_wait1");
-          ackno_send(clo, 1);
-          async_fct_call(num_fct_high_close_rx, clo->id_tcpid, &(clo->tcpid),
-                         0, NULL);
-          clo_mngt_set_state(clo, state_closed);
+          ackno_send(clo);
+          clo_mngt_get_ackno_seqno_wnd(clo,&ackno,&seqno,&loc_wnd,&dist_wnd);
+          ackno_send(clo);
+          clo_mngt_set_state(clo, state_fin_wait_last_ack);
+          init_closed_state_count_if_not_done(clo, 50, __LINE__);
+          }
+        else
+          {
+          local_rx_data_purge(clo);
+          clo->must_call_fin = 1;
           }
         }
-      break;
-
-    case state_fin_wait2:
-
-      if ((low->flags & TH_FIN) ==  TH_FIN)
-        {
-        if (clo->head_hdata)
-          KERR("%p", clo);
-        ackno_send(clo, 2);
-        async_fct_call(num_fct_high_close_rx, clo->id_tcpid, &(clo->tcpid), 
-                       0, NULL);
-        clo_mngt_set_state(clo, state_closed);
-        }
+      result = 0;
       break;
 
     case state_fin_wait_last_ack:
         if ((low->flags & TH_ACK) ==  TH_ACK)
           {
-          async_fct_call(num_fct_high_close_rx, clo->id_tcpid, &(clo->tcpid), 
-                         0, NULL);
+          init_closed_state_count_if_not_done(clo, 50, __LINE__);
           }
-        clo_mngt_set_state(clo, state_closed);
+        else
+          KERR("LLID%d %X", clo->tcpid.history_llid, low->flags);
+      result = 0;
       break;
 
     case state_closed:
@@ -711,11 +688,10 @@ static int existing_tcp_low_input(t_clo *clo, t_low *low)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 void clo_low_input(int mac_len, u8_t *mac_data)
 {
-  int res, change = 0, len, inserted = 0;
+  int res, len, inserted = 0;
   u8_t *data;
   t_tcp_id tcpid;
   t_low *low;
@@ -724,6 +700,7 @@ void clo_low_input(int mac_len, u8_t *mac_data)
   if (!tcp_packet2low(mac_len, mac_data, &low))
     {
     util_low2tcpid(&tcpid, low);
+//    util_trace_tcpid(&tcpid, (char *) __FUNCTION__);
     clo = clo_mngt_find(&tcpid);
     if (!clo)
       {
@@ -731,46 +708,36 @@ void clo_low_input(int mac_len, u8_t *mac_data)
       }
     else
       {
+      clo->non_activ_count_rx = 0;
       if ((low->flags & TH_RST) ==  TH_RST)
         {
-        reset_rx_close_all(clo);
+        if (clo->reset_rx_close_all_done == 0)
+          reset_rx_close_all(clo);
         }
       else if (!clo_mngt_low_input(clo, low, &inserted))
         {
-        if (!existing_tcp_low_input(clo, low))
+        if (existing_tcp_low_input(clo, low))
+          KERR("LLID%d", clo->tcpid.history_llid);
+        else if (clo->tcpid.llid_unlocked)
           {
           if (inserted)
             {
-            res = fct_high_data_rx_possible(&(clo->tcpid));
-            if (res == -1)
-              break_of_com_kill_both_sides(clo, __LINE__);
-            if (res == 1)
+            clo_mngt_adjust_loc_wnd(clo, TCP_WND);
+            if (!clo_mngt_get_new_rxdata(clo, &len, &data))
               {
-              change = clo_mngt_adjust_loc_wnd(clo, TCP_WND);
-              if (!clo_mngt_get_new_rxdata(clo, &len, &data))
-                {
+              res = fct_high_data_rx_possible(&(clo->tcpid));
+              if (res == 1)
                 fct_high_data_rx(&(clo->tcpid), len, data);
-                }
-              }
-            else if (res == 0)
-              {
-              if (clo->tcpid.llid_unlocked)
-                change = clo_mngt_adjust_loc_wnd(clo, TCP_WND_MIN);
-              }
-            }
-          if ((change || clo->have_to_ack) &&
-              (clo_mngt_get_state(clo) == state_established))
-            {
-            if (timed_send_ack(clo))
-              {
-              if (clo->have_to_ack > 0)
-                clo->have_to_ack -= 1;
+              else if (res == -1)
+                clo_delayed_high_close_tx(&(clo->tcpid));
+              else if (res != -2)
+                KERR("LLID%d %d", clo->tcpid.history_llid, res);
               }
             }
           }
         }
       else
-        KERR("%p", clo);
+        KERR("LLID%d", clo->tcpid.history_llid);
       }
     if (!inserted)
       {
@@ -800,18 +767,18 @@ static void receive_all_local_data(void)
   t_clo *cur = get_head_clo();
   while (cur)
     {
-    if (cur->head_ldata)
+    while (cur->head_ldata)
       {
-      res = fct_high_data_rx_possible(&(cur->tcpid));
-      if (res == -1)
-        break_of_com_kill_both_sides(cur, __LINE__);
-      if (res == 1)
+      if (!clo_mngt_get_new_rxdata(cur, &len, &data))
         {
-        if (!clo_mngt_get_new_rxdata(cur, &len, &data))
-          {
+        res = fct_high_data_rx_possible(&(cur->tcpid));
+        if (res == 1)
           fct_high_data_rx(&(cur->tcpid), len, data);
-          }
+        else
+          KERR("LLID%d %d", cur->tcpid.history_llid, res);
         }
+      else
+        KERR("LLID%d", cur->tcpid.history_llid);
       }
     cur = cur->next;
     }
@@ -821,11 +788,23 @@ static void receive_all_local_data(void)
 /*****************************************************************************/
 static void send_all_data_to_send(void)
 {
+  int state;
   t_clo *cur = get_head_clo();
   while (cur)
     {
-    if (cur->head_hdata) 
-      try_send_data2low_timer(cur);
+    state = clo_mngt_get_state(cur);
+    if ((cur->head_hdata) && (cur->tcpid.llid_unlocked) &&
+        ((state == state_established)||(state == state_fin_wait_last_ack)))
+      {
+      ackno_send(cur);
+      try_send_data2low(cur);
+      }
+    if(cur->must_call_fin == 1)
+      {
+      cur->must_call_fin = 0;
+      if (cur->fin_ack_has_been_sent == 0)
+        async_fct_call(num_fct_send_finack, cur->id_tcpid, &(cur->tcpid), 0, NULL);
+      }
     cur = cur->next;
     }
 }
@@ -844,6 +823,16 @@ static void clo_clean_closed(void)
       cur->closed_state_count -= 1;
       if (cur->closed_state_count == 0) 
         {
+        if (cur->head_hdata)
+          KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                                  cur->tcpid.local_port & 0xFFFF,
+                                  cur->tcpid.remote_port & 0xFFFF,
+                                  util_state2ascii(cur->state));
+        if (cur->head_ldata)
+          KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                                  cur->tcpid.local_port & 0xFFFF,
+                                  cur->tcpid.remote_port & 0xFFFF,
+                                  util_state2ascii(cur->state));
         memcpy(&tmp, cur, sizeof(t_clo));
         if (clo_mngt_delete_tcp(cur))
           {
@@ -865,26 +854,24 @@ static void clo_clean_closed(void)
 /*****************************************************************************/
 static void send_wnd_modif(void)
 {
-  int res, change = 0;
+  int res;
   t_clo *clo = get_head_clo();
   while (clo)
     {  
     if (clo->loc_wnd == 0)
       {
       res = fct_high_data_rx_possible(&(clo->tcpid));
-      if (res == -1)
-        break_of_com_kill_both_sides(clo, __LINE__);
       if (res == 1)
-        change = clo_mngt_adjust_loc_wnd(clo, TCP_WND);
+        clo_mngt_adjust_loc_wnd(clo, TCP_WND);
       else  
-        KERR("%d", clo_mngt_get_state(clo));
+        {
+        KERR("LLID%d %d", clo->tcpid.history_llid, res);
+        break_of_com_kill_both_sides(clo, __LINE__);
+        }
       }
-    if ((change || clo->have_to_ack) &&
-        (clo_mngt_get_state(clo) == state_established))
+    if (clo_mngt_get_state(clo) == state_established)
       {
-      ackno_send(clo, 1);
-      if (clo->have_to_ack > 0)
-        clo->have_to_ack -= 1;
+      ackno_send(clo);
       }
     clo = clo->next;
     }
@@ -898,28 +885,76 @@ static void non_activ_count_inc(void)
   while (cur)
     {
     next = cur->next;
-    cur->non_activ_count += 1;
+    cur->non_activ_count_rx += 1;
+    cur->non_activ_count_tx += 1;
     if (clo_mngt_get_state(cur) == state_first_syn_sent)
       cur->syn_sent_non_activ_count += 1;
     else
       cur->syn_sent_non_activ_count = 0;
-    if (cur->non_activ_count == 400) 
+    if (cur->non_activ_count_rx == 1000) 
       {
-      KERR("TOLOOKINTO Connection lasting more than 100 sec");
-      KERR("%X %X %d %d", cur->tcpid.local_ip, cur->tcpid.remote_ip,
-                          cur->tcpid.local_port, cur->tcpid.remote_port);
+      if (cur->state != state_established)
+        {
+        KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                              cur->tcpid.local_port & 0xFFFF,
+                              cur->tcpid.remote_port & 0xFFFF,
+                              util_state2ascii(cur->state));
+        local_send_reset_state_closed(cur);
+        }
+      else
+        KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                              cur->tcpid.local_port & 0xFFFF,
+                              cur->tcpid.remote_port & 0xFFFF,
+                              util_state2ascii(cur->state));
       }
-    if (cur->non_activ_count > 500000) 
+    if (cur->non_activ_count_tx == 1000)
       {
-      clo_high_close_tx(&(cur->tcpid), 1);
+      if (cur->state != state_established)
+        {
+        KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                              cur->tcpid.local_port & 0xFFFF,
+                              cur->tcpid.remote_port & 0xFFFF,
+                              util_state2ascii(cur->state));
+        local_send_reset_state_closed(cur);
+        }
+      else
+        KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                              cur->tcpid.local_port & 0xFFFF,
+                              cur->tcpid.remote_port & 0xFFFF,
+                              util_state2ascii(cur->state));
       }
-    if (cur->syn_sent_non_activ_count > 10)
+    if (cur->non_activ_count_rx == 2000)
       {
-      clo_high_close_tx(&(cur->tcpid), 1);
+      KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                            cur->tcpid.local_port & 0xFFFF,
+                            cur->tcpid.remote_port & 0xFFFF,
+                            util_state2ascii(cur->state));
+      local_send_reset_state_closed(cur);
+      }
+
+    if (cur->non_activ_count_tx == 2000)
+      {
+      KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                            cur->tcpid.local_port & 0xFFFF,
+                            cur->tcpid.remote_port & 0xFFFF,
+                            util_state2ascii(cur->state));
+      local_send_reset_state_closed(cur);
+      }
+    if (cur->syn_sent_non_activ_count > 500)
+      {
+      KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                            cur->tcpid.local_port & 0xFFFF,
+                            cur->tcpid.remote_port & 0xFFFF,
+                            util_state2ascii(cur->state));
+      local_send_reset_state_closed(cur);
       }
     if (cur->tx_repeat_failure_count > 20)
       {
-      clo_high_close_tx(&(cur->tcpid), 0);
+      KERR("LLID%d %d %d %s", cur->tcpid.history_llid,
+                            cur->tcpid.local_port & 0xFFFF,
+                            cur->tcpid.remote_port & 0xFFFF,
+                            util_state2ascii(cur->state));
+      local_send_reset_state_closed(cur);
       }
     cur = next;
     }
@@ -965,6 +1000,7 @@ void clo_init(t_all_ctx *all_ctx,
   fct_high_synack_rx =  high_synack_rx;
   fct_high_close_rx  =  high_close_rx;
   clo_mngt_init();
+  util_init();
 }
 /*---------------------------------------------------------------------------*/
 

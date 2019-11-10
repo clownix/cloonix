@@ -52,6 +52,8 @@ static void update_unack_release_past_hdata(t_clo *clo, u32_t ackno)
 {
   t_hdata *next, *cur = clo->head_hdata;
   u32_t add = 0;
+  if (ackno > clo->send_unack)
+    clo->send_unack = ackno;
   while (cur)
     {
     next = cur->next;
@@ -59,14 +61,15 @@ static void update_unack_release_past_hdata(t_clo *clo, u32_t ackno)
       {
       if ((cur->seqno + TCP_WND ) < cur->seqno)
         add = 0x10000000;
-      if ((ackno+add) >= ((cur->seqno+add) + cur->len))
+      if ((clo->send_unack + add) >= ((cur->seqno + add) + cur->len))
         util_extract_hdata(&(clo->head_hdata), cur);
       }
     cur = next;
     }
-  clo->send_unack = ackno;
 }
 /*---------------------------------------------------------------------------*/
+
+
 
 /*****************************************************************************/
 u32_t get_g_50ms_count(void)
@@ -85,8 +88,11 @@ t_clo *get_head_clo(void)
 /*****************************************************************************/
 void clo_mngt_set_state(t_clo *clo, int state)
 {
-  printf("STATE: from %s to %s\n", 
-         util_state2ascii(clo->state), util_state2ascii(state));
+//  KERR("LLID%d %d %d: from %s to %s", clo->tcpid.history_llid,  
+//                                  clo->tcpid.local_port & 0xFFFF,
+//                                  clo->tcpid.remote_port & 0xFFFF,
+//                                  util_state2ascii(clo->state),
+//                                  util_state2ascii(state));
   clo->state = state;
 }
 /*--------------------------------------------------------------------------*/
@@ -128,6 +134,7 @@ static void ajust(t_clo *clo, t_low *low,
     }
   else
     {
+    KERR("ADJUST  %X %X", clo->recv_next, clo->recv_next + 2*TCP_WND);
     *ajusted_recv_next = clo->recv_next + 0x10000000;
     *ajusted_seqno = low->seqno + 0x10000000;
     }
@@ -139,6 +146,7 @@ static void ajust(t_clo *clo, t_low *low,
     }
   else
     {
+    KERR("ADJUST  %X %X", clo->recv_next, clo->recv_next + 2*TCP_WND);
     *ajusted_send_unack = clo->send_unack + 0x10000000;
     *ajusted_send_next = clo->send_next + 0x10000000;
     *ajusted_ackno = low->ackno + 0x10000000;
@@ -152,8 +160,8 @@ int clo_mngt_low_input(t_clo *clo, t_low *low, int *inserted)
 {
   int result = -1;
   int adjusted_tcplen;
-  u32_t adjusted_send_unack, adjusted_send_next, adjusted_recv_next,
-        adjusted_seqno, adjusted_ackno;
+  u32_t adjusted_sunack, adjusted_snext, adjusted_rnext,
+        adjusted_eqno, adjusted_ckno;
   *inserted = 0;
   if ((clo->state == state_created) && 
       (low->flags == TH_SYN))
@@ -168,62 +176,65 @@ int clo_mngt_low_input(t_clo *clo, t_low *low, int *inserted)
     clo->recv_next = low->seqno + low->tcplen;
     clo->dist_wnd = low->wnd;
     update_unack_release_past_hdata(clo, low->ackno);
-    clo->have_to_ack = 1;
     result = 0;
     }
   else
     {
-    ajust(clo, low, &adjusted_send_unack, &adjusted_send_next,
-          &adjusted_recv_next, &adjusted_seqno, &adjusted_ackno); 
-    if ((low->flags & TH_FIN) ==  TH_FIN)
-      adjusted_tcplen = low->tcplen + 1;
-    else
-      adjusted_tcplen = low->tcplen;
-    if (((adjusted_recv_next <= adjusted_seqno) &&
-         (adjusted_seqno <= adjusted_recv_next + 2*TCP_WND)) ||
-        ((adjusted_recv_next <= adjusted_seqno + adjusted_tcplen) &&
-         adjusted_seqno+adjusted_tcplen-1 <= adjusted_recv_next+2*TCP_WND)) 
+    ajust(clo, low, &adjusted_sunack, &adjusted_snext,
+          &adjusted_rnext, &adjusted_eqno, &adjusted_ckno); 
+    adjusted_tcplen = low->tcplen;
+    if (((adjusted_rnext <= adjusted_eqno) &&
+         (adjusted_eqno <= adjusted_rnext + 2*TCP_WND)) ||
+        ((adjusted_rnext <= adjusted_eqno + adjusted_tcplen) &&
+         adjusted_eqno+adjusted_tcplen-1 <= adjusted_rnext+2*TCP_WND)) 
       {
       if (low->flags & TH_ACK)
         {
-        if ((adjusted_send_unack <= adjusted_ackno) && 
-          (adjusted_ackno <= adjusted_send_next))
-          update_unack_release_past_hdata(clo, low->ackno);
+        update_unack_release_past_hdata(clo, low->ackno);
+        clo->dist_wnd = low->wnd;
         }
       if (low->datalen)
         {
         if ((clo->state == state_established) ||
-            (clo->state == state_fin_wait1) || 
-            (clo->state == state_fin_wait_last_ack) || 
-            (clo->state == state_fin_wait2))
+            (clo->state == state_fin_wait_last_ack))
           {
           if (low->seqno == clo->recv_next)
             {
             util_insert_ldata(&(clo->head_ldata), low);
             *inserted = 1;
-            clo->have_to_ack = 1;
             clo->recv_next = low->seqno + adjusted_tcplen;
             clo->dist_wnd = low->wnd;
             }
           else
             {
-            KERR("DROP bad seq rx%d  %d  %d", 
-                  low->seqno, clo->recv_next, low->datalen);
+            KERR("DROP LLID%d %d %d %s   bad seq rx %u  %u  %d %d",
+                                         clo->tcpid.history_llid,
+                                         clo->tcpid.local_port & 0xFFFF,
+                                         clo->tcpid.remote_port & 0xFFFF,
+                                         util_state2ascii(clo->state), 
+                                         low->seqno, clo->recv_next,
+                                         low->datalen,
+                                         (int)(clo->recv_next-low->seqno));
             }
           }
         else
           KERR("DROP TOLOOKINTO %d", low->datalen);
+        }
+      else
+        {
+        if (!(low->flags & TH_ACK))
+          KERR("ABNORMAL ZERO LENGH %d", low->datalen);
         }
       result = 0;
       }
     else 
       {
       KERR("%d %d %d %d", 
-           (adjusted_recv_next <= adjusted_seqno),
-           (adjusted_seqno <= adjusted_recv_next + 2*TCP_WND),
-           (adjusted_recv_next <= adjusted_seqno + adjusted_tcplen),
-           (adjusted_seqno+adjusted_tcplen-1 <= adjusted_recv_next+2*TCP_WND));
-      KERR("%d %d %d %d", adjusted_seqno, adjusted_recv_next, 
+           (adjusted_rnext <= adjusted_eqno),
+           (adjusted_eqno <= adjusted_rnext + 2*TCP_WND),
+           (adjusted_rnext <= adjusted_eqno + adjusted_tcplen),
+           (adjusted_eqno+adjusted_tcplen-1 <= adjusted_rnext+2*TCP_WND));
+      KERR("%d %d %d %d", adjusted_eqno, adjusted_rnext, 
                           2*TCP_WND, adjusted_tcplen);
       }
     }
@@ -261,10 +272,13 @@ t_clo *clo_mngt_create_tcp(t_tcp_id *tcpid)
 {
   t_clo *clo;
   clo = util_insert_clo(&head_clo, tcpid);
-  clo_mngt_set_state(clo, state_created);
-  clo->send_unack = clo_next_iss();
-  clo->send_next = clo->send_unack;
-  clo->loc_wnd = TCP_WND;
+  if (clo)
+    {
+    clo_mngt_set_state(clo, state_created);
+    clo->send_unack = clo_next_iss();
+    clo->send_next = clo->send_unack;
+    clo->loc_wnd = TCP_WND;
+    }
   return clo;
 }
 /*---------------------------------------------------------------------------*/
@@ -304,6 +318,15 @@ void clo_mngt_adjust_send_next(t_clo *clo, u32_t seqno, int len)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void clo_mngt_adjust_recv_next(t_clo *clo, u32_t ackno, int len)
+{
+  if (ackno != clo->recv_next)
+    KOUT(" %d %d ", ackno, clo->recv_next);
+  clo->recv_next = ackno + len;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int clo_mngt_adjust_loc_wnd(t_clo *clo, u16_t loc_wnd)
 {
   int result = 0;
@@ -336,7 +359,6 @@ int clo_mngt_get_new_rxdata(t_clo *clo, int *len, u8_t **data)
   *len = compute_ldata_len(clo);
   if (*len)
     {
-    clo->non_activ_count = 0;
     *data = (u8_t *) malloc(*len);
     memset(*data, 0, *len);
     while (cur)
@@ -363,7 +385,7 @@ int  clo_mngt_authorised_to_send_nexttx(t_clo *clo)
   diff = (clo->send_next - clo->send_unack);
   if (diff < 0)
     KOUT(" %d %d", clo->send_unack, clo->send_next); 
-//  diff += g_tcp_max_size + 200;
+  diff += g_tcp_max_size + 200;
   if (diff < clo->dist_wnd)
     result = 1;
   return result;
@@ -371,8 +393,8 @@ int  clo_mngt_authorised_to_send_nexttx(t_clo *clo)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void clo_mngt_get_txdata(t_clo *clo, t_hdata *hd, u32_t *seqno, 
-                        int *len, u8_t **data)
+static void get_txdata(t_clo *clo, t_hdata *hd, u32_t *seqno, 
+                       int *len, u8_t **data)
 {
   *len = hd->len;
   if (!(*len))
@@ -386,7 +408,52 @@ void clo_mngt_get_txdata(t_clo *clo, t_hdata *hd, u32_t *seqno,
   if (hd->count_tries_tx > clo->tx_repeat_failure_count)
     clo->tx_repeat_failure_count = hd->count_tries_tx;
   *seqno = hd->seqno;
-  clo->non_activ_count = 0;
+  clo->non_activ_count_tx = 0;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int clo_mngt_get_txdata(t_clo *clo, t_hdata *hd, u32_t *seqno, 
+                        int *len, u8_t **data)
+{
+  u32_t add = 0;
+  int result = -1;
+  if (hd->count_50ms == 0)
+    {
+    if (hd->seqno == 0)
+      {
+      get_txdata(clo, hd, seqno, len, data);
+      result = 0;
+      }
+    else
+      {
+      if ((hd->seqno + TCP_WND ) < hd->seqno)
+        add = 0x10000000;
+      if ((clo->send_unack+add) <= ((hd->seqno+add) + hd->len))
+        {
+        get_txdata(clo, hd, seqno, len, data);
+        result = 0;
+        }
+      else
+        KERR("%u %u", clo->send_unack, hd->seqno);
+      }
+    }
+  else
+    {
+    if (hd->count_50ms + 2 < g_50ms_count)
+      {
+      if ((hd->seqno + TCP_WND ) < hd->seqno)
+        add = 0x10000000;
+      if ((clo->send_unack+add) <= ((hd->seqno+add) + hd->len))
+        {
+        get_txdata(clo, hd, seqno, len, data); 
+        result = 0;
+        }
+      else
+        KERR("%u %u", clo->send_unack, hd->seqno);
+      }
+    }
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 

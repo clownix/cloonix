@@ -95,7 +95,6 @@ void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line)
       if (name_valid == 1)
         {
         snprintf(mach->name, MAX_NAME_LEN, "%s", name);
-        KERR("%s %d %s", mac, name_valid, name);
         }
       else
         KERR("%s %d %s", mac, name_valid, name);

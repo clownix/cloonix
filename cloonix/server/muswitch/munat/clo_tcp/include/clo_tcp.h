@@ -33,6 +33,7 @@
 #define TH_PUSH 0x08
 #define TH_ACK  0x10
 
+#define OFFSET_PORT 30000
 
 typedef signed char s8_t;
 typedef unsigned char u8_t;
@@ -64,8 +65,6 @@ enum {
   state_created,
   state_first_syn_sent,
   state_established,
-  state_fin_wait1,
-  state_fin_wait2,
   state_fin_wait_last_ack,
   state_closed,
   state_max,
@@ -103,6 +102,7 @@ typedef struct t_tcp_id
   u16_t local_port;
   u16_t remote_port;
   int llid;
+  int history_llid;
   int llid_unlocked;
 } t_tcp_id;
 /*---------------------------------------------------------------------------*/
@@ -139,15 +139,18 @@ typedef struct t_clo
   int closed_state_count;
   int closed_state_count_initialised;
   int closed_state_count_line;
+  int reset_rx_close_all_done;
+  int try_send_data2low;
   int id_tcpid;
   int has_been_closed_from_outside_socket;
+  int fin_ack_has_been_sent;
+  int must_call_fin;
   int state;
   int syn_sent_non_activ_count;
-  int non_activ_count;
+  int non_activ_count_rx;
+  int non_activ_count_tx;
   int tx_repeat_failure_count;
   int read_zero_bytes_occurence;
-  int have_to_ack;
-  int send_ack_active;
   u32_t ackno_sent;
   u32_t send_unack;
   u32_t send_next;
@@ -170,19 +173,20 @@ typedef void (*t_high_synack_rx)(t_tcp_id *tcpid);
 typedef void (*t_high_close_rx)(t_tcp_id *tcpid);
 /*---------------------------------------------------------------------------*/
 
+char *util_state2ascii(int state);
 /*****************************************************************************/
 int util_tcpid_comp(t_tcp_id *a, t_tcp_id *b);
 t_clo *util_get_clo(int llid);
 void util_attach_llid_clo(int llid, t_clo *clo);
 void util_detach_llid_clo(int llid, t_clo *clo);
 
-t_clo *util_get_fast_clo(t_tcp_id *tid);
+t_clo *clo_mngt_find(t_tcp_id *tcpid);
 void clo_low_input(int mac_len, u8_t *mac_data);
 int  clo_high_data_tx(t_tcp_id *tcpid, int len, u8_t *data);
 int  clo_high_data_tx_possible(t_tcp_id *tcpid);
 int  clo_high_syn_tx(t_tcp_id *tcpid);
 int  clo_high_synack_tx(t_tcp_id *tcpid);
-int  clo_high_close_tx(t_tcp_id *tcpid, int trace);
+void  clo_delayed_high_close_tx(t_tcp_id *tcpid);
 void clo_heartbeat_timer(void);
 void clo_high_free_tcpid(t_tcp_id *tcpid);
 /*---------------------------------------------------------------------------*/

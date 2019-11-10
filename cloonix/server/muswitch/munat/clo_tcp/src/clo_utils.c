@@ -43,6 +43,19 @@ typedef struct t_fast_clo
 static t_fast_clo *g_head_fast_clo[MAX_HASH_IDX];
 static t_clo *llid_to_clo[CLOWNIX_MAX_CHANNELS];
 
+/*****************************************************************************/
+void util_trace_tcpid(t_tcp_id *t, char *fct)
+{
+  KERR("%s %02X %02X %02X %02X %02X %02X   %02X %02X %02X %02X %02X %02X", fct,
+    t->local_mac[0] & 0xFF, t->local_mac[1] & 0xFF, t->local_mac[2] & 0xFF,
+    t->local_mac[3] & 0xFF, t->local_mac[4] & 0xFF, t->local_mac[5] & 0xFF,
+    t->remote_mac[0] & 0xFF, t->remote_mac[1] & 0xFF, t->remote_mac[2] & 0xFF,
+    t->remote_mac[3] & 0xFF, t->remote_mac[4] & 0xFF, t->remote_mac[5] & 0xFF);
+  KERR("%s %08X  %08X", fct, t->local_ip, t->remote_ip);
+  KERR("%s %d  %d", fct, t->local_port & 0xFFFF, t->remote_port & 0xFFFF);
+}
+/*---------------------------------------------------------------------------*/
+
 /****************************************************************************/
 int util_tcpid_comp(t_tcp_id *a, t_tcp_id *b)
 {
@@ -120,20 +133,27 @@ static t_fast_clo *fast_get(t_tcp_id *tid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void create_fast(t_clo *clo)
+static int create_fast(t_clo *clo)
 {
-  t_fast_clo *fc;
-  int idx = get_hash(clo->tcpid.remote_mac, 
-                     clo->tcpid.local_ip, clo->tcpid.remote_ip, 
-                     clo->tcpid.local_port, clo->tcpid.remote_port);
-  fc = (t_fast_clo *) malloc(sizeof(t_fast_clo));
-  memset(fc, 0, sizeof(t_fast_clo));
-  fc->idx = idx;
-  fc->clo = clo;
-  if (g_head_fast_clo[idx])
-    g_head_fast_clo[idx]->prev = fc;
-  fc->next = g_head_fast_clo[idx];
-  g_head_fast_clo[idx] = fc;
+  int idx, result = 0;
+  t_fast_clo *fc = fast_get(&clo->tcpid);
+  if (fc)
+    result = -1;
+  else
+    {
+    idx = get_hash(clo->tcpid.remote_mac, 
+                   clo->tcpid.local_ip, clo->tcpid.remote_ip, 
+                   clo->tcpid.local_port, clo->tcpid.remote_port);
+    fc = (t_fast_clo *) malloc(sizeof(t_fast_clo));
+    memset(fc, 0, sizeof(t_fast_clo));
+    fc->idx = idx;
+    fc->clo = clo;
+    if (g_head_fast_clo[idx])
+      g_head_fast_clo[idx]->prev = fc;
+    fc->next = g_head_fast_clo[idx];
+    g_head_fast_clo[idx] = fc;
+    }
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -149,6 +169,7 @@ static void delete_fast(t_clo *clo)
     fc->next->prev = fc->prev;
   if (fc == g_head_fast_clo[fc->idx])
     g_head_fast_clo[fc->idx] = fc->next;
+  memset(fc, 0, sizeof(t_fast_clo));
   free(fc);
 }
 /*---------------------------------------------------------------------------*/
@@ -176,6 +197,10 @@ void util_attach_llid_clo(int llid, t_clo *clo)
     KOUT(" ");
   llid_to_clo[llid] = clo;
   clo->tcpid.llid = llid;
+  clo->tcpid.history_llid = llid;
+//  KERR("LLID%d ATTACH INFO: %d %d", clo->tcpid.history_llid,
+//                                    clo->tcpid.local_port & 0xFFFF,
+//                                    clo->tcpid.remote_port & 0xFFFF);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -213,12 +238,6 @@ char *util_state2ascii(int state)
       break;
     case state_established:
       return("ESTABLISHED");
-      break;
-    case state_fin_wait1:
-      return("FIN_WAIT1");
-      break;
-    case state_fin_wait2:
-      return("FIN_WAIT2");
       break;
     case state_fin_wait_last_ack:
       return("FIN_WAIT_LASTACK");
@@ -364,24 +383,45 @@ t_clo *util_insert_clo(t_clo **head, t_tcp_id *tcpid)
   if (tcpid->llid != 0)
     KOUT(" ");
   memcpy(&(clo->tcpid), tcpid, sizeof(t_tcp_id));
-  id_tcpid += 1;
-  clo->id_tcpid = id_tcpid;
-  create_fast(clo);
-  if (*head)
-    (*head)->prev = clo; 
-  clo->next = (*head);
-  (*head) = clo;
+  if (create_fast(clo))
+    {
+    free(clo);
+    clo = NULL;
+    }
+  else
+    {
+    id_tcpid += 1;
+    clo->id_tcpid = id_tcpid;
+    if (*head)
+      (*head)->prev = clo; 
+    clo->next = (*head);
+    (*head) = clo;
+    }
   return clo;
 }
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void util_silent_purge_hdata_and_ldata(t_clo *clo)
+int util_purge_hdata(t_clo *clo)
 {
+  int result = 0;
+  if (clo->head_hdata)
+    result = -1;
   while (clo->head_hdata)
     util_extract_hdata(&(clo->head_hdata), clo->head_hdata);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int util_purge_ldata(t_clo *clo)
+{
+  int result = 0;
+  if (clo->head_ldata)
+    result = -1;
   while (clo->head_ldata)
     util_extract_ldata(&(clo->head_ldata), clo->head_ldata);
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -389,15 +429,15 @@ void util_silent_purge_hdata_and_ldata(t_clo *clo)
 int util_extract_clo(t_clo **head, t_clo *clo)
 {
   int result = 0;
+  if (clo->head_ldata)
+    KERR("ln:%d %d", clo->closed_state_count_line, clo->tcpid.history_llid);
   while (clo->head_hdata)
     {
-    KERR("closed_state_count_line:%d", clo->closed_state_count_line);
     util_extract_hdata(&(clo->head_hdata), clo->head_hdata);
     result = -1;
     }
   while (clo->head_ldata)
     {
-    KERR("closed_state_count_line:%d", clo->closed_state_count_line);
     util_extract_ldata(&(clo->head_ldata), clo->head_ldata);
     result = -1;
     }
@@ -410,6 +450,7 @@ int util_extract_clo(t_clo **head, t_clo *clo)
     clo->next->prev = clo->prev;
   if (clo == (*head))
     (*head) = clo->next;
+  memset(clo, 0, sizeof(t_clo));
   free(clo);
   return result;
 }
@@ -502,5 +543,13 @@ void util_send_data(t_tcp_id *tcpid, u32_t ackno, u32_t seqno, u16_t wnd,
                     int hlen, u8_t *hdata)
 {
   send_seg(tcpid, ackno, seqno, wnd, TH_PUSH | TH_ACK, hlen, hdata);
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void util_init(void)
+{
+  memset(g_head_fast_clo, 0, sizeof(t_fast_clo *) * MAX_HASH_IDX);
+  memset(llid_to_clo, 0, sizeof(t_clo *) * CLOWNIX_MAX_CHANNELS);
 }
 /*---------------------------------------------------------------------------*/

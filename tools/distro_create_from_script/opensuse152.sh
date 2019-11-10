@@ -108,7 +108,7 @@ if [ -e /etc/resolv.conf ]; then
   cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
 fi
 #-----------------------------------------------------------------------#
-list_pkt="kernel-default grub2-i386-pc udhcp "
+list_pkt="kernel-default grub2-i386-pc udhcp iproute2 "
 list_pkt+="openssh xauth sudo kbd vim net-tools "
 list_pkt+="iw dracut"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
@@ -125,7 +125,7 @@ chroot /tmp/wkmntloops/ zypper --non-interactive update
 chroot /tmp/wkmntloops/ zypper --non-interactive install $list_pkt
 chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
 
-KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
+KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0 ipv6.disable=1"
 printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" \
         > /tmp/wkmntloops/etc/default/grub
 

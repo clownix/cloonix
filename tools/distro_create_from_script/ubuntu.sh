@@ -1,7 +1,18 @@
 #!/bin/bash
 HERE=`pwd`
-DIST=disco
-ROOTFS=/root/disco
+#----------------------------------------------------------------------#
+DISTRO=$1
+case "${DISTRO}" in
+  "disco")
+    ;;
+  "eoan")
+    ;;
+  *)
+    echo ERROR FIRST PARAM: ${DISTRO} Choice: disco eoan
+    exit 1
+esac
+#----------------------------------------------------------------------#
+ROOTFS=/root/${DISTRO}
 UBUNTU_REPO="http://fr.archive.ubuntu.com/ubuntu"
 #----------------------------------------------------------------------#
 fct_check_uid()
@@ -66,9 +77,9 @@ fct_check_losetup
 set -e
 fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
-if [ ! -e /usr/share/debootstrap/scripts/${DIST} ]; then
+if [ ! -e /usr/share/debootstrap/scripts/${DISTRO} ]; then
   cd /usr/share/debootstrap/scripts
-  ln -s gutsy ${DIST}
+  ln -s gutsy ${DISTRO}
   cd $HERE
 fi
 #-----------------------------------------------------------------------#
@@ -79,13 +90,13 @@ list_pkt+="acpi-support,iw,initramfs-tools"
 debootstrap --no-check-certificate --no-check-gpg \
         --arch amd64 \
         --include=$list_pkt \
-        ${DIST} \
+        ${DISTRO} \
         /tmp/wkmntloops ${UBUNTU_REPO}
 #-----------------------------------------------------------------------#
 cat > /tmp/wkmntloops/etc/apt/sources.list << EOF
-deb ${UBUNTU_REPO} ${DIST} main universe
-deb ${UBUNTU_REPO} ${DIST}-security main universe 
-deb ${UBUNTU_REPO} ${DIST}-updates main universe 
+deb ${UBUNTU_REPO} ${DISTRO} main universe
+deb ${UBUNTU_REPO} ${DISTRO}-security main universe 
+deb ${UBUNTU_REPO} ${DISTRO}-updates main universe 
 EOF
 #-----------------------------------------------------------------------#
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done

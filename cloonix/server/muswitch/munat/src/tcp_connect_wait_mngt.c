@@ -192,7 +192,6 @@ static void timed_rx_from_out(long delta_ns, void *data)
   t_clo *clo = NULL;
   if (!msg_exist_channel(get_all_ctx(), llid, &is_blkd, __FUNCTION__))
     {
-    fatal_err_llid_slirptux(llid);
     }
   else if (!llid_slirptux_tcp_tx_to_slirptux_possible(llid))
     {
@@ -288,7 +287,7 @@ static void timer_connect_wait(t_all_ctx *all_ctx, void *data)
   ctx->timer_abs_beat = 0;
   ctx->timer_ref = 0;
   ctx->count++;
-  if (ctx->count > 30)
+  if (ctx->count > 40)
     {
     KERR(" FAIL CONNECT TO PORT %d", ctx->tcpid.local_port);
     end_ctx(ctx, -1);
@@ -297,11 +296,11 @@ static void timer_connect_wait(t_all_ctx *all_ctx, void *data)
     {
     if (!quick_select_ok(ctx->fd))
       {
-      if ((ctx->count == 10) || (ctx->count == 20))
+      if ((ctx->count == 8) ||
+          (ctx->count == 16) ||
+          (ctx->count == 24))
         {
         connect(ctx->fd, &(ctx->addr), ctx->addr_len);
-        KERR(" RETRY CONNECT TO PORT %d %08X", 
-             ctx->tcpid.local_port, ctx->tcpid.local_ip);
         }
       clownix_timeout_add(get_all_ctx(), 5, timer_connect_wait, 
                           data, &(ctx->timer_abs_beat), &(ctx->timer_ref));

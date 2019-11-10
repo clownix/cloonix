@@ -33,7 +33,6 @@
 #include "packets_io.h"
 #include "llid_slirptux.h"
 
-#define OFFSET_PORT 30000
 #define MAX_INFO_LEN 200
 
 enum {
@@ -168,7 +167,7 @@ static int arm_timeout_waiting_for_vmtx(t_all_ctx *all_ctx, int is_synack,
     ti->llid = llid;
     strncpy(ti->ip, ctx->remote_ip, MAX_NAME_LEN);
     ti->is_synack = is_synack;
-    clownix_timeout_add(all_ctx, 50, timeout_waiting_for_vmtx, (void *) ti,
+    clownix_timeout_add(all_ctx, 250, timeout_waiting_for_vmtx, (void *) ti,
                         &(ctx->timeout_abs_beat), &(ctx->timeout_ref));
     result = 0;
     }
@@ -419,7 +418,7 @@ static int send_first_tcp_syn(t_ctx_unix2inet *ctx,
     }
   else
     {
-    clo = util_get_fast_clo(&(ctx->tcpid));
+    clo = clo_mngt_find(&(ctx->tcpid));
     if (clo)
       {
       machine = look_for_machine_with_ip(remote_ip);
@@ -500,7 +499,7 @@ static void unix2inet_ssh_rx_cb(t_all_ctx *all_ctx, int llid,
       }
     else if (ctx->state == state_running_half) 
       {
-      clo = util_get_fast_clo(&(ctx->tcpid));
+      clo = clo_mngt_find(&(ctx->tcpid));
       if (!clo)
         {
         KERR(" ");
@@ -615,16 +614,14 @@ void unix2inet_finack_state(t_tcp_id *tcpid, int line)
   if (!tcpid)
     KOUT(" ");
   llid = tcpid->local_port - OFFSET_PORT;
-  if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KERR("%d %d", llid, line);
-  else
+  if ((llid > 0) && (llid < CLOWNIX_MAX_CHANNELS))
     {
     ctx = find_ctx(llid);
     if (ctx)
       {
       if (!tcpid_are_the_same(tcpid, &(ctx->tcpid)))
         KERR("%d", llid);
-      ctx->state = state_finack;
+      change_state(ctx, state_finack);
       }
     }
 }
@@ -640,7 +637,7 @@ int unix2inet_ssh_syn_ack_arrival(t_tcp_id *tcpid)
   void *ti;
   if (!tcpid)
     KOUT(" ");
-  clo = util_get_fast_clo(tcpid);
+  clo = clo_mngt_find(tcpid);
   llid = tcpid->local_port - OFFSET_PORT;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
     KOUT("%d", llid);
@@ -702,7 +699,10 @@ void unix2inet_close_tcpid(t_tcp_id *tcpid)
       if (!tcpid_are_the_same(tcpid, &(ctx->tcpid)))
         KERR("%d", llid);
       else
+        {
+        KERR("%d", llid);
         free_ctx(ctx->all_ctx, llid, __LINE__);
+        }
       }
     }
 }

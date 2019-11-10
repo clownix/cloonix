@@ -1,9 +1,21 @@
 #!/bin/bash
 HERE=`pwd`
-DIST=buster
-ROOTFS=/root/buster
+#----------------------------------------------------------------------#
+DISTRO=$1
+case "${DISTRO}" in
+  "buster")
+    ;;
+  "bullseye")
+    ;;
+  *)
+    echo ERROR FIRST PARAM: ${DISTRO} Choice: buster bullseye
+    exit 1
+esac
+#----------------------------------------------------------------------#
+DIST=${DISTRO}
+ROOTFS=/root/${DISTRO}
 DEBIAN_REPO="http://deb.debian.org/debian"
-#DEBIAN_REPO="http://127.0.0.1/buster"
+#DEBIAN_REPO="http://127.0.0.1/${DISTRO}"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {

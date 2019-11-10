@@ -1,11 +1,12 @@
 #!/bin/bash
 HERE=`pwd`
 NET=fido
-NAME=tool
+NAME=cloon
 CLOONIX=/home/cloonix
-QCOW2=centos8.qcow2
-CLOONIX_CENTOS8_REPO=https://mirrors.edge.kernel.org/centos/8
-CLOONIX_CENTOS8_REPO=http://172.17.0.2/centos8
+QCOW2=opensuse152.qcow2
+OPENSUSE_MIRROR=http://download.opensuse.org
+OPENSUSE=${OPENSUSE_MIRROR}/distribution/leap/15.2/repo/oss/
+OPENSUSE_UPDATES=${OPENSUSE_MIRROR}/update/leap/15.2/oss/
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 CLOONIX_BULK=$(cat $CLOONIX_CONFIG |grep CLOONIX_BULK | awk -F = "{print \$2}")
@@ -18,8 +19,6 @@ if [ ! -e ${BULK}/buster.qcow2 ]; then
   echo
   exit 1
 fi
-
-
 #######################################################################
 is_started=$(cloonix_cli $NET lst |grep cloonix_net)
 if [ "x$is_started" == "x" ]; then
@@ -38,9 +37,14 @@ fi
 #######################################################################
 cloonix_gui $NET
 #----------------------------------------------------------------------
-cloonix_cli $NET add kvm $NAME ram=8000 cpu=4 dpdk=0 sock=2 hwsim=0 $QCOW2
-#----------------------------------------------------------------------
 cloonix_cli ${NET} add nat nat
+#----------------------------------------------------------------------
+cloonix_cli $NET add kvm $NAME ram=8000 cpu=4 dpdk=0 sock=1 hwsim=0 $QCOW2 &
+#----------------------------------------------------------------------
+sleep 3
+cloonix_cli ${NET} add lan ${NAME} 0 lan1
+cloonix_cli ${NET} add lan nat 0 lan1
+#----------------------------------------------------------------------
 
 #######################################################################
 set +e
@@ -49,9 +53,6 @@ while ! cloonix_ssh $NET ${NAME} "echo" 2>/dev/null; do
   sleep 5
 done
 set -e
-#----------------------------------------------------------------------
-cloonix_cli ${NET} add lan ${NAME} 0 lan1
-cloonix_cli ${NET} add lan nat 0 lan1
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "mkdir -p ${CLOONIX}/cloonix_data/bulk"
 #----------------------------------------------------------------------
@@ -66,38 +67,35 @@ cd ${HERE}
 #----------------------------------------------------------------------
 cloonix_scp $NET ${BULK}/buster.qcow2 ${NAME}:${CLOONIX}/cloonix_data/bulk
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "dhclient"
-#----------------------------------------------------------------------
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-Base.repo << EOF
-[base]
-name=CentOS-8 - Base
-baseurl=${CLOONIX_CENTOS8_REPO}/BaseOS/x86_64/os
+cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/opensuse.repo << EOF
+[opensuse]
+name=opensuse-15-2 - Base
+baseurl=${OPENSUSE}
+enabled=1
 gpgcheck=0
 EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-AppStream.repo << EOF
-[AppStream]
-name=CentOS-8 - AppStream
-baseurl=${CLOONIX_CENTOS8_REPO}/AppStream/x86_64/os
+#-----------------------------------------------------------------------#
+cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/opensuse-updates.repo << EOF
+[updates]
+name=opensuse-15-2 - Updates
+baseurl=${OPENSUSE_UPDATES}
+enabled=1
 gpgcheck=0
 EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-Extras.repo << EOF
-[extras]
-name=CentOS-8 - Extras
-baseurl=${CLOONIX_CENTOS8_REPO}/extras/x86_64/os
-gpgcheck=0
-EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-PowerTools.repo << EOF
-[PowerTools]
-name=CentOS-8 - PowerTools
-baseurl=${CLOONIX_CENTOS8_REPO}/PowerTools/x86_64/os
-gpgcheck=0
-EOF"
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------#
 cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
 nameserver 172.17.0.3
 EOF"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "dnf update -y; dnf -y install tar"
+cloonix_ssh ${NET} ${NAME} "ip link set eth0 up"
+cloonix_ssh ${NET} ${NAME} "udhcpc -i eth0"
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "systemctl stop packagekit.service"
+cloonix_ssh ${NET} ${NAME} "systemctl disable packagekit.service"
+#----------------------------------------------------------------------
+cloonix_ssh $NET ${NAME} "zypper --non-interactive refresh"
+cloonix_ssh $NET ${NAME} "zypper --non-interactive update"
+cloonix_ssh $NET ${NAME} "zypper --non-interactive install tar"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "cd ${CLOONIX}; tar xvf sources.tar.gz"
 #----------------------------------------------------------------------

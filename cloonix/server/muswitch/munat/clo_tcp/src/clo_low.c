@@ -25,6 +25,34 @@
 #include "clo_tcp.h"
 /*---------------------------------------------------------------------------*/
 
+#define TH_FIN  0x01
+#define TH_SYN  0x02
+#define TH_RST  0x04
+#define TH_PUSH 0x08
+#define TH_ACK  0x10
+#define TH_URG  0x20
+
+///*****************************************************************************/
+//static char *loc_flags_to_ascii(char flags)
+//{
+//  static char resp[100];
+//  memset(resp, 0, 100);
+//  if (flags&TH_FIN)
+//    strcat(resp, "FIN ");
+//  if (flags&TH_SYN)
+//    strcat(resp, "SYN ");
+//  if (flags&TH_RST)
+//    strcat(resp, "RST ");
+//  if (flags&TH_PUSH)
+//    strcat(resp, "PUSH ");
+//  if (flags&TH_ACK)
+//    strcat(resp, "ACK ");
+//  if (flags&TH_URG)
+//    strcat(resp, "URG ");
+//  return resp;
+//}
+///*---------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static u16_t in_cksum(u16_t *addr, int len)
 {
@@ -281,6 +309,9 @@ int tcp_packet2low(int mac_len, u8_t *mac_data, t_low **low)
   len  += ip_data[3]         & 0x000000FF;
   len  -= IP_HLEN;
 
+  if (mac_len != (len+34))
+     KERR("DIFFERENCE !!!!!!!!!!!!!! %d %d", mac_len, len+34);
+
   if (len < 0)
     KERR("DROP!!!! TCP BAD LEN");
   else if (tcp_checksum(len, data, ip_data))
@@ -299,6 +330,10 @@ int tcp_packet2low(int mac_len, u8_t *mac_data, t_low **low)
     local_tcp_packet2low(len, mac_data, low);
     result = 0;
     }
+//  if (result == 0)
+//    KERR("LOW %s %d %d %lu %lu", loc_flags_to_ascii((char) ((*low)->flags & 0xFF)),
+//                                 (*low)->tcp_src, (*low)->tcp_dest,
+//                                 (*low)->seqno, (*low)->ackno);
   return result;
 }
 /*---------------------------------------------------------------------------*/

@@ -108,11 +108,19 @@ void packet_ip_input(t_machine *machine, char *src_mac, char *dst_mac,
       llid_slirptux_tcp_rx_from_slirptux(mac_len, mac_data);
       }
     else 
+      {
+      KERR( "DROP!!! VM:%s mac_src:%s mac_dst:%s len:%d\n"
+                    "ip_src:%s ip_dst:%s proto:%d\n",
+                   machine->name, src_mac, dst_mac, len, sip, dip, proto);
+
       DOUT(get_all_ctx(), FLAG_HOP_DIAG, 
                   "DROP!!! VM:%s mac_src:%s mac_dst:%s len:%d\n"
                   "ip_src:%s ip_dst:%s proto:%d\n",
                    machine->name, src_mac, dst_mac, len, sip, dip, proto);
+      }
     }
+  else
+    KERR(" ");
 }
 /*---------------------------------------------------------------------------*/
 

@@ -43,11 +43,11 @@ void llid_clo_high_close_rx(t_tcp_id *tcpid)
 {
   t_clo *clo;
   unix2inet_close_tcpid(tcpid);
-  clo = util_get_fast_clo(tcpid);
+  clo = clo_mngt_find(tcpid);
 
   if (clo)
     {
-    clo_high_close_tx(&(clo->tcpid), 0);
+    clo_delayed_high_close_tx(&(clo->tcpid));
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -60,8 +60,7 @@ void llid_slirptux_tcp_close_llid(int llid)
   if (clo)
     {
     clo->has_been_closed_from_outside_socket = 1;
-    if (clo_high_close_tx(&(clo->tcpid), 0))
-      KOUT(" ");
+    clo_delayed_high_close_tx(&(clo->tcpid));
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -120,23 +119,21 @@ void llid_clo_low_output(int mac_len, u8_t *mac_data)
 /*****************************************************************************/
 int llid_clo_data_rx_possible(t_tcp_id *tcpid)
 {
-  int is_blkd, result = 0;
+  int qlen, is_blkd, result = 0;
   if ((tcpid->llid == 0) && (tcpid->llid_unlocked == 0))
-    KERR("Time chaos, llid not yet established, in-between events!");
+    result = 0;
   else
     {
     if (msg_exist_channel(get_all_ctx(), tcpid->llid, &is_blkd, __FUNCTION__))
       {
-      if ((tcpid->llid_unlocked) &&
-          (msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid) < 20000))
+      qlen = msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid);
+      if ((qlen < 20000) && (tcpid->llid_unlocked))
         result = 1; 
       else
-        KERR("%d", msg_mngt_get_tx_queue_len(get_all_ctx(), tcpid->llid));
+        result = -2; 
       }
     else
-      {
       result = -1;
-      }
     }
   return result;
 }
@@ -152,7 +149,7 @@ void llid_clo_data_rx(t_tcp_id *tcpid, int len, u8_t *data)
     data_tx(get_all_ctx(), tcpid->llid, len, (char *)data);
     }
   else
-    KERR("%d ", len);
+    KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -171,14 +168,25 @@ static void callback_connect(t_tcp_id *tcpid, int llid, int status)
     }
   else
     {
-    clo = util_get_fast_clo(tcpid);
-    if (clo)
+    clo = clo_mngt_find(tcpid);
+    if (clo != NULL)
       {
-      util_attach_llid_clo(llid, clo);
-      clo->tcpid.llid_unlocked = 1;
+      if (clo->tcpid.llid_unlocked == 0)
+        { 
+        util_attach_llid_clo(llid, clo);
+        clo->tcpid.llid_unlocked = 1;
+        }
+      else
+        KERR("LLID%d %d %d %s", clo->tcpid.history_llid,
+                              clo->tcpid.local_port & 0xFFFF,
+                              clo->tcpid.remote_port & 0xFFFF,
+                              util_state2ascii(clo->state));
       }
     else
-      KERR(" ");
+      KERR("LLID%d %d %d %s", clo->tcpid.history_llid,
+                            clo->tcpid.local_port & 0xFFFF,
+                            clo->tcpid.remote_port & 0xFFFF,
+                            util_state2ascii(clo->state));
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -194,7 +202,7 @@ void llid_clo_high_syn_rx(t_tcp_id *tcpid)
 void llid_clo_high_synack_rx(t_tcp_id *tcpid)
 {
   t_clo *clo;
-  clo = util_get_fast_clo(tcpid);
+  clo = clo_mngt_find(tcpid);
   if (!clo)
     KERR(" ");
   else if (unix2inet_ssh_syn_ack_arrival(tcpid))

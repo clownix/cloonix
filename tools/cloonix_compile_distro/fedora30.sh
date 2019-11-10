@@ -1,12 +1,16 @@
 #!/bin/bash
 HERE=`pwd`
-NET=fido
+NET=nemo
 NAME=cloon
 CLOONIX=/home/cloonix
-QCOW2=buster.qcow2
-CLOONIX_BUSTER_REPO="http://deb.debian.org/debian"
-CLOONIX_BUSTER_REPO="http://172.17.0.2/buster"
-
+QCOW2=fedora30.qcow2
+releasever=30
+basearch=x86_64
+MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
+FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/x86_64/os
+FEDORA_MODULAR=${MIRROR}/releases/${releasever}/Modular/x86_64/os
+FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/x86_64
+FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/x86_64
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 CLOONIX_BULK=$(cat $CLOONIX_CONFIG |grep CLOONIX_BULK | awk -F = "{print \$2}")
@@ -69,19 +73,48 @@ cd ${HERE}
 #----------------------------------------------------------------------
 cloonix_scp $NET ${BULK}/buster.qcow2 ${NAME}:${CLOONIX}/cloonix_data/bulk
 #----------------------------------------------------------------------
+cloonix_ssh $NET ${NAME} "dhclient"
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/fedora.repo << EOF
+[fedora]
+name=Fedora $releasever - $basearch
+baseurl=${FEDORA_MAIN}
+enabled=1
+gpgcheck=0
+EOF"
+cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/fedora-updates.repo << EOF
+[updates]
+name=Fedora $releasever - $basearch - Updates
+baseurl=${FEDORA_MAIN_UPDATES}
+enabled=1
+gpgcheck=0
+EOF"
+cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/fedora-modular.repo << EOF
+[fedora-modular]
+name=Fedora Modular $releasever - $basearch
+baseurl=${FEDORA_MODULAR}
+enabled=1
+gpgcheck=0
+EOF"
+cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/fedora-updates-modular.repo << EOF
+[fedora-modular-updates]
+name=Fedora Modular $releasever - $basearch - Updates
+baseurl=${FEDORA_MODULAR_UPDATES}
+enabled=1
+gpgcheck=0
+EOF"
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
+nameserver 172.17.0.3
+EOF"
+#----------------------------------------------------------------------
+#----------------------------------------------------------------------
+cloonix_ssh $NET ${NAME} "dnf update -y; dnf -y install tar"
+#----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "cd ${CLOONIX}; tar xvf sources.tar.gz"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "rm ${CLOONIX}/sources.tar.gz"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "echo \"wireshark-common "\
-                         "wireshark-common/install-setuid boolean true\" "\
-                         " > /tmp/custom_preseed.txt"
-cloonix_ssh $NET ${NAME} "debconf-set-selections /tmp/custom_preseed.txt"
-cloonix_ssh $NET ${NAME} "dhclient"
-#----------------------------------------------------------------------
-cloonix_ssh ${NET} ${NAME} "cat > /etc/apt/sources.list << EOF
-deb ${CLOONIX_BUSTER_REPO} buster main contrib non-free
-EOF"
 cloonix_ssh $NET ${NAME} "cd ${CLOONIX}/sources ; ./install_depends"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "cd ${CLOONIX}/sources ; ./doitall"

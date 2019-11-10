@@ -1,15 +1,14 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
-#LIST="arch \
-#      centos8 \
-#      opensuse152 \
-
-LIST="disco \
-      eoan \
-      buster \
+LIST="arch \
+      centos8 \
       fedora30 \
-      openwrt"
+      opensuse152 \
+      openwrt \
+      disco \
+      eoan \
+      buster"
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
 mkdir -p ${CLOONIX_BULK}
 sudo echo "sudoer rights given"
@@ -18,10 +17,32 @@ for i in ${LIST}; do
   sudo rm -f /root/${i}
   sudo rm -f /root/${i}.qcow2
 done
+
+LIST="arch \
+      centos8 \
+      fedora30 \
+      opensuse152 \
+      openwrt"
+
 for i in ${LIST}; do
   echo BEGIN ${i}  
   sudo ${HERE}/${i}.sh
-  echo END ${i}  
   sudo mv -v /root/${i}.qcow2 ${CLOONIX_BULK}
-  echo MOVED ${i}.qcow2  
+  echo END ${i}  
 done
+
+echo BEGIN disco
+sudo ${HERE}/ubuntu.sh disco
+sudo mv -v /root/disco.qcow2 ${CLOONIX_BULK}
+echo END disco
+
+echo BEGIN eoan
+sudo ${HERE}/ubuntu.sh eoan
+sudo mv -v /root/eoan.qcow2 ${CLOONIX_BULK}
+echo END eoan
+
+echo BEGIN buster
+sudo ${HERE}/debian.sh buster 
+sudo mv -v /root/buster.qcow2 ${CLOONIX_BULK}
+echo END buster
+
