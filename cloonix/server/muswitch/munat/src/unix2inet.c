@@ -287,7 +287,8 @@ static void free_ctx(t_all_ctx *all_ctx, int llid, int line)
     }
   else
     {
-    llid_slirptux_tcp_close_llid(llid);
+    if (llid_slirptux_tcp_close_llid(llid, 0))
+      KERR("%d", llid);
     free(ctx);
     llid_to_ctx[llid] = 0;
     DOUT((void *) all_ctx, FLAG_HOP_APP, "%s %d", __FUNCTION__, llid);

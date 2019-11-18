@@ -440,7 +440,7 @@ int clo_mngt_get_txdata(t_clo *clo, t_hdata *hd, u32_t *seqno,
     }
   else
     {
-    if (hd->count_50ms + 2 < g_50ms_count)
+    if (hd->count_50ms +2 < g_50ms_count)
       {
       if ((hd->seqno + TCP_WND ) < hd->seqno)
         add = 0x10000000;

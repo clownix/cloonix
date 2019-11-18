@@ -93,10 +93,11 @@ static t_connect_ctx *alloc_ctx(t_connect cb, t_tcp_id *tcpid, int fd,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void fatal_err_llid_slirptux(int llid)
+static void fatal_err_llid_slirptux(int llid, int reset)
 {
   int is_blkd;
-  llid_slirptux_tcp_close_llid(llid);
+  if (llid_slirptux_tcp_close_llid(llid, reset))
+    KERR("%d", llid);
   if (msg_exist_channel(get_all_ctx(), llid, &is_blkd, __FUNCTION__))
     msg_delete_channel(get_all_ctx(), llid);
 }
@@ -157,7 +158,7 @@ static void do_rx_from_out(t_clo *clo, int fd)
                       clo->tcpid.local_ip, clo->tcpid.remote_ip,
                       clo->tcpid.local_port & 0xFFFF,
                       clo->tcpid.remote_port & 0xFFFF);
-    fatal_err_llid_slirptux(clo->tcpid.llid);
+    fatal_err_llid_slirptux(clo->tcpid.llid, 0);
     }
   else
     {
@@ -170,12 +171,12 @@ static void do_rx_from_out(t_clo *clo, int fd)
                       clo->tcpid.local_ip, clo->tcpid.remote_ip,
                       clo->tcpid.local_port & 0xFFFF,
                       clo->tcpid.remote_port & 0xFFFF);
-        fatal_err_llid_slirptux(clo->tcpid.llid);
+        fatal_err_llid_slirptux(clo->tcpid.llid, 0);
         }
       }
     else if (len == 0)
       {
-      fatal_err_llid_slirptux(clo->tcpid.llid);
+      fatal_err_llid_slirptux(clo->tcpid.llid, 0);
       }
     else 
       llid_slirptux_tcp_rx_from_llid(clo->tcpid.llid, len, rx_buf);
@@ -249,8 +250,8 @@ int tcp_rx_from_out (void *ptr, int llid, int fd)
 /*****************************************************************************/
 static void tcp_err_from_out (void *ptr, int llid, int err, int from)
 {
-  KERR(" ");
-  fatal_err_llid_slirptux(llid);
+  KERR("%d %d %d", llid, err, from);
+  fatal_err_llid_slirptux(llid, 1);
 }
 /*---------------------------------------------------------------------------*/
 

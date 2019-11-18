@@ -151,11 +151,11 @@ static int try_send_data2low(t_clo *clo)
 {
   t_hdata *next, *cur = clo->head_hdata;
   int result = -1;
-  while (cur)
+  if (cur->count_50ms == 0)
     {
-    next = cur->next;
-    if (cur->count_50ms == 0)
+    while (cur)
       {
+      next = cur->next;
       if (!clo_mngt_authorised_to_send_nexttx(clo))
         {
         cur->count_stuck += 1;
@@ -170,25 +170,34 @@ static int try_send_data2low(t_clo *clo)
         }
       cur->count_stuck = 0;
       local_send_data_to_low(clo, cur, 1);
+      cur = next;
       }
-    else
+    }
+  else
+    {
+    while (cur)
       {
-      if (!clo_mngt_authorised_to_send_nexttx(clo))
+      next = cur->next;
+      if (cur->count_50ms != 0)
         {
-        cur->count_stuck += 1;
-        if (cur->count_stuck > 1000)
+        if (!clo_mngt_authorised_to_send_nexttx(clo))
           {
-          KERR("LLID%d CONNECTION %d %d %s", clo->tcpid.history_llid,
-                clo->tcpid.local_port & 0xFFFF, clo->tcpid.remote_port & 0xFFFF,
-                util_state2ascii(clo->state));
-          local_send_reset_state_closed(clo);
+          cur->count_stuck += 1;
+          if (cur->count_stuck > 1000)
+            {
+            KERR("LLID%d CONNECTION %d %d %s", clo->tcpid.history_llid,
+                                        clo->tcpid.local_port & 0xFFFF,
+                                        clo->tcpid.remote_port & 0xFFFF,
+                                        util_state2ascii(clo->state));
+            local_send_reset_state_closed(clo);
+            }
+          break;
           }
-        break;
+        cur->count_stuck = 0;
+        local_send_data_to_low(clo, cur, 0);
         }
-      cur->count_stuck = 0;
-      local_send_data_to_low(clo, cur, 0);
+      cur = next;
       }
-    cur = next;
     }
   if (clo->head_hdata == NULL)
     result = 0;
@@ -982,6 +991,12 @@ t_all_ctx *get_all_ctx(void)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+void clo_send_reset_state_closed(t_clo *clo)
+{
+  local_send_reset_state_closed(clo);
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void clo_init(t_all_ctx *all_ctx,

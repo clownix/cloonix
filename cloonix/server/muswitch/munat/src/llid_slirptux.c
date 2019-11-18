@@ -54,14 +54,19 @@ void llid_clo_high_close_rx(t_tcp_id *tcpid)
 
 
 /*****************************************************************************/
-void llid_slirptux_tcp_close_llid(int llid)
+int llid_slirptux_tcp_close_llid(int llid, int reset)
 {
+  int result = -1;
   t_clo *clo = util_get_clo(llid);
   if (clo)
     {
     clo->has_been_closed_from_outside_socket = 1;
+    if (reset)
+      KERR("%d", llid);
     clo_delayed_high_close_tx(&(clo->tcpid));
+    result = 0;
     }
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 

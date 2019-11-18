@@ -24,7 +24,7 @@ void llid_clo_high_close_rx(t_tcp_id *tcpid);
 
 
 
-void llid_slirptux_tcp_close_llid(int llid);
+int llid_slirptux_tcp_close_llid(int llid, int reset);
 void llid_slirptux_tcp_rx_from_llid(int llid, int len, char *rx_buf);
 int  llid_slirptux_tcp_tx_to_slirptux_possible(int llid);
 void llid_slirptux_tcp_rx_from_slirptux(int mac_len, char *mac_data);
