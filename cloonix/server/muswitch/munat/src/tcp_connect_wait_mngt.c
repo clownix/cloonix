@@ -335,6 +335,14 @@ void tcp_connect_wait_management(t_connect cb, t_tcp_id *tcpid, int fd,
     {
     KERR(" !!!!!!! NOT EXPECTED REPEAT CONNECT TO PORT %d %08X", 
            ctx->tcpid.local_port, ctx->tcpid.local_ip);
+    if (ctx->timer_abs_beat)
+      clownix_timeout_del(get_all_ctx(), ctx->timer_abs_beat, ctx->timer_ref,
+                          __FILE__, __LINE__);
+    end_ctx(ctx, ctx->llid);
+    ctx = alloc_ctx(cb, tcpid, fd, addr, addr_len);
+    connect(fd, addr, addr_len);
+    clownix_timeout_add(get_all_ctx(), 1, timer_connect_wait, (void *) ctx, 
+                        &(ctx->timer_abs_beat), &(ctx->timer_ref));
     }
   else
     {

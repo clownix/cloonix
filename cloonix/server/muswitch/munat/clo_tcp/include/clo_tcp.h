@@ -145,6 +145,9 @@ typedef struct t_clo
   int has_been_closed_from_outside_socket;
   int fin_ack_has_been_sent;
   int must_call_fin;
+  u32_t fin_ackno;
+  u32_t fin_seqno;
+  u32_t fin_use_stored_vals;
   int state;
   int syn_sent_non_activ_count;
   int non_activ_count_rx;
