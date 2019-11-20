@@ -139,10 +139,17 @@ static void local_send_data_to_low(t_clo *clo, t_hdata *cur, int adjust)
                                  &loc_wnd, &dist_wnd);
     if (!clo_mngt_get_txdata(clo, cur, &seqno, &len, &data))
       {
-      util_send_data(&(clo->tcpid), ackno, seqno, loc_wnd, len, data);
-      if (adjust)
-        clo_mngt_adjust_send_next(clo, seqno, len);
-      clo->ackno_sent = ackno;
+      if (clo->must_call_fin != 1)
+        {
+        util_send_data(&(clo->tcpid), ackno, seqno, loc_wnd, len, data);
+        if (adjust)
+          clo_mngt_adjust_send_next(clo, seqno, len);
+        clo->ackno_sent = ackno;
+        }
+      else
+        KERR("LLID%d CONNECTION %d %d %s", clo->tcpid.history_llid,
+              clo->tcpid.local_port & 0xFFFF, clo->tcpid.remote_port & 0xFFFF,
+              util_state2ascii(clo->state));
       }
     }
 }
@@ -668,16 +675,17 @@ static int existing_tcp_low_input(t_clo *clo, t_low *low)
           ackno_send(clo);
           clo_mngt_set_state(clo, state_fin_wait_last_ack);
           init_closed_state_count_if_not_done(clo, 50, __LINE__);
+          util_purge_hdata(clo);
           }
         else
           {
+          util_purge_hdata(clo);
           local_rx_data_purge(clo);
-          clo->must_call_fin = 1;
           clo->fin_use_stored_vals = 1;
-          clo->fin_ackno = ackno+1;
+          clo->fin_ackno = ackno;
           clo->fin_seqno = seqno;
+          local_send_finack_state_fin(clo, __LINE__);
           }
-        util_purge_hdata(clo);
         }
       result = 0;
       break;
