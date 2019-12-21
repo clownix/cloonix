@@ -179,7 +179,7 @@ static void err_raw (void *ptr, int llid, int err, int from)
     {
     close(g_fd_raw_tx);
     close(g_fd_raw);
-    KERR(" ");
+    KERR("%d %d", err, from);
     g_ifindex = 0;
     g_llid_raw = 0;
     g_fd_raw = -1;

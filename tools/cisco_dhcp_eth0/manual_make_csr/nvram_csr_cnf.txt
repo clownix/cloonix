@@ -1,0 +1,42 @@
+!
+hostname csr
+!
+username csr privilege 15 secret 0 csr 
+!
+interface GigabitEthernet1
+  ip address dhcp
+  no shutdown
+exit
+!
+line vty 0 15
+  login local
+  transport input ssh
+exit
+!
+crypto key generate rsa modulus 2048 label RSA_SSH
+!
+ip ssh rsa keypair-name RSA_SSH
+!
+ip ssh server algorithm authentication publickey
+!
+ip scp server enable
+!
+ip ssh pubkey-chain
+!
+username csr
+  key-string    
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGR6miK5hkP8eelcvitoRqsmLsSwwWSvk2gL9y/1IXwI/B4gUkzrqp7QJR30nD3s6/26VMs+ehRBgVuNv9ps5rt62KNHHe+y9qGBBKNik4FcKeCR3OigC9bKYtiwGxlCjRA21d1qA/SWa2Ll4Rf7+4K//4hYYXHu0FPxQXyznwOu4NGmZ3DMaCH9+vYXA6SXGNA7vWCQjN39+lBd6+yP3cKxQfdTNOu9OfwGt+soAEAB4fZB3XLFMdE9x/2zITMwwDxi3AI887y+qhsy3W0fpiuX9zsOTGoJ+1aM9XHSYwn9IcE5A/g0xWv58TpHRjVa5ZXCiOzzq4sC04UGXmL5Wb cisco@debian
+exit
+exit
+!
+exit
+!
+exit
+! show platform software vnic-if interface-mapping
+clear platform software vnic-if nvtable
+
+write
+reload
+
+
+

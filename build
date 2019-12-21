@@ -27,7 +27,8 @@ done
   echo
   sleep 1
 #----------------------------------------------------------
-  for i in agent_dropbear \
+  for i in meson_ninja \
+           agent_dropbear \
            xwy \
            spice \
            lib_rpc_clownix \

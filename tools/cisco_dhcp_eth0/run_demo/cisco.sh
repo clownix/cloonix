@@ -2,7 +2,7 @@
 
 NET=nemo
 LINUX=buster
-CISCO=cisco
+CISCO=ecisco
 
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
@@ -91,8 +91,7 @@ done
 
 
 for i in $LIST_CISCO ; do
-  cloonix_cli ${NET} add kvm ${i} ram=4000 cpu=4 dpdk=0 sock=4 hwsim=0 ${CISCO}.qcow2 --cisco &
-ram=2000 cpu=4 dpdk=2 sock=2 hwsim=2
+  cloonix_cli ${NET} add kvm ${i} ram=5000 cpu=4 dpdk=0 sock=4 hwsim=0 ${CISCO}.qcow2 --cisco &
 done
 
 cloonix_cli ${NET} add nat nat
@@ -135,7 +134,7 @@ for i in $LIST_CISCO ; do
   sleep 5
 
   while [ 1 ]; do
-    RET=$(cloonix_osh ${NET} nat root@${i} ?)
+    RET=$(cloonix_osh ${NET} nat csr@${i} ?)
     echo ${i} returned: $RET
     RET=${RET#*invalid }
     RET=${RET% *}
@@ -162,7 +161,7 @@ for i in $LIST_CISCO ; do
 done
 #######################################################################
 for i in $LIST_CISCO ; do
-  cloonix_ocp ${NET} nat configs/${i}.cfg root@${i}:running-config
+  cloonix_ocp ${NET} nat configs/${i}.cfg csr@${i}:running-config
 done
 #######################################################################
 cloonix_ssh ${NET} linux1 "ip addr add dev eth0 1.0.0.1/24"

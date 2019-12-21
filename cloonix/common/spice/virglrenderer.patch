@@ -1,7 +1,7 @@
-diff -Naur virglrenderer/src/vrend_renderer.c virglrenderer_new/src/vrend_renderer.c
---- virglrenderer/src/vrend_renderer.c	2019-10-04 10:27:46.000000000 +0200
-+++ virglrenderer_new/src/vrend_renderer.c	2019-10-04 10:53:18.361479634 +0200
-@@ -3686,9 +3686,9 @@
+diff -Naur virglrenderer/src/vrend_renderer.c newvirglrenderer/src/vrend_renderer.c
+--- virglrenderer/src/vrend_renderer.c	2019-12-14 20:47:16.000000000 +0100
++++ newvirglrenderer/src/vrend_renderer.c	2019-12-14 21:57:47.562009430 +0100
+@@ -3725,9 +3725,9 @@
           glViewport(ctx->sub->vps[idx].cur_x, cy, ctx->sub->vps[idx].width, ctx->sub->vps[idx].height);
  
        if (idx && has_feature(feat_viewport_array))

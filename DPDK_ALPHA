@@ -34,9 +34,9 @@ MOST FREQUENT PB: Not enough Huge pages, 2 Huge pages are hardcoded in
 cat /var/log/user.log
 cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
 
-NOTE: The sources used in cloonix are updated with:
-cd update_open_sources
-./doitall
+Feature not used in my usual work, perf is usualy not needed in the
+Proof Of Concepts cloonix is used for.
+Tested only on buster. 
 -----------------------------------------------------------------------------
 
 

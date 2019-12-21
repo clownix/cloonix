@@ -15,7 +15,7 @@ case "${DISTRO}" in
 esac
 QCOW2=${DISTRO}.qcow2
 CLOONIX_BUSTER_REPO="http://deb.debian.org/debian"
-CLOONIX_BUSTER_REPO="http://172.17.0.2/${DISTRO}"
+#CLOONIX_BUSTER_REPO="http://172.17.0.2/${DISTRO}"
 
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config

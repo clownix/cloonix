@@ -1,22 +1,11 @@
 #!/bin/bash
 HERE=`pwd`
-. ${HERE}/config.env
-
-rm -f ${CLOONIX_BULK}/cisco.qcow2
-rm -rf ${CISCO_OUTPUTS}
-mkdir -p ${CISCO_OUTPUTS}
-
+CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu/qemu_bin"
+CISCO_QCOW2=${HOME}/cloonix_data/bulk/ecisco.qcow2
+CISCO_ISO=${HOME}/Bureau/archives/cisco/csr1000v-universalk9.16.10.01b.iso
 if [ ! -e ${CISCO_ISO} ]; then
   echo missing ${CISCO_ISO}
   exit 1
-fi
-
-if [ -e ${CISCO_QCOW2} ]; then
-  echo
-  echo GOING TO ERASE ${CISCO_QCOW2} in 2 sec
-  echo
-  sleep 3
-  rm -f ${CISCO_QCOW2}
 fi
 
 qemu-img create -f qcow2 ${CISCO_QCOW2} 60G
@@ -62,5 +51,4 @@ if [ ! -e ${CISCO_QCOW2} ]; then
   echo missing ${CISCO_QCOW2}
   exit 1
 fi
-cp -f ${CISCO_QCOW2} ${CLOONIX_BULK}/cisco.qcow2
-echo DONE cisco.qcow2
+echo DONE ${CISCO_QCOW2}

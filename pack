@@ -50,7 +50,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   for i in lib_io_clownix lib_rpc_doors lib_rpct \
            lib_rpc_c2c lib_rpc_layout lib_utils \
            lib_blkd lib_rpc_clownix lib_rpc_qmonitor \
-           lib_zor ; do
+           lib_zor meson_ninja ; do
     rm -rf ${CLOONIX_COMMON}/${i}
   done
 #----------------------------------------------------------

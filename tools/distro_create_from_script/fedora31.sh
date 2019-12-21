@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
-releasever=30
+releasever=31
 basearch=x86_64
-ROOTFS=/root/fedora30
+ROOTFS=/root/fedora31
 MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
 FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/x86_64/os
 FEDORA_MODULAR=${MIRROR}/releases/${releasever}/Modular/x86_64/os

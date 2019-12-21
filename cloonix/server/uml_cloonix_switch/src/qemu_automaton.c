@@ -47,11 +47,6 @@
 #include "endp_mngt.h"
 #include "dpdk_ovs.h"
 
-//sudo ip tuntap add dev vmwa0 mode tap
-//cloonix_cli nemo add kvm  vm_name ram=6000 cpu=4 dpdk=0 sock=3 hwsim=0 \
-//                          vmware.qcow2 --vmware \
-//                          --added_disk=/home/perrier/cloonix_data/bulk/vmware_store.qcow2
-
 #define NETWORK_PARAMS_VMWARE " -netdev type=tap,id=vmware0,ifname=vmwa0"\
                               " -device e1000,netdev=vmware0"\
                               " -netdev type=tap,id=vmware1,ifname=vmwa1"\
@@ -83,7 +78,7 @@
 
 #define AGENT_CDROM " -drive file=%s,if=none,media=cdrom,id=cd"\
                     " -device virtio-scsi-pci"\
-                    " -device scsi-disk,drive=cd"
+                    " -device scsi-cd,drive=cd"
 
 #define AGENT_DISK " -drive file=%s,if=virtio,media=disk"
 
@@ -96,10 +91,6 @@
 #define BLOCKNAME " -blockdev node-name=%s,driver=qcow2,"\
                   "file.driver=file,file.node-name=file,file.filename=%s" \
                   " -device virtio-blk,drive=%s"
-
-//#define BLOCKNAME_VMWARE " -blockdev node-name=vmwdatab,driver=qcow2,"\
-//                  "file.driver=file,file.node-name=vmwdatab0,file.filename=%s" \
-//                  " -device virtio-blk,drive=vmwdatab"
 
 #define FLAG_UEFI " -bios %s/server/qemu/%s/OVMF.fd"
 
@@ -481,10 +472,11 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
                         DIR_UMID, cpu_type, nb_cpu, nb_cpu);
   if (spice_libs_exists())
     {
-    if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
-      len += sprintf(linux_cmd+len, QEMU_SPICE, spice_path);
-    else
+    if ((vm->kvm.vm_config_flags & VM_CONFIG_FLAG_WITH_PXE) ||
+        (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
       len += sprintf(linux_cmd+len," -nographic -vga none");
+    else
+      len += sprintf(linux_cmd+len, QEMU_SPICE, spice_path);
     }
 
 
@@ -509,6 +501,10 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     {
     len += sprintf(linux_cmd+len, " -no-reboot");
     }
+  if  (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_WITH_PXE)
+    {
+    len += sprintf(linux_cmd+len, " -boot n");
+    }
   if  (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM)
     {
     len += sprintf(linux_cmd+len, INSTALL_DISK, rootfs, 0);
@@ -525,7 +521,8 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
         {
         len += sprintf(linux_cmd+len, DRIVE_PARAMS_CISCO, rootfs, 0);
         len += sprintf(linux_cmd+len,
-        " -uuid 3824cca6-7603-423b-8e5c-84d15d9b0a6a");
+          " -uuid 1c54ff10-774c-4e63-9896-4c18d66b50b1");
+//        " -uuid 3824cca6-7603-423b-8e5c-84d15d9b0a6a");
         }
       else if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VMWARE)
         {

@@ -47,6 +47,7 @@ void help_add_vm_kvm(char *line)
   printf("\n\t       --9p_share=<host_shared_dir_file_path>");
   printf("\n\t       --install_cdrom=<cdrom_file_path>");
   printf("\n\t       --no_reboot");
+  printf("\n\t       --with_pxe");
   printf("\n\t       --added_cdrom=<cdrom_file_path>");
   printf("\n\t       --added_disk=<disk_file_path>");
   printf("\n\t       --fullvirt");
@@ -156,6 +157,11 @@ static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
       {
       prop_flags |= VM_CONFIG_FLAG_INSTALL_CDROM;
       install_cdrom = argv[i] + strlen("--install_cdrom=");
+      }
+    else if (!strncmp(argv[i], "--with_pxe", strlen("--with_pxe")))
+      {
+      prop_flags |= VM_CONFIG_FLAG_WITH_PXE;
+      install_cdrom = argv[i] + strlen("--with_pxe");
       }
     else if (!strncmp(argv[i], "--no_reboot", strlen("--no_reboot")))
       {

@@ -1,8 +1,8 @@
 #!/bin/bash
 HERE=`pwd`
 ROOTFS=/root/arch
-BOOTPATH="https://mirrors.edge.kernel.org/archlinux/iso/2019.10.01"
-BOOTNAME="archlinux-bootstrap-2019.10.01-x86_64.tar.gz"
+BOOTPATH="https://mirrors.edge.kernel.org/archlinux/iso/2019.12.01"
+BOOTNAME="archlinux-bootstrap-2019.12.01-x86_64.tar.gz"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {

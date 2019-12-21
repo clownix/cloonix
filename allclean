@@ -15,7 +15,8 @@ rm -f cloonix-${CLOONIX_VERSION}.tar.gz
 rm -rf tmpbuild
 rm -rf tmpbuild_bis
 #----------------------------------------------------------
-  for i in agent_dropbear \
+  for i in meson_ninja \
+           agent_dropbear \
            xwy \
            spice \
            lib_rpc_clownix \

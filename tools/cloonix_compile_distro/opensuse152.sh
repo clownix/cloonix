@@ -88,10 +88,7 @@ nameserver 172.17.0.3
 EOF"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "ip link set eth0 up"
-cloonix_ssh ${NET} ${NAME} "udhcpc -i eth0"
-#----------------------------------------------------------------------
-cloonix_ssh ${NET} ${NAME} "systemctl stop packagekit.service"
-cloonix_ssh ${NET} ${NAME} "systemctl disable packagekit.service"
+cloonix_ssh ${NET} ${NAME} "systemctl restart network.service"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "zypper --non-interactive refresh"
 cloonix_ssh $NET ${NAME} "zypper --non-interactive update"

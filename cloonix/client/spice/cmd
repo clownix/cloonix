@@ -2,6 +2,7 @@
 set -e
 HERE=`pwd`
 CLOONIX_COMMON=${HERE}/../../../cloonix/common
+MESON_NINJA=${CLOONIX_COMMON}/meson_ninja
 TARGET=${CLOONIX_COMMON}/spice/spice_lib
 if [ ! -d ${TARGET} ]; then
   echo
@@ -22,7 +23,8 @@ sed -i s/UNKNOWN/0.37/ ./build-aux/git-version-gen
 sed -i s"%'-Wextra',%'-Wextra',\n'-Wl,-rpath',\n'-Wl,/usr/local/bin/cloonix/common/spice/spice_lib',%" meson.build
 export PKG_CONFIG_PATH=${TARGET}/pkgconfig 
 export DESTDIR=${TARGET}
-meson build
+export PATH=${MESON_NINJA}/ninja:$PATH
+${MESON_NINJA}/meson/meson.py build
 cd build
 ninja install
 cp -rf ${TARGET}/usr/local/* ${TARGET}

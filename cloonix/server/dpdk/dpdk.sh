@@ -1,8 +1,9 @@
 #!/bin/bash
 HERE=`pwd`
 TARGZSTORE=${HERE}/../../../targz_store
-NAMEZ=dpdk.tar.gz
+MESON_NINJA=${HERE}/../../common/meson_ninja
 NAME=dpdk
+NAMEZ=${NAME}.tar.gz
 rm -rf ${NAME}
 tar xvf ${TARGZSTORE}/${NAMEZ}
 cd ${HERE}/${NAME}
@@ -11,16 +12,9 @@ patch -p1 < ${HERE}/dpdk.patch
 sleep 2
 sed -i s'%-rpath=$(RTE_SDK_BIN)/lib%-rpath=/usr/local/bin/cloonix/server/dpdk/lib%' mk/rte.app.mk
 echo "LDFLAGS+=\"-rpath=/usr/local/bin/cloonix/server/dpdk/lib\"" >> mk/rte.vars.mk
-tar xvf ${TARGZSTORE}/meson.tar.gz
-tar xvf ${TARGZSTORE}/ninja.tar.gz
-
-cd ${HERE}/${NAME}/ninja
-sed -i s"%/usr/bin/env python%/usr/bin/env python3%" configure.py
-sed -i s"%/usr/bin/env python%/usr/bin/env python3%" bootstrap.py
-./configure.py --bootstrap
 cd ${HERE}/${NAME}
-export PATH=${HERE}/${NAME}/ninja:$PATH
-${HERE}/${NAME}/meson/meson.py build
+export PATH=${MESON_NINJA}/ninja:$PATH
+${MESON_NINJA}/meson/meson.py build
 cd build
 cp rte_build_config.h ../config
 ninja

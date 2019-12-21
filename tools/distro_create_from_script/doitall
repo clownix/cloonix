@@ -3,7 +3,7 @@ set -e
 HERE=`pwd`
 LIST="arch \
       centos8 \
-      fedora30 \
+      fedora31 \
       opensuse152 \
       openwrt \
       disco \
@@ -20,7 +20,7 @@ done
 
 LIST="arch \
       centos8 \
-      fedora30 \
+      fedora31 \
       opensuse152 \
       openwrt"
 

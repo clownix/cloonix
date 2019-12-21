@@ -35,7 +35,7 @@
 #define MASK_TX_ELEM_FREE_POOL 0x3FF
 #define MAX_USOCK_RANKS 200 
 
-#define MAX_PERSEC_ELEMS 800
+#define MAX_PERSEC_ELEMS 1000
 /*--------------------------------------------------------------------------*/
 struct t_all_ctx;
 /*--------------------------------------------------------------------------*/

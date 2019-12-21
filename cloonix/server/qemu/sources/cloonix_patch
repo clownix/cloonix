@@ -1,7 +1,7 @@
 diff -Naur qemu_vip/configure tainted_qemu/configure
---- qemu_vip/configure	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/configure	2019-10-21 11:41:56.814121633 +0200
-@@ -362,6 +362,7 @@
+--- qemu_vip/configure	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/configure	2019-12-21 00:24:14.970175035 +0100
+@@ -363,6 +363,7 @@
  vnc="yes"
  sparse="no"
  vde=""
@@ -9,7 +9,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
  vnc_sasl=""
  vnc_jpeg=""
  vnc_png=""
-@@ -1043,6 +1044,8 @@
+@@ -1050,6 +1051,8 @@
    ;;
    --firmwarepath=*) firmwarepath="$optarg"
    ;;
@@ -18,7 +18,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
    --host=*|--build=*|\
    --disable-dependency-tracking|\
    --sbindir=*|--sharedstatedir=*|\
-@@ -1129,6 +1132,10 @@
+@@ -1136,6 +1139,10 @@
    ;;
    --enable-vde) vde="yes"
    ;;
@@ -29,7 +29,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
    --disable-netmap) netmap="no"
    ;;
    --enable-netmap) netmap="yes"
-@@ -3320,6 +3327,84 @@
+@@ -3398,6 +3405,84 @@
    fi
  fi
  
@@ -114,7 +114,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
  ##########################################
  # netmap support probe
  # Apart from looking for netmap headers, we make sure that the host API version
-@@ -4819,29 +4904,18 @@
+@@ -4864,29 +4949,18 @@
  fi
  
  ##########################################
@@ -153,7 +153,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
  fi
  
  # check for smartcard support
-@@ -6354,6 +6428,7 @@
+@@ -6481,6 +6555,7 @@
  echo "Documentation     $docs"
  echo "PIE               $pie"
  echo "vde support       $vde"
@@ -161,7 +161,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
  echo "netmap support    $netmap"
  echo "Linux AIO support $linux_aio"
  echo "ATTR/XATTR support $attr"
-@@ -6592,6 +6667,9 @@
+@@ -6720,6 +6795,9 @@
    echo "CONFIG_VDE=y" >> $config_host_mak
    echo "VDE_LIBS=$vde_libs" >> $config_host_mak
  fi
@@ -172,8 +172,8 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
    echo "CONFIG_NETMAP=y" >> $config_host_mak
  fi
 diff -Naur qemu_vip/hmp-commands.hx tainted_qemu/hmp-commands.hx
---- qemu_vip/hmp-commands.hx	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/hmp-commands.hx	2019-10-21 11:41:56.814121633 +0200
+--- qemu_vip/hmp-commands.hx	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/hmp-commands.hx	2019-12-21 00:24:14.970175035 +0100
 @@ -1403,7 +1403,7 @@
      {
          .name       = "netdev_add",
@@ -184,9 +184,9 @@ diff -Naur qemu_vip/hmp-commands.hx tainted_qemu/hmp-commands.hx
          .cmd        = hmp_netdev_add,
          .command_completion = netdev_add_completion,
 diff -Naur qemu_vip/hw/net/Makefile.objs tainted_qemu/hw/net/Makefile.objs
---- qemu_vip/hw/net/Makefile.objs	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/hw/net/Makefile.objs	2019-10-21 11:41:56.814121633 +0200
-@@ -38,6 +38,7 @@
+--- qemu_vip/hw/net/Makefile.objs	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/hw/net/Makefile.objs	2019-12-21 00:24:14.970175035 +0100
+@@ -39,6 +39,7 @@
  obj-$(CONFIG_XILINX_ETHLITE) += xilinx_ethlite.o
  
  obj-$(CONFIG_VIRTIO_NET) += virtio-net.o
@@ -196,8 +196,8 @@ diff -Naur qemu_vip/hw/net/Makefile.objs tainted_qemu/hw/net/Makefile.objs
  common-obj-$(CONFIG_ALL) += vhost_net-stub.o
 diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet.c
 --- qemu_vip/hw/net/virtio-muethnet.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_qemu/hw/net/virtio-muethnet.c	2019-10-21 11:41:56.814121633 +0200
-@@ -0,0 +1,1160 @@
++++ tainted_qemu/hw/net/virtio-muethnet.c	2019-12-21 00:24:14.970175035 +0100
+@@ -0,0 +1,1225 @@
 +/*
 + * Modifications for cloonix mueth
 + */
@@ -239,12 +239,6 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +#define MAC_TABLE_ENTRIES    64
 +#define MAX_VLAN    (1 << 12)   /* Per 802.1Q definition */
 +
-+/*
-+ * Calculate the number of bytes up to and including the given 'field' of
-+ * 'container'.
-+ */
-+#define endof(container, field) \
-+    (offsetof(container, field) + sizeof(((container *)0)->field))
 +
 +static VirtIOFeature feature_sizes[] = {
 +    {.flags = 1 << VIRTIO_NET_F_MAC,
@@ -258,6 +252,9 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +
 +
 +
++static void purge_tx_all(t_all_ctx *all_ctx, VirtIONet *n,
++                         VirtIONetQueue *q, VirtIODevice *vdev);
++static void local_purge_tx_elem_free_pool(t_all_ctx *all_ctx);
 +static void virtio_net_rx_timer(void *opaque);
 +static void virtio_net_tx_timer(void *opaque);
 +static void virtio_net_handle_tx(VirtIODevice *vdev, VirtQueue *vq);
@@ -324,7 +321,6 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +/*****************************************************************************/
 +static void pool_elem_put(t_async_rx_el *ael, VirtQueueElement *elem)
 +{
-+  while (__sync_lock_test_and_set(&(ael->pool_put_lock), 1));
 +  if(ael->pool_put == ael->pool_get)
 +    KOUT(" ");
 +  if (ael->elem[ael->pool_put])
@@ -332,7 +328,6 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +  ael->elem[ael->pool_put] = elem;
 +  ael->pool_put = (ael->pool_put + 1) & CLOONIX_CIRC_ELEM;
 +  ael->pool_qty += 1;
-+  __sync_lock_release(&(ael->pool_put_lock));
 +}
 +/*---------------------------------------------------------------------------*/
 +
@@ -358,6 +353,7 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +static void pool_elem_fill(VirtIONetQueue *q)
 +{
 +  VirtQueueElement *elem = NULL;
++  while (__sync_lock_test_and_set(&(q->async_rx_el.pool_put_lock), 1));
 +  while(1)
 +    {
 +    elem = virtqueue_pop(q->rx_vq, sizeof(VirtQueueElement));
@@ -365,6 +361,7 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +      break;
 +    pool_elem_put(&(q->async_rx_el), elem);
 +    }
++  __sync_lock_release(&(q->async_rx_el.pool_put_lock));
 +}
 +/*--------------------------------------------------------------------------*/
 +
@@ -444,6 +441,7 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +    KERR(" ");
 +    return;
 +    }
++  while (__sync_lock_test_and_set(&(q->async_rx_el.pool_put_lock), 1));
 +  elem = pool_elem_get(q, &(q->async_rx_el));
 +  while(elem)
 +    {
@@ -454,8 +452,9 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +  q->rx_waiting = 1;
 +  sock_fd_local_flow_control(all_ctx, 1);
 +  timer_mod(n->vqs[0].rx_timer,
-+            qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+1000000);
++            qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+10000000);
 +  all_ctx->g_nb_elem_rx_ready = q->async_rx_el.pool_qty;
++  __sync_lock_release(&(q->async_rx_el.pool_put_lock));
 +}
 +/*--------------------------------------------------------------------------*/
 +
@@ -473,6 +472,7 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +    KERR(" ");
 +    return;
 +    }
++  while (__sync_lock_test_and_set(&(q->async_rx_el.pool_put_lock), 1));
 +  while(1)
 +    {
 +    elem = virtqueue_pop(q->rx_vq, sizeof(VirtQueueElement));
@@ -481,6 +481,7 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +    pool_elem_put(&(q->async_rx_el), elem);
 +    }
 +  all_ctx->g_nb_elem_rx_ready = q->async_rx_el.pool_qty;
++  __sync_lock_release(&(q->async_rx_el.pool_put_lock));
 +}
 +/*--------------------------------------------------------------------------*/
 +
@@ -539,11 +540,30 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +/*--------------------------------------------------------------------------*/
 +
 +/****************************************************************************/
-+static bool virtio_net_started(VirtIONet *n, uint8_t status)
++static void virtio_net_drop_tx_queue_data(VirtIODevice *vdev, VirtQueue *vq)
 +{
-+    VirtIODevice *vdev = VIRTIO_DEVICE(n);
-+    return (status & VIRTIO_CONFIG_S_DRIVER_OK) &&
-+        (n->status & VIRTIO_NET_S_LINK_UP) && vdev->vm_running;
++  unsigned int dropped = virtqueue_drop_all(vq);
++  if (dropped)
++    virtio_notify(vdev, vq);
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void purge_all(VirtIODevice *vdev)
++{
++  VirtIONet *n = VIRTIO_MUETHNET(vdev);
++  MUETHState *s;
++  VirtIONetQueue *q;
++  t_all_ctx *all_ctx = cloonix_get_all_ctx(n, &s);
++  q = &(n->vqs[0]);
++  purge_tx_all(all_ctx, n, q, vdev);
++  local_purge_tx_elem_free_pool(all_ctx);
++  virtio_net_drop_tx_queue_data(vdev, q->tx_vq);
++  pool_elem_purge_empty(all_ctx);
++  timer_mod(q->tx_timer,qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+1000000000);
++  timer_mod(q->rx_timer,qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+1000000000);
++  virtio_queue_set_notification_tx(q, 1);
++  virtio_queue_set_notification_rx(q, 1);
 +}
 +/*--------------------------------------------------------------------------*/
 +
@@ -552,23 +572,31 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +{
 +  VirtIONet *n = VIRTIO_MUETHNET(vdev);
 +  MUETHState *s;
-+  t_all_ctx *all_ctx;
-+  all_ctx = cloonix_get_all_ctx(n, &s);
-+  if (virtio_net_started(n, status))
++  VirtIONetQueue *q;
++  NetClientState *nc;
++  t_all_ctx *all_ctx = cloonix_get_all_ctx(n, &s);
++  uint16_t old_status = n->status;
++  q = &(n->vqs[0]);
++  if ((status & VIRTIO_CONFIG_S_DRIVER_OK) && (vdev->vm_running))
 +    {
 +    if (all_ctx->g_qemu_net_status_ok == 0) 
 +      {
 +      all_ctx->g_qemu_net_status_ok = 1;
++      timer_mod(q->tx_timer,qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+10000000);
++      timer_mod(q->rx_timer,qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL)+10000000);
 +      pool_elem_refill_empty(all_ctx);
++      nc = qemu_get_queue(n->nic);
++      nc->link_down = 0;
++      old_status = n->status;
++      n->status |= VIRTIO_NET_S_LINK_UP;
++      if (n->status != old_status)
++        virtio_notify_config(vdev);
 +      }
 +    }
 +  else
 +    {
-+    if (all_ctx->g_qemu_net_status_ok == 1)
-+      {
-+      all_ctx->g_qemu_net_status_ok = 0;
-+      pool_elem_purge_empty(all_ctx);
-+      }
++    purge_all(vdev);
++    all_ctx->g_qemu_net_status_ok = 0;
 +    }
 +}
 +/*--------------------------------------------------------------------------*/
@@ -590,7 +618,7 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +      }
 +
 +    if (n->status != old_status)
-+        virtio_notify_config(vdev);
++      virtio_notify_config(vdev);
 +
 +    virtio_net_set_status(vdev, vdev->status);
 +}
@@ -615,12 +643,15 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +static void virtio_net_reset(VirtIODevice *vdev)
 +{
 +  VirtIONet *n = VIRTIO_MUETHNET(vdev);
-+  n->promisc = 0;
++  NetClientState *nc;
++  n->promisc = 1;
 +  n->curr_queues = 1;
-+
-+
 +  memcpy(&n->mac[0], &n->nic->conf->macaddr, sizeof(n->mac));
 +  qemu_format_nic_info_str(qemu_get_queue(n->nic), n->mac);
++  purge_all(vdev);
++  nc = qemu_get_queue(n->nic);
++  nc->link_down = 1;
++  virtio_net_set_link_status(nc);
 +}
 +/*--------------------------------------------------------------------------*/
 +
@@ -947,6 +978,7 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +      {
 +      if (q->async_rx_el.pool_qty >= MAX_ELEM_PER_PKT)
 +        {  
++        while (__sync_lock_test_and_set(&(q->async_rx_el.pool_put_lock), 1));
 +        elem = pool_elem_get(q, &(q->async_rx_el));
 +        if (!elem)
 +          KOUT(" ");
@@ -989,7 +1021,7 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +            g_free(elem);
 +            nb += 1;
 +            if (len1 + len2 + len3 != packlen)
-+              KERR("BIG BIG BIG PROBLEM: %d %d %d %d", packlen, len1, len2, len3);
++              KERR("BIG BIG BIG PROBLEM: %d %d %d %d",packlen,len1,len2,len3);
 +            }
 +          }
 +
@@ -1002,10 +1034,31 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +
 +        virtqueue_flush(q->rx_vq, nb);
 +        virtio_notify(vdev, q->rx_vq);
++        __sync_lock_release(&(q->async_rx_el.pool_put_lock));
 +        }
 +      }
 +    }
 +  return nb;
++}
++/*--------------------------------------------------------------------------*/
++
++/****************************************************************************/
++static void purge_tx_all(t_all_ctx *all_ctx, VirtIONet *n,
++                         VirtIONetQueue *q, VirtIODevice *vdev)
++{
++  VirtQueueElement *elem;
++  int must_notif = 0;
++  while (!virtio_queue_empty(q->tx_vq))
++    {
++    elem = virtqueue_pop(q->tx_vq, sizeof(VirtQueueElement));
++    if (elem == NULL)
++      break;
++    must_notif = 1;
++    virtqueue_push(q->tx_vq, elem, 0);
++    g_free(elem);
++    }
++  if (must_notif == 1)
++    virtio_notify(vdev, q->tx_vq);
 +}
 +/*--------------------------------------------------------------------------*/
 +
@@ -1036,29 +1089,41 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +/*--------------------------------------------------------------------------*/
 +
 +/****************************************************************************/
-+void purge_tx_elem_free_pool(t_all_ctx *all_ctx)
++static void local_purge_tx_elem_free_pool(t_all_ctx *all_ctx)
 +{
-+  VirtIONetQueue *q;
-+  VirtIODevice *vdev;
++  VirtIONetQueue *sq, *q;
++  VirtIODevice *st_vdev, *vdev;
 +  VirtQueueElement *elem;
-+  while(tx_elem_free_pool_get(&(all_ctx->tx_elem_free_pool), 
-+                              (void **) &elem, 
-+                              (void **) &q, 
++  int must_notif = 0;
++  while(tx_elem_free_pool_get(&(all_ctx->tx_elem_free_pool),
++                              (void **) &elem,
++                              (void **) &q,
 +                              (void **) &vdev))
 +    {
++    if (must_notif == 0)
++      {
++      must_notif = 1;
++      st_vdev = vdev;
++      sq = q;
++      }
++    else
++      {
++      if ((vdev != st_vdev) || (q != sq))
++        KOUT("%p %p %p %p", vdev, st_vdev, q, sq);
++      }
 +    virtqueue_push(q->tx_vq, elem, 0);
-+    virtio_notify(vdev, q->tx_vq);
 +    g_free(elem);
 +    }
++  if (must_notif == 1)
++    virtio_notify(st_vdev, sq->tx_vq);
 +}
 +/*--------------------------------------------------------------------------*/
 +
 +/****************************************************************************/
-+static void virtio_net_drop_tx_queue_data(VirtIODevice *vdev, VirtQueue *vq)
++void purge_tx_elem_free_pool(t_all_ctx *all_ctx)
 +{
-+  unsigned int dropped = virtqueue_drop_all(vq);
-+  if (dropped)
-+    virtio_notify(vdev, vq);
++  if (all_ctx->g_qemu_net_status_ok)
++    local_purge_tx_elem_free_pool(all_ctx);
 +}
 +/*--------------------------------------------------------------------------*/
 +
@@ -1358,11 +1423,33 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +/****************************************************************************/
 +type_init(virtio_register_types)
 +/*--------------------------------------------------------------------------*/
+diff -Naur qemu_vip/hw/pci/pci.c tainted_qemu/hw/pci/pci.c
+--- qemu_vip/hw/pci/pci.c	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/hw/pci/pci.c	2019-12-21 00:24:14.974175052 +0100
+@@ -48,6 +48,7 @@
+ #include "qapi/error.h"
+ #include "qapi/qapi-commands-misc.h"
+ #include "qemu/cutils.h"
++#include "ioc.h"
+ 
+ //#define DEBUG_PCI
+ #ifdef DEBUG_PCI
+@@ -350,7 +351,9 @@
+     }
+ 
+     for (i = 0; i < bus->nirq; i++) {
+-        assert(bus->irq_count[i] == 0);
++        // assert(bus->irq_count[i] == 0);
++        if (bus->irq_count[i] != 0)
++          KERR("ASSERT %d %d", i, bus->irq_count[i]);
+     }
+ }
+ 
 diff -Naur qemu_vip/hw/virtio/virtio.c tainted_qemu/hw/virtio/virtio.c
---- qemu_vip/hw/virtio/virtio.c	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/hw/virtio/virtio.c	2019-10-21 11:41:56.814121633 +0200
-@@ -329,6 +329,12 @@
-     address_space_cache_invalidate(&caches->used, pa, sizeof(val));
+--- qemu_vip/hw/virtio/virtio.c	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/hw/virtio/virtio.c	2019-12-21 00:24:14.974175052 +0100
+@@ -432,6 +432,12 @@
+     }
  }
  
 +unsigned int virtio_queue_get_notification(VirtQueue *vq)
@@ -1375,8 +1462,8 @@ diff -Naur qemu_vip/hw/virtio/virtio.c tainted_qemu/hw/virtio/virtio.c
  {
      vq->notification = enable;
 diff -Naur qemu_vip/hw/virtio/virtio-net-pci.c tainted_qemu/hw/virtio/virtio-net-pci.c
---- qemu_vip/hw/virtio/virtio-net-pci.c	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/hw/virtio/virtio-net-pci.c	2019-10-21 11:41:56.814121633 +0200
+--- qemu_vip/hw/virtio/virtio-net-pci.c	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/hw/virtio/virtio-net-pci.c	2019-12-21 00:24:14.974175052 +0100
 @@ -32,6 +32,13 @@
  #define VIRTIO_NET_PCI(obj) \
          OBJECT_CHECK(VirtIONetPCI, (obj), TYPE_VIRTIO_NET_PCI)
@@ -1493,9 +1580,9 @@ diff -Naur qemu_vip/hw/virtio/virtio-net-pci.c tainted_qemu/hw/virtio/virtio-net
 +
  type_init(virtio_net_pci_register)
 diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/virtio.h
---- qemu_vip/include/hw/virtio/virtio.h	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/include/hw/virtio/virtio.h	2019-10-21 11:41:56.814121633 +0200
-@@ -312,6 +312,8 @@
+--- qemu_vip/include/hw/virtio/virtio.h	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/include/hw/virtio/virtio.h	2019-12-21 00:24:14.974175052 +0100
+@@ -318,6 +318,8 @@
                                                  VirtIOHandleAIOOutput handle_output);
  VirtQueue *virtio_vector_first_queue(VirtIODevice *vdev, uint16_t vector);
  VirtQueue *virtio_vector_next_queue(VirtQueue *vq);
@@ -1505,9 +1592,9 @@ diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/vi
  static inline void virtio_add_feature(uint64_t *features, unsigned int fbit)
  {
 diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virtio/virtio-net.h
---- qemu_vip/include/hw/virtio/virtio-net.h	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/include/hw/virtio/virtio-net.h	2019-10-21 11:41:56.814121633 +0200
-@@ -23,6 +23,14 @@
+--- qemu_vip/include/hw/virtio/virtio-net.h	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/include/hw/virtio/virtio-net.h	2019-12-21 00:24:14.974175052 +0100
+@@ -24,6 +24,14 @@
  #define VIRTIO_NET(obj) \
          OBJECT_CHECK(VirtIONet, (obj), TYPE_VIRTIO_NET)
  
@@ -1522,7 +1609,7 @@ diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virti
  #define TX_TIMER_INTERVAL 150000 /* 150 us */
  
  /* Limit the number of packets that can be sent via a single flush
-@@ -32,6 +40,8 @@
+@@ -33,6 +41,8 @@
   * and latency. */
  #define TX_BURST 256
  
@@ -1531,7 +1618,7 @@ diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virti
  typedef struct virtio_net_conf
  {
      uint32_t txtimer;
-@@ -124,15 +134,28 @@
+@@ -126,15 +136,28 @@
  /* Maximum packet size we can receive from tap device: header + 64k */
  #define VIRTIO_NET_MAX_BUFSIZE (sizeof(struct virtio_net_hdr) + (64 * KiB))
  
@@ -1560,7 +1647,7 @@ diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virti
      struct VirtIONet *n;
  } VirtIONetQueue;
  
-@@ -190,4 +213,10 @@
+@@ -204,4 +227,10 @@
  void virtio_net_set_netclient_name(VirtIONet *n, const char *name,
                                     const char *type);
  
@@ -1573,7 +1660,7 @@ diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virti
  #endif
 diff -Naur qemu_vip/include/net/cloonix_mueth.h tainted_qemu/include/net/cloonix_mueth.h
 --- qemu_vip/include/net/cloonix_mueth.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_qemu/include/net/cloonix_mueth.h	2019-10-21 11:41:56.814121633 +0200
++++ tainted_qemu/include/net/cloonix_mueth.h	2019-12-21 00:24:14.974175052 +0100
 @@ -0,0 +1,43 @@
 +
 +void cloonix_set_link_status(t_all_ctx *all_ctx, int on);
@@ -1619,8 +1706,8 @@ diff -Naur qemu_vip/include/net/cloonix_mueth.h tainted_qemu/include/net/cloonix
 +
 +#define MAX_ELEM_PER_PKT 3
 diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
---- qemu_vip/include/qemu/error-report.h	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/include/qemu/error-report.h	2019-10-21 11:41:56.814121633 +0200
+--- qemu_vip/include/qemu/error-report.h	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/include/qemu/error-report.h	2019-12-21 00:24:14.974175052 +0100
 @@ -13,6 +13,26 @@
  #ifndef QEMU_ERROR_REPORT_H
  #define QEMU_ERROR_REPORT_H
@@ -1660,9 +1747,9 @@ diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-
  
  bool error_report_once_cond(bool *printed, const char *fmt, ...)
 diff -Naur qemu_vip/include/qemu-common.h tainted_qemu/include/qemu-common.h
---- qemu_vip/include/qemu-common.h	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/include/qemu-common.h	2019-10-21 11:41:56.814121633 +0200
-@@ -129,4 +129,13 @@
+--- qemu_vip/include/qemu-common.h	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/include/qemu-common.h	2019-12-21 00:24:14.974175052 +0100
+@@ -135,4 +135,13 @@
   * returned. */
  bool dump_in_progress(void);
  
@@ -1677,8 +1764,8 @@ diff -Naur qemu_vip/include/qemu-common.h tainted_qemu/include/qemu-common.h
 +
  #endif
 diff -Naur qemu_vip/net/clients.h tainted_qemu/net/clients.h
---- qemu_vip/net/clients.h	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/net/clients.h	2019-10-21 11:41:56.814121633 +0200
+--- qemu_vip/net/clients.h	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/net/clients.h	2019-12-21 00:24:14.974175052 +0100
 @@ -53,6 +53,12 @@
                   NetClientState *peer, Error **errp);
  #endif
@@ -1694,7 +1781,7 @@ diff -Naur qemu_vip/net/clients.h tainted_qemu/net/clients.h
                      NetClientState *peer, Error **errp);
 diff -Naur qemu_vip/net/cloonix_mueth.c tainted_qemu/net/cloonix_mueth.c
 --- qemu_vip/net/cloonix_mueth.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_qemu/net/cloonix_mueth.c	2019-10-21 11:41:56.830121626 +0200
++++ tainted_qemu/net/cloonix_mueth.c	2019-12-21 00:24:14.974175052 +0100
 @@ -0,0 +1,385 @@
 +/*****************************************************************************/
 +#include <stdio.h>
@@ -2082,8 +2169,8 @@ diff -Naur qemu_vip/net/cloonix_mueth.c tainted_qemu/net/cloonix_mueth.c
 +/*--------------------------------------------------------------------------*/
 +
 diff -Naur qemu_vip/net/hub.c tainted_qemu/net/hub.c
---- qemu_vip/net/hub.c	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/net/hub.c	2019-10-21 11:41:56.830121626 +0200
+--- qemu_vip/net/hub.c	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/net/hub.c	2019-12-21 00:24:14.974175052 +0100
 @@ -337,6 +337,7 @@
              case NET_CLIENT_DRIVER_TAP:
              case NET_CLIENT_DRIVER_SOCKET:
@@ -2093,8 +2180,8 @@ diff -Naur qemu_vip/net/hub.c tainted_qemu/net/hub.c
                  has_host_dev = 1;
                  break;
 diff -Naur qemu_vip/net/Makefile.objs tainted_qemu/net/Makefile.objs
---- qemu_vip/net/Makefile.objs	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/net/Makefile.objs	2019-10-21 11:41:56.830121626 +0200
+--- qemu_vip/net/Makefile.objs	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/net/Makefile.objs	2019-12-21 00:24:14.974175052 +0100
 @@ -12,6 +12,7 @@
  slirp.o-libs := $(SLIRP_LIBS)
  common-obj-$(CONFIG_VDE) += vde.o
@@ -2104,8 +2191,8 @@ diff -Naur qemu_vip/net/Makefile.objs tainted_qemu/net/Makefile.objs
  common-obj-y += filter-buffer.o
  common-obj-y += filter-mirror.o
 diff -Naur qemu_vip/net/net.c tainted_qemu/net/net.c
---- qemu_vip/net/net.c	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/net/net.c	2019-10-21 11:41:56.830121626 +0200
+--- qemu_vip/net/net.c	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/net/net.c	2019-12-21 00:24:14.974175052 +0100
 @@ -949,6 +949,9 @@
  #ifdef CONFIG_VDE
          [NET_CLIENT_DRIVER_VDE]       = net_init_vde,
@@ -2138,8 +2225,8 @@ diff -Naur qemu_vip/net/net.c tainted_qemu/net/net.c
          "bridge",
  #endif
 diff -Naur qemu_vip/qapi/net.json tainted_qemu/qapi/net.json
---- qemu_vip/qapi/net.json	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/qapi/net.json	2019-10-21 11:41:56.830121626 +0200
+--- qemu_vip/qapi/net.json	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/qapi/net.json	2019-12-21 00:24:14.974175052 +0100
 @@ -369,6 +369,30 @@
      '*mode':  'uint16' } }
  
@@ -2206,9 +2293,9 @@ diff -Naur qemu_vip/qapi/net.json tainted_qemu/qapi/net.json
      'netmap':   'NetdevNetmapOptions',
      'vhost-user': 'NetdevVhostUserOptions' } }
 diff -Naur qemu_vip/qdev-monitor.c tainted_qemu/qdev-monitor.c
---- qemu_vip/qdev-monitor.c	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/qdev-monitor.c	2019-10-21 11:41:56.830121626 +0200
-@@ -71,6 +71,7 @@
+--- qemu_vip/qdev-monitor.c	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/qdev-monitor.c	2019-12-21 00:24:14.974175052 +0100
+@@ -73,6 +73,7 @@
      { "virtio-mouse-pci", "virtio-mouse", QEMU_ARCH_ALL & ~QEMU_ARCH_S390X },
      { "virtio-net-ccw", "virtio-net", QEMU_ARCH_S390X },
      { "virtio-net-pci", "virtio-net", QEMU_ARCH_ALL & ~QEMU_ARCH_S390X },
@@ -2217,9 +2304,9 @@ diff -Naur qemu_vip/qdev-monitor.c tainted_qemu/qdev-monitor.c
      { "virtio-rng-pci", "virtio-rng", QEMU_ARCH_ALL & ~QEMU_ARCH_S390X },
      { "virtio-scsi-ccw", "virtio-scsi", QEMU_ARCH_S390X },
 diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
---- qemu_vip/qemu-options.hx	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/qemu-options.hx	2019-10-21 11:41:56.830121626 +0200
-@@ -2245,6 +2245,11 @@
+--- qemu_vip/qemu-options.hx	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/qemu-options.hx	2019-12-21 00:24:14.974175052 +0100
+@@ -2279,6 +2279,11 @@
      "                Use group 'groupname' and mode 'octalmode' to change default\n"
      "                ownership and permissions for communication port.\n"
  #endif
@@ -2231,7 +2318,7 @@ diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
  #ifdef CONFIG_NETMAP
      "-netdev netmap,id=str,ifname=name[,devname=nmname]\n"
      "                attach to the existing netmap-enabled network interface 'name', or to a\n"
-@@ -2268,6 +2273,9 @@
+@@ -2302,6 +2307,9 @@
  #ifdef CONFIG_VDE
      "vde|"
  #endif
@@ -2242,9 +2329,9 @@ diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
      "netmap|"
  #endif
 diff -Naur qemu_vip/util/qemu-error.c tainted_qemu/util/qemu-error.c
---- qemu_vip/util/qemu-error.c	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/util/qemu-error.c	2019-10-21 11:41:56.830121626 +0200
-@@ -270,6 +270,7 @@
+--- qemu_vip/util/qemu-error.c	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/util/qemu-error.c	2019-12-21 00:24:14.974175052 +0100
+@@ -272,6 +272,7 @@
   * Prepend the current location and append a newline.
   * It's wrong to call this in a QMP monitor.  Use error_setg() there.
   */
@@ -2252,7 +2339,7 @@ diff -Naur qemu_vip/util/qemu-error.c tainted_qemu/util/qemu-error.c
  void error_report(const char *fmt, ...)
  {
      va_list ap;
-@@ -278,6 +279,7 @@
+@@ -280,6 +281,7 @@
      vreport(REPORT_TYPE_ERROR, fmt, ap);
      va_end(ap);
  }
@@ -2260,7 +2347,7 @@ diff -Naur qemu_vip/util/qemu-error.c tainted_qemu/util/qemu-error.c
  
  /*
   * Print a warning message to current monitor if we have one, else to stderr.
-@@ -285,6 +287,7 @@
+@@ -287,6 +289,7 @@
   * single phrase, with no newline or trailing punctuation.
   * Prepend the current location and append a newline.
   */
@@ -2268,7 +2355,7 @@ diff -Naur qemu_vip/util/qemu-error.c tainted_qemu/util/qemu-error.c
  void warn_report(const char *fmt, ...)
  {
      va_list ap;
-@@ -293,6 +296,7 @@
+@@ -295,6 +298,7 @@
      vreport(REPORT_TYPE_WARNING, fmt, ap);
      va_end(ap);
  }
@@ -2277,9 +2364,9 @@ diff -Naur qemu_vip/util/qemu-error.c tainted_qemu/util/qemu-error.c
  /*
   * Print an information message to current monitor if we have one, else to
 diff -Naur qemu_vip/vl.c tainted_qemu/vl.c
---- qemu_vip/vl.c	2019-10-18 15:13:11.000000000 +0200
-+++ tainted_qemu/vl.c	2019-10-21 11:41:56.830121626 +0200
-@@ -131,6 +131,9 @@
+--- qemu_vip/vl.c	2019-12-20 17:37:07.000000000 +0100
++++ tainted_qemu/vl.c	2019-12-21 00:24:14.974175052 +0100
+@@ -130,6 +130,9 @@
  #include "sysemu/iothread.h"
  #include "qemu/guest-random.h"
  
@@ -2289,7 +2376,7 @@ diff -Naur qemu_vip/vl.c tainted_qemu/vl.c
  #define MAX_VIRTIO_CONSOLES 1
  
  static const char *data_dir[16];
-@@ -3841,6 +3844,7 @@
+@@ -3807,6 +3810,7 @@
      set_memory_options(&ram_slots, &maxram_size, machine_class);
  
      os_daemonize();

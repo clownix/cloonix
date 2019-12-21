@@ -30,7 +30,7 @@ fct_get_debian_packages()
 		     sudo zlib1g-dev liborc-0.4-dev libegl1-mesa-dev \
                      libdrm-dev bison flex libjson-glib-dev libsasl2-dev \
                      libnuma-dev libpixman-1-dev libpcap-dev libmnl-dev \
-                     libibverbs-dev xorriso ninja-build meson wireshark 
+                     libibverbs-dev xorriso wireshark 
 case "$name" in
   "Ubuntu")
    apt-get -y install linux-headers-generic
@@ -53,10 +53,9 @@ fct_get_redhat_packages()
          python3-six gstreamer1-plugins-base-devel libepoxy-devel \
          polkit-devel libacl-devel dejavu-serif-fonts orc-devel \
          mesa-libEGL-devel bison flex wireshark libusbx-devel bzip2 \
-         python3-pyparsing numactl-devel kernel-headers meson \
+         python3-pyparsing numactl-devel kernel-headers \
          json-glib-devel mesa-libgbm-devel opus-devel 
 
-# meson ninja
 }
 #--------------------------------------------------------------------------
 fct_get_opensuse_packages()
@@ -69,9 +68,8 @@ fct_get_opensuse_packages()
          python3-six gstreamer-plugins-base-devel libepoxy-devel \
          polkit-devel libacl-devel orc-devel libusb-1_0-devel \
          Mesa-libEGL-devel bison flex wireshark python3-pyparsing \
-         libnuma-devel kernel-headers json-glib-devel \
-         libgbm-devel libopus-devel rxvt-unicode xorriso \
-         meson ninja
+         libnuma-devel kernel-headers json-glib-devel bzip2 \
+         libgbm-devel libopus-devel rxvt-unicode xorriso 
 }
 #--------------------------------------------------------------------------
 if [ $UID != 0 ]; then

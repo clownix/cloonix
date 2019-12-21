@@ -224,7 +224,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   int is_persistent, is_backed, is_inside_cloonix, is_vmware;
   int has_p9_host_share, is_cisco, has_vhost_vsock, is_uefi; 
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
-  int is_full_virt, has_no_reboot, has_added_disk, len = 0;
+  int is_full_virt, has_no_reboot, has_added_disk, with_pxe, len = 0;
   bitem = look_for_node_with_id(pm->name);
   if (bitem)
     {
@@ -244,6 +244,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     is_inside_cloonix = vm_config_flags & VM_FLAG_IS_INSIDE_CLOONIX;
     has_install_cdrom = vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM;
     has_no_reboot = vm_config_flags & VM_CONFIG_FLAG_NO_REBOOT;
+    with_pxe = vm_config_flags & VM_CONFIG_FLAG_WITH_PXE;
     has_added_cdrom = vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM;
     has_added_disk = vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK;
     is_cisco = vm_config_flags & VM_CONFIG_FLAG_CISCO;
@@ -287,6 +288,8 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
                      bitem->pbi.pbi_node->install_cdrom);
     if (has_no_reboot)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n NO_REBOOT");
+    if (with_pxe)
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n WITH_PXE");
     if (has_added_cdrom)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n ADDED_CDROM: %s",
                      bitem->pbi.pbi_node->added_cdrom);

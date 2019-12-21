@@ -29,7 +29,7 @@ chmod u+s ${MUTAP}
 MUOVS=/usr/local/bin/cloonix/server/muswitch/muovs/cloonix_muovs
 chmod u+s ${MUOVS}
 USBHELP=/usr/local/bin/cloonix/common/spice
-USBHELP+=/spice_lib/spice-client-glib-usb-acl-helper
+USBHELP+=/spice_lib/bin/spice-client-glib-usb-acl-helper
 if [ -e ${USBHELP} ]; then
   chmod u+s ${USBHELP}
 fi

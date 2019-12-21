@@ -108,9 +108,9 @@ if [ -e /etc/resolv.conf ]; then
   cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
 fi
 #-----------------------------------------------------------------------#
-list_pkt="kernel-default grub2-i386-pc udhcp iproute2 "
+list_pkt="kernel-default grub2-i386-pc iproute2 "
 list_pkt+="openssh xauth sudo kbd vim net-tools "
-list_pkt+="iw dracut"
+list_pkt+="iw dracut dhcp-client"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ zypper addrepo ${OPENSUSE} 15.2-oss
 chroot /tmp/wkmntloops/ zypper addrepo ${OPENSUSE_UPDATES} 15.2-oss-updates
@@ -156,6 +156,22 @@ sysfs       /sys         sysfs    nosuid,noexec,nodev           0 0
 devpts      /dev/pts     devpts   nosuid,noexec,gid=5,mode=620  0 0
 tmpfs       /run         tmpfs    defaults                      0 0
 devtmpfs    /dev         devtmpfs mode=0755,nosuid              0 0
+EOF
+#-----------------------------------------------------------------------#
+cat > /tmp/wkmntloops/etc/sysconfig/network/ifcfg-eth0 << EOF
+BOOTPROTO='dhcp'
+BROADCAST=''
+ETHTOOL_OPTIONS=''
+IPADDR=''
+MTU=''
+NAME=''
+NETMASK=''
+NETWORK=''
+REMOTE_IPADDR=''
+STARTMODE='auto'
+DHCLIENT_SET_DEFAULT_ROUTE='yes'
+ZONE=public
+PREFIXLEN='24'
 EOF
 #-----------------------------------------------------------------------#
 chroot /tmp/wkmntloops/ passwd root <<EOF

@@ -1,10 +1,10 @@
 #!/bin/bash
 HERE=`pwd`
-NET=nemo
+NET=fido
 NAME=cloon
 CLOONIX=/home/cloonix
-QCOW2=fedora30.qcow2
-releasever=30
+QCOW2=fedora31.qcow2
+releasever=31
 basearch=x86_64
 MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
 FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/x86_64/os
