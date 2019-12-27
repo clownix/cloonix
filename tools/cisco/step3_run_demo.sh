@@ -1,32 +1,30 @@
 #!/bin/bash
-
 NET=nemo
 LINUX=buster
-CISCO=ecisco
-
-#######################################################################
-CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
-CLOONIX_BULK=$(cat $CLOONIX_CONFIG |grep CLOONIX_BULK | awk -F = '{print $2}')
-CLOONIX_TREE=$(cat $CLOONIX_CONFIG |grep CLOONIX_TREE | awk -F = '{print $2}')
-CLOONIX_BULK=$(eval echo $CLOONIX_BULK)
-if [ ! -e ${CLOONIX_BULK}/${LINUX}.qcow2 ]; then
-  echo Missing ${LINUX}.qcow2
-  exit
-fi
-if [ ! -e ${CLOONIX_BULK}/${CISCO}.qcow2 ]; then
-  echo Missing ${CISCO}.qcow2
-  exit
-fi
-#######################################################################
-
+CISCO=cisco
 LIST_CISCO="cisco1 cisco2 cisco3" 
 LIST_LINUX="linux1 linux2" 
-
-set +e
-if [ -z ${NET} ]; then
-  echo this file is sourced by the master script
+BULK=${HOME}/cloonix_data/bulk
+PRECONF=${BULK}/preconfig_cisco.iso
+#######################################################################
+for i in ${BULK}/${CISCO}.qcow2 ${PRECONF}; do
+  if [ ! -e ${i} ]; then
+    echo ${i} not found
+    echo do step1 and step2 before step3
+    exit 1
+  fi
+done
+#######################################################################
+if [ ! -e ${BULK}/${LINUX}.qcow2 ]; then
+  echo Missing ${LINUX}.qcow2
+  echo wget http://clownix.net/downloads/cloonix-04-02/bulk/buster.qcow2.gz
+  echo mv buster.qcow2.gz ${BULK}
+  echo cd ${BULK}
+  echo gunzip buster.qcow2.gz
   exit
 fi
+#######################################################################
+set +e
 is_started=$(cloonix_cli $NET lst |grep cloonix_net)
 if [ "x$is_started" != "x" ]; then
   cloonix_cli ${NET} kil
@@ -36,7 +34,6 @@ fi
 cloonix_net ${NET}
 sleep 1
 set -e
-
 #######################################################################
 fct_layout()
 {
@@ -79,9 +76,6 @@ cloonix_cli ${NET} cnf lay scale 0 100 800 480
 #######################################################################
 
 
-
-
-
 cloonix_gui ${NET}
 
 #######################################################################
@@ -91,7 +85,7 @@ done
 
 
 for i in $LIST_CISCO ; do
-  cloonix_cli ${NET} add kvm ${i} ram=5000 cpu=4 dpdk=0 sock=4 hwsim=0 ${CISCO}.qcow2 --cisco &
+  cloonix_cli ${NET} add kvm ${i} ram=5000 cpu=4 dpdk=0 sock=4 hwsim=0 ${CISCO}.qcow2 --cisco --install_cdrom=${PRECONF} &
 done
 
 cloonix_cli ${NET} add nat nat

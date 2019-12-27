@@ -1,0 +1,22 @@
+From a cisco iso to a running ospf network.
+
+First install cloonix if it is not done.
+
+Then get an ios from cisco, I found one on the web at:
+
+http://185.136.162.5/CSR1000v/csr1000v-universalk9.16.09.01.iso
+
+Then adapt the CISCO_ISO variable in the step1_make_qcow2.sh file.
+ 
+Then call ./step1_make_qcow2.sh and choose "Serial Console"
+Note that the serial console in cloonix is the dtach console in cloonix menu.
+
+./step1_make_qcow2.sh creates the cisco qcow2.
+
+Then call ./step2_make_iso.sh, this creates an iso file that contains the cisco
+initial configuration, this initial configuration allows to inject a custom
+configuration latter on.
+
+Then call ./step3_run_demo.sh and wait until the pings go through. 
+ 
+
