@@ -1,0 +1,8 @@
+#!/bin/bash
+HERE=`pwd`
+rm -f qmp_backdoor.bin
+cd qmp
+make clean
+make
+mv qmp_backdoor.bin $HERE
+make clean

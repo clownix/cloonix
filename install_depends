@@ -69,7 +69,7 @@ fct_get_opensuse_packages()
          polkit-devel libacl-devel orc-devel libusb-1_0-devel \
          Mesa-libEGL-devel bison flex wireshark python3-pyparsing \
          libnuma-devel kernel-headers json-glib-devel bzip2 \
-         libgbm-devel libopus-devel rxvt-unicode xorriso 
+         libgbm-devel libopus-devel rxvt-unicode xorriso libdrm-devel 
 }
 #--------------------------------------------------------------------------
 if [ $UID != 0 ]; then

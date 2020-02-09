@@ -51,8 +51,6 @@ int cmd_del_vl2sat(int argc, char **argv);
 /*---------------------------------------------------------------------------*/
 int cmd_sav_derived(int argc, char **argv);
 int cmd_sav_full(int argc, char **argv);
-int cmd_sav_topo(int argc, char **argv);
-int cmd_sav_topo_full(int argc, char **argv);
 /*---------------------------------------------------------------------------*/
 int cmd_sub_qmp(int argc, char **argv);
 int cmd_snd_qmp(int argc, char **argv);
@@ -62,8 +60,6 @@ void help_snd_qmp(char *line);
 /*---------------------------------------------------------------------------*/
 void help_sav_derived(char *line);
 void help_sav_full(char *line);
-void help_sav_topo(char *line);
-void help_sav_topo_all(char *line);
 /*---------------------------------------------------------------------------*/
 void help_topo_set(char *line);
 void help_topo_get(char *line);

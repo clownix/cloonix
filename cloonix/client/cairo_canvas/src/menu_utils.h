@@ -32,7 +32,6 @@ void node_xterm_qmonitor(GtkWidget *mn, t_item_ident *pm);
 void node_qemu_spice(GtkWidget *mn, t_item_ident *pm);
 GtkWidget *canvas_cursors(void);
 void topo_delete(GtkWidget *mn);
-void topo_save(GtkWidget *mn);
 void start_wireshark(char *name, char *recpath);
 
 

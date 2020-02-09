@@ -111,10 +111,6 @@ struct cmd_struct level_sav_cmd[] = {
                                       help_sav_derived},
 {"full", "Save backing and derived in one qcow2", NULL, cmd_sav_full,
                                                         help_sav_full},
-{"topo", "Save all derived and replay script", NULL, cmd_sav_topo, 
-                                                     help_sav_topo},
-{"topo_full", "Save all full and replay script", NULL, cmd_sav_topo_full, 
-                                                       help_sav_topo},
 {"help",  "",                     level_sav_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
@@ -538,7 +534,6 @@ static char *init_local_cloonix_bin_path(char *curdir, char *callbin)
 int main (int argc, char *argv[])
 {
   int i, result;
-  char *cloonix_tree;
   if (argc < 2)
     KOUT("%d", argc);
   g_inhibited = 0;
@@ -548,7 +543,7 @@ int main (int argc, char *argv[])
   memset(g_current_directory, 0, MAX_PATH_LEN);
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
-  cloonix_tree = init_local_cloonix_bin_path(g_current_directory, argv[0]);
+  init_local_cloonix_bin_path(g_current_directory, argv[0]);
   if (argc < 3)
     {
     doorways_sock_init();

@@ -465,12 +465,13 @@ static void do_add_lan(int llid, int tid, int is_wlan,
 
 
 /*****************************************************************************/
-void endp_evt_add_lan(int llid, int tid, char *name, int num, 
-                            char *lan, int tidx)
+int endp_evt_add_lan(int llid, int tid, char *name, int num, 
+                     char *lan, int tidx)
 {
   t_evendp *evendp = endp_find(name, num);
   t_attached *atlan = endp_atlan_find(name, num, tidx);
   int nb_eth, endp_type, is_wlan;
+  int result = -1;
   if ((!lan) || (!lan[0]))
     KOUT("%s", name);
   if (!endp_mngt_exists(name, num, &endp_type))
@@ -481,11 +482,16 @@ void endp_evt_add_lan(int llid, int tid, char *name, int num,
     }
   else if (!atlan)
     {
-    if (msg_exist_channel(llid))
+    if (endp_type == endp_type_c2c)
       {
-      if (endp_type == endp_type_c2c)
+      KERR("%s %s", name, lan);
+      if (msg_exist_channel(llid))
         send_status_ko(llid, tid, "c2c exists only when connected to peer");
-      else
+      }
+    else
+      {
+      KERR("%s %s", name, lan);
+      if (msg_exist_channel(llid))
         send_status_ko(llid, tid, "evendp not found");
       }
     }
@@ -502,16 +508,19 @@ void endp_evt_add_lan(int llid, int tid, char *name, int num,
     KOUT("%d", endp_type);
   else if (!endp_mngt_connection_state_is_restfull(name, num))
     {
+    KERR("%s %s", name, lan);
     if (msg_exist_channel(llid))
       send_status_ko(llid, tid, "evendp is not restfull");
     }
   else if (strlen((atlan->waiting_lan)))
     {
+    KERR("%s %s", name, lan);
     if (msg_exist_channel(llid))
       send_status_ko(llid, tid, "evendp connecting");
     }
   else if (strlen((atlan->attached_lan)))
     {
+    KERR("%s %s", name, lan);
     if (msg_exist_channel(llid))
       send_status_ko(llid, tid, "evendp connected");
     }
@@ -519,7 +528,9 @@ void endp_evt_add_lan(int llid, int tid, char *name, int num,
     {
     is_wlan = endp_is_wlan(name, num, &nb_eth);
     do_add_lan(llid, tid, is_wlan, name, num, tidx, evendp, lan, nb_eth);
+    result = 0;
     }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 

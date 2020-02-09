@@ -95,7 +95,7 @@ void get_custom_vm (t_custom_vm **cust_vm)
   static t_custom_vm cust;
   *cust_vm = &cust;
   memcpy(&cust, &custom_vm, sizeof(t_custom_vm));
-  if (custom_vm.add_number)
+  if (!strcmp(custom_vm.name, "Cloon"))
     {
     custom_vm.current_number += 1;
     sprintf(cust.name, "%s%d", custom_vm.name, custom_vm.current_number);
@@ -139,16 +139,27 @@ static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
 ///*--------------------------------------------------------------------------*/
 
 
+// /****************************************************************************/
+// static void has_p9_host_share_toggle(GtkToggleButton *togglebutton,
+//                                      gpointer user_data)
+// {
+//   if (gtk_toggle_button_get_active(togglebutton))
+//     custom_vm.has_p9_host_share = 1;
+//   else
+//     custom_vm.has_p9_host_share = 0;
+// }
+// /*--------------------------------------------------------------------------*/
+
 /****************************************************************************/
-static void has_p9_host_share_toggle(GtkToggleButton *togglebutton,
-                                     gpointer user_data)
+static void is_cisco_toggle(GtkToggleButton *togglebutton, gpointer user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton))
-    custom_vm.has_p9_host_share = 1;
+    custom_vm.is_cisco = 1;
   else
-    custom_vm.has_p9_host_share = 0;
+    custom_vm.is_cisco = 0;
 }
 /*--------------------------------------------------------------------------*/
+
 
 
 /****************************************************************************/
@@ -162,16 +173,6 @@ static void is_persistent_toggle (GtkToggleButton *togglebutton,
 }
 /*--------------------------------------------------------------------------*/
 
-
-/****************************************************************************/
-static void numadd_toggle (GtkToggleButton *togglebutton, gpointer user_data)
-{
-  if (gtk_toggle_button_get_active(togglebutton))
-    custom_vm.add_number = 1;
-  else
-    custom_vm.add_number = 0;
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void update_cust(t_custom_vm *cust, GtkWidget *entry_name, 
@@ -191,12 +192,13 @@ static void update_cust(t_custom_vm *cust, GtkWidget *entry_name,
   memset(cust->kvm_used_rootfs, 0, MAX_NAME_LEN);
   strncpy(cust->kvm_used_rootfs, tmp, MAX_NAME_LEN-1);
 
-  if (custom_vm.has_p9_host_share)
-    {
-    tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_p9_host_share));
-    memset(cust->kvm_p9_host_share, 0, MAX_PATH_LEN);
-    strncpy(cust->kvm_p9_host_share, tmp, MAX_PATH_LEN-1);
-    }
+//  if (custom_vm.has_p9_host_share)
+//    {
+//    tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_p9_host_share));
+//    memset(cust->kvm_p9_host_share, 0, MAX_PATH_LEN);
+//    strncpy(cust->kvm_p9_host_share, tmp, MAX_PATH_LEN-1);
+//    }
+
 
   cust->cpu = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_cpu));
   cust->mem = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_ram));
@@ -238,10 +240,10 @@ static void custom_vm_dialog(t_custom_vm *cust)
 {
   int response, line_nb = 0;
   GtkWidget *entry_name, *entry_ram; 
-  GtkWidget *entry_p9_host_share; 
+  GtkWidget *entry_p9_host_share=NULL; 
   GtkWidget *entry_cpu=NULL, *entry_dpdk_nb, *entry_eth_nb, *entry_wlan_nb;
-  GtkWidget *grid, *parent, *numadd, *is_persistent;
-  GtkWidget *has_p9_host_share, *qcow2_rootfs, *bulkvm_menu;
+  GtkWidget *grid, *parent, *is_persistent;
+  GtkWidget *is_cisco, *qcow2_rootfs, *bulkvm_menu;
 
   if (g_custom_dialog)
     return;
@@ -286,29 +288,27 @@ static void custom_vm_dialog(t_custom_vm *cust)
 //                   G_CALLBACK(is_full_virt_toggle),NULL);
 //
 
-  has_p9_host_share = gtk_check_button_new_with_label("9p share host files");
+//   has_p9_host_share = gtk_check_button_new_with_label("9p share host files");
+// 
+//   if (custom_vm.has_p9_host_share)
+//     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_p9_host_share), TRUE);
+//   else
+//     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_p9_host_share), FALSE);
+//   g_signal_connect(has_p9_host_share,"toggled", G_CALLBACK(has_p9_host_share_toggle),NULL);
 
-  if (custom_vm.has_p9_host_share)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_p9_host_share), TRUE);
-  else
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_p9_host_share), FALSE);
-  g_signal_connect(has_p9_host_share,"toggled", G_CALLBACK(has_p9_host_share_toggle),NULL);
+   is_cisco = gtk_check_button_new_with_label("csr1000v qcow2");
+   if (custom_vm.is_cisco)
+     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_cisco), TRUE);
+   else
+     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_cisco), FALSE);
+   g_signal_connect(is_cisco,"toggled", G_CALLBACK(is_cisco_toggle),NULL);
 
-
-
-  numadd = gtk_check_button_new_with_label("end number");
-  if (custom_vm.add_number)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(numadd), TRUE);
-  else
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(numadd), FALSE);
-  g_signal_connect(numadd, "toggled", G_CALLBACK(numadd_toggle), NULL);
-
-  append_grid(grid, numadd, "Append:", line_nb++);
+  append_grid(grid, is_cisco, "Is cisco:", line_nb++);
 
   append_grid(grid, is_persistent, "remanence of file-system:", line_nb++);
 //  append_grid(grid, is_uefi, "uefi:", line_nb++);
 //  append_grid(grid, is_full_virt, "full virt:", line_nb++);
-  append_grid(grid, has_p9_host_share, "9p host share files:", line_nb++);
+//  append_grid(grid, has_p9_host_share, "9p host share files:", line_nb++);
 
   entry_cpu = gtk_spin_button_new_with_range(1, 32, 1);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_cpu), cust->cpu);
@@ -328,12 +328,12 @@ static void custom_vm_dialog(t_custom_vm *cust)
   gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
   gtk_widget_show_all(bulkvm_menu);
 
-  if (custom_vm.has_p9_host_share)
-    {
-    entry_p9_host_share = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(entry_p9_host_share), cust->kvm_p9_host_share);
-    append_grid(grid,entry_p9_host_share,"Path to host share:",line_nb++);
-    }
+//  if (custom_vm.has_p9_host_share)
+//    {
+//    entry_p9_host_share = gtk_entry_new();
+//    gtk_entry_set_text(GTK_ENTRY(entry_p9_host_share), cust->kvm_p9_host_share);
+//    append_grid(grid,entry_p9_host_share,"Path to host share:",line_nb++);
+//    }
 
   entry_dpdk_nb = gtk_spin_button_new_with_range(0, MAX_DPDK_VM, 1);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_dpdk_nb), cust->nb_dpdk);
@@ -394,12 +394,12 @@ void menu_dialog_vm_init(void)
     strcpy(custom_vm.name, "Cloon");
   strcpy(custom_vm.kvm_used_rootfs, "buster.qcow2");
   custom_vm.current_number = 0;
-  custom_vm.add_number = 1;
   custom_vm.is_persistent = 0;
   custom_vm.is_sda_disk = 0;
   custom_vm.is_uefi = 0;
   custom_vm.is_full_virt = 0;
   custom_vm.has_p9_host_share = 0;
+  custom_vm.is_cisco = 0;
   custom_vm.cpu = 2;
   custom_vm.mem = 2000;
   custom_vm.nb_dpdk = 0;

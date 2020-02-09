@@ -16,8 +16,6 @@ cd ${HERE}/spice_client
 mv tainted_spice spice_client
 rm -rf ${TARGET}/spice_client
 mv spice_client ${TARGET}
-cd ${TARGET}/spice_client/tests
-patch meson.build ${HERE}/tests_meson.build.patch
 cd ${TARGET}/spice_client
 sed -i s/UNKNOWN/0.37/ ./build-aux/git-version-gen
 sed -i s"%'-Wextra',%'-Wextra',\n'-Wl,-rpath',\n'-Wl,/usr/local/bin/cloonix/common/spice/spice_lib',%" meson.build

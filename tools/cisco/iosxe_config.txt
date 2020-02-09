@@ -21,12 +21,12 @@ ip ssh pubkey-chain
 !
 username csr
   key-string    
-  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGR6miK5hkP8eelcvitoRqsmLsSww
-WSvk2gL9y/1IXwI/B4gUkzrqp7QJR30nD3s6/26VMs+ehRBgVuNv9ps5rt62KNHHe+y9q
-GBBKNik4FcKeCR3OigC9bKYtiwGxlCjRA21d1qA/SWa2Ll4Rf7+4K//4hYYXHu0FPxQXy
-znwOu4NGmZ3DMaCH9+vYXA6SXGNA7vWCQjN39+lBd6+yP3cKxQfdTNOu9OfwGt+soAEAB
-4fZB3XLFMdE9x/2zITMwwDxi3AI887y+qhsy3W0fpiuX9zsOTGoJ+1aM9XHSYwn9IcE5A
-/g0xWv58TpHRjVa5ZXCiOzzq4sC04UGXmL5Wb cisco@debian
+  __xaa__
+__xab__
+__xac__
+__xad__
+__xae__
+__xaf__
 exit
 exit
 exit
@@ -40,4 +40,5 @@ exit
 clear platform software vnic-if nvtable
 !
 write
+reload
 

@@ -1,6 +1,6 @@
 diff -Naur ovs/include/openvswitch/vlog.h ovs_tainted/include/openvswitch/vlog.h
---- ovs/include/openvswitch/vlog.h	2019-12-21 00:21:13.000000000 +0100
-+++ ovs_tainted/include/openvswitch/vlog.h	2019-12-21 00:26:42.342799030 +0100
+--- ovs/include/openvswitch/vlog.h	2020-02-08 12:53:10.000000000 +0100
++++ ovs_tainted/include/openvswitch/vlog.h	2020-02-08 13:01:56.685648014 +0100
 @@ -178,7 +178,7 @@
          static struct vlog_module this_module = {                       \
              OVS_LIST_INITIALIZER(&this_module.list),                    \
@@ -11,9 +11,9 @@ diff -Naur ovs/include/openvswitch/vlog.h ovs_tainted/include/openvswitch/vlog.h
              true                               /* honor_rate_limits */  \
          };                                                              \
 diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
---- ovs/lib/netdev-dpdk.c	2019-12-21 00:21:13.000000000 +0100
-+++ ovs_tainted/lib/netdev-dpdk.c	2019-12-21 00:26:42.342799030 +0100
-@@ -748,6 +748,7 @@
+--- ovs/lib/netdev-dpdk.c	2020-02-08 12:53:10.000000000 +0100
++++ ovs_tainted/lib/netdev-dpdk.c	2020-02-08 13:01:56.685648014 +0100
+@@ -802,6 +802,7 @@
  {
      struct dpdk_mp *dmp, *next;
      bool reuse = false;
@@ -21,7 +21,7 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
  
      ovs_mutex_lock(&dpdk_mp_mutex);
      /* Check if shared memory is being used, if so check existing mempools
-@@ -3646,18 +3647,18 @@
+@@ -3933,18 +3934,18 @@
          }
      }
  
@@ -53,8 +53,8 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
      free(enabled_queues);
  }
 diff -Naur ovs/lib/vlog.c ovs_tainted/lib/vlog.c
---- ovs/lib/vlog.c	2019-12-21 00:21:13.000000000 +0100
-+++ ovs_tainted/lib/vlog.c	2019-12-21 00:26:42.342799030 +0100
+--- ovs/lib/vlog.c	2020-02-08 12:53:10.000000000 +0100
++++ ovs_tainted/lib/vlog.c	2020-02-08 13:01:56.689648007 +0100
 @@ -572,7 +572,7 @@
              ovs_fatal(0, "processing \"%s\": %s", arg, msg);
          }
@@ -65,9 +65,9 @@ diff -Naur ovs/lib/vlog.c ovs_tainted/lib/vlog.c
  }
  
 diff -Naur ovs/ofproto/ofproto-dpif-xlate.c ovs_tainted/ofproto/ofproto-dpif-xlate.c
---- ovs/ofproto/ofproto-dpif-xlate.c	2019-12-21 00:21:13.000000000 +0100
-+++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2019-12-21 00:26:42.342799030 +0100
-@@ -4113,6 +4113,12 @@
+--- ovs/ofproto/ofproto-dpif-xlate.c	2020-02-08 12:53:10.000000000 +0100
++++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2020-02-08 13:01:56.689648007 +0100
+@@ -4123,6 +4123,12 @@
             xlate_report_error(ctx, "Cannot truncate output to patch port");
         }
         patch_port_output(ctx, xport, xport->peer);

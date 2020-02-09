@@ -1049,11 +1049,19 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
   int i, vm_id, result = 0;
   char mac[6];
   char info[MAX_PRINT_LEN];
-  t_add_vm_cow_look *cow_look;
+  char cisco_nat_name[2*MAX_NAME_LEN];
+  char lan_cisco_nat_name[2*MAX_NAME_LEN];
   char use[MAX_PATH_LEN];
+  t_add_vm_cow_look *cow_look;
   t_vm   *vm = cfg_get_vm(kvm->name);
   info[0] = 0;
   memset(mac, 0, 6);
+  memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
+  memset(lan_cisco_nat_name, 0, 2*MAX_NAME_LEN);
+  snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "nat_%s", kvm->name);
+  snprintf(lan_cisco_nat_name, 2*MAX_NAME_LEN-1, "lan_nat_%s", kvm->name);
+  cisco_nat_name[MAX_NAME_LEN-1] = 0;
+  lan_cisco_nat_name[MAX_NAME_LEN-1] = 0;
   if (get_inhib_new_clients())
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
   else if (cfg_name_is_in_use(0, kvm->name, use))
@@ -1080,6 +1088,22 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
            ((kvm->nb_eth != 3) || (kvm->nb_dpdk != 0))) 
     {
     sprintf( info, "Hardcoded 3 eth in VMWARE TYPE for  \"%s\"", kvm->name);
+    event_print("%s", info);
+    send_status_ko(llid, tid, info);
+    }
+  else if ((kvm->vm_config_flags & VM_CONFIG_FLAG_CISCO) && 
+           ((cfg_name_is_in_use(0, cisco_nat_name, use)) ||
+            (cfg_name_is_in_use(0, lan_cisco_nat_name, use))))
+    {
+    sprintf(info, "Cisco needs nat \"%s\" or \"%s\", already exists",
+            cisco_nat_name, lan_cisco_nat_name);
+    event_print("%s", info);
+    send_status_ko(llid, tid, info);
+    }
+  else if ((kvm->vm_config_flags & VM_CONFIG_FLAG_CISCO) && 
+           (kvm->nb_dpdk))
+    {
+    sprintf(info, "Cisco with dpdk not supported");
     event_print("%s", info);
     send_status_ko(llid, tid, info);
     }

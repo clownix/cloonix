@@ -1,16 +1,15 @@
 #!/bin/bash
+HERE=`pwd`
 NET=nemo
 LINUX=buster
-CISCO=cisco
+CISCO=csr
 LIST_CISCO="cisco1 cisco2 cisco3" 
 LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk
-PRECONF=${BULK}/preconfig_cisco.iso
 #######################################################################
-for i in ${BULK}/${CISCO}.qcow2 ${PRECONF}; do
+for i in ${BULK}/${CISCO}.qcow2 ; do
   if [ ! -e ${i} ]; then
     echo ${i} not found
-    echo do step1 and step2 before step3
     exit 1
   fi
 done
@@ -79,13 +78,15 @@ cloonix_cli ${NET} cnf lay scale 0 100 800 480
 cloonix_gui ${NET}
 
 #######################################################################
+PARAMS="ram=2000 cpu=2 dpdk=0 sock=2 hwsim=0"
 for i in ${LIST_LINUX} ; do
-  cloonix_cli ${NET} add kvm ${i} ram=2000 cpu=2 dpdk=0 sock=2 hwsim=0 ${LINUX}.qcow2 &
+  cloonix_cli ${NET} add kvm ${i} ${PARAMS} ${LINUX}.qcow2 &
 done
 
 
+PARAMS="ram=5000 cpu=4 dpdk=0 sock=4 hwsim=0"
 for i in $LIST_CISCO ; do
-  cloonix_cli ${NET} add kvm ${i} ram=5000 cpu=4 dpdk=0 sock=4 hwsim=0 ${CISCO}.qcow2 --cisco --install_cdrom=${PRECONF} &
+  cloonix_cli ${NET} add kvm ${i} ${PARAMS} ${CISCO}.qcow2 --cisco &
 done
 
 cloonix_cli ${NET} add nat nat
@@ -157,6 +158,11 @@ done
 for i in $LIST_CISCO ; do
   cloonix_ocp ${NET} nat configs/${i}.cfg csr@${i}:running-config
 done
+#   cloonix_osh ${NET} nat csr@${i} <<EOF
+# write
+# reload
+# 
+# EOF
 #######################################################################
 cloonix_ssh ${NET} linux1 "ip addr add dev eth0 1.0.0.1/24"
 cloonix_ssh ${NET} linux1 "ip link set dev eth0 up"

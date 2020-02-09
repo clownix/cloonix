@@ -46,26 +46,6 @@ void help_sav_full(char *line)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void help_sav_topo(char *line)
-{
-  printf( "\n\n\n%s <saving_dir>\n", line);
-  printf( "\nThe saving_dir must not exist.");
-  printf( "\nFor each machine on the canvas, a derived file is saved.");
-  printf( "\nA replay script is created.\n\n\n");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_sav_topo_full(char *line)
-{
-  printf( "\n\n\n%s <saving_dir>\n", line);
-  printf( "\nThe saving_dir must not exist.");
-  printf( "\nFor each machine on the canvas, a full file is saved.");
-  printf( "\nA replay script file is created.\n\n\n");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void help_qreboot_vm(char *line)
 {
   printf("\n\n\n%s <name>\n", line);

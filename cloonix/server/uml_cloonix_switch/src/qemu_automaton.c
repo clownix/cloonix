@@ -46,6 +46,7 @@
 #include "file_read_write.h"
 #include "endp_mngt.h"
 #include "dpdk_ovs.h"
+#include "endp_evt.h"
 
 #define NETWORK_PARAMS_VMWARE " -netdev type=tap,id=vmware0,ifname=vmwa0"\
                               " -device e1000,netdev=vmware0"\
@@ -345,7 +346,8 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
    " -chardev socket,path=%s,server,nowait,id=hvc0"\
    " -device virtconsole,chardev=hvc0"\
    " -device virtio-balloon-pci,id=balloon0"\
-   " -device virtio-rng-pci"
+   " -object rng-random,filename=/dev/urandom,id=rng0"\
+   " -device virtio-rng-pci,rng=rng0"
 
 #define QEMU_SPICE \
    " -device virtio-vga"\
@@ -522,7 +524,6 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
         len += sprintf(linux_cmd+len, DRIVE_PARAMS_CISCO, rootfs, 0);
         len += sprintf(linux_cmd+len,
           " -uuid 1c54ff10-774c-4e63-9896-4c18d66b50b1");
-//        " -uuid 3824cca6-7603-423b-8e5c-84d15d9b0a6a");
         }
       else if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VMWARE)
         {
@@ -741,10 +742,38 @@ void timer_utils_finish_vm_init(char *name, int val)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void added_nat_cisco_done(void *data)
+{
+  char *name = (char * ) data;
+  t_vm   *vm = cfg_get_vm(name);
+  char cisco_nat_name[2*MAX_NAME_LEN];
+  char lan_cisco_nat_name[2*MAX_NAME_LEN];
+  int endp_type;
+  memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
+  memset(lan_cisco_nat_name, 0, 2*MAX_NAME_LEN);
+  snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "nat_%s", name);
+  snprintf(lan_cisco_nat_name, 2*MAX_NAME_LEN-1, "lan_nat_%s", name);
+  cisco_nat_name[MAX_NAME_LEN-1] = 0;
+  lan_cisco_nat_name[MAX_NAME_LEN-1] = 0;
+  if ((vm) && 
+      (endp_mngt_exists(cisco_nat_name, 0, &endp_type)) &&
+      (endp_type == endp_type_nat))
+    {
+    if (endp_evt_add_lan(0, 0, name, 0, lan_cisco_nat_name, 0))
+      KERR("%s", name);
+    else if (endp_evt_add_lan(0,0,cisco_nat_name,0,lan_cisco_nat_name,0))
+      KERR("%s", name);
+    }
+  free(name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void qemu_vm_automaton(void *unused_data, int status, char *name) 
 {
   char err[MAX_PRINT_LEN];
   int i, state;
+  char *cisco_nat_name;
   t_vm   *vm = cfg_get_vm(name);
   t_wake_up_eths *wake_up;
   if (!vm)
@@ -795,6 +824,25 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
       qmonitor_begin_qemu_unix(name);
       qmp_begin_qemu_unix(name);
       qhvc0_begin_qemu_unix(name);
+      if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
+        {
+        cisco_nat_name = (char *)malloc(2*MAX_NAME_LEN);
+        memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
+        snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "nat_%s", name);
+        cisco_nat_name[MAX_NAME_LEN-1] = 0;
+        if (endp_mngt_start(0, 0, cisco_nat_name, 0, endp_type_nat))
+          {
+          free(cisco_nat_name);
+          KERR("%s", name);
+          }
+        else
+          {
+          memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
+          snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "%s", name);
+          clownix_timeout_add(100, added_nat_cisco_done, 
+                              (void *)cisco_nat_name,NULL,NULL);
+          }
+        }
       break;
     default:
       KOUT(" ");

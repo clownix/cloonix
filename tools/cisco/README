@@ -1,4 +1,46 @@
-From a cisco iso to a running ospf network.
+Howto use a cisco with cloonix.
+
+1) Qcow2 cisco creation from an iso.
+
+The goal of this chapter is to create a csr1000v qcow2 that has the following
+requirements:
+
+- The command "show license udi" must always give the same result in case a
+  paid licence is used with this cisco. The licence is lost if this identifier
+  changes.
+
+- The cisco is configured with an interface with DHCP in order to be able to
+  have an administrative ip managed by the cloonix nat object.
+
+- The cisco must have ssh and scp and an associated rsa key to be accessed
+  without the need for a password.
+  This permits the cloonix commands cloonix_osh and cloonix_ocp to work, those
+  are the equivalent for a cisco vm of cloonix_ssh and cloonix_scp.
+
+- The mac addresses of the interfaces must not be memorised because a dose of
+  random must be put into those mac addresses at VM creation, this in order
+  to use the same qcow2 for multiple instances of the cisco without having
+  identical macs on a lan.
+
+For all these requirement, we use a very usefull function of the cisco: the
+passing of an iso at the launch of the cisco. In this iso is the file
+"iosxe_config.txt" containing the pre-configuration that implements the
+requirement above.
+
+
+./step1_make_iso.sh is the command that creates this iso.
+
+
+When this iso is done then the creation of the qcow2 can begin (if you have a
+csr1000v installation iso such as: csr1000v-universalk9.16.09.01.iso).
+This creation is done in 2 steps, beware that in the first step I choose the
+serial option for the main cisco access, this console can be accessed with
+the "dtach console" in the cloonix gui.
+ 
+./step2_make_qcow2.sh
+
+
+2) Use of the nat
 
 First install cloonix if it is not done.
 
@@ -6,16 +48,16 @@ Then get an ios from cisco, I found one on the web at:
 
 http://185.136.162.5/CSR1000v/csr1000v-universalk9.16.09.01.iso
 
-Then adapt the CISCO_ISO variable in the step1_make_qcow2.sh file.
+Then adapt the CISCO_ISO variable in the step2_make_qcow2.sh file.
  
-Then call ./step1_make_qcow2.sh and choose "Serial Console"
-Note that the serial console in cloonix is the dtach console in cloonix menu.
-
-./step1_make_qcow2.sh creates the cisco qcow2.
-
-Then call ./step2_make_iso.sh, this creates an iso file that contains the cisco
+Then call ./step1_make_iso.sh, this creates an iso file that contains the cisco
 initial configuration, this initial configuration allows to inject a custom
-configuration latter on.
+configuration used in ./step2_make_qcow2.sh.
+
+Call ./step2_make_qcow2.sh and choose "Serial Console"
+Note that the serial console in cloonix is the dtach console in cloonix menu.
+./step2_make_qcow2.sh creates the cisco qcow2.
+
 
 Then call ./step3_run_demo.sh and wait until the pings go through. 
  

@@ -501,7 +501,6 @@ static void c2c_cact(GtkWidget *mn)
 void canvas_ctx_menu(gdouble x, gdouble y)
 {
   GtkWidget *menu = gtk_menu_new();
-  GtkWidget *sav = gtk_menu_item_new_with_label("Save Topo");
   GtkWidget *del = gtk_menu_item_new_with_label("Delete Topo");
   GtkWidget *lst = gtk_menu_item_new_with_label("List cmds Topo");
 
@@ -530,8 +529,6 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   g_x_mouse = (double) x;
   g_y_mouse = (double) y;
 
-  g_signal_connect_swapped(G_OBJECT(sav), "activate",
-                               (GCallback)topo_save, NULL);
   g_signal_connect_swapped(G_OBJECT(del), "activate",
                                (GCallback)topo_delete, NULL);
   g_signal_connect_swapped(G_OBJECT(lst), "activate",
@@ -582,7 +579,6 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), c2c_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), a2b_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator2);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), sav);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), del);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), lst);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), warnings);

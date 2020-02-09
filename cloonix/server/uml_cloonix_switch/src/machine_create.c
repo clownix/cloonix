@@ -366,6 +366,7 @@ int machine_death( char *name, int error_death)
 {
   int result = -1;
   t_vm *vm = cfg_get_vm(name);
+  char cisco_nat_name[2*MAX_NAME_LEN];
   if (!vm)
     return result;
   if ((error_death) && 
@@ -381,6 +382,14 @@ int machine_death( char *name, int error_death)
     }
   if (vm->vm_to_be_killed == 0)
     {
+    if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
+      {
+      memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
+      snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "nat_%s", name);
+      cisco_nat_name[MAX_NAME_LEN-1] = 0;
+      if (endp_mngt_stop(cisco_nat_name, 0))
+        KERR("%s", cisco_nat_name);
+      }
     if (vm->kvm.nb_dpdk)
       dpdk_ovs_end_vm(vm->kvm.name, vm->kvm.nb_dpdk);
     vm->vm_to_be_killed = 1;

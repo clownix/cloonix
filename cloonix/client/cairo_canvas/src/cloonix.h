@@ -29,8 +29,8 @@ typedef struct t_custom_vm
   int  is_full_virt;
   int  is_persistent;
   int  is_sda_disk;
+  int  is_cisco;
   int  has_p9_host_share;
-  int  add_number;
   int  current_number;
   int  cpu;
   int  mem;

@@ -3,10 +3,9 @@ HERE=`pwd`
 CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu/qemu_bin"
 CISCO_QCOW2=${HOME}/cloonix_data/bulk/cisco.qcow2
 CISCO_ISO=/media/perrier/Samsung_T5/iso/csr1000v-universalk9.16.09.01.iso
+CISCO_PRECONFIG_ISO=${HERE}/preconfig_cisco.iso
 if [ ! -e ${CISCO_ISO} ]; then
   echo missing ${CISCO_ISO}
-  echo Found mine here \(may have disapeared\):
-  echo wget http://185.136.162.5/CSR1000v/csr1000v-universalk9.16.09.01.iso
   exit 1
 fi
 if [ ! -e ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 ]; then
@@ -20,19 +19,16 @@ if [ ! -d ${HOME}/cloonix_data/bulk ]; then
   exit 1
 fi
 
+rm ${CISCO_QCOW2}
 qemu-img create -f qcow2 ${CISCO_QCOW2} 60G
 
 echo
 echo
-echo IMPORTANT: At grub choice, choose the \"Serial Console\"
-echo            second line in the grub menu!
+echo IMPORTANT: Choose the \"Serial Console\"
 echo
+echo            Second line in the grub menu!
 echo
-echo Then wait until end.
-echo
-echo
-echo waiting 5 sec before start...
-sleep 5
+sleep 2
 
 sudo ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 \
             -L ${CLOONIX_QEMU_BIN} -enable-kvm -m 6000 \
@@ -41,13 +37,34 @@ sudo ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 \
             -nographic \
             -nodefaults \
             -drive file=${CISCO_QCOW2},index=0,media=disk,if=virtio \
-            -uuid 3824cca6-7603-423b-8e5c-84d15d9b0a6a \
-            -boot d -cdrom ${CISCO_ISO}
+            -uuid 1c54ff10-774c-4e63-9896-4c18d66b50b1 \
+            -boot d \
+            -cdrom ${CISCO_ISO}
 
 echo
 echo
 echo DONE ${CISCO_QCOW2}
+
 echo
+echo
+echo Loading the preconfiguration...
+sleep 2
+echo
+echo
+sudo ip tuntap add dev tap71 mode tap
+sudo ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 \
+            -L ${CLOONIX_QEMU_BIN} -enable-kvm -m 6000 \
+            -cpu host,+vmx -smp 4 -no-reboot \
+            -serial stdio \
+            -nographic \
+            -nodefaults \
+            -drive file=${CISCO_QCOW2},index=0,media=disk,if=virtio \
+            -uuid 1c54ff10-774c-4e63-9896-4c18d66b50b1 \
+            -netdev type=tap,id=net0,ifname=tap71 \
+            -device virtio-net-pci,netdev=net0,mac=52:ca:fe:de:ca:40 \
+            -cdrom ${CISCO_PRECONFIG_ISO}
+echo
+sudo ip tuntap del dev tap71 mode tap
 echo
 
 

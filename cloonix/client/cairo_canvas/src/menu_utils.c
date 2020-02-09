@@ -504,42 +504,6 @@ void topo_delete(GtkWidget *mn)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void topo_save(GtkWidget *mn)
-{
-  int response;
-  char *tmp;
-  GtkWidget *entry_rootfs, *parent, *dialog;
-  parent = get_main_window();
-  dialog = gtk_dialog_new_with_buttons ("Path of directory",
-                                        GTK_WINDOW (parent),
-                                        GTK_DIALOG_MODAL,
-                                        "_OK",
-                                        GTK_RESPONSE_ACCEPT,
-                                        "_Cancel",
-                                        GTK_RESPONSE_REJECT,
-                                        NULL);
-  gtk_window_set_default_size(GTK_WINDOW(dialog), 300, 20);
-  entry_rootfs = gtk_entry_new();
-  gtk_entry_set_text(GTK_ENTRY(entry_rootfs), g_sav_dir);
-  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
-                     entry_rootfs, TRUE, TRUE, 0);
-  gtk_widget_show_all(dialog);
-  response = gtk_dialog_run(GTK_DIALOG (dialog));
-  if (response == GTK_RESPONSE_ACCEPT)
-    {
-    tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_rootfs));
-    memset(g_sav_dir, 0, MAX_PATH_LEN);
-    strncpy(g_sav_dir, tmp, MAX_PATH_LEN-1);
-    if (tmp && strlen(tmp))
-      {
-      client_sav_vm_all(0, callback_sav_all, 0, tmp);
-      }
-    }
-  gtk_widget_destroy(dialog);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void menu_utils_init(void)
 {
   qemu_spice_head = NULL;

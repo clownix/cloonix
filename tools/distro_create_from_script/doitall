@@ -8,7 +8,9 @@ LIST="arch \
       openwrt \
       disco \
       eoan \
-      buster"
+      buster \
+      bullseye"
+
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
 mkdir -p ${CLOONIX_BULK}
 sudo echo "sudoer rights given"
@@ -45,4 +47,9 @@ echo BEGIN buster
 sudo ${HERE}/debian.sh buster 
 sudo mv -v /root/buster.qcow2 ${CLOONIX_BULK}
 echo END buster
+
+echo BEGIN bullseye
+sudo ${HERE}/debian.sh bullseye
+sudo mv -v /root/bullseye.qcow2 ${CLOONIX_BULK}
+echo END bullseye
 

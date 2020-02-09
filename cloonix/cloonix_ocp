@@ -42,33 +42,33 @@ if [ "$found" == "no" ]; then
   exit 1
 fi
 
-if (( ${#} < 4 )); then
+if (( ${#} < 3 )); then
   echo error input params
-  echo  "cloonix_osh <nemo> <nat> <user@vm_name:files> files"
-  echo  "cloonix_osh <nemo> <nat> files <user@vm_name:files>"
+  echo  "cloonix_osh <nemo> <vm_name:files> files"
+  echo  "cloonix_osh <nemo> files <vm_name:files>"
   exit 1
 fi
-nat_name=$2
-if (( ${#} == 5 )); then
-  if [ "$3" != "-r" ]; then
+vm_name=$2
+vm_name=${vm_name%%:*}
+nat_name=nat_${vm_name}
+user_name="csr"
+if (( ${#} == 4 )); then
+  if [ "$2" != "-r" ]; then
     echo error input params
     exit 1
   fi
   recurs="-r"
-  src_side=$4
-  dst_side=$5
-else
-  recurs=" "
   src_side=$3
   dst_side=$4
+else
+  recurs=" "
+  src_side=$2
+  dst_side=$3
 fi
 
 case $src_side in
 
   *[@]*[:]* )
-    user_name=${src_side%%@*}
-    vm_name=${src_side##*@}
-    vm_name=${vm_name%%:*}
     file_src=${src_side##*:}
     case $dst_side in
       *[@]*[:]* )
@@ -86,9 +86,6 @@ case $src_side in
   file_src=${src_side}
   case $dst_side in
     *[@]*[:]* )
-      user_name=${dst_side%%@*}
-      vm_name=${dst_side##*@}
-      vm_name=${vm_name%%:*}
       file_dst=${dst_side##*:}
       file_source=loc
     ;;

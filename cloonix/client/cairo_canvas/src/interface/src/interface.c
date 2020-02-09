@@ -104,7 +104,7 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
                          "/bin/bash", "-c", cmd, NULL};
   static char *argvcisco[] = {xvt, "-T", title, "-e", 
                               "/usr/local/bin/cloonix_osh",
-                              net, "nat", cmd, NULL};
+                              net, name, NULL};
   memset(cmd, 0, 2*MAX_PATH_LEN);
   memset(title, 0, 2*MAX_NAME_LEN+1);
   memset(name, 0, MAX_NAME_LEN);
@@ -116,7 +116,6 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
   if (vm_config_flags & VM_CONFIG_FLAG_CISCO)
     {
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", net, name);
-    sprintf(cmd, "root@%s",  name);
     if (check_before_start_launch(argvcisco))
       pid_clone_launch(start_launch, NULL, NULL, (void *)(argvcisco),
                        NULL, NULL, name_vm, -1, 0);

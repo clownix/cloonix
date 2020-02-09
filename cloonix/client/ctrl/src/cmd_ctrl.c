@@ -345,25 +345,6 @@ int cmd_qreboot_vm(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int local_cmd_sav_topo(int is_full, int argc, char **argv)
-{
-  int result = -1;
-  char *sav_rootfs_path;
-  if (argc == 1)
-    {
-    sav_rootfs_path = argv[0];
-    if (strlen(sav_rootfs_path) > 1)
-      {
-      result = 0;
-      init_connection_to_uml_cloonix_switch();
-      client_sav_vm_all(0, callback_end, is_full, sav_rootfs_path);
-      }
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int local_cmd_sav(int is_full, int argc, char **argv)
 {
   int result = -1;
@@ -379,22 +360,6 @@ static int local_cmd_sav(int is_full, int argc, char **argv)
       client_sav_vm(0, callback_end, name, is_full, sav_rootfs_path);
       }
     }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_sav_topo_full(int argc, char **argv)
-{
-  int result = local_cmd_sav_topo(1, argc, argv);
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_sav_topo(int argc, char **argv)
-{
-  int result = local_cmd_sav_topo(0, argc, argv);
   return result;
 }
 /*---------------------------------------------------------------------------*/

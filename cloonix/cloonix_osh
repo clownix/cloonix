@@ -26,31 +26,26 @@ if (( ${#} < 1 )); then
   echo $LIST
   exit 1
 fi
-
 cloonix_name=$1
-
 found=no
 for i in $LIST ; do
   if [ "$cloonix_name" == "$i" ]; then
     found=yes
   fi
 done
-
 if [ "$found" == "no" ]; then
   echo "ERROR: $cloonix_name not found in $CLOONIX_CONFIG"
   echo $LIST
   exit 1
 fi
-
-if (( ${#} < 3 )); then
+if (( ${#} < 2 )); then
   echo error input params
-  echo  "cloonix_osh <nemo> <nat> <user@vm_name> [cmd]"
+  echo  "cloonix_osh <nemo> <vm_name> [cmd]"
   exit 1
 fi
-nat_name=$2
-user_and_vm=$3
-user_name=${user_and_vm%%@*}
-vm_name=${user_and_vm##*@}
+vm_name=$2
+nat_name=nat_${vm_name}
+user_name="csr"
 
 LINE_CLOONIX_CONFIG=$(cat $CLOONIX_CONFIG)
 LINE_CLOONIX_CONFIG=$(echo $LINE_CLOONIX_CONFIG)
@@ -76,9 +71,8 @@ if [ ! -e $SOCK ]; then
   mkdir -p $SOCK
 fi
 
-shift 3
+shift 2
 
 BIN_SSH=${CLOONIX_TREE}/client/openssh/cloonix_u2i_ssh
-#${BIN_SSH} ${SOCK} -i ${CLOONIX_TREE}/id_rsa -X ${PARAMS} "$@"
 ${BIN_SSH} ${SOCK} -i ${CLOONIX_TREE}/id_rsa ${PARAMS} "$@"
 
