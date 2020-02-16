@@ -14,9 +14,9 @@ if [ ! -e ${ID_RSA} ]; then
   exit 1
 fi
 rm -rf ${TARGET}
-rm -f ${HERE}/preconfig_cisco.iso
+rm -f ${HERE}/pre_configs/preconfig_cisco.iso
 mkdir ${TARGET}
-cp ${HERE}/iosxe_config.txt ${TARGET}
+cp ${HERE}/pre_configs/iosxe_config.txt ${TARGET}
 cd ${TARGET}
 split -b 70 ${ID_RSA}
 for i in xaa xab xac xad xae xaf; do
@@ -26,5 +26,5 @@ for i in xaa xab xac xad xae xaf; do
   rm -f ${i}
 done
 
-${XORRISO} -o ${HERE}/preconfig_cisco.iso ${TARGET}
+${XORRISO} -o ${HERE}/pre_configs/preconfig_cisco.iso ${TARGET}
 rm -rf ${TARGET}

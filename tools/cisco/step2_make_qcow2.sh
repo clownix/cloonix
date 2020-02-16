@@ -3,7 +3,7 @@ HERE=`pwd`
 CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu/qemu_bin"
 CISCO_QCOW2=${HOME}/cloonix_data/bulk/cisco.qcow2
 CISCO_ISO=/media/perrier/Samsung_T5/iso/csr1000v-universalk9.16.09.01.iso
-CISCO_PRECONFIG_ISO=${HERE}/preconfig_cisco.iso
+CISCO_PRECONFIG_ISO=${HERE}/pre_configs/preconfig_cisco.iso
 if [ ! -e ${CISCO_ISO} ]; then
   echo missing ${CISCO_ISO}
   exit 1

@@ -48,9 +48,6 @@ if (( ${#} < 3 )); then
   echo  "cloonix_osh <nemo> files <vm_name:files>"
   exit 1
 fi
-vm_name=$2
-vm_name=${vm_name%%:*}
-nat_name=nat_${vm_name}
 user_name="csr"
 if (( ${#} == 4 )); then
   if [ "$2" != "-r" ]; then
@@ -68,10 +65,12 @@ fi
 
 case $src_side in
 
-  *[@]*[:]* )
+  *[:]* )
     file_src=${src_side##*:}
+    vm_name=${src_side%%:*}
+    nat_name=nat_${vm_name}
     case $dst_side in
-      *[@]*[:]* )
+      *[:]* )
         echo Bad input
         exit 1
       ;;
@@ -85,8 +84,10 @@ case $src_side in
   *)
   file_src=${src_side}
   case $dst_side in
-    *[@]*[:]* )
+    *[:]* )
       file_dst=${dst_side##*:}
+      vm_name=${dst_side%%:*}
+      nat_name=nat_${vm_name}
       file_source=loc
     ;;
     *)

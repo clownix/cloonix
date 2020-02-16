@@ -2,7 +2,7 @@
 HERE=`pwd`
 NET=nemo
 LINUX=buster
-CISCO=csr
+CISCO=cisco
 LIST_CISCO="cisco1 cisco2 cisco3" 
 LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk
@@ -16,7 +16,7 @@ done
 #######################################################################
 if [ ! -e ${BULK}/${LINUX}.qcow2 ]; then
   echo Missing ${LINUX}.qcow2
-  echo wget http://clownix.net/downloads/cloonix-04-02/bulk/buster.qcow2.gz
+  echo wget http://clownix.net/downloads/cloonix-04-03/bulk/buster.qcow2.gz
   echo mv buster.qcow2.gz ${BULK}
   echo cd ${BULK}
   echo gunzip buster.qcow2.gz
@@ -36,41 +36,41 @@ set -e
 #######################################################################
 fct_layout()
 {
-cloonix_cli ${NET} cnf lay stop
-sleep 2
 cloonix_cli ${NET} cnf lay width_height 700 420
 sleep 1
-cloonix_cli ${NET} cnf lay abs_xy_kvm linux1   -300  130
-cloonix_cli ${NET} cnf lay abs_xy_lan lan1   -200  130
-cloonix_cli ${NET} cnf lay abs_xy_kvm cisco1 -100  130
-cloonix_cli ${NET} cnf lay abs_xy_lan lan3      0  100
-cloonix_cli ${NET} cnf lay abs_xy_kvm cisco2  100  130
-cloonix_cli ${NET} cnf lay abs_xy_lan lan7    200  130
-cloonix_cli ${NET} cnf lay abs_xy_kvm linux2    300  130
-cloonix_cli ${NET} cnf lay abs_xy_kvm cisco3    3  270
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco1 1 235
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco1 2 0
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco1 3 157
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco2 1 78
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco2 2 0
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco2 3 157
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco3 1 235
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco3 2 78
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco3 3 0
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco3 4 157
-cloonix_cli ${NET} cnf lay abs_xy_eth linux1 0 78
-cloonix_cli ${NET} cnf lay abs_xy_eth linux1 1 235
-cloonix_cli ${NET} cnf lay abs_xy_eth linux2 0 235
-cloonix_cli ${NET} cnf lay abs_xy_eth linux2 1 78
-cloonix_cli ${NET} cnf lay abs_xy_lan lan6  70 210
-cloonix_cli ${NET} cnf lay abs_xy_lan lan5 -70 210
-cloonix_cli ${NET} cnf lay abs_xy_sat nat 0 164
-cloonix_cli ${NET} cnf lay abs_xy_lan lan0 0 184
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco1 0 110
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco2 0 198
-cloonix_cli ${NET} cnf lay abs_xy_eth cisco3 0 0
-sleep 5
-cloonix_cli ${NET} cnf lay scale 0 100 800 480
+cloonix_cli ${NET} cnf lay abs_xy_kvm cisco3 3 270
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco3 0 151
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco3 1 233
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco3 2 76
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco3 3 269
+cloonix_cli ${NET} cnf lay abs_xy_kvm linux2 300 130
+cloonix_cli ${NET} cnf lay abs_xy_eth linux2 0 233
+cloonix_cli ${NET} cnf lay abs_xy_eth linux2 1 76
+cloonix_cli ${NET} cnf lay abs_xy_kvm linux1 -300 130
+cloonix_cli ${NET} cnf lay abs_xy_eth linux1 0 76
+cloonix_cli ${NET} cnf lay abs_xy_eth linux1 1 233
+cloonix_cli ${NET} cnf lay abs_xy_kvm cisco2 100 130
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco2 0 0
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco2 1 76
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco2 2 241
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco2 3 175
+cloonix_cli ${NET} cnf lay abs_xy_kvm cisco1 -100 130
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco1 0 305
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco1 1 233
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco1 2 70
+cloonix_cli ${NET} cnf lay abs_xy_eth cisco1 3 128
+cloonix_cli ${NET} cnf lay abs_xy_sat nat_cisco3 6 369
+cloonix_cli ${NET} cnf lay abs_xy_sat nat_cisco2 95 9
+cloonix_cli ${NET} cnf lay abs_xy_sat nat_cisco1 -107 11
+cloonix_cli ${NET} cnf lay abs_xy_lan lan6 70 210
+cloonix_cli ${NET} cnf lay abs_xy_lan lan5 -59 214
+cloonix_cli ${NET} cnf lay abs_xy_lan lan3 0 125
+cloonix_cli ${NET} cnf lay abs_xy_lan lan7 200 130
+cloonix_cli ${NET} cnf lay abs_xy_lan lan1 -200 130
+cloonix_cli ${NET} cnf lay abs_xy_lan lan_nat_cisco3 6 337
+cloonix_cli ${NET} cnf lay abs_xy_lan lan_nat_cisco1 -106 54
+cloonix_cli ${NET} cnf lay abs_xy_lan lan_nat_cisco2 98 52
+cloonix_cli ${NET} cnf lay scale -1 166 800 480
 }
 #######################################################################
 
@@ -89,10 +89,7 @@ for i in $LIST_CISCO ; do
   cloonix_cli ${NET} add kvm ${i} ${PARAMS} ${CISCO}.qcow2 --cisco &
 done
 
-cloonix_cli ${NET} add nat nat
 sleep 30
-#######################################################################
-cloonix_cli ${NET} add lan nat    0 lan0
 #######################################################################
 cloonix_cli ${NET} add lan linux1 0 lan1
 cloonix_cli ${NET} add lan cisco1 1 lan1
@@ -120,16 +117,8 @@ for i in $LIST_LINUX ; do
 done
 #######################################################################
 for i in $LIST_CISCO ; do
-  cloonix_cli ${NET} cnf eth  ${i} 0 "set_link 0"
-done
-for i in $LIST_CISCO ; do
-
-  cloonix_cli ${NET} add lan ${i} 0 lan0
-  cloonix_cli ${NET} cnf eth  ${i} 0 "set_link 1"
-  sleep 5
-
   while [ 1 ]; do
-    RET=$(cloonix_osh ${NET} nat csr@${i} ?)
+    RET=$(cloonix_osh ${NET} ${i} ?)
     echo ${i} returned: $RET
     RET=${RET#*invalid }
     RET=${RET% *}
@@ -144,25 +133,12 @@ for i in $LIST_CISCO ; do
     fi
     sleep 3
   done
-
-  cloonix_cli ${NET} del lan ${i} 0 lan0
-
 done
 set -e
 #######################################################################
 for i in $LIST_CISCO ; do
-  cloonix_cli ${NET} cnf eth ${i} 0 "set_promisc 0"
-  cloonix_cli ${NET} add lan ${i} 0 lan0
+  cloonix_ocp ${NET} run_configs/${i}.cfg ${i}:running-config
 done
-#######################################################################
-for i in $LIST_CISCO ; do
-  cloonix_ocp ${NET} nat configs/${i}.cfg csr@${i}:running-config
-done
-#   cloonix_osh ${NET} nat csr@${i} <<EOF
-# write
-# reload
-# 
-# EOF
 #######################################################################
 cloonix_ssh ${NET} linux1 "ip addr add dev eth0 1.0.0.1/24"
 cloonix_ssh ${NET} linux1 "ip link set dev eth0 up"
