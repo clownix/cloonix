@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -343,6 +343,11 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
     KERR("%d %d", kvm->vm_config_flags, ikvm->vm_config_flags);
     result = -1;
     }
+  if (kvm->vm_config_param != ikvm->vm_config_param)
+    {
+    KERR("%d %d", kvm->vm_config_param, ikvm->vm_config_param);
+    result = -1;
+    }
   if (kvm->nb_wlan != ikvm->nb_wlan)
     {
     KERR("%d %d", kvm->nb_wlan, ikvm->nb_wlan);
@@ -403,6 +408,7 @@ static void random_kvm(t_topo_kvm *kvm)
   kvm->cpu = rand();
   kvm->mem = rand();
   kvm->vm_config_flags = rand();
+  kvm->vm_config_param = rand();
   kvm->nb_dpdk = my_rand(MAX_DPDK_VM);
   kvm->nb_eth = my_rand(MAX_ETH_VM);
   kvm->nb_wlan = my_rand(MAX_WLAN_VM);

@@ -12,6 +12,9 @@ requirements:
 - The cisco is configured with an interface with DHCP in order to be able to
   have an administrative ip managed by the cloonix nat object.
 
+- We want to have the choice of which interface number will be used for cloonix
+  entry with nat object.
+
 - The cisco must have ssh and scp and an associated rsa key to be accessed
   without the need for a password.
   This permits the cloonix commands cloonix_osh and cloonix_ocp to work, those
@@ -29,15 +32,17 @@ requirements above, csr is the name for ssh, the cloonix public key
 id_rsa.pub is put in the authorized keys of the cisco, and DHCP is 
 configured for eth0 of the cisco.
 
-./step1_make_preconf_iso.sh is the command that creates this preconfig iso.
+./step1_make_preconf_iso.sh is the command that creates 2 preconfig isos.
 
-When this iso is done then the creation of the qcow2 can begin (if you have a
-csr1000v installation iso such as: csr1000v-universalk9.16.09.01.iso).
+When these isos are done then the creation of the 2 qcow2 can begin 
+(if you have a csr1000v installation iso such as:
+csr1000v-universalk9.16.09.01.iso).
+
 This creation is done in 2 steps, beware that in the first step YOU MUST 
 CHOOSE THE SERIAL OPTION as cisco access at cisco installation.
  
-./step2_make_qcow2.sh is the command that creates cisco.qcow2 in bulk.
-
+./step2_make_qcow2.sh cisco0 is the command that creates cisco0.qcow2 in bulk.
+./step2_make_qcow2.sh cisco3 is the command that creates cisco3.qcow2 in bulk.
 
 Then call ./step3_run_demo.sh and wait until the pings go through. 
  

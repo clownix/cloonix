@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -36,7 +36,6 @@
 #include "stats_counters_sysinfo.h"
 #include "blkd_sub.h"
 #include "unix2inet.h"
-
 /*---------------------------------------------------------------------------*/
 typedef struct t_event_to_llid
 {
@@ -444,9 +443,7 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
 int llid_trace_exists(int llid)
 {
   int result = 0;
-  if ((llid <1) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KERR("%d", llid);
-  else
+  if ((llid > 0) && (llid < CLOWNIX_MAX_CHANNELS))
     {
     if (llid_trace_data[llid])
       result = 1;

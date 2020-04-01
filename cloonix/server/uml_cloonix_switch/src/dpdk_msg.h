@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void dpdk_msg_vlan_exist_no_more(char *lan);
 void dpdk_msg_ack_lan(int tid, char *lan_name, 
                       int is_ko, int is_add, char *lab);
 void dpdk_msg_ack_lan_endp(int tid, char *lan_name, char *name, int num,

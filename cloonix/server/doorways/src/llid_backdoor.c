@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -933,10 +933,10 @@ int llid_backdoor_ping_status_is_ok(char *name)
   t_backdoor_vm *bvm = vm_get_with_name(name);
   if ((bvm) && (bvm->ping_status == ping_ok))
     {
-    if (bvm->ping_agent_rx > 5)
+    if (bvm->ping_agent_rx > 1)
       result = 1;
     else
-      KERR("%s", name);
+      KERR("%s %d", name, bvm->ping_agent_rx);
     }
   return result;
 }

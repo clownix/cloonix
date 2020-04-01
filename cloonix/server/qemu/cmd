@@ -32,11 +32,18 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --enable-usb-redir
                      --enable-opengl
                      --enable-gtk
-                     --enable-vhost-net
-                     --enable-vhost-vsock
-                     --enable-vhost-user
                      --enable-numa
                      --enable-virglrenderer
+                     --enable-vhost-net
+                     --enable-vhost-vsock
+                     --enable-vhost-scsi
+                     --enable-vhost-crypto
+                     --enable-vhost-kernel
+                     --enable-vhost-user
+                     --disable-debug-info
+                     --disable-debug-tcg
+                     --disable-virtfs
+                     --disable-strip
                      --disable-modules
                      --disable-libiscsi
                      --disable-linux-aio
@@ -47,8 +54,6 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --disable-guest-agent
                      --disable-guest-agent-msi
                      --disable-pie
-                     --disable-debug-tcg
-                     --disable-debug-info
                      --disable-sparse
                      --disable-gnutls
                      --disable-nettle
@@ -61,7 +66,6 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --disable-vnc-jpeg
                      --disable-vnc-png
                      --disable-cocoa
-                     --disable-virtfs
                      --disable-xen
                      --disable-xen-pci-passthrough
                      --disable-brlapi

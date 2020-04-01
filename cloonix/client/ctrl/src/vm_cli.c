@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -119,6 +119,9 @@ static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
   char *install_cdrom=NULL;
   char *added_cdrom=NULL;
   char *added_disk=NULL;
+  char *ptr;
+  char *endptr;
+  int prop_param = 0;
   t_eth_params eth_params[MAX_ETH_VM];
 
   memset(eth_params, 0, MAX_ETH_VM * sizeof(t_eth_params));
@@ -178,8 +181,12 @@ static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
       prop_flags |= VM_CONFIG_FLAG_ADDED_DISK;
       added_disk = argv[i] + strlen("--added_disk=");
       }
-    else if (!strcmp(argv[i], "--cisco"))
+    else if (!strncmp(argv[i], "--cisco", strlen("--cisco")))
       {
+      ptr = argv[i] + strlen("--cisco");
+      prop_param = (int) strtol(ptr, &endptr, 10);
+      if ((endptr[0] != 0) || ( prop_param < 0 ) || ( prop_param >= eth))
+        prop_param = 0;
       prop_flags |= VM_CONFIG_FLAG_CISCO;
       }
     else if (!strcmp(argv[i], "--vmware"))
@@ -205,9 +212,9 @@ static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
   if (result == 0)
     {
     init_connection_to_uml_cloonix_switch();
-    client_add_vm(0, callback_end, name, dpdk, eth, wlan, prop_flags, cpu,
-                  mem, img_linux, rootfs, install_cdrom, added_cdrom,
-                  added_disk, p9_host_shared, eth_params);
+    client_add_vm(0, callback_end, name, dpdk, eth, wlan, prop_flags,
+                  prop_param, cpu, mem, img_linux, rootfs, install_cdrom,
+                  added_cdrom, added_disk, p9_host_shared, eth_params);
     }
   return result;
 }

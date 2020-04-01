@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,12 +15,12 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int dpdk_fmt_tx_add_tap(int tid, char *name, int tap_id);
+int dpdk_fmt_tx_add_tap(int tid, char *name);
 int dpdk_fmt_tx_del_tap(int tid, char *name);
 int dpdk_fmt_tx_add_lan_tap(int tid, char *lan, char *name);
 int dpdk_fmt_tx_del_lan_tap(int tid, char *lan, char *name);
-int dpdk_fmt_tx_add_lan(int tid, char *lan, int spy);
-int dpdk_fmt_tx_del_lan(int tid, char *lan, int spy);
+int dpdk_fmt_tx_add_lan(int tid, char *lan);
+int dpdk_fmt_tx_del_lan(int tid, char *lan);
 int dpdk_fmt_tx_add_eth(int tid, t_vm *kvm, char *name, int num);
 int dpdk_fmt_tx_del_eth(int tid, char *name, int num);
 int dpdk_fmt_tx_add_lan_eth(int tid, char *lan, char *name, int num);

@@ -17,9 +17,7 @@ OBJ_DIR=obj/
 EXE = cloonix_muovs
 VPATH=src
 
-SRC = main.c ovs_execv.c \
-      my_popen.c ring_client.c \
-      pcap_fifo.c cirspy.c eventfull.c
+SRC = main.c ovs_execv.c my_popen.c
 
 WARNINGS=-Wall -Wdeprecated -Wstrict-prototypes -Wdeclaration-after-statement
 

@@ -15,7 +15,7 @@ esac
 DIST=${DISTRO}
 ROOTFS=/root/${DISTRO}
 DEBIAN_REPO="http://deb.debian.org/debian"
-#DEBIAN_REPO="http://127.0.0.1/${DISTRO}"
+DEBIAN_REPO="http://127.0.0.1/${DISTRO}"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {

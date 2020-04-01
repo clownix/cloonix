@@ -1,73 +1,51 @@
-diff -Naur ovs/include/openvswitch/vlog.h ovs_tainted/include/openvswitch/vlog.h
---- ovs/include/openvswitch/vlog.h	2020-02-08 12:53:10.000000000 +0100
-+++ ovs_tainted/include/openvswitch/vlog.h	2020-02-08 13:01:56.685648014 +0100
-@@ -178,7 +178,7 @@
-         static struct vlog_module this_module = {                       \
-             OVS_LIST_INITIALIZER(&this_module.list),                    \
-             #MODULE,                                        /* name */  \
--            { VLL_INFO, VLL_INFO, VLL_INFO },             /* levels */  \
-+            { VLL_OFF, VLL_OFF, VLL_INFO },             /* levels */  \
-             VLL_INFO,                                  /* min_level */  \
-             true                               /* honor_rate_limits */  \
-         };                                                              \
-diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
---- ovs/lib/netdev-dpdk.c	2020-02-08 12:53:10.000000000 +0100
-+++ ovs_tainted/lib/netdev-dpdk.c	2020-02-08 13:01:56.685648014 +0100
-@@ -802,6 +802,7 @@
- {
-     struct dpdk_mp *dmp, *next;
-     bool reuse = false;
-+    int ret;
+diff -Naur ovs/lib/dpif-netdev.h ovs_tainted/lib/dpif-netdev.h
+--- ovs/lib/dpif-netdev.h	2020-03-29 13:11:11.000000000 +0200
++++ ovs_tainted/lib/dpif-netdev.h	2020-03-29 19:59:41.302165902 +0200
+@@ -35,7 +35,7 @@
  
-     ovs_mutex_lock(&dpdk_mp_mutex);
-     /* Check if shared memory is being used, if so check existing mempools
-@@ -3933,18 +3934,18 @@
-         }
-     }
+ bool dpif_is_netdev(const struct dpif *);
  
--    if (VLOG_IS_DBG_ENABLED()) {
--        struct ds mapping = DS_EMPTY_INITIALIZER;
+-#define NR_QUEUE   1
++#define NR_QUEUE   4
+ #define NR_PMD_THREADS 1
+ 
+ #ifdef  __cplusplus
+diff -Naur ovs/lib/poll-loop.c ovs_tainted/lib/poll-loop.c
+--- ovs/lib/poll-loop.c	2020-03-29 13:11:11.000000000 +0200
++++ ovs_tainted/lib/poll-loop.c	2020-03-29 20:00:47.462354218 +0200
+@@ -64,7 +64,12 @@
+     struct poll_node *node;
+ 
+     /* Both 'fd' and 'wevent' cannot be set. */
+-    ovs_assert(!fd != !wevent);
++    //ovs_assert(!fd != !wevent);
++    if ((fd != 0) && (wevent != 0))
++      {
++      VLOG_ERR("ovs_assert poll_create_node");
++      return;
++      }
+ 
+     HMAP_FOR_EACH_WITH_HASH (node, hmap_node,
+                              hash_2words(fd, (uint32_t)wevent),
+@@ -108,8 +113,12 @@
+     COVERAGE_INC(poll_create_node);
+ 
+     /* Both 'fd' and 'wevent' cannot be set. */
+-    ovs_assert(!fd != !wevent);
 -
--        ds_put_format(&mapping, "TX queue mapping for port '%s':\n",
--                      netdev_get_name(&dev->up));
--        for (i = 0; i < total_txqs; i++) {
--            ds_put_format(&mapping, "%2d --> %2d\n", i, dev->tx_q[i].map);
--        }
--
--        VLOG_DBG("%s", ds_cstr(&mapping));
--        ds_destroy(&mapping);
--    }
-+//    if (VLOG_IS_DBG_ENABLED()) {
-+//        struct ds mapping = DS_EMPTY_INITIALIZER;
-+//
-+//        ds_put_format(&mapping, "TX queue mapping for port '%s':\n",
-+//                      netdev_get_name(&dev->up));
-+//        for (i = 0; i < total_txqs; i++) {
-+//            ds_put_format(&mapping, "%2d --> %2d\n", i, dev->tx_q[i].map);
-+//        }
-+//
-+//        VLOG_DBG("%s", ds_cstr(&mapping));
-+//        ds_destroy(&mapping);
-+//    }
- 
-     free(enabled_queues);
- }
-diff -Naur ovs/lib/vlog.c ovs_tainted/lib/vlog.c
---- ovs/lib/vlog.c	2020-02-08 12:53:10.000000000 +0100
-+++ ovs_tainted/lib/vlog.c	2020-02-08 13:01:56.689648007 +0100
-@@ -572,7 +572,7 @@
-             ovs_fatal(0, "processing \"%s\": %s", arg, msg);
-         }
-     } else {
--        vlog_set_levels(NULL, VLF_ANY_DESTINATION, VLL_DBG);
-+        vlog_set_levels(NULL, VLF_ANY_DESTINATION, VLL_WARN);
-     }
- }
- 
++    // ovs_assert(!fd != !wevent);
++    if ((fd != 0) && (wevent != 0))
++      {
++      VLOG_ERR("ovs_assert poll_create_node");
++      return;
++      }
+     /* Check for duplicate.  If found, "or" the events. */
+     node = find_poll_node(loop, fd, wevent);
+     if (node) {
 diff -Naur ovs/ofproto/ofproto-dpif-xlate.c ovs_tainted/ofproto/ofproto-dpif-xlate.c
---- ovs/ofproto/ofproto-dpif-xlate.c	2020-02-08 12:53:10.000000000 +0100
-+++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2020-02-08 13:01:56.689648007 +0100
-@@ -4123,6 +4123,12 @@
+--- ovs/ofproto/ofproto-dpif-xlate.c	2020-03-29 13:11:11.000000000 +0200
++++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2020-03-29 19:59:41.302165902 +0200
+@@ -4144,6 +4144,12 @@
             xlate_report_error(ctx, "Cannot truncate output to patch port");
         }
         patch_port_output(ctx, xport, xport->peer);

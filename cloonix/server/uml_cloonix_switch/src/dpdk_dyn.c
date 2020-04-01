@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -33,6 +33,7 @@
 #include "dpdk_ovs.h"
 #include "dpdk_dyn.h"
 #include "dpdk_msg.h"
+#include "dpdk_tap.h"
 #include "machine_create.h"
 #include "event_subscriber.h"
 
@@ -92,13 +93,19 @@ static t_dlan *vlan_alloc(t_deth *eth, char *lan, int llid, int tid)
 /****************************************************************************/
 static void vlan_free(t_deth *eth, t_dlan *lan)
 {
-    if (lan->prev)
-      lan->prev->next = lan->next;
-    if (lan->next)
-      lan->next->prev = lan->prev;
-    if (lan == eth->head_lan)
-      eth->head_lan = lan->next;
-    clownix_free(lan, __FUNCTION__);
+  char lan_name[MAX_NAME_LEN];
+  memset (lan_name, 0, MAX_NAME_LEN);
+  strncpy(lan_name, lan->lan, MAX_NAME_LEN-1);
+  if (lan->prev)
+    lan->prev->next = lan->next;
+  if (lan->next)
+    lan->next->prev = lan->prev;
+  if (lan == eth->head_lan)
+    eth->head_lan = lan->next;
+  clownix_free(lan, __FUNCTION__);
+  if ((!dpdk_dyn_lan_exists(lan_name)) &&
+      (!dpdk_tap_lan_exists(lan_name)))
+    dpdk_msg_vlan_exist_no_more(lan_name);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -260,8 +267,6 @@ static void single_lan_del_req(t_dvm *vm, t_deth *eth, t_dlan *lan)
     else
       lan->waiting_ack_del = 1;
     }
-  else
-    KERR("%s %s %d", lan->lan, vm->name, eth->num);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -291,47 +296,48 @@ static void recv_ack(int is_add, int is_ko,
   t_dlan *lan;
   t_dvm *vm = vm_find(name);
   t_deth *eth = eth_find(vm, num);
-  if (!vm)
-    KERR("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
-  else if (!eth)
-    KOUT("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
-  else
+  if (vm)
     {
-    lan = vlan_find(eth, lan_name);
-    if(!lan)
-      KERR("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
+    if (!eth)
+      KOUT("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
     else
       {
-      if (lan->llid)
-        {
-        if (msg_exist_channel(lan->llid))
-          {
-          if (is_ko)
-            send_status_ko(lan->llid, lan->tid, lab);
-          else
-            send_status_ok(lan->llid, lan->tid, "OK");
-          }
-        else
-          KERR("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
-        } 
-      lan->llid = 0;
-      lan->tid = 0;
-      if (is_add == 1)
-        {
-        if (lan->waiting_ack_add != 1)
-          KERR("addlan ko:%d %s %s %d", is_ko, lan_name, name, num);
-        lan->waiting_ack_add = 0; 
-        if (is_ko)
-          vlan_free(eth, lan);
-        event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-        }
+      lan = vlan_find(eth, lan_name);
+      if(!lan)
+        KERR("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
       else
         {
-        if (lan->waiting_ack_del != 1)
-          KERR("dellan ko:%d %s %s %d", is_ko, lan_name, name, num);
-        lan->waiting_ack_del = 0;
-        vlan_free(eth, lan);
-        event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+        if (lan->llid)
+          {
+          if (msg_exist_channel(lan->llid))
+            {
+            if (is_ko)
+              send_status_ko(lan->llid, lan->tid, lab);
+            else
+              send_status_ok(lan->llid, lan->tid, "OK");
+            }
+          else
+            KERR("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
+          } 
+        lan->llid = 0;
+        lan->tid = 0;
+        if (is_add == 1)
+          {
+          if (lan->waiting_ack_add != 1)
+            KERR("addlan ko:%d %s %s %d", is_ko, lan_name, name, num);
+          lan->waiting_ack_add = 0; 
+          if (is_ko)
+            vlan_free(eth, lan);
+          event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+          }
+        else
+          {
+          if (lan->waiting_ack_del != 1)
+            KERR("dellan ko:%d %s %s %d", is_ko, lan_name, name, num);
+          lan->waiting_ack_del = 0;
+          vlan_free(eth, lan);
+          event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+          }
         }
       }
     }
@@ -462,16 +468,19 @@ int dpdk_dyn_del_lan_from_eth(int llid, int tid, char *lan_name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_add_eth(t_vm *kvm, char *name, int num, int base_spy)
+void dpdk_dyn_add_eth(t_vm *kvm, char *name, int num)
 {
   t_dvm *vm = vm_find(name);
   if (vm)
     KERR("%s %d", name, num);
-  event_print("Send vm dyn add eth %s %d",name, num);
-  if (dpdk_msg_send_add_eth(kvm, name, num))
+  else
     {
-    machine_death(name, error_death_noovs);
-    KERR("%s %d", name, num);
+    event_print("Send vm dyn add eth %s %d",name, num);
+    if (dpdk_msg_send_add_eth(kvm, name, num))
+      {
+      machine_death(name, error_death_noovs);
+      KERR("%s %d", name, num);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -481,9 +490,7 @@ int dpdk_dyn_del_all_lan(char *name)
 {
   int result = -1;
   t_dvm *vm = vm_find(name);
-  if (!vm)
-    KERR("%s", name);
-  else
+  if (vm)
     {
     result = 0;
     vm->is_zombie = 1;
@@ -495,18 +502,15 @@ int dpdk_dyn_del_all_lan(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num, int base_spy)
+void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num)
 {
   t_dvm *vm = vm_find(name);
   event_print("Send vm eth del %s %d", name, num);
-  if (!vm)
-    KERR("%s", name);
-  else
+  if (vm)
     {
     if (vlan_exists_in_vm(name))
       {
       all_lan_del_req(vm);
-      KERR("%s", name);
       }
     dpdk_msg_send_del_eth(name, num);
     vm_free(name);
@@ -599,6 +603,45 @@ int dpdk_dyn_lan_exists(char *name)
       eth = eth->next;
       }
     vm = vm->next;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_dyn_lan_exists_in_vm(char *name, int num, char *lan)
+{
+  int result = 0;
+  t_dvm *vm = vm_find(name);
+  t_deth *eth = NULL;
+  t_dlan *cur;
+  if (vm)
+    {
+    eth = eth_find(vm, num);
+    if (eth)
+      {
+      cur = vlan_find(eth, lan);
+      if (cur)
+        result = 1;
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_dyn_is_all_empty(void)
+{
+  t_dvm *dvm_next, *dvm = g_head_vm;
+  int result = 1;
+  while(dvm)
+    {
+    result = 0;
+    dvm_next = dvm->next;
+    KERR("%s", dvm->name); 
+    eth_free(dvm->head_eth);
+    vm_free(dvm->name);
+    dvm = dvm_next;
     }
   return result;
 }

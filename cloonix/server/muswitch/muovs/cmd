@@ -14,6 +14,7 @@ make
 if [ ! -d ../../../../tmpbuild/cloonix/server/dpdk/dpdk ]; then
   if [ ! -d ../../dpdk/dpdk ]; then
     cd ${HERE}/../../dpdk
+    ./meson_ninja.sh
     ./dpdk.sh
   fi
 fi

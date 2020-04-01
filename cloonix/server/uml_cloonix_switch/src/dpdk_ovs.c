@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -68,8 +68,9 @@ typedef struct t_dpdk_vm
 {
   char name[MAX_NAME_LEN];
   int  num;
-  int  base_spy;
   int  must_unlock_coherency;
+  int  coherency_idx;
+  int  dyn_vm_add_delay;
   int  dyn_vm_add_done;
   int  dyn_vm_add_done_acked;
   int  dyn_vm_add_done_notacked;
@@ -140,13 +141,12 @@ static void test_and_end_ovs(void)
   int nb_tap = dpdk_tap_get_qty();
   if ((g_head_vm == NULL) && (nb_tap == 0))
     {
+    if (!dpdk_dyn_is_all_empty())
+      KERR(" ");
     if (cur)
       {
       if (cur->destroy_requested == 0)
-        {
-        KERR("No more clients for ovs");
         cur->destroy_requested = 4;
-        }
       }
     }
   else
@@ -179,7 +179,7 @@ static void vm_check_unlock_coherency(void)
       {
       if (vm->must_unlock_coherency)
         {
-        recv_coherency_unlock();
+        recv_coherency_unlock(vm->coherency_idx);
         vm->must_unlock_coherency = 0;
         event_print("Unlock coherency vm %s", vm->name);
         }
@@ -200,7 +200,7 @@ static t_dpdk_vm *vm_find(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void vm_alloc(char *name, int num, int base_spy, int must_unlock)
+static void vm_alloc(char *name, int num, int must_unlock, int idx)
 {
   t_dpdk_vm *vm = vm_find(name);
   if (vm)
@@ -211,7 +211,7 @@ static void vm_alloc(char *name, int num, int base_spy, int must_unlock)
     memset(vm, 0, sizeof(t_dpdk_vm));
     strncpy(vm->name, name, MAX_NAME_LEN-1);
     vm->must_unlock_coherency = must_unlock;
-    vm->base_spy = base_spy;
+    vm->coherency_idx = idx;
     vm->num = num;
     if (g_head_vm)
       g_head_vm->prev = vm;
@@ -286,11 +286,7 @@ static int try_send_msg_ovs(t_ovs *cur, int msg_type, int tid, char *msg)
       else
         KERR("%s", msg);
       }
-    else
-      KERR("%s", msg);
     }
-  else
-    KERR("%s", msg);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -412,6 +408,7 @@ static int test_if_dpdk_qemu_path_is_ok(char *name, int nb_dpdk)
 static void check_on_destroy_requested(t_ovs *cur)
 {
   char *sock;
+  t_dpdk_vm *nvm, *vm = g_head_vm;
   test_and_end_ovs();
   if (cur->destroy_requested == 4)
     {
@@ -420,11 +417,21 @@ static void check_on_destroy_requested(t_ovs *cur)
     }
   if (cur->destroy_requested == 1)
     { 
+    while(vm)
+      {
+      KERR("%s", vm->name);
+      nvm = vm->next;
+      machine_death(vm->name, error_death_noovs);
+      vm = nvm;
+      }
     event_print("End OpenVSwitch %s", cur->name);
     sock = utils_get_dpdk_ovs_path(cur->name);
     dpdk_ovs_urgent_client_destruct();
     if (cur->llid)
+      {
       llid_trace_free(cur->llid, 0, __FUNCTION__);
+      cur->llid = 0;
+      }
     if (cur->ovsdb_pid)
       {
       if (!kill(cur->ovsdb_pid, SIGKILL))
@@ -453,30 +460,43 @@ static void timer_vm_add_beat(void *data)
   vm = g_head_vm;
   while(vm)
     {
+    nvm = vm->next;
     kvm = cfg_get_vm(vm->name);
     if (!kvm)
-      KERR("%s", vm->name);
-    nvm = vm->next;
-    if (kvm && (vm->dyn_vm_add_done == 0))
       {
-      if ((ovsdb != NULL) &&
-          (ovsdb->ovs_pid_ready == 1) &&
-          (ovsdb->periodic_count > 0))
+      dpdk_dyn_end_vm_qmp_shutdown(vm->name, vm->num);
+      }
+    else if (kvm->vm_to_be_killed == 1)
+      {
+      dpdk_dyn_end_vm_qmp_shutdown(vm->name, vm->num);
+      }
+    else
+      {
+      if (kvm && (vm->dyn_vm_add_done == 0))
         {
-        if (test_if_dpdk_qemu_path_is_ok(vm->name, vm->num))
+        if ((ovsdb != NULL) &&
+            (ovsdb->ovs_pid_ready == 1) &&
+            (ovsdb->periodic_count > 0))
           {
-          dpdk_dyn_add_eth(kvm, vm->name, vm->num, vm->base_spy);
-          vm->dyn_vm_add_done = 1;
+          if (test_if_dpdk_qemu_path_is_ok(vm->name, vm->num))
+            {
+            vm->dyn_vm_add_delay += 1;
+            if (vm->dyn_vm_add_delay > 3)
+              {
+              dpdk_dyn_add_eth(kvm, vm->name, vm->num);
+              vm->dyn_vm_add_done = 1;
+              }
+            }
           }
         }
-      }
-    if (kvm && (vm->dyn_vm_add_done_acked == 0))
-      {
-      vm->dyn_vm_add_done_notacked += 1;
-      if (vm->dyn_vm_add_done_notacked == 400)
+      if (kvm && (vm->dyn_vm_add_done_acked == 0))
         {
-        KERR("%s", vm->name);
-        machine_death(vm->name, error_death_noovstime);
+        vm->dyn_vm_add_done_notacked += 1;
+        if (vm->dyn_vm_add_done_notacked == 400)
+          {
+          KERR("%s", vm->name);
+          machine_death(vm->name, error_death_noovstime);
+          }
         }
       }
     vm = nvm;
@@ -749,18 +769,22 @@ int dpdk_ovs_find_with_llid(int llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_ovs_start_vm(char *name, int num, int base_spy)
+void dpdk_ovs_start_vm(char *name, int num, int idx)
 {
   t_ovs *cur = g_head_ovs;
   erase_dpdk_qemu_path(name, num);
-  if (cur != NULL)
+  if ((cur != NULL) && (dpdk_ovs_muovs_ready()))
     {
-    recv_coherency_unlock();
-    vm_alloc(name, num, base_spy, 0);
+    recv_coherency_unlock(idx);
+    vm_alloc(name, num, 0, 0);
+    }
+  else if (cur != NULL)
+    {
+    vm_alloc(name, num, 1, idx);
     }
   else
     {
-    vm_alloc(name, num, base_spy, 1);
+    vm_alloc(name, num, 1, idx);
     event_print("Start OpenVSwitch");
     cur = ovs_alloc("ovsdb");
     cur->clone_start_pid = create_muovs_process("ovsdb");
@@ -778,7 +802,7 @@ void dpdk_ovs_end_vm_qmp_shutdown(char *name)
   t_dpdk_vm *vm = vm_find(name);
   if (vm)
     {
-    dpdk_dyn_end_vm_qmp_shutdown(name, vm->num, vm->base_spy);
+    dpdk_dyn_end_vm_qmp_shutdown(name, vm->num);
     event_print("Free ovs vm %s %d", name, vm->num);
     vm_free(name);
     }
@@ -824,10 +848,7 @@ void dpdk_ovs_end_vm(char *name, int num)
       {
       vm->destroy_done = 1;
       if (dpdk_dyn_del_all_lan(name))
-        {
-        KERR("%s", name);
         vm_free(name);
-        }
       }
     }
 }
@@ -869,10 +890,11 @@ char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_eth)
   " -chardev socket,id=chard%d,path=%s,server", eth, endp_path);
 
   len += sprintf(net_cmd+len,
-  " -netdev type=vhost-user,id=net%d,chardev=chard%d,vhostforce", eth, eth);
+  " -netdev type=vhost-user,id=net%d,chardev=chard%d,vhostforce,queues=4", eth, eth);
   
   len += sprintf(net_cmd+len,
-  " -device virtio-net-pci,netdev=net%d,mac=%02X:%02X:%02X:%02X:%02X:%02X",
+  " -device virtio-net-pci,netdev=net%d,"
+  "mac=%02X:%02X:%02X:%02X:%02X:%02X,mrg_rxbuf=on,mq=on",
   eth, mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF, mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF);
 
   len += sprintf(net_cmd+len,
@@ -947,63 +969,6 @@ int dpdk_ovs_get_nb(void)
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-int dpdk_ovs_collect_dpdk(t_eventfull_endp *eventfull)
-{
-  int nb_vm, i, j, result = 0;; 
-  t_vm *vm = cfg_get_first_vm(&nb_vm);
-  t_dpdk_vm *cur;
-  for (i=0; i<nb_vm; i++)
-    {
-    if (!vm)
-      KOUT(" ");
-    cur = vm_find(vm->kvm.name);
-    for (j=0; j<vm->kvm.nb_dpdk; j++)
-      {
-      strncpy(eventfull[result].name, vm->kvm.name, MAX_NAME_LEN-1);
-      eventfull[result].num  = j;
-      eventfull[result].type = endp_type_kvm_dpdk;
-      if (j == 0)
-        {
-        eventfull[result].ram  = vm->ram;
-        eventfull[result].cpu  = vm->cpu;
-        }
-      if (cur)
-        {
-        eventfull[result].ptx  = cur->eth[j].pkt_tx;
-        eventfull[result].prx  = cur->eth[j].pkt_rx;
-        eventfull[result].btx  = cur->eth[j].byte_tx;
-        eventfull[result].brx  = cur->eth[j].byte_rx;
-        eventfull[result].ms   = cur->eth[j].ms;
-        memset(&(cur->eth[j]), 0, sizeof(t_dpdk_eth));
-        }
-      result += 1;
-      }
-    vm = vm->next;
-    }
-  if (vm)
-    KOUT(" ");
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void dpdk_ovs_fill_eventfull(char *name, int num, int ms,
-                             int ptx, int prx, int btx, int brx)
-{
-  t_dpdk_vm *vm = vm_find(name);
-  if (vm)
-    {
-    vm->eth[num].ms      = ms;
-    vm->eth[num].pkt_tx  += ptx;
-    vm->eth[num].pkt_rx  += prx;
-    vm->eth[num].byte_tx += btx;
-    vm->eth[num].byte_rx += brx;
-    stats_counters_update_endp_tx_rx(name, num, ms, ptx, btx, prx, brx);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
 /****************************************************************************/
 int dpdk_ovs_add_lan_tap(int llid, int tid, char *lan, char *name)
 {
@@ -1023,33 +988,31 @@ int dpdk_ovs_del_lan_tap(int llid, int tid, char *lan, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_ovs_add_tap(int llid, int tid, char *name)
+int dpdk_ovs_add_tap(int llid, int tid, char *name, int idx)
 {
   t_ovs *cur = g_head_ovs;
   int result = -1;
-  if (cur != NULL)
+
+  if ((cur != NULL) && (dpdk_ovs_muovs_ready()))
     {
-    recv_coherency_unlock();
-    if (!dpdk_ovs_muovs_ready())
-      KERR("ovs not ready");
-    else
-      result = dpdk_tap_add(llid, tid, name, 0);
+    recv_coherency_unlock(idx);
+    result = dpdk_tap_add(llid, tid, name, 0, 0);
+    }
+  else if (cur != NULL)
+    {
+    result = dpdk_tap_add(llid, tid, name, 1, idx);
+    if (result)
+      recv_coherency_unlock(idx);
     }
   else
     {
-    result = dpdk_tap_add(llid, tid, name, 1);
+    result = dpdk_tap_add(llid, tid, name, 1, idx);
     if (result)
-      {
-      recv_coherency_unlock();
-      KERR("%s", name);
-      } 
-    else
-      {
-      event_print("Start OpenVSwitch");
-      cur = ovs_alloc("ovsdb");
-      cur->clone_start_pid = create_muovs_process("ovsdb");
-      cur->clone_start_pid_just_done = 1;
-      }
+      recv_coherency_unlock(idx);
+    event_print("Start OpenVSwitch");
+    cur = ovs_alloc("ovsdb");
+    cur->clone_start_pid = create_muovs_process("ovsdb");
+    cur->clone_start_pid_just_done = 1;
     }
   return result;
 }
@@ -1081,9 +1044,8 @@ void dpdk_ovs_urgent_client_destruct(void)
     dpdk_tap_end_ovs();
   while(vm)
     {
-    KERR("%s", vm->name);
+    dpdk_ovs_end_vm(vm->name, vm->num);
     nvm = vm->next;
-    machine_death(vm->name, error_death_noovs);
     vm = nvm;
     }
 }
@@ -1094,8 +1056,8 @@ void dpdk_ovs_init(void)
 {
   g_head_vm = NULL;
   g_head_ovs = NULL;
-  clownix_timeout_add(50, timer_ovs_beat, NULL, NULL, NULL);
-  clownix_timeout_add(50, timer_vm_add_beat, NULL, NULL, NULL);
+  clownix_timeout_add(10, timer_ovs_beat, NULL, NULL, NULL);
+  clownix_timeout_add(10, timer_vm_add_beat, NULL, NULL, NULL);
   dpdk_dyn_init();
   dpdk_msg_init();
   dpdk_tap_init();

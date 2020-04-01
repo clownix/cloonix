@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -475,7 +475,7 @@ void client_req_slowperiodic(t_slowperiodic_cb cb)
 /*****************************************************************************/
 void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_dpdk, 
                    int nb_eth, int nb_wlan, int vm_config_flags,
-                   int cpu_qty, int mem_qty, 
+                   int vm_config_param, int cpu_qty, int mem_qty, 
                    char *kernel, char *root_fs, 
                    char *install_cdrom, char *added_cdrom, 
                    char *added_disk, char *p9_host_share,
@@ -491,6 +491,7 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_dpdk,
     KOUT(" ");
   strncpy(kvm.name, nm, MAX_NAME_LEN - 1);
   kvm.vm_config_flags = vm_config_flags;
+  kvm.vm_config_param = vm_config_param;
   kvm.cpu = cpu_qty;
   kvm.mem = mem_qty;
   kvm.nb_dpdk = nb_dpdk;

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -77,7 +77,6 @@ static char *g_cloonix_vm_name;
 
 int file_exists(char *path, int mode);
 
-
 /*****************************************************************************/
 typedef struct t_coherency_delay
 {
@@ -96,6 +95,7 @@ typedef struct t_add_vm_cow_look
   int llid;
   int tid;
   int vm_id;
+  int coherency_idx;
   t_topo_kvm kvm;
 } t_add_vm_cow_look;
 /*---------------------------------------------------------------------------*/
@@ -116,10 +116,62 @@ typedef struct t_timer_endp
 
 static t_timer_endp *g_head_timer;
 static int glob_coherency;
+static int glob_coherency_fail_count;
 static t_coherency_delay *g_head_coherency;
 static long long g_coherency_abs_beat_timer;
 static int g_coherency_ref_timer;
 static int g_inhib_new_clients;
+
+
+/*****************************************************************************/
+#define MAX_COHERENCY 100
+/*---------------------------------------------------------------------------*/
+typedef struct t_glob_coherency
+{
+  char fct[MAX_NAME_LEN];
+  int  line;
+} t_glob_coherency;
+static int pool_fifo_free_index[MAX_COHERENCY];
+static int pool_read_idx;
+static int pool_write_idx;
+static t_glob_coherency g_coherency_tab[MAX_COHERENCY+1];
+
+/*****************************************************************************/
+static void pool_init(void)
+{
+  int i;
+  for(i = 0; i < MAX_COHERENCY; i++)
+    pool_fifo_free_index[i] = i+1;
+  pool_read_idx = 0;
+  pool_write_idx =  MAX_COHERENCY - 1;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int pool_alloc(void)
+{
+  int job_idx = 0;
+  if(pool_read_idx != pool_write_idx)
+    {
+    job_idx = pool_fifo_free_index[pool_read_idx];
+    pool_read_idx = (pool_read_idx + 1) % MAX_COHERENCY;
+    }
+  else
+    {
+    KOUT(" ");
+    }
+  return job_idx;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void pool_release(int job_idx)
+{
+  pool_fifo_free_index[pool_write_idx] =  job_idx;
+  pool_write_idx=(pool_write_idx + 1) % MAX_COHERENCY;
+}
+/*---------------------------------------------------------------------------*/
+
 
 
 /*****************************************************************************/
@@ -135,24 +187,46 @@ static int get_inhib_new_clients(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_coherency_unlock(void)
+void recv_coherency_unlock(int idx)
 {
   glob_coherency -= 1;
   if (glob_coherency < 0)
     KOUT(" ");
+  memset(&(g_coherency_tab[idx]), 0, sizeof(t_glob_coherency));
+  pool_release(idx);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_coherency_lock(void)
+int recv_coherency_lock(const char *fct, int line)
 {
+  int idx = pool_alloc();
+  memset(&(g_coherency_tab[idx]), 0, sizeof(t_glob_coherency));
+  strncpy(g_coherency_tab[idx].fct, fct, MAX_NAME_LEN-1);
+  g_coherency_tab[idx].line = line;
   glob_coherency += 1;
+  return idx;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int recv_coherency_locked(void)
 {
+  int i;
+  if (glob_coherency > 0)
+    glob_coherency_fail_count += 1;
+  else
+    glob_coherency_fail_count = 0;
+  if  ((glob_coherency_fail_count > 0) && 
+       (glob_coherency_fail_count % 100 == 0))
+    {
+    KERR("LOCK TOO LONG %d", glob_coherency_fail_count);
+    for (i=0; i<=MAX_COHERENCY; i++)
+      {
+      if (g_coherency_tab[i].line)
+        KERR("LOCK  %s %d", g_coherency_tab[i].fct, g_coherency_tab[i].line);
+      }
+    }
   return glob_coherency;
 }
 /*---------------------------------------------------------------------------*/
@@ -194,30 +268,6 @@ static void coherency_del_chain(t_coherency_delay *cd)
   if (cd == g_head_coherency)
     g_head_coherency = cd->next;
   clownix_free(cd, __FUNCTION__);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void delayed_coherency_cmd_timeout(void *data)
-{
-  t_coherency_delay *next, *cur = (t_coherency_delay *) data;
-  g_coherency_abs_beat_timer = 0;
-  g_coherency_ref_timer = 0;
-  if (g_head_coherency != cur)
-    KOUT(" ");
-  if (recv_coherency_locked())
-    clownix_timeout_add(20, delayed_coherency_cmd_timeout, data, 
-                        &g_coherency_abs_beat_timer, &g_coherency_ref_timer);
-  else
-    {
-    while (cur)
-      {
-      next = cur->next;
-      add_lan_endp(cur->llid, cur->tid, cur->name, cur->num, cur->lan);
-      coherency_del_chain(cur);
-      cur = next;
-      }
-    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -442,22 +492,91 @@ static void timer_endp_init(int llid, int tid, char *name,
 /*****************************************************************************/
 static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
 {
-  if (recv_coherency_locked())
+  int type, is_dpdk = 0;
+  t_vm *vm = cfg_get_vm(name);
+  char info[MAX_PATH_LEN];
+  if (dpdk_ovs_exist_tap(name))
     {
-    g_head_coherency = coherency_add_chain(llid, tid, name, num, lan);
-    if (!g_coherency_abs_beat_timer)
-      clownix_timeout_add(20, delayed_coherency_cmd_timeout,
-                          (void *) g_head_coherency,
-                          &g_coherency_abs_beat_timer,
-                          &g_coherency_ref_timer);
+    if (!dpdk_ovs_muovs_ready())
+      {
+      snprintf(info, MAX_PATH_LEN, "Problem dpdk muovs not ready");
+      send_status_ko(llid, tid, info);
+      }
+    else if (num != 0)
+      {
+      snprintf(info, MAX_PATH_LEN, "Problem dpdk tap %s %d", name, num);
+      send_status_ko(llid, tid, info);
+      }
+    else if (mulan_can_be_found_with_name(lan))
+      {
+      snprintf(info, MAX_PATH_LEN, "tap %s is DPDK", name);
+      send_status_ko(llid, tid, info);
+      }
+    else
+      {
+      if (dpdk_ovs_add_lan_tap(llid, tid, lan, name))
+        {
+        snprintf(info, MAX_PATH_LEN, "add lan tap %s %s", lan, name);
+        send_status_ko(llid, tid, info);
+        }
+      }
     }
   else
     {
-    if ((!endp_evt_exists(name, num)) &&
-        (!dpdk_dyn_eth_exists(name, num)))
-      timer_endp_init(llid, tid, name, num, lan);
+    if ((vm) && (num < vm->kvm.nb_dpdk))
+      is_dpdk = 1;
+    if ((!endp_mngt_exists(name, num, &type)) &&
+        (!dpdk_ovs_eth_exists(name, num)))
+      {
+      snprintf(info, MAX_PATH_LEN, "endp %s %d not found", name, num);
+      send_status_ko(llid, tid, info);
+      }
     else
-      local_add_lan(llid, tid, name, num, lan);
+      {
+      if ((is_dpdk == 1) &&
+          (mulan_can_be_found_with_name(lan)))
+        {
+        snprintf(info, MAX_PATH_LEN, "eth %s %d is DPDK", name, num);
+        send_status_ko(llid, tid, info);
+        }
+      else if ((is_dpdk == 0) && (dpdk_dyn_lan_exists(lan)))
+        {
+        snprintf(info, MAX_PATH_LEN, "eth %s %d is NOT DPDK", name, num);
+        send_status_ko(llid, tid, info);
+        }
+      else
+        {  
+        if ((!endp_evt_exists(name, num)) &&
+            (!dpdk_dyn_eth_exists(name, num)))
+          timer_endp_init(llid, tid, name, num, lan);
+        else
+          local_add_lan(llid, tid, name, num, lan);
+        }
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void delayed_coherency_cmd_timeout(void *data)
+{
+  t_coherency_delay *next, *cur = (t_coherency_delay *) data;
+  g_coherency_abs_beat_timer = 0;
+  g_coherency_ref_timer = 0;
+  if (g_head_coherency != cur)
+    KOUT(" ");
+  if (recv_coherency_locked())
+    clownix_timeout_add(20, delayed_coherency_cmd_timeout, data,
+                        &g_coherency_abs_beat_timer, &g_coherency_ref_timer);
+  else
+    {
+    while (cur)
+      {
+      next = cur->next;
+      add_lan_endp(cur->llid, cur->tid, cur->name, cur->num, cur->lan);
+      coherency_del_chain(cur);
+      cur = next;
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -466,8 +585,6 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
 void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan)
 {
   char info[MAX_PATH_LEN];
-  int type, is_dpdk = 0;
-  t_vm *vm = cfg_get_vm(name);
   event_print("Rx Req add lan %s in %s %d", lan, name, num);
   if (get_inhib_new_clients())
     {
@@ -479,58 +596,18 @@ void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     }
   else 
     {
-    if (dpdk_ovs_exist_tap(name))
+    if (recv_coherency_locked())
       {
-      if (!dpdk_ovs_muovs_ready())
-        {
-        snprintf(info, MAX_PATH_LEN, "Problem dpdk muovs not ready");
-        send_status_ko(llid, tid, info);
-        }
-      else if (num != 0)
-        {
-        snprintf(info, MAX_PATH_LEN, "Problem dpdk tap %s %d", name, num);
-        send_status_ko(llid, tid, info);
-        }
-      else if (mulan_can_be_found_with_name(lan))
-        {
-        snprintf(info, MAX_PATH_LEN, "tap %s is DPDK", name);
-        send_status_ko(llid, tid, info);
-        }
-      else
-        {
-        if (dpdk_ovs_add_lan_tap(llid, tid, lan, name))
-          {
-          snprintf(info, MAX_PATH_LEN, "add lan tap %s %s", lan, name);
-          send_status_ko(llid, tid, info);
-          }
-        }
-      }
+      g_head_coherency = coherency_add_chain(llid, tid, name, num, lan);
+      if (!g_coherency_abs_beat_timer)
+        clownix_timeout_add(20, delayed_coherency_cmd_timeout,
+                            (void *) g_head_coherency,
+                            &g_coherency_abs_beat_timer,
+                            &g_coherency_ref_timer);
+      }  
     else
       {
-      if ((vm) && (num < vm->kvm.nb_dpdk))
-        is_dpdk = 1; 
-      if ((!endp_mngt_exists(name, num, &type)) &&
-          (!dpdk_ovs_eth_exists(name, num)))
-        {
-        snprintf(info, MAX_PATH_LEN, "endp %s %d not found", name, num);
-        send_status_ko(llid, tid, info);
-        }
-      else
-        {
-        if ((is_dpdk == 1) && 
-            (mulan_can_be_found_with_name(lan)))
-          {
-          snprintf(info, MAX_PATH_LEN, "eth %s %d is DPDK", name, num);
-          send_status_ko(llid, tid, info);
-          }
-        else if ((is_dpdk == 0) && (dpdk_dyn_lan_exists(lan)))
-          {
-          snprintf(info, MAX_PATH_LEN, "eth %s %d is NOT DPDK", name, num);
-          send_status_ko(llid, tid, info);
-          }
-        else
-          add_lan_endp(llid, tid, name, num, lan);
-        }
+      add_lan_endp(llid, tid, name, num, lan);
       }
     }
 }
@@ -583,7 +660,7 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
       snprintf(info, MAX_PATH_LEN, "tap %s is DPDK", name);
       send_status_ko(llid, tid, info);
       }
-    else if (!dpdk_dyn_lan_exists(lan))
+    else if (!dpdk_tap_lan_exists(lan))
       {
       snprintf(info, MAX_PATH_LEN, "dpdk lan %s does not exist", lan);
       send_status_ko(llid, tid, info);
@@ -1002,7 +1079,8 @@ static void cow_look_clone_death(void *data, int status, char *name)
       }
     }
   machine_recv_add_vm(add_vm->llid, add_vm->tid, 
-                      &(add_vm->kvm), add_vm->vm_id);
+                      &(add_vm->kvm), add_vm->vm_id,
+                      add_vm->coherency_idx);
   clownix_free(data, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
@@ -1046,7 +1124,7 @@ static int adjust_for_nb_dpdk(int mem, int nb_dpdk)
 /****************************************************************************/
 void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
 {
-  int i, vm_id, result = 0;
+  int i, idx, idx_dpdk, vm_id, result = 0;
   char mac[6];
   char info[MAX_PRINT_LEN];
   char cisco_nat_name[2*MAX_NAME_LEN];
@@ -1140,12 +1218,12 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
       }
     else 
       {
-      recv_coherency_lock();
+      idx = recv_coherency_lock(__FUNCTION__, __LINE__);
       if (kvm->nb_dpdk)
         {
+        idx_dpdk = recv_coherency_lock(__FUNCTION__, __LINE__);
         kvm->mem = adjust_for_nb_dpdk(kvm->mem, kvm->nb_dpdk);
-        recv_coherency_lock();
-        dpdk_ovs_start_vm(kvm->name, kvm->nb_dpdk, MAX_VM * vm_id);
+        dpdk_ovs_start_vm(kvm->name, kvm->nb_dpdk, idx_dpdk);
         }
       cow_look = (t_add_vm_cow_look *) 
                  clownix_malloc(sizeof(t_add_vm_cow_look), 7);
@@ -1153,6 +1231,7 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
       cow_look->llid = llid;
       cow_look->tid = tid;
       cow_look->vm_id = vm_id;
+      cow_look->coherency_idx = idx;
       memcpy(&(cow_look->kvm), kvm, sizeof(t_topo_kvm));
       pid_clone_launch(cow_look_clone, cow_look_clone_death,
                        cow_look_clone_msg, cow_look, cow_look, cow_look, 
@@ -1395,12 +1474,12 @@ void local_add_sat(int llid, int tid, char *name, int type,
 {
   char info[MAX_PATH_LEN];
   char recpath[MAX_PATH_LEN];
-  int capture_on=0;
+  int idx, capture_on=0;
   snprintf(recpath,MAX_PATH_LEN-1,"%s/%s.pcap",utils_get_snf_pcap_dir(),name);
   if (type == endp_type_dpdk_tap)
     {
-    recv_coherency_lock();
-    if (dpdk_ovs_add_tap(llid, tid, name))
+    idx = recv_coherency_lock(__FUNCTION__, __LINE__);
+    if (dpdk_ovs_add_tap(llid, tid, name, idx))
       {
       snprintf( info, MAX_PATH_LEN-1, "Error dpdk_tap %s", name);
       send_status_ko(llid, tid, info);
@@ -1658,11 +1737,14 @@ static void recv_halt_vm(int llid, int tid, char *name)
 void recv_init(void)
 {
   glob_coherency = 0;
+  glob_coherency_fail_count = 0;
   g_head_coherency = NULL;
   g_coherency_abs_beat_timer = 0;
   g_coherency_ref_timer = 0;
   g_in_cloonix = inside_cloonix(&g_cloonix_vm_name);
   g_inhib_new_clients = 0;
+  pool_init();
+  memset(g_coherency_tab, 0, (MAX_COHERENCY + 1) * sizeof(t_glob_coherency));
 }
 /*---------------------------------------------------------------------------*/
 

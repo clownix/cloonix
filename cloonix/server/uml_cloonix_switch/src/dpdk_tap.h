@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -21,15 +21,14 @@ int dpdk_tap_topo_endp(int nb_max, t_topo_endp *endp);
 int dpdk_tap_get_qty(void);
 int dpdk_tap_add_lan(int llid, int tid, char *lan, char *name);
 int dpdk_tap_del_lan(int llid, int tid, char *lan, char *name);
-int dpdk_tap_add(int llid, int tid, char *name, int lock);
+int dpdk_tap_add(int llid, int tid, char *name, int coherency_lock, int idx);
 int dpdk_tap_del(int llid, int tid, char *name);
 int dpdk_tap_exist(char *name);
+int dpdk_tap_lan_exists(char *lan);
+int dpdk_dyn_lan_exists_in_tap(char *name, char *lan);
 void dpdk_tap_resp_add(int is_ko, char *name);
 void dpdk_tap_resp_del(char *name);
 void dpdk_tap_end_ovs(void);
-int dpdk_tap_collect_dpdk(t_eventfull_endp *eventfull);
-int dpdk_tap_eventfull(int tap_id, int num, int ms,
-                       int ptx, int btx, int prx, int brx);
 void dpdk_tap_init(void);
 /*--------------------------------------------------------------------------*/
 

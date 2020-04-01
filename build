@@ -18,7 +18,7 @@ for i in cloonix_net cloonix_ssh cloonix_scp \
          cloonix_cli cloonix_gui cloonix_zor \
          cloonix_osh cloonix_ocp cloonix_dta \
          cloonix_xwy cloonix_ice cloonix_mon \
-         cloonix_ctl ; do
+         cloonix_ctl cloonix_ovs; do
   mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
 done
 #----------------------------------------------------------

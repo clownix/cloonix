@@ -2,7 +2,7 @@
 HERE=`pwd`
 NET=nemo
 LINUX=buster
-CISCO=cisco
+CISCO=cisco0
 LIST_CISCO="cisco1 cisco2 cisco3" 
 LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk
@@ -85,9 +85,9 @@ done
 
 
 PARAMS="ram=5000 cpu=4 dpdk=0 sock=4 hwsim=0"
-for i in $LIST_CISCO ; do
-  cloonix_cli ${NET} add kvm ${i} ${PARAMS} ${CISCO}.qcow2 --cisco &
-done
+cloonix_cli ${NET} add kvm cisco1 ${PARAMS} ${CISCO}.qcow2 --cisco0 &
+cloonix_cli ${NET} add kvm cisco2 ${PARAMS} ${CISCO}.qcow2 --cisco0 &
+cloonix_cli ${NET} add kvm cisco3 ${PARAMS} cisco3.qcow2 --cisco3 &
 
 sleep 30
 #######################################################################

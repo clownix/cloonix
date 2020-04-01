@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -759,10 +759,15 @@ void qhvc0_begin_qemu_unix(char *name)
   vm = cfg_get_vm(name);
   if (vm && !cvm)
     {
-    cvm = vm_alloc(name, vm);
-    clownix_timeout_add(10, timer_cvm_connect_qhvc0, (void *) cvm,
-                        &(cvm->connect_abs_beat_timer),
-                        &(cvm->connect_ref_timer));
+    if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT)
+      KERR("Full virt, no hvc0 %s", name);
+    else
+      {
+      cvm = vm_alloc(name, vm);
+      clownix_timeout_add(10, timer_cvm_connect_qhvc0, (void *) cvm,
+                          &(cvm->connect_abs_beat_timer),
+                          &(cvm->connect_ref_timer));
+      }
     }
   else if (cvm)
     KERR("%s %d", cvm->name, cvm->auto_state);

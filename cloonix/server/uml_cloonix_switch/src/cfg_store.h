@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -22,6 +22,7 @@ typedef struct t_wake_up_eths
   int llid;
   int tid;
   int state;
+  int dpdk_count;
   int nb_reqs_with_no_resp;
   long long automate_abs_beat; 
   int automate_ref;
@@ -57,6 +58,7 @@ typedef struct t_vm
   int vm_to_be_killed;
   int qmp_conn;
   t_wake_up_eths *wake_up_eths;
+  int pid_returned_clone;
   int pid;
   int ram;
   int mem_rss;
@@ -141,8 +143,8 @@ t_topo_info *cfg_produce_topo_info(void);
 
 /*****************************************************************************/
 void recv_init(void);
-void recv_coherency_lock(void);
-void recv_coherency_unlock(void);
+int  recv_coherency_lock(const char *fct, int line);
+void recv_coherency_unlock(int idx);
 int  recv_coherency_locked(void);
 /*---------------------------------------------------------------------------*/
 t_vm   *cfg_get_first_vm(int *nb);

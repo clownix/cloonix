@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -148,10 +148,11 @@ static char *string_to_xml(char *info)
 {
   static char buf[MAX_PRINT_LEN];
   char *ptr = buf;
+  memset(buf, 0, MAX_PRINT_LEN);
   strncpy(buf, info, MAX_PRINT_LEN);
   buf[MAX_PRINT_LEN-1] = 0;
   if (strlen(buf) == 0)
-    sprintf(buf, "error in error report, 0 len txt");
+    sprintf(buf, " ");
   while(ptr)
     {
     ptr = strchr(ptr, ' ');
@@ -734,6 +735,7 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
                                        kvm.rootfs_backing,  
                                        kvm.vm_id, 
                                        kvm.vm_config_flags,  
+                                       kvm.vm_config_param,  
                                        kvm.nb_dpdk,
                                        kvm.nb_eth,
                                        kvm.nb_wlan,
@@ -1035,8 +1037,9 @@ void send_add_vm(int llid, int tid, t_topo_kvm *ikvm)
   topo_kvm_check_str(ikvm, __LINE__);
   topo_kvm_swapon(&kvm, ikvm); 
 
-  len = sprintf(sndbuf, ADD_VM_O, tid, kvm.name, kvm.vm_config_flags, kvm.cpu,  
-                kvm.mem, kvm.nb_dpdk, kvm.nb_eth, kvm.nb_wlan);
+  len = sprintf(sndbuf, ADD_VM_O, tid, kvm.name, kvm.vm_config_flags,
+                kvm.vm_config_param, kvm.cpu,  kvm.mem, kvm.nb_dpdk,
+                kvm.nb_eth, kvm.nb_wlan);
 
   len += make_eth_params(sndbuf+len, kvm.nb_dpdk + kvm.nb_eth, kvm.eth_params);
 
@@ -1436,11 +1439,12 @@ static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
                                     ikvm.rootfs_backing,  
                                     &(ikvm.vm_id), 
                                     &(ikvm.vm_config_flags),  
+                                    &(ikvm.vm_config_param),  
                                     &(ikvm.nb_dpdk),
                                     &(ikvm.nb_eth),
                                     &(ikvm.nb_wlan),
                                     &(ikvm.mem), 
-                                    &(ikvm.cpu)) != 15)
+                                    &(ikvm.cpu)) != 16)
     KOUT("%s", msg);
   get_eth_params(msg, ikvm.nb_dpdk + ikvm.nb_eth, ikvm.eth_params);
   topo_kvm_swapoff(kvm, &ikvm); 
@@ -2062,8 +2066,9 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       memset(&ikvm, 0, sizeof(t_topo_kvm));
       if (sscanf(msg, ADD_VM_O, &tid, ikvm.name, 
                  &(ikvm.vm_config_flags),
+                 &(ikvm.vm_config_param),
                  &(ikvm.cpu), &(ikvm.mem), &(ikvm.nb_dpdk), 
-                 &(ikvm.nb_eth), &(ikvm.nb_wlan)) != 8)
+                 &(ikvm.nb_eth), &(ikvm.nb_wlan)) != 9)
         KOUT("%s", msg);
       get_eth_params(msg, ikvm.nb_dpdk + ikvm.nb_eth, ikvm.eth_params);
       ptr = strstr(msg, "<linux_kernel>");

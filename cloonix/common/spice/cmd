@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
+MESON_NINJA=${HERE}/../../common/meson_ninja
 TARGZ=${HERE}/../../../targz_store
 TARGET=${HERE}/spice_lib
 rm -rf ${TARGET}
@@ -9,18 +10,16 @@ mkdir -p ${TARGET}
 cd $TARGET
 tar xvf ${TARGZ}/spice-protocol.tar.gz
 cd spice-protocol
-./configure --prefix=${TARGET} \
-            --datarootdir=${TARGET} \
-            --enable-python-checks
-make clean
-make
-make install
-
-export PKG_CONFIG_PATH=${TARGET}/pkgconfig
-SPICE_PC=${TARGET}/spice-protocol/spice-protocol.pc
-mkdir -p $PKG_CONFIG_PATH
-cp -f ${SPICE_PC} $PKG_CONFIG_PATH
-sed -i s"%prefix}/share%prefix}%" ${PKG_CONFIG_PATH}/spice-protocol.pc
+rm -rf build
+export PATH=${MESON_NINJA}/ninja:$PATH
+${MESON_NINJA}/meson/meson.py build
+cd build
+${MESON_NINJA}/meson/meson.py configure --prefix=${TARGET} \
+                                        --datadir=${TARGET} \
+                                        --libdir=${TARGET} \
+                                        --includedir=${TARGET}
+ninja
+ninja install
 
 cd ${TARGET}
 tar xvf ${TARGZ}/usbredir.tar.gz

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -411,8 +411,7 @@ int unlink_sub_dir_files_except_dir(char *dir, char *err)
       pth[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
       if(ent->d_type == DT_DIR)
         {
-        sprintf(err, "%s Directory Found: %s will not delete\n", dir, pth);
-        end_result = -1;
+        end_result = unlink_sub_dir_files(pth, err);
         }
       else if (unlink(pth))
         {
@@ -438,9 +437,6 @@ int unlink_sub_dir_files_except_dir(char *dir, char *err)
   return result;
 }
 /*---------------------------------------------------------------------------*/
-
-
-
 
 /*****************************************************************************/
 int unlink_sub_dir_files(char *dir, char *err)

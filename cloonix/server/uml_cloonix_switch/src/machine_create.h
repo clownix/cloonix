@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -39,13 +39,14 @@ enum
   error_death_kvmstartko,
   error_death_qmonitor,
   error_death_qmp,
+  error_death_pid_diseapeared,
   error_death_timeout_no_pid,
   error_death_timeout_hvc0_silent,
   error_death_timeout_hvc0_conf,
 };
 int machine_death(char *name, int error_death);
 void machine_recv_kill_clownix(void);
-void machine_recv_add_vm(int llid, int tid, t_topo_kvm *kvm, int vm_id); 
+void machine_recv_add_vm(int llid,int tid,t_topo_kvm *kvm,int vm_id,int idx); 
 int get_nb_mask(char *mask_string);
 void machine_init(void);
 

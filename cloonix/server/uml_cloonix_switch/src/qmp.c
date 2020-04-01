@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -153,9 +153,7 @@ static void alloc_tail_qmp_req(t_qmp *qmp, int llid, int tid, char *msg)
 static void free_head_qmp_req(t_qmp *qmp)
 {
   t_qmp_req *cur = qmp->head_qmp_req;
-  if (!cur)
-    KERR(" ");
-  else
+  if (cur)
     {
     qmp->head_qmp_req = cur->next;
     clownix_free(cur, __FUNCTION__);
@@ -800,6 +798,7 @@ static void timer_fifo_visit(void *data)
 {
   t_qmp *cur = g_head_qmp;
   t_qmp_req *req;
+  t_vm *vm;
   while(cur)
     {
     req = cur->head_qmp_req;
@@ -818,12 +817,27 @@ static void timer_fifo_visit(void *data)
         }
       else
         {
-        req->count += 1;
-        if (req->count > 10)
+        vm = cfg_get_vm(cur->name);
+        if (!vm)
           {
-          if ((req->llid) && llid_trace_exists(req->llid))
-            send_qmp_resp(req->llid, req->tid, cur->name, "error timeout",-1);
           free_head_qmp_req(cur);
+          }
+        else
+          {
+          if (vm->vm_to_be_killed)
+            {
+            free_head_qmp_req(cur);
+            }
+          else
+            {
+            req->count += 1;
+            if (req->count > 10)
+              {
+              if ((req->llid) && llid_trace_exists(req->llid))
+                send_qmp_resp(req->llid, req->tid, cur->name, "error timeout",-1);
+              free_head_qmp_req(cur);
+              }
+            }
           }
         }
       }
@@ -948,8 +962,6 @@ void qmp_request_qemu_halt(char *name, int llid, int tid)
     {
     if (llid)
       send_status_ko(llid, tid, "error qmp not found");
-    else
-      KERR(" ");
     }
   else if (qmp->waiting_for != waiting_for_nothing)
     {

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -276,8 +276,8 @@ static void timer_connect_qmp(void *data)
   t_small_evt vm_evt;
   t_qrec *qrec = get_qrec_with_name(pname);
   if (!qrec)
-    KERR("%s", pname);
-  else if (qrec->llid)
+    return;
+  if (qrec->llid)
     KERR("%s %d", pname, qrec->llid);
   else
     {
@@ -375,6 +375,14 @@ int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_resp cb)
     qrec_free(qrec, 1);
     return result;
     }
+  else
+    {
+    if (vm->vm_to_be_killed)
+      {
+      qrec_free(qrec, 1);
+      return result;
+      }
+    }
   if (!qrec)
     KERR("%s", name);
   else if (qrec->resp_cb)
@@ -382,7 +390,10 @@ int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_resp cb)
   else if (strlen(req) >= MAX_RPC_MSG_LEN)
     KERR("%s %d %d", name, (int)strlen(req), MAX_RPC_MSG_LEN);
   else if ((!qrec->llid) || (!msg_exist_channel(qrec->llid)))  
+    {
     KERR("%s", name);
+    qmp_dialog_free(name);
+    }
   else if ((strlen(req)) && (!message_braces_complete(req)))
     cb(name, llid, tid, req, "invalid braces syntax"); 
   else

@@ -16,7 +16,7 @@ fi
 for i in cloonix_dta cloonix_mon cloonix_osh cloonix_xwy \
          cloonix_cli cloonix_gui cloonix_net cloonix_scp \
          cloonix_zor cloonix_ctl cloonix_ice cloonix_ocp \
-         cloonix_ssh; do 
+         cloonix_ssh cloonix_ovs; do 
   rm -f /usr/local/bin/${i}
 done
 rm -rf /usr/local/bin/cloonix

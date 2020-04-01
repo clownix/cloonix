@@ -12,11 +12,13 @@ patch -p1 < ${HERE}/dpdk.patch
 sleep 2
 sed -i s'%-rpath=$(RTE_SDK_BIN)/lib%-rpath=/usr/local/bin/cloonix/server/dpdk/lib%' mk/rte.app.mk
 echo "LDFLAGS+=\"-rpath=/usr/local/bin/cloonix/server/dpdk/lib\"" >> mk/rte.vars.mk
-cd ${HERE}/${NAME}
 export PATH=${MESON_NINJA}/ninja:$PATH
-${MESON_NINJA}/meson/meson.py build
-cd build
-cp rte_build_config.h ../config
+
+BASE=${HERE}/${NAME}/config/common_base
+sed -i s"/CONFIG_RTE_PROC_INFO=n/CONFIG_RTE_PROC_INFO=y/" ${BASE}
+
+${MESON_NINJA}/meson/meson.py -Dexamples=kni build
+cd ${HERE}/${NAME}/build
 ninja
 DESTDIR=${HERE} ninja install
 
@@ -33,7 +35,7 @@ else
   rmdir -v ${HERE}/lib
   mv -v ${HERE}/x86_64-linux-gnu ${HERE}/lib
 fi
-rm -vrf ${HERE}/usr
+cp -f ${HERE}/${NAME}/build/examples/dpdk-kni ${HERE}/bin
 sed -i s"%libdir=\${prefix}/lib64%libdir=${HERE}/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc
 sed -i s"%libdir=\${prefix}/lib/x86_64-linux-gnu%libdir=${HERE}/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc
 sed -i s"%includedir=\${prefix}/include%includedir=${HERE}/include%" ${HERE}/lib/pkgconfig/libdpdk.pc

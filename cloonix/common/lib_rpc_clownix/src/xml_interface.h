@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -137,6 +137,7 @@
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
                          "  <vm_config_flags> %d </vm_config_flags>\n"\
+                         "  <vm_config_param> %d </vm_config_param>\n"\
                          "  <cpu> %d </cpu>\n"\
                          "  <mem> %d </mem>\n"\
                          "  <nb_dpdk> %d </nb_dpdk>\n"\
@@ -342,7 +343,7 @@
                               "  linux_kernel: %s \n"\
                               "  rootfs_used: %s \n"\
                               "  rootfs_backing: %s \n"\
-                              "  vm_id: %d vm_config_flags: %d \n"\
+                              "  vm_id: %d vm_config_flags: %d vm_config_param: %d \n"\
                               "  nb_dpdk: %d nb_eth: %d nb_wlan: %d \n"\
                               "  mem: %d cpu: %d \n"
 

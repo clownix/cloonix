@@ -1,6 +1,6 @@
 diff -Naur dpdk/drivers/net/tap/rte_eth_tap.h dpdk_tainted/drivers/net/tap/rte_eth_tap.h
---- dpdk/drivers/net/tap/rte_eth_tap.h	2020-02-08 12:53:31.000000000 +0100
-+++ dpdk_tainted/drivers/net/tap/rte_eth_tap.h	2020-02-08 13:00:44.081769201 +0100
+--- dpdk/drivers/net/tap/rte_eth_tap.h	2020-03-22 09:27:35.000000000 +0100
++++ dpdk_tainted/drivers/net/tap/rte_eth_tap.h	2020-03-29 12:21:10.081837127 +0200
 @@ -18,11 +18,11 @@
  #include <rte_gso.h>
  #include "tap_log.h"
@@ -13,13 +13,13 @@ diff -Naur dpdk/drivers/net/tap/rte_eth_tap.h dpdk_tainted/drivers/net/tap/rte_e
 +// #else
  #define RTE_PMD_TAP_MAX_QUEUES	1
 -#endif
-+// #endif
++//#endif
  #define MAX_GSO_MBUFS 64
  
  enum rte_tuntap_type {
 diff -Naur dpdk/lib/librte_eal/linux/eal/eal.c dpdk_tainted/lib/librte_eal/linux/eal/eal.c
---- dpdk/lib/librte_eal/linux/eal/eal.c	2020-02-08 12:53:31.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/linux/eal/eal.c	2020-02-08 13:00:44.081769201 +0100
+--- dpdk/lib/librte_eal/linux/eal/eal.c	2020-03-22 09:27:35.000000000 +0100
++++ dpdk_tainted/lib/librte_eal/linux/eal/eal.c	2020-03-29 12:19:54.409684090 +0200
 @@ -113,13 +113,13 @@
  	char tmp[PATH_MAX];
  	int ret;

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -28,6 +28,7 @@
 #include "ioc.h"
 
 #include "ovs_execv.h"
+
 
 #define CLOONIX_CMD_LOG  "cloonix_ovs_req.log"
 
@@ -136,16 +137,24 @@ static int my_popen(char *dpdk_dir, char *argv[], char *env[])
 /*****************************************************************************/
 int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
 {
+  static int protect_reentry = 0;
   int i, result = 0;
   char *argv[NB_ARG];
   memset(argv, 0, NB_ARG * sizeof(char *));
   for (i=0; i<nb; i++)
     argv[i] = arg[i];
+  while(protect_reentry)
+    {
+    KERR("REENTRY my_popen");
+    usleep(10000);
+    }
+  protect_reentry = 1;
   if (my_popen(dpdk_dir, argv, g_environ))
     {
     KERR("%s", make_cmd_str(argv));
     result = -1;
     }
+  protect_reentry = 0;
   return result;
 }
 /*---------------------------------------------------------------------------*/

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -109,6 +109,7 @@ enum
   {
   auto_idle = 0,
   auto_create_disk,
+  auto_delay_possible_ovs_start,
   auto_create_vm_launch,
   auto_create_vm_connect,
   auto_max,
@@ -139,10 +140,14 @@ static int get_wake_up_eths(char *name, t_vm **vm,
 /****************************************************************************/
 static void static_vm_timeout(void *data)
 {
-  t_wake_up_eths *wake_up_eths = (t_wake_up_eths *) data;
-  if (!wake_up_eths)
-    KOUT(" ");
-  qemu_vm_automaton(NULL, 0, wake_up_eths->name);
+  char *name = (char *) data;
+  t_wake_up_eths *wake_up_eths;
+  t_vm *vm;
+  if (get_wake_up_eths(name, &vm, &wake_up_eths))
+    KERR("%s", name);
+  else
+    qemu_vm_automaton(NULL, 0, name);
+  clownix_free(data, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -617,6 +622,7 @@ static char *qemu_cmd_format(t_vm *vm)
                     path_qemu_exe, cfg_get_bin_dir(), QEMU_BIN_DIR);
     len += create_linux_cmd_kvm(vm, cmd+len);
     }
+  len += sprintf(cmd+len, " 2>/tmp/qemu_%s", vm->kvm.name);
   return cmd;
 }
 /*--------------------------------------------------------------------------*/
@@ -690,12 +696,36 @@ static void timer_launch_end(void *data)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void timer_qemu_monitor_name(void *data)
+{
+  char *name = (char *) data;
+  t_vm   *vm = cfg_get_vm(name);
+  int pid;
+  if (vm)
+    {
+    pid = utils_get_pid_of_machine(vm);
+    if ((pid == 0) && (vm->vm_to_be_killed == 0))
+      {
+      KERR("ERROR QEMU PID ABSENT (%d, %d)", vm->pid_returned_clone, vm->pid);
+      machine_death(name, error_death_pid_diseapeared);
+      }
+    else
+      clownix_timeout_add(10, timer_qemu_monitor_name, data, NULL, NULL);
+    }
+  else
+    {
+    clownix_free(data, __FUNCTION__);
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void launcher_death(void *data, int status, char *name)
 {
   int i;
   char *time_name;
+  char *qemu_monitor_name;
   char **argv = (char **) data;
   for (i=0; argv[i] != NULL; i++)
     clownix_free(argv[i], __FUNCTION__);
@@ -703,6 +733,11 @@ static void launcher_death(void *data, int status, char *name)
   time_name = clownix_malloc(MAX_NAME_LEN, 5);
   memset(time_name, 0, MAX_NAME_LEN);
   strncpy(time_name, name, MAX_NAME_LEN-1);
+  qemu_monitor_name = clownix_malloc(MAX_NAME_LEN, 5);
+  memset(qemu_monitor_name, 0, MAX_NAME_LEN);
+  strncpy(qemu_monitor_name, name, MAX_NAME_LEN-1);
+  clownix_timeout_add(10, timer_qemu_monitor_name,
+                      (void *) qemu_monitor_name, NULL, NULL);
   clownix_timeout_add(500, timer_launch_end, (void *) time_name, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
@@ -721,6 +756,7 @@ static void launch_qemu_vm(t_vm *vm)
     KERR("%s", vm->kvm.name);
   else
     {
+    vm->pid_returned_clone = pid;
     for (i=vm->kvm.nb_dpdk; i<vm->kvm.nb_dpdk+vm->kvm.nb_eth; i++)
       {
       if (endp_mngt_kvm_pid_clone(vm->kvm.name, i, pid))
@@ -759,12 +795,23 @@ static void added_nat_cisco_done(void *data)
       (endp_mngt_exists(cisco_nat_name, 0, &endp_type)) &&
       (endp_type == endp_type_nat))
     {
-    if (endp_evt_add_lan(0, 0, name, 0, lan_cisco_nat_name, 0))
+    if (endp_evt_add_lan(0,0,name,vm->kvm.vm_config_param,lan_cisco_nat_name,0))
       KERR("%s", name);
     else if (endp_evt_add_lan(0,0,cisco_nat_name,0,lan_cisco_nat_name,0))
       KERR("%s", name);
     }
   free(name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void arm_static_vm_timeout(char *name, int delay)
+{
+  char *nm;
+  nm = (char *) clownix_malloc(MAX_NAME_LEN, 9);
+  memset(nm, 0, MAX_NAME_LEN);
+  strncpy(nm, name, MAX_NAME_LEN-1);
+  clownix_timeout_add(delay, static_vm_timeout, (void *)nm, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -795,13 +842,38 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
   switch (state)
     {
     case auto_idle:
-      wake_up->state = auto_create_vm_launch;
+      wake_up->state = auto_delay_possible_ovs_start;
       if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
-        clownix_timeout_add(1, static_vm_timeout, (void *)wake_up,NULL,NULL);
+        arm_static_vm_timeout(name, 1);
       else if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_EVANESCENT)
         derived_file_creation_request(vm);
       else
         KOUT("%X", vm->kvm.vm_config_flags);
+      break;
+    case auto_delay_possible_ovs_start:
+      if (vm->kvm.nb_dpdk)
+        {
+        wake_up->dpdk_count += 1;
+        if (wake_up->dpdk_count > 20)
+          {
+          KERR("ERROR dpdk ovs start when creating %s\n", name);
+          sprintf(err, "ERROR dpdk ovs start when creating %s\n", name);
+          event_print(err);
+          send_status_ko(wake_up->llid, wake_up->tid, err);
+          utils_launched_vm_death(name, error_death_qemuerr);
+          }
+        else
+          {
+          arm_static_vm_timeout(name, 100);
+          }
+        if (dpdk_ovs_muovs_ready())
+          wake_up->state = auto_create_vm_launch;
+        }
+      else
+        {
+        wake_up->state = auto_create_vm_launch;
+        arm_static_vm_timeout(name, 1);
+        }
       break;
     case auto_create_vm_launch:
       wake_up->state = auto_create_vm_connect;
@@ -817,7 +889,7 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
           KERR("WLAN %s %d", vm->kvm.name, i);
         }
       launch_qemu_vm(vm);
-      clownix_timeout_add(100, static_vm_timeout, (void *)wake_up,NULL,NULL);
+      arm_static_vm_timeout(name, 100);
       break;
     case auto_create_vm_connect:
       timer_utils_finish_vm_init(name, 4000);

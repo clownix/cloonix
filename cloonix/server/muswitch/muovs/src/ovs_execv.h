@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2019 cloonix@cloonix.net License AGPL-3             */
+/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -21,47 +21,30 @@
 #define NB_ARG 50
 void init_environ(char *ovs_bin, char *dpdk_dir);
 int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN]);
-int ovs_execv_add_lan(t_all_ctx *all_ctx, char *ovs_bin,
-                      char *dpdk_dir, char *lan_name);
+int ovs_execv_add_lan(char *ovs_bin, char *dpdk_dir, char *lan_name);
 
-int ovs_execv_del_lan(t_all_ctx *all_ctx, char *ovs_bin,
-                      char *dpdk_dir, char *lan_name);
+int ovs_execv_del_lan(char *ovs_bin, char *dpdk_dir, char *lan_name);
 
-int ovs_execv_add_lan_eth(t_all_ctx *all_ctx, char *ovs_bin,
-                          char *dpdk_dir, char *lan_name,
+int ovs_execv_add_lan_eth(char *ovs_bin, char *dpdk_dir, char *lan_name,
                           char *vm_name, int num);
 
-int ovs_execv_del_lan_eth(t_all_ctx *all_ctx, char *ovs_bin,
-                          char *dpdk_dir, char *lan_name,
+int ovs_execv_del_lan_eth(char *ovs_bin, char *dpdk_dir, char *lan_name,
                           char *vm_name, int num);
 
-int ovs_execv_add_eth(t_all_ctx *all_ctx,
-                      char *ovs_bin, char *dpdk_dir,
-                      char *name, int num);
+int ovs_execv_add_eth(char *ovs_bin, char *dpdk_dir, char *name, int num);
 
-int ovs_execv_add_spy(t_all_ctx *all_ctx,
-                      char *ovs_bin, char *dpdk_dir,
-                      char *lan, int spy);
+int ovs_execv_del_eth(char *ovs_bin, char *dpdk_dir, char *name, int num);
 
-int ovs_execv_add_spy_eth(t_all_ctx *all_ctx,
-                          char *ovs_bin, char *dpdk_dir,
-                          char *lan, char *name, int num);
+int ovs_execv_add_tap(char *ovs_bin, char *dpdk_dir, char *name);
 
-int ovs_execv_add_spy_tap(t_all_ctx *all_ctx,
-                          char *ovs_bin, char *dpdk_dir,
+int ovs_execv_del_tap(char *ovs_bin, char *dpdk_dir, char *name);
+
+int ovs_execv_add_lan_tap(char *ovs_bin, char *dpdk_dir,
                           char *lan, char *name);
 
-int ovs_execv_del_eth(t_all_ctx *all_ctx,
-                      char *ovs_bin, char *dpdk_dir,
-                      char *name, int num);
-
-int ovs_execv_daemon(t_all_ctx *all_ctx, int is_switch,
-                     char *ovs_bin, char *dpdk_dir);
-
-int ovs_execv_add_lan_tap(t_all_ctx *all_ctx, char *ovs_bin,
-                          char *dpdk_dir, char *lan, char *name);
-
-int ovs_execv_del_lan_tap(t_all_ctx *all_ctx, char *ovs_bin,
-                          char *dpdk_dir, char *lan, char *name);
+int ovs_execv_del_lan_tap(char *ovs_bin, char *dpdk_dir,
+                          char *lan, char *name);
 
 int ovs_execv_get_tap_mac(char *name, t_eth_params *eth_params);
+
+int ovs_execv_daemon(int is_switch, char *ovs_bin, char *dpdk_dir);
