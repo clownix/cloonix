@@ -34,9 +34,8 @@ MOST FREQUENT PB: Not enough Huge pages, 2 Huge pages are hardcoded in
 cat /var/log/user.log
 cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
 
-Feature not used in my usual work, perf is usualy not needed in the
-Proof Of Concepts cloonix is used for.
-Tested only on buster. 
+Feature not used in my usual work, this may change soon.
+Tested mostly on buster. 
 -----------------------------------------------------------------------------
 
 
