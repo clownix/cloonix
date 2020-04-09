@@ -31,7 +31,8 @@ fi
 for i in etc sbin share usr var; do
   rm -rf ${HERE}/${i}
 done
-rm ${HERE}/lib/librte_\*.so\*
+rm -f ${HERE}/lib/librte_\*.so\*
+rm -f ${HERE}/lib/*.a
 
 sed -i s"%libdir=\${prefix}/lib64%libdir=${HERE}/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc
 sed -i s"%libdir=\${prefix}/lib/x86_64-linux-gnu%libdir=${HERE}/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc

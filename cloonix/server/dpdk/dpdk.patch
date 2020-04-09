@@ -1,6 +1,6 @@
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2020-04-07 00:17:50.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2020-04-09 15:24:23.275698596 +0200
+--- dpdk/drivers/meson.build	2020-04-06 22:17:50.000000000 +0000
++++ dpdk_tainted/drivers/meson.build	2020-04-09 21:21:09.824000000 +0000
 @@ -150,6 +150,7 @@
  				objects: objs,
  				include_directories: includes,
@@ -18,8 +18,8 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  
  			# create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/tap/rte_eth_tap.h dpdk_tainted/drivers/net/tap/rte_eth_tap.h
---- dpdk/drivers/net/tap/rte_eth_tap.h	2020-04-07 00:17:50.000000000 +0200
-+++ dpdk_tainted/drivers/net/tap/rte_eth_tap.h	2020-04-09 15:24:23.275698596 +0200
+--- dpdk/drivers/net/tap/rte_eth_tap.h	2020-04-06 22:17:50.000000000 +0000
++++ dpdk_tainted/drivers/net/tap/rte_eth_tap.h	2020-04-09 21:21:09.824000000 +0000
 @@ -18,11 +18,11 @@
  #include <rte_gso.h>
  #include "tap_log.h"
@@ -36,9 +36,21 @@ diff -Naur dpdk/drivers/net/tap/rte_eth_tap.h dpdk_tainted/drivers/net/tap/rte_e
  #define MAX_GSO_MBUFS 64
  
  enum rte_tuntap_type {
+diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/librte_eal/common/eal_common_options.c
+--- dpdk/lib/librte_eal/common/eal_common_options.c	2020-04-06 22:17:50.000000000 +0000
++++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-04-09 21:22:47.496000000 +0000
+@@ -104,7 +104,7 @@
+ TAILQ_HEAD_INITIALIZER(solib_list);
+ 
+ /* Default path of external loadable drivers */
+-static const char *default_solib_dir = RTE_EAL_PMD_PATH;
++static const char *default_solib_dir = "/usr/local/bin/cloonix/server/dpdk/lib";
+ 
+ /*
+  * Stringified version of solib path used by dpdk-pmdinfo.py
 diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal.c
---- dpdk/lib/librte_eal/linux/eal.c	2020-04-07 00:17:50.000000000 +0200
-+++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-04-09 15:24:23.275698596 +0200
+--- dpdk/lib/librte_eal/linux/eal.c	2020-04-06 22:17:50.000000000 +0000
++++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-04-09 21:21:09.824000000 +0000
 @@ -113,13 +113,13 @@
  	char tmp[PATH_MAX];
  	int ret;
@@ -56,8 +68,8 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
  	if (ret < 0 || ret == sizeof(tmp)) {
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2020-04-07 00:17:50.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2020-04-09 15:24:23.275698596 +0200
+--- dpdk/lib/meson.build	2020-04-06 22:17:50.000000000 +0000
++++ dpdk_tainted/lib/meson.build	2020-04-09 21:21:09.824000000 +0000
 @@ -126,6 +126,7 @@
  					c_args: cflags,
  					dependencies: static_deps,
@@ -75,8 +87,8 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
  			shared_dep = declare_dependency(link_with: shared_lib,
  					include_directories: includes,
 diff -Naur dpdk/meson_options.txt dpdk_tainted/meson_options.txt
---- dpdk/meson_options.txt	2020-04-07 00:17:50.000000000 +0200
-+++ dpdk_tainted/meson_options.txt	2020-04-09 15:24:23.275698596 +0200
+--- dpdk/meson_options.txt	2020-04-06 22:17:50.000000000 +0000
++++ dpdk_tainted/meson_options.txt	2020-04-09 21:21:09.824000000 +0000
 @@ -4,11 +4,11 @@
  	description: 'path to the armv8_crypto library installation directory')
  option('disable_drivers', type: 'string', value: '',
