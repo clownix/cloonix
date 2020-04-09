@@ -1,7 +1,0 @@
-#!/bin/bash
-export OVS_BINDIR="/usr/local/bin/cloonix/server/dpdk"
-export OVS_RUNDIR="/home/perrier/cloonix_data/nemo/dpdk"
-export OVS_LOGDIR="/home/perrier/cloonix_data/nemo/dpdk"
-export OVS_DBDIR="/home/perrier/cloonix_data/nemo/dpdk"
-export XDG_RUNTIME_DIR="/home/perrier/cloonix_data/nemo/dpdk"
-${OVS_BINDIR}/bin/ovs-vsctl --db=unix:${OVS_DBDIR}/ovsdb_server.sock "$@"

@@ -1,0 +1,11 @@
+#!/bin/bash
+HERE=`pwd`
+
+for i in ovs_tainted ovs bin etc include lib sbin share var ; do
+  rm -rf ${HERE}/$i
+done
+
+
+
+
+

@@ -25,9 +25,7 @@ cd ${TARGET}
 tar xvf ${TARGZ}/usbredir.tar.gz
 cd usbredir
 
-./configure --prefix=${TARGET} \
-            --libdir=${TARGET} \
-            --enable-python-checks
+./configure --prefix=${TARGET} --libdir=${TARGET} 
 
 make clean
 make

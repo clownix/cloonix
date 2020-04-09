@@ -1,0 +1,9 @@
+#!/bin/bash
+HERE=`pwd`
+
+rm -rf ${HERE}/usr
+rm -rf ${HERE}/tldk
+rm -f ${HERE}/l4fwd
+
+
+

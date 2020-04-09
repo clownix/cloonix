@@ -545,14 +545,20 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     }
   else if (!mycmp(line, "cloonixovs_req_ovs"))
     {
-    snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ok");
-    if (g_ovs_launched == 0)
+    if (g_ovsdb_pid <= 0)
+      snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ko");
+    else
       {
-      g_ovs_launched = 1;
-      g_ovs_pid = ovs_execv_daemon(1, bin, db);
-      if (g_ovs_pid <= 0)
-        snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ko");
-      usleep(300000);
+      snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ok");
+      if (g_ovs_launched == 0)
+        {
+        g_ovs_launched = 1;
+        g_ovs_pid = ovs_execv_daemon(1, bin, db);
+        if (g_ovs_pid <= 0)
+          snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ko");
+        else
+          usleep(300000);
+        }
       }
     }
   else if (add_eth_req(line, name, &num, eth_params))
@@ -579,9 +585,9 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     del_lan_tap_br(respb, lan, name);
   else if (!strcmp(line, "cloonixovs_req_destroy"))
     { 
-    if (g_ovs_pid)
+    if (g_ovs_pid > 0)
       kill(g_ovs_pid, SIGKILL);
-    if (g_ovsdb_pid)
+    if (g_ovsdb_pid > 0)
       kill(g_ovsdb_pid, SIGKILL);
     usleep(10000);
     unlink_dir(g_dpdk_dir);
@@ -651,12 +657,12 @@ static void cloonix_connect(void *ptr, int llid, int llid_new)
 /*****************************************************************************/
 static void cmd_interrupt(int signo)
 {
-  if (g_ovs_pid)
+  if (g_ovs_pid > 0)
     {
     if (kill(g_ovs_pid, SIGKILL))
       KOUT("Received SIGKILL no kill %d", g_ovs_pid);
     }
-  if (g_ovsdb_pid)
+  if (g_ovsdb_pid > 0)
     {
     if (kill(g_ovsdb_pid, SIGKILL))
       KOUT("Received SIGKILL no kill %d", g_ovsdb_pid);
@@ -727,7 +733,8 @@ int main (int argc, char *argv[])
   memcpy(g_ovs_bin, argv[4], MAX_PATH_LEN-1);
   memcpy(g_dpdk_dir, argv[5], MAX_PATH_LEN-1);
   if (strncmp("/home/", g_dpdk_dir, strlen("/home/")))
-    KOUT("Too risky to erase %s/dpdk", g_dpdk_dir);
+    if (strncmp("/root/", g_dpdk_dir, strlen("/root/")))
+      KOUT("Too risky to erase %s/dpdk Accepted: /home or /root", g_dpdk_dir);
   unlink_dir(g_dpdk_dir);
   signal(SIGINT, cmd_interrupt);
   all_ctx = cloonix_part_init(ctl_argv);

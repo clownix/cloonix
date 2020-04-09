@@ -87,10 +87,20 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -f ${CLOONIX_SERVER}/dtach/cmd
   rm -f ${CLOONIX_SERVER}/dtach/dtach_source.tar.gz
 #----------------------------------------------------------
-for i in allclean cmd dpdk ovs dpdk_mkpatch dpdk.patch \
-         dpdk_patched_create dpdk.sh ovs_mkpatch \
-         ovs.patch ovs_patched_create ovs.sh ring_client; do
+  for i in allclean cmd dpdk dpdk.patch etc include \
+           mkpatch patched_create sbin usr var ovs ; do
     rm -rf ${CLOONIX_SERVER}/dpdk/${i}
+  done
+#----------------------------------------------------------
+  for i in allclean cmd ovs ovs.patch \
+           mkpatch patched_create ; do
+    rm -rf ${CLOONIX_SERVER}/ovs/${i}
+  done
+  rm -rf ${CLOONIX_SERVER}/ovs
+#----------------------------------------------------------
+  for i in allclean cmd tldk tldk.patch \
+           mkpatch patched_create ; do
+    rm -rf ${CLOONIX_SERVER}/tldk/${i}
   done
 #----------------------------------------------------------
   rm -rf ${CLOONIX_CLIENT}/lib_client

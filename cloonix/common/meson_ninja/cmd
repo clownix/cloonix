@@ -6,4 +6,4 @@ tar xvf ${TARGZSTORE}/ninja.tar.gz
 cd ${HERE}/ninja
 sed -i s"%/usr/bin/env python%/usr/bin/env python3%" configure.py
 ./configure.py --bootstrap
-
+exit 0

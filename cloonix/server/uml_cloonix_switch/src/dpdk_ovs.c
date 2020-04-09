@@ -709,7 +709,7 @@ void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
       {
       KERR("ERROR: cloonix_ovs is not suid root");
       KERR("%s", "\"sudo chmod u+s /usr/local/bin/cloonix"
-                 "/server/dpdk/sbin/ovs-vswitchd\"");
+                 "/server/dpdk/bin/ovs-vswitchd\"");
       KERR(" destroy_requested for %s", cur->name);
       cur->destroy_requested = 1;
       }

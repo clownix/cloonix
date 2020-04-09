@@ -34,8 +34,8 @@
 #include "ioc.h"
 #include "ovs_execv.h"
 
-#define OVSDB_SERVER_BIN  "sbin/ovsdb-server"
-#define OVS_VSWITCHD_BIN  "sbin/ovs-vswitchd"
+#define OVSDB_SERVER_BIN  "bin/ovsdb-server"
+#define OVS_VSWITCHD_BIN  "bin/ovs-vswitchd"
 #define OVSDB_TOOL_BIN    "bin/ovsdb-tool"
 #define SCHEMA_TEMPLATE   "share/openvswitch/vswitch.ovsschema"
 
@@ -249,11 +249,10 @@ static int create_ovsdb_server_conf(char *ovs_bin, char *dpdk_dir)
 {
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
   snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVSDB_TOOL_BIN);
-  snprintf(g_arg[1],MAX_ARG_LEN-1,"-v");
-  snprintf(g_arg[2],MAX_ARG_LEN-1,"create");
-  snprintf(g_arg[3],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, OVSDB_SERVER_CONF);
-  snprintf(g_arg[4],MAX_ARG_LEN-1,"%s/%s", ovs_bin, SCHEMA_TEMPLATE);
-  return (call_my_popen(dpdk_dir, 5, g_arg));
+  snprintf(g_arg[1],MAX_ARG_LEN-1,"create");
+  snprintf(g_arg[2],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, OVSDB_SERVER_CONF);
+  snprintf(g_arg[3],MAX_ARG_LEN-1,"%s/%s", ovs_bin, SCHEMA_TEMPLATE);
+  return (call_my_popen(dpdk_dir, 4, g_arg));
 }
 /*---------------------------------------------------------------------------*/
 
@@ -317,8 +316,7 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *dpdk_dir)
   else
     {
     result = wait_read_pid_file(dpdk_dir, OVS_VSWITCHD_PID);
-    sleep(2);
-    appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:syslog:err");
+    appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:syslog:warn");
     appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:file:info");
 //    appctl_debug_fix(ovs_bin, dpdk_dir, "netdev_dpdk:syslog:warn");
 //    appctl_debug_fix(ovs_bin, dpdk_dir, "netdev_dpdk:file:dbg");
@@ -531,33 +529,36 @@ int ovs_execv_daemon(int is_switch, char *ovs_bin, char *dpdk_dir)
     }
   else
     {
+    usleep(10000);
     if (!create_ovsdb_server_conf(ovs_bin, dpdk_dir))
       {
+      usleep(10000);
       pid = launch_ovs_server(ovs_bin, dpdk_dir);
+      usleep(10000);
       if (pid <= 0)
         KERR(" ");
       else
         {
         result = pid;
-        if (ovs_vsctl(ovs_bin, dpdk_dir, 
-        "--verbose --no-wait init"))
+        if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait init"))
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir,
-        "--verbose --no-wait set Open_vSwitch . "
+        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
+        "other_config:dpdk-extra='-d/usr/local/bin/cloonix/server/dpdk/lib/librte_mempool_ring.so'"))
+          result = -1;
+        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
         "other_config:pmd-cpu-mask=0x03"))
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir,
-        "--verbose --no-wait set Open_vSwitch . "
+        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
         "other_config:dpdk-lcore-mask=0x03"))
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir,
-        "--verbose --no-wait set Open_vSwitch . "
-        "other_config:dpdk-socket-mem=2048"))
+        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
+        "other_config:dpdk-socket-mem=1024"))
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir,
-        "--verbose --no-wait set Open_vSwitch . "
+        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
         "other_config:dpdk-init=true"))
           result = -1;
+        if (result == -1)
+          kill(pid, SIGKILL);
         }
       }
     }

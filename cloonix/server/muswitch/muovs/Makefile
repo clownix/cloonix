@@ -47,7 +47,7 @@ $(OBJ_DIR)%.o: %.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 $(EXE): $(OBJS)
-	$(CC) $(LDFLAGS) $^ $(LDFLAGS) $(LIBS) -o $(EXE) 
+	$(CC) $^ $(LDFLAGS) $(LIBS) -o $(EXE) 
 
 clean:
 	@-rm -vf $(OBJ_DIR)*.o $(EXE) 

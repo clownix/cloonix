@@ -1,0 +1,45 @@
+#!/bin/bash
+HERE=`pwd`
+NINJA=${HERE}/../../common/meson_ninja
+DPDK=${HERE}/../dpdk
+TARGZSTORE=../../../targz_store
+NAMEZ=ovs.tar.gz
+NAME=ovs
+./allclean
+if [ ! -f ${NINJA}/ninja/ninja ]; then
+  cd ${NINJA}
+  ./cmd
+fi
+if [ ! -f ${DPDK}/bin/dpdk-testpmd ]; then
+  cd ${DPDK}
+  ./cmd
+fi
+cd ${HERE}
+tar xvf ${TARGZSTORE}/${NAMEZ}
+cd ${HERE}/${NAME}
+patch -p1 < ${HERE}/ovs.patch
+./boot.sh
+export PKG_CONFIG_PATH=${DPDK}/lib/pkgconfig
+export DPDK_LIBS="$(pkg-config --libs --static libdpdk)"
+sed -i s"%-ldpdk%${DPDK_LIBS}%" ./configure
+./configure CFLAGS=-mavx --prefix=${HERE} --with-dpdk=${DPDK}
+make -j 6
+cd ${HERE}
+
+for i in ovsdb-client ovsdb-server ovsdb-tool; do
+  cp -f ${HERE}/${NAME}/ovsdb/${i} ${DPDK}/bin
+done
+
+for i in ovs-appctl ovs-ofctl ovs-vsctl; do
+  cp -f ${HERE}/${NAME}/utilities/${i} ${DPDK}/bin
+done
+
+cp -f ${HERE}/${NAME}/vswitchd/ovs-vswitchd ${DPDK}/bin
+
+mkdir -p ${DPDK}/share/openvswitch
+cp -f ${HERE}/${NAME}/vswitchd/vswitch.ovsschema ${DPDK}/share/openvswitch
+
+for i in ovs_tainted ovs ; do
+  rm -rf ${HERE}/$i
+done
+

@@ -2,12 +2,11 @@
 #-----------------------------------------------------------------------#
 HERE=`pwd`
 
-OPENWRT=http://lede-project.tetaneutral.net/snapshots/targets/x86/64
-
+OPENWRT=https://downloads.openwrt.org/releases/19.07.2/targets/x86/64
 ROOTFS=/root/openwrt
 OFFSET=17301504
 OFFSET_BOOT=262144
-OPENWRT_IMG=openwrt-x86-64-combined-ext4.img
+OPENWRT_IMG=openwrt-19.07.2-x86-64-combined-ext4.img
 
 for i in qemu-img gunzip wget; do
   path_bin=$(which $i)

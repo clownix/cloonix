@@ -1,8 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
-NET=fido
+NET=nemo
 NAME=cloon
-CLOONIX=/home/cloonix
 QCOW2=fedora31.qcow2
 releasever=31
 basearch=x86_64
@@ -60,18 +59,18 @@ while ! cloonix_ssh $NET ${NAME} "echo" 2>/dev/null; do
 done
 set -e
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "mkdir -p ${CLOONIX}/cloonix_data/bulk"
+cloonix_ssh $NET ${NAME} "mkdir -p /root/cloonix_data/bulk"
 #----------------------------------------------------------------------
 cd ${HERE}/../..
 ./allclean
 cd ${HERE}/../../..
 mkdir -p /tmp/${NET}
 tar zcvf /tmp/${NET}/sources.tar.gz ./sources
-cloonix_scp $NET /tmp/${NET}/sources.tar.gz ${NAME}:${CLOONIX}
+cloonix_scp $NET /tmp/${NET}/sources.tar.gz ${NAME}:/root
 rm -rf /tmp/${NET}
 cd ${HERE}
 #----------------------------------------------------------------------
-cloonix_scp $NET ${BULK}/buster.qcow2 ${NAME}:${CLOONIX}/cloonix_data/bulk
+cloonix_scp $NET ${BULK}/buster.qcow2 ${NAME}:/root/cloonix_data/bulk
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "dhclient"
 #----------------------------------------------------------------------
@@ -111,15 +110,13 @@ EOF"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "dnf update -y; dnf -y install tar"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "cd ${CLOONIX}; tar xvf sources.tar.gz"
+cloonix_ssh $NET ${NAME} "tar xvf sources.tar.gz"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "rm ${CLOONIX}/sources.tar.gz"
+cloonix_ssh $NET ${NAME} "rm sources.tar.gz"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "cd ${CLOONIX}/sources ; ./install_depends"
+cloonix_ssh $NET ${NAME} "cd sources ; ./install_depends"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "cd ${CLOONIX}/sources ; ./doitall"
-cloonix_ssh $NET ${NAME} "sed -i s%\\\${HOME}%/home/cloonix% "\
-                         "/usr/local/bin/cloonix/cloonix_config"
+cloonix_ssh $NET ${NAME} "cd sources ; ./doitall"
 #----------------------------------------------------------------------
 
 

@@ -53,8 +53,8 @@ fct_get_redhat_packages()
          python3-six gstreamer1-plugins-base-devel libepoxy-devel \
          polkit-devel libacl-devel dejavu-serif-fonts orc-devel \
          mesa-libEGL-devel bison flex wireshark libusbx-devel bzip2 \
-         python3-pyparsing numactl-devel kernel-headers \
-         json-glib-devel mesa-libgbm-devel opus-devel 
+         python3-pyparsing numactl-devel json-glib-devel mesa-libgbm-devel \
+         opus-devel kernel-devel elfutils-libelf-devel
 
 }
 #--------------------------------------------------------------------------
@@ -68,8 +68,9 @@ fct_get_opensuse_packages()
          python3-six gstreamer-plugins-base-devel libepoxy-devel \
          polkit-devel libacl-devel orc-devel libusb-1_0-devel \
          Mesa-libEGL-devel bison flex wireshark python3-pyparsing \
-         libnuma-devel kernel-headers json-glib-devel bzip2 \
-         libgbm-devel libopus-devel rxvt-unicode xorriso libdrm-devel 
+         libnuma-devel json-glib-devel bzip2 libgbm-devel \
+         libopus-devel rxvt-unicode xorriso libdrm-devel \
+         kernel-devel libelf-devel
 }
 #--------------------------------------------------------------------------
 if [ $UID != 0 ]; then

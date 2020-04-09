@@ -1,4 +1,40 @@
 #!/bin/bash
-set -e
-./dpdk.sh
-./ovs.sh
+HERE=`pwd`
+TARGZSTORE=${HERE}/../../../targz_store
+NINJA=${HERE}/../../common/meson_ninja
+NAME=dpdk
+NAMEZ=${NAME}.tar.gz
+./allclean
+if [ ! -f ${NINJA}/ninja/ninja ]; then
+  cd ${NINJA}
+  ./cmd
+fi
+cd ${HERE}
+tar xvf ${TARGZSTORE}/${NAMEZ}
+cd ${HERE}/${NAME}
+echo patch -p1 < ${HERE}/dpdk.patch
+patch -p1 < ${HERE}/dpdk.patch
+sleep 2
+export PATH=${NINJA}/ninja:$PATH
+${NINJA}/meson/meson.py build
+cd ${HERE}/${NAME}/build
+ninja
+DESTDIR=${HERE} ninja install
+cp -vrf ${HERE}/usr/local/bin     ${HERE}
+cp -vrf ${HERE}/usr/local/include ${HERE}
+mkdir -p ${HERE}/lib
+if [ -d ${HERE}/usr/local/lib64 ]; then
+  cp -vrf ${HERE}/usr/local/lib64/* ${HERE}/lib
+else
+  cp -vrf ${HERE}/usr/local/lib/x86_64-linux-gnu/* ${HERE}/lib
+fi
+for i in etc sbin share usr var; do
+  rm -rf ${HERE}/${i}
+done
+rm ${HERE}/lib/librte_\*.so\*
+
+sed -i s"%libdir=\${prefix}/lib64%libdir=${HERE}/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc
+sed -i s"%libdir=\${prefix}/lib/x86_64-linux-gnu%libdir=${HERE}/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc
+sed -i s"%includedir=\${prefix}/include%includedir=${HERE}/include%" ${HERE}/lib/pkgconfig/libdpdk.pc
+sed -i s"%{libdir}%{libdir} -Wl,-rpath,/usr/local/bin/cloonix/server/dpdk/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc
+

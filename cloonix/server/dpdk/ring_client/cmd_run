@@ -1,3 +1,0 @@
-#!/bin/bash
-
-sudo ./ring --proc-type secondary -- $1

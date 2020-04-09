@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
-LIST="arch \
-      centos8 \
+LIST="centos8 \
       fedora31 \
       opensuse152 \
       openwrt \
@@ -20,8 +19,7 @@ for i in ${LIST}; do
   sudo rm -f /root/${i}.qcow2
 done
 
-LIST="arch \
-      centos8 \
+LIST="centos8 \
       fedora31 \
       opensuse152 \
       openwrt"

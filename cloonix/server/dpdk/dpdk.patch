@@ -1,6 +1,25 @@
+diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
+--- dpdk/drivers/meson.build	2020-04-07 00:17:50.000000000 +0200
++++ dpdk_tainted/drivers/meson.build	2020-04-09 15:24:23.275698596 +0200
+@@ -150,6 +150,7 @@
+ 				objects: objs,
+ 				include_directories: includes,
+ 				dependencies: static_deps,
++                                install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
+ 				c_args: cflags,
+ 				install: true)
+ 
+@@ -191,6 +192,7 @@
+ 				version: lib_version,
+ 				soversion: so_version,
+ 				install: true,
++                                install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
+ 				install_dir: driver_install_path)
+ 
+ 			# create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/tap/rte_eth_tap.h dpdk_tainted/drivers/net/tap/rte_eth_tap.h
---- dpdk/drivers/net/tap/rte_eth_tap.h	2020-03-22 09:27:35.000000000 +0100
-+++ dpdk_tainted/drivers/net/tap/rte_eth_tap.h	2020-03-29 12:21:10.081837127 +0200
+--- dpdk/drivers/net/tap/rte_eth_tap.h	2020-04-07 00:17:50.000000000 +0200
++++ dpdk_tainted/drivers/net/tap/rte_eth_tap.h	2020-04-09 15:24:23.275698596 +0200
 @@ -18,11 +18,11 @@
  #include <rte_gso.h>
  #include "tap_log.h"
@@ -17,9 +36,9 @@ diff -Naur dpdk/drivers/net/tap/rte_eth_tap.h dpdk_tainted/drivers/net/tap/rte_e
  #define MAX_GSO_MBUFS 64
  
  enum rte_tuntap_type {
-diff -Naur dpdk/lib/librte_eal/linux/eal/eal.c dpdk_tainted/lib/librte_eal/linux/eal/eal.c
---- dpdk/lib/librte_eal/linux/eal/eal.c	2020-03-22 09:27:35.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/linux/eal/eal.c	2020-03-29 12:19:54.409684090 +0200
+diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal.c
+--- dpdk/lib/librte_eal/linux/eal.c	2020-04-07 00:17:50.000000000 +0200
++++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-04-09 15:24:23.275698596 +0200
 @@ -113,13 +113,13 @@
  	char tmp[PATH_MAX];
  	int ret;
@@ -36,3 +55,39 @@ diff -Naur dpdk/lib/librte_eal/linux/eal/eal.c dpdk_tainted/lib/librte_eal/linux
  	/* create DPDK subdirectory under runtime dir */
  	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
  	if (ret < 0 || ret == sizeof(tmp)) {
+diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
+--- dpdk/lib/meson.build	2020-04-07 00:17:50.000000000 +0200
++++ dpdk_tainted/lib/meson.build	2020-04-09 15:24:23.275698596 +0200
+@@ -126,6 +126,7 @@
+ 					c_args: cflags,
+ 					dependencies: static_deps,
+ 					include_directories: includes,
++                                        install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
+ 					install: true)
+ 			static_dep = declare_dependency(link_with: static_lib,
+ 					include_directories: includes,
+@@ -179,6 +180,7 @@
+ 					link_depends: lk_deps,
+ 					version: lib_version,
+ 					soversion: so_version,
++                                        install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
+ 					install: true)
+ 			shared_dep = declare_dependency(link_with: shared_lib,
+ 					include_directories: includes,
+diff -Naur dpdk/meson_options.txt dpdk_tainted/meson_options.txt
+--- dpdk/meson_options.txt	2020-04-07 00:17:50.000000000 +0200
++++ dpdk_tainted/meson_options.txt	2020-04-09 15:24:23.275698596 +0200
+@@ -4,11 +4,11 @@
+ 	description: 'path to the armv8_crypto library installation directory')
+ option('disable_drivers', type: 'string', value: '',
+ 	description: 'Comma-separated list of drivers to explicitly disable.')
+-option('drivers_install_subdir', type: 'string', value: 'dpdk/pmds-<VERSION>',
++option('drivers_install_subdir', type: 'string', value: '',
+ 	description: 'Subdirectory of libdir where to install PMDs. Defaults to using a versioned subdirectory.')
+ option('enable_docs', type: 'boolean', value: false,
+ 	description: 'build documentation')
+-option('enable_kmods', type: 'boolean', value: false,
++option('enable_kmods', type: 'boolean', value: true,
+ 	description: 'build kernel modules')
+ option('examples', type: 'string', value: '',
+ 	description: 'Comma-separated list of examples to build by default')

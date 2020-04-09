@@ -53,6 +53,8 @@ done
   sleep 1
 #----------------------------------------------------------
   for i in  dpdk \
+            ovs \
+            tldk \
             doorways \
             uml_cloonix_switch \
             muswitch/lib_ioc \

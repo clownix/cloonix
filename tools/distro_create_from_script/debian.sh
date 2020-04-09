@@ -4,8 +4,10 @@ HERE=`pwd`
 DISTRO=$1
 case "${DISTRO}" in
   "buster")
+    DEFVIM=/tmp/wkmntloops/usr/share/vim/vim81/defaults.vim
     ;;
   "bullseye")
+    DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
     ;;
   *)
     echo ERROR FIRST PARAM: ${DISTRO} Choice: buster bullseye
@@ -15,7 +17,7 @@ esac
 DIST=${DISTRO}
 ROOTFS=/root/${DISTRO}
 DEBIAN_REPO="http://deb.debian.org/debian"
-DEBIAN_REPO="http://127.0.0.1/${DISTRO}"
+#DEBIAN_REPO="http://127.0.0.1/${DISTRO}"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -139,7 +141,6 @@ cd /tmp/wkmntloops/etc/systemd/system/getty.target.wants
 ln -s /etc/systemd/system/serial-getty@hvc0.service serial-getty@hvc0.service 
 cd ${HERE}
 #-----------------------------------------------------------------------#
-DEFVIM=/tmp/wkmntloops/usr/share/vim/vim81/defaults.vim
 sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
 sed -i s"/set mouse/\"set mouse/" $DEFVIM
 #-----------------------------------------------------------------------#

@@ -639,7 +639,6 @@ int dpdk_dyn_is_all_empty(void)
     result = 0;
     dvm_next = dvm->next;
     KERR("%s", dvm->name); 
-    eth_free(dvm->head_eth);
     vm_free(dvm->name);
     dvm = dvm_next;
     }

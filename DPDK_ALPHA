@@ -13,6 +13,8 @@ dpdk, you can do:
                                "hugepagesz=1G hugepages=5" \
                                 >> /etc/default/grub
     update-grub
+or
+    grub2-mkconfig --output=/boot/grub2/grub.cfg
 
 After any of the above commands, the host must be rebooted, then check:
 
@@ -29,13 +31,10 @@ Check the number
     ./dpdk_ping.sh
 
 To track errors in case of failure:
-MOST FREQUENT PB: Not enough Huge pages, 2 Huge pages are hardcoded in
-                  file ovs_execv.c (search for 2048).
-cat /var/log/user.log
+MOST FREQUENT PB: Not enough Huge pages, see file ovs_execv.c for the value needed.
+
 cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
 
-Feature not used in my usual work, this may change soon.
-Tested mostly on buster. 
 -----------------------------------------------------------------------------
 
 

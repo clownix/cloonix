@@ -52,7 +52,7 @@ rm -rf tmpbuild_bis
   done 
   rm -f ${CLOONIX_SERVER}/dtach/dtach
 
-  for i in dpdk ; do
+  for i in dpdk ovs tldk; do
     cd ${CLOONIX_SERVER}/${i}
     ./allclean
   done

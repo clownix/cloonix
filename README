@@ -9,7 +9,7 @@ All opens sources compiled within cloonix such as dpdk, openvswitch, qemu,
 spice, openssh... are stored at:
 clownix.net/downloads/cloonix-<major>-<minor>/targz_store.tar.gz
 
-This version v05-00 is the latest (if this README is up to date).
+This version v05-01 is the latest (if this README is up to date).
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -21,7 +21,7 @@ ajust needed packages.
 
 cd cloonix
 sudo ./install_depends build
-wget http://clownix.net/downloads/cloonix-05-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-05-01/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 ./doitall
 cd -
@@ -31,10 +31,10 @@ HOWTO GET A WORKING VM:
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget http://clownix.net/downloads/cloonix-05-00/bulk/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-05-01/bulk/buster.qcow2.gz
 gunzip buster.qcow2.gz
 
-See other distros at http://clownix.net/downloads/cloonix-05-00/bulk
+See other distros at http://clownix.net/downloads/cloonix-05-01/bulk
 
 If you want to create your own distribution, go to the directory
 tools/distro_create_from_script and try making your own VM.
