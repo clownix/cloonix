@@ -348,34 +348,39 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
     KERR("%d %d", kvm->vm_config_param, ikvm->vm_config_param);
     result = -1;
     }
-  if (kvm->nb_wlan != ikvm->nb_wlan)
+  if (kvm->nb_tot_eth != ikvm->nb_tot_eth)
     {
-    KERR("%d %d", kvm->nb_wlan, ikvm->nb_wlan);
-    result = -1;
-    }
-  if ((kvm->nb_eth != ikvm->nb_eth) || (kvm->nb_dpdk != ikvm->nb_dpdk))
-    {
-    KERR("%d %d    %d %d", kvm->nb_eth, ikvm->nb_eth, kvm->nb_dpdk, ikvm->nb_dpdk);
+    KERR("%d %d", kvm->nb_tot_eth, ikvm->nb_tot_eth);
     result = -1;
     }
   else
     {
-    for (k=0; k < MAX_DPDK_VM + MAX_ETH_VM; k++)
+    for (k=0; k < MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM; k++)
       {
+      if (kvm->eth_table[k].eth_type != ikvm->eth_table[k].eth_type)
+        {
+        KERR("%d %d",kvm->eth_table[k].eth_type,ikvm->eth_table[k].eth_type);
+        result = -1;
+        }
+      if (strcmp(kvm->eth_table[k].vhost_ifname,
+                 ikvm->eth_table[k].vhost_ifname))
+        {
+        KERR("%s %s", kvm->eth_table[k].vhost_ifname,
+                      ikvm->eth_table[k].vhost_ifname);
+        result = -1;
+        }
       for (l=0; l < 6; l++)
         {
-        if (kvm->eth_params[k].mac_addr[l] != ikvm->eth_params[k].mac_addr[l])
+        if (kvm->eth_table[k].mac_addr[l] != ikvm->eth_table[k].mac_addr[l])
           {
-          KERR("%d %d", kvm->eth_params[k].mac_addr[l], 
-                        ikvm->eth_params[k].mac_addr[l]);
+          KERR("%d %d", kvm->eth_table[k].mac_addr[l], 
+                        ikvm->eth_table[k].mac_addr[l]);
           result = -1;
           }
         }
       }
-
-
-    if (memcmp(kvm->eth_params, ikvm->eth_params,
-               (MAX_DPDK_VM + MAX_ETH_VM)*sizeof(t_eth_params)))
+    if (memcmp(kvm->eth_table, ikvm->eth_table,
+       (MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM)*sizeof(t_eth_table)))
       KERR(" ");
     }
   return result;
@@ -409,12 +414,14 @@ static void random_kvm(t_topo_kvm *kvm)
   kvm->mem = rand();
   kvm->vm_config_flags = rand();
   kvm->vm_config_param = rand();
-  kvm->nb_dpdk = my_rand(MAX_DPDK_VM);
-  kvm->nb_eth = my_rand(MAX_ETH_VM);
-  kvm->nb_wlan = my_rand(MAX_WLAN_VM);
-  for (k=0; k < kvm->nb_dpdk + kvm->nb_eth; k++)
+  kvm->nb_tot_eth = my_rand(MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM);
+  for (k=0; k < kvm->nb_tot_eth; k++)
+    {
+    kvm->eth_table[k].eth_type = (rand() & 0x04) + 1;
+    random_choice_str(kvm->eth_table[k].vhost_ifname, IFNAMSIZ-1);
     for (l=0; l < 6; l++)
-      kvm->eth_params[k].mac_addr[l] = rand() & 0xFF;
+      kvm->eth_table[k].mac_addr[l] = rand() & 0xFF;
+    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -446,6 +453,29 @@ static void random_sat(t_topo_sat *sat)
   random_choice_str(sat->name, MAX_NAME_LEN);
   sat->type = rand();
 } 
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void random_phy(t_topo_phy *phy)
+{
+  phy->index = rand();
+  phy->flags = rand();
+  random_choice_str(phy->name, IFNAMSIZ);
+  random_choice_str(phy->drv, IFNAMSIZ);
+  random_choice_str(phy->pci, IFNAMSIZ);
+  random_choice_str(phy->mac, IFNAMSIZ);
+  random_choice_str(phy->vendor, IFNAMSIZ);
+  random_choice_str(phy->device, IFNAMSIZ);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void random_pci(t_topo_pci *pci)
+{
+  random_choice_str(pci->pci, IFNAMSIZ);
+  random_choice_str(pci->drv, MAX_NAME_LEN);
+  random_choice_str(pci->unused, MAX_NAME_LEN);
+}
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -487,6 +517,8 @@ static t_topo_info *random_topo_gen(void)
   topo->nb_snf = my_rand(10);
   topo->nb_sat = my_rand(30);
   topo->nb_endp = my_rand(50);
+  topo->nb_phy = my_rand(10);
+  topo->nb_pci = my_rand(10);
 
   if (topo->nb_kvm)
     {
@@ -535,6 +567,26 @@ static t_topo_info *random_topo_gen(void)
     for (i=0; i<topo->nb_endp; i++)
       random_endp(&(topo->endp[i]));
     }
+
+  if (topo->nb_phy)
+    {
+    topo->phy =
+    (t_topo_phy *)clownix_malloc(topo->nb_phy * sizeof(t_topo_phy),3);
+    memset(topo->phy, 0, topo->nb_phy * sizeof(t_topo_phy));
+    for (i=0; i<topo->nb_phy; i++)
+      random_phy(&(topo->phy[i]));
+    }
+
+  if (topo->nb_pci)
+    {
+    topo->pci =
+    (t_topo_pci *)clownix_malloc(topo->nb_pci * sizeof(t_topo_pci),3);
+    memset(topo->pci, 0, topo->nb_pci * sizeof(t_topo_pci));
+    for (i=0; i<topo->nb_pci; i++)
+      random_pci(&(topo->pci[i]));
+    }
+
+
   return topo;
 }
 /*---------------------------------------------------------------------------*/

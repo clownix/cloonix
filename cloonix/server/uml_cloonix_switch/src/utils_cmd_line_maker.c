@@ -40,6 +40,7 @@
 #include "doors_rpc.h"
 #include "file_read_write.h"
 #include "doorways_mngt.h"
+#include "suid_power.h"
 
 
 char **get_saved_environ(void);
@@ -48,6 +49,84 @@ void dec_creation_counter(t_wake_up_eths *wake_up_eths);
 void give_back_creation_counter(void);
 static uid_t glob_uid_user;
 static uid_t glob_gid_user;
+
+/****************************************************************************/
+int utils_get_next_tid(void)
+{
+  static int tid = 0;
+  tid += 1;
+  if (tid == 0xFFFF)
+    tid = 1;
+  return tid;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab,
+                          int *sock, int *dpdk, int *vhost, int *wlan)
+{
+  int i, result = 0;
+  char info[MAX_PATH_LEN];
+  (*sock) = 0;
+  (*dpdk) = 0;
+  (*vhost) = 0;
+  (*wlan) = 0;
+  for (i=0; i<nb_tot_eth; i++)
+    {
+    if (eth_tab[i].eth_type == eth_type_sock)
+      (*sock)++;
+    else if (eth_tab[i].eth_type == eth_type_dpdk)
+      (*dpdk)++;
+    else if (eth_tab[i].eth_type == eth_type_vhost)
+      (*vhost)++;
+    else if (eth_tab[i].eth_type == eth_type_wlan)
+      (*wlan)++;
+    else
+      {
+      KERR("%d %d %d", nb_tot_eth, i, eth_tab[i].eth_type);
+      sprintf(info, "Bad input %d for eth_type", eth_tab[i].eth_type);
+      event_print("%s", info);
+      result = -1;
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_suid_power_bin_path(void)
+{
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,
+           "%s/server/suid_power/cloonix_suid_power",
+           cfg_get_bin_dir());
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *vhost_ident_get(int vm_id, int eth)
+{
+  static char vhost[IFNAMSIZ];
+  char net_name[9];
+  char vm_id_str[4];
+  char eth_str[4];
+  memset(vhost, 0, IFNAMSIZ);
+  memset(net_name, 0, 9);
+  memset(vm_id_str, 0, 4);
+  memset(eth_str, 0, 4);
+  snprintf(net_name, 8, "%s", cfg_get_cloonix_name());
+  snprintf(vm_id_str, 3, "%02d", vm_id);
+  snprintf(eth_str, 3, "%02d", eth);
+  net_name[7] = 0;
+  vm_id_str[2] = 0;
+  eth_str[2] = 0;
+  snprintf(vhost, IFNAMSIZ-1, "%s%s%s", net_name, vm_id_str, eth_str);
+  vhost[IFNAMSIZ-1] = 0;
+  return vhost;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 char *utils_get_qemu_img(void)
@@ -60,7 +139,6 @@ char *utils_get_qemu_img(void)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 char *utils_qemu_img_derived(char *backing_file, char *derived_file)
 {
@@ -72,7 +150,6 @@ char *utils_qemu_img_derived(char *backing_file, char *derived_file)
   return cmd;
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 int utils_get_uid_user(void)
@@ -151,7 +228,6 @@ char *utils_get_dpdk_ovs_path(char *name)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 char *utils_get_dpdk_endp_path(char *name, int num)
 {
@@ -198,7 +274,6 @@ char *utils_get_qhvc0_path(int vm_id)
   return path;
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 char *utils_get_qbackdoor_path(int vm_id)
@@ -253,7 +328,7 @@ char *utils_get_endp_bin_path(int type)
 {
   static char path[MAX_PATH_LEN];
   if ((type == endp_type_tap)  || 
-      (type == endp_type_raw)  ||
+      (type == endp_type_phy)  ||
       (type == endp_type_wif))
     sprintf(path, "%s/server/muswitch/mutap/cloonix_mutap", cfg_get_bin_dir());
   else if (type == endp_type_snf)
@@ -266,12 +341,13 @@ char *utils_get_endp_bin_path(int type)
     sprintf(path, "%s/server/muswitch/munat/cloonix_munat", cfg_get_bin_dir());
   else if (type == endp_type_ovsdb)
     sprintf(path, "%s/server/muswitch/muovs/cloonix_muovs", cfg_get_bin_dir());
+  else if (type == endp_type_pci)
+    KERR("%d", type);
   else
     KOUT("%d", type);
   return path;
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 char *utils_get_muswitch_sock_dir(void)
@@ -290,7 +366,6 @@ char *utils_get_muswitch_traf_dir(void)
   return path;
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 char *utils_get_dtach_bin_path(void)
@@ -355,7 +430,6 @@ char *utils_get_dtach_sock_path(char *name)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 char *utils_get_spice_path(int vm_id)
 {
@@ -381,18 +455,6 @@ char *utils_dir_conf_tmp(int vm_id)
   static char dir_conf_tmp[MAX_PATH_LEN];
   sprintf(dir_conf_tmp, "%s/%s", cfg_get_work_vm(vm_id), DIR_CONF);  
   return dir_conf_tmp;
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
-int utils_get_pid_of_machine(t_vm *vm)
-{
-  int pid = 0;
-  if (!vm)
-    KOUT(" ");
-  pid = machine_read_umid_pid(vm->kvm.vm_id);
-  return pid;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -441,6 +503,8 @@ void free_wake_up_eths(t_vm *vm)
                       __FILE__, __LINE__);
   vm->wake_up_eths->abs_beat = 0;
   vm->wake_up_eths->ref = 0;
+  if (vm->wake_up_eths->state != auto_create_vm_connect)
+    KERR("WRONG AUTO STATE: %d", vm->wake_up_eths->state);
   clownix_free(vm->wake_up_eths, __FUNCTION__);
   vm->wake_up_eths = NULL;
   cfg_reset_vm_locked(vm);
@@ -448,27 +512,21 @@ void free_wake_up_eths(t_vm *vm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death)
+void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death)
 {
   int llid, tid;
   char err[MAX_PATH_LEN];
   event_print("DELETE VM %s", vm->kvm.name);
   llid = vm->wake_up_eths->llid;
   tid = vm->wake_up_eths->tid;
-  if (cfg_is_a_zombie(vm->kvm.name))
-    cfg_del_zombie(vm->kvm.name);
   free_wake_up_eths(vm);
-  machine_death(vm->kvm.name, error_death);
+  if (!cfg_is_a_zombie(vm->kvm.name))
+    machine_death(vm->kvm.name, error_death);
   if (llid)
     {
     memset(err, 0, MAX_PATH_LEN);
-    if (error_death == error_death_timeout_hvc0_silent)
-      snprintf(err, MAX_PATH_LEN-1, "ERROR, hvc0 of machine silent"); 
-    else if (error_death == error_death_timeout_hvc0_conf)
-      snprintf(err, MAX_PATH_LEN-1, "ERROR, hvc0 of machine not usable"); 
-    else
-      snprintf(err, MAX_PATH_LEN-1, 
-               "ERROR %d WHILE CREATION try \"sudo cat /var/log/user.log\"",
+    snprintf(err, MAX_PATH_LEN-1, 
+             "ERROR %d WHILE CREATION try \"sudo cat /var/log/user.log\"",
                error_death); 
     send_status_ko(llid, tid, err);
     }
@@ -490,74 +548,33 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
 }
 /*---------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-void utils_launched_vm_death(char *nm, int error_death)
-{
-  t_vm   *vm = cfg_get_vm(nm);
-  char info[MAX_PRINT_LEN];
-  sprintf(info, "DEATH OF %s", nm);
-  event_print(info);
-  if (vm)
-    {
-    if (!vm->wake_up_eths)
-      {
-      if (cfg_is_a_zombie(vm->kvm.name))
-        cfg_del_zombie(vm->kvm.name);
-      machine_death(vm->kvm.name, error_death);
-      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-      }
-    else
-      {
-      free_wake_up_eths_and_delete_vm(vm, error_death);
-      }
-    }
-  else
-    KERR(" ");
-}
-/*---------------------------------------------------------------------------*/
-
 /****************************************************************************/
-void utils_vm_create_fct_abort(void *data)
+void utils_finish_vm_init(void *ul_vm_id)
 {
-  t_vm *vm = (t_vm *) data;
-  if (!vm)
-    KOUT(" ");
-  if (!vm->wake_up_eths)
-    KOUT(" ");
-  event_print("ABORT %s %s", __FUNCTION__, vm->kvm.name);
-  free_wake_up_eths_and_delete_vm(vm, error_death_abort);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void utils_finish_vm_init(void *vname)
-{
-  char *name = (char *) vname;
-  t_vm *vm = cfg_get_vm(name);
+  int vm_id = (unsigned long) ul_vm_id;
+  t_vm *vm = find_vm_with_id(vm_id);
   if ((vm) && (vm->wake_up_eths))
     {
     if (vm->wake_up_eths->destroy_requested)
       free_wake_up_eths_and_delete_vm(vm, error_death_wakeup);
     else
       {
-      vm->pid = utils_get_pid_of_machine(vm);
+      vm->pid = suid_power_get_pid(vm->kvm.vm_id);
       if (!vm->pid)
         {
-        KERR("PID of machine %s not found", name);
-        event_print("PID of machine %s not found", name);
+        KERR("PID of machine %s not found", vm->kvm.name);
+        event_print("PID of machine %s not found", vm->kvm.name);
         free_wake_up_eths_and_delete_vm(vm, error_death_timeout_no_pid);
         }
       else
         {
-        event_print("VM %s has a main pid: %d",vm->wake_up_eths->name,vm->pid);
+        event_print("VM %s has a main pid: %d", vm->kvm.name, vm->pid);
         free_wake_up_eths_and_vm_ok(vm);
         }
       }
     }
-  clownix_free(vname, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 char *utils_get_kernel_path_name(char *gkernel)
@@ -635,23 +652,6 @@ void utils_send_creation_info(char *name, char **argv)
   event_print("%s", info);
 }
 /*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int spice_libs_exists(void)
-{
-  int result = 0;
-  char lib_path[MAX_PATH_LEN];
-  memset(lib_path, 0, MAX_PATH_LEN);
-  snprintf(lib_path, MAX_PATH_LEN-1,
-           "%s/common/spice/spice_lib/pkgconfig", cfg_get_bin_dir());
-  if (file_exists(lib_path, F_OK))
-    result = 1;
-  else
-    KERR("%s", lib_path);
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
 
 
 /*****************************************************************************/

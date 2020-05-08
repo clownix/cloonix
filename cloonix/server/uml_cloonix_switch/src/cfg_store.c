@@ -46,6 +46,10 @@
 #include "file_read_write.h"
 #include "dpdk_ovs.h"
 #include "dpdk_tap.h"
+#include "vhost_eth.h"
+#include "suid_power.h"
+#include "phy_mngt.h"
+#include "phy_evt.h"
 
 
 /*---------------------------------------------------------------------------*/
@@ -118,12 +122,12 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
     {
     if (type == endp_type_tap)
       snprintf(use, MAX_NAME_LEN, "%s is used by a tap", name);
-    else if (type == endp_type_dpdk_tap)
-      snprintf(use, MAX_NAME_LEN, "%s is used by a dpdk_tap", name);
     else if (type == endp_type_wif)
       snprintf(use, MAX_NAME_LEN, "%s is used by a wif", name);
-    else if (type == endp_type_raw)
-      snprintf(use, MAX_NAME_LEN, "%s is used by a raw", name);
+    else if (type == endp_type_pci)
+      snprintf(use, MAX_NAME_LEN, "%s is used by a pci", name);
+    else if (type == endp_type_phy)
+      snprintf(use, MAX_NAME_LEN, "%s is used by a phy", name);
     else if (type == endp_type_snf)
       snprintf(use, MAX_NAME_LEN, "%s is used by a snf", name);
     else if (type == endp_type_a2b)
@@ -299,7 +303,7 @@ int cfg_unset_vm(t_vm *vm)
     KERR("BUG %s", vm->kvm.name);
     free_wake_up_eths(vm);
     }
-  muendp_wlan_death(vm->kvm.name, vm->kvm.nb_dpdk + vm->kvm.nb_eth);
+  muendp_wlan_death(vm->kvm.name, vm->kvm.nb_tot_eth);
   layout_del_vm(vm->kvm.name);
   extract_vm(&cfg, vm);
   clownix_free(vm, __FUNCTION__);
@@ -643,7 +647,9 @@ static void fill_topo_endp(t_topo_endp *topo_endp, t_endp *endp)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_ovs_endp)
+static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_endp,
+                                     int nb_vhost, int nb_endp_phy,
+                                     int nb_phy, int nb_pci)
 {
   t_topo_info *topo = (t_topo_info *) clownix_malloc(sizeof(t_topo_info), 3);
   memset(topo, 0, sizeof(t_topo_info));
@@ -651,8 +657,10 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_ovs_endp)
   topo->nb_c2c = endp_mngt_get_nb(endp_type_c2c);
   topo->nb_snf = endp_mngt_get_nb(endp_type_snf);
   topo->nb_sat = endp_mngt_get_nb_sat();
-  topo->nb_sat += dpdk_tap_get_qty();
-  topo->nb_endp = endp_mngt_get_nb_all() + nb_dpdk_ovs_endp;
+  topo->nb_sat += phy_mngt_get_qty();
+  topo->nb_endp = endp_mngt_get_nb_all()+nb_dpdk_endp+nb_vhost+nb_endp_phy;
+  topo->nb_phy = nb_phy;
+  topo->nb_pci = nb_pci;
  if (topo->nb_kvm)
     {
     topo->kvm =
@@ -687,6 +695,22 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_ovs_endp)
     (t_topo_endp *)clownix_malloc(topo->nb_endp * sizeof(t_topo_endp),3);
     memset(topo->endp, 0, topo->nb_endp * sizeof(t_topo_endp));
     }
+
+  if (topo->nb_phy)
+    {
+    topo->phy =
+    (t_topo_phy *)clownix_malloc(topo->nb_phy * sizeof(t_topo_phy),3);
+    memset(topo->phy, 0, topo->nb_phy * sizeof(t_topo_phy));
+    }
+
+ if (topo->nb_pci)
+    {
+    topo->pci =
+    (t_topo_pci *)clownix_malloc(topo->nb_pci * sizeof(t_topo_pci),3);
+    memset(topo->pci, 0, topo->nb_pci * sizeof(t_topo_pci));
+    }
+
+
   return topo;
 }
 /*---------------------------------------------------------------------------*/
@@ -708,12 +732,21 @@ static void copy_ovs_endp(t_topo_endp *dst, t_topo_endp *src)
 /*****************************************************************************/
 t_topo_info *cfg_produce_topo_info(void)
 {
-  int i, nb_vm, nb_endp, nb_dpdk_ovs_endp;
+  int i, nb_vm, nb_endp, nb_dpdk_ovs_endp, nb_vhost_endp, nb_endp_phy;
   int i_c2c=0, i_snf=0, i_sat=0, i_endp=0; 
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
   t_endp *next, *cur;
+  t_topo_phy *phy;
+  t_topo_pci *pci;
   t_topo_endp *dpdk_ovs_endp=dpdk_ovs_translate_topo_endp(&nb_dpdk_ovs_endp);
-  t_topo_info *topo = alloc_all_fields(nb_vm, nb_dpdk_ovs_endp);
+  t_topo_endp *vhost_endp = vhost_eth_translate_topo_endp(&nb_vhost_endp);
+  t_topo_endp *phy_endp = phy_mngt_translate_topo_endp(&nb_endp_phy);
+  int nb_phy = suid_power_get_topo_phy(&phy);
+  int nb_pci = suid_power_get_topo_pci(&pci);
+
+  t_topo_info *topo = alloc_all_fields(nb_vm, nb_dpdk_ovs_endp,
+                                       nb_vhost_endp, nb_endp_phy,
+                                       nb_phy, nb_pci);
 
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
 
@@ -735,6 +768,7 @@ t_topo_info *cfg_produce_topo_info(void)
     {
     if (!cur)
       KOUT("%d %d", nb_endp, i);
+    next = endp_mngt_get_next(cur);
     if (cur->num == 0)
       {
       switch (cur->endp_type)
@@ -760,9 +794,7 @@ t_topo_info *cfg_produce_topo_info(void)
             }
           break;
   
-        case endp_type_tap:
         case endp_type_wif:
-        case endp_type_raw:
         case endp_type_a2b:
         case endp_type_nat:
           if (cur->pid != 0)
@@ -774,8 +806,13 @@ t_topo_info *cfg_produce_topo_info(void)
             }
           break;
 
-        case endp_type_kvm_eth:
+        case endp_type_kvm_sock:
+        case endp_type_kvm_dpdk:
+        case endp_type_kvm_vhost:
         case endp_type_kvm_wlan:
+        case endp_type_phy:
+        case endp_type_pci:
+        case endp_type_tap:
           break;
   
         default:
@@ -787,7 +824,6 @@ t_topo_info *cfg_produce_topo_info(void)
       fill_topo_endp(&(topo->endp[i_endp]), cur);
       i_endp += 1; 
       }
-    next = endp_mngt_get_next(cur);
     clownix_free(cur, __FUNCTION__);
     cur = next;
     }
@@ -795,24 +831,47 @@ t_topo_info *cfg_produce_topo_info(void)
     KOUT(" ");
   for (i=0; i<nb_dpdk_ovs_endp; i++)
     {
-    if ((dpdk_ovs_endp[i].type == endp_type_kvm_dpdk) ||
-        (dpdk_ovs_endp[i].type == endp_type_dpdk_tap))
+    if (dpdk_ovs_endp[i].type != endp_type_kvm_dpdk)
+      KOUT("%d", dpdk_ovs_endp[i].type);
       {
       if (i_endp == topo->nb_endp)
         KOUT(" ");
       copy_ovs_endp(&(topo->endp[i_endp]), &(dpdk_ovs_endp[i]));
       i_endp += 1;
       }
-    if (dpdk_ovs_endp[i].type == endp_type_dpdk_tap)
-      {
-      if (i_sat == topo->nb_sat)
-        KOUT(" ");
-      strncpy(topo->sat[i_sat].name, dpdk_ovs_endp[i].name, MAX_NAME_LEN-1);
-      topo->sat[i_sat].type = dpdk_ovs_endp[i].type;
-      i_sat += 1;
-      }
     }
+  for (i=0; i<nb_vhost_endp; i++)
+    {
+    if (i_endp == topo->nb_endp)
+      KOUT(" ");
+    copy_ovs_endp(&(topo->endp[i_endp]), &(vhost_endp[i]));
+    i_endp += 1;
+    }
+  for (i=0; i<nb_endp_phy; i++)
+    {
+    if (i_endp == topo->nb_endp)
+      KOUT(" ");
+    copy_ovs_endp(&(topo->endp[i_endp]), &(phy_endp[i]));
+    i_endp += 1;
+    if (i_sat == topo->nb_sat)
+      KOUT(" ");
+    strncpy(topo->sat[i_sat].name, phy_endp[i].name, MAX_NAME_LEN-1);
+    topo->sat[i_sat].type = phy_endp[i].type;
+    i_sat += 1;
+    }
+  for (i=0; i<nb_phy; i++)
+    {
+    memcpy(&(topo->phy[i]), &(phy[i]), sizeof(t_topo_phy)); 
+    } 
+
+  for (i=0; i<nb_pci; i++)
+    {
+    memcpy(&(topo->pci[i]), &(pci[i]), sizeof(t_topo_pci)); 
+    } 
+
   clownix_free(dpdk_ovs_endp, __FUNCTION__);
+  clownix_free(vhost_endp, __FUNCTION__);
+  clownix_free(phy_endp, __FUNCTION__);
   topo->nb_c2c = i_c2c;
   topo->nb_snf = i_snf;
   topo->nb_sat = i_sat;
@@ -848,7 +907,7 @@ int cfg_get_name_with_mac(char *mac, char *vmname)
   int i, j, nb_eth, result = -1;
   t_vm *cur = cfg.vm_head;
   t_topo_kvm *topo_kvm;
-  t_eth_params *eth_params;
+  t_eth_table *eth_table;
   char *addr;
   char mac_vm[MAX_NAME_LEN];
   for (i=0; i<cfg.nb_vm; i++)
@@ -856,11 +915,11 @@ int cfg_get_name_with_mac(char *mac, char *vmname)
     if (!cur)
       KOUT(" ");
     topo_kvm = &(cur->kvm); 
-    nb_eth = topo_kvm->nb_dpdk + topo_kvm->nb_eth;
-    eth_params = topo_kvm->eth_params;
+    nb_eth = topo_kvm->nb_tot_eth;
+    eth_table = topo_kvm->eth_table;
     for (j=0; j<nb_eth; j++)
       {
-      addr = eth_params[j].mac_addr;
+      addr = eth_table[j].mac_addr;
       sprintf(mac_vm,"%02X:%02X:%02X:%02X:%02X:%02X",
                  addr[0] & 0xFF, addr[1] & 0xFF, addr[2] & 0xFF,
                  addr[3] & 0xFF, addr[4] & 0xFF, addr[5] & 0xFF);

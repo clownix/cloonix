@@ -215,7 +215,6 @@ static void process_disconnect_req(void *ptr, char *resp,
   int is_blkd, llid;
   if (!llid_traf_chain_exists(name, num))
     {
-    KERR("%s %d", name, num);
     snprintf(resp, MAX_RESP_LEN-1,
              "cloonix_resp_disconnect_ko name=%s num=%d tidx=%d",
              name, num, tidx);

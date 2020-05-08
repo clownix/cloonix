@@ -15,9 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void dpdk_dyn_add_eth(t_vm *kvm, char *name, int num);
-int  dpdk_dyn_del_all_lan(char *name);
-void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num);
+void dpdk_dyn_add_eth(char *name, int num, char *strmac);
+void dpdk_dyn_del_eth(char *name, int num);
 
 int dpdk_dyn_add_lan_to_eth(int llid, int tid, char *lan_name,
                             char *name, int num, char *info);

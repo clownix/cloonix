@@ -49,7 +49,6 @@
 #include "menu_dialog_kvm.h"
 #include "file_read_write.h"
 #include "menu_dialog_c2c.h"
-#include "menu_dialog_lan.h"
 #include "cloonix_conf_info.h"
 #include "bdplot.h"
 

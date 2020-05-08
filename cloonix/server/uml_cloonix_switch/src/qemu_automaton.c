@@ -47,22 +47,7 @@
 #include "endp_mngt.h"
 #include "dpdk_ovs.h"
 #include "endp_evt.h"
-
-#define NETWORK_PARAMS_VMWARE " -netdev type=tap,id=vmware0,ifname=vmwa0"\
-                              " -device e1000,netdev=vmware0"\
-                              " -netdev type=tap,id=vmware1,ifname=vmwa1"\
-                              " -device e1000,netdev=vmware1"\
-                              " -netdev type=tap,id=vmware2,ifname=vmwa2"\
-                              " -device e1000,netdev=vmware2"
-
-
-
-#define DRIVE_VMWARE0 " -drive file=%s,index=0,media=disk,if=none,id=sata0"\
-                      " -device ich9-ahci,id=ahci"\
-                      " -device ide-drive,drive=sata0,bus=ahci.0"
-
-#define DRIVE_VMWARE1 " -drive file=%s,index=1,media=disk,if=none,id=sata1"\
-                      " -device ide-drive,drive=sata1,bus=ahci.1"
+#include "suid_power.h"
 
 #define DRIVE_PARAMS_CISCO " -drive file=%s,index=%d,media=disk,if=virtio,cache=directsync"
 #define DRIVE_PARAMS " -drive file=%s,index=%d,media=disk,if=virtio"
@@ -74,7 +59,6 @@
                         "file.driver=file,file.node-name=file,file.filename=%s" \
                         " -device ide-hd,bus=ide.0,unit=0,drive=%s"
 
-
 #define INSTALL_DISK " -boot d -drive file=%s,index=%d,media=disk,if=virtio"
 
 #define AGENT_CDROM " -drive file=%s,if=none,media=cdrom,id=cd"\
@@ -83,11 +67,7 @@
 
 #define AGENT_DISK " -drive file=%s,if=virtio,media=disk"
 
-
 #define ADDED_CDROM " -drive file=%s,media=cdrom"
-
-#define VHOST_VSOCK " -device vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid=%d"
-
 
 #define BLOCKNAME " -blockdev node-name=%s,driver=qcow2,"\
                   "file.driver=file,file.node-name=file,file.filename=%s" \
@@ -104,24 +84,12 @@ typedef struct t_cprootfs_config
   char used[MAX_PATH_LEN];
 } t_cprootfs_config;
 
-
-enum
-  {
-  auto_idle = 0,
-  auto_create_disk,
-  auto_delay_possible_ovs_start,
-  auto_create_vm_launch,
-  auto_create_vm_connect,
-  auto_max,
-  };
-
 /*--------------------------------------------------------------------------*/
 
 int inside_cloonix(char **name);
 
 void qemu_vm_automaton(void *unused_data, int status, char *name);
 
-char **get_saved_environ(void);
 
 /****************************************************************************/
 static int get_wake_up_eths(char *name, t_vm **vm,
@@ -129,10 +97,16 @@ static int get_wake_up_eths(char *name, t_vm **vm,
 {
   *vm = cfg_get_vm(name);
   if (!(*vm))
+    {
+    KERR("WAKE ERROR NO VM %s", name);
     return -1;
+    }
   *wake_up_eths = (*vm)->wake_up_eths;
   if (!(*wake_up_eths))
+    {
+    KERR("WAKE ERROR NO ETH %s", name);
     return -1;
+    }
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -159,7 +133,12 @@ static void cprootfs_clone_death(void *data, int status, char *name)
   t_wake_up_eths *wake_up_eths;
 
   event_print("%s %s", __FUNCTION__, name);
-  if (!get_wake_up_eths(name, &vm, &wake_up_eths))
+  if (get_wake_up_eths(name, &vm, &wake_up_eths))
+    {
+    KERR("POSSIBLE? %s", name);
+    recv_coherency_unlock();
+    }
+  else
     {
     if (strcmp(name, cprootfs->name))
       KOUT("%s %s", name, cprootfs->name);
@@ -308,21 +287,40 @@ static void derived_file_creation_request(t_vm *vm)
 /****************************************************************************/
 static char *format_virtkvm_net(t_vm *vm, int eth)
 {
-  static char net_cmd[MAX_PATH_LEN*3];
+  static char cmd[4*MAX_PATH_LEN];
   int len = 0;
-  char *mac_addr;
-  len+=sprintf(net_cmd+len,
-               " -device virtio-muethnet,tx=bh,netdev=eth%d,mac=", eth);
-  mac_addr = vm->kvm.eth_params[eth].mac_addr;
-  len += sprintf(net_cmd+len,"%02X:%02X:%02X:%02X:%02X:%02X",
-                 mac_addr[0] & 0xFF, mac_addr[1] & 0xFF, mac_addr[2] & 0xFF,
-                 mac_addr[3] & 0xFF, mac_addr[4] & 0xFF, mac_addr[5] & 0xFF);
-  len += sprintf(net_cmd+len,",bus=pci.0,addr=0x%x", eth+5);
-  len += sprintf(net_cmd+len, 
-  " -netdev mueth,id=eth%d,munetname=%s,muname=%s,munum=%d,sock=%s,mutype=1",
-                 eth,cfg_get_cloonix_name(), vm->kvm.name, eth, 
-                 utils_get_endp_path(vm->kvm.name, eth)); 
-  return net_cmd;
+  char *mac;
+  mac = vm->kvm.eth_table[eth].mac_addr;
+  len+=sprintf(cmd+len," -device virtio-muethnet,tx=bh,netdev=eth%d,mac=",eth);
+  len += sprintf(cmd+len,"%02X:%02X:%02X:%02X:%02X:%02X",
+                         mac[0] & 0xFF, mac[1] & 0xFF, mac[2] & 0xFF,
+                         mac[3] & 0xFF, mac[4] & 0xFF, mac[5] & 0xFF);
+  len += sprintf(cmd+len,",bus=pci.0,addr=0x%x", eth+5);
+  len += sprintf(cmd+len, " -netdev mueth,id=eth%d,munetname=%s,"
+                          "muname=%s,munum=%d,sock=%s,mutype=1",
+                          eth, cfg_get_cloonix_name(), vm->kvm.name, eth, 
+                          utils_get_endp_path(vm->kvm.name, eth)); 
+  return cmd;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static char *format_vhost_net(t_vm *vm, int eth, char *ifname)
+{
+  static char cmd[4*MAX_PATH_LEN];
+  int  len = 0;
+  char *mac;
+  mac = vm->kvm.eth_table[eth].mac_addr;
+  len += sprintf(cmd+len," -device virtio-net-pci,netdev=nvhost%d,mac=",eth);
+  len += sprintf(cmd+len,"%02X:%02X:%02X:%02X:%02X:%02X",
+                         mac[0] & 0xFF, mac[1] & 0xFF, mac[2] & 0xFF,
+                         mac[3] & 0xFF, mac[4] & 0xFF, mac[5] & 0xFF);
+  len += sprintf(cmd+len,",bus=pci.0,addr=0x%x", eth+5);
+//  len += sprintf(cmd+len,",csum=off,gso=off,guest_tso4=off");
+//  len += sprintf(cmd+len,",guest_tso6=off,guest_ecn=off");
+  len += sprintf(cmd+len," -netdev type=tap,id=nvhost%d,vhost=on,"
+                         "ifname=%s,script=no,downscript=no", eth, ifname);
+  return cmd;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -370,56 +368,13 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int create_linux_cmd_arm(t_vm *vm, char *linux_cmd)
-{
-  int i, len = 0;
-  char *agent = utils_get_cdrom_path_name(vm->kvm.vm_id);
-  len += sprintf(linux_cmd+len, 
-                 " -m %d -name %s"
-                 " -serial stdio"
-                 " -nographic"
-                 " -nodefaults"
-                 " -pidfile %s/%s/pid"
-                 " -drive file=%s,if=virtio"
-                 " -append \"root=/dev/vda earlyprintk=ttyAMA0 net.ifnames=0\"",
-                 vm->kvm.mem, vm->kvm.name,
-                 cfg_get_work_vm(vm->kvm.vm_id),
-                 DIR_UMID, vm->kvm.rootfs_used);
-
-  for (i=vm->kvm.nb_dpdk; i<vm->kvm.nb_dpdk+vm->kvm.nb_eth; i++)
-    len+=sprintf(linux_cmd+len,"%s",format_virtkvm_net(vm,i));
-
-
-  len += sprintf(linux_cmd+len, 
-                " -device virtio-serial-pci"
-                " -chardev socket,path=%s,server,nowait,id=cloon0"
-                " -device virtserialport,chardev=cloon0,name=net.cloonix.0"
-                " -chardev socket,path=%s,server,nowait,id=hvc0"
-                " -device virtconsole,chardev=hvc0"
-                " -chardev socket,id=mon1,path=%s,server,nowait"
-                " -mon chardev=mon1,mode=readline"
-                " -chardev socket,id=qmp1,path=%s,server,nowait"
-                " -mon chardev=qmp1,mode=control",
-                utils_get_qbackdoor_path(vm->kvm.vm_id),
-                utils_get_qhvc0_path(vm->kvm.vm_id),
-                utils_get_qmonitor_path(vm->kvm.vm_id),
-                utils_get_qmp_path(vm->kvm.vm_id));
-
-
-  len += sprintf(linux_cmd+len, AGENT_DISK, agent);
-
-  return len;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
 {
-  int i, nb_cpu, len, tot_dpdk;
+  int i, nb_cpu, len, nb_sock, nb_dpdk, nb_vhost, nb_wlan;
   char cmd_start[10000];
   char cpu_type[MAX_NAME_LEN];
   char *rootfs, *added_disk, *gname;
-  char *spice_path, *cdrom;
+  char *spice_path, *cdrom, *ifname;
   if (!vm)
     KOUT(" ");
   spice_path = utils_get_spice_path(vm->kvm.vm_id);
@@ -432,36 +387,32 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     {
     strcpy(cpu_type, "host,+vmx");
     }
-
   len = sprintf(cmd_start, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
-
-  tot_dpdk = vm->kvm.nb_dpdk;
-  for (i=0; i < tot_dpdk; i++)
-    len+=sprintf(cmd_start+len, "%s", dpdk_ovs_format_net(vm, i, tot_dpdk));
-
-  if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VMWARE)
+  utils_get_eth_numbers(vm->kvm.nb_tot_eth, vm->kvm.eth_table,
+                        &nb_sock, &nb_dpdk, &nb_vhost, &nb_wlan);
+  for (i = 0; i < vm->kvm.nb_tot_eth; i++)
     {
-    if (vm->kvm.nb_eth != 3)
-      KOUT("%d", vm->kvm.nb_eth);
-    if (vm->kvm.nb_dpdk != 0)
-      KOUT("%d", vm->kvm.nb_dpdk);
-    len+=sprintf(cmd_start+len, "%s", NETWORK_PARAMS_VMWARE);
-    }
-  else
-    {
-    for (i=vm->kvm.nb_dpdk; i<vm->kvm.nb_dpdk+vm->kvm.nb_eth; i++)
+    if (vm->kvm.eth_table[i].eth_type == eth_type_sock)
       len+=sprintf(cmd_start+len, "%s",format_virtkvm_net(vm,i));
+    else if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
+      len+=sprintf(cmd_start+len, "%s", dpdk_ovs_format_net(vm, i, nb_dpdk));
+    else if (vm->kvm.eth_table[i].eth_type == eth_type_vhost)
+      {
+      ifname = vm->kvm.eth_table[i].vhost_ifname;
+      len+=sprintf(cmd_start+len, "%s",format_vhost_net(vm, i, ifname));
+      }
     }
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_UEFI)
     len += sprintf(cmd_start+len, FLAG_UEFI, cfg_get_bin_dir(), QEMU_BIN_DIR);
   if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
     {
-    if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VHOST_VSOCK)
-      len += sprintf(cmd_start+len, VHOST_VSOCK, vm->kvm.vm_id+2);
     len += sprintf(cmd_start+len, QEMU_OPTS_CLOONIX, 
                    utils_get_qbackdoor_path(vm->kvm.vm_id),
                    utils_get_qhvc0_path(vm->kvm.vm_id));
-    for (i=0; i<vm->kvm.nb_wlan; i++)
+    }
+  for (i = 0; i < vm->kvm.nb_tot_eth; i++)
+    {
+    if (vm->kvm.eth_table[i].eth_type == eth_type_wlan)
       {
        len += sprintf(cmd_start+len, 
               " -chardev socket,path=%s,server,nowait,id=cloon%d"
@@ -469,7 +420,6 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
               utils_get_qbackdoor_wlan_path(vm->kvm.vm_id, i), i+1, i+1, i+1);
       }
     }
-
   len = sprintf(linux_cmd, " %s"
                         " -pidfile %s/%s/pid"
                         " -machine pc,accel=kvm,usb=off,dump-guest-core=off"
@@ -477,15 +427,11 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
                         " -smp %d,maxcpus=%d,cores=1",
                         cmd_start, cfg_get_work_vm(vm->kvm.vm_id),
                         DIR_UMID, cpu_type, nb_cpu, nb_cpu);
-  if (spice_libs_exists())
-    {
-    if ((vm->kvm.vm_config_flags & VM_CONFIG_FLAG_WITH_PXE) ||
-        (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
-      len += sprintf(linux_cmd+len," -nographic -vga none");
-    else
-      len += sprintf(linux_cmd+len, QEMU_SPICE, spice_path);
-    }
-
+  if ((vm->kvm.vm_config_flags & VM_CONFIG_FLAG_WITH_PXE) ||
+      (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
+    len += sprintf(linux_cmd+len," -nographic -vga none");
+  else
+    len += sprintf(linux_cmd+len, QEMU_SPICE, spice_path);
 
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_9P_SHARED)
     {
@@ -500,10 +446,8 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
                                                  vm->kvm.name);
       }
     }
-
   rootfs = vm->kvm.rootfs_used;
   added_disk = vm->kvm.added_disk;
-
   if  (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NO_REBOOT)
     {
     len += sprintf(linux_cmd+len, " -no-reboot");
@@ -530,12 +474,6 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
         len += sprintf(linux_cmd+len,
           " -uuid 1c54ff10-774c-4e63-9896-4c18d66b50b1");
         }
-      else if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VMWARE)
-        {
-        len += sprintf(linux_cmd+len, DRIVE_VMWARE0, rootfs);
-        if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK)
-          len += sprintf(linux_cmd+len, DRIVE_VMWARE1, added_disk);
-        }
       else
         {
         len += sprintf(linux_cmd+len, BLOCKNAME, 
@@ -547,21 +485,16 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
   
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK)
       {
-      if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_VMWARE))
-        len += sprintf(linux_cmd+len, DRIVE_PARAMS, added_disk, 1);
+      len += sprintf(linux_cmd+len, DRIVE_PARAMS, added_disk, 1);
       }
     }
-
-
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM)
     {
     len += sprintf(linux_cmd+len, ADDED_CDROM, vm->kvm.added_cdrom);
     }
-
   len += sprintf(linux_cmd+len, QEMU_OPTS_MON_QMP,
                  utils_get_qmonitor_path(vm->kvm.vm_id),
                  utils_get_qmp_path(vm->kvm.vm_id));
-
   return len;
 }
 /*--------------------------------------------------------------------------*/
@@ -571,57 +504,14 @@ static char *qemu_cmd_format(t_vm *vm)
 {
   int len = 0;
   char *cmd = (char *) clownix_malloc(MAX_BIG_BUF, 7);
-  char mach[MAX_NAME_LEN];
   char path_qemu_exe[MAX_PATH_LEN];
-  char path_kern[MAX_PATH_LEN];
-  char path_initrd[MAX_PATH_LEN];
   memset(cmd, 0,  MAX_BIG_BUF);
   memset(path_qemu_exe, 0, MAX_PATH_LEN);
-  memset(path_kern, 0, MAX_PATH_LEN);
-  memset(path_initrd, 0, MAX_PATH_LEN);
-  memset(mach, 0, MAX_NAME_LEN);
-  if ((vm->kvm.vm_config_flags & VM_CONFIG_FLAG_ARM) ||
-      (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_AARCH64))
-    {
-    snprintf(path_kern, MAX_PATH_LEN-1, "%s/%s",
-             cfg_get_bulk(), vm->kvm.linux_kernel);
-    snprintf(path_initrd, MAX_PATH_LEN-1, "%s/%s-initramfs",
-             cfg_get_bulk(), vm->kvm.linux_kernel);
-    if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_AARCH64)
-      {
-      snprintf(path_qemu_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s/%s",
-               cfg_get_bin_dir(), QEMU_BIN_DIR, QEMU_AARCH64_EXE);
-      snprintf(mach, MAX_NAME_LEN-1, "-M virt --cpu cortex-a57");
-      }
-    else
-      {
-      snprintf(path_qemu_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s/%s",
-               cfg_get_bin_dir(), QEMU_BIN_DIR, QEMU_ARM_EXE);
-      snprintf(mach, MAX_NAME_LEN-1, "-M virt");
-      }
-    if (!file_exists(path_initrd, F_OK))
-      {
-      len += snprintf(cmd, MAX_BIG_BUF-1,
-      "%s -L %s/server/qemu/%s %s -kernel %s",
-      path_qemu_exe, cfg_get_bin_dir(), QEMU_BIN_DIR, mach, path_kern); 
-      }
-    else
-      {
-      len += snprintf(cmd, MAX_BIG_BUF-1,
-      "%s -L %s/server/qemu/%s %s -kernel %s -initrd %s",
-      path_qemu_exe, cfg_get_bin_dir(), QEMU_BIN_DIR,
-      mach, path_kern, path_initrd); 
-      }
-    len += create_linux_cmd_arm(vm, cmd+len);
-    }
-  else
-    {
-    snprintf(path_qemu_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s/%s",
-             cfg_get_bin_dir(), QEMU_BIN_DIR, QEMU_EXE);
-    len += snprintf(cmd, MAX_BIG_BUF-1, "%s -L %s/server/qemu/%s ",
-                    path_qemu_exe, cfg_get_bin_dir(), QEMU_BIN_DIR);
-    len += create_linux_cmd_kvm(vm, cmd+len);
-    }
+  snprintf(path_qemu_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s/%s",
+           cfg_get_bin_dir(), QEMU_BIN_DIR, QEMU_EXE);
+  len += snprintf(cmd, MAX_BIG_BUF-1, "%s -L %s/server/qemu/%s ",
+                  path_qemu_exe, cfg_get_bin_dir(), QEMU_BIN_DIR);
+  len += create_linux_cmd_kvm(vm, cmd+len);
   len += sprintf(cmd+len, " 2>/tmp/qemu_%s", vm->kvm.name);
   return cmd;
 }
@@ -658,14 +548,6 @@ static char **create_qemu_argv(t_vm *vm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int start_launch_args(void *ptr)
-{  
-
-  return (utils_execve(ptr));
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void timer_launch_end(void *data)
 {
   char *name = (char *) data;
@@ -687,7 +569,7 @@ static void timer_launch_end(void *data)
                        "sudo cat /var/log/user.log | grep qemu\n", name);
           event_print(err);
           send_status_ko(wake_up_eths->llid, wake_up_eths->tid, err);
-          utils_launched_vm_death(name, error_death_qemu_quiterr);
+          free_wake_up_eths_and_delete_vm(vm, error_death_qemu_quiterr);
           }
         }
       }
@@ -704,11 +586,22 @@ static void timer_qemu_monitor_name(void *data)
   int pid;
   if (vm)
     {
-    pid = utils_get_pid_of_machine(vm);
+    pid = suid_power_get_pid(vm->kvm.vm_id);
     if ((pid == 0) && (vm->vm_to_be_killed == 0))
       {
-      KERR("ERROR QEMU PID ABSENT (%d, %d)", vm->pid_returned_clone, vm->pid);
-      machine_death(name, error_death_pid_diseapeared);
+      if (vm->pid == 0)
+        {
+        vm->count_no_pid_yet += 1;
+        if (vm->count_no_pid_yet > 20)
+          {
+          KERR("ERROR QEMU PID ABSENT");
+          machine_death(name, error_death_pid_diseapeared);
+          }
+        }
+      else
+        {
+        machine_death(name, error_death_pid_diseapeared);
+        }
       }
     else
       clownix_timeout_add(10, timer_qemu_monitor_name, data, NULL, NULL);
@@ -721,59 +614,59 @@ static void timer_qemu_monitor_name(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void launcher_death(void *data, int status, char *name)
+static void launch_qemu_vm_end(char *name)
 {
   int i;
   char *time_name;
   char *qemu_monitor_name;
-  char **argv = (char **) data;
-  for (i=0; argv[i] != NULL; i++)
-    clownix_free(argv[i], __FUNCTION__);
-  clownix_free(argv, __FUNCTION__);
-  time_name = clownix_malloc(MAX_NAME_LEN, 5);
-  memset(time_name, 0, MAX_NAME_LEN);
-  strncpy(time_name, name, MAX_NAME_LEN-1);
-  qemu_monitor_name = clownix_malloc(MAX_NAME_LEN, 5);
-  memset(qemu_monitor_name, 0, MAX_NAME_LEN);
-  strncpy(qemu_monitor_name, name, MAX_NAME_LEN-1);
-  clownix_timeout_add(10, timer_qemu_monitor_name,
-                      (void *) qemu_monitor_name, NULL, NULL);
-  clownix_timeout_add(500, timer_launch_end, (void *) time_name, NULL, NULL);
+  t_vm   *vm = cfg_get_vm(name);
+  if (!vm)
+    {
+    KERR("%s", name);
+    }
+  else
+   {
+    for (i = 0; i < vm->kvm.nb_tot_eth; i++)
+     {
+     if (vm->kvm.eth_table[i].eth_type == eth_type_sock)
+       {
+       if (endp_mngt_kvm_pid_clone(vm->kvm.name, i))
+         KERR("%s %d", vm->kvm.name, i);
+       }
+     }
+    for (i=0; vm->launcher_argv[i] != NULL; i++)
+      clownix_free(vm->launcher_argv[i], __FUNCTION__);
+    clownix_free(vm->launcher_argv, __FUNCTION__);
+    vm->launcher_argv = NULL;
+    time_name = clownix_malloc(MAX_NAME_LEN, 5);
+    memset(time_name, 0, MAX_NAME_LEN);
+    strncpy(time_name, vm->kvm.name, MAX_NAME_LEN-1);
+    qemu_monitor_name = clownix_malloc(MAX_NAME_LEN, 5);
+    memset(qemu_monitor_name, 0, MAX_NAME_LEN);
+    strncpy(qemu_monitor_name, vm->kvm.name, MAX_NAME_LEN-1);
+    clownix_timeout_add(10, timer_qemu_monitor_name,
+                        (void *) qemu_monitor_name, NULL, NULL);
+    clownix_timeout_add(500, timer_launch_end, (void *) time_name, NULL, NULL);
+   }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void launch_qemu_vm(t_vm *vm)
+static void launch_qemu_vm_start(t_vm *vm)
 {
-  char **argv;
-  int i, pid;
-  argv = create_qemu_argv(vm);
-  utils_send_creation_info(vm->kvm.name, argv);
-  pid = pid_clone_launch(start_launch_args, launcher_death, NULL, 
-                        (void *)argv, (void *)argv, NULL, 
-                        vm->kvm.name, -1, 1);
-  if (!pid)
-    KERR("%s", vm->kvm.name);
-  else
-    {
-    vm->pid_returned_clone = pid;
-    for (i=vm->kvm.nb_dpdk; i<vm->kvm.nb_dpdk+vm->kvm.nb_eth; i++)
-      {
-      if (endp_mngt_kvm_pid_clone(vm->kvm.name, i, pid))
-        KERR("%s %d", vm->kvm.name, i);
-      }
-    }
+  if (vm->launcher_argv != NULL)
+    KOUT("%s", vm->kvm.name);
+  vm->launcher_argv = create_qemu_argv(vm);
+  utils_send_creation_info(vm->kvm.name, vm->launcher_argv);
+  suid_power_launch_vm(vm, launch_qemu_vm_end);
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void timer_utils_finish_vm_init(char *name, int val)
+void timer_utils_finish_vm_init(int vm_id, int val)
 {
-  char *nm;
-  nm = (char *) clownix_malloc(MAX_NAME_LEN, 9);
-  memset(nm, 0, MAX_NAME_LEN);
-  strncpy(nm, name, MAX_NAME_LEN-1);
-  clownix_timeout_add(val, utils_finish_vm_init, (void *) nm, NULL, NULL);
+  unsigned long ul_vm_id = (unsigned long) vm_id;
+  clownix_timeout_add(val,utils_finish_vm_init,(void *)ul_vm_id,NULL,NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -819,15 +712,21 @@ static void arm_static_vm_timeout(char *name, int delay)
 void qemu_vm_automaton(void *unused_data, int status, char *name) 
 {
   char err[MAX_PRINT_LEN];
-  int i, state;
+  int i, state, nb_dpdk = 0;
   char *cisco_nat_name;
   t_vm   *vm = cfg_get_vm(name);
   t_wake_up_eths *wake_up;
   if (!vm)
+    {
+    KERR("POSSIBLE ? %s", name);
     return;
+    }
   wake_up = vm->wake_up_eths;
   if (!wake_up)
+    {
+    KERR("POSSIBLE ? %s", name);
     return;
+    }
   if (strcmp(wake_up->name, name))
     KOUT(" ");
   state = wake_up->state;
@@ -835,8 +734,10 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
     {
     sprintf(err, "ERROR when creating %s\n", name);
     event_print(err);
+    KERR("%s", err);
     send_status_ko(wake_up->llid, wake_up->tid, err);
-    utils_launched_vm_death(name, error_death_qemuerr);
+    free_wake_up_eths_and_delete_vm(vm, error_death_qemuerr);
+    recv_coherency_unlock();
     return;
     }
   switch (state)
@@ -851,7 +752,12 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
         KOUT("%X", vm->kvm.vm_config_flags);
       break;
     case auto_delay_possible_ovs_start:
-      if (vm->kvm.nb_dpdk)
+      for (i = 0; i < vm->kvm.nb_tot_eth; i++)
+        {
+        if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
+          nb_dpdk += 1;
+        }
+      if (nb_dpdk)
         {
         wake_up->dpdk_count += 1;
         if (wake_up->dpdk_count > 20)
@@ -860,7 +766,8 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
           sprintf(err, "ERROR dpdk ovs start when creating %s\n", name);
           event_print(err);
           send_status_ko(wake_up->llid, wake_up->tid, err);
-          utils_launched_vm_death(name, error_death_qemuerr);
+          free_wake_up_eths_and_delete_vm(vm, error_death_qemuerr);
+          recv_coherency_unlock();
           }
         else
           {
@@ -877,22 +784,33 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
       break;
     case auto_create_vm_launch:
       wake_up->state = auto_create_vm_connect;
-      for (i=vm->kvm.nb_dpdk; i<vm->kvm.nb_dpdk+vm->kvm.nb_eth; i++)
+      for (i = 0; i < vm->kvm.nb_tot_eth; i++)
         {
-        if (endp_mngt_start(0, 0, vm->kvm.name, i, endp_type_kvm_eth))
-          KERR("%s %d", vm->kvm.name, i);
-        }
-      for (i=vm->kvm.nb_dpdk + vm->kvm.nb_eth; 
-           i<vm->kvm.nb_dpdk + vm->kvm.nb_wlan + vm->kvm.nb_eth; i++)
-        {
-        if (endp_mngt_start(0, 0, vm->kvm.name, i, endp_type_kvm_wlan))
-          KERR("WLAN %s %d", vm->kvm.name, i);
-        }
-      launch_qemu_vm(vm);
+        if (vm->kvm.eth_table[i].eth_type == eth_type_sock)
+          {
+          if (endp_mngt_start(0, 0, vm->kvm.name, i, endp_type_kvm_sock))
+            KERR("%s %d", vm->kvm.name, i);
+          }
+        else if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
+          {
+          }
+        else if (vm->kvm.eth_table[i].eth_type == eth_type_vhost)
+          {
+          }
+        else if (vm->kvm.eth_table[i].eth_type == eth_type_wlan)
+          {
+          if (endp_mngt_start(0, 0, vm->kvm.name, i, endp_type_kvm_wlan))
+            KERR("WLAN %s %d", vm->kvm.name, i);
+          }
+        else
+          KERR("%s %d %d  %d", vm->kvm.name, vm->kvm.nb_tot_eth,
+                                i, vm->kvm.eth_table[i].eth_type);
+        } 
+      launch_qemu_vm_start(vm);
       arm_static_vm_timeout(name, 100);
       break;
     case auto_create_vm_connect:
-      timer_utils_finish_vm_init(name, 4000);
+      timer_utils_finish_vm_init(vm->kvm.vm_id, 2000);
       qmonitor_begin_qemu_unix(name);
       qmp_begin_qemu_unix(name);
       qhvc0_begin_qemu_unix(name);
@@ -915,6 +833,7 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
                               (void *)cisco_nat_name,NULL,NULL);
           }
         }
+      recv_coherency_unlock();
       break;
     default:
       KOUT(" ");

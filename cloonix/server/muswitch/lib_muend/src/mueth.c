@@ -357,7 +357,7 @@ void mueth_main_endless_loop(t_all_ctx *all_ctx, char *net_name,
                              t_change_virtio_queue change_virtio_queue)
 {
   long long int val;
-  blkd_set_our_mutype((void *) all_ctx, endp_type_kvm_eth);
+  blkd_set_our_mutype((void *) all_ctx, endp_type_kvm_sock);
   all_ctx->get_blkd_from_elem = get_blkd_from_elem;
   strncpy(all_ctx->g_net_name, net_name, MAX_NAME_LEN-1);
   strncpy(all_ctx->g_name, name, MAX_NAME_LEN-1);

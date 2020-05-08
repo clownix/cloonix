@@ -17,17 +17,16 @@
 /*****************************************************************************/
 void dpdk_tap_resp_add_lan(int is_ko, char *lan, char *name);
 void dpdk_tap_resp_del_lan(int is_ko, char *lan, char *name);
-int dpdk_tap_topo_endp(int nb_max, t_topo_endp *endp);
 int dpdk_tap_get_qty(void);
 int dpdk_tap_add_lan(int llid, int tid, char *lan, char *name);
 int dpdk_tap_del_lan(int llid, int tid, char *lan, char *name);
-int dpdk_tap_add(int llid, int tid, char *name, int coherency_lock, int idx);
+int dpdk_tap_add(int llid, int tid, char *name);
 int dpdk_tap_del(int llid, int tid, char *name);
 int dpdk_tap_exist(char *name);
 int dpdk_tap_lan_exists(char *lan);
 int dpdk_dyn_lan_exists_in_tap(char *name, char *lan);
 void dpdk_tap_resp_add(int is_ko, char *name);
-void dpdk_tap_resp_del(char *name);
+void dpdk_tap_resp_del(int is_ko, char *name);
 void dpdk_tap_end_ovs(void);
 void dpdk_tap_init(void);
 /*--------------------------------------------------------------------------*/

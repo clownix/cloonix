@@ -19,8 +19,8 @@ typedef struct t_item_node_req
 {
   double x;
   double y;
-  double tx[MAX_ETH_VM+MAX_WLAN_VM];
-  double ty[MAX_ETH_VM+MAX_WLAN_VM];
+  double tx[MAX_SOCK_VM+MAX_WLAN_VM];
+  double ty[MAX_SOCK_VM+MAX_WLAN_VM];
 } t_item_node_req;
 /*--------------------------------------------------------------------------*/
 typedef struct t_item_req

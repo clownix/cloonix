@@ -37,16 +37,17 @@ static void create_node_resp(t_topo_kvm *kvm)
 {
   int hidden_on_graph, color_choice;
   double x, y;
-  double tx[MAX_ETH_VM+MAX_WLAN_VM];
-  double ty[MAX_ETH_VM+MAX_WLAN_VM];
-  int32_t thidden_on_graph[MAX_ETH_VM+MAX_WLAN_VM];
+  double tx[MAX_SOCK_VM+MAX_WLAN_VM];
+  double ty[MAX_SOCK_VM+MAX_WLAN_VM];
+  int32_t thidden_on_graph[MAX_SOCK_VM+MAX_WLAN_VM];
 
   get_node_layout_x_y(kvm->name, &color_choice, &x, &y, &hidden_on_graph, 
                       tx, ty, thidden_on_graph);
+
   bank_node_create(kvm->name, kvm->linux_kernel, kvm->rootfs_used, 
                    kvm->rootfs_backing,  kvm->install_cdrom,
                    kvm->added_cdrom, kvm->added_disk, 
-                   kvm->nb_dpdk, kvm->nb_eth, kvm->nb_wlan, 
+                   kvm->nb_tot_eth, kvm->eth_table, 
                    color_choice, kvm->vm_id, kvm->vm_config_flags,
                    x, y, hidden_on_graph, tx, ty, thidden_on_graph);
 }

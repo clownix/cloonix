@@ -56,9 +56,9 @@ typedef struct t_vm
   int pid_of_cp_clone;
   int locked_vm;
   int vm_to_be_killed;
+  int count_no_pid_yet;
   int qmp_conn;
   t_wake_up_eths *wake_up_eths;
-  int pid_returned_clone;
   int pid;
   int ram;
   int mem_rss;
@@ -67,6 +67,7 @@ typedef struct t_vm
   unsigned long previous_cutime;
   unsigned long previous_stime;
   unsigned long previous_cstime;
+  char **launcher_argv; 
   struct t_vm *prev;
   struct t_vm *next;
   } t_vm;
@@ -143,9 +144,9 @@ t_topo_info *cfg_produce_topo_info(void);
 
 /*****************************************************************************/
 void recv_init(void);
-int  recv_coherency_lock(const char *fct, int line);
-void recv_coherency_unlock(int idx);
+void recv_coherency_lock(void);
 int  recv_coherency_locked(void);
+void recv_coherency_unlock(void);
 /*---------------------------------------------------------------------------*/
 t_vm   *cfg_get_first_vm(int *nb);
 int cfg_name_is_in_use(int is_lan, char *name, char *use);

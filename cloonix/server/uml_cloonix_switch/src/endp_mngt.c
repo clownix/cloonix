@@ -47,6 +47,7 @@
 #include "unix2inet.h"
 #include "murpc_dispatch.h"
 #include "uml_clownix_switch.h"
+#include "phy_mngt.h"
 
 
 void local_add_sat(int llid, int tid, char *name, int type, 
@@ -79,8 +80,8 @@ typedef struct t_priv_endp
 {
   char name[MAX_NAME_LEN];
   int num;
-  int clone_start_pid;
-  int clone_start_pid_just_done;
+  int clone_started;
+  int clone_started_just_done;
   int pid;
   int getsuidroot;
   int open_endp;
@@ -138,11 +139,7 @@ static int try_send_endp(t_priv_endp *mu, char *msg)
       rpct_send_diag_msg(NULL, mu->llid, mu->pid, msg);
       result = 0;
       }
-    else
-      KERR("%s", msg);
     }
-  else
-    KERR("%s", msg);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -191,14 +188,20 @@ static int trace_alloc(t_priv_endp *mu)
     if (mu->endp_type == endp_type_a2b)
       llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_a2b);
     else 
-    if (mu->endp_type == endp_type_raw)
-      llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_raw);
+    if (mu->endp_type == endp_type_phy)
+      llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_phy);
     else
     if (mu->endp_type == endp_type_wif)
       llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_wif);
     else
-    if (mu->endp_type == endp_type_kvm_eth)
-      llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_kvm_eth);
+    if (mu->endp_type == endp_type_kvm_sock)
+      llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_kvm_sock);
+    else
+    if (mu->endp_type == endp_type_kvm_dpdk)
+      llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_kvm_dpdk);
+    else
+    if (mu->endp_type == endp_type_kvm_vhost)
+      llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_kvm_vhost);
     else
     if (mu->endp_type == endp_type_kvm_wlan)
       llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_kvm_wlan);
@@ -281,6 +284,21 @@ int endp_mngt_can_be_found_with_name(char *name, int num, int *endp_type)
         *endp_type = cur->endp_type;
         }
       }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int endp_mngt_exists(char *name, int num, int *endp_type)
+{
+  int result = 0;
+  t_priv_endp *cur = muendp_find_with_name(name, num);
+  *endp_type = 0;
+  if (cur)
+    {
+    *endp_type = cur->endp_type;
+    result = 1;
     }
   return result;
 }
@@ -482,7 +500,9 @@ static void muendp_free(char *name, int num)
       {
       llid_trace_free(mu->llid, 0, __FUNCTION__);
       }
-    if ((num == 0) && (mu->endp_type != endp_type_kvm_eth))
+    if ((num == 0) &&
+        (mu->endp_type != endp_type_kvm_sock) &&
+        (mu->endp_type != endp_type_tap))
       layout_del_sat(name);
     if (mu->pid)
       kill(mu->pid, SIGKILL);
@@ -661,11 +681,11 @@ void endp_mngt_rpct_recv_diag_msg(int llid, int tid, char *line)
       }
     else if ((!strcmp(line, "cloonix_resp_tap_ok"))  ||
              (!strcmp(line, "cloonix_resp_wif_ok"))  ||
-             (!strcmp(line, "cloonix_resp_raw_ok"))  ||
+             (!strcmp(line, "cloonix_resp_phy_ok"))  ||
              (!strcmp(line, "cloonix_resp_snf_ok"))  ||
              (!strcmp(line, "cloonix_resp_c2c_ok"))  ||
              (!strcmp(line, "cloonix_resp_nat_ok"))  ||
-             (!strcmp(line, "cloonix_resp_kvm_eth_ok"))  ||
+             (!strcmp(line, "cloonix_resp_kvm_sock_ok"))  ||
              (!strcmp(line, "cloonix_resp_a2b_ok")))
       {
       mu->open_endp = 1;
@@ -675,7 +695,7 @@ void endp_mngt_rpct_recv_diag_msg(int llid, int tid, char *line)
       }
     else if ((!strcmp(line, "cloonix_resp_tap_ko"))  ||
              (!strcmp(line, "cloonix_resp_wif_ko"))  ||
-             (!strcmp(line, "cloonix_resp_raw_ko")))
+             (!strcmp(line, "cloonix_resp_phy_ko")))
       {
       mu->open_endp = 1;
       status_reply_if_possible(0, mu, line);
@@ -742,8 +762,8 @@ static void send_type_req(t_priv_endp *cur)
     try_send_endp(cur, "cloonix_req_tap");
   else if (cur->endp_type == endp_type_wif)
     try_send_endp(cur, "cloonix_req_wif");
-  else if (cur->endp_type == endp_type_raw)
-    try_send_endp(cur, "cloonix_req_raw");
+  else if (cur->endp_type == endp_type_phy)
+    try_send_endp(cur, "cloonix_req_phy");
   else if (cur->endp_type == endp_type_snf)
     try_send_endp(cur, "cloonix_req_snf");
   else if (cur->endp_type == endp_type_c2c)
@@ -752,22 +772,20 @@ static void send_type_req(t_priv_endp *cur)
     try_send_endp(cur, "cloonix_req_a2b");
   else if (cur->endp_type == endp_type_nat)
     try_send_endp(cur, "cloonix_req_nat");
-  else if (cur->endp_type == endp_type_kvm_eth)
-    try_send_endp(cur, "cloonix_req_kvm_eth");
+  else if (cur->endp_type == endp_type_kvm_sock)
+    try_send_endp(cur, "cloonix_req_kvm_sock");
   else
     KERR("%d", cur->endp_type);
 }
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void set_clone_start_pid(char *name, t_priv_endp *endp, int pid)
+static void set_clone_started(char *name, t_priv_endp *endp)
 {
-  if (!pid)
-    KERR("BADPID");
-  if (endp->clone_start_pid)
-    KERR("CLONEPID %s %d %d", name, pid, endp->clone_start_pid);
-  endp->clone_start_pid = pid;
-  endp->clone_start_pid_just_done = 1;
+  if (endp->clone_started)
+    KERR("CLONEPID %s", name);
+  endp->clone_started = 1;
+  endp->clone_started_just_done = 1;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -779,10 +797,10 @@ static void timer_endp_beat(void *data)
   while(cur)
     {
     next = cur->next;
-    if (cur->clone_start_pid)
+    if (cur->clone_started)
       {
-      if (cur->clone_start_pid_just_done == 1)
-        cur->clone_start_pid_just_done = 0;
+      if (cur->clone_started_just_done == 1)
+        cur->clone_started_just_done = 0;
       else
         {
         if (cur->trace_alloc_count == 0)
@@ -805,7 +823,7 @@ static void timer_endp_beat(void *data)
           rpct_send_pid_req(NULL,cur->llid,type_hop_endp,cur->name,cur->num);
         else if ((cur->getsuidroot == 0) && 
                  ((cur->endp_type == endp_type_tap) ||
-                  (cur->endp_type == endp_type_raw) ||
+                  (cur->endp_type == endp_type_phy) ||
                   (cur->endp_type == endp_type_wif)))
           try_send_endp(cur, "cloonix_req_suidroot");
         else if (cur->open_endp == 0)
@@ -863,6 +881,17 @@ static void muendp_watchdog(void *data)
     muendp_free(muendp->name, muendp->num);
     }
   clownix_free(mua, __FUNCTION__);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void doors_recv_c2c_clone_birth_pid(int llid, int tid, char *name, int pid)
+{
+  t_priv_endp *mu = muendp_find_with_name(name, 0);
+  if (!mu)
+    KERR("%s %d", name, pid);
+  else
+    set_clone_started(name, mu);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -983,21 +1012,6 @@ int endp_mngt_connection_state_is_restfull(char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void doors_recv_c2c_clone_birth_pid(int llid, int tid, char *name, int pid)
-{
-  t_priv_endp *mu = muendp_find_with_name(name, 0);
-  if (!mu)
-    KERR("%s %d", name, pid);
-  else
-    {
-    if (mu->clone_start_pid)
-      KERR("%s %d %d", name, pid, mu->clone_start_pid);
-    set_clone_start_pid(name, mu, pid);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int fd_ready_doors_clone_has_arrived(char *name, int doors_fd)
 {
   int result = -1;
@@ -1052,22 +1066,26 @@ static void fd_ready_doors_clone(void *data)
 /****************************************************************************/
 int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type)
 {
-  int pid, nb_eth, result = -1;
+  int result = -1;
   char *sock = utils_get_endp_path(name, num);
   t_priv_endp *mu = muendp_find_with_name(name, num);
   t_priv_endp *mu0;
   t_argendp  *mua1, *mua2;
   char **argv;
+  if (endp_type == endp_type_pci)
+    KERR("WRONG");
   if (mu == NULL)
     {
-    result = 0;
     if (file_exists(sock, F_OK))
       unlink(sock);
     mu = muendp_alloc(name, num, llid, tid, endp_type);
     if (!mu)
       KOUT(" ");
 
-    if ((num == 0) && (mu->endp_type != endp_type_kvm_eth))
+    if ((num == 0) &&
+        (mu->endp_type != endp_type_kvm_sock) &&
+        (mu->endp_type != endp_type_tap) &&
+        (mu->endp_type != endp_type_phy))
       layout_add_sat(name, llid);
 
     if (mu->endp_type == endp_type_c2c)
@@ -1080,16 +1098,15 @@ int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type)
               ((mu->endp_type == endp_type_snf) ||
                (mu->endp_type == endp_type_tap) ||
                (mu->endp_type == endp_type_wif) ||
-               (mu->endp_type == endp_type_raw) ||
+               (mu->endp_type == endp_type_phy) ||
                (mu->endp_type == endp_type_a2b) ||
                (mu->endp_type == endp_type_nat)))
       {
       create_two_endp_arg(name, num, endp_type, &mua1, &mua2);
       argv = muendp_birth_argv(mua2);
       utils_send_creation_info("muendp", argv);
-      pid = pid_clone_launch(muendp_birth, muendp_death, NULL,
-                             mua2, mua2, NULL, name, -1, 1);
-      set_clone_start_pid(name, mu, pid);
+      pid_clone_launch(muendp_birth,muendp_death,NULL,mua2,mua2,NULL,name,-1,1);
+      set_clone_started(name, mu);
       clownix_timeout_add(500, muendp_watchdog, (void *) mua1, NULL, NULL);
       }
     else if ((num == 1) && (mu->endp_type == endp_type_a2b))
@@ -1098,11 +1115,11 @@ int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type)
       if (!mu0) 
         KERR("%s %d", name, num);
       else
-        set_clone_start_pid(name, mu, mu0->clone_start_pid);
+        set_clone_started(name, mu);
       }
     else if (mu->endp_type == endp_type_kvm_wlan)
       {
-      if (endp_is_wlan(mu->name, mu->num, &nb_eth))
+      if (endp_is_wlan(mu->name, mu->num))
         endp_evt_birth(mu->name, mu->num, mu->endp_type);
       else
         KERR("%s %d %d", mu->name, mu->num, mu->endp_type);
@@ -1223,21 +1240,6 @@ void endp_mngt_send_quit(char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int endp_mngt_exists(char *name, int num, int *endp_type)
-{
-  int result = 0;
-  t_priv_endp *mu = muendp_find_with_name(name, num);
-  *endp_type = 0;
-  if (mu)
-    {
-    *endp_type = mu->endp_type;
-    result = 1;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int endp_mngt_stop(char *name, int num)
 {
   int result = -1;
@@ -1262,7 +1264,7 @@ void endp_mngt_stop_all_sat(void)
     next = cur->next;
     if ((cur->endp_type == endp_type_tap) ||
         (cur->endp_type == endp_type_wif) ||
-        (cur->endp_type == endp_type_raw) ||
+        (cur->endp_type == endp_type_phy) ||
         (cur->endp_type == endp_type_a2b) ||
         (cur->endp_type == endp_type_snf) ||
         (cur->endp_type == endp_type_nat))
@@ -1407,7 +1409,7 @@ int endp_mngt_get_nb_sat(void)
       {
       if ((cur->endp_type == endp_type_tap) ||
           (cur->endp_type == endp_type_wif) ||
-          (cur->endp_type == endp_type_raw) ||
+          (cur->endp_type == endp_type_phy) ||
           (cur->endp_type == endp_type_a2b) ||
           (cur->endp_type == endp_type_nat))
         result++;
@@ -1426,7 +1428,7 @@ int endp_mngt_get_nb_all(void)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int endp_mngt_kvm_pid_clone(char *name, int num, int pid)
+int endp_mngt_kvm_pid_clone(char *name, int num)
 {
   int result = -1;
   t_priv_endp *mu = muendp_find_with_name(name, num);
@@ -1434,11 +1436,11 @@ int endp_mngt_kvm_pid_clone(char *name, int num, int pid)
     KERR("%s %d", name, num);
   else 
     {
-    if (mu->endp_type != endp_type_kvm_eth)
+    if (mu->endp_type != endp_type_kvm_sock)
       KERR("%s %d %d", name, num, mu->endp_type);
     else
       {
-      set_clone_start_pid(name, mu, pid);
+      set_clone_started(name, mu);
       result = 0;
       }
     }

@@ -611,7 +611,6 @@ void mulan_rpct_recv_diag_msg(int llid, int tid, char *line)
                     name, &num, &tidx) == 3)
       {
       wlan_name_num_free(mulan, name, num);
-      KERR("%s %s %d %d", lan, name, num, tidx);
       }
     else if (!strcmp(line, "SELF-DESTROYING"))
       {
@@ -786,10 +785,11 @@ int mulan_start(char *lan, int is_wlan)
 /****************************************************************************/
 void mulan_test_stop(char *lan)
 {
+  int type;
   t_mulan *mulan = mulan_find_with_name(lan);
   if (mulan)
     {
-    if (!endp_evt_lan_is_in_use(lan))
+    if (!endp_evt_lan_is_in_use(lan, &type))
       {
       mulan_request_quit(mulan);
       }

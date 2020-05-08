@@ -41,11 +41,12 @@
 #include "dpdk_ovs.h"
 #include "dpdk_dyn.h"
 #include "dpdk_msg.h"
-#include "dpdk_fmt.h"
+#include "fmt_diag.h"
 #include "dpdk_tap.h"
 #include "qmp.h"
 #include "system_callers.h"
 #include "stats_counters.h"
+#include "vhost_eth.h"
 
 enum{
   msg_type_diag = 1,
@@ -67,10 +68,10 @@ typedef struct t_dpdk_eth
 typedef struct t_dpdk_vm
 {
   char name[MAX_NAME_LEN];
-  int  num;
-  int  must_unlock_coherency;
-  int  coherency_idx;
+  int  nb_tot_eth;
+  t_eth_table eth_table[MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM];
   int  dyn_vm_add_delay;
+  int  dyn_vm_add_eth_todo;
   int  dyn_vm_add_done;
   int  dyn_vm_add_done_acked;
   int  dyn_vm_add_done_notacked;
@@ -117,20 +118,16 @@ typedef struct t_arg_ovsx
 } t_arg_ovsx;
 /*--------------------------------------------------------------------------*/
 
-
+static int g_dpdk_usable;
 static t_dpdk_vm *g_head_vm;
 static t_ovs *g_head_ovs;
 
 /****************************************************************************/
-static void erase_dpdk_qemu_path(char *name, int nb_dpdk)
+static void erase_dpdk_qemu_path(char *name, int num_eth)
 {
-  int i;
   char *endp_path;
-  for (i=0; i<nb_dpdk; i++)
-    {
-    endp_path = utils_get_dpdk_endp_path(name, i);
-    unlink(endp_path);
-    }
+  endp_path = utils_get_dpdk_endp_path(name, num_eth);
+  unlink(endp_path);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -169,27 +166,6 @@ static void test_and_end_ovs(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void vm_check_unlock_coherency(void)
-{
-  t_dpdk_vm *vm = g_head_vm;
-  t_ovs *cur = g_head_ovs;
-  if (cur != NULL)
-    {
-    while(vm)
-      {
-      if (vm->must_unlock_coherency)
-        {
-        recv_coherency_unlock(vm->coherency_idx);
-        vm->must_unlock_coherency = 0;
-        event_print("Unlock coherency vm %s", vm->name);
-        }
-      vm = vm->next;
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static t_dpdk_vm *vm_find(char *name)
 {
   t_dpdk_vm *vm = g_head_vm;
@@ -200,7 +176,7 @@ static t_dpdk_vm *vm_find(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void vm_alloc(char *name, int num, int must_unlock, int idx)
+static void vm_alloc(char *name, int nb_tot_eth, t_eth_table *eth_tab)
 {
   t_dpdk_vm *vm = vm_find(name);
   if (vm)
@@ -210,9 +186,8 @@ static void vm_alloc(char *name, int num, int must_unlock, int idx)
     vm = (t_dpdk_vm *) clownix_malloc(sizeof(t_dpdk_vm), 8);
     memset(vm, 0, sizeof(t_dpdk_vm));
     strncpy(vm->name, name, MAX_NAME_LEN-1);
-    vm->must_unlock_coherency = must_unlock;
-    vm->coherency_idx = idx;
-    vm->num = num;
+    vm->nb_tot_eth = nb_tot_eth;
+    memcpy(vm->eth_table, eth_tab, nb_tot_eth * sizeof(t_eth_table));
     if (g_head_vm)
       g_head_vm->prev = vm;
     vm->next = g_head_vm;
@@ -224,17 +199,16 @@ static void vm_alloc(char *name, int num, int must_unlock, int idx)
 /****************************************************************************/
 static void vm_free(char *name)
 {
+  int i;
   t_dpdk_vm *vm = vm_find(name);
   if (!vm)
     KERR("%s", name);
   else
     {
-    erase_dpdk_qemu_path(name, vm->num);
-    if (vm->destroy_done == 0)
+    for (i=0; i<vm->nb_tot_eth; i++)
       {
-      KERR("%s", name);
-      if (dpdk_dyn_del_all_lan(name))
-        KERR("%s", name);
+      if (vm->eth_table[i].eth_type == eth_type_dpdk)
+        erase_dpdk_qemu_path(name, i);
       }
     if (vm->prev)
       vm->prev->next = vm->next;
@@ -279,7 +253,6 @@ static int try_send_msg_ovs(t_ovs *cur, int msg_type, int tid, char *msg)
         }
       else if (msg_type == msg_type_pid)
         {
-        hop_event_hook(cur->llid, FLAG_HOP_DIAG, "pid_req");
         rpct_send_pid_req(NULL, cur->llid, tid, msg, 0);
         result = 0;
         }
@@ -328,6 +301,16 @@ static t_ovs *ovs_find(void)
 static void ovs_free(char *name)
 {
   t_ovs *cur = g_head_ovs;
+  if (cur->ovsdb_pid > 0)
+    {
+    if (!kill(cur->ovsdb_pid, SIGKILL))
+      KERR("ERR: ovsdb was alive");
+    }
+  if (cur->ovs_pid > 0)
+    {
+    if (!kill(cur->ovs_pid, SIGKILL))
+      KERR("ERR: ovs was alive");
+    }
   g_head_ovs = NULL;
   clownix_free(cur, __FUNCTION__);
 }
@@ -393,18 +376,6 @@ static int ovs_birth(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int test_if_dpdk_qemu_path_is_ok(char *name, int nb_dpdk)
-{
-  int result = 1;
-  char *endp_path;
-  endp_path = utils_get_dpdk_endp_path(name, 0);
-  if (access(endp_path, F_OK))
-    result = 0;
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void check_on_destroy_requested(t_ovs *cur)
 {
   char *sock;
@@ -432,15 +403,17 @@ static void check_on_destroy_requested(t_ovs *cur)
       llid_trace_free(cur->llid, 0, __FUNCTION__);
       cur->llid = 0;
       }
-    if (cur->ovsdb_pid)
+    if (cur->ovsdb_pid > 0)
       {
       if (!kill(cur->ovsdb_pid, SIGKILL))
         KERR("ERR: ovsdb was alive");
+      cur->ovsdb_pid = 0;
       }
-    if (cur->ovs_pid)
+    if (cur->ovs_pid > 0)
       {
       if (!kill(cur->ovs_pid, SIGKILL))
         KERR("ERR: ovs was alive");
+      cur->ovs_pid = 0;
       }
     unlink(sock);
     mk_dpdk_ovs_db_dir();
@@ -452,8 +425,68 @@ static void check_on_destroy_requested(t_ovs *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void call_dpdk_dyn_del_eth(t_dpdk_vm *vm)
+{
+  int i;
+  for (i=0; i<vm->nb_tot_eth; i++)
+    {
+    if (vm->eth_table[i].eth_type == eth_type_dpdk)
+      {
+      dpdk_dyn_del_eth(vm->name, i);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int try_connect_eth(t_dpdk_vm *vm)
+{
+  char *endp_path;
+  int i, success, some_more, result = 0;
+  char strmac[MAX_NAME_LEN];
+  char *mc; 
+  success = 0;
+  for (i = vm->dyn_vm_add_eth_todo; i < vm->nb_tot_eth; i++)
+    {
+    if (vm->eth_table[i].eth_type == eth_type_dpdk)
+      {
+      endp_path = utils_get_dpdk_endp_path(vm->name, i);
+      if (!access(endp_path, F_OK))
+        {
+        success = 1;
+        vm->dyn_vm_add_eth_todo = i+1;
+        event_print("Add eth %s %d", vm->name, i);
+        mc = vm->eth_table[i].mac_addr;
+        sprintf(strmac, " mac=%02X:%02X:%02X:%02X:%02X:%02X",
+                          mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF,
+                          mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF);
+        dpdk_dyn_add_eth(vm->name, i, strmac);
+        break;
+        }
+      }
+    }
+  if (success)
+    {
+    some_more = 0;
+    for (i = vm->dyn_vm_add_eth_todo; i < vm->nb_tot_eth; i++)
+      {
+      if (vm->eth_table[i].eth_type == eth_type_dpdk)
+        some_more = 1;
+      }
+    if (some_more == 0)
+      {
+      event_print("Add eth %s all done", vm->name);
+      result  = 1;
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void timer_vm_add_beat(void *data)
 {
+  int nb_sock, nb_dpdk, nb_vhost, nb_wlan;
   t_vm *kvm;
   t_dpdk_vm *nvm, *vm;
   t_ovs *ovsdb = ovs_find();
@@ -464,41 +497,61 @@ static void timer_vm_add_beat(void *data)
     kvm = cfg_get_vm(vm->name);
     if (!kvm)
       {
-      dpdk_dyn_end_vm_qmp_shutdown(vm->name, vm->num);
+      event_print("timer !kvm call_dpdk_dyn_del_eth %s", vm->name);
+      call_dpdk_dyn_del_eth(vm);
       }
     else if (kvm->vm_to_be_killed == 1)
       {
-      dpdk_dyn_end_vm_qmp_shutdown(vm->name, vm->num);
+      event_print("timer to_be_killed call_dpdk_dyn_del_eth %s", vm->name);
+      call_dpdk_dyn_del_eth(vm);
       }
     else
       {
-      if (kvm && (vm->dyn_vm_add_done == 0))
+      utils_get_eth_numbers(kvm->kvm.nb_tot_eth, kvm->kvm.eth_table,
+                            &nb_sock, &nb_dpdk, &nb_vhost, &nb_wlan);
+      if (nb_dpdk != 0)
         {
-        if ((ovsdb != NULL) &&
-            (ovsdb->ovs_pid_ready == 1) &&
-            (ovsdb->periodic_count > 0))
+        if (!kvm)
           {
-          if (test_if_dpdk_qemu_path_is_ok(vm->name, vm->num))
+          event_print("timer !kvm call_dpdk_dyn_del_eth %s", vm->name);
+          call_dpdk_dyn_del_eth(vm);
+          }
+        else if (kvm->vm_to_be_killed == 1)
+          {
+          event_print("timer to_be_killed call_dpdk_dyn_del_eth %s", vm->name);
+          call_dpdk_dyn_del_eth(vm);
+          }
+        else
+          {
+          if (kvm && (vm->dyn_vm_add_done == 0))
             {
-            vm->dyn_vm_add_delay += 1;
-            if (vm->dyn_vm_add_delay > 3)
+            if ((ovsdb != NULL) &&
+                (ovsdb->ovs_pid_ready == 1) &&
+                (ovsdb->periodic_count > 0))
               {
-              dpdk_dyn_add_eth(kvm, vm->name, vm->num);
-              vm->dyn_vm_add_done = 1;
+              if (!dpdk_ovs_get_dpdk_usable())
+                {
+                KERR("0 Hugepages no dpdk for %s", vm->name);
+                machine_death(vm->name, error_death_no_dpdk);
+                }
+              vm->dyn_vm_add_delay += 1;
+              if (vm->dyn_vm_add_delay > 2)
+                vm->dyn_vm_add_done = try_connect_eth(vm);
+              }
+            }
+          if (kvm && (vm->dyn_vm_add_done_acked == 0))
+            {
+            vm->dyn_vm_add_done_notacked += 1;
+            if (vm->dyn_vm_add_done_notacked == 400)
+              {
+              KERR("%s", vm->name);
+              machine_death(vm->name, error_death_noovstime);
               }
             }
           }
         }
-      if (kvm && (vm->dyn_vm_add_done_acked == 0))
-        {
-        vm->dyn_vm_add_done_notacked += 1;
-        if (vm->dyn_vm_add_done_notacked == 400)
-          {
-          KERR("%s", vm->name);
-          machine_death(vm->name, error_death_noovstime);
-          }
-        }
       }
+
     vm = nvm;
     }
   clownix_timeout_add(10, timer_vm_add_beat, NULL, NULL, NULL);
@@ -552,13 +605,8 @@ static void timer_ovs_beat(void *data)
         }
       }
     check_on_destroy_requested(cur);
-    if (cur->periodic_count)
-      clownix_timeout_add(100, timer_ovs_beat, NULL, NULL, NULL);
-    else
-      clownix_timeout_add(5, timer_ovs_beat, NULL, NULL, NULL);
     }
-  else
-    clownix_timeout_add(10, timer_ovs_beat, NULL, NULL, NULL);
+  clownix_timeout_add(50, timer_ovs_beat, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -613,9 +661,9 @@ int dpdk_ovs_get_all_pid(t_lst_pid **lst_pid)
     {
     if (cur->pid)
       result++;
-    if (cur->ovs_pid)
+    if (cur->ovs_pid > 0)
       result++;
-    if (cur->ovsdb_pid)
+    if (cur->ovsdb_pid > 0)
       result++;
     }
   if (result)
@@ -630,13 +678,13 @@ int dpdk_ovs_get_all_pid(t_lst_pid **lst_pid)
       glob_lst[i].pid = cur->pid;
       i++;
       }
-    if (cur->ovsdb_pid)
+    if (cur->ovsdb_pid > 0)
       {
       strcpy(glob_lst[i].name, "ovsdb-server");
       glob_lst[i].pid = cur->ovsdb_pid;
       i++;
       }
-    if (cur->ovs_pid)
+    if (cur->ovs_pid > 0)
       {
       strcpy(glob_lst[i].name, "ovs-vswitchd");
       glob_lst[i].pid = cur->ovs_pid;
@@ -654,10 +702,6 @@ int dpdk_ovs_get_all_pid(t_lst_pid **lst_pid)
 void dpdk_ovs_pid_resp(int llid, char *name, int toppid, int pid)
 {
   t_ovs *cur = ovs_find_with_llid(llid);
-  char txt[MAX_PATH_LEN];
-  memset(txt, 0, MAX_PATH_LEN);
-  snprintf(txt, MAX_PATH_LEN-1, "pid_resp %s %d", name, pid);
-  hop_event_hook(llid, FLAG_HOP_DIAG, txt);
   if (!cur)
     KERR("%s %d %d", name, toppid, pid);
   else
@@ -670,7 +714,6 @@ void dpdk_ovs_pid_resp(int llid, char *name, int toppid, int pid)
       if (cur->clone_start_pid != pid)
         KERR("%s %d %d %d", name, toppid, pid, cur->clone_start_pid);
       cur->pid = pid;
-      vm_check_unlock_coherency();
       }
     else
       {
@@ -680,7 +723,7 @@ void dpdk_ovs_pid_resp(int llid, char *name, int toppid, int pid)
           cur->ovsdb_pid = pid;
         if (cur->ovs_pid == 0)
           cur->ovs_pid = toppid;
-        if ((cur->ovs_pid) && (cur->ovsdb_pid))
+        if ((cur->ovs_pid > 0) && (cur->ovsdb_pid > 0))
           cur->ovs_pid_ready = 1;
         }
       }
@@ -692,10 +735,6 @@ void dpdk_ovs_pid_resp(int llid, char *name, int toppid, int pid)
 void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
 {
   t_ovs *cur = ovs_find_with_llid(llid);
-  char txt[MAX_PATH_LEN];
-  memset(txt, 0, MAX_PATH_LEN);
-  snprintf(txt, MAX_PATH_LEN-1, "diag_msg %s", line);
-  hop_event_hook(llid, FLAG_HOP_DIAG, txt);
   if (!cur)
     KERR("%s", line);
   else
@@ -723,23 +762,49 @@ void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
         cur->destroy_requested = 1;
         }
       }
-    else if (!strcmp(line, "cloonixovs_resp_ovsdb_ok"))
+    else if (!strcmp(line, "cloonixovs_resp_ovsdb_ok_dpdk_ok"))
       {
-      cur->open_ovsdb = 1;
-      event_print("Start OpenVSwitch %s open_ovsdb = 1", cur->name);
+      g_dpdk_usable = 1;
+      if (cur->open_ovsdb == 0)
+        {
+        event_print("Start OpenVSwitch %s open_ovsdb = 1", cur->name);
+        cur->open_ovsdb = 1;
+        }
+      }
+    else if (!strcmp(line, "cloonixovs_resp_ovsdb_ok_dpdk_ko"))
+      {
+      g_dpdk_usable = 0;
+      if (cur->open_ovsdb == 0)
+        {
+        event_print("Start OpenVSwitch %s open_ovsdb = 1", cur->name);
+        cur->open_ovsdb = 1;
+        }
       }
     else if (!strcmp(line, "cloonixovs_resp_ovs_ko"))
       {
       KERR("cloonixovs_resp_ovs_ko ovs-vswitchd FAIL huge page memory?");
       cur->destroy_requested = 1;
       }
-    else if (!strcmp(line, "cloonixovs_resp_ovs_ok"))
+    else if (!strcmp(line, "cloonixovs_resp_ovs_ok_dpdk_ko"))
       {
-      cur->open_ovs = 1;
-      event_print("Start OpenVSwitch %s open_ovs = 1", cur->name);
+      g_dpdk_usable = 0;
+      if (cur->open_ovs == 0)
+        {
+        event_print("Start OpenVSwitch %s open_ovs = 1", cur->name);
+        cur->open_ovs = 1;
+        }
+      }
+    else if (!strcmp(line, "cloonixovs_resp_ovs_ok_dpdk_ok"))
+      {
+      g_dpdk_usable = 1;
+      if (cur->open_ovs == 0)
+        {
+        event_print("Start OpenVSwitch %s open_ovs = 1", cur->name);
+        cur->open_ovs = 1;
+        }
       }
     else
-      dpdk_fmt_rx_rpct_recv_diag_msg(llid, tid, line);
+      fmt_rx_rpct_recv_diag_msg(llid, tid, line);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -768,54 +833,6 @@ int dpdk_ovs_find_with_llid(int llid)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-void dpdk_ovs_start_vm(char *name, int num, int idx)
-{
-  t_ovs *cur = g_head_ovs;
-  erase_dpdk_qemu_path(name, num);
-  if ((cur != NULL) && (dpdk_ovs_muovs_ready()))
-    {
-    recv_coherency_unlock(idx);
-    vm_alloc(name, num, 0, 0);
-    }
-  else if (cur != NULL)
-    {
-    vm_alloc(name, num, 1, idx);
-    }
-  else
-    {
-    vm_alloc(name, num, 1, idx);
-    event_print("Start OpenVSwitch");
-    cur = ovs_alloc("ovsdb");
-    cur->clone_start_pid = create_muovs_process("ovsdb");
-    cur->clone_start_pid_just_done = 1;
-    }
-  event_print("Alloc ovs vm %s %d", name, num);
-  if (cur != NULL)
-    event_print("Unlock coherency vm %s", name);
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void dpdk_ovs_end_vm_qmp_shutdown(char *name)
-{
-  t_dpdk_vm *vm = vm_find(name);
-  if (vm)
-    {
-    dpdk_dyn_end_vm_qmp_shutdown(name, vm->num);
-    event_print("Free ovs vm %s %d", name, vm->num);
-    vm_free(name);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void dpdk_ovs_end_vm_kill_shutdown(char *name)
-{
-  dpdk_ovs_end_vm_qmp_shutdown(name);
-}
-/*--------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 void dpdk_ovs_ack_add_eth_vm(char *name, int is_ko)
 {
@@ -833,34 +850,18 @@ void dpdk_ovs_ack_add_eth_vm(char *name, int is_ko)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_ovs_end_vm(char *name, int num)
-{
-  t_dpdk_vm *vm = vm_find(name);
-  if (!vm)
-    {
-    KERR("%s", name);
-    if (dpdk_dyn_del_all_lan(name))
-      KERR("%s", name);
-    }
-  else
-    {
-    if (vm->destroy_done == 0)
-      {
-      vm->destroy_done = 1;
-      if (dpdk_dyn_del_all_lan(name))
-        vm_free(name);
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int dpdk_ovs_eth_exists(char *name, int num)
 {
   int result = 0;
   t_dpdk_vm *vm = vm_find(name);
-  if (vm && (num < vm->num))
-    result = 1;
+  if ((num < 0) || 
+      (num > MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM + MAX_WLAN_VM))
+    KOUT("%d", num);
+  if (vm)
+    {
+    if (vm->eth_table[num].eth_type == eth_type_dpdk)
+      result = 1;
+    }
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -879,28 +880,31 @@ int dpdk_ovs_try_send_diag_msg(int tid, char *cmd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_eth)
+char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_dpdk)
 {
   static char net_cmd[MAX_PATH_LEN*3];
   int len = 0;
-  char *mc = vm->kvm.eth_params[eth].mac_addr;
+  char *mc = vm->kvm.eth_table[eth].mac_addr;
   char *endp_path = utils_get_dpdk_endp_path(vm->kvm.name, eth);
 
-  len += sprintf(net_cmd+len, 
-  " -chardev socket,id=chard%d,path=%s,server", eth, endp_path);
+  len += sprintf(net_cmd+len, " -chardev socket,id=chard%d,path=%s,server",
+                              eth, endp_path);
 
-  len += sprintf(net_cmd+len,
-  " -netdev type=vhost-user,id=net%d,chardev=chard%d,vhostforce,queues=4", eth, eth);
+  len += sprintf(net_cmd+len, " -netdev type=vhost-user,id=net%d,"
+                              "chardev=chard%d,vhostforce,queues=4",
+                              eth, eth);
   
-  len += sprintf(net_cmd+len,
-  " -device virtio-net-pci,netdev=net%d,"
-  "mac=%02X:%02X:%02X:%02X:%02X:%02X,mrg_rxbuf=on,mq=on",
-  eth, mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF, mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF);
+  len += sprintf(net_cmd+len, " -device virtio-net-pci,netdev=net%d,"
+                              "mac=%02X:%02X:%02X:%02X:%02X:%02X,"
+                              "mrg_rxbuf=on,mq=on,bus=pci.0,addr=0x%x",
+                              eth, mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF,
+                              mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF, eth+5);
 
-  len += sprintf(net_cmd+len,
-  " -object memory-backend-file,id=mem%d,size=%dM,share=on,mem-path=%s"
-  " -numa node,memdev=mem%d -mem-prealloc",
-  eth, vm->kvm.mem/tot_eth, cfg_get_root_work(), eth);
+  len += sprintf(net_cmd+len, " -object memory-backend-file,id=mem%d,"
+                              "size=%dM,share=on,mem-path=%s"
+                              " -numa node,memdev=mem%d -mem-prealloc",
+                              eth, vm->kvm.mem/tot_dpdk,
+                              cfg_get_root_work(), eth);
   return net_cmd;
 }
 /*--------------------------------------------------------------------------*/
@@ -920,32 +924,34 @@ int dpdk_ovs_still_present(void)
 /****************************************************************************/
 t_topo_endp *dpdk_ovs_translate_topo_endp(int *nb)
 {
-  int i, nb_tap, nb_endp = 0, nb_endp_vlan = 0;
+  int i, nb_endp = 0, nb_endp_vlan = 0;
   t_dpdk_vm *vm;
   t_topo_endp *result;
   vm = g_head_vm;
   while(vm)
     {
-    nb_endp += vm->num;
+    for (i=0; i<vm->nb_tot_eth; i++)
+      {
+      if (vm->eth_table[i].eth_type == eth_type_dpdk)
+        nb_endp += 1;
+      }
     vm = vm->next;
     }
-  nb_endp += dpdk_tap_get_qty();
   result = (t_topo_endp *) clownix_malloc(nb_endp*sizeof(t_topo_endp),13);
   memset(result, 0, nb_endp*sizeof(t_topo_endp));
   vm = g_head_vm;
   while(vm)
     {
-    for (i=0; i<vm->num; i++)
+    for (i=0; i<vm->nb_tot_eth; i++)
       {
-      if (dpdk_dyn_topo_endp(vm->name, i, &(result[nb_endp_vlan])))
-        nb_endp_vlan += 1;
+      if (vm->eth_table[i].eth_type == eth_type_dpdk)
+        {
+        if (dpdk_dyn_topo_endp(vm->name, i, &(result[nb_endp_vlan])))
+          nb_endp_vlan += 1;
+        }
       }
     vm = vm->next;
     }
-  nb_tap = dpdk_tap_topo_endp((nb_endp-nb_endp_vlan),&(result[nb_endp_vlan]));
-  if ((nb_tap + nb_endp_vlan) > nb_endp)
-    KOUT("%d %d %d", nb_tap, nb_endp_vlan, nb_endp);
-  nb_endp_vlan += nb_tap;
   *nb = nb_endp_vlan;
   return result;
 }
@@ -954,84 +960,21 @@ t_topo_endp *dpdk_ovs_translate_topo_endp(int *nb)
 /****************************************************************************/
 int dpdk_ovs_get_nb(void)
 {
-  int nb_vm, i, result = 0;
+  int nb_vm, i, j, result = 0;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   for (i=0; i<nb_vm; i++)
     {
     if (!vm)
       KOUT(" ");
-    result += vm->kvm.nb_dpdk;
+    for (j=0; j<vm->kvm.nb_tot_eth; j++)
+      {
+      if (vm->kvm.eth_table[j].eth_type == eth_type_dpdk)
+        result += 1;
+      }
     vm = vm->next;
     }
   if (vm)
     KOUT(" ");
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_ovs_add_lan_tap(int llid, int tid, char *lan, char *name)
-{
-  int result;
-  result = dpdk_tap_add_lan(llid, tid, lan, name); 
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_ovs_del_lan_tap(int llid, int tid, char *lan, char *name)
-{
-  int result;
-  result = dpdk_tap_del_lan(llid, tid, lan, name); 
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_ovs_add_tap(int llid, int tid, char *name, int idx)
-{
-  t_ovs *cur = g_head_ovs;
-  int result = -1;
-
-  if ((cur != NULL) && (dpdk_ovs_muovs_ready()))
-    {
-    recv_coherency_unlock(idx);
-    result = dpdk_tap_add(llid, tid, name, 0, 0);
-    }
-  else if (cur != NULL)
-    {
-    result = dpdk_tap_add(llid, tid, name, 1, idx);
-    if (result)
-      recv_coherency_unlock(idx);
-    }
-  else
-    {
-    result = dpdk_tap_add(llid, tid, name, 1, idx);
-    if (result)
-      recv_coherency_unlock(idx);
-    event_print("Start OpenVSwitch");
-    cur = ovs_alloc("ovsdb");
-    cur->clone_start_pid = create_muovs_process("ovsdb");
-    cur->clone_start_pid_just_done = 1;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_ovs_del_tap(int llid, int tid, char *name)
-{
-  int result;
-  result = dpdk_tap_del(llid, tid, name);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_ovs_exist_tap(char *name)
-{
-  int result;
-  result = dpdk_tap_exist(name);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -1044,10 +987,57 @@ void dpdk_ovs_urgent_client_destruct(void)
     dpdk_tap_end_ovs();
   while(vm)
     {
-    dpdk_ovs_end_vm(vm->name, vm->num);
+    dpdk_ovs_del_vm(vm->name);
+    vhost_eth_del_vm(vm->name, vm->nb_tot_eth, vm->eth_table);
     nvm = vm->next;
     vm = nvm;
     }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void dpdk_ovs_add_vm(char *name,int nb_tot_eth,t_eth_table *eth_tab)
+{
+  t_ovs *cur = g_head_ovs;
+  int i;
+  for (i=0; i<nb_tot_eth; i++)
+    {
+    if (eth_tab[i].eth_type == eth_type_dpdk)
+      erase_dpdk_qemu_path(name, i);
+    }
+  vm_alloc(name, nb_tot_eth, eth_tab);
+  if (cur == NULL)
+    {
+    event_print("Start OpenVSwitch");
+    cur = ovs_alloc("ovsdb");
+    cur->clone_start_pid = create_muovs_process("ovsdb");
+    cur->clone_start_pid_just_done = 1;
+    }
+  event_print("Alloc ovs vm %s", name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void dpdk_ovs_del_vm(char *name)
+{
+  t_dpdk_vm *vm = vm_find(name);
+  if (vm)
+    {
+    if (vm->destroy_done == 0)
+      {
+      event_print("Free qmp_shutdown vm %s", name);
+      call_dpdk_dyn_del_eth(vm);
+      vm->destroy_done = 1;
+      vm_free(name);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_ovs_get_dpdk_usable(void)
+{
+  return g_dpdk_usable;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1061,6 +1051,7 @@ void dpdk_ovs_init(void)
   dpdk_dyn_init();
   dpdk_msg_init();
   dpdk_tap_init();
+  g_dpdk_usable = 0;
 }
 /*--------------------------------------------------------------------------*/
 

@@ -186,6 +186,8 @@ void extremely_last_action(void *data)
         tot -= 1;
       if (!strcmp(lst[i].name, "switch"))
         tot -= 1;
+      if (!strcmp(lst[i].name, "suid_power"))
+        tot -= 1;
       }
     if (tot == 0)
       exit(0);

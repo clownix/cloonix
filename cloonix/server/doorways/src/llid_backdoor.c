@@ -86,13 +86,9 @@ typedef struct t_backdoor_vm
   int ping_status;
   int ping_id;
   int reboot_id;
-  int reboot_job_idx;
   int halt_id;
-  int fifreeze_id;
-  int halt_job_idx;
   int cloonix_up_and_running;
   int cloonix_not_yet_connected;
-  int cloonix_is_fifreezed;
   struct t_backdoor_vm *prev;
   struct t_backdoor_vm *next;
 } t_backdoor_vm;
@@ -112,13 +108,8 @@ void llid_backdoor_low_tx(int llid, int len, char *buf)
   t_backdoor_vm *bvm = g_llid_backdoor[llid];
   if (bvm)
     {
-    if (bvm->cloonix_is_fifreezed == 0)
-      {
-      if (msg_exist_channel(llid))
-        watch_tx(llid, len, buf);
-      else
-        KERR("%s", bvm->name);
-      }
+    if (msg_exist_channel(llid))
+      watch_tx(llid, len, buf);
     }
   else
     KERR(" ");
@@ -205,7 +196,7 @@ void llid_backdoor_tx(char *name, int llid_backdoor, int dido_llid,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void llid_backdoor_tx_reboot_to_agent(char *name, int job_idx)
+void llid_backdoor_tx_reboot_to_agent(char *name)
 {
   char *buf;
   int  headsize = sock_header_get_size();
@@ -215,7 +206,6 @@ void llid_backdoor_tx_reboot_to_agent(char *name, int job_idx)
     buf = get_gbuf();
     memset(buf, 0, MAX_A2D_LEN);
     bvm->reboot_id += 1;
-    bvm->reboot_job_idx = job_idx;
     snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, LABOOT, bvm->reboot_id);
     local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
                       header_type_ctrl, header_val_reboot, buf);
@@ -225,7 +215,7 @@ void llid_backdoor_tx_reboot_to_agent(char *name, int job_idx)
 
 
 /****************************************************************************/
-void llid_backdoor_tx_halt_to_agent(char *name, int job_idx)
+void llid_backdoor_tx_halt_to_agent(char *name)
 {
   char *buf;
   int  headsize = sock_header_get_size();
@@ -235,49 +225,9 @@ void llid_backdoor_tx_halt_to_agent(char *name, int job_idx)
     buf = get_gbuf();
     memset(buf, 0, MAX_A2D_LEN);
     bvm->halt_id += 1;
-    bvm->halt_job_idx = job_idx;
     snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, LAHALT, bvm->halt_id);
     local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
                       header_type_ctrl, header_val_halt, buf);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void llid_backdoor_tx_fifreeze_freeze_to_agent(char *name)
-{
-  char *buf;
-  int  headsize = sock_header_get_size();
-  t_backdoor_vm *bvm = vm_get_with_name(name);
-  if ((bvm) && (bvm->cloonix_up_and_running))
-    {
-    buf = get_gbuf();
-    memset(buf, 0, MAX_A2D_LEN);
-    bvm->fifreeze_id += 1;
-    snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, 
-             LAFIFREEZE_FREEZE, bvm->fifreeze_id);
-    local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
-                      header_type_ctrl, header_val_fifreeze_freeze, buf);
-    bvm->cloonix_is_fifreezed = 1;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void llid_backdoor_tx_fifreeze_thaw_to_agent(char *name)
-{
-  char *buf;
-  int  headsize = sock_header_get_size();
-  t_backdoor_vm *bvm = vm_get_with_name(name);
-  if ((bvm) && (bvm->cloonix_up_and_running))
-    {
-    buf = get_gbuf();
-    memset(buf, 0, MAX_A2D_LEN);
-    snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, 
-             LAFIFREEZE_THAW, bvm->fifreeze_id);
-    bvm->cloonix_is_fifreezed = 0;
-    local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
-                      header_type_ctrl, header_val_fifreeze_thaw, buf);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -426,69 +376,6 @@ static void rx_from_agent_conclusion_zero_llid(t_backdoor_vm *bvm,
               }
             bvm->ping_agent_rx += 1;
             }
-          }
-        else
-          KERR("%s", payload);
-        break;
-      case header_val_reboot:
-        if (sscanf(payload, LABOOT, &val_id) == 1)
-          {
-          if (val_id == bvm->reboot_id)
-            {
-            memset(buf, 0, MAX_NAME_LEN);
-            snprintf(buf, MAX_NAME_LEN-1, REBOOT_REQUEST, bvm->reboot_job_idx);
-            doors_send_event(get_doorways_llid(), 0, bvm->name, buf);
-            }
-          else
-            KERR("WRONG REBOOT ID: %d %d", val_id, bvm->reboot_id);
-          }
-        else
-          KERR("%s", payload);
-        break;
-
-      case header_val_halt:
-        if (sscanf(payload, LAHALT, &val_id) == 1)
-          {
-          if (val_id == bvm->halt_id)
-            {
-            memset(buf, 0, MAX_NAME_LEN);
-            snprintf(buf, MAX_NAME_LEN-1, HALT_REQUEST, bvm->halt_job_idx);
-            doors_send_event(get_doorways_llid(), 0, bvm->name, buf);
-            }
-          else
-            KERR("WRONG HALT ID: %d %d", val_id, bvm->halt_id);
-          }
-        else
-          KERR("%s", payload);
-        break;
-
-      case header_val_fifreeze_freeze:
-        if (sscanf(payload, LAFIFREEZE_FREEZE, &val_id) == 1)
-          {
-          if (val_id == bvm->fifreeze_id)
-            {
-            memset(buf, 0, MAX_NAME_LEN);
-            snprintf(buf, MAX_NAME_LEN-1, FIFREEZE_FITHAW_FREEZE);
-            doors_send_event(get_doorways_llid(), 0, bvm->name, buf);
-            }
-          else
-            KERR("WRONG FIFREEZE ID: %d %d", val_id, bvm->fifreeze_id);
-          }
-        else
-          KERR("%s", payload);
-        break;
-
-      case header_val_fifreeze_thaw:
-        if (sscanf(payload, LAFIFREEZE_THAW, &val_id) == 1)
-          {
-          if (val_id == bvm->fifreeze_id)
-            {
-            memset(buf, 0, MAX_NAME_LEN);
-            snprintf(buf, MAX_NAME_LEN-1, FIFREEZE_FITHAW_THAW);
-            doors_send_event(get_doorways_llid(), 0, bvm->name, buf);
-            }
-          else
-            KERR("WRONG FIFREEZE ID: %d %d", val_id, bvm->fifreeze_id);
           }
         else
           KERR("%s", payload);
@@ -793,7 +680,6 @@ static void vm_err_cb (void *ptr, int llid, int err, int from)
       if (llid != bvm->backdoor_llid)
         KOUT(" ");
       llid_backdoor_cloonix_down_and_not_running(bvm->name);
-      KERR(" BAD BACKDOOR 2 %s", bvm->name);
       }
     }
   else
@@ -868,10 +754,7 @@ static void action_ga_heartbeat_on_working_llid(t_backdoor_vm *bvm)
     {
     if (bvm->last_ping_agent_rx == bvm->ping_agent_rx)
       {
-      if (!bvm->cloonix_is_fifreezed)
-        {
-        bvm->fail_ping_agent_rx += 1;
-        }
+      bvm->fail_ping_agent_rx += 1;
       }
     else
       bvm->fail_ping_agent_rx = 0;
@@ -882,16 +765,13 @@ static void action_ga_heartbeat_on_working_llid(t_backdoor_vm *bvm)
       KERR("%s PING_KO", bvm->name);
       bvm->ping_status = ping_ko;
       }
-    if (!bvm->cloonix_is_fifreezed)
-      {
-      bvm->last_ping_agent_rx = bvm->ping_agent_rx;
-      buf = get_gbuf();
-      memset(buf, 0, MAX_A2D_LEN);
-      bvm->ping_id += 1;
-      snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, LAPING, bvm->ping_id);
-      local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
-                        header_type_ctrl, header_val_ping, buf);
-      }
+    bvm->last_ping_agent_rx = bvm->ping_agent_rx;
+    buf = get_gbuf();
+    memset(buf, 0, MAX_A2D_LEN);
+    bvm->ping_id += 1;
+    snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, LAPING, bvm->ping_id);
+    local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
+                      header_type_ctrl, header_val_ping, buf);
     }
 }
 /*--------------------------------------------------------------------------*/

@@ -180,7 +180,7 @@ int lan_get_with_name(char *name)
 {
   int target_idx;
   if ((!name) || (!name[0]) || (strlen(name) >= MAX_NAME_LEN))
-    KOUT(" ");
+    KOUT("%p", name);
   target_idx = find_elem_with_name(name);
   return target_idx;
 }

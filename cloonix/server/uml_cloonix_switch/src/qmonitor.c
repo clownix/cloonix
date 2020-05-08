@@ -40,6 +40,7 @@
 #include "event_subscriber.h"
 #include "qmonitor.h"
 #include "qmp.h"
+#include "suid_power.h"
 
 
 
@@ -374,7 +375,7 @@ static void timer_qvm_connect_qmonitor(void *data)
     { 
     if (qvm->vm_qmonitor_llid)
       {
-      qvm->pid = utils_get_pid_of_machine(vm);
+      qvm->pid = suid_power_get_pid(vm->kvm.vm_id);
       if (!qvm->pid)
         rearm_timer_qvm_connect_qmonitor(qvm);
       }

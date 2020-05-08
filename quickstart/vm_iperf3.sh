@@ -2,13 +2,16 @@
 TYPE=$1
 case "${TYPE}" in
   "dpdk")
-    PARAMS="ram=2000 cpu=2 dpdk=2 sock=0 hwsim=0"
+    PARAMS="ram=2000 cpu=2 eth=d"
     ;;
   "sock")
-    PARAMS="ram=2000 cpu=2 dpdk=0 sock=2 hwsim=0"
+    PARAMS="ram=2000 cpu=2 eth=s"
+    ;;
+  "vhost")
+    PARAMS="ram=2000 cpu=2 eth=v"
     ;;
   *)
-    echo ERROR FIRST PARAM: ${TYPE} must be either dpdk or sock
+    echo ERROR FIRST PARAM: ${TYPE} must be dpdk sock or vhost
     exit 1
 esac
 
@@ -21,13 +24,12 @@ if [ "x$is_started" == "x" ]; then
   printf "\nServer Not started, launching:"
   printf "\ncloonix_net $NET:\n"
   cloonix_net $NET
-  echo waiting 2 sec
-  sleep 2
 else
   cloonix_cli $NET rma
-  echo waiting 20 sec
-  sleep 20 
 fi
+
+echo waiting 2 sec
+sleep 2
 
 #######################################################################
 cloonix_gui $NET
@@ -35,16 +37,19 @@ cloonix_gui $NET
 
 
 #######################################################################
-for i in 1 2 3; do
-  cloonix_cli $NET add kvm vm${i} $PARAMS ${DIST}.qcow2 & 
+for i in 1 2; do
+  cloonix_cli $NET add kvm vm${i} ${PARAMS} ${DIST}.qcow2 & 
 done
 #----------------------------------------------------------------------
+
+cloonix_cli $NET add lan vm1 0 lan
+cloonix_cli $NET add lan vm2 0 lan
 
 sleep 5
 
 #######################################################################
 set +e
-for i in 1 2 3; do
+for i in 1 2; do
   while ! cloonix_ssh $NET vm${i} "echo" 2>/dev/null; do
     echo vm${i} not ready, waiting 5 sec
     sleep 5
@@ -55,30 +60,21 @@ set -e
 
 
 #######################################################################
-for ((i=1;i<4;i++)); do
-  cloonix_ssh $NET vm${i} "ip addr add dev eth0 $((i)).0.0.$((i))/24"
-  cloonix_ssh $NET vm${i} "ip addr add dev eth1 $((i+1)).0.0.$((i))/24"
-  cloonix_ssh $NET vm${i} "ip link set dev eth0 up"
-  cloonix_ssh $NET vm${i} "ip link set dev eth1 up"
-  cloonix_ssh $NET vm${i} "echo 1 > /proc/sys/net/ipv4/ip_forward"
-  cloonix_cli $NET add lan vm${i} 1 lan$((i))
-  cloonix_cli $NET add lan vm${i} 0 lan$((i-1))
-done
-cloonix_ssh $NET vm1 "ip route add default via 2.0.0.2"
-cloonix_ssh $NET vm3 "ip route add default via 3.0.0.2"
-cloonix_cli $NET del lan vm1 0 lan0
-cloonix_cli $NET del lan vm3 1 lan3
+cloonix_ssh $NET vm1 "ip addr add dev eth0 1.0.0.1/24"
+cloonix_ssh $NET vm2 "ip addr add dev eth0 1.0.0.2/24"
+cloonix_ssh $NET vm1 "ip link set dev eth0 up"
+cloonix_ssh $NET vm2 "ip link set dev eth0 up"
 #----------------------------------------------------------------------
 sleep 1
 echo
-cloonix_ssh $NET vm1 "ping -c 5 3.0.0.3"
+cloonix_ssh $NET vm1 "ping -c 5 1.0.0.2"
 sleep 1
 echo
-cloonix_ssh $NET vm1 "ping -f -c 10000 3.0.0.3"
+cloonix_ssh $NET vm1 "ping -f -c 10000 1.0.0.2"
 sleep 1
 echo
 #----------------------------------------------------------------------
-urxvt -title server -e cloonix_ssh $NET vm3 "iperf3 -s" &
+urxvt -title server -e cloonix_ssh $NET vm2 "iperf3 -s" &
 sleep 1
-urxvt -title client -e cloonix_ssh $NET vm1 "iperf3 -c 3.0.0.3 -t 10000" &
+urxvt -title client -e cloonix_ssh $NET vm1 "iperf3 -c 1.0.0.2 -t 10000" &
 #----------------------------------------------------------------------

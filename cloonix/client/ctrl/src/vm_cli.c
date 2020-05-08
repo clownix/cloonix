@@ -34,15 +34,18 @@ void callback_end(int tid, int status, char *err);
 /***************************************************************************/
 void help_add_vm_kvm(char *line)
 {
-  printf("\n\n\n %s <name> ram=<mem_qty> cpu=<nb_proc> dpdk=<nb_eth> sock=<nb_eth> hwsim=<nb_wlan> <rootfs> [options]\n",
+  printf("\n\n\n %s <name> ram=<mem_qty> cpu=<nb_proc> eth=<eth_description> <rootfs> [options]\n",
   line);
   printf("\n\tram is the mem_qty in mega");
   printf("\n\tcpu is the number of processors");
-  printf("\n\tdpdk: number of eth provided with dhcp (low latency and high throughput), max:%d", MAX_DPDK_VM);
-  printf("\n\tsock: number of eth provided with classic unix socket, max:%d", MAX_ETH_VM);
-  printf("\n\thwsim: number of wlan provided with hwsim modules and unix sockets, max:%d\n", MAX_WLAN_VM);
+  printf("\n\teth_description: d is for dpdk, s is for sock, v is for vhost w is for wlan");
+  printf("\n\teth_description example:");
+  printf("\n\t\t  eth=sdvw says eth0:sock eth1:dpdk eth3:vhost wlan0:hwsim");
+  printf("\n\tdpdk: low latency and high throughput, max:%d", MAX_DPDK_VM);
+  printf("\n\tsock: eth provided with classic unix socket, max:%d", MAX_SOCK_VM);
+  printf("\n\tvhost: eth provided with vhost-net, max:%d", MAX_VHOST_VM);
+  printf("\n\twlan: wlanx provided by hwsim, max:%d\n", MAX_WLAN_VM);
   printf("\n\t[options]");
-  printf("\n\t       --vhost-vsock");
   printf("\n\t       --persistent ");
   printf("\n\t       --9p_share=<host_shared_dir_file_path>");
   printf("\n\t       --install_cdrom=<cdrom_file_path>");
@@ -62,16 +65,19 @@ void help_add_vm_kvm(char *line)
   printf("\n\t      /mnt/p9_host_share in the guest kvm.\n\n");
   printf("\n\nexample:\n\n");
 
-  printf("%s vm_name ram=2000 cpu=4 dpdk=2 sock=2 hwsim=2 buster.qcow2\n", line);
-  printf("%s vm_name ram=2000 cpu=4 dpdk=0 sock=3 hwsim=0 buster.qcow2\n", line);
-  printf("%s vm_name ram=2000 cpu=4 dpdk=0 sock=3 hwsim=0 buster.qcow2 --persistent\n", line);
+  printf("\n%s vm_name ram=2000 cpu=4 eth=sss buster.qcow2\n", line);
+  printf("This will give 3 eth based on cloonix sockets\n");
+  printf("\n%s vm_name ram=2000 cpu=4 eth=ddd buster.qcow2\n", line);
+  printf("This will give 3 eth based on dpdk\n");
+  printf("\n%s vm_name ram=2000 cpu=4 eth=vsd buster.qcow2 --persistent\n", line);
+  printf("This will give 3 eth, eth0 is vhost-net, eth1 is sock eth2 is dpdk\n");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
 
 /***************************************************************************/
-static int fill_eth_params_from_argv(char *input, int eth_max,
-                                     t_eth_params *eth_params)
+static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
+                                     t_eth_table *eth_tab)
 {
   int num, i, result = -1;
   char *ptr;
@@ -86,8 +92,10 @@ static int fill_eth_params_from_argv(char *input, int eth_max,
     ptr++;
     if (sscanf(str, "--mac_addr=eth%d", &num) == 1)
       {
-      if ((num < 0) || (num >= eth_max))
-        printf("\nBad interface number\n");
+      if ((num < 0) || (num > nb_tot_eth))
+        printf("\nBad interface number: %s\n", str);
+      else if(eth_tab[num].eth_type == 0)
+        printf("\nInterface number unused: %s\n", str);
       else
         {
         if (sscanf(ptr, "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -95,7 +103,7 @@ static int fill_eth_params_from_argv(char *input, int eth_max,
             &(mac[3]), &(mac[4]), &(mac[5])) == MAC_ADDR_LEN) 
           {
           for (i=0; i<MAC_ADDR_LEN; i++)
-            eth_params[num].mac_addr[i] = mac[i] & 0xFF;
+            eth_tab[num].mac_addr[i] = mac[i] & 0xFF;
           result = 0;
           }
         else
@@ -110,8 +118,9 @@ static int fill_eth_params_from_argv(char *input, int eth_max,
 /*-------------------------------------------------------------------------*/
 
 /***************************************************************************/
-static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
-                         int wlan, char *rootfs, int argc, char **argv)
+static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
+                         t_eth_table *eth_tab, char *rootfs,
+                         int argc, char **argv)
 {
   int i, result = 0, prop_flags = 0;
   char *img_linux = NULL;
@@ -122,31 +131,17 @@ static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
   char *ptr;
   char *endptr;
   int prop_param = 0;
-  t_eth_params eth_params[MAX_ETH_VM];
 
-  memset(eth_params, 0, MAX_ETH_VM * sizeof(t_eth_params));
   prop_flags |= VM_CONFIG_FLAG_EVANESCENT;
   for (i=0; i<argc; i++)
     {
-    if (!strncmp(argv[i], "--arm_kernel=", strlen("--arm_kernel=")))
-      {
-      prop_flags |= VM_CONFIG_FLAG_ARM;
-      img_linux = argv[i] + strlen("--arm_kernel=");
-      }
-    else if (!strncmp(argv[i],"--aarch64_kernel=",strlen("--aarch64_kernel=")))
-      {
-      prop_flags |= VM_CONFIG_FLAG_AARCH64;
-      img_linux = argv[i] + strlen("--aarch64_kernel=");
-      }
-    else if (!strcmp(argv[i], "--persistent"))
+    if (!strcmp(argv[i], "--persistent"))
       {
       prop_flags |= VM_CONFIG_FLAG_PERSISTENT;
       prop_flags &= ~VM_CONFIG_FLAG_EVANESCENT;
       }
     else if (!strcmp(argv[i], "--fullvirt"))
       prop_flags |= VM_CONFIG_FLAG_FULL_VIRT;
-    else if (!strcmp(argv[i], "--vhost-vsock"))
-      prop_flags |= VM_CONFIG_FLAG_VHOST_VSOCK;
     else if (!strcmp(argv[i], "--balloon"))
       prop_flags |= VM_CONFIG_FLAG_BALLOONING;
     else if (!strcmp(argv[i], "--uefi"))
@@ -185,17 +180,13 @@ static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
       {
       ptr = argv[i] + strlen("--cisco");
       prop_param = (int) strtol(ptr, &endptr, 10);
-      if ((endptr[0] != 0) || ( prop_param < 0 ) || ( prop_param >= eth))
+      if ((endptr[0] != 0) || ( prop_param < 0 ) || ( prop_param >= nb_tot_eth))
         prop_param = 0;
       prop_flags |= VM_CONFIG_FLAG_CISCO;
       }
-    else if (!strcmp(argv[i], "--vmware"))
-      {
-      prop_flags |= VM_CONFIG_FLAG_VMWARE;
-      }
     else if (!strncmp(argv[i], "--mac_addr=eth", strlen("--mac_addr=eth")))
       {
-      if (fill_eth_params_from_argv(argv[i], eth, eth_params))
+      if (fill_eth_params_from_argv(argv[i], nb_tot_eth, eth_tab))
         {
         printf("\nERROR: %s\n\n", argv[i]);
         result = -1;
@@ -212,54 +203,120 @@ static int local_add_kvm(char *name, int mem, int cpu, int dpdk, int eth,
   if (result == 0)
     {
     init_connection_to_uml_cloonix_switch();
-    client_add_vm(0, callback_end, name, dpdk, eth, wlan, prop_flags,
+    client_add_vm(0, callback_end, name, nb_tot_eth, eth_tab, prop_flags,
                   prop_param, cpu, mem, img_linux, rootfs, install_cdrom,
-                  added_cdrom, added_disk, p9_host_shared, eth_params);
+                  added_cdrom, added_disk, p9_host_shared);
     }
   return result;
 }
 /*---------------------------------------------------------------------------*/
 
+/***************************************************************************/
+static int check_eth_desc(char *eth_desc, char *err,
+                          int *nb_tot_eth,
+                          t_eth_table *eth_tab)
+
+{
+  int i, sock=0, dpdk=0, vhost=0, wlan=0, result = 0;
+  int len, max = MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM + MAX_WLAN_VM;
+  memset(eth_tab, 0, max * sizeof(t_eth_table)); 
+  len = strlen(eth_desc);
+  if (len >= max)
+    {
+    sprintf(err, "Too long string for eth description");
+    result = -1;
+    }
+  else
+    {
+    for (i=0; (result == 0) && (i < len); i++)
+      {
+      if (eth_desc[i] == 's')
+        eth_tab[i].eth_type = eth_type_sock;
+      else if (eth_desc[i] == 'd')
+        eth_tab[i].eth_type = eth_type_dpdk;
+      else if (eth_desc[i] == 'v')
+        eth_tab[i].eth_type = eth_type_vhost;
+      else if (eth_desc[i] == 'w')
+        eth_tab[i].eth_type = eth_type_wlan;
+      else
+        {
+        sprintf(err, "Found bad char: %c in string", eth_desc[i]);
+        result = -1;
+        }
+      }
+    }
+  if (result == 0)
+    {
+    for (i=0; i < max; i++)
+      {
+      if (eth_tab[i].eth_type == eth_type_sock)
+        sock += 1;
+      if (eth_tab[i].eth_type == eth_type_dpdk)
+        dpdk += 1;
+      if (eth_tab[i].eth_type == eth_type_vhost)
+        vhost += 1;
+      if (eth_tab[i].eth_type == eth_type_wlan)
+        wlan += 1;
+      }
+    if (sock > MAX_SOCK_VM)
+      {
+      sprintf(err, "Too many sock interfaces, %d max: %d",sock,MAX_SOCK_VM);
+      result = -1;
+      }
+    else if (dpdk > MAX_DPDK_VM)
+      {
+      sprintf(err, "Too many dpdk interfaces, %d max: %d",dpdk,MAX_DPDK_VM);
+      result = -1;
+      }
+    else if (vhost > MAX_VHOST_VM)
+      {
+      sprintf(err, "Too many vhost interfaces, %d max: %d",vhost,MAX_VHOST_VM);
+      result = -1;
+      }
+    else if (wlan > MAX_WLAN_VM)
+      {
+      sprintf(err, "Too many wlan interfaces, %d max: %d", wlan, MAX_WLAN_VM);
+      result = -1;
+      }
+
+    }
+  *nb_tot_eth = sock + dpdk + vhost + wlan;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /***************************************************************************/
 int cmd_add_vm_kvm(int argc, char **argv)
 {
-  int cpu, mem, dpdk, eth, wlan, result = -1;
+  int cpu, mem, nb_tot_eth, result = -1;
   char *rootfs, *name;
-  if (argc < 7) 
+  char eth_string[MAX_PATH_LEN];
+  char err[MAX_PATH_LEN];
+  t_eth_table eth_tab[MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM];
+  if (argc < 4) 
     printf("\nNot enough parameters for add kvm\n");
 
   else if (sscanf(argv[1], "ram=%d", &mem) != 1)
-    printf("\nBad ram= parameter\n");
+    printf("\nBad ram= parameter %s\n", argv[1]);
   else if ((mem < 1) || (mem > 500000))
     printf("\nBad ram range, must be between 1 and 500000 (in mega)\n");
 
   else if (sscanf(argv[2], "cpu=%d", &cpu) != 1)
-    printf("\nBad cpu= parameter\n");
+    printf("\nBad cpu= parameter %s\n", argv[2]);
   else if ((cpu < 1) || (cpu > 128))
     printf("\nBad cpu range, must be between 1 and 128\n");
 
-  else if (sscanf(argv[3], "dpdk=%d", &dpdk) != 1)
-    printf("\nBad dpdk= parameter\n");
-  else if ((dpdk < 0) || (dpdk > MAX_DPDK_VM))
-    printf("\nBad dpdk range, must be between 0 and %d\n", MAX_DPDK_VM);
-
-  else if (sscanf(argv[4], "sock=%d", &eth) != 1)
-    printf("\nBad sock= parameter\n");
-  else if ((eth < 0) || (eth > MAX_ETH_VM))
-    printf("\nBad sock range, must be between 0 and %d\n", MAX_ETH_VM);
-
-  else if (sscanf(argv[5], "hwsim=%d", &wlan) != 1)
-    printf("\nBad hwsim= parameter\n");
-  else if ((wlan < 0) || (wlan > MAX_ETH_VM))
-    printf("\nBad hwsim range, must be between 0 and %d\n", MAX_WLAN_VM);
+  else if (sscanf(argv[3], "eth=%s", eth_string) != 1)
+    printf("\nBad eth= parameter %s\n", argv[3]);
+  else if (check_eth_desc(eth_string, err, &nb_tot_eth, eth_tab))
+    printf("\nBad eth= parameter %s %s\n", argv[3], err);
 
   else
     {
     name = argv[0];
-    rootfs = argv[6];
-    result = local_add_kvm(name, mem, cpu, dpdk, eth, wlan, rootfs,
-                           argc-7, &(argv[7])); 
+    rootfs = argv[4];
+    result = local_add_kvm(name, mem, cpu, nb_tot_eth,
+                           eth_tab, rootfs, argc-5, &(argv[5])); 
     }
   return result;
 }

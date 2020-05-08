@@ -30,10 +30,8 @@ rm -rf tmpbuild_bis
   done
 #----------------------------------------------------------
   for i in  doorways \
+            suid_power \
             uml_cloonix_switch \
-            lan_spy \
-            lan_spy/lib_ioc \
-            lan_spy/lib_blkd \
             muswitch/lib_ioc \
             muswitch/lib_mulan \
             muswitch/lib_muend \

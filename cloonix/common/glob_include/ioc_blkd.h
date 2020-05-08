@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <syslog.h>
 #include <string.h>
+#include <linux/if.h>
 
 long long cloonix_get_msec(void);
 long long cloonix_get_usec(void);
@@ -113,18 +114,19 @@ enum {
   mutype_none = 0,
   mulan_type,
   endp_type_tap,
+  endp_type_phy,
+  endp_type_pci,
   endp_type_wif,
-  endp_type_raw,
   endp_type_snf,
   endp_type_c2c,
   endp_type_a2b,
   endp_type_nat,
   endp_type_hsim,
+  endp_type_kvm_sock,
   endp_type_kvm_dpdk,
-  endp_type_kvm_eth,
+  endp_type_kvm_vhost,
   endp_type_kvm_wlan,
   endp_type_ovsdb,
-  endp_type_dpdk_tap,
   endp_type_mtcp,
   endp_type_lan_spy,
 };

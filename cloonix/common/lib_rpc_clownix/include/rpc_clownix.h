@@ -25,6 +25,7 @@
 #define MUSWITCH_SOCK_DIR "mu"
 #define MUSWITCH_TRAF_DIR "tmu"
 #define ENDP_SOCK_DIR "endp"
+#define SUID_POWER_SOCK_DIR "suid_power"
 #define CLI_SOCK_DIR "cli"
 #define SNF_PCAP_DIR "snf"
 
@@ -37,7 +38,7 @@
 #define MAX_ITEM_LEN       200
 #define MAX_TYPE_LEN       32
 #define MAX_BIG_BUF        20000 
-#define MAX_PRINT_LEN      5000
+#define MAX_PRINT_LEN      10000
 #define HALF_SEC_BEAT      50 
 #define MAX_ARGC_ARGV      100
 #define MAX_INTF_MNGT      100
@@ -58,6 +59,7 @@ enum {
     type_hop_endp,
     type_hop_snf,
     type_hop_doors,
+    type_hop_suid_power,
     type_hop_max
     };
 
@@ -65,6 +67,8 @@ enum {
 enum {
   vmcmd_min = 0,
   vmcmd_del,
+  vmcmd_halt_with_guest,
+  vmcmd_reboot_with_guest,
   vmcmd_halt_with_qemu,
   vmcmd_reboot_with_qemu,
   vmcmd_promiscious_flag_set,
@@ -102,10 +106,12 @@ enum
   type_llid_trace_listen_clone,
   type_llid_trace_doorways,
   type_llid_trace_mulan,
-  type_llid_trace_endp_kvm_eth,
+  type_llid_trace_endp_kvm_sock,
+  type_llid_trace_endp_kvm_dpdk,
+  type_llid_trace_endp_kvm_vhost,
   type_llid_trace_endp_kvm_wlan,
   type_llid_trace_endp_tap,
-  type_llid_trace_endp_raw,
+  type_llid_trace_endp_phy,
   type_llid_trace_endp_wif,
   type_llid_trace_endp_snf,
   type_llid_trace_endp_c2c,

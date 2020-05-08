@@ -46,9 +46,9 @@ typedef struct t_node_layout
   int hidden_on_graph;
   double x; 
   double y;
-  double tx[MAX_ETH_VM+MAX_WLAN_VM];
-  double ty[MAX_ETH_VM+MAX_WLAN_VM];
-  int32_t thidden_on_graph[MAX_ETH_VM+MAX_WLAN_VM];
+  double tx[MAX_SOCK_VM+MAX_WLAN_VM];
+  double ty[MAX_SOCK_VM+MAX_WLAN_VM];
+  int32_t thidden_on_graph[MAX_SOCK_VM+MAX_WLAN_VM];
   struct t_node_layout *prev;
   struct t_node_layout *next;
 } t_node_layout;
@@ -128,9 +128,9 @@ void set_node_layout_x_y(char *name, int color_choice,
   nl->y = y;
   nl->hidden_on_graph = hidden_on_graph;
   nl->color_choice = color_choice;
-  memcpy(nl->tx, tx, (MAX_ETH_VM+MAX_WLAN_VM)*sizeof(double));
-  memcpy(nl->ty, ty, (MAX_ETH_VM+MAX_WLAN_VM)*sizeof(double));
-  for (i=0; i<MAX_ETH_VM+MAX_WLAN_VM; i++)
+  memcpy(nl->tx, tx, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
+  memcpy(nl->ty, ty, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
+  for (i=0; i<MAX_SOCK_VM+MAX_WLAN_VM; i++)
     nl->thidden_on_graph[i] = thidden_on_graph[i];
   nl->next = head_node_layout;
   if (nl->next)
@@ -155,9 +155,9 @@ void get_node_layout_x_y(char *name, int *color_choice,
     *y = cur->y;
     *color_choice = cur->color_choice;
     *hidden_on_graph = cur->hidden_on_graph;
-    memcpy(tx, cur->tx, (MAX_ETH_VM+MAX_WLAN_VM)*sizeof(double));
-    memcpy(ty, cur->ty, (MAX_ETH_VM+MAX_WLAN_VM)*sizeof(double));
-    for (i=0; i<MAX_ETH_VM+MAX_WLAN_VM; i++)
+    memcpy(tx, cur->tx, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
+    memcpy(ty, cur->ty, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
+    for (i=0; i<MAX_SOCK_VM+MAX_WLAN_VM; i++)
       thidden_on_graph[i] = cur->thidden_on_graph[i];
     unset_node_layout(name);
     }
@@ -167,9 +167,9 @@ void get_node_layout_x_y(char *name, int *color_choice,
     *y = START_POS;
     *color_choice = 0;
     *hidden_on_graph = 0;
-    memset(tx, 0, (MAX_ETH_VM+MAX_WLAN_VM)*sizeof(double));
-    memset(ty, 0, (MAX_ETH_VM+MAX_WLAN_VM)*sizeof(double));
-    for (i=0; i<MAX_ETH_VM+MAX_WLAN_VM; i++)
+    memset(tx, 0, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
+    memset(ty, 0, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
+    for (i=0; i<MAX_SOCK_VM+MAX_WLAN_VM; i++)
       {
       thidden_on_graph[i] = 0;
       rest = i%4;

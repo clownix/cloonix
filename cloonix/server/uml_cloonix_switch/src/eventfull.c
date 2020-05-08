@@ -126,7 +126,6 @@ static void timeout_delete_vm(void *data)
       {
       event_print("The pid was not found in the /proc, KILLING machine %s", 
                   vm->kvm.name);
-      KERR("PID NOT FOUND %s", vm->kvm.name);
       machine_death(vm->kvm.name, error_death_nopid);
       }
     }
@@ -263,13 +262,15 @@ static int collect_endp(t_eventfull_endp *eventfull, int nb, t_endp *endp)
       KOUT(" ");
     if (strlen(cur->name) == 0)
       KERR("%d", cur->endp_type);
-    else if ((!((cur->endp_type == endp_type_kvm_eth)  && (!cfg_get_vm(cur->name)))) &&
-             (!((cur->endp_type == endp_type_kvm_wlan) && (!cfg_get_vm(cur->name)))))
+    else if ((!((cur->endp_type == endp_type_kvm_sock)  && (!cfg_get_vm(cur->name)))) &&
+             (!((cur->endp_type == endp_type_kvm_dpdk)  && (!cfg_get_vm(cur->name)))) &&
+             (!((cur->endp_type == endp_type_kvm_vhost) && (!cfg_get_vm(cur->name)))) &&
+             (!((cur->endp_type == endp_type_kvm_wlan)  && (!cfg_get_vm(cur->name)))))
       {
       strncpy(eventfull[real_nb].name, cur->name, MAX_NAME_LEN-1);
       eventfull[real_nb].num  = cur->num;
       eventfull[real_nb].type = cur->endp_type;
-      if ((cur->endp_type == endp_type_kvm_eth)  && (cur->num == 0))
+      if ((cur->endp_type == endp_type_kvm_sock)  && (cur->num == 0))
         {
         vm = cfg_get_vm(cur->name);
         eventfull[real_nb].ram  = vm->ram;

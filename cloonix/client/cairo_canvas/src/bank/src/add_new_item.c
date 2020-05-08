@@ -51,9 +51,9 @@ int is_a_snf(t_bank_item *bitem)
 {
   int result;
   if ((bitem->pbi.mutype == endp_type_tap) ||
-      (bitem->pbi.mutype == endp_type_dpdk_tap) ||
+      (bitem->pbi.mutype == endp_type_phy) ||
+      (bitem->pbi.mutype == endp_type_pci) ||
       (bitem->pbi.mutype == endp_type_wif) ||
-      (bitem->pbi.mutype == endp_type_raw) ||
       (bitem->pbi.mutype == endp_type_c2c) ||
       (bitem->pbi.mutype == endp_type_nat) ||
       (bitem->pbi.mutype == endp_type_a2b))
@@ -75,9 +75,9 @@ int is_a_nat(t_bank_item *bitem)
 {
   int result;
   if ((bitem->pbi.mutype == endp_type_tap) ||
-      (bitem->pbi.mutype == endp_type_dpdk_tap) ||
+      (bitem->pbi.mutype == endp_type_phy) ||
+      (bitem->pbi.mutype == endp_type_pci) ||
       (bitem->pbi.mutype == endp_type_wif) ||
-      (bitem->pbi.mutype == endp_type_raw) ||
       (bitem->pbi.mutype == endp_type_c2c) ||
       (bitem->pbi.mutype == endp_type_snf) ||
       (bitem->pbi.mutype == endp_type_a2b))
@@ -99,9 +99,9 @@ int is_a_c2c(t_bank_item *bitem)
 {
   int result;
   if ((bitem->pbi.mutype == endp_type_tap) ||
-      (bitem->pbi.mutype == endp_type_dpdk_tap) ||
+      (bitem->pbi.mutype == endp_type_phy) ||
+      (bitem->pbi.mutype == endp_type_pci) ||
       (bitem->pbi.mutype == endp_type_wif) ||
-      (bitem->pbi.mutype == endp_type_raw) ||
       (bitem->pbi.mutype == endp_type_snf) ||
       (bitem->pbi.mutype == endp_type_nat) ||
       (bitem->pbi.mutype == endp_type_a2b))
@@ -123,9 +123,9 @@ int is_a_a2b(t_bank_item *bitem)
 {
   int result;
   if ((bitem->pbi.mutype == endp_type_tap) ||
-      (bitem->pbi.mutype == endp_type_dpdk_tap) ||
+      (bitem->pbi.mutype == endp_type_phy) ||
+      (bitem->pbi.mutype == endp_type_pci) ||
       (bitem->pbi.mutype == endp_type_wif) ||
-      (bitem->pbi.mutype == endp_type_raw) ||
       (bitem->pbi.mutype == endp_type_snf) ||
       (bitem->pbi.mutype == endp_type_nat) ||
       (bitem->pbi.mutype == endp_type_c2c))
@@ -579,7 +579,7 @@ void delete_bitem(t_bank_item *bitem)
 /****************************************************************************/
 void add_new_edge(t_bank_item *bi_eth, t_bank_item *bi_lan, int eorig)
 {
-  int bank_type, nb_dpdk;
+  int bank_type;
   t_bank_item *bi_edge;
   t_bank_item *bitem;
   double x0, y0, x1, y1, dist;
@@ -607,11 +607,6 @@ void add_new_edge(t_bank_item *bi_eth, t_bank_item *bi_lan, int eorig)
     bitem = bi_eth->att_node;
     if (bitem && bitem->pbi.pbi_node)
       {
-      nb_dpdk = bitem->pbi.pbi_node->node_vm_nb_dpdk;
-      if (bi_eth->num < nb_dpdk)
-        {
-        mutype = endp_type_kvm_dpdk;
-        }
       }
     }
   else if (bi_eth->bank_type == bank_type_sat) 
@@ -775,7 +770,7 @@ int add_new_eth(char *name, int num, int mutype,
      if (bnode->pbi.mutype != endp_type_a2b)
        KOUT("%s", name);
      }
-  if ((num <0) || (num > MAX_ETH_VM+MAX_WLAN_VM))
+  if ((num <0) || (num > MAX_SOCK_VM+MAX_WLAN_VM))
     KOUT(" ");
   if ((!bnode) || (bank_get_item(bank_type, name, num, NULL)))
     result = -1;
@@ -814,8 +809,8 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
                  char *rootfs_backing,  char *install_cdrom,     
                  char *added_cdrom, char *added_disk,
                  double x, double y, int hidden_on_graph,
-                 int color_choice, int vm_id, 
-                 int vm_config_flags, int nb_dpdk, int nb_eth)
+                 int color_choice, int vm_id, int vm_config_flags,
+                 int nb_tot_eth, t_eth_table *eth_tab)
 {
   int result = 0;
   t_bank_item *bitem;
@@ -839,8 +834,9 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
     strncpy(bitem->pbi.pbi_node->added_disk, added_disk, MAX_PATH_LEN-1); 
     bitem->pbi.color_choice = color_choice;
     bitem->pbi.pbi_node->node_vm_id = vm_id;
-    bitem->pbi.pbi_node->node_vm_nb_dpdk = nb_dpdk;
-    bitem->pbi.pbi_node->node_vm_nb_eth = nb_eth;
+    bitem->pbi.pbi_node->nb_tot_eth = nb_tot_eth;
+    memcpy(bitem->pbi.pbi_node->eth_tab, eth_tab,
+           nb_tot_eth * sizeof(t_eth_table));
     bitem->pbi.pbi_node->node_vm_config_flags = vm_config_flags;
     bitem->pbi.flag = flag_qmp_conn_ko;
     topo_add_cr_item_to_canvas(bitem, NULL);

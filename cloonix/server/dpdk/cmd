@@ -28,14 +28,17 @@ if [ -d ${HERE}/usr/local/lib64 ]; then
 else
   cp -vrf ${HERE}/usr/local/lib/x86_64-linux-gnu/* ${HERE}/lib
 fi
+cp -vrf ${HERE}/include ${HERE}/${NAME}/build
+cp -vrf ${HERE}/lib ${HERE}/${NAME}/build
 for i in etc sbin share usr var; do
   rm -rf ${HERE}/${i}
 done
 rm -f ${HERE}/lib/librte_\*.so\*
-rm -f ${HERE}/lib/*.a
+sed -i '1s/python/python3/' ${HERE}/bin/dpdk-devbind.py
 
 sed -i s"%libdir=\${prefix}/lib64%libdir=${HERE}/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc
 sed -i s"%libdir=\${prefix}/lib/x86_64-linux-gnu%libdir=${HERE}/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc
 sed -i s"%includedir=\${prefix}/include%includedir=${HERE}/include%" ${HERE}/lib/pkgconfig/libdpdk.pc
 sed -i s"%{libdir}%{libdir} -Wl,-rpath,/usr/local/bin/cloonix/server/dpdk/lib%" ${HERE}/lib/pkgconfig/libdpdk.pc
+
 

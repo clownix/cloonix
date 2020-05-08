@@ -32,10 +32,6 @@
 #define LAX11OPENKO  "link_agent_x11_open_ko sub_dido_idx=%d"
 #define LASTATS "link_agent_stats_req"
 #define LASTATSDF "link_agent_stats_df_req"
-#define LAFIFREEZE_FREEZE  "link_agent_fifreeze_freeze %d"
-#define LAFIFREEZE_THAW  "link_agent_fifreeze_thaw %d"
-#define LASSHHANDSHAKE  "syn_synack_ssh_tcp_handshake %s"
-#define LASSHHOK  "syn_synack_ssh_tcp_ok"
 
 
 #define SYSINFOFORMAT "uptime:%lu load1:%lu load5:%lu load15:%lu "\
@@ -66,8 +62,6 @@ enum{
   header_val_x11_open_serv,
   header_val_sysinfo,
   header_val_sysinfo_df,
-  header_val_fifreeze_freeze,
-  header_val_fifreeze_thaw,
 
 };
 

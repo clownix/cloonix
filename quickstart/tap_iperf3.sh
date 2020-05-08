@@ -2,15 +2,16 @@
 TYPE=$1
 case "${TYPE}" in
   "dpdk")
-    PARAMS="ram=2000 cpu=2 dpdk=1 sock=0 hwsim=0"
-    TAP=dpdk_tap
+    PARAMS="ram=2000 cpu=2 eth=d"
     ;;
   "sock")
-    PARAMS="ram=2000 cpu=2 dpdk=0 sock=1 hwsim=0"
-    TAP=tap
+    PARAMS="ram=2000 cpu=2 eth=s"
+    ;;
+  "vhost")
+    PARAMS="ram=2000 cpu=2 eth=v"
     ;;
   *)
-    echo ERROR FIRST PARAM: ${TYPE} must be either dpdk or sock
+    echo ERROR FIRST PARAM: ${TYPE} must be dpdk sock vhost
     exit 1
 esac
 
@@ -23,23 +24,23 @@ if [ "x$is_started" == "x" ]; then
   printf "\nServer Not started, launching:"
   printf "\ncloonix_net $NET:\n"
   cloonix_net $NET
-  echo waiting 2 sec
-  sleep 2
 else
   cloonix_cli $NET rma
-  echo waiting 20 sec
-  sleep 20 
 fi
+
+echo waiting 2 sec
+sleep 2
 
 #######################################################################
 cloonix_gui $NET
 #----------------------------------------------------------------------
 
-
 #######################################################################
 for i in 1 2; do
-  cloonix_cli $NET add kvm vm${i} $PARAMS ${DIST}.qcow2 & 
-  cloonix_cli $NET add $TAP tap${i}
+  cloonix_cli $NET add kvm vm${i} ${PARAMS} ${DIST}.qcow2 & 
+  cloonix_cli $NET add tap tap${i}
+  cloonix_cli $NET add lan vm${i}  0 lan${i}
+  cloonix_cli $NET add lan tap${i} 0 lan${i}
 done
 #----------------------------------------------------------------------
 
@@ -61,8 +62,6 @@ set -e
 for i in 1 2; do
   cloonix_ssh $NET vm${i} "ip addr add dev eth0 172.2${i}.0.1/24"
   cloonix_ssh $NET vm${i} "ip link set dev eth0 up"
-  cloonix_cli $NET add lan vm${i}  0 lan${i}
-  cloonix_cli $NET add lan tap${i} 0 lan${i}
   sudo ip addr add dev tap${i} 172.2${i}.0.2/24
   sudo ip link set dev tap${i} up
   ping -c 3 172.2${i}.0.1

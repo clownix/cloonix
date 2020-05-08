@@ -217,9 +217,9 @@ static void alloc_record_sat(t_record_net *net, char *name, int type)
   send_evt_stats_sysinfo_sub(net->llid, 0, name, 1);
   send_evt_stats_endp_sub(net->llid, 0, name, 0, 1);
   if ((type == endp_type_tap)  ||
-      (type == endp_type_dpdk_tap)  ||
       (type == endp_type_wif)  || 
-      (type == endp_type_raw)  || 
+      (type == endp_type_phy)  || 
+      (type == endp_type_pci)  || 
       (type == endp_type_c2c)  ||
       (type == endp_type_nat)  ||
       (type == endp_type_snf)  ||
@@ -242,9 +242,9 @@ static void free_record_sat(t_record_net *net, t_record_sat *sat)
   if (sat == net->head_sat)
     net->head_sat = sat->next;
   if ((sat->type == endp_type_tap)  ||
-      (sat->type == endp_type_dpdk_tap)  ||
       (sat->type == endp_type_wif)  || 
-      (sat->type == endp_type_raw)  || 
+      (sat->type == endp_type_phy)  || 
+      (sat->type == endp_type_pci)  || 
       (sat->type == endp_type_c2c)  ||
       (sat->type == endp_type_nat)  ||
       (sat->type == endp_type_snf)  ||
@@ -415,7 +415,7 @@ static void alloc_kvm_not_in_record(t_record_net *net,
   for (i=0; i<nb_kvm; i++)
     {
     if (!find_vm_with_name(net, kvm[i].name))
-      alloc_record_vm(net, kvm[i].name, kvm[i].nb_eth, kvm[i].vm_id);
+      alloc_record_vm(net, kvm[i].name, kvm[i].nb_tot_eth, kvm[i].vm_id);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -501,9 +501,9 @@ void recv_evt_stats_endp(int llid, int tid, char *network,
     if (sat)
       {
       if ((sat->type == endp_type_tap) ||
-          (sat->type == endp_type_dpdk_tap)  ||
           (sat->type == endp_type_wif) ||
-          (sat->type == endp_type_raw) ||
+          (sat->type == endp_type_phy) ||
+          (sat->type == endp_type_pci) ||
           (sat->type == endp_type_c2c) ||
           (sat->type == endp_type_nat) ||
           (sat->type == endp_type_snf) ||

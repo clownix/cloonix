@@ -138,15 +138,15 @@
                          "  <name> %s </name>\n"\
                          "  <vm_config_flags> %d </vm_config_flags>\n"\
                          "  <vm_config_param> %d </vm_config_param>\n"\
-                         "  <cpu> %d </cpu>\n"\
                          "  <mem> %d </mem>\n"\
-                         "  <nb_dpdk> %d </nb_dpdk>\n"\
-                         "  <nb_eth> %d </nb_eth>\n"\
-                         "  <nb_wlan> %d </nb_wlan>"
+                         "  <cpu> %d </cpu>\n"\
+                         "  <nb_tot_eth> %d </nb_tot_eth>"
 
-#define ADD_VM_ETH_PARAMS "<eth_params>\n"\
-                          "  <mac> %02X %02X %02X %02X %02X %02X </mac>\n"\
-                          "</eth_params>"
+#define VM_ETH_TABLE     "<eth_table>\n"\
+                         "  <eth_type> %d </eth_type>\n"\
+                         "  <ifname> %s </ifname>\n"\
+                         "  <mac> %02X %02X %02X %02X %02X %02X </mac>\n"\
+                         "</eth_table>"
 
 #define ADD_VM_C         "  <linux_kernel> %s </linux_kernel>\n"\
                          "  <rootfs_input> %s </rootfs_input>\n"\
@@ -330,7 +330,7 @@
                               "  work_dir:%s bulk_dir:%s bin_dir:%s \n"\
                               "  flags_config:%d \n"\
                               "  nb_kvm:%d nb_c2c:%d nb_snf:%d \n"\
-                              "  nb_sat:%d nb_endp:%d \n"
+                              "  nb_sat:%d nb_endp:%d nb_phy:%d nb_pci:%d \n"
 
 #define EVENT_TOPO_C          "</event_topo>\n"\
 
@@ -344,8 +344,7 @@
                               "  rootfs_used: %s \n"\
                               "  rootfs_backing: %s \n"\
                               "  vm_id: %d vm_config_flags: %d vm_config_param: %d \n"\
-                              "  nb_dpdk: %d nb_eth: %d nb_wlan: %d \n"\
-                              "  mem: %d cpu: %d \n"
+                              "  mem: %d cpu: %d nb_tot_eth: %d "
 
 #define EVENT_TOPO_KVM_C      "</kvm>\n"
                         
@@ -364,6 +363,23 @@
                               "  name:%s \n"\
                               "  type:%d \n"\
                               "</sat>\n"
+
+#define EVENT_TOPO_PHY        "<phy>\n"\
+                              "  index:%d \n"\
+                              "  flags:%X \n"\
+                              "  name:%s \n"\
+                              "  drv:%s \n"\
+                              "  pci:%s \n"\
+                              "  mac:%s \n"\
+                              "  vendor:%s \n"\
+                              "  device:%s \n"\
+                              "</phy>\n"
+
+#define EVENT_TOPO_PCI        "<pci>\n"\
+                              "  pci:%s \n"\
+                              "  drv:%s \n"\
+                              "  unused:%s \n"\
+                              "</pci>\n"
 
 #define EVENT_TOPO_LAN        "  <lan> %s </lan>\n"
 

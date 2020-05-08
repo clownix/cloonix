@@ -15,7 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void doors_timeout_service_cb(int job_idx, int is_timeout, void *opaque);
 int doorways_get_distant_pid(void);
 int get_doorways_llid(void);
 char *get_doorways_bin(void);

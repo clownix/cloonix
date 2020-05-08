@@ -53,6 +53,8 @@
 #include "stats_counters.h"
 #include "stats_counters_sysinfo.h"
 #include "dpdk_ovs.h"
+#include "suid_power.h"
+#include "vhost_eth.h"
 
 
 
@@ -75,7 +77,6 @@ typedef struct t_vm_building
 {
   int llid;
   int tid;
-  int coherency_idx;
   t_topo_kvm kvm;
   int vm_id;
   int ref_jfs;
@@ -87,9 +88,37 @@ typedef struct t_vm_building
 static void death_of_rmdir_clone(void *data, int status, char *name)
 {
   t_action_rm_dir *act = (t_action_rm_dir *) data;
-  int result;
+  int i, pid, result;
+  t_eth_table *eth_tab;
+  t_vm *vm = find_vm_with_id(act->vm_id);
+  if (vm)
+    {
+    pid = suid_power_get_pid(vm->kvm.vm_id);
+    if (pid)
+      {
+      suid_power_kill_vm(vm->kvm.vm_id);
+      }
+    eth_tab = vm->kvm.eth_table;
+    for (i=0; i<vm->kvm.nb_tot_eth; i++)
+      {
+      if ((eth_tab[i].eth_type == eth_type_dpdk) ||
+          (eth_tab[i].eth_type == eth_type_vhost))
+        {
+        dpdk_ovs_del_vm(vm->kvm.name);
+        vhost_eth_del_vm(vm->kvm.name, vm->kvm.nb_tot_eth, vm->kvm.eth_table);
+        break;
+        }
+      }
+    if (cfg_unset_vm(vm) != act->vm_id)
+      KOUT(" ");
+    cfg_free_vm_id(act->vm_id);
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    }
   if (cfg_is_a_zombie(act->name))
     {
+    pid = suid_power_get_pid(act->vm_id);
+    if (pid)
+      KERR("%s %d", name, act->vm_id);
     cfg_del_zombie(act->name);
     result = status;
     }
@@ -109,6 +138,7 @@ static int rmdir_clone(void *data)
   char info[MAX_PRINT_LEN];
   t_action_rm_dir *act = (t_action_rm_dir *) data;
   info[0] = 0;
+  suid_power_kill_vm(act->vm_id);
   if (rm_machine_dirs(act->vm_id, info))
     {
     sleep(1);
@@ -122,6 +152,7 @@ static int rmdir_clone(void *data)
         }
       }
     }
+  sleep(1);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -144,57 +175,31 @@ static void timeout_erase_dir_zombie(int vm_id, char *name)
   memset(act, 0, sizeof(t_action_rm_dir));
   act->vm_id = vm_id; 
   strcpy(act->name, name);
-  clownix_timeout_add(500, action_rm_dir_timed, (void *) act, NULL, NULL);
+  clownix_timeout_add(200, action_rm_dir_timed, (void *) act, NULL, NULL);
   inc_lock_self_destruction_dir();
 }
 /*---------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-static void delayed_vm_cutoff(void *data)
-{
-  int pid;
-  char *name = (char *) data;
-  t_vm *vm = cfg_get_vm(name);
-  int vm_id;
-  if (vm)
-    {
-    pid = utils_get_pid_of_machine(vm);
-    if (pid)
-      {
-      KERR("Brutal kill of %s", vm->kvm.name);
-      kill(pid, SIGTERM);
-      }
-    if (vm->kvm.nb_dpdk)
-      dpdk_ovs_end_vm_kill_shutdown(vm->kvm.name);
-    vm_id = cfg_unset_vm(vm);
-    cfg_free_vm_id(vm_id);
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    }
-  clownix_free(data, __FUNCTION__);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void arm_delayed_vm_cutoff(char *name)
-{
-  char *vmn;
-  vmn = clownix_malloc(MAX_NAME_LEN, 13);
-  memset (vmn, 0, MAX_NAME_LEN);
-  strncpy(vmn, name, MAX_NAME_LEN-1);
-  clownix_timeout_add(400, delayed_vm_cutoff,(void *)vmn, NULL, NULL);
-}
-/*---------------------------------------------------------------------------*/
-    
 /*****************************************************************************/
 void timeout_start_vm_create_automaton(void *data)
 {
   char *vm_name = (char *) data;
   t_vm   *vm = cfg_get_vm(vm_name);
   t_wake_up_eths *wake_up_eths;
-  if (vm)
+  if (!vm)
+    {
+    KERR("POSSIBLE?");
+    recv_coherency_unlock();
+    }
+  else
     {
     wake_up_eths = vm->wake_up_eths;
-    if (wake_up_eths)
+    if (!wake_up_eths)
+      {
+      KERR("POSSIBLE?");
+      recv_coherency_unlock();
+      }
+    else
       {
       if (strcmp(wake_up_eths->name, vm_name))
         KOUT("%s %s", wake_up_eths->name, vm_name);
@@ -231,17 +236,8 @@ int run_linux_virtual_machine(int llid, int tid, char *name,
                               t_vm *vm, char *err)
 {
   int result = -1;
-  if (umid_pid_already_exists(vm->kvm.vm_id))
-    {
-    sprintf( err, "Machine %s seems to be running already", name);
-    event_print("Machine %s seems to be running already", name);
-    KERR(" ");
-    }
-  else
-    {
-    start_lock_and_watchdog(llid, tid, vm, err);
-    result = 0;
-    }
+  start_lock_and_watchdog(llid, tid, vm, err);
+  result = 0;
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -307,12 +303,14 @@ static void death_of_mkdir_clone(void *data, int status, char *name)
                 cfg_get_work_vm(vm_building->vm_id));
     send_status_ko(vm_building->llid, vm_building->tid, err);
     clownix_free(vm_building,  __FUNCTION__);
+    recv_coherency_unlock();
     }
   else if (missing_dir(vm_building->kvm.name, vm_building->vm_id))
     {
     sprintf(err,"Bad vm %s dir creation", vm_building->kvm.name);
     send_status_ko(vm_building->llid, vm_building->tid, err);
     clownix_free(vm_building,  __FUNCTION__);
+    recv_coherency_unlock();
     }
   else
     {
@@ -330,9 +328,9 @@ static void death_of_mkdir_clone(void *data, int status, char *name)
       {
       send_status_ko(vm_building->llid, vm_building->tid, err);
       machine_death(vm_building->kvm.name, error_death_run);
+      recv_coherency_unlock();
       }
     }
-  recv_coherency_unlock(vm_building->coherency_idx);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -347,14 +345,13 @@ static int mkdir_clone(void *data)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void machine_recv_add_vm(int llid,int tid,t_topo_kvm *kvm,int vm_id,int idx)
+void machine_recv_add_vm(int llid, int tid, t_topo_kvm *kvm, int vm_id)
 {
   t_vm_building *vm_building;
   vm_building = (t_vm_building *) clownix_malloc(sizeof(t_vm_building), 19);
   memset(vm_building, 0, sizeof(t_vm_building));
   vm_building->llid = llid;
   vm_building->tid  = tid;
-  vm_building->coherency_idx = idx;
   memcpy(&(vm_building->kvm), kvm, sizeof(t_topo_kvm));
   vm_building->vm_id  = vm_id;
   pid_clone_launch(mkdir_clone, death_of_mkdir_clone, NULL,
@@ -364,27 +361,25 @@ void machine_recv_add_vm(int llid,int tid,t_topo_kvm *kvm,int vm_id,int idx)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int machine_death( char *name, int error_death)
+void machine_death( char *name, int error_death)
 {
-  int result = -1;
+  int i;
   t_vm *vm = cfg_get_vm(name);
   char cisco_nat_name[2*MAX_NAME_LEN];
-  if (!vm)
-    return result;
-  if ((error_death) && 
-      (error_death != error_death_qmp) &&
-      (error_death != error_death_qmonitor))
+  t_eth_table *eth_tab;
+  if ((!vm) || (vm->vm_to_be_killed == 1))
     {
-    if (error_death == error_death_timeout_hvc0_silent)
-      KERR("%s KILLED BECAUSE OF NO hvc0 IN GUEST", vm->kvm.name);
-    else if (error_death == error_death_timeout_hvc0_conf)
-      KERR("%s KILLED BECAUSE OF NO AUTOLOGING IN hvc0 CONF", vm->kvm.name);
-    else
-      KERR("%s %s %d ", __FUNCTION__, vm->kvm.name, error_death);
+    KERR("%s %d", name, error_death);
     }
-  if (vm->vm_to_be_killed == 0)
+  else
     {
     vm->vm_to_be_killed = 1;
+    if ((error_death) && 
+        (error_death != error_death_qmp) &&
+        (error_death != error_death_nopid) &&
+        (error_death != error_death_pid_diseapeared) &&
+        (error_death != error_death_qmonitor))
+      KERR("%s %s %d ", __FUNCTION__, vm->kvm.name, error_death);
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
       {
       memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
@@ -393,64 +388,56 @@ int machine_death( char *name, int error_death)
       if (endp_mngt_stop(cisco_nat_name, 0))
         KERR("%s", cisco_nat_name);
       }
-    if (vm->kvm.nb_dpdk)
-      dpdk_ovs_end_vm(vm->kvm.name, vm->kvm.nb_dpdk);
+    eth_tab = vm->kvm.eth_table;
+    for (i=0; i<vm->kvm.nb_tot_eth; i++)
+      {
+      if ((eth_tab[i].eth_type == eth_type_dpdk) ||
+          (eth_tab[i].eth_type == eth_type_vhost))
+        {
+        dpdk_ovs_del_vm(vm->kvm.name);
+        vhost_eth_del_vm(vm->kvm.name, vm->kvm.nb_tot_eth, vm->kvm.eth_table);
+        break;
+        }
+      else if (eth_tab[i].eth_type == eth_type_wlan)
+        {
+        endp_mngt_stop(vm->kvm.name, i);
+        }
+      }
+
+
     doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
     qhvc0_end_qemu_unix(vm->kvm.name);
     qmonitor_end_qemu_unix(vm->kvm.name);
     qmp_request_qemu_halt(vm->kvm.name, 0, 0);
-    arm_delayed_vm_cutoff(vm->kvm.name);
     if (vm->pid_of_cp_clone)
       {
       KERR("CP ROOTFS SIGKILL %s, PID %d", vm->kvm.name, vm->pid_of_cp_clone);
       kill(vm->pid_of_cp_clone, SIGKILL);
       vm->pid_of_cp_clone = 0;
       }
-    }
-  if (!cfg_is_a_zombie(vm->kvm.name))
-    {
-    result = 0;
-    stats_counters_sysinfo_vm_death(vm->kvm.name);
-    cfg_add_zombie(vm->kvm.vm_id, vm->kvm.name);
-    if (!cfg_get_vm_locked(vm))
+    if (!cfg_is_a_zombie(vm->kvm.name))
       {
-      if (vm->wake_up_eths != NULL)
-        KOUT(" ");
+      stats_counters_sysinfo_vm_death(vm->kvm.name);
+      cfg_add_zombie(vm->kvm.vm_id, vm->kvm.name);
       timeout_erase_dir_zombie(vm->kvm.vm_id, vm->kvm.name);
-      }
-    else
-      {
-      if (vm->wake_up_eths == NULL)
-        KOUT(" ");
-      vm->wake_up_eths->destroy_requested = 1;
-      clownix_timeout_del(vm->wake_up_eths->abs_beat,vm->wake_up_eths->ref,
-                          __FILE__, __LINE__);
-      clownix_timeout_add(1, utils_vm_create_fct_abort,(void *)vm,
-                    &(vm->wake_up_eths->abs_beat),&(vm->wake_up_eths->ref));
+      if (!cfg_get_vm_locked(vm))
+        {
+        if (vm->wake_up_eths != NULL)
+          KOUT(" ");
+        }
+      else
+        {
+        if (vm->wake_up_eths == NULL)
+          KOUT(" ");
+        vm->wake_up_eths->destroy_requested = 1;
+        clownix_timeout_del(vm->wake_up_eths->abs_beat,
+                            vm->wake_up_eths->ref, __FILE__, __LINE__);
+        vm->wake_up_eths->abs_beat = 0;
+        vm->wake_up_eths->ref = 0;
+        free_wake_up_eths_and_delete_vm(vm, error_death_abort);
+        }
       }
     }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void machine_recv_kill_clownix(void)
-{
-  int i, nb;
-  char name[MAX_NAME_LEN];
-  t_vm *vm = cfg_get_first_vm(&nb);
-  t_vm *next_vm;
-  for (i=0; i<nb; i++)
-    {
-    if (!vm)
-      KOUT(" ");
-    next_vm = vm->next;
-    strcpy(name, vm->kvm.name);
-    machine_death(name, error_death_noerr);
-    vm = next_vm;
-    }
-  if (vm) 
-    KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 

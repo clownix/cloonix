@@ -56,6 +56,7 @@ done
             ovs \
             tldk \
             doorways \
+            suid_power \
             uml_cloonix_switch \
             muswitch/lib_ioc \
             muswitch/lib_mulan \

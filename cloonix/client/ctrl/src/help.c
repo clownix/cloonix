@@ -55,12 +55,30 @@ void help_qreboot_vm(char *line)
 
 
 /*****************************************************************************/
+void help_qhalt_vm(char *line)
+{
+  printf("\n\n\n%s <name>\n", line);
+  printf("\nRequest a poweroff to qemu kvm\n\n\n");
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void help_reboot_vm(char *line)
+{
+  printf("\n\n\n%s <name>\n", line);
+  printf("\nRequest a reboot to the cloonix agent\n\n\n");
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
 void help_halt_vm(char *line)
 {
   printf("\n\n\n%s <name>\n", line);
-  printf("\nFor kvm machines, request a poweroff to the cloonix agent\n\n\n");
+  printf("\nRequest a poweroff to the cloonix agent\n\n\n");
 }
 /*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 void help_del_vm(char *line)
@@ -74,19 +92,6 @@ void help_del_vm(char *line)
 void help_add_sat(char *line)
 {
   printf("\n\n\n%s <name>\n\n", line);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_add_raw(char *line)
-{
-  printf("\n\n\n%s <name>\n\n", line);
-  printf("\n%s eth0\n\n", line);
-  printf("  Specifique to have a raw socket to an interface\n");
-  printf("  real hardware host interface, the name of the\n");
-  printf("  real interface must be given. \n");
-  printf("  This interface is made promiscuous.\n");
-  printf("  The interface is left in promiscuous mode after use.\n\n\n");
 }
 /*---------------------------------------------------------------------------*/
 

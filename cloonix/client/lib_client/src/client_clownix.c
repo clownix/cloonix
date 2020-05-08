@@ -473,13 +473,11 @@ void client_req_slowperiodic(t_slowperiodic_cb cb)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_dpdk, 
-                   int nb_eth, int nb_wlan, int vm_config_flags,
-                   int vm_config_param, int cpu_qty, int mem_qty, 
-                   char *kernel, char *root_fs, 
-                   char *install_cdrom, char *added_cdrom, 
-                   char *added_disk, char *p9_host_share,
-                   t_eth_params *eth_params)
+void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
+                   t_eth_table *eth_tab, int vm_config_flags,
+                   int vm_config_param, int cpu_qty, int mem_qty, char *kernel,
+                   char *root_fs, char *install_cdrom, char *added_cdrom, 
+                   char *added_disk, char *p9_host_share)
 {
   t_topo_kvm kvm;
   int new_tid;
@@ -494,11 +492,8 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_dpdk,
   kvm.vm_config_param = vm_config_param;
   kvm.cpu = cpu_qty;
   kvm.mem = mem_qty;
-  kvm.nb_dpdk = nb_dpdk;
-  kvm.nb_eth = nb_eth;
-  kvm.nb_wlan = nb_wlan;
-  if (eth_params)
-    memcpy(kvm.eth_params, eth_params, MAX_ETH_VM * sizeof(t_eth_params));
+  kvm.nb_tot_eth = nb_tot_eth;
+  memcpy(kvm.eth_table, eth_tab, nb_tot_eth * sizeof(t_eth_table));
   if (kernel)
     strncpy(kvm.linux_kernel, kernel, MAX_NAME_LEN - 1);
   strncpy(kvm.rootfs_input, root_fs, MAX_PATH_LEN - 1);
@@ -548,13 +543,16 @@ void client_sav_vm_all(int tid, t_end_cb cb,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_reboot_vm(int tid, t_end_cb cb, char *nm)
+void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest)
 {
   int new_tid;
   if (!g_llid)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_vmcmd(g_llid, new_tid, nm, vmcmd_reboot_with_qemu, 0);
+  if (by_guest)
+    send_vmcmd(g_llid, new_tid, nm, vmcmd_reboot_with_guest, 0);
+  else
+    send_vmcmd(g_llid, new_tid, nm, vmcmd_reboot_with_qemu, 0);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -562,7 +560,7 @@ void client_reboot_vm(int tid, t_end_cb cb, char *nm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_halt_vm(int tid, t_end_cb cb, char *nm)
+void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest)
 {
   int new_tid;
   if (!g_llid)
@@ -570,7 +568,10 @@ void client_halt_vm(int tid, t_end_cb cb, char *nm)
   new_tid = set_response_callback(cb, tid);
   if (!g_llid)
     KOUT(" ");
-  send_vmcmd(g_llid, new_tid, nm, vmcmd_halt_with_qemu, 0);
+  if (by_guest)
+    send_vmcmd(g_llid, new_tid, nm, vmcmd_halt_with_guest, 0);
+  else
+    send_vmcmd(g_llid, new_tid, nm, vmcmd_halt_with_qemu, 0);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif

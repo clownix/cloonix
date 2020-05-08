@@ -18,7 +18,8 @@
 int  endp_evt_exists(char *name, int num);
 int  endp_evt_lan_full(char *name, int num, int *tidx);
 int  endp_evt_lan_find(char *name, int num, char *lan, int *tidx);
-int  endp_evt_lan_is_in_use(char *lan);
+int  endp_evt_lan_is_in_use(char *lan, int *type);
+int  endp_evt_lan_is_in_use_by_other(char *name, char *lan, int *type);
 int  endp_evt_add_lan(int llid, int tid, char *name, int num,
                       char *lan, int tidx);
 int  endp_evt_del_lan(char *name, int num, int tidx, char *lan);
@@ -29,5 +30,5 @@ void endp_evt_connect_KO(char *name, int num, char *lan, int tidx);
 void endp_evt_birth(char *name, int num, int endp_type);
 int  endp_evt_death(char *name, int num);
 void endp_evt_quick_death(char *name, int num);
-int endp_is_wlan(char *name, int num, int *nb_eth);
+int endp_is_wlan(char *name, int num);
 void endp_evt_init(void);

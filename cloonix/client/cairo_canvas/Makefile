@@ -57,9 +57,7 @@ LIBS = $(shell pkg-config --libs gtk+-3.0) \
 
 SRCS     = popup.c topo.c menus.c cloonix.c move.c menu_utils.c \
            main_timer_loop.c canvas_ctx.c eventfull_eth.c make_layout.c \
-           menu_dialog_kvm.c menu_dialog_c2c.c menu_dialog_tap.c \
-           menu_dialog_snf.c menu_dialog_lan.c menu_dialog_a2b.c \
-           layout_topo.c 
+           menu_dialog_kvm.c menu_dialog_c2c.c layout_topo.c 
 
 OBJ      = $(SRCS:.c=.o)
 OBJ_DIR  = ./obj/

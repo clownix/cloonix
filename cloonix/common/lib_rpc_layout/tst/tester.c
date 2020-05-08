@@ -298,7 +298,7 @@ void recv_layout_node(int llid, int itid, t_layout_node *ilayout_node)
     layout_node.y      =randouble();
     layout_node.hidden_on_graph  =rand();
     layout_node.color = rand();
-    layout_node.nb_eth = (rand() %(MAX_ETH_VM - 1))+1;
+    layout_node.nb_eth = (rand() %(MAX_SOCK_VM - 1))+1;
     for (i=0; i<layout_node.nb_eth; i++)
       {
       layout_node.eth[i].x      =randouble();

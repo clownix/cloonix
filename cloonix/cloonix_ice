@@ -53,7 +53,7 @@ passwd=$(echo $cloonix_info |awk '{print $6}')
 
 DIST_CLOONIX_WORK=$(cloonix_cli $cloonix_name dcf |grep  CLOONIX_WORK | awk -F = '{print $2}')
 
-ID=$(cloonix_cli $cloonix_name dmp |grep AGENT |grep "kvm:$2 ID" | awk '{print $3}')
+ID=$(cloonix_cli $cloonix_name dmp |grep "$2 vm_id:" | awk '{print $3}')
 if [ -z $ID ]; then
   echo Bad param: $2
   exit 1

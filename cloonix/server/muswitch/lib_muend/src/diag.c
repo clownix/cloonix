@@ -463,15 +463,15 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     else
       snprintf(resp_cloonix, MAX_PATH_LEN-1, "cloonix_resp_wif_ok");
     }
-  else if (!mycmp(line, "cloonix_req_raw"))
+  else if (!mycmp(line, "cloonix_req_phy"))
     {
     if (raw_fd_open(all_ctx, all_ctx->g_name))
       {
-      snprintf(resp_cloonix, MAX_PATH_LEN-1, "cloonix_resp_raw_ko");
+      snprintf(resp_cloonix, MAX_PATH_LEN-1, "cloonix_resp_phy_ko");
       KERR(" ");
       }
     else
-      snprintf(resp_cloonix, MAX_PATH_LEN-1, "cloonix_resp_raw_ok");
+      snprintf(resp_cloonix, MAX_PATH_LEN-1, "cloonix_resp_phy_ok");
     }
   else if (!mycmp(line, "cloonix_req_snf"))
     {
@@ -489,9 +489,9 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     {
     snprintf(resp_cloonix, MAX_PATH_LEN-1, "cloonix_resp_nat_ok");
     }
-  else if (!strcmp(line, "cloonix_req_kvm_eth"))
+  else if (!strcmp(line, "cloonix_req_kvm_sock"))
     {
-    snprintf(resp_cloonix, MAX_PATH_LEN-1, "cloonix_resp_kvm_eth_ok");
+    snprintf(resp_cloonix, MAX_PATH_LEN-1, "cloonix_resp_kvm_sock_ok");
     }
   else if (lan_diag(all_ctx, line, &num, &tidx, resp_lan))
     KERR("%s", line);

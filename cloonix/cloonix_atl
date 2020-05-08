@@ -1,7 +1,0 @@
-#!/bin/bash
-export OVS_BINDIR="/usr/local/bin/cloonix/server/dpdk"
-export OVS_RUNDIR="${HOME}/cloonix_data/nemo/dpdk"
-export OVS_LOGDIR="${HOME}/cloonix_data/nemo/dpdk"
-export OVS_DBDIR="${HOME}/cloonix_data/nemo/dpdk"
-export XDG_RUNTIME_DIR="${HOME}/cloonix_data/nemo/dpdk"
-sudo ${OVS_BINDIR}/bin/ovs-appctl --target=${OVS_RUNDIR}/ovs-vswitchd.ctl "$@"

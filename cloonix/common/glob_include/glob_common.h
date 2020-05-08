@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#include <linux/if.h>
 #ifndef MAX_NAME_LEN
 #define MAX_NAME_LEN 64
 #endif
@@ -44,11 +45,13 @@
     } while (0)
 #endif
 
-
+#define MAX_PHY            16
+#define MAX_PCI            16
 #define MAX_VM             100
-#define MAX_DPDK_VM        4
-#define MAX_ETH_VM         12
-#define MAX_WLAN_VM        4
+#define MAX_SOCK_VM         12
+#define MAX_DPDK_VM        8
+#define MAX_VHOST_VM       12
+#define MAX_WLAN_VM        8
 
 #define MAX_TRAF_ENDPOINT 4
 
@@ -86,10 +89,6 @@
 #define VM_CONFIG_FLAG_ADDED_CDROM     0x00080
 #define VM_CONFIG_FLAG_ADDED_DISK      0x00100
 #define VM_CONFIG_FLAG_CISCO           0x00200
-#define VM_CONFIG_FLAG_VMWARE          0x00400
-#define VM_CONFIG_FLAG_ARM             0x00800
-#define VM_CONFIG_FLAG_AARCH64         0x01000
-#define VM_CONFIG_FLAG_VHOST_VSOCK     0x02000
 #define VM_CONFIG_FLAG_UEFI            0x04000
 #define VM_CONFIG_FLAG_WITH_PXE        0x08000
 
@@ -97,9 +96,21 @@
 #define VM_FLAG_IS_INSIDE_CLOONIX      0x20000
 #define VM_FLAG_CLOONIX_AGENT_PING_OK  0x80000
 
+#define DIR_UMID "umid"
+#define CLOONIX_VM_WORKDIR "vm"
+
 
 #define MSG_DIGEST_LEN 32
 
+enum{
+  eth_type_min = 0,
+  eth_type_none,
+  eth_type_sock,
+  eth_type_dpdk,
+  eth_type_vhost,
+  eth_type_wlan,
+  eth_type_max,
+};
 
 
 enum{
@@ -158,15 +169,15 @@ typedef struct t_lan_group_item
 typedef struct t_lan_group
 {
   int nb_lan;
-  int unusedalign;
   t_lan_group_item *lan;
 } t_lan_group;
 /*---------------------------------------------------------------------------*/
-typedef struct t_eth_params
+typedef struct t_eth_table
 {
-  char mac_addr[MAC_ADDR_LEN];
-  char unusedalign[2];
-} t_eth_params;
+  int  eth_type;
+  char mac_addr[8];
+  char vhost_ifname[IFNAMSIZ];
+} t_eth_table;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_kvm
 {
@@ -175,11 +186,10 @@ typedef struct t_topo_kvm
   int  vm_config_param;
   int  cpu;
   int  mem;
-  int  nb_dpdk; 
-  int  nb_eth; 
+  int  nb_tot_eth;
+  t_eth_table eth_table[MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM];
   int  nb_wlan; 
   int  vm_id;
-  t_eth_params eth_params[MAX_DPDK_VM+MAX_ETH_VM];
   char linux_kernel[MAX_NAME_LEN];
   char rootfs_input[MAX_PATH_LEN];
   char rootfs_used[MAX_PATH_LEN];
@@ -206,14 +216,12 @@ typedef struct t_topo_snf
   char name[MAX_NAME_LEN];
   char recpath[MAX_PATH_LEN];
   int capture_on;
-  int unusedalign;
   } t_topo_snf;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_sat
   {
   char name[MAX_NAME_LEN];
   int type;
-  int unusedalign;
   } t_topo_sat;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_endp
@@ -223,6 +231,25 @@ typedef struct t_topo_endp
   int  type;
   t_lan_group lan;
 } t_topo_endp;
+/*---------------------------------------------------------------------------*/
+typedef struct t_topo_phy
+{
+  int  index;
+  int  flags;
+  char name[IFNAMSIZ];
+  char drv[IFNAMSIZ];
+  char pci[IFNAMSIZ];
+  char mac[IFNAMSIZ];
+  char vendor[IFNAMSIZ];
+  char device[IFNAMSIZ];
+} t_topo_phy;
+/*---------------------------------------------------------------------------*/
+typedef struct t_topo_pci
+{
+  char pci[IFNAMSIZ];
+  char drv[MAX_NAME_LEN];
+  char unused[MAX_NAME_LEN];
+} t_topo_pci;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_info
 {
@@ -242,6 +269,12 @@ typedef struct t_topo_info
 
   int nb_endp;
   t_topo_endp *endp;
+
+  int nb_phy;
+  t_topo_phy *phy;  
+
+  int nb_pci;
+  t_topo_pci *pci;  
 
 } t_topo_info;
 /*---------------------------------------------------------------------------*/

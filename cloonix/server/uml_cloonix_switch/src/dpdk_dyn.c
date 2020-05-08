@@ -36,6 +36,8 @@
 #include "dpdk_tap.h"
 #include "machine_create.h"
 #include "event_subscriber.h"
+#include "phy_mngt.h"
+#include "phy_evt.h"
 
 /****************************************************************************/
 typedef struct t_dlan
@@ -64,8 +66,6 @@ typedef struct t_deth
 typedef struct t_dvm
 {
   char name[MAX_NAME_LEN];
-  int  num;
-  int  is_zombie;
   t_deth *head_eth;
   struct t_dvm *prev;
   struct t_dvm *next;
@@ -110,25 +110,6 @@ static void vlan_free(t_deth *eth, t_dlan *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_deth *eth_alloc(int num)
-{
-  int i;
-  t_deth *cur, *head = NULL;
-  for (i=0; i<num; i++)
-    {
-    cur = (t_deth *) clownix_malloc(sizeof(t_dvm), 15); 
-    memset(cur, 0, sizeof(t_dvm));
-    cur->num = i;
-    if (head)
-      head->prev = cur;
-    cur->next = head;
-    head = cur; 
-    }
-  return head;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void eth_free(t_deth *eth)
 {
   t_deth *next, *cur = eth;
@@ -160,23 +141,27 @@ static t_dvm *vm_find(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void vm_alloc(char *name, int num)
+static void vm_eth_alloc(char *name, int num)
 {
   t_dvm *vm = vm_find(name);
-  if (vm)
-    KOUT("%s", name);
-  else
+  t_deth *cur;
+  if (vm == NULL)
     {
     vm = (t_dvm *) clownix_malloc(sizeof(t_dvm), 4);
     memset(vm, 0, sizeof(t_dvm));
     strncpy(vm->name, name, MAX_NAME_LEN-1);
-    vm->head_eth = eth_alloc(num);
-    vm->num = num;
     if (g_head_vm)
       g_head_vm->prev = vm;
     vm->next = g_head_vm;
     g_head_vm = vm;
     }
+  cur = (t_deth *) clownix_malloc(sizeof(t_deth), 15);
+  memset(cur, 0, sizeof(t_deth));
+  cur->num = num;
+  if (vm->head_eth)
+    vm->head_eth->prev = cur;
+  cur->next = vm->head_eth;
+  vm->head_eth = cur;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -313,14 +298,10 @@ static void recv_ack(int is_add, int is_ko,
             {
             if (is_ko)
               send_status_ko(lan->llid, lan->tid, lab);
-            else
-              send_status_ok(lan->llid, lan->tid, "OK");
             }
           else
             KERR("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
           } 
-        lan->llid = 0;
-        lan->tid = 0;
         if (is_add == 1)
           {
           if (lan->waiting_ack_add != 1)
@@ -328,7 +309,13 @@ static void recv_ack(int is_add, int is_ko,
           lan->waiting_ack_add = 0; 
           if (is_ko)
             vlan_free(eth, lan);
-          event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+          else
+            {
+            if (phy_evt_update_eth_type(lan->llid, lan->tid, is_add,
+                                         eth_type_dpdk, name, lan_name))
+              send_status_ok(lan->llid, lan->tid, "OK");
+            event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+            }
           }
         else
           {
@@ -336,8 +323,11 @@ static void recv_ack(int is_add, int is_ko,
             KERR("dellan ko:%d %s %s %d", is_ko, lan_name, name, num);
           lan->waiting_ack_del = 0;
           vlan_free(eth, lan);
+          phy_evt_update_eth_type(0,0,is_add,eth_type_dpdk,name,lan_name);
           event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
           }
+        lan->llid = 0;
+        lan->tid = 0;
         }
       }
     }
@@ -384,7 +374,7 @@ void dpdk_dyn_ack_add_eth_KO(char *name, int num, char *lab)
 void dpdk_dyn_ack_add_eth_OK(char *name, int num, char *lab)
 {
   event_print("Recv vm dyn add eth OK %s %d %s", name, num, lab);
-  vm_alloc(name, num);
+  vm_eth_alloc(name, num);
   dpdk_ovs_ack_add_eth_vm(name, 0);
 }
 /*--------------------------------------------------------------------------*/
@@ -407,19 +397,14 @@ int dpdk_dyn_add_lan_to_eth(int llid, int tid, char *lan_name,
       sprintf(info, "Eth is in lan: %s %s %d",eth->head_lan->lan,name,num);
     else
       {
-      if (vm->is_zombie)
-        sprintf(info, "Zombie vm: %s %s %d", lan_name, name, num);
+      if (dpdk_msg_send_add_lan_eth(lan_name, name, num))
+        sprintf(info, "Bad ovs connect: %s %s %d", lan_name, name, num);
       else
         {
-        if (dpdk_msg_send_add_lan_eth(lan_name, name, num))
-          sprintf(info, "Bad ovs connect: %s %s %d", lan_name, name, num);
-        else
-          {
-          cur = vlan_alloc(eth, lan_name, llid, tid);
-          cur->waiting_ack_add = 1;
-          event_print("Send vm dyn add lan eth %s %s %d", lan_name, name, num);
-          result = 0;
-          }
+        cur = vlan_alloc(eth, lan_name, llid, tid);
+        cur->waiting_ack_add = 1;
+        event_print("Send vm dyn add lan eth %s %s %d", lan_name, name, num);
+        result = 0;
         }
       }
     }
@@ -444,22 +429,17 @@ int dpdk_dyn_del_lan_from_eth(int llid, int tid, char *lan_name,
       sprintf(info, "Lan not attached: %s %s %d", lan_name, name, num);
     else
       {
-      if (vm->is_zombie)
-        sprintf(info, "Zombie vm: %s %s %d", lan_name, name, num);
+      if (cur->waiting_ack_del != 0)
+        KERR("%s %s %d", lan_name, name, num);
+      if (dpdk_msg_send_del_lan_eth(lan_name, name, num))
+        sprintf(info, "Bad ovs connect: %s %s %d", lan_name, name, num);
       else
         {
-        if (cur->waiting_ack_del != 0)
-          KERR("%s %s %d", lan_name, name, num);
-        if (dpdk_msg_send_del_lan_eth(lan_name, name, num))
-          sprintf(info, "Bad ovs connect: %s %s %d", lan_name, name, num);
-        else
-          {
-          cur->llid = llid;
-          cur->tid = tid;
-          cur->waiting_ack_del = 1;
-          event_print("Send vm dyn del lan eth %s %s %d", lan_name, name, num);
-          result = 0;
-          }
+        cur->llid = llid;
+        cur->tid = tid;
+        cur->waiting_ack_del = 1;
+        event_print("Send vm dyn del lan eth %s %s %d", lan_name, name, num);
+        result = 0;
         }
       }
     }
@@ -468,50 +448,26 @@ int dpdk_dyn_del_lan_from_eth(int llid, int tid, char *lan_name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_add_eth(t_vm *kvm, char *name, int num)
+void dpdk_dyn_add_eth(char *name, int num, char *strmac)
 {
-  t_dvm *vm = vm_find(name);
-  if (vm)
+  event_print("Send vm dyn add eth %s %d",name, num);
+  if (dpdk_msg_send_add_eth(name, num, strmac))
+    {
+    machine_death(name, error_death_noovs);
     KERR("%s %d", name, num);
-  else
-    {
-    event_print("Send vm dyn add eth %s %d",name, num);
-    if (dpdk_msg_send_add_eth(kvm, name, num))
-      {
-      machine_death(name, error_death_noovs);
-      KERR("%s %d", name, num);
-      }
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_dyn_del_all_lan(char *name)
-{
-  int result = -1;
-  t_dvm *vm = vm_find(name);
-  if (vm)
-    {
-    result = 0;
-    vm->is_zombie = 1;
-    if (vlan_exists_in_vm(name))
-      all_lan_del_req(vm);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void dpdk_dyn_end_vm_qmp_shutdown(char *name, int num)
+void dpdk_dyn_del_eth(char *name, int num)
 {
   t_dvm *vm = vm_find(name);
   event_print("Send vm eth del %s %d", name, num);
   if (vm)
     {
     if (vlan_exists_in_vm(name))
-      {
       all_lan_del_req(vm);
-      }
     dpdk_msg_send_del_eth(name, num);
     vm_free(name);
     }

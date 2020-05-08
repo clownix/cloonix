@@ -24,10 +24,13 @@ mkdir -p /usr/local/bin
 cd /usr/local/bin
 tar zxvf ${HERE}/${CLOONIX}
 chown -R root:root /usr/local/bin/cloonix*
-MUTAP=/usr/local/bin/cloonix/server/muswitch/mutap/cloonix_mutap
+SERV_BIN_PATH=/usr/local/bin/cloonix/server
+MUTAP=${SERV_BIN_PATH}/muswitch/mutap/cloonix_mutap
+MUOVS=${SERV_BIN_PATH}/muswitch/muovs/cloonix_muovs
+SUID_POWER=${SERV_BIN_PATH}/suid_power/cloonix_suid_power
 chmod u+s ${MUTAP}
-MUOVS=/usr/local/bin/cloonix/server/muswitch/muovs/cloonix_muovs
 chmod u+s ${MUOVS}
+chmod u+s ${SUID_POWER}
 USBHELP=/usr/local/bin/cloonix/common/spice
 USBHELP+=/spice_lib/bin/spice-client-glib-usb-acl-helper
 if [ -e ${USBHELP} ]; then

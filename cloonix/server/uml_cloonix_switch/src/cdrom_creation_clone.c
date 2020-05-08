@@ -32,10 +32,6 @@
 #include "system_callers.h"
 
 
-
-
-
-
 /*****************************************************************************/
 typedef struct t_cdrom_config
 {
@@ -124,30 +120,43 @@ static void death_of_clone_in_main_context(void *data, int status, char *name)
   t_vm   *vm = cfg_get_vm(name);
   t_wake_up_eths *wake_up_eths;
   if (!vm)
-    return;
-  wake_up_eths = vm->wake_up_eths;
-  if (!wake_up_eths)
-    return;
-  if (strcmp(wake_up_eths->name, name))
-    KOUT(" ");
-  if (strcmp(cdrom_conf->name, name))
-    KOUT(" ");
-  if (strstr(cdrom_conf->msg_from_clone, "CDROM_DONE_OK"))
     {
-    vm_name = (char *) clownix_malloc(MAX_NAME_LEN, 7);
-    memset(vm_name, 0, MAX_NAME_LEN);
-    strncpy(vm_name, name, MAX_NAME_LEN-1);
-    clownix_timeout_add(100, timeout_start_vm_create_automaton,
-                        (void *) vm_name, NULL, NULL);
-    clownix_free(data, __FUNCTION__);
+    KERR("POSSIBLE?");
+    recv_coherency_unlock();
     }
   else
     {
-    sprintf(err, "ERROR CDROM when creating %s detail: %s", 
-            name, cdrom_conf->msg_from_clone);
-    event_print(err);
-    send_status_ko(wake_up_eths->llid, wake_up_eths->tid, err);
-    utils_launched_vm_death(name, error_death_cdrom);
+    wake_up_eths = vm->wake_up_eths;
+    if (!wake_up_eths)
+      {
+      KERR("POSSIBLE?");
+      recv_coherency_unlock();
+      }
+    else
+      {
+      if (strcmp(wake_up_eths->name, name))
+        KOUT(" ");
+      if (strcmp(cdrom_conf->name, name))
+        KOUT(" ");
+      if (strstr(cdrom_conf->msg_from_clone, "CDROM_DONE_OK"))
+        {
+        vm_name = (char *) clownix_malloc(MAX_NAME_LEN, 7);
+        memset(vm_name, 0, MAX_NAME_LEN);
+        strncpy(vm_name, name, MAX_NAME_LEN-1);
+        clownix_timeout_add(20, timeout_start_vm_create_automaton,
+                            (void *) vm_name, NULL, NULL);
+        clownix_free(data, __FUNCTION__);
+        }
+      else
+        {
+        sprintf(err, "ERROR CDROM when creating %s detail: %s", 
+                name, cdrom_conf->msg_from_clone);
+        event_print(err);
+        send_status_ko(wake_up_eths->llid, wake_up_eths->tid, err);
+        free_wake_up_eths_and_delete_vm(vm, error_death_cdrom);
+        recv_coherency_unlock();
+        }
+      }
     }
 }
 /*---------------------------------------------------------------------------*/

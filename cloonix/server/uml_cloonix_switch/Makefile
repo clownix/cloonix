@@ -44,7 +44,6 @@ SRC = \
       qmp.c \
       qhvc0.c \
       xwy.c \
-      timeout_service.c \
       mulan_mngt.c \
       endp_mngt.c \
       endp_evt.c \
@@ -59,10 +58,17 @@ SRC = \
       dpdk_ovs.c \
       dpdk_dyn.c \
       dpdk_msg.c \
-      dpdk_fmt.c \
+      fmt_diag.c \
       dpdk_tap.c \
       slowperiodic.c \
-      unix2inet.c
+      unix2inet.c \
+      suid_power.c \
+      vhost_eth.c \
+      phy_mngt.c \
+      phy_evt.c \
+      phy_sock.c \
+      phy_vhost.c \
+      pci_dpdk.c
 
 INCLUDES= -I./src \
           -I$(GLOB_INCLUDE) \

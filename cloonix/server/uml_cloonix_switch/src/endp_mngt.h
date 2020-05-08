@@ -49,9 +49,9 @@ int endp_mngt_get_all_llid(int32_t **llid_tab);
 int endp_mngt_lan_connect(int delay, char *name, int num, int tidx, char *lan);
 int endp_mngt_lan_disconnect(char *name, int num, int tidx, char *lan);
 int endp_mngt_connection_state_is_restfull(char *name, int num);
-int endp_mngt_exists(char *name, int num, int *endp_type);
 int endp_mngt_get_all_pid(t_lst_pid **lst_pid);
 int endp_mngt_can_be_found_with_name(char *name, int num, int *endp_type);
+int endp_mngt_exists(char *name, int num, int *endp_type);
 int endp_mngt_can_be_found_with_llid(int llid, char *name,
                                      int *num, int *endp_type);
 void endp_mngt_rpct_recv_diag_msg(int llid, int tid, char *line);
@@ -82,7 +82,7 @@ void endp_mngt_c2c_disconnect(char *name, int num);
 void endp_mngt_add_attached_lan(int llid, char *name, int num,
                                 int tidx, char *lan);
 void endp_mngt_del_attached_lan(char *name, int num, int tidx, char *lan);
-int endp_mngt_kvm_pid_clone(char *name, int num, int pid);
+int endp_mngt_kvm_pid_clone(char *name, int num);
 void endp_mngt_erase_eventfull_stats(void);
 void endp_mngt_stop_all_sat(void);
 void endp_mngt_wlan_eventfull(char *name, int num, int tidx, char *wlan, 

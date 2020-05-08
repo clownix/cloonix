@@ -87,19 +87,17 @@ struct cmd_struct level_layout_cmd[] = {
 
 /****************************************************************************/
 struct cmd_struct level_add_cmd[] = {
-{"lan",  "Add lan (emulated cable)", NULL, cmd_add_vl2sat, help_add_vl2sat},
-{"kvm",  "Add kvm (virtualized machine)", NULL,cmd_add_vm_kvm,help_add_vm_kvm},
-{"tap",  "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_sat},
-{"dpdk_tap",  "Add dpdk_tap (host network interface)",NULL, cmd_add_dpdk_tap,
-                                                            help_add_sat},
-{"snf",  "Add snf (emulated cable sniffer)",  NULL, cmd_add_snf, help_add_sat},
-{"c2c",  "Add c2c (cloonix to cloonix cable)",NULL,cmd_add_c2c,help_add_c2c},
-{"nat",  "Add nat (slirp to access ip)",NULL, cmd_add_nat, help_add_sat},
-{"a2b",  "Add a2b (traffic shaping)",NULL, cmd_add_a2b, help_add_sat},
-{"raw",  "Add raw (raw socket to the interface)",  NULL, cmd_add_raw, 
-                                                         help_add_raw},
-{"wif",  "Add wif (special interface for wlan use)",  NULL, cmd_add_wif, 
-                                                            help_add_wif},
+{"lan", "Add lan (emulated cable)", NULL, cmd_add_vl2sat, help_add_vl2sat},
+{"kvm", "Add kvm (virtualized machine)", NULL,cmd_add_vm_kvm,help_add_vm_kvm},
+{"phy", "Add phy (host network interface)",  NULL, cmd_add_phy, help_add_sat},
+{"pci", "Add pci (dpdk pci of ethernet)",  NULL, cmd_add_pci, help_add_sat},
+{"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_sat},
+{"snf", "Add snf (emulated cable sniffer)",  NULL, cmd_add_snf, help_add_sat},
+{"c2c", "Add c2c (cloonix to cloonix cable)",NULL,cmd_add_c2c,help_add_c2c},
+{"nat", "Add nat (slirp to access ip)",NULL, cmd_add_nat, help_add_sat},
+{"a2b", "Add a2b (traffic shaping)",NULL, cmd_add_a2b, help_add_sat},
+{"wif", "Add wif (special interface for wlan use)",  NULL, cmd_add_wif, 
+                                                           help_add_wif},
 {"help",  "",                     level_add_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
@@ -128,8 +126,10 @@ struct cmd_struct level_del_cmd[] = {
 
 /****************************************************************************/
 struct cmd_struct level_vm_cmd[] = {
-{"reboot", "Reboot vm by qemu",  NULL, cmd_qreboot_vm, help_qreboot_vm},
-{"halt",   "Poweroff vm by qemut", NULL, cmd_halt_vm, help_halt_vm},
+{"reboot","Reboot by cloonix guest agent",NULL,cmd_reboot_vm,help_reboot_vm},
+{"halt",  "Poweroff by cloonix guest agent",NULL,cmd_halt_vm, help_halt_vm},
+{"qreboot", "Reboot by qemu",  NULL, cmd_qreboot_vm, help_qreboot_vm},
+{"qhalt",   "Poweroff by qemu", NULL, cmd_qhalt_vm, help_qhalt_vm},
 {"help",  "",                     level_vm_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/

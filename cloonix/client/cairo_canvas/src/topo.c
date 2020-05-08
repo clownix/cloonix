@@ -485,6 +485,8 @@ static void print_event_item(GdkEventType type, char *from)
     case GDK_MAP:
       //printf("%s %d GDK_MAP\n", from, type);
     break;
+    case GDK_3BUTTON_PRESS:
+    break;
     default:
       KERR("%s MUSTADD %d", from, type);
     }
@@ -738,8 +740,9 @@ static void on_item_paint_nat(CrItem *item, cairo_t *c)
 /****************************************************************************/
 static void on_item_paint_eth(CrItem *item, cairo_t *c)
 {
-  int flag, flag_trace, flag_grabbed;
+  int flag, flag_trace, flag_grabbed, eth_type;
   t_bank_item *bitem = from_critem_to_bank_item(item);
+  t_pbi_node *pbi;
   flag = bitem->pbi.flag;
   flag_trace = bitem->pbi.flag_trace;
   flag_grabbed = bitem->pbi.grabbed;
@@ -765,14 +768,18 @@ static void on_item_paint_eth(CrItem *item, cairo_t *c)
       }
     else
       {
-      if (bitem->num < bitem->att_node->pbi.pbi_node->node_vm_nb_dpdk)
+      pbi = bitem->att_node->pbi.pbi_node;
+      eth_type = pbi->eth_tab[bitem->num].eth_type;
+      if (eth_type == eth_type_sock)
+        paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
+      else if (eth_type == eth_type_dpdk)
         paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
-      else if (bitem->num >= 
-               (bitem->att_node->pbi.pbi_node->node_vm_nb_dpdk + 
-                bitem->att_node->pbi.pbi_node->node_vm_nb_eth))
+      else if (eth_type == eth_type_vhost)
+        paint_select(c,flag,flag_trace,&lightcyan,&red,&lightmagenta);
+      else if (eth_type == eth_type_wlan)
         paint_select(c,flag,flag_trace,&lightblue,&red,&lightmagenta);
       else
-        paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
+        KOUT("%d %d %d", bitem->num, pbi->nb_tot_eth, eth_type);
       }
     }
   else

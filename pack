@@ -24,7 +24,7 @@ CLOONIX_COMMON=${TMPBUILD_BIS}/cloonix/common
 CLOONIX_SERVER=${TMPBUILD_BIS}/cloonix/server
 CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
 #----------------------------------------------------------
-  for i in allclean cli cmd libmdl libxwycli srv; do
+  for i in allclean cli cmd libmdl libcli srv; do
     rm -rf ${CLOONIX_COMMON}/xwy/${i}
   done
 #----------------------------------------------------------
@@ -41,7 +41,8 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   done
 #----------------------------------------------------------
   for i in spice share spice_client spice-protocol \
-           spice_server usbredir include virglrenderer ; do
+           spice_server usbredir include virglrenderer \
+           pkgconfig spice-1 spice-server usr ; do
     rm -rf ${CLOONIX_COMMON}/spice/spice_lib/${i}
   done
 #----------------------------------------------------------
@@ -63,6 +64,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   done
 #----------------------------------------------------------
   for i in  doorways \
+            suid_power \
             uml_cloonix_switch \
             muswitch/mutap \
             muswitch/musnf \
@@ -88,8 +90,10 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -f ${CLOONIX_SERVER}/dtach/dtach_source.tar.gz
 #----------------------------------------------------------
   for i in allclean cmd dpdk dpdk.patch etc include \
-           mkpatch patched_create sbin usr var ovs ; do
+           mkpatch patched_create sbin usr var ovs \
+           pmds-20.0.2 ; do
     rm -rf ${CLOONIX_SERVER}/dpdk/${i}
+    rm -f ${CLOONIX_SERVER}/dpdk/lib/*.a
   done
 #----------------------------------------------------------
   for i in allclean cmd ovs ovs.patch \

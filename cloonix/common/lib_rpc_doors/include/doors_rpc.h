@@ -19,8 +19,8 @@
 #define PING_OK "ping_agent_ok"
 #define BACKDOOR_CONNECTED "backdoor_connected"
 #define BACKDOOR_DISCONNECTED "backdoor_disconnected"
-#define HALT_REQUEST "halt_requested %d"
-#define REBOOT_REQUEST "reboot_requested %d"
+#define HALT_REQUEST "halt_requested"
+#define REBOOT_REQUEST "reboot_requested"
 #define AGENT_SYSINFO "agent_sysinfo_sys"
 #define AGENT_SYSINFO_DF "agent_sysinfo_df"
 #define CLOONIX_UP_VPORT_AND_RUNNING "cloonix_up_vport_and_running"
@@ -28,10 +28,6 @@
 #define STOP_DOORS_LISTENING "stop_doors_listening"
 #define XWY_CONNECT "xwy_connect %s"
 
-/*---------------------------------------------------------------------------*/
-#define FIFREEZE_FITHAW_FREEZE "fifreeze_fithaw_freeze"
-#define FIFREEZE_FITHAW_THAW "fifreeze_fithaw_thaw"
-/*---------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------*/
 void doors_send_c2c_req_idx(int llid, int tid, char *name);

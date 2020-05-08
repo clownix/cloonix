@@ -55,7 +55,6 @@
 #include "qmp.h"
 #include "qhvc0.h"
 #include "doorways_mngt.h"
-#include "timeout_service.h"
 #include "doorways_sock.h"
 #include "xwy.h"
 #include "c2c.h"
@@ -68,6 +67,9 @@
 #include "unix2inet.h"
 #include "qmp_dialog.h"
 #include "dpdk_ovs.h"
+#include "suid_power.h"
+#include "vhost_eth.h"
+#include "phy_mngt.h"
 
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
@@ -141,6 +143,7 @@ static void usage(char *name)
 static void  check_used_binaries_presence(t_topo_clc *conf)
 {
   int i=0;
+  char *suid_power_bin = utils_get_suid_power_bin_path();
   while(used_binaries[i])
     {
     if (!file_exists(used_binaries[i], X_OK))
@@ -155,6 +158,12 @@ static void  check_used_binaries_presence(t_topo_clc *conf)
     printf("\"%s\" not found or not executable\n", util_get_xorrisofs());
     KOUT("\"%s\" not found or not executable\n", util_get_xorrisofs());
     }
+  if (!file_exists(suid_power_bin, X_OK))
+    {
+    printf("\"%s\" not found or not executable\n", suid_power_bin);
+    KOUT("\"%s\" not found or not executable\n", suid_power_bin);
+    }
+
 }
 /*--------------------------------------------------------------------------*/
 
@@ -210,7 +219,6 @@ static void check_for_another_instance(char *clownlock, int keep_fd)
     }
 }
 /*---------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void mk_and_tst_work_path(void)
@@ -524,8 +532,6 @@ static char **save_environ(void)
   snprintf(home, MAX_PATH_LEN-1, "HOME=%s", getenv("HOME"));
   memset(username, 0, MAX_NAME_LEN);
   snprintf(username, MAX_NAME_LEN-1, "USER=%s", getenv("USER"));
-  if (!spice_libs_exists())
-    KOUT(" ");
   environ = environ_normal;
   snprintf(spice_env, MAX_NAME_LEN-1, "SPICE_DEBUG_ALLOW_MC=1");
   return environ;
@@ -601,10 +607,12 @@ int main (int argc, char *argv[])
   qmp_dialog_init();
   qmp_init();
   init_qhvc0();
-  timeout_service_init();
   mulan_init();
   endp_mngt_init();
   dpdk_ovs_init();
+  suid_power_init();
+  vhost_eth_init();
+  phy_mngt_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
   msg_mngt_loop();

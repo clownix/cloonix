@@ -22,7 +22,7 @@ patch -p1 < ${HERE}/ovs.patch
 export PKG_CONFIG_PATH=${DPDK}/lib/pkgconfig
 export DPDK_LIBS="$(pkg-config --libs --static libdpdk)"
 sed -i s"%-ldpdk%${DPDK_LIBS}%" ./configure
-./configure CFLAGS=-mavx --prefix=${HERE} --with-dpdk=${DPDK}
+./configure CFLAGS="-mavx" --prefix=${HERE} --with-dpdk=${DPDK}
 make -j 6
 cd ${HERE}
 

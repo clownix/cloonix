@@ -26,7 +26,7 @@ cp -v ${BULK}/${DIST}.qcow2 ${BULK}/${VM_NAME}.qcow2
 
 cloonix_cli ${NET} add nat nat 
 cloonix_cli ${NET} add lan nat 0 lan_nat
-cloonix_cli ${NET} add kvm ${VM_NAME} ram=2048 cpu=1 dpdk=0 sock=1 hwsim=0 ${VM_NAME}.qcow2 --persistent &
+cloonix_cli ${NET} add kvm ${VM_NAME} ram=2048 cpu=1 eth=s ${VM_NAME}.qcow2 --persistent &
 
 while ! cloonix_ssh ${NET} ${VM_NAME} "echo" 2>/dev/null; do
   echo ${VM_NAME} not ready, waiting 5 sec

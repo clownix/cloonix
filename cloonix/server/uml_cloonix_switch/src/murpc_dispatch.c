@@ -33,8 +33,9 @@
 #include "mulan_mngt.h"
 #include "unix2inet.h"
 #include "dpdk_ovs.h"
-#include "dpdk_fmt.h"
+#include "fmt_diag.h"
 #include "murpc_dispatch.h"
+#include "suid_power.h"
 
 
 /****************************************************************************/
@@ -276,7 +277,7 @@ void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line)
     }
   else if (dpdk_ovs_find_with_llid(llid))
     {
-    dpdk_fmt_rx_rpct_recv_evt_msg(llid, tid, line);
+    fmt_rx_rpct_recv_evt_msg(llid, tid, line);
     hop_event_hook(llid, FLAG_HOP_EVT, line);
     }
   else
@@ -327,17 +328,23 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
   int num, mutype;
-  hop_event_hook(llid, FLAG_HOP_DIAG, line);
-  if (endp_mngt_can_be_found_with_llid(llid, name, &num, &mutype))
+  if (suid_power_diag_llid(llid))
     {
+    suid_power_diag_resp(llid, tid, line);
+    }
+  else if (endp_mngt_can_be_found_with_llid(llid, name, &num, &mutype))
+    {
+    hop_event_hook(llid, FLAG_HOP_DIAG, line);
     endp_mngt_rpct_recv_diag_msg(llid, tid, line);
     }
   else if (mulan_can_be_found_with_llid(llid, name))
     {
+    hop_event_hook(llid, FLAG_HOP_DIAG, line);
     mulan_rpct_recv_diag_msg(llid, tid, line);
     }
   else if (dpdk_ovs_find_with_llid(llid))
     {
+    hop_event_hook(llid, FLAG_HOP_DIAG, line);
     dpdk_ovs_rpct_recv_diag_msg(llid, tid, line);
     }
   else

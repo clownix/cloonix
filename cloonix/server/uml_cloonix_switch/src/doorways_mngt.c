@@ -40,7 +40,6 @@
 #include "doorways_mngt.h"
 #include "qhvc0.h"
 #include "qmp.h"
-#include "timeout_service.h"
 #include "c2c.h"
 #include "hop_event.h"
 #include "header_sock.h"
@@ -48,9 +47,10 @@
 #include "stats_counters_sysinfo.h"
 #include "xwy.h"
 #include "uml_clownix_switch.h"
+#include "suid_power.h"
 
 
-void timer_utils_finish_vm_init(char *name, int val);
+void timer_utils_finish_vm_init(int vm_id, int val);
 
 
 static void doorways_start(void);
@@ -61,9 +61,9 @@ void last_action_self_destruction(void *data);
 
 static int g_nb_pid_resp;
 static int g_nb_pid_resp_warning;
-static int g_this_is_a_restart;
+static int g_this_is_not_first_start;
 static int g_doorways_pid;
-static int g_doorways_llid = 0;
+static int g_doorways_llid;
 static long long g_abs_beat_timer;
 static int  g_ref_timer;
 static char g_bin_doorways[MAX_PATH_LEN];
@@ -72,28 +72,6 @@ static char g_server_port[MAX_NAME_LEN];
 static char g_password[MSG_DIGEST_LEN];
 
 
-
-/*****************************************************************************/
-void doors_timeout_service_cb(int job_idx, int is_timeout, void *opaque)
-{
-  char msg[3*MAX_NAME_LEN];
-  t_opaque_agent_req *agent_req = (t_opaque_agent_req *) opaque;
-  memset(msg, 0, 3*MAX_NAME_LEN);
-  if (is_timeout)
-    {
-    snprintf(msg, 3*MAX_NAME_LEN - 1, "TIMEOUT REACHING %s for %s", 
-             agent_req->name, agent_req->action);
-    send_status_ko(agent_req->llid, agent_req->tid, msg);
-    }
-  else
-    {
-    snprintf(msg, 3*MAX_NAME_LEN - 1, "%s for %s OK", 
-             agent_req->action, agent_req->name);
-    send_status_ok(agent_req->llid, agent_req->tid, msg);
-    }
-  clownix_free(opaque, __FUNCTION__);
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void doors_recv_c2c_resp_idx(int llid, int tid, char *name, int local_idx)
@@ -163,38 +141,37 @@ static void recv_sysinfo_vals(char *name, char *line)
 /*****************************************************************************/
 void doors_recv_event(int llid, int tid, char *name, char *line)
 {
-  int job_idx;
-  if (!strcmp(line, BACKDOOR_CONNECTED))
-    {
-    qhvc0_event_backdoor(name, backdoor_evt_connected);
-    }
-  else if (!strcmp(line, BACKDOOR_DISCONNECTED))
-    {
-    qhvc0_event_backdoor(name, backdoor_evt_disconnected);
-    }
-  else if (!strncmp(line, AGENT_SYSINFO, strlen(AGENT_SYSINFO)))
-    {
-    recv_sysinfo_vals(name, line + strlen(AGENT_SYSINFO) + 1);
-    }
-  else if (!strncmp(line, AGENT_SYSINFO_DF, strlen(AGENT_SYSINFO_DF)))
-    {
-    stats_counters_sysinfo_update_df(name,line+strlen(AGENT_SYSINFO_DF)+1);
-    }
-  else if (!strcmp(line, PING_OK))
-    {
-    timer_utils_finish_vm_init(name, 1);
-    qhvc0_event_backdoor(name, backdoor_evt_ping_ok);
-    }
-  else if (!strcmp(line, PING_KO))
-    qhvc0_event_backdoor(name, backdoor_evt_ping_ko);
-  else if (sscanf(line, REBOOT_REQUEST, &job_idx) == 1)
-    timeout_service_trigger(job_idx);
-  else if (sscanf(line, HALT_REQUEST, &job_idx) == 1)
-    timeout_service_trigger(job_idx);
+  t_vm   *vm = cfg_get_vm(name);
+  if (!vm)
+    KERR("FROM DOORS NOT FOUND: %s %s", name, line);
   else
-    KOUT("%s", line);
-  
-
+    {
+    if (!strcmp(line, BACKDOOR_CONNECTED))
+      {
+      qhvc0_event_backdoor(name, backdoor_evt_connected);
+      }
+    else if (!strcmp(line, BACKDOOR_DISCONNECTED))
+      {
+      qhvc0_event_backdoor(name, backdoor_evt_disconnected);
+      }
+    else if (!strncmp(line, AGENT_SYSINFO, strlen(AGENT_SYSINFO)))
+      {
+      recv_sysinfo_vals(name, line + strlen(AGENT_SYSINFO) + 1);
+      }
+    else if (!strncmp(line, AGENT_SYSINFO_DF, strlen(AGENT_SYSINFO_DF)))
+      {
+      stats_counters_sysinfo_update_df(name,line+strlen(AGENT_SYSINFO_DF)+1);
+      }
+    else if (!strcmp(line, PING_OK))
+      {
+      timer_utils_finish_vm_init(vm->kvm.vm_id, 1);
+      qhvc0_event_backdoor(name, backdoor_evt_ping_ok);
+      }
+    else if (!strcmp(line, PING_KO))
+      qhvc0_event_backdoor(name, backdoor_evt_ping_ko);
+    else
+      KOUT("%s", line);
+    } 
 }
 /*---------------------------------------------------------------------------*/
 
@@ -211,7 +188,6 @@ void doorways_err_cb (int llid)
   if (llid == g_doorways_llid)
     {
     g_doorways_llid = 0;
-    g_this_is_a_restart = 1;
     if (!get_glob_req_self_destruction())
       {
       KERR("Ctrl access to cloonix_doorways broken, re-launching\n");
@@ -253,7 +229,7 @@ void doors_pid_resp(int llid, char *name, int pid)
   if (g_doorways_pid != pid)
     {
     event_print("DOORWAYS PID CHANGE: %d to %d", g_doorways_pid, pid);
-    if (g_this_is_a_restart)
+    if (g_this_is_not_first_start)
       {
       KERR("DOORWAYS PID CHANGE: %d to %d", g_doorways_pid, pid);
       xwy_request_doors_connect();
@@ -261,6 +237,11 @@ void doors_pid_resp(int llid, char *name, int pid)
     }
   g_doorways_pid = pid;
   g_nb_pid_resp++;
+  if (g_this_is_not_first_start == 0)
+    {
+    g_this_is_not_first_start = 1;
+    suid_power_first_start();
+    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -337,25 +318,15 @@ static void doorways_start()
       (!strlen(g_server_port))  || 
       (!strlen(g_password)))
     KOUT(" ");
-
   if (!get_glob_req_self_destruction())
     {
     g_killed = 0;
-//VIP
-    KERR("Cloonix doorways launching\n");
     pid_clone_launch(utils_execve, killed, NULL, (void *) argv,
                      NULL, NULL, "doorways", -1, 1);
-
     clownix_timeout_add(500, timer_doorways_protect, NULL, NULL, NULL); 
     clownix_timeout_add(50, timer_doorways_connect, 
                         (void *) ctrl_doors_sock, NULL, NULL);
-
     dump_doors_creation_info("doors", argv);
-
-//VIP
-//    clownix_timeout_add(5000, timer_doorways_protect, NULL, NULL, NULL); 
-//    clownix_timeout_add(1000, timer_doorways_connect, 
-//                        (void *) ctrl_doors_sock, NULL, NULL);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -384,7 +355,6 @@ char *get_doorways_bin(void)
 /*****************************************************************************/
 void doorways_first_start(void)
 {
-  g_this_is_a_restart = 0;
   doorways_start();
 }
 /*---------------------------------------------------------------------------*/
@@ -403,6 +373,14 @@ void doorways_init(char *root_work, int server_port, char *password)
   memset(g_root_work, 0, MAX_PATH_LEN);
   memset(g_server_port, 0, MAX_NAME_LEN);
   memset(g_password, 0, MSG_DIGEST_LEN);
+  g_this_is_not_first_start = 0;
+  g_nb_pid_resp = 0;
+  g_nb_pid_resp_warning = 0;
+  g_this_is_not_first_start = 0;
+  g_doorways_pid = 0;
+  g_doorways_llid = 0;
+  g_abs_beat_timer = 0;
+  g_ref_timer = 0;
   sprintf(g_bin_doorways, 
           "%s/server/doorways/cloonix_doorways", cfg_get_bin_dir());
   strncpy(g_root_work, root_work, MAX_PATH_LEN-1);

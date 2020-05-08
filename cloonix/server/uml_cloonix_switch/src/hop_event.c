@@ -30,6 +30,7 @@
 #include "mulan_mngt.h"
 #include "endp_mngt.h"
 #include "dpdk_ovs.h"
+#include "suid_power.h"
 
 
 /*---------------------------------------------------------------------------*/
@@ -461,7 +462,9 @@ void rpct_recv_hop_msg(void *ptr, int llid, int tid, int flags_hop, char *txt)
 void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
                         int toppid, int pid)
 {
-  if (tid == type_hop_doors)
+  if (tid == type_hop_suid_power)
+    suid_power_pid_resp(llid, tid, name, pid);
+  else if (tid == type_hop_doors)
     doors_pid_resp(llid, name, pid);
   else if (tid == type_hop_mulan)
     mulan_pid_resp(llid, name, pid);
@@ -482,17 +485,20 @@ void hop_event_hook(int llid, int flag, char *iline)
   t_clients *cur_client;
   if (!hop)
     KERR("%s", iline);
-  cur_client = hop->clients;
-  if (cur_client)
+  else
     {
-    memset(line, 0, MAX_HOP_PRINT_LEN);
-    snprintf(line, MAX_HOP_PRINT_LEN-1, "%07u: %s",
-             (unsigned int) cloonix_get_msec(), iline);
-    while ((cur_client) && (cur_client->flags_hop & flag))
+    cur_client = hop->clients;
+    if (cur_client)
       {
-      send_hop_evt_doors(cur_client->llid, cur_client->tid,
-                         flag, "cloonix", line);
-      cur_client = cur_client->next;
+      memset(line, 0, MAX_HOP_PRINT_LEN);
+      snprintf(line, MAX_HOP_PRINT_LEN-1, "%07u: %s",
+               (unsigned int) cloonix_get_msec(), iline);
+      while ((cur_client) && (cur_client->flags_hop & flag))
+        {
+        send_hop_evt_doors(cur_client->llid, cur_client->tid,
+                           flag, "cloonix", line);
+        cur_client = cur_client->next;
+        }
       }
     }
 }

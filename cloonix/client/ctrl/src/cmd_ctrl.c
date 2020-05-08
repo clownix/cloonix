@@ -125,23 +125,29 @@ static char *get_type_endp(int type)
   char *result = "notfound";
   switch (type)
     {
-    case endp_type_kvm_dpdk:
-      result = "kvm_dpdk"; 
+    case endp_type_pci:
+      result = "pci"; 
       break;
-    case endp_type_kvm_eth:
-      result = "kvm_eth"; 
+    case endp_type_phy:
+      result = "phy"; 
+      break;
+    case endp_type_kvm_dpdk:
+      result = "dpdk"; 
+      break;
+    case endp_type_kvm_sock:
+      result = "sock"; 
+      break;
+    case endp_type_kvm_vhost:
+      result = "vhost"; 
       break;
     case endp_type_kvm_wlan:
-      result = "kvm_wlan"; 
+      result = "wlan"; 
       break;
     case endp_type_c2c:
       result = "c2c"; 
       break;
     case endp_type_snf:
       result = "snf"; 
-      break;
-    case endp_type_dpdk_tap:
-      result = "dpdk_tap"; 
       break;
     case endp_type_tap:
       result = "tap"; 
@@ -154,9 +160,6 @@ static char *get_type_endp(int type)
       break;
     case endp_type_wif:
       result = "wif"; 
-      break;
-    case endp_type_raw:
-      result = "raw"; 
       break;
     default:
       KOUT("%d", type);
@@ -177,40 +180,74 @@ static void print_endpoint_info(t_topo_endp *endp)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void print_phy_info(t_topo_phy *phy)
+{
+  printf("\n%s index:%d flags:0x%X drv:%s pci:%s mac:%s vendor:%s device:%s", 
+         phy->name, phy->index, phy->flags, phy->drv, phy->pci, phy->mac,
+         phy->vendor, phy->device);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void callback_topo_topo(int tid, t_topo_info *topo)
 {
-  int i, type;
+  int i, j, type;
+  printf("\n");
+
+  for (i=0; i<topo->nb_phy; i++)
+    {
+    if (i == 0)
+      printf("\n");
+    print_phy_info(&(topo->phy[i]));
+    }
+
   for (i=0; i<topo->nb_kvm; i++)
     {
-    printf("\n");
+    if (i == 0)
+      printf("\n");
     if (topo->kvm[i].vm_config_flags & VM_FLAG_CLOONIX_AGENT_PING_OK)
-      printf("\nkvm:%s ID: %d AGENT OK", topo->kvm[i].name, topo->kvm[i].vm_id);
+      printf("\n%s vm_id: %d ok", topo->kvm[i].name, topo->kvm[i].vm_id);
     else
-      printf("\nkvm:%s ID: %d AGENT KO", topo->kvm[i].name, topo->kvm[i].vm_id);
+      printf("\n%s vm_id: %d ko", topo->kvm[i].name, topo->kvm[i].vm_id);
+    for (j=0; j<topo->kvm[i].nb_tot_eth; j++)
+      {
+      if (topo->kvm[i].eth_table[j].eth_type == eth_type_vhost)
+        printf(" eth%d:%s", j, topo->kvm[i].eth_table[j].vhost_ifname);
+      }
     }
   for (i=0; i<topo->nb_c2c; i++)
-      printf("\nc2c:%s", topo->c2c[i].name);
+    {
+    if (i == 0)
+      printf("\n");
+    printf("\nc2c:%s", topo->c2c[i].name);
+    }
   for (i=0; i<topo->nb_snf; i++)
-      printf("\nsnf:%s", topo->snf[i].name);
+    {
+    if (i == 0)
+      printf("\n");
+    printf("\nsnf:%s", topo->snf[i].name);
+    }
   for (i=0; i<topo->nb_sat; i++)
     {
+    if (i == 0)
+      printf("\n");
     type = topo->sat[i].type;
     if (type == endp_type_tap) 
       printf("\ntap:%s", topo->sat[i].name);
-    else if (type == endp_type_dpdk_tap) 
-      printf("\ndpdk_tap:%s", topo->sat[i].name);
     else if (type == endp_type_nat) 
       printf("\nnat:%s", topo->sat[i].name);
     else if (type == endp_type_a2b) 
       printf("\na2b:%s", topo->sat[i].name);
     else if (type == endp_type_wif) 
       printf("\nwif:%s", topo->sat[i].name);
-    else if (type == endp_type_raw) 
-      printf("\nraw:%s", topo->sat[i].name);
     printf("\n");
     }
   for (i=0; i<topo->nb_endp; i++)
+    {
+    if (i == 0)
+      printf("\n");
     print_endpoint_info(&(topo->endp[i]));
+    }
   printf("\n\n");
   exit(0);
 }
@@ -310,6 +347,25 @@ int cmd_pid_dump(int argc, char **argv)
 int cmd_halt_vm(int argc, char **argv)
 {
   int result = -1;
+  char *name; 
+  if (argc == 1)
+    {
+    name = argv[0];
+    if (strlen(name)>2)
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_halt_vm(0, callback_end, name, 1);
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_reboot_vm(int argc, char **argv)
+{
+  int result = -1;
   char *name;
   if (argc == 1)
     {
@@ -318,7 +374,26 @@ int cmd_halt_vm(int argc, char **argv)
       {
       result = 0;
       init_connection_to_uml_cloonix_switch();
-      client_halt_vm(0, callback_end, name);
+      client_reboot_vm(0, callback_end, name, 1);
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_qhalt_vm(int argc, char **argv)
+{
+  int result = -1;
+  char *name;
+  if (argc == 1)
+    {
+    name = argv[0];
+    if (strlen(name)>2)
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_halt_vm(0, callback_end, name, 0);
       }
     }
   return result;
@@ -337,7 +412,7 @@ int cmd_qreboot_vm(int argc, char **argv)
       {
       result = 0;
       init_connection_to_uml_cloonix_switch();
-      client_reboot_vm(0, callback_end, name);
+      client_reboot_vm(0, callback_end, name, 0);
       }
     }
   return result;
@@ -397,20 +472,6 @@ int cmd_del_vm(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int cmd_add_dpdk_tap(int argc, char **argv)
-{
-  int result = -1;
-  if (argc == 1)
-    {
-    result = 0;
-    init_connection_to_uml_cloonix_switch();
-    client_add_sat(0, callback_end, argv[0], endp_type_dpdk_tap, NULL);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 int cmd_add_tap(int argc, char **argv)
 {
   int result = -1;
@@ -425,6 +486,34 @@ int cmd_add_tap(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int cmd_add_phy(int argc, char **argv)
+{
+  int result = -1;
+  if (argc == 1)
+    {
+    result = 0;
+    init_connection_to_uml_cloonix_switch();
+    client_add_sat(0, callback_end, argv[0], endp_type_phy, NULL);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_add_pci(int argc, char **argv)
+{
+  int result = -1;
+  if (argc == 1)
+    {
+    result = 0;
+    init_connection_to_uml_cloonix_switch();
+    client_add_sat(0, callback_end, argv[0], endp_type_pci, NULL);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int cmd_add_wif(int argc, char **argv)
 {
   int result = -1;
@@ -433,20 +522,6 @@ int cmd_add_wif(int argc, char **argv)
     result = 0;
     init_connection_to_uml_cloonix_switch();
     client_add_sat(0, callback_end, argv[0], endp_type_wif, NULL);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_add_raw(int argc, char **argv)
-{
-  int result = -1;
-  if (argc == 1)
-    {
-    result = 0;
-    init_connection_to_uml_cloonix_switch();
-    client_add_sat(0, callback_end, argv[0], endp_type_raw, NULL);
     }
   return result;
 }
@@ -566,7 +641,7 @@ int cmd_add_vl2sat(int argc, char **argv)
   if (argc == 3)
     {
     name = argv[0];
-    num = param_tester(argv[1], 0, MAX_ETH_VM);
+    num = param_tester(argv[1], 0, MAX_SOCK_VM);
     if (num != -1)
       {
       result = 0;
@@ -587,7 +662,7 @@ int cmd_del_vl2sat(int argc, char **argv)
   if (argc == 3)
     {
     name = argv[0];
-    num = param_tester(argv[1], 0, MAX_ETH_VM);
+    num = param_tester(argv[1], 0, MAX_SOCK_VM);
     if (num != -1)
       {
       result = 0;
@@ -881,7 +956,7 @@ int cmd_mud_eth(int argc, char **argv)
   int eth, result = -1;
   if (argc == 3)
     {
-    eth = param_tester(argv[1], 0, MAX_ETH_VM);
+    eth = param_tester(argv[1], 0, MAX_SOCK_VM);
     if (eth != -1)
       {
       result = 0;
@@ -985,7 +1060,7 @@ int cmd_sub_endp(int argc, char **argv)
   int num, result = -1;
   if (argc == 2)
     {
-    num = param_tester(argv[1], 0, MAX_ETH_VM);
+    num = param_tester(argv[1], 0, MAX_SOCK_VM);
     if (num != -1)
       {
       result = 0;
@@ -1036,7 +1111,7 @@ int cmd_hwsim_config(int argc, char **argv)
   int num, result = -1;
   if (argc == 3)
     {
-    num = param_tester(argv[1], 0, MAX_ETH_VM);
+    num = param_tester(argv[1], 0, MAX_SOCK_VM);
     if (num != -1)
       {
       result = 0;
@@ -1055,7 +1130,7 @@ int cmd_hwsim_dump(int argc, char **argv)
   int num, result = -1;
   if (argc == 2)
     {
-    num = param_tester(argv[1], 0, MAX_ETH_VM);
+    num = param_tester(argv[1], 0, MAX_SOCK_VM);
     if (num != -1)
       {
       result = 0;

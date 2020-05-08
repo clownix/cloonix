@@ -444,8 +444,6 @@ void llid_traf_tx_to_client(char *name, int dido_llid,
           {
           if (sscanf(buf, DBSSH_SERV_DOORS_RESP, &display_sock_x11) == 1)
             send_resp_ok_to_traf_client(lt->dido_llid, display_sock_x11); 
-          else if (!strcmp(buf, LASSHHOK))
-            send_resp_ok_to_traf_client(lt->dido_llid, 0); 
           else
             {
             KERR("%s", buf);

@@ -61,6 +61,7 @@ static t_xwy_params g_xwy_params;
 static int g_xwy_kill_req;
 static int g_xwy_state;
 static int g_xwy_pid;
+static int g_xwy_last_pid;
 static int g_xwy_llid;
 
 int get_doorways_llid(void);
@@ -141,6 +142,7 @@ static int xwy_rx_cb(void *ptr, int llid, int fd)
         KERR("pid changed: %d %d", g_xwy_pid, pid);
       set_state(xwy_state_pid_ok);
       g_xwy_pid = pid;
+      g_xwy_last_pid = pid;
       }
     else
       KERR("%d %s", len, buf);
@@ -215,7 +217,7 @@ void kill_xwy(void)
 /*****************************************************************************/
 int xwy_pid(void)
 {
-  return g_xwy_pid;
+  return g_xwy_last_pid;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -235,6 +237,7 @@ void init_xwy(void)
 {
   g_xwy_kill_req = 0;
   g_xwy_pid = 0;
+  g_xwy_last_pid = 0;
   g_xwy_llid = 0;
   set_state(xwy_state_init);
   memset(&g_xwy_params, 0, sizeof(t_xwy_params));

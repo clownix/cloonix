@@ -464,24 +464,6 @@ static void timer_end_del_all(void *data)
 }
 /*--------------------------------------------------------------------------*/
 
-
-/****************************************************************************/
-static void callback_sav_all(int tid, int status, char *err)
-{
-  char info[MAX_PRINT_LEN];
-  if (status)
-    {
-    sprintf(info, "Save all ended KO: %s\n", err);
-    insert_next_warning(info, 1);
-    }
-  else
-    {
-    sprintf(info, "Save all ended OK\n");
-    insert_next_warning(info, 1);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
 /****************************************************************************/
 static void callback_del_all(int tid, int status, char *err)
 {

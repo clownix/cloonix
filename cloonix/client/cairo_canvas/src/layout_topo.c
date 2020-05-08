@@ -398,11 +398,11 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
 void recv_layout_node(int llid, int tid, t_layout_node *layout)
 {
   int i;
-  double tx[MAX_ETH_VM+MAX_WLAN_VM];
-  double ty[MAX_ETH_VM+MAX_WLAN_VM];
-  int hidden_on_graph[MAX_ETH_VM+MAX_WLAN_VM];
+  double tx[MAX_SOCK_VM+MAX_WLAN_VM];
+  double ty[MAX_SOCK_VM+MAX_WLAN_VM];
+  int hidden_on_graph[MAX_SOCK_VM+MAX_WLAN_VM];
   add_layout_node(layout);
-  for (i=0; i<MAX_ETH_VM+MAX_WLAN_VM; i++)
+  for (i=0; i<MAX_SOCK_VM+MAX_WLAN_VM; i++)
     {
     if (i<layout->nb_eth_wlan)
       {

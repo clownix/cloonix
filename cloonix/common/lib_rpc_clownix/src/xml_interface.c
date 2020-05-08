@@ -703,15 +703,22 @@ void send_topo_small_event(int llid, int tid, char *name,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int topo_eth_format(char *buf, char mac[MAC_ADDR_LEN])
+static int topo_eth_format(char *buf, int eth_type, char *ifname,
+                           char mac[MAC_ADDR_LEN])
 {
   int len = 0;
-  len += sprintf(buf+len, ADD_VM_ETH_PARAMS, (mac[0]) & 0xFF,
-                                             (mac[1]) & 0xFF,
-                                             (mac[2]) & 0xFF,
-                                             (mac[3]) & 0xFF,
-                                             (mac[4]) & 0xFF,
-                                             (mac[5]) & 0xFF);
+  char tmp_ifname[MAX_NAME_LEN];
+  memset(tmp_ifname, 0, MAX_NAME_LEN);
+  if (strlen(ifname))
+    strncpy(tmp_ifname, ifname, IFNAMSIZ-1);
+  else
+    strncpy(tmp_ifname, "noname", IFNAMSIZ-1);
+  len += sprintf(buf+len, VM_ETH_TABLE, eth_type, tmp_ifname, (mac[0]) & 0xFF,
+                                                          (mac[1]) & 0xFF,
+                                                          (mac[2]) & 0xFF,
+                                                          (mac[3]) & 0xFF,
+                                                          (mac[4]) & 0xFF,
+                                                          (mac[5]) & 0xFF);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -736,13 +743,13 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
                                        kvm.vm_id, 
                                        kvm.vm_config_flags,  
                                        kvm.vm_config_param,  
-                                       kvm.nb_dpdk,
-                                       kvm.nb_eth,
-                                       kvm.nb_wlan,
                                        kvm.mem, 
-                                       kvm.cpu); 
-  for (i=0; i<kvm.nb_dpdk + kvm.nb_eth; i++)
-    len += topo_eth_format(buf+len, kvm.eth_params[i].mac_addr);
+                                       kvm.cpu,
+                                       kvm.nb_tot_eth);
+  for (i=0; i < kvm.nb_tot_eth; i++)
+    len += topo_eth_format(buf+len, kvm.eth_table[i].eth_type, 
+                                    kvm.eth_table[i].vhost_ifname,
+                                    kvm.eth_table[i].mac_addr);
   len += sprintf(buf+len, EVENT_TOPO_KVM_C);
   return len;
 }
@@ -807,6 +814,37 @@ static int topo_sat_format(char *buf, t_topo_sat *sat)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int topo_phy_format(char *buf, t_topo_phy *phy)
+{
+  int len;
+  if ((strlen(phy->name) == 0) ||
+      (strlen(phy->drv) == 0)  ||
+      (strlen(phy->pci) == 0)  ||
+      (strlen(phy->mac) == 0)  ||
+      (strlen(phy->vendor) == 0) ||
+      (strlen(phy->device) == 0))
+    KOUT(" ");
+  len = sprintf(buf, EVENT_TOPO_PHY, phy->index, phy->flags, phy->name,
+                                     phy->drv, phy->pci, phy->mac,
+                                     phy->vendor, phy->device);
+  return len;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int topo_pci_format(char *buf, t_topo_pci *pci)
+{
+  int len;
+  if ((strlen(pci->pci) == 0) ||
+      (strlen(pci->drv) == 0)  ||
+      (strlen(pci->unused) == 0)) 
+    KOUT(" ");
+  len = sprintf(buf, EVENT_TOPO_PCI, pci->pci, pci->drv, pci->unused);
+  return len;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static int topo_endp_format(char *buf, t_topo_endp *endp)
 {
   int i, len;
@@ -838,21 +876,21 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
   t_topo_clc cf;
   topo_config_check_str(&(topo->clc), __LINE__);
   topo_config_swapon(&cf, &(topo->clc));
-  len = sprintf(sndbuf, EVENT_TOPO_O, tid,
-                                      cf.version,
-                                      cf.network,
-                                      cf.username,
-                                      cf.server_port,
-                                      cf.work_dir,
-                                      cf.bulk_dir,
-                                      cf.bin_dir,
-                                      cf.flags_config,
-                                      topo->nb_kvm,
-                                      topo->nb_c2c,
-                                      topo->nb_snf,
-                                      topo->nb_sat,
-                                      topo->nb_endp);
-
+  len = sprintf(sndbuf, EVENT_TOPO_O, tid, cf.version,
+                                           cf.network,
+                                           cf.username,
+                                           cf.server_port,
+                                           cf.work_dir,
+                                           cf.bulk_dir,
+                                           cf.bin_dir,
+                                           cf.flags_config,
+                                           topo->nb_kvm,
+                                           topo->nb_c2c,
+                                           topo->nb_snf,
+                                           topo->nb_sat,
+                                           topo->nb_endp,
+                                           topo->nb_phy,
+                                           topo->nb_pci); 
   for (i=0; i<topo->nb_kvm; i++)
     len += topo_kvm_format(sndbuf+len, &(topo->kvm[i]));
   for (i=0; i<topo->nb_c2c; i++)
@@ -863,6 +901,10 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
     len += topo_sat_format(sndbuf+len, &(topo->sat[i]));
   for (i=0; i<topo->nb_endp; i++)
     len += topo_endp_format(sndbuf+len, &(topo->endp[i]));
+  for (i=0; i<topo->nb_phy; i++)
+    len += topo_phy_format(sndbuf+len, &(topo->phy[i]));
+  for (i=0; i<topo->nb_pci; i++)
+    len += topo_pci_format(sndbuf+len, &(topo->pci[i]));
 
   len += sprintf(sndbuf+len, EVENT_TOPO_C);
   my_msg_mngt_tx(llid, len, sndbuf);
@@ -973,56 +1015,72 @@ void send_status_ko(int llid, int tid, char *reason)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void get_one_eth_param(char *buf, char mac[MAC_ADDR_LEN])
+static void get_one_eth_table(char *buf, int *eth_type,
+                              char *ifname,  char mac[MAC_ADDR_LEN])
 {
   int i;
   char *ptr;
   int var[6];
-  ptr = strstr(buf, "<eth_params>");
+  char tmp_ifname[MAX_NAME_LEN];
+  ptr = strstr(buf, "<eth_table>");
+  memset(tmp_ifname, 0, MAX_NAME_LEN);
   if (!ptr)
     KOUT("%s\n", buf);
-  if (sscanf(ptr, ADD_VM_ETH_PARAMS, &(var[0]), &(var[1]), &(var[2]),
-                                     &(var[3]), &(var[4]), &(var[5])) != 6) 
+  if (sscanf(ptr, VM_ETH_TABLE, eth_type, tmp_ifname,
+             &(var[0]), &(var[1]), &(var[2]),
+             &(var[3]), &(var[4]), &(var[5])) != 8) 
       KOUT("%s\n", buf);
   for (i=0; i<6; i++)
     mac[i] = var[i] & 0xFF;
+  memset(ifname, 0, IFNAMSIZ);
+  strncpy(ifname, tmp_ifname, IFNAMSIZ-1);
 }
 /*---------------------------------------------------------------------------*/
 
 
 /*****************************************************************************/
-static void get_eth_params(char *buf, int nb, t_eth_params *eth_params)
+static void get_eth_table(char *buf, int nb_tot_eth, t_eth_table *eth_table)
 { 
   int i;
   char *ptr = buf;
-  for (i=0; i < nb; i++)
+  for (i=0; i < nb_tot_eth; i++)
     {
-    ptr = strstr(ptr, "<eth_params>");
+    ptr = strstr(ptr, "<eth_table>");
     if (!ptr)
-      KOUT("%s\n%d\n", buf, nb);
-    get_one_eth_param(ptr, eth_params[i].mac_addr); 
-    ptr = strstr(ptr, "</eth_params>");
+      KOUT("%s\n%d\n", buf, nb_tot_eth);
+    get_one_eth_table(ptr, &(eth_table[i].eth_type),
+                      eth_table[i].vhost_ifname,
+                      eth_table[i].mac_addr); 
+    ptr = strstr(ptr, "</eth_table>");
     if (!ptr)
-      KOUT("%s\n%d\n", buf, nb);
+      KOUT("%s\n%d\n", buf, nb_tot_eth);
     }
 }
 /*---------------------------------------------------------------------------*/
 
 
 /*****************************************************************************/
-static int make_eth_params(char *buf, int nb, t_eth_params *eth_params)
+static int make_eth_table(char *buf, int nb, t_eth_table *eth_tab)
 {
-  int i, len = 0;
-  char *mac;
+  int i, eth_type, len = 0;
+  char *ifname, *mac;
+  char tmp_ifname[MAX_NAME_LEN];
   for (i=0; i<nb; i++)
     {
-    mac = eth_params[i].mac_addr;
-    len += sprintf(buf+len, ADD_VM_ETH_PARAMS, (mac[0]) & 0xFF,
-                                               (mac[1]) & 0xFF,
-                                               (mac[2]) & 0xFF,
-                                               (mac[3]) & 0xFF,
-                                               (mac[4]) & 0xFF,
-                                               (mac[5]) & 0xFF);
+    mac = eth_tab[i].mac_addr;
+    eth_type = eth_tab[i].eth_type;
+    ifname = eth_tab[i].vhost_ifname;
+    memset(tmp_ifname, 0, MAX_NAME_LEN);
+    if (strlen(ifname))
+      strncpy(tmp_ifname, ifname, IFNAMSIZ-1);
+    else
+      strncpy(tmp_ifname, "noname", IFNAMSIZ-1);
+    len += sprintf(buf+len,VM_ETH_TABLE, eth_type, tmp_ifname,(mac[0]) & 0xFF,
+                                                              (mac[1]) & 0xFF,
+                                                              (mac[2]) & 0xFF,
+                                                              (mac[3]) & 0xFF,
+                                                              (mac[4]) & 0xFF,
+                                                              (mac[5]) & 0xFF);
     }
   return len;
 }
@@ -1038,15 +1096,14 @@ void send_add_vm(int llid, int tid, t_topo_kvm *ikvm)
   topo_kvm_swapon(&kvm, ikvm); 
 
   len = sprintf(sndbuf, ADD_VM_O, tid, kvm.name, kvm.vm_config_flags,
-                kvm.vm_config_param, kvm.cpu,  kvm.mem, kvm.nb_dpdk,
-                kvm.nb_eth, kvm.nb_wlan);
+                kvm.vm_config_param, kvm.mem, kvm.cpu, kvm.nb_tot_eth);
 
-  len += make_eth_params(sndbuf+len, kvm.nb_dpdk + kvm.nb_eth, kvm.eth_params);
+  len += make_eth_table(sndbuf+len, kvm.nb_tot_eth, kvm.eth_table);
 
   len += sprintf(sndbuf+len, ADD_VM_C, kvm.linux_kernel, 
-                             kvm.rootfs_input, 
-                             kvm.install_cdrom, kvm.added_cdrom,
-                             kvm.added_disk, kvm.p9_host_share);
+                             kvm.rootfs_input, kvm.install_cdrom,
+                             kvm.added_cdrom, kvm.added_disk,
+                             kvm.p9_host_share);
 
   my_msg_mngt_tx(llid, len, sndbuf);
 }
@@ -1440,13 +1497,11 @@ static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
                                     &(ikvm.vm_id), 
                                     &(ikvm.vm_config_flags),  
                                     &(ikvm.vm_config_param),  
-                                    &(ikvm.nb_dpdk),
-                                    &(ikvm.nb_eth),
-                                    &(ikvm.nb_wlan),
-                                    &(ikvm.mem), 
-                                    &(ikvm.cpu)) != 16)
+                                    &(ikvm.mem),
+                                    &(ikvm.cpu),
+                                    &(ikvm.nb_tot_eth)) != 14)
     KOUT("%s", msg);
-  get_eth_params(msg, ikvm.nb_dpdk + ikvm.nb_eth, ikvm.eth_params);
+  get_eth_table(msg, ikvm.nb_tot_eth, ikvm.eth_table);
   topo_kvm_swapoff(kvm, &ikvm); 
 }
 /*---------------------------------------------------------------------------*/
@@ -1487,6 +1542,25 @@ static void helper_fill_topo_sat(char *msg, t_topo_sat *sat)
     KOUT("%s", msg);
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void helper_fill_topo_phy(char *msg, t_topo_phy *phy)
+{
+  if (sscanf(msg, EVENT_TOPO_PHY, &(phy->index), &(phy->flags), phy->name,
+                                  phy->drv, phy->pci, phy->mac,
+                                  phy->vendor, phy->device) != 8)
+    KOUT("%s", msg);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void helper_fill_topo_pci(char *msg, t_topo_pci *pci)
+{
+  if (sscanf(msg, EVENT_TOPO_PCI, pci->pci, pci->drv, pci->unused) != 3)
+    KOUT("%s", msg);
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 static void helper_fill_topo_lan(char *msg, t_lan_group *vlg)
@@ -1544,7 +1618,9 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
                                      &(topo->nb_c2c),
                                      &(topo->nb_snf),
                                      &(topo->nb_sat),
-                                     &(topo->nb_endp)) != 14)
+                                     &(topo->nb_endp),
+                                     &(topo->nb_phy),
+                                     &(topo->nb_pci)) != 16)
     KOUT("%s", msg);
   topo_config_swapoff(&(topo->clc), &icf);
   topo->kvm= (t_topo_kvm *) clownix_malloc(topo->nb_kvm*sizeof(t_topo_kvm),16);
@@ -1557,6 +1633,10 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
   memset(topo->sat, 0, topo->nb_sat*sizeof(t_topo_sat));
   topo->endp= (t_topo_endp *) clownix_malloc(topo->nb_endp*sizeof(t_topo_endp),16);
   memset(topo->endp, 0, topo->nb_endp*sizeof(t_topo_endp));
+  topo->phy= (t_topo_phy *) clownix_malloc(topo->nb_phy*sizeof(t_topo_phy),16);
+  memset(topo->phy, 0, topo->nb_phy*sizeof(t_topo_phy));
+  topo->pci= (t_topo_pci *) clownix_malloc(topo->nb_pci*sizeof(t_topo_pci),16);
+  memset(topo->pci, 0, topo->nb_pci*sizeof(t_topo_pci));
 
   for (i=0; i<topo->nb_kvm; i++)
     {
@@ -1608,6 +1688,27 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
     if (!ptr)
       KOUT(" ");
     }
+  for (i=0; i<topo->nb_phy; i++)
+    {
+    ptr = strstr(ptr, "<phy>");
+    if (!ptr)
+      KOUT("%d,%d\n%s\n", topo->nb_phy, i, msg);
+    helper_fill_topo_phy(ptr, &(topo->phy[i]));
+    ptr = strstr(ptr, "</phy>");
+    if (!ptr)
+      KOUT(" ");
+    }
+  for (i=0; i<topo->nb_pci; i++)
+    {
+    ptr = strstr(ptr, "<pci>");
+    if (!ptr)
+      KOUT("%d,%d\n%s\n", topo->nb_pci, i, msg);
+    helper_fill_topo_pci(ptr, &(topo->pci[i]));
+    ptr = strstr(ptr, "</pci>");
+    if (!ptr)
+      KOUT(" ");
+    }
+
 
   return topo;
 }
@@ -2065,12 +2166,10 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
     case bnd_add_vm:
       memset(&ikvm, 0, sizeof(t_topo_kvm));
       if (sscanf(msg, ADD_VM_O, &tid, ikvm.name, 
-                 &(ikvm.vm_config_flags),
-                 &(ikvm.vm_config_param),
-                 &(ikvm.cpu), &(ikvm.mem), &(ikvm.nb_dpdk), 
-                 &(ikvm.nb_eth), &(ikvm.nb_wlan)) != 9)
+                 &(ikvm.vm_config_flags), &(ikvm.vm_config_param),
+                 &(ikvm.mem), &(ikvm.cpu), &(ikvm.nb_tot_eth)) != 7)
         KOUT("%s", msg);
-      get_eth_params(msg, ikvm.nb_dpdk + ikvm.nb_eth, ikvm.eth_params);
+      get_eth_table(msg, ikvm.nb_tot_eth, ikvm.eth_table);
       ptr = strstr(msg, "<linux_kernel>");
       if (!ptr)
         KOUT("%s", msg);
@@ -2290,8 +2389,14 @@ char *llid_trace_lib(int type)
     case type_llid_trace_mulan:
       result = "mulan";
       break;
-    case type_llid_trace_endp_kvm_eth:
-      result = "mueth";
+    case type_llid_trace_endp_kvm_sock:
+      result = "musock";
+      break;
+    case type_llid_trace_endp_kvm_dpdk:
+      result = "mudpdk";
+      break;
+    case type_llid_trace_endp_kvm_vhost:
+      result = "muvhost";
       break;
     case type_llid_trace_endp_kvm_wlan:
       result = "muwlan";

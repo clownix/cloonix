@@ -269,7 +269,9 @@ void mk_endp_dir(void)
 /*****************************************************************************/
 void mk_dtach_dir(void)
 {
-
+  char err[2*MAX_PATH_LEN];
+  if (unlink_sub_dir_files(utils_get_dtach_sock_dir(), err))
+    KERR("%s", err);
   my_mkdir(utils_get_dtach_sock_dir(), 0);
 }
 /*--------------------------------------------------------------------------*/
@@ -291,6 +293,8 @@ void mk_dpdk_ovs_db_dir(void)
         if (!strcmp(ent->d_name, "."))
           continue;
         if (!strcmp(ent->d_name, ".."))
+          continue;
+        if (!strcmp(ent->d_name, "cloonix_diag.log"))
           continue;
         if (!strcmp(ent->d_name, "ovs-vswitchd.log"))
           continue;
@@ -342,51 +346,6 @@ int mk_machine_dirs(char *name, int vm_id)
   if (write_whole_file(path, name, strlen(name) + 1, err))
     KERR("%s", err);
   return 0;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int check_pid_is_clownix( int pid, int vm_id)
-{
-  int result = 0;
-  int len, fd;
-  char path[MAX_PATH_LEN];
-  char ndpath[MAX_PATH_LEN];
-  char *ptr;
-  static char cmd[MAX_BIG_BUF];
-  sprintf(path, "/proc/%d/cmdline", pid);
-  fd = open(path, O_RDONLY);
-  if (fd > 0)
-    {
-    memset(cmd, 0, MAX_BIG_BUF);
-    len = read(fd, cmd, MAX_BIG_BUF-2);
-    ptr = cmd;
-    if (len >= 0)
-      {
-      while ((ptr = memchr(cmd, 0, len)) != NULL)
-        *ptr = ' '; 
-      sprintf(ndpath,"%s", cfg_get_work_vm(vm_id));
-      if (strstr(cmd, ndpath))
-        result = 1;
-      }
-    if (close(fd))
-      KOUT("%d", errno);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
-int umid_pid_already_exists(int vm_id)
-{ 
-  char path[MAX_PATH_LEN];
-  struct stat buf;
-  int result = 0;
-  sprintf(path,"%s/%s/pid", cfg_get_work_vm(vm_id), DIR_UMID);
-  if (!stat(path, &buf))
-    result = 1;
-  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -572,6 +531,13 @@ int rm_machine_dirs(int vm_id, char *err)
         pth[maxlenpth-1] = 0;
         unlink(pth);
         }
+     else if (!strncmp(QBACKDOOR_WLAN_UNIX, ent->d_name,
+                       strlen(QBACKDOOR_WLAN_UNIX)))
+        {
+        snprintf(pth, maxlenpth, "%s/%s", cfg_get_work_vm(vm_id), ent->d_name); 
+        pth[maxlenpth-1] = 0;
+        unlink(pth);
+        }
       else
         {
         snprintf(err, MAX_PRINT_LEN, "UNEXPECTED: %s found\n", ent->d_name);
@@ -594,32 +560,6 @@ int rm_machine_dirs(int vm_id, char *err)
   return result;
 }
 /*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int machine_read_umid_pid(int vm_id)
-{
-  FILE *fhd;
-  char path[MAX_PATH_LEN+MAX_NAME_LEN];
-  int pid;
-  int result = 0;
-  snprintf(path, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s/pid",
-                                            cfg_get_work_vm(vm_id), DIR_UMID);
-  path[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
-  fhd = fopen(path, "r");
-  if (fhd)
-    {
-    if (fscanf(fhd, "%d", &pid) == 1)
-      {
-      if (check_pid_is_clownix( pid, vm_id))
-        result = pid;
-      }
-    if (fclose(fhd)) 
-      KOUT("%d", errno);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 int get_pty(int *master_fdp, int *slave_fdp, char *slave_name)

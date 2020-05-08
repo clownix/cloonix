@@ -20,11 +20,9 @@ void mk_dtach_dir(void);
 void mk_dpdk_dir(void);
 void mk_dpdk_ovs_db_dir(void);
 int mk_machine_dirs(char *name, int vm_id);
-int umid_pid_already_exists(int vm_id);
 int unlink_sub_dir_files(char *dir, char *err);
 int unlink_sub_dir_files_except_dir(char *dir, char *err);
 int rm_machine_dirs(int vm_id, char *err);
-int machine_read_umid_pid(int vm_id);
 
 
 void my_cp_file(char *dsrc, char *ddst, char *name);

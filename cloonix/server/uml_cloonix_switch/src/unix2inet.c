@@ -189,10 +189,10 @@ static int get_common_lan(int nb_nat, int *nat, int nb_vm, int *vm)
 void unix2inet_monitor(int llid, int llid_con, char *satname, char *vmname)
 {
   int i, nb, nb_lan_nat, nb_lan_vm, common_lan;
-  int32_t lan_vm[MAX_ETH_VM*MAX_TRAF_ENDPOINT];
+  int32_t lan_vm[MAX_SOCK_VM*MAX_TRAF_ENDPOINT];
   int32_t lan_nat[MAX_TRAF_ENDPOINT];
   t_vm *vm;
-  for (i=0; i<MAX_ETH_VM*MAX_TRAF_ENDPOINT; i++)
+  for (i=0; i<MAX_SOCK_VM*MAX_TRAF_ENDPOINT; i++)
     lan_vm[i] = 0;
   for (i=0; i<MAX_TRAF_ENDPOINT; i++)
     lan_nat[i] = 0;
@@ -205,7 +205,7 @@ void unix2inet_monitor(int llid, int llid_con, char *satname, char *vmname)
       KERR("%s", vmname);
     else
       {
-      nb = vm->kvm.nb_eth;
+      nb = vm->kvm.nb_tot_eth;
       if (endp_mngt_get_all_lan(vmname, nb, &nb_lan_vm, lan_vm))
         KERR("%s", satname);
       else

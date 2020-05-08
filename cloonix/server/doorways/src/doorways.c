@@ -149,23 +149,18 @@ void doors_recv_c2c_req_free(int llid, int tid, char *name)
 /****************************************************************************/
 void doors_recv_command(int llid, int tid, char *name, char *cmd)
 {
-  int job_idx;
   char addr[MAX_PATH_LEN];
   memset(addr, 0, MAX_PATH_LEN);
   if (!strcmp(cmd, CLOONIX_UP_VPORT_AND_RUNNING))
     llid_backdoor_cloonix_up_vport_and_running(name);
   else if (!strcmp(cmd, CLOONIX_DOWN_AND_NOT_RUNNING))
     llid_backdoor_cloonix_down_and_not_running(name);
-  else if (sscanf(cmd, REBOOT_REQUEST, &job_idx) == 1)
-    llid_backdoor_tx_reboot_to_agent(name, job_idx);
+  else if (!strcmp(cmd, REBOOT_REQUEST))
+    llid_backdoor_tx_reboot_to_agent(name);
   else if (sscanf(cmd, XWY_CONNECT, addr) == 1)
     llid_xwy_connect_info(addr);
-  else if (sscanf(cmd, HALT_REQUEST, &job_idx) == 1)
-    llid_backdoor_tx_halt_to_agent(name, job_idx);
-  else if (!strcmp(cmd, FIFREEZE_FITHAW_FREEZE))
-    llid_backdoor_tx_fifreeze_freeze_to_agent(name);
-  else if (!strcmp(cmd, FIFREEZE_FITHAW_THAW))
-    llid_backdoor_tx_fifreeze_thaw_to_agent(name);
+  else if (!strcmp(cmd, HALT_REQUEST))
+    llid_backdoor_tx_halt_to_agent(name);
   else if (!strcmp(cmd, STOP_DOORS_LISTENING))
     {
     if (msg_exist_channel(g_llid_doors_listen))

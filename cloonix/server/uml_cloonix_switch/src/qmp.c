@@ -39,6 +39,7 @@
 #include "doors_rpc.h"
 #include "doorways_mngt.h"
 #include "dpdk_ovs.h"
+#include "vhost_eth.h"
 
 int produce_list_commands(t_list_commands *list);
 
@@ -330,12 +331,26 @@ void qmp_conn_end(char *name)
   t_qmp_sub *cur, *next;
   t_qmp_req *req;
   t_vm   *vm = cfg_get_vm(name);
+  t_eth_table *eth_tab;
+  int i;
   if (!qmp)
     KERR("%s", name);
   else
     {
-    if ((vm) && (vm->kvm.nb_dpdk))
-      dpdk_ovs_end_vm_qmp_shutdown(name);
+    if (vm)
+      {
+      eth_tab = vm->kvm.eth_table;
+      for (i=0; i<vm->kvm.nb_tot_eth; i++)
+        {
+        if ((eth_tab[i].eth_type == eth_type_dpdk) ||
+            (eth_tab[i].eth_type == eth_type_vhost))
+          {
+          dpdk_ovs_del_vm(name);
+          vhost_eth_del_vm(name, vm->kvm.nb_tot_eth, eth_tab);
+          break;
+          }
+        }
+      }
     cur = qmp->head_qmp_sub;
     while(cur)
       {
@@ -731,9 +746,7 @@ static void dialog_resp(char *name, int llid, int tid, char *req, char *resp)
     {
     if (!qmp->waiting_for)
       {
-      if ((!llid) || (!llid_trace_exists(llid)))
-        KERR("%d %s", llid, name);
-      else
+      if ((llid) && (llid_trace_exists(llid)))
         report_msg(llid, tid, name, resp, 0);
       }
     else
@@ -834,7 +847,7 @@ static void timer_fifo_visit(void *data)
             if (req->count > 10)
               {
               if ((req->llid) && llid_trace_exists(req->llid))
-                send_qmp_resp(req->llid, req->tid, cur->name, "error timeout",-1);
+                send_qmp_resp(req->llid,req->tid,cur->name,"error timeout",-1);
               free_head_qmp_req(cur);
               }
             }
@@ -965,10 +978,10 @@ void qmp_request_qemu_halt(char *name, int llid, int tid)
     }
   else if (qmp->waiting_for != waiting_for_nothing)
     {
+    if (qmp->waiting_for != waiting_for_shutdown_return)
+      KERR("%s  %d", name, qmp->waiting_for);
     if (llid)
       send_status_ko(llid, tid, "error qmp doing something");
-    else
-      KERR("%d ", qmp->waiting_for);
     }
   else
     {

@@ -46,6 +46,29 @@ static int can_increment_index(int val)
 }
 /*---------------------------------------------------------------------------*/
 
+/***************************************************************************/
+static void eth_tab_to_str(char *out, int nb_tot_eth, t_eth_table *eth_tab)
+{
+  int i;
+  memset(out, 0, MAX_NAME_LEN);
+  for (i=0 ; i < nb_tot_eth; i++)
+    {
+    if (i > MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM + MAX_WLAN_VM)
+      KOUT("%d", nb_tot_eth); 
+    if(eth_tab[i].eth_type == eth_type_sock)
+      out[i] = 's';
+    else if(eth_tab[i].eth_type == eth_type_dpdk)
+      out[i] = 'd';
+    else if(eth_tab[i].eth_type == eth_type_vhost)
+      out[i] = 'v';
+    else if(eth_tab[i].eth_type == eth_type_wlan)
+      out[i] = 'w';
+    else
+      KOUT("%d %d", i, nb_tot_eth); 
+    }
+}
+/*-------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static int build_add_vm_cmd(int offset, t_list_commands *hlist, 
                             t_topo_kvm *para)
@@ -53,12 +76,13 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
   int len = 0;
   int result = offset;
   t_list_commands *list = &(hlist[offset]);
+  char eth_desc[MAX_NAME_LEN];
   if (can_increment_index(result))
     {
+    eth_tab_to_str(eth_desc, para->nb_tot_eth, para->eth_table);
     len += sprintf(list->cmd + len, 
-           "cloonix_cli %s add kvm %s ram=%d cpu=%d dpdk=%d sock=%d hwsim=%d",
-            cfg_get_cloonix_name(), para->name, para->mem, para->cpu,
-            para->nb_dpdk, para->nb_eth, para->nb_wlan);
+           "cloonix_cli %s add kvm %s ram=%d cpu=%d eth=%s",
+            cfg_get_cloonix_name(), para->name, para->mem, para->cpu, eth_desc);
     len += sprintf(list->cmd + len, " %s", para->rootfs_input);
     if (para->vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
       len += sprintf(list->cmd + len, " --persistent");
@@ -82,17 +106,17 @@ static int build_add_tap_cmd(int offset, t_list_commands *hlist, t_endp *endp)
   t_list_commands *list = &(hlist[offset]);
   if (can_increment_index(result))
     {
-    if (endp->endp_type == endp_type_tap)
-      sprintf(list->cmd, "cloonix_cli %s add tap %s", 
+    if (endp->endp_type == endp_type_phy)
+      sprintf(list->cmd, "cloonix_cli %s add phy %s", 
                          cfg_get_cloonix_name(), endp->name);
-    else if (endp->endp_type == endp_type_dpdk_tap)
-      sprintf(list->cmd, "cloonix_cli %s add dpdk_tap %s", 
+    else if (endp->endp_type == endp_type_pci)
+      sprintf(list->cmd, "cloonix_cli %s add pci %s", 
+                         cfg_get_cloonix_name(), endp->name);
+    else if (endp->endp_type == endp_type_tap)
+      sprintf(list->cmd, "cloonix_cli %s add tap %s", 
                          cfg_get_cloonix_name(), endp->name);
     else if (endp->endp_type == endp_type_wif)
       sprintf(list->cmd, "cloonix_cli %s add wif %s", 
-                         cfg_get_cloonix_name(), endp->name);
-    else if (endp->endp_type == endp_type_raw)
-      sprintf(list->cmd, "cloonix_cli %s add raw %s", 
                          cfg_get_cloonix_name(), endp->name);
     else
       KERR("%d", endp->endp_type);
@@ -386,8 +410,8 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
     if (!cur)
       KOUT(" ");
     if ((cur->endp_type == endp_type_tap) ||
-        (cur->endp_type == endp_type_dpdk_tap) ||
-        (cur->endp_type == endp_type_raw) ||
+        (cur->endp_type == endp_type_phy) ||
+        (cur->endp_type == endp_type_pci) ||
         (cur->endp_type == endp_type_wif))
       {
       result = build_add_tap_cmd(result, hlist, cur);
@@ -410,7 +434,7 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
       {
       result = build_add_nat_cmd(result, hlist, cur);
       }
-    else if ((cur->endp_type == endp_type_kvm_eth) ||
+    else if ((cur->endp_type == endp_type_kvm_sock) ||
              (cur->endp_type == endp_type_kvm_wlan))
       {
       }

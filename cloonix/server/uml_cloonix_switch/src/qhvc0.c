@@ -41,30 +41,9 @@
 #include "doorways_mngt.h"
 #include "doors_rpc.h"
 #include "header_sock.h"
+#include "suid_power.h"
 
 
-
-//  if [ ! -e /dev/virtio-ports/net.cloonix.0 ]; then
-//    mkdir -p /dev/virtio-ports
-//    cd  /dev/virtio-ports
-//    ln -s ../vport0p1 net.cloonix.0
-//    cd -
-//  fi
-//  if [ \"$(uname -m)\" = \"armv7l\" ]; then
-//    AGD=vdb
-//    AGT=cloonix_agent_armv7l
-//    DRP=dropbear_cloonix_sshd_armv7l
-//  else 
-//    if [ \"$(uname -m)\" = \"aarch64\" ]; then
-//      AGD=vdb
-//      AGT=cloonix_agent_aarch64
-//      DRP=dropbear_cloonix_sshd_aarch64
-//    else
-//      AGD=sr0
-//      AGT=cloonix_agent_i386
-//      DRP=dropbear_cloonix_sshd_i386
-//    fi
-//  fi
 
 
 
@@ -438,13 +417,18 @@ static void vm_release(t_qhvc0_vm *cvm)
 /*****************************************************************************/
 static t_qhvc0_vm *vm_alloc(char *name, t_vm *vm)
 {
+  int i;
   t_qhvc0_vm *cvm = NULL;
   cvm = (t_qhvc0_vm *) clownix_malloc(sizeof(t_qhvc0_vm), 5);
   memset(cvm, 0, sizeof(t_qhvc0_vm));
   strncpy(cvm->name, name, MAX_NAME_LEN-1);
   cvm->vm_id = vm->kvm.vm_id;
   cvm->vm_config_flags = vm->kvm.vm_config_flags;
-  cvm->nb_wlan = vm->kvm.nb_wlan;
+  for (i = 0; i < vm->kvm.nb_tot_eth; i++)
+    {
+    if (vm->kvm.eth_table[i].eth_type == eth_type_wlan)
+      cvm->nb_wlan += 1;
+    }
   if (head_cvm)
     head_cvm->prev = cvm;
   cvm->next = head_cvm;
@@ -601,7 +585,7 @@ static void timer_cvm_connect_qhvc0(void *data)
   vm = cfg_get_vm(cvm->name);
   if (vm)
     {
-    cvm->pid = utils_get_pid_of_machine(vm);
+    cvm->pid = suid_power_get_pid(vm->kvm.vm_id);
     if (!cvm->pid)
       {
       clownix_timeout_add(30, timer_cvm_connect_qhvc0, (void *) cvm,
@@ -778,6 +762,7 @@ void qhvc0_begin_qemu_unix(char *name)
 void qhvc0_end_qemu_unix(char *name)
 {
   t_qhvc0_vm *cvm = vm_get_with_name(name);
+  doors_send_command(get_doorways_llid(),0,name,CLOONIX_DOWN_AND_NOT_RUNNING);
   if (cvm)
     vm_release(cvm);
 }

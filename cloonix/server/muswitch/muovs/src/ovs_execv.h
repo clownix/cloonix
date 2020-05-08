@@ -19,6 +19,17 @@
 #define MAX_ENV_LEN 100
 #define NB_ENV 10
 #define NB_ARG 50
+void force_dpdk_off(void);
+int dpdk_is_usable(void);
+int create_ovsdb_server_conf(char *ovs_bin, char *dpdk_dir);
+
+int ovs_execv_add_pci_dpdk(char *ovs, char *dpdk, char *lan, char *pci);
+int ovs_execv_del_pci_dpdk(char *ovs, char *dpdk, char *lan, char *pci);
+
+int ovs_execv_add_vhost_br(char *ovs, char *dpdk, char *lan);
+int ovs_execv_del_vhost_br(char *ovs, char *dpdk, char *lan);
+int ovs_execv_add_vhost_br_port(char *ovs,char *dpdk,char *lan,char *vhost);
+int ovs_execv_del_vhost_br_port(char *ovs,char *dpdk,char *lan,char *vhost);
 void init_environ(char *ovs_bin, char *dpdk_dir);
 int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN]);
 int ovs_execv_add_lan(char *ovs_bin, char *dpdk_dir, char *lan_name);
@@ -45,6 +56,8 @@ int ovs_execv_add_lan_tap(char *ovs_bin, char *dpdk_dir,
 int ovs_execv_del_lan_tap(char *ovs_bin, char *dpdk_dir,
                           char *lan, char *name);
 
-int ovs_execv_get_tap_mac(char *name, t_eth_params *eth_params);
+int ovs_execv_get_tap_mac(char *name, char *mac);
 
-int ovs_execv_daemon(int is_switch, char *ovs_bin, char *dpdk_dir);
+int ovs_execv_daemon(int is_switch, char *net, char *ovs_bin, char *dpdk_dir);
+
+void ovs_execv_init(void);

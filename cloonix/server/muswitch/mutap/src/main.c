@@ -64,7 +64,7 @@ int rx_from_traffic_sock(t_all_ctx *all_ctx, int tidx, t_blkd *bd)
       tap_fd_tx(all_ctx, bd);
     else if (type == endp_type_wif)
       wif_fd_tx(all_ctx, bd);
-    else if (type == endp_type_raw)
+    else if (type == endp_type_phy)
       raw_fd_tx(all_ctx, bd);
     else
       KOUT("%d", type);
@@ -85,7 +85,7 @@ int main (int argc, char *argv[])
   if ((endptr == NULL)||(endptr[0] != 0))
     KOUT(" ");
   if ((tap_type != endp_type_tap) &&
-      (tap_type != endp_type_raw) &&
+      (tap_type != endp_type_phy) &&
       (tap_type != endp_type_wif))
     KOUT("%d", tap_type);
   cloonix_set_pid(getpid());

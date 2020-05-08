@@ -95,7 +95,7 @@ static void usage(void)
 int main (int argc, char *argv[])
 {
   int i, action=action_bash;
-  char *cloonix_tree, *src=NULL, *dst=NULL, *cmd=NULL;
+  char *src=NULL, *dst=NULL, *cmd=NULL;
   int nb_cloonix;
   t_cloonix_conf_info *cloonix_conf;
   t_cloonix_conf_info *cnf;
@@ -109,7 +109,7 @@ int main (int argc, char *argv[])
       usage();
     }
   DEBUG_INIT(0);
-  cloonix_tree = init_local_cloonix_bin_path(argv[0]);
+  init_local_cloonix_bin_path(argv[0]);
   doorways_sock_init();
   msg_mngt_init("ctrl", IO_MAX_BUF_LEN);
   cloonix_conf_info_get_all(&nb_cloonix, &cloonix_conf);

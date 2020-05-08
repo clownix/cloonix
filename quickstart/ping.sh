@@ -1,5 +1,21 @@
 #!/bin/bash
-NET=fido
+TYPE=$1
+case "${TYPE}" in
+  "dpdk")
+    PARAMS="ram=2000 cpu=2 eth=d"
+    ;;
+  "sock")
+    PARAMS="ram=2000 cpu=2 eth=s"
+    ;;
+  "vhost")
+    PARAMS="ram=2000 cpu=2 eth=v"
+    ;;
+  *)
+    echo ERROR FIRST PARAM: ${TYPE} must be dpdk sock or vhost
+    exit 1
+esac
+
+NET=nemo
 DIST=buster
 
 #######################################################################
@@ -13,7 +29,7 @@ if [ "x$is_started" == "x" ]; then
 else
   cloonix_cli $NET rma
   echo waiting 10 sec
-  sleep 10
+  sleep 10 
 fi
 
 #######################################################################
@@ -22,20 +38,17 @@ cloonix_gui $NET
 
 #######################################################################
 for i in one two; do
-  cloonix_cli $NET add kvm ${i} ram=1024 cpu=2 dpdk=0 sock=3 hwsim=0 ${DIST}.qcow2 & 
+  cloonix_cli $NET add kvm ${i} ${PARAMS} ${DIST}.qcow2 & 
 done
 #----------------------------------------------------------------------
 
-sleep 10
-#######################################################################
-cloonix_cli $NET add snf sniffer
-#----------------------------------------------------------------------
+sleep 2
 
 #######################################################################
 cloonix_cli $NET add lan one 0 lan1
-cloonix_cli $NET add lan sniffer 0 lan1
 cloonix_cli $NET add lan two 0 lan1
 #----------------------------------------------------------------------
+
 
 #######################################################################
 set +e

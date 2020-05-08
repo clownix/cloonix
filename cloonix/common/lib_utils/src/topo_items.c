@@ -51,6 +51,8 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
     return 3;
   if (topo->nb_sat  != ref->nb_sat)
     return 4;
+  if (topo->nb_phy  != ref->nb_phy)
+    return 4;
   if (topo->nb_endp != ref->nb_endp)
     return 5;
   if (memcmp(&(topo->clc), &(ref->clc), sizeof(t_topo_clc)))
@@ -103,6 +105,32 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
         return (4000+i);
       }
     }
+  if (topo->nb_phy)
+    {
+    if (!topo->phy)
+      return 12;
+    if (!ref->phy)
+      return 13;
+    for (i=0; i<topo->nb_phy; i++)
+      {
+      if (memcmp(&(topo->phy[i]), &(ref->phy[i]), sizeof(t_topo_phy)))
+        return (4500+i);
+      }
+    }
+
+  if (topo->nb_pci)
+    {
+    if (!topo->pci)
+      return 12;
+    if (!ref->pci)
+      return 13;
+    for (i=0; i<topo->nb_pci; i++)
+      {
+      if (memcmp(&(topo->pci[i]), &(ref->pci[i]), sizeof(t_topo_pci)))
+        return (4500+i);
+      }
+    }
+
   if (topo->nb_endp)
     {
     if (!topo->endp)
@@ -152,6 +180,7 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
   topo->nb_c2c = ref->nb_c2c;
   topo->nb_snf = ref->nb_snf;
   topo->nb_sat = ref->nb_sat;
+  topo->nb_phy = ref->nb_phy;
   topo->nb_endp = ref->nb_endp;
 
   memcpy(&(topo->clc), &(ref->clc), sizeof(t_topo_clc));
@@ -183,6 +212,19 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
     (t_topo_sat *)clownix_malloc(ref->nb_sat*sizeof(t_topo_sat),28);
     memcpy(topo->sat, ref->sat, ref->nb_sat*sizeof(t_topo_sat));
     } 
+  if (topo->nb_phy)
+    {
+    topo->phy =
+    (t_topo_phy *)clownix_malloc(ref->nb_phy*sizeof(t_topo_phy),28);
+    memcpy(topo->phy, ref->phy, ref->nb_phy*sizeof(t_topo_phy));
+    }
+
+  if (topo->nb_pci)
+    {
+    topo->pci =
+    (t_topo_pci *)clownix_malloc(ref->nb_pci*sizeof(t_topo_pci),28);
+    memcpy(topo->pci, ref->pci, ref->nb_pci*sizeof(t_topo_pci));
+    }
 
   if (topo->nb_endp)
     {
@@ -215,6 +257,8 @@ void topo_free_topo(t_topo_info *topo)
     clownix_free(topo->c2c, __FUNCTION__);
     clownix_free(topo->snf, __FUNCTION__);
     clownix_free(topo->sat, __FUNCTION__);
+    clownix_free(topo->phy, __FUNCTION__);
+    clownix_free(topo->pci, __FUNCTION__);
     clownix_free(topo->endp, __FUNCTION__);
     clownix_free(topo, __FUNCTION__);
     }

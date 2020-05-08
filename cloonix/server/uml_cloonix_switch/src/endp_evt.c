@@ -30,6 +30,8 @@
 #include "lan_to_name.h"
 #include "mulan_mngt.h"
 #include "endp_mngt.h"
+#include "phy_mngt.h"
+#include "phy_evt.h"
 
 
 /****************************************************************************/
@@ -57,6 +59,7 @@ typedef struct t_evendp
 {
   char name[MAX_NAME_LEN];
   int  num;
+  int  endp_type;
   t_attached atlan[MAX_TRAF_ENDPOINT];
   struct t_evendp *prev;
   struct t_evendp *next;
@@ -77,18 +80,15 @@ static t_evendp *g_head_endp;
 
 
 /*****************************************************************************/
-int endp_is_wlan(char *name, int num, int *nb_eth)
+int endp_is_wlan(char *name, int num)
 {
   int result = 0;
   t_vm *vm = cfg_get_vm(name);
   if (vm)
     {
-    *nb_eth = vm->kvm.nb_dpdk + vm->kvm.nb_eth;
-    if (num >= vm->kvm.nb_dpdk + vm->kvm.nb_eth)
+    if (vm->kvm.eth_table[num].eth_type == eth_type_wlan)
       result = 1;
     }
-  else
-    *nb_eth = 0;
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -197,7 +197,7 @@ static t_evendp *endp_find_next_with_lan(t_evendp *start,
 
 /*****************************************************************************/
 static t_evendp *endp_find_next_with_attached_lan(t_evendp *start, 
-                                                      char *lan, int *tidx)
+                                                  char *lan, int *tidx)
 {
   int i, found = 0;
   t_evendp *cur = start;
@@ -228,7 +228,7 @@ static t_evendp *endp_find_next_with_attached_lan(t_evendp *start,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static t_evendp *endp_alloc(char *name, int num)
+static t_evendp *endp_alloc(char *name, int num, int endp_type)
 {
   t_evendp *evendp = endp_find(name, num);
   int i;
@@ -240,6 +240,7 @@ static t_evendp *endp_alloc(char *name, int num)
     memset(evendp, 0, sizeof(t_evendp));
     strncpy(evendp->name, name, MAX_NAME_LEN-1);
     evendp->num = num;
+    evendp->endp_type = endp_type;
     if (g_head_endp)
       g_head_endp->prev = evendp;
     evendp->next = g_head_endp;
@@ -297,9 +298,7 @@ int endp_evt_lan_find(char *name, int num, char *lan, int *tidx)
 {
   int i, result = 0;
   t_evendp *evendp = endp_find(name, num);
-  if (!evendp)
-    KERR("%s %d", name, num);
-  else
+  if (evendp)
     {
     for (i=0; i<MAX_TRAF_ENDPOINT; i++)
       {
@@ -390,13 +389,12 @@ static int wlan_req_mulan(char *lan, char *name, int num, int tidx)
 {
   int result = -1; 
   char *sock;
-  int nb_eth;
   t_vm *vm = cfg_get_vm(name);
   if (vm)
     {
-    if (endp_is_wlan(name, num, &nb_eth))
+    if (endp_is_wlan(name, num))
       {
-      sock = utils_get_qbackdoor_wlan_path(vm->kvm.vm_id, num-nb_eth);
+      sock = utils_get_qbackdoor_wlan_path(vm->kvm.vm_id, num);
       if (mulan_send_wlan_req_connect(sock, lan, name, num, tidx))
         KERR("%s %s %s %d", sock, lan, name, num);
       else
@@ -414,13 +412,14 @@ static int wlan_req_mulan(char *lan, char *name, int num, int tidx)
 /*****************************************************************************/
 static void do_add_lan(int llid, int tid, int is_wlan, 
                        char *name, int num, int tidx, 
-                       t_evendp *evendp, char *lan, int nb_eth)
+                       t_evendp *evendp, char *lan)
 {
   int mulan_is_wlan;
   if (!(mulan_exists(lan, &mulan_is_wlan)))
     {
     if (mulan_start(lan, is_wlan))
       {
+      KERR("bad mulan start %s %s %d", lan, name, num);
       send_status_ko(llid, tid, "bad mulan start");
       }
     else
@@ -433,14 +432,13 @@ static void do_add_lan(int llid, int tid, int is_wlan,
     {   
     if (mulan_is_wlan != is_wlan)
       {
-      if (msg_exist_channel(llid))
-        send_status_ko(llid, tid, "mulan incoherency wlan non-wlan");
+      KERR("mulan incoherency wlan non-wlan %s %d %s", name, num, lan);
+      send_status_ko(llid, tid, "mulan incoherency wlan non-wlan");
       }
     else if (mulan_is_zombie(lan))
       {
-      KERR("%s %s", name, lan);
-      if (msg_exist_channel(llid))
-        send_status_ko(llid, tid, "mulan zombie");
+      KERR("mulan zombie %s %d %s", name, num, lan);
+      send_status_ko(llid, tid, "mulan zombie");
       }
     else
       {
@@ -470,64 +468,59 @@ int endp_evt_add_lan(int llid, int tid, char *name, int num,
 {
   t_evendp *evendp = endp_find(name, num);
   t_attached *atlan = endp_atlan_find(name, num, tidx);
-  int nb_eth, endp_type, is_wlan;
+  int endp_type, is_wlan;
   int result = -1;
   if ((!lan) || (!lan[0]))
     KOUT("%s", name);
   if (!endp_mngt_exists(name, num, &endp_type))
     {
     KERR("%s %s", name, lan);
-    if (msg_exist_channel(llid))
-      send_status_ko(llid, tid, "evendp record should be present");
+    send_status_ko(llid, tid, "evendp record should be present");
     }
   else if (!atlan)
     {
     if (endp_type == endp_type_c2c)
       {
       KERR("%s %s", name, lan);
-      if (msg_exist_channel(llid))
-        send_status_ko(llid, tid, "c2c exists only when connected to peer");
+      send_status_ko(llid, tid, "c2c exists only when connected to peer");
       }
     else
       {
       KERR("%s %s", name, lan);
-      if (msg_exist_channel(llid))
-        send_status_ko(llid, tid, "evendp not found");
+      send_status_ko(llid, tid, "evendp not found");
       }
     }
   else if ((endp_type != endp_type_tap) &&
-           (endp_type != endp_type_dpdk_tap) &&
+           (endp_type != endp_type_phy) &&
            (endp_type != endp_type_snf) &&
            (endp_type != endp_type_c2c) &&
            (endp_type != endp_type_nat) &&
            (endp_type != endp_type_a2b) &&
-           (endp_type != endp_type_raw) &&
-           (endp_type != endp_type_kvm_eth)  &&
-           (endp_type != endp_type_kvm_wlan) &&
+           (endp_type != endp_type_kvm_sock)  &&
+           (endp_type != endp_type_kvm_dpdk)  &&
+           (endp_type != endp_type_kvm_vhost) &&
+           (endp_type != endp_type_kvm_wlan)  &&
            (endp_type != endp_type_wif))
     KOUT("%d", endp_type);
   else if (!endp_mngt_connection_state_is_restfull(name, num))
     {
     KERR("%s %s", name, lan);
-    if (msg_exist_channel(llid))
-      send_status_ko(llid, tid, "evendp is not restfull");
+    send_status_ko(llid, tid, "evendp is not restfull");
     }
   else if (strlen((atlan->waiting_lan)))
     {
     KERR("%s %s", name, lan);
-    if (msg_exist_channel(llid))
-      send_status_ko(llid, tid, "evendp connecting");
+    send_status_ko(llid, tid, "evendp connecting");
     }
   else if (strlen((atlan->attached_lan)))
     {
     KERR("%s %s", name, lan);
-    if (msg_exist_channel(llid))
-      send_status_ko(llid, tid, "evendp connected");
+    send_status_ko(llid, tid, "evendp connected");
     }
   else
     {
-    is_wlan = endp_is_wlan(name, num, &nb_eth);
-    do_add_lan(llid, tid, is_wlan, name, num, tidx, evendp, lan, nb_eth);
+    is_wlan = endp_is_wlan(name, num);
+    do_add_lan(llid, tid, is_wlan, name, num, tidx, evendp, lan);
     result = 0;
     }
   return result;
@@ -535,13 +528,66 @@ int endp_evt_add_lan(int llid, int tid, char *name, int num,
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int endp_evt_lan_is_in_use(char *lan)
+int endp_evt_lan_is_in_use(char *lan, int *type)
 {
   int tidx, result = 0;
+  t_evendp *cur1, *cur2;
   if ((!lan) || (!lan[0]))
     KOUT(" ");
-  if ((endp_find_next_with_lan(NULL, lan, &tidx)) || 
-      (endp_find_next_with_attached_lan(NULL, lan, &tidx)))
+  *type = 0;
+  cur1 = endp_find_next_with_lan(NULL, lan, &tidx);
+  cur2 = endp_find_next_with_attached_lan(NULL, lan, &tidx);
+  if (cur1 || cur2)
+    {
+    if (cur2)
+      {
+      if (!endp_mngt_exists(cur2->name, cur2->num, type))
+        KOUT("%s %d", cur2->name, cur2->num);
+      }
+    else if (cur1)
+      {
+      if (!endp_mngt_exists(cur1->name, cur1->num, type))
+        KOUT("%s %d", cur1->name, cur1->num);
+      }
+    else
+      KOUT(" ");
+    result = 1;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int endp_evt_lan_is_in_use_by_other(char *name, char *lan, int *type)
+{
+  int tidx, result = 0;
+  t_evendp *cur;
+  if ((!lan) || (!lan[0]))
+    KOUT(" ");
+  *type = 0;
+
+  cur = endp_find_next_with_lan(NULL, lan, &tidx);
+  while (cur)
+    {
+    if (!endp_mngt_exists(cur->name, cur->num, type))
+      KOUT("%s %d", cur->name, cur->num);
+    if (strcmp(cur->name, name))
+      break;
+    cur = endp_find_next_with_lan(cur, lan, &tidx);
+    }
+  if (cur == NULL)
+    {
+    cur = endp_find_next_with_attached_lan(NULL, lan, &tidx);
+    while (cur)
+      {
+      if (!endp_mngt_exists(cur->name, cur->num, type))
+        KOUT("%s %d", cur->name, cur->num);
+      if (strcmp(cur->name, name))
+        break;
+      cur = endp_find_next_with_attached_lan(cur, lan, &tidx);
+      }
+    }
+  if (cur)
     result = 1;
   return result;
 }
@@ -552,7 +598,7 @@ int endp_evt_del_lan(char *name, int num, int tidx, char *lan)
 {
   t_evendp *evendp = endp_find(name, num);
   t_attached *atlan = endp_atlan_find(name, num, tidx);
-  int nb_eth, lan_num, result = -1;
+  int lan_num, result = -1;
   if ((!lan) || (!lan[0]))
     KOUT("%s", name);
   lan_num = lan_get_with_name(lan);
@@ -566,7 +612,7 @@ int endp_evt_del_lan(char *name, int num, int tidx, char *lan)
       KERR("%s %s", lan, atlan->attached_lan);
     else
       {
-      if (endp_is_wlan(name, num, &nb_eth))
+      if (endp_is_wlan(name, num))
         {
         if (mulan_send_wlan_req_disconnect(lan, name, num, tidx))
           KERR("%s %s %d", lan, name, num);
@@ -578,6 +624,16 @@ int endp_evt_del_lan(char *name, int num, int tidx, char *lan)
       memset(atlan->attached_lan, 0, MAX_NAME_LEN);
       result = 0;
       mulan_test_stop(lan);
+      if ((evendp->endp_type == endp_type_phy) ||
+          (evendp->endp_type == endp_type_tap))
+        {
+        phy_evt_lan_del_done(eth_type_sock, lan);
+        }
+      else
+        {
+        phy_evt_update_eth_type(0, 0, 0, eth_type_sock, name, lan);
+        }
+      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
     }
   return result;
@@ -606,7 +662,18 @@ void endp_evt_connect_OK(char *name, int num, char *lan, int tidx, int rank)
       strncpy(atlan->attached_lan, lan, MAX_NAME_LEN-1);
       endp_mngt_add_attached_lan(llid, name, num, tidx, lan); 
       init_waiting_lan(name, num, tidx, NULL, 0, 0);
-      resp_to_cli(name, num, llid, tid, 1, lan);
+      if ((evendp->endp_type == endp_type_phy) ||
+          (evendp->endp_type == endp_type_tap))
+        {
+        resp_to_cli(name, num, llid, tid, 1, lan);
+        phy_evt_lan_add_done(eth_type_sock, lan);
+        }
+      else
+        {
+        if (phy_evt_update_eth_type(llid, tid, 1, eth_type_sock, name, lan))
+          resp_to_cli(name, num, llid, tid, 1, lan);
+        }
+      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
     else
       KERR("%s %s", name, lan);
@@ -647,7 +714,7 @@ void endp_evt_birth(char *name, int num, int endp_type)
     KERR("%s %d", name, num);
   else
     {
-    endp_alloc(name, num);
+    endp_alloc(name, num, endp_type);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -692,7 +759,7 @@ int endp_evt_death(char *name, int num)
   t_evendp *evendp = endp_find(name, num);
   t_attached *atlan;
   t_time_delay *td;
-  int nb_eth, i, result = -1;
+  int i, result = -1;
   if (evendp)
     {
     for (i=0; i<MAX_TRAF_ENDPOINT; i++)
@@ -700,7 +767,7 @@ int endp_evt_death(char *name, int num)
       atlan = endp_atlan_find(name, num, i);
       if (strlen(atlan->attached_lan))
         {
-        if (endp_is_wlan(name, num, &nb_eth))
+        if (endp_is_wlan(name, num))
           {
           if (mulan_send_wlan_req_disconnect(atlan->attached_lan, name, num, i))
             KERR("%s %s %d", atlan->attached_lan, name, num);
@@ -710,7 +777,7 @@ int endp_evt_death(char *name, int num)
         }
       if (strlen(atlan->waiting_lan))
         {
-        if (endp_is_wlan(name, num, &nb_eth))
+        if (endp_is_wlan(name, num))
           {
           if (mulan_send_wlan_req_disconnect(atlan->waiting_lan, name, num, i))
             KERR("%s %s %d", atlan->waiting_lan, name, num);

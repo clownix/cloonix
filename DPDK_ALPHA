@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------------
-HOWTO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
+iommu=pt intel_iommu=onHOWTO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
 This is an experimental try to use DPDK, not as reliable as classic lan.
 -----------------------------------------------------------------------------
   The host must have 1 Giga size hugepages, i chose to have 5 hugepages:
@@ -9,14 +9,24 @@ dpdk, you can do:
 
     printf '\nGRUB_CMDLINE_LINUX="%s %s %s %s"\n' \
                                "kvm-intel.nested=1" \
+                               "iommu=pt intel_iommu=on" \
+                               "vfio_iommu_type1.allow_unsafe_interrupts=1" \
+                               "vfio.enable_unsafe_noiommu_mode=1" \
                                "default_hugepagesz=1G" \
                                "hugepagesz=1G hugepages=5" \
                                 >> /etc/default/grub
+
     update-grub
 or
     grub2-mkconfig --output=/boot/grub2/grub.cfg
 
-After any of the above commands, the host must be rebooted, then check:
+
+echo vfio_iommu_type1 > /etc/modules
+echo vfio-pci >> /etc/modules
+
+echo "vfio enable_unsafe_noiommu_mode=Y" > /etc/modules
+echo "vfio-pci" >> /etc/modules
+
 
     mount |grep hugepages
 Check pagesize=1024M
@@ -33,9 +43,32 @@ Check the number
 To track errors in case of failure:
 MOST FREQUENT PB: Not enough Huge pages, see file ovs_execv.c for the value needed.
 
+sudo grep huge /proc/*/numa_maps
+
+
 cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
 
 -----------------------------------------------------------------------------
+
+IN VIRTUAL:
+
+vfio
+vfio_iommu_type1
+vfio_virqfd
+vfio_pci
+
+
+modprobe vfio enable_unsafe_noiommu_mode
+cat /sys/module/vfio/parameters/enable_unsafe_noiommu_mode
+
+modprobe vfio_pci enable_unsafe_noiommu_mode
+
+echo 0000:00:05.0 > /sys/bus/pci/drivers/virtio-pci/unbind 
+
+echo "1af4 0001" > /sys/bus/pci/drivers/vfio-pci/new_id 
+echo "1af4 1000" > /sys/bus/pci/drivers/vfio-pci/new_id 
+
+echo 0000:00:05.0 > /sys/bus/pci/drivers/vfio-pci/bind
 
 
 

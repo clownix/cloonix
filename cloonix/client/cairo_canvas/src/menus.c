@@ -40,11 +40,7 @@
 #include "menus.h"
 #include "hidden_visible_edge.h"
 #include "menu_dialog_kvm.h"
-#include "menu_dialog_lan.h"
-#include "menu_dialog_tap.h"
-#include "menu_dialog_snf.h"
 #include "menu_dialog_c2c.h"
-#include "menu_dialog_a2b.h"
 #include "bdplot.h"
 
 
@@ -53,6 +49,7 @@ GtkWidget *get_main_window(void);
 static char g_sav_whole[MAX_PATH_LEN];
 static char g_sav_derived[MAX_PATH_LEN];
 char *get_distant_dpdk_snf_dir(void);
+int format_phy_info(char *name, char *txt);
 
 
 /****************************************************************************/
@@ -134,6 +131,18 @@ static void end_cb_node_reboot(int tid, int status, char *err)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void end_cb_node_halt(int tid, int status, char *err)
+{
+  if (status)
+    insert_next_warning(err, 1);
+  else
+    insert_next_warning("SEND HALT VM OK", 1);
+
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 static void end_cb_node_sav_rootfs(int tid, int status, char *err)
 {
   if (status)
@@ -195,7 +204,28 @@ static void node_sav_rootfs(GtkWidget *mn, t_item_ident *pm)
 /****************************************************************************/
 static void node_qreboot_vm(GtkWidget *mn, t_item_ident *pm)
 {
-  client_reboot_vm(0, end_cb_node_reboot, pm->name);
+  client_reboot_vm(0, end_cb_node_reboot, pm->name, 0);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void node_greboot_vm(GtkWidget *mn, t_item_ident *pm)
+{
+  client_reboot_vm(0, end_cb_node_reboot, pm->name, 1);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void node_qhalt_vm(GtkWidget *mn, t_item_ident *pm)
+{
+  client_reboot_vm(0, end_cb_node_halt, pm->name, 0);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void node_ghalt_vm(GtkWidget *mn, t_item_ident *pm)
+{
+  client_reboot_vm(0, end_cb_node_halt, pm->name, 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -221,8 +251,8 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   t_bank_item *bitem;
   static char title[MAX_PATH_LEN];
   static char text[MAX_TEXT];
-  int is_persistent, is_backed, is_inside_cloonix, is_vmware;
-  int has_p9_host_share, is_cisco, has_vhost_vsock, is_uefi; 
+  int is_persistent, is_backed, is_inside_cloonix;
+  int has_p9_host_share, is_cisco, is_uefi; 
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
   int is_full_virt, has_no_reboot, has_added_disk, with_pxe, len = 0;
   bitem = look_for_node_with_id(pm->name);
@@ -238,7 +268,6 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     vm_config_flags = bitem->pbi.pbi_node->node_vm_config_flags;
     is_persistent = vm_config_flags & VM_CONFIG_FLAG_PERSISTENT;
     is_full_virt  = vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT;
-    has_vhost_vsock = vm_config_flags & VM_CONFIG_FLAG_VHOST_VSOCK;
     is_uefi = vm_config_flags & VM_CONFIG_FLAG_UEFI;
     is_backed   = vm_config_flags & VM_FLAG_DERIVED_BACKING;
     is_inside_cloonix = vm_config_flags & VM_FLAG_IS_INSIDE_CLOONIX;
@@ -248,13 +277,10 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     has_added_cdrom = vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM;
     has_added_disk = vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK;
     is_cisco = vm_config_flags & VM_CONFIG_FLAG_CISCO;
-    is_vmware = vm_config_flags & VM_CONFIG_FLAG_VMWARE;
     has_p9_host_share = vm_config_flags & VM_CONFIG_FLAG_9P_SHARED;
 
     if (is_cisco)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tCISCO");
-    if (is_vmware)
-      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tVMWARE");
     if (has_p9_host_share)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tP9_HOST_SHARE");
     if (is_persistent)
@@ -263,8 +289,6 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tEVANESCENT");
     if (is_full_virt)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tFULL VIRT");
-    if (has_vhost_vsock)
-      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tVHOST_VSOCK");
     if (is_uefi)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tUEFI");
     if (is_backed)
@@ -333,10 +357,12 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
     {
     snprintf(title, MAX_PATH_LEN, "%s", bitem->name);
     title[2*MAX_NAME_LEN-1] = 0;
-    if (bitem->pbi.mutype == endp_type_tap)
+    if (bitem->pbi.mutype == endp_type_pci)
+      len += format_pci_info(bitem->name, text);
+    else if (bitem->pbi.mutype == endp_type_phy)
+      len += format_phy_info(bitem->name, text);
+    else if (bitem->pbi.mutype == endp_type_tap)
       len += sprintf(text + len, "\nTAP");
-    else if (bitem->pbi.mutype == endp_type_dpdk_tap)
-      len += sprintf(text + len, "\nDPDK_TAP");
     else if (bitem->pbi.mutype == endp_type_snf)
       len += sprintf(text + len, "\nSNF");
     else if (bitem->pbi.mutype == endp_type_nat)
@@ -735,14 +761,24 @@ void sat_ctx_menu(t_bank_item *bitem)
 /****************************************************************************/
 static void intf_item_info(GtkWidget *mn, t_item_ident *pm)
 {
-  t_bank_item *bitem;
+  t_bank_item *att_node, *bitem;
+  int num;
   char title[2*MAX_PATH_LEN];
   bitem = look_for_eth_with_id(pm->name, pm->num);
   if (bitem)
     {
     snprintf(title, 2*MAX_PATH_LEN, "%s eth%d", bitem->name, pm->num);
     title[2*MAX_NAME_LEN-1] = 0;
-    display_info(title, " ");
+    att_node = bitem->att_node;
+    num = bitem->num;
+    if (!att_node)
+      KOUT(" ");
+    if ((num < 0) || (num >= att_node->pbi.pbi_node->nb_tot_eth))
+      KOUT(" ");
+    if (att_node->pbi.pbi_node->eth_tab[num].eth_type == eth_type_vhost)
+      display_info(title, att_node->pbi.pbi_node->eth_tab[num].vhost_ifname);
+    else
+      display_info(title, " ");
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -790,9 +826,9 @@ void node_ctx_menu(t_bank_item *bitem)
 {
   GtkWidget *dtach_console, *desktop=NULL, *xterm_qmonitor;
   GtkWidget *item_delete, *item_info, *item_color;
-  GtkWidget *save_whole, *save_derived, *qreboot_vm;
+  GtkWidget *save_whole, *save_derived, *qreboot_vm, *greboot_vm;
   GtkWidget *separator, *separator2, *menu = gtk_menu_new();
-  GtkWidget *item_hidden;
+  GtkWidget *item_hidden, *qhalt_vm, *ghalt_vm;
   char *whole_rootfs = "save whole rootfs"; 
   char *derived_rootfs = "save derived rootfs"; 
   t_item_ident *pm = get_and_init_pm(bitem);
@@ -807,7 +843,10 @@ void node_ctx_menu(t_bank_item *bitem)
     {
     save_whole = gtk_menu_item_new_with_label(whole_rootfs);
     save_derived = gtk_menu_item_new_with_label(derived_rootfs);
-    qreboot_vm = gtk_menu_item_new_with_label("send reboot req to qemu");
+    greboot_vm = gtk_menu_item_new_with_label("reboot by cloonix guest agent");
+    ghalt_vm = gtk_menu_item_new_with_label("halt by cloonix guest agent");
+    qreboot_vm = gtk_menu_item_new_with_label("reboot by qemu");
+    qhalt_vm = gtk_menu_item_new_with_label("halt by qemu");
     }
   dtach_console = gtk_menu_item_new_with_label("dtach console");
   item_info = gtk_menu_item_new_with_label("Info");
@@ -848,9 +887,20 @@ void node_ctx_menu(t_bank_item *bitem)
                      G_CALLBACK(node_sav_derived), (gpointer) pm);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), save_whole);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), save_derived);
+
+    g_signal_connect(G_OBJECT(greboot_vm), "activate",
+                     G_CALLBACK(node_greboot_vm), (gpointer) pm);
     g_signal_connect(G_OBJECT(qreboot_vm), "activate",
                      G_CALLBACK(node_qreboot_vm), (gpointer) pm);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), greboot_vm);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), qreboot_vm);
+
+    g_signal_connect(G_OBJECT(ghalt_vm), "activate",
+                     G_CALLBACK(node_ghalt_vm), (gpointer) pm);
+    g_signal_connect(G_OBJECT(qhalt_vm), "activate",
+                     G_CALLBACK(node_qhalt_vm), (gpointer) pm);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), ghalt_vm);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), qhalt_vm);
     }
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator2);
@@ -869,11 +919,7 @@ void menu_init(void)
 {
   menu_utils_init();
   menu_dialog_vm_init();
-  menu_dialog_lan_init();
-  menu_dialog_tap_init();
   menu_dialog_c2c_init();
-  menu_dialog_a2b_init();
-  menu_dialog_snf_init();
   memset(g_sav_whole, 0, MAX_PATH_LEN);
   memset(g_sav_derived, 0, MAX_PATH_LEN);
   snprintf(g_sav_whole, MAX_PATH_LEN-1, 

@@ -44,11 +44,20 @@ typedef struct t_pid_info
 } t_pid_info;
 /*--------------------------------------------------------------------------*/
 
+enum
+  {
+  auto_idle = 0,
+  auto_create_disk,
+  auto_delay_possible_ovs_start,
+  auto_create_vm_launch,
+  auto_create_vm_connect,
+  auto_max,
+  };
+
 
 #define CDROM_CONFIG_ISO "cdrom_config.iso"
 #define DIR_CONF "config"
 #define FILE_COW "cow"
-#define DIR_UMID "umid"
 #define CLOONIX_FILE_NAME "name"
 #define FILE_IMAGE "image.bin"
 #define CLOONIX_INTERNAL_COM "cloonix_internal_com"
@@ -59,7 +68,6 @@ typedef struct t_pid_info
 #define QEMU_IMG "qemu-img"
 #define DIR_CLOONIX_DISKS "disks"
 #define DIR_DPDK "dpdk"
-#define CLOONIX_VM_WORKDIR "vm"
 #define QMONITOR_UNIX "mon"
 #define QMP_UNIX "qmp"
 #define QHVCO_UNIX "qhvc0"

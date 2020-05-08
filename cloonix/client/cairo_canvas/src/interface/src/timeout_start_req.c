@@ -70,8 +70,8 @@ void to_cloonix_switch_create_node(double x, double y,
   memset(pa, 0, sizeof(t_item_node_req));
   pa->x = x;
   pa->y = y;
-  memcpy(pa->tx, tx, MAX_ETH_VM+MAX_WLAN_VM * sizeof(double));
-  memcpy(pa->ty, ty, MAX_ETH_VM+MAX_WLAN_VM * sizeof(double));
+  memcpy(pa->tx, tx, MAX_SOCK_VM+MAX_WLAN_VM * sizeof(double));
+  memcpy(pa->ty, ty, MAX_SOCK_VM+MAX_WLAN_VM * sizeof(double));
   clownix_timeout_add(1, timer_create_item_node_req,(void *)pa, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/

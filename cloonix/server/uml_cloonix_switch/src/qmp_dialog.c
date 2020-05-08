@@ -30,6 +30,7 @@
 #include "qmp.h"
 #include "event_subscriber.h"
 #include "machine_create.h"
+#include "suid_power.h"
 
 
 typedef struct t_timeout_resp
@@ -289,7 +290,7 @@ static void timer_connect_qmp(void *data)
       }
     else
       {
-      if (!utils_get_pid_of_machine(vm))
+      if (!suid_power_get_pid(vm->kvm.vm_id))
         {
         qrec->count_conn_timeout += 1;
         if (qrec->count_conn_timeout > 100)

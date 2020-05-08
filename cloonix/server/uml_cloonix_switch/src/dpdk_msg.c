@@ -33,8 +33,11 @@
 #include "dpdk_ovs.h"
 #include "dpdk_dyn.h"
 #include "dpdk_msg.h"
-#include "dpdk_fmt.h"
+#include "fmt_diag.h"
 #include "dpdk_tap.h"
+#include "utils_cmd_line_maker.h"
+#include "phy_mngt.h"
+#include "phy_evt.h"
 
 enum {
      ovsreq_add_eth = 15,
@@ -66,21 +69,8 @@ typedef struct t_ovslan
 } t_ovslan;
 
 
-static int g_tid;
 static t_ovsreq *g_head_ovsreq;
 static t_ovslan *g_head_ovslan;
-
-
-
-/****************************************************************************/
-static int get_next_tid(void)
-{
-  g_tid += 1;
-  if (g_tid == 0xFFFF)
-    g_tid = 1;
-  return g_tid;
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static t_ovslan *lan_find(char *lan_name)
@@ -125,7 +115,6 @@ static int lan_refcount_dec(char *lan_name, int line)
   return (result);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void lan_alloc(char *lan_name)
@@ -252,10 +241,10 @@ static void ovsreq_free(int tid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_msg_send_add_eth(t_vm *kvm, char *name, int num)
+int dpdk_msg_send_add_eth(char *name, int num, char *strmac)
 {
-  int result, tid = get_next_tid();
-  result = dpdk_fmt_tx_add_eth(tid, kvm, name, num);
+  int result, tid = utils_get_next_tid();
+  result = fmt_tx_add_eth(tid, name, num, strmac);
   if (result)
     KERR("%s %d", name, num);
   else
@@ -267,8 +256,8 @@ int dpdk_msg_send_add_eth(t_vm *kvm, char *name, int num)
 /****************************************************************************/
 void dpdk_msg_send_del_eth(char *name, int num)
 {
-  int tid = get_next_tid();
-  if (dpdk_fmt_tx_del_eth(tid, name, num))
+  int tid = utils_get_next_tid();
+  if (fmt_tx_del_eth(tid, name, num))
     KERR("%s %d", name, num);
   else
     ovsreq_alloc(tid, ovsreq_del_eth, "none", name, num);
@@ -285,7 +274,7 @@ static void delay_add_lan_endp(void *data)
     {
     if (req->type == ovsreq_add_lan_eth)
       {
-      if (dpdk_fmt_tx_add_lan_eth(req->tid, req->lan_name, req->name, req->num))
+      if (fmt_tx_add_lan_eth(req->tid, req->lan_name, req->name, req->num))
         {
         KERR("%s %s %d", req->lan_name, req->name, req->num);
         dpdk_dyn_ack_add_lan_eth_KO(req->lan_name,req->name,req->num,"delayed");
@@ -294,7 +283,7 @@ static void delay_add_lan_endp(void *data)
       }
     else if (req->type == ovsreq_add_lan_tap)
       {
-      if (dpdk_fmt_tx_add_lan_tap(req->tid, req->lan_name, req->name))
+      if (fmt_tx_add_lan_tap(req->tid, req->lan_name, req->name))
         {
         KERR("%s %s", req->lan_name, req->name);
         dpdk_tap_resp_add_lan(1, req->lan_name, req->name);
@@ -326,12 +315,12 @@ static void delay_add_lan_endp(void *data)
 /****************************************************************************/
 int dpdk_msg_send_add_lan_tap(char *lan_name, char *name)
 { 
-  int result = -1, tid = get_next_tid();
+  int result = -1, tid = utils_get_next_tid();
   t_ovslan *cur = lan_find(lan_name);
   t_ovsreq *ovsreq;
   if (cur == NULL)
     {
-    result = dpdk_fmt_tx_add_lan(tid, lan_name);
+    result = fmt_tx_add_lan(tid, lan_name);
     if (result)
       {
       KERR("%s %s", lan_name, name);
@@ -344,7 +333,7 @@ int dpdk_msg_send_add_lan_tap(char *lan_name, char *name)
     }
   else if (cur->refcount > 0) 
     {
-    result = dpdk_fmt_tx_add_lan_tap(tid, lan_name, name);
+    result = fmt_tx_add_lan_tap(tid, lan_name, name);
     if (result)
       KERR("%s %s", lan_name, name);
     else
@@ -363,10 +352,10 @@ int dpdk_msg_send_add_lan_tap(char *lan_name, char *name)
 /****************************************************************************/
 int dpdk_msg_send_del_lan_tap(char *lan_name, char *name)
 {
-  int result, tid = get_next_tid();
+  int result, tid = utils_get_next_tid();
   if (!lan_find(lan_name))
     KERR("%s %s", lan_name, name);
-  result = dpdk_fmt_tx_del_lan_tap(tid, lan_name, name);
+  result = fmt_tx_del_lan_tap(tid, lan_name, name);
   if (result)
     KERR("%s %s", lan_name, name);
   else
@@ -378,12 +367,12 @@ int dpdk_msg_send_del_lan_tap(char *lan_name, char *name)
 /****************************************************************************/
 int dpdk_msg_send_add_lan_eth(char *lan_name, char *name, int num)
 {
-  int result = -1, tid = get_next_tid();
+  int result = -1, tid = utils_get_next_tid();
   t_ovslan *cur = lan_find(lan_name);
   t_ovsreq *ovsreq;
   if (cur == NULL)
     {
-    result = dpdk_fmt_tx_add_lan(tid, lan_name);
+    result = fmt_tx_add_lan(tid, lan_name);
     if (result)
       {
       KERR("%s %s %d", lan_name, name, num);
@@ -396,7 +385,7 @@ int dpdk_msg_send_add_lan_eth(char *lan_name, char *name, int num)
     }
   else if (cur->refcount > 0) 
     {
-    result = dpdk_fmt_tx_add_lan_eth(tid, lan_name, name, num);
+    result = fmt_tx_add_lan_eth(tid, lan_name, name, num);
     if (result)
       KERR("%s %s %d", lan_name, name, num);
     else
@@ -416,10 +405,10 @@ int dpdk_msg_send_add_lan_eth(char *lan_name, char *name, int num)
 /****************************************************************************/
 int dpdk_msg_send_del_lan_eth(char *lan_name, char *name, int num)
 {
-  int result, tid = get_next_tid();
+  int result, tid = utils_get_next_tid();
   if (!lan_find(lan_name))
     KERR("%s %s %d", lan_name, name, num);
-  result = dpdk_fmt_tx_del_lan_eth(tid, lan_name, name, num);
+  result = fmt_tx_del_lan_eth(tid, lan_name, name, num);
   if (result)
     KERR("%s %s %d", lan_name, name, num);
   else
@@ -508,9 +497,10 @@ void dpdk_msg_ack_lan_endp(int tid, char *lan_name, char *name, int num,
       {
       if (lan_refcount_dec(lan_name, __LINE__) == 1)
         {
-        ntid = get_next_tid();
+        ntid = utils_get_next_tid();
         ovsreq_alloc(ntid, cur->type, cur->lan_name, cur->name, cur->num);
-        if (dpdk_fmt_tx_del_lan(ntid, lan_name))
+        phy_evt_lan_del_done(eth_type_dpdk, lan_name);
+        if (fmt_tx_del_lan(ntid, lan_name))
           {
           KERR("%s", lan_name);
           if (cur->type == ovsreq_del_lan_eth)
@@ -574,7 +564,7 @@ void dpdk_msg_ack_lan(int tid, char *lan_name,
       else
         {
         lan_refcount_inc(cur->lan_name, __LINE__);
-        ntid = get_next_tid();
+        ntid = utils_get_next_tid();
         ovsreq=ovsreq_alloc(ntid,cur->type,cur->lan_name,cur->name,cur->num);
         ovsreq_free(tid);
         clownix_timeout_add(10,delay_add_lan_endp,(void *)ovsreq,NULL,NULL);
@@ -633,7 +623,6 @@ static void timer_msg_beat(void *data)
         break;
 
         case ovsreq_del_eth:
-          KERR("%d %s %d", cur->tid, cur->name, cur->num);
           ovsreq_free(cur->tid);
         break;
 
@@ -671,7 +660,6 @@ void dpdk_msg_vlan_exist_no_more(char *lan)
 /****************************************************************************/
 void dpdk_msg_init(void)
 {
-  g_tid = 0;
   g_head_ovsreq = NULL;
   g_head_ovslan = NULL;
   clownix_timeout_add(50, timer_msg_beat, NULL, NULL, NULL);

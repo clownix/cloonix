@@ -38,6 +38,8 @@
 
 int check_before_start_launch(char **argv);
 void set_bulkvm(int nb, t_slowperiodic *slowperiodic);
+void update_topo_phy(int nb_phy, t_topo_phy *phy);
+void update_topo_pci(int nb_pci, t_topo_pci *pci);
 
 /*---------------------------------------------------------------------------*/
 typedef struct t_vm_config
@@ -151,6 +153,8 @@ void callback_topo(int tid, t_topo_info *topo)
     g_not_first_callback_topo = 1;
     pid_clone_init();
     }
+  update_topo_phy(topo->nb_phy, topo->phy);
+  update_topo_pci(topo->nb_pci, topo->pci);
 }
 /*--------------------------------------------------------------------------*/
 

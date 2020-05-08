@@ -8,7 +8,7 @@ BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
 
 
-OBJ_DIR=./obj
+OBJ_DIR=./obj/
 VPATH=./src
 
 EXE = qmonitor

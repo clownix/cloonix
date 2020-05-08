@@ -3,6 +3,7 @@ set -e
 HERE=`pwd`
 TARGZ=${HERE}/../../../targz_store
 CLOONIX_COMMON=${HERE}/../../../cloonix/common
+MESON_NINJA=${CLOONIX_COMMON}/meson_ninja
 TARGET=${CLOONIX_COMMON}/spice/spice_lib
 if [ ! -d ${TARGET} ]; then
   echo
@@ -13,22 +14,20 @@ if [ ! -d ${TARGET} ]; then
 fi
 #----------------------------------------------------------
 cd ${TARGET}
+rm -rf ${TARGET}/spice
 tar xvf ${TARGZ}/spice.tar.gz
 cd ${TARGET}/spice
+sed -i 52s/true/false/ meson_options.txt
 export PKG_CONFIG_PATH=${TARGET}/pkgconfig
-sed -i s"/PACKAGE_VERSION=\(.*\)/PACKAGE_VERSION='0.14.2'/" configure
-./configure --prefix=${TARGET} \
-            --enable-gstreamer=yes \
-            --libdir=${TARGET} \
-            --datarootdir=${TARGET} \
-            --disable-celt051 \
-            --disable-smartcard \
-            --disable-client \
-            --disable-static \
-            --disable-lz4 \
-            --disable-opus \
-            --enable-python-checks
-make clean
-make
-make install
+export PATH=${MESON_NINJA}/ninja:$PATH
+${MESON_NINJA}/meson/meson.py build
+cd build
+${MESON_NINJA}/meson/meson.py configure --prefix=${TARGET} \
+                                        --datadir=${TARGET} \
+                                        --libdir=${TARGET} \
+                                        --includedir=${TARGET} 
+
+ninja
+ninja install
+
 

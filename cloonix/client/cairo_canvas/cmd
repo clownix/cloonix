@@ -1,5 +1,6 @@
 #!/bin/bash
 HERE=`pwd`
+set -e
 for i in ${HERE}/../lib_client \
          ${HERE}/crcanvas_gtk \
          ${HERE}/src/bank \

@@ -62,17 +62,16 @@ void client_topo_tst_sub(t_topo_cb cb);
 void client_promisc_set(int tid, t_end_cb cb, char *name, int eth, int promisc);
 
 
-void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_dpdk, int nb_eth,
-                   int nb_wlan, int vm_config_flags, int vm_config_param,
-                   int cpu_qty, int mem_qty, 
-                   char *kernel, char *root_fs, char *install_cdrom,
-                   char *added_cdrom, char *added_disk, char *p9_host_share,
-                   t_eth_params *eth_params);
+void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
+                   t_eth_table *eth_tab, int vm_config_flags,
+                   int vm_config_param, int cpu_qty, int mem_qty, char *kernel,
+                   char *root_fs, char *install_cdrom, char *added_cdrom,
+                   char *added_disk, char *p9_host_share);
 
 void client_sav_vm(int tid, t_end_cb cb, char *nm, int type, char *new_dir_path);
 void client_sav_vm_all(int tid, t_end_cb cb, int type, char *new_dir_path);
-void client_reboot_vm(int tid, t_end_cb cb, char *nm);
-void client_halt_vm(int tid, t_end_cb cb, char *nm);
+void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest);
+void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest);
 void client_del_vm(int tid, t_end_cb cb, char *nm);
 void client_add_sat(int tid, t_end_cb cb, char *name, 
                     int mutype, t_c2c_req_info *c2c_req_info);

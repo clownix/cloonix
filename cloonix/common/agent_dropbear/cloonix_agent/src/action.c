@@ -94,81 +94,6 @@ static void call_poweroff(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int fs_mount_slash(void)
-{
-  int result = -1;
-  struct mntent *ment;
-  char const *mtab = "/proc/self/mounts";
-  FILE *fp;
-  fp = setmntent(mtab, "r");
-  if (!fp)
-    KERR("%s", mtab);
-  else
-    {
-    while ((ment = getmntent(fp)))
-      {
-      if ((ment->mnt_fsname[0] != '/') ||
-          (strcmp(ment->mnt_type, "smbfs") == 0) ||
-          (strcmp(ment->mnt_type, "cifs") == 0))
-        continue;
-      if (!strcmp(ment->mnt_dir, "/"))
-        result = 0;
-      }
-    endmntent(fp);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void call_fifreeze(void)
-{
-  int fd, result =-1;
-  if (fs_mount_slash())
-    KERR(" ");
-  else
-    {
-    fd = open("/", O_RDONLY);
-    if (fd <= 0)
-      KERR(" ");
-    else
-      {
-      sync();
-      system("echo \"ENTERING FIFREEZE REQ by cloonix_agent\" | wall");
-      result = ioctl(fd, FIFREEZE);
-      if (result == -1)
-        KERR("%d %d", errno, EOPNOTSUPP);
-      }
-    close (fd);
-    }
-
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void call_fithaw(void)
-{
-  int fd, ret;
-  if (fs_mount_slash())
-    KERR(" ");
-  else
-    {
-    fd = open("/", O_RDONLY);
-    if (fd <= 0)
-      KERR(" ");
-    else
-      {
-      do
-        ret = ioctl(fd, FITHAW);
-      while(ret == 0);
-      }
-    close (fd);
-    }
-  system("echo \"EXIT FROM FIFREEZE REQ by cloonix_agent\" | wall");
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void call_reboot(void)
 {
   system("echo \"REBOOT IN 1 SEC by cloonix_agent\" | wall");
@@ -490,7 +415,6 @@ static void helper_rx_virtio_nodido_llid(int type, int val, char *rx)
       case header_val_reboot:
         if (sscanf(rx, LABOOT, &val_id) == 1)
           {
-          send_to_virtio(0, len, header_type_ctrl, header_val_reboot, g_buf);
           call_reboot();
           }
         else
@@ -499,36 +423,11 @@ static void helper_rx_virtio_nodido_llid(int type, int val, char *rx)
       case header_val_halt:
         if (sscanf(rx, LAHALT, &val_id) == 1)
           {
-          send_to_virtio(0, len, header_type_ctrl, header_val_halt, g_buf);
           call_poweroff();
           }
         else
           KERR("%s", rx);
         break;
-
-      case header_val_fifreeze_freeze:
-        if (sscanf(rx, LAFIFREEZE_FREEZE, &val_id) == 1)
-          {
-          sync();
-          call_fifreeze();
-          send_to_virtio(0, len, header_type_ctrl, 
-                                 header_val_fifreeze_freeze, g_buf);
-          }
-        else
-          KERR("%s", rx);
-        break;
-
-      case header_val_fifreeze_thaw:
-        if (sscanf(rx, LAFIFREEZE_THAW, &val_id) == 1)
-          {
-          send_to_virtio(0, len, header_type_ctrl,
-                                 header_val_fifreeze_thaw, g_buf);
-          call_fithaw();
-          }
-        else
-          KERR("%s", rx);
-        break;
-
 
       default:
         KERR("%d", val);

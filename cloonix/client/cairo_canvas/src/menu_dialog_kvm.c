@@ -29,14 +29,20 @@
 #include "cloonix.h"
 
 GtkWidget *get_main_window(void);
-
-static t_custom_vm custom_vm;
+static t_custom_vm g_custom_vm;
 static t_slowperiodic g_bulkvm[MAX_BULK_FILES];
 static t_slowperiodic g_bulkvm_photo[MAX_BULK_FILES];
 static int g_nb_bulkvm;
 static GtkWidget *g_custom_dialog, *g_entry_rootfs;
-
 void menu_choice_kvm(void);
+
+typedef struct t_cb_eth_type
+{
+  int rank;
+  int eth_type;
+  GtkWidget **rad;
+} t_cb_eth_type;
+
 
 /****************************************************************************/
 static void qcow2_get(GtkWidget *check, gpointer data)
@@ -85,7 +91,7 @@ static GtkWidget *get_bulkvm(void)
 /*****************************************************************************/
 t_custom_vm *get_ptr_custom_vm (void)
 {
-  return (&custom_vm);
+  return (&g_custom_vm);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -94,14 +100,14 @@ void get_custom_vm (t_custom_vm **cust_vm)
 {
   static t_custom_vm cust;
   *cust_vm = &cust;
-  memcpy(&cust, &custom_vm, sizeof(t_custom_vm));
-  if (!strcmp(custom_vm.name, "Cloon"))
+  memcpy(&cust, &g_custom_vm, sizeof(t_custom_vm));
+  if (!strcmp(g_custom_vm.name, "Cloon"))
     {
-    custom_vm.current_number += 1;
-    sprintf(cust.name, "%s%d", custom_vm.name, custom_vm.current_number);
+    g_custom_vm.current_number += 1;
+    sprintf(cust.name, "%s%d", g_custom_vm.name, g_custom_vm.current_number);
     }
   else
-    sprintf(cust.name, "%s", custom_vm.name);
+    sprintf(cust.name, "%s", g_custom_vm.name);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -116,70 +122,31 @@ static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
 }
 /*--------------------------------------------------------------------------*/
 
-///****************************************************************************/
-//static void is_full_virt_toggle(GtkToggleButton *togglebutton,
-//                                gpointer user_data)
-//{
-//  if (gtk_toggle_button_get_active(togglebutton))
-//    custom_vm.is_full_virt = 1;
-//  else
-//    custom_vm.is_full_virt = 0;
-//}
-///*--------------------------------------------------------------------------*/
-//
-///****************************************************************************/
-//static void is_uefi_toggle(GtkToggleButton *togglebutton,         
-//                                 gpointer user_data)
-//{
-//  if (gtk_toggle_button_get_active(togglebutton))
-//    custom_vm.is_uefi = 1;
-//  else
-//    custom_vm.is_uefi = 0;
-//}
-///*--------------------------------------------------------------------------*/
-
-
-// /****************************************************************************/
-// static void has_p9_host_share_toggle(GtkToggleButton *togglebutton,
-//                                      gpointer user_data)
-// {
-//   if (gtk_toggle_button_get_active(togglebutton))
-//     custom_vm.has_p9_host_share = 1;
-//   else
-//     custom_vm.has_p9_host_share = 0;
-// }
-// /*--------------------------------------------------------------------------*/
-
 /****************************************************************************/
 static void is_cisco_toggle(GtkToggleButton *togglebutton, gpointer user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton))
-    custom_vm.is_cisco = 1;
+    g_custom_vm.is_cisco = 1;
   else
-    custom_vm.is_cisco = 0;
+    g_custom_vm.is_cisco = 0;
 }
 /*--------------------------------------------------------------------------*/
-
-
 
 /****************************************************************************/
 static void is_persistent_toggle (GtkToggleButton *togglebutton,
                               gpointer user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton))
-    custom_vm.is_persistent = 1;
+    g_custom_vm.is_persistent = 1;
   else
-    custom_vm.is_persistent = 0;
+    g_custom_vm.is_persistent = 0;
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void update_cust(t_custom_vm *cust, GtkWidget *entry_name, 
                         GtkWidget *entry_p9_host_share,
-                        GtkWidget *entry_cpu, GtkWidget *entry_ram,
-                        GtkWidget *entry_dpdk_nb, GtkWidget *entry_eth_nb,
-                        GtkWidget *entry_wlan_nb) 
+                        GtkWidget *entry_cpu, GtkWidget *entry_ram)
 {
   char *tmp;
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_name));
@@ -192,58 +159,121 @@ static void update_cust(t_custom_vm *cust, GtkWidget *entry_name,
   memset(cust->kvm_used_rootfs, 0, MAX_NAME_LEN);
   strncpy(cust->kvm_used_rootfs, tmp, MAX_NAME_LEN-1);
 
-//  if (custom_vm.has_p9_host_share)
-//    {
-//    tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_p9_host_share));
-//    memset(cust->kvm_p9_host_share, 0, MAX_PATH_LEN);
-//    strncpy(cust->kvm_p9_host_share, tmp, MAX_PATH_LEN-1);
-//    }
-
-
   cust->cpu = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_cpu));
   cust->mem = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_ram));
-  cust->nb_dpdk=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_dpdk_nb));
-  cust->nb_eth=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_eth_nb));
-  cust->nb_wlan=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_wlan_nb));
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void nb_eth_activate_cb(GtkWidget *entry_eth_nb)
+static void free_eth_type(GtkWidget *check, gpointer user_data)
 {
-
-  int nb_eth=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_eth_nb));
-  custom_vm.nb_eth = nb_eth;
+  t_cb_eth_type **cb_eth_type = (t_cb_eth_type **) user_data;
+  int i;
+  for (i=0; i<5; i++)
+    free(cb_eth_type[i]);
+  free(cb_eth_type);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void nb_wlan_activate_cb(GtkWidget *entry_wlan_nb)
+static void eth_type_cb(GtkWidget *check, gpointer user_data)
 {
+  t_cb_eth_type *cb_eth_type = (t_cb_eth_type *) user_data;
+  t_custom_vm *cust_vm = get_ptr_custom_vm();
+  int i,j, max_rank = MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM + MAX_WLAN_VM;
+  int nb_tot_eth = 0, rank = cb_eth_type->rank;
+  int eth_type = cb_eth_type->eth_type; 
+  GtkWidget **rad = cb_eth_type->rad;
+  cust_vm->eth_tab[rank].eth_type = eth_type;
 
-  int nb_wlan=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_wlan_nb));
-  custom_vm.nb_wlan = nb_wlan;
+  if (eth_type == eth_type_none)
+    {
+    for (i=rank + 1; i<max_rank; i++)
+      {
+      cust_vm->eth_tab[i].eth_type = eth_type_none;
+      if (i < 7)
+        {
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[5*i]),TRUE);
+        for(j=1; j<5; j++)
+          gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[5*i+j]),FALSE);
+        }
+      }
+    } 
+  else
+    {
+    for (i=0; i<rank; i++)
+      {
+      if (cust_vm->eth_tab[i].eth_type == eth_type_none)
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[5*rank]),TRUE);
+      } 
+    }
+  for (i=0; i < max_rank; i++)
+    {
+    if (cust_vm->eth_tab[i].eth_type == eth_type_sock)
+      nb_tot_eth += 1;
+    else if (cust_vm->eth_tab[i].eth_type == eth_type_dpdk)
+      nb_tot_eth += 1;
+    else if (cust_vm->eth_tab[i].eth_type == eth_type_vhost)
+      nb_tot_eth += 1;
+    else if (cust_vm->eth_tab[i].eth_type == eth_type_wlan)
+      nb_tot_eth += 1;
+    else if ((cust_vm->eth_tab[i].eth_type != eth_type_none) &&
+             (cust_vm->eth_tab[i].eth_type != 0))
+      KOUT("%d %d %d", i, nb_tot_eth, cust_vm->eth_tab[i].eth_type);
+    }
+  cust_vm->nb_tot_eth = nb_tot_eth;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void nb_dpdk_activate_cb(GtkWidget *entry_dpdk_nb)
+static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
+                                   int rank, GtkWidget **rad)
 {
-
-  int nb_dpdk=(int )gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_dpdk_nb));
-  custom_vm.nb_dpdk = nb_dpdk;
+  unsigned long int i;
+  GtkWidget *hbox;
+  t_cb_eth_type **cb_eth_type;
+  char title[MAX_NAME_LEN];
+  unsigned long int endp_type[6]={eth_type_none, eth_type_sock, eth_type_dpdk,
+                                  eth_type_vhost, eth_type_wlan};
+  
+  memset(title, 0, MAX_NAME_LEN); 
+  snprintf(title, MAX_NAME_LEN-1, "Eth%d", rank);
+  cb_eth_type = (t_cb_eth_type **) malloc(6 * sizeof(t_cb_eth_type *));
+  for (i=0; i<5; i++)
+    {
+    cb_eth_type[i] = (t_cb_eth_type *) malloc(sizeof(t_cb_eth_type)); 
+    memset(cb_eth_type[i], 0, sizeof(t_cb_eth_type));
+    cb_eth_type[i]->rank = rank;
+    cb_eth_type[i]->eth_type = endp_type[i];
+    cb_eth_type[i]->rad = rad;
+    }
+  hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+  for (i=0; i<5; i++)
+    {
+    gtk_box_pack_start(GTK_BOX(hbox), rad[5*rank + i], TRUE, TRUE, 10);
+    g_signal_connect(G_OBJECT(rad[5*rank + i]),"clicked",
+                       (GCallback) eth_type_cb,
+                       (gpointer) cb_eth_type[i]);
+    }
+  append_grid(grid, hbox, title, (*line_nb)++);
+  g_signal_connect (G_OBJECT (hbox), "destroy", 
+                    (GCallback) free_eth_type, cb_eth_type);
 }
 /*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 static void custom_vm_dialog(t_custom_vm *cust)
 {
-  int response, line_nb = 0;
+  int i, j, response, line_nb = 0;
   GtkWidget *entry_name, *entry_ram; 
-  GtkWidget *entry_p9_host_share=NULL; 
-  GtkWidget *entry_cpu=NULL, *entry_dpdk_nb, *entry_eth_nb, *entry_wlan_nb;
+  GtkWidget *entry_p9_host_share=NULL, *entry_cpu=NULL; 
   GtkWidget *grid, *parent, *is_persistent;
   GtkWidget *is_cisco, *qcow2_rootfs, *bulkvm_menu;
+  GtkWidget *rad[7*5];
+  GSList *group;
+  char *lib[6] = {"n", "s", "d", "v", "w"};
+  t_custom_vm *cust_vm;
 
   if (g_custom_dialog)
     return;
@@ -263,41 +293,15 @@ static void custom_vm_dialog(t_custom_vm *cust)
   append_grid(grid, entry_name, "Name:", line_nb++);
 
   is_persistent = gtk_check_button_new_with_label("persistent_rootfs");
-  if (custom_vm.is_persistent)
+  if (g_custom_vm.is_persistent)
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), TRUE);
   else
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), FALSE);
   g_signal_connect(is_persistent,"toggled",G_CALLBACK(is_persistent_toggle),NULL);
 
 
-
-//  is_uefi = gtk_check_button_new_with_label("uefi");
-//  if (custom_vm.is_uefi)
-//    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_uefi), TRUE);
-//  else
-//    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_uefi), FALSE);
-//  g_signal_connect(is_uefi,"toggled",
-//                   G_CALLBACK(is_uefi_toggle),NULL);
-//
-//  is_full_virt = gtk_check_button_new_with_label("full virt");
-//  if (custom_vm.is_full_virt)
-//    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_full_virt), TRUE);
-//  else
-//    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_full_virt), FALSE);
-//  g_signal_connect(is_full_virt,"toggled",
-//                   G_CALLBACK(is_full_virt_toggle),NULL);
-//
-
-//   has_p9_host_share = gtk_check_button_new_with_label("9p share host files");
-// 
-//   if (custom_vm.has_p9_host_share)
-//     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_p9_host_share), TRUE);
-//   else
-//     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_p9_host_share), FALSE);
-//   g_signal_connect(has_p9_host_share,"toggled", G_CALLBACK(has_p9_host_share_toggle),NULL);
-
    is_cisco = gtk_check_button_new_with_label("csr1000v qcow2");
-   if (custom_vm.is_cisco)
+   if (g_custom_vm.is_cisco)
      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_cisco), TRUE);
    else
      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_cisco), FALSE);
@@ -305,14 +309,10 @@ static void custom_vm_dialog(t_custom_vm *cust)
 
   append_grid(grid, is_cisco, "Is cisco:", line_nb++);
 
-  append_grid(grid, is_persistent, "remanence of file-system:", line_nb++);
-//  append_grid(grid, is_uefi, "uefi:", line_nb++);
-//  append_grid(grid, is_full_virt, "full virt:", line_nb++);
-//  append_grid(grid, has_p9_host_share, "9p host share files:", line_nb++);
-
+  append_grid(grid, is_persistent, "remanence:", line_nb++);
   entry_cpu = gtk_spin_button_new_with_range(1, 32, 1);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_cpu), cust->cpu);
-  append_grid(grid, entry_cpu, "Nb cpu:", line_nb++);
+  append_grid(grid, entry_cpu, "Cpu:", line_nb++);
 
   entry_ram = gtk_spin_button_new_with_range(128, 50000, 16);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_ram), cust->mem);
@@ -328,30 +328,23 @@ static void custom_vm_dialog(t_custom_vm *cust)
   gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
   gtk_widget_show_all(bulkvm_menu);
 
-//  if (custom_vm.has_p9_host_share)
-//    {
-//    entry_p9_host_share = gtk_entry_new();
-//    gtk_entry_set_text(GTK_ENTRY(entry_p9_host_share), cust->kvm_p9_host_share);
-//    append_grid(grid,entry_p9_host_share,"Path to host share:",line_nb++);
-//    }
 
-  entry_dpdk_nb = gtk_spin_button_new_with_range(0, MAX_DPDK_VM, 1);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_dpdk_nb), cust->nb_dpdk);
-  g_signal_connect(G_OBJECT(entry_dpdk_nb),"value-changed",
-                  (GCallback) nb_dpdk_activate_cb, (gpointer) cust);
-  append_grid(grid, entry_dpdk_nb, "Nb dpdk eth:", line_nb++);
-
-  entry_eth_nb = gtk_spin_button_new_with_range(0, MAX_ETH_VM, 1);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_eth_nb), cust->nb_eth);
-  g_signal_connect(G_OBJECT(entry_eth_nb),"value-changed", 
-                  (GCallback) nb_eth_activate_cb, (gpointer) cust);
-  append_grid(grid, entry_eth_nb, "Nb classic eth:", line_nb++);
-
-  entry_wlan_nb = gtk_spin_button_new_with_range(0, MAX_WLAN_VM, 1);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_wlan_nb), cust->nb_wlan);
-  g_signal_connect(G_OBJECT(entry_wlan_nb),"value-changed", 
-                  (GCallback) nb_wlan_activate_cb, (gpointer) cust);
-  append_grid(grid, entry_wlan_nb, "Nb hwsim wlan:", line_nb++);
+  cust_vm = get_ptr_custom_vm();
+  for (i=0; i<7; i++)
+    {
+    group = NULL;
+    for (j=0; j<5; j++)
+      {
+      rad[i*5 + j] = gtk_radio_button_new_with_label(group, lib[j]);
+      group  = gtk_radio_button_get_group(GTK_RADIO_BUTTON(rad[i*5 + j]));
+      if (cust_vm->eth_tab[i].eth_type == j+eth_type_none)
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[5*i + j]),TRUE);
+      }
+    }
+  for (i=0; i<7; i++)
+    {  
+    flags_eth_check_button(grid, &line_nb, i, rad);
+    }
 
   gtk_container_set_border_width(GTK_CONTAINER(grid), 5);
   gtk_box_pack_start(
@@ -367,9 +360,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
     }
   else
     {
-    update_cust(cust, entry_name, entry_p9_host_share, 
-                entry_cpu, entry_ram, entry_dpdk_nb, entry_eth_nb,
-                entry_wlan_nb);
+    update_cust(cust, entry_name, entry_p9_host_share, entry_cpu, entry_ram);
     gtk_widget_destroy(g_custom_dialog);
     g_custom_dialog = NULL;
     }
@@ -379,32 +370,32 @@ static void custom_vm_dialog(t_custom_vm *cust)
 /****************************************************************************/
 void menu_choice_kvm(void)
 {
-  custom_vm_dialog(&custom_vm);
+  custom_vm_dialog(&g_custom_vm);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void menu_dialog_vm_init(void)
 {
   char *name;
   if (inside_cloonix(&name))
-    snprintf(custom_vm.name, MAX_NAME_LEN-3, "IN_%s_n", name);
+    snprintf(g_custom_vm.name, MAX_NAME_LEN-3, "IN_%s_n", name);
   else
-    strcpy(custom_vm.name, "Cloon");
-  strcpy(custom_vm.kvm_used_rootfs, "buster.qcow2");
-  custom_vm.current_number = 0;
-  custom_vm.is_persistent = 0;
-  custom_vm.is_sda_disk = 0;
-  custom_vm.is_uefi = 0;
-  custom_vm.is_full_virt = 0;
-  custom_vm.has_p9_host_share = 0;
-  custom_vm.is_cisco = 0;
-  custom_vm.cpu = 2;
-  custom_vm.mem = 2000;
-  custom_vm.nb_dpdk = 0;
-  custom_vm.nb_eth = 3;
-  custom_vm.nb_wlan = 0;
+    strcpy(g_custom_vm.name, "Cloon");
+  strcpy(g_custom_vm.kvm_used_rootfs, "buster.qcow2");
+  g_custom_vm.current_number = 0;
+  g_custom_vm.is_persistent = 0;
+  g_custom_vm.is_sda_disk = 0;
+  g_custom_vm.is_uefi = 0;
+  g_custom_vm.is_full_virt = 0;
+  g_custom_vm.has_p9_host_share = 0;
+  g_custom_vm.is_cisco = 0;
+  g_custom_vm.cpu = 2;
+  g_custom_vm.mem = 2000;
+  g_custom_vm.nb_tot_eth = 3;
+  g_custom_vm.eth_tab[0].eth_type = eth_type_sock;
+  g_custom_vm.eth_tab[1].eth_type = eth_type_sock;
+  g_custom_vm.eth_tab[2].eth_type = eth_type_sock;
   g_custom_dialog = NULL;
   memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   g_nb_bulkvm = 0;

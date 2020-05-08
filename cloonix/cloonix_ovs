@@ -35,7 +35,6 @@ cloonix_name=$1
 ovs_type=$2
 export OVS_BINDIR="${CLOONIX_TREE}/server/dpdk"
 export OVS_RUNDIR="${WORK}/${cloonix_name}/dpdk"
-export OVS_LOGDIR=$OVS_RUNDIR
 export OVS_DBDIR=$OVS_RUNDIR
 export XDG_RUNTIME_DIR=$OVS_RUNDIR
 
@@ -53,13 +52,13 @@ case $ovs_type in
     sudo OVS_RUNDIR=$OVS_RUNDIR XDG_RUNTIME_DIR=$OVS_RUNDIR ${OVS_BINDIR}/bin/ovs-ofctl "$@"
       ;;
   vsctl)
-    sudo XDG_RUNTIME_DIR=$OVS_RUNDIR ${OVS_BINDIR}/bin/ovs-vsctl --db=unix:${OVS_DBDIR}/ovsdb_server.sock "$@"
+    sudo ${OVS_BINDIR}/bin/ovs-vsctl --db=unix:${OVS_DBDIR}/ovsdb_server.sock "$@"
       ;;
   procinfo)
-    sudo XDG_RUNTIME_DIR=$OVS_RUNDIR ${OVS_BINDIR}/bin/dpdk-proc-info "$@"
+    sudo XDG_RUNTIME_DIR=$OVS_RUNDIR ${OVS_BINDIR}/bin/dpdk-proc-info --file-prefix=cloonix${cloonix_name} "$@"
       ;;
   appctl)
-    sudo XDG_RUNTIME_DIR=$OVS_RUNDIR ${OVS_BINDIR}/bin/ovs-appctl --target=${OVS_DBDIR}/ovs-vswitchd.ctl "$@"
+    sudo ${OVS_BINDIR}/bin/ovs-appctl --target=${OVS_DBDIR}/ovs-vswitchd.ctl "$@"
       ;;
     *)
   echo choice:

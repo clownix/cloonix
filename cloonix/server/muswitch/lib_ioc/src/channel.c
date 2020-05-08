@@ -575,10 +575,10 @@ static void evt_set_blkd_epoll(t_all_ctx *all_ctx, int cidx,
   switch (our_mutype)
     {
     case mulan_type:
-    case endp_type_dpdk_tap:
     case endp_type_tap:
     case endp_type_wif:
-    case endp_type_raw:
+    case endp_type_phy:
+    case endp_type_pci:
     case endp_type_snf:
     case endp_type_c2c:
     case endp_type_nat:
@@ -590,8 +590,9 @@ static void evt_set_blkd_epoll(t_all_ctx *all_ctx, int cidx,
       else
         blkd_stop_rx_counter_increment((void *) all_ctx, llid);
       break;
+    case endp_type_kvm_sock:
     case endp_type_kvm_dpdk:
-    case endp_type_kvm_eth:
+    case endp_type_kvm_vhost:
     case endp_type_kvm_wlan:
     case endp_type_mtcp:
       if (ioc_ctx->g_channel[cidx].red_to_stop_reading == 0)

@@ -34,8 +34,9 @@ if [ ! -e ${BULK}/${VM_NAME}.qcow2 ]; then
 fi
 
 #######################################################################
+PARAMS="ram=2048 cpu=2 eth=www"
 for i in one two three; do
-  cloonix_cli ${NET} add kvm ${i} ram=2048 cpu=2 dpdk=0 sock=0 hwsim=3 ${VM_NAME}.qcow2 & 
+  cloonix_cli ${NET} add kvm ${i} $PARAMS ${VM_NAME}.qcow2 & 
 done
 #----------------------------------------------------------------------
 sleep 5

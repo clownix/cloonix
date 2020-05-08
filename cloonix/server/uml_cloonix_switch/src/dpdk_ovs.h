@@ -15,12 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int dpdk_ovs_get_dpdk_usable(void);
 int dpdk_ovs_muovs_ready(void);
-int dpdk_ovs_add_lan_tap(int llid, int tid, char *lan, char *name);
-int dpdk_ovs_del_lan_tap(int llid, int tid, char *lan, char *name);
-int dpdk_ovs_add_tap(int llid, int tid, char *name, int idx);
-int dpdk_ovs_del_tap(int llid, int tid, char *name);
-int dpdk_ovs_exist_tap(char *name);
 
 int dpdk_ovs_get_nb(void);
 int  dpdk_ovs_try_send_diag_msg(int tid, char *cmd);
@@ -28,10 +24,8 @@ void dpdk_ovs_erase_endp_path(char *name, int nb_dpdk);
 void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line);
 void dpdk_ovs_pid_resp(int llid, char *name, int toppid, int pid);
 int  dpdk_ovs_find_with_llid(int llid);
-void dpdk_ovs_start_vm(char *name, int num, int idx);
-void dpdk_ovs_end_vm(char *name, int num);
-void dpdk_ovs_end_vm_qmp_shutdown(char *name);
-void dpdk_ovs_end_vm_kill_shutdown(char *name);
+void dpdk_ovs_add_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab);
+void dpdk_ovs_del_vm(char *name);
 void dpdk_ovs_ack_add_eth_vm(char *name, int is_ko);
 int  dpdk_ovs_eth_exists(char *name, int num);
 void dpdk_ovs_init(void);
