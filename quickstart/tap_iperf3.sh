@@ -38,6 +38,7 @@ cloonix_gui $NET
 #######################################################################
 for i in 1 2; do
   cloonix_cli $NET add kvm vm${i} ${PARAMS} ${DIST}.qcow2 & 
+  sleep 1
   cloonix_cli $NET add tap tap${i}
   cloonix_cli $NET add lan vm${i}  0 lan${i}
   cloonix_cli $NET add lan tap${i} 0 lan${i}
@@ -79,10 +80,10 @@ sleep 1
 echo
 #----------------------------------------------------------------------
 urxvt -title server2 -e cloonix_ssh $NET vm2 "iperf3 -s" &
-sleep 1
+sleep 2
 echo
 urxvt -title server1 -e iperf3 -s &
-sleep 1
+sleep 2
 echo
 urxvt -title client2 -e iperf3 -c 172.22.0.1 -t 10000 &
 sleep 1

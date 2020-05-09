@@ -299,7 +299,7 @@ static int begin_eth_type_sock(t_phy *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void set_flag_lan_ok(t_phy *cur, int flag)
+static void set_flag_lan(t_phy *cur, int flag)
 {
   if (cur->flag_lan_ok != flag)
     {
@@ -312,10 +312,10 @@ static void set_flag_lan_ok(t_phy *cur, int flag)
         cur->llid = 0;
         cur->tid = 0;
         }
-      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
     else
       cur->flag_lan_ok = 0;
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -354,12 +354,13 @@ static void timer_update_flag_lan(void *data)
           }
         else if (dpdk_dyn_lan_exists(lan))
           {
-          flag = 1;
+          if (cur->dpdk_attach_ok)
+            flag = 1;
           }
         }
       else
         KOUT("%d", cur->eth_type);
-      set_flag_lan_ok(cur, flag);
+      set_flag_lan(cur, flag);
       }
     cur = cur->next;
     }
@@ -376,7 +377,7 @@ int phy_evt_update_lan_add(t_phy *cur, int llid, int tid)
     {
     lan = cur->lan.lan[0].lan;
     eth_type = eth_type_update(cur->name, lan);
-    if (cur->llid)
+    if ((cur->llid) && (cur->llid != llid))
       KERR("%d %d", cur->llid, llid);
     cur->llid = llid;
     cur->tid = tid;
@@ -519,6 +520,22 @@ void phy_evt_lan_del_done(int eth_type, char *lan)
   t_phy *cur = phy_mngt_lan_find(lan);
   if (cur)
     cur->flag_lan_ok = 0;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void phy_evt_end_eth_type_dpdk(char *lan, int status)
+{
+  t_phy *cur = phy_mngt_lan_find(lan);
+  if (!cur)
+    KERR("%s %d", lan, status);
+  else
+    {
+    cur->dpdk_attach_ok = status;
+    if (status == 0)
+      phy_mngt_lowest_clean_lan(cur);
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    }
 }
 /*--------------------------------------------------------------------------*/
 

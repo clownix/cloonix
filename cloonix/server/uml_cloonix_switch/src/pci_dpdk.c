@@ -30,6 +30,7 @@
 #include "phy_evt.h"
 #include "pci_dpdk.h"
 #include "dpdk_dyn.h"
+#include "suid_power.h"
 
 
 /****************************************************************************/
@@ -49,6 +50,7 @@ typedef struct t_pci_dpdk
 enum {
   state_min=100,
   state_wait_del_port,
+  state_wait_vfio_attach,
   state_wait_add_port,
   state_max,
 };
@@ -99,11 +101,12 @@ static t_pci_dpdk *find_pci_dpdk(char *pci)
 /****************************************************************************/
 static void fail_resp_req(t_pci_dpdk *cur)
 {
-  KERR("%s %s", cur->lan, cur->pci);
+  KERR("TIMEOUT FAIL %s %s", cur->lan, cur->pci);
   if (msg_exist_channel(cur->llid))
     send_status_ko(cur->llid, cur->tid, "KO");
   else
     KERR("%s %s", cur->lan, cur->pci);
+  phy_evt_end_eth_type_dpdk(cur->lan, 0);
   free_pci_dpdk(cur);
 }
 /*--------------------------------------------------------------------------*/
@@ -116,7 +119,7 @@ static void timer_pci(void *data)
     {
     next = cur->next;
     cur->count += 1;
-    if (cur->count == 20)
+    if (cur->count == 10)
       fail_resp_req(cur);
     cur = next;
     }
@@ -149,6 +152,7 @@ void pci_dpdk_ack_add(int tid, int is_ok, char *lan, char *pci)
       KERR("%s %s %d", pci, lan, cur->state);
     send_status_ok(cur->llid, cur->tid, "OK");
     free_pci_dpdk(cur);
+    phy_evt_end_eth_type_dpdk(lan, 1);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -187,24 +191,59 @@ void pci_dpdk_ack_del(int tid, int is_ok, char *lan, char *pci)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void pci_dpdk_ack_vfio_attach(int is_ok, char *pci)
+{
+  t_pci_dpdk *cur = find_pci_dpdk(pci);
+  int ovs_tid = utils_get_next_tid();
+  if (!cur)
+    KERR("%s", pci);
+  else
+    {
+    if (cur->state != state_wait_vfio_attach)
+      KERR("%s %s %d %d", pci, cur->lan, cur->state, state_wait_vfio_attach);
+    if (is_ok)
+      {
+      cur->ovs_tid = ovs_tid;
+      cur->state = state_wait_add_port;
+      if (fmt_tx_add_lan_pci_dpdk(ovs_tid, cur->lan, pci))
+        KERR("%s %s", pci, cur->lan);
+      }
+    else
+      KERR("Bad driver vfio-pci attach %s %s", pci, cur->lan);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int pci_dpdk_add(int llid, int tid, char *lan, char *pci)
 {
   int result = -1;
   int ovs_tid = utils_get_next_tid();
   t_pci_dpdk *cur = find_pci_dpdk(pci);
+  char *drv;
   if (cur)
     KERR("%s %s", pci, lan);
   else if (!dpdk_dyn_lan_exists(lan))
-    KERR("%s %s", pci, lan);
-  else if (fmt_tx_add_lan_pci_dpdk(ovs_tid, lan, pci))
     KERR("%s %s", pci, lan);
   else
     {
     cur = alloc_pci_dpdk(pci);
     strncpy(cur->lan, lan, MAX_NAME_LEN-1);
     strncpy(cur->pci, pci, MAX_NAME_LEN-1);
-    cur->state = state_wait_add_port;
-    cur->ovs_tid = ovs_tid;
+    drv = suid_power_get_drv(pci);
+    if (strcmp(drv, "vfio-pci"))
+      {
+      if (suid_power_req_vfio_attach(pci))
+        KERR("%s %s", lan, pci);
+      cur->state = state_wait_vfio_attach;
+      }
+    else
+      {
+      cur->ovs_tid = ovs_tid;
+      cur->state = state_wait_add_port;
+      if (fmt_tx_add_lan_pci_dpdk(ovs_tid, lan, pci))
+        KERR("%s %s", pci, lan);
+      }
     cur->llid = llid;
     cur->tid = tid;
     result = 0;

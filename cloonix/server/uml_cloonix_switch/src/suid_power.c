@@ -39,6 +39,7 @@
 #include "phy_mngt.h"
 #include "phy_evt.h"
 #include "vhost_eth.h"
+#include "pci_dpdk.h"
 
 static long long g_abs_beat_timer;
 static int g_ref_timer;
@@ -273,6 +274,10 @@ void suid_power_diag_resp(int llid, int tid, char *line)
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
     g_suid_power_root_resp_ok = 1;
     }
+  else if (sscanf(line, "cloonixsuid_resp_vfio_attach_ok: %s", name) == 1)
+    pci_dpdk_ack_vfio_attach(1, name);
+  else if (sscanf(line, "cloonixsuid_resp_vfio_attach_ko: %s", name) == 1)
+    pci_dpdk_ack_vfio_attach(0, name);
   else if (sscanf(line,
                   "cloonixsuid_resp_ifname_change_ok %s %d old:%s new:%s",
                   name, &num, old_name, new_name) == 4)
@@ -401,6 +406,26 @@ t_topo_pci *suid_power_get_pci_info(char *name)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+char *suid_power_get_drv(char *name)
+{
+  int i;
+  char *result = NULL;
+  static char drv[MAX_NAME_LEN];
+  for (i=0; i<g_nb_pci; i++)
+    {
+    if (!strcmp(g_topo_pci[i].pci, name))
+      {
+      memset(drv, 0, MAX_NAME_LEN);
+      strncpy(drv, g_topo_pci[i].drv, MAX_NAME_LEN-1);
+      result = drv;
+      break;
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 t_topo_phy *suid_power_get_phy_info(char *name)
 {
   int i;
@@ -510,6 +535,22 @@ void suid_power_ifname_change(char *name, int num, char *old, char *nw)
              name, num, old, nw);
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
     }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int suid_power_req_vfio_attach(char *pci)
+{
+  int result = -1;
+  char req[MAX_PATH_LEN];
+  if ((g_llid) && (msg_exist_channel(g_llid)))
+    {
+    memset(req, 0, MAX_PATH_LEN);
+    snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_req_vfio_attach: %s",pci);
+    rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    result = 0;
+    }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 

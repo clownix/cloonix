@@ -5,10 +5,6 @@ See directory cloonix for the LICENCE
 
 See clownix.net for a documentation which may not be up to date.
 
-All opens sources compiled within cloonix such as dpdk, openvswitch, qemu,
-spice, openssh... are stored at:
-clownix.net/downloads/cloonix-<major>-<minor>/targz_store.tar.gz
-
 This version v06-00 is the latest (if this README is up to date).
 -----------------------------------------------------------------------------
 
@@ -20,30 +16,36 @@ compilation and run work, but for other distributions, you may have to
 ajust needed packages.
 
 cd cloonix
+
 sudo ./install_depends build
+
 wget http://clownix.net/downloads/cloonix-06-00/targz_store.tar.gz
+
 tar xvf targz_store.tar.gz
+
 ./doitall
-cd -
 
 -----------------------------------------------------------------------------
 HOWTO GET A WORKING VM:
 
 mkdir -p ${HOME}/cloonix_data/bulk
+
 cd ${HOME}/cloonix_data/bulk
+
 wget http://clownix.net/downloads/cloonix-06-00/bulk/buster.qcow2.gz
+
 gunzip buster.qcow2.gz
 
 See other distros at http://clownix.net/downloads/cloonix-06-00/bulk
 
-If you want to create your own distribution, go to the directory
-tools/distro_create_from_script and try making your own VM.
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
 HOWTO START BASIC NET:
 Check that your cpu is equiped with the necessary option:
+
     egrep -c '(vmx|svm)' /proc/cpuinfo
+
 The result must be non-zero
 
 To have the kvm_intel loaded at each start of your host (for an intel):
@@ -63,17 +65,47 @@ If you do not hav Y after this cat, then you can do:
 After any of the above commands, the host must be rebooted, then:
 
 -----------------------------------------------------------------------------
-For the usual use of cloonix:
+For the first test of cloonix:
 cd cloonix/quickstart
-./ping.sh
+
+./ping.sh sock
+
 -----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+TO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
+-----------------------------------------------------------------------------
+  The host must have 1 Giga size hugepages, i chose to have 5 hugepages:
+-----------------------------------------------------------------------------
+To have the correct hugepage configuration, if you have 5 giga to spare for
+dpdk, you can put in /etc/default/grub:
+
+GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugepages=5"
+
+Then
+
+    update-grub
+or
+    grub2-mkconfig --output=/boot/grub2/grub.cfg
+
+    mount |grep hugepages
+Check pagesize=1024M
+
+    grep Huge /proc/meminfo
+Check the number
+
+For debug:
+
+cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
+
+Inspect:
+
+cloonix_ovs nemo vsctl show
 
 -----------------------------------------------------------------------------
 CISCO DEMO:
 After cloonix install, go in "tools/cisco" directory and execute
 The 3 steps to have a cisco network running ospf.
------------------------------------------------------------------------------
-see DPDK_ALPHA text for the experimental code with dpdk
 -----------------------------------------------------------------------------
 cloonix also supports wlan:
 cd cloonix/quickstart/mac80211_hwsim

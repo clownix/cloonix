@@ -42,10 +42,10 @@ for i in 1 2; do
 done
 #----------------------------------------------------------------------
 
+sleep 2
+
 cloonix_cli $NET add lan vm1 0 lan
 cloonix_cli $NET add lan vm2 0 lan
-
-sleep 5
 
 #######################################################################
 set +e
@@ -75,6 +75,6 @@ sleep 1
 echo
 #----------------------------------------------------------------------
 urxvt -title server -e cloonix_ssh $NET vm2 "iperf3 -s" &
-sleep 1
+sleep 2
 urxvt -title client -e cloonix_ssh $NET vm1 "iperf3 -c 1.0.0.2 -t 10000" &
 #----------------------------------------------------------------------

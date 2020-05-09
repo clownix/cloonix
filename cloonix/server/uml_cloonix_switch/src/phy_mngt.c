@@ -312,7 +312,11 @@ int phy_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
       strncpy(cur->lan.lan[0].lan, lan, MAX_NAME_LEN-1);
       eth_type = phy_evt_update_lan_add(cur, llid, tid);
       if (eth_type == eth_type_none)
+        {
         send_status_ok(llid, tid, "OK");
+        cur->llid = 0;
+        cur->tid = 0;
+        }
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
     }

@@ -31,6 +31,7 @@ typedef struct t_phy
   int llid;
   int tid;
   int flag_lan_ok;
+  int dpdk_attach_ok;
   t_lan_group lan;
   t_phy_mngt_vhost vhost;
   struct t_phy *prev;

@@ -24,13 +24,12 @@ if [ "x$is_started" == "x" ]; then
   printf "\nServer Not started, launching:"
   printf "\ncloonix_net $NET:\n"
   cloonix_net $NET
-  echo waiting 2 sec
-  sleep 2
 else
   cloonix_cli $NET rma
-  echo waiting 10 sec
-  sleep 10 
 fi
+
+echo waiting 2 sec
+sleep 2
 
 #######################################################################
 cloonix_gui $NET

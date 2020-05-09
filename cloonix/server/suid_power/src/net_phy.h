@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int net_phy_vfio_attach(char *pci);
 int net_phy_ifname_change(char *old_name, char *new_name);
 int net_phy_flags_iff_up_down(char *intf, int up);
 t_topo_phy *net_phy_get(int *nb);

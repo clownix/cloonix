@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void phy_evt_end_eth_type_dpdk(char *lan, int status);
 int phy_evt_update_lan_add(t_phy *cur, int llid, int tid);
 void phy_evt_del_inside(t_phy *cur);
 void phy_evt_change_phy_topo(void);

@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void pci_dpdk_ack_vfio_attach(int is_ok, char *pci);
 void pci_dpdk_ack_add(int tid, int is_ok, char *lan, char *pci);
 void pci_dpdk_ack_del(int tid, int is_ok, char *lan, char *pci);
 int  pci_dpdk_add(int llid, int tid, char *lan, char *pci);

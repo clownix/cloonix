@@ -236,7 +236,7 @@ static void timer_tap_msg_beat(void *data)
     if ((dtap->waiting_ack_add_tap != 0) || (dtap->waiting_ack_del_tap != 0))
       {
       dtap->timer_count_tap += 1;
-      if (dtap->timer_count_tap > 5)
+      if (dtap->timer_count_tap > 15)
         {
         if (!msg_exist_channel(dtap->llid))
           KERR("Time %s", dtap->name);

@@ -576,6 +576,14 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     if (net_phy_flags_iff_up_down(name, 0))
       KERR("ERROR Bad ifdown %s", name);
     }
+  else if (sscanf(line, "cloonixsuid_req_vfio_attach: %s", name) == 1)
+    {
+    if (!net_phy_vfio_attach(name))
+      snprintf(resp,MAX_PATH_LEN-1,"cloonixsuid_resp_vfio_attach_ok: %s",name);
+    else
+      snprintf(resp,MAX_PATH_LEN-1,"cloonixsuid_resp_vfio_attach_ko: %s",name);
+    rpct_send_diag_msg(NULL, llid, tid, resp);
+    }
   else if (sscanf(line, "cloonixsuid_req_kill vm_id: %d", &vm_id) == 1)
     {
     cur = find_vmon_by_vm_id(vm_id);

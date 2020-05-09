@@ -306,19 +306,22 @@ t_topo_phy *net_phy_get(int *nb)
 t_topo_pci *net_pci_get(int *nb)
 {
   char line[MAX_PATH_LEN];
+  char buf[MAX_PATH_LEN];
   t_topo_pci pci;
   FILE *fh;
-  char *ptr_start, *ptr_end;
+  char *ptr_start, *ptr_end, *ptr_end_pci;
   char *cmd="/usr/local/bin/cloonix/server/dpdk/bin/dpdk-devbind.py "
-            "--status-dev net | grep drv | grep unused";
+            "--status-dev net | grep :";
   g_nb_pci = 0;
   fh = popen(cmd, "r");
   if (fh)
     {
     while (fgets(line, MAX_PATH_LEN-1, fh))
       {
+      strcpy(buf, line);
       memset(&pci, 0, sizeof(t_topo_pci));
-      ptr_start = line;
+
+      ptr_start = buf;
       ptr_end = strchr(ptr_start, ' ');
       if (!ptr_end)
         {
@@ -327,36 +330,58 @@ t_topo_pci *net_pci_get(int *nb)
         }
       *ptr_end = 0;
       strncpy(pci.pci, ptr_start, IFNAMSIZ-1);
-      ptr_start = ptr_end+1;
-      ptr_start = strstr(ptr_start, "drv=");
+      if (strlen(pci.pci) < 4)
+        {
+        KERR("%s", line);
+        break;
+        }
+
+      ptr_end_pci = ptr_end+1;
+
+      ptr_start = strstr(ptr_end_pci, "drv=");
       if (!ptr_start)
         {
-        KERR("%s", line);
-        break;
+        strncpy(pci.drv, "none", MAX_NAME_LEN-1);
         }
-      ptr_end = strchr(ptr_start, ' ');
-      if (!ptr_end)
+      else
         {
-        KERR("%s", line);
-        break;
+        ptr_end = strchr(ptr_start, ' ');
+        if (!ptr_end)
+          {
+          strncpy(pci.drv, "none", MAX_NAME_LEN-1);
+          KERR("%s", line);
+          }
+        else
+          {
+          ptr_end_pci = ptr_end+1;
+          *ptr_end = 0;
+          strncpy(pci.drv, ptr_start+4, MAX_NAME_LEN-1);
+          if (strlen(pci.drv) <= 1)
+            {
+            strncpy(pci.drv, "none", MAX_NAME_LEN-1);
+            KERR("%s", line);
+            }
+          }
         }
-      *ptr_end = 0;
-      strncpy(pci.drv, ptr_start+4, MAX_NAME_LEN-1);
-      ptr_start = ptr_end+1;
-      ptr_start = strstr(ptr_start, "unused=");
+
+      ptr_start = strstr(ptr_end_pci, "unused=");
       if (!ptr_start)
         {
+        strncpy(pci.unused, "none", MAX_NAME_LEN-1);
         KERR("%s", line);
-        break;
         }
-      ptr_end = strchr(ptr_start, ' ');
-      if (!ptr_end)
+      else
         {
-        KERR("%s", line);
-        break;
+        ptr_end = ptr_start + strcspn(ptr_start, " \r\n\t");
+        *ptr_end = 0;
+        strncpy(pci.unused, ptr_start+7, MAX_NAME_LEN-1);
+        if (strlen(pci.unused) <= 1)
+          {
+          strncpy(pci.unused, "none", MAX_NAME_LEN-1);
+          KERR("%s", line);
+          }
         }
-      *ptr_end = 0;
-      strncpy(pci.unused, ptr_start+7, MAX_NAME_LEN-1);
+
       if (g_nb_pci >= MAX_PCI-2)
         {
         KERR("ERROR, NOT ENOUGH SPACE MAX_PCI %d", g_nb_pci);
@@ -371,6 +396,48 @@ t_topo_pci *net_pci_get(int *nb)
     KERR("%s", cmd);
   *nb = g_nb_pci;
   return g_topo_pci;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int net_phy_vfio_attach(char *pci)
+{
+  char *bin="/usr/local/bin/cloonix/server/dpdk/bin/dpdk-devbind.py";
+  char *cmd="--bind=vfio-pci";
+  char req[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+  FILE *fh;
+  int i, bad_cmd = 0, result = 0;
+  
+  for (i = 0; i < g_nb_phy; i++)
+    {
+    if (!strcmp(g_topo_phy[i].pci, pci))
+      {
+      net_phy_flags_iff_up_down(g_topo_phy[i].name, 0);
+      }
+    }
+
+  memset(req, 0, MAX_PATH_LEN);
+  snprintf(req, MAX_PATH_LEN-1, "%s %s %s 2>&1", bin, cmd, pci);
+  fh = popen(req, "r");
+  if (fh)
+    {
+    while (fgets(line, MAX_PATH_LEN-1, fh))
+      {
+      KERR("%s", line);
+      result = -1;
+      bad_cmd = 1;
+      }
+    fclose(fh);
+    }
+  else
+    {
+    KERR("%s", line);
+    result = -1;
+    }
+  if (bad_cmd)
+    KERR("%s", req); 
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
