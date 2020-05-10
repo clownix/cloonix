@@ -1,5 +1,16 @@
 #!/bin/bash
 set -e
+
+if (( ${#} < 1 )); then
+  echo
+  echo "$0 <net> <vm_name>"
+  echo
+  echo net:
+  echo $LIST
+  echo
+  exit 1
+fi
+
 if [ -z $CLOONIX_CONFIG ]; then
   CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 fi
@@ -16,16 +27,6 @@ if [ ! -d ${CLOONIX_TREE} ]; then
 fi
 
 LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
-
-if (( ${#} < 1 )); then
-  echo
-  echo "$0 <net> <vm_name>"
-  echo
-  echo net:
-  echo $LIST
-  echo
-  exit 1
-fi
 
 cloonix_name=$1
 found=no

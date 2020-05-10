@@ -71,7 +71,7 @@ static char *linearize(t_vm *vm)
 {
   static char line[MAX_PRINT_LEN];
   char **argv = vm->launcher_argv;
-  char *name = vm->kvm.name;
+  char *dtach, *name = vm->kvm.name;
   int i, j, ln, argc = 0, len = 0, vm_id = vm->kvm.vm_id;
   int nb_sock, nb_dpdk, nb_vhost, nb_wlan;
   utils_get_eth_numbers(vm->kvm.nb_tot_eth, vm->kvm.eth_table,
@@ -85,9 +85,10 @@ static char *linearize(t_vm *vm)
       KOUT("%d %d %d", argc, len, MAX_PRINT_LEN);
     argc++;
     }
+  dtach = utils_get_dtach_sock_path(name);
   ln = sprintf(line, 
-       "cloonixsuid_req_launch name=%s vm_id=%d nb_eth=%d argc=%d:",
-       name, vm_id, nb_vhost, argc);
+       "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s nb_eth=%d argc=%d:",
+       name, vm_id, dtach, nb_vhost, argc);
   for (i=0,j=0; i<vm->kvm.nb_tot_eth; i++)
     {
     if (vm->kvm.eth_table[i].eth_type == eth_type_vhost)
@@ -364,9 +365,9 @@ void suid_power_diag_resp(int llid, int tid, char *line)
     memcpy(ppci, g_topo_pci, prev_nb_pci * sizeof(t_topo_pci));
     memset(g_topo_pci, 0, prev_nb_pci * sizeof(t_topo_pci));
     ptr = line;
+    ptr = strstr(ptr, "pci:");
     for (i=0; i<nb_pci; i++)
       {
-      ptr = strstr(ptr, "pci:");
       if (!ptr)
         KOUT("%s", line);
       if (sscanf(ptr, "pci:%s drv:%s unused:%s", pci, drv, unused) != 3)
@@ -374,6 +375,7 @@ void suid_power_diag_resp(int llid, int tid, char *line)
       strncpy(g_topo_pci[i].pci,    pci, IFNAMSIZ-1);
       strncpy(g_topo_pci[i].drv,    drv, MAX_NAME_LEN-1);
       strncpy(g_topo_pci[i].unused, unused, MAX_NAME_LEN-1);
+      ptr = strstr(ptr+strlen("pci:"), "pci:");
       }
     if ((prev_nb_pci != nb_pci) ||
         (memcmp(ppci, g_topo_pci, prev_nb_pci * sizeof(t_topo_pci))))

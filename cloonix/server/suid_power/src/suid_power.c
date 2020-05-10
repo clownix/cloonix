@@ -486,18 +486,49 @@ void rpct_recv_kil_req(void *ptr, int llid, int tid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void qemu_launch(char *name, int vm_id, int nb_vhost, int argc,
+                        char *line, char *resp, int llid, int tid)
+{
+  int result;
+  char **argv;
+  char *ptr_arg;
+  t_vmon *cur = alloc_vmon(name, vm_id);
+  ptr_arg = strchr(line, ':');
+  if (nb_vhost > 0)
+    ptr_arg = get_ifnames(cur, nb_vhost, ptr_arg+1);
+  cur->nb_vhostif = nb_vhost;
+  argv = unlinearize(argc, ptr_arg+1);
+  result = launcher(argv);
+  if (result)
+    {
+    snprintf(resp, MAX_PATH_LEN-1,
+             "cloonixsuid_resp_launch_vm_ko name=%s", name);
+    rpct_send_diag_msg(NULL, llid, tid, resp);
+    free_vmon(cur);
+    }
+  else
+    {
+    snprintf(resp, MAX_PATH_LEN-1,
+             "cloonixsuid_resp_launch_vm_ok name=%s",name);
+    rpct_send_diag_msg(NULL, llid, tid, resp);
+    }
+  free(argv);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
   char resp[MAX_PATH_LEN];
+  char dtach[MAX_PATH_LEN];
   char old_name[MAX_NAME_LEN];
   char new_name[MAX_NAME_LEN];
-  char *str_net_phy, *ptr_arg, *str_net_pci;
-  char **argv;
-  int num, argc, vm_id, nb_vhost, nb_phy, nb_pci, result;
-  t_vmon *cur;
+  char *str_net_phy, *str_net_pci;
+  int num, argc, vm_id, nb_vhost, nb_phy, nb_pci;
   t_topo_pci *net_pci;
   t_topo_phy *net_phy;
+  t_vmon *cur;
 
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
@@ -513,30 +544,12 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       rpct_send_diag_msg(NULL, llid, tid, "cloonixsuid_resp_suidroot_ok");
     }
   else if (sscanf(line, 
-           "cloonixsuid_req_launch name=%s vm_id=%d nb_eth=%d argc=%d:",
-           name, &vm_id, &nb_vhost, &argc) == 4)
+        "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s nb_eth=%d argc=%d:",
+         name, &vm_id, dtach, &nb_vhost, &argc) == 5)
     {
-    cur = alloc_vmon(name, vm_id);
-    ptr_arg = strchr(line, ':');
-    if (nb_vhost > 0)
-      ptr_arg = get_ifnames(cur, nb_vhost, ptr_arg+1);
-    cur->nb_vhostif = nb_vhost;
-    argv = unlinearize(argc, ptr_arg+1);
-    result = launcher(argv);
-    if (result)
-      {
-      snprintf(resp, MAX_PATH_LEN-1,
-               "cloonixsuid_resp_launch_vm_ko name=%s", name);
-      rpct_send_diag_msg(NULL, llid, tid, resp);
-      free_vmon(cur);
-      }
-    else
-      {
-      snprintf(resp, MAX_PATH_LEN-1,
-               "cloonixsuid_resp_launch_vm_ok name=%s",name);
-      rpct_send_diag_msg(NULL, llid, tid, resp);
-      }
-    free(argv);
+    qemu_launch(name, vm_id, nb_vhost, argc, line, resp, llid, tid);
+    if (chmod(dtach, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH))
+      KERR("%s", dtach);
     }
   else if (sscanf(line,
                   "cloonixsuid_req_ifname_change %s %d old:%s new:%s",

@@ -50,6 +50,8 @@ static char g_sav_whole[MAX_PATH_LEN];
 static char g_sav_derived[MAX_PATH_LEN];
 char *get_distant_dpdk_snf_dir(void);
 int format_phy_info(char *name, char *txt);
+int format_pci_info(char *name, char *txt);
+
 
 
 /****************************************************************************/

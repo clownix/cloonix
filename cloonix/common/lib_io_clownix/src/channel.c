@@ -711,19 +711,38 @@ static void waked_count_update(int nb, struct epoll_event *events)
 
 
 /*****************************************************************************/
-static int handle_io_on_fd(int nb, struct epoll_event *events)
+static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
 {
   int llid, cidx, len, k, result = -1;
   uint32_t evt;
-
+  *neg = 0;
   for(k=0; (!channel_modification_occurence) && (k<nb); k++)
     {
     cidx = events[k].data.fd + 1;
+    llid = get_llid(cidx);
+
     if (g_channel[cidx].fd == -1)
       {
+      *neg = 1;
+      if (*pb)
+        {
+        if (!llid)
+          {
+          KERR("%d %d %d", cidx, events[k].data.fd, g_channel[cidx].kind);
+          epoll_ctl(g_epfd, EPOLL_CTL_DEL, events[k].data.fd, NULL);
+          }
+        else
+          {
+          KERR("%d %d %d", cidx, events[k].data.fd, g_channel[cidx].kind);
+          g_channel[cidx].err_cb(NULL, llid, errno, 511);
+          channel_delete(llid);
+          }
+        *pb = 0;
+        }
+
       continue;
       }
-    llid = get_llid(cidx);
+
     if (!llid)
       KOUT("%d %d %d", cidx, g_channel[cidx].fd, g_channel[cidx].kind);
     evt = events[k].events;
@@ -808,7 +827,7 @@ static int handle_io_on_fd(int nb, struct epoll_event *events)
 /*****************************************************************************/
 void channel_loop(int once)
 {
-  int cidx, k, result, pb;
+  int neg, cidx, k, result, pb = 0;
   uint32_t evt;
   static struct epoll_event events[MAX_EPOLL_EVENTS_PER_RUN];
   my_gettimeofday(&last_heartbeat);
@@ -845,7 +864,7 @@ void channel_loop(int once)
     waked_count_update(result, events);
 
     channel_modification_occurence = 0;
-    if (!handle_io_on_fd(result, events))
+    if ((!handle_io_on_fd(result, events, &pb, &neg) || neg))
       slipery_select = 0;
 
     if (g_fct_after_epoll)
@@ -860,9 +879,9 @@ void channel_loop(int once)
         {
         cidx = events[k].data.fd + 1;
         evt = events[k].events;
-        KERR( "%d %d %d %d %d %08X %d", slipery_select, g_channel[cidx].kind,
-                                        cidx, (evt & EPOLLOUT),
-                                        (evt & EPOLLIN), evt, get_llid(cidx));
+        KERR( "pb: %d slip:%d %d %d %d %d %08X %d", pb, slipery_select,
+                               g_channel[cidx].kind, cidx, (evt & EPOLLOUT),
+                               (evt & EPOLLIN), evt, get_llid(cidx));
         }
       KOUT(" %d %d", result, channel_modification_occurence);
       }
