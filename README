@@ -103,6 +103,15 @@ Inspect:
 cloonix_ovs nemo vsctl show
 
 -----------------------------------------------------------------------------
+DPDK ETHERNET INTERFACE TEST WITHOUT INTEL
+As my personnal PCs have only Realtek ethernet devices and as those are not
+supported by DPDK, here is the way of testing, virtio_net is supported:
+Use the nested function: compile cloonix inside a guest with persistance flag
+on, launch 2 instances of this guest with dpdk interfaces linked to each-other.
+Inside each guest launch a nested vm with a dpdk interface, connect the
+interface to the pci 0000:00:05.0 (corresponding to the eth0 of level 0 guest).
+Ifconfig and ping from nested guest to nested guest.
+-----------------------------------------------------------------------------
 CISCO DEMO:
 After cloonix install, go in "tools/cisco" directory and execute
 The 3 steps to have a cisco network running ospf.

@@ -279,10 +279,10 @@ static void resp_lan(int is_add, int is_ko, char *lan, char *name)
     dlan = get_dlan(dtap, lan);;
     if (!dlan)
       KERR("%d %s %s", is_ko, lan, name);
-    else if (!msg_exist_channel(dlan->llid))
-      KERR("%d %s %s", is_ko, lan, name);
     else
       {
+      if (!msg_exist_channel(dlan->llid))
+        KERR("%d %s %s", is_ko, lan, name);
       if (is_add)
         {
         if ((dlan->waiting_ack_add_lan == 0) ||
@@ -346,27 +346,30 @@ void dpdk_tap_resp_add(int is_ko, char *name)
     KERR("%s", name);
   else if (!dtap->llid)
     KERR("%s", name);
-  else if (!msg_exist_channel(dtap->llid))
-    KERR("%s", name);
-  else if (is_ko)
+  else 
     {
-    KERR("Resp KO %s", dtap->name);
-    send_status_ko(dtap->llid, dtap->tid, "ovs req ko");
-    free_dtap(name);
-    }
-  else
-    {
-    send_status_ok(dtap->llid, dtap->tid, "OK");
-    if (dtap->waiting_ack_add_tap == 0)
+    if (!msg_exist_channel(dtap->llid))
       KERR("%s", name);
-    if (dtap->waiting_ack_del_tap != 0)
-      KERR("%s", name);
-    dtap->waiting_ack_add_tap = 0;
-    dtap->waiting_ack_del_tap = 0;
-    dtap->timer_count_tap = 0;
-    dtap->llid = 0;
-    dtap->tid = 0;
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    if (is_ko)
+      {
+      KERR("Resp KO %s", dtap->name);
+      send_status_ko(dtap->llid, dtap->tid, "ovs req ko");
+      free_dtap(name);
+      }
+    else
+      {
+      send_status_ok(dtap->llid, dtap->tid, "OK");
+      if (dtap->waiting_ack_add_tap == 0)
+        KERR("%s", name);
+      if (dtap->waiting_ack_del_tap != 0)
+        KERR("%s", name);
+      dtap->waiting_ack_add_tap = 0;
+      dtap->waiting_ack_del_tap = 0;
+      dtap->timer_count_tap = 0;
+      dtap->llid = 0;
+      dtap->tid = 0;
+      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+      } 
     } 
 }
 /*--------------------------------------------------------------------------*/

@@ -891,14 +891,15 @@ char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_dpdk)
                               eth, endp_path);
 
   len += sprintf(net_cmd+len, " -netdev type=vhost-user,id=net%d,"
-                              "chardev=chard%d,vhostforce,queues=4",
-                              eth, eth);
+                              "chardev=chard%d,vhostforce,queues=%d",
+                              eth, eth, MQ_QUEUES);
   
   len += sprintf(net_cmd+len, " -device virtio-net-pci,netdev=net%d,"
                               "mac=%02X:%02X:%02X:%02X:%02X:%02X,"
-                              "mrg_rxbuf=on,mq=on,bus=pci.0,addr=0x%x",
+                              "mq=on,vectors=%d,bus=pci.0,addr=0x%x",
                               eth, mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF,
-                              mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF, eth+5);
+                              mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF,
+                              MQ_VECTORS, eth+5);
 
   len += sprintf(net_cmd+len, " -object memory-backend-file,id=mem%d,"
                               "size=%dM,share=on,mem-path=%s"

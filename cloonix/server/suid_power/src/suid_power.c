@@ -467,6 +467,28 @@ static char *cloonix_resp_pci(int nb_pci, t_topo_pci *pci)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void req_kill_clean_all(void)
+{
+  int pid;
+  t_vmon *next, *cur = g_head_vmon;
+  while(cur)
+    {
+    next = cur->next;
+    pid = read_umid_pid(cur->vm_id);
+    if (pid > 0)
+      {
+      if (kill(cur->pid, SIGTERM))
+        KERR("ERROR Bad kill %d", cur->vm_id);
+      else
+        KERR("ERROR GOOD kill %d", cur->vm_id);
+      free_vmon(cur);
+      }
+    cur = next;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
 {
   if (llid != g_llid)
@@ -481,6 +503,7 @@ void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
 /****************************************************************************/
 void rpct_recv_kil_req(void *ptr, int llid, int tid)
 {
+  req_kill_clean_all();
   exit(0);
 }
 /*--------------------------------------------------------------------------*/
@@ -609,6 +632,10 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       free_vmon(cur);
       }
     }
+  else if (!strcmp(line, "cloonixsuid_req_kill_all"))
+    {
+    req_kill_clean_all();
+    }
   else
     KERR("%s %s", g_network_name, line);
 }
@@ -617,6 +644,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 /****************************************************************************/
 static void err_ctrl_cb (void *ptr, int llid, int err, int from)
 {
+  req_kill_clean_all();
   exit(0);
 }
 /*--------------------------------------------------------------------------*/

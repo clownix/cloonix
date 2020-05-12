@@ -45,6 +45,10 @@
     } while (0)
 #endif
 
+
+#define MQ_QUEUES 4
+#define MQ_VECTORS ((2 * MQ_QUEUES) + 2)
+
 #define MAX_PHY            16
 #define MAX_PCI            16
 #define MAX_VM             100

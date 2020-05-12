@@ -1587,12 +1587,27 @@ void recv_evt_print_unsub(int llid, int tid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void timer_del_all_end(void *data)
+{
+  t_timer_del *td = (t_timer_del *) data;;
+  if (td->kill_cloonix)
+    auto_self_destruction(td->llid, td->tid);
+  else
+    {
+    send_status_ok(td->llid, td->tid, "delall");
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    clownix_free(td, __FUNCTION__);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void timer_del_all(void *data)
 { 
   int i, nb_vm, found = 0;
   t_timer_del *td = (t_timer_del *) data;;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
- for (i=0; i<nb_vm; i++)
+  for (i=0; i<nb_vm; i++)
     {
     if (suid_power_get_pid(vm->kvm.vm_id))
       found = 1;
@@ -1611,18 +1626,13 @@ static void timer_del_all(void *data)
     }
   else
     {
+    suid_power_req_kill_all();
     mulan_del_all();
     c2c_free_all();
     endp_mngt_stop_all_sat();
     dpdk_ovs_urgent_client_destruct();
     phy_mngt_del_all();
-    if (td->kill_cloonix)
-      auto_self_destruction(td->llid, td->tid);
-    else
-      {
-      send_status_ok(td->llid, td->tid, "delall");
-      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-      }
+    clownix_timeout_add(200, timer_del_all_end, (void *) td, NULL, NULL);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -1643,7 +1653,7 @@ void recv_del_all(int llid, int tid)
   memset(td, 0, sizeof(t_timer_del));
   td->llid = llid;
   td->tid = tid;
-  clownix_timeout_add(100, timer_del_all, (void *) td, NULL, NULL);
+  clownix_timeout_add(300, timer_del_all, (void *) td, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1665,7 +1675,7 @@ void recv_kill_uml_clownix(int llid, int tid)
   td->llid = llid;
   td->tid = tid;
   td->kill_cloonix = 1;
-  clownix_timeout_add(100, timer_del_all, (void *) td, NULL, NULL);
+  clownix_timeout_add(300, timer_del_all, (void *) td, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 

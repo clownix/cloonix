@@ -1,6 +1,6 @@
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2020-05-04 10:51:43.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2020-05-04 11:59:56.384268889 +0200
+--- dpdk/drivers/meson.build	2020-05-08 19:10:53.000000000 +0200
++++ dpdk_tainted/drivers/meson.build	2020-05-12 09:55:26.313633705 +0200
 @@ -148,6 +148,7 @@
  				objects: objs,
  				include_directories: includes,
@@ -17,9 +17,33 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  				install_dir: driver_install_path)
  
  			# create a dependency object and add it to the global dictionary so
+diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_ethdev.c
+--- dpdk/drivers/net/virtio/virtio_ethdev.c	2020-05-08 19:10:54.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2020-05-12 10:03:11.045556554 +0200
+@@ -2214,20 +2214,6 @@
+ 	PMD_INIT_LOG(DEBUG, "configure");
+ 	req_features = VIRTIO_PMD_DEFAULT_GUEST_FEATURES;
+ 
+-	if (rxmode->mq_mode != ETH_MQ_RX_NONE) {
+-		PMD_DRV_LOG(ERR,
+-			"Unsupported Rx multi queue mode %d",
+-			rxmode->mq_mode);
+-		return -EINVAL;
+-	}
+-
+-	if (txmode->mq_mode != ETH_MQ_TX_NONE) {
+-		PMD_DRV_LOG(ERR,
+-			"Unsupported Tx multi queue mode %d",
+-			txmode->mq_mode);
+-		return -EINVAL;
+-	}
+-
+ 	if (dev->data->dev_conf.intr_conf.rxq) {
+ 		ret = virtio_init_device(dev, hw->req_guest_features);
+ 		if (ret < 0)
 diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/librte_eal/common/eal_common_options.c
---- dpdk/lib/librte_eal/common/eal_common_options.c	2020-05-04 10:51:43.000000000 +0200
-+++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-05-04 11:59:56.384268889 +0200
+--- dpdk/lib/librte_eal/common/eal_common_options.c	2020-05-08 19:10:54.000000000 +0200
++++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-05-12 09:55:26.313633705 +0200
 @@ -111,7 +111,7 @@
  TAILQ_HEAD_INITIALIZER(solib_list);
  
@@ -30,8 +54,8 @@ diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/libr
  /*
   * Stringified version of solib path used by dpdk-pmdinfo.py
 diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal.c
---- dpdk/lib/librte_eal/linux/eal.c	2020-05-04 10:51:43.000000000 +0200
-+++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-05-04 11:59:56.384268889 +0200
+--- dpdk/lib/librte_eal/linux/eal.c	2020-05-08 19:10:54.000000000 +0200
++++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-05-12 09:55:26.313633705 +0200
 @@ -114,13 +114,13 @@
  	char tmp[PATH_MAX];
  	int ret;
@@ -49,8 +73,8 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
  	if (ret < 0 || ret == sizeof(tmp)) {
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2020-05-04 10:51:43.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2020-05-04 11:59:56.384268889 +0200
+--- dpdk/lib/meson.build	2020-05-08 19:10:54.000000000 +0200
++++ dpdk_tainted/lib/meson.build	2020-05-12 09:55:26.313633705 +0200
 @@ -127,6 +127,7 @@
  					c_args: cflags,
  					dependencies: static_deps,

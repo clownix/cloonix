@@ -638,11 +638,12 @@ int ovs_execv_add_eth(char *ovs_bin, char *dpdk_dir, char *name, int num)
            "-- add-br br_%s_%d "
            "-- set bridge br_%s_%d datapath_type=netdev "
            "-- add-port br_%s_%d %s_%d "
-           "-- set Interface %s_%d type=dpdkvhostuserclient "
-           "options:vhost-server-path=%s_qemu/%s_%d",
+           "-- set Interface %s_%d type=dpdkvhostuserclient"
+           " options:vhost-server-path=%s_qemu/%s_%d"
+           " options:n_rxq=%d",
            name, num, name, num,
            name, num, name, num, name, num,
-           dpdk_dir, name, num);
+           dpdk_dir, name, num, MQ_QUEUES);
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd)) 
     result = -1;
 
@@ -673,9 +674,10 @@ int ovs_execv_add_tap(char *ovs_bin, char *dpdk_dir, char *name)
            "-- add-br br_%s "
            "-- set bridge br_%s datapath_type=netdev "
            "-- add-port br_%s %s "
-           "-- set Interface %s type=dpdk "
-           "options:dpdk-devargs=net_tap_%s,iface=%s",
-           name, name, name, name, name, name, name);
+           "-- set Interface %s type=dpdk"
+           " options:dpdk-devargs=net_tap_%s,iface=%s"
+           " options:n_rxq=%d",
+           name, name, name, name, name, name, name, MQ_QUEUES);
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = -1;
   return result;

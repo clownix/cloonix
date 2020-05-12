@@ -65,16 +65,15 @@ cloonix_ssh $NET vm2 "ip addr add dev eth0 1.0.0.2/24"
 cloonix_ssh $NET vm1 "ip link set dev eth0 up"
 cloonix_ssh $NET vm2 "ip link set dev eth0 up"
 #----------------------------------------------------------------------
-sleep 1
-echo
-cloonix_ssh $NET vm1 "ping -c 5 1.0.0.2"
-sleep 1
-echo
-cloonix_ssh $NET vm1 "ping -f -c 10000 1.0.0.2"
-sleep 1
 echo
 #----------------------------------------------------------------------
 urxvt -title server -e cloonix_ssh $NET vm2 "iperf3 -s" &
-sleep 2
+sleep 3
 urxvt -title client -e cloonix_ssh $NET vm1 "iperf3 -c 1.0.0.2 -t 10000" &
 #----------------------------------------------------------------------
+
+sleep 10
+
+kill $(jobs -p)
+
+echo DONE

@@ -557,6 +557,22 @@ int suid_power_req_vfio_attach(char *pci)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int suid_power_req_kill_all(void)
+{
+  int result = -1;
+  char req[MAX_PATH_LEN];
+  if ((g_llid) && (msg_exist_channel(g_llid)))
+    {
+    memset(req, 0, MAX_PATH_LEN);
+    snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_req_kill_all");
+    rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int suid_power_pid(void)
 {
   return (g_suid_power_last_pid);

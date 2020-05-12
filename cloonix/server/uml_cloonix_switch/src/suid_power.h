@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int suid_power_req_kill_all(void);
 char *suid_power_get_drv(char *pci);
 int suid_power_pid(void);
 void suid_power_ifname_change(char *name, int num, char *old, char *nw);

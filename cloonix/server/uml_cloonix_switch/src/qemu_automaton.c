@@ -316,10 +316,10 @@ static char *format_vhost_net(t_vm *vm, int eth, char *ifname)
                          mac[0] & 0xFF, mac[1] & 0xFF, mac[2] & 0xFF,
                          mac[3] & 0xFF, mac[4] & 0xFF, mac[5] & 0xFF);
   len += sprintf(cmd+len,",bus=pci.0,addr=0x%x", eth+5);
-//  len += sprintf(cmd+len,",csum=off,gso=off,guest_tso4=off");
-//  len += sprintf(cmd+len,",guest_tso6=off,guest_ecn=off");
-  len += sprintf(cmd+len," -netdev type=tap,id=nvhost%d,vhost=on,"
-                         "ifname=%s,script=no,downscript=no", eth, ifname);
+  len += sprintf(cmd+len,",mq=on,vectors=%d", MQ_VECTORS);
+  len += sprintf(cmd+len," -netdev type=tap,id=nvhost%d,vhost=on,", eth);
+  len += sprintf(cmd+len,"vhostforce=on,queues=%d,", MQ_QUEUES);
+  len += sprintf(cmd+len,"ifname=%s,script=no,downscript=no", ifname);
   return cmd;
 }
 /*--------------------------------------------------------------------------*/

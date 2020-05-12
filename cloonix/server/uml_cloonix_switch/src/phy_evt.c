@@ -379,6 +379,8 @@ int phy_evt_update_lan_add(t_phy *cur, int llid, int tid)
     eth_type = eth_type_update(cur->name, lan);
     if ((cur->llid) && (cur->llid != llid))
       KERR("%d %d", cur->llid, llid);
+    if (llid == 0)
+      KERR(" ");
     cur->llid = llid;
     cur->tid = tid;
     if (eth_type == eth_type_dpdk)
