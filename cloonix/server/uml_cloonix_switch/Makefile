@@ -60,6 +60,7 @@ SRC = \
       dpdk_msg.c \
       fmt_diag.c \
       dpdk_tap.c \
+      dpdk_snf.c \
       slowperiodic.c \
       unix2inet.c \
       suid_power.c \
@@ -68,7 +69,8 @@ SRC = \
       phy_evt.c \
       phy_sock.c \
       phy_vhost.c \
-      pci_dpdk.c
+      pci_dpdk.c \
+      snf_dpdk_process.c
 
 INCLUDES= -I./src \
           -I$(GLOB_INCLUDE) \

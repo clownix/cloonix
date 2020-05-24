@@ -50,7 +50,7 @@ rm -rf tmpbuild_bis
   done 
   rm -f ${CLOONIX_SERVER}/dtach/dtach
 
-  for i in dpdk ovs tldk; do
+  for i in dpdk ovs tldk qemu snf_dpdk; do
     cd ${CLOONIX_SERVER}/${i}
     ./allclean
   done
@@ -70,6 +70,8 @@ rm -rf tmpbuild_bis
     cd ${CLOONIX_CLIENT}/${i}
     make clean
   done
-  cd ${CLOONIX_CLIENT}/openssh
-  ./all_clean
+  for i in  openssh spice ; do 
+    cd ${CLOONIX_CLIENT}/${i}
+    ./allclean
+  done
 #----------------------------------------------------------

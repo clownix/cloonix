@@ -63,6 +63,12 @@ static int g_nb_pci;
 
 static t_topo_phy g_topo_phy[MAX_PHY];
 static int g_nb_phy;
+
+static int g_nb_brgs;
+static int g_nb_mirs;
+static t_topo_bridges g_brgs[MAX_OVS_BRIDGES];
+static t_topo_mirrors g_mirs[MAX_OVS_MIRRORS];
+
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -466,6 +472,72 @@ static void kvm_cact(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void display_info(char *title, char *text)
+{
+  GtkWidget *window, *scrolled_win, *textview;
+  GtkTextIter iter;
+  GtkTextBuffer *buffer;
+  window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_modal (GTK_WINDOW(window), FALSE);
+  gtk_window_set_title(GTK_WINDOW (window), title);
+  gtk_container_set_border_width(GTK_CONTAINER(window), 0);
+  gtk_window_set_default_size(GTK_WINDOW(window), 300, 200);
+  scrolled_win = gtk_scrolled_window_new(NULL, NULL);
+  textview = gtk_text_view_new();
+  buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
+  gtk_text_buffer_get_end_iter(buffer, &iter);
+  gtk_text_buffer_insert(buffer, &iter, text, -1);
+  gtk_text_buffer_get_end_iter(buffer, &iter);
+  gtk_text_buffer_insert(buffer, &iter, "\n", -1);
+  gtk_container_add(GTK_CONTAINER(scrolled_win), textview);
+  gtk_container_add(GTK_CONTAINER(window), scrolled_win);
+  gtk_widget_show_all (window);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int estimate_max_string_size(void)
+{
+  int i, j, result = (10 * MAX_NAME_LEN);
+  for (i=0; i<g_nb_brgs; i++)
+    {
+    result += MAX_NAME_LEN;
+    for (j=0; j<g_brgs[i].nb_ports; j++)
+      result += MAX_NAME_LEN;
+    }
+  for (i=0; i<g_nb_mirs; i++)
+    result += MAX_NAME_LEN;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void ovs_cact(void)
+{
+  char *msg, *name;
+  int nb_ports, i, j, len = estimate_max_string_size();
+  msg = (char *) malloc(len);
+  len = 0;
+  len += sprintf(msg+len, " %d BRIDGES:\n", g_nb_brgs);
+  for (i=0; i<g_nb_brgs; i++)
+    {
+    name = g_brgs[i].br;
+    nb_ports = g_brgs[i].nb_ports;
+    len += sprintf(msg+len, "\n\t%s    nb_ports: %d\n", name, nb_ports);
+    for (j=0; j<g_brgs[i].nb_ports; j++)
+      len += sprintf(msg+len, "\t\t\t\t%s\n", g_brgs[i].ports[j]);
+    }
+  len += sprintf(msg+len, "\n %d MIRRORS\n", g_nb_mirs);
+  for (i=0; i<g_nb_mirs; i++)
+    len += sprintf(msg+len, "\n\t%s\n", g_mirs[i].mir);
+  display_info("OVS CONFIG", msg);
+  free(msg);
+}
+/*--------------------------------------------------------------------------*/
+
+
+
+/****************************************************************************/
 static void c2c_cact(void)
 {
   menu_choice_c2c_params();
@@ -631,6 +703,24 @@ void update_topo_pci(int nb_pci, t_topo_pci *pci)
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+void update_topo_bridges(int nb_bridges, t_topo_bridges *bridges)
+{
+  memset(g_brgs, 0, MAX_OVS_BRIDGES * sizeof(t_topo_bridges));
+  memcpy(g_brgs, bridges, nb_bridges * sizeof(t_topo_bridges));
+  g_nb_brgs = nb_bridges;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void update_topo_mirrors(int nb_mirrors, t_topo_mirrors *mirrors)
+{ 
+  memset(g_mirs, 0, MAX_OVS_MIRRORS * sizeof(t_topo_mirrors));
+  memcpy(g_mirs, mirrors, nb_mirrors * sizeof(t_topo_mirrors));
+  g_nb_mirs = nb_mirrors;
+}
+/*--------------------------------------------------------------------------*/
+
 /****************************************************************************/
 void canvas_ctx_menu(gdouble x, gdouble y)
 {
@@ -644,6 +734,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *nat  = gtk_menu_item_new_with_label("nat");
   GtkWidget *phy  = gtk_menu_item_new_with_label("phy");
   GtkWidget *pci  = gtk_menu_item_new_with_label("pci");
+  GtkWidget *ovs  = gtk_menu_item_new_with_label("ovs");
   GtkWidget *kvm_conf = gtk_menu_item_new_with_label("Kvm_conf");
   GtkWidget *other= gtk_menu_item_new_with_label("Other");
   g_x_mouse = (double) x;
@@ -662,6 +753,8 @@ void canvas_ctx_menu(gdouble x, gdouble y)
                           (GCallback)nat_act, NULL);
   g_signal_connect_swapped(G_OBJECT(kvm_conf), "activate",
                           (GCallback)kvm_cact, NULL);
+  g_signal_connect_swapped(G_OBJECT(ovs), "activate",
+                          (GCallback)ovs_cact, NULL);
 
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), lan);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm);
@@ -673,6 +766,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   phy_sub_menu(phy);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), pci);
   pci_sub_menu(pci);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), ovs);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator1);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), other);

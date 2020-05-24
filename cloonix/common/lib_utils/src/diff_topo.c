@@ -54,20 +54,6 @@ static int topo_find_c2c(char *name, t_topo_info *topo)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int topo_find_snf(char *name, t_topo_info *topo)
-{
-  int i, found = 0;
-  for (i=0; i< topo->nb_snf; i++)
-    if (!strcmp(name, topo->snf[i].name))
-      {
-      found = 1;
-      break;
-      }
-  return found;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int topo_find_sat(char *name, t_topo_info *topo)
 {
   int i, found = 0;
@@ -151,25 +137,6 @@ static t_topo_c2c_chain *topo_get_c2c_chain(t_topo_info *topo)
     cur = (t_topo_c2c_chain *) clownix_malloc(sizeof(t_topo_c2c_chain), 3);
     memset(cur, 0, sizeof(t_topo_c2c_chain));
     memcpy(&(cur->c2c), &(topo->c2c[i]), sizeof(t_topo_c2c));
-    cur->next = res;
-    if (res)
-      res->prev = cur;
-    res = cur;
-    }
-  return res;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static t_topo_snf_chain *topo_get_snf_chain(t_topo_info *topo)
-{
-  int i;
-  t_topo_snf_chain *cur, *res = NULL;
-  for (i=0; i< topo->nb_snf; i++)
-    {
-    cur = (t_topo_snf_chain *) clownix_malloc(sizeof(t_topo_snf_chain), 3);
-    memset(cur, 0, sizeof(t_topo_snf_chain));
-    memcpy(&(cur->snf), &(topo->snf[i]), sizeof(t_topo_snf));
     cur->next = res;
     if (res)
       res->prev = cur;
@@ -294,19 +261,6 @@ static void topo_free_c2c_chain(t_topo_c2c_chain *ch)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void topo_free_snf_chain(t_topo_snf_chain *ch)
-{
-  t_topo_snf_chain *next, *cur = ch;
-  while(cur)
-    {
-    next = cur->next;
-    clownix_free(cur, __FUNCTION__);
-    cur = next;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static void topo_free_sat_chain(t_topo_sat_chain *ch)
 {
   t_topo_sat_chain *next, *cur = ch;
@@ -375,28 +329,6 @@ void take_out_from_c2c_chain(t_topo_c2c_chain **ch, t_topo_info *topo)
     {
     next = cur->next;
     if (topo_find_c2c(cur->c2c.name, topo))
-      {
-      if (cur->next)
-        cur->next->prev = cur->prev;
-      if (cur->prev)
-        cur->prev->next = cur->next;
-      if (cur == *ch)
-        *ch = cur->next;
-      clownix_free(cur, __FUNCTION__);
-      } 
-    cur = next;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void take_out_from_snf_chain(t_topo_snf_chain **ch, t_topo_info *topo)
-{
-  t_topo_snf_chain *next, *cur = *ch;
-  while (cur)
-    {
-    next = cur->next;
-    if (topo_find_snf(cur->snf.name, topo))
       {
       if (cur->next)
         cur->next->prev = cur->prev;
@@ -491,10 +423,6 @@ t_topo_differences *topo_get_diffs(t_topo_info *newt, t_topo_info *oldt)
   if (oldt)
     diffs.del_c2c   = topo_get_c2c_chain(oldt);
 
-  diffs.add_snf     = topo_get_snf_chain(newt);
-  if (oldt)
-    diffs.del_snf   = topo_get_snf_chain(oldt);
-
   diffs.add_sat     = topo_get_sat_chain(newt);
   if (oldt)
     diffs.del_sat   = topo_get_sat_chain(oldt);
@@ -518,12 +446,6 @@ t_topo_differences *topo_get_diffs(t_topo_info *newt, t_topo_info *oldt)
 
   if (diffs.del_c2c && newt)
     take_out_from_c2c_chain(&(diffs.del_c2c), newt);
-
-  if (diffs.add_snf && oldt)
-    take_out_from_snf_chain(&(diffs.add_snf), oldt);
-
-  if (diffs.del_snf && newt)
-    take_out_from_snf_chain(&(diffs.del_snf), newt);
 
   if (diffs.add_sat && oldt)
     take_out_from_sat_chain(&(diffs.add_sat), oldt);
@@ -552,13 +474,11 @@ void topo_free_diffs(t_topo_differences *diffs)
 {
   topo_free_kvm_chain(diffs->add_kvm);
   topo_free_c2c_chain(diffs->add_c2c);
-  topo_free_snf_chain(diffs->add_snf);
   topo_free_sat_chain(diffs->add_sat);
   topo_free_lan_chain(diffs->add_lan);
   topo_free_edge_chain(diffs->add_edge);
   topo_free_kvm_chain(diffs->del_kvm);
   topo_free_c2c_chain(diffs->del_c2c);
-  topo_free_snf_chain(diffs->del_snf);
   topo_free_sat_chain(diffs->del_sat);
   topo_free_lan_chain(diffs->del_lan);
   topo_free_edge_chain(diffs->del_edge);

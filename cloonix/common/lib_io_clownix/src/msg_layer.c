@@ -515,7 +515,6 @@ int msg_watch_fd(int fd, t_fd_event rx_data,
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 int string_server_unix(char *pname, t_fd_connect connect_cb,
                         char *little_name)
@@ -653,7 +652,7 @@ void string_tx(int llid, int len, char *str_tx)
   if (is_blkd)
     KOUT(" ");
   if (dchan[cidx].llid != llid)
-    KOUT(" ");
+    KOUT("%d %d %d", cidx, dchan[cidx].llid, llid);
   if ((dchan[cidx].decoding_state != rx_type_ascii_start) && 
       (dchan[cidx].decoding_state != rx_type_open_bound_found)) 
     KOUT(" ");

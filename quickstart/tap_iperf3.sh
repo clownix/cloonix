@@ -80,7 +80,7 @@ urxvt -title client1 -e cloonix_ssh $NET vm1 "iperf3 -c 172.21.0.2 -t 10000" &
 sleep 1
 urxvt -title client2 -e iperf3 -c 172.22.0.1 -t 10000  &
 
-sleep 10
+sleep 20
 
 kill $(jobs -p)
 

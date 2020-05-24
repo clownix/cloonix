@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int suid_power_rec_name(char *name, int on);
 int suid_power_req_kill_all(void);
 char *suid_power_get_drv(char *pci);
 int suid_power_pid(void);
@@ -29,9 +30,14 @@ int  suid_power_diag_llid(int llid);
 void suid_power_pid_resp(int llid, int tid, char *name, int pid);
 void suid_power_first_start(void);
 int suid_power_get_pid(int vm_id);
+
 int suid_power_get_topo_pci(t_topo_pci **pci);
 int suid_power_get_topo_phy(t_topo_phy **phy);
+int suid_power_get_topo_bridges(t_topo_bridges **bridges);
+int suid_power_get_topo_mirrors(t_topo_mirrors **mirrors);
+
 int suid_power_req_vfio_attach(char *pci);
+int suid_power_req_vfio_detach(char *pci);
 t_topo_phy *suid_power_get_phy_info(char *name);
 t_topo_pci *suid_power_get_pci_info(char *name);
 void suid_power_init(void);

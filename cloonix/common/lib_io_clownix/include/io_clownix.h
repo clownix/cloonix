@@ -73,7 +73,7 @@ char *get_bigbuf(void);
 typedef void (*t_fct_job)(int ref_id, void *data);
 void job_for_select_init(void);
 void *job_for_select_alloc(int ref_id, int *llid1, int *llid2);
-void job_for_select_request(void *jfs_hand, t_fct_job cb, void *data);
+int  job_for_select_request(void *jfs_hand, t_fct_job cb, void *data);
 void job_for_select_free(void *jfs_hand, int *llid1, int *llid2);
 void job_for_select_close_fd(void);
 

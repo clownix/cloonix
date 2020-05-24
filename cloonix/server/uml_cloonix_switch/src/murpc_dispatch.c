@@ -36,6 +36,7 @@
 #include "fmt_diag.h"
 #include "murpc_dispatch.h"
 #include "suid_power.h"
+#include "snf_dpdk_process.h"
 
 
 /****************************************************************************/
@@ -55,14 +56,12 @@ static t_mutimeout *g_head;
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void snf_globtopo_small_event(char *name, int num_evt, char *path)
+void snf_globtopo_small_event(char *name, int num_evt, char *path)
 {
   t_small_evt evt;
   memset(&evt, 0, sizeof(t_small_evt));
   strncpy(evt.name, name, MAX_NAME_LEN-1);
   evt.evt = num_evt;
-  if (num_evt == snf_evt_recpath_change)
-    strncpy(evt.param1, path, MAX_PATH_LEN-1);
   event_subscriber_send(topo_small_event, (void *) &evt);
 }
 /*--------------------------------------------------------------------------*/
@@ -201,13 +200,7 @@ static void update_snf(char *name, char *line)
     KERR("%s", name);
   else
     {
-    if (!strncmp(line, "SET_CONF_OK", strlen("SET_CONF_OK")))
-      {
-      ptr = line + strlen("SET_CONF_OK");
-      endp_mngt_snf_set_recpath(name, 0, ptr);
-      snf_globtopo_small_event(name, snf_evt_recpath_change, ptr); 
-      }
-    else if (!strncmp(line, "GET_CONF_RESP", strlen("GET_CONF_RESP")))
+    if (!strncmp(line, "GET_CONF_RESP", strlen("GET_CONF_RESP")))
       {
       ptr = line + strlen("GET_CONF_RESP");
       ptrend = strchr(ptr, ' ');
@@ -215,20 +208,11 @@ static void update_snf(char *name, char *line)
         KERR("%s", ptr); 
       else
         {
-        *ptrend = 0;
-        endp_mngt_snf_set_recpath(name, 0, ptr);
-        snf_globtopo_small_event(name, snf_evt_recpath_change, ptr); 
         ptr = ptrend + 1;
         if (ptr[0] == '1')
-          {
-          endp_mngt_snf_set_capture(name, 0, 1); 
           snf_globtopo_small_event(name, snf_evt_capture_on, NULL);
-          }
         else
-          {
-          endp_mngt_snf_set_capture(name, 0, 0); 
           snf_globtopo_small_event(name, snf_evt_capture_off, NULL);
-          }
         }
       }
     else
@@ -331,6 +315,10 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   if (suid_power_diag_llid(llid))
     {
     suid_power_diag_resp(llid, tid, line);
+    }
+  else if (snf_dpdk_diag_llid(llid))
+    {
+    snf_dpdk_diag_resp(llid, tid, line);
     }
   else if (endp_mngt_can_be_found_with_llid(llid, name, &num, &mutype))
     {

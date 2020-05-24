@@ -49,6 +49,7 @@
 #include "dpdk_msg.h"
 #include "phy_mngt.h"
 #include "phy_evt.h"
+#include "snf_dpdk_process.h"
 
 /****************************************************************************/
 typedef struct t_dlan
@@ -68,6 +69,7 @@ typedef struct t_dlan
 typedef struct t_dtap
 {
   char name[MAX_NAME_LEN];
+  char strmac[MAX_NAME_LEN];
   int waiting_ack_add_tap;
   int waiting_ack_del_tap;
   int timer_count_tap;
@@ -144,6 +146,7 @@ static void free_dlan(t_dtap *dtap, char *lan)
     {
     if (!strcmp(cur->lan, lan_name))
       break;
+    cur = cur->next;
     }
   if (!cur)
     KERR("%s %s", dtap->name, lan_name);
@@ -161,6 +164,7 @@ static void free_dlan(t_dtap *dtap, char *lan)
     if ((!dpdk_dyn_lan_exists(lan_name)) &&
         (!dpdk_tap_lan_exists(lan_name)))
       dpdk_msg_vlan_exist_no_more(lan_name);
+    snf_dpdk_process_possible_change(lan_name);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -317,6 +321,7 @@ static void resp_lan(int is_add, int is_ko, char *lan, char *name)
           {
           phy_evt_lan_add_done(eth_type_dpdk, lan);
           event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+          snf_dpdk_process_possible_change(lan);
           }
         }
       }
@@ -339,7 +344,7 @@ void dpdk_tap_resp_del_lan(int is_ko, char *lan, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_tap_resp_add(int is_ko, char *name)
+void dpdk_tap_resp_add(int is_ko, char *name, char *strmac)
 {
   t_dtap *dtap = get_dtap(name);
   if (dtap == NULL)
@@ -363,6 +368,7 @@ void dpdk_tap_resp_add(int is_ko, char *name)
         KERR("%s", name);
       if (dtap->waiting_ack_del_tap != 0)
         KERR("%s", name);
+      strncpy(dtap->strmac, strmac, MAX_NAME_LEN-1);
       dtap->waiting_ack_add_tap = 0;
       dtap->waiting_ack_del_tap = 0;
       dtap->timer_count_tap = 0;
@@ -427,10 +433,8 @@ int dpdk_tap_add_lan(int llid, int tid, char *lan, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_tap_del_lan(int llid, int tid, char *lan, char *name)
+static void dpdk_tap_del_lan(char *lan, char *name)
 {
-
-  int result = -1;
   t_dtap *dtap = get_dtap(name);
   t_dlan *dlan;
   if (dtap == NULL)
@@ -448,13 +452,9 @@ int dpdk_tap_del_lan(int llid, int tid, char *lan, char *name)
         {
         dlan->waiting_ack_del_lan = 1;
         dlan->timer_count_lan = 0;
-        dlan->llid = llid;
-        dlan->tid = tid;
-        result = 0;
         }
       }
     }
-  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -484,15 +484,24 @@ int dpdk_tap_add(int llid, int tid, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_tap_del(int llid, int tid, char *name)
+int dpdk_tap_del(char *name)
 {
   int result = -1;
+  t_dlan *cur;
   t_dtap *dtap = get_dtap(name);
   if (!dtap)
     KERR("%s", name);
-  else if (dtap->waiting_ack_del_tap == 0)
+  else
     {
-    if (fmt_tx_del_tap(0, name))
+    cur = dtap->head_lan;
+    while (cur)
+      {
+      dpdk_tap_del_lan(cur->lan, name);
+      cur = cur->next;
+      }
+    if (dtap->waiting_ack_del_tap != 0)
+      KERR("%s", name);
+    else if (fmt_tx_del_tap(0, name))
       {
       KERR("%s", name);
       free_dtap(name);
@@ -501,8 +510,6 @@ int dpdk_tap_del(int llid, int tid, char *name)
       {
       dtap->waiting_ack_del_tap = 1;
       dtap->timer_count_tap = 0;
-      dtap->llid = llid;
-      dtap->tid = tid;
       result = 0;
       }
     }
@@ -536,7 +543,44 @@ int dpdk_tap_lan_exists(char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_dyn_lan_exists_in_tap(char *name, char *lan)
+char *dpdk_tap_get_mac(char *name)
+{
+  char *result = NULL;
+  t_dtap *dtap = get_dtap(name);
+  if (dtap)
+    result = dtap->strmac;
+  return result; 
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+char *dpdk_tap_get_next_matching_lan(char *lan, char *name)
+{
+  char *result = NULL;
+  t_dtap *dtap;
+  if (name == NULL)
+    dtap = g_head_dtap;
+  else
+    {
+    dtap = get_dtap(name);
+    if (dtap)
+      dtap = dtap->next;
+    } 
+  while(dtap)
+    {
+    if (get_dlan(dtap, lan) != NULL)
+      {
+      result = dtap->name;
+      break;
+      }
+    dtap = dtap->next;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_tap_lan_exists_in_tap(char *name, char *lan)
 {
   int result = 0;
   t_dtap *dtap = get_dtap(name);
@@ -586,6 +630,51 @@ void dpdk_tap_end_ovs(void)
   
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_tap_eventfull(char *name, int ms, int ptx, int btx, int prx, int brx)
+{
+  int result = -1;
+  t_dtap *dtap = get_dtap(name);
+  if (dtap)
+    {
+    dtap->ms      = ms;
+    dtap->pkt_tx  += ptx;
+    dtap->pkt_rx  += prx;
+    dtap->byte_tx += btx;
+    dtap->byte_rx += brx;
+    stats_counters_update_endp_tx_rx(dtap->name,0,ms,ptx,btx,prx,brx);
+    result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int dpdk_tap_collect_dpdk(t_eventfull_endp *eventfull)
+{
+  int result = 0;;
+  t_dtap *dtap = g_head_dtap;
+  while(dtap)
+    {
+    strncpy(eventfull[result].name, dtap->name, MAX_NAME_LEN-1);
+    eventfull[result].type = endp_type_tap;
+    eventfull[result].num  = 0;
+    eventfull[result].ms   = dtap->ms;
+    eventfull[result].ptx  = dtap->pkt_tx;
+    eventfull[result].prx  = dtap->pkt_rx;
+    eventfull[result].btx  = dtap->byte_tx;
+    eventfull[result].brx  = dtap->byte_rx;
+    dtap->pkt_tx  = 0;
+    dtap->pkt_rx  = 0;
+    dtap->byte_tx = 0;
+    dtap->byte_rx = 0;
+    result += 1;
+    dtap = dtap->next;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void dpdk_tap_init(void)

@@ -29,6 +29,7 @@
 #include "ioc.h"
 #include "sock_fd.h"
 
+void clean_before_exit(void *ptr);
 int  tap_fd_open(t_all_ctx *all_ctx, char *tap_name);
 int  wif_fd_open(t_all_ctx *all_ctx, char *tap_name);
 int  raw_fd_open(t_all_ctx *all_ctx, char *tap_name);
@@ -412,6 +413,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 /*---------------------------------------------------------------------------*/
   if (!strcmp(line, "cloonix_req_quit"))
     {
+    clean_before_exit(ptr);
     exit(0);
     }
 /*---------------------------------------------------------------------------*/

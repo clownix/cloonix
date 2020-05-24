@@ -48,7 +48,6 @@ GtkWidget *get_main_window(void);
 
 static char g_sav_whole[MAX_PATH_LEN];
 static char g_sav_derived[MAX_PATH_LEN];
-char *get_distant_dpdk_snf_dir(void);
 int format_phy_info(char *name, char *txt);
 int format_pci_info(char *name, char *txt);
 
@@ -518,21 +517,6 @@ static void node_item_delete(GtkWidget *mn, t_item_ident *pm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void lan_item_wireshark(GtkWidget *mn, t_item_ident *pm)
-{
-  t_bank_item *bitem;
-  char path[MAX_PATH_LEN+MAX_NAME_LEN];
-  bitem = look_for_lan_with_id(pm->name);
-  if (bitem)
-    {
-    memset(path, 0, MAX_PATH_LEN+MAX_NAME_LEN);
-    sprintf(path, "%s/%s", get_distant_dpdk_snf_dir(), pm->name);
-    start_wireshark(pm->name, path);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void lan_item_delete(GtkWidget *mn, t_item_ident *pm)
 {
   t_bank_item *edge=NULL, *bitem;
@@ -619,14 +603,12 @@ static void hidden_visible_node(GtkWidget *mn, t_item_ident *pm)
 static void sat_item_wireshark(GtkWidget *mn, t_item_ident *pm)
 {
   t_bank_item *bitem;
-  char *recpath;
   bitem = look_for_sat_with_id(pm->name);
   if (bitem)
     {
     if (bitem->pbi.mutype == endp_type_snf)
       {
-      recpath = bitem->pbi.pbi_sat->topo_snf.recpath;
-      start_wireshark(pm->name, recpath);
+      start_wireshark(pm->name);
       }
     }
 }
@@ -696,25 +678,18 @@ void focus_back_to_main (GtkWidget *win, gpointer data)
 /****************************************************************************/
 void lan_ctx_menu(t_bank_item *bitem)
 {
-  GtkWidget *item_delete, *item_hidden, *item_wireshark;
+  GtkWidget *item_delete, *item_hidden;
   GtkWidget *menu = gtk_menu_new();
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
-  if(bitem->pbi.mutype == endp_type_kvm_dpdk)
-    item_wireshark = gtk_menu_item_new_with_label("Wireshark");
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
   item_delete = gtk_menu_item_new_with_label("Delete");
-  if(bitem->pbi.mutype == endp_type_kvm_dpdk)
-    g_signal_connect(G_OBJECT(item_wireshark), "activate",
-                     G_CALLBACK(lan_item_wireshark), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_delete), "activate",
                    G_CALLBACK(lan_item_delete), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_hidden), "activate",
                    G_CALLBACK(hidden_visible_lan), (gpointer) pm);
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
-  if(bitem->pbi.mutype == endp_type_kvm_dpdk)
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_widget_show_all(menu);

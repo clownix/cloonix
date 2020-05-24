@@ -19,7 +19,6 @@ typedef struct t_item_obj_resp
 {
   t_topo_kvm *kvm;
   t_topo_c2c *c2c;
-  t_topo_snf *snf;
   t_topo_sat *sat;
 } t_item_obj_resp;
 /*--------------------------------------------------------------------------*/

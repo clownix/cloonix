@@ -393,9 +393,9 @@ void menu_dialog_vm_init(void)
   g_custom_vm.cpu = 2;
   g_custom_vm.mem = 2000;
   g_custom_vm.nb_tot_eth = 3;
-  g_custom_vm.eth_tab[0].eth_type = eth_type_sock;
-  g_custom_vm.eth_tab[1].eth_type = eth_type_sock;
-  g_custom_vm.eth_tab[2].eth_type = eth_type_sock;
+  g_custom_vm.eth_tab[0].eth_type = eth_type_dpdk;
+  g_custom_vm.eth_tab[1].eth_type = eth_type_dpdk;
+  g_custom_vm.eth_tab[2].eth_type = eth_type_dpdk;
   g_custom_dialog = NULL;
   memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   g_nb_bulkvm = 0;

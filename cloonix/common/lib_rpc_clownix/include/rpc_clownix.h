@@ -26,6 +26,7 @@
 #define MUSWITCH_TRAF_DIR "tmu"
 #define ENDP_SOCK_DIR "endp"
 #define SUID_POWER_SOCK_DIR "suid_power"
+#define SNF_DPDK_SOCK_DIR "snf_dpdk"
 #define CLI_SOCK_DIR "cli"
 #define SNF_PCAP_DIR "snf"
 
@@ -57,9 +58,9 @@ enum {
     type_hop_ovsdb,
     type_hop_mulan,
     type_hop_endp,
-    type_hop_snf,
     type_hop_doors,
     type_hop_suid_power,
+    type_hop_snf_dpdk,
     type_hop_max
     };
 
@@ -92,7 +93,6 @@ enum
   c2c_evt_mod_master_slave,
   snf_evt_capture_on,
   snf_evt_capture_off,
-  snf_evt_recpath_change,
   vm_evt_max,
 };
 

@@ -1,16 +1,14 @@
-CLOONIX_COMMON=../../../cloonix/common
-
+CLOONIX_COMMON=../../common
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
-AGENT_INCLUDE=${CLOONIX_COMMON}/agent_dropbear/cloonix_agent/src
 
 OBJ_DIR=obj/
 EXE = cloonix_suid_power
 
-SRC = suid_power.c stub.c net_phy.c
+SRC = suid_power.c stub.c net_phy.c ovs_get.c
 
 VPATH=./src
 
@@ -18,14 +16,13 @@ WARNINGS=-Wall -Wstrict-prototypes -Wdeclaration-after-statement
 
 INCLUDES= -I./src \
           -I$(GLOB_INCLUDE) \
-          -I${AGENT_INCLUDE} \
           -I${IO_CLOWNIX}/include \
           -I${RPC_CLOWNIX}/include
 
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
        -L${BLKD} -lblkd \
        -L${RPCT} -lrpct \
-       -lssl -lcrypto -lrt -lm
+       -lcrypto
 
 CFLAGS+= -g -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)
 CC=gcc

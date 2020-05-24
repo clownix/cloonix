@@ -16,6 +16,7 @@ echo patch -p1 < ${HERE}/dpdk.patch
 patch -p1 < ${HERE}/dpdk.patch
 sleep 2
 export PATH=${NINJA}/ninja:$PATH
+#${NINJA}/meson/meson.py -Dexamples=vhost build
 ${NINJA}/meson/meson.py build
 cd ${HERE}/${NAME}/build
 ninja

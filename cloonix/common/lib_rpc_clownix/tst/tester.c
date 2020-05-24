@@ -439,15 +439,6 @@ static void random_c2c(t_topo_c2c *c2c)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void random_snf(t_topo_snf *snf)
-{
-  random_choice_str(snf->name, MAX_NAME_LEN);
-  random_choice_str(snf->recpath, MAX_PATH_LEN);
-  snf->capture_on = rand();
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static void random_sat(t_topo_sat *sat)
 {
   random_choice_str(sat->name, MAX_NAME_LEN);
@@ -475,6 +466,26 @@ static void random_pci(t_topo_pci *pci)
   random_choice_str(pci->pci, IFNAMSIZ);
   random_choice_str(pci->drv, MAX_NAME_LEN);
   random_choice_str(pci->unused, MAX_NAME_LEN);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void random_bridges(t_topo_bridges *bridges)
+{
+  int i;
+  random_choice_str(bridges->br, MAX_NAME_LEN);
+  bridges->nb_ports = my_rand(20);
+  for (i=0; i<bridges->nb_ports; i++)
+    {
+    random_choice_str(bridges->ports[i], MAX_NAME_LEN);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void random_mirrors(t_topo_mirrors *mirrors)
+{ 
+  random_choice_str(mirrors->mir, MAX_NAME_LEN);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -514,11 +525,12 @@ static t_topo_info *random_topo_gen(void)
 
   topo->nb_kvm = my_rand(30);
   topo->nb_c2c = my_rand(10);
-  topo->nb_snf = my_rand(10);
   topo->nb_sat = my_rand(30);
   topo->nb_endp = my_rand(50);
   topo->nb_phy = my_rand(10);
   topo->nb_pci = my_rand(10);
+  topo->nb_bridges = my_rand(10);
+  topo->nb_mirrors = my_rand(10);
 
   if (topo->nb_kvm)
     {
@@ -539,15 +551,6 @@ static t_topo_info *random_topo_gen(void)
     memset(topo->c2c, 0, topo->nb_c2c * sizeof(t_topo_c2c));
     for (i=0; i<topo->nb_c2c; i++)
       random_c2c(&(topo->c2c[i]));
-    }
-
-  if (topo->nb_snf)
-    {
-    topo->snf =
-    (t_topo_snf *)clownix_malloc(topo->nb_snf * sizeof(t_topo_snf),3);
-    memset(topo->snf, 0, topo->nb_snf * sizeof(t_topo_snf));
-    for (i=0; i<topo->nb_snf; i++)
-      random_snf(&(topo->snf[i]));
     }
 
   if (topo->nb_sat)
@@ -586,6 +589,23 @@ static t_topo_info *random_topo_gen(void)
       random_pci(&(topo->pci[i]));
     }
 
+  if (topo->nb_bridges)
+    {
+    topo->bridges =
+    (t_topo_bridges *)clownix_malloc(topo->nb_bridges*sizeof(t_topo_bridges),3);
+    memset(topo->bridges, 0, topo->nb_bridges*sizeof(t_topo_bridges));
+    for (i=0; i<topo->nb_bridges; i++)
+      random_bridges(&(topo->bridges[i]));
+    }
+
+  if (topo->nb_mirrors)
+    {
+    topo->mirrors =
+    (t_topo_mirrors *)clownix_malloc(topo->nb_mirrors*sizeof(t_topo_mirrors),3);
+    memset(topo->mirrors, 0, topo->nb_mirrors*sizeof(t_topo_mirrors));
+    for (i=0; i<topo->nb_mirrors; i++)
+      random_mirrors(&(topo->mirrors[i]));
+    }
 
   return topo;
 }
@@ -741,8 +761,6 @@ void rpct_recv_hop_unsub(void *ptr, int llid, int itid)
   count_cmd_resp_txt_unsub++;
 }
 /*---------------------------------------------------------------------------*/
-
-
 
 /*****************************************************************************/
 void rpct_recv_hop_msg(void *ptr, int llid, int itid,

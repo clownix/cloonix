@@ -21,6 +21,7 @@
 #include <string.h>
 #include "io_clownix.h"
 #include "rpc_clownix.h"
+#include "commun_daemon.h"
 #include "layout_rpc.h"
 #include "cfg_store.h"
 #include "event_subscriber.h"
@@ -36,6 +37,7 @@
 #include "stats_counters_sysinfo.h"
 #include "blkd_sub.h"
 #include "unix2inet.h"
+#include "snf_dpdk_process.h"
 /*---------------------------------------------------------------------------*/
 typedef struct t_event_to_llid
 {
@@ -405,6 +407,7 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
   if ((llid <1) || (llid >= CLOWNIX_MAX_CHANNELS))
     KOUT("%s %d", fct, llid);
 
+  snf_dpdk_llid_closed(llid);
   qmp_event_free(llid);
   hop_event_free(llid);
   eventfull_llid_delete(llid);

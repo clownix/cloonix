@@ -5,21 +5,30 @@ See directory cloonix for the LICENCE
 
 See clownix.net for a documentation which may not be up to date.
 
-This version v06-00 is the latest (if this README is up to date).
+This version v07-00 is the latest (if this README is up to date).
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
 HOWTO INSTALL:
+
 It is assumed that sudo makes the command run as root.
-On bullseye, buster, disco, eoan, fedora31, centos8, opensuse152,
-compilation and run work, but for other distributions, you may have to
-ajust needed packages.
 
-cd cloonix
+Tested on:  
+            buster (debian 10),
+            bullseye (debian 11),
+            eoan (ubuntu 19.10),
+            focal (ubuntu 20.04),
+            centos8,
+            fedora31,
+            fedora32,
+            opensuse152.
 
-sudo ./install_depends build
+Compilation and run work, on the above but for other distributions, you may
+have to ajust needed packages that are in file install_depends.
 
-wget http://clownix.net/downloads/cloonix-06-00/targz_store.tar.gz
+sudo ./install_depends
+
+wget http://clownix.net/downloads/cloonix-07-00/targz_store.tar.gz
 
 tar xvf targz_store.tar.gz
 
@@ -32,16 +41,17 @@ mkdir -p ${HOME}/cloonix_data/bulk
 
 cd ${HOME}/cloonix_data/bulk
 
-wget http://clownix.net/downloads/cloonix-06-00/bulk/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-07-00/bulk/buster.qcow2.gz
 
 gunzip buster.qcow2.gz
 
-See other distros at http://clownix.net/downloads/cloonix-06-00/bulk
+See other distros at http://clownix.net/downloads/cloonix-07-00/bulk
 
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
 HOWTO START BASIC NET:
+
 Check that your cpu is equiped with the necessary option:
 
     egrep -c '(vmx|svm)' /proc/cpuinfo
@@ -60,6 +70,7 @@ cloonix vm guest, you can test if you have the necessary config:
 If you do not hav Y after this cat, then you can do:
 
     echo 'GRUB_CMDLINE_LINUX="kvm-intel.nested=1"' >> /etc/default/grub
+
     update-grub
 
 After any of the above commands, the host must be rebooted, then:
@@ -98,16 +109,27 @@ For debug:
 
 cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
 
-Inspect:
+Inspect ovs data:
 
 cloonix_ovs nemo vsctl show
 
 -----------------------------------------------------------------------------
 DPDK ETHERNET INTERFACE TEST WITHOUT INTEL
 As my personnal PCs have only Realtek ethernet devices and as those are not
-supported by DPDK, here is the way of testing, virtio_net is supported:
-Use the nested function: compile cloonix inside a guest with persistance flag
-on, launch 2 instances of this guest with dpdk interfaces linked to each-other.
+supported by DPDK, I never tested the DPDK with a real device.
+Here is the way of testing I used for this function:
+
+First compile a custom kernel with VFIO_NOIOMMU=y in the kernel config, this
+new kernel will be installed in your guest vm (not the host).
+
+Hardcoded in the current cloonix code, the vfio module is inserted with
+parameter enable_unsafe_noiommu_mode, I have no way to know the impact of
+this on a real dpdk interface.
+
+The guest must have the cloonix software inside it: compile cloonix inside
+ a guest with persistance flag so as not to do this multiple times.
+
+Launch 2 instances of this guest with dpdk interfaces linked to each-other.
 Inside each guest launch a nested vm with a dpdk interface, connect the
 interface to the pci 0000:00:05.0 (corresponding to the eth0 of level 0 guest).
 Ifconfig and ping from nested guest to nested guest.

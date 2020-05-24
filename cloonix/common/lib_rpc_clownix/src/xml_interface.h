@@ -329,8 +329,9 @@
                               "  network:%s username:%s server_port:%d \n"\
                               "  work_dir:%s bulk_dir:%s bin_dir:%s \n"\
                               "  flags_config:%d \n"\
-                              "  nb_kvm:%d nb_c2c:%d nb_snf:%d \n"\
-                              "  nb_sat:%d nb_endp:%d nb_phy:%d nb_pci:%d \n"
+                              "  nb_kvm:%d nb_c2c:%d \n"\
+                              "  nb_sat:%d nb_endp:%d nb_phy:%d nb_pci:%d \n"\
+                              "  nb_bridges:%d nb_mirrors:%d \n"
 
 #define EVENT_TOPO_C          "</event_topo>\n"\
 
@@ -354,11 +355,6 @@
                               "  peered:%d ip_slave:%x port_slave%d \n"\
                               "</c2c>\n"
 
-#define EVENT_TOPO_SNF        "<snf>\n"\
-                              "  name:%s \n"\
-                              "  recpath:%s capture_on:%d \n"\
-                              "</snf>\n"
-
 #define EVENT_TOPO_SAT        "<sat>\n"\
                               "  name:%s \n"\
                               "  type:%d \n"\
@@ -380,6 +376,18 @@
                               "  drv:%s \n"\
                               "  unused:%s \n"\
                               "</pci>\n"
+
+#define EVENT_TOPO_BRIDGES_O  "<bridges>\n"\
+                              "  br_name: %s \n"\
+                              "  nb_ports:%d \n"
+
+#define EVENT_TOPO_BRIDGES_I  "<port_name> %s </port_name>\n"
+
+#define EVENT_TOPO_BRIDGES_C  "</bridges>\n"
+
+#define EVENT_TOPO_MIRRORS    "<mirrors>\n"\
+                              "  mirror_name: %s \n"\
+                              "</mirrors>\n"
 
 #define EVENT_TOPO_LAN        "  <lan> %s </lan>\n"
 

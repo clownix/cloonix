@@ -64,18 +64,6 @@ void from_cloonix_switch_create_c2c(t_topo_c2c *c2c)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void from_cloonix_switch_create_snf(t_topo_snf *snf)
-{
-  t_item_obj_resp *pa;
-  pa = (t_item_obj_resp *)clownix_malloc(sizeof(t_item_obj_resp), 21);
-  memset(pa, 0, sizeof(t_item_obj_resp));
-  pa->snf = (t_topo_snf *) clownix_malloc(sizeof(t_topo_snf), 22);
-  memcpy(pa->snf, snf, sizeof(t_topo_snf));
-  clownix_timeout_add(1, timer_create_obj_resp, (void *)pa, NULL,NULL);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void from_cloonix_switch_create_sat(t_topo_sat *sat)
 {
   t_item_obj_resp *pa;

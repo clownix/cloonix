@@ -94,13 +94,23 @@ int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char *utils_get_snf_dpdk_bin_path(void)
+{
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,
+           "%s/server/dpdk/bin/cloonix_snf_dpdk", cfg_get_bin_dir());
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char *utils_get_suid_power_bin_path(void)
 {
   static char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1,
-           "%s/server/suid_power/cloonix_suid_power",
-           cfg_get_bin_dir());
+           "%s/server/suid_power/cloonix_suid_power", cfg_get_bin_dir());
   return path;
 }
 /*---------------------------------------------------------------------------*/
@@ -201,8 +211,9 @@ char *utils_get_cli_sock_dir(void)
 char *utils_get_snf_pcap_dir(void)
 {
   static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,"%s/%s", cfg_get_root_work(), SNF_PCAP_DIR);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, SNF_PCAP_DIR);
   return path;
 }
 /*--------------------------------------------------------------------------*/
@@ -395,19 +406,19 @@ char *utils_get_dpdk_ovs_db_dir(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_snf_dir(void)
+char *utils_get_dpdk_qemu_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s_snf", cfg_get_root_work(), DIR_DPDK);
+  sprintf(dpdk, "%s/%s_qemu", cfg_get_root_work(), DIR_DPDK);
   return dpdk;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_qemu_dir(void)
+char *utils_get_dpdk_snf_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s_qemu", cfg_get_root_work(), DIR_DPDK);
+  sprintf(dpdk, "%s/%s", cfg_get_root_work(), SNF_DPDK_SOCK_DIR);
   return dpdk;
 }
 /*---------------------------------------------------------------------------*/
@@ -537,7 +548,8 @@ void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death)
 /*****************************************************************************/
 void free_wake_up_eths_and_vm_ok(t_vm *vm)
 {
-  int llid, tid;
+  int i, llid, tid;
+  char *vhost_ifname;
   if ((!vm) || (!vm->wake_up_eths))
     KOUT(" ");
   llid = vm->wake_up_eths->llid;
@@ -545,6 +557,15 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
   free_wake_up_eths(vm);
   if (llid)
     send_status_ok(llid, tid, "addvm");
+
+  for (i=0; i < vm->kvm.nb_tot_eth; i++)
+    {
+    if (vm->kvm.eth_table[i].eth_type == eth_type_vhost)
+      {
+      vhost_ifname = vhost_ident_get(vm->kvm.vm_id, i);
+      suid_power_rec_name(vhost_ifname, 1);
+      }
+    }
 }
 /*---------------------------------------------------------------------------*/
 

@@ -3,10 +3,10 @@ HERE=`pwd`
 NINJA=${HERE}/../../common/meson_ninja
 DPDK=${HERE}/../dpdk
 TARGZSTORE=${HERE}/../../../targz_store
-NAME=tldk
-NAMEZ=${NAME}.tar.gz
+NAME=tldk_tainted
 
 ./allclean
+./patched_create.sh
 
 if [ ! -f ${NINJA}/ninja/ninja ]; then
   cd ${NINJA}
@@ -18,10 +18,7 @@ if [ ! -f ${DPDK}/bin/dpdk-testpmd ]; then
   ./cmd
 fi
 
-
 cd ${HERE}
-tar xvf ${TARGZSTORE}/${NAMEZ}
-
 
 export ALL_DPDK_LIBS=${DPDK}/lib
 export ALL_DPDK_INCS=${DPDK}/include
@@ -133,13 +130,8 @@ executable('l4fwd', sources, include_directories : incdir,
 
 EOF
 
-#            build_rpath : '${ALL_DPDK_LIBS}',
-#            install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
-
 meson.py build
 cd build
 ninja
 DESTDIR=${HERE} ninja install
-
-
-#mv ${HERE}/${NAME}/examples/l4fwd/build/l4fwd ${HERE}
+mv ${HERE}/usr/local/bin/l4fwd ${DPDK}/bin 

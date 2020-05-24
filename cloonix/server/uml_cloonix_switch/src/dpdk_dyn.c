@@ -34,10 +34,12 @@
 #include "dpdk_dyn.h"
 #include "dpdk_msg.h"
 #include "dpdk_tap.h"
+#include "dpdk_snf.h"
 #include "machine_create.h"
 #include "event_subscriber.h"
 #include "phy_mngt.h"
 #include "phy_evt.h"
+#include "snf_dpdk_process.h"
 
 /****************************************************************************/
 typedef struct t_dlan
@@ -104,7 +106,8 @@ static void vlan_free(t_deth *eth, t_dlan *lan)
     eth->head_lan = lan->next;
   clownix_free(lan, __FUNCTION__);
   if ((!dpdk_dyn_lan_exists(lan_name)) &&
-      (!dpdk_tap_lan_exists(lan_name)))
+      (!dpdk_tap_lan_exists(lan_name)) &&
+      (!dpdk_snf_lan_exists(lan_name)))
     dpdk_msg_vlan_exist_no_more(lan_name);
 }
 /*--------------------------------------------------------------------------*/
@@ -275,8 +278,8 @@ static void all_lan_del_req(t_dvm *vm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void recv_ack(int is_add, int is_ko,
-                     char *lan_name, char *name, int num, char *lab)
+static void recv_ack(int is_add, int is_ko, char *lan_name,
+                     char *name, int num, char *lab)
 {
   t_dlan *lan;
   t_dvm *vm = vm_find(name);
@@ -292,42 +295,26 @@ static void recv_ack(int is_add, int is_ko,
         KERR("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
       else
         {
-        if (lan->llid)
+        if ((is_ko) || (!is_add))
           {
-          if (msg_exist_channel(lan->llid))
-            {
-            if (is_ko)
-              send_status_ko(lan->llid, lan->tid, lab);
-            }
-          else
-            KERR("add:%d ko:%d %s %s %d", is_add, is_ko, lan_name, name, num);
+          if ((is_ko) && (lan->llid))
+            send_status_ko(lan->llid, lan->tid, lab);
+          vlan_free(eth, lan);
           } 
-        if (is_add == 1)
+        else
           {
           if (lan->waiting_ack_add != 1)
             KERR("addlan ko:%d %s %s %d", is_ko, lan_name, name, num);
           lan->waiting_ack_add = 0; 
-          if (is_ko)
-            vlan_free(eth, lan);
-          else
-            {
-            if (phy_evt_update_eth_type(lan->llid, lan->tid, is_add,
-                                         eth_type_dpdk, name, lan_name))
-              send_status_ok(lan->llid, lan->tid, "OK");
-            event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-            }
+          if (phy_evt_update_eth_type(lan->llid, lan->tid, is_add,
+                                       eth_type_dpdk, name, lan_name))
+            send_status_ok(lan->llid, lan->tid, "OK");
+          lan->llid = 0;
+          lan->tid = 0;
           }
-        else
-          {
-          if (lan->waiting_ack_del != 1)
-            KERR("dellan ko:%d %s %s %d", is_ko, lan_name, name, num);
-          lan->waiting_ack_del = 0;
-          vlan_free(eth, lan);
-          phy_evt_update_eth_type(0,0,is_add,eth_type_dpdk,name,lan_name);
-          event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-          }
-        lan->llid = 0;
-        lan->tid = 0;
+        phy_evt_update_eth_type(0, 0, is_add, eth_type_dpdk, name, lan_name);
+        event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+        snf_dpdk_process_possible_change(lan_name);
         }
       }
     }

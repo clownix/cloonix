@@ -40,6 +40,7 @@
 #include "menu_utils.h"
 
 
+void canvas_ctx_menu(gdouble x, gdouble y);
 
 typedef struct
 {
@@ -115,13 +116,13 @@ void topo_repaint_request(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void snf_add_recpath_and_capture_on(t_bank_item *bitem)
+void snf_add_capture_on(t_bank_item *bitem)
 {
   CrItem *item, *child1;
   char onoff[5];
   item = (CrItem *) bitem->cr_item;
   child1 = (CrItem *) bitem->pbi.pbi_sat->snf_cr_item_onoff;
-  if (bitem->pbi.pbi_sat->topo_snf.capture_on)
+  if (bitem->pbi.pbi_sat->snf_capture_on)
     strcpy(onoff, "ON"); 
   else
     strcpy(onoff, "OFF"); 
@@ -278,7 +279,6 @@ void move_manager_rotate(t_bank_item *bitem, double x1, double y1)
 static void process_mouse_double_click(t_bank_item *bitem)
 {
   int config_flags;
-  char *recpath;
   switch(bitem->bank_type)
     {
 
@@ -298,10 +298,7 @@ static void process_mouse_double_click(t_bank_item *bitem)
     case bank_type_sat:
       bitem->pbi.flag = flag_normal;
       if (is_a_snf(bitem))
-        {
-        recpath = bitem->pbi.pbi_sat->topo_snf.recpath;
-        start_wireshark(bitem->name, recpath);
-        }
+        start_wireshark(bitem->name);
       break;
 
     default:
@@ -676,7 +673,7 @@ static void on_item_paint_snf(CrItem *item, cairo_t *c)
   paint_select(c,flag,flag_trace,&myorange,&red,&lightmagenta);
   cairo_fill(c);
   cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, SNIFF_RAD/2, 0, 2*M_PI);
-  if (bitem->pbi.pbi_sat->topo_snf.capture_on)
+  if (bitem->pbi.pbi_sat->snf_capture_on)
     cairo_set_source_rgba (c, red.r, red.g, red.b, 1.0);
   else
     cairo_set_source_rgba (c, green.r, green.g, green.b, 1.0);

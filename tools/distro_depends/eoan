@@ -81,7 +81,7 @@ EOF"
 cloonix_ssh $NET ${NAME} "./install_depends"
 #----------------------------------------------------------------------
 set +e
-for ((i=0;i<10;i++)); do
+for ((i=0;i<3;i++)); do
   cloonix_ssh $NET ${NAME} "./install_depends"
   sleep 10
 done

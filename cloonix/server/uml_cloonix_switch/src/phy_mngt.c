@@ -248,77 +248,73 @@ int phy_mngt_lan_exists(char *lan, int *eth_type, int *endp_type)
 /****************************************************************************/
 int phy_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
 {
-  t_phy *cur = phy_mngt_lan_find(lan);
+  t_phy *cur;
   int eth_type, type, result = -1, len;
-  if (cur)
+  cur = phy_mngt_phy_find(name); 
+  if (cur == NULL)
     {
-    snprintf(err, MAX_PATH_LEN-1,
-             "Lan already exists %s %s in %s", name, lan, cur->name);
+    snprintf(err, MAX_PATH_LEN, "Not found: %s", name);
     KERR("%s", err);
     }
-  else
+  else if ((cur->lan.nb_lan == 1) &&
+           (cur->eth_type != eth_type_none))
     {
-    cur = phy_mngt_phy_find(name); 
-    if (cur == NULL)
+    snprintf(err, MAX_PATH_LEN, "Phy %s is attached to %s",
+                                name, cur->lan.lan[0].lan);
+    KERR("%s", err);
+    }
+  else if (endp_evt_lan_is_in_use(lan, &type))
+    {
+    if ((type != endp_type_kvm_sock)  &&
+        (type != endp_type_kvm_dpdk)  &&
+        (type != endp_type_kvm_vhost) &&
+        (type != endp_type_tap)       &&
+        (type != endp_type_snf)       &&
+        (type != endp_type_c2c))
       {
-      snprintf(err, MAX_PATH_LEN, "Not found: %s", name);
+      snprintf(err, MAX_PATH_LEN, 
+              "Lan %s is attached to incompatible type", lan);
       KERR("%s", err);
-      }
-    else if ((cur->lan.nb_lan == 1) &&
-             (cur->eth_type != eth_type_none))
+      } 
+    else if (cur->endp_type == endp_type_pci)
       {
-      snprintf(err, MAX_PATH_LEN, "Phy %s is attached to %s",
-                                  name, cur->lan.lan[0].lan);
+      snprintf(err, MAX_PATH_LEN, "%s SOCK not compat pci", lan); 
       KERR("%s", err);
-      }
-    else if (endp_evt_lan_is_in_use(lan, &type))
+      } 
+    else 
+      result = 0;
+    }
+  else if (vhost_lan_exists(lan))
+    {
+    if (cur->endp_type == endp_type_pci)
       {
-      if ((type != endp_type_kvm_sock)  &&
-          (type != endp_type_kvm_dpdk)  &&
-          (type != endp_type_kvm_vhost) &&
-          (type != endp_type_tap)       &&
-          (type != endp_type_snf)       &&
-          (type != endp_type_c2c))
-        {
-        snprintf(err, MAX_PATH_LEN, 
-                "Lan %s is attached to incompatible type", lan);
-        KERR("%s", err);
-        } 
-      else if (cur->endp_type == endp_type_pci)
-        {
-        snprintf(err, MAX_PATH_LEN, "%s SOCK not compat pci", lan); 
-        KERR("%s", err);
-        } 
-      else 
-        result = 0;
-      }
-    else if (vhost_lan_exists(lan))
+      snprintf(err, MAX_PATH_LEN, "%s VHOST not compat pci", lan);
+      KERR("%s", err);
+      } 
+    else if (cur->endp_type == endp_type_snf)
       {
-      if (cur->endp_type == endp_type_pci)
-        {
-        snprintf(err, MAX_PATH_LEN, "%s VHOST not compat pci", lan);
-        KERR("%s", err);
-        } 
-      else
-        result = 0;
+      snprintf(err, MAX_PATH_LEN, "%s VHOST not compat snf", lan);
+      KERR("%s", err);
       }
     else
       result = 0;
-    if (result == 0)
+    }
+  else
+    result = 0;
+  if (result == 0)
+    {
+    len = sizeof(t_lan_group_item);
+    cur->lan.nb_lan = 1;
+    cur->lan.lan=(t_lan_group_item *)clownix_malloc(len, 2);
+    strncpy(cur->lan.lan[0].lan, lan, MAX_NAME_LEN-1);
+    eth_type = phy_evt_update_lan_add(cur, llid, tid);
+    if (eth_type == eth_type_none)
       {
-      len = sizeof(t_lan_group_item);
-      cur->lan.nb_lan = 1;
-      cur->lan.lan=(t_lan_group_item *)clownix_malloc(len, 2);
-      strncpy(cur->lan.lan[0].lan, lan, MAX_NAME_LEN-1);
-      eth_type = phy_evt_update_lan_add(cur, llid, tid);
-      if (eth_type == eth_type_none)
-        {
-        send_status_ok(llid, tid, "OK");
-        cur->llid = 0;
-        cur->tid = 0;
-        }
-      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+      send_status_ok(llid, tid, "OK");
+      cur->llid = 0;
+      cur->tid = 0;
       }
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     }
   return result;
 }
@@ -367,6 +363,7 @@ int phy_mngt_add(int llid, int tid, char *name, int endp_type)
   int result;
   if ((endp_type != endp_type_phy) &&
       (endp_type != endp_type_pci) &&
+      (endp_type != endp_type_snf) &&
       (endp_type != endp_type_tap))
     {
     KERR("%s not compatible endp", name);
@@ -395,6 +392,7 @@ int phy_mngt_add(int llid, int tid, char *name, int endp_type)
       suid_power_ifup_phy(name);
     cur = phy_alloc(name, endp_type); 
     phy_mngt_set_eth_type(cur, eth_type_none); 
+    suid_power_rec_name(name, 1);
     layout_add_sat(name, llid);
     send_status_ok(llid, tid, "OK");
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
@@ -419,6 +417,7 @@ int phy_mngt_del(int llid, int tid, char *name)
     phy_evt_del_inside(cur);
     phy_mngt_phy_free(cur);
     layout_del_sat(name);
+    suid_power_rec_name(name, 0);
     send_status_ok(llid, tid, "OK");
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     result = 0;

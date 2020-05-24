@@ -49,6 +49,9 @@
 #define MQ_QUEUES 4
 #define MQ_VECTORS ((2 * MQ_QUEUES) + 2)
 
+#define MAX_OVS_BRIDGES    100
+#define MAX_OVS_MIRRORS    100
+#define MAX_OVS_PORTS      50 
 #define MAX_PHY            16
 #define MAX_PCI            16
 #define MAX_VM             100
@@ -215,13 +218,6 @@ typedef struct t_topo_c2c
   int port_slave;
   } t_topo_c2c;
 /*---------------------------------------------------------------------------*/
-typedef struct t_topo_snf
-  {
-  char name[MAX_NAME_LEN];
-  char recpath[MAX_PATH_LEN];
-  int capture_on;
-  } t_topo_snf;
-/*---------------------------------------------------------------------------*/
 typedef struct t_topo_sat
   {
   char name[MAX_NAME_LEN];
@@ -255,6 +251,18 @@ typedef struct t_topo_pci
   char unused[MAX_NAME_LEN];
 } t_topo_pci;
 /*---------------------------------------------------------------------------*/
+typedef struct t_topo_bridges
+{
+  char br[MAX_NAME_LEN];
+  int nb_ports;
+  char ports[MAX_OVS_PORTS][MAX_NAME_LEN];
+} t_topo_bridges;
+/*---------------------------------------------------------------------------*/
+typedef struct t_topo_mirrors
+{
+  char mir[MAX_NAME_LEN];
+} t_topo_mirrors;
+/*---------------------------------------------------------------------------*/
 typedef struct t_topo_info
 {
   t_topo_clc clc;
@@ -264,9 +272,6 @@ typedef struct t_topo_info
 
   int nb_c2c;
   t_topo_c2c *c2c;
-
-  int nb_snf;
-  t_topo_snf *snf;
 
   int nb_sat;
   t_topo_sat *sat;
@@ -279,6 +284,12 @@ typedef struct t_topo_info
 
   int nb_pci;
   t_topo_pci *pci;  
+
+  int nb_bridges;
+  t_topo_bridges *bridges;
+
+  int nb_mirrors;
+  t_topo_mirrors *mirrors;
 
 } t_topo_info;
 /*---------------------------------------------------------------------------*/

@@ -35,11 +35,10 @@
 #include "layout_rpc.h"
 #include "lib_topo.h"
 #include "utils.h"
+#include "canvas_ctx.h"
 
 int check_before_start_launch(char **argv);
 void set_bulkvm(int nb, t_slowperiodic *slowperiodic);
-void update_topo_phy(int nb_phy, t_topo_phy *phy);
-void update_topo_pci(int nb_pci, t_topo_pci *pci);
 
 /*---------------------------------------------------------------------------*/
 typedef struct t_vm_config
@@ -155,6 +154,8 @@ void callback_topo(int tid, t_topo_info *topo)
     }
   update_topo_phy(topo->nb_phy, topo->phy);
   update_topo_pci(topo->nb_pci, topo->pci);
+  update_topo_bridges(topo->nb_bridges, topo->bridges);
+  update_topo_mirrors(topo->nb_mirrors, topo->mirrors);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -213,11 +214,8 @@ static void topo_small_event_cb(int tid, char *name,
   else if (evt == c2c_evt_mod_master_slave)
     modify_c2c(name, p1, p2);
   else if ((evt == snf_evt_capture_on)  ||
-           (evt == snf_evt_capture_off) ||
-           (evt == snf_evt_recpath_change))
-    {
-    modify_snf(name, evt, p1);
-    }
+           (evt == snf_evt_capture_off)) 
+    modify_snf(name, evt);
   else
     KOUT(" ");
 }

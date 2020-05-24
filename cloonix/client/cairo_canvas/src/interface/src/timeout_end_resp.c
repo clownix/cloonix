@@ -54,15 +54,13 @@ static void create_node_resp(t_topo_kvm *kvm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_sat_resp(char *name, int type, 
-                            t_topo_c2c *c2c, t_topo_snf *snf)
+static void create_sat_resp(char *name, int type, t_topo_c2c *c2c)
 {
   double x, y, xa, ya, xb, yb;
   int hidden;
   get_gene_layout_x_y(bank_type_sat, name, type,
                       &x, &y, &xa, &ya, &xb, &yb, &hidden);
-  bank_sat_create(name, type, c2c, snf,
-                  x, y, xa, ya, xb, yb, hidden);
+  bank_sat_create(name, type, c2c, x, y, xa, ya, xb, yb, hidden);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -77,17 +75,12 @@ void timer_create_obj_resp(void *data)
     }
   else if (pa->c2c)
     {
-    create_sat_resp(pa->c2c->name, endp_type_c2c, pa->c2c, NULL);
+    create_sat_resp(pa->c2c->name, endp_type_c2c, pa->c2c);
     clownix_free(pa->c2c, __FUNCTION__);
-    }
-  else if (pa->snf)
-    {
-    create_sat_resp(pa->snf->name, endp_type_snf, NULL, pa->snf);
-    clownix_free(pa->snf, __FUNCTION__);
     }
   else if (pa->sat)
     {
-    create_sat_resp(pa->sat->name, pa->sat->type, NULL, NULL);
+    create_sat_resp(pa->sat->name, pa->sat->type, NULL);
     clownix_free(pa->sat, __FUNCTION__);
     }
   else

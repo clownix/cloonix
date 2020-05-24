@@ -101,6 +101,11 @@ static void death_of_rmdir_clone(void *data, int status, char *name)
     eth_tab = vm->kvm.eth_table;
     for (i=0; i<vm->kvm.nb_tot_eth; i++)
       {
+      if (eth_tab[i].eth_type == eth_type_sock)
+        endp_mngt_stop(vm->kvm.name, i);
+      }
+    for (i=0; i<vm->kvm.nb_tot_eth; i++)
+      {
       if ((eth_tab[i].eth_type == eth_type_dpdk) ||
           (eth_tab[i].eth_type == eth_type_vhost))
         {
@@ -366,6 +371,7 @@ void machine_death( char *name, int error_death)
   int i;
   t_vm *vm = cfg_get_vm(name);
   char cisco_nat_name[2*MAX_NAME_LEN];
+  char *vhost_ifname;
   t_eth_table *eth_tab;
   if ((!vm) || (vm->vm_to_be_killed == 1))
     {
@@ -391,6 +397,16 @@ void machine_death( char *name, int error_death)
     eth_tab = vm->kvm.eth_table;
     for (i=0; i<vm->kvm.nb_tot_eth; i++)
       {
+      if (eth_tab[i].eth_type == eth_type_sock)
+        endp_mngt_stop(vm->kvm.name, i);
+      else if (eth_tab[i].eth_type == eth_type_vhost)
+        {
+        vhost_ifname = vhost_ident_get(vm->kvm.vm_id, i);
+        suid_power_rec_name(vhost_ifname, 0);
+        }
+      }
+    for (i=0; i<vm->kvm.nb_tot_eth; i++)
+      {
       if ((eth_tab[i].eth_type == eth_type_dpdk) ||
           (eth_tab[i].eth_type == eth_type_vhost))
         {
@@ -403,7 +419,6 @@ void machine_death( char *name, int error_death)
         endp_mngt_stop(vm->kvm.name, i);
         }
       }
-
 
     doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
     qhvc0_end_qemu_unix(vm->kvm.name);

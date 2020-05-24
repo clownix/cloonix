@@ -73,6 +73,7 @@ done
             muswitch/mulan \
             spice \
             qemu \
+            snf_dpdk \
             dtach; do
 
     echo

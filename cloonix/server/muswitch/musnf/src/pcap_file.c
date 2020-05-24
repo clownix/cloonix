@@ -26,6 +26,7 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <linux/types.h>
+#include <libgen.h>
 
 #include "ioc.h"
 #include "inotify_open.h"
@@ -57,6 +58,20 @@ typedef struct pcaprec_hdr_s
 
 void send_config_modif(t_all_ctx *all_ctx);
 
+/*****************************************************************************/
+static int dir_exists_writable(char *path)
+{
+  int result = 0;
+  char tmp[MAX_PATH_LEN];
+  char *pdir;
+  memset(tmp, 0, MAX_PATH_LEN);
+  strncpy(tmp, path, MAX_PATH_LEN - 1);
+  pdir = dirname(tmp);
+  if (!access(pdir, W_OK))
+    result = 1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void pcap_file_start_begin(t_all_ctx *all_ctx)
@@ -67,6 +82,16 @@ static void pcap_file_start_begin(t_all_ctx *all_ctx)
     KOUT("%s", strerror(errno));
   inotify_upon_open(all_ctx, g_path_file);
   send_config_modif(all_ctx);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void pcap_file_unlink(void)
+{
+  if (g_fd != -1)
+    close(g_fd);
+  unlink(g_path_file);
+  g_fd = -1;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -144,34 +169,13 @@ void pcap_file_start_end(t_all_ctx *all_ctx, int fd)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int pcap_file_set_path(t_all_ctx *all_ctx, char *path)
-{
-  int result = -1;
-  if (g_path_file[0] != 0)
-    KERR("PATH_FILE ALREADY INITIALIZED to %s", g_path_file);
-  else if (g_fd != -1)
-    KERR("PROBLEM %s", g_path_file);
-  else
-    {
-    strcpy(g_path_file, path);
-    pcap_file_start_begin(all_ctx);
-    result = 0;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *pcap_file_get_path(t_all_ctx *all_ctx)
-{
-  return(g_path_file);
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void pcap_file_init(t_all_ctx *all_ctx, char *net_name, char *name)
+void pcap_file_init(t_all_ctx *all_ctx, char *net_name, char *name, char *snf)
 {
   g_fd = -1;
   memset(g_path_file, 0, MAX_PATH_LEN);
+  if (!dir_exists_writable(snf))
+    KOUT("%s", snf);
+  snprintf(g_path_file, MAX_PATH_LEN-1, "%ssnf/%s.pcap", snf, name);
+  pcap_file_start_begin(all_ctx);
 }
 /*--------------------------------------------------------------------------*/

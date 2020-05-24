@@ -38,8 +38,8 @@ typedef struct t_pbi_node
 typedef struct t_pbi_sat
 {
   void *snf_cr_item_onoff;
-  t_topo_snf topo_snf;
   t_topo_c2c topo_c2c;
+  int snf_capture_on;
 } t_pbi_sat;
 
 
@@ -168,8 +168,7 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
                       double *tx, double *ty, int32_t *thidden_on_graph);
 /*--------------------------------------------------------------------------*/
 void bank_edge_create(char *name, int num, char *lan); 
-void bank_sat_create(char *name, int mutype, 
-                     t_topo_c2c *c2c, t_topo_snf *snf,
+void bank_sat_create(char *name, int mutype, t_topo_c2c *c2c,
                      double x, double y, 
                      double xa, double ya, 
                      double xb, double yb, 
@@ -199,7 +198,7 @@ void bank_set_wireshark_pid(char *name, int val);
 /*--------------------------------------------------------------------------*/
 
 void modify_c2c(char *name, char *master_cloonix, char *slave_cloonix);
-void modify_snf(char *name, int evt, char *path);
+void modify_snf(char *name, int evt);
 
 int is_a_nat(t_bank_item *bitem);
 int is_a_c2c(t_bank_item *bitem);

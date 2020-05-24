@@ -67,7 +67,6 @@ static void inotify_read_event(t_all_ctx *all_ctx, int llid, int fdnotify)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static int rx_inot(void *ptr, int llid, int fd)
 {

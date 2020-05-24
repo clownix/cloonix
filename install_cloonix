@@ -28,14 +28,14 @@ SERV_BIN_PATH=/usr/local/bin/cloonix/server
 MUTAP=${SERV_BIN_PATH}/muswitch/mutap/cloonix_mutap
 MUOVS=${SERV_BIN_PATH}/muswitch/muovs/cloonix_muovs
 SUID_POWER=${SERV_BIN_PATH}/suid_power/cloonix_suid_power
+SNF_DPDK=${SERV_BIN_PATH}/dpdk/bin/cloonix_snf_dpdk
+USBHELP=/usr/local/bin/cloonix/common/spice/spice_lib
+USBHELP+=/libexec/spice-client-glib-usb-acl-helper
 chmod u+s ${MUTAP}
 chmod u+s ${MUOVS}
 chmod u+s ${SUID_POWER}
-USBHELP=/usr/local/bin/cloonix/common/spice
-USBHELP+=/spice_lib/bin/spice-client-glib-usb-acl-helper
-if [ -e ${USBHELP} ]; then
-  chmod u+s ${USBHELP}
-fi
+chmod u+s ${SNF_DPDK}
+chmod u+s ${USBHELP}
 #----------------------------------------------------------
 rm -f ${HERE}/${CLOONIX}
 #----------------------------------------------------------

@@ -74,6 +74,8 @@ static t_pci_dpdk *alloc_pci_dpdk(char *pci)
 /****************************************************************************/
 static void free_pci_dpdk(t_pci_dpdk *cur)
 {
+  if (suid_power_req_vfio_detach(cur->pci))
+    KERR("%s", cur->pci);
   if (cur->prev)
     cur->prev->next = cur->next;
   if (cur->next)

@@ -36,6 +36,32 @@
 #include "sock_fd.h"
 
 /*****************************************************************************/
+void send_config_modif(t_all_ctx *all_ctx)
+{
+  int is_blkd, cloonix_llid;
+  int mutype;
+  char resp[MAX_PATH_LEN];
+  memset(resp, 0, MAX_PATH_LEN);
+  cloonix_llid = blkd_get_cloonix_llid((void *) all_ctx);
+  snprintf(resp, MAX_PATH_LEN-1, "GET_CONF_RESP %d",
+                                 pcap_file_is_recording(all_ctx));
+  if (msg_exist_channel(all_ctx, cloonix_llid, &is_blkd, __FUNCTION__))
+    {
+    mutype = blkd_get_our_mutype((void *) all_ctx);
+    rpct_send_cli_resp(all_ctx, cloonix_llid, mutype, 0, 0, resp);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_recv_cli_req(void *ptr, int llid, int tid,
+                    int cli_llid, int cli_tid, char *line)
+{
+  KOUT("%s", line);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line)
 {
 }
@@ -85,11 +111,19 @@ int rx_from_traffic_sock(t_all_ctx *all_ctx, int tidx, t_blkd *bd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void clean_before_exit(void *ptr)
+{
+  pcap_file_unlink();
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int main (int argc, char *argv[])
 {
   t_all_ctx *all_ctx;
   int snf_type;
   char *endptr;
+  char snf_dir[MAX_PATH_LEN];
   if (argc != 5)
     KOUT(" ");
   snf_type = strtoul(argv[4], &endptr, 10);
@@ -103,8 +137,13 @@ int main (int argc, char *argv[])
   strncpy(all_ctx->g_net_name, argv[1], MAX_NAME_LEN-1);
   strncpy(all_ctx->g_name, argv[2], MAX_NAME_LEN-1);
   strncpy(all_ctx->g_path, argv[3], MAX_PATH_LEN-1);
-  pcap_file_init(all_ctx, all_ctx->g_net_name, all_ctx->g_name);
+  strncpy(snf_dir, argv[3], MAX_PATH_LEN-1);
+  endptr = strstr(snf_dir, "endp");
+  if (!endptr)
+    KOUT("%s", snf_dir);
+  *endptr = 0;
   sock_fd_init(all_ctx);
+  pcap_file_init(all_ctx, all_ctx->g_net_name, all_ctx->g_name, snf_dir);
   msg_mngt_loop(all_ctx);
   return 0;
 }

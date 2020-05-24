@@ -25,6 +25,9 @@ void dpdk_msg_ack_eth(int tid, char *name, int num,
 /*--------------------------------------------------------------------------*/
 int dpdk_msg_send_add_eth(char *name, int num, char *strmac);
 void dpdk_msg_send_del_eth(char *name, int num);
+
+int dpdk_msg_send_add_lan_snf(char *lan_name, char *name);
+int dpdk_msg_send_del_lan_snf(char *lan_name, char *name);
 int dpdk_msg_send_add_lan_eth(char *lan_name, char *vm_name, int num);
 int dpdk_msg_send_del_lan_eth(char *lan_name, char *vm_name, int num);
 int dpdk_msg_send_add_lan_tap(char *lan_name, char *name);

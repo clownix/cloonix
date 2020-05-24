@@ -5,8 +5,10 @@ LIST="centos8 \
       buster \
       bullseye \
       fedora31 \
+      fedora32 \
       opensuse152 \
-      eoan" 
+      eoan \
+      focal" 
 
 
 #######################################################################
@@ -35,7 +37,7 @@ cloonix_gui $NET
 
 #######################################################################
 for DISTRO in $LIST; do
-  cloonix_cli $NET add kvm $DISTRO ram=8000 cpu=8 eth=v full_${DISTRO}.qcow2 &
+  cloonix_cli $NET add kvm $DISTRO ram=8000 cpu=8 eth=v full_${DISTRO}.qcow2 --persistent &
 done
 
 for DISTRO in $LIST; do

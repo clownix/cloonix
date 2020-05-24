@@ -34,13 +34,10 @@
 void process_all_diffs(t_topo_differences *diffs)
 {
   int pid;
-
   t_topo_kvm_chain   *add_kvm = diffs->add_kvm;
   t_topo_kvm_chain   *del_kvm = diffs->del_kvm;
   t_topo_c2c_chain   *add_c2c = diffs->add_c2c;
   t_topo_c2c_chain   *del_c2c = diffs->del_c2c;
-  t_topo_snf_chain   *add_snf = diffs->add_snf;
-  t_topo_snf_chain   *del_snf = diffs->del_snf;
   t_topo_sat_chain   *add_sat = diffs->add_sat;
   t_topo_sat_chain   *del_sat = diffs->del_sat;
   t_topo_lan_chain   *add_lan = diffs->add_lan;
@@ -60,12 +57,6 @@ void process_all_diffs(t_topo_differences *diffs)
     add_c2c = add_c2c->next;
     }
 
-  while(add_snf)
-    {
-    from_cloonix_switch_create_snf(&(add_snf->snf));
-    add_snf = add_snf->next;
-    }
-
   while(add_sat)
     {
     from_cloonix_switch_create_sat(&(add_sat->sat));
@@ -83,13 +74,13 @@ void process_all_diffs(t_topo_differences *diffs)
 
   while(add_edge)
     {
-    from_cloonix_switch_create_edge(add_edge->name, add_edge->num, add_edge->lan);
+    from_cloonix_switch_create_edge(add_edge->name,add_edge->num,add_edge->lan);
     add_edge = add_edge->next;
     }
 
   while(del_edge)
     {
-    from_cloonix_switch_delete_edge(del_edge->name, del_edge->num, del_edge->lan);
+    from_cloonix_switch_delete_edge(del_edge->name,del_edge->num,del_edge->lan);
     del_edge = del_edge->next;
     }
 
@@ -105,17 +96,11 @@ void process_all_diffs(t_topo_differences *diffs)
     del_c2c = del_c2c->next;
     }
 
-  while(del_snf)
-    {
-    pid = bank_get_wireshark_pid(del_snf->snf.name);
-    if (pid)
-      pid_clone_kill_single(pid);
-    from_cloonix_switch_delete_sat(del_snf->snf.name);
-    del_snf = del_snf->next;
-    }
-
   while(del_sat)
     {
+    pid = bank_get_wireshark_pid(del_sat->sat.name);
+    if (pid)
+      pid_clone_kill_single(pid);
     from_cloonix_switch_delete_sat(del_sat->sat.name);
     del_sat = del_sat->next;
     }

@@ -307,7 +307,7 @@ int util_socket_listen_unix(char *pname)
     {
     close(fd);
     fd = -1;
-    printf("bind failure %s %d\n", pname, errno);
+    KERR("bind failure %s %d\n", pname, errno);
     }
   return fd;
 }

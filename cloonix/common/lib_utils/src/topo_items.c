@@ -47,14 +47,21 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
     return 1;
   if (topo->nb_c2c  != ref->nb_c2c)
     return 2;
-  if (topo->nb_snf  != ref->nb_snf)
-    return 3;
   if (topo->nb_sat  != ref->nb_sat)
-    return 4;
+    return 3;
   if (topo->nb_phy  != ref->nb_phy)
-    return 4;
-  if (topo->nb_endp != ref->nb_endp)
+    return 41;
+  if (topo->nb_pci  != ref->nb_pci)
+{
+KERR("%d %d", topo->nb_pci, ref->nb_pci);
+    return 42;
+}
+  if (topo->nb_bridges != ref->nb_bridges)
     return 5;
+  if (topo->nb_mirrors != ref->nb_mirrors)
+    return 6;
+  if (topo->nb_endp != ref->nb_endp)
+    return 7;
   if (memcmp(&(topo->clc), &(ref->clc), sizeof(t_topo_clc)))
     return 5;
   if (topo->nb_kvm)
@@ -79,18 +86,6 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
       {
       if (memcmp(&(topo->c2c[i]), &(ref->c2c[i]), sizeof(t_topo_c2c)))
         return (2000+i);
-      }
-    }
-  if (topo->nb_snf)
-    {
-    if (!topo->snf)
-      return 10;
-    if (!ref->snf)
-      return 11;
-    for (i=0; i<topo->nb_snf; i++)
-      {
-      if (memcmp(&(topo->snf[i]), &(ref->snf[i]), sizeof(t_topo_snf)))
-        return (3000+i);
       }
     }
   if (topo->nb_sat)
@@ -127,9 +122,37 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
     for (i=0; i<topo->nb_pci; i++)
       {
       if (memcmp(&(topo->pci[i]), &(ref->pci[i]), sizeof(t_topo_pci)))
-        return (4500+i);
+        return (4600+i);
       }
     }
+
+  if (topo->nb_bridges)
+    {
+    if (!topo->bridges)
+      return 12;
+    if (!ref->bridges)
+      return 13;
+    for (i=0; i<topo->nb_bridges; i++)
+      {
+      if (memcmp(&(topo->bridges[i]), &(ref->bridges[i]), sizeof(t_topo_bridges)))
+        return (4700+i);
+      }
+    }
+
+  if (topo->nb_mirrors)
+    {
+    if (!topo->mirrors)
+      return 12;
+    if (!ref->mirrors)
+      return 13;
+    for (i=0; i<topo->nb_mirrors; i++)
+      {
+      if (memcmp(&(topo->mirrors[i]), &(ref->mirrors[i]), sizeof(t_topo_mirrors)))
+        return (4800+i);
+      }
+    }
+
+
 
   if (topo->nb_endp)
     {
@@ -178,9 +201,11 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
   
   topo->nb_kvm = ref->nb_kvm;
   topo->nb_c2c = ref->nb_c2c;
-  topo->nb_snf = ref->nb_snf;
   topo->nb_sat = ref->nb_sat;
   topo->nb_phy = ref->nb_phy;
+  topo->nb_pci = ref->nb_pci;
+  topo->nb_bridges = ref->nb_bridges;
+  topo->nb_mirrors = ref->nb_mirrors;
   topo->nb_endp = ref->nb_endp;
 
   memcpy(&(topo->clc), &(ref->clc), sizeof(t_topo_clc));
@@ -197,13 +222,6 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
     topo->c2c = 
     (t_topo_c2c *)clownix_malloc(ref->nb_c2c*sizeof(t_topo_c2c),28);
     memcpy(topo->c2c, ref->c2c, ref->nb_c2c*sizeof(t_topo_c2c));
-    } 
-
-  if (topo->nb_snf)
-    {
-    topo->snf = 
-    (t_topo_snf *)clownix_malloc(ref->nb_snf*sizeof(t_topo_snf),28);
-    memcpy(topo->snf, ref->snf, ref->nb_snf*sizeof(t_topo_snf));
     } 
 
   if (topo->nb_sat)
@@ -224,6 +242,20 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
     topo->pci =
     (t_topo_pci *)clownix_malloc(ref->nb_pci*sizeof(t_topo_pci),28);
     memcpy(topo->pci, ref->pci, ref->nb_pci*sizeof(t_topo_pci));
+    }
+
+  if (topo->nb_bridges)
+    {
+    topo->bridges =
+    (t_topo_bridges *)clownix_malloc(ref->nb_bridges*sizeof(t_topo_bridges),28);
+    memcpy(topo->bridges, ref->bridges, ref->nb_bridges*sizeof(t_topo_bridges));
+    }
+
+  if (topo->nb_mirrors)
+    {
+    topo->mirrors =
+    (t_topo_mirrors *)clownix_malloc(ref->nb_mirrors*sizeof(t_topo_mirrors),28);
+    memcpy(topo->mirrors, ref->mirrors, ref->nb_mirrors*sizeof(t_topo_mirrors));
     }
 
   if (topo->nb_endp)
@@ -255,10 +287,11 @@ void topo_free_topo(t_topo_info *topo)
       clownix_free(topo->endp[i].lan.lan, __FUNCTION__);
     clownix_free(topo->kvm, __FUNCTION__);
     clownix_free(topo->c2c, __FUNCTION__);
-    clownix_free(topo->snf, __FUNCTION__);
     clownix_free(topo->sat, __FUNCTION__);
     clownix_free(topo->phy, __FUNCTION__);
     clownix_free(topo->pci, __FUNCTION__);
+    clownix_free(topo->bridges, __FUNCTION__);
+    clownix_free(topo->mirrors, __FUNCTION__);
     clownix_free(topo->endp, __FUNCTION__);
     clownix_free(topo, __FUNCTION__);
     }

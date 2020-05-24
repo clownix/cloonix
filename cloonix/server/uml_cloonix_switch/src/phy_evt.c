@@ -43,8 +43,10 @@
 #include "phy_vhost.h"
 #include "pci_dpdk.h"
 #include "dpdk_tap.h"
+#include "dpdk_snf.h"
 #include "utils_cmd_line_maker.h"
 
+void snf_globtopo_small_event(char *name, int num_evt, char *path);
 
 /****************************************************************************/
 static int eth_type_update(char *name, char *lan)
@@ -96,8 +98,14 @@ static void phy_del_inside_dpdk(t_phy *cur, char *name, char *lan)
     {
     if (dpdk_tap_exist(name))
       {
-      dpdk_tap_del_lan(0, 0, lan, name);
-      dpdk_tap_del(0, 0, name);
+      dpdk_tap_del(name);
+      }
+    }
+  else if (cur->endp_type == endp_type_snf)
+    {
+    if (dpdk_snf_exist(name))
+      {
+      dpdk_snf_del(name);
       }
     }
   else if (cur->endp_type == endp_type_pci)
@@ -136,6 +144,13 @@ static void phy_del_inside_vhost(t_phy *cur, char *name, char *lan)
       suid_power_ifname_change(peer_name, peer_num, name, ifname);
       }
     }
+  else if (cur->endp_type == endp_type_snf)
+    {
+    if (dpdk_snf_exist(name))
+      {
+      dpdk_snf_del(name);
+      }
+    }
   else if (cur->endp_type == endp_type_pci)
     {
     KERR("%s %s", name, lan);
@@ -156,12 +171,46 @@ static void phy_del_inside_sock(t_phy *cur, char *name, char *lan)
       if (endp_evt_del_lan(name, 0, tidx, lan))
         KERR("%s %s", name, lan);
       }
+    if (type == endp_type_snf) 
+      snf_globtopo_small_event(name, snf_evt_capture_off, NULL);
     endp_mngt_stop(name, 0);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int begin_dpdk_snf(t_phy *cur, int eth_type)
+{
+  char info[MAX_PATH_LEN];
+  int llid = cur->llid, tid = cur->tid;
+  char *name = cur->name;
+  char *lan = cur->lan.lan[0].lan;
+  int result = eth_type_none;
+  if (cur->endp_type == endp_type_snf)
+    {
+    if (dpdk_snf_add(llid, tid, name))
+      {
+      snprintf(info,MAX_PATH_LEN-1,"Error add dpdk snf %s %s", name, lan);
+      KERR("%s", info);
+      send_status_ko(llid, tid, info);
+      }
+    else
+      {
+      if (dpdk_snf_add_lan(llid, tid, lan, name))
+        {
+        snprintf(info,MAX_PATH_LEN-1,"Error add lan dpdk snf %s %s",name,lan);
+        KERR("%s", info);
+        send_status_ko(llid, tid, info);
+        }
+      else
+        result = eth_type;
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/**************************************************************************/
 static int begin_eth_type_dpdk(t_phy *cur)
 {
   char info[MAX_PATH_LEN];
@@ -194,6 +243,10 @@ static int begin_eth_type_dpdk(t_phy *cur)
       else
         result = eth_type_dpdk;
       }
+    }
+  else if (cur->endp_type == endp_type_snf)
+    {
+    result = begin_dpdk_snf(cur, eth_type_dpdk);
     }
   else if (cur->endp_type == endp_type_pci)
     {
@@ -244,8 +297,7 @@ static int begin_eth_type_vhost(t_phy *cur)
       if (vhost > 1)
         {
         phy_mngt_lowest_clean_lan(cur);
-        snprintf(info,MAX_PATH_LEN-1,
-                 "Other vhost on lan %s %d", vhost_ifname, num);
+        snprintf(info,MAX_PATH_LEN-1, "Tap must be the first to be attached");
         KERR("%s", info);
         send_status_ko(llid, tid, info);
         }
@@ -259,9 +311,17 @@ static int begin_eth_type_vhost(t_phy *cur)
         }
       }
     }
+  else if (cur->endp_type == endp_type_snf)
+    {
+    snprintf(info,MAX_PATH_LEN-1, "VHOST not compatible snf %s", lan);
+    KERR("%s", info);
+    send_status_ko(llid, tid, info);
+    }
   else if (cur->endp_type == endp_type_pci)
     {
-    KERR("%s %s", name, lan);
+    snprintf(info,MAX_PATH_LEN-1, "VHOST not compatible pci %s", lan);
+    KERR("%s", info);
+    send_status_ko(llid, tid, info);
     }
   else
     KOUT("%d", cur->endp_type);
@@ -277,6 +337,7 @@ static int begin_eth_type_sock(t_phy *cur)
   char *name = cur->name;
   char *lan = cur->lan.lan[0].lan;
   int result = eth_type_none;
+
   if (endp_mngt_exists(name, 0, &endp_type))
     {
     snprintf( info, MAX_PATH_LEN-1, "Phy sock exists %s", name);
@@ -344,12 +405,22 @@ static void timer_update_flag_lan(void *data)
         {
         if (vhost_lan_exists(lan))
           flag = 1;
+        else if (dpdk_snf_exist(cur->name))
+          {
+          if (dpdk_snf_lan_exists(lan))
+            flag = 1;
+          }
         }
       else if (cur->eth_type == eth_type_dpdk)
         {
         if (dpdk_tap_exist(cur->name))
           {
           if (dpdk_tap_lan_exists(lan))
+            flag = 1;
+          }
+        else if (dpdk_snf_exist(cur->name))
+          {
+          if (dpdk_snf_lan_exists(lan))
             flag = 1;
           }
         else if (dpdk_dyn_lan_exists(lan))

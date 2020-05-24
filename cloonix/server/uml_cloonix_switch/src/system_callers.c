@@ -262,7 +262,7 @@ void mk_endp_dir(void)
 {
   my_mkdir(utils_get_endp_sock_dir(), 0);
   my_mkdir(utils_get_cli_sock_dir(), 0);
-  my_mkdir(utils_get_snf_pcap_dir(), 0);
+  my_mkdir(utils_get_snf_pcap_dir(), 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -318,8 +318,8 @@ void mk_dpdk_ovs_db_dir(void)
 /*****************************************************************************/
 void mk_dpdk_dir(void)
 {
-  my_mkdir(utils_get_dpdk_snf_dir(), 0);
   my_mkdir(utils_get_dpdk_qemu_dir(), 0);
+  my_mkdir(utils_get_dpdk_snf_dir(), 0);
   my_mkdir(utils_get_dpdk_cloonix_dir(), 0);
 }
 /*--------------------------------------------------------------------------*/

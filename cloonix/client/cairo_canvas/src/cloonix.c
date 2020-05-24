@@ -75,7 +75,7 @@ static char g_current_directory[MAX_PATH_LEN];
 static char g_doors_client_addr[MAX_PATH_LEN];
 static char g_cloonix_root_tree[MAX_PATH_LEN];
 static char g_dtach_work_path[MAX_PATH_LEN];
-static char g_distant_dpdk_snf_dir[MAX_PATH_LEN];
+static char g_distant_snf_dir[MAX_PATH_LEN];
 static char g_password[MSG_DIGEST_LEN];
 /*--------------------------------------------------------------------------*/
 
@@ -385,9 +385,9 @@ void main_timer_activation(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *get_distant_dpdk_snf_dir(void)
+char *get_distant_snf_dir(void)
 {
-  return (g_distant_dpdk_snf_dir);
+  return (g_distant_snf_dir);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -396,7 +396,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 {
   char title[2*MAX_NAME_LEN];
   char tmp_dtach_work_path[2*MAX_PATH_LEN];
-  char tmp_distant_dpdk_snf_dir[2*MAX_PATH_LEN];
+  char tmp_distant_snf_dir[2*MAX_PATH_LEN];
   GtkWidget *window, *vbox;
   GtkWidget *scrolled;
   eth_choice = 0;
@@ -417,10 +417,9 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   tmp_dtach_work_path[MAX_PATH_LEN-1] = 0;
   strcpy(g_dtach_work_path, tmp_dtach_work_path); 
 
-  snprintf(tmp_distant_dpdk_snf_dir, 2*MAX_PATH_LEN,
-           "%s/dpdk_snf", g_clc.work_dir);
-  tmp_distant_dpdk_snf_dir[MAX_PATH_LEN-1] = 0;
-  strcpy(g_distant_dpdk_snf_dir, tmp_distant_dpdk_snf_dir);
+  snprintf(tmp_distant_snf_dir, 2*MAX_PATH_LEN, "%s/snf", g_clc.work_dir);
+  tmp_distant_snf_dir[MAX_PATH_LEN-1] = 0;
+  strcpy(g_distant_snf_dir, tmp_distant_snf_dir);
 
   if (gtk_init_check(NULL, NULL) == FALSE)
     KOUT("Error in gtk_init_check function");

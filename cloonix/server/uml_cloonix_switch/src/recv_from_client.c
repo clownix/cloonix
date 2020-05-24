@@ -55,9 +55,11 @@
 #include "dpdk_ovs.h"
 #include "dpdk_dyn.h"
 #include "dpdk_tap.h"
+#include "dpdk_snf.h"
 #include "suid_power.h"
 #include "vhost_eth.h"
 #include "phy_mngt.h"
+#include "snf_dpdk_process.h"
 
 
 
@@ -541,7 +543,7 @@ static void timer_endp(void *data)
     te->count++;
     if (te->count >= 50)
       {
-      sprintf(err, "bad endpoint start: %s %d %s", te->name, te->num, te->lan);
+      sprintf(err, "bad endpoint start: %s %d %s",te->name,te->num,te->lan);
       send_status_ko(te->llid, te->tid, err);
       timer_free(te);
       }
@@ -640,7 +642,20 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
       {
       if (phy_mngt_lan_exists(lan, &eth_type, &endp_type))
         {
-        if ((eth_type != eth_type_none) && (eth_type != eth_type_vhost))
+        if (eth_type == eth_type_none)
+          {
+          if (endp_type == endp_type_snf)
+            {
+            snprintf(info, MAX_PATH_LEN, 
+                    "%s eth%d VHOST not snf compatible", name, num);
+            send_status_ko(llid, tid, info);
+            }
+          else if (!dpdk_ovs_muovs_ready())
+            timer_endp_init(llid, tid, eth_type_vhost, vm_id, name, num, lan);
+          else
+            local_add_lan(llid, tid, vm_id, name, num, lan);
+          }
+        else if (eth_type != eth_type_vhost)
           {
           snprintf(info, MAX_PATH_LEN, "%s VHOST %s not VHOST", name, lan);
           send_status_ko(llid, tid, info);
@@ -650,6 +665,10 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
           snprintf(info,MAX_PATH_LEN,"%s VHOST cannot connect to pci",name);
           send_status_ko(llid, tid, info);
           }
+        else if (!dpdk_ovs_muovs_ready())
+          timer_endp_init(llid, tid, eth_type_vhost, vm_id, name, num, lan);
+        else
+          local_add_lan(llid, tid, vm_id, name, num, lan);
         }
       else if (mulan_can_be_found_with_name(lan))
         {
@@ -733,8 +752,6 @@ static void delayed_coherency_cmd_timeout(void *data)
   t_coherency_delay *next, *cur = (t_coherency_delay *) data;
   g_coherency_abs_beat_timer = 0;
   g_coherency_ref_timer = 0;
-  if (g_head_coherency != cur)
-    KOUT(" ");
   if (recv_coherency_locked())
     clownix_timeout_add(20, delayed_coherency_cmd_timeout, data,
                         &g_coherency_abs_beat_timer, &g_coherency_ref_timer);
@@ -1293,6 +1310,8 @@ static void delayed_add_vm(t_timer_zombie *tz)
   lan_cisco_nat_name[MAX_NAME_LEN-1] = 0;
   if (cfg_is_a_zombie(kvm->name))
     KOUT("%s", kvm->name);
+  if (vm)
+    KOUT("%s", kvm->name);
   if (get_inhib_new_clients())
     {
     recv_coherency_unlock();
@@ -1302,20 +1321,6 @@ static void delayed_add_vm(t_timer_zombie *tz)
     {
     recv_coherency_unlock();
     send_status_ko(llid, tid, use);
-    }
-  else if (vm)
-    {
-    sprintf(info, "Machine: \"%s\" already exists", kvm->name);
-    event_print("%s", info);
-    recv_coherency_unlock();
-    send_status_ko(llid, tid, info);
-    }
-  else if (cfg_is_a_zombie(kvm->name))
-    {
-    sprintf( info, "Machine: \"%s\" is a zombie", kvm->name);
-    event_print("%s", info);
-    recv_coherency_unlock();
-    send_status_ko(llid, tid, info);
     }
   else if (cfg_is_a_newborn(kvm->name))
     {
@@ -1429,14 +1434,25 @@ static void timer_zombie(void *data)
 /****************************************************************************/
 void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
 {
+  t_vm   *vm = cfg_get_vm(kvm->name);
   t_timer_zombie *tz;
-  tz = (t_timer_zombie *) clownix_malloc(sizeof(t_timer_zombie), 3);
-  memset(tz, 0, sizeof(t_timer_zombie));
-  tz->llid = llid;
-  tz->tid = tid;
-  memcpy(&(tz->kvm), kvm, sizeof(t_topo_kvm));
-  clownix_timeout_add(1, timer_zombie, (void *) tz, NULL, NULL);
-  recv_coherency_lock();
+  char err[MAX_PATH_LEN];
+  if (vm)
+    {
+    sprintf(err, "Machine: \"%s\" already exists", kvm->name);
+    event_print("%s", err);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    tz = (t_timer_zombie *) clownix_malloc(sizeof(t_timer_zombie), 3);
+    memset(tz, 0, sizeof(t_timer_zombie));
+    tz->llid = llid;
+    tz->tid = tid;
+    memcpy(&(tz->kvm), kvm, sizeof(t_topo_kvm));
+    clownix_timeout_add(1, timer_zombie, (void *) tz, NULL, NULL);
+    recv_coherency_lock();
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1456,16 +1472,18 @@ void recv_list_commands_req(int llid, int tid)
 /*****************************************************************************/
 t_pid_lst *create_list_pid(int *nb)
 {
-  int i,j, nb_vm, nb_endp, nb_sum, nb_mulan, nb_ovs;
+  int i,j, nb_vm, nb_endp, nb_sum, nb_mulan, nb_ovs, nb_snf_dpdk;
   t_lst_pid *ovs_pid = NULL;
   t_lst_pid *endp_pid = NULL;
   t_lst_pid *mulan_pid = NULL;
+  t_lst_pid *snf_dpdk_pid = NULL;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_pid_lst *lst;
   nb_endp  = endp_mngt_get_all_pid(&endp_pid);
   nb_mulan = mulan_get_all_pid(&mulan_pid);
+  nb_snf_dpdk = snf_dpdk_get_all_pid(&snf_dpdk_pid);
   nb_ovs   = dpdk_ovs_get_all_pid(&ovs_pid);
-  nb_sum   = nb_ovs + nb_vm + nb_endp + nb_mulan + 10;
+  nb_sum   = nb_ovs + nb_vm + nb_endp + nb_mulan + nb_snf_dpdk + 10;
   lst = (t_pid_lst *)clownix_malloc(nb_sum*sizeof(t_pid_lst),18);
   memset(lst, 0, nb_sum*sizeof(t_pid_lst));
   for (i=0, j=0; i<nb_vm; i++)
@@ -1494,6 +1512,13 @@ t_pid_lst *create_list_pid(int *nb)
     j++;
     }
   clownix_free(mulan_pid, __FUNCTION__);
+  for (i=0 ; i<nb_snf_dpdk; i++)
+    {
+    strncpy(lst[j].name, snf_dpdk_pid[i].name, MAX_NAME_LEN-1);
+    lst[j].pid = snf_dpdk_pid[i].pid;
+    j++;
+    }
+  clownix_free(snf_dpdk_pid, __FUNCTION__);
   for (i=0 ; i<nb_ovs; i++)
     {
     strncpy(lst[j].name, ovs_pid[i].name, MAX_NAME_LEN-1);
@@ -1738,12 +1763,11 @@ void local_add_sat(int llid, int tid, char *name, int type,
                    t_c2c_req_info *c2c_info)
 {
   char info[MAX_PATH_LEN];
-  char recpath[MAX_PATH_LEN];
-  int endp_type, capture_on=0;
-  snprintf(recpath,MAX_PATH_LEN-1,"%s/%s.pcap",utils_get_snf_pcap_dir(),name);
+  int endp_type;
   if ((type == endp_type_phy) ||
       (type == endp_type_pci) ||
-      (type == endp_type_tap))
+      (type == endp_type_tap) ||
+      (type == endp_type_snf))
     {
     if (!phy_mngt_exists(name, &endp_type))
       {
@@ -1764,41 +1788,32 @@ void local_add_sat(int llid, int tid, char *name, int type,
     snprintf( info, MAX_PATH_LEN-1, "Bad start of %s", name);
     send_status_ko(llid, tid, info);
     }
-  else
+  else if (type == endp_type_c2c)
     {
-    if (type == endp_type_snf)
+    if (!c2c_info)
       {
-      endp_mngt_snf_set_name(name, 0);
-      endp_mngt_snf_set_capture(name, 0, capture_on);
-      endp_mngt_snf_set_recpath(name, 0, recpath);
+      KERR("%s", name);
+      sprintf( info, "Bad c2c param info %s", name);
+      send_status_ko(llid, tid, info);
+      endp_mngt_stop(name, 0);
       }
-    else if (type == endp_type_c2c)
+    else  if (c2c_create_master_begin(name, c2c_info->ip_slave,
+                                            c2c_info->port_slave,
+                                            c2c_info->passwd_slave))
       {
-      if (!c2c_info)
-        {
-        KERR("%s", name);
-        sprintf( info, "Bad c2c param info %s", name);
-        send_status_ko(llid, tid, info);
-        endp_mngt_stop(name, 0);
-        }
-      else  if (c2c_create_master_begin(name, c2c_info->ip_slave,
-                                              c2c_info->port_slave,
-                                              c2c_info->passwd_slave))
-        {
-        KERR("%s", name);
-        sprintf( info, "Bad c2c begin %s", name);
-        send_status_ko(llid, tid, info);
-        endp_mngt_stop(name, 0);
-        }
+      KERR("%s", name);
+      sprintf( info, "Bad c2c begin %s", name);
+      send_status_ko(llid, tid, info);
+      endp_mngt_stop(name, 0);
       }
-    else if (type == endp_type_a2b)
+    }
+  else if (type == endp_type_a2b)
+    {
+    if (endp_mngt_start(llid, tid, name, 1, type))
       {
-      if (endp_mngt_start(llid, tid, name, 1, type))
-        {
-        endp_mngt_stop(name, 0);
-        sprintf( info, "Bad start of %s", name);
-        send_status_ko(llid, tid, info);
-        }
+      endp_mngt_stop(name, 0);
+      sprintf( info, "Bad start of %s", name);
+      send_status_ko(llid, tid, info);
       }
     }
 }

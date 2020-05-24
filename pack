@@ -82,6 +82,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
     rm -rf ${CLOONIX_SERVER}/${i}/include
   done
 #----------------------------------------------------------
+  rm -rf ${CLOONIX_SERVER}/snf_dpdk
   rm -f ${CLOONIX_SERVER}/qemu/cmd
   rm -rf ${CLOONIX_SERVER}/qemu/sources
   rm -rf ${CLOONIX_SERVER}/qemu/qemu_bin/tainted_qemu
@@ -89,12 +90,18 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -f ${CLOONIX_SERVER}/dtach/cmd
   rm -f ${CLOONIX_SERVER}/dtach/dtach_source.tar.gz
 #----------------------------------------------------------
-  for i in allclean cmd dpdk dpdk.patch etc include \
+  SCHEMA=${CLOONIX_SERVER}/dpdk/share/openvswitch/vswitch.ovsschema
+  cp -f ${SCHEMA} ${CLOONIX_SERVER}/dpdk
+  for i in allclean cmd dpdk dpdk.patch etc share \
            mkpatch patched_create sbin usr var ovs \
            pmds-20.0.2 ; do
     rm -rf ${CLOONIX_SERVER}/dpdk/${i}
     rm -f ${CLOONIX_SERVER}/dpdk/lib/*.a
   done
+  PKG=${CLOONIX_SERVER}/dpdk/lib/pkgconfig/libdpdk.pc
+  DPDK=/usr/local/bin/cloonix/server/dpdk
+  sed -i s"%libdir=\(.*\)%libdir=${DPDK}/lib%" $PKG
+  sed -i s"%includedir=\(.*\)%includedir=${DPDK}/include%" $PKG
 #----------------------------------------------------------
   for i in allclean cmd ovs ovs.patch \
            mkpatch patched_create ; do
@@ -102,9 +109,8 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   done
   rm -rf ${CLOONIX_SERVER}/ovs
 #----------------------------------------------------------
-  for i in allclean cmd tldk tldk.patch \
-           mkpatch patched_create ; do
-    rm -rf ${CLOONIX_SERVER}/tldk/${i}
+  for i in tldk snf_dpdk; do
+    rm -rf ${CLOONIX_SERVER}/${i}
   done
 #----------------------------------------------------------
   rm -rf ${CLOONIX_CLIENT}/lib_client

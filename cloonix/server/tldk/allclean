@@ -3,7 +3,7 @@ HERE=`pwd`
 
 rm -rf ${HERE}/usr
 rm -rf ${HERE}/tldk
-rm -f ${HERE}/l4fwd
+rm -rf ${HERE}/tldk_tainted
 
 
 

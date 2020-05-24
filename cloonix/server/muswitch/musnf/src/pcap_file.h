@@ -15,14 +15,13 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void pcap_file_unlink(void);
 void pcap_close_and_reinit(t_all_ctx *all_ctx);
 int pcap_file_is_recording(t_all_ctx *all_ctx);
 void pcap_file_start_end(t_all_ctx *all_ctx);
-int pcap_file_set_path(t_all_ctx *all_ctx, char *path);
-char *pcap_file_get_path(t_all_ctx *all_ctx);
 void pcap_file_rx_packet(t_all_ctx *all_ctx, long long usec, 
                          int len, char *buf);
-void pcap_file_init(t_all_ctx *all_ctx, char *net_name, char *name);
+void pcap_file_init(t_all_ctx *all_ctx, char *net_name, char *name, char *snf);
 /*--------------------------------------------------------------------------*/
 
 

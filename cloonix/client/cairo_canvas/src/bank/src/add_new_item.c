@@ -37,7 +37,7 @@ typedef struct t_edge_update_all
 } t_edge_update_all;
 
 
-void snf_add_recpath_and_capture_on(t_bank_item *bitem);
+void snf_add_capture_on(t_bank_item *bitem);
 void topo_bitem_hide(t_bank_item *bitem);
 void topo_bitem_show(t_bank_item *bitem);
 
@@ -536,7 +536,7 @@ void write_item_name(t_bank_item *bitem)
   topo_cr_item_text(bitem, bitem->pbi.x0 + dx, 
                     bitem->pbi.y0 + dy, name);
   if ((bitem->bank_type == bank_type_sat) && (is_a_snf(bitem)))
-    snf_add_recpath_and_capture_on(bitem);
+    snf_add_capture_on(bitem);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -678,8 +678,7 @@ int add_new_lan(char *name, double x, double y, int hidden_on_graph)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int add_new_sat(char *name, int mutype,
-                t_topo_c2c *c2c, t_topo_snf *snf,
+int add_new_sat(char *name, int mutype, t_topo_c2c *c2c,
                 double x, double y, int hidden_on_graph)
 {
   int result = 0;
@@ -690,7 +689,7 @@ int add_new_sat(char *name, int mutype,
   if (bitem)
     {
     if (is_a_snf(bitem))
-      snf_add_recpath_and_capture_on(bitem);
+      snf_add_capture_on(bitem);
     insert_next_warning("Address already exists", 1);
     result = -1;
     }
@@ -705,8 +704,6 @@ int add_new_sat(char *name, int mutype,
     bitem->pbi.pbi_sat =
     (t_pbi_sat *) clownix_malloc(sizeof(t_pbi_sat), 14);
     memset(bitem->pbi.pbi_sat, 0, sizeof(t_pbi_sat));
-    if (snf)
-      memcpy(&(bitem->pbi.pbi_sat->topo_snf), snf, sizeof(t_topo_snf));
     if (c2c)
       memcpy(&(bitem->pbi.pbi_sat->topo_c2c), c2c, sizeof(t_topo_c2c));
     topo_add_cr_item_to_canvas(bitem, NULL);
@@ -735,20 +732,18 @@ void modify_c2c(char *name, char *master_cloonix, char *slave_cloonix)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void modify_snf(char *name, int evt, char *path)
+void modify_snf(char *name, int evt)
 {
   t_bank_item *bitem = look_for_sat_with_id(name);
   if ((bitem) && (is_a_snf(bitem)))
     {
     if (evt == snf_evt_capture_on)
-      bitem->pbi.pbi_sat->topo_snf.capture_on = 1;
+      bitem->pbi.pbi_sat->snf_capture_on = 1;
     else if (evt == snf_evt_capture_off)
-      bitem->pbi.pbi_sat->topo_snf.capture_on = 0;
-    else if (evt == snf_evt_recpath_change)
-      strncpy(bitem->pbi.pbi_sat->topo_snf.recpath, path, MAX_PATH_LEN);
+      bitem->pbi.pbi_sat->snf_capture_on = 0;
     else
       KOUT("%d ", evt);
-    snf_add_recpath_and_capture_on(bitem);
+    snf_add_capture_on(bitem);
     }
 }
 /*--------------------------------------------------------------------------*/

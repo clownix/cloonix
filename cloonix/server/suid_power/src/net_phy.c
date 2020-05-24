@@ -213,6 +213,61 @@ static int get_driver_mac_pci(t_topo_phy *phy)
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static char *net_pci_get_current_drv(char *pci)
+{
+  char *result = NULL;
+  static char pci_drv[MAX_NAME_LEN];
+  char line[MAX_PATH_LEN];
+  char buf[MAX_PATH_LEN];
+  FILE *fh;
+  char *ptr_start, *ptr_end;
+  char *cmd="/usr/local/bin/cloonix/server/dpdk/bin/dpdk-devbind.py "
+            "--status-dev net | grep :";
+  fh = popen(cmd, "r");
+  if (fh)
+    {
+    while (fgets(line, MAX_PATH_LEN-1, fh))
+      {
+      strcpy(buf, line);
+      memset(pci_drv, 0, MAX_NAME_LEN);
+      ptr_start = buf;
+      ptr_end = strchr(ptr_start, ' ');
+      if (!ptr_end)
+        KERR("%s", line);
+      else
+        {
+        *ptr_end = 0;
+        if (!strcmp(ptr_start, pci))
+          {
+          ptr_end += 1;
+          ptr_start = strstr(ptr_end, "drv=");
+          if (ptr_start)
+            {
+            ptr_end = strchr(ptr_start, ' ');
+            if (ptr_end)
+              {
+              *ptr_end = 0;
+              *ptr_end = 0;
+              strncpy(pci_drv, ptr_start+4, MAX_NAME_LEN-1);
+              if (strlen(pci_drv) > 2)
+                {
+                result = pci_drv;
+                break;
+                }
+              }
+            }
+          }
+        }
+      }
+    fclose(fh);
+    }
+  return result;
+}
+
+
+
+
 /*****************************************************************************/
 int net_phy_flags_iff_up_down(char *intf, int up)
 {
@@ -330,13 +385,13 @@ t_topo_pci *net_pci_get(int *nb)
         }
       *ptr_end = 0;
       strncpy(pci.pci, ptr_start, IFNAMSIZ-1);
-      if (strlen(pci.pci) < 4)
+      ptr_end_pci = ptr_end+1;
+      if (strlen(pci.pci) < 3)
         {
         KERR("%s", line);
         break;
         }
 
-      ptr_end_pci = ptr_end+1;
 
       ptr_start = strstr(ptr_end_pci, "drv=");
       if (!ptr_start)
@@ -372,8 +427,6 @@ t_topo_pci *net_pci_get(int *nb)
         }
       else
         {
-        ptr_end = ptr_start + strcspn(ptr_start, " \r\n\t");
-        *ptr_end = 0;
         strncpy(pci.unused, ptr_start+7, MAX_NAME_LEN-1);
         if (strlen(pci.unused) <= 1)
           {
@@ -382,6 +435,12 @@ t_topo_pci *net_pci_get(int *nb)
           }
         }
 
+      ptr_end  = pci.pci + strcspn(pci.pci, " \r\n\t");
+      *ptr_end = 0;
+      ptr_end  = pci.drv + strcspn(pci.drv, " \r\n\t");
+      *ptr_end = 0;
+      ptr_end  = pci.unused + strcspn(pci.unused, " \r\n\t");
+      *ptr_end = 0;
       if (g_nb_pci >= MAX_PCI-2)
         {
         KERR("ERROR, NOT ENOUGH SPACE MAX_PCI %d", g_nb_pci);
@@ -400,14 +459,15 @@ t_topo_pci *net_pci_get(int *nb)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int net_phy_vfio_attach(char *pci)
+int net_phy_vfio_attach(char *pci, char **old_drv)
 {
   char *bin="/usr/local/bin/cloonix/server/dpdk/bin/dpdk-devbind.py";
   char *cmd="--bind=vfio-pci";
+  char *current_drv;
   char req[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
   FILE *fh;
-  int i, bad_cmd = 0, result = 0;
+  int i, bad_cmd = 0, result = -1;
   
   for (i = 0; i < g_nb_phy; i++)
     {
@@ -416,9 +476,49 @@ int net_phy_vfio_attach(char *pci)
       net_phy_flags_iff_up_down(g_topo_phy[i].name, 0);
       }
     }
+  current_drv = net_pci_get_current_drv(pci);
+  if ((current_drv != NULL) && (strcmp(current_drv, "vfio-pci")))
+    *old_drv = current_drv;
+  else
+    *old_drv = NULL;
+  if ((current_drv == NULL) || (strcmp(current_drv, "vfio-pci")))
+    {
+    result = 0;
+    memset(req, 0, MAX_PATH_LEN);
+    snprintf(req, MAX_PATH_LEN-1, "%s %s %s 2>&1", bin, cmd, pci);
+    fh = popen(req, "r");
+    if (fh)
+      {
+      while (fgets(line, MAX_PATH_LEN-1, fh))
+        {
+        KERR("%s", line);
+        result = -1;
+        bad_cmd = 1;
+        }
+      fclose(fh);
+      }
+    else
+      {
+      KERR("%s", line);
+      result = -1;
+      }
+    if (bad_cmd)
+      KERR("%s", req); 
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+int net_phy_vfio_detach(char *pci, char *old_drv)
+{
+  char *bin="/usr/local/bin/cloonix/server/dpdk/bin/dpdk-devbind.py";
+  char req[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+  FILE *fh;
+  int bad_cmd = 0, result = 0;
   memset(req, 0, MAX_PATH_LEN);
-  snprintf(req, MAX_PATH_LEN-1, "%s %s %s 2>&1", bin, cmd, pci);
+  snprintf(req, MAX_PATH_LEN-1, "%s --bind=%s %s 2>&1", bin, old_drv, pci);
   fh = popen(req, "r");
   if (fh)
     {
@@ -436,7 +536,7 @@ int net_phy_vfio_attach(char *pci)
     result = -1;
     }
   if (bad_cmd)
-    KERR("%s", req); 
+    KERR("%s", req);
   return result;
 }
 /*--------------------------------------------------------------------------*/

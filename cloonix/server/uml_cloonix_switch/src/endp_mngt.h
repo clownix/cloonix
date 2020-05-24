@@ -35,7 +35,6 @@ typedef struct t_endp
   int pid;
   int endp_type;
   t_topo_c2c c2c;
-  t_topo_snf snf;
   t_lan_attached lan_attached[MAX_TRAF_ENDPOINT];
   void *next;
 } t_endp;
@@ -69,10 +68,6 @@ int fd_ready_doors_clone_has_arrived(char *name, int doors_fd);
 int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type);
 
 int endp_mngt_stop(char *name, int num);
-
-void endp_mngt_snf_set_name(char *name, int num);
-void endp_mngt_snf_set_capture(char *name, int num, int capture_on);
-void endp_mngt_snf_set_recpath(char *name, int num, char *recpath);
 
 void endp_mngt_c2c_info(char *name, int num, int local_is_master,
                         char *master, char *slave, int ip, int port, 

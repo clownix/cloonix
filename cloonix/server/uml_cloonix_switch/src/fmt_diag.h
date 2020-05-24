@@ -29,10 +29,15 @@ int  fmt_tx_add_lan_tap(int tid, char *lan, char *name);
 int  fmt_tx_del_lan_tap(int tid, char *lan, char *name);
 int  fmt_tx_add_lan(int tid, char *lan);
 int  fmt_tx_del_lan(int tid, char *lan);
+
+int  fmt_tx_add_lan_snf(int tid, char *lan, char *name);
+int  fmt_tx_del_lan_snf(int tid, char *lan, char *name);
+
 int  fmt_tx_add_eth(int tid, char *name, int num, char *strmac);
 int  fmt_tx_del_eth(int tid, char *name, int num);
 int  fmt_tx_add_lan_eth(int tid, char *lan, char *name, int num);
 int  fmt_tx_del_lan_eth(int tid, char *lan, char *name, int num);
+
 void fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line);
 void fmt_rx_rpct_recv_evt_msg(int llid, int tid, char *line);
 /*--------------------------------------------------------------------------*/

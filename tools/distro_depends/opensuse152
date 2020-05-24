@@ -97,7 +97,7 @@ cloonix_ssh $NET ${NAME} "zypper --non-interactive update"
 cloonix_ssh $NET ${NAME} "zypper --non-interactive install tar"
 #----------------------------------------------------------------------
 set +e
-for ((i=0;i<15;i++)); do
+for ((i=0;i<5;i++)); do
   cloonix_ssh $NET ${NAME} "./install_depends"
   sleep 10
 done

@@ -67,12 +67,13 @@ cloonix_ssh $NET vm2 "ip link set dev eth0 up"
 #----------------------------------------------------------------------
 echo
 #----------------------------------------------------------------------
+sleep 1
 urxvt -title server -e cloonix_ssh $NET vm2 "iperf3 -s" &
-sleep 3
+sleep 2
 urxvt -title client -e cloonix_ssh $NET vm1 "iperf3 -c 1.0.0.2 -t 10000" &
 #----------------------------------------------------------------------
 
-sleep 10
+sleep 20
 
 kill $(jobs -p)
 

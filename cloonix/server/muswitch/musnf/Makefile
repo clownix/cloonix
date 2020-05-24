@@ -13,7 +13,6 @@ EXE = cloonix_musnf
 VPATH=src
 
 SRC = main.c \
-      msg_recv.c \
       pcap_file.c \
       inotify_open.c
 

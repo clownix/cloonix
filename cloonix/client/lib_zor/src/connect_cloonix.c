@@ -335,7 +335,6 @@ static void free_kvm_not_in_topo(t_record_net *net,
 /****************************************************************************/
 static void free_sat_not_in_topo(t_record_net *net, 
                                  int nb_c2c, t_topo_c2c *c2c,
-                                 int nb_snf, t_topo_snf *snf,
                                  int nb_sat, t_topo_sat *sat)
 {
   int i, found;
@@ -348,14 +347,6 @@ static void free_sat_not_in_topo(t_record_net *net,
     for (i=0; (found == 0) && (i < nb_c2c); i++)
       {
       if (!strcmp(cur_sat->name, c2c[i].name))
-        {
-        found = 1;
-        break;
-        }
-      }
-    for (i=0; (found == 0) && (i < nb_snf); i++)
-      {
-      if (!strcmp(cur_sat->name, snf[i].name))
         {
         found = 1;
         break;
@@ -423,7 +414,6 @@ static void alloc_kvm_not_in_record(t_record_net *net,
 /****************************************************************************/
 static void alloc_sat_not_in_record(t_record_net *net,
                                     int nb_c2c, t_topo_c2c *c2c,
-                                    int nb_snf, t_topo_snf *snf,
                                     int nb_sat, t_topo_sat *sat)
 {
   int i;
@@ -431,11 +421,6 @@ static void alloc_sat_not_in_record(t_record_net *net,
     {
     if (!find_sat_with_name(net, c2c[i].name))
       alloc_record_sat(net, c2c[i].name, endp_type_c2c);
-    }
-  for (i=0; i<nb_snf; i++)
-    {
-    if (!find_sat_with_name(net, snf[i].name))
-      alloc_record_sat(net, snf[i].name, endp_type_snf);
     }
   for (i=0; i<nb_sat; i++)
     {
@@ -473,13 +458,11 @@ void recv_event_topo(int llid, int tid, t_topo_info *topo)
     {
     free_kvm_not_in_topo(net, topo->nb_kvm, topo->kvm);
     free_sat_not_in_topo(net, topo->nb_c2c, topo->c2c,
-                              topo->nb_snf, topo->snf,
                               topo->nb_sat, topo->sat);
     free_lan_not_in_topo(net, topo->nb_endp, topo->endp);
 
     alloc_kvm_not_in_record(net, topo->nb_kvm, topo->kvm);
     alloc_sat_not_in_record(net, topo->nb_c2c, topo->c2c,
-                            topo->nb_snf, topo->snf,
                             topo->nb_sat, topo->sat);
     alloc_lan_not_in_record(net, topo->nb_endp, topo->endp);
     }

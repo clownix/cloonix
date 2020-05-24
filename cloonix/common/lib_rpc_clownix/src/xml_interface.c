@@ -785,22 +785,6 @@ static int topo_c2c_format(char *buf, t_topo_c2c *c2c)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int topo_snf_format(char *buf, t_topo_snf *snf)
-{ 
-  int len;
-  if ((!snf->name) || (!snf->recpath))
-    KOUT("%p %p", snf->name, snf->recpath);
-  if ((!strlen(snf->name)) || (!strlen(snf->recpath)))
-    KOUT("%d %d", (int)strlen(snf->name), (int)strlen(snf->recpath));
-
-  len = sprintf(buf, EVENT_TOPO_SNF, snf->name,
-                                     snf->recpath,
-                                     snf->capture_on);
-  return len;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int topo_sat_format(char *buf, t_topo_sat *sat)
 {
   int len;
@@ -840,6 +824,35 @@ static int topo_pci_format(char *buf, t_topo_pci *pci)
       (strlen(pci->unused) == 0)) 
     KOUT(" ");
   len = sprintf(buf, EVENT_TOPO_PCI, pci->pci, pci->drv, pci->unused);
+  return len;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int topo_bridges_format(char *buf, t_topo_bridges *bridges)
+{
+  int i, len;
+  if ((bridges->nb_ports < 0) || (bridges->nb_ports >= MAX_OVS_PORTS))
+    KOUT("%d", bridges->nb_ports);
+  len = sprintf(buf, EVENT_TOPO_BRIDGES_O, bridges->br, bridges->nb_ports);
+  for (i=0; i<bridges->nb_ports; i++)
+    {
+    if (!strlen(bridges->ports[i]))
+      KOUT("%d %d", bridges->nb_ports, i);
+    len += sprintf(buf+len, EVENT_TOPO_BRIDGES_I, bridges->ports[i]);
+    }
+  len += sprintf(buf+len, EVENT_TOPO_BRIDGES_C);
+  return len;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int topo_mirrors_format(char *buf, t_topo_mirrors *mirrors)
+{
+  int len;
+  if (strlen(mirrors->mir) == 0)
+    KOUT(" ");
+  len = sprintf(buf, EVENT_TOPO_MIRRORS, mirrors->mir);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -886,17 +899,17 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
                                            cf.flags_config,
                                            topo->nb_kvm,
                                            topo->nb_c2c,
-                                           topo->nb_snf,
                                            topo->nb_sat,
                                            topo->nb_endp,
                                            topo->nb_phy,
-                                           topo->nb_pci); 
+                                           topo->nb_pci,
+                                           topo->nb_bridges,
+                                           topo->nb_mirrors); 
+
   for (i=0; i<topo->nb_kvm; i++)
     len += topo_kvm_format(sndbuf+len, &(topo->kvm[i]));
   for (i=0; i<topo->nb_c2c; i++)
     len += topo_c2c_format(sndbuf+len, &(topo->c2c[i]));
-  for (i=0; i<topo->nb_snf; i++)
-    len += topo_snf_format(sndbuf+len, &(topo->snf[i]));
   for (i=0; i<topo->nb_sat; i++)
     len += topo_sat_format(sndbuf+len, &(topo->sat[i]));
   for (i=0; i<topo->nb_endp; i++)
@@ -905,6 +918,10 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
     len += topo_phy_format(sndbuf+len, &(topo->phy[i]));
   for (i=0; i<topo->nb_pci; i++)
     len += topo_pci_format(sndbuf+len, &(topo->pci[i]));
+  for (i=0; i<topo->nb_bridges; i++)
+    len += topo_bridges_format(sndbuf+len, &(topo->bridges[i]));
+  for (i=0; i<topo->nb_mirrors; i++)
+    len += topo_mirrors_format(sndbuf+len, &(topo->mirrors[i]));
 
   len += sprintf(sndbuf+len, EVENT_TOPO_C);
   my_msg_mngt_tx(llid, len, sndbuf);
@@ -1525,16 +1542,6 @@ static void helper_fill_topo_c2c(char *msg, t_topo_c2c *c2c)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void helper_fill_topo_snf(char *msg, t_topo_snf *snf)
-{
-  if (sscanf(msg, EVENT_TOPO_SNF, snf->name,
-                                  snf->recpath,
-                                  &(snf->capture_on)) != 3)
-    KOUT("%s", msg);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static void helper_fill_topo_sat(char *msg, t_topo_sat *sat)
 {
   if (sscanf(msg, EVENT_TOPO_SAT, sat->name,
@@ -1557,6 +1564,37 @@ static void helper_fill_topo_phy(char *msg, t_topo_phy *phy)
 static void helper_fill_topo_pci(char *msg, t_topo_pci *pci)
 {
   if (sscanf(msg, EVENT_TOPO_PCI, pci->pci, pci->drv, pci->unused) != 3)
+    KOUT("%s", msg);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void helper_fill_topo_bridges(char *msg, t_topo_bridges *bridges)
+{
+  int i;
+  char *ptr = msg;
+  if (sscanf(msg,EVENT_TOPO_BRIDGES_O,bridges->br,&(bridges->nb_ports))!=2)
+    KOUT("%s", msg);
+  if ((bridges->nb_ports < 0) || (bridges->nb_ports >= MAX_OVS_PORTS))
+    KOUT("MAX_OVS_PORTS: %d  %s", bridges->nb_ports, msg);
+  for (i=0; i<bridges->nb_ports; i++)
+    {
+    ptr = strstr(ptr, "<port_name>");
+    if (!ptr)
+      KOUT("%s", msg);
+    if (sscanf(ptr, EVENT_TOPO_BRIDGES_I, bridges->ports[i]) != 1)
+      KOUT(" ");
+    ptr = strstr(ptr, "</port_name>");
+    if (!ptr)
+      KOUT("%s", msg);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void helper_fill_topo_mirrors(char *msg, t_topo_mirrors *mirrors)
+{
+  if (sscanf(msg, EVENT_TOPO_MIRRORS, mirrors->mir) != 1)
     KOUT("%s", msg);
 }
 /*---------------------------------------------------------------------------*/
@@ -1616,19 +1654,18 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
                                      &(icf.flags_config),
                                      &(topo->nb_kvm),
                                      &(topo->nb_c2c),
-                                     &(topo->nb_snf),
                                      &(topo->nb_sat),
                                      &(topo->nb_endp),
                                      &(topo->nb_phy),
-                                     &(topo->nb_pci)) != 16)
+                                     &(topo->nb_pci),
+                                     &(topo->nb_bridges),
+                                     &(topo->nb_mirrors)) != 17)
     KOUT("%s", msg);
   topo_config_swapoff(&(topo->clc), &icf);
   topo->kvm= (t_topo_kvm *) clownix_malloc(topo->nb_kvm*sizeof(t_topo_kvm),16);
   memset(topo->kvm, 0, topo->nb_kvm*sizeof(t_topo_kvm));
   topo->c2c= (t_topo_c2c *) clownix_malloc(topo->nb_c2c*sizeof(t_topo_c2c),16);
   memset(topo->c2c, 0, topo->nb_c2c*sizeof(t_topo_c2c));
-  topo->snf= (t_topo_snf *) clownix_malloc(topo->nb_snf*sizeof(t_topo_snf),16);
-  memset(topo->snf, 0, topo->nb_snf*sizeof(t_topo_snf));
   topo->sat= (t_topo_sat *) clownix_malloc(topo->nb_sat*sizeof(t_topo_sat),16);
   memset(topo->sat, 0, topo->nb_sat*sizeof(t_topo_sat));
   topo->endp= (t_topo_endp *) clownix_malloc(topo->nb_endp*sizeof(t_topo_endp),16);
@@ -1637,6 +1674,10 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
   memset(topo->phy, 0, topo->nb_phy*sizeof(t_topo_phy));
   topo->pci= (t_topo_pci *) clownix_malloc(topo->nb_pci*sizeof(t_topo_pci),16);
   memset(topo->pci, 0, topo->nb_pci*sizeof(t_topo_pci));
+  topo->bridges= (t_topo_bridges *) clownix_malloc(topo->nb_bridges*sizeof(t_topo_bridges),16);
+  memset(topo->bridges, 0, topo->nb_bridges*sizeof(t_topo_bridges));
+  topo->mirrors= (t_topo_mirrors *) clownix_malloc(topo->nb_mirrors*sizeof(t_topo_mirrors),16);
+  memset(topo->mirrors, 0, topo->nb_mirrors*sizeof(t_topo_mirrors));
 
   for (i=0; i<topo->nb_kvm; i++)
     {
@@ -1655,16 +1696,6 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
       KOUT("%d,%d\n%s\n", topo->nb_c2c, i, msg);
     helper_fill_topo_c2c(ptr, &(topo->c2c[i]));
     ptr = strstr(ptr, "</c2c>");
-    if (!ptr)
-      KOUT(" ");
-    }
-  for (i=0; i<topo->nb_snf; i++)
-    {
-    ptr = strstr(ptr, "<snf>");
-    if (!ptr)
-      KOUT("%d,%d\n%s\n", topo->nb_snf, i, msg);
-    helper_fill_topo_snf(ptr, &(topo->snf[i]));
-    ptr = strstr(ptr, "</snf>");
     if (!ptr)
       KOUT(" ");
     }
@@ -1709,6 +1740,27 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
       KOUT(" ");
     }
 
+  for (i=0; i<topo->nb_bridges; i++)
+    {
+    ptr = strstr(ptr, "<bridges>");
+    if (!ptr)
+      KOUT("%d,%d\n%s\n", topo->nb_bridges, i, msg);
+    helper_fill_topo_bridges(ptr, &(topo->bridges[i]));
+    ptr = strstr(ptr, "</bridges>");
+    if (!ptr)
+      KOUT(" ");
+    }
+
+  for (i=0; i<topo->nb_mirrors; i++)
+    {
+    ptr = strstr(ptr, "<mirrors>");
+    if (!ptr)
+      KOUT("%d,%d\n%s\n", topo->nb_mirrors, i, msg);
+    helper_fill_topo_mirrors(ptr, &(topo->mirrors[i]));
+    ptr = strstr(ptr, "</mirrors>");
+    if (!ptr)
+      KOUT(" ");
+    }
 
   return topo;
 }

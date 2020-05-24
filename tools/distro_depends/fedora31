@@ -103,7 +103,7 @@ EOF"
 cloonix_ssh $NET ${NAME} "dnf update -y"
 #----------------------------------------------------------------------
 set +e
-for ((i=0;i<20;i++)); do
+for ((i=0;i<6;i++)); do
   cloonix_ssh $NET ${NAME} "./install_depends"
   sleep 10
 done

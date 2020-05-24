@@ -43,6 +43,7 @@
 #include "dpdk_msg.h"
 #include "fmt_diag.h"
 #include "dpdk_tap.h"
+#include "dpdk_snf.h"
 #include "qmp.h"
 #include "system_callers.h"
 #include "stats_counters.h"
@@ -136,7 +137,8 @@ static void test_and_end_ovs(void)
 {
   t_ovs *cur = g_head_ovs;
   int nb_tap = dpdk_tap_get_qty();
-  if ((g_head_vm == NULL) && (nb_tap == 0))
+  int nb_snf = dpdk_snf_get_qty();
+  if ((g_head_vm == NULL) && (nb_tap == 0) && (nb_snf == 0))
     {
     if (!dpdk_dyn_is_all_empty())
       KERR(" ");
@@ -916,6 +918,7 @@ int dpdk_ovs_still_present(void)
   int result = 0;
   if ((g_head_vm != NULL) || 
       (dpdk_tap_get_qty() != 0) ||
+      (dpdk_snf_get_qty() != 0) ||
       (g_head_ovs != NULL))
     result = 1;
   return result;
@@ -986,6 +989,8 @@ void dpdk_ovs_urgent_client_destruct(void)
   t_dpdk_vm *nvm, *vm = g_head_vm;
   if (dpdk_tap_get_qty())
     dpdk_tap_end_ovs();
+  if (dpdk_snf_get_qty())
+    dpdk_snf_end_ovs();
   while(vm)
     {
     dpdk_ovs_del_vm(vm->name);
@@ -1042,6 +1047,71 @@ int dpdk_ovs_get_dpdk_usable(void)
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+int dpdk_ovs_fill_eventfull(char *name, int num, int ms,
+                            int ptx, int prx, int btx, int brx)
+{
+  int result = -1;
+  t_dpdk_vm *vm = vm_find(name);
+  if (vm)
+    {
+    if ((num < 0) || (num > MAX_DPDK_VM))
+      KOUT("%d", num);
+    vm->eth[num].ms      = ms;
+    vm->eth[num].pkt_tx  += ptx;
+    vm->eth[num].pkt_rx  += prx;
+    vm->eth[num].byte_tx += btx;
+    vm->eth[num].byte_rx += brx;
+    stats_counters_update_endp_tx_rx(name, num, ms, ptx, btx, prx, brx);
+    result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int dpdk_ovs_collect_dpdk(t_eventfull_endp *eventfull)
+{
+  int nb_vm, i, j, result = 0;;
+  t_vm *vm = cfg_get_first_vm(&nb_vm);
+  t_dpdk_vm *cur;
+  for (i=0; i<nb_vm; i++)
+    {
+    if (!vm)
+      KOUT(" ");
+    cur = vm_find(vm->kvm.name);
+    for (j=0; j<vm->kvm.nb_tot_eth; j++)
+      {
+      if (vm->kvm.eth_table[j].eth_type == eth_type_dpdk)
+        {
+        strncpy(eventfull[result].name, vm->kvm.name, MAX_NAME_LEN-1);
+        eventfull[result].num  = j;
+        eventfull[result].type = endp_type_kvm_dpdk;
+        if (j == 0)
+          {
+          eventfull[result].ram  = vm->ram;
+          eventfull[result].cpu  = vm->cpu;
+          }
+        if (cur)
+          {
+          eventfull[result].ptx  = cur->eth[j].pkt_tx;
+          eventfull[result].prx  = cur->eth[j].pkt_rx;
+          eventfull[result].btx  = cur->eth[j].byte_tx;
+          eventfull[result].brx  = cur->eth[j].byte_rx;
+          eventfull[result].ms   = cur->eth[j].ms;
+          memset(&(cur->eth[j]), 0, sizeof(t_dpdk_eth));
+          }
+        result += 1;
+        }
+      }
+    vm = vm->next;
+    }
+  if (vm)
+    KOUT(" ");
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
 /****************************************************************************/
 void dpdk_ovs_init(void)
 {
@@ -1052,6 +1122,7 @@ void dpdk_ovs_init(void)
   dpdk_dyn_init();
   dpdk_msg_init();
   dpdk_tap_init();
+  dpdk_snf_init();
   g_dpdk_usable = 0;
 }
 /*--------------------------------------------------------------------------*/

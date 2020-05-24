@@ -36,6 +36,7 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "net_phy.h"
+#include "ovs_get.h"
 
 /*--------------------------------------------------------------------------*/
 static int  g_llid;
@@ -43,6 +44,7 @@ static int  g_watchdog_ok;
 static char g_network_name[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
 static char g_root_work[MAX_PATH_LEN];
+static char g_bin_dir[MAX_PATH_LEN];
 static char *g_saved_environ[4];
 /*--------------------------------------------------------------------------*/
 enum {
@@ -50,6 +52,14 @@ enum {
   state_running,
   state_lost_pid,
 };
+
+typedef struct t_record_old_drv
+{
+  char name[MAX_NAME_LEN];
+  char old_drv[MAX_NAME_LEN];
+  struct t_record_old_drv *prev;
+  struct t_record_old_drv *next;
+} t_record_old_drv;
 
 typedef struct t_vmon
 {
@@ -65,6 +75,63 @@ typedef struct t_vmon
 } t_vmon;
 
 static t_vmon *g_head_vmon;
+static t_record_old_drv *g_head_record_old_drv;
+
+
+/****************************************************************************/
+static t_record_old_drv *find_record_old_drv(char *name)
+{
+  t_record_old_drv *cur = g_head_record_old_drv;
+  while(cur)
+    {
+    if (!strcmp(name, cur->name))
+      break;
+    cur = cur->next;
+    }
+  return cur;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void alloc_record_old_drv(char *name, char *old_drv)
+{
+  t_record_old_drv *cur = find_record_old_drv(name);
+  if (cur)
+    KERR("%s %s %s", name, old_drv, cur->old_drv);
+  else
+    {
+    cur = (t_record_old_drv *) malloc(sizeof(t_record_old_drv));
+    memset(cur, 0, sizeof(t_record_old_drv));
+    strncpy(cur->name, name, MAX_NAME_LEN-1);
+    strncpy(cur->old_drv, old_drv, MAX_NAME_LEN-1);
+    if (g_head_record_old_drv)
+      g_head_record_old_drv->prev = cur;
+    cur->next = g_head_record_old_drv;
+    g_head_record_old_drv = cur;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static char *free_record_old_drv(char *name)
+{
+  char *result = NULL;
+  t_record_old_drv *cur = find_record_old_drv(name);
+  if (!cur)
+    KERR("%s", name);
+  else
+    {
+    if (cur->prev)
+      cur->prev->next = cur->next;
+    if (cur->next)
+      cur->next->prev = cur->prev;
+    if (cur == g_head_record_old_drv)
+      g_head_record_old_drv = cur->next;
+    free(cur);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static t_vmon *find_vmon_by_name(char *name)
@@ -547,8 +614,8 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   char dtach[MAX_PATH_LEN];
   char old_name[MAX_NAME_LEN];
   char new_name[MAX_NAME_LEN];
-  char *str_net_phy, *str_net_pci;
-  int num, argc, vm_id, nb_vhost, nb_phy, nb_pci;
+  char *str_net_phy, *str_net_pci, *str_net_ovs, *old_drv;
+  int on, num, argc, vm_id, nb_vhost, nb_phy, nb_pci;
   t_topo_pci *net_pci;
   t_topo_phy *net_phy;
   t_vmon *cur;
@@ -558,8 +625,8 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     KERR("%s %d %d", g_network_name, llid, g_llid);
   if (tid != type_hop_suid_power)
     KERR("%s %d %d", g_network_name, tid, type_hop_suid_power);
-  if (!strncmp(line, "cloonixsuid_req_suidroot",
-               strlen("cloonixsuid_req_suidroot")))
+  if (!strncmp(line,
+  "cloonixsuid_req_suidroot", strlen("cloonixsuid_req_suidroot")))
     {
     if (check_and_set_uid())
       rpct_send_diag_msg(NULL, llid, tid, "cloonixsuid_resp_suidroot_ko");
@@ -567,7 +634,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       rpct_send_diag_msg(NULL, llid, tid, "cloonixsuid_resp_suidroot_ok");
     }
   else if (sscanf(line, 
-        "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s nb_eth=%d argc=%d:",
+  "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s nb_eth=%d argc=%d:",
          name, &vm_id, dtach, &nb_vhost, &argc) == 5)
     {
     qemu_launch(name, vm_id, nb_vhost, argc, line, resp, llid, tid);
@@ -575,7 +642,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       KERR("%s", dtach);
     }
   else if (sscanf(line,
-                  "cloonixsuid_req_ifname_change %s %d old:%s new:%s",
+  "cloonixsuid_req_ifname_change %s %d old:%s new:%s",
                   name, &num, old_name, new_name) == 4)
     {
     if (!net_phy_ifname_change(old_name, new_name))
@@ -588,39 +655,63 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
                name, num, old_name, new_name);
     rpct_send_diag_msg(NULL, llid, tid, resp);
     }
-  else if (!strcmp(line, "cloonixsuid_req_phy")) 
+  else if (!strcmp(line,
+  "cloonixsuid_req_phy")) 
     {
     net_phy = net_phy_get(&nb_phy);
     str_net_phy = cloonix_resp_phy(nb_phy, net_phy);
     rpct_send_diag_msg(NULL, llid, tid, str_net_phy);
     free(str_net_phy);
     }
-  else if (!strcmp(line, "cloonixsuid_req_pci"))
+  else if (!strcmp(line,
+  "cloonixsuid_req_pci"))
     {
     net_pci = net_pci_get(&nb_pci);
     str_net_pci = cloonix_resp_pci(nb_pci, net_pci);
     rpct_send_diag_msg(NULL, llid, tid, str_net_pci);
     free(str_net_pci);
     }
-  else if (sscanf(line, "cloonixsuid_req_ifup phy: %s", name) == 1)
+  else if (!strcmp(line,
+  "cloonixsuid_req_ovs"))
+    {
+    str_net_ovs = ovs_get_topo(g_bin_dir, g_root_path);
+    rpct_send_diag_msg(NULL, llid, tid, str_net_ovs);
+    free(str_net_ovs);
+    }
+  else if (sscanf(line,
+  "cloonixsuid_req_ifup phy: %s", name) == 1)
     {
     if (net_phy_flags_iff_up_down(name, 1))
       KERR("ERROR Bad ifup %s", name);
     }
-  else if (sscanf(line, "cloonixsuid_req_ifdown phy: %s", name) == 1)
+  else if (sscanf(line,
+  "cloonixsuid_req_ifdown phy: %s", name) == 1)
     {
     if (net_phy_flags_iff_up_down(name, 0))
       KERR("ERROR Bad ifdown %s", name);
     }
-  else if (sscanf(line, "cloonixsuid_req_vfio_attach: %s", name) == 1)
+  else if (sscanf(line,
+  "cloonixsuid_req_vfio_attach: %s", name) == 1)
     {
-    if (!net_phy_vfio_attach(name))
+    if (!net_phy_vfio_attach(name, &old_drv))
       snprintf(resp,MAX_PATH_LEN-1,"cloonixsuid_resp_vfio_attach_ok: %s",name);
     else
       snprintf(resp,MAX_PATH_LEN-1,"cloonixsuid_resp_vfio_attach_ko: %s",name);
+    if (old_drv)
+      {
+      alloc_record_old_drv(name, old_drv);
+      }
     rpct_send_diag_msg(NULL, llid, tid, resp);
     }
-  else if (sscanf(line, "cloonixsuid_req_kill vm_id: %d", &vm_id) == 1)
+  else if (sscanf(line,
+  "cloonixsuid_req_vfio_detach: %s", name) == 1)
+    {
+    old_drv = free_record_old_drv(name);
+    if (old_drv)
+      net_phy_vfio_detach(name, old_drv);
+    }
+  else if (sscanf(line,
+  "cloonixsuid_req_kill vm_id: %d", &vm_id) == 1)
     {
     cur = find_vmon_by_vm_id(vm_id);
     if (!cur)
@@ -632,7 +723,11 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       free_vmon(cur);
       }
     }
-  else if (!strcmp(line, "cloonixsuid_req_kill_all"))
+  else if (sscanf(line,
+  "cloonixsuid_rec_name: %s on: %d", name, &on) == 2)
+    ovs_get_rec_name(name, on);
+  else if (!strcmp(line,
+  "cloonixsuid_req_kill_all"))
     {
     req_kill_clean_all();
     }
@@ -684,22 +779,25 @@ int main (int argc, char *argv[])
   char ctrl_path[MAX_PATH_LEN];
   char *root;
   net_phy_init();
+  ovs_get_init();
   g_head_vmon = NULL;
   g_llid = 0;
   g_watchdog_ok = 0;
-  if (argc != 6)
+  if (argc != 7)
     KOUT(" ");
-  g_saved_environ[0] = argv[3]; //username
-  g_saved_environ[1] = argv[4]; //home
-  g_saved_environ[2] = argv[5]; //spice_env
+  g_saved_environ[0] = argv[4]; //username
+  g_saved_environ[1] = argv[5]; //home
+  g_saved_environ[2] = argv[6]; //spice_env
   g_saved_environ[3] = NULL;
   msg_mngt_init("suid_power", IO_MAX_BUF_LEN);
   memset(g_network_name, 0, MAX_NAME_LEN);
   memset(ctrl_path, 0, MAX_PATH_LEN);
   memset(g_root_path, 0, MAX_PATH_LEN);
   memset(g_root_work, 0, MAX_PATH_LEN);
+  memset(g_bin_dir, 0, MAX_PATH_LEN);
   strncpy(g_network_name, argv[1], MAX_NAME_LEN-1);
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
+  strncpy(g_bin_dir, argv[3], MAX_PATH_LEN-1);
   root = g_root_path;
   snprintf(g_root_work,MAX_PATH_LEN-1,"%s/%s", root, CLOONIX_VM_WORKDIR);
   snprintf(ctrl_path,MAX_PATH_LEN-1,"%s/%s", root, SUID_POWER_SOCK_DIR);

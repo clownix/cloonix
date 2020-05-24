@@ -189,17 +189,37 @@ static void print_phy_info(t_topo_phy *phy)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void print_pci_info(t_topo_pci *pci)
+{
+  printf("\n%s drv:%s unused:%s", pci->pci, pci->drv, pci->unused);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void print_bridges_info(t_topo_bridges *br)
+{
+  int i; 
+  printf("\nOVS BRIDGE: %s nb_ports:%d", br->br, br->nb_ports);
+  for (i=0; i<br->nb_ports; i++)
+    printf(" %s", br->ports[i]);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void print_mirrors_info(t_topo_mirrors *mir)
+{
+  printf("\nOVS MIRROR: %s", mir->mir);
+}
+/*---------------------------------------------------------------------------*/
+
+
+
+/*****************************************************************************/
 static void callback_topo_topo(int tid, t_topo_info *topo)
 {
   int i, j, type;
   printf("\n");
 
-  for (i=0; i<topo->nb_phy; i++)
-    {
-    if (i == 0)
-      printf("\n");
-    print_phy_info(&(topo->phy[i]));
-    }
 
   for (i=0; i<topo->nb_kvm; i++)
     {
@@ -221,12 +241,6 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
       printf("\n");
     printf("\nc2c:%s", topo->c2c[i].name);
     }
-  for (i=0; i<topo->nb_snf; i++)
-    {
-    if (i == 0)
-      printf("\n");
-    printf("\nsnf:%s", topo->snf[i].name);
-    }
   for (i=0; i<topo->nb_sat; i++)
     {
     if (i == 0)
@@ -234,6 +248,8 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
     type = topo->sat[i].type;
     if (type == endp_type_tap) 
       printf("\ntap:%s", topo->sat[i].name);
+    else if (type == endp_type_snf) 
+      printf("\nsnf:%s", topo->sat[i].name);
     else if (type == endp_type_nat) 
       printf("\nnat:%s", topo->sat[i].name);
     else if (type == endp_type_a2b) 
@@ -248,6 +264,37 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
       printf("\n");
     print_endpoint_info(&(topo->endp[i]));
     }
+
+  for (i=0; i<topo->nb_phy; i++)
+    {
+    if (i == 0)
+      printf("\n");
+    print_phy_info(&(topo->phy[i]));
+    }
+
+  for (i=0; i<topo->nb_pci; i++)
+    {
+    if (i == 0)
+      printf("\n");
+    print_pci_info(&(topo->pci[i]));
+    }
+
+  for (i=0; i<topo->nb_bridges; i++)
+    {
+    if (i == 0)
+      printf("\n");
+    print_bridges_info(&(topo->bridges[i]));
+    }
+
+  for (i=0; i<topo->nb_mirrors; i++)
+    {
+    if (i == 0)
+      printf("\n");
+    print_mirrors_info(&(topo->mirrors[i]));
+    }
+
+
+
   printf("\n\n");
   exit(0);
 }

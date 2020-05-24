@@ -86,7 +86,6 @@ typedef struct t_priv_endp
   int getsuidroot;
   int open_endp;
   int open_endp_req_sent;
-  int init_pcap_snf;
   int endp_type;
   int llid;
   int cli_llid;
@@ -101,7 +100,6 @@ typedef struct t_priv_endp
   int trace_alloc_count;
   char c2c_passwd_slave[MSG_DIGEST_LEN];
   t_topo_c2c c2c;
-  t_topo_snf snf;
   t_lan_attached lan_attached[MAX_TRAF_ENDPOINT];
   struct t_priv_endp *prev;
   struct t_priv_endp *next;
@@ -325,54 +323,6 @@ static t_priv_endp *muendp_alloc(char *name, int num, int llid, int tid, int end
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_topo_snf *get_snf(char *name, int num)
-{
-  t_topo_snf *result = NULL;
-  t_priv_endp *mu = muendp_find_with_name(name, num);
-  if (!mu)
-    KERR("%s %d", name, num);
-  else
-    {
-    if (mu->endp_type != endp_type_snf)
-      KERR("%s %d %d", name, num, mu->endp_type);
-    else
-      result = &(mu->snf);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void endp_mngt_snf_set_name(char *name, int num)
-{
-  t_topo_snf *snf = get_snf(name, num);
-  if (snf)
-    strncpy(snf->name, name, MAX_NAME_LEN-1);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void endp_mngt_snf_set_capture(char *name, int num, int capture_on)
-{
-  t_topo_snf *snf = get_snf(name, num);
-  if (snf)
-    snf->capture_on = capture_on;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void endp_mngt_snf_set_recpath(char *name, int num, char *recpath)
-{
-  t_topo_snf *snf = get_snf(name, num);
-  if (snf)
-    {
-    strncpy(snf->recpath, recpath, MAX_PATH_LEN-1);
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void endp_mngt_c2c_info(char *name, int num, int local_is_master, 
                         char *master, char *slave, int ip, int port,
                         char *slave_passwd)
@@ -574,8 +524,6 @@ void endp_mngt_pid_resp(int llid, char *name, int toppid, int pid)
       KERR("%s %s", name, muendp->name);
     if (muendp->pid == 0)
       {
-      if (muendp->endp_type == endp_type_snf)
-        rpct_send_cli_req(NULL, llid, 0, 0, 0, "-get_conf");
       muendp->pid = pid;
       }
     else
@@ -792,7 +740,6 @@ static void set_clone_started(char *name, t_priv_endp *endp)
 /****************************************************************************/
 static void timer_endp_beat(void *data)
 {
-  char line[2*MAX_PATH_LEN];
   t_priv_endp *next, *cur = g_head_muendp;
   while(cur)
     {
@@ -838,14 +785,6 @@ static void timer_endp_beat(void *data)
           }
         else
           {
-          if ((cur->endp_type == endp_type_snf) &&
-              (cur->init_pcap_snf == 0))
-            {
-            snprintf(line, 2*MAX_PATH_LEN - 1, "-set_conf %s/%s.pcap",
-                     utils_get_snf_pcap_dir(), cur->name);
-            rpct_send_cli_req(NULL, cur->llid, 0, 0, 0, line);
-            cur->init_pcap_snf = 1;
-            }
           cur->periodic_count += 1;
           if (cur->periodic_count >= 5)
             {
@@ -1085,6 +1024,7 @@ int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type)
     if ((num == 0) &&
         (mu->endp_type != endp_type_kvm_sock) &&
         (mu->endp_type != endp_type_tap) &&
+        (mu->endp_type != endp_type_snf) &&
         (mu->endp_type != endp_type_phy))
       layout_add_sat(name, llid);
 
@@ -1352,7 +1292,6 @@ static t_endp *fill_endp(t_priv_endp *mu)
   endp->pid = mu->pid;
   endp->endp_type = mu->endp_type;
   memcpy(&(endp->c2c), &(mu->c2c), sizeof(t_topo_c2c));
-  memcpy(&(endp->snf), &(mu->snf), sizeof(t_topo_snf));
   memcpy(endp->lan_attached, mu->lan_attached, 
          MAX_TRAF_ENDPOINT * sizeof(t_lan_attached));
   endp->next = (void *) mu->next;

@@ -42,6 +42,7 @@
 #include "layout_x_y.h"
 
 
+char *get_distant_snf_dir(void);
 char *get_doors_client_addr(void);
 
 GtkWidget *get_main_window(void);
@@ -357,25 +358,23 @@ static void start_qemu_spice(char *password, char *path, t_qemu_spice_item *it)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void start_wireshark(char *name, char *recpath)
+void start_wireshark(char *name)
 {
   char bin_path[MAX_PATH_LEN];
   char config[MAX_PATH_LEN];
+  char recpath[MAX_PATH_LEN];
   char cloonix_name[MAX_NAME_LEN];
   char *argv[]={bin_path, config, cloonix_name, "-dae",
                "/usr/bin/wireshark", "-k", "-i", recpath, NULL}; 
   memset(bin_path, 0, MAX_PATH_LEN);
   memset(config, 0, MAX_PATH_LEN);
   memset(cloonix_name, 0, MAX_NAME_LEN);
-
   snprintf(bin_path, MAX_PATH_LEN-1,
                      "%s/client/xwycli/xwycli", get_local_cloonix_tree());
-
   snprintf(config, MAX_PATH_LEN-1,
                      "%s/cloonix_config", get_local_cloonix_tree());
-
   snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
-
+  snprintf(recpath, MAX_PATH_LEN-1,"%s/%s.pcap", get_distant_snf_dir(), name);
   if (check_before_start_launch(argv))
     launch_pid_wait(type_pid_wireshark, name, argv);
 }

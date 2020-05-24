@@ -51,7 +51,8 @@ static int g_suid_power_root_resp_ok;
 static int g_suid_power_pid;
 static int g_suid_power_last_pid;
 static char g_sock_path[MAX_PATH_LEN];
-static char g_bin_path[MAX_PATH_LEN];
+static char g_bin_suid[MAX_PATH_LEN];
+static char g_bin_dir[MAX_PATH_LEN];
 static char g_root_path[MAX_PATH_LEN];
 static char g_cloonix_net[MAX_NAME_LEN];
 static int g_tab_pid[MAX_VM];
@@ -65,6 +66,117 @@ static int g_nb_phy;
 static t_topo_pci g_topo_pci[MAX_PCI];
 static int g_nb_pci;
 
+static int g_nb_brgs;
+static int g_nb_mirs;
+static t_topo_bridges g_brgs[MAX_OVS_BRIDGES];
+static t_topo_mirrors g_mirs[MAX_OVS_MIRRORS];
+
+
+/****************************************************************************/
+static void unformat_bridges(char *msg)
+{
+  int i, j, nb, nb_port;
+  char *ptr = strstr(msg, "<ovs_bridges>");
+  if (!ptr)
+    KERR("%s", msg);
+  else
+    {
+    if (sscanf(ptr, "<ovs_bridges> %d ", &nb) != 1)
+      KERR("%s", msg);
+    else
+      {
+      if ((nb < 0) || (nb >= MAX_OVS_BRIDGES))
+        KOUT("%s", msg);
+      g_nb_brgs = nb;
+      for (i=0; i<nb; i++)
+        {
+        ptr = strstr(ptr, "<br>");
+        if (!ptr)
+          KOUT("%s", msg);
+        if (sscanf(ptr, "<br> %s %d </br>", g_brgs[i].br, &nb_port) != 2)
+          KOUT("%s", msg);
+        g_brgs[i].nb_ports = nb_port;
+        for (j=0; j<nb_port; j++)
+          {
+          ptr = strstr(ptr, "<port>");
+          if (!ptr)
+            KOUT("%s", msg);
+          if (sscanf(ptr, "<port> %s </port>", g_brgs[i].ports[j]) != 1)
+          KOUT("%s", msg);
+          ptr = strstr(ptr, "</port>");
+          if (!ptr)
+            KOUT("%s", msg);
+          }
+        }
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void unformat_mirrors(char *msg)
+{
+  int i, nb;
+  char *ptr = strstr(msg, "<ovs_mirrors>");
+  if (!ptr)
+    KERR("%s", msg);
+  else
+    {
+    if (sscanf(ptr, "<ovs_mirrors> %d ", &nb) != 1)
+      KERR("%s", msg);
+    else
+      {
+      if ((nb < 0) || (nb >= MAX_OVS_MIRRORS))
+        KOUT("%s", msg);
+      g_nb_mirs = nb;
+      for (i=0; i<nb; i++)
+        {
+        ptr = strstr(ptr, "<mir>");
+        if (!ptr)
+          KOUT("%s", msg);
+        if (sscanf(ptr, "<mir> %s </mir>", g_mirs[i].mir) != 1)
+          KOUT("%s", msg);
+        ptr = strstr(ptr, "</mir>");
+        if (!ptr)
+          KOUT("%s", msg);
+        }
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void ovs_topo_arrival(char *msg)
+{
+  int nb_brgs, nb_mirs;
+  t_topo_bridges *brgs;
+  t_topo_mirrors *mirs;
+  char *ptr = strstr(msg, "</ovs_topo_config>");
+  if (!ptr)
+    KERR("%s", msg);
+  else
+    {  
+    nb_brgs = g_nb_brgs;
+    nb_mirs = g_nb_mirs;
+    brgs = (t_topo_bridges *) malloc(MAX_OVS_BRIDGES*sizeof(t_topo_bridges));
+    mirs = (t_topo_mirrors *) malloc(MAX_OVS_MIRRORS*sizeof(t_topo_mirrors));
+    memcpy(brgs, g_brgs, MAX_OVS_BRIDGES * sizeof(t_topo_bridges));
+    memcpy(mirs, g_mirs, MAX_OVS_MIRRORS * sizeof(t_topo_mirrors));
+    g_nb_brgs = 0;
+    g_nb_mirs = 0;
+    memset(g_brgs, 0, MAX_OVS_BRIDGES * sizeof(t_topo_bridges));
+    memset(g_mirs, 0, MAX_OVS_MIRRORS * sizeof(t_topo_mirrors));
+    unformat_bridges(msg);
+    unformat_mirrors(msg);
+    if ((nb_brgs != g_nb_brgs) || (nb_mirs != g_nb_mirs) ||
+        (memcmp(g_brgs, brgs, MAX_OVS_BRIDGES * sizeof(t_topo_bridges))) ||
+        (memcmp(g_mirs, mirs, MAX_OVS_MIRRORS * sizeof(t_topo_mirrors))))
+      {
+      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static char *linearize(t_vm *vm)
@@ -144,6 +256,8 @@ static void timer_monitoring(void *data)
                          "cloonixsuid_req_pci");
       rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power,
                          "cloonixsuid_req_phy");
+      rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power,
+                         "cloonixsuid_req_ovs");
       }
     old_nb_pid_resp = g_nb_pid_resp;
     }
@@ -191,15 +305,16 @@ static void end_process(void *unused_data, int status, char *name)
 /*****************************************************************************/
 static void suid_power_start(void)
 {
-  static char *argv[7];
+  static char *argv[8];
   char **env = get_saved_environ();
-  argv[0] = g_bin_path;
+  argv[0] = g_bin_suid;
   argv[1] = g_cloonix_net;
   argv[2] = g_root_path;
-  argv[3] = env[0]; //username
-  argv[4] = env[1]; //home
-  argv[5] = env[2]; //spice_env
-  argv[6] = NULL;
+  argv[3] = g_bin_dir;
+  argv[4] = env[0]; //username
+  argv[5] = env[1]; //home
+  argv[6] = env[2]; //spice_env
+  argv[7] = NULL;
   pid_clone_launch(utils_execve, end_process, NULL,
                    (void *) argv, NULL, NULL, "suid_power", -1, 1);
   clownix_timeout_add(100, timer_connect, (void *) g_sock_path, NULL, NULL);
@@ -264,44 +379,54 @@ void suid_power_diag_resp(int llid, int tid, char *line)
     KERR("%d %d", llid, g_llid);
   if (tid != type_hop_suid_power)
     KERR("%d %d", tid, type_hop_suid_power);
-  if (!strcmp(line, "cloonixsuid_resp_suidroot_ko"))
+  if (!strcmp(line,
+  "cloonixsuid_resp_suidroot_ko"))
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
     KERR("Started suid_power: %s %s", g_cloonix_net, line);
     g_suid_power_root_resp_ok = 0;
     }
-  else if (!strcmp(line, "cloonixsuid_resp_suidroot_ok")) 
+  else if (!strcmp(line,
+  "cloonixsuid_resp_suidroot_ok")) 
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
     g_suid_power_root_resp_ok = 1;
     }
-  else if (sscanf(line, "cloonixsuid_resp_vfio_attach_ok: %s", name) == 1)
+  else if (!strncmp(line,
+  "<ovs_topo_config>", strlen("<ovs_topo_config>")))
+    ovs_topo_arrival(line);
+  else if (sscanf(line,
+  "cloonixsuid_resp_vfio_attach_ok: %s", name) == 1)
     pci_dpdk_ack_vfio_attach(1, name);
-  else if (sscanf(line, "cloonixsuid_resp_vfio_attach_ko: %s", name) == 1)
+  else if (sscanf(line,
+  "cloonixsuid_resp_vfio_attach_ko: %s", name) == 1)
     pci_dpdk_ack_vfio_attach(0, name);
   else if (sscanf(line,
-                  "cloonixsuid_resp_ifname_change_ok %s %d old:%s new:%s",
+  "cloonixsuid_resp_ifname_change_ok %s %d old:%s new:%s",
                   name, &num, old_name, new_name) == 4)
     {
     vhost_eth_tap_rename(name, num, new_name);
     }
   else if (sscanf(line,
-                  "cloonixsuid_resp_ifname_change_ko %s %d old:%s new:%s",
+  "cloonixsuid_resp_ifname_change_ko %s %d old:%s new:%s",
                   name, &num, old_name, new_name) == 4)
     {
     }
-  else if (sscanf(line, "cloonixsuid_resp_launch_vm_ok name=%s", name) == 1)
+  else if (sscanf(line,
+  "cloonixsuid_resp_launch_vm_ok name=%s", name) == 1)
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
     g_qemu_vm_end(name);
     }
-  else if (sscanf(line, "cloonixsuid_resp_launch_vm_ko name=%s", name) == 1)
+  else if (sscanf(line,
+  "cloonixsuid_resp_launch_vm_ko name=%s", name) == 1)
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
     KERR("suid_power reports bad vm start for: %s", name);
     g_qemu_vm_end(name);
     }
-  else if (sscanf(line,"cloonixsuid_resp_pid_ok vm_id=%d pid=%d",
+  else if (sscanf(line,
+  "cloonixsuid_resp_pid_ok vm_id=%d pid=%d",
            &vm_id, &pid) == 2)
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
@@ -310,7 +435,8 @@ void suid_power_diag_resp(int llid, int tid, char *line)
     else
       g_tab_pid[vm_id] = pid;
     }
-  else if (sscanf(line,"cloonixsuid_resp_pid_ko vm_id=%d", &vm_id) == 1)
+  else if (sscanf(line,
+  "cloonixsuid_resp_pid_ko vm_id=%d", &vm_id) == 1)
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
     if ((vm_id < 0) || (vm_id >= MAX_VM))
@@ -318,7 +444,8 @@ void suid_power_diag_resp(int llid, int tid, char *line)
     else
       g_tab_pid[vm_id] = 0;
     }
-  else if (sscanf(line,"cloonixsuid_resp_phy nb_phys=%d", &nb_phy) == 1)
+  else if (sscanf(line,
+  "cloonixsuid_resp_phy nb_phys=%d", &nb_phy) == 1)
     {
     if (nb_phy > MAX_PHY)
       KOUT("%d %d", nb_phy, MAX_PHY);
@@ -355,7 +482,8 @@ void suid_power_diag_resp(int llid, int tid, char *line)
       }
     free(phy);
     }
-  else if (sscanf(line,"cloonixsuid_resp_pci nb_pcis=%d", &nb_pci) == 1)
+  else if (sscanf(line,
+  "cloonixsuid_resp_pci nb_pcis=%d", &nb_pci) == 1)
     {
     if (nb_pci > MAX_PCI)
       KOUT("%d %d", nb_pci, MAX_PCI);
@@ -461,6 +589,22 @@ int suid_power_get_topo_pci(t_topo_pci **pci)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int suid_power_get_topo_bridges(t_topo_bridges **bridges)
+{
+  *bridges = g_brgs;
+  return g_nb_brgs;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int suid_power_get_topo_mirrors(t_topo_mirrors **mirrors)
+{
+  *mirrors = g_mirs;
+  return g_nb_mirs;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void suid_power_first_start(void)
 {
   suid_power_start();
@@ -557,6 +701,39 @@ int suid_power_req_vfio_attach(char *pci)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int suid_power_req_vfio_detach(char *pci)
+{
+  int result = -1;
+  char req[MAX_PATH_LEN];
+  if ((g_llid) && (msg_exist_channel(g_llid)))
+    {
+    memset(req, 0, MAX_PATH_LEN);
+    snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_req_vfio_detach: %s",pci);
+    rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int suid_power_rec_name(char *name, int on)
+{
+  int result = -1;
+  char req[MAX_PATH_LEN];
+  if ((g_llid) && (msg_exist_channel(g_llid)))
+    {
+    memset(req, 0, MAX_PATH_LEN);
+    snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_rec_name: %s on: %d", name, on);
+    rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 int suid_power_req_kill_all(void)
 {
   int result = -1;
@@ -598,14 +775,16 @@ void suid_power_init(void)
   g_nb_phy = 0;
   memset(g_topo_phy, 0, MAX_PHY * sizeof(t_topo_phy));
   memset(g_root_path, 0, MAX_PATH_LEN);
-  memset(g_bin_path, 0, MAX_PATH_LEN);
+  memset(g_bin_suid, 0, MAX_PATH_LEN);
   memset(g_cloonix_net, 0, MAX_NAME_LEN);
   memset(g_sock_path, 0, MAX_NAME_LEN);
+  memset(g_bin_dir, 0, MAX_NAME_LEN);
   root_path = cfg_get_root_work();
   bin_path = utils_get_suid_power_bin_path();
   cloonix_net = cfg_get_cloonix_name();
+  strncpy(g_bin_dir, cfg_get_bin_dir(), MAX_NAME_LEN-1);
   strncpy(g_cloonix_net, cloonix_net, MAX_NAME_LEN-1);
-  strncpy(g_bin_path, bin_path, MAX_PATH_LEN-1);
+  strncpy(g_bin_suid, bin_path, MAX_PATH_LEN-1);
   strncpy(g_root_path, root_path, MAX_PATH_LEN-1);
   snprintf(g_sock_path,MAX_PATH_LEN-1,"%s/%s",root_path,SUID_POWER_SOCK_DIR);
 }

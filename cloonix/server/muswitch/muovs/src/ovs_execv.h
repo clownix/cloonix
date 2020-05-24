@@ -32,27 +32,25 @@ int ovs_execv_add_vhost_br_port(char *ovs,char *dpdk,char *lan,char *vhost);
 int ovs_execv_del_vhost_br_port(char *ovs,char *dpdk,char *lan,char *vhost);
 void init_environ(char *ovs_bin, char *dpdk_dir);
 int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN]);
-int ovs_execv_add_lan(char *ovs_bin, char *dpdk_dir, char *lan_name);
 
+int ovs_execv_add_lan(char *ovs_bin, char *dpdk_dir, char *lan_name);
 int ovs_execv_del_lan(char *ovs_bin, char *dpdk_dir, char *lan_name);
+
+int ovs_execv_add_lan_snf(char *ovs, char *dpdk, char *lan, char *name);
+int ovs_execv_del_lan_snf(char *ovs, char *dpdk, char *lan, char *name);
 
 int ovs_execv_add_lan_eth(char *ovs_bin, char *dpdk_dir, char *lan_name,
                           char *vm_name, int num);
-
 int ovs_execv_del_lan_eth(char *ovs_bin, char *dpdk_dir, char *lan_name,
                           char *vm_name, int num);
-
 int ovs_execv_add_eth(char *ovs_bin, char *dpdk_dir, char *name, int num);
-
 int ovs_execv_del_eth(char *ovs_bin, char *dpdk_dir, char *name, int num);
 
+
 int ovs_execv_add_tap(char *ovs_bin, char *dpdk_dir, char *name);
-
 int ovs_execv_del_tap(char *ovs_bin, char *dpdk_dir, char *name);
-
 int ovs_execv_add_lan_tap(char *ovs_bin, char *dpdk_dir,
                           char *lan, char *name);
-
 int ovs_execv_del_lan_tap(char *ovs_bin, char *dpdk_dir,
                           char *lan, char *name);
 

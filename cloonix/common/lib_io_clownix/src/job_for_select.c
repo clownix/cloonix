@@ -31,7 +31,10 @@
 #include "io_clownix.h"
 
 
-#define MAX_JOBS 200
+#define MEMORY_BARRIER()  asm volatile ("": : :"memory")
+
+#define MAX_JOBS_MASK (0xFF)
+
 
 
 /*****************************************************************************/
@@ -45,10 +48,10 @@ typedef struct t_job
 /*****************************************************************************/
 typedef struct t_job_idx_pool
   {
-  int32_t check_tab[MAX_JOBS];
-  int fifo_free_index[MAX_JOBS];
-  int read_idx;
-  int write_idx;
+  int fifo_free_index[MAX_JOBS_MASK+1];
+  uint32_t volatile read_idx;
+  uint32_t volatile write_idx;
+  uint32_t volatile lock;
   } t_job_idx_pool;
 /*---------------------------------------------------------------------------*/
 
@@ -60,9 +63,8 @@ typedef struct t_jfs_obj
   t_job_idx_pool job_idx_pool;
   int fd_request;
   int fd_ack;
-  t_job glob_jobs[MAX_JOBS];
-  short buffer[MAX_JOBS];
-  int nb_used_jobs;
+  t_job glob_jobs[MAX_JOBS_MASK+2];
+  short buffer[MAX_JOBS_MASK+2];
   int llid_request;
   int llid_ack;
   struct t_jfs_obj *prev;
@@ -79,12 +81,11 @@ static t_jfs_obj *g_jfs_obj_tab[CLOWNIX_MAX_CHANNELS];
 static void job_idx_pool_init(t_jfs_obj *jfs)
 {
   int i;
-  for(i = 0; i < MAX_JOBS; i++)
+  for(i = 0; i < MAX_JOBS_MASK+1; i++)
     jfs->job_idx_pool.fifo_free_index[i] = i+1;
   jfs->job_idx_pool.read_idx = 0;
-  jfs->job_idx_pool.write_idx =  MAX_JOBS - 1;
-  for(i = 0; i < MAX_JOBS; i++)
-    jfs->job_idx_pool.check_tab[i] = 0;
+  jfs->job_idx_pool.write_idx = 0;
+  jfs->job_idx_pool.lock = 0;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -92,21 +93,22 @@ static void job_idx_pool_init(t_jfs_obj *jfs)
 static int job_idx_pool_alloc(t_jfs_obj *jfs)
 {
   int job_idx = 0;
-  if(jfs->job_idx_pool.read_idx != jfs->job_idx_pool.write_idx)
+  uint32_t read_idx, write_idx, new_read_idx;
+  while (__sync_lock_test_and_set(&(jfs->job_idx_pool.lock), 1));
+  read_idx  = jfs->job_idx_pool.read_idx;
+  write_idx = jfs->job_idx_pool.write_idx;
+  if ((write_idx - (read_idx+1)) & MAX_JOBS_MASK)
     {
-    job_idx = jfs->job_idx_pool.fifo_free_index[jfs->job_idx_pool.read_idx];
-    jfs->job_idx_pool.read_idx = (jfs->job_idx_pool.read_idx + 1)%MAX_JOBS;
-    if ((job_idx <= 0) || (job_idx >= MAX_JOBS))
-      KOUT("%d", job_idx);
-    if (jfs->job_idx_pool.check_tab[job_idx])
-      KOUT("%d", job_idx);
-    jfs->job_idx_pool.check_tab[job_idx] = 1;
-    if (!job_idx)
-      KOUT(" ");
-    jfs->nb_used_jobs++;
+    job_idx = jfs->job_idx_pool.fifo_free_index[read_idx];
+    if ((job_idx <= 0) || (job_idx > MAX_JOBS_MASK+1))
+      KOUT("%d %d %d", job_idx, read_idx, write_idx); 
+    new_read_idx = (read_idx + 1) & MAX_JOBS_MASK;
+    MEMORY_BARRIER();
+    if (__sync_val_compare_and_swap(&(jfs->job_idx_pool.read_idx),
+                                    read_idx, new_read_idx) != read_idx)
+      KOUT("%x %x", new_read_idx, read_idx);
     }
-  else
-    KOUT("%d", jfs->nb_used_jobs);
+  __sync_lock_release(&(jfs->job_idx_pool.lock));
   return job_idx;
 }
 /*---------------------------------------------------------------------------*/
@@ -114,16 +116,24 @@ static int job_idx_pool_alloc(t_jfs_obj *jfs)
 /*****************************************************************************/
 static void job_idx_pool_release(t_jfs_obj *jfs, int job_idx)
 {
-  if ((job_idx <= 0) || (job_idx >= MAX_JOBS))
+  uint32_t read_idx, write_idx, new_write_idx;
+  while (__sync_lock_test_and_set(&(jfs->job_idx_pool.lock), 1));
+  read_idx  = jfs->job_idx_pool.read_idx;
+  write_idx = jfs->job_idx_pool.write_idx;
+  if ((read_idx - write_idx) & MAX_JOBS_MASK)
+    {
+    if ((job_idx <= 0) || (job_idx > MAX_JOBS_MASK+1))
+      KOUT("%d %d %d", job_idx, read_idx, write_idx); 
+    jfs->job_idx_pool.fifo_free_index[write_idx] =  job_idx;
+    new_write_idx = (write_idx + 1) & MAX_JOBS_MASK;
+    MEMORY_BARRIER();
+    if (__sync_val_compare_and_swap(&(jfs->job_idx_pool.write_idx),
+                                    write_idx, new_write_idx) != write_idx)
+      KOUT("%x %x", new_write_idx, write_idx);
+    }
+  else
     KOUT("%d", job_idx);
-  jfs->job_idx_pool.fifo_free_index[jfs->job_idx_pool.write_idx] =  job_idx;
-  jfs->job_idx_pool.write_idx=(jfs->job_idx_pool.write_idx + 1)%MAX_JOBS;
-  if (!jfs->job_idx_pool.check_tab[job_idx])
-    KOUT("%d %d ", job_idx, jfs->ref_id); 
-  jfs->job_idx_pool.check_tab[job_idx] = 0;
-  if (!job_idx)
-    KOUT(" ");
-  jfs->nb_used_jobs--;
+  __sync_lock_release(&(jfs->job_idx_pool.lock));
 }
 /*---------------------------------------------------------------------------*/
 
@@ -158,13 +168,13 @@ static int rx_ack(void *ptr, int llid, int fd)
     if (len > 0)
       {
       len /= sizeof(short);
-      if (len > MAX_JOBS)
+      if (len > MAX_JOBS_MASK+1)
         KOUT("%d", len);
       for (i=0; i<len; i++)
         {
         val = (int) (jfs->buffer[i]);
         val &= 0xFFFF;
-        if ((val <= 0) || (val >= MAX_JOBS))
+        if ((val <= 0) || (val > MAX_JOBS_MASK+1))
           KOUT("%d", val);
         if (!(jfs->glob_jobs[val].cb))
           KOUT(" "); 
@@ -179,22 +189,27 @@ static int rx_ack(void *ptr, int llid, int fd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void job_for_select_request(void *hand, t_fct_job cb, void *data)
+int job_for_select_request(void *hand, t_fct_job cb, void *data)
 {
-  int idx;
+  int idx, result = -1;
   short cidx;
   t_jfs_obj *jfs = (t_jfs_obj *) hand;
   if ((jfs) && (jfs->magic_number == 0xFECACAFE))
     {
     idx = job_idx_pool_alloc(jfs);
-    if (jfs->glob_jobs[idx].cb || jfs->glob_jobs[idx].data)
-      KOUT("%d", idx); 
-    jfs->glob_jobs[idx].cb = cb;
-    jfs->glob_jobs[idx].data = data;
-    cidx = (short) (idx & 0xFFFF);
-    if (write(jfs->fd_request, &cidx, sizeof(cidx)) != sizeof(cidx))
-      KERR("%d", errno);
+    if (idx)
+      {
+      result = 0;
+      if (jfs->glob_jobs[idx].cb || jfs->glob_jobs[idx].data)
+        KOUT("%d", idx); 
+      jfs->glob_jobs[idx].cb = cb;
+      jfs->glob_jobs[idx].data = data;
+      cidx = (short) (idx & 0xFFFF);
+      if (write(jfs->fd_request, &cidx, sizeof(cidx)) != sizeof(cidx))
+        KERR("%d", errno);
+      }
     }
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 

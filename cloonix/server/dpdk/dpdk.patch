@@ -1,7 +1,7 @@
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2020-05-08 19:10:53.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2020-05-12 09:55:26.313633705 +0200
-@@ -148,6 +148,7 @@
+--- dpdk/drivers/meson.build	2020-05-20 14:14:03.000000000 +0200
++++ dpdk_tainted/drivers/meson.build	2020-05-20 15:50:53.968259103 +0200
+@@ -145,6 +145,7 @@
  				objects: objs,
  				include_directories: includes,
  				dependencies: static_deps,
@@ -9,7 +9,7 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  				c_args: cflags,
  				install: true)
  
-@@ -189,6 +190,7 @@
+@@ -186,6 +187,7 @@
  				version: lib_version,
  				soversion: so_version,
  				install: true,
@@ -18,9 +18,21 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  
  			# create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_ethdev.c
---- dpdk/drivers/net/virtio/virtio_ethdev.c	2020-05-08 19:10:54.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2020-05-12 10:03:11.045556554 +0200
-@@ -2214,20 +2214,6 @@
+--- dpdk/drivers/net/virtio/virtio_ethdev.c	2020-05-20 14:14:03.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2020-05-20 15:50:53.968259103 +0200
+@@ -1488,6 +1488,11 @@
+ 	isr = vtpci_isr(hw);
+ 	PMD_DRV_LOG(INFO, "interrupt status = %#x", isr);
+ 
++	if (hw->started == false) {
++	    PMD_DRV_LOG(ERR, "cloonix: hw->started FALSE");
++            return;
++        }
++
+ 	if (virtio_intr_unmask(dev) < 0)
+ 		PMD_DRV_LOG(ERR, "interrupt enable failed");
+ 
+@@ -2214,20 +2219,6 @@
  	PMD_INIT_LOG(DEBUG, "configure");
  	req_features = VIRTIO_PMD_DEFAULT_GUEST_FEATURES;
  
@@ -42,9 +54,9 @@ diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virt
  		ret = virtio_init_device(dev, hw->req_guest_features);
  		if (ret < 0)
 diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/librte_eal/common/eal_common_options.c
---- dpdk/lib/librte_eal/common/eal_common_options.c	2020-05-08 19:10:54.000000000 +0200
-+++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-05-12 09:55:26.313633705 +0200
-@@ -111,7 +111,7 @@
+--- dpdk/lib/librte_eal/common/eal_common_options.c	2020-05-20 14:14:03.000000000 +0200
++++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-05-20 15:50:53.968259103 +0200
+@@ -116,7 +116,7 @@
  TAILQ_HEAD_INITIALIZER(solib_list);
  
  /* Default path of external loadable drivers */
@@ -54,8 +66,8 @@ diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/libr
  /*
   * Stringified version of solib path used by dpdk-pmdinfo.py
 diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal.c
---- dpdk/lib/librte_eal/linux/eal.c	2020-05-08 19:10:54.000000000 +0200
-+++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-05-12 09:55:26.313633705 +0200
+--- dpdk/lib/librte_eal/linux/eal.c	2020-05-20 14:14:03.000000000 +0200
++++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-05-20 15:50:53.968259103 +0200
 @@ -114,13 +114,13 @@
  	char tmp[PATH_MAX];
  	int ret;
@@ -73,9 +85,9 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
  	if (ret < 0 || ret == sizeof(tmp)) {
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2020-05-08 19:10:54.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2020-05-12 09:55:26.313633705 +0200
-@@ -127,6 +127,7 @@
+--- dpdk/lib/meson.build	2020-05-20 14:14:03.000000000 +0200
++++ dpdk_tainted/lib/meson.build	2020-05-20 15:50:53.968259103 +0200
+@@ -128,6 +128,7 @@
  					c_args: cflags,
  					dependencies: static_deps,
  					include_directories: includes,
@@ -83,7 +95,7 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
  					install: true)
  			static_dep = declare_dependency(link_with: static_lib,
  					include_directories: includes,
-@@ -180,6 +181,7 @@
+@@ -181,6 +182,7 @@
  					link_depends: lk_deps,
  					version: lib_version,
  					soversion: so_version,
