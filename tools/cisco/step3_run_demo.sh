@@ -2,10 +2,22 @@
 HERE=`pwd`
 NET=nemo
 LINUX=buster
-CISCO=cisco0
 LIST_CISCO="cisco1 cisco2 cisco3" 
 LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk
+
+CISCO=$1
+case "${CISCO}" in
+  "cisco0")
+    ;;
+  "cisco3")
+    ;;
+  *)
+    echo ERROR FIRST PARAM: ${CISCO} Choice: cisco0 cisco3 
+    echo Put the existing qcow2 name found in $BULK
+    exit 1
+esac
+
 #######################################################################
 for i in ${BULK}/${CISCO}.qcow2 ; do
   if [ ! -e ${i} ]; then
@@ -78,16 +90,16 @@ cloonix_cli ${NET} cnf lay scale -1 166 800 480
 cloonix_gui ${NET}
 
 #######################################################################
-PARAMS="ram=2000 cpu=2 dpdk=0 sock=2 hwsim=0"
+PARAMS="ram=2000 cpu=2 eth=ss"
 for i in ${LIST_LINUX} ; do
   cloonix_cli ${NET} add kvm ${i} ${PARAMS} ${LINUX}.qcow2 &
 done
 
 
-PARAMS="ram=5000 cpu=4 dpdk=0 sock=4 hwsim=0"
-cloonix_cli ${NET} add kvm cisco1 ${PARAMS} ${CISCO}.qcow2 --cisco0 &
-cloonix_cli ${NET} add kvm cisco2 ${PARAMS} ${CISCO}.qcow2 --cisco0 &
-cloonix_cli ${NET} add kvm cisco3 ${PARAMS} cisco3.qcow2 --cisco3 &
+PARAMS="ram=5000 cpu=4 eth=ssss"
+cloonix_cli ${NET} add kvm cisco1 ${PARAMS} ${CISCO}.qcow2 --${CISCO} &
+cloonix_cli ${NET} add kvm cisco2 ${PARAMS} ${CISCO}.qcow2 --${CISCO} &
+cloonix_cli ${NET} add kvm cisco3 ${PARAMS} ${CISCO}.qcow2 --${CISCO} &
 
 sleep 30
 #######################################################################

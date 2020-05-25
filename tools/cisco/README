@@ -40,11 +40,20 @@ csr1000v-universalk9.16.09.01.iso).
 
 This creation is done in 2 steps, beware that in the first step YOU MUST 
 CHOOSE THE SERIAL OPTION as cisco access at cisco installation.
- 
-./step2_make_qcow2.sh cisco0 is the command that creates cisco0.qcow2 in bulk.
-./step2_make_qcow2.sh cisco3 is the command that creates cisco3.qcow2 in bulk.
 
-Then call ./step3_run_demo.sh and wait until the pings go through. 
+Call: 
+./step2_make_qcow2.sh cisco0
+
+This is the command that creates cisco0.qcow2 in bulk. This cisco will
+have a dhclient function on eth0. (This same script with cisco3 will have
+the dhclient function on eth3).
+
+Then call ./step3_run_demo.sh cisco0
+
+The demo makes five vms, 2 with linux buster qcow2 and 3 with the cisco0 made.
+There is a long wait with messages:
+"cisco1 returned: RESPKO UNKNOWN VM: cisco1"
+"cisco1 not ready"
  
 The cisco has no spice desktop, the  "dtach console" in the cloonix gui or
 use the cli command "cloonix_dta nemo cisco1" to access the serial console.
