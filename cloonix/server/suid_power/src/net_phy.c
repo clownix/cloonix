@@ -364,7 +364,7 @@ t_topo_pci *net_pci_get(int *nb)
   char buf[MAX_PATH_LEN];
   t_topo_pci pci;
   FILE *fh;
-  char *ptr_start, *ptr_end, *ptr_end_pci;
+  char *ptr_start, *ptr_end;
   char *cmd="/usr/local/bin/cloonix/server/dpdk/bin/dpdk-devbind.py "
             "--status-dev net | grep :";
   g_nb_pci = 0;
@@ -373,6 +373,7 @@ t_topo_pci *net_pci_get(int *nb)
     {
     while (fgets(line, MAX_PATH_LEN-1, fh))
       {
+      memset(buf, 0, MAX_PATH_LEN);
       strcpy(buf, line);
       memset(&pci, 0, sizeof(t_topo_pci));
 
@@ -384,16 +385,24 @@ t_topo_pci *net_pci_get(int *nb)
         break;
         }
       *ptr_end = 0;
+      ptr_end  = ptr_start + strcspn(ptr_start, " \r\n\t");
+      *ptr_end = 0;
       strncpy(pci.pci, ptr_start, IFNAMSIZ-1);
-      ptr_end_pci = ptr_end+1;
       if (strlen(pci.pci) < 3)
         {
         KERR("%s", line);
         break;
         }
+      if (strchr(pci.pci, ':') == NULL)
+        {
+        KERR("%s", line);
+        break;
+        }
 
-
-      ptr_start = strstr(ptr_end_pci, "drv=");
+      memset(buf, 0, MAX_PATH_LEN);
+      strcpy(buf, line);
+      ptr_start = buf;
+      ptr_start = strstr(ptr_start, "drv=");
       if (!ptr_start)
         {
         strncpy(pci.drv, "none", MAX_NAME_LEN-1);
@@ -408,7 +417,8 @@ t_topo_pci *net_pci_get(int *nb)
           }
         else
           {
-          ptr_end_pci = ptr_end+1;
+          *ptr_end = 0;
+          ptr_end  = ptr_start + strcspn(ptr_start, " \r\n\t");
           *ptr_end = 0;
           strncpy(pci.drv, ptr_start+4, MAX_NAME_LEN-1);
           if (strlen(pci.drv) <= 1)
@@ -419,7 +429,10 @@ t_topo_pci *net_pci_get(int *nb)
           }
         }
 
-      ptr_start = strstr(ptr_end_pci, "unused=");
+      memset(buf, 0, MAX_PATH_LEN);
+      strcpy(buf, line);
+      ptr_start = buf;
+      ptr_start = strstr(ptr_start, "unused=");
       if (!ptr_start)
         {
         strncpy(pci.unused, "none", MAX_NAME_LEN-1);
@@ -427,6 +440,8 @@ t_topo_pci *net_pci_get(int *nb)
         }
       else
         {
+        ptr_end  = ptr_start + strcspn(ptr_start, " \r\n\t");
+        *ptr_end = 0;
         strncpy(pci.unused, ptr_start+7, MAX_NAME_LEN-1);
         if (strlen(pci.unused) <= 1)
           {
@@ -435,12 +450,6 @@ t_topo_pci *net_pci_get(int *nb)
           }
         }
 
-      ptr_end  = pci.pci + strcspn(pci.pci, " \r\n\t");
-      *ptr_end = 0;
-      ptr_end  = pci.drv + strcspn(pci.drv, " \r\n\t");
-      *ptr_end = 0;
-      ptr_end  = pci.unused + strcspn(pci.unused, " \r\n\t");
-      *ptr_end = 0;
       if (g_nb_pci >= MAX_PCI-2)
         {
         KERR("ERROR, NOT ENOUGH SPACE MAX_PCI %d", g_nb_pci);
