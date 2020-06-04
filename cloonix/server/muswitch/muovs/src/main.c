@@ -556,6 +556,44 @@ static void del_lan_snf_br(char *respb, char *lan, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void add_lan_nat_br(char *respb, char *lan, char *name)
+{
+  char *bin = g_ovs_bin;
+  char *db = g_dpdk_dir;
+  if (ovs_execv_add_lan_nat(bin, db, lan, name))
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_lan_nat lan=%s name=%s", lan, name);
+    KERR("%s", respb);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_add_lan_nat lan=%s name=%s", lan, name);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void del_lan_nat_br(char *respb, char *lan, char *name)
+{
+  char *bin = g_ovs_bin;
+  char *db = g_dpdk_dir;
+  if (ovs_execv_del_lan_nat(bin, db, lan, name))
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_lan_nat lan=%s name=%s", lan, name);
+    KERR("%s", respb);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_del_lan_nat lan=%s name=%s", lan, name);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void add_lan_eth_br(char *respb, char *lan, char *name, int num)
 {
   char *bin = g_ovs_bin;
@@ -890,6 +928,11 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     add_lan_snf_br(respb, lan, name);
   else if (sscanf(line,"cloonixovs_del_lan_snf lan=%s name=%s",lan,name) == 2)
     del_lan_snf_br(respb, lan, name);
+  else if (sscanf(line,"cloonixovs_add_lan_nat lan=%s name=%s",lan,name) == 2)
+    add_lan_nat_br(respb, lan, name);
+  else if (sscanf(line,"cloonixovs_del_lan_nat lan=%s name=%s",lan,name) == 2)
+    del_lan_nat_br(respb, lan, name);
+
 
   else if (sscanf(line,"cloonixovs_add_lan_eth lan=%s name=%s num=%d",
                        lan, name, &num) == 3)

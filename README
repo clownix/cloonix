@@ -5,7 +5,7 @@ See directory cloonix for the LICENCE
 
 See clownix.net for a documentation which may not be up to date.
 
-This version v07-00 is the latest (if this README is up to date).
+This version v07-02 is the latest (if this README is up to date).
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -28,7 +28,7 @@ have to ajust needed packages that are in file install_depends.
 
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-07-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-07-02/targz_store.tar.gz
 
 tar xvf targz_store.tar.gz
 
@@ -41,11 +41,11 @@ mkdir -p ${HOME}/cloonix_data/bulk
 
 cd ${HOME}/cloonix_data/bulk
 
-wget http://clownix.net/downloads/cloonix-07-00/bulk/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-07-02/bulk/buster.qcow2.gz
 
 gunzip buster.qcow2.gz
 
-See other distros at http://clownix.net/downloads/cloonix-07-00/bulk
+See other distros at http://clownix.net/downloads/cloonix-07-02/bulk
 
 -----------------------------------------------------------------------------
 
@@ -126,8 +126,8 @@ Hardcoded in the current cloonix code, the vfio module is inserted with
 parameter enable_unsafe_noiommu_mode, I have no way to know the impact of
 this on a real dpdk interface.
 
-The guest must have the cloonix software inside it: compile cloonix inside
- a guest with persistance flag so as not to do this multiple times.
+To run the cloonix software inside the guest, the best way is to make a
+persistant guest with the compiled cloonix inside..
 
 Launch 2 instances of this guest with dpdk interfaces linked to each-other.
 Inside each guest launch a nested vm with a dpdk interface, connect the

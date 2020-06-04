@@ -15,10 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-char *phy_vhost_get_ifname(char *name, int num);
-void phy_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name);
-void phy_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name);
-int  phy_vhost_add_port(int llid, int tid, char *name, char *lan);
-int  phy_vhost_del_port(char *name, char *lan);
-void phy_vhost_init(void);
-/*--------------------------------------------------------------------------*/
+void dhcp_arp_management(struct rte_mbuf *m);
+void dhcp_input(uint8_t *src_mac, uint8_t *dst_mac, int len, uint8_t *data);
+void dhcp_init(void);
+/*---------------------------------------------------------------------------*/

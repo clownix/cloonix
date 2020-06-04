@@ -174,13 +174,19 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     }
   else if (!strncmp(line,
   "cloonixsnf_macliststart", strlen("cloonixsnf_macliststart")))
+    {
     eventfull_obj_update_begin();
+    }
   else if (sscanf(line, "cloonixsnf_mac name=%s num=%d mac=%s",
                          name, &num, strmac) == 3)
+    {
     eventfull_obj_update_item(name, num, strmac);
+    }
   else if (!strncmp(line,
   "cloonixsnf_maclistend", strlen("cloonixsnf_maclistend")))
+    {
     eventfull_obj_update_end();
+    }
   else
     KERR("%s %s", g_net_name, line);
 }
@@ -207,7 +213,6 @@ static void rx_ctrl_cb (int llid, int len, char *buf)
 /****************************************************************************/
 static void connect_from_ctrl_client(void *ptr, int llid, int llid_new)
 {
-KERR(" ");
   msg_mngt_set_callbacks (llid_new, err_ctrl_cb, rx_ctrl_cb);
   g_llid = llid_new;
   g_watchdog_ok = 1;

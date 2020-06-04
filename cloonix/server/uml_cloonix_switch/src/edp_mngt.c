@@ -32,21 +32,21 @@
 #include "event_subscriber.h"
 #include "suid_power.h"
 #include "endp_evt.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
 #include "endp_mngt.h"
-#include "phy_sock.h"
-#include "phy_vhost.h"
+#include "edp_sock.h"
+#include "edp_vhost.h"
 #include "pci_dpdk.h"
 #include "utils_cmd_line_maker.h"
 #include "dpdk_dyn.h"
 #include "vhost_eth.h"
 
 
-static t_phy *g_head_phy;
-static int g_nb_phy;
+static t_edp *g_head_edp;
+static int g_nb_edp;
 
 
 /****************************************************************************/
@@ -62,26 +62,26 @@ static int lan_exists_somewhere(char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_phy *phy_alloc(char *name, int endp_type)
+static t_edp *edp_alloc(char *name, int endp_type)
 {
-  t_phy *cur;
-  cur = (t_phy *) clownix_malloc(sizeof(t_phy), 13);
-  memset(cur, 0, sizeof(t_phy));
+  t_edp *cur;
+  cur = (t_edp *) clownix_malloc(sizeof(t_edp), 13);
+  memset(cur, 0, sizeof(t_edp));
   strncpy(cur->name, name, MAX_NAME_LEN-1);
   cur->endp_type = endp_type;
-  if (g_head_phy)
-    g_head_phy->prev = cur;
-  cur->next = g_head_phy;
-  g_head_phy = cur;
-  g_nb_phy += 1;
+  if (g_head_edp)
+    g_head_edp->prev = cur;
+  cur->next = g_head_edp;
+  g_head_edp = cur;
+  g_nb_edp += 1;
   return cur;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_phy *phy_mngt_phy_find(char *name)
+t_edp *edp_mngt_edp_find(char *name)
 {
-  t_phy *cur = g_head_phy;
+  t_edp *cur = g_head_edp;
   while(cur)
     {
     if ((!strcmp(name, cur->name)))
@@ -93,22 +93,22 @@ t_phy *phy_mngt_phy_find(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_mngt_phy_free(t_phy *cur)
+void edp_mngt_edp_free(t_edp *cur)
 {
   if (cur->prev)
     cur->prev->next = cur->next;
   if (cur->next)
     cur->next->prev = cur->prev;
-  if (g_head_phy == cur)
-    g_head_phy = cur->next;
-  if (g_nb_phy < 1)
+  if (g_head_edp == cur)
+    g_head_edp = cur->next;
+  if (g_nb_edp < 1)
     KOUT(" ");
-  g_nb_phy -= 1;
+  g_nb_edp -= 1;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_mngt_lowest_clean_lan(t_phy *cur)
+void edp_mngt_lowest_clean_lan(t_edp *cur)
 {
   cur->lan.nb_lan = 0;
   clownix_free(cur->lan.lan[0].lan, __FUNCTION__);
@@ -117,9 +117,9 @@ void phy_mngt_lowest_clean_lan(t_phy *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_phy *phy_mngt_lan_find(char *lan)
+t_edp *edp_mngt_lan_find(char *lan)
 {
-  t_phy *cur = g_head_phy;
+  t_edp *cur = g_head_edp;
   while(cur)
     {
     if (cur->lan.nb_lan)
@@ -136,14 +136,14 @@ t_phy *phy_mngt_lan_find(char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_topo_endp *phy_mngt_translate_topo_endp(int *nb)
+t_topo_endp *edp_mngt_translate_topo_endp(int *nb)
 {
-  t_phy *cur = g_head_phy;
+  t_edp *cur = g_head_edp;
   int len, nb_lan, nb_endp = 0;
   t_topo_endp *endp;
   char *lan, *name;
-  endp = (t_topo_endp *) clownix_malloc(g_nb_phy * sizeof(t_topo_endp),13);
-  memset(endp, 0, g_nb_phy * sizeof(t_topo_endp));
+  endp = (t_topo_endp *) clownix_malloc(g_nb_edp * sizeof(t_topo_endp),13);
+  memset(endp, 0, g_nb_edp * sizeof(t_topo_endp));
   while(cur)
     {
     name = cur->name;
@@ -179,7 +179,7 @@ t_topo_endp *phy_mngt_translate_topo_endp(int *nb)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_mngt_set_eth_type(t_phy *cur, int eth_type)
+void edp_mngt_set_eth_type(t_edp *cur, int eth_type)
 {
   if ((cur->eth_type == 0) && (eth_type != eth_type_none))
     KERR("%d %d", cur->eth_type, eth_type);
@@ -202,10 +202,10 @@ void phy_mngt_set_eth_type(t_phy *cur, int eth_type)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_mngt_exists(char *name, int *endp_type)
+int edp_mngt_exists(char *name, int *endp_type)
 {
   int result = 0;
-  t_phy *cur = phy_mngt_phy_find(name);
+  t_edp *cur = edp_mngt_edp_find(name);
   *endp_type = 0;
   if (cur)
     {
@@ -217,17 +217,17 @@ int phy_mngt_exists(char *name, int *endp_type)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_mngt_get_qty(void)
+int edp_mngt_get_qty(void)
 {
-  return (g_nb_phy);
+  return (g_nb_edp);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_mngt_lan_exists(char *lan, int *eth_type, int *endp_type)
+int edp_mngt_lan_exists(char *lan, int *eth_type, int *endp_type)
 {
   int result = 0;
-  t_phy *cur = g_head_phy;
+  t_edp *cur = g_head_edp;
   while(cur)
     {
     if (cur->lan.nb_lan)
@@ -246,11 +246,11 @@ int phy_mngt_lan_exists(char *lan, int *eth_type, int *endp_type)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
+int edp_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
 {
-  t_phy *cur;
+  t_edp *cur;
   int eth_type, type, result = -1, len;
-  cur = phy_mngt_phy_find(name); 
+  cur = edp_mngt_edp_find(name); 
   if (cur == NULL)
     {
     snprintf(err, MAX_PATH_LEN, "Not found: %s", name);
@@ -268,6 +268,7 @@ int phy_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
     if ((type != endp_type_kvm_sock)  &&
         (type != endp_type_kvm_dpdk)  &&
         (type != endp_type_kvm_vhost) &&
+        (type != endp_type_nat)       &&
         (type != endp_type_tap)       &&
         (type != endp_type_snf)       &&
         (type != endp_type_c2c))
@@ -296,6 +297,11 @@ int phy_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
       snprintf(err, MAX_PATH_LEN, "%s VHOST not compat snf", lan);
       KERR("%s", err);
       }
+    else if (cur->endp_type == endp_type_nat)
+      {
+      snprintf(err, MAX_PATH_LEN, "%s VHOST not compat nat", lan);
+      KERR("%s", err);
+      }
     else
       result = 0;
     }
@@ -307,7 +313,7 @@ int phy_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
     cur->lan.nb_lan = 1;
     cur->lan.lan=(t_lan_group_item *)clownix_malloc(len, 2);
     strncpy(cur->lan.lan[0].lan, lan, MAX_NAME_LEN-1);
-    eth_type = phy_evt_update_lan_add(cur, llid, tid);
+    eth_type = edp_evt_update_lan_add(cur, llid, tid);
     if (eth_type == eth_type_none)
       {
       send_status_ok(llid, tid, "OK");
@@ -321,9 +327,9 @@ int phy_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_mngt_del_lan(int llid, int tid, char *name, char *lan, char *err)
+int edp_mngt_del_lan(int llid, int tid, char *name, char *lan, char *err)
 {
-  t_phy *cur = phy_mngt_phy_find(name); 
+  t_edp *cur = edp_mngt_edp_find(name); 
   int result = -1;
   if (cur == NULL)
     {
@@ -345,9 +351,9 @@ int phy_mngt_del_lan(int llid, int tid, char *name, char *lan, char *err)
       }
     else
       {
-      phy_evt_del_inside(cur);
-      phy_mngt_lowest_clean_lan(cur);
-      phy_mngt_set_eth_type(cur, eth_type_none); 
+      edp_evt_del_inside(cur);
+      edp_mngt_lowest_clean_lan(cur);
+      edp_mngt_set_eth_type(cur, eth_type_none); 
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       result = 0;
       }
@@ -357,13 +363,14 @@ int phy_mngt_del_lan(int llid, int tid, char *name, char *lan, char *err)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_mngt_add(int llid, int tid, char *name, int endp_type)
+int edp_mngt_add(int llid, int tid, char *name, int endp_type)
 {
-  t_phy *cur = phy_mngt_phy_find(name); 
+  t_edp *cur = edp_mngt_edp_find(name); 
   int result;
   if ((endp_type != endp_type_phy) &&
       (endp_type != endp_type_pci) &&
       (endp_type != endp_type_snf) &&
+      (endp_type != endp_type_nat) &&
       (endp_type != endp_type_tap))
     {
     KERR("%s not compatible endp", name);
@@ -377,7 +384,7 @@ int phy_mngt_add(int llid, int tid, char *name, int endp_type)
   else if ((endp_type == endp_type_phy) &&
            (!suid_power_get_phy_info(name)))
     {
-    KERR("%s phy not found", name);
+    KERR("%s edp not found", name);
     result = -1;
     }
   else if ((endp_type == endp_type_pci) &&
@@ -390,9 +397,12 @@ int phy_mngt_add(int llid, int tid, char *name, int endp_type)
     {
     if (endp_type == endp_type_phy)
       suid_power_ifup_phy(name);
-    cur = phy_alloc(name, endp_type); 
-    phy_mngt_set_eth_type(cur, eth_type_none); 
-    suid_power_rec_name(name, 1);
+    cur = edp_alloc(name, endp_type); 
+    edp_mngt_set_eth_type(cur, eth_type_none); 
+    if ((endp_type == endp_type_phy) ||
+        (endp_type == endp_type_snf) ||
+        (endp_type == endp_type_tap))
+      suid_power_rec_name(name, 1);
     layout_add_sat(name, llid);
     send_status_ok(llid, tid, "OK");
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
@@ -403,9 +413,9 @@ int phy_mngt_add(int llid, int tid, char *name, int endp_type)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_mngt_del(int llid, int tid, char *name)
+int edp_mngt_del(int llid, int tid, char *name)
 {
-  t_phy *cur = phy_mngt_phy_find(name); 
+  t_edp *cur = edp_mngt_edp_find(name); 
   int result = -1;
   if (cur == NULL)
     {
@@ -414,10 +424,13 @@ int phy_mngt_del(int llid, int tid, char *name)
     }
   else
     {
-    phy_evt_del_inside(cur);
-    phy_mngt_phy_free(cur);
+    edp_evt_del_inside(cur);
+    edp_mngt_edp_free(cur);
     layout_del_sat(name);
-    suid_power_rec_name(name, 0);
+    if ((cur->endp_type == endp_type_phy) ||
+        (cur->endp_type == endp_type_snf) ||
+        (cur->endp_type == endp_type_tap))
+      suid_power_rec_name(name, 0);
     send_status_ok(llid, tid, "OK");
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     result = 0;
@@ -427,34 +440,34 @@ int phy_mngt_del(int llid, int tid, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_mngt_del_all(void)
+void edp_mngt_del_all(void)
 {
-  t_phy *next, *cur = g_head_phy;
+  t_edp *next, *cur = g_head_edp;
   while(cur)
     {
     next = cur->next;
-    phy_mngt_del(0, 0, cur->name);
+    edp_mngt_del(0, 0, cur->name);
     cur = next;
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_phy *phy_mngt_get_head_phy(int *nb_phy)
+t_edp *edp_mngt_get_head_edp(int *nb_edp)
 {
-  *nb_phy = g_nb_phy;
-  return g_head_phy;
+  *nb_edp = g_nb_edp;
+  return g_head_edp;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_mngt_init(void)
+void edp_mngt_init(void)
 {
-  g_nb_phy   = 0;
-  g_head_phy = NULL;
-  phy_sock_init();
-  phy_vhost_init();
-  phy_evt_init();
+  g_nb_edp   = 0;
+  g_head_edp = NULL;
+  edp_sock_init();
+  edp_vhost_init();
+  edp_evt_init();
   pci_dpdk_init();
 }
 /*--------------------------------------------------------------------------*/

@@ -83,6 +83,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   done
 #----------------------------------------------------------
   rm -rf ${CLOONIX_SERVER}/snf_dpdk
+  rm -rf ${CLOONIX_SERVER}/nat_dpdk
   rm -f ${CLOONIX_SERVER}/qemu/cmd
   rm -rf ${CLOONIX_SERVER}/qemu/sources
   rm -rf ${CLOONIX_SERVER}/qemu/qemu_bin/tainted_qemu
@@ -109,7 +110,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   done
   rm -rf ${CLOONIX_SERVER}/ovs
 #----------------------------------------------------------
-  for i in tldk snf_dpdk; do
+  for i in snf_dpdk nat_dpdk; do
     rm -rf ${CLOONIX_SERVER}/${i}
   done
 #----------------------------------------------------------

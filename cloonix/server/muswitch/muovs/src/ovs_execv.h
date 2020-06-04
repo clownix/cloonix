@@ -38,6 +38,8 @@ int ovs_execv_del_lan(char *ovs_bin, char *dpdk_dir, char *lan_name);
 
 int ovs_execv_add_lan_snf(char *ovs, char *dpdk, char *lan, char *name);
 int ovs_execv_del_lan_snf(char *ovs, char *dpdk, char *lan, char *name);
+int ovs_execv_add_lan_nat(char *ovs, char *dpdk, char *lan, char *name);
+int ovs_execv_del_lan_nat(char *ovs, char *dpdk, char *lan, char *name);
 
 int ovs_execv_add_lan_eth(char *ovs_bin, char *dpdk_dir, char *lan_name,
                           char *vm_name, int num);

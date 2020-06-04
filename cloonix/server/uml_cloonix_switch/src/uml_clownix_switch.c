@@ -69,8 +69,9 @@
 #include "dpdk_ovs.h"
 #include "suid_power.h"
 #include "vhost_eth.h"
-#include "phy_mngt.h"
+#include "edp_mngt.h"
 #include "snf_dpdk_process.h"
+#include "nat_dpdk_process.h"
 
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
@@ -613,8 +614,9 @@ int main (int argc, char *argv[])
   dpdk_ovs_init();
   suid_power_init();
   vhost_eth_init();
-  phy_mngt_init();
+  edp_mngt_init();
   snf_dpdk_init();
+  nat_dpdk_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
   msg_mngt_loop();

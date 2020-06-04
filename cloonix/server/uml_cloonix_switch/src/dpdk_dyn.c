@@ -35,10 +35,11 @@
 #include "dpdk_msg.h"
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
+#include "dpdk_nat.h"
 #include "machine_create.h"
 #include "event_subscriber.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
 #include "snf_dpdk_process.h"
 
 /****************************************************************************/
@@ -107,6 +108,7 @@ static void vlan_free(t_deth *eth, t_dlan *lan)
   clownix_free(lan, __FUNCTION__);
   if ((!dpdk_dyn_lan_exists(lan_name)) &&
       (!dpdk_tap_lan_exists(lan_name)) &&
+      (!dpdk_nat_lan_exists(lan_name)) &&
       (!dpdk_snf_lan_exists(lan_name)))
     dpdk_msg_vlan_exist_no_more(lan_name);
 }
@@ -306,13 +308,13 @@ static void recv_ack(int is_add, int is_ko, char *lan_name,
           if (lan->waiting_ack_add != 1)
             KERR("addlan ko:%d %s %s %d", is_ko, lan_name, name, num);
           lan->waiting_ack_add = 0; 
-          if (phy_evt_update_eth_type(lan->llid, lan->tid, is_add,
+          if (edp_evt_update_eth_type(lan->llid, lan->tid, is_add,
                                        eth_type_dpdk, name, lan_name))
             send_status_ok(lan->llid, lan->tid, "OK");
           lan->llid = 0;
           lan->tid = 0;
           }
-        phy_evt_update_eth_type(0, 0, is_add, eth_type_dpdk, name, lan_name);
+        edp_evt_update_eth_type(0, 0, is_add, eth_type_dpdk, name, lan_name);
         event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
         snf_dpdk_process_possible_change(lan_name);
         }

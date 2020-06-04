@@ -59,6 +59,9 @@ static int rx_inot(void *ptr, int llid, int fd)
         close(g_fdnotify);
         pcap_record_close_and_reinit();
         }
+      else if (event->mask & IN_IGNORED)
+        {
+        }
       else
         KERR("Unknown Mask 0x%.8x\n", event->mask);
       len -= sizeof(*event) + event->len;

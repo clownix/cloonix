@@ -32,6 +32,8 @@ int  fmt_tx_del_lan(int tid, char *lan);
 
 int  fmt_tx_add_lan_snf(int tid, char *lan, char *name);
 int  fmt_tx_del_lan_snf(int tid, char *lan, char *name);
+int  fmt_tx_add_lan_nat(int tid, char *lan, char *name);
+int  fmt_tx_del_lan_nat(int tid, char *lan, char *name);
 
 int  fmt_tx_add_eth(int tid, char *name, int num, char *strmac);
 int  fmt_tx_del_eth(int tid, char *name, int num);

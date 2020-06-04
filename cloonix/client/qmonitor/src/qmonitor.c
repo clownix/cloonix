@@ -228,7 +228,7 @@ static int callback_connect(void *ptr, int llid, int fd)
 /*****************************************************************************/
 int main (int argc, char *argv[])
 {
-  int switch_ip = 0;
+  uint32_t switch_ip = 0;
   int switch_port = 0;
 
   if (argc != 4)

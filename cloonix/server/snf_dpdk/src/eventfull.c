@@ -37,7 +37,7 @@ void send_eventfull_tx_rx(char *name, int num, int ms,
 typedef struct t_evt_eth
 {
   int eth;
-  char mac[ETH_ALEN];
+  uint8_t mac[6];
   int pkt_tx;
   int bytes_tx;
   int pkt_rx;
@@ -75,11 +75,11 @@ static t_evt_obj *find_evt_obj(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_evt_eth *get_eth_with_mac(char *mac)
+static t_evt_eth *get_eth_with_mac(uint8_t *mac)
 {
   t_evt_obj *obj = g_obj_head;
   t_evt_eth *cur = NULL;
-  char *mc;
+  uint8_t *mc;
   int result = 0;
   while((obj) && (result == 0))
     {
@@ -104,19 +104,26 @@ static t_evt_eth *get_eth_with_mac(char *mac)
 static void update_stats(int flag_allcast, t_evt_eth *src,
                          t_evt_eth *dst, int len)
 {
-  t_evt_eth *cur = NULL;
+  t_evt_obj *mcur = g_obj_head;
+  t_evt_eth *cur;
+
   src->pkt_tx += 1;
   src->bytes_tx += len;
   if (flag_allcast)
     {
-    while (cur)
+    while(mcur)
       {
-      if (cur != src)
+      cur = mcur->head_evt_eth;
+      while (cur)
         {
-        cur->pkt_rx += 1;
-        cur->bytes_rx += len;
-        } 
-      cur = cur->next;
+        if (cur != src)
+          {
+          cur->pkt_rx += 1;
+          cur->bytes_rx += len;
+          } 
+        cur = cur->next;
+        }
+      mcur = mcur->next;
       }
     }
   else
@@ -128,13 +135,13 @@ static void update_stats(int flag_allcast, t_evt_eth *src,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void add_chain_eth(t_evt_obj *vme, int num, char *mac)
+static void add_chain_eth(t_evt_obj *vme, int num, uint8_t *mac)
 {
   t_evt_eth *cur;
   cur = (t_evt_eth *) malloc(sizeof(t_evt_eth));
   memset(cur, 0, sizeof(t_evt_eth));
   cur->eth = num;
-  memcpy(cur->mac, mac, ETH_ALEN);
+  memcpy(cur->mac, mac, 6);
   if (vme->head_evt_eth)
     vme->head_evt_eth->prev = cur;
   cur->next = vme->head_evt_eth;
@@ -187,7 +194,7 @@ static void eventfull_can_be_sent(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void eventfull_obj_add(char *name, int num, char *mac)
+static void eventfull_obj_add(char *name, int num, uint8_t *mac)
 {
   t_evt_obj *cur = find_evt_obj(name);
   if (cur)
@@ -197,9 +204,6 @@ static void eventfull_obj_add(char *name, int num, char *mac)
     }
   else
     {
-    KERR("EVENT ADD OBJ %s %d %02x:%02x:%02x:%02x:%02x:%02x", name, num,
-                       (mac[0]&0xff), (mac[1]&0xff),(mac[2]&0xff),
-                       (mac[3]&0xff),(mac[4]&0xff),(mac[5]&0xff));
     cur = malloc(sizeof(t_evt_obj));
     memset(cur, 0, sizeof(t_evt_obj));
     memcpy(cur->name, name, MAX_NAME_LEN-1);
@@ -220,7 +224,6 @@ static void eventfull_obj_del(char *name)
     KERR("%s", name);
   else
     {
-    KERR("EVENT DEL OBJ %s", name);
     delete_chain_eth(cur);
     if (cur->prev) 
       cur->prev->next = cur->next;
@@ -234,7 +237,7 @@ static void eventfull_obj_del(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void eventfull_hook_spy(int len, char *buf)
+void eventfull_hook_spy(int len, uint8_t *buf)
 {
   int flag_allcast = buf[0] & 0x01;
   t_evt_eth *src, *dst = NULL;
@@ -264,20 +267,20 @@ void eventfull_obj_update_begin(void)
 void eventfull_obj_update_item(char *name, int num, char *strmac)
 {
   int i, imac[6];
-  char mac[6];
+  uint8_t mac[6];
   t_evt_obj *obj = find_evt_obj(name);
   if (obj)
     obj->to_be_erased = 0;
   else
     {
     if (sscanf(strmac, "%02x:%02x:%02x:%02x:%02x:%02x", 
-        &(imac[0]), &(imac[1]),&(imac[2]),
-        &(imac[3]),&(imac[4]),&(imac[5])) != 6) 
+        &(imac[0]), &(imac[1]), &(imac[2]),
+        &(imac[3]), &(imac[4]), &(imac[5])) != 6) 
       KERR("%s %d %s", name, num, strmac);
     else
       {
       for (i=0; i<6; i++)
-        mac[i] = (char )(imac[i] & 0xFF); 
+        mac[i] = (uint8_t)(imac[i] & 0xFF); 
       eventfull_obj_add(name, num, mac);
       }
     }

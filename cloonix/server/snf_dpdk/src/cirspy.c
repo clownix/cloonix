@@ -42,7 +42,7 @@ typedef struct t_cspy_elem
 {
   long long usec;
   int len;
-  char buf[CIRC_MAX_LEN];
+  uint8_t buf[CIRC_MAX_LEN];
 } t_cspy_elem;
 /*---------------------------------------------------------------------------*/
 typedef struct t_cspy_set
@@ -125,19 +125,10 @@ t_cspy_elem *queue_get(t_cspy_set *csy)
 /****************************************************************************/
 void cirspy_run(void)
 {
-static int count1 = 0;
-static int count2 = 0;
   t_cspy_elem *elem;
   elem = queue_get(&(g_cspy.full_set));
   while(elem)
     {
-count1+=1;
-if (count1 == 1000000)
-{
-count1 = 0;
-count2 += 1;
-KERR("MEGA: %d", count2);
-}
     pcap_record_rx_packet(elem->usec, elem->len, elem->buf);
     eventfull_hook_spy(elem->len, elem->buf);
     queue_put(&(g_cspy.empty_set), elem);

@@ -37,6 +37,7 @@
 #include "murpc_dispatch.h"
 #include "suid_power.h"
 #include "snf_dpdk_process.h"
+#include "nat_dpdk_process.h"
 
 
 /****************************************************************************/
@@ -319,6 +320,10 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   else if (snf_dpdk_diag_llid(llid))
     {
     snf_dpdk_diag_resp(llid, tid, line);
+    }
+  else if (nat_dpdk_diag_llid(llid))
+    {
+    nat_dpdk_diag_resp(llid, tid, line);
     }
   else if (endp_mngt_can_be_found_with_llid(llid, name, &num, &mutype))
     {

@@ -547,9 +547,10 @@ static void apply_epoll_ctl(int llid, int cidx, uint32_t evt)
       {
       if (errno == EBADF)
         {
+        KERR(" %s %d (bad fd) ", g_channel[cidx].little_name, errno);
+        g_channel[cidx].err_cb(NULL, llid, errno, 1111);
         if (msg_exist_channel(llid))
           channel_delete(llid);
-        KERR(" %s %d (bad fd) ", g_channel[cidx].little_name, errno);
         }
       else
         KERR(" %s %d ", g_channel[cidx].little_name, errno);
@@ -647,8 +648,13 @@ int channel_create(int fd, int is_blkd, int kind, char *little_name,
     g_channel[cidx].epev.data.fd = fd;
     fd_check(fd, __LINE__, little_name);
     if (epoll_ctl(g_epfd, EPOLL_CTL_ADD, fd, &(g_channel[cidx].epev)))
-      KOUT(" %s ", little_name);
-    strncpy(g_channel[cidx].little_name, little_name, MAX_NAME_LEN-1);
+      {
+      release_llid_cidx(llid, cidx);
+      KERR(" %s %d", little_name, errno);
+      llid = 0;
+      }
+    else
+      strncpy(g_channel[cidx].little_name, little_name, MAX_NAME_LEN-1);
     }
   return (llid);
 }

@@ -129,7 +129,8 @@ static int extract_info(char *buf)
   char name[MAX_NAME_LEN];
   char ip[MAX_NAME_LEN];
   char passwd[MSG_DIGEST_LEN];
-  int  port, ipnum, result = -1;
+  int  port, result = -1;
+  uint32_t ipnum;
   if (find_entry(buf, "CLOONIX_VERSION=", g_cloonix_version, MAX_NAME_LEN)) 
     KERR(" ");
   else if (find_entry(buf, "CLOONIX_TREE=", g_cloonix_tree, MAX_PATH_LEN)) 

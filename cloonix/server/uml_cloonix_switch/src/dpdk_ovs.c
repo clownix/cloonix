@@ -44,6 +44,7 @@
 #include "fmt_diag.h"
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
+#include "dpdk_nat.h"
 #include "qmp.h"
 #include "system_callers.h"
 #include "stats_counters.h"
@@ -138,7 +139,11 @@ static void test_and_end_ovs(void)
   t_ovs *cur = g_head_ovs;
   int nb_tap = dpdk_tap_get_qty();
   int nb_snf = dpdk_snf_get_qty();
-  if ((g_head_vm == NULL) && (nb_tap == 0) && (nb_snf == 0))
+  int nb_nat = dpdk_nat_get_qty();
+  if ((g_head_vm == NULL) &&
+      (nb_tap == 0) &&
+      (nb_nat == 0) &&
+      (nb_snf == 0))
     {
     if (!dpdk_dyn_is_all_empty())
       KERR(" ");
@@ -919,6 +924,7 @@ int dpdk_ovs_still_present(void)
   if ((g_head_vm != NULL) || 
       (dpdk_tap_get_qty() != 0) ||
       (dpdk_snf_get_qty() != 0) ||
+      (dpdk_nat_get_qty() != 0) ||
       (g_head_ovs != NULL))
     result = 1;
   return result;
@@ -991,6 +997,8 @@ void dpdk_ovs_urgent_client_destruct(void)
     dpdk_tap_end_ovs();
   if (dpdk_snf_get_qty())
     dpdk_snf_end_ovs();
+  if (dpdk_nat_get_qty())
+    dpdk_nat_end_ovs();
   while(vm)
     {
     dpdk_ovs_del_vm(vm->name);
@@ -1123,6 +1131,7 @@ void dpdk_ovs_init(void)
   dpdk_msg_init();
   dpdk_tap_init();
   dpdk_snf_init();
+  dpdk_nat_init();
   g_dpdk_usable = 0;
 }
 /*--------------------------------------------------------------------------*/

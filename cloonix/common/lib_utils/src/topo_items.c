@@ -52,10 +52,7 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
   if (topo->nb_phy  != ref->nb_phy)
     return 41;
   if (topo->nb_pci  != ref->nb_pci)
-{
-KERR("%d %d", topo->nb_pci, ref->nb_pci);
     return 42;
-}
   if (topo->nb_bridges != ref->nb_bridges)
     return 5;
   if (topo->nb_mirrors != ref->nb_mirrors)

@@ -951,7 +951,8 @@ static void timeout_connect_doors(void *data)
 /****************************************************************************/
 void client_init(char *name, char *path, char *password)
 {
-  int ip, port, llid;
+  uint32_t ip;
+  int port, llid;
   doorways_sock_address_detect(path, &ip, &port);
   memset(g_main_end_cb, 0, MAX_MAIN_END_CB * sizeof(t_end_cb));
   memset(g_password, 0, MSG_DIGEST_LEN);

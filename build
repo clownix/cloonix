@@ -54,7 +54,6 @@ done
 #----------------------------------------------------------
   for i in  dpdk \
             ovs \
-            tldk \
             doorways \
             suid_power \
             uml_cloonix_switch \
@@ -74,6 +73,7 @@ done
             spice \
             qemu \
             snf_dpdk \
+            nat_dpdk \
             dtach; do
 
     echo

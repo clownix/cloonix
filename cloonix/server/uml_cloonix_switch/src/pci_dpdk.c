@@ -26,8 +26,8 @@
 #include "cfg_store.h"
 #include "utils_cmd_line_maker.h"
 #include "fmt_diag.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
 #include "pci_dpdk.h"
 #include "dpdk_dyn.h"
 #include "suid_power.h"
@@ -108,7 +108,7 @@ static void fail_resp_req(t_pci_dpdk *cur)
     send_status_ko(cur->llid, cur->tid, "KO");
   else
     KERR("%s %s", cur->lan, cur->pci);
-  phy_evt_end_eth_type_dpdk(cur->lan, 0);
+  edp_evt_end_eth_type_dpdk(cur->lan, 0);
   free_pci_dpdk(cur);
 }
 /*--------------------------------------------------------------------------*/
@@ -154,7 +154,7 @@ void pci_dpdk_ack_add(int tid, int is_ok, char *lan, char *pci)
       KERR("%s %s %d", pci, lan, cur->state);
     send_status_ok(cur->llid, cur->tid, "OK");
     free_pci_dpdk(cur);
-    phy_evt_end_eth_type_dpdk(lan, 1);
+    edp_evt_end_eth_type_dpdk(lan, 1);
     }
 }
 /*--------------------------------------------------------------------------*/

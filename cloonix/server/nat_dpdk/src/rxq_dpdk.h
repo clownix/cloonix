@@ -15,6 +15,9 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void phy_sock_timer_add(int llid, int tid, char *name, char *lan);
-void phy_sock_init(void);
+void rxq_dpdk_flush(void);
+void rxq_dpdk_enqueue(struct rte_mbuf *pkts);
+struct rte_mbuf *rxq_dpdk_dequeue(void);
+void rxq_dpdk_init(void);
 /*--------------------------------------------------------------------------*/
+

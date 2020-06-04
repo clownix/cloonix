@@ -155,7 +155,7 @@ static int tst_port(char *str_port, int *port)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int get_ip_and_port(char *doors, int *ip, int *port)
+static int get_ip_and_port(char *doors, uint32_t *ip, int *port)
 {
   int result;
   char *ptr_ip, *ptr_port;
@@ -172,7 +172,8 @@ static int get_ip_and_port(char *doors, int *ip, int *port)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void doorways_sock_address_detect(char *doors_client_addr, int *ip, int *port)
+void doorways_sock_address_detect(char *doors_client_addr,
+                                  uint32_t *ip, int *port)
 {
   char doors[MAX_PATH_LEN];
   if (strlen(doors_client_addr) >= MAX_PATH_LEN)
@@ -200,8 +201,6 @@ static void clean_llid(int llid)
     g_llid_data[llid] = NULL;
     if (!lid->cb_end)
       KOUT(" ");
-    if (doorways_tx_or_rx_still_in_queue(llid))
-      KERR("Q  %d %d", lid->rx_pktbuf.offset, lid->rx_pktbuf.paylen);
     lid->cb_end(llid);
     clownix_free(lid, __FUNCTION__);
     }

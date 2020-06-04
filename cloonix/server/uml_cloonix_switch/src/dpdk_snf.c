@@ -47,8 +47,8 @@
 #include "system_callers.h"
 #include "stats_counters.h"
 #include "dpdk_msg.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
 #include "snf_dpdk_process.h"
 
 
@@ -130,12 +130,11 @@ static void free_dlan(t_dsnf *dsnf)
     KOUT(" ");
   if (dsnf->head_lan == NULL) 
     KOUT(" ");
-KERR("FREE %s %s", dsnf->head_lan->lan, dsnf->name);
   memset(lan, 0, MAX_NAME_LEN);
   strncpy(lan, dsnf->head_lan->lan, MAX_NAME_LEN-1);
   clownix_free(dsnf->head_lan, __FUNCTION__);
   dsnf->head_lan = NULL;
-  phy_evt_lan_del_done(eth_type_dpdk, lan);
+  edp_evt_lan_del_done(eth_type_dpdk, lan);
   event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
   if ((!dpdk_dyn_lan_exists(lan)) && (!dpdk_snf_lan_exists(lan)))
     dpdk_msg_vlan_exist_no_more(lan);
@@ -276,7 +275,7 @@ static void resp_lan(int is_add, int is_ko, char *lan, char *name)
             dlan->snf_dpdk_start_process = 1;
             snf_dpdk_start_process(name, lan, 1);
             }
-          phy_evt_lan_add_done(eth_type_dpdk, lan);
+          edp_evt_lan_add_done(eth_type_dpdk, lan);
           event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
           snf_dpdk_process_possible_change(lan);
           }
@@ -327,7 +326,6 @@ int dpdk_snf_add_lan(int llid, int tid, char *lan, char *name)
           dlan->llid = llid;
           dlan->tid = tid;
           result = 0;
-KERR("ALLOC %s %s", lan, name);
           }
         }
       }
@@ -360,7 +358,6 @@ static int dpdk_snf_del_ovs_lan(char *lan, char *name)
       dlan->waiting_ack_del_lan = 1;
       dlan->timer_count_lan = 0;
       result = 0;
-KERR("SENT dpdk_msg_send_del_lan_snf %s %s", lan, name);
       }
     }
   return result;
@@ -393,24 +390,38 @@ void dpdk_snf_event_from_snf_dpdk_process(char *name, char *lan, int on)
   if (!dsnf)
     KERR("ERROR TODO %s %s", name, lan);
   else if (on == -1)
-    KERR("ERROR TODO %s %s", name, lan);
-  else if (on == 0)
     {
-KERR("OFF PROCESS %s %s", name, lan);
+    KERR("ERROR %s %s", name, lan);
     cur = dsnf->head_lan;
     if (cur)
       {
+      cur->snf_dpdk_start_process = 0;
       if (strcmp(cur->lan, lan))
         KERR("%s %s %s", name, lan, cur->lan);
       if (dpdk_snf_del_ovs_lan(cur->lan, name))
         KERR("%s %s", name, lan);
+      free_dsnf(name);
+      }
+    else
+      KERR("ERROR TODO %s %s", name, lan);
+    }
+  else if (on == 0)
+    {
+    cur = dsnf->head_lan;
+    if (cur)
+      {
+      cur->snf_dpdk_start_process = 0;
+      if (strcmp(cur->lan, lan))
+        KERR("%s %s %s", name, lan, cur->lan);
+      if (dpdk_snf_del_ovs_lan(cur->lan, name))
+        KERR("%s %s", name, lan);
+      free_dsnf(name);
       }
     else
       KERR("ERROR TODO %s %s", name, lan);
     }
   else
     {
-KERR("ON PROCESS %s %s", name, lan);
     }
 }
 /*--------------------------------------------------------------------------*/

@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void eventfull_hook_spy(int len, char *buf);
+void eventfull_hook_spy(int len, uint8_t *buf);
 void eventfull_collect_send(int cloonix_llid);
 void eventfull_obj_update_begin(void);
 void eventfull_obj_update_item(char *name, int num, char *strmac);

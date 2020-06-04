@@ -28,25 +28,25 @@
 
 
 /*****************************************************************************/
-typedef struct t_phy_timer
+typedef struct t_edp_timer
 {
   int  llid;
   int  tid;
   char name[MAX_NAME_LEN];
   char lan[MAX_NAME_LEN];
   int  count;
-  struct t_phy_timer *prev;
-  struct t_phy_timer *next;
-} t_phy_timer;
+  struct t_edp_timer *prev;
+  struct t_edp_timer *next;
+} t_edp_timer;
 /*---------------------------------------------------------------------------*/
 
-static t_phy_timer *g_head_timer;
+static t_edp_timer *g_head_timer;
 
 
 /*****************************************************************************/
-static t_phy_timer *timer_find(char *name)
+static t_edp_timer *timer_find(char *name)
 {
-  t_phy_timer *cur = NULL;
+  t_edp_timer *cur = NULL;
   if (name[0])
     {
     cur = g_head_timer;
@@ -62,13 +62,13 @@ static t_phy_timer *timer_find(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static t_phy_timer *timer_alloc(char *name)
+static t_edp_timer *timer_alloc(char *name)
 {
-  t_phy_timer *timer = timer_find(name);
+  t_edp_timer *timer = timer_find(name);
   if (timer)
     KOUT("%s", name);
-  timer = (t_phy_timer *)clownix_malloc(sizeof(t_phy_timer), 4);
-  memset(timer, 0, sizeof(t_phy_timer));
+  timer = (t_edp_timer *)clownix_malloc(sizeof(t_edp_timer), 4);
+  memset(timer, 0, sizeof(t_edp_timer));
   strncpy(timer->name, name, MAX_NAME_LEN-1);
   if (g_head_timer)
     g_head_timer->prev = timer;
@@ -79,7 +79,7 @@ static t_phy_timer *timer_alloc(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void timer_free(t_phy_timer *timer)
+static void timer_free(t_edp_timer *timer)
 {
   if (timer->prev)
     timer->prev->next = timer->next;
@@ -125,7 +125,7 @@ static void sock_add_lan(int llid, int tid, char *name, char *lan)
 /****************************************************************************/
 static void timer_endp(void *data)
 {
-  t_phy_timer *te = (t_phy_timer *) data;
+  t_edp_timer *te = (t_edp_timer *) data;
   char err[MAX_PATH_LEN];
   if (endp_evt_exists(te->name, 0))
     {
@@ -137,7 +137,7 @@ static void timer_endp(void *data)
     te->count++;
     if (te->count >= 40)
       {
-      sprintf(err, "bad phy sock start: %s %s", te->name, te->lan);
+      sprintf(err, "bad edp sock start: %s %s", te->name, te->lan);
       if (msg_exist_channel(te->llid))
         send_status_ko(te->llid, te->tid, err);
       else 
@@ -154,9 +154,9 @@ static void timer_endp(void *data)
 
 
 /****************************************************************************/
-void phy_sock_timer_add(int llid, int tid, char *name, char *lan)
+void edp_sock_timer_add(int llid, int tid, char *name, char *lan)
 {
-  t_phy_timer *te = timer_find(name);
+  t_edp_timer *te = timer_find(name);
   if (te)
     {
     if (msg_exist_channel(llid))
@@ -176,7 +176,7 @@ void phy_sock_timer_add(int llid, int tid, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_sock_init(void)
+void edp_sock_init(void)
 {
   g_head_timer = NULL;
 }

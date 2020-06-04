@@ -41,6 +41,7 @@
 #include "file_read_write.h"
 #include "doorways_mngt.h"
 #include "suid_power.h"
+#include "nat_dpdk_process.h"
 
 
 char **get_saved_environ(void);
@@ -100,6 +101,17 @@ char *utils_get_snf_dpdk_bin_path(void)
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1,
            "%s/server/dpdk/bin/cloonix_snf_dpdk", cfg_get_bin_dir());
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_nat_dpdk_bin_path(void)
+{
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,
+           "%s/server/dpdk/bin/cloonix_nat_dpdk", cfg_get_bin_dir());
   return path;
 }
 /*---------------------------------------------------------------------------*/
@@ -424,6 +436,15 @@ char *utils_get_dpdk_snf_dir(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char *utils_get_dpdk_nat_dir(void)
+{
+  static char dpdk[MAX_PATH_LEN];
+  sprintf(dpdk, "%s/%s", cfg_get_root_work(), NAT_DPDK_SOCK_DIR);
+  return dpdk;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char *utils_get_dpdk_cloonix_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];
@@ -566,6 +587,7 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
       suid_power_rec_name(vhost_ifname, 1);
       }
     }
+  nat_dpdk_vm_event();
 }
 /*---------------------------------------------------------------------------*/
 

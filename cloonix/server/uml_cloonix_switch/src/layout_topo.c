@@ -29,7 +29,7 @@
 #include "lan_to_name.h"
 #include "llid_trace.h"
 #include "dpdk_tap.h"
-#include "phy_mngt.h"
+#include "edp_mngt.h"
 
 #define MAX_MS_OF_INSERT 3600000
 
@@ -167,7 +167,7 @@ static void make_default_layout_sat(t_layout_sat *layout, char *name, int type)
 {
   int endp_type;
   if ((!endp_mngt_exists(name, 0, &endp_type)) &&
-      (!phy_mngt_exists(name, &endp_type)))
+      (!edp_mngt_exists(name, &endp_type)))
     KERR("%s", name);
   else
     {
@@ -554,7 +554,7 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
   t_layout_sat_xml *xml;
   int endp_type;
   if ((!endp_mngt_exists(layout->name, 0, &endp_type)) &&
-      (!phy_mngt_exists(layout->name, &endp_type)))
+      (!edp_mngt_exists(layout->name, &endp_type)))
     KERR("%s", layout->name);
   else
     {
@@ -809,7 +809,7 @@ static void layout_modif_sat(int llid, int tid, char *name, int kind,
   t_layout_sat_xml *cur;
   cur = find_sat_xml(name);
   if ((!endp_mngt_exists(name, 0, &endp_type)) &&
-      (!phy_mngt_exists(name, &endp_type)))
+      (!edp_mngt_exists(name, &endp_type)))
     {
     sprintf(info, "KO %s not found", name);
     send_status_ko(llid, tid, info);
@@ -1107,7 +1107,7 @@ void layout_add_sat(char *name, int llid)
   t_layout_sat layout;
   int endp_type;
   if ((!endp_mngt_exists(name, 0, &endp_type)) &&
-      (!phy_mngt_exists(name, &endp_type)))
+      (!edp_mngt_exists(name, &endp_type)))
     KERR("%s", name);
   else
     {

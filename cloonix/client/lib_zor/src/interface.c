@@ -464,7 +464,8 @@ static gboolean glib_cb (GIOChannel   *source,
 static void timeout_second(void *data)
 {
   static int count = 0;
-  int fd, ip, port;
+  uint32_t ip;
+  int fd, port;
   t_cloonix *cur = g_head_cloonix;
   count += 1;
   if (count == 3)

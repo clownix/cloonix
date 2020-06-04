@@ -27,10 +27,10 @@
 #include "utils_cmd_line_maker.h"
 #include "vhost_eth.h"
 #include "fmt_diag.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
 
-typedef struct t_phy_vhost
+typedef struct t_edp_vhost
 {
   int llid;
   int tid;
@@ -39,9 +39,9 @@ typedef struct t_phy_vhost
   int count;
   char name[IFNAMSIZ];
   char lan[MAX_NAME_LEN];
-  struct t_phy_vhost *prev;
-  struct t_phy_vhost *next;
-} t_phy_vhost;
+  struct t_edp_vhost *prev;
+  struct t_edp_vhost *next;
+} t_edp_vhost;
 
 enum {
   state_min=100,
@@ -50,39 +50,39 @@ enum {
   state_max,
 };
 
-static t_phy_vhost *g_head_phy_vhost;
+static t_edp_vhost *g_head_edp_vhost;
 
 /****************************************************************************/
-static t_phy_vhost *alloc_phy_vhost(char *name)
+static t_edp_vhost *alloc_edp_vhost(char *name)
 {
-  t_phy_vhost *cur = (t_phy_vhost *) malloc(sizeof(t_phy_vhost));
-  memset(cur, 0, sizeof(t_phy_vhost));
+  t_edp_vhost *cur = (t_edp_vhost *) malloc(sizeof(t_edp_vhost));
+  memset(cur, 0, sizeof(t_edp_vhost));
   strncpy(cur->name, name, IFNAMSIZ-1);
-  if (g_head_phy_vhost)
-    g_head_phy_vhost->prev = cur;
-  cur->next = g_head_phy_vhost;
-  g_head_phy_vhost = cur;
+  if (g_head_edp_vhost)
+    g_head_edp_vhost->prev = cur;
+  cur->next = g_head_edp_vhost;
+  g_head_edp_vhost = cur;
   return cur;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void free_phy_vhost(t_phy_vhost *cur)
+static void free_edp_vhost(t_edp_vhost *cur)
 {
   if (cur->prev)
     cur->prev->next = cur->next;
   if (cur->next)
     cur->next->prev = cur->prev;
-  if (cur == g_head_phy_vhost)
-    g_head_phy_vhost = cur->next;
+  if (cur == g_head_edp_vhost)
+    g_head_edp_vhost = cur->next;
   free(cur);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_phy_vhost *find_phy_vhost(char *name)
+static t_edp_vhost *find_edp_vhost(char *name)
 {
-  t_phy_vhost *cur = g_head_phy_vhost;
+  t_edp_vhost *cur = g_head_edp_vhost;
   while (cur)
     {
     if (!strcmp(name, cur->name))
@@ -94,21 +94,21 @@ static t_phy_vhost *find_phy_vhost(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void fail_resp_req(t_phy_vhost *cur)
+static void fail_resp_req(t_edp_vhost *cur)
 {
    KERR("%s %s", cur->name, cur->lan);
   if (msg_exist_channel(cur->llid))
     send_status_ko(cur->llid, cur->tid, "KO");
   else
     KERR("%s %s", cur->name, cur->lan);
-  free_phy_vhost(cur);
+  free_edp_vhost(cur);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void timer_phy(void *data)
+static void timer_edp(void *data)
 {
-  t_phy_vhost *next, *cur = g_head_phy_vhost;
+  t_edp_vhost *next, *cur = g_head_edp_vhost;
   while (cur)
     {
     next = cur->next;
@@ -117,14 +117,14 @@ static void timer_phy(void *data)
       fail_resp_req(cur);
     cur = next;
     }
-  clownix_timeout_add(20, timer_phy, NULL, NULL, NULL);
+  clownix_timeout_add(20, timer_edp, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name)
+void edp_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name)
 {
-  t_phy_vhost *cur = find_phy_vhost(name);
+  t_edp_vhost *cur = find_edp_vhost(name);
   if (!cur)
     {
     KERR("%s %s", name, lan);
@@ -136,7 +136,7 @@ void phy_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name)
       send_status_ko(cur->llid, cur->tid, "KO");
     else
       KERR("%s %s", name, lan);
-    free_phy_vhost(cur);
+    free_edp_vhost(cur);
     }
   else
     {
@@ -145,15 +145,15 @@ void phy_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name)
     if (cur->state != state_wait_add_port)
       KERR("%s %s %d", name, lan, cur->state);
     send_status_ok(cur->llid, cur->tid, "OK");
-    free_phy_vhost(cur);
+    free_edp_vhost(cur);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name)
+void edp_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name)
 {
-  t_phy_vhost *cur = find_phy_vhost(name);
+  t_edp_vhost *cur = find_edp_vhost(name);
   if (!cur)
     {
     KERR("%s %s", name, lan);
@@ -165,7 +165,7 @@ void phy_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name)
       send_status_ko(cur->llid, cur->tid, "KO");
     else
       KERR("%s %s", name, lan);
-    free_phy_vhost(cur);
+    free_edp_vhost(cur);
     }
   else
     {
@@ -180,17 +180,17 @@ void phy_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name)
       else
         KERR("%s %s", name, lan);
       }
-    free_phy_vhost(cur);
+    free_edp_vhost(cur);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_vhost_add_port(int llid, int tid, char *name, char *lan)
+int edp_vhost_add_port(int llid, int tid, char *name, char *lan)
 {
   int result = -1;
   int ovs_tid = utils_get_next_tid();
-  t_phy_vhost *cur = find_phy_vhost(name);
+  t_edp_vhost *cur = find_edp_vhost(name);
   if (cur)
     KERR("%s %s", name, lan);
   else if (!vhost_lan_exists(lan))
@@ -199,7 +199,7 @@ int phy_vhost_add_port(int llid, int tid, char *name, char *lan)
     KERR("%s %s", name, lan);
   else
     {
-    cur = alloc_phy_vhost(name);
+    cur = alloc_edp_vhost(name);
     strncpy(cur->lan, lan, MAX_NAME_LEN-1);
     cur->state = state_wait_add_port;
     cur->ovs_tid = ovs_tid;
@@ -212,10 +212,10 @@ int phy_vhost_add_port(int llid, int tid, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_vhost_del_port(char *name, char *lan)
+int edp_vhost_del_port(char *name, char *lan)
 {
   int ovs_tid, result = -1;
-  t_phy_vhost *cur;
+  t_edp_vhost *cur;
   ovs_tid = utils_get_next_tid();
   if (fmt_tx_del_phy_vhost_port(ovs_tid, name, lan))
     {
@@ -223,7 +223,7 @@ int phy_vhost_del_port(char *name, char *lan)
     }
   else
     {
-    cur = alloc_phy_vhost(name);    
+    cur = alloc_edp_vhost(name);    
     strncpy(cur->lan, lan, MAX_NAME_LEN-1);
     cur->state = state_wait_del_port;
     cur->ovs_tid = ovs_tid;
@@ -234,7 +234,7 @@ int phy_vhost_del_port(char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *phy_vhost_get_ifname(char *name, int num)
+char *edp_vhost_get_ifname(char *name, int num)
 {
   char *result = NULL;
   t_vm *vm = cfg_get_vm(name);
@@ -249,9 +249,9 @@ char *phy_vhost_get_ifname(char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_vhost_init(void)
+void edp_vhost_init(void)
 {
-  g_head_phy_vhost = NULL;
-  clownix_timeout_add(200, timer_phy, NULL, NULL, NULL);
+  g_head_edp_vhost = NULL;
+  clownix_timeout_add(200, timer_edp, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/

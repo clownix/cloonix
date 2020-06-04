@@ -251,7 +251,7 @@ void differed_clownix_free(void *data)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ip_string_to_int (int *inet_addr, char *ip_string)
+int ip_string_to_int (uint32_t *inet_addr, char *ip_string)
 {
   int result = -1;
   unsigned int part[4];
@@ -500,17 +500,18 @@ int msg_watch_fd(int fd, t_fd_event rx_data,
     KOUT(" ");
   llid = channel_create(fd, 0, kind_simple_watch, little_name, rx_data, 
                         tx_dchan_cb, err_dchan_cb);
-  if (!llid)
-    KOUT(" ");
-  cidx = channel_check_llid(llid, &is_blkd, __FUNCTION__);
-  if (is_blkd)
-    KOUT(" ");
-  memset(&dchan[cidx], 0, sizeof(t_data_channel));
-  dchan[cidx].decoding_state = rx_type_watch;
-  dchan[cidx].rx_callback = default_rx_callback;
-  dchan[cidx].error_callback = err;
-  dchan[cidx].llid = llid;
-  dchan[cidx].fd = fd;
+  if (llid)
+    {
+    cidx = channel_check_llid(llid, &is_blkd, __FUNCTION__);
+    if (is_blkd)
+      KOUT(" ");
+    memset(&dchan[cidx], 0, sizeof(t_data_channel));
+    dchan[cidx].decoding_state = rx_type_watch;
+    dchan[cidx].rx_callback = default_rx_callback;
+    dchan[cidx].error_callback = err;
+    dchan[cidx].llid = llid;
+    dchan[cidx].fd = fd;
+    }
   return (llid);
 }
 /*---------------------------------------------------------------------------*/

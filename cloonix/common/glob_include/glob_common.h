@@ -46,6 +46,12 @@
 #endif
 
 
+#define NAT_IP_GW   "172.17.0.2"
+#define NAT_IP_DNS  "172.17.0.3"
+#define NAT_MAC_GW  "42:CA:FE:13:07:02"
+#define NAT_MAC_DNS "42:CA:FE:13:07:03"
+
+
 #define MQ_QUEUES 4
 #define MQ_VECTORS ((2 * MQ_QUEUES) + 2)
 

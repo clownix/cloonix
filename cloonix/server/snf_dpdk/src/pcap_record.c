@@ -101,7 +101,7 @@ int pcap_record_is_on(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void pcap_record_rx_packet(long long usec, int len, char *buf)
+void pcap_record_rx_packet(long long usec, int len, uint8_t *buf)
 {
   int ln, hlen = sizeof(pcaprec_hdr_s);
   pcaprec_hdr_s rec_hdr_s;

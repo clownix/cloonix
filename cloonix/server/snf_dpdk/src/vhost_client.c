@@ -60,20 +60,9 @@ static struct vhost_device_ops g_virtio_net_device_ops;
 /****************************************************************************/
 static int virtio_new_device(int vid)
 {
-  uint16_t vring_num;
-  struct rte_vhost_vring vring;
-  int i;
   g_virtio_device_on = 1;
-  KERR("AAAAAAAAAAAAAAAAAA");
   rte_vhost_enable_guest_notification(vid, 0, 0);
   rte_vhost_enable_guest_notification(vid, 1, 0);
-  vring_num = rte_vhost_get_vring_num(vid);
-  KERR("VRING_NUM: %d", vring_num);
-  for (i = 0; i < vring_num; i++)
-    {
-    rte_vhost_get_vhost_vring(vid, i, &vring);
-    KERR("vring_%d_size: %d", i, vring.size);
-    }
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -82,7 +71,6 @@ static int virtio_new_device(int vid)
 static void virtio_destroy_device(int vid)
 {
   g_virtio_device_on = 0;
-  KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -91,7 +79,6 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
   if (g_virtio_device_on)
     {
-    KERR("VRING  %d enable:%d", queue_id, enable);
     if ((queue_id==0)||(queue_id==2)||(queue_id==4)||(queue_id==6))
       {
       if (enable)
@@ -101,10 +88,10 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
         g_enable -= 1;
         KERR("RX DISABLE %d", queue_id);
         }
-      KERR("RX RX RX RX RX RX RX queue:%d enable:%d", queue_id, g_enable);
       }
     else if ((queue_id==1)||(queue_id==3)||(queue_id==5)||(queue_id==7))
-      KERR("TX TX TX TX TX TX TX queue:%d %d", queue_id, enable);
+      {
+      }
     else
       KOUT("%d", queue_id);
     }
@@ -152,15 +139,13 @@ static int circle_worker(void *arg __rte_unused)
               }
             for (i = 0; i < nb_rx; i++)
               rte_pktmbuf_free(pkts[i]);
-            if (job_for_select_request(g_jfs, fct_job_for_select, NULL))
-              KERR(" ");
+            job_for_select_request(g_jfs, fct_job_for_select, NULL);
             }
           }
         }
       }
     }
   i = rte_lcore_id();
-  KERR("ENDCORE: %d", i);
   g_circle_worker_ended[i] = 1;
   return 0;
 }
@@ -182,7 +167,6 @@ static void timeout_end(void *data)
     err = rte_vhost_driver_unregister(g_snf_socket);
     if (err)
       KERR("ERROR UNREGISTER");
-    KERR("END_DESTROY_SNF");
     exit(0);
     }
   else
@@ -193,7 +177,6 @@ static void timeout_end(void *data)
 /****************************************************************************/
 void vhost_client_end_and_exit(void)
 {
-  KERR("START_DESTROY_SNF");
   g_circle_worker = 0;
   clownix_timeout_add(1, timeout_end, NULL, NULL, NULL);
 }
@@ -204,9 +187,9 @@ void vhost_client_start(char *path, char *memid)
 {
   uint64_t unsup_flags, flags = RTE_VHOST_USER_CLIENT;
   int i, err, llid1, llid2, sid;
-  uint32_t mbuf_cache = 128;
+  uint32_t mcache = 128;
   uint32_t mbufs = 2048;
-  uint32_t mbuf_size = 2048;
+  uint32_t msize = 2048;
   memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
   memset(g_snf_socket, 0, MAX_PATH_LEN);
   memset(g_memid, 0, MAX_NAME_LEN);
@@ -236,9 +219,18 @@ void vhost_client_start(char *path, char *memid)
   err = rte_vhost_driver_start(path);
   if (err)
     KOUT(" ");
-  g_mempool=rte_pktmbuf_pool_create(g_memid,mbufs,mbuf_cache,0,mbuf_size,sid);
+  g_mempool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
   if (!g_mempool)
-    KOUT(" ");
+    {
+    if (rte_errno == EEXIST)
+      {
+      g_mempool = rte_mempool_lookup(g_memid);
+      if (!g_mempool)
+        KOUT(" ");
+      }
+    else
+      KOUT(" ");
+    }
   for (i=0; i < RTE_MAX_LCORE; i++)
     g_circle_worker_ended[i] = 1;
   for (i = rte_get_next_lcore(-1, 1, 0);

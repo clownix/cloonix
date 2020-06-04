@@ -30,8 +30,8 @@
 #include "lan_to_name.h"
 #include "mulan_mngt.h"
 #include "endp_mngt.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
 
 
 /****************************************************************************/
@@ -627,11 +627,11 @@ int endp_evt_del_lan(char *name, int num, int tidx, char *lan)
       if ((evendp->endp_type == endp_type_phy) ||
           (evendp->endp_type == endp_type_tap))
         {
-        phy_evt_lan_del_done(eth_type_sock, lan);
+        edp_evt_lan_del_done(eth_type_sock, lan);
         }
       else
         {
-        phy_evt_update_eth_type(0, 0, 0, eth_type_sock, name, lan);
+        edp_evt_update_eth_type(0, 0, 0, eth_type_sock, name, lan);
         }
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
@@ -666,11 +666,11 @@ void endp_evt_connect_OK(char *name, int num, char *lan, int tidx, int rank)
           (evendp->endp_type == endp_type_tap))
         {
         resp_to_cli(name, num, llid, tid, 1, lan);
-        phy_evt_lan_add_done(eth_type_sock, lan);
+        edp_evt_lan_add_done(eth_type_sock, lan);
         }
       else
         {
-        if (phy_evt_update_eth_type(llid, tid, 1, eth_type_sock, name, lan))
+        if (edp_evt_update_eth_type(llid, tid, 1, eth_type_sock, name, lan))
           resp_to_cli(name, num, llid, tid, 1, lan);
         }
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());

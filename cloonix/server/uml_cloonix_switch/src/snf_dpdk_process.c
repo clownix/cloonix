@@ -32,6 +32,7 @@
 #include "uml_clownix_switch.h"
 #include "hop_event.h"
 #include "dpdk_tap.h"
+#include "dpdk_nat.h"
 #include "dpdk_dyn.h"
 #include "dpdk_snf.h"
 #include "dpdk_ovs.h"
@@ -192,7 +193,6 @@ void snf_dpdk_pid_resp(int llid, int tid, char *name, int pid)
       cur->pid = pid;
       dpdk_snf_event_from_snf_dpdk_process(name, cur->lan, 1);
       snf_dpdk_process_possible_change(cur->lan);
-KERR("STARTED PROCESS %s pid: %d", name, pid);
       }
     else if (cur->pid != pid)
       KERR("%s %d", name, pid);
@@ -229,7 +229,10 @@ void snf_dpdk_diag_resp(int llid, int tid, char *line)
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
     if (dpdk_tap_eventfull(name, ms, ptx, btx, prx, brx))
-      dpdk_ovs_fill_eventfull(name, num, ms, ptx, prx, btx, brx);
+      {
+      if (dpdk_ovs_fill_eventfull(name, num, ms, ptx, prx, btx, brx))
+        dpdk_nat_eventfull(name, ms, ptx, prx, btx, brx);
+      }
     } 
   else if (!strcmp(line,
   "cloonixsnf_suidroot_ko"))
@@ -270,7 +273,6 @@ void snf_dpdk_start_process(char *name, char *lan, int on)
         KERR("%s %s", name, lan);
       else
         {
-KERR("LAUNCHING   %s %s %d", name, lan, on);
         cur = (t_snf_dpdk *) malloc(sizeof(t_snf_dpdk));
         memset(cur, 0, sizeof(t_snf_dpdk));
         strncpy(cur->name, name, MAX_NAME_LEN-1);
@@ -346,6 +348,20 @@ void snf_dpdk_process_possible_change(char *lan)
     snprintf(msg, MAX_PATH_LEN-1, "%s", "cloonixsnf_macliststart");
     rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
   
+    name = dpdk_nat_get_next_matching_lan(lan, NULL);
+    while(name)
+      {
+      for (i=0; i<2; i++)
+        {
+        strmac = dpdk_nat_get_mac(name, i);
+        memset(msg, 0, MAX_PATH_LEN);
+        snprintf(msg, MAX_PATH_LEN-1,
+        "cloonixsnf_mac name=%s num=%d mac=%s", name, i, strmac);
+        rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
+        }
+      name = dpdk_nat_get_next_matching_lan(lan, name);
+      }
+
     name = dpdk_tap_get_next_matching_lan(lan, NULL);
     while(name)
       {
@@ -359,6 +375,7 @@ void snf_dpdk_process_possible_change(char *lan)
         }
       name = dpdk_tap_get_next_matching_lan(lan, name);
       }
+
     vm = cfg_get_first_vm(&nb_vm);
     for (i=0; i < nb_vm; i++)
       {
@@ -398,7 +415,6 @@ void snf_dpdk_llid_closed(int llid)
     {
     if (cur->llid == llid)
       {
-KERR("END PROCESS %s", cur->name);
       dpdk_snf_event_from_snf_dpdk_process(cur->name, cur->lan, 0);
       free_snf_dpdk(cur);
       }

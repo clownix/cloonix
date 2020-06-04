@@ -36,8 +36,8 @@
 #include "uml_clownix_switch.h"
 #include "automates.h"
 #include "hop_event.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
 #include "vhost_eth.h"
 #include "pci_dpdk.h"
 
@@ -477,7 +477,7 @@ void suid_power_diag_resp(int llid, int tid, char *line)
     if ((prev_nb_phy != nb_phy) || 
         (memcmp(phy, g_topo_phy, prev_nb_phy * sizeof(t_topo_phy))))
       {
-      phy_evt_change_phy_topo();
+      edp_evt_change_phy_topo();
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
     free(phy);
@@ -508,7 +508,7 @@ void suid_power_diag_resp(int llid, int tid, char *line)
     if ((prev_nb_pci != nb_pci) ||
         (memcmp(ppci, g_topo_pci, prev_nb_pci * sizeof(t_topo_pci))))
       {
-      phy_evt_change_pci_topo();
+      edp_evt_change_pci_topo();
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
     free(ppci);

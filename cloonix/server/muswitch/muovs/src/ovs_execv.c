@@ -705,6 +705,41 @@ int ovs_execv_del_lan_snf(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
            "-- --id=@m get Mirror mi_%s -- remove Bridge br_%s mirrors @m "
            "-- clear bridge br_%s mirrors",
            lan, name, name, lan, lan);
+
+  if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_add_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+
+  snprintf(cmd, MAX_ARG_LEN-1,
+                "-- add-port br_%s %s "
+                "-- set Interface %s type=dpdk"
+                " options:dpdk-devargs=net_virtio_user_%s,"
+                "path=%s/na_%s,server=1,iface=%s/na_%s,queues=1",
+                lan, name, name, name,
+                dpdk_dir, name, dpdk_dir, name);
+
+  if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_del_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port br_%s %s", lan, name);
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = -1;
   return result;
@@ -834,13 +869,13 @@ int ovs_execv_daemon(int is_switch, char *net, char *ovs_bin, char *dpdk_dir)
                  "other_config:vhost-postcopy-support=true"))
           result = -1;
         else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:pmd-cpu-mask=0x03"))
+                 "other_config:pmd-cpu-mask=0x07"))
           result = -1;
         else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:dpdk-lcore-mask=0x03"))
+                 "other_config:dpdk-lcore-mask=0x07"))
           result = -1;
         else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:dpdk-socket-mem=1024"))
+                 "other_config:dpdk-socket-mem=2048"))
           result = -1;
         else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
                  "other_config:per-port-memory=true"))

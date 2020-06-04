@@ -31,9 +31,9 @@
 #include "utils_cmd_line_maker.h"
 #include "fmt_diag.h"
 #include "vhost_eth.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
+#include "edp_evt.h"
 #include "dpdk_ovs.h"
 #include "suid_power.h"
 
@@ -148,7 +148,7 @@ static void vlan_free(t_vheth *eth, char *lan)
       KERR("%s %d %s", eth->name, eth->num, lan);
     if (vhost_lan_exists(lan) == 1)
       {
-      phy_evt_lan_del_done(eth_type_vhost, cur->lan);
+      edp_evt_lan_del_done(eth_type_vhost, cur->lan);
       if (fmt_tx_del_vhost_lan(0, cur->name, cur->num, cur->lan))
         KERR("%s %d %s", cur->name, cur->num, cur->lan);
       }
@@ -564,8 +564,8 @@ void vhost_eth_add_ack_port(int tid, int is_ok, char *lan, char *name, int num)
       else
         {
         suid_power_ifup_phy(cur->vhost_ifname);
-        phy_evt_lan_add_done(eth_type_vhost, lan);
-        if (phy_evt_update_eth_type(cur->add_cli_llid, cur->add_cli_tid,
+        edp_evt_lan_add_done(eth_type_vhost, lan);
+        if (edp_evt_update_eth_type(cur->add_cli_llid, cur->add_cli_tid,
                                      1, eth_type_vhost, name, lan))
           send_status_ok(cur->add_cli_llid, cur->add_cli_tid, "OK");
         cur->add_cli_llid = 0;
@@ -604,7 +604,7 @@ void vhost_eth_del_ack_port(int tid, int is_ok, char *lan, char *name, int num)
         }
       eth = eth_find(vhm, num);
       vlan_free(eth, cur->lan);
-      phy_evt_update_eth_type(0, 0, 0, eth_type_vhost, name, lan);
+      edp_evt_update_eth_type(0, 0, 0, eth_type_vhost, name, lan);
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
     }

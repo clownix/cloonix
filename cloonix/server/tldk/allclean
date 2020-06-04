@@ -1,9 +1,0 @@
-#!/bin/bash
-HERE=`pwd`
-
-rm -rf ${HERE}/usr
-rm -rf ${HERE}/tldk
-rm -rf ${HERE}/tldk_tainted
-
-
-

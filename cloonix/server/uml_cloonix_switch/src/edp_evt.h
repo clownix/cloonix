@@ -15,14 +15,14 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void phy_evt_end_eth_type_dpdk(char *lan, int status);
-int phy_evt_update_lan_add(t_phy *cur, int llid, int tid);
-void phy_evt_del_inside(t_phy *cur);
-void phy_evt_change_phy_topo(void);
-void phy_evt_change_pci_topo(void);
-int  phy_evt_update_eth_type(int llid, int tid, int is_add, int eth_type,
+void edp_evt_end_eth_type_dpdk(char *lan, int status);
+int edp_evt_update_lan_add(t_edp *cur, int llid, int tid);
+void edp_evt_del_inside(t_edp *cur);
+void edp_evt_change_phy_topo(void);
+void edp_evt_change_pci_topo(void);
+int  edp_evt_update_eth_type(int llid, int tid, int is_add, int eth_type,
                               char *name, char *lan);
-void phy_evt_lan_add_done(int eth_type, char *lan);
-void phy_evt_lan_del_done(int eth_type, char *lan);
-void phy_evt_init(void);
+void edp_evt_lan_add_done(int eth_type, char *lan);
+void edp_evt_lan_del_done(int eth_type, char *lan);
+void edp_evt_init(void);
 /*--------------------------------------------------------------------------*/

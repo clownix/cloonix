@@ -38,6 +38,7 @@
 #include "blkd_sub.h"
 #include "unix2inet.h"
 #include "snf_dpdk_process.h"
+#include "nat_dpdk_process.h"
 /*---------------------------------------------------------------------------*/
 typedef struct t_event_to_llid
 {
@@ -408,6 +409,7 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
     KOUT("%s %d", fct, llid);
 
   snf_dpdk_llid_closed(llid);
+  nat_dpdk_llid_closed(llid);
   qmp_event_free(llid);
   hop_event_free(llid);
   eventfull_llid_delete(llid);

@@ -58,8 +58,9 @@
 #include "dpdk_snf.h"
 #include "suid_power.h"
 #include "vhost_eth.h"
-#include "phy_mngt.h"
+#include "edp_mngt.h"
 #include "snf_dpdk_process.h"
+#include "nat_dpdk_process.h"
 
 
 
@@ -587,11 +588,11 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     eth_tab = vm->kvm.eth_table;
     vm_id = vm->kvm.vm_id;
     }
-  if (phy_mngt_exists(name, &endp_type))
+  if (edp_mngt_exists(name, &endp_type))
     {
     if (num != 0)
       KERR("%s %s", name, lan); 
-    if (phy_mngt_add_lan(llid, tid, name, lan, info))
+    if (edp_mngt_add_lan(llid, tid, name, lan, info))
       send_status_ko(llid, tid, info);
     }
   else if ((vm) &&
@@ -600,7 +601,7 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     {
     if (eth_tab[num].eth_type == eth_type_dpdk)
       {
-      if (phy_mngt_lan_exists(lan, &eth_type, &endp_type))
+      if (edp_mngt_lan_exists(lan, &eth_type, &endp_type))
         {
         if ((eth_type != eth_type_none) && (eth_type != eth_type_dpdk))
           {
@@ -640,7 +641,7 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
       }
     else if (eth_tab[num].eth_type == eth_type_vhost)
       {
-      if (phy_mngt_lan_exists(lan, &eth_type, &endp_type))
+      if (edp_mngt_lan_exists(lan, &eth_type, &endp_type))
         {
         if (eth_type == eth_type_none)
           {
@@ -698,7 +699,7 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
       snprintf(info, MAX_PATH_LEN, "endp_mngt %s %d not found", name, num);
       send_status_ko(llid, tid, info);
       }
-    else if (phy_mngt_lan_exists(lan, &eth_type, &endp_type))
+    else if (edp_mngt_lan_exists(lan, &eth_type, &endp_type))
       {
       if ((eth_type != eth_type_none) && (eth_type != eth_type_sock))
         {
@@ -844,11 +845,11 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   char info[MAX_PRINT_LEN];
   int endp_type, tidx;
   event_print("Rx Req del lan %s of %s %d", lan, name, num);
-  if (phy_mngt_exists(name, &endp_type))
+  if (edp_mngt_exists(name, &endp_type))
     {
     if (num != 0)
       KERR("%s %s", name, lan); 
-    if (phy_mngt_del_lan(llid, tid, name, lan, info))
+    if (edp_mngt_del_lan(llid, tid, name, lan, info))
       send_status_ko(llid, tid, info);
     else
       send_status_ok(llid, tid, "OK");
@@ -1472,18 +1473,21 @@ void recv_list_commands_req(int llid, int tid)
 /*****************************************************************************/
 t_pid_lst *create_list_pid(int *nb)
 {
-  int i,j, nb_vm, nb_endp, nb_sum, nb_mulan, nb_ovs, nb_snf_dpdk;
+  int i,j, nb_vm, nb_endp, nb_sum, nb_mulan, nb_ovs, nb_snf_dpdk, nb_nat_dpdk;
   t_lst_pid *ovs_pid = NULL;
   t_lst_pid *endp_pid = NULL;
   t_lst_pid *mulan_pid = NULL;
   t_lst_pid *snf_dpdk_pid = NULL;
+  t_lst_pid *nat_dpdk_pid = NULL;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_pid_lst *lst;
   nb_endp  = endp_mngt_get_all_pid(&endp_pid);
   nb_mulan = mulan_get_all_pid(&mulan_pid);
   nb_snf_dpdk = snf_dpdk_get_all_pid(&snf_dpdk_pid);
+  nb_nat_dpdk = nat_dpdk_get_all_pid(&nat_dpdk_pid);
   nb_ovs   = dpdk_ovs_get_all_pid(&ovs_pid);
-  nb_sum   = nb_ovs + nb_vm + nb_endp + nb_mulan + nb_snf_dpdk + 10;
+  nb_sum   = nb_ovs + nb_vm + nb_endp + nb_mulan + 10;
+  nb_sum   += nb_snf_dpdk + nb_nat_dpdk;
   lst = (t_pid_lst *)clownix_malloc(nb_sum*sizeof(t_pid_lst),18);
   memset(lst, 0, nb_sum*sizeof(t_pid_lst));
   for (i=0, j=0; i<nb_vm; i++)
@@ -1519,6 +1523,13 @@ t_pid_lst *create_list_pid(int *nb)
     j++;
     }
   clownix_free(snf_dpdk_pid, __FUNCTION__);
+  for (i=0 ; i<nb_nat_dpdk; i++)
+    {
+    strncpy(lst[j].name, nat_dpdk_pid[i].name, MAX_NAME_LEN-1);
+    lst[j].pid = nat_dpdk_pid[i].pid;
+    j++;
+    }
+  clownix_free(nat_dpdk_pid, __FUNCTION__);
   for (i=0 ; i<nb_ovs; i++)
     {
     strncpy(lst[j].name, ovs_pid[i].name, MAX_NAME_LEN-1);
@@ -1656,7 +1667,7 @@ static void timer_del_all(void *data)
     c2c_free_all();
     endp_mngt_stop_all_sat();
     dpdk_ovs_urgent_client_destruct();
-    phy_mngt_del_all();
+    edp_mngt_del_all();
     clownix_timeout_add(200, timer_del_all_end, (void *) td, NULL, NULL);
     }
 }
@@ -1767,11 +1778,12 @@ void local_add_sat(int llid, int tid, char *name, int type,
   if ((type == endp_type_phy) ||
       (type == endp_type_pci) ||
       (type == endp_type_tap) ||
+      (type == endp_type_nat) ||
       (type == endp_type_snf))
     {
-    if (!phy_mngt_exists(name, &endp_type))
+    if (!edp_mngt_exists(name, &endp_type))
       {
-      if (phy_mngt_add(llid, tid, name, type))
+      if (edp_mngt_add(llid, tid, name, type))
         {
         KERR("%s", name);
         send_status_ko(llid, tid, "KO");
@@ -1865,9 +1877,9 @@ void recv_del_sat(int llid, int tid, char *name)
   int endp_type, type;
   char info[MAX_PATH_LEN];
   event_print("Rx Req del %s", name);
-  if (phy_mngt_exists(name, &endp_type))
+  if (edp_mngt_exists(name, &endp_type))
     {
-    if (phy_mngt_del(llid, tid, name))
+    if (edp_mngt_del(llid, tid, name))
       {
       KERR("%s", name);
       send_status_ko(llid, tid, "KO");

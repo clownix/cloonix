@@ -94,7 +94,7 @@ void clownix_timer_init(void);
 void clownix_get_current_cpu(int *long_cpu, int *medium_cpu, int *short_cpu);
 int  clownix_get_sum_bogomips(void);
 /*--------------------------------------------------------------------------*/
-int ip_string_to_int (int *inet_addr, char *ip_string);
+int ip_string_to_int (uint32_t *inet_addr, char *ip_string);
 void int_to_ip_string (int addr, char *ip_string);
 int get_nb_mask_ip( char *ip_string);
 /*---------------------------------------------------------------------------*/

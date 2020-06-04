@@ -31,6 +31,7 @@
 #include "endp_mngt.h"
 #include "dpdk_ovs.h"
 #include "dpdk_tap.h"
+#include "dpdk_nat.h"
 #include "dpdk_snf.h"
 
 
@@ -326,7 +327,8 @@ static void timeout_collect_eventfull(void *data)
   t_endp *endp   = endp_mngt_get_first(&nb_endp);
   t_eventfull_subs *cur = head_eventfull_subs;
   int nb;
-  tot_evt = nb_endp+dpdk_ovs_get_nb()+dpdk_tap_get_qty()+dpdk_snf_get_qty();
+  tot_evt  = nb_endp + dpdk_ovs_get_nb() + dpdk_tap_get_qty();
+  tot_evt += dpdk_snf_get_qty() + dpdk_nat_get_qty();
   eventfull_endp = 
   (t_eventfull_endp *) clownix_malloc(tot_evt * sizeof(t_eventfull_endp), 13);
   memset(eventfull_endp, 0, tot_evt * sizeof(t_eventfull_endp));
@@ -339,6 +341,7 @@ static void timeout_collect_eventfull(void *data)
   nb = collect_endp(eventfull_endp, nb_endp, endp); 
   nb += dpdk_ovs_collect_dpdk(&(eventfull_endp[nb]));
   nb += dpdk_tap_collect_dpdk(&(eventfull_endp[nb]));
+  nb += dpdk_nat_collect_dpdk(&(eventfull_endp[nb]));
   while (cur)
     {
     llid = cur->llid;

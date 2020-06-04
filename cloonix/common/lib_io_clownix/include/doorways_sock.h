@@ -51,7 +51,8 @@ int doorways_sock_client_inet_end_glib(int type, int fd, char *passwd,
                                         t_fd_event *rx_glib,
                                         t_fd_event *tx_glib);
 /*---------------------------------------------------------------------------*/
-void doorways_sock_address_detect(char *doors_client_addr, int *ip, int *port);
+void doorways_sock_address_detect(char *doors_client_addr,
+                                  uint32_t *ip, int *port);
 /*---------------------------------------------------------------------------*/
 void doorways_clean_llid(int llid);
 /*---------------------------------------------------------------------------*/

@@ -47,8 +47,8 @@
 #include "system_callers.h"
 #include "stats_counters.h"
 #include "dpdk_msg.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
 #include "snf_dpdk_process.h"
 
 /****************************************************************************/
@@ -152,7 +152,7 @@ static void free_dlan(t_dtap *dtap, char *lan)
     KERR("%s %s", dtap->name, lan_name);
   else
     {
-    phy_evt_lan_del_done(eth_type_dpdk, lan);
+    edp_evt_lan_del_done(eth_type_dpdk, lan);
     if (cur->prev)
       cur->prev->next = cur->next;
     if (cur->next)
@@ -319,7 +319,7 @@ static void resp_lan(int is_add, int is_ko, char *lan, char *name)
           }
         else
           {
-          phy_evt_lan_add_done(eth_type_dpdk, lan);
+          edp_evt_lan_add_done(eth_type_dpdk, lan);
           event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
           snf_dpdk_process_possible_change(lan);
           }

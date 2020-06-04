@@ -6,4 +6,3 @@
 ./get_new_spice_serv.sh
 ./get_new_virglrenderer.sh
 ./get_new_ovs_dpdk.sh
-./get_new_tldk.sh

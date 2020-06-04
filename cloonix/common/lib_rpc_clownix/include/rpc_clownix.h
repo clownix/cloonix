@@ -27,6 +27,7 @@
 #define ENDP_SOCK_DIR "endp"
 #define SUID_POWER_SOCK_DIR "suid_power"
 #define SNF_DPDK_SOCK_DIR "snf_dpdk"
+#define NAT_DPDK_SOCK_DIR "nat_dpdk"
 #define CLI_SOCK_DIR "cli"
 #define SNF_PCAP_DIR "snf"
 
@@ -61,6 +62,7 @@ enum {
     type_hop_doors,
     type_hop_suid_power,
     type_hop_snf_dpdk,
+    type_hop_nat_dpdk,
     type_hop_max
     };
 

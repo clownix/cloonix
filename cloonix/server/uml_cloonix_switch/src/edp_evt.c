@@ -34,16 +34,17 @@
 #include "dpdk_dyn.h"
 #include "vhost_eth.h"
 #include "endp_evt.h"
-#include "phy_mngt.h"
-#include "phy_evt.h"
+#include "edp_mngt.h"
+#include "edp_evt.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
 #include "endp_mngt.h"
-#include "phy_sock.h"
-#include "phy_vhost.h"
+#include "edp_sock.h"
+#include "edp_vhost.h"
 #include "pci_dpdk.h"
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
+#include "dpdk_nat.h"
 #include "utils_cmd_line_maker.h"
 
 void snf_globtopo_small_event(char *name, int num_evt, char *path);
@@ -74,6 +75,7 @@ static int eth_type_update(char *name, char *lan)
     if ((type != endp_type_kvm_sock) &&
         (type != endp_type_phy)  &&
         (type != endp_type_tap)  &&
+        (type != endp_type_nat)  &&
         (type != endp_type_c2c)  &&
         (type != endp_type_snf))
       KOUT("%d", type); 
@@ -88,7 +90,7 @@ static int eth_type_update(char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void phy_del_inside_dpdk(t_phy *cur, char *name, char *lan)
+static void edp_del_inside_dpdk(t_edp *cur, char *name, char *lan)
 {
   if (cur->endp_type == endp_type_phy)
     {
@@ -108,6 +110,13 @@ static void phy_del_inside_dpdk(t_phy *cur, char *name, char *lan)
       dpdk_snf_del(name);
       }
     }
+  else if (cur->endp_type == endp_type_nat)
+    {
+    if (dpdk_nat_exist(name))
+      {
+      dpdk_nat_del(name);
+      }
+    }
   else if (cur->endp_type == endp_type_pci)
     {
     if (cur->flag_lan_ok)
@@ -122,7 +131,7 @@ static void phy_del_inside_dpdk(t_phy *cur, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void phy_del_inside_vhost(t_phy *cur, char *name, char *lan)
+static void edp_del_inside_vhost(t_edp *cur, char *name, char *lan)
 {
   char *ifname, *peer_name;
   int peer_num;
@@ -130,7 +139,7 @@ static void phy_del_inside_vhost(t_phy *cur, char *name, char *lan)
     {
     if (cur->flag_lan_ok)
       {
-      if (phy_vhost_del_port(name, lan))
+      if (edp_vhost_del_port(name, lan))
         KERR("%s %s", name, lan);
       }
     }
@@ -140,15 +149,8 @@ static void phy_del_inside_vhost(t_phy *cur, char *name, char *lan)
       {
       peer_name = cur->vhost.peer_name;
       peer_num = cur->vhost.peer_num;
-      ifname = phy_vhost_get_ifname(peer_name, peer_num);
+      ifname = edp_vhost_get_ifname(peer_name, peer_num);
       suid_power_ifname_change(peer_name, peer_num, name, ifname);
-      }
-    }
-  else if (cur->endp_type == endp_type_snf)
-    {
-    if (dpdk_snf_exist(name))
-      {
-      dpdk_snf_del(name);
       }
     }
   else if (cur->endp_type == endp_type_pci)
@@ -161,7 +163,7 @@ static void phy_del_inside_vhost(t_phy *cur, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void phy_del_inside_sock(t_phy *cur, char *name, char *lan)
+static void edp_del_inside_sock(t_edp *cur, char *name, char *lan)
 {
   int tidx, type;
   if (endp_mngt_exists(name, 0, &type))
@@ -179,39 +181,65 @@ static void phy_del_inside_sock(t_phy *cur, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int begin_dpdk_snf(t_phy *cur, int eth_type)
+static int begin_dpdk_snf(t_edp *cur)
 {
   char info[MAX_PATH_LEN];
   int llid = cur->llid, tid = cur->tid;
   char *name = cur->name;
   char *lan = cur->lan.lan[0].lan;
   int result = eth_type_none;
-  if (cur->endp_type == endp_type_snf)
+  if (dpdk_snf_add(llid, tid, name))
     {
-    if (dpdk_snf_add(llid, tid, name))
+    snprintf(info,MAX_PATH_LEN-1,"Error add dpdk snf %s %s", name, lan);
+    KERR("%s", info);
+    send_status_ko(llid, tid, info);
+    }
+  else
+    {
+    if (dpdk_snf_add_lan(llid, tid, lan, name))
       {
-      snprintf(info,MAX_PATH_LEN-1,"Error add dpdk snf %s %s", name, lan);
+      snprintf(info,MAX_PATH_LEN-1,"Error add lan dpdk snf %s %s",name,lan);
       KERR("%s", info);
       send_status_ko(llid, tid, info);
       }
     else
+      result = eth_type_dpdk;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int begin_dpdk_nat(t_edp *cur)
+{ 
+  char info[MAX_PATH_LEN];
+  int llid = cur->llid, tid = cur->tid;
+  char *name = cur->name;
+  char *lan = cur->lan.lan[0].lan;
+  int result = eth_type_none;
+  if (dpdk_nat_add(llid, tid, name))
+    {
+    snprintf(info,MAX_PATH_LEN-1,"Error add dpdk nat %s %s", name, lan);
+    KERR("%s", info);
+    send_status_ko(llid, tid, info);
+    }
+  else
+    {
+    if (dpdk_nat_add_lan(llid, tid, lan, name))
       {
-      if (dpdk_snf_add_lan(llid, tid, lan, name))
-        {
-        snprintf(info,MAX_PATH_LEN-1,"Error add lan dpdk snf %s %s",name,lan);
-        KERR("%s", info);
-        send_status_ko(llid, tid, info);
-        }
-      else
-        result = eth_type;
+      snprintf(info,MAX_PATH_LEN-1,"Error add lan dpdk nat %s %s",name,lan);
+      KERR("%s", info);
+      send_status_ko(llid, tid, info);
       }
+    else
+      result = eth_type_dpdk;
     }
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /**************************************************************************/
-static int begin_eth_type_dpdk(t_phy *cur)
+static int begin_eth_type_dpdk(t_edp *cur)
 {
   char info[MAX_PATH_LEN];
   int llid = cur->llid, tid = cur->tid;
@@ -246,7 +274,11 @@ static int begin_eth_type_dpdk(t_phy *cur)
     }
   else if (cur->endp_type == endp_type_snf)
     {
-    result = begin_dpdk_snf(cur, eth_type_dpdk);
+    result = begin_dpdk_snf(cur);
+    }
+  else if (cur->endp_type == endp_type_nat)
+    {
+    result = begin_dpdk_nat(cur);
     }
   else if (cur->endp_type == endp_type_pci)
     {
@@ -266,7 +298,7 @@ static int begin_eth_type_dpdk(t_phy *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int begin_eth_type_vhost(t_phy *cur)
+static int begin_eth_type_vhost(t_edp *cur)
 {
   char vhost_ifname[IFNAMSIZ];
   char vm_name[MAX_NAME_LEN];
@@ -277,7 +309,7 @@ static int begin_eth_type_vhost(t_phy *cur)
   int result = eth_type_none;
   if (cur->endp_type == endp_type_phy)
     {
-    if (phy_vhost_add_port(llid, tid, name, lan))
+    if (edp_vhost_add_port(llid, tid, name, lan))
       {
       snprintf(info,MAX_PATH_LEN-1,
                "Openvswitch not reacheable %s %s",name,lan);
@@ -296,7 +328,7 @@ static int begin_eth_type_vhost(t_phy *cur)
       {
       if (vhost > 1)
         {
-        phy_mngt_lowest_clean_lan(cur);
+        edp_mngt_lowest_clean_lan(cur);
         snprintf(info,MAX_PATH_LEN-1, "Tap must be the first to be attached");
         KERR("%s", info);
         send_status_ko(llid, tid, info);
@@ -311,15 +343,11 @@ static int begin_eth_type_vhost(t_phy *cur)
         }
       }
     }
-  else if (cur->endp_type == endp_type_snf)
+  else if ((cur->endp_type == endp_type_nat) ||
+           (cur->endp_type == endp_type_snf) ||
+           (cur->endp_type == endp_type_pci))
     {
-    snprintf(info,MAX_PATH_LEN-1, "VHOST not compatible snf %s", lan);
-    KERR("%s", info);
-    send_status_ko(llid, tid, info);
-    }
-  else if (cur->endp_type == endp_type_pci)
-    {
-    snprintf(info,MAX_PATH_LEN-1, "VHOST not compatible pci %s", lan);
+    snprintf(info,MAX_PATH_LEN-1, "VHOST not compatible with this type %s", lan);
     KERR("%s", info);
     send_status_ko(llid, tid, info);
     }
@@ -330,7 +358,7 @@ static int begin_eth_type_vhost(t_phy *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int begin_eth_type_sock(t_phy *cur)
+static int begin_eth_type_sock(t_edp *cur)
 {
   char info[MAX_PATH_LEN];
   int endp_type, llid = cur->llid, tid = cur->tid;
@@ -352,7 +380,7 @@ static int begin_eth_type_sock(t_phy *cur)
     }
   else
     {
-    phy_sock_timer_add(llid, tid, name, lan);
+    edp_sock_timer_add(llid, tid, name, lan);
     result = eth_type_sock;
     }
   return result;
@@ -360,7 +388,7 @@ static int begin_eth_type_sock(t_phy *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void set_flag_lan(t_phy *cur, int flag)
+static void set_flag_lan(t_edp *cur, int flag)
 {
   if (cur->flag_lan_ok != flag)
     {
@@ -378,14 +406,111 @@ static void set_flag_lan(t_phy *cur, int flag)
       cur->flag_lan_ok = 0;
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     }
+  if ((flag == 0) && (cur->count_flag_ko > 2)) 
+    {
+    if ((cur->lan.nb_lan) && (cur->eth_type != eth_type_none))
+      {
+      KERR("CLEANING LAN %s %s", cur->lan.lan[0].lan, cur->name);
+      edp_mngt_lowest_clean_lan(cur);
+      edp_mngt_set_eth_type(cur, eth_type_none);
+      }
+    else
+      KERR("CLEANING ERROR %s", cur->name);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int timer_update_type_dpdk(t_edp *cur, char *lan)
+{
+  int flag = 0;
+  cur->count_flag_ko += 1;
+  if (cur->endp_type == endp_type_tap)
+    {
+    if (dpdk_tap_exist(cur->name))
+      {
+      if (dpdk_tap_lan_exists(lan))
+        flag = 1;
+      }
+    }
+  else if (cur->endp_type == endp_type_snf)
+    {
+    if (dpdk_snf_exist(cur->name))
+      {
+      if (dpdk_snf_lan_exists(lan))
+        flag = 1;
+      }
+    }
+  else if (cur->endp_type == endp_type_nat)
+    {
+    if (dpdk_nat_exist(cur->name))
+      {
+      if (dpdk_nat_lan_exists(lan))
+        flag = 1;
+      }
+    }
+  else if (cur->endp_type == endp_type_pci)
+    {
+    if (dpdk_dyn_lan_exists(lan))
+      {
+      if (cur->dpdk_attach_ok)
+        flag = 1;
+      }
+    }
+  else if (cur->endp_type == endp_type_phy)
+    KERR("ERROR phy not compatible dpdk %s %s", cur->name, lan);
+  else
+    KOUT("%d", cur->endp_type);
+  cur->count_flag_ko -= flag;
+  return flag;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+static int timer_update_type_vhost(t_edp *cur, char *lan)
+{
+  int flag = 0;
+  if (cur->endp_type == endp_type_tap)
+    {
+    if (vhost_lan_exists(lan))
+      flag = 1;
+    }
+  else if (cur->endp_type == endp_type_snf)
+    KERR("ERROR snf not compatible vhost %s %s", cur->name, lan);
+  else if (cur->endp_type == endp_type_nat)
+    KERR("ERROR nat not compatible vhost %s %s", cur->name, lan);
+  else if (cur->endp_type == endp_type_pci)
+    KERR("ERROR pci not compatible vhost %s %s", cur->name, lan);
+  else if (cur->endp_type == endp_type_phy)
+    {
+    if (vhost_lan_exists(lan))
+      flag = 1;
+    }
+  else
+    KOUT("%d", cur->endp_type);
+  return flag;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int timer_update_type_sock(t_edp *cur, char *lan)
+{
+  int tidx, type, flag = 0;
+  if (endp_mngt_exists(cur->name, 0, &type))
+    {
+    if (endp_evt_lan_find(cur->name, 0, lan, &tidx))
+    flag = 1;
+    }
+  return flag;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void timer_update_flag_lan(void *data)
 {
-  int flag, nb_phy, tidx, type;
-  t_phy *cur = phy_mngt_get_head_phy(&nb_phy);
+  int flag, nb_edp;
+  t_edp *cur = edp_mngt_get_head_edp(&nb_edp);
   char *lan;
   while(cur)
     {
@@ -395,39 +520,15 @@ static void timer_update_flag_lan(void *data)
       lan = cur->lan.lan[0].lan;
       if (cur->eth_type == eth_type_sock)
         {
-        if (endp_mngt_exists(cur->name, 0, &type))
-          {
-          if (endp_evt_lan_find(cur->name, 0, lan, &tidx))
-            flag = 1;
-          }
+        flag = timer_update_type_sock(cur, lan);
         }
       else if (cur->eth_type == eth_type_vhost)
         {
-        if (vhost_lan_exists(lan))
-          flag = 1;
-        else if (dpdk_snf_exist(cur->name))
-          {
-          if (dpdk_snf_lan_exists(lan))
-            flag = 1;
-          }
+        flag = timer_update_type_vhost(cur, lan);
         }
       else if (cur->eth_type == eth_type_dpdk)
         {
-        if (dpdk_tap_exist(cur->name))
-          {
-          if (dpdk_tap_lan_exists(lan))
-            flag = 1;
-          }
-        else if (dpdk_snf_exist(cur->name))
-          {
-          if (dpdk_snf_lan_exists(lan))
-            flag = 1;
-          }
-        else if (dpdk_dyn_lan_exists(lan))
-          {
-          if (cur->dpdk_attach_ok)
-            flag = 1;
-          }
+        flag = timer_update_type_dpdk(cur, lan);
         }
       else
         KOUT("%d", cur->eth_type);
@@ -435,12 +536,13 @@ static void timer_update_flag_lan(void *data)
       }
     cur = cur->next;
     }
+
   clownix_timeout_add(50, timer_update_flag_lan, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_evt_update_lan_add(t_phy *cur, int llid, int tid)
+int edp_evt_update_lan_add(t_edp *cur, int llid, int tid)
 {
   int eth_type;
   char *lan = NULL;
@@ -448,8 +550,6 @@ int phy_evt_update_lan_add(t_phy *cur, int llid, int tid)
     {
     lan = cur->lan.lan[0].lan;
     eth_type = eth_type_update(cur->name, lan);
-    if ((cur->llid) && (cur->llid != llid))
-      KERR("%d %d", cur->llid, llid);
     if (llid == 0)
       KERR(" ");
     cur->llid = llid;
@@ -462,27 +562,25 @@ int phy_evt_update_lan_add(t_phy *cur, int llid, int tid)
       eth_type = begin_eth_type_sock(cur);
     else if (eth_type != eth_type_none)
       KOUT("%d", eth_type);
-    phy_mngt_set_eth_type(cur, eth_type);
+    edp_mngt_set_eth_type(cur, eth_type);
     }
   return eth_type;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_evt_del_inside(t_phy *cur)
+void edp_evt_del_inside(t_edp *cur)
 {
   char *lan, *name = cur->name;
-  if (cur->lan.nb_lan == 0)
-    KERR("NO LAN %s", cur->name);
-  else
+  if (cur->lan.nb_lan != 0)
     {
     lan = cur->lan.lan[0].lan;
     if (cur->eth_type == eth_type_dpdk)
-      phy_del_inside_dpdk(cur, name, lan);
+      edp_del_inside_dpdk(cur, name, lan);
     else if (cur->eth_type == eth_type_vhost)
-      phy_del_inside_vhost(cur, name, lan);
+      edp_del_inside_vhost(cur, name, lan);
     else if (cur->eth_type == eth_type_sock)
-      phy_del_inside_sock(cur, name, lan);
+      edp_del_inside_sock(cur, name, lan);
     else if (cur->eth_type != eth_type_none)
       KOUT("%d", cur->eth_type);
     }
@@ -490,10 +588,10 @@ void phy_evt_del_inside(t_phy *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_evt_change_phy_topo(void)
+void edp_evt_change_phy_topo(void)
 {
-  int nb_phy;
-  t_phy *next, *cur = phy_mngt_get_head_phy(&nb_phy);
+  int nb_edp;
+  t_edp *next, *cur = edp_mngt_get_head_edp(&nb_edp);
   while(cur)
     {
     next = cur->next;
@@ -502,8 +600,8 @@ void phy_evt_change_phy_topo(void)
         (cur->lan.nb_lan))
       {
       KERR("%s", cur->lan.lan[0].lan);
-      phy_evt_del_inside(cur);
-      phy_mngt_phy_free(cur);
+      edp_evt_del_inside(cur);
+      edp_mngt_edp_free(cur);
       }
     cur = next;
     }
@@ -511,10 +609,10 @@ void phy_evt_change_phy_topo(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_evt_change_pci_topo(void)
+void edp_evt_change_pci_topo(void)
 {
-  int nb_phy;
-  t_phy *next, *cur = phy_mngt_get_head_phy(&nb_phy);
+  int nb_edp;
+  t_edp *next, *cur = edp_mngt_get_head_edp(&nb_edp);
   while(cur)
     {
     next = cur->next;
@@ -523,8 +621,8 @@ void phy_evt_change_pci_topo(void)
         (cur->lan.nb_lan))
       {
       KERR("%s", cur->lan.lan[0].lan);
-      phy_evt_del_inside(cur);
-      phy_mngt_phy_free(cur);
+      edp_evt_del_inside(cur);
+      edp_mngt_edp_free(cur);
       }
     cur = next;
     }
@@ -532,11 +630,11 @@ void phy_evt_change_pci_topo(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int phy_evt_update_eth_type(int llid, int tid, int is_add,
+int edp_evt_update_eth_type(int llid, int tid, int is_add,
                              int eth_type, char *name, char *lan)
 {
-  int nb_phy, cur_eth_type, result = -1;
-  t_phy *cur = phy_mngt_get_head_phy(&nb_phy);
+  int nb_edp, cur_eth_type, result = -1;
+  t_edp *cur = edp_mngt_get_head_edp(&nb_edp);
   char *cur_lan, *cur_name;
   while(cur)
     {
@@ -548,7 +646,7 @@ int phy_evt_update_eth_type(int llid, int tid, int is_add,
         {
         if ((cur->eth_type == eth_type_none) && (is_add))
           {
-          cur_eth_type = phy_evt_update_lan_add(cur, llid, tid);
+          cur_eth_type = edp_evt_update_lan_add(cur, llid, tid);
           if (cur_eth_type != eth_type)
             KERR("%d %d", cur_eth_type, eth_type);
           if (cur_eth_type != eth_type_none)
@@ -561,8 +659,8 @@ int phy_evt_update_eth_type(int llid, int tid, int is_add,
           eth_type = eth_type_update(cur_name, cur_lan);
           if (eth_type == eth_type_none)
             {
-            phy_evt_del_inside(cur);
-            phy_mngt_set_eth_type(cur, eth_type_none);
+            edp_evt_del_inside(cur);
+            edp_mngt_set_eth_type(cur, eth_type_none);
             }
           }
         }
@@ -574,9 +672,9 @@ int phy_evt_update_eth_type(int llid, int tid, int is_add,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_evt_lan_add_done(int eth_type, char *lan)
+void edp_evt_lan_add_done(int eth_type, char *lan)
 {
-  t_phy *cur = phy_mngt_lan_find(lan);
+  t_edp *cur = edp_mngt_lan_find(lan);
   if (cur)
     {
     if (cur->eth_type != eth_type)
@@ -588,32 +686,32 @@ void phy_evt_lan_add_done(int eth_type, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_evt_lan_del_done(int eth_type, char *lan)
+void edp_evt_lan_del_done(int eth_type, char *lan)
 {
-  t_phy *cur = phy_mngt_lan_find(lan);
+  t_edp *cur = edp_mngt_lan_find(lan);
   if (cur)
     cur->flag_lan_ok = 0;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_evt_end_eth_type_dpdk(char *lan, int status)
+void edp_evt_end_eth_type_dpdk(char *lan, int status)
 {
-  t_phy *cur = phy_mngt_lan_find(lan);
+  t_edp *cur = edp_mngt_lan_find(lan);
   if (!cur)
     KERR("%s %d", lan, status);
   else
     {
     cur->dpdk_attach_ok = status;
     if (status == 0)
-      phy_mngt_lowest_clean_lan(cur);
+      edp_mngt_lowest_clean_lan(cur);
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void phy_evt_init(void)
+void edp_evt_init(void)
 {
   clownix_timeout_add(200, timer_update_flag_lan, NULL, NULL, NULL);
 }

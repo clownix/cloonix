@@ -44,7 +44,7 @@ cloonix_gui $NET
 #----------------------------------------------------------------------
 cloonix_cli ${NET} add nat nat
 #----------------------------------------------------------------------
-cloonix_cli $NET add kvm $NAME ram=8000 cpu=4 eth=s full_$QCOW2 --persistent
+cloonix_cli $NET add kvm $NAME ram=8000 cpu=4 eth=d full_$QCOW2 --persistent
 #----------------------------------------------------------------------
 sleep 3
 cloonix_cli ${NET} add lan ${NAME} 0 lan1
@@ -103,7 +103,7 @@ EOF"
 cloonix_ssh $NET ${NAME} "dnf update -y"
 #----------------------------------------------------------------------
 set +e
-for ((i=0;i<6;i++)); do
+for ((i=0;i<3;i++)); do
   cloonix_ssh $NET ${NAME} "./install_depends"
   sleep 10
 done

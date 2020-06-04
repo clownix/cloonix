@@ -36,8 +36,9 @@
 #include "fmt_diag.h"
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
+#include "dpdk_nat.h"
 #include "vhost_eth.h"
-#include "phy_vhost.h"
+#include "edp_vhost.h"
 #include "pci_dpdk.h"
 
 
@@ -248,6 +249,32 @@ int fmt_tx_del_lan_snf(int tid, char *lan, char *name)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+int fmt_tx_add_lan_nat(int tid, char *lan, char *name)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "cloonixovs_add_lan_nat lan=%s name=%s", lan, name);
+  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
+  return result;
+}
+
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fmt_tx_del_lan_nat(int tid, char *lan, char *name)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "cloonixovs_del_lan_nat lan=%s name=%s", lan, name);
+  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int fmt_tx_add_eth(int tid, char *name, int num, char *strmac)
@@ -328,16 +355,16 @@ void fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
 
   else if (sscanf(line,
       "OK cloonixovs_add_lan_phy_port lan=%s name=%s", lan, name) == 2)
-      phy_vhost_ack_add_port(tid, 1, lan, name);
+      edp_vhost_ack_add_port(tid, 1, lan, name);
   else if (sscanf(line,
       "OK cloonixovs_del_lan_phy_port lan=%s name=%s", lan, name) == 2)
-      phy_vhost_ack_del_port(tid, 1, lan, name);
+      edp_vhost_ack_del_port(tid, 1, lan, name);
   else if (sscanf(line,
       "KO cloonixovs_add_lan_phy_port lan=%s name=%s", lan, name) == 2)
-      phy_vhost_ack_add_port(tid, 0, lan, name);
+      edp_vhost_ack_add_port(tid, 0, lan, name);
   else if (sscanf(line,
       "KO cloonixovs_del_lan_phy_port lan=%s name=%s", lan, name) == 2)
-      phy_vhost_ack_del_port(tid, 0, lan, name);
+      edp_vhost_ack_del_port(tid, 0, lan, name);
 
   else if (sscanf(line, 
           "OK cloonixovs_add_lan_vhost lan=%s name=%s num=%d",
@@ -399,6 +426,14 @@ void fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
   else if (sscanf(line,"OK cloonixovs_del_lan_snf lan=%s name=%s",lan,name)==2)
     dpdk_msg_ack_lan_endp(tid, lan, name, 0, 0, 0, "OK");
 
+  else if (sscanf(line,"KO cloonixovs_add_lan_nat lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 0, 1, 1, "KO");
+  else if (sscanf(line,"OK cloonixovs_add_lan_nat lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 0, 1, 0, "OK");
+  else if (sscanf(line,"KO cloonixovs_del_lan_nat lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 0, 0, 1, "KO");
+  else if (sscanf(line,"OK cloonixovs_del_lan_nat lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 0, 0, 0, "OK");
 
   else if (sscanf(line, "KO cloonixovs_add_lan_eth lan=%s name=%s num=%d",
                         lan, name, &num) == 3)

@@ -100,7 +100,7 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int build_add_tap_cmd(int offset, t_list_commands *hlist, t_endp *endp)
+static int build_add_edp_cmd(int offset, t_list_commands *hlist, t_endp *endp)
 {
   int result = offset;
   t_list_commands *list = &(hlist[offset]);
@@ -117,6 +117,12 @@ static int build_add_tap_cmd(int offset, t_list_commands *hlist, t_endp *endp)
                          cfg_get_cloonix_name(), endp->name);
     else if (endp->endp_type == endp_type_wif)
       sprintf(list->cmd, "cloonix_cli %s add wif %s", 
+                         cfg_get_cloonix_name(), endp->name);
+    else if (endp->endp_type == endp_type_nat)
+      sprintf(list->cmd, "cloonix_cli %s add nat %s",
+                         cfg_get_cloonix_name(), endp->name);
+    else if (endp->endp_type == endp_type_snf)
+      sprintf(list->cmd, "cloonix_cli %s add snf %s", 
                          cfg_get_cloonix_name(), endp->name);
     else
       KERR("%d", endp->endp_type);
@@ -143,21 +149,6 @@ static int build_add_c2c_cmd(int offset, t_list_commands *hlist, t_endp *endp)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int build_add_snf_cmd(int offset, t_list_commands *hlist, t_endp *endp)
-{
-  int result = offset;
-  t_list_commands *list = &(hlist[offset]);
-  if (can_increment_index(result))
-    {
-    sprintf(list->cmd, "cloonix_cli %s add snf %s", 
-                       cfg_get_cloonix_name(), endp->name);
-    result += 1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int build_add_a2b_cmd(int offset, t_list_commands *hlist, t_endp *endp)
 {
   int result = offset;
@@ -165,21 +156,6 @@ static int build_add_a2b_cmd(int offset, t_list_commands *hlist, t_endp *endp)
   if (can_increment_index(result))
     {
     sprintf(list->cmd, "cloonix_cli %s add a2b %s",
-                       cfg_get_cloonix_name(), endp->name);
-    result += 1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int build_add_nat_cmd(int offset, t_list_commands *hlist, t_endp *endp)
-{
-  int result = offset;
-  t_list_commands *list = &(hlist[offset]);
-  if (can_increment_index(result))
-    {
-    sprintf(list->cmd, "cloonix_cli %s add nat %s",
                        cfg_get_cloonix_name(), endp->name);
     result += 1;
     }
@@ -412,27 +388,21 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
     if ((cur->endp_type == endp_type_tap) ||
         (cur->endp_type == endp_type_phy) ||
         (cur->endp_type == endp_type_pci) ||
+        (cur->endp_type == endp_type_nat) ||
+        (cur->endp_type == endp_type_snf) ||
         (cur->endp_type == endp_type_wif))
       {
-      result = build_add_tap_cmd(result, hlist, cur);
+      result = build_add_edp_cmd(result, hlist, cur);
       }
     else if (cur->endp_type == endp_type_c2c)
       {
       if (cur->c2c.local_is_master)
         result = build_add_c2c_cmd(result, hlist, cur);
       }
-    else if (cur->endp_type == endp_type_snf)
-      {
-      result = build_add_snf_cmd(result, hlist, cur);
-      }
     else if (cur->endp_type == endp_type_a2b)
       {
       if (cur->num == 0)
         result = build_add_a2b_cmd(result, hlist, cur);
-      }
-    else if (cur->endp_type == endp_type_nat)
-      {
-      result = build_add_nat_cmd(result, hlist, cur);
       }
     else if ((cur->endp_type == endp_type_kvm_sock) ||
              (cur->endp_type == endp_type_kvm_wlan))

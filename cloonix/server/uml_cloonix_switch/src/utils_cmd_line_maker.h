@@ -21,6 +21,7 @@ int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab,
 
 char *utils_get_suid_power_bin_path(void);
 char *utils_get_snf_dpdk_bin_path(void);
+char *utils_get_nat_dpdk_bin_path(void);
 char *vhost_ident_get(int vm_id, int eth);
 char *utils_dir_conf(int vm_id);
 char *utils_dir_conf_tmp(int vm_id);
@@ -82,6 +83,7 @@ char *utils_get_dpdk_ovs_db_dir(void);
 char *utils_get_dpdk_qemu_dir(void);
 char *utils_get_dpdk_cloonix_dir(void);
 char *utils_get_dpdk_snf_dir(void);
+char *utils_get_dpdk_nat_dir(void);
 /****************************************************************************/
 
 

@@ -47,7 +47,7 @@
 #include "unix2inet.h"
 #include "murpc_dispatch.h"
 #include "uml_clownix_switch.h"
-#include "phy_mngt.h"
+#include "edp_mngt.h"
 
 
 void local_add_sat(int llid, int tid, char *name, int type, 
@@ -1024,6 +1024,7 @@ int endp_mngt_start(int llid, int tid, char *name, int num, int endp_type)
     if ((num == 0) &&
         (mu->endp_type != endp_type_kvm_sock) &&
         (mu->endp_type != endp_type_tap) &&
+        (mu->endp_type != endp_type_nat) &&
         (mu->endp_type != endp_type_snf) &&
         (mu->endp_type != endp_type_phy))
       layout_add_sat(name, llid);

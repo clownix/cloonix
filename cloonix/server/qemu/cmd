@@ -4,7 +4,8 @@ HERE=`pwd`
 CLOONIX_COMMON=${HERE}/../../../cloonix/common
 PKGCONFIG=${CLOONIX_COMMON}/spice/spice_lib/pkgconfig
 export PKG_CONFIG_PATH=${PKGCONFIG}
-export QEMU_LDFLAGS="-L${CLOONIX_COMMON}/spice/spice_lib \
+export QEMU_CFLAGS="-I${CLOONIX_COMMON}/spice/spice_lib/include"
+export QEMU_LDFLAGS="-L${CLOONIX_COMMON}/spice/spice_lib -lepoxy \
                      -Wl,-rpath,/usr/local/bin/cloonix/common/spice/spice_lib"
 MUETH=${HERE}/../../
 rm -rf ${HERE}/qemu_bin
