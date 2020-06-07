@@ -133,7 +133,7 @@ void doors_recv_c2c_req_idx(int llid, int tid, char *name)
 
 /****************************************************************************/
 void doors_recv_c2c_req_conx(int llid, int tid, char *name, int peer_idx,
-                             int peer_ip, int peer_port, char *passwd)
+                             uint32_t peer_ip, int peer_port, char *passwd)
 {
   c2c_from_switch_req_conx(name, peer_idx, peer_ip, peer_port, passwd);
 }

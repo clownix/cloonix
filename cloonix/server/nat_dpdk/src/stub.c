@@ -33,8 +33,6 @@
 
 void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
 void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
-void rpct_recv_cli_req(void *ptr, int llid, int tid,
-                    int cli_llid, int cli_tid, char *line) {KOUT();}
 void rpct_recv_cli_resp(void *ptr, int llid, int tid,
                      int cli_llid, int cli_tid, char *line) {KOUT();}
 

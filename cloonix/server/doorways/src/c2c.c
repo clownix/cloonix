@@ -414,7 +414,7 @@ static void init_traff_c2c_conx(t_c2c *c2c)
 
 /****************************************************************************/
 void c2c_from_switch_req_conx(char *name, int peer_idx, 
-                              int peer_ip, int peer_port, char *passwd)
+                              uint32_t peer_ip, int peer_port, char *passwd)
 {
   t_c2c *c2c = find_with_name(name);
   if (c2c)

@@ -374,9 +374,7 @@ int hop_event_alloc(int llid, int type_hop, char *name, int num)
   if (!llid) 
     KOUT(" ");
   hop = get_hop_with_llid(llid);
-  if (hop)
-    KERR("%d %s %d", llid, name, num);
-  else
+  if (!hop)
     {
     if (strlen(name) == 0)
       KOUT(" ");

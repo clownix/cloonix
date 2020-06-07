@@ -39,6 +39,7 @@
 #include "rpc_clownix.h"
 #include "tcp_llid.h"
 #include "tcp_flagseq.h"
+#include "ssh_cisco_dpdk.h"
 
 
 /*--------------------------------------------------------------------------*/
@@ -51,7 +52,6 @@ typedef struct t_tcp_flow
   uint8_t smac[6];
   uint8_t dmac[6];
   int llid;
-  int fd;
   int destruction_count;
   int inactivity_count;
   struct rte_tcp_hdr tcp_hdr;
@@ -109,7 +109,6 @@ static t_tcp_flow *alloc_tcp_flow(uint32_t sip, uint32_t dip,
   cur->dip = dip;
   cur->sport = sport;
   cur->dport = dport;
-  cur->fd = -1;
   memcpy(cur->smac, smac, 6);
   memcpy(cur->dmac, dmac, 6);
   memcpy(&(cur->tcp_hdr), tcp_h, sizeof(struct rte_tcp_hdr));
@@ -124,11 +123,6 @@ static t_tcp_flow *alloc_tcp_flow(uint32_t sip, uint32_t dip,
 /****************************************************************************/
 static void free_tcp_flow(t_tcp_flow *cur)
 {
-  if (cur->fd >= 0)
-    {
-    close(cur->fd);
-    cur->fd = -1;
-    }
   if (cur->llid > 0)
     {
     if (msg_exist_channel(cur->llid))
@@ -170,8 +164,6 @@ static void timeout_beat(void *data)
       cur->destruction_count -= 1;
       if (cur->destruction_count == 0)
         {
-//        KERR("CLEAN TCP %X %X %hu %hu", cur->sip, cur->dip,
-//                                        cur->sport, cur->dport);
         destroy_tcp_flow(cur);
         }
       }
@@ -199,11 +191,6 @@ void tcp_end_of_flow(uint32_t sip, uint32_t dip,
     KERR("%X %X %hu %hu", sip, dip, sport, dport);
   else
     {
-    if (cur->fd >= 0)
-      {
-      close(cur->fd);
-      cur->fd = -1;
-      }
     if (cur->llid > 0)
       {
       if (msg_exist_channel(cur->llid))
@@ -255,7 +242,7 @@ void tcp_rx_err(int llid)
 /****************************************************************************/
 void tcp_connect_resp(uint32_t sip, uint32_t dip,
                       uint16_t sport, uint16_t dport,
-                      int fd, int llid, int is_ko)
+                      int llid, int is_ko)
 {
   t_tcp_flow *cur = find_tcp_flow(sip, dip, sport, dport);
   if (!cur)
@@ -271,9 +258,8 @@ void tcp_connect_resp(uint32_t sip, uint32_t dip,
     else
       {
       cur->llid = llid;
-      cur->fd = fd;
       cur->flagseq = tcp_flagseq_begin(sip, dip, sport, dport, cur->smac,
-                                       cur->dmac, &(cur->tcp_hdr));
+                                       cur->dmac, &(cur->tcp_hdr), 0);
       memset(&(cur->tcp_hdr), 0, sizeof(struct rte_tcp_hdr));
       }
     }
@@ -291,19 +277,24 @@ void tcp_input(uint8_t *smac, uint8_t *dmac, struct rte_ipv4_hdr *ipv4_h,
   t_tcp_flow *cur = find_tcp_flow(sip, dip, sport, dport);
   if (!cur)
     {
-    if (tcp_h->tcp_flags != RTE_TCP_SYN_FLAG)
+    if (ssh_cisco_dpdk_input(smac, dmac, ipv4_h, tcp_h, data_len, data) == -1)
       {
-//      KERR("%X %X %hu %hu flag:%X", sip, dip, sport, dport,
-//                                    tcp_h->tcp_flags & 0xFF);
-      }
-    else if (data_len)
-      {
-      KERR("%X %X %hu %hu len:%d", sip, dip, sport, dport, data_len);
-      }
-    else
-      {
-      cur = alloc_tcp_flow(sip, dip, sport, dport, smac, dmac, tcp_h);
-      tcp_llid_connect(sip, dip, sport, dport);
+      if (tcp_h->tcp_flags == RTE_TCP_SYN_FLAG)
+        {
+        if (data_len)
+          {
+          KERR("%X %X %hu %hu len:%d", sip, dip, sport, dport, data_len);
+          }
+        else
+          {
+          cur = alloc_tcp_flow(sip, dip, sport, dport, smac, dmac, tcp_h);
+          tcp_llid_connect(sip, dip, sport, dport);
+          }
+        }
+      else
+        {
+        //KERR("%X %X %hu %hu len:%d", sip, dip, sport, dport, data_len);
+        }
       }
     }
   else

@@ -48,6 +48,7 @@
 #include "dpdk_ovs.h"
 #include "endp_evt.h"
 #include "suid_power.h"
+#include "edp_mngt.h"
 
 #define DRIVE_PARAMS_CISCO " -drive file=%s,index=%d,media=disk,if=virtio,cache=directsync"
 #define DRIVE_PARAMS " -drive file=%s,index=%d,media=disk,if=virtio"
@@ -671,33 +672,6 @@ void timer_utils_finish_vm_init(int vm_id, int val)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void added_nat_cisco_done(void *data)
-{
-  char *name = (char * ) data;
-  t_vm   *vm = cfg_get_vm(name);
-  char cisco_nat_name[2*MAX_NAME_LEN];
-  char lan_cisco_nat_name[2*MAX_NAME_LEN];
-  int endp_type;
-  memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
-  memset(lan_cisco_nat_name, 0, 2*MAX_NAME_LEN);
-  snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "nat_%s", name);
-  snprintf(lan_cisco_nat_name, 2*MAX_NAME_LEN-1, "lan_nat_%s", name);
-  cisco_nat_name[MAX_NAME_LEN-1] = 0;
-  lan_cisco_nat_name[MAX_NAME_LEN-1] = 0;
-  if ((vm) && 
-      (endp_mngt_exists(cisco_nat_name, 0, &endp_type)) &&
-      (endp_type == endp_type_nat))
-    {
-    if (endp_evt_add_lan(0,0,name,vm->kvm.vm_config_param,lan_cisco_nat_name,0))
-      KERR("%s", name);
-    else if (endp_evt_add_lan(0,0,cisco_nat_name,0,lan_cisco_nat_name,0))
-      KERR("%s", name);
-    }
-  free(name);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void arm_static_vm_timeout(char *name, int delay)
 {
   char *nm;
@@ -713,7 +687,6 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
 {
   char err[MAX_PRINT_LEN];
   int i, state, nb_dpdk = 0;
-  char *cisco_nat_name;
   t_vm   *vm = cfg_get_vm(name);
   t_wake_up_eths *wake_up;
   if (!vm)
@@ -814,25 +787,6 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
       qmonitor_begin_qemu_unix(name);
       qmp_begin_qemu_unix(name);
       qhvc0_begin_qemu_unix(name);
-      if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
-        {
-        cisco_nat_name = (char *)malloc(2*MAX_NAME_LEN);
-        memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
-        snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "nat_%s", name);
-        cisco_nat_name[MAX_NAME_LEN-1] = 0;
-        if (endp_mngt_start(0, 0, cisco_nat_name, 0, endp_type_nat))
-          {
-          free(cisco_nat_name);
-          KERR("%s", name);
-          }
-        else
-          {
-          memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
-          snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "%s", name);
-          clownix_timeout_add(100, added_nat_cisco_done, 
-                              (void *)cisco_nat_name,NULL,NULL);
-          }
-        }
       recv_coherency_unlock();
       break;
     default:

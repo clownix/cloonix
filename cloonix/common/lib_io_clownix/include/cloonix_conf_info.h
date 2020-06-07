@@ -23,7 +23,7 @@ typedef struct t_cloonix_conf_info
   char doors[MAX_NAME_LEN];
   int  doors_llid;
   int  connect_llid;
-  int  ip;
+  uint32_t  ip;
   int  port;
   char passwd[MSG_DIGEST_LEN];
 } t_cloonix_conf_info;

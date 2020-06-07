@@ -37,9 +37,9 @@ void doors_send_c2c_resp_idx(int llid, int tid, char *name, int local_idx);
 void doors_recv_c2c_resp_idx(int llid, int tid, char *name, int local_idx);
 /*---------------------------------------------------------------------------*/
 void doors_send_c2c_req_conx(int llid, int tid, char *name, int peer_idx, 
-                             int peer_ip, int peer_port, char *passwd);
+                             uint32_t peer_ip, int peer_port, char *passwd);
 void doors_recv_c2c_req_conx(int llid, int tid, char *name, int peer_idx, 
-                             int peer_ip, int peer_port, char *passwd);
+                             uint32_t peer_ip, int peer_port, char *passwd);
 /*---------------------------------------------------------------------------*/
 void doors_send_c2c_resp_conx(int llid, int tid, char *name, 
                               int fd, int status);

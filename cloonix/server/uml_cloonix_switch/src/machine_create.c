@@ -55,6 +55,8 @@
 #include "dpdk_ovs.h"
 #include "suid_power.h"
 #include "vhost_eth.h"
+#include "endp_evt.h"
+#include "edp_mngt.h"
 
 
 
@@ -370,7 +372,6 @@ void machine_death( char *name, int error_death)
 {
   int i;
   t_vm *vm = cfg_get_vm(name);
-  char cisco_nat_name[2*MAX_NAME_LEN];
   char *vhost_ifname;
   t_eth_table *eth_tab;
   if ((!vm) || (vm->vm_to_be_killed == 1))
@@ -388,11 +389,7 @@ void machine_death( char *name, int error_death)
       KERR("%s %s %d ", __FUNCTION__, vm->kvm.name, error_death);
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
       {
-      memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
-      snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "nat_%s", name);
-      cisco_nat_name[MAX_NAME_LEN-1] = 0;
-      if (endp_mngt_stop(cisco_nat_name, 0))
-        KERR("%s", cisco_nat_name);
+      edp_mngt_cisco_nat_destroy(name);
       }
     eth_tab = vm->kvm.eth_table;
     for (i=0; i<vm->kvm.nb_tot_eth; i++)

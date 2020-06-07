@@ -59,6 +59,7 @@ typedef struct t_icmp
   struct t_icmp *next;
 } t_icmp;
 
+static uint32_t g_our_cisco_ip;
 static uint32_t g_our_gw_ip;
 static uint32_t g_our_dns_ip;
 static t_icmp *g_head_icmp;
@@ -293,8 +294,9 @@ void icmp_input(struct rte_ether_hdr *eth_h,
   cksum = (cksum & 0xffff) + (cksum >> 16);
   cksum = (cksum & 0xffff) + (cksum >> 16);
   icmp_h->icmp_cksum = ~cksum;
-  if ((htonl(g_our_gw_ip) == ipv4_h->src_addr) ||
-      (htonl(g_our_dns_ip) == ipv4_h->src_addr))
+  if ((htonl(g_our_cisco_ip) == ipv4_h->src_addr) ||
+      (htonl(g_our_gw_ip)    == ipv4_h->src_addr) ||
+      (htonl(g_our_dns_ip)   == ipv4_h->src_addr))
     {
     txq_dpdk_enqueue(mbuf, 0);
     }
@@ -311,6 +313,7 @@ void icmp_input(struct rte_ether_hdr *eth_h,
 void icmp_init(void)
 {
   clownix_timeout_add(100, timeout_beat, NULL, NULL, NULL);
+  g_our_cisco_ip = utils_get_cisco_ip();
   g_our_gw_ip    = utils_get_gw_ip();
   g_our_dns_ip   = utils_get_dns_ip();
   g_head_icmp = NULL;

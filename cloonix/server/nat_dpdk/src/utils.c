@@ -103,6 +103,43 @@ static void utils_fill_mac_header(uint8_t *data, uint8_t *smac, uint8_t *dmac)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void format_cisco_arp_req(uint8_t *data, uint8_t *smac, uint8_t *dmac,
+                          uint32_t sip, uint32_t dip)
+{
+  int i;
+
+  utils_fill_mac_header(data, smac, dmac);
+
+  data[12] = 0x08;
+  data[13] = 0x06;
+  data[14] = 0x00;
+  data[15] = 0x01;
+  data[16] = 0x08;
+  data[17] = 0x00;
+  data[18] = 0x06;
+  data[19] = 0x04;
+  data[20] = 0x00;
+  data[21] = 0x01;
+
+  for (i=0; i<6; i++)
+    data[22+i] = smac[i];
+
+  data[28] = (sip >> 24) & 0xFF;
+  data[29] = (sip >> 16) & 0xFF;
+  data[30] = (sip >> 8)  & 0xFF;
+  data[31] = (sip & 0xFF);
+
+  for (i=0; i<6; i++)
+    data[32+i] = 0;
+
+  data[38] = (dip >> 24) & 0xFF;
+  data[39] = (dip >> 16) & 0xFF;
+  data[40] = (dip >> 8)  & 0xFF;
+  data[41] = (dip & 0xFF);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void utils_fill_ip_header(int ip_proto, int len, uint8_t *data,
                                  uint32_t sip, uint32_t dip)
 {
@@ -233,6 +270,17 @@ static void utils_fill_tcp_ip_header(uint8_t  *buf_ip,   int data_len,
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+uint32_t utils_get_cisco_ip(void)
+{
+  uint32_t result;
+  char *ip = NAT_IP_CISCO;
+  if (ip_string_to_int (&result, ip))
+    KOUT("%s", ip);
+  return (result);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 uint32_t utils_get_dns_ip(void)
 {
   uint32_t result;
@@ -255,9 +303,8 @@ uint32_t utils_get_gw_ip(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-uint8_t *utils_get_mac(char *str_mac)
+void utils_get_mac(char *str_mac, uint8_t mc[6])
 {
-  static uint8_t mc[6];
   uint32_t i, mac[6];
   memset(mc, 0, 6);
   if (sscanf(str_mac, "%02X:%02X:%02X:%02X:%02X:%02X",
@@ -269,7 +316,6 @@ uint8_t *utils_get_mac(char *str_mac)
     for (i=0; i<6; i++)
       mc[i] = mac[i] & 0xFF;
     }
-  return mc;
 }
 /*--------------------------------------------------------------------------*/
 

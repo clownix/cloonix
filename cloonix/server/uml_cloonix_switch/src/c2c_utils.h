@@ -53,7 +53,7 @@ typedef struct t_sc2c
   long long timer_abs_beat;
   int timer_ref;
   int ping_timer_count;
-  int ip_slave; 
+  uint32_t ip_slave; 
   int port_slave;
   struct t_sc2c *prev;
   struct t_sc2c *next;

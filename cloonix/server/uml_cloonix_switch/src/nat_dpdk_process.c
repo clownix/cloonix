@@ -54,6 +54,7 @@ static char g_root_path[MAX_PATH_LEN];
 static char g_bin_nat[MAX_PATH_LEN];
 static t_nat_dpdk *g_head_nat_dpdk;
 
+int get_glob_req_self_destruction(void);
 
 /****************************************************************************/
 static t_nat_dpdk *find_nat_dpdk(char *name)
@@ -76,6 +77,20 @@ static t_nat_dpdk *find_nat_dpdk_with_lan(char *lan)
   while(cur)
     {
     if (!strcmp(cur->lan, lan))
+      break;
+    cur = cur->next;
+    }
+  return cur;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static t_nat_dpdk *find_nat_dpdk_with_llid(int llid)
+{
+  t_nat_dpdk *cur = g_head_nat_dpdk;
+  while(cur)
+    {
+    if (cur->llid == llid)
       break;
     cur = cur->next;
     }
@@ -123,7 +138,7 @@ static int try_connect(char *socket, char *name)
                                 uml_clownix_switch_rx_cb, name);
   if (llid)
     {
-    if (hop_event_alloc(llid, type_hop_nat_dpdk, "nat_dpdk", 0))
+    if (hop_event_alloc(llid, type_hop_nat_dpdk, name, 0))
       KERR(" ");
     rpct_send_pid_req(NULL, llid, type_hop_nat_dpdk, name, 0);
     }
@@ -136,6 +151,8 @@ static void timer_heartbeat(void *data)
 {
   t_nat_dpdk *next, *cur = g_head_nat_dpdk;
   int llid;
+  if (get_glob_req_self_destruction())
+    return;
   while(cur)
     {
     next = cur->next;
@@ -328,7 +345,7 @@ void nat_dpdk_llid_closed(int llid)
 void nat_dpdk_vm_event(void)
 {
   int i, j, nb;
-  t_vm *vm = cfg_get_first_vm(&nb);
+  t_vm *vm;
   char mac[MAX_NAME_LEN];
   char msg[MAX_PATH_LEN];
   char *m, *name;
@@ -341,13 +358,14 @@ void nat_dpdk_vm_event(void)
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "cloonixnat_machine_begin");
       rpct_send_diag_msg(NULL, cur->llid, type_hop_nat_dpdk, msg);
+      vm = cfg_get_first_vm(&nb);
       for (i=0; i<nb; i++)
         {
         for (j=0; j<vm->kvm.nb_tot_eth; j++)
           {
           if (vm->kvm.eth_table[j].eth_type == eth_type_dpdk)
             {
-            m = vm->kvm.eth_table[i].mac_addr;
+            m = vm->kvm.eth_table[j].mac_addr;
             name = vm->kvm.name;
             memset(mac, 0, MAX_NAME_LEN);
             snprintf(mac, MAX_NAME_LEN-1, 
@@ -368,6 +386,32 @@ void nat_dpdk_vm_event(void)
       }
     cur = cur->next;
     }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int nat_dpdk_name_exists_with_llid(int llid, char *name)
+{
+  int result = 0;
+  t_nat_dpdk *cur = find_nat_dpdk_with_llid(llid);
+  memset(name, 0, MAX_NAME_LEN);
+  if (cur)
+    {
+    strncpy(name, cur->name, MAX_NAME_LEN-1);
+    result = 1;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int nat_dpdk_llid_exists_with_name(char *name)
+{
+  int result = 0;
+  t_nat_dpdk *cur = find_nat_dpdk(name);
+  if (cur)
+    result = cur->llid;
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 

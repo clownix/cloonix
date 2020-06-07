@@ -65,6 +65,8 @@ static int g_rxtx_worker_ended[RTE_MAX_LCORE];
 static struct vhost_device_ops g_virtio_net_device_ops;
 
 
+void end_clean_unlink(void);
+
 /****************************************************************************/
 struct rte_mempool *get_rte_mempool(void)
 {
@@ -170,6 +172,7 @@ static void timeout_end(void *data)
     err = rte_vhost_driver_unregister(g_nat_socket);
     if (err)
       KERR("ERROR UNREGISTER");
+    end_clean_unlink();
     exit(0);
     }
   else

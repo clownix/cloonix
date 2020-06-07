@@ -549,7 +549,10 @@ static int rx_pktbuf_get_paylen(t_rx_pktbuf *rx_pktbuf)
   else
     {
     if ((nb_pkt-1) != rx_pktbuf->nb_pkt_rx)
+      {
       KERR("%d %d", nb_pkt, rx_pktbuf->nb_pkt_rx);
+      result = -1;
+      }
     if (nb_pkt == 0xFFFF)
       rx_pktbuf->nb_pkt_rx = 0;
     else
@@ -751,7 +754,7 @@ static void doorways_connect_error(void *ptr, int llid, int err, int from)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int doorways_sock_client_inet_start(int ip, int port, t_fd_event conn_rx)
+int doorways_sock_client_inet_start(uint32_t ip, int port, t_fd_event conn_rx)
 {
   int fd, llid = 0;
   if (g_init_done != 777)

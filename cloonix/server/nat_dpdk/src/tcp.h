@@ -22,7 +22,7 @@ void tcp_rx_from_llid(int llid, int data_len, uint8_t *data);
 void tcp_rx_err(int llid);
 void tcp_connect_resp(uint32_t sip, uint32_t dip,
                       uint16_t sport, uint16_t dport,
-                      int fd, int llid, int is_ko);
+                      int llid, int is_ko);
 
 void tcp_input(uint8_t *smac, uint8_t *dmac, struct rte_ipv4_hdr *ipv4_h,
                struct rte_tcp_hdr *tcp_h, int data_len, uint8_t *data);

@@ -133,7 +133,8 @@ static void rxtx_vhost_rx(struct rte_mbuf *mbuf)
       rte_pktmbuf_free(mbuf);
       }
     }
-  else if (ethertype == RTE_ETHER_TYPE_IPV6)
+  else if ((ethertype == RTE_ETHER_TYPE_IPV6) ||
+           (ethertype == RTE_ETHER_TYPE_RARP))
     {
     rte_pktmbuf_free(mbuf);
     }

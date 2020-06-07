@@ -375,9 +375,7 @@ static void update_layout_sat(char *name, int mutype,
                               int hidden)
 {
   t_layout_sat_xml *cur = find_sat_xml(name);
-  if (!cur)
-    KERR("%s", name);
-  else
+  if (cur)
     {
     if (mutype != cur->sat.mutype)
       KERR("%s %d %d", name, mutype, cur->sat.mutype);

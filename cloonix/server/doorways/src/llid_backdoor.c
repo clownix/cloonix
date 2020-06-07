@@ -359,7 +359,6 @@ static void rx_from_agent_conclusion_zero_llid(t_backdoor_vm *bvm,
                                                int paylen, char *payload)
 {
   int val_id;
-  char buf[MAX_NAME_LEN];
   if (type == header_type_ctrl) 
     {
     switch (val)
@@ -579,15 +578,13 @@ static void rearm_timer_bvm_connect_backdoor(t_backdoor_vm *bvm)
 {
   clean_connect_timer(bvm);
   bvm->connect_count += 1;
-  if (bvm->connect_count < 60)
+  if (bvm->connect_count < 120)
     {
     clean_connect_timer(bvm);
     clownix_timeout_add(30, timer_bvm_connect_backdoor, (void *) bvm,
                         &(bvm->connect_abs_beat_timer),
                         &(bvm->connect_ref_timer));
     }
-  else
-    KERR("GIVING UP BACKDOOR CONNECT  %s", bvm->name);
 }
 /*--------------------------------------------------------------------------*/
 

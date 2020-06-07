@@ -48,7 +48,7 @@ static char g_cloonix_nat[MAX_NAME_LEN];
 static char g_address_in_vm[MAX_PATH_LEN];
 static char g_sockcli[MAX_PATH_LEN];
 
-int get_ip_port_from_path(char *param, int *ip, int *port);
+int get_ip_port_from_path(char *param, uint32_t *ip, int *port);
 
 
 /*****************************************************************************/
@@ -232,7 +232,8 @@ static int callback_connect(void *ptr, int llid, int fd)
 /*****************************************************************************/
 static int cloonix_connect_remote(char *cloonix_doors)
 {
-  int ip, port;
+  uint32_t ip;
+  int port;
   if (get_ip_port_from_path(cloonix_doors, &ip, &port) == -1)
     {
     fprintf(stderr, "\nBad address %s\n\n", cloonix_doors);
@@ -253,7 +254,8 @@ static int cloonix_connect_remote(char *cloonix_doors)
 static int input_extract_init(char *inputs)
 {
   int result = -1;
-  int ip, port;
+  uint32_t ip;
+  int port;
   char *ptr;
   memset(g_cloonix_passwd, 0, MSG_DIGEST_LEN+1);
   memset(g_cloonix_doors, 0, MAX_PATH_LEN);

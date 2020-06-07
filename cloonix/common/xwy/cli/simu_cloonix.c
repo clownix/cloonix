@@ -268,7 +268,7 @@ static void time_connect(void *data)
 
 
 /****************************************************************************/
-int doorways_sock_client_inet_start(int ip, int port, t_fd_event conn_rx)
+int doorways_sock_client_inet_start(uint32_t ip, int port, t_fd_event conn_rx)
 {
   int fd;
   unsigned long ul_fd;

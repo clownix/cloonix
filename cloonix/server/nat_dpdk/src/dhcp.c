@@ -45,6 +45,7 @@
 #include "machine.h"
 #include "txq_dpdk.h"
 #include "utils.h"
+#include "ssh_cisco_dpdk.h"
 
 #define BOOTP_REQUEST   1
 #define BOOTP_REPLY     2
@@ -236,7 +237,7 @@ void dhcp_input(uint8_t *src_mac, uint8_t *dst_mac, int len, uint8_t *data)
   int resp_len;
   struct bootp_t *rbp;
   struct rte_mbuf *pktmbuf;
-  uint8_t *our_mac_gw;
+  uint8_t our_mac_gw[6];
   memset(resp, 0, MAX_RXTX_LEN);
   rbp = (struct bootp_t *) &(resp[g_offset]);
   if (bp->bp_op == BOOTP_REQUEST)
@@ -244,7 +245,7 @@ void dhcp_input(uint8_t *src_mac, uint8_t *dst_mac, int len, uint8_t *data)
     resp_len = bootp_format_reply(len, src_mac, &addr, bp, rbp);
     if ((resp_len > 0) && addr)
       {
-      our_mac_gw = utils_get_mac(NAT_MAC_GW);
+      utils_get_mac(NAT_MAC_GW, our_mac_gw);
       utils_fill_udp_packet(resp, resp_len,
                             our_mac_gw, src_mac,
                             utils_get_gw_ip(), 0xFFFFFFFF,
@@ -260,36 +261,61 @@ void dhcp_input(uint8_t *src_mac, uint8_t *dst_mac, int len, uint8_t *data)
 /****************************************************************************/
 void dhcp_arp_management(struct rte_mbuf *m)
 {
+  uint32_t our_cisco_ip = utils_get_cisco_ip();
   uint32_t our_gw_ip = utils_get_gw_ip();
   uint32_t our_dns_ip = utils_get_dns_ip();
   struct rte_ether_hdr *eth;
   struct rte_arp_hdr *ahdr;
   struct rte_arp_ipv4 *adata;
-  uint32_t tip, l2_len = sizeof(struct rte_ether_hdr);
-  uint8_t *mac = NULL;
+  uint32_t sip, tip, l2_len = sizeof(struct rte_ether_hdr);
+  uint8_t *mc, mac[6];
+  int ok = 1;
   ahdr = rte_pktmbuf_mtod_offset(m, struct rte_arp_hdr *, l2_len);
   adata = &ahdr->arp_data;
-  tip = adata->arp_tip;
-  if (tip == htonl(our_gw_ip))
-    mac = utils_get_mac(NAT_MAC_GW);
-  else if (tip == htonl(our_dns_ip))
-    mac = utils_get_mac(NAT_MAC_DNS);
-  else
+  tip = (uint32_t) adata->arp_tip;
+  sip = (uint32_t) adata->arp_sip;
+  eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+  if (ahdr->arp_opcode == rte_cpu_to_be_16(RTE_ARP_OP_REPLY))
     {
+    if (tip == htonl(our_cisco_ip))
+      {
+      mc = (uint8_t *) &(eth->d_addr);
+      utils_get_mac(NAT_MAC_CISCO, mac);
+      if (memcmp(mc, mac, 6))
+        KERR("%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+              mc[0],mc[1],mc[2],mc[3],mc[4],mc[5]); 
+      else
+        ssh_cisco_dpdk_arp_resp((uint8_t *)(&(eth->s_addr)), ntohl(sip));
+      }
+    else
+      {
+      }
     rte_pktmbuf_free(m);
-    KERR("ARP NOT FOR US %X %X %X", our_gw_ip, our_dns_ip, tip);
     }
-  if (mac)
+  else if (ahdr->arp_opcode == rte_cpu_to_be_16(RTE_ARP_OP_REQUEST))
     {
-    eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
-    eth->d_addr = eth->s_addr;
-    eth->s_addr = (*((struct rte_ether_addr *)mac));
-    ahdr->arp_opcode = rte_cpu_to_be_16(RTE_ARP_OP_REPLY);
-    adata->arp_tip = adata->arp_sip;
-    adata->arp_sip = tip;
-    adata->arp_tha = adata->arp_sha;
-    adata->arp_sha = eth->s_addr;
-    txq_dpdk_enqueue(m, 0);
+    if (tip == htonl(our_cisco_ip))
+      utils_get_mac(NAT_MAC_CISCO, mac);
+    else if (tip == htonl(our_gw_ip))
+      utils_get_mac(NAT_MAC_GW, mac);
+    else if (tip == htonl(our_dns_ip))
+      utils_get_mac(NAT_MAC_DNS, mac);
+    else
+      {
+      ok = 0;
+      rte_pktmbuf_free(m);
+      }
+    if (ok == 1)
+      {
+      eth->d_addr = eth->s_addr;
+      eth->s_addr = (*((struct rte_ether_addr *)mac));
+      ahdr->arp_opcode = rte_cpu_to_be_16(RTE_ARP_OP_REPLY);
+      adata->arp_tip = adata->arp_sip;
+      adata->arp_sip = tip;
+      adata->arp_tha = adata->arp_sha;
+      adata->arp_sha = eth->s_addr;
+      txq_dpdk_enqueue(m, 0);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

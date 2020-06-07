@@ -71,6 +71,8 @@ static int g_nb_mirs;
 static t_topo_bridges g_brgs[MAX_OVS_BRIDGES];
 static t_topo_mirrors g_mirs[MAX_OVS_MIRRORS];
 
+int get_glob_req_self_destruction(void);
+
 
 /****************************************************************************/
 static void unformat_bridges(char *msg)
@@ -151,7 +153,10 @@ static void ovs_topo_arrival(char *msg)
   int nb_brgs, nb_mirs;
   t_topo_bridges *brgs;
   t_topo_mirrors *mirs;
-  char *ptr = strstr(msg, "</ovs_topo_config>");
+  char *ptr;
+  if (get_glob_req_self_destruction())
+    return;
+  ptr = strstr(msg, "</ovs_topo_config>");
   if (!ptr)
     KERR("%s", msg);
   else
@@ -224,6 +229,8 @@ static void timer_monitoring(void *data)
 {
   static int old_nb_pid_resp;
   static int count = 0;
+  if (get_glob_req_self_destruction())
+    return;
   count += 1;
   if (old_nb_pid_resp == g_nb_pid_resp)
     g_nb_pid_resp_warning++;
@@ -270,6 +277,8 @@ static void timer_connect(void *data)
   static int count = 0;
   int llid;
   char *ctrl = (char *) data;
+  if (get_glob_req_self_destruction())
+    return;
   llid = string_client_unix(ctrl, uml_clownix_switch_error_cb,
                                   uml_clownix_switch_rx_cb, "suid_power");
   if (llid)
@@ -307,6 +316,8 @@ static void suid_power_start(void)
 {
   static char *argv[8];
   char **env = get_saved_environ();
+  if (get_glob_req_self_destruction())
+    return;
   argv[0] = g_bin_suid;
   argv[1] = g_cloonix_net;
   argv[2] = g_root_path;
@@ -315,15 +326,18 @@ static void suid_power_start(void)
   argv[5] = env[1]; //home
   argv[6] = env[2]; //spice_env
   argv[7] = NULL;
+
   pid_clone_launch(utils_execve, end_process, NULL,
-                   (void *) argv, NULL, NULL, "suid_power", -1, 1);
-  clownix_timeout_add(100, timer_connect, (void *) g_sock_path, NULL, NULL);
+                 (void *) argv, NULL, NULL, "suid_power", -1, 1);
+  clownix_timeout_add(100, timer_connect, (void *)g_sock_path,NULL,NULL);
 }
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void suid_power_pid_resp(int llid, int tid, char *name, int pid)
 {
+  if (get_glob_req_self_destruction())
+    return;
   if (llid != g_llid)
     KERR("%d %d", llid, g_llid);
   if ((tid != type_hop_suid_power) || (strcmp(name, "suid_power")))
@@ -375,6 +389,8 @@ void suid_power_diag_resp(int llid, int tid, char *line)
   char *ptr;
   t_topo_phy *phy;
   t_topo_pci *ppci;
+  if (get_glob_req_self_destruction())
+    return;
   if (llid != g_llid)
     KERR("%d %d", llid, g_llid);
   if (tid != type_hop_suid_power)

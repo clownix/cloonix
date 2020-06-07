@@ -223,13 +223,14 @@ static int ovs_vsctl(char *ovs_bin, char *dpdk_dir, char *multi_arg_cmd)
   memset(cmd_argv, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   cmd_argc = make_cmd_argv(cmd_argv, multi_arg_cmd);
   snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/bin/ovs-vsctl", ovs_bin);
-  snprintf(g_arg[1],MAX_ARG_LEN-1,"--db=unix:%s/%s",
+  snprintf(g_arg[1],MAX_ARG_LEN-1,"--no-syslog");
+  snprintf(g_arg[2],MAX_ARG_LEN-1,"--db=unix:%s/%s",
                                 dpdk_dir, OVSDB_SERVER_SOCK);
   for (i=0; i<cmd_argc; i++)
     {
-    strncpy(g_arg[2+i], cmd_argv[i], MAX_ARG_LEN-1);
+    strncpy(g_arg[3+i], cmd_argv[i], MAX_ARG_LEN-1);
     }
-  return (call_my_popen(dpdk_dir, cmd_argc+2, g_arg));
+  return (call_my_popen(dpdk_dir, cmd_argc+3, g_arg));
 }
 /*---------------------------------------------------------------------------*/
 
@@ -270,8 +271,9 @@ static int launch_ovs_server(char *ovs_bin, char *dpdk_dir)
            "--remote=db:Open_vSwitch,Open_vSwitch,manager_options");
   snprintf(g_arg[5], MAX_ARG_LEN-1,"--unixctl=%s/%s",
                                    dpdk_dir, OVSDB_SERVER_CTL);
-  snprintf(g_arg[6], MAX_ARG_LEN-1, "--detach");
-  if (call_my_popen(dpdk_dir, 7, g_arg))
+  snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=warn");
+  snprintf(g_arg[7], MAX_ARG_LEN-1, "--detach");
+  if (call_my_popen(dpdk_dir, 8, g_arg))
     {
     result = -1;
     KERR(" ");
@@ -305,8 +307,9 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *dpdk_dir)
   snprintf(g_arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s", dpdk_dir, OVS_VSWITCHD_PID);
   snprintf(g_arg[3],MAX_ARG_LEN-1,"--log-file=%s/%s", dpdk_dir, OVS_VSWITCHD_LOG);
   snprintf(g_arg[4],MAX_ARG_LEN-1,"--unixctl=%s/%s", dpdk_dir, OVS_VSWITCHD_CTL);
-  snprintf(g_arg[5], MAX_ARG_LEN-1, "--detach");
-  if (call_my_popen(dpdk_dir, 6, g_arg))
+  snprintf(g_arg[5], MAX_ARG_LEN-1, "--verbose=warn");
+  snprintf(g_arg[6], MAX_ARG_LEN-1, "--detach");
+  if (call_my_popen(dpdk_dir, 7, g_arg))
     {
     result = -1;
     } 
@@ -314,7 +317,7 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *dpdk_dir)
     {
     result = wait_read_pid_file(dpdk_dir, OVS_VSWITCHD_PID);
     appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:syslog:warn");
-    appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:file:info");
+    appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:file:warn");
     }
   return result;
 }

@@ -56,6 +56,8 @@ typedef struct t_mutimeout
 static t_mutimeout *g_head;
 /*--------------------------------------------------------------------------*/
 
+int get_glob_req_self_destruction(void);
+
 /****************************************************************************/
 void snf_globtopo_small_event(char *name, int num_evt, char *path)
 {
@@ -144,6 +146,10 @@ void recv_mucli_dialog_req(int llid, int tid, char *name, int num, char *line)
 {
   char newline[MAX_RPC_MSG_LEN];
   int is_wlan=0, endp_type, mullid=0;
+
+  if (get_glob_req_self_destruction())
+    return;
+
   if (!mullid)
     mullid = mulan_can_be_found_with_name(name);
   if (!mullid)
@@ -154,6 +160,8 @@ void recv_mucli_dialog_req(int llid, int tid, char *name, int num, char *line)
     }
   if (!mullid)
     mullid = endp_mngt_can_be_found_with_name(name, num, &endp_type);
+  if (!mullid)
+    mullid = nat_dpdk_llid_exists_with_name(name);
   if (!mullid)
     send_mucli_dialog_resp(llid, tid, name, num, "KO NOT FOUND", 1);
   else
@@ -228,6 +236,10 @@ void rpct_recv_cli_resp(void *ptr, int llid, int tid,
 {
   char name[MAX_NAME_LEN];
   int mutype, num = 0;
+
+  if (get_glob_req_self_destruction())
+    return;
+
   hop_event_hook(llid, FLAG_HOP_DIAG, line);
   if (cli_llid)
     {
@@ -238,10 +250,14 @@ void rpct_recv_cli_resp(void *ptr, int llid, int tid,
     {
     if (mutype == endp_type_snf)
       update_snf(name, line);
+    send_mucli_dialog_resp(cli_llid, cli_tid, name, num, line, 0);
     }
-  else if (!mulan_can_be_found_with_llid(llid, name))
+  else if (mulan_can_be_found_with_llid(llid, name))
+    send_mucli_dialog_resp(cli_llid, cli_tid, name, num, line, 0);
+  else if (nat_dpdk_name_exists_with_llid(llid, name))
+    send_mucli_dialog_resp(cli_llid, cli_tid, name, num, line, 0);
+  else
     KERR("CANNOT BE %s", line);
-  send_mucli_dialog_resp(cli_llid, cli_tid, name, num, line, 0);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -250,6 +266,10 @@ void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
   int num, mutype;
+
+  if (get_glob_req_self_destruction())
+    return;
+
   if (endp_mngt_can_be_found_with_llid(llid, name, &num, &mutype))
     {
     endp_mngt_rpct_recv_evt_msg(llid, tid, line);
@@ -278,6 +298,10 @@ void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line)
   char satname[MAX_NAME_LEN];
   char msg[MAX_PATH_LEN];
   int num, mutype, llid_con;
+
+  if (get_glob_req_self_destruction())
+    return;
+
   if (endp_mngt_can_be_found_with_llid(llid, satname, &num, &mutype))
     {
     if (mutype == endp_type_nat)
@@ -303,6 +327,16 @@ void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line)
     else
       KERR("%s", line);
     }
+  else if (nat_dpdk_name_exists_with_llid(llid, satname))
+    {
+    if (sscanf(line, "unix2inet_conpath_evt_monitor llid=%d name=%s",
+               &llid_con, vmname) == 2)
+      {
+      //unix2inet_monitor(llid, llid_con, satname, vmname);
+      }
+    else
+      KERR("%s", line);
+    }
   else
     KERR("%s", line);
 }
@@ -313,6 +347,10 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
   int num, mutype;
+
+  if (get_glob_req_self_destruction())
+    return;
+
   if (suid_power_diag_llid(llid))
     {
     suid_power_diag_resp(llid, tid, line);

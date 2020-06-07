@@ -550,6 +550,8 @@ char *dpdk_nat_get_mac(char *name, int num)
     result = NAT_MAC_GW;
   else if (num == 1)
     result = NAT_MAC_DNS;
+  else if (num == 2)
+    result = NAT_MAC_CISCO;
   else
     KOUT("%s %d", name, num);
   return result;

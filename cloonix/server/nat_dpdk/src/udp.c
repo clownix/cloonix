@@ -57,6 +57,7 @@ typedef struct t_udp_flow
 } t_udp_flow;
 /*--------------------------------------------------------------------------*/
 
+static uint32_t g_our_cisco_ip;
 static uint32_t g_our_gw_ip;
 static uint32_t g_our_dns_ip;
 static uint32_t g_host_dns_ip;
@@ -286,7 +287,7 @@ static void transfert_onto_udp(uint8_t *smac,  uint8_t *dmac,
     }
   if (!cur)
     {
-    KERR("%X %X %d %d", sip, dip, sport & 0xFFFF, dport & 0xFFFF);
+    KERR("%X %X %hu %hu", sip, dip, sport, dport);
     }
   else
     {
@@ -323,8 +324,10 @@ void udp_input(uint8_t *smac, uint8_t *dmac,
     else if (dip == g_our_dns_ip)
       transfert_onto_udp(smac, dmac, sip, dip, sport, dport,
                          g_host_dns_ip, data_len, data);
+    else if (dip == g_our_cisco_ip)
+      KERR("TOOLOOKINTO UDP FROM CISCO %X %X %d %d", sip, dip, sport, dport);
     else
-      KERR("%X %X %d %d", sip, dip, sport & 0xFFFF, dport & 0xFFFF);
+      KERR("%X %X %hu %hu", sip, dip, sport, dport);
     }
   else
     transfert_onto_udp(smac, dmac, sip, dip, sport, dport,
@@ -337,9 +340,10 @@ void udp_init(void)
 {
   if (ip_string_to_int (&g_host_local_ip, "127.0.0.1"))
     KOUT(" ");
-  g_our_gw_ip    = utils_get_gw_ip();
-  g_our_dns_ip   = utils_get_dns_ip();
-  g_host_dns_ip  = get_dns_addr();
+  g_our_gw_ip      = utils_get_gw_ip();
+  g_our_dns_ip     = utils_get_dns_ip();
+  g_our_cisco_ip   = utils_get_cisco_ip();
+  g_host_dns_ip    = get_dns_addr();
   clownix_timeout_add(100, timeout_beat, NULL, NULL, NULL);
   g_head_udp_flow = NULL;
   g_offset = sizeof(struct rte_ether_hdr);

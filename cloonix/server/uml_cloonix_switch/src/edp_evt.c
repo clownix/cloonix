@@ -550,8 +550,6 @@ int edp_evt_update_lan_add(t_edp *cur, int llid, int tid)
     {
     lan = cur->lan.lan[0].lan;
     eth_type = eth_type_update(cur->name, lan);
-    if (llid == 0)
-      KERR(" ");
     cur->llid = llid;
     cur->tid = tid;
     if (eth_type == eth_type_dpdk)

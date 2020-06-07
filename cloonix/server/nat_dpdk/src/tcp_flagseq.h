@@ -17,8 +17,8 @@
 /*****************************************************************************/
 
 #define MAIN_INACTIVITY_COUNT 1000000
-#define MAIN_DESTRUCTION_DECREMENTER 2000
-#define RESET_DESTRUCTION_DECREMENTER 1000
+#define MAIN_DESTRUCTION_DECREMENTER 3000
+#define RESET_DESTRUCTION_DECREMENTER 2000
 
 /*--------------------------------------------------------------------------*/
 typedef struct t_qstore
@@ -37,6 +37,8 @@ typedef struct t_flagseq
   uint16_t dport;
   uint8_t  smac[6];
   uint8_t  dmac[6];
+  int      is_ssh_cisco;
+  int      is_ssh_cisco_first;
   uint32_t offset;
   uint32_t local_seq;
   uint32_t distant_seq;
@@ -77,6 +79,7 @@ void tcp_flagseq_end(t_flagseq *flagseq);
 t_flagseq *tcp_flagseq_begin(uint32_t sip,   uint32_t dip,
                              uint16_t sport, uint16_t dport,
                              uint8_t *smac,  uint8_t *dmac,
-                             struct rte_tcp_hdr *tcp_hdr);
+                             struct rte_tcp_hdr *tcp_hdr,
+                             int is_ssh_cisco);
 
 /*--------------------------------------------------------------------------*/

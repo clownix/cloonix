@@ -13,19 +13,17 @@ if [ ! -e ${ID_RSA} ]; then
   echo ${ID_RSA}
   exit 1
 fi
-for k in cisco0 cisco3 ; do
-  rm -rf ${TARGET}
-  rm -f ${HERE}/pre_configs/preconfig_${k}.iso
-  mkdir ${TARGET}
-  cp ${HERE}/pre_configs/iosxe_config_${k}.txt ${TARGET}/iosxe_config.txt
-  cd ${TARGET}
-  split -b 70 ${ID_RSA}
-  for i in xaa xab xac xad xae xaf; do
-    var="$(cat ${i})"
-    export "$(eval echo \$i=$var)"
-    sed -i s%__${i}__%"$(eval echo \$$i)"% iosxe_config.txt
-    rm -f ${i}
-  done
-  ${XORRISO} -o ${HERE}/pre_configs/preconfig_${k}.iso ${TARGET}
-  rm -rf ${TARGET}
+rm -rf ${TARGET}
+rm -f ${HERE}/pre_configs/preconfig_cisco4.iso
+mkdir ${TARGET}
+cp ${HERE}/pre_configs/iosxe_config_cisco4.txt ${TARGET}/iosxe_config.txt
+cd ${TARGET}
+split -b 70 ${ID_RSA}
+for i in xaa xab xac xad xae xaf; do
+  var="$(cat ${i})"
+  export "$(eval echo \$i=$var)"
+  sed -i s%__${i}__%"$(eval echo \$$i)"% iosxe_config.txt
+  rm -f ${i}
 done
+${XORRISO} -o ${HERE}/pre_configs/preconfig_cisco4.iso ${TARGET}
+rm -rf ${TARGET}

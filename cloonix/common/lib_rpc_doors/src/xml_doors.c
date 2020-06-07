@@ -148,7 +148,7 @@ void doors_send_c2c_resp_idx(int llid, int tid, char *name, int local_idx)
 
 /****************************************************************************/
 void doors_send_c2c_req_conx(int llid, int tid, char *name, int peer_idx,
-                             int peer_ip, int peer_port, char *passwd)
+                             uint32_t peer_ip, int peer_port, char *passwd)
 {
   int len;
   char replace_passwd[MSG_DIGEST_LEN];
@@ -281,7 +281,8 @@ void doors_send_del_vm(int llid, int tid, char *name)
 /*****************************************************************************/
 static void dispatcher(int llid, int bnd_evt, char *msg)
 {
-  int pid, fd, endp_type, tid, peer_idx, peer_ip, peer_port, status, local_idx;
+  int pid, fd, endp_type, tid, peer_idx, peer_port, status, local_idx;
+  uint32_t peer_ip;
   char *ptrs, *ptre;
   char net_name[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];

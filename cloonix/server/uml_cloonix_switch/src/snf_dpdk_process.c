@@ -57,6 +57,7 @@ static char g_pcap_dir[MAX_PATH_LEN];
 static t_snf_dpdk *g_head_snf_dpdk;
 
 void snf_globtopo_small_event(char *name, int num_evt, char *path);
+int get_glob_req_self_destruction(void);
 
 /****************************************************************************/
 static t_snf_dpdk *find_snf_dpdk(char *name)
@@ -121,6 +122,88 @@ static void snf_dpdk_start(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void send_all_nat_mac_to_snf(int llid, char *lan)
+{
+  char msg[MAX_PATH_LEN];
+  char *name, *strmac;
+  int i;
+  name = dpdk_nat_get_next_matching_lan(lan, NULL);
+  while(name)
+    {
+    for (i=0; i<3; i++)
+      {
+      strmac = dpdk_nat_get_mac(name, i);
+      memset(msg, 0, MAX_PATH_LEN);
+      snprintf(msg, MAX_PATH_LEN-1,
+      "cloonixsnf_mac name=%s num=%d mac=%s", name, i, strmac);
+      rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
+      hop_event_alloc(llid, type_hop_endp, name, i);
+      }
+    name = dpdk_nat_get_next_matching_lan(lan, name);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void send_all_tap_mac_to_snf(int llid, char *lan)
+{
+  char msg[MAX_PATH_LEN];
+  char *name, *strmac;
+  name = dpdk_tap_get_next_matching_lan(lan, NULL);
+  while(name)
+    {
+    strmac = dpdk_tap_get_mac(name);
+    if (strmac)
+      {
+      memset(msg, 0, MAX_PATH_LEN);
+      snprintf(msg, MAX_PATH_LEN-1,
+      "cloonixsnf_mac name=%s num=%d mac=%s", name, 0, strmac);
+      rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
+      hop_event_alloc(llid, type_hop_endp, name, 0);
+      }
+    name = dpdk_tap_get_next_matching_lan(lan, name);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void send_all_vm_mac_to_snf(int llid, char *lan)
+{
+ t_vm *vm;
+  char msg[MAX_PATH_LEN];
+  char *name, *mc;
+  char mac[MAX_NAME_LEN];
+  int i, j, nb_vm;
+
+  vm = cfg_get_first_vm(&nb_vm);
+  for (i=0; i < nb_vm; i++)
+    {
+    for (j=0; j < vm->kvm.nb_tot_eth; j++)
+      {
+      if (vm->kvm.eth_table[j].eth_type == eth_type_dpdk)
+        {
+        if (dpdk_dyn_lan_exists_in_vm(vm->kvm.name, j, lan))
+          {
+          name = vm->kvm.name;
+          mc = vm->kvm.eth_table[j].mac_addr;
+          memset(mac, 0, MAX_NAME_LEN);
+          snprintf(mac, MAX_NAME_LEN-1, "%02x:%02x:%02x:%02x:%02x:%02x",
+                                      mc[0]&0xff, mc[1]&0xff, mc[2]&0xff,
+                                      mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);
+          memset(msg, 0, MAX_PATH_LEN);
+          snprintf(msg, MAX_PATH_LEN-1,
+          "cloonixsnf_mac name=%s num=%d mac=%s", name, j, mac);
+          rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
+          hop_event_alloc(llid, type_hop_endp, name, j);
+          }
+        }
+      }
+    vm = vm->next;
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static int try_connect(char *socket, char *name)
 {
   int llid = string_client_unix(socket, uml_clownix_switch_error_cb,
@@ -140,6 +223,8 @@ static void timer_heartbeat(void *data)
 {
   t_snf_dpdk *next, *cur = g_head_snf_dpdk;
   int llid;
+  if (get_glob_req_self_destruction())
+    return;
   while(cur)
     {
     next = cur->next;
@@ -147,7 +232,9 @@ static void timer_heartbeat(void *data)
       {
       llid = try_connect(cur->socket, cur->name);
       if (llid)
+        {
         cur->llid = llid;
+        }
       else
         {
         cur->count += 1;
@@ -269,8 +356,9 @@ void snf_dpdk_start_process(char *name, char *lan, int on)
       KERR("%s %s", name, lan);
     else
       {
-      if (find_snf_dpdk_with_lan(lan))
-        KERR("%s %s", name, lan);
+      cur = find_snf_dpdk_with_lan(lan);
+      if (cur)
+        KERR("%s %s %s", name, cur->name, lan);
       else
         {
         cur = (t_snf_dpdk *) malloc(sizeof(t_snf_dpdk));
@@ -337,69 +425,17 @@ int  snf_dpdk_get_all_pid(t_lst_pid **lst_pid)
 void snf_dpdk_process_possible_change(char *lan)
 {
   t_snf_dpdk *cur = find_snf_dpdk_with_lan(lan);
-  t_vm *vm;
   char msg[MAX_PATH_LEN];
-  char *name, *mc, *strmac;
-  char mac[MAX_NAME_LEN];
-  int i, j, nb_vm;
-  if (cur)
+  if ((cur) && (cur->llid))
     {
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "%s", "cloonixsnf_macliststart");
     rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
   
-    name = dpdk_nat_get_next_matching_lan(lan, NULL);
-    while(name)
-      {
-      for (i=0; i<2; i++)
-        {
-        strmac = dpdk_nat_get_mac(name, i);
-        memset(msg, 0, MAX_PATH_LEN);
-        snprintf(msg, MAX_PATH_LEN-1,
-        "cloonixsnf_mac name=%s num=%d mac=%s", name, i, strmac);
-        rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
-        }
-      name = dpdk_nat_get_next_matching_lan(lan, name);
-      }
+    send_all_nat_mac_to_snf(cur->llid, lan);
+    send_all_tap_mac_to_snf(cur->llid, lan);
+    send_all_vm_mac_to_snf(cur->llid, lan);
 
-    name = dpdk_tap_get_next_matching_lan(lan, NULL);
-    while(name)
-      {
-      strmac = dpdk_tap_get_mac(name);
-      if (strmac)
-        {
-        memset(msg, 0, MAX_PATH_LEN);
-        snprintf(msg, MAX_PATH_LEN-1,
-        "cloonixsnf_mac name=%s num=%d mac=%s", name, 0, strmac);
-        rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
-        }
-      name = dpdk_tap_get_next_matching_lan(lan, name);
-      }
-
-    vm = cfg_get_first_vm(&nb_vm);
-    for (i=0; i < nb_vm; i++)
-      {
-      for (j=0; j < vm->kvm.nb_tot_eth; j++)
-        {
-        if (vm->kvm.eth_table[j].eth_type == eth_type_dpdk)
-          {
-          if (dpdk_dyn_lan_exists_in_vm(vm->kvm.name, j, lan))
-            {
-            name = vm->kvm.name;
-            mc = vm->kvm.eth_table[j].mac_addr;
-            memset(mac, 0, MAX_NAME_LEN);
-            snprintf(mac, MAX_NAME_LEN-1, "%02x:%02x:%02x:%02x:%02x:%02x",
-                                        mc[0]&0xff, mc[1]&0xff, mc[2]&0xff,
-                                        mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);   
-            memset(msg, 0, MAX_PATH_LEN);
-            snprintf(msg, MAX_PATH_LEN-1,
-            "cloonixsnf_mac name=%s num=%d mac=%s", name, j, mac);
-            rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
-            }
-          }
-        }
-      vm = vm->next;
-      }
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "%s", "cloonixsnf_maclistend");
     rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);

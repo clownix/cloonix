@@ -258,7 +258,7 @@ void doors_recv_c2c_resp_idx(int llid, int itid, char *iname, int ilocal_idx)
 
 /****************************************************************************/
 void doors_recv_c2c_req_conx(int llid, int itid, char *iname, int ipeer_idx, 
-                             int ipeer_ip, int ipeer_port, char *ipasswd)
+                             uint32_t ipeer_ip, int ipeer_port, char *ipasswd)
 {
   static char name[MAX_NAME_LEN];
   static char passwd[MSG_DIGEST_LEN];

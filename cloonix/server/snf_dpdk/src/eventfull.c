@@ -33,40 +33,33 @@
 void send_eventfull_tx_rx(char *name, int num, int ms,
                           int ptx, int btx, int prx, int brx);
 
-/****************************************************************************/
-typedef struct t_evt_eth
+/*--------------------------------------------------------------------------*/
+typedef struct t_evt
 {
-  int eth;
+  char name[MAX_NAME_LEN];
+  int num;
   uint8_t mac[6];
   int pkt_tx;
   int bytes_tx;
   int pkt_rx;
   int bytes_rx;
-  struct t_evt_eth *prev;
-  struct t_evt_eth *next;
-} t_evt_eth;
-/*--------------------------------------------------------------------------*/
-typedef struct t_evt_obj
-{
-  char name[MAX_NAME_LEN];
-  t_evt_eth *head_evt_eth;
   int to_be_erased;
-  struct t_evt_obj *prev;
-  struct t_evt_obj *next;
-} t_evt_obj;  
+  struct t_evt *prev;
+  struct t_evt *next;
+} t_evt;  
 /*--------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------*/
-static t_evt_obj *g_obj_head;
+static t_evt *g_head_evt;
 
 
 /****************************************************************************/
-static t_evt_obj *find_evt_obj(char *name)
+static t_evt *find_evt(char *name, int num)
 {
-  t_evt_obj *cur = g_obj_head;
+  t_evt *cur = g_head_evt;
   while(cur)
     {
-    if (!strcmp(cur->name, name))
+    if ((!strcmp(cur->name, name)) && (cur->num == num))
       break;
     cur = cur->next;
     }
@@ -75,94 +68,73 @@ static t_evt_obj *find_evt_obj(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_evt_eth *get_eth_with_mac(uint8_t *mac)
+static t_evt *get_evt_with_mac(uint8_t *mac)
 {
-  t_evt_obj *obj = g_obj_head;
-  t_evt_eth *cur = NULL;
-  uint8_t *mc;
-  int result = 0;
-  while((obj) && (result == 0))
+  t_evt *cur = g_head_evt;
+  while(cur)
     {
-    cur = obj->head_evt_eth;
-    while(cur)
-      {
-      mc = cur->mac;
-      if (!memcmp(mc, mac, 6))
-        {
-        result = 1;
-        break;
-        }
-      cur = cur->next;
-      }
-    obj = obj->next;
+    if (!memcmp(cur->mac, mac, 6))
+      break;
+    cur = cur->next;
     }
   return cur;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void update_stats(int flag_allcast, t_evt_eth *src,
-                         t_evt_eth *dst, int len)
+static void eventfull_free_evt(t_evt *cur)
 {
-  t_evt_obj *mcur = g_obj_head;
-  t_evt_eth *cur;
-
-  src->pkt_tx += 1;
-  src->bytes_tx += len;
-  if (flag_allcast)
-    {
-    while(mcur)
-      {
-      cur = mcur->head_evt_eth;
-      while (cur)
-        {
-        if (cur != src)
-          {
-          cur->pkt_rx += 1;
-          cur->bytes_rx += len;
-          } 
-        cur = cur->next;
-        }
-      mcur = mcur->next;
-      }
-    }
-  else
-    {
-    dst->pkt_rx += 1;
-    dst->bytes_rx += len;
-    } 
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void add_chain_eth(t_evt_obj *vme, int num, uint8_t *mac)
-{
-  t_evt_eth *cur;
-  cur = (t_evt_eth *) malloc(sizeof(t_evt_eth));
-  memset(cur, 0, sizeof(t_evt_eth));
-  cur->eth = num;
-  memcpy(cur->mac, mac, 6);
-  if (vme->head_evt_eth)
-    vme->head_evt_eth->prev = cur;
-  cur->next = vme->head_evt_eth;
-  vme->head_evt_eth = cur;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void delete_chain_eth(t_evt_obj *vme)
-{
-  t_evt_eth *cur;
-  cur = vme->head_evt_eth;
   while (cur)
     {
     if (cur->prev) 
       cur->prev->next = cur->next;
     if (cur->next) 
       cur->next->prev = cur->prev;
-    if (cur==vme->head_evt_eth)
-      vme->head_evt_eth = cur->next;
-    cur = vme->head_evt_eth;
+    if (cur == g_head_evt)
+      g_head_evt = cur->next;
+    cur = cur->next;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void eventfull_alloc_evt(char *name, int num, uint8_t *mac)
+{
+  t_evt *cur = malloc(sizeof(t_evt));
+  memset(cur, 0, sizeof(t_evt));
+  memcpy(cur->name, name, MAX_NAME_LEN-1);
+  cur->num = num;
+  memcpy(cur->mac, mac, 6);
+  if (g_head_evt)
+    g_head_evt->prev = cur;
+  cur->next = g_head_evt;
+  g_head_evt = cur;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void update_stats(int flag_allcast, t_evt *src, t_evt *dst, int len)
+{
+  t_evt *cur;
+  src->pkt_tx += 1;
+  src->bytes_tx += len;
+  if (flag_allcast)
+    {
+    cur = g_head_evt;
+    while(cur)
+      {
+      if (cur != src)
+        {
+        cur->pkt_rx += 1;
+        cur->bytes_rx += len;
+        }
+      cur = cur->next;
+      }
+    }
+  else
+    {
+    dst->pkt_rx += 1;
+    dst->bytes_rx += len;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -170,69 +142,20 @@ static void delete_chain_eth(t_evt_obj *vme)
 /****************************************************************************/
 static void eventfull_can_be_sent(void *data)
 {
-  t_evt_obj *obj = g_obj_head;
-  t_evt_eth *cur;
+  t_evt *cur = g_head_evt;
   unsigned int ms = (unsigned int) cloonix_get_msec();
-  while(obj)
+  while(cur)
     {
-    cur = obj->head_evt_eth;
-    while(cur)
-      {
-      send_eventfull_tx_rx(obj->name, cur->eth, ms,
-                           cur->pkt_tx, cur->bytes_tx,
-                           cur->pkt_rx, cur->bytes_rx);
-      cur->pkt_tx   = 0;
-      cur->bytes_tx = 0;
-      cur->pkt_rx   = 0;
-      cur->bytes_rx = 0;
-      cur = cur->next;
-      }
-    obj = obj->next;
+    send_eventfull_tx_rx(cur->name, cur->num, ms,
+                         cur->pkt_tx, cur->bytes_tx,
+                         cur->pkt_rx, cur->bytes_rx);
+    cur->pkt_tx   = 0;
+    cur->bytes_tx = 0;
+    cur->pkt_rx   = 0;
+    cur->bytes_rx = 0;
+    cur = cur->next;
     }
   clownix_timeout_add(5, eventfull_can_be_sent, NULL, NULL, NULL);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void eventfull_obj_add(char *name, int num, uint8_t *mac)
-{
-  t_evt_obj *cur = find_evt_obj(name);
-  if (cur)
-    {
-    KERR("ADD OBJ %s %d More than a single eth?", name, num);
-    add_chain_eth(cur, num, mac);
-    }
-  else
-    {
-    cur = malloc(sizeof(t_evt_obj));
-    memset(cur, 0, sizeof(t_evt_obj));
-    memcpy(cur->name, name, MAX_NAME_LEN-1);
-    add_chain_eth(cur, num, mac);
-    if (g_obj_head) 
-      g_obj_head->prev = cur;
-    cur->next = g_obj_head;
-    g_obj_head = cur;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void eventfull_obj_del(char *name)
-{
-  t_evt_obj *cur = find_evt_obj(name);
-  if (!cur)
-    KERR("%s", name);
-  else
-    {
-    delete_chain_eth(cur);
-    if (cur->prev) 
-      cur->prev->next = cur->next;
-    if (cur->next) 
-      cur->next->prev = cur->prev;
-    if (cur==g_obj_head) 
-      g_obj_head = cur->next;
-    free(cur);
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -240,12 +163,10 @@ static void eventfull_obj_del(char *name)
 void eventfull_hook_spy(int len, uint8_t *buf)
 {
   int flag_allcast = buf[0] & 0x01;
-  t_evt_eth *src, *dst = NULL;
+  t_evt *src, *dst = NULL;
   if (!flag_allcast)
-    {
-    dst = get_eth_with_mac(&(buf[0]));
-    }
-  src = get_eth_with_mac(&(buf[6]));
+    dst = get_evt_with_mac(&(buf[0]));
+  src = get_evt_with_mac(&(buf[6]));
   if ((src != NULL) && ( (dst != NULL) || flag_allcast != 0)) 
     update_stats(flag_allcast, src, dst, len);
 }
@@ -254,11 +175,11 @@ void eventfull_hook_spy(int len, uint8_t *buf)
 /****************************************************************************/
 void eventfull_obj_update_begin(void)
 {
-  t_evt_obj *obj = g_obj_head;
-  while(obj)
+  t_evt *cur = g_head_evt;
+  while(cur)
     {
-    obj->to_be_erased = 1;
-    obj = obj->next;
+    cur->to_be_erased = 1;
+    cur = cur->next;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -268,9 +189,9 @@ void eventfull_obj_update_item(char *name, int num, char *strmac)
 {
   int i, imac[6];
   uint8_t mac[6];
-  t_evt_obj *obj = find_evt_obj(name);
-  if (obj)
-    obj->to_be_erased = 0;
+  t_evt *cur = find_evt(name, num);
+  if (cur)
+    cur->to_be_erased = 0;
   else
     {
     if (sscanf(strmac, "%02x:%02x:%02x:%02x:%02x:%02x", 
@@ -281,23 +202,22 @@ void eventfull_obj_update_item(char *name, int num, char *strmac)
       {
       for (i=0; i<6; i++)
         mac[i] = (uint8_t)(imac[i] & 0xFF); 
-      eventfull_obj_add(name, num, mac);
+      eventfull_alloc_evt(name, num, mac);
       }
     }
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 void eventfull_obj_update_end(void)
 {
-  t_evt_obj *nobj, *obj = g_obj_head;
-  while(obj)
+  t_evt *next, *cur = g_head_evt;
+  while(cur)
     {
-    nobj = obj->next;
-    if (obj->to_be_erased == 1)
-      eventfull_obj_del(obj->name);
-    obj = nobj;
+    next = cur->next;
+    if (cur->to_be_erased == 1)
+      eventfull_free_evt(cur);
+    cur = next;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -309,10 +229,9 @@ void eventfull_init_start(void)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 void eventfull_init(void)
 {
-  g_obj_head = NULL;
+  g_head_evt = NULL;
 }
 /*--------------------------------------------------------------------------*/

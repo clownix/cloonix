@@ -794,7 +794,8 @@ int cloonix_connect_remote(char *tree,
                            char *vmname,
                            char *password)
 {
-  int  ip=0, port=0;
+  uint32_t  ip=0;
+  int  port=0;
   memset(g_cloonix_name, 0, 100);
   memset(g_cloonix_display, 0, 100);
   memset(g_xauth_cookie_format, 0, MAX_XAUTH_COOKIE);

@@ -51,7 +51,7 @@ static char g_pcap_file[MAX_PATH_LEN];
 static char g_snf_socket[MAX_PATH_LEN];
 static char g_runtime[MAX_PATH_LEN];
 static char g_prefix[MAX_PATH_LEN];
-static char *g_rte_argv[5];
+static char *g_rte_argv[6];
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -166,7 +166,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       cirspy_init();
       rpct_send_diag_msg(NULL, llid, tid, "cloonixsnf_suidroot_ok");
       setenv("XDG_RUNTIME_DIR", g_runtime, 1);
-      ret = rte_eal_init(3, g_rte_argv);
+      ret = rte_eal_init(4, g_rte_argv);
       if (ret < 0)
         KOUT("Cannot init EAL\n");
       vhost_client_start(g_snf_socket, g_memid);
@@ -268,7 +268,8 @@ int main (int argc, char *argv[])
   g_rte_argv[0] = argv[0];
   g_rte_argv[1] = g_prefix;
   g_rte_argv[2] = "--proc-type=secondary";
-  g_rte_argv[3] = NULL;
+  g_rte_argv[3] = "--log-level=5";
+  g_rte_argv[4] = NULL;
   daemon(0,0);
   seteuid(getuid());
   cloonix_set_pid(getpid());

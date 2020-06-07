@@ -45,6 +45,8 @@
 #include "machine.h"
 #include "txq_dpdk.h"
 #include "utils.h"
+#include "ssh_cisco_llid.h"
+#include "ssh_cisco_dpdk.h"
 
 /*--------------------------------------------------------------------------*/
 static int  g_llid;
@@ -56,7 +58,9 @@ static char g_root_path[MAX_PATH_LEN];
 static char g_nat_socket[MAX_PATH_LEN];
 static char g_runtime[MAX_PATH_LEN];
 static char g_prefix[MAX_PATH_LEN];
-static char *g_rte_argv[5];
+static char g_ctrl_path[MAX_PATH_LEN];
+static char g_cisco_path[MAX_PATH_LEN];
+static char *g_rte_argv[6];
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -119,6 +123,15 @@ static void heartbeat (int delta)
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+void req_unix2inet_conpath_evt(int llid, char *name)
+{
+  char msg[MAX_PATH_LEN];
+  sprintf(msg, "unix2inet_conpath_evt_monitor llid=%d name=%s", llid, name);
+  rpct_send_app_msg(NULL, g_llid, 0, msg);
+}
+/*---------------------------------------------------------------------------*/
+
 /****************************************************************************/
 void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
 {
@@ -134,11 +147,45 @@ void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void end_clean_unlink(void)
+{
+  unlink(g_ctrl_path);
+  unlink(g_cisco_path);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void rpct_recv_kil_req(void *ptr, int llid, int tid)
 {
   vhost_client_end_and_exit();
 }
 /*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_recv_cli_req(void *ptr, int llid, int tid,
+                    int cli_llid, int cli_tid, char *line)
+{
+  char resp[MAX_PATH_LEN];
+  char name[MAX_NAME_LEN];
+  char str_ip[MAX_NAME_LEN];
+  uint32_t addr_ip;
+  memset(resp, 0, MAX_PATH_LEN);
+  if (sscanf(line, "whatip %s", name) == 1)
+    {
+    addr_ip = machine_ip_get(name);
+    if (addr_ip)
+      {
+      int_to_ip_string (addr_ip, str_ip);
+      snprintf(resp, MAX_PATH_LEN-1, "RESPOK %s %s", name, str_ip);
+      }
+    else
+      snprintf(resp, MAX_PATH_LEN-1, "RESPKO UNKNOWN IP FOR VM: %s", name);
+    }
+  else
+    snprintf(resp, MAX_PATH_LEN-1, "RESPKO NO CMD: %s", line);
+  rpct_send_cli_resp(ptr, llid, tid, cli_llid, cli_tid, resp);
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
@@ -162,11 +209,13 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       {
       rpct_send_diag_msg(NULL, llid, tid, "cloonixnat_suidroot_ok");
       setenv("XDG_RUNTIME_DIR", g_runtime, 1);
-      ret = rte_eal_init(3, g_rte_argv);
+      ret = rte_eal_init(4, g_rte_argv);
       if (ret < 0)
         KOUT("Cannot init EAL\n");
       machine_init();
       txq_dpdk_init();
+      ssh_cisco_llid_init(g_cisco_path);
+      ssh_cisco_dpdk_init();
       vhost_client_start(g_nat_socket, g_memid);
       }
     }
@@ -231,9 +280,8 @@ static void fct_timeout_self_destruct(void *data)
 /****************************************************************************/
 int main (int argc, char *argv[])
 {
-  char ctrl_path[MAX_PATH_LEN];
   char *root = g_root_path;
-  char *sock = NAT_DPDK_SOCK_DIR;
+  char *sock = ENDP_SOCK_DIR;
   char *net = g_net_name;
   char *nat = g_nat_name;
   if (argc != 4)
@@ -246,23 +294,27 @@ int main (int argc, char *argv[])
   memset(g_nat_socket, 0, MAX_PATH_LEN);
   memset(g_runtime, 0, MAX_PATH_LEN);
   memset(g_prefix, 0, MAX_PATH_LEN);
-  memset(ctrl_path, 0, MAX_PATH_LEN);
+  memset(g_ctrl_path, 0, MAX_PATH_LEN);
+  memset(g_cisco_path, 0, MAX_PATH_LEN);
   strncpy(g_net_name,  argv[1], MAX_NAME_LEN-1);
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
   strncpy(g_nat_name,  argv[3], MAX_NAME_LEN-1);
   snprintf(g_runtime, MAX_PATH_LEN-1, "%s/dpdk", root);
   snprintf(g_nat_socket, MAX_PATH_LEN-1, "%s/dpdk/na_%s", root, nat);
-  snprintf(g_prefix,MAX_PATH_LEN-1,"--file-prefix=cloonix%s", net);
-  snprintf(ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, nat);
+  snprintf(g_prefix, MAX_PATH_LEN-1, "--file-prefix=cloonix%s", net);
+  snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, nat);
+  snprintf(g_cisco_path, MAX_PATH_LEN-1,"%s/%s/%s_0_u2i", root, sock, nat);
   snprintf(g_memid, MAX_NAME_LEN-1, "%s%s", net, nat);
-  unlink(ctrl_path);
+  unlink(g_ctrl_path);
+  unlink(g_cisco_path);
   msg_mngt_init("nat_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
-  string_server_unix(ctrl_path, connect_from_ctrl_client, "ctrl");
+  string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");
   g_rte_argv[0] = argv[0];
   g_rte_argv[1] = g_prefix;
   g_rte_argv[2] = "--proc-type=secondary";
-  g_rte_argv[3] = NULL;
+  g_rte_argv[3] = "--log-level=5";
+  g_rte_argv[4] = NULL;
   daemon(0,0);
   utils_init();
   seteuid(getuid());

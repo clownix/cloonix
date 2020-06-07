@@ -36,7 +36,7 @@ int doorways_tx_or_rx_still_in_queue(int llid);
 /*--------------------------------------------------------------------------*/
 int doorways_tx(int llid, int tid, int type, int val, int len, char *buf);
 /*---------------------------------------------------------------------------*/
-int doorways_sock_client_inet_start(int ip, int port, t_fd_event conn_rx);
+int doorways_sock_client_inet_start(uint32_t ip, int port, t_fd_event conn_rx);
 /*---------------------------------------------------------------------------*/
 void doorways_sock_client_inet_delete(int llid);
 /*---------------------------------------------------------------------------*/

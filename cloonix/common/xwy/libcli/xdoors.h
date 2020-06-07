@@ -16,5 +16,5 @@
 /*                                                                           */
 /*****************************************************************************/
 void xdoors_connect(int cli_idx);
-void xdoors_connect_init(int ip, int port, char *passwd,
+void xdoors_connect_init(uint32_t ip, int port, char *passwd,
                          int action, char *cmd, char *src, char *dst);

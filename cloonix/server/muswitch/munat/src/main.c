@@ -276,6 +276,12 @@ static void get_dns_addr(char *dns_ip)
 /*****************************************************************************/
 void clean_before_exit(void *ptr)
 {
+  t_all_ctx *all_ctx = (t_all_ctx *) ptr;
+  char tcp_path[MAX_PATH_LEN];
+  char *pth = all_ctx->g_path;
+  memset(tcp_path, 0, MAX_PATH_LEN);
+  snprintf(tcp_path, MAX_PATH_LEN-1, "%s_u2i", pth);
+  unlink(tcp_path);
 }
 /*---------------------------------------------------------------------------*/
 

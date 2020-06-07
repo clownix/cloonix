@@ -18,18 +18,7 @@ if [ ! -d ${HOME}/cloonix_data/bulk ]; then
   exit 1
 fi
 
-TYPE=$1
-case "${TYPE}" in
-  "cisco0")
-    ;;
-  "cisco3")
-    ;;
-  *)
-    echo ERROR FIRST PARAM: ${TYPE} Choice: cisco0 cisco3 
-    echo cisco0: the dhcp done on eth0
-    echo cisco3: the dhcp done on eth3
-    exit 1
-esac
+TYPE=cisco4
 
 CISCO_PRECONFIG_ISO=${HERE}/pre_configs/preconfig_${TYPE}.iso
 if [ ! -e ${CISCO_PRECONFIG_ISO} ]; then
@@ -70,7 +59,7 @@ echo Loading the preconfiguration...
 sleep 2
 echo
 echo
-for i in tap71 tap72 tap73 tap74 ; do
+for i in tap71 tap72 tap73 tap74 tap75 ; do
   sudo ip tuntap add dev ${i} mode tap
 done
 
@@ -90,13 +79,13 @@ sudo ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 \
             -device virtio-net-pci,netdev=net73 \
             -netdev type=tap,id=net74,ifname=tap74 \
             -device virtio-net-pci,netdev=net74 \
+            -netdev type=tap,id=net75,ifname=tap75 \
+            -device virtio-net-pci,netdev=net75 \
             -cdrom ${CISCO_PRECONFIG_ISO}
 echo
-for i in tap71 tap72 tap73 tap74 ; do
+for i in tap71 tap72 tap73 tap74 tap75 ; do
   sudo ip tuntap del dev ${i} mode tap
 done
 echo
-
-
 
 

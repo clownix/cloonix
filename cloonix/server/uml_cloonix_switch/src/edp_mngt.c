@@ -461,6 +461,87 @@ t_edp *edp_mngt_get_head_edp(int *nb_edp)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timer_add_nat_vm(void *data)
+{
+  char *name = (char *) data;
+  t_vm *vm = cfg_get_vm(name);
+  char err[MAX_PATH_LEN];
+  char cisconat[MAX_NAME_LEN];
+  char lan[MAX_NAME_LEN];
+  int num;
+  if (!vm)
+    KERR("%s", name);
+  else
+    {
+    memset(cisconat, 0, MAX_NAME_LEN);
+    memset(lan, 0, MAX_NAME_LEN);
+    snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
+    snprintf(lan, MAX_NAME_LEN-1, "lan_nat_%s", name);
+    num = vm->kvm.vm_config_param;
+    if (vm->kvm.eth_table[num].eth_type == eth_type_sock)
+      {
+      if (endp_evt_add_lan(0, 0, name, num, lan, 0))
+        KERR("%s %d", name, num);
+      else if (edp_mngt_add_lan(0, 0, cisconat, lan, err))
+        KERR("ERROR CREATING CISCO NAT LAN %s %s", lan, err);
+      }
+    else if (vm->kvm.eth_table[num].eth_type == eth_type_dpdk)
+      {
+      if (!dpdk_dyn_eth_exists(name, num))
+        KERR("%s %d", name, num);
+      else
+        {
+        if (dpdk_dyn_add_lan_to_eth(0, 0, lan, name, num, err))
+          KERR("%s %d %s", name, num, err);
+        else if (edp_mngt_add_lan(0, 0, cisconat, lan, err))
+          KERR("ERROR CREATING CISCO NAT LAN %s %s", lan, err);
+        }
+      }
+    else
+      KERR("%s %d", name, num);
+    } 
+  free(data);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void edp_mngt_cisco_nat_create(char *name)
+{
+  t_vm *vm = cfg_get_vm(name);
+  char cisconat[MAX_NAME_LEN];
+  char *nm;
+  if (!vm)
+    KERR("ERROR CREATING CISCO NAT %s", name);
+  else
+    {  
+    memset(cisconat, 0, MAX_NAME_LEN);
+    snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
+    if (edp_mngt_add(0, 0, cisconat, endp_type_nat))
+      {
+      KERR("ERROR CREATING CISCO NAT %s", cisconat);
+      }
+    else
+      {
+      nm = (char *) malloc(MAX_NAME_LEN);
+      memset(nm, 0, MAX_NAME_LEN);
+      strncpy(nm, name, MAX_NAME_LEN-1);
+      clownix_timeout_add(300, timer_add_nat_vm, (void *)nm, NULL, NULL);
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void edp_mngt_cisco_nat_destroy(char *name)
+{
+  char cisconat[MAX_NAME_LEN];
+  memset(cisconat, 0, MAX_NAME_LEN);
+  snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
+  edp_mngt_del(0, 0, cisconat);
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void edp_mngt_init(void)
 {
   g_nb_edp   = 0;

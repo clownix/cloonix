@@ -44,7 +44,7 @@ typedef struct t_xdoors
 static t_xdoors *g_xdoors[CLOWNIX_MAX_CHANNELS];
 static int g_inhib_timeout;
 static char g_passwd[MSG_DIGEST_LEN];
-static int g_doors_ip;
+static uint32_t g_doors_ip;
 static int g_doors_port;
 static int g_action;
 static char *g_cmd, *g_src, *g_dst;
@@ -295,7 +295,7 @@ void xdoors_connect(int cli_idx)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void xdoors_connect_init(int ip, int port, char *passwd,
+void xdoors_connect_init(uint32_t ip, int port, char *passwd,
                          int action, char *cmd, char *src, char *dst)
 {
   int llid;

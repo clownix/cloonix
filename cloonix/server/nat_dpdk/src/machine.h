@@ -15,6 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int machine_name_exists_with_ip(uint32_t ip, char *name);
+uint32_t machine_ip_get(char *name);
 void machine_begin(void);
 void machine_add(char *name, int num, uint8_t *mc);
 void machine_end(void);

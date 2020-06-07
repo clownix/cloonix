@@ -145,7 +145,7 @@ char *get_full_bin_path(char *input_callbin)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int get_ip_port_from_path(char *param, int *ip, int *port)
+int get_ip_port_from_path(char *param, uint32_t *ip, int *port)
 {
   char pm[MAX_PATH_LEN];
   int result = -1;

@@ -184,8 +184,6 @@ void tcp_qstore_enqueue(t_flagseq *flseq, int data_len, uint8_t *data)
 /****************************************************************************/
 void tcp_qstore_flush_backup_seq(t_flagseq *flseq, uint32_t local_seq)
 {
-  if (local_seq > 0xFFFFFFF)
-    KERR("BIG local_seq %X", local_seq);
   while ((flseq->head_qstore_backup) &&
          (flseq->head_qstore_backup->local_seq < local_seq))
     {

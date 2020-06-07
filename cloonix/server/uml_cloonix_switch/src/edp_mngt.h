@@ -39,6 +39,9 @@ typedef struct t_edp
   struct t_edp *next;
 } t_edp;
 /*--------------------------------------------------------------------------*/
+void edp_mngt_cisco_nat_destroy(char *name);
+void edp_mngt_cisco_nat_create(char *name);
+
 t_edp *edp_mngt_lan_find(char *lan);
 t_edp *edp_mngt_edp_find(char *name);
 void edp_mngt_edp_free(t_edp *cur);

@@ -1293,8 +1293,8 @@ static void delayed_add_vm(t_timer_zombie *tz)
   int nb_sock = 0, nb_dpdk = 0, nb_vhost = 0, nb_wlan = 0;
   char mac[6];
   char info[MAX_PRINT_LEN];
-  char cisco_nat_name[2*MAX_NAME_LEN];
-  char lan_cisco_nat_name[2*MAX_NAME_LEN];
+  char cisconat_name[2*MAX_NAME_LEN];
+  char lan_cisconat_name[2*MAX_NAME_LEN];
   char use[MAX_PATH_LEN];
   char *vhost_ifname;
   t_add_vm_cow_look *cow_look;
@@ -1303,12 +1303,12 @@ static void delayed_add_vm(t_timer_zombie *tz)
   t_vm   *vm = cfg_get_vm(kvm->name);
   info[0] = 0;
   memset(mac, 0, 6);
-  memset(cisco_nat_name, 0, 2*MAX_NAME_LEN);
-  memset(lan_cisco_nat_name, 0, 2*MAX_NAME_LEN);
-  snprintf(cisco_nat_name, 2*MAX_NAME_LEN-1, "nat_%s", kvm->name);
-  snprintf(lan_cisco_nat_name, 2*MAX_NAME_LEN-1, "lan_nat_%s", kvm->name);
-  cisco_nat_name[MAX_NAME_LEN-1] = 0;
-  lan_cisco_nat_name[MAX_NAME_LEN-1] = 0;
+  memset(cisconat_name, 0, 2*MAX_NAME_LEN);
+  memset(lan_cisconat_name, 0, 2*MAX_NAME_LEN);
+  snprintf(cisconat_name, 2*MAX_NAME_LEN-1, "nat_%s", kvm->name);
+  snprintf(lan_cisconat_name, 2*MAX_NAME_LEN-1, "lan_nat_%s", kvm->name);
+  cisconat_name[MAX_NAME_LEN-1] = 0;
+  lan_cisconat_name[MAX_NAME_LEN-1] = 0;
   if (cfg_is_a_zombie(kvm->name))
     KOUT("%s", kvm->name);
   if (vm)
@@ -1331,11 +1331,11 @@ static void delayed_add_vm(t_timer_zombie *tz)
     send_status_ko(llid, tid, info);
     }
   else if ((kvm->vm_config_flags & VM_CONFIG_FLAG_CISCO) && 
-           ((cfg_name_is_in_use(0, cisco_nat_name, use)) ||
-            (cfg_name_is_in_use(0, lan_cisco_nat_name, use))))
+           ((cfg_name_is_in_use(0, cisconat_name, use)) ||
+            (cfg_name_is_in_use(0, lan_cisconat_name, use))))
     {
     sprintf(info, "Cisco needs nat \"%s\" or \"%s\", already exists",
-            cisco_nat_name, lan_cisco_nat_name);
+            cisconat_name, lan_cisconat_name);
     event_print("%s", info);
     recv_coherency_unlock();
     send_status_ko(llid, tid, info);

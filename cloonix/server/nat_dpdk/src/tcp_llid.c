@@ -158,11 +158,11 @@ static void timeout_connect(void *data)
     if (lid == 0)
       {
       KERR("%X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
-      tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, 0, -1);
+      tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, -1);
       }
     else
       {
-      tcp_connect_resp(ctx->sip,ctx->dip,ctx->sport,ctx->dport,ctx->fd,lid,0);
+      tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, lid, 0);
       }
     free(ctx);
     }
@@ -173,7 +173,7 @@ static void timeout_connect(void *data)
     if (ctx->count == 200)
       {
       KERR("%X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
-      tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, 0, -1);
+      tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, -1);
       free(ctx);
       }
     else
@@ -182,7 +182,7 @@ static void timeout_connect(void *data)
       if (ctx->fd < 0)
         {
         KERR("%X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
-        tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport,0,0,-1);
+        tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, -1);
         free(ctx);
         }
       else
@@ -222,7 +222,7 @@ void tcp_llid_connect(uint32_t sip, uint32_t dip,
   if (fd < 0)
     {
     KERR("%X %X %d %d", sip, dip, sport & 0xFFFF, dport & 0xFFFF);
-    tcp_connect_resp(sip, dip, sport, dport, 0, 0, -1);
+    tcp_connect_resp(sip, dip, sport, dport, 0, -1);
     }
   else
     {

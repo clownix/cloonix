@@ -42,6 +42,7 @@
 #include "doorways_mngt.h"
 #include "suid_power.h"
 #include "nat_dpdk_process.h"
+#include "edp_mngt.h"
 
 
 char **get_saved_environ(void);
@@ -439,7 +440,7 @@ char *utils_get_dpdk_snf_dir(void)
 char *utils_get_dpdk_nat_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s", cfg_get_root_work(), NAT_DPDK_SOCK_DIR);
+  sprintf(dpdk, "%s/%s", cfg_get_root_work(), ENDP_SOCK_DIR);
   return dpdk;
 }
 /*---------------------------------------------------------------------------*/
@@ -586,6 +587,10 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
       vhost_ifname = vhost_ident_get(vm->kvm.vm_id, i);
       suid_power_rec_name(vhost_ifname, 1);
       }
+    }
+  if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
+    {
+    edp_mngt_cisco_nat_create(vm->kvm.name);
     }
   nat_dpdk_vm_event();
 }

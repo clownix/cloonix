@@ -117,6 +117,21 @@ static t_arp_ip *find_arp_ip(uint8_t *mac)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static t_arp_ip *find_arp_with_ip(uint32_t ip)
+{
+  t_arp_ip *cur = g_head_arp_ip;
+  while(cur)
+    {
+    if ((ip) && (cur->ip == ip))
+      break;
+    cur = cur->next;
+    }
+  return cur;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 void machine_begin(void)
 {
   t_machine *cur = g_head_machine;
@@ -125,6 +140,51 @@ void machine_begin(void)
     cur->to_be_deleted = 1;
     cur = cur->next;
     }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int machine_name_exists_with_ip(uint32_t ip, char *name)
+{
+  uint32_t result = 0;
+  t_arp_ip *arp = find_arp_with_ip(ip);
+  t_machine *cur = g_head_machine;
+  memset(name, 0, MAX_NAME_LEN);
+  while(cur)
+    {
+    if (!memcmp(cur->mac, arp->mac, 6))
+      break;
+    cur = cur->next;
+    }
+  if (cur)
+    {
+    result = 1;
+    strncpy(name, cur->name, MAX_NAME_LEN-1); 
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+uint32_t machine_ip_get(char *name)
+{
+  uint32_t result = 0;
+  t_arp_ip *arp;
+  t_machine *cur = g_head_machine;
+  while(cur)
+    {
+    if (!strcmp(cur->name, name))
+      {
+      arp = find_arp_ip(cur->mac);
+      if (arp)
+        {
+        result = arp->ip;
+        break;
+        }
+      }
+    cur = cur->next;
+    }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 

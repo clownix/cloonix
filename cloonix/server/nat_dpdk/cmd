@@ -75,6 +75,8 @@ sources = files('src/nat_dpdk.c',
                 'src/txq_dpdk.c',
                 'src/rxq_dpdk.c',
                 'src/utils.c',
+                'src/ssh_cisco_llid.c',
+                'src/ssh_cisco_dpdk.c',
                 'src/stub.c')
 
 executable('cloonix_nat_dpdk', sources, include_directories : incdir,

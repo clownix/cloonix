@@ -21,7 +21,7 @@ typedef struct t_c2c
   char tux_path[MAX_PATH_LEN];
   char passwd[MSG_DIGEST_LEN];
   int  peer_idx;
-  int  peer_ip;
+  uint32_t peer_ip;
   int  peer_port;
   int  connect_llid;
   long long connect_abs_beat_timer;
@@ -37,7 +37,7 @@ typedef struct t_c2c
 void c2c_from_switch_req_idx(char *name);
 void c2c_from_switch_req_free(char *name);
 void c2c_from_switch_req_conx(char *name, int peer_idx, 
-                              int peer_ip, int peer_port, char *passwd);
+                              uint32_t peer_ip, int peer_port, char *passwd);
 void c2c_server_dispach_rx_init(int dido_llid, int val, int len, char *buf);
 void c2c_server_dispach_rx_traf(int dido_llid, int val, int len, char *buf);
 t_c2c *c2c_get_llid_ctx(int llid);
