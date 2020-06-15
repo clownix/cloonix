@@ -295,8 +295,6 @@ void send_add_vm(int llid, int tid, t_topo_kvm *kvm);
 void recv_add_vm(int llid, int tid, t_topo_kvm *kvm);
 void send_sav_vm(int llid, int tid, char *name, int type, char *sav_vm_path);
 void recv_sav_vm(int llid, int tid, char *name, int type, char *sav_vm_path);
-void send_sav_vm_all(int llid, int tid, int type, char *sav_vm_path);
-void recv_sav_vm_all(int llid, int tid, int type, char *sav_vm_path);
 
 void send_add_sat(int llid, int tid, char *name,int type,t_c2c_req_info *c2c);
 void recv_add_sat(int llid, int tid, char *name,int type,t_c2c_req_info *c2c);
@@ -324,8 +322,8 @@ void recv_list_pid_req(int llid, int tid);
 void send_list_pid_resp(int llid, int tid, int qty, t_pid_lst *pid);
 void recv_list_pid_resp(int llid, int tid, int qty, t_pid_lst *pid);
 
-void send_list_commands_req(int llid, int tid);
-void recv_list_commands_req(int llid, int tid);
+void send_list_commands_req(int llid, int tid, int is_layout);
+void recv_list_commands_req(int llid, int tid, int is_layout);
 
 void send_list_commands_resp(int llid, int tid, int qty, t_list_commands *list);
 void recv_list_commands_resp(int llid, int tid, int qty, t_list_commands *list);

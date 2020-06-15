@@ -51,8 +51,23 @@ static char g_pcap_file[MAX_PATH_LEN];
 static char g_snf_socket[MAX_PATH_LEN];
 static char g_runtime[MAX_PATH_LEN];
 static char g_prefix[MAX_PATH_LEN];
+static char g_ctrl_path[MAX_PATH_LEN];
 static char *g_rte_argv[6];
 /*--------------------------------------------------------------------------*/
+
+
+#define RANDOM_APPEND_SIZE 8
+/*****************************************************************************/
+static char *random_str(void)
+{ 
+  static char rd[RANDOM_APPEND_SIZE+1];
+  int i; 
+  memset (rd, 0 , RANDOM_APPEND_SIZE+1);
+  for (i=0; i<RANDOM_APPEND_SIZE; i++)
+    rd[i] = 'A' + (rand() % 26);
+  return rd;
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int check_and_set_uid(void)
@@ -129,6 +144,13 @@ void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
     KERR("%s %s %s %d %d", g_net_name, name, g_snf_name, llid, g_llid);
   rpct_send_pid_resp(ptr, llid, tid, name, num, cloonix_get_pid(), getpid());
   g_watchdog_ok = 1;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void end_clean_unlink(void)
+{
+  unlink(g_ctrl_path);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -234,7 +256,6 @@ static void fct_timeout_self_destruct(void *data)
 /****************************************************************************/
 int main (int argc, char *argv[])
 {
-  char ctrl_path[MAX_PATH_LEN];
   char *root = g_root_path;
   char *sock = SNF_DPDK_SOCK_DIR;
   char *net = g_net_name;
@@ -250,7 +271,7 @@ int main (int argc, char *argv[])
   memset(g_snf_socket, 0, MAX_PATH_LEN);
   memset(g_runtime, 0, MAX_PATH_LEN);
   memset(g_prefix, 0, MAX_PATH_LEN);
-  memset(ctrl_path, 0, MAX_PATH_LEN);
+  memset(g_ctrl_path, 0, MAX_PATH_LEN);
   memset(g_pcap_file, 0, MAX_PATH_LEN);
   strncpy(g_net_name,  argv[1], MAX_NAME_LEN-1);
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
@@ -259,12 +280,16 @@ int main (int argc, char *argv[])
   snprintf(g_runtime, MAX_PATH_LEN-1, "%s/dpdk", root);
   snprintf(g_snf_socket, MAX_PATH_LEN-1, "%s/dpdk/mi_%s", root, snf);
   snprintf(g_prefix,MAX_PATH_LEN-1,"--file-prefix=cloonix%s", net);
-  snprintf(ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, snf);
-  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s", net, snf);
-  unlink(ctrl_path);
+  snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, snf);
+  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s%s", net, snf, random_str());
+  if (!access(g_ctrl_path, F_OK))                                       
+    {
+    KERR("%s exists ERASING", g_ctrl_path);
+    unlink(g_ctrl_path);
+    }
   msg_mngt_init("snf_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
-  string_server_unix(ctrl_path, connect_from_ctrl_client, "ctrl");
+  string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");
   g_rte_argv[0] = argv[0];
   g_rte_argv[1] = g_prefix;
   g_rte_argv[2] = "--proc-type=secondary";

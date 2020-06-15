@@ -12,7 +12,7 @@ LIST="centos8 \
 
 
 #######################################################################
-is_started=$(cloonix_cli $NET lst |grep cloonix_net)
+is_started=$(cloonix_cli $NET pid |grep cloonix_server)
 if [ "x$is_started" != "x" ]; then
   cloonix_cli $NET kil
   echo waiting 20 sec

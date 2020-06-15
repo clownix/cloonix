@@ -558,21 +558,20 @@ int endp_evt_lan_is_in_use(char *lan, int *type)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int endp_evt_lan_is_in_use_by_other(char *name, char *lan, int *type)
+int endp_evt_lan_is_in_use_by_vm_or_c2c(char *lan)
 {
-  int tidx, result = 0;
+  int tidx, endp_type, result = 0;
   t_evendp *cur;
   if ((!lan) || (!lan[0]))
     KOUT(" ");
-  *type = 0;
-
   cur = endp_find_next_with_lan(NULL, lan, &tidx);
   while (cur)
     {
-    if (!endp_mngt_exists(cur->name, cur->num, type))
+    if (!endp_mngt_exists(cur->name, cur->num, &endp_type))
       KOUT("%s %d", cur->name, cur->num);
-    if (strcmp(cur->name, name))
-      break;
+    if ((endp_type == endp_type_kvm_sock) ||
+        (endp_type == endp_type_c2c))
+      result += 1;
     cur = endp_find_next_with_lan(cur, lan, &tidx);
     }
   if (cur == NULL)
@@ -580,15 +579,14 @@ int endp_evt_lan_is_in_use_by_other(char *name, char *lan, int *type)
     cur = endp_find_next_with_attached_lan(NULL, lan, &tidx);
     while (cur)
       {
-      if (!endp_mngt_exists(cur->name, cur->num, type))
+      if (!endp_mngt_exists(cur->name, cur->num, &endp_type))
         KOUT("%s %d", cur->name, cur->num);
-      if (strcmp(cur->name, name))
-        break;
+      if ((endp_type == endp_type_kvm_sock) ||
+          (endp_type == endp_type_c2c))
+        result += 1;
       cur = endp_find_next_with_attached_lan(cur, lan, &tidx);
       }
     }
-  if (cur)
-    result = 1;
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -625,13 +623,16 @@ int endp_evt_del_lan(char *name, int num, int tidx, char *lan)
       result = 0;
       mulan_test_stop(lan);
       if ((evendp->endp_type == endp_type_phy) ||
+          (evendp->endp_type == endp_type_nat) ||
+          (evendp->endp_type == endp_type_snf) ||
+          (evendp->endp_type == endp_type_pci) ||
           (evendp->endp_type == endp_type_tap))
         {
-        edp_evt_lan_del_done(eth_type_sock, lan);
+        edp_evt_update_non_fix_del(eth_type_sock, name, lan);
         }
       else
         {
-        edp_evt_update_eth_type(0, 0, 0, eth_type_sock, name, lan);
+        edp_evt_update_fix_type_del(eth_type_sock, name, lan);
         }
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
@@ -665,14 +666,13 @@ void endp_evt_connect_OK(char *name, int num, char *lan, int tidx, int rank)
       if ((evendp->endp_type == endp_type_phy) ||
           (evendp->endp_type == endp_type_tap))
         {
-        resp_to_cli(name, num, llid, tid, 1, lan);
-        edp_evt_lan_add_done(eth_type_sock, lan);
+        edp_evt_update_non_fix_add(eth_type_sock, name, lan);
         }
       else
         {
-        if (edp_evt_update_eth_type(llid, tid, 1, eth_type_sock, name, lan))
-          resp_to_cli(name, num, llid, tid, 1, lan);
+        edp_evt_update_fix_type_add(eth_type_sock, name, lan);
         }
+      resp_to_cli(name, num, llid, tid, 1, lan);
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
     else

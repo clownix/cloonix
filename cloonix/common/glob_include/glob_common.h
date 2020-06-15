@@ -95,7 +95,6 @@
 
 #define MAC_ADDR_LEN 6
 #define VM_CONFIG_FLAG_PERSISTENT      0x00001
-#define VM_CONFIG_FLAG_EVANESCENT      0x00002
 #define VM_CONFIG_FLAG_9P_SHARED       0x00004
 #define VM_CONFIG_FLAG_FULL_VIRT       0x00008
 #define VM_CONFIG_FLAG_BALLOONING      0x00010
@@ -190,6 +189,7 @@ typedef struct t_lan_group
 typedef struct t_eth_table
 {
   int  eth_type;
+  int  randmac;
   char mac_addr[8];
   char vhost_ifname[IFNAMSIZ];
 } t_eth_table;

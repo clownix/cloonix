@@ -719,10 +719,8 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
       wake_up->state = auto_delay_possible_ovs_start;
       if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
         arm_static_vm_timeout(name, 1);
-      else if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_EVANESCENT)
-        derived_file_creation_request(vm);
       else
-        KOUT("%X", vm->kvm.vm_config_flags);
+        derived_file_creation_request(vm);
       break;
     case auto_delay_possible_ovs_start:
       for (i = 0; i < vm->kvm.nb_tot_eth; i++)

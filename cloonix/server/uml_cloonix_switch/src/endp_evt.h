@@ -19,7 +19,7 @@ int  endp_evt_exists(char *name, int num);
 int  endp_evt_lan_full(char *name, int num, int *tidx);
 int  endp_evt_lan_find(char *name, int num, char *lan, int *tidx);
 int  endp_evt_lan_is_in_use(char *lan, int *type);
-int  endp_evt_lan_is_in_use_by_other(char *name, char *lan, int *type);
+int  endp_evt_lan_is_in_use_by_vm_or_c2c(char *lan);
 int  endp_evt_add_lan(int llid, int tid, char *name, int num,
                       char *lan, int tidx);
 int  endp_evt_del_lan(char *name, int num, int tidx, char *lan);

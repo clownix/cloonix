@@ -186,6 +186,7 @@ struct cmd_struct level_main_cmd[] = {
 {"dcf", "Dump config", NULL,  cmd_config_dump, NULL},
 {"dmp", "Dump topo", NULL,  cmd_topo_dump, NULL},
 {"lst", "List commands to replay topo", NULL,  cmd_list_commands, NULL},
+{"lay", "List topo layout", NULL,  cmd_lay_commands, NULL},
 {"add", "Add one cloonix object to topo", level_add_cmd, NULL, NULL},
 {"del", "Del one cloonix object from topo", level_del_cmd, NULL, NULL},
 {"sav", "Save sub-menu", level_sav_cmd, NULL,  NULL},

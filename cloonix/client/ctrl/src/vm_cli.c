@@ -132,14 +132,10 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
   char *endptr;
   int prop_param = 0;
 
-  prop_flags |= VM_CONFIG_FLAG_EVANESCENT;
   for (i=0; i<argc; i++)
     {
     if (!strcmp(argv[i], "--persistent"))
-      {
       prop_flags |= VM_CONFIG_FLAG_PERSISTENT;
-      prop_flags &= ~VM_CONFIG_FLAG_EVANESCENT;
-      }
     else if (!strcmp(argv[i], "--fullvirt"))
       prop_flags |= VM_CONFIG_FLAG_FULL_VIRT;
     else if (!strcmp(argv[i], "--balloon"))

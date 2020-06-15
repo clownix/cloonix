@@ -184,7 +184,7 @@ void extremely_last_action(void *data)
         tot -= 1;
       if (!strcmp(lst[i].name, "xwy"))
         tot -= 1;
-      if (!strcmp(lst[i].name, "switch"))
+      if (!strcmp(lst[i].name, "cloonix_server"))
         tot -= 1;
       if (!strcmp(lst[i].name, "suid_power"))
         tot -= 1;

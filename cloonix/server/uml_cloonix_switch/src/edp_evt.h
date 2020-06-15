@@ -16,13 +16,13 @@
 /*                                                                           */
 /*****************************************************************************/
 void edp_evt_end_eth_type_dpdk(char *lan, int status);
-int edp_evt_update_lan_add(t_edp *cur, int llid, int tid);
-void edp_evt_del_inside(t_edp *cur);
+int edp_evt_action_add_lan(t_edp *cur, int llid, int tid);
+void edp_evt_action_del_lan(t_edp *cur, int llid, int tid);
 void edp_evt_change_phy_topo(void);
 void edp_evt_change_pci_topo(void);
-int  edp_evt_update_eth_type(int llid, int tid, int is_add, int eth_type,
-                              char *name, char *lan);
-void edp_evt_lan_add_done(int eth_type, char *lan);
-void edp_evt_lan_del_done(int eth_type, char *lan);
+void edp_evt_update_fix_type_add(int eth_type, char *name, char *lan);
+void edp_evt_update_fix_type_del(int eth_type, char *name, char *lan);
+void edp_evt_update_non_fix_add(int eth_type, char *name, char *lan);
+void edp_evt_update_non_fix_del(int eth_type, char *name, char *lan);
 void edp_evt_init(void);
 /*--------------------------------------------------------------------------*/

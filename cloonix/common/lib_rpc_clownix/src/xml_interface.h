@@ -144,6 +144,7 @@
 
 #define VM_ETH_TABLE     "<eth_table>\n"\
                          "  <eth_type> %d </eth_type>\n"\
+                         "  <randmac> %d </randmac>\n"\
                          "  <ifname> %s </ifname>\n"\
                          "  <mac> %02X %02X %02X %02X %02X %02X </mac>\n"\
                          "</eth_table>"
@@ -162,13 +163,6 @@
                          "  <save_type> %d </save_type>\n"\
                          "  <sav_rootfs_path> %s </sav_rootfs_path>\n"\
                          "</sav_vm>"
-
-#define SAV_VM_ALL       "<sav_vm_all>\n"\
-                         "  <tid> %d </tid>\n"\
-                         "  <save_type> %d </save_type>\n"\
-                         "  <sav_rootfs_path> %s </sav_rootfs_path>\n"\
-                         "</sav_vm_all>"
-
 
 #define ADD_SAT_C2C      "<sat_c2c>\n"\
                          "  <tid> %d </tid>\n"\
@@ -219,6 +213,7 @@
 /*---------------------------------------------------------------------------*/
 #define LIST_COMMANDS         "<list_commands_req>\n"\
                               "  <tid> %d </tid>\n"\
+                              "  <is_layout> %d </is_layout>\n"\
                               "</list_commands_req>"
 /*---------------------------------------------------------------------------*/
 #define LIST_COMMANDS_O       "<list_commands_resp>\n"\

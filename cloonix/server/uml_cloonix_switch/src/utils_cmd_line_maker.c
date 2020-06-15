@@ -52,6 +52,27 @@ void give_back_creation_counter(void);
 static uid_t glob_uid_user;
 static uid_t glob_gid_user;
 
+
+/****************************************************************************/
+void utils_send_status_ko(int *llid, int *tid, char *err)
+{
+  if (msg_exist_channel(*llid))
+    send_status_ko(*llid, *tid, err);
+  *llid = 0;
+  *tid = 0;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void utils_send_status_ok(int *llid, int *tid)
+{
+  if (msg_exist_channel(*llid))
+    send_status_ok(*llid, *tid, "");
+  *llid = 0;
+  *tid = 0;
+}
+/*--------------------------------------------------------------------------*/
+
 /****************************************************************************/
 int utils_get_next_tid(void)
 {

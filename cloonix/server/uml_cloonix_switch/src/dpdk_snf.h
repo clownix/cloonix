@@ -19,13 +19,12 @@ void dpdk_snf_event_from_snf_dpdk_process(char *name, char *lan, int on);
 void dpdk_snf_resp_add_lan(int is_ko, char *lan, char *name);
 void dpdk_snf_resp_del_lan(int is_ko, char *lan, char *name);
 int dpdk_snf_get_qty(void);
-int dpdk_snf_add_lan(int llid, int tid, char *lan, char *name);
 int dpdk_snf_exist(char *name);
 int dpdk_snf_lan_exists(char *lan);
 int dpdk_snf_lan_exists_in_snf(char *name, char *lan);
 void dpdk_snf_end_ovs(void);
-int dpdk_snf_add(int llid, int tid, char *name);
-void dpdk_snf_del(char *name);
+int dpdk_snf_add(int llid, int tid, char *name, char *lan);
+int dpdk_snf_del(int llid, int tid, char *name);
 void dpdk_snf_init(void);
 /*--------------------------------------------------------------------------*/
 

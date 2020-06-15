@@ -52,27 +52,16 @@
 #include "snf_dpdk_process.h"
 
 /****************************************************************************/
-typedef struct t_dlan
-{
-  char lan[MAX_NAME_LEN];
-  int  waiting_ack_add_lan;
-  int  waiting_ack_del_lan;
-  int  timer_count_lan;
-  int  llid;
-  int  tid;
-  struct t_dlan *prev;
-  struct t_dlan *next;
-} t_dlan;
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 typedef struct t_dtap
 {
   char name[MAX_NAME_LEN];
   char strmac[MAX_NAME_LEN];
+  char lan[MAX_NAME_LEN];
   int waiting_ack_add_tap;
   int waiting_ack_del_tap;
-  int timer_count_tap;
+  int waiting_ack_add_lan;
+  int waiting_ack_del_lan;
+  int timer_count;
   int llid;
   int tid;
   int ms;
@@ -80,179 +69,89 @@ typedef struct t_dtap
   int pkt_rx;
   int byte_tx;
   int byte_rx;
-  t_dlan *head_lan;
   struct t_dtap *prev;
   struct t_dtap *next;
 } t_dtap;
 /*--------------------------------------------------------------------------*/
 
 static t_dtap *g_head_dtap;
-static int g_timer_tap_waiting;
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static t_dtap *get_dtap(char *name)
 { 
-  t_dtap *dtap = g_head_dtap;
-  while(dtap)
-    {
-    if (!strcmp(name, dtap->name))
-      break;
-    dtap = dtap->next;
-    }
-  return dtap;
-} 
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static t_dlan *get_dlan(t_dtap *dtap, char *lan)
-{
-  t_dlan *cur = dtap->head_lan;
+  t_dtap *cur = g_head_dtap;
   while(cur)
     {
-    if (!strcmp(cur->lan, lan))
+    if (!strcmp(name, cur->name))
       break;
     cur = cur->next;
     }
   return cur;
-}
+} 
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_dlan *alloc_dlan(t_dtap *dtap, char *lan)
+static t_dtap *alloc_dtap(char *name, char *lan)
 {
-  t_dlan *dlan = (t_dlan *) clownix_malloc(sizeof(t_dlan), 5);
-  memset(dlan, 0, sizeof(t_dlan));
-  memcpy(dlan->lan, lan, MAX_NAME_LEN-1);
-  if (dtap->head_lan)
-    dtap->head_lan->prev = dlan;
-  dlan->next = dtap->head_lan;
-  dtap->head_lan = dlan;
-  return dlan;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void free_dlan(t_dtap *dtap, char *lan)
-{
-  t_dlan *cur;
-  char lan_name[MAX_NAME_LEN];
-  memset (lan_name, 0, MAX_NAME_LEN);
-  strncpy(lan_name, lan, MAX_NAME_LEN-1);
-  if (dtap == NULL)
-    KOUT(" ");
-  cur = dtap->head_lan;
-  while (cur)
-    {
-    if (!strcmp(cur->lan, lan_name))
-      break;
-    cur = cur->next;
-    }
-  if (!cur)
-    KERR("%s %s", dtap->name, lan_name);
-  else
-    {
-    edp_evt_lan_del_done(eth_type_dpdk, lan);
-    if (cur->prev)
-      cur->prev->next = cur->next;
-    if (cur->next)
-      cur->next->prev = cur->prev;
-    if (cur == dtap->head_lan)
-      dtap->head_lan = cur->next;
-    clownix_free(cur, __FUNCTION__);
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    if ((!dpdk_dyn_lan_exists(lan_name)) &&
-        (!dpdk_tap_lan_exists(lan_name)))
-      dpdk_msg_vlan_exist_no_more(lan_name);
-    snf_dpdk_process_possible_change(lan_name);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void free_all_dlan(t_dtap *dtap)
-{
-  t_dlan *cur, *next;
-  if (dtap == NULL)
-    KOUT(" "); 
-  cur = dtap->head_lan;
-  while (cur)
-    {
-    next = cur->next;
-    free_dlan(dtap, cur->lan);
-    cur = next;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static t_dtap *alloc_dtap(char *name)
-{
-  t_dtap *dtap = (t_dtap *)clownix_malloc(sizeof(t_dtap), 5);
-  memset(dtap, 0, sizeof(t_dtap));
-  memcpy(dtap->name, name, MAX_NAME_LEN-1);
+  t_dtap *cur = (t_dtap *)clownix_malloc(sizeof(t_dtap), 5);
+  memset(cur, 0, sizeof(t_dtap));
+  memcpy(cur->name, name, MAX_NAME_LEN-1);
+  memcpy(cur->lan, lan, MAX_NAME_LEN-1);
   if (g_head_dtap)
-    g_head_dtap->prev = dtap;
-  dtap->next = g_head_dtap;
-  g_head_dtap = dtap;
-  return dtap;
+    g_head_dtap->prev = cur;
+  cur->next = g_head_dtap;
+  g_head_dtap = cur;
+  return cur;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void free_dtap(char *name)
 {
-  t_dtap *dtap = get_dtap(name);
-  if (!dtap)
+  t_dtap *cur = get_dtap(name);
+  if (!cur)
     KERR("%s", name);
   else
     {
-    free_all_dlan(dtap);
-    if (dtap->prev)
-      dtap->prev->next = dtap->next;
-    if (dtap->next)
-      dtap->next->prev = dtap->prev;
-    if (g_head_dtap == dtap)
-      g_head_dtap = dtap->next;
-    clownix_free(dtap, __FUNCTION__);
+    edp_evt_update_non_fix_del(eth_type_dpdk, cur->name, cur->lan);
+    if ((!dpdk_dyn_lan_exists(cur->lan)) &&
+        (!dpdk_tap_lan_exists(cur->lan)))
+      dpdk_msg_vlan_exist_no_more(cur->lan);
+    snf_dpdk_process_possible_change(cur->lan);
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    if (cur->prev)
+      cur->prev->next = cur->next;
+    if (cur->next)
+      cur->next->prev = cur->prev;
+    if (g_head_dtap == cur)
+      g_head_dtap = cur->next;
+    clownix_free(cur, __FUNCTION__);
     }
-  event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void timer_tap_msg_beat(void *data)
 {
-  t_dtap *next, *dtap = g_head_dtap;
-  t_dlan *cur;
-  while(dtap)
+  t_dtap *next, *cur = g_head_dtap;
+  while(cur)
     {
-    next = dtap->next;
-    cur = dtap->head_lan;
-    while (cur)
+    next = cur->next;
+    if ((cur->waiting_ack_add_tap != 0) ||
+        (cur->waiting_ack_del_tap != 0) ||
+        (cur->waiting_ack_add_lan != 0) ||
+        (cur->waiting_ack_del_lan != 0))
       {
-      if ((cur->waiting_ack_add_lan != 0) || (cur->waiting_ack_del_lan != 0))
+      cur->timer_count += 1;
+      if (cur->timer_count > 15)
         {
-        cur->timer_count_lan += 1;
-        }
-      cur = cur->next;
-      }
-    if ((dtap->waiting_ack_add_tap != 0) || (dtap->waiting_ack_del_tap != 0))
-      {
-      dtap->timer_count_tap += 1;
-      if (dtap->timer_count_tap > 15)
-        {
-        if (!msg_exist_channel(dtap->llid))
-          KERR("Time %s", dtap->name);
-        else
-          {
-          KERR("Timeout %s", dtap->name);
-          send_status_ko(dtap->llid, dtap->tid, "Timeout");
-          }
-        free_dtap(dtap->name);
+        KERR("Timeout %s", cur->name);
+        utils_send_status_ko(&(cur->llid), &(cur->tid), "timeout error");
+        free_dtap(cur->name);
         }
       }
-    dtap = next;
+    cur = next;
     }
   clownix_timeout_add(50, timer_tap_msg_beat, NULL, NULL, NULL);
 }
@@ -268,62 +167,100 @@ int dpdk_tap_get_qty(void)
     result += 1;
     cur = cur->next;
     }
-  result += g_timer_tap_waiting;
   return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void dpdk_tap_resp_del(int is_ko, char *name)
+{
+  t_dtap *cur = get_dtap(name);
+  if (cur == NULL)
+    KERR("%s %d", name, is_ko);
+  else
+    {
+    if (is_ko)
+      utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
+    else
+      utils_send_status_ok(&(cur->llid), &(cur->tid));
+    if (cur->waiting_ack_add_tap != 0)
+      KERR("%s", name);
+    free_dtap(name);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void resp_lan_add(t_dtap *cur, int is_ko, char *lan, char *name)
+{
+  if (is_ko)
+    {
+    KERR("%s %s", name, lan);
+    utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
+    }
+  else
+    {
+    edp_evt_update_non_fix_add(eth_type_dpdk, name, lan);
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    snf_dpdk_process_possible_change(lan);
+    utils_send_status_ok(&(cur->llid), &(cur->tid));
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void resp_lan_del(t_dtap *cur, int is_ko, char *lan, char *name)
+{ 
+  if (is_ko)
+    {
+    KERR("%s %s", name, lan);
+    utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
+    }
+  else if (cur->waiting_ack_del_tap != 0)
+    {
+    KERR("%s %s", name, lan);
+    }
+  else if (fmt_tx_del_tap(0, name))
+    {
+    KERR("%s %s", name, lan);
+    free_dtap(name);
+    }
+  else
+    {
+    cur->waiting_ack_del_tap = 1;
+    cur->timer_count = 0;
+    }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void resp_lan(int is_add, int is_ko, char *lan, char *name)
 {
-  t_dtap *dtap = get_dtap(name);
-  t_dlan *dlan;
-  if (dtap)
+  t_dtap *cur = get_dtap(name);
+  if (cur)
     {
-    dlan = get_dlan(dtap, lan);;
-    if (!dlan)
-      KERR("%d %s %s", is_ko, lan, name);
-    else
+    if (strcmp(lan, cur->lan))
+      KERR("%s %s %s", lan, name, cur->lan);
+    else 
       {
-      if (!msg_exist_channel(dlan->llid))
-        KERR("%d %s %s", is_ko, lan, name);
       if (is_add)
         {
-        if ((dlan->waiting_ack_add_lan == 0) ||
-            (dlan->waiting_ack_del_lan == 1))
-          KERR("%d %s %s %d", is_ko, lan, name, dlan->waiting_ack_add_lan);
+        if ((cur->waiting_ack_add_lan == 0) ||
+            (cur->waiting_ack_del_lan == 1))
+          KERR("%d %s %s %d", is_ko, lan, name, cur->waiting_ack_add_lan);
+        resp_lan_add(cur, is_ko, lan, name);
         }
       else
         {
-        if ((dlan->waiting_ack_add_lan == 1) ||
-            (dlan->waiting_ack_del_lan == 0))
-          KERR("%d %s %s %d", is_ko, lan, name, dlan->waiting_ack_del_lan);
+        if ((cur->waiting_ack_add_lan == 1) ||
+            (cur->waiting_ack_del_lan == 0))
+          KERR("%d %s %s %d", is_ko, lan, name, cur->waiting_ack_del_lan);
+        resp_lan_del(cur, is_ko, lan, name);
         }
-      if (is_ko)
-        {
-        KERR("Resp KO %s %s", lan, dtap->name);
-        send_status_ko(dlan->llid, dlan->tid, "Resp KO");
-        free_dlan(dtap, lan);
-        }
-      else
-        {
-        dlan->waiting_ack_add_lan = 0;
-        dlan->waiting_ack_del_lan = 0;
-        send_status_ok(dlan->llid, dlan->tid, "OK");
-        dlan->timer_count_lan = 0;
-        dlan->llid = 0;
-        dlan->tid = 0;
-        if (is_add == 0)
-          {
-          free_dlan(dtap, lan);
-          }
-        else
-          {
-          edp_evt_lan_add_done(eth_type_dpdk, lan);
-          event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-          snf_dpdk_process_possible_change(lan);
-          }
-        }
+      cur->waiting_ack_add_lan = 0;
+      cur->waiting_ack_del_lan = 0;
+      cur->timer_count = 0;
       }
     }
 }
@@ -346,172 +283,71 @@ void dpdk_tap_resp_del_lan(int is_ko, char *lan, char *name)
 /****************************************************************************/
 void dpdk_tap_resp_add(int is_ko, char *name, char *strmac)
 {
-  t_dtap *dtap = get_dtap(name);
-  if (dtap == NULL)
+  t_dtap *cur = get_dtap(name);
+  if (cur == NULL)
     KERR("%s", name);
-  else if (!dtap->llid)
+  else if (!cur->llid)
     KERR("%s", name);
-  else 
+  else if (is_ko)
     {
-    if (!msg_exist_channel(dtap->llid))
-      KERR("%s", name);
-    if (is_ko)
-      {
-      KERR("Resp KO %s", dtap->name);
-      send_status_ko(dtap->llid, dtap->tid, "ovs req ko");
-      free_dtap(name);
-      }
-    else
-      {
-      send_status_ok(dtap->llid, dtap->tid, "OK");
-      if (dtap->waiting_ack_add_tap == 0)
-        KERR("%s", name);
-      if (dtap->waiting_ack_del_tap != 0)
-        KERR("%s", name);
-      strncpy(dtap->strmac, strmac, MAX_NAME_LEN-1);
-      dtap->waiting_ack_add_tap = 0;
-      dtap->waiting_ack_del_tap = 0;
-      dtap->timer_count_tap = 0;
-      dtap->llid = 0;
-      dtap->tid = 0;
-      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-      } 
-    } 
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void dpdk_tap_resp_del(int is_ko, char *name)
-{
-  t_dtap *dtap = get_dtap(name);
-  if (dtap != NULL)
-    {
-    if ((dtap->llid) && (msg_exist_channel(dtap->llid)))
-      {
-      if (is_ko)
-        send_status_ko(dtap->llid, dtap->tid, "KO");
-      else
-        send_status_ok(dtap->llid, dtap->tid, "OK");
-      }
-    if (dtap->waiting_ack_add_tap != 0)
-      KERR("%s", name);
+    KERR("%s", cur->name);
+    utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
     free_dtap(name);
     }
+  else if (dpdk_msg_send_add_lan_tap(cur->lan, name))
+    KERR("%s %s", cur->lan, name);
+  else
+    {
+    if (cur->waiting_ack_add_tap == 0)
+      KERR("%s", name);
+    if (cur->waiting_ack_del_tap != 0)
+      KERR("%s", name);
+    strncpy(cur->strmac, strmac, MAX_NAME_LEN-1);
+    cur->waiting_ack_add_lan = 1;
+    cur->waiting_ack_add_tap = 0;
+    cur->waiting_ack_del_tap = 0;
+    cur->timer_count = 0;
+  } 
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_tap_add_lan(int llid, int tid, char *lan, char *name)
+int dpdk_tap_add(int llid, int tid, char *name, char *lan)
 {
   int result = -1;
-  t_dtap *dtap = get_dtap(name);
-  t_dlan *dlan;
-  if (dtap == NULL)
-    KERR("%s %s", lan, name);
+  t_dtap *cur = get_dtap(name);
+  if (cur)
+    KERR("%s", name);
+  else if (fmt_tx_add_tap(0, name))
+    KERR("%s", name);
   else
     {
-    dlan = get_dlan(dtap, lan);
-    if (dlan != NULL)
-      KERR("%s %s", lan, name);
-    else
-      {
-      if (dpdk_msg_send_add_lan_tap(lan, name))
-        KERR("%s %s", lan, name);
-      else
-        {
-        dlan = alloc_dlan(dtap, lan);
-        dlan->waiting_ack_add_lan = 1;
-        dlan->timer_count_lan = 0;
-        dlan->llid = llid;
-        dlan->tid = tid;
-        result = 0;
-        }
-      }
+    cur = alloc_dtap(name, lan);
+    cur->waiting_ack_add_tap = 1;
+    cur->llid = llid;
+    cur->tid = tid;
+    result = 0;
     }
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void dpdk_tap_del_lan(char *lan, char *name)
-{
-  t_dtap *dtap = get_dtap(name);
-  t_dlan *dlan;
-  if (dtap == NULL)
-    KERR("%s %s", lan, name);
-  else
-    {
-    dlan = get_dlan(dtap, lan);
-    if (dlan == NULL)
-      KERR("%s %s", lan, name);
-    else if (dlan->waiting_ack_del_lan == 0)
-      {
-      if (dpdk_msg_send_del_lan_tap(lan, name))
-        KERR("%s %s", lan, name);
-      else
-        {
-        dlan->waiting_ack_del_lan = 1;
-        dlan->timer_count_lan = 0;
-        }
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_tap_add(int llid, int tid, char *name)
+int dpdk_tap_del(int llid, int tid, char *name)
 {
   int result = -1;
-  t_dtap *dtap = get_dtap(name);
-  if (dtap)
+  t_dtap *cur = get_dtap(name);
+  if (!cur)
     KERR("%s", name);
+  else if (cur->waiting_ack_del_lan != 0)
+    KERR("%s", name);
+  else if (dpdk_msg_send_del_lan_tap(cur->lan, name))
+    KERR("%s %s", cur->lan, name);
   else
     {
-    if (fmt_tx_add_tap(0, name))
-      KERR("%s", name);
-    else
-      {
-      dtap = alloc_dtap(name);
-      dtap->waiting_ack_add_tap = 1;
-      dtap->timer_count_tap = 0;
-      dtap->llid = llid;
-      dtap->tid = tid;
-      result = 0;
-      }
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_tap_del(char *name)
-{
-  int result = -1;
-  t_dlan *cur;
-  t_dtap *dtap = get_dtap(name);
-  if (!dtap)
-    KERR("%s", name);
-  else
-    {
-    cur = dtap->head_lan;
-    while (cur)
-      {
-      dpdk_tap_del_lan(cur->lan, name);
-      cur = cur->next;
-      }
-    if (dtap->waiting_ack_del_tap != 0)
-      KERR("%s", name);
-    else if (fmt_tx_del_tap(0, name))
-      {
-      KERR("%s", name);
-      free_dtap(name);
-      }
-    else
-      {
-      dtap->waiting_ack_del_tap = 1;
-      dtap->timer_count_tap = 0;
-      result = 0;
-      }
+    cur->waiting_ack_del_lan = 1;
+    cur->timer_count = 0;
+    result = 0;
     }
   return result;
 }
@@ -530,13 +366,13 @@ int dpdk_tap_exist(char *name)
 /****************************************************************************/
 int dpdk_tap_lan_exists(char *lan)
 {
-  t_dtap *dtap = g_head_dtap;
+  t_dtap *cur = g_head_dtap;
   int result = 0;
-  while(dtap)
+  while(cur)
     {
-    if (get_dlan(dtap, lan) != NULL)
+    if (!strcmp(lan, cur->lan))
       result = 1;
-    dtap = dtap->next;
+    cur = cur->next;
     }
   return result;
 }
@@ -546,9 +382,9 @@ int dpdk_tap_lan_exists(char *lan)
 char *dpdk_tap_get_mac(char *name)
 {
   char *result = NULL;
-  t_dtap *dtap = get_dtap(name);
-  if (dtap)
-    result = dtap->strmac;
+  t_dtap *cur = get_dtap(name);
+  if (cur)
+    result = cur->strmac;
   return result; 
 }
 /*--------------------------------------------------------------------------*/
@@ -557,23 +393,23 @@ char *dpdk_tap_get_mac(char *name)
 char *dpdk_tap_get_next_matching_lan(char *lan, char *name)
 {
   char *result = NULL;
-  t_dtap *dtap;
+  t_dtap *cur;
   if (name == NULL)
-    dtap = g_head_dtap;
+    cur = g_head_dtap;
   else
     {
-    dtap = get_dtap(name);
-    if (dtap)
-      dtap = dtap->next;
+    cur = get_dtap(name);
+    if (cur)
+      cur = cur->next;
     } 
-  while(dtap)
+  while(cur)
     {
-    if (get_dlan(dtap, lan) != NULL)
+    if (!strcmp(lan, cur->lan))
       {
-      result = dtap->name;
+      result = cur->name;
       break;
       }
-    dtap = dtap->next;
+    cur = cur->next;
     }
   return result;
 }
@@ -583,12 +419,10 @@ char *dpdk_tap_get_next_matching_lan(char *lan, char *name)
 int dpdk_tap_lan_exists_in_tap(char *name, char *lan)
 {
   int result = 0;
-  t_dtap *dtap = get_dtap(name);
-  t_dlan *dlan;
-  if(dtap)
+  t_dtap *cur = get_dtap(name);
+  if(cur)
     {
-    dlan = get_dlan(dtap, lan);
-    if (dlan != NULL)
+    if (!strcmp(lan, cur->lan))
       result = 1;
     }
   return result;
@@ -598,36 +432,33 @@ int dpdk_tap_lan_exists_in_tap(char *name, char *lan)
 /****************************************************************************/
 void dpdk_tap_end_ovs(void)
 {
-  t_dtap *ndtap, *dtap = g_head_dtap;
-  t_dlan *cur;
-  while(dtap)
+  t_dtap *next, *cur = g_head_dtap;
+  while(cur)
     {
-    ndtap = dtap->next;
-    cur = dtap->head_lan;
-    while(cur)
+    next = cur->next;
+    if (cur->waiting_ack_del_lan != 0)
+      KERR("%s %s", cur->lan, cur->name);
+    else
       {
-      if (cur->waiting_ack_del_lan == 0)
-        {
-        if (dpdk_msg_send_del_lan_tap(cur->lan, dtap->name))
-          KERR("%s %s", cur->lan, dtap->name);
-        else
-          cur->waiting_ack_del_lan = 1;
-        }
-      cur = cur->next;
+      if (dpdk_msg_send_del_lan_tap(cur->lan, cur->name))
+        KERR("%s %s", cur->lan, cur->name);
+      else
+        cur->waiting_ack_del_lan = 1;
       }
-    if (dtap->waiting_ack_del_tap == 0)
+    if (cur->waiting_ack_del_tap != 0)
+      KERR("%s %s", cur->lan, cur->name);
+    else
       {
-      if (fmt_tx_del_tap(0, dtap->name))
+      if (fmt_tx_del_tap(0, cur->name))
         {
-        KERR("%s", dtap->name);
-        free_dtap(dtap->name);
+        KERR("%s", cur->name);
+        free_dtap(cur->name);
         }
       else
-        dtap->waiting_ack_del_tap = 1; 
+        cur->waiting_ack_del_tap = 1; 
       }
-    dtap = ndtap;
+    cur = next;
     }
-  
 }
 /*--------------------------------------------------------------------------*/
 
@@ -635,15 +466,15 @@ void dpdk_tap_end_ovs(void)
 int dpdk_tap_eventfull(char *name, int ms, int ptx, int btx, int prx, int brx)
 {
   int result = -1;
-  t_dtap *dtap = get_dtap(name);
-  if (dtap)
+  t_dtap *cur = get_dtap(name);
+  if (cur)
     {
-    dtap->ms      = ms;
-    dtap->pkt_tx  += ptx;
-    dtap->pkt_rx  += prx;
-    dtap->byte_tx += btx;
-    dtap->byte_rx += brx;
-    stats_counters_update_endp_tx_rx(dtap->name,0,ms,ptx,btx,prx,brx);
+    cur->ms       = ms;
+    cur->pkt_tx  += ptx;
+    cur->pkt_rx  += prx;
+    cur->byte_tx += btx;
+    cur->byte_rx += brx;
+    stats_counters_update_endp_tx_rx(cur->name, 0, ms, ptx, btx, prx, brx);
     result = 0;
     }
   return result;
@@ -654,23 +485,23 @@ int dpdk_tap_eventfull(char *name, int ms, int ptx, int btx, int prx, int brx)
 int dpdk_tap_collect_dpdk(t_eventfull_endp *eventfull)
 {
   int result = 0;;
-  t_dtap *dtap = g_head_dtap;
-  while(dtap)
+  t_dtap *cur = g_head_dtap;
+  while(cur)
     {
-    strncpy(eventfull[result].name, dtap->name, MAX_NAME_LEN-1);
+    strncpy(eventfull[result].name, cur->name, MAX_NAME_LEN-1);
     eventfull[result].type = endp_type_tap;
     eventfull[result].num  = 0;
-    eventfull[result].ms   = dtap->ms;
-    eventfull[result].ptx  = dtap->pkt_tx;
-    eventfull[result].prx  = dtap->pkt_rx;
-    eventfull[result].btx  = dtap->byte_tx;
-    eventfull[result].brx  = dtap->byte_rx;
-    dtap->pkt_tx  = 0;
-    dtap->pkt_rx  = 0;
-    dtap->byte_tx = 0;
-    dtap->byte_rx = 0;
+    eventfull[result].ms   = cur->ms;
+    eventfull[result].ptx  = cur->pkt_tx;
+    eventfull[result].prx  = cur->pkt_rx;
+    eventfull[result].btx  = cur->byte_tx;
+    eventfull[result].brx  = cur->byte_rx;
+    cur->pkt_tx  = 0;
+    cur->pkt_rx  = 0;
+    cur->byte_tx = 0;
+    cur->byte_rx = 0;
     result += 1;
-    dtap = dtap->next;
+    cur = cur->next;
     }
   return result;
 }
@@ -681,6 +512,5 @@ void dpdk_tap_init(void)
 {
   g_head_dtap = NULL;
   clownix_timeout_add(50, timer_tap_msg_beat, NULL, NULL, NULL);
-  g_timer_tap_waiting = 0;
 }
 /*--------------------------------------------------------------------------*/

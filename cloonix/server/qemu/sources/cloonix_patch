@@ -1,6 +1,6 @@
 diff -Naur qemu_vip/configure tainted_qemu/configure
---- qemu_vip/configure	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/configure	2020-06-05 17:52:13.095875347 +0200
+--- qemu_vip/configure	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/configure	2020-06-15 16:50:12.466160709 +0200
 @@ -364,6 +364,7 @@
  vnc="yes"
  sparse="no"
@@ -29,7 +29,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
    --disable-netmap) netmap="no"
    ;;
    --enable-netmap) netmap="yes"
-@@ -3513,6 +3520,88 @@
+@@ -3517,6 +3524,88 @@
    fi
  fi
  
@@ -118,7 +118,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
  ##########################################
  # netmap support probe
  # Apart from looking for netmap headers, we make sure that the host API version
-@@ -5073,29 +5162,18 @@
+@@ -5089,29 +5178,18 @@
  fi
  
  ##########################################
@@ -157,7 +157,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
  fi
  
  # check for smartcard support
-@@ -6658,6 +6736,7 @@
+@@ -6676,6 +6754,7 @@
  echo "Documentation     $docs"
  echo "PIE               $pie"
  echo "vde support       $vde"
@@ -165,7 +165,7 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
  echo "netmap support    $netmap"
  echo "Linux AIO support $linux_aio"
  echo "Linux io_uring support $linux_io_uring"
-@@ -6893,6 +6972,9 @@
+@@ -6911,6 +6990,9 @@
    echo "CONFIG_VDE=y" >> $config_host_mak
    echo "VDE_LIBS=$vde_libs" >> $config_host_mak
  fi
@@ -176,8 +176,8 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
    echo "CONFIG_NETMAP=y" >> $config_host_mak
  fi
 diff -Naur qemu_vip/hmp-commands.hx tainted_qemu/hmp-commands.hx
---- qemu_vip/hmp-commands.hx	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/hmp-commands.hx	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/hmp-commands.hx	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/hmp-commands.hx	2020-06-15 16:50:12.466160709 +0200
 @@ -1313,7 +1313,7 @@
      {
          .name       = "netdev_add",
@@ -188,8 +188,8 @@ diff -Naur qemu_vip/hmp-commands.hx tainted_qemu/hmp-commands.hx
          .cmd        = hmp_netdev_add,
          .command_completion = netdev_add_completion,
 diff -Naur qemu_vip/hw/net/Makefile.objs tainted_qemu/hw/net/Makefile.objs
---- qemu_vip/hw/net/Makefile.objs	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/hw/net/Makefile.objs	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/hw/net/Makefile.objs	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/hw/net/Makefile.objs	2020-06-15 16:50:12.466160709 +0200
 @@ -42,6 +42,7 @@
  obj-$(CONFIG_XILINX_ETHLITE) += xilinx_ethlite.o
  
@@ -200,7 +200,7 @@ diff -Naur qemu_vip/hw/net/Makefile.objs tainted_qemu/hw/net/Makefile.objs
  common-obj-$(CONFIG_ALL) += vhost_net-stub.o
 diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet.c
 --- qemu_vip/hw/net/virtio-muethnet.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_qemu/hw/net/virtio-muethnet.c	2020-06-05 17:52:13.099875420 +0200
++++ tainted_qemu/hw/net/virtio-muethnet.c	2020-06-15 16:50:12.466160709 +0200
 @@ -0,0 +1,1224 @@
 +/*
 + * Modifications for cloonix mueth
@@ -1427,8 +1427,8 @@ diff -Naur qemu_vip/hw/net/virtio-muethnet.c tainted_qemu/hw/net/virtio-muethnet
 +type_init(virtio_register_types)
 +/*--------------------------------------------------------------------------*/
 diff -Naur qemu_vip/hw/pci/pci.c tainted_qemu/hw/pci/pci.c
---- qemu_vip/hw/pci/pci.c	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/hw/pci/pci.c	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/hw/pci/pci.c	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/hw/pci/pci.c	2020-06-15 16:50:12.466160709 +0200
 @@ -48,6 +48,7 @@
  #include "qapi/error.h"
  #include "qapi/qapi-commands-misc.h"
@@ -1449,9 +1449,9 @@ diff -Naur qemu_vip/hw/pci/pci.c tainted_qemu/hw/pci/pci.c
  }
  
 diff -Naur qemu_vip/hw/virtio/vhost-user.c tainted_qemu/hw/virtio/vhost-user.c
---- qemu_vip/hw/virtio/vhost-user.c	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/hw/virtio/vhost-user.c	2020-06-05 17:52:13.099875420 +0200
-@@ -1004,7 +1004,9 @@
+--- qemu_vip/hw/virtio/vhost-user.c	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/hw/virtio/vhost-user.c	2020-06-15 16:50:12.466160709 +0200
+@@ -1424,7 +1424,9 @@
      } while (size < 0 && (errno == EINTR || errno == EAGAIN));
  
      if (size != VHOST_USER_HDR_SIZE) {
@@ -1462,8 +1462,8 @@ diff -Naur qemu_vip/hw/virtio/vhost-user.c tainted_qemu/hw/virtio/vhost-user.c
      }
  
 diff -Naur qemu_vip/hw/virtio/virtio-net-pci.c tainted_qemu/hw/virtio/virtio-net-pci.c
---- qemu_vip/hw/virtio/virtio-net-pci.c	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/hw/virtio/virtio-net-pci.c	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/hw/virtio/virtio-net-pci.c	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/hw/virtio/virtio-net-pci.c	2020-06-15 16:50:12.466160709 +0200
 @@ -32,6 +32,13 @@
  #define VIRTIO_NET_PCI(obj) \
          OBJECT_CHECK(VirtIONetPCI, (obj), TYPE_VIRTIO_NET_PCI)
@@ -1580,8 +1580,8 @@ diff -Naur qemu_vip/hw/virtio/virtio-net-pci.c tainted_qemu/hw/virtio/virtio-net
 +
  type_init(virtio_net_pci_register)
 diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/virtio.h
---- qemu_vip/include/hw/virtio/virtio.h	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/include/hw/virtio/virtio.h	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/include/hw/virtio/virtio.h	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/include/hw/virtio/virtio.h	2020-06-15 16:50:12.466160709 +0200
 @@ -324,6 +324,7 @@
  VirtQueue *virtio_vector_first_queue(VirtIODevice *vdev, uint16_t vector);
  VirtQueue *virtio_vector_next_queue(VirtQueue *vq);
@@ -1591,8 +1591,8 @@ diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/vi
  {
      assert(fbit < 64);
 diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virtio/virtio-net.h
---- qemu_vip/include/hw/virtio/virtio-net.h	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/include/hw/virtio/virtio-net.h	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/include/hw/virtio/virtio-net.h	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/include/hw/virtio/virtio-net.h	2020-06-15 16:50:12.466160709 +0200
 @@ -24,6 +24,14 @@
  #define VIRTIO_NET(obj) \
          OBJECT_CHECK(VirtIONet, (obj), TYPE_VIRTIO_NET)
@@ -1659,7 +1659,7 @@ diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virti
  #endif
 diff -Naur qemu_vip/include/net/cloonix_mueth.h tainted_qemu/include/net/cloonix_mueth.h
 --- qemu_vip/include/net/cloonix_mueth.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_qemu/include/net/cloonix_mueth.h	2020-06-05 17:52:13.099875420 +0200
++++ tainted_qemu/include/net/cloonix_mueth.h	2020-06-15 16:50:12.470160744 +0200
 @@ -0,0 +1,43 @@
 +
 +void cloonix_set_link_status(t_all_ctx *all_ctx, int on);
@@ -1705,8 +1705,8 @@ diff -Naur qemu_vip/include/net/cloonix_mueth.h tainted_qemu/include/net/cloonix
 +
 +#define MAX_ELEM_PER_PKT 3
 diff -Naur qemu_vip/include/qemu/bitops.h tainted_qemu/include/qemu/bitops.h
---- qemu_vip/include/qemu/bitops.h	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/include/qemu/bitops.h	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/include/qemu/bitops.h	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/include/qemu/bitops.h	2020-06-15 16:50:12.470160744 +0200
 @@ -12,12 +12,14 @@
  #ifndef BITOPS_H
  #define BITOPS_H
@@ -1724,8 +1724,8 @@ diff -Naur qemu_vip/include/qemu/bitops.h tainted_qemu/include/qemu/bitops.h
  #define BIT(nr)                 (1UL << (nr))
  #define BIT_ULL(nr)             (1ULL << (nr))
 diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
---- qemu_vip/include/qemu/error-report.h	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/include/qemu/error-report.h	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/include/qemu/error-report.h	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/include/qemu/error-report.h	2020-06-15 16:50:12.470160744 +0200
 @@ -13,6 +13,26 @@
  #ifndef QEMU_ERROR_REPORT_H
  #define QEMU_ERROR_REPORT_H
@@ -1765,8 +1765,8 @@ diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-
  
  bool error_report_once_cond(bool *printed, const char *fmt, ...)
 diff -Naur qemu_vip/include/qemu-common.h tainted_qemu/include/qemu-common.h
---- qemu_vip/include/qemu-common.h	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/include/qemu-common.h	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/include/qemu-common.h	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/include/qemu-common.h	2020-06-15 16:50:12.470160744 +0200
 @@ -135,4 +135,13 @@
   * returned. */
  bool dump_in_progress(void);
@@ -1782,8 +1782,8 @@ diff -Naur qemu_vip/include/qemu-common.h tainted_qemu/include/qemu-common.h
 +
  #endif
 diff -Naur qemu_vip/net/clients.h tainted_qemu/net/clients.h
---- qemu_vip/net/clients.h	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/net/clients.h	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/net/clients.h	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/net/clients.h	2020-06-15 16:50:12.470160744 +0200
 @@ -53,6 +53,12 @@
                   NetClientState *peer, Error **errp);
  #endif
@@ -1799,7 +1799,7 @@ diff -Naur qemu_vip/net/clients.h tainted_qemu/net/clients.h
                      NetClientState *peer, Error **errp);
 diff -Naur qemu_vip/net/cloonix_mueth.c tainted_qemu/net/cloonix_mueth.c
 --- qemu_vip/net/cloonix_mueth.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_qemu/net/cloonix_mueth.c	2020-06-05 17:52:46.812479428 +0200
++++ tainted_qemu/net/cloonix_mueth.c	2020-06-15 16:50:12.470160744 +0200
 @@ -0,0 +1,391 @@
 +/*****************************************************************************/
 +#include <stdio.h>
@@ -2193,8 +2193,8 @@ diff -Naur qemu_vip/net/cloonix_mueth.c tainted_qemu/net/cloonix_mueth.c
 +/*--------------------------------------------------------------------------*/
 +
 diff -Naur qemu_vip/net/hub.c tainted_qemu/net/hub.c
---- qemu_vip/net/hub.c	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/net/hub.c	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/net/hub.c	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/net/hub.c	2020-06-15 16:50:12.470160744 +0200
 @@ -314,6 +314,7 @@
              case NET_CLIENT_DRIVER_TAP:
              case NET_CLIENT_DRIVER_SOCKET:
@@ -2204,8 +2204,8 @@ diff -Naur qemu_vip/net/hub.c tainted_qemu/net/hub.c
                  has_host_dev = 1;
                  break;
 diff -Naur qemu_vip/net/Makefile.objs tainted_qemu/net/Makefile.objs
---- qemu_vip/net/Makefile.objs	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/net/Makefile.objs	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/net/Makefile.objs	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/net/Makefile.objs	2020-06-15 16:50:12.470160744 +0200
 @@ -12,6 +12,7 @@
  slirp.o-libs := $(SLIRP_LIBS)
  common-obj-$(CONFIG_VDE) += vde.o
@@ -2215,8 +2215,8 @@ diff -Naur qemu_vip/net/Makefile.objs tainted_qemu/net/Makefile.objs
  common-obj-y += filter-buffer.o
  common-obj-y += filter-mirror.o
 diff -Naur qemu_vip/net/net.c tainted_qemu/net/net.c
---- qemu_vip/net/net.c	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/net/net.c	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/net/net.c	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/net/net.c	2020-06-15 16:50:12.470160744 +0200
 @@ -949,6 +949,9 @@
  #ifdef CONFIG_VDE
          [NET_CLIENT_DRIVER_VDE]       = net_init_vde,
@@ -2249,8 +2249,8 @@ diff -Naur qemu_vip/net/net.c tainted_qemu/net/net.c
          "bridge",
  #endif
 diff -Naur qemu_vip/qapi/net.json tainted_qemu/qapi/net.json
---- qemu_vip/qapi/net.json	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/qapi/net.json	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/qapi/net.json	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/qapi/net.json	2020-06-15 16:50:12.470160744 +0200
 @@ -357,6 +357,30 @@
      '*mode':  'uint16' } }
  
@@ -2317,8 +2317,8 @@ diff -Naur qemu_vip/qapi/net.json tainted_qemu/qapi/net.json
      'netmap':   'NetdevNetmapOptions',
      'vhost-user': 'NetdevVhostUserOptions' } }
 diff -Naur qemu_vip/qdev-monitor.c tainted_qemu/qdev-monitor.c
---- qemu_vip/qdev-monitor.c	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/qdev-monitor.c	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/qdev-monitor.c	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/qdev-monitor.c	2020-06-15 16:50:12.470160744 +0200
 @@ -76,6 +76,7 @@
      { "virtio-mouse-pci", "virtio-mouse", QEMU_ARCH_ALL & ~QEMU_ARCH_S390X },
      { "virtio-net-ccw", "virtio-net", QEMU_ARCH_S390X },
@@ -2328,8 +2328,8 @@ diff -Naur qemu_vip/qdev-monitor.c tainted_qemu/qdev-monitor.c
      { "virtio-rng-pci", "virtio-rng", QEMU_ARCH_ALL & ~QEMU_ARCH_S390X },
      { "virtio-scsi-ccw", "virtio-scsi", QEMU_ARCH_S390X },
 diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
---- qemu_vip/qemu-options.hx	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/qemu-options.hx	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/qemu-options.hx	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/qemu-options.hx	2020-06-15 16:50:12.470160744 +0200
 @@ -2408,6 +2408,11 @@
      "                Use group 'groupname' and mode 'octalmode' to change default\n"
      "                ownership and permissions for communication port.\n"
@@ -2353,9 +2353,9 @@ diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
      "netmap|"
  #endif
 diff -Naur qemu_vip/softmmu/vl.c tainted_qemu/softmmu/vl.c
---- qemu_vip/softmmu/vl.c	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/softmmu/vl.c	2020-06-05 17:52:13.099875420 +0200
-@@ -113,6 +113,9 @@
+--- qemu_vip/softmmu/vl.c	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/softmmu/vl.c	2020-06-15 16:50:12.470160744 +0200
+@@ -114,6 +114,9 @@
  #include "sysemu/iothread.h"
  #include "qemu/guest-random.h"
  
@@ -2375,9 +2375,9 @@ diff -Naur qemu_vip/softmmu/vl.c tainted_qemu/softmmu/vl.c
          error_reportf_err(err, "cannot create PID file: ");
          exit(1);
 diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
---- qemu_vip/util/oslib-posix.c	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/util/oslib-posix.c	2020-06-05 17:52:13.099875420 +0200
-@@ -68,6 +68,8 @@
+--- qemu_vip/util/oslib-posix.c	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/util/oslib-posix.c	2020-06-15 16:50:12.470160744 +0200
+@@ -70,6 +70,8 @@
      size_t numpages;
      size_t hpagesize;
      QemuThread pgthread;
@@ -2386,7 +2386,7 @@ diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
      sigjmp_buf env;
  };
  typedef struct MemsetThread MemsetThread;
-@@ -412,6 +414,7 @@
+@@ -421,6 +423,7 @@
       * contention with allocation of the thread stacks.  Do not start
       * clearing until all threads have been created.
       */
@@ -2394,7 +2394,7 @@ diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
      qemu_mutex_lock(&page_mutex);
      while(!threads_created_flag){
          qemu_cond_wait(&page_cond, &page_mutex);
-@@ -430,7 +433,8 @@
+@@ -439,7 +442,8 @@
          size_t numpages = memset_args->numpages;
          size_t hpagesize = memset_args->hpagesize;
          size_t i;
@@ -2404,7 +2404,7 @@ diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
              /*
               * Read & write back the same value, so we don't
               * corrupt existing user/app data that might be
-@@ -443,9 +447,9 @@
+@@ -452,9 +456,9 @@
               * don't need to write at all so we don't cause
               * wear on the storage backing the region...
               */
@@ -2417,7 +2417,7 @@ diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
      }
      pthread_sigmask(SIG_SETMASK, &oldset, NULL);
      return NULL;
-@@ -469,7 +473,7 @@
+@@ -478,7 +482,7 @@
      static gsize initialized = 0;
      size_t numpages_per_thread, leftover;
      char *addr = area;
@@ -2426,7 +2426,7 @@ diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
  
      if (g_once_init_enter(&initialized)) {
          qemu_mutex_init(&page_mutex);
-@@ -484,6 +488,7 @@
+@@ -493,6 +497,7 @@
      numpages_per_thread = numpages / memset_num_threads;
      leftover = numpages % memset_num_threads;
      for (i = 0; i < memset_num_threads; i++) {
@@ -2434,7 +2434,7 @@ diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
          memset_thread[i].addr = addr;
          memset_thread[i].numpages = numpages_per_thread + (i < leftover);
          memset_thread[i].hpagesize = hpagesize;
-@@ -492,7 +497,18 @@
+@@ -501,7 +506,18 @@
                             QEMU_THREAD_JOINABLE);
          addr += memset_thread[i].numpages * hpagesize;
      }
@@ -2455,8 +2455,8 @@ diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
      threads_created_flag = true;
      qemu_cond_broadcast(&page_cond);
 diff -Naur qemu_vip/util/qemu-error.c tainted_qemu/util/qemu-error.c
---- qemu_vip/util/qemu-error.c	2020-06-04 12:38:48.000000000 +0200
-+++ tainted_qemu/util/qemu-error.c	2020-06-05 17:52:13.099875420 +0200
+--- qemu_vip/util/qemu-error.c	2020-06-13 00:06:22.000000000 +0200
++++ tainted_qemu/util/qemu-error.c	2020-06-15 16:50:12.470160744 +0200
 @@ -272,6 +272,7 @@
   * Prepend the current location and append a newline.
   * It's wrong to call this in a QMP monitor.  Use error_setg() there.

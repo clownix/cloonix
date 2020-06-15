@@ -387,6 +387,13 @@ void machine_death( char *name, int error_death)
         (error_death != error_death_pid_diseapeared) &&
         (error_death != error_death_qmonitor))
       KERR("%s %s %d ", __FUNCTION__, vm->kvm.name, error_death);
+    else if ((error_death == error_death_noovs) ||
+             (error_death == error_death_noovstime) ||
+             (error_death == error_death_noovseth))
+      {
+      KERR("%s REQ KILL %s %d ", __FUNCTION__, vm->kvm.name, error_death);
+      suid_power_kill_vm(vm->kvm.vm_id);
+      }
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
       {
       edp_mngt_cisco_nat_destroy(name);

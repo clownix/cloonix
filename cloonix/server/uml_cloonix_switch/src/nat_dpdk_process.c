@@ -44,6 +44,7 @@ typedef struct t_nat_dpdk
   int count;
   int llid;
   int pid;
+  int closed_count;
   int suid_root_done;
   struct t_nat_dpdk *prev;
   struct t_nat_dpdk *next;
@@ -151,6 +152,7 @@ static void timer_heartbeat(void *data)
 {
   t_nat_dpdk *next, *cur = g_head_nat_dpdk;
   int llid;
+  char *msg = "cloonixnat_suidroot";
   if (get_glob_req_self_destruction())
     return;
   while(cur)
@@ -174,8 +176,8 @@ static void timer_heartbeat(void *data)
       }
     else if (cur->suid_root_done == 0)
       {
-      rpct_send_diag_msg(NULL, cur->llid,
-                         type_hop_nat_dpdk, "cloonixnat_suidroot");
+      rpct_send_diag_msg(NULL, cur->llid, type_hop_nat_dpdk, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
       cur->suid_root_done = 1;
       }
     else
@@ -185,6 +187,15 @@ static void timer_heartbeat(void *data)
         {
         rpct_send_pid_req(NULL, cur->llid, type_hop_nat_dpdk, cur->name, 0);
         cur->count = 0;
+        }
+      if (cur->closed_count > 0)
+        { 
+        cur->closed_count -= 1;
+        if (cur->closed_count == 0)
+          {
+          dpdk_nat_event_from_nat_dpdk_process(cur->name, cur->lan, 0);
+          free_nat_dpdk(cur);
+          }
         }
       }
     cur = next;
@@ -203,11 +214,13 @@ void nat_dpdk_pid_resp(int llid, int tid, char *name, int pid)
     {
     if (cur->pid == 0)
       {
-      cur->pid = pid;
       dpdk_nat_event_from_nat_dpdk_process(name, cur->lan, 1);
+      cur->pid = pid;
       }
     else if (cur->pid != pid)
+      {
       KERR("%s %d", name, pid);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -251,10 +264,11 @@ void nat_dpdk_diag_resp(int llid, int tid, char *line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void nat_dpdk_start_process(char *name, char *lan, int on)
+void nat_dpdk_start_stop_process(char *name, char *lan, int on)
 {
   t_nat_dpdk *cur = find_nat_dpdk(name);
   char *nat = utils_get_dpdk_nat_dir();
+  char msg[MAX_PATH_LEN];
   if (on)
     {
     if (cur)
@@ -283,7 +297,12 @@ void nat_dpdk_start_process(char *name, char *lan, int on)
     if (!cur)
       KERR("%s %s", name, lan);
     else
+      {
+      memset(msg, 0, MAX_PATH_LEN);
+      snprintf(msg, MAX_PATH_LEN-1, "rpct_send_kil_req to %s", name);
       rpct_send_kil_req(NULL, cur->llid, type_hop_nat_dpdk);
+      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -333,8 +352,7 @@ void nat_dpdk_llid_closed(int llid)
     {
     if (cur->llid == llid)
       {
-      dpdk_nat_event_from_nat_dpdk_process(cur->name, cur->lan, 0);
-      free_nat_dpdk(cur);
+      cur->closed_count = 2;
       }
     cur = cur->next;
     }
@@ -358,6 +376,7 @@ void nat_dpdk_vm_event(void)
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "cloonixnat_machine_begin");
       rpct_send_diag_msg(NULL, cur->llid, type_hop_nat_dpdk, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
       vm = cfg_get_first_vm(&nb);
       for (i=0; i<nb; i++)
         {
@@ -376,6 +395,7 @@ void nat_dpdk_vm_event(void)
             snprintf(msg, MAX_PATH_LEN-1,
             "cloonixnat_machine_add %s eth:%d mac:%s", name, j, mac);
             rpct_send_diag_msg(NULL,cur->llid,type_hop_nat_dpdk,msg);
+            hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
             }
           }
         vm = vm->next;
@@ -383,6 +403,7 @@ void nat_dpdk_vm_event(void)
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "cloonixnat_machine_end");
       rpct_send_diag_msg(NULL, cur->llid, type_hop_nat_dpdk, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
       }
     cur = cur->next;
     }

@@ -48,6 +48,7 @@
 #include "ssh_cisco_llid.h"
 #include "ssh_cisco_dpdk.h"
 
+
 /*--------------------------------------------------------------------------*/
 static int  g_llid;
 static int  g_watchdog_ok;
@@ -62,6 +63,19 @@ static char g_ctrl_path[MAX_PATH_LEN];
 static char g_cisco_path[MAX_PATH_LEN];
 static char *g_rte_argv[6];
 /*--------------------------------------------------------------------------*/
+
+#define RANDOM_APPEND_SIZE 8
+/*****************************************************************************/
+static char *random_str(void)
+{
+  static char rd[RANDOM_APPEND_SIZE+1];
+  int i;
+  memset (rd, 0 , RANDOM_APPEND_SIZE+1);
+  for (i=0; i<RANDOM_APPEND_SIZE; i++)
+    rd[i] = 'A' + (rand() % 26);
+  return rd;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static uint8_t *get_mac(char *str_mac)
@@ -304,9 +318,17 @@ int main (int argc, char *argv[])
   snprintf(g_prefix, MAX_PATH_LEN-1, "--file-prefix=cloonix%s", net);
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, nat);
   snprintf(g_cisco_path, MAX_PATH_LEN-1,"%s/%s/%s_0_u2i", root, sock, nat);
-  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s", net, nat);
-  unlink(g_ctrl_path);
-  unlink(g_cisco_path);
+  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s%s", net, nat, random_str());
+  if (!access(g_ctrl_path, F_OK))
+    {
+    KERR("%s exists ERASING", g_ctrl_path);
+    unlink(g_ctrl_path);
+    }
+  if (!access(g_cisco_path, F_OK))
+    {
+    KERR("%s exists ERASING", g_cisco_path);
+    unlink(g_cisco_path);
+    }
   msg_mngt_init("nat_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
   string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");

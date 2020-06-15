@@ -24,7 +24,7 @@ if [ ! -e ${BULK}/${LINUX}.qcow2 ]; then
 fi
 #######################################################################
 set +e
-is_started=$(cloonix_cli $NET lst |grep cloonix_net)
+is_started=$(cloonix_cli $NET pid |grep cloonix_server)
 if [ "x$is_started" != "x" ]; then
   cloonix_cli ${NET} kil
   echo waiting 10 sec for cleaning

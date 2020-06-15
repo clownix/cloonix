@@ -229,6 +229,7 @@ static void timer_monitoring(void *data)
 {
   static int old_nb_pid_resp;
   static int count = 0;
+  char *req;
   if (get_glob_req_self_destruction())
     return;
   count += 1;
@@ -259,12 +260,15 @@ static void timer_monitoring(void *data)
     rpct_send_pid_req(NULL, g_llid, type_hop_suid_power, "suid_power", 0);
     if (count % 2)
       {
-      rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power,
-                         "cloonixsuid_req_pci");
-      rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power,
-                         "cloonixsuid_req_phy");
-      rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power,
-                         "cloonixsuid_req_ovs");
+      req = "cloonixsuid_req_pci";
+      rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+      hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
+      req = "cloonixsuid_req_phy";
+      rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+      hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
+      req = "cloonixsuid_req_ovs";
+      rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+      hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
       }
     old_nb_pid_resp = g_nb_pid_resp;
     }
@@ -336,6 +340,7 @@ static void suid_power_start(void)
 /****************************************************************************/
 void suid_power_pid_resp(int llid, int tid, char *name, int pid)
 {
+  char *msg = "cloonixsuid_req_suidroot";
   if (get_glob_req_self_destruction())
     return;
   if (llid != g_llid)
@@ -354,8 +359,10 @@ void suid_power_pid_resp(int llid, int tid, char *name, int pid)
     {
     g_first_ever_start = 1;
     if ((g_llid) && (msg_exist_channel(g_llid)))
-      rpct_send_diag_msg(NULL, llid, type_hop_suid_power,
-                         "cloonixsuid_req_suidroot");
+      {
+      rpct_send_diag_msg(NULL, llid, type_hop_suid_power, msg);
+      hop_event_hook(llid, FLAG_HOP_DIAG, msg);
+      }
     else
       KERR("%d", g_llid);
     }
@@ -395,6 +402,7 @@ void suid_power_diag_resp(int llid, int tid, char *line)
     KERR("%d %d", llid, g_llid);
   if (tid != type_hop_suid_power)
     KERR("%d %d", tid, type_hop_suid_power);
+  hop_event_hook(llid, FLAG_HOP_DIAG, line);
   if (!strcmp(line,
   "cloonixsuid_resp_suidroot_ko"))
     {
@@ -634,6 +642,7 @@ void suid_power_launch_vm(t_vm *vm, t_qemu_vm_end end)
   g_qemu_vm_end = end;
   msg = linearize(vm);
   rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, msg);
+  hop_event_hook(g_llid, FLAG_HOP_DIAG, msg);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -655,6 +664,7 @@ void suid_power_kill_vm(int vm_id)
     memset(req, 0, MAX_PATH_LEN);
     snprintf(req, MAX_PATH_LEN-1, "cloonixsuid_req_kill vm_id: %d", vm_id);
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -668,6 +678,7 @@ void suid_power_ifup_phy(char *phy)
     memset(req, 0, MAX_PATH_LEN);
     snprintf(req, MAX_PATH_LEN-1, "cloonixsuid_req_ifup phy: %s", phy);
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -681,6 +692,7 @@ void suid_power_ifdown_phy(char *phy)
     memset(req, 0, MAX_PATH_LEN);
     snprintf(req, MAX_PATH_LEN-1, "cloonixsuid_req_ifdown phy: %s", phy);
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -696,6 +708,7 @@ void suid_power_ifname_change(char *name, int num, char *old, char *nw)
              "cloonixsuid_req_ifname_change %s %d old:%s new:%s",
              name, num, old, nw);
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -710,6 +723,7 @@ int suid_power_req_vfio_attach(char *pci)
     memset(req, 0, MAX_PATH_LEN);
     snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_req_vfio_attach: %s",pci);
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
     result = 0;
     }
   return result;
@@ -726,6 +740,7 @@ int suid_power_req_vfio_detach(char *pci)
     memset(req, 0, MAX_PATH_LEN);
     snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_req_vfio_detach: %s",pci);
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
     result = 0;
     }
   return result;
@@ -742,6 +757,7 @@ int suid_power_rec_name(char *name, int on)
     memset(req, 0, MAX_PATH_LEN);
     snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_rec_name: %s on: %d", name, on);
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
     result = 0;
     }
   return result;
@@ -759,6 +775,7 @@ int suid_power_req_kill_all(void)
     memset(req, 0, MAX_PATH_LEN);
     snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_req_kill_all");
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+    hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
     result = 0;
     }
   return result;

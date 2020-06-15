@@ -409,9 +409,16 @@ static void callback_list_commands(int tid, int qty, t_list_commands *list)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void topo_list(void)
+static void cmd_cact(void)
 {
   client_list_commands(0, callback_list_commands);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void topo_lay(void)
+{
+  client_lay_commands(0, callback_list_commands);
 }
 /*--------------------------------------------------------------------------*/
  
@@ -606,7 +613,7 @@ static void other_sub_menu(GtkWidget *other)
   GtkWidget *warnings = gtk_menu_item_new_with_label("Previous Warnings");
   GtkWidget *hidden_visible = gtk_menu_item_new_with_label("Hidden/Visible");
   GtkWidget *del = gtk_menu_item_new_with_label("Delete Topo");
-  GtkWidget *lst = gtk_menu_item_new_with_label("List cmds Topo");
+  GtkWidget *lst = gtk_menu_item_new_with_label("Layout Topo");
   GtkWidget *menu = gtk_menu_new();
   if (!other)
     KOUT(" ");
@@ -615,7 +622,7 @@ static void other_sub_menu(GtkWidget *other)
   g_signal_connect_swapped(G_OBJECT(del), "activate",
                                          (GCallback)topo_delete, NULL);
   g_signal_connect_swapped(G_OBJECT(lst), "activate",
-                                         (GCallback)topo_list, NULL);
+                                         (GCallback)topo_lay, NULL);
   g_signal_connect_swapped (G_OBJECT(warnings), "activate",
                                          (GCallback)show_old_warnings, NULL);
   g_signal_connect_swapped(G_OBJECT(hidden_visible), "activate",
@@ -728,13 +735,14 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *separator1 = gtk_separator_menu_item_new();
   GtkWidget *lan  = gtk_menu_item_new_with_label("lan");
   GtkWidget *kvm  = gtk_menu_item_new_with_label("kvm");
-  GtkWidget *tap  = gtk_menu_item_new_with_label("tap");
-  GtkWidget *snf  = gtk_menu_item_new_with_label("snf");
-  GtkWidget *c2c  = gtk_menu_item_new_with_label("c2c");
   GtkWidget *nat  = gtk_menu_item_new_with_label("nat");
+  GtkWidget *snf  = gtk_menu_item_new_with_label("snf");
+  GtkWidget *tap  = gtk_menu_item_new_with_label("tap");
+  GtkWidget *c2c  = gtk_menu_item_new_with_label("c2c");
   GtkWidget *phy  = gtk_menu_item_new_with_label("phy");
   GtkWidget *pci  = gtk_menu_item_new_with_label("pci");
   GtkWidget *ovs  = gtk_menu_item_new_with_label("ovs");
+  GtkWidget *cmd  = gtk_menu_item_new_with_label("cmd");
   GtkWidget *kvm_conf = gtk_menu_item_new_with_label("Kvm_conf");
   GtkWidget *other= gtk_menu_item_new_with_label("Other");
   g_x_mouse = (double) x;
@@ -755,20 +763,23 @@ void canvas_ctx_menu(gdouble x, gdouble y)
                           (GCallback)kvm_cact, NULL);
   g_signal_connect_swapped(G_OBJECT(ovs), "activate",
                           (GCallback)ovs_cact, NULL);
+  g_signal_connect_swapped(G_OBJECT(cmd), "activate",
+                          (GCallback)cmd_cact, NULL);
 
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), lan);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), tap);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), snf);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), c2c);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), nat);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), snf);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), tap);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), c2c);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), phy);
   phy_sub_menu(phy);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), pci);
   pci_sub_menu(pci);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), ovs);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator1);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm_conf);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator1);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), ovs);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), cmd);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), other);
   other_sub_menu(other);
   gtk_widget_show_all(menu);

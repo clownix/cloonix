@@ -173,15 +173,8 @@ static int rx_cb(void *ptr, int llid, int fd)
       {
       cur = icmp_find(ipv4_h->src_addr, rcv_hdr->un.echo.id,
                       rcv_hdr->un.echo.sequence);
-      if (!cur)
-        {
-        KERR("ICMP Reply, %X id=%d, seq=%d", ipv4_h->src_addr,
-              (int)rcv_hdr->un.echo.id, (int)rcv_hdr->un.echo.sequence); 
-        }
-      else
-        {
+      if (cur)
         ping_destore(cur, 0);
-        }
       }
     }
   return rc;

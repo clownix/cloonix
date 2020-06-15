@@ -254,8 +254,8 @@ static int try_send_msg_ovs(t_ovs *cur, int msg_type, int tid, char *msg)
       {
       if (msg_type == msg_type_diag)
         {
-        hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
         rpct_send_diag_msg(NULL, cur->llid, tid, msg);
+        hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
         result = 0;
         }
       else if (msg_type == msg_type_pid)
@@ -506,11 +506,13 @@ static void timer_vm_add_beat(void *data)
       {
       event_print("timer !kvm call_dpdk_dyn_del_eth %s", vm->name);
       call_dpdk_dyn_del_eth(vm);
+      KERR("%s", vm->name);
       }
     else if (kvm->vm_to_be_killed == 1)
       {
       event_print("timer to_be_killed call_dpdk_dyn_del_eth %s", vm->name);
       call_dpdk_dyn_del_eth(vm);
+      KERR("%s", vm->name);
       }
     else
       {
@@ -522,11 +524,13 @@ static void timer_vm_add_beat(void *data)
           {
           event_print("timer !kvm call_dpdk_dyn_del_eth %s", vm->name);
           call_dpdk_dyn_del_eth(vm);
+          KERR("%s", vm->name);
           }
         else if (kvm->vm_to_be_killed == 1)
           {
           event_print("timer to_be_killed call_dpdk_dyn_del_eth %s", vm->name);
           call_dpdk_dyn_del_eth(vm);
+          KERR("%s", vm->name);
           }
         else
           {

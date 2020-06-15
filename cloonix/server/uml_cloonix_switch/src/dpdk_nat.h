@@ -23,13 +23,12 @@ void dpdk_nat_event_from_nat_dpdk_process(char *name, char *lan, int on);
 void dpdk_nat_resp_add_lan(int is_ko, char *lan, char *name);
 void dpdk_nat_resp_del_lan(int is_ko, char *lan, char *name);
 int dpdk_nat_get_qty(void);
-int dpdk_nat_add_lan(int llid, int tid, char *lan, char *name);
 int dpdk_nat_exist(char *name);
 int dpdk_nat_lan_exists(char *lan);
 int dpdk_nat_lan_exists_in_nat(char *name, char *lan);
 void dpdk_nat_end_ovs(void);
-int dpdk_nat_add(int llid, int tid, char *name);
-void dpdk_nat_del(char *name);
+int dpdk_nat_add(int llid, int tid, char *name, char *lan);
+int dpdk_nat_del(int llid, int tid, char *name);
 void dpdk_nat_init(void);
 /*--------------------------------------------------------------------------*/
 

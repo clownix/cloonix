@@ -62,7 +62,6 @@ void recv_status_ok(int llid, int tid, char *txt){KOUT(" ");}
 void recv_status_ko(int llid, int tid, char *reason){KOUT(" ");}
 void recv_add_vm(int llid, int tid, t_topo_kvm *kvm){KOUT(" ");}
 void recv_sav_vm(int llid, int tid, char *name, int type, char *sav_vm_path){KOUT(" ");}
-void recv_sav_vm_all(int llid, int tid,  int type, char *sav_vm_path){KOUT(" ");}
 void recv_add_sat(int llid, int tid, char *name, int mutype,
                   t_c2c_req_info *c2c_req_info){KOUT(" ");}
 void recv_del_sat(int llid, int tid, char *sat){KOUT(" ");}
@@ -78,7 +77,7 @@ void recv_slowperiodic_sub(int llid, int tid){KOUT(" ");}
 void recv_slowperiodic(int llid, int tid, int nb_endp, t_slowperiodic *spic){KOUT(" ");} 
 void recv_list_pid_req(int llid, int tid){KOUT(" ");}
 void recv_list_pid_resp(int llid, int tid, int qty, t_pid_lst *pid){KOUT(" ");}
-void recv_list_commands_req(int llid, int tid){KOUT(" ");}
+void recv_list_commands_req(int llid, int tid, int is_layout){KOUT(" ");}
 void recv_list_commands_resp(int llid, int tid, int qty, t_list_commands *list){KOUT(" ");}
 void recv_kill_uml_clownix(int llid, int tid){KOUT(" ");}
 void recv_del_all(int llid, int tid){KOUT(" ");}

@@ -44,18 +44,12 @@ typedef struct t_vhlan
   int  num;
   char lan[MAX_NAME_LEN];
   char vhost_ifname[IFNAMSIZ];
-  int  add_msg_tid;
-  int  add_cli_llid;
-  int  add_cli_tid;
-  int  add_count;
-  int  add_ack_lan_wait;
-  int  add_ack_port_wait;
-  int  del_msg_tid;
-  int  del_cli_llid;
-  int  del_cli_tid;
-  int  del_count;
-  int  del_ack_lan_wait;
-  int  del_ack_port_wait;
+  int  msg_tid;
+  int  cli_llid;
+  int  cli_tid;
+  int  count;
+  int  ack_lan_wait;
+  int  ack_port_wait;
   int  dummy_activated;
   struct t_vhlan *prev;
   struct t_vhlan *next;
@@ -148,7 +142,6 @@ static void vlan_free(t_vheth *eth, char *lan)
       KERR("%s %d %s", eth->name, eth->num, lan);
     if (vhost_lan_exists(lan) == 1)
       {
-      edp_evt_lan_del_done(eth_type_vhost, cur->lan);
       if (fmt_tx_del_vhost_lan(0, cur->name, cur->num, cur->lan))
         KERR("%s %d %s", cur->name, cur->num, cur->lan);
       }
@@ -271,34 +264,12 @@ static void vhm_free(char *name)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void send_resp_cli(t_vhlan *cur, int is_add, int is_ok)
+static void send_resp_cli(t_vhlan *cur, int is_ok)
 { 
-  int llid, tid;
-  char *msg_ok, *msg_ko;
-  if (is_add)
-    {
-    llid = cur->add_cli_llid;
-    tid = cur->add_cli_tid;
-    cur->add_cli_llid = 0;
-    cur->add_cli_tid = 0;
-    msg_ok = "OK add";
-    msg_ko = "KO add";
-    }
-  else
-    {
-    llid = cur->del_cli_llid;
-    tid = cur->del_cli_tid;
-    cur->del_cli_llid = 0;
-    cur->del_cli_tid = 0;
-    msg_ok = "OK del";
-    msg_ko = "KO del";
-    }
-  if (!msg_exist_channel(llid))
-    KERR("CANNOT ACK CMD: %d %s %s %d", llid, cur->lan, cur->name, cur->num); 
   if (is_ok)
-    send_status_ok(llid, tid, msg_ok);
+    utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
   else
-    send_status_ko(llid, tid, msg_ko);
+    utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), "fail");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -322,28 +293,15 @@ static void timer_vm_beat(void *data)
         cur = eth->head_lan;
         if (cur)
           {
-          if (cur->add_cli_llid)
+          if (cur->cli_llid)
             {
-            cur->add_count += 1;
-            if (cur->add_count > 3)
+            cur->count += 1;
+            if (cur->count > 3)
               {
               memset(lan, 0, MAX_NAME_LEN);
               strncpy(lan, cur->lan, MAX_NAME_LEN-1);
-              KERR("TIMEOUT lan: %s eth: %s %d",cur->lan,cur->name,cur->num);
-              send_resp_cli(cur, 1, 0);
-              vlan_free(eth, cur->lan);
-              event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-              }
-            }
-          else if (cur->del_cli_llid)
-            {
-            cur->del_count += 1;
-            if (cur->del_count > 3)
-              {
-              memset(lan, 0, MAX_NAME_LEN);
-              strncpy(lan, cur->lan, MAX_NAME_LEN-1);
-              KERR("TIMEOUT lan: %s eth: %s %d",cur->lan,cur->name,cur->num);
-              send_resp_cli(cur, 0, 0);
+              KERR("TIMEOUT: %s eth: %s %d", cur->lan, cur->name, cur->num);
+              send_resp_cli(cur, 0);
               vlan_free(eth, cur->lan);
               event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
               }
@@ -429,14 +387,9 @@ static int add_del_lan(int add, char *lan, char *name, int num,
           snprintf(err, MAX_PRINT_LEN-1, "Lan %s not found in Eth: %s %d",
                    lan, name, num);
           }
-        else if (ptr_vhlan->add_cli_llid)
+        else if (ptr_vhlan->cli_llid)
           {
-          snprintf(err, MAX_PRINT_LEN-1, "Lan %s Eth: %s %d waiting ack add",
-                   lan, name, num);
-          }
-        else if (ptr_vhlan->del_cli_llid)
-          {
-          snprintf(err, MAX_PRINT_LEN-1, "Lan %s Eth: %s %d waiting ack del",
+          snprintf(err, MAX_PRINT_LEN-1, "Lan %s Eth: %s %d waiting ack",
                    lan, name, num);
           }
         else
@@ -510,24 +463,25 @@ void vhost_eth_add_ack_lan(int tid, int is_ok, char *lan, char *name, int num)
     KERR("%d %d %s %s %d", tid, is_ok, lan, name, num);
   else if (tid != 0)
     {
-    if (tid != cur->add_msg_tid)
-      KERR("%d %d", tid, cur->add_msg_tid);
-    if (!cur->add_ack_lan_wait)
+    if (tid != cur->msg_tid)
+      KERR("%d %d", tid, cur->msg_tid);
+    if (!cur->ack_lan_wait)
       KERR("%s %s %d", lan, name, num);
     else
       {
-      cur->add_ack_lan_wait = 0;
+      cur->msg_tid = 0;
+      cur->ack_lan_wait = 0;
       if (is_ok == 0)
         {
         KERR("%s %s %d", lan, name, num);
-        send_resp_cli(cur, 1, 0);
+        send_resp_cli(cur, 0);
         eth = eth_find(vhm, num);
         vlan_free(eth, cur->lan);
         event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
         }
       else
         {
-        cur->add_ack_port_wait = 1;
+        cur->ack_port_wait = 1;
         if (fmt_tx_add_vhost_port(tid, name, num, cur->vhost_ifname, lan))
           KERR("%s %d %s %s", name, num, lan, cur->vhost_ifname);
         }
@@ -546,17 +500,17 @@ void vhost_eth_add_ack_port(int tid, int is_ok, char *lan, char *name, int num)
     KERR("%d %d %s %s %d", tid, is_ok, lan, name, num);
   else if (tid != 0)
     {
-    if (tid != cur->add_msg_tid)
-      KERR("%d %d", tid, cur->add_msg_tid);
-    if (!cur->add_ack_port_wait)
+    if (tid != cur->msg_tid)
+      KERR("%d %d", tid, cur->msg_tid);
+    if (!cur->ack_port_wait)
       KERR("%s %s %d", lan, name, num);
     else
       {
-      cur->del_msg_tid = 0;
-      cur->add_ack_port_wait = 0;
+      cur->msg_tid = 0;
+      cur->ack_port_wait = 0;
       if (is_ok == 0)
         {
-        send_resp_cli(cur, 1, 0);
+        send_resp_cli(cur, 0);
         KERR("%s %s %d", lan, name, num);
         eth = eth_find(vhm, num);
         vlan_free(eth, cur->lan);
@@ -564,12 +518,8 @@ void vhost_eth_add_ack_port(int tid, int is_ok, char *lan, char *name, int num)
       else
         {
         suid_power_ifup_phy(cur->vhost_ifname);
-        edp_evt_lan_add_done(eth_type_vhost, lan);
-        if (edp_evt_update_eth_type(cur->add_cli_llid, cur->add_cli_tid,
-                                     1, eth_type_vhost, name, lan))
-          send_status_ok(cur->add_cli_llid, cur->add_cli_tid, "OK");
-        cur->add_cli_llid = 0;
-        cur->add_cli_tid = 0;
+        edp_evt_update_fix_type_add(eth_type_vhost, name, lan);
+        utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
         event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
         }
       }
@@ -590,21 +540,21 @@ void vhost_eth_del_ack_port(int tid, int is_ok, char *lan, char *name, int num)
       KERR("%d %d %s %s %d", tid, is_ok, lan, name, num);
     else
       {
-      if (tid != cur->del_msg_tid)
-        KERR("%d %d", tid, cur->add_msg_tid);
-      if (!cur->del_ack_port_wait)
+      if (tid != cur->msg_tid)
+        KERR("%d %d", tid, cur->msg_tid);
+      if (!cur->ack_port_wait)
         KERR("%d %d %s %s %d", tid, is_ok, lan, name, num);
       else
         {
-        cur->del_msg_tid = 0;
-        cur->del_ack_port_wait = 0;
-        send_resp_cli(cur, 0, is_ok);
+        cur->msg_tid = 0;
+        cur->ack_port_wait = 0;
+        send_resp_cli(cur, is_ok);
         if (is_ok == 0)
           KERR("%s %s %d", lan, name, num);
         }
+      edp_evt_update_fix_type_del(eth_type_vhost, name, lan);
       eth = eth_find(vhm, num);
       vlan_free(eth, cur->lan);
-      edp_evt_update_eth_type(0, 0, 0, eth_type_vhost, name, lan);
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
     }
@@ -698,24 +648,24 @@ int vhost_eth_add_lan(int llid, int tid, char *lan, int vm_id,
   char *ifname;
   if (!add_del_lan(1, lan, name, num, info, &eth, &cur))
     {
-    if (cur->add_ack_port_wait)
+    if (cur->ack_port_wait)
       KERR("%s %d %s %s", name, num, lan, cur->vhost_ifname);
     else
       {
-      cur->add_msg_tid = utils_get_next_tid();
-      cur->add_cli_llid = llid;
-      cur->add_cli_tid = tid;
+      cur->msg_tid = utils_get_next_tid();
+      cur->cli_llid = llid;
+      cur->cli_tid = tid;
       if (vhost_lan_exists(lan) > 1)
         {
-        cur->add_ack_port_wait = 1;
+        cur->ack_port_wait = 1;
         ifname = cur->vhost_ifname;
-        if (fmt_tx_add_vhost_port(cur->add_msg_tid, name, num, ifname, lan))
+        if (fmt_tx_add_vhost_port(cur->msg_tid, name, num, ifname, lan))
           KERR("%s %d %s %s", name, num, lan, ifname);
         }
       else
         {
-        cur->add_ack_lan_wait = 1;
-        if (fmt_tx_add_vhost_lan(cur->add_msg_tid, name, num, lan))
+        cur->ack_lan_wait = 1;
+        if (fmt_tx_add_vhost_lan(cur->msg_tid, name, num, lan))
           KERR("%s %d %s", name, num, lan);
         }
       result = 0;
@@ -735,7 +685,7 @@ int vhost_eth_del_lan(int llid, int tid, char *lan,
   char *ifname;
   if (!add_del_lan(0, lan, name, num, info, &eth, &cur))
     {
-    if (cur->del_ack_port_wait)
+    if (cur->ack_port_wait)
       KERR("%s %d %s %s", name, num, lan, cur->vhost_ifname);
     else
       {
@@ -750,11 +700,11 @@ int vhost_eth_del_lan(int llid, int tid, char *lan,
         }
       else
         {
-        cur->del_msg_tid = utils_get_next_tid();
-        cur->del_cli_llid = llid;
-        cur->del_cli_tid = tid;
-        cur->del_ack_port_wait = 1;
-        if (fmt_tx_del_vhost_port(cur->del_msg_tid, name, num, ifname, lan))
+        cur->msg_tid = utils_get_next_tid();
+        cur->cli_llid = llid;
+        cur->cli_tid = tid;
+        cur->ack_port_wait = 1;
+        if (fmt_tx_del_vhost_port(cur->msg_tid, name, num, ifname, lan))
           KERR("%s %d %s %s", name, num, lan, ifname);
         }
       result = 0;
@@ -863,7 +813,7 @@ t_topo_endp *vhost_eth_translate_topo_endp(int *nb)
     while(eth)
       {
       cur = eth->head_lan;
-      if ((cur) && (cur->add_cli_llid==0) && (cur->del_cli_llid==0))
+      if ((cur) && (cur->cli_llid == 0))
         {
         len = nb_lan * sizeof(t_lan_group_item);
         result[nb_endp_vlan].lan.lan=(t_lan_group_item *)clownix_malloc(len,2);

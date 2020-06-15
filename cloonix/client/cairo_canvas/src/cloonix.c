@@ -117,12 +117,10 @@ int get_vm_config_flags(t_custom_vm *cust_vm)
   if (cust_vm->is_persistent)
     {
     vm_config_flags |= VM_CONFIG_FLAG_PERSISTENT;
-    vm_config_flags &= ~VM_CONFIG_FLAG_EVANESCENT;
     }
   else
     {
     vm_config_flags &= ~VM_CONFIG_FLAG_PERSISTENT;
-    vm_config_flags |= VM_CONFIG_FLAG_EVANESCENT;
     }
   if (cust_vm->has_p9_host_share)
     vm_config_flags |= VM_CONFIG_FLAG_9P_SHARED;

@@ -23,10 +23,10 @@ int dpdk_dyn_add_lan_to_eth(int llid, int tid, char *lan_name,
 int dpdk_dyn_del_lan_from_eth(int llid, int tid, char *lan_name,
                               char *name, int num, char *info);
 
-void dpdk_dyn_ack_add_lan_eth_OK(char *lan, char *name, int num, char *lab);
-void dpdk_dyn_ack_add_lan_eth_KO(char *lan, char *name, int num, char *lab);
-void dpdk_dyn_ack_del_lan_eth_OK(char *lan, char *name, int num, char *lab);
-void dpdk_dyn_ack_del_lan_eth_KO(char *lan, char *name, int num, char *lab);
+void dpdk_dyn_ack_add_lan_eth_OK(char *lan, char *name, int num);
+void dpdk_dyn_ack_add_lan_eth_KO(char *lan, char *name, int num);
+void dpdk_dyn_ack_del_lan_eth_OK(char *lan, char *name, int num);
+void dpdk_dyn_ack_del_lan_eth_KO(char *lan, char *name, int num);
 
 void dpdk_dyn_ack_add_eth_OK(char *name, int num, char *lab);
 void dpdk_dyn_ack_add_eth_KO(char *name, int num, char *lab);

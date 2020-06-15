@@ -61,17 +61,10 @@
 #include "edp_mngt.h"
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
-
-
-
-int produce_list_commands(t_list_commands *list);
+#include "list_commands.h"
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
-
-
-
 int inside_cloonix(char **name);
-
 extern int clownix_server_fork_llid;
 static void add_lan_endp(int llid, int tid, char *name, int num, char *lan);
 static int g_in_cloonix;
@@ -1139,7 +1132,7 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info,
         strncpy(kvm->rootfs_used, rootfs, MAX_PATH_LEN-1);
         }
       }
-    else if (kvm->vm_config_flags & VM_CONFIG_FLAG_EVANESCENT)
+    else
       {
       kvm->vm_config_flags |= VM_FLAG_DERIVED_BACKING;
       if (file_exists(kvm->rootfs_input, F_OK))
@@ -1159,8 +1152,6 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info,
       kvm->rootfs_used[MAX_PATH_LEN-1] = 0;
       strncpy(rootfs, kvm->rootfs_backing, MAX_PATH_LEN-1); 
       }
-    else
-      KOUT(" ");
     if (!strlen(rootfs))
       {
       result = -1;
@@ -1376,6 +1367,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
         kvm->eth_table[i].mac_addr[3] = 0xFF & rand();
         kvm->eth_table[i].mac_addr[4] = vm_id%100;
         kvm->eth_table[i].mac_addr[5] = i;
+        kvm->eth_table[i].randmac = 1;
         }
       }
     result = test_topo_kvm(kvm,vm_id,info,nb_sock,nb_dpdk,nb_vhost,nb_wlan);
@@ -1458,13 +1450,13 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_list_commands_req(int llid, int tid)
+void recv_list_commands_req(int llid, int tid, int is_layout)
 {
   t_list_commands *list;
   int qty, alloc_len = MAX_LIST_COMMANDS_QTY * sizeof(t_list_commands);
   list = (t_list_commands *) clownix_malloc(alloc_len, 7);
   memset(list, 0, alloc_len);
-  qty = produce_list_commands(list);
+  qty = produce_list_commands(list, is_layout);
   send_list_commands_resp(llid, tid, qty, list);
   clownix_free(list, __FILE__);
 }
@@ -1546,7 +1538,7 @@ t_pid_lst *create_list_pid(int *nb)
   strcpy(lst[j].name, "suid_power");
   lst[j].pid = suid_power_pid();
   j++;
-  strcpy(lst[j].name, "switch");
+  strcpy(lst[j].name, "cloonix_server");
   lst[j].pid = getpid();
   j++;
   *nb = j;
@@ -1940,49 +1932,6 @@ void recv_sav_vm(int llid, int tid, char *name, int stype, char *path)
   else
     {
     qmp_request_save_rootfs(name, path, llid, tid, stype);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_sav_vm_all(int llid, int tid, int stype, char *path)
-{
-  char info[MAX_PRINT_LEN];
-  char *dir_path = mydirname(path);
-  int nb;
-  t_vm *vm = cfg_get_first_vm(&nb);
-  if (!vm)
-    {
-    send_status_ko(llid, tid, "error MACHINE NOT FOUND");
-    }
-  else if (file_exists(path, F_OK))
-    {
-    send_status_ko(llid, tid, "error DIRECTORY ALREADY EXISTS");
-    }
-  else if (!file_exists(dir_path, W_OK))
-    {
-    sprintf(info, "error DIRECTORY %s NOT WRITABLE", dir_path);
-    send_status_ko(llid, tid, info);
-    }
-  else
-    {
-    if (mkdir(path, 0700))
-      {
-      if (errno == EEXIST)
-        {
-        sprintf(info, "error %s ALREADY EXISTS", path);
-        send_status_ko(llid, tid, info);
-        }
-      else
-        {
-        sprintf(info, "error DIR %s CREATE ERROR %d", path, errno);
-        send_status_ko(llid, tid, info);
-        }
-      }
-    else
-      {
-      qmp_request_save_rootfs_all(nb, vm, path, llid, tid, stype);
-      }
     }
 }
 /*--------------------------------------------------------------------------*/

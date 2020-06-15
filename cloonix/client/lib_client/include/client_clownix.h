@@ -69,7 +69,6 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
                    char *added_disk, char *p9_host_share);
 
 void client_sav_vm(int tid, t_end_cb cb, char *nm, int type, char *new_dir_path);
-void client_sav_vm_all(int tid, t_end_cb cb, int type, char *new_dir_path);
 void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest);
 void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest);
 void client_del_vm(int tid, t_end_cb cb, char *nm);
@@ -107,6 +106,7 @@ char *to_ascii_topo_stats(t_topo_info *topo);
 
 
 void client_list_commands(int tid,  t_list_commands_cb cb);
+void client_lay_commands(int tid,  t_list_commands_cb cb);
 void client_sav_list_commands(int tid, t_list_commands_cb cb, char *dirpath);
 void client_req_pids(int tid, t_pid_cb cb);
 

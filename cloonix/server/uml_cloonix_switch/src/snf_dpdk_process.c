@@ -45,6 +45,7 @@ typedef struct t_snf_dpdk
   int count;
   int llid;
   int pid;
+  int closed_count;
   int suid_root_done;
   struct t_snf_dpdk *prev;
   struct t_snf_dpdk *next;
@@ -138,6 +139,7 @@ static void send_all_nat_mac_to_snf(int llid, char *lan)
       "cloonixsnf_mac name=%s num=%d mac=%s", name, i, strmac);
       rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
       hop_event_alloc(llid, type_hop_endp, name, i);
+      hop_event_hook(llid, FLAG_HOP_DIAG, msg);
       }
     name = dpdk_nat_get_next_matching_lan(lan, name);
     }
@@ -160,6 +162,7 @@ static void send_all_tap_mac_to_snf(int llid, char *lan)
       "cloonixsnf_mac name=%s num=%d mac=%s", name, 0, strmac);
       rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
       hop_event_alloc(llid, type_hop_endp, name, 0);
+      hop_event_hook(llid, FLAG_HOP_DIAG, msg);
       }
     name = dpdk_tap_get_next_matching_lan(lan, name);
     }
@@ -195,6 +198,7 @@ static void send_all_vm_mac_to_snf(int llid, char *lan)
           "cloonixsnf_mac name=%s num=%d mac=%s", name, j, mac);
           rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
           hop_event_alloc(llid, type_hop_endp, name, j);
+          hop_event_hook(llid, FLAG_HOP_DIAG, msg);
           }
         }
       }
@@ -223,6 +227,7 @@ static void timer_heartbeat(void *data)
 {
   t_snf_dpdk *next, *cur = g_head_snf_dpdk;
   int llid;
+  char *msg = "cloonixsnf_suidroot";
   if (get_glob_req_self_destruction())
     return;
   while(cur)
@@ -248,8 +253,8 @@ static void timer_heartbeat(void *data)
       }
     else if (cur->suid_root_done == 0)
       {
-      rpct_send_diag_msg(NULL, cur->llid,
-                         type_hop_snf_dpdk, "cloonixsnf_suidroot");
+      rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
       cur->suid_root_done = 1;
       }
     else
@@ -259,6 +264,15 @@ static void timer_heartbeat(void *data)
         {
         rpct_send_pid_req(NULL, cur->llid, type_hop_snf_dpdk, cur->name, 0);
         cur->count = 0;
+        }
+      if (cur->closed_count > 0)
+        {
+        cur->closed_count -= 1;
+        if (cur->closed_count == 0)
+          {
+          dpdk_snf_event_from_snf_dpdk_process(cur->name, cur->lan, 0);
+          free_snf_dpdk(cur);
+          }
         }
       }
     cur = next;
@@ -277,12 +291,13 @@ void snf_dpdk_pid_resp(int llid, int tid, char *name, int pid)
     {
     if (cur->pid == 0)
       {
-      cur->pid = pid;
       dpdk_snf_event_from_snf_dpdk_process(name, cur->lan, 1);
-      snf_dpdk_process_possible_change(cur->lan);
+      cur->pid = pid;
       }
     else if (cur->pid != pid)
+      {
       KERR("%s %d", name, pid);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -314,7 +329,7 @@ void snf_dpdk_diag_resp(int llid, int tid, char *line)
   "endp_eventfull_tx_rx %s %d %d %d %d %d %d",
                         name, &num, &ms, &ptx, &btx, &prx, &brx) == 7)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
+    hop_event_hook(llid, FLAG_HOP_EVT, line);
     if (dpdk_tap_eventfull(name, ms, ptx, btx, prx, brx))
       {
       if (dpdk_ovs_fill_eventfull(name, num, ms, ptx, prx, btx, brx))
@@ -346,10 +361,11 @@ void snf_dpdk_diag_resp(int llid, int tid, char *line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void snf_dpdk_start_process(char *name, char *lan, int on)
+void snf_dpdk_start_stop_process(char *name, char *lan, int on)
 {
   t_snf_dpdk *cur = find_snf_dpdk(name);
   char *snf = utils_get_dpdk_snf_dir();
+  char msg[MAX_PATH_LEN];
   if (on)
     {
     if (cur)
@@ -379,7 +395,12 @@ void snf_dpdk_start_process(char *name, char *lan, int on)
     if (!cur)
       KERR("%s %s", name, lan);
     else
+      {
+      memset(msg, 0, MAX_PATH_LEN);
+      snprintf(msg, MAX_PATH_LEN-1, "rpct_send_kil_req to %s", name);
       rpct_send_kil_req(NULL, cur->llid, type_hop_snf_dpdk);
+      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -431,6 +452,7 @@ void snf_dpdk_process_possible_change(char *lan)
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "%s", "cloonixsnf_macliststart");
     rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
   
     send_all_nat_mac_to_snf(cur->llid, lan);
     send_all_tap_mac_to_snf(cur->llid, lan);
@@ -439,6 +461,7 @@ void snf_dpdk_process_possible_change(char *lan)
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "%s", "cloonixsnf_maclistend");
     rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -451,8 +474,7 @@ void snf_dpdk_llid_closed(int llid)
     {
     if (cur->llid == llid)
       {
-      dpdk_snf_event_from_snf_dpdk_process(cur->name, cur->lan, 0);
-      free_snf_dpdk(cur);
+      cur->closed_count = 2;
       }
     cur = cur->next;
     }

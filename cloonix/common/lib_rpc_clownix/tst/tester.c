@@ -43,7 +43,6 @@ static int count_work_dir_resp=0;
 static int count_add_vm=0;
 static int count_add_sat=0;
 static int count_sav_vm=0;
-static int count_sav_vm_all=0;
 static int count_del_sat=0;
 static int count_add_lan_endp=0;
 static int count_del_lan_endp=0;
@@ -146,7 +145,6 @@ static void print_all_count(void)
   printf("%d (slow)\n", count_slowperiodic_sub);
   printf("%d (slow)\n", count_slowperiodic);
   printf("%d\n", count_sav_vm);
-  printf("%d\n", count_sav_vm_all);
 
   printf("%d\n", count_evt_stats_endp_sub);
   printf("%d\n", count_evt_stats_endp);
@@ -362,6 +360,11 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
         KERR("%d %d",kvm->eth_table[k].eth_type,ikvm->eth_table[k].eth_type);
         result = -1;
         }
+      if (kvm->eth_table[k].randmac != ikvm->eth_table[k].randmac)
+        {
+        KERR("%d %d",kvm->eth_table[k].randmac,ikvm->eth_table[k].randmac);
+        result = -1;
+        }
       if (strcmp(kvm->eth_table[k].vhost_ifname,
                  ikvm->eth_table[k].vhost_ifname))
         {
@@ -418,6 +421,7 @@ static void random_kvm(t_topo_kvm *kvm)
   for (k=0; k < kvm->nb_tot_eth; k++)
     {
     kvm->eth_table[k].eth_type = (rand() & 0x04) + 1;
+    kvm->eth_table[k].randmac = rand();
     random_choice_str(kvm->eth_table[k].vhost_ifname, IFNAMSIZ-1);
     for (l=0; l < 6; l++)
       kvm->eth_table[k].mac_addr[l] = rand() & 0xFF;
@@ -1992,35 +1996,6 @@ void recv_sav_vm(int llid, int itid, char *iname, int itype, char *ipath)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_sav_vm_all(int llid, int itid, int itype, char *ipath)
-{
-  static int tid;
-  static int type;
-  static char path[MAX_PATH_LEN];
-  if (i_am_client)
-    {
-    if (count_sav_vm_all)
-      {
-      if (strcmp(ipath, path))
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      if (itype != type)
-        KOUT(" ");
-      }
-    tid = rand();
-    type = rand();
-    random_choice_str(path, MAX_PATH_LEN);
-    send_sav_vm_all(llid, tid, type, path);
-    }
-  else
-    send_sav_vm_all(llid, itid, itype, ipath);
-  count_sav_vm_all++;
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
 void recv_add_sat(int llid, int itid, char *iname, int imutype, 
                   t_c2c_req_info *ic2c_req_info)
 {
@@ -2272,21 +2247,24 @@ void recv_list_pid_resp(int llid, int itid, int iqty, t_pid_lst *ilst)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_list_commands_req(int llid, int itid)
+void recv_list_commands_req(int llid, int itid, int iis_layout)
 {
-  static int tid;
+  static int tid, is_layout;
   if (i_am_client)
     {
     if (count_list_commands_req)
       {
       if (itid != tid)
         KOUT(" ");
+      if (iis_layout != is_layout)
+        KOUT(" ");
       }
     tid = rand();
-    send_list_commands_req(llid, tid);
+    is_layout = rand();
+    send_list_commands_req(llid, tid, is_layout);
     }
   else
-    send_list_commands_req(llid, itid);
+    send_list_commands_req(llid, itid, iis_layout);
   count_list_commands_req++;
 }
 /*---------------------------------------------------------------------------*/
@@ -2627,7 +2605,7 @@ static void send_first_burst(int llid)
   recv_del_lan_endp(llid, 0, NULL, 0, NULL);
   recv_list_pid_req(llid,0);
   recv_list_pid_resp(llid,0, 0, NULL);
-  recv_list_commands_req(llid,0);
+  recv_list_commands_req(llid,0, 0);
   recv_list_commands_resp(llid,0, 0, NULL);
   recv_topo_small_event_sub(llid,0);
   recv_topo_small_event_unsub(llid,0);
@@ -2649,7 +2627,6 @@ static void send_first_burst(int llid)
   recv_slowperiodic_sub(llid, 0);
   recv_slowperiodic(llid, 0, 0, NULL);
   recv_sav_vm(llid, 0, NULL, 0, NULL);
-  recv_sav_vm_all(llid, 0, 0, NULL);
   recv_mucli_dialog_req(llid, 0, NULL, 0, NULL);
   recv_mucli_dialog_resp(llid, 0, NULL, 0, NULL, 0);
   recv_evt_stats_endp_sub(llid, 0, NULL, 0, 0);
@@ -2735,7 +2712,8 @@ static void connect_from_client(void *ptr, int llid, int llid_new)
 /*---------------------------------------------------------------------------*/
 int main (int argc, char *argv[])
 {
-  int llid, ip, port = PORT;
+  int llid, port = PORT;
+  uint32_t ip;
   if (ip_string_to_int(&ip, IP)) 
     KOUT("%s", IP);
   doors_io_basic_xml_init(string_tx);

@@ -30,6 +30,7 @@
 #include "lan_to_name.h"
 #include "layout_topo.h"
 #include "endp_mngt.h"
+#include "edp_mngt.h"
 
 
 
@@ -71,28 +72,54 @@ static void eth_tab_to_str(char *out, int nb_tot_eth, t_eth_table *eth_tab)
 
 /*****************************************************************************/
 static int build_add_vm_cmd(int offset, t_list_commands *hlist, 
-                            t_topo_kvm *para)
+                            t_topo_kvm *kvm)
 {
-  int len = 0;
+  int i, len = 0;
   int result = offset;
   t_list_commands *list = &(hlist[offset]);
   char eth_desc[MAX_NAME_LEN];
+  char *mc;
   if (can_increment_index(result))
     {
-    eth_tab_to_str(eth_desc, para->nb_tot_eth, para->eth_table);
+    eth_tab_to_str(eth_desc, kvm->nb_tot_eth, kvm->eth_table);
     len += sprintf(list->cmd + len, 
            "cloonix_cli %s add kvm %s ram=%d cpu=%d eth=%s",
-            cfg_get_cloonix_name(), para->name, para->mem, para->cpu, eth_desc);
-    len += sprintf(list->cmd + len, " %s", para->rootfs_input);
-    if (para->vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
+            cfg_get_cloonix_name(), kvm->name, kvm->mem, kvm->cpu, eth_desc);
+    len += sprintf(list->cmd + len, " %s", kvm->rootfs_input);
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
       len += sprintf(list->cmd + len, " --persistent");
-    if (para->vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT)
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT)
       len += sprintf(list->cmd + len, " --fullvirt");
-    if (para->vm_config_flags & VM_CONFIG_FLAG_BALLOONING)
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_NO_REBOOT)
+      len += sprintf(list->cmd + len, " --no_reboot");
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_WITH_PXE)
+      len += sprintf(list->cmd + len, " --with_pxe");
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_UEFI)
+      len += sprintf(list->cmd + len, " --uefi");
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_BALLOONING)
       len += sprintf(list->cmd + len, " --balloon");
-    if (para->vm_config_flags & VM_CONFIG_FLAG_9P_SHARED)
-      len += sprintf(list->cmd + len, " --9p_share=%s", para->p9_host_share);
-    len += sprintf(list->cmd + len, " &");
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_9P_SHARED)
+      len += sprintf(list->cmd + len, " --9p_share=%s", kvm->p9_host_share);
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM)
+      len += sprintf(list->cmd + len, " --install_cdrom=%s",
+                                         kvm->install_cdrom);
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM)
+      len += sprintf(list->cmd + len, " --added_cdrom=%s",
+                                         kvm->added_cdrom);
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK)
+      len += sprintf(list->cmd + len, " --added_disk=%s",
+                                         kvm->added_disk);
+    for (i=0; i < kvm->nb_tot_eth; i++)
+      {
+      if (kvm->eth_table[i].randmac == 0)
+        {
+        mc = kvm->eth_table[i].mac_addr;
+	len += sprintf(list->cmd + len,
+        " --mac_addr=eth%d:%02x:%02x:%02x:%02x:%02x:%02x", i,
+                           mc[0]&0xff, mc[1]&0xff, mc[2]&0xff,
+                           mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);
+        }
+      }
     result += 1;
     }
   return result;
@@ -100,32 +127,40 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int build_add_edp_cmd(int offset, t_list_commands *hlist, t_endp *endp)
+static int build_add_edp_cmd(int offset, t_list_commands *hlist, t_edp *edp)
+{
+  int result = offset;
+  t_list_commands *list = &(hlist[offset]);
+  char *clo = cfg_get_cloonix_name();
+  if (can_increment_index(result))
+    {
+    if (edp->endp_type == endp_type_phy)
+      sprintf(list->cmd, "cloonix_cli %s add phy %s", clo, edp->name);
+    else if (edp->endp_type == endp_type_pci)
+      sprintf(list->cmd, "cloonix_cli %s add pci %s", clo, edp->name);
+    else if (edp->endp_type == endp_type_tap)
+      sprintf(list->cmd, "cloonix_cli %s add tap %s", clo, edp->name);
+    else if (edp->endp_type == endp_type_nat)
+      sprintf(list->cmd, "cloonix_cli %s add nat %s", clo, edp->name);
+    else if (edp->endp_type == endp_type_snf)
+      sprintf(list->cmd, "cloonix_cli %s add snf %s", clo, edp->name);
+    else
+      KERR("%d", edp->endp_type);
+    result += 1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int build_add_wif_cmd(int offset, t_list_commands *hlist, t_endp *endp)
 {
   int result = offset;
   t_list_commands *list = &(hlist[offset]);
   if (can_increment_index(result))
     {
-    if (endp->endp_type == endp_type_phy)
-      sprintf(list->cmd, "cloonix_cli %s add phy %s", 
-                         cfg_get_cloonix_name(), endp->name);
-    else if (endp->endp_type == endp_type_pci)
-      sprintf(list->cmd, "cloonix_cli %s add pci %s", 
-                         cfg_get_cloonix_name(), endp->name);
-    else if (endp->endp_type == endp_type_tap)
-      sprintf(list->cmd, "cloonix_cli %s add tap %s", 
-                         cfg_get_cloonix_name(), endp->name);
-    else if (endp->endp_type == endp_type_wif)
-      sprintf(list->cmd, "cloonix_cli %s add wif %s", 
-                         cfg_get_cloonix_name(), endp->name);
-    else if (endp->endp_type == endp_type_nat)
-      sprintf(list->cmd, "cloonix_cli %s add nat %s",
-                         cfg_get_cloonix_name(), endp->name);
-    else if (endp->endp_type == endp_type_snf)
-      sprintf(list->cmd, "cloonix_cli %s add snf %s", 
-                         cfg_get_cloonix_name(), endp->name);
-    else
-      KERR("%d", endp->endp_type);
+    sprintf(list->cmd, "cloonix_cli %s add wif %s", 
+                       cfg_get_cloonix_name(), endp->name);
     result += 1;
     }
   return result;
@@ -346,21 +381,6 @@ static int build_layout_lan(int offset, t_list_commands *hlist,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int produce_sleep_line(int offset, t_list_commands *hlist, int sec)
-{
-  int result = offset;
-  t_list_commands *list;
-  if (can_increment_index(result))
-    {
-    list = &(hlist[result]);
-    sprintf(list->cmd, "sleep %d", sec);
-    result += 1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int produce_list_vm_cmd(int offset, t_list_commands *hlist,
                                int nb_vm, t_vm *vm) 
 {
@@ -368,12 +388,42 @@ static int produce_list_vm_cmd(int offset, t_list_commands *hlist,
   for (i=0; i<nb_vm; i++)
     {
     result = build_add_vm_cmd(result, hlist, &(vm->kvm));
-    result = produce_sleep_line(result, hlist, 5);
     vm = vm->next;
     }
   return result;
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int produce_list_edp_cmd(int offset, t_list_commands *hlist,
+                                int nb_edp, t_edp *edp)
+{
+  t_edp *cur = edp;
+  int i, result = offset;
+  for (i=0; i<nb_edp; i++)
+    {
+    if (!cur)
+      KOUT(" ");
+    if ((cur->endp_type == endp_type_tap)       ||
+        (cur->endp_type == endp_type_phy)       ||
+        (cur->endp_type == endp_type_pci)       ||
+        (cur->endp_type == endp_type_nat)       ||
+        (cur->endp_type == endp_type_snf))
+      {
+      result = build_add_edp_cmd(result, hlist, cur);
+      }
+    else
+      KERR("%s %d", cur->name, cur->endp_type); 
+    cur = cur->next;
+    }
+  if (cur)
+    KOUT(" ");
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+
+
 
 /*****************************************************************************/
 static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
@@ -385,14 +435,9 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
     {
     if (!cur)
       KOUT(" ");
-    if ((cur->endp_type == endp_type_tap) ||
-        (cur->endp_type == endp_type_phy) ||
-        (cur->endp_type == endp_type_pci) ||
-        (cur->endp_type == endp_type_nat) ||
-        (cur->endp_type == endp_type_snf) ||
-        (cur->endp_type == endp_type_wif))
+    if (cur->endp_type == endp_type_wif)
       {
-      result = build_add_edp_cmd(result, hlist, cur);
+      result = build_add_wif_cmd(result, hlist, cur);
       }
     else if (cur->endp_type == endp_type_c2c)
       {
@@ -404,19 +449,25 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
       if (cur->num == 0)
         result = build_add_a2b_cmd(result, hlist, cur);
       }
-    else if ((cur->endp_type == endp_type_kvm_sock) ||
-             (cur->endp_type == endp_type_kvm_wlan))
+    else if ((cur->endp_type == endp_type_kvm_sock)  ||
+             (cur->endp_type == endp_type_kvm_wlan)  ||
+             (cur->endp_type == endp_type_kvm_vhost) ||
+             (cur->endp_type == endp_type_kvm_dpdk)  ||
+             (cur->endp_type == endp_type_tap)       ||
+             (cur->endp_type == endp_type_phy)       ||
+             (cur->endp_type == endp_type_pci)       ||
+             (cur->endp_type == endp_type_nat)       ||
+             (cur->endp_type == endp_type_snf))
       {
       }
     else
-      KERR("%s %d", cur->name, cur->num); 
+      KERR("%s %d %d", cur->name, cur->num, cur->endp_type); 
     next = endp_mngt_get_next(cur);
     clownix_free(cur, __FILE__);
     cur = next;
     }
   if (cur)
     KOUT(" ");
-  result = produce_sleep_line(result, hlist, 5);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -462,9 +513,7 @@ static int produce_list_canvas_layout_cmd(int offset, t_list_commands *hlist,
 {
   int result = offset;
   result = build_stop_go_cmd(result, hlist, go);
-  result = produce_sleep_line(result, hlist, 1);
   result = build_width_height_cmd(result, hlist, width, height);
-  result = produce_sleep_line(result, hlist, 1);
   result = build_center_scale_cmd(result, hlist, cx, cy, cw, ch);
   return result;
 }
@@ -516,78 +565,37 @@ static int produce_list_layout_lan_cmd(int offset, t_list_commands *hlist,
 }
 /*---------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-static int produce_first_lines(int offset, t_list_commands *hlist)
-{
-  int result = offset;
-  t_list_commands *list;
-  if (can_increment_index(result))
-    {
-    list = &(hlist[result]);
-    sprintf(list->cmd, "#!/bin/bash");
-    result += 1;
-    }
-  if (can_increment_index(result))
-    {
-    list = &(hlist[result]);
-    sprintf(list->cmd, "cloonix_net %s", cfg_get_cloonix_name());
-    result += 1;
-    }
-  if (can_increment_index(result))
-    {
-    list = &(hlist[result]);
-    sprintf(list->cmd, "sleep 2");
-    result += 1;
-    }
-  if (can_increment_index(result))
-    {
-    list = &(hlist[result]);
-    sprintf(list->cmd, "cloonix_gui %s", cfg_get_cloonix_name());
-    result += 1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int produce_last_lines(int offset, t_list_commands *hlist)
+int produce_list_commands(t_list_commands *hlist, int is_layout)
 {
-  int result = offset;
-  t_list_commands *list;
-  if (can_increment_index(result))
-    {
-    list = &(hlist[result]);
-    sprintf(list->cmd, "echo END");
-    result += 1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int produce_list_commands(t_list_commands *hlist)
-{
-  int nb_vm, nb_endp, result = 0;
+  int nb_vm, nb_endp, nb_edp, result = 0;
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
   t_endp *endp;
+  t_edp *edp;
   int go, width, height, cx, cy, cw, ch;
   t_layout_xml *layout_xml;
 
-  result = produce_first_lines(result, hlist);
-  result = produce_list_vm_cmd(result, hlist, nb_vm, vm); 
-  endp = endp_mngt_get_first(&nb_endp);
-  result = produce_list_sat_cmd(result, hlist, nb_endp, endp);
-  endp = endp_mngt_get_first(&nb_endp);
-  result = produce_list_lan_cmd(result, hlist, nb_endp, endp);
-  get_layout_main_params(&go, &width, &height, &cx, &cy, &cw, &ch);
-  result = produce_list_canvas_layout_cmd(result, hlist, go, 
-                                               width, height, 
-                                               cx, cy, cw, ch);
-  layout_xml = get_layout_xml_chain();
-  result = produce_list_layout_node_cmd(result, hlist, layout_xml->node_xml);
-  result = produce_list_layout_sat_cmd(result, hlist, layout_xml->sat_xml);
-  result = produce_list_layout_lan_cmd(result, hlist, layout_xml->lan_xml);
-  result = produce_last_lines(result, hlist);
+  if (is_layout == 0)
+    {
+    result = produce_list_vm_cmd(result, hlist, nb_vm, vm); 
+    edp = edp_mngt_get_first(&nb_edp);
+    result = produce_list_edp_cmd(result, hlist, nb_edp, edp);
+    endp = endp_mngt_get_first(&nb_endp);
+    result = produce_list_sat_cmd(result, hlist, nb_endp, endp);
+    endp = endp_mngt_get_first(&nb_endp);
+    result = produce_list_lan_cmd(result, hlist, nb_endp, endp);
+    }
+  else
+    {
+    get_layout_main_params(&go, &width, &height, &cx, &cy, &cw, &ch);
+    layout_xml = get_layout_xml_chain();
+    result = produce_list_layout_node_cmd(result, hlist, layout_xml->node_xml);
+    result = produce_list_layout_sat_cmd(result, hlist, layout_xml->sat_xml);
+    result = produce_list_layout_lan_cmd(result, hlist, layout_xml->lan_xml);
+    result = produce_list_canvas_layout_cmd(result, hlist, go, width, height, 
+                                                              cx, cy, cw, ch);
+    }
   return result;
 }
 /*---------------------------------------------------------------------------*/

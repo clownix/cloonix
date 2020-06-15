@@ -94,18 +94,6 @@ static t_edp_vhost *find_edp_vhost(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void fail_resp_req(t_edp_vhost *cur)
-{
-   KERR("%s %s", cur->name, cur->lan);
-  if (msg_exist_channel(cur->llid))
-    send_status_ko(cur->llid, cur->tid, "KO");
-  else
-    KERR("%s %s", cur->name, cur->lan);
-  free_edp_vhost(cur);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void timer_edp(void *data)
 {
   t_edp_vhost *next, *cur = g_head_edp_vhost;
@@ -114,7 +102,11 @@ static void timer_edp(void *data)
     next = cur->next;
     cur->count += 1;
     if (cur->count == 20)
-      fail_resp_req(cur);
+      {
+      KERR("%s %s", cur->name, cur->lan);
+      utils_send_status_ko(&(cur->llid), &(cur->tid), "timeout");
+      free_edp_vhost(cur);
+      }
     cur = next;
     }
   clownix_timeout_add(20, timer_edp, NULL, NULL, NULL);
@@ -132,10 +124,7 @@ void edp_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name)
   else if (is_ok == 0)
     {
     KERR("%s %s", name, lan);
-    if (msg_exist_channel(cur->llid))
-      send_status_ko(cur->llid, cur->tid, "KO");
-    else
-      KERR("%s %s", name, lan);
+    utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch fail");
     free_edp_vhost(cur);
     }
   else
@@ -144,7 +133,8 @@ void edp_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name)
       KERR("%s %s %d %d", name, lan, tid, cur->ovs_tid);
     if (cur->state != state_wait_add_port)
       KERR("%s %s %d", name, lan, cur->state);
-    send_status_ok(cur->llid, cur->tid, "OK");
+    edp_evt_update_non_fix_add(eth_type_vhost, name, lan);
+    utils_send_status_ok(&(cur->llid), &(cur->tid));
     free_edp_vhost(cur);
     }
 }
@@ -161,10 +151,7 @@ void edp_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name)
   else if (is_ok == 0)
     {
     KERR("%s %s", name, lan);
-    if (msg_exist_channel(cur->llid))
-      send_status_ko(cur->llid, cur->tid, "KO");
-    else
-      KERR("%s %s", name, lan);
+    utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch fail");
     free_edp_vhost(cur);
     }
   else
@@ -175,10 +162,8 @@ void edp_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name)
       KERR("%s %s %d", name, lan, cur->state);
     else
       {
-      if (msg_exist_channel(cur->llid))
-        send_status_ok(cur->llid, cur->tid, "OK");
-      else
-        KERR("%s %s", name, lan);
+      edp_evt_update_non_fix_del(eth_type_vhost, name, lan);
+      utils_send_status_ok(&(cur->llid), &(cur->tid));
       }
     free_edp_vhost(cur);
     }

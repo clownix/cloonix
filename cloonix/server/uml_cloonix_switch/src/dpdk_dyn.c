@@ -41,6 +41,7 @@
 #include "edp_mngt.h"
 #include "edp_evt.h"
 #include "snf_dpdk_process.h"
+#include "utils_cmd_line_maker.h"
 
 /****************************************************************************/
 typedef struct t_dlan
@@ -281,7 +282,7 @@ static void all_lan_del_req(t_dvm *vm)
 
 /****************************************************************************/
 static void recv_ack(int is_add, int is_ko, char *lan_name,
-                     char *name, int num, char *lab)
+                     char *name, int num)
 {
   t_dlan *lan;
   t_dvm *vm = vm_find(name);
@@ -299,8 +300,10 @@ static void recv_ack(int is_add, int is_ko, char *lan_name,
         {
         if ((is_ko) || (!is_add))
           {
-          if ((is_ko) && (lan->llid))
-            send_status_ko(lan->llid, lan->tid, lab);
+          if (is_ko)
+            utils_send_status_ko(&(lan->llid), &(lan->tid), "openvswitch error");
+          else
+            utils_send_status_ok(&(lan->llid), &(lan->tid));
           vlan_free(eth, lan);
           } 
         else
@@ -308,13 +311,8 @@ static void recv_ack(int is_add, int is_ko, char *lan_name,
           if (lan->waiting_ack_add != 1)
             KERR("addlan ko:%d %s %s %d", is_ko, lan_name, name, num);
           lan->waiting_ack_add = 0; 
-          if (edp_evt_update_eth_type(lan->llid, lan->tid, is_add,
-                                       eth_type_dpdk, name, lan_name))
-            send_status_ok(lan->llid, lan->tid, "OK");
-          lan->llid = 0;
-          lan->tid = 0;
+          utils_send_status_ok(&(lan->llid), &(lan->tid));
           }
-        edp_evt_update_eth_type(0, 0, is_add, eth_type_dpdk, name, lan_name);
         event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
         snf_dpdk_process_possible_change(lan_name);
         }
@@ -324,30 +322,30 @@ static void recv_ack(int is_add, int is_ko, char *lan_name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_ack_add_lan_eth_OK(char *lan, char *name, int num, char *lab)
+void dpdk_dyn_ack_add_lan_eth_OK(char *lan, char *name, int num)
 {
-  recv_ack(1, 0, lan, name, num, lab);
+  recv_ack(1, 0, lan, name, num);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_ack_add_lan_eth_KO(char *lan, char *name, int num, char *lab)
+void dpdk_dyn_ack_add_lan_eth_KO(char *lan, char *name, int num)
 {
-  recv_ack(1, 1, lan, name, num, lab);
+  recv_ack(1, 1, lan, name, num);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_ack_del_lan_eth_OK(char *lan, char *name, int num, char *lab)
+void dpdk_dyn_ack_del_lan_eth_OK(char *lan, char *name, int num)
 {
-  recv_ack(0, 0, lan, name, num, lab);
+  recv_ack(0, 0, lan, name, num);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_dyn_ack_del_lan_eth_KO(char *lan, char *name, int num, char *lab)
+void dpdk_dyn_ack_del_lan_eth_KO(char *lan, char *name, int num)
 {
-  recv_ack(0, 1, lan, name, num, lab);
+  recv_ack(0, 1, lan, name, num);
 }
 /*--------------------------------------------------------------------------*/
 

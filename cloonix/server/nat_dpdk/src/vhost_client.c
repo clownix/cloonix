@@ -96,17 +96,16 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
   if (g_virtio_device_on)
     {
-    if ((queue_id==0)||(queue_id==2)||(queue_id==4)||(queue_id==6))
+    if (queue_id==0)
       {
       if (enable)
-        g_enable += 1;
+        g_enable = 1;
       else
         {
-        g_enable -= 1;
-        KERR("RX DISABLE %d", queue_id);
+        g_enable = 0;
         }
       }
-    else if ((queue_id==1)||(queue_id==3)||(queue_id==5)||(queue_id==7))
+    else if (queue_id==1)
       {
       }
     else
@@ -157,6 +156,14 @@ static int rxtx_worker(void *arg __rte_unused)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void last_timeout_end(void *data)
+{
+  end_clean_unlink();
+  exit(0);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void timeout_end(void *data)
 {
   int err, i, ok_to_exit = 1;
@@ -172,8 +179,8 @@ static void timeout_end(void *data)
     err = rte_vhost_driver_unregister(g_nat_socket);
     if (err)
       KERR("ERROR UNREGISTER");
-    end_clean_unlink();
-    exit(0);
+    memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
+    clownix_timeout_add(10, last_timeout_end, NULL, NULL, NULL);
     }
   else
     clownix_timeout_add(1, timeout_end, NULL, NULL, NULL);

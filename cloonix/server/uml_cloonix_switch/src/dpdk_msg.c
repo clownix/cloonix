@@ -317,7 +317,7 @@ static void delay_add_lan_endp(void *data)
       if (fmt_tx_add_lan_eth(req->tid, req->lan_name, req->name, req->num))
         {
         KERR("%s %s %d", req->lan_name, req->name, req->num);
-        dpdk_dyn_ack_add_lan_eth_KO(req->lan_name,req->name,req->num,"delay");
+        dpdk_dyn_ack_add_lan_eth_KO(req->lan_name, req->name, req->num);
         ovsreq_free(req->tid);
         }
       }
@@ -362,7 +362,7 @@ static void delay_add_lan_endp(void *data)
       {
       KERR("DELAY %s %s %d %d", req->lan_name, req->name, req->num, req->type);
       if (req->type == ovsreq_add_lan_eth)
-        dpdk_dyn_ack_add_lan_eth_KO(req->lan_name,req->name,req->num,"PB delay");
+        dpdk_dyn_ack_add_lan_eth_KO(req->lan_name, req->name, req->num);
       else if (req->type == ovsreq_add_lan_snf)
         dpdk_snf_resp_add_lan(1, req->lan_name, req->name);
       else if (req->type == ovsreq_add_lan_nat)
@@ -626,10 +626,78 @@ void dpdk_msg_ack_eth(int tid, char *name, int num,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void transmit_add_ack_to_dyn(int tid, t_ovsreq *cur, int is_ko)
+{
+  if (!lan_find(cur->lan_name))
+    KERR("%s %s %d", cur->lan_name, cur->name, cur->num);
+  if (is_ko == 0)
+    lan_refcount_inc(cur->lan_name, __LINE__);
+  if (cur->type == ovsreq_add_lan_eth)
+    {
+    if (is_ko)
+      dpdk_dyn_ack_add_lan_eth_KO(cur->lan_name, cur->name, cur->num);
+    else
+      dpdk_dyn_ack_add_lan_eth_OK(cur->lan_name, cur->name, cur->num);
+    edp_evt_update_fix_type_add(eth_type_dpdk, cur->name, cur->lan_name);
+    }
+  else if (cur->type == ovsreq_add_lan_snf)
+    {
+    dpdk_snf_resp_add_lan(is_ko, cur->lan_name, cur->name);
+    }
+  else if (cur->type == ovsreq_add_lan_nat)
+    {
+    dpdk_nat_resp_add_lan(is_ko, cur->lan_name, cur->name);
+    }
+  else if (cur->type == ovsreq_add_lan_tap)
+    {
+    dpdk_tap_resp_add_lan(is_ko, cur->lan_name, cur->name);
+    }
+  else
+    KERR("%s %s %d %d", cur->lan_name, cur->name, cur->num, cur->type);
+  ovsreq_free(tid);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void transmit_del_ack_to_dyn(int tid, t_ovsreq *cur, int is_ko)
+{
+  int ntid;
+  if (cur->type == ovsreq_del_lan_eth)
+    {
+    if (is_ko)
+      dpdk_dyn_ack_del_lan_eth_KO(cur->lan_name, cur->name, cur->num);
+    else
+      dpdk_dyn_ack_del_lan_eth_OK(cur->lan_name, cur->name, cur->num);
+    edp_evt_update_fix_type_del(eth_type_dpdk, cur->name, cur->lan_name);
+    }
+  else if (cur->type == ovsreq_del_lan_snf)
+    dpdk_snf_resp_del_lan(is_ko, cur->lan_name, cur->name);
+  else if (cur->type == ovsreq_del_lan_nat)
+    dpdk_nat_resp_del_lan(is_ko, cur->lan_name, cur->name);
+  else if (cur->type == ovsreq_del_lan_tap)
+    dpdk_tap_resp_del_lan(is_ko, cur->lan_name, cur->name);
+  else
+    KERR("%s %s %d %d", cur->lan_name, cur->name, cur->num, cur->type);
+  if (lan_refcount_dec(cur->lan_name, __LINE__) == 1)
+    {
+    ntid = utils_get_next_tid();
+    ovsreq_alloc(ntid, cur->type, cur->lan_name, cur->name, cur->num);
+    if (fmt_tx_del_lan(ntid, cur->lan_name))
+      {
+      KERR("%s", cur->lan_name);
+      ovsreq_free(ntid);
+      lan_refcount_dec(cur->lan_name, __LINE__);
+      }
+    }
+  lan_free_try(cur->name, cur->num, cur->lan_name, cur->type);
+  ovsreq_free(tid);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void dpdk_msg_ack_lan_endp(int tid, char *lan_name, char *name, int num,
                            int is_add, int is_ko, char *lab)
 {
-  int ntid;
   t_ovsreq *cur = ovsreq_find(tid);
   if (!cur)
     {
@@ -645,77 +713,11 @@ void dpdk_msg_ack_lan_endp(int tid, char *lan_name, char *name, int num,
       KERR("%d %d is_add:%d is_ko:%d", num, cur->num, is_add, is_ko);
     else if (is_add)
       {
-      if (!lan_find(cur->lan_name))
-        KERR("%s %s %d", cur->lan_name, cur->name, cur->num);
-      if (is_ko == 0)
-        lan_refcount_inc(cur->lan_name, __LINE__);
-      if (cur->type == ovsreq_add_lan_eth)
-        {
-        if (is_ko)
-          dpdk_dyn_ack_add_lan_eth_KO(lan_name, name, num, lab);
-        else
-          dpdk_dyn_ack_add_lan_eth_OK(lan_name, name, num, lab);
-        }
-      else if (cur->type == ovsreq_add_lan_snf)
-        {
-        dpdk_snf_resp_add_lan(is_ko, lan_name, name);
-        }
-      else if (cur->type == ovsreq_add_lan_nat)
-        {
-        dpdk_nat_resp_add_lan(is_ko, lan_name, name);
-        }
-      else if (cur->type == ovsreq_add_lan_tap)
-        {
-        dpdk_tap_resp_add_lan(is_ko, lan_name, name);
-        }
-      else
-        KERR("%s %s %d %d",cur->lan_name,cur->name,cur->num,cur->type);
-      ovsreq_free(tid);
+      transmit_add_ack_to_dyn(tid, cur, is_ko);
       }
     else
       {
-      if (lan_refcount_dec(lan_name, __LINE__) == 1)
-        {
-        ntid = utils_get_next_tid();
-        ovsreq_alloc(ntid, cur->type, cur->lan_name, cur->name, cur->num);
-        edp_evt_lan_del_done(eth_type_dpdk, lan_name);
-        if (fmt_tx_del_lan(ntid, lan_name))
-          {
-          KERR("%s", lan_name);
-          if (cur->type == ovsreq_del_lan_eth)
-            dpdk_dyn_ack_del_lan_eth_KO(lan_name, name, num, "badlandel");
-          else if (cur->type == ovsreq_del_lan_snf)
-            dpdk_snf_resp_del_lan(1, lan_name, name);
-          else if (cur->type == ovsreq_del_lan_nat)
-            dpdk_nat_resp_del_lan(1, lan_name, name);
-          else if (cur->type == ovsreq_del_lan_tap)
-            dpdk_tap_resp_del_lan(1, lan_name, name);
-          else
-            KERR("%s %s %d %d",cur->lan_name,cur->name,cur->num,cur->type);
-          ovsreq_free(ntid);
-          lan_refcount_dec(lan_name, __LINE__);
-          }
-        }
-      else
-        {
-        if (cur->type == ovsreq_del_lan_eth)
-          {
-          if (is_ko)
-            dpdk_dyn_ack_del_lan_eth_KO(lan_name, name, num, lab);
-          else
-            dpdk_dyn_ack_del_lan_eth_OK(lan_name, name, num, lab);
-          }
-        else if (cur->type == ovsreq_del_lan_snf)
-          dpdk_snf_resp_del_lan(is_ko, lan_name, name);
-        else if (cur->type == ovsreq_del_lan_nat)
-          dpdk_nat_resp_del_lan(is_ko, lan_name, name);
-        else if (cur->type == ovsreq_del_lan_tap)
-          dpdk_tap_resp_del_lan(is_ko, lan_name, name);
-        else
-          KERR("%s %s %d %d",cur->lan_name,cur->name,cur->num,cur->type);
-        }
-      lan_free_try(name, num, lan_name, cur->type);
-      ovsreq_free(tid);
+      transmit_del_ack_to_dyn(tid, cur, is_ko);
       }
     }
 }
@@ -739,17 +741,6 @@ void dpdk_msg_ack_lan(int tid, char *lan_name,
       {
       if (is_ko)
         {
-        KERR("%s %s %d", cur->lan_name, cur->name, cur->num);
-        if (cur->type == ovsreq_add_lan_eth)
-          dpdk_dyn_ack_add_lan_eth_KO(lan_name, cur->name, cur->num, lab);
-        else if (cur->type == ovsreq_add_lan_snf)
-          dpdk_snf_resp_add_lan(is_ko, lan_name, cur->name);
-        else if (cur->type == ovsreq_add_lan_nat)
-          dpdk_nat_resp_add_lan(is_ko, lan_name, cur->name);
-        else if (cur->type == ovsreq_add_lan_tap)
-          dpdk_tap_resp_add_lan(is_ko, lan_name, cur->name);
-        else
-          KERR("%s %s %d %d",cur->lan_name,cur->name,cur->num,cur->type);
         ovsreq_free(tid);
         }
       else
@@ -765,21 +756,6 @@ void dpdk_msg_ack_lan(int tid, char *lan_name,
       {
       lan_refcount_dec(cur->lan_name, __LINE__);
       lan_free_try(cur->name, cur->num, cur->lan_name, cur->type);
-      if (cur->type == ovsreq_del_lan_eth)
-        {
-        if (is_ko)
-          dpdk_dyn_ack_del_lan_eth_KO(lan_name, cur->name, cur->num, lab);
-        else
-          dpdk_dyn_ack_del_lan_eth_OK(lan_name, cur->name, cur->num, lab);
-        }
-      else if (cur->type == ovsreq_del_lan_snf)
-        dpdk_snf_resp_del_lan(is_ko, lan_name, cur->name);
-      else if (cur->type == ovsreq_del_lan_nat)
-        dpdk_nat_resp_del_lan(is_ko, lan_name, cur->name);
-      else if (cur->type == ovsreq_del_lan_tap)
-        dpdk_tap_resp_del_lan(is_ko, lan_name, cur->name);
-      else
-        KERR("%s %s %d %d", cur->lan_name, cur->name, cur->num, cur->type);
       ovsreq_free(tid);
       }
     }
@@ -800,62 +776,63 @@ static void timer_msg_beat(void *data)
         {
 
        case ovsreq_add_lan_snf:
-          KERR("%d %s %s", cur->tid, cur->lan_name, cur->name);
+          KERR("TIMEOUT %d %s %s", cur->tid, cur->lan_name, cur->name);
           dpdk_snf_resp_add_lan(1, cur->lan_name, cur->name);
           ovsreq_free(cur->tid);
         break;
 
         case ovsreq_del_lan_snf:
-          KERR("%d %s %s", cur->tid, cur->lan_name, cur->name);
+          KERR("TIMEOUT %d %s %s", cur->tid, cur->lan_name, cur->name);
           dpdk_snf_resp_del_lan(1, cur->lan_name, cur->name);
           ovsreq_free(cur->tid);
         break;
 
        case ovsreq_add_lan_nat:
-          KERR("%d %s %s", cur->tid, cur->lan_name, cur->name);
+          KERR("TIMEOUT %d %s %s", cur->tid, cur->lan_name, cur->name);
           dpdk_nat_resp_add_lan(1, cur->lan_name, cur->name);
           ovsreq_free(cur->tid);
         break;
 
         case ovsreq_del_lan_nat:
-          KERR("%d %s %s", cur->tid, cur->lan_name, cur->name);
+          KERR("TIMEOUT %d %s %s", cur->tid, cur->lan_name, cur->name);
           dpdk_nat_resp_del_lan(1, cur->lan_name, cur->name);
           ovsreq_free(cur->tid);
         break;
 
         case ovsreq_add_lan_tap:
-          KERR("%d %s %s", cur->tid, cur->lan_name, cur->name);
+          KERR("TIMEOUT %d %s %s", cur->tid, cur->lan_name, cur->name);
           dpdk_tap_resp_add_lan(1, cur->lan_name, cur->name);
           ovsreq_free(cur->tid);
         break;
   
         case ovsreq_del_lan_tap:
-          KERR("%d %s %s", cur->tid, cur->lan_name, cur->name);
+          KERR("TIMEOUT %d %s %s", cur->tid, cur->lan_name, cur->name);
           dpdk_tap_resp_del_lan(1, cur->lan_name, cur->name);
           ovsreq_free(cur->tid);
         break;
 
         case ovsreq_add_eth:
-          KERR("%d %s %d", cur->tid, cur->name, cur->num);
+          KERR("TIMEOUT %d %s %d", cur->tid, cur->name, cur->num);
           dpdk_dyn_ack_add_eth_KO(cur->name, cur->num, "timeout");
           ovsreq_free(cur->tid);
         break;
 
         case ovsreq_del_eth:
+          KERR("TIMEOUT %d", cur->tid);
           ovsreq_free(cur->tid);
         break;
 
         case ovsreq_add_lan_eth:
-          KERR("%d %s %s %d", cur->tid, cur->lan_name, cur->name, cur->num);
-          dpdk_dyn_ack_add_lan_eth_KO(cur->lan_name, cur->name,
-                                      cur->num, "timeout");
+          KERR("TIMEOUT %d %s %s %d", cur->tid, cur->lan_name,
+                                      cur->name, cur->num);
+          dpdk_dyn_ack_add_lan_eth_KO(cur->lan_name, cur->name, cur->num);
           ovsreq_free(cur->tid);
         break;
 
         case ovsreq_del_lan_eth:
-          KERR("%d %s %s %d", cur->tid, cur->lan_name, cur->name, cur->num);
-          dpdk_dyn_ack_del_lan_eth_KO(cur->lan_name, cur->name,
-                                      cur->num, "timeout");
+          KERR("TIMEOUT %d %s %s %d", cur->tid, cur->lan_name,
+                                      cur->name, cur->num);
+          dpdk_dyn_ack_del_lan_eth_KO(cur->lan_name, cur->name, cur->num);
           ovsreq_free(cur->tid);
         break;
 

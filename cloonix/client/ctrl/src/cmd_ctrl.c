@@ -88,10 +88,9 @@ void callback_end(int tid, int status, char *err)
 static void callback_list_commands(int tid, int qty, t_list_commands *list)
 {
   int i;
-  printf("\n\n");
   for (i=0; i<qty; i++)
     printf("\n%s", list[i].cmd);
-  printf("\n\n\n");
+  printf("\n");
   exit(0);
 }
 /*---------------------------------------------------------------------------*/
@@ -105,10 +104,8 @@ static void callback_topo_names(int tid, t_topo_info *topo)
     {
     if (topo->kvm[i].vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
       rootfs_type = "persistent writes rootfs";
-    else if (topo->kvm[i].vm_config_flags & VM_CONFIG_FLAG_EVANESCENT)
-      rootfs_type = "evanescent writes rootfs";
     else
-      KOUT("%X", topo->kvm[i].vm_config_flags);
+      rootfs_type = "evanescent writes rootfs";
     printf("\n%s %s\n", topo->kvm[i].name, rootfs_type);
     printf("Rootfs:%s\n", topo->kvm[i].rootfs_used);
     if (topo->kvm[i].vm_config_flags & VM_FLAG_DERIVED_BACKING)
@@ -380,6 +377,16 @@ int cmd_list_commands(int argc, char **argv)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_lay_commands(int argc, char **argv)
+{
+  init_connection_to_uml_cloonix_switch();
+  client_lay_commands(0, callback_list_commands);
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 int cmd_pid_dump(int argc, char **argv)

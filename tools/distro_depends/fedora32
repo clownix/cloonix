@@ -24,7 +24,7 @@ if [ ! -e ${BULK}/buster.qcow2 ]; then
   exit 1
 fi
 #######################################################################
-is_started=$(cloonix_cli $NET lst |grep cloonix_net)
+is_started=$(cloonix_cli $NET pid |grep cloonix_server)
 if [ "x$is_started" == "x" ]; then
   printf "\nServer Not started, launching:"
   printf "\ncloonix_net $NET:\n"

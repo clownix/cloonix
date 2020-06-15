@@ -439,7 +439,20 @@ void client_list_commands(int tid,  t_list_commands_cb cb)
   if (!g_llid)
     KOUT(" ");
   clownix_list_commands_cb = cb;
-  send_list_commands_req(g_llid, tid);
+  send_list_commands_req(g_llid, tid, 0);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void client_lay_commands(int tid,  t_list_commands_cb cb)
+{
+  if (!g_llid)
+    KOUT(" ");
+  clownix_list_commands_cb = cb;
+  send_list_commands_req(g_llid, tid, 1);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -521,21 +534,6 @@ void client_sav_vm(int tid, t_end_cb cb, char *nm,
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
   send_sav_vm(g_llid, new_tid, nm, type, sav_rootfs_path);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(g_llid);
-#endif
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void client_sav_vm_all(int tid, t_end_cb cb,
-                       int type, char *sav_rootfs_path)
-{
-  int new_tid;
-  if (!g_llid)
-    KOUT(" ");
-  new_tid = set_response_callback(cb, tid);
-  send_sav_vm_all(g_llid, new_tid, type, sav_rootfs_path);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif

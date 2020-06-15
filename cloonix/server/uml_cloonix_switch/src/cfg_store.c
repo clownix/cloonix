@@ -735,13 +735,14 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_endp,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void copy_ovs_endp(t_topo_endp *dst, t_topo_endp *src)
+static void copy_endp(t_topo_endp *dst, t_topo_endp *src)
 {
   int len, i;
   memcpy(dst, src, sizeof(t_topo_endp));
   len = src->lan.nb_lan * sizeof(t_lan_group_item);
   dst->lan.lan = (t_lan_group_item *) clownix_malloc(len, 19);
   memset(dst->lan.lan, 0, len);
+  dst->lan.nb_lan = src->lan.nb_lan;
   for (i=0; i<src->lan.nb_lan; i++)
     strncpy(dst->lan.lan[i].lan, src->lan.lan[i].lan, MAX_NAME_LEN-1);
   clownix_free(src->lan.lan, __FUNCTION__);
@@ -848,28 +849,28 @@ t_topo_info *cfg_produce_topo_info(void)
     {
     if (dpdk_ovs_endp[i].type != endp_type_kvm_dpdk)
       KOUT("%d", dpdk_ovs_endp[i].type);
-      {
-      if (i_endp == topo->nb_endp)
-        KOUT(" ");
-      copy_ovs_endp(&(topo->endp[i_endp]), &(dpdk_ovs_endp[i]));
-      i_endp += 1;
-      }
+    if (i_endp == topo->nb_endp)
+      KOUT(" ");
+    copy_endp(&(topo->endp[i_endp]), &(dpdk_ovs_endp[i]));
+    i_endp += 1;
     }
   for (i=0; i<nb_vhost_endp; i++)
     {
     if (i_endp == topo->nb_endp)
       KOUT(" ");
-    copy_ovs_endp(&(topo->endp[i_endp]), &(vhost_endp[i]));
+    copy_endp(&(topo->endp[i_endp]), &(vhost_endp[i]));
     i_endp += 1;
     }
   for (i=0; i<nb_endp_edp; i++)
     {
     if (i_endp == topo->nb_endp)
       KOUT(" ");
-    copy_ovs_endp(&(topo->endp[i_endp]), &(edp_endp[i]));
+    copy_endp(&(topo->endp[i_endp]), &(edp_endp[i]));
     i_endp += 1;
     if (i_sat == topo->nb_sat)
       KOUT(" ");
+
+
     strncpy(topo->sat[i_sat].name, edp_endp[i].name, MAX_NAME_LEN-1);
     topo->sat[i_sat].type = edp_endp[i].type;
     i_sat += 1;
@@ -907,7 +908,7 @@ t_topo_info *cfg_produce_topo_info(void)
 /*****************************************************************************/
 int cfg_get_vm_locked(t_vm *vm)
 {
-return (vm->locked_vm);
+  return (vm->locked_vm);
 }
 /*---------------------------------------------------------------------------*/
 

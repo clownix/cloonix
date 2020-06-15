@@ -96,6 +96,7 @@ void help_graph_center_scale(char *line);
 int cmd_graph_center_scale(int argc, char **argv);
 /*---------------------------------------------------------------------------*/
 int cmd_list_commands(int argc, char **argv);
+int cmd_lay_commands(int argc, char **argv);
 int cmd_sav_list_commands(int argc, char **argv);
 
 

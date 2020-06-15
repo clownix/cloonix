@@ -705,9 +705,8 @@ int ovs_execv_del_lan_snf(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
            "-- del-port br_%s %s "
-           "-- --id=@m get Mirror mi_%s -- remove Bridge br_%s mirrors @m "
-           "-- clear bridge br_%s mirrors",
-           lan, name, name, lan, lan);
+           "-- --id=@m get Mirror mi_%s -- remove Bridge br_%s mirrors @m",
+           lan, name, name, lan);
 
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = -1;

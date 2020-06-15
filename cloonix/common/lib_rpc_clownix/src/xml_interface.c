@@ -46,7 +46,6 @@ enum
   bnd_status_ko,
   bnd_add_vm,
   bnd_sav_vm,
-  bnd_sav_vm_all,
   bnd_add_sat_c2c,
   bnd_add_sat_non_c2c,
   bnd_del_sat,
@@ -703,7 +702,7 @@ void send_topo_small_event(int llid, int tid, char *name,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int topo_eth_format(char *buf, int eth_type, char *ifname,
+static int topo_eth_format(char *buf, int eth_type, int randmac, char *ifname,
                            char mac[MAC_ADDR_LEN])
 {
   int len = 0;
@@ -713,12 +712,9 @@ static int topo_eth_format(char *buf, int eth_type, char *ifname,
     strncpy(tmp_ifname, ifname, IFNAMSIZ-1);
   else
     strncpy(tmp_ifname, "noname", IFNAMSIZ-1);
-  len += sprintf(buf+len, VM_ETH_TABLE, eth_type, tmp_ifname, (mac[0]) & 0xFF,
-                                                          (mac[1]) & 0xFF,
-                                                          (mac[2]) & 0xFF,
-                                                          (mac[3]) & 0xFF,
-                                                          (mac[4]) & 0xFF,
-                                                          (mac[5]) & 0xFF);
+  len += sprintf(buf+len, VM_ETH_TABLE, eth_type, randmac, tmp_ifname,
+                     (mac[0]) & 0xFF, (mac[1]) & 0xFF, (mac[2]) & 0xFF,
+                     (mac[3]) & 0xFF, (mac[4]) & 0xFF, (mac[5]) & 0xFF);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -748,6 +744,7 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
                                        kvm.nb_tot_eth);
   for (i=0; i < kvm.nb_tot_eth; i++)
     len += topo_eth_format(buf+len, kvm.eth_table[i].eth_type, 
+                                    kvm.eth_table[i].randmac,
                                     kvm.eth_table[i].vhost_ifname,
                                     kvm.eth_table[i].mac_addr);
   len += sprintf(buf+len, EVENT_TOPO_KVM_C);
@@ -1032,7 +1029,7 @@ void send_status_ko(int llid, int tid, char *reason)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void get_one_eth_table(char *buf, int *eth_type,
+static void get_one_eth_table(char *buf, int *eth_type, int *randmac,
                               char *ifname,  char mac[MAC_ADDR_LEN])
 {
   int i;
@@ -1043,9 +1040,9 @@ static void get_one_eth_table(char *buf, int *eth_type,
   memset(tmp_ifname, 0, MAX_NAME_LEN);
   if (!ptr)
     KOUT("%s\n", buf);
-  if (sscanf(ptr, VM_ETH_TABLE, eth_type, tmp_ifname,
-             &(var[0]), &(var[1]), &(var[2]),
-             &(var[3]), &(var[4]), &(var[5])) != 8) 
+  if (sscanf(ptr, VM_ETH_TABLE, eth_type, randmac, tmp_ifname,
+                               &(var[0]), &(var[1]), &(var[2]),
+                               &(var[3]), &(var[4]), &(var[5])) != 9) 
       KOUT("%s\n", buf);
   for (i=0; i<6; i++)
     mac[i] = var[i] & 0xFF;
@@ -1065,7 +1062,7 @@ static void get_eth_table(char *buf, int nb_tot_eth, t_eth_table *eth_table)
     ptr = strstr(ptr, "<eth_table>");
     if (!ptr)
       KOUT("%s\n%d\n", buf, nb_tot_eth);
-    get_one_eth_table(ptr, &(eth_table[i].eth_type),
+    get_one_eth_table(ptr, &(eth_table[i].eth_type), &(eth_table[i].randmac),
                       eth_table[i].vhost_ifname,
                       eth_table[i].mac_addr); 
     ptr = strstr(ptr, "</eth_table>");
@@ -1079,12 +1076,13 @@ static void get_eth_table(char *buf, int nb_tot_eth, t_eth_table *eth_table)
 /*****************************************************************************/
 static int make_eth_table(char *buf, int nb, t_eth_table *eth_tab)
 {
-  int i, eth_type, len = 0;
+  int i, eth_type, randmac, len = 0;
   char *ifname, *mac;
   char tmp_ifname[MAX_NAME_LEN];
   for (i=0; i<nb; i++)
     {
     mac = eth_tab[i].mac_addr;
+    randmac = eth_tab[i].randmac;
     eth_type = eth_tab[i].eth_type;
     ifname = eth_tab[i].vhost_ifname;
     memset(tmp_ifname, 0, MAX_NAME_LEN);
@@ -1092,12 +1090,9 @@ static int make_eth_table(char *buf, int nb, t_eth_table *eth_tab)
       strncpy(tmp_ifname, ifname, IFNAMSIZ-1);
     else
       strncpy(tmp_ifname, "noname", IFNAMSIZ-1);
-    len += sprintf(buf+len,VM_ETH_TABLE, eth_type, tmp_ifname,(mac[0]) & 0xFF,
-                                                              (mac[1]) & 0xFF,
-                                                              (mac[2]) & 0xFF,
-                                                              (mac[3]) & 0xFF,
-                                                              (mac[4]) & 0xFF,
-                                                              (mac[5]) & 0xFF);
+    len += sprintf(buf+len, VM_ETH_TABLE, eth_type, randmac, tmp_ifname,
+                      (mac[0]) & 0xFF, (mac[1]) & 0xFF, (mac[2]) & 0xFF,
+                      (mac[3]) & 0xFF, (mac[4]) & 0xFF, (mac[5]) & 0xFF);
     }
   return len;
 }
@@ -1139,19 +1134,6 @@ void send_sav_vm(int llid, int tid, char *name, int type, char *sav_rootfs_path)
   if (strlen(sav_rootfs_path) >= MAX_PATH_LEN)
     KOUT(" ");
   len = sprintf(sndbuf, SAV_VM, tid, name, type, sav_rootfs_path);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void send_sav_vm_all(int llid, int tid, int type, char *sav_rootfs_path)
-{
-  int len = 0;
-  if (sav_rootfs_path[0] == 0)
-    KOUT(" ");
-  if (strlen(sav_rootfs_path) >= MAX_PATH_LEN)
-    KOUT(" ");
-  len = sprintf(sndbuf, SAV_VM_ALL, tid, type, sav_rootfs_path);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -1321,10 +1303,10 @@ void send_blkd_reports(int llid, int tid, t_blkd_reports *blkd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_list_commands_req(int llid, int tid)
+void send_list_commands_req(int llid, int tid, int is_layout)
 { 
   int len = 0;
-  len = sprintf(sndbuf, LIST_COMMANDS, tid);
+  len = sprintf(sndbuf, LIST_COMMANDS, tid, is_layout);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -1986,7 +1968,7 @@ static char *extract_rpc_msg(char *msg, char *bound)
 /*****************************************************************************/
 static void dispatcher(int llid, int bnd_evt, char *msg)
 {
-  int len, nb, flags_hop, num;
+  int len, nb, flags_hop, num, is_layout;
   int vmcmd, param, status, sub;
   int mutype, type, eth, qty, tid; 
   t_topo_clc  icf;
@@ -2241,13 +2223,6 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_sav_vm(llid, tid, name, type, path);
       break;
 
-    case bnd_sav_vm_all:
-      if (sscanf(msg, SAV_VM_ALL, &tid, &type, path) != 3)
-        KOUT("%s", msg);
-      recv_sav_vm_all(llid, tid, type, path);
-      break;
-
-
     case bnd_add_sat_c2c:
       memset(&(c2c), 0, sizeof(t_c2c_req_info));
       if (sscanf(msg, ADD_SAT_C2C, &tid, name, 
@@ -2311,9 +2286,9 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       break;
 
     case bnd_list_commands_req:
-      if (sscanf(msg, LIST_COMMANDS, &tid) != 1)
+      if (sscanf(msg, LIST_COMMANDS, &tid, &is_layout) != 2)
         KOUT("%s", msg);
-      recv_list_commands_req(llid, tid);
+      recv_list_commands_req(llid, tid, is_layout);
       break;
 
     case bnd_list_commands_resp:
@@ -2501,10 +2476,8 @@ char *prop_flags_ascii_get(int prop_flags)
   memset(resp, 0, 500);
   if (prop_flags & VM_CONFIG_FLAG_PERSISTENT)
     strcat(resp, "persistent_write_rootfs ");
-  else if (prop_flags & VM_CONFIG_FLAG_EVANESCENT)
-    strcat(resp, "evanescent_write_rootfs ");
   else
-    KOUT("%X", prop_flags);
+    strcat(resp, "evanescent_write_rootfs ");
   return resp;
 }
 /*---------------------------------------------------------------------------*/
@@ -2540,7 +2513,6 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary (STATUS_KO,      bound_list[bnd_status_ko]);
   extract_boundary (ADD_VM_O,       bound_list[bnd_add_vm]);
   extract_boundary (SAV_VM,         bound_list[bnd_sav_vm]);
-  extract_boundary (SAV_VM_ALL,     bound_list[bnd_sav_vm_all]);
   extract_boundary (ADD_SAT_C2C,     bound_list[bnd_add_sat_c2c]);
   extract_boundary (ADD_SAT_NON_C2C, bound_list[bnd_add_sat_non_c2c]);
   extract_boundary (DEL_SAT,     bound_list[bnd_del_sat]);

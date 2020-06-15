@@ -15,6 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void utils_send_status_ko(int *llid, int *tid, char *err);
+void utils_send_status_ok(int *llid, int *tid);
 int utils_get_next_tid(void);
 int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab,
                           int *sock, int *dpdk, int *vhost, int *wlan);

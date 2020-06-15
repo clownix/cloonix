@@ -192,7 +192,7 @@ void recv_list_pid_req(int llid, int tid)
   KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
-void recv_list_commands_req(int llid, int tid)
+void recv_list_commands_req(int llid, int tid, int is_layout)
 {
   KOUT(" ");
 }
@@ -338,13 +338,6 @@ void recv_event_spy(int llid, int tid, char *name, char *intf, char *dir,
 
 /*****************************************************************************/
 void recv_sav_vm(int llid, int tid, char *name, int type, char *path)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_sav_vm_all(int llid, int tid, int type, char *path)
 {
   KOUT(" ");
 }

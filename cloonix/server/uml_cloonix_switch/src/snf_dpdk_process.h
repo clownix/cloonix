@@ -21,6 +21,6 @@ void snf_dpdk_pid_resp(int llid, int tid, char *name, int pid);
 int  snf_dpdk_get_all_pid(t_lst_pid **lst_pid);
 int  snf_dpdk_diag_llid(int llid);
 void snf_dpdk_diag_resp(int llid, int tid, char *line);
-void snf_dpdk_start_process(char *name, char *lan, int on);
+void snf_dpdk_start_stop_process(char *name, char *lan, int on);
 void snf_dpdk_init(void);
 /*--------------------------------------------------------------------------*/
