@@ -388,6 +388,8 @@ void recv_topo_small_event(int llid, int tid, char *name,
 void sys_info_free(t_sys_info *sys);
 char *llid_trace_lib(int type);
 
+void send_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu);
+void recv_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu);
 
 void send_vmcmd(int llid, int tid, char *name, int vmcmd, int param);
 void recv_vmcmd(int llid, int tid, char *name, int vmcmd, int param);

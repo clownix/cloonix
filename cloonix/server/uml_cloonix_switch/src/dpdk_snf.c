@@ -239,7 +239,6 @@ void dpdk_snf_resp_del_lan(int is_ko, char *lan, char *name)
 void dpdk_snf_event_from_snf_dpdk_process(char *name, char *lan, int on)
 {
   t_dsnf *cur = get_dsnf(name);
-KERR("PROCESS SNF %d %s %s", on, name, lan);
   if (!cur)
     {
     KERR("%s %s", name, lan);

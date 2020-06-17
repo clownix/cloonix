@@ -120,6 +120,9 @@ typedef struct t_arg_ovsx
 } t_arg_ovsx;
 /*--------------------------------------------------------------------------*/
 
+static uint32_t g_lcore_mask;
+static uint32_t g_socket_mem;
+static uint32_t g_cpu_mask;
 static int g_dpdk_usable;
 static t_dpdk_vm *g_head_vm;
 static t_ovs *g_head_ovs;
@@ -574,6 +577,7 @@ static void timer_ovs_beat(void *data)
 {
   t_ovs *cur = g_head_ovs;
   int type_hop_tid = type_hop_ovsdb;
+  char msg[MAX_PATH_LEN];
   if (cur)
     {
     if (!cur->clone_start_pid)
@@ -593,13 +597,27 @@ static void timer_ovs_beat(void *data)
         }
       }
     else if (cur->pid == 0)
+      {
       try_send_msg_ovs(cur, msg_type_pid, type_hop_tid, cur->name);
+      }
     else if (cur->getsuidroot == 0)
+      {
       try_send_msg_ovs(cur, msg_type_diag, 0, "cloonixovs_req_suidroot");
+      }
     else if (cur->open_ovsdb == 0)
-      try_send_msg_ovs(cur, msg_type_diag, 0, "cloonixovs_req_ovsdb");
+      {
+      snprintf(msg, MAX_PATH_LEN-1,
+      "cloonixovs_req_ovsdb lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
+      g_lcore_mask, g_socket_mem, g_cpu_mask);
+      try_send_msg_ovs(cur, msg_type_diag, 0, msg);
+      }
     else if (cur->open_ovs == 0)
-      try_send_msg_ovs(cur, msg_type_diag, 0, "cloonixovs_req_ovs");
+      {
+      snprintf(msg, MAX_PATH_LEN-1,
+      "cloonixovs_req_ovs lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
+      g_lcore_mask, g_socket_mem, g_cpu_mask);
+      try_send_msg_ovs(cur, msg_type_diag, 0, msg);
+      }
     else
       {
       cur->periodic_count += 1;
@@ -1125,6 +1143,16 @@ int dpdk_ovs_collect_dpdk(t_eventfull_endp *eventfull)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void dpdk_ovs_cnf(uint32_t lcore_mask, uint32_t socket_mem, uint32_t cpu_mask)
+{
+  KERR("Config ovs dpdk: %X  %d  %X", lcore_mask, socket_mem, cpu_mask);
+  g_lcore_mask = lcore_mask;
+  g_socket_mem = socket_mem;
+  g_cpu_mask   = cpu_mask;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void dpdk_ovs_init(void)
 {
   g_head_vm = NULL;
@@ -1137,6 +1165,9 @@ void dpdk_ovs_init(void)
   dpdk_snf_init();
   dpdk_nat_init();
   g_dpdk_usable = 0;
+  g_lcore_mask = 0x01;
+  g_socket_mem = 2048;
+  g_cpu_mask   = 0x0F;
 }
 /*--------------------------------------------------------------------------*/
 

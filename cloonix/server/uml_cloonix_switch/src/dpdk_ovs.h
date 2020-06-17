@@ -15,6 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void dpdk_ovs_cnf(uint32_t lcore_mask, uint32_t socket_mem, uint32_t cpu_mask);
+
 int dpdk_ovs_collect_dpdk(t_eventfull_endp *eventfull);
 int dpdk_ovs_fill_eventfull(char *name, int num, int ms,
                             int ptx, int prx, int btx, int brx);

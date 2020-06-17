@@ -227,6 +227,14 @@ void recv_work_dir_req(int llid, int tid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu)
+{ 
+  dpdk_ovs_cnf((uint32_t) lcore, (uint32_t) mem, (uint32_t) cpu);
+  send_status_ok(llid, tid, "");
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on)
 {
   char info[MAX_PRINT_LEN];

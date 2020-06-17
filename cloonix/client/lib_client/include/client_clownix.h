@@ -68,6 +68,7 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
                    char *root_fs, char *install_cdrom, char *added_cdrom,
                    char *added_disk, char *p9_host_share);
 
+void client_dpdk_ovs_cnf(int tid, t_end_cb cb, int lcore, int mem, int cpu);
 void client_sav_vm(int tid, t_end_cb cb, char *nm, int type, char *new_dir_path);
 void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest);
 void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest);

@@ -30,7 +30,7 @@ int ovs_execv_add_vhost_br(char *ovs, char *dpdk, char *lan);
 int ovs_execv_del_vhost_br(char *ovs, char *dpdk, char *lan);
 int ovs_execv_add_vhost_br_port(char *ovs,char *dpdk,char *lan,char *vhost);
 int ovs_execv_del_vhost_br_port(char *ovs,char *dpdk,char *lan,char *vhost);
-void init_environ(char *ovs_bin, char *dpdk_dir);
+void init_environ(char *net, char *ovs_bin, char *dpdk_dir);
 int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN]);
 
 int ovs_execv_add_lan(char *ovs_bin, char *dpdk_dir, char *lan_name);
@@ -58,6 +58,9 @@ int ovs_execv_del_lan_tap(char *ovs_bin, char *dpdk_dir,
 
 int ovs_execv_get_tap_mac(char *name, char *mac);
 
-int ovs_execv_daemon(int is_switch, char *net, char *ovs_bin, char *dpdk_dir);
+int ovs_execv_ovs_vswitchd(char *net, char *ovs_bin, char *dpdk_dir);
+int ovs_execv_ovsdb_server( char *net, char *ovs_bin, char *dpdk_dir,
+                            uint32_t lcore_mask, uint32_t socket_mem,
+                            uint32_t cpu_mask);
 
 void ovs_execv_init(void);

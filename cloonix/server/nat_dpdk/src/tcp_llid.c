@@ -203,7 +203,7 @@ void tcp_llid_transmit(int llid, int len, uint8_t *data)
     {
     watch_tx(llid, len, (char *) data);
     result = msg_mngt_get_tx_queue_len(llid);
-    if (result > 10000)
+    if (result > 50000)
       KERR("QUEUE TRANSMIT   llid:%d qlen:%d", llid, result);
     }
 }

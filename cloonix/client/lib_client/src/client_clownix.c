@@ -558,6 +558,20 @@ void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void client_dpdk_ovs_cnf(int tid, t_end_cb cb, int lcore, int mem, int cpu)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_dpdk_ovs_cnf(g_llid, new_tid, lcore, mem, cpu);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest)
 {
   int new_tid;

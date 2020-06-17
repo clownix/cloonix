@@ -250,7 +250,6 @@ void dpdk_nat_resp_del_lan(int is_ko, char *lan, char *name)
 void dpdk_nat_event_from_nat_dpdk_process(char *name, char *lan, int on)
 {
   t_dnat *cur = get_dnat(name);
-KERR("PROCESS NAT %d %s %s", on, name, lan);
   if (!cur)
     {
     KERR("%s %s", name, lan);

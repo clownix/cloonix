@@ -730,6 +730,44 @@ int cmd_del_vl2sat(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int cmd_dpdk_ovs_cnf(int argc, char **argv)
+{
+  int lcore, mem, cpu, result = -1;
+  if (argc == 3)
+    {
+    if (sscanf(argv[0], "0x%X", &lcore) != 1)
+      {
+      if (sscanf(argv[0], "0x%x", &lcore) != 1)
+        {
+        printf("Bad param: %s\n", argv[0]); 
+        lcore = -1;
+        }
+      }
+    if (sscanf(argv[1], "%d", &mem) != 1) 
+      {
+      printf("Bad param: %s\n", argv[1]); 
+      mem = -1;
+      }
+    if (sscanf(argv[2], "0x%X", &cpu) != 1)
+      {
+      if (sscanf(argv[2], "0x%x", &cpu) != 1)
+        {
+        printf("Bad param: %s\n", argv[2]);
+        cpu = -1;
+        }
+      }
+    if ((lcore != -1) && (mem != -1) && (cpu != -1))
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_dpdk_ovs_cnf(0, callback_end, lcore, mem, cpu);
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int cmd_event_print(int argc, char **argv)
 {
     init_connection_to_uml_cloonix_switch();

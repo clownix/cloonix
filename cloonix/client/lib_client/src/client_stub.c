@@ -256,6 +256,13 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu)
+{
+  KOUT(" ");
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_add_sat(int llid, int tid, char *name, 
                   int mutype, t_c2c_req_info *c2c_req_info)
 {

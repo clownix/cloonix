@@ -99,6 +99,7 @@ void recv_topo_small_event_unsub(int llid, int tid){KOUT(" ");}
 void recv_topo_small_event(int llid, int tid, char *name, 
                            char *param1, char *param2, int vm_evt){KOUT(" ");}
 void recv_vmcmd(int llid, int tid, char *name, int vmcmd, int param){KOUT(" ");}
+void recv_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu){KOUT(" ");}
 
 void recv_mucli_dialog_req(int llid, int tid,
                            char *name, int eth, char *line){KOUT(" ");}

@@ -5,9 +5,9 @@ See directory cloonix for the LICENCE
 
 See clownix.net for a documentation which may not be up to date.
 
-This version v08-00 is the latest (if this README is up to date).
+This version v08-01 is the latest (if this README is up to date).
 The downloads for this version are in
-http://clownix.net/downloads/cloonix-08-00
+http://clownix.net/downloads/cloonix-08-01
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -30,7 +30,7 @@ have to ajust needed packages that are in file install_depends.
 
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-08-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-08-01/targz_store.tar.gz
 
 tar xvf targz_store.tar.gz
 
@@ -43,11 +43,11 @@ mkdir -p ${HOME}/cloonix_data/bulk
 
 cd ${HOME}/cloonix_data/bulk
 
-wget http://clownix.net/downloads/cloonix-08-00/bulk/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-08-01/bulk/buster.qcow2.gz
 
 gunzip buster.qcow2.gz
 
-See other distros at http://clownix.net/downloads/cloonix-08-00/bulk
+See other distros at http://clownix.net/downloads/cloonix-08-01/bulk
 
 -----------------------------------------------------------------------------
 

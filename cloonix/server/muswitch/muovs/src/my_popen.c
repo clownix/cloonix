@@ -160,7 +160,7 @@ int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void init_environ(char *ovs_bin, char *dpdk_dir)
+void init_environ(char *net, char *ovs_bin, char *dpdk_dir)
 {
   int i;
   static char env[NB_ENV][MAX_ENV_LEN];
@@ -171,6 +171,7 @@ void init_environ(char *ovs_bin, char *dpdk_dir)
   snprintf(env[2], MAX_ENV_LEN-1, "OVS_LOGDIR=%s", dpdk_dir);
   snprintf(env[3], MAX_ENV_LEN-1, "OVS_DBDIR=%s", dpdk_dir);
   snprintf(env[4], MAX_ENV_LEN-1, "XDG_RUNTIME_DIR=%s", dpdk_dir);
+  snprintf(env[5], MAX_ENV_LEN-1, "CLOONIX_NET=%s", net);
   for (i=0; i<NB_ENV-1; i++)
     g_environ[i] = env[i];
 }

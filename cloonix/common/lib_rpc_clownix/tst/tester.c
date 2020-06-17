@@ -65,6 +65,7 @@ static int count_event_sys_sub=0;
 static int count_event_sys_unsub=0;
 static int count_event_sys=0;
 static int count_vmcmd=0;
+static int count_dpdk_ovs_cnf=0;
 
 static int count_eventfull=0;
 static int count_eventfull_sub=0;
@@ -140,6 +141,7 @@ static void print_all_count(void)
   printf("%d\n", count_work_dir_req);
   printf("%d\n", count_work_dir_resp);
   printf("%d\n", count_vmcmd);
+  printf("%d\n", count_dpdk_ovs_cnf);
   printf("%d\n", count_eventfull_sub);
   printf("%d\n", count_eventfull);
   printf("%d (slow)\n", count_slowperiodic_sub);
@@ -2338,6 +2340,35 @@ void recv_vmcmd(int llid, int itid, char *iname, int icmd, int iparam)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_dpdk_ovs_cnf(int llid, int itid, int ilcore, int imem, int icpu)
+{
+  static int tid, lcore, mem, cpu;
+  if (i_am_client)
+    {
+    if (count_dpdk_ovs_cnf)
+      {
+      if (lcore != ilcore)
+        KOUT(" ");
+      if (mem != imem)
+        KOUT(" ");
+      if (cpu != icpu)
+        KOUT(" ");
+      if (tid != itid)
+        KOUT(" ");
+      }
+    tid   = rand();
+    lcore = rand();
+    mem   = rand();
+    cpu   = rand();
+    send_dpdk_ovs_cnf(llid, tid, lcore, mem, cpu);
+    }
+  else
+    send_dpdk_ovs_cnf(llid, itid, ilcore, imem, icpu);
+  count_dpdk_ovs_cnf++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_eventfull_sub(int llid, int itid)
 {
   static int tid;
@@ -2622,6 +2653,7 @@ static void send_first_burst(int llid)
   recv_work_dir_req(llid, 0);
   recv_work_dir_resp(llid, 0, NULL);
   recv_vmcmd(llid, 0, NULL, 0, 0);
+  recv_dpdk_ovs_cnf(llid, 0, 0, 0, 0);
   recv_eventfull_sub(llid, 0);
   recv_eventfull(llid, 0, 0, NULL);
   recv_slowperiodic_sub(llid, 0);

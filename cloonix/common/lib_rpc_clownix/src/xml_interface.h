@@ -398,6 +398,13 @@
                          "  <param> %d </param>\n"\
                          "</vmcmd>"
 /*---------------------------------------------------------------------------*/
+#define DPDK_OVS_CONFIG  "<dpdk_ovs_cnf>\n"\
+                         "  <tid>   %d </tid>\n"\
+                         "  <lcore> %d </lcore>\n"\
+                         "  <mem>   %d </mem>\n"\
+                         "  <cpu>   %d </cpu>\n"\
+                         "</dpdk_ovs_cnf>"
+/*---------------------------------------------------------------------------*/
 #define EVT_STATS_ITEM      "<item>\n"\
                             "  ms: %d ptx: %d btx: %d prx: %d brx: %d \n"\
                             "</item>"

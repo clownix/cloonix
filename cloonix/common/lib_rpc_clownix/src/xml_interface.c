@@ -72,6 +72,7 @@ enum
   bnd_work_dir_req,
   bnd_work_dir_resp,
   bnd_vmcmd,
+  bnd_dpdk_ovs_cnf,
   bnd_eventfull_sub,
   bnd_eventfull,
   bnd_slowperiodic_sub,
@@ -1341,6 +1342,15 @@ void send_vmcmd(int llid, int tid, char *name, int vmcmd, int param)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void send_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu)
+{
+  int len = 0;
+  len = sprintf(sndbuf, DPDK_OVS_CONFIG, tid, lcore, mem, cpu);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void helper_list_pid_resp(char *msg, int qty, t_pid_lst **lst)
 {
   int i;
@@ -1969,7 +1979,7 @@ static char *extract_rpc_msg(char *msg, char *bound)
 static void dispatcher(int llid, int bnd_evt, char *msg)
 {
   int len, nb, flags_hop, num, is_layout;
-  int vmcmd, param, status, sub;
+  int vmcmd, param, status, sub, lcore, mem, cpu;
   int mutype, type, eth, qty, tid; 
   t_topo_clc  icf;
   t_topo_clc  cf;
@@ -2327,6 +2337,11 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_vmcmd(llid, tid, name, vmcmd, param);
       break;
 
+    case bnd_dpdk_ovs_cnf:
+      if (sscanf(msg, DPDK_OVS_CONFIG, &tid, &lcore, &mem, &cpu) != 4)
+        KOUT("%s", msg);
+      recv_dpdk_ovs_cnf(llid, tid, lcore, mem, cpu);
+      break;
 
     case bnd_eventfull_sub:
       if (sscanf(msg, EVENTFULL_SUB, &tid) != 1)
@@ -2539,6 +2554,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary (WORK_DIR_REQ,  bound_list[bnd_work_dir_req]);
   extract_boundary (WORK_DIR_RESP, bound_list[bnd_work_dir_resp]);
   extract_boundary (VMCMD, bound_list[bnd_vmcmd]);
+  extract_boundary (DPDK_OVS_CONFIG, bound_list[bnd_dpdk_ovs_cnf]);
   extract_boundary (EVENTFULL_SUB, bound_list[bnd_eventfull_sub]);
   extract_boundary (EVENTFULL_O, bound_list[bnd_eventfull]);
   extract_boundary (SLOWPERIODIC_SUB, bound_list[bnd_slowperiodic_sub]);

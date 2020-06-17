@@ -152,6 +152,7 @@ struct cmd_struct level_hwsim_cmd[] = {
 
 /****************************************************************************/
 struct cmd_struct level_cnf_cmd[] = {
+{"ovs",  "Conf openvswitch dpdk", NULL, cmd_dpdk_ovs_cnf, help_dpdk_ovs_cnf},
 {"kvm",  "Virtual machine actions",    level_vm_cmd, NULL, NULL},
 {"a2b",  "A2b actions", level_a2b_cmd, NULL, NULL},
 {"hws",  "Hwsim actions", level_hwsim_cmd, NULL, NULL},

@@ -27,6 +27,7 @@ int cmd_snf_off(int argc, char **argv);
 int cmd_snf_get_file(int argc, char **argv);
 int cmd_snf_set_file(int argc, char **argv);
 /*---------------------------------------------------------------------------*/
+int cmd_dpdk_ovs_cnf(int argc, char **argv);
 int cmd_kill(int argc, char **argv);
 int cmd_delall(int argc, char **argv);
 int cmd_name_dump(int argc, char **argv);
@@ -57,6 +58,7 @@ int cmd_sav_full(int argc, char **argv);
 int cmd_sub_qmp(int argc, char **argv);
 int cmd_snd_qmp(int argc, char **argv);
 /*---------------------------------------------------------------------------*/
+void help_dpdk_ovs_cnf(char *line);
 void help_sub_qmp(char *line);
 void help_snd_qmp(char *line);
 /*---------------------------------------------------------------------------*/

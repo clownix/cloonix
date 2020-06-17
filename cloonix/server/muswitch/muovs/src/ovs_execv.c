@@ -823,70 +823,150 @@ int ovs_execv_del_lan_tap(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_daemon(int is_switch, char *net, char *ovs_bin, char *dpdk_dir)
+int ovs_execv_ovs_vswitchd(char *net, char *ovs_bin, char *dpdk_dir)
+{
+  int pid, result = -1;
+  init_environ(net, ovs_bin, dpdk_dir);
+  wait_for_server_sock(dpdk_dir);
+  pid = launch_ovs_vswitchd(ovs_bin, dpdk_dir);
+  if (pid <= 0)
+    KERR("Fail launch vswitchd server ");
+  else
+    result = pid;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_ovsdb_server( char *net, char *ovs_bin, char *dpdk_dir,
+                            uint32_t lcore_mask, uint32_t socket_mem,
+                            uint32_t cpu_mask)
 {
   int pid, result = -1;
   char other_config_extra[MAX_ARG_LEN];
-  
-  init_environ(ovs_bin, dpdk_dir);
-  if (is_switch)
-    {
-    wait_for_server_sock(dpdk_dir);
-    pid = launch_ovs_vswitchd(ovs_bin, dpdk_dir);
-    if (pid <= 0)
-      KERR("Fail launch vswitchd server ");
-    else
-      result = pid;
-    }
+  init_environ(net, ovs_bin, dpdk_dir);
+  pid = launch_ovs_server(ovs_bin, dpdk_dir);
+  usleep(10000);
+KERR("%X %d %X", lcore_mask, socket_mem, cpu_mask);
+  if (pid <= 0)
+    KERR("Fail launch ovsbd server ");
   else
     {
-    pid = launch_ovs_server(ovs_bin, dpdk_dir);
-    usleep(10000);
-    if (pid <= 0)
-      KERR("Fail launch ovsbd server ");
-    else
+    result = pid;
+    if (g_with_dpdk)
       {
-      result = pid;
-      if (g_with_dpdk)
-        {
-        insert_module(ovs_bin, "vfio");
-        insert_module(ovs_bin, "vfio_iommu_type1");
-        insert_module(ovs_bin, "vfio_virqfd");
-        insert_module(ovs_bin, "vfio_pci");
+      /*---------------------------------------------------------*/
+      insert_module(ovs_bin, "vfio");
+      insert_module(ovs_bin, "vfio_iommu_type1");
+      insert_module(ovs_bin, "vfio_virqfd");
+      insert_module(ovs_bin, "vfio_pci");
+      /*---------------------------------------------------------*/
+      if (result != -1)
+        { 
+        if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait init"))
+          { 
+          KERR("Fail launch ovsbd server ");
+          result = -1;
+          }
+        }
+      /*---------------------------------------------------------*/
+      if (result != -1)
+        { 
         memset(other_config_extra, 0, MAX_ARG_LEN);
         snprintf(other_config_extra, MAX_ARG_LEN-1,
-                   "--no-wait set Open_vSwitch . "
-                   "other_config:dpdk-extra=\"--file-prefix=cloonix%s\"", net);
-        if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait init"))
+                 "--no-wait set Open_vSwitch . "
+                 "other_config:dpdk-extra=\"--file-prefix=cloonix%s\"", net);
+        if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+          { 
+          KERR("Fail launch ovsbd server ");
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+          }
+        }
+      /*---------------------------------------------------------*/
+      if (result != -1)
+        { 
+        if (ovs_vsctl(ovs_bin, dpdk_dir,
+                      "--no-wait set Open_vSwitch . "
+                      "other_config:vhost-sock-dir=."))
+          { 
+          KERR("Fail launch ovsbd server ");
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:vhost-sock-dir=."))
+          }
+        }
+      /*---------------------------------------------------------*/
+      if (result != -1)
+        { 
+        if (ovs_vsctl(ovs_bin, dpdk_dir,
+                         "--no-wait set Open_vSwitch . "
+                         "other_config:vhost-iommu-support=true"))
+          { 
+          KERR("Fail launch ovsbd server ");
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:vhost-iommu-support=true"))
+          }
+        }
+      /*---------------------------------------------------------*/
+      if (result != -1)
+        { 
+        if (ovs_vsctl(ovs_bin, dpdk_dir,
+                      "--no-wait set Open_vSwitch . "
+                      "other_config:vhost-postcopy-support=true"))
+          { 
+          KERR("Fail launch ovsbd server ");
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:vhost-postcopy-support=true"))
+          }
+        }
+      /*---------------------------------------------------------*/
+      if (result != -1)
+        { 
+        memset(other_config_extra, 0, MAX_ARG_LEN);
+        snprintf(other_config_extra, MAX_ARG_LEN-1,
+                 "--no-wait set Open_vSwitch . "
+                 "other_config:dpdk-lcore-mask=0x%x", lcore_mask);
+        if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+          { 
+          KERR("Fail launch ovsbd server ");
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:pmd-cpu-mask=0x07"))
+          }
+        }
+      /*---------------------------------------------------------*/
+      if (result != -1)
+        { 
+        memset(other_config_extra, 0, MAX_ARG_LEN);
+        snprintf(other_config_extra, MAX_ARG_LEN-1,
+                 "--no-wait set Open_vSwitch . "
+                 "other_config:dpdk-socket-mem=%d", socket_mem);
+        if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+          { 
+          KERR("Fail launch ovsbd server ");
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:dpdk-lcore-mask=0x07"))
+          }
+        }
+      /*---------------------------------------------------------*/
+      if (result != -1)
+        { 
+        memset(other_config_extra, 0, MAX_ARG_LEN);
+        snprintf(other_config_extra, MAX_ARG_LEN-1,
+                 "--no-wait set Open_vSwitch . "
+                 "other_config:pmd-cpu-mask=0x%x", cpu_mask);
+        if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+          { 
+          KERR("Fail launch ovsbd server ");
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:dpdk-socket-mem=2048"))
+          }
+        }
+      /*---------------------------------------------------------*/
+      if (result != -1)
+        { 
+        if (ovs_vsctl(ovs_bin, dpdk_dir,
+                      "--no-wait set Open_vSwitch . "
+                      "other_config:dpdk-init=true"))
+          { 
+          KERR("Fail launch ovsbd server ");
           result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:per-port-memory=true"))
-          result = -1;
-        else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait set Open_vSwitch . "
-                 "other_config:dpdk-init=true"))
-          result = -1;
+          }
         } 
-      }
+      /*---------------------------------------------------------*/
+      } 
     }
   return result;
 }

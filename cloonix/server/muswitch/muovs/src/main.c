@@ -746,7 +746,9 @@ static int add_eth_req(char *line, char *name, int *num, char *mac)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void action_req_ovsdb(char *bin, char *db, char *respb)
+static void action_req_ovsdb(char *bin, char *db, char *respb,
+                            uint32_t lcore_mask, uint32_t socket_mem,
+                            uint32_t cpu_mask)
 {
   if (g_ovsdb_launched == 0)
     {
@@ -763,7 +765,9 @@ static void action_req_ovsdb(char *bin, char *db, char *respb)
       }
     else
       {
-      g_ovsdb_pid = ovs_execv_daemon(0, g_net_name, bin, db);
+      g_ovsdb_pid = ovs_execv_ovsdb_server(g_net_name, bin, db,
+                                           lcore_mask, socket_mem,
+                                           cpu_mask);
       if (g_ovsdb_pid <= 0)
         snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovsdb_ko");
       }
@@ -786,7 +790,9 @@ static void action_req_ovsdb(char *bin, char *db, char *respb)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void action_req_ovs_switch(char *bin, char *db, char *respb)
+static void action_req_ovs_switch(char *bin, char *db, char *respb,
+                                  uint32_t lcore_mask, uint32_t socket_mem,
+                                  uint32_t cpu_mask)
 {
   snprintf(respb, MAX_PATH_LEN-1, "cloonixovs_resp_ovs_ko");
   if (g_ovsdb_pid > 0)
@@ -794,7 +800,7 @@ static void action_req_ovs_switch(char *bin, char *db, char *respb)
     if (g_ovs_launched == 0)
       {
       g_ovs_launched = 1;
-      g_ovs_pid = ovs_execv_daemon(1, g_net_name, bin, db);
+      g_ovs_pid = ovs_execv_ovs_vswitchd(g_net_name, bin, db);
       if (g_ovs_pid <= 0)
         {
         KERR("Bad start of ovs switch with dpdk, try without dpdk");
@@ -811,13 +817,15 @@ static void action_req_ovs_switch(char *bin, char *db, char *respb)
           KERR("ERROR CREATION DB");
         else
           {
-          g_ovsdb_pid = ovs_execv_daemon(0, g_net_name, bin, db);
+          g_ovsdb_pid = ovs_execv_ovsdb_server(g_net_name, bin, db,
+                                               lcore_mask, socket_mem,
+                                               cpu_mask);
           usleep(50000);
           if (g_ovsdb_pid <= 0)
             KERR("ERROR CREATION OVSDB");
           else
             {
-            g_ovs_pid = ovs_execv_daemon(1, g_net_name, bin, db);
+            g_ovs_pid = ovs_execv_ovs_vswitchd(g_net_name, bin, db);
             usleep(50000);
             if (g_ovs_pid <= 0)
               KERR("ERROR CREATION OVS SWITCH");
@@ -864,6 +872,7 @@ static void action_req_destroy(void)
 /*****************************************************************************/
 void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 {
+  uint32_t lcore_mask, cpu_mask, socket_mem;
   t_all_ctx *all_ctx = (t_all_ctx *) ptr;
   char *bin = g_ovs_bin;
   char *db = g_dpdk_dir;
@@ -881,10 +890,14 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   memset(respb, 0, MAX_PATH_LEN); 
   if (!mycmp(line, "cloonixovs_req_suidroot"))
     action_req_suidroot(respb);
-  else if (!mycmp(line, "cloonixovs_req_ovsdb"))
-    action_req_ovsdb(bin, db, respb);
-  else if (!mycmp(line, "cloonixovs_req_ovs"))
-    action_req_ovs_switch(bin, db, respb);
+  else if (sscanf(line,
+           "cloonixovs_req_ovsdb lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
+                                 &lcore_mask, &socket_mem, &cpu_mask) == 3)
+    action_req_ovsdb(bin, db, respb, lcore_mask, socket_mem, cpu_mask);
+  else if (sscanf(line,
+           "cloonixovs_req_ovs lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
+                                 &lcore_mask, &socket_mem, &cpu_mask) == 3)
+    action_req_ovs_switch(bin, db, respb, lcore_mask, socket_mem, cpu_mask);
 
   else if (sscanf(line,
            "cloonixovs_add_lan_pci_dpdk lan=%s pci=%s", lan, pci) == 2)

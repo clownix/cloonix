@@ -684,17 +684,14 @@ void edp_evt_update_fix_type_add(int eth_type, char *name, char *lan)
 {
   int nb_edp, new_eth_type;
   t_edp *cur = edp_mngt_get_head_edp(&nb_edp);
-KERR("ADD 1 FIX %s %s %d", name, lan, eth_type);
   while(cur)
     {
     if (strlen(cur->lan))
       {
       if ((!strcmp(lan, cur->lan)) && (strcmp(name, cur->name)))
         {
-KERR("ADD 2 FIX %s %s %d", cur->name, cur->lan, eth_type);
         if (cur->eth_type == eth_type_none)
           {
-KERR("ADD 3 FIX %s %s %d", cur->name, cur->lan, eth_type);
           new_eth_type = edp_evt_action_add_lan(cur, 0, 0);
           if (new_eth_type != eth_type)
             KERR("%d %d", new_eth_type, eth_type);
@@ -711,7 +708,6 @@ void edp_evt_update_fix_type_del(int eth_type, char *name, char *lan)
 {
   int nb_edp, new_eth_type;
   t_edp *cur = edp_mngt_get_head_edp(&nb_edp);
-KERR("DEL 1 FIX %s %s %d", name, lan, eth_type);
   while(cur)
     {
     if (strlen(cur->lan))
@@ -721,11 +717,9 @@ KERR("DEL 1 FIX %s %s %d", name, lan, eth_type);
         if ((cur->eth_type != eth_type_none) &&
             (cur->eth_type == eth_type))
           {
-KERR("DEL 2 FIX %s %s %d", cur->name, cur->lan, eth_type);
           new_eth_type = eth_type_update(cur->name, cur->lan);
           if (new_eth_type == eth_type_none)
             {
-KERR("DEL 3 FIX %s %s %d", cur->name, cur->lan, eth_type);
             edp_evt_action_del_lan(cur, 0, 0);
             }
           }
