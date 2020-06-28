@@ -564,7 +564,7 @@ int ovs_execv_del_vhost_br_port(char *ovs, char *dpdk, char *lan, char *vhost)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_add_lan(char *ovs_bin, char *dpdk_dir, char *lan)
+int ovs_execv_add_lan_br(char *ovs_bin, char *dpdk_dir, char *lan)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
@@ -580,8 +580,8 @@ int ovs_execv_add_lan(char *ovs_bin, char *dpdk_dir, char *lan)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_del_lan(char *ovs_bin,
-                      char *dpdk_dir, char *lan)
+int ovs_execv_del_lan_br(char *ovs_bin,
+                         char *dpdk_dir, char *lan)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN]; 
@@ -749,6 +749,40 @@ int ovs_execv_del_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int ovs_execv_add_lan_d2d(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+
+  snprintf(cmd, MAX_ARG_LEN-1,
+                "-- add-port br_%s %s "
+                "-- set Interface %s type=dpdk "
+                "options:dpdk-devargs=net_virtio_user_%s,"
+                "path=%s/d2_%s,server=1,iface=%s/d2_%s,queues=1",
+                lan, name, name, name,
+                dpdk_dir, name, dpdk_dir, name);
+
+  if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_del_lan_d2d(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port br_%s %s", lan, name);
+  if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int ovs_execv_add_tap(char *ovs_bin, char *dpdk_dir, char *name)
 {
   char cmd[MAX_ARG_LEN];
@@ -847,7 +881,6 @@ int ovs_execv_ovsdb_server( char *net, char *ovs_bin, char *dpdk_dir,
   init_environ(net, ovs_bin, dpdk_dir);
   pid = launch_ovs_server(ovs_bin, dpdk_dir);
   usleep(10000);
-KERR("%X %d %X", lcore_mask, socket_mem, cpu_mask);
   if (pid <= 0)
     KERR("Fail launch ovsbd server ");
   else

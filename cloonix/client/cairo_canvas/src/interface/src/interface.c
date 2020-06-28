@@ -67,6 +67,23 @@ void modify_c2c(char *name, char *master_cloonix, char *slave_cloonix);
 void layout_set_ready_for_send(void);
 
 
+/****************************************************************************/
+static void d2d_update_bitem(t_topo_info *topo)
+{
+  int i;
+  t_topo_d2d *cur;
+  t_bank_item *bitem;
+  for (i=0; i<topo->nb_d2d; i++)
+    {
+    cur = &(topo->d2d[i]);
+    bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
+    if ((bitem) && (bitem->pbi.mutype == endp_type_d2d))
+      {
+      memcpy(&(bitem->pbi.pbi_sat->topo_d2d), cur, sizeof(t_topo_d2d));
+      }
+    }  
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int get_vm_id_from_topo(char *name)
@@ -146,6 +163,7 @@ void callback_topo(int tid, t_topo_info *topo)
     current_topo = topo_duplicate(topo);
     process_all_diffs(diffs);
     topo_free_diffs(diffs);
+    d2d_update_bitem(topo);
     }
   if (g_not_first_callback_topo == 0)
     {

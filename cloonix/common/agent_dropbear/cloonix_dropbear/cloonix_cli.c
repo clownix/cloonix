@@ -725,7 +725,7 @@ static int tst_port(char *str_port, int *port)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int test_param(char *param, int *ip, int *port)
+static int test_param(char *param, uint32_t *ip, int *port)
 {
   char pm[MAX_PATH_LEN];
   int result = 0;

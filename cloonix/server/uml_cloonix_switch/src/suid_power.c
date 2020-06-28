@@ -40,6 +40,7 @@
 #include "edp_evt.h"
 #include "vhost_eth.h"
 #include "pci_dpdk.h"
+#include "llid_trace.h"
 
 static long long g_abs_beat_timer;
 static int g_ref_timer;
@@ -245,6 +246,9 @@ static void timer_monitoring(void *data)
       g_abs_beat_timer = 0;
       g_ref_timer = 0;
       }
+    llid_trace_free(g_llid, 0, __FUNCTION__);
+    hop_event_free(g_llid);
+    g_llid = 0; 
     g_nb_pid_resp_warning = 0;
     event_print("SUID_POWER CONTACT LOSS");
     KERR("TRY KILLING SUID_POWER");
@@ -262,13 +266,13 @@ static void timer_monitoring(void *data)
       {
       req = "cloonixsuid_req_pci";
       rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
-      hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
+      hop_event_hook(g_llid, FLAG_HOP_EVT, req);
       req = "cloonixsuid_req_phy";
       rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
-      hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
+      hop_event_hook(g_llid, FLAG_HOP_EVT, req);
       req = "cloonixsuid_req_ovs";
       rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
-      hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
+      hop_event_hook(g_llid, FLAG_HOP_EVT, req);
       }
     old_nb_pid_resp = g_nb_pid_resp;
     }
@@ -290,6 +294,7 @@ static void timer_connect(void *data)
     count = 0;
     g_suid_power_pid = 0;
     g_llid = llid;
+    llid_trace_alloc(llid, "suid_power", 0, 0, type_llid_trace_endp_suid);
     if (hop_event_alloc(llid, type_hop_suid_power, "suid_power", 0))
       KERR(" ");
     rpct_send_pid_req(NULL, llid, type_hop_suid_power, "suid_power", 0);
@@ -402,7 +407,6 @@ void suid_power_diag_resp(int llid, int tid, char *line)
     KERR("%d %d", llid, g_llid);
   if (tid != type_hop_suid_power)
     KERR("%d %d", tid, type_hop_suid_power);
-  hop_event_hook(llid, FLAG_HOP_DIAG, line);
   if (!strcmp(line,
   "cloonixsuid_resp_suidroot_ko"))
     {
@@ -429,12 +433,14 @@ void suid_power_diag_resp(int llid, int tid, char *line)
   "cloonixsuid_resp_ifname_change_ok %s %d old:%s new:%s",
                   name, &num, old_name, new_name) == 4)
     {
+    hop_event_hook(llid, FLAG_HOP_DIAG, line);
     vhost_eth_tap_rename(name, num, new_name);
     }
   else if (sscanf(line,
   "cloonixsuid_resp_ifname_change_ko %s %d old:%s new:%s",
                   name, &num, old_name, new_name) == 4)
     {
+    hop_event_hook(llid, FLAG_HOP_DIAG, line);
     }
   else if (sscanf(line,
   "cloonixsuid_resp_launch_vm_ok name=%s", name) == 1)
@@ -764,7 +770,6 @@ int suid_power_rec_name(char *name, int on)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 int suid_power_req_kill_all(void)
 {
@@ -786,6 +791,15 @@ int suid_power_req_kill_all(void)
 int suid_power_pid(void)
 {
   return (g_suid_power_last_pid);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void suid_power_llid_closed(int llid)
+{
+  if (llid == g_llid)
+    {
+    }
 }
 /*--------------------------------------------------------------------------*/
 

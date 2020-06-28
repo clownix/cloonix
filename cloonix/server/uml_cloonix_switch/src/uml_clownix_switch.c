@@ -72,16 +72,20 @@
 #include "edp_mngt.h"
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
+#include "d2d_dpdk_process.h"
 
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
 static int g_i_am_in_cloonix;
 static char g_i_am_in_cloonix_name[MAX_NAME_LEN];
 
-static int glob_cloonix_lock_fd = 0;
-static int glob_machine_is_kvm_able;
+static int g_cloonix_lock_fd = 0;
+static int g_machine_is_kvm_able;
 static char g_user[MAX_NAME_LEN];
 static char **g_saved_environ;
+static int g_machine_nb_cpu;
+static int g_machine_hugepages_nb;
+static int g_machine_hugepages_size;
 
 char *used_binaries[] =
 {
@@ -121,15 +125,15 @@ char *get_user(void)
 /****************************************************************************/
 void cloonix_lock_fd_close(void)
 {
-  if (glob_cloonix_lock_fd)
-    close(glob_cloonix_lock_fd);
+  if (g_cloonix_lock_fd)
+    close(g_cloonix_lock_fd);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int machine_is_kvm_able(void)
 {
-  return glob_machine_is_kvm_able;
+  return g_machine_is_kvm_able;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -217,7 +221,7 @@ static void check_for_another_instance(char *clownlock, int keep_fd)
   else
     {
     cfg_set_lock_fd(fd);
-    glob_cloonix_lock_fd = fd;
+    g_cloonix_lock_fd = fd;
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -359,6 +363,25 @@ static void launching(void)
     printf("BADCONF\n");
     KOUT("BADCONF");
     }
+  if ((1 << g_machine_nb_cpu) <= g_cloonix_conf_info->cpu_mask)
+    {
+    printf("WARNING! Probable dpdk config error, "
+           "nb cpu on host: %d cpu_mask Ox%x\n\n",
+            g_machine_nb_cpu, g_cloonix_conf_info->cpu_mask);
+    }
+  if (g_machine_hugepages_size < 1024*1024)
+    {
+    printf("WARNING! Probable dpdk config error, hugepages_size: %d\n\n",
+            g_machine_hugepages_size);
+    }
+  if ((g_cloonix_conf_info->socket_mem) >
+      (g_machine_hugepages_nb * (g_machine_hugepages_size/1024)))
+    {
+    printf("WARNING! Probable dpdk config error, "
+           "1 giga hugepages: %d mem wanted: %dM\n\n",
+           g_machine_hugepages_nb, g_cloonix_conf_info->socket_mem);
+    }
+
   daemon(0,0);
   doorways_first_start();
   sprintf(clownlock, "%s/cloonix_lock", cfg_get_root_work());
@@ -455,18 +478,58 @@ static t_topo_clc *get_parsed_config(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int test_machine_nb_cpu(void)
+{
+  int nb, nb_cpu = 0;
+  FILE *fhd;
+  char result[500];
+  fhd = fopen("/proc/cpuinfo", "r");
+  if (fhd)
+    {
+    while(fgets(result, 500, fhd))
+      {
+      if (sscanf(result, "cpu cores : %d", &nb) == 1)
+        nb_cpu = nb;
+      }
+    fclose(fhd);
+    }
+  return nb_cpu;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void test_machine_nb_hugePages(int *nb_hpages, int *hp_size)
+{
+  int nb;
+  FILE *fhd;
+  char result[500];
+  fhd = fopen("/proc/meminfo", "r");
+  if (fhd)
+    {
+    while(fgets(result, 500, fhd))
+      {
+      if (sscanf(result, "HugePages_Total: %d", &nb) == 1)
+        *nb_hpages = nb;
+      if (sscanf(result, "Hugepagesize: %d", &nb) == 1)
+        *hp_size = nb;
+      }
+    fclose(fhd);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static int test_machine_is_kvm_able(void)
 {
   int found = 0;
   FILE *fhd;
-  char *result = NULL;
+  char result[500];
   fhd = fopen("/proc/cpuinfo", "r");
   if (fhd)
     {
-    result = (char *) clownix_malloc(MAX_PRINT_LEN, 7);
     while(!found)
       {
-      if (!fgets(result, MAX_PRINT_LEN, fhd))
+      if (!fgets(result, 500, fhd))
         break;
       if (!strncmp(result, "flags", strlen("flags")))
         found = 1;
@@ -479,7 +542,6 @@ static int test_machine_is_kvm_able(void)
     if ((strstr(result, "vmx")) || (strstr(result, "svm")))
       found = 1;
     }
-  clownix_free(result, __FILE__);
   return found;
 }
 /*---------------------------------------------------------------------------*/
@@ -556,8 +618,10 @@ int main (int argc, char *argv[])
   job_for_select_init();
   utils_init();
   recv_init();
-  glob_cloonix_lock_fd = 0;
-  glob_machine_is_kvm_able = test_machine_is_kvm_able();
+  g_cloonix_lock_fd = 0;
+  g_machine_is_kvm_able = test_machine_is_kvm_able();
+  g_machine_nb_cpu = test_machine_nb_cpu();
+  test_machine_nb_hugePages(&g_machine_hugepages_nb,&g_machine_hugepages_size);
   if (argc != 3)
     usage(argv[0]);
   if (cloonix_conf_info_init(argv[1]))
@@ -611,12 +675,15 @@ int main (int argc, char *argv[])
   init_qhvc0();
   mulan_init();
   endp_mngt_init();
-  dpdk_ovs_init();
+  dpdk_ovs_init(g_cloonix_conf_info->lcore_mask,
+                g_cloonix_conf_info->socket_mem,
+                g_cloonix_conf_info->cpu_mask);
   suid_power_init();
   vhost_eth_init();
   edp_mngt_init();
   snf_dpdk_init();
   nat_dpdk_init();
+  d2d_dpdk_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
   msg_mngt_loop();

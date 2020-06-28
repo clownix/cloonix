@@ -99,6 +99,7 @@ void timer_create_item_node_req(void *data)
 void timer_create_item_req(void *data)
 {
   t_item_req *pa = (t_item_req *) data;
+  t_d2d_req_info *d2d = &(pa->d2d_req_info); 
   set_gene_layout_x_y(pa->bank_type, pa->name, pa->mutype, pa->x, pa->y, 
                       pa->xa, pa->ya, pa->xb, pa->yb, 0);
   switch(pa->bank_type)
@@ -107,7 +108,19 @@ void timer_create_item_req(void *data)
       from_cloonix_switch_create_lan(pa->name);
       break;
     case bank_type_sat:
-      client_add_sat(0, callback_end, pa->name, pa->mutype, &pa->c2c_req_info);
+      if (pa->mutype == endp_type_d2d)
+        {
+        if ((!strlen(pa->name)) || (!strlen(d2d->dist_cloonix)))
+          KOUT(" ");
+        client_add_d2d(0, callback_end, pa->name, d2d->loc_udp_ip,
+                       d2d->dist_cloonix, d2d->dist_tcp_ip,
+                       d2d->dist_tcp_port, d2d->dist_passwd,
+                       d2d->dist_udp_ip);
+        }
+      else
+        {
+        client_add_sat(0,callback_end,pa->name,pa->mutype,&pa->c2c_req_info);
+        }
       break;
     default:
       KOUT("%d", pa->bank_type);

@@ -55,6 +55,14 @@ struct cmd_struct {
         void (*help_fn)(char *);
 };
 
+
+/*---------------------------------------------------------------------------*/
+t_cloonix_conf_info *get_own_cloonix_conf_info(void)
+{
+  return (g_cloonix_conf_info);
+}
+/*---------------------------------------------------------------------------*/
+
 /*---------------------------------------------------------------------------*/
 static int handle_command(struct cmd_struct *command, int level, 
                           int argc, char **argv);
@@ -93,6 +101,8 @@ struct cmd_struct level_add_cmd[] = {
 {"pci", "Add pci (dpdk pci of ethernet)",  NULL, cmd_add_pci, help_add_sat},
 {"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_sat},
 {"snf", "Add snf (emulated cable sniffer)",  NULL, cmd_add_snf, help_add_sat},
+{"d2d", "Add d2d (cloonix to cloonix dpdk cable)", NULL,
+                                         cmd_add_d2d, help_add_d2d},
 {"c2c", "Add c2c (cloonix to cloonix cable)",NULL,cmd_add_c2c,help_add_c2c},
 {"nat", "Add nat (slirp to access ip)",NULL, cmd_add_nat, help_add_sat},
 {"a2b", "Add a2b (traffic shaping)",NULL, cmd_add_a2b, help_add_sat},

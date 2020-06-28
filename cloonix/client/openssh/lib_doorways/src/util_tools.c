@@ -132,7 +132,8 @@ char *get_full_bin_path(char *input_callbin)
       }
     else if (callbin[0] == '/')
       {
-      snprintf(path, MAX_PATH_LEN-1, "%s", callbin);
+      ptr = callbin;
+      snprintf(path, MAX_PATH_LEN-1, "%s",ptr);
       }
     else
       {

@@ -77,7 +77,17 @@ static char g_cloonix_root_tree[MAX_PATH_LEN];
 static char g_dtach_work_path[MAX_PATH_LEN];
 static char g_distant_snf_dir[MAX_PATH_LEN];
 static char g_password[MSG_DIGEST_LEN];
+static t_cloonix_conf_info *g_cloonix_conf_info;
+
 /*--------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+t_cloonix_conf_info *get_own_cloonix_conf_info(void)
+{
+  return (g_cloonix_conf_info);
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 char *get_password(void)
@@ -487,7 +497,6 @@ static void init_local_cloonix_bin_path(char *curdir, char *callbin)
 int main(int argc, char *argv[])
 {
   char xvt[MAX_PATH_LEN];
-  t_cloonix_conf_info *cnf;
   g_i_am_in_cloonix = i_am_inside_cloonix(g_i_am_in_cloonix_name);
   main_timeout = 0;
   eth_choice = 0;
@@ -501,8 +510,8 @@ int main(int argc, char *argv[])
     printf("\n\n%s\n\n", cloonix_conf_info_get_names());
     exit(1);
     }
-  cnf = cloonix_conf_info_get(argv[2]);
-  if (!cnf)
+  g_cloonix_conf_info = cloonix_conf_info_get(argv[2]);
+  if (!g_cloonix_conf_info)
     {
     printf("\nBAD NAME %s:", argv[2]);
     printf("\n\n%s\n\n", cloonix_conf_info_get_names());
@@ -523,10 +532,10 @@ int main(int argc, char *argv[])
     KOUT("No DISPLAY env");
 
   memset(g_doors_client_addr, 0, MAX_PATH_LEN);
-  strncpy(g_doors_client_addr, cnf->doors, MAX_PATH_LEN-1);
+  strncpy(g_doors_client_addr, g_cloonix_conf_info->doors, MAX_PATH_LEN-1);
   printf("CONNECT TO UNIX SERVER: %s\n", g_doors_client_addr);
   memset(g_password, 0, MSG_DIGEST_LEN);
-  strncpy(g_password, cnf->passwd, MSG_DIGEST_LEN-1);
+  strncpy(g_password, g_cloonix_conf_info->passwd, MSG_DIGEST_LEN-1);
   interface_switch_init(g_doors_client_addr, g_password);
   eventfull_init();
   client_get_path(0, work_dir_resp);

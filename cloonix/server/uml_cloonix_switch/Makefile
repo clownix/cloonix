@@ -71,7 +71,10 @@ SRC = \
       edp_sock.c \
       edp_vhost.c \
       pci_dpdk.c \
+      dpdk_d2d.c \
+      dpdk_d2d_peer.c \
       snf_dpdk_process.c \
+      d2d_dpdk_process.c \
       nat_dpdk_process.c
 
 INCLUDES= -I./src \

@@ -20,6 +20,55 @@
 
 
 /*---------------------------------------------------------------------------*/
+#define D2D_MAC_O        "<d2d_mac>\n"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <nb_mac> %d </nb_mac>\n"
+
+#define D2D_MAC_I        "  <mac> %s </mac>\n"
+
+#define D2D_MAC_C        "</d2d_mac>\n"
+/*---------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
+#define D2D_ADD          "<d2d_add>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <local_udp_ip> %x </local_udp_ip>\n"\
+                         "  <slave_net> %s </slave_net>\n"\
+                         "  <ip> %x </ip>\n"\
+                         "  <port> %hu </port>\n"\
+                         "  <passwd> %s </passwd>\n"\
+                         "  <udp_ip> %x </udp_ip>\n"\
+                         "</d2d_add>"
+
+#define D2D_CREATE       "<d2d_create>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <is_ack> %d </is_ack>\n"\
+                         "  <mnet> %s </mnet>\n"\
+                         "  <snet> %s </snet>\n"\
+                         "</d2d_create>"
+
+#define D2D_CONF         "<d2d_conf>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <is_ack> %d </is_ack>\n"\
+                         "  <mnet> %s </mnet>\n"\
+                         "  <snet> %s </snet>\n"\
+                         "  <mip> %x </mip>\n"\
+                         "  <sip> %x </sip>\n"\
+                         "  <mport> %hu </mport>\n"\
+                         "  <sport> %hu </sport>\n"\
+                         "</d2d_conf>"
+
+#define D2D_PING         "<d2d_ping>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <status> %d </status>\n"\
+                         "</d2d_ping>"
+
+/*---------------------------------------------------------------------------*/
 #define HOP_GET_LIST_NAME    "<hop_get_list_name>\n"\
                              "  <tid> %d </tid>\n"\
                              "</hop_get_list_name>"
@@ -324,7 +373,7 @@
                               "  network:%s username:%s server_port:%d \n"\
                               "  work_dir:%s bulk_dir:%s bin_dir:%s \n"\
                               "  flags_config:%d \n"\
-                              "  nb_kvm:%d nb_c2c:%d \n"\
+                              "  nb_kvm:%d nb_c2c:%d nb_d2d:%d \n"\
                               "  nb_sat:%d nb_endp:%d nb_phy:%d nb_pci:%d \n"\
                               "  nb_bridges:%d nb_mirrors:%d \n"
 
@@ -349,6 +398,22 @@
                               "  master:%s slave:%s local_is_master:%d \n"\
                               "  peered:%d ip_slave:%x port_slave%d \n"\
                               "</c2c>\n"
+
+#define EVENT_TOPO_D2D        "<d2d>\n"\
+                              "  name: %s \n"\
+                              "  dist_cloonix: %s \n"\
+                              "  lan: %s \n"\
+                              "  local_is_master: %d \n"\
+                              "  dist_tcp_ip:    %x \n"\
+                              "  dist_tcp_port:  %hu \n"\
+                              "  loc_udp_ip:     %x \n"\
+                              "  dist_udp_ip:    %x \n"\
+                              "  loc_udp_port:   %hu \n"\
+                              "  dist_udp_port:  %hu \n"\
+                              "  tcp_connection: %d \n"\
+                              "  udp_connection: %d \n"\
+                              "  ovs_lan_attach: %d \n"\
+                              "</d2d>\n"
 
 #define EVENT_TOPO_SAT        "<sat>\n"\
                               "  name:%s \n"\

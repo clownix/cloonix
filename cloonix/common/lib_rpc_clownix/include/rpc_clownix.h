@@ -27,6 +27,7 @@
 #define ENDP_SOCK_DIR "endp"
 #define SUID_POWER_SOCK_DIR "suid_power"
 #define SNF_DPDK_SOCK_DIR "snf_dpdk"
+#define D2D_DPDK_SOCK_DIR "d2d_dpdk"
 #define CLI_SOCK_DIR "cli"
 #define SNF_PCAP_DIR "snf"
 
@@ -62,6 +63,7 @@ enum {
     type_hop_suid_power,
     type_hop_snf_dpdk,
     type_hop_nat_dpdk,
+    type_hop_d2d_dpdk,
     type_hop_max
     };
 
@@ -123,6 +125,7 @@ enum
   type_llid_trace_jfs,
   type_llid_trace_unix_qmonitor,
   type_llid_trace_unix_xwy,
+  type_llid_trace_endp_suid,
   type_llid_max,
 };
 /*---------------------------------------------------------------------------*/
@@ -223,6 +226,11 @@ typedef struct t_stats_sysinfo
   unsigned long process_cstime;
   unsigned long process_rss;
 } t_stats_sysinfo;
+/*---------------------------------------------------------------------------*/
+typedef struct t_d2d_mac
+{
+  char mac[MAX_NAME_LEN];
+} t_d2d_mac;
 /*---------------------------------------------------------------------------*/
 typedef struct t_pid_lst
 {
@@ -410,4 +418,39 @@ void send_qmp_req(int llid, int tid, char *name, char *msg);
 void recv_qmp_req(int llid, int tid, char *name, char *msg);
 void send_qmp_resp(int llid, int tid, char *name, char *line, int status);
 void recv_qmp_resp(int llid, int tid, char *name, char *line, int status);
+/*---------------------------------------------------------------------------*/
+void send_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
+                  char *slave_cloonix, uint32_t ip, uint16_t port,
+                  char *passwd, uint32_t udp_ip);
+
+void recv_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
+                  char *slave_cloonix, uint32_t ip, uint16_t port,
+                  char *passwd, uint32_t udp_ip);
+
+void send_d2d_peer_mac(int llid, int tid, char *d2d_name,
+                       int nb_mac, t_d2d_mac *tabmac);
+
+void recv_d2d_peer_mac(int llid, int tid, char *d2d_name,
+                       int nb_mac, t_d2d_mac *tabmac);
+
+void send_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
+                          char *local_cloonix, char *distant_cloonix);
+
+void recv_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
+                          char *distant_cloonix, char *local_cloonix);
+
+void send_d2d_peer_conf(int llid, int tid, char *d2d_name, int is_ack,
+                        char *local_cloonix,     char *distant_cloonix,
+                        uint32_t local_udp_ip,   uint32_t distant_udp_ip,
+                        uint16_t local_udp_port, uint16_t distant_udp_port);
+
+void recv_d2d_peer_conf(int llid, int tid, char *d2d_name, int is_ack,
+                        char *distant_cloonix,     char *local_cloonix,
+                        uint32_t distant_udp_ip,   uint32_t local_udp_ip,
+                        uint16_t distant_udp_port, uint16_t local_udp_port);
+
+void send_d2d_peer_ping(int llid, int tid, char *d2d_name, int status);
+
+void recv_d2d_peer_ping(int llid, int tid, char *d2d_name, int status);
+void doors_io_basic_tx_set(t_llid_tx llid_tx);
 /*---------------------------------------------------------------------------*/

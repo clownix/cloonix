@@ -42,8 +42,9 @@ static char g_cloonix_bulk[MAX_PATH_LEN];
 
 
 /*****************************************************************************/
-static void alloc_record(char *name, char *ip, int ipnum, int port, 
-                         char *passwd)
+static void alloc_record(char *name, char *ip, uint32_t ipnum, int port, 
+                         char *passwd, uint32_t udp_ip,
+                         uint32_t lcore, uint32_t mem, uint32_t cpu)
 {
   if (g_cloonix_nb == MAX_CLOONIX_SERVERS - 1)
     KOUT("%d", g_cloonix_nb);
@@ -52,6 +53,10 @@ static void alloc_record(char *name, char *ip, int ipnum, int port,
   g_name2info[g_cloonix_nb].ip = ipnum;
   g_name2info[g_cloonix_nb].port = port;
   strncpy(g_name2info[g_cloonix_nb].passwd, passwd, MSG_DIGEST_LEN-1);
+  g_name2info[g_cloonix_nb].d2d_udp_ip = udp_ip;
+  g_name2info[g_cloonix_nb].lcore_mask = lcore;
+  g_name2info[g_cloonix_nb].socket_mem = mem;
+  g_name2info[g_cloonix_nb].cpu_mask = cpu;
   g_cloonix_nb += 1;
 }
 /*--------------------------------------------------------------------------*/
@@ -128,9 +133,10 @@ static int extract_info(char *buf)
   char *ptr_end, *ptr_start;
   char name[MAX_NAME_LEN];
   char ip[MAX_NAME_LEN];
+  char d2d_udp_ip[MAX_NAME_LEN];
   char passwd[MSG_DIGEST_LEN];
   int  port, result = -1;
-  uint32_t ipnum;
+  uint32_t ipnum, udp_ip, lcore_mask, socket_mem, cpu_mask;
   if (find_entry(buf, "CLOONIX_VERSION=", g_cloonix_version, MAX_NAME_LEN)) 
     KERR(" ");
   else if (find_entry(buf, "CLOONIX_TREE=", g_cloonix_tree, MAX_PATH_LEN)) 
@@ -152,15 +158,21 @@ static int extract_info(char *buf)
           KOUT("%s", ptr_start);
         *ptr_end = 0;
         if (sscanf(ptr_start, 
-          "CLOONIX_NET: %s { cloonix_ip %s cloonix_port %d cloonix_passwd %s", 
-          name, ip, &port, passwd) != 4)
+          "CLOONIX_NET: %s { cloonix_ip %s cloonix_port %d "
+          "cloonix_passwd %s d2d_udp_ip %s "
+          "lcore_mask 0x%x socket_mem %d cpu_mask 0x%x", 
+          name, ip, &port, passwd, d2d_udp_ip,
+          &lcore_mask, &socket_mem, &cpu_mask) != 8)
           KOUT("%s", ptr_start);
         ptr_start = ptr_end + 1;
         if (ip_string_to_int(&ipnum, ip))
           KOUT("Bad ip in:\n%s", ptr_start);
+        if (ip_string_to_int(&udp_ip, d2d_udp_ip))
+          KOUT("Bad d2d_udp_ip in:\n%s", ptr_start);
         if ((port < 1) || (port > 0xFFFF))
           KOUT("Bad port in:\n%s", ptr_start);
-        alloc_record(name, ip, ipnum, port, passwd);
+        alloc_record(name, ip, ipnum, port, passwd, udp_ip,
+                     lcore_mask, socket_mem, cpu_mask);
         sprintf(g_all_names + strlen(g_all_names), "%s, ", name);
         result = 0;
         }

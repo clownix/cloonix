@@ -33,6 +33,7 @@
 #include "suid_power.h"
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
+#include "d2d_dpdk_process.h"
 
 
 /*---------------------------------------------------------------------------*/
@@ -468,6 +469,8 @@ void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
     snf_dpdk_pid_resp(llid, tid, name, pid);
   else if (tid == type_hop_nat_dpdk)
     nat_dpdk_pid_resp(llid, tid, name, pid);
+  else if (tid == type_hop_d2d_dpdk)
+    d2d_dpdk_pid_resp(llid, tid, name, pid);
   else if (tid == type_hop_doors)
     doors_pid_resp(llid, name, pid);
   else if (tid == type_hop_mulan)

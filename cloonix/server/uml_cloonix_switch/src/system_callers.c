@@ -321,6 +321,7 @@ void mk_dpdk_dir(void)
   my_mkdir(utils_get_dpdk_qemu_dir(), 0);
   my_mkdir(utils_get_dpdk_snf_dir(), 0);
   my_mkdir(utils_get_dpdk_nat_dir(), 0);
+  my_mkdir(utils_get_dpdk_d2d_dir(), 0);
   my_mkdir(utils_get_dpdk_cloonix_dir(), 0);
 }
 /*--------------------------------------------------------------------------*/

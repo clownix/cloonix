@@ -109,6 +109,26 @@ void recv_mucli_dialog_resp(int llid, int tid,
 void recv_qmp_sub(int llid, int tid, char *name){KOUT(" ");};
 void recv_qmp_req(int llid, int tid, char *name, char *msg){KOUT(" ");};
 void recv_qmp_resp(int llid, int tid, char *name, char *line, int status){KOUT(" ");};
+
+void recv_d2d_add(int llid, int tid, char *name, uint32_t local_udp_ip,
+                  char *net, uint32_t ip, uint16_t port,
+                  char *passwd, uint32_t udp_ip){KOUT(" ");}
+
+void recv_d2d_peer_mac(int llid, int tid, char *d2d_name,
+                       int nb_mac, t_d2d_mac *mac) {KOUT(" ");}
+
+void recv_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
+                          char *distant_cloonix, char *local_cloonix)
+{KOUT(" ");}
+
+void recv_d2d_peer_conf(int llid, int tid, char *d2d_name, int is_ack,
+                        char *distant_cloonix,     char *local_cloonix,
+                        uint32_t distant_udp_ip,   uint32_t local_udp_ip,
+                        uint16_t distant_udp_port, uint16_t local_udp_port)
+{KOUT(" ");}
+
+void recv_d2d_peer_ping(int llid, int tid, char *d2d_name, int status)
+{KOUT(" ");}
 /*---------------------------------------------------------------------------*/
 
 

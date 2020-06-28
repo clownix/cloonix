@@ -62,7 +62,6 @@ typedef struct t_dsnf
   int  timer_count;
   int  llid;
   int  tid;
-  int  var_ovs_lan_attached;
   int  var_dpdk_start_stop_process;
   int to_be_destroyed;
   struct t_dsnf *prev;
@@ -103,21 +102,24 @@ static t_dsnf *alloc_dsnf(char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void free_dsnf(char *name)
+static void free_dsnf(t_dsnf *cur)
 {
-  t_dsnf *cur = get_dsnf(name);
-  if (!cur)
-    KERR("%s", name);
-  else
-    {
-    if (cur->prev)
-      cur->prev->next = cur->next;
-    if (cur->next)
-      cur->next->prev = cur->prev;
-    if (g_head_dsnf == cur)
-      g_head_dsnf = cur->next;
-    clownix_free(cur, __FUNCTION__);
-    }
+  char name[MAX_NAME_LEN];
+  char lan[MAX_NAME_LEN];
+  memset(name, 0, MAX_NAME_LEN);
+  memset(lan, 0, MAX_NAME_LEN);
+  strncpy(name, cur->name, MAX_NAME_LEN-1);
+  strncpy(lan, cur->lan, MAX_NAME_LEN-1);
+  if (cur->prev)
+    cur->prev->next = cur->next;
+  if (cur->next)
+    cur->next->prev = cur->prev;
+  if (g_head_dsnf == cur)
+    g_head_dsnf = cur->next;
+  clownix_free(cur, __FUNCTION__);
+  dpdk_msg_vlan_exist_no_more(lan);
+  edp_evt_update_non_fix_del(eth_type_dpdk, name, lan);
+  event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
 
@@ -142,7 +144,7 @@ static void timer_snf_msg_beat(void *data)
               snf_dpdk_start_stop_process(cur->name, cur->lan, 0);
               cur->var_dpdk_start_stop_process = 0;
               }
-            free_dsnf(cur->name);
+            free_dsnf(cur);
             }
           }
         }
@@ -224,7 +226,7 @@ void dpdk_snf_resp_del_lan(int is_ko, char *lan, char *name)
       {
       KERR("ERROR %s %s", name, cur->lan);
       utils_send_status_ko(&(cur->llid), &(cur->tid), "not coherent");
-      free_dsnf(name);
+      free_dsnf(cur);
       }
     else
       {
@@ -257,12 +259,8 @@ void dpdk_snf_event_from_snf_dpdk_process(char *name, char *lan, int on)
       if (cur->waiting_ack_del_lan)
         {
         utils_send_status_ok(&(cur->llid), &(cur->tid));
-        free_dsnf(name);
-        if ((!dpdk_dyn_lan_exists(lan)) && (!dpdk_snf_lan_exists(lan)))
-          dpdk_msg_vlan_exist_no_more(lan);
-        edp_evt_update_non_fix_del(eth_type_dpdk, name, lan);
-        event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
         }
+      free_dsnf(cur);
       }
     else
       {

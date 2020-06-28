@@ -116,7 +116,7 @@ static int circle_worker(void *arg __rte_unused)
   long long usec;
   while(g_circle_worker)
     {
-    usleep(1000);
+    usleep(100);
     if (g_enable == NB_QUEUE)
       {
       for (q=0; q<2*NB_QUEUE; q++)

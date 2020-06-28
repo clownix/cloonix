@@ -139,6 +139,17 @@ char *utils_get_nat_dpdk_bin_path(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char *utils_get_d2d_dpdk_bin_path(void)
+{
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,
+           "%s/server/dpdk/bin/cloonix_d2d_dpdk", cfg_get_bin_dir());
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char *utils_get_suid_power_bin_path(void)
 {
   static char path[MAX_PATH_LEN];
@@ -462,6 +473,15 @@ char *utils_get_dpdk_nat_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];
   sprintf(dpdk, "%s/%s", cfg_get_root_work(), ENDP_SOCK_DIR);
+  return dpdk;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_dpdk_d2d_dir(void)
+{
+  static char dpdk[MAX_PATH_LEN];
+  sprintf(dpdk, "%s/%s", cfg_get_root_work(), D2D_DPDK_SOCK_DIR);
   return dpdk;
 }
 /*---------------------------------------------------------------------------*/

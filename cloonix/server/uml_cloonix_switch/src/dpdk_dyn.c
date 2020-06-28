@@ -36,6 +36,7 @@
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
 #include "dpdk_nat.h"
+#include "dpdk_d2d.h"
 #include "machine_create.h"
 #include "event_subscriber.h"
 #include "edp_mngt.h"
@@ -107,11 +108,10 @@ static void vlan_free(t_deth *eth, t_dlan *lan)
   if (lan == eth->head_lan)
     eth->head_lan = lan->next;
   clownix_free(lan, __FUNCTION__);
-  if ((!dpdk_dyn_lan_exists(lan_name)) &&
-      (!dpdk_tap_lan_exists(lan_name)) &&
-      (!dpdk_nat_lan_exists(lan_name)) &&
-      (!dpdk_snf_lan_exists(lan_name)))
-    dpdk_msg_vlan_exist_no_more(lan_name);
+  dpdk_msg_vlan_exist_no_more(lan_name);
+  snf_dpdk_process_possible_change(lan_name);
+  dpdk_d2d_process_possible_change(lan_name);
+  event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
 
@@ -315,6 +315,7 @@ static void recv_ack(int is_add, int is_ko, char *lan_name,
           }
         event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
         snf_dpdk_process_possible_change(lan_name);
+        dpdk_d2d_process_possible_change(lan_name);
         }
       }
     }

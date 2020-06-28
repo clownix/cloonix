@@ -40,7 +40,7 @@ static void tst_port(char *str_port, int *port)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void get_ip_and_port(char *ip_port, int *ip, int *port)
+static void get_ip_and_port(char *ip_port, uint32_t *ip, int *port)
 {
   char *ptr_ip, *ptr_port;
   ptr_ip = strchr(ip_port, ':');
@@ -73,7 +73,7 @@ int doors_test_file_is_socket(char *path)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void doors_tux_sock_param(char *ipm, char *path, int *ip, int *port)
+void doors_tux_sock_param(char *ipm, char *path, uint32_t *ip, int *port)
 {
   char pm[MAX_PATH_LEN];
   if (strlen(ipm) >= MAX_PATH_LEN) 

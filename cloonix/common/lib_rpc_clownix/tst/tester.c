@@ -107,6 +107,11 @@ static int count_qmp_sub = 0;
 static int count_qmp_req = 0;
 static int count_qmp_resp = 0;
 
+static int count_d2d_peer_mac = 0;
+static int count_d2d_add = 0;
+static int count_d2d_peer_create = 0;
+static int count_d2d_peer_conf = 0;
+static int count_d2d_peer_ping = 0;
 
 /*****************************************************************************/
 static void print_all_count(void)
@@ -144,8 +149,8 @@ static void print_all_count(void)
   printf("%d\n", count_dpdk_ovs_cnf);
   printf("%d\n", count_eventfull_sub);
   printf("%d\n", count_eventfull);
-  printf("%d (slow)\n", count_slowperiodic_sub);
-  printf("%d (slow)\n", count_slowperiodic);
+  printf("%d\n", count_slowperiodic_sub);
+  printf("%d\n", count_slowperiodic);
   printf("%d\n", count_sav_vm);
 
   printf("%d\n", count_evt_stats_endp_sub);
@@ -155,7 +160,7 @@ static void print_all_count(void)
   printf("%d\n", count_evt_stats_sysinfo);
   printf("%d\n", count_blkd_reports);
   printf("%d\n", count_blkd_reports_sub);
-  printf("SPECIAL: %d\n", count_rpct_recv_report);
+  printf("%d\n", count_rpct_recv_report);
 
   printf("%d\n", count_evt_txt_doors);
   printf("%d\n", count_evt_txt_doors_sub);
@@ -177,6 +182,12 @@ static void print_all_count(void)
   printf("%d\n", count_qmp_sub);
   printf("%d\n", count_qmp_req);
   printf("%d\n", count_qmp_resp);
+
+  printf("%d\n", count_d2d_peer_mac);
+  printf("%d\n", count_d2d_add);
+  printf("%d\n", count_d2d_peer_create);
+  printf("%d\n", count_d2d_peer_conf);
+  printf("%d\n", count_d2d_peer_ping);
 
   printf("END COUNT\n");
 }
@@ -445,6 +456,25 @@ static void random_c2c(t_topo_c2c *c2c)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void random_d2d(t_topo_d2d *d2d)
+{
+  random_choice_str(d2d->name, MAX_NAME_LEN);
+  random_choice_str(d2d->dist_cloonix, MAX_NAME_LEN);
+  random_choice_str(d2d->lan, MAX_NAME_LEN);
+  d2d->local_is_master = rand();
+  d2d->dist_tcp_ip = rand();
+  d2d->dist_tcp_port = rand();
+  d2d->loc_udp_ip = rand();
+  d2d->dist_udp_ip = rand();
+  d2d->loc_udp_port = rand();
+  d2d->dist_udp_port = rand();
+  d2d->tcp_connection_peered = rand();
+  d2d->udp_connection_peered = rand();
+  d2d->ovs_lan_attach_ready = rand();
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void random_sat(t_topo_sat *sat)
 {
   random_choice_str(sat->name, MAX_NAME_LEN);
@@ -531,6 +561,7 @@ static t_topo_info *random_topo_gen(void)
 
   topo->nb_kvm = my_rand(30);
   topo->nb_c2c = my_rand(10);
+  topo->nb_d2d = my_rand(10);
   topo->nb_sat = my_rand(30);
   topo->nb_endp = my_rand(50);
   topo->nb_phy = my_rand(10);
@@ -557,6 +588,15 @@ static t_topo_info *random_topo_gen(void)
     memset(topo->c2c, 0, topo->nb_c2c * sizeof(t_topo_c2c));
     for (i=0; i<topo->nb_c2c; i++)
       random_c2c(&(topo->c2c[i]));
+    }
+
+  if (topo->nb_d2d)
+    {
+    topo->d2d =
+    (t_topo_d2d *)clownix_malloc(topo->nb_d2d * sizeof(t_topo_d2d),3);
+    memset(topo->d2d, 0, topo->nb_d2d * sizeof(t_topo_d2d));
+    for (i=0; i<topo->nb_d2d; i++)
+      random_d2d(&(topo->d2d[i]));
     }
 
   if (topo->nb_sat)
@@ -2621,6 +2661,214 @@ void recv_qmp_resp(int llid, int itid, char *iname, char *iline, int istatus)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_d2d_peer_mac(int llid, int itid, char *id2d_name,
+                       int inb_mac, t_d2d_mac *itabmac)
+{
+  static char d2d_name[MAX_NAME_LEN];
+  static int tid, nb_mac;
+  static t_d2d_mac tabmac[100];
+  int i;
+  if (i_am_client)
+    {
+    if (count_d2d_peer_mac)
+      {
+      if (strcmp(id2d_name, d2d_name))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (inb_mac != nb_mac)
+        KOUT(" ");
+      if (memcmp(itabmac, tabmac, nb_mac * sizeof(t_d2d_mac)))
+        KOUT(" ");
+      }
+    tid = rand();
+    random_choice_str(d2d_name, MAX_NAME_LEN);
+    nb_mac = (rand() % 99) + 1;
+    memset(tabmac, 0, 100 * sizeof(t_d2d_mac));
+    for (i=0; i<nb_mac; i++)
+      random_choice_str(tabmac[i].mac, MAX_NAME_LEN);
+    send_d2d_peer_mac(llid, tid, d2d_name, nb_mac, tabmac);
+    }
+  else
+    send_d2d_peer_mac(llid, itid, id2d_name, inb_mac, itabmac);
+  count_d2d_peer_mac++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_d2d_add(int llid, int itid, char *id2d_name, uint32_t ilocal_udp_ip,
+                  char *islave_cloonix, uint32_t iip, uint16_t iport,
+                  char *ipasswd, uint32_t iudp_ip)
+{
+  static char d2d_name[MAX_NAME_LEN];
+  static char slave_cloonix[MAX_NAME_LEN];
+  static char passwd[MSG_DIGEST_LEN];
+  static int tid;
+  static uint32_t ip, local_udp_ip, udp_ip;
+  static uint16_t port;
+  if (i_am_client)
+    {
+    if (count_d2d_add)
+      {
+      if (strcmp(ipasswd, passwd))
+        KOUT(" ");
+      if (strcmp(id2d_name, d2d_name))
+        KOUT(" ");
+      if (strcmp(islave_cloonix, slave_cloonix))
+        KOUT(" ");
+      if (iip != ip)
+        KOUT(" ");
+      if (ilocal_udp_ip != local_udp_ip)
+        KOUT(" ");
+      if (iudp_ip != udp_ip)
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (iport != port)
+        KOUT(" ");
+      }
+    tid = rand();
+    ip = rand();
+    local_udp_ip = rand();
+    udp_ip = rand();
+    port = rand() & 0xFFFF;
+    random_choice_str(passwd, MSG_DIGEST_LEN);
+    random_choice_str(d2d_name, MAX_NAME_LEN);
+    random_choice_str(slave_cloonix, MAX_NAME_LEN);
+    send_d2d_add(llid, tid, d2d_name, local_udp_ip,
+                 slave_cloonix, ip, port, passwd, udp_ip);
+    }
+  else
+    send_d2d_add(llid, itid, id2d_name, ilocal_udp_ip,
+                 islave_cloonix, iip, iport, ipasswd, iudp_ip);
+  count_d2d_add++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_d2d_peer_create(int llid, int itid, char *id2d_name, int iis_ack,
+                          char *idistant_cloonix, char *ilocal_cloonix)
+{
+  static char d2d_name[MAX_NAME_LEN];
+  static char distant_cloonix[MAX_NAME_LEN];
+  static char local_cloonix[MAX_NAME_LEN];
+  static int tid, is_ack;
+  if (i_am_client)
+    {
+    if (count_d2d_peer_create)
+      {
+      if (strcmp(id2d_name, d2d_name))
+        KOUT(" ");
+      if (strcmp(idistant_cloonix, distant_cloonix))
+        KOUT(" ");
+      if (strcmp(ilocal_cloonix, local_cloonix))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (iis_ack != is_ack)
+        KOUT(" ");
+      }
+    is_ack = rand();
+    tid = rand();
+    random_choice_str(d2d_name, MAX_NAME_LEN);
+    random_choice_str(distant_cloonix, MAX_NAME_LEN);
+    random_choice_str(local_cloonix, MAX_NAME_LEN);
+    send_d2d_peer_create(llid, tid, d2d_name, is_ack,
+                         distant_cloonix, local_cloonix);
+    }
+  else
+    send_d2d_peer_create(llid, itid, id2d_name, iis_ack,
+                         idistant_cloonix, ilocal_cloonix);
+  count_d2d_peer_create++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_d2d_peer_conf(int llid, int itid, char *id2d_name, int iis_ack,
+                        char *idistant_cloonix,     char *ilocal_cloonix,
+                        uint32_t idudp_ip,   uint32_t iludp_ip,
+                        uint16_t idudp_port, uint16_t iludp_port)
+{
+  static char d2d_name[MAX_NAME_LEN];
+  static char distant_cloonix[MAX_NAME_LEN];
+  static char local_cloonix[MAX_NAME_LEN];
+  static int tid, is_ack;
+  static uint32_t dudp_ip, ludp_ip;
+  static uint16_t dudp_port, ludp_port;
+  if (i_am_client)
+    {
+    if (count_d2d_peer_conf)
+      {
+      if (strcmp(id2d_name, d2d_name))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (iis_ack != is_ack)
+        KOUT(" ");
+      if (strcmp(idistant_cloonix, distant_cloonix))
+        KOUT(" ");
+      if (strcmp(ilocal_cloonix, local_cloonix))
+        KOUT(" ");
+      if (iludp_ip != ludp_ip)
+        KOUT(" ");
+      if (idudp_ip != dudp_ip)
+        KOUT(" ");
+      if (iludp_port != ludp_port)
+        KOUT(" ");
+      if (idudp_port != dudp_port)
+        KOUT(" ");
+      }
+    tid = rand();
+    is_ack = rand();
+    ludp_ip = rand();
+    dudp_ip = rand();
+    ludp_port = rand() & 0xFFFF;
+    dudp_port = rand() & 0xFFFF;
+    random_choice_str(d2d_name, MAX_NAME_LEN);
+    random_choice_str(distant_cloonix, MAX_NAME_LEN);
+    random_choice_str(local_cloonix, MAX_NAME_LEN);
+    send_d2d_peer_conf(llid, tid, d2d_name, is_ack, distant_cloonix,
+                       local_cloonix, dudp_ip, ludp_ip,
+                       dudp_port, ludp_port);
+    }
+  else
+    send_d2d_peer_conf(llid, itid, id2d_name, iis_ack, idistant_cloonix,
+                       ilocal_cloonix, idudp_ip, iludp_ip,
+                       idudp_port, iludp_port);
+  count_d2d_peer_conf++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_d2d_peer_ping(int llid, int itid, char *id2d_name, int istatus)
+{
+  static char d2d_name[MAX_NAME_LEN];
+  static int tid, status;
+  if (i_am_client)
+    {
+    if (count_d2d_peer_ping)
+      {
+      if (strcmp(id2d_name, d2d_name))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (istatus != status)
+        KOUT(" ");
+      }
+    tid = rand();
+    status = rand();
+    random_choice_str(d2d_name, MAX_NAME_LEN);
+    send_d2d_peer_ping(llid, tid, d2d_name, status);
+    }
+  else
+    send_d2d_peer_ping(llid, itid, id2d_name, istatus);
+  count_d2d_peer_ping++;
+}
+/*---------------------------------------------------------------------------*/
+
+
+
+/*****************************************************************************/
 /* FUNCTION: send_first_burst                                              */
 /*---------------------------------------------------------------------------*/
 static void send_first_burst(int llid)
@@ -2693,6 +2941,11 @@ static void send_first_burst(int llid)
   recv_qmp_req(llid, 0, NULL, NULL);
   recv_qmp_resp(llid, 0, NULL, NULL, 0);
 
+  recv_d2d_add(llid, 0,  NULL, 0, NULL, 0, 0, NULL, 0);
+  recv_d2d_peer_create(llid, 0, NULL, 0, NULL, NULL);
+  recv_d2d_peer_conf(llid, 0, NULL, 0, NULL, NULL, 0,0,0,0);
+  recv_d2d_peer_ping(llid, 0, NULL, 0);
+  recv_d2d_peer_mac(llid, 0, NULL, 0, NULL);
 }
 /*---------------------------------------------------------------------------*/
 

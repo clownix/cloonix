@@ -15,7 +15,7 @@ fi
 #----------------------------------------------------------
 for i in cloonix_dta cloonix_mon cloonix_osh cloonix_xwy \
          cloonix_cli cloonix_gui cloonix_net cloonix_scp \
-         cloonix_zor cloonix_ctl cloonix_ice cloonix_ocp \
+         cloonix_zor cloonix_ice cloonix_ocp \
          cloonix_ssh cloonix_ovs; do 
   rm -f /usr/local/bin/${i}
 done
@@ -30,6 +30,7 @@ MUOVS=${SERV_BIN_PATH}/muswitch/muovs/cloonix_muovs
 SUID_POWER=${SERV_BIN_PATH}/suid_power/cloonix_suid_power
 SNF_DPDK=${SERV_BIN_PATH}/dpdk/bin/cloonix_snf_dpdk
 NAT_DPDK=${SERV_BIN_PATH}/dpdk/bin/cloonix_nat_dpdk
+D2D_DPDK=${SERV_BIN_PATH}/dpdk/bin/cloonix_d2d_dpdk
 USBHELP=/usr/local/bin/cloonix/common/spice/spice_lib
 USBHELP+=/libexec/spice-client-glib-usb-acl-helper
 chmod u+s ${MUTAP}
@@ -37,6 +38,7 @@ chmod u+s ${MUOVS}
 chmod u+s ${SUID_POWER}
 chmod u+s ${SNF_DPDK}
 chmod u+s ${NAT_DPDK}
+chmod u+s ${D2D_DPDK}
 chmod u+s ${USBHELP}
 #----------------------------------------------------------
 rm -f ${HERE}/${CLOONIX}

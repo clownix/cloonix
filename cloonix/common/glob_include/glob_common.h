@@ -15,6 +15,11 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdint.h>
 #include <linux/if.h>
 #ifndef MAX_NAME_LEN
 #define MAX_NAME_LEN 64
@@ -226,6 +231,23 @@ typedef struct t_topo_c2c
   int port_slave;
   } t_topo_c2c;
 /*---------------------------------------------------------------------------*/
+typedef struct t_topo_d2d
+  {
+  char name[MAX_NAME_LEN];
+  char dist_cloonix[MAX_NAME_LEN];
+  char lan[MAX_NAME_LEN];
+  int local_is_master;
+  uint32_t dist_tcp_ip;
+  uint16_t dist_tcp_port;
+  uint32_t loc_udp_ip;
+  uint32_t dist_udp_ip;
+  uint16_t loc_udp_port;
+  uint16_t dist_udp_port;
+  int tcp_connection_peered;
+  int udp_connection_peered;
+  int ovs_lan_attach_ready;
+  } t_topo_d2d;
+/*---------------------------------------------------------------------------*/
 typedef struct t_topo_sat
   {
   char name[MAX_NAME_LEN];
@@ -280,6 +302,9 @@ typedef struct t_topo_info
 
   int nb_c2c;
   t_topo_c2c *c2c;
+
+  int nb_d2d;
+  t_topo_d2d *d2d;
 
   int nb_sat;
   t_topo_sat *sat;

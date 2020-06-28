@@ -47,6 +47,8 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
     return 1;
   if (topo->nb_c2c  != ref->nb_c2c)
     return 2;
+  if (topo->nb_d2d  != ref->nb_d2d)
+    return 5;
   if (topo->nb_sat  != ref->nb_sat)
     return 3;
   if (topo->nb_phy  != ref->nb_phy)
@@ -85,6 +87,19 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
         return (2000+i);
       }
     }
+  if (topo->nb_d2d)
+    {
+    if (!topo->d2d)
+      return 118;
+    if (!ref->d2d)
+      return 119;
+    for (i=0; i<topo->nb_d2d; i++)
+      {
+      if (memcmp(&(topo->d2d[i]), &(ref->d2d[i]), sizeof(t_topo_d2d)))
+        return (251+i);
+      }
+    }
+
   if (topo->nb_sat)
     {
     if (!topo->sat)
@@ -198,6 +213,7 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
   
   topo->nb_kvm = ref->nb_kvm;
   topo->nb_c2c = ref->nb_c2c;
+  topo->nb_d2d = ref->nb_d2d;
   topo->nb_sat = ref->nb_sat;
   topo->nb_phy = ref->nb_phy;
   topo->nb_pci = ref->nb_pci;
@@ -220,6 +236,13 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
     (t_topo_c2c *)clownix_malloc(ref->nb_c2c*sizeof(t_topo_c2c),28);
     memcpy(topo->c2c, ref->c2c, ref->nb_c2c*sizeof(t_topo_c2c));
     } 
+
+  if (topo->nb_d2d)
+    {
+    topo->d2d =
+    (t_topo_d2d *)clownix_malloc(ref->nb_d2d*sizeof(t_topo_d2d),28);
+    memcpy(topo->d2d, ref->d2d, ref->nb_d2d*sizeof(t_topo_d2d));
+    }
 
   if (topo->nb_sat)
     {
@@ -284,6 +307,7 @@ void topo_free_topo(t_topo_info *topo)
       clownix_free(topo->endp[i].lan.lan, __FUNCTION__);
     clownix_free(topo->kvm, __FUNCTION__);
     clownix_free(topo->c2c, __FUNCTION__);
+    clownix_free(topo->d2d, __FUNCTION__);
     clownix_free(topo->sat, __FUNCTION__);
     clownix_free(topo->phy, __FUNCTION__);
     clownix_free(topo->pci, __FUNCTION__);

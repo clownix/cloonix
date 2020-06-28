@@ -73,6 +73,12 @@ void client_sav_vm(int tid, t_end_cb cb, char *nm, int type, char *new_dir_path)
 void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest);
 void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest);
 void client_del_vm(int tid, t_end_cb cb, char *nm);
+
+
+void client_add_d2d(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
+                    char *slave_cloonix, uint32_t ip, uint16_t port,
+                    char *passwd, uint32_t udp_ip);
+
 void client_add_sat(int tid, t_end_cb cb, char *name, 
                     int mutype, t_c2c_req_info *c2c_req_info);
 void client_del_sat(int tid, t_end_cb cb, char *name);

@@ -41,6 +41,7 @@
 #include "hidden_visible_edge.h"
 #include "menu_dialog_kvm.h"
 #include "menu_dialog_c2c.h"
+#include "menu_dialog_d2d.h"
 #include "bdplot.h"
 
 
@@ -347,6 +348,63 @@ static int c2c_item_info(char *text,  t_bank_item *bitem)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int d2d_item_info(char *text,  t_bank_item *bitem)
+{
+  int len = 0;
+  uint16_t tcp_port, loc_udp_port, dist_udp_port;
+  int local_is_master, tcp_connection_peered;
+  int udp_connection_peered, ovs_lan_attach_ready;
+  char tcp_ip[MAX_NAME_LEN];
+  char loc_udp_ip[MAX_NAME_LEN];
+  char dist_udp_ip[MAX_NAME_LEN];
+  char *dist_cloonix = bitem->pbi.pbi_sat->topo_d2d.dist_cloonix; 
+  char *lan = bitem->pbi.pbi_sat->topo_d2d.lan; 
+  int_to_ip_string (bitem->pbi.pbi_sat->topo_d2d.dist_tcp_ip, tcp_ip);
+  int_to_ip_string (bitem->pbi.pbi_sat->topo_d2d.dist_udp_ip, dist_udp_ip);
+  int_to_ip_string (bitem->pbi.pbi_sat->topo_d2d.loc_udp_ip, loc_udp_ip);
+  tcp_port = bitem->pbi.pbi_sat->topo_d2d.dist_tcp_port;
+  loc_udp_port = bitem->pbi.pbi_sat->topo_d2d.loc_udp_port;
+  dist_udp_port = bitem->pbi.pbi_sat->topo_d2d.dist_udp_port;
+  local_is_master = bitem->pbi.pbi_sat->topo_d2d.local_is_master;
+  tcp_connection_peered = bitem->pbi.pbi_sat->topo_d2d.tcp_connection_peered;
+  udp_connection_peered = bitem->pbi.pbi_sat->topo_d2d.udp_connection_peered;
+  ovs_lan_attach_ready = bitem->pbi.pbi_sat->topo_d2d.ovs_lan_attach_ready;
+  if (local_is_master)
+    {
+    len += sprintf(text + len,"\nLOCAL IS MASTER");
+    if (tcp_connection_peered)
+      {
+      len += sprintf(text + len,"\nTCP PEERED %s %s:%hu",
+                               dist_cloonix, tcp_ip, tcp_port);
+      }
+    else
+      {
+      len += sprintf(text + len,"\nTCP NOT PEERED %s %s:%hu",
+                               dist_cloonix, tcp_ip, tcp_port);
+      }
+    }
+  else
+    {
+    len += sprintf(text + len,"\nDISTANT IS MASTER");
+    len += sprintf(text + len,"\nTCP PEERED %s", dist_cloonix);
+    }
+  if (udp_connection_peered)
+    len += sprintf(text + len,"\nUDP PEERED");
+  else
+    len += sprintf(text + len,"\nUDP NOT PEERED");
+  if (ovs_lan_attach_ready)
+    len += sprintf(text + len,"\nOVS LAN ATTACHED %s", lan);
+  else
+    len += sprintf(text + len,"\nOVS LAN NOT ATTACHED");
+  len += sprintf(text + len,"\nUdp loc  %s:%hu", loc_udp_ip, loc_udp_port);
+  len += sprintf(text + len,"\nUdp dist %s:%hu", dist_udp_ip, dist_udp_port);
+  return len;
+}
+/*--------------------------------------------------------------------------*/
+
+
+
+/****************************************************************************/
 static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
 {
   t_bank_item *bitem;
@@ -371,12 +429,11 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
     else if (bitem->pbi.mutype == endp_type_wif)
       len += sprintf(text + len, "\nWIF");
     else if (bitem->pbi.mutype == endp_type_c2c)
-      len += sprintf(text + len, "\nC2C");
+      len += c2c_item_info(text + len, bitem);
+    else if (bitem->pbi.mutype == endp_type_d2d)
+      len += d2d_item_info(text + len, bitem);
     else if (bitem->pbi.mutype == endp_type_a2b)
       len += sprintf(text + len, "\nA2B");
-
-    if (is_a_c2c(bitem))
-      len += c2c_item_info(text + len, bitem);
     display_info(title, text);
     }
 }
@@ -897,6 +954,7 @@ void menu_init(void)
   menu_utils_init();
   menu_dialog_vm_init();
   menu_dialog_c2c_init();
+  menu_dialog_d2d_init();
   memset(g_sav_whole, 0, MAX_PATH_LEN);
   memset(g_sav_derived, 0, MAX_PATH_LEN);
   snprintf(g_sav_whole, MAX_PATH_LEN-1, 

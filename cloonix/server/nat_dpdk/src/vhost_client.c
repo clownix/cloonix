@@ -124,7 +124,7 @@ static int rxtx_worker(void *arg __rte_unused)
   lcore = rte_lcore_id();
   while(g_rxtx_worker)
     {
-    usleep(1000);
+    usleep(100);
     if (g_enable)
       {
 

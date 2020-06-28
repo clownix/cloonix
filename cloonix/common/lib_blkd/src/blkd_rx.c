@@ -374,6 +374,7 @@ static void trig_dist_flow_control(void *ptr, t_blkd_fifo_rx *pool, int llid)
       (our_mutype == endp_type_pci)  ||
       (our_mutype == endp_type_snf)  ||
       (our_mutype == endp_type_c2c)  ||
+      (our_mutype == endp_type_d2d)  ||
       (our_mutype == endp_type_nat)  ||
       (our_mutype == endp_type_a2b))
     {

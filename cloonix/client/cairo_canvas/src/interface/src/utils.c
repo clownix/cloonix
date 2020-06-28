@@ -38,6 +38,8 @@ void process_all_diffs(t_topo_differences *diffs)
   t_topo_kvm_chain   *del_kvm = diffs->del_kvm;
   t_topo_c2c_chain   *add_c2c = diffs->add_c2c;
   t_topo_c2c_chain   *del_c2c = diffs->del_c2c;
+  t_topo_d2d_chain   *add_d2d = diffs->add_d2d;
+  t_topo_d2d_chain   *del_d2d = diffs->del_d2d;
   t_topo_sat_chain   *add_sat = diffs->add_sat;
   t_topo_sat_chain   *del_sat = diffs->del_sat;
   t_topo_lan_chain   *add_lan = diffs->add_lan;
@@ -55,6 +57,12 @@ void process_all_diffs(t_topo_differences *diffs)
     {
     from_cloonix_switch_create_c2c(&(add_c2c->c2c)); 
     add_c2c = add_c2c->next;
+    }
+
+  while(add_d2d)
+    {
+    from_cloonix_switch_create_d2d(&(add_d2d->d2d));
+    add_d2d = add_d2d->next;
     }
 
   while(add_sat)
@@ -94,6 +102,12 @@ void process_all_diffs(t_topo_differences *diffs)
     {
     from_cloonix_switch_delete_sat(del_c2c->c2c.name);
     del_c2c = del_c2c->next;
+    }
+
+  while(del_d2d)
+    {
+    from_cloonix_switch_delete_sat(del_d2d->d2d.name);
+    del_d2d = del_d2d->next;
     }
 
   while(del_sat)

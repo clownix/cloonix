@@ -86,6 +86,8 @@ char *utils_get_dpdk_qemu_dir(void);
 char *utils_get_dpdk_cloonix_dir(void);
 char *utils_get_dpdk_snf_dir(void);
 char *utils_get_dpdk_nat_dir(void);
+char *utils_get_dpdk_d2d_dir(void);
+char *utils_get_d2d_dpdk_bin_path(void);
 /****************************************************************************/
 
 

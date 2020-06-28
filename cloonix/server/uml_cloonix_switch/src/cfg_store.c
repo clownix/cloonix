@@ -47,6 +47,7 @@
 #include "dpdk_ovs.h"
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
+#include "dpdk_d2d.h"
 #include "vhost_eth.h"
 #include "suid_power.h"
 #include "edp_mngt.h"
@@ -92,24 +93,16 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
 {
   int type, result = 0;
   t_sc2c *c2c = c2c_find(name);
+  t_d2d_cnx *d2d = dpdk_d2d_find(name);
   memset(use, 0, MAX_PATH_LEN);
-  if (edp_mngt_exists(name, &type))
-    {
-    if (type == endp_type_phy)
-      snprintf(use, MAX_NAME_LEN, "%s is used by a phy", name);
-    else if (type == endp_type_pci)
-      snprintf(use, MAX_NAME_LEN, "%s is used by a pci", name);
-    else if (type == endp_type_tap)
-      snprintf(use, MAX_NAME_LEN, "%s is used by a tap", name);
-    else if (type == endp_type_snf)
-      snprintf(use, MAX_NAME_LEN, "%s is used by a snf", name);
-    else
-      KERR("%s", name);
-    result = 1;
-    }
-  else if (c2c)
+  if (c2c)
     {
     snprintf(use, MAX_NAME_LEN, "%s is used by a sat c2c", name);
+    result = 1;
+    }
+  else if (d2d)
+    {
+    snprintf(use, MAX_NAME_LEN, "%s is used by a d2d", name);
     result = 1;
     }
   else if ((!strcmp(name, "doors")) ||
@@ -134,7 +127,8 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
     snprintf(use, MAX_NAME_LEN, "%s is used by running vm", name);
     result = 1;
     }
-  else if (endp_mngt_exists(name, 0, &type))
+  else if ((endp_mngt_exists(name, 0, &type)) ||
+           (edp_mngt_exists(name, &type)))
     {
     if (type == endp_type_tap)
       snprintf(use, MAX_NAME_LEN, "%s is used by a tap", name);
@@ -659,17 +653,20 @@ static void fill_topo_endp(t_topo_endp *topo_endp, t_endp *endp)
 /*****************************************************************************/
 static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_endp,
                                      int nb_vhost, int nb_endp_edp,
-                                     int nb_phy, int nb_pci,
-                                     int nb_bridges, int nb_mirrors)
+                                     int nb_endp_d2d, int nb_phy, int nb_pci,
+                                     int nb_bridges, int nb_mirrors,
+                                     int nb_d2d)
 {
   t_topo_info *topo = (t_topo_info *) clownix_malloc(sizeof(t_topo_info), 3);
   int len;
   memset(topo, 0, sizeof(t_topo_info));
   topo->nb_kvm = nb_vm;
+  topo->nb_d2d = nb_d2d;
   topo->nb_c2c = endp_mngt_get_nb(endp_type_c2c);
   topo->nb_sat = endp_mngt_get_nb_sat();
   topo->nb_sat += edp_mngt_get_qty();
-  topo->nb_endp = endp_mngt_get_nb_all()+nb_dpdk_endp+nb_vhost+nb_endp_edp;
+  topo->nb_endp = endp_mngt_get_nb_all() + nb_dpdk_endp + nb_vhost;
+  topo->nb_endp += nb_endp_edp + nb_endp_d2d;
   topo->nb_phy = nb_phy;
   topo->nb_pci = nb_pci;
   topo->nb_bridges = nb_bridges;
@@ -680,14 +677,18 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_endp,
     (t_topo_kvm *)clownix_malloc(topo->nb_kvm * sizeof(t_topo_kvm),3);
     memset(topo->kvm, 0, topo->nb_kvm * sizeof(t_topo_kvm));
     }
-
   if (topo->nb_c2c)
     {
     topo->c2c =
     (t_topo_c2c *)clownix_malloc(topo->nb_c2c * sizeof(t_topo_c2c),3);
     memset(topo->c2c, 0, topo->nb_c2c * sizeof(t_topo_c2c));
     }
-
+  if (topo->nb_d2d)
+    {
+    topo->d2d =
+    (t_topo_d2d *)clownix_malloc(topo->nb_d2d * sizeof(t_topo_d2d),3);
+    memset(topo->d2d, 0, topo->nb_d2d * sizeof(t_topo_d2d));
+    }
   if (topo->nb_sat)
     {
     topo->sat =
@@ -750,9 +751,30 @@ static void copy_endp(t_topo_endp *dst, t_topo_endp *src)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void fill_topo_d2d(t_topo_d2d *topo_d2d, t_d2d_cnx *d2d)
+{
+  memset(topo_d2d, 0, sizeof(t_topo_d2d));
+  strncpy(topo_d2d->name, d2d->name, MAX_NAME_LEN);
+  strncpy(topo_d2d->dist_cloonix, d2d->dist_cloonix, MAX_NAME_LEN);
+  strncpy(topo_d2d->lan, d2d->lan, MAX_NAME_LEN);
+  topo_d2d->local_is_master = d2d->local_is_master;
+  topo_d2d->dist_tcp_ip           = d2d->dist_tcp_ip;
+  topo_d2d->dist_tcp_port         = d2d->dist_tcp_port;
+  topo_d2d->loc_udp_ip            = d2d->loc_udp_ip;
+  topo_d2d->dist_udp_ip           = d2d->dist_udp_ip;
+  topo_d2d->loc_udp_port          = d2d->loc_udp_port;
+  topo_d2d->dist_udp_port         = d2d->dist_udp_port;
+  topo_d2d->tcp_connection_peered = d2d->tcp_connection_peered;
+  topo_d2d->udp_connection_peered = d2d->udp_connection_peered;
+  topo_d2d->ovs_lan_attach_ready  = d2d->ovs_lan_attach_ready;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 t_topo_info *cfg_produce_topo_info(void)
 {
-  int i, nb_vm, nb_endp, nb_dpdk_ovs_endp, nb_vhost_endp, nb_endp_edp;
+  int i, nb_vm, nb_endp, nb_dpdk_ovs_endp;
+  int  nb_vhost_endp, nb_endp_edp, nb_d2d, nb_endp_d2d;
   int i_c2c=0, i_sat=0, i_endp=0; 
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
   t_endp *next, *cur;
@@ -763,14 +785,16 @@ t_topo_info *cfg_produce_topo_info(void)
   t_topo_endp *dpdk_ovs_endp=dpdk_ovs_translate_topo_endp(&nb_dpdk_ovs_endp);
   t_topo_endp *vhost_endp = vhost_eth_translate_topo_endp(&nb_vhost_endp);
   t_topo_endp *edp_endp = edp_mngt_translate_topo_endp(&nb_endp_edp);
+  t_topo_endp *d2d_endp = dpdk_d2d_mngt_translate_topo_endp(&nb_endp_d2d);
   int nb_phy = suid_power_get_topo_phy(&phy);
   int nb_pci = suid_power_get_topo_pci(&pci);
   int nb_bridges = suid_power_get_topo_bridges(&bridges);
   int nb_mirrors = suid_power_get_topo_mirrors(&mirrors);
+  t_d2d_cnx *d2d = dpdk_d2d_get_first(&nb_d2d);
 
   t_topo_info *topo = alloc_all_fields(nb_vm, nb_dpdk_ovs_endp, nb_vhost_endp,
-                                       nb_endp_edp, nb_phy, nb_pci,
-                                       nb_bridges, nb_mirrors);
+                                       nb_endp_edp, nb_endp_d2d, nb_phy, nb_pci,
+                                       nb_bridges, nb_mirrors, nb_d2d);
 
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
 
@@ -784,6 +808,19 @@ t_topo_info *cfg_produce_topo_info(void)
       vm = vm->next;
       }
     if (vm)
+      KOUT(" ");
+    }
+
+  if (topo->nb_d2d)
+    {
+    for (i=0; i<topo->nb_d2d; i++)
+      {
+      if (!d2d)
+        KOUT(" ");
+      fill_topo_d2d(&(topo->d2d[i]), d2d);
+      d2d = d2d->next;
+      }
+    if (d2d)
       KOUT(" ");
     }
 
@@ -854,6 +891,15 @@ t_topo_info *cfg_produce_topo_info(void)
     copy_endp(&(topo->endp[i_endp]), &(dpdk_ovs_endp[i]));
     i_endp += 1;
     }
+
+  for (i=0; i<nb_endp_d2d; i++)
+    {
+    if (i_endp == topo->nb_endp)
+      KOUT(" ");
+    copy_endp(&(topo->endp[i_endp]), &(d2d_endp[i]));
+    i_endp += 1;
+    }
+
   for (i=0; i<nb_vhost_endp; i++)
     {
     if (i_endp == topo->nb_endp)
@@ -861,6 +907,7 @@ t_topo_info *cfg_produce_topo_info(void)
     copy_endp(&(topo->endp[i_endp]), &(vhost_endp[i]));
     i_endp += 1;
     }
+
   for (i=0; i<nb_endp_edp; i++)
     {
     if (i_endp == topo->nb_endp)
@@ -869,12 +916,11 @@ t_topo_info *cfg_produce_topo_info(void)
     i_endp += 1;
     if (i_sat == topo->nb_sat)
       KOUT(" ");
-
-
     strncpy(topo->sat[i_sat].name, edp_endp[i].name, MAX_NAME_LEN-1);
     topo->sat[i_sat].type = edp_endp[i].type;
     i_sat += 1;
     }
+
   for (i=0; i<nb_phy; i++)
     {
     memcpy(&(topo->phy[i]), &(phy[i]), sizeof(t_topo_phy)); 

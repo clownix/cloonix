@@ -22,6 +22,7 @@ int dpdk_ovs_fill_eventfull(char *name, int num, int ms,
                             int ptx, int prx, int btx, int brx);
 int dpdk_ovs_get_dpdk_usable(void);
 int dpdk_ovs_muovs_ready(void);
+void dpdk_ovs_start_openvswitch_if_not_done(void);
 
 int dpdk_ovs_get_nb(void);
 int  dpdk_ovs_try_send_diag_msg(int tid, char *cmd);
@@ -33,7 +34,7 @@ void dpdk_ovs_add_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab);
 void dpdk_ovs_del_vm(char *name);
 void dpdk_ovs_ack_add_eth_vm(char *name, int is_ko);
 int  dpdk_ovs_eth_exists(char *name, int num);
-void dpdk_ovs_init(void);
+void dpdk_ovs_init(uint32_t lcore, uint32_t mem, uint32_t cpu);
 int  dpdk_ovs_get_all_pid(t_lst_pid **lst_pid);
 char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_eth);
 int dpdk_ovs_still_present(void);

@@ -4,9 +4,6 @@ NET=nemo
 DISTRO=opensuse152
 NAME=${DISTRO}
 QCOW2=${DISTRO}.qcow2
-OPENSUSE_MIRROR=http://download.opensuse.org
-OPENSUSE=${OPENSUSE_MIRROR}/distribution/leap/15.2/repo/oss/
-OPENSUSE_UPDATES=${OPENSUSE_MIRROR}/update/leap/15.2/oss/
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 CLOONIX_BULK=$(cat $CLOONIX_CONFIG |grep CLOONIX_BULK | awk -F = "{print \$2}")
@@ -61,22 +58,6 @@ cloonix_scp $NET ${HERE}/../../install_depends ${NAME}:/root
 #----------------------------------------------------------------------
 cloonix_scp $NET ${BULK}/buster.qcow2 ${NAME}:/root/cloonix_data/bulk
 #----------------------------------------------------------------------
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/opensuse.repo << EOF
-[opensuse]
-name=opensuse-15-2 - Base
-baseurl=${OPENSUSE}
-enabled=1
-gpgcheck=0
-EOF"
-#-----------------------------------------------------------------------#
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/opensuse-updates.repo << EOF
-[updates]
-name=opensuse-15-2 - Updates
-baseurl=${OPENSUSE_UPDATES}
-enabled=1
-gpgcheck=0
-EOF"
-#-----------------------------------------------------------------------#
 cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
 nameserver 172.17.0.3
 EOF"

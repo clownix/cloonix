@@ -45,6 +45,7 @@
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
 #include "dpdk_nat.h"
+#include "dpdk_d2d.h"
 #include "qmp.h"
 #include "system_callers.h"
 #include "stats_counters.h"
@@ -143,9 +144,11 @@ static void test_and_end_ovs(void)
   int nb_tap = dpdk_tap_get_qty();
   int nb_snf = dpdk_snf_get_qty();
   int nb_nat = dpdk_nat_get_qty();
+  int nb_d2d = dpdk_d2d_get_qty();
   if ((g_head_vm == NULL) &&
       (nb_tap == 0) &&
       (nb_nat == 0) &&
+      (nb_d2d == 0) &&
       (nb_snf == 0))
     {
     if (!dpdk_dyn_is_all_empty())
@@ -509,7 +512,6 @@ static void timer_vm_add_beat(void *data)
       {
       event_print("timer !kvm call_dpdk_dyn_del_eth %s", vm->name);
       call_dpdk_dyn_del_eth(vm);
-      KERR("%s", vm->name);
       }
     else if (kvm->vm_to_be_killed == 1)
       {
@@ -568,7 +570,7 @@ static void timer_vm_add_beat(void *data)
 
     vm = nvm;
     }
-  clownix_timeout_add(10, timer_vm_add_beat, NULL, NULL, NULL);
+  clownix_timeout_add(30, timer_vm_add_beat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1032,16 +1034,9 @@ void dpdk_ovs_urgent_client_destruct(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_ovs_add_vm(char *name,int nb_tot_eth,t_eth_table *eth_tab)
+void dpdk_ovs_start_openvswitch_if_not_done(void)
 {
   t_ovs *cur = g_head_ovs;
-  int i;
-  for (i=0; i<nb_tot_eth; i++)
-    {
-    if (eth_tab[i].eth_type == eth_type_dpdk)
-      erase_dpdk_qemu_path(name, i);
-    }
-  vm_alloc(name, nb_tot_eth, eth_tab);
   if (cur == NULL)
     {
     event_print("Start OpenVSwitch");
@@ -1049,6 +1044,20 @@ void dpdk_ovs_add_vm(char *name,int nb_tot_eth,t_eth_table *eth_tab)
     cur->clone_start_pid = create_muovs_process("ovsdb");
     cur->clone_start_pid_just_done = 1;
     }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void dpdk_ovs_add_vm(char *name,int nb_tot_eth,t_eth_table *eth_tab)
+{
+  int i;
+  for (i=0; i<nb_tot_eth; i++)
+    {
+    if (eth_tab[i].eth_type == eth_type_dpdk)
+      erase_dpdk_qemu_path(name, i);
+    }
+  vm_alloc(name, nb_tot_eth, eth_tab);
+  dpdk_ovs_start_openvswitch_if_not_done();
   event_print("Alloc ovs vm %s", name);
 }
 /*--------------------------------------------------------------------------*/
@@ -1143,31 +1152,32 @@ int dpdk_ovs_collect_dpdk(t_eventfull_endp *eventfull)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_ovs_cnf(uint32_t lcore_mask, uint32_t socket_mem, uint32_t cpu_mask)
+void dpdk_ovs_cnf(uint32_t lcore, uint32_t mem, uint32_t cpu)
 {
-  KERR("Config ovs dpdk: %X  %d  %X", lcore_mask, socket_mem, cpu_mask);
-  g_lcore_mask = lcore_mask;
-  g_socket_mem = socket_mem;
-  g_cpu_mask   = cpu_mask;
+  KERR("Config ovs dpdk: %X  %d  %X", lcore, mem, cpu);
+  g_lcore_mask = lcore;
+  g_socket_mem = mem;
+  g_cpu_mask   = cpu;
 }
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_ovs_init(void)
+void dpdk_ovs_init(uint32_t lcore, uint32_t mem, uint32_t cpu)
 {
   g_head_vm = NULL;
   g_head_ovs = NULL;
-  clownix_timeout_add(10, timer_ovs_beat, NULL, NULL, NULL);
-  clownix_timeout_add(10, timer_vm_add_beat, NULL, NULL, NULL);
+  clownix_timeout_add(50, timer_ovs_beat, NULL, NULL, NULL);
+  clownix_timeout_add(50, timer_vm_add_beat, NULL, NULL, NULL);
   dpdk_dyn_init();
   dpdk_msg_init();
   dpdk_tap_init();
   dpdk_snf_init();
   dpdk_nat_init();
+  dpdk_d2d_init();
   g_dpdk_usable = 0;
-  g_lcore_mask = 0x01;
-  g_socket_mem = 2048;
-  g_cpu_mask   = 0x0F;
+  g_lcore_mask = lcore;
+  g_socket_mem = mem;
+  g_cpu_mask   = cpu;
 }
 /*--------------------------------------------------------------------------*/
 

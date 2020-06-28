@@ -23,12 +23,26 @@ typedef struct t_item_node_req
   double ty[MAX_SOCK_VM+MAX_WLAN_VM];
 } t_item_node_req;
 /*--------------------------------------------------------------------------*/
+/*
+typedef struct t_d2d_req_info
+{
+  char name[MAX_NAME_LEN];
+  uint32_t loc_udp_ip;
+  char dist_cloonix[MAX_NAME_LEN];
+  char dist_passwd[MSG_DIGEST_LEN];
+  uint32_t dist_tcp_ip;
+  uint16_t dist_tcp_port;
+  uint32_t dist_udp_ip;
+} t_d2d_req_info;
+*/
+
 typedef struct t_item_req
 {
   int bank_type;
   char name[MAX_NAME_LEN];
   char path[MAX_PATH_LEN];
   int mutype;
+  t_d2d_req_info d2d_req_info;
   t_c2c_req_info c2c_req_info;
   double x;
   double y;

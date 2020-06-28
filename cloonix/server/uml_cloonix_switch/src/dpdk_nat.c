@@ -41,6 +41,7 @@
 #include "dpdk_ovs.h"
 #include "dpdk_dyn.h"
 #include "dpdk_nat.h"
+#include "dpdk_d2d.h"
 #include "dpdk_msg.h"
 #include "fmt_diag.h"
 #include "qmp.h"
@@ -108,27 +109,26 @@ static t_dnat *alloc_dnat(char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void free_dnat(char *name)
+static void free_dnat(t_dnat *cur)
 {
-  t_dnat *cur = get_dnat(name);
-  if (!cur)
-    KERR("%s", name);
-  else
-    {
-    edp_evt_update_non_fix_del(eth_type_dpdk, cur->name, cur->lan);
-    snf_dpdk_process_possible_change(cur->lan);
-    if ((!dpdk_dyn_lan_exists(cur->lan)) &&
-        (!dpdk_nat_lan_exists(cur->lan)))
-      dpdk_msg_vlan_exist_no_more(cur->lan);
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    if (cur->prev)
-      cur->prev->next = cur->next;
-    if (cur->next)
-      cur->next->prev = cur->prev;
-    if (g_head_dnat == cur)
-      g_head_dnat = cur->next;
-    clownix_free(cur, __FUNCTION__);
-    }
+  char name[MAX_NAME_LEN];
+  char lan[MAX_NAME_LEN];
+  memset(name, 0, MAX_NAME_LEN);
+  memset(lan, 0, MAX_NAME_LEN);
+  strncpy(name, cur->name, MAX_NAME_LEN-1); 
+  strncpy(lan, cur->lan, MAX_NAME_LEN-1); 
+  if (cur->prev)
+    cur->prev->next = cur->next;
+  if (cur->next)
+    cur->next->prev = cur->prev;
+  if (g_head_dnat == cur)
+    g_head_dnat = cur->next;
+  clownix_free(cur, __FUNCTION__);
+  edp_evt_update_non_fix_del(eth_type_dpdk, name, lan);
+  snf_dpdk_process_possible_change(lan);
+  dpdk_d2d_process_possible_change(lan);
+  dpdk_msg_vlan_exist_no_more(lan);
+  event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
 
@@ -153,7 +153,7 @@ static void timer_nat_msg_beat(void *data)
               nat_dpdk_start_stop_process(cur->name, cur->lan, 0);
               cur->var_dpdk_start_stop_process = 0;
               }
-            free_dnat(cur->name);
+            free_dnat(cur);
             }
           }
         }
@@ -235,7 +235,7 @@ void dpdk_nat_resp_del_lan(int is_ko, char *lan, char *name)
       {
       KERR("ERROR %s %s", name, cur->lan);
       utils_send_status_ko(&(cur->llid), &(cur->tid), "not coherent");
-      free_dnat(name);
+      free_dnat(cur);
       }
     else
       {
@@ -268,13 +268,8 @@ void dpdk_nat_event_from_nat_dpdk_process(char *name, char *lan, int on)
       if (cur->waiting_ack_del_lan)
         {
         utils_send_status_ok(&(cur->llid), &(cur->tid));
-        free_dnat(name);
-        if ((!dpdk_dyn_lan_exists(lan)) && (!dpdk_nat_lan_exists(lan)))
-          dpdk_msg_vlan_exist_no_more(lan);
-        snf_dpdk_process_possible_change(lan);
-        edp_evt_update_non_fix_del(eth_type_dpdk, name, lan);
-        event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
         }
+      free_dnat(cur);
       }
     else
       {
@@ -285,6 +280,7 @@ void dpdk_nat_event_from_nat_dpdk_process(char *name, char *lan, int on)
       cur->waiting_ack_add_lan = 0;
       edp_evt_update_non_fix_add(eth_type_dpdk, name, lan);
       snf_dpdk_process_possible_change(lan);
+      dpdk_d2d_process_possible_change(lan);
       utils_send_status_ok(&(cur->llid), &(cur->tid));
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }

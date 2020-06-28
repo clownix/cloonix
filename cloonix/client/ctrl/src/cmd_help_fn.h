@@ -49,6 +49,7 @@ int cmd_add_a2b(int argc, char **argv);
 int cmd_add_nat(int argc, char **argv);
 int cmd_del_sat(int argc, char **argv);
 int cmd_add_c2c(int argc, char **argv);
+int cmd_add_d2d(int argc, char **argv);
 int cmd_add_vl2sat(int argc, char **argv);
 int cmd_del_vl2sat(int argc, char **argv);
 /*---------------------------------------------------------------------------*/
@@ -77,6 +78,7 @@ void help_del_vm(char *line);
 void help_add_sat(char *line);
 void help_add_wif(char *line);
 void help_add_c2c(char *line);
+void help_add_d2d(char *line);
 void help_del_sat(char *line);
 void help_add_vl2sat(char *line);
 void help_del_vl2sat(char *line);

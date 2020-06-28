@@ -34,6 +34,9 @@ static t_hop_list *g_hop_list;
 static int g_hop_list_nb_item;
 static char glob_layout_path[MAX_PATH_LEN];
 
+
+t_cloonix_conf_info *get_own_cloonix_conf_info(void);
+
 /*****************************************************************************/
 char *get_glob_layout_path(void)
 {
@@ -238,6 +241,14 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
       printf("\n");
     printf("\nc2c:%s", topo->c2c[i].name);
     }
+
+  for (i=0; i<topo->nb_d2d; i++)
+    {
+    if (i == 0)
+      printf("\n");
+    printf("\nd2d:%s", topo->d2d[i].name);
+    }
+
   for (i=0; i<topo->nb_sat; i++)
     {
     if (i == 0)
@@ -642,6 +653,35 @@ int cmd_del_sat(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int cmd_add_d2d(int argc, char **argv)
+{
+  int result = -1;
+  t_cloonix_conf_info *cnf, *local_cnf;
+  char *d2d_name;
+  char *slave_cloonix;
+  if (argc == 2)
+    {
+    d2d_name =  argv[0];
+    cnf = cloonix_conf_info_get(argv[1]);
+    if (!cnf)
+      printf("\nd2d dest names: %s\n\n", cloonix_conf_info_get_names());
+    else
+      {
+      result = 0;
+      slave_cloonix = argv[1];
+      printf("\nd2d is at: %s\n\n", cnf->doors);
+      init_connection_to_uml_cloonix_switch();
+      local_cnf = get_own_cloonix_conf_info();
+      client_add_d2d(0, callback_end, d2d_name, local_cnf->d2d_udp_ip,
+                     slave_cloonix, cnf->ip, (cnf->port & 0xFFFF),
+                     cnf->passwd, cnf->d2d_udp_ip);
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int cmd_add_c2c(int argc, char **argv)
 {
   int result = -1;
@@ -866,7 +906,6 @@ void hop_event_cb(int tid, char *name, char *txt)
   printf("%s: %s\n", name, txt);
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static void hop_callback_end(int nb, t_hop_list *list)

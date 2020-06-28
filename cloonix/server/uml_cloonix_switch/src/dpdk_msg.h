@@ -30,6 +30,8 @@ int dpdk_msg_send_add_lan_snf(char *lan_name, char *name);
 int dpdk_msg_send_del_lan_snf(char *lan_name, char *name);
 int dpdk_msg_send_add_lan_nat(char *lan_name, char *name);
 int dpdk_msg_send_del_lan_nat(char *lan_name, char *name);
+int dpdk_msg_send_add_lan_d2d(char *lan_name, char *name);
+int dpdk_msg_send_del_lan_d2d(char *lan_name, char *name);
 int dpdk_msg_send_add_lan_eth(char *lan_name, char *vm_name, int num);
 int dpdk_msg_send_del_lan_eth(char *lan_name, char *vm_name, int num);
 int dpdk_msg_send_add_lan_tap(char *lan_name, char *name);

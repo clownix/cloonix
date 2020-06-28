@@ -1,5 +1,5 @@
 ##################################################
-CLOONIX_VERSION=08-01
+CLOONIX_VERSION=09-00
 CLOONIX_TREE=/usr/local/bin/cloonix
 CLOONIX_WORK=${HOME}/cloonix_data
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
@@ -10,6 +10,10 @@ CLOONIX_NET: nemo {
   cloonix_ip       127.0.0.1
   cloonix_port     43211
   cloonix_passwd   nemoclown
+  d2d_udp_ip       127.0.0.1
+  lcore_mask       0x1
+  socket_mem       2048
+  cpu_mask         0x03
 }
 #-------------------------------------------------
 
@@ -18,22 +22,34 @@ CLOONIX_NET: mito {
   cloonix_ip       127.0.0.1
   cloonix_port     43212
   cloonix_passwd   mitoclown
+  d2d_udp_ip       127.0.0.1
+  lcore_mask       0x1
+  socket_mem       2048
+  cpu_mask         0x0C
 }
 #-------------------------------------------------
 
 ##################################################
 CLOONIX_NET: fido {
-  cloonix_ip       127.0.0.1
+  cloonix_ip       10.8.8.1
   cloonix_port     43213
   cloonix_passwd   fidoclown
+  d2d_udp_ip       10.8.8.1
+  lcore_mask       0x1
+  socket_mem       2048
+  cpu_mask         0x0F
 }
 #-------------------------------------------------
 
 ##################################################
 CLOONIX_NET: pipo {
-  cloonix_ip       127.0.0.1
+  cloonix_ip       10.8.8.2
   cloonix_port     43214
   cloonix_passwd   pipoclown
+  d2d_udp_ip       10.8.8.2
+  lcore_mask       0x1
+  socket_mem       2048
+  cpu_mask         0x0F
 }
 #-------------------------------------------------
 
@@ -42,6 +58,10 @@ CLOONIX_NET: cucu {
   cloonix_ip       10.7.7.1
   cloonix_port     43217
   cloonix_passwd   cucuclown
+  d2d_udp_ip       10.7.7.1
+  lcore_mask       0x1
+  socket_mem       2048
+  cpu_mask         0x0F
 }
 #-------------------------------------------------
 
@@ -50,6 +70,10 @@ CLOONIX_NET: lolo {
   cloonix_ip       127.0.0.1
   cloonix_port     43218
   cloonix_passwd   loloclown
+  d2d_udp_ip       10.7.7.2
+  lcore_mask       0x1
+  socket_mem       2048
+  cpu_mask         0x0F
 }
 #-------------------------------------------------
 
@@ -58,6 +82,10 @@ CLOONIX_NET: kiki {
   cloonix_ip       172.16.0.92
   cloonix_port     43220
   cloonix_passwd   kiki
+  d2d_udp_ip       0.0.0.0
+  lcore_mask       0x1
+  socket_mem       2048
+  cpu_mask         0x0F
 }
 #-------------------------------------------------
 

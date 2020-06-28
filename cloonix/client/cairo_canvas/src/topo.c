@@ -94,6 +94,35 @@ static void update_layout_center_scale(const char *from)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void paint_color_of_c2c_d2d(t_bank_item *bitem, cairo_t *c)
+{
+  if (is_a_c2c(bitem))
+    {
+    if (bitem->pbi.pbi_sat->topo_c2c.is_peered)
+      cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
+    else
+      cairo_set_source_rgba (c, lightred.r, lightred.g, lightred.b, 0.8);
+    }
+  else if (is_a_d2d(bitem))
+    {
+    if ((bitem->pbi.pbi_sat->topo_d2d.tcp_connection_peered) &&
+        (bitem->pbi.pbi_sat->topo_d2d.udp_connection_peered) &&
+        (bitem->pbi.pbi_sat->topo_d2d.ovs_lan_attach_ready))
+      cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
+    else if ((bitem->pbi.pbi_sat->topo_d2d.tcp_connection_peered) &&
+             (bitem->pbi.pbi_sat->topo_d2d.udp_connection_peered))
+      cairo_set_source_rgba (c, orange.r, orange.g, orange.b, 0.8);
+    else if (bitem->pbi.pbi_sat->topo_d2d.tcp_connection_peered)
+      cairo_set_source_rgba (c, lightred.r, lightred.g, lightred.b, 0.8);
+    else
+      cairo_set_source_rgba (c, red.r, red.g, red.b, 0.8);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+
+
+/****************************************************************************/
 void topo_zoom_in_out_canvas(int in, int val)
 {
   int i;
@@ -608,13 +637,7 @@ static void paint_select_source_color(t_bank_item *bitem, cairo_t *c)
   switch (bitem->bank_type)
     {
     case bank_type_sat:
-      if (is_a_c2c(bitem))
-        {
-        if (bitem->pbi.pbi_sat->topo_c2c.is_peered)
-          paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
-        else
-          paint_select(c,flag,flag_trace,&lightred,&red,&lightmagenta);
-        }
+      paint_color_of_c2c_d2d(bitem, c);
       break;
     case bank_type_lan:
       paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
@@ -970,7 +993,7 @@ static void on_item_paint_a2b(CrItem *item, cairo_t *c)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void on_item_paint_c2c(CrItem *item, cairo_t *c)
+static void on_item_paint_c2c_d2d(CrItem *item, cairo_t *c)
 {
   t_bank_item *bitem = from_critem_to_bank_item(item);
   double x0,y0, d0;
@@ -995,10 +1018,7 @@ static void on_item_paint_c2c(CrItem *item, cairo_t *c)
   else
     cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
   cairo_stroke_preserve(c);
-  if (!bitem->pbi.pbi_sat->topo_c2c.is_peered)
-    cairo_set_source_rgba (c, lightred.r, lightred.g, lightred.b, 0.8);
-  else
-    cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
+  paint_color_of_c2c_d2d(bitem, c);
   cairo_fill(c);
   if (bitem->pbi.blink_rx)
     {
@@ -1078,7 +1098,7 @@ static CrItem *on_item_test(CrItem *item, cairo_t *c, double x, double y)
         cairo_arc (c, x0, y0, NAT_RAD, 0, 2*M_PI);
       else if (is_a_snf(bitem))
         cairo_arc (c, x0, y0, SNIFF_RAD, 0, 2*M_PI);
-      else if (is_a_c2c(bitem))
+      else if ((is_a_c2c(bitem)) || (is_a_d2d(bitem)))
         {
         d0 = C2C_DIA/2;
         sat_lozange(c, x0, y0, d0);
@@ -1287,8 +1307,8 @@ void topo_add_cr_item_to_canvas(t_bank_item *bitem, t_bank_item *bnode)
       g_signal_connect(item, "paint", (GCallback) on_item_paint_nat, NULL);
     else if (is_a_snf(bitem))
       g_signal_connect(item, "paint", (GCallback) on_item_paint_snf, NULL);
-    else if (is_a_c2c(bitem))
-      g_signal_connect(item, "paint", (GCallback) on_item_paint_c2c, NULL);
+    else if ((is_a_c2c(bitem)) || (is_a_d2d(bitem)))
+      g_signal_connect(item, "paint", (GCallback) on_item_paint_c2c_d2d, NULL);
     else if (is_a_a2b(bitem))
       g_signal_connect(item, "paint", (GCallback) on_item_paint_a2b, NULL);
     else

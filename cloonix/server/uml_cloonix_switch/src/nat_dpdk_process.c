@@ -35,6 +35,7 @@
 #include "dpdk_dyn.h"
 #include "dpdk_nat.h"
 #include "dpdk_ovs.h"
+#include "llid_trace.h"
 
 typedef struct t_nat_dpdk
 {
@@ -46,6 +47,7 @@ typedef struct t_nat_dpdk
   int pid;
   int closed_count;
   int suid_root_done;
+  int watchdog_count;
   struct t_nat_dpdk *prev;
   struct t_nat_dpdk *next;
 } t_nat_dpdk;
@@ -102,6 +104,11 @@ static t_nat_dpdk *find_nat_dpdk_with_llid(int llid)
 /*****************************************************************************/
 static void free_nat_dpdk(t_nat_dpdk *cur)
 {
+  if (cur->llid)
+    {
+    llid_trace_free(cur->llid, 0, __FUNCTION__);
+    hop_event_free(cur->llid);
+    }
   if (cur->prev)
     cur->prev->next = cur->next;
   if (cur->next)
@@ -141,6 +148,7 @@ static int try_connect(char *socket, char *name)
     {
     if (hop_event_alloc(llid, type_hop_nat_dpdk, name, 0))
       KERR(" ");
+    llid_trace_alloc(llid, name, 0, 0, type_llid_trace_endp_ovsdb);
     rpct_send_pid_req(NULL, llid, type_hop_nat_dpdk, name, 0);
     }
   return llid;
@@ -162,7 +170,9 @@ static void timer_heartbeat(void *data)
       {
       llid = try_connect(cur->socket, cur->name);
       if (llid)
+        {
         cur->llid = llid;
+        }
       else
         {
         cur->count += 1;
@@ -182,6 +192,12 @@ static void timer_heartbeat(void *data)
       }
     else
       {
+      cur->watchdog_count += 1;
+      if (cur->watchdog_count >= 25)
+        {
+        dpdk_nat_event_from_nat_dpdk_process(cur->name, cur->lan, 0);
+        free_nat_dpdk(cur);
+        }
       cur->count += 1;
       if (cur->count == 5)
         {
@@ -212,6 +228,7 @@ void nat_dpdk_pid_resp(int llid, int tid, char *name, int pid)
     KERR("%s %d", name, pid);
   else
     {
+    cur->watchdog_count = 0;
     if (cur->pid == 0)
       {
       dpdk_nat_event_from_nat_dpdk_process(name, cur->lan, 1);

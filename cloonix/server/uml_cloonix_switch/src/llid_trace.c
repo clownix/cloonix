@@ -39,6 +39,8 @@
 #include "unix2inet.h"
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
+#include "d2d_dpdk_process.h"
+#include "suid_power.h"
 /*---------------------------------------------------------------------------*/
 typedef struct t_event_to_llid
 {
@@ -408,6 +410,8 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
   if ((llid <1) || (llid >= CLOWNIX_MAX_CHANNELS))
     KOUT("%s %d", fct, llid);
 
+  suid_power_llid_closed(llid);
+  d2d_dpdk_llid_closed(llid);
   snf_dpdk_llid_closed(llid);
   nat_dpdk_llid_closed(llid);
   qmp_event_free(llid);

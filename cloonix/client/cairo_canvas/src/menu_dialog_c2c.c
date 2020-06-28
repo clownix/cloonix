@@ -53,19 +53,6 @@ t_custom_c2c *get_custom_c2c (void)
 }
 /*--------------------------------------------------------------------------*/
 
-
-/*****************************************************************************/
-int param_tester(char *param, int min, int max)
-{
-  int result;
-  char *endptr;
-  result = (int) strtol(param, &endptr, 10);
-  if ((endptr[0] != 0) || ( result < min ) || ( result > max))
-    result = -1;
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
 /****************************************************************************/
 static void update_c2c_cust(t_custom_c2c *cust, GtkWidget *name, 
                             GtkWidget *cloonix_slave)

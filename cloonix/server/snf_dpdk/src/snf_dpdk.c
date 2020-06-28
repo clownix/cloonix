@@ -218,9 +218,8 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 /****************************************************************************/
 static void err_ctrl_cb (void *ptr, int llid, int err, int from)
 {
-  inotify_trigger_end();
-  pcap_record_unlink();
-  vhost_client_end_and_exit();
+  KERR("SNF DPDK SELF DESTRUCT CONNECTION");
+  rpct_recv_kil_req(NULL, 0, 0);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -247,7 +246,10 @@ static void connect_from_ctrl_client(void *ptr, int llid, int llid_new)
 static void fct_timeout_self_destruct(void *data)
 {
   if (g_watchdog_ok == 0)
-    KOUT("SNF DPDK SELF DESTRUCT");
+    {
+    KERR("SNF DPDK SELF DESTRUCT WATCHDOG");
+    rpct_recv_kil_req(NULL, 0, 0);
+    }
   g_watchdog_ok = 0;
   clownix_timeout_add(500, fct_timeout_self_destruct, NULL, NULL, NULL);
 }

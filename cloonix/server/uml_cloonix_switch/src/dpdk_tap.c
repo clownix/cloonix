@@ -41,6 +41,7 @@
 #include "dpdk_ovs.h"
 #include "dpdk_dyn.h"
 #include "dpdk_tap.h"
+#include "dpdk_d2d.h"
 #include "dpdk_msg.h"
 #include "fmt_diag.h"
 #include "qmp.h"
@@ -107,27 +108,26 @@ static t_dtap *alloc_dtap(char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void free_dtap(char *name)
+static void free_dtap(t_dtap *cur)
 {
-  t_dtap *cur = get_dtap(name);
-  if (!cur)
-    KERR("%s", name);
-  else
-    {
-    edp_evt_update_non_fix_del(eth_type_dpdk, cur->name, cur->lan);
-    if ((!dpdk_dyn_lan_exists(cur->lan)) &&
-        (!dpdk_tap_lan_exists(cur->lan)))
-      dpdk_msg_vlan_exist_no_more(cur->lan);
-    snf_dpdk_process_possible_change(cur->lan);
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    if (cur->prev)
-      cur->prev->next = cur->next;
-    if (cur->next)
-      cur->next->prev = cur->prev;
-    if (g_head_dtap == cur)
-      g_head_dtap = cur->next;
-    clownix_free(cur, __FUNCTION__);
-    }
+  char name[MAX_NAME_LEN];
+  char lan[MAX_NAME_LEN];
+  memset(name, 0, MAX_NAME_LEN);
+  memset(lan, 0, MAX_NAME_LEN);
+  strncpy(name, cur->name, MAX_NAME_LEN-1);
+  strncpy(lan, cur->lan, MAX_NAME_LEN-1);
+  if (cur->prev)
+    cur->prev->next = cur->next;
+  if (cur->next)
+    cur->next->prev = cur->prev;
+  if (g_head_dtap == cur)
+    g_head_dtap = cur->next;
+  clownix_free(cur, __FUNCTION__);
+  edp_evt_update_non_fix_del(eth_type_dpdk, name, lan);
+  dpdk_msg_vlan_exist_no_more(lan);
+  snf_dpdk_process_possible_change(lan);
+  dpdk_d2d_process_possible_change(lan);
+  event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
 
@@ -148,7 +148,7 @@ static void timer_tap_msg_beat(void *data)
         {
         KERR("Timeout %s", cur->name);
         utils_send_status_ko(&(cur->llid), &(cur->tid), "timeout error");
-        free_dtap(cur->name);
+        free_dtap(cur);
         }
       }
     cur = next;
@@ -185,7 +185,7 @@ void dpdk_tap_resp_del(int is_ko, char *name)
       utils_send_status_ok(&(cur->llid), &(cur->tid));
     if (cur->waiting_ack_add_tap != 0)
       KERR("%s", name);
-    free_dtap(name);
+    free_dtap(cur);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -203,6 +203,7 @@ static void resp_lan_add(t_dtap *cur, int is_ko, char *lan, char *name)
     edp_evt_update_non_fix_add(eth_type_dpdk, name, lan);
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     snf_dpdk_process_possible_change(lan);
+    dpdk_d2d_process_possible_change(lan);
     utils_send_status_ok(&(cur->llid), &(cur->tid));
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     }
@@ -224,7 +225,7 @@ static void resp_lan_del(t_dtap *cur, int is_ko, char *lan, char *name)
   else if (fmt_tx_del_tap(0, name))
     {
     KERR("%s %s", name, lan);
-    free_dtap(name);
+    free_dtap(cur);
     }
   else
     {
@@ -292,7 +293,7 @@ void dpdk_tap_resp_add(int is_ko, char *name, char *strmac)
     {
     KERR("%s", cur->name);
     utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
-    free_dtap(name);
+    free_dtap(cur);
     }
   else if (dpdk_msg_send_add_lan_tap(cur->lan, name))
     KERR("%s %s", cur->lan, name);
@@ -452,7 +453,7 @@ void dpdk_tap_end_ovs(void)
       if (fmt_tx_del_tap(0, cur->name))
         {
         KERR("%s", cur->name);
-        free_dtap(cur->name);
+        free_dtap(cur);
         }
       else
         cur->waiting_ack_del_tap = 1; 

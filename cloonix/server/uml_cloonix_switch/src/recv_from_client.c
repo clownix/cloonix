@@ -56,11 +56,13 @@
 #include "dpdk_dyn.h"
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
+#include "dpdk_d2d.h"
 #include "suid_power.h"
 #include "vhost_eth.h"
 #include "edp_mngt.h"
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
+#include "d2d_dpdk_process.h"
 #include "list_commands.h"
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
@@ -596,6 +598,10 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     if (edp_mngt_add_lan(llid, tid, name, lan, info))
       send_status_ko(llid, tid, info);
     }
+  else if (dpdk_d2d_find(name))
+    {
+    dpdk_d2d_add_lan(llid, tid, name, lan);
+    }
   else if ((vm) &&
            (eth_tab[num].eth_type != eth_type_sock) &&
            (eth_tab[num].eth_type != eth_type_wlan))
@@ -864,6 +870,10 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
     {
     if (vhost_eth_del_lan(llid, tid, lan, name, num, info))
       send_status_ko(llid, tid, info);
+    }
+  else if (dpdk_d2d_lan_exists_in_d2d(name, lan, 0))
+    {
+    dpdk_d2d_del_lan(llid, tid, name, lan);
     }
   else if (!lan_get_with_name(lan))
     {
@@ -1473,21 +1483,24 @@ void recv_list_commands_req(int llid, int tid, int is_layout)
 /*****************************************************************************/
 t_pid_lst *create_list_pid(int *nb)
 {
-  int i,j, nb_vm, nb_endp, nb_sum, nb_mulan, nb_ovs, nb_snf_dpdk, nb_nat_dpdk;
+  int i,j, nb_vm, nb_endp, nb_sum, nb_mulan, nb_ovs;
+  int nb_snf_dpdk, nb_nat_dpdk, nb_d2d_dpdk;
   t_lst_pid *ovs_pid = NULL;
   t_lst_pid *endp_pid = NULL;
   t_lst_pid *mulan_pid = NULL;
   t_lst_pid *snf_dpdk_pid = NULL;
   t_lst_pid *nat_dpdk_pid = NULL;
+  t_lst_pid *d2d_dpdk_pid = NULL;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_pid_lst *lst;
   nb_endp  = endp_mngt_get_all_pid(&endp_pid);
   nb_mulan = mulan_get_all_pid(&mulan_pid);
   nb_snf_dpdk = snf_dpdk_get_all_pid(&snf_dpdk_pid);
   nb_nat_dpdk = nat_dpdk_get_all_pid(&nat_dpdk_pid);
+  nb_d2d_dpdk = d2d_dpdk_get_all_pid(&d2d_dpdk_pid);
   nb_ovs   = dpdk_ovs_get_all_pid(&ovs_pid);
   nb_sum   = nb_ovs + nb_vm + nb_endp + nb_mulan + 10;
-  nb_sum   += nb_snf_dpdk + nb_nat_dpdk;
+  nb_sum   += nb_snf_dpdk + nb_nat_dpdk + nb_d2d_dpdk;
   lst = (t_pid_lst *)clownix_malloc(nb_sum*sizeof(t_pid_lst),18);
   memset(lst, 0, nb_sum*sizeof(t_pid_lst));
   for (i=0, j=0; i<nb_vm; i++)
@@ -1530,6 +1543,13 @@ t_pid_lst *create_list_pid(int *nb)
     j++;
     }
   clownix_free(nat_dpdk_pid, __FUNCTION__);
+  for (i=0 ; i<nb_d2d_dpdk; i++)
+    {
+    strncpy(lst[j].name, d2d_dpdk_pid[i].name, MAX_NAME_LEN-1);
+    lst[j].pid = d2d_dpdk_pid[i].pid;
+    j++;
+    }
+  clownix_free(d2d_dpdk_pid, __FUNCTION__);
   for (i=0 ; i<nb_ovs; i++)
     {
     strncpy(lst[j].name, ovs_pid[i].name, MAX_NAME_LEN-1);
@@ -1662,6 +1682,7 @@ static void timer_del_all(void *data)
     }
   else
     {
+    dpdk_d2d_all_del();
     suid_power_req_kill_all();
     mulan_del_all();
     c2c_free_all();
@@ -1836,37 +1857,27 @@ void recv_add_sat(int llid, int tid, char *name, int type,
                   t_c2c_req_info *c2c_info)
 {
   char info[MAX_PRINT_LEN];
-  int mutype;
   char use[MAX_PATH_LEN];
   event_print("Rx Req add %s %d", name, type);
   if (get_inhib_new_clients())
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
   else if (cfg_name_is_in_use(0, name, use))
     send_status_ko(llid, tid, use);
-  else
+  else if ((type != endp_type_tap) &&
+           (type != endp_type_phy) &&
+           (type != endp_type_pci) &&
+           (type != endp_type_nat) &&
+           (type != endp_type_snf) &&
+           (type != endp_type_c2c) &&
+           (type != endp_type_a2b) &&
+           (type != endp_type_wif))
     {
-    if ((endp_mngt_exists(name, 0, &mutype)) ||
-        ((type == endp_type_a2b) && (endp_mngt_exists(name, 1, &mutype))))
-      {
-      sprintf( info, "NOT NORMAL!  %s 1 already exists", name);
-      send_status_ko(llid, tid, info);
-      }
-    else if ((type != endp_type_tap) &&
-             (type != endp_type_phy) &&
-             (type != endp_type_pci) &&
-             (type != endp_type_snf) &&
-             (type != endp_type_c2c) &&
-             (type != endp_type_nat) &&
-             (type != endp_type_a2b) &&
-             (type != endp_type_wif))
-      {
-      sprintf(info, "%s Bad type: %d", name, type);
-      send_status_ko(llid, tid, info);
-      }
-    else 
-      {
-      local_add_sat(llid, tid, name, type, c2c_info); 
-      }
+    sprintf(info, "%s Bad type: %d", name, type);
+    send_status_ko(llid, tid, info);
+    }
+  else 
+    {
+    local_add_sat(llid, tid, name, type, c2c_info); 
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1877,7 +1888,15 @@ void recv_del_sat(int llid, int tid, char *name)
   int endp_type, type;
   char info[MAX_PATH_LEN];
   event_print("Rx Req del %s", name);
-  if (edp_mngt_exists(name, &endp_type))
+  t_d2d_cnx *d2d = dpdk_d2d_find(name);
+  if (d2d)
+    {
+    if (dpdk_d2d_del(name, info))
+      send_status_ko(llid, tid, info);
+    else
+      send_status_ok(llid, tid, "");
+    }
+  else if (edp_mngt_exists(name, &endp_type))
     {
     if (edp_mngt_del(llid, tid, name))
       {
@@ -1969,6 +1988,99 @@ void recv_qmp_req(int llid, int tid, char *name, char *msg)
     qmp_request_snd(name, llid, tid, msg);
   else
     send_qmp_resp(llid, tid, name, "error MACHINE NOT FOUND", -1);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_d2d_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
+                  char *dist, uint32_t dist_ip, uint16_t dist_port,
+                  char *dist_passwd, uint32_t dist_udp_ip)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char err[MAX_PATH_LEN];
+  event_print("Rx Req add d2d %s", name);
+  if (get_inhib_new_clients())
+    {
+    KERR("%s %s %s", locnet, name, dist);
+    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    }
+  else if (cfg_name_is_in_use(0, name, err))
+    {
+    KERR("%s %s %s", locnet, name, dist);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    if (dpdk_d2d_add(name, loc_udp_ip, dist, dist_ip, dist_port,
+                                       dist_passwd, dist_udp_ip))
+      {
+      KERR("%s %s %s", locnet, name, dist);
+      send_status_ko(llid, tid, "dpdk_d2d_add ko");
+      }
+    else
+      {
+      send_status_ok(llid, tid, "");
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_d2d_peer_mac(int llid, int tid, char *d2d_name,
+                       int nb_mac, t_d2d_mac *tabmac)
+{
+  dpdk_d2d_peer_mac(llid, tid, d2d_name, nb_mac, tabmac);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_d2d_peer_create(int llid, int tid, char *name,
+                          int is_ack, char *dist, char *loc)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char err[MAX_PATH_LEN];
+  t_d2d_cnx *d2d;
+  if (is_ack == 0)
+    {
+    if (get_inhib_new_clients())
+      {
+      KERR("%s %s %s %s", locnet, name, dist, loc);
+      }
+    else if (cfg_name_is_in_use(0, name, err))
+      {
+      KERR("%s %s %s %s %s", locnet, name, dist, loc, err);
+      }
+    else
+      {
+      dpdk_d2d_peer_add(llid, tid, name, dist, loc);
+      }
+    }
+  else
+    {
+    d2d = dpdk_d2d_find(name);
+    if (d2d)
+      dpdk_d2d_peer_add_ack(llid, tid, name, dist, loc, is_ack);
+    else
+      KERR("%s %s %s %s", locnet, name, dist, loc);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_d2d_peer_conf(int llid, int tid, char *name,
+                        int status, char *dist, char *loc,
+                        uint32_t dist_udp_ip,   uint32_t loc_udp_ip,
+                        uint16_t dist_udp_port, uint16_t loc_udp_port)
+{
+  dpdk_d2d_peer_conf(llid, tid, name, status, dist, loc, dist_udp_ip,
+                     loc_udp_ip, dist_udp_port, loc_udp_port);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_d2d_peer_ping(int llid, int tid, char *name, int status)
+{
+  dpdk_d2d_peer_ping(llid, tid, name, status);
 }
 /*--------------------------------------------------------------------------*/
 

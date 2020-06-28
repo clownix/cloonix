@@ -214,7 +214,7 @@ static int check_eth_desc(char *eth_desc, char *err,
 
 {
   int i, sock=0, dpdk=0, vhost=0, wlan=0, result = 0;
-  int len, max = MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM + MAX_WLAN_VM;
+  int len, max = MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM;
   memset(eth_tab, 0, max * sizeof(t_eth_table)); 
   len = strlen(eth_desc);
   if (len >= max)
@@ -288,7 +288,7 @@ int cmd_add_vm_kvm(int argc, char **argv)
   char *rootfs, *name;
   char eth_string[MAX_PATH_LEN];
   char err[MAX_PATH_LEN];
-  t_eth_table eth_tab[MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM];
+  t_eth_table eth_tab[MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM];
   if (argc < 4) 
     printf("\nNot enough parameters for add kvm\n");
 

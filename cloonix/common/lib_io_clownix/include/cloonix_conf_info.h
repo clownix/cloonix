@@ -26,6 +26,10 @@ typedef struct t_cloonix_conf_info
   uint32_t  ip;
   int  port;
   char passwd[MSG_DIGEST_LEN];
+  uint32_t d2d_udp_ip;
+  uint32_t lcore_mask;
+  uint32_t socket_mem;
+  uint32_t cpu_mask;
 } t_cloonix_conf_info;
 /*--------------------------------------------------------------------------*/
 

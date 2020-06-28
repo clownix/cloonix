@@ -239,9 +239,7 @@ void ovs_get_rec_name(char *name, int on)
     }
   if (on)
     {
-    if (cur)
-      KERR("%s", name);
-    else
+    if (!cur)
       {
       cur = (t_list_names *) malloc(sizeof(t_list_names));
       memset(cur, 0, sizeof(t_list_names));

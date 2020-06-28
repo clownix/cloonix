@@ -25,6 +25,7 @@
 #include "doorways_sock.h"
 #include "client_clownix.h"
 #include "bank.h"
+#include "interface.h"
 #include "timeout_start_req.h"
 
 t_topo_info *get_current_topo(void);
@@ -78,6 +79,7 @@ void to_cloonix_switch_create_node(double x, double y,
 
 /****************************************************************************/
 void to_cloonix_switch_create_sat(char *name, int mutype, 
+                                  t_d2d_req_info *d2d_req_info,
                                   t_c2c_req_info *c2c_req_info,
                                   double x, double y)
 {
@@ -89,6 +91,8 @@ void to_cloonix_switch_create_sat(char *name, int mutype,
   pa->mutype = mutype;
   if (c2c_req_info)
     memcpy(&(pa->c2c_req_info), c2c_req_info, sizeof(t_c2c_req_info));
+  if (d2d_req_info)
+    memcpy(&(pa->d2d_req_info), d2d_req_info, sizeof(t_d2d_req_info));
   pa->x = x;
   pa->y = y;
   clownix_timeout_add(1, timer_create_item_req, (void *)pa, NULL, NULL);

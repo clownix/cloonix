@@ -100,11 +100,10 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
 
 
 /****************************************************************************/
-void bank_sat_create(char *name, int mutype, t_topo_c2c *c2c,
-                     double x, double y,
-                     double xa, double ya,
-                     double xb, double yb,
-                     int hidden)
+void bank_sat_create(char *name, int mutype,
+                     t_topo_c2c *c2c, t_topo_d2d *d2d,
+                     double x, double y, double xa, double ya,
+                     double xb, double yb, int hidden)
 {
   t_bank_item *sat;
   sat = look_for_sat_with_id(name);
@@ -112,7 +111,7 @@ void bank_sat_create(char *name, int mutype, t_topo_c2c *c2c,
     KERR("%s", name);
   else
     {
-    add_new_sat(name, mutype, c2c, x, y, hidden);
+    add_new_sat(name, mutype, c2c, d2d, x, y, hidden);
     if (mutype == endp_type_a2b)
       {
       add_new_eth(name, 0, endp_type_kvm_sock, xa, ya, hidden);

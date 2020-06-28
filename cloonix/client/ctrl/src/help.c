@@ -128,6 +128,17 @@ void help_add_c2c(char *line)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void help_add_d2d(char *line)
+{
+  printf("\n\n\n%s <name> <distant_name>",line);
+  printf("\n\tDistant cloonix server name:");
+  printf("\n%s\n", cloonix_conf_info_get_names());
+  printf("\n\nexemple:\n");
+  printf("\t%s to_mito mito\n\n\n", line);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void help_add_vl2sat(char *line)
 {
   printf("\n\n\n%s <name> <num> <lan>\n\n\n", line);

@@ -52,7 +52,7 @@ fct_umount_wkmntloops()
 #########################################################################
 fct_check_uid
 set +e
-for i in qemu-img rpm yum blkid wget sgdisk partprobe; do
+for i in qemu-img rpm yum blkid wget sgdisk partprobe zypper; do
   path_bin=$(which $i)
   if [ -z $path_bin ]; then
     echo $i  DOES NOT EXIST
@@ -83,27 +83,12 @@ do
   echo
 done
 set -e
-#-----------------------------------------------------------------------#
-cd /tmp/wkmntloops
-mkdir -p /tmp/wkmntloops/etc/yum.repos.d
-cat > /tmp/wkmntloops/etc/yum.repos.d/opensuse.repo << EOF
-[opensuse]
-name=opensuse-15-2 - Base
-baseurl=${OPENSUSE}
-enabled=1
-gpgcheck=0
-EOF
-#-----------------------------------------------------------------------#
-cat > /tmp/wkmntloops/etc/yum.repos.d/opensuse-updates.repo << EOF
-[updates]
-name=opensuse-15-2 - Updates
-baseurl=${OPENSUSE_UPDATES}
-enabled=1
-gpgcheck=0
-EOF
-#-----------------------------------------------------------------------#
-yum --installroot=/tmp/wkmntloops -y install systemd
-yum --installroot=/tmp/wkmntloops -y install zypper
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE} 15.2-oss
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE_UPDATES} 15.2-oss-updates
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys refresh
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys update
+zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install systemd
+zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install zypper
 #-----------------------------------------------------------------------#
 if [ -e /etc/resolv.conf ]; then
   cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
@@ -113,16 +98,6 @@ list_pkt="kernel-default grub2-i386-pc iproute2 "
 list_pkt+="openssh xauth sudo kbd vim net-tools "
 list_pkt+="iw dracut dhcp-client"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
-chroot /tmp/wkmntloops/ zypper addrepo ${OPENSUSE} 15.2-oss
-chroot /tmp/wkmntloops/ zypper addrepo ${OPENSUSE_UPDATES} 15.2-oss-updates
-chroot /tmp/wkmntloops/ zypper lr
-chroot /tmp/wkmntloops/ zypper mr -r 1
-chroot /tmp/wkmntloops/ zypper mr -r 2
-chroot /tmp/wkmntloops/ zypper mr --no-gpgcheck 1
-chroot /tmp/wkmntloops/ zypper mr --no-gpgcheck 2
-chroot /tmp/wkmntloops/ zypper lr
-chroot /tmp/wkmntloops/ zypper --non-interactive refresh
-chroot /tmp/wkmntloops/ zypper --non-interactive update
 chroot /tmp/wkmntloops/ zypper --non-interactive install $list_pkt
 chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
 
@@ -139,7 +114,7 @@ if [ ! -e /tmp/wkmntloops/boot/vmlinuz-${version} ]; then
   exit 1
 fi
 echo $version
-list="virtio_scsi virtio_blk virtio_console"
+list="virtio_scsi virtio_blk"
 chroot /tmp/wkmntloops/ dracut --add-drivers "$list" --force /boot/initrd-${version}.img $version
 
 chroot /tmp/wkmntloops/ grub2-mkconfig -o /boot/grub2/grub.cfg

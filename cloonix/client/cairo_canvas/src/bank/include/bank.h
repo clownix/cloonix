@@ -39,6 +39,7 @@ typedef struct t_pbi_sat
 {
   void *snf_cr_item_onoff;
   t_topo_c2c topo_c2c;
+  t_topo_d2d topo_d2d;
   int snf_capture_on;
 } t_pbi_sat;
 
@@ -80,7 +81,6 @@ enum
   bank_type_all_non_edges_items,
   bank_type_node,
   bank_type_eth,
-  bank_type_c2c,
   bank_type_snf,
   bank_type_sat,
   bank_type_lan,
@@ -168,7 +168,8 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
                       double *tx, double *ty, int32_t *thidden_on_graph);
 /*--------------------------------------------------------------------------*/
 void bank_edge_create(char *name, int num, char *lan); 
-void bank_sat_create(char *name, int mutype, t_topo_c2c *c2c,
+void bank_sat_create(char *name, int mutype,
+                     t_topo_c2c *c2c, t_topo_d2d *d2d,
                      double x, double y, 
                      double xa, double ya, 
                      double xb, double yb, 
@@ -202,6 +203,7 @@ void modify_snf(char *name, int evt);
 
 int is_a_nat(t_bank_item *bitem);
 int is_a_c2c(t_bank_item *bitem);
+int is_a_d2d(t_bank_item *bitem);
 int is_a_a2b(t_bank_item *bitem);
 int is_a_snf(t_bank_item *bitem);
 

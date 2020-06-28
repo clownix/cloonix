@@ -605,6 +605,28 @@ void client_del_vm(int tid, t_end_cb cb, char *nm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void client_add_d2d(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip, 
+                    char *slave_cloonix, uint32_t ip, uint16_t port,
+                    char *passwd, uint32_t udp_ip)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  if ((!name) || (!slave_cloonix))
+    KOUT(" ");
+  if ((!strlen(name)) || !(strlen(slave_cloonix)))
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_d2d_add(g_llid, new_tid, name, local_udp_ip,
+               slave_cloonix, ip, port,
+               passwd, udp_ip);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void client_add_sat(int tid, t_end_cb cb, char *name, 
                     int mutype, t_c2c_req_info *c2c_req_info)
 {
