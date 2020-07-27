@@ -82,6 +82,12 @@ name=CentOS-8 - PowerTools
 baseurl=${CLOONIX_CENTOS8_REPO}/PowerTools/x86_64/os
 gpgcheck=0
 EOF"
+cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-Cloud.repo << EOF
+[Cloud]
+name=CentOS-8 - Cloud
+baseurl=${CLOONIX_CENTOS8_REPO}/cloud/x86_64/openstack-train
+gpgcheck=0
+EOF"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
 nameserver 172.17.0.3
@@ -97,6 +103,15 @@ done
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "rm -f install_depends"
 #----------------------------------------------------------------------
+KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial "
+KERN+="net.ifnames=0 "
+KERN+="default_hugepagesz=1G hugepagesz=1G hugepages=2"
+printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" > /tmp/grub
+
+cloonix_scp $NET /tmp/grub ${NAME}:/etc/default
+
+cloonix_ssh $NET ${NAME} "grub2-mkconfig -o /boot/grub2/grub.cfg"
+
 cloonix_ssh $NET ${NAME} "sync"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "poweroff"

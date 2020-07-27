@@ -70,8 +70,6 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
             muswitch/musnf \
             muswitch/munat \
             muswitch/muc2c \
-            muswitch/mua2b \
-            muswitch/mutst \
             muswitch/muovs \
             muswitch/muwlan \
             muswitch/mulan ; do
@@ -85,6 +83,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -rf ${CLOONIX_SERVER}/snf_dpdk
   rm -rf ${CLOONIX_SERVER}/nat_dpdk
   rm -rf ${CLOONIX_SERVER}/d2d_dpdk
+  rm -rf ${CLOONIX_SERVER}/a2b_dpdk
   rm -f ${CLOONIX_SERVER}/qemu/cmd
   rm -rf ${CLOONIX_SERVER}/qemu/sources
   rm -rf ${CLOONIX_SERVER}/qemu/qemu_bin/tainted_qemu

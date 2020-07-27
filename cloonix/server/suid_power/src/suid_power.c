@@ -544,10 +544,7 @@ static void req_kill_clean_all(void)
     pid = read_umid_pid(cur->vm_id);
     if (pid > 0)
       {
-      if (kill(cur->pid, SIGTERM))
-        KERR("ERROR Bad kill %d", cur->vm_id);
-      else
-        KERR("ERROR GOOD kill %d", cur->vm_id);
+      kill(cur->pid, SIGTERM);
       free_vmon(cur);
       }
     cur = next;

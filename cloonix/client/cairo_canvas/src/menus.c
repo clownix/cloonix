@@ -402,6 +402,28 @@ static int d2d_item_info(char *text,  t_bank_item *bitem)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static int a2b_item_info(char *text,  t_bank_item *bitem)
+{
+  int i, len = 0;
+  int *delay, *loss, *qsize, *bsize, *brate;
+  delay = bitem->pbi.pbi_sat->topo_a2b.delay; 
+  loss  = bitem->pbi.pbi_sat->topo_a2b.loss; 
+  qsize = bitem->pbi.pbi_sat->topo_a2b.qsize; 
+  bsize = bitem->pbi.pbi_sat->topo_a2b.bsize; 
+  brate = bitem->pbi.pbi_sat->topo_a2b.brate; 
+  len += sprintf(text+len, "\nA2B: %s\n", bitem->name);
+  for (i=0; i<2; i++)
+    {
+    len += sprintf(text+len, "\nSide%d: delay=%d loss=%d",
+                             i, delay[i], loss[i]);
+    len += sprintf(text+len, "\nSide%d: qsize=%d bsize=%d rate=%d\n",
+                             i, qsize[i], bsize[i], brate[i]);
+    }
+  return len;
+}
+/*--------------------------------------------------------------------------*/
+
 
 
 /****************************************************************************/
@@ -433,7 +455,7 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
     else if (bitem->pbi.mutype == endp_type_d2d)
       len += d2d_item_info(text + len, bitem);
     else if (bitem->pbi.mutype == endp_type_a2b)
-      len += sprintf(text + len, "\nA2B");
+      len += a2b_item_info(text + len, bitem);
     display_info(title, text);
     }
 }

@@ -49,6 +49,7 @@ void to_cloonix_switch_delete_edge(char *name, int num, char *lan);
 void from_cloonix_switch_create_node(t_topo_kvm *kvm);
 void from_cloonix_switch_create_c2c(t_topo_c2c *c2c);
 void from_cloonix_switch_create_d2d(t_topo_d2d *d2d);
+void from_cloonix_switch_create_a2b(t_topo_a2b *a2b);
 void from_cloonix_switch_create_sat(t_topo_sat *sat);
 /*--------------------------------------------------------------------------*/
 void from_cloonix_switch_create_lan(char *lan);

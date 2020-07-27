@@ -57,37 +57,42 @@ static uint32_t volatile g_lock;
 void txq_dpdk_enqueue(struct rte_mbuf *pkt, int top_prio)
 {
   t_txq_dpdk *cur;
-  cur = (t_txq_dpdk *) malloc(sizeof(t_txq_dpdk));
-  memset(cur, 0, sizeof(t_txq_dpdk));
-  cur->mbuf = pkt;
-  while (__sync_lock_test_and_set(&(g_lock), 1));
-  if (top_prio == 0)
-    { 
-    if (g_tail_txq_dpdk)
-      {
-      g_tail_txq_dpdk->next = cur;
-      g_tail_txq_dpdk = cur;
-      }
-    else
-      {
-      g_head_txq_dpdk = cur;
-      g_tail_txq_dpdk = cur;
-      }
-    }
+  cur = (t_txq_dpdk *) rte_malloc(NULL, sizeof(t_txq_dpdk), 0);
+  if (cur == NULL)
+    KERR(" ");
   else
     {
-    if (g_head_txq_dpdk)
-      {
-      cur->next = g_head_txq_dpdk;
-      g_head_txq_dpdk = cur;
+    memset(cur, 0, sizeof(t_txq_dpdk));
+    cur->mbuf = pkt;
+    while (__sync_lock_test_and_set(&(g_lock), 1));
+    if (top_prio == 0)
+      { 
+      if (g_tail_txq_dpdk)
+        {
+        g_tail_txq_dpdk->next = cur;
+        g_tail_txq_dpdk = cur;
+        }
+      else
+        {
+        g_head_txq_dpdk = cur;
+        g_tail_txq_dpdk = cur;
+        }
       }
     else
       {
-      g_head_txq_dpdk = cur;
-      g_tail_txq_dpdk = cur;
+      if (g_head_txq_dpdk)
+        {
+        cur->next = g_head_txq_dpdk;
+        g_head_txq_dpdk = cur;
+        }
+      else
+        {
+        g_head_txq_dpdk = cur;
+        g_tail_txq_dpdk = cur;
+        }
       }
+    __sync_lock_release(&(g_lock));
     }
-  __sync_lock_release(&(g_lock));
 
 }
 /*--------------------------------------------------------------------------*/
@@ -108,7 +113,7 @@ void txq_dpdk_dequeue_end(int one_dequeue)
       }
     else
       g_head_txq_dpdk = g_head_txq_dpdk->next;
-    free(cur);
+    rte_free(cur);
     }
   __sync_lock_release(&(g_lock));
 }
@@ -139,7 +144,7 @@ void txq_dpdk_flush(void)
     {
     next = cur->next;
     rte_pktmbuf_free(cur->mbuf);
-    free(cur);
+    rte_free(cur);
     cur = next;
     }
   g_head_txq_dpdk = NULL;

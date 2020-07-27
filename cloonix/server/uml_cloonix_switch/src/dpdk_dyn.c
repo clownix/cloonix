@@ -43,6 +43,7 @@
 #include "edp_evt.h"
 #include "snf_dpdk_process.h"
 #include "utils_cmd_line_maker.h"
+#include "tabmac.h"
 
 /****************************************************************************/
 typedef struct t_dlan
@@ -109,20 +110,22 @@ static void vlan_free(t_deth *eth, t_dlan *lan)
     eth->head_lan = lan->next;
   clownix_free(lan, __FUNCTION__);
   dpdk_msg_vlan_exist_no_more(lan_name);
-  snf_dpdk_process_possible_change(lan_name);
-  dpdk_d2d_process_possible_change(lan_name);
+  tabmac_process_possible_change();
   event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void eth_free(t_deth *eth)
+static void eth_free(t_dvm *vm)
 {
-  t_deth *next, *cur = eth;
+  t_deth *cur;
   t_dlan *nlan, *lan;
-  while(cur)
+  while(vm->head_eth)
     {
-    next = cur->next;
+    cur = vm->head_eth;
+    if (cur->next) 
+      cur->next->prev = NULL;
+    vm->head_eth = cur->next; 
     lan = cur->head_lan;
     while(lan)
       {
@@ -131,7 +134,6 @@ static void eth_free(t_deth *eth)
       lan = nlan;
       }
     clownix_free(cur, __FUNCTION__);
-    cur = next;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -179,7 +181,7 @@ static void vm_free(char *name)
     KOUT("%s", name);
   else
     {
-    eth_free(vm->head_eth);
+    eth_free(vm);
     if (vm->prev)
       vm->prev->next = vm->next;
     if (vm->next)
@@ -314,8 +316,7 @@ static void recv_ack(int is_add, int is_ko, char *lan_name,
           utils_send_status_ok(&(lan->llid), &(lan->tid));
           }
         event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-        snf_dpdk_process_possible_change(lan_name);
-        dpdk_d2d_process_possible_change(lan_name);
+        tabmac_process_possible_change();
         }
       }
     }
@@ -379,7 +380,12 @@ int dpdk_dyn_add_lan_to_eth(int llid, int tid, char *lan_name,
     sprintf(info, "Not found: %s %d", name, num);
   else
     {
-    if(vlan_find(eth, lan_name))
+    if (!dpdk_ovs_muovs_ready())
+      {
+      sprintf(info, "OVS not ready: %s %s %d", lan_name, name, num);
+      KERR("%s", info);
+      }
+    else if(vlan_find(eth, lan_name))
       sprintf(info, "Lan already attached: %s %s %d", lan_name, name, num);
     else if (eth->head_lan)
       sprintf(info, "Eth is in lan: %s %s %d",eth->head_lan->lan,name,num);

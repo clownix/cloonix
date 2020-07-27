@@ -121,6 +121,7 @@
 
 #define MSG_DIGEST_LEN 32
 
+
 enum{
   eth_type_min = 0,
   eth_type_none,
@@ -248,6 +249,16 @@ typedef struct t_topo_d2d
   int ovs_lan_attach_ready;
   } t_topo_d2d;
 /*---------------------------------------------------------------------------*/
+typedef struct t_topo_a2b
+  {
+  char name[MAX_NAME_LEN];
+  int delay[2];
+  int loss[2];
+  int qsize[2];
+  int bsize[2];
+  int brate[2];
+  } t_topo_a2b;
+/*---------------------------------------------------------------------------*/
 typedef struct t_topo_sat
   {
   char name[MAX_NAME_LEN];
@@ -305,6 +316,9 @@ typedef struct t_topo_info
 
   int nb_d2d;
   t_topo_d2d *d2d;
+
+  int nb_a2b;
+  t_topo_a2b *a2b;
 
   int nb_sat;
   t_topo_sat *sat;

@@ -57,22 +57,26 @@ static uint32_t volatile g_lock;
 void rxq_dpdk_enqueue(struct rte_mbuf *pkt)
 {
   t_rxq_dpdk *cur;
-  cur = (t_rxq_dpdk *) malloc(sizeof(t_rxq_dpdk));
-  memset(cur, 0, sizeof(t_rxq_dpdk));
-  cur->mbuf = pkt;
-  while (__sync_lock_test_and_set(&(g_lock), 1));
-  if (g_tail_rxq_dpdk)
-    {
-    g_tail_rxq_dpdk->next = cur;
-    g_tail_rxq_dpdk = cur;
-    }
+  cur = (t_rxq_dpdk *) rte_malloc(NULL, sizeof(t_rxq_dpdk), 0);
+  if (cur == NULL)
+    KERR(" ");
   else
     {
-    g_head_rxq_dpdk = cur;
-    g_tail_rxq_dpdk = cur;
+    memset(cur, 0, sizeof(t_rxq_dpdk));
+    cur->mbuf = pkt;
+    while (__sync_lock_test_and_set(&(g_lock), 1));
+    if (g_tail_rxq_dpdk)
+      {
+      g_tail_rxq_dpdk->next = cur;
+      g_tail_rxq_dpdk = cur;
+      }
+    else
+      {
+      g_head_rxq_dpdk = cur;
+      g_tail_rxq_dpdk = cur;
+      }
+    __sync_lock_release(&(g_lock));
     }
-  __sync_lock_release(&(g_lock));
-
 }
 /*--------------------------------------------------------------------------*/
 
@@ -93,7 +97,7 @@ struct rte_mbuf *rxq_dpdk_dequeue(void)
       }
     else
       g_head_rxq_dpdk = cur->next;
-    free(cur);
+    rte_free(cur);
     }
   __sync_lock_release(&(g_lock));
   return result;
@@ -110,7 +114,7 @@ void rxq_dpdk_flush(void)
     {
     next = cur->next;
     rte_pktmbuf_free(cur->mbuf);
-    free(cur);
+    rte_free(cur);
     cur = next;
     }
   g_head_rxq_dpdk = NULL;

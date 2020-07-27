@@ -1,6 +1,5 @@
 #!/bin/bash
 HERE=`pwd`
-
 cd ${HERE}/../../../common/lib_blkd
 make clean
 make 
@@ -10,14 +9,6 @@ make
 cd ${HERE}/../lib_ioc
 make clean
 make 
-
-if [ ! -d ../../../../tmpbuild/cloonix/server/dpdk/dpdk ]; then
-  if [ ! -d ../../dpdk/dpdk ]; then
-    cd ${HERE}/../../dpdk
-    ./meson_ninja.sh
-    ./dpdk.sh
-  fi
-fi
 
 cd ${HERE}
 make clean

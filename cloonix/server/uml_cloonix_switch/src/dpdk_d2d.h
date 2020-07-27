@@ -15,7 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define MAX_MAC_NB 20
 typedef struct t_d2d_cnx
 {
   char name[MAX_NAME_LEN];
@@ -58,10 +57,8 @@ typedef struct t_d2d_cnx
   int process_waiting_error;
   int master_del_req;
   int received_del_lan_req;
-  int nb_loc_mac;
   int nb_dist_mac;
-  t_d2d_mac loc_tabmac[MAX_MAC_NB];
-  t_d2d_mac dist_tabmac[MAX_MAC_NB];
+  t_peer_mac dist_tabmac[MAX_PEER_MAC];
   struct t_d2d_cnx *prev;
   struct t_d2d_cnx *next;
 } t_d2d_cnx;
@@ -105,18 +102,20 @@ void dpdk_d2d_all_del(void);
 void dpdk_d2d_add_lan(int llid, int tid, char *name, char *lan);
 void dpdk_d2d_del_lan(int llid, int tid, char *name, char *lan);
 
-char *dpdk_d2d_get_next_matching_lan(char *lan, char *name);
-int dpdk_d2d_get_strmac(char *name, t_d2d_mac **tabmac);
+char *dpdk_d2d_get_next(char *name);
+int dpdk_d2d_get_strmac(char *name, t_peer_mac **tabmac);
 
 t_topo_endp *dpdk_d2d_mngt_translate_topo_endp(int *nb);
 
 void dpdk_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_d2d_mac *tabmac);
+                       int nb_mac, t_peer_mac *tabmac);
 
-void dpdk_d2d_process_possible_change(char *lan);
+void dpdk_d2d_process_possible_change(void);
 
 int dpdk_d2d_eventfull(char *name, int ms, int ptx, int btx, int prx, int brx);
 int dpdk_d2d_collect_dpdk(t_eventfull_endp *eventfull);
+void dpdk_d2d_end_ovs(void);
+int dpdk_d2d_get_tabmac(char *name, t_peer_mac tab[MAX_PEER_MAC]);
 
 void dpdk_d2d_init(void);
 /*--------------------------------------------------------------------------*/

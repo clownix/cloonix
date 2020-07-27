@@ -117,6 +117,10 @@ void timer_create_item_req(void *data)
                        d2d->dist_tcp_port, d2d->dist_passwd,
                        d2d->dist_udp_ip);
         }
+      else if (pa->mutype == endp_type_a2b)
+        {
+        client_add_a2b(0, callback_end, pa->name);
+        }
       else
         {
         client_add_sat(0,callback_end,pa->name,pa->mutype,&pa->c2c_req_info);

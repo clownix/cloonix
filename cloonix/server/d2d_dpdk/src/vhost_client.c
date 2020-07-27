@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <sys/queue.h>
 
-#define ALLOW_EXPERIMENTAL_API
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
 #include <rte_config.h>
@@ -84,25 +83,23 @@ static void virtio_destroy_device(int vid)
 /****************************************************************************/
 static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
-  if (g_virtio_device_on)
+  g_virtio_device_on = 1;
+  if (queue_id==0)
     {
-    if (queue_id==0)
+    if (enable)
       {
-      if (enable)
-        {
-        g_enable = 1;
-        }
-      else
-        {
-        g_enable = 0;
-        }
-      }
-    else if (queue_id==1)
-      {
+      g_enable = 1;
       }
     else
-      KOUT("%d", queue_id);
+      {
+      g_enable = 0;
+      }
     }
+  else if (queue_id==1)
+    {
+    }
+  else
+    KOUT("%d", queue_id);
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -273,3 +270,19 @@ void vhost_client_start(char *path, char *memid)
   udp_enter_traffic_mngt();
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void vhost_client_init(void)
+{
+  g_mempool = NULL;
+  g_enable = 0;
+  memset(g_memid, 0, MAX_NAME_LEN);
+  memset(g_d2d_socket, 0, MAX_PATH_LEN);
+  g_virtio_device_on = 0;
+  g_rxtx_worker = 0;
+  memset(g_rxtx_worker_ended, 0, RTE_MAX_LCORE * sizeof(int));
+  memset(&g_virtio_net_device_ops, 0, sizeof(struct vhost_device_ops));
+  g_lock = 0;
+}
+/*--------------------------------------------------------------------------*/
+

@@ -20,6 +20,20 @@
 
 
 /*---------------------------------------------------------------------------*/
+#define A2B_ADD          "<a2b_add>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "</a2b_add>"
+
+#define A2B_CNF          "<a2b_cnf>"\
+                         "  <tid>    %d </tid>\n"\
+                         "  <name>   %s </name>\n"\
+                         "  <dir>    %d </dir>\n"\
+                         "  <type>    %d </type>\n"\
+                         "  <val>    %d </val>\n"\
+                         "</a2b_cnf>"
+
+/*---------------------------------------------------------------------------*/
 #define D2D_MAC_O        "<d2d_mac>\n"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
@@ -373,7 +387,7 @@
                               "  network:%s username:%s server_port:%d \n"\
                               "  work_dir:%s bulk_dir:%s bin_dir:%s \n"\
                               "  flags_config:%d \n"\
-                              "  nb_kvm:%d nb_c2c:%d nb_d2d:%d \n"\
+                              "  nb_kvm:%d nb_c2c:%d nb_d2d:%d nb_a2b:%d \n"\
                               "  nb_sat:%d nb_endp:%d nb_phy:%d nb_pci:%d \n"\
                               "  nb_bridges:%d nb_mirrors:%d \n"
 
@@ -414,6 +428,20 @@
                               "  udp_connection: %d \n"\
                               "  ovs_lan_attach: %d \n"\
                               "</d2d>\n"
+
+#define EVENT_TOPO_A2B        "<a2b>\n"\
+                              "  name:   %s \n"\
+                              "  delay0: %d \n"\
+                              "  loss0:  %d \n"\
+                              "  qsize0: %d \n"\
+                              "  bsize0: %d \n"\
+                              "  brate0: %d \n"\
+                              "  delay1: %d \n"\
+                              "  loss1:  %d \n"\
+                              "  qsize1: %d \n"\
+                              "  bsize1: %d \n"\
+                              "  brate1: %d \n"\
+                              "</a2b>\n"
 
 #define EVENT_TOPO_SAT        "<sat>\n"\
                               "  name:%s \n"\

@@ -32,7 +32,7 @@
 #include "main_timer_loop.h"
 
 /****************************************************************************/
-#define START_POS 200
+#define START_POS 100
 void topo_get_matrix_inv_transform_point(double *x, double *y);
 /*--------------------------------------------------------------------------*/
 

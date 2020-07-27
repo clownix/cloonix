@@ -113,6 +113,9 @@ static int count_d2d_peer_create = 0;
 static int count_d2d_peer_conf = 0;
 static int count_d2d_peer_ping = 0;
 
+static int count_a2b_add = 0;
+static int count_a2b_cnf = 0;
+
 /*****************************************************************************/
 static void print_all_count(void)
 {
@@ -188,6 +191,9 @@ static void print_all_count(void)
   printf("%d\n", count_d2d_peer_create);
   printf("%d\n", count_d2d_peer_conf);
   printf("%d\n", count_d2d_peer_ping);
+
+  printf("%d\n", count_a2b_add);
+  printf("%d\n", count_a2b_cnf);
 
   printf("END COUNT\n");
 }
@@ -475,6 +481,23 @@ static void random_d2d(t_topo_d2d *d2d)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void random_a2b(t_topo_a2b *a2b)
+{
+  random_choice_str(a2b->name, MAX_NAME_LEN);
+  a2b->delay[0] = rand();
+  a2b->loss[0] = rand();
+  a2b->qsize[0] = rand();
+  a2b->bsize[0] = rand();
+  a2b->brate[0] = rand();
+  a2b->delay[1] = rand();
+  a2b->loss[1] = rand();
+  a2b->qsize[1] = rand();
+  a2b->bsize[1] = rand();
+  a2b->brate[1] = rand();
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void random_sat(t_topo_sat *sat)
 {
   random_choice_str(sat->name, MAX_NAME_LEN);
@@ -562,6 +585,7 @@ static t_topo_info *random_topo_gen(void)
   topo->nb_kvm = my_rand(30);
   topo->nb_c2c = my_rand(10);
   topo->nb_d2d = my_rand(10);
+  topo->nb_a2b = my_rand(10);
   topo->nb_sat = my_rand(30);
   topo->nb_endp = my_rand(50);
   topo->nb_phy = my_rand(10);
@@ -597,6 +621,15 @@ static t_topo_info *random_topo_gen(void)
     memset(topo->d2d, 0, topo->nb_d2d * sizeof(t_topo_d2d));
     for (i=0; i<topo->nb_d2d; i++)
       random_d2d(&(topo->d2d[i]));
+    }
+
+  if (topo->nb_a2b)
+    {
+    topo->a2b =
+    (t_topo_a2b *)clownix_malloc(topo->nb_a2b * sizeof(t_topo_a2b),3);
+    memset(topo->a2b, 0, topo->nb_a2b * sizeof(t_topo_a2b));
+    for (i=0; i<topo->nb_a2b; i++)
+      random_a2b(&(topo->a2b[i]));
     }
 
   if (topo->nb_sat)
@@ -2661,12 +2694,70 @@ void recv_qmp_resp(int llid, int itid, char *iname, char *iline, int istatus)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_a2b_add(int llid, int itid, char *iname)
+{
+  static char name[MAX_NAME_LEN];
+  static int tid;
+  if (i_am_client)
+    {
+    if (count_a2b_add)
+      {
+      if (strcmp(iname, name))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      }
+    tid = rand();
+    random_choice_str(name, MAX_NAME_LEN);
+    send_a2b_add(llid, tid, name);
+    }
+  else
+    send_a2b_add(llid, itid, iname);
+  count_a2b_add++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_a2b_cnf(int llid, int itid, char *iname,
+                  int idir, int itype, int ival)
+{
+  static char name[MAX_NAME_LEN];
+  static int tid, dir, type, val;
+  if (i_am_client)
+    {
+    if (count_a2b_cnf)
+      {
+      if (strcmp(iname, name))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (idir != dir)
+        KOUT(" ");
+      if (itype != type)
+        KOUT(" ");
+      if (ival != val)
+        KOUT(" ");
+      } 
+    tid = rand();
+    dir = rand();
+    type  = rand();
+    val  = rand();
+    random_choice_str(name, MAX_NAME_LEN);
+    send_a2b_cnf(llid, tid, name, dir, type, val);
+    }
+  else
+    send_a2b_cnf(llid, itid, iname, idir, itype, ival);
+  count_a2b_cnf++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_d2d_peer_mac(int llid, int itid, char *id2d_name,
-                       int inb_mac, t_d2d_mac *itabmac)
+                       int inb_mac, t_peer_mac *itabmac)
 {
   static char d2d_name[MAX_NAME_LEN];
   static int tid, nb_mac;
-  static t_d2d_mac tabmac[100];
+  static t_peer_mac tabmac[100];
   int i;
   if (i_am_client)
     {
@@ -2678,13 +2769,13 @@ void recv_d2d_peer_mac(int llid, int itid, char *id2d_name,
         KOUT(" ");
       if (inb_mac != nb_mac)
         KOUT(" ");
-      if (memcmp(itabmac, tabmac, nb_mac * sizeof(t_d2d_mac)))
+      if (memcmp(itabmac, tabmac, nb_mac * sizeof(t_peer_mac)))
         KOUT(" ");
       }
     tid = rand();
     random_choice_str(d2d_name, MAX_NAME_LEN);
     nb_mac = (rand() % 99) + 1;
-    memset(tabmac, 0, 100 * sizeof(t_d2d_mac));
+    memset(tabmac, 0, 100 * sizeof(t_peer_mac));
     for (i=0; i<nb_mac; i++)
       random_choice_str(tabmac[i].mac, MAX_NAME_LEN);
     send_d2d_peer_mac(llid, tid, d2d_name, nb_mac, tabmac);
@@ -2946,6 +3037,9 @@ static void send_first_burst(int llid)
   recv_d2d_peer_conf(llid, 0, NULL, 0, NULL, NULL, 0,0,0,0);
   recv_d2d_peer_ping(llid, 0, NULL, 0);
   recv_d2d_peer_mac(llid, 0, NULL, 0, NULL);
+
+  recv_a2b_add(llid, 0, NULL);
+  recv_a2b_cnf(llid, 0, NULL, 0, 0, 0);
 }
 /*---------------------------------------------------------------------------*/
 

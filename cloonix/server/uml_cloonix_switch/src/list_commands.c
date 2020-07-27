@@ -184,21 +184,6 @@ static int build_add_c2c_cmd(int offset, t_list_commands *hlist, t_endp *endp)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int build_add_a2b_cmd(int offset, t_list_commands *hlist, t_endp *endp)
-{
-  int result = offset;
-  t_list_commands *list = &(hlist[offset]);
-  if (can_increment_index(result))
-    {
-    sprintf(list->cmd, "cloonix_cli %s add a2b %s",
-                       cfg_get_cloonix_name(), endp->name);
-    result += 1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int build_add_sat_lan_cmd(int offset, t_list_commands *hlist, 
                                  char *name, int num, char *lan)
 {
@@ -443,11 +428,6 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
       {
       if (cur->c2c.local_is_master)
         result = build_add_c2c_cmd(result, hlist, cur);
-      }
-    else if (cur->endp_type == endp_type_a2b)
-      {
-      if (cur->num == 0)
-        result = build_add_a2b_cmd(result, hlist, cur);
       }
     else if ((cur->endp_type == endp_type_kvm_sock)  ||
              (cur->endp_type == endp_type_kvm_wlan)  ||

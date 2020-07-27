@@ -43,18 +43,22 @@ export PATH=${NINJA}/ninja:${NINJA}/meson:$PATH
 
 cat > meson.build << EOF
 project('cloonix_snf_dpdk', 'c')
+
+cflags = ['-march=native']
+cflags += ['-fPIC']
+cflags += ['-DALLOW_EXPERIMENTAL_API']
+
 incdir = include_directories('${DPDK}/include',
                              '${IO_CLOWNIX}/include',
                              '${RPC_CLOWNIX}/include',
                              '${GLOB_INCLUDE}')
 
+crypto = dependency('libcrypto')
+dpdk = dependency('libdpdk')
 cmplr = meson.get_compiler('c')
 io_clownix = cmplr.find_library('libio_clownix', dirs : '${HERE}/${IO_CLOWNIX}')
 blkd = cmplr.find_library('libblkd', dirs : '${HERE}/${BLKD}')
 rpct = cmplr.find_library('librpct', dirs : '${HERE}/${RPCT}')
-dpdk = dependency('libdpdk')
-crypto = dependency('libcrypto')
-
 
 sources = files('src/snf_dpdk.c',
                 'src/vhost_client.c',
@@ -65,8 +69,9 @@ sources = files('src/snf_dpdk.c',
                 'src/pcap_record.c')
 
 executable('cloonix_snf_dpdk', sources, include_directories : incdir,
-            dependencies : [io_clownix,blkd,rpct,dpdk,crypto],
+            dependencies : [dpdk,io_clownix,blkd,rpct,crypto],
             install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
+            c_args: cflags,
             install : true)
 
 EOF

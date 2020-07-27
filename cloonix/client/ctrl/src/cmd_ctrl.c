@@ -161,6 +161,9 @@ static char *get_type_endp(int type)
     case endp_type_wif:
       result = "wif"; 
       break;
+    case endp_type_d2d:
+      result = "d2d"; 
+      break;
     default:
       KOUT("%d", type);
     }
@@ -199,7 +202,7 @@ static void print_pci_info(t_topo_pci *pci)
 static void print_bridges_info(t_topo_bridges *br)
 {
   int i; 
-  printf("\nOVS BRIDGE: %s nb_ports:%d", br->br, br->nb_ports);
+  printf("\novs_bridge:%s nb_ports:%d", br->br, br->nb_ports);
   for (i=0; i<br->nb_ports; i++)
     printf(" %s", br->ports[i]);
 }
@@ -208,11 +211,76 @@ static void print_bridges_info(t_topo_bridges *br)
 /*****************************************************************************/
 static void print_mirrors_info(t_topo_mirrors *mir)
 {
-  printf("\nOVS MIRROR: %s", mir->mir);
+  printf("\novs_mirror:%s", mir->mir);
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void d2d_info(t_topo_d2d *d2d)
+{
+  uint16_t tcp_port, loc_udp_port, dist_udp_port;
+  int local_is_master, tcp_connection_peered;
+  int udp_connection_peered, ovs_lan_attach_ready;
+  char tcp_ip[MAX_NAME_LEN];
+  char loc_udp_ip[MAX_NAME_LEN];
+  char dist_udp_ip[MAX_NAME_LEN];
+  char *dist = d2d->dist_cloonix;
+  char *lan = d2d->lan;
+  char *nm = d2d->name;
+  int_to_ip_string (d2d->dist_tcp_ip, tcp_ip);
+  int_to_ip_string (d2d->dist_udp_ip, dist_udp_ip);
+  int_to_ip_string (d2d->loc_udp_ip, loc_udp_ip);
+  tcp_port = d2d->dist_tcp_port;
+  loc_udp_port = d2d->loc_udp_port;
+  dist_udp_port = d2d->dist_udp_port;
+  local_is_master = d2d->local_is_master;
+  tcp_connection_peered = d2d->tcp_connection_peered;
+  udp_connection_peered = d2d->udp_connection_peered;
+  ovs_lan_attach_ready = d2d->ovs_lan_attach_ready;
+  if (local_is_master)
+    {
+    printf("\nd2d:%s:Local_is_master", nm);
+    if (tcp_connection_peered)
+      {
+      printf("\nd2d:%s:tcp_peered %s %s:%hu", nm, dist, tcp_ip, tcp_port);
+      }
+    else
+      {
+      printf("\nd2d:%s:tcp_not_peered %s %s:%hu", nm, dist, tcp_ip, tcp_port);
+      }
+    }
+  else
+    {
+    printf("\nd2d:%s:distant_is_master", nm);
+    printf("\nd2d:%s:tcp_peered %s", nm, dist);
+    }
+  if (udp_connection_peered)
+    printf("\nd2d:%s:udp_peered", nm);
+  else
+    printf("\nd2d:%s:udp_not_peered", nm);
+  if (ovs_lan_attach_ready)
+    printf("\nd2d:%s:ovs_lan_attached %s", nm, lan);
+  else
+    printf("\nd2d:%s:ovs_lan_not_attached", nm);
+  printf("\nd2d:%s:udp_local %s:%hu", nm, loc_udp_ip, loc_udp_port);
+  printf("\nd2d:%s:udp_distant %s:%hu", nm, dist_udp_ip, dist_udp_port);
+}
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void a2b_info(t_topo_a2b *a2b)
+{
+  int i, *delay, *loss, *brate;
+  delay = a2b->delay;
+  loss  = a2b->loss;
+  brate = a2b->brate;
+  for (i=0; i<2; i++)
+    {
+    printf("\na2b:%s:side%d: delay=%d loss=%d rate=%d",
+           a2b->name, i, delay[i], loss[i], brate[i]);
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void callback_topo_topo(int tid, t_topo_info *topo)
@@ -246,7 +314,14 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
     {
     if (i == 0)
       printf("\n");
-    printf("\nd2d:%s", topo->d2d[i].name);
+    d2d_info(&(topo->d2d[i]));
+    }
+
+  for (i=0; i<topo->nb_a2b; i++)
+    {
+    if (i == 0)
+      printf("\n");
+    a2b_info(&(topo->a2b[i]));
     }
 
   for (i=0; i<topo->nb_sat; i++)
@@ -260,10 +335,10 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
       printf("\nsnf:%s", topo->sat[i].name);
     else if (type == endp_type_nat) 
       printf("\nnat:%s", topo->sat[i].name);
-    else if (type == endp_type_a2b) 
-      printf("\na2b:%s", topo->sat[i].name);
     else if (type == endp_type_wif) 
       printf("\nwif:%s", topo->sat[i].name);
+    else 
+      printf("\nerror:%s", topo->sat[i].name);
     printf("\n");
     }
   for (i=0; i<topo->nb_endp; i++)
@@ -333,6 +408,19 @@ int param_tester(char *param, int min, int max)
   return result;
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int param_get(char *param)
+{
+  int result;
+  char *endptr;
+  result = (int) strtol(param, &endptr, 10);
+  if (endptr[0] != 0)
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 int cmd_kill(int argc, char **argv)
@@ -614,7 +702,42 @@ int cmd_add_a2b(int argc, char **argv)
     {
     result = 0;
     init_connection_to_uml_cloonix_switch();
-    client_add_sat(0, callback_end, argv[0], endp_type_a2b, NULL);
+    client_add_a2b(0, callback_end, argv[0]);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_cnf_a2b(int argc, char **argv)
+{
+  int dir, val, cmd, result = -1;
+  if (argc != 4)
+    KERR(" ");
+  else
+    {
+    dir = param_tester(argv[1], 0, 1);
+    val = param_get(argv[3]);
+    if (!strcmp("delay", argv[2]))
+      cmd = a2b_type_delay;
+    else if (!strcmp("loss", argv[2]))
+      cmd = a2b_type_loss;
+    else if (!strcmp("qsize", argv[2]))
+      cmd = a2b_type_qsize;
+    else if (!strcmp("bsize", argv[2]))
+      cmd = a2b_type_bsize;
+    else if (!strcmp("rate", argv[2]))
+      cmd = a2b_type_brate;
+    else
+      cmd = -1;
+    if ((dir >= 0) && (val >= 0) && (cmd > 0))
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_cnf_a2b(0, callback_end, argv[0], dir, cmd, val);
+      }
+    else
+      KERR("%s %d %d %d", argv[0], dir, cmd, val);
     }
   return result;
 }
@@ -1198,39 +1321,6 @@ int cmd_sub_endp(int argc, char **argv)
       init_connection_to_uml_cloonix_switch();
       client_evt_stats_endp_sub(0, argv[0], num, 1, stats_endp_cb);
       }
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_a2b_config(int argc, char **argv)
-{
-  int result = -1;
-  char line[MAX_PATH_LEN];
-  if (argc == 4)
-    {
-    result = 0;
-    init_connection_to_uml_cloonix_switch();
-    set_mud_cli_dialog_callback(mud_cli_dialog_cb);
-    memset(line, 0, MAX_PATH_LEN);
-    snprintf(line, MAX_PATH_LEN-1, "%s %s %s", argv[1], argv[2], argv[3]);
-    client_mud_cli_cmd(0, argv[0], 0, line);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_a2b_dump(int argc, char **argv)
-{
-  int result = -1;
-  if (argc == 1)
-    {
-    result = 0;
-    init_connection_to_uml_cloonix_switch();
-    set_mud_cli_dialog_callback(mud_cli_dialog_cb);
-    client_mud_cli_cmd(0, argv[0], 0, "dump_config");
     }
   return result;
 }

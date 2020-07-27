@@ -25,7 +25,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "cirspy.h"
@@ -92,6 +91,7 @@ static void eventfull_free_evt(t_evt *cur)
       cur->next->prev = cur->prev;
     if (cur == g_head_evt)
       g_head_evt = cur->next;
+    free(cur);
     cur = cur->next;
     }
 }
@@ -101,40 +101,18 @@ static void eventfull_free_evt(t_evt *cur)
 static void eventfull_alloc_evt(char *name, int num, uint8_t *mac)
 {
   t_evt *cur = malloc(sizeof(t_evt));
-  memset(cur, 0, sizeof(t_evt));
-  memcpy(cur->name, name, MAX_NAME_LEN-1);
-  cur->num = num;
-  memcpy(cur->mac, mac, 6);
-  if (g_head_evt)
-    g_head_evt->prev = cur;
-  cur->next = g_head_evt;
-  g_head_evt = cur;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void update_stats(int flag_allcast, t_evt *src, t_evt *dst, int len)
-{
-  t_evt *cur;
-  src->pkt_tx += 1;
-  src->bytes_tx += len;
-  if (flag_allcast)
-    {
-    cur = g_head_evt;
-    while(cur)
-      {
-      if (cur != src)
-        {
-        cur->pkt_rx += 1;
-        cur->bytes_rx += len;
-        }
-      cur = cur->next;
-      }
-    }
+  if (cur == NULL)
+    KERR(" ");
   else
     {
-    dst->pkt_rx += 1;
-    dst->bytes_rx += len;
+    memset(cur, 0, sizeof(t_evt));
+    memcpy(cur->name, name, MAX_NAME_LEN-1);
+    cur->num = num;
+    memcpy(cur->mac, mac, 6);
+    if (g_head_evt)
+      g_head_evt->prev = cur;
+    cur->next = g_head_evt;
+    g_head_evt = cur;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -167,8 +145,16 @@ void eventfull_hook_spy(int len, uint8_t *buf)
   if (!flag_allcast)
     dst = get_evt_with_mac(&(buf[0]));
   src = get_evt_with_mac(&(buf[6]));
-  if ((src != NULL) && ( (dst != NULL) || flag_allcast != 0)) 
-    update_stats(flag_allcast, src, dst, len);
+  if (src != NULL) 
+    {
+    src->pkt_tx += 1;
+    src->bytes_tx += len;
+    }
+  if (dst != NULL)
+    {
+    dst->pkt_rx += 1;
+    dst->bytes_rx += len;
+    }
 }
 /*--------------------------------------------------------------------------*/
 

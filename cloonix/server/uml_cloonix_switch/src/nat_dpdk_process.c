@@ -52,12 +52,14 @@ typedef struct t_nat_dpdk
   struct t_nat_dpdk *next;
 } t_nat_dpdk;
 
+static char g_ascii_cpu_mask[MAX_NAME_LEN];
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
 static char g_bin_nat[MAX_PATH_LEN];
 static t_nat_dpdk *g_head_nat_dpdk;
 
 int get_glob_req_self_destruction(void);
+uint32_t get_cpu_mask(void);
 
 /****************************************************************************/
 static t_nat_dpdk *find_nat_dpdk(char *name)
@@ -128,12 +130,13 @@ static void process_demonized(void *unused_data, int status, char *name)
 /*****************************************************************************/
 static void nat_dpdk_start(char *name)
 {
-  static char *argv[5];
+  static char *argv[6];
   argv[0] = g_bin_nat;
   argv[1] = g_cloonix_net;
   argv[2] = g_root_path;
   argv[3] = name;
-  argv[4] = NULL;
+  argv[4] = g_ascii_cpu_mask;
+  argv[5] = NULL;
   pid_clone_launch(utils_execve, process_demonized, NULL,
                    (void *) argv, NULL, NULL, name, -1, 1);
 }
@@ -464,6 +467,8 @@ void nat_dpdk_init(void)
   memset(g_cloonix_net, 0, MAX_NAME_LEN);
   memset(g_root_path, 0, MAX_PATH_LEN);
   memset(g_bin_nat, 0, MAX_PATH_LEN);
+  memset(g_ascii_cpu_mask, 0, MAX_NAME_LEN);
+  snprintf(g_ascii_cpu_mask, MAX_NAME_LEN-1, "%X",  get_cpu_mask());
   strncpy(g_cloonix_net, net, MAX_NAME_LEN-1);
   strncpy(g_root_path, root, MAX_PATH_LEN-1);
   strncpy(g_bin_nat, bin_nat, MAX_PATH_LEN-1);

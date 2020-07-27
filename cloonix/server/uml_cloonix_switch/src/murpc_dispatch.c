@@ -39,6 +39,7 @@
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
 #include "d2d_dpdk_process.h"
+#include "a2b_dpdk_process.h"
 
 
 /****************************************************************************/
@@ -163,6 +164,8 @@ void recv_mucli_dialog_req(int llid, int tid, char *name, int num, char *line)
     mullid = endp_mngt_can_be_found_with_name(name, num, &endp_type);
   if (!mullid)
     mullid = nat_dpdk_llid_exists_with_name(name);
+  if (!mullid)
+    mullid = a2b_dpdk_llid_exists_with_name(name);
   if (!mullid)
     send_mucli_dialog_resp(llid, tid, name, num, "KO NOT FOUND", 1);
   else
@@ -363,6 +366,10 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   else if (nat_dpdk_diag_llid(llid))
     {
     nat_dpdk_diag_resp(llid, tid, line);
+    }
+  else if (a2b_dpdk_diag_llid(llid))
+    {
+    a2b_dpdk_diag_resp(llid, tid, line);
     }
   else if (d2d_dpdk_diag_llid(llid))
     {

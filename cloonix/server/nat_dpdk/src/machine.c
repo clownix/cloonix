@@ -196,15 +196,20 @@ void machine_add(char *name, int num, uint8_t *mac)
     cur->to_be_deleted = 0;
   else
     {
-    cur = (t_machine *) malloc(sizeof(t_machine));
-    memset(cur, 0, sizeof(t_machine));
-    memcpy(cur->mac, mac, 6);
-    strncpy(cur->name, name, MAX_NAME_LEN-1);
-    cur->num = num;
-    if (g_head_machine)
-      g_head_machine->prev = cur;
-    cur->next = g_head_machine;
-    g_head_machine = cur;
+    cur = (t_machine *) rte_malloc(NULL, sizeof(t_machine), 0);
+    if (cur == NULL)
+      KERR(" ");
+    else
+      {
+      memset(cur, 0, sizeof(t_machine));
+      memcpy(cur->mac, mac, 6);
+      strncpy(cur->name, name, MAX_NAME_LEN-1);
+      cur->num = num;
+      if (g_head_machine)
+        g_head_machine->prev = cur;
+      cur->next = g_head_machine;
+      g_head_machine = cur;
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -237,17 +242,26 @@ uint32_t machine_dhcp(uint8_t *mac)
     result = cur->ip;
   else
     {
-    offset = get_next_offset();
-    result = g_gw_ip;
-    result += offset + 8;
-    cur = (t_arp_ip *) malloc(sizeof(t_arp_ip));
-    memset(cur, 0, sizeof(t_arp_ip));
-    memcpy(cur->mac, mac, 6);
-    cur->ip = result;
-    if (g_head_arp_ip)
-      g_head_arp_ip->prev = cur;
-    cur->next = g_head_arp_ip;
-    g_head_arp_ip = cur;
+    cur = (t_arp_ip *) rte_malloc(NULL, sizeof(t_arp_ip), 0);
+    if (cur == NULL)
+      {
+      KERR("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2],
+                                            mac[3], mac[4], mac[5]);
+      result = 0;
+      }
+    else
+      { 
+      offset = get_next_offset();
+      result = g_gw_ip;
+      result += offset + 8;
+      memset(cur, 0, sizeof(t_arp_ip));
+      memcpy(cur->mac, mac, 6);
+      cur->ip = result;
+      if (g_head_arp_ip)
+        g_head_arp_ip->prev = cur;
+      cur->next = g_head_arp_ip;
+      g_head_arp_ip = cur;
+      }
     }
   return result;
 }

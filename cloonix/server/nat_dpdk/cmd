@@ -58,7 +58,9 @@ rpct = cmplr.find_library('librpct', dirs : '${HERE}/${RPCT}')
 dpdk = dependency('libdpdk')
 crypto = dependency('libcrypto')
 
-cflags = '-fPIC'
+cflags = ['-march=native']
+cflags += ['-fPIC']
+cflags += ['-DALLOW_EXPERIMENTAL_API']
 
 sources = files('src/nat_dpdk.c',
                 'src/vhost_client.c',

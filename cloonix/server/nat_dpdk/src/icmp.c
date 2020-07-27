@@ -82,17 +82,22 @@ static t_icmp *icmp_find(uint32_t ipdst, uint16_t ident, uint16_t seq)
 static void icmp_alloc(uint32_t ipdst, uint16_t ident, uint16_t seq,
                        int llid, struct rte_mbuf *mbuf)
 {
-  t_icmp *cur = (t_icmp *) malloc(sizeof(t_icmp));
-  memset(cur, 0, sizeof(t_icmp));
-  cur->ipdst = ipdst;
-  cur->seq = seq;
-  cur->ident = ident;
-  cur->llid = llid;
-  cur->mbuf = mbuf;
-  if (g_head_icmp)
-    g_head_icmp->prev = cur;
-  cur->next = g_head_icmp;
-  g_head_icmp = cur;
+  t_icmp *cur = (t_icmp *) rte_malloc(NULL, sizeof(t_icmp), 0);
+  if (cur == NULL)
+    KERR(" ");
+  else
+    {
+    memset(cur, 0, sizeof(t_icmp));
+    cur->ipdst = ipdst;
+    cur->seq = seq;
+    cur->ident = ident;
+    cur->llid = llid;
+    cur->mbuf = mbuf;
+    if (g_head_icmp)
+      g_head_icmp->prev = cur;
+    cur->next = g_head_icmp;
+    g_head_icmp = cur;
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -105,7 +110,7 @@ static void icmp_free(t_icmp *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_icmp)
     g_head_icmp = cur->next;
-  free(cur);
+  rte_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 

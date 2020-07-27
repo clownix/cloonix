@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void vhost_client_init(void);
 void vhost_client_start(char *path, char *memid);
 void vhost_client_end_and_exit(void);
 /*--------------------------------------------------------------------------*/

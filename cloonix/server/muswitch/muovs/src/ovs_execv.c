@@ -33,19 +33,20 @@
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/utsname.h>
+#include <time.h>
 
 
 #include "ioc.h"
 #include "ovs_execv.h"
 
+#define RANDOM_APPEND_SIZE 8
 #define OVSDB_SERVER_BIN  "bin/ovsdb-server"
 #define OVS_VSWITCHD_BIN  "bin/ovs-vswitchd"
 #define OVSDB_TOOL_BIN    "bin/ovsdb-tool"
 #define SCHEMA_TEMPLATE   "vswitch.ovsschema"
 
 #define OVSDB_SERVER_SOCK "ovsdb_server.sock"
-#define OVSDB_SERVER_1CONF "ovsdb_server_1conf"
-#define OVSDB_SERVER_2CONF "ovsdb_server_2conf"
+#define OVSDB_SERVER_CONF "ovsdb_server_conf"
 #define OVSDB_SERVER_PID  "ovsdb_server.pid"
 #define OVSDB_SERVER_CTL  "ovsdb_server.ctl"
 #define OVS_VSWITCHD_PID  "ovs-vswitchd.pid"
@@ -56,11 +57,38 @@ int init_module(void *module_image, unsigned long len,
                        const char *param_values);
 
 static char g_arg[NB_ARG][MAX_ARG_LEN];
+static char g_ovsdb_server_conf[MAX_NAME_LEN];
 
 static int g_with_dpdk;
 
 /*****************************************************************************/
 int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN]);
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static char *random_str(void)
+{
+  static char rd[RANDOM_APPEND_SIZE+1];
+  int i;
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  srand(ts.tv_nsec);
+  memset (rd, 0 , RANDOM_APPEND_SIZE+1);
+  for (i=0; i<RANDOM_APPEND_SIZE; i++)
+    rd[i] = 'A' + (rand() % 26);
+  return rd;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int file_exists(char *path)
+{
+  int err, result = 0;
+  err = access(path, F_OK);
+  if (!err)
+    result = 1;
+  return result;
+}
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -143,24 +171,6 @@ static int set_intf_flags_iff_up_down(char *intf, int up)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void wait_for_server_sock(char *dpdk_dir)
-{
-  int count = 0;
-  char server_sock[MAX_ARG_LEN];
-  memset(server_sock, 0, MAX_ARG_LEN);
-  snprintf(server_sock, MAX_ARG_LEN-1, "%s/%s",dpdk_dir,OVSDB_SERVER_SOCK);
-  while (access(server_sock, F_OK))
-    {
-    usleep(10000);
-    count++;
-    if (count == 100)
-      KOUT(" ");
-    }
-  usleep(10000);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int wait_read_pid_file(char *dpdk_dir, char *name)
 {
   FILE *fhd;
@@ -172,15 +182,18 @@ static int wait_read_pid_file(char *dpdk_dir, char *name)
     {
     count += 1;
     if (count > 100)
-      KOUT(" ");
-    usleep(10000);
+      {
+      KERR("NO PID %s", name);
+      result = -1;
+      }
+    usleep(30000);
     fhd = fopen(path, "r");
     if (fhd)
       {
       if (fscanf(fhd, "%d", &pid) == 1)
         result = pid;
       if (fclose(fhd))
-        KOUT("%s", strerror(errno));
+        KERR("%s", strerror(errno));
       }
     }
   return result;
@@ -254,15 +267,18 @@ static int ovs_appctl(char *ovs_bin, char *dpdk_dir, char *multi_arg_cmd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int launch_ovs_server(char *ovs_bin, char *dpdk_dir)
+static int launch_ovsdb_server(char *ovs_bin, char *dpdk_dir)
 {
-  int result;
+  int result = -1;
+  char *pidfile = get_pidfile_ovsdb(dpdk_dir);
+  if (file_exists(pidfile))
+    {
+    KERR("PIDFILE: %s EXISTS! ERROR", pidfile);
+    unlink(get_pidfile_ovs(dpdk_dir));
+    }
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVSDB_SERVER_BIN);
-  if (g_with_dpdk)
-    snprintf(g_arg[1],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, OVSDB_SERVER_1CONF);
-  else
-    snprintf(g_arg[1],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, OVSDB_SERVER_2CONF);
+  snprintf(g_arg[1],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, g_ovsdb_server_conf);
   snprintf(g_arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s",
                                   dpdk_dir, OVSDB_SERVER_PID);
   snprintf(g_arg[3],MAX_ARG_LEN-1,"--remote=punix:%s/%s",
@@ -271,17 +287,10 @@ static int launch_ovs_server(char *ovs_bin, char *dpdk_dir)
            "--remote=db:Open_vSwitch,Open_vSwitch,manager_options");
   snprintf(g_arg[5], MAX_ARG_LEN-1,"--unixctl=%s/%s",
                                    dpdk_dir, OVSDB_SERVER_CTL);
-  snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=warn");
-  snprintf(g_arg[7], MAX_ARG_LEN-1, "--detach");
-  if (call_my_popen(dpdk_dir, 8, g_arg))
-    {
-    result = -1;
-    KERR(" ");
-    } 
-  else
-    {
-    result = wait_read_pid_file(dpdk_dir, OVSDB_SERVER_PID);
-    }
+  snprintf(g_arg[6], MAX_ARG_LEN-1, "--no-self-confinement");
+  snprintf(g_arg[7], MAX_ARG_LEN-1, "--verbose=warn");
+  snprintf(g_arg[8], MAX_ARG_LEN-1, "--detach");
+  result = call_my_popen(dpdk_dir, 9, g_arg);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -300,22 +309,25 @@ static void appctl_debug_fix(char *ovs_bin, char *dpdk_dir, char *debug_cmd)
 /*****************************************************************************/
 static int launch_ovs_vswitchd(char *ovs_bin, char *dpdk_dir)
 {
-  int result;
+  int result = -1;
+  char *pidfile = get_pidfile_ovs(dpdk_dir);
+  if (file_exists(pidfile))
+    {
+    KERR("PIDFILE: %s EXISTS! ERROR", pidfile);
+    unlink(get_pidfile_ovs(dpdk_dir));
+    }
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
   snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVS_VSWITCHD_BIN);
   snprintf(g_arg[1],MAX_ARG_LEN-1,"unix:%s/%s", dpdk_dir, OVSDB_SERVER_SOCK);
-  snprintf(g_arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s", dpdk_dir, OVS_VSWITCHD_PID);
-  snprintf(g_arg[3],MAX_ARG_LEN-1,"--log-file=%s/%s", dpdk_dir, OVS_VSWITCHD_LOG);
-  snprintf(g_arg[4],MAX_ARG_LEN-1,"--unixctl=%s/%s", dpdk_dir, OVS_VSWITCHD_CTL);
-  snprintf(g_arg[5], MAX_ARG_LEN-1, "--verbose=warn");
-  snprintf(g_arg[6], MAX_ARG_LEN-1, "--detach");
-  if (call_my_popen(dpdk_dir, 7, g_arg))
+  snprintf(g_arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s",dpdk_dir,OVS_VSWITCHD_PID);
+  snprintf(g_arg[3],MAX_ARG_LEN-1,"--log-file=%s/%s",dpdk_dir,OVS_VSWITCHD_LOG);
+  snprintf(g_arg[4],MAX_ARG_LEN-1,"--unixctl=%s/%s",dpdk_dir,OVS_VSWITCHD_CTL);
+  snprintf(g_arg[5], MAX_ARG_LEN-1, "--no-self-confinement");
+  snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=warn");
+  snprintf(g_arg[7], MAX_ARG_LEN-1, "--detach");
+  result = call_my_popen(dpdk_dir, 8, g_arg);
+  if (!result)
     {
-    result = -1;
-    } 
-  else
-    {
-    result = wait_read_pid_file(dpdk_dir, OVS_VSWITCHD_PID);
     appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:syslog:warn");
     appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:file:warn");
     }
@@ -349,81 +361,15 @@ static int module_is_inserted(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int get_module_path(char *ovs_bin, char path[MAX_ARG_LEN], char *name)
+static void insert_module(char *dpdk_dir, char *mod_name)
 {
-  struct utsname buf;
-  char kern[MAX_NAME_LEN+2];
-  int result = -1;
-  if (uname(&buf))
-    KERR("No kernel version, %s will not be inserted", name);
-  else
-    { 
-    memset(path, 0, MAX_ARG_LEN);
-    memset(kern, 0, MAX_NAME_LEN+2);
-    strncpy(kern, buf.release, MAX_NAME_LEN+1);
-    if (!strcmp(name, "vfio"))
-      snprintf(path, MAX_ARG_LEN-1,
-               "/lib/modules/%s/kernel/drivers/vfio/vfio.ko", kern); 
-    else if (!strcmp(name, "vfio_iommu_type1"))
-      snprintf(path, MAX_ARG_LEN-1,
-               "/lib/modules/%s/kernel/drivers/vfio/vfio_iommu_type1.ko", kern);
-    else if (!strcmp(name, "vfio_virqfd"))
-      snprintf(path, MAX_ARG_LEN-1,
-               "/lib/modules/%s/kernel/drivers/vfio/vfio_virqfd.ko", kern);
-    else if (!strcmp(name, "vfio_pci"))
-      snprintf(path, MAX_ARG_LEN-1,
-               "/lib/modules/%s/kernel/drivers/vfio/pci/vfio-pci.ko", kern); 
-    else
-      KERR("MODULE NOT KNOWN %s", name);
-    if (strlen(path))
-      {
-      if (access(path, F_OK))
-        KERR("DOES NOT EXISTS: %s", path);
-      else
-        result = 0;
-      }
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void insert_module(char *ovs_bin, char *mod_name)
-{
-  char mod_path[MAX_ARG_LEN];
-  char params[MAX_NAME_LEN];
-  int fd;
-  size_t image_size;
-  struct stat st;
-  void *image;
   if (!module_is_inserted(mod_name))
     {
-    if (get_module_path(ovs_bin, mod_path, mod_name))
-      KERR("Error getting path for %s", mod_name);
-    else
-      {
-      fd = open(mod_path, O_RDONLY);
-      if (fd < 0)
-        KERR("ERROR OPEN: %s", mod_path);
-      else
-        {
-        if (fstat(fd, &st))
-          KERR("ERROR FSTAT: %s", mod_path);
-        else
-          {
-          image_size = st.st_size;
-          image = malloc(image_size);
-          read(fd, image, image_size);
-          close(fd);
-          memset(params, 0, MAX_NAME_LEN);
-          if (!strcmp(mod_name, "vfio"))
-            strncpy(params, "enable_unsafe_noiommu_mode", MAX_NAME_LEN-1);
-          if (init_module(image, image_size, params))
-            KERR("ERROR INSMOD: %s", mod_path);
-          free(image);
-          }
-        }
-      }
+    memset(g_arg, 0, MAX_ARG_LEN * NB_ARG);
+    snprintf(g_arg[0], MAX_PATH_LEN-1,"/sbin/modprobe");
+    snprintf(g_arg[1], MAX_PATH_LEN-1,"%s", mod_name);
+    if (call_my_popen(dpdk_dir, 3, g_arg))
+      KERR("Error modprobe %s", mod_name);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -436,22 +382,15 @@ int dpdk_is_usable(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void force_dpdk_off(void)
-{
-  g_with_dpdk = 0;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 int create_ovsdb_server_conf(char *ovs_bin, char *dpdk_dir)
 {
+  memset(g_ovsdb_server_conf, 0, MAX_NAME_LEN);
+  snprintf(g_ovsdb_server_conf, MAX_NAME_LEN-1,
+           "%s%s", OVSDB_SERVER_CONF, random_str());
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVSDB_TOOL_BIN);
   snprintf(g_arg[1],MAX_ARG_LEN-1,"create");
-  if (g_with_dpdk)
-    snprintf(g_arg[2],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, OVSDB_SERVER_1CONF);
-  else
-    snprintf(g_arg[2],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, OVSDB_SERVER_2CONF);
+  snprintf(g_arg[2],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, g_ovsdb_server_conf);
   snprintf(g_arg[3],MAX_ARG_LEN-1,"%s/%s", ovs_bin, SCHEMA_TEMPLATE);
   return (call_my_popen(dpdk_dir, 4, g_arg));
 }
@@ -783,6 +722,74 @@ int ovs_execv_del_lan_d2d(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int ovs_execv_add_lan_a2b(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+
+  snprintf(cmd, MAX_ARG_LEN-1,
+                "-- add-port br_%s %s0 "
+                "-- set Interface %s0 type=dpdk "
+                "options:dpdk-devargs=net_virtio_user_%s0,"
+                "path=%s/a2_%s,server=1,iface=%s/a2_%s,queues=1",
+                lan, name, name, name,
+                dpdk_dir, name, dpdk_dir, name);
+
+  if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_del_lan_a2b(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port br_%s %s0", lan, name);
+  if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_add_lan_b2a(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+
+  snprintf(cmd, MAX_ARG_LEN-1,
+                "-- add-port br_%s %s1 "
+                "-- set Interface %s1 type=dpdk "
+                "options:dpdk-devargs=net_virtio_user_%s1,"
+                "path=%s/b2_%s,server=1,iface=%s/b2_%s,queues=1",
+                lan, name, name, name,
+                dpdk_dir, name, dpdk_dir, name);
+
+  if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_del_lan_b2a(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port br_%s %s1", lan, name);
+  if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
+    result = -1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int ovs_execv_add_tap(char *ovs_bin, char *dpdk_dir, char *name)
 {
   char cmd[MAX_ARG_LEN];
@@ -857,151 +864,219 @@ int ovs_execv_del_lan_tap(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_ovs_vswitchd(char *net, char *ovs_bin, char *dpdk_dir)
+static int send_config_ovs( char *net, char *ovs_bin, char *dpdk_dir,
+                            uint32_t lcore_mask, uint32_t socket_mem,
+                            uint32_t cpu_mask)
 {
-  int pid, result = -1;
-  init_environ(net, ovs_bin, dpdk_dir);
-  wait_for_server_sock(dpdk_dir);
-  pid = launch_ovs_vswitchd(ovs_bin, dpdk_dir);
-  if (pid <= 0)
-    KERR("Fail launch vswitchd server ");
-  else
-    result = pid;
+  int result = 0;
+  char other_config_extra[MAX_ARG_LEN];
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    {
+    memset(other_config_extra, 0, MAX_ARG_LEN);
+    snprintf(other_config_extra, MAX_ARG_LEN-1,
+             "--no-wait set Open_vSwitch . "
+             "other_config:dpdk-extra=\"--file-prefix=cloonix%s\"", net);
+    if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+      { 
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    } 
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    {  
+    if (ovs_vsctl(ovs_bin, dpdk_dir,
+                  "--no-wait set Open_vSwitch . "
+                  "other_config:vhost-sock-dir=."))
+      {
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    { 
+    if (ovs_vsctl(ovs_bin, dpdk_dir,
+                     "--no-wait set Open_vSwitch . "
+                     "other_config:vhost-iommu-support=true"))
+      {  
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    { 
+    if (ovs_vsctl(ovs_bin, dpdk_dir,
+                  "--no-wait set Open_vSwitch . "
+                  "other_config:vhost-postcopy-support=true"))
+      { 
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    {
+    memset(other_config_extra, 0, MAX_ARG_LEN);
+    snprintf(other_config_extra, MAX_ARG_LEN-1,
+             "--no-wait set Open_vSwitch . "
+             "other_config:dpdk-lcore-mask=0x%x", lcore_mask);
+    if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+      {
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    {
+    memset(other_config_extra, 0, MAX_ARG_LEN);
+    snprintf(other_config_extra, MAX_ARG_LEN-1,
+             "--no-wait set Open_vSwitch . "
+             "other_config:dpdk-socket-mem=%d", socket_mem);
+    if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+      {
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    {
+    memset(other_config_extra, 0, MAX_ARG_LEN);
+    snprintf(other_config_extra, MAX_ARG_LEN-1,
+             "--no-wait set Open_vSwitch . "
+             "other_config:pmd-cpu-mask=0x%x", cpu_mask);
+    if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+      {
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    {
+    if (ovs_vsctl(ovs_bin, dpdk_dir,
+                  "--no-wait set Open_vSwitch . "
+                  "other_config:dpdk-init=true"))
+      {
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
+  /*---------------------------------------------------------*/
   return result;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_ovsdb_server( char *net, char *ovs_bin, char *dpdk_dir,
-                            uint32_t lcore_mask, uint32_t socket_mem,
-                            uint32_t cpu_mask)
+static void clean_and_wait(char *dpdk_dir, int pid)
+{
+  KERR("ERROR, CLEAN OVS AND OVSDB");
+  kill(pid, SIGKILL);
+  while (!kill(pid, 0))
+    usleep(5000);
+  unlink(get_pidfile_ovs(dpdk_dir));
+  usleep(10000);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_ovs_vswitchd(char *net, char *ovs_bin, char *dpdk_dir,
+                           uint32_t lcore_mask, uint32_t socket_mem,
+                           uint32_t cpu_mask)
 {
   int pid, result = -1;
-  char other_config_extra[MAX_ARG_LEN];
   init_environ(net, ovs_bin, dpdk_dir);
-  pid = launch_ovs_server(ovs_bin, dpdk_dir);
-  usleep(10000);
+  if (launch_ovs_vswitchd(ovs_bin, dpdk_dir))
+    {
+    KERR("Fail launch vswitchd server ");
+    pid = wait_read_pid_file(dpdk_dir, OVS_VSWITCHD_PID);
+    if (pid > 0)
+      {
+      clean_and_wait(dpdk_dir, pid);
+      if (launch_ovs_vswitchd(ovs_bin, dpdk_dir))
+        {
+        KERR("SECOND Fail launch vswitchd server ");
+        pid = wait_read_pid_file(dpdk_dir, OVS_VSWITCHD_PID);
+        }
+      }
+    else
+      KERR("Bad pid vswitchd server ");
+    }
+  else
+    {
+    pid = wait_read_pid_file(dpdk_dir, OVS_VSWITCHD_PID);
+    }
   if (pid <= 0)
-    KERR("Fail launch ovsbd server ");
+    {
+    KERR("Fail launch vswitchd server ");
+    }
   else
     {
     result = pid;
-    if (g_with_dpdk)
-      {
-      /*---------------------------------------------------------*/
-      insert_module(ovs_bin, "vfio");
-      insert_module(ovs_bin, "vfio_iommu_type1");
-      insert_module(ovs_bin, "vfio_virqfd");
-      insert_module(ovs_bin, "vfio_pci");
-      /*---------------------------------------------------------*/
-      if (result != -1)
-        { 
-        if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait init"))
-          { 
-          KERR("Fail launch ovsbd server ");
-          result = -1;
-          }
-        }
-      /*---------------------------------------------------------*/
-      if (result != -1)
-        { 
-        memset(other_config_extra, 0, MAX_ARG_LEN);
-        snprintf(other_config_extra, MAX_ARG_LEN-1,
-                 "--no-wait set Open_vSwitch . "
-                 "other_config:dpdk-extra=\"--file-prefix=cloonix%s\"", net);
-        if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
-          { 
-          KERR("Fail launch ovsbd server ");
-          result = -1;
-          }
-        }
-      /*---------------------------------------------------------*/
-      if (result != -1)
-        { 
-        if (ovs_vsctl(ovs_bin, dpdk_dir,
-                      "--no-wait set Open_vSwitch . "
-                      "other_config:vhost-sock-dir=."))
-          { 
-          KERR("Fail launch ovsbd server ");
-          result = -1;
-          }
-        }
-      /*---------------------------------------------------------*/
-      if (result != -1)
-        { 
-        if (ovs_vsctl(ovs_bin, dpdk_dir,
-                         "--no-wait set Open_vSwitch . "
-                         "other_config:vhost-iommu-support=true"))
-          { 
-          KERR("Fail launch ovsbd server ");
-          result = -1;
-          }
-        }
-      /*---------------------------------------------------------*/
-      if (result != -1)
-        { 
-        if (ovs_vsctl(ovs_bin, dpdk_dir,
-                      "--no-wait set Open_vSwitch . "
-                      "other_config:vhost-postcopy-support=true"))
-          { 
-          KERR("Fail launch ovsbd server ");
-          result = -1;
-          }
-        }
-      /*---------------------------------------------------------*/
-      if (result != -1)
-        { 
-        memset(other_config_extra, 0, MAX_ARG_LEN);
-        snprintf(other_config_extra, MAX_ARG_LEN-1,
-                 "--no-wait set Open_vSwitch . "
-                 "other_config:dpdk-lcore-mask=0x%x", lcore_mask);
-        if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
-          { 
-          KERR("Fail launch ovsbd server ");
-          result = -1;
-          }
-        }
-      /*---------------------------------------------------------*/
-      if (result != -1)
-        { 
-        memset(other_config_extra, 0, MAX_ARG_LEN);
-        snprintf(other_config_extra, MAX_ARG_LEN-1,
-                 "--no-wait set Open_vSwitch . "
-                 "other_config:dpdk-socket-mem=%d", socket_mem);
-        if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
-          { 
-          KERR("Fail launch ovsbd server ");
-          result = -1;
-          }
-        }
-      /*---------------------------------------------------------*/
-      if (result != -1)
-        { 
-        memset(other_config_extra, 0, MAX_ARG_LEN);
-        snprintf(other_config_extra, MAX_ARG_LEN-1,
-                 "--no-wait set Open_vSwitch . "
-                 "other_config:pmd-cpu-mask=0x%x", cpu_mask);
-        if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
-          { 
-          KERR("Fail launch ovsbd server ");
-          result = -1;
-          }
-        }
-      /*---------------------------------------------------------*/
-      if (result != -1)
-        { 
-        if (ovs_vsctl(ovs_bin, dpdk_dir,
-                      "--no-wait set Open_vSwitch . "
-                      "other_config:dpdk-init=true"))
-          { 
-          KERR("Fail launch ovsbd server ");
-          result = -1;
-          }
-        } 
-      /*---------------------------------------------------------*/
-      } 
+    if (send_config_ovs(net,ovs_bin,dpdk_dir,lcore_mask,socket_mem,cpu_mask))
+      KERR("Fail Configure ovsbd server ");
+    else
+      KERR("Configured ovsbd server");
     }
   return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_execv_ovsdb_server(char *net, char *ovs_bin, char *dpdk_dir,
+                           uint32_t lcore_mask, uint32_t socket_mem,
+                           uint32_t cpu_mask)
+{
+  int pid, result = -1;
+  init_environ(net, ovs_bin, dpdk_dir);
+  if (launch_ovsdb_server(ovs_bin, dpdk_dir))
+    KERR("Fail launch ovsbd server ");
+  else
+    {
+    pid = wait_read_pid_file(dpdk_dir, OVSDB_SERVER_PID);
+    if (pid <= 0)
+      {
+      KERR("Fail launch ovsbd server ");
+      }
+    else if (ovs_vsctl(ovs_bin, dpdk_dir, "--no-wait init"))
+      {
+      KERR("Fail launch init ovsbd server ");
+      result = -1;
+      }
+    else
+      {
+      insert_module(dpdk_dir, "vfio");
+      insert_module(dpdk_dir, "vfio_iommu_type1");
+      insert_module(dpdk_dir, "vfio_virqfd");
+      insert_module(dpdk_dir, "vfio_pci");
+      result = pid;
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *get_pidfile_ovsdb(char *dpdk_dir)
+{
+  static char pidfile[MAX_PATH_LEN];
+  memset(pidfile, 0, MAX_PATH_LEN);
+  snprintf(pidfile, MAX_PATH_LEN-1, "%s/%s", dpdk_dir, OVSDB_SERVER_PID);
+  return pidfile;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *get_pidfile_ovs(char *dpdk_dir)
+{
+  static char pidfile[MAX_PATH_LEN];
+  memset(pidfile, 0, MAX_PATH_LEN);
+  snprintf(pidfile, MAX_PATH_LEN-1, "%s/%s", dpdk_dir, OVS_VSWITCHD_PID);
+  return pidfile;
 }
 /*---------------------------------------------------------------------------*/
 

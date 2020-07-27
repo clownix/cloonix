@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <sys/queue.h>
 
-#define ALLOW_EXPERIMENTAL_API
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
 #include <rte_config.h>
@@ -55,7 +54,7 @@ static int g_circle_worker;
 static int g_circle_worker_ended[RTE_MAX_LCORE];
 static struct vhost_device_ops g_virtio_net_device_ops;
 
-
+void end_clean_unlink(void);
 
 /****************************************************************************/
 static int virtio_new_device(int vid)
@@ -77,23 +76,21 @@ static void virtio_destroy_device(int vid)
 /****************************************************************************/
 static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
-  if (g_virtio_device_on)
+  g_virtio_device_on = 1;
+  if (queue_id==0)
     {
-    if (queue_id==0)
-      {
-      if (enable)
-        g_enable = 1;
-      else
-        {
-        g_enable = 0;
-        }
-      }
-    else if (queue_id==1)
-      {
-      }
+    if (enable)
+      g_enable = 1;
     else
-      KOUT("%d", queue_id);
+      {
+      g_enable = 0;
+      }
     }
+  else if (queue_id==1)
+    {
+    }
+  else
+    KOUT("%d", queue_id);
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -229,24 +226,33 @@ void vhost_client_start(char *path, char *memid)
     KOUT(" ");
   g_mempool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
   if (!g_mempool)
-    {
-    if (rte_errno == EEXIST)
-      {
-      g_mempool = rte_mempool_lookup(g_memid);
-      if (!g_mempool)
-        KOUT(" ");
-      }
-    else
-      KOUT(" ");
-    }
+    KOUT(" ");
   for (i=0; i < RTE_MAX_LCORE; i++)
     g_circle_worker_ended[i] = 1;
-  for (i = rte_get_next_lcore(-1, 1, 0);
-             i<RTE_MAX_LCORE;
-             i = rte_get_next_lcore(i, 1, 0))
+  i = rte_get_next_lcore(-1, 1, 0);
+  if (i<RTE_MAX_LCORE)
     {
     g_circle_worker_ended[i] = 0;
-    rte_eal_remote_launch(circle_worker, NULL, i);
+    if (rte_eal_remote_launch(circle_worker, NULL, i))
+      KOUT(" ");
     }
+  else
+    KOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void vhost_client_init(void)
+{ 
+  g_mempool = NULL;
+  g_enable = 0;
+  g_jfs = NULL;
+  memset(g_memid, 0, MAX_NAME_LEN);
+  memset(g_snf_socket, 0, MAX_PATH_LEN);
+  g_virtio_device_on = 0;
+  g_circle_worker = 0;
+  memset(g_circle_worker_ended, 0, RTE_MAX_LCORE * sizeof(int));
+  memset(&g_virtio_net_device_ops, 0, sizeof(struct vhost_device_ops));
+} 
+/*--------------------------------------------------------------------------*/
+

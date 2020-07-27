@@ -182,10 +182,10 @@ void dpdk_snf_resp_add_lan(int is_ko, char *lan, char *name)
       KERR("%d %s %s", is_ko, lan, name);
     if (cur->waiting_ack_del_lan == 1)
       KERR("%d %s %s", is_ko, lan, name);
-    cur->waiting_ack_add_lan = 1;
     if (is_ko)
       {
       KERR("%s %s", name, lan);
+      cur->waiting_ack_add_lan = 0;
       utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
       }
     else
@@ -193,10 +193,12 @@ void dpdk_snf_resp_add_lan(int is_ko, char *lan, char *name)
       if (cur->var_dpdk_start_stop_process)
         {
         KERR("%s %s", name, lan);
+        cur->waiting_ack_add_lan = 0;
         utils_send_status_ko(&(cur->llid), &(cur->tid), "not coherent");
         }
       else
         {
+        cur->waiting_ack_add_lan = 1;
         cur->var_dpdk_start_stop_process = 1;
         snf_dpdk_start_stop_process(name, lan, 1);
         }
@@ -270,7 +272,7 @@ void dpdk_snf_event_from_snf_dpdk_process(char *name, char *lan, int on)
         KERR("ERROR %s %s", name, lan);
       cur->waiting_ack_add_lan = 0;
       edp_evt_update_non_fix_add(eth_type_dpdk, name, lan);
-      snf_dpdk_process_possible_change(lan);
+      snf_dpdk_process_possible_change();
       utils_send_status_ok(&(cur->llid), &(cur->tid));
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }

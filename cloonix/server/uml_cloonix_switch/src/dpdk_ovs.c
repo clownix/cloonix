@@ -46,6 +46,7 @@
 #include "dpdk_snf.h"
 #include "dpdk_nat.h"
 #include "dpdk_d2d.h"
+#include "dpdk_a2b.h"
 #include "qmp.h"
 #include "system_callers.h"
 #include "stats_counters.h"
@@ -97,7 +98,11 @@ typedef struct t_ovs
   int ovs_pid_ready;
   int getsuidroot;
   int open_ovsdb;
+  int open_ovsdb_wait;
+  int open_ovsdb_ok;
   int open_ovs;
+  int open_ovs_wait;
+  int open_ovs_ok;
   int llid;
   int periodic_count;
   int unanswered_pid_req;
@@ -105,7 +110,6 @@ typedef struct t_ovs
   int destroy_requested;
   int destroy_msg_sent;
   int nb_resp_ovs_ko;
-  int nb_resp_ovsdb_ko;
 } t_ovs;
 /*--------------------------------------------------------------------------*/
 
@@ -124,7 +128,6 @@ typedef struct t_arg_ovsx
 static uint32_t g_lcore_mask;
 static uint32_t g_socket_mem;
 static uint32_t g_cpu_mask;
-static int g_dpdk_usable;
 static t_dpdk_vm *g_head_vm;
 static t_ovs *g_head_ovs;
 
@@ -144,10 +147,12 @@ static void test_and_end_ovs(void)
   int nb_tap = dpdk_tap_get_qty();
   int nb_snf = dpdk_snf_get_qty();
   int nb_nat = dpdk_nat_get_qty();
+  int nb_a2b = dpdk_a2b_get_qty();
   int nb_d2d = dpdk_d2d_get_qty();
   if ((g_head_vm == NULL) &&
       (nb_tap == 0) &&
       (nb_nat == 0) &&
+      (nb_a2b == 0) &&
       (nb_d2d == 0) &&
       (nb_snf == 0))
     {
@@ -314,18 +319,21 @@ static t_ovs *ovs_find(void)
 static void ovs_free(char *name)
 {
   t_ovs *cur = g_head_ovs;
-  if (cur->ovsdb_pid > 0)
+  if (cur)
     {
-    if (!kill(cur->ovsdb_pid, SIGKILL))
-      KERR("ERR: ovsdb was alive");
+    if (cur->ovsdb_pid > 0)
+      {
+      if (!kill(cur->ovsdb_pid, SIGKILL))
+        KERR("ERR: ovsdb was alive");
+      }
+    if (cur->ovs_pid > 0)
+      {
+      if (!kill(cur->ovs_pid, SIGKILL))
+        KERR("ERR: ovs was alive");
+      }
+    g_head_ovs = NULL;
+    clownix_free(cur, __FUNCTION__);
     }
-  if (cur->ovs_pid > 0)
-    {
-    if (!kill(cur->ovs_pid, SIGKILL))
-      KERR("ERR: ovs was alive");
-    }
-  g_head_ovs = NULL;
-  clownix_free(cur, __FUNCTION__);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -357,7 +365,7 @@ static void ovs_death(void *data, int status, char *name)
       KERR("OVS PREMATURE DEATH %s", mu->name);
     }
   dpdk_ovs_urgent_client_destruct();
-  clownix_free(mu, __FUNCTION__);
+  ovs_free(name);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -374,7 +382,7 @@ static void ovs_watchdog(void *data)
     KERR("OVS %s TIMEOUT %s %d %d %d", cur->name, mu->name,
                                    cur->llid, cur->pid, cur->periodic_count);
     }
-  clownix_free(mu, __FUNCTION__);
+  clownix_free(data, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -545,6 +553,11 @@ static void timer_vm_add_beat(void *data)
                 (ovsdb->ovs_pid_ready == 1) &&
                 (ovsdb->periodic_count > 0))
               {
+              if (ovsdb->destroy_requested)
+                {
+                KERR("OVS BEING DESTROYED %s", vm->name);
+                machine_death(vm->name, error_death_no_dpdk);
+                }
               if (!dpdk_ovs_get_dpdk_usable())
                 {
                 KERR("0 Hugepages no dpdk for %s", vm->name);
@@ -600,31 +613,58 @@ static void timer_ovs_beat(void *data)
       }
     else if (cur->pid == 0)
       {
+      if (!strlen(cur->name))
+        KOUT(" ");
       try_send_msg_ovs(cur, msg_type_pid, type_hop_tid, cur->name);
       }
     else if (cur->getsuidroot == 0)
       {
       try_send_msg_ovs(cur, msg_type_diag, 0, "cloonixovs_req_suidroot");
       }
+
     else if (cur->open_ovsdb == 0)
       {
+      cur->open_ovsdb = 1;
       snprintf(msg, MAX_PATH_LEN-1,
       "cloonixovs_req_ovsdb lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
       g_lcore_mask, g_socket_mem, g_cpu_mask);
       try_send_msg_ovs(cur, msg_type_diag, 0, msg);
       }
+    else if (cur->open_ovsdb_ok == 0)
+      {
+      cur->open_ovsdb_wait += 1;
+      if (cur->open_ovsdb_wait > 20)
+        {
+        cur->destroy_requested = 1;
+        KERR("OVSDB %s NOT RESPONDING destroy_requested", cur->name);
+        }
+      }
+
     else if (cur->open_ovs == 0)
       {
+      cur->open_ovs = 1;
       snprintf(msg, MAX_PATH_LEN-1,
       "cloonixovs_req_ovs lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
       g_lcore_mask, g_socket_mem, g_cpu_mask);
       try_send_msg_ovs(cur, msg_type_diag, 0, msg);
       }
+    else if (cur->open_ovs_ok == 0)
+      {
+      cur->open_ovs_wait += 1;
+      if (cur->open_ovs_wait > 40)
+        {
+        cur->destroy_requested = 1;
+        KERR("OVS %s NOT RESPONDING destroy_requested", cur->name);
+        }
+      }
+
     else
       {
       cur->periodic_count += 1;
       if (cur->periodic_count >= 5)
         {
+        if (!strlen(cur->name))
+          KOUT(" ");
         try_send_msg_ovs(cur, msg_type_pid, type_hop_tid, cur->name);
         cur->periodic_count = 1;
         cur->unanswered_pid_req += 1;
@@ -677,7 +717,7 @@ static int create_muovs_process(char *name)
   strncpy(arg_ovsx->sock, sock, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->ovsx_bin, ovsx_bin, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->dpdk_db_dir, dpdk_db_dir, MAX_PATH_LEN-1);
-  clownix_timeout_add(1500, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
+  clownix_timeout_add(4000, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
   return pid;
 }
 /*--------------------------------------------------------------------------*/
@@ -786,53 +826,22 @@ void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
     else if (!strcmp(line, "cloonixovs_resp_ovsdb_ko"))
       {
       KERR("cloonixovs_resp_ovsdb_ko");
-      cur->nb_resp_ovsdb_ko += 1;
-      if (cur->nb_resp_ovsdb_ko > 3)
-        {
-        KERR(" destroy_requested for %s", cur->name);
-        cur->destroy_requested = 1;
-        }
+      cur->destroy_requested = 1;
       }
-    else if (!strcmp(line, "cloonixovs_resp_ovsdb_ok_dpdk_ok"))
+    else if (!strcmp(line, "cloonixovs_resp_ovsdb_ok"))
       {
-      g_dpdk_usable = 1;
-      if (cur->open_ovsdb == 0)
-        {
-        event_print("Start OpenVSwitch %s open_ovsdb = 1", cur->name);
-        cur->open_ovsdb = 1;
-        }
-      }
-    else if (!strcmp(line, "cloonixovs_resp_ovsdb_ok_dpdk_ko"))
-      {
-      g_dpdk_usable = 0;
-      if (cur->open_ovsdb == 0)
-        {
-        event_print("Start OpenVSwitch %s open_ovsdb = 1", cur->name);
-        cur->open_ovsdb = 1;
-        }
+      event_print("Start OpenVSwitch %s open_ovsdb = 1", cur->name);
+      cur->open_ovsdb_ok = 1;
       }
     else if (!strcmp(line, "cloonixovs_resp_ovs_ko"))
       {
       KERR("cloonixovs_resp_ovs_ko ovs-vswitchd FAIL huge page memory?");
       cur->destroy_requested = 1;
       }
-    else if (!strcmp(line, "cloonixovs_resp_ovs_ok_dpdk_ko"))
+    else if (!strcmp(line, "cloonixovs_resp_ovs_ok"))
       {
-      g_dpdk_usable = 0;
-      if (cur->open_ovs == 0)
-        {
-        event_print("Start OpenVSwitch %s open_ovs = 1", cur->name);
-        cur->open_ovs = 1;
-        }
-      }
-    else if (!strcmp(line, "cloonixovs_resp_ovs_ok_dpdk_ok"))
-      {
-      g_dpdk_usable = 1;
-      if (cur->open_ovs == 0)
-        {
-        event_print("Start OpenVSwitch %s open_ovs = 1", cur->name);
-        cur->open_ovs = 1;
-        }
+      event_print("Start OpenVSwitch %s open_ovs = 1", cur->name);
+      cur->open_ovs_ok = 1;
       }
     else
       fmt_rx_rpct_recv_diag_msg(llid, tid, line);
@@ -846,7 +855,10 @@ int dpdk_ovs_muovs_ready(void)
   int result = 0;
   t_ovs *cur = g_head_ovs;
   if (cur)
-    result = cur->ovs_pid_ready;
+    {
+    if (!cur->destroy_requested)
+      result = cur->ovs_pid_ready;
+    }
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -949,6 +961,8 @@ int dpdk_ovs_still_present(void)
       (dpdk_tap_get_qty() != 0) ||
       (dpdk_snf_get_qty() != 0) ||
       (dpdk_nat_get_qty() != 0) ||
+      (dpdk_a2b_get_qty() != 0) ||
+      (dpdk_d2d_get_qty() != 0) ||
       (g_head_ovs != NULL))
     result = 1;
   return result;
@@ -1023,6 +1037,10 @@ void dpdk_ovs_urgent_client_destruct(void)
     dpdk_snf_end_ovs();
   if (dpdk_nat_get_qty())
     dpdk_nat_end_ovs();
+  if (dpdk_a2b_get_qty())
+    dpdk_a2b_end_ovs();
+  if (dpdk_d2d_get_qty())
+    dpdk_d2d_end_ovs();
   while(vm)
     {
     dpdk_ovs_del_vm(vm->name);
@@ -1082,7 +1100,11 @@ void dpdk_ovs_del_vm(char *name)
 /****************************************************************************/
 int dpdk_ovs_get_dpdk_usable(void)
 {
-  return g_dpdk_usable;
+  int result = 0;
+  t_ovs *cur = g_head_ovs;
+  if (cur)
+    result = cur->open_ovs_ok;
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1173,8 +1195,8 @@ void dpdk_ovs_init(uint32_t lcore, uint32_t mem, uint32_t cpu)
   dpdk_tap_init();
   dpdk_snf_init();
   dpdk_nat_init();
+  dpdk_a2b_init();
   dpdk_d2d_init();
-  g_dpdk_usable = 0;
   g_lcore_mask = lcore;
   g_socket_mem = mem;
   g_cpu_mask   = cpu;

@@ -85,6 +85,27 @@ static void d2d_update_bitem(t_topo_info *topo)
 }
 /*--------------------------------------------------------------------------*/
 
+
+/****************************************************************************/
+static void a2b_update_bitem(t_topo_info *topo)
+{
+  int i;
+  t_topo_a2b *cur;
+  t_bank_item *bitem;
+  for (i=0; i<topo->nb_a2b; i++)
+    {
+    cur = &(topo->a2b[i]);
+    bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
+    if ((bitem) && (bitem->pbi.mutype == endp_type_a2b))
+      {
+      memcpy(&(bitem->pbi.pbi_sat->topo_a2b), cur, sizeof(t_topo_a2b));
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+
+
 /****************************************************************************/
 int get_vm_id_from_topo(char *name)
 {
@@ -164,6 +185,7 @@ void callback_topo(int tid, t_topo_info *topo)
     process_all_diffs(diffs);
     topo_free_diffs(diffs);
     d2d_update_bitem(topo);
+    a2b_update_bitem(topo);
     }
   if (g_not_first_callback_topo == 0)
     {

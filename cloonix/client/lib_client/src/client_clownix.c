@@ -642,6 +642,35 @@ void client_add_sat(int tid, t_end_cb cb, char *name,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void client_add_a2b(int tid, t_end_cb cb, char *name)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_a2b_add(g_llid, new_tid, name);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void client_cnf_a2b(int tid, t_end_cb cb, char *name,
+                    int dir, int type, int val)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_a2b_cnf(g_llid, new_tid, name, dir, type, val);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void client_del_sat(int tid, t_end_cb cb, char *name)
 {
   int new_tid;

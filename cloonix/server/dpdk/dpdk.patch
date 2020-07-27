@@ -1,7 +1,7 @@
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2020-06-15 15:40:20.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2020-06-15 16:51:42.570932365 +0200
-@@ -145,6 +145,7 @@
+--- dpdk/drivers/meson.build	2020-07-22 22:16:18.000000000 +0200
++++ dpdk_tainted/drivers/meson.build	2020-07-22 22:18:01.374171699 +0200
+@@ -129,6 +129,7 @@
  				objects: objs,
  				include_directories: includes,
  				dependencies: static_deps,
@@ -9,8 +9,8 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  				c_args: cflags,
  				install: true)
  
-@@ -186,6 +187,7 @@
- 				version: lib_version,
+@@ -180,6 +181,7 @@
+ 				version: abi_version,
  				soversion: so_version,
  				install: true,
 +                                install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
@@ -18,9 +18,9 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  
  			# create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_ethdev.c
---- dpdk/drivers/net/virtio/virtio_ethdev.c	2020-06-15 15:40:20.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2020-06-15 16:51:42.570932365 +0200
-@@ -1488,6 +1488,11 @@
+--- dpdk/drivers/net/virtio/virtio_ethdev.c	2020-07-22 22:16:18.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2020-07-22 22:18:01.374171699 +0200
+@@ -1485,6 +1485,11 @@
  	isr = vtpci_isr(hw);
  	PMD_DRV_LOG(INFO, "interrupt status = %#x", isr);
  
@@ -32,7 +32,7 @@ diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virt
  	if (virtio_intr_unmask(dev) < 0)
  		PMD_DRV_LOG(ERR, "interrupt enable failed");
  
-@@ -2214,20 +2219,6 @@
+@@ -2211,20 +2216,6 @@
  	PMD_INIT_LOG(DEBUG, "configure");
  	req_features = VIRTIO_PMD_DEFAULT_GUEST_FEATURES;
  
@@ -54,9 +54,9 @@ diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virt
  		ret = virtio_init_device(dev, hw->req_guest_features);
  		if (ret < 0)
 diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c
---- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2020-06-15 15:40:20.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2020-06-15 16:51:42.570932365 +0200
-@@ -107,6 +107,7 @@
+--- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2020-07-22 22:16:18.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2020-07-22 22:18:01.374171699 +0200
+@@ -127,6 +127,7 @@
  			return -1;
  		}
  	}
@@ -64,7 +64,7 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net
  	if (eth_dev->data->dev_flags & RTE_ETH_DEV_INTR_LSC) {
  		if (rte_intr_disable(eth_dev->intr_handle) < 0) {
  			PMD_DRV_LOG(ERR, "interrupt disable failed");
-@@ -124,6 +125,7 @@
+@@ -144,6 +145,7 @@
  			return -1;
  		}
  	}
@@ -73,9 +73,9 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net
  	return 0;
  }
 diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/librte_eal/common/eal_common_options.c
---- dpdk/lib/librte_eal/common/eal_common_options.c	2020-06-15 15:40:20.000000000 +0200
-+++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-06-15 16:53:32.415794672 +0200
-@@ -119,7 +119,9 @@
+--- dpdk/lib/librte_eal/common/eal_common_options.c	2020-07-22 22:16:18.000000000 +0200
++++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-07-22 22:18:01.374171699 +0200
+@@ -121,7 +121,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
  /* Default path of external loadable drivers */
@@ -87,9 +87,9 @@ diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/libr
  
  /*
 diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal.c
---- dpdk/lib/librte_eal/linux/eal.c	2020-06-15 15:40:20.000000000 +0200
-+++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-06-15 16:51:42.570932365 +0200
-@@ -114,13 +114,13 @@
+--- dpdk/lib/librte_eal/linux/eal.c	2020-07-22 22:16:18.000000000 +0200
++++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-07-22 22:18:01.374171699 +0200
+@@ -98,13 +98,13 @@
  	char tmp[PATH_MAX];
  	int ret;
  
@@ -106,19 +106,19 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
  	if (ret < 0 || ret == sizeof(tmp)) {
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2020-06-15 15:40:20.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2020-06-15 16:51:42.570932365 +0200
-@@ -128,6 +128,7 @@
+--- dpdk/lib/meson.build	2020-07-22 22:16:18.000000000 +0200
++++ dpdk_tainted/lib/meson.build	2020-07-22 22:18:01.374171699 +0200
+@@ -123,6 +123,7 @@
  					c_args: cflags,
  					dependencies: static_deps,
  					include_directories: includes,
 +                                        install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
  					install: true)
- 			static_dep = declare_dependency(link_with: static_lib,
+ 			static_dep = declare_dependency(
  					include_directories: includes,
-@@ -181,6 +182,7 @@
+@@ -185,6 +186,7 @@
  					link_depends: lk_deps,
- 					version: lib_version,
+ 					version: abi_version,
  					soversion: so_version,
 +                                        install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
  					install: true)

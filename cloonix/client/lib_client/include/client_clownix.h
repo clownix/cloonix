@@ -79,6 +79,10 @@ void client_add_d2d(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
                     char *slave_cloonix, uint32_t ip, uint16_t port,
                     char *passwd, uint32_t udp_ip);
 
+void client_add_a2b(int tid, t_end_cb cb, char *name);
+void client_cnf_a2b(int tid, t_end_cb cb, char *name,
+                    int dir, int type, int val);
+
 void client_add_sat(int tid, t_end_cb cb, char *name, 
                     int mutype, t_c2c_req_info *c2c_req_info);
 void client_del_sat(int tid, t_end_cb cb, char *name);

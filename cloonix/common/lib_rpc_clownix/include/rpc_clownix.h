@@ -27,6 +27,7 @@
 #define ENDP_SOCK_DIR "endp"
 #define SUID_POWER_SOCK_DIR "suid_power"
 #define SNF_DPDK_SOCK_DIR "snf_dpdk"
+#define A2B_DPDK_SOCK_DIR "a2b_dpdk"
 #define D2D_DPDK_SOCK_DIR "d2d_dpdk"
 #define CLI_SOCK_DIR "cli"
 #define SNF_PCAP_DIR "snf"
@@ -53,6 +54,16 @@
 #define ROOTFS_STATIC_PREFIX "rootfs_"
 #define NVRAM_STATIC_PREFIX "nvram_"
 
+#define MAX_PEER_MAC 50
+
+enum{
+  a2b_type_delay = 12,
+  a2b_type_loss,
+  a2b_type_qsize,
+  a2b_type_bsize,
+  a2b_type_brate,
+};
+
 enum {
     type_hop_unused = 0,
     type_hop_ovs,
@@ -64,6 +75,7 @@ enum {
     type_hop_snf_dpdk,
     type_hop_nat_dpdk,
     type_hop_d2d_dpdk,
+    type_hop_a2b_dpdk,
     type_hop_max
     };
 
@@ -119,7 +131,6 @@ enum
   type_llid_trace_endp_snf,
   type_llid_trace_endp_c2c,
   type_llid_trace_endp_nat,
-  type_llid_trace_endp_a2b,
   type_llid_trace_endp_ovs,
   type_llid_trace_endp_ovsdb,
   type_llid_trace_jfs,
@@ -227,10 +238,10 @@ typedef struct t_stats_sysinfo
   unsigned long process_rss;
 } t_stats_sysinfo;
 /*---------------------------------------------------------------------------*/
-typedef struct t_d2d_mac
+typedef struct t_peer_mac
 {
   char mac[MAX_NAME_LEN];
-} t_d2d_mac;
+} t_peer_mac;
 /*---------------------------------------------------------------------------*/
 typedef struct t_pid_lst
 {
@@ -419,6 +430,11 @@ void recv_qmp_req(int llid, int tid, char *name, char *msg);
 void send_qmp_resp(int llid, int tid, char *name, char *line, int status);
 void recv_qmp_resp(int llid, int tid, char *name, char *line, int status);
 /*---------------------------------------------------------------------------*/
+void send_a2b_add(int llid, int tid, char *name);
+void recv_a2b_add(int llid, int tid, char *name);
+void send_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
+void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
+/*---------------------------------------------------------------------------*/
 void send_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
                   char *slave_cloonix, uint32_t ip, uint16_t port,
                   char *passwd, uint32_t udp_ip);
@@ -428,10 +444,10 @@ void recv_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip,
                   char *passwd, uint32_t udp_ip);
 
 void send_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_d2d_mac *tabmac);
+                       int nb_mac, t_peer_mac *tabmac);
 
 void recv_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_d2d_mac *tabmac);
+                       int nb_mac, t_peer_mac *tabmac);
 
 void send_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
                           char *local_cloonix, char *distant_cloonix);

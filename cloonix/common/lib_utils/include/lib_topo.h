@@ -36,6 +36,13 @@ typedef struct t_topo_d2d_chain
   struct t_topo_d2d_chain *next;
 } t_topo_d2d_chain;
 /*--------------------------------------------------------------------------*/
+typedef struct t_topo_a2b_chain
+{
+  t_topo_a2b a2b;
+  struct t_topo_a2b_chain *prev;
+  struct t_topo_a2b_chain *next;
+} t_topo_a2b_chain;
+/*--------------------------------------------------------------------------*/
 typedef struct t_topo_sat_chain
 {
   t_topo_sat sat;
@@ -67,6 +74,8 @@ typedef struct t_topo_differences
   t_topo_c2c_chain  *del_c2c;
   t_topo_d2d_chain  *add_d2d;
   t_topo_d2d_chain  *del_d2d;
+  t_topo_a2b_chain  *add_a2b;
+  t_topo_a2b_chain  *del_a2b;
   t_topo_sat_chain  *add_sat;
   t_topo_sat_chain  *del_sat;
   t_topo_lan_chain  *add_lan;

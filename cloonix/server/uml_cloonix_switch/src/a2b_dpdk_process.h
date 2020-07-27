@@ -15,7 +15,15 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void wake_tx_send(t_all_ctx *all_ctx, int num);
-void wake_tx_watch_fd(t_all_ctx *all_ctx, int num);
-void wake_tx_init(void);
-/*---------------------------------------------------------------------------*/
+void a2b_dpdk_cnf(char *name, int dir, int type, int val);
+void a2b_dpdk_start_vhost(char *name);
+int a2b_dpdk_llid_exists_with_name(char *name);
+int a2b_dpdk_name_exists_with_llid(int llid, char *name);
+void a2b_dpdk_llid_closed(int llid);
+void a2b_dpdk_pid_resp(int llid, int tid, char *name, int pid);
+int  a2b_dpdk_get_all_pid(t_lst_pid **lst_pid);
+int  a2b_dpdk_diag_llid(int llid);
+void a2b_dpdk_diag_resp(int llid, int tid, char *line);
+void a2b_dpdk_start_stop_process(char *name, int on);
+void a2b_dpdk_init(void);
+/*--------------------------------------------------------------------------*/

@@ -118,10 +118,8 @@ void help_sub_endp(char *line);
 int cmd_sub_sysinfo(int argc, char **argv);
 void help_sub_sysinfo(char *line);
 /*---------------------------------------------------------------------------*/
-int cmd_a2b_config(int argc, char **argv);
-void help_a2b_config(char *line);
-int cmd_a2b_dump(int argc, char **argv);
-void help_a2b_dump(char *line);
+int cmd_cnf_a2b(int argc, char **argv);
+void help_cnf_a2b(char *line);
 /*---------------------------------------------------------------------------*/
 int cmd_hwsim_config(int argc, char **argv);
 void help_hwsim_config(char *line);

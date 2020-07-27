@@ -115,7 +115,7 @@ void recv_d2d_add(int llid, int tid, char *name, uint32_t local_udp_ip,
                   char *passwd, uint32_t udp_ip){KOUT(" ");}
 
 void recv_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_d2d_mac *mac) {KOUT(" ");}
+                       int nb_mac, t_peer_mac *mac) {KOUT(" ");}
 
 void recv_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
                           char *distant_cloonix, char *local_cloonix)
@@ -129,6 +129,13 @@ void recv_d2d_peer_conf(int llid, int tid, char *d2d_name, int is_ack,
 
 void recv_d2d_peer_ping(int llid, int tid, char *d2d_name, int status)
 {KOUT(" ");}
+
+void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
+{KOUT(" ");}
+
+void recv_a2b_add(int llid, int tid, char *name)
+{KOUT(" ");}
+
 /*---------------------------------------------------------------------------*/
 
 

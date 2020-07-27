@@ -253,7 +253,6 @@ static void x11_read_evt(int fd)
       len = read (fd, buf, MAX_A2D_LEN-headsize);
       if ((len == 0) && (first_loop == 1))
         {
-        KERR("%d", errno);
         free_fd_ctx(sub_dido_idx);
         }
       else if (len < 0)

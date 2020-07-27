@@ -95,6 +95,10 @@ enum
   bnd_qmp_sub,
   bnd_qmp_req,
   bnd_qmp_msg,
+
+  bnd_a2b_add,
+  bnd_a2b_cnf,
+
   bnd_max,
   };
 static char bound_list[bnd_max][MAX_CLOWNIX_BOUND_LEN];
@@ -822,6 +826,29 @@ static int topo_d2d_format(char *buf, t_topo_d2d *d2d)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int topo_a2b_format(char *buf, t_topo_a2b *a2b)
+{
+  int len;
+  if (!a2b->name)
+    KOUT(" ");
+  if (!strlen(a2b->name) || (strlen(a2b->name) >= MAX_NAME_LEN))
+     KOUT(" ");
+  len = sprintf(buf, EVENT_TOPO_A2B, a2b->name,
+                                     a2b->delay[0],
+                                     a2b->loss[0],
+                                     a2b->qsize[0],
+                                     a2b->bsize[0],
+                                     a2b->brate[0],
+                                     a2b->delay[1],
+                                     a2b->loss[1],
+                                     a2b->qsize[1],
+                                     a2b->bsize[1],
+                                     a2b->brate[1]);
+  return len;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static int topo_sat_format(char *buf, t_topo_sat *sat)
 {
   int len;
@@ -937,6 +964,7 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
                                            topo->nb_kvm,
                                            topo->nb_c2c,
                                            topo->nb_d2d,
+                                           topo->nb_a2b,
                                            topo->nb_sat,
                                            topo->nb_endp,
                                            topo->nb_phy,
@@ -950,6 +978,8 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
     len += topo_c2c_format(sndbuf+len, &(topo->c2c[i]));
   for (i=0; i<topo->nb_d2d; i++)
     len += topo_d2d_format(sndbuf+len, &(topo->d2d[i]));
+  for (i=0; i<topo->nb_a2b; i++)
+    len += topo_a2b_format(sndbuf+len, &(topo->a2b[i]));
   for (i=0; i<topo->nb_sat; i++)
     len += topo_sat_format(sndbuf+len, &(topo->sat[i]));
   for (i=0; i<topo->nb_endp; i++)
@@ -1593,18 +1623,37 @@ static void helper_fill_topo_d2d(char *msg, t_topo_d2d *d2d)
                                   &(d2d->tcp_connection_peered),
                                   &(d2d->udp_connection_peered),
                                   &(d2d->ovs_lan_attach_ready)) != 13)
-    KOUT("%s", msg);
+    KOUT(" ");
   if (!strcmp(d2d->lan, "name_to_erase_upon_extract"))
     memset(d2d->lan, 0, MAX_NAME_LEN);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void helper_fill_topo_a2b(char *msg, t_topo_a2b *a2b)
+{
+  if (sscanf(msg, EVENT_TOPO_A2B, a2b->name,
+                                  &(a2b->delay[0]),
+                                  &(a2b->loss[0]),
+                                  &(a2b->qsize[0]),
+                                  &(a2b->bsize[0]),
+                                  &(a2b->brate[0]),
+                                  &(a2b->delay[1]),
+                                  &(a2b->loss[1]),
+                                  &(a2b->qsize[1]),
+                                  &(a2b->bsize[1]),
+                                  &(a2b->brate[1])) != 11)
+    KOUT(" ");
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
 static void helper_fill_topo_sat(char *msg, t_topo_sat *sat)
 {
   if (sscanf(msg, EVENT_TOPO_SAT, sat->name,
                                   &(sat->type)) != 2)
-    KOUT("%s", msg);
+    KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1614,7 +1663,7 @@ static void helper_fill_topo_phy(char *msg, t_topo_phy *phy)
   if (sscanf(msg, EVENT_TOPO_PHY, &(phy->index), &(phy->flags), phy->name,
                                   phy->drv, phy->pci, phy->mac,
                                   phy->vendor, phy->device) != 8)
-    KOUT("%s", msg);
+    KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1622,7 +1671,7 @@ static void helper_fill_topo_phy(char *msg, t_topo_phy *phy)
 static void helper_fill_topo_pci(char *msg, t_topo_pci *pci)
 {
   if (sscanf(msg, EVENT_TOPO_PCI, pci->pci, pci->drv, pci->unused) != 3)
-    KOUT("%s", msg);
+    KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1713,12 +1762,13 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
                                      &(topo->nb_kvm),
                                      &(topo->nb_c2c),
                                      &(topo->nb_d2d),
+                                     &(topo->nb_a2b),
                                      &(topo->nb_sat),
                                      &(topo->nb_endp),
                                      &(topo->nb_phy),
                                      &(topo->nb_pci),
                                      &(topo->nb_bridges),
-                                     &(topo->nb_mirrors)) != 18)
+                                     &(topo->nb_mirrors)) != 19)
     KOUT("%s", msg);
   topo_config_swapoff(&(topo->clc), &icf);
   len = topo->nb_kvm*sizeof(t_topo_kvm);
@@ -1730,6 +1780,9 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
   len = topo->nb_d2d*sizeof(t_topo_d2d);
   topo->d2d= (t_topo_d2d *) clownix_malloc(len, 16);
   memset(topo->d2d, 0, len);
+  len = topo->nb_a2b*sizeof(t_topo_a2b);
+  topo->a2b= (t_topo_a2b *) clownix_malloc(len, 16);
+  memset(topo->a2b, 0, len);
   len = topo->nb_sat*sizeof(t_topo_sat);
   topo->sat= (t_topo_sat *) clownix_malloc(len, 16);
   memset(topo->sat, 0, len);
@@ -1776,6 +1829,17 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
       KOUT("%d,%d\n%s\n", topo->nb_d2d, i, msg);
     helper_fill_topo_d2d(ptr, &(topo->d2d[i]));
     ptr = strstr(ptr, "</d2d>");
+    if (!ptr)
+      KOUT(" ");
+    }
+
+  for (i=0; i<topo->nb_a2b; i++)
+    {
+    ptr = strstr(ptr, "<a2b>");
+    if (!ptr)
+      KOUT("%d,%d\n%s\n", topo->nb_a2b, i, msg);
+    helper_fill_topo_a2b(ptr, &(topo->a2b[i]));
+    ptr = strstr(ptr, "</a2b>");
     if (!ptr)
       KOUT(" ");
     }
@@ -2066,8 +2130,34 @@ static char *extract_rpc_msg(char *msg, char *bound)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void send_a2b_add(int llid, int tid, char *name)
+{
+  int len = 0;
+  if (name[0] == 0)
+    KOUT(" ");
+  if (strlen(name) >= MAX_NAME_LEN)
+    KOUT(" ");
+  len = sprintf(sndbuf, A2B_ADD, tid, name);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
+{
+  int len = 0;
+  if (name[0] == 0)
+    KOUT(" ");
+  if (strlen(name) >= MAX_NAME_LEN)
+    KOUT(" ");
+  len = sprintf(sndbuf, A2B_CNF, tid, name, dir, type, val);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void send_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_d2d_mac *tabmac)
+                       int nb_mac, t_peer_mac *tabmac)
 {
   int i, len = 0;
   if (d2d_name[0] == 0)
@@ -2172,11 +2262,11 @@ void send_d2d_peer_ping(int llid, int tid, char *d2d_name, int status)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-t_d2d_mac *d2d_mac_unformat(char *msg, int nb)
+t_peer_mac *d2d_mac_unformat(char *msg, int nb)
 {
   char *ptr = msg;
-  t_d2d_mac *tabmac = (t_d2d_mac *) clownix_malloc(nb * sizeof(t_d2d_mac), 5);
-  memset(tabmac, 0, nb * sizeof(t_d2d_mac));
+  t_peer_mac *tabmac = (t_peer_mac *) clownix_malloc(nb * sizeof(t_peer_mac), 5);
+  memset(tabmac, 0, nb * sizeof(t_peer_mac));
   int i;
   for (i=0; i<nb; i++)
     {
@@ -2198,7 +2288,7 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
 {
   int len, nb, flags_hop, num, is_layout;
   int vmcmd, param, status, sub, lcore, mem, cpu;
-  int mutype, type, eth, qty, tid; 
+  int mutype, type, eth, qty, tid, dir, val; 
   uint32_t ip, dudp_ip, ludp_ip;
   uint16_t lport, dport;
   t_topo_clc  icf;
@@ -2227,7 +2317,8 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
   t_c2c_req_info c2c;
   t_blkd_reports blkd;
   t_hop_list *list;
-  t_d2d_mac *tabmac;
+  t_peer_mac *tabmac;
+
 
   switch(bnd_evt)
     {
@@ -2665,6 +2756,18 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_d2d_peer_ping(llid, tid, name, status);
       break;
 
+    case bnd_a2b_add:
+      if (sscanf(msg, A2B_ADD, &tid, name) != 2)
+        KOUT("%s", msg);
+      recv_a2b_add(llid, tid, name);
+      break;
+
+    case bnd_a2b_cnf:
+      if (sscanf(msg, A2B_CNF, &tid, name, &dir, &type, &val) != 5)
+        KOUT("%s", msg);
+      recv_a2b_cnf(llid, tid, name, dir, type, val);
+      break;
+
     default:
       KOUT("%s", msg);
     }
@@ -2713,9 +2816,6 @@ char *llid_trace_lib(int type)
       break;
     case type_llid_trace_endp_c2c:
       result = "muc2c";
-      break;
-    case type_llid_trace_endp_a2b:
-      result = "mua2b";
       break;
     case type_llid_trace_endp_ovs:
       result = "ovs";
@@ -2848,6 +2948,8 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(D2D_CONF, bound_list[bnd_d2d_peer_conf]);
   extract_boundary(D2D_PING, bound_list[bnd_d2d_peer_ping]);
 
+  extract_boundary(A2B_ADD, bound_list[bnd_a2b_add]);
+  extract_boundary(A2B_CNF, bound_list[bnd_a2b_cnf]);
 }
 /*---------------------------------------------------------------------------*/
 

@@ -15,11 +15,11 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void circ_slot_put(int num, void *elem);
-void *circ_slot_get(int num);
-void *circ_slot_lookat(int num);
-int circ_empty_slot_nb(int num);
-int circ_used_slot_nb(int num);
-void circ_slot_init(int num);
+void sched_inc_queue_stored(int id, uint64_t len);
+void sched_dec_queue_stored(int id, uint64_t len);
+void sched_mngt(int id, uint64_t current_usec, uint64_t delta_usec);
+int sched_can_enqueue(int id, uint64_t len);
+void sched_cnf(int dir, int type, int val);
+void sched_init(void);
 /*--------------------------------------------------------------------------*/
 

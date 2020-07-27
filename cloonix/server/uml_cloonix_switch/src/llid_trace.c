@@ -40,6 +40,7 @@
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
 #include "d2d_dpdk_process.h"
+#include "a2b_dpdk_process.h"
 #include "suid_power.h"
 /*---------------------------------------------------------------------------*/
 typedef struct t_event_to_llid
@@ -131,9 +132,6 @@ static char *llid_trace_translate_type(int type_llid_trace)
       break;
     case type_llid_trace_endp_c2c:
       result = "trace_endp_c2c";
-      break;
-    case type_llid_trace_endp_a2b:
-      result = "trace_endp_a2b";
       break;
     case type_llid_trace_endp_ovs:
       result = "trace_endp_ovs";
@@ -413,6 +411,7 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
   suid_power_llid_closed(llid);
   d2d_dpdk_llid_closed(llid);
   snf_dpdk_llid_closed(llid);
+  a2b_dpdk_llid_closed(llid);
   nat_dpdk_llid_closed(llid);
   qmp_event_free(llid);
   hop_event_free(llid);

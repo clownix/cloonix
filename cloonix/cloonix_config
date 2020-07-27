@@ -1,5 +1,5 @@
 ##################################################
-CLOONIX_VERSION=09-00
+CLOONIX_VERSION=10-00
 CLOONIX_TREE=/usr/local/bin/cloonix
 CLOONIX_WORK=${HOME}/cloonix_data
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
@@ -12,8 +12,8 @@ CLOONIX_NET: nemo {
   cloonix_passwd   nemoclown
   d2d_udp_ip       127.0.0.1
   lcore_mask       0x1
-  socket_mem       2048
-  cpu_mask         0x03
+  socket_mem       1024
+  cpu_mask         0x08
 }
 #-------------------------------------------------
 
@@ -24,8 +24,8 @@ CLOONIX_NET: mito {
   cloonix_passwd   mitoclown
   d2d_udp_ip       127.0.0.1
   lcore_mask       0x1
-  socket_mem       2048
-  cpu_mask         0x0C
+  socket_mem       1024
+  cpu_mask         0x04
 }
 #-------------------------------------------------
 
@@ -36,8 +36,8 @@ CLOONIX_NET: fido {
   cloonix_passwd   fidoclown
   d2d_udp_ip       10.8.8.1
   lcore_mask       0x1
-  socket_mem       2048
-  cpu_mask         0x0F
+  socket_mem       1024
+  cpu_mask         0x02
 }
 #-------------------------------------------------
 
@@ -48,8 +48,8 @@ CLOONIX_NET: pipo {
   cloonix_passwd   pipoclown
   d2d_udp_ip       10.8.8.2
   lcore_mask       0x1
-  socket_mem       2048
-  cpu_mask         0x0F
+  socket_mem       1024
+  cpu_mask         0x02
 }
 #-------------------------------------------------
 
@@ -60,8 +60,8 @@ CLOONIX_NET: cucu {
   cloonix_passwd   cucuclown
   d2d_udp_ip       10.7.7.1
   lcore_mask       0x1
-  socket_mem       2048
-  cpu_mask         0x0F
+  socket_mem       1024
+  cpu_mask         0x02
 }
 #-------------------------------------------------
 
@@ -72,8 +72,8 @@ CLOONIX_NET: lolo {
   cloonix_passwd   loloclown
   d2d_udp_ip       10.7.7.2
   lcore_mask       0x1
-  socket_mem       2048
-  cpu_mask         0x0F
+  socket_mem       1024
+  cpu_mask         0x02
 }
 #-------------------------------------------------
 
@@ -84,8 +84,8 @@ CLOONIX_NET: kiki {
   cloonix_passwd   kiki
   d2d_udp_ip       0.0.0.0
   lcore_mask       0x1
-  socket_mem       2048
-  cpu_mask         0x0F
+  socket_mem       1024
+  cpu_mask         0x02
 }
 #-------------------------------------------------
 

@@ -145,14 +145,6 @@ struct cmd_struct level_vm_cmd[] = {
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-struct cmd_struct level_a2b_cmd[] = {
-{"mod",  "A2b config modify", NULL, cmd_a2b_config, help_a2b_config},
-{"dmp",  "A2b config dump", NULL, cmd_a2b_dump, help_a2b_dump},
-{"help",  "",                     level_a2b_cmd, NULL, NULL},
-};
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
 struct cmd_struct level_hwsim_cmd[] = {
 {"mod",  "Hwsim config modify", NULL, cmd_hwsim_config, help_hwsim_config},
 {"dmp",  "Hwsim config dump", NULL,   cmd_hwsim_dump, help_hwsim_dump},
@@ -164,7 +156,7 @@ struct cmd_struct level_hwsim_cmd[] = {
 struct cmd_struct level_cnf_cmd[] = {
 {"ovs",  "Conf openvswitch dpdk", NULL, cmd_dpdk_ovs_cnf, help_dpdk_ovs_cnf},
 {"kvm",  "Virtual machine actions",    level_vm_cmd, NULL, NULL},
-{"a2b",  "A2b actions", level_a2b_cmd, NULL, NULL},
+{"a2b",  "A2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
 {"hws",  "Hwsim actions", level_hwsim_cmd, NULL, NULL},
 {"lay",  "Layout modifications on canvas", level_layout_cmd, NULL, NULL},
 {"lan",  "Send cmd to mulan", NULL, cmd_mud_lan, help_mud_lan},

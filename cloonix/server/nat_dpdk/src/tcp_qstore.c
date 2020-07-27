@@ -55,8 +55,8 @@ static void free_head_backup(t_flagseq *flseq)
     {
     flseq->head_qstore_backup = flseq->head_qstore_backup->next;
     }
-  free(cur->data);
-  free(cur);
+  rte_free(cur->data);
+  rte_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -157,26 +157,31 @@ struct rte_mbuf *tcp_qstore_dequeue(t_flagseq *flseq,
 /****************************************************************************/
 void tcp_qstore_enqueue(t_flagseq *flseq, int data_len, uint8_t *data)
 {
-  t_qstore *cur = (t_qstore *) malloc(sizeof(t_qstore));
-  memset(cur, 0, sizeof(t_qstore));
-  cur->data_len = data_len;
-  cur->data     = data; 
-  flseq->nb_qstore += 1;
-  if (flseq->head_qstore == NULL)
-    {
-    if (flseq->tail_qstore != NULL)
-      KOUT(" ");
-    flseq->head_qstore = cur;
-    flseq->tail_qstore = cur;
-    }
+  t_qstore *cur = (t_qstore *) rte_malloc(NULL, sizeof(t_qstore), 0);
+  if (cur == NULL)
+    KERR(" ");
   else
     {
-    if (flseq->tail_qstore == NULL)
-      KOUT(" ");
-    if (flseq->tail_qstore->next != NULL)
-      KOUT(" ");
-    flseq->tail_qstore->next = cur;
-    flseq->tail_qstore = cur;
+    memset(cur, 0, sizeof(t_qstore));
+    cur->data_len = data_len;
+    cur->data     = data; 
+    flseq->nb_qstore += 1;
+    if (flseq->head_qstore == NULL)
+      {
+      if (flseq->tail_qstore != NULL)
+        KOUT(" ");
+      flseq->head_qstore = cur;
+      flseq->tail_qstore = cur;
+      }
+    else
+      {
+      if (flseq->tail_qstore == NULL)
+        KOUT(" ");
+      if (flseq->tail_qstore->next != NULL)
+        KOUT(" ");
+      flseq->tail_qstore->next = cur;
+      flseq->tail_qstore = cur;
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -223,8 +228,8 @@ int tcp_qstore_flush(t_flagseq *flseq)
     next = cur->next;
     result += 1;
     flseq->nb_qstore -= 1;
-    free(cur->data);
-    free(cur);
+    rte_free(cur->data);
+    rte_free(cur);
     cur = next;
     }
   flseq->head_qstore = NULL;
@@ -235,8 +240,8 @@ int tcp_qstore_flush(t_flagseq *flseq)
     next = cur->next;
     result += 1;
     flseq->nb_qstore_backup -= 1;
-    free(cur->data);
-    free(cur);
+    rte_free(cur->data);
+    rte_free(cur);
     cur = next;
     }
   flseq->head_qstore_backup = NULL;

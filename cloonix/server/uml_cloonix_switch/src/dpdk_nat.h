@@ -18,7 +18,7 @@
 int dpdk_nat_collect_dpdk(t_eventfull_endp *eventfull);
 int dpdk_nat_eventfull(char *name, int ms, int ptx, int btx, int prx, int brx);
 char *dpdk_nat_get_mac(char *name, int num);
-char *dpdk_nat_get_next_matching_lan(char *lan, char *name);
+char *dpdk_nat_get_next(char *name);
 void dpdk_nat_event_from_nat_dpdk_process(char *name, char *lan, int on);
 void dpdk_nat_resp_add_lan(int is_ko, char *lan, char *name);
 void dpdk_nat_resp_del_lan(int is_ko, char *lan, char *name);

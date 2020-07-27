@@ -15,43 +15,15 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define MAX_SAMPLES 6000
-
-enum{
-  input_cmd_none = 0,
-  input_cmd_delay,
-  input_cmd_loss,
-  input_cmd_qsize,
-  input_cmd_bsize,
-  input_cmd_rate,
-  input_cmd_dump_config,
-};
-enum{
-  input_dir_none = 0,
-  input_dir_a2b,
-  input_dir_b2a,
-};
-/*---------------------------------------------------------------------------*/
-typedef struct t_connect_side
+typedef struct t_tabmac_snf
 {
-  int llid;
-  long long enqueue;
-  long long dequeue;
-  long long dropped;
-  long long tockens;
-  long long stored;
-  long long lost;
-  long long conf_loss;
-  long long conf_delay;
-  long long conf_qsize;
-  long long conf_bsize;
-  long long conf_brate;
-} t_connect_side;
-/*---------------------------------------------------------------------------*/
-t_connect_side *get_sideA(void);
-t_connect_side *get_sideB(void);
-void config_fill_resp(char *resp, int max_len);
-int config_recv_command(int input_cmd, int input_dir, int val);
-void config_init(void);
-/*---------------------------------------------------------------------------*/
+  char name[MAX_NAME_LEN];
+  int  num;
+  char mac[MAX_NAME_LEN];  
+} t_tabmac_snf;
+
+int tabmac_update_for_d2d(t_peer_mac tabmac[MAX_PEER_MAC]);
+int tabmac_update_for_snf(t_tabmac_snf tabmac_snf[MAX_PEER_MAC]);
+void tabmac_process_possible_change(void);
+/*--------------------------------------------------------------------------*/
 

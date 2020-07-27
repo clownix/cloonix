@@ -51,6 +51,7 @@
 #include "edp_mngt.h"
 #include "edp_evt.h"
 #include "snf_dpdk_process.h"
+#include "tabmac.h"
 
 /****************************************************************************/
 typedef struct t_dtap
@@ -125,8 +126,7 @@ static void free_dtap(t_dtap *cur)
   clownix_free(cur, __FUNCTION__);
   edp_evt_update_non_fix_del(eth_type_dpdk, name, lan);
   dpdk_msg_vlan_exist_no_more(lan);
-  snf_dpdk_process_possible_change(lan);
-  dpdk_d2d_process_possible_change(lan);
+  tabmac_process_possible_change();
   event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
@@ -202,8 +202,7 @@ static void resp_lan_add(t_dtap *cur, int is_ko, char *lan, char *name)
     {
     edp_evt_update_non_fix_add(eth_type_dpdk, name, lan);
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    snf_dpdk_process_possible_change(lan);
-    dpdk_d2d_process_possible_change(lan);
+    tabmac_process_possible_change();
     utils_send_status_ok(&(cur->llid), &(cur->tid));
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     }
@@ -391,7 +390,7 @@ char *dpdk_tap_get_mac(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *dpdk_tap_get_next_matching_lan(char *lan, char *name)
+char *dpdk_tap_get_next(char *name)
 {
   char *result = NULL;
   t_dtap *cur;
@@ -403,15 +402,8 @@ char *dpdk_tap_get_next_matching_lan(char *lan, char *name)
     if (cur)
       cur = cur->next;
     } 
-  while(cur)
-    {
-    if (!strcmp(lan, cur->lan))
-      {
-      result = cur->name;
-      break;
-      }
-    cur = cur->next;
-    }
+  if (cur)
+    result = cur->name;
   return result;
 }
 /*--------------------------------------------------------------------------*/

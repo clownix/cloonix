@@ -19,7 +19,6 @@
 #define MAX_ENV_LEN 100
 #define NB_ENV 10
 #define NB_ARG 50
-void force_dpdk_off(void);
 int dpdk_is_usable(void);
 int create_ovsdb_server_conf(char *ovs_bin, char *dpdk_dir);
 
@@ -42,6 +41,10 @@ int ovs_execv_add_lan_nat(char *ovs, char *dpdk, char *lan, char *name);
 int ovs_execv_del_lan_nat(char *ovs, char *dpdk, char *lan, char *name);
 int ovs_execv_add_lan_d2d(char *ovs, char *dpdk, char *lan, char *name);
 int ovs_execv_del_lan_d2d(char *ovs, char *dpdk, char *lan, char *name);
+int ovs_execv_add_lan_a2b(char *ovs, char *dpdk, char *lan, char *name);
+int ovs_execv_del_lan_a2b(char *ovs, char *dpdk, char *lan, char *name);
+int ovs_execv_add_lan_b2a(char *ovs, char *dpdk, char *lan, char *name);
+int ovs_execv_del_lan_b2a(char *ovs, char *dpdk, char *lan, char *name);
 
 int ovs_execv_add_lan_eth(char *ovs_bin, char *dpdk_dir, char *lan_name,
                           char *vm_name, int num);
@@ -60,9 +63,14 @@ int ovs_execv_del_lan_tap(char *ovs_bin, char *dpdk_dir,
 
 int ovs_execv_get_tap_mac(char *name, char *mac);
 
-int ovs_execv_ovs_vswitchd(char *net, char *ovs_bin, char *dpdk_dir);
-int ovs_execv_ovsdb_server( char *net, char *ovs_bin, char *dpdk_dir,
-                            uint32_t lcore_mask, uint32_t socket_mem,
-                            uint32_t cpu_mask);
+int ovs_execv_ovs_vswitchd(char *net, char *ovs_bin, char *dpdk_dir,
+                           uint32_t lcore_mask, uint32_t socket_mem,
+                           uint32_t cpu_mask);
+int ovs_execv_ovsdb_server(char *net, char *ovs_bin, char *dpdk_dir,
+                           uint32_t lcore_mask, uint32_t socket_mem,
+                           uint32_t cpu_mask);
+
+char *get_pidfile_ovsdb(char *dpdk_dir);
+char *get_pidfile_ovs(char *dpdk_dir);
 
 void ovs_execv_init(void);

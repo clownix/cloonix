@@ -277,6 +277,48 @@ int fmt_tx_del_lan_nat(int tid, char *lan, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int fmt_tx_add_lan_a2b(int tid, char *lan, char *name, int num)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  if (num == 0)
+    {
+    snprintf(cmd, MAX_PATH_LEN-1,
+    "cloonixovs_add_lan_a2b lan=%s name=%s", lan, name);
+    }
+  else
+    {
+    snprintf(cmd, MAX_PATH_LEN-1,
+    "cloonixovs_add_lan_b2a lan=%s name=%s", lan, name);
+    }
+  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fmt_tx_del_lan_a2b(int tid, char *lan, char *name, int num)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  if (num == 0)
+    {
+    snprintf(cmd, MAX_PATH_LEN-1,
+    "cloonixovs_del_lan_a2b lan=%s name=%s", lan, name);
+    }
+  else
+    {
+    snprintf(cmd, MAX_PATH_LEN-1,
+    "cloonixovs_del_lan_b2a lan=%s name=%s", lan, name);
+    }
+  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int fmt_tx_add_lan_d2d(int tid, char *lan, char *name)
 {
   int result;
@@ -470,6 +512,24 @@ void fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
     dpdk_msg_ack_lan_endp(tid, lan, name, 0, 0, 1, "KO");
   else if (sscanf(line,"OK cloonixovs_del_lan_d2d lan=%s name=%s",lan,name)==2)
     dpdk_msg_ack_lan_endp(tid, lan, name, 0, 0, 0, "OK");
+
+  else if (sscanf(line,"KO cloonixovs_add_lan_a2b lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 0, 1, 1, "KO");
+  else if (sscanf(line,"OK cloonixovs_add_lan_a2b lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 0, 1, 0, "OK");
+  else if (sscanf(line,"KO cloonixovs_del_lan_a2b lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 0, 0, 1, "KO");
+  else if (sscanf(line,"OK cloonixovs_del_lan_a2b lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 0, 0, 0, "OK");
+
+  else if (sscanf(line,"KO cloonixovs_add_lan_b2a lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 1, 1, 1, "KO");
+  else if (sscanf(line,"OK cloonixovs_add_lan_b2a lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 1, 1, 0, "OK");
+  else if (sscanf(line,"KO cloonixovs_del_lan_b2a lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 1, 0, 1, "KO");
+  else if (sscanf(line,"OK cloonixovs_del_lan_b2a lan=%s name=%s",lan,name)==2)
+    dpdk_msg_ack_lan_endp(tid, lan, name, 1, 0, 0, "OK");
 
   else if (sscanf(line, "KO cloonixovs_add_lan_eth lan=%s name=%s num=%d",
                         lan, name, &num) == 3)

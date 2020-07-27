@@ -103,19 +103,24 @@ static t_tcp_flow *alloc_tcp_flow(uint32_t sip, uint32_t dip,
 
 {
   t_tcp_flow *cur = NULL;
-  cur = (t_tcp_flow *) malloc(sizeof(t_tcp_flow));
-  memset(cur, 0, sizeof(t_tcp_flow));
-  cur->sip = sip;
-  cur->dip = dip;
-  cur->sport = sport;
-  cur->dport = dport;
-  memcpy(cur->smac, smac, 6);
-  memcpy(cur->dmac, dmac, 6);
-  memcpy(&(cur->tcp_hdr), tcp_h, sizeof(struct rte_tcp_hdr));
-  if (g_head_tcp_flow)
-    g_head_tcp_flow->prev = cur;
-  cur->next = g_head_tcp_flow;
-  g_head_tcp_flow = cur;
+  cur = (t_tcp_flow *) rte_malloc(NULL, sizeof(t_tcp_flow), 0);
+  if (cur == NULL)
+    KERR(" ");
+  else
+    {
+    memset(cur, 0, sizeof(t_tcp_flow));
+    cur->sip = sip;
+    cur->dip = dip;
+    cur->sport = sport;
+    cur->dport = dport;
+    memcpy(cur->smac, smac, 6);
+    memcpy(cur->dmac, dmac, 6);
+    memcpy(&(cur->tcp_hdr), tcp_h, sizeof(struct rte_tcp_hdr));
+    if (g_head_tcp_flow)
+      g_head_tcp_flow->prev = cur;
+    cur->next = g_head_tcp_flow;
+    g_head_tcp_flow = cur;
+    }
   return cur;
 }
 /*--------------------------------------------------------------------------*/
@@ -135,7 +140,7 @@ static void free_tcp_flow(t_tcp_flow *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_tcp_flow)
     g_head_tcp_flow = cur->next;
-  free(cur);
+  rte_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -260,7 +265,13 @@ void tcp_connect_resp(uint32_t sip, uint32_t dip,
       cur->llid = llid;
       cur->flagseq = tcp_flagseq_begin(sip, dip, sport, dport, cur->smac,
                                        cur->dmac, &(cur->tcp_hdr), 0);
-      memset(&(cur->tcp_hdr), 0, sizeof(struct rte_tcp_hdr));
+      if (cur->flagseq == NULL)
+        {
+        KERR("%X %X %hu %hu", sip, dip, sport, dport);
+        destroy_tcp_flow(cur);
+        }
+      else
+        memset(&(cur->tcp_hdr), 0, sizeof(struct rte_tcp_hdr));
       }
     }
 }

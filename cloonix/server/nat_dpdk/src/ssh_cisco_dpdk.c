@@ -110,18 +110,24 @@ static t_arp *find_arp(int dip)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void alloc_arp(uint32_t dip, uint16_t dport, int llid, char *vm)
+static t_arp *alloc_arp(uint32_t dip, uint16_t dport, int llid, char *vm)
 {
-  t_arp *arp = (t_arp *) malloc(sizeof(t_arp));
-  memset(arp, 0, sizeof(t_arp));
-  arp->dip = dip;
-  arp->dport = dport;
-  arp->llid = llid;
-  strncpy(arp->vm, vm, MAX_NAME_LEN-1);
-  if (g_head_arp)
-    g_head_arp->prev = arp;
-  arp->next = g_head_arp;
-  g_head_arp = arp;
+  t_arp *arp = (t_arp *) rte_malloc(NULL, sizeof(t_arp), 0);
+  if (arp == NULL)
+    KERR(" ");
+  else
+    {
+    memset(arp, 0, sizeof(t_arp));
+    arp->dip = dip;
+    arp->dport = dport;
+    arp->llid = llid;
+    strncpy(arp->vm, vm, MAX_NAME_LEN-1);
+    if (g_head_arp)
+      g_head_arp->prev = arp;
+    arp->next = g_head_arp;
+    g_head_arp = arp;
+    }
+  return arp;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -134,7 +140,7 @@ static void free_arp(t_arp *arp)
     arp->next->prev = arp->prev;
   if (arp == g_head_arp)
     g_head_arp = arp->next;
-  free(arp);
+  rte_free(arp);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -182,17 +188,22 @@ static t_cnx *find_cnx(int llid)
 static t_cnx *alloc_cnx(int llid, uint32_t sip, uint32_t dip,
                         uint16_t sport, uint16_t dport)
 {
-  t_cnx *cur = (t_cnx *) malloc(sizeof(t_cnx));
-  memset(cur, 0, sizeof(t_cnx));
-  cur->llid = llid;
-  cur->sip = sip;
-  cur->dip = dip;
-  cur->sport = sport;
-  cur->dport = dport;
-  if (g_head_cnx)
-    g_head_cnx->prev = cur;
-  cur->next = g_head_cnx;
-  g_head_cnx = cur;
+  t_cnx *cur = (t_cnx *) rte_malloc(NULL, sizeof(t_cnx), 0);
+  if (cur == NULL)
+    KERR(" ");
+  else
+    {
+    memset(cur, 0, sizeof(t_cnx));
+    cur->llid = llid;
+    cur->sip = sip;
+    cur->dip = dip;
+    cur->sport = sport;
+    cur->dport = dport;
+    if (g_head_cnx)
+      g_head_cnx->prev = cur;
+    cur->next = g_head_cnx;
+    g_head_cnx = cur;
+    }
   return cur;
 }
 /*--------------------------------------------------------------------------*/
@@ -218,7 +229,7 @@ static void free_cnx(t_cnx *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_cnx)
     g_head_cnx = cur->next;
-  free(cur);
+  rte_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -323,6 +334,7 @@ void ssh_cisco_dpdk_arp_resp(uint8_t *dmac, uint32_t dip)
   uint8_t smac[6];
   char vm[MAX_NAME_LEN];
   int llid;
+  t_flagseq *flagseq;
   if (!arp)
     KERR("%X", dip);
   else
@@ -341,11 +353,22 @@ void ssh_cisco_dpdk_arp_resp(uint8_t *dmac, uint32_t dip)
       KERR("%X", dip);
     else
       {
-      req_unix2inet_conpath_evt(llid, vm);
-      cur = alloc_cnx(llid, sip, dip, sport, dport);
-      memcpy(cur->smac, smac, 6);
-      memcpy(cur->dmac, dmac, 6);
-      cur->flagseq = tcp_flagseq_begin(dip,sip,dport,sport,dmac,smac,NULL,1);
+      flagseq = tcp_flagseq_begin(dip,sip,dport,sport,dmac,smac,NULL,1);
+      if (flagseq == NULL)
+        KERR("%X", dip);
+      else
+        {
+        cur = alloc_cnx(llid, sip, dip, sport, dport);
+        if (cur == NULL)
+          KERR("%X", dip);
+        else
+          { 
+          req_unix2inet_conpath_evt(llid, vm);
+          memcpy(cur->smac, smac, 6);
+          memcpy(cur->dmac, dmac, 6);
+          cur->flagseq = flagseq;
+          }
+        }
       }
     }
 }
@@ -379,7 +402,10 @@ void ssh_cisco_dpdk_connect(int llid, char *vm, uint32_t dip, uint16_t dport)
     if (arp)
       KERR("%X %hu", dip, dport);
     else
-      alloc_arp(dip, dport, llid, vm);
+      {
+      if (alloc_arp(dip, dport, llid, vm) == NULL)
+        KERR("%X %hu", dip, dport);
+      }
     } 
 }
 /*--------------------------------------------------------------------------*/

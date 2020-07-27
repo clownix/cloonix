@@ -16,7 +16,7 @@
 /*                                                                           */
 /*****************************************************************************/
 void snf_dpdk_llid_closed(int llid);
-void snf_dpdk_process_possible_change(char *lan);
+void snf_dpdk_process_possible_change();
 void snf_dpdk_pid_resp(int llid, int tid, char *name, int pid);
 int  snf_dpdk_get_all_pid(t_lst_pid **lst_pid);
 int  snf_dpdk_diag_llid(int llid);

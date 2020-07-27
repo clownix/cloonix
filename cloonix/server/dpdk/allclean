@@ -5,7 +5,8 @@ for i in dpdk_tainted dpdk ovs ; do
   rm -rf ${HERE}/$i
 done
 
-for i in usr etc bin include lib sbin share var x86_64-linux-gnu; do
+for i in usr etc bin include lib sbin static_lib \
+         share var x86_64-linux-gnu; do
   rm -rf ${HERE}/$i
 done
 

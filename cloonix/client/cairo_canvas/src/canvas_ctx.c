@@ -191,6 +191,19 @@ static void call_cloonix_interface_d2d_create(double x, double y)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void call_cloonix_interface_a2b_create(double x, double y)
+{
+  double x0=x, y0=y;
+  static int num = 1;
+  char name[MAX_NAME_LEN];
+  memset(name, 0, MAX_NAME_LEN);
+  snprintf(name, MAX_NAME_LEN-1, "a2b%d", num++);
+  topo_get_matrix_inv_transform_point(&x0, &y0);
+  to_cloonix_switch_create_sat(name, endp_type_a2b, NULL, NULL, x0, y0);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void call_cloonix_interface_node_create(double x, double y)
 {
   int rest, i;
@@ -499,6 +512,12 @@ static void d2d_act(void)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void a2b_act(void)
+{
+  call_cloonix_interface_a2b_create(g_x_mouse, g_y_mouse);
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void nat_act(void)
@@ -792,6 +811,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *snf  = gtk_menu_item_new_with_label("snf");
   GtkWidget *tap  = gtk_menu_item_new_with_label("tap");
   GtkWidget *d2d  = gtk_menu_item_new_with_label("d2d");
+  GtkWidget *a2b  = gtk_menu_item_new_with_label("a2b");
   GtkWidget *phy  = gtk_menu_item_new_with_label("phy");
   GtkWidget *pci  = gtk_menu_item_new_with_label("pci");
   GtkWidget *ovs  = gtk_menu_item_new_with_label("ovs");
@@ -810,6 +830,8 @@ void canvas_ctx_menu(gdouble x, gdouble y)
                           (GCallback)snf_act, NULL);
   g_signal_connect_swapped(G_OBJECT(d2d), "activate",
                           (GCallback)d2d_act, NULL);
+  g_signal_connect_swapped(G_OBJECT(a2b), "activate",
+                          (GCallback)a2b_act, NULL);
   g_signal_connect_swapped(G_OBJECT(nat), "activate",
                           (GCallback)nat_act, NULL);
   g_signal_connect_swapped(G_OBJECT(kvm_conf), "activate",
@@ -825,6 +847,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), snf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), tap);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), d2d);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), a2b);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), phy);
   phy_sub_menu(phy);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), pci);

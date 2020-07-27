@@ -22,6 +22,8 @@
 #include <sys/queue.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
+
 
 
 #define ALLOW_EXPERIMENTAL_API
@@ -61,7 +63,8 @@ static char g_runtime[MAX_PATH_LEN];
 static char g_prefix[MAX_PATH_LEN];
 static char g_ctrl_path[MAX_PATH_LEN];
 static char g_cisco_path[MAX_PATH_LEN];
-static char *g_rte_argv[6];
+static char *g_rte_argv[7];
+static uint32_t g_cpu_flags;
 /*--------------------------------------------------------------------------*/
 
 #define RANDOM_APPEND_SIZE 8
@@ -70,6 +73,9 @@ static char *random_str(void)
 {
   static char rd[RANDOM_APPEND_SIZE+1];
   int i;
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  srand(ts.tv_nsec);
   memset (rd, 0 , RANDOM_APPEND_SIZE+1);
   for (i=0; i<RANDOM_APPEND_SIZE; i++)
     rd[i] = 'A' + (rand() % 26);
@@ -223,7 +229,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       {
       rpct_send_diag_msg(NULL, llid, tid, "cloonixnat_suidroot_ok");
       setenv("XDG_RUNTIME_DIR", g_runtime, 1);
-      ret = rte_eal_init(4, g_rte_argv);
+      ret = rte_eal_init(5, g_rte_argv);
       if (ret < 0)
         KOUT("Cannot init EAL\n");
       machine_init();
@@ -296,13 +302,30 @@ static void fct_timeout_self_destruct(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static char *get_cpu_from_flags(uint32_t flags)
+{
+  static char g_lcore_cpu[MAX_NAME_LEN];
+  int i, cpu;
+  for (i=0; i<64; i++)
+    {
+    if ((flags >> i) & 0x01)
+      break;
+    }
+  cpu = i;
+  memset(g_lcore_cpu, 0, MAX_NAME_LEN);
+  snprintf(g_lcore_cpu, MAX_NAME_LEN-1, "--lcores=0@0,%d@%d", cpu, cpu);
+  return g_lcore_cpu;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int main (int argc, char *argv[])
 {
   char *root = g_root_path;
   char *sock = ENDP_SOCK_DIR;
   char *net = g_net_name;
   char *nat = g_nat_name;
-  if (argc != 4)
+  if (argc != 5)
     KOUT("%d", argc);
   g_llid = 0;
   g_watchdog_ok = 0;
@@ -323,6 +346,7 @@ int main (int argc, char *argv[])
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, nat);
   snprintf(g_cisco_path, MAX_PATH_LEN-1,"%s/%s/%s_0_u2i", root, sock, nat);
   snprintf(g_memid, MAX_NAME_LEN-1, "%s%s%s", net, nat, random_str());
+  sscanf(argv[4], "%X", &g_cpu_flags);
   if (!access(g_ctrl_path, F_OK))
     {
     KERR("%s exists ERASING", g_ctrl_path);
@@ -333,6 +357,7 @@ int main (int argc, char *argv[])
     KERR("%s exists ERASING", g_cisco_path);
     unlink(g_cisco_path);
     }
+  vhost_client_init();
   msg_mngt_init("nat_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
   string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");
@@ -340,7 +365,8 @@ int main (int argc, char *argv[])
   g_rte_argv[1] = g_prefix;
   g_rte_argv[2] = "--proc-type=secondary";
   g_rte_argv[3] = "--log-level=5";
-  g_rte_argv[4] = NULL;
+  g_rte_argv[4] = get_cpu_from_flags(g_cpu_flags);
+  g_rte_argv[5] = NULL;
   daemon(0,0);
   utils_init();
   seteuid(getuid());

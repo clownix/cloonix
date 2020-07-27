@@ -57,12 +57,14 @@
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
 #include "dpdk_d2d.h"
+#include "dpdk_a2b.h"
 #include "suid_power.h"
 #include "vhost_eth.h"
 #include "edp_mngt.h"
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
 #include "d2d_dpdk_process.h"
+#include "a2b_dpdk_process.h"
 #include "list_commands.h"
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
@@ -590,6 +592,12 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     {
     eth_tab = vm->kvm.eth_table;
     vm_id = vm->kvm.vm_id;
+    if (num >= vm->kvm.nb_tot_eth)
+      {
+      KERR("%s %s", name, lan); 
+      send_status_ko(llid, tid, info);
+      return;
+      }
     }
   if (edp_mngt_exists(name, &endp_type))
     {
@@ -601,6 +609,16 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
   else if (dpdk_d2d_find(name))
     {
     dpdk_d2d_add_lan(llid, tid, name, lan);
+    }
+  else if (dpdk_a2b_exists(name))
+    {
+    if ((num != 0) && (num != 1))
+      {
+      KERR("%s %s %d", name, lan, num); 
+      send_status_ko(llid, tid, "only 0 or 1 for a2b");
+      }
+    else
+      dpdk_a2b_add_lan(llid, tid, name, num, lan);
     }
   else if ((vm) &&
            (eth_tab[num].eth_type != eth_type_sock) &&
@@ -874,6 +892,10 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   else if (dpdk_d2d_lan_exists_in_d2d(name, lan, 0))
     {
     dpdk_d2d_del_lan(llid, tid, name, lan);
+    }
+  else if (dpdk_a2b_lan_exists_in_a2b(name, num, lan))
+    {
+    dpdk_a2b_del_lan(llid, tid, name, num, lan);
     }
   else if (!lan_get_with_name(lan))
     {
@@ -1484,13 +1506,14 @@ void recv_list_commands_req(int llid, int tid, int is_layout)
 t_pid_lst *create_list_pid(int *nb)
 {
   int i,j, nb_vm, nb_endp, nb_sum, nb_mulan, nb_ovs;
-  int nb_snf_dpdk, nb_nat_dpdk, nb_d2d_dpdk;
+  int nb_snf_dpdk, nb_nat_dpdk, nb_d2d_dpdk, nb_a2b_dpdk;
   t_lst_pid *ovs_pid = NULL;
   t_lst_pid *endp_pid = NULL;
   t_lst_pid *mulan_pid = NULL;
   t_lst_pid *snf_dpdk_pid = NULL;
   t_lst_pid *nat_dpdk_pid = NULL;
   t_lst_pid *d2d_dpdk_pid = NULL;
+  t_lst_pid *a2b_dpdk_pid = NULL;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_pid_lst *lst;
   nb_endp  = endp_mngt_get_all_pid(&endp_pid);
@@ -1498,9 +1521,10 @@ t_pid_lst *create_list_pid(int *nb)
   nb_snf_dpdk = snf_dpdk_get_all_pid(&snf_dpdk_pid);
   nb_nat_dpdk = nat_dpdk_get_all_pid(&nat_dpdk_pid);
   nb_d2d_dpdk = d2d_dpdk_get_all_pid(&d2d_dpdk_pid);
+  nb_a2b_dpdk = a2b_dpdk_get_all_pid(&a2b_dpdk_pid);
   nb_ovs   = dpdk_ovs_get_all_pid(&ovs_pid);
   nb_sum   = nb_ovs + nb_vm + nb_endp + nb_mulan + 10;
-  nb_sum   += nb_snf_dpdk + nb_nat_dpdk + nb_d2d_dpdk;
+  nb_sum   += nb_snf_dpdk + nb_nat_dpdk + nb_d2d_dpdk + nb_a2b_dpdk;
   lst = (t_pid_lst *)clownix_malloc(nb_sum*sizeof(t_pid_lst),18);
   memset(lst, 0, nb_sum*sizeof(t_pid_lst));
   for (i=0, j=0; i<nb_vm; i++)
@@ -1543,6 +1567,15 @@ t_pid_lst *create_list_pid(int *nb)
     j++;
     }
   clownix_free(nat_dpdk_pid, __FUNCTION__);
+
+  for (i=0 ; i<nb_a2b_dpdk; i++)
+    {
+    strncpy(lst[j].name, a2b_dpdk_pid[i].name, MAX_NAME_LEN-1);
+    lst[j].pid = a2b_dpdk_pid[i].pid;
+    j++;
+    }
+  clownix_free(a2b_dpdk_pid, __FUNCTION__);
+
   for (i=0 ; i<nb_d2d_dpdk; i++)
     {
     strncpy(lst[j].name, d2d_dpdk_pid[i].name, MAX_NAME_LEN-1);
@@ -1840,15 +1873,6 @@ void local_add_sat(int llid, int tid, char *name, int type,
       endp_mngt_stop(name, 0);
       }
     }
-  else if (type == endp_type_a2b)
-    {
-    if (endp_mngt_start(llid, tid, name, 1, type))
-      {
-      endp_mngt_stop(name, 0);
-      sprintf( info, "Bad start of %s", name);
-      send_status_ko(llid, tid, info);
-      }
-    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1869,7 +1893,6 @@ void recv_add_sat(int llid, int tid, char *name, int type,
            (type != endp_type_nat) &&
            (type != endp_type_snf) &&
            (type != endp_type_c2c) &&
-           (type != endp_type_a2b) &&
            (type != endp_type_wif))
     {
     sprintf(info, "%s Bad type: %d", name, type);
@@ -1904,6 +1927,13 @@ void recv_del_sat(int llid, int tid, char *name)
       send_status_ko(llid, tid, "KO");
       }
     }
+  else if (dpdk_a2b_exists(name))
+    {
+    if (dpdk_a2b_del(name))
+      send_status_ko(llid, tid, "a2b delete fail");
+    else
+      send_status_ok(llid, tid, "");
+    }
   else if (!endp_mngt_exists(name, 0, &type))
     {
     snprintf(info, MAX_PATH_LEN-1, "sat %s not found", name);
@@ -1916,11 +1946,6 @@ void recv_del_sat(int llid, int tid, char *name)
     }
   else 
     {
-    if (type == endp_type_a2b)
-      {
-      if (endp_mngt_stop(name, 1))
-        KERR("%s", name);
-      }
     if (endp_mngt_stop(name, 0))
       KERR("%s", name);
     send_status_ok(llid, tid, "del usat");
@@ -1992,6 +2017,67 @@ void recv_qmp_req(int llid, int tid, char *name, char *msg)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_a2b_add(int llid, int tid, char *name)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char err[MAX_PATH_LEN];
+  event_print("Rx Req add a2b %s", name);
+  if (get_inhib_new_clients())
+    {
+    KERR("%s %s", locnet, name);
+    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    }
+  else if (cfg_name_is_in_use(0, name, err))
+    {
+    KERR("%s %s", locnet, name);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    if (dpdk_a2b_add(llid, tid, name))
+      {
+      KERR("%s %s", locnet, name);
+      send_status_ko(llid, tid, "dpdk_a2b_add ko");
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
+{
+  char err[MAX_PATH_LEN];
+  memset(err, 0, MAX_PATH_LEN);
+  event_print("Rx Req cnf a2b %s dir:%d type:%d val:%d",name,dir,type,val);
+  KERR("%s %d %d %d ", name, dir, type, val);
+  if (!dpdk_a2b_exists(name))
+    {
+    snprintf(err, MAX_PATH_LEN-1, "A2B %s not found", name);
+    send_status_ko(llid, tid, err);
+    }
+  else if ((dir != 0) && (dir != 1))
+    {
+    snprintf(err, MAX_PATH_LEN-1, "A2B %s wrong dir 0 or 1", name);
+    send_status_ko(llid, tid, err);
+    }
+  else if ((type != a2b_type_delay) &&
+           (type != a2b_type_loss)  &&
+           (type != a2b_type_qsize)  &&
+           (type != a2b_type_bsize)  &&
+           (type != a2b_type_brate))
+    {
+    snprintf(err, MAX_PATH_LEN-1, "A2B %s wrong type %d", name, type);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    dpdk_a2b_cnf(name, dir, type, val);
+    send_status_ok(llid, tid, "");
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_d2d_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                   char *dist, uint32_t dist_ip, uint16_t dist_port,
                   char *dist_passwd, uint32_t dist_udp_ip)
@@ -2027,7 +2113,7 @@ void recv_d2d_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
 
 /*****************************************************************************/
 void recv_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_d2d_mac *tabmac)
+                       int nb_mac, t_peer_mac *tabmac)
 {
   dpdk_d2d_peer_mac(llid, tid, d2d_name, nb_mac, tabmac);
 }

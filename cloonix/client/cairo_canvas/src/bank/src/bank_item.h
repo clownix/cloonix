@@ -40,7 +40,8 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
 int add_new_eth(char *name, int num, int is_eth,
                  double x, double y, int hidden_on_graph);
 int add_new_lan(char *name, double x, double y, int hidden_on_graph);
-int add_new_sat(char *name, int mutype, t_topo_c2c *c2c, t_topo_d2d *d2d, 
+int add_new_sat(char *name, int mutype, t_topo_c2c *c2c, 
+                t_topo_d2d *d2d, t_topo_a2b *a2b, 
                 double x, double y, int hidden_on_graph);
 void add_new_edge(t_bank_item *bi_eth, t_bank_item *bi_lan, int eorig);
 

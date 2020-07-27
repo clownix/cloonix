@@ -32,7 +32,7 @@ long long cloonix_get_msec(void)
 {
   struct timespec ts;
   long long result;
-  if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC_COARSE, &ts))
+  if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &ts))
     KOUT(" ");
   result = (long long) (ts.tv_sec);
   result *= 1000;

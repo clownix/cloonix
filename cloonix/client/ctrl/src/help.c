@@ -232,27 +232,16 @@ void help_event_hop(char *line)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void help_a2b_config(char *line)
+void help_cnf_a2b(char *line)
 {
-  printf("\n\n%s <name> <cmd> <dir> <val>\n", line);
+  printf("\n\n%s <name> <dir> <cmd> <val>\n", line);
   printf("\nname is the a2b name.");
-  printf("\ncmd =  \"loss\" \"delay\" \"qsize\" \"bsize\" \"brate\"");
-  printf("\ndir =  \"A2B\" \"B2A\"");
+  printf("\ndir =  0 or 1");
+  printf("\ncmd =  \"loss\" \"delay\" \"rate\"");
   printf("\nval is an integer.\n");
   printf("\nloss: 0 = no loss 10000 = all lost.\n");
   printf("\ndelay: milli-sec.\n");
-  printf("\nqsize : octets that can be put in waiting queue.\n");
-  printf("\nbsize : max octets to fill the bucket.\n");
-  printf("\nbrate : octets per second throughput.\n");
-  printf("\n\n");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_a2b_dump(char *line)
-{
-  printf("\n\n%s <name>\n", line);
-  printf("\nname is the a2b name.");
+  printf("\nrate : kilo-octets per second throughput.\n");
   printf("\n\n");
 }
 /*---------------------------------------------------------------------------*/

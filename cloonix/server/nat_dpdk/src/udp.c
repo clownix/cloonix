@@ -214,20 +214,25 @@ static t_udp_flow *alloc_udp_flow(uint32_t sip, uint32_t dip,
   int llid = open_udp_sock(&fd);
   if (llid)
     {
-    cur = (t_udp_flow *) malloc(sizeof(t_udp_flow));
-    memset(cur, 0, sizeof(t_udp_flow));
-    cur->sip = sip;
-    cur->dip = dip;
-    cur->sport = sport;
-    cur->dport = dport;
-    cur->smac = smac;
-    cur->dmac = dmac;
-    cur->llid = llid;
-    cur->fd = fd;
-    if (g_head_udp_flow)
-      g_head_udp_flow->prev = cur;
-    cur->next = g_head_udp_flow;
-    g_head_udp_flow = cur;
+    cur = (t_udp_flow *) rte_malloc(NULL, sizeof(t_udp_flow), 0);
+    if (cur == NULL)
+      KERR(" ");
+    else
+      {
+      memset(cur, 0, sizeof(t_udp_flow));
+      cur->sip = sip;
+      cur->dip = dip;
+      cur->sport = sport;
+      cur->dport = dport;
+      cur->smac = smac;
+      cur->dmac = dmac;
+      cur->llid = llid;
+      cur->fd = fd;
+      if (g_head_udp_flow)
+        g_head_udp_flow->prev = cur;
+      cur->next = g_head_udp_flow;
+      g_head_udp_flow = cur;
+      }
     }
   return cur;
 }
@@ -249,7 +254,7 @@ static void free_udp_flow(t_udp_flow *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_udp_flow)
     g_head_udp_flow = cur->next;
-  free(cur);
+  rte_free(cur);
 }
 /*---------------------------------------------------------------------------*/
 

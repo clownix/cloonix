@@ -244,7 +244,7 @@ void wrap_send_d2d_peer_ping(t_d2d_cnx *cur, int status)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void wrap_send_d2d_peer_mac(t_d2d_cnx *cur, int nb_mac, t_d2d_mac *tabmac)
+void wrap_send_d2d_peer_mac(t_d2d_cnx *cur, int nb_mac, t_peer_mac *tabmac)
 {
   if (msg_exist_channel(cur->peer_llid))
     {

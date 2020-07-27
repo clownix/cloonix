@@ -760,9 +760,8 @@ static void on_item_paint_nat(CrItem *item, cairo_t *c)
 /****************************************************************************/
 static void on_item_paint_eth(CrItem *item, cairo_t *c)
 {
-  int flag, flag_trace, flag_grabbed, eth_type;
+  int flag, flag_trace, flag_grabbed;
   t_bank_item *bitem = from_critem_to_bank_item(item);
-  t_pbi_node *pbi;
   flag = bitem->pbi.flag;
   flag_trace = bitem->pbi.flag_trace;
   flag_grabbed = bitem->pbi.grabbed;
@@ -782,25 +781,16 @@ static void on_item_paint_eth(CrItem *item, cairo_t *c)
   cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, INTF_DIA/2, 0, 2*M_PI);
   if (bitem->bank_type == bank_type_eth)
     {
-    if ((!bitem->att_node) || (!bitem->att_node->pbi.pbi_node))
-      {
+    if (bitem->pbi.mutype == endp_type_kvm_sock)
       paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
-      }
+    else if (bitem->pbi.mutype == endp_type_kvm_dpdk)
+      paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
+    else if (bitem->pbi.mutype == endp_type_kvm_vhost)
+      paint_select(c,flag,flag_trace,&lightcyan,&red,&lightmagenta);
+    else if (bitem->pbi.mutype == endp_type_kvm_wlan)
+      paint_select(c,flag,flag_trace,&lightblue,&red,&lightmagenta);
     else
-      {
-      pbi = bitem->att_node->pbi.pbi_node;
-      eth_type = pbi->eth_tab[bitem->num].eth_type;
-      if (eth_type == eth_type_sock)
-        paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
-      else if (eth_type == eth_type_dpdk)
-        paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
-      else if (eth_type == eth_type_vhost)
-        paint_select(c,flag,flag_trace,&lightcyan,&red,&lightmagenta);
-      else if (eth_type == eth_type_wlan)
-        paint_select(c,flag,flag_trace,&lightblue,&red,&lightmagenta);
-      else
-        KOUT("%d %d %d", bitem->num, pbi->nb_tot_eth, eth_type);
-      }
+      KOUT("%d", bitem->pbi.mutype);
     }
   else
     KOUT("%d", bitem->bank_type);

@@ -19,10 +19,18 @@ tar xvf ${TARGZSTORE}/${NAMEZ}
 cd ${HERE}/${NAME}
 patch -p1 < ${HERE}/ovs.patch
 ./boot.sh
+rm -rf .git
+export DPDK_NETDEV=1
 export PKG_CONFIG_PATH=${DPDK}/lib/pkgconfig
-export DPDK_LIBS="$(pkg-config --libs --static libdpdk)"
-sed -i s"%-ldpdk%${DPDK_LIBS}%" ./configure
-./configure CFLAGS="-mavx" --prefix=${HERE} --with-dpdk=${DPDK}
+CFLAGS="-I${DPDK}/include -DALLOW_EXPERIMENTAL_API "
+CFLAGS+="-pthread -lm -ldl -lnuma -lpcap -lrt -fPIC -lunwind"
+export CFLAGS=$CFLAGS
+export LDFLAGS="-L${DPDK}/lib -fPIC"
+export DPDK_INCLUDES="$(pkg-config --cflags libdpdk)"
+export DPDK_LIBS="$(pkg-config --libs libdpdk)"
+
+./configure  --prefix=${HERE} --with-dpdk=${DPDK}
+
 make -j 6
 cd ${HERE}
 
@@ -39,6 +47,7 @@ cp -f ${HERE}/${NAME}/vswitchd/ovs-vswitchd ${DPDK}/bin
 mkdir -p ${DPDK}/share/openvswitch
 cp -f ${HERE}/${NAME}/vswitchd/vswitch.ovsschema ${DPDK}/share/openvswitch
 
+exit
 for i in ovs_tainted ovs ; do
   rm -rf ${HERE}/$i
 done

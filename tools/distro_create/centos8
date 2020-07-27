@@ -3,7 +3,6 @@ set -e
 HERE=`pwd`
 ROOTFS=/root/centos8
 MIRROR=https://mirrors.edge.kernel.org/centos/8
-#MIRROR=http://127.0.0.1/centos8
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -177,10 +176,6 @@ EOF
 cd /tmp/wkmntloops/etc/systemd/system/getty.target.wants
 ln -s /etc/systemd/system/serial-getty@hvc0.service serial-getty@hvc0.service
 cd ${HERE}
-#-----------------------------------------------------------------------#
-sed -i s"/127.0.0.1/172.17.0.2/" /tmp/wkmntloops/etc/yum.repos.d/CentOS-Base.repo
-sed -i s"/127.0.0.1/172.17.0.2/" /tmp/wkmntloops/etc/yum.repos.d/CentOS-AppStream.repo
-sed -i s"/127.0.0.1/172.17.0.2/" /tmp/wkmntloops/etc/yum.repos.d/CentOS-Extras.repo
 #-----------------------------------------------------------------------#
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#

@@ -446,7 +446,6 @@ t_topo_pci *net_pci_get(int *nb)
         if (strlen(pci.unused) <= 1)
           {
           strncpy(pci.unused, "none", MAX_NAME_LEN-1);
-          KERR("%s", line);
           }
         }
 

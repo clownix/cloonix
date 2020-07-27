@@ -17,7 +17,7 @@
 /*****************************************************************************/
 int dpdk_tap_eventfull(char *name, int ms, int ptx, int btx, int prx, int brx);
 int dpdk_tap_collect_dpdk(t_eventfull_endp *eventfull);
-char *dpdk_tap_get_next_matching_lan(char *lan, char *name);
+char *dpdk_tap_get_next(char *name);
 char *dpdk_tap_get_mac(char *name);
 void dpdk_tap_resp_add_lan(int is_ko, char *lan, char *name);
 void dpdk_tap_resp_del_lan(int is_ko, char *lan, char *name);

@@ -31,8 +31,8 @@ fct_get_debian_packages()
 		     sudo zlib1g-dev liborc-0.4-dev libegl1-mesa-dev \
                      libdrm-dev bison flex libjson-glib-dev libsasl2-dev \
                      libnuma-dev libpixman-1-dev libpcap-dev libmnl-dev \
-                     libibverbs-dev xorriso wireshark \
-                     liblz4-dev libcacard-dev pciutils
+                     libibverbs-dev xorriso wireshark liblz4-dev \
+                     libcacard-dev pciutils libunwind-dev
 
 }
 #--------------------------------------------------------------------------
@@ -48,7 +48,8 @@ fct_get_redhat_packages()
          mesa-libEGL-devel bison flex wireshark libusbx-devel bzip2 \
          python3-pyparsing numactl-devel json-glib-devel \
          mesa-libgbm-devel opus-devel lz4-devel libcacard-devel \
-         libffi-devel libdrm-devel pciutils
+         libffi-devel libdrm-devel pciutils libpcap-devel \
+         libunwind-devel rxvt-unicode
 
 }
 #--------------------------------------------------------------------------
@@ -64,7 +65,8 @@ fct_get_opensuse_packages()
          Mesa-libEGL-devel bison flex wireshark python3-pyparsing \
          libnuma-devel json-glib-devel bzip2 libgbm-devel \
          libopus-devel rxvt-unicode xorriso libdrm-devel \
-         liblz4-devel libcacard-devel pciutils
+         liblz4-devel libcacard-devel pciutils libpcap-devel \
+         libunwind-devel rxvt-unicode
 }
 #--------------------------------------------------------------------------
 if [ $UID != 0 ]; then
@@ -77,7 +79,13 @@ case "$name" in
     apt-get --assume-yes update
     fct_get_debian_packages
   ;;
-  "Red" | "CentOS" | "Fedora")
+  "Red" | "CentOS")
+    printf "\n\tInstall tool is dnf.\n\n"
+    dnf update -y
+    dnf -y install epel-release.noarch
+    fct_get_redhat_packages
+  ;;
+  "Fedora")
     printf "\n\tInstall tool is dnf.\n\n"
     dnf update -y
     fct_get_redhat_packages

@@ -495,11 +495,8 @@ int endp_evt_add_lan(int llid, int tid, char *name, int num,
            (endp_type != endp_type_snf) &&
            (endp_type != endp_type_c2c) &&
            (endp_type != endp_type_nat) &&
-           (endp_type != endp_type_a2b) &&
            (endp_type != endp_type_kvm_sock)  &&
-           (endp_type != endp_type_kvm_dpdk)  &&
-           (endp_type != endp_type_kvm_vhost) &&
-           (endp_type != endp_type_kvm_wlan)  &&
+           (endp_type != endp_type_kvm_wlan) &&
            (endp_type != endp_type_wif))
     KOUT("%d", endp_type);
   else if (!endp_mngt_connection_state_is_restfull(name, num))

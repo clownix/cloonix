@@ -30,6 +30,7 @@
 #include "llid_trace.h"
 #include "dpdk_tap.h"
 #include "dpdk_d2d.h"
+#include "dpdk_a2b.h"
 #include "edp_mngt.h"
 
 #define MAX_MS_OF_INSERT 3600000
@@ -554,7 +555,8 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
   int endp_type;
   if ((!endp_mngt_exists(layout->name, 0, &endp_type)) &&
       (!edp_mngt_exists(layout->name, &endp_type)) &&
-      (!dpdk_d2d_find(layout->name)))
+      (!dpdk_d2d_find(layout->name)) &&
+      (!dpdk_a2b_exists(layout->name)))
     KERR("%s", layout->name);
   else
     {

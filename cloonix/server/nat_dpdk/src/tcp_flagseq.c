@@ -323,12 +323,12 @@ void tcp_flagseq_to_dpdk_data(t_flagseq *cur, int data_len, uint8_t *data)
       }
     else
       {
-      free(data);
+      rte_free(data);
       }
     }
   else
     {
-    free(data);
+    rte_free(data);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -443,34 +443,39 @@ t_flagseq *tcp_flagseq_begin(uint32_t sip,   uint32_t dip,
                              int is_ssh_cisco)
 {
   uint32_t seq = 0;
-  t_flagseq *cur = (t_flagseq *) malloc(sizeof(t_flagseq));
-  memset(cur, 0, sizeof(t_flagseq));
-  tcp_qstore_init(cur);
-  if (is_ssh_cisco == 0)
-    seq = rte_be_to_cpu_32(tcp_hdr->sent_seq);
-  cur->sip   = sip; 
-  cur->dip   = dip; 
-  cur->sport = sport; 
-  cur->dport = dport; 
-  cur->is_ssh_cisco = is_ssh_cisco;
-  cur->local_seq = 1;
-  cur->distant_seq = seq;
-  memcpy(cur->smac, smac, 6);
-  memcpy(cur->dmac, dmac, 6);
-  if (is_ssh_cisco == 0)
-    {
-    if (tcp_hdr->tcp_flags != RTE_TCP_SYN_FLAG)
-      KERR("%X %X %hu %hu flags:%X", cur->sip, cur->dip,
-            cur->sport, cur->dport, tcp_hdr->tcp_flags & 0xFF);
-    else
-      {
-      update_flagseq_tcp_hdr(cur, tcp_hdr, 0);
-      transmit_flags_back(cur, RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG);
-      }
-    }
+  t_flagseq *cur = (t_flagseq *) rte_malloc(NULL, sizeof(t_flagseq), 0);
+  if (cur == NULL)
+    KERR(" ");
   else
     {
-    transmit_flags_back(cur, RTE_TCP_SYN_FLAG);
+    memset(cur, 0, sizeof(t_flagseq));
+    tcp_qstore_init(cur);
+    if (is_ssh_cisco == 0)
+      seq = rte_be_to_cpu_32(tcp_hdr->sent_seq);
+    cur->sip   = sip; 
+    cur->dip   = dip; 
+    cur->sport = sport; 
+    cur->dport = dport; 
+    cur->is_ssh_cisco = is_ssh_cisco;
+    cur->local_seq = 1;
+    cur->distant_seq = seq;
+    memcpy(cur->smac, smac, 6);
+    memcpy(cur->dmac, dmac, 6);
+    if (is_ssh_cisco == 0)
+      {
+      if (tcp_hdr->tcp_flags != RTE_TCP_SYN_FLAG)
+        KERR("%X %X %hu %hu flags:%X", cur->sip, cur->dip,
+              cur->sport, cur->dport, tcp_hdr->tcp_flags & 0xFF);
+      else
+        {
+        update_flagseq_tcp_hdr(cur, tcp_hdr, 0);
+        transmit_flags_back(cur, RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG);
+        }
+      }
+    else
+      {
+      transmit_flags_back(cur, RTE_TCP_SYN_FLAG);
+      }
     }
   return cur;
 }

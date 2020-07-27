@@ -40,8 +40,6 @@ rm -rf tmpbuild_bis
             muswitch/munat/clo_tcp \
             muswitch/munat \
             muswitch/muc2c \
-            muswitch/mua2b \
-            muswitch/mutst \
             muswitch/muwlan \
             muswitch/muovs \
             muswitch/mulan; do 
@@ -50,7 +48,9 @@ rm -rf tmpbuild_bis
   done 
   rm -f ${CLOONIX_SERVER}/dtach/dtach
 
-  for i in dpdk ovs qemu snf_dpdk nat_dpdk d2d_dpdk; do
+  for i in dpdk ovs qemu \
+           snf_dpdk nat_dpdk \
+           d2d_dpdk a2b_dpdk ; do
     cd ${CLOONIX_SERVER}/${i}
     ./allclean
   done

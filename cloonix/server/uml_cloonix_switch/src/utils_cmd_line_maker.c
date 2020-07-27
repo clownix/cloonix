@@ -128,6 +128,17 @@ char *utils_get_snf_dpdk_bin_path(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char *utils_get_a2b_dpdk_bin_path(void)
+{
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,
+           "%s/server/dpdk/bin/cloonix_a2b_dpdk", cfg_get_bin_dir());
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char *utils_get_nat_dpdk_bin_path(void)
 {
   static char path[MAX_PATH_LEN];
@@ -199,9 +210,9 @@ char *utils_qemu_img_derived(char *backing_file, char *derived_file)
 {
   static char cmd[2*MAX_PATH_LEN];
   memset(cmd, 0,  2*MAX_PATH_LEN);
-  snprintf(cmd, 2*MAX_PATH_LEN-1, "%s create -f qcow2 -b %s %s", 
-                                   utils_get_qemu_img(), backing_file, 
-                                   derived_file);
+  snprintf(cmd, 2*MAX_PATH_LEN-1, 
+           "%s create -f qcow2 -o backing_file=%s,backing_fmt=qcow2 %s", 
+            utils_get_qemu_img(), backing_file, derived_file);
   return cmd;
 }
 /*---------------------------------------------------------------------------*/
@@ -391,8 +402,6 @@ char *utils_get_endp_bin_path(int type)
     sprintf(path, "%s/server/muswitch/musnf/cloonix_musnf", cfg_get_bin_dir());
   else if (type == endp_type_c2c)
     sprintf(path, "%s/server/muswitch/muc2c/cloonix_muc2c", cfg_get_bin_dir());
-  else if (type == endp_type_a2b)
-    sprintf(path, "%s/server/muswitch/mua2b/cloonix_mua2b", cfg_get_bin_dir());
   else if (type == endp_type_nat)
     sprintf(path, "%s/server/muswitch/munat/cloonix_munat", cfg_get_bin_dir());
   else if (type == endp_type_ovsdb)
@@ -473,6 +482,15 @@ char *utils_get_dpdk_nat_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];
   sprintf(dpdk, "%s/%s", cfg_get_root_work(), ENDP_SOCK_DIR);
+  return dpdk;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_dpdk_a2b_dir(void)
+{
+  static char dpdk[MAX_PATH_LEN];
+  sprintf(dpdk, "%s/%s", cfg_get_root_work(), A2B_DPDK_SOCK_DIR);
   return dpdk;
 }
 /*---------------------------------------------------------------------------*/

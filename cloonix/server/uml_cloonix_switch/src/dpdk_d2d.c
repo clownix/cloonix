@@ -42,6 +42,7 @@
 #include "dpdk_msg.h"
 #include "utils_cmd_line_maker.h"
 #include "stats_counters.h"
+#include "tabmac.h"
 
 int get_glob_req_self_destruction(void);
 
@@ -106,7 +107,7 @@ static void free_d2d(t_d2d_cnx *cur)
   g_nb_d2d -= 1;
   if (strlen(lan))
     {
-    snf_dpdk_process_possible_change(lan);
+    tabmac_process_possible_change();
     dpdk_msg_vlan_exist_no_more(lan);
     }
   suid_power_rec_name(name, 0);
@@ -374,7 +375,7 @@ void dpdk_d2d_resp_add_lan(int is_ko, char *lan, char *name)
     cur->waiting_ack_add_lan = 0;
     utils_send_status_ok(&(cur->lan_add_cli_llid),&(cur->lan_add_cli_tid));
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    dpdk_d2d_process_possible_change(lan);
+    tabmac_process_possible_change();
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -413,7 +414,7 @@ void dpdk_d2d_resp_del_lan(int is_ko, char *lan, char *name)
         cur->received_del_lan_req = 0;
         }
       cur->lan_ovs_is_attached = 0;
-      snf_dpdk_process_possible_change(lan);
+      tabmac_process_possible_change();
       dpdk_msg_vlan_exist_no_more(lan);
       utils_send_status_ok(&(cur->lan_del_cli_llid),&(cur->lan_del_cli_tid));
       }
@@ -446,15 +447,19 @@ int dpdk_d2d_lan_exists_in_d2d(char *name, char *lan, int activ)
 {
   int result = 0;
   t_d2d_cnx *cur = dpdk_d2d_find(name);
-  if ((strlen(cur->lan)) && (!strcmp(lan, cur->lan)))
+  if (cur)
     {
-    if (activ) 
+    if ((strlen(cur->lan)) &&
+        (!strcmp(lan, cur->lan)))
       {
-      if (cur->lan_ovs_is_attached == 1)
+      if (activ) 
+        {
+        if (cur->lan_ovs_is_attached == 1)
+          result = 1;
+        }
+      else
         result = 1;
       }
-    else
-      result = 1;
     }
   return result;
 }
@@ -779,6 +784,13 @@ void dpdk_d2d_all_del(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void dpdk_d2d_end_ovs(void)
+{
+  dpdk_d2d_all_del();
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void dpdk_d2d_add_lan(int llid, int tid, char *name, char *lan)
 {
   char *locnet = cfg_get_cloonix_name();
@@ -840,7 +852,7 @@ void dpdk_d2d_del_lan(int llid, int tid, char *name, char *lan)
       if (strlen(lan))
         {
         memset(cur->lan, 0, MAX_NAME_LEN);
-        snf_dpdk_process_possible_change(lan);
+        tabmac_process_possible_change();
         dpdk_msg_vlan_exist_no_more(lan);
         }
       }
@@ -856,7 +868,7 @@ void dpdk_d2d_del_lan(int llid, int tid, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *dpdk_d2d_get_next_matching_lan(char *lan, char *name)
+char *dpdk_d2d_get_next(char *name)
 {
   t_d2d_cnx *cur;
   char *result = NULL;
@@ -869,12 +881,6 @@ char *dpdk_d2d_get_next_matching_lan(char *lan, char *name)
   else
     {
     cur = g_head_d2d;
-    }
-  while(cur)
-    {
-    if (strlen(cur->lan) && (!strcmp(lan, cur->lan)))
-      break;
-    cur = cur->next;
     }
   if (cur)
     result = cur->name;
@@ -912,7 +918,7 @@ t_topo_endp *dpdk_d2d_mngt_translate_topo_endp(int *nb)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_d2d_get_strmac(char *name, t_d2d_mac **tabmac)
+int dpdk_d2d_get_strmac(char *name, t_peer_mac **tabmac)
 {
   int result = 0;
   t_d2d_cnx *cur = dpdk_d2d_find(name);
@@ -927,125 +933,31 @@ int dpdk_d2d_get_strmac(char *name, t_d2d_mac **tabmac)
 
 /****************************************************************************/
 void dpdk_d2d_peer_mac(int llid, int tid, char *name,
-                       int nb_mac, t_d2d_mac *tabmac)
+                       int nb_mac, t_peer_mac *tabmac)
 {
   t_d2d_cnx *cur = dpdk_d2d_find(name);
-  int i;
-  if (nb_mac >= MAX_MAC_NB)
-    KERR("INCREASE MAX_MAC_NB %d", nb_mac);
+  if (nb_mac >= MAX_PEER_MAC)
+    KERR("INCREASE MAX_PEER_MAC %d", nb_mac);
   else if (cur)
     {
     cur->nb_dist_mac = nb_mac;
-    memset(cur->dist_tabmac, 0, MAX_MAC_NB * sizeof(t_d2d_mac));
-    memcpy(cur->dist_tabmac, tabmac, nb_mac * sizeof(t_d2d_mac));
-    if (strlen(cur->lan))
-      snf_dpdk_process_possible_change(cur->lan);
+    memset(cur->dist_tabmac, 0, MAX_PEER_MAC * sizeof(t_peer_mac));
+    memcpy(cur->dist_tabmac, tabmac, nb_mac * sizeof(t_peer_mac));
+    snf_dpdk_process_possible_change();
     }
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-static int nat_possible_change(t_d2d_mac *tabmac, int max, char *lan)
-{
-  char *name, *strmac;
-  int i, k = 0; 
-  name = dpdk_nat_get_next_matching_lan(lan, NULL);
-  while(name)
-    {
-    for (i=0; i<3; i++)
-      {
-      strmac = dpdk_nat_get_mac(name, i);
-      if (k < max)
-        {
-        strncpy(tabmac[k].mac, strmac, MAX_NAME_LEN-1);
-        k += 1;
-        }
-      else
-        KERR("INCREASE MAX_MAC_NB %d %d", k, max);
-      }
-    name = dpdk_nat_get_next_matching_lan(lan, name);
-    }
-  return k;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int tap_possible_change(t_d2d_mac *tabmac, int max, char *lan)
-{
-  char *name, *strmac;
-  int i = 0;
-  name = dpdk_tap_get_next_matching_lan(lan, NULL);
-  while(name)
-    {
-    strmac = dpdk_tap_get_mac(name);
-    if (strmac)
-      {
-      if (i < max)
-        {
-        strncpy(tabmac[i].mac, strmac, MAX_NAME_LEN-1);
-        i += 1;
-        }
-      else
-        KERR("INCREASE MAX_MAC_NB %d %d", i, max);
-      }
-    name = dpdk_tap_get_next_matching_lan(lan, name);
-    }
-  return i;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int vm_possible_change(t_d2d_mac *tabmac, int max, char *lan)
-{
-  t_vm *vm;
-  char *mc, strmac[MAX_NAME_LEN];
-  int i, j, nb_vm, k = 0;
-  vm = cfg_get_first_vm(&nb_vm);
-  for (i=0; i < nb_vm; i++)
-    {
-    for (j=0; j < vm->kvm.nb_tot_eth; j++)
-      {
-      if (vm->kvm.eth_table[j].eth_type == eth_type_dpdk)
-        {
-        if (dpdk_dyn_lan_exists_in_vm(vm->kvm.name, j, lan))
-          {
-          mc = vm->kvm.eth_table[j].mac_addr;
-          memset(strmac, 0, MAX_NAME_LEN);
-          snprintf(strmac, MAX_NAME_LEN-1, "%02x:%02x:%02x:%02x:%02x:%02x",
-                                        mc[0]&0xff, mc[1]&0xff, mc[2]&0xff,
-                                        mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);
-          if (k < max)
-            {
-            strncpy(tabmac[i].mac, strmac, MAX_NAME_LEN-1);
-            k += 1;
-            }
-          else
-            KERR("INCREASE MAX_MAC_NB %d %d", k, max);
-          }
-        }
-      }
-    vm = vm->next;
-    }
-  return k;
-}
-/*---------------------------------------------------------------------------*/
-
 /****************************************************************************/
-void dpdk_d2d_process_possible_change(char *lan)
+void dpdk_d2d_process_possible_change(void)
 {
-  int nb_mac = 0;
-  t_d2d_mac tabmac[MAX_MAC_NB];
+  int nb_mac;
+  t_peer_mac tabmac[MAX_PEER_MAC];
   t_d2d_cnx *cur = g_head_d2d;
   while(cur)
     {
-    if (!strcmp(lan, cur->lan))
-      {
-      memset(tabmac, 0, MAX_MAC_NB * sizeof(t_d2d_mac));
-      nb_mac += nat_possible_change(&(tabmac[nb_mac]),MAX_MAC_NB-nb_mac,lan);
-      nb_mac += tap_possible_change(&(tabmac[nb_mac]),MAX_MAC_NB-nb_mac,lan);
-      nb_mac += vm_possible_change(&(tabmac[nb_mac]),MAX_MAC_NB-nb_mac,lan);
-      wrap_send_d2d_peer_mac(cur, nb_mac, tabmac);
-      }
+    nb_mac = tabmac_update_for_d2d(tabmac);
+    wrap_send_d2d_peer_mac(cur, nb_mac, tabmac);
     cur = cur->next;
     }
 }
@@ -1095,6 +1007,26 @@ int dpdk_d2d_collect_dpdk(t_eventfull_endp *eventfull)
   return result;
 }
 /*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_d2d_get_tabmac(char *name, t_peer_mac tab[MAX_PEER_MAC])
+{
+  t_d2d_cnx *cur = g_head_d2d;
+  int nb = 0;
+  memset(tab, 0, MAX_PEER_MAC * sizeof(t_peer_mac));
+  memset(name, 0, MAX_NAME_LEN);
+  while(cur)
+    {
+    strncpy(name, cur->name, MAX_NAME_LEN-1);
+    nb = cur->nb_dist_mac;
+    if (nb >= MAX_PEER_MAC)
+      KOUT("%d %d", nb, MAX_PEER_MAC);
+    memcpy(tab, cur->dist_tabmac, nb * sizeof(t_peer_mac));
+    cur = cur->next;
+    }
+  return nb;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void dpdk_d2d_init(void)

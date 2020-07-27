@@ -386,7 +386,7 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     }
   else
     {
-    strcpy(cpu_type, "host,+vmx");
+    strcpy(cpu_type, "host,-aes");
     }
   len = sprintf(cmd_start, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
   utils_get_eth_numbers(vm->kvm.nb_tot_eth, vm->kvm.eth_table,
@@ -731,7 +731,7 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
       if (nb_dpdk)
         {
         wake_up->dpdk_count += 1;
-        if (wake_up->dpdk_count > 20)
+        if (wake_up->dpdk_count > 50)
           {
           KERR("ERROR dpdk ovs start when creating %s\n", name);
           sprintf(err, "ERROR dpdk ovs start when creating %s\n", name);

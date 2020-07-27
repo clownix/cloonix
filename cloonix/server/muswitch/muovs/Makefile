@@ -1,11 +1,3 @@
-RTE_SDK=$(shell if [ -d ../../../../tmpbuild/cloonix/server/dpdk ]; then \
-                  echo "../../../../tmpbuild/cloonix/server/dpdk"; \
-                else \
-                  echo "../../dpdk"; \
-                fi)
-               
-PKG_CONFIG_PATH=$(RTE_SDK)/lib/pkgconfig
-
 CLOONIX_COMMON=../../../../cloonix/common
 
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
@@ -25,18 +17,13 @@ INCLUDES= -I./src \
           -I./include \
           -I${GLOB_INCLUDE} \
           -I${IOC}/include \
-          -I${RPCT}/include  \
-          -I$(RTE_SDK)/include
+          -I${RPCT}/include
 
 LIBS = -L${BLKD} -lblkd \
        -L${IOC} -lioc \
        -L${RPCT} -lrpct
 
 CFLAGS += -O3 -mavx $(INCLUDES) $(WARNINGS)
-
-LDFLAGS=  -Wl,-rpath,/usr/local/bin/cloonix/server/dpdk/lib \
-          $(shell export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) ; \
-                  pkg-config --libs --static libdpdk)
 
 CC=gcc
 all: $(shell mkdir -p ./obj) $(EXE)

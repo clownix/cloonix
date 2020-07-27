@@ -550,9 +550,9 @@ void write_item_name(t_bank_item *bitem)
       if (bitem->att_node->pbi.mutype == endp_type_a2b)
         {
         if (bitem->num == 0)
-          sprintf(name, "a");
+          sprintf(name, "0");
         else if (bitem->num == 1)
-          sprintf(name, "b");
+          sprintf(name, "1");
         else
           KERR("%s %d", bitem->att_node->name, bitem->num);
         }
@@ -707,7 +707,8 @@ int add_new_lan(char *name, double x, double y, int hidden_on_graph)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int add_new_sat(char *name, int mutype, t_topo_c2c *c2c, t_topo_d2d *d2d,
+int add_new_sat(char *name, int mutype, t_topo_c2c *c2c,
+                t_topo_d2d *d2d, t_topo_a2b *a2b,
                 double x, double y, int hidden_on_graph)
 {
   int result = 0;
@@ -737,6 +738,8 @@ int add_new_sat(char *name, int mutype, t_topo_c2c *c2c, t_topo_d2d *d2d,
       memcpy(&(bitem->pbi.pbi_sat->topo_c2c), c2c, sizeof(t_topo_c2c));
     if (d2d)
       memcpy(&(bitem->pbi.pbi_sat->topo_d2d), d2d, sizeof(t_topo_d2d));
+    if (a2b)
+      memcpy(&(bitem->pbi.pbi_sat->topo_a2b), a2b, sizeof(t_topo_a2b));
     topo_add_cr_item_to_canvas(bitem, NULL);
     write_item_name(bitem);
     topo_get_absolute_coords(bitem);
@@ -758,16 +761,6 @@ void modify_c2c(char *name, char *master_cloonix, char *slave_cloonix)
             master_cloonix, MAX_NAME_LEN);
     strncpy(bitem->pbi.pbi_sat->topo_c2c.slave_cloonix, 
             slave_cloonix, MAX_NAME_LEN);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void modify_d2d(char *name, char *master_cloonix, char *slave_cloonix)
-{
-  t_bank_item *bitem = look_for_sat_with_id(name);
-  if ((bitem) && is_a_d2d(bitem))
-    {
     }
 }
 /*--------------------------------------------------------------------------*/

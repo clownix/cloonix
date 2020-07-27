@@ -36,8 +36,10 @@
 #include "dpdk_dyn.h"
 #include "dpdk_snf.h"
 #include "dpdk_d2d.h"
+#include "dpdk_a2b.h"
 #include "dpdk_ovs.h"
 #include "llid_trace.h"
+#include "tabmac.h"
 
 typedef struct t_snf_dpdk
 {
@@ -54,6 +56,7 @@ typedef struct t_snf_dpdk
   struct t_snf_dpdk *next;
 } t_snf_dpdk;
 
+static char g_ascii_cpu_mask[MAX_NAME_LEN];
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
 static char g_bin_snf[MAX_PATH_LEN];
@@ -62,6 +65,7 @@ static t_snf_dpdk *g_head_snf_dpdk;
 
 void snf_globtopo_small_event(char *name, int num_evt, char *path);
 int get_glob_req_self_destruction(void);
+uint32_t get_cpu_mask(void);
 
 /****************************************************************************/
 static t_snf_dpdk *find_snf_dpdk(char *name)
@@ -118,124 +122,16 @@ static void process_demonized(void *unused_data, int status, char *name)
 /*****************************************************************************/
 static void snf_dpdk_start(char *name)
 {
-  static char *argv[5];
+  static char *argv[7];
   argv[0] = g_bin_snf;
   argv[1] = g_cloonix_net;
   argv[2] = g_root_path;
   argv[3] = name;
   argv[4] = g_pcap_dir;
-  argv[5] = NULL;
+  argv[5] = g_ascii_cpu_mask;
+  argv[6] = NULL;
   pid_clone_launch(utils_execve, process_demonized, NULL,
                    (void *) argv, NULL, NULL, name, -1, 1);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void send_all_d2d_mac_to_snf(int llid, char *lan)
-{
-  char *name,  msg[MAX_PATH_LEN];
-  int nb, num;
-  t_d2d_mac *tabmac;
-  name = dpdk_d2d_get_next_matching_lan(lan, NULL);
-  while(name)
-    {
-    nb = dpdk_d2d_get_strmac(name, &tabmac);
-    for (num=0; num<nb; num++)
-      {
-      memset(msg, 0, MAX_PATH_LEN);
-      snprintf(msg, MAX_PATH_LEN-1,
-      "cloonixsnf_mac name=%s num=%d mac=%s", name, num, tabmac[num].mac);
-      rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
-      hop_event_alloc(llid, type_hop_endp, name, num);
-      hop_event_hook(llid, FLAG_HOP_DIAG, msg);
-      }
-    name = dpdk_d2d_get_next_matching_lan(lan, name);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void send_all_nat_mac_to_snf(int llid, char *lan)
-{
-  char msg[MAX_PATH_LEN];
-  char *name, *strmac;
-  int i;
-  name = dpdk_nat_get_next_matching_lan(lan, NULL);
-  while(name)
-    {
-    for (i=0; i<3; i++)
-      {
-      strmac = dpdk_nat_get_mac(name, i);
-      memset(msg, 0, MAX_PATH_LEN);
-      snprintf(msg, MAX_PATH_LEN-1,
-      "cloonixsnf_mac name=%s num=%d mac=%s", name, i, strmac);
-      rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
-      hop_event_alloc(llid, type_hop_endp, name, i);
-      hop_event_hook(llid, FLAG_HOP_DIAG, msg);
-      }
-    name = dpdk_nat_get_next_matching_lan(lan, name);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void send_all_tap_mac_to_snf(int llid, char *lan)
-{
-  char msg[MAX_PATH_LEN];
-  char *name, *strmac;
-  name = dpdk_tap_get_next_matching_lan(lan, NULL);
-  while(name)
-    {
-    strmac = dpdk_tap_get_mac(name);
-    if (strmac)
-      {
-      memset(msg, 0, MAX_PATH_LEN);
-      snprintf(msg, MAX_PATH_LEN-1,
-      "cloonixsnf_mac name=%s num=%d mac=%s", name, 0, strmac);
-      rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
-      hop_event_alloc(llid, type_hop_endp, name, 0);
-      hop_event_hook(llid, FLAG_HOP_DIAG, msg);
-      }
-    name = dpdk_tap_get_next_matching_lan(lan, name);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void send_all_vm_mac_to_snf(int llid, char *lan)
-{
- t_vm *vm;
-  char msg[MAX_PATH_LEN];
-  char *name, *mc;
-  char mac[MAX_NAME_LEN];
-  int i, j, nb_vm;
-
-  vm = cfg_get_first_vm(&nb_vm);
-  for (i=0; i < nb_vm; i++)
-    {
-    for (j=0; j < vm->kvm.nb_tot_eth; j++)
-      {
-      if (vm->kvm.eth_table[j].eth_type == eth_type_dpdk)
-        {
-        if (dpdk_dyn_lan_exists_in_vm(vm->kvm.name, j, lan))
-          {
-          name = vm->kvm.name;
-          mc = vm->kvm.eth_table[j].mac_addr;
-          memset(mac, 0, MAX_NAME_LEN);
-          snprintf(mac, MAX_NAME_LEN-1, "%02x:%02x:%02x:%02x:%02x:%02x",
-                                      mc[0]&0xff, mc[1]&0xff, mc[2]&0xff,
-                                      mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);
-          memset(msg, 0, MAX_PATH_LEN);
-          snprintf(msg, MAX_PATH_LEN-1,
-          "cloonixsnf_mac name=%s num=%d mac=%s", name, j, mac);
-          rpct_send_diag_msg(NULL, llid, type_hop_snf_dpdk, msg);
-          hop_event_alloc(llid, type_hop_endp, name, j);
-          hop_event_hook(llid, FLAG_HOP_DIAG, msg);
-          }
-        }
-      }
-    vm = vm->next;
-    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -293,8 +189,9 @@ static void timer_heartbeat(void *data)
     else
       {
       cur->watchdog_count += 1;
-      if (cur->watchdog_count >= 25)
+      if (cur->watchdog_count >= 50)
         {
+        KERR("%s %s", cur->name, cur->lan);
         dpdk_snf_event_from_snf_dpdk_process(cur->name, cur->lan, 0);
         free_snf_dpdk(cur);
         }
@@ -374,8 +271,11 @@ void snf_dpdk_diag_resp(int llid, int tid, char *line)
       {
       if (dpdk_ovs_fill_eventfull(name, num, ms, ptx, prx, btx, brx))
         {
-        if (dpdk_nat_eventfull(name, ms, ptx, prx, btx, brx))
-          dpdk_d2d_eventfull(name, ms, ptx, prx, btx, brx);
+        if (dpdk_a2b_eventfull(name, num, ms, ptx, prx, btx, brx))
+          {
+          if (dpdk_nat_eventfull(name, ms, ptx, prx, btx, brx))
+            dpdk_d2d_eventfull(name, ms, ptx, prx, btx, brx);
+          }
         }
       }
     } 
@@ -486,26 +386,40 @@ int  snf_dpdk_get_all_pid(t_lst_pid **lst_pid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void snf_dpdk_process_possible_change(char *lan)
+void snf_dpdk_process_possible_change(void)
 {
-  t_snf_dpdk *cur = find_snf_dpdk_with_lan(lan);
   char msg[MAX_PATH_LEN];
-  if ((cur) && (cur->llid))
+  t_tabmac_snf tabmac_snf[MAX_PEER_MAC];
+  int i, nb_mac, num;
+  char *name, *mac;
+  t_snf_dpdk *cur = g_head_snf_dpdk;
+  while(cur)
     {
-    memset(msg, 0, MAX_PATH_LEN);
-    snprintf(msg, MAX_PATH_LEN-1, "%s", "cloonixsnf_macliststart");
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
-  
-    send_all_nat_mac_to_snf(cur->llid, lan);
-    send_all_tap_mac_to_snf(cur->llid, lan);
-    send_all_vm_mac_to_snf(cur->llid, lan);
-    send_all_d2d_mac_to_snf(cur->llid, lan);
-
-    memset(msg, 0, MAX_PATH_LEN);
-    snprintf(msg, MAX_PATH_LEN-1, "%s", "cloonixsnf_maclistend");
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    if (cur->llid)
+      {
+      memset(msg, 0, MAX_PATH_LEN);
+      snprintf(msg, MAX_PATH_LEN-1, "%s", "cloonixsnf_macliststart");
+      rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      nb_mac = tabmac_update_for_snf(tabmac_snf); 
+      for (i=0; i<nb_mac; i++)
+        {
+        name = tabmac_snf[i].name;
+        num = tabmac_snf[i].num;
+        mac = tabmac_snf[i].mac;
+        memset(msg, 0, MAX_PATH_LEN);
+        snprintf(msg, MAX_PATH_LEN-1,
+        "cloonixsnf_mac name=%s num=%d mac=%s", name, num, mac);
+        rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
+        hop_event_alloc(cur->llid, type_hop_endp, name, num);
+        hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+        }
+      memset(msg, 0, MAX_PATH_LEN);
+      snprintf(msg, MAX_PATH_LEN-1, "%s", "cloonixsnf_maclistend");
+      rpct_send_diag_msg(NULL, cur->llid, type_hop_snf_dpdk, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      }
+    cur = cur->next;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -538,6 +452,8 @@ void snf_dpdk_init(void)
   memset(g_root_path, 0, MAX_PATH_LEN);
   memset(g_bin_snf, 0, MAX_PATH_LEN);
   memset(g_pcap_dir, 0, MAX_PATH_LEN);
+  memset(g_ascii_cpu_mask, 0, MAX_NAME_LEN);
+  snprintf(g_ascii_cpu_mask, MAX_NAME_LEN-1, "%X",  get_cpu_mask());
   strncpy(g_cloonix_net, net, MAX_NAME_LEN-1);
   strncpy(g_root_path, root, MAX_PATH_LEN-1);
   strncpy(g_bin_snf, bin_snf, MAX_PATH_LEN-1);

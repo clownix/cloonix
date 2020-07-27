@@ -62,6 +62,7 @@ SRC = \
       dpdk_tap.c \
       dpdk_snf.c \
       dpdk_nat.c \
+      dpdk_a2b.c \
       slowperiodic.c \
       unix2inet.c \
       suid_power.c \
@@ -74,8 +75,10 @@ SRC = \
       dpdk_d2d.c \
       dpdk_d2d_peer.c \
       snf_dpdk_process.c \
+      a2b_dpdk_process.c \
       d2d_dpdk_process.c \
-      nat_dpdk_process.c
+      nat_dpdk_process.c \
+      tabmac.c
 
 INCLUDES= -I./src \
           -I$(GLOB_INCLUDE) \

@@ -76,6 +76,18 @@ void from_cloonix_switch_create_d2d(t_topo_d2d *d2d)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void from_cloonix_switch_create_a2b(t_topo_a2b *a2b)
+{
+  t_item_obj_resp *pa;
+  pa = (t_item_obj_resp *)clownix_malloc(sizeof(t_item_obj_resp), 21);
+  memset(pa, 0, sizeof(t_item_obj_resp));
+  pa->a2b = (t_topo_a2b *) clownix_malloc(sizeof(t_topo_a2b), 22);
+  memcpy(pa->a2b, a2b, sizeof(t_topo_a2b));
+  clownix_timeout_add(1, timer_create_obj_resp, (void *)pa, NULL,NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void from_cloonix_switch_create_sat(t_topo_sat *sat)
 {
   t_item_obj_resp *pa;

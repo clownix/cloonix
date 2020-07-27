@@ -83,13 +83,18 @@ static t_ssh_cisco *find_ssh_cisco(int llid)
 /****************************************************************************/
 static void alloc_ssh_cisco(int llid)
 {
-  t_ssh_cisco *cur = (t_ssh_cisco *) malloc(sizeof(t_ssh_cisco));
-  memset(cur, 0, sizeof(t_ssh_cisco));
-  cur->llid = llid;
-  if (g_head_ssh_cisco)
-    g_head_ssh_cisco->prev = cur;
-  cur->next = g_head_ssh_cisco;
-  g_head_ssh_cisco = cur;
+  t_ssh_cisco *cur = (t_ssh_cisco *) rte_malloc(NULL, sizeof(t_ssh_cisco), 0);
+  if (cur == NULL)
+    KERR(" ");
+  else
+    {
+    memset(cur, 0, sizeof(t_ssh_cisco));
+    cur->llid = llid;
+    if (g_head_ssh_cisco)
+      g_head_ssh_cisco->prev = cur;
+    cur->next = g_head_ssh_cisco;
+    g_head_ssh_cisco = cur;
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -106,7 +111,7 @@ static void free_ssh_cisco(t_ssh_cisco *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_ssh_cisco)
     g_head_ssh_cisco = cur->next;
-  free(cur);
+  rte_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -116,36 +121,41 @@ static int get_info_from_buf(int len, char *ibuf, char *remote_user,
 {
   int port, result = -1;
   char *ptr;
-  char *buf = (char *) malloc(len);
+  char *buf = (char *) rte_malloc(NULL, len, 0);
   char str_ip[MAX_NAME_LEN];
-  memcpy(buf, ibuf, len);
-  ptr = strchr(buf, '=');
-  while (ptr)
-    {
-    *ptr = ' ';
-    ptr = strchr(buf, '=');
-    }
-  ptr = (strstr(buf, "cloonix_info_end"));
-  if (!(ptr))
-    KERR("%d %s", len, buf);
+  if (buf == NULL)
+    KERR(" ");
   else
     {
-    *ptr = 0;
-    if (sscanf(buf, CLOONIX_INFO, remote_user, str_ip, &port) != 3)
-      KERR("%d %s", len, buf);
-    else if (ip_string_to_int (remote_ip, str_ip))
+    memcpy(buf, ibuf, len);
+    ptr = strchr(buf, '=');
+    while (ptr)
+      {
+      *ptr = ' ';
+      ptr = strchr(buf, '=');
+      }
+    ptr = (strstr(buf, "cloonix_info_end"));
+    if (!(ptr))
       KERR("%d %s", len, buf);
     else
       {
-      *remote_port = (port & 0xFFFF);
-      ptr = ptr + strlen("cloonix_info_end");
-      if ((*ptr) != 0)
+      *ptr = 0;
+      if (sscanf(buf, CLOONIX_INFO, remote_user, str_ip, &port) != 3)
+        KERR("%d %s", len, buf);
+      else if (ip_string_to_int (remote_ip, str_ip))
         KERR("%d %s", len, buf);
       else
-        result = 0;
+        {
+        *remote_port = (port & 0xFFFF);
+        ptr = ptr + strlen("cloonix_info_end");
+        if ((*ptr) != 0)
+          KERR("%d %s", len, buf);
+        else
+          result = 0;
+        }
       }
+    rte_free(buf);
     }
-  free(buf);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -160,54 +170,59 @@ static int rx_cb(void *ptr, int llid, int fd)
   uint32_t ip;
   uint16_t port;
   t_ssh_cisco *cur = find_ssh_cisco(llid);
-  data = (uint8_t *) malloc(MAX_RXTX_LEN);
-  data_len = read(fd, data, MAX_RXTX_LEN - g_offset - 4);
-  if (!cur)
-    {
-    if (msg_exist_channel(llid))
-      msg_delete_channel(llid);
-    KERR("%d", llid);
-    free(data);
-    }
-  else if (data_len == 0)
-    {
-    free_ssh_cisco(cur);
-    free(data);
-    }
-  else if (data_len < 0)
-    {
-    if ((errno != EAGAIN) && (errno != EINTR))
-      {
-      KERR("%d", llid);
-      free_ssh_cisco(cur);
-      }
-    free(data);
-    }
+  data = (uint8_t *) rte_malloc(NULL, MAX_RXTX_LEN, 0);
+  if (data == NULL)
+    KERR(" ");
   else
     {
-    if (cur->info_received == 0)
+    data_len = read(fd, data, MAX_RXTX_LEN - g_offset - 4);
+    if (!cur)
       {
-      if (get_info_from_buf(data_len, (char *) data, user, &ip, &port))
+      if (msg_exist_channel(llid))
+        msg_delete_channel(llid);
+      KERR("%d", llid);
+      rte_free(data);
+      }
+    else if (data_len == 0)
+      {
+      free_ssh_cisco(cur);
+      rte_free(data);
+      }
+    else if (data_len < 0)
+      {
+      if ((errno != EAGAIN) && (errno != EINTR))
         {
-        KERR("%s", data);
+        KERR("%d", llid);
         free_ssh_cisco(cur);
         }
-      else if (!machine_name_exists_with_ip(ip, vm))
-        {
-        KERR("%s", data);
-        free_ssh_cisco(cur);
-        }
-      else
-        {
-        cur->info_received = 1;
-        ssh_cisco_dpdk_connect(llid, vm, ip, port);
-        }
+      rte_free(data);
       }
     else
       {
-      ssh_cisco_dpdk_rx_from_llid(llid, data_len, data);
+      if (cur->info_received == 0)
+        {
+        if (get_info_from_buf(data_len, (char *) data, user, &ip, &port))
+          {
+          KERR("%s", data);
+          free_ssh_cisco(cur);
+          }
+        else if (!machine_name_exists_with_ip(ip, vm))
+          {
+          KERR("%s", data);
+          free_ssh_cisco(cur);
+          }
+        else
+          {
+          cur->info_received = 1;
+          ssh_cisco_dpdk_connect(llid, vm, ip, port);
+          }
+        }
+      else
+        {
+        ssh_cisco_dpdk_rx_from_llid(llid, data_len, data);
+        }
+      result = data_len;
       }
-    result = data_len;
     }
   return result;
 }

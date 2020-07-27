@@ -73,6 +73,7 @@
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
 #include "d2d_dpdk_process.h"
+#include "a2b_dpdk_process.h"
 
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
@@ -112,6 +113,13 @@ static void init_g_user(void)
     printf("Could not get user name\n");
     KOUT("Could not get user name");
     }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+uint32_t get_cpu_mask(void)
+{
+  return (g_cloonix_conf_info->cpu_mask);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -480,7 +488,7 @@ static t_topo_clc *get_parsed_config(char *name)
 /*****************************************************************************/
 static int test_machine_nb_cpu(void)
 {
-  int nb, nb_cpu = 0;
+  int nb_cpu = 0;
   FILE *fhd;
   char result[500];
   fhd = fopen("/proc/cpuinfo", "r");
@@ -488,8 +496,8 @@ static int test_machine_nb_cpu(void)
     {
     while(fgets(result, 500, fhd))
       {
-      if (sscanf(result, "cpu cores : %d", &nb) == 1)
-        nb_cpu = nb;
+      if (!strncmp(result, "processor", strlen("processor")))
+        nb_cpu += 1;
       }
     fclose(fhd);
     }
@@ -683,6 +691,7 @@ int main (int argc, char *argv[])
   edp_mngt_init();
   snf_dpdk_init();
   nat_dpdk_init();
+  a2b_dpdk_init();
   d2d_dpdk_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));

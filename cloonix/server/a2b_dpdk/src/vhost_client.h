@@ -15,8 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void sched_tx0_activate(t_all_ctx *all_ctx);
-void sched_tx1_activate(t_all_ctx *all_ctx);
-void sched_tx_pkt(int num, t_blkd *blkd);
-void sched_init(int num, t_all_ctx *all_ctx);
-/*---------------------------------------------------------------------------*/
+void vhost_client_start(char *path0, char *memid0, char *path1, char *memid1);
+void vhost_client_end_and_exit(void);
+void vhost_client_init(void);
+/*--------------------------------------------------------------------------*/
