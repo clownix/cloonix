@@ -22,7 +22,6 @@
 #include <netinet/in.h>
 #include <sys/un.h>
 
-#define ALLOW_EXPERIMENTAL_API
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
 #include <rte_config.h>
@@ -270,11 +269,11 @@ void dhcp_arp_management(struct rte_mbuf *m)
   uint32_t sip, tip, l2_len = sizeof(struct rte_ether_hdr);
   uint8_t *mc, mac[6];
   int ok = 1;
-  ahdr = rte_pktmbuf_mtod_offset(m, struct rte_arp_hdr *, l2_len);
+  ahdr = rte_pktmbuf_mtod_offset(m, struct rte_arp_hdr *, EMPTY_HEAD + l2_len);
   adata = &ahdr->arp_data;
   tip = (uint32_t) adata->arp_tip;
   sip = (uint32_t) adata->arp_sip;
-  eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+  eth = rte_pktmbuf_mtod_offset(m, struct rte_ether_hdr *, EMPTY_HEAD);
   if (ahdr->arp_opcode == rte_cpu_to_be_16(RTE_ARP_OP_REPLY))
     {
     if (tip == htonl(our_cisco_ip))

@@ -37,7 +37,6 @@ typedef struct t_d2d_cnx
   int tcp_connection_peered;
   int udp_connection_probed;
   int udp_connection_peered;
-  int ovs_lan_attach_ready;
   int peer_llid;
   int peer_llid_connect;
   int peer_bad_status_received;
@@ -47,6 +46,8 @@ typedef struct t_d2d_cnx
   int udp_probe_qty_sent;
   int udp_connection_tx_configured;
   int openvswitch_started_and_running;
+  int openvswitch_started_and_running_count;
+  int vhost_started_and_running;
   int lan_add_cli_llid;
   int lan_add_cli_tid;
   int lan_del_cli_llid;
@@ -93,6 +94,7 @@ void dpdk_d2d_peer_conf(int llid, int tid, char *d2d_name,
 
 void dpdk_d2d_peer_ping(int llid, int tid, char *name, int status);
 
+void dpdk_d2d_vhost_stopped(char *name);
 void dpdk_d2d_vhost_started(char *name);
 void dpdk_d2d_get_udp_port_done(char *name, uint16_t udp_port, int status);
 void dpdk_d2d_dist_udp_ip_port_done(char *name);

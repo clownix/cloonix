@@ -517,6 +517,33 @@ int msg_watch_fd(int fd, t_fd_event rx_data,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int msg_watch_no_erase_fd(int fd, t_fd_event rx_data,
+                 t_fd_error err,  char *little_name)
+{
+  int llid, cidx, is_blkd;
+  if (fd < 0)
+    KOUT(" ");
+  if (!err)
+    KOUT(" ");
+  llid = channel_create(fd, 0, kind_simple_watch_no_erase, little_name, rx_data,
+                        tx_dchan_cb, err_dchan_cb);
+  if (llid)
+    {
+    cidx = channel_check_llid(llid, &is_blkd, __FUNCTION__);
+    if (is_blkd)
+      KOUT(" ");
+    memset(&dchan[cidx], 0, sizeof(t_data_channel));
+    dchan[cidx].decoding_state = rx_type_watch;
+    dchan[cidx].rx_callback = default_rx_callback;
+    dchan[cidx].error_callback = err;
+    dchan[cidx].llid = llid;
+    dchan[cidx].fd = fd;
+    }
+  return (llid);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int string_server_unix(char *pname, t_fd_connect connect_cb,
                         char *little_name)
 {

@@ -785,8 +785,6 @@ static void on_item_paint_eth(CrItem *item, cairo_t *c)
       paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
     else if (bitem->pbi.mutype == endp_type_kvm_dpdk)
       paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
-    else if (bitem->pbi.mutype == endp_type_kvm_vhost)
-      paint_select(c,flag,flag_trace,&lightcyan,&red,&lightmagenta);
     else if (bitem->pbi.mutype == endp_type_kvm_wlan)
       paint_select(c,flag,flag_trace,&lightblue,&red,&lightmagenta);
     else

@@ -86,13 +86,12 @@ int utils_get_next_tid(void)
 
 /*****************************************************************************/
 int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab,
-                          int *sock, int *dpdk, int *vhost, int *wlan)
+                          int *sock, int *dpdk, int *wlan)
 {
   int i, result = 0;
   char info[MAX_PATH_LEN];
   (*sock) = 0;
   (*dpdk) = 0;
-  (*vhost) = 0;
   (*wlan) = 0;
   for (i=0; i<nb_tot_eth; i++)
     {
@@ -100,8 +99,6 @@ int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab,
       (*sock)++;
     else if (eth_tab[i].eth_type == eth_type_dpdk)
       (*dpdk)++;
-    else if (eth_tab[i].eth_type == eth_type_vhost)
-      (*vhost)++;
     else if (eth_tab[i].eth_type == eth_type_wlan)
       (*wlan)++;
     else
@@ -168,29 +165,6 @@ char *utils_get_suid_power_bin_path(void)
   snprintf(path, MAX_PATH_LEN-1,
            "%s/server/suid_power/cloonix_suid_power", cfg_get_bin_dir());
   return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *vhost_ident_get(int vm_id, int eth)
-{
-  static char vhost[IFNAMSIZ];
-  char net_name[9];
-  char vm_id_str[4];
-  char eth_str[4];
-  memset(vhost, 0, IFNAMSIZ);
-  memset(net_name, 0, 9);
-  memset(vm_id_str, 0, 4);
-  memset(eth_str, 0, 4);
-  snprintf(net_name, 8, "%s", cfg_get_cloonix_name());
-  snprintf(vm_id_str, 3, "%02d", vm_id);
-  snprintf(eth_str, 3, "%02d", eth);
-  net_name[7] = 0;
-  vm_id_str[2] = 0;
-  eth_str[2] = 0;
-  snprintf(vhost, IFNAMSIZ-1, "%s%s%s", net_name, vm_id_str, eth_str);
-  vhost[IFNAMSIZ-1] = 0;
-  return vhost;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -629,8 +603,7 @@ void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death)
 /*****************************************************************************/
 void free_wake_up_eths_and_vm_ok(t_vm *vm)
 {
-  int i, llid, tid;
-  char *vhost_ifname;
+  int llid, tid;
   if ((!vm) || (!vm->wake_up_eths))
     KOUT(" ");
   llid = vm->wake_up_eths->llid;
@@ -638,15 +611,6 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
   free_wake_up_eths(vm);
   if (llid)
     send_status_ok(llid, tid, "addvm");
-
-  for (i=0; i < vm->kvm.nb_tot_eth; i++)
-    {
-    if (vm->kvm.eth_table[i].eth_type == eth_type_vhost)
-      {
-      vhost_ifname = vhost_ident_get(vm->kvm.vm_id, i);
-      suid_power_rec_name(vhost_ifname, 1);
-      }
-    }
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
     {
     edp_mngt_cisco_nat_create(vm->kvm.name);

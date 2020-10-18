@@ -39,7 +39,6 @@
 #include "doors_rpc.h"
 #include "doorways_mngt.h"
 #include "dpdk_ovs.h"
-#include "vhost_eth.h"
 
 
 #define QMP_RESET     "{ \"execute\": \"system_reset\" }\n"
@@ -334,11 +333,9 @@ void qmp_conn_end(char *name)
       eth_tab = vm->kvm.eth_table;
       for (i=0; i<vm->kvm.nb_tot_eth; i++)
         {
-        if ((eth_tab[i].eth_type == eth_type_dpdk) ||
-            (eth_tab[i].eth_type == eth_type_vhost))
+        if (eth_tab[i].eth_type == eth_type_dpdk)
           {
           dpdk_ovs_del_vm(name);
-          vhost_eth_del_vm(name, vm->kvm.nb_tot_eth, eth_tab);
           break;
           }
         }

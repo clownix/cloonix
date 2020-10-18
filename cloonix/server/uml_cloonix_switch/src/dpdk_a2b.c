@@ -159,13 +159,15 @@ static void timer_a2b_msg_beat(void *data)
     if ((cur->openvswitch_started_and_running == 0) &&
         (dpdk_ovs_muovs_ready()))
       {
+KERR("OOOi000000000000000000000000000000000000000000000000000000000000000000000000OOOOOOOOOO ");
+
       cur->openvswitch_started_and_running = 1;
       a2b_dpdk_start_vhost(cur->name);
       }
     if (cur->add_llid)
       {
       cur->timer_count += 1;
-      if (cur->timer_count > 15)
+      if (cur->timer_count > 40)
         {
         KERR("TIMEOUT %s", cur->name);
         utils_send_status_ko(&(cur->add_llid), &(cur->add_tid), "timeout");
@@ -179,9 +181,11 @@ static void timer_a2b_msg_beat(void *data)
           (cur->side[i].waiting_ack_del_lan))
         {
         cur->side[i].timer_count += 1;
-        if (cur->side[i].timer_count > 15)
+        if (cur->side[i].timer_count > 20)
           {
-          KERR("TIMEOUT %s", cur->name);
+          KERR("TIMEOUT %s add:%d del:%d", cur->name,
+               cur->side[i].waiting_ack_add_lan,
+               cur->side[i].waiting_ack_del_lan);
           cur->side[i].timer_count = 0;
           cur->to_be_destroyed = 1;
           }
@@ -283,7 +287,18 @@ void dpdk_a2b_event_from_a2b_dpdk_process(char *name, int on)
     if ((on == -1) || (on == 0))
       {
       if (on == -1)
+        {
         KERR("ERROR %s", name);
+        for (i=0; i<2; i++)
+          {
+          lan = cur->side[i].lan;
+          if (strlen(lan))
+            {
+            dpdk_msg_send_del_lan_a2b(lan, name, i);
+            KERR("ERROR %s %s %d", name, lan, i);
+            }
+          }
+        }
       if (cur->add_llid)
         {
         KERR("ERROR %s", name);

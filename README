@@ -5,9 +5,9 @@ See directory cloonix for the LICENCE
 
 See clownix.net for a documentation which may not be up to date.
 
-This version v10-00 is the latest (if this README is up to date).
+This version v11-00 is the latest
 The downloads for this version are in
-http://clownix.net/downloads/cloonix-10-00
+http://clownix.net/downloads/cloonix-11-00
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -15,39 +15,34 @@ HOWTO INSTALL:
 
 It is assumed that sudo makes the command run as root.
 
-Tested on:  
+Tested on virtual machines installed with:
+  
             buster (debian 10),
             bullseye (debian 11),
-            eoan (ubuntu 19.10),
             focal (ubuntu 20.04),
             centos8,
-            fedora31,
             fedora32,
             opensuse152.
 
-Compilation and run work, on the above but for other distributions, you may
-have to ajust needed packages that are in file install_depends.
+Compilation and run should work, on the above but for other distributions,
+you may have to ajust needed packages, look in file install_depends for help.
 
+
+cd cloonix
 sudo ./install_depends
-
-wget http://clownix.net/downloads/cloonix-10-00/targz_store.tar.gz
-
+wget http://clownix.net/downloads/cloonix-11-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
-
 ./doitall
+
 
 -----------------------------------------------------------------------------
 HOWTO GET A WORKING VM:
+See at http://clownix.net/downloads/cloonix-11-00/bulk
 
 mkdir -p ${HOME}/cloonix_data/bulk
-
 cd ${HOME}/cloonix_data/bulk
-
-wget http://clownix.net/downloads/cloonix-10-00/bulk/buster.qcow2.gz
-
+wget http://clownix.net/downloads/cloonix-11-00/bulk/buster.qcow2.gz
 gunzip buster.qcow2.gz
-
-See other distros at http://clownix.net/downloads/cloonix-10-00/bulk
 
 -----------------------------------------------------------------------------
 
@@ -82,16 +77,15 @@ For the first test of cloonix:
 cd cloonix/quickstart
 
 ./ping.sh sock
-
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
-TO START DPDK/OVS NET:  (Lower latency, Higher Throughput)
+TO START DPDK/OVS NET:  (Lower latency, Higher Throughput, advised)
 -----------------------------------------------------------------------------
-  The host must have 1 Giga size hugepages, i chose to have 5 hugepages:
+  The host must have 1 Giga size hugepages, I chose to have 5 hugepages:
 -----------------------------------------------------------------------------
-To have the correct hugepage configuration, if you have 5 giga to spare for
-dpdk, you can put in /etc/default/grub:
+
+To have the correct hugepage configuration, put in /etc/default/grub: 
 
 GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugepages=5"
 
@@ -115,46 +109,26 @@ Inspect ovs data:
 
 cloonix_ovs nemo vsctl show
 
-Note: isolcpus=3
-
------------------------------------------------------------------------------
-DPDK ETHERNET INTERFACE TEST WITHOUT INTEL
-As my personnal PCs have only Realtek ethernet devices and as those are not
-supported by DPDK, I never tested the DPDK with a real device.
-Here is the way of testing I used for this function:
-
-First compile a custom kernel with VFIO_NOIOMMU=y in the kernel config, this
-new kernel will be installed in your guest vm (not the host).
-
-Hardcoded in the current cloonix code, the vfio module is inserted with
-parameter enable_unsafe_noiommu_mode, I have no way to know the impact of
-this on a real dpdk interface.
-
-To run the cloonix software inside the guest, the best way is to make a
-persistant guest with the compiled cloonix inside..
-
-Launch 2 instances of this guest with dpdk interfaces linked to each-other.
-Inside each guest launch a nested vm with a dpdk interface, connect the
-interface to the pci 0000:00:05.0 (corresponding to the eth0 of level 0 guest).
-Ifconfig and ping from nested guest to nested guest.
 -----------------------------------------------------------------------------
 CISCO DEMO:
 After cloonix install, go in "tools/cisco" directory and execute
 The 3 steps to have a cisco network running ospf.
-Sadly the cisco I have does not support several dpdk interfaces, it seems
-to work with one or two but reboots on 3 or more.
-As the new dpdk nat supports the ssh, the demo has one dpdk and all other
-are vhost interfaces. The dpdk is the last interface, the nat must be put
-int front of the interface that is dhcp configured (eth4 or Gigabitethernet5)
-in the demo case. --cisco4 must be given to have automatic nat attached to
-this interface (see in the step3_run_demo.sh script).
------------------------------------------------------------------------------
-Note: the wireshark sniffer and the nat are not implemented yet on vhost
-      interface.
+are vhost interfaces. The nat must is put int front of the interface that is
+dhcp configured (eth4 or Gigabitethernet5) in the demo case.
+--cisco4 must be given to have automatic nat attached to this interface
+(see in the step3_run_demo.sh script).
 -----------------------------------------------------------------------------
 cloonix also supports wlan:
 cd cloonix/quickstart/mac80211_hwsim
 ./hwsim.sh
 -----------------------------------------------------------------------------
-
-
+wireshark problems: Make wireshark usable by non-root user, on debian the way
+to go is:
+echo "wireshark-common wireshark-common/install-setuid boolean true" > preseed
+debconf-set-selections preseed
+dpkg-reconfigure  wireshark
+adduser perrier wireshark
+-----------------------------------------------------------------------------
+Note: the only choices for the inter-vm links are now sock or dpdk, the vhost
+option is not supported in this version.
+-----------------------------------------------------------------------------

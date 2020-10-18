@@ -15,10 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-char *edp_vhost_get_ifname(char *name, int num);
-void edp_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name);
-void edp_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name);
-int  edp_vhost_add_port(int llid, int tid, char *name, char *lan);
-int  edp_vhost_del_port(char *name, char *lan);
-void edp_vhost_init(void);
-/*--------------------------------------------------------------------------*/
+void checksum_compute(struct rte_mbuf *mbuf);
+void utils_init(void);
+/*---------------------------------------------------------------------------*/
+

@@ -90,8 +90,6 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
       add_new_eth(name, i, endp_type_kvm_sock, tx[i], ty[i], thidden[i]);
     else if (eth_tab[i].eth_type == eth_type_dpdk)
       add_new_eth(name, i, endp_type_kvm_dpdk, tx[i], ty[i], thidden[i]);
-    else if (eth_tab[i].eth_type == eth_type_vhost)
-      add_new_eth(name, i, endp_type_kvm_vhost, tx[i], ty[i], thidden[i]);
     else if (eth_tab[i].eth_type == eth_type_wlan)
       add_new_eth(name, i, endp_type_kvm_wlan, tx[i], ty[i], thidden[i]);
     }

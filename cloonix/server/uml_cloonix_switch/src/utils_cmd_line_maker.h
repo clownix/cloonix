@@ -19,13 +19,12 @@ void utils_send_status_ko(int *llid, int *tid, char *err);
 void utils_send_status_ok(int *llid, int *tid);
 int utils_get_next_tid(void);
 int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab,
-                          int *sock, int *dpdk, int *vhost, int *wlan);
+                          int *sock, int *dpdk, int *wlan);
 
 char *utils_get_suid_power_bin_path(void);
 char *utils_get_snf_dpdk_bin_path(void);
 char *utils_get_a2b_dpdk_bin_path(void);
 char *utils_get_nat_dpdk_bin_path(void);
-char *vhost_ident_get(int vm_id, int eth);
 char *utils_dir_conf(int vm_id);
 char *utils_dir_conf_tmp(int vm_id);
 char *utils_get_root_fs(char *rootfs);

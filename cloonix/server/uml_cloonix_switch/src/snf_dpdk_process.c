@@ -162,6 +162,7 @@ static void timer_heartbeat(void *data)
   while(cur)
     {
     next = cur->next;
+    cur->watchdog_count += 1;
     if (cur->llid == 0)
       {
       llid = try_connect(cur->socket, cur->name);
@@ -172,7 +173,7 @@ static void timer_heartbeat(void *data)
       else
         {
         cur->count += 1;
-        if (cur->count == 20)
+        if (cur->count == 50)
           {
           KERR("%s", cur->socket);
           dpdk_snf_event_from_snf_dpdk_process(cur->name, cur->lan, -1);
@@ -186,15 +187,14 @@ static void timer_heartbeat(void *data)
       hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
       cur->suid_root_done = 1;
       }
+    else if (cur->watchdog_count >= 150)
+      {
+      KERR("%s %s", cur->name, cur->lan);
+      dpdk_snf_event_from_snf_dpdk_process(cur->name, cur->lan, -1);
+      free_snf_dpdk(cur);
+      }
     else
       {
-      cur->watchdog_count += 1;
-      if (cur->watchdog_count >= 50)
-        {
-        KERR("%s %s", cur->name, cur->lan);
-        dpdk_snf_event_from_snf_dpdk_process(cur->name, cur->lan, 0);
-        free_snf_dpdk(cur);
-        }
       cur->count += 1;
       if (cur->count == 5)
         {

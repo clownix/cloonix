@@ -268,7 +268,6 @@ static int collect_endp(t_eventfull_endp *eventfull, int nb, t_endp *endp)
       KERR("%d", cur->endp_type);
     else if ((!((cur->endp_type == endp_type_kvm_sock)  && (!cfg_get_vm(cur->name)))) &&
              (!((cur->endp_type == endp_type_kvm_dpdk)  && (!cfg_get_vm(cur->name)))) &&
-             (!((cur->endp_type == endp_type_kvm_vhost) && (!cfg_get_vm(cur->name)))) &&
              (!((cur->endp_type == endp_type_kvm_wlan)  && (!cfg_get_vm(cur->name)))))
       {
       strncpy(eventfull[real_nb].name, cur->name, MAX_NAME_LEN-1);

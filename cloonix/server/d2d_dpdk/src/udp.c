@@ -44,23 +44,27 @@
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
+#include "utils.h"
 #include "udp.h"
 
-#define PLEN 1518
+#define PLEN 70000
 #define PHEAD 2 
 #define MHNB 2 
 #define MHLN 2 
 #define MHID 4 
+#define MAXUDPLEN (MHID+MHLN+MHNB+PLEN+PHEAD)
 
 struct rte_mempool *get_rte_mempool(void);
 static struct sockaddr_in g_loc_addr;
 static struct sockaddr_in g_dist_addr;
 static int g_llid;
 static int g_fd;
-static uint8_t g_rx[MHID + MHLN + MHNB + (PLEN + PHEAD) * MAX_PKT_BURST];
-static uint8_t g_tx[MHID + MHLN + MHNB + (PLEN + PHEAD) * MAX_PKT_BURST];
+static uint8_t g_rx[MAXUDPLEN];
+static uint8_t g_tx[MAXUDPLEN];
 static int g_traffic_mngt;
 void reply_probe_udp(void);
+char *get_net_name(void);
+char *get_d2d_name(void);
 
 /*****************************************************************************/
 static void nonblock(int fd)
@@ -78,11 +82,11 @@ static void nonblock(int fd)
 void udp_tx_sig(int len, uint8_t *buf)
 {
   uint32_t ln = sizeof(struct sockaddr_in);
-  int len_tx = sendto(g_fd, buf, len, 0,
-                  (const struct sockaddr *) &g_dist_addr, ln);
+  int len_tx;
+  len_tx = sendto(g_fd,buf,len,0,(const struct sockaddr *)&g_dist_addr,ln);
   if (len_tx != len)
     {
-    KERR("%d %d", len_tx, len);
+    KERR("%d %d %d", len_tx, len, errno);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -118,9 +122,14 @@ static int udp_tx_traf_send(int tot)
   uint32_t ln = sizeof(struct sockaddr_in);
   int len_tx, result = 0;
   len_tx = sendto(g_fd,g_tx,tot,0,(const struct sockaddr *)&g_dist_addr,ln);
+  while ((len_tx == -1) && (errno == EAGAIN))
+    {
+    usleep(1000);
+    len_tx = sendto(g_fd,g_tx,tot,0,(const struct sockaddr *)&g_dist_addr,ln);
+    }
   if (len_tx != tot) 
     {
-    KERR("%d %d", len_tx, tot);
+    KERR("%d %d %d", len_tx, tot, errno);
     result = -1;
     }
   return result;
@@ -131,8 +140,7 @@ static int udp_tx_traf_send(int tot)
 int udp_read_bulk(int *nb_packets, uint8_t **start)
 {
   int nbp, len, tot_len;
-  int max = MHID + MHLN + MHNB + (PLEN + PHEAD) * MAX_PKT_BURST;
-  int result = read(g_fd, g_rx, max);
+  int result = read(g_fd, g_rx, MAXUDPLEN);
   if (result == 0)
     {
     result = -1;
@@ -208,17 +216,20 @@ static int process_udp_rx(int nb_packets, int tot_len, uint8_t *pkts,
       if (len_done + len > tot_len)
         {
         KERR("ERROR %d %d %d", len, tot_len, len_done);
+        rte_pktmbuf_free_bulk(mbufs, nb_packets);
         result = -1;
         break;
         }
       data = rte_pktmbuf_append(mbufs[i], len);
       if (data == NULL)
         {
-        KERR("NO MEM 2");
+        KERR("NO MEM 2 len=%d nb_packets=%d", len, nb_packets);
+        rte_pktmbuf_free_bulk(mbufs, nb_packets);
         result = -1;
         break;
         }
       memcpy(data, &(ptr[2]), len);
+      checksum_compute(mbufs[i]);
       ptr += len + PHEAD;
       len_done += (len + PHEAD); 
       }
@@ -236,16 +247,14 @@ static int rx_cb(void *ptr, int llid, int fd)
     len = read(fd, g_rx, PLEN);
     if (len == 0)
       {
-      if (msg_exist_channel(llid))
-        msg_delete_channel(llid);
+      udp_close();
       KERR(" ");
       }
     else if (len < 0)
       {
       if ((errno != EAGAIN) && (errno != EINTR))
         {
-        if (msg_exist_channel(llid))
-          msg_delete_channel(llid);
+        udp_close();
         KERR(" ");
         }
       }
@@ -265,8 +274,7 @@ static void err_cb(void *ptr, int llid, int err, int from)
 {
   if (g_traffic_mngt == 0)
     {
-    if (msg_exist_channel(llid))
-      msg_delete_channel(llid);
+    udp_close();
     KERR(" ");
     }
 }
@@ -285,9 +293,11 @@ void udp_fill_dist_addr(uint32_t ip, uint16_t udp_port)
 void udp_close(void)
 {
   uint32_t len = sizeof(struct sockaddr_in);
+KERR("CCCCCCCCCCCCCCLLLLLLLLLLLLLOOOOOOOOOOOOOOOOOOOSSSSSSSSSSSSSEEEEEEEEEEE");
   if (msg_exist_channel(g_llid))
     msg_delete_channel(g_llid);
-  close(g_fd);
+  if (g_fd != -1) 
+    close(g_fd);
   memset(&g_loc_addr,  0, len);
   memset(&g_dist_addr, 0, len);
   g_llid = 0;
@@ -323,7 +333,24 @@ static int udp_init_bind_loc_addr(uint16_t *udp_port)
   if (result)
     KERR("No port udp found");
   else
-    g_llid = msg_watch_fd(fd, rx_cb, err_cb, "udpd2d");
+    g_llid = msg_watch_no_erase_fd(fd, rx_cb, err_cb, "udpd2d");
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int sub_udp_tx_burst(int nb, struct rte_mbuf **mbuf, int tot_len)
+{
+  int i, len, result;
+  uint8_t *data, *buf;
+  buf = udp_tx_traf_header(tot_len, nb);
+  for (i=0; i < nb; i++)
+    {
+    len = (int) (mbuf[i]->pkt_len);
+    data = rte_pktmbuf_mtod(mbuf[i], uint8_t *);
+    buf = udp_tx_traf_add_elem(len, data, buf);
+    }
+  result = udp_tx_traf_send(tot_len);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -338,6 +365,8 @@ int udp_get_traffic_mngt(void)
 /****************************************************************************/
 void udp_enter_traffic_mngt(void)
 {
+  if (msg_exist_channel(g_llid))
+    msg_delete_channel(g_llid);
   g_traffic_mngt = 1;
 }
 /*--------------------------------------------------------------------------*/
@@ -348,6 +377,7 @@ int  udp_rx_burst(int *nb, struct rte_mbuf **mbuf)
   int nb_packets;
   uint8_t *pkts;
   int result = udp_read_bulk(&nb_packets, &pkts);
+  *nb = 0;
   if (result > 0)
     {
     result = process_udp_rx(nb_packets, result, pkts, mbuf);
@@ -361,25 +391,33 @@ int  udp_rx_burst(int *nb, struct rte_mbuf **mbuf)
 /****************************************************************************/
 int udp_tx_burst(int nb, struct rte_mbuf **mbuf)
 {
-  int i, len, tot_len = MHID + MHLN + MHNB;
-  int result, max = MHID + MHLN + MHNB + (PLEN + PHEAD) * MAX_PKT_BURST;
-  uint8_t *data, *buf;
+  int result, i, tot_len, len;
+  tot_len = MHID + MHLN + MHNB; 
   for (i=0; i < nb; i++)
     {
     tot_len += PHEAD; 
     tot_len += (int) (mbuf[i]->pkt_len); 
     }
-  if (tot_len > max)
-    KOUT("%d %d", tot_len, max);
-  buf = udp_tx_traf_header(tot_len, nb);
-  for (i=0; i < nb; i++)
+  if (tot_len > 65500)
     {
-    len = (int) (mbuf[i]->pkt_len);
-    data = rte_pktmbuf_mtod(mbuf[i], uint8_t *);
-    buf = udp_tx_traf_add_elem(len, data, buf);
-    rte_pktmbuf_free(mbuf[i]);
+    for (i=0; i < nb; i++)
+      {
+      len = PHEAD + MHID + MHLN + MHNB; 
+      len += (int) (mbuf[i]->pkt_len); 
+      result = sub_udp_tx_burst(1, &(mbuf[i]), len);
+      if (result != 0)
+        {
+        KERR("BAD UNIT: %d %d", nb, tot_len);
+        break;
+        }
+      }
     }
-  result = udp_tx_traf_send(tot_len);
+  else
+    {
+    result = sub_udp_tx_burst(nb, mbuf, tot_len);
+    }
+  for (i=0; i < nb; i++)
+    rte_pktmbuf_free(mbuf[i]);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -390,6 +428,7 @@ int udp_init(void)
   int result = -1;
   uint16_t udp_port;
   g_traffic_mngt = 0;
+  g_fd = -1;
   if (udp_init_bind_loc_addr(&udp_port) == 0)
     result = udp_port;
   return result;

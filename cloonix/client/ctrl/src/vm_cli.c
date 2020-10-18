@@ -38,12 +38,11 @@ void help_add_vm_kvm(char *line)
   line);
   printf("\n\tram is the mem_qty in mega");
   printf("\n\tcpu is the number of processors");
-  printf("\n\teth_description: d is for dpdk, s is for sock, v is for vhost w is for wlan");
+  printf("\n\teth_description: d is for dpdk, s is for sock, w is for wlan");
   printf("\n\teth_description example:");
-  printf("\n\t\t  eth=sdvw says eth0:sock eth1:dpdk eth3:vhost wlan0:hwsim");
+  printf("\n\t\t  eth=sdw says eth0:sock eth1:dpdk wlan0:hwsim");
   printf("\n\tdpdk: low latency and high throughput, max:%d", MAX_DPDK_VM);
   printf("\n\tsock: eth provided with classic unix socket, max:%d", MAX_SOCK_VM);
-  printf("\n\tvhost: eth provided with vhost-net, max:%d", MAX_VHOST_VM);
   printf("\n\twlan: wlanx provided by hwsim, max:%d\n", MAX_WLAN_VM);
   printf("\n\t[options]");
   printf("\n\t       --persistent ");
@@ -69,8 +68,8 @@ void help_add_vm_kvm(char *line)
   printf("This will give 3 eth based on cloonix sockets\n");
   printf("\n%s vm_name ram=2000 cpu=4 eth=ddd buster.qcow2\n", line);
   printf("This will give 3 eth based on dpdk\n");
-  printf("\n%s vm_name ram=2000 cpu=4 eth=vsd buster.qcow2 --persistent\n", line);
-  printf("This will give 3 eth, eth0 is vhost-net, eth1 is sock eth2 is dpdk\n");
+  printf("\n%s vm_name ram=2000 cpu=4 eth=dsd buster.qcow2 --persistent\n", line);
+  printf("This will give 3 eth, eth0 is dpdk, eth1 is sock eth2 is dpdk\n");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
@@ -213,8 +212,8 @@ static int check_eth_desc(char *eth_desc, char *err,
                           t_eth_table *eth_tab)
 
 {
-  int i, sock=0, dpdk=0, vhost=0, wlan=0, result = 0;
-  int len, max = MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM;
+  int i, sock=0, dpdk=0, wlan=0, result = 0;
+  int len, max = MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM;
   memset(eth_tab, 0, max * sizeof(t_eth_table)); 
   len = strlen(eth_desc);
   if (len >= max)
@@ -230,8 +229,6 @@ static int check_eth_desc(char *eth_desc, char *err,
         eth_tab[i].eth_type = eth_type_sock;
       else if (eth_desc[i] == 'd')
         eth_tab[i].eth_type = eth_type_dpdk;
-      else if (eth_desc[i] == 'v')
-        eth_tab[i].eth_type = eth_type_vhost;
       else if (eth_desc[i] == 'w')
         eth_tab[i].eth_type = eth_type_wlan;
       else
@@ -249,8 +246,6 @@ static int check_eth_desc(char *eth_desc, char *err,
         sock += 1;
       if (eth_tab[i].eth_type == eth_type_dpdk)
         dpdk += 1;
-      if (eth_tab[i].eth_type == eth_type_vhost)
-        vhost += 1;
       if (eth_tab[i].eth_type == eth_type_wlan)
         wlan += 1;
       }
@@ -264,11 +259,6 @@ static int check_eth_desc(char *eth_desc, char *err,
       sprintf(err, "Too many dpdk interfaces, %d max: %d",dpdk,MAX_DPDK_VM);
       result = -1;
       }
-    else if (vhost > MAX_VHOST_VM)
-      {
-      sprintf(err, "Too many vhost interfaces, %d max: %d",vhost,MAX_VHOST_VM);
-      result = -1;
-      }
     else if (wlan > MAX_WLAN_VM)
       {
       sprintf(err, "Too many wlan interfaces, %d max: %d", wlan, MAX_WLAN_VM);
@@ -276,7 +266,7 @@ static int check_eth_desc(char *eth_desc, char *err,
       }
 
     }
-  *nb_tot_eth = sock + dpdk + vhost + wlan;
+  *nb_tot_eth = sock + dpdk + wlan;
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -288,7 +278,7 @@ int cmd_add_vm_kvm(int argc, char **argv)
   char *rootfs, *name;
   char eth_string[MAX_PATH_LEN];
   char err[MAX_PATH_LEN];
-  t_eth_table eth_tab[MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM];
+  t_eth_table eth_tab[MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM];
   if (argc < 4) 
     printf("\nNot enough parameters for add kvm\n");
 

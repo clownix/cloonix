@@ -42,6 +42,7 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "vhost_client.h"
+#include "utils.h"
 #include "sched.h"
 
 
@@ -304,6 +305,7 @@ int main (int argc, char *argv[])
     unlink(g_ctrl_path);
     }
   vhost_client_init();
+  utils_init();
   msg_mngt_init("a2b_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
   string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");

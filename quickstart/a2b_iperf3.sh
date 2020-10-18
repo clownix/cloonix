@@ -16,7 +16,7 @@ fi
 echo waiting 2 sec
 sleep 2
 
-cloonix_cli nemo add a2b name_a2b
+cloonix_cli nemo add a2b a2b
 
 #######################################################################
 cloonix_gui $NET
@@ -37,8 +37,8 @@ set -e
 #######################################################################
 cloonix_cli $NET add lan vm1 0 lan1
 cloonix_cli $NET add lan vm2 0 lan2
-cloonix_cli $NET add lan name_a2b 0 lan1
-cloonix_cli $NET add lan name_a2b 1 lan2
+cloonix_cli $NET add lan a2b 0 lan1
+cloonix_cli $NET add lan a2b 1 lan2
 #----------------------------------------------------------------------
 
 #######################################################################

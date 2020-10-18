@@ -68,9 +68,8 @@
 #define MAX_PHY            16
 #define MAX_PCI            16
 #define MAX_VM             100
-#define MAX_SOCK_VM         12
-#define MAX_DPDK_VM        8
-#define MAX_VHOST_VM       12
+#define MAX_SOCK_VM        12
+#define MAX_DPDK_VM        12
 #define MAX_WLAN_VM        8
 
 #define MAX_TRAF_ENDPOINT 4
@@ -127,7 +126,6 @@ enum{
   eth_type_none,
   eth_type_sock,
   eth_type_dpdk,
-  eth_type_vhost,
   eth_type_wlan,
   eth_type_max,
 };
@@ -208,7 +206,7 @@ typedef struct t_topo_kvm
   int  cpu;
   int  mem;
   int  nb_tot_eth;
-  t_eth_table eth_table[MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM];
+  t_eth_table eth_table[MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM];
   int  nb_wlan; 
   int  vm_id;
   char linux_kernel[MAX_NAME_LEN];

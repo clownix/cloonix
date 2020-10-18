@@ -2,10 +2,8 @@
 set +e
 
 LIST="centos8 \
-      fedora31 \
       fedora32 \
       opensuse152 \
-      eoan \
       focal \
       buster \
       bullseye"

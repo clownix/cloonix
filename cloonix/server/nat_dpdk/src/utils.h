@@ -15,10 +15,11 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#define EMPTY_HEAD 12
 #define BOOTP_SERVER    67
 #define BOOTP_CLIENT    68
 
-#define MAX_RXTX_LEN 1518
+#define MAX_RXTX_LEN 1500
 
 struct rte_mbuf *utils_alloc_pktmbuf(int len);
 struct rte_mempool *get_rte_mempool(void);

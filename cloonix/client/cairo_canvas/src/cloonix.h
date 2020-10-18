@@ -35,7 +35,7 @@ typedef struct t_custom_vm
   int  cpu;
   int  mem;
   int  nb_tot_eth;
-  t_eth_table eth_tab[MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM + MAX_WLAN_VM];
+  t_eth_table eth_tab[MAX_SOCK_VM + MAX_DPDK_VM + MAX_WLAN_VM];
 } t_custom_vm;
 
 

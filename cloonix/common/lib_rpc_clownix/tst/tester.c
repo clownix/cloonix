@@ -372,7 +372,7 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
     }
   else
     {
-    for (k=0; k < MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM; k++)
+    for (k=0; k < MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM; k++)
       {
       if (kvm->eth_table[k].eth_type != ikvm->eth_table[k].eth_type)
         {
@@ -402,7 +402,7 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
         }
       }
     if (memcmp(kvm->eth_table, ikvm->eth_table,
-       (MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM)*sizeof(t_eth_table)))
+       (MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM)*sizeof(t_eth_table)))
       KERR(" ");
     }
   return result;
@@ -436,7 +436,7 @@ static void random_kvm(t_topo_kvm *kvm)
   kvm->mem = rand();
   kvm->vm_config_flags = rand();
   kvm->vm_config_param = rand();
-  kvm->nb_tot_eth = my_rand(MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM);
+  kvm->nb_tot_eth = my_rand(MAX_SOCK_VM+MAX_DPDK_VM);
   for (k=0; k < kvm->nb_tot_eth; k++)
     {
     kvm->eth_table[k].eth_type = (rand() & 0x04) + 1;

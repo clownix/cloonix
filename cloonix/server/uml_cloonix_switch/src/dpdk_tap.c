@@ -42,6 +42,9 @@
 #include "dpdk_dyn.h"
 #include "dpdk_tap.h"
 #include "dpdk_d2d.h"
+#include "dpdk_a2b.h"
+#include "dpdk_nat.h"
+#include "dpdk_snf.h"
 #include "dpdk_msg.h"
 #include "fmt_diag.h"
 #include "qmp.h"
@@ -144,9 +147,11 @@ static void timer_tap_msg_beat(void *data)
         (cur->waiting_ack_del_lan != 0))
       {
       cur->timer_count += 1;
-      if (cur->timer_count > 15)
+      if (cur->timer_count > 20)
         {
-        KERR("Timeout %s", cur->name);
+        KERR("Timeout %s  addtap:%d deltap:%d addlan:%d dellan:%d",
+             cur->name, cur->waiting_ack_add_tap, cur->waiting_ack_del_tap,
+             cur->waiting_ack_add_lan, cur->waiting_ack_del_lan);
         utils_send_status_ko(&(cur->llid), &(cur->tid), "timeout error");
         free_dtap(cur);
         }
@@ -294,20 +299,23 @@ void dpdk_tap_resp_add(int is_ko, char *name, char *strmac)
     utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
     free_dtap(cur);
     }
-  else if (dpdk_msg_send_add_lan_tap(cur->lan, name))
-    KERR("%s %s", cur->lan, name);
-  else
+  else 
     {
-    if (cur->waiting_ack_add_tap == 0)
-      KERR("%s", name);
-    if (cur->waiting_ack_del_tap != 0)
-      KERR("%s", name);
-    strncpy(cur->strmac, strmac, MAX_NAME_LEN-1);
-    cur->waiting_ack_add_lan = 1;
-    cur->waiting_ack_add_tap = 0;
-    cur->waiting_ack_del_tap = 0;
-    cur->timer_count = 0;
-  } 
+    if (dpdk_msg_send_add_lan_tap(cur->lan, name))
+      KERR("%s %s", cur->lan, name);
+    else
+      {
+      if (cur->waiting_ack_add_tap == 0)
+        KERR("%s", name);
+      if (cur->waiting_ack_del_tap != 0)
+        KERR("%s", name);
+      strncpy(cur->strmac, strmac, MAX_NAME_LEN-1);
+      cur->waiting_ack_add_lan = 1;
+      cur->waiting_ack_add_tap = 0;
+      cur->waiting_ack_del_tap = 0;
+      cur->timer_count = 0;
+      } 
+    } 
 }
 /*--------------------------------------------------------------------------*/
 

@@ -15,11 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define CIRC_MAX_LEN 0xFFFF
+void checksum_compute(struct rte_mbuf *mbuf);
+void utils_init(void);
+/*---------------------------------------------------------------------------*/
 
-/****************************************************************************/
-void cirspy_flush(void);
-void cirspy_run(void);
-int cirspy_put(long long usec, int len, char *pkt);
-void  cirspy_init(void);
-/*--------------------------------------------------------------------------*/

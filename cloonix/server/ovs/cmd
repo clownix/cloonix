@@ -17,9 +17,9 @@ fi
 cd ${HERE}
 tar xvf ${TARGZSTORE}/${NAMEZ}
 cd ${HERE}/${NAME}
+rm -rf .git
 patch -p1 < ${HERE}/ovs.patch
 ./boot.sh
-rm -rf .git
 export DPDK_NETDEV=1
 export PKG_CONFIG_PATH=${DPDK}/lib/pkgconfig
 CFLAGS="-I${DPDK}/include -DALLOW_EXPERIMENTAL_API "

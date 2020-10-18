@@ -45,6 +45,7 @@ typedef struct t_d2d_dpdk
   int llid;
   int pid;
   int closed_count;
+  int to_be_killed;
   int suid_root_done;
   int watchdog_count;
   struct t_d2d_dpdk *prev;
@@ -141,6 +142,7 @@ static void timer_heartbeat(void *data)
   while(cur)
     {
     next = cur->next;
+    cur->watchdog_count += 1;
     if (cur->llid == 0)
       {
       llid = try_connect(cur->socket, cur->name);
@@ -151,7 +153,7 @@ static void timer_heartbeat(void *data)
       else
         {
         cur->count += 1;
-        if (cur->count == 20)
+        if (cur->count == 50)
           {
           KERR("%s %s", locnet, cur->socket);
           dpdk_d2d_event_from_d2d_dpdk_process(cur->name, -1);
@@ -165,14 +167,13 @@ static void timer_heartbeat(void *data)
       hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
       cur->suid_root_done = 1;
       }
+    else if (cur->watchdog_count >= 150)
+      {
+      dpdk_d2d_event_from_d2d_dpdk_process(cur->name, -1);
+      free_d2d_dpdk(cur);
+      }
     else
       {
-      cur->watchdog_count += 1;
-      if (cur->watchdog_count >= 25)
-        {
-        dpdk_d2d_event_from_d2d_dpdk_process(cur->name, 0);
-        free_d2d_dpdk(cur);
-        }
       cur->count += 1;
       if (cur->count == 5)
         {
@@ -184,8 +185,17 @@ static void timer_heartbeat(void *data)
         cur->closed_count -= 1;
         if (cur->closed_count == 0)
           {
-          dpdk_d2d_event_from_d2d_dpdk_process(cur->name, 0);
-          free_d2d_dpdk(cur);
+          if (cur->to_be_killed != 1)
+            {
+            KERR("PROCESS LLID DECONNECTED %s %s", locnet, cur->socket);
+            dpdk_d2d_event_from_d2d_dpdk_process(cur->name, -1);
+            free_d2d_dpdk(cur);
+            }
+          else
+            {
+            dpdk_d2d_event_from_d2d_dpdk_process(cur->name, 0);
+            free_d2d_dpdk(cur);
+            }
           }
         }
       }
@@ -255,11 +265,22 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
     }
+  else if (!strcmp(line,
+  "cloonixd2d_eal_init_ok"))
+    {
+    hop_event_hook(llid, FLAG_HOP_DIAG, line);
+    }
   else if (sscanf(line,
   "cloonixd2d_vhost_start_ok %s", name) == 1)
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
     dpdk_d2d_vhost_started(name);
+    }
+  else if (sscanf(line,
+  "cloonixd2d_vhost_stop_ok %s", name) == 1)
+    {
+    hop_event_hook(llid, FLAG_HOP_DIAG, line);
+    dpdk_d2d_vhost_stopped(name);
     }
   else if (sscanf(line,
   "cloonixd2d_get_udp_port_ko %s", name) == 1)
@@ -325,6 +346,7 @@ void d2d_dpdk_start_stop_process(char *name, int on)
       }
     else
       {
+      cur->to_be_killed = 1;
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "rpct_send_kil_req to %s", name);
       rpct_send_kil_req(NULL, cur->llid, type_hop_d2d_dpdk);
@@ -400,6 +422,46 @@ void d2d_dpdk_start_vhost(char *name)
     {
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "cloonixd2d_vhost_start %s", name);
+    rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void d2d_dpdk_eal_init(char *name)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char msg[MAX_PATH_LEN];
+  t_d2d_dpdk *cur = find_d2d_dpdk(name);
+  if (!cur)
+    {
+    KERR("%s %s", locnet, name);
+    }
+  else
+    {
+    memset(msg, 0, MAX_PATH_LEN); 
+    snprintf(msg, MAX_PATH_LEN-1, "cloonixd2d_eal_init");
+    rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void d2d_dpdk_stop_vhost(char *name)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char msg[MAX_PATH_LEN];
+  t_d2d_dpdk *cur = find_d2d_dpdk(name);
+  if (!cur)
+    {
+    KERR("%s %s", locnet, name);
+    }
+  else
+    {
+    memset(msg, 0, MAX_PATH_LEN);
+    snprintf(msg, MAX_PATH_LEN-1, "cloonixd2d_vhost_stop %s", name);
     rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
     hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
     }

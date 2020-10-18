@@ -143,9 +143,11 @@ static void timer_nat_msg_beat(void *data)
           (cur->waiting_ack_del_lan))
         {
         cur->timer_count += 1;
-        if (cur->timer_count > 15)
+        if (cur->timer_count > 20)
           {
-          KERR("TIMEOUT %s", cur->name);
+          KERR("TIMEOUT %s addlan:%d dellan:%d", 
+               cur->name, cur->waiting_ack_add_lan,
+               cur->waiting_ack_del_lan);
           cur->timer_count = 0;
           if (cur->to_be_destroyed == 1)
             {
@@ -266,7 +268,10 @@ void dpdk_nat_event_from_nat_dpdk_process(char *name, char *lan, int on)
     if ((on == -1) || (on == 0))
       {
       if (on == -1)
+        {
         KERR("ERROR %s %s", name, lan);
+        dpdk_msg_send_del_lan_nat(lan, name);
+        }
       cur->var_dpdk_start_stop_process = 0;
       if (cur->waiting_ack_del_lan)
         {

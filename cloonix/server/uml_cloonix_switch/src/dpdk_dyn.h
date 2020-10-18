@@ -35,6 +35,7 @@ int dpdk_dyn_topo_endp(char *name, int num, t_topo_endp *endp);
 
 int dpdk_dyn_eth_exists(char *name, int num);
 int dpdk_dyn_lan_exists(char *name);
+int dpdk_dyn_lan_exists_with_dpdk(char *name);
 int dpdk_dyn_lan_exists_in_vm(char *name, int num, char *lan);
 int dpdk_dyn_is_all_empty(void);
 void dpdk_dyn_init(void);

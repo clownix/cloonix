@@ -33,6 +33,7 @@
 
 #define MEMORY_BARRIER()  asm volatile ("": : :"memory")
 
+#define EMPTY_HEAD 12
 
 
 #define CIRC_SPY_MASK (0x1FF)
@@ -129,8 +130,10 @@ void cirspy_run(void)
   elem = queue_get(&(g_cspy.full_set));
   while(elem)
     {
-    pcap_record_rx_packet(elem->usec, elem->len, elem->buf);
-    eventfull_hook_spy(elem->len, elem->buf);
+    if (elem->len <= EMPTY_HEAD)
+      KOUT("%d", elem->len);
+    pcap_record_rx_packet(elem->usec, elem->len-EMPTY_HEAD, elem->buf+EMPTY_HEAD);
+    eventfull_hook_spy(elem->len-EMPTY_HEAD, elem->buf+EMPTY_HEAD);
     queue_put(&(g_cspy.empty_set), elem);
     elem = queue_get(&(g_cspy.full_set));
     }
@@ -154,6 +157,19 @@ int cirspy_put(long long usec, int len, char *buf)
   return result; 
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void cirspy_flush(void)
+{
+  t_cspy_elem *elem;
+  elem = queue_get(&(g_cspy.full_set));
+  while(elem)
+    {
+    queue_put(&(g_cspy.empty_set), elem);
+    elem = queue_get(&(g_cspy.full_set));
+    }
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void  cirspy_init(void)

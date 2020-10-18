@@ -195,9 +195,6 @@ static int trace_alloc(t_priv_endp *mu)
     if (mu->endp_type == endp_type_kvm_dpdk)
       llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_kvm_dpdk);
     else
-    if (mu->endp_type == endp_type_kvm_vhost)
-      llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_kvm_vhost);
-    else
     if (mu->endp_type == endp_type_kvm_wlan)
       llid_trace_alloc(llid, mu->name, 0, 0, type_llid_trace_endp_kvm_wlan);
     else

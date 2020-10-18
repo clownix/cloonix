@@ -130,6 +130,8 @@ int string_server_unix(char *pname,t_fd_connect connect_cb,char *little_name);
 int  string_server_inet (__u16 port,t_fd_connect connect_cb,char *little_name);
 void msg_mngt_set_callbacks (int llid, t_fd_error err_cb, 
                              t_msg_rx_cb rx_cb);
+int msg_watch_no_erase_fd(int fd, t_fd_event rx_data,
+                 t_fd_error err, char *little_name);
 int msg_watch_fd(int fd, t_fd_event rx_data,
                  t_fd_error err, char *little_name);
 struct timeval *channel_get_current_time(void);

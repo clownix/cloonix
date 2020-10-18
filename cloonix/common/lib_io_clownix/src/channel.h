@@ -19,6 +19,7 @@
 enum {
      kind_client = 0,
      kind_simple_watch_connect,
+     kind_simple_watch_no_erase,
      kind_simple_watch,
      kind_server,
      kind_glib_managed

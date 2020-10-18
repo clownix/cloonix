@@ -27,7 +27,6 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define ALLOW_EXPERIMENTAL_API
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
 #include <rte_config.h>
@@ -243,8 +242,10 @@ static void request_mac_with_ip(t_arp *arp)
   int32_t len = sizeof(struct rte_ether_hdr) +
                 sizeof(struct rte_arp_hdr)   +
                 sizeof(struct rte_arp_ipv4);
-  mbuf    = utils_alloc_pktmbuf(len + 4);
+  mbuf    = utils_alloc_pktmbuf(len + 4 + EMPTY_HEAD);
   buf     = rte_pktmbuf_mtod(mbuf, uint8_t *);
+  memset(buf, 0, EMPTY_HEAD);
+  buf     = rte_pktmbuf_mtod_offset(mbuf, uint8_t *, EMPTY_HEAD);
   utils_get_mac("FF:FF:FF:FF:FF:FF", dmac);
   utils_get_mac(NAT_MAC_CISCO, smac);
   arp->sip = sip;

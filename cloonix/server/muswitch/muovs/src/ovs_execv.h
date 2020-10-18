@@ -25,10 +25,9 @@ int create_ovsdb_server_conf(char *ovs_bin, char *dpdk_dir);
 int ovs_execv_add_pci_dpdk(char *ovs, char *dpdk, char *lan, char *pci);
 int ovs_execv_del_pci_dpdk(char *ovs, char *dpdk, char *lan, char *pci);
 
-int ovs_execv_add_vhost_br(char *ovs, char *dpdk, char *lan);
-int ovs_execv_del_vhost_br(char *ovs, char *dpdk, char *lan);
-int ovs_execv_add_vhost_br_port(char *ovs,char *dpdk,char *lan,char *vhost);
-int ovs_execv_del_vhost_br_port(char *ovs,char *dpdk,char *lan,char *vhost);
+int ovs_execv_add_phy_dpdk(char *ovs, char *dpdk, char *lan, char *phy);
+int ovs_execv_del_phy_dpdk(char *ovs, char *dpdk, char *lan, char *phy);
+
 void init_environ(char *net, char *ovs_bin, char *dpdk_dir);
 int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN]);
 

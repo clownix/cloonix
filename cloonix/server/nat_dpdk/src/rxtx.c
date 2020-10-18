@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <sys/queue.h>
 
-#define ALLOW_EXPERIMENTAL_API
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
 #include <rte_config.h>
@@ -63,7 +62,7 @@ static void rxtx_vhost_rx(struct rte_mbuf *mbuf)
   struct rte_icmp_hdr *icmp_hdr;
   void *l3_hdr;
   len = (int) (mbuf->pkt_len);
-  eth_hdr = rte_pktmbuf_mtod(mbuf, struct rte_ether_hdr *);
+  eth_hdr = rte_pktmbuf_mtod_offset(mbuf, struct rte_ether_hdr *, EMPTY_HEAD);
   ethertype = rte_be_to_cpu_16(eth_hdr->ether_type);
   smac = (uint8_t *) (&eth_hdr->s_addr);
   dmac = (uint8_t *) (&eth_hdr->d_addr);
@@ -73,7 +72,8 @@ static void rxtx_vhost_rx(struct rte_mbuf *mbuf)
     } 
   else if (ethertype == RTE_ETHER_TYPE_IPV4)
     {
-    offset =  sizeof(struct rte_ether_hdr);
+    offset = EMPTY_HEAD;
+    offset +=  sizeof(struct rte_ether_hdr);
     offset += sizeof(struct rte_ipv4_hdr);
     l3_hdr = (uint8_t *)eth_hdr + sizeof(struct rte_ether_hdr);
     l3_len = sizeof(struct rte_ipv4_hdr);

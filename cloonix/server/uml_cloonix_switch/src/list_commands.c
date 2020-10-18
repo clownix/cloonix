@@ -54,14 +54,12 @@ static void eth_tab_to_str(char *out, int nb_tot_eth, t_eth_table *eth_tab)
   memset(out, 0, MAX_NAME_LEN);
   for (i=0 ; i < nb_tot_eth; i++)
     {
-    if (i > MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM + MAX_WLAN_VM)
+    if (i > MAX_SOCK_VM + MAX_DPDK_VM + MAX_WLAN_VM)
       KOUT("%d", nb_tot_eth); 
     if(eth_tab[i].eth_type == eth_type_sock)
       out[i] = 's';
     else if(eth_tab[i].eth_type == eth_type_dpdk)
       out[i] = 'd';
-    else if(eth_tab[i].eth_type == eth_type_vhost)
-      out[i] = 'v';
     else if(eth_tab[i].eth_type == eth_type_wlan)
       out[i] = 'w';
     else
@@ -431,7 +429,6 @@ static int produce_list_sat_cmd(int offset, t_list_commands *hlist,
       }
     else if ((cur->endp_type == endp_type_kvm_sock)  ||
              (cur->endp_type == endp_type_kvm_wlan)  ||
-             (cur->endp_type == endp_type_kvm_vhost) ||
              (cur->endp_type == endp_type_kvm_dpdk)  ||
              (cur->endp_type == endp_type_tap)       ||
              (cur->endp_type == endp_type_phy)       ||

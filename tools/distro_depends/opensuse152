@@ -70,8 +70,7 @@ DHCP=yes
 EOF"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "ip link set eth0 up"
-cloonix_ssh ${NET} ${NAME} "systemctl restart systemd-timesyncd.service"
-cloonix_ssh ${NET} ${NAME} "systemctl restart systemd-networkd.service"
+cloonix_ssh ${NET} ${NAME} "systemctl restart wicked.service"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "zypper --non-interactive refresh"
 cloonix_ssh $NET ${NAME} "zypper --non-interactive update"

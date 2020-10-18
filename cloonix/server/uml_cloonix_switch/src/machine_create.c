@@ -54,7 +54,6 @@
 #include "stats_counters_sysinfo.h"
 #include "dpdk_ovs.h"
 #include "suid_power.h"
-#include "vhost_eth.h"
 #include "endp_evt.h"
 #include "edp_mngt.h"
 
@@ -105,16 +104,6 @@ static void death_of_rmdir_clone(void *data, int status, char *name)
       {
       if (eth_tab[i].eth_type == eth_type_sock)
         endp_mngt_stop(vm->kvm.name, i);
-      }
-    for (i=0; i<vm->kvm.nb_tot_eth; i++)
-      {
-      if ((eth_tab[i].eth_type == eth_type_dpdk) ||
-          (eth_tab[i].eth_type == eth_type_vhost))
-        {
-        dpdk_ovs_del_vm(vm->kvm.name);
-        vhost_eth_del_vm(vm->kvm.name, vm->kvm.nb_tot_eth, vm->kvm.eth_table);
-        break;
-        }
       }
     if (cfg_unset_vm(vm) != act->vm_id)
       KOUT(" ");
@@ -372,7 +361,6 @@ void machine_death( char *name, int error_death)
 {
   int i;
   t_vm *vm = cfg_get_vm(name);
-  char *vhost_ifname;
   t_eth_table *eth_tab;
   if ((!vm) || (vm->vm_to_be_killed == 1))
     {
@@ -403,19 +391,12 @@ void machine_death( char *name, int error_death)
       {
       if (eth_tab[i].eth_type == eth_type_sock)
         endp_mngt_stop(vm->kvm.name, i);
-      else if (eth_tab[i].eth_type == eth_type_vhost)
-        {
-        vhost_ifname = vhost_ident_get(vm->kvm.vm_id, i);
-        suid_power_rec_name(vhost_ifname, 0);
-        }
       }
     for (i=0; i<vm->kvm.nb_tot_eth; i++)
       {
-      if ((eth_tab[i].eth_type == eth_type_dpdk) ||
-          (eth_tab[i].eth_type == eth_type_vhost))
+      if (eth_tab[i].eth_type == eth_type_dpdk)
         {
         dpdk_ovs_del_vm(vm->kvm.name);
-        vhost_eth_del_vm(vm->kvm.name, vm->kvm.nb_tot_eth, vm->kvm.eth_table);
         break;
         }
       else if (eth_tab[i].eth_type == eth_type_wlan)

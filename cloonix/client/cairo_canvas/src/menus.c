@@ -831,8 +831,8 @@ static void intf_item_info(GtkWidget *mn, t_item_ident *pm)
       KOUT(" ");
     if ((num < 0) || (num >= att_node->pbi.pbi_node->nb_tot_eth))
       KOUT(" ");
-    if (att_node->pbi.pbi_node->eth_tab[num].eth_type == eth_type_vhost)
-      display_info(title, att_node->pbi.pbi_node->eth_tab[num].vhost_ifname);
+    if (att_node->pbi.pbi_node->eth_tab[num].eth_type == eth_type_dpdk)
+      display_info(title, "dpdk");
     else
       display_info(title, " ");
     }

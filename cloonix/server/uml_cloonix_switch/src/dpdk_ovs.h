@@ -36,7 +36,7 @@ void dpdk_ovs_ack_add_eth_vm(char *name, int is_ko);
 int  dpdk_ovs_eth_exists(char *name, int num);
 void dpdk_ovs_init(uint32_t lcore, uint32_t mem, uint32_t cpu);
 int  dpdk_ovs_get_all_pid(t_lst_pid **lst_pid);
-char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_eth);
+char *dpdk_ovs_format_net(t_vm *vm, int eth);
 int dpdk_ovs_still_present(void);
 t_topo_endp *dpdk_ovs_translate_topo_endp(int *nb);
 void dpdk_ovs_urgent_client_destruct(void);

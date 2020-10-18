@@ -49,7 +49,6 @@
 #include "dpdk_snf.h"
 #include "dpdk_d2d.h"
 #include "dpdk_a2b.h"
-#include "vhost_eth.h"
 #include "suid_power.h"
 #include "edp_mngt.h"
 #include "edp_evt.h"
@@ -656,9 +655,8 @@ static void fill_topo_endp(t_topo_endp *topo_endp, t_endp *endp)
 
 /*****************************************************************************/
 static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_endp,
-                                     int nb_vhost, int nb_endp_edp,
-                                     int nb_endp_d2d, int nb_endp_a2b,
-                                     int nb_phy, int nb_pci,
+                                     int nb_endp_edp, int nb_endp_d2d,
+                                     int nb_endp_a2b, int nb_phy, int nb_pci,
                                      int nb_bridges, int nb_mirrors,
                                      int nb_d2d, int nb_a2b)
 {
@@ -671,7 +669,7 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_dpdk_endp,
   topo->nb_c2c = endp_mngt_get_nb(endp_type_c2c);
   topo->nb_sat = endp_mngt_get_nb_sat();
   topo->nb_sat += edp_mngt_get_qty();
-  topo->nb_endp = endp_mngt_get_nb_all() + nb_dpdk_endp + nb_vhost;
+  topo->nb_endp = endp_mngt_get_nb_all() + nb_dpdk_endp;
   topo->nb_endp += nb_endp_edp + nb_endp_d2d + nb_endp_a2b;
   topo->nb_phy = nb_phy;
   topo->nb_pci = nb_pci;
@@ -778,7 +776,7 @@ static void fill_topo_d2d(t_topo_d2d *topo_d2d, t_d2d_cnx *d2d)
   topo_d2d->dist_udp_port         = d2d->dist_udp_port;
   topo_d2d->tcp_connection_peered = d2d->tcp_connection_peered;
   topo_d2d->udp_connection_peered = d2d->udp_connection_peered;
-  topo_d2d->ovs_lan_attach_ready  = d2d->ovs_lan_attach_ready;
+  topo_d2d->ovs_lan_attach_ready  = d2d->lan_ovs_is_attached;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -807,7 +805,7 @@ static void fill_topo_a2b(t_topo_a2b *topo_a2b, t_a2b_cnx *a2b)
 t_topo_info *cfg_produce_topo_info(void)
 {
   int i, nb_vm, nb_endp, nb_dpdk_ovs_endp;
-  int  nb_vhost_endp, nb_endp_edp, nb_d2d, nb_endp_d2d, nb_a2b, nb_endp_a2b;
+  int  nb_endp_edp, nb_d2d, nb_endp_d2d, nb_a2b, nb_endp_a2b;
   int i_c2c=0, i_sat=0, i_endp=0; 
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
   t_endp *next, *cur;
@@ -816,7 +814,6 @@ t_topo_info *cfg_produce_topo_info(void)
   t_topo_bridges *bridges;
   t_topo_mirrors *mirrors;
   t_topo_endp *dpdk_ovs_endp=dpdk_ovs_translate_topo_endp(&nb_dpdk_ovs_endp);
-  t_topo_endp *vhost_endp = vhost_eth_translate_topo_endp(&nb_vhost_endp);
   t_topo_endp *edp_endp = edp_mngt_translate_topo_endp(&nb_endp_edp);
   t_topo_endp *d2d_endp = dpdk_d2d_mngt_translate_topo_endp(&nb_endp_d2d);
   t_topo_endp *a2b_endp = dpdk_a2b_mngt_translate_topo_endp(&nb_endp_a2b);
@@ -827,9 +824,9 @@ t_topo_info *cfg_produce_topo_info(void)
   t_d2d_cnx *d2d = dpdk_d2d_get_first(&nb_d2d);
   t_a2b_cnx *a2b = dpdk_a2b_get_first(&nb_a2b);
 
-  t_topo_info *topo = alloc_all_fields(nb_vm, nb_dpdk_ovs_endp, nb_vhost_endp,
-                                       nb_endp_edp, nb_endp_d2d, nb_endp_a2b,
-                                       nb_phy, nb_pci, nb_bridges, nb_mirrors,
+  t_topo_info *topo = alloc_all_fields(nb_vm, nb_dpdk_ovs_endp, nb_endp_edp,
+                                       nb_endp_d2d, nb_endp_a2b, nb_phy,
+                                       nb_pci, nb_bridges, nb_mirrors,
                                        nb_d2d, nb_a2b);
 
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
@@ -907,7 +904,6 @@ t_topo_info *cfg_produce_topo_info(void)
 
         case endp_type_kvm_sock:
         case endp_type_kvm_dpdk:
-        case endp_type_kvm_vhost:
         case endp_type_kvm_wlan:
         case endp_type_phy:
         case endp_type_pci:
@@ -956,15 +952,6 @@ t_topo_info *cfg_produce_topo_info(void)
     i_endp += 1;
     }
 
-
-  for (i=0; i<nb_vhost_endp; i++)
-    {
-    if (i_endp == topo->nb_endp)
-      KOUT(" ");
-    copy_endp(&(topo->endp[i_endp]), &(vhost_endp[i]));
-    i_endp += 1;
-    }
-
   for (i=0; i<nb_endp_edp; i++)
     {
     if (i_endp == topo->nb_endp)
@@ -999,7 +986,6 @@ t_topo_info *cfg_produce_topo_info(void)
     }
 
   clownix_free(dpdk_ovs_endp, __FUNCTION__);
-  clownix_free(vhost_endp, __FUNCTION__);
   clownix_free(edp_endp, __FUNCTION__);
   topo->nb_c2c = i_c2c;
   topo->nb_sat = i_sat;

@@ -4,12 +4,11 @@ NET=nemo
 LIST="centos8 \
       buster \
       bullseye \
-      fedora31 \
       fedora32 \
       opensuse152 \
-      eoan \
       focal" 
 
+set -x
 
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -19,9 +18,9 @@ if [ "x$is_started" != "x" ]; then
   sleep 20
 fi
 
-cd ${HERE}/../..
+cd ${HERE}/..
 ./allclean
-cd ${HERE}/../../..
+cd ${HERE}/../..
 mkdir -p /tmp/${NET}
 tar zcvf /tmp/${NET}/sources.tar.gz ./sources
 
@@ -37,7 +36,7 @@ cloonix_gui $NET
 
 #######################################################################
 for DISTRO in $LIST; do
-  cloonix_cli $NET add kvm $DISTRO ram=8000 cpu=8 eth=v full_${DISTRO}.qcow2 --persistent &
+  cloonix_cli $NET add kvm $DISTRO ram=8000 cpu=8 eth=d full_${DISTRO}.qcow2 &
 done
 
 for DISTRO in $LIST; do

@@ -7,11 +7,8 @@ case "${TYPE}" in
   "sock")
     PARAMS="ram=2000 cpu=2 eth=s"
     ;;
-  "vhost")
-    PARAMS="ram=2000 cpu=2 eth=v"
-    ;;
   *)
-    echo ERROR FIRST PARAM: ${TYPE} must be dpdk sock vhost
+    echo ERROR FIRST PARAM: ${TYPE} must be dpdk or sock
     exit 1
 esac
 

@@ -68,8 +68,6 @@ typedef struct t_vmon
   int  vm_id;
   int  pid;
   int  count;
-  int  nb_vhostif;
-  char vhostif[MAX_VHOST_VM][IFNAMSIZ];
   struct t_vmon *prev;
   struct t_vmon *next;
 } t_vmon;
@@ -224,20 +222,6 @@ static void clean_all_llid(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int ifup_all_vsockif(t_vmon *vmon)
-{
-  int i, result = 0;
-  
-  for (i=0; i<vmon->nb_vhostif; i++)
-    {
-    if (net_phy_flags_iff_up_down(vmon->vhostif[i], 1))
-      result = -1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int launcher(char *argv[])
 {
   char **env = get_saved_environ();
@@ -360,26 +344,6 @@ static int read_umid_pid(int vm_id)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char *get_ifnames(t_vmon *vmon, int nb, char *msg)
-{
-  int i;
-  char *ptr_end = msg, *ptr = msg;
-  if (nb > MAX_VHOST_VM)
-    KOUT("%d %d", nb, MAX_VHOST_VM);
-  for (i=0; i<nb; i++)
-    {
-    ptr_end = strchr(ptr, ':');
-    if (!ptr_end)
-      KOUT(" "); 
-    (*ptr_end) = 0;
-    strncpy(vmon->vhostif[i], ptr, IFNAMSIZ-1);
-    ptr = ptr_end + 1;
-    }
-  return ptr_end;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static char **unlinearize(int nb, char *line)
 {
   char **argv; 
@@ -449,8 +413,7 @@ static void automate_pid_monitor(void)
                  "cloonixsuid_resp_pid_ok vm_id=%d pid=%d", cur->vm_id, pid);
         rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, resp);
         cur->pid = pid;
-        if (!ifup_all_vsockif(cur))
-          cur->state = state_running;
+        cur->state = state_running;
         }
       }
     else if (cur->state == state_running)
@@ -502,7 +465,7 @@ static void heartbeat (int delta)
 /****************************************************************************/
 static char *cloonix_resp_phy(int nb_phy, t_topo_phy *phy)
 {
-  int i, ln, len = MAX_PATH_LEN + (nb_phy * MAX_NAME_LEN);
+  int i, ln, len = MAX_PATH_LEN + (nb_phy * MAX_NAME_LEN * 4);
   char *buf = (char *) malloc(len);
   memset(buf, 0, len);
   ln = sprintf(buf, "cloonixsuid_resp_phy nb_phys=%d", nb_phy); 
@@ -520,7 +483,7 @@ static char *cloonix_resp_phy(int nb_phy, t_topo_phy *phy)
 /****************************************************************************/
 static char *cloonix_resp_pci(int nb_pci, t_topo_pci *pci)
 {
-  int i, ln, len = MAX_PATH_LEN + (nb_pci * MAX_NAME_LEN);
+  int i, ln, len = MAX_PATH_LEN + (nb_pci * MAX_NAME_LEN * 4);
   char *buf = (char *) malloc(len);
   memset(buf, 0, len);
   ln = sprintf(buf, "cloonixsuid_resp_pci nb_pcis=%d", nb_pci);
@@ -573,7 +536,7 @@ void rpct_recv_kil_req(void *ptr, int llid, int tid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void qemu_launch(char *name, int vm_id, int nb_vhost, int argc,
+static void qemu_launch(char *name, int vm_id, int argc,
                         char *line, char *resp, int llid, int tid)
 {
   int result;
@@ -581,9 +544,6 @@ static void qemu_launch(char *name, int vm_id, int nb_vhost, int argc,
   char *ptr_arg;
   t_vmon *cur = alloc_vmon(name, vm_id);
   ptr_arg = strchr(line, ':');
-  if (nb_vhost > 0)
-    ptr_arg = get_ifnames(cur, nb_vhost, ptr_arg+1);
-  cur->nb_vhostif = nb_vhost;
   argv = unlinearize(argc, ptr_arg+1);
   result = launcher(argv);
   if (result)
@@ -609,10 +569,8 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   char name[MAX_NAME_LEN];
   char resp[MAX_PATH_LEN];
   char dtach[MAX_PATH_LEN];
-  char old_name[MAX_NAME_LEN];
-  char new_name[MAX_NAME_LEN];
   char *str_net_phy, *str_net_pci, *str_net_ovs, *old_drv;
-  int on, num, argc, vm_id, nb_vhost, nb_phy, nb_pci;
+  int on, argc, vm_id, nb_phy, nb_pci;
   t_topo_pci *net_pci;
   t_topo_phy *net_phy;
   t_vmon *cur;
@@ -631,26 +589,12 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       rpct_send_diag_msg(NULL, llid, tid, "cloonixsuid_resp_suidroot_ok");
     }
   else if (sscanf(line, 
-  "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s nb_eth=%d argc=%d:",
-         name, &vm_id, dtach, &nb_vhost, &argc) == 5)
+  "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s argc=%d:",
+         name, &vm_id, dtach, &argc) == 4)
     {
-    qemu_launch(name, vm_id, nb_vhost, argc, line, resp, llid, tid);
+    qemu_launch(name, vm_id, argc, line, resp, llid, tid);
     if (chmod(dtach, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH))
       KERR("%s", dtach);
-    }
-  else if (sscanf(line,
-  "cloonixsuid_req_ifname_change %s %d old:%s new:%s",
-                  name, &num, old_name, new_name) == 4)
-    {
-    if (!net_phy_ifname_change(old_name, new_name))
-      snprintf(resp, MAX_PATH_LEN-1,
-               "cloonixsuid_resp_ifname_change_ok %s %d old:%s new:%s",
-               name, num, old_name, new_name);
-    else
-      snprintf(resp, MAX_PATH_LEN-1,
-               "cloonixsuid_resp_ifname_change_ko %s %d old:%s new:%s",
-               name, num, old_name, new_name);
-    rpct_send_diag_msg(NULL, llid, tid, resp);
     }
   else if (!strcmp(line,
   "cloonixsuid_req_phy")) 

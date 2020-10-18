@@ -28,6 +28,7 @@
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
+#include "commun_daemon.h"
 #include "cfg_store.h"
 #include "pid_clone.h"
 #include "utils_cmd_line_maker.h"
@@ -38,8 +39,9 @@
 #include "hop_event.h"
 #include "edp_mngt.h"
 #include "edp_evt.h"
-#include "vhost_eth.h"
 #include "pci_dpdk.h"
+#include "dpdk_dyn.h"
+#include "dpdk_ovs.h"
 #include "llid_trace.h"
 
 static long long g_abs_beat_timer;
@@ -180,6 +182,8 @@ static void ovs_topo_arrival(char *msg)
       {
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       }
+    free(brgs);
+    free(mirs);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -190,10 +194,10 @@ static char *linearize(t_vm *vm)
   static char line[MAX_PRINT_LEN];
   char **argv = vm->launcher_argv;
   char *dtach, *name = vm->kvm.name;
-  int i, j, ln, argc = 0, len = 0, vm_id = vm->kvm.vm_id;
-  int nb_sock, nb_dpdk, nb_vhost, nb_wlan;
+  int i, ln, argc = 0, len = 0, vm_id = vm->kvm.vm_id;
+  int nb_sock, nb_dpdk, nb_wlan;
   utils_get_eth_numbers(vm->kvm.nb_tot_eth, vm->kvm.eth_table,
-                        &nb_sock, &nb_dpdk, &nb_vhost, &nb_wlan);
+                        &nb_sock, &nb_dpdk, &nb_wlan);
   while (argv[argc])
     {
     if (strchr(argv[argc], '"'))
@@ -205,18 +209,8 @@ static char *linearize(t_vm *vm)
     }
   dtach = utils_get_dtach_sock_path(name);
   ln = sprintf(line, 
-       "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s nb_eth=%d argc=%d:",
-       name, vm_id, dtach, nb_vhost, argc);
-  for (i=0,j=0; i<vm->kvm.nb_tot_eth; i++)
-    {
-    if (vm->kvm.eth_table[i].eth_type == eth_type_vhost)
-      {
-      ln += sprintf(line+ln, "%s:", vm->kvm.eth_table[i].vhost_ifname);
-      j++;
-      }
-    }
-  if (j != nb_vhost)
-    KOUT(" ");
+       "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s argc=%d:",
+       name, vm_id, dtach, argc);
   for (i=0; i<argc; i++)
     {
     ln += sprintf(line+ln, "\"%s\"", argv[i]);
@@ -272,9 +266,19 @@ static void timer_monitoring(void *data)
       req = "cloonixsuid_req_phy";
       rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
       hop_event_hook(g_llid, FLAG_HOP_EVT, req);
-      req = "cloonixsuid_req_ovs";
-      rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
-      hop_event_hook(g_llid, FLAG_HOP_EVT, req);
+      if (dpdk_ovs_muovs_ready())
+        {
+        req = "cloonixsuid_req_ovs";
+        rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
+        hop_event_hook(g_llid, FLAG_HOP_EVT, req);
+        }
+      else if (g_nb_brgs || g_nb_mirs)
+        {
+        g_nb_brgs = 0;
+        g_nb_mirs = 0;
+        memset(g_brgs, 0, MAX_OVS_BRIDGES * sizeof(t_topo_bridges));
+        memset(g_mirs, 0, MAX_OVS_MIRRORS * sizeof(t_topo_mirrors));
+        }
       }
     old_nb_pid_resp = g_nb_pid_resp;
     }
@@ -390,15 +394,13 @@ int suid_power_diag_llid(int llid)
 void suid_power_diag_resp(int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
-  char old_name[MAX_NAME_LEN];
-  char new_name[MAX_NAME_LEN];
   char drv[MAX_NAME_LEN];
   char pci[MAX_NAME_LEN];
   char unused[MAX_NAME_LEN];
   char mac[MAX_NAME_LEN];
   char vendor[MAX_NAME_LEN];
   char device[MAX_NAME_LEN];
-  int num, i, prev_nb_phy, prev_nb_pci, nb_phy;
+  int i, prev_nb_phy, prev_nb_pci, nb_phy;
   int nb_pci, vm_id, pid, index, flags;
   char *ptr;
   t_topo_phy *phy;
@@ -431,19 +433,6 @@ void suid_power_diag_resp(int llid, int tid, char *line)
   else if (sscanf(line,
   "cloonixsuid_resp_vfio_attach_ko: %s", name) == 1)
     pci_dpdk_ack_vfio_attach(0, name);
-  else if (sscanf(line,
-  "cloonixsuid_resp_ifname_change_ok %s %d old:%s new:%s",
-                  name, &num, old_name, new_name) == 4)
-    {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    vhost_eth_tap_rename(name, num, new_name);
-    }
-  else if (sscanf(line,
-  "cloonixsuid_resp_ifname_change_ko %s %d old:%s new:%s",
-                  name, &num, old_name, new_name) == 4)
-    {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    }
   else if (sscanf(line,
   "cloonixsuid_resp_launch_vm_ok name=%s", name) == 1)
     {
@@ -699,22 +688,6 @@ void suid_power_ifdown_phy(char *phy)
     {
     memset(req, 0, MAX_PATH_LEN);
     snprintf(req, MAX_PATH_LEN-1, "cloonixsuid_req_ifdown phy: %s", phy);
-    rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
-    hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void suid_power_ifname_change(char *name, int num, char *old, char *nw)
-{
-  char req[MAX_PATH_LEN];
-  if ((g_llid) && (msg_exist_channel(g_llid)))
-    {
-    memset(req, 0, MAX_PATH_LEN);
-    snprintf(req, MAX_PATH_LEN-1,
-             "cloonixsuid_req_ifname_change %s %d old:%s new:%s",
-             name, num, old, nw);
     rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
     hop_event_hook(g_llid, FLAG_HOP_DIAG, req);
     }

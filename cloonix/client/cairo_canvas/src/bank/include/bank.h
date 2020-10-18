@@ -26,7 +26,7 @@ typedef struct t_pbi_node
   char added_disk[MAX_PATH_LEN];
   int  node_vm_id;
   int  nb_tot_eth;
-  t_eth_table eth_tab[MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM];
+  t_eth_table eth_tab[MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM];
   int  node_vm_config_flags;
   int  node_ram;
   int  node_cpu;

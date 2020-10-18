@@ -22,9 +22,8 @@ cloonix_cli nemo add d2d name_d2d mito
 #######################################################################
 for NET in nemo mito; do
   cloonix_gui $NET
-  cloonix_cli $NET add kvm vm ${PARAMS} ${DIST}.qcow2 & 
+  cloonix_cli $NET add kvm vm ${PARAMS} ${DIST}.qcow2 &
 done
-sleep 2
 
 set +e
 for NET in nemo mito; do
@@ -36,10 +35,13 @@ done
 set -e
 #----------------------------------------------------------------------
 for NET in nemo mito; do
+  echo cloonix_cli $NET add lan vm 0 lan
   cloonix_cli $NET add lan vm 0 lan
+  echo done
+  echo cloonix_cli $NET add lan name_d2d 0 lan
   cloonix_cli $NET add lan name_d2d 0 lan
+  echo done
 done
-
 #######################################################################
 cloonix_ssh nemo vm "ip addr add dev eth0 1.1.1.1/24"
 cloonix_ssh nemo vm "ip link set dev eth0 up"
@@ -53,9 +55,6 @@ urxvt -title nemo -e cloonix_ssh nemo vm "iperf3 -s" &
 sleep 2
 urxvt -title mito -e cloonix_ssh mito vm "iperf3 -c 1.1.1.1 -t 10000" &
 #----------------------------------------------------------------------
-
-sleep 30
-
-kill $(jobs -p)
-
+#sleep 30
+#kill $(jobs -p)
 echo DONE

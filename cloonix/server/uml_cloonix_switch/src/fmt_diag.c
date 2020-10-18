@@ -37,9 +37,8 @@
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
 #include "dpdk_nat.h"
-#include "vhost_eth.h"
-#include "edp_vhost.h"
 #include "pci_dpdk.h"
+#include "edp_phy.h"
 
 
 /****************************************************************************/
@@ -69,80 +68,26 @@ int fmt_tx_del_lan_pci_dpdk(int tid, char *lan, char *pci)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_add_phy_vhost_port(int tid, char *name, char *lan)
+int fmt_tx_add_lan_phy_dpdk(int tid, char *lan, char *phy)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_add_lan_phy_port lan=%s name=%s", lan, name);
+  "cloonixovs_add_lan_phy_dpdk lan=%s phy=%s", lan, phy);
   result = dpdk_ovs_try_send_diag_msg(tid, cmd);
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_del_phy_vhost_port(int tid, char *name, char *lan)
+int fmt_tx_del_lan_phy_dpdk(int tid, char *lan, char *phy)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_del_lan_phy_port lan=%s name=%s", lan, name);
-  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int fmt_tx_add_vhost_lan(int tid, char *name, int num, char *lan)
-{
-  int result;
-  char cmd[MAX_PATH_LEN];
-  memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_add_lan_vhost lan=%s name=%s num=%d", lan, name, num);
-  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int fmt_tx_add_vhost_port(int tid,char *name,int num,char *vhost,char *lan)
-{
-  int result;
-  char cmd[MAX_PATH_LEN];
-  memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_add_lan_vhost_port lan=%s name=%s num=%d vhost=%s",
-  lan, name, num, vhost);
-  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int fmt_tx_del_vhost_lan(int tid, char *name, int num, char *lan)
-{
-  int result;
-  char cmd[MAX_PATH_LEN];
-  memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_del_lan_vhost lan=%s name=%s num=%d", lan, name, num);
-  result = dpdk_ovs_try_send_diag_msg(tid, cmd);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int fmt_tx_del_vhost_port(int tid,char *name,int num,char *vhost,char *lan)
-{
-  int result;
-  char cmd[MAX_PATH_LEN];
-  memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_del_lan_vhost_port lan=%s name=%s num=%d vhost=%s",
-  lan, name, num, vhost);
+  "cloonixovs_del_lan_phy_dpdk lan=%s phy=%s", lan, phy);
   result = dpdk_ovs_try_send_diag_msg(tid, cmd);
   return result;
 }
@@ -178,8 +123,8 @@ int fmt_tx_add_lan_tap(int tid, char *lan, char *name)
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1, "cloonixovs_add_lan_tap lan=%s name=%s",
-                                lan, name);
+  snprintf(cmd, MAX_PATH_LEN-1,
+           "cloonixovs_add_lan_tap lan=%s name=%s", lan, name);
   result = dpdk_ovs_try_send_diag_msg(tid, cmd);
   return result;
 }
@@ -406,67 +351,32 @@ void fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
   char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   char strmac[MAX_NAME_LEN];
-  char pci[MAX_NAME_LEN];
-  char vhost[MAX_NAME_LEN];
 
   if (sscanf(line,
-      "OK cloonixovs_add_lan_pci_dpdk lan=%s pci=%s", lan, pci) == 2)
-      pci_dpdk_ack_add(tid, 1, lan, pci);
+      "OK cloonixovs_add_lan_pci_dpdk lan=%s pci=%s", lan, name) == 2)
+      pci_dpdk_ack_add(tid, 1, lan, name);
   else if (sscanf(line,
-      "KO cloonixovs_add_lan_pci_dpdk lan=%s pci=%s", lan, pci) == 2)
-      pci_dpdk_ack_add(tid, 0, lan, pci);
+      "KO cloonixovs_add_lan_pci_dpdk lan=%s pci=%s", lan, name) == 2)
+      pci_dpdk_ack_add(tid, 0, lan, name);
   else if (sscanf(line,
-      "OK cloonixovs_del_lan_pci_dpdk lan=%s pci=%s", lan, pci) == 2)
-      pci_dpdk_ack_del(tid, 1, lan, pci);
+      "OK cloonixovs_del_lan_pci_dpdk lan=%s pci=%s", lan, name) == 2)
+      pci_dpdk_ack_del(tid, 1, lan, name);
   else if (sscanf(line,
-      "KO cloonixovs_del_lan_pci_dpdk lan=%s pci=%s", lan, pci) == 2)
-      pci_dpdk_ack_del(tid, 0, lan, pci);
+      "KO cloonixovs_del_lan_pci_dpdk lan=%s pci=%s", lan, name) == 2)
+      pci_dpdk_ack_del(tid, 0, lan, name);
 
   else if (sscanf(line,
-      "OK cloonixovs_add_lan_phy_port lan=%s name=%s", lan, name) == 2)
-      edp_vhost_ack_add_port(tid, 1, lan, name);
+      "OK cloonixovs_add_lan_phy_dpdk lan=%s phy=%s", lan, name) == 2)
+      edp_phy_ack_add(tid, 1, lan, name);
   else if (sscanf(line,
-      "OK cloonixovs_del_lan_phy_port lan=%s name=%s", lan, name) == 2)
-      edp_vhost_ack_del_port(tid, 1, lan, name);
+      "OK cloonixovs_del_lan_phy_dpdk lan=%s phy=%s", lan, name) == 2)
+      edp_phy_ack_del(tid, 1, lan, name);
   else if (sscanf(line,
-      "KO cloonixovs_add_lan_phy_port lan=%s name=%s", lan, name) == 2)
-      edp_vhost_ack_add_port(tid, 0, lan, name);
+      "KO cloonixovs_add_lan_phy_dpdk lan=%s phy=%s", lan, name) == 2)
+      edp_phy_ack_add(tid, 0, lan, name);
   else if (sscanf(line,
-      "KO cloonixovs_del_lan_phy_port lan=%s name=%s", lan, name) == 2)
-      edp_vhost_ack_del_port(tid, 0, lan, name);
-
-  else if (sscanf(line, 
-          "OK cloonixovs_add_lan_vhost lan=%s name=%s num=%d",
-          lan, name, &num) == 3)
-    vhost_eth_add_ack_lan(tid, 1, lan, name, num);
-  else if (sscanf(line, 
-          "OK cloonixovs_add_lan_vhost_port lan=%s name=%s num=%d vhost=%s",
-          lan, name, &num, vhost) == 4)
-    vhost_eth_add_ack_port(tid, 1, lan, name, num);
-  else if (sscanf(line, 
-          "OK cloonixovs_del_lan_vhost lan=%s name=%s num=%d",
-          lan, name, &num) == 3)
-    vhost_eth_del_ack_lan(tid, 1, lan, name, num);
-  else if (sscanf(line, 
-          "OK cloonixovs_del_lan_vhost_port lan=%s name=%s num=%d vhost=%s",
-          lan, name, &num, vhost) == 4)
-    vhost_eth_del_ack_port(tid, 1, lan, name, num);
-  else if (sscanf(line, 
-          "KO cloonixovs_add_lan_vhost lan=%s name=%s num=%d",
-          lan, name, &num) == 3)
-    vhost_eth_add_ack_lan(tid, 0, lan, name, num);
-  else if (sscanf(line,
-          "KO cloonixovs_add_lan_vhost_port lan=%s name=%s num=%d vhost=%s",
-          lan, name, &num, vhost) == 4)
-    vhost_eth_add_ack_port(tid, 0, lan, name, num);
-  else if (sscanf(line,
-          "KO cloonixovs_del_lan_vhost lan=%s name=%s num=%d",
-          lan, name, &num) == 3)
-    vhost_eth_del_ack_lan(tid, 0, lan, name, num);
-  else if (sscanf(line,
-          "KO cloonixovs_del_lan_vhost_port lan=%s name=%s num=%d vhost=%s",
-          lan, name, &num, vhost) == 4)
-    vhost_eth_del_ack_port(tid, 0, lan, name, num);
+      "KO cloonixovs_del_lan_phy_dpdk lan=%s phy=%s", lan, name) == 2)
+      edp_phy_ack_del(tid, 0, lan, name);
 
   else if (sscanf(line, "KO cloonixovs_add_eth name=%s num=%d",name,&num)==2)
     dpdk_msg_ack_eth(tid, name, num, 1, 1, "KO");

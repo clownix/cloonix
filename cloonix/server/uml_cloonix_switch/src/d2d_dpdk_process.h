@@ -18,7 +18,9 @@
 void d2d_dpdk_send_probe_udp(char *name);
 void d2d_dpdk_set_dist_udp_ip_port(char *name, uint32_t ip, uint16_t port);
 void d2d_dpdk_get_udp_port(char *name);
+void d2d_dpdk_eal_init(char *name);
 void d2d_dpdk_start_vhost(char *name);
+void d2d_dpdk_stop_vhost(char *name);
 int  d2d_dpdk_diag_llid(int llid);
 int  d2d_dpdk_get_all_pid(t_lst_pid **lst_pid);
 void d2d_dpdk_pid_resp(int llid, int tid, char *name, int pid);

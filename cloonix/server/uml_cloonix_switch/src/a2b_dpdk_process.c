@@ -154,6 +154,7 @@ static void timer_heartbeat(void *data)
   while(cur)
     {
     next = cur->next;
+    cur->watchdog_count += 1;
     if (cur->llid == 0)
       {
       llid = try_connect(cur->socket, cur->name);
@@ -164,7 +165,7 @@ static void timer_heartbeat(void *data)
       else
         {
         cur->count += 1;
-        if (cur->count == 20)
+        if (cur->count == 50)
           {
           KERR("%s", cur->socket);
           dpdk_a2b_event_from_a2b_dpdk_process(cur->name, -1);
@@ -178,30 +179,26 @@ static void timer_heartbeat(void *data)
       hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
       cur->suid_root_done = 1;
       }
+    else if (cur->watchdog_count >= 150)
+      {
+      dpdk_a2b_event_from_a2b_dpdk_process(cur->name, -1);
+      free_a2b_dpdk(cur);
+      }
     else
       {
-      cur->watchdog_count += 1;
-      if (cur->watchdog_count >= 25)
+      cur->count += 1;
+      if (cur->count == 5)
         {
-        dpdk_a2b_event_from_a2b_dpdk_process(cur->name, 0);
-        free_a2b_dpdk(cur);
+        rpct_send_pid_req(NULL, cur->llid, type_hop_a2b_dpdk, cur->name, 0);
+        cur->count = 0;
         }
-      else
-        {
-        cur->count += 1;
-        if (cur->count == 5)
+      if (cur->closed_count > 0)
+        { 
+        cur->closed_count -= 1;
+        if (cur->closed_count == 0)
           {
-          rpct_send_pid_req(NULL, cur->llid, type_hop_a2b_dpdk, cur->name, 0);
-          cur->count = 0;
-          }
-        if (cur->closed_count > 0)
-          { 
-          cur->closed_count -= 1;
-          if (cur->closed_count == 0)
-            {
-            dpdk_a2b_event_from_a2b_dpdk_process(cur->name, 0);
-            free_a2b_dpdk(cur);
-            }
+          dpdk_a2b_event_from_a2b_dpdk_process(cur->name, 0);
+          free_a2b_dpdk(cur);
           }
         }
       }

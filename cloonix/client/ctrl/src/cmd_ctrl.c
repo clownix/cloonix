@@ -137,9 +137,6 @@ static char *get_type_endp(int type)
     case endp_type_kvm_sock:
       result = "sock"; 
       break;
-    case endp_type_kvm_vhost:
-      result = "vhost"; 
-      break;
     case endp_type_kvm_wlan:
       result = "wlan"; 
       break;
@@ -297,11 +294,6 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
       printf("\n%s vm_id: %d ok", topo->kvm[i].name, topo->kvm[i].vm_id);
     else
       printf("\n%s vm_id: %d ko", topo->kvm[i].name, topo->kvm[i].vm_id);
-    for (j=0; j<topo->kvm[i].nb_tot_eth; j++)
-      {
-      if (topo->kvm[i].eth_table[j].eth_type == eth_type_vhost)
-        printf(" eth%d:%s", j, topo->kvm[i].eth_table[j].vhost_ifname);
-      }
     }
   for (i=0; i<topo->nb_c2c; i++)
     {

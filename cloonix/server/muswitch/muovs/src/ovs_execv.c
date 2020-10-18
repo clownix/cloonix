@@ -272,12 +272,11 @@ static int launch_ovsdb_server(char *ovs_bin, char *dpdk_dir)
   int result = -1;
   char *pidfile = get_pidfile_ovsdb(dpdk_dir);
   if (file_exists(pidfile))
-    {
-    KERR("PIDFILE: %s EXISTS! ERROR", pidfile);
     unlink(get_pidfile_ovs(dpdk_dir));
-    }
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVSDB_SERVER_BIN);
+  if (!file_exists(g_arg[0]))
+    KOUT("MISSING %s", g_arg[0]);
   snprintf(g_arg[1],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, g_ovsdb_server_conf);
   snprintf(g_arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s",
                                   dpdk_dir, OVSDB_SERVER_PID);
@@ -287,10 +286,9 @@ static int launch_ovsdb_server(char *ovs_bin, char *dpdk_dir)
            "--remote=db:Open_vSwitch,Open_vSwitch,manager_options");
   snprintf(g_arg[5], MAX_ARG_LEN-1,"--unixctl=%s/%s",
                                    dpdk_dir, OVSDB_SERVER_CTL);
-  snprintf(g_arg[6], MAX_ARG_LEN-1, "--no-self-confinement");
-  snprintf(g_arg[7], MAX_ARG_LEN-1, "--verbose=warn");
-  snprintf(g_arg[8], MAX_ARG_LEN-1, "--detach");
-  result = call_my_popen(dpdk_dir, 9, g_arg);
+  snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=info");
+  snprintf(g_arg[7], MAX_ARG_LEN-1, "--detach");
+  result = call_my_popen(dpdk_dir, 8, g_arg);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -318,18 +316,19 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *dpdk_dir)
     }
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
   snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVS_VSWITCHD_BIN);
+  if (!file_exists(g_arg[0]))
+    KOUT("MISSING %s", g_arg[0]);
   snprintf(g_arg[1],MAX_ARG_LEN-1,"unix:%s/%s", dpdk_dir, OVSDB_SERVER_SOCK);
   snprintf(g_arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s",dpdk_dir,OVS_VSWITCHD_PID);
   snprintf(g_arg[3],MAX_ARG_LEN-1,"--log-file=%s/%s",dpdk_dir,OVS_VSWITCHD_LOG);
   snprintf(g_arg[4],MAX_ARG_LEN-1,"--unixctl=%s/%s",dpdk_dir,OVS_VSWITCHD_CTL);
-  snprintf(g_arg[5], MAX_ARG_LEN-1, "--no-self-confinement");
-  snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=warn");
-  snprintf(g_arg[7], MAX_ARG_LEN-1, "--detach");
-  result = call_my_popen(dpdk_dir, 8, g_arg);
+  snprintf(g_arg[5], MAX_ARG_LEN-1, "--verbose=info");
+  snprintf(g_arg[6], MAX_ARG_LEN-1, "--detach");
+  result = call_my_popen(dpdk_dir, 7, g_arg);
   if (!result)
     {
     appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:syslog:warn");
-    appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:file:warn");
+    appctl_debug_fix(ovs_bin, dpdk_dir, "ANY:file:info");
     }
   return result;
 }
@@ -389,6 +388,8 @@ int create_ovsdb_server_conf(char *ovs_bin, char *dpdk_dir)
            "%s%s", OVSDB_SERVER_CONF, random_str());
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   snprintf(g_arg[0],MAX_ARG_LEN-1,"%s/%s", ovs_bin, OVSDB_TOOL_BIN);
+  if (!file_exists(g_arg[0]))
+    KOUT("MISSING %s", g_arg[0]);
   snprintf(g_arg[1],MAX_ARG_LEN-1,"create");
   snprintf(g_arg[2],MAX_ARG_LEN-1,"%s/%s", dpdk_dir, g_ovsdb_server_conf);
   snprintf(g_arg[3],MAX_ARG_LEN-1,"%s/%s", ovs_bin, SCHEMA_TEMPLATE);
@@ -428,9 +429,10 @@ int ovs_execv_add_pci_dpdk(char *ovs, char *dpdk, char *lan, char *pci)
   char cmd[MAX_ARG_LEN];
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1, 
+           "-- set bridge br_%s datapath_type=netdev "
            "-- add-port br_%s %s "
            "-- set Interface %s type=dpdk options:dpdk-devargs=%s",
-           lan, pci, pci, pci);
+           lan,lan, pci, pci, pci);
   if (ovs_vsctl(ovs, dpdk, cmd))
     result = -1;
   return result;
@@ -451,12 +453,12 @@ int ovs_execv_del_pci_dpdk(char *ovs, char *dpdk, char *lan, char *pci)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_add_vhost_br(char *ovs, char *dpdk, char *lan)
+int ovs_execv_add_phy_dpdk(char *ovs, char *dpdk, char *lan, char *phy)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- add-br br_%s", lan);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- add-port br_%s %s", lan, phy);
   if (ovs_vsctl(ovs, dpdk, cmd))
     result = -1;
   return result;
@@ -464,38 +466,12 @@ int ovs_execv_add_vhost_br(char *ovs, char *dpdk, char *lan)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_del_vhost_br(char *ovs, char *dpdk, char *lan)
+int ovs_execv_del_phy_dpdk(char *ovs, char *dpdk, char *lan, char *phy)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- del-br br_%s", lan);
-  if (ovs_vsctl(ovs, dpdk, cmd))
-    result = -1;
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int ovs_execv_add_vhost_br_port(char *ovs, char *dpdk, char *lan, char *vhost)
-{
-  int result = 0;
-  char cmd[MAX_ARG_LEN];
-  memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- add-port br_%s %s", lan, vhost);
-  if (ovs_vsctl(ovs, dpdk, cmd))
-    result = -1;
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int ovs_execv_del_vhost_br_port(char *ovs, char *dpdk, char *lan, char *vhost)
-{
-  int result = 0;
-  char cmd[MAX_ARG_LEN];
-  memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port br_%s %s", lan, vhost);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port br_%s %s", lan, phy);
   if (ovs_vsctl(ovs, dpdk, cmd))
     result = -1;
   return result;
@@ -508,10 +484,7 @@ int ovs_execv_add_lan_br(char *ovs_bin, char *dpdk_dir, char *lan)
   int result = 0;
   char cmd[MAX_ARG_LEN];
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1,
-           "-- add-br br_%s "
-           "-- set bridge br_%s datapath_type=netdev", 
-           lan, lan);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- add-br br_%s", lan);
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = -1;
   return result;
@@ -540,11 +513,12 @@ int ovs_execv_add_lan_eth(char *ovs_bin, char *dpdk_dir, char *lan,
   char cmd[MAX_ARG_LEN]; 
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
+           "-- set bridge br_%s datapath_type=netdev "
            "-- add-port br_%s pt_%s_%s_%d "
            "-- set interface pt_%s_%s_%d type=patch options:peer=pt_%s_%d_%s "
            "-- add-port br_%s_%d pt_%s_%d_%s "
            "-- set interface pt_%s_%d_%s type=patch options:peer=pt_%s_%s_%d",
-           lan, lan, name, num,
+           lan, lan, lan, name, num,
            lan, name, num, name, num, lan,
            name, num, name, num, lan,
            name, num, lan, lan, name, num);
@@ -585,7 +559,7 @@ int ovs_execv_add_eth(char *ovs_bin, char *dpdk_dir, char *name, int num)
            "-- add-port br_%s_%d pt_%s_%d "
            "-- set Interface pt_%s_%d type=dpdkvhostuserclient"
            " options:vhost-server-path=%s_qemu/%s_%d"
-           " options:n_rxq=%d",
+           " options:vm2vm=1,n_rxq=%d,tso=1,tx-csum=1",
            name, num, name, num,
            name, num, name, num, name, num,
            dpdk_dir, name, num, MQ_QUEUES);
@@ -617,6 +591,7 @@ int ovs_execv_add_lan_snf(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
   memset(cmd, 0, MAX_ARG_LEN);
 
   snprintf(cmd, MAX_ARG_LEN-1,
+                "-- set bridge br_%s datapath_type=netdev "
                 "-- add-port br_%s %s "
                 "-- set Interface %s type=dpdk"
                 " options:dpdk-devargs=net_virtio_user_%s,"
@@ -626,7 +601,7 @@ int ovs_execv_add_lan_snf(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
                 "-- set mirror mi_%s select-all=1 "
                 "-- set mirror mi_%s output-port=@p "
                 "-- set bridge br_%s mirrors=@m",
-                lan, name, name, name,
+                lan, lan, name, name, name,
                 dpdk_dir, name, dpdk_dir, name,
                 name, name, name, name, lan);
 
@@ -661,11 +636,13 @@ int ovs_execv_add_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
   memset(cmd, 0, MAX_ARG_LEN);
 
   snprintf(cmd, MAX_ARG_LEN-1,
+                "-- set bridge br_%s datapath_type=netdev "
                 "-- add-port br_%s %s "
                 "-- set Interface %s type=dpdk"
                 " options:dpdk-devargs=net_virtio_user_%s,"
-                "path=%s/na_%s,server=1,iface=%s/na_%s,queues=1",
-                lan, name, name, name,
+                "path=%s/na_%s,server=1,iface=%s/na_%s,"
+                "queues=1",
+                lan, lan, name, name, name,
                 dpdk_dir, name, dpdk_dir, name);
 
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
@@ -695,11 +672,13 @@ int ovs_execv_add_lan_d2d(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
   memset(cmd, 0, MAX_ARG_LEN);
 
   snprintf(cmd, MAX_ARG_LEN-1,
+                "-- set bridge br_%s datapath_type=netdev "
                 "-- add-port br_%s %s "
                 "-- set Interface %s type=dpdk "
                 "options:dpdk-devargs=net_virtio_user_%s,"
-                "path=%s/d2_%s,server=1,iface=%s/d2_%s,queues=1",
-                lan, name, name, name,
+                "path=%s/d2_%s,server=1,iface=%s/d2_%s,"
+                "queues=1",
+                lan, lan, name, name, name,
                 dpdk_dir, name, dpdk_dir, name);
 
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
@@ -729,12 +708,12 @@ int ovs_execv_add_lan_a2b(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
   memset(cmd, 0, MAX_ARG_LEN);
 
   snprintf(cmd, MAX_ARG_LEN-1,
+                "-- set bridge br_%s datapath_type=netdev "
                 "-- add-port br_%s %s0 "
                 "-- set Interface %s0 type=dpdk "
                 "options:dpdk-devargs=net_virtio_user_%s0,"
-                "path=%s/a2_%s,server=1,iface=%s/a2_%s,queues=1",
-                lan, name, name, name,
-                dpdk_dir, name, dpdk_dir, name);
+                "server=1,iface=%s/a2_%s,path=%s/a2_%s,queues=1,mrg_rxbuf=1",
+                lan, lan, name, name, name, dpdk_dir, name, dpdk_dir, name);
 
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = -1;
@@ -763,12 +742,12 @@ int ovs_execv_add_lan_b2a(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
   memset(cmd, 0, MAX_ARG_LEN);
 
   snprintf(cmd, MAX_ARG_LEN-1,
+                "-- set bridge br_%s datapath_type=netdev "
                 "-- add-port br_%s %s1 "
                 "-- set Interface %s1 type=dpdk "
                 "options:dpdk-devargs=net_virtio_user_%s1,"
-                "path=%s/b2_%s,server=1,iface=%s/b2_%s,queues=1",
-                lan, name, name, name,
-                dpdk_dir, name, dpdk_dir, name);
+                "server=1,iface=%s/b2_%s,path=%s/b2_%s,queues=1,mrg_rxbuf=1",
+                lan, lan, name, name, name, dpdk_dir, name, dpdk_dir, name);
 
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = -1;
@@ -796,13 +775,7 @@ int ovs_execv_add_tap(char *ovs_bin, char *dpdk_dir, char *name)
   int result = 0;
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
-           "-- add-br br_%s "
-           "-- set bridge br_%s datapath_type=netdev "
-           "-- add-port br_%s %s "
-           "-- set Interface %s type=dpdk "
-           "options:dpdk-devargs=net_tap_%s,iface=%s "
-           "options:n_rxq=%d",
-           name, name, name, name, name, name, name, MQ_QUEUES);
+           "-- add-br %s", name);
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = -1;
   return result;
@@ -817,10 +790,7 @@ int ovs_execv_del_tap(char *ovs_bin, char *dpdk_dir, char *name)
   if (!set_intf_flags_iff_up_down(name, 0))
     {
     memset(cmd, 0, MAX_ARG_LEN);
-    snprintf(cmd, MAX_ARG_LEN-1,
-             "-- del-port br_%s %s "
-             "-- del-br br_%s",
-             name, name, name);
+    snprintf(cmd, MAX_ARG_LEN-1, "-- del-br %s", name);
     if (!ovs_vsctl(ovs_bin, dpdk_dir, cmd))
       result = 0;
     }
@@ -835,11 +805,13 @@ int ovs_execv_add_lan_tap(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
   int result = -1;
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
+           "-- set bridge br_%s datapath_type=netdev "
+           "-- set bridge %s datapath_type=netdev "
            "-- add-port br_%s pt_%s_%s "
            "-- set interface pt_%s_%s type=patch options:peer=pt_%s_%s "
-           "-- add-port br_%s pt_%s_%s "
+           "-- add-port %s pt_%s_%s "
            "-- set interface pt_%s_%s type=patch options:peer=pt_%s_%s",
-           lan,lan,name, lan,name,name,lan,
+           lan, name, lan,lan,name, lan,name,name,lan,
            name,name,lan, name,lan,lan,name);
   if (!ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = 0;
@@ -896,22 +868,22 @@ static int send_config_ovs( char *net, char *ovs_bin, char *dpdk_dir,
     }
   /*---------------------------------------------------------*/
   if (result != -1)
-    { 
+    {
     if (ovs_vsctl(ovs_bin, dpdk_dir,
                      "--no-wait set Open_vSwitch . "
-                     "other_config:vhost-iommu-support=true"))
-      {  
+                     "other_config:tso-support=true"))
+      {
       KERR("Fail launch ovsbd server ");
       result = -1;
       }
     }
   /*---------------------------------------------------------*/
   if (result != -1)
-    { 
+    {
     if (ovs_vsctl(ovs_bin, dpdk_dir,
-                  "--no-wait set Open_vSwitch . "
-                  "other_config:vhost-postcopy-support=true"))
-      { 
+                     "--no-wait set Open_vSwitch . "
+                     "other_config:userspace-tso-enable=true"))
+      {
       KERR("Fail launch ovsbd server ");
       result = -1;
       }
@@ -1017,10 +989,9 @@ int ovs_execv_ovs_vswitchd(char *net, char *ovs_bin, char *dpdk_dir,
   else
     {
     result = pid;
-    if (send_config_ovs(net,ovs_bin,dpdk_dir,lcore_mask,socket_mem,cpu_mask))
+    if (send_config_ovs(net, ovs_bin, dpdk_dir, lcore_mask,
+                        socket_mem, cpu_mask))
       KERR("Fail Configure ovsbd server ");
-    else
-      KERR("Configured ovsbd server");
     }
   return result;
 }

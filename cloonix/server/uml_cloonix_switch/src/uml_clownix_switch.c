@@ -68,7 +68,6 @@
 #include "qmp_dialog.h"
 #include "dpdk_ovs.h"
 #include "suid_power.h"
-#include "vhost_eth.h"
 #include "edp_mngt.h"
 #include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
@@ -687,7 +686,6 @@ int main (int argc, char *argv[])
                 g_cloonix_conf_info->socket_mem,
                 g_cloonix_conf_info->cpu_mask);
   suid_power_init();
-  vhost_eth_init();
   edp_mngt_init();
   snf_dpdk_init();
   nat_dpdk_init();

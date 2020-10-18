@@ -115,15 +115,15 @@ void pcap_record_rx_packet(long long usec, int len, uint8_t *buf)
     ln = write(g_fd, (void *)&rec_hdr_s, hlen);
     if (ln != hlen)
       {
-      pcap_record_close_and_reinit();
-      KERR("%d %d %s", ln, hlen, strerror(errno));
+      inotify_trigger_end();
+      KERR("STOP SNIFFER: %d %d %s", ln, hlen, strerror(errno));
       }
     else
       {
       if (write(g_fd, (void *) buf, len) != len)
         {
-        pcap_record_close_and_reinit();
-        KERR("%s", strerror(errno));
+        inotify_trigger_end();
+        KERR("STOP SNIFFER: %s", strerror(errno));
         }
       }
     }

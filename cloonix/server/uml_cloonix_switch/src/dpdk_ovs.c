@@ -50,7 +50,6 @@
 #include "qmp.h"
 #include "system_callers.h"
 #include "stats_counters.h"
-#include "vhost_eth.h"
 
 enum{
   msg_type_diag = 1,
@@ -73,7 +72,7 @@ typedef struct t_dpdk_vm
 {
   char name[MAX_NAME_LEN];
   int  nb_tot_eth;
-  t_eth_table eth_table[MAX_SOCK_VM+MAX_DPDK_VM+MAX_VHOST_VM+MAX_WLAN_VM];
+  t_eth_table eth_table[MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM];
   int  dyn_vm_add_delay;
   int  dyn_vm_add_eth_todo;
   int  dyn_vm_add_done;
@@ -110,6 +109,7 @@ typedef struct t_ovs
   int destroy_requested;
   int destroy_msg_sent;
   int nb_resp_ovs_ko;
+  int watchdog_protect;
 } t_ovs;
 /*--------------------------------------------------------------------------*/
 
@@ -130,6 +130,7 @@ static uint32_t g_socket_mem;
 static uint32_t g_cpu_mask;
 static t_dpdk_vm *g_head_vm;
 static t_ovs *g_head_ovs;
+static uint32_t g_restart_hysteresis;
 
 /****************************************************************************/
 static void erase_dpdk_qemu_path(char *name, int num_eth)
@@ -160,24 +161,14 @@ static void test_and_end_ovs(void)
       KERR(" ");
     if (cur)
       {
-      if (cur->destroy_requested == 0)
-        cur->destroy_requested = 4;
-      }
-    }
-  else
-    {
-    if (cur)
-      {
-      if (cur->destroy_requested)
+      if (cur->watchdog_protect == 0)
         {
-        KERR("Bad ovs start, destroy vm");
-        dpdk_ovs_urgent_client_destruct();
+        if (cur->destroy_requested == 0)
+          {
+          cur->destroy_requested = 4;
+          KERR("END OVS");
+          }
         }
-      }
-    else
-      {
-      KERR("Not normal ovs absent");
-      dpdk_ovs_urgent_client_destruct();
       }
     }
 }
@@ -265,8 +256,8 @@ static int try_send_msg_ovs(t_ovs *cur, int msg_type, int tid, char *msg)
       {
       if (msg_type == msg_type_diag)
         {
-        rpct_send_diag_msg(NULL, cur->llid, tid, msg);
         hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+        rpct_send_diag_msg(NULL, cur->llid, tid, msg);
         result = 0;
         }
       else if (msg_type == msg_type_pid)
@@ -316,9 +307,18 @@ static t_ovs *ovs_find(void)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timer_restart_hysteresis(void *data)
+{  
+  g_restart_hysteresis = 0;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void ovs_free(char *name)
 {
   t_ovs *cur = g_head_ovs;
+  if (g_restart_hysteresis != 1)
+    KERR("Bad g_restart_hysteresis");
   if (cur)
     {
     if (cur->ovsdb_pid > 0)
@@ -333,7 +333,10 @@ static void ovs_free(char *name)
       }
     g_head_ovs = NULL;
     clownix_free(cur, __FUNCTION__);
+    clownix_timeout_add(50, timer_restart_hysteresis, NULL, NULL, NULL);
     }
+  else
+    KERR("Free bad");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -363,9 +366,10 @@ static void ovs_death(void *data, int status, char *name)
     {
     if (cur->destroy_msg_sent == 0)
       KERR("OVS PREMATURE DEATH %s", mu->name);
+    cur->destroy_requested = 1;
     }
-  dpdk_ovs_urgent_client_destruct();
-  ovs_free(name);
+  else
+    KERR("OVS DEATH %s", mu->name);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -374,6 +378,8 @@ static void ovs_watchdog(void *data)
 {
   t_arg_ovsx *mu = (t_arg_ovsx *) data;
   t_ovs *cur = ovs_find();
+  if (cur)
+    cur->watchdog_protect = 0;
   if (cur && ((!cur->llid) || 
               (!cur->pid) || 
               (!cur->periodic_count)))
@@ -400,8 +406,9 @@ static int ovs_birth(void *data)
 static void check_on_destroy_requested(t_ovs *cur)
 {
   char *sock;
-  t_dpdk_vm *nvm, *vm = g_head_vm;
+  t_dpdk_vm *nvm, *vm;
   test_and_end_ovs();
+  vm = g_head_vm;
   if (cur->destroy_requested == 4)
     {
     cur->destroy_msg_sent = 1;
@@ -409,9 +416,10 @@ static void check_on_destroy_requested(t_ovs *cur)
     }
   if (cur->destroy_requested == 1)
     { 
+    g_restart_hysteresis = 1;
     while(vm)
       {
-      KERR("%s", vm->name);
+      KERR("FAST DESTRUCT %s", vm->name);
       nvm = vm->next;
       machine_death(vm->name, error_death_noovs);
       vm = nvm;
@@ -441,7 +449,9 @@ static void check_on_destroy_requested(t_ovs *cur)
     ovs_free(cur->name);
     }
   else if (cur->destroy_requested > 1)
+    {
     cur->destroy_requested -= 1;
+    }
 } 
 /*--------------------------------------------------------------------------*/
 
@@ -507,7 +517,7 @@ static int try_connect_eth(t_dpdk_vm *vm)
 /****************************************************************************/
 static void timer_vm_add_beat(void *data)
 {
-  int nb_sock, nb_dpdk, nb_vhost, nb_wlan;
+  int nb_sock, nb_dpdk, nb_wlan;
   t_vm *kvm;
   t_dpdk_vm *nvm, *vm;
   t_ovs *ovsdb = ovs_find();
@@ -530,7 +540,7 @@ static void timer_vm_add_beat(void *data)
     else
       {
       utils_get_eth_numbers(kvm->kvm.nb_tot_eth, kvm->kvm.eth_table,
-                            &nb_sock, &nb_dpdk, &nb_vhost, &nb_wlan);
+                            &nb_sock, &nb_dpdk, &nb_wlan);
       if (nb_dpdk != 0)
         {
         if (!kvm)
@@ -551,7 +561,7 @@ static void timer_vm_add_beat(void *data)
             {
             if ((ovsdb != NULL) &&
                 (ovsdb->ovs_pid_ready == 1) &&
-                (ovsdb->periodic_count > 0))
+                (ovsdb->periodic_count > 1))
               {
               if (ovsdb->destroy_requested)
                 {
@@ -564,7 +574,7 @@ static void timer_vm_add_beat(void *data)
                 machine_death(vm->name, error_death_no_dpdk);
                 }
               vm->dyn_vm_add_delay += 1;
-              if (vm->dyn_vm_add_delay > 2)
+              if (vm->dyn_vm_add_delay >= 1)
                 vm->dyn_vm_add_done = try_connect_eth(vm);
               }
             }
@@ -633,7 +643,7 @@ static void timer_ovs_beat(void *data)
     else if (cur->open_ovsdb_ok == 0)
       {
       cur->open_ovsdb_wait += 1;
-      if (cur->open_ovsdb_wait > 20)
+      if (cur->open_ovsdb_wait > 120)
         {
         cur->destroy_requested = 1;
         KERR("OVSDB %s NOT RESPONDING destroy_requested", cur->name);
@@ -661,14 +671,14 @@ static void timer_ovs_beat(void *data)
     else
       {
       cur->periodic_count += 1;
-      if (cur->periodic_count >= 5)
+      if (cur->periodic_count >= 10)
         {
         if (!strlen(cur->name))
           KOUT(" ");
         try_send_msg_ovs(cur, msg_type_pid, type_hop_tid, cur->name);
-        cur->periodic_count = 1;
+        cur->periodic_count = 5;
         cur->unanswered_pid_req += 1;
-        if (cur->unanswered_pid_req > 3)
+        if (cur->unanswered_pid_req > 6)
           {
           cur->destroy_requested = 1;
           KERR("OVS %s NOT RESPONDING destroy_requested", cur->name);
@@ -717,7 +727,7 @@ static int create_muovs_process(char *name)
   strncpy(arg_ovsx->sock, sock, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->ovsx_bin, ovsx_bin, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->dpdk_db_dir, dpdk_db_dir, MAX_PATH_LEN-1);
-  clownix_timeout_add(4000, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
+  clownix_timeout_add(1000, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
   return pid;
 }
 /*--------------------------------------------------------------------------*/
@@ -856,8 +866,11 @@ int dpdk_ovs_muovs_ready(void)
   t_ovs *cur = g_head_ovs;
   if (cur)
     {
-    if (!cur->destroy_requested)
-      result = cur->ovs_pid_ready;
+    if ((g_restart_hysteresis == 0) &&
+        (cur->destroy_requested == 0) &&
+        (cur->ovs_pid_ready == 1) &&
+        (cur->periodic_count > 3))
+      result = 1;
     }
   return result;
 }
@@ -883,7 +896,9 @@ void dpdk_ovs_ack_add_eth_vm(char *name, int is_ko)
   if (!vm)
     KERR("%s", name);
   else
+    {
     vm->dyn_vm_add_done_acked =  1;
+    }
   if (is_ko)
     {
     KERR("FATAL NO ETH FOR DPDK: %s", name);
@@ -898,7 +913,7 @@ int dpdk_ovs_eth_exists(char *name, int num)
   int result = 0;
   t_dpdk_vm *vm = vm_find(name);
   if ((num < 0) || 
-      (num > MAX_SOCK_VM + MAX_DPDK_VM + MAX_VHOST_VM + MAX_WLAN_VM))
+      (num > MAX_SOCK_VM + MAX_DPDK_VM + MAX_WLAN_VM))
     KOUT("%d", num);
   if (vm)
     {
@@ -923,12 +938,20 @@ int dpdk_ovs_try_send_diag_msg(int tid, char *cmd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_dpdk)
+char *dpdk_ovs_format_net(t_vm *vm, int eth)
 {
   static char net_cmd[MAX_PATH_LEN*3];
   int len = 0;
   char *mc = vm->kvm.eth_table[eth].mac_addr;
   char *endp_path = utils_get_dpdk_endp_path(vm->kvm.name, eth);
+
+  if (eth == 0)
+    {
+    len += sprintf(net_cmd+len, " -object memory-backend-file,id=mem0,"
+                                "size=%dM,share=on,mem-path=%s"
+                                " -numa node,memdev=mem0 -mem-prealloc",
+                                vm->kvm.mem, cfg_get_root_work());
+    }
 
   len += sprintf(net_cmd+len, " -chardev socket,id=chard%d,path=%s,server",
                               eth, endp_path);
@@ -939,16 +962,13 @@ char *dpdk_ovs_format_net(t_vm *vm, int eth, int tot_dpdk)
   
   len += sprintf(net_cmd+len, " -device virtio-net-pci,netdev=net%d,"
                               "mac=%02X:%02X:%02X:%02X:%02X:%02X,"
-                              "mq=on,vectors=%d,bus=pci.0,addr=0x%x",
+                              "mq=on,vectors=%d,bus=pci.0,addr=0x%x,"
+                              "csum=off,guest_csum=off,guest_tso4=off,"
+                              "guest_tso6=off,guest_ecn=on,mrg_rxbuf=on",
                               eth, mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF,
                               mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF,
                               MQ_VECTORS, eth+5);
 
-  len += sprintf(net_cmd+len, " -object memory-backend-file,id=mem%d,"
-                              "size=%dM,share=on,mem-path=%s"
-                              " -numa node,memdev=mem%d -mem-prealloc",
-                              eth, vm->kvm.mem/tot_dpdk,
-                              cfg_get_root_work(), eth);
   return net_cmd;
 }
 /*--------------------------------------------------------------------------*/
@@ -1030,7 +1050,6 @@ int dpdk_ovs_get_nb(void)
 /*****************************************************************************/
 void dpdk_ovs_urgent_client_destruct(void)
 {
-  t_dpdk_vm *nvm, *vm = g_head_vm;
   if (dpdk_tap_get_qty())
     dpdk_tap_end_ovs();
   if (dpdk_snf_get_qty())
@@ -1041,13 +1060,6 @@ void dpdk_ovs_urgent_client_destruct(void)
     dpdk_a2b_end_ovs();
   if (dpdk_d2d_get_qty())
     dpdk_d2d_end_ovs();
-  while(vm)
-    {
-    dpdk_ovs_del_vm(vm->name);
-    vhost_eth_del_vm(vm->name, vm->nb_tot_eth, vm->eth_table);
-    nvm = vm->next;
-    vm = nvm;
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1059,6 +1071,7 @@ void dpdk_ovs_start_openvswitch_if_not_done(void)
     {
     event_print("Start OpenVSwitch");
     cur = ovs_alloc("ovsdb");
+    cur->watchdog_protect = 1;
     cur->clone_start_pid = create_muovs_process("ovsdb");
     cur->clone_start_pid_just_done = 1;
     }
@@ -1200,6 +1213,7 @@ void dpdk_ovs_init(uint32_t lcore, uint32_t mem, uint32_t cpu)
   g_lcore_mask = lcore;
   g_socket_mem = mem;
   g_cpu_mask   = cpu;
+  g_restart_hysteresis = 0;
 }
 /*--------------------------------------------------------------------------*/
 

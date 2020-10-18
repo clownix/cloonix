@@ -22,7 +22,6 @@
 #include <netinet/in.h>
 #include <sys/un.h>
 
-#define ALLOW_EXPERIMENTAL_API
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
 #include <rte_config.h>
@@ -375,12 +374,13 @@ struct rte_mbuf *utils_alloc_and_copy_pktmbuf(int len, uint8_t *resp)
   m = rte_pktmbuf_alloc(get_rte_mempool());
   if (m == NULL)
     KOUT(" ");
-  data = rte_pktmbuf_append(m, len);
+  data = rte_pktmbuf_append(m, len + EMPTY_HEAD);
   if (data == NULL)
     KOUT(" ");
-  if (rte_pktmbuf_pkt_len(m) != len)
+  if (rte_pktmbuf_pkt_len(m) != len + EMPTY_HEAD)
     KOUT("%d %d", rte_pktmbuf_pkt_len(m), len);
-  memcpy(data, resp, len);
+  memset(data, 0, EMPTY_HEAD);
+  memcpy(data + EMPTY_HEAD, resp, len);
   return (m);
 }
 /*--------------------------------------------------------------------------*/

@@ -480,7 +480,7 @@ int heartbeat_mngt(int type)
       {
       if (heart_count > 15000)
         {
-        KERR("%d", type);
+        KERR("%d LONG SELECT", type);
         result = 1;
         }
       }
@@ -620,7 +620,8 @@ void channel_delete(int llid)
     cidx = get_cidx(llid);
     fd = g_channel[cidx].fd;
     epoll_ctl(g_epfd, EPOLL_CTL_DEL, fd, NULL);
-    if (g_channel[cidx].kind != kind_simple_watch_connect)
+    if ((g_channel[cidx].kind != kind_simple_watch_connect) &&
+        (g_channel[cidx].kind != kind_simple_watch_no_erase))
       util_free_fd(fd);
     release_llid_cidx(llid, cidx);
     }
@@ -772,6 +773,7 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
     evt = events[k].events;
 
     if ((g_channel[cidx].kind == kind_simple_watch_connect) ||
+        (g_channel[cidx].kind == kind_simple_watch_no_erase)  ||
         (g_channel[cidx].kind == kind_simple_watch)  ||
         (g_channel[cidx].kind == kind_server) || 
         (g_channel[cidx].kind == kind_client))
@@ -805,7 +807,8 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
       KOUT("%d %d %d", cidx, g_channel[cidx].fd, g_channel[cidx].kind);
     evt = events[k].events;
 
-    if ((g_channel[cidx].kind == kind_simple_watch) ||
+    if ((g_channel[cidx].kind == kind_simple_watch_no_erase) ||
+        (g_channel[cidx].kind == kind_simple_watch) ||
         (g_channel[cidx].kind == kind_server) || 
         (g_channel[cidx].kind == kind_client))
       {

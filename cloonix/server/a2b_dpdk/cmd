@@ -61,16 +61,17 @@ cmplr = meson.get_compiler('c')
 io_clownix = cmplr.find_library('libio_clownix', dirs : '${HERE}/${IO_CLOWNIX}')
 blkd = cmplr.find_library('libblkd', dirs : '${HERE}/${BLKD}')
 rpct = cmplr.find_library('librpct', dirs : '${HERE}/${RPCT}')
-
+web = dependency('libwebsockets')
 
 sources = files('src/a2b_dpdk.c',
                 'src/vhost_client.c',
                 'src/sched.c',
                 'src/circle.c',
+                'src/utils.c',
                 'src/stub.c')
 
 executable('cloonix_a2b_dpdk', sources, include_directories : incdir,
-            dependencies : [dpdk,io_clownix,blkd,rpct,crypto],
+            dependencies : [dpdk,io_clownix,blkd,rpct,crypto,web],
             c_args: cflags,
             install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
             install : true)

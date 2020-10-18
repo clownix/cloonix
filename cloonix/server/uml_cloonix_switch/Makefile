@@ -66,11 +66,10 @@ SRC = \
       slowperiodic.c \
       unix2inet.c \
       suid_power.c \
-      vhost_eth.c \
       edp_mngt.c \
       edp_evt.c \
+      edp_phy.c \
       edp_sock.c \
-      edp_vhost.c \
       pci_dpdk.c \
       dpdk_d2d.c \
       dpdk_d2d_peer.c \

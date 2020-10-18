@@ -4,11 +4,9 @@ set -e
 HERE=`pwd`
 
 LIST="centos8 \
-      fedora31 \
       fedora32 \
       opensuse152 \
       focal \
-      eoan \
       buster \
       bullseye \
       openwrt"

@@ -26,7 +26,6 @@
 #include <arpa/inet.h>
 #include <sys/select.h>
 
-#define ALLOW_EXPERIMENTAL_API
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
 #include <rte_config.h>

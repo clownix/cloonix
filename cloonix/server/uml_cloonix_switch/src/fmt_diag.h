@@ -17,12 +17,8 @@
 /*****************************************************************************/
 int  fmt_tx_add_lan_pci_dpdk(int tid, char *lan, char *pci);
 int  fmt_tx_del_lan_pci_dpdk(int tid, char *lan, char *pci);
-int  fmt_tx_add_phy_vhost_port(int tid, char *name, char *lan);
-int  fmt_tx_del_phy_vhost_port(int tid, char *name, char *lan);
-int  fmt_tx_add_vhost_lan(int tid, char *name, int num, char *lan);
-int  fmt_tx_add_vhost_port(int tid,char *name,int num,char *vhost,char *lan);
-int  fmt_tx_del_vhost_lan(int tid, char *name, int num, char *lan);
-int  fmt_tx_del_vhost_port(int tid,char *name,int num,char *vhost,char *lan);
+int  fmt_tx_add_lan_phy_dpdk(int tid, char *lan, char *phy);
+int  fmt_tx_del_lan_phy_dpdk(int tid, char *lan, char *phy);
 int  fmt_tx_add_tap(int tid, char *name);
 int  fmt_tx_del_tap(int tid, char *name);
 int  fmt_tx_add_lan_tap(int tid, char *lan, char *name);

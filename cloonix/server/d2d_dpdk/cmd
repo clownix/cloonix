@@ -65,6 +65,7 @@ cflags += ['-DALLOW_EXPERIMENTAL_API']
 sources = files('src/d2d_dpdk.c',
                 'src/vhost_client.c',
                 'src/udp.c',
+                'src/utils.c',
                 'src/stub.c')
 
 executable('cloonix_d2d_dpdk', sources, include_directories : incdir,

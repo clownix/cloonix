@@ -34,16 +34,15 @@
 #include "endp_evt.h"
 #include "edp_mngt.h"
 #include "edp_evt.h"
+#include "edp_phy.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
 #include "endp_mngt.h"
 #include "edp_sock.h"
-#include "edp_vhost.h"
 #include "pci_dpdk.h"
 #include "utils_cmd_line_maker.h"
 #include "dpdk_dyn.h"
 #include "dpdk_d2d.h"
-#include "vhost_eth.h"
 
 
 static t_edp *g_head_edp;
@@ -172,8 +171,6 @@ void edp_mngt_set_eth_type(t_edp *cur, int eth_type)
       cur->eth_type = eth_type_none;
     else if (eth_type == eth_type_dpdk)
       cur->eth_type = eth_type_dpdk;
-    else if (eth_type == eth_type_vhost)
-      cur->eth_type = eth_type_vhost;
     else if (eth_type == eth_type_sock)
       cur->eth_type = eth_type_sock;
     else
@@ -252,7 +249,6 @@ int edp_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
     {
     if ((type != endp_type_kvm_sock)  &&
         (type != endp_type_kvm_dpdk)  &&
-        (type != endp_type_kvm_vhost) &&
         (type != endp_type_nat)       &&
         (type != endp_type_tap)       &&
         (type != endp_type_snf)       &&
@@ -269,27 +265,7 @@ int edp_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err)
     else 
       result = 0;
     }
-  else if (vhost_lan_exists(lan))
-    {
-    if (cur->endp_type == endp_type_pci)
-      {
-      snprintf(err, MAX_PATH_LEN, "%s VHOST not compat pci", lan);
-      KERR("%s", err);
-      } 
-    else if (cur->endp_type == endp_type_snf)
-      {
-      snprintf(err, MAX_PATH_LEN, "%s VHOST not compat snf", lan);
-      KERR("%s", err);
-      }
-    else if (cur->endp_type == endp_type_nat)
-      {
-      snprintf(err, MAX_PATH_LEN, "%s VHOST not compat nat", lan);
-      KERR("%s", err);
-      }
-    else
-      result = 0;
-    }
-  else
+  else 
     result = 0;
   if (result == 0)
     {
@@ -527,10 +503,9 @@ void edp_mngt_cisco_nat_destroy(char *name)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void edp_mngt_kvm_lan_exists(char *lan, int *dpdk, int *vhost, int *sock)
+void edp_mngt_kvm_lan_exists(char *lan, int *dpdk, int *sock)
 { 
   *dpdk = (dpdk_dyn_lan_exists(lan)) + (dpdk_d2d_lan_exists(lan));
-  *vhost = vhost_lan_exists(lan);
   *sock = endp_evt_lan_is_in_use_by_vm_or_c2c(lan);
 }
 /*--------------------------------------------------------------------------*/
@@ -549,8 +524,8 @@ void edp_mngt_init(void)
   g_nb_edp   = 0;
   g_head_edp = NULL;
   edp_sock_init();
-  edp_vhost_init();
   edp_evt_init();
+  edp_phy_init();
   pci_dpdk_init();
 }
 /*--------------------------------------------------------------------------*/

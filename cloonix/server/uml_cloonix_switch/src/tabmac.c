@@ -104,7 +104,7 @@ static int vm_mac_collect(t_peer_mac *tabmac, int max)
                                       mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);
         if (k < max)
           {
-          strncpy(tabmac[i].mac, strmac, MAX_NAME_LEN-1);
+          strncpy(tabmac[k].mac, strmac, MAX_NAME_LEN-1);
           k += 1;
           }
         else

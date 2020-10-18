@@ -38,6 +38,8 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --enable-vhost-net
                      --enable-vhost-kernel
                      --enable-vhost-user
+                     --enable-pie
+                     --disable-slirp
                      --disable-vhost-vsock
                      --disable-vhost-scsi
                      --disable-vhost-crypto
@@ -54,7 +56,6 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --disable-docs
                      --disable-guest-agent
                      --disable-guest-agent-msi
-                     --disable-pie
                      --disable-sparse
                      --disable-gnutls
                      --disable-nettle
@@ -94,20 +95,18 @@ cd ${HERE}/qemu_bin/tainted_qemu
 make clean
 make -j 5
 
-mv x86_64-softmmu/qemu-system-x86_64 ${HERE}/qemu_bin
-#mv arm-softmmu/qemu-system-arm  ${HERE}/qemu_bin
-#mv aarch64-softmmu/qemu-system-aarch64 ${HERE}/qemu_bin
-mv qemu-img                     ${HERE}/qemu_bin
-cp ./pc-bios/bios-256k.bin      ${HERE}/qemu_bin
-cp ./pc-bios/kvmvapic.bin       ${HERE}/qemu_bin
-cp ./pc-bios/vgabios.bin        ${HERE}/qemu_bin
-cp ./pc-bios/vgabios-stdvga.bin ${HERE}/qemu_bin
-cp ./pc-bios/vgabios-qxl.bin    ${HERE}/qemu_bin
-cp ./pc-bios/vgabios-virtio.bin ${HERE}/qemu_bin
-cp ./pc-bios/efi-virtio.rom     ${HERE}/qemu_bin
-cp ./pc-bios/efi-e1000.rom      ${HERE}/qemu_bin
-cp ./pc-bios/efi-ne2k_pci.rom   ${HERE}/qemu_bin
-cp ./pc-bios/efi-rtl8139.rom    ${HERE}/qemu_bin
-cp ./pc-bios/efi-vmxnet3.rom    ${HERE}/qemu_bin
+mv build/qemu-system-x86_64   ${HERE}/qemu_bin
+mv build/qemu-img             ${HERE}/qemu_bin
+cp pc-bios/bios-256k.bin      ${HERE}/qemu_bin
+cp pc-bios/kvmvapic.bin       ${HERE}/qemu_bin
+cp pc-bios/vgabios.bin        ${HERE}/qemu_bin
+cp pc-bios/vgabios-stdvga.bin ${HERE}/qemu_bin
+cp pc-bios/vgabios-qxl.bin    ${HERE}/qemu_bin
+cp pc-bios/vgabios-virtio.bin ${HERE}/qemu_bin
+cp pc-bios/efi-virtio.rom     ${HERE}/qemu_bin
+cp pc-bios/efi-e1000.rom      ${HERE}/qemu_bin
+cp pc-bios/efi-ne2k_pci.rom   ${HERE}/qemu_bin
+cp pc-bios/efi-rtl8139.rom    ${HERE}/qemu_bin
+cp pc-bios/efi-vmxnet3.rom    ${HERE}/qemu_bin
 
 

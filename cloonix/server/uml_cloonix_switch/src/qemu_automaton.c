@@ -305,25 +305,6 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static char *format_vhost_net(t_vm *vm, int eth, char *ifname)
-{
-  static char cmd[4*MAX_PATH_LEN];
-  int  len = 0;
-  char *mac;
-  mac = vm->kvm.eth_table[eth].mac_addr;
-  len += sprintf(cmd+len," -device virtio-net-pci,netdev=nvhost%d,mac=",eth);
-  len += sprintf(cmd+len,"%02X:%02X:%02X:%02X:%02X:%02X",
-                         mac[0] & 0xFF, mac[1] & 0xFF, mac[2] & 0xFF,
-                         mac[3] & 0xFF, mac[4] & 0xFF, mac[5] & 0xFF);
-  len += sprintf(cmd+len,",bus=pci.0,addr=0x%x", eth+5);
-  len += sprintf(cmd+len,",mq=on,vectors=%d", MQ_VECTORS);
-  len += sprintf(cmd+len," -netdev type=tap,id=nvhost%d,vhost=on,", eth);
-  len += sprintf(cmd+len,"vhostforce=on,queues=%d,", MQ_QUEUES);
-  len += sprintf(cmd+len,"ifname=%s,script=no,downscript=no", ifname);
-  return cmd;
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 #define QEMU_OPTS_BASE \
@@ -371,11 +352,11 @@ static char *format_vhost_net(t_vm *vm, int eth, char *ifname)
 /****************************************************************************/
 static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
 {
-  int i, nb_cpu, len, nb_sock, nb_dpdk, nb_vhost, nb_wlan;
+  int i, nb_cpu, len;
   char cmd_start[10000];
   char cpu_type[MAX_NAME_LEN];
   char *rootfs, *added_disk, *gname;
-  char *spice_path, *cdrom, *ifname;
+  char *spice_path, *cdrom;
   if (!vm)
     KOUT(" ");
   spice_path = utils_get_spice_path(vm->kvm.vm_id);
@@ -389,19 +370,15 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     strcpy(cpu_type, "host,-aes");
     }
   len = sprintf(cmd_start, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
-  utils_get_eth_numbers(vm->kvm.nb_tot_eth, vm->kvm.eth_table,
-                        &nb_sock, &nb_dpdk, &nb_vhost, &nb_wlan);
+  for (i = 0; i < vm->kvm.nb_tot_eth; i++)
+    {
+    if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
+      len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_net(vm,i));
+    }
   for (i = 0; i < vm->kvm.nb_tot_eth; i++)
     {
     if (vm->kvm.eth_table[i].eth_type == eth_type_sock)
       len+=sprintf(cmd_start+len, "%s",format_virtkvm_net(vm,i));
-    else if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
-      len+=sprintf(cmd_start+len, "%s", dpdk_ovs_format_net(vm, i, nb_dpdk));
-    else if (vm->kvm.eth_table[i].eth_type == eth_type_vhost)
-      {
-      ifname = vm->kvm.eth_table[i].vhost_ifname;
-      len+=sprintf(cmd_start+len, "%s",format_vhost_net(vm, i, ifname));
-      }
     }
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_UEFI)
     len += sprintf(cmd_start+len, FLAG_UEFI, cfg_get_bin_dir(), QEMU_BIN_DIR);
@@ -731,7 +708,7 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
       if (nb_dpdk)
         {
         wake_up->dpdk_count += 1;
-        if (wake_up->dpdk_count > 50)
+        if (wake_up->dpdk_count > 100)
           {
           KERR("ERROR dpdk ovs start when creating %s\n", name);
           sprintf(err, "ERROR dpdk ovs start when creating %s\n", name);
@@ -763,9 +740,6 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
             KERR("%s %d", vm->kvm.name, i);
           }
         else if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
-          {
-          }
-        else if (vm->kvm.eth_table[i].eth_type == eth_type_vhost)
           {
           }
         else if (vm->kvm.eth_table[i].eth_type == eth_type_wlan)

@@ -36,7 +36,7 @@ configured for eth0 of the cisco.
 
 When these isos are done then the creation of the 2 qcow2 can begin 
 (if you have a csr1000v installation iso such as:
-csr1000v-universalk9.16.09.01.iso).
+csr1000v-universalk9.17.02.01r.iso).
 
 This creation is done in 2 steps, beware that in the first step YOU MUST 
 CHOOSE THE SERIAL OPTION as cisco access at cisco installation.

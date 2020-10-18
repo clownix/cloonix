@@ -69,7 +69,7 @@ fct_create_32G_mount_wkmntloops $ROOTFS
 list_pkt="linux-image-amd64,grub-pc,openssh-client,locales,iperf3,htop,"
 list_pkt+="console-data,kbd,keyboard-configuration,xauth,sudo,vim,iw,"
 list_pkt+="bash-completion,net-tools,pciutils,iftop,acpi-support-base,"
-list_pkt+="tcpdump"
+list_pkt+="tcpdump,ethtool"
 debootstrap --no-check-certificate \
 	    --no-check-gpg \
             --arch amd64 \

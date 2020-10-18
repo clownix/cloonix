@@ -20,7 +20,6 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define ALLOW_EXPERIMENTAL_API
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
 #include <rte_config.h>
@@ -106,8 +105,10 @@ struct rte_mbuf *tcp_qstore_get_backup(t_flagseq *flseq, int rank,
     }
   else
     {
-    result = utils_alloc_pktmbuf(flseq->offset + cur->data_len + 4);
-    data = rte_pktmbuf_mtod_offset(result, uint8_t *, flseq->offset);
+    result = utils_alloc_pktmbuf(flseq->offset + cur->data_len + 4 + EMPTY_HEAD);
+    data = rte_pktmbuf_mtod(result, uint8_t *);
+    memset(data, 0, EMPTY_HEAD);
+    data = rte_pktmbuf_mtod_offset(result, uint8_t *, flseq->offset + EMPTY_HEAD);
     memcpy(data, cur->data, cur->data_len);
     *data_len = cur->data_len;
     *local_seq = cur->local_seq;
@@ -131,8 +132,10 @@ struct rte_mbuf *tcp_qstore_dequeue(t_flagseq *flseq,
     }
   else
     {
-    result = utils_alloc_pktmbuf(flseq->offset + cur->data_len + 4);
-    data = rte_pktmbuf_mtod_offset(result, uint8_t *, flseq->offset);
+    result = utils_alloc_pktmbuf(flseq->offset + cur->data_len + 4 + EMPTY_HEAD);
+    data = rte_pktmbuf_mtod(result, uint8_t *);
+    memset(data, 0, EMPTY_HEAD);
+    data = rte_pktmbuf_mtod_offset(result, uint8_t *, flseq->offset + EMPTY_HEAD);
     memcpy(data, cur->data, cur->data_len);
     *data_len = cur->data_len; 
     if (flseq->head_qstore == flseq->tail_qstore)

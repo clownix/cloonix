@@ -160,7 +160,7 @@ void wrap_try_connect_to_peer(t_d2d_cnx *cur)
       KERR("%s PROBLEM %s", locnet, cur->name);
     if (cur->udp_connection_peered)
       KERR("%s PROBLEM %s", locnet, cur->name);
-    if (cur->ovs_lan_attach_ready)
+    if (cur->lan_ovs_is_attached)
       KERR("%s PROBLEM %s", locnet, cur->name);
     cur->ref_tid = get_new_tid();
     llid = doorways_sock_client_inet_start(cur->dist_tcp_ip, 

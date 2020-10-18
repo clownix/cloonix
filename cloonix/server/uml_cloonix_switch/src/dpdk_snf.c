@@ -134,9 +134,10 @@ static void timer_snf_msg_beat(void *data)
         (cur->waiting_ack_del_lan != 0))
         {
         cur->timer_count += 1;
-        if (cur->timer_count > 15)
+        if (cur->timer_count > 20)
           {
-          KERR("Time %s", cur->name);
+          KERR("Time %s add:%d del:%d", cur->name,
+               cur->waiting_ack_add_lan, cur->waiting_ack_del_lan);
           if (cur->to_be_destroyed == 1)
             {
             if (cur->var_dpdk_start_stop_process)
@@ -256,7 +257,10 @@ void dpdk_snf_event_from_snf_dpdk_process(char *name, char *lan, int on)
     if ((on == -1) || (on == 0))
       {
       if (on == -1)
+        {
         KERR("ERROR %s %s", name, lan);
+        dpdk_msg_send_del_lan_snf(lan, name);
+        }
       cur->var_dpdk_start_stop_process = 0;
       if (cur->waiting_ack_del_lan)
         {

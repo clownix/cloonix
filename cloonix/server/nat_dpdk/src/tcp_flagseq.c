@@ -20,7 +20,6 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define ALLOW_EXPERIMENTAL_API
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
 #include <rte_config.h>
@@ -88,8 +87,10 @@ static void transmit_flags_back(t_flagseq *cur, uint8_t flags)
   uint8_t *buf;
   struct rte_mbuf *mbuf;
   int32_t recv_ack = 0;
-  mbuf    = utils_alloc_pktmbuf(cur->offset + 4);
+  mbuf    = utils_alloc_pktmbuf(cur->offset + 4 + EMPTY_HEAD);
   buf     = rte_pktmbuf_mtod(mbuf, uint8_t *);
+  memset(buf, 0, EMPTY_HEAD);
+  buf     = rte_pktmbuf_mtod_offset(mbuf, uint8_t *, EMPTY_HEAD);
   if (flags & RTE_TCP_ACK_FLAG)
     recv_ack = cur->distant_seq;  
   utils_fill_tcp_packet(buf, 0, cur->dmac, cur->smac, cur->dip, cur->sip, 
@@ -114,7 +115,9 @@ static void try_qstore_dequeue_backup_and_xmit(t_flagseq *cur)
     mbuf = tcp_qstore_get_backup(cur, i, &data_len, &local_seq);
     if (!mbuf)
       break;
-    buf = rte_pktmbuf_mtod(mbuf, uint8_t *);
+    buf     = rte_pktmbuf_mtod(mbuf, uint8_t *);
+    memset(buf, 0, EMPTY_HEAD);
+    buf = rte_pktmbuf_mtod_offset(mbuf, uint8_t *, EMPTY_HEAD);
     tcp_flags = RTE_TCP_PSH_FLAG | RTE_TCP_ACK_FLAG;
     utils_fill_tcp_packet(buf, data_len, cur->dmac, cur->smac,
                           cur->dip, cur->sip, cur->dport, cur->sport,
@@ -142,7 +145,9 @@ static void try_qstore_dequeue_and_xmit(t_flagseq *cur)
       {
       while (mbuf)
         {
-        buf = rte_pktmbuf_mtod(mbuf, uint8_t *);
+        buf     = rte_pktmbuf_mtod(mbuf, uint8_t *);
+        memset(buf, 0, EMPTY_HEAD);
+        buf = rte_pktmbuf_mtod_offset(mbuf, uint8_t *, EMPTY_HEAD);
         tcp_flags = RTE_TCP_PSH_FLAG | RTE_TCP_ACK_FLAG;
         utils_fill_tcp_packet(buf, data_len, cur->dmac, cur->smac,
                               cur->dip, cur->sip, cur->dport, cur->sport,

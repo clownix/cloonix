@@ -32,15 +32,14 @@
 #include "event_subscriber.h"
 #include "suid_power.h"
 #include "dpdk_dyn.h"
-#include "vhost_eth.h"
 #include "endp_evt.h"
 #include "edp_mngt.h"
 #include "edp_evt.h"
+#include "edp_phy.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
 #include "endp_mngt.h"
 #include "edp_sock.h"
-#include "edp_vhost.h"
 #include "pci_dpdk.h"
 #include "dpdk_tap.h"
 #include "dpdk_snf.h"
@@ -52,11 +51,11 @@ void snf_globtopo_small_event(char *name, int num_evt, char *path);
 /****************************************************************************/
 static void erase_inside_lan_if_lan_used(t_edp *cur)
 {
-  int dpdk, vhost, sock;
+  int dpdk, sock;
   if (strlen(cur->lan))
     {
-    edp_mngt_kvm_lan_exists(cur->lan, &dpdk, &vhost, &sock);
-    if (dpdk || vhost || sock)
+    edp_mngt_kvm_lan_exists(cur->lan, &dpdk, &sock);
+    if (dpdk  || sock)
       memset(cur->lan, 0, MAX_NAME_LEN);
     }
   edp_mngt_set_eth_type(cur, eth_type_none); 
@@ -66,24 +65,18 @@ static void erase_inside_lan_if_lan_used(t_edp *cur)
 /****************************************************************************/
 static int eth_type_update(char *name, char *lan)
 {
-  int result, dpdk, vhost, sock;
-  edp_mngt_kvm_lan_exists(lan, &dpdk, &vhost, &sock);
+  int result, dpdk, sock;
+  edp_mngt_kvm_lan_exists(lan, &dpdk, &sock);
   if (dpdk)
     {
-    if (vhost || sock)
-      KERR("%d %d", vhost, sock);
+    if (sock)
+      KERR(" ");
     result = eth_type_dpdk;
-    }
-  else if (vhost)
-    {
-    if (dpdk || sock)
-      KERR("%d %d", dpdk, sock);
-    result = eth_type_vhost;
     }
   else if (sock)
     {
-    if (dpdk || vhost)
-      KERR("%d %d", dpdk, vhost);
+    if (dpdk)
+      KERR(" ");
     result = eth_type_sock;
     }
   else
@@ -100,7 +93,15 @@ static int edp_del_inside_dpdk(t_edp *cur, char *name, char *lan)
   int result = -1;
   if (cur->endp_type == endp_type_phy)
     {
-    KERR("%s %s", name, lan);
+    if (!cur->flag_lan_ok)
+      KERR("%s %s", name, lan);
+    else
+      {
+      if (edp_phy_del_dpdk(lan, name))
+        KERR("%s %s", name, lan);
+      else
+        result = 0;
+      }
     }
   else if (cur->endp_type == endp_type_tap)
     {
@@ -160,47 +161,6 @@ static int edp_del_inside_dpdk(t_edp *cur, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int edp_del_inside_vhost(t_edp *cur, char *name, char *lan)
-{
-  int result = -1;
-  char *ifname, *peer_name;
-  int peer_num;
-  if (cur->endp_type == endp_type_phy)
-    {
-    if (!cur->flag_lan_ok)
-      KERR("%s %s", name, lan);
-    else
-      {
-      if (edp_vhost_del_port(name, lan))
-        KERR("%s %s", name, lan);
-      else
-        result = 0;
-      }
-    }
-  else if (cur->endp_type == endp_type_tap)
-    {
-    if (!cur->flag_lan_ok)
-      KERR("%s %s", name, lan);
-    else
-      {
-      peer_name = cur->vhost.peer_name;
-      peer_num = cur->vhost.peer_num;
-      ifname = edp_vhost_get_ifname(peer_name, peer_num);
-      suid_power_ifname_change(peer_name, peer_num, name, ifname);
-      result = 0;
-      }
-    }
-  else if (cur->endp_type == endp_type_pci)
-    {
-    KERR("%s %s", name, lan);
-    }
-  else
-    KOUT("%d", cur->endp_type);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int edp_del_inside_sock(t_edp *cur, char *name, char *lan)
 {
   int tidx, type, result = -1;
@@ -233,6 +193,26 @@ static int begin_dpdk_tap(t_edp *cur)
     {
     KERR("%s %s", cur->name, cur->lan);
     utils_send_status_ko(&(cur->llid), &(cur->tid), "tap create error");
+    }
+  else
+    {
+    cur->llid = 0;
+    cur->tid = 0;
+    result = eth_type_dpdk;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int begin_dpdk_phy(t_edp *cur)
+{
+  int result = eth_type_none;
+  if (edp_phy_add_dpdk(cur->llid, cur->tid, cur->lan, cur->name))
+    {
+    KERR("%s %s", cur->name, cur->lan);
+    utils_send_status_ko(&(cur->llid), &(cur->tid), "phy create error");
+    erase_inside_lan_if_lan_used(cur);
     }
   else
     {
@@ -288,9 +268,7 @@ static int begin_eth_type_dpdk(t_edp *cur)
   int result = eth_type_none;
   if (cur->endp_type == endp_type_phy)
     {
-    KERR("%s %s", cur->name, cur->lan);
-    utils_send_status_ko(&(cur->llid), &(cur->tid), "eth create error");
-    erase_inside_lan_if_lan_used(cur);
+    result = begin_dpdk_phy(cur);
     }
   else if (cur->endp_type == endp_type_tap)
     {
@@ -314,62 +292,6 @@ static int begin_eth_type_dpdk(t_edp *cur)
       }
     else
       result = eth_type_dpdk;
-    }
-  else
-    KOUT("%d", cur->endp_type);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static int begin_eth_type_vhost(t_edp *cur)
-{
-  char vhost_ifname[IFNAMSIZ];
-  char vm_name[MAX_NAME_LEN];
-  int vhost, num;
-  int result = eth_type_none;
-  if (cur->endp_type == endp_type_phy)
-    {
-    if (edp_vhost_add_port(cur->llid, cur->tid, cur->name, cur->lan))
-      {
-      KERR("%s %s", cur->name, cur->lan);
-      utils_send_status_ko(&(cur->llid),&(cur->tid),"vhost phy create error");
-      erase_inside_lan_if_lan_used(cur);
-      }
-    else
-      result = eth_type_vhost;
-    }
-  else if (cur->endp_type == endp_type_tap)
-    {
-    vhost = vhost_lan_info(cur->lan, vhost_ifname, vm_name, &num);
-    if (vhost == 0)
-      {
-      KERR("%s %s %s %d", cur->name, cur->lan, vm_name, num);
-      utils_send_status_ko(&(cur->llid),&(cur->tid),"vhost tap create error");
-      erase_inside_lan_if_lan_used(cur);
-      }
-    else if (vhost > 1)
-      {
-      KERR("%s %s %s %d", cur->name, cur->lan, vm_name, num);
-      utils_send_status_ko(&(cur->llid),&(cur->tid),"vhost tap create error");
-      erase_inside_lan_if_lan_used(cur);
-      }
-    else
-      {
-      memset(cur->vhost.peer_name, 0, MAX_NAME_LEN);
-      strncpy(cur->vhost.peer_name, vm_name, MAX_NAME_LEN-1);
-      cur->vhost.peer_num = num;
-      suid_power_ifname_change(vm_name, num, vhost_ifname, cur->name);
-      result = eth_type_vhost;
-      }
-    }
-  else if ((cur->endp_type == endp_type_nat) ||
-           (cur->endp_type == endp_type_snf) ||
-           (cur->endp_type == endp_type_pci))
-    {
-    KERR("%s %s", cur->name, cur->lan);
-    utils_send_status_ko(&(cur->llid), &(cur->tid), "vhost incompatible");
-    erase_inside_lan_if_lan_used(cur);
     }
   else
     KOUT("%d", cur->endp_type);
@@ -432,6 +354,11 @@ static int timer_update_type_dpdk(t_edp *cur)
         flag = 1;
       }
     }
+  else if (cur->endp_type == endp_type_phy) 
+    {
+    if (dpdk_dyn_lan_exists(cur->lan))
+      flag = 1;
+    }
   else if (cur->endp_type == endp_type_pci)
     {
     if (dpdk_dyn_lan_exists(cur->lan))
@@ -440,35 +367,6 @@ static int timer_update_type_dpdk(t_edp *cur)
         flag = 1;
       }
     }
-  else if (cur->endp_type == endp_type_phy)
-    KERR("ERROR phy not compatible dpdk %s %s", cur->name, cur->lan);
-  else
-    KOUT("%d", cur->endp_type);
-  return flag;
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
-static int timer_update_type_vhost(t_edp *cur)
-{
-  int flag = 0;
-  if (cur->endp_type == endp_type_tap)
-    {
-    if (vhost_lan_exists(cur->lan))
-      flag = 1;
-    }
-  else if (cur->endp_type == endp_type_phy)
-    {
-    if (vhost_lan_exists(cur->lan))
-      flag = 1;
-    }
-  else if (cur->endp_type == endp_type_snf)
-    KERR("ERROR snf not compatible vhost %s %s", cur->name, cur->lan);
-  else if (cur->endp_type == endp_type_nat)
-    KERR("ERROR nat not compatible vhost %s %s", cur->name, cur->lan);
-  else if (cur->endp_type == endp_type_pci)
-    KERR("ERROR pci not compatible vhost %s %s", cur->name, cur->lan);
   else
     KOUT("%d", cur->endp_type);
   return flag;
@@ -543,10 +441,6 @@ static void timer_update_flag_lan(void *data)
           {
           flag = timer_update_type_sock(cur);
           }
-        else if (cur->eth_type == eth_type_vhost)
-          {
-          flag = timer_update_type_vhost(cur);
-          }
         else if (cur->eth_type == eth_type_dpdk)
           {
           flag = timer_update_type_dpdk(cur);
@@ -573,8 +467,6 @@ int edp_evt_action_add_lan(t_edp *cur, int llid, int tid)
   cur->tid = tid;
   if (eth_type == eth_type_dpdk)
     eth_type = begin_eth_type_dpdk(cur);
-  else if (eth_type == eth_type_vhost)
-    eth_type = begin_eth_type_vhost(cur);
   else if (eth_type == eth_type_sock)
     eth_type = begin_eth_type_sock(cur);
   else if (eth_type == eth_type_none)
@@ -602,18 +494,6 @@ void edp_evt_action_del_lan(t_edp *cur, int llid, int tid)
       {
       cur->llid = 0;
       cur->tid = 0;
-      }
-    }
-  else if (cur->eth_type == eth_type_vhost)
-    {
-    if (edp_del_inside_vhost(cur, cur->name, cur->lan))
-      {
-      KERR("%s %s", cur->name, cur->lan);
-      utils_send_status_ko(&(cur->llid), &(cur->tid), "vhost del error");
-      }
-    else
-      {
-      utils_send_status_ok(&(cur->llid), &(cur->tid));
       }
     }
   else if (cur->eth_type == eth_type_sock)
@@ -736,19 +616,23 @@ void edp_evt_update_non_fix_add(int eth_type, char *name, char *lan)
   t_edp *cur = edp_mngt_name_lan_find(name, lan);
   if (cur)
     {
-    if (cur->eth_type != eth_type)
+    if (cur->eth_type == eth_type_sock)
       {
-      KERR("WRONG TYPE LAN: %s %d %d", lan, cur->eth_type, eth_type);
+      if (eth_type != eth_type_sock)
+        KERR("WRONG TYPE LAN: %s %d %d", lan, cur->eth_type, eth_type);
+      else
+        cur->flag_lan_ok = 1;
       }
-    else if ((cur->eth_type != eth_type_sock) &&
-             (cur->eth_type != eth_type_dpdk) &&
-             (cur->eth_type != eth_type_vhost))
+    else if (cur->eth_type == eth_type_dpdk)
       {
-      KERR("WRONG TYPE: %s %d", lan, eth_type);
+      if (eth_type != eth_type_dpdk)
+        KERR("WRONG TYPE LAN: %s %d %d", lan, cur->eth_type, eth_type);
+      else
+        cur->flag_lan_ok = 1;
       }
     else
       {
-      cur->flag_lan_ok = 1;
+      KERR("WRONG TYPE: %s %d", lan, eth_type);
       }
     }
 }

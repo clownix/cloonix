@@ -277,7 +277,8 @@ static t_ovsreq *ovsreq_find(int tid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_ovsreq *ovsreq_alloc(int tid,int type,char *lan,char *name,int num)
+static t_ovsreq *ovsreq_alloc(int tid, int type, char *lan,
+                              char *name, int num)
 {
   t_ovsreq *cur = (t_ovsreq *) clownix_malloc(sizeof(t_ovsreq), 19);
   memset(cur, 0, sizeof(t_ovsreq));
@@ -342,12 +343,14 @@ static void delay_add_lan_endp(void *data)
 {
   t_ovsreq *req = (t_ovsreq *) data;
   t_ovslan *lan;
+  int result;
   lan = lan_find(req->lan_name);
   if (lan && (lan->refcount > 0))
     {
     if (req->type == ovsreq_add_lan_eth)
       {
-      if (fmt_tx_add_lan_eth(req->tid, req->lan_name, req->name, req->num))
+      result = fmt_tx_add_lan_eth(req->tid,req->lan_name,req->name,req->num);
+      if (result)
         {
         KERR("%s %s %d", req->lan_name, req->name, req->num);
         dpdk_dyn_ack_add_lan_eth_KO(req->lan_name, req->name, req->num);
@@ -392,7 +395,7 @@ static void delay_add_lan_endp(void *data)
       }
     else if (req->type == ovsreq_add_lan_tap)
       {
-      if (fmt_tx_add_lan_tap(req->tid, req->lan_name, req->name))
+      if (fmt_tx_add_lan_tap(req->tid,req->lan_name,req->name))
         {
         KERR("%s %s", req->lan_name, req->name);
         dpdk_tap_resp_add_lan(1, req->lan_name, req->name);
@@ -457,7 +460,7 @@ int dpdk_msg_send_add_lan_tap(char *lan_name, char *name)
     else
       {
       lan_alloc(lan_name);
-      ovsreq_alloc(tid, ovsreq_add_lan_tap, lan_name, name, 0);
+      ovsreq_alloc(tid,ovsreq_add_lan_tap,lan_name,name,0);
       }
     }
   else if (cur->refcount > 0) 
@@ -466,12 +469,12 @@ int dpdk_msg_send_add_lan_tap(char *lan_name, char *name)
     if (result)
       KERR("%s %s", lan_name, name);
     else
-      ovsreq_alloc(tid, ovsreq_add_lan_tap, lan_name, name, 0);
+      ovsreq_alloc(tid,ovsreq_add_lan_tap,lan_name,name,0);
     }
   else
     {
     result = 0;
-    ovsreq = ovsreq_alloc(tid, ovsreq_add_lan_tap, lan_name, name, 0);
+    ovsreq=ovsreq_alloc(tid,ovsreq_add_lan_tap,lan_name,name,0);
     clownix_timeout_add(5, delay_add_lan_endp,(void *) ovsreq, NULL, NULL);
     }
   return result;
@@ -546,7 +549,7 @@ int dpdk_msg_send_add_lan_snf(char *lan_name, char *name)
   else
     {
     result = 0;
-    ovsreq = ovsreq_alloc(tid, ovsreq_add_lan_snf, lan_name, name, 0);
+    ovsreq = ovsreq_alloc(tid,ovsreq_add_lan_snf,lan_name,name,0);
     clownix_timeout_add(5, delay_add_lan_endp,(void *) ovsreq, NULL, NULL);
     }
   return result;
@@ -570,7 +573,7 @@ int dpdk_msg_send_add_lan_nat(char *lan_name, char *name)
     else
       {
       lan_alloc(lan_name);
-      ovsreq_alloc(tid, ovsreq_add_lan_nat, lan_name, name, 0);
+      ovsreq_alloc(tid, ovsreq_add_lan_nat, lan_name, name,0);
       }
     }
   else if (cur->refcount > 0)
@@ -579,12 +582,12 @@ int dpdk_msg_send_add_lan_nat(char *lan_name, char *name)
     if (result)
       KERR("%s %s", lan_name, name);
     else
-      ovsreq_alloc(tid, ovsreq_add_lan_nat, lan_name, name, 0);
+      ovsreq_alloc(tid, ovsreq_add_lan_nat,lan_name,name,0);
     }
   else
     {
     result = 0;
-    ovsreq = ovsreq_alloc(tid, ovsreq_add_lan_nat, lan_name, name, 0);
+    ovsreq = ovsreq_alloc(tid,ovsreq_add_lan_nat,lan_name,name,0);
     clownix_timeout_add(5, delay_add_lan_endp,(void *) ovsreq, NULL, NULL);
     }
   return result;
@@ -616,12 +619,12 @@ int dpdk_msg_send_add_lan_a2b(char *lan_name, char *name, int num)
     if (result)
       KERR("%s %s %d", lan_name, name, num);
     else
-      ovsreq_alloc(tid, ovsreq_add_lan_a2b, lan_name, name, num);
+      ovsreq_alloc(tid,ovsreq_add_lan_a2b,lan_name,name,num);
     }
   else
     {
     result = 0;
-    ovsreq = ovsreq_alloc(tid, ovsreq_add_lan_a2b, lan_name, name, num);
+    ovsreq = ovsreq_alloc(tid,ovsreq_add_lan_a2b,lan_name,name,num);
     clownix_timeout_add(5, delay_add_lan_endp,(void *) ovsreq, NULL, NULL);
     }
   return result;
@@ -659,7 +662,7 @@ int dpdk_msg_send_add_lan_d2d(char *lan_name, char *name)
   else
     {
     result = 0;
-    ovsreq = ovsreq_alloc(tid, ovsreq_add_lan_d2d, lan_name, name, 0);
+    ovsreq = ovsreq_alloc(tid,ovsreq_add_lan_d2d,lan_name,name,0);
     clownix_timeout_add(5, delay_add_lan_endp,(void *) ovsreq, NULL, NULL);
     }
   return result;

@@ -51,10 +51,27 @@ static char g_snf_socket[MAX_PATH_LEN];
 
 static int g_virtio_device_on;
 static int g_circle_worker;
-static int g_circle_worker_ended[RTE_MAX_LCORE];
 static struct vhost_device_ops g_virtio_net_device_ops;
 
+static uint32_t volatile g_lock;
+static int g_running_lcore;
+
+
 void end_clean_unlink(void);
+
+/****************************************************************************/
+static void vhost_lock_acquire(void)
+{
+  while (__sync_lock_test_and_set(&(g_lock), 1));
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void vhost_lock_release(void)
+{
+  __sync_lock_release(&(g_lock));
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int virtio_new_device(int vid)
@@ -108,12 +125,13 @@ static void fct_job_for_select(int ref_id, void *data)
 static int circle_worker(void *arg __rte_unused)
 {
   struct rte_mbuf *pkts[PKT_READ_SIZE];
-  int i, q, nb_rx, len;
+  int  i, q, nb_rx, len;
   char *buf;
   long long usec;
   while(g_circle_worker)
     {
     usleep(100);
+    vhost_lock_acquire();
     if (g_enable == NB_QUEUE)
       {
       for (q=0; q<2*NB_QUEUE; q++)
@@ -140,60 +158,41 @@ static int circle_worker(void *arg __rte_unused)
           }
         }
       }
+    vhost_lock_release();
     }
-  i = rte_lcore_id();
-  g_circle_worker_ended[i] = 1;
   return 0;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void last_timeout_end(void *data)
-{
-  end_clean_unlink();
-  exit(0);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void timeout_end(void *data)
-{
-  int err, i, ok_to_exit = 1;
-  for (i=0; i < RTE_MAX_LCORE; i++)
-    {
-    if (g_circle_worker_ended[i] == 0)
-      ok_to_exit = 0;
-    }
-  if (ok_to_exit)
-    {
-    rte_mempool_free(g_mempool);
-    usleep(1000);
-    err = rte_vhost_driver_unregister(g_snf_socket);
-    if (err)
-      KERR("ERROR UNREGISTER");
-    memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
-    clownix_timeout_add(10, last_timeout_end, NULL, NULL, NULL);
-    }
-  else
-    clownix_timeout_add(1, timeout_end, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_end_and_exit(void)
 {
+  vhost_lock_acquire();
   g_circle_worker = 0;
-  clownix_timeout_add(1, timeout_end, NULL, NULL, NULL);
+  g_enable = 0;
+  vhost_lock_release();
+  cirspy_flush();
+  if (g_running_lcore == -1)
+    KERR("ERROR STOP SNF");
+  else
+    rte_eal_wait_lcore(g_running_lcore);
+  g_running_lcore = -1;
+  rte_mempool_free(g_mempool);
+  if (rte_vhost_driver_unregister(g_snf_socket))
+    KERR("ERROR UNREGISTER");
+  end_clean_unlink();
+  exit(0);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_start(char *path, char *memid)
 {
-  uint64_t unsup_flags, flags = RTE_VHOST_USER_CLIENT;
-  int i, err, llid1, llid2, sid;
+  uint64_t flags = RTE_VHOST_USER_CLIENT;
+  uint64_t unsup_flags = (1ULL << VIRTIO_NET_F_STATUS);
+  int i, j, err, llid1, llid2, sid;
   uint32_t mcache = 128;
-  uint32_t mbufs = 2048;
+  uint32_t mbufs = 1024;
   uint32_t msize = 2048;
   memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
   memset(g_snf_socket, 0, MAX_PATH_LEN);
@@ -217,7 +216,6 @@ void vhost_client_start(char *path, char *memid)
   err = rte_vhost_driver_callback_register(path, &g_virtio_net_device_ops);
   if (err)
     KOUT(" ");
-  unsup_flags = 1ULL << VIRTIO_NET_F_CSUM;
   err = rte_vhost_driver_disable_features(path, unsup_flags);
   if (err)
     KOUT(" ");
@@ -227,17 +225,15 @@ void vhost_client_start(char *path, char *memid)
   g_mempool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
   if (!g_mempool)
     KOUT(" ");
-  for (i=0; i < RTE_MAX_LCORE; i++)
-    g_circle_worker_ended[i] = 1;
   i = rte_get_next_lcore(-1, 1, 0);
-  if (i<RTE_MAX_LCORE)
-    {
-    g_circle_worker_ended[i] = 0;
-    if (rte_eal_remote_launch(circle_worker, NULL, i))
-      KOUT(" ");
-    }
+  j = rte_get_next_lcore(i, 1, 0);
+  if (j < RTE_MAX_LCORE)
+    g_running_lcore = j;
+  else if (i < RTE_MAX_LCORE)
+    g_running_lcore = i;
   else
     KOUT(" ");
+  rte_eal_remote_launch(circle_worker, NULL, g_running_lcore);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -251,7 +247,6 @@ void vhost_client_init(void)
   memset(g_snf_socket, 0, MAX_PATH_LEN);
   g_virtio_device_on = 0;
   g_circle_worker = 0;
-  memset(g_circle_worker_ended, 0, RTE_MAX_LCORE * sizeof(int));
   memset(&g_virtio_net_device_ops, 0, sizeof(struct vhost_device_ops));
 } 
 /*--------------------------------------------------------------------------*/

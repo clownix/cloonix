@@ -25,12 +25,12 @@
 #include "rpc_clownix.h"
 #include "cfg_store.h"
 #include "utils_cmd_line_maker.h"
-#include "vhost_eth.h"
 #include "fmt_diag.h"
 #include "edp_mngt.h"
 #include "edp_evt.h"
+#include "dpdk_dyn.h"
 
-typedef struct t_edp_vhost
+typedef struct t_edp_phy
 {
   int llid;
   int tid;
@@ -39,9 +39,9 @@ typedef struct t_edp_vhost
   int count;
   char name[IFNAMSIZ];
   char lan[MAX_NAME_LEN];
-  struct t_edp_vhost *prev;
-  struct t_edp_vhost *next;
-} t_edp_vhost;
+  struct t_edp_phy *prev;
+  struct t_edp_phy *next;
+} t_edp_phy;
 
 enum {
   state_min=100,
@@ -50,39 +50,39 @@ enum {
   state_max,
 };
 
-static t_edp_vhost *g_head_edp_vhost;
+static t_edp_phy *g_head_edp_phy;
 
 /****************************************************************************/
-static t_edp_vhost *alloc_edp_vhost(char *name)
+static t_edp_phy *alloc_edp_phy(char *name)
 {
-  t_edp_vhost *cur = (t_edp_vhost *) malloc(sizeof(t_edp_vhost));
-  memset(cur, 0, sizeof(t_edp_vhost));
+  t_edp_phy *cur = (t_edp_phy *) malloc(sizeof(t_edp_phy));
+  memset(cur, 0, sizeof(t_edp_phy));
   strncpy(cur->name, name, IFNAMSIZ-1);
-  if (g_head_edp_vhost)
-    g_head_edp_vhost->prev = cur;
-  cur->next = g_head_edp_vhost;
-  g_head_edp_vhost = cur;
+  if (g_head_edp_phy)
+    g_head_edp_phy->prev = cur;
+  cur->next = g_head_edp_phy;
+  g_head_edp_phy = cur;
   return cur;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void free_edp_vhost(t_edp_vhost *cur)
+static void free_edp_phy(t_edp_phy *cur)
 {
   if (cur->prev)
     cur->prev->next = cur->next;
   if (cur->next)
     cur->next->prev = cur->prev;
-  if (cur == g_head_edp_vhost)
-    g_head_edp_vhost = cur->next;
+  if (cur == g_head_edp_phy)
+    g_head_edp_phy = cur->next;
   free(cur);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_edp_vhost *find_edp_vhost(char *name)
+static t_edp_phy *find_edp_phy(char *name)
 {
-  t_edp_vhost *cur = g_head_edp_vhost;
+  t_edp_phy *cur = g_head_edp_phy;
   while (cur)
     {
     if (!strcmp(name, cur->name))
@@ -96,7 +96,7 @@ static t_edp_vhost *find_edp_vhost(char *name)
 /****************************************************************************/
 static void timer_edp(void *data)
 {
-  t_edp_vhost *next, *cur = g_head_edp_vhost;
+  t_edp_phy *next, *cur = g_head_edp_phy;
   while (cur)
     {
     next = cur->next;
@@ -105,7 +105,7 @@ static void timer_edp(void *data)
       {
       KERR("%s %s", cur->name, cur->lan);
       utils_send_status_ko(&(cur->llid), &(cur->tid), "timeout");
-      free_edp_vhost(cur);
+      free_edp_phy(cur);
       }
     cur = next;
     }
@@ -114,9 +114,9 @@ static void timer_edp(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void edp_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name)
+void edp_phy_ack_add(int tid, int is_ok, char *lan, char *name)
 {
-  t_edp_vhost *cur = find_edp_vhost(name);
+  t_edp_phy *cur = find_edp_phy(name);
   if (!cur)
     {
     KERR("%s %s", name, lan);
@@ -125,7 +125,7 @@ void edp_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name)
     {
     KERR("%s %s", name, lan);
     utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch fail");
-    free_edp_vhost(cur);
+    free_edp_phy(cur);
     }
   else
     {
@@ -133,17 +133,17 @@ void edp_vhost_ack_add_port(int tid, int is_ok, char *lan, char *name)
       KERR("%s %s %d %d", name, lan, tid, cur->ovs_tid);
     if (cur->state != state_wait_add_port)
       KERR("%s %s %d", name, lan, cur->state);
-    edp_evt_update_non_fix_add(eth_type_vhost, name, lan);
+    edp_evt_update_non_fix_add(eth_type_dpdk, name, lan);
     utils_send_status_ok(&(cur->llid), &(cur->tid));
-    free_edp_vhost(cur);
+    free_edp_phy(cur);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void edp_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name)
+void edp_phy_ack_del(int tid, int is_ok, char *lan, char *name)
 {
-  t_edp_vhost *cur = find_edp_vhost(name);
+  t_edp_phy *cur = find_edp_phy(name);
   if (!cur)
     {
     KERR("%s %s", name, lan);
@@ -152,7 +152,7 @@ void edp_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name)
     {
     KERR("%s %s", name, lan);
     utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch fail");
-    free_edp_vhost(cur);
+    free_edp_phy(cur);
     }
   else
     {
@@ -162,29 +162,29 @@ void edp_vhost_ack_del_port(int tid, int is_ok, char *lan, char *name)
       KERR("%s %s %d", name, lan, cur->state);
     else
       {
-      edp_evt_update_non_fix_del(eth_type_vhost, name, lan);
+      edp_evt_update_non_fix_del(eth_type_dpdk, name, lan);
       utils_send_status_ok(&(cur->llid), &(cur->tid));
       }
-    free_edp_vhost(cur);
+    free_edp_phy(cur);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int edp_vhost_add_port(int llid, int tid, char *name, char *lan)
+int edp_phy_add_dpdk(int llid, int tid, char *lan, char *name)
 {
   int result = -1;
   int ovs_tid = utils_get_next_tid();
-  t_edp_vhost *cur = find_edp_vhost(name);
+  t_edp_phy *cur = find_edp_phy(name);
   if (cur)
     KERR("%s %s", name, lan);
-  else if (!vhost_lan_exists(lan))
+  else if (!dpdk_dyn_lan_exists(lan))
     KERR("%s %s", name, lan);
-  else if (fmt_tx_add_phy_vhost_port(ovs_tid, name, lan))
+  else if (fmt_tx_add_lan_phy_dpdk(ovs_tid, lan, name))
     KERR("%s %s", name, lan);
   else
     {
-    cur = alloc_edp_vhost(name);
+    cur = alloc_edp_phy(name);
     strncpy(cur->lan, lan, MAX_NAME_LEN-1);
     cur->state = state_wait_add_port;
     cur->ovs_tid = ovs_tid;
@@ -197,18 +197,18 @@ int edp_vhost_add_port(int llid, int tid, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int edp_vhost_del_port(char *name, char *lan)
+int edp_phy_del_dpdk(char *lan, char *name)
 {
   int ovs_tid, result = -1;
-  t_edp_vhost *cur;
+  t_edp_phy *cur;
   ovs_tid = utils_get_next_tid();
-  if (fmt_tx_del_phy_vhost_port(ovs_tid, name, lan))
+  if (fmt_tx_del_lan_phy_dpdk(ovs_tid, lan, name))
     {
     KERR("%s %s", name, lan);
     }
   else
     {
-    cur = alloc_edp_vhost(name);    
+    cur = alloc_edp_phy(name);    
     strncpy(cur->lan, lan, MAX_NAME_LEN-1);
     cur->state = state_wait_del_port;
     cur->ovs_tid = ovs_tid;
@@ -219,24 +219,9 @@ int edp_vhost_del_port(char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *edp_vhost_get_ifname(char *name, int num)
+void edp_phy_init(void)
 {
-  char *result = NULL;
-  t_vm *vm = cfg_get_vm(name);
-  if (!vm)
-    KERR("ERR NOT FOUND: %s", name);
-  else
-    {
-    result = vhost_ident_get(vm->kvm.vm_id, num);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void edp_vhost_init(void)
-{
-  g_head_edp_vhost = NULL;
+  g_head_edp_phy = NULL;
   clownix_timeout_add(200, timer_edp, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/

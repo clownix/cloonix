@@ -41,6 +41,16 @@
 #include "vhost_client.h"
 #include "sched.h"
 #include "circle.h"
+#include "utils.h"
+
+
+#define VIRTIO_PMD_SUPPORTED_GUEST_FEATURES     \
+        (1u << VIRTIO_NET_F_GUEST_CSUM     |    \
+         1u << VIRTIO_NET_F_GUEST_TSO4     |    \
+         1u << VIRTIO_NET_F_GUEST_TSO6     |    \
+         1u << VIRTIO_NET_F_CSUM           |    \
+         1u << VIRTIO_NET_F_HOST_TSO4      |    \
+         1u << VIRTIO_NET_F_HOST_TSO6)
 
 
 #define MAX_PKT_BURST 32
@@ -53,12 +63,27 @@ static char g_a2b1_socket[MAX_PATH_LEN];
 static struct rte_mempool *g_mempool0;
 static struct rte_mempool *g_mempool1;
 static int g_rxtx_worker;
-static int g_rxtx_worker_ended[RTE_MAX_LCORE];
 static struct vhost_device_ops g_virtio_net_device_ops0;
 static struct vhost_device_ops g_virtio_net_device_ops1;
+static uint32_t volatile g_lock;
+static int g_running_lcore;
+
 
 void end_clean_unlink(void);
 
+/****************************************************************************/
+static void vhost_lock_acquire(void)
+{
+  while (__sync_lock_test_and_set(&(g_lock), 1));
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void vhost_lock_release(void)
+{
+  __sync_lock_release(&(g_lock));
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static uint64_t get_usec(void)
@@ -79,6 +104,14 @@ static int virtio_new_device(int vid)
   rte_vhost_enable_guest_notification(vid, 0, 0);
   rte_vhost_enable_guest_notification(vid, 1, 0);
   return 0;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int virtio_features_changed(int vid, uint64_t features)
+{
+KERR("%lu", features);
+return features; 
 }
 /*--------------------------------------------------------------------------*/
 
@@ -120,6 +153,7 @@ static void enqueue(int id, uint64_t usec, int nb, struct rte_mbuf **pkts)
     { 
     if (sched_can_enqueue(id, pkts[i]->pkt_len))
       {
+      checksum_compute(pkts[i]);
       circle_put(id, pkts[i]->pkt_len, usec, pkts[i]);
       sched_inc_queue_stored(id, pkts[i]->pkt_len);
       }
@@ -189,10 +223,9 @@ static int store_rx_circle(int id, uint64_t arrival_usec)
 /****************************************************************************/
 static int rxtx_worker(void *unused)
 {
-  int i, lcore, fast = 0, loop_is_on = 0;
+  int i, fast = 0, loop_is_on = 0;
   uint64_t arrival_usec, delta_usec, last_usec;
   (void) unused;
-  lcore = rte_lcore_id();
   while(g_rxtx_worker)
     {
     if (!(g_enable[0] && g_enable[1]))
@@ -209,6 +242,7 @@ static int rxtx_worker(void *unused)
         {
         usleep(60);
         }
+      vhost_lock_acquire();
       fast = 0;
       arrival_usec = get_usec();
       delta_usec = arrival_usec - last_usec;
@@ -220,69 +254,50 @@ static int rxtx_worker(void *unused)
         sched_mngt(i, arrival_usec, delta_usec);
         flush_tx_circle(i);
         }
+      vhost_lock_release();
       }
     }
-  g_rxtx_worker_ended[lcore] = 1;
   return 0;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void last_timeout_end(void *data)
-{
-  end_clean_unlink();
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void timeout_end(void *data)
-{
-  int err, i, ok_to_exit = 1;
-  for (i=0; i < RTE_MAX_LCORE; i++)
-    {
-    if (g_rxtx_worker_ended[i] == 0)
-      ok_to_exit = 0;
-    }
-  if (ok_to_exit)
-    {
-    rte_mempool_free(g_mempool0);
-    rte_mempool_free(g_mempool1);
-    usleep(250);
-    err = rte_vhost_driver_unregister(g_a2b0_socket);
-    if (err)
-      KERR("ERROR UNREGISTER");
-    err = rte_vhost_driver_unregister(g_a2b1_socket);
-    if (err)
-      KERR("ERROR UNREGISTER");
-    memset(&(g_virtio_net_device_ops0), 0, sizeof(struct vhost_device_ops));
-    memset(&(g_virtio_net_device_ops1), 0, sizeof(struct vhost_device_ops));
-    clownix_timeout_add(10, last_timeout_end, NULL, NULL, NULL);
-    }
-  else
-    clownix_timeout_add(1, timeout_end, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_end_and_exit(void)
 {
-  if (g_rxtx_worker == 1)
-    {
-    g_rxtx_worker = 0;
-    circle_flush();
-    clownix_timeout_add(2, timeout_end, NULL, NULL, NULL);
-    }
+  int err;
+KERR("STOP A2B +");
+  vhost_lock_acquire();
+  g_rxtx_worker = 0;
+  vhost_lock_release();
+  if (g_running_lcore == -1) 
+    KERR("ERROR A2B STOP");
+  else
+    rte_eal_wait_lcore(g_running_lcore);
+  g_running_lcore = -1;
+  circle_flush();
+  rte_mempool_free(g_mempool0);
+  rte_mempool_free(g_mempool1);
+  g_mempool0 = NULL;
+  g_mempool1 = NULL;
+  err = rte_vhost_driver_unregister(g_a2b0_socket);
+  if (err)
+    KERR("ERROR UNREGISTER");
+  err = rte_vhost_driver_unregister(g_a2b1_socket);
+  if (err)
+    KERR("ERROR UNREGISTER");
+  end_clean_unlink();
+KERR("STOP A2B -");
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_start(char *path0, char *memid0, char *path1, char *memid1)
 {
-  uint64_t unsup_flags, flags = RTE_VHOST_USER_CLIENT;
+  uint64_t flags = RTE_VHOST_USER_CLIENT | RTE_VHOST_USER_EXTBUF_SUPPORT;
   int i, err, sid;
   uint32_t mcache = 128;
-  uint32_t mbufs = 2048;
-  uint32_t msize = 2048;
+  uint32_t mbufs = 512;
+  uint32_t msize = 65500;
 
   sid = rte_lcore_to_socket_id(rte_get_master_lcore());
   if (sid < 0)
@@ -301,10 +316,12 @@ void vhost_client_start(char *path0, char *memid0, char *path1, char *memid1)
   g_virtio_net_device_ops0.new_device          = virtio_new_device;
   g_virtio_net_device_ops0.destroy_device      = virtio_destroy_device;
   g_virtio_net_device_ops0.vring_state_changed = virtio_vring_state_changed;
+  g_virtio_net_device_ops0.features_changed    = virtio_features_changed;
 
   g_virtio_net_device_ops1.new_device          = virtio_new_device;
   g_virtio_net_device_ops1.destroy_device      = virtio_destroy_device;
   g_virtio_net_device_ops1.vring_state_changed = virtio_vring_state_changed;
+  g_virtio_net_device_ops1.features_changed    = virtio_features_changed;
 
   g_rxtx_worker = 1;
   err = rte_vhost_driver_register(path0, flags);
@@ -313,19 +330,14 @@ void vhost_client_start(char *path0, char *memid0, char *path1, char *memid1)
   err = rte_vhost_driver_register(path1, flags);
   if (err)
     KOUT(" ");
+
   err = rte_vhost_driver_callback_register(path0, &g_virtio_net_device_ops0);
   if (err)
     KOUT(" ");
   err = rte_vhost_driver_callback_register(path1, &g_virtio_net_device_ops1);
   if (err)
     KOUT(" ");
-  unsup_flags = 1ULL << VIRTIO_NET_F_CSUM;
-  err = rte_vhost_driver_disable_features(path0, unsup_flags);
-  if (err)
-    KOUT(" ");
-  err = rte_vhost_driver_disable_features(path1, unsup_flags);
-  if (err)
-    KOUT(" ");
+
   err = rte_vhost_driver_start(path0);
   if (err)
     KOUT(" ");
@@ -335,26 +347,24 @@ void vhost_client_start(char *path0, char *memid0, char *path1, char *memid1)
   i = rte_get_next_lcore(-1, 1, 0);
   if (i >= RTE_MAX_LCORE)
     KOUT(" ");
-  g_rxtx_worker_ended[i] = 0;
-  rte_eal_remote_launch(rxtx_worker, NULL, i);
+  g_running_lcore = i;
+  rte_eal_remote_launch(rxtx_worker, NULL, g_running_lcore);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_init(void)
 {
-  int i;
   g_enable[0] = 0;
   g_enable[1] = 0;
   g_mempool0 = NULL;
   g_mempool1 = NULL;
+  g_running_lcore = -1;
   memset(g_memid0, 0, MAX_NAME_LEN);
   memset(g_memid1, 0, MAX_NAME_LEN);
   memset(g_a2b0_socket, 0, MAX_PATH_LEN);
   memset(g_a2b1_socket, 0, MAX_PATH_LEN);
   g_rxtx_worker = 0;
-  for (i=0; i < RTE_MAX_LCORE; i++)
-    g_rxtx_worker_ended[i] = 1;
   memset(&g_virtio_net_device_ops0, 0, sizeof(struct vhost_device_ops));
   memset(&g_virtio_net_device_ops1, 0, sizeof(struct vhost_device_ops));
   circle_init();

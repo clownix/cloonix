@@ -115,9 +115,6 @@ static char *llid_trace_translate_type(int type_llid_trace)
     case type_llid_trace_endp_kvm_dpdk:
       result = "trace_endp_kvm_dpdk";
       break;
-    case type_llid_trace_endp_kvm_vhost:
-      result = "trace_endp_kvm_vhost";
-      break;
     case type_llid_trace_endp_kvm_wlan:
       result = "trace_endp_kvm_wlan";
       break;

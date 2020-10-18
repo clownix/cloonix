@@ -15,14 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-typedef struct t_edp_mngt_vhost
-{
-  char peer_name[MAX_NAME_LEN];
-  int peer_num;
-} t_edp_mngt_vhost;
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 typedef struct t_edp
 {
   char name[MAX_NAME_LEN];
@@ -35,7 +27,6 @@ typedef struct t_edp
   int dpdk_attach_ok;
   int count_llid_on;
   int count_flag_ko;
-  t_edp_mngt_vhost vhost;
   struct t_edp *prev;
   struct t_edp *next;
 } t_edp;
@@ -43,7 +34,7 @@ typedef struct t_edp
 void edp_mngt_cisco_nat_destroy(char *name);
 void edp_mngt_cisco_nat_create(char *name);
 
-void edp_mngt_kvm_lan_exists(char *lan, int *dpdk, int *vhost, int *sock);
+void edp_mngt_kvm_lan_exists(char *lan, int *dpdk, int *sock);
 
 t_edp *edp_mngt_name_lan_find(char *name, char *lan);
 t_edp *edp_mngt_lan_find(char *lan);
