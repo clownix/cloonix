@@ -693,7 +693,7 @@ void qhvc0_event_backdoor(char *name, int backdoor_evt)
         {
         if (!cvm->timeout_cloonix_agent_handshake)
           {
-          KERR("%s PING KO RESTART PROCEDURE", name);
+          KERR("%s PING TO AGENT KO, RESTART", name);
           doors_send_command(get_doorways_llid(),0,cvm->name,
                              CLOONIX_DOWN_AND_NOT_RUNNING);
           entry_in_state_automaton_1(cvm);

@@ -282,7 +282,7 @@ static void a2b_info(t_topo_a2b *a2b)
 /*****************************************************************************/
 static void callback_topo_topo(int tid, t_topo_info *topo)
 {
-  int i, j, type;
+  int i, type;
   printf("\n");
 
 

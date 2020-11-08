@@ -185,37 +185,29 @@ void dpdk_nat_resp_add_lan(int is_ko, char *lan, char *name)
 {
   t_dnat *cur = get_dnat(name);
   if (!cur)
-    KERR("%s %s", name, lan);
+    KERR("ERROR %s %s", name, lan);
   else if (strcmp(lan, cur->lan))
-    KERR("%s %s %s", lan, name, cur->lan);
+    KERR("ERROR %s %s %s", lan, name, cur->lan);
+  else if (cur->waiting_ack_add_lan == 0)
+    KERR("ERROR %d %s %s", is_ko, lan, name);
+  else if (cur->waiting_ack_del_lan == 1)
+    KERR("ERROR %d %s %s", is_ko, lan, name);
+  else if (cur->var_dpdk_start_stop_process == 0)
+    KERR("ERROR %d %s %s", is_ko, lan, name);
+  else if (is_ko)
+    {
+    KERR("ERROR %s %s", name, lan);
+    utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
+    cur->waiting_ack_add_lan = 0;
+    }
   else
     {
-    if (cur->waiting_ack_add_lan == 0)
-      KERR("%d %s %s", is_ko, lan, name);
-    if (cur->waiting_ack_del_lan == 1)
-      KERR("%d %s %s", is_ko, lan, name);
-    if (is_ko)
-      {
-      KERR("%s %s", name, lan);
-      utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
-      cur->waiting_ack_add_lan = 0;
-      }
-    else
-      {
-      if (cur->var_dpdk_start_stop_process)
-        {
-        KERR("%s %s", name, lan);
-        utils_send_status_ko(&(cur->llid), &(cur->tid), "not coherent");
-        cur->waiting_ack_add_lan = 0;
-        }
-      else
-        {
-        cur->waiting_ack_add_lan = 1;
-        cur->var_dpdk_start_stop_process = 1;
-        nat_dpdk_start_stop_process(name, lan, 1);
-        }
-      }
-    }
+    cur->waiting_ack_add_lan = 0;
+    edp_evt_update_non_fix_add(eth_type_dpdk, name, lan);
+    tabmac_process_possible_change();
+    utils_send_status_ok(&(cur->llid), &(cur->tid));
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+   }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -224,29 +216,19 @@ void dpdk_nat_resp_del_lan(int is_ko, char *lan, char *name)
 {
   t_dnat *cur = get_dnat(name);
   if (!cur)
-    {
     KERR("%s %s", lan, name);
-    }
   else if (strcmp(lan, cur->lan))
     KERR("%s %s %s", lan, name, cur->lan);
+  else if (cur->waiting_ack_add_lan == 1)
+    KERR("%d %s %s", is_ko, lan, name);
+  else if (cur->waiting_ack_del_lan == 0)
+    KERR("%d %s %s", is_ko, lan, name);
+  else if (cur->var_dpdk_start_stop_process)
+    KERR("ERROR %s %s", name, cur->lan);
   else
     {
-    if (cur->waiting_ack_add_lan == 1)
-      KERR("%d %s %s", is_ko, lan, name);
-    if (cur->waiting_ack_del_lan == 0)
-      KERR("%d %s %s", is_ko, lan, name);
-    cur->waiting_ack_del_lan = 1;
-    if (cur->var_dpdk_start_stop_process == 0)
-      {
-      KERR("ERROR %s %s", name, cur->lan);
-      utils_send_status_ko(&(cur->llid), &(cur->tid), "not coherent");
-      free_dnat(cur);
-      }
-    else
-      {
-      nat_dpdk_start_stop_process(name, cur->lan, 0);
-      cur->var_dpdk_start_stop_process = 0;
-      }
+    utils_send_status_ok(&(cur->llid), &(cur->tid));
+    free_dnat(cur);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -263,34 +245,24 @@ void dpdk_nat_event_from_nat_dpdk_process(char *name, char *lan, int on)
     {
     KERR("%s %s %s", name, lan, cur->lan);
     }
+  else if ((on == -1) || (on == 0))
+    {
+    if (on == -1)
+      KERR("ERROR %s %s", name, lan);
+    cur->var_dpdk_start_stop_process = 0;
+    if (dpdk_msg_send_del_lan_nat(lan, name))
+      KERR("ERROR %s %s", name, lan);
+    }
   else
     {
-    if ((on == -1) || (on == 0))
-      {
-      if (on == -1)
-        {
-        KERR("ERROR %s %s", name, lan);
-        dpdk_msg_send_del_lan_nat(lan, name);
-        }
-      cur->var_dpdk_start_stop_process = 0;
-      if (cur->waiting_ack_del_lan)
-        {
-        utils_send_status_ok(&(cur->llid), &(cur->tid));
-        }
-      free_dnat(cur);
-      }
+    if (cur->var_dpdk_start_stop_process == 0)
+      KERR("ERROR %s %s", name, lan);
+    else if (cur->waiting_ack_add_lan != 0)
+      KERR("ERROR %s %s", name, lan);
+    else if (dpdk_msg_send_add_lan_nat(lan, name))
+      KERR("ERROR %s %s", lan, name);
     else
-      {
-      if (cur->var_dpdk_start_stop_process == 0)
-        KERR("ERROR %s %s", name, lan);
-      if (cur->waiting_ack_add_lan == 0)
-        KERR("ERROR %s %s", name, lan);
-      cur->waiting_ack_add_lan = 0;
-      edp_evt_update_non_fix_add(eth_type_dpdk, name, lan);
-      tabmac_process_possible_change();
-      utils_send_status_ok(&(cur->llid), &(cur->tid));
-      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-      }
+      cur->waiting_ack_add_lan = 1;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -301,19 +273,14 @@ int dpdk_nat_add(int llid, int tid, char *name, char *lan)
   int result = -1;
   t_dnat *cur = get_dnat(name);
   if (cur)
-    {
     KERR("%s", name);
-    }
-  else if (dpdk_msg_send_add_lan_nat(lan, name))
-    {
-    KERR("%s %s", lan, name);
-    }
   else
     {
     cur = alloc_dnat(name, lan);
-    cur->waiting_ack_add_lan = 1;
     cur->llid = llid;
     cur->tid = tid;
+    cur->var_dpdk_start_stop_process = 1;
+    nat_dpdk_start_stop_process(name, lan, 1);
     result = 0;
     }
   return result;
@@ -335,23 +302,23 @@ int dpdk_nat_del(int llid, int tid, char *name)
     KERR("%s %s", name, cur->lan);
     utils_send_status_ko(&(cur->llid), &(cur->tid), "wait add");
     }
-  else if (cur->waiting_ack_del_lan)
-    {
-    KERR("%s %s", name, cur->lan);
-    utils_send_status_ko(&(cur->llid), &(cur->tid), "wait del");
-    }
-  else if (dpdk_msg_send_del_lan_nat(cur->lan, name))
-    {
-    KERR("%s %s", cur->lan, name);
-    utils_send_status_ko(&(cur->llid), &(cur->tid), "ovs no-connect");
-    }
   else
     {
-    cur->to_be_destroyed = 1;
+    if (cur->waiting_ack_del_lan)
+      {
+      KERR("%s %s", name, cur->lan);
+      utils_send_status_ko(&(cur->llid), &(cur->tid), "wait del");
+      }
+    else
+      {
+      cur->llid = llid;
+      cur->tid = tid;
+      }
+    nat_dpdk_start_stop_process(name, cur->lan, 0);
+    cur->var_dpdk_start_stop_process = 0;
     cur->waiting_ack_del_lan = 1;
+    cur->to_be_destroyed = 1;
     cur->timer_count = 0;
-    cur->llid = llid;
-    cur->tid = tid;
     result = 0;
     }
   return result;

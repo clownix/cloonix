@@ -39,6 +39,7 @@
 
 int check_before_start_launch(char **argv);
 void set_bulkvm(int nb, t_slowperiodic *slowperiodic);
+void wireshark_kill(char *name);
 
 /*---------------------------------------------------------------------------*/
 typedef struct t_vm_config
@@ -104,7 +105,27 @@ static void a2b_update_bitem(t_topo_info *topo)
 }
 /*--------------------------------------------------------------------------*/
 
-
+/****************************************************************************/
+static void snf_update_bitem(t_topo_info *topo)
+{
+  int i;
+  t_topo_endp *cur;
+  t_bank_item *bitem;
+  for (i=0; i<topo->nb_endp; i++)
+    {
+    cur = &(topo->endp[i]);
+    if ((cur->type == endp_type_snf) && (cur->lan.nb_lan == 0))
+      {
+      bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
+      if ((bitem) &&
+          (bitem->pbi.mutype == endp_type_snf))
+        {
+        wireshark_kill(cur->name);
+        }
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int get_vm_id_from_topo(char *name)
@@ -186,6 +207,7 @@ void callback_topo(int tid, t_topo_info *topo)
     topo_free_diffs(diffs);
     d2d_update_bitem(topo);
     a2b_update_bitem(topo);
+    snf_update_bitem(topo);
     }
   if (g_not_first_callback_topo == 0)
     {

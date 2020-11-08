@@ -55,7 +55,6 @@ void help_add_vm_kvm(char *line)
   printf("\n\t       --fullvirt");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\t       --balloon");
-  printf("\n\t       --uefi");
   printf("\n\tnote: for the --persistent option, the rootfs must be a full");
   printf("\n\t      path to a file system. If not set, the rootfs writes are");
   printf("\n\t      evenescent, lost at shutdown.");
@@ -139,8 +138,6 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
       prop_flags |= VM_CONFIG_FLAG_FULL_VIRT;
     else if (!strcmp(argv[i], "--balloon"))
       prop_flags |= VM_CONFIG_FLAG_BALLOONING;
-    else if (!strcmp(argv[i], "--uefi"))
-      prop_flags |= VM_CONFIG_FLAG_UEFI;
     else if (!strncmp(argv[i], "--9p_share=", strlen("--9p_share=")))
       {
       prop_flags |= VM_CONFIG_FLAG_9P_SHARED;

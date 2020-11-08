@@ -132,7 +132,7 @@ static int circle_worker(void *arg __rte_unused)
     {
     usleep(100);
     vhost_lock_acquire();
-    if (g_enable == NB_QUEUE)
+    if ((g_circle_worker) && (g_enable == NB_QUEUE))
       {
       for (q=0; q<2*NB_QUEUE; q++)
         {
@@ -177,18 +177,18 @@ void vhost_client_end_and_exit(void)
   else
     rte_eal_wait_lcore(g_running_lcore);
   g_running_lcore = -1;
-  rte_mempool_free(g_mempool);
   if (rte_vhost_driver_unregister(g_snf_socket))
     KERR("ERROR UNREGISTER");
+  rte_mempool_free(g_mempool);
   end_clean_unlink();
-  exit(0);
+  rte_exit(EXIT_SUCCESS, "Exit snf");
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_start(char *path, char *memid)
 {
-  uint64_t flags = RTE_VHOST_USER_CLIENT;
+  uint64_t flags = 0;
   uint64_t unsup_flags = (1ULL << VIRTIO_NET_F_STATUS);
   int i, j, err, llid1, llid2, sid;
   uint32_t mcache = 128;
@@ -207,7 +207,7 @@ void vhost_client_start(char *path, char *memid)
   g_virtio_device_on = 0;
   job_for_select_init();
   g_jfs = job_for_select_alloc(0xCCC, &llid1, &llid2);
-  sid = rte_lcore_to_socket_id(rte_get_master_lcore());
+  sid = rte_lcore_to_socket_id(rte_get_main_lcore());
   if (sid < 0)
     KOUT(" ");
   err = rte_vhost_driver_register(path, flags);

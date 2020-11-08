@@ -2,9 +2,9 @@
 set -e
 HERE=`pwd`
 TARGZ=${HERE}/../../../targz_store
-CLOONIX_COMMON=${HERE}/../../../cloonix/common
-MESON_NINJA=${CLOONIX_COMMON}/meson_ninja
-TARGET=${CLOONIX_COMMON}/spice/spice_lib
+COMMON=${HERE}/../../../cloonix/common
+MESON_NINJA=${COMMON}/meson_ninja
+TARGET=${COMMON}/spice/spice_lib
 if [ ! -d ${TARGET} ]; then
   echo
   echo NOT FOUND:

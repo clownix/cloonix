@@ -92,8 +92,6 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
       len += sprintf(list->cmd + len, " --no_reboot");
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_WITH_PXE)
       len += sprintf(list->cmd + len, " --with_pxe");
-    if (kvm->vm_config_flags & VM_CONFIG_FLAG_UEFI)
-      len += sprintf(list->cmd + len, " --uefi");
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_BALLOONING)
       len += sprintf(list->cmd + len, " --balloon");
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_9P_SHARED)

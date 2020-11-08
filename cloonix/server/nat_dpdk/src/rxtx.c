@@ -28,7 +28,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -46,6 +45,7 @@
 #include "tcp.h"
 #include "rxq_dpdk.h"
 
+#define IPPROTO_IGMP 2
 
 static void *g_jfs;
 
@@ -126,6 +126,9 @@ static void rxtx_vhost_rx(struct rte_mbuf *mbuf)
       data = rte_pktmbuf_mtod_offset(mbuf, uint8_t *, offset);
       tcp_input(smac, dmac, ipv4_hdr, tcp_hdr, data_len, data);
       rte_pktmbuf_free(mbuf);
+      }
+    else if (l4_proto == IPPROTO_IGMP)
+      {
       }
     else
       {

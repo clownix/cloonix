@@ -1,6 +1,6 @@
 diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
---- ovs/acinclude.m4	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/acinclude.m4	2020-10-10 11:39:34.857211861 +0200
+--- ovs/acinclude.m4	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/acinclude.m4	2020-11-06 22:37:10.270129277 +0100
 @@ -344,36 +344,11 @@
      DPDKLIB_FOUND=false
    else
@@ -64,9 +64,9 @@ diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
      AC_DEFINE([DPDK_NETDEV], [1], [System uses the DPDK module.])
    fi
 diff -Naur ovs/configure.ac ovs_tainted/configure.ac
---- ovs/configure.ac	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/configure.ac	2020-10-10 11:39:34.857211861 +0200
-@@ -178,13 +178,10 @@
+--- ovs/configure.ac	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/configure.ac	2020-11-06 22:37:10.270129277 +0100
+@@ -179,13 +179,10 @@
  OVS_ENABLE_OPTION([-Warray-bounds-pointer-arithmetic])
  OVS_CONDITIONAL_CC_OPTION([-Wno-unused], [HAVE_WNO_UNUSED])
  OVS_CONDITIONAL_CC_OPTION([-Wno-unused-parameter], [HAVE_WNO_UNUSED_PARAMETER])
@@ -81,8 +81,8 @@ diff -Naur ovs/configure.ac ovs_tainted/configure.ac
  AC_ARG_VAR(KARCH, [Kernel Architecture String])
  AC_SUBST(KARCH)
 diff -Naur ovs/lib/automake.mk ovs_tainted/lib/automake.mk
---- ovs/lib/automake.mk	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/lib/automake.mk	2020-10-10 11:39:34.857211861 +0200
+--- ovs/lib/automake.mk	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/lib/automake.mk	2020-11-06 22:37:10.274129301 +0100
 @@ -21,27 +21,6 @@
          -Wl,--version-script=$(top_builddir)/lib/libopenvswitch.sym \
          $(AM_LDFLAGS)
@@ -112,8 +112,8 @@ diff -Naur ovs/lib/automake.mk ovs_tainted/lib/automake.mk
  # Build core vswitch libraries as before
  lib_libopenvswitch_la_SOURCES = \
 diff -Naur ovs/lib/dpdk.c ovs_tainted/lib/dpdk.c
---- ovs/lib/dpdk.c	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/lib/dpdk.c	2020-10-10 11:39:34.857211861 +0200
+--- ovs/lib/dpdk.c	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/lib/dpdk.c	2020-11-06 22:37:10.274129301 +0100
 @@ -632,11 +632,11 @@
          return false;
      }
@@ -132,8 +132,8 @@ diff -Naur ovs/lib/dpdk.c ovs_tainted/lib/dpdk.c
      VLOG_WARN("Unknown CPU arch,feature: %s,%s. Returning not supported.\n",
                arch, feature);
 diff -Naur ovs/lib/dpif-netdev.h ovs_tainted/lib/dpif-netdev.h
---- ovs/lib/dpif-netdev.h	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/lib/dpif-netdev.h	2020-10-10 11:39:34.857211861 +0200
+--- ovs/lib/dpif-netdev.h	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/lib/dpif-netdev.h	2020-11-06 22:37:10.274129301 +0100
 @@ -35,7 +35,7 @@
  
  bool dpif_is_netdev(const struct dpif *);
@@ -144,8 +144,8 @@ diff -Naur ovs/lib/dpif-netdev.h ovs_tainted/lib/dpif-netdev.h
  
  #ifdef  __cplusplus
 diff -Naur ovs/lib/dpif-netdev-lookup.c ovs_tainted/lib/dpif-netdev-lookup.c
---- ovs/lib/dpif-netdev-lookup.c	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/lib/dpif-netdev-lookup.c	2020-10-10 11:39:34.857211861 +0200
+--- ovs/lib/dpif-netdev-lookup.c	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/lib/dpif-netdev-lookup.c	2020-11-06 22:37:10.274129301 +0100
 @@ -43,25 +43,6 @@
        .probe = dpcls_subtable_generic_probe,
        .name = "generic", },
@@ -173,8 +173,8 @@ diff -Naur ovs/lib/dpif-netdev-lookup.c ovs_tainted/lib/dpif-netdev-lookup.c
  
  int32_t
 diff -Naur ovs/lib/netdev.c ovs_tainted/lib/netdev.c
---- ovs/lib/netdev.c	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/lib/netdev.c	2020-10-10 11:39:34.857211861 +0200
+--- ovs/lib/netdev.c	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/lib/netdev.c	2020-11-06 22:37:10.274129301 +0100
 @@ -793,6 +793,7 @@
                             struct dp_packet *packet, char **errormsg)
  {
@@ -184,8 +184,8 @@ diff -Naur ovs/lib/netdev.c ovs_tainted/lib/netdev.c
      if (dp_packet_hwol_is_tso(packet)
          && !(netdev_flags & NETDEV_TX_OFFLOAD_TCP_TSO)) {
 diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
---- ovs/lib/netdev-dpdk.c	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/lib/netdev-dpdk.c	2020-10-10 11:39:34.857211861 +0200
+--- ovs/lib/netdev-dpdk.c	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/lib/netdev-dpdk.c	2020-11-06 22:37:10.274129301 +0100
 @@ -1460,7 +1460,7 @@
      struct netdev_dpdk *dev = netdev_dpdk_cast(netdev);
      struct rte_device *rte_dev;
@@ -206,8 +206,8 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
  
          /* Remove the eth device. */
 diff -Naur ovs/lib/poll-loop.c ovs_tainted/lib/poll-loop.c
---- ovs/lib/poll-loop.c	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/lib/poll-loop.c	2020-10-10 11:39:34.857211861 +0200
+--- ovs/lib/poll-loop.c	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/lib/poll-loop.c	2020-11-06 22:37:10.274129301 +0100
 @@ -64,7 +64,12 @@
      struct poll_node *node;
  
@@ -238,8 +238,8 @@ diff -Naur ovs/lib/poll-loop.c ovs_tainted/lib/poll-loop.c
      node = find_poll_node(loop, fd, wevent);
      if (node) {
 diff -Naur ovs/m4/openvswitch.m4 ovs_tainted/m4/openvswitch.m4
---- ovs/m4/openvswitch.m4	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/m4/openvswitch.m4	2020-10-10 11:39:34.857211861 +0200
+--- ovs/m4/openvswitch.m4	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/m4/openvswitch.m4	2020-11-06 22:37:10.274129301 +0100
 @@ -411,8 +411,7 @@
       echo "vpgatherqq $GATHER_PARAMS" | as --64 -o $OBJFILE -
       if ($CC -dumpmachine | grep x86_64) >/dev/null 2>&1; then
@@ -251,8 +251,8 @@ diff -Naur ovs/m4/openvswitch.m4 ovs_tainted/m4/openvswitch.m4
           ovs_cv_binutils_avx512_good=no
           dnl Explicitly disallow avx512f to stop compiler auto-vectorizing
 diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
---- ovs/ofproto/ofproto-dpif.c	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/ofproto/ofproto-dpif.c	2020-10-10 11:39:34.857211861 +0200
+--- ovs/ofproto/ofproto-dpif.c	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/ofproto/ofproto-dpif.c	2020-11-06 22:37:10.274129301 +0100
 @@ -748,7 +748,7 @@
          return 0;
      }
@@ -263,8 +263,8 @@ diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
      /* Remove any existing datapaths, since we assume we're the only
       * userspace controlling the datapath. */
 diff -Naur ovs/ofproto/ofproto-dpif-xlate.c ovs_tainted/ofproto/ofproto-dpif-xlate.c
---- ovs/ofproto/ofproto-dpif-xlate.c	2020-10-10 11:34:33.000000000 +0200
-+++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2020-10-10 11:39:34.857211861 +0200
+--- ovs/ofproto/ofproto-dpif-xlate.c	2020-11-06 22:33:11.000000000 +0100
++++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2020-11-06 22:37:10.274129301 +0100
 @@ -4144,6 +4144,12 @@
             xlate_report_error(ctx, "Cannot truncate output to patch port");
         }

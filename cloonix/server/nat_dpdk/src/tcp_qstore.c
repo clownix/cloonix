@@ -27,7 +27,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -54,8 +53,8 @@ static void free_head_backup(t_flagseq *flseq)
     {
     flseq->head_qstore_backup = flseq->head_qstore_backup->next;
     }
-  rte_free(cur->data);
-  rte_free(cur);
+  utils_free(cur->data);
+  utils_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -160,7 +159,7 @@ struct rte_mbuf *tcp_qstore_dequeue(t_flagseq *flseq,
 /****************************************************************************/
 void tcp_qstore_enqueue(t_flagseq *flseq, int data_len, uint8_t *data)
 {
-  t_qstore *cur = (t_qstore *) rte_malloc(NULL, sizeof(t_qstore), 0);
+  t_qstore *cur = (t_qstore *) utils_malloc(sizeof(t_qstore));
   if (cur == NULL)
     KERR(" ");
   else
@@ -231,8 +230,8 @@ int tcp_qstore_flush(t_flagseq *flseq)
     next = cur->next;
     result += 1;
     flseq->nb_qstore -= 1;
-    rte_free(cur->data);
-    rte_free(cur);
+    utils_free(cur->data);
+    utils_free(cur);
     cur = next;
     }
   flseq->head_qstore = NULL;
@@ -243,8 +242,8 @@ int tcp_qstore_flush(t_flagseq *flseq)
     next = cur->next;
     result += 1;
     flseq->nb_qstore_backup -= 1;
-    rte_free(cur->data);
-    rte_free(cur);
+    utils_free(cur->data);
+    utils_free(cur);
     cur = next;
     }
   flseq->head_qstore_backup = NULL;

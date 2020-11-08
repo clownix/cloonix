@@ -5,8 +5,10 @@ LIST="centos8 \
       buster \
       bullseye \
       fedora32 \
+      fedora33 \
       opensuse152 \
-      focal" 
+      focal \
+      groovy" 
 
 set -x
 

@@ -173,8 +173,8 @@ char *utils_get_qemu_img(void)
 {
   static char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/server/qemu/%s/%s",
-           cfg_get_bin_dir(), QEMU_BIN_DIR, QEMU_IMG);
+  snprintf(path, MAX_PATH_LEN-1, "%s/server/qemu/%s",
+           cfg_get_bin_dir(), QEMU_IMG);
   return path;
 }
 /*---------------------------------------------------------------------------*/

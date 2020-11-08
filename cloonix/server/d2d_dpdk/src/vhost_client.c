@@ -106,12 +106,10 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
     {
     if (enable)
       {
-KERR("ENABLE %s %s", get_net_name(), get_d2d_name());
       g_enable = 1;
       }
     else
       {
-KERR("DISABLE %s %s", get_net_name(), get_d2d_name());
       g_enable = 0;
       }
     }
@@ -130,12 +128,11 @@ static int rxtx_worker(void *arg __rte_unused)
   struct rte_mbuf *pkts_rx[MAX_PKT_BURST];
   struct rte_mbuf *pkts_tx[MAX_PKT_BURST];
   int i, nb_tx_offst, nb, nb_rx,  nb_tx = 0;
-KERR("STARTWORK %s %s", get_net_name(), get_d2d_name());
   while(g_rxtx_worker)
     {
     usleep(10);
     vhost_lock_acquire();
-    if (g_enable)
+    if ((g_rxtx_worker) && (g_enable))
       {
       if (nb_tx == 0)
         {
@@ -163,7 +160,6 @@ KERR("STARTWORK %s %s", get_net_name(), get_d2d_name());
       }
     vhost_lock_release();
     }
-KERR("ENDWORK %s %s", get_net_name(), get_d2d_name());
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -172,40 +168,35 @@ KERR("ENDWORK %s %s", get_net_name(), get_d2d_name());
 void vhost_client_stop(void)
 {
   int err;
-KERR("STOPVHOST %s %s", get_net_name(), get_d2d_name());
   vhost_lock_acquire();
   g_enable = 0;
-  rte_mempool_free(g_mempool);
-  g_mempool = NULL;
-  usleep(1000);
-  err = rte_vhost_driver_unregister(g_d2d_socket);
-  if (err)
-    KERR("ERROR UNREGISTER");
-  end_clean_unlink();
   g_virtio_device_on = 0;
   g_rxtx_worker = 0;
   vhost_lock_release();
-KERR("STOPVHOST ALMOST DONE %s %s", get_net_name(), get_d2d_name());
   if (g_running_lcore == -1)
     KERR("ERROR STOP %s %s", get_net_name(), get_d2d_name());
   else
     rte_eal_wait_lcore(g_running_lcore);
   g_running_lcore = -1;
-KERR("STOPVHOST DONE %s %s", get_net_name(), get_d2d_name());
+  err = rte_vhost_driver_unregister(g_d2d_socket);
+  if (err)
+    KERR("ERROR UNREGISTER");
+  rte_mempool_free(g_mempool);
+  g_mempool = NULL;
+  end_clean_unlink();
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_start(char *path, char *memid)
 {
-  uint64_t flags = RTE_VHOST_USER_CLIENT;
+  uint64_t flags = 0;
   uint64_t unsup_flags = (1ULL << VIRTIO_NET_F_STATUS);
   int i, j,  err, sid;
   uint32_t mcache = 128;
-  uint32_t mbufs = 512;
-  uint32_t msize = 65500;
+  uint32_t mbufs = 2048;
+  uint32_t msize = 2048;
 
-KERR("STARTVHOST %s %s", get_net_name(), get_d2d_name());
   g_lock = 0;
   memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
   memset(g_d2d_socket, 0, MAX_PATH_LEN);
@@ -218,7 +209,7 @@ KERR("STARTVHOST %s %s", get_net_name(), get_d2d_name());
   g_enable = 0;
   g_rxtx_worker = 1;
   g_virtio_device_on = 0;
-  sid = rte_lcore_to_socket_id(rte_get_master_lcore());
+  sid = rte_lcore_to_socket_id(rte_get_main_lcore());
   if (sid < 0)
     KOUT(" ");
   err = rte_vhost_driver_register(path, flags);
@@ -255,7 +246,6 @@ KERR("STARTVHOST %s %s", get_net_name(), get_d2d_name());
     KOUT(" ");
   rte_eal_remote_launch(rxtx_worker, NULL, g_running_lcore);
   udp_enter_traffic_mngt();
-KERR("STARTVHOST DONE %s %s %d", get_net_name(), get_d2d_name(), g_running_lcore);
 }
 /*--------------------------------------------------------------------------*/
 

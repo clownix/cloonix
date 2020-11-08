@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define EMPTY_HEAD 12
+#define EMPTY_HEAD 0
 #define BOOTP_SERVER    67
 #define BOOTP_CLIENT    68
 
@@ -45,5 +45,7 @@ void format_cisco_arp_req(uint8_t *data, uint8_t *smac, uint8_t *dmac,
                           uint32_t sip, uint32_t dip);
 
 
+void* utils_malloc(int size);
+void utils_free(void *ptr);
 void utils_init(void);
 /*---------------------------------------------------------------------------*/

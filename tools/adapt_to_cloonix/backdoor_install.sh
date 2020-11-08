@@ -25,8 +25,8 @@ if [ ! -e ${QCOW2} ]; then
   echo vm_to_adapt.qcow2 must be in $BULK
   exit 1
 fi
-QEMU_BIN="/usr/local/bin/cloonix/server/qemu/qemu_bin"
-${QEMU_BIN}/qemu-system-x86_64 -L ${QEMU_BIN} -enable-kvm -m 3000 \
+CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu"
+${CLOONIX_QEMU_BIN}/qemu-system-x86_64 -L ${QEMU_BIN} -enable-kvm -m 3000 \
                  -cpu host,+vmx -smp 4 -no-reboot \
                  -chardev socket,id=qmpsock,path=/tmp/qemu_qmp_sock,server \
                  -mon chardev=qmpsock,mode=control \

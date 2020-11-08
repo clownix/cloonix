@@ -293,7 +293,6 @@ void udp_fill_dist_addr(uint32_t ip, uint16_t udp_port)
 void udp_close(void)
 {
   uint32_t len = sizeof(struct sockaddr_in);
-KERR("CCCCCCCCCCCCCCLLLLLLLLLLLLLOOOOOOOOOOOOOOOOOOOSSSSSSSSSSSSSEEEEEEEEEEE");
   if (msg_exist_channel(g_llid))
     msg_delete_channel(g_llid);
   if (g_fd != -1) 

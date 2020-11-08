@@ -95,6 +95,20 @@ static t_snf_dpdk *find_snf_dpdk_with_lan(char *lan)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static t_snf_dpdk *find_snf_dpdk_with_llid(int llid)
+{
+  t_snf_dpdk *cur = g_head_snf_dpdk;
+  while(cur)
+    {
+    if (cur->llid == llid)
+      break;
+    cur = cur->next;
+    }
+  return cur;
+}
+/*--------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static void free_snf_dpdk(t_snf_dpdk *cur)
 {
@@ -142,7 +156,7 @@ static int try_connect(char *socket, char *name)
                                 uml_clownix_switch_rx_cb, name);
   if (llid)
     {
-    if (hop_event_alloc(llid, type_hop_snf_dpdk, "snf_dpdk", 0))
+    if (hop_event_alloc(llid, type_hop_snf_dpdk, name, 0))
       KERR(" ");
     llid_trace_alloc(llid, name, 0, 0, type_llid_trace_endp_ovsdb);
     rpct_send_pid_req(NULL, llid, type_hop_snf_dpdk, name, 0);
@@ -228,7 +242,6 @@ void snf_dpdk_pid_resp(int llid, int tid, char *name, int pid)
     cur->watchdog_count = 0;
     if (cur->pid == 0)
       {
-      dpdk_snf_event_from_snf_dpdk_process(name, cur->lan, 1);
       cur->pid = pid;
       }
     else if (cur->pid != pid)
@@ -262,7 +275,10 @@ void snf_dpdk_diag_resp(int llid, int tid, char *line)
 {
   int on, ms, ptx, btx, prx, brx, num;
   char name[MAX_NAME_LEN];
-  if (sscanf(line,
+  t_snf_dpdk *cur = find_snf_dpdk_with_llid(llid);
+  if (cur == NULL)
+    KERR("%s", line);
+  else if (sscanf(line,
   "endp_eventfull_tx_rx %s %d %d %d %d %d %d",
                         name, &num, &ms, &ptx, &btx, &prx, &brx) == 7)
     {
@@ -289,6 +305,7 @@ void snf_dpdk_diag_resp(int llid, int tid, char *line)
   "cloonixsnf_suidroot_ok"))
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
+    dpdk_snf_event_from_snf_dpdk_process(cur->name, cur->lan, 1);
     }
   else if (sscanf(line,
   "cloonixsnf_GET_CONF_RESP %s %d", name, &on))
@@ -339,6 +356,7 @@ void snf_dpdk_start_stop_process(char *name, char *lan, int on)
       KERR("%s %s", name, lan);
     else
       {
+      snf_globtopo_small_event(name, snf_evt_capture_off, NULL);
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "rpct_send_kil_req to %s", name);
       rpct_send_kil_req(NULL, cur->llid, type_hop_snf_dpdk);
@@ -427,15 +445,9 @@ void snf_dpdk_process_possible_change(void)
 /****************************************************************************/
 void snf_dpdk_llid_closed(int llid)
 {
-  t_snf_dpdk *cur = g_head_snf_dpdk;
-  while(cur)
-    {
-    if (cur->llid == llid)
-      {
-      cur->closed_count = 2;
-      }
-    cur = cur->next;
-    }
+  t_snf_dpdk *cur = find_snf_dpdk_with_llid(llid);
+  if(cur)
+    cur->closed_count = 2;
 }
 /*--------------------------------------------------------------------------*/
 

@@ -3,8 +3,10 @@ set +e
 
 LIST="centos8 \
       fedora32 \
+      fedora33 \
       opensuse152 \
       focal \
+      groovy \
       buster \
       bullseye"
 

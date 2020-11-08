@@ -155,10 +155,9 @@ void end_clean_unlink(void)
 /****************************************************************************/
 void rpct_recv_kil_req(void *ptr, int llid, int tid)
 {
-KERR("KILLREQ");
   vhost_client_stop();
   udp_close();
-  exit(0);
+  rte_exit(EXIT_SUCCESS, "Exit d2d");
 }
 /*--------------------------------------------------------------------------*/
 

@@ -1,4 +1,4 @@
 #!/bin/bash
 HERE=`pwd`
-rm -rf ${HERE}/sources/tainted_qemu
+rm -rf ${HERE}/tainted_qemu
 

@@ -84,9 +84,10 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -rf ${CLOONIX_SERVER}/nat_dpdk
   rm -rf ${CLOONIX_SERVER}/d2d_dpdk
   rm -rf ${CLOONIX_SERVER}/a2b_dpdk
-  rm -f ${CLOONIX_SERVER}/qemu/cmd
-  rm -rf ${CLOONIX_SERVER}/qemu/sources
-  rm -rf ${CLOONIX_SERVER}/qemu/qemu_bin/tainted_qemu
+  for i in cmd allclean cloonix_patch mkpatch patched_create ; do
+    rm -f ${CLOONIX_SERVER}/qemu/${i}
+  done
+  rm -rf ${CLOONIX_SERVER}/qemu/tainted_qemu
 #----------------------------------------------------------
   rm -f ${CLOONIX_SERVER}/dtach/cmd
   rm -f ${CLOONIX_SERVER}/dtach/dtach_source.tar.gz

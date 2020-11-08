@@ -27,7 +27,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -213,7 +212,7 @@ static t_udp_flow *alloc_udp_flow(uint32_t sip, uint32_t dip,
   int llid = open_udp_sock(&fd);
   if (llid)
     {
-    cur = (t_udp_flow *) rte_malloc(NULL, sizeof(t_udp_flow), 0);
+    cur = (t_udp_flow *) utils_malloc(sizeof(t_udp_flow));
     if (cur == NULL)
       KERR(" ");
     else
@@ -253,7 +252,7 @@ static void free_udp_flow(t_udp_flow *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_udp_flow)
     g_head_udp_flow = cur->next;
-  rte_free(cur);
+  utils_free(cur);
 }
 /*---------------------------------------------------------------------------*/
 

@@ -298,6 +298,7 @@ static void death_of_mkdir_clone(void *data, int status, char *name)
     sprintf(err,"Path: \"%s\" pb creating directory", 
                 cfg_get_work_vm(vm_building->vm_id));
     send_status_ko(vm_building->llid, vm_building->tid, err);
+    KERR("%s", err);
     clownix_free(vm_building,  __FUNCTION__);
     recv_coherency_unlock();
     }
@@ -305,6 +306,7 @@ static void death_of_mkdir_clone(void *data, int status, char *name)
     {
     sprintf(err,"Bad vm %s dir creation", vm_building->kvm.name);
     send_status_ko(vm_building->llid, vm_building->tid, err);
+    KERR("%s", err);
     clownix_free(vm_building,  __FUNCTION__);
     recv_coherency_unlock();
     }
@@ -323,6 +325,7 @@ static void death_of_mkdir_clone(void *data, int status, char *name)
     else
       {
       send_status_ko(vm_building->llid, vm_building->tid, err);
+      KERR("%s", err);
       machine_death(vm_building->kvm.name, error_death_run);
       recv_coherency_unlock();
       }

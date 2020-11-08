@@ -43,6 +43,9 @@ typedef struct t_a2b_cnx
   int to_be_destroyed;
   int openvswitch_started_and_running;
   int vhost_started_and_running;
+  int process_started_and_running;
+  int state_up;
+  int state_down;
   int add_llid;
   int add_tid;
   int timer_count;

@@ -390,7 +390,6 @@ void menu_dialog_vm_init(void)
   g_custom_vm.current_number = 0;
   g_custom_vm.is_persistent = 0;
   g_custom_vm.is_sda_disk = 0;
-  g_custom_vm.is_uefi = 0;
   g_custom_vm.is_full_virt = 0;
   g_custom_vm.has_p9_host_share = 0;
   g_custom_vm.is_cisco = 0;

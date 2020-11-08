@@ -41,7 +41,7 @@
 #include "rpc_clownix.h"
 #include "utils.h"
 
-#define EMPTY_HEAD 12
+#define EMPTY_HEAD 0
 
 
 static uint32_t g_mac_len;
@@ -49,72 +49,62 @@ static uint32_t g_ip_len;
 static uint32_t g_udp_len;
 static uint32_t g_tcp_len;
 
-/*****************************************************************************/
-static uint16_t sum_calc(int len, uint8_t *buff, uint8_t *pseudo_header)
-{
-  int i, sum = 0;
-  for (i=0; i<len; i=i+2)
-    {
-    if (i+1 == len)
-      {
-      sum += ((buff[i] << 8) & 0xFF00);
-      break;
-      }
-    else
-      sum += ((buff[i] << 8) & 0xFF00) + (buff[i+1] & 0xFF);
-    }
-  for (i=0; i<12; i=i+2)
-    sum += ((pseudo_header[i] << 8) & 0xFF00) + (pseudo_header[i+1] & 0xFF);
-  sum = (sum & 0xFFFF) + (sum >> 16);
-  sum = (sum & 0xFFFF) + (sum >> 16);
-  sum = ~sum;
-  return ((uint16_t) sum);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void utils_fill_tcp_csum(uint8_t  *buf_ip, uint32_t tcp_len)
-{
-  int i;
-  uint8_t pseudo_header[12];
-  uint16_t checksum;
-  uint8_t *buf = &(buf_ip[g_ip_len]);
-  buf[16]  = 0;
-  buf[17]  = 0;
-  for (i=0; i< 8; i++)
-    pseudo_header[i] = buf_ip[12+i];
-  pseudo_header[8]  = 0;
-  pseudo_header[9]  = IPPROTO_TCP;
-  pseudo_header[10] = (tcp_len >> 8) & 0xFF;
-  pseudo_header[11] = tcp_len & 0xFF;
-  checksum = sum_calc(tcp_len, &(buf[0]), pseudo_header);
-  buf[16]  =  (checksum >> 8) & 0xFF;
-  buf[17]  =  checksum & 0xFF;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void utils_fill_udp_csum(uint8_t  *buf_ip, uint32_t udp_len)
-{
-  int i;
-  uint8_t pseudo_header[12];
-  uint16_t checksum;
-  uint8_t *buf = &(buf_ip[g_ip_len]);
-  buf[6]  = 0;
-  buf[7]  = 0;
-  for (i=0; i< 8; i++)
-    pseudo_header[i] = buf_ip[12+i];
-  pseudo_header[8]  = 0;
-  pseudo_header[9]  = IPPROTO_UDP;
-  pseudo_header[10] = (udp_len >> 8) & 0xFF;
-  pseudo_header[11] = udp_len & 0xFF;
-  checksum = sum_calc(udp_len, &(buf[0]), pseudo_header);
-  buf[6]  =  (checksum >> 8) & 0xFF;
-  buf[7]  =  checksum & 0xFF;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
+//static uint16_t sum_calc(int len, uint8_t *buff, uint8_t *pseudo_header)
+//{
+//  int i, sum = 0;
+//  for (i=0; i<len; i=i+2)
+//    {
+//    if (i+1 == len)
+//      {
+//      sum += ((buff[i] << 8) & 0xFF00);
+//      break;
+//      }
+//    else
+//      sum += ((buff[i] << 8) & 0xFF00) + (buff[i+1] & 0xFF);
+//    }
+//  for (i=0; i<12; i=i+2)
+//    sum += ((pseudo_header[i] << 8) & 0xFF00) + (pseudo_header[i+1] & 0xFF);
+//  sum = (sum & 0xFFFF) + (sum >> 16);
+//  sum = (sum & 0xFFFF) + (sum >> 16);
+//  sum = ~sum;
+//  return ((uint16_t) sum);
+//}
+//static void utils_fill_tcp_csum(uint8_t  *buf_ip, uint32_t tcp_len)
+//{
+//  int i;
+//  uint8_t pseudo_header[12];
+//  uint16_t checksum;
+//  uint8_t *buf = &(buf_ip[g_ip_len]);
+//  buf[16]  = 0;
+//  buf[17]  = 0;
+//  for (i=0; i< 8; i++)
+//    pseudo_header[i] = buf_ip[12+i];
+//  pseudo_header[8]  = 0;
+//  pseudo_header[9]  = IPPROTO_TCP;
+//  pseudo_header[10] = (tcp_len >> 8) & 0xFF;
+//  pseudo_header[11] = tcp_len & 0xFF;
+//  checksum = sum_calc(tcp_len, &(buf[0]), pseudo_header);
+//  buf[16]  =  (checksum >> 8) & 0xFF;
+//  buf[17]  =  checksum & 0xFF;
+//}
+//static void utils_fill_udp_csum(uint8_t  *buf_ip, uint32_t udp_len)
+//{
+//  int i;
+//  uint8_t pseudo_header[12];
+//  uint16_t checksum;
+//  uint8_t *buf = &(buf_ip[g_ip_len]);
+//  buf[6]  = 0;
+//  buf[7]  = 0;
+//  for (i=0; i< 8; i++)
+//    pseudo_header[i] = buf_ip[12+i];
+//  pseudo_header[8]  = 0;
+//  pseudo_header[9]  = IPPROTO_UDP;
+//  pseudo_header[10] = (udp_len >> 8) & 0xFF;
+//  pseudo_header[11] = udp_len & 0xFF;
+//  checksum = sum_calc(udp_len, &(buf[0]), pseudo_header);
+//  buf[6]  =  (checksum >> 8) & 0xFF;
+//  buf[7]  =  checksum & 0xFF;
+//}
 void checksum_compute(struct rte_mbuf *mbuf)
 {
 //  int offset;

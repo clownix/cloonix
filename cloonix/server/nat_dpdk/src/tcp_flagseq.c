@@ -27,7 +27,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -328,12 +327,12 @@ void tcp_flagseq_to_dpdk_data(t_flagseq *cur, int data_len, uint8_t *data)
       }
     else
       {
-      rte_free(data);
+      utils_free(data);
       }
     }
   else
     {
-    rte_free(data);
+    utils_free(data);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -448,7 +447,7 @@ t_flagseq *tcp_flagseq_begin(uint32_t sip,   uint32_t dip,
                              int is_ssh_cisco)
 {
   uint32_t seq = 0;
-  t_flagseq *cur = (t_flagseq *) rte_malloc(NULL, sizeof(t_flagseq), 0);
+  t_flagseq *cur = (t_flagseq *) utils_malloc(sizeof(t_flagseq));
   if (cur == NULL)
     KERR(" ");
   else

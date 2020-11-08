@@ -234,7 +234,6 @@ void nat_dpdk_pid_resp(int llid, int tid, char *name, int pid)
     cur->watchdog_count = 0;
     if (cur->pid == 0)
       {
-      dpdk_nat_event_from_nat_dpdk_process(name, cur->lan, 1);
       cur->pid = pid;
       }
     else if (cur->pid != pid)
@@ -248,17 +247,10 @@ void nat_dpdk_pid_resp(int llid, int tid, char *name, int pid)
 /****************************************************************************/
 int nat_dpdk_diag_llid(int llid)
 {
-  t_nat_dpdk *cur = g_head_nat_dpdk;
+  t_nat_dpdk *cur = find_nat_dpdk_with_llid(llid);
   int result = 0;
-  while(cur)
-    {
-    if (cur->llid == llid)
-      {
-      result = 1;
-      break; 
-      } 
-    cur = cur->next;
-    }
+  if (cur)
+    result = 1;
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -266,7 +258,10 @@ int nat_dpdk_diag_llid(int llid)
 /****************************************************************************/
 void nat_dpdk_diag_resp(int llid, int tid, char *line)
 {
-  if (!strcmp(line,
+  t_nat_dpdk *cur = find_nat_dpdk_with_llid(llid);
+  if (cur == NULL)
+    KERR("%s", line);
+  else if (!strcmp(line,
   "cloonixnat_suidroot_ko"))
     {
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
@@ -277,6 +272,7 @@ void nat_dpdk_diag_resp(int llid, int tid, char *line)
     {
     nat_dpdk_vm_event();
     hop_event_hook(llid, FLAG_HOP_DIAG, line);
+    dpdk_nat_event_from_nat_dpdk_process(cur->name, cur->lan, 1);
     }
   else
     KERR("ERROR nat_dpdk: %s %s", g_cloonix_net, line);

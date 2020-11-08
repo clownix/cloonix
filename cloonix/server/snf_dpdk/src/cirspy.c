@@ -33,7 +33,7 @@
 
 #define MEMORY_BARRIER()  asm volatile ("": : :"memory")
 
-#define EMPTY_HEAD 12
+#define EMPTY_HEAD 0 
 
 
 #define CIRC_SPY_MASK (0x1FF)

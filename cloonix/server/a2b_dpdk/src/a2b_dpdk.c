@@ -148,7 +148,7 @@ void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
 void end_clean_unlink(void)
 {
   unlink(g_ctrl_path);
-  exit(0);
+  rte_exit(EXIT_SUCCESS, "Exit a2b");
 }
 /*--------------------------------------------------------------------------*/
 

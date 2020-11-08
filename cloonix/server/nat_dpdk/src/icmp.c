@@ -33,7 +33,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -81,7 +80,7 @@ static t_icmp *icmp_find(uint32_t ipdst, uint16_t ident, uint16_t seq)
 static void icmp_alloc(uint32_t ipdst, uint16_t ident, uint16_t seq,
                        int llid, struct rte_mbuf *mbuf)
 {
-  t_icmp *cur = (t_icmp *) rte_malloc(NULL, sizeof(t_icmp), 0);
+  t_icmp *cur = (t_icmp *) utils_malloc(sizeof(t_icmp));
   if (cur == NULL)
     KERR(" ");
   else
@@ -109,7 +108,7 @@ static void icmp_free(t_icmp *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_icmp)
     g_head_icmp = cur->next;
-  rte_free(cur);
+  utils_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 

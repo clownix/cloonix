@@ -1,5 +1,5 @@
 ##################################################
-CLOONIX_VERSION=11-00
+CLOONIX_VERSION=12-00
 CLOONIX_TREE=/usr/local/bin/cloonix
 CLOONIX_WORK=${HOME}/cloonix_data
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
@@ -89,5 +89,16 @@ CLOONIX_NET: kiki {
 }
 #-------------------------------------------------
 
+##################################################
+CLOONIX_NET: bcde {
+  cloonix_ip       1.1.1.1
+  cloonix_port     43221
+  cloonix_passwd   bcde
+  d2d_udp_ip       1.1.1.1
+  lcore_mask       0x1
+  socket_mem       1024
+  cpu_mask         0x02
+}
+#-------------------------------------------------
 
 

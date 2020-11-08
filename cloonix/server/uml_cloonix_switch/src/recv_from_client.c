@@ -423,34 +423,47 @@ static void local_add_lan(int llid, int tid, int vm_id,
   char info[MAX_PRINT_LEN];
   int tidx, type;
   if (get_inhib_new_clients())
+    {
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    KERR("%s %d %s", name, num, lan);
+    }
   else if (cfg_name_is_in_use(1, lan, info))
+    {
     send_status_ko(llid, tid, info);
+    KERR("%s %d %s", name, num, lan);
+    }
   else if (dpdk_dyn_eth_exists(name, num))
     {
     if (dpdk_dyn_add_lan_to_eth(llid, tid, lan, name, num, info))
+      {
       send_status_ko(llid, tid, info);
+      KERR("%s %d %s", name, num, lan);
+      }
     }
   else if (mulan_is_zombie(lan))
     {
     sprintf( info, "lan %s is zombie",  lan);
     send_status_ko(llid, tid, info);
+    KERR("%s %d %s", name, num, lan);
     }
   else if (!endp_mngt_exists(name, num, &type))
     {
     sprintf(info, "endp %s %d not found", name, num);
     send_status_ko(llid, tid, info);
+    KERR("%s %d %s", name, num, lan);
     }
   else if (endp_evt_lan_find(name, num, lan, &tidx))
     {
     sprintf(info, "%s %d already has %s ulan", name, num, lan);
     send_status_ko(llid, tid, info);
+    KERR("%s %d %s", name, num, lan);
     }
   else if (endp_evt_lan_full(name, num, &tidx))
     {
     sprintf(info, "%s in %d ulan max increase MAX_TRAF_ENDPOINT and recompile",
             name, MAX_TRAF_ENDPOINT);
     send_status_ko(llid, tid, info);
+    KERR("%s %d %s", name, num, lan);
     }
   else
     {
@@ -556,7 +569,10 @@ static void timer_endp_init(int llid, int tid, int eth_type, int vm_id,
 {
   t_timer_endp *te = timer_find(name, num);
   if (te)
+    {
     send_status_ko(llid, tid, "endpoint already waiting");
+    KERR("%s %d %s", name, num, lan);
+    }
   else
     {
     te = timer_alloc(vm_id, name, num);
@@ -565,7 +581,7 @@ static void timer_endp_init(int llid, int tid, int eth_type, int vm_id,
     te->eth_type = eth_type;
     te->vm_id = vm_id;
     strncpy(te->lan, lan, MAX_NAME_LEN-1);
-    clownix_timeout_add(10, timer_endp, (void *) te, NULL, NULL);
+    clownix_timeout_add(50, timer_endp, (void *) te, NULL, NULL);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -577,14 +593,15 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
   t_vm *vm = cfg_get_vm(name);
   char info[MAX_PATH_LEN];
   t_eth_table *eth_tab = NULL;
+  event_print("Rx Req add lan not delayed %s in %s %d", lan, name, num);
   if (vm)
     {
     eth_tab = vm->kvm.eth_table;
     vm_id = vm->kvm.vm_id;
     if (num >= vm->kvm.nb_tot_eth)
       {
-      KERR("%s %s", name, lan); 
       send_status_ko(llid, tid, info);
+      KERR("%s %d %s", name, num, lan);
       return;
       }
     }
@@ -595,7 +612,7 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     if (edp_mngt_add_lan(llid, tid, name, lan, info))
       {
       send_status_ko(llid, tid, info);
-      KERR("%s %d %s", name, num, lan); 
+      KERR("%s %d %s", name, num, lan);
       }
     }
   else if (dpdk_d2d_find(name))
@@ -606,8 +623,8 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
     {
     if ((num != 0) && (num != 1))
       {
-      KERR("%s %s %d", name, lan, num); 
       send_status_ko(llid, tid, "only 0 or 1 for a2b");
+      KERR("%s %d %s", name, num, lan);
       }
     else
       dpdk_a2b_add_lan(llid, tid, name, num, lan);
@@ -624,26 +641,22 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
           {
           snprintf(info, MAX_PATH_LEN, "%s and %s not compat1", name, lan);
           send_status_ko(llid, tid, info);
+          KERR("%s %d %s", name, num, lan);
           }
         else
           {
-          if (!dpdk_dyn_eth_exists(name, num))
-            timer_endp_init(llid, tid, eth_type_dpdk, vm_id, name, num, lan);
-          else
-            local_add_lan(llid, tid, vm_id, name, num, lan);
+          timer_endp_init(llid, tid, eth_type_dpdk, vm_id, name, num, lan);
           }
         }
       else if (mulan_can_be_found_with_name(lan))
         {
         snprintf(info, MAX_PATH_LEN, "%s and %s not compat2", name, lan);
         send_status_ko(llid, tid, info);
+        KERR("%s %d %s", name, num, lan);
         }
       else
         {
-        if (!dpdk_dyn_eth_exists(name, num))
-          timer_endp_init(llid, tid, eth_type_dpdk, vm_id, name, num, lan);
-        else
-          local_add_lan(llid, tid, vm_id, name, num, lan);
+        timer_endp_init(llid, tid, eth_type_dpdk, vm_id, name, num, lan);
         }
       }
     }
@@ -653,6 +666,7 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
       {
       snprintf(info, MAX_PATH_LEN, "endp_mngt %s %d not found", name, num);
       send_status_ko(llid, tid, info);
+      KERR("%s %d %s", name, num, lan);
       }
     else if (edp_mngt_lan_exists(lan, &eth_type, &endp_type))
       {
@@ -660,11 +674,13 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
         {
         snprintf(info,MAX_PATH_LEN,"%s %d SOCK %s is not", name, num, lan);
         send_status_ko(llid, tid, info);
+        KERR("%s %d %s", name, num, lan);
         }
       else if (endp_type == endp_type_pci)
         {
         snprintf(info,MAX_PATH_LEN,"%s %d SOCK not compat pci", name, num);
         send_status_ko(llid, tid, info);
+        KERR("%s %d %s", name, num, lan);
         }
       else if ((type != endp_type_kvm_sock) &&
                (type != endp_type_c2c)  &&
@@ -672,26 +688,22 @@ static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
         {
         snprintf(info,MAX_PATH_LEN,"%s %d not compatible", name, num);
         send_status_ko(llid, tid, info);
+        KERR("%s %d %s", name, num, lan);
         }
       else 
         {
-        if (!endp_evt_exists(name, num))
-          timer_endp_init(llid, tid, eth_type_sock, vm_id, name, num, lan);
-        else
-          local_add_lan(llid, tid, vm_id, name, num, lan);
+        timer_endp_init(llid, tid, eth_type_sock, vm_id, name, num, lan);
         }
       }
     else if (dpdk_dyn_lan_exists(lan))
       {
       snprintf(info,MAX_PATH_LEN,"%s %d SOCK %s is DPDK", name, num, lan);
       send_status_ko(llid, tid, info);
+      KERR("%s %d %s", name, num, lan);
       }
     else 
       {
-      if (!endp_evt_exists(name, num))
-        timer_endp_init(llid, tid, eth_type_sock, vm_id, name, num, lan);
-      else
-        local_add_lan(llid, tid, vm_id, name, num, lan);
+      timer_endp_init(llid, tid, eth_type_sock, vm_id, name, num, lan);
       }
     }
 }
@@ -1013,8 +1025,8 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
   char qemu_kvm_exe[MAX_PATH_LEN];
   memset(bz_image, 0, MAX_PATH_LEN);
   memset(qemu_kvm_exe, 0, MAX_PATH_LEN);
-  snprintf(qemu_kvm_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s/%s", 
-           cfg_get_bin_dir(), QEMU_BIN_DIR, QEMU_EXE);
+  snprintf(qemu_kvm_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s", 
+           cfg_get_bin_dir(), QEMU_EXE);
   if (test_dev_kvm(info))
     result = -1;
   else if (!file_exists(qemu_kvm_exe, F_OK))
@@ -1248,11 +1260,13 @@ static void delayed_add_vm(t_timer_zombie *tz)
     {
     recv_coherency_unlock();
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    KERR("%s", kvm->name);
     }
   else if (cfg_name_is_in_use(0, kvm->name, use))
     {
     recv_coherency_unlock();
     send_status_ko(llid, tid, use);
+    KERR("%s", kvm->name);
     }
   else if (cfg_is_a_newborn(kvm->name))
     {
@@ -1260,6 +1274,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
     event_print("%s", info);
     recv_coherency_unlock();
     send_status_ko(llid, tid, info);
+    KERR("%s", kvm->name);
     }
   else if ((kvm->vm_config_flags & VM_CONFIG_FLAG_CISCO) && 
            ((cfg_name_is_in_use(0, cisconat_name, use)) ||
@@ -1270,6 +1285,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
     event_print("%s", info);
     recv_coherency_unlock();
     send_status_ko(llid, tid, info);
+    KERR("%s", kvm->name);
     }
   else if (utils_get_eth_numbers(kvm->nb_tot_eth, kvm->eth_table,
                                  &nb_sock, &nb_dpdk, &nb_wlan))
@@ -1278,6 +1294,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
     event_print("%s", info);
     recv_coherency_unlock();
     send_status_ko(llid, tid, info);
+    KERR("%s", kvm->name);
     }
   else
     {
@@ -1311,6 +1328,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
       send_status_ko(llid, tid, info);
       recv_coherency_unlock();
       cfg_del_newborn(kvm->name);
+      KERR("%s", kvm->name);
       }
     else
       {
@@ -1346,6 +1364,7 @@ static void timer_zombie(void *data)
     send_status_ko(tz->llid, tz->tid, err);
     clownix_free(tz, __FUNCTION__);
     recv_coherency_unlock();
+    KERR("%s", tz->kvm.name);
     }
   else
     {
@@ -1367,6 +1386,7 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
     {
     sprintf(err, "Machine: \"%s\" already exists", kvm->name);
     event_print("%s", err);
+    KERR("%s", err);
     send_status_ko(llid, tid, err);
     }
   else

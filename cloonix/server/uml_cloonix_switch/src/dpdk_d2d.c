@@ -44,13 +44,99 @@
 #include "stats_counters.h"
 #include "tabmac.h"
 
+enum {
+  state_idle = 0,
+  state_up_initialised,
+  state_up_process_started,
+  state_up_process_eal_init,
+  state_up_process_vhost_req_on,
+  state_up_process_vhost_resp_on,
+  state_up_lan_ovs_req,
+  state_up_lan_ovs_resp,
+  state_down_initialised,
+  state_down_vhost_stopped,
+  state_down_ovs_req_del_lan,
+  state_down_ovs_resp_del_lan,
+};
+
 int get_glob_req_self_destruction(void);
 
 
 static t_d2d_cnx *g_head_d2d;
 static int g_nb_d2d;
 
+/****************************************************************************/
+static void nb_to_text(int state, char *label)
+{
+  switch (state)
+    {
+    case state_idle:
+      strcpy(label, "state_idle");
+      break;
+    case state_up_initialised:
+      strcpy(label, "state_up_initialised");
+      break;
+    case state_up_process_started:
+      strcpy(label, "state_up_process_started");
+      break;
+    case state_up_process_eal_init:
+      strcpy(label, "state_up_process_eal_init");
+      break;
+    case state_up_process_vhost_req_on:
+      strcpy(label, "state_up_process_vhost_req_on");
+      break;
+    case state_up_process_vhost_resp_on:
+      strcpy(label, "state_up_process_vhost_resp_on");
+      break;
+    case state_up_lan_ovs_req:
+      strcpy(label, "state_up_lan_ovs_req");
+      break;
+    case state_up_lan_ovs_resp:
+      strcpy(label, "state_up_lan_ovs_resp");
+      break;
+    case state_down_initialised:
+      strcpy(label, "state_down_initialised");
+      break;
+    case state_down_vhost_stopped:
+      strcpy(label, "state_down_vhost_stopped");
+      break;
+    case state_down_ovs_req_del_lan:
+      strcpy(label, "state_down_ovs_req_del_lan");
+      break;
+    case state_down_ovs_resp_del_lan:
+      strcpy(label, "state_down_ovs_resp_del_lan");
+      break;
+    default:
+      KOUT("%d", state);
+    }
+}
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void state_progress_up(t_d2d_cnx *cur, int state)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char olab[MAX_NAME_LEN];
+  char nlab[MAX_NAME_LEN];
+  nb_to_text(cur->state_up, olab);
+  cur->state_up = state;
+  nb_to_text(cur->state_up, nlab);
+  KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void state_progress_down(t_d2d_cnx *cur, int state)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char olab[MAX_NAME_LEN];
+  char nlab[MAX_NAME_LEN];
+  nb_to_text(cur->state_down, olab);
+  cur->state_down = state;
+  nb_to_text(cur->state_down, nlab);
+  KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int dpdk_d2d_get_qty(void)
@@ -150,7 +236,7 @@ static void dpdk_d2d_reset_con_params(t_d2d_cnx *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void process_cwaiting_error(t_d2d_cnx *cur)
+static void process_peer_bad_status_received(t_d2d_cnx *cur)
 {
   char *locnet = cfg_get_cloonix_name();
   if ((cur->waiting_ack_del_lan == 0) &&
@@ -158,6 +244,7 @@ static void process_cwaiting_error(t_d2d_cnx *cur)
       (cur->lan_ovs_is_attached == 0) &&
       (cur->tcp_connection_peered == 0))
     {
+    KERR("%s %s PEER BAD STATUS RECEIVED", locnet, cur->name);
     wrap_disconnect_to_peer(cur);
     if ((cur->local_is_master == 0) ||
         (cur->master_del_req == 1))
@@ -175,6 +262,7 @@ static void process_cwaiting_error(t_d2d_cnx *cur)
     if ((cur->waiting_ack_del_lan != 0) ||
         (cur->waiting_ack_add_lan != 0))
       {
+      KERR("%s %s PEER BAD STATUS RECEIVED", locnet, cur->name);
       cur->process_waiting_error += 1;
       if (cur->process_waiting_error == 20)
         {
@@ -191,6 +279,7 @@ static void process_cwaiting_error(t_d2d_cnx *cur)
       }
     else
       {
+      KERR("%s %s PEER BAD STATUS RECEIVED", locnet, cur->name);
       if (cur->lan_ovs_is_attached)
         {
         if (!strlen(cur->lan))
@@ -232,29 +321,34 @@ static void process_watchdog_count(t_d2d_cnx *cur)
 static void process_waiting_add_lan(t_d2d_cnx *cur)
 {
   char *locnet = cfg_get_cloonix_name();
-  if ((cur->openvswitch_started_and_running == 1) &&
-      (strlen(cur->lan)) &&
-      (cur->waiting_ack_del_lan == 0) &&
-      (cur->waiting_ack_add_lan == 0) &&
-      (cur->peer_bad_status_received == 0) &&
-      (cur->lan_ovs_is_attached == 0))
+
+  if (cur->vhost_started_and_running == 1)
     {
-    cur->waiting_ack_add_lan = 1;
-    dpdk_msg_send_add_lan_d2d(cur->lan, cur->name);
-    }
-  else if ((cur->openvswitch_started_and_running == 0) && (strlen(cur->lan)))
-    {
-    cur->openvswitch_started_and_running_count += 1;
-    if (cur->openvswitch_started_and_running_count > 5)
+    if ((cur->openvswitch_started_and_running == 1) &&
+        (strlen(cur->lan)) &&
+        (cur->waiting_ack_del_lan == 0) &&
+        (cur->waiting_ack_add_lan == 0) &&
+        (cur->peer_bad_status_received == 0) &&
+        (cur->lan_ovs_is_attached == 0))
       {
-      KERR("FAIL ADD LAN %s %s %s", locnet, cur->name, cur->lan);
-      KERR("loc ip: %x loc port: %hu", cur->loc_udp_ip, cur->loc_udp_port);
-      KERR("dist ip: %x dist port: %hu", cur->dist_udp_ip, cur->dist_udp_port);
-      utils_send_status_ko(&(cur->lan_add_cli_llid),
-                           &(cur->lan_add_cli_tid),
-                           "udp not peered check conf udp ip addr");
-      memset(cur->lan, 0, MAX_NAME_LEN);
-      cur->openvswitch_started_and_running_count = 0;
+      dpdk_msg_send_add_lan_d2d(cur->lan, cur->name);
+      cur->waiting_ack_add_lan = 1;
+      state_progress_up(cur, state_up_lan_ovs_req);
+      }
+    else if ((cur->openvswitch_started_and_running == 0) && (strlen(cur->lan)))
+      {
+      cur->openvswitch_started_and_running_count += 1;
+      if (cur->openvswitch_started_and_running_count > 5)
+        {
+        KERR("FAIL ADD LAN %s %s %s", locnet, cur->name, cur->lan);
+        KERR("loc ip: %x loc port: %hu", cur->loc_udp_ip, cur->loc_udp_port);
+        KERR("dist ip: %x dist port: %hu", cur->dist_udp_ip, cur->dist_udp_port);
+        utils_send_status_ko(&(cur->lan_add_cli_llid),
+                             &(cur->lan_add_cli_tid),
+                             "udp not peered check conf udp ip addr");
+        memset(cur->lan, 0, MAX_NAME_LEN);
+        cur->openvswitch_started_and_running_count = 0;
+        }
       }
     }
 }
@@ -272,7 +366,7 @@ static void timer_d2d_msg_beat(void *data)
     process_watchdog_count(cur);
     if(cur->peer_bad_status_received == 1)
       {
-      process_cwaiting_error(cur);
+      process_peer_bad_status_received(cur);
       }
     else 
       {
@@ -356,7 +450,10 @@ void dpdk_d2d_event_from_d2d_dpdk_process(char *name, int on)
   else
     {
     if (on == 1)
+      {
       d2d_dpdk_get_udp_port(name);
+      state_progress_up(cur, state_up_process_started);
+      }
     else
       {
       if (on == -1)
@@ -400,6 +497,7 @@ void dpdk_d2d_resp_add_lan(int is_ko, char *lan, char *name)
     utils_send_status_ok(&(cur->lan_add_cli_llid),&(cur->lan_add_cli_tid));
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     tabmac_process_possible_change();
+    state_progress_up(cur, state_up_lan_ovs_resp);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -421,32 +519,28 @@ void dpdk_d2d_resp_del_lan(int is_ko, char *lan, char *name)
     {
     KERR("%s %s %s %d", locnet, name, lan, is_ko);
     }
-  else 
+  else if (is_ko) 
     {
-    if (is_ko)
-      {
-      KERR("%s %s %s %d", locnet, name, lan, is_ko);
-      utils_send_status_ko(&(cur->lan_del_cli_llid),
-                           &(cur->lan_del_cli_tid),
-                           "openvswitch status error");
-      }
-    else
-      {
-KERR("RESP DEL LAN");
-      if (cur->received_del_lan_req)
-        {
-KERR("RESP DEL LAN DEL LAN");
-        memset(cur->lan, 0, MAX_NAME_LEN);
-        cur->received_del_lan_req = 0;
-        }
-      cur->lan_ovs_is_attached = 0;
-      tabmac_process_possible_change();
-      dpdk_msg_vlan_exist_no_more(lan);
-      utils_send_status_ok(&(cur->lan_del_cli_llid),&(cur->lan_del_cli_tid));
-      }
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    cur->waiting_ack_del_lan = 0; 
+    KERR("%s %s %s %d", locnet, name, lan, is_ko);
+    utils_send_status_ko(&(cur->lan_del_cli_llid),
+                         &(cur->lan_del_cli_tid),
+                         "openvswitch status error");
     }
+  else
+    {
+    state_progress_down(cur, state_down_ovs_resp_del_lan);
+    if (cur->received_del_lan_req)
+      {
+      memset(cur->lan, 0, MAX_NAME_LEN);
+      cur->received_del_lan_req = 0;
+      }
+    cur->lan_ovs_is_attached = 0;
+    tabmac_process_possible_change();
+    dpdk_msg_vlan_exist_no_more(lan);
+    utils_send_status_ok(&(cur->lan_del_cli_llid),&(cur->lan_del_cli_tid));
+    }
+  event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+  cur->waiting_ack_del_lan = 0; 
 }
 /*--------------------------------------------------------------------------*/
 
@@ -543,7 +637,8 @@ static void master_and_slave_ping_process(t_d2d_cnx *cur, int peer_status)
                                     cur->dist_udp_port);
     }
   else if ((cur->openvswitch_started_and_running == 0) &&
-           (cur->udp_connection_peered == 1) && (peer_status > 1))
+           (cur->udp_connection_peered == 1) &&
+           (peer_status > 1))
 
     {
     dpdk_ovs_start_openvswitch_if_not_done();
@@ -552,14 +647,15 @@ static void master_and_slave_ping_process(t_d2d_cnx *cur, int peer_status)
       d2d_dpdk_eal_init(cur->name);
       cur->openvswitch_started_and_running = 1;
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+      state_progress_up(cur, state_up_process_eal_init);
       }
     }
   else if ((cur->vhost_started_and_running == 0) &&
            (cur->openvswitch_started_and_running == 1) &&
-           (cur->udp_connection_peered == 1) && (peer_status > 1) &&
-           (cur->lan_ovs_is_attached))
+           (cur->udp_connection_peered == 1) && (peer_status > 1)) 
     {
     d2d_dpdk_start_vhost(cur->name);
+    state_progress_up(cur, state_up_process_vhost_req_on);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -629,11 +725,13 @@ int dpdk_d2d_add(char *name, uint32_t loc_udp_ip,
     cur->loc_udp_ip = loc_udp_ip;
     cur->local_is_master = 1;
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    state_progress_up(cur, state_up_initialised);
     result = 0;
     }
   return result;
 }
 /*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 void dpdk_d2d_peer_add(int llid, int tid, char *name, char *dist, char *loc)
@@ -657,6 +755,7 @@ void dpdk_d2d_peer_add(int llid, int tid, char *name, char *dist, char *loc)
     cur->tcp_connection_peered = 1;
     d2d_dpdk_start_stop_process(name, 1);
     wrap_send_d2d_peer_create(cur, 1);
+    state_progress_up(cur, state_up_initialised);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -739,6 +838,7 @@ void dpdk_d2d_vhost_started(char *name)
     {
     cur->vhost_started_and_running = 1;
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    state_progress_up(cur, state_up_process_vhost_resp_on);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -861,7 +961,7 @@ void dpdk_d2d_vhost_stopped(char *name)
     }
   else
     {
-KERR("STOPPED %s %s %s", locnet, name, cur->lan);
+    state_progress_down(cur, state_down_vhost_stopped);
     if (dpdk_msg_send_del_lan_d2d(cur->lan, cur->name))
       {
       KERR("%s %s %s", locnet, name, cur->lan);
@@ -875,6 +975,7 @@ KERR("STOPPED %s %s %s", locnet, name, cur->lan);
       }
     else
       {
+      state_progress_down(cur, state_down_ovs_req_del_lan);
       cur->received_del_lan_req = 1;
       cur->waiting_ack_del_lan = 1;
       }
@@ -916,11 +1017,11 @@ void dpdk_d2d_del_lan(int llid, int tid, char *name, char *lan)
     }
   else
     {
+    state_progress_down(cur, state_down_initialised);
     cur->lan_del_cli_llid = llid;
     cur->lan_del_cli_tid = tid;
     cur->vhost_started_and_running = 0;
     d2d_dpdk_stop_vhost(cur->name);
-KERR("DEL LAN %s %s %s", locnet, name, lan);
     }
 }
 /*--------------------------------------------------------------------------*/

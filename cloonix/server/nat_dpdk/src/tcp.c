@@ -27,7 +27,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -39,6 +38,7 @@
 #include "tcp_llid.h"
 #include "tcp_flagseq.h"
 #include "ssh_cisco_dpdk.h"
+#include "utils.h"
 
 
 /*--------------------------------------------------------------------------*/
@@ -102,7 +102,7 @@ static t_tcp_flow *alloc_tcp_flow(uint32_t sip, uint32_t dip,
 
 {
   t_tcp_flow *cur = NULL;
-  cur = (t_tcp_flow *) rte_malloc(NULL, sizeof(t_tcp_flow), 0);
+  cur = (t_tcp_flow *) utils_malloc(sizeof(t_tcp_flow));
   if (cur == NULL)
     KERR(" ");
   else
@@ -139,7 +139,7 @@ static void free_tcp_flow(t_tcp_flow *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_tcp_flow)
     g_head_tcp_flow = cur->next;
-  rte_free(cur);
+  utils_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 

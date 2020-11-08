@@ -1,0 +1,16 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=${HERE}/../../../targz_store
+
+QEMU_NAME=qemu_vip
+
+rm -rf ${QEMU_NAME}
+
+if [ ! -e tainted_qemu ]; then
+  echo tainted_qemu directory must exist 
+  exit 1
+fi
+
+tar xvf ${TARGZ}/${QEMU_NAME}.tar.gz
+diff -Naur ${QEMU_NAME} tainted_qemu > tmp_cloonix_patch
+rm -rf ${QEMU_NAME}

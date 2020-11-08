@@ -44,14 +44,6 @@
 #include "utils.h"
 
 
-#define VIRTIO_PMD_SUPPORTED_GUEST_FEATURES     \
-        (1u << VIRTIO_NET_F_GUEST_CSUM     |    \
-         1u << VIRTIO_NET_F_GUEST_TSO4     |    \
-         1u << VIRTIO_NET_F_GUEST_TSO6     |    \
-         1u << VIRTIO_NET_F_CSUM           |    \
-         1u << VIRTIO_NET_F_HOST_TSO4      |    \
-         1u << VIRTIO_NET_F_HOST_TSO6)
-
 
 #define MAX_PKT_BURST 32
 
@@ -110,8 +102,8 @@ static int virtio_new_device(int vid)
 /****************************************************************************/
 static int virtio_features_changed(int vid, uint64_t features)
 {
-KERR("%lu", features);
-return features; 
+  KERR("%lu", features);
+  return features; 
 }
 /*--------------------------------------------------------------------------*/
 
@@ -223,17 +215,15 @@ static int store_rx_circle(int id, uint64_t arrival_usec)
 /****************************************************************************/
 static int rxtx_worker(void *unused)
 {
-  int i, fast = 0, loop_is_on = 0;
+  int i, fast = 0;
   uint64_t arrival_usec, delta_usec, last_usec;
   (void) unused;
   while(g_rxtx_worker)
     {
     if (!(g_enable[0] && g_enable[1]))
-      usleep(500);
-    else if (loop_is_on == 0)
       {
+      usleep(500);
       last_usec = get_usec();
-      loop_is_on = 1;
       }
     else
       {
@@ -242,19 +232,22 @@ static int rxtx_worker(void *unused)
         {
         usleep(60);
         }
-      vhost_lock_acquire();
-      fast = 0;
-      arrival_usec = get_usec();
-      delta_usec = arrival_usec - last_usec;
-      last_usec = arrival_usec;
-      for (i=0; i<2; i++)
-        { 
-        if (store_rx_circle(i, arrival_usec) == 0)
-          fast = 1;
-        sched_mngt(i, arrival_usec, delta_usec);
-        flush_tx_circle(i);
+      if (g_rxtx_worker)
+        {
+        vhost_lock_acquire();
+        fast = 0;
+        arrival_usec = get_usec();
+        delta_usec = arrival_usec - last_usec;
+        last_usec = arrival_usec;
+        for (i=0; i<2; i++)
+          { 
+          if (store_rx_circle(i, arrival_usec) == 0)
+            fast = 1;
+          sched_mngt(i, arrival_usec, delta_usec);
+          flush_tx_circle(i);
+          }
+        vhost_lock_release();
         }
-      vhost_lock_release();
       }
     }
   return 0;
@@ -265,7 +258,6 @@ static int rxtx_worker(void *unused)
 void vhost_client_end_and_exit(void)
 {
   int err;
-KERR("STOP A2B +");
   vhost_lock_acquire();
   g_rxtx_worker = 0;
   vhost_lock_release();
@@ -274,32 +266,28 @@ KERR("STOP A2B +");
   else
     rte_eal_wait_lcore(g_running_lcore);
   g_running_lcore = -1;
+  err = rte_vhost_driver_unregister(g_a2b0_socket);
+  if (err)
+    KERR("ERROR UNREGISTER");
   circle_flush();
   rte_mempool_free(g_mempool0);
   rte_mempool_free(g_mempool1);
   g_mempool0 = NULL;
   g_mempool1 = NULL;
-  err = rte_vhost_driver_unregister(g_a2b0_socket);
-  if (err)
-    KERR("ERROR UNREGISTER");
-  err = rte_vhost_driver_unregister(g_a2b1_socket);
-  if (err)
-    KERR("ERROR UNREGISTER");
   end_clean_unlink();
-KERR("STOP A2B -");
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_start(char *path0, char *memid0, char *path1, char *memid1)
 {
-  uint64_t flags = RTE_VHOST_USER_CLIENT | RTE_VHOST_USER_EXTBUF_SUPPORT;
+  uint64_t flags = 0;
   int i, err, sid;
   uint32_t mcache = 128;
-  uint32_t mbufs = 512;
-  uint32_t msize = 65500;
+  uint32_t mbufs = 2048;
+  uint32_t msize = 2048;
 
-  sid = rte_lcore_to_socket_id(rte_get_master_lcore());
+  sid = rte_lcore_to_socket_id(rte_get_main_lcore());
   if (sid < 0)
     KOUT(" ");
   strncpy(g_a2b0_socket, path0, MAX_PATH_LEN-1);
@@ -344,6 +332,7 @@ void vhost_client_start(char *path0, char *memid0, char *path1, char *memid1)
   err = rte_vhost_driver_start(path1);
   if (err)
     KOUT(" ");
+
   i = rte_get_next_lcore(-1, 1, 0);
   if (i >= RTE_MAX_LCORE)
     KOUT(" ");

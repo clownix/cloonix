@@ -269,6 +269,18 @@ static void launch_new_pid(t_pid_wait *pid_wait)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void wireshark_kill(char *name)
+{
+  int pid;
+  pid = bank_get_wireshark_pid(name);
+  if (pid)
+    {
+    pid_clone_kill_single(pid);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void launch_pid_wait(int type, char *nm, char **argv)
 {
   t_pid_wait *pid_wait;

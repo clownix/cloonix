@@ -27,7 +27,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -195,7 +194,7 @@ void machine_add(char *name, int num, uint8_t *mac)
     cur->to_be_deleted = 0;
   else
     {
-    cur = (t_machine *) rte_malloc(NULL, sizeof(t_machine), 0);
+    cur = (t_machine *) utils_malloc(sizeof(t_machine));
     if (cur == NULL)
       KERR(" ");
     else
@@ -241,7 +240,7 @@ uint32_t machine_dhcp(uint8_t *mac)
     result = cur->ip;
   else
     {
-    cur = (t_arp_ip *) rte_malloc(NULL, sizeof(t_arp_ip), 0);
+    cur = (t_arp_ip *) utils_malloc(sizeof(t_arp_ip));
     if (cur == NULL)
       {
       KERR("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2],

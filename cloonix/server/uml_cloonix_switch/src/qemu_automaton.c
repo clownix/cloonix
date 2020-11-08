@@ -74,8 +74,6 @@
                   "file.driver=file,file.node-name=file,file.filename=%s" \
                   " -device virtio-blk,drive=%s"
 
-#define FLAG_UEFI " -bios %s/server/qemu/%s/OVMF.fd"
-
 
 typedef struct t_cprootfs_config
 {
@@ -380,8 +378,6 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     if (vm->kvm.eth_table[i].eth_type == eth_type_sock)
       len+=sprintf(cmd_start+len, "%s",format_virtkvm_net(vm,i));
     }
-  if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_UEFI)
-    len += sprintf(cmd_start+len, FLAG_UEFI, cfg_get_bin_dir(), QEMU_BIN_DIR);
   if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
     {
     len += sprintf(cmd_start+len, QEMU_OPTS_CLOONIX, 
@@ -485,10 +481,10 @@ static char *qemu_cmd_format(t_vm *vm)
   char path_qemu_exe[MAX_PATH_LEN];
   memset(cmd, 0,  MAX_BIG_BUF);
   memset(path_qemu_exe, 0, MAX_PATH_LEN);
-  snprintf(path_qemu_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s/%s",
-           cfg_get_bin_dir(), QEMU_BIN_DIR, QEMU_EXE);
-  len += snprintf(cmd, MAX_BIG_BUF-1, "%s -L %s/server/qemu/%s ",
-                  path_qemu_exe, cfg_get_bin_dir(), QEMU_BIN_DIR);
+  snprintf(path_qemu_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s",
+           cfg_get_bin_dir(), QEMU_EXE);
+  len += snprintf(cmd, MAX_BIG_BUF-1, "%s -L %s/server/qemu ",
+                  path_qemu_exe, cfg_get_bin_dir());
   len += create_linux_cmd_kvm(vm, cmd+len);
   len += sprintf(cmd+len, " 2>/tmp/qemu_%s", vm->kvm.name);
   return cmd;

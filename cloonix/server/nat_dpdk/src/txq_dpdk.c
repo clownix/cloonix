@@ -28,7 +28,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -40,6 +39,7 @@
 #include "rpc_clownix.h"
 #include "rxtx.h"
 #include "dhcp.h"
+#include "utils.h"
 
 typedef struct t_txq_dpdk
 {
@@ -56,7 +56,7 @@ static uint32_t volatile g_lock;
 void txq_dpdk_enqueue(struct rte_mbuf *pkt, int top_prio)
 {
   t_txq_dpdk *cur;
-  cur = (t_txq_dpdk *) rte_malloc(NULL, sizeof(t_txq_dpdk), 0);
+  cur = (t_txq_dpdk *) utils_malloc(sizeof(t_txq_dpdk));
   if (cur == NULL)
     KERR(" ");
   else
@@ -112,7 +112,7 @@ void txq_dpdk_dequeue_end(int one_dequeue)
       }
     else
       g_head_txq_dpdk = g_head_txq_dpdk->next;
-    rte_free(cur);
+    utils_free(cur);
     }
   __sync_lock_release(&(g_lock));
 }
@@ -143,7 +143,7 @@ void txq_dpdk_flush(void)
     {
     next = cur->next;
     rte_pktmbuf_free(cur->mbuf);
-    rte_free(cur);
+    utils_free(cur);
     cur = next;
     }
   g_head_txq_dpdk = NULL;

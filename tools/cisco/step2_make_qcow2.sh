@@ -1,6 +1,6 @@
 #!/bin/bash
 HERE=`pwd`
-CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu/qemu_bin"
+CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu"
 CISCO_ISO=/media/perrier/Samsung_T51/iso/csr1000v-universalk9.17.02.01r.iso
 
 if [ ! -e ${CISCO_ISO} ]; then

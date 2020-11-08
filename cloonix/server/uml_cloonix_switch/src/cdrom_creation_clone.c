@@ -152,6 +152,7 @@ static void death_of_clone_in_main_context(void *data, int status, char *name)
         sprintf(err, "ERROR CDROM when creating %s detail: %s", 
                 name, cdrom_conf->msg_from_clone);
         event_print(err);
+        KERR("%s", err);
         send_status_ko(wake_up_eths->llid, wake_up_eths->tid, err);
         free_wake_up_eths_and_delete_vm(vm, error_death_cdrom);
         recv_coherency_unlock();

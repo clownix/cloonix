@@ -59,6 +59,8 @@ typedef struct t_d2d_cnx
   int master_del_req;
   int received_del_lan_req;
   int nb_dist_mac;
+  int state_up;
+  int state_down;
   t_peer_mac dist_tabmac[MAX_PEER_MAC];
   struct t_d2d_cnx *prev;
   struct t_d2d_cnx *next;

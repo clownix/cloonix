@@ -34,7 +34,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -67,7 +66,7 @@ static int rx_cb(void *ptr, int llid, int fd)
 {
   int data_len, result = 0;
   uint8_t *data;
-  data = (uint8_t *) rte_malloc(NULL, MAX_RXTX_LEN, 0);
+  data = (uint8_t *) utils_malloc(MAX_RXTX_LEN);
   if (data == NULL)
     KERR(" ");
   else
@@ -75,7 +74,7 @@ static int rx_cb(void *ptr, int llid, int fd)
     data_len = read(fd, data, MAX_RXTX_LEN - g_offset - 4);
     if (data_len == 0)
       {
-      rte_free(data);
+      utils_free(data);
       if (msg_exist_channel(llid))
         msg_delete_channel(llid);
       tcp_rx_err(llid);
@@ -88,7 +87,7 @@ static int rx_cb(void *ptr, int llid, int fd)
           msg_delete_channel(llid);
         tcp_rx_err(llid);
         }
-      rte_free(data);
+      utils_free(data);
       }
     else
       {
@@ -168,7 +167,7 @@ static void timeout_connect(void *data)
       {
       tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, lid, 0);
       }
-    rte_free(ctx);
+    utils_free(ctx);
     }
   else
     {
@@ -178,7 +177,7 @@ static void timeout_connect(void *data)
       {
       KERR("%X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
       tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, -1);
-      rte_free(ctx);
+      utils_free(ctx);
       }
     else
       {
@@ -187,7 +186,7 @@ static void timeout_connect(void *data)
         {
         KERR("%X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
         tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, -1);
-        rte_free(ctx);
+        utils_free(ctx);
         }
       else
         {
@@ -217,7 +216,7 @@ void tcp_llid_transmit(int llid, int len, uint8_t *data)
 void tcp_llid_connect(uint32_t sip, uint32_t dip,
                       uint16_t sport, uint16_t dport)
 {
-  t_llid_ctx *ctx = (t_llid_ctx *) rte_malloc(NULL, sizeof(t_llid_ctx), 0); 
+  t_llid_ctx *ctx = (t_llid_ctx *) utils_malloc(sizeof(t_llid_ctx)); 
   int fd;
   if (dip == g_our_gw_ip)
     fd = open_connect_tcp_sock(g_host_local_ip, dport);
@@ -230,7 +229,7 @@ void tcp_llid_connect(uint32_t sip, uint32_t dip,
     }
   else
     {
-    ctx = (t_llid_ctx *) rte_malloc(NULL, sizeof(t_llid_ctx), 0); 
+    ctx = (t_llid_ctx *) utils_malloc(sizeof(t_llid_ctx)); 
     memset(ctx, 0, sizeof(t_llid_ctx));
     ctx->sip   = sip;
     ctx->dip   = dip;

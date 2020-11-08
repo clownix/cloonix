@@ -1,28 +1,68 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
-CLOONIX_COMMON=${HERE}/../../../cloonix/common
-PKGCONFIG=${CLOONIX_COMMON}/spice/spice_lib/pkgconfig
+DBASE=${HERE}/../..
+NINJA=${DBASE}/common/meson_ninja
+./allclean
+if [ ! -f ${NINJA}/ninja/ninja ]; then
+  echo Doing NINJA
+  sleep 1
+  cd ${NINJA}
+  ./cmd
+  cd ${HERE}
+fi
+
+if [ ! -f ${DBASE}/common/spice/spice_lib/pkgconfig/spice-protocol.pc ]; then
+  echo Doing COMMON SPICE
+  sleep 1
+  cd ${DBASE}/common/spice
+  ./cmd
+  cd ${HERE}
+fi
+
+if [ ! -f ${DBASE}/common/spice/spice_lib/pkgconfig/spice-server.pc ]; then
+  echo Doing SERVER SPICE
+  sleep 1
+  cd ${DBASE}/server/spice/
+  ./cmd
+  cd ${HERE}
+fi
+
+echo Doing LIBS
+sleep 1
+
+for i in common/lib_blkd \
+         common/lib_rpct \
+         server/muswitch/lib_ioc \
+         server/muswitch/lib_muend; do
+
+  cd ${DBASE}/${i}
+  make
+done
+cd ${HERE}
+
+
+PKGCONFIG=${DBASE}/common/spice/spice_lib/pkgconfig
+export PATH=${NINJA}/ninja:$PATH
 export PKG_CONFIG_PATH=${PKGCONFIG}
-export QEMU_CFLAGS="-I${CLOONIX_COMMON}/spice/spice_lib/include"
-export QEMU_LDFLAGS="-L${CLOONIX_COMMON}/spice/spice_lib -lepoxy \
+export QEMU_CFLAGS="-I${DBASE}/common/spice/spice_lib/include \
+                    -I${DBASE}/common/glob_include \
+                    -I${DBASE}/server/muswitch/lib_ioc/include \
+                    -I${DBASE}/server/muswitch/lib_muend/include"
+export QEMU_LDFLAGS="-L${DBASE}/common/spice/spice_lib -lepoxy \
                      -Wl,-rpath,/usr/local/bin/cloonix/common/spice/spice_lib"
-MUETH=${HERE}/../../
-rm -rf ${HERE}/qemu_bin
-mkdir -p ${HERE}/qemu_bin
 
-mv ${HERE}/OVMF.fd ${HERE}/qemu_bin
-cd ${HERE}/sources
+echo Doing untar and patch
+sleep 1
+
 ./patched_create
-mv tainted_qemu ${HERE}/qemu_bin
-cd ${HERE}/qemu_bin/tainted_qemu
 
-# --target-list=x86_64-softmmu,arm-softmmu,aarch64-softmmu
+cd ${HERE}/tainted_qemu/
 
  CONFIGURATION_OPTS="--prefix=/usr/local
                      --target-list=x86_64-softmmu
                      --enable-mueth
-                     --muethdir=${MUETH}
+                     --muethdir=${DBASE}
                      --python=/usr/bin/python3
                      --enable-fdt
                      --enable-kvm
@@ -90,23 +130,30 @@ cd ${HERE}/qemu_bin/tainted_qemu
                      --disable-jemalloc"
 
 
+echo Doing CONFIGURE
+sleep 1
 ./configure  $CONFIGURATION_OPTS
 
+echo Doing QEMU
+sleep 1
 make clean
 make -j 5
 
-mv build/qemu-system-x86_64   ${HERE}/qemu_bin
-mv build/qemu-img             ${HERE}/qemu_bin
-cp pc-bios/bios-256k.bin      ${HERE}/qemu_bin
-cp pc-bios/kvmvapic.bin       ${HERE}/qemu_bin
-cp pc-bios/vgabios.bin        ${HERE}/qemu_bin
-cp pc-bios/vgabios-stdvga.bin ${HERE}/qemu_bin
-cp pc-bios/vgabios-qxl.bin    ${HERE}/qemu_bin
-cp pc-bios/vgabios-virtio.bin ${HERE}/qemu_bin
-cp pc-bios/efi-virtio.rom     ${HERE}/qemu_bin
-cp pc-bios/efi-e1000.rom      ${HERE}/qemu_bin
-cp pc-bios/efi-ne2k_pci.rom   ${HERE}/qemu_bin
-cp pc-bios/efi-rtl8139.rom    ${HERE}/qemu_bin
-cp pc-bios/efi-vmxnet3.rom    ${HERE}/qemu_bin
+echo MOVING QEMU RESULT BIN
+sleep 1
+
+mv build/qemu-system-x86_64   ${HERE}
+mv build/qemu-img             ${HERE}
+cp pc-bios/bios-256k.bin      ${HERE}
+cp pc-bios/kvmvapic.bin       ${HERE}
+cp pc-bios/vgabios.bin        ${HERE}
+cp pc-bios/vgabios-stdvga.bin ${HERE}
+cp pc-bios/vgabios-qxl.bin    ${HERE}
+cp pc-bios/vgabios-virtio.bin ${HERE}
+cp pc-bios/efi-virtio.rom     ${HERE}
+cp pc-bios/efi-e1000.rom      ${HERE}
+cp pc-bios/efi-ne2k_pci.rom   ${HERE}
+cp pc-bios/efi-rtl8139.rom    ${HERE}
+cp pc-bios/efi-vmxnet3.rom    ${HERE}
 
 

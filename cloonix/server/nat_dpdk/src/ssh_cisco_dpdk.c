@@ -34,7 +34,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -111,7 +110,7 @@ static t_arp *find_arp(int dip)
 /****************************************************************************/
 static t_arp *alloc_arp(uint32_t dip, uint16_t dport, int llid, char *vm)
 {
-  t_arp *arp = (t_arp *) rte_malloc(NULL, sizeof(t_arp), 0);
+  t_arp *arp = (t_arp *) utils_malloc(sizeof(t_arp));
   if (arp == NULL)
     KERR(" ");
   else
@@ -139,7 +138,7 @@ static void free_arp(t_arp *arp)
     arp->next->prev = arp->prev;
   if (arp == g_head_arp)
     g_head_arp = arp->next;
-  rte_free(arp);
+  utils_free(arp);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -187,7 +186,7 @@ static t_cnx *find_cnx(int llid)
 static t_cnx *alloc_cnx(int llid, uint32_t sip, uint32_t dip,
                         uint16_t sport, uint16_t dport)
 {
-  t_cnx *cur = (t_cnx *) rte_malloc(NULL, sizeof(t_cnx), 0);
+  t_cnx *cur = (t_cnx *) utils_malloc(sizeof(t_cnx));
   if (cur == NULL)
     KERR(" ");
   else
@@ -228,7 +227,7 @@ static void free_cnx(t_cnx *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_cnx)
     g_head_cnx = cur->next;
-  rte_free(cur);
+  utils_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 

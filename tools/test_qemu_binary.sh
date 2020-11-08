@@ -1,6 +1,6 @@
 #!/bin/bash
 HERE=`pwd`
-CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu/qemu_bin"
+CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu"
 QCOW2=${HOME}/cloonix_data/bulk/tester.qcow2
 
 ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 \

@@ -7,10 +7,10 @@ QCOW2=${DISTRO}.qcow2
 releasever=32
 basearch=x86_64
 MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
-FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/x86_64/os
-FEDORA_MODULAR=${MIRROR}/releases/${releasever}/Modular/x86_64/os
-FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/x86_64
-FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/x86_64
+FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/${basearch}/os
+FEDORA_MODULAR=${MIRROR}/releases/${releasever}/Modular/${basearch}/os
+FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/${basearch}
+FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/${basearch}
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 CLOONIX_BULK=$(cat $CLOONIX_CONFIG |grep CLOONIX_BULK | awk -F = "{print \$2}")

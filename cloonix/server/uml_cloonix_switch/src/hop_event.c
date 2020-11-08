@@ -493,9 +493,7 @@ void hop_event_hook(int llid, int flag, char *iline)
   char line[MAX_HOP_PRINT_LEN];
   t_hop_record *hop = get_hop_with_llid(llid);
   t_clients *cur_client;
-  if (!hop)
-    KERR("%s", iline);
-  else
+  if (hop)
     {
     cur_client = hop->clients;
     if (cur_client)

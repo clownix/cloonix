@@ -286,7 +286,7 @@ static int launch_ovsdb_server(char *ovs_bin, char *dpdk_dir)
            "--remote=db:Open_vSwitch,Open_vSwitch,manager_options");
   snprintf(g_arg[5], MAX_ARG_LEN-1,"--unixctl=%s/%s",
                                    dpdk_dir, OVSDB_SERVER_CTL);
-  snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=info");
+  snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=warn");
   snprintf(g_arg[7], MAX_ARG_LEN-1, "--detach");
   result = call_my_popen(dpdk_dir, 8, g_arg);
   return result;
@@ -322,7 +322,7 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *dpdk_dir)
   snprintf(g_arg[2],MAX_ARG_LEN-1,"--pidfile=%s/%s",dpdk_dir,OVS_VSWITCHD_PID);
   snprintf(g_arg[3],MAX_ARG_LEN-1,"--log-file=%s/%s",dpdk_dir,OVS_VSWITCHD_LOG);
   snprintf(g_arg[4],MAX_ARG_LEN-1,"--unixctl=%s/%s",dpdk_dir,OVS_VSWITCHD_CTL);
-  snprintf(g_arg[5], MAX_ARG_LEN-1, "--verbose=info");
+  snprintf(g_arg[5], MAX_ARG_LEN-1, "--verbose=warn");
   snprintf(g_arg[6], MAX_ARG_LEN-1, "--detach");
   result = call_my_popen(dpdk_dir, 7, g_arg);
   if (!result)
@@ -595,7 +595,7 @@ int ovs_execv_add_lan_snf(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
                 "-- add-port br_%s %s "
                 "-- set Interface %s type=dpdk"
                 " options:dpdk-devargs=net_virtio_user_%s,"
-                "path=%s/mi_%s,server=1,iface=%s/mi_%s,queues=1 "
+                "path=%s/mi_%s,iface=%s/mi_%s "
                 "-- --id=@p get port %s "
                 "-- --id=@m create mirror name=mi_%s "
                 "-- set mirror mi_%s select-all=1 "
@@ -640,8 +640,7 @@ int ovs_execv_add_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
                 "-- add-port br_%s %s "
                 "-- set Interface %s type=dpdk"
                 " options:dpdk-devargs=net_virtio_user_%s,"
-                "path=%s/na_%s,server=1,iface=%s/na_%s,"
-                "queues=1",
+                "path=%s/na_%s,iface=%s/na_%s",
                 lan, lan, name, name, name,
                 dpdk_dir, name, dpdk_dir, name);
 
@@ -676,8 +675,7 @@ int ovs_execv_add_lan_d2d(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
                 "-- add-port br_%s %s "
                 "-- set Interface %s type=dpdk "
                 "options:dpdk-devargs=net_virtio_user_%s,"
-                "path=%s/d2_%s,server=1,iface=%s/d2_%s,"
-                "queues=1",
+                "path=%s/d2_%s,iface=%s/d2_%s",
                 lan, lan, name, name, name,
                 dpdk_dir, name, dpdk_dir, name);
 
@@ -712,8 +710,9 @@ int ovs_execv_add_lan_a2b(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
                 "-- add-port br_%s %s0 "
                 "-- set Interface %s0 type=dpdk "
                 "options:dpdk-devargs=net_virtio_user_%s0,"
-                "server=1,iface=%s/a2_%s,path=%s/a2_%s,queues=1,mrg_rxbuf=1",
-                lan, lan, name, name, name, dpdk_dir, name, dpdk_dir, name);
+                "path=%s/a2_%s,iface=%s/a2_%s",
+                lan, lan, name, name, name, 
+                dpdk_dir, name, dpdk_dir, name);
 
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = -1;
@@ -746,8 +745,9 @@ int ovs_execv_add_lan_b2a(char *ovs_bin, char *dpdk_dir, char *lan, char *name)
                 "-- add-port br_%s %s1 "
                 "-- set Interface %s1 type=dpdk "
                 "options:dpdk-devargs=net_virtio_user_%s1,"
-                "server=1,iface=%s/b2_%s,path=%s/b2_%s,queues=1,mrg_rxbuf=1",
-                lan, lan, name, name, name, dpdk_dir, name, dpdk_dir, name);
+                "path=%s/b2_%s,iface=%s/b2_%s",
+                lan, lan, name, name, name,
+                dpdk_dir, name, dpdk_dir, name);
 
   if (ovs_vsctl(ovs_bin, dpdk_dir, cmd))
     result = -1;

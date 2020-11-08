@@ -55,10 +55,76 @@
 #include "suid_power.h"
 
 
+enum {
+  state_idle = 0,
+  state_up_process_req,
+  state_up_process_started,
+  state_up_process_vhost_req_on,
+  state_up_process_vhost_resp_on,
+  state_up_lan_ovs_req0,
+  state_up_lan_ovs_resp0,
+  state_up_lan_ovs_req1,
+  state_up_lan_ovs_resp1,
+  state_down_initialised,
+  state_down_vhost_stopped,
+  state_down_ovs_req_del_lan,
+  state_down_ovs_resp_del_lan,
+};
 
 /*--------------------------------------------------------------------------*/
 static t_a2b_cnx *g_head_a2b;
 static int g_nb_a2b;
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void nb_to_text(int state, char *label)
+{
+  switch (state)
+    {
+    case state_idle:
+      strcpy(label, "state_idle");
+      break;
+    case state_up_process_req:
+      strcpy(label, "state_up_process_req");
+      break;
+    case state_up_process_started:
+      strcpy(label, "state_up_process_started");
+      break;
+    case state_up_process_vhost_req_on:
+      strcpy(label, "state_up_process_vhost_req_on");
+      break;
+    case state_up_process_vhost_resp_on:
+      strcpy(label, "state_up_process_vhost_resp_on");
+      break;
+    case state_up_lan_ovs_req0:
+      strcpy(label, "state_up_lan_ovs_req0");
+      break;
+    case state_up_lan_ovs_resp0:
+      strcpy(label, "state_up_lan_ovs_resp0");
+      break;
+    case state_up_lan_ovs_req1:
+      strcpy(label, "state_up_lan_ovs_req1");
+      break;
+    case state_up_lan_ovs_resp1:
+      strcpy(label, "state_up_lan_ovs_resp1");
+      break;
+    default:
+      KOUT("%d", state);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void state_progress_up(t_a2b_cnx *cur, int state)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char olab[MAX_NAME_LEN];
+  char nlab[MAX_NAME_LEN];
+  nb_to_text(cur->state_up, olab);
+  cur->state_up = state;
+  nb_to_text(cur->state_up, nlab);
+  KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
+}
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -91,7 +157,6 @@ static t_a2b_cnx *alloc_a2b(int llid, int tid, char *name)
   memcpy(cur->name, name, MAX_NAME_LEN-1);
   cur->add_llid = llid;
   cur->add_tid = tid;
-  a2b_dpdk_start_stop_process(name, 1);
   if (g_head_a2b)
     g_head_a2b->prev = cur;
   cur->next = g_head_a2b;
@@ -123,7 +188,6 @@ static void free_a2b(t_a2b_cnx *cur)
   strncpy(name, cur->name, MAX_NAME_LEN-1); 
   strncpy(lan0, cur->side[0].lan, MAX_NAME_LEN-1); 
   strncpy(lan1, cur->side[1].lan, MAX_NAME_LEN-1); 
-  a2b_dpdk_start_stop_process(cur->name, 0);
   for (i=0; i<2; i++)
     cur->side[i].attached_lan_ok = 0; 
   if (strlen(lan0))
@@ -148,6 +212,7 @@ static void free_a2b(t_a2b_cnx *cur)
 }
 /*--------------------------------------------------------------------------*/
 
+
 /****************************************************************************/
 static void timer_a2b_msg_beat(void *data)
 {
@@ -156,13 +221,13 @@ static void timer_a2b_msg_beat(void *data)
   while(cur)
     {
     next = cur->next;
-    if ((cur->openvswitch_started_and_running == 0) &&
+    if ((cur->process_started_and_running == 1) &&
+        (cur->openvswitch_started_and_running == 0) &&
         (dpdk_ovs_muovs_ready()))
       {
-KERR("OOOi000000000000000000000000000000000000000000000000000000000000000000000000OOOOOOOOOO ");
-
       cur->openvswitch_started_and_running = 1;
       a2b_dpdk_start_vhost(cur->name);
+      state_progress_up(cur, state_up_process_vhost_req_on);
       }
     if (cur->add_llid)
       {
@@ -193,6 +258,7 @@ KERR("OOOi0000000000000000000000000000000000000000000000000000000000000000000000
       }
     if (cur->to_be_destroyed == 1)
       {
+  a2b_dpdk_start_stop_process(cur->name, 0);
       free_a2b(cur);
       }
     cur = next;
@@ -244,6 +310,10 @@ void dpdk_a2b_resp_add_lan(int is_ko, char *lan, char *name, int num)
       cur->side[num].waiting_ack_add_lan = 0;
       cur->side[num].attached_lan_ok = 1;
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+      if (num == 0)
+        state_progress_up(cur, state_up_lan_ovs_resp0);
+      else
+        state_progress_up(cur, state_up_lan_ovs_resp1);
       }
     }
 }
@@ -315,8 +385,12 @@ void dpdk_a2b_event_from_a2b_dpdk_process(char *name, int on)
           {    
           cur->side[i].attached_lan_ok = 0;
           }
-        event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
         }
+      if (cur->process_started_and_running != 0)
+        KERR("ERROR %s", name);
+      cur->process_started_and_running = 1;
+      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+      state_progress_up(cur, state_up_process_started);
       }
     }
 }
@@ -354,6 +428,10 @@ int dpdk_a2b_add_lan(int llid, int tid, char *name, int num, char *lan)
     cur->side[num].waiting_ack_add_lan = 1;
     cur->side[num].llid = llid;
     cur->side[num].tid = tid;
+    if (num == 0)
+      state_progress_up(cur, state_up_lan_ovs_req0);
+    else
+      state_progress_up(cur, state_up_lan_ovs_req1);
     result = 0;
     }
   return result;
@@ -382,16 +460,12 @@ int dpdk_a2b_del_lan(int llid, int tid, char *name, int num, char *lan)
     {
     KERR("%s %s", lan, name);
     }
-  else if (cur->side[num].waiting_ack_del_lan == 1)
+  else 
     {
-    KERR("%s %s", lan, name);
-    }
-  else if (dpdk_msg_send_del_lan_a2b(lan, name, num))
-    {
-    KERR("%s %s", lan, name);
-    }
-  else
-    {
+    if (cur->side[num].waiting_ack_del_lan == 1)
+      KERR("%s %s", lan, name);
+    if (dpdk_msg_send_del_lan_a2b(lan, name, num))
+      KERR("%s %s", lan, name);
     cur->side[num].attached_lan_ok = 0;
     cur->side[num].waiting_ack_del_lan = 1;
     cur->side[num].llid = llid;
@@ -414,9 +488,11 @@ int dpdk_a2b_add(int llid, int tid, char *name)
   else
     {
     cur = alloc_a2b(llid, tid, name);
+    a2b_dpdk_start_stop_process(name, 1);
     result = 0;
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     dpdk_ovs_start_openvswitch_if_not_done();
+    state_progress_up(cur, state_up_process_req);
     }
   return result;
 }
@@ -653,6 +729,7 @@ void dpdk_a2b_vhost_started(char *name)
     {
     cur->vhost_started_and_running = 1;
     utils_send_status_ok(&(cur->add_llid),&(cur->add_tid));
+    state_progress_up(cur, state_up_process_vhost_resp_on);
     }
 }
 /*--------------------------------------------------------------------------*/

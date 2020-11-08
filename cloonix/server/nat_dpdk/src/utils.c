@@ -29,8 +29,8 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
+#include <rte_malloc.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
 #include <rte_version.h>
@@ -45,6 +45,7 @@ static uint32_t g_mac_len;
 static uint32_t g_ip_len;
 static uint32_t g_udp_len;
 static uint32_t g_tcp_len;
+static int g_nb_tot_malloc;
 
 /*****************************************************************************/
 static uint16_t utils_in_cksum(uint16_t *addr, unsigned int count)
@@ -403,12 +404,35 @@ struct rte_mbuf *utils_alloc_pktmbuf(int len)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void* utils_malloc(int len)
+{
+  void *result;
+  g_nb_tot_malloc += 1;
+  if (g_nb_tot_malloc > 50000)
+    KERR("%d", g_nb_tot_malloc);
+  //result = rte_malloc(NULL, len, 0);
+  result = malloc(len);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void utils_free(void *ptr)
+{
+  g_nb_tot_malloc -= 1;
+  //rte_free(ptr);
+  free(ptr);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void utils_init(void)
 {
   g_mac_len = sizeof(struct rte_ether_hdr);
   g_ip_len  = sizeof(struct rte_ipv4_hdr);
   g_udp_len = sizeof(struct rte_udp_hdr);
   g_tcp_len = sizeof(struct rte_tcp_hdr);
+  g_nb_tot_malloc = 0;
 }
 /*---------------------------------------------------------------------------*/
 

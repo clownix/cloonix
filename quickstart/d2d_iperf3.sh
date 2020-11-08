@@ -17,7 +17,6 @@ done
 echo waiting 2 sec
 sleep 2
 
-cloonix_cli nemo add d2d name_d2d mito 
 
 #######################################################################
 for NET in nemo mito; do
@@ -38,9 +37,6 @@ for NET in nemo mito; do
   echo cloonix_cli $NET add lan vm 0 lan
   cloonix_cli $NET add lan vm 0 lan
   echo done
-  echo cloonix_cli $NET add lan name_d2d 0 lan
-  cloonix_cli $NET add lan name_d2d 0 lan
-  echo done
 done
 #######################################################################
 cloonix_ssh nemo vm "ip addr add dev eth0 1.1.1.1/24"
@@ -48,7 +44,16 @@ cloonix_ssh nemo vm "ip link set dev eth0 up"
 cloonix_ssh mito vm "ip addr add dev eth0 1.1.1.2/24"
 cloonix_ssh mito vm "ip link set dev eth0 up"
 #----------------------------------------------------------------------
-echo
+sudo rm -f /var/log/syslog
+sudo rm -f /var/log/user.log
+sudo systemctl restart syslog.service
+cloonix_cli nemo add d2d name_d2d mito 
+for NET in nemo mito; do
+  echo cloonix_cli $NET add lan name_d2d 0 lan
+  cloonix_cli $NET add lan name_d2d 0 lan
+  echo done
+done
+
 #----------------------------------------------------------------------
 sleep 1
 urxvt -title nemo -e cloonix_ssh nemo vm "iperf3 -s" &

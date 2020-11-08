@@ -5,9 +5,9 @@ See directory cloonix for the LICENCE
 
 See clownix.net for a documentation which may not be up to date.
 
-This version v11-00 is the latest
+This version v12-00 is the latest
 The downloads for this version are in
-http://clownix.net/downloads/cloonix-11-00
+http://clownix.net/downloads/cloonix-12-00
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -20,8 +20,10 @@ Tested on virtual machines installed with:
             buster (debian 10),
             bullseye (debian 11),
             focal (ubuntu 20.04),
+            groovy (ubuntu 20.10),
             centos8,
             fedora32,
+            fedora33,
             opensuse152.
 
 Compilation and run should work, on the above but for other distributions,
@@ -30,18 +32,18 @@ you may have to ajust needed packages, look in file install_depends for help.
 
 cd cloonix
 sudo ./install_depends
-wget http://clownix.net/downloads/cloonix-11-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-12-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 ./doitall
 
 
 -----------------------------------------------------------------------------
 HOWTO GET A WORKING VM:
-See at http://clownix.net/downloads/cloonix-11-00/bulk
+See at http://clownix.net/downloads/cloonix-12-00/bulk
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget http://clownix.net/downloads/cloonix-11-00/bulk/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-12-00/bulk/buster.qcow2.gz
 gunzip buster.qcow2.gz
 
 -----------------------------------------------------------------------------

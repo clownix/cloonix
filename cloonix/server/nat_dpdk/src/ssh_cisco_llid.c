@@ -34,7 +34,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -82,7 +81,7 @@ static t_ssh_cisco *find_ssh_cisco(int llid)
 /****************************************************************************/
 static void alloc_ssh_cisco(int llid)
 {
-  t_ssh_cisco *cur = (t_ssh_cisco *) rte_malloc(NULL, sizeof(t_ssh_cisco), 0);
+  t_ssh_cisco *cur = (t_ssh_cisco *) utils_malloc(sizeof(t_ssh_cisco));
   if (cur == NULL)
     KERR(" ");
   else
@@ -110,7 +109,7 @@ static void free_ssh_cisco(t_ssh_cisco *cur)
     cur->next->prev = cur->prev;
   if (cur == g_head_ssh_cisco)
     g_head_ssh_cisco = cur->next;
-  rte_free(cur);
+  utils_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -120,7 +119,7 @@ static int get_info_from_buf(int len, char *ibuf, char *remote_user,
 {
   int port, result = -1;
   char *ptr;
-  char *buf = (char *) rte_malloc(NULL, len, 0);
+  char *buf = (char *) utils_malloc(len);
   char str_ip[MAX_NAME_LEN];
   if (buf == NULL)
     KERR(" ");
@@ -153,7 +152,7 @@ static int get_info_from_buf(int len, char *ibuf, char *remote_user,
           result = 0;
         }
       }
-    rte_free(buf);
+    utils_free(buf);
     }
   return result;
 }
@@ -169,7 +168,7 @@ static int rx_cb(void *ptr, int llid, int fd)
   uint32_t ip;
   uint16_t port;
   t_ssh_cisco *cur = find_ssh_cisco(llid);
-  data = (uint8_t *) rte_malloc(NULL, MAX_RXTX_LEN, 0);
+  data = (uint8_t *) utils_malloc(MAX_RXTX_LEN);
   if (data == NULL)
     KERR(" ");
   else
@@ -180,12 +179,12 @@ static int rx_cb(void *ptr, int llid, int fd)
       if (msg_exist_channel(llid))
         msg_delete_channel(llid);
       KERR("%d", llid);
-      rte_free(data);
+      utils_free(data);
       }
     else if (data_len == 0)
       {
       free_ssh_cisco(cur);
-      rte_free(data);
+      utils_free(data);
       }
     else if (data_len < 0)
       {
@@ -194,7 +193,7 @@ static int rx_cb(void *ptr, int llid, int fd)
         KERR("%d", llid);
         free_ssh_cisco(cur);
         }
-      rte_free(data);
+      utils_free(data);
       }
     else
       {

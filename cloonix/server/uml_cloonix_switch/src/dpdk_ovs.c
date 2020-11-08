@@ -166,7 +166,6 @@ static void test_and_end_ovs(void)
         if (cur->destroy_requested == 0)
           {
           cur->destroy_requested = 4;
-          KERR("END OVS");
           }
         }
       }
@@ -941,11 +940,22 @@ int dpdk_ovs_try_send_diag_msg(int tid, char *cmd)
 char *dpdk_ovs_format_net(t_vm *vm, int eth)
 {
   static char net_cmd[MAX_PATH_LEN*3];
-  int len = 0;
+  int i, first_dpdk = 0xFFFF, len = 0;
   char *mc = vm->kvm.eth_table[eth].mac_addr;
   char *endp_path = utils_get_dpdk_endp_path(vm->kvm.name, eth);
 
-  if (eth == 0)
+  for (i = 0; i < vm->kvm.nb_tot_eth; i++)
+    {
+    if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
+      {
+      first_dpdk = i;
+      break;
+      }
+    }
+  if (first_dpdk == 0xFFFF)
+    KOUT("%d", eth);
+  
+  if (eth == first_dpdk)
     {
     len += sprintf(net_cmd+len, " -object memory-backend-file,id=mem0,"
                                 "size=%dM,share=on,mem-path=%s"

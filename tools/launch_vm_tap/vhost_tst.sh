@@ -1,6 +1,6 @@
 #!/bin/bash
 HERE=`pwd`
-CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu/qemu_bin"
+CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu"
 
 if [ ! -e ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 ]; then
   echo ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 does not exist

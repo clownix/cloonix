@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Flowatcher</title>
+	<style type="text/css">
+	.stat_contents {
+		width: 300px;
+	}
+	.ws_status {
+		vertical-align: middle;
+		text-align: center;
+		background: #f0f0c0;
+		padding: 10px;
+		-webkit-border-radius: 10px;
+		-moz-border-radius: 10px;
+		border-radius: 10px;
+		color: #404000;
+	}
+	.dt_status {
+		vertical-align: middle;
+		text-align: center;
+		background: #aec6cf;
+		padding: 10px;
+		margin-top: 5px;
+		-webkit-border-radius: 10px;
+		-moz-border-radius: 10px;
+		border-radius: 10px;
+	}
+	.flow_table {
+		border-collapse: collapse;
+	}
+	.flow_table th {
+		padding: 4px;
+		background-color: #ddd;
+		border: 1px solid #666;
+	}
+	.flow_table td {
+		padding: 4px;
+		border: 1px solid #666;
+	}
+	.t_val {
+		width: 100px;
+	}
+	</style>
+</head>
+
+<body>
+	<h1>Flowatcher</h1>
+
+	<div class="stat_contents">
+		<div id="ws_statustd" class="ws_status">
+			<div id="ws_status">Not Initialized</div>
+			<input type=button id="ws_control" value="Not Initialized" disabled>
+		</div>
+
+		<div class="dt_status">
+			<span id="serial"> </span> / <span id="parse_res"> </span><br />
+			<!-- <input type=button value="Reset Serial" onclick="resetSerial();"> -->
+
+			<div id="RX_status">RX: Not Initialized</div>
+			<div id="flow_cnt">Flow Counter</div>
+		</div>
+	</div>
+
+	<canvas id="linechart_pkt" align=center width=600 height=400></canvas>
+	<canvas id="linechart_byte" align=center width=600 height=400></canvas>
+
+	<table id="flowdata" class="flow_table" border="1"></table>
+
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script>
+	<script type="text/javascript" src="/flowatcher.js"></script>
+</body>
+</html>

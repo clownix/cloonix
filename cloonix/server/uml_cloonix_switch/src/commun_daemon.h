@@ -61,7 +61,6 @@ enum
 #define CLOONIX_FILE_NAME "name"
 #define FILE_IMAGE "image.bin"
 #define CLOONIX_INTERNAL_COM "cloonix_internal_com"
-#define QEMU_BIN_DIR "qemu_bin"
 #define QEMU_EXE "qemu-system-x86_64"
 #define QEMU_ARM_EXE "qemu-system-arm"
 #define QEMU_AARCH64_EXE "qemu-system-aarch64"

@@ -28,7 +28,6 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
-#include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_meter.h>
 #include <rte_pci.h>
@@ -139,9 +138,8 @@ static int rxtx_worker(void *arg __rte_unused)
     {
     usleep(100);
     vhost_lock_acquire();
-    if (g_enable)
+    if ((g_rxtx_worker) && (g_enable))
       {
-
       mbuf = txq_dpdk_dequeue_begin();
       while (mbuf)
         {
@@ -161,7 +159,6 @@ static int rxtx_worker(void *arg __rte_unused)
       for (i=0; i<nb; i++)
         rxq_dpdk_enqueue(pkts_rx[i]);
       rxtx_job_trigger();
-
       }
     vhost_lock_release();
     }
@@ -181,25 +178,25 @@ void vhost_client_end_and_exit(void)
   else
     rte_eal_wait_lcore(g_running_lcore);
   g_running_lcore = -1;
+  if (rte_vhost_driver_unregister(g_nat_socket))
+    KERR("ERROR UNREGISTER");
   tcp_flush_all();
   txq_dpdk_flush();
   rxq_dpdk_flush();
   rte_mempool_free(g_mempool);
-  if (rte_vhost_driver_unregister(g_nat_socket))
-    KERR("ERROR UNREGISTER");
   end_clean_unlink();
-  exit(0);
+  rte_exit(EXIT_SUCCESS, "Exit nat");
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_start(char *path, char *memid)
 {
-  uint64_t flags = RTE_VHOST_USER_CLIENT;
+  uint64_t flags;
   uint64_t unsup_flags = (1ULL << VIRTIO_NET_F_STATUS);
   int i, j, err, sid;
   uint32_t mcache = 128;
-  uint32_t mbufs = 1024;
+  uint32_t mbufs = 2048;
   uint32_t msize = 2048;
 
   memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
@@ -219,7 +216,7 @@ void vhost_client_start(char *path, char *memid)
   tcp_llid_init();
   icmp_init();
   rxtx_init();
-  sid = rte_lcore_to_socket_id(rte_get_master_lcore());
+  sid = rte_lcore_to_socket_id(rte_get_main_lcore());
   if (sid < 0)
     KOUT(" ");
   err = rte_vhost_driver_register(path, flags);
