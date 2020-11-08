@@ -51,7 +51,7 @@ fct_get_redhat_packages()
          mesa-libgbm-devel opus-devel lz4-devel libcacard-devel \
          libffi-devel libdrm-devel pciutils libpcap-devel \
          libunwind-devel rxvt-unicode libwebsockets-devel \
-         python3-setuptools
+         python3-setuptools expat-devel
 
 }
 #--------------------------------------------------------------------------
