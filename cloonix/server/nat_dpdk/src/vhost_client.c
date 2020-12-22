@@ -192,7 +192,7 @@ void vhost_client_end_and_exit(void)
 /****************************************************************************/
 void vhost_client_start(char *path, char *memid)
 {
-  uint64_t flags;
+  uint64_t flags = 0;
   uint64_t unsup_flags = (1ULL << VIRTIO_NET_F_STATUS);
   int i, j, err, sid;
   uint32_t mcache = 128;

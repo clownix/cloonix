@@ -44,6 +44,7 @@
 #include "snf_dpdk_process.h"
 #include "utils_cmd_line_maker.h"
 #include "tabmac.h"
+#include "lan_to_name.h"
 
 /****************************************************************************/
 typedef struct t_dlan
@@ -51,6 +52,7 @@ typedef struct t_dlan
   char lan[MAX_NAME_LEN];
   int  waiting_ack_add;
   int  waiting_ack_del;
+  int  lan_num;
   int  llid;
   int  tid;
   struct t_dlan *prev;
@@ -83,6 +85,7 @@ static t_dvm *g_head_vm;
 /****************************************************************************/
 static t_dlan *vlan_alloc(t_deth *eth, char *lan, int llid, int tid)
 {
+  int lan_num;
   t_dlan *cur = (t_dlan *) clownix_malloc(sizeof(t_dlan), 14); 
   memset(cur, 0, sizeof(t_dlan));
   strncpy(cur->lan, lan, MAX_NAME_LEN-1);
@@ -92,6 +95,8 @@ static t_dlan *vlan_alloc(t_deth *eth, char *lan, int llid, int tid)
     eth->head_lan->prev = cur;
   cur->next = eth->head_lan;
   eth->head_lan = cur;
+  lan_num = lan_add_name(lan, llid);
+  cur->lan_num = lan_num;
   return cur;
 }
 /*--------------------------------------------------------------------------*/
@@ -100,6 +105,7 @@ static t_dlan *vlan_alloc(t_deth *eth, char *lan, int llid, int tid)
 static void vlan_free(t_deth *eth, t_dlan *lan)
 {
   char lan_name[MAX_NAME_LEN];
+  int lan_num;
   memset (lan_name, 0, MAX_NAME_LEN);
   strncpy(lan_name, lan->lan, MAX_NAME_LEN-1);
   if (lan->prev)
@@ -108,10 +114,14 @@ static void vlan_free(t_deth *eth, t_dlan *lan)
     lan->next->prev = lan->prev;
   if (lan == eth->head_lan)
     eth->head_lan = lan->next;
+  lan_num = lan_del_name(lan_name);
+  if (lan_num != lan->lan_num)
+    KERR("KO LAN NUM: %d %d", lan_num, lan->lan_num);
   clownix_free(lan, __FUNCTION__);
   dpdk_msg_vlan_exist_no_more(lan_name);
   tabmac_process_possible_change();
   event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+
 }
 /*--------------------------------------------------------------------------*/
 

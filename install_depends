@@ -33,7 +33,8 @@ fct_get_debian_packages()
                      libnuma-dev libpixman-1-dev libpcap-dev libmnl-dev \
                      libibverbs-dev xorriso wireshark liblz4-dev \
                      libcacard-dev pciutils libunwind-dev libwebsockets-dev \
-                     python3-setuptools
+                     python3-setuptools cmake libgl1-mesa-dev libffi-dev \
+                     libaio-dev libvirglrenderer-dev
 
 }
 #--------------------------------------------------------------------------
@@ -51,7 +52,8 @@ fct_get_redhat_packages()
          mesa-libgbm-devel opus-devel lz4-devel libcacard-devel \
          libffi-devel libdrm-devel pciutils libpcap-devel \
          libunwind-devel rxvt-unicode libwebsockets-devel \
-         python3-setuptools expat-devel
+         python3-setuptools expat-devel cmake mesa-libGL-devel \
+         libaio-devel virglrenderer-devel
 
 }
 #--------------------------------------------------------------------------
@@ -69,7 +71,8 @@ fct_get_opensuse_packages()
          libopus-devel rxvt-unicode xorriso libdrm-devel \
          liblz4-devel libcacard-devel pciutils libpcap-devel \
          libunwind-devel rxvt-unicode libwebsockets-devel \
-         python3-setuptools
+         python3-setuptools cmake Mesa-libGL-devel libffi-devel \
+         libaio-devel virglrenderer-devel
 }
 #--------------------------------------------------------------------------
 if [ $UID != 0 ]; then

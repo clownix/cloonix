@@ -1175,9 +1175,21 @@ int main (int argc, char *argv[])
   memcpy(sock, argv[3], MAX_PATH_LEN-1);
   memcpy(g_ovs_bin, argv[4], MAX_PATH_LEN-1);
   memcpy(g_dpdk_dir, argv[5], MAX_PATH_LEN-1);
-  if (strncmp("/home/", g_dpdk_dir, strlen("/home/")))
-    if (strncmp("/root/", g_dpdk_dir, strlen("/root/")))
-      KOUT("Too risky to erase %s/dpdk Accepted: /home or /root", g_dpdk_dir);
+
+
+  if ((!strncmp("/bin", g_dpdk_dir, strlen("/bin"))) ||
+      (!strncmp("/etc", g_dpdk_dir, strlen("/etc"))) ||
+      (!strncmp("/run", g_dpdk_dir, strlen("/run"))) ||
+      (!strncmp("/sys", g_dpdk_dir, strlen("/sys"))) ||
+      (!strncmp("/var", g_dpdk_dir, strlen("/var"))) ||
+      (!strncmp("/boot", g_dpdk_dir, strlen("/boot"))) ||
+      (!strncmp("/lib", g_dpdk_dir, strlen("/lib"))) ||
+      (!strncmp("/media", g_dpdk_dir, strlen("/media"))) ||
+      (!strncmp("/proc", g_dpdk_dir, strlen("/proc"))) ||
+      (!strncmp("/dev", g_dpdk_dir, strlen("/dev"))) ||
+      (!strncmp("/usr", g_dpdk_dir, strlen("/usr"))) ||
+      (!strncmp("/sbin", g_dpdk_dir, strlen("/sbin"))))
+    KOUT("Too risky to erase %s/dpdk ERROR FAIL", g_dpdk_dir);
   unlink_dir(g_dpdk_dir);
   signal(SIGINT, cmd_interrupt);
   all_ctx = cloonix_part_init(ctl_argv);

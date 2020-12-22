@@ -35,13 +35,12 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   done
 #----------------------------------------------------------
   for i in cmd allclean spice_protocol spice_usb \
-           virglrenderer get_new_spice_protocol.sh \
-           get_new_usbredir.sh  get_new_virglrenderer.sh; do
+           get_new_spice_protocol.sh get_new_usbredir.sh; do
     rm -rf ${CLOONIX_COMMON}/spice/${i}
   done
 #----------------------------------------------------------
   for i in spice share spice_client spice-protocol \
-           spice_server usbredir include virglrenderer \
+           spice_server usbredir include \
            pkgconfig spice-1 spice-server usr ; do
     rm -rf ${CLOONIX_COMMON}/spice/spice_lib/${i}
   done

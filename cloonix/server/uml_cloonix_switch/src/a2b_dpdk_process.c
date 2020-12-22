@@ -161,6 +161,7 @@ static void timer_heartbeat(void *data)
       if (llid)
         {
         cur->llid = llid;
+        cur->count = 0;
         }
       else
         {
@@ -175,9 +176,18 @@ static void timer_heartbeat(void *data)
       }
     else if (cur->suid_root_done == 0)
       {
-      rpct_send_diag_msg(NULL, cur->llid, type_hop_a2b_dpdk, msg);
-      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
-      cur->suid_root_done = 1;
+      cur->count += 1;
+      if (cur->count == 50)
+        {
+        KERR("%s", cur->socket);
+        dpdk_a2b_event_from_a2b_dpdk_process(cur->name, -1);
+        free_a2b_dpdk(cur);
+        }
+      else
+        {
+        rpct_send_diag_msg(NULL, cur->llid, type_hop_a2b_dpdk, msg);
+        hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+        }
       }
     else if (cur->watchdog_count >= 150)
       {
@@ -217,12 +227,12 @@ void a2b_dpdk_pid_resp(int llid, int tid, char *name, int pid)
   else
     {
     cur->watchdog_count = 0;
-    if (cur->pid == 0)
+    if ((cur->pid == 0) && (cur->suid_root_done == 1))
       {
-      dpdk_a2b_event_from_a2b_dpdk_process(name, 1);
       cur->pid = pid;
+      dpdk_a2b_event_from_a2b_dpdk_process(name, 1);
       }
-    else if (cur->pid != pid)
+    else if (cur->pid && (cur->pid != pid))
       {
       KERR("%s %d", name, pid);
       }
@@ -252,22 +262,44 @@ int a2b_dpdk_diag_llid(int llid)
 void a2b_dpdk_diag_resp(int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
-  if (!strcmp(line,
-  "cloonixa2b_suidroot_ko"))
+  t_a2b_dpdk *cur;
+  if (sscanf(line,
+  "cloonixa2b_suidroot_ko %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    KERR("Started a2b_dpdk: %s %s", g_cloonix_net, line);
+    cur = find_a2b_dpdk(name);
+    if (!cur)
+      KERR("ERROR a2b_dpdk: %s %s", g_cloonix_net, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      KERR("Started a2b_dpdk: %s %s", g_cloonix_net, line);
+      dpdk_a2b_event_from_a2b_dpdk_process(cur->name, -1);
+      }
     }
-  else if (!strcmp(line,
-  "cloonixa2b_suidroot_ok"))
+  else if (sscanf(line,
+  "cloonixa2b_suidroot_ok %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
+    cur = find_a2b_dpdk(name);
+    if (!cur)
+      KERR("ERROR a2b_dpdk: %s %s", g_cloonix_net, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      cur->suid_root_done = 1;
+      cur->count = 0;
+      }
     }
   else if (sscanf(line,
   "cloonixa2b_vhost_start_ok %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    dpdk_a2b_vhost_started(name);
+    cur = find_a2b_dpdk(name);
+    if (!cur)
+      KERR("ERROR a2b_dpdk: %s %s", g_cloonix_net, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      dpdk_a2b_vhost_started(name);
+      }
     }
   else
     KERR("ERROR a2b_dpdk: %s %s", g_cloonix_net, line);
@@ -280,7 +312,6 @@ void a2b_dpdk_start_vhost(char *name)
   char *locnet = cfg_get_cloonix_name();
   char msg[MAX_PATH_LEN];
   t_a2b_dpdk *cur = find_a2b_dpdk(name);
-KERR("%s %s", locnet, name);
   if (!cur)
     {
     KERR("%s %s", locnet, name);
@@ -318,7 +349,6 @@ void a2b_dpdk_cnf(char *name, int dir, int type, int val)
     "cloonixa2b_vhost_cnf %s dir=%d type=%d val=%d", name, dir, type, val);
     rpct_send_diag_msg(NULL, cur->llid, type_hop_a2b_dpdk, msg);
     hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
-KERR("%s", msg);
     }
 }
 /*--------------------------------------------------------------------------*/

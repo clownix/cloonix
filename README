@@ -3,20 +3,18 @@ AGPLv3 tool to create networks of kvm virtual machines.
 
 See directory cloonix for the LICENCE
 
-See clownix.net for a documentation which may not be up to date.
+See clownix.net for a documentation (which is not up to date).
 
-This version v12-00 is the latest
-The downloads for this version are in
-http://clownix.net/downloads/cloonix-12-00
+This version v13-00 is the latest the biggest difference from the v12.00
+is the update of the external open-sources used, stored in targz_store,
+dpdk, ovs, and qemu amongs others.
+
+All usefull downloads for this version are in
+http://clownix.net/downloads/cloonix-13-00
 -----------------------------------------------------------------------------
-
------------------------------------------------------------------------------
-HOWTO INSTALL:
-
-It is assumed that sudo makes the command run as root.
 
 Tested on virtual machines installed with:
-  
+
             buster (debian 10),
             bullseye (debian 11),
             focal (ubuntu 20.04),
@@ -27,23 +25,37 @@ Tested on virtual machines installed with:
             opensuse152.
 
 Compilation and run should work, on the above but for other distributions,
-you may have to ajust needed packages, look in file install_depends for help.
+you may have to ajust needed packages, look in file install_depends for
+hints on necessary packages.
 
+-----------------------------------------------------------------------------
+HOWTO INSTALL:
 
-cd cloonix
+The cloonix github store seem to have added characters to scripts last
+time I used it, dos2unix repairs the errors but I would advise the use of
+the direct tar.gz download from clownix.net as following:
+ 
+wget http://clownix.net/downloads/cloonix-13-00/cloonix-v13-00.tar.gz
+
+tar xvf cloonix-v13-00.tar.gz
+
+cd cloonix-v13-00
+
+(It is assumed that sudo makes the command run as root.)
 sudo ./install_depends
-wget http://clownix.net/downloads/cloonix-12-00/targz_store.tar.gz
-tar xvf targz_store.tar.gz
-./doitall
 
+wget http://clownix.net/downloads/cloonix-13-00/targz_store.tar.gz
+tar xvf targz_store.tar.gz
+
+./doitall
 
 -----------------------------------------------------------------------------
 HOWTO GET A WORKING VM:
-See at http://clownix.net/downloads/cloonix-12-00/bulk
+See availlable qcow2 vm at http://clownix.net/downloads/cloonix-13-00/bulk
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget http://clownix.net/downloads/cloonix-12-00/bulk/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-13-00/bulk/buster.qcow2.gz
 gunzip buster.qcow2.gz
 
 -----------------------------------------------------------------------------
@@ -53,24 +65,24 @@ HOWTO START BASIC NET:
 
 Check that your cpu is equiped with the necessary option:
 
-    egrep -c '(vmx|svm)' /proc/cpuinfo
+egrep -c '(vmx|svm)' /proc/cpuinfo
 
 The result must be non-zero
 
 To have the kvm_intel loaded at each start of your host (for an intel):
 
-    echo kvm_intel >> /etc/modules 
+echo kvm_intel >> /etc/modules 
 
 If you need the nested function of kvm, to put a cloonix network inside a
 cloonix vm guest, you can test if you have the necessary config:
 
-    cat /sys/module/kvm_intel/parameters/nested
+cat /sys/module/kvm_intel/parameters/nested
 
 If you do not have Y after this cat, then you can do:
 
-    echo 'GRUB_CMDLINE_LINUX="kvm-intel.nested=1"' >> /etc/default/grub
+echo 'GRUB_CMDLINE_LINUX="kvm-intel.nested=1"' >> /etc/default/grub
 
-    update-grub
+update-grub
 
 After any of the above commands, the host must be rebooted, then:
 
@@ -84,7 +96,7 @@ cd cloonix/quickstart
 -----------------------------------------------------------------------------
 TO START DPDK/OVS NET:  (Lower latency, Higher Throughput, advised)
 -----------------------------------------------------------------------------
-  The host must have 1 Giga size hugepages, I chose to have 5 hugepages:
+The host must have 1 Giga size hugepages, I chose to have 5 hugepages:
 -----------------------------------------------------------------------------
 
 To have the correct hugepage configuration, put in /etc/default/grub: 
@@ -93,17 +105,26 @@ GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugep
 
 Then
 
-    update-grub
-or
-    grub2-mkconfig --output=/boot/grub2/grub.cfg
+update-grub
+    or
+grub2-mkconfig --output=/boot/grub2/grub.cfg
 
-    mount |grep hugepages
+mount |grep hugepages
 Check pagesize=1024M
 
-    grep Huge /proc/meminfo
+grep Huge /proc/meminfo
 Check the number
 
-For debug:
+Automatic kvm insert with exec rights for users at startup::
+
+echo kvm_intel >> /etc/modules
+
+cat > /etc/udev/rules.d/65-kvm.rules << EOF
+KERNEL=="kvm", NAME="%k", GROUP="kvm", MODE="0666"
+EOF
+
+
+For ovs, log for the nemo network is at:
 
 cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
 
@@ -115,10 +136,7 @@ cloonix_ovs nemo vsctl show
 CISCO DEMO:
 After cloonix install, go in "tools/cisco" directory and execute
 The 3 steps to have a cisco network running ospf.
-are vhost interfaces. The nat must is put int front of the interface that is
-dhcp configured (eth4 or Gigabitethernet5) in the demo case.
---cisco4 must be given to have automatic nat attached to this interface
-(see in the step3_run_demo.sh script).
+You have to be patient, ciscos are very long to start.
 -----------------------------------------------------------------------------
 cloonix also supports wlan:
 cd cloonix/quickstart/mac80211_hwsim
@@ -130,7 +148,4 @@ echo "wireshark-common wireshark-common/install-setuid boolean true" > preseed
 debconf-set-selections preseed
 dpkg-reconfigure  wireshark
 adduser perrier wireshark
------------------------------------------------------------------------------
-Note: the only choices for the inter-vm links are now sock or dpdk, the vhost
-option is not supported in this version.
 -----------------------------------------------------------------------------

@@ -45,11 +45,11 @@ cd ${HERE}
 PKGCONFIG=${DBASE}/common/spice/spice_lib/pkgconfig
 export PATH=${NINJA}/ninja:$PATH
 export PKG_CONFIG_PATH=${PKGCONFIG}
-export QEMU_CFLAGS="-I${DBASE}/common/spice/spice_lib/include \
+export QEMU_CFLAGS="-fPIE -DPIE -I${DBASE}/common/spice/spice_lib/include \
                     -I${DBASE}/common/glob_include \
                     -I${DBASE}/server/muswitch/lib_ioc/include \
                     -I${DBASE}/server/muswitch/lib_muend/include"
-export QEMU_LDFLAGS="-L${DBASE}/common/spice/spice_lib -lepoxy \
+export QEMU_LDFLAGS="-pie -L${DBASE}/common/spice/spice_lib -lepoxy \
                      -Wl,-rpath,/usr/local/bin/cloonix/common/spice/spice_lib"
 
 echo Doing untar and patch
@@ -79,17 +79,21 @@ cd ${HERE}/tainted_qemu/
                      --enable-vhost-kernel
                      --enable-vhost-user
                      --enable-pie
+                     --enable-vhost-scsi
+                     --enable-vhost-crypto
+                     --enable-debug-info
+                     --enable-linux-aio
+                     --disable-vte
+                     --disable-lzo
+                     --disable-snappy
+                     --disable-bzip2
                      --disable-slirp
                      --disable-vhost-vsock
-                     --disable-vhost-scsi
-                     --disable-vhost-crypto
-                     --disable-debug-info
                      --disable-debug-tcg
                      --disable-virtfs
                      --disable-strip
                      --disable-modules
                      --disable-libiscsi
-                     --disable-linux-aio
                      --disable-libusb
                      --disable-tcg-interpreter
                      --disable-bsd-user
@@ -101,7 +105,6 @@ cd ${HERE}/tainted_qemu/
                      --disable-nettle
                      --disable-gcrypt
                      --disable-sdl
-                     --disable-vte
                      --disable-curses
                      --disable-vnc
                      --disable-vnc-sasl
@@ -120,9 +123,6 @@ cd ${HERE}/tainted_qemu/
                      --disable-rbd
                      --disable-libnfs
                      --disable-smartcard
-                     --disable-lzo
-                     --disable-snappy
-                     --disable-bzip2
                      --disable-seccomp
                      --disable-glusterfs
                      --disable-tpm

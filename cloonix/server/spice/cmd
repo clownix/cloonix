@@ -18,6 +18,7 @@ rm -rf ${TARGET}/spice
 tar xvf ${TARGZ}/spice.tar.gz
 cd ${TARGET}/spice
 sed -i 52s/true/false/ meson_options.txt
+sed -i s"/'-Wno-sign-compare',/'-Wno-sign-compare','-fPIC',/" meson.build
 export PKG_CONFIG_PATH=${TARGET}/pkgconfig
 export PATH=${MESON_NINJA}/ninja:$PATH
 ${MESON_NINJA}/meson/meson.py build

@@ -726,7 +726,7 @@ static int create_muovs_process(char *name)
   strncpy(arg_ovsx->sock, sock, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->ovsx_bin, ovsx_bin, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->dpdk_db_dir, dpdk_db_dir, MAX_PATH_LEN-1);
-  clownix_timeout_add(1000, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
+  clownix_timeout_add(2000, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
   return pid;
 }
 /*--------------------------------------------------------------------------*/
@@ -868,7 +868,7 @@ int dpdk_ovs_muovs_ready(void)
     if ((g_restart_hysteresis == 0) &&
         (cur->destroy_requested == 0) &&
         (cur->ovs_pid_ready == 1) &&
-        (cur->periodic_count > 3))
+        (cur->periodic_count >= 5))
       result = 1;
     }
   return result;

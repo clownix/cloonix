@@ -146,12 +146,21 @@ void sched_cnf(int dir, int type, int val)
   else if (type == a2b_type_brate)
     {
     g_cnf_brate[dir] = (uint64_t ) val;
-    g_cnf_qsize[dir] = (uint64_t ) ((g_cnf_brate[dir] * 1000) / 4);
+    if (val > 1000)
+      g_cnf_qsize[dir] = (uint64_t ) ((g_cnf_brate[dir] * 1000) / 4);
+    else if (val > 100)
+      g_cnf_qsize[dir] = (uint64_t ) ((g_cnf_brate[dir] * 1000) / 2);
+    else
+      g_cnf_qsize[dir] = (uint64_t ) ((g_cnf_brate[dir] * 1000));
     g_cnf_bsize[dir] = (uint64_t ) ((g_cnf_brate[dir] * 1000000) / 8)+2000000;
     }
   else
-    KERR("%d %d %d", dir, type, val);
-} 
+    KERR("ERROR %d %d %d", dir, type, val);
+
+  KERR("CNF SCHED %d: rate %ld  qsize %ld  bsize %ld  loss %ld",
+       dir, g_cnf_brate[dir], g_cnf_qsize[dir],
+       g_cnf_bsize[dir]/1000, g_cnf_loss[dir]);
+}
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -210,6 +219,11 @@ int sched_can_enqueue(int id, uint64_t len)
       }
     else
       {
+      if (g_pkt_drop[id] == 0)
+        {
+        KERR("DROP %lu %d %lu %lu %d", len, id, g_cnf_qsize[id],
+                                       g_byt_stored[id], MAX_ETH_LEN);
+        }
       g_pkt_drop[id] += 1;
       g_byt_drop[id] += len;
       }

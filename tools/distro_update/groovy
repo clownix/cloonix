@@ -53,6 +53,7 @@ done
 cloonix_ssh $NET ${NAME} "rm -f install_depends"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "sync"
+exit
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "poweroff"
 echo $QCOW2 done

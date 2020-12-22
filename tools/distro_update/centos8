@@ -37,8 +37,6 @@ cloonix_scp $NET ${HERE}/../../install_depends ${NAME}:/root
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "dhclient"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "dnf update -y"
-#----------------------------------------------------------------------
 set +e
 for ((i=0;i<2;i++)); do
   cloonix_ssh $NET ${NAME} "./install_depends"

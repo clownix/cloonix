@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <sys/queue.h>
 #include <sys/time.h>
+#include <libwebsockets.h>
 
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
@@ -42,6 +43,7 @@
 #include "sched.h"
 #include "circle.h"
 #include "utils.h"
+#include "flow_tab.h"
 
 
 
@@ -178,10 +180,12 @@ static void flush_tx_circle(int id)
       }
     if (id == 0)
       {
+      app_tx_flow(1, nb_tx_todo, pkts_tx);
       rte_vhost_enqueue_burst(1, 0, pkts_tx, nb_tx_todo);
       }
     else
       {
+      app_tx_flow(0, nb_tx_todo, pkts_tx);
       rte_vhost_enqueue_burst(0, 0, pkts_tx, nb_tx_todo);
       }
     for (i=0; i<nb_tx_todo; i++)

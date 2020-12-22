@@ -963,7 +963,7 @@ static void timer_msg_beat(void *data)
     {
     next = cur->next;
     cur->time_count += 1;
-    if (cur->time_count > 10)
+    if (cur->time_count > 25)
       {
       switch(cur->type)
         {

@@ -31,32 +31,3 @@ make clean
 make
 make install
 
-
-cd ${TARGET}
-tar xvf ${TARGZ}/libepoxy.tar.gz
-tar xvf ${TARGZ}/virglrenderer.tar.gz
-cd libepoxy
-${MESON_NINJA}/meson/meson.py build
-cd build
-${MESON_NINJA}/meson/meson.py configure --prefix=${TARGET} \
-                                        --datadir=${TARGET} \
-                                        --libdir=${TARGET} \
-                                        --includedir=${TARGET}
-ninja
-ninja install
-
-export PKG_CONFIG_PATH=${TARGET}/pkgconfig
-
-cd ${TARGET}
-
-cd virglrenderer
-patch -p1 < ${HERE}/virglrenderer.patch
-${MESON_NINJA}/meson/meson.py build
-cd build
-${MESON_NINJA}/meson/meson.py configure --prefix=${TARGET} \
-                                        --datadir=${TARGET} \
-                                        --libdir=${TARGET} \
-                                        --includedir=${TARGET}/include
-ninja
-ninja install
-

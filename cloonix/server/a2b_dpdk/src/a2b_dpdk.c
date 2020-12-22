@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <libwebsockets.h>
 
 
 #include <rte_compat.h>
@@ -38,12 +39,14 @@
 #include <rte_pci.h>
 #include <rte_version.h>
 #include <rte_vhost.h>
+#include <rte_errno.h>
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "vhost_client.h"
 #include "utils.h"
 #include "sched.h"
+#include "flow_tab.h"
 
 
 /*--------------------------------------------------------------------------*/
@@ -65,6 +68,8 @@ static uint32_t g_cpu_flags;
 /*--------------------------------------------------------------------------*/
 
 #define RANDOM_APPEND_SIZE 8
+#define FLOW_TAB_SIZE 2048
+#define FLOW_TAB_PORT 7681
 /*****************************************************************************/
 static char *random_str(void)
 {
@@ -108,6 +113,7 @@ static void heartbeat (int delta)
   static int count_ticks_rpct = 0;
   count_ticks_blkd += 1;
   count_ticks_rpct += 1;
+  flow_tab_loop();
   if (count_ticks_blkd == 5)
     {
     blkd_heartbeat(NULL);
@@ -117,6 +123,8 @@ static void heartbeat (int delta)
     {
     rpct_heartbeat(NULL);
     count_ticks_rpct = 0;
+    if (g_started_vhost == 1)
+      flow_tab_periodic_dump(FLOW_TAB_SIZE);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -166,6 +174,7 @@ void rpct_recv_kil_req(void *ptr, int llid, int tid)
 }
 /*--------------------------------------------------------------------------*/
 
+
 /****************************************************************************/
 void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 {
@@ -181,19 +190,19 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   "cloonixa2b_suidroot", strlen("cloonixa2b_suidroot")))
     {
     if (check_and_set_uid())
-      rpct_send_diag_msg(NULL, llid, tid, "cloonixa2b_suidroot_ko");
+      snprintf(resp, MAX_PATH_LEN-1, "cloonixa2b_suidroot_ko %s", g_a2b_name);
     else
-      {
-      rpct_send_diag_msg(NULL, llid, tid, "cloonixa2b_suidroot_ok");
-      }
+      snprintf(resp, MAX_PATH_LEN-1, "cloonixa2b_suidroot_ok %s", g_a2b_name);
+    rpct_send_diag_msg(NULL, llid, tid, resp);
     }
   else if (sscanf(line,
   "cloonixa2b_vhost_start %s", name) == 1)
     {
     setenv("XDG_RUNTIME_DIR", g_runtime, 1);
-    ret = rte_eal_init(5, g_rte_argv);
+    ret = rte_eal_init(6, g_rte_argv);
     if (ret < 0)
-      KOUT("Cannot init EAL\n");
+      KOUT("Cannot init EAL %d\n", rte_errno);
+    flow_tab_init(FLOW_TAB_PORT, FLOW_TAB_SIZE);
     vhost_client_start(g_a2b0_socket, g_memid0, g_a2b1_socket, g_memid1);
     g_started_vhost = 1;
     snprintf(resp, MAX_PATH_LEN-1, 
@@ -314,7 +323,8 @@ int main (int argc, char *argv[])
   g_rte_argv[2] = "--proc-type=secondary";
   g_rte_argv[3] = "--log-level=5";
   g_rte_argv[4] = get_cpu_from_flags(g_cpu_flags);
-  g_rte_argv[5] = NULL;
+  g_rte_argv[5] = "--";
+  g_rte_argv[6] = NULL;
   daemon(0,0);
   seteuid(getuid());
   cloonix_set_pid(getpid());

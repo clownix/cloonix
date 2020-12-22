@@ -149,6 +149,7 @@ static void timer_heartbeat(void *data)
       if (llid)
         {
         cur->llid = llid;
+        cur->count = 0;
         }
       else
         {
@@ -163,9 +164,18 @@ static void timer_heartbeat(void *data)
       }
     else if (cur->suid_root_done == 0)
       {
-      rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
-      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
-      cur->suid_root_done = 1;
+      cur->count += 1;
+      if (cur->count == 50)
+        {
+        KERR("%s %s", locnet, cur->socket);
+        dpdk_d2d_event_from_d2d_dpdk_process(cur->name, -1);
+        free_d2d_dpdk(cur);
+        }
+      else
+        {
+        rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
+        hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+        }
       }
     else if (cur->watchdog_count >= 150)
       {
@@ -217,12 +227,12 @@ void d2d_dpdk_pid_resp(int llid, int tid, char *name, int pid)
   else
     {
     cur->watchdog_count = 0;
-    if (cur->pid == 0)
+    if ((cur->pid == 0) && (cur->suid_root_done == 1))
       {
       dpdk_d2d_event_from_d2d_dpdk_process(name, 1);
       cur->pid = pid;
       }
-    else if (cur->pid != pid)
+    else if (cur->pid && (cur->pid != pid))
       {
       KERR("%s %s %d", locnet, name, pid);
       }
@@ -253,60 +263,117 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
 {
   char *locnet = cfg_get_cloonix_name();
   uint16_t udp_port;
+  t_d2d_dpdk *cur;
   char name[MAX_NAME_LEN];
-  if (!strcmp(line,
-  "cloonixd2d_suidroot_ko"))
+  if (sscanf(line,
+  "cloonixd2d_suidroot_ko %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    KERR("%s Started d2d_dpdk: %s", locnet, line);
+    cur = find_d2d_dpdk(name);
+    if (!cur)
+      KERR("%s ERROR d2d_dpdk: %s", locnet, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      KERR("%s Started d2d_dpdk: %s", locnet, line);
+            dpdk_d2d_event_from_d2d_dpdk_process(cur->name, -1);
+      }
     }
-  else if (!strcmp(line,
-  "cloonixd2d_suidroot_ok"))
+  else if (sscanf(line,
+  "cloonixd2d_suidroot_ok %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
+    cur = find_d2d_dpdk(name);
+    if (!cur)
+      KERR("%s ERROR d2d_dpdk: %s", locnet, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      cur->suid_root_done = 1;
+      cur->count = 0;
+      }
     }
-  else if (!strcmp(line,
-  "cloonixd2d_eal_init_ok"))
+  else if (sscanf(line,
+  "cloonixd2d_eal_init_ok %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
+    cur = find_d2d_dpdk(name);
+    if (!cur)
+      KERR("%s ERROR d2d_dpdk: %s", locnet, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      }
     }
   else if (sscanf(line,
   "cloonixd2d_vhost_start_ok %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    dpdk_d2d_vhost_started(name);
+    cur = find_d2d_dpdk(name);
+    if (!cur)
+      KERR("%s ERROR d2d_dpdk: %s", locnet, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      dpdk_d2d_vhost_started(name);
+      }
     }
   else if (sscanf(line,
   "cloonixd2d_vhost_stop_ok %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    dpdk_d2d_vhost_stopped(name);
+    cur = find_d2d_dpdk(name);
+    if (!cur)
+      KERR("%s ERROR d2d_dpdk: %s", locnet, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      dpdk_d2d_vhost_stopped(name);
+      }
     }
   else if (sscanf(line,
   "cloonixd2d_get_udp_port_ko %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    dpdk_d2d_get_udp_port_done(name, 0, -1);
+    cur = find_d2d_dpdk(name);
+    if (!cur)
+      KERR("%s ERROR d2d_dpdk: %s", locnet, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      dpdk_d2d_get_udp_port_done(name, 0, -1);
+      }
     }
   else if (sscanf(line,
   "cloonixd2d_get_udp_port_ok %s udp_port=%hu", name, &udp_port) == 2)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    dpdk_d2d_get_udp_port_done(name, udp_port, 0);
+    cur = find_d2d_dpdk(name);
+    if (!cur)
+      KERR("%s ERROR d2d_dpdk: %s", locnet, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      dpdk_d2d_get_udp_port_done(name, udp_port, 0);
+      }
     }
   else if (sscanf(line,
   "cloonixd2d_set_dist_udp_ip_port_ok %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    dpdk_d2d_dist_udp_ip_port_done(name);
+    cur = find_d2d_dpdk(name);
+    if (!cur)
+      KERR("%s ERROR d2d_dpdk: %s", locnet, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      dpdk_d2d_dist_udp_ip_port_done(name);
+      }
     }
   else if (sscanf(line,
   "cloonixd2d_receive_probe_udp %s", name) == 1)
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    dpdk_d2d_receive_probe_udp(name);
+    cur = find_d2d_dpdk(name);
+    if (!cur)
+      KERR("%s ERROR d2d_dpdk: %s", locnet, line);
+    else
+      {
+      hop_event_hook(llid, FLAG_HOP_DIAG, line);
+      dpdk_d2d_receive_probe_udp(name);
+      }
     }
-
   else
     KERR("%s ERROR d2d_dpdk: %s", locnet, line);
 }

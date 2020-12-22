@@ -37,6 +37,7 @@
 #include <rte_pci.h>
 #include <rte_version.h>
 #include <rte_vhost.h>
+#include <rte_errno.h>
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
@@ -226,9 +227,9 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       {
       rpct_send_diag_msg(NULL, llid, tid, "cloonixnat_suidroot_ok");
       setenv("XDG_RUNTIME_DIR", g_runtime, 1);
-      ret = rte_eal_init(5, g_rte_argv);
+      ret = rte_eal_init(6, g_rte_argv);
       if (ret < 0)
-        KOUT("Cannot init EAL\n");
+        KOUT("Cannot init EAL %d\n", rte_errno);
       machine_init();
       txq_dpdk_init();
       ssh_cisco_llid_init(g_cisco_path);
@@ -363,7 +364,8 @@ int main (int argc, char *argv[])
   g_rte_argv[2] = "--proc-type=secondary";
   g_rte_argv[3] = "--log-level=5";
   g_rte_argv[4] = get_cpu_from_flags(g_cpu_flags);
-  g_rte_argv[5] = NULL;
+  g_rte_argv[5] = "--";
+  g_rte_argv[6] = NULL;
   daemon(0,0);
   utils_init();
   seteuid(getuid());

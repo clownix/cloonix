@@ -783,7 +783,7 @@ static void timer_endp_beat(void *data)
                               cur->name,cur->num);
             cur->periodic_count = 1;
             cur->unanswered_pid_req += 1;
-            if (cur->unanswered_pid_req > 2)
+            if (cur->unanswered_pid_req > 5)
               {
               KERR("ENDP %s %d NOT RESPONDING KILLING IT",cur->name,cur->num);
               endp_mngt_send_quit(cur->name, cur->num);

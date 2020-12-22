@@ -39,6 +39,7 @@
 #include <rte_pci.h>
 #include <rte_version.h>
 #include <rte_vhost.h>
+#include <rte_errno.h>
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
@@ -188,18 +189,20 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   "cloonixd2d_suidroot", strlen("cloonixd2d_suidroot")))
     {
     if (check_and_set_uid())
-      rpct_send_diag_msg(NULL, llid, tid, "cloonixd2d_suidroot_ko");
+      snprintf(resp, MAX_PATH_LEN-1, "cloonixd2d_suidroot_ko %s", g_d2d_name);
     else
-      rpct_send_diag_msg(NULL, llid, tid, "cloonixd2d_suidroot_ok");
+      snprintf(resp, MAX_PATH_LEN-1, "cloonixd2d_suidroot_ok %s", g_d2d_name);
+    rpct_send_diag_msg(NULL, llid, tid, resp);
     }
   else if (!strncmp(line,
   "cloonixd2d_eal_init", strlen("cloonixd2d_eal_init")))
     {
     setenv("XDG_RUNTIME_DIR", g_runtime, 1);
-    ret = rte_eal_init(5, g_rte_argv);
+    ret = rte_eal_init(6, g_rte_argv);
     if (ret < 0)
-      KOUT("Cannot init EAL %s\n", g_net_name);
-    rpct_send_diag_msg(NULL, llid, tid, "cloonixd2d_eal_init_ok");
+      KOUT("Cannot init EAL %s %d\n", g_net_name, rte_errno);
+    snprintf(resp, MAX_PATH_LEN-1, "cloonixd2d_eal_init_ok %s", g_d2d_name);
+    rpct_send_diag_msg(NULL, llid, tid, resp);
     }
   else if (sscanf(line,
   "cloonixd2d_vhost_start %s", name) == 1)
@@ -375,7 +378,8 @@ int main (int argc, char *argv[])
   g_rte_argv[2] = "--proc-type=secondary";
   g_rte_argv[3] = "--log-level=5";
   g_rte_argv[4] = get_cpu_from_flags(g_cpu_flags);
-  g_rte_argv[5] = NULL;
+  g_rte_argv[5] = "--";
+  g_rte_argv[6] = NULL;
   daemon(0,0);
   seteuid(getuid());
   cloonix_set_pid(getpid());

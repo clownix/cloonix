@@ -258,7 +258,7 @@ static void timer_a2b_msg_beat(void *data)
       }
     if (cur->to_be_destroyed == 1)
       {
-  a2b_dpdk_start_stop_process(cur->name, 0);
+      a2b_dpdk_start_stop_process(cur->name, 0);
       free_a2b(cur);
       }
     cur = next;

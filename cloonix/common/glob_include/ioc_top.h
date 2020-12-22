@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#include <sys/socket.h>
 #include "ioc_blkd.h"
 #include "glob_common.h"
 #include "rpct.h"

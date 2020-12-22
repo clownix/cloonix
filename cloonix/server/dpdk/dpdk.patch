@@ -1,6 +1,6 @@
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2020-11-06 22:33:39.000000000 +0100
-+++ dpdk_tainted/drivers/meson.build	2020-11-06 22:36:30.449887600 +0100
+--- dpdk/drivers/meson.build	2020-11-28 00:08:56.000000000 +0100
++++ dpdk_tainted/drivers/meson.build	2020-11-29 21:35:24.966063721 +0100
 @@ -164,6 +164,7 @@
  				objects: objs,
  				include_directories: includes,
@@ -9,7 +9,7 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  				c_args: cflags,
  				install: true)
  
-@@ -215,6 +216,7 @@
+@@ -217,6 +218,7 @@
  				version: abi_version,
  				soversion: so_version,
  				install: true,
@@ -18,8 +18,8 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  
  			# create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_ethdev.c
---- dpdk/drivers/net/virtio/virtio_ethdev.c	2020-11-06 22:33:39.000000000 +0100
-+++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2020-11-06 22:36:30.449887600 +0100
+--- dpdk/drivers/net/virtio/virtio_ethdev.c	2020-11-28 00:08:56.000000000 +0100
++++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2020-11-29 21:35:24.966063721 +0100
 @@ -2219,19 +2219,19 @@
  	PMD_INIT_LOG(DEBUG, "configure");
  	req_features = VIRTIO_PMD_DEFAULT_GUEST_FEATURES;
@@ -54,8 +54,8 @@ diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virt
  	if (dev->data->dev_conf.intr_conf.rxq) {
  		ret = virtio_init_device(dev, hw->req_guest_features);
 diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c
---- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2020-11-06 22:33:39.000000000 +0100
-+++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2020-11-06 22:36:30.453887624 +0100
+--- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2020-11-28 00:08:56.000000000 +0100
++++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2020-11-29 21:35:24.966063721 +0100
 @@ -721,21 +721,21 @@
  	PMD_INIT_LOG(INFO, "Backend type detected: %s",
  		     virtio_user_backend_strings[backend_type]);
@@ -94,9 +94,9 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net
  	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_MAC) == 1) {
  		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_MAC,
 diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/librte_eal/common/eal_common_options.c
---- dpdk/lib/librte_eal/common/eal_common_options.c	2020-11-06 22:33:39.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-11-06 22:36:30.453887624 +0100
-@@ -124,7 +124,9 @@
+--- dpdk/lib/librte_eal/common/eal_common_options.c	2020-11-28 00:08:56.000000000 +0100
++++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-11-29 21:35:24.966063721 +0100
+@@ -130,7 +130,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
  /* Default path of external loadable drivers */
@@ -108,27 +108,115 @@ diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/libr
  
  /*
 diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal.c
---- dpdk/lib/librte_eal/linux/eal.c	2020-11-06 22:33:39.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-11-06 22:36:30.453887624 +0100
-@@ -97,13 +97,13 @@
+--- dpdk/lib/librte_eal/linux/eal.c	2020-11-28 00:08:56.000000000 +0100
++++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-11-29 21:36:46.102492042 +0100
+@@ -27,6 +27,7 @@
+ #endif
+ #include <linux/version.h>
+ 
++
+ #include <rte_compat.h>
+ #include <rte_common.h>
+ #include <rte_debug.h>
+@@ -92,18 +93,17 @@
+ {
+ 	const char *directory = default_runtime_dir;
+ 	const char *xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
+-	const char *fallback = "/tmp";
+ 	char run_dir[PATH_MAX];
  	char tmp[PATH_MAX];
- 	int ret;
+-	int ret;
++	int ret, err;
++        struct stat s;
  
 -	if (getuid() != 0) {
-+//cloonix	if (getuid() != 0) {
- 		/* try XDG path first, fall back to /tmp */
- 		if (xdg_runtime_dir != NULL)
- 			directory = xdg_runtime_dir;
- 		else
- 			directory = fallback;
+-		/* try XDG path first, fall back to /tmp */
+-		if (xdg_runtime_dir != NULL)
+-			directory = xdg_runtime_dir;
+-		else
+-			directory = fallback;
 -	}
-+//cloonix	}
++	if (xdg_runtime_dir != NULL)
++		directory = xdg_runtime_dir;
++	else {
++                syslog(LOG_ERR | LOG_USER, "xdg_runtime_dir NOT DEFINED\n");
++		return -1;
++        }
  	/* create DPDK subdirectory under runtime dir */
  	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
  	if (ret < 0 || ret == sizeof(tmp)) {
+@@ -122,19 +122,47 @@
+ 	/* create the path if it doesn't exist. no "mkdir -p" here, so do it
+ 	 * step by step.
+ 	 */
+-	ret = mkdir(tmp, 0700);
+-	if (ret < 0 && errno != EEXIST) {
+-		RTE_LOG(ERR, EAL, "Error creating '%s': %s\n",
+-			tmp, strerror(errno));
+-		return -1;
+-	}
+-
+-	ret = mkdir(run_dir, 0700);
+-	if (ret < 0 && errno != EEXIST) {
+-		RTE_LOG(ERR, EAL, "Error creating '%s': %s\n",
+-			run_dir, strerror(errno));
+-		return -1;
+-	}
++        err = stat(tmp, &s);
++        if(-1 == err) {
++            if(ENOENT == errno) {
++	        ret = mkdir(tmp, 0700);
++	        if (ret < 0 && errno != EEXIST) {
++                    syslog(LOG_ERR | LOG_USER, "MKDIR ERROR %s %s\n",
++                           tmp, strerror(errno));
++		return -1;
++	        }
++            } else {
++                syslog(LOG_ERR | LOG_USER, "STAT ERROR %s %s %d\n",
++                       tmp, strerror(errno), getuid());
++    	        return -1;
++            }
++        } else {
++            if(S_ISDIR(s.st_mode) == 0) {
++                syslog(LOG_ERR | LOG_USER, "NOT A DIR ERROR %s\n", tmp);
++    	        return -1;
++            }
++        }
++
++        err = stat(run_dir, &s);
++        if(-1 == err) {
++            if(ENOENT == errno) {
++	        ret = mkdir(run_dir, 0700);
++                if (ret < 0 && errno != EEXIST) {
++                    syslog(LOG_ERR | LOG_USER, "MKDIR ERROR %s %s\n", 
++                           run_dir, strerror(errno));
++                return -1;
++                }
++            } else {
++                syslog(LOG_ERR | LOG_USER, "STAT ERROR %s %s %d\n",
++                       run_dir, strerror(errno), getuid());
++                return -1;
++            }
++        } else {
++            if(S_ISDIR(s.st_mode) == 0) {
++                syslog(LOG_ERR | LOG_USER, "NOT A DIR ERROR %s\n", run_dir);
++                return -1;
++            }
++        }
+ 
+ 	if (eal_set_runtime_dir(run_dir, sizeof(run_dir)))
+ 		return -1;
+@@ -924,6 +952,7 @@
+ {
+ 	fprintf(stderr, "EAL: FATAL: %s\n", msg);
+ 	RTE_LOG(ERR, EAL, "%s\n", msg);
++        syslog(LOG_ERR | LOG_USER, "%s\n", msg);
+ }
+ 
+ /*
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2020-11-06 22:33:39.000000000 +0100
-+++ dpdk_tainted/lib/meson.build	2020-11-06 22:36:30.453887624 +0100
+--- dpdk/lib/meson.build	2020-11-28 00:08:56.000000000 +0100
++++ dpdk_tainted/lib/meson.build	2020-11-29 21:35:24.970063744 +0100
 @@ -128,6 +128,7 @@
  					c_args: cflags,
  					dependencies: static_deps,
@@ -137,7 +225,7 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
  					install: true)
  			static_dep = declare_dependency(
  					include_directories: includes,
-@@ -190,6 +191,7 @@
+@@ -192,6 +193,7 @@
  					link_depends: lk_deps,
  					version: abi_version,
  					soversion: so_version,

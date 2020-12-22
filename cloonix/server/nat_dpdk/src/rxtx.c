@@ -45,7 +45,6 @@
 #include "tcp.h"
 #include "rxq_dpdk.h"
 
-#define IPPROTO_IGMP 2
 
 static void *g_jfs;
 
