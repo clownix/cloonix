@@ -97,7 +97,7 @@ static int edp_del_inside_dpdk(t_edp *cur, char *name, char *lan)
       KERR("%s %s", name, lan);
     else
       {
-      if (edp_phy_del_dpdk(lan, name))
+      if (edp_phy_del_port(lan, name))
         KERR("%s %s", name, lan);
       else
         result = 0;
@@ -208,7 +208,7 @@ static int begin_dpdk_tap(t_edp *cur)
 static int begin_dpdk_phy(t_edp *cur)
 {
   int result = eth_type_none;
-  if (edp_phy_add_dpdk(cur->llid, cur->tid, cur->lan, cur->name))
+  if (edp_phy_add_port(cur->llid, cur->tid, cur->lan, cur->name))
     {
     KERR("%s %s", cur->name, cur->lan);
     utils_send_status_ko(&(cur->llid), &(cur->tid), "phy create error");

@@ -291,8 +291,6 @@ void dpdk_tap_resp_add(int is_ko, char *name, char *strmac)
   t_dtap *cur = get_dtap(name);
   if (cur == NULL)
     KERR("%s", name);
-  else if (!cur->llid)
-    KERR("%s", name);
   else if (is_ko)
     {
     KERR("%s", cur->name);

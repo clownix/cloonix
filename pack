@@ -69,7 +69,6 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
             muswitch/musnf \
             muswitch/munat \
             muswitch/muc2c \
-            muswitch/muovs \
             muswitch/muwlan \
             muswitch/mulan ; do
     rm -f ${CLOONIX_SERVER}/${i}/cmd
@@ -79,6 +78,11 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
     rm -rf ${CLOONIX_SERVER}/${i}/include
   done
 #----------------------------------------------------------
+  rm -rf ${CLOONIX_SERVER}/ovs_drv/build
+  rm -rf ${CLOONIX_SERVER}/ovs_drv/usr
+  for i in allclean cmd meson.build; do
+    rm -f ${CLOONIX_SERVER}/ovs_drv/${i}
+  done
   rm -rf ${CLOONIX_SERVER}/snf_dpdk
   rm -rf ${CLOONIX_SERVER}/nat_dpdk
   rm -rf ${CLOONIX_SERVER}/d2d_dpdk

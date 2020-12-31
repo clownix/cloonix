@@ -313,7 +313,7 @@ static void recv_ack(int is_add, int is_ko, char *lan_name,
         if ((is_ko) || (!is_add))
           {
           if (is_ko)
-            utils_send_status_ko(&(lan->llid), &(lan->tid), "openvswitch error");
+            utils_send_status_ko(&(lan->llid), &(lan->tid),"openvswitch error");
           else
             utils_send_status_ok(&(lan->llid), &(lan->tid));
           vlan_free(eth, lan);
@@ -390,7 +390,7 @@ int dpdk_dyn_add_lan_to_eth(int llid, int tid, char *lan_name,
     sprintf(info, "Not found: %s %d", name, num);
   else
     {
-    if (!dpdk_ovs_muovs_ready())
+    if (!dpdk_ovs_drv_ready())
       {
       sprintf(info, "OVS not ready: %s %s %d", lan_name, name, num);
       KERR("%s", info);

@@ -505,7 +505,9 @@ void edp_mngt_cisco_nat_destroy(char *name)
 /****************************************************************************/
 void edp_mngt_kvm_lan_exists(char *lan, int *dpdk, int *sock)
 { 
-  *dpdk = (dpdk_dyn_lan_exists(lan)) + (dpdk_d2d_lan_exists(lan));
+  *dpdk = (dpdk_dyn_lan_exists(lan)) +
+          (dpdk_d2d_lan_exists(lan)) +
+          (dpdk_a2b_lan_exists(lan));
   *sock = endp_evt_lan_is_in_use_by_vm_or_c2c(lan);
 }
 /*--------------------------------------------------------------------------*/

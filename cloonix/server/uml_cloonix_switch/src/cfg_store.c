@@ -987,6 +987,8 @@ t_topo_info *cfg_produce_topo_info(void)
 
   clownix_free(dpdk_ovs_endp, __FUNCTION__);
   clownix_free(edp_endp, __FUNCTION__);
+  clownix_free(d2d_endp, __FUNCTION__);
+  clownix_free(a2b_endp, __FUNCTION__);
   topo->nb_c2c = i_c2c;
   topo->nb_sat = i_sat;
   topo->nb_endp = i_endp;

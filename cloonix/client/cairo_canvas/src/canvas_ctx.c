@@ -815,7 +815,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *phy  = gtk_menu_item_new_with_label("phy");
   GtkWidget *pci  = gtk_menu_item_new_with_label("pci");
   GtkWidget *ovs  = gtk_menu_item_new_with_label("ovs");
-  GtkWidget *cmd  = gtk_menu_item_new_with_label("cmd");
+  GtkWidget *cmd  = gtk_menu_item_new_with_label("cmd_list");
   GtkWidget *kvm_conf = gtk_menu_item_new_with_label("Kvm_conf");
   GtkWidget *other= gtk_menu_item_new_with_label("Other");
   g_x_mouse = (double) x;

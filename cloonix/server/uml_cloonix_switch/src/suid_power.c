@@ -266,7 +266,7 @@ static void timer_monitoring(void *data)
       req = "cloonixsuid_req_phy";
       rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);
       hop_event_hook(g_llid, FLAG_HOP_EVT, req);
-      if (dpdk_ovs_muovs_ready())
+      if (dpdk_ovs_drv_ready())
         {
         req = "cloonixsuid_req_ovs";
         rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, req);

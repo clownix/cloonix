@@ -17,7 +17,7 @@
 /*****************************************************************************/
 void edp_phy_ack_add(int tid, int is_ok, char *lan, char *name);
 void edp_phy_ack_del(int tid, int is_ok, char *lan, char *name);
-int  edp_phy_add_dpdk(int llid, int tid, char *lan, char *name);
-int  edp_phy_del_dpdk(char *lan, char *name);
+int  edp_phy_add_port(int llid, int tid, char *lan, char *name);
+int  edp_phy_del_port(char *lan, char *name);
 void edp_phy_init(void);
 /*--------------------------------------------------------------------------*/

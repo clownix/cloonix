@@ -717,7 +717,7 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
           {
           arm_static_vm_timeout(name, 100);
           }
-        if (dpdk_ovs_muovs_ready())
+        if (dpdk_ovs_drv_ready())
           wake_up->state = auto_create_vm_launch;
         }
       else

@@ -74,6 +74,7 @@ typedef struct t_dpdk_vm
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM];
   int  dyn_vm_add_delay;
+  int  dyn_vm_add_eth_start;
   int  dyn_vm_add_eth_todo;
   int  dyn_vm_add_done;
   int  dyn_vm_add_done_acked;
@@ -484,13 +485,20 @@ static int try_connect_eth(t_dpdk_vm *vm)
       if (!access(endp_path, F_OK))
         {
         success = 1;
-        vm->dyn_vm_add_eth_todo = i+1;
-        event_print("Add eth %s %d", vm->name, i);
-        mc = vm->eth_table[i].mac_addr;
-        sprintf(strmac, " mac=%02X:%02X:%02X:%02X:%02X:%02X",
-                          mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF,
-                          mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF);
-        dpdk_dyn_add_eth(vm->name, i, strmac);
+        if (vm->dyn_vm_add_eth_start == 0)
+          {
+          vm->dyn_vm_add_eth_start = 1;
+          }
+        else
+          {
+          vm->dyn_vm_add_eth_todo = i+1;
+          event_print("Add eth %s %d", vm->name, i);
+          mc = vm->eth_table[i].mac_addr;
+          sprintf(strmac, " mac=%02X:%02X:%02X:%02X:%02X:%02X",
+                            mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF,
+                            mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF);
+          dpdk_dyn_add_eth(vm->name, i, strmac);
+          }
         break;
         }
       }
@@ -691,17 +699,19 @@ static void timer_ovs_beat(void *data)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int create_muovs_process(char *name)
+static int create_ovs_drv_process(char *name)
 {
   int pid = 0;
   char **argv;
-  char *bin_path = utils_get_endp_bin_path(endp_type_ovsdb);
+  char bin_path[MAX_PATH_LEN];
   char *net = cfg_get_cloonix_name();
   char *sock = utils_get_dpdk_ovs_path(name);
   char *ovsx_bin = utils_get_dpdk_ovs_bin_dir();
   char *dpdk_db_dir = utils_get_dpdk_ovs_db_dir();
   t_arg_ovsx *arg_ovsx = (t_arg_ovsx *) clownix_malloc(sizeof(t_arg_ovsx), 10);
   memset(arg_ovsx, 0, sizeof(t_arg_ovsx));
+  memset(bin_path, 0, MAX_PATH_LEN);
+  sprintf(bin_path, "%s/server/ovs_drv/cloonix_ovs_drv", cfg_get_bin_dir());
   strncpy(arg_ovsx->bin_path, bin_path, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->net, net, MAX_NAME_LEN-1);
   strncpy(arg_ovsx->name, name, MAX_NAME_LEN-1);
@@ -859,7 +869,7 @@ void dpdk_ovs_rpct_recv_diag_msg(int llid, int tid, char *line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_ovs_muovs_ready(void)
+int dpdk_ovs_drv_ready(void)
 {
   int result = 0;
   t_ovs *cur = g_head_ovs;
@@ -1082,7 +1092,7 @@ void dpdk_ovs_start_openvswitch_if_not_done(void)
     event_print("Start OpenVSwitch");
     cur = ovs_alloc("ovsdb");
     cur->watchdog_protect = 1;
-    cur->clone_start_pid = create_muovs_process("ovsdb");
+    cur->clone_start_pid = create_ovs_drv_process("ovsdb");
     cur->clone_start_pid_just_done = 1;
     }
 }

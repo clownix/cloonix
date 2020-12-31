@@ -378,8 +378,6 @@ char *utils_get_endp_bin_path(int type)
     sprintf(path, "%s/server/muswitch/muc2c/cloonix_muc2c", cfg_get_bin_dir());
   else if (type == endp_type_nat)
     sprintf(path, "%s/server/muswitch/munat/cloonix_munat", cfg_get_bin_dir());
-  else if (type == endp_type_ovsdb)
-    sprintf(path, "%s/server/muswitch/muovs/cloonix_muovs", cfg_get_bin_dir());
   else if (type == endp_type_pci)
     KERR("%d", type);
   else

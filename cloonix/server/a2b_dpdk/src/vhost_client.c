@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <sys/queue.h>
 #include <sys/time.h>
-#include <libwebsockets.h>
 
 #include <rte_compat.h>
 #include <rte_bus_pci.h>

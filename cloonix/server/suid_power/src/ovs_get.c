@@ -51,10 +51,19 @@ static t_list_names *g_head_names;
 static int name_exists_in_list(char *line)
 {
   int result = 0;
+  char cpy_line[MAX_PATH_LEN];
+  char *ptr_start, *ptr_end;
   t_list_names *cur = g_head_names;
+
+  strncpy(cpy_line, line, MAX_PATH_LEN-1);
+  cpy_line[MAX_PATH_LEN-1] = 0;
+  ptr_start = cpy_line;
+  ptr_end = ptr_start + strcspn(ptr_start, " \r\n\t");
+  *ptr_end = 0;
   while (cur)
     {
-    if (strstr(line, cur->name))
+    if ((strlen(cur->name) > 1) &&
+        (!strncmp(line, cur->name, strlen(cur->name))))
       result = 1;
     cur = cur->next;
     }
@@ -76,7 +85,8 @@ static void update_bridges(char *bin, char *sock)
     {
     while (fgets(line, MAX_PATH_LEN-1, fh) != NULL)
       {
-      if (!strncmp(line, "br_", strlen("br_")))
+      if ((!strncmp(line, "br_", strlen("br_"))) ||
+          (name_exists_in_list(line)))
         {
         ptr_start = g_brgs[g_nb_brgs].br;
         strncpy(g_brgs[g_nb_brgs].br, line, MAX_NAME_LEN-1);

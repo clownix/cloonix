@@ -642,7 +642,7 @@ static void master_and_slave_ping_process(t_d2d_cnx *cur, int peer_status)
 
     {
     dpdk_ovs_start_openvswitch_if_not_done();
-    if (dpdk_ovs_muovs_ready())
+    if (dpdk_ovs_drv_ready())
       {
       d2d_dpdk_eal_init(cur->name);
       cur->openvswitch_started_and_running = 1;

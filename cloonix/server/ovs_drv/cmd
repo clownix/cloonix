@@ -1,6 +1,5 @@
 #!/bin/bash
 HERE=`pwd`
-DPDK=../dpdk
 CLOONIX_COMMON=../../common
 NINJA=${HERE}/${CLOONIX_COMMON}/meson_ninja
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
@@ -8,8 +7,6 @@ GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
-
-
 
 ./allclean
 
@@ -34,46 +31,34 @@ if [ ! -f ${NINJA}/ninja/ninja ]; then
   ./cmd
   cd ${HERE}
 fi
-if [ ! -f ${DPDK}/bin/dpdk-testpmd ]; then
-  cd ${DPDK}
-  ./cmd
-  cd ${HERE}
-fi
 
-export PKG_CONFIG_PATH=${DPDK}/lib/pkgconfig
 export PATH=${NINJA}/ninja:${NINJA}/meson:$PATH
 
 cat > meson.build << EOF
-project('cloonix_a2b_dpdk', 'c')
+project('cloonix_ovs_drv', 'c')
 
 cflags = ['-march=native']
 cflags += ['-fPIC']
 cflags += ['-DALLOW_EXPERIMENTAL_API']
 
-incdir = include_directories('${DPDK}/include',
-                             '${IO_CLOWNIX}/include',
+incdir = include_directories('${IO_CLOWNIX}/include',
                              '${RPC_CLOWNIX}/include',
                              '${GLOB_INCLUDE}')
 
 crypto = dependency('libcrypto')
-dpdk = dependency('libdpdk')
 cmplr = meson.get_compiler('c')
 io_clownix = cmplr.find_library('libio_clownix', dirs : '${HERE}/${IO_CLOWNIX}')
 blkd = cmplr.find_library('libblkd', dirs : '${HERE}/${BLKD}')
 rpct = cmplr.find_library('librpct', dirs : '${HERE}/${RPCT}')
 
-sources = files('src/flow_tab.c',
-                'src/a2b_dpdk.c',
-                'src/vhost_client.c',
-                'src/sched.c',
-                'src/circle.c',
-                'src/utils.c',
-                'src/stub.c')
+sources = files('src/ovs_drv.c',
+                'src/action.c',
+                'src/my_popen.c',
+                'src/ovs_execv.c')
 
-executable('cloonix_a2b_dpdk', sources, include_directories : incdir,
-            dependencies : [dpdk,io_clownix,blkd,rpct,crypto],
+executable('cloonix_ovs_drv', sources, include_directories : incdir,
+            dependencies : [io_clownix,blkd,rpct,crypto],
             c_args: cflags,
-            install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
             install : true)
 
 EOF
@@ -83,4 +68,4 @@ cd build
 ninja
 DESTDIR=${HERE} ninja install
 cd ${HERE}
-cp -vf usr/local/bin/cloonix_a2b_dpdk ${DPDK}/bin
+cp -vf usr/local/bin/cloonix_ovs_drv ${HERE}

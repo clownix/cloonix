@@ -65,7 +65,6 @@ done
             muswitch/munat/clo_tcp \
             muswitch/munat \
             muswitch/muc2c \
-            muswitch/muovs \
             muswitch/muwlan \
             muswitch/mulan \
             spice \
@@ -74,6 +73,7 @@ done
             nat_dpdk \
             d2d_dpdk \
             a2b_dpdk \
+            ovs_drv \
             dtach; do
 
     echo

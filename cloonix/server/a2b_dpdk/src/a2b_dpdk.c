@@ -23,7 +23,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <libwebsockets.h>
 
 
 #include <rte_compat.h>
@@ -113,7 +112,6 @@ static void heartbeat (int delta)
   static int count_ticks_rpct = 0;
   count_ticks_blkd += 1;
   count_ticks_rpct += 1;
-  flow_tab_loop();
   if (count_ticks_blkd == 5)
     {
     blkd_heartbeat(NULL);
@@ -202,7 +200,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     ret = rte_eal_init(6, g_rte_argv);
     if (ret < 0)
       KOUT("Cannot init EAL %d\n", rte_errno);
-    flow_tab_init(FLOW_TAB_PORT, FLOW_TAB_SIZE);
+    flow_tab_init(name, FLOW_TAB_PORT, FLOW_TAB_SIZE);
     vhost_client_start(g_a2b0_socket, g_memid0, g_a2b1_socket, g_memid1);
     g_started_vhost = 1;
     snprintf(resp, MAX_PATH_LEN-1, 

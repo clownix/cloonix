@@ -15,22 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-/* Original copy: https://github.com/quiqfield/flowatcher                    */
-/*****************************************************************************/
-
-/*---------------------------------------------------------------------------*/
-enum export_states {
-        EXPORT_START_V4,
-        EXPORT_PAYLOAD_V4,
-        EXPORT_PAYLOAD_V4_FIN,
-};
-/*---------------------------------------------------------------------------*/
-enum wss_protocol {
-        PROTOCOL_HTTP = 0,
-        PROTOCOL_FLOWEXP,
-        PROTOCOL_MAX
-};
-/*---------------------------------------------------------------------------*/
 struct fivetuple_v4
 {
   uint32_t src_ip;
@@ -86,31 +70,10 @@ struct flow_table
   struct flow_entry entries[0];
 };
 /*---------------------------------------------------------------------------*/
-struct user_data
-{
-  uint32_t serial;
-  uint32_t left;
-  enum export_states state;
-};
-/*---------------------------------------------------------------------------*/
-
-
-
-
-void flow_tab_init(int flow_mon_port, int flow_table_size);
-
+void flow_tab_init(char *name, int flow_mon_port, int flow_table_size);
 void app_tx_flow(int direction, uint16_t n_rx, struct rte_mbuf **bufs);
-
-int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
-int callback_flowexp(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
-
-
 int remove_flow_entry(struct flow_table *table, struct fivetuple_v4 *_key);
 void flow_tab_periodic_dump(int flow_table_size);
-
-struct flow_table *get_flow_table_v4(int direction);
-struct lws_context *get_wss_context(void);
-struct lws_protocols *get_wss_protocol(int val);
-void flow_tab_loop(void);
+/*---------------------------------------------------------------------------*/
 
 

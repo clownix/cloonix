@@ -41,7 +41,6 @@ rm -rf tmpbuild_bis
             muswitch/munat \
             muswitch/muc2c \
             muswitch/muwlan \
-            muswitch/muovs \
             muswitch/mulan; do 
     cd ${CLOONIX_SERVER}/${i}
     make clean
@@ -50,7 +49,8 @@ rm -rf tmpbuild_bis
 
   for i in dpdk ovs qemu \
            snf_dpdk nat_dpdk \
-           d2d_dpdk a2b_dpdk ; do
+           d2d_dpdk a2b_dpdk \
+           ovs_drv ; do
     cd ${CLOONIX_SERVER}/${i}
     ./allclean
   done

@@ -35,8 +35,7 @@
 #include <sys/utsname.h>
 #include <time.h>
 
-
-#include "ioc.h"
+#include "io_clownix.h"
 #include "ovs_execv.h"
 
 #define RANDOM_APPEND_SIZE 8
@@ -453,7 +452,7 @@ int ovs_execv_del_pci_dpdk(char *ovs, char *dpdk, char *lan, char *pci)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_add_phy_dpdk(char *ovs, char *dpdk, char *lan, char *phy)
+int ovs_execv_add_phy_port(char *ovs, char *dpdk, char *lan, char *phy)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
@@ -466,7 +465,7 @@ int ovs_execv_add_phy_dpdk(char *ovs, char *dpdk, char *lan, char *phy)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_execv_del_phy_dpdk(char *ovs, char *dpdk, char *lan, char *phy)
+int ovs_execv_del_phy_port(char *ovs, char *dpdk, char *lan, char *phy)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];

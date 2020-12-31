@@ -23,7 +23,6 @@
 #include <errno.h>
 #include <sys/queue.h>
 #include <sys/time.h>
-#include <libwebsockets.h>
 
 #include <rte_compat.h>
 #include <rte_bus_pci.h>
@@ -48,8 +47,43 @@
 #define IPPROTO_OSPFIGP 89
 
 struct flow_table *g_flow_table_v4[2];
-struct lws_context *g_wss_context;
-struct lws_protocols g_wss_protocol[3];
+
+
+/*****************************************************************************/
+static void print_five(int dir, struct fivetuple_v4 *fivetuple)
+{
+  uint32_t s,d;
+  uint16_t sp,dp;
+  s = fivetuple->src_ip;
+  d = fivetuple->dst_ip;
+  sp = fivetuple->src_port;
+  dp = fivetuple->dst_port;
+  KERR("%d src:%d.%d.%d.%d dst:%d.%d.%d.%d sport:%d dport:%d proto:%d", dir,
+  (s >> 24) & 0xff, (s >> 16) & 0xff, (s >> 8) & 0xff, s & 0xff,
+  (d >> 24) & 0xff, (d >> 16) & 0xff, (d >> 8) & 0xff, d & 0xff,
+  sp & 0xFFFF, dp & 0xFFFF, fivetuple->proto & 0xFF);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void update_export_data_v4(int dir, int flow_table_size)
+{
+  int j;
+  struct flow_entry *entry;
+  struct flow_table *flow = g_flow_table_v4[dir];
+  for (j = 0; j < flow_table_size; j++)
+    {
+    entry = &flow->entries[j];
+    if (entry && (entry->start_tsc != 0))
+      {
+      KERR("%d start_tsc:%lu  pkt_cnt:%lu  byte_cnt:%lu",
+           dir, entry->start_tsc, entry->pkt_cnt, entry->byte_cnt);
+      print_five(dir, &(entry->key));
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 static uint32_t roundup32(uint32_t x)
@@ -93,27 +127,6 @@ static struct flow_table *create_flow_table(char *name, uint32_t flow_table_size
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-struct flow_table *get_flow_table_v4(int dir)
-{
-  return (g_flow_table_v4[dir]);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-struct lws_context *get_wss_context(void)
-{
-  return g_wss_context;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-struct lws_protocols *get_wss_protocol(int val)
-{
-  return (&(g_wss_protocol[val]));
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static void update_flow_entry(int dir, uint64_t timestamp, uint32_t pktlen,
                               struct fivetuple_v4 *fivetuple)
 {
@@ -141,6 +154,14 @@ static void update_flow_entry(int dir, uint64_t timestamp, uint32_t pktlen,
     }
   else
     KERR("ERROR rte_hash_add_key %d", key);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void flow_tab_periodic_dump(int flow_table_size)
+{
+  update_export_data_v4(0, flow_table_size);
+  update_export_data_v4(1, flow_table_size);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -208,48 +229,18 @@ void app_tx_flow(int dir, uint16_t nb_bufs, struct rte_mbuf **bufs)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void flow_tab_loop(void)
-{
-  lws_service(g_wss_context, 0);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void flow_tab_init(int flow_mon_port, int flow_table_size)
+void flow_tab_init(char *name, int flow_mon_port, int flow_table_size)
 {
   int i;
-  char tabnm[MAX_NAME_LEN];
-  struct lws_context_creation_info info;
-  memset(&info, 0, sizeof(info));
+  char tabnm[2*MAX_NAME_LEN];
   for (i=0; i<2; i++)
     {
-    memset(tabnm, 0, MAX_NAME_LEN);
-    snprintf(tabnm, MAX_NAME_LEN-1, "flow_table_v4_%d", i);
+    memset(tabnm, 0, 2*MAX_NAME_LEN);
+    snprintf(tabnm, 2*MAX_NAME_LEN-1, "flow_v4_%s_%d", name, i);
     g_flow_table_v4[i] = create_flow_table(tabnm, flow_table_size);
     if (g_flow_table_v4[i] == NULL)
       rte_exit(EXIT_FAILURE, "Cannot create flow_table_v4\n");
     }
-  memset(g_wss_protocol, 0, 3 * sizeof(struct lws_protocols));
-  g_wss_protocol[0].name = "http-only";
-  g_wss_protocol[0].callback = callback_http;
-  g_wss_protocol[1].name = "flow-export-protocol";
-  g_wss_protocol[1].callback = callback_flowexp;
-  g_wss_protocol[1].per_session_data_size = sizeof(struct user_data);
-  g_wss_protocol[1].rx_buffer_size = 10;
-  g_wss_protocol[1].id = 0;
-  info.port = flow_mon_port;
-  info.iface = NULL;
-  info.protocols = g_wss_protocol;
-  info.ssl_cert_filepath = NULL;
-  info.ssl_private_key_filepath = NULL;
-  info.gid = -1;
-  info.uid = -1;
-  info.max_http_header_pool = 1;
-  info.options = 0;
-  g_wss_context = lws_create_context(&info);
-  if (g_wss_context == NULL)
-    rte_exit(EXIT_FAILURE, "Cannot create lws_context\n");
-  KERR("Created g_wss_context\n");
 }
 /*---------------------------------------------------------------------------*/
 

@@ -223,7 +223,7 @@ static void timer_a2b_msg_beat(void *data)
     next = cur->next;
     if ((cur->process_started_and_running == 1) &&
         (cur->openvswitch_started_and_running == 0) &&
-        (dpdk_ovs_muovs_ready()))
+        (dpdk_ovs_drv_ready()))
       {
       cur->openvswitch_started_and_running = 1;
       a2b_dpdk_start_vhost(cur->name);

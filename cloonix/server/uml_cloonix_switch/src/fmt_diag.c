@@ -68,26 +68,26 @@ int fmt_tx_del_lan_pci_dpdk(int tid, char *lan, char *pci)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_add_lan_phy_dpdk(int tid, char *lan, char *phy)
+int fmt_tx_add_lan_phy_port(int tid, char *lan, char *phy)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_add_lan_phy_dpdk lan=%s phy=%s", lan, phy);
+  "cloonixovs_add_lan_phy_port lan=%s phy=%s", lan, phy);
   result = dpdk_ovs_try_send_diag_msg(tid, cmd);
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_del_lan_phy_dpdk(int tid, char *lan, char *phy)
+int fmt_tx_del_lan_phy_port(int tid, char *lan, char *phy)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_del_lan_phy_dpdk lan=%s phy=%s", lan, phy);
+  "cloonixovs_del_lan_phy_port lan=%s phy=%s", lan, phy);
   result = dpdk_ovs_try_send_diag_msg(tid, cmd);
   return result;
 }
@@ -366,16 +366,16 @@ void fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line)
       pci_dpdk_ack_del(tid, 0, lan, name);
 
   else if (sscanf(line,
-      "OK cloonixovs_add_lan_phy_dpdk lan=%s phy=%s", lan, name) == 2)
+      "OK cloonixovs_add_lan_phy_port lan=%s phy=%s", lan, name) == 2)
       edp_phy_ack_add(tid, 1, lan, name);
   else if (sscanf(line,
-      "OK cloonixovs_del_lan_phy_dpdk lan=%s phy=%s", lan, name) == 2)
+      "OK cloonixovs_del_lan_phy_port lan=%s phy=%s", lan, name) == 2)
       edp_phy_ack_del(tid, 1, lan, name);
   else if (sscanf(line,
-      "KO cloonixovs_add_lan_phy_dpdk lan=%s phy=%s", lan, name) == 2)
+      "KO cloonixovs_add_lan_phy_port lan=%s phy=%s", lan, name) == 2)
       edp_phy_ack_add(tid, 0, lan, name);
   else if (sscanf(line,
-      "KO cloonixovs_del_lan_phy_dpdk lan=%s phy=%s", lan, name) == 2)
+      "KO cloonixovs_del_lan_phy_port lan=%s phy=%s", lan, name) == 2)
       edp_phy_ack_del(tid, 0, lan, name);
 
   else if (sscanf(line, "KO cloonixovs_add_eth name=%s num=%d",name,&num)==2)

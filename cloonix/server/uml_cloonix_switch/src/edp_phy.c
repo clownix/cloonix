@@ -171,7 +171,7 @@ void edp_phy_ack_del(int tid, int is_ok, char *lan, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int edp_phy_add_dpdk(int llid, int tid, char *lan, char *name)
+int edp_phy_add_port(int llid, int tid, char *lan, char *name)
 {
   int result = -1;
   int ovs_tid = utils_get_next_tid();
@@ -180,7 +180,7 @@ int edp_phy_add_dpdk(int llid, int tid, char *lan, char *name)
     KERR("%s %s", name, lan);
   else if (!dpdk_dyn_lan_exists(lan))
     KERR("%s %s", name, lan);
-  else if (fmt_tx_add_lan_phy_dpdk(ovs_tid, lan, name))
+  else if (fmt_tx_add_lan_phy_port(ovs_tid, lan, name))
     KERR("%s %s", name, lan);
   else
     {
@@ -197,22 +197,27 @@ int edp_phy_add_dpdk(int llid, int tid, char *lan, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int edp_phy_del_dpdk(char *lan, char *name)
+int edp_phy_del_port(char *lan, char *name)
 {
   int ovs_tid, result = -1;
-  t_edp_phy *cur;
-  ovs_tid = utils_get_next_tid();
-  if (fmt_tx_del_lan_phy_dpdk(ovs_tid, lan, name))
-    {
+  t_edp_phy *cur = find_edp_phy(name);
+  if (cur)
     KERR("%s %s", name, lan);
-    }
   else
     {
-    cur = alloc_edp_phy(name);    
-    strncpy(cur->lan, lan, MAX_NAME_LEN-1);
-    cur->state = state_wait_del_port;
-    cur->ovs_tid = ovs_tid;
-    result = 0;
+    ovs_tid = utils_get_next_tid();
+    if (fmt_tx_del_lan_phy_port(ovs_tid, lan, name))
+      {
+      KERR("%s %s", name, lan);
+      }
+    else
+      {
+      cur = alloc_edp_phy(name);    
+      strncpy(cur->lan, lan, MAX_NAME_LEN-1);
+      cur->state = state_wait_del_port;
+      cur->ovs_tid = ovs_tid;
+      result = 0;
+      }
     }
   return result;
 }
