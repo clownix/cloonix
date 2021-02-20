@@ -10,6 +10,7 @@ LIST="centos8 \
       focal \
       groovy \
       buster \
+      buster_fr \
       bullseye \
       openwrt"
 

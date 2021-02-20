@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -720,9 +720,9 @@ static int topo_eth_format(char *buf, int eth_type, int randmac, char *ifname,
   char tmp_ifname[MAX_NAME_LEN];
   memset(tmp_ifname, 0, MAX_NAME_LEN);
   if (strlen(ifname))
-    strncpy(tmp_ifname, ifname, IFNAMSIZ-1);
+    strncpy(tmp_ifname, ifname, MAX_NAME_LEN-1);
   else
-    strncpy(tmp_ifname, "noname", IFNAMSIZ-1);
+    strncpy(tmp_ifname, "noname", MAX_NAME_LEN-1);
   len += sprintf(buf+len, VM_ETH_TABLE, eth_type, randmac, tmp_ifname,
                      (mac[0]) & 0xFF, (mac[1]) & 0xFF, (mac[2]) & 0xFF,
                      (mac[3]) & 0xFF, (mac[4]) & 0xFF, (mac[5]) & 0xFF);
@@ -1119,8 +1119,8 @@ static void get_one_eth_table(char *buf, int *eth_type, int *randmac,
       KOUT("%s\n", buf);
   for (i=0; i<6; i++)
     mac[i] = var[i] & 0xFF;
-  memset(ifname, 0, IFNAMSIZ);
-  strncpy(ifname, tmp_ifname, IFNAMSIZ-1);
+  memset(ifname, 0, MAX_NAME_LEN);
+  strncpy(ifname, tmp_ifname, MAX_NAME_LEN-1);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1160,9 +1160,9 @@ static int make_eth_table(char *buf, int nb, t_eth_table *eth_tab)
     ifname = eth_tab[i].vhost_ifname;
     memset(tmp_ifname, 0, MAX_NAME_LEN);
     if (strlen(ifname))
-      strncpy(tmp_ifname, ifname, IFNAMSIZ-1);
+      strncpy(tmp_ifname, ifname, MAX_NAME_LEN-1);
     else
-      strncpy(tmp_ifname, "noname", IFNAMSIZ-1);
+      strncpy(tmp_ifname, "noname", MAX_NAME_LEN-1);
     len += sprintf(buf+len, VM_ETH_TABLE, eth_type, randmac, tmp_ifname,
                       (mac[0]) & 0xFF, (mac[1]) & 0xFF, (mac[2]) & 0xFF,
                       (mac[3]) & 0xFF, (mac[4]) & 0xFF, (mac[5]) & 0xFF);

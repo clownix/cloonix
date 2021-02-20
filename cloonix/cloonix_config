@@ -1,5 +1,5 @@
 ##################################################
-CLOONIX_VERSION=14-00
+CLOONIX_VERSION=15-00
 CLOONIX_TREE=/usr/local/bin/cloonix
 CLOONIX_WORK=${HOME}/cloonix_data
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
@@ -67,7 +67,7 @@ CLOONIX_NET: cucu {
 
 ##################################################
 CLOONIX_NET: lolo {
-  cloonix_ip       127.0.0.1
+  cloonix_ip       10.7.7.2
   cloonix_port     43218
   cloonix_passwd   loloclown
   d2d_udp_ip       10.7.7.2

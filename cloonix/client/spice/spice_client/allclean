@@ -1,0 +1,4 @@
+#!/bin/bash
+HERE=`pwd`
+rm -rf ${HERE}/spice-gtk
+rm -rf ${HERE}/tainted_spice

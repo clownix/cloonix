@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -37,7 +37,7 @@ typedef struct t_edp_phy
   int ovs_tid;
   int state;
   int count;
-  char name[IFNAMSIZ];
+  char name[MAX_NAME_LEN];
   char lan[MAX_NAME_LEN];
   struct t_edp_phy *prev;
   struct t_edp_phy *next;
@@ -57,7 +57,7 @@ static t_edp_phy *alloc_edp_phy(char *name)
 {
   t_edp_phy *cur = (t_edp_phy *) malloc(sizeof(t_edp_phy));
   memset(cur, 0, sizeof(t_edp_phy));
-  strncpy(cur->name, name, IFNAMSIZ-1);
+  strncpy(cur->name, name, MAX_NAME_LEN-1);
   if (g_head_edp_phy)
     g_head_edp_phy->prev = cur;
   cur->next = g_head_edp_phy;

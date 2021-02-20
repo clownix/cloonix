@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -61,7 +61,7 @@ int cloonix_get_pid(void);
 #define MAX_SELECT_CHANNELS 500
 
 #define HEADER_BLKD_SIZE (4 + 8 + sizeof(long long))
-#define PAYLOAD_BLKD_SIZE 2400
+#define PAYLOAD_BLKD_SIZE 5000
 #define MAX_TOTAL_BLKD_SIZE (HEADER_BLKD_SIZE+PAYLOAD_BLKD_SIZE)
 #define GROUP_BLKD_MAX_SIZE (40 * MAX_TOTAL_BLKD_SIZE)
 #define MAX_QEMU_BLKD_IN_GROUP 10

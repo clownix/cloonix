@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -488,12 +488,12 @@ void suid_power_diag_resp(int llid, int tid, char *line)
       ptr = strstr(ptr, "mac:");
       g_topo_phy[i].index = index;
       g_topo_phy[i].flags = flags;
-      strncpy(g_topo_phy[i].name,   name, IFNAMSIZ-1);
-      strncpy(g_topo_phy[i].drv,     drv, IFNAMSIZ-1);
-      strncpy(g_topo_phy[i].pci,     pci, IFNAMSIZ-1);
-      strncpy(g_topo_phy[i].mac,     mac, IFNAMSIZ-1);
-      strncpy(g_topo_phy[i].vendor, vendor, IFNAMSIZ-1);
-      strncpy(g_topo_phy[i].device, device, IFNAMSIZ-1);
+      strncpy(g_topo_phy[i].name,   name, MAX_NAME_LEN-1);
+      strncpy(g_topo_phy[i].drv,     drv, MAX_NAME_LEN-1);
+      strncpy(g_topo_phy[i].pci,     pci, MAX_NAME_LEN-1);
+      strncpy(g_topo_phy[i].mac,     mac, MAX_NAME_LEN-1);
+      strncpy(g_topo_phy[i].vendor, vendor, MAX_NAME_LEN-1);
+      strncpy(g_topo_phy[i].device, device, MAX_NAME_LEN-1);
       }
     if ((prev_nb_phy != nb_phy) || 
         (memcmp(phy, g_topo_phy, prev_nb_phy * sizeof(t_topo_phy))))
@@ -521,7 +521,7 @@ void suid_power_diag_resp(int llid, int tid, char *line)
         KOUT("%s", line);
       if (sscanf(ptr, "pci:%s drv:%s unused:%s", pci, drv, unused) != 3)
         KOUT("%s", line);
-      strncpy(g_topo_pci[i].pci,    pci, IFNAMSIZ-1);
+      strncpy(g_topo_pci[i].pci,    pci, MAX_NAME_LEN-1);
       strncpy(g_topo_pci[i].drv,    drv, MAX_NAME_LEN-1);
       strncpy(g_topo_pci[i].unused, unused, MAX_NAME_LEN-1);
       ptr = strstr(ptr+strlen("pci:"), "pci:");

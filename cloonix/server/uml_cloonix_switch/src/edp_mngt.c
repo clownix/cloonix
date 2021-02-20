@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -43,6 +43,7 @@
 #include "utils_cmd_line_maker.h"
 #include "dpdk_dyn.h"
 #include "dpdk_d2d.h"
+#include "dpdk_a2b.h"
 
 
 static t_edp *g_head_edp;

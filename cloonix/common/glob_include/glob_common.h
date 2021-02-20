@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -194,7 +194,7 @@ typedef struct t_eth_table
   int  eth_type;
   int  randmac;
   char mac_addr[8];
-  char vhost_ifname[IFNAMSIZ];
+  char vhost_ifname[MAX_NAME_LEN];
 } t_eth_table;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_kvm
@@ -274,17 +274,17 @@ typedef struct t_topo_phy
 {
   int  index;
   int  flags;
-  char name[IFNAMSIZ];
-  char drv[IFNAMSIZ];
-  char pci[IFNAMSIZ];
-  char mac[IFNAMSIZ];
-  char vendor[IFNAMSIZ];
-  char device[IFNAMSIZ];
+  char name[MAX_NAME_LEN];
+  char drv[MAX_NAME_LEN];
+  char pci[MAX_NAME_LEN];
+  char mac[MAX_NAME_LEN];
+  char vendor[MAX_NAME_LEN];
+  char device[MAX_NAME_LEN];
 } t_topo_phy;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_pci
 {
-  char pci[IFNAMSIZ];
+  char pci[MAX_NAME_LEN];
   char drv[MAX_NAME_LEN];
   char unused[MAX_NAME_LEN];
 } t_topo_pci;

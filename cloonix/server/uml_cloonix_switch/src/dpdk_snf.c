@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -201,20 +201,26 @@ void dpdk_snf_resp_add_lan(int is_ko, char *lan, char *name)
 /****************************************************************************/
 void dpdk_snf_resp_del_lan(int is_ko, char *lan, char *name)
 {
+  int is_ok = 0;
   t_dsnf *cur = get_dsnf(name);
   if (!cur)
     KERR("%s %s", lan, name);
-  else if (strcmp(lan, cur->lan))
-    KERR("%s %s %s", lan, name, cur->lan);
-  else if (cur->waiting_ack_add_lan == 1)
-    KERR("%d %s %s", is_ko, lan, name);
-  else if (cur->waiting_ack_del_lan == 0)
-    KERR("%d %s %s", is_ko, lan, name);
-  else if (cur->var_dpdk_start_stop_process)
-    KERR("ERROR %s %s", name, cur->lan);
   else
     {
-    utils_send_status_ok(&(cur->llid), &(cur->tid));
+    if (strcmp(lan, cur->lan))
+      KERR("%s %s %s", lan, name, cur->lan);
+    else if (cur->waiting_ack_add_lan == 1)
+      KERR("%d %s %s", is_ko, lan, name);
+    else if (cur->waiting_ack_del_lan == 0)
+      KERR("%d %s %s", is_ko, lan, name);
+    else if (cur->var_dpdk_start_stop_process)
+      KERR("ERROR %s %s", name, cur->lan);
+    else
+      is_ok = 1;
+    if (is_ok)
+      utils_send_status_ok(&(cur->llid), &(cur->tid));
+    else
+      utils_send_status_ko(&(cur->llid), &(cur->tid), "del error");
     free_dsnf(cur);
     }
 }
@@ -232,6 +238,7 @@ void dpdk_snf_event_from_snf_dpdk_process(char *name, char *lan, int on)
     {
     if (on == -1)
       KERR("ERROR %s %s", name, lan);
+    cur->to_be_destroyed = 1;
     cur->var_dpdk_start_stop_process = 0;
     if (dpdk_msg_send_del_lan_snf(cur->lan, name))
       {

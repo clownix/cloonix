@@ -5,8 +5,8 @@ DISTRO=buster
 DEFVIM=/tmp/wkmntloops/usr/share/vim/vim81/defaults.vim
 ROOTFS=/root/${DISTRO}_fr
 DEBIAN_REPO="http://deb.debian.org/debian"
-DEBIAN_REPO="http://1.1.1.1/repo/buster"
-DEBIAN_REPO="http://127.0.0.1/debian/buster"
+#DEBIAN_REPO="http://1.1.1.1/repo/buster"
+#DEBIAN_REPO="http://127.0.0.1/debian/buster"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {

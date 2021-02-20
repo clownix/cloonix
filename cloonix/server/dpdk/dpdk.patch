@@ -1,7 +1,7 @@
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2020-11-28 00:08:56.000000000 +0100
-+++ dpdk_tainted/drivers/meson.build	2020-11-29 21:35:24.966063721 +0100
-@@ -164,6 +164,7 @@
+--- dpdk/drivers/meson.build	2021-02-05 21:16:37.000000000 +0100
++++ dpdk_tainted/drivers/meson.build	2021-02-05 21:28:13.049851086 +0100
+@@ -139,6 +139,7 @@
  				objects: objs,
  				include_directories: includes,
  				dependencies: static_deps,
@@ -9,7 +9,7 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  				c_args: cflags,
  				install: true)
  
-@@ -217,6 +218,7 @@
+@@ -192,6 +193,7 @@
  				version: abi_version,
  				soversion: so_version,
  				install: true,
@@ -18,9 +18,9 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  
  			# create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_ethdev.c
---- dpdk/drivers/net/virtio/virtio_ethdev.c	2020-11-28 00:08:56.000000000 +0100
-+++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2020-11-29 21:35:24.966063721 +0100
-@@ -2219,19 +2219,19 @@
+--- dpdk/drivers/net/virtio/virtio_ethdev.c	2021-02-05 21:16:37.000000000 +0100
++++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2021-02-05 21:28:13.049851086 +0100
+@@ -2004,19 +2004,19 @@
  	PMD_INIT_LOG(DEBUG, "configure");
  	req_features = VIRTIO_PMD_DEFAULT_GUEST_FEATURES;
  
@@ -54,9 +54,9 @@ diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virt
  	if (dev->data->dev_conf.intr_conf.rxq) {
  		ret = virtio_init_device(dev, hw->req_guest_features);
 diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c
---- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2020-11-28 00:08:56.000000000 +0100
-+++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2020-11-29 21:35:24.966063721 +0100
-@@ -721,21 +721,21 @@
+--- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2021-02-05 21:16:37.000000000 +0100
++++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2021-02-05 21:28:13.049851086 +0100
+@@ -526,21 +526,21 @@
  	PMD_INIT_LOG(INFO, "Backend type detected: %s",
  		     virtio_user_backend_strings[backend_type]);
  
@@ -94,8 +94,8 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net
  	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_MAC) == 1) {
  		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_MAC,
 diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/librte_eal/common/eal_common_options.c
---- dpdk/lib/librte_eal/common/eal_common_options.c	2020-11-28 00:08:56.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2020-11-29 21:35:24.966063721 +0100
+--- dpdk/lib/librte_eal/common/eal_common_options.c	2021-02-05 21:16:38.000000000 +0100
++++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2021-02-05 21:28:13.049851086 +0100
 @@ -130,7 +130,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
@@ -107,9 +107,33 @@ diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/libr
  #endif
  
  /*
+diff -Naur dpdk/lib/librte_eal/include/rte_log.h dpdk_tainted/lib/librte_eal/include/rte_log.h
+--- dpdk/lib/librte_eal/include/rte_log.h	2021-02-05 21:16:38.000000000 +0100
++++ dpdk_tainted/lib/librte_eal/include/rte_log.h	2021-02-05 21:28:13.049851086 +0100
+@@ -27,6 +27,20 @@
+ #include <rte_config.h>
+ #include <rte_compat.h>
+ 
++
++#define KERR(format, a...)                               \
++ do {                                                    \
++    syslog(LOG_ERR | LOG_USER, "%s"                      \
++    " line:%d " format "\n",                             \
++    (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
++     __LINE__, ## a);                                    \
++    printf("%s line:%d " format "\n",                    \
++    (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
++     __LINE__, ## a);                                    \
++    } while (0)
++
++
++
+ /* SDK log type */
+ #define RTE_LOGTYPE_EAL        0 /**< Log related to eal. */
+ #define RTE_LOGTYPE_MALLOC     1 /**< Log related to malloc. */
 diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal.c
---- dpdk/lib/librte_eal/linux/eal.c	2020-11-28 00:08:56.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/linux/eal.c	2020-11-29 21:36:46.102492042 +0100
+--- dpdk/lib/librte_eal/linux/eal.c	2021-02-05 21:16:38.000000000 +0100
++++ dpdk_tainted/lib/librte_eal/linux/eal.c	2021-02-05 21:28:13.049851086 +0100
 @@ -27,6 +27,7 @@
  #endif
  #include <linux/version.h>
@@ -206,7 +230,95 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  
  	if (eal_set_runtime_dir(run_dir, sizeof(run_dir)))
  		return -1;
-@@ -924,6 +952,7 @@
+@@ -358,19 +386,19 @@
+ {
+ 	struct rte_config *config = rte_eal_get_configuration();
+ 	struct rte_mem_config *mem_config;
+-	const struct internal_config *internal_conf =
+-		eal_get_internal_configuration();
+-
+-	const char *pathname = eal_runtime_config_path();
++	const struct internal_config *internal_conf;
++	const char *pathname;
+ 
++	internal_conf = eal_get_internal_configuration();
++	pathname = eal_runtime_config_path();
+ 	if (internal_conf->no_shconf)
+ 		return 0;
+-
+ 	if (mem_cfg_fd < 0){
+ 		mem_cfg_fd = open(pathname, O_RDWR);
+ 		if (mem_cfg_fd < 0) {
+ 			RTE_LOG(ERR, EAL, "Cannot open '%s' for rte_mem_config\n",
+ 				pathname);
++                        KERR("VIP ERROR %s", pathname);
+ 			return -1;
+ 		}
+ 	}
+@@ -383,6 +411,7 @@
+ 		mem_cfg_fd = -1;
+ 		RTE_LOG(ERR, EAL, "Cannot mmap memory for rte_config! error %i (%s)\n",
+ 			errno, strerror(errno));
++                KERR("Cannot mmap memory for rte_config! error %i (%s)\n", errno, strerror(errno));
+ 		return -1;
+ 	}
+ 
+@@ -470,29 +499,41 @@
+ rte_config_init(void)
+ {
+ 	struct rte_config *config = rte_eal_get_configuration();
+-	const struct internal_config *internal_conf =
+-		eal_get_internal_configuration();
++	const struct internal_config *internal_conf;
+ 
++	internal_conf =	eal_get_internal_configuration();
+ 	config->process_type = internal_conf->process_type;
+ 
+ 	switch (config->process_type) {
+ 	case RTE_PROC_PRIMARY:
+ 		if (rte_eal_config_create() < 0)
+-			return -1;
++                    {
++                    KERR("%s", "VIP3 rte_eal_config_create");
++		    return -1;
++                    }
++
+ 		eal_mcfg_update_from_internal();
+ 		break;
+ 	case RTE_PROC_SECONDARY:
++
+ 		if (rte_eal_config_attach() < 0)
+-			return -1;
++                    {
++                    KERR("%s", "VIP5 rte_eal_config_attach");
++		    return -1;
++                    }
+ 		eal_mcfg_wait_complete();
+ 		if (eal_mcfg_check_version() < 0) {
+ 			RTE_LOG(ERR, EAL, "Primary and secondary process DPDK version mismatch\n");
++                        KERR("VIP6 Primary and secondary process DPDK version mismatch\n");
+ 			return -1;
+ 		}
+-		if (rte_eal_config_reattach() < 0)
++		if (rte_eal_config_reattach() < 0) {
++                        KERR("%s", "VIP8 rte_eal_config_reattach");
+ 			return -1;
++                }
+ 		if (!__rte_mp_enable()) {
+ 			RTE_LOG(ERR, EAL, "Primary process refused secondary attachment\n");
++                        KERR("%s", "VIP9");
+ 			return -1;
+ 		}
+ 		eal_mcfg_update_internal();
+@@ -501,6 +542,7 @@
+ 	case RTE_PROC_INVALID:
+ 		RTE_LOG(ERR, EAL, "Invalid process type %d\n",
+ 			config->process_type);
++                KERR("%s", "VIP11");
+ 		return -1;
+ 	}
+ 
+@@ -924,6 +966,7 @@
  {
  	fprintf(stderr, "EAL: FATAL: %s\n", msg);
  	RTE_LOG(ERR, EAL, "%s\n", msg);
@@ -214,10 +326,21 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  }
  
  /*
+@@ -1072,6 +1115,10 @@
+ 	phys_addrs = rte_eal_using_phys_addrs() != 0;
+ 
+ 	/* if no EAL option "--iova-mode=<pa|va>", use bus IOVA scheme */
++
++//VIP
++	internal_conf->iova_mode = RTE_IOVA_VA;
++
+ 	if (internal_conf->iova_mode == RTE_IOVA_DC) {
+ 		/* autodetect the IOVA mapping mode */
+ 		enum rte_iova_mode iova_mode = rte_bus_get_iommu_class();
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2020-11-28 00:08:56.000000000 +0100
-+++ dpdk_tainted/lib/meson.build	2020-11-29 21:35:24.970063744 +0100
-@@ -128,6 +128,7 @@
+--- dpdk/lib/meson.build	2021-02-05 21:16:38.000000000 +0100
++++ dpdk_tainted/lib/meson.build	2021-02-05 21:28:13.049851086 +0100
+@@ -131,6 +131,7 @@
  					c_args: cflags,
  					dependencies: static_deps,
  					include_directories: includes,
@@ -225,7 +348,7 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
  					install: true)
  			static_dep = declare_dependency(
  					include_directories: includes,
-@@ -192,6 +193,7 @@
+@@ -195,6 +196,7 @@
  					link_depends: lk_deps,
  					version: abi_version,
  					soversion: so_version,

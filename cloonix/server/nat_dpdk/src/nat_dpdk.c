@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -61,7 +61,7 @@ static char g_runtime[MAX_PATH_LEN];
 static char g_prefix[MAX_PATH_LEN];
 static char g_ctrl_path[MAX_PATH_LEN];
 static char g_cisco_path[MAX_PATH_LEN];
-static char *g_rte_argv[7];
+static char *g_rte_argv[8];
 static uint32_t g_cpu_flags;
 /*--------------------------------------------------------------------------*/
 
@@ -227,7 +227,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       {
       rpct_send_diag_msg(NULL, llid, tid, "cloonixnat_suidroot_ok");
       setenv("XDG_RUNTIME_DIR", g_runtime, 1);
-      ret = rte_eal_init(6, g_rte_argv);
+      ret = rte_eal_init(7, g_rte_argv);
       if (ret < 0)
         KOUT("Cannot init EAL %d\n", rte_errno);
       machine_init();
@@ -360,12 +360,13 @@ int main (int argc, char *argv[])
   msg_mngt_heartbeat_init(heartbeat);
   string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");
   g_rte_argv[0] = argv[0];
-  g_rte_argv[1] = g_prefix;
-  g_rte_argv[2] = "--proc-type=secondary";
-  g_rte_argv[3] = "--log-level=5";
-  g_rte_argv[4] = get_cpu_from_flags(g_cpu_flags);
-  g_rte_argv[5] = "--";
-  g_rte_argv[6] = NULL;
+  g_rte_argv[1] = "--iova-mode=va";
+  g_rte_argv[2] = g_prefix;
+  g_rte_argv[3] = "--proc-type=secondary";
+  g_rte_argv[4] = "--log-level=5";
+  g_rte_argv[5] = get_cpu_from_flags(g_cpu_flags);
+  g_rte_argv[6] = "--";
+  g_rte_argv[7] = NULL;
   daemon(0,0);
   utils_init();
   seteuid(getuid());

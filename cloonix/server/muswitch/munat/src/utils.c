@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -66,7 +66,7 @@ int ip_string_to_int (uint32_t *inet_addr, char *ip_string)
 /*****************************************************************************/
 void int_to_ip_string (uint32_t addr, char *ip_string)
 {
-  sprintf(ip_string, "%d.%d.%d.%d", (int) ((addr >> 24) & 0xff),
+  sprintf(ip_string, "%u.%u.%u.%u", (int) ((addr >> 24) & 0xff),
           (int)((addr >> 16) & 0xff), (int)((addr >> 8) & 0xff),
           (int) (addr & 0xff));
 }

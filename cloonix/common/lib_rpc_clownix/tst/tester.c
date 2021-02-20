@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -441,7 +441,7 @@ static void random_kvm(t_topo_kvm *kvm)
     {
     kvm->eth_table[k].eth_type = (rand() & 0x04) + 1;
     kvm->eth_table[k].randmac = rand();
-    random_choice_str(kvm->eth_table[k].vhost_ifname, IFNAMSIZ-1);
+    random_choice_str(kvm->eth_table[k].vhost_ifname, MAX_NAME_LEN-1);
     for (l=0; l < 6; l++)
       kvm->eth_table[k].mac_addr[l] = rand() & 0xFF;
     }
@@ -510,19 +510,19 @@ static void random_phy(t_topo_phy *phy)
 {
   phy->index = rand();
   phy->flags = rand();
-  random_choice_str(phy->name, IFNAMSIZ);
-  random_choice_str(phy->drv, IFNAMSIZ);
-  random_choice_str(phy->pci, IFNAMSIZ);
-  random_choice_str(phy->mac, IFNAMSIZ);
-  random_choice_str(phy->vendor, IFNAMSIZ);
-  random_choice_str(phy->device, IFNAMSIZ);
+  random_choice_str(phy->name, MAX_NAME_LEN);
+  random_choice_str(phy->drv, MAX_NAME_LEN);
+  random_choice_str(phy->pci, MAX_NAME_LEN);
+  random_choice_str(phy->mac, MAX_NAME_LEN);
+  random_choice_str(phy->vendor, MAX_NAME_LEN);
+  random_choice_str(phy->device, MAX_NAME_LEN);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void random_pci(t_topo_pci *pci)
 {
-  random_choice_str(pci->pci, IFNAMSIZ);
+  random_choice_str(pci->pci, MAX_NAME_LEN);
   random_choice_str(pci->drv, MAX_NAME_LEN);
   random_choice_str(pci->unused, MAX_NAME_LEN);
 }

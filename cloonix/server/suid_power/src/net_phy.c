@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -60,7 +60,7 @@ static void get_pci_for_virtio_net(char *name, char *pci)
       if (ptr_end)
         {
         *ptr_end = 0;
-        strncpy(pci, ptr_start, IFNAMSIZ-1);
+        strncpy(pci, ptr_start, MAX_NAME_LEN-1);
         }
       else
         KERR("%s", line);
@@ -152,11 +152,11 @@ static int get_driver_mac_pci(t_topo_phy *phy)
     while (fgets(line, MAX_PATH_LEN-1, fh) != NULL)
       {
       if (sscanf(line, "DRIVER=%s", ident) == 1)
-        strncpy(phy->drv, ident, IFNAMSIZ-1);
+        strncpy(phy->drv, ident, MAX_NAME_LEN-1);
       if (sscanf(line, "PCI_SLOT_NAME=%s", ident) == 1)
-        strncpy(phy->pci, ident, IFNAMSIZ-1);
+        strncpy(phy->pci, ident, MAX_NAME_LEN-1);
       if (sscanf(line, "DEVTYPE=%s", ident) == 1)
-        strncpy(devtype, ident, IFNAMSIZ-1);
+        strncpy(devtype, ident, MAX_NAME_LEN-1);
       }
     fclose(fh);
 
@@ -164,7 +164,7 @@ static int get_driver_mac_pci(t_topo_phy *phy)
     fh = fopen(path, "r");
     if (fh)
       {
-      if (fgets(phy->vendor, IFNAMSIZ-1, fh) == NULL)
+      if (fgets(phy->vendor, MAX_NAME_LEN-1, fh) == NULL)
         KERR("%s", phy->name);
       phy->vendor[6] = 0;
       fclose(fh);
@@ -174,7 +174,7 @@ static int get_driver_mac_pci(t_topo_phy *phy)
     fh = fopen(path, "r");
     if (fh)
       {
-      if (fgets(phy->device, IFNAMSIZ-1, fh) == NULL)
+      if (fgets(phy->device, MAX_NAME_LEN-1, fh) == NULL)
         KERR("%s", phy->name);
       phy->device[6] = 0;
       fclose(fh);
@@ -184,7 +184,7 @@ static int get_driver_mac_pci(t_topo_phy *phy)
     fh = fopen(path, "r");
     if (fh)
       {
-      if (fgets(phy->mac, IFNAMSIZ-1, fh) == NULL)
+      if (fgets(phy->mac, MAX_NAME_LEN-1, fh) == NULL)
         KERR("%s", phy->name);
       fclose(fh);
       }
@@ -192,7 +192,7 @@ static int get_driver_mac_pci(t_topo_phy *phy)
       KERR("%s", path);
 
     if ((strlen(phy->pci) == 0) && (strlen(devtype) != 0))
-      strncpy(phy->pci, devtype, IFNAMSIZ-1);
+      strncpy(phy->pci, devtype, MAX_NAME_LEN-1);
     else if (!strncmp(phy->drv, "virtio_net", strlen("virtio_net")))
       {
       phy->drv[strlen("virtio_net")] = 0;
@@ -387,7 +387,7 @@ t_topo_pci *net_pci_get(int *nb)
       *ptr_end = 0;
       ptr_end  = ptr_start + strcspn(ptr_start, " \r\n\t");
       *ptr_end = 0;
-      strncpy(pci.pci, ptr_start, IFNAMSIZ-1);
+      strncpy(pci.pci, ptr_start, MAX_NAME_LEN-1);
       if (strlen(pci.pci) < 3)
         {
         KERR("%s", line);

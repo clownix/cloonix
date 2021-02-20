@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -356,6 +356,7 @@ void dpdk_a2b_event_from_a2b_dpdk_process(char *name, int on)
     {
     if ((on == -1) || (on == 0))
       {
+      cur->to_be_destroyed = 1;
       if (on == -1)
         {
         KERR("ERROR %s", name);

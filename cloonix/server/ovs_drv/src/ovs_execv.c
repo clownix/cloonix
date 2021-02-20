@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -841,6 +841,32 @@ static int send_config_ovs( char *net, char *ovs_bin, char *dpdk_dir,
 {
   int result = 0;
   char other_config_extra[MAX_ARG_LEN];
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    {
+    memset(other_config_extra, 0, MAX_ARG_LEN);
+    snprintf(other_config_extra, MAX_ARG_LEN-1,
+             "--no-wait set Open_vSwitch . "
+             "other_config:dpdk-extra=\"--iova-mode=va\"");
+    if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+      {
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    {
+    memset(other_config_extra, 0, MAX_ARG_LEN);
+    snprintf(other_config_extra, MAX_ARG_LEN-1,
+             "--no-wait set Open_vSwitch . "
+             "other_config:dpdk-extra=\"--proc-type=primary\"");
+    if (ovs_vsctl(ovs_bin, dpdk_dir, other_config_extra))
+      {
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
   /*---------------------------------------------------------*/
   if (result != -1)
     {

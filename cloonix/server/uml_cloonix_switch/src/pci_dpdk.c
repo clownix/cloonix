@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2020 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -62,7 +62,7 @@ static t_pci_dpdk *alloc_pci_dpdk(char *pci)
 {
   t_pci_dpdk *cur = (t_pci_dpdk *) malloc(sizeof(t_pci_dpdk));
   memset(cur, 0, sizeof(t_pci_dpdk));
-  strncpy(cur->pci, pci, IFNAMSIZ-1);
+  strncpy(cur->pci, pci, MAX_NAME_LEN-1);
   if (g_head_pci_dpdk)
     g_head_pci_dpdk->prev = cur;
   cur->next = g_head_pci_dpdk;

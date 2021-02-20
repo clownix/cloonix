@@ -84,34 +84,24 @@ set -e
 cd /tmp/wkmntloops
 mkdir -p /tmp/wkmntloops/etc/yum.repos.d
 
-cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-Base.repo << EOF
-[base]
-name=CentOS-8 - Base
-baseurl=${MIRROR}/BaseOS/x86_64/os
+for i in AppStream \
+         BaseOS \
+         Devel \
+         HighAvailability \
+         PowerTools \
+         centosplus \
+         cr \
+         extras \
+         fasttrack ; do
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-${i}.repo << EOF
+[${i}]
+name=CentOS-8 - ${i}
+baseurl=${MIRROR}/${i}/x86_64/os
 gpgcheck=0
 EOF
 
-cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-AppStream.repo << EOF
-[AppStream]
-name=CentOS-8 - AppStream
-baseurl=${MIRROR}/AppStream/x86_64/os
-gpgcheck=0
-EOF
-
-cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-Extras.repo << EOF
-[extras]
-name=CentOS-8 - Extras
-baseurl=${MIRROR}/extras/x86_64/os
-gpgcheck=0
-EOF
-
-cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-PowerTools.repo << EOF
-[PowerTools]
-name=CentOS-8 - PowerTools
-baseurl=${MIRROR}/PowerTools/x86_64/os
-gpgcheck=0
-EOF
-
+done
 
 
 yum --releasever=8 --installroot=/tmp/wkmntloops -y install dnf
