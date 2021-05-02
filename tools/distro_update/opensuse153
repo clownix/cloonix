@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 NET=nemo
-DISTRO=opensuse152
+DISTRO=opensuse153
 NAME=${DISTRO}
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)

@@ -6,9 +6,11 @@ LIST="centos8 \
       bullseye \
       fedora32 \
       fedora33 \
-      opensuse152 \
+      opensuse153 \
       focal \
       groovy" 
+
+
 
 
 

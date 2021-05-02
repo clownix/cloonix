@@ -8,7 +8,7 @@ set -e
 # sudo apt-get install libnl-3-dev:i386
 # sudo apt-get install libnl-genl-3-dev:i386
 # cd /usr/lib/i386-linux-gnu/
-# sudo ln -s libnl-3.so.200 libnl-3.so
+# sudo ln -s /lib/i386-linux-gnu/libnl-3.so.200 libnl-3.so
 
 
 AGENT_BIN_ALIEN=${HERE}/agent_bin_alien

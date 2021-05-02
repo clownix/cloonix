@@ -330,7 +330,9 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
    " -device virtconsole,chardev=hvc0"\
    " -device virtio-balloon-pci,id=balloon0"\
    " -object rng-random,filename=/dev/urandom,id=rng0"\
-   " -device virtio-rng-pci,rng=rng0"
+   " -device virtio-rng-pci,rng=rng0"\
+   " -device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0"\
+   " -chardev spicevmc,id=spicechannel0,name=vdagent"
 
 #define QEMU_SPICE \
    " -device virtio-vga"\
@@ -342,9 +344,7 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
    " -device usb-redir,chardev=charredir0"\
    " -chardev spicevmc,id=charredir1,name=usbredir"\
    " -device usb-redir,chardev=charredir1"\
-   " -spice unix,addr=%s,disable-ticketing"\
-   " -device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0"\
-   " -chardev spicevmc,id=spicechannel0,name=vdagent"
+   " -spice unix,addr=%s,disable-ticketing"
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -378,7 +378,7 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     if (vm->kvm.eth_table[i].eth_type == eth_type_sock)
       len+=sprintf(cmd_start+len, "%s",format_virtkvm_net(vm,i));
     }
-  if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
+  if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NOBACKDOOR))
     {
     len += sprintf(cmd_start+len, QEMU_OPTS_CLOONIX, 
                    utils_get_qbackdoor_path(vm->kvm.vm_id),
@@ -401,8 +401,7 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
                         " -smp %d,maxcpus=%d,cores=1",
                         cmd_start, cfg_get_work_vm(vm->kvm.vm_id),
                         DIR_UMID, cpu_type, nb_cpu, nb_cpu);
-  if ((vm->kvm.vm_config_flags & VM_CONFIG_FLAG_WITH_PXE) ||
-      (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO))
+  if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_WITH_PXE)
     len += sprintf(linux_cmd+len," -nographic -vga none");
   else
     len += sprintf(linux_cmd+len, QEMU_SPICE, spice_path);
@@ -442,7 +441,7 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
                      vm->kvm.name, rootfs, vm->kvm.name );
     else
       {
-      if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
+      if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NOBACKDOOR)
         {
         len += sprintf(linux_cmd+len, DRIVE_PARAMS_CISCO, rootfs, 0);
         len += sprintf(linux_cmd+len,

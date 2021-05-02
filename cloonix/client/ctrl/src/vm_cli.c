@@ -45,6 +45,8 @@ void help_add_vm_kvm(char *line)
   printf("\n\tsock: eth provided with classic unix socket, max:%d", MAX_SOCK_VM);
   printf("\n\twlan: wlanx provided by hwsim, max:%d\n", MAX_WLAN_VM);
   printf("\n\t[options]");
+  printf("\n\t       --nobackdoor ");
+  printf("\n\t       --natplug=<num of eth for nat> ");
   printf("\n\t       --persistent ");
   printf("\n\t       --9p_share=<host_shared_dir_file_path>");
   printf("\n\t       --install_cdrom=<cdrom_file_path>");
@@ -55,11 +57,10 @@ void help_add_vm_kvm(char *line)
   printf("\n\t       --fullvirt");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\t       --balloon");
-  printf("\n\tnote: for the --persistent option, the rootfs must be a full");
-  printf("\n\t      path to a file system. If not set, the rootfs writes are");
-  printf("\n\t      evenescent, lost at shutdown.");
-  printf("\n\t      If set, those writes are persistent after shutwown.\n");
-  printf("\n\tnote: for the 9p_share, the shared dir mount point is");
+  printf("\n\t for the nobackdoor option, if set, the vm will not have special cloonix_ssh option.\n");
+  printf("\n\t for the natplug= option, if set, the vm will have special cloonix_osh option.\n");
+  printf("\n\t for the persistent option, if set, those writes are persistent after shutwown.\n");
+  printf("\n\t for the 9p_share, the shared dir mount point is");
   printf("\n\t      /mnt/p9_host_share in the guest kvm.\n\n");
   printf("\n\nexample:\n\n");
 
@@ -128,7 +129,7 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
   char *added_disk=NULL;
   char *ptr;
   char *endptr;
-  int prop_param = 0;
+  int nat_plug = 0;
 
   for (i=0; i<argc; i++)
     {
@@ -168,13 +169,21 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
       prop_flags |= VM_CONFIG_FLAG_ADDED_DISK;
       added_disk = argv[i] + strlen("--added_disk=");
       }
-    else if (!strncmp(argv[i], "--cisco", strlen("--cisco")))
+    else if (!strcmp(argv[i], "--nobackdoor"))
       {
-      ptr = argv[i] + strlen("--cisco");
-      prop_param = (int) strtol(ptr, &endptr, 10);
-      if ((endptr[0] != 0) || ( prop_param < 0 ) || ( prop_param >= nb_tot_eth))
-        prop_param = 0;
-      prop_flags |= VM_CONFIG_FLAG_CISCO;
+      prop_flags |= VM_CONFIG_FLAG_NOBACKDOOR;
+      }
+    else if (!strncmp(argv[i], "--natplug=", strlen("--natplug=")))
+      {
+      ptr = argv[i] + strlen("--natplug=");
+      nat_plug = (int) strtol(ptr, &endptr, 10);
+      if ((endptr[0] != 0) || ( nat_plug < 0 ) || ( nat_plug >= nb_tot_eth))
+        {
+        printf("\nERROR natplug: %d\n\n", nat_plug);
+        nat_plug = 0;
+        }
+      else
+        prop_flags |= VM_CONFIG_FLAG_NATPLUG;
       }
     else if (!strncmp(argv[i], "--mac_addr=eth", strlen("--mac_addr=eth")))
       {
@@ -196,7 +205,7 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
     {
     init_connection_to_uml_cloonix_switch();
     client_add_vm(0, callback_end, name, nb_tot_eth, eth_tab, prop_flags,
-                  prop_param, cpu, mem, img_linux, rootfs, install_cdrom,
+                  nat_plug, cpu, mem, img_linux, rootfs, install_cdrom,
                   added_cdrom, added_disk, p9_host_shared);
     }
   return result;

@@ -3,9 +3,10 @@ HERE=`pwd`
 #----------------------------------------------------------------------#
 DISTRO=bullseye
 DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
-ROOTFS=/root/${DISTRO}
+ROOTFS=/root/${DISTRO}_fr
 DEBIAN_REPO="http://deb.debian.org/debian"
-#DEBIAN_REPO="http://127.0.0.1/debian/bullseye"
+#DEBIAN_REPO="http://1.1.1.1/repo/buster"
+#DEBIAN_REPO="http://127.0.0.1/debian/buster"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -67,11 +68,12 @@ fct_check_losetup
 set -e
 fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
+#-----------------------------------------------------------------------#
 list_pkt="linux-image-amd64,grub-efi-amd64-signed,grub2,"
 list_pkt+="openssh-client,locales,iperf3,htop,"
-list_pkt+="console-data,kbd,keyboard-configuration,xauth,sudo,vim,iw,"
-list_pkt+="bash-completion,net-tools,pciutils,iftop,acpi-support-base,"
-list_pkt+="tcpdump,ethtool,lsof,file"
+list_pkt+="console-data,console-setup,kbd,keyboard-configuration,"
+list_pkt+="xauth,sudo,vim,iw,bash-completion,net-tools,pciutils,"
+list_pkt+="iftop,acpi-support-base,tcpdump,ethtool,htop,lsof,file"
 debootstrap --no-check-certificate \
 	    --no-check-gpg \
             --arch amd64 \
@@ -132,6 +134,28 @@ cd ${HERE}
 #-----------------------------------------------------------------------#
 sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
 sed -i s"/set mouse/\"set mouse/" $DEFVIM
+#-----------------------------------------------------------------------#
+cat > /tmp/wkmntloops/root/debconf_selection << EOF
+locales locales_to_be_generated multiselect fr_FR.UTF-8 UTF-8
+locales locales/default_environment_locale select fr_FR.UTF-8
+keyboard-configuration keyboard-configuration/layoutcode string fr
+keyboard-configuration keyboard-configuration/variant select Français - Français (variante)
+keyboard-configuration keyboard-configuration/model select Generic 105-key (Intl) PC
+keyboard-configuration keyboard-configuration/xkb-keymap select fr(latin9)
+EOF
+chroot /tmp/wkmntloops/ debconf-set-selections /root/debconf_selection
+rm -f /tmp/wkmntloops/etc/default/locale
+rm -f /tmp/wkmntloops/etc/default/keyboard
+sed -i s"/# fr_FR.UTF-8/fr_FR.UTF-8/" /tmp/wkmntloops/etc/locale.gen
+export DEBCONF_NONINTERACTIVE_SEEN=true
+
+
+for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
+chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive locales
+chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive console-setup
+chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive keyboard-configuration
+sync /dev/loop0
+umount /tmp/wkmntloops/{dev,proc,sys}
 #-----------------------------------------------------------------------#
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#

@@ -4,7 +4,7 @@ set +e
 LIST="centos8 \
       fedora32 \
       fedora33 \
-      opensuse152 \
+      opensuse153 \
       focal \
       groovy \
       buster \

@@ -1,7 +1,7 @@
 !
 hostname csr
 !
-username csr privilege 15 secret 0 csr 
+username admin privilege 15 secret 0 secpass
 !
 interface GigabitEthernet1
  ip address dhcp
@@ -19,7 +19,7 @@ ip ssh rsa keypair-name RSA_SSH
 !
 ip ssh pubkey-chain
 !
-username csr
+username admin
   key-string    
   __xaa__
 __xab__

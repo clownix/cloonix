@@ -1,26 +1,26 @@
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2021-02-05 21:16:37.000000000 +0100
-+++ dpdk_tainted/drivers/meson.build	2021-02-05 21:28:13.049851086 +0100
-@@ -139,6 +139,7 @@
- 				objects: objs,
- 				include_directories: includes,
- 				dependencies: static_deps,
-+                                install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
- 				c_args: cflags,
- 				install: true)
+--- dpdk/drivers/meson.build	2021-04-30 12:29:21.000000000 +0200
++++ dpdk_tainted/drivers/meson.build	2021-04-30 12:56:51.900689215 +0200
+@@ -151,6 +151,7 @@
+         tmp_lib = static_library('tmp_' + lib_name, sources,
+                 include_directories: includes,
+                 dependencies: static_deps,
++                install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
+                 c_args: cflags)
+         objs += tmp_lib.extract_all_objects()
+         sources = custom_target(out_filename,
+@@ -215,6 +216,7 @@
+                 version: abi_version,
+                 soversion: so_version,
+                 install: true,
++                install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
+                 install_dir: driver_install_path)
  
-@@ -192,6 +193,7 @@
- 				version: abi_version,
- 				soversion: so_version,
- 				install: true,
-+                                install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
- 				install_dir: driver_install_path)
- 
- 			# create a dependency object and add it to the global dictionary so
+         # create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_ethdev.c
---- dpdk/drivers/net/virtio/virtio_ethdev.c	2021-02-05 21:16:37.000000000 +0100
-+++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2021-02-05 21:28:13.049851086 +0100
-@@ -2004,19 +2004,19 @@
+--- dpdk/drivers/net/virtio/virtio_ethdev.c	2021-04-30 12:29:21.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2021-04-30 12:42:54.365172995 +0200
+@@ -2019,19 +2019,19 @@
  	PMD_INIT_LOG(DEBUG, "configure");
  	req_features = VIRTIO_PMD_DEFAULT_GUEST_FEATURES;
  
@@ -54,9 +54,9 @@ diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virt
  	if (dev->data->dev_conf.intr_conf.rxq) {
  		ret = virtio_init_device(dev, hw->req_guest_features);
 diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c
---- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2021-02-05 21:16:37.000000000 +0100
-+++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2021-02-05 21:28:13.049851086 +0100
-@@ -526,21 +526,21 @@
+--- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2021-04-30 12:29:21.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2021-04-30 12:42:54.365172995 +0200
+@@ -525,21 +525,21 @@
  	PMD_INIT_LOG(INFO, "Backend type detected: %s",
  		     virtio_user_backend_strings[backend_type]);
  
@@ -93,10 +93,10 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net
  
  	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_MAC) == 1) {
  		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_MAC,
-diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/librte_eal/common/eal_common_options.c
---- dpdk/lib/librte_eal/common/eal_common_options.c	2021-02-05 21:16:38.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/common/eal_common_options.c	2021-02-05 21:28:13.049851086 +0100
-@@ -130,7 +130,9 @@
+diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/eal_common_options.c
+--- dpdk/lib/eal/common/eal_common_options.c	2021-04-30 12:29:21.000000000 +0200
++++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-04-30 12:42:54.365172995 +0200
+@@ -131,7 +131,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
  /* Default path of external loadable drivers */
@@ -107,9 +107,9 @@ diff -Naur dpdk/lib/librte_eal/common/eal_common_options.c dpdk_tainted/lib/libr
  #endif
  
  /*
-diff -Naur dpdk/lib/librte_eal/include/rte_log.h dpdk_tainted/lib/librte_eal/include/rte_log.h
---- dpdk/lib/librte_eal/include/rte_log.h	2021-02-05 21:16:38.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/include/rte_log.h	2021-02-05 21:28:13.049851086 +0100
+diff -Naur dpdk/lib/eal/include/rte_log.h dpdk_tainted/lib/eal/include/rte_log.h
+--- dpdk/lib/eal/include/rte_log.h	2021-04-30 12:29:21.000000000 +0200
++++ dpdk_tainted/lib/eal/include/rte_log.h	2021-04-30 12:42:54.365172995 +0200
 @@ -27,6 +27,20 @@
  #include <rte_config.h>
  #include <rte_compat.h>
@@ -131,9 +131,9 @@ diff -Naur dpdk/lib/librte_eal/include/rte_log.h dpdk_tainted/lib/librte_eal/inc
  /* SDK log type */
  #define RTE_LOGTYPE_EAL        0 /**< Log related to eal. */
  #define RTE_LOGTYPE_MALLOC     1 /**< Log related to malloc. */
-diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal.c
---- dpdk/lib/librte_eal/linux/eal.c	2021-02-05 21:16:38.000000000 +0100
-+++ dpdk_tainted/lib/librte_eal/linux/eal.c	2021-02-05 21:28:13.049851086 +0100
+diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
+--- dpdk/lib/eal/linux/eal.c	2021-04-30 12:29:21.000000000 +0200
++++ dpdk_tainted/lib/eal/linux/eal.c	2021-04-30 12:42:54.369173079 +0200
 @@ -27,6 +27,7 @@
  #endif
  #include <linux/version.h>
@@ -142,7 +142,7 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  #include <rte_compat.h>
  #include <rte_common.h>
  #include <rte_debug.h>
-@@ -92,18 +93,17 @@
+@@ -93,18 +94,17 @@
  {
  	const char *directory = default_runtime_dir;
  	const char *xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
@@ -169,7 +169,7 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  	/* create DPDK subdirectory under runtime dir */
  	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
  	if (ret < 0 || ret == sizeof(tmp)) {
-@@ -122,19 +122,47 @@
+@@ -123,19 +123,47 @@
  	/* create the path if it doesn't exist. no "mkdir -p" here, so do it
  	 * step by step.
  	 */
@@ -230,7 +230,7 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  
  	if (eal_set_runtime_dir(run_dir, sizeof(run_dir)))
  		return -1;
-@@ -358,19 +386,19 @@
+@@ -359,19 +387,19 @@
  {
  	struct rte_config *config = rte_eal_get_configuration();
  	struct rte_mem_config *mem_config;
@@ -255,7 +255,7 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  			return -1;
  		}
  	}
-@@ -383,6 +411,7 @@
+@@ -384,6 +412,7 @@
  		mem_cfg_fd = -1;
  		RTE_LOG(ERR, EAL, "Cannot mmap memory for rte_config! error %i (%s)\n",
  			errno, strerror(errno));
@@ -263,7 +263,7 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  		return -1;
  	}
  
-@@ -470,29 +499,41 @@
+@@ -471,29 +500,41 @@
  rte_config_init(void)
  {
  	struct rte_config *config = rte_eal_get_configuration();
@@ -310,7 +310,7 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  			return -1;
  		}
  		eal_mcfg_update_internal();
-@@ -501,6 +542,7 @@
+@@ -502,6 +543,7 @@
  	case RTE_PROC_INVALID:
  		RTE_LOG(ERR, EAL, "Invalid process type %d\n",
  			config->process_type);
@@ -318,7 +318,7 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  		return -1;
  	}
  
-@@ -924,6 +966,7 @@
+@@ -929,6 +971,7 @@
  {
  	fprintf(stderr, "EAL: FATAL: %s\n", msg);
  	RTE_LOG(ERR, EAL, "%s\n", msg);
@@ -326,7 +326,7 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  }
  
  /*
-@@ -1072,6 +1115,10 @@
+@@ -1077,6 +1120,10 @@
  	phys_addrs = rte_eal_using_phys_addrs() != 0;
  
  	/* if no EAL option "--iova-mode=<pa|va>", use bus IOVA scheme */
@@ -338,21 +338,21 @@ diff -Naur dpdk/lib/librte_eal/linux/eal.c dpdk_tainted/lib/librte_eal/linux/eal
  		/* autodetect the IOVA mapping mode */
  		enum rte_iova_mode iova_mode = rte_bus_get_iommu_class();
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2021-02-05 21:16:38.000000000 +0100
-+++ dpdk_tainted/lib/meson.build	2021-02-05 21:28:13.049851086 +0100
-@@ -131,6 +131,7 @@
- 					c_args: cflags,
- 					dependencies: static_deps,
- 					include_directories: includes,
-+                                        install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
- 					install: true)
- 			static_dep = declare_dependency(
- 					include_directories: includes,
-@@ -195,6 +196,7 @@
- 					link_depends: lk_deps,
- 					version: abi_version,
- 					soversion: so_version,
-+                                        install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
- 					install: true)
- 			shared_dep = declare_dependency(link_with: shared_lib,
- 					include_directories: includes,
+--- dpdk/lib/meson.build	2021-04-30 12:29:21.000000000 +0200
++++ dpdk_tainted/lib/meson.build	2021-04-30 12:53:27.836875590 +0200
+@@ -185,6 +185,7 @@
+             c_args: cflags,
+             dependencies: static_deps,
+             include_directories: includes,
++            install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
+             install: true)
+     static_dep = declare_dependency(
+             include_directories: includes,
+@@ -249,6 +250,7 @@
+             link_depends: lk_deps,
+             version: abi_version,
+             soversion: so_version,
++            install_rpath : '/usr/local/bin/cloonix/server/dpdk/lib',
+             install: true)
+     shared_dep = declare_dependency(link_with: shared_lib,
+             include_directories: includes,

@@ -1237,8 +1237,8 @@ static void delayed_add_vm(t_timer_zombie *tz)
   int nb_sock = 0, nb_dpdk = 0, nb_wlan = 0;
   char mac[6];
   char info[MAX_PRINT_LEN];
-  char cisconat_name[2*MAX_NAME_LEN];
-  char lan_cisconat_name[2*MAX_NAME_LEN];
+  char natplug_name[2*MAX_NAME_LEN];
+  char lan_natplug_name[2*MAX_NAME_LEN];
   char use[MAX_PATH_LEN];
   t_add_vm_cow_look *cow_look;
   int llid = tz->llid, tid = tz->tid;
@@ -1246,12 +1246,12 @@ static void delayed_add_vm(t_timer_zombie *tz)
   t_vm   *vm = cfg_get_vm(kvm->name);
   info[0] = 0;
   memset(mac, 0, 6);
-  memset(cisconat_name, 0, 2*MAX_NAME_LEN);
-  memset(lan_cisconat_name, 0, 2*MAX_NAME_LEN);
-  snprintf(cisconat_name, 2*MAX_NAME_LEN-1, "nat_%s", kvm->name);
-  snprintf(lan_cisconat_name, 2*MAX_NAME_LEN-1, "lan_nat_%s", kvm->name);
-  cisconat_name[MAX_NAME_LEN-1] = 0;
-  lan_cisconat_name[MAX_NAME_LEN-1] = 0;
+  memset(natplug_name, 0, 2*MAX_NAME_LEN);
+  memset(lan_natplug_name, 0, 2*MAX_NAME_LEN);
+  snprintf(natplug_name, 2*MAX_NAME_LEN-1, "nat_%s", kvm->name);
+  snprintf(lan_natplug_name, 2*MAX_NAME_LEN-1, "lan_nat_%s", kvm->name);
+  natplug_name[MAX_NAME_LEN-1] = 0;
+  lan_natplug_name[MAX_NAME_LEN-1] = 0;
   if (cfg_is_a_zombie(kvm->name))
     KOUT("%s", kvm->name);
   if (vm)
@@ -1276,12 +1276,12 @@ static void delayed_add_vm(t_timer_zombie *tz)
     send_status_ko(llid, tid, info);
     KERR("%s", kvm->name);
     }
-  else if ((kvm->vm_config_flags & VM_CONFIG_FLAG_CISCO) && 
-           ((cfg_name_is_in_use(0, cisconat_name, use)) ||
-            (cfg_name_is_in_use(0, lan_cisconat_name, use))))
+  else if ((kvm->vm_config_flags & VM_CONFIG_FLAG_NATPLUG) && 
+           ((cfg_name_is_in_use(0, natplug_name, use)) ||
+            (cfg_name_is_in_use(0, lan_natplug_name, use))))
     {
     sprintf(info, "Cisco needs nat \"%s\" or \"%s\", already exists",
-            cisconat_name, lan_cisconat_name);
+            natplug_name, lan_natplug_name);
     event_print("%s", info);
     recv_coherency_unlock();
     send_status_ko(llid, tid, info);

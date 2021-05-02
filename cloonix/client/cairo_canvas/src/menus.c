@@ -254,7 +254,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   static char title[MAX_PATH_LEN];
   static char text[MAX_TEXT];
   int is_persistent, is_backed, is_inside_cloonix;
-  int has_p9_host_share, is_cisco; 
+  int has_p9_host_share, is_natplug; 
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
   int is_full_virt, has_no_reboot, has_added_disk, with_pxe, len = 0;
   bitem = look_for_node_with_id(pm->name);
@@ -277,11 +277,11 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     with_pxe = vm_config_flags & VM_CONFIG_FLAG_WITH_PXE;
     has_added_cdrom = vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM;
     has_added_disk = vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK;
-    is_cisco = vm_config_flags & VM_CONFIG_FLAG_CISCO;
+    is_natplug = vm_config_flags & VM_CONFIG_FLAG_NATPLUG;
     has_p9_host_share = vm_config_flags & VM_CONFIG_FLAG_9P_SHARED;
 
-    if (is_cisco)
-      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tCISCO");
+    if (is_natplug)
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tNATPLUG");
     if (has_p9_host_share)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tP9_HOST_SHARE");
     if (is_persistent)

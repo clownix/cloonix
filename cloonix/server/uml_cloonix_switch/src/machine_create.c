@@ -385,7 +385,7 @@ void machine_death( char *name, int error_death)
       KERR("%s REQ KILL %s %d ", __FUNCTION__, vm->kvm.name, error_death);
       suid_power_kill_vm(vm->kvm.vm_id);
       }
-    if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
+    if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
       {
       edp_mngt_cisco_nat_destroy(name);
       }

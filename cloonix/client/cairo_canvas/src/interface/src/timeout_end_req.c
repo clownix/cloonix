@@ -70,7 +70,7 @@ void timer_create_item_node_req(void *data)
 {
   char *ptr_p9_host_share = NULL;
   int32_t thidden_on_graph[MAX_DPDK_VM+MAX_SOCK_VM+MAX_WLAN_VM];
-  int i, vm_config_flags;
+  int i, vm_config_flags, natplug = 0;
   t_custom_vm *cust_vm;
   t_item_node_req *pa = (t_item_node_req *) data;
   get_custom_vm (&cust_vm);
@@ -80,12 +80,12 @@ void timer_create_item_node_req(void *data)
     ptr_p9_host_share = cust_vm->kvm_p9_host_share;
   if (cust_vm->kvm_used_rootfs[0])
     {
-    vm_config_flags = get_vm_config_flags(cust_vm);
+    vm_config_flags = get_vm_config_flags(cust_vm, &natplug);
     set_node_layout_x_y(cust_vm->name, 0, pa->x, pa->y, 0, 
                         pa->tx, pa->ty, thidden_on_graph);
     client_add_vm(0, callback_end, cust_vm->name,
                   cust_vm->nb_tot_eth, cust_vm->eth_tab,
-                  vm_config_flags, 0, cust_vm->cpu, cust_vm->mem,
+                  vm_config_flags, natplug, cust_vm->cpu, cust_vm->mem,
                   NULL, cust_vm->kvm_used_rootfs, NULL, NULL, 
                   NULL, ptr_p9_host_share);
     }

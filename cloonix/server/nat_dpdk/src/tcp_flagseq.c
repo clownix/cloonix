@@ -294,12 +294,10 @@ static void fin_fin_ack_done_close_upon_ack(t_flagseq *cur,
 
 /****************************************************************************/
 static void reception_of_first_fin_ack(t_flagseq *cur,
-                                       uint32_t ack_local_seq,
                                        uint32_t new_distant_seq)
 {
   cur->fin_req = 1;
   cur->fin_ack_received = 1;
-  cur->local_seq = ack_local_seq;
   cur->distant_seq = new_distant_seq;
   flagseq_end_of_flow(cur, 0);
   tcp_qstore_flush(cur);
@@ -343,7 +341,6 @@ void tcp_flagseq_to_llid_data(t_flagseq *cur, int llid,
                               int data_len, uint8_t *data)
 {
   uint32_t new_distant_seq = rte_be_to_cpu_32(tcp_hdr->sent_seq);
-  uint32_t ack_local_seq = rte_be_to_cpu_32(cur->tcp_hdr.recv_ack);
   uint8_t flags = tcp_hdr->tcp_flags;
 
   if (flags & RTE_TCP_RST_FLAG)
@@ -366,33 +363,36 @@ void tcp_flagseq_to_llid_data(t_flagseq *cur, int llid,
     update_flagseq_tcp_hdr(cur, tcp_hdr, 0);
     fin_fin_ack_done_close_upon_ack(cur, tcp_hdr);
     }
-  else if (cur->distant_seq == new_distant_seq)
+  else
     {
     if (flags & RTE_TCP_ACK_FLAG)
       {
-      cur->ack_local_seq = rte_be_to_cpu_32(cur->tcp_hdr.recv_ack);
+      cur->ack_local_seq = rte_be_to_cpu_32(tcp_hdr->recv_ack);
       tcp_qstore_flush_backup_seq(cur, cur->ack_local_seq);
       }
-    if ((flags & RTE_TCP_FIN_FLAG) && (flags & RTE_TCP_ACK_FLAG))
+    if (cur->distant_seq == new_distant_seq)
       {
-      reception_of_first_fin_ack(cur, ack_local_seq, new_distant_seq);
+      if ((flags & RTE_TCP_FIN_FLAG) && (flags & RTE_TCP_ACK_FLAG))
+        {
+        reception_of_first_fin_ack(cur, new_distant_seq);
+        }
+      else if (data_len)
+        {
+        flagseq_llid_transmit(cur, llid, data_len, data);
+        cur->must_ack = 1;
+        }
+      update_flagseq_tcp_hdr(cur, tcp_hdr, data_len);
       }
-    else if (data_len)
+    else if ((new_distant_seq+1) == cur->distant_seq)
       {
-      flagseq_llid_transmit(cur, llid, data_len, data);
-      cur->must_ack = 1;
       }
-    update_flagseq_tcp_hdr(cur, tcp_hdr, data_len);
-    }
-  else if ((new_distant_seq+1) == cur->distant_seq)
-    {
-    }
-  else
-    {
-//    KERR("DROP %X %X %hu %hu %X %X %d", cur->sip, cur->dip, cur->sport,
-//                                        cur->dport, cur->distant_seq,
-//                                        new_distant_seq, data_len);
-    transmit_flags_back(cur, RTE_TCP_ACK_FLAG);
+    else
+      {
+      KERR("DROP %X %X %hu %hu %X %X %d", cur->sip, cur->dip, cur->sport,
+                                          cur->dport, cur->distant_seq,
+                                          new_distant_seq, data_len);
+      transmit_flags_back(cur, RTE_TCP_ACK_FLAG);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

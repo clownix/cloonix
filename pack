@@ -87,7 +87,8 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -rf ${CLOONIX_SERVER}/nat_dpdk
   rm -rf ${CLOONIX_SERVER}/d2d_dpdk
   rm -rf ${CLOONIX_SERVER}/a2b_dpdk
-  for i in cmd allclean cloonix_patch mkpatch patched_create ; do
+  for i in cmd allclean qemu_bin \
+           cloonix_patch mkpatch patched_create ; do
     rm -f ${CLOONIX_SERVER}/qemu/${i}
   done
   rm -rf ${CLOONIX_SERVER}/qemu/tainted_qemu
@@ -137,7 +138,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   for i in tainted_openssh lib_doorways ; do
     rm -rf ${CLOONIX_CLIENT}/openssh/$i
   done
-  for i in all_clean cmd mkpatch openssh* patched_create ; do
+  for i in allclean cmd mkpatch openssh* patched_create ; do
     rm -f ${CLOONIX_CLIENT}/openssh/$i
   done
 #----------------------------------------------------------

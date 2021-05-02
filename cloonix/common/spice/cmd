@@ -12,12 +12,12 @@ tar xvf ${TARGZ}/spice-protocol.tar.gz
 cd spice-protocol
 rm -rf build
 export PATH=${MESON_NINJA}/ninja:$PATH
-${MESON_NINJA}/meson/meson.py build
+${MESON_NINJA}/meson/meson.py --prefix=${TARGET} \
+                              --datadir=${TARGET} \
+                              --libdir=${TARGET} \
+                              --includedir=${TARGET} build
 cd build
-${MESON_NINJA}/meson/meson.py configure --prefix=${TARGET} \
-                                        --datadir=${TARGET} \
-                                        --libdir=${TARGET} \
-                                        --includedir=${TARGET}
+
 ninja
 ninja install
 

@@ -6,7 +6,7 @@ See directory cloonix for the LICENCE
 See clownix.net for a documentation (which is not up to date).
 
 All usefull downloads for this version are in
-http://clownix.net/downloads/cloonix-15-00
+http://clownix.net/downloads/cloonix-16-00
 -----------------------------------------------------------------------------
 
 Tested on virtual machines installed with:
@@ -31,27 +31,27 @@ The cloonix github store seem to have added characters to scripts last
 time I used it, dos2unix repairs the errors but I would advise the use of
 the direct tar.gz download from clownix.net as following:
  
-wget http://clownix.net/downloads/cloonix-15-00/cloonix-v15-00.tar.gz
+wget http://clownix.net/downloads/cloonix-16-00/cloonix-v16-00.tar.gz
 
-tar xvf cloonix-v15-00.tar.gz
+tar xvf cloonix-v16-00.tar.gz
 
-cd cloonix-v15-00
+cd cloonix-v16-00
 
 (It is assumed that sudo makes the command run as root.)
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-15-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-16-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
 
 -----------------------------------------------------------------------------
 HOWTO GET A WORKING VM:
-See availlable qcow2 vm at http://clownix.net/downloads/cloonix-15-00/bulk
+See availlable qcow2 vm at http://clownix.net/downloads/cloonix-16-00/bulk
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget http://clownix.net/downloads/cloonix-15-00/bulk/buster.qcow2.gz
+wget http://clownix.net/downloads/cloonix-16-00/bulk/buster.qcow2.gz
 gunzip buster.qcow2.gz
 
 -----------------------------------------------------------------------------

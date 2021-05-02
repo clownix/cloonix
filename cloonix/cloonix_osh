@@ -45,7 +45,7 @@ if (( ${#} < 2 )); then
 fi
 vm_name=$2
 nat_name=nat_${vm_name}
-user_name="csr"
+user_name="admin"
 
 LINE_CLOONIX_CONFIG=$(cat $CLOONIX_CONFIG)
 LINE_CLOONIX_CONFIG=$(echo $LINE_CLOONIX_CONFIG)

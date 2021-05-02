@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 TARGZ=${HERE}/../../../targz_store
-OPENSSH=openssh-7.9p1
+OPENSSH=openssh-8.6p1
 rm -rf $OPENSSH
 if [ -e tainted_openssh ]; then
   echo remove tainted_openssh directory and start again

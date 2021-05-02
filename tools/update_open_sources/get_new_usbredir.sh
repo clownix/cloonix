@@ -6,11 +6,12 @@ rm -f usbredir.tar.gz
 rm -f ${TARGZ}/usbredir.tar.gz
 
 git clone https://gitlab.freedesktop.org/spice/usbredir.git
-cd usbredir
+cd ${HERE}/usbredir
 ./autogen.sh
-cd $HERE
-rm -rf ./usbredir/autom4te.cache
-rm -rf ./usbredir/.git
+rm -rf ./autom4te.cache
+rm -rf ./.git
+patch -p1 < ../usbredir.patch 
+cd ${HERE} 
 tar zcvf usbredir.tar.gz usbredir
 rm -rf usbredir
 mv usbredir.tar.gz ${TARGZ}

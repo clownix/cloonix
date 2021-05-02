@@ -28,7 +28,9 @@ typedef struct t_custom_vm
   int  is_full_virt;
   int  is_persistent;
   int  is_sda_disk;
-  int  is_cisco;
+  int  nobackdoor_flag;
+  int  natplug_flag;
+  int  natplug;
   int  has_p9_host_share;
   int  current_number;
   int  cpu;
@@ -62,7 +64,7 @@ int inside_cloonix(char **name);
 
 char **get_argv_local_xwy(char *name);
 
-int get_vm_config_flags(t_custom_vm *cust_vm);
+int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug);
 void cloonix_get_xvt(char *xvt);
 char *local_get_cloonix_name(void);
 char *get_password(void);

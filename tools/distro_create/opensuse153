@@ -1,11 +1,11 @@
 #!/bin/bash
+set -e
 HERE=`pwd`
-#----------------------------------------------------------------------#
-DISTRO=bullseye
-DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
+DISTRO=opensuse153
 ROOTFS=/root/${DISTRO}
-DEBIAN_REPO="http://deb.debian.org/debian"
-#DEBIAN_REPO="http://127.0.0.1/debian/bullseye"
+OPENSUSE_MIRROR=http://download.opensuse.org
+OPENSUSE=${OPENSUSE_MIRROR}/distribution/leap/15.3/repo/oss/
+OPENSUSE_UPDATES=${OPENSUSE_MIRROR}/update/leap/15.3/oss/
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -52,51 +52,79 @@ fct_umount_wkmntloops()
 #########################################################################
 fct_check_uid
 set +e
-for i in qemu-img debootstrap blkid wget sgdisk partprobe; do
+for i in qemu-img rpm yum blkid wget sgdisk partprobe zypper; do
   path_bin=$(which $i)
   if [ -z $path_bin ]; then
     echo $i  DOES NOT EXIST
     exit -1
   fi
 done
+
 if [ -e $ROOTFS ]; then
   echo $ROOTFS already exists
   exit 1
 fi
+
 fct_check_losetup
 set -e
 fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
-list_pkt="linux-image-amd64,grub-efi-amd64-signed,grub2,"
-list_pkt+="openssh-client,locales,iperf3,htop,"
-list_pkt+="console-data,kbd,keyboard-configuration,xauth,sudo,vim,iw,"
-list_pkt+="bash-completion,net-tools,pciutils,iftop,acpi-support-base,"
-list_pkt+="tcpdump,ethtool,lsof,file"
-debootstrap --no-check-certificate \
-	    --no-check-gpg \
-            --arch amd64 \
-            --include=$list_pkt \
-            ${DISTRO} \
-            /tmp/wkmntloops ${DEBIAN_REPO}
+set +e
+for i in ${OPENSUSE} ${OPENSUSE_UPDATES};
+do
+  wget --no-check-certificate --delete-after ${i} 1>/dev/null 2>&1
+  OK=$?
+  if [ "$OK" != "0" ]; then
+    echo ERROR wget ${i}
+    exit 1
+  fi
+  echo
+  echo REPO OK ${i}
+  echo
+done
+set -e
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE} 15.3-oss
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE_UPDATES} 15.3-oss-updates
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys refresh
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys update
+zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install systemd
+zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install zypper
 #-----------------------------------------------------------------------#
-cat > /tmp/wkmntloops/etc/apt/sources.list << EOF
-deb http://deb.debian.org/debian ${DISTRO} main contrib non-free
-EOF
+if [ -e /etc/resolv.conf ]; then
+  cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
+fi
 #-----------------------------------------------------------------------#
+list_pkt="kernel-default grub2-i386-pc iproute2 "
+list_pkt+="openssh xauth sudo kbd vim net-tools "
+list_pkt+="iw dracut dhcp-client "
+list_pkt+="curl lvm2 ntfs-3g mdadm biosdevname tar"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
-chroot /tmp/wkmntloops/ grub-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
-KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
+chroot /tmp/wkmntloops/ zypper --non-interactive install $list_pkt
+chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
+
+KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0 ipv6.disable=1"
 printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" \
-        >> /tmp/wkmntloops/etc/default/grub
-chroot /tmp/wkmntloops/ update-grub
-echo "source /etc/bash_completion" >> /tmp/wkmntloops/root/.bashrc
-sync /dev/loop0
-umount /tmp/wkmntloops/{dev,proc,sys}
-#-----------------------------------------------------------------------#
+        > /tmp/wkmntloops/etc/default/grub
+
+version=$(ls /tmp/wkmntloops/lib/modules/)
+if [ ! -e /tmp/wkmntloops/boot/vmlinuz-${version} ]; then
+  echo ERROR:
+  ls /tmp/wkmntloops/lib/modules/
+  ls /tmp/wkmntloops/boot/
+  umount /tmp/wkmntloops/{dev,proc,sys}
+  exit 1
+fi
+echo $version
+list="virtio_pci virtio_scsi virtio_blk virtio_gpu virtio_input virtio_console virtio_rng virtio_net"
+chroot /tmp/wkmntloops/ dracut --add-drivers "$list" --force /boot/initrd-${version}.img $version
+
+chroot /tmp/wkmntloops/ grub2-mkconfig -o /boot/grub2/grub.cfg
 uuid=$(blkid | grep cloonix)
 uuid=${uuid#*UUID=\"}
 uuid=${uuid%%\"*}
 echo $uuid
+sync /dev/loop0
+umount /tmp/wkmntloops/{dev,proc,sys}
 #-----------------------------------------------------------------------#
 cat > /tmp/wkmntloops/etc/fstab  << EOF
 UUID=$uuid  /            ext4     defaults                      0 0 
@@ -107,15 +135,25 @@ tmpfs       /run         tmpfs    defaults                      0 0
 devtmpfs    /dev         devtmpfs mode=0755,nosuid              0 0
 EOF
 #-----------------------------------------------------------------------#
+cat > /tmp/wkmntloops/etc/sysconfig/network/ifcfg-eth0 << EOF
+BOOTPROTO='dhcp'
+BROADCAST=''
+ETHTOOL_OPTIONS=''
+IPADDR=''
+MTU=''
+NAME=''
+NETMASK=''
+NETWORK=''
+REMOTE_IPADDR=''
+STARTMODE='auto'
+DHCLIENT_SET_DEFAULT_ROUTE='yes'
+ZONE=public
+PREFIXLEN='24'
+EOF
+#-----------------------------------------------------------------------#
 chroot /tmp/wkmntloops/ passwd root <<EOF
 root
 root
-EOF
-#-----------------------------------------------------------------------#
-chroot /tmp/wkmntloops useradd --create-home --shell /bin/bash admin
-chroot /tmp/wkmntloops passwd admin <<EOF
-admin
-admin
 EOF
 #-----------------------------------------------------------------------#
 cat > /tmp/wkmntloops/etc/systemd/system/serial-getty@hvc0.service << EOF
@@ -127,11 +165,8 @@ RestartSec=0
 EOF
 #-----------------------------------------------------------------------#
 cd /tmp/wkmntloops/etc/systemd/system/getty.target.wants
-ln -s /etc/systemd/system/serial-getty@hvc0.service serial-getty@hvc0.service 
+ln -s /etc/systemd/system/serial-getty@hvc0.service serial-getty@hvc0.service
 cd ${HERE}
-#-----------------------------------------------------------------------#
-sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
-sed -i s"/set mouse/\"set mouse/" $DEFVIM
 #-----------------------------------------------------------------------#
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#

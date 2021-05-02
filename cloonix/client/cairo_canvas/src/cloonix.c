@@ -115,11 +115,17 @@ char *local_get_cloonix_name(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int get_vm_config_flags(t_custom_vm *cust_vm)
+int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug)
 {
   int vm_config_flags = 0;
-  if (cust_vm->is_cisco)
-    vm_config_flags |= VM_CONFIG_FLAG_CISCO;
+  *natplug = 0;
+  if (cust_vm->nobackdoor_flag)
+    vm_config_flags |= VM_CONFIG_FLAG_NOBACKDOOR;
+  if (cust_vm->natplug_flag)
+    {
+    vm_config_flags |= VM_CONFIG_FLAG_NATPLUG;
+    *natplug = cust_vm->natplug;
+    }
   if (cust_vm->is_full_virt)
     vm_config_flags |= VM_CONFIG_FLAG_FULL_VIRT;
   if (cust_vm->is_persistent)

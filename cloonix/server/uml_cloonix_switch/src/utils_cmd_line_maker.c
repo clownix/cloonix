@@ -609,7 +609,7 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
   free_wake_up_eths(vm);
   if (llid)
     send_status_ok(llid, tid, "addvm");
-  if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_CISCO)
+  if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
     {
     edp_mngt_cisco_nat_create(vm->kvm.name);
     }

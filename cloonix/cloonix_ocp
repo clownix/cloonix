@@ -48,7 +48,7 @@ if (( ${#} < 3 )); then
   echo  "cloonix_osh <nemo> files <vm_name:files>"
   exit 1
 fi
-user_name="csr"
+user_name="admin"
 if (( ${#} == 4 )); then
   if [ "$2" != "-r" ]; then
     echo error input params

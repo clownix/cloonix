@@ -2,10 +2,10 @@
 HERE=`pwd`
 NET=nemo
 LINUX=buster_fr
-LIST_CISCO="cisco1 cisco2 cisco3" 
+LIST_MIKROTIK="mikrotik1 mikrotik2 mikrotik3" 
 LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk
-NAME=c8000
+NAME=mikrotik
 
 #######################################################################
 for i in ${BULK}/${NAME}.qcow2 ; do
@@ -41,44 +41,41 @@ for i in ${LIST_LINUX} ; do
 done
 
 
-PARAMS="ram=5000 cpu=4 eth=dddd"
-cloonix_cli ${NET} add kvm cisco1 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
-cloonix_cli ${NET} add kvm cisco2 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
-cloonix_cli ${NET} add kvm cisco3 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
+PARAMS="ram=2000 cpu=4 eth=dddd"
+cloonix_cli ${NET} add kvm mikrotik1 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
+cloonix_cli ${NET} add kvm mikrotik2 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
+cloonix_cli ${NET} add kvm mikrotik3 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
 
 sleep 30
 #######################################################################
 cloonix_cli ${NET} add lan linux1 0 lan1
-cloonix_cli ${NET} add lan cisco1 1 lan1
+cloonix_cli ${NET} add lan mikrotik1 1 lan1
 #######################################################################
 cloonix_cli ${NET} add lan linux2 0 lan7
-cloonix_cli ${NET} add lan cisco2 1 lan7
+cloonix_cli ${NET} add lan mikrotik2 1 lan7
 #######################################################################
-cloonix_cli ${NET} add lan cisco1 2 lan3
-cloonix_cli ${NET} add lan cisco2 2 lan3
+cloonix_cli ${NET} add lan mikrotik1 2 lan3
+cloonix_cli ${NET} add lan mikrotik2 2 lan3
 #######################################################################
-cloonix_cli ${NET} add lan cisco1 3 lan5
-cloonix_cli ${NET} add lan cisco3 1 lan5
+cloonix_cli ${NET} add lan mikrotik1 3 lan5
+cloonix_cli ${NET} add lan mikrotik3 1 lan5
 #######################################################################
-cloonix_cli ${NET} add lan cisco2 3 lan6
-cloonix_cli ${NET} add lan cisco3 2 lan6
+cloonix_cli ${NET} add lan mikrotik2 3 lan6
+cloonix_cli ${NET} add lan mikrotik3 2 lan6
 #######################################################################
 set +e
-count=0
-for i in $LIST_CISCO ; do
+for i in $LIST_MIKROTIK ; do
   while [ 1 ]; do
-    RET=$(cloonix_osh ${NET} ${i} ?)
+    RET=$(cloonix_osh ${NET} ${i} quit)
     #echo ${i} returned: $RET
-    RET=${RET#*invalid }
-    RET=${RET% *}
-    if [ "${RET}" = "autocommand" ]; then
+    if [ "${RET}" = "interrupted" ]; then
       echo ${i} is ready to receive
       break
     else
-      echo ${i} not ready $((count*10)) sec
+      echo ${i} not ready $((count*3)) sec
     fi
     count=$((count+1))
-    sleep 10
+    sleep 3
   done
 done
 #######################################################################
@@ -88,7 +85,6 @@ for i in $LIST_LINUX ; do
     sleep 3
   done
 done
-set -e
 #######################################################################
 cloonix_ssh ${NET} linux1 "ip addr add dev eth0 1.0.0.1/24"
 cloonix_ssh ${NET} linux1 "ip link set dev eth0 up"
@@ -97,7 +93,9 @@ cloonix_ssh ${NET} linux2 "ip addr add dev eth0 5.0.0.1/24"
 cloonix_ssh ${NET} linux2 "ip link set dev eth0 up"
 cloonix_ssh ${NET} linux2 "ip route add default via  5.0.0.2"
 #######################################################################
-for i in $LIST_CISCO ; do
+
+#######################################################################
+for i in $LIST_MIKROTIK ; do
   cloonix_ocp ${NET} configs/${i}.cfg ${i}:running-config
 done
 #######################################################################

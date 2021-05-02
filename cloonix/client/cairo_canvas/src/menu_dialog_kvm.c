@@ -126,12 +126,22 @@ static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void is_cisco_toggle(GtkToggleButton *togglebutton, gpointer user_data)
+static void has_nobackdoor_toggle(GtkToggleButton *togglebutton, gpointer user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton))
-    g_custom_vm.is_cisco = 1;
+    g_custom_vm.nobackdoor_flag = 1;
   else
-    g_custom_vm.is_cisco = 0;
+    g_custom_vm.nobackdoor_flag = 0;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void has_natplug_toggle(GtkToggleButton *togglebutton, gpointer user_data)
+{
+  if (gtk_toggle_button_get_active(togglebutton))
+    g_custom_vm.natplug_flag = 1;
+  else
+    g_custom_vm.natplug_flag = 0;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -272,7 +282,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
   GtkWidget *entry_name, *entry_ram; 
   GtkWidget *entry_p9_host_share=NULL, *entry_cpu=NULL; 
   GtkWidget *grid, *parent, *is_persistent;
-  GtkWidget *is_cisco, *qcow2_rootfs, *bulkvm_menu;
+  GtkWidget *has_nobackdoor, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
   GSList *group;
   char *lib[ETH_TYPE_MAX] = {"n", "s", "d", "w"};
@@ -303,14 +313,22 @@ static void custom_vm_dialog(t_custom_vm *cust)
   g_signal_connect(is_persistent,"toggled",G_CALLBACK(is_persistent_toggle),NULL);
 
 
-   is_cisco = gtk_check_button_new_with_label("csr1000v qcow2");
-   if (g_custom_vm.is_cisco)
-     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_cisco), TRUE);
-   else
-     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_cisco), FALSE);
-   g_signal_connect(is_cisco,"toggled", G_CALLBACK(is_cisco_toggle),NULL);
+  has_nobackdoor = gtk_check_button_new_with_label("nobackdoor_flag");
+  if (g_custom_vm.nobackdoor_flag)
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_nobackdoor), TRUE);
+  else
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_nobackdoor), FALSE);
+  g_signal_connect(has_nobackdoor,"toggled", G_CALLBACK(has_nobackdoor_toggle),NULL);
+  append_grid(grid, has_nobackdoor, "No hvc0 backdoor", line_nb++);
 
-  append_grid(grid, is_cisco, "Is cisco:", line_nb++);
+  has_natplug = gtk_check_button_new_with_label("natplug_flag");
+  if (g_custom_vm.natplug_flag)
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_natplug), TRUE);
+  else
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_natplug), FALSE);
+  g_signal_connect(has_natplug,"toggled", G_CALLBACK(has_natplug_toggle),NULL);
+
+  append_grid(grid, has_natplug, "Nat on eth0:", line_nb++);
 
   append_grid(grid, is_persistent, "remanence:", line_nb++);
   entry_cpu = gtk_spin_button_new_with_range(1, 32, 1);
@@ -392,7 +410,9 @@ void menu_dialog_vm_init(void)
   g_custom_vm.is_sda_disk = 0;
   g_custom_vm.is_full_virt = 0;
   g_custom_vm.has_p9_host_share = 0;
-  g_custom_vm.is_cisco = 0;
+  g_custom_vm.nobackdoor_flag = 0;
+  g_custom_vm.natplug_flag = 0;
+  g_custom_vm.natplug = 0;
   g_custom_vm.cpu = 2;
   g_custom_vm.mem = 2000;
   g_custom_vm.nb_tot_eth = 3;

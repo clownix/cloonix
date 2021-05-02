@@ -6,12 +6,13 @@ HERE=`pwd`
 LIST="centos8 \
       fedora32 \
       fedora33 \
-      opensuse152 \
+      opensuse153 \
       focal \
       groovy \
       buster \
       buster_fr \
       bullseye \
+      bullseye_fr \
       openwrt"
 
 CLOONIX_BULK=${HOME}/cloonix_data/bulk

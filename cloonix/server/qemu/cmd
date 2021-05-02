@@ -28,6 +28,7 @@ if [ ! -f ${DBASE}/common/spice/spice_lib/pkgconfig/spice-server.pc ]; then
   cd ${HERE}
 fi
 
+
 echo Doing LIBS
 sleep 1
 

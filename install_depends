@@ -32,9 +32,9 @@ fct_get_debian_packages()
               libdrm-dev bison flex libjson-glib-dev libsasl2-dev \
               libnuma-dev libpixman-1-dev libpcap-dev libmnl-dev \
               libibverbs-dev xorriso wireshark liblz4-dev \
-              libcacard-dev pciutils libunwind-dev \
-              cmake libgl1-mesa-dev libffi-dev \
-              libaio-dev libvirglrenderer-dev
+              libcacard-dev pciutils libunwind-dev cmake \
+              libgl1-mesa-dev libffi-dev libaio-dev \
+              libvirglrenderer-dev libxml2-dev
 
 }
 #--------------------------------------------------------------------------
@@ -51,12 +51,11 @@ fct_get_redhat_packages()
          bzip2 python3-pyparsing numactl-devel json-glib-devel \
          mesa-libgbm-devel opus-devel lz4-devel libcacard-devel \
          libffi-devel libdrm-devel pciutils libpcap-devel \
-         libunwind-devel rxvt-unicode \
-         python3-setuptools expat-devel cmake mesa-libGL-devel \
-         libaio-devel virglrenderer-devel
+         libunwind-devel rxvt-unicode python3-setuptools \
+         expat-devel cmake mesa-libGL-devel libaio-devel \
+         virglrenderer-devel libxml2-devel
 
   pip3 install pyelftools
-
 
 }
 #--------------------------------------------------------------------------
@@ -73,9 +72,9 @@ fct_get_opensuse_packages()
          libnuma-devel json-glib-devel bzip2 libgbm-devel \
          libopus-devel rxvt-unicode xorriso libdrm-devel \
          liblz4-devel libcacard-devel pciutils libpcap-devel \
-         libunwind-devel rxvt-unicode \
-         python3-setuptools cmake Mesa-libGL-devel libffi-devel \
-         libaio-devel virglrenderer-devel
+         libunwind-devel rxvt-unicode python3-setuptools \
+         cmake Mesa-libGL-devel libffi-devel libaio-devel \
+         virglrenderer-devel libxml2-devel
 }
 #--------------------------------------------------------------------------
 if [ $UID != 0 ]; then
