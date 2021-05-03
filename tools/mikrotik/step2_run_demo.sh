@@ -2,7 +2,6 @@
 HERE=`pwd`
 NET=nemo
 LINUX=buster_fr
-LIST_MIKROTIK="mikrotik1 mikrotik2 mikrotik3" 
 LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk
 NAME=mikrotik
@@ -42,41 +41,27 @@ done
 
 
 PARAMS="ram=2000 cpu=4 eth=dddd"
-cloonix_cli ${NET} add kvm mikrotik1 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
-cloonix_cli ${NET} add kvm mikrotik2 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
-cloonix_cli ${NET} add kvm mikrotik3 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
+cloonix_cli ${NET} add kvm mikro ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
 
-sleep 30
+sleep 10
 #######################################################################
 cloonix_cli ${NET} add lan linux1 0 lan1
-cloonix_cli ${NET} add lan mikrotik1 1 lan1
+cloonix_cli ${NET} add lan mikro 1 lan1
 #######################################################################
-cloonix_cli ${NET} add lan linux2 0 lan7
-cloonix_cli ${NET} add lan mikrotik2 1 lan7
-#######################################################################
-cloonix_cli ${NET} add lan mikrotik1 2 lan3
-cloonix_cli ${NET} add lan mikrotik2 2 lan3
-#######################################################################
-cloonix_cli ${NET} add lan mikrotik1 3 lan5
-cloonix_cli ${NET} add lan mikrotik3 1 lan5
-#######################################################################
-cloonix_cli ${NET} add lan mikrotik2 3 lan6
-cloonix_cli ${NET} add lan mikrotik3 2 lan6
+cloonix_cli ${NET} add lan linux2 0 lan2
+cloonix_cli ${NET} add lan mikro 2 lan2
 #######################################################################
 set +e
-for i in $LIST_MIKROTIK ; do
-  while [ 1 ]; do
-    RET=$(cloonix_osh ${NET} ${i} quit)
-    #echo ${i} returned: $RET
-    if [ "${RET}" = "interrupted" ]; then
-      echo ${i} is ready to receive
-      break
-    else
-      echo ${i} not ready $((count*3)) sec
-    fi
-    count=$((count+1))
-    sleep 3
-  done
+while [ 1 ]; do
+  RET=$(cloonix_osh ${NET} mikro quit)
+  if [ "${RET}" = "interrupted" ]; then
+    echo ${i} is ready to receive
+    break
+  else
+    echo ${i} not ready $((count*3)) sec
+  fi
+  count=$((count+1))
+  sleep 3
 done
 #######################################################################
 for i in $LIST_LINUX ; do
@@ -86,19 +71,6 @@ for i in $LIST_LINUX ; do
   done
 done
 #######################################################################
-cloonix_ssh ${NET} linux1 "ip addr add dev eth0 1.0.0.1/24"
-cloonix_ssh ${NET} linux1 "ip link set dev eth0 up"
-cloonix_ssh ${NET} linux1 "ip route add default via  1.0.0.2"
-cloonix_ssh ${NET} linux2 "ip addr add dev eth0 5.0.0.1/24"
-cloonix_ssh ${NET} linux2 "ip link set dev eth0 up"
-cloonix_ssh ${NET} linux2 "ip route add default via  5.0.0.2"
-#######################################################################
-
-#######################################################################
-for i in $LIST_MIKROTIK ; do
-  cloonix_ocp ${NET} configs/${i}.cfg ${i}:running-config
-done
-#######################################################################
-cloonix_ssh ${NET} linux1 "ping 5.0.0.1"
+cloonix_osh nemo mikro "ip address print"
 #######################################################################
 

@@ -15,10 +15,11 @@ Tested on virtual machines installed with:
             bullseye (debian 11),
             focal (ubuntu 20.04),
             groovy (ubuntu 20.10),
+            hirsute (ubuntu 21.04),
             centos8,
             fedora32,
             fedora33,
-            opensuse152.
+            opensuse153.
 
 Compilation and run should work, on the above but for other distributions,
 you may have to ajust needed packages, look in file install_depends for
@@ -131,8 +132,11 @@ cloonix_ovs nemo vsctl show
 -----------------------------------------------------------------------------
 CISCO DEMO:
 After cloonix install, go in "tools/cisco" directory and execute
-The 3 steps to have a cisco network running ospf.
+the 3 steps to have a cisco network running ospf.
 You have to be patient, ciscos are very long to start.
+-----------------------------------------------------------------------------
+MIKROTIK DEMO:
+After cloonix install, go in "tools/mikrotik" directory and execute steps.
 -----------------------------------------------------------------------------
 cloonix also supports wlan:
 cd cloonix/quickstart/mac80211_hwsim
@@ -143,5 +147,5 @@ to go is:
 echo "wireshark-common wireshark-common/install-setuid boolean true" > preseed
 debconf-set-selections preseed
 dpkg-reconfigure  wireshark
-adduser perrier wireshark
+adduser ${USER} wireshark
 -----------------------------------------------------------------------------

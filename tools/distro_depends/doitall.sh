@@ -7,6 +7,7 @@ LIST="centos8 \
       opensuse153 \
       focal \
       groovy \
+      hirsute \
       buster \
       bullseye"
 

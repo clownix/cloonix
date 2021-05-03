@@ -8,11 +8,8 @@ LIST="centos8 \
       fedora33 \
       opensuse153 \
       focal \
-      groovy" 
-
-
-
-
+      groovy \
+      hirsute" 
 
 set -x
 
