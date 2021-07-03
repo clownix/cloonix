@@ -1,11 +1,15 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
-DISTRO=opensuse152
+releasever=34
+basearch=x86_64
+DISTRO=fedora34
 ROOTFS=/root/${DISTRO}
-OPENSUSE_MIRROR=http://download.opensuse.org
-OPENSUSE=${OPENSUSE_MIRROR}/distribution/leap/15.2/repo/oss/
-OPENSUSE_UPDATES=${OPENSUSE_MIRROR}/update/leap/15.2/oss/
+MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
+FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/${basearch}/os
+FEDORA_MODULAR=${MIRROR}/releases/${releasever}/Modular/${basearch}/os
+FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/${basearch}
+FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/${basearch}
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -52,7 +56,7 @@ fct_umount_wkmntloops()
 #########################################################################
 fct_check_uid
 set +e
-for i in qemu-img rpm yum blkid wget sgdisk partprobe zypper; do
+for i in qemu-img yum blkid wget sgdisk partprobe; do
   path_bin=$(which $i)
   if [ -z $path_bin ]; then
     echo $i  DOES NOT EXIST
@@ -70,7 +74,8 @@ set -e
 fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
 set +e
-for i in ${OPENSUSE} ${OPENSUSE_UPDATES};
+for i in ${FEDORA_MAIN} ${FEDORA_MAIN_UPDATES} \
+         ${FEDORA_MODULAR} ${FEDORA_MODULAR_UPDATES};
 do
   wget --no-check-certificate --delete-after ${i} 1>/dev/null 2>&1
   OK=$?
@@ -78,44 +83,88 @@ do
     echo ERROR wget ${i}
     exit 1
   fi
-  echo
-  echo REPO OK ${i}
-  echo
+echo
+echo REPO OK ${i}
+echo
 done
 set -e
-zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE} 15.2-oss
-zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE_UPDATES} 15.2-oss-updates
-zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys refresh
-zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys update
-zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install systemd
-zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install zypper
+#-----------------------------------------------------------------------#
+cd /tmp/wkmntloops
+
+mkdir -p /tmp/wkmntloops/etc/yum.repos.d
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora.repo << EOF
+[fedora]
+name=Fedora $releasever - $basearch
+baseurl=${FEDORA_MAIN}
+enabled=1
+gpgcheck=0
+EOF
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates.repo << EOF
+[updates]
+name=Fedora $releasever - $basearch - Updates
+baseurl=${FEDORA_MAIN_UPDATES}
+enabled=1
+gpgcheck=0
+EOF
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-modular.repo << EOF
+[fedora-modular]
+name=Fedora Modular $releasever - $basearch
+baseurl=${FEDORA_MODULAR}
+enabled=1
+gpgcheck=0
+EOF
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates-modular.repo << EOF
+[fedora-modular-updates]
+name=Fedora Modular $releasever - $basearch - Updates
+baseurl=${FEDORA_MODULAR_UPDATES}
+enabled=1
+gpgcheck=0
+EOF
+
+
+yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install bash.$basearch
+yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install libcurl-minimal.$basearch
+yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl.$basearch
+yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl-libs.$basearch
+yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install rpm.$basearch
+set +e
+yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install dnf
+for i in fedora updates; do
+  chroot /tmp/wkmntloops/ rpm --install --nodeps /var/cache/yum/${i}/packages/*
+done
+set -e
+
 #-----------------------------------------------------------------------#
 if [ -e /etc/resolv.conf ]; then
   cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
 fi
 #-----------------------------------------------------------------------#
-list_pkt="kernel-default grub2-i386-pc iproute2 "
-list_pkt+="openssh xauth sudo kbd vim net-tools "
-list_pkt+="iw dracut dhcp-client"
+list_pkt="kernel grub2-pc passwd openssh-clients "
+list_pkt+="xorg-x11-xauth iputils dhclient sudo kbd "
+list_pkt+="vim net-tools iw dracut"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
-chroot /tmp/wkmntloops/ zypper --non-interactive install $list_pkt
+sleep 5
+echo dnf clean packages
+chroot /tmp/wkmntloops/ dnf clean packages
+echo dnf -y update
+chroot /tmp/wkmntloops/ dnf -y update
+echo dnf -y install
+chroot /tmp/wkmntloops/ dnf -y install $list_pkt
 chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
 
-KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0 ipv6.disable=1"
+KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
 printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" \
         > /tmp/wkmntloops/etc/default/grub
 
-version=$(ls /tmp/wkmntloops/lib/modules/)
-if [ ! -e /tmp/wkmntloops/boot/vmlinuz-${version} ]; then
-  echo ERROR:
-  ls /tmp/wkmntloops/lib/modules/
-  ls /tmp/wkmntloops/boot/
-  umount /tmp/wkmntloops/{dev,proc,sys}
-  exit 1
-fi
+for i in $(ls /tmp/wkmntloops/boot | grep vmlinuz);do vmlinuz=$i;done
+version=${vmlinuz#*vmlinuz-}
 echo $version
-list="virtio_scsi virtio_blk"
-chroot /tmp/wkmntloops/ dracut --add-drivers "$list" --force /boot/initrd-${version}.img $version
+list="virtio_scsi virtio_blk virtio_console"
+chroot /tmp/wkmntloops/ dracut --add-drivers "$list" --force /boot/initramfs-${version}.img $version
 
 chroot /tmp/wkmntloops/ grub2-mkconfig -o /boot/grub2/grub.cfg
 uuid=$(blkid | grep cloonix)
@@ -132,22 +181,6 @@ sysfs       /sys         sysfs    nosuid,noexec,nodev           0 0
 devpts      /dev/pts     devpts   nosuid,noexec,gid=5,mode=620  0 0
 tmpfs       /run         tmpfs    defaults                      0 0
 devtmpfs    /dev         devtmpfs mode=0755,nosuid              0 0
-EOF
-#-----------------------------------------------------------------------#
-cat > /tmp/wkmntloops/etc/sysconfig/network/ifcfg-eth0 << EOF
-BOOTPROTO='dhcp'
-BROADCAST=''
-ETHTOOL_OPTIONS=''
-IPADDR=''
-MTU=''
-NAME=''
-NETMASK=''
-NETWORK=''
-REMOTE_IPADDR=''
-STARTMODE='auto'
-DHCLIENT_SET_DEFAULT_ROUTE='yes'
-ZONE=public
-PREFIXLEN='24'
 EOF
 #-----------------------------------------------------------------------#
 chroot /tmp/wkmntloops/ passwd root <<EOF

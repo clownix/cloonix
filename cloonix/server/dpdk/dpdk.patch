@@ -1,7 +1,7 @@
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2021-04-30 12:29:21.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2021-04-30 12:56:51.900689215 +0200
-@@ -151,6 +151,7 @@
+--- dpdk/drivers/meson.build	2021-07-03 07:30:16.000000000 +0200
++++ dpdk_tainted/drivers/meson.build	2021-07-03 07:51:00.918324914 +0200
+@@ -159,6 +159,7 @@
          tmp_lib = static_library('tmp_' + lib_name, sources,
                  include_directories: includes,
                  dependencies: static_deps,
@@ -9,7 +9,7 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
                  c_args: cflags)
          objs += tmp_lib.extract_all_objects()
          sources = custom_target(out_filename,
-@@ -215,6 +216,7 @@
+@@ -223,6 +224,7 @@
                  version: abi_version,
                  soversion: so_version,
                  install: true,
@@ -18,8 +18,8 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  
          # create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_ethdev.c
---- dpdk/drivers/net/virtio/virtio_ethdev.c	2021-04-30 12:29:21.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2021-04-30 12:42:54.365172995 +0200
+--- dpdk/drivers/net/virtio/virtio_ethdev.c	2021-07-03 07:30:16.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2021-07-03 07:51:00.922324902 +0200
 @@ -2019,19 +2019,19 @@
  	PMD_INIT_LOG(DEBUG, "configure");
  	req_features = VIRTIO_PMD_DEFAULT_GUEST_FEATURES;
@@ -54,9 +54,9 @@ diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virt
  	if (dev->data->dev_conf.intr_conf.rxq) {
  		ret = virtio_init_device(dev, hw->req_guest_features);
 diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c
---- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2021-04-30 12:29:21.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2021-04-30 12:42:54.365172995 +0200
-@@ -525,21 +525,21 @@
+--- dpdk/drivers/net/virtio/virtio_user_ethdev.c	2021-07-03 07:30:16.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user_ethdev.c	2021-07-03 07:51:00.922324902 +0200
+@@ -530,21 +530,21 @@
  	PMD_INIT_LOG(INFO, "Backend type detected: %s",
  		     virtio_user_backend_strings[backend_type]);
  
@@ -94,8 +94,8 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user_ethdev.c dpdk_tainted/drivers/net
  	if (rte_kvargs_count(kvlist, VIRTIO_USER_ARG_MAC) == 1) {
  		if (rte_kvargs_process(kvlist, VIRTIO_USER_ARG_MAC,
 diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/eal_common_options.c
---- dpdk/lib/eal/common/eal_common_options.c	2021-04-30 12:29:21.000000000 +0200
-+++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-04-30 12:42:54.365172995 +0200
+--- dpdk/lib/eal/common/eal_common_options.c	2021-07-03 07:30:16.000000000 +0200
++++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-07-03 07:51:00.922324902 +0200
 @@ -131,7 +131,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
@@ -108,8 +108,8 @@ diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/
  
  /*
 diff -Naur dpdk/lib/eal/include/rte_log.h dpdk_tainted/lib/eal/include/rte_log.h
---- dpdk/lib/eal/include/rte_log.h	2021-04-30 12:29:21.000000000 +0200
-+++ dpdk_tainted/lib/eal/include/rte_log.h	2021-04-30 12:42:54.365172995 +0200
+--- dpdk/lib/eal/include/rte_log.h	2021-07-03 07:30:16.000000000 +0200
++++ dpdk_tainted/lib/eal/include/rte_log.h	2021-07-03 07:51:00.922324902 +0200
 @@ -27,6 +27,20 @@
  #include <rte_config.h>
  #include <rte_compat.h>
@@ -132,8 +132,8 @@ diff -Naur dpdk/lib/eal/include/rte_log.h dpdk_tainted/lib/eal/include/rte_log.h
  #define RTE_LOGTYPE_EAL        0 /**< Log related to eal. */
  #define RTE_LOGTYPE_MALLOC     1 /**< Log related to malloc. */
 diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
---- dpdk/lib/eal/linux/eal.c	2021-04-30 12:29:21.000000000 +0200
-+++ dpdk_tainted/lib/eal/linux/eal.c	2021-04-30 12:42:54.369173079 +0200
+--- dpdk/lib/eal/linux/eal.c	2021-07-03 07:30:16.000000000 +0200
++++ dpdk_tainted/lib/eal/linux/eal.c	2021-07-03 07:51:00.922324902 +0200
 @@ -27,6 +27,7 @@
  #endif
  #include <linux/version.h>
@@ -338,9 +338,9 @@ diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
  		/* autodetect the IOVA mapping mode */
  		enum rte_iova_mode iova_mode = rte_bus_get_iommu_class();
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2021-04-30 12:29:21.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2021-04-30 12:53:27.836875590 +0200
-@@ -185,6 +185,7 @@
+--- dpdk/lib/meson.build	2021-07-03 07:30:16.000000000 +0200
++++ dpdk_tainted/lib/meson.build	2021-07-03 07:51:00.922324902 +0200
+@@ -187,6 +187,7 @@
              c_args: cflags,
              dependencies: static_deps,
              include_directories: includes,
@@ -348,7 +348,7 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
              install: true)
      static_dep = declare_dependency(
              include_directories: includes,
-@@ -249,6 +250,7 @@
+@@ -251,6 +252,7 @@
              link_depends: lk_deps,
              version: abi_version,
              soversion: so_version,

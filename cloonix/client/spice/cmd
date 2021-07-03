@@ -27,7 +27,7 @@ if [ ! -d ${TARGET} ]; then
   fi
 fi
 
-tar xvf ${TARGZ}/wayland.tar.gz 
+tar xvf ${TARGZ}/wayland_*.tar.gz 
 rm -f wayland/meson_options.txt
 cat > wayland/meson_options.txt << EOF
 option('libraries',
@@ -49,11 +49,11 @@ option('documentation',
 option('dtd_validation',
   description: 'Validate the protocol DTD (requires libxml2)',
   type: 'boolean',
-  value: 'true')
+  value: 'false')
 option('icon_directory',
   description: 'Location used to look for cursors (defaults to ${datadir}/icons if unset)',
   type: 'string',
-  value: '')
+  value: 'false')
 EOF
 
 rm -rf ${TARGET}/wayland
@@ -76,6 +76,7 @@ meson.py build
 cd build
 ninja install
 cp -rf ${TARGET}/usr/local/* ${TARGET}
+cp -rf ${TARGET}/include/* ${TARGET}/spice-1
 rm -rf ${TARGET}/usr/local
 if [ -d ${TARGET}/lib/x86_64-linux-gnu/pkgconfig ]; then
   mv ${TARGET}/lib/x86_64-linux-gnu/pkgconfig/* ${TARGET}/pkgconfig

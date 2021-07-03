@@ -71,7 +71,6 @@ cd ${HERE}/tainted_qemu/
                      --enable-usb-redir
                      --enable-linux-user
                      --enable-coroutine-pool
-                     --enable-usb-redir
                      --enable-opengl
                      --enable-gtk
                      --enable-numa
@@ -84,6 +83,7 @@ cd ${HERE}/tainted_qemu/
                      --enable-vhost-crypto
                      --enable-debug-info
                      --enable-linux-aio
+                     --enable-curses
                      --disable-vte
                      --disable-lzo
                      --disable-snappy
@@ -106,7 +106,6 @@ cd ${HERE}/tainted_qemu/
                      --disable-nettle
                      --disable-gcrypt
                      --disable-sdl
-                     --disable-curses
                      --disable-vnc
                      --disable-vnc-sasl
                      --disable-vnc-jpeg

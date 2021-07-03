@@ -1,10 +1,14 @@
 #!/bin/bash
 HERE=`pwd`
-TARGZSTORE=../../../targz_store
-NAMEZ=dpdk.tar.gz
-NAME=dpdk
-tar xvf ${TARGZSTORE}/${NAMEZ}
-mv ${NAME} dpdk_tainted
+TARGZ=../../../targz_store
+
+cd ${TARGZ}
+DPDK=$(ls dpdk_*)
+DPDK=${DPDK%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${DPDK}.tar.gz
+mv dpdk dpdk_tainted
 cd dpdk_tainted
 patch -p1 < ${HERE}/dpdk.patch
 

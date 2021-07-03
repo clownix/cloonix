@@ -8,7 +8,7 @@ rm -rf ${TARGET}
 mkdir -p ${TARGET}
 
 cd $TARGET
-tar xvf ${TARGZ}/spice-protocol.tar.gz
+tar xvf ${TARGZ}/spice-protocol_*.tar.gz
 cd spice-protocol
 rm -rf build
 export PATH=${MESON_NINJA}/ninja:$PATH
@@ -22,12 +22,17 @@ ninja
 ninja install
 
 cd ${TARGET}
-tar xvf ${TARGZ}/usbredir.tar.gz
+tar xvf ${TARGZ}/usbredir_*.tar.gz
 cd usbredir
+rm -rf build
+sed -i s"/subdir('tests')/#subdir('tests')/" meson.build 
+export PATH=${MESON_NINJA}/ninja:$PATH
+${MESON_NINJA}/meson/meson.py --prefix=${TARGET} \
+                              --datadir=${TARGET} \
+                              --libdir=${TARGET} \
+                              --includedir=${TARGET} build
+cd build
 
-./configure --prefix=${TARGET} --libdir=${TARGET} 
-
-make clean
-make
-make install
+ninja
+ninja install
 

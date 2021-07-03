@@ -2,17 +2,20 @@
 HERE=`pwd`
 TARGZ=${HERE}/../../../../targz_store
 
-SPICE_GTK=spice-gtk
-
-rm -rf $SPICE_GTK
+rm -rf spice-gtk
 
 if [ -e tainted_spice ]; then
   echo remove tainted_spice directory and start again
   exit 1
 fi
 
-tar xvf ${TARGZ}/${SPICE_GTK}.tar.gz
-mv ${SPICE_GTK} tainted_spice
+cd ${TARGZ}
+SPICEGTK=$(ls spice-gtk_*)
+SPICEGTK=${SPICEGTK%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${SPICEGTK}.tar.gz
+mv spice-gtk tainted_spice
 
 cd tainted_spice
 patch -p1 < ../cloonix.patch

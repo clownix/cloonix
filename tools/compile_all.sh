@@ -4,12 +4,12 @@ NET=nemo
 LIST="centos8 \
       buster \
       bullseye \
-      fedora32 \
+      fedora34 \
       fedora33 \
-      opensuse153 \
       focal \
       groovy \
-      hirsute" 
+      hirsute \
+      tumbleweed"
 
 set -x
 

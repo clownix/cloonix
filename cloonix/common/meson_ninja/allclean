@@ -2,5 +2,4 @@
 HERE=`pwd`
 rm -rf ${HERE}/meson
 rm -rf ${HERE}/ninja
-rm -rf ${HERE}/dpdk
 

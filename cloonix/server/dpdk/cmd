@@ -1,23 +1,21 @@
 #!/bin/bash
 HERE=`pwd`
-TARGZSTORE=${HERE}/../../../targz_store
+TARGZ=${HERE}/../../../targz_store
 NINJA=${HERE}/../../common/meson_ninja
-NAME=dpdk
-NAMEZ=${NAME}.tar.gz
 ./allclean
 if [ ! -f ${NINJA}/ninja/ninja ]; then
   cd ${NINJA}
   ./cmd
 fi
 cd ${HERE}
-tar xvf ${TARGZSTORE}/${NAMEZ}
-cd ${HERE}/${NAME}
+tar xvf ${TARGZ}/dpdk_*.tar.gz
+cd ${HERE}/dpdk
 echo patch -p1 < ${HERE}/dpdk.patch
 patch -p1 < ${HERE}/dpdk.patch
 sleep 2
 export PATH=${NINJA}/ninja:$PATH
 ${NINJA}/meson/meson.py -Dexamples=l2fwd build
-cd ${HERE}/${NAME}/build
+cd ${HERE}/dpdk/build
 ninja
 DESTDIR=${HERE} ninja install
 cp -vrf ${HERE}/usr/local/bin     ${HERE}
@@ -28,8 +26,8 @@ if [ -d ${HERE}/usr/local/lib64 ]; then
 else
   cp -vrf ${HERE}/usr/local/lib/x86_64-linux-gnu/* ${HERE}/lib
 fi
-cp -vrf ${HERE}/include ${HERE}/${NAME}/build
-cp -vrf ${HERE}/lib ${HERE}/${NAME}/build
+cp -vrf ${HERE}/include ${HERE}/dpdk/build
+cp -vrf ${HERE}/lib ${HERE}/dpdk/build
 for i in etc sbin share usr var; do
   rm -rf ${HERE}/${i}
 done

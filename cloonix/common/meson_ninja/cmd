@@ -1,8 +1,8 @@
 #!/bin/bash
 HERE=`pwd`
-TARGZSTORE=${HERE}/../../../targz_store
-tar xvf ${TARGZSTORE}/meson.tar.gz
-tar xvf ${TARGZSTORE}/ninja.tar.gz
+TARGZ=${HERE}/../../../targz_store
+tar xvf ${TARGZ}/meson_*.tar.gz
+tar xvf ${TARGZ}/ninja_*.tar.gz
 cd ${HERE}/ninja
 sed -i s"%/usr/bin/env python%/usr/bin/env python3%" configure.py
 ./configure.py --bootstrap

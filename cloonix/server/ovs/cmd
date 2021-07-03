@@ -2,9 +2,7 @@
 HERE=`pwd`
 NINJA=${HERE}/../../common/meson_ninja
 DPDK=${HERE}/../dpdk
-TARGZSTORE=../../../targz_store
-NAMEZ=ovs.tar.gz
-NAME=ovs
+TARGZ=../../../targz_store
 ./allclean
 if [ ! -f ${NINJA}/ninja/ninja ]; then
   cd ${NINJA}
@@ -15,8 +13,8 @@ if [ ! -f ${DPDK}/bin/dpdk-testpmd ]; then
   ./cmd
 fi
 cd ${HERE}
-tar xvf ${TARGZSTORE}/${NAMEZ}
-cd ${HERE}/${NAME}
+tar xvf ${TARGZ}/ovs_*.tar.gz
+cd ${HERE}/ovs
 rm -rf .git
 patch -p1 < ${HERE}/ovs.patch
 ./boot.sh
@@ -35,17 +33,17 @@ make -j 6
 cd ${HERE}
 
 for i in ovsdb-client ovsdb-server ovsdb-tool; do
-  cp -f ${HERE}/${NAME}/ovsdb/${i} ${DPDK}/bin
+  cp -f ${HERE}/ovs/ovsdb/${i} ${DPDK}/bin
 done
 
 for i in ovs-appctl ovs-ofctl ovs-vsctl; do
-  cp -f ${HERE}/${NAME}/utilities/${i} ${DPDK}/bin
+  cp -f ${HERE}/ovs/utilities/${i} ${DPDK}/bin
 done
 
-cp -f ${HERE}/${NAME}/vswitchd/ovs-vswitchd ${DPDK}/bin
+cp -f ${HERE}/ovs/vswitchd/ovs-vswitchd ${DPDK}/bin
 
 mkdir -p ${DPDK}/share/openvswitch
-cp -f ${HERE}/${NAME}/vswitchd/vswitch.ovsschema ${DPDK}/share/openvswitch
+cp -f ${HERE}/ovs/vswitchd/vswitch.ovsschema ${DPDK}/share/openvswitch
 
 exit
 for i in ovs_tainted ovs ; do

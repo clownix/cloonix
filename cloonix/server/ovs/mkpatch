@@ -1,9 +1,13 @@
 #!/bin/bash
 HERE=`pwd`
-TARGZSTORE=../../../targz_store
-NAMEZ=ovs.tar.gz
-NAME=ovs
-tar xvf ${TARGZSTORE}/${NAMEZ}
-diff -Naur ${NAME} ovs_tainted > ${HERE}/tmp_ovs.patch
+TARGZ=../../../targz_store
+
+cd ${TARGZ}
+OVS=$(ls ovs_*)
+OVS=${OVS%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${OVS}.tar.gz
+diff -Naur ovs ovs_tainted > ${HERE}/tmp_ovs.patch
 
 

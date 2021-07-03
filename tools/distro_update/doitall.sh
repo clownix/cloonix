@@ -2,14 +2,14 @@
 set +e
 
 LIST="centos8 \
-      fedora32 \
+      fedora34 \
       fedora33 \
-      opensuse153 \
       focal \
       groovy \
       hirsute \
       buster \
-      bullseye"
+      bullseye \
+      tumbleweed"
 
 for i in ${LIST}; do
   echo BEGIN ${i} 

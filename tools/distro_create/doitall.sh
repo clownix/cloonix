@@ -4,7 +4,7 @@ set -e
 HERE=`pwd`
 
 LIST="centos8 \
-      fedora32 \
+      fedora34 \
       fedora33 \
       opensuse153 \
       focal \
@@ -37,3 +37,4 @@ for i in ${LIST}; do
   echo END ${i}  
 done
 
+./tumbleweed

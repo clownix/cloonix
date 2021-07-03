@@ -2,7 +2,10 @@
 HERE=`pwd`
 TARGZ=${HERE}/../../../targz_store
 
-QEMU_NAME=qemu_vip
+cd ${TARGZ}
+QEMU_NAME=$(ls qemu_*)
+QEMU_NAME=${QEMU_NAME%%.*}
+cd ${HERE}
 
 rm -rf $QEMU_NAME
 
@@ -13,7 +16,7 @@ fi
 
 tar xvf ${TARGZ}/${QEMU_NAME}.tar.gz
 
-mv $QEMU_NAME tainted_qemu
+mv qemu_vip tainted_qemu
 
 cd tainted_qemu
 

@@ -4,5 +4,11 @@ TARGZ=${HERE}/../../../../targz_store
 if [ ! -e tainted_spice ]; then
   echo Must have tainted_spice
 fi
-tar xvf ${TARGZ}/spice-gtk.tar.gz
+
+cd ${TARGZ}
+SPICEGTK=$(ls spice-gtk_*)
+SPICEGTK=${SPICEGTK%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${SPICEGTK}.tar.gz
 diff -Naur spice-gtk tainted_spice > tmp_cloonix.patch

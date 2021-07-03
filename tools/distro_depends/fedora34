@@ -1,10 +1,10 @@
 #!/bin/bash
 HERE=`pwd`
 NET=nemo
-DISTRO=fedora32
+DISTRO=fedora34
 NAME=${DISTRO}
 QCOW2=${DISTRO}.qcow2
-releasever=32
+releasever=34
 basearch=x86_64
 MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
 FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/${basearch}/os

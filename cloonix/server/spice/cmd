@@ -32,7 +32,7 @@ fi
 #----------------------------------------------------------
 cd ${TARGET}
 rm -rf ${TARGET}/spice
-tar xvf ${TARGZ}/spice.tar.gz
+tar xvf ${TARGZ}/spice_*.tar.gz
 cd ${TARGET}/spice
 sed -i 52s/true/false/ meson_options.txt
 sed -i s"/'-Wno-sign-compare',/'-Wno-sign-compare','-fPIC',/" meson.build
