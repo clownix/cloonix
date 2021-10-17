@@ -63,8 +63,8 @@ int get_fd_with_llid(int llid);
 int get_in_bytes_with_cidx(int cidx);
 int get_out_bytes_with_cidx(int cidx);
 
-void channel_rx_local_flow_ctrl(void *ptr, int llid, int stop);
-void channel_tx_local_flow_ctrl(void *ptr, int llid, int stop);
+void channel_rx_local_flow_ctrl(int llid, int stop);
+void channel_tx_local_flow_ctrl(int llid, int stop);
 /*---------------------------------------------------------------------------*/
 
 char *get_bigbuf(void);
@@ -112,8 +112,6 @@ void msg_mngt_init (char *name, int max_len_per_read);
 int  msg_exist_channel(int llid);
 void msg_delete_channel(int llid);
 
-void check_is_clownix_malloc(void *ptr, int len, const char *caller_ident);
-
 void string_tx(int llid, int len, char *tx);
 void string_tx_now(int llid, int len, char *tx);
 void watch_tx(int llid, int len, char *tx);
@@ -159,7 +157,7 @@ void nonnonblock_fd(int fd);
 
 unsigned long channel_get_tx_queue_len(int llid);
 
-void ptr_doorways_client_tx(void *ptr, int llid, int len, char *buf);
+void ptr_doorways_client_tx(int llid, int len, char *buf);
 
 
 int msg_mngt_get_tx_queue_len(int llid);

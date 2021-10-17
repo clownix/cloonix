@@ -270,7 +270,7 @@ static void doorways_rx(int llid,int tid,int type,int val,int len,char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int cb_conn(void *ptr, int llid, int fd)
+static int cb_conn(int llid, int fd)
 {
   int doors_llid, type = get_type_start_xdoors(llid);
   doors_llid = doorways_sock_client_inet_end(type, llid, fd, g_passwd,

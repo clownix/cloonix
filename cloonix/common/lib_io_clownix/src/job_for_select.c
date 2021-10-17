@@ -138,21 +138,21 @@ static void job_idx_pool_release(t_jfs_obj *jfs, int job_idx)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void err_rx(void *ptr, int llid, int err, int from)
+static void err_rx(int llid, int err, int from)
 {
   KOUT(" %d ", llid);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int rx_err(void *ptr, int llid, int fd)
+static int rx_err(int llid, int fd)
 {
   KOUT(" %d ", llid);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int rx_ack(void *ptr, int llid, int fd)
+static int rx_ack(int llid, int fd)
 {
   int i, len, val;
   t_jfs_obj *jfs = g_jfs_obj_tab[llid];

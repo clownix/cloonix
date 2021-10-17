@@ -32,14 +32,8 @@ fi
 echo Doing LIBS
 sleep 1
 
-for i in common/lib_blkd \
-         common/lib_rpct \
-         server/muswitch/lib_ioc \
-         server/muswitch/lib_muend; do
-
-  cd ${DBASE}/${i}
-  make
-done
+cd ${DBASE}/common/lib_rpct
+make
 cd ${HERE}
 
 
@@ -47,9 +41,7 @@ PKGCONFIG=${DBASE}/common/spice/spice_lib/pkgconfig
 export PATH=${NINJA}/ninja:$PATH
 export PKG_CONFIG_PATH=${PKGCONFIG}
 export QEMU_CFLAGS="-fPIE -DPIE -I${DBASE}/common/spice/spice_lib/include \
-                    -I${DBASE}/common/glob_include \
-                    -I${DBASE}/server/muswitch/lib_ioc/include \
-                    -I${DBASE}/server/muswitch/lib_muend/include"
+                    -I${DBASE}/common/glob_include"
 export QEMU_LDFLAGS="-pie -L${DBASE}/common/spice/spice_lib -lepoxy \
                      -Wl,-rpath,/usr/local/bin/cloonix/common/spice/spice_lib"
 
@@ -62,8 +54,6 @@ cd ${HERE}/tainted_qemu/
 
  CONFIGURATION_OPTS="--prefix=/usr/local
                      --target-list=x86_64-softmmu
-                     --enable-mueth
-                     --muethdir=${DBASE}
                      --python=/usr/bin/python3
                      --enable-fdt
                      --enable-kvm
@@ -82,6 +72,7 @@ cd ${HERE}/tainted_qemu/
                      --enable-vhost-scsi
                      --enable-vhost-crypto
                      --enable-debug-info
+                     --enable-debug
                      --enable-linux-aio
                      --enable-curses
                      --disable-vte
@@ -90,6 +81,7 @@ cd ${HERE}/tainted_qemu/
                      --disable-bzip2
                      --disable-slirp
                      --disable-vhost-vsock
+                     --disable-tcg
                      --disable-debug-tcg
                      --disable-virtfs
                      --disable-strip
@@ -125,9 +117,7 @@ cd ${HERE}/tainted_qemu/
                      --disable-smartcard
                      --disable-seccomp
                      --disable-glusterfs
-                     --disable-tpm
-                     --disable-tcmalloc
-                     --disable-jemalloc"
+                     --disable-tpm"
 
 
 echo Doing CONFIGURE

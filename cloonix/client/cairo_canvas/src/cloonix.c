@@ -48,7 +48,6 @@
 #include "layout_topo.h"
 #include "menu_dialog_kvm.h"
 #include "file_read_write.h"
-#include "menu_dialog_c2c.h"
 #include "cloonix_conf_info.h"
 #include "bdplot.h"
 
@@ -429,7 +428,8 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   tmp_dtach_work_path[MAX_PATH_LEN-1] = 0;
   strcpy(g_dtach_work_path, tmp_dtach_work_path); 
 
-  snprintf(tmp_distant_snf_dir, 2*MAX_PATH_LEN, "%s/snf", g_clc.work_dir);
+  snprintf(tmp_distant_snf_dir, 2*MAX_PATH_LEN, "%s/%s",
+           g_clc.work_dir, SNF_PCAP_DIR);
   tmp_distant_snf_dir[MAX_PATH_LEN-1] = 0;
   strcpy(g_distant_snf_dir, tmp_distant_snf_dir);
 

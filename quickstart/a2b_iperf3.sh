@@ -1,6 +1,7 @@
 #!/bin/bash
+set -x
 PARAMS="ram=2000 cpu=2 eth=d"
-DIST=buster
+DIST=bullseye
 NET=nemo
 
 #######################################################################
@@ -13,17 +14,15 @@ else
   cloonix_cli $NET rma
 fi
 
-echo waiting 2 sec
-sleep 2
-
-cloonix_cli nemo add a2b a2b
 
 #######################################################################
 cloonix_gui $NET
-cloonix_cli $NET add kvm vm1 ${PARAMS} ${DIST}.qcow2 & 
-cloonix_cli $NET add kvm vm2 ${PARAMS} ${DIST}.qcow2 & 
-sleep 2
-
+cloonix_cli $NET add kvm vm1 ${PARAMS} ${DIST}.qcow2 &
+sleep 5
+cloonix_cli $NET add kvm vm2 ${PARAMS} ${DIST}.qcow2 &
+sleep 5
+cloonix_cli $NET add a2b a2b
+sleep 15
 set +e
 for i in vm1 vm2 ; do
   while ! cloonix_ssh $NET ${i} "echo" 2>/dev/null; do

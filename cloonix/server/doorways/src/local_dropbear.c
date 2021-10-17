@@ -314,7 +314,7 @@ static int listen_x11_begin(t_local_dropbear *ld)
   ld->fd_display_sock_x11 = add_listen_x11(ld->idx_display_sock_x11);
   if (ld->fd_display_sock_x11 < 0)
     {
-    DOUT(NULL, FLAG_HOP_DOORS, "BAD LISTEN START");
+    DOUT(FLAG_HOP_DOORS, "BAD LISTEN START");
     KERR(" ");
     pool_release_sub_dido_idx(ld, ld->idx_display_sock_x11);
     ld->idx_display_sock_x11 = 0;
@@ -327,12 +327,12 @@ static int listen_x11_begin(t_local_dropbear *ld)
                                              "listen_x11");
     if (!ld->llid_display_sock_x11)
       {
-      DOUT(NULL, FLAG_HOP_DOORS, "BAD LISTEN START");
+      DOUT(FLAG_HOP_DOORS, "BAD LISTEN START");
       KERR(" ");
       }
     else
       {
-      DOUT(NULL, FLAG_HOP_DOORS, "LISTEN START %d", ld->idx_display_sock_x11);
+      DOUT(FLAG_HOP_DOORS, "LISTEN START %d", ld->idx_display_sock_x11);
       if (g_local_llid[ld->llid_display_sock_x11])
         KOUT("%d", ld->llid_display_sock_x11);
       g_local_llid[ld->llid_display_sock_x11] = ld;
@@ -354,7 +354,7 @@ static void traf_x11_end(t_sub_dido_x11 *cur)
     ld = find_with_dido_llid_by_scan(cur->dido_llid);
     if (!ld)
       KOUT(" ");
-    DOUT(NULL, FLAG_HOP_DOORS, 
+    DOUT(FLAG_HOP_DOORS, 
                "TRAF END display_sock_x11:%d sub_dido_idx:%d",
                ld->idx_display_sock_x11, cur->sub_dido_idx);
     memset(buf, 0, MAX_A2D_LEN); 
@@ -377,7 +377,7 @@ static void listen_x11_end(t_local_dropbear *ld)
   int i;
   if (ld->idx_display_sock_x11)
     {
-    DOUT(NULL, FLAG_HOP_DOORS, "LISTEN END %d", ld->idx_display_sock_x11);
+    DOUT(FLAG_HOP_DOORS, "LISTEN END %d", ld->idx_display_sock_x11);
     for (i=1; i<MAX_IDX_X11; i++)
       {
       if (ld->sub_dido_x11[i].sub_dido_idx == i)
@@ -574,7 +574,7 @@ static int listen_x11_evt(void *ptr, int llid, int fd_x11_listen)
         memset(buf, 0, MAX_A2D_LEN);
         snprintf(buf,MAX_A2D_LEN-1,LAX11OPEN,idx,ld->idx_display_sock_x11);
         x11_open_close(0, ld->dido_llid, buf);
-        DOUT(NULL, FLAG_HOP_DOORS, "TRAF START display_sock_x11:%d sub_dido_idx:%d",
+        DOUT(FLAG_HOP_DOORS, "TRAF START display_sock_x11:%d sub_dido_idx:%d",
              ld->idx_display_sock_x11);
         }
       }

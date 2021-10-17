@@ -22,19 +22,19 @@ typedef struct t_topo_kvm_chain
   struct t_topo_kvm_chain *next;
 } t_topo_kvm_chain;
 /*--------------------------------------------------------------------------*/
-typedef struct t_topo_c2c_chain
-{
-  t_topo_c2c c2c;
-  struct t_topo_c2c_chain *prev;
-  struct t_topo_c2c_chain *next;
-} t_topo_c2c_chain;
-/*--------------------------------------------------------------------------*/
 typedef struct t_topo_d2d_chain
 {
   t_topo_d2d d2d;
   struct t_topo_d2d_chain *prev;
   struct t_topo_d2d_chain *next;
 } t_topo_d2d_chain;
+/*--------------------------------------------------------------------------*/
+typedef struct t_topo_tap_chain
+{
+  t_topo_tap tap;
+  struct t_topo_tap_chain *prev;
+  struct t_topo_tap_chain *next;
+} t_topo_tap_chain;
 /*--------------------------------------------------------------------------*/
 typedef struct t_topo_a2b_chain
 {
@@ -43,12 +43,19 @@ typedef struct t_topo_a2b_chain
   struct t_topo_a2b_chain *next;
 } t_topo_a2b_chain;
 /*--------------------------------------------------------------------------*/
-typedef struct t_topo_sat_chain
+typedef struct t_topo_nat_chain
 {
-  t_topo_sat sat;
-  struct t_topo_sat_chain *prev;
-  struct t_topo_sat_chain *next;
-} t_topo_sat_chain;
+  t_topo_nat nat;
+  struct t_topo_nat_chain *prev;
+  struct t_topo_nat_chain *next;
+} t_topo_nat_chain;
+/*--------------------------------------------------------------------------*/
+typedef struct t_topo_phy_chain
+{
+  t_topo_phy phy;
+  struct t_topo_phy_chain *prev;
+  struct t_topo_phy_chain *next;
+} t_topo_phy_chain;
 /*--------------------------------------------------------------------------*/
 typedef struct t_topo_lan_chain
 {
@@ -70,14 +77,16 @@ typedef struct t_topo_differences
 {
   t_topo_kvm_chain  *add_kvm;
   t_topo_kvm_chain  *del_kvm;
-  t_topo_c2c_chain  *add_c2c;
-  t_topo_c2c_chain  *del_c2c;
   t_topo_d2d_chain  *add_d2d;
   t_topo_d2d_chain  *del_d2d;
+  t_topo_tap_chain  *add_tap;
+  t_topo_tap_chain  *del_tap;
   t_topo_a2b_chain  *add_a2b;
   t_topo_a2b_chain  *del_a2b;
-  t_topo_sat_chain  *add_sat;
-  t_topo_sat_chain  *del_sat;
+  t_topo_nat_chain  *add_nat;
+  t_topo_nat_chain  *del_nat;
+  t_topo_phy_chain  *add_phy;
+  t_topo_phy_chain  *del_phy;
   t_topo_lan_chain  *add_lan;
   t_topo_lan_chain  *del_lan;
   t_topo_edge_chain *add_edge;

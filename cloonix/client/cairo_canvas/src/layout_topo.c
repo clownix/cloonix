@@ -310,7 +310,7 @@ static void add_layout_sat(t_layout_sat *sat)
       modif_position_layout(bitem, sat->x - acur->x,
                                    sat->y - acur->y);
 
-      if (bitem->pbi.mutype == endp_type_a2b)
+      if (bitem->pbi.endp_type == endp_type_a2b)
         {
         eth_bitem = look_for_eth_with_id(sat->name, 0);
         if (!eth_bitem)
@@ -376,7 +376,7 @@ static void add_layout_node(t_layout_node *node)
 void recv_layout_lan(int llid, int tid, t_layout_lan *layout)
 {
   add_layout_lan(layout);
-  set_gene_layout_x_y(bank_type_lan, layout->name, mulan_type, 
+  set_gene_layout_x_y(bank_type_lan, layout->name,
                       layout->x, layout->y, 0,0,0,0,
                       layout->hidden_on_graph);
 }
@@ -386,7 +386,7 @@ void recv_layout_lan(int llid, int tid, t_layout_lan *layout)
 void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
 {
   add_layout_sat(layout);
-  set_gene_layout_x_y(bank_type_sat, layout->name, layout->mutype, 
+  set_gene_layout_x_y(bank_type_sat, layout->name,
                       layout->x, layout->y, 
                       layout->xa, layout->ya, 
                       layout->xb, layout->yb, 
@@ -398,11 +398,11 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
 void recv_layout_node(int llid, int tid, t_layout_node *layout)
 {
   int i;
-  double tx[MAX_SOCK_VM+MAX_WLAN_VM];
-  double ty[MAX_SOCK_VM+MAX_WLAN_VM];
-  int hidden_on_graph[MAX_SOCK_VM+MAX_WLAN_VM];
+  double tx[MAX_DPDK_VM];
+  double ty[MAX_DPDK_VM];
+  int hidden_on_graph[MAX_DPDK_VM];
   add_layout_node(layout);
-  for (i=0; i<MAX_SOCK_VM+MAX_WLAN_VM; i++)
+  for (i=0; i<MAX_DPDK_VM; i++)
     {
     if (i<layout->nb_eth_wlan)
       {

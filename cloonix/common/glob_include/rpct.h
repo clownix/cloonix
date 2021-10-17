@@ -19,11 +19,8 @@
 enum
   {
   bnd_rpct_min = 0,
-  bnd_rpct_blkd_item_sub,
-  bnd_rpct_blkd_item,
-  bnd_rpct_evt_msg,
-  bnd_rpct_diag_msg,
-  bnd_rpct_app_msg,
+  bnd_rpct_sigdiag_msg,
+  bnd_rpct_poldiag_msg,
   bnd_rpct_cli_req,
   bnd_rpct_cli_resp,
   bnd_rpct_kil_req,
@@ -36,73 +33,19 @@ enum
   };
 
 /*---------------------------------------------------------------------------*/
-#define BLKD_ITEM_SUB  "<blkd_item_sub>\n"\
-                       " <sub> %d </sub>\n"\
-                       "</blkd_item_sub>"
+#define MUSIGDIAG_MSG_O  "<sigdiag_msg>\n"\
+                         "  <tid> %d </tid>\n"
 
-#define BLKD_ITEM      "<blkd_item>\n"\
-                       "  sock:%s \n"\
-                       "  rank_name:%s rank_num:%d rank_tidx:%d \n"\
-                       "  rank:%d \n"\
-                       "  pid:%d \n"\
-                       "  llid:%d \n"\
-                       "  fd:%d \n"\
-                       "  sel_tx:%d \n"\
-                       "  sel_rx:%d \n"\
-                       "  fifo_tx:%d \n"\
-                       "  fifo_rx:%d \n"\
-                       "  queue_tx:%d \n"\
-                       "  queue_rx:%d \n"\
-                       "  bandwidth_tx:%d \n"\
-                       "  bandwidth_rx:%d \n"\
-                       "  stop_tx:%d \n"\
-                       "  stop_rx:%d \n"\
-                       "  flow_ctrl_tx:%d \n"\
-                       "  flow_ctrl_rx:%d \n"\
-                       "  drop_tx:%lld \n"\
-                       "  drop_rx:%lld \n"\
-                       "</blkd_item>"
+#define MUSIGDIAG_MSG_I "<sigdiag_msg_delimiter>%s</sigdiag_msg_delimiter>\n"
 
-
+#define MUSIGDIAG_MSG_C  "</sigdiag_msg>"
 /*---------------------------------------------------------------------------*/
-#define MUEVT_MSG_O  "<evt_msg>\n"\
-                     "  <tid> %d </tid>\n"
+#define MUPOLDIAG_MSG_O  "<poldiag_msg>\n"\
+                         "  <tid> %d </tid>\n"
 
-#define MUEVT_MSG_I "<evt_msg_delimiter>%s</evt_msg_delimiter>\n"
+#define MUPOLDIAG_MSG_I "<poldiag_msg_delimiter>%s</poldiag_msg_delimiter>\n"
 
-#define MUEVT_MSG_C  "</evt_msg>"
-/*---------------------------------------------------------------------------*/
-#define MUDIAG_MSG_O  "<diag_msg>\n"\
-                     "  <tid> %d </tid>\n"
-
-#define MUDIAG_MSG_I "<diag_msg_delimiter>%s</diag_msg_delimiter>\n"
-
-#define MUDIAG_MSG_C  "</diag_msg>"
-/*---------------------------------------------------------------------------*/
-#define MUAPP_MSG_O  "<app_msg>\n"\
-                     "  <tid> %d </tid>\n"
-
-#define MUAPP_MSG_I "<app_msg_delimiter>%s</app_msg_delimiter>\n"
-
-#define MUAPP_MSG_C  "</app_msg>"
-/*---------------------------------------------------------------------------*/
-#define MUCLI_REQ_O  "<mucli_req>\n"\
-                     "  <tid> %d </tid>\n"\
-                     "  <cli_llid> %d </cli_llid>\n"\
-                     "  <cli_tid> %d </cli_tid>\n"
-
-#define MUCLI_REQ_I  "  <mucli_req_bound>%s</mucli_req_bound>\n"
-
-#define MUCLI_REQ_C  "</mucli_req>"
-/*---------------------------------------------------------------------------*/
-#define MUCLI_RESP_O  "<mucli_resp>\n"\
-                      "  <tid> %d </tid>\n"\
-                      "  <cli_llid> %d </cli_llid>\n"\
-                      "  <cli_tid> %d </cli_tid>\n"
-
-#define MUCLI_RESP_I  "  <mucli_resp_bound>%s</mucli_resp_bound>\n"
-
-#define MUCLI_RESP_C  "</mucli_resp>"
+#define MUPOLDIAG_MSG_C  "</poldiag_msg>"
 /*---------------------------------------------------------------------------*/
 #define HOP_PID_REQ   "<hop_req_pid>\n"\
                        "  <tid> %d </tid>\n"\
@@ -136,60 +79,40 @@ enum
                       "</hop_evt_unsub>"
 
 /*---------------------------------------------------------------------------*/
-void rpct_send_app_msg(void *ptr, int llid, int tid, char *line);
-void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line);
-void rpct_send_diag_msg(void *ptr, int llid, int tid, char *line);
-void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line);
-void rpct_send_evt_msg(void *ptr, int llid, int tid, char *line);
-void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line);
+void rpct_send_sigdiag_msg(int llid, int tid, char *line);
+void rpct_send_poldiag_msg(int llid, int tid, char *line);
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line);
+void rpct_recv_poldiag_msg(int llid, int tid, char *line);
 /*---------------------------------------------------------------------------*/
-void rpct_send_cli_req(void *ptr, int llid, int tid,
-                    int cli_llid, int cli_tid, char *line);
-void rpct_recv_cli_req(void *ptr, int llid, int tid,
-                    int cli_llid, int cli_tid, char *line);
-void rpct_send_cli_resp(void *ptr, int llid, int tid,
-                     int cli_llid, int cli_tid, char *line);
-void rpct_recv_cli_resp(void *ptr, int llid, int tid,
-                     int cli_llid, int cli_tid, char *line);
+void rpct_send_pid_req(int llid, int tid, char *name, int num);
+void rpct_recv_pid_req(int llid, int tid, char *name, int num);
 /*---------------------------------------------------------------------------*/
-void rpct_send_pid_req(void *ptr, int llid, int tid, char *name, int num);
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num);
+void rpct_send_kil_req(int llid, int tid);
+void rpct_recv_kil_req(int llid, int tid);
 /*---------------------------------------------------------------------------*/
-void rpct_send_kil_req(void *ptr, int llid, int tid);
-void rpct_recv_kil_req(void *ptr, int llid, int tid);
-/*---------------------------------------------------------------------------*/
-void rpct_send_pid_resp(void *ptr, int llid, int tid,
+void rpct_send_pid_resp(int llid, int tid,
                         char *name, int num, int toppid, int pid);
-void rpct_recv_pid_resp(void *ptr, int llid, int tid,
+void rpct_recv_pid_resp(int llid, int tid,
                         char *name, int num, int toppid, int pid);
 /*---------------------------------------------------------------------------*/
-void rpct_send_hop_sub(void *ptr, int llid, int tid, int flags_hop);
-void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop);
+void rpct_send_hop_sub(int llid, int tid, int flags_hop);
+void rpct_recv_hop_sub(int llid, int tid, int flags_hop);
 /*---------------------------------------------------------------------------*/
-void rpct_send_hop_unsub(void *ptr, int llid, int tid);
-void rpct_recv_hop_unsub(void *ptr, int llid, int tid);
+void rpct_send_hop_unsub(int llid, int tid);
+void rpct_recv_hop_unsub(int llid, int tid);
 /*---------------------------------------------------------------------------*/
-void rpct_send_hop_msg(void *ptr, int llid, int tid,
+void rpct_send_hop_msg(int llid, int tid,
                       int flags_hop, char *txt);
-void rpct_recv_hop_msg(void *ptr, int llid, int tid,
+void rpct_recv_hop_msg(int llid, int tid,
                       int flags_hop, char *txt);
 /*---------------------------------------------------------------------------*/
-void rpct_hop_print_add_sub(void *ptr, int llid, int tid, int flags_hop);
-void rpct_hop_print_del_sub(void *ptr, int llid);
-void rpct_hop_print(void *ptr, int flags_hop, const char * format, ...);
+void rpct_hop_print_add_sub(int llid, int tid, int flags_hop);
+void rpct_hop_print_del_sub(int llid);
+void rpct_hop_print(int flags_hop, const char * format, ...);
 /*---------------------------------------------------------------------------*/
-typedef void (*t_rpct_tx)(void *ptr, int llid, int len, char *buf);
-void rpct_heartbeat(void *ptr);
-int  rpct_decoder(void *ptr, int llid, int len, char *str_rx);
-void rpct_send_report_sub(void *ptr, int llid, int sub);
-void rpct_recv_report_sub(void *ptr, int llid, int sub);
-void rpct_send_report(void *ptr, int llid, t_blkd_item *item);
-void rpct_recv_report(void *ptr, int llid, t_blkd_item *item);
-void rpct_clean_all(void *ptr);
-void rpct_redirect_string_tx(void *ptr, t_rpct_tx rpc_tx);
-void rpct_send_peer_flow_control(void *ptr, int llid,
-                                 char *name, int num, int tidx,
-                                 int rank, int stop);
-void rpct_init(void *ptr, t_rpct_tx rpc_tx);
+typedef void (*t_rpct_tx)(int llid, int len, char *buf);
+int  rpct_decoder(int llid, int len, char *str_rx);
+void rpct_redirect_string_tx(t_rpct_tx rpc_tx);
+void rpct_init(t_rpct_tx rpc_tx);
 /****************************************************************************/
 

@@ -5,7 +5,6 @@ NINJA=${HERE}/${CLOONIX_COMMON}/meson_ninja
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
-BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
 
 ./allclean
@@ -17,10 +16,6 @@ fi
 if [ ! -f ${RPC_CLOWNIX}/librpc_clownix.a ]; then
   cd ${RPC_CLOWNIX}
   ./cmd
-fi
-if [ ! -f ${BLKD}/libblkd.a ]; then
-  cd ${BLKD}
-  make
 fi
 if [ ! -f ${RPCT}/librpct.a ]; then
   cd ${RPCT}
@@ -48,16 +43,17 @@ incdir = include_directories('${IO_CLOWNIX}/include',
 crypto = dependency('libcrypto')
 cmplr = meson.get_compiler('c')
 io_clownix = cmplr.find_library('libio_clownix', dirs : '${HERE}/${IO_CLOWNIX}')
-blkd = cmplr.find_library('libblkd', dirs : '${HERE}/${BLKD}')
 rpct = cmplr.find_library('librpct', dirs : '${HERE}/${RPCT}')
 
 sources = files('src/ovs_drv.c',
                 'src/action.c',
                 'src/my_popen.c',
+                'src/ovs_cmd.c',
+                'src/ifdev.c',
                 'src/ovs_execv.c')
 
 executable('cloonix_ovs_drv', sources, include_directories : incdir,
-            dependencies : [io_clownix,blkd,rpct,crypto],
+            dependencies : [io_clownix,rpct,crypto],
             c_args: cflags,
             install : true)
 

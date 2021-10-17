@@ -36,15 +36,6 @@ static int count_command      = 0;
 static int count_status       = 0;
 static int count_add_vm       = 0;
 static int count_del_vm       = 0;
-static int count_c2c_req_idx  = 0;
-static int count_c2c_req_conx = 0;
-static int count_c2c_req_free = 0;
-static int count_c2c_resp_conx = 0;
-static int count_c2c_resp_idx = 0;
-static int count_c2c_clone_birth = 0;
-static int count_c2c_clone_birth_pid = 0;
-static int count_c2c_clone_death = 0;
-
 
 
 
@@ -59,14 +50,6 @@ static void print_all_count(void)
   printf("%d\n", count_status);
   printf("%d\n", count_add_vm);
   printf("%d\n", count_del_vm);
-  printf("%d\n", count_c2c_req_idx);
-  printf("%d\n", count_c2c_req_conx);
-  printf("%d\n", count_c2c_req_free);
-  printf("%d\n", count_c2c_resp_conx);
-  printf("%d\n", count_c2c_resp_idx);
-  printf("%d\n", count_c2c_clone_birth);
-  printf("%d\n", count_c2c_clone_birth_pid);
-  printf("%d\n", count_c2c_clone_death);
   printf("END COUNT\n");
 }
 /*---------------------------------------------------------------------------*/
@@ -104,250 +87,6 @@ static void heartbeat (int delta)
       printf("%d:%02lu ", i, mallocs[i]);
     print_all_count();
     }
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_clone_birth(int llid, int itid, 
-                                char *inet_name, char *iname,
-                                int ifd, int iendp_type,
-                                char *ibin_path, char *isock)
-{
-  static char net_name[MAX_NAME_LEN];
-  static char name[MAX_NAME_LEN];
-  static char bin_path[MAX_PATH_LEN];
-  static char sock[MAX_PATH_LEN];
-  static int tid, fd, endp_type;
-  if (i_am_client)
-    {
-    if (count_c2c_clone_birth)
-      {
-      if (strcmp(inet_name, net_name))
-        KOUT(" ");
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (strcmp(ibin_path, bin_path))
-        KOUT(" ");
-      if (strcmp(isock, sock))
-        KOUT(" ");
-      if (ifd != fd)
-        KOUT(" ");
-      if (iendp_type != endp_type)
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    fd = rand();
-    endp_type = rand();
-    random_choice_str(net_name, MAX_NAME_LEN);
-    random_choice_str(name, MAX_NAME_LEN);
-    random_choice_str(bin_path, MAX_PATH_LEN);
-    random_choice_str(sock, MAX_PATH_LEN);
-    doors_send_c2c_clone_birth(llid, tid, net_name, name,
-                               fd, endp_type, bin_path, sock);
-    }
-  else
-    doors_send_c2c_clone_birth(llid, itid,inet_name, iname,
-                               ifd, iendp_type, ibin_path, isock);
-  count_c2c_clone_birth++;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_clone_birth_pid(int llid, int itid, char *iname, int ipid)
-{
-  static char name[MAX_NAME_LEN];
-  static int tid, pid;
-  if (i_am_client)
-    {
-    if (count_c2c_clone_birth_pid)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (ipid != pid)
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    pid = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    doors_send_c2c_clone_birth_pid(llid, tid, name, pid);
-    }
-  else
-    doors_send_c2c_clone_birth_pid(llid, itid, iname, ipid);
-  count_c2c_clone_birth_pid++;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_clone_death(int llid, int itid, char *iname)
-{
-  static char name[MAX_NAME_LEN];
-  static int tid;
-  if (i_am_client)
-    {
-    if (count_c2c_clone_death)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    doors_send_c2c_clone_death(llid, tid, name);
-    }
-  else
-    doors_send_c2c_clone_death(llid, itid, iname);
-  count_c2c_clone_death++;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_req_idx(int llid, int itid, char *iname)
-{
-  static char name[MAX_NAME_LEN];
-  static int tid;
-  if (i_am_client)
-    {
-    if (count_c2c_req_idx)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    doors_send_c2c_req_idx(llid, tid, name);
-    }
-  else
-    doors_send_c2c_req_idx(llid, itid, iname);
-  count_c2c_req_idx++;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_resp_idx(int llid, int itid, char *iname, int ilocal_idx)
-{ 
-  static char name[MAX_NAME_LEN];
-  static int tid, local_idx;
-  if (i_am_client)
-    {
-    if (count_c2c_resp_idx)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (ilocal_idx != local_idx)
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    local_idx = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    doors_send_c2c_resp_idx(llid, tid, name, local_idx);
-    }
-  else
-    doors_send_c2c_resp_idx(llid, itid, iname, ilocal_idx);
-  count_c2c_resp_idx++;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_req_conx(int llid, int itid, char *iname, int ipeer_idx, 
-                             uint32_t ipeer_ip, int ipeer_port, char *ipasswd)
-{
-  static char name[MAX_NAME_LEN];
-  static char passwd[MSG_DIGEST_LEN];
-  static int tid, peer_idx, peer_ip, peer_port;
-  if (i_am_client)
-    {
-    if (count_c2c_req_conx)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (strcmp(ipasswd, passwd))
-        KOUT(" ");
-      if (ipeer_idx != peer_idx)
-        KOUT(" ");
-      if (ipeer_ip != peer_ip)
-        KOUT(" ");
-      if (ipeer_port != peer_port)
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    peer_idx = rand();
-    peer_ip = rand();
-    peer_port = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    random_choice_str(passwd, MSG_DIGEST_LEN);
-    doors_send_c2c_req_conx(llid, tid, name, peer_idx, 
-                            peer_ip, peer_port, passwd);
-    }
-  else
-    doors_send_c2c_req_conx(llid, itid, iname, ipeer_idx, 
-                            ipeer_ip, ipeer_port, ipasswd);
-  count_c2c_req_conx++;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_resp_conx(int llid, int itid, char *iname, 
-                              int ifd, int istatus)
-{
-  static char name[MAX_NAME_LEN];
-  static int tid, status, fd;
-  if (i_am_client)
-    {
-    if (count_c2c_resp_conx)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (ifd != fd)
-        KOUT(" ");
-      if (istatus != status)
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    fd = rand();
-    status = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    doors_send_c2c_resp_conx(llid, tid, name, fd, status);
-    }
-  else
-    doors_send_c2c_resp_conx(llid, itid, iname, ifd, istatus);
-  count_c2c_resp_conx++;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_req_free(int llid, int itid, char *iname)
-{
-  static char name[MAX_NAME_LEN];
-  static int tid;
-  if (i_am_client)
-    {
-    if (count_c2c_req_free)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    doors_send_c2c_req_free(llid, tid, name);
-    }
-  else
-    doors_send_c2c_req_free(llid, itid, iname);
-  count_c2c_req_free++;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -518,14 +257,6 @@ void doors_recv_del_vm(int llid, int itid, char *iname)
 /*****************************************************************************/
 static void send_first_burst(int llid)
 {
-  doors_recv_c2c_req_idx(llid, 0, NULL);
-  doors_recv_c2c_resp_idx(llid, 0, NULL, 0);
-  doors_recv_c2c_req_conx(llid, 0, NULL, 0, 0, 0, NULL);
-  doors_recv_c2c_resp_conx(llid, 0, NULL, 0, 0);
-  doors_recv_c2c_req_free(llid, 0, NULL);
-  doors_recv_c2c_clone_birth(llid, 0, NULL, NULL, 0, 0, NULL, NULL);
-  doors_recv_c2c_clone_birth_pid(llid, 0, NULL, 0);
-  doors_recv_c2c_clone_death(llid, 0, NULL);
   doors_recv_info(llid, 0, NULL, NULL);
   doors_recv_event(llid, 0, NULL, NULL);
   doors_recv_command(llid, 0, NULL, NULL);
@@ -575,7 +306,7 @@ int main (int argc, char *argv[])
 {
   int llid;
   doors_xml_init();
-  msg_mngt_init(IO_MAX_BUF_LEN);
+  msg_mngt_init("doors", IO_MAX_BUF_LEN);
   if (argc == 2)
     {
     if (!strcmp(argv[1], "-s"))

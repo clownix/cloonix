@@ -29,20 +29,14 @@
 #include "rpc_clownix.h"
 #include "cfg_store.h"
 #include "commun_daemon.h"
-#include "dpdk_ovs.h"
-#include "dpdk_nat.h"
-#include "dpdk_tap.h"
-#include "dpdk_dyn.h"
 #include "dpdk_d2d.h"
 #include "suid_power.h"
 #include "dpdk_d2d_peer.h"
 #include "event_subscriber.h"
 #include "d2d_dpdk_process.h"
-#include "snf_dpdk_process.h"
 #include "dpdk_msg.h"
 #include "utils_cmd_line_maker.h"
 #include "stats_counters.h"
-#include "tabmac.h"
 
 enum {
   state_idle = 0,
@@ -66,49 +60,60 @@ static t_d2d_cnx *g_head_d2d;
 static int g_nb_d2d;
 
 /****************************************************************************/
-static void nb_to_text(int state, char *label)
+static char *nb_to_text_raw(int state)
 {
+  char *result;
   switch (state)
     {
     case state_idle:
-      strcpy(label, "state_idle");
+      result = "state_idle";
       break;
     case state_up_initialised:
-      strcpy(label, "state_up_initialised");
+      result = "state_up_initialised";
       break;
     case state_up_process_started:
-      strcpy(label, "state_up_process_started");
+      result = "state_up_process_started";
       break;
     case state_up_process_eal_init:
-      strcpy(label, "state_up_process_eal_init");
+      result = "state_up_process_eal_init";
       break;
     case state_up_process_vhost_req_on:
-      strcpy(label, "state_up_process_vhost_req_on");
+      result = "state_up_process_vhost_req_on";
       break;
     case state_up_process_vhost_resp_on:
-      strcpy(label, "state_up_process_vhost_resp_on");
+      result = "state_up_process_vhost_resp_on";
       break;
     case state_up_lan_ovs_req:
-      strcpy(label, "state_up_lan_ovs_req");
+      result = "state_up_lan_ovs_req";
       break;
     case state_up_lan_ovs_resp:
-      strcpy(label, "state_up_lan_ovs_resp");
+      result = "state_up_lan_ovs_resp";
       break;
     case state_down_initialised:
-      strcpy(label, "state_down_initialised");
+      result = "state_down_initialised";
       break;
     case state_down_vhost_stopped:
-      strcpy(label, "state_down_vhost_stopped");
+      result = "state_down_vhost_stopped";
       break;
     case state_down_ovs_req_del_lan:
-      strcpy(label, "state_down_ovs_req_del_lan");
+      result = "state_down_ovs_req_del_lan";
       break;
     case state_down_ovs_resp_del_lan:
-      strcpy(label, "state_down_ovs_resp_del_lan");
+      result = "state_down_ovs_resp_del_lan";
       break;
     default:
       KOUT("%d", state);
     }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void nb_to_text(int state, char *label)
+{
+  char *txt = nb_to_text_raw(state);
+  memset(label, 0, MAX_NAME_LEN);
+  strncpy(label, txt, MAX_NAME_LEN-1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -193,10 +198,8 @@ static void free_d2d(t_d2d_cnx *cur)
   g_nb_d2d -= 1;
   if (strlen(lan))
     {
-    tabmac_process_possible_change();
     dpdk_msg_vlan_exist_no_more(lan);
     }
-  suid_power_rec_name(name, 0);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -225,8 +228,6 @@ static void dpdk_d2d_reset_con_params(t_d2d_cnx *cur)
   cur->udp_probe_qty_sent    = 0;
   cur->peer_bad_status_received = 0;
   cur->watchdog_count        = 0;
-  cur->openvswitch_started_and_running = 0;
-  cur->openvswitch_started_and_running_count = 0;
   cur->vhost_started_and_running = 0;
   cur->lan_add_cli_llid      = 0;
   cur->lan_add_cli_tid       = 0;
@@ -320,12 +321,9 @@ static void process_watchdog_count(t_d2d_cnx *cur)
 /****************************************************************************/
 static void process_waiting_add_lan(t_d2d_cnx *cur)
 {
-  char *locnet = cfg_get_cloonix_name();
-
   if (cur->vhost_started_and_running == 1)
     {
-    if ((cur->openvswitch_started_and_running == 1) &&
-        (strlen(cur->lan)) &&
+    if ((strlen(cur->lan)) &&
         (cur->waiting_ack_del_lan == 0) &&
         (cur->waiting_ack_add_lan == 0) &&
         (cur->peer_bad_status_received == 0) &&
@@ -334,21 +332,6 @@ static void process_waiting_add_lan(t_d2d_cnx *cur)
       dpdk_msg_send_add_lan_d2d(cur->lan, cur->name);
       cur->waiting_ack_add_lan = 1;
       state_progress_up(cur, state_up_lan_ovs_req);
-      }
-    else if ((cur->openvswitch_started_and_running == 0) && (strlen(cur->lan)))
-      {
-      cur->openvswitch_started_and_running_count += 1;
-      if (cur->openvswitch_started_and_running_count > 5)
-        {
-        KERR("FAIL ADD LAN %s %s %s", locnet, cur->name, cur->lan);
-        KERR("loc ip: %x loc port: %hu", cur->loc_udp_ip, cur->loc_udp_port);
-        KERR("dist ip: %x dist port: %hu", cur->dist_udp_ip, cur->dist_udp_port);
-        utils_send_status_ko(&(cur->lan_add_cli_llid),
-                             &(cur->lan_add_cli_tid),
-                             "udp not peered check conf udp ip addr");
-        memset(cur->lan, 0, MAX_NAME_LEN);
-        cur->openvswitch_started_and_running_count = 0;
-        }
       }
     }
 }
@@ -451,8 +434,13 @@ void dpdk_d2d_event_from_d2d_dpdk_process(char *name, int on)
     {
     if (on == 1)
       {
-      d2d_dpdk_get_udp_port(name);
-      state_progress_up(cur, state_up_process_started);
+      if (cur->state_up != state_up_initialised)
+        KERR("BAD STATE: %s", nb_to_text_raw(cur->state_up));
+      else
+        {
+        d2d_dpdk_get_udp_port(name);
+        state_progress_up(cur, state_up_process_started);
+        }
       }
     else
       {
@@ -496,7 +484,6 @@ void dpdk_d2d_resp_add_lan(int is_ko, char *lan, char *name)
     cur->waiting_ack_add_lan = 0;
     utils_send_status_ok(&(cur->lan_add_cli_llid),&(cur->lan_add_cli_tid));
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    tabmac_process_possible_change();
     state_progress_up(cur, state_up_lan_ovs_resp);
     }
 }
@@ -535,7 +522,6 @@ void dpdk_d2d_resp_del_lan(int is_ko, char *lan, char *name)
       cur->received_del_lan_req = 0;
       }
     cur->lan_ovs_is_attached = 0;
-    tabmac_process_possible_change();
     dpdk_msg_vlan_exist_no_more(lan);
     utils_send_status_ok(&(cur->lan_del_cli_llid),&(cur->lan_del_cli_tid));
     }
@@ -636,23 +622,18 @@ static void master_and_slave_ping_process(t_d2d_cnx *cur, int peer_status)
       d2d_dpdk_set_dist_udp_ip_port(cur->name, cur->dist_udp_ip,
                                     cur->dist_udp_port);
     }
-  else if ((cur->openvswitch_started_and_running == 0) &&
-           (cur->udp_connection_peered == 1) &&
-           (peer_status > 1))
-
+  else if ((cur->udp_connection_peered == 1) &&
+           (peer_status > 1) &&
+           (cur->state_up == state_up_process_started))
     {
-    dpdk_ovs_start_openvswitch_if_not_done();
-    if (dpdk_ovs_drv_ready())
-      {
-      d2d_dpdk_eal_init(cur->name);
-      cur->openvswitch_started_and_running = 1;
-      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-      state_progress_up(cur, state_up_process_eal_init);
-      }
+    d2d_dpdk_eal_init(cur->name);
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    state_progress_up(cur, state_up_process_eal_init);
     }
   else if ((cur->vhost_started_and_running == 0) &&
-           (cur->openvswitch_started_and_running == 1) &&
-           (cur->udp_connection_peered == 1) && (peer_status > 1)) 
+           (cur->udp_connection_peered == 1) &&
+           (peer_status > 1) &&
+           (cur->state_up == state_up_process_eal_init))
     {
     d2d_dpdk_start_vhost(cur->name);
     state_progress_up(cur, state_up_process_vhost_req_on);
@@ -716,7 +697,6 @@ int dpdk_d2d_add(char *name, uint32_t loc_udp_ip,
     }
   else
     {
-    suid_power_rec_name(name, 1);
     cur = alloc_d2d(name, dist);
     strncpy(cur->dist_passwd, dist_passwd, MSG_DIGEST_LEN-1);
     cur->dist_tcp_ip = dist_ip;
@@ -748,7 +728,6 @@ void dpdk_d2d_peer_add(int llid, int tid, char *name, char *dist, char *loc)
     }
   else
     {
-    suid_power_rec_name(name, 1);
     cur = alloc_d2d(name, dist);
     cur->peer_llid = llid;
     cur->ref_tid = tid;
@@ -930,8 +909,11 @@ void dpdk_d2d_add_lan(int llid, int tid, char *name, char *lan)
   char *locnet = cfg_get_cloonix_name();
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
-    KOUT("%s %s %s", locnet, name, lan); 
-  if (cur->lan_add_cli_llid)
+    {
+    KERR("%s %s %s", locnet, name, lan);
+    send_status_ko(llid, tid, "not found");
+    }
+  else if (cur->lan_add_cli_llid)
     {
     KERR("%s %s %s", locnet, name, lan);
     send_status_ko(llid, tid, "command to be processed");
@@ -969,7 +951,6 @@ void dpdk_d2d_vhost_stopped(char *name)
       if (strlen(cur->lan))
         {
         memset(cur->lan, 0, MAX_NAME_LEN);
-        tabmac_process_possible_change();
         dpdk_msg_vlan_exist_no_more(cur->lan);
         }
       }
@@ -989,8 +970,11 @@ void dpdk_d2d_del_lan(int llid, int tid, char *name, char *lan)
   char *locnet = cfg_get_cloonix_name();
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
-    KOUT("%s %s %s", locnet, name, lan);
-  if (cur->lan_del_cli_llid)
+    {
+    KERR("%s %s %s", locnet, name, lan);
+    send_status_ko(llid, tid, "not found");
+    }
+  else if (cur->lan_del_cli_llid)
     {
     KERR("%s %s %s", locnet, name, lan);
     send_status_ko(llid, tid, "command to be processed");
@@ -1048,7 +1032,7 @@ char *dpdk_d2d_get_next(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_topo_endp *dpdk_d2d_mngt_translate_topo_endp(int *nb)
+t_topo_endp *translate_topo_endp_d2d(int *nb)
 {
   t_d2d_cnx *cur = g_head_d2d;
   int len, nb_endp = 0;
@@ -1077,115 +1061,15 @@ t_topo_endp *dpdk_d2d_mngt_translate_topo_endp(int *nb)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_d2d_get_strmac(char *name, t_peer_mac **tabmac)
+int dpdk_d2d_exists(char *name)
 {
   int result = 0;
   t_d2d_cnx *cur = dpdk_d2d_find(name);
-  if (cur)
-    {
-    *tabmac = &(cur->dist_tabmac[0]);
-    result = cur->nb_dist_mac;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void dpdk_d2d_peer_mac(int llid, int tid, char *name,
-                       int nb_mac, t_peer_mac *tabmac)
-{
-  t_d2d_cnx *cur = dpdk_d2d_find(name);
-  if (nb_mac >= MAX_PEER_MAC)
-    KERR("INCREASE MAX_PEER_MAC %d", nb_mac);
-  else if (cur)
-    {
-    cur->nb_dist_mac = nb_mac;
-    memset(cur->dist_tabmac, 0, MAX_PEER_MAC * sizeof(t_peer_mac));
-    memcpy(cur->dist_tabmac, tabmac, nb_mac * sizeof(t_peer_mac));
-    snf_dpdk_process_possible_change();
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void dpdk_d2d_process_possible_change(void)
-{
-  int nb_mac;
-  t_peer_mac tabmac[MAX_PEER_MAC];
-  t_d2d_cnx *cur = g_head_d2d;
-  while(cur)
-    {
-    nb_mac = tabmac_update_for_d2d(tabmac);
-    wrap_send_d2d_peer_mac(cur, nb_mac, tabmac);
-    cur = cur->next;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_d2d_eventfull(char *name, int ms, int ptx, int btx, int prx, int brx)
-{
-  int result = -1;
-  t_d2d_cnx *cur = dpdk_d2d_find(name);
-  if (cur)
-    {
-    cur->ms      = ms;
-    cur->pkt_tx  += ptx;
-    cur->pkt_rx  += prx;
-    cur->byte_tx += btx;
-    cur->byte_rx += brx;
-    stats_counters_update_endp_tx_rx(cur->name, 0, ms, ptx, btx, prx, brx);
-    result = 0;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int dpdk_d2d_collect_dpdk(t_eventfull_endp *eventfull)
-{
-  int result = 0;;
-  t_d2d_cnx *cur = g_head_d2d;
-  while(cur)
-    {
-    strncpy(eventfull[result].name, cur->name, MAX_NAME_LEN-1);
-    eventfull[result].type = endp_type_d2d;
-    eventfull[result].num  = 0;
-    eventfull[result].ms   = cur->ms;
-    eventfull[result].ptx  = cur->pkt_tx;
-    eventfull[result].prx  = cur->pkt_rx;
-    eventfull[result].btx  = cur->byte_tx;
-    eventfull[result].brx  = cur->byte_rx;
-    cur->pkt_tx  = 0;
-    cur->pkt_rx  = 0;
-    cur->byte_tx = 0;
-    cur->byte_rx = 0;
-    result += 1;
-    cur = cur->next;
-    }
+  if (cur != NULL)
+    result =1;
   return result;
 }
 /*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_d2d_get_tabmac(char *name, t_peer_mac tab[MAX_PEER_MAC])
-{
-  t_d2d_cnx *cur = g_head_d2d;
-  int nb = 0;
-  memset(tab, 0, MAX_PEER_MAC * sizeof(t_peer_mac));
-  memset(name, 0, MAX_NAME_LEN);
-  while(cur)
-    {
-    strncpy(name, cur->name, MAX_NAME_LEN-1);
-    nb = cur->nb_dist_mac;
-    if (nb >= MAX_PEER_MAC)
-      KOUT("%d %d", nb, MAX_PEER_MAC);
-    memcpy(tab, cur->dist_tabmac, nb * sizeof(t_peer_mac));
-    cur = cur->next;
-    }
-  return nb;
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void dpdk_d2d_init(void)

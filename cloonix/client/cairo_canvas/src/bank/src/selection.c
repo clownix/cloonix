@@ -43,8 +43,8 @@ static int selectioned_resolve(t_bank_item *bitem)
           KOUT(" ");
         if (bitem->att_node->bank_type == bank_type_sat)
           {
-          if (bitem->att_node->pbi.mutype != endp_type_a2b) 
-            KERR("%s %d", bitem->name, bitem->att_node->pbi.mutype);
+          if (bitem->att_node->pbi.endp_type != endp_type_a2b) 
+            KERR("%s %d", bitem->name, bitem->att_node->pbi.endp_type);
           else
             {
             to_cloonix_switch_create_edge(bitem->name, bitem->num, selectioned_lan->name); 
@@ -64,7 +64,7 @@ static int selectioned_resolve(t_bank_item *bitem)
         {
         if ((!selectioned_lan->name) || (!strlen(selectioned_lan->name)))
           KOUT(" ");
-        if (selectioned_lan->pbi.mutype != endp_type_a2b)
+        if (selectioned_lan->pbi.endp_type != endp_type_a2b)
           {
           to_cloonix_switch_create_edge(bitem->name, 0, selectioned_lan->name); 
           }

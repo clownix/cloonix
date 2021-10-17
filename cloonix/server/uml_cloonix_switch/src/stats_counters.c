@@ -33,7 +33,6 @@
 #include "event_subscriber.h"
 #include "commun_daemon.h"
 #include "header_sock.h"
-#include "endp_mngt.h"
 
 
 
@@ -215,10 +214,9 @@ void stats_counters_update_endp_tx_rx(char *name, int num, unsigned int ms,
 void recv_evt_stats_endp_sub(int llid, int tid, char *name, int num, int sub)
 {
   char *network = cfg_get_cloonix_name();
-  int type;
   t_stats_counts sc;
   memset(&sc, 0, sizeof(t_stats_counts));
-  if (!endp_mngt_exists(name, num, &type))
+  if (1)
     send_evt_stats_endp(llid, tid, network, name, num, &sc, 1);
   else
     {

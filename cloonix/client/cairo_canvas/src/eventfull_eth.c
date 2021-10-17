@@ -39,7 +39,7 @@ typedef struct t_obj_blinks
   char name[MAX_NAME_LEN];
   int to_be_deleted;
   int nb_eth;
-  t_eth_blinks eth_blinks[MAX_SOCK_VM+MAX_WLAN_VM];
+  t_eth_blinks eth_blinks[MAX_DPDK_VM];
   t_bank_item *bitem;  
   struct t_obj_blinks *hash_prev;
   struct t_obj_blinks *hash_next;
@@ -151,7 +151,7 @@ static void blink_on_obj(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void eventfull_arrival(int nb_endp, t_eventfull_endp *endp)
+void eventfull_arrival(int nb_endp, t_eventfull_endp *endp)
 {
   t_obj_blinks *cur;
   int i, num;
@@ -163,7 +163,7 @@ static void eventfull_arrival(int nb_endp, t_eventfull_endp *endp)
     if (cur)
       {
       num = endp[i].num;
-      if ((num < 0) || (num > MAX_SOCK_VM+MAX_WLAN_VM))
+      if ((num < 0) || (num > MAX_DPDK_VM))
         KOUT("%d", num);
       if ((cur->bitem->pbi.pbi_node) && (num == 0))
         {
@@ -190,17 +190,7 @@ static void eventfull_arrival(int nb_endp, t_eventfull_endp *endp)
         }
       }
     }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void eventfull_packets_data(t_eventfull *eventfull)
-{
-  if (!eventfull)
-    KOUT(" ");
-  eventfull_arrival(eventfull->nb_endp, eventfull->endp);
   blink_on_obj();
-  eventfull_periodic_work();
 }
 /*---------------------------------------------------------------------------*/
 

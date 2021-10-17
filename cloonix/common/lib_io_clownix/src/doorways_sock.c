@@ -102,7 +102,7 @@ static void fct_10_sec_timeout(void *data)
 static void fct_stop_writing_timeout(void *data)
 {
   unsigned long ul_llid = (unsigned long) data;
-  channel_tx_local_flow_ctrl(NULL, (int) ul_llid, 0);
+  channel_tx_local_flow_ctrl((int) ul_llid, 0);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -123,7 +123,7 @@ static int max_tx_sock_queue_len_reached(int llid, int cidx, int fd)
       if (used > MAX_TOT_LEN_DOORWAYS_SOCK_Q) 
         {
         KERR("%d %d", used, MAX_TOT_LEN_DOORWAYS_SOCK_Q);
-        channel_tx_local_flow_ctrl(NULL, llid, 1);
+        channel_tx_local_flow_ctrl(llid, 1);
         clownix_timeout_add(2, fct_stop_writing_timeout,
                             (void *) ul_llid,NULL,NULL);
         g_max_tx_sock_queue_len_reached += 1;
@@ -212,7 +212,7 @@ static void clean_llid(int llid)
 /*****************************************************************************/
 static t_llid *alloc_llid(int doors_type, int llid, int fd, char *fct)
 {
-  int cidx, is_blkd;
+  int cidx;
   t_data_channel *dchan;
   if (!doors_type)
     KOUT("%d    %s   %s", llid, g_llid_data[llid]->fct, fct);
@@ -224,7 +224,7 @@ static t_llid *alloc_llid(int doors_type, int llid, int fd, char *fct)
   g_llid_data[llid]->llid = llid;
   g_llid_data[llid]->fd = fd;
   strncpy(g_llid_data[llid]->fct, fct, MAX_NAME_LEN - 1);
-  cidx = channel_check_llid(llid, &is_blkd, __FUNCTION__);
+  cidx = channel_check_llid(llid, __FUNCTION__);
   dchan = get_dchan(cidx);
   memset(dchan, 0, sizeof(t_data_channel));
   dchan->decoding_state = rx_type_doorways;
@@ -350,28 +350,28 @@ static int sock_header_get_info(char *rx,
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void err_listen_cb(void *ptr, int llid, int err, int from)
+static void err_listen_cb(int llid, int err, int from)
 {
   KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void err_cb(void *ptr, int llid, int err, int from)
+static void err_cb(int llid, int err, int from)
 {
   clean_llid(llid);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void cli_err_cb(void *ptr, int llid, int err, int from)
+static void cli_err_cb(int llid, int err, int from)
 {
   clean_llid(llid);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void tx_err_cb(void *ptr, int llid, int err, int from)
+static void tx_err_cb(int llid, int err, int from)
 {
   clean_llid(llid);
 }
@@ -434,7 +434,7 @@ static int doors_tx_send_chunk(t_data_channel *dchan, int cidx,
     chain_delete(&(dchan->tx), &(dchan->last_tx));
     if (!err_cb)
       KOUT(" ");
-    err_cb(NULL, dchan->llid, errno, 3);
+    err_cb(dchan->llid, errno, 3);
     result = -1;
     }
   return result;
@@ -444,9 +444,9 @@ static int doors_tx_send_chunk(t_data_channel *dchan, int cidx,
 
 
 /*****************************************************************************/
-static int tx_cb(void *ptr, int llid, int fd)
+static int tx_cb(int llid, int fd)
 {
-  int cidx, is_blkd, result, correct_send, total_correct_send = 0;
+  int cidx, result, correct_send, total_correct_send = 0;
   t_data_channel *dchan;
   t_llid *lid = g_llid_data[llid];
   if (!lid)
@@ -455,7 +455,7 @@ static int tx_cb(void *ptr, int llid, int fd)
     {
     if (lid->fd != fd)
       KOUT("%d %d", lid->fd, fd);
-    cidx = channel_check_llid(llid, &is_blkd, __FUNCTION__);
+    cidx = channel_check_llid(llid, __FUNCTION__);
     dchan = get_dchan(cidx);
     if (dchan->llid !=  llid)
       KOUT("%d %d %d %d %d", cidx, llid,  fd, dchan->llid, dchan->fd);
@@ -631,7 +631,7 @@ static int rx_doorways(t_llid *lid, int len, char *buf)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int rx_cb(void *ptr, int llid, int fd)
+static int rx_cb(int llid, int fd)
 {
   int result = -1;
   static char buf[MAX_DOORWAYS_BUF_LEN];
@@ -662,7 +662,7 @@ static int rx_cb(void *ptr, int llid, int fd)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int server_has_new_connect_from_client(void *ptr, int id, int fd)
+static int server_has_new_connect_from_client(int id, int fd)
 {
   int fd_new, llid;
   char *little_name;
@@ -678,7 +678,7 @@ static int server_has_new_connect_from_client(void *ptr, int id, int fd)
     if (fd_new > 0)
       {
       little_name = channel_get_little_name(id);
-      llid = channel_create(fd_new, 0, kind_server, little_name, rx_cb,
+      llid = channel_create(fd_new, kind_server, little_name, rx_cb,
                             tx_cb, cli_err_cb);
       if (!llid)
         KOUT(" ");
@@ -719,7 +719,7 @@ int doorways_sock_server_inet(int ip, int port, char *passwd,
     listen_fd = util_socket_listen_inet(port);
     if (listen_fd > 0)
       {
-      llid = channel_create(listen_fd, 0, kind_simple_watch, "doorway_serv",
+      llid = channel_create(listen_fd, kind_simple_watch, "doorway_serv",
                             server_has_new_connect_from_client,
                             NULL, err_listen_cb);
       if (!llid)
@@ -740,7 +740,7 @@ int doorways_sock_server_inet(int ip, int port, char *passwd,
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void doorways_connect_error(void *ptr, int llid, int err, int from)
+static void doorways_connect_error(int llid, int err, int from)
 {
   int fd;
   if (msg_exist_channel(llid))
@@ -762,7 +762,7 @@ int doorways_sock_client_inet_start(uint32_t ip, int port, t_fd_event conn_rx)
   fd = util_nonblock_client_socket_inet(ip, port);
   if (fd != -1)
     {
-    llid = channel_create(fd, 0, kind_simple_watch_connect, "connect_wait",
+    llid = channel_create(fd, kind_simple_watch_connect, "connect_wait",
                           conn_rx, conn_rx, doorways_connect_error);
     if (!llid)
       KOUT(" ");
@@ -798,7 +798,7 @@ int doorways_sock_client_inet_end(int type, int llid, int fd,
       {
       if (err == 0)
         {
-        result = channel_create(fd, 0, kind_client, "doorways_cli", rx_cb,
+        result = channel_create(fd, kind_client, "doorways_cli", rx_cb,
                                 tx_cb, err_cb);
         if (!result)
           KOUT(" ");
@@ -837,7 +837,7 @@ int doorways_sock_client_inet_end_glib(int type, int fd, char *passwd,
     {
     if (err == 0)
       {
-      result = channel_create(fd, 0, kind_glib_managed, "glib",
+      result = channel_create(fd, kind_glib_managed, "glib",
                               NULL, NULL, err_cb);
       if (!result)
         KOUT(" ");
@@ -929,9 +929,9 @@ static void doorways_tx_split(t_llid *lid, int cidx, t_data_channel *dchan,
 /****************************************************************************/
 int doorways_tx_or_rx_still_in_queue(int llid)
 {
-  int result = 0, is_blkd;
+  int result = 0;
   t_data_channel *dchan;
-  int cidx = channel_check_llid(llid, &is_blkd, __FUNCTION__);
+  int cidx = channel_check_llid(llid, __FUNCTION__);
   t_llid *lid = g_llid_data[llid];
   dchan = get_dchan(cidx);
   if (dchan->tot_txq_size)
@@ -948,7 +948,7 @@ int doorways_tx_or_rx_still_in_queue(int llid)
 /****************************************************************************/
 int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
 {
-  int cidx, is_blkd, fd, result = -1;
+  int cidx, fd, result = -1;
   t_llid *lid;
   t_data_channel *dchan;
 
@@ -986,7 +986,7 @@ int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
              KERR("%d %d", lid->doors_type, type);
           }
         }
-      cidx = channel_check_llid(llid, &is_blkd, __FUNCTION__);
+      cidx = channel_check_llid(llid, __FUNCTION__);
       dchan = get_dchan(cidx);
       if (dchan->llid != lid->llid)
         KOUT(" ");
@@ -1012,7 +1012,7 @@ int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void ptr_doorways_client_tx(void *ptr, int llid, int len, char *buf)
+void ptr_doorways_client_tx(int llid, int len, char *buf)
 {
   if (msg_exist_channel(llid))
     doorways_tx(llid, 0, doors_type_switch, doors_val_none, len, buf);

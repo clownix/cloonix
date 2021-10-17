@@ -381,7 +381,7 @@ static void spring_force_item(t_bank_item *bitem)
   t_list_bank_item *cur;
   if ((bitem->bank_type == bank_type_node) ||
       ((bitem->bank_type == bank_type_sat) && 
-        (bitem->pbi.mutype == endp_type_a2b)))
+        (bitem->pbi.endp_type == endp_type_a2b)))
     {
     cur = bitem->head_eth_list;
     while (cur)

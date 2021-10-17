@@ -1,6 +1,6 @@
 #!/bin/bash
 HERE=`pwd`
-NAME=buster
+NAME=bullseye
 ISO=/home/perrier/Bureau/archives/iso/debian-10.2.0-amd64-netinst.iso
 ISO=/home/perrier/Bureau/archives/iso/debian-9.11.0-amd64-netinst.iso
 BULK=${HOME}/cloonix_data/bulk

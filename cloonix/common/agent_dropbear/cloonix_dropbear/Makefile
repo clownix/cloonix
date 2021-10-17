@@ -1,13 +1,11 @@
 
 LIB_CLOWNIX=../../lib_io_clownix
 GLOB_INCLUDE=../../glob_include
-BLKD=../../lib_blkd
 RPCT=../../lib_rpct
 
 
 LIB_IO_CLOWNIX=$(LIB_CLOWNIX)
-LIBS=-L${BLKD} -lblkd \
-     -L${RPCT} -lrpct \
+LIBS=-L${RPCT} -lrpct \
      -lutil
 
 LIBDBCLIENT=-L${LIB_IO_CLOWNIX} -lio_clownix -lssl -lcrypto -lrt

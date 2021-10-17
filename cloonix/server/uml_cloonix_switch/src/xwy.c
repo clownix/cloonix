@@ -108,7 +108,7 @@ static void fatal_xwy_err(int llid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void xwy_err_cb (void *ptr, int llid, int err, int from)
+static void xwy_err_cb (int llid, int err, int from)
 {
   if (g_xwy_kill_req ==0)
     KERR("%d %d", err, from);
@@ -117,7 +117,7 @@ static void xwy_err_cb (void *ptr, int llid, int err, int from)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int xwy_rx_cb(void *ptr, int llid, int fd)
+static int xwy_rx_cb(int llid, int fd)
 {
   int len, pid;
   char buf[2*MAX_PATH_LEN];

@@ -59,18 +59,12 @@
 #define NAT_MAC_DNS   "42:CA:FE:13:07:03"
 
 
-#define MQ_QUEUES 4
-#define MQ_VECTORS ((2 * MQ_QUEUES) + 2)
-
-#define MAX_OVS_BRIDGES    100
-#define MAX_OVS_MIRRORS    100
-#define MAX_OVS_PORTS      50 
+#define MAX_OVS_BRIDGES    500
+#define MAX_OVS_PORTS      100 
 #define MAX_PHY            16
 #define MAX_PCI            16
 #define MAX_VM             100
-#define MAX_SOCK_VM        12
 #define MAX_DPDK_VM        12
-#define MAX_WLAN_VM        8
 
 #define MAX_TRAF_ENDPOINT 4
 
@@ -82,16 +76,16 @@
 #define MAX_HOP_PRINT_LEN 2000
 #define DOUT rpct_hop_print
 
-#define FLAG_HOP_EVT    0x0001
-#define FLAG_HOP_DIAG   0x0002
-#define FLAG_HOP_APP    0x0004
-#define FLAG_HOP_DOORS  0x0008
+#define FLAG_HOP_ERRDIAG 0x0001
+#define FLAG_HOP_SIGDIAG 0x0002
+#define FLAG_HOP_POLDIAG 0x0004
+#define FLAG_HOP_DOORS   0x0008
 
 #define MAX_DOORWAYS_BUF_LEN 1000000
 #define MAX_DOOR_CTRL_LEN 1000
 
 
-#define MAX_RPC_MSG_LEN 5000
+#define MAX_RPC_MSG_LEN 50000
 #define MAX_BULK_FILES 100
 
 #define MAX_CLOWNIX_BOUND_LEN      64
@@ -124,9 +118,7 @@
 enum{
   eth_type_min = 0,
   eth_type_none,
-  eth_type_sock,
   eth_type_dpdk,
-  eth_type_wlan,
   eth_type_max,
 };
 
@@ -139,7 +131,6 @@ enum{
 
   doors_type_high_prio_begin,
   doors_type_switch,
-  doors_type_c2c_init,
   doors_type_high_prio_end,
 
   doors_type_low_prio_begin,
@@ -206,8 +197,7 @@ typedef struct t_topo_kvm
   int  cpu;
   int  mem;
   int  nb_tot_eth;
-  t_eth_table eth_table[MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM];
-  int  nb_wlan; 
+  t_eth_table eth_table[MAX_DPDK_VM];
   int  vm_id;
   char linux_kernel[MAX_NAME_LEN];
   char rootfs_input[MAX_PATH_LEN];
@@ -218,17 +208,6 @@ typedef struct t_topo_kvm
   char added_disk[MAX_PATH_LEN];
   char p9_host_share[MAX_PATH_LEN];
 } t_topo_kvm;
-/*---------------------------------------------------------------------------*/
-typedef struct t_topo_c2c
-  {
-  char name[MAX_NAME_LEN];
-  char master_cloonix[MAX_NAME_LEN];
-  char slave_cloonix[MAX_NAME_LEN];
-  int local_is_master;
-  int is_peered;
-  int ip_slave;
-  int port_slave;
-  } t_topo_c2c;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_d2d
   {
@@ -247,6 +226,16 @@ typedef struct t_topo_d2d
   int ovs_lan_attach_ready;
   } t_topo_d2d;
 /*---------------------------------------------------------------------------*/
+typedef struct t_topo_tap
+  {
+  char name[MAX_NAME_LEN];
+  } t_topo_tap;
+/*---------------------------------------------------------------------------*/
+typedef struct t_topo_phy
+  {
+  char name[MAX_NAME_LEN];
+  } t_topo_phy;
+/*---------------------------------------------------------------------------*/
 typedef struct t_topo_a2b
   {
   char name[MAX_NAME_LEN];
@@ -257,11 +246,10 @@ typedef struct t_topo_a2b
   int brate[2];
   } t_topo_a2b;
 /*---------------------------------------------------------------------------*/
-typedef struct t_topo_sat
+typedef struct t_topo_nat
   {
   char name[MAX_NAME_LEN];
-  int type;
-  } t_topo_sat;
+  } t_topo_nat;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_endp
 {
@@ -271,7 +259,7 @@ typedef struct t_topo_endp
   t_lan_group lan;
 } t_topo_endp;
 /*---------------------------------------------------------------------------*/
-typedef struct t_topo_phy
+typedef struct t_topo_info_phy
 {
   int  index;
   int  flags;
@@ -281,14 +269,7 @@ typedef struct t_topo_phy
   char mac[MAX_NAME_LEN];
   char vendor[MAX_NAME_LEN];
   char device[MAX_NAME_LEN];
-} t_topo_phy;
-/*---------------------------------------------------------------------------*/
-typedef struct t_topo_pci
-{
-  char pci[MAX_NAME_LEN];
-  char drv[MAX_NAME_LEN];
-  char unused[MAX_NAME_LEN];
-} t_topo_pci;
+} t_topo_info_phy;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_bridges
 {
@@ -297,11 +278,6 @@ typedef struct t_topo_bridges
   char ports[MAX_OVS_PORTS][MAX_NAME_LEN];
 } t_topo_bridges;
 /*---------------------------------------------------------------------------*/
-typedef struct t_topo_mirrors
-{
-  char mir[MAX_NAME_LEN];
-} t_topo_mirrors;
-/*---------------------------------------------------------------------------*/
 typedef struct t_topo_info
 {
   t_topo_clc clc;
@@ -309,32 +285,29 @@ typedef struct t_topo_info
   int nb_kvm;
   t_topo_kvm *kvm;
 
-  int nb_c2c;
-  t_topo_c2c *c2c;
-
   int nb_d2d;
   t_topo_d2d *d2d;
+
+  int nb_nat;
+  t_topo_nat *nat;
+
+  int nb_tap;
+  t_topo_tap *tap;
 
   int nb_a2b;
   t_topo_a2b *a2b;
 
-  int nb_sat;
-  t_topo_sat *sat;
+  int nb_phy;
+  t_topo_phy *phy;  
 
   int nb_endp;
   t_topo_endp *endp;
 
-  int nb_phy;
-  t_topo_phy *phy;  
-
-  int nb_pci;
-  t_topo_pci *pci;  
-
   int nb_bridges;
   t_topo_bridges *bridges;
 
-  int nb_mirrors;
-  t_topo_mirrors *mirrors;
+  int nb_info_phy;
+  t_topo_info_phy *info_phy;  
 
 } t_topo_info;
 /*---------------------------------------------------------------------------*/

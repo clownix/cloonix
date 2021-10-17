@@ -18,11 +18,6 @@
 typedef struct t_a2b_side
 {
   char lan[MAX_NAME_LEN];
-  int ms;
-  int pkt_tx;
-  int pkt_rx;
-  int byte_tx;
-  int byte_rx;
   int delay;
   int loss;
   int qsize;
@@ -40,8 +35,8 @@ typedef struct t_a2b_cnx
 {
   char name[MAX_NAME_LEN];
   t_a2b_side side[2];
+  int to_be_destroyed_count;
   int to_be_destroyed;
-  int openvswitch_started_and_running;
   int vhost_started_and_running;
   int process_started_and_running;
   int state_up;
@@ -55,9 +50,6 @@ typedef struct t_a2b_cnx
 
 void dpdk_a2b_vhost_started(char *name);
 t_a2b_cnx *dpdk_a2b_get_first(int *nb_a2b);
-int dpdk_a2b_collect_dpdk(t_eventfull_endp *eventfull);
-int dpdk_a2b_eventfull(char *name, int num, int ms,
-                       int ptx, int btx, int prx, int brx);
 void dpdk_a2b_event_from_a2b_dpdk_process(char *name, int on);
 void dpdk_a2b_resp_add_lan(int is_ko, char *lan, char *name, int num);
 void dpdk_a2b_resp_del_lan(int is_ko, char *lan, char *name, int num);
@@ -70,9 +62,8 @@ int dpdk_a2b_del_lan(int llid, int tid, char *name, int num, char *lan);
 int dpdk_a2b_add(int llid, int tid, char *name);
 int dpdk_a2b_del(char *name);
 int dpdk_a2b_exists(char *name);
-t_topo_endp *dpdk_a2b_mngt_translate_topo_endp(int *nb);
+t_topo_endp *translate_topo_endp_a2b(int *nb);
 void dpdk_a2b_cnf(char *name, int dir, int type, int val);
-void dpdk_a2b_process_possible_change(char *lan);
 void dpdk_a2b_init(void);
 /*--------------------------------------------------------------------------*/
 

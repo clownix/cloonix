@@ -513,7 +513,7 @@ int sat_is_a_a2b(char *name)
   if (bitem)
     {
     result = 0;
-    if (bitem->pbi.mutype == endp_type_a2b)
+    if (bitem->pbi.endp_type == endp_type_a2b)
       result = 1;
     }
   return result;

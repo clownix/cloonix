@@ -57,7 +57,7 @@ long long  *get_peak_queue_len(int cidx);
 void new_rx_to_process(t_data_channel *dchan, int len, char *new_rx);
 int tx_try_send_chunk(t_data_channel *dchan, int cidx, 
                       int *correct_send, t_fd_error cb);
-void err_dchan_cb(void *ptr, int llid, int err, int from);
+void err_dchan_cb(int llid, int err, int from);
 void chunk_chain_delete(t_data_channel *dchan);
 int get_tot_txq_size(int cidx);
 /*---------------------------------------------------------------------------*/

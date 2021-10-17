@@ -6,7 +6,6 @@ WARNINGS=-Wall -Wextra -Wstrict-prototypes -Wdeclaration-after-statement
 IO_CLOWNIX=../../../lib_io_clownix
 GLOB_INCLUDE=../../glob_include
 UTILS=../../lib_utils
-BLKD=../../muswitch/lib_blkd
 
 INCLUDES= -I../src \
           -I../include \
@@ -17,7 +16,6 @@ INCLUDES= -I../src \
           
 LIBS = -L../ -lrpc_qmonitor \
        -L${IO_CLOWNIX} -lio_clownix \
-       -L${BLKD} -lblkd \
        -L${UTILS} -lutils -lssl -lcrypto -lrt
 
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)

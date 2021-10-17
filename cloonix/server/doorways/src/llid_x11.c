@@ -173,7 +173,7 @@ void x11_open_close (int backdoor_llid, int dido_llid, char *rx_payload)
 {
   t_x11_ctx *cur;
   int sub_dido_idx, display_sock_x11;
-  DOUT(NULL, FLAG_HOP_DOORS, "%s %d %s", __FUNCTION__, dido_llid, rx_payload);
+  DOUT(FLAG_HOP_DOORS, "%s %d %s", __FUNCTION__, dido_llid, rx_payload);
   if (sscanf(rx_payload, LAX11OPEN, &sub_dido_idx, &display_sock_x11) == 2)
     {
     cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
@@ -200,7 +200,7 @@ void x11_open_close (int backdoor_llid, int dido_llid, char *rx_payload)
 void x11_close(int backdoor_llid, int dido_llid)
 {
   t_x11_ctx *next, *cur = get_head_ctx_with_dido_llid(dido_llid);
-  DOUT(NULL, FLAG_HOP_DOORS, "%s %d", __FUNCTION__, dido_llid);
+  DOUT(FLAG_HOP_DOORS, "%s %d", __FUNCTION__, dido_llid);
   while (cur)
     {
     if (cur->backdoor_llid != backdoor_llid)
@@ -261,7 +261,7 @@ void receive_ctrl_x11_from_client(int dido_llid, int sub_dido_idx,
                                   int len, char *buf)
 {
   t_x11_ctx *cur;
-  DOUT(NULL, FLAG_HOP_DOORS, "%s %d %d %s", __FUNCTION__, 
+  DOUT(FLAG_HOP_DOORS, "%s %d %d %s", __FUNCTION__, 
                                            dido_llid, sub_dido_idx, buf);
   cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
   if (cur)

@@ -245,10 +245,9 @@ static void free_ctx(int x11_llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void x11_err_cb (void *ptr, int x11_llid, int err, int from)
+static void x11_err_cb (int x11_llid, int err, int from)
 {
   t_x11_ctx *ctx = get_ctx_with_x11_llid(x11_llid);
-  (void) ptr;
   (void) from;
   if (ctx)
     {
@@ -265,13 +264,12 @@ static void x11_err_cb (void *ptr, int x11_llid, int err, int from)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int x11_rx_cb(void *ptr, int x11_llid, int x11_fd)
+static int x11_rx_cb(int x11_llid, int x11_fd)
 {
   int len, result = 0;
   static char buf[MAX_A2D_LEN];
   int headsize = doorways_header_size();
   t_x11_ctx *cur;
-  (void) ptr;
   len = util_read (buf, MAX_A2D_LEN - headsize, x11_fd);
   cur = get_ctx_with_x11_llid(x11_llid);
   if (!cur)

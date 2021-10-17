@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 NET=nemo
-LINUX=buster_fr
+LINUX=bullseye
 LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk
 NAME=mikrotik

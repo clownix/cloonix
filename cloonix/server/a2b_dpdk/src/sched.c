@@ -49,6 +49,7 @@ static uint64_t g_cnf_delay[2];
 static uint64_t g_cnf_qsize[2]; 
 static uint64_t g_cnf_bsize[2]; 
 static uint64_t g_cnf_brate[2]; 
+
 static uint64_t g_tocken[2];
 static uint64_t g_pkt_stop[2];
 static uint64_t g_pkt_drop[2];
@@ -158,8 +159,8 @@ void sched_cnf(int dir, int type, int val)
     KERR("ERROR %d %d %d", dir, type, val);
 
   KERR("CNF SCHED %d: rate %ld  qsize %ld  bsize %ld  loss %ld",
-       dir, g_cnf_brate[dir], g_cnf_qsize[dir],
-       g_cnf_bsize[dir]/1000, g_cnf_loss[dir]);
+        dir, g_cnf_brate[dir], g_cnf_qsize[dir],
+        g_cnf_bsize[dir]/1000, g_cnf_loss[dir]);
 }
 /*--------------------------------------------------------------------------*/
 

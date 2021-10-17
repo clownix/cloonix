@@ -44,7 +44,6 @@
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
-#include "utils.h"
 #include "udp.h"
 
 #define PLEN 70000
@@ -229,7 +228,6 @@ static int process_udp_rx(int nb_packets, int tot_len, uint8_t *pkts,
         break;
         }
       memcpy(data, &(ptr[2]), len);
-      checksum_compute(mbufs[i]);
       ptr += len + PHEAD;
       len_done += (len + PHEAD); 
       }
@@ -239,7 +237,7 @@ static int process_udp_rx(int nb_packets, int tot_len, uint8_t *pkts,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rx_cb(void *ptr, int llid, int fd)
+static int rx_cb(int llid, int fd)
 {
   int len, result = 0;
   if (g_traffic_mngt == 0)
@@ -270,7 +268,7 @@ static int rx_cb(void *ptr, int llid, int fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void err_cb(void *ptr, int llid, int err, int from)
+static void err_cb(int llid, int err, int from)
 {
   if (g_traffic_mngt == 0)
     {

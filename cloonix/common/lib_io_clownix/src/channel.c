@@ -57,7 +57,6 @@ typedef struct t_io_channel
   int waked_count_err;
   int out_bytes;
   int in_bytes;
-  int is_blkd;
   int red_to_stop_reading;
   int red_to_stop_writing;
   t_fd_event rx_cb;
@@ -289,7 +288,7 @@ int msg_exist_channel(int llid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int channel_check_llid(int llid, int *is_blkd, const char *fct)
+int channel_check_llid(int llid, const char *fct)
 {
   int cidx;
   if (llid <= 0) 
@@ -305,7 +304,6 @@ int channel_check_llid(int llid, int *is_blkd, const char *fct)
     KOUT("%s",fct);
   if (g_channel[cidx].fd == -1)
     KOUT("%s",fct);
-  *is_blkd = g_channel[cidx].is_blkd;
   return (cidx);
 }
 /*---------------------------------------------------------------------------*/
@@ -424,7 +422,7 @@ struct timeval *channel_get_current_time(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void channel_rx_local_flow_ctrl(void *ptr, int llid, int stop)
+void channel_rx_local_flow_ctrl(int llid, int stop)
 {
   int cidx;
   if (msg_exist_channel(llid))
@@ -439,7 +437,7 @@ void channel_rx_local_flow_ctrl(void *ptr, int llid, int stop)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void channel_tx_local_flow_ctrl(void *ptr, int llid, int stop)
+void channel_tx_local_flow_ctrl(int llid, int stop)
 {
   int cidx;
   if (msg_exist_channel(llid))
@@ -511,20 +509,8 @@ static void fd_check(int fd, int line, char *little_name)
 /*****************************************************************************/
 unsigned long channel_get_tx_queue_len(int llid)
 {
-  int cidx, is_blkd;
-  int tx_queued_bytes=0, rx_queued_bytes=0, result = 0;
-  cidx = channel_check_llid(llid, &is_blkd, __FUNCTION__);
-  if (is_blkd)
-    {
-    if (blkd_get_tx_rx_queues(NULL, llid, &tx_queued_bytes, &rx_queued_bytes))
-      KERR(" ");
-    else
-      result = tx_queued_bytes;
-    }
-  else
-    {
-    result = get_tot_txq_size(cidx);
-    }
+  int cidx = channel_check_llid(llid, __FUNCTION__);
+  int result = get_tot_txq_size(cidx);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -548,7 +534,7 @@ static void apply_epoll_ctl(int llid, int cidx, uint32_t evt)
       if (errno == EBADF)
         {
         KERR(" %s %d (bad fd) ", g_channel[cidx].little_name, errno);
-        g_channel[cidx].err_cb(NULL, llid, errno, 1111);
+        g_channel[cidx].err_cb(llid, errno, 1111);
         if (msg_exist_channel(llid))
           channel_delete(llid);
         }
@@ -629,7 +615,7 @@ void channel_delete(int llid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int channel_create(int fd, int is_blkd, int kind, char *little_name, 
+int channel_create(int fd, int kind, char *little_name, 
                    t_fd_event rx_cb, t_fd_event tx_cb, t_fd_error err_cb)
 {
   int llid = 0, cidx;
@@ -641,7 +627,6 @@ int channel_create(int fd, int is_blkd, int kind, char *little_name,
     if (cidx != fd+1)
       KOUT(" %d %d ", cidx, fd);
     g_channel[cidx].kind       = kind;
-    g_channel[cidx].is_blkd    = is_blkd;
     g_channel[cidx].rx_cb      = rx_cb;
     g_channel[cidx].tx_cb      = tx_cb;
     g_channel[cidx].err_cb     = err_cb;
@@ -658,17 +643,6 @@ int channel_create(int fd, int is_blkd, int kind, char *little_name,
       strncpy(g_channel[cidx].little_name, little_name, MAX_NAME_LEN-1);
     }
   return (llid);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int blkd_channel_create(void *ptr, int fd, 
-                        t_fd_event rx,
-                        t_fd_event tx,
-                        t_fd_error err,
-                        char *from)
-{
-  return channel_create(fd, 1, kind_simple_watch, from, rx, tx, err);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -741,7 +715,7 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
         else
           {
           KERR("%d %d %d", cidx, events[k].data.fd, g_channel[cidx].kind);
-          g_channel[cidx].err_cb(NULL, llid, errno, 511);
+          g_channel[cidx].err_cb(llid, errno, 511);
           channel_delete(llid);
           }
         *pb = 0;
@@ -756,7 +730,7 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
 
     if ((evt & EPOLLHUP) || (evt & EPOLLERR))
       {
-      g_channel[cidx].err_cb(NULL, llid, errno, 511);
+      g_channel[cidx].err_cb(llid, errno, 511);
       channel_delete(llid);
       result = 0;
       }
@@ -781,10 +755,10 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
       if (evt & EPOLLOUT)
         {
         len =
-        g_channel[cidx].tx_cb(NULL, llid, g_channel[cidx].fd);
+        g_channel[cidx].tx_cb(llid, g_channel[cidx].fd);
         if (len < 0)
           {
-          g_channel[cidx].err_cb(NULL, llid, errno, 512);
+          g_channel[cidx].err_cb(llid, errno, 512);
           channel_delete(llid);
           }
         else
@@ -814,10 +788,10 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
       {
       if (evt & EPOLLIN)
         {
-        len = g_channel[cidx].rx_cb(NULL, llid, g_channel[cidx].fd);
+        len = g_channel[cidx].rx_cb(llid, g_channel[cidx].fd);
         if (len < 0)
           {
-          g_channel[cidx].err_cb(NULL, llid, errno, 513);
+          g_channel[cidx].err_cb(llid, errno, 513);
           channel_delete(llid);
           }
         else

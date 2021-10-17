@@ -92,7 +92,7 @@ int tx_try_send_chunk(t_data_channel *dchan, int cidx, int *correct_send,
     chain_delete(&(dchan->tx), &(dchan->last_tx));
     if (!err_cb)
       KOUT(" ");
-    err_cb(NULL, dchan->llid, errno, 3);
+    err_cb(dchan->llid, errno, 3);
     result = -1;
     }
   return result;

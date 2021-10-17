@@ -73,7 +73,6 @@
 #define LAYOUT_SAT  "<layout_sat>\n"\
                     "<tid> %d </tid>\n"\
                     "<name> %s </name>\n"\
-                    "<mutype> %d </mutype>\n"\
                     "<x> %d.%d </x>\n"\
                     "<y> %d.%d </y>\n"\
                     "<xa> %d.%d </xa>\n"\

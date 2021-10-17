@@ -26,7 +26,7 @@ typedef struct t_pbi_node
   char added_disk[MAX_PATH_LEN];
   int  node_vm_id;
   int  nb_tot_eth;
-  t_eth_table eth_tab[MAX_SOCK_VM+MAX_DPDK_VM+MAX_WLAN_VM];
+  t_eth_table eth_tab[MAX_DPDK_VM];
   int  node_vm_config_flags;
   int  node_ram;
   int  node_cpu;
@@ -37,11 +37,9 @@ typedef struct t_pbi_node
 
 typedef struct t_pbi_sat
 {
-  void *snf_cr_item_onoff;
-  t_topo_c2c topo_c2c;
   t_topo_d2d topo_d2d;
   t_topo_a2b topo_a2b;
-  int snf_capture_on;
+  t_topo_nat topo_nat;
 } t_pbi_sat;
 
 
@@ -51,7 +49,7 @@ typedef struct t_params_bank_item
   t_pbi_sat *pbi_sat;
   int color_choice;
   int hidden_on_graph;
-  int mutype;
+  int endp_type;
   double x0, y0, x1, y1, x2, y2, x, y, dist;
   double tx, ty;
   double line_width;
@@ -82,7 +80,6 @@ enum
   bank_type_all_non_edges_items,
   bank_type_node,
   bank_type_eth,
-  bank_type_snf,
   bank_type_sat,
   bank_type_lan,
   bank_type_edge,
@@ -169,7 +166,7 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
                       double *tx, double *ty, int32_t *thidden_on_graph);
 /*--------------------------------------------------------------------------*/
 void bank_edge_create(char *name, int num, char *lan); 
-void bank_sat_create(char *name, int mutype, t_topo_c2c *c2c,
+void bank_sat_create(char *name, int endp_type,
                      t_topo_d2d *d2d, t_topo_a2b *a2b,
                      double x, double y, 
                      double xa, double ya, 
@@ -199,14 +196,9 @@ int bank_get_wireshark_pid(char *name);
 void bank_set_wireshark_pid(char *name, int val);
 /*--------------------------------------------------------------------------*/
 
-void modify_c2c(char *name, char *master_cloonix, char *slave_cloonix);
-void modify_snf(char *name, int evt);
-
 int is_a_nat(t_bank_item *bitem);
-int is_a_c2c(t_bank_item *bitem);
 int is_a_d2d(t_bank_item *bitem);
 int is_a_a2b(t_bank_item *bitem);
-int is_a_snf(t_bank_item *bitem);
 
 
 

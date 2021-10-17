@@ -2,9 +2,6 @@
 HERE=`pwd`
 ./all_clean
 
-cd ${HERE}/../../common/lib_blkd
-make clean
-make
 cd ${HERE}/../../common/lib_rpct
 make clean
 make

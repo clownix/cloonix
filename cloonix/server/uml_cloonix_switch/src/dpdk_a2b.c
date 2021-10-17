@@ -32,26 +32,20 @@
 #include "event_subscriber.h"
 #include "pid_clone.h"
 #include "utils_cmd_line_maker.h"
-#include "endp_mngt.h"
 #include "uml_clownix_switch.h"
 #include "hop_event.h"
 #include "llid_trace.h"
 #include "machine_create.h"
 #include "file_read_write.h"
 #include "dpdk_ovs.h"
-#include "dpdk_dyn.h"
 #include "dpdk_a2b.h"
 #include "dpdk_d2d.h"
 #include "dpdk_msg.h"
-#include "fmt_diag.h"
 #include "qmp.h"
 #include "system_callers.h"
 #include "stats_counters.h"
 #include "dpdk_msg.h"
-#include "edp_mngt.h"
-#include "edp_evt.h"
 #include "a2b_dpdk_process.h"
-#include "snf_dpdk_process.h"
 #include "suid_power.h"
 
 
@@ -145,14 +139,6 @@ static t_a2b_cnx *find_a2b(char *name)
 static t_a2b_cnx *alloc_a2b(int llid, int tid, char *name)
 {
   t_a2b_cnx *cur = (t_a2b_cnx *)clownix_malloc(sizeof(t_a2b_cnx), 5);
-  char name0[MAX_NAME_LEN];
-  char name1[MAX_NAME_LEN];
-  memset(name0, 0, MAX_NAME_LEN);
-  memset(name1, 0, MAX_NAME_LEN);
-  snprintf(name0, MAX_NAME_LEN-1, "%s0", name);
-  snprintf(name1, MAX_NAME_LEN-1, "%s1", name);
-  suid_power_rec_name(name0, 1);
-  suid_power_rec_name(name1, 1);
   memset(cur, 0, sizeof(t_a2b_cnx));
   memcpy(cur->name, name, MAX_NAME_LEN-1);
   cur->add_llid = llid;
@@ -162,6 +148,7 @@ static t_a2b_cnx *alloc_a2b(int llid, int tid, char *name)
   cur->next = g_head_a2b;
   g_head_a2b = cur;
   g_nb_a2b += 1;
+  KERR("ALLOC A2B %s", name);
   return cur;
 }
 /*--------------------------------------------------------------------------*/
@@ -173,18 +160,10 @@ static void free_a2b(t_a2b_cnx *cur)
   char lan0[MAX_NAME_LEN];
   char lan1[MAX_NAME_LEN];
   int i;
-  char name0[MAX_NAME_LEN];
-  char name1[MAX_NAME_LEN];
-  char *nm = cur->name;
-  memset(name0, 0, MAX_NAME_LEN);
-  memset(name1, 0, MAX_NAME_LEN);
+  KERR("FREE A2B %s", cur->name);
   memset(name, 0, MAX_NAME_LEN);
   memset(lan0, 0, MAX_NAME_LEN);
   memset(lan1, 0, MAX_NAME_LEN);
-  snprintf(name0, MAX_NAME_LEN-1, "%s0", nm);
-  snprintf(name1, MAX_NAME_LEN-1, "%s1", nm);
-  suid_power_rec_name(name0, 0);
-  suid_power_rec_name(name1, 0);
   strncpy(name, cur->name, MAX_NAME_LEN-1); 
   strncpy(lan0, cur->side[0].lan, MAX_NAME_LEN-1); 
   strncpy(lan1, cur->side[1].lan, MAX_NAME_LEN-1); 
@@ -212,7 +191,6 @@ static void free_a2b(t_a2b_cnx *cur)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void timer_a2b_msg_beat(void *data)
 {
@@ -222,10 +200,8 @@ static void timer_a2b_msg_beat(void *data)
     {
     next = cur->next;
     if ((cur->process_started_and_running == 1) &&
-        (cur->openvswitch_started_and_running == 0) &&
-        (dpdk_ovs_drv_ready()))
+        (cur->state_up == state_up_process_started)) 
       {
-      cur->openvswitch_started_and_running = 1;
       a2b_dpdk_start_vhost(cur->name);
       state_progress_up(cur, state_up_process_vhost_req_on);
       }
@@ -234,7 +210,7 @@ static void timer_a2b_msg_beat(void *data)
       cur->timer_count += 1;
       if (cur->timer_count > 40)
         {
-        KERR("TIMEOUT %s", cur->name);
+        KERR("ERROR TIMEOUT %s", cur->name);
         utils_send_status_ko(&(cur->add_llid), &(cur->add_tid), "timeout");
         cur->timer_count = 0;
         cur->to_be_destroyed = 1;
@@ -242,13 +218,13 @@ static void timer_a2b_msg_beat(void *data)
       }
     for (i=0; i<2; i++)
       {
-      if ((cur->side[i].waiting_ack_add_lan) ||
-          (cur->side[i].waiting_ack_del_lan))
+      if ((cur->side[i].waiting_ack_add_lan == 1) ||
+          (cur->side[i].waiting_ack_del_lan == 1))
         {
         cur->side[i].timer_count += 1;
         if (cur->side[i].timer_count > 20)
           {
-          KERR("TIMEOUT %s add:%d del:%d", cur->name,
+          KERR("ERROR TIMEOUT %s add:%d del:%d", cur->name,
                cur->side[i].waiting_ack_add_lan,
                cur->side[i].waiting_ack_del_lan);
           cur->side[i].timer_count = 0;
@@ -258,8 +234,18 @@ static void timer_a2b_msg_beat(void *data)
       }
     if (cur->to_be_destroyed == 1)
       {
-      a2b_dpdk_start_stop_process(cur->name, 0);
-      free_a2b(cur);
+      if ((cur->side[0].waiting_ack_add_lan == 1)  ||
+          (cur->side[0].attached_lan_ok == 1)      ||
+          (cur->side[1].waiting_ack_add_lan == 1)  ||
+          (cur->side[1].attached_lan_ok == 1))
+        cur->to_be_destroyed_count += 1;
+      else
+        a2b_dpdk_start_stop_process(cur->name, 0);
+      if (cur->to_be_destroyed_count == 20)
+        {
+        KERR("ERROR TIMEOUT %s", cur->name);
+        a2b_dpdk_start_stop_process(cur->name, 0);
+        }
       }
     cur = next;
     }
@@ -286,20 +272,20 @@ void dpdk_a2b_resp_add_lan(int is_ko, char *lan, char *name, int num)
 {
   t_a2b_cnx *cur = find_a2b(name);
   if ((num != 0) && (num != 1))
-    KERR("%s %s %d", name, lan, num);
+    KERR("ERROR %s %s %d", name, lan, num);
   else if (!cur)
-    KERR("%s %s %d", name, lan, num);
+    KERR("ERROR %s %s %d", name, lan, num);
   else if (strcmp(cur->side[num].lan, lan))
-    KERR("%s %s %s %d", lan, name, cur->side[num].lan, num);
+    KERR("ERROR %s %s %s %d", lan, name, cur->side[num].lan, num);
   else
     {
     if (cur->side[num].waiting_ack_add_lan == 0)
-      KERR("%d %s %s", is_ko, lan, name);
+      KERR("ERROR %d %s %s", is_ko, lan, name);
     if (cur->side[num].waiting_ack_del_lan == 1)
-      KERR("%d %s %s", is_ko, lan, name);
+      KERR("ERROR %d %s %s", is_ko, lan, name);
     if (is_ko)
       {
-      KERR("%s %s", name, lan);
+      KERR("ERROR %s %s", name, lan);
       cur->side[num].waiting_ack_add_lan = 0;
       utils_send_status_ko(&(cur->side[num].llid),
                            &(cur->side[num].tid), "openvswitch error");
@@ -324,19 +310,19 @@ void dpdk_a2b_resp_del_lan(int is_ko, char *lan, char *name, int num)
 {
   t_a2b_cnx *cur = find_a2b(name);
   if ((num != 0) && (num != 1))
-    KERR("%s %s %d", name, lan, num);
+    KERR("ERROR %s %s %d", name, lan, num);
   else if (!cur)
-    KERR("%s %s", lan, name);
+    KERR("ERROR %s %s", lan, name);
   else if (strcmp(lan, cur->side[num].lan))
-    KERR("%s %s %s", lan, name, cur->side[num].lan);
+    KERR("ERROR %s %s %s", lan, name, cur->side[num].lan);
   else
     {
     if (cur->side[num].attached_lan_ok == 1) 
-      KERR("%d %s %s", is_ko, lan, name);
+      KERR("ERROR %d %s %s", is_ko, lan, name);
     if (cur->side[num].waiting_ack_add_lan == 1)
-      KERR("%d %s %s", is_ko, lan, name);
+      KERR("ERROR %d %s %s", is_ko, lan, name);
     if (cur->side[num].waiting_ack_del_lan == 0)
-      KERR("%d %s %s", is_ko, lan, name);
+      KERR("ERROR %d %s %s", is_ko, lan, name);
     cur->side[num].attached_lan_ok = 0; 
     cur->side[num].waiting_ack_del_lan = 0;
     memset(cur->side[num].lan, 0, MAX_NAME_LEN);
@@ -404,23 +390,23 @@ int dpdk_a2b_add_lan(int llid, int tid, char *name, int num, char *lan)
   t_a2b_cnx *cur = find_a2b(name);
   if (cur == NULL)
     {
-    KERR("%s", name);
+    KERR("ERROR %s %d %s", name, num, lan);
+    }
+  else if ((num != 0) && (num != 1))
+    {
+    KERR("ERROR %s %d %s", name, num, lan);
     }
   else if (strlen(cur->side[num].lan))
     {
-    KERR("%s %s %s", name, lan, cur->side[num].lan);
-    }
-  else if (cur->openvswitch_started_and_running == 0)
-    {
-    KERR("%s %s", lan, name);
+    KERR("ERROR %s %s %s", name, lan, cur->side[num].lan);
     }
   else if (cur->vhost_started_and_running == 0)
     {
-    KERR("%s %s", lan, name);
+    KERR("ERROR %s %d %s", name, num, lan);
     }
   else if (dpdk_msg_send_add_lan_a2b(lan, name, num))
     {
-    KERR("%s %s", lan, name);
+    KERR("ERROR %s %d %s", name, num, lan);
     }
   else
     {
@@ -446,27 +432,27 @@ int dpdk_a2b_del_lan(int llid, int tid, char *name, int num, char *lan)
   t_a2b_cnx *cur = find_a2b(name);
   if (cur == NULL)
     {
-    KERR("%s", name);
+    KERR("ERROR %s %d %s", name, num, lan);
     }
   else if (!strlen(cur->side[num].lan))
     {
-    KERR("%s %s %s", name, lan, cur->side[num].lan);
+    KERR("ERROR %s %s %s", name, lan, cur->side[num].lan);
     }
   else if (strcmp(lan, cur->side[num].lan))
     {
-    KERR("%s %s", lan, name);
+    KERR("ERROR %s %d %s", name, num, lan);
     }
   else if ((cur->side[num].waiting_ack_add_lan == 0) && 
            (cur->side[num].attached_lan_ok == 0))
     {
-    KERR("%s %s", lan, name);
+    KERR("ERROR %s %d %s", name, num, lan);
     }
   else 
     {
     if (cur->side[num].waiting_ack_del_lan == 1)
-      KERR("%s %s", lan, name);
+      KERR("ERROR %s %d %s", name, num, lan);
     if (dpdk_msg_send_del_lan_a2b(lan, name, num))
-      KERR("%s %s", lan, name);
+      KERR("ERROR %s %d %s", name, num, lan);
     cur->side[num].attached_lan_ok = 0;
     cur->side[num].waiting_ack_del_lan = 1;
     cur->side[num].llid = llid;
@@ -483,16 +469,13 @@ int dpdk_a2b_add(int llid, int tid, char *name)
   int result = -1;
   t_a2b_cnx *cur = find_a2b(name);
   if (cur)
-    {
-    KERR("%s", name);
-    }
+    KERR("ERROR %s", name);
   else
     {
     cur = alloc_a2b(llid, tid, name);
     a2b_dpdk_start_stop_process(name, 1);
     result = 0;
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    dpdk_ovs_start_openvswitch_if_not_done();
     state_progress_up(cur, state_up_process_req);
     }
   return result;
@@ -502,14 +485,29 @@ int dpdk_a2b_add(int llid, int tid, char *name)
 /****************************************************************************/
 int dpdk_a2b_del(char *name)
 {
-  int result = -1;
+  int i, result = -1;
   t_a2b_cnx *cur = find_a2b(name);
+  char *lan;
   if (!cur)
-    {
-    KERR("%s", name);
-    }
+    KERR("ERROR %s", name);
   else
     {
+    a2b_dpdk_stop_vhost(name);
+    for (i=0; i<2; i++)
+      {
+      lan = cur->side[i].lan;
+      if ((strlen(lan)) &&
+          ((cur->side[i].waiting_ack_add_lan == 1) ||
+           (cur->side[i].attached_lan_ok == 1)))
+        {
+        if (cur->side[i].waiting_ack_del_lan == 1)
+          KERR("ERROR %s %d %s", name, i, lan);
+        if (dpdk_msg_send_del_lan_a2b(lan, name, i))
+          KERR("ERROR %s %d %s", name, i, lan);
+        cur->side[i].attached_lan_ok = 0;
+        cur->side[i].waiting_ack_del_lan = 1;
+        }
+      }
     cur->to_be_destroyed = 1;
     result = 0;
     }
@@ -527,7 +525,7 @@ int dpdk_a2b_lan_exists(char *lan)
     for (i=0; i<2; i++)
       {
       if ((!strcmp(lan, cur->side[i].lan)) &&
-          ((cur->side[i].waiting_ack_add_lan) ||
+          ((cur->side[i].waiting_ack_add_lan == 1) ||
           (cur->side[i].attached_lan_ok == 1)))
         {
         result = 1;
@@ -570,60 +568,6 @@ void dpdk_a2b_end_ovs(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_a2b_eventfull(char *name, int num, int ms,
-                       int ptx, int btx, int prx, int brx)
-{
-  int result = -1;
-  t_a2b_cnx *cur = find_a2b(name);
-  if (cur)
-    {
-    if ((num != 0) && (num != 1))
-      KOUT("%d", num);
-    cur->side[num].ms      = ms;
-    cur->side[num].pkt_tx  += ptx;
-    cur->side[num].pkt_rx  += prx;
-    cur->side[num].byte_tx += btx;
-    cur->side[num].byte_rx += brx;
-    stats_counters_update_endp_tx_rx(cur->name, num, ms, ptx, btx, prx, brx);
-    result = 0;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int dpdk_a2b_collect_dpdk(t_eventfull_endp *eventfull)
-{
-  int i, result = 0;;
-  t_a2b_cnx *cur = g_head_a2b;
-  while(cur)
-    {
-    for (i=0; i<2; i++)
-      {
-      if (strlen(cur->side[i].lan))
-        {
-        strncpy(eventfull[result].name, cur->name, MAX_NAME_LEN-1);
-        eventfull[result].type = endp_type_a2b;
-        eventfull[result].num  = 0;
-        eventfull[result].ms   = cur->side[i].ms;
-        eventfull[result].ptx  = cur->side[i].pkt_tx;
-        eventfull[result].prx  = cur->side[i].pkt_rx;
-        eventfull[result].btx  = cur->side[i].byte_tx;
-        eventfull[result].brx  = cur->side[i].byte_rx;
-        cur->side[i].pkt_tx  = 0;
-        cur->side[i].pkt_rx  = 0;
-        cur->side[i].byte_tx = 0;
-        cur->side[i].byte_rx = 0;
-        result += 1;
-        }
-      }
-    cur = cur->next;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int dpdk_a2b_exists(char *name)
 {
   int result = 0;
@@ -643,7 +587,7 @@ t_a2b_cnx *dpdk_a2b_get_first(int *nb_a2b)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_topo_endp *dpdk_a2b_mngt_translate_topo_endp(int *nb)
+t_topo_endp *translate_topo_endp_a2b(int *nb)
 {
   t_a2b_cnx *cur = g_head_a2b;
   int i, len, nb_endp = 0;
@@ -713,9 +657,7 @@ void dpdk_a2b_cnf(char *name, int dir, int type, int val)
     a2b_dpdk_cnf(name, dir, type, val);
     }
   else
-    {
     KERR("%s %d %d %d", name, dir, type, val);
-    }
   event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/

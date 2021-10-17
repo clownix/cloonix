@@ -2,11 +2,11 @@
 #-----------------------------------------------------------------------#
 HERE=`pwd`
 DISTRO=openwrt
-OPENWRT=https://downloads.openwrt.org/releases/19.07.7/targets/x86/64
+OPENWRT=https://downloads.openwrt.org/releases/21.02.0/targets/x86/64
 ROOTFS=/root/${DISTRO}
 OFFSET=17301504
 OFFSET_BOOT=262144
-OPENWRT_IMG=openwrt-19.07.7-x86-64-combined-ext4.img
+OPENWRT_IMG=openwrt-21.02.0-x86-64-generic-ext4-combined.img
 
 for i in qemu-img gunzip wget; do
   path_bin=$(which $i)
@@ -45,12 +45,6 @@ fi
 #-----------------------------------------------------------------------#
   cat > /tmp/wkmntloops/chroot_cmds  << "EOF"
 #!/bin/ash
-mkdir /var/lock/
-sleep 1
-opkg update
-sleep 1
-opkg install kmod-scsi-cdrom
-opkg install kmod-fs-isofs
 passwd << "INEOF"
 rootroot
 rootroot
@@ -59,7 +53,7 @@ EOF
 
   chmod +x /tmp/wkmntloops/chroot_cmds
   chroot /tmp/wkmntloops /chroot_cmds
-
+  rm -f /tmp/wkmntloops/chroot_cmds
   umount /tmp/wkmntloops
   losetup -d /dev/loop1
   losetup -d /dev/loop0

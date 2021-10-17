@@ -377,7 +377,10 @@ void start_wireshark(char *name)
   char recpath[MAX_PATH_LEN];
   char cloonix_name[MAX_NAME_LEN];
   char *argv[]={bin_path, config, cloonix_name, "-dae",
-               "/usr/bin/wireshark", "-k", "-i", recpath, NULL}; 
+                       "/usr/bin/wireshark",
+                       "-o", "capture.no_interface_load:TRUE",
+                       "-o", "gui.ask_unsaved:FALSE",
+                       "-k", "-i", recpath, NULL}; 
   memset(bin_path, 0, MAX_PATH_LEN);
   memset(config, 0, MAX_PATH_LEN);
   memset(cloonix_name, 0, MAX_NAME_LEN);
@@ -386,7 +389,7 @@ void start_wireshark(char *name)
   snprintf(config, MAX_PATH_LEN-1,
                      "%s/cloonix_config", get_local_cloonix_tree());
   snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
-  snprintf(recpath, MAX_PATH_LEN-1,"%s/%s.pcap", get_distant_snf_dir(), name);
+  snprintf(recpath, MAX_PATH_LEN-1,"%s/%s", get_distant_snf_dir(), name);
   if (check_before_start_launch(argv))
     launch_pid_wait(type_pid_wireshark, name, argv);
 }

@@ -63,27 +63,17 @@ static void print_all_count(void)
 /*---------------------------------------------------------------------------*/
 
 
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line){KOUT(" ");};
+void rpct_recv_poldiag_msg(int llid, int tid, char *line){KOUT(" ");};
 
-
-void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line){KOUT(" ");};
-void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line){KOUT(" ");};
-void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line){KOUT(" ");};
-void rpct_recv_cli_req(void *ptr, int llid, int tid,
-                    int cli_llid, int cli_tid, char *line){KOUT(" ");};
-void rpct_recv_cli_resp(void *ptr, int llid, int tid,
-                     int cli_llid, int cli_tid, char *line){KOUT(" ");};
-
-void rpct_recv_kil_req(void *ptr, int llid, int tid){KOUT(" ");};
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num){KOUT(" ");};
-void rpct_recv_pid_resp(void *ptr, int llid, int tid,
+void rpct_recv_kil_req(int llid, int tid){KOUT(" ");};
+void rpct_recv_pid_req(int llid, int tid, char *name, int num){KOUT(" ");};
+void rpct_recv_pid_resp(int llid, int tid,
                         char *name, int num, int toppid, int pid){KOUT(" ");};
 
-void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop){KOUT(" ");};
-void rpct_recv_hop_unsub(void *ptr, int llid, int tid){KOUT(" ");};
-void rpct_recv_hop_msg(void *ptr, int llid, int tid,
-                      int flags_hop, char *txt){KOUT(" ");};
-void rpct_recv_report(void *ptr, int llid, t_blkd_item *item){KOUT(" ");};
-
+void rpct_recv_hop_sub(int llid, int tid, int flags_hop){KOUT(" ");};
+void rpct_recv_hop_unsub(int llid, int tid){KOUT(" ");};
+void rpct_recv_hop_msg(int llid, int tid, int flags_hop, char *txt){KOUT(" ");};
 
 
 /*****************************************************************************/
@@ -223,8 +213,6 @@ void recv_layout_sat(int llid, int itid, t_layout_sat *ilayout_sat)
         KOUT(" ");
       if (strcmp(layout_sat.name, ilayout_sat->name))
         KOUT("%s %s", layout_sat.name, ilayout_sat->name);
-      if (layout_sat.mutype != ilayout_sat->mutype)
-        KOUT("%d %d", layout_sat.mutype, ilayout_sat->mutype);
       if (double_diff(layout_sat.x, ilayout_sat->x))
         KOUT(" ");
       if (double_diff(layout_sat.y, ilayout_sat->y))
@@ -243,7 +231,6 @@ void recv_layout_sat(int llid, int itid, t_layout_sat *ilayout_sat)
       }
     memset(&layout_sat, 0, sizeof(t_layout_sat));
     random_choice_str(layout_sat.name, MAX_NAME_LEN);
-    layout_sat.mutype = rand();
     layout_sat.x      =randouble();
     layout_sat.y      =randouble();
     layout_sat.xa      =randouble();
@@ -298,7 +285,7 @@ void recv_layout_node(int llid, int itid, t_layout_node *ilayout_node)
     layout_node.y      =randouble();
     layout_node.hidden_on_graph  =rand();
     layout_node.color = rand();
-    layout_node.nb_eth = (rand() %(MAX_SOCK_VM - 1))+1;
+    layout_node.nb_eth = (rand() %(MAX_DPDK_VM - 1))+1;
     for (i=0; i<layout_node.nb_eth; i++)
       {
       layout_node.eth[i].x      =randouble();
@@ -541,7 +528,7 @@ static void usage(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void err_cb (void *ptr, int llid, int err, int from)
+static void err_cb (int llid, int err, int from)
 {
   printf("ERROR %d  %d\n", llid, err);
   KOUT(" ");
@@ -558,7 +545,7 @@ static void rx_cb (int llid, int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void connect_from_client(void *ptr, int llid, int llid_new)
+static void connect_from_client(int llid, int llid_new)
 {
   msg_mngt_set_callbacks (llid_new, err_cb, rx_cb);
 }

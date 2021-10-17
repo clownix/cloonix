@@ -15,14 +15,6 @@ FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/${basearch}
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 CLOONIX_BULK=$(cat $CLOONIX_CONFIG |grep CLOONIX_BULK | awk -F = "{print \$2}")
 BULK=$(eval echo $CLOONIX_BULK)
-if [ ! -e ${BULK}/buster.qcow2 ]; then
-  echo
-  echo Need a small virtual qcow2 to test cloonix inside vm.
-  echo Missing:
-  echo ${BULK}/buster.qcow2
-  echo
-  exit 1
-fi
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
 if [ "x$is_started" == "x" ]; then
@@ -63,7 +55,7 @@ cloonix_ssh $NET ${NAME} "mkdir -p /root/cloonix_data/bulk"
 #----------------------------------------------------------------------
 cloonix_scp $NET ${HERE}/../../install_depends ${NAME}:/root
 #----------------------------------------------------------------------
-cloonix_scp $NET ${BULK}/buster.qcow2 ${NAME}:/root/cloonix_data/bulk
+cloonix_scp $NET ${BULK}/bullseye.qcow2 ${NAME}:/root/cloonix_data/bulk
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "dhclient"
 #----------------------------------------------------------------------

@@ -242,7 +242,6 @@ void send_layout_sat(int llid, int tid, t_layout_sat *layout_sat)
     double2int(&xbe, &xbd, layout_sat->xb);
     double2int(&ybe, &ybd, layout_sat->yb);
     len = sprintf(g_sndbuf, LAYOUT_SAT, tid, layout_sat->name, 
-                                           layout_sat->mutype,
                                            xe, xd, ye, yd,
                                            xae, xad, yae, yad,
                                            xbe, xbd, ybe, ybd,
@@ -290,7 +289,7 @@ static void helper_get_eth(int nb, t_layout_eth_wlan *eth_wlan, char *msg)
   int i;
   char *ptr = msg;
   int xe, xd, ye, yd;
-  if ((nb < 0) || (nb > MAX_SOCK_VM+MAX_WLAN_VM))
+  if ((nb < 0) || (nb > MAX_DPDK_VM))
     KOUT("%d", nb);
   for (i=0; i<nb; i++)
     {
@@ -389,11 +388,10 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
     case bnd_layout_sat:
       memset(&layout_sat, 0, sizeof(t_layout_sat));
       if (sscanf(msg, LAYOUT_SAT, &tid, layout_sat.name,
-                                        &layout_sat.mutype,
                                         &xe, &xd, &ye, &yd,
                                         &xea, &xda, &yea, &yda,
                                         &xeb, &xdb, &yeb, &ydb,
-                                        &(layout_sat.hidden_on_graph)) != 16) 
+                                        &(layout_sat.hidden_on_graph)) != 15) 
         KOUT("%s", msg);
       int2double(xe, xd, &(layout_sat.x));
       int2double(ye, yd, &(layout_sat.y));

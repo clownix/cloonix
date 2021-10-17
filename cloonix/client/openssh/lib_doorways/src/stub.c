@@ -20,20 +20,14 @@
 #include <stdio.h>
 #include <string.h>
 #include "io_clownix.h"
-void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line){KOUT(" ");}
-void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line){KOUT(" ");}
-void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line){KOUT(" ");}
-void rpct_recv_cli_req(void *ptr, int llid, int tid,
-                       int cli_llid, int cli_tid, char *line){KOUT(" ");}
-void rpct_recv_cli_resp(void *ptr, int llid, int tid,
-                        int cli_llid, int cli_tid, char *line){KOUT(" ");}
-void rpct_recv_kil_req(void *ptr, int llid, int tid){KOUT(" ");}
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num){KOUT(" ");}
-void rpct_recv_pid_resp(void *ptr, int llid, int tid,
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line){KOUT(" ");}
+void rpct_recv_poldiag_msg(int llid, int tid, char *line){KOUT(" ");}
+void rpct_recv_kil_req(int llid, int tid){KOUT(" ");}
+void rpct_recv_pid_req(int llid, int tid, char *name, int num){KOUT(" ");}
+void rpct_recv_pid_resp(int llid, int tid,
                         char *name, int num, int toppid, int pid){KOUT(" ");}
-void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop){KOUT(" ");}
-void rpct_recv_hop_unsub(void *ptr, int llid, int tid){KOUT(" ");}
-void rpct_recv_hop_msg(void *ptr, int llid, int tid,
+void rpct_recv_hop_sub(int llid, int tid, int flags_hop){KOUT(" ");}
+void rpct_recv_hop_unsub(int llid, int tid){KOUT(" ");}
+void rpct_recv_hop_msg(int llid, int tid,
                        int flags_hop, char *txt){KOUT(" ");}
-void rpct_recv_report(void *ptr, int llid, t_blkd_item *item){KOUT(" ");}
 

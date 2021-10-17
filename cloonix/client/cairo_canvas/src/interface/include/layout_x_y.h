@@ -25,13 +25,13 @@ void get_node_layout_x_y(char *name, int *color_choice,
                          double *tx, double *ty,
                          int32_t *thidden_on_graph);
 /*---------------------------------------------------------------------------*/
-void set_gene_layout_x_y(int bank_type, char *name, int mutype, 
+void set_gene_layout_x_y(int bank_type, char *name,
                          double x, double y, 
                          double xa, double ya,
                          double xb, double yb,
                          int hidden_on_graph);
 /*---------------------------------------------------------------------------*/
-void get_gene_layout_x_y(int bank_type, char *name, int mutype, 
+void get_gene_layout_x_y(int bank_type, char *name,
                          double *x, double *y, 
                          double *xa, double *ya,
                          double *xb, double *yb,

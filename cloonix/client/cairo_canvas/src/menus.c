@@ -40,7 +40,6 @@
 #include "menus.h"
 #include "hidden_visible_edge.h"
 #include "menu_dialog_kvm.h"
-#include "menu_dialog_c2c.h"
 #include "menu_dialog_d2d.h"
 #include "bdplot.h"
 
@@ -50,7 +49,6 @@ GtkWidget *get_main_window(void);
 static char g_sav_whole[MAX_PATH_LEN];
 static char g_sav_derived[MAX_PATH_LEN];
 int format_phy_info(char *name, char *txt);
-int format_pci_info(char *name, char *txt);
 
 
 
@@ -326,25 +324,6 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int c2c_item_info(char *text,  t_bank_item *bitem)
-{
-  int port_slave, len = 0;
-  char ip_slave[MAX_NAME_LEN];
-    int_to_ip_string (bitem->pbi.pbi_sat->topo_c2c.ip_slave, ip_slave);
-    port_slave = bitem->pbi.pbi_sat->topo_c2c.port_slave;
-    len += sprintf(text + len,"\nMaster: %s",bitem->pbi.pbi_sat->topo_c2c.master_cloonix);
-    len += sprintf(text + len,"\nSlave: %s",bitem->pbi.pbi_sat->topo_c2c.slave_cloonix);
-    len += sprintf(text + len,"\nip_slave: %s port_slave: %d", 
-                              ip_slave, port_slave);
-    if (bitem->pbi.pbi_sat->topo_c2c.is_peered)
-      len += sprintf(text + len, "\n CONNECTION OK");
-    else
-      len += sprintf(text + len, "\n CONNECTION KO");
-  return len;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int d2d_item_info(char *text,  t_bank_item *bitem)
 {
   int len = 0;
@@ -435,23 +414,15 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
     {
     snprintf(title, MAX_PATH_LEN, "%s", bitem->name);
     title[2*MAX_NAME_LEN-1] = 0;
-    if (bitem->pbi.mutype == endp_type_pci)
-      len += format_pci_info(bitem->name, text);
-    else if (bitem->pbi.mutype == endp_type_phy)
+    if (bitem->pbi.endp_type == endp_type_phy)
       len += format_phy_info(bitem->name, text);
-    else if (bitem->pbi.mutype == endp_type_tap)
+    else if (bitem->pbi.endp_type == endp_type_tap)
       len += sprintf(text + len, "\nTAP");
-    else if (bitem->pbi.mutype == endp_type_snf)
-      len += sprintf(text + len, "\nSNF");
-    else if (bitem->pbi.mutype == endp_type_nat)
+    else if (bitem->pbi.endp_type == endp_type_nat)
       len += sprintf(text + len, "\nNAT");
-    else if (bitem->pbi.mutype == endp_type_wif)
-      len += sprintf(text + len, "\nWIF");
-    else if (bitem->pbi.mutype == endp_type_c2c)
-      len += c2c_item_info(text + len, bitem);
-    else if (bitem->pbi.mutype == endp_type_d2d)
+    else if (bitem->pbi.endp_type == endp_type_d2d)
       len += d2d_item_info(text + len, bitem);
-    else if (bitem->pbi.mutype == endp_type_a2b)
+    else if (bitem->pbi.endp_type == endp_type_a2b)
       len += a2b_item_info(text + len, bitem);
     display_info(title, text);
     }
@@ -678,15 +649,7 @@ static void hidden_visible_node(GtkWidget *mn, t_item_ident *pm)
 /****************************************************************************/
 static void sat_item_wireshark(GtkWidget *mn, t_item_ident *pm)
 {
-  t_bank_item *bitem;
-  bitem = look_for_sat_with_id(pm->name);
-  if (bitem)
-    {
-    if (bitem->pbi.mutype == endp_type_snf)
-      {
-      start_wireshark(pm->name);
-      }
-    }
+  wireshark_launch(pm->name, pm->num);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -723,6 +686,30 @@ static t_item_ident *get_and_init_pm(t_bank_item *bitem)
   return pm;
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void wireshark_launch(char *name, int num)
+{
+  t_bank_item *bitem, *bnode;
+  char full_name[MAX_NAME_LEN];
+  bitem = look_for_sat_with_id(name);
+  bnode = look_for_node_with_id(name);
+  if (bitem)
+    {
+    start_wireshark(name);
+    }
+  else if(bnode)
+    {
+    memset(full_name, 0, MAX_NAME_LEN);
+    snprintf(full_name, MAX_NAME_LEN-1, "%s_%d", name, num);
+    start_wireshark(full_name);
+    }
+  else
+    KERR("ERROR: wireshark for %s %d", name, num);
+}
+/*--------------------------------------------------------------------------*/
+
+
 
 
 /****************************************************************************/
@@ -778,19 +765,19 @@ void sat_ctx_menu(t_bank_item *bitem)
 {
   GtkWidget *item_delete, *item_hidden, *item_info, *item_wireshark;
   GtkWidget *menu = gtk_menu_new();
-  char cmd[MAX_PATH_LEN];
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
-  if (bitem->pbi.mutype == endp_type_snf)
-    {
-    memset(cmd, 0, MAX_PATH_LEN);
-    snprintf(cmd, MAX_PATH_LEN-1, "wireshark");
-    item_wireshark = gtk_menu_item_new_with_label(cmd);
-    }
+
+  if ((bitem->pbi.endp_type == endp_type_phy) ||
+      (bitem->pbi.endp_type == endp_type_tap))
+    item_wireshark = gtk_menu_item_new_with_label("wireshark");
+
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
   item_delete = gtk_menu_item_new_with_label("Delete");
   item_info = gtk_menu_item_new_with_label("Info");
-  if (bitem->pbi.mutype == endp_type_snf)
+
+  if ((bitem->pbi.endp_type == endp_type_phy) ||
+      (bitem->pbi.endp_type == endp_type_tap))
     g_signal_connect(G_OBJECT(item_wireshark), "activate",
                      G_CALLBACK(sat_item_wireshark), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_delete), "activate",
@@ -801,11 +788,14 @@ void sat_ctx_menu(t_bank_item *bitem)
                    G_CALLBACK(sat_item_info), (gpointer) pm);
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
-  if (bitem->pbi.mutype == endp_type_snf)
+
+  if ((bitem->pbi.endp_type == endp_type_phy) ||
+      (bitem->pbi.endp_type == endp_type_tap))
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
+
   gtk_widget_show_all(menu);
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
 }
@@ -841,9 +831,13 @@ void intf_ctx_menu(t_bank_item *bitem)
 {
   GtkWidget *item_promisc_on, *item_promisc_off, *item_monitor; 
   GtkWidget *separator, *menu = gtk_menu_new();
-  GtkWidget *item_hidden, *item_info;
+  GtkWidget *item_hidden, *item_info, *item_wireshark;
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
+
+  item_wireshark = gtk_menu_item_new_with_label("wireshark");
+
+
   item_promisc_on = gtk_menu_item_new_with_label("Promisc on");
   item_promisc_off = gtk_menu_item_new_with_label("Promisc off");
   item_monitor = gtk_menu_item_new_with_label("Monitor");
@@ -851,6 +845,8 @@ void intf_ctx_menu(t_bank_item *bitem)
   item_info = gtk_menu_item_new_with_label("Info");
   separator = gtk_separator_menu_item_new();
 
+  g_signal_connect(G_OBJECT(item_wireshark), "activate",
+                   G_CALLBACK(sat_item_wireshark), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_monitor), "activate",
                    G_CALLBACK(intf_item_monitor), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_promisc_on), "activate",
@@ -865,6 +861,7 @@ void intf_ctx_menu(t_bank_item *bitem)
 
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_monitor);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
@@ -972,7 +969,6 @@ void menu_init(void)
 {
   menu_utils_init();
   menu_dialog_vm_init();
-  menu_dialog_c2c_init();
   menu_dialog_d2d_init();
   memset(g_sav_whole, 0, MAX_PATH_LEN);
   memset(g_sav_derived, 0, MAX_PATH_LEN);

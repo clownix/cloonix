@@ -408,7 +408,7 @@ void* utils_malloc(int len)
 {
   void *result;
   g_nb_tot_malloc += 1;
-  if (g_nb_tot_malloc > 50000)
+  if (g_nb_tot_malloc > 100000)
     KERR("%d", g_nb_tot_malloc);
   //result = rte_malloc(NULL, len, 0);
   result = malloc(len);

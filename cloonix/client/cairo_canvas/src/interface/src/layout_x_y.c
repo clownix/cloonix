@@ -46,9 +46,9 @@ typedef struct t_node_layout
   int hidden_on_graph;
   double x; 
   double y;
-  double tx[MAX_SOCK_VM+MAX_WLAN_VM];
-  double ty[MAX_SOCK_VM+MAX_WLAN_VM];
-  int32_t thidden_on_graph[MAX_SOCK_VM+MAX_WLAN_VM];
+  double tx[MAX_DPDK_VM];
+  double ty[MAX_DPDK_VM];
+  int32_t thidden_on_graph[MAX_DPDK_VM];
   struct t_node_layout *prev;
   struct t_node_layout *next;
 } t_node_layout;
@@ -56,7 +56,6 @@ typedef struct t_node_layout
 typedef struct t_gene_layout
 {
   int bank_type;
-  int mutype;
   char name[MAX_NAME_LEN];
   int hidden_on_graph;
   double x; 
@@ -128,9 +127,9 @@ void set_node_layout_x_y(char *name, int color_choice,
   nl->y = y;
   nl->hidden_on_graph = hidden_on_graph;
   nl->color_choice = color_choice;
-  memcpy(nl->tx, tx, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
-  memcpy(nl->ty, ty, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
-  for (i=0; i<MAX_SOCK_VM+MAX_WLAN_VM; i++)
+  memcpy(nl->tx, tx, (MAX_DPDK_VM)*sizeof(double));
+  memcpy(nl->ty, ty, (MAX_DPDK_VM)*sizeof(double));
+  for (i=0; i<MAX_DPDK_VM; i++)
     nl->thidden_on_graph[i] = thidden_on_graph[i];
   nl->next = head_node_layout;
   if (nl->next)
@@ -155,9 +154,9 @@ void get_node_layout_x_y(char *name, int *color_choice,
     *y = cur->y;
     *color_choice = cur->color_choice;
     *hidden_on_graph = cur->hidden_on_graph;
-    memcpy(tx, cur->tx, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
-    memcpy(ty, cur->ty, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
-    for (i=0; i<MAX_SOCK_VM+MAX_WLAN_VM; i++)
+    memcpy(tx, cur->tx, (MAX_DPDK_VM)*sizeof(double));
+    memcpy(ty, cur->ty, (MAX_DPDK_VM)*sizeof(double));
+    for (i=0; i<MAX_DPDK_VM; i++)
       thidden_on_graph[i] = cur->thidden_on_graph[i];
     unset_node_layout(name);
     }
@@ -167,9 +166,9 @@ void get_node_layout_x_y(char *name, int *color_choice,
     *y = START_POS;
     *color_choice = 0;
     *hidden_on_graph = 0;
-    memset(tx, 0, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
-    memset(ty, 0, (MAX_SOCK_VM+MAX_WLAN_VM)*sizeof(double));
-    for (i=0; i<MAX_SOCK_VM+MAX_WLAN_VM; i++)
+    memset(tx, 0, (MAX_DPDK_VM)*sizeof(double));
+    memset(ty, 0, (MAX_DPDK_VM)*sizeof(double));
+    for (i=0; i<MAX_DPDK_VM; i++)
       {
       thidden_on_graph[i] = 0;
       rest = i%4;
@@ -187,7 +186,7 @@ void get_node_layout_x_y(char *name, int *color_choice,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void set_gene_layout_x_y(int bank_type, char *name, int mutype, 
+void set_gene_layout_x_y(int bank_type, char *name,
                          double x, double y,
                          double xa, double ya, 
                          double xb, double yb,
@@ -198,7 +197,6 @@ void set_gene_layout_x_y(int bank_type, char *name, int mutype,
   vtl = (t_gene_layout *) clownix_malloc(sizeof(t_gene_layout), 16);
   memset(vtl, 0, sizeof(t_gene_layout));
   vtl->bank_type = bank_type;
-  vtl->mutype = mutype;
   strcpy(vtl->name, name);
   vtl->x = x;
   vtl->y = y;
@@ -216,7 +214,7 @@ void set_gene_layout_x_y(int bank_type, char *name, int mutype,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void get_gene_layout_x_y(int bank_type, char *name, int mutype, 
+void get_gene_layout_x_y(int bank_type, char *name,
                          double *x, double *y,
                          double *xa, double *ya, 
                          double *xb, double *yb,
@@ -230,20 +228,11 @@ void get_gene_layout_x_y(int bank_type, char *name, int mutype,
     {
     *x = START_POS;
     *y = START_POS;
-    if (mutype == endp_type_a2b)
-      {
-      *xa = A2B_DIA * VAL_INTF_POS_A2B;
-      *ya = A2B_DIA * VAL_INTF_POS_A2B;
-      *xb = -A2B_DIA * VAL_INTF_POS_A2B;
-      *yb = A2B_DIA * VAL_INTF_POS_A2B;
-      }
     *hidden_on_graph = 0;
     topo_get_matrix_inv_transform_point(x, y);
     }
   else
     {
-    if (mutype != cur->mutype)
-      KERR("%d %d", mutype, cur->mutype);
     *x = cur->x;
     *y = cur->y;
     *xa = cur->xa;

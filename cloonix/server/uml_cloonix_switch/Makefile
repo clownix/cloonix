@@ -5,10 +5,8 @@ GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 RPC_DOORS=${CLOONIX_COMMON}/lib_rpc_doors/
 RPC_QMONITOR=${CLOONIX_COMMON}/lib_rpc_qmonitor/
-RPC_C2C=${CLOONIX_COMMON}/lib_rpc_c2c
 RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout
 UTILS=${CLOONIX_COMMON}/lib_utils/
-BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
 AGENT_INCLUDE=${CLOONIX_COMMON}/agent_dropbear/cloonix_agent/src
 
@@ -22,7 +20,6 @@ WARNINGS=-Wall
 SRC = \
       uml_clownix_switch.c \
       recv_from_client.c \
-      server_stub.c \
       heartbeat.c \
       machine_create.c \
       utils_cmd_line_maker.c \
@@ -44,46 +41,32 @@ SRC = \
       qmp.c \
       qhvc0.c \
       xwy.c \
-      mulan_mngt.c \
-      endp_mngt.c \
-      endp_evt.c \
       list_commands.c \
       stats_counters.c \
       stats_counters_sysinfo.c \
-      murpc_dispatch.c \
-      c2c.c \
-      c2c_utils.c \
-      blkd_sub.c \
-      blkd_data.c \
-      dpdk_ovs.c \
-      dpdk_dyn.c \
-      dpdk_msg.c \
       fmt_diag.c \
-      dpdk_tap.c \
-      dpdk_snf.c \
-      dpdk_nat.c \
-      dpdk_a2b.c \
       slowperiodic.c \
-      unix2inet.c \
       suid_power.c \
-      edp_mngt.c \
-      edp_evt.c \
-      edp_phy.c \
-      edp_sock.c \
-      pci_dpdk.c \
       dpdk_d2d.c \
       dpdk_d2d_peer.c \
-      snf_dpdk_process.c \
+      xyx_dpdk_process.c \
       a2b_dpdk_process.c \
       d2d_dpdk_process.c \
       nat_dpdk_process.c \
-      tabmac.c
+      dpdk_ovs.c \
+      dpdk_msg.c \
+      dpdk_tap.c \
+      dpdk_xyx.c \
+      dpdk_nat.c \
+      dpdk_a2b.c \
+      dpdk_phy.c \
+      dpdk_kvm.c \
+      dispatch_diag_msg.c \
+      server_stub.c
 
 INCLUDES= -I./src \
           -I$(GLOB_INCLUDE) \
           -I${IO_CLOWNIX}/include \
-          -I${RPC_SNF}/include \
-          -I${RPC_C2C}/include \
           -I${RPC_LAYOUT}/include \
           -I${RPC_DOORS}/include \
           -I${UTILS}/include \
@@ -92,9 +75,7 @@ INCLUDES= -I./src \
           -I${AGENT_INCLUDE}
 
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
-       -L${BLKD} -lblkd \
        -L${RPCT} -lrpct \
-       -L${RPC_C2C} -lrpc_c2c \
        -L${RPC_LAYOUT} -lrpc_layout \
        -L${RPC_DOORS} -lrpc_doors \
        -L${RPC_CLOWNIX} -lrpc_clownix \

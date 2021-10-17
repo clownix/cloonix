@@ -19,44 +19,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+
 #include "io_clownix.h"
 #include "rpc_clownix.h"
-#include "doors_rpc.h"
+#include "commun_daemon.h"
+
 
 
 /*****************************************************************************/
 void recv_qmp_resp(int llid, int tid, char *name, char *line, int status)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void doors_recv_c2c_clone_birth(int llid, int tid, char *net_name,
-                                char *name, int fd, int endp_type,
-                                char *bin_path, char *sock)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void doors_recv_c2c_req_idx(int llid, int tid, char *name)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void doors_recv_c2c_req_conx(int llid, int tid, char *name, int peer_idx,
-                             uint32_t peer_ip, int peer_port, char *passwd)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void doors_recv_c2c_req_free(int llid, int tid, char *name)
 {
   KOUT(" ");
 }
@@ -106,14 +77,14 @@ void recv_hop_evt_doors(int llid, int tid, int flags_hop,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop)
+void rpct_recv_hop_sub(int llid, int tid, int flags_hop)
 {
  KOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_hop_unsub(void *ptr, int llid, int tid)
+void rpct_recv_hop_unsub(int llid, int tid)
 {
  KOUT(" ");
 }
@@ -219,13 +190,13 @@ void recv_event_print_sub(int llid, int tid, int on)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_kil_req(void *ptr, int llid, int tid)
+void rpct_recv_kil_req(int llid, int tid)
 {
   KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 /*****************************************************************************/
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
+void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   KOUT(" ");
 }
@@ -254,16 +225,6 @@ void recv_evt_stats_sysinfo(int llid, int tid, char *network, char *name,
   KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void recv_blkd_reports(int llid, int tid, t_blkd_reports *blkd)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-
-
-
 
 
 

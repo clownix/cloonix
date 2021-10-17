@@ -152,7 +152,7 @@ static void ping_destore(t_icmp *cur, int drop)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rx_cb(void *ptr, int llid, int fd)
+static int rx_cb(int llid, int fd)
 {
   socklen_t slen;
   struct rte_ipv4_hdr *ipv4_h;
@@ -186,7 +186,7 @@ static int rx_cb(void *ptr, int llid, int fd)
 
 
 /****************************************************************************/
-static void err_cb (void *ptr, int llid, int err, int from)
+static void err_cb (int llid, int err, int from)
 {
   KERR(" ");
 }
@@ -277,9 +277,9 @@ void icmp_input(struct rte_ether_hdr *eth_h,
   uint16_t seq = icmp_h->icmp_seq_nb;
   uint16_t ident = icmp_h->icmp_ident;
 
-  rte_ether_addr_copy(&eth_h->s_addr, &eth_addr);
-  rte_ether_addr_copy(&eth_h->d_addr, &eth_h->s_addr);
-  rte_ether_addr_copy(&eth_addr, &eth_h->d_addr);
+  rte_ether_addr_copy(&eth_h->src_addr, &eth_addr);
+  rte_ether_addr_copy(&eth_h->dst_addr, &eth_h->src_addr);
+  rte_ether_addr_copy(&eth_addr, &eth_h->dst_addr);
   ip_addr = ipv4_h->src_addr;
   ipv4_h->src_addr = ipv4_h->dst_addr;
   ipv4_h->dst_addr = ip_addr;

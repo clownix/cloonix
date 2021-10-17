@@ -44,9 +44,6 @@
 #include "suid_power.h"
 
 
-
-
-
 #define END_HVCO_CMD_MARKER "end_of_hvc0_cloonix_cmd_marker"
 #define MAX_LEN_DROPBEAR 3000
 #define CMD_START_DROPBEAR_CLOONIX " "\
@@ -64,13 +61,8 @@
   "fi\n"\
   "CONFIG=/mnt/cloonix_config_fs\n"\
   "AGD=sr0\n"\
-  "if [ \"$(uname -m)\" = \"x86_64\" ]; then\n"\
-    "AGT=cloonix_agent\n"\
-    "DRP=dropbear_cloonix_sshd\n"\
-  "else\n"\
-    "AGT=cloonix_agent_i386\n"\
-    "DRP=dropbear_cloonix_sshd_i386\n"\
-  "fi\n"\
+  "AGT=cloonix_agent\n"\
+  "DRP=dropbear_cloonix_sshd\n"\
   "APID=\"$(pidof $AGT )\"\n"\
   "DPID=\"$(pidof $DRP )\"\n"\
   "if [ \"$APID\" != \"\" ]; then\n"\
@@ -99,17 +91,6 @@
   "  SHRED=/mnt/p9_host_share\n"\
   "  mkdir -p ${SHRED}\n"\
   "  mount -t 9p -o trans=virtio,version=9p2000.L $name ${SHRED}\n"\
-  "fi\n"\
-  "WLAN_NB=%d \n"\
-  "if [ \"$WLAN_NB\" != \"0\" ]; then \n"\
-    "modprobe mac80211_hwsim radios=$WLAN_NB\n"\
-    "if [ \"$(uname -m)\" = \"x86_64\" ]; then\n"\
-      "export LD_LIBRARY_PATH=/mnt/cloonix_config_fs/lib_x86_64\n"\
-      "${CONFIG}/cloonix_hwsim $WLAN_NB\n"\
-    "else\n"\
-      "export LD_LIBRARY_PATH=/mnt/cloonix_config_fs/lib_i386\n"\
-      "${CONFIG}/cloonix_hwsim_i386 $WLAN_NB\n"\
-    "fi\n"\
   "fi\n"\
   "INSIDE_EOF\n"\
   "chmod +x /tmp/dropbear_cloonix_agent.sh\n"\
@@ -145,7 +126,6 @@ typedef struct t_qhvc0_vm
   char name[MAX_NAME_LEN];
   int vm_config_flags;
   int vm_id;
-  int nb_wlan;
   int vm_qhvc0_llid;
   int vm_qhvc0_fd;
   long long heartbeat_abeat;
@@ -417,18 +397,12 @@ static void vm_release(t_qhvc0_vm *cvm)
 /*****************************************************************************/
 static t_qhvc0_vm *vm_alloc(char *name, t_vm *vm)
 {
-  int i;
   t_qhvc0_vm *cvm = NULL;
   cvm = (t_qhvc0_vm *) clownix_malloc(sizeof(t_qhvc0_vm), 5);
   memset(cvm, 0, sizeof(t_qhvc0_vm));
   strncpy(cvm->name, name, MAX_NAME_LEN-1);
   cvm->vm_id = vm->kvm.vm_id;
   cvm->vm_config_flags = vm->kvm.vm_config_flags;
-  for (i = 0; i < vm->kvm.nb_tot_eth; i++)
-    {
-    if (vm->kvm.eth_table[i].eth_type == eth_type_wlan)
-      cvm->nb_wlan += 1;
-    }
   if (head_cvm)
     head_cvm->prev = cvm;
   cvm->next = head_cvm;
@@ -453,7 +427,7 @@ static void err_llid_retry(int llid, t_qhvc0_vm *cvm)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void vm_err_cb (void *ptr, int llid, int err, int from)
+static void vm_err_cb (int llid, int err, int from)
 {
   t_qhvc0_vm *cvm;
   cvm = vm_get_with_llid(llid);
@@ -467,7 +441,7 @@ static void vm_err_cb (void *ptr, int llid, int err, int from)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int vm_rx_cb(void *ptr, int llid, int fd)
+static int vm_rx_cb(int llid, int fd)
 {
   int len;
   t_qhvc0_vm *cvm;
@@ -524,7 +498,7 @@ static void scheduler_heartbeat(t_qhvc0_vm *cvm)
       {
       cvm->in_guest_cloonix_agent_start_done = 1;
       snprintf(script_start_dropbear, MAX_LEN_DROPBEAR, 
-               CMD_START_DROPBEAR_CLOONIX, cvm->nb_wlan); 
+               CMD_START_DROPBEAR_CLOONIX); 
       begin_and_send(cvm, script_start_dropbear);
       }
     cvm->in_guest_cloonix_agent_start_done++;

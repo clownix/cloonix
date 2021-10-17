@@ -28,13 +28,12 @@
 #include "event_subscriber.h"
 #include "machine_create.h"
 #include "utils_cmd_line_maker.h"
-#include "endp_mngt.h"
 #include "dpdk_ovs.h"
-#include "dpdk_tap.h"
+#include "dpdk_xyx.h"
 #include "dpdk_nat.h"
 #include "dpdk_a2b.h"
 #include "dpdk_d2d.h"
-#include "dpdk_snf.h"
+#include "dpdk_phy.h"
 
 
 /*****************************************************************************/
@@ -193,111 +192,6 @@ static int update_pid_infos(t_vm *vm)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int add_all_tidx_prx(t_lan_attached *lan_attached)
-{
-  int i, result = 0;
-  for (i=0; i<MAX_TRAF_ENDPOINT; i++)
-    {
-    result += lan_attached[i].eventfull_rx_p;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int add_all_tidx_ptx(t_lan_attached *lan_attached)
-{
-  int i, result = 0;
-  for (i=0; i<MAX_TRAF_ENDPOINT; i++)
-    {
-    result += lan_attached[i].eventfull_tx_p;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
-static int add_all_tidx_brx(t_lan_attached *lan_attached)
-{
-  int i, result = 0;
-  for (i=0; i<MAX_TRAF_ENDPOINT; i++)
-    {
-    result += lan_attached[i].eventfull_rx_b;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int add_all_tidx_btx(t_lan_attached *lan_attached)
-{
-  int i, result = 0;
-  for (i=0; i<MAX_TRAF_ENDPOINT; i++)
-    {
-    result += lan_attached[i].eventfull_tx_b;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int get_last_ms(t_lan_attached *lan_attached)
-{
-  int i, result = 0;
-  for (i=0; i<MAX_TRAF_ENDPOINT; i++)
-    {
-    if (result < lan_attached[i].eventfull_ms)
-      result = lan_attached[i].eventfull_ms;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int collect_endp(t_eventfull_endp *eventfull, int nb, t_endp *endp)
-{
-  int i, real_nb = 0;
-  t_endp *next, *cur = endp;
-  t_vm *vm = NULL;
-  for (i=0; i<nb; i++)
-    {
-    if (!cur)
-      KOUT(" ");
-    if (strlen(cur->name) == 0)
-      KERR("%d", cur->endp_type);
-    else if ((!((cur->endp_type == endp_type_kvm_sock)  && (!cfg_get_vm(cur->name)))) &&
-             (!((cur->endp_type == endp_type_kvm_dpdk)  && (!cfg_get_vm(cur->name)))) &&
-             (!((cur->endp_type == endp_type_kvm_wlan)  && (!cfg_get_vm(cur->name)))))
-      {
-      strncpy(eventfull[real_nb].name, cur->name, MAX_NAME_LEN-1);
-      eventfull[real_nb].num  = cur->num;
-      eventfull[real_nb].type = cur->endp_type;
-      if ((cur->endp_type == endp_type_kvm_sock)  && (cur->num == 0))
-        {
-        vm = cfg_get_vm(cur->name);
-        eventfull[real_nb].ram  = vm->ram;
-        eventfull[real_nb].cpu  = vm->cpu;
-        }
-      eventfull[real_nb].ok   = cur->c2c.is_peered;
-      eventfull[real_nb].ptx  = add_all_tidx_ptx(cur->lan_attached);
-      eventfull[real_nb].prx  = add_all_tidx_prx(cur->lan_attached);
-      eventfull[real_nb].btx  = add_all_tidx_btx(cur->lan_attached);
-      eventfull[real_nb].brx  = add_all_tidx_brx(cur->lan_attached);
-      eventfull[real_nb].ms   = get_last_ms(cur->lan_attached);
-      real_nb += 1;
-      }
-    next = endp_mngt_get_next(cur);
-    clownix_free(cur, __FILE__);
-    cur = next;
-    }
-  if (cur)
-    KOUT(" ");
-  return real_nb;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static void refresh_ram_cpu_vm(int nb, t_vm *head_vm)
 {
   int i;
@@ -323,13 +217,11 @@ static void timeout_collect_eventfull(void *data)
 {
   static int count = 0;
   t_eventfull_endp *eventfull_endp;
-  int nb_endp, nb_vm, llid, tid, tot_evt;
+  int nb_vm, llid, tid, tot_evt;
   t_vm *vm   = cfg_get_first_vm(&nb_vm);
-  t_endp *endp   = endp_mngt_get_first(&nb_endp);
   t_eventfull_subs *cur = head_eventfull_subs;
   int nb;
-  tot_evt  = nb_endp + dpdk_ovs_get_nb() + dpdk_tap_get_qty();
-  tot_evt += dpdk_snf_get_qty() + dpdk_nat_get_qty() + dpdk_d2d_get_qty();
+  tot_evt  = dpdk_xyx_get_qty() + dpdk_nat_get_qty() + dpdk_d2d_get_qty();
   tot_evt += (2 * dpdk_a2b_get_qty());
   eventfull_endp = 
   (t_eventfull_endp *) clownix_malloc(tot_evt * sizeof(t_eventfull_endp), 13);
@@ -340,12 +232,7 @@ static void timeout_collect_eventfull(void *data)
     refresh_ram_cpu_vm(nb_vm, vm);
     count = 0;
     }
-  nb = collect_endp(eventfull_endp, nb_endp, endp); 
-  nb += dpdk_ovs_collect_dpdk(&(eventfull_endp[nb]));
-  nb += dpdk_tap_collect_dpdk(&(eventfull_endp[nb]));
-  nb += dpdk_nat_collect_dpdk(&(eventfull_endp[nb]));
-  nb += dpdk_a2b_collect_dpdk(&(eventfull_endp[nb]));
-  nb += dpdk_d2d_collect_dpdk(&(eventfull_endp[nb]));
+  nb = dpdk_xyx_collect_dpdk(&(eventfull_endp[0]));
   while (cur)
     {
     llid = cur->llid;
@@ -358,7 +245,6 @@ static void timeout_collect_eventfull(void *data)
       event_print ("EVENTFULL ERROR!!!!!!");
     cur = cur->next;
     }
-  endp_mngt_erase_eventfull_stats();
   clownix_timeout_add(10, timeout_collect_eventfull, NULL, NULL, NULL);
   clownix_free(eventfull_endp, __FUNCTION__); 
 }

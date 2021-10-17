@@ -27,13 +27,11 @@
 #include "rpc_clownix.h"
 #include "layout_rpc.h"
 #include "doorways_sock.h"
-#include "rpc_c2c.h"
 #include "client_clownix.h"
 
 static int g_llid;
 static int g_connect_llid;
 static t_qmp_cb qmp_cb;
-static t_mud_cli_dialog_cb mud_cli_dialog_cb;
 static t_list_commands_cb clownix_list_commands_cb;
 static t_pid_cb   clownix_pid_cb;
 static t_print_cb clownix_print_cb;
@@ -43,7 +41,6 @@ static t_topo_cb  clownix_topo_cb;
 
 static t_evt_stats_endp_cb clownix_evt_stats_endp_cb;
 static t_evt_stats_sysinfo_cb clownix_evt_stats_sysinfo_cb;
-static t_evt_blkd_reports_cb clownix_evt_blkd_reports_cb;
 
 static t_eventfull_cb clownix_eventfull_cb;
 static t_slowperiodic_cb clownix_slowperiodic_cb;
@@ -102,39 +99,11 @@ void call_response_callback(int tid, int status, char *reason)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void set_mud_cli_dialog_callback(t_mud_cli_dialog_cb cb)
-{
-  mud_cli_dialog_cb = cb;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void set_qmp_callback(t_qmp_cb cb)
 {
   qmp_cb = cb;
 }
 /*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_mucli_dialog_resp(int llid, int tid, 
-                            char *name, int eth, char *line, int status)
-{
-  if (mud_cli_dialog_cb)
-    mud_cli_dialog_cb(tid, name, eth, line, status);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void client_mud_cli_cmd(int tid, char *name, int eth, char *line)
-{
-  if (!g_llid)
-    KOUT(" ");
-  send_mucli_dialog_req(g_llid, tid, name, eth, line);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(g_llid);
-#endif
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void recv_qmp_resp(int llid, int tid, char *name, char *line, int status)
@@ -320,32 +289,6 @@ void recv_evt_stats_sysinfo(int llid, int tid, char *network_name, char *name,
 #endif
 }
 /*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void client_blkd_reports_sub(int tid, int sub, t_evt_blkd_reports_cb cb)
-{
-  if (!g_llid)
-    KOUT(" ");
-  clownix_evt_blkd_reports_cb = cb;
-  send_blkd_reports_sub(g_llid, tid, sub);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(g_llid);
-#endif
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void recv_blkd_reports(int llid, int tid, t_blkd_reports *blkd)
-{
-  if (!msg_exist_channel(llid))
-    KOUT(" ");
-  if (clownix_evt_blkd_reports_cb)
-    clownix_evt_blkd_reports_cb(tid, blkd);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(llid);
-#endif
-}
-/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void recv_evt_stats_endp(int llid, int tid, char *network_name, 
@@ -627,14 +570,42 @@ void client_add_d2d(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_add_sat(int tid, t_end_cb cb, char *name, 
-                    int mutype, t_c2c_req_info *c2c_req_info)
+void client_add_nat(int tid, t_end_cb cb, char *name)
 {
   int new_tid;
   if (!g_llid)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_add_sat(g_llid, new_tid, name, mutype, c2c_req_info);
+  send_nat_add(g_llid, new_tid, name);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void client_add_phy(int tid, t_end_cb cb, char *name)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_phy_add(g_llid, new_tid, name);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+void client_add_tap(int tid, t_end_cb cb, char *name)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_tap_add(g_llid, new_tid, name);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -664,6 +635,20 @@ void client_cnf_a2b(int tid, t_end_cb cb, char *name,
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
   send_a2b_cnf(g_llid, new_tid, name, dir, type, val);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void client_cnf_xyx(int tid, t_end_cb cb, char *name, int type, uint8_t *mac)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_xyx_cnf(g_llid, new_tid, name, type, mac);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -903,13 +888,10 @@ static void rx_cb(int llid, int tid, int type, int val, int len, char *buf)
       {
       if (doors_io_basic_decoder(llid, len, buf))
         {
-        if (doors_io_c2c_decoder(llid, len, buf))
+        if (doors_io_layout_decoder(llid, len, buf))
           {
-          if (doors_io_layout_decoder(llid, len, buf))
-            {
-            if (rpct_decoder(NULL, llid, len, buf))
-              KOUT("%s", buf);
-            }
+          if (rpct_decoder(llid, len, buf))
+            KOUT("%s", buf);
           }
         }
       }
@@ -921,7 +903,7 @@ static void rx_cb(int llid, int tid, int type, int val, int len, char *buf)
 
 /*****************************************************************************/
 #ifdef WITH_GLIB
-int callback_connect_glib(void *ptr, int llid, int fd)
+int callback_connect_glib(int llid, int fd)
 {
   if (llid != g_connect_llid)
     KERR("%d %d", llid, g_connect_llid);
@@ -956,9 +938,8 @@ static void err_cb (int llid)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int callback_connect(void *ptr, int llid, int fd)
+static int callback_connect(int llid, int fd)
 {
-  (void) ptr;
   if (llid != g_connect_llid)
     KERR("%d %d", llid, g_connect_llid);
   g_connect_llid = 0;
@@ -1029,11 +1010,10 @@ void client_init(char *name, char *path, char *password)
   clownix_topo_small_event_cb = NULL;
   clownix_get_path_cb = NULL;
   doors_io_basic_xml_init(doorways_client_tx);
-  doors_io_c2c_init(doorways_client_tx);
   doors_io_layout_xml_init(doorways_client_tx);
   doorways_sock_init();
   msg_mngt_init(name, IO_MAX_BUF_LEN);
-  rpct_redirect_string_tx(NULL, ptr_doorways_client_tx);
+  rpct_redirect_string_tx(ptr_doorways_client_tx);
 #ifdef WITH_GLIB
   glib_client_init();
   llid = doorways_sock_client_inet_start(ip, port, callback_connect_glib);

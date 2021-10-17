@@ -43,7 +43,6 @@
 #include "automates.h"
 #include "lan_to_name.h"
 #include "llid_trace.h"
-#include "rpc_c2c.h"
 #include "layout_rpc.h"
 #include "eventfull.h"
 #include "slowperiodic.h"
@@ -57,27 +56,21 @@
 #include "doorways_mngt.h"
 #include "doorways_sock.h"
 #include "xwy.h"
-#include "c2c.h"
-#include "mulan_mngt.h"
-#include "endp_mngt.h"
 #include "hop_event.h"
-#include "blkd_sub.h"
-#include "blkd_data.h"
 #include "cloonix_conf_info.h"
-#include "unix2inet.h"
 #include "qmp_dialog.h"
 #include "dpdk_ovs.h"
 #include "suid_power.h"
-#include "edp_mngt.h"
-#include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
 #include "d2d_dpdk_process.h"
 #include "a2b_dpdk_process.h"
+#include "xyx_dpdk_process.h"
 
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
 static int g_i_am_in_cloonix;
 static char g_i_am_in_cloonix_name[MAX_NAME_LEN];
+
 
 static int g_cloonix_lock_fd = 0;
 static int g_machine_is_kvm_able;
@@ -293,12 +286,10 @@ static void mk_and_tst_work_path(void)
 
 
 /*****************************************************************************/
-void uml_clownix_switch_error_cb(void *ptr, int llid, int err, int from)
+void uml_clownix_switch_error_cb(int llid, int err, int from)
 {
   llid_trace_free(llid, 0, __FUNCTION__);
   doorways_err_cb (llid);
-  endp_mngt_err_cb (llid);
-  mulan_err_cb (llid);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -308,15 +299,13 @@ void uml_clownix_switch_rx_cb(int llid, int len, char *buf)
   int result;
     result = doors_io_basic_decoder(llid, len, buf);
   if (result == -1)
-    result = doors_io_c2c_decoder(llid, len, buf);
-  if (result == -1)
     result = doors_io_layout_decoder(llid, len, buf);
   if (result == -1)
     result = doors_io_qmonitor_decoder(llid, len, buf);
   if (result == -1)
     result = doors_xml_decoder(llid, len, buf);
   if (result == -1)
-    result = rpct_decoder(NULL, llid, len, buf);
+    result = rpct_decoder(llid, len, buf);
   if (result == -1)
     {
     KERR("Unknown xml message received \n%s\n", buf);
@@ -333,12 +322,26 @@ void uml_clownix_switch_rx_cb(int llid, int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void connect_from_client_unix(void *ptr, int llid, int llid_new)
+static void connect_from_client_unix(int llid, int llid_new)
 {
   llid_trace_alloc(llid_new,"CLIENT_SRV_UX",0,0, type_llid_trace_client_unix);
   msg_mngt_set_callbacks (llid_new, uml_clownix_switch_error_cb, 
                                     uml_clownix_switch_rx_cb);
   event_print("Listen:%d, New client connection: %d", llid, llid_new);
+}
+/*---------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+static void timer_openvswitch_ok(void *data)
+{
+  if (!get_daemon_done())
+    clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
+  else
+    {
+    printf("\n    UML_CLOONIX_SWITCH NOW RUNNING\n\n");
+    daemon(0,0);
+    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -361,7 +364,6 @@ static void launching(void)
   printf("     Bulk Path:              %s\n",cfg_get_bulk());
   printf("     Server Doors Port:      %d\n",cfg_get_server_port());
   printf("\n\n\n");
-  printf(" uml_cloonix_switch now running\n\n");
   if ((strlen(cfg_get_cloonix_name()) == 0) || 
       (strlen(cfg_get_bin_dir()) == 0)      || 
       (strlen(cfg_get_root_work()) == 0)    || 
@@ -388,44 +390,15 @@ static void launching(void)
            "1 giga hugepages: %d mem wanted: %dM\n\n",
            g_machine_hugepages_nb, g_cloonix_conf_info->socket_mem);
     }
-
-  daemon(0,0);
+  dpdk_ovs_init(g_cloonix_conf_info->lcore_mask,
+                g_cloonix_conf_info->socket_mem,
+                g_cloonix_conf_info->cpu_mask);
   doorways_first_start();
   sprintf(clownlock, "%s/cloonix_lock", cfg_get_root_work());
   check_for_another_instance(clownlock, 1);
   init_xwy();
-}
-/*---------------------------------------------------------------------------*/
 
-
-/*****************************************************************************/
-static void callback_after_work_dir_clean(void *data, int status, char *nm)
-{
-  int llid;
-  if (data || nm)
-    {
-    printf("%s %d\n", __FUNCTION__, __LINE__);
-    KOUT(" ");
-    }
-  if (status)
-    {
-    printf("%s %d\n", __FUNCTION__, __LINE__);
-    KOUT("%d", status);
-    }
-  my_mkdir(cfg_get_work(), 0);
-  layout_topo_init();
-  llid = string_server_unix(utils_get_cloonix_switch_path(),
-                            connect_from_client_unix, "main_unix");
-  if (llid <= 0)
-    {
-    printf("\nSomething wrong when making or listening to %s\n\n",
-           utils_get_cloonix_switch_path());
-    printf("%s %d\n", __FUNCTION__, __LINE__);
-    KOUT(" ");
-    }
-  llid_trace_alloc(llid, "CLIENT_LISTEN_UX",0,0,
-                   type_llid_trace_listen_client_unix);
-  launching();
+  clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -554,7 +527,7 @@ static int test_machine_is_kvm_able(void)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void connect_dummy(void *ptr, int llid, int llid_new)
+static void connect_dummy(int llid, int llid_new)
 {
   printf("%s %d\n", __FUNCTION__, __LINE__);
   KOUT(" ");
@@ -610,17 +583,32 @@ static char **save_environ(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void check_for_work_dir_inexistance(void)
+{
+  struct stat stat_path;
+  char cmd[2*MAX_PATH_LEN];
+  if (stat(cfg_get_work(), &stat_path) == 0)
+    {
+    printf( "Path: \"%s\" already exists, destroing it\n\n",cfg_get_work());
+    memset(cmd, 0, 2*MAX_PATH_LEN);
+    snprintf(cmd, 2*MAX_PATH_LEN-1, "/bin/rm -rf %s", cfg_get_work());
+    system(cmd);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int main (int argc, char *argv[])
 {
   long long date_us;
   t_topo_clc *conf;
   struct timespec ts;
+  int llid;
 
   if (clock_gettime(CLOCK_MONOTONIC, &ts))
     KOUT(" ");
   g_i_am_in_cloonix = i_am_inside_cloonix(g_i_am_in_cloonix_name);
 
-  unix2inet_init();
   init_g_user();
   job_for_select_init();
   utils_init();
@@ -643,11 +631,8 @@ int main (int argc, char *argv[])
   llid_trace_init();
   event_subscriber_init();
   doors_io_basic_xml_init(string_tx);
-  doors_io_c2c_init(string_tx);
   doors_io_layout_xml_init(string_tx);
   doors_io_qmonitor_xml_init(string_tx);
-  blkd_sub_init();
-  blkd_data_init();
   automates_init();
   g_saved_environ = save_environ();
   msg_mngt_init(cfg_get_cloonix_name(), IO_MAX_BUF_LEN);
@@ -670,29 +655,37 @@ int main (int argc, char *argv[])
     }
   mk_and_tst_work_path();
   pid_clone_init();
-  check_for_work_dir_inexistance(callback_after_work_dir_clean);
+  check_for_work_dir_inexistance();
+  my_mkdir(cfg_get_work(), 0);
   init_heartbeat();
   stats_counters_init();
   stats_counters_sysinfo_init();
   hop_init();
-  init_c2c();
   init_qmonitor();
   qmp_dialog_init();
   qmp_init();
   init_qhvc0();
-  mulan_init();
-  endp_mngt_init();
-  dpdk_ovs_init(g_cloonix_conf_info->lcore_mask,
-                g_cloonix_conf_info->socket_mem,
-                g_cloonix_conf_info->cpu_mask);
   suid_power_init();
-  edp_mngt_init();
-  snf_dpdk_init();
   nat_dpdk_init();
+  xyx_dpdk_init();
   a2b_dpdk_init();
   d2d_dpdk_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
+  layout_topo_init();
+  llid = string_server_unix(utils_get_cloonix_switch_path(),
+                            connect_from_client_unix, "main_unix");
+  if (llid <= 0)
+    {
+    printf("\nSomething wrong when making or listening to %s\n\n",
+           utils_get_cloonix_switch_path());
+    printf("%s %d\n", __FUNCTION__, __LINE__);
+    KOUT(" ");
+    }
+  llid_trace_alloc(llid, "CLIENT_LISTEN_UX",0,0,
+                   type_llid_trace_listen_client_unix);
+  launching();
+
   msg_mngt_loop();
   return 0;
 }

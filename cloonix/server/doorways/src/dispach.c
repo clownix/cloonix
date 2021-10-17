@@ -26,7 +26,6 @@
 #include "llid_traffic.h"
 #include "openssh_traf.h"
 #include "llid_x11.h"
-#include "c2c.h"
 #include "llid_xwy.h"
 #include "dispach.h"
 
@@ -75,7 +74,7 @@ static void timeout_flow_ctrl(void *data)
     {
     if (tf->ident_flow_timeout == fc->ident_flow_timeout)
       {
-      channel_rx_local_flow_ctrl(NULL, tf->inside_llid, 0);
+      channel_rx_local_flow_ctrl(tf->inside_llid, 0);
       }
     }
   free(data);
@@ -94,7 +93,7 @@ static int flow_ctrl_activation_done(t_transfert *tf)
     tf->ident_flow_timeout += 1;
     fc->ident_flow_timeout = tf->ident_flow_timeout;
     fc->dido_llid = tf->dido_llid;
-    channel_rx_local_flow_ctrl(NULL, tf->inside_llid, 0);
+    channel_rx_local_flow_ctrl(tf->inside_llid, 0);
     clownix_timeout_add(1, timeout_flow_ctrl, (void *)fc, NULL, NULL);
     result = 1;
     }
@@ -208,7 +207,7 @@ t_transfert *dispach_get_inside_transfert(int inside_llid)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void in_err_gene(void *ptr, int inside_llid, int err, int from)
+void in_err_gene(int inside_llid, int err, int from)
 {
   int dido_llid;
   t_transfert *ilt;
@@ -261,7 +260,7 @@ static void in_rx_switch(int inside_llid, int len, char *buf)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int in_rx_spice(void *ptr, int inside_llid, int fd)
+static int in_rx_spice(int inside_llid, int fd)
 {
   t_transfert *ilt;
   int len = 0;
@@ -553,10 +552,6 @@ void dispach_door_rx(int dido_llid, int tid, int type, int val,
 
     case doors_type_dbssh_x11_traf:
       receive_traf_x11_from_client(dido_llid, val, len, buf);
-      break;
-
-    case doors_type_c2c_init:
-      c2c_server_dispach_rx_init(dido_llid, val, len, buf);
       break;
 
     case doors_type_openssh:

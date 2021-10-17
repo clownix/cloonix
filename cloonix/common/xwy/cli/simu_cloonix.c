@@ -262,7 +262,7 @@ static void time_connect(void *data)
   unsigned long ul_fd = (unsigned long) data;
   int llid, fd = (int) ul_fd; 
   llid = fd + 10;
-  g_conn_rx(NULL, llid+20, fd+20);
+  g_conn_rx(llid+20, fd+20);
 }
 /*--------------------------------------------------------------------------*/
 

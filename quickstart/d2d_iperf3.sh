@@ -1,6 +1,6 @@
 #!/bin/bash
 PARAMS="ram=2000 cpu=2 eth=d"
-DIST=buster
+DIST=bullseye
 
 #######################################################################
 for NET in nemo mito; do
@@ -44,10 +44,11 @@ cloonix_ssh nemo vm "ip link set dev eth0 up"
 cloonix_ssh mito vm "ip addr add dev eth0 1.1.1.2/24"
 cloonix_ssh mito vm "ip link set dev eth0 up"
 #----------------------------------------------------------------------
-sudo rm -f /var/log/syslog
-sudo rm -f /var/log/user.log
-sudo systemctl restart syslog.service
+
+sleep 2
+echo cloonix_cli nemo add d2d name_d2d mito
 cloonix_cli nemo add d2d name_d2d mito 
+
 for NET in nemo mito; do
   echo cloonix_cli $NET add lan name_d2d 0 lan
   cloonix_cli $NET add lan name_d2d 0 lan

@@ -137,7 +137,7 @@ static void qrec_free(t_qrec *qrec, int transmit)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int message_braces_complete(char *whole_rx)
+static int req_message_braces_complete(char *whole_rx)
 {
   int j, i=0, count=0, result = 0;
   if (strchr(whole_rx, '{'))
@@ -159,6 +159,41 @@ static int message_braces_complete(char *whole_rx)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int resp_message_braces_complete(char *whole_rx, char **next_rx)
+{
+  int i, count, result = 0;
+  char c;
+  char *ptr, *ptr_first = strchr(whole_rx, '{');
+  *next_rx = NULL;
+  if (whole_rx[0] != '{')
+    KERR("ERROR: %s", whole_rx);
+  if (ptr_first)
+    {
+    i = 0;
+    count = 1;
+    ptr = ptr_first+1;
+    do
+      {
+      c = ptr[i];
+      if (c == '{')
+        count += 1;
+      if (c == '}')
+        count -= 1;
+      if (count == 0)
+        {
+        result = 1;
+        ptr[i] = 0;
+        *next_rx = strchr(&(ptr[i+1]), '{');
+        break;
+        }
+      i += 1;
+      } while (c);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void reset_diag(t_qrec *q)
 {
   q->ref_id += 1;
@@ -169,7 +204,7 @@ static void reset_diag(t_qrec *q)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void call_cb(t_qrec *q, int is_timeout)
+static void call_cb(t_qrec *q, char *resp, int is_timeout)
 {
   t_dialog_resp cb;
   if ((strlen(q->req)) && (q->resp_cb))
@@ -183,32 +218,32 @@ static void call_cb(t_qrec *q, int is_timeout)
       }
     else
       {
-      if ((!strncmp(q->resp, "{\"return\":", strlen("{\"return\":"))) ||
-          (!strncmp(q->resp, "{\"error\":", strlen("{\"error\":"))) ||
-          (!strncmp(q->resp, "{\"timestamp\":", strlen("{\"timestamp\":"))))
+      if ((!strncmp(resp, "{\"return\":", strlen("{\"return\":"))) ||
+          (!strncmp(resp, "{\"error\":", strlen("{\"error\":"))) ||
+          (!strncmp(resp, "{\"timestamp\":", strlen("{\"timestamp\":"))))
         {
         cb = q->resp_cb;
         q->resp_cb = NULL;
-        cb(q->name, q->resp_llid, q->resp_tid, q->req, q->resp);
+        cb(q->name, q->resp_llid, q->resp_tid, q->req, resp);
         }
       else
-        KERR("TOLOOKINTO %s %d %s %s", q->name, q->resp_llid, q->req, q->resp);
+        KERR("TOLOOKINTO %s %d %s %s", q->name, q->resp_llid, q->req, resp);
       }
     } 
   else if ((strlen(q->req)==0) && (q->resp_cb))
     {
     cb = q->resp_cb;
     q->resp_cb = NULL;
-    cb(q->name, q->resp_llid, q->resp_tid, q->req, q->resp);
+    cb(q->name, q->resp_llid, q->resp_tid, q->req, resp);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int qmp_rx_cb(void *ptr, int llid, int fd)
+static int qmp_rx_cb(int llid, int fd)
 {
   int len, max;
-  char *buf;
+  char *buf, *ptr, *next_ptr;
   t_qrec *qrec = get_qrec_with_llid(llid);
   if (!qrec)
     KERR(" ");
@@ -226,28 +261,34 @@ static int qmp_rx_cb(void *ptr, int llid, int fd)
       {
       if (len == max)
         KERR("%s %s %d", qrec->name, qrec->resp, len);
-      else if (len != strlen(buf))
-        KERR("%s %s %d %d", qrec->name, qrec->resp, len, (int) strlen(buf));
       else
         {
-        if (message_braces_complete(qrec->resp))
+        ptr = qrec->resp;
+        while (ptr)
           {
-          if ((!strncmp(qrec->resp, "{\"timestamp\":", 
-                        strlen("{\"timestamp\":"))) &&
-              (strstr(qrec->resp, "JOB_STATUS_CHANGE")))
+          if (resp_message_braces_complete(ptr, &next_ptr))
             {
-//            KERR("DROP %s", qrec->resp);
-            reset_diag(qrec);
+            if ((!strncmp(ptr, "{\"timestamp\":", 
+                          strlen("{\"timestamp\":"))) &&
+                (strstr(ptr, "JOB_STATUS_CHANGE")))
+              {
+              //KERR("DROP %s", ptr);
+              ptr = next_ptr;
+              }
+            else
+              {
+              qmp_msg_recv(qrec->name, qrec->resp);
+              call_cb(qrec, ptr, 0);
+              ptr = NULL;
+              reset_diag(qrec);
+              }
             }
           else
             {
-            qmp_msg_recv(qrec->name, qrec->resp);
-            call_cb(qrec, 0);
-            reset_diag(qrec);
+            ptr = NULL;
+            qrec->resp_offset += len;
             }
           }
-        else
-          qrec->resp_offset += len;
         }
       }
     }
@@ -256,7 +297,7 @@ static int qmp_rx_cb(void *ptr, int llid, int fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void qmp_err_cb (void *ptr, int llid, int err, int from)
+static void qmp_err_cb (int llid, int err, int from)
 {
   t_qrec *qrec = get_qrec_with_llid(llid);
   if (!qrec)
@@ -355,7 +396,7 @@ static void timeout_resp_qmp(void *data)
   t_qrec *qrec = get_qrec_with_name(timeout->name);
   if ((qrec) && (qrec->ref_id == timeout->ref_id))
     {
-    call_cb(qrec, 1);
+    call_cb(qrec, qrec->resp, 1);
     reset_diag(qrec);
     }
   clownix_free(timeout, __FUNCTION__);
@@ -381,6 +422,7 @@ int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_resp cb)
     if (vm->vm_to_be_killed)
       {
       qrec_free(qrec, 1);
+      KERR("%s", name);
       return result;
       }
     }
@@ -395,8 +437,11 @@ int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_resp cb)
     KERR("%s", name);
     qmp_dialog_free(name);
     }
-  else if ((strlen(req)) && (!message_braces_complete(req)))
+  else if ((strlen(req)) && (!req_message_braces_complete(req)))
+    {
+    KERR("%s", name);
     cb(name, llid, tid, req, "invalid braces syntax"); 
+    }
   else
     {
     if (strlen(req))
@@ -405,7 +450,7 @@ int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_resp cb)
       memset(timeout, 0, sizeof(t_timeout_resp));
       strncpy(timeout->name, name, MAX_NAME_LEN-1);
       timeout->ref_id = qrec->ref_id;
-      clownix_timeout_add(20, timeout_resp_qmp, (void *) timeout, NULL, NULL);
+      clownix_timeout_add(1500, timeout_resp_qmp, (void *) timeout, NULL, NULL);
       strncpy(qrec->req, req, MAX_RPC_MSG_LEN-1);
       qmp_msg_send(qrec->name, req);
       watch_tx(qrec->llid, strlen(req), req);

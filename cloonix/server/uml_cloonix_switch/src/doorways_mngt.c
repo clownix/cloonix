@@ -40,7 +40,6 @@
 #include "doorways_mngt.h"
 #include "qhvc0.h"
 #include "qmp.h"
-#include "c2c.h"
 #include "hop_event.h"
 #include "header_sock.h"
 #include "stats_counters.h"
@@ -71,21 +70,6 @@ static char g_root_work[MAX_PATH_LEN];
 static char g_server_port[MAX_NAME_LEN];
 static char g_password[MSG_DIGEST_LEN];
 
-
-
-/*****************************************************************************/
-void doors_recv_c2c_resp_idx(int llid, int tid, char *name, int local_idx)
-{
-  rx_c2c_resp_idx_from_doors(name, local_idx);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void doors_recv_c2c_resp_conx(int llid, int tid, char *name, int fd, int status)
-{
-  rx_c2c_event_conx_from_doors(name, fd, status);
-}
-/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int get_sysinfo_vals(char *msg, unsigned long *uptime,
@@ -216,7 +200,7 @@ static void monitoring_doorways(void *data)
   g_ref_timer = 0;
   clownix_timeout_add(500, monitoring_doorways, NULL, 
                    &(g_abs_beat_timer), &(g_ref_timer));
-  rpct_send_pid_req(NULL, g_doorways_llid, type_hop_doors, "doors", 0);
+  rpct_send_pid_req(g_doorways_llid, type_hop_doors, "doors", 0);
   old_nb_pid_resp = g_nb_pid_resp;
 }
 /*--------------------------------------------------------------------------*/
@@ -268,7 +252,7 @@ static void timer_doorways_connect(void *data)
       KERR(" ");
     llid_trace_alloc(llid, "DOORWAYS", 0,0,type_llid_trace_doorways);
     qhvc0_reinit_vm_in_doorways();
-    rpct_send_pid_req(NULL, llid, type_hop_doors, "doors", 0);
+    rpct_send_pid_req(llid, type_hop_doors, "doors", 0);
     if (g_abs_beat_timer)
       clownix_timeout_del(g_abs_beat_timer, g_ref_timer, __FILE__, __LINE__);
     clownix_timeout_add(500, monitoring_doorways, NULL, 
@@ -362,7 +346,7 @@ void doorways_first_start(void)
 /*****************************************************************************/
 void kill_doors(void)
 {
-  rpct_send_kil_req(NULL, g_doorways_llid, 0);
+  rpct_send_kil_req(g_doorways_llid, 0);
 }
 /*---------------------------------------------------------------------------*/
 

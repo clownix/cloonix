@@ -5,10 +5,6 @@ cd ${HERE}/../../common/lib_io_clownix
 make clean
 make -j 5
 
-cd ${HERE}/../../common/lib_blkd
-make clean
-make -j 5
-
 cd ${HERE}/../../common/lib_rpct
 make clean
 make -j 5

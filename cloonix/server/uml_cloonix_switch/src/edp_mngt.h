@@ -34,15 +34,12 @@ typedef struct t_edp
 void edp_mngt_cisco_nat_destroy(char *name);
 void edp_mngt_cisco_nat_create(char *name);
 
-void edp_mngt_kvm_lan_exists(char *lan, int *dpdk, int *sock);
-
 t_edp *edp_mngt_name_lan_find(char *name, char *lan);
 t_edp *edp_mngt_lan_find(char *lan);
 t_edp *edp_mngt_edp_find(char *name);
 void edp_mngt_edp_free(t_edp *cur);
 t_edp *edp_mngt_get_head_edp(int *nb_edp);
 t_topo_endp *edp_mngt_translate_topo_endp(int *nb);
-int  edp_mngt_lan_exists(char *lan, int *eth_type, int *endp_type);
 int  edp_mngt_add_lan(int llid, int tid, char *name, char *lan, char *err);
 int  edp_mngt_del_lan(int llid, int tid, char *name, char *lan, char *err);
 int  edp_mngt_add(int llid, int tid, char *name, int endp_type);
@@ -50,7 +47,6 @@ int  edp_mngt_del(int llid, int tid, char *name);
 void edp_mngt_del_all(void);
 int  edp_mngt_get_qty(void);
 int  edp_mngt_exists(char *name, int *endp_type);
-void edp_mngt_set_eth_type(t_edp *cur, int eth_type);
 t_edp *edp_mngt_get_first(int *nb_enp);
 void edp_mngt_init(void);
 /*--------------------------------------------------------------------------*/

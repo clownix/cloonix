@@ -38,7 +38,7 @@ static int g_xwy_path_ok;
 
 
 /*****************************************************************************/
-static int xwy_rx_cb(void *ptr, int llid, int fd)
+static int xwy_rx_cb(int llid, int fd)
 {
   int len;
   t_transfert *ilt;

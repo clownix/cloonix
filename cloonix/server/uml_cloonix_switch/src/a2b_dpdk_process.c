@@ -31,10 +31,7 @@
 #include "a2b_dpdk_process.h"
 #include "uml_clownix_switch.h"
 #include "hop_event.h"
-#include "dpdk_tap.h"
-#include "dpdk_dyn.h"
 #include "dpdk_a2b.h"
-#include "dpdk_ovs.h"
 #include "llid_trace.h"
 
 typedef struct t_a2b_dpdk
@@ -137,7 +134,7 @@ static int try_connect(char *socket, char *name)
     if (hop_event_alloc(llid, type_hop_a2b_dpdk, name, 0))
       KERR(" ");
     llid_trace_alloc(llid, name, 0, 0, type_llid_trace_endp_ovsdb);
-    rpct_send_pid_req(NULL, llid, type_hop_a2b_dpdk, name, 0);
+    rpct_send_pid_req(llid, type_hop_a2b_dpdk, name, 0);
     }
   return llid;
 }
@@ -185,8 +182,8 @@ static void timer_heartbeat(void *data)
         }
       else
         {
-        rpct_send_diag_msg(NULL, cur->llid, type_hop_a2b_dpdk, msg);
-        hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+        rpct_send_sigdiag_msg(cur->llid, type_hop_a2b_dpdk, msg);
+        hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
         }
       }
     else if (cur->watchdog_count >= 150)
@@ -199,7 +196,7 @@ static void timer_heartbeat(void *data)
       cur->count += 1;
       if (cur->count == 5)
         {
-        rpct_send_pid_req(NULL, cur->llid, type_hop_a2b_dpdk, cur->name, 0);
+        rpct_send_pid_req(cur->llid, type_hop_a2b_dpdk, cur->name, 0);
         cur->count = 0;
         }
       if (cur->closed_count > 0)
@@ -259,7 +256,7 @@ int a2b_dpdk_diag_llid(int llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void a2b_dpdk_diag_resp(int llid, int tid, char *line)
+void a2b_dpdk_sigdiag_resp(int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
   t_a2b_dpdk *cur;
@@ -271,7 +268,6 @@ void a2b_dpdk_diag_resp(int llid, int tid, char *line)
       KERR("ERROR a2b_dpdk: %s %s", g_cloonix_net, line);
     else
       {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       KERR("Started a2b_dpdk: %s %s", g_cloonix_net, line);
       dpdk_a2b_event_from_a2b_dpdk_process(cur->name, -1);
       }
@@ -284,7 +280,6 @@ void a2b_dpdk_diag_resp(int llid, int tid, char *line)
       KERR("ERROR a2b_dpdk: %s %s", g_cloonix_net, line);
     else
       {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       cur->suid_root_done = 1;
       cur->count = 0;
       }
@@ -297,7 +292,6 @@ void a2b_dpdk_diag_resp(int llid, int tid, char *line)
       KERR("ERROR a2b_dpdk: %s %s", g_cloonix_net, line);
     else
       {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       dpdk_a2b_vhost_started(name);
       }
     }
@@ -325,12 +319,36 @@ void a2b_dpdk_start_vhost(char *name)
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1,
     "cloonixa2b_vhost_start %s", name);
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_a2b_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_a2b_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+void a2b_dpdk_stop_vhost(char *name)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char msg[MAX_PATH_LEN];
+  t_a2b_dpdk *cur = find_a2b_dpdk(name);
+  if (!cur)
+    {
+    KERR("%s %s", locnet, name);
+    }
+  else if (cur->pid == 0)
+    {
+    KERR("%s %s", locnet, name);
+    }
+  else
+    {
+    memset(msg, 0, MAX_PATH_LEN);
+    snprintf(msg, MAX_PATH_LEN-1,
+    "cloonixa2b_vhost_stop %s", name);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_a2b_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void a2b_dpdk_cnf(char *name, int dir, int type, int val)
@@ -347,8 +365,8 @@ void a2b_dpdk_cnf(char *name, int dir, int type, int val)
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, 
     "cloonixa2b_vhost_cnf %s dir=%d type=%d val=%d", name, dir, type, val);
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_a2b_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_a2b_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -385,8 +403,8 @@ void a2b_dpdk_start_stop_process(char *name, int on)
       {
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "rpct_send_kil_req to %s", name);
-      rpct_send_kil_req(NULL, cur->llid, type_hop_a2b_dpdk);
-      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      rpct_send_kil_req(cur->llid, type_hop_a2b_dpdk);
+      hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       }
     }
 }

@@ -33,32 +33,29 @@
 /****************************************************************************/
 void process_all_diffs(t_topo_differences *diffs)
 {
-  int pid;
-  t_topo_kvm_chain   *add_kvm = diffs->add_kvm;
-  t_topo_kvm_chain   *del_kvm = diffs->del_kvm;
-  t_topo_c2c_chain   *add_c2c = diffs->add_c2c;
-  t_topo_c2c_chain   *del_c2c = diffs->del_c2c;
-  t_topo_d2d_chain   *add_d2d = diffs->add_d2d;
-  t_topo_d2d_chain   *del_d2d = diffs->del_d2d;
-  t_topo_a2b_chain   *add_a2b = diffs->add_a2b;
-  t_topo_a2b_chain   *del_a2b = diffs->del_a2b;
-  t_topo_sat_chain   *add_sat = diffs->add_sat;
-  t_topo_sat_chain   *del_sat = diffs->del_sat;
-  t_topo_lan_chain   *add_lan = diffs->add_lan;
-  t_topo_lan_chain   *del_lan = diffs->del_lan;
-  t_topo_edge_chain *add_edge = diffs->add_edge;
-  t_topo_edge_chain *del_edge = diffs->del_edge;
+  t_topo_kvm_chain   *add_kvm  = diffs->add_kvm;
+  t_topo_d2d_chain   *add_d2d  = diffs->add_d2d;
+  t_topo_tap_chain   *add_tap  = diffs->add_tap;
+  t_topo_a2b_chain   *add_a2b  = diffs->add_a2b;
+  t_topo_nat_chain   *add_nat  = diffs->add_nat;
+  t_topo_phy_chain   *add_phy  = diffs->add_phy;
+  t_topo_lan_chain   *add_lan  = diffs->add_lan;
+  t_topo_edge_chain  *add_edge = diffs->add_edge;
+
+  t_topo_kvm_chain   *del_kvm  = diffs->del_kvm;
+  t_topo_d2d_chain   *del_d2d  = diffs->del_d2d;
+  t_topo_tap_chain   *del_tap  = diffs->del_tap;
+  t_topo_a2b_chain   *del_a2b  = diffs->del_a2b;
+  t_topo_nat_chain   *del_nat  = diffs->del_nat;
+  t_topo_phy_chain   *del_phy  = diffs->del_phy;
+  t_topo_lan_chain   *del_lan  = diffs->del_lan;
+  t_topo_edge_chain  *del_edge = diffs->del_edge;
+
 
   while(add_kvm)
     {
     from_cloonix_switch_create_node(&(add_kvm->kvm));
     add_kvm = add_kvm->next;
-    }
-
-  while(add_c2c)
-    {
-    from_cloonix_switch_create_c2c(&(add_c2c->c2c)); 
-    add_c2c = add_c2c->next;
     }
 
   while(add_d2d)
@@ -67,24 +64,34 @@ void process_all_diffs(t_topo_differences *diffs)
     add_d2d = add_d2d->next;
     }
 
+  while(add_tap)
+    {
+    from_cloonix_switch_create_tap(&(add_tap->tap));
+    add_tap = add_tap->next;
+    }
+
   while(add_a2b)
     {
     from_cloonix_switch_create_a2b(&(add_a2b->a2b));
     add_a2b = add_a2b->next;
     }
 
-  while(add_sat)
+  while(add_nat)
     {
-    from_cloonix_switch_create_sat(&(add_sat->sat));
-    add_sat = add_sat->next;
+    from_cloonix_switch_create_nat(&(add_nat->nat));
+    add_nat = add_nat->next;
+    }
+
+  while(add_phy)
+    {
+    from_cloonix_switch_create_phy(&(add_phy->phy));
+    add_phy = add_phy->next;
     }
 
   while(add_lan)
     {
     if (look_for_lan_with_id(add_lan->lan) == NULL)
-      {
       from_cloonix_switch_create_lan(add_lan->lan);
-      }
     add_lan = add_lan->next;
     }
 
@@ -106,16 +113,16 @@ void process_all_diffs(t_topo_differences *diffs)
     del_kvm = del_kvm->next;
     }
 
-  while(del_c2c)
-    {
-    from_cloonix_switch_delete_sat(del_c2c->c2c.name);
-    del_c2c = del_c2c->next;
-    }
-
   while(del_d2d)
     {
     from_cloonix_switch_delete_sat(del_d2d->d2d.name);
     del_d2d = del_d2d->next;
+    }
+
+  while(del_tap)
+    {
+    from_cloonix_switch_delete_sat(del_tap->tap.name);
+    del_tap = del_tap->next;
     }
 
   while(del_a2b)
@@ -124,13 +131,16 @@ void process_all_diffs(t_topo_differences *diffs)
     del_a2b = del_a2b->next;
     }
 
-  while(del_sat)
+  while(del_nat)
     {
-    pid = bank_get_wireshark_pid(del_sat->sat.name);
-    if (pid)
-      pid_clone_kill_single(pid);
-    from_cloonix_switch_delete_sat(del_sat->sat.name);
-    del_sat = del_sat->next;
+    from_cloonix_switch_delete_sat(del_nat->nat.name);
+    del_nat = del_nat->next;
+    }
+
+  while(del_phy)
+    {
+    from_cloonix_switch_delete_sat(del_phy->phy.name);
+    del_phy = del_phy->next;
     }
 
   while(del_lan)

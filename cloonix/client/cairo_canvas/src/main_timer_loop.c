@@ -112,24 +112,9 @@ static void timer_ping_evt(void *data)
 {
   t_bank_item *bitem;
   t_ping_evt *evt = (t_ping_evt *) data;
-  if (evt->evt == c2c_evt_connection_ok)
-    {
-    bitem = look_for_sat_with_id(evt->name);
-    if (bitem)
-      bitem->pbi.pbi_sat->topo_c2c.is_peered = 1;
-    }
-  else if (evt->evt == c2c_evt_connection_ko)
-    {
-    bitem = look_for_sat_with_id(evt->name);
-    if (bitem)
-      bitem->pbi.pbi_sat->topo_c2c.is_peered = 0;
-    }
-  else
-    {
-    bitem = look_for_node_with_id(evt->name);
-    if (bitem)
-      timer_ping_evt_node(bitem, evt->evt);
-    }
+  bitem = look_for_node_with_id(evt->name);
+  if (bitem)
+    timer_ping_evt_node(bitem, evt->evt);
   clownix_free(data, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/

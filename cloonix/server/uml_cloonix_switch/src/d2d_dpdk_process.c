@@ -31,10 +31,7 @@
 #include "d2d_dpdk_process.h"
 #include "uml_clownix_switch.h"
 #include "hop_event.h"
-#include "dpdk_tap.h"
-#include "dpdk_dyn.h"
 #include "dpdk_d2d.h"
-#include "dpdk_ovs.h"
 #include "llid_trace.h"
 
 typedef struct t_d2d_dpdk
@@ -124,7 +121,7 @@ static int try_connect(char *socket, char *name)
     if (hop_event_alloc(llid, type_hop_d2d_dpdk, name, 0))
       KERR(" ");
     llid_trace_alloc(llid, name, 0, 0, type_llid_trace_endp_ovsdb);
-    rpct_send_pid_req(NULL, llid, type_hop_d2d_dpdk, name, 0);
+    rpct_send_pid_req(llid, type_hop_d2d_dpdk, name, 0);
     }
   return llid;
 }
@@ -173,8 +170,8 @@ static void timer_heartbeat(void *data)
         }
       else
         {
-        rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
-        hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+        rpct_send_sigdiag_msg(cur->llid, type_hop_d2d_dpdk, msg);
+        hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
         }
       }
     else if (cur->watchdog_count >= 150)
@@ -187,7 +184,7 @@ static void timer_heartbeat(void *data)
       cur->count += 1;
       if (cur->count == 5)
         {
-        rpct_send_pid_req(NULL, cur->llid, type_hop_d2d_dpdk, cur->name, 0);
+        rpct_send_pid_req(cur->llid, type_hop_d2d_dpdk, cur->name, 0);
         cur->count = 0;
         }
       if (cur->closed_count > 0)
@@ -259,7 +256,7 @@ int d2d_dpdk_diag_llid(int llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void d2d_dpdk_diag_resp(int llid, int tid, char *line)
+void d2d_dpdk_sigdiag_resp(int llid, int tid, char *line)
 {
   char *locnet = cfg_get_cloonix_name();
   uint16_t udp_port;
@@ -273,7 +270,6 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
       KERR("%s ERROR d2d_dpdk: %s", locnet, line);
     else
       {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       KERR("%s Started d2d_dpdk: %s", locnet, line);
             dpdk_d2d_event_from_d2d_dpdk_process(cur->name, -1);
       }
@@ -286,7 +282,6 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
       KERR("%s ERROR d2d_dpdk: %s", locnet, line);
     else
       {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       cur->suid_root_done = 1;
       cur->count = 0;
       }
@@ -297,10 +292,6 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
     cur = find_d2d_dpdk(name);
     if (!cur)
       KERR("%s ERROR d2d_dpdk: %s", locnet, line);
-    else
-      {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
-      }
     }
   else if (sscanf(line,
   "cloonixd2d_vhost_start_ok %s", name) == 1)
@@ -309,10 +300,7 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
     if (!cur)
       KERR("%s ERROR d2d_dpdk: %s", locnet, line);
     else
-      {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       dpdk_d2d_vhost_started(name);
-      }
     }
   else if (sscanf(line,
   "cloonixd2d_vhost_stop_ok %s", name) == 1)
@@ -321,10 +309,7 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
     if (!cur)
       KERR("%s ERROR d2d_dpdk: %s", locnet, line);
     else
-      {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       dpdk_d2d_vhost_stopped(name);
-      }
     }
   else if (sscanf(line,
   "cloonixd2d_get_udp_port_ko %s", name) == 1)
@@ -333,10 +318,7 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
     if (!cur)
       KERR("%s ERROR d2d_dpdk: %s", locnet, line);
     else
-      {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       dpdk_d2d_get_udp_port_done(name, 0, -1);
-      }
     }
   else if (sscanf(line,
   "cloonixd2d_get_udp_port_ok %s udp_port=%hu", name, &udp_port) == 2)
@@ -345,10 +327,7 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
     if (!cur)
       KERR("%s ERROR d2d_dpdk: %s", locnet, line);
     else
-      {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       dpdk_d2d_get_udp_port_done(name, udp_port, 0);
-      }
     }
   else if (sscanf(line,
   "cloonixd2d_set_dist_udp_ip_port_ok %s", name) == 1)
@@ -357,10 +336,7 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
     if (!cur)
       KERR("%s ERROR d2d_dpdk: %s", locnet, line);
     else
-      {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       dpdk_d2d_dist_udp_ip_port_done(name);
-      }
     }
   else if (sscanf(line,
   "cloonixd2d_receive_probe_udp %s", name) == 1)
@@ -369,10 +345,7 @@ void d2d_dpdk_diag_resp(int llid, int tid, char *line)
     if (!cur)
       KERR("%s ERROR d2d_dpdk: %s", locnet, line);
     else
-      {
-      hop_event_hook(llid, FLAG_HOP_DIAG, line);
       dpdk_d2d_receive_probe_udp(name);
-      }
     }
   else
     KERR("%s ERROR d2d_dpdk: %s", locnet, line);
@@ -416,8 +389,8 @@ void d2d_dpdk_start_stop_process(char *name, int on)
       cur->to_be_killed = 1;
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "rpct_send_kil_req to %s", name);
-      rpct_send_kil_req(NULL, cur->llid, type_hop_d2d_dpdk);
-      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      rpct_send_kil_req(cur->llid, type_hop_d2d_dpdk);
+      hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       }
     }
 }
@@ -489,8 +462,8 @@ void d2d_dpdk_start_vhost(char *name)
     {
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "cloonixd2d_vhost_start %s", name);
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_d2d_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -509,8 +482,8 @@ void d2d_dpdk_eal_init(char *name)
     {
     memset(msg, 0, MAX_PATH_LEN); 
     snprintf(msg, MAX_PATH_LEN-1, "cloonixd2d_eal_init");
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_d2d_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -529,8 +502,8 @@ void d2d_dpdk_stop_vhost(char *name)
     {
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "cloonixd2d_vhost_stop %s", name);
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_d2d_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -549,8 +522,8 @@ void d2d_dpdk_get_udp_port(char *name)
     {
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "cloonixd2d_get_udp_port %s", name);
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_d2d_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -570,8 +543,8 @@ void d2d_dpdk_set_dist_udp_ip_port(char *name, uint32_t ip, uint16_t port)
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1,
     "cloonixd2d_set_dist_udp_ip_port %s %x %hu", name, ip, port);
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_d2d_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -591,8 +564,8 @@ void d2d_dpdk_send_probe_udp(char *name)
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1,
     "cloonixd2d_send_probe_udp %s", name);
-    rpct_send_diag_msg(NULL, cur->llid, type_hop_d2d_dpdk, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_d2d_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
 /*--------------------------------------------------------------------------*/

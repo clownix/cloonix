@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void uml_clownix_switch_error_cb(void *ptr, int llid, int err, int from);
+void uml_clownix_switch_error_cb(int llid, int err, int from);
 void uml_clownix_switch_rx_cb(int llid, int len, char *buf);
 
 

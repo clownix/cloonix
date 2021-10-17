@@ -51,7 +51,7 @@ Wait...
 ./step3_run_demo.sh
 Wait...
 
-The demo makes five vms, 2 with linux buster qcow2 and 3 ciscos.
+The demo makes five vms, 2 with linux bullseye qcow2 and 3 ciscos.
 
 There is a long wait with messages:
 "cisco1 returned: RESPKO UNKNOWN VM: cisco1"

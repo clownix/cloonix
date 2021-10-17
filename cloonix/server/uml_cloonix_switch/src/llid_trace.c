@@ -35,11 +35,9 @@
 #include "hop_event.h"
 #include "stats_counters.h"
 #include "stats_counters_sysinfo.h"
-#include "blkd_sub.h"
-#include "unix2inet.h"
-#include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
 #include "d2d_dpdk_process.h"
+#include "xyx_dpdk_process.h"
 #include "a2b_dpdk_process.h"
 #include "suid_power.h"
 /*---------------------------------------------------------------------------*/
@@ -106,29 +104,11 @@ static char *llid_trace_translate_type(int type_llid_trace)
     case type_llid_trace_doorways:
       result = "trace_doorways";
       break;
-    case type_llid_trace_mulan:
-      result = "trace_mulan";
-      break;
-    case type_llid_trace_endp_kvm_sock:
-      result = "trace_endp_kvm_sock";
-      break;
-    case type_llid_trace_endp_kvm_dpdk:
-      result = "trace_endp_kvm_dpdk";
-      break;
-    case type_llid_trace_endp_kvm_wlan:
-      result = "trace_endp_kvm_wlan";
-      break;
-    case type_llid_trace_endp_snf:
-      result = "trace_endp_snf";
+    case type_llid_trace_endp_kvm:
+      result = "trace_endp_kvm";
       break;
     case type_llid_trace_endp_tap:
       result = "trace_endp_tap";
-      break;
-    case type_llid_trace_endp_wif:
-      result = "trace_endp_wif";
-      break;
-    case type_llid_trace_endp_c2c:
-      result = "trace_endp_c2c";
       break;
     case type_llid_trace_endp_ovs:
       result = "trace_endp_ovs";
@@ -407,7 +387,7 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
 
   suid_power_llid_closed(llid);
   d2d_dpdk_llid_closed(llid);
-  snf_dpdk_llid_closed(llid);
+  xyx_dpdk_llid_closed(llid);
   a2b_dpdk_llid_closed(llid);
   nat_dpdk_llid_closed(llid);
   qmp_event_free(llid);
@@ -417,8 +397,6 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
   layout_llid_destroy(llid);
   stats_counters_llid_close(llid);
   stats_counters_sysinfo_llid_close(llid);
-  blkd_sub_llid_close(llid, from_clone);
-  unix2inet_llid_cutoff(llid);
 
   cur = llid_trace_data[llid];
   if (cur)

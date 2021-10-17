@@ -15,7 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void wrap_send_d2d_peer_mac(t_d2d_cnx *cur, int nb_mac, t_peer_mac *tabmac);
 void wrap_disconnect_to_peer(t_d2d_cnx *d2d);
 void wrap_try_connect_to_peer(t_d2d_cnx *d2d);
 void wrap_send_d2d_peer_create(t_d2d_cnx *d2d, int is_ack);

@@ -4,9 +4,7 @@ IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 UTILS=${CLOONIX_COMMON}/lib_utils/
-RPC_C2C=${CLOONIX_COMMON}/lib_rpc_c2c/
 RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout/
-BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
 
 LIB_CLIENT=../lib_client
@@ -26,15 +24,12 @@ INCLUDES= -I./src \
           -I${GLOB_INCLUDE} \
           -I${RPC_CLOWNIX}/include \
           -I${UTILS}/include \
-          -I${RPC_C2C}/include \
           -I${RPC_LAYOUT}/include \
           -I${LIB_CLIENT}/include
 
 LIBS = -L${LIB_CLIENT}/ -lclient \
        -L${IO_CLOWNIX} -lio_clownix \
-       -L${BLKD} -lblkd \
        -L${RPCT} -lrpct \
-       -L${RPC_C2C}/ -lrpc_c2c \
        -L${RPC_LAYOUT}/ -lrpc_layout \
        -L${RPC_CLOWNIX}/ -lrpc_clownix \
        -L${UTILS}/ -lutils \

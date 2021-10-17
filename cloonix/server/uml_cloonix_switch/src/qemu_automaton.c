@@ -44,11 +44,8 @@
 #include "doorways_mngt.h"
 #include "doors_rpc.h"
 #include "file_read_write.h"
-#include "endp_mngt.h"
 #include "dpdk_ovs.h"
-#include "endp_evt.h"
 #include "suid_power.h"
-#include "edp_mngt.h"
 
 #define DRIVE_PARAMS_CISCO " -drive file=%s,index=%d,media=disk,if=virtio,cache=directsync"
 #define DRIVE_PARAMS " -drive file=%s,index=%d,media=disk,if=virtio"
@@ -284,27 +281,6 @@ static void derived_file_creation_request(t_vm *vm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char *format_virtkvm_net(t_vm *vm, int eth)
-{
-  static char cmd[4*MAX_PATH_LEN];
-  int len = 0;
-  char *mac;
-  mac = vm->kvm.eth_table[eth].mac_addr;
-  len+=sprintf(cmd+len," -device virtio-muethnet,tx=bh,netdev=eth%d,mac=",eth);
-  len += sprintf(cmd+len,"%02X:%02X:%02X:%02X:%02X:%02X",
-                         mac[0] & 0xFF, mac[1] & 0xFF, mac[2] & 0xFF,
-                         mac[3] & 0xFF, mac[4] & 0xFF, mac[5] & 0xFF);
-  len += sprintf(cmd+len,",bus=pci.0,addr=0x%x", eth+5);
-  len += sprintf(cmd+len, " -netdev mueth,id=eth%d,munetname=%s,"
-                          "muname=%s,munum=%d,sock=%s,mutype=1",
-                          eth, cfg_get_cloonix_name(), vm->kvm.name, eth, 
-                          utils_get_endp_path(vm->kvm.name, eth)); 
-  return cmd;
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
 #define QEMU_OPTS_BASE \
    " -m %d"\
    " -name %s"\
@@ -315,18 +291,18 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
    " -no-hpet -boot strict=on"
 
 #define QEMU_OPTS_MON_QMP \
-   " -chardev socket,id=mon1,path=%s,server,nowait"\
+   " -chardev socket,id=mon1,path=%s,server=on,wait=off"\
    " -mon chardev=mon1,mode=readline"\
-   " -chardev socket,id=qmp1,path=%s,server,nowait"\
+   " -chardev socket,id=qmp1,path=%s,server=on,wait=off"\
    " -mon chardev=qmp1,mode=control"
 
 #define QEMU_OPTS_CLOONIX \
    " -device virtio-serial-pci"\
    " -device virtio-mouse-pci"\
    " -device virtio-keyboard-pci"\
-   " -chardev socket,path=%s,server,nowait,id=cloon0"\
+   " -chardev socket,path=%s,server=on,wait=off,id=cloon0"\
    " -device virtserialport,chardev=cloon0,name=net.cloonix.0"\
-   " -chardev socket,path=%s,server,nowait,id=hvc0"\
+   " -chardev socket,path=%s,server=on,wait=off,id=hvc0"\
    " -device virtconsole,chardev=hvc0"\
    " -device virtio-balloon-pci,id=balloon0"\
    " -object rng-random,filename=/dev/urandom,id=rng0"\
@@ -344,7 +320,7 @@ static char *format_virtkvm_net(t_vm *vm, int eth)
    " -device usb-redir,chardev=charredir0"\
    " -chardev spicevmc,id=charredir1,name=usbredir"\
    " -device usb-redir,chardev=charredir1"\
-   " -spice unix,addr=%s,disable-ticketing"
+   " -spice unix=on,addr=%s,disable-ticketing=on"
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -373,26 +349,11 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
       len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_net(vm,i));
     }
-  for (i = 0; i < vm->kvm.nb_tot_eth; i++)
-    {
-    if (vm->kvm.eth_table[i].eth_type == eth_type_sock)
-      len+=sprintf(cmd_start+len, "%s",format_virtkvm_net(vm,i));
-    }
   if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NOBACKDOOR))
     {
     len += sprintf(cmd_start+len, QEMU_OPTS_CLOONIX, 
                    utils_get_qbackdoor_path(vm->kvm.vm_id),
                    utils_get_qhvc0_path(vm->kvm.vm_id));
-    }
-  for (i = 0; i < vm->kvm.nb_tot_eth; i++)
-    {
-    if (vm->kvm.eth_table[i].eth_type == eth_type_wlan)
-      {
-       len += sprintf(cmd_start+len, 
-              " -chardev socket,path=%s,server,nowait,id=cloon%d"
-              " -device virtserialport,chardev=cloon%d,name=net.cloonix.%d",
-              utils_get_qbackdoor_wlan_path(vm->kvm.vm_id, i), i+1, i+1, i+1);
-      }
     }
   len = sprintf(linux_cmd, " %s"
                         " -pidfile %s/%s/pid"
@@ -599,14 +560,6 @@ static void launch_qemu_vm_end(char *name)
     }
   else
    {
-    for (i = 0; i < vm->kvm.nb_tot_eth; i++)
-     {
-     if (vm->kvm.eth_table[i].eth_type == eth_type_sock)
-       {
-       if (endp_mngt_kvm_pid_clone(vm->kvm.name, i))
-         KERR("%s %d", vm->kvm.name, i);
-       }
-     }
     for (i=0; vm->launcher_argv[i] != NULL; i++)
       clownix_free(vm->launcher_argv[i], __FUNCTION__);
     clownix_free(vm->launcher_argv, __FUNCTION__);
@@ -716,8 +669,7 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
           {
           arm_static_vm_timeout(name, 100);
           }
-        if (dpdk_ovs_drv_ready())
-          wake_up->state = auto_create_vm_launch;
+        wake_up->state = auto_create_vm_launch;
         }
       else
         {
@@ -727,25 +679,6 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
       break;
     case auto_create_vm_launch:
       wake_up->state = auto_create_vm_connect;
-      for (i = 0; i < vm->kvm.nb_tot_eth; i++)
-        {
-        if (vm->kvm.eth_table[i].eth_type == eth_type_sock)
-          {
-          if (endp_mngt_start(0, 0, vm->kvm.name, i, endp_type_kvm_sock))
-            KERR("%s %d", vm->kvm.name, i);
-          }
-        else if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
-          {
-          }
-        else if (vm->kvm.eth_table[i].eth_type == eth_type_wlan)
-          {
-          if (endp_mngt_start(0, 0, vm->kvm.name, i, endp_type_kvm_wlan))
-            KERR("WLAN %s %d", vm->kvm.name, i);
-          }
-        else
-          KERR("%s %d %d  %d", vm->kvm.name, vm->kvm.nb_tot_eth,
-                                i, vm->kvm.eth_table[i].eth_type);
-        } 
       launch_qemu_vm_start(vm);
       arm_static_vm_timeout(name, 100);
       break;

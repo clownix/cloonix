@@ -86,19 +86,15 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
 
   for (i=0; i < nb_tot_eth; i++)
     {
-    if (eth_tab[i].eth_type == eth_type_sock)
-      add_new_eth(name, i, endp_type_kvm_sock, tx[i], ty[i], thidden[i]);
-    else if (eth_tab[i].eth_type == eth_type_dpdk)
-      add_new_eth(name, i, endp_type_kvm_dpdk, tx[i], ty[i], thidden[i]);
-    else if (eth_tab[i].eth_type == eth_type_wlan)
-      add_new_eth(name, i, endp_type_kvm_wlan, tx[i], ty[i], thidden[i]);
+    if (eth_tab[i].eth_type == eth_type_dpdk)
+      add_new_eth(name, i, tx[i], ty[i], thidden[i]);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 
 /****************************************************************************/
-void bank_sat_create(char *name, int mutype, t_topo_c2c *c2c,
+void bank_sat_create(char *name, int endp_type,
                      t_topo_d2d *d2d, t_topo_a2b *a2b,
                      double x, double y, double xa, double ya,
                      double xb, double yb, int hidden)
@@ -109,11 +105,11 @@ void bank_sat_create(char *name, int mutype, t_topo_c2c *c2c,
     KERR("%s", name);
   else
     {
-    add_new_sat(name, mutype, c2c, d2d, a2b, x, y, hidden);
-    if (mutype == endp_type_a2b)
+    add_new_sat(name, endp_type, d2d, a2b, x, y, hidden);
+    if (endp_type == endp_type_a2b)
       {
-      add_new_eth(name, 0, endp_type_kvm_dpdk, xa, ya, hidden);
-      add_new_eth(name, 1, endp_type_kvm_dpdk, xb, yb, hidden);
+      add_new_eth(name, 0, xa, ya, hidden);
+      add_new_eth(name, 1, xb, yb, hidden);
       }
     }
 }

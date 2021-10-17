@@ -15,7 +15,7 @@ cp -r ${HERE}/targz_store ${TMPBUILD}
 cp -r ${HERE}/cloonix ${TMPBUILD}
 #----------------------------------------------------------
 for i in cloonix_net cloonix_ssh cloonix_scp \
-         cloonix_cli cloonix_gui cloonix_zor \
+         cloonix_cli cloonix_gui \
          cloonix_osh cloonix_ocp cloonix_dta \
          cloonix_xwy cloonix_ice cloonix_mon \
          cloonix_ovs; do
@@ -35,7 +35,6 @@ done
            lib_utils \
            lib_rpc_qmonitor \
            lib_rpc_doors \
-           lib_rpc_c2c \
            lib_rpc_layout ; do
 
     cd ${CLOONIX_COMMON}/${i}
@@ -57,21 +56,11 @@ done
             doorways \
             suid_power \
             uml_cloonix_switch \
-            muswitch/lib_ioc \
-            muswitch/lib_mulan \
-            muswitch/lib_muend \
-            muswitch/mutap \
-            muswitch/musnf \
-            muswitch/munat/clo_tcp \
-            muswitch/munat \
-            muswitch/muc2c \
-            muswitch/muwlan \
-            muswitch/mulan \
             spice \
             qemu \
-            snf_dpdk \
             nat_dpdk \
             d2d_dpdk \
+            xyx_dpdk \
             a2b_dpdk \
             ovs_drv \
             dtach; do
@@ -101,8 +90,6 @@ done
             cairo_canvas/src/subsets \
             cairo_canvas/src/bdplot \
             cairo_canvas \
-            lib_zor \
-            hyperzor \
             spice \
             openssh; do
 

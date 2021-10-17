@@ -42,7 +42,6 @@
 #include "doorways_mngt.h"
 #include "suid_power.h"
 #include "nat_dpdk_process.h"
-#include "edp_mngt.h"
 
 
 char **get_saved_environ(void);
@@ -85,22 +84,15 @@ int utils_get_next_tid(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab,
-                          int *sock, int *dpdk, int *wlan)
+int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab, int *dpdk)
 {
   int i, result = 0;
   char info[MAX_PATH_LEN];
-  (*sock) = 0;
   (*dpdk) = 0;
-  (*wlan) = 0;
   for (i=0; i<nb_tot_eth; i++)
     {
-    if (eth_tab[i].eth_type == eth_type_sock)
-      (*sock)++;
-    else if (eth_tab[i].eth_type == eth_type_dpdk)
+    if (eth_tab[i].eth_type == eth_type_dpdk)
       (*dpdk)++;
-    else if (eth_tab[i].eth_type == eth_type_wlan)
-      (*wlan)++;
     else
       {
       KERR("%d %d %d", nb_tot_eth, i, eth_tab[i].eth_type);
@@ -114,12 +106,12 @@ int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_snf_dpdk_bin_path(void)
+char *utils_get_xyx_dpdk_bin_path(void)
 {
   static char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1,
-           "%s/server/dpdk/bin/cloonix_snf_dpdk", cfg_get_bin_dir());
+           "%s/server/dpdk/bin/cloonix_xyx_dpdk", cfg_get_bin_dir());
   return path;
 }
 /*---------------------------------------------------------------------------*/
@@ -208,26 +200,6 @@ int utils_get_gid_user(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_endp_name(char *name, int num)
-{
-  static char endp_name[MAX_NAME_LEN];
-  snprintf(endp_name, MAX_NAME_LEN-1, "%s_%d", name, num);
-  return endp_name;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_endp_sock_dir(void)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,"%s/%s", 
-           cfg_get_root_work(), ENDP_SOCK_DIR);
-  return path;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 char *utils_get_cli_sock_dir(void)
 {
   static char path[MAX_PATH_LEN];
@@ -247,17 +219,6 @@ char *utils_get_snf_pcap_dir(void)
   return path;
 }
 /*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_endp_path(char *name, int num)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s", 
-           utils_get_endp_sock_dir(), utils_get_endp_name(name, num));
-  return path;
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 char *utils_get_dpdk_ovs_path(char *name)
@@ -326,15 +287,6 @@ char *utils_get_qbackdoor_path(int vm_id)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_qbackdoor_wlan_path(int vm_id, int wlan)
-{
-  static char path[MAX_PATH_LEN];
-  sprintf(path, "%s/%s%d", cfg_get_work_vm(vm_id), QBACKDOOR_WLAN_UNIX, wlan);
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 char *utils_get_qbackdoor_hvc0_path(int vm_id)
 {
   static char path[MAX_PATH_LEN];
@@ -344,62 +296,10 @@ char *utils_get_qbackdoor_hvc0_path(int vm_id)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_muswitch_bin_path(int is_wlan)
-{
-  static char path[MAX_PATH_LEN];
-  if (is_wlan)
-    sprintf(path, "%s/server/muswitch/muwlan/cloonix_muwlan", cfg_get_bin_dir());
-  else
-    sprintf(path, "%s/server/muswitch/mulan/cloonix_mulan", cfg_get_bin_dir());
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 char *utils_get_dpdk_ovs_bin_dir(void)
 {
   static char path[MAX_PATH_LEN];
   sprintf(path, "%s/server/dpdk", cfg_get_bin_dir());
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_endp_bin_path(int type)
-{
-  static char path[MAX_PATH_LEN];
-  if ((type == endp_type_tap)  || 
-      (type == endp_type_phy)  ||
-      (type == endp_type_wif))
-    sprintf(path, "%s/server/muswitch/mutap/cloonix_mutap", cfg_get_bin_dir());
-  else if (type == endp_type_snf)
-    sprintf(path, "%s/server/muswitch/musnf/cloonix_musnf", cfg_get_bin_dir());
-  else if (type == endp_type_c2c)
-    sprintf(path, "%s/server/muswitch/muc2c/cloonix_muc2c", cfg_get_bin_dir());
-  else if (type == endp_type_nat)
-    sprintf(path, "%s/server/muswitch/munat/cloonix_munat", cfg_get_bin_dir());
-  else if (type == endp_type_pci)
-    KERR("%d", type);
-  else
-    KOUT("%d", type);
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_muswitch_sock_dir(void)
-{
-  static char path[MAX_PATH_LEN];
-  sprintf(path, "%s/%s", cfg_get_root_work(), MUSWITCH_SOCK_DIR);
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_muswitch_traf_dir(void)
-{
-  static char path[MAX_PATH_LEN];
-  sprintf(path, "%s/%s", cfg_get_root_work(), MUSWITCH_TRAF_DIR);
   return path;
 }
 /*---------------------------------------------------------------------------*/
@@ -441,19 +341,19 @@ char *utils_get_dpdk_qemu_dir(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_snf_dir(void)
+char *utils_get_dpdk_nat_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s", cfg_get_root_work(), SNF_DPDK_SOCK_DIR);
+  sprintf(dpdk, "%s/%s", cfg_get_root_work(), NAT_DPDK_SOCK_DIR);
   return dpdk;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_nat_dir(void)
+char *utils_get_dpdk_xyx_dir(void)
 {
   static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s", cfg_get_root_work(), ENDP_SOCK_DIR);
+  sprintf(dpdk, "%s/%s", cfg_get_root_work(), XYX_DPDK_SOCK_DIR);
   return dpdk;
 }
 /*---------------------------------------------------------------------------*/
@@ -611,7 +511,7 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
     send_status_ok(llid, tid, "addvm");
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
     {
-    edp_mngt_cisco_nat_create(vm->kvm.name);
+//    edp_mngt_cisco_nat_create(vm->kvm.name);
     }
   nat_dpdk_vm_event();
 }
@@ -777,15 +677,5 @@ void utils_init(void)
   glob_gid_user = getgid();
 }
 /*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-char *utils_mulan_get_sock_path(char *lan)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path,MAX_PATH_LEN-1,"%s/%s",utils_get_muswitch_sock_dir(),lan);
-  return path;
-}
-/*--------------------------------------------------------------------------*/
 
 

@@ -19,6 +19,5 @@ SWITCH_BIN=${CLOONIX_TREE}/server/uml_cloonix_switch/uml_cloonix_switch
 
 
 ${SWITCH_BIN} $CLOONIX_CONFIG "$@"
-sleep 2
 ##############################################################################
 

@@ -94,16 +94,9 @@ static void update_layout_center_scale(const char *from)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void paint_color_of_c2c_d2d(t_bank_item *bitem, cairo_t *c)
+static void paint_color_of_d2d(t_bank_item *bitem, cairo_t *c)
 {
-  if (is_a_c2c(bitem))
-    {
-    if (bitem->pbi.pbi_sat->topo_c2c.is_peered)
-      cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
-    else
-      cairo_set_source_rgba (c, lightred.r, lightred.g, lightred.b, 0.8);
-    }
-  else if (is_a_d2d(bitem))
+  if (is_a_d2d(bitem))
     {
     if ((bitem->pbi.pbi_sat->topo_d2d.tcp_connection_peered) &&
         (bitem->pbi.pbi_sat->topo_d2d.udp_connection_peered) &&
@@ -119,8 +112,6 @@ static void paint_color_of_c2c_d2d(t_bank_item *bitem, cairo_t *c)
     }
 }
 /*--------------------------------------------------------------------------*/
-
-
 
 /****************************************************************************/
 void topo_zoom_in_out_canvas(int in, int val)
@@ -141,29 +132,6 @@ void topo_zoom_in_out_canvas(int in, int val)
 void topo_repaint_request(void)
 {
   cr_canvas_queue_repaint (glob_canvas);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void snf_add_capture_on(t_bank_item *bitem)
-{
-  CrItem *item, *child1;
-  char onoff[5];
-  item = (CrItem *) bitem->cr_item;
-  child1 = (CrItem *) bitem->pbi.pbi_sat->snf_cr_item_onoff;
-  if (bitem->pbi.pbi_sat->snf_capture_on)
-    strcpy(onoff, "ON"); 
-  else
-    strcpy(onoff, "OFF"); 
-  if (child1)
-    cr_item_remove(item, child1);
-  bitem->pbi.pbi_sat->snf_cr_item_onoff = 
-                              (void *) cr_text_new (CR_ITEM(bitem->cr_item),
-                                       bitem->pbi.x0 -12,
-                                       bitem->pbi.y0 - 6,
-                                       onoff,
-                                       "font", "Sans 7", NULL);
-
 }
 /*--------------------------------------------------------------------------*/
 
@@ -263,7 +231,7 @@ void modif_position_eth(t_bank_item *bitem, double xi, double yi)
     }
   else
     {
-    if (bitem->att_node->pbi.mutype == endp_type_a2b)
+    if (bitem->att_node->pbi.endp_type == endp_type_a2b)
       {
       tx = (vx * (A2B_DIA*VAL_INTF_POS_A2B))/dist;
       ty = (vy * (A2B_DIA*VAL_INTF_POS_A2B))/dist;
@@ -322,12 +290,14 @@ static void process_mouse_double_click(t_bank_item *bitem)
 
     case bank_type_eth:
       bitem->pbi.flag = flag_normal;
+      wireshark_launch(bitem->name, bitem->num);
       break;
 
     case bank_type_sat:
       bitem->pbi.flag = flag_normal;
-      if (is_a_snf(bitem))
-        start_wireshark(bitem->name);
+      if ((bitem->pbi.endp_type == endp_type_phy) ||
+          (bitem->pbi.endp_type == endp_type_tap))
+        wireshark_launch(bitem->name, 0);
       break;
 
     default:
@@ -437,7 +407,7 @@ static void fct_bitem_moved_by_operator(t_bank_item *bitem)
     }
   else if (bitem->bank_type == bank_type_eth)
     {
-    if (bitem->pbi.mutype == endp_type_a2b)
+    if (bitem->pbi.endp_type == endp_type_a2b)
       {
       layout_sat = make_layout_sat(bitem->att_node);
       layout_send_layout_sat(layout_sat);
@@ -637,7 +607,7 @@ static void paint_select_source_color(t_bank_item *bitem, cairo_t *c)
   switch (bitem->bank_type)
     {
     case bank_type_sat:
-      paint_color_of_c2c_d2d(bitem, c);
+      paint_color_of_d2d(bitem, c);
       break;
     case bank_type_lan:
       paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
@@ -674,40 +644,6 @@ static void cairo_elem(cairo_t *c, int bank_type, double x0, double y0,
     default: 
       KOUT("%d", bank_type);
     }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void on_item_paint_snf(CrItem *item, cairo_t *c)
-{
-  int flag, flag_trace, flag_grabbed;
-  t_bank_item *bitem = from_critem_to_bank_item(item);
-  t_ccol myorange;
-  myorange.r        = 0.99;  
-  myorange.g        = 0.80;  
-  myorange.b        = 0.00;
-  flag = bitem->pbi.flag;
-  flag_trace = bitem->pbi.flag_trace;
-  flag_grabbed = bitem->pbi.grabbed;
-  if (!bitem)
-    KOUT(" ");
-  cairo_new_path(c);
-  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, SNIFF_RAD, 0, 2*M_PI);
-  paint_select(c,flag,flag_trace,&myorange,&red,&lightmagenta);
-  cairo_fill(c);
-  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, SNIFF_RAD/2, 0, 2*M_PI);
-  if (bitem->pbi.pbi_sat->snf_capture_on)
-    cairo_set_source_rgba (c, red.r, red.g, red.b, 1.0);
-  else
-    cairo_set_source_rgba (c, green.r, green.g, green.b, 1.0);
-  cairo_fill(c);
-  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, SNIFF_RAD, 0, 2*M_PI);
-  if (flag_grabbed)
-    cairo_set_source_rgba (c, white.r, white.g, white.b, 1.0);
-  else
-    cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
-  cairo_set_line_width(c, bitem->pbi.line_width);
-  cairo_stroke(c);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -781,14 +717,7 @@ static void on_item_paint_eth(CrItem *item, cairo_t *c)
   cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, INTF_DIA/2, 0, 2*M_PI);
   if (bitem->bank_type == bank_type_eth)
     {
-    if (bitem->pbi.mutype == endp_type_kvm_sock)
-      paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
-    else if (bitem->pbi.mutype == endp_type_kvm_dpdk)
-      paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
-    else if (bitem->pbi.mutype == endp_type_kvm_wlan)
-      paint_select(c,flag,flag_trace,&lightblue,&red,&lightmagenta);
-    else
-      KOUT("%d", bitem->pbi.mutype);
+    paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
     }
   else
     KOUT("%d", bitem->bank_type);
@@ -981,7 +910,7 @@ static void on_item_paint_a2b(CrItem *item, cairo_t *c)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void on_item_paint_c2c_d2d(CrItem *item, cairo_t *c)
+static void on_item_paint_d2d(CrItem *item, cairo_t *c)
 {
   t_bank_item *bitem = from_critem_to_bank_item(item);
   double x0,y0, d0;
@@ -993,12 +922,12 @@ static void on_item_paint_c2c_d2d(CrItem *item, cairo_t *c)
 
   if (bitem->pbi.blink_tx)
     {
-    d0 = C2C_DIA/2+C2C_DIA/6; 
+    d0 = D2D_DIA/2+D2D_DIA/6; 
     sat_lozange(c, x0, y0, d0);
     cairo_set_source_rgba (c, orange.r, orange.g, orange.b, 0.8);
     cairo_fill(c);
     }
-  d0 = C2C_DIA/2; 
+  d0 = D2D_DIA/2; 
   sat_lozange(c, x0, y0, d0);
   cairo_close_path (c);
   if (bitem->pbi.grabbed)
@@ -1006,7 +935,7 @@ static void on_item_paint_c2c_d2d(CrItem *item, cairo_t *c)
   else
     cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
   cairo_stroke_preserve(c);
-  paint_color_of_c2c_d2d(bitem, c);
+  paint_color_of_d2d(bitem, c);
   cairo_fill(c);
   if (bitem->pbi.blink_rx)
     {
@@ -1084,11 +1013,9 @@ static CrItem *on_item_test(CrItem *item, cairo_t *c, double x, double y)
       {
       if (is_a_nat(bitem))
         cairo_arc (c, x0, y0, NAT_RAD, 0, 2*M_PI);
-      else if (is_a_snf(bitem))
-        cairo_arc (c, x0, y0, SNIFF_RAD, 0, 2*M_PI);
-      else if ((is_a_c2c(bitem)) || (is_a_d2d(bitem)))
+      else if (is_a_d2d(bitem))
         {
-        d0 = C2C_DIA/2;
+        d0 = D2D_DIA/2;
         sat_lozange(c, x0, y0, d0);
         cairo_close_path (c);
         }
@@ -1138,8 +1065,6 @@ static gboolean on_item_calcb(CrItem *item, cairo_t *c,
     else if (bitem->bank_type == bank_type_sat)
       {
       if (is_a_nat(bitem))
-        cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, SNIFF_RAD, 0, 2*M_PI);
-      else if (is_a_snf(bitem))
         cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, SNIFF_RAD, 0, 2*M_PI);
       else
         {
@@ -1293,10 +1218,8 @@ void topo_add_cr_item_to_canvas(t_bank_item *bitem, t_bank_item *bnode)
     {
     if (is_a_nat(bitem))
       g_signal_connect(item, "paint", (GCallback) on_item_paint_nat, NULL);
-    else if (is_a_snf(bitem))
-      g_signal_connect(item, "paint", (GCallback) on_item_paint_snf, NULL);
-    else if ((is_a_c2c(bitem)) || (is_a_d2d(bitem)))
-      g_signal_connect(item, "paint", (GCallback) on_item_paint_c2c_d2d, NULL);
+    else if (is_a_d2d(bitem))
+      g_signal_connect(item, "paint", (GCallback) on_item_paint_d2d, NULL);
     else if (is_a_a2b(bitem))
       g_signal_connect(item, "paint", (GCallback) on_item_paint_a2b, NULL);
     else

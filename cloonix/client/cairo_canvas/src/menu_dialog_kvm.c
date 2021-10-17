@@ -158,8 +158,8 @@ static void is_persistent_toggle (GtkToggleButton *togglebutton,
 
 /****************************************************************************/
 static void update_cust(t_custom_vm *cust, GtkWidget *entry_name, 
-                        GtkWidget *entry_p9_host_share,
-                        GtkWidget *entry_cpu, GtkWidget *entry_ram)
+                        GtkWidget *entry_p9_host_share, GtkWidget *entry_cpu,
+                        GtkWidget *entry_ram, GtkWidget *entry_eth)
 {
   char *tmp;
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_name));
@@ -174,119 +174,18 @@ static void update_cust(t_custom_vm *cust, GtkWidget *entry_name,
 
   cust->cpu = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_cpu));
   cust->mem = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_ram));
+  cust->eth = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_eth));
 }
 /*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void free_eth_type(GtkWidget *check, gpointer user_data)
-{
-  t_cb_eth_type **cb_eth_type = (t_cb_eth_type **) user_data;
-  int i;
-  for (i=0; i<ETH_TYPE_MAX; i++)
-    free(cb_eth_type[i]);
-  free(cb_eth_type);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void eth_type_cb(GtkWidget *check, gpointer user_data)
-{
-  t_cb_eth_type *cb_eth_type = (t_cb_eth_type *) user_data;
-  t_custom_vm *cust_vm = get_ptr_custom_vm();
-  int i,j,k, max_rank = MAX_SOCK_VM + MAX_DPDK_VM + MAX_WLAN_VM;
-  int nb_tot_eth = 0, rank = cb_eth_type->rank;
-  int eth_type = cb_eth_type->eth_type; 
-  GtkWidget **rad = cb_eth_type->rad;
-  cust_vm->eth_tab[rank].eth_type = eth_type;
-
-  if (eth_type == eth_type_none)
-    {
-    for (i=rank + 1; i<max_rank; i++)
-      {
-      cust_vm->eth_tab[i].eth_type = eth_type_none;
-      if (i < ETH_LINE_MAX)
-        {
-        k = ETH_TYPE_MAX * i;
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[k]),TRUE);
-        for(j=1; j<ETH_TYPE_MAX; j++)
-          gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[k+j]),FALSE);
-        }
-      }
-    } 
-  else
-    {
-    for (i=0; i<rank; i++)
-      {
-      k = ETH_TYPE_MAX * rank;
-      if (cust_vm->eth_tab[i].eth_type == eth_type_none)
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[k]),TRUE);
-      } 
-    }
-  for (i=0; i < max_rank; i++)
-    {
-    if (cust_vm->eth_tab[i].eth_type == eth_type_sock)
-      nb_tot_eth += 1;
-    else if (cust_vm->eth_tab[i].eth_type == eth_type_dpdk)
-      nb_tot_eth += 1;
-    else if (cust_vm->eth_tab[i].eth_type == eth_type_wlan)
-      nb_tot_eth += 1;
-    else if ((cust_vm->eth_tab[i].eth_type != eth_type_none) &&
-             (cust_vm->eth_tab[i].eth_type != 0))
-      KOUT("%d %d %d", i, nb_tot_eth, cust_vm->eth_tab[i].eth_type);
-    }
-  cust_vm->nb_tot_eth = nb_tot_eth;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
-                                   int rank, GtkWidget **rad)
-{
-  unsigned long int i;
-  GtkWidget *hbox;
-  t_cb_eth_type **cb_eth_type;
-  char title[MAX_NAME_LEN];
-  unsigned long int endp_type[ETH_TYPE_MAX]={eth_type_none, eth_type_sock,
-                                  eth_type_dpdk, eth_type_wlan};
-  
-  memset(title, 0, MAX_NAME_LEN); 
-  snprintf(title, MAX_NAME_LEN-1, "Eth%d", rank);
-  cb_eth_type = (t_cb_eth_type **) malloc(ETH_TYPE_MAX * sizeof(t_cb_eth_type *));
-  for (i=0; i<ETH_TYPE_MAX; i++)
-    {
-    cb_eth_type[i] = (t_cb_eth_type *) malloc(sizeof(t_cb_eth_type)); 
-    memset(cb_eth_type[i], 0, sizeof(t_cb_eth_type));
-    cb_eth_type[i]->rank = rank;
-    cb_eth_type[i]->eth_type = endp_type[i];
-    cb_eth_type[i]->rad = rad;
-    }
-  hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  for (i=0; i<ETH_TYPE_MAX; i++)
-    {
-    gtk_box_pack_start(GTK_BOX(hbox),rad[ETH_TYPE_MAX*rank+i],TRUE,TRUE,10);
-    g_signal_connect(G_OBJECT(rad[ETH_TYPE_MAX*rank+i]),"clicked",
-                       (GCallback) eth_type_cb,
-                       (gpointer) cb_eth_type[i]);
-    }
-  append_grid(grid, hbox, title, (*line_nb)++);
-  g_signal_connect (G_OBJECT (hbox), "destroy", 
-                    (GCallback) free_eth_type, cb_eth_type);
-}
-/*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void custom_vm_dialog(t_custom_vm *cust)
 {
-  int i, j, k, response, line_nb = 0;
-  GtkWidget *entry_name, *entry_ram; 
+  int response, line_nb = 0;
+  GtkWidget *entry_name, *entry_ram, *entry_eth; 
   GtkWidget *entry_p9_host_share=NULL, *entry_cpu=NULL; 
   GtkWidget *grid, *parent, *is_persistent;
   GtkWidget *has_nobackdoor, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
-  GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
-  GSList *group;
-  char *lib[ETH_TYPE_MAX] = {"n", "s", "d", "w"};
-  t_custom_vm *cust_vm;
 
   if (g_custom_dialog)
     return;
@@ -339,6 +238,10 @@ static void custom_vm_dialog(t_custom_vm *cust)
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_ram), cust->mem);
   append_grid(grid, entry_ram, "Ram:", line_nb++);
 
+  entry_eth = gtk_spin_button_new_with_range(0, MAX_DPDK_VM, 1);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_eth), cust->eth);
+  append_grid(grid, entry_eth, "Eth:", line_nb++);
+
   g_entry_rootfs = gtk_entry_new();
   gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), cust->kvm_used_rootfs);
   append_grid(grid, g_entry_rootfs, "Rootfs:", line_nb++);
@@ -348,25 +251,6 @@ static void custom_vm_dialog(t_custom_vm *cust)
   bulkvm_menu = get_bulkvm();
   gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
   gtk_widget_show_all(bulkvm_menu);
-
-
-  cust_vm = get_ptr_custom_vm();
-  for (i=0; i<ETH_LINE_MAX; i++)
-    {
-    group = NULL;
-    for (j=0; j<ETH_TYPE_MAX; j++)
-      {
-      k= i*ETH_TYPE_MAX + j;
-      rad[k] = gtk_radio_button_new_with_label(group,lib[j]);
-      group  = gtk_radio_button_get_group(GTK_RADIO_BUTTON(rad[k]));
-      if (cust_vm->eth_tab[i].eth_type == j+eth_type_none)
-        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[k]),TRUE);
-      }
-    }
-  for (i=0; i<ETH_LINE_MAX; i++)
-    {  
-    flags_eth_check_button(grid, &line_nb, i, rad);
-    }
 
   gtk_container_set_border_width(GTK_CONTAINER(grid), ETH_TYPE_MAX);
   gtk_box_pack_start(
@@ -382,7 +266,8 @@ static void custom_vm_dialog(t_custom_vm *cust)
     }
   else
     {
-    update_cust(cust, entry_name, entry_p9_host_share, entry_cpu, entry_ram);
+    update_cust(cust, entry_name, entry_p9_host_share, entry_cpu,
+                entry_ram, entry_eth);
     gtk_widget_destroy(g_custom_dialog);
     g_custom_dialog = NULL;
     }
@@ -399,12 +284,14 @@ void menu_choice_kvm(void)
 /****************************************************************************/
 void menu_dialog_vm_init(void)
 {
+  int i;
   char *name;
+  memset(&g_custom_vm, 0, sizeof(t_custom_vm)); 
   if (inside_cloonix(&name))
     snprintf(g_custom_vm.name, MAX_NAME_LEN-3, "IN_%s_n", name);
   else
     strcpy(g_custom_vm.name, "Cloon");
-  strcpy(g_custom_vm.kvm_used_rootfs, "buster.qcow2");
+  strcpy(g_custom_vm.kvm_used_rootfs, "bullseye.qcow2");
   g_custom_vm.current_number = 0;
   g_custom_vm.is_persistent = 0;
   g_custom_vm.is_sda_disk = 0;
@@ -415,10 +302,9 @@ void menu_dialog_vm_init(void)
   g_custom_vm.natplug = 0;
   g_custom_vm.cpu = 2;
   g_custom_vm.mem = 2000;
-  g_custom_vm.nb_tot_eth = 3;
-  g_custom_vm.eth_tab[0].eth_type = eth_type_dpdk;
-  g_custom_vm.eth_tab[1].eth_type = eth_type_dpdk;
-  g_custom_vm.eth_tab[2].eth_type = eth_type_dpdk;
+  g_custom_vm.eth = 3;
+  for (i=0; i<MAX_DPDK_VM; i++)
+    g_custom_vm.eth_table[i].eth_type = eth_type_dpdk;
   g_custom_dialog = NULL;
   memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   g_nb_bulkvm = 0;

@@ -260,7 +260,6 @@ void my_mv_dir(char *src_dir,char *dst_dir, char *src_name,char *dst_name)
 /*****************************************************************************/
 void mk_endp_dir(void)
 {
-  my_mkdir(utils_get_endp_sock_dir(), 0);
   my_mkdir(utils_get_cli_sock_dir(), 0);
   my_mkdir(utils_get_snf_pcap_dir(), 1);
 }
@@ -319,8 +318,8 @@ void mk_dpdk_ovs_db_dir(void)
 void mk_dpdk_dir(void)
 {
   my_mkdir(utils_get_dpdk_qemu_dir(), 0);
-  my_mkdir(utils_get_dpdk_snf_dir(), 0);
   my_mkdir(utils_get_dpdk_nat_dir(), 0);
+  my_mkdir(utils_get_dpdk_xyx_dir(), 0);
   my_mkdir(utils_get_dpdk_a2b_dir(), 0);
   my_mkdir(utils_get_dpdk_d2d_dir(), 0);
   my_mkdir(utils_get_dpdk_cloonix_dir(), 0);
@@ -531,13 +530,6 @@ int rm_machine_dirs(int vm_id, char *err)
      else if (!strcmp(SPICE_SOCK, ent->d_name))
         {
         snprintf(pth, maxlenpth, "%s", utils_get_spice_path(vm_id));
-        pth[maxlenpth-1] = 0;
-        unlink(pth);
-        }
-     else if (!strncmp(QBACKDOOR_WLAN_UNIX, ent->d_name,
-                       strlen(QBACKDOOR_WLAN_UNIX)))
-        {
-        snprintf(pth, maxlenpth, "%s/%s", cfg_get_work_vm(vm_id), ent->d_name); 
         pth[maxlenpth-1] = 0;
         unlink(pth);
         }

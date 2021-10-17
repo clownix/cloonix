@@ -43,10 +43,6 @@
 #include "suid_power.h"
 
 
-
-
-
-
 #define MAX_QMON_LEN 5000
 
 
@@ -291,7 +287,7 @@ static void process_llid_error( t_qmonitor_vm *qvm)
 
 
 /*****************************************************************************/
-static void vm_err_cb (void *ptr, int llid, int err, int from)
+static void vm_err_cb(int llid, int err, int from)
 {
   t_qmonitor_vm *qvm;
   qvm = vm_get_with_llid(llid);
@@ -303,7 +299,7 @@ static void vm_err_cb (void *ptr, int llid, int err, int from)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int vm_rx_cb(void *ptr, int llid, int fd)
+static int vm_rx_cb(int llid, int fd)
 {
   int len;
   t_qmonitor_vm *qvm;

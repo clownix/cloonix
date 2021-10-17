@@ -32,58 +32,30 @@
 #include "event_subscriber.h"
 #include "pid_clone.h"
 #include "utils_cmd_line_maker.h"
-#include "endp_mngt.h"
 #include "uml_clownix_switch.h"
 #include "hop_event.h"
 #include "llid_trace.h"
 #include "machine_create.h"
 #include "file_read_write.h"
 #include "dpdk_ovs.h"
-#include "dpdk_dyn.h"
 #include "dpdk_nat.h"
-#include "dpdk_d2d.h"
 #include "dpdk_msg.h"
 #include "fmt_diag.h"
 #include "qmp.h"
 #include "system_callers.h"
 #include "stats_counters.h"
 #include "dpdk_msg.h"
-#include "edp_mngt.h"
-#include "edp_evt.h"
 #include "nat_dpdk_process.h"
-#include "snf_dpdk_process.h"
-#include "tabmac.h"
 
 
-/****************************************************************************/
-typedef struct t_dnat
-{
-  char name[MAX_NAME_LEN];
-  char lan[MAX_NAME_LEN];
-  int waiting_ack_add_lan;
-  int waiting_ack_del_lan;
-  int timer_count;
-  int llid;
-  int tid;
-  int var_dpdk_start_stop_process;
-  int to_be_destroyed;
-  int ms;
-  int pkt_tx;
-  int pkt_rx;
-  int byte_tx;
-  int byte_rx;
-  struct t_dnat *prev;
-  struct t_dnat *next;
-} t_dnat;
-/*--------------------------------------------------------------------------*/
 
-static t_dnat *g_head_dnat;
+static t_nat_cnx *g_head_nat;
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_dnat *get_dnat(char *name)
+static t_nat_cnx *find_nat(char *name)
 { 
-  t_dnat *cur = g_head_dnat;
+  t_nat_cnx *cur = g_head_nat;
   while(cur)
     {
     if (!strcmp(name, cur->name))
@@ -95,22 +67,21 @@ static t_dnat *get_dnat(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_dnat *alloc_dnat(char *name, char *lan)
+static t_nat_cnx *alloc_nat(char *name)
 {
-  t_dnat *cur = (t_dnat *)clownix_malloc(sizeof(t_dnat), 5);
-  memset(cur, 0, sizeof(t_dnat));
+  t_nat_cnx *cur = (t_nat_cnx *)clownix_malloc(sizeof(t_nat_cnx), 5);
+  memset(cur, 0, sizeof(t_nat_cnx));
   memcpy(cur->name, name, MAX_NAME_LEN-1);
-  memcpy(cur->lan, lan, MAX_NAME_LEN-1);
-  if (g_head_dnat)
-    g_head_dnat->prev = cur;
-  cur->next = g_head_dnat;
-  g_head_dnat = cur;
+  if (g_head_nat)
+    g_head_nat->prev = cur;
+  cur->next = g_head_nat;
+  g_head_nat = cur;
   return cur;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void free_dnat(t_dnat *cur)
+static void free_nat(t_nat_cnx *cur)
 {
   char name[MAX_NAME_LEN];
   char lan[MAX_NAME_LEN];
@@ -122,47 +93,58 @@ static void free_dnat(t_dnat *cur)
     cur->prev->next = cur->next;
   if (cur->next)
     cur->next->prev = cur->prev;
-  if (g_head_dnat == cur)
-    g_head_dnat = cur->next;
+  if (g_head_nat == cur)
+    g_head_nat = cur->next;
   clownix_free(cur, __FUNCTION__);
-  edp_evt_update_non_fix_del(eth_type_dpdk, name, lan);
-  tabmac_process_possible_change();
   dpdk_msg_vlan_exist_no_more(lan);
   event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void timer_nat_msg_beat(void *data)
+static void timer_beat(void *data)
 {
-  t_dnat *next, *cur = g_head_dnat;
+  t_nat_cnx *next, *cur = g_head_nat;
   while(cur)
     {
     next = cur->next;
-      if ((cur->waiting_ack_add_lan) ||
-          (cur->waiting_ack_del_lan))
+
+    if (cur->to_be_destroyed == 1)
+      {
+      if (cur->process_cmd_on == 1)
         {
-        cur->timer_count += 1;
-        if (cur->timer_count > 20)
-          {
-          KERR("TIMEOUT %s addlan:%d dellan:%d", 
-               cur->name, cur->waiting_ack_add_lan,
-               cur->waiting_ack_del_lan);
-          cur->timer_count = 0;
-          if (cur->to_be_destroyed == 1)
-            {
-            if (cur->var_dpdk_start_stop_process)
-              {
-              nat_dpdk_start_stop_process(cur->name, cur->lan, 0);
-              cur->var_dpdk_start_stop_process = 0;
-              }
-            free_dnat(cur);
-            }
-          }
+        cur->process_cmd_on = 0;
+        nat_dpdk_start_stop_process(cur->name, 0);
         }
+      cur->to_be_destroyed_timer_count += 1;
+      if (cur->to_be_destroyed_timer_count == 10)
+        utils_send_status_ok(&(cur->del_llid), &(cur->del_tid));
+      if (cur->to_be_destroyed_timer_count > 20)
+        free_nat(cur);
+      }
+    if ((cur->waiting_ack_add_lan) || (cur->waiting_ack_del_lan))
+      {
+      cur->timer_count += 1;
+      if (cur->timer_count > 20)
+        {
+        if (cur->waiting_ack_add_lan)
+          {
+          KERR("ERROR TIMEOUT ADD LAN %s %s", cur->name, cur->lan);
+          utils_send_status_ko(&(cur->add_llid),&(cur->add_tid),"add timeout");
+          }
+        if (cur->waiting_ack_del_lan)
+          {
+          KERR("ERROR TIMEOUT DEL LAN %s %s", cur->name, cur->lan);
+          utils_send_status_ko(&(cur->del_llid),&(cur->del_tid),"add timeout");
+          }
+        cur->timer_count = 0;
+        cur->waiting_ack_add_lan = 0;
+        cur->waiting_ack_del_lan = 0;
+        }
+      }
     cur = next;
     }
-  clownix_timeout_add(50, timer_nat_msg_beat, NULL, NULL, NULL);
+  clownix_timeout_add(50, timer_beat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -170,7 +152,7 @@ static void timer_nat_msg_beat(void *data)
 int dpdk_nat_get_qty(void)
 {
   int result = 0;
-  t_dnat *cur = g_head_dnat; 
+  t_nat_cnx *cur = g_head_nat; 
   while(cur)
     {
     result += 1;
@@ -183,29 +165,25 @@ int dpdk_nat_get_qty(void)
 /****************************************************************************/
 void dpdk_nat_resp_add_lan(int is_ko, char *lan, char *name)
 {
-  t_dnat *cur = get_dnat(name);
+  t_nat_cnx *cur = find_nat(name);
   if (!cur)
     KERR("ERROR %s %s", name, lan);
-  else if (strcmp(lan, cur->lan))
+  if (strcmp(lan, cur->lan))
     KERR("ERROR %s %s %s", lan, name, cur->lan);
-  else if (cur->waiting_ack_add_lan == 0)
+  if (cur->waiting_ack_add_lan == 0)
     KERR("ERROR %d %s %s", is_ko, lan, name);
-  else if (cur->waiting_ack_del_lan == 1)
+  if (cur->waiting_ack_del_lan == 1)
     KERR("ERROR %d %s %s", is_ko, lan, name);
-  else if (cur->var_dpdk_start_stop_process == 0)
-    KERR("ERROR %d %s %s", is_ko, lan, name);
-  else if (is_ko)
+  cur->waiting_ack_add_lan = 0;
+  if (is_ko)
     {
     KERR("ERROR %s %s", name, lan);
-    utils_send_status_ko(&(cur->llid), &(cur->tid), "openvswitch error");
-    cur->waiting_ack_add_lan = 0;
+    utils_send_status_ko(&(cur->add_llid), &(cur->add_tid), "openvswitch error");
     }
   else
     {
-    cur->waiting_ack_add_lan = 0;
-    edp_evt_update_non_fix_add(eth_type_dpdk, name, lan);
-    tabmac_process_possible_change();
-    utils_send_status_ok(&(cur->llid), &(cur->tid));
+    cur->attached_lan_ok = 1;
+    utils_send_status_ok(&(cur->add_llid), &(cur->add_tid));
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
    }
 }
@@ -215,133 +193,63 @@ void dpdk_nat_resp_add_lan(int is_ko, char *lan, char *name)
 void dpdk_nat_resp_del_lan(int is_ko, char *lan, char *name)
 {
   int is_ok = 0;
-  t_dnat *cur = get_dnat(name);
+  t_nat_cnx *cur = find_nat(name);
   if (!cur)
-    KERR("%s %s", lan, name);
+    KERR("ERROR %s %s", lan, name);
   else
     {
     if (strcmp(lan, cur->lan))
-      KERR("%s %s %s", lan, name, cur->lan);
-    else if (cur->waiting_ack_add_lan == 1)
-      KERR("%d %s %s", is_ko, lan, name);
-    else if (cur->waiting_ack_del_lan == 0)
-      KERR("%d %s %s", is_ko, lan, name);
-    else if (cur->var_dpdk_start_stop_process)
-      KERR("ERROR %s %s", name, cur->lan);
-    else
-      is_ok = 1;
+      KERR("ERROR %s %s %s", lan, name, cur->lan);
+    if (cur->waiting_ack_add_lan == 1)
+      KERR("ERROR %d %s %s", is_ko, lan, name);
+    if (cur->waiting_ack_del_lan == 0)
+      KERR("ERROR %d %s %s", is_ko, lan, name);
+    cur->waiting_ack_del_lan = 0;
+    cur->attached_lan_ok = 0;
+    memset(cur->lan, 0, MAX_NAME_LEN);
     if (is_ok)
-      {
-      utils_send_status_ok(&(cur->llid), &(cur->tid));
-      free_dnat(cur);
-      }
+      utils_send_status_ok(&(cur->del_llid), &(cur->del_tid));
     else
-      {
-      utils_send_status_ko(&(cur->llid), &(cur->tid), "error del");
-      free_dnat(cur);
-      }
+      utils_send_status_ko(&(cur->del_llid), &(cur->del_tid), "error del");
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_nat_event_from_nat_dpdk_process(char *name, char *lan, int on)
+void dpdk_nat_event_from_nat_dpdk_process(char *name, int on)
 {
-  t_dnat *cur = get_dnat(name);
+  t_nat_cnx *cur = find_nat(name);
   if (!cur)
     {
-    KERR("%s %s", name, lan);
-    }
-  else if (strcmp(cur->lan, lan))
-    {
-    KERR("%s %s %s", name, lan, cur->lan);
+    KERR("ERROR %s", name);
     }
   else if ((on == -1) || (on == 0))
     {
+    KERR("PROCESS NAT OFF %s", name);
     if (on == -1)
-      KERR("ERROR %s %s", name, lan);
-    cur->var_dpdk_start_stop_process = 0;
-    cur->to_be_destroyed = 1;
-    if (dpdk_msg_send_del_lan_nat(lan, name))
-      KERR("ERROR %s %s", name, lan);
+      KERR("ERROR %s", name);
+    if (cur->to_be_destroyed == 1)
+      utils_send_status_ok(&(cur->del_llid), &(cur->del_tid));
+    cur->process_running = 0;
     }
   else
     {
-    if (cur->var_dpdk_start_stop_process == 0)
-      KERR("ERROR %s %s", name, lan);
-    else if (cur->waiting_ack_add_lan != 0)
-      KERR("ERROR %s %s", name, lan);
-    else if (dpdk_msg_send_add_lan_nat(lan, name))
-      KERR("ERROR %s %s", lan, name);
-    else
-      cur->waiting_ack_add_lan = 1;
+    KERR("PROCESS NAT ON %s", name);
+    if (cur->process_cmd_on == 0)
+      KERR("ERROR %s", name);
+    cur->process_cmd_on = 1; 
+    cur->process_running = 1; 
+    utils_send_status_ok(&(cur->add_llid), &(cur->add_tid));
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_nat_add(int llid, int tid, char *name, char *lan)
-{
-  int result = -1;
-  t_dnat *cur = get_dnat(name);
-  if (cur)
-    KERR("%s", name);
-  else
-    {
-    cur = alloc_dnat(name, lan);
-    cur->llid = llid;
-    cur->tid = tid;
-    cur->var_dpdk_start_stop_process = 1;
-    nat_dpdk_start_stop_process(name, lan, 1);
-    result = 0;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_nat_del(int llid, int tid, char *name)
-{
-  int result = -1;
-  t_dnat *cur = get_dnat(name);
-  if (!cur)
-    {
-    KERR("%s", name);
-    utils_send_status_ko(&(cur->llid), &(cur->tid), "not found");
-    }
-  else if (cur->waiting_ack_add_lan)
-    {
-    KERR("%s %s", name, cur->lan);
-    utils_send_status_ko(&(cur->llid), &(cur->tid), "wait add");
-    }
-  else
-    {
-    if (cur->waiting_ack_del_lan)
-      {
-      KERR("%s %s", name, cur->lan);
-      utils_send_status_ko(&(cur->llid), &(cur->tid), "wait del");
-      }
-    else
-      {
-      cur->llid = llid;
-      cur->tid = tid;
-      }
-    nat_dpdk_start_stop_process(name, cur->lan, 0);
-    cur->var_dpdk_start_stop_process = 0;
-    cur->waiting_ack_del_lan = 1;
-    cur->to_be_destroyed = 1;
-    cur->timer_count = 0;
-    result = 0;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int dpdk_nat_exist(char *name)
+int dpdk_nat_exists(char *name)
 {
   int result = 0;
-  if (get_dnat(name))
+  if (find_nat(name))
     result = 1;
   return result;
 }
@@ -350,7 +258,7 @@ int dpdk_nat_exist(char *name)
 /****************************************************************************/
 int dpdk_nat_lan_exists(char *lan)
 {
-  t_dnat *cur = g_head_dnat;
+  t_nat_cnx *cur = g_head_nat;
   int result = 0;
   while(cur)
     {
@@ -369,12 +277,12 @@ int dpdk_nat_lan_exists(char *lan)
 char *dpdk_nat_get_next(char *name)
 {
   char *result = NULL;
-  t_dnat *cur;
+  t_nat_cnx *cur;
   if (name == NULL)
-    cur = g_head_dnat;
+    cur = g_head_nat;
   else
     {
-    cur = get_dnat(name);
+    cur = find_nat(name);
     if (cur)
       cur = cur->next;
     }
@@ -388,7 +296,7 @@ char *dpdk_nat_get_next(char *name)
 int dpdk_nat_lan_exists_in_nat(char *name, char *lan)
 {
   int result = 0;
-  t_dnat *cur = get_dnat(name);
+  t_nat_cnx *cur = find_nat(name);
   if(cur)
     {
     if (!strcmp(lan, cur->lan))
@@ -401,7 +309,7 @@ int dpdk_nat_lan_exists_in_nat(char *name, char *lan)
 /****************************************************************************/
 void dpdk_nat_end_ovs(void)
 {
-  t_dnat *next, *cur = g_head_dnat;
+  t_nat_cnx *next, *cur = g_head_nat;
   while(cur)
     {
     next = cur->next;
@@ -428,55 +336,165 @@ char *dpdk_nat_get_mac(char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dpdk_nat_eventfull(char *name, int ms, int ptx, int btx, int prx, int brx)
+int dpdk_nat_add_lan(int llid, int tid, char *name, char *lan)
 {
   int result = -1;
-  t_dnat *cur = get_dnat(name);
-  if (cur)
+  t_nat_cnx *cur = find_nat(name);
+  if (cur == NULL)
+    KERR("ERROR %s", name);
+  else if (cur->process_running == 0)
+    KERR("ERROR %s %s", name, lan);
+  else if (strlen(cur->lan)) 
+    KERR("ERROR %s %s %s", name, lan, cur->lan);
+  else if (cur->attached_lan_ok == 1)
+    KERR("ERROR %s %s", name, lan);
+  else if (cur->waiting_ack_add_lan)
+    KERR("ERROR %s %s", name, cur->lan);
+  else if (cur->waiting_ack_del_lan)
+    KERR("ERROR %s %s", name, cur->lan);
+  else if (dpdk_msg_send_add_lan_nat(lan, name))
+    KERR("ERROR %s %s", lan, name);
+  else
     {
-    cur->ms      = ms;
-    cur->pkt_tx  += ptx;
-    cur->pkt_rx  += prx;
-    cur->byte_tx += btx;
-    cur->byte_rx += brx;
-    stats_counters_update_endp_tx_rx(cur->name, 0, ms, ptx, btx, prx, brx);
+    cur->waiting_ack_add_lan = 1;
+    cur->add_llid = llid;
+    cur->add_tid = tid;
+    strncpy(cur->lan, lan, MAX_NAME_LEN-1);
+    result = 0;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int dpdk_nat_del_lan(int llid, int tid, char *name, char *lan)
+{
+  int result = -1;
+  t_nat_cnx *cur = find_nat(name);
+  if (cur == NULL)
+    KERR("ERROR %s", name);
+  else if (cur->process_running == 0)
+    KERR("ERROR %s %s", name, lan);
+  else if (!strlen(cur->lan))
+    KERR("ERROR %s %s", name, lan);
+  else if (cur->attached_lan_ok == 0)
+    KERR("ERROR %s %s", name, lan);
+  else if (cur->waiting_ack_add_lan)
+    KERR("ERROR %s %s", name, cur->lan);
+  else if (cur->waiting_ack_del_lan)
+    KERR("ERROR %s %s", name, cur->lan);
+  else if (dpdk_msg_send_del_lan_nat(lan, name))
+    KERR("ERROR %s %s", lan, name);
+  else
+    {
+    cur->attached_lan_ok = 0;
+    cur->waiting_ack_del_lan = 1;
+    cur->del_llid = llid;
+    cur->del_tid = tid;
     result = 0;
     }
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-int dpdk_nat_collect_dpdk(t_eventfull_endp *eventfull)
+/****************************************************************************/
+int dpdk_nat_add(int llid, int tid, char *name)
 {
-  int result = 0;;
-  t_dnat *cur = g_head_dnat;
-  while(cur)
+  int result = -1;
+  t_nat_cnx *cur = find_nat(name);
+  if (cur)
+    KERR("ERROR %s", name);
+  else
     {
-    strncpy(eventfull[result].name, cur->name, MAX_NAME_LEN-1);
-    eventfull[result].type = endp_type_nat;
-    eventfull[result].num  = 0;
-    eventfull[result].ms   = cur->ms;
-    eventfull[result].ptx  = cur->pkt_tx;
-    eventfull[result].prx  = cur->pkt_rx;
-    eventfull[result].btx  = cur->byte_tx;
-    eventfull[result].brx  = cur->byte_rx;
-    cur->pkt_tx  = 0;
-    cur->pkt_rx  = 0;
-    cur->byte_tx = 0;
-    cur->byte_rx = 0;
-    result += 1;
-    cur = cur->next;
+    KERR("NAT ADD %s", name);
+    cur = alloc_nat(name);
+    cur->add_llid = llid;
+    cur->add_tid = tid;
+    cur->process_cmd_on = 1;
+    nat_dpdk_start_stop_process(name, 1);
+    result = 0;
     }
   return result;
 }
-/*---------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+int dpdk_nat_del(int llid, int tid, char *name)
+{
+  int result = -1;
+  t_nat_cnx *cur = find_nat(name);
+  if (!cur)
+    KERR("ERROR %s", name);
+  else if (cur->waiting_ack_add_lan)
+    KERR("ERROR %s %s", name, cur->lan);
+  else if (cur->waiting_ack_del_lan)
+    KERR("ERROR %s %s", name, cur->lan);
+  else
+    {
+    KERR("NAT DEL %s", name);
+    cur->del_llid = llid;
+    cur->del_tid = tid;
+    if ((strlen(cur->lan)) && (cur->attached_lan_ok == 1))
+      {
+      cur->waiting_ack_del_lan = 1;
+      if (dpdk_msg_send_del_lan_nat(cur->lan, name))
+        KERR("ERROR %s %s", cur->lan, name);
+      }
+    cur->to_be_destroyed = 1;
+    result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+t_nat_cnx *dpdk_nat_get_first(int *nb_nat)
+{
+  t_nat_cnx *cur = g_head_nat;
+  *nb_nat = 0;
+  while(cur)
+    {
+    *nb_nat += 1;
+    cur = cur->next;
+    }
+  return g_head_nat;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+t_topo_endp *translate_topo_endp_nat(int *nb)
+{
+  t_nat_cnx *cur;
+  int len, nb_nat, nb_endp = 0;
+  t_topo_endp *endp;
+  cur = dpdk_nat_get_first(&nb_nat);
+  endp = (t_topo_endp *) clownix_malloc(nb_nat * sizeof(t_topo_endp),13);
+  memset(endp, 0, nb_nat * sizeof(t_topo_endp));
+  while(cur)
+    {
+    len = sizeof(t_lan_group_item);
+    endp[nb_endp].lan.lan = (t_lan_group_item *)clownix_malloc(len, 2);
+    memset(endp[nb_endp].lan.lan, 0, len);
+    strncpy(endp[nb_endp].name, cur->name, MAX_NAME_LEN-1);
+    endp[nb_endp].num = 0;
+    endp[nb_endp].type = endp_type_nat;
+    if (strlen(cur->lan))
+      {
+      strncpy(endp[nb_endp].lan.lan[0].lan, cur->lan, MAX_NAME_LEN-1);
+      endp[nb_endp].lan.nb_lan = 1;
+      }
+    nb_endp += 1;
+    cur = cur->next;
+    }
+  *nb = nb_endp;
+  return endp;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void dpdk_nat_init(void)
 {
-  g_head_dnat = NULL;
-  clownix_timeout_add(50, timer_nat_msg_beat, NULL, NULL, NULL);
+  g_head_nat = NULL;
+  clownix_timeout_add(50, timer_beat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/

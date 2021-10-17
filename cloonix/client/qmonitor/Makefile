@@ -4,7 +4,6 @@ IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_QMONITOR=${CLOONIX_COMMON}/lib_rpc_qmonitor/
 UTILS=${CLOONIX_COMMON}/lib_utils/
-BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
 
 
@@ -20,7 +19,6 @@ INCLUDES= -I${IO_CLOWNIX}/include \
           -I${RPC_QMONITOR}/include
 
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
-       -L${BLKD} -lblkd \
        -L${RPCT} -lrpct \
        -L${RPC_QMONITOR} -lrpc_qmonitor \
        -L${UTILS} -lutils -lssl -lcrypto -lrt -lpthread -lreadline -lncurses

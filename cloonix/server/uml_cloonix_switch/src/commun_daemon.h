@@ -71,7 +71,6 @@ enum
 #define QMP_UNIX "qmp"
 #define QHVCO_UNIX "qhvc0"
 #define QBACKDOOR_UNIX "qdagent"
-#define QBACKDOOR_WLAN_UNIX "qdwlan"
 #define QBACKDOOR_HVCO_UNIX "qdhvc"
 
 

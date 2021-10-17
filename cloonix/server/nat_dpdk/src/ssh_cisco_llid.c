@@ -159,7 +159,7 @@ static int get_info_from_buf(int len, char *ibuf, char *remote_user,
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rx_cb(void *ptr, int llid, int fd)
+static int rx_cb(int llid, int fd)
 {
   int data_len, result = 0;
   uint8_t *data;
@@ -227,7 +227,7 @@ static int rx_cb(void *ptr, int llid, int fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void err_cb(void *ptr, int llid, int err, int from)
+static void err_cb(int llid, int err, int from)
 {
   t_ssh_cisco *cur = find_ssh_cisco(llid);
   if (!cur)
@@ -244,7 +244,7 @@ static void err_cb(void *ptr, int llid, int err, int from)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void listen_error(void *ptr, int llid, int err, int from)
+static void listen_error(int llid, int err, int from)
 {
   if (msg_exist_channel(llid))
     msg_delete_channel(llid);
@@ -253,7 +253,7 @@ static void listen_error(void *ptr, int llid, int err, int from)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int listen_event(void *ptr, int llid, int fd)
+static int listen_event(int llid, int fd)
 {
   int traffic_fd, traffic_llid;
   util_fd_accept(fd, &traffic_fd, __FUNCTION__);

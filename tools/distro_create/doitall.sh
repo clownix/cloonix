@@ -5,13 +5,8 @@ HERE=`pwd`
 
 LIST="centos8 \
       fedora34 \
-      fedora33 \
       opensuse153 \
-      focal \
-      groovy \
       hirsute \
-      buster \
-      buster_fr \
       bullseye \
       bullseye_fr \
       openwrt"

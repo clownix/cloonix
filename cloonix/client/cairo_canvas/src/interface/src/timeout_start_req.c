@@ -35,7 +35,7 @@ t_topo_info *get_current_topo(void);
 
 /****************************************************************************/
 static void gene_create_item_req(int bank_type, char *name, char *path,
-                                 int mutype, double x, double y)
+                                 int endp_type, double x, double y)
 {
   t_item_req *pa;
   pa = (t_item_req *) clownix_malloc(sizeof(t_item_req), 12);
@@ -43,7 +43,7 @@ static void gene_create_item_req(int bank_type, char *name, char *path,
   pa->bank_type = bank_type;
   strncpy(pa->name, name, MAX_NAME_LEN-1);
   strncpy(pa->path, path, MAX_PATH_LEN-1);
-  pa->mutype = mutype;
+  pa->endp_type = endp_type;
   pa->x = x;
   pa->y = y;
   clownix_timeout_add(1, timer_create_item_req, (void *)pa, NULL, NULL);
@@ -71,16 +71,15 @@ void to_cloonix_switch_create_node(double x, double y,
   memset(pa, 0, sizeof(t_item_node_req));
   pa->x = x;
   pa->y = y;
-  memcpy(pa->tx, tx, MAX_SOCK_VM+MAX_WLAN_VM * sizeof(double));
-  memcpy(pa->ty, ty, MAX_SOCK_VM+MAX_WLAN_VM * sizeof(double));
+  memcpy(pa->tx, tx, MAX_DPDK_VM * sizeof(double));
+  memcpy(pa->ty, ty, MAX_DPDK_VM * sizeof(double));
   clownix_timeout_add(1, timer_create_item_node_req,(void *)pa, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void to_cloonix_switch_create_sat(char *name, int mutype, 
+void to_cloonix_switch_create_sat(char *name, int endp_type, 
                                   t_d2d_req_info *d2d_req_info,
-                                  t_c2c_req_info *c2c_req_info,
                                   double x, double y)
 {
   t_item_req *pa;
@@ -88,9 +87,7 @@ void to_cloonix_switch_create_sat(char *name, int mutype,
   memset(pa, 0, sizeof(t_item_req));
   pa->bank_type = bank_type_sat;
   strncpy(pa->name, name, MAX_NAME_LEN-1);
-  pa->mutype = mutype;
-  if (c2c_req_info)
-    memcpy(&(pa->c2c_req_info), c2c_req_info, sizeof(t_c2c_req_info));
+  pa->endp_type = endp_type;
   if (d2d_req_info)
     memcpy(&(pa->d2d_req_info), d2d_req_info, sizeof(t_d2d_req_info));
   pa->x = x;
@@ -102,7 +99,7 @@ void to_cloonix_switch_create_sat(char *name, int mutype,
 /****************************************************************************/
 void to_cloonix_switch_create_lan(char *lan, double x, double y)
 {
-  gene_create_item_req(bank_type_lan, lan, "", mulan_type, x, y); 
+  gene_create_item_req(bank_type_lan, lan, "", 0, x, y); 
 }
 /*--------------------------------------------------------------------------*/
 

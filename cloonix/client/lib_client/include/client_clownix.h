@@ -22,11 +22,7 @@ typedef void (*t_evt_stats_sysinfo_cb)(int tid, char *name,
                                        t_stats_sysinfo *stats, 
                                        char *df, int status);
 
-typedef void (*t_evt_blkd_reports_cb)(int tid, t_blkd_reports *blkd);
-
 typedef void (*t_qmp_cb)(int tid, char *name, char *line, int status);
-typedef void (*t_mud_cli_dialog_cb)(int tid, char *name, int num, 
-                                    char *line, int status);
 typedef void (*t_list_commands_cb)(int tid, int qty, t_list_commands *list);
 typedef void (*t_progress_txt_cb)(int status, int last, char *txt);
 typedef void (*t_end_cb)(int tid, int status, char *err);
@@ -83,8 +79,13 @@ void client_add_a2b(int tid, t_end_cb cb, char *name);
 void client_cnf_a2b(int tid, t_end_cb cb, char *name,
                     int dir, int type, int val);
 
-void client_add_sat(int tid, t_end_cb cb, char *name, 
-                    int mutype, t_c2c_req_info *c2c_req_info);
+void client_cnf_xyx(int tid, t_end_cb cb, char *name,
+                    int type, uint8_t *mac);
+
+void client_add_tap(int tid, t_end_cb cb, char *name);
+void client_add_phy(int tid, t_end_cb cb, char *name);
+void client_add_nat(int tid, t_end_cb cb, char *name);
+
 void client_del_sat(int tid, t_end_cb cb, char *name);
 void client_add_lan_endp(int tid, t_end_cb cb, char *name, int num, char *lan); 
 void client_del_lan_endp(int tid, t_end_cb cb, char *name, int num, char *lan); 
@@ -104,8 +105,6 @@ void client_evt_stats_endp_sub(int tid, char *name, int num, int sub,
                                t_evt_stats_endp_cb  cb);
 void client_evt_stats_sysinfo_sub(int tid, char *name, int sub, 
                                   t_evt_stats_sysinfo_cb  cb);
-
-void client_blkd_reports_sub(int tid, int sub, t_evt_blkd_reports_cb cb);
 
 void client_save_vm(int tid, t_end_cb cb, char *nm, char *path);
 
@@ -129,9 +128,6 @@ int cmd_ftopo_recv(char *topo_dir, t_progress_txt_cb pcb);
 int cmd_topo_send(char *topo_dir, t_progress_txt_cb pcb);
 
 int set_response_callback(t_end_cb cb, int tid);
-void set_mud_cli_dialog_callback(t_mud_cli_dialog_cb cb);
-void client_mud_cli_cmd(int tid, char *name, int num, char *line);
-
 
 void set_qmp_callback(t_qmp_cb cb);
 void client_qmp_sub(int tid, char *name);

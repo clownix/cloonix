@@ -27,40 +27,6 @@
 #define CLOONIX_DOWN_AND_NOT_RUNNING "cloonix_down_and_not_running"
 #define STOP_DOORS_LISTENING "stop_doors_listening"
 #define XWY_CONNECT "xwy_connect %s"
-
-
-/*---------------------------------------------------------------------------*/
-void doors_send_c2c_req_idx(int llid, int tid, char *name);
-void doors_recv_c2c_req_idx(int llid, int tid, char *name);
-/*---------------------------------------------------------------------------*/
-void doors_send_c2c_resp_idx(int llid, int tid, char *name, int local_idx);
-void doors_recv_c2c_resp_idx(int llid, int tid, char *name, int local_idx);
-/*---------------------------------------------------------------------------*/
-void doors_send_c2c_req_conx(int llid, int tid, char *name, int peer_idx, 
-                             uint32_t peer_ip, int peer_port, char *passwd);
-void doors_recv_c2c_req_conx(int llid, int tid, char *name, int peer_idx, 
-                             uint32_t peer_ip, int peer_port, char *passwd);
-/*---------------------------------------------------------------------------*/
-void doors_send_c2c_resp_conx(int llid, int tid, char *name, 
-                              int fd, int status);
-void doors_recv_c2c_resp_conx(int llid, int tid, char *name, 
-                              int fd, int status);
-/*---------------------------------------------------------------------------*/
-void doors_send_c2c_req_free(int llid, int tid, char *name);
-void doors_recv_c2c_req_free(int llid, int tid, char *name);
-/*---------------------------------------------------------------------------*/
-void doors_send_c2c_clone_birth(int llid, int tid, char *net_name, char *name, 
-                                int fd, int endp_type,
-                                char *bin_path, char *sock);
-void doors_recv_c2c_clone_birth(int llid, int tid, char *net_name, char *name, 
-                                int fd, int endp_type,
-                                char *bin_path, char *sock);
-/*---------------------------------------------------------------------------*/
-void doors_send_c2c_clone_birth_pid(int llid, int tid, char *name, int pid); 
-void doors_recv_c2c_clone_birth_pid(int llid, int tid, char *name, int pid); 
-/*---------------------------------------------------------------------------*/
-void doors_send_c2c_clone_death(int llid, int tid, char *name);
-void doors_recv_c2c_clone_death(int llid, int tid, char *name);
 /*---------------------------------------------------------------------------*/
 void doors_send_info(int llid, int tid, char *type, char *info);
 void doors_recv_info(int llid, int tid, char *type, char *info);

@@ -22,7 +22,7 @@ void nat_dpdk_llid_closed(int llid);
 void nat_dpdk_pid_resp(int llid, int tid, char *name, int pid);
 int  nat_dpdk_get_all_pid(t_lst_pid **lst_pid);
 int  nat_dpdk_diag_llid(int llid);
-void nat_dpdk_diag_resp(int llid, int tid, char *line);
-void nat_dpdk_start_stop_process(char *name, char *lan, int on);
+void nat_dpdk_sigdiag_resp(int llid, int tid, char *line);
+void nat_dpdk_start_stop_process(char *name, int on);
 void nat_dpdk_init(void);
 /*--------------------------------------------------------------------------*/

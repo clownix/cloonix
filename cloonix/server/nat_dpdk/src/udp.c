@@ -104,7 +104,7 @@ static uint32_t get_dns_addr(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rx_cb(void *ptr, int llid, int fd)
+static int rx_cb(int llid, int fd)
 {
   socklen_t slen;
   int data_len;
@@ -135,7 +135,7 @@ static int rx_cb(void *ptr, int llid, int fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void err_cb(void *ptr, int llid, int err, int from)
+static void err_cb(int llid, int err, int from)
 {
   KERR(" ");
 }

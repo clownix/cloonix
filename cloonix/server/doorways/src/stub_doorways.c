@@ -32,49 +32,10 @@
 #include "doors_rpc.h"
 /*--------------------------------------------------------------------------*/
 
-void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
-void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
-void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
-void rpct_recv_cli_req(void *ptr, int llid, int tid,
-                    int cli_llid, int cli_tid, char *line) {KOUT();}
-void rpct_recv_cli_resp(void *ptr, int llid, int tid,
-                     int cli_llid, int cli_tid, char *line) {KOUT();}
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line) {KOUT();}
+void rpct_recv_poldiag_msg(int llid, int tid, char *line) {KOUT();}
 
 /*****************************************************************************/
-void rpct_recv_report(void *ptr, int llid, t_blkd_item *item)
-{
-  KOUT("%p %d %p", ptr, llid, item);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void doors_recv_c2c_clone_birth_pid(int llid, int tid, char *name, int pid)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void doors_recv_c2c_clone_death(int llid, int tid, char *name)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void doors_recv_c2c_resp_idx(int llid, int tid, char *name, int local_idx)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void doors_recv_c2c_resp_conx(int llid, int tid, char *name, int fd, int status)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void doors_recv_event(int llid, int tid, char *name,  char *line)
@@ -98,7 +59,7 @@ void doors_recv_status(int llid, int itid, char *name, char *cmd)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
+void rpct_recv_pid_resp(int llid, int tid, char *name, int num,
                         int toppid, int pid)
 {
   KOUT(" ");
@@ -106,7 +67,7 @@ void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_msg(void *ptr, int llid, int tid, int flags_hop, char *txt)
+void rpct_recv_hop_msg(int llid, int tid, int flags_hop, char *txt)
 {
   KOUT(" ");
 }

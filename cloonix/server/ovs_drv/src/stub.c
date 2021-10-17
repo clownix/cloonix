@@ -31,20 +31,8 @@
 #include "rpc_clownix.h"
 /*--------------------------------------------------------------------------*/
 
-void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
-void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
-void rpct_recv_cli_resp(void *ptr, int llid, int tid,
-                     int cli_llid, int cli_tid, char *line) {KOUT();}
-
 /*****************************************************************************/
-void rpct_recv_report(void *ptr, int llid, t_blkd_item *item)
-{
-  KOUT("%p %d %p", ptr, llid, item);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
+void rpct_recv_pid_resp(int llid, int tid, char *name, int num,
                         int toppid, int pid)
 {
   KOUT(" ");
@@ -52,7 +40,7 @@ void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_msg(void *ptr, int llid, int tid, int flags_hop, char *txt)
+void rpct_recv_hop_msg(int llid, int tid, int flags_hop, char *txt)
 {
   KOUT(" ");
 }
@@ -96,25 +84,15 @@ void recv_hop_evt_doors(int llid, int tid, int flags_hop,
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop)
+void rpct_recv_hop_sub(int llid, int tid, int flags_hop)
 {
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_unsub(void *ptr, int llid, int tid)
+void rpct_recv_hop_unsub(int llid, int tid)
 {
 }
 /*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void rpct_recv_cli_req(void *ptr, int llid, int tid,
-                    int cli_llid, int cli_tid, char *line)
-{
-  KOUT("%s", line);
-}
-/*---------------------------------------------------------------------------*/
-
-
 
 

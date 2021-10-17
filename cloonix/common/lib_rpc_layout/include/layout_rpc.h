@@ -47,7 +47,6 @@ typedef struct t_layout_eth_wlan
 typedef struct t_layout_sat
 {
   char name[MAX_NAME_LEN];
-  int mutype;
   double x;
   double y;
   double xa;
@@ -73,7 +72,7 @@ typedef struct t_layout_node
   int hidden_on_graph;
   int color;
   int nb_eth_wlan;
-  t_layout_eth_wlan eth_wlan[MAX_SOCK_VM+MAX_WLAN_VM];
+  t_layout_eth_wlan eth_wlan[MAX_DPDK_VM];
 } t_layout_node;
 /*--------------------------------------------------------------------------*/
 enum {

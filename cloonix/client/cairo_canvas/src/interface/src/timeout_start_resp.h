@@ -18,16 +18,16 @@
 typedef struct t_item_obj_resp
 {
   t_topo_kvm *kvm;
-  t_topo_c2c *c2c;
   t_topo_d2d *d2d;
   t_topo_a2b *a2b;
-  t_topo_sat *sat;
+  t_topo_nat *nat;
+  t_topo_phy *phy;
+  t_topo_tap *tap;
 } t_item_obj_resp;
 /*--------------------------------------------------------------------------*/
 typedef struct t_item_lan_resp
 {
   int bank_type;
-  int mutype;
   char name[MAX_NAME_LEN];
 } t_item_lan_resp;
 /*--------------------------------------------------------------------------*/

@@ -24,9 +24,9 @@
 #define XWY_CONTROL_SOCK "xwy_ctrl"
 #define MUSWITCH_SOCK_DIR "mu"
 #define MUSWITCH_TRAF_DIR "tmu"
-#define ENDP_SOCK_DIR "endp"
 #define SUID_POWER_SOCK_DIR "suid_power"
-#define SNF_DPDK_SOCK_DIR "snf_dpdk"
+#define XYX_DPDK_SOCK_DIR "xyx_dpdk"
+#define NAT_DPDK_SOCK_DIR "nat_dpdk"
 #define A2B_DPDK_SOCK_DIR "a2b_dpdk"
 #define D2D_DPDK_SOCK_DIR "d2d_dpdk"
 #define CLI_SOCK_DIR "cli"
@@ -62,20 +62,20 @@ enum{
   a2b_type_qsize,
   a2b_type_bsize,
   a2b_type_brate,
+  xyx_type_mac_mangle,
 };
 
 enum {
     type_hop_unused = 0,
     type_hop_ovs,
     type_hop_ovsdb,
-    type_hop_mulan,
     type_hop_endp,
     type_hop_doors,
     type_hop_suid_power,
-    type_hop_snf_dpdk,
     type_hop_nat_dpdk,
     type_hop_d2d_dpdk,
     type_hop_a2b_dpdk,
+    type_hop_xyx_dpdk,
     type_hop_max
     };
 
@@ -103,11 +103,6 @@ enum
   vm_evt_ping_ko,
   vm_evt_cloonix_ga_ping_ok,
   vm_evt_cloonix_ga_ping_ko,
-  c2c_evt_connection_ok,
-  c2c_evt_connection_ko,
-  c2c_evt_mod_master_slave,
-  snf_evt_capture_on,
-  snf_evt_capture_off,
   vm_evt_max,
 };
 
@@ -120,16 +115,9 @@ enum
   type_llid_trace_clone,
   type_llid_trace_listen_clone,
   type_llid_trace_doorways,
-  type_llid_trace_mulan,
-  type_llid_trace_endp_kvm_sock,
-  type_llid_trace_endp_kvm_dpdk,
-  type_llid_trace_endp_kvm_vhost,
-  type_llid_trace_endp_kvm_wlan,
+  type_llid_trace_endp_kvm,
   type_llid_trace_endp_tap,
   type_llid_trace_endp_phy,
-  type_llid_trace_endp_wif,
-  type_llid_trace_endp_snf,
-  type_llid_trace_endp_c2c,
   type_llid_trace_endp_nat,
   type_llid_trace_endp_ovs,
   type_llid_trace_endp_ovsdb,
@@ -163,20 +151,6 @@ typedef struct t_queue_tx
   int unusedalign;
   char name[MAX_PATH_LEN];
 } t_queue_tx;
-/*---------------------------------------------------------------------------*/
-typedef struct t_blkd_reports
-{
-  int nb_blkd_reports;
-  t_blkd_item *blkd_item;
-} t_blkd_reports;
-/*---------------------------------------------------------------------------*/
-typedef struct t_c2c_req_info
-  {
-  char cloonix_slave[MAX_NAME_LEN];
-  char passwd_slave[MSG_DIGEST_LEN];
-  int ip_slave;
-  int port_slave;
-  } t_c2c_req_info;
 /*---------------------------------------------------------------------------*/
 typedef struct t_sys_info
 {
@@ -237,11 +211,6 @@ typedef struct t_stats_sysinfo
   unsigned long process_cstime;
   unsigned long process_rss;
 } t_stats_sysinfo;
-/*---------------------------------------------------------------------------*/
-typedef struct t_peer_mac
-{
-  char mac[MAX_NAME_LEN];
-} t_peer_mac;
 /*---------------------------------------------------------------------------*/
 typedef struct t_pid_lst
 {
@@ -315,8 +284,6 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm);
 void send_sav_vm(int llid, int tid, char *name, int type, char *sav_vm_path);
 void recv_sav_vm(int llid, int tid, char *name, int type, char *sav_vm_path);
 
-void send_add_sat(int llid, int tid, char *name,int type,t_c2c_req_info *c2c);
-void recv_add_sat(int llid, int tid, char *name,int type,t_c2c_req_info *c2c);
 void send_del_sat(int llid, int tid, char *name);
 void recv_del_sat(int llid, int tid, char *name);
 
@@ -346,11 +313,6 @@ void recv_list_commands_req(int llid, int tid, int is_layout);
 
 void send_list_commands_resp(int llid, int tid, int qty, t_list_commands *list);
 void recv_list_commands_resp(int llid, int tid, int qty, t_list_commands *list);
-
-void send_blkd_reports_sub(int llid, int tid, int sub);
-void recv_blkd_reports_sub(int llid, int tid, int sub);
-void send_blkd_reports(int llid, int tid, t_blkd_reports *blkd);
-void recv_blkd_reports(int llid, int tid, t_blkd_reports *blkd);
 
 void send_kill_uml_clownix(int llid, int tid);
 void recv_kill_uml_clownix(int llid, int tid);
@@ -414,13 +376,6 @@ void send_vmcmd(int llid, int tid, char *name, int vmcmd, int param);
 void recv_vmcmd(int llid, int tid, char *name, int vmcmd, int param);
 
 /*---------------------------------------------------------------------------*/
-void send_mucli_dialog_req(int llid, int tid, char *name, int num, char *line);
-void recv_mucli_dialog_req(int llid, int tid, char *name, int num, char *line);
-void send_mucli_dialog_resp(int llid, int tid, char *name, int num, 
-                            char *line, int status);
-void recv_mucli_dialog_resp(int llid, int tid, char *name, int num,
-                            char *line, int status);
-/*---------------------------------------------------------------------------*/
 char *prop_flags_ascii_get(int prop_flags);
 /*---------------------------------------------------------------------------*/
 void send_qmp_sub(int llid, int tid, char *name);
@@ -430,10 +385,18 @@ void recv_qmp_req(int llid, int tid, char *name, char *msg);
 void send_qmp_resp(int llid, int tid, char *name, char *line, int status);
 void recv_qmp_resp(int llid, int tid, char *name, char *line, int status);
 /*---------------------------------------------------------------------------*/
+void send_nat_add(int llid, int tid, char *name);
+void recv_nat_add(int llid, int tid, char *name);
+void send_phy_add(int llid, int tid, char *name);
+void recv_phy_add(int llid, int tid, char *name);
+void send_tap_add(int llid, int tid, char *name);
+void recv_tap_add(int llid, int tid, char *name);
 void send_a2b_add(int llid, int tid, char *name);
 void recv_a2b_add(int llid, int tid, char *name);
 void send_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
 void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
+void send_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
+void recv_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
 /*---------------------------------------------------------------------------*/
 void send_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
                   char *slave_cloonix, uint32_t ip, uint16_t port,
@@ -442,12 +405,6 @@ void send_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip,
 void recv_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
                   char *slave_cloonix, uint32_t ip, uint16_t port,
                   char *passwd, uint32_t udp_ip);
-
-void send_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_peer_mac *tabmac);
-
-void recv_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_peer_mac *tabmac);
 
 void send_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
                           char *local_cloonix, char *distant_cloonix);

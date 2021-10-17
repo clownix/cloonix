@@ -52,7 +52,7 @@ fct_umount_wkmntloops()
 #########################################################################
 fct_check_uid
 set +e
-for i in qemu-img rpm yum blkid wget sgdisk partprobe zypper; do
+for i in qemu-img rpm blkid wget sgdisk partprobe zypper; do
   path_bin=$(which $i)
   if [ -z $path_bin ]; then
     echo $i  DOES NOT EXIST

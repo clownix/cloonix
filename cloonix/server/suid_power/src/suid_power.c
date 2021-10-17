@@ -53,14 +53,6 @@ enum {
   state_lost_pid,
 };
 
-typedef struct t_record_old_drv
-{
-  char name[MAX_NAME_LEN];
-  char old_drv[MAX_NAME_LEN];
-  struct t_record_old_drv *prev;
-  struct t_record_old_drv *next;
-} t_record_old_drv;
-
 typedef struct t_vmon
 {
   int  state;
@@ -73,63 +65,7 @@ typedef struct t_vmon
 } t_vmon;
 
 static t_vmon *g_head_vmon;
-static t_record_old_drv *g_head_record_old_drv;
 
-
-/****************************************************************************/
-static t_record_old_drv *find_record_old_drv(char *name)
-{
-  t_record_old_drv *cur = g_head_record_old_drv;
-  while(cur)
-    {
-    if (!strcmp(name, cur->name))
-      break;
-    cur = cur->next;
-    }
-  return cur;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void alloc_record_old_drv(char *name, char *old_drv)
-{
-  t_record_old_drv *cur = find_record_old_drv(name);
-  if (cur)
-    KERR("%s %s %s", name, old_drv, cur->old_drv);
-  else
-    {
-    cur = (t_record_old_drv *) malloc(sizeof(t_record_old_drv));
-    memset(cur, 0, sizeof(t_record_old_drv));
-    strncpy(cur->name, name, MAX_NAME_LEN-1);
-    strncpy(cur->old_drv, old_drv, MAX_NAME_LEN-1);
-    if (g_head_record_old_drv)
-      g_head_record_old_drv->prev = cur;
-    cur->next = g_head_record_old_drv;
-    g_head_record_old_drv = cur;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static char *free_record_old_drv(char *name)
-{
-  char *result = NULL;
-  t_record_old_drv *cur = find_record_old_drv(name);
-  if (!cur)
-    KERR("%s", name);
-  else
-    {
-    if (cur->prev)
-      cur->prev->next = cur->next;
-    if (cur->next)
-      cur->next->prev = cur->prev;
-    if (cur == g_head_record_old_drv)
-      g_head_record_old_drv = cur->next;
-    free(cur);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static t_vmon *find_vmon_by_name(char *name)
@@ -411,7 +347,7 @@ static void automate_pid_monitor(void)
         memset(resp, 0, MAX_PATH_LEN);
         snprintf(resp, MAX_PATH_LEN-1,
                  "cloonixsuid_resp_pid_ok vm_id=%d pid=%d", cur->vm_id, pid);
-        rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, resp);
+        rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, resp);
         cur->pid = pid;
         cur->state = state_running;
         }
@@ -424,8 +360,10 @@ static void automate_pid_monitor(void)
         memset(resp, 0, MAX_PATH_LEN);
         snprintf(resp, MAX_PATH_LEN-1,
                  "cloonixsuid_resp_pid_ko vm_id=%d", cur->vm_id);
-        rpct_send_diag_msg(NULL, g_llid, type_hop_suid_power, resp);
+        rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, resp);
         cur->state = state_lost_pid;
+        if (cur->pid > 0)
+          kill(cur->pid, SIGTERM);
         }
       else if (pid != cur->pid)
         KERR("%d %d", pid, cur->pid);
@@ -445,25 +383,17 @@ static void automate_pid_monitor(void)
 static void heartbeat (int delta)
 {
   static int count_ticks_blkd = 0;
-  static int count_ticks_rpct = 0;
   count_ticks_blkd += 1;
-  count_ticks_rpct += 1;
-  if (count_ticks_blkd == 5)
+  if (count_ticks_blkd == 10)
     {
-    blkd_heartbeat(NULL);
     count_ticks_blkd = 0;
     automate_pid_monitor();
-    }
-  if (count_ticks_rpct == 100)
-    {
-    rpct_heartbeat(NULL);
-    count_ticks_rpct = 0;
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char *cloonix_resp_phy(int nb_phy, t_topo_phy *phy)
+static char *cloonix_resp_phy(int nb_phy, t_topo_info_phy *phy)
 {
   int i, ln, len = MAX_PATH_LEN + (nb_phy * MAX_NAME_LEN * 4);
   char *buf = (char *) malloc(len);
@@ -475,22 +405,6 @@ static char *cloonix_resp_phy(int nb_phy, t_topo_phy *phy)
           " phy:%s idx:%d flags:%X drv:%s pci:%s mac:%s vendor:%s device:%s",
           phy[i].name, phy[i].index, phy[i].flags, phy[i].drv,
           phy[i].pci, phy[i].mac, phy[i].vendor, phy[i].device); 
-    }
-  return buf;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static char *cloonix_resp_pci(int nb_pci, t_topo_pci *pci)
-{
-  int i, ln, len = MAX_PATH_LEN + (nb_pci * MAX_NAME_LEN * 4);
-  char *buf = (char *) malloc(len);
-  memset(buf, 0, len);
-  ln = sprintf(buf, "cloonixsuid_resp_pci nb_pcis=%d", nb_pci);
-  for (i=0; i<nb_pci; i++)
-    {
-    ln += sprintf(buf+ln, " pci:%s drv:%s unused:%s",
-                  pci[i].pci, pci[i].drv, pci[i].unused);
     }
   return buf;
 }
@@ -516,19 +430,19 @@ static void req_kill_clean_all(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
+void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   if (llid != g_llid)
     KERR("%s %d %d", g_network_name, llid, g_llid);
   if (tid != type_hop_suid_power)
     KERR("%s %d %d", g_network_name, tid, type_hop_suid_power);
-  rpct_send_pid_resp(ptr, llid, tid, name, num, cloonix_get_pid(), getpid());
+  rpct_send_pid_resp(llid, tid, name, num, cloonix_get_pid(), getpid());
   g_watchdog_ok = 1;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_kil_req(void *ptr, int llid, int tid)
+void rpct_recv_kil_req(int llid, int tid)
 {
   req_kill_clean_all();
   exit(0);
@@ -550,31 +464,57 @@ static void qemu_launch(char *name, int vm_id, int argc,
     {
     snprintf(resp, MAX_PATH_LEN-1,
              "cloonixsuid_resp_launch_vm_ko name=%s", name);
-    rpct_send_diag_msg(NULL, llid, tid, resp);
+    rpct_send_sigdiag_msg(llid, tid, resp);
     free_vmon(cur);
     }
   else
     {
     snprintf(resp, MAX_PATH_LEN-1,
              "cloonixsuid_resp_launch_vm_ok name=%s",name);
-    rpct_send_diag_msg(NULL, llid, tid, resp);
+    rpct_send_sigdiag_msg(llid, tid, resp);
     }
   free(argv);
 }
 /*--------------------------------------------------------------------------*/
 
+
 /****************************************************************************/
-void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
+void rpct_recv_poldiag_msg(int llid, int tid, char *line)
+{
+  char *str_net_phy, *str_net_ovs;
+  int nb_phy;
+  t_topo_info_phy *net_phy;
+  DOUT(FLAG_HOP_POLDIAG, "SUID %s", line);
+  if (!strcmp(line,
+  "cloonixsuid_req_phy"))
+    {
+    net_phy = net_phy_get(&nb_phy);
+    str_net_phy = cloonix_resp_phy(nb_phy, net_phy);
+    rpct_send_poldiag_msg(llid, tid, str_net_phy);
+    free(str_net_phy);
+    }
+  else if (!strcmp(line,
+  "cloonixsuid_req_ovs"))
+    {
+    str_net_ovs = ovs_get_topo(g_bin_dir, g_root_path);
+    rpct_send_poldiag_msg(llid, tid, str_net_ovs);
+    free(str_net_ovs);
+    }
+  else
+    KERR("%s %s", g_network_name, line);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
   char resp[MAX_PATH_LEN];
   char dtach[MAX_PATH_LEN];
-  char *str_net_phy, *str_net_pci, *str_net_ovs, *old_drv;
-  int on, argc, vm_id, nb_phy, nb_pci;
-  t_topo_pci *net_pci;
-  t_topo_phy *net_phy;
+  int on, argc, vm_id;
   t_vmon *cur;
 
+  DOUT(FLAG_HOP_SIGDIAG, "SUID %s", line);
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
     KERR("%s %d %d", g_network_name, llid, g_llid);
@@ -584,9 +524,9 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   "cloonixsuid_req_suidroot", strlen("cloonixsuid_req_suidroot")))
     {
     if (check_and_set_uid())
-      rpct_send_diag_msg(NULL, llid, tid, "cloonixsuid_resp_suidroot_ko");
+      rpct_send_sigdiag_msg(llid, tid, "cloonixsuid_resp_suidroot_ko");
     else
-      rpct_send_diag_msg(NULL, llid, tid, "cloonixsuid_resp_suidroot_ok");
+      rpct_send_sigdiag_msg(llid, tid, "cloonixsuid_resp_suidroot_ok");
     }
   else if (sscanf(line, 
   "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s argc=%d:",
@@ -595,29 +535,6 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     qemu_launch(name, vm_id, argc, line, resp, llid, tid);
     if (chmod(dtach, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH))
       KERR("%s", dtach);
-    }
-  else if (!strcmp(line,
-  "cloonixsuid_req_phy")) 
-    {
-    net_phy = net_phy_get(&nb_phy);
-    str_net_phy = cloonix_resp_phy(nb_phy, net_phy);
-    rpct_send_diag_msg(NULL, llid, tid, str_net_phy);
-    free(str_net_phy);
-    }
-  else if (!strcmp(line,
-  "cloonixsuid_req_pci"))
-    {
-    net_pci = net_pci_get(&nb_pci);
-    str_net_pci = cloonix_resp_pci(nb_pci, net_pci);
-    rpct_send_diag_msg(NULL, llid, tid, str_net_pci);
-    free(str_net_pci);
-    }
-  else if (!strcmp(line,
-  "cloonixsuid_req_ovs"))
-    {
-    str_net_ovs = ovs_get_topo(g_bin_dir, g_root_path);
-    rpct_send_diag_msg(NULL, llid, tid, str_net_ovs);
-    free(str_net_ovs);
     }
   else if (sscanf(line,
   "cloonixsuid_req_ifup phy: %s", name) == 1)
@@ -630,26 +547,6 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     {
     if (net_phy_flags_iff_up_down(name, 0))
       KERR("ERROR Bad ifdown %s", name);
-    }
-  else if (sscanf(line,
-  "cloonixsuid_req_vfio_attach: %s", name) == 1)
-    {
-    if (!net_phy_vfio_attach(name, &old_drv))
-      snprintf(resp,MAX_PATH_LEN-1,"cloonixsuid_resp_vfio_attach_ok: %s",name);
-    else
-      snprintf(resp,MAX_PATH_LEN-1,"cloonixsuid_resp_vfio_attach_ko: %s",name);
-    if (old_drv)
-      {
-      alloc_record_old_drv(name, old_drv);
-      }
-    rpct_send_diag_msg(NULL, llid, tid, resp);
-    }
-  else if (sscanf(line,
-  "cloonixsuid_req_vfio_detach: %s", name) == 1)
-    {
-    old_drv = free_record_old_drv(name);
-    if (old_drv)
-      net_phy_vfio_detach(name, old_drv);
     }
   else if (sscanf(line,
   "cloonixsuid_req_kill vm_id: %d", &vm_id) == 1)
@@ -678,7 +575,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void err_ctrl_cb (void *ptr, int llid, int err, int from)
+static void err_ctrl_cb (int llid, int err, int from)
 {
   req_kill_clean_all();
   exit(0);
@@ -688,13 +585,13 @@ static void err_ctrl_cb (void *ptr, int llid, int err, int from)
 /****************************************************************************/
 static void rx_ctrl_cb (int llid, int len, char *buf)
 {
-  if (rpct_decoder(NULL, llid, len, buf))
+  if (rpct_decoder(llid, len, buf))
     KOUT("%s %s", g_network_name, buf);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void connect_from_ctrl_client(void *ptr, int llid, int llid_new)
+static void connect_from_ctrl_client(int llid, int llid_new)
 {
   msg_mngt_set_callbacks (llid_new, err_ctrl_cb, rx_ctrl_cb);
   g_llid = llid_new;

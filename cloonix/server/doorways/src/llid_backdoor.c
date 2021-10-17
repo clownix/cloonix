@@ -405,7 +405,7 @@ static void rx_from_agent_conclusion(t_backdoor_vm *bvm,
       ((type == header_type_x11_ctrl) ||
        (type == header_type_ctrl) ||
        (type == header_type_ctrl_agent)))
-    DOUT(NULL, FLAG_HOP_DOORS, "BACKDOOR_RX: %d %s", dido_llid, payload);
+    DOUT(FLAG_HOP_DOORS, "BACKDOOR_RX: %d %s", dido_llid, payload);
 
   if (dido_llid == 0)
     rx_from_agent_conclusion_zero_llid(bvm, type, val, paylen, payload);
@@ -662,7 +662,7 @@ static t_backdoor_vm *vm_alloc(char *name, char *path)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void vm_err_cb (void *ptr, int llid, int err, int from)
+static void vm_err_cb (int llid, int err, int from)
 {
   t_backdoor_vm *bvm;
   if (msg_exist_channel(llid))
@@ -685,7 +685,7 @@ static void vm_err_cb (void *ptr, int llid, int err, int from)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int vm_rx_cb(void *ptr, int llid, int fd)
+static int vm_rx_cb(int llid, int fd)
 {
   int len;
   t_backdoor_vm *bvm;

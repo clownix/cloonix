@@ -20,24 +20,21 @@ void dpdk_msg_ack_lan(int tid, char *lan_name,
                       int is_ko, int is_add, char *lab);
 void dpdk_msg_ack_lan_endp(int tid, char *lan_name, char *name, int num,
                            int is_ko, int is_add, char *lab);
-void dpdk_msg_ack_eth(int tid, char *name, int num,
-                      int is_ko, int is_add, char *lab);
 /*--------------------------------------------------------------------------*/
-int dpdk_msg_send_add_eth(char *name, int num, char *strmac);
-void dpdk_msg_send_del_eth(char *name, int num);
-
-int dpdk_msg_send_add_lan_snf(char *lan_name, char *name);
-int dpdk_msg_send_del_lan_snf(char *lan_name, char *name);
+int dpdk_msg_send_add_kvm(char *name, int num);
+void dpdk_msg_send_del_kvm(char *name, int num);
 int dpdk_msg_send_add_lan_nat(char *lan_name, char *name);
 int dpdk_msg_send_del_lan_nat(char *lan_name, char *name);
 int dpdk_msg_send_add_lan_d2d(char *lan_name, char *name);
 int dpdk_msg_send_del_lan_d2d(char *lan_name, char *name);
 int dpdk_msg_send_add_lan_a2b(char *lan_name, char *name, int num);
 int dpdk_msg_send_del_lan_a2b(char *lan_name, char *name, int num);
-int dpdk_msg_send_add_lan_eth(char *lan_name, char *name, int num);
-int dpdk_msg_send_del_lan_eth(char *lan_name, char *name, int num);
+int dpdk_msg_send_add_lan_kvm(char *lan_name, char *name, int num);
+int dpdk_msg_send_del_lan_kvm(char *lan_name, char *name, int num);
 int dpdk_msg_send_add_lan_tap(char *lan_name, char *name);
 int dpdk_msg_send_del_lan_tap(char *lan_name, char *name);
+int dpdk_msg_send_add_lan_phy(char *lan_name, char *name);
+int dpdk_msg_send_del_lan_phy(char *lan_name, char *name);
 /*--------------------------------------------------------------------------*/
 void dpdk_msg_init(void);
 /*--------------------------------------------------------------------------*/

@@ -2,7 +2,6 @@ CLOONIX_COMMON=../../common
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
-BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
 
 OBJ_DIR=obj/
@@ -20,7 +19,6 @@ INCLUDES= -I./src \
           -I${RPC_CLOWNIX}/include
 
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
-       -L${BLKD} -lblkd \
        -L${RPCT} -lrpct \
        -lcrypto
 

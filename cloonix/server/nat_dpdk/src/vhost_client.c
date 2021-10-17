@@ -115,9 +115,7 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
     if (enable)
       g_enable = 1;
     else
-      {
       g_enable = 0;
-      }
     }
   else if (queue_id==1)
     {
@@ -196,7 +194,7 @@ void vhost_client_start(char *path, char *memid)
   uint64_t unsup_flags = (1ULL << VIRTIO_NET_F_STATUS);
   int i, j, err, sid;
   uint32_t mcache = 128;
-  uint32_t mbufs = 2048;
+  uint32_t mbufs = 512;
   uint32_t msize = 2048;
 
   memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));

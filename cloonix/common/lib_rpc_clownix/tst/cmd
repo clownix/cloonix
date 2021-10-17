@@ -8,10 +8,6 @@ cd $HERE/../../lib_utils/
 make clean
 make
 
-cd $HERE/../../lib_blkd/
-make clean
-make
-
 cd $HERE/../../lib_rpct/
 make clean
 make

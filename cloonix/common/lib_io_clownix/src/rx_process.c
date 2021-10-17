@@ -385,7 +385,6 @@ static void chunks_state_rx_type_ascii_start(t_data_channel *dchan)
       if (boundary)
         {
         chain_del(&(dchan->rx), chunk_bound);
-        check_is_clownix_malloc(boundary, 0, "BOUND_MALLOC_OK");
         alloc_boundary(dchan, boundary, chunk_bound, i_bound);
         clownix_free(boundary, __FUNCTION__);
         }

@@ -65,7 +65,7 @@ static char *g_rte_argv[8];
 static uint32_t g_cpu_flags;
 /*--------------------------------------------------------------------------*/
 
-#define RANDOM_APPEND_SIZE 8
+#define RANDOM_APPEND_SIZE 6
 /*****************************************************************************/
 static char *random_str(void)
 {
@@ -125,33 +125,16 @@ static int check_and_set_uid(void)
 static void heartbeat (int delta)
 {
   static int count_ticks_blkd = 0;
-  static int count_ticks_rpct = 0;
   count_ticks_blkd += 1;
-  count_ticks_rpct += 1;
-  if (count_ticks_blkd == 5)
+  if (count_ticks_blkd == 10)
     {
-    blkd_heartbeat(NULL);
     count_ticks_blkd = 0;
-    }
-  if (count_ticks_rpct == 100)
-    {
-    rpct_heartbeat(NULL);
-    count_ticks_rpct = 0;
     }
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-void req_unix2inet_conpath_evt(int llid, char *name)
-{
-  char msg[MAX_PATH_LEN];
-  sprintf(msg, "unix2inet_conpath_evt_monitor llid=%d name=%s", llid, name);
-  rpct_send_app_msg(NULL, g_llid, 0, msg);
-}
-/*---------------------------------------------------------------------------*/
-
 /****************************************************************************/
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
+void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   if (llid != g_llid)
     KERR("%s %s %d %d", g_net_name, name, llid, g_llid);
@@ -159,7 +142,7 @@ void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
     KERR("%s %s %d %d", g_net_name, name, llid, g_llid);
   if (strcmp(g_nat_name, name))
     KERR("%s %s %s %d %d", g_net_name, name, g_nat_name, llid, g_llid);
-  rpct_send_pid_resp(ptr, llid, tid, name, num, cloonix_get_pid(), getpid());
+  rpct_send_pid_resp(llid, tid, name, num, cloonix_get_pid(), getpid());
   g_watchdog_ok = 1;
 }
 /*--------------------------------------------------------------------------*/
@@ -173,46 +156,29 @@ void end_clean_unlink(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_kil_req(void *ptr, int llid, int tid)
+void rpct_recv_kil_req(int llid, int tid)
 {
   vhost_client_end_and_exit();
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-void rpct_recv_cli_req(void *ptr, int llid, int tid,
-                    int cli_llid, int cli_tid, char *line)
-{
-  char resp[MAX_PATH_LEN];
-  char name[MAX_NAME_LEN];
-  char str_ip[MAX_NAME_LEN];
-  uint32_t addr_ip;
-  memset(resp, 0, MAX_PATH_LEN);
-  if (sscanf(line, "whatip %s", name) == 1)
-    {
-    addr_ip = machine_ip_get(name);
-    if (addr_ip)
-      {
-      int_to_ip_string (addr_ip, str_ip);
-      snprintf(resp, MAX_PATH_LEN-1, "RESPOK %s %s", name, str_ip);
-      }
-    else
-      snprintf(resp, MAX_PATH_LEN-1, "RESPKO UNKNOWN IP FOR VM: %s", name);
-    }
-  else
-    snprintf(resp, MAX_PATH_LEN-1, "RESPKO NO CMD: %s", line);
-  rpct_send_cli_resp(ptr, llid, tid, cli_llid, cli_tid, resp);
-}
-/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
+void rpct_recv_poldiag_msg(int llid, int tid, char *line)
+{
+  KERR("%s", line);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   int num, ret;
   char resp[MAX_PATH_LEN];
   char mac[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   uint8_t *mc;
+  DOUT(FLAG_HOP_SIGDIAG, "NAT %s", line);
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
     KERR("%s %d %d", g_net_name, llid, g_llid);
@@ -222,10 +188,10 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
   "cloonixnat_suidroot", strlen("cloonixnat_suidroot")))
     {
     if (check_and_set_uid())
-      rpct_send_diag_msg(NULL, llid, tid, "cloonixnat_suidroot_ko");
+      rpct_send_sigdiag_msg(llid, tid, "cloonixnat_suidroot_ko");
     else
       {
-      rpct_send_diag_msg(NULL, llid, tid, "cloonixnat_suidroot_ok");
+      rpct_send_sigdiag_msg(llid, tid, "cloonixnat_suidroot_ok");
       setenv("XDG_RUNTIME_DIR", g_runtime, 1);
       ret = rte_eal_init(7, g_rte_argv);
       if (ret < 0)
@@ -260,23 +226,23 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 
 
 /****************************************************************************/
-static void err_ctrl_cb (void *ptr, int llid, int err, int from)
+static void err_ctrl_cb(int llid, int err, int from)
 {
   KERR("NAT DPDK SELF DESTRUCT CONNECTION");
-  rpct_recv_kil_req(NULL, 0, 0);
+  rpct_recv_kil_req(0, 0);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void rx_ctrl_cb (int llid, int len, char *buf)
+static void rx_ctrl_cb(int llid, int len, char *buf)
 {
-  if (rpct_decoder(NULL, llid, len, buf))
+  if (rpct_decoder(llid, len, buf))
     KOUT("%s %s", g_net_name, buf);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void connect_from_ctrl_client(void *ptr, int llid, int llid_new)
+static void connect_from_ctrl_client(int llid, int llid_new)
 {
   msg_mngt_set_callbacks (llid_new, err_ctrl_cb, rx_ctrl_cb);
   g_llid = llid_new;
@@ -292,7 +258,7 @@ static void fct_timeout_self_destruct(void *data)
   if (g_watchdog_ok == 0)
     {
     KERR("NAT DPDK SELF DESTRUCT WATCHDOG");
-    rpct_recv_kil_req(NULL, 0, 0);
+    rpct_recv_kil_req(0, 0);
     }
   g_watchdog_ok = 0;
   clownix_timeout_add(500, fct_timeout_self_destruct, NULL, NULL, NULL);
@@ -320,7 +286,7 @@ static char *get_cpu_from_flags(uint32_t flags)
 int main (int argc, char *argv[])
 {
   char *root = g_root_path;
-  char *sock = ENDP_SOCK_DIR;
+  char *sock = NAT_DPDK_SOCK_DIR;
   char *net = g_net_name;
   char *nat = g_nat_name;
   if (argc != 5)
@@ -339,11 +305,11 @@ int main (int argc, char *argv[])
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
   strncpy(g_nat_name,  argv[3], MAX_NAME_LEN-1);
   snprintf(g_runtime, MAX_PATH_LEN-1, "%s/dpdk", root);
-  snprintf(g_nat_socket, MAX_PATH_LEN-1, "%s/dpdk/na_%s", root, nat);
+  snprintf(g_nat_socket, MAX_PATH_LEN-1, "%s/dpdk/nat_%s", root, nat);
   snprintf(g_prefix, MAX_PATH_LEN-1, "--file-prefix=cloonix%s", net);
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, nat);
   snprintf(g_cisco_path, MAX_PATH_LEN-1,"%s/%s/%s_0_u2i", root, sock, nat);
-  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s%s", net, nat, random_str());
+  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s", nat, random_str());
   sscanf(argv[4], "%X", &g_cpu_flags);
   if (!access(g_ctrl_path, F_OK))
     {
@@ -371,7 +337,7 @@ int main (int argc, char *argv[])
   utils_init();
   seteuid(getuid());
   cloonix_set_pid(getpid());
-  clownix_timeout_add(1000, fct_timeout_self_destruct, NULL, NULL, NULL);
+  clownix_timeout_add(1500, fct_timeout_self_destruct, NULL, NULL, NULL);
   msg_mngt_loop();
   return 0;
 }

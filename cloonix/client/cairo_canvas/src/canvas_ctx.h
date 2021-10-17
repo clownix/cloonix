@@ -16,8 +16,6 @@
 /*                                                                           */
 /*****************************************************************************/
 void update_topo_phy(int nb_phy, t_topo_phy *phy);
-void update_topo_pci(int nb_pci, t_topo_pci *pci);
 void update_topo_bridges(int nb_bridges, t_topo_bridges *bridges);
-void update_topo_mirrors(int nb_mirrors, t_topo_mirrors *mirrors);
 
 

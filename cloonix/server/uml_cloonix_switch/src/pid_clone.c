@@ -32,9 +32,6 @@
 #include <fcntl.h>
 
 
-
-
-
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "pid_clone.h"
@@ -64,8 +61,6 @@
 #define PROCESS_STACK 500*1024
 
 void cloonix_lock_fd_close(void);
-void blkd_sub_clean_all(void);
-void blkd_data_clean_all(void);
 
 
 typedef struct t_clone_ctx
@@ -192,7 +187,7 @@ static t_clone_ctx *pid_find_clone_ctx(int pid)
 
 /*****************************************************************************/
 #if !defined(IS_DOORWAYS)
-static void err_cb(void *ptr, int llid, int err, int from)
+static void err_cb(int llid, int err, int from)
 {
   exit(-1);
 }
@@ -473,9 +468,6 @@ static int forked_fct(void *ptr)
 
 #if !defined(IS_DOORWAYS)
 
-  blkd_data_clean_all();
-  blkd_sub_clean_all();
-  rpct_clean_all(NULL);
   llid_free_all_llid();
   cloonix_lock_fd_close();
   job_for_select_close_fd();
@@ -684,7 +676,7 @@ int my_popen(char *exe, char *argv[])
 
 #if !defined(IS_DOORWAYS)
 /*****************************************************************************/
-static void connect_from_client_clone(void *ptr, int llid, int llid_new)
+static void connect_from_client_clone(int llid, int llid_new)
 {
   if (!msg_exist_channel(llid))
     KOUT(" ");

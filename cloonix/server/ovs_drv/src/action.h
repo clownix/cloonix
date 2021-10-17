@@ -15,31 +15,27 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void action_add_lan_pci_dpdk(char *respb, char *lan, char *pci);
-void action_del_lan_pci_dpdk(char *respb, char *lan, char *pci);
-void action_add_lan_phy_port(char *respb, char *lan, char *name);
-void action_del_lan_phy_port(char *respb, char *lan, char *name);
-void action_add_eth_br(char *respb, char *name, int num, char *mac);
-void action_del_eth_br(char *respb, char *name, int num);
-void action_add_lan_br(char *respb, char *lan);
-void action_del_lan_br(char *respb, char *lan);
-void action_add_lan_snf_br(char *respb, char *lan, char *name);
-void action_del_lan_snf_br(char *respb, char *lan, char *name);
-void action_add_lan_nat_br(char *respb, char *lan, char *name);
-void action_del_lan_nat_br(char *respb, char *lan, char *name);
-void action_add_lan_d2d_br(char *respb, char *lan, char *name);
-void action_del_lan_d2d_br(char *respb, char *lan, char *name);
-void action_add_lan_a2b_br(char *respb, char *lan, char *name);
-void action_del_lan_a2b_br(char *respb, char *lan, char *name);
-void action_add_lan_b2a_br(char *respb, char *lan, char *name);
-void action_del_lan_b2a_br(char *respb, char *lan, char *name);
-void action_add_lan_eth_br(char *respb, char *lan, char *name, int num);
-void action_del_lan_eth_br(char *respb, char *lan, char *name, int num);
-void action_add_tap_br(char *respb, char *name);
-void action_del_tap_br(char *respb, char *name);
-void action_add_lan_tap_br(char *respb, char *lan, char *name);
-void action_del_lan_tap_br(char *respb, char *lan, char *name);
-int action_add_eth_req(char *line, char *name, int *num, char *mac);
+void action_add_kvm1(char *respb, char *name, int num);
+void action_add_kvm2(char *respb, char *name, int num);
+void action_del_kvm(char *respb, char *name, int num);
+void action_add_lan(char *respb, char *lan);
+void action_del_lan(char *respb, char *lan);
+void action_add_lan_nat(char *respb, char *lan, char *name);
+void action_del_lan_nat(char *respb, char *lan, char *name);
+void action_add_lan_d2d(char *respb, char *lan, char *name);
+void action_del_lan_d2d(char *respb, char *lan, char *name);
+void action_add_lan_a2b(char *respb, char *lan, char *name, int num);
+void action_del_lan_a2b(char *respb, char *lan, char *name, int num);
+void action_add_lan_kvm(char *respb, char *lan, char *name, int num);
+void action_del_lan_kvm(char *respb, char *lan, char *name, int num);
+void action_add_phy(char *respb, char *name);
+void action_del_phy(char *respb, char *name);
+void action_add_tap(char *respb, char *name);
+void action_del_tap(char *respb, char *name);
+void action_add_lan_tap(char *respb, char *lan, char *name);
+void action_del_lan_tap(char *respb, char *lan, char *name);
+void action_add_lan_phy(char *respb, char *lan, char *name);
+void action_del_lan_phy(char *respb, char *lan, char *name);
 void action_req_ovsdb(char *bin, char *db, char *respb, uint32_t lcore_mask,
                       uint32_t socket_mem, uint32_t cpu_mask);
 void action_req_ovs_switch(char *bin, char *db, char *respb,

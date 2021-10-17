@@ -37,7 +37,6 @@ typedef struct t_edge_update_all
 } t_edge_update_all;
 
 
-void snf_add_capture_on(t_bank_item *bitem);
 void topo_bitem_hide(t_bank_item *bitem);
 void topo_bitem_show(t_bank_item *bitem);
 
@@ -47,76 +46,11 @@ static t_bank_item *currently_in_item_surface;
 static void attached_obj_associations_delete(t_bank_item *bitem);
 
 /****************************************************************************/
-int is_a_snf(t_bank_item *bitem)
-{
-  int result;
-  if ((bitem->pbi.mutype == endp_type_tap) ||
-      (bitem->pbi.mutype == endp_type_phy) ||
-      (bitem->pbi.mutype == endp_type_pci) ||
-      (bitem->pbi.mutype == endp_type_wif) ||
-      (bitem->pbi.mutype == endp_type_c2c) ||
-      (bitem->pbi.mutype == endp_type_d2d) ||
-      (bitem->pbi.mutype == endp_type_nat) ||
-      (bitem->pbi.mutype == endp_type_a2b))
-    {
-    result = 0;
-    }
-  else if (bitem->pbi.mutype == endp_type_snf)
-    {
-    result = 1;
-    }
-  else
-    KOUT("%d", bitem->pbi.mutype);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int is_a_nat(t_bank_item *bitem)
 {
-  int result;
-  if ((bitem->pbi.mutype == endp_type_tap) ||
-      (bitem->pbi.mutype == endp_type_phy) ||
-      (bitem->pbi.mutype == endp_type_pci) ||
-      (bitem->pbi.mutype == endp_type_wif) ||
-      (bitem->pbi.mutype == endp_type_c2c) ||
-      (bitem->pbi.mutype == endp_type_d2d) ||
-      (bitem->pbi.mutype == endp_type_snf) ||
-      (bitem->pbi.mutype == endp_type_a2b))
-    {
-    result = 0;
-    }
-  else if (bitem->pbi.mutype == endp_type_nat)
-    {
+  int result = 0;
+  if (bitem->pbi.endp_type == endp_type_nat)
     result = 1;
-    }
-  else
-    KOUT("%d", bitem->pbi.mutype);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int is_a_c2c(t_bank_item *bitem)
-{
-  int result;
-  if ((bitem->pbi.mutype == endp_type_tap) ||
-      (bitem->pbi.mutype == endp_type_phy) ||
-      (bitem->pbi.mutype == endp_type_pci) ||
-      (bitem->pbi.mutype == endp_type_wif) ||
-      (bitem->pbi.mutype == endp_type_snf) ||
-      (bitem->pbi.mutype == endp_type_d2d) ||
-      (bitem->pbi.mutype == endp_type_nat) ||
-      (bitem->pbi.mutype == endp_type_a2b))
-    {
-    result = 0;
-    }
-  else if (bitem->pbi.mutype == endp_type_c2c)
-    {
-    result = 1;
-    }
-  else
-    KOUT("%d", bitem->pbi.mutype);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -124,24 +58,9 @@ int is_a_c2c(t_bank_item *bitem)
 /****************************************************************************/
 int is_a_d2d(t_bank_item *bitem)
 {
-  int result;
-  if ((bitem->pbi.mutype == endp_type_tap) ||
-      (bitem->pbi.mutype == endp_type_phy) ||
-      (bitem->pbi.mutype == endp_type_pci) ||
-      (bitem->pbi.mutype == endp_type_wif) ||
-      (bitem->pbi.mutype == endp_type_snf) ||
-      (bitem->pbi.mutype == endp_type_c2c) ||
-      (bitem->pbi.mutype == endp_type_nat) ||
-      (bitem->pbi.mutype == endp_type_a2b))
-    {
-    result = 0;
-    }
-  else if (bitem->pbi.mutype == endp_type_d2d)
-    {
+  int result = 0;
+  if (bitem->pbi.endp_type == endp_type_d2d)
     result = 1;
-    }
-  else
-    KOUT("%d", bitem->pbi.mutype);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -150,24 +69,9 @@ int is_a_d2d(t_bank_item *bitem)
 /****************************************************************************/
 int is_a_a2b(t_bank_item *bitem)
 {
-  int result;
-  if ((bitem->pbi.mutype == endp_type_tap) ||
-      (bitem->pbi.mutype == endp_type_phy) ||
-      (bitem->pbi.mutype == endp_type_pci) ||
-      (bitem->pbi.mutype == endp_type_wif) ||
-      (bitem->pbi.mutype == endp_type_snf) ||
-      (bitem->pbi.mutype == endp_type_nat) ||
-      (bitem->pbi.mutype == endp_type_d2d) ||
-      (bitem->pbi.mutype == endp_type_c2c))
-    {
-    result = 0;
-    }
-  else if (bitem->pbi.mutype == endp_type_a2b)
-    {
+  int result = 0;
+  if (bitem->pbi.endp_type == endp_type_a2b)
     result = 1;
-    }
-  else
-    KOUT("%d", bitem->pbi.mutype);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -242,7 +146,7 @@ static t_bank_item *centralized_item_creation(int bank_type, char *name,
                                               t_bank_item *blan, 
                                               double x0, double y0,
                                               int hidden_on_graph,
-                                              int mutype,
+                                              int endp_type,
                                               double x1, double y1,
                                               double x2, double y2,
                                               double dist, int eorig)
@@ -252,7 +156,7 @@ static t_bank_item *centralized_item_creation(int bank_type, char *name,
   bitem = bank_get_item(bank_type, name, num, lan); 
   bitem->pbi.line_width = 1;
   bitem->pbi.hidden_on_graph = hidden_on_graph;
-  bitem->pbi.mutype = mutype;
+  bitem->pbi.endp_type = endp_type;
   bitem->pbi.x0 = x0;
   bitem->pbi.y0 = y0;
   bitem->pbi.x1 = x1;
@@ -521,16 +425,8 @@ void write_item_name(t_bank_item *bitem)
   char name[MAX_NAME_LEN];
   if (bitem->bank_type == bank_type_sat) 
     {
-    if (is_a_snf(bitem))
-      {
-      dy = -16;
-      dx = -13;
-      }
-    else
-      {
-      dy = -7;
-      dx = -10;
-      }
+    dy = -7;
+    dx = -10;
     }
   else if (bitem->bank_type == bank_type_lan) 
     {
@@ -547,7 +443,7 @@ void write_item_name(t_bank_item *bitem)
     case bank_type_eth:
       if (!bitem->att_node)
         KOUT(" ");
-      if (bitem->att_node->pbi.mutype == endp_type_a2b)
+      if (bitem->att_node->pbi.endp_type == endp_type_a2b)
         {
         if (bitem->num == 0)
           sprintf(name, "0");
@@ -565,8 +461,6 @@ void write_item_name(t_bank_item *bitem)
     }
   topo_cr_item_text(bitem, bitem->pbi.x0 + dx, 
                     bitem->pbi.y0 + dy, name);
-  if ((bitem->bank_type == bank_type_sat) && (is_a_snf(bitem)))
-    snf_add_capture_on(bitem);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -613,7 +507,6 @@ void add_new_edge(t_bank_item *bi_eth, t_bank_item *bi_lan, int eorig)
   t_bank_item *bi_edge;
   t_bank_item *bitem;
   double x0, y0, x1, y1, dist;
-  int mutype = mutype_none;
   if ((!bi_lan) || (!bi_eth) || 
       (bi_lan->bank_type != bank_type_lan))
     KOUT(" ");
@@ -654,12 +547,10 @@ void add_new_edge(t_bank_item *bi_eth, t_bank_item *bi_lan, int eorig)
   if (bi_lan->bank_type == bank_type_lan)
     { 
     if ((bi_eth->bank_type == bank_type_eth) || 
-        (bi_eth->bank_type == bank_type_snf) ||
         (bi_eth->bank_type == bank_type_sat))
       bank_type = bank_type_edge;
     else
       KOUT("%d", bi_eth->bank_type);
-    bi_lan->pbi.mutype = mutype;
     }
   else
     KOUT("%d", bi_eth->bank_type);
@@ -707,7 +598,7 @@ int add_new_lan(char *name, double x, double y, int hidden_on_graph)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int add_new_sat(char *name, int mutype, t_topo_c2c *c2c,
+int add_new_sat(char *name, int endp_type,
                 t_topo_d2d *d2d, t_topo_a2b *a2b,
                 double x, double y, int hidden_on_graph)
 {
@@ -718,8 +609,6 @@ int add_new_sat(char *name, int mutype, t_topo_c2c *c2c,
   bitem = bank_get_item(bank_type, name, 0, NULL);
   if (bitem)
     {
-    if (is_a_snf(bitem))
-      snf_add_capture_on(bitem);
     insert_next_warning("Address already exists", 1);
     result = -1;
     }
@@ -727,15 +616,13 @@ int add_new_sat(char *name, int mutype, t_topo_c2c *c2c,
     {
     bitem = centralized_item_creation(bank_type, name, NULL, 0,
                                       NULL, NULL, NULL,
-                                      x, y, hidden_on_graph, mutype,
+                                      x, y, hidden_on_graph, endp_type,
                                       0, 0, 0, 0, 0,
                                       eorig_noedge);
 
     bitem->pbi.pbi_sat =
     (t_pbi_sat *) clownix_malloc(sizeof(t_pbi_sat), 14);
     memset(bitem->pbi.pbi_sat, 0, sizeof(t_pbi_sat));
-    if (c2c)
-      memcpy(&(bitem->pbi.pbi_sat->topo_c2c), c2c, sizeof(t_topo_c2c));
     if (d2d)
       memcpy(&(bitem->pbi.pbi_sat->topo_d2d), d2d, sizeof(t_topo_d2d));
     if (a2b)
@@ -752,38 +639,7 @@ int add_new_sat(char *name, int mutype, t_topo_c2c *c2c,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void modify_c2c(char *name, char *master_cloonix, char *slave_cloonix)
-{
-  t_bank_item *bitem = look_for_sat_with_id(name);
-  if ((bitem) && is_a_c2c(bitem))
-    {
-    strncpy(bitem->pbi.pbi_sat->topo_c2c.master_cloonix, 
-            master_cloonix, MAX_NAME_LEN);
-    strncpy(bitem->pbi.pbi_sat->topo_c2c.slave_cloonix, 
-            slave_cloonix, MAX_NAME_LEN);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void modify_snf(char *name, int evt)
-{
-  t_bank_item *bitem = look_for_sat_with_id(name);
-  if ((bitem) && (is_a_snf(bitem)))
-    {
-    if (evt == snf_evt_capture_on)
-      bitem->pbi.pbi_sat->snf_capture_on = 1;
-    else if (evt == snf_evt_capture_off)
-      bitem->pbi.pbi_sat->snf_capture_on = 0;
-    else
-      KOUT("%d ", evt);
-    snf_add_capture_on(bitem);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int add_new_eth(char *name, int num, int mutype, 
+int add_new_eth(char *name, int num, 
                  double x, double y, int hidden_on_graph)
 {
   int result = 0;
@@ -796,10 +652,10 @@ int add_new_eth(char *name, int num, int mutype,
   if (!bnode)
      {
      bnode = look_for_sat_with_id(name);
-     if (bnode->pbi.mutype != endp_type_a2b)
+     if (bnode->pbi.endp_type != endp_type_a2b)
        KOUT("%s", name);
      }
-  if ((num <0) || (num > MAX_SOCK_VM+MAX_WLAN_VM))
+  if ((num <0) || (num > MAX_DPDK_VM))
     KOUT(" ");
   if ((!bnode) || (bank_get_item(bank_type, name, num, NULL)))
     result = -1;
@@ -812,7 +668,6 @@ int add_new_eth(char *name, int num, int mutype,
                                       x0, y0, hidden_on_graph, 0, 
                                       x, y, 0, 0,  0,
                                       eorig_noedge);
-    bitem->pbi.mutype = mutype;
     bitem->att_node = bnode;
     lst_eth=(t_list_bank_item *)clownix_malloc(sizeof(t_list_bank_item), 12);
     memset(lst_eth, 0, sizeof(t_list_bank_item));

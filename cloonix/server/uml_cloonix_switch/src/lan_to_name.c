@@ -21,7 +21,6 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "commun_daemon.h"
-#include "mulan_mngt.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
 

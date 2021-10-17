@@ -10,11 +10,6 @@ make clean
 make
 
 cd $HERE
-cd ../../muswitch/lib_blkd
-make clean
-make
-
-cd $HERE
 cd ..
 make clean
 make

@@ -67,7 +67,7 @@ t_layout_node *make_layout_node(t_bank_item *cur)
       KOUT("%d %d", i, eth->bitem->num);
     x = eth->bitem->pbi.position_x - cur->pbi.position_x;
     y = eth->bitem->pbi.position_y - cur->pbi.position_y;
-    if (cur->pbi.mutype == endp_type_a2b)
+    if (cur->pbi.endp_type == endp_type_a2b)
       layout_round_a2b_eth_coords(&x, &y);
     else
       layout_round_node_eth_coords(&x, &y);
@@ -89,11 +89,10 @@ t_layout_sat *make_layout_sat(t_bank_item *cur)
   int count=0, i;
   memset(&layout_sat, 0, sizeof(t_layout_sat));
   strncpy(layout_sat.name, cur->name, MAX_NAME_LEN-1);
-  layout_sat.mutype = cur->pbi.mutype;
   layout_sat.x = cur->pbi.position_x;
   layout_sat.y = cur->pbi.position_y;
   layout_sat.hidden_on_graph = cur->pbi.hidden_on_graph;
-  if (cur->pbi.mutype == endp_type_a2b)
+  if (cur->pbi.endp_type == endp_type_a2b)
     {
     eth = cur->head_eth_list;
     while (eth && eth->next)

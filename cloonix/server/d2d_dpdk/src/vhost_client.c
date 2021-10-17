@@ -194,7 +194,7 @@ void vhost_client_start(char *path, char *memid)
   uint64_t unsup_flags = (1ULL << VIRTIO_NET_F_STATUS);
   int i, j,  err, sid;
   uint32_t mcache = 128;
-  uint32_t mbufs = 2048;
+  uint32_t mbufs = 512;
   uint32_t msize = 2048;
 
   g_lock = 0;

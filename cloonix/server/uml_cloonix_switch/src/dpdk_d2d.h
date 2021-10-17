@@ -20,11 +20,6 @@ typedef struct t_d2d_cnx
   char name[MAX_NAME_LEN];
   char lan[MAX_NAME_LEN];
   int ref_tid;
-  int ms;
-  int pkt_tx;
-  int pkt_rx;
-  int byte_tx;
-  int byte_rx;
   char dist_cloonix[MAX_NAME_LEN];
   char dist_passwd[MSG_DIGEST_LEN];
   uint32_t dist_tcp_ip;
@@ -45,8 +40,6 @@ typedef struct t_d2d_cnx
   int udp_loc_port_chosen;
   int udp_probe_qty_sent;
   int udp_connection_tx_configured;
-  int openvswitch_started_and_running;
-  int openvswitch_started_and_running_count;
   int vhost_started_and_running;
   int lan_add_cli_llid;
   int lan_add_cli_tid;
@@ -61,7 +54,6 @@ typedef struct t_d2d_cnx
   int nb_dist_mac;
   int state_up;
   int state_down;
-  t_peer_mac dist_tabmac[MAX_PEER_MAC];
   struct t_d2d_cnx *prev;
   struct t_d2d_cnx *next;
 } t_d2d_cnx;
@@ -105,22 +97,10 @@ int  dpdk_d2d_get_qty(void);
 void dpdk_d2d_all_del(void);
 void dpdk_d2d_add_lan(int llid, int tid, char *name, char *lan);
 void dpdk_d2d_del_lan(int llid, int tid, char *name, char *lan);
-
 char *dpdk_d2d_get_next(char *name);
-int dpdk_d2d_get_strmac(char *name, t_peer_mac **tabmac);
-
-t_topo_endp *dpdk_d2d_mngt_translate_topo_endp(int *nb);
-
-void dpdk_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_peer_mac *tabmac);
-
-void dpdk_d2d_process_possible_change(void);
-
-int dpdk_d2d_eventfull(char *name, int ms, int ptx, int btx, int prx, int brx);
-int dpdk_d2d_collect_dpdk(t_eventfull_endp *eventfull);
+t_topo_endp *translate_topo_endp_d2d(int *nb);
 void dpdk_d2d_end_ovs(void);
-int dpdk_d2d_get_tabmac(char *name, t_peer_mac tab[MAX_PEER_MAC]);
-
+int dpdk_d2d_exists(char *name);
 void dpdk_d2d_init(void);
 /*--------------------------------------------------------------------------*/
 

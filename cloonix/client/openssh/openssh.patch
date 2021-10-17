@@ -100,7 +100,7 @@ diff -Naur openssh-8.6p1/Makefile.in tainted_openssh/Makefile.in
  SED=@SED@
  XAUTH_PATH=@XAUTH_PATH@
 -LDFLAGS=-L. -Lopenbsd-compat/ @LDFLAGS@
-+LDFLAGS=-L../lib_doorways/ -ldoorways -L../../../common/lib_io_clownix/ -lio_clownix -L../../../common/lib_blkd -lblkd -L../../../common/lib_rpct -lrpct -ldoorways -L. -Lopenbsd-compat/ @LDFLAGS@
++LDFLAGS=-L../lib_doorways/ -ldoorways -L../../../common/lib_io_clownix/ -lio_clownix -L../../../common/lib_rpct -lrpct -ldoorways -L. -Lopenbsd-compat/ @LDFLAGS@
  LDFLAGS_NOPIE=-L. -Lopenbsd-compat/ @LDFLAGS_NOPIE@
  EXEEXT=@EXEEXT@
  MANFMT=@MANFMT@

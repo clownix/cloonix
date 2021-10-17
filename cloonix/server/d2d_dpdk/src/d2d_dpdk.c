@@ -44,7 +44,6 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "vhost_client.h"
-#include "utils.h"
 #include "udp.h"
 
 
@@ -59,13 +58,12 @@ static char g_d2d_socket[MAX_PATH_LEN];
 static char g_runtime[MAX_PATH_LEN];
 static char g_prefix[MAX_PATH_LEN];
 static char g_ctrl_path[MAX_PATH_LEN];
-static char g_cisco_path[MAX_PATH_LEN];
 static char *g_rte_argv[8];
 static uint16_t g_udp_port;
 static uint32_t g_cpu_flags;
 /*--------------------------------------------------------------------------*/
 
-#define RANDOM_APPEND_SIZE 8
+#define RANDOM_APPEND_SIZE 6
 /*****************************************************************************/
 static char *random_str(void)
 {
@@ -106,33 +104,16 @@ static int check_and_set_uid(void)
 static void heartbeat (int delta)
 {
   static int count_ticks_blkd = 0;
-  static int count_ticks_rpct = 0;
   count_ticks_blkd += 1;
-  count_ticks_rpct += 1;
-  if (count_ticks_blkd == 5)
+  if (count_ticks_blkd == 10)
     {
-    blkd_heartbeat(NULL);
     count_ticks_blkd = 0;
-    }
-  if (count_ticks_rpct == 100)
-    {
-    rpct_heartbeat(NULL);
-    count_ticks_rpct = 0;
     }
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-void req_unix2inet_conpath_evt(int llid, char *name)
-{
-  char msg[MAX_PATH_LEN];
-  sprintf(msg, "unix2inet_conpath_evt_monitor llid=%d name=%s", llid, name);
-  rpct_send_app_msg(NULL, g_llid, 0, msg);
-}
-/*---------------------------------------------------------------------------*/
-
 /****************************************************************************/
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
+void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   if (llid != g_llid)
     KERR("%s %s %d %d", g_net_name, name, llid, g_llid);
@@ -140,7 +121,7 @@ void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
     KERR("%s %s %d %d", g_net_name, name, llid, g_llid);
   if (strcmp(g_d2d_name, name))
     KERR("%s %s %s %d %d", g_net_name, name, g_d2d_name, llid, g_llid);
-  rpct_send_pid_resp(ptr, llid, tid, name, num, cloonix_get_pid(), getpid());
+  rpct_send_pid_resp(llid, tid, name, num, cloonix_get_pid(), getpid());
   g_watchdog_ok = 1;
 }
 /*--------------------------------------------------------------------------*/
@@ -149,12 +130,11 @@ void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
 void end_clean_unlink(void)
 {
   unlink(g_ctrl_path);
-  unlink(g_cisco_path);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_kil_req(void *ptr, int llid, int tid)
+void rpct_recv_kil_req(int llid, int tid)
 {
   vhost_client_stop();
   udp_close();
@@ -167,19 +147,26 @@ void reply_probe_udp(void)
 {
   char resp[MAX_PATH_LEN];
   snprintf(resp, MAX_PATH_LEN-1,"cloonixd2d_receive_probe_udp %s",g_d2d_name);
-  rpct_send_diag_msg(NULL, g_llid, type_hop_d2d_dpdk, resp);
+  rpct_send_sigdiag_msg(g_llid, type_hop_d2d_dpdk, resp);
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+void rpct_recv_poldiag_msg(int llid, int tid, char *line)
+{
+  KERR("%s", line);
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
   char resp[MAX_PATH_LEN];
   uint32_t dist_ip;
   uint16_t dist_port;
   int ret;
+  DOUT(FLAG_HOP_SIGDIAG, "D2D %s", line);
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
     KERR("%s %d %d", g_net_name, llid, g_llid);
@@ -192,7 +179,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       snprintf(resp, MAX_PATH_LEN-1, "cloonixd2d_suidroot_ko %s", g_d2d_name);
     else
       snprintf(resp, MAX_PATH_LEN-1, "cloonixd2d_suidroot_ok %s", g_d2d_name);
-    rpct_send_diag_msg(NULL, llid, tid, resp);
+    rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (!strncmp(line,
   "cloonixd2d_eal_init", strlen("cloonixd2d_eal_init")))
@@ -202,7 +189,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     if (ret < 0)
       KOUT("Cannot init EAL %s %d\n", g_net_name, rte_errno);
     snprintf(resp, MAX_PATH_LEN-1, "cloonixd2d_eal_init_ok %s", g_d2d_name);
-    rpct_send_diag_msg(NULL, llid, tid, resp);
+    rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (sscanf(line,
   "cloonixd2d_vhost_start %s", name) == 1)
@@ -210,7 +197,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     vhost_client_start(g_d2d_socket, g_memid);
     snprintf(resp, MAX_PATH_LEN-1, 
     "cloonixd2d_vhost_start_ok %s", name);
-    rpct_send_diag_msg(NULL, llid, tid, resp);
+    rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (sscanf(line,
   "cloonixd2d_vhost_stop %s", name) == 1)
@@ -218,7 +205,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     vhost_client_stop();
     snprintf(resp, MAX_PATH_LEN-1,
     "cloonixd2d_vhost_stop_ok %s", name);
-    rpct_send_diag_msg(NULL, llid, tid, resp);
+    rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (sscanf(line,
   "cloonixd2d_get_udp_port %s", name) == 1)
@@ -234,7 +221,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
       snprintf(resp, MAX_PATH_LEN-1, 
       "cloonixd2d_get_udp_port_ok %s udp_port=%hu", name, g_udp_port);
       }
-    rpct_send_diag_msg(NULL, llid, tid, resp);
+    rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (sscanf(line,
   "cloonixd2d_set_dist_udp_ip_port %s %x %hu",name,&dist_ip,&dist_port)==3)
@@ -242,7 +229,7 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
     udp_fill_dist_addr(dist_ip, dist_port);
     snprintf(resp, MAX_PATH_LEN-1,
     "cloonixd2d_set_dist_udp_ip_port_ok %s", name);
-    rpct_send_diag_msg(NULL, llid, tid, resp);
+    rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (sscanf(line,
   "cloonixd2d_send_probe_udp %s", name) == 1)
@@ -258,23 +245,23 @@ void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
 
 
 /****************************************************************************/
-static void err_ctrl_cb (void *ptr, int llid, int err, int from)
+static void err_ctrl_cb (int llid, int err, int from)
 {
   KERR("D2D DPDK SELF DESTRUCT CONNECTION");
-  rpct_recv_kil_req(NULL, 0, 0);
+  rpct_recv_kil_req(0, 0);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void rx_ctrl_cb (int llid, int len, char *buf)
 {
-  if (rpct_decoder(NULL, llid, len, buf))
+  if (rpct_decoder(llid, len, buf))
     KOUT("%s %s", g_net_name, buf);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void connect_from_ctrl_client(void *ptr, int llid, int llid_new)
+static void connect_from_ctrl_client(int llid, int llid_new)
 {
   msg_mngt_set_callbacks (llid_new, err_ctrl_cb, rx_ctrl_cb);
   g_llid = llid_new;
@@ -290,7 +277,7 @@ static void fct_timeout_self_destruct(void *data)
   if (g_watchdog_ok == 0)
     {
     KERR("D2D DPDK SELF DESTRUCT WATCHDOG");
-    rpct_recv_kil_req(NULL, 0, 0);
+    rpct_recv_kil_req(0, 0);
     }
   g_watchdog_ok = 0;
   clownix_timeout_add(500, fct_timeout_self_destruct, NULL, NULL, NULL);
@@ -347,28 +334,20 @@ int main (int argc, char *argv[])
   memset(g_runtime, 0, MAX_PATH_LEN);
   memset(g_prefix, 0, MAX_PATH_LEN);
   memset(g_ctrl_path, 0, MAX_PATH_LEN);
-  memset(g_cisco_path, 0, MAX_PATH_LEN);
   strncpy(g_net_name,  argv[1], MAX_NAME_LEN-1);
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
   strncpy(g_d2d_name,  argv[3], MAX_NAME_LEN-1);
   snprintf(g_runtime, MAX_PATH_LEN-1, "%s/dpdk", root);
-  snprintf(g_d2d_socket, MAX_PATH_LEN-1, "%s/dpdk/d2_%s", root, d2d);
+  snprintf(g_d2d_socket, MAX_PATH_LEN-1, "%s/dpdk/d2d_%s", root, d2d);
   snprintf(g_prefix, MAX_PATH_LEN-1, "--file-prefix=cloonix%s", net);
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, d2d);
-  snprintf(g_cisco_path, MAX_PATH_LEN-1,"%s/%s/%s_0_u2i", root, sock, d2d);
-  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s%s", net, d2d, random_str());
+  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s", d2d, random_str());
   sscanf(argv[4], "%X", &g_cpu_flags);
   if (!access(g_ctrl_path, F_OK))
     {
     KERR("%s exists ERASING", g_ctrl_path);
     unlink(g_ctrl_path);
     }
-  if (!access(g_cisco_path, F_OK))
-    {
-    KERR("%s exists ERASING", g_cisco_path);
-    unlink(g_cisco_path);
-    }
-  utils_init();
   vhost_client_init();
   msg_mngt_init("d2d_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
@@ -384,7 +363,7 @@ int main (int argc, char *argv[])
   daemon(0,0);
   seteuid(getuid());
   cloonix_set_pid(getpid());
-  clownix_timeout_add(1000, fct_timeout_self_destruct, NULL, NULL, NULL);
+  clownix_timeout_add(1500, fct_timeout_self_destruct, NULL, NULL, NULL);
   msg_mngt_loop();
   return 0;
 }

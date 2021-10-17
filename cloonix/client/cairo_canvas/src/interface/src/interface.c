@@ -63,8 +63,6 @@ static char *g_glob_path;
 
 char *get_doors_client_addr(void);
 
-void modify_c2c(char *name, char *master_cloonix, char *slave_cloonix);
-
 void layout_set_ready_for_send(void);
 
 
@@ -78,7 +76,7 @@ static void d2d_update_bitem(t_topo_info *topo)
     {
     cur = &(topo->d2d[i]);
     bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
-    if ((bitem) && (bitem->pbi.mutype == endp_type_d2d))
+    if ((bitem) && (bitem->pbi.endp_type == endp_type_d2d))
       {
       memcpy(&(bitem->pbi.pbi_sat->topo_d2d), cur, sizeof(t_topo_d2d));
       }
@@ -97,31 +95,9 @@ static void a2b_update_bitem(t_topo_info *topo)
     {
     cur = &(topo->a2b[i]);
     bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
-    if ((bitem) && (bitem->pbi.mutype == endp_type_a2b))
+    if ((bitem) && (bitem->pbi.endp_type == endp_type_a2b))
       {
       memcpy(&(bitem->pbi.pbi_sat->topo_a2b), cur, sizeof(t_topo_a2b));
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void snf_update_bitem(t_topo_info *topo)
-{
-  int i;
-  t_topo_endp *cur;
-  t_bank_item *bitem;
-  for (i=0; i<topo->nb_endp; i++)
-    {
-    cur = &(topo->endp[i]);
-    if ((cur->type == endp_type_snf) && (cur->lan.nb_lan == 0))
-      {
-      bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
-      if ((bitem) &&
-          (bitem->pbi.mutype == endp_type_snf))
-        {
-        wireshark_kill(cur->name);
-        }
       }
     }
 }
@@ -207,30 +183,14 @@ void callback_topo(int tid, t_topo_info *topo)
     topo_free_diffs(diffs);
     d2d_update_bitem(topo);
     a2b_update_bitem(topo);
-    snf_update_bitem(topo);
     }
   if (g_not_first_callback_topo == 0)
     {
     g_not_first_callback_topo = 1;
     pid_clone_init();
     }
-  update_topo_phy(topo->nb_phy, topo->phy);
-  update_topo_pci(topo->nb_pci, topo->pci);
+  update_topo_phy(topo->nb_info_phy, topo->info_phy);
   update_topo_bridges(topo->nb_bridges, topo->bridges);
-  update_topo_mirrors(topo->nb_mirrors, topo->mirrors);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void timeout_eventfull(void *data)
-{
-  t_eventfull *eventfull = (t_eventfull *) data;
-  if (!eventfull)
-    KOUT(" ");
-  eventfull_has_arrived();
-  eventfull_packets_data(eventfull);
-  clownix_free(eventfull->endp, __FUNCTION__);
-  clownix_free(eventfull, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -244,20 +204,9 @@ static void slowperiodic_cb(int nb, t_slowperiodic *spic)
 /****************************************************************************/
 static void eventfull_cb(int nb_endp, t_eventfull_endp *endp)
 {
-  t_eventfull *eventfull;
-  int len;
-  len = sizeof(t_eventfull);
-  eventfull = (t_eventfull *) clownix_malloc(len, 13);
-  memset(eventfull, 0, len);
-
-  len = nb_endp * sizeof(t_eventfull_endp);
-  eventfull->endp = (t_eventfull_endp *) clownix_malloc(len, 13);
-  eventfull->nb_endp  = nb_endp;
-  memcpy(eventfull->endp,  endp,  nb_endp  * sizeof(t_eventfull_endp));
-
-//  clownix_timeout_add(1, timeout_eventfull, (void *) eventfull, NULL, NULL);
-  timeout_eventfull((void *) eventfull);
-
+  eventfull_has_arrived();
+  eventfull_arrival(nb_endp, endp);
+  eventfull_periodic_work();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -266,18 +215,11 @@ static void eventfull_cb(int nb_endp, t_eventfull_endp *endp)
 static void topo_small_event_cb(int tid, char *name, 
                                 char *p1, char *p2, int evt)
 {
-  if ((evt == c2c_evt_connection_ok)    ||
-      (evt == c2c_evt_connection_ko)    ||
-      (evt == vm_evt_qmp_conn_ok)       || 
+  if ((evt == vm_evt_qmp_conn_ok)       || 
       (evt == vm_evt_qmp_conn_ko)       ||
       (evt == vm_evt_cloonix_ga_ping_ok)||
       (evt == vm_evt_cloonix_ga_ping_ko))
     ping_enqueue_evt(name, evt);
-  else if (evt == c2c_evt_mod_master_slave)
-    modify_c2c(name, p1, p2);
-  else if ((evt == snf_evt_capture_on)  ||
-           (evt == snf_evt_capture_off)) 
-    modify_snf(name, evt);
   else
     KOUT(" ");
 }

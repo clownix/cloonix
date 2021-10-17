@@ -36,7 +36,7 @@ static void send_to_openssh_client(int dido_llid, int val, int len, char *buf)
   else
     {
     if (val != doors_val_none)
-      DOUT(NULL, FLAG_HOP_DOORS, "CLIENT_TX: %d %s", dido_llid, buf);
+      DOUT(FLAG_HOP_DOORS, "CLIENT_TX: %d %s", dido_llid, buf);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -49,7 +49,7 @@ void openssh_tx_to_nat(int inside_llid, int len, char *buf)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int nat_rx_cb(void *ptr, int llid, int fd)
+static int nat_rx_cb(int llid, int fd)
 {
   int len, init_done;
   char *buf = get_g_buf();
@@ -99,7 +99,7 @@ static void timer_close_dido_llid(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void nat_err_cb (void *ptr, int llid, int err, int from)
+static void nat_err_cb (int llid, int err, int from)
 {
   char *nack = "UNIX2INET_NACK_CUTOFF";
   unsigned long ul_llid = (unsigned long) llid;

@@ -63,8 +63,8 @@ static void rxtx_vhost_rx(struct rte_mbuf *mbuf)
   len = (int) (mbuf->pkt_len);
   eth_hdr = rte_pktmbuf_mtod_offset(mbuf, struct rte_ether_hdr *, EMPTY_HEAD);
   ethertype = rte_be_to_cpu_16(eth_hdr->ether_type);
-  smac = (uint8_t *) (&eth_hdr->s_addr);
-  dmac = (uint8_t *) (&eth_hdr->d_addr);
+  smac = (uint8_t *) (&eth_hdr->src_addr);
+  dmac = (uint8_t *) (&eth_hdr->dst_addr);
   if (ethertype == RTE_ETHER_TYPE_ARP)
     {
     dhcp_arp_management(mbuf);

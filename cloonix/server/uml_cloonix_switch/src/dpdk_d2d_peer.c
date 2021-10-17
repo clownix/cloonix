@@ -88,7 +88,7 @@ static void peer_doorways_client_tx(int llid, int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int callback_connect(void *ptr, int llid, int fd)
+static int callback_connect(int llid, int fd)
 {
   int doors_llid;
   char *buf;
@@ -238,25 +238,6 @@ void wrap_send_d2d_peer_ping(t_d2d_cnx *cur, int status)
     else
       {
       send_d2d_peer_ping(cur->peer_llid,cur->ref_tid,cur->name,status);
-      }
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void wrap_send_d2d_peer_mac(t_d2d_cnx *cur, int nb_mac, t_peer_mac *tabmac)
-{
-  if (msg_exist_channel(cur->peer_llid))
-    {
-    if (cur->local_is_master)
-      {
-      doors_io_basic_tx_set(peer_doorways_client_tx);
-      send_d2d_peer_mac(cur->peer_llid,cur->ref_tid,cur->name,nb_mac,tabmac);
-      doors_io_basic_tx_set(string_tx);
-      }
-    else
-      {
-      send_d2d_peer_mac(cur->peer_llid,cur->ref_tid,cur->name,nb_mac,tabmac);
       }
     }
 }

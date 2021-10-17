@@ -1,7 +1,7 @@
 diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
---- ovs/acinclude.m4	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/acinclude.m4	2021-06-18 22:43:37.529507927 +0200
-@@ -379,6 +379,10 @@
+--- ovs/acinclude.m4	2021-08-29 17:22:49.000000000 +0200
++++ ovs_tainted/acinclude.m4	2021-08-29 17:30:55.549392714 +0200
+@@ -434,6 +434,10 @@
            esac
      esac
  
@@ -12,7 +12,7 @@ diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
      ovs_save_CFLAGS="$CFLAGS"
      ovs_save_LDFLAGS="$LDFLAGS"
      CFLAGS="$CFLAGS $DPDK_INCLUDE"
-@@ -421,7 +425,7 @@
+@@ -476,7 +480,7 @@
      OVS_FIND_DEPENDENCY([dlopen], [dl], [libdl])
  
      AC_MSG_CHECKING([whether linking with dpdk works])
@@ -21,7 +21,7 @@ diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
      AC_LINK_IFELSE(
        [AC_LANG_PROGRAM([#include <rte_config.h>
                          #include <rte_eal.h>],
-@@ -469,6 +473,8 @@
+@@ -524,6 +528,8 @@
      AC_DEFINE([DPDK_NETDEV], [1], [System uses the DPDK module.])
    fi
  
@@ -30,174 +30,9 @@ diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
    AM_CONDITIONAL([DPDK_NETDEV], test "$DPDKLIB_FOUND" = true)
  ])
  
-diff -Naur ovs/configure.ac ovs_tainted/configure.ac
---- ovs/configure.ac	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/configure.ac	2021-06-18 22:43:37.529507927 +0200
-@@ -179,13 +179,10 @@
- OVS_ENABLE_OPTION([-Warray-bounds-pointer-arithmetic])
- OVS_CONDITIONAL_CC_OPTION([-Wno-unused], [HAVE_WNO_UNUSED])
- OVS_CONDITIONAL_CC_OPTION([-Wno-unused-parameter], [HAVE_WNO_UNUSED_PARAMETER])
--OVS_CONDITIONAL_CC_OPTION([-mavx512f], [HAVE_AVX512F])
--OVS_CHECK_CC_OPTION([-mavx512f], [CFLAGS="$CFLAGS -DHAVE_AVX512F"])
- OVS_ENABLE_WERROR
- OVS_ENABLE_SPARSE
- OVS_CTAGS_IDENTIFIERS
- OVS_CHECK_DPCLS_AUTOVALIDATOR
--OVS_CHECK_BINUTILS_AVX512
- 
- AC_ARG_VAR(KARCH, [Kernel Architecture String])
- AC_SUBST(KARCH)
-diff -Naur ovs/lib/automake.mk ovs_tainted/lib/automake.mk
---- ovs/lib/automake.mk	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/lib/automake.mk	2021-06-18 22:43:37.529507927 +0200
-@@ -21,27 +21,6 @@
-         -Wl,--version-script=$(top_builddir)/lib/libopenvswitch.sym \
-         $(AM_LDFLAGS)
- 
--if HAVE_AVX512F
--if HAVE_LD_AVX512_GOOD
--# Build library of avx512 code with CPU ISA CFLAGS enabled. This allows the
--# compiler to use the ISA features required for the ISA optimized code-paths.
--# Use LDFLAGS to compile only static library of this code, as it should be
--# statically linked into vswitchd even if vswitchd is a shared build.
--lib_LTLIBRARIES += lib/libopenvswitchavx512.la
--lib_libopenvswitch_la_LIBADD += lib/libopenvswitchavx512.la
--lib_libopenvswitchavx512_la_CFLAGS = \
--	-mavx512f \
--	-mavx512bw \
--	-mavx512dq \
--	-mbmi2 \
--	-fPIC \
--	$(AM_CFLAGS)
--lib_libopenvswitchavx512_la_SOURCES = \
--	lib/dpif-netdev-lookup-avx512-gather.c
--lib_libopenvswitchavx512_la_LDFLAGS = \
--	-static
--endif
--endif
- 
- # Build core vswitch libraries as before
- lib_libopenvswitch_la_SOURCES = \
-diff -Naur ovs/lib/dpdk.c ovs_tainted/lib/dpdk.c
---- ovs/lib/dpdk.c	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/lib/dpdk.c	2021-06-18 22:43:37.529507927 +0200
-@@ -642,11 +642,11 @@
-         return false;
-     }
- 
--#if __x86_64__
--    /* CPU flags only defined for the architecture that support it. */
--    CHECK_CPU_FEATURE(feature, "avx512f", RTE_CPUFLAG_AVX512F);
--    CHECK_CPU_FEATURE(feature, "bmi2", RTE_CPUFLAG_BMI2);
--#endif
-+//#if __x86_64__
-+//    /* CPU flags only defined for the architecture that support it. */
-+//    CHECK_CPU_FEATURE(feature, "avx512f", RTE_CPUFLAG_AVX512F);
-+//    CHECK_CPU_FEATURE(feature, "bmi2", RTE_CPUFLAG_BMI2);
-+//#endif
- 
-     VLOG_WARN("Unknown CPU arch,feature: %s,%s. Returning not supported.\n",
-               arch, feature);
-diff -Naur ovs/lib/dpif-netdev.h ovs_tainted/lib/dpif-netdev.h
---- ovs/lib/dpif-netdev.h	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/lib/dpif-netdev.h	2021-06-18 22:43:37.529507927 +0200
-@@ -35,7 +35,7 @@
- 
- bool dpif_is_netdev(const struct dpif *);
- 
--#define NR_QUEUE   1
-+#define NR_QUEUE   4
- #define NR_PMD_THREADS 1
- 
- #ifdef  __cplusplus
-diff -Naur ovs/lib/dpif-netdev-lookup.c ovs_tainted/lib/dpif-netdev-lookup.c
---- ovs/lib/dpif-netdev-lookup.c	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/lib/dpif-netdev-lookup.c	2021-06-18 22:43:37.529507927 +0200
-@@ -43,25 +43,6 @@
-       .probe = dpcls_subtable_generic_probe,
-       .name = "generic", },
- 
--#if (__x86_64__ && HAVE_AVX512F && HAVE_LD_AVX512_GOOD && __SSE4_2__)
--    /* Only available on x86_64 bit builds with SSE 4.2 used for OVS core. */
--    { .prio = 0,
--      .probe = dpcls_subtable_avx512_gather_probe,
--      .name = "avx512_gather", },
--#else
--    /* Disabling AVX512 at compile time, as compile time requirements not met.
--     * This could be due to a number of reasons:
--     *  1) core OVS is not compiled with SSE4.2 instruction set.
--     *     The SSE42 instructions are required to use CRC32 ISA for high-
--     *     performance hashing. Consider ./configure of OVS with -msse42 (or
--     *     newer) to enable CRC32 hashing and higher performance.
--     *  2) The assembler in binutils versions 2.30 and 2.31 has bugs in AVX512
--     *     assembly. Compile time probes check for this assembler issue, and
--     *     disable the HAVE_LD_AVX512_GOOD check if an issue is detected.
--     *     Please upgrade binutils, or backport this binutils fix commit:
--     *     2069ccaf8dc28ea699bd901fdd35d90613e4402a
--     */
--#endif
- };
- 
- int32_t
-diff -Naur ovs/lib/netdev.c ovs_tainted/lib/netdev.c
---- ovs/lib/netdev.c	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/lib/netdev.c	2021-06-18 22:43:37.529507927 +0200
-@@ -793,6 +793,7 @@
-                            struct dp_packet *packet, char **errormsg)
- {
-     uint64_t l4_mask;
-+    return true;
- 
-     if (dp_packet_hwol_is_tso(packet)
-         && !(netdev_flags & NETDEV_TX_OFFLOAD_TCP_TSO)) {
-diff -Naur ovs/lib/poll-loop.c ovs_tainted/lib/poll-loop.c
---- ovs/lib/poll-loop.c	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/lib/poll-loop.c	2021-06-18 22:43:37.529507927 +0200
-@@ -64,7 +64,12 @@
-     struct poll_node *node;
- 
-     /* Both 'fd' and 'wevent' cannot be set. */
--    ovs_assert(!fd != !wevent);
-+    //ovs_assert(!fd != !wevent);
-+    if ((fd != 0) && (wevent != 0))
-+      {
-+      VLOG_ERR("ovs_assert poll_create_node");
-+      return;
-+      }
- 
-     HMAP_FOR_EACH_WITH_HASH (node, hmap_node,
-                              hash_2words(fd, (uint32_t)wevent),
-@@ -108,8 +113,12 @@
-     COVERAGE_INC(poll_create_node);
- 
-     /* Both 'fd' and 'wevent' cannot be set. */
--    ovs_assert(!fd != !wevent);
--
-+    // ovs_assert(!fd != !wevent);
-+    if ((fd != 0) && (wevent != 0))
-+      {
-+      VLOG_ERR("ovs_assert poll_create_node");
-+      return;
-+      }
-     /* Check for duplicate.  If found, "or" the events. */
-     node = find_poll_node(loop, fd, wevent);
-     if (node) {
-diff -Naur ovs/m4/openvswitch.m4 ovs_tainted/m4/openvswitch.m4
---- ovs/m4/openvswitch.m4	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/m4/openvswitch.m4	2021-06-18 22:43:37.529507927 +0200
-@@ -411,8 +411,7 @@
-      echo "vpgatherqq $GATHER_PARAMS" | as --64 -o $OBJFILE -
-      if ($CC -dumpmachine | grep x86_64) >/dev/null 2>&1; then
-        if (objdump -d  --no-show-raw-insn $OBJFILE | grep -q $GATHER_PARAMS) >/dev/null 2>&1; then
--         ovs_cv_binutils_avx512_good=yes
--         CFLAGS="$CFLAGS -DHAVE_LD_AVX512_GOOD"
-+         ovs_cv_binutils_avx512_good=no
-        else
-          ovs_cv_binutils_avx512_good=no
-          dnl Explicitly disallow avx512f to stop compiler auto-vectorizing
 diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
---- ovs/ofproto/ofproto-dpif.c	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/ofproto/ofproto-dpif.c	2021-06-18 22:43:37.529507927 +0200
+--- ovs/ofproto/ofproto-dpif.c	2021-08-29 17:22:49.000000000 +0200
++++ ovs_tainted/ofproto/ofproto-dpif.c	2021-08-29 17:31:04.401434418 +0200
 @@ -748,7 +748,7 @@
          return 0;
      }
@@ -207,19 +42,4 @@ diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
  
      /* Remove any existing datapaths, since we assume we're the only
       * userspace controlling the datapath. */
-diff -Naur ovs/ofproto/ofproto-dpif-xlate.c ovs_tainted/ofproto/ofproto-dpif-xlate.c
---- ovs/ofproto/ofproto-dpif-xlate.c	2021-06-18 22:40:20.000000000 +0200
-+++ ovs_tainted/ofproto/ofproto-dpif-xlate.c	2021-06-18 22:43:37.529507927 +0200
-@@ -4145,6 +4145,12 @@
-            xlate_report_error(ctx, "Cannot truncate output to patch port");
-        }
-        patch_port_output(ctx, xport, xport->peer);
-+
-+    if (mbridge_has_mirrors(ctx->xbridge->mbridge) && xport->xbundle) {
-+        mirror_packet(ctx, xport->xbundle,
-+                      xbundle_mirror_dst(xport->xbundle->xbridge,
-+                                         xport->xbundle));
-+    }
-        return;
-     }
  

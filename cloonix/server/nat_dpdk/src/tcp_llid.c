@@ -62,7 +62,7 @@ static uint32_t g_host_local_ip;
 static uint32_t g_offset;
 
 /****************************************************************************/
-static int rx_cb(void *ptr, int llid, int fd)
+static int rx_cb(int llid, int fd)
 {
   int data_len, result = 0;
   uint8_t *data;
@@ -100,7 +100,7 @@ static int rx_cb(void *ptr, int llid, int fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void err_cb(void *ptr, int llid, int err, int from)
+static void err_cb(int llid, int err, int from)
 {
   if (msg_exist_channel(llid))
     msg_delete_channel(llid);

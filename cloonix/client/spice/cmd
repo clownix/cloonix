@@ -27,84 +27,19 @@ if [ ! -d ${TARGET} ]; then
   fi
 fi
 
-tar xvf ${TARGZ}/wayland_*.tar.gz 
-rm -f wayland/meson_options.txt
-cat > wayland/meson_options.txt << EOF
-option('libraries',
-  description: 'Compile Wayland libraries',
-  type: 'boolean',
-  value: 'true')
-option('scanner',
-  description: 'Compile wayland-scanner binary',
-  type: 'boolean',
-  value: 'true')
-option('tests',
-  description: 'Compile Wayland tests',
-  type: 'boolean',
-  value: 'false')
-option('documentation',
-  description: 'Build the documentation (requires Doxygen, dot, xmlto, xsltproc)',
-  type: 'boolean',
-  value: 'false')
-option('dtd_validation',
-  description: 'Validate the protocol DTD (requires libxml2)',
-  type: 'boolean',
-  value: 'false')
-option('icon_directory',
-  description: 'Location used to look for cursors (defaults to ${datadir}/icons if unset)',
-  type: 'string',
-  value: 'false')
-EOF
-
-rm -rf ${TARGET}/wayland
-mv wayland ${TARGET}
-
-
 cd ${HERE}/spice_client
 ./patched_create
 mv tainted_spice spice_client
 rm -rf ${TARGET}/spice_client
 mv spice_client ${TARGET}
 
-
 export PKG_CONFIG_PATH=${TARGET}/pkgconfig 
 export DESTDIR=${TARGET}
 export PATH=${TARGET}/bin:${MESON_NINJA}/ninja:${MESON_NINJA}/meson:$PATH
 
-cd ${TARGET}/wayland
-meson.py build
-cd build
-ninja install
-cp -rf ${TARGET}/usr/local/* ${TARGET}
-cp -rf ${TARGET}/include/* ${TARGET}/spice-1
-rm -rf ${TARGET}/usr/local
-if [ -d ${TARGET}/lib/x86_64-linux-gnu/pkgconfig ]; then
-  mv ${TARGET}/lib/x86_64-linux-gnu/pkgconfig/* ${TARGET}/pkgconfig
-  rmdir ${TARGET}/lib/x86_64-linux-gnu/pkgconfig
-  mv ${TARGET}/lib/x86_64-linux-gnu/* ${TARGET}
-  rmdir ${TARGET}/lib/x86_64-linux-gnu
-  rmdir ${TARGET}/lib
-else
-  if [ -d ${TARGET}/lib64/pkgconfig ]; then
-    mv ${TARGET}/lib64/pkgconfig/* ${TARGET}/pkgconfig
-    rmdir ${TARGET}/lib64/pkgconfig
-    mv ${TARGET}/lib64/* ${TARGET}
-    rmdir ${TARGET}/lib64
-  else
-    echo ERROR NO:
-    echo ${TARGET}/lib/x86_64-linux-gnu/pkgconfig
-    echo ${TARGET}/lib64/pkgconfig
-    exit 1
-  fi
-fi
-
-
-
 cd ${TARGET}/spice_client
 sed -i s/UNKNOWN/0.37/ ./build-aux/git-version-gen
 sed -i s"%'-Wextra',%'-Wextra',\n'-Wl,-rpath',\n'-Wl,/usr/local/bin/cloonix/common/spice/spice_lib',%" meson.build
-sed -i s"%prog_scanner =\(.*\)%prog_scanner ='${TARGET}/bin/wayland-scanner'%" meson.build
-
 
 meson.py build
 cd build

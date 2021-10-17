@@ -2,7 +2,6 @@ CLOONIX_COMMON=../../../cloonix/common
 
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
-BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
 LIBMDL=${CLOONIX_COMMON}/xwy/libmdl
 LIBCLI=${CLOONIX_COMMON}/xwy/libcli
@@ -23,7 +22,6 @@ INCLUDES= -I./src \
           -I${GLOB_INCLUDE}
 
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
-       -L${BLKD} -lblkd \
        -L${RPCT} -lrpct \
        -L${LIBCLI} -lcli \
        -L${LIBMDL} -lmdl \

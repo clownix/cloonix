@@ -26,7 +26,7 @@ enum {
      };
 
 /*---------------------------------------------------------------------------*/
-int channel_create(int fd, int is_blkd, int kind, char *little_name,
+int channel_create(int fd, int kind, char *little_name,
                    t_fd_event rx_cb,  t_fd_event tx_cb, t_fd_error err_cb);
 char *channel_get_little_name(int llid);
 /*---------------------------------------------------------------------------*/
@@ -40,7 +40,7 @@ int  get_current_max_channels(void);
 /*---------------------------------------------------------------------------*/
 void channel_init(void);
 /*---------------------------------------------------------------------------*/
-int channel_check_llid(int llid, int *is_blkd, const char *fct);
+int channel_check_llid(int llid, const char *fct);
 /*---------------------------------------------------------------------------*/
 int get_fd_with_cidx(int cidx);
 /*---------------------------------------------------------------------------*/

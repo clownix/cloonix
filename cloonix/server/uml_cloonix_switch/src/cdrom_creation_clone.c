@@ -56,18 +56,9 @@ static int create_tmp_config(int vm_id, char *name,
   snprintf(agent_dir, MAX_PATH_LEN-1, 
            "%s/common/agent_dropbear/agent_bin_alien/", cfg_get_bin_dir());
   tmp_conf_dir = utils_dir_conf_tmp(vm_id);
-//  my_cp_file(agent_dir, tmp_conf_dir, "cloonix_agent_armv7l");
-//  my_cp_file(agent_dir, tmp_conf_dir, "dropbear_cloonix_sshd_armv7l");
-//  my_cp_file(agent_dir, tmp_conf_dir, "cloonix_agent_aarch64");
-//  my_cp_file(agent_dir, tmp_conf_dir, "dropbear_cloonix_sshd_aarch64");
-  my_cp_file(agent_dir, tmp_conf_dir, "cloonix_hwsim");
   my_cp_file(agent_dir, tmp_conf_dir, "cloonix_agent");
   my_cp_file(agent_dir, tmp_conf_dir, "dropbear_cloonix_sshd");
-  my_cp_file(agent_dir, tmp_conf_dir, "cloonix_hwsim_386");
-  my_cp_file(agent_dir, tmp_conf_dir, "cloonix_agent_i386");
-  my_cp_file(agent_dir, tmp_conf_dir, "dropbear_cloonix_sshd_i386");
   my_cp_dir(agent_dir, tmp_conf_dir, "lib_x86_64", "lib_x86_64");
-  my_cp_dir(agent_dir, tmp_conf_dir, "lib_i386", "lib_i386");
   make_config_cloonix_vm_name(tmp_conf_dir, name);
   make_config_cloonix_vm_p9_host_share(tmp_conf_dir, has_p9_host_share);
   return result;

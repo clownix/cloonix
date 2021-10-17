@@ -1,0 +1,12 @@
+#!/bin/bash
+
+rm -rf build
+rm -rf usr
+rm -f meson.build
+rm -rf build
+rm -rf usr
+rm -f meson.build
+
+
+
+

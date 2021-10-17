@@ -69,12 +69,12 @@ void topo_info_update(t_topo_info *topo)
 void timer_create_item_node_req(void *data)
 {
   char *ptr_p9_host_share = NULL;
-  int32_t thidden_on_graph[MAX_DPDK_VM+MAX_SOCK_VM+MAX_WLAN_VM];
+  int32_t thidden_on_graph[MAX_DPDK_VM];
   int i, vm_config_flags, natplug = 0;
   t_custom_vm *cust_vm;
   t_item_node_req *pa = (t_item_node_req *) data;
   get_custom_vm (&cust_vm);
-  for (i=0; i<MAX_DPDK_VM+MAX_SOCK_VM+MAX_WLAN_VM; i++)
+  for (i=0; i<MAX_DPDK_VM; i++)
     thidden_on_graph[i] = 0;
   if (cust_vm->has_p9_host_share)
     ptr_p9_host_share = cust_vm->kvm_p9_host_share;
@@ -84,7 +84,7 @@ void timer_create_item_node_req(void *data)
     set_node_layout_x_y(cust_vm->name, 0, pa->x, pa->y, 0, 
                         pa->tx, pa->ty, thidden_on_graph);
     client_add_vm(0, callback_end, cust_vm->name,
-                  cust_vm->nb_tot_eth, cust_vm->eth_tab,
+                  cust_vm->eth, cust_vm->eth_table,
                   vm_config_flags, natplug, cust_vm->cpu, cust_vm->mem,
                   NULL, cust_vm->kvm_used_rootfs, NULL, NULL, 
                   NULL, ptr_p9_host_share);
@@ -100,7 +100,7 @@ void timer_create_item_req(void *data)
 {
   t_item_req *pa = (t_item_req *) data;
   t_d2d_req_info *d2d = &(pa->d2d_req_info); 
-  set_gene_layout_x_y(pa->bank_type, pa->name, pa->mutype, pa->x, pa->y, 
+  set_gene_layout_x_y(pa->bank_type, pa->name, pa->x, pa->y, 
                       pa->xa, pa->ya, pa->xb, pa->yb, 0);
   switch(pa->bank_type)
     {
@@ -108,7 +108,7 @@ void timer_create_item_req(void *data)
       from_cloonix_switch_create_lan(pa->name);
       break;
     case bank_type_sat:
-      if (pa->mutype == endp_type_d2d)
+      if (pa->endp_type == endp_type_d2d)
         {
         if ((!strlen(pa->name)) || (!strlen(d2d->dist_cloonix)))
           KOUT(" ");
@@ -117,14 +117,16 @@ void timer_create_item_req(void *data)
                        d2d->dist_tcp_port, d2d->dist_passwd,
                        d2d->dist_udp_ip);
         }
-      else if (pa->mutype == endp_type_a2b)
-        {
+      else if (pa->endp_type == endp_type_a2b)
         client_add_a2b(0, callback_end, pa->name);
-        }
+      else if (pa->endp_type == endp_type_tap)
+        client_add_tap(0, callback_end, pa->name);
+      else if (pa->endp_type == endp_type_nat)
+        client_add_nat(0, callback_end, pa->name);
+      else if (pa->endp_type == endp_type_phy)
+        client_add_phy(0, callback_end, pa->name);
       else
-        {
-        client_add_sat(0,callback_end,pa->name,pa->mutype,&pa->c2c_req_info);
-        }
+        KERR("%d %s %d", pa->bank_type, pa->name, pa->endp_type);
       break;
     default:
       KOUT("%d", pa->bank_type);

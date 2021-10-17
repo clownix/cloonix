@@ -6,7 +6,6 @@ WARNINGS=-Wall
 IO_CLOWNIX=../../lib_io_clownix
 GLOB_INCLUDE=../../glob_include
 UTILS=../../lib_utils
-BLKD=../../lib_blkd/
 RPCT=../../lib_rpct/
 
 INCLUDES= -I../src \
@@ -18,7 +17,6 @@ INCLUDES= -I../src \
           
 LIBS = -L../ -lrpc_clownix \
        -L${IO_CLOWNIX} -lio_clownix \
-       -L${BLKD} -lblkd \
        -L${RPCT} -lrpct \
        -L${UTILS} -lutils -lssl -lcrypto -lrt
 

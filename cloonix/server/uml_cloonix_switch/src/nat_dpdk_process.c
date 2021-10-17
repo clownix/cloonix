@@ -31,16 +31,12 @@
 #include "nat_dpdk_process.h"
 #include "uml_clownix_switch.h"
 #include "hop_event.h"
-#include "dpdk_tap.h"
-#include "dpdk_dyn.h"
 #include "dpdk_nat.h"
-#include "dpdk_ovs.h"
 #include "llid_trace.h"
 
 typedef struct t_nat_dpdk
 {
   char name[MAX_NAME_LEN];
-  char lan[MAX_NAME_LEN];
   char socket[MAX_PATH_LEN];
   int count;
   int llid;
@@ -68,20 +64,6 @@ static t_nat_dpdk *find_nat_dpdk(char *name)
   while(cur)
     {
     if (!strcmp(cur->name, name))
-      break;
-    cur = cur->next;
-    }
-  return cur;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static t_nat_dpdk *find_nat_dpdk_with_lan(char *lan)
-{
-  t_nat_dpdk *cur = g_head_nat_dpdk;
-  while(cur)
-    {
-    if (!strcmp(cur->lan, lan))
       break;
     cur = cur->next;
     }
@@ -150,9 +132,9 @@ static int try_connect(char *socket, char *name)
   if (llid)
     {
     if (hop_event_alloc(llid, type_hop_nat_dpdk, name, 0))
-      KERR(" ");
+      KERR("ERROR %s", name);
     llid_trace_alloc(llid, name, 0, 0, type_llid_trace_endp_ovsdb);
-    rpct_send_pid_req(NULL, llid, type_hop_nat_dpdk, name, 0);
+    rpct_send_pid_req(llid, type_hop_nat_dpdk, name, 0);
     }
   return llid;
 }
@@ -182,21 +164,21 @@ static void timer_heartbeat(void *data)
         cur->count += 1;
         if (cur->count == 50)
           {
-          KERR("%s", cur->socket);
-          dpdk_nat_event_from_nat_dpdk_process(cur->name, cur->lan, -1);
+          KERR("ERROR %s", cur->socket);
+          dpdk_nat_event_from_nat_dpdk_process(cur->name, -1);
           free_nat_dpdk(cur);
           }
         }
       }
     else if (cur->suid_root_done == 0)
       {
-      rpct_send_diag_msg(NULL, cur->llid, type_hop_nat_dpdk, msg);
-      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      rpct_send_sigdiag_msg(cur->llid, type_hop_nat_dpdk, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       cur->suid_root_done = 1;
       }
     else if (cur->watchdog_count >= 150)
       {
-      dpdk_nat_event_from_nat_dpdk_process(cur->name, cur->lan, -1);
+      dpdk_nat_event_from_nat_dpdk_process(cur->name, -1);
       free_nat_dpdk(cur);
       }
     else
@@ -204,7 +186,7 @@ static void timer_heartbeat(void *data)
       cur->count += 1;
       if (cur->count == 5)
         {
-        rpct_send_pid_req(NULL, cur->llid, type_hop_nat_dpdk, cur->name, 0);
+        rpct_send_pid_req(cur->llid, type_hop_nat_dpdk, cur->name, 0);
         cur->count = 0;
         }
       if (cur->closed_count > 0)
@@ -212,7 +194,7 @@ static void timer_heartbeat(void *data)
         cur->closed_count -= 1;
         if (cur->closed_count == 0)
           {
-          dpdk_nat_event_from_nat_dpdk_process(cur->name, cur->lan, 0);
+          dpdk_nat_event_from_nat_dpdk_process(cur->name, 0);
           free_nat_dpdk(cur);
           }
         }
@@ -228,7 +210,7 @@ void nat_dpdk_pid_resp(int llid, int tid, char *name, int pid)
 {
   t_nat_dpdk *cur = find_nat_dpdk(name);
   if (!cur)
-    KERR("%s %d", name, pid);
+    KERR("ERROR %s %d", name, pid);
   else
     {
     cur->watchdog_count = 0;
@@ -238,7 +220,7 @@ void nat_dpdk_pid_resp(int llid, int tid, char *name, int pid)
       }
     else if (cur->pid != pid)
       {
-      KERR("%s %d", name, pid);
+      KERR("ERROR %s %d", name, pid);
       }
     }
 }
@@ -256,23 +238,21 @@ int nat_dpdk_diag_llid(int llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void nat_dpdk_diag_resp(int llid, int tid, char *line)
+void nat_dpdk_sigdiag_resp(int llid, int tid, char *line)
 {
   t_nat_dpdk *cur = find_nat_dpdk_with_llid(llid);
   if (cur == NULL)
-    KERR("%s", line);
+    KERR("ERROR %s", line);
   else if (!strcmp(line,
   "cloonixnat_suidroot_ko"))
     {
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    KERR("Started nat_dpdk: %s %s", g_cloonix_net, line);
+    KERR("ERROR Started nat_dpdk: %s %s", g_cloonix_net, line);
     }
   else if (!strcmp(line,
   "cloonixnat_suidroot_ok"))
     {
     nat_dpdk_vm_event();
-    hop_event_hook(llid, FLAG_HOP_DIAG, line);
-    dpdk_nat_event_from_nat_dpdk_process(cur->name, cur->lan, 1);
+    dpdk_nat_event_from_nat_dpdk_process(cur->name, 1);
     }
   else
     KERR("ERROR nat_dpdk: %s %s", g_cloonix_net, line);
@@ -280,7 +260,7 @@ void nat_dpdk_diag_resp(int llid, int tid, char *line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void nat_dpdk_start_stop_process(char *name, char *lan, int on)
+void nat_dpdk_start_stop_process(char *name, int on)
 {
   t_nat_dpdk *cur = find_nat_dpdk(name);
   char *nat = utils_get_dpdk_nat_dir();
@@ -288,36 +268,30 @@ void nat_dpdk_start_stop_process(char *name, char *lan, int on)
   if (on)
     {
     if (cur)
-      KERR("%s %s", name, lan);
+      KERR("ERROR %s", name);
     else
       {
-      if (find_nat_dpdk_with_lan(lan))
-        KERR("%s %s", name, lan);
-      else
-        {
-        cur = (t_nat_dpdk *) malloc(sizeof(t_nat_dpdk));
-        memset(cur, 0, sizeof(t_nat_dpdk));
-        strncpy(cur->name, name, MAX_NAME_LEN-1);
-        strncpy(cur->lan, lan, MAX_NAME_LEN-1);
-        snprintf(cur->socket, MAX_NAME_LEN-1, "%s/%s", nat, name);
-        if (g_head_nat_dpdk)
-          g_head_nat_dpdk->prev = cur;
-        cur->next = g_head_nat_dpdk;
-        g_head_nat_dpdk = cur; 
-        nat_dpdk_start(name);
-        }
+      cur = (t_nat_dpdk *) malloc(sizeof(t_nat_dpdk));
+      memset(cur, 0, sizeof(t_nat_dpdk));
+      strncpy(cur->name, name, MAX_NAME_LEN-1);
+      snprintf(cur->socket, MAX_NAME_LEN-1, "%s/%s", nat, name);
+      if (g_head_nat_dpdk)
+        g_head_nat_dpdk->prev = cur;
+      cur->next = g_head_nat_dpdk;
+      g_head_nat_dpdk = cur; 
+      nat_dpdk_start(name);
       }
     }
   else
     {
     if (!cur)
-      KERR("%s %s", name, lan);
+      KERR("ERROR %s", name);
     else
       {
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "rpct_send_kil_req to %s", name);
-      rpct_send_kil_req(NULL, cur->llid, type_hop_nat_dpdk);
-      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      rpct_send_kil_req(cur->llid, type_hop_nat_dpdk);
+      hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       }
     }
 }
@@ -391,8 +365,8 @@ void nat_dpdk_vm_event(void)
       {
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "cloonixnat_machine_begin");
-      rpct_send_diag_msg(NULL, cur->llid, type_hop_nat_dpdk, msg);
-      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      rpct_send_sigdiag_msg(cur->llid, type_hop_nat_dpdk, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       vm = cfg_get_first_vm(&nb);
       for (i=0; i<nb; i++)
         {
@@ -410,16 +384,16 @@ void nat_dpdk_vm_event(void)
             memset(msg, 0, MAX_PATH_LEN);
             snprintf(msg, MAX_PATH_LEN-1,
             "cloonixnat_machine_add %s eth:%d mac:%s", name, j, mac);
-            rpct_send_diag_msg(NULL,cur->llid,type_hop_nat_dpdk,msg);
-            hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+            rpct_send_sigdiag_msg(cur->llid,type_hop_nat_dpdk,msg);
+            hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
             }
           }
         vm = vm->next;
         }
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "cloonixnat_machine_end");
-      rpct_send_diag_msg(NULL, cur->llid, type_hop_nat_dpdk, msg);
-      hop_event_hook(cur->llid, FLAG_HOP_DIAG, msg);
+      rpct_send_sigdiag_msg(cur->llid, type_hop_nat_dpdk, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       }
     cur = cur->next;
     }

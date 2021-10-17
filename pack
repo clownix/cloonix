@@ -28,9 +28,9 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
     rm -rf ${CLOONIX_COMMON}/xwy/${i}
   done
 #----------------------------------------------------------
-  for i in cloonix_agent cmd cmd_hwsim_i386 \
-           cmd_i386 hwsim allclean cloonix_dropbear \
-           cmd_alien cmd_hwsim_x86_64  cmd_x86_64; do
+  for i in cloonix_agent cmd \
+           allclean cloonix_dropbear \
+           cmd_alien cmd_local; do
     rm -rf ${CLOONIX_COMMON}/agent_dropbear/${i}
   done
 #----------------------------------------------------------
@@ -48,29 +48,17 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -rf ${CLOONIX_COMMON}/glob_include
 #----------------------------------------------------------
   for i in lib_io_clownix lib_rpc_doors lib_rpct \
-           lib_rpc_c2c lib_rpc_layout lib_utils \
-           lib_blkd lib_rpc_clownix lib_rpc_qmonitor \
-           lib_zor meson_ninja ; do
+           lib_rpc_layout lib_utils \
+           lib_rpc_clownix lib_rpc_qmonitor \
+           meson_ninja ; do
     rm -rf ${CLOONIX_COMMON}/${i}
   done
 #----------------------------------------------------------
-  for i in  muswitch/lib_ioc \
-            muswitch/lib_mulan \
-            muswitch/lib_muend \
-            muswitch/munat/clo_tcp \
-            spice ; do
-    rm -rf ${CLOONIX_SERVER}/${i}
-  done
+  rm -rf ${CLOONIX_SERVER}/spice
 #----------------------------------------------------------
   for i in  doorways \
             suid_power \
-            uml_cloonix_switch \
-            muswitch/mutap \
-            muswitch/musnf \
-            muswitch/munat \
-            muswitch/muc2c \
-            muswitch/muwlan \
-            muswitch/mulan ; do
+            uml_cloonix_switch ; do
     rm -f ${CLOONIX_SERVER}/${i}/cmd
     rm -f ${CLOONIX_SERVER}/${i}/Makefile
     rm -rf ${CLOONIX_SERVER}/${i}/obj
@@ -83,10 +71,9 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   for i in allclean cmd meson.build; do
     rm -f ${CLOONIX_SERVER}/ovs_drv/${i}
   done
-  rm -rf ${CLOONIX_SERVER}/snf_dpdk
-  rm -rf ${CLOONIX_SERVER}/nat_dpdk
-  rm -rf ${CLOONIX_SERVER}/d2d_dpdk
-  rm -rf ${CLOONIX_SERVER}/a2b_dpdk
+  for i in nat_dpdk d2d_dpdk a2b_dpdk xyx_dpdk; do
+    rm -rf ${CLOONIX_SERVER}/${i}
+  done
   for i in cmd allclean qemu_bin \
            cloonix_patch mkpatch patched_create ; do
     rm -f ${CLOONIX_SERVER}/qemu/${i}
@@ -116,7 +103,6 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -rf ${CLOONIX_SERVER}/ovs
 #----------------------------------------------------------
   rm -rf ${CLOONIX_CLIENT}/lib_client
-  rm -rf ${CLOONIX_CLIENT}/lib_zor
   rm -rf ${CLOONIX_CLIENT}/spice
 #----------------------------------------------------------
   for i in crcanvas_gtk Makefile obj src allclean cmd ; do 
@@ -125,8 +111,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
 #----------------------------------------------------------
   for i in  ctrl \
             xwycli \
-            qmonitor \
-            hyperzor ; do
+            qmonitor ; do
     rm -f ${CLOONIX_CLIENT}/${i}/Makefile
     rm -rf ${CLOONIX_CLIENT}/${i}/obj
     rm -rf ${CLOONIX_CLIENT}/${i}/include

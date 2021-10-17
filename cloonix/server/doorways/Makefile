@@ -5,7 +5,6 @@ GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 RPC_DOORS=${CLOONIX_COMMON}/lib_rpc_doors/
 UTILS=${CLOONIX_COMMON}/lib_utils/
-BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
 AGENT_INCLUDE=${CLOONIX_COMMON}/agent_dropbear/cloonix_agent/src
 
@@ -17,7 +16,7 @@ VPATH=./src:${PID_CLONE}
 
 SRC = doorways.c llid_backdoor.c llid_traffic.c sock.c \
       llid_x11.c stats.c dispach.c llid_xwy.c \
-      stub_doorways.c c2c.c pid_clone.c openssh_traf.c
+      stub_doorways.c pid_clone.c openssh_traf.c
 
 WARNINGS=-Wall -Wstrict-prototypes -Wdeclaration-after-statement
 
@@ -33,7 +32,6 @@ INCLUDES= -I./src \
 LIBS = -L${RPC_DOORS} -lrpc_doors \
        -L${UTILS} -lutils \
        -L${IO_CLOWNIX} -lio_clownix \
-       -L${BLKD} -lblkd \
        -L${RPCT} -lrpct \
        -lssl -lcrypto -lrt -lm
 

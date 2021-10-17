@@ -24,7 +24,7 @@ void d2d_dpdk_stop_vhost(char *name);
 int  d2d_dpdk_diag_llid(int llid);
 int  d2d_dpdk_get_all_pid(t_lst_pid **lst_pid);
 void d2d_dpdk_pid_resp(int llid, int tid, char *name, int pid);
-void d2d_dpdk_diag_resp(int llid, int tid, char *line);
+void d2d_dpdk_sigdiag_resp(int llid, int tid, char *line);
 void d2d_dpdk_start_stop_process(char *name, int on);
 void d2d_dpdk_llid_closed(int llid);
 void d2d_dpdk_init(void);

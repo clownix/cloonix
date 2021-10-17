@@ -25,13 +25,12 @@
 #include "layout_rpc.h"
 #include "cfg_store.h"
 #include "event_subscriber.h"
-#include "endp_mngt.h"
 #include "lan_to_name.h"
 #include "llid_trace.h"
-#include "dpdk_tap.h"
 #include "dpdk_d2d.h"
 #include "dpdk_a2b.h"
-#include "edp_mngt.h"
+#include "dpdk_xyx.h"
+#include "dpdk_nat.h"
 
 #define MAX_MS_OF_INSERT 3600000
 
@@ -161,36 +160,6 @@ void make_default_layout_lan(t_layout_lan *layout, char *name)
   strncpy(layout->name, name, MAX_NAME_LEN-1);
   layout->x = 20;
   layout->y = 20;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void make_default_layout_sat(t_layout_sat *layout, char *name, int type)
-{
-  int endp_type;
-  if ((!endp_mngt_exists(name, 0, &endp_type)) &&
-      (!edp_mngt_exists(name, &endp_type)))
-    KERR("%s", name);
-  else
-    {
-    if (endp_type != type)
-      KERR("%s %d %d", name, endp_type, type);
-    else
-      {
-      memset(layout, 0, sizeof(t_layout_sat));
-      strncpy(layout->name, name, MAX_NAME_LEN-1);
-      layout->mutype = type;
-      layout->x = 50;
-      layout->y = 50;
-      if (type == endp_type_a2b)
-        {
-        layout->xa = A2B_DIA * VAL_INTF_POS_A2B;
-        layout->ya = A2B_DIA * VAL_INTF_POS_A2B;
-        layout->xb = -A2B_DIA * VAL_INTF_POS_A2B;
-        layout->yb = A2B_DIA * VAL_INTF_POS_A2B;
-        }
-      }
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -370,7 +339,7 @@ static void update_layout_lan(char *name, double x, double y, int hidden)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void update_layout_sat(char *name, int mutype, 
+static void update_layout_sat(char *name,
                               double x, double y, 
                               double xa, double ya, 
                               double xb, double yb, 
@@ -379,8 +348,6 @@ static void update_layout_sat(char *name, int mutype,
   t_layout_sat_xml *cur = find_sat_xml(name);
   if (cur)
     {
-    if (mutype != cur->sat.mutype)
-      KERR("%s %d %d", name, mutype, cur->sat.mutype);
     cur->sat.x = x;
     cur->sat.y = y;
     cur->sat.xa = xa;
@@ -552,11 +519,10 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
 {
   t_layout_sub *cur = g_head_layout_sub;
   t_layout_sat_xml *xml;
-  int endp_type;
-  if ((!endp_mngt_exists(layout->name, 0, &endp_type)) &&
-      (!edp_mngt_exists(layout->name, &endp_type)) &&
-      (!dpdk_d2d_find(layout->name)) &&
-      (!dpdk_a2b_exists(layout->name)))
+  if ((!dpdk_d2d_find(layout->name)) &&
+      (!dpdk_a2b_exists(layout->name)) &&
+      (!dpdk_xyx_name_exists(layout->name)) &&
+      (!dpdk_nat_exists(layout->name)))
     KERR("%s", layout->name);
   else
     {
@@ -569,7 +535,6 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
         cur = cur->next;
         }
       update_layout_sat(layout->name,
-                        layout->mutype,
                         layout->x, layout->y,
                         layout->xa, layout->ya,
                         layout->xb, layout->yb,
@@ -805,49 +770,37 @@ static void layout_modif_sat(int llid, int tid, char *name, int kind,
   char info[MAX_PRINT_LEN];
   t_layout_sat layout;
   double real_val1, real_val2;
-  int endp_type;
   t_layout_sat_xml *cur;
   cur = find_sat_xml(name);
-  if ((!endp_mngt_exists(name, 0, &endp_type)) &&
-      (!edp_mngt_exists(name, &endp_type)))
-    {
-    sprintf(info, "KO %s not found", name);
-    send_status_ko(llid, tid, info);
-    }
+  if (!cur)
+    KERR("%s", name);
   else
     {
-    if (!cur)
-      KERR("%s", name);
-    else
+    memset(&layout, 0, sizeof(t_layout_sat));
+    memcpy(&layout, &(cur->sat), sizeof(t_layout_sat));
+    switch (kind)
       {
-      if (cur->sat.mutype != endp_type)
-        KERR("%s %d %d", name, cur->sat.mutype, endp_type);
-      memset(&layout, 0, sizeof(t_layout_sat));
-      memcpy(&layout, &(cur->sat), sizeof(t_layout_sat));
-      switch (kind)
-        {
-        case 0:
-          layout.hidden_on_graph = val1;
-          break;
-        case 1:
-          real_val1 = (double) val1;
-          real_val2 = (double) val2;
-          layout.x += real_val1;
-          layout.y += real_val2;
-          break;
-        case 2:
-          real_val1 = (double) val1;
-          real_val2 = (double) val2;
-          layout.x = real_val1;
-          layout.y = real_val2;
-          break;
-        default:
-          KOUT("%d", kind);
-        }
-      recv_layout_sat(0, 0, &layout);
-      sprintf(info, "OK %s %d", name, val1);
-      send_status_ok(llid, tid, info);
+      case 0:
+        layout.hidden_on_graph = val1;
+        break;
+      case 1:
+        real_val1 = (double) val1;
+        real_val2 = (double) val2;
+        layout.x += real_val1;
+        layout.y += real_val2;
+        break;
+      case 2:
+        real_val1 = (double) val1;
+        real_val2 = (double) val2;
+        layout.x = real_val1;
+        layout.y = real_val2;
+        break;
+      default:
+        KOUT("%d", kind);
       }
+    recv_layout_sat(0, 0, &layout);
+    sprintf(info, "OK %s %d", name, val1);
+    send_status_ok(llid, tid, info);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -1105,18 +1058,23 @@ void layout_del_vm(char *name)
 void layout_add_sat(char *name, int llid)
 {
   t_layout_sat layout;
-  int endp_type;
-  if ((!endp_mngt_exists(name, 0, &endp_type)) &&
-      (!edp_mngt_exists(name, &endp_type)))
-    KERR("%s", name);
-  else
-    {
-    make_default_layout_sat(&layout, name, endp_type);
-    add_layout_sat(&layout);
-    if (!(g_head_layout_sub) ||
-         ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))
-      recv_layout_sat(0, 0, &layout);
-    }
+
+     memset(&layout, 0, sizeof(t_layout_sat));
+      strncpy(layout.name, name, MAX_NAME_LEN-1);
+      layout.x = 50;
+      layout.y = 50;
+//      if (type == endp_type_a2b)
+        {
+        layout.xa = A2B_DIA * VAL_INTF_POS_A2B;
+        layout.ya = A2B_DIA * VAL_INTF_POS_A2B;
+        layout.xb = -A2B_DIA * VAL_INTF_POS_A2B;
+        layout.yb = A2B_DIA * VAL_INTF_POS_A2B;
+        }
+
+  add_layout_sat(&layout);
+  if (!(g_head_layout_sub) ||
+       ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))
+    recv_layout_sat(0, 0, &layout);
 }
 /*---------------------------------------------------------------------------*/
 

@@ -48,16 +48,11 @@
 #include "qmp.h"
 #include "qhvc0.h"
 #include "doorways_mngt.h"
-#include "c2c.h"
-#include "endp_mngt.h"
 #include "stats_counters.h"
 #include "stats_counters_sysinfo.h"
 #include "dpdk_ovs.h"
+#include "dpdk_kvm.h"
 #include "suid_power.h"
-#include "endp_evt.h"
-#include "edp_mngt.h"
-
-
 
 
 
@@ -89,8 +84,7 @@ typedef struct t_vm_building
 static void death_of_rmdir_clone(void *data, int status, char *name)
 {
   t_action_rm_dir *act = (t_action_rm_dir *) data;
-  int i, pid, result;
-  t_eth_table *eth_tab;
+  int pid, result;
   t_vm *vm = find_vm_with_id(act->vm_id);
   if (vm)
     {
@@ -98,12 +92,6 @@ static void death_of_rmdir_clone(void *data, int status, char *name)
     if (pid)
       {
       suid_power_kill_vm(vm->kvm.vm_id);
-      }
-    eth_tab = vm->kvm.eth_table;
-    for (i=0; i<vm->kvm.nb_tot_eth; i++)
-      {
-      if (eth_tab[i].eth_type == eth_type_sock)
-        endp_mngt_stop(vm->kvm.name, i);
       }
     if (cfg_unset_vm(vm) != act->vm_id)
       KOUT(" ");
@@ -321,7 +309,10 @@ static void death_of_mkdir_clone(void *data, int status, char *name)
 
     if (!run_linux_virtual_machine(vm_building->llid, vm_building->tid,
                                    vm_building->kvm.name, vm, err))
+      {
+      dpdk_kvm_add_whole_vm(vm->kvm.name, vm->kvm.nb_tot_eth, vm->kvm.eth_table);
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+      }
     else
       {
       send_status_ko(vm_building->llid, vm_building->tid, err);
@@ -371,6 +362,19 @@ void machine_death( char *name, int error_death)
     }
   else
     {
+
+    eth_tab = vm->kvm.eth_table;
+    for (i=0; i<vm->kvm.nb_tot_eth; i++)
+      {
+      if (eth_tab[i].eth_type == eth_type_dpdk)
+        {
+        KERR("DELETH FOR VM %s %d", name, i);
+        if (dpdk_kvm_del(0, 0, vm->kvm.name, i))
+          KERR("ERROR %s %d", vm->kvm.name, i);
+        }
+      }
+
+
     vm->vm_to_be_killed = 1;
     if ((error_death) && 
         (error_death != error_death_qmp) &&
@@ -387,27 +391,8 @@ void machine_death( char *name, int error_death)
       }
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
       {
-      edp_mngt_cisco_nat_destroy(name);
+//      edp_mngt_cisco_nat_destroy(name);
       }
-    eth_tab = vm->kvm.eth_table;
-    for (i=0; i<vm->kvm.nb_tot_eth; i++)
-      {
-      if (eth_tab[i].eth_type == eth_type_sock)
-        endp_mngt_stop(vm->kvm.name, i);
-      }
-    for (i=0; i<vm->kvm.nb_tot_eth; i++)
-      {
-      if (eth_tab[i].eth_type == eth_type_dpdk)
-        {
-        dpdk_ovs_del_vm(vm->kvm.name);
-        break;
-        }
-      else if (eth_tab[i].eth_type == eth_type_wlan)
-        {
-        endp_mngt_stop(vm->kvm.name, i);
-        }
-      }
-
     doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
     qhvc0_end_qemu_unix(vm->kvm.name);
     qmonitor_end_qemu_unix(vm->kvm.name);

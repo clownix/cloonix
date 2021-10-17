@@ -30,14 +30,6 @@
 enum 
   {
   bnd_min = 0,
-  bnd_c2c_clone_birth,
-  bnd_c2c_clone_birth_pid,
-  bnd_c2c_clone_death,
-  bnd_c2c_req_idx,
-  bnd_c2c_req_conx,
-  bnd_c2c_req_free,
-  bnd_c2c_resp_conx,
-  bnd_c2c_resp_idx,
   bnd_info,
   bnd_event,
   bnd_command,
@@ -82,115 +74,6 @@ static void extract_boundary(char *input, char *output)
     KOUT("%s\n", input);
   memcpy(output, input, bound_len);
   output[bound_len] = 0;
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
-void doors_send_c2c_clone_birth(int llid, int tid, char *net_name, char *name,
-                                int fd, int endp_type,
-                                char *bin_path, char *sock)
-{
-  int len;
-  if (!net_name||(strlen(net_name)==0)||(strlen(net_name)>=MAX_NAME_LEN))
-    KOUT(" ");
-  if (!name||(strlen(name)==0)||(strlen(name)>=MAX_NAME_LEN))
-    KOUT(" ");
-  len = sprintf(sndbuf, C2C_CLONE_BIRTH, tid, net_name, name, fd, endp_type, 
-                                         bin_path, sock);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_send_c2c_clone_birth_pid(int llid, int tid, char *name, int pid)
-{
-  int len;
-  if (!name||(strlen(name)==0)||(strlen(name)>=MAX_NAME_LEN))
-    KOUT(" ");
-  len = sprintf(sndbuf, C2C_CLONE_BIRTH_PID, tid, name, pid);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_send_c2c_clone_death(int llid, int tid, char *name)
-{
-  int len;
-  if (!name||(strlen(name)==0)||(strlen(name)>=MAX_NAME_LEN))
-    KOUT(" ");
-  len = sprintf(sndbuf, C2C_CLONE_DEATH, tid, name);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_send_c2c_req_idx(int llid, int tid, char *name)
-{
-  int len;
-  if (!name||(strlen(name)==0)||(strlen(name)>=MAX_NAME_LEN))
-    KOUT(" ");
-  len = sprintf(sndbuf, C2C_REQ_IDX, tid, name);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_send_c2c_resp_idx(int llid, int tid, char *name, int local_idx)
-{
-  int len;
-  if (!name||(strlen(name)==0)||(strlen(name)>=MAX_NAME_LEN))
-    KOUT(" ");
-  len = sprintf(sndbuf, C2C_RESP_IDX, tid, name, local_idx);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_send_c2c_req_conx(int llid, int tid, char *name, int peer_idx,
-                             uint32_t peer_ip, int peer_port, char *passwd)
-{
-  int len;
-  char replace_passwd[MSG_DIGEST_LEN];
-  if (!name||(strlen(name)==0)||(strlen(name)>=MAX_NAME_LEN))
-    KOUT(" ");
-  memset(replace_passwd, 0, MSG_DIGEST_LEN);
-  if (passwd)
-    {
-    if (strlen(passwd) >= MSG_DIGEST_LEN)
-      KOUT("%s", passwd);
-    strncpy(replace_passwd, passwd, MSG_DIGEST_LEN-1);
-    }
-  else
-    {
-    strncpy(replace_passwd, "UNSPECIFIED_PASS_NULL", MSG_DIGEST_LEN-1);
-    }
-  len = sprintf(sndbuf, C2C_REQ_CONX, tid, name, peer_idx, 
-                                      peer_ip, peer_port, replace_passwd);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_send_c2c_resp_conx(int llid, int tid, char *name, 
-                              int fd, int status)
-{
-  int len;
-  if (!name||(strlen(name)==0)||(strlen(name)>=MAX_NAME_LEN))
-    KOUT(" ");
-  len = sprintf(sndbuf, C2C_RESP_CONX, tid, name, fd, status);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_send_c2c_req_free(int llid, int tid, char *name)
-{
-  int len;
-  if (!name||(strlen(name)==0)||(strlen(name)>=MAX_NAME_LEN))
-    KOUT(" ");
-  len = sprintf(sndbuf, C2C_REQ_FREE, tid, name);
-  my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -291,63 +174,6 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
   char sock[MAX_PATH_LEN];
   switch(bnd_evt)
     {
-
-    case bnd_c2c_clone_birth:
-      if (sscanf(msg, C2C_CLONE_BIRTH, &tid, net_name, name, &fd, &endp_type, 
-                                       bin_path, sock) != 7)
-        KOUT("%s", msg);
-      doors_recv_c2c_clone_birth(llid, tid, net_name, name,
-                                 fd, endp_type, bin_path,sock);
-      break;
-
-    case bnd_c2c_clone_birth_pid:
-      if (sscanf(msg, C2C_CLONE_BIRTH_PID, &tid, name, &pid) != 3)
-        KOUT("%s", msg);
-      doors_recv_c2c_clone_birth_pid(llid, tid, name, pid);
-      break;
-
-
-    case bnd_c2c_clone_death:
-      if (sscanf(msg, C2C_CLONE_DEATH, &tid, name) != 2)
-        KOUT("%s", msg);
-      doors_recv_c2c_clone_death(llid, tid, name);
-      break;
-
-    case bnd_c2c_req_idx: 
-      if (sscanf(msg, C2C_REQ_IDX, &tid, name) != 2)
-        KOUT("%s", msg);
-      doors_recv_c2c_req_idx(llid, tid, name);
-      break;
-
-    case bnd_c2c_req_conx: 
-      if (sscanf(msg, C2C_REQ_CONX, &tid, name, 
-                 &peer_idx, &peer_ip, &peer_port, passwd) != 6)
-        KOUT("%s", msg);
-      if (!strcmp(passwd, "UNSPECIFIED_PASS_NULL"))
-        doors_recv_c2c_req_conx(llid, tid, name, peer_idx, 
-                                peer_ip, peer_port, NULL);
-      else
-        doors_recv_c2c_req_conx(llid, tid, name, peer_idx, 
-                                peer_ip, peer_port, passwd);
-      break;
-
-    case bnd_c2c_req_free: 
-      if (sscanf(msg, C2C_REQ_FREE, &tid, name) != 2)
-        KOUT("%s", msg);
-      doors_recv_c2c_req_free(llid, tid, name);
-      break;
-
-    case bnd_c2c_resp_conx: 
-      if (sscanf(msg, C2C_RESP_CONX, &tid, name, &fd, &status) != 4)
-        KOUT("%s", msg);
-      doors_recv_c2c_resp_conx(llid, tid, name, fd, status);
-      break;
-
-    case bnd_c2c_resp_idx: 
-      if (sscanf(msg, C2C_RESP_IDX, &tid, name, &local_idx) != 3)
-        KOUT("%s", msg);
-      doors_recv_c2c_resp_idx(llid, tid, name, local_idx);
-      break;
 
     case bnd_info:
       if (sscanf(msg, INFO_O, &tid, name) != 2)
@@ -452,14 +278,6 @@ void doors_xml_init(void)
 {
   sndbuf = get_bigbuf();
   memset (bound_list, 0, bnd_max * MAX_CLOWNIX_BOUND_LEN);
-  extract_boundary (C2C_CLONE_BIRTH, bound_list[bnd_c2c_clone_birth]);
-  extract_boundary (C2C_CLONE_BIRTH_PID, bound_list[bnd_c2c_clone_birth_pid]);
-  extract_boundary (C2C_CLONE_DEATH, bound_list[bnd_c2c_clone_death]);
-  extract_boundary (C2C_REQ_IDX,   bound_list[bnd_c2c_req_idx]);
-  extract_boundary (C2C_REQ_CONX,  bound_list[bnd_c2c_req_conx]);
-  extract_boundary (C2C_REQ_FREE,  bound_list[bnd_c2c_req_free]);
-  extract_boundary (C2C_RESP_CONX, bound_list[bnd_c2c_resp_conx]);
-  extract_boundary (C2C_RESP_IDX,  bound_list[bnd_c2c_resp_idx]);
   extract_boundary (INFO_O,    bound_list[bnd_info]);
   extract_boundary (EVENT_O,    bound_list[bnd_event]);
   extract_boundary (COMMAND_O,  bound_list[bnd_command]);

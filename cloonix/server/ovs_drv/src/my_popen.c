@@ -145,7 +145,7 @@ int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
     argv[i] = arg[i];
   while(protect_reentry)
     {
-    KERR("REENTRY my_popen");
+    KERR("ERROR REENTRY my_popen");
     usleep(10000);
     }
   protect_reentry = 1;

@@ -27,13 +27,11 @@
 #include "llid_trace.h"
 #include "hop_event.h"
 #include "doorways_mngt.h"
-#include "mulan_mngt.h"
-#include "endp_mngt.h"
 #include "dpdk_ovs.h"
 #include "suid_power.h"
-#include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
 #include "d2d_dpdk_process.h"
+#include "xyx_dpdk_process.h"
 #include "a2b_dpdk_process.h"
 
 
@@ -206,8 +204,8 @@ static void free_client(t_clients *cli)
     {
     memset(debug_line, 0, MAX_PATH_LEN);
     snprintf(debug_line, MAX_PATH_LEN-1, "rpct_send_hop_unsub %s", hop->name);
-    hop_event_hook(hop->llid, FLAG_HOP_DIAG, debug_line);
-    rpct_send_hop_unsub(NULL, hop->llid, 0);
+    hop_event_hook(hop->llid, FLAG_HOP_SIGDIAG, debug_line);
+    rpct_send_hop_unsub(hop->llid, 0);
     event_print("HOPS unsubscribe from hop %s", hop->name);
     }
   hop->nb_client_allocated -= 1;
@@ -247,8 +245,8 @@ static void alloc_client(t_hop_record *hop, int llid, int tid, int flags_hop)
   char debug_line[MAX_PATH_LEN];
   memset(debug_line, 0, MAX_PATH_LEN);
   snprintf(debug_line, MAX_PATH_LEN-1, "rpct_send_hop_sub %s", hop->name);
-  hop_event_hook(hop->llid, FLAG_HOP_DIAG, debug_line);
-  rpct_send_hop_sub(NULL, hop->llid, 0, flags_hop);
+  hop_event_hook(hop->llid, FLAG_HOP_SIGDIAG, debug_line);
+  rpct_send_hop_sub(hop->llid, 0, flags_hop);
   event_print("HOPS %s subscribing to hop %s %04X", 
               __FUNCTION__, hop->name, flags_hop);
   cli = (t_clients *)clownix_malloc(sizeof(t_clients), 7);
@@ -436,7 +434,7 @@ void hop_free_name_list(t_hop_list *list)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_hop_msg(void *ptr, int llid, int tid, int flags_hop, char *txt)
+void rpct_recv_hop_msg(int llid, int tid, int flags_hop, char *txt)
 {
   t_hop_record *hop = get_hop_with_llid(llid);
   t_clients *cur_client;
@@ -461,25 +459,21 @@ void rpct_recv_hop_msg(void *ptr, int llid, int tid, int flags_hop, char *txt)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
+void rpct_recv_pid_resp(int llid, int tid, char *name, int num,
                         int toppid, int pid)
 {
   if (tid == type_hop_suid_power)
     suid_power_pid_resp(llid, tid, name, pid);
-  else if (tid == type_hop_snf_dpdk)
-    snf_dpdk_pid_resp(llid, tid, name, pid);
   else if (tid == type_hop_nat_dpdk)
     nat_dpdk_pid_resp(llid, tid, name, pid);
+  else if (tid == type_hop_xyx_dpdk)
+    xyx_dpdk_pid_resp(llid, tid, name, pid);
   else if (tid == type_hop_a2b_dpdk)
     a2b_dpdk_pid_resp(llid, tid, name, pid);
   else if (tid == type_hop_d2d_dpdk)
     d2d_dpdk_pid_resp(llid, tid, name, pid);
   else if (tid == type_hop_doors)
     doors_pid_resp(llid, name, pid);
-  else if (tid == type_hop_mulan)
-    mulan_pid_resp(llid, name, pid);
-  else if (tid == type_hop_endp)
-    endp_mngt_pid_resp(llid, name, toppid, pid);
   else if ((tid == type_hop_ovs) || (tid == type_hop_ovsdb)) 
     dpdk_ovs_pid_resp(llid, name, toppid, pid);
   else

@@ -1,19 +1,7 @@
 #!/bin/bash
-TYPE=$1
-case "${TYPE}" in
-  "dpdk")
-    PARAMS="ram=2000 cpu=2 eth=d"
-    ;;
-  "sock")
-    PARAMS="ram=2000 cpu=2 eth=s"
-    ;;
-  *)
-    echo ERROR FIRST PARAM: ${TYPE} must be dpdk or sock
-    exit 1
-esac
-
+PARAMS="ram=2000 cpu=2 eth=d"
 NET=nemo
-DIST=buster
+DIST=bullseye
 
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)

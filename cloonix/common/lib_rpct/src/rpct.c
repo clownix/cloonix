@@ -21,54 +21,30 @@
 #include <stdint.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <stdarg.h>
+
 
 #include "ioc_top.h"
-#include "rpct_ctx.h"
 /*---------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static t_rpct_ctx *g_rpct_ctx;
-/*--------------------------------------------------------------------------*/
 
 
-/****************************************************************************/
-t_rpct_ctx *get_rpct_ctx(void *ptr)
+
+
+typedef struct t_sub_llid
 {
-  t_all_ctx_head *ctx_head;
-  t_rpct_ctx *ctx;
-  if (!ptr)
-    {
-    ctx = g_rpct_ctx;
-    }
-  else
-    {
-    ctx_head = (t_all_ctx_head *) ptr;
-    ctx = (t_rpct_ctx *) ctx_head->rpct_ctx;
-    }
-  return ctx;
-}
-/*--------------------------------------------------------------------------*/
+  int llid;
+  int tid;
+  int flags_hop;
+  struct t_sub_llid *prev;
+  struct t_sub_llid *next;
+} t_sub_llid;
 
+static char g_bound_list[bnd_rpct_max][MAX_CLOWNIX_BOUND_LEN];
+static t_rpct_tx g_string_tx;
+static char *g_buf_tx;
+static t_sub_llid *g_head_sub_llid;
 
-/*****************************************************************************/
-static void msg_tx(void *ptr, int llid, int len, char *buf)
-{
-  t_rpct_ctx *ctx = get_rpct_ctx(ptr);
-  if (ctx->g_string_tx)
-    {
-    buf[len] = 0;
-    ctx->g_string_tx(ptr, llid, len+1, buf);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *get_buf_tx(void *ptr)
-{
-  t_rpct_ctx *ctx = get_rpct_ctx(ptr);
-  return ctx->g_buf_tx;
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static char *get_hop_free_txt(char *msg)
@@ -91,388 +67,310 @@ static char *get_hop_free_txt(char *msg)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_report_sub(void *ptr, int llid, int sub)
+static void insert_in_sub(t_sub_llid **head, int llid,
+                          int tid, int flags_hop)
 {
-  int len;
-  char *buf = get_buf_tx(ptr);
-  if (llid)
+  t_sub_llid *elem = *head;
+  while(elem)
     {
-    len = sprintf(buf, BLKD_ITEM_SUB, sub);
-    msg_tx(ptr, llid, len, buf);
+    if (elem->llid == llid)
+      break;
+    elem = elem->next;
+    }
+  if (elem)
+    {
+    elem->tid = tid;
+    elem->flags_hop |= flags_hop;
     }
   else
-    rpct_recv_report_sub(ptr, 0, sub);
+    {
+    elem = (t_sub_llid *) malloc(sizeof(t_sub_llid));
+    memset(elem, 0, sizeof(t_sub_llid));
+    elem->llid = llid;
+    elem->tid = tid;
+    elem->flags_hop = flags_hop;
+    elem->next = *head;
+    if (*head)
+      (*head)->prev = elem;
+    *head = elem;
+    }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_report(void *ptr, int llid, t_blkd_item *item)
+static void extract_from_sub(t_sub_llid **head, int llid)
 {
-  int len;
-  char *buf = get_buf_tx(ptr);
-  if (!item)
-    KOUT(" ");
-  if (strlen(item->sock) == 0)
-    KOUT(" ");
-  if (strlen(item->sock) >= MAX_PATH_LEN)
-    KOUT("%s", item->sock);
-  if (strlen(item->rank_name) == 0)
-    KOUT(" ");
-  if (strlen(item->rank_name) >= MAX_NAME_LEN)
-    KOUT("%s", item->rank_name);
-  len = sprintf(buf, BLKD_ITEM, item->sock, item->rank_name,
-                                item->rank_num, item->rank_tidx, 
-                                item->rank, item->pid, item->llid, 
-                                item->fd, item->sel_tx,
-                                item->sel_rx, item->fifo_tx,
-                                item->fifo_rx, item->queue_tx,
-                                item->queue_rx, item->bandwidth_tx,
-                                item->bandwidth_rx, 
-                                item->stop_tx, item->stop_rx,
-                                item->dist_flow_ctrl_tx, 
-                                item->dist_flow_ctrl_rx,
-                                item->drop_tx, item->drop_rx);
-  msg_tx(ptr, llid, len, buf);
+  t_sub_llid *elem = *head;
+  while(elem)
+    {
+    if (elem->llid == llid)
+      break;
+    elem = elem->next;
+    }
+  if (elem)
+    {
+    if (elem->prev)
+      elem->prev->next = elem->next;
+    if (elem->next)
+      elem->next->prev = elem->prev;
+    if (*head == elem)
+      *head = elem->next;
+    free(elem);
+    }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_pid_req(void *ptr, int llid, int tid, char *name, int num)
+static void interface_send_evt_txt (int flags_hop, char *line)
+{
+  t_sub_llid *elem = g_head_sub_llid;
+  t_sub_llid *next;
+  while(elem)
+    {
+    next = elem->next;
+    if (elem->flags_hop & flags_hop)
+      {
+      rpct_send_hop_msg(elem->llid, elem->tid, flags_hop, line);
+      }
+    elem = next;
+    }
+}
+/*-----------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_hop_print_add_sub(int llid, int tid, int flags)
+{
+  insert_in_sub(&(g_head_sub_llid), llid, tid, flags);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_hop_print_del_sub(int llid)
+{
+  extract_from_sub(&(g_head_sub_llid), llid);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_hop_print(int flags_hop, const char * format, ...)
+{
+  va_list arguments;
+  char line[MAX_HOP_PRINT_LEN];
+  int len;
+
+  va_start (arguments, format);
+  memset(line, 0, MAX_HOP_PRINT_LEN);
+  len = snprintf(line, MAX_HOP_PRINT_LEN-1, "%07u: ",
+                 (unsigned int) cloonix_get_msec());
+  vsnprintf (line+len, MAX_HOP_PRINT_LEN-1, format, arguments);
+  interface_send_evt_txt (flags_hop, line);
+  va_end (arguments);
+}
+/*-----------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+static void msg_tx(int llid, int len, char *buf)
+{
+  buf[len] = 0;
+  g_string_tx(llid, len+1, buf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *get_buf_tx(void)
+{
+  return(g_buf_tx);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void rpct_send_pid_req(int llid, int tid, char *name, int num)
 {
   int len;
-  char *buf = get_buf_tx(ptr);
+  char *buf = get_buf_tx();
   if (!name || !strlen(name))
     KOUT(" ");
   len = sprintf(buf, HOP_PID_REQ, tid, name, num);
-  msg_tx(ptr, llid, len, buf);
+  msg_tx(llid, len, buf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_kil_req(void *ptr, int llid, int tid)
+void rpct_send_kil_req(int llid, int tid)
 {
   int len;
-  char *buf = get_buf_tx(ptr);
+  char *buf = get_buf_tx();
   len = sprintf(buf, HOP_KIL_REQ, tid);
-  msg_tx(ptr, llid, len, buf);
+  msg_tx(llid, len, buf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_pid_resp(void *ptr, int llid, int tid,
-                        char *name, int num, int toppid, int pid)
+void rpct_send_pid_resp(int llid, int tid, char *name, int num,
+                        int toppid, int pid)
 {
   int len;
-  char *buf = get_buf_tx(ptr);
+  char *buf = get_buf_tx();
   if (!name || !strlen(name))
     KOUT(" ");
   len = sprintf(buf, HOP_PID_RESP, tid, name, num, toppid, pid);
-  msg_tx(ptr, llid, len, buf);
+  msg_tx(llid, len, buf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_hop_sub(void *ptr, int llid, int tid, int flags_hop)
+void rpct_send_hop_sub(int llid, int tid, int flags_hop)
 {
   int len;
-  char *buf = get_buf_tx(ptr);
+  char *buf = get_buf_tx();
   len = sprintf(buf, HOP_EVT_SUB, tid, flags_hop);
-  msg_tx(ptr, llid, len, buf);
+  msg_tx(llid, len, buf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_hop_unsub(void *ptr, int llid, int tid)
+void rpct_send_hop_unsub(int llid, int tid)
 {
   int len;
-  char *buf = get_buf_tx(ptr);
+  char *buf = get_buf_tx();
   len = sprintf(buf, HOP_EVT_UNSUB, tid);
-  msg_tx(ptr, llid, len, buf);
+  msg_tx(llid, len, buf);
 }
 /*---------------------------------------------------------------------------*/
 
 
 /*****************************************************************************/
-void rpct_send_hop_msg(void *ptr, int llid, int tid,
+void rpct_send_hop_msg(int llid, int tid,
                       int flags_hop, char *txt)
 {
   int len;
-  char *buf = get_buf_tx(ptr);
+  char *buf = get_buf_tx();
   len = sprintf(buf, HOP_EVT_O, tid, flags_hop);
   len += sprintf(buf+len, HOP_FREE_TXT, txt);
   len += sprintf(buf+len, HOP_EVT_C);
-  msg_tx(ptr, llid, len, buf);
+  msg_tx(llid, len, buf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_evt_msg(void *ptr, int llid, int tid, char *line)
+void rpct_send_sigdiag_msg(int llid, int tid, char *line)
 {
   int len;
-  char *buf = get_buf_tx(ptr);
+  char *buf = get_buf_tx();
   if (!line)
     KOUT(" ");
   if (strlen(line) < 1)
     KOUT(" ");
   if (strlen(line) >= MAX_RPC_MSG_LEN)
     line[MAX_RPC_MSG_LEN-1] = 0;
-  len = sprintf(buf, MUEVT_MSG_O, tid);
-  len += sprintf(buf+len, MUEVT_MSG_I, line);
-  len += sprintf(buf+len, MUEVT_MSG_C);
-  msg_tx(ptr, llid, len, buf);
+  len = sprintf(buf, MUSIGDIAG_MSG_O, tid);
+  len += sprintf(buf+len, MUSIGDIAG_MSG_I, line);
+  len += sprintf(buf+len, MUSIGDIAG_MSG_C);
+  msg_tx(llid, len, buf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_diag_msg(void *ptr, int llid, int tid, char *line)
+void rpct_send_poldiag_msg(int llid, int tid, char *line)
 {
   int len;
-  char *buf = get_buf_tx(ptr);
+  char *buf = get_buf_tx();
   if (!line)
     KOUT(" ");
   if (strlen(line) < 1)
     KOUT(" ");
   if (strlen(line) >= MAX_RPC_MSG_LEN)
     line[MAX_RPC_MSG_LEN-1] = 0;
-  len = sprintf(buf, MUDIAG_MSG_O, tid);
-  len += sprintf(buf+len, MUDIAG_MSG_I, line);
-  len += sprintf(buf+len, MUDIAG_MSG_C);
-  msg_tx(ptr, llid, len, buf);
+  len = sprintf(buf, MUPOLDIAG_MSG_O, tid);
+  len += sprintf(buf+len, MUPOLDIAG_MSG_I, line);
+  len += sprintf(buf+len, MUPOLDIAG_MSG_C);
+  msg_tx(llid, len, buf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_send_app_msg(void *ptr, int llid, int tid, char *line)
+static void dispatcher(int llid, int bnd_evt, char *msg)
 {
-  int len;
-  char *buf = get_buf_tx(ptr);
-  if (!line)
-    KOUT(" ");
-  if (strlen(line) < 1)
-    KOUT(" ");
-  if (strlen(line) >= MAX_RPC_MSG_LEN)
-    line[MAX_RPC_MSG_LEN-1] = 0;
-  len = sprintf(buf, MUAPP_MSG_O, tid);
-  len += sprintf(buf+len, MUAPP_MSG_I, line);
-  len += sprintf(buf+len, MUAPP_MSG_C);
-  msg_tx(ptr, llid, len, buf);
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
-void rpct_send_cli_req(void *ptr, int llid, int tid,
-                        int cli_llid, int cli_tid, char *line)
-{
-  int len;
-  char *buf = get_buf_tx(ptr);
-  if (!line)
-    KOUT(" ");
-  if (strlen(line) < 1)
-    KOUT(" ");
-  if (strlen(line) >= MAX_RPC_MSG_LEN)
-    line[MAX_RPC_MSG_LEN-1] = 0;
-  len = sprintf(buf, MUCLI_REQ_O, tid, cli_llid, cli_tid);
-  len += sprintf(buf+len, MUCLI_REQ_I, line);
-  len += sprintf(buf+len, MUCLI_REQ_C);
-  msg_tx(ptr, llid, len, buf);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void rpct_send_cli_resp(void *ptr, int llid, int tid,
-                         int cli_llid, int cli_tid, char *line)
-{
-  int len;
-  char *buf = get_buf_tx(ptr);
-  if (!line)
-    KOUT(" ");
-  if (strlen(line) < 1)
-    KOUT(" ");
-  if (strlen(line) >= MAX_RPC_MSG_LEN)
-    line[MAX_RPC_MSG_LEN-1] = 0;
-  len = sprintf(buf, MUCLI_RESP_O, tid, cli_llid, cli_tid);
-  len += sprintf(buf+len, MUCLI_RESP_I, line);
-  len += sprintf(buf+len, MUCLI_RESP_C);
-  msg_tx(ptr, llid, len, buf);
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
-static void dispatcher(void *ptr, int llid, int bnd_evt, char *msg)
-{
-  int sub;
-  t_blkd_item item;
-  int flags_hop, toppid, pid, tid, len, cli_llid, cli_tid, num;
-  char *ptrs, *ptre, *line, *txt;
+  int flags_hop, toppid, pid, tid, len, num;
+  char *ptrs, *ptre, *line;
   char name[MAX_NAME_LEN];
 
 
   switch(bnd_evt)
     {
 
-    case bnd_rpct_blkd_item_sub:
-      if (sscanf(msg, BLKD_ITEM_SUB, &sub) != 1)
-        KOUT("%s", msg);
-      rpct_recv_report_sub(ptr, llid, sub);
-      break;
-
-    case bnd_rpct_blkd_item:
-    memset(&item, 0, sizeof(t_blkd_item));
-    if (sscanf(msg, BLKD_ITEM, item.sock, 
-                               item.rank_name,
-                               &(item.rank_num),
-                               &(item.rank_tidx),
-                               &(item.rank),
-                               &(item.pid),
-                               &(item.llid),
-                               &(item.fd),
-                               &(item.sel_tx),
-                               &(item.sel_rx),
-                               &(item.fifo_tx),
-                               &(item.fifo_rx),
-                               &(item.queue_tx),
-                               &(item.queue_rx),
-                               &(item.bandwidth_tx),
-                               &(item.bandwidth_rx),
-                               &(item.stop_tx),
-                               &(item.stop_rx),
-                               &(item.dist_flow_ctrl_tx),
-                               &(item.dist_flow_ctrl_rx),
-                               &(item.drop_tx),
-                               &(item.drop_rx))
-                               != 22)
-      KOUT("%s", msg);
-      rpct_recv_report(ptr, llid, &item);
-      break;
-
     case bnd_rpct_pid_req:
       if (sscanf(msg, HOP_PID_REQ, &tid, name, &num) != 3)
         KOUT("%s", msg);
-      rpct_recv_pid_req(ptr, llid, tid, name, num);
+      rpct_recv_pid_req(llid, tid, name, num);
       break;
 
     case bnd_rpct_kil_req:
       if (sscanf(msg, HOP_KIL_REQ, &tid) != 1)
         KOUT("%s", msg);
-      rpct_recv_kil_req(ptr, llid, tid);
+      rpct_recv_kil_req(llid, tid);
       break;
 
     case bnd_rpct_pid_resp:
       if (sscanf(msg, HOP_PID_RESP, &tid, name, &num, &toppid, &pid) != 5)
         KOUT("%s", msg);
-      rpct_recv_pid_resp(ptr, llid, tid, name, num, toppid, pid);
+      rpct_recv_pid_resp(llid, tid, name, num, toppid, pid);
       break;
 
     case bnd_rpct_hop_evt_sub:
       if (sscanf(msg, HOP_EVT_SUB, &tid, &flags_hop) != 2)
         KOUT("%s", msg);
-      rpct_recv_hop_sub(ptr, llid, tid, flags_hop);
+      rpct_recv_hop_sub(llid, tid, flags_hop);
       break;
 
     case bnd_rpct_hop_evt_unsub:
       if (sscanf(msg, HOP_EVT_UNSUB, &tid) != 1)
         KOUT("%s", msg);
-      rpct_recv_hop_unsub(ptr, llid, tid);
+      rpct_recv_hop_unsub(llid, tid);
+      break;
+
+    case bnd_rpct_sigdiag_msg:
+      if (sscanf(msg, MUSIGDIAG_MSG_O, &tid) != 1)
+        KOUT("%s", msg);
+      ptrs = strstr(msg, "<sigdiag_msg_delimiter>");
+      if (!ptrs)
+        KOUT("%s", msg);
+      ptrs += strlen("<sigdiag_msg_delimiter>");
+      ptre = strstr(ptrs, "</sigdiag_msg_delimiter>");
+      if (!ptre)
+        KOUT("%s", msg);
+      len = ptre - ptrs;
+      line = (char *) malloc(len+1);
+      memset(line, 0, len+1);
+      memcpy(line, ptrs, len);
+      rpct_recv_sigdiag_msg(llid, tid, line);
+      free(line);
+      break;
+
+    case bnd_rpct_poldiag_msg:
+      if (sscanf(msg, MUPOLDIAG_MSG_O, &tid) != 1)
+        KOUT("%s", msg);
+      ptrs = strstr(msg, "<poldiag_msg_delimiter>");
+      if (!ptrs)
+        KOUT("%s", msg);
+      ptrs += strlen("<poldiag_msg_delimiter>");
+      ptre = strstr(ptrs, "</poldiag_msg_delimiter>");
+      if (!ptre)
+        KOUT("%s", msg);
+      len = ptre - ptrs;
+      line = (char *) malloc(len+1);
+      memset(line, 0, len+1);
+      memcpy(line, ptrs, len);
+      rpct_recv_poldiag_msg(llid, tid, line);
+      free(line);
       break;
 
     case bnd_rpct_hop_evt_msg:
       if (sscanf(msg, HOP_EVT_O, &tid, &flags_hop) != 2)
         KOUT("%s", msg);
-      txt = get_hop_free_txt(msg);
-      rpct_recv_hop_msg(ptr, llid, tid, flags_hop, txt);
-      free(txt);
-      break;
-
-    case bnd_rpct_evt_msg:
-      if (sscanf(msg, MUEVT_MSG_O, &tid) != 1)
-        KOUT("%s", msg);
-      ptrs = strstr(msg, "<evt_msg_delimiter>");
-      if (!ptrs)
-        KOUT("%s", msg);
-      ptrs += strlen("<evt_msg_delimiter>");
-      ptre = strstr(ptrs, "</evt_msg_delimiter>");
-      if (!ptre)
-        KOUT("%s", msg);
-      len = ptre - ptrs;
-      line = (char *) malloc(len+1);
-      memset(line, 0, len+1);
-      memcpy(line, ptrs, len);
-      rpct_recv_evt_msg(ptr, llid, tid, line);
-      free(line);
-      break;
-
-    case bnd_rpct_app_msg:
-      if (sscanf(msg, MUAPP_MSG_O, &tid) != 1)
-        KOUT("%s", msg);
-      ptrs = strstr(msg, "<app_msg_delimiter>");
-      if (!ptrs)
-        KOUT("%s", msg);
-      ptrs += strlen("<app_msg_delimiter>");
-      ptre = strstr(ptrs, "</app_msg_delimiter>");
-      if (!ptre)
-        KOUT("%s", msg);
-      len = ptre - ptrs;
-      line = (char *) malloc(len+1);
-      memset(line, 0, len+1);
-      memcpy(line, ptrs, len);
-      rpct_recv_app_msg(ptr, llid, tid, line);
-      free(line);
-      break;
-
-    case bnd_rpct_diag_msg:
-      if (sscanf(msg, MUDIAG_MSG_O, &tid) != 1)
-        KOUT("%s", msg);
-      ptrs = strstr(msg, "<diag_msg_delimiter>");
-      if (!ptrs)
-        KOUT("%s", msg);
-      ptrs += strlen("<diag_msg_delimiter>");
-      ptre = strstr(ptrs, "</diag_msg_delimiter>");
-      if (!ptre)
-        KOUT("%s", msg);
-      len = ptre - ptrs;
-      line = (char *) malloc(len+1);
-      memset(line, 0, len+1);
-      memcpy(line, ptrs, len);
-      rpct_recv_diag_msg(ptr, llid, tid, line);
-      free(line);
-      break;
-
-
-    case bnd_rpct_cli_req:
-      if (sscanf(msg, MUCLI_REQ_O, &tid, &cli_llid, &cli_tid) != 3)
-        KOUT("%s", msg);
-      ptrs = strstr(msg, "<mucli_req_bound>");
-      if (!ptrs)
-        KOUT("%s", msg);
-      ptrs += strlen("<mucli_req_bound>");
-      ptre = strstr(ptrs, "</mucli_req_bound>");
-      if (!ptre)
-        KOUT("%s", msg);
-      len = ptre - ptrs;
-      line = (char *) malloc(len+1);
-      memset(line, 0, len+1);
-      memcpy(line, ptrs, len);
-      rpct_recv_cli_req(ptr, llid, tid, cli_llid, cli_tid, line);
-      free(line);
-      break;
-
-    case bnd_rpct_cli_resp:
-      if (sscanf(msg, MUCLI_RESP_O, &tid, &cli_llid, &cli_tid) != 3)
-        KOUT("%s", msg);
-      ptrs = strstr(msg, "<mucli_resp_bound>");
-      if (!ptrs)
-        KOUT("%s", msg);
-      ptrs += strlen("<mucli_resp_bound>");
-      ptre = strstr(ptrs, "</mucli_resp_bound>");
-      if (!ptre)
-        KOUT("%s", msg);
-      len = ptre - ptrs;
-      line = (char *) malloc(len+1);
-      memset(line, 0, len+1);
-      memcpy(line, ptrs, len);
-      rpct_recv_cli_resp(ptr, llid, tid, cli_llid, cli_tid, line);
+      line = get_hop_free_txt(msg);
+      rpct_recv_hop_msg(llid, tid, flags_hop, line);
       free(line);
       break;
 
@@ -500,13 +398,12 @@ static void extract_boundary(char *input, char *output)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int get_bnd_evt(void *ptr, char *bound)
+static int get_bnd_evt(char *bound)
 {
   int i, result = 0;
-  t_rpct_ctx *ctx = get_rpct_ctx(ptr);
   for (i=bnd_rpct_min; i<bnd_rpct_max; i++)
     {
-    if (!strcmp(bound, ctx->g_bound_list[i]))
+    if (!strcmp(bound, g_bound_list[i]))
       {
       result = i;
       break;
@@ -517,7 +414,7 @@ static int get_bnd_evt(void *ptr, char *bound)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int rpct_decoder(void *ptr, int llid, int len, char *str_rx)
+int rpct_decoder(int llid, int len, char *str_rx)
 {
   int  result = -1;
   int  bnd_evt;
@@ -525,76 +422,36 @@ int rpct_decoder(void *ptr, int llid, int len, char *str_rx)
   if (len != ((int) strlen(str_rx) + 1))
     KOUT("%d %d %s", len, ((int) strlen(str_rx) + 1), str_rx);
   extract_boundary(str_rx, bound);
-  bnd_evt = get_bnd_evt(ptr, bound);
+  bnd_evt = get_bnd_evt(bound);
   if (bnd_evt)
     {
-    dispatcher(ptr, llid, bnd_evt, str_rx);
+    dispatcher(llid, bnd_evt, str_rx);
     result = 0;
     }
   return result;
 }
 /*---------------------------------------------------------------------------*/
 
-/****************************************************************************/
-void rpct_heartbeat(void *ptr)
+/*****************************************************************************/
+void rpct_redirect_string_tx(t_rpct_tx rpc_tx)
 {
-  report_heartbeat(ptr);
+  g_string_tx = rpc_tx;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_redirect_string_tx(void *ptr, t_rpct_tx rpc_tx)
+void rpct_init(t_rpct_tx rpc_tx)
 {
-  t_rpct_ctx *ctx = get_rpct_ctx(ptr);
-  ctx->g_string_tx = rpc_tx;
-}
-/*---------------------------------------------------------------------------*/
+  g_string_tx = rpc_tx;
+  g_buf_tx = (char *) malloc(100000);
+  extract_boundary(MUSIGDIAG_MSG_O,  g_bound_list[bnd_rpct_sigdiag_msg]);
+  extract_boundary(MUPOLDIAG_MSG_O,  g_bound_list[bnd_rpct_poldiag_msg]);
+  extract_boundary(HOP_PID_REQ,      g_bound_list[bnd_rpct_pid_req]);
+  extract_boundary(HOP_KIL_REQ,      g_bound_list[bnd_rpct_kil_req]);
+  extract_boundary(HOP_PID_RESP,     g_bound_list[bnd_rpct_pid_resp]);
+  extract_boundary(HOP_EVT_SUB,      g_bound_list[bnd_rpct_hop_evt_sub]);
+  extract_boundary(HOP_EVT_UNSUB,    g_bound_list[bnd_rpct_hop_evt_unsub]);
+  extract_boundary(HOP_EVT_O,        g_bound_list[bnd_rpct_hop_evt_msg]);
 
-/*****************************************************************************/
-void rpct_send_peer_flow_control(void *ptr, int llid, 
-                                 char *name, int num, int tidx, 
-                                 int rank, int stop)
-{
-  char evt[MAX_PATH_LEN];
-  snprintf(evt, MAX_PATH_LEN-1,
-  "cloonix_evt_peer_flow_control name=%s num=%d tidx=%d rank=%d stop=%d",
-  name, num, tidx, rank, stop);
-  rpct_send_evt_msg(ptr, llid, 0, evt);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void rpct_init(void *ptr, t_rpct_tx rpc_tx)
-{
-  t_rpct_ctx *ctx;
-  t_all_ctx_head *ctx_head;
-  if (!ptr)
-    {
-    g_rpct_ctx = (t_rpct_ctx *) malloc(sizeof(t_rpct_ctx));
-    ctx = g_rpct_ctx;
-    }
-  else
-    {
-    ctx_head = (t_all_ctx_head *) ptr;
-    ctx_head->rpct_ctx = malloc(sizeof(t_rpct_ctx));
-    ctx = (t_rpct_ctx *) ctx_head->rpct_ctx;
-    }
-  memset(ctx, 0, sizeof(t_rpct_ctx));
-  ctx->g_buf_tx = (char *) malloc(100000);
-  ctx->g_string_tx = rpc_tx;
-  ctx->g_pid = (int) getpid();
-  extract_boundary(BLKD_ITEM_SUB,  ctx->g_bound_list[bnd_rpct_blkd_item_sub]);
-  extract_boundary(BLKD_ITEM,      ctx->g_bound_list[bnd_rpct_blkd_item]);
-  extract_boundary(MUEVT_MSG_O,    ctx->g_bound_list[bnd_rpct_evt_msg]);
-  extract_boundary(MUAPP_MSG_O,    ctx->g_bound_list[bnd_rpct_app_msg]);
-  extract_boundary(MUDIAG_MSG_O,    ctx->g_bound_list[bnd_rpct_diag_msg]);
-  extract_boundary(MUCLI_REQ_O,    ctx->g_bound_list[bnd_rpct_cli_req]);
-  extract_boundary(MUCLI_RESP_O,   ctx->g_bound_list[bnd_rpct_cli_resp]);
-  extract_boundary(HOP_PID_REQ,    ctx->g_bound_list[bnd_rpct_pid_req]);
-  extract_boundary(HOP_KIL_REQ,    ctx->g_bound_list[bnd_rpct_kil_req]);
-  extract_boundary(HOP_PID_RESP,   ctx->g_bound_list[bnd_rpct_pid_resp]);
-  extract_boundary(HOP_EVT_SUB,    ctx->g_bound_list[bnd_rpct_hop_evt_sub]);
-  extract_boundary(HOP_EVT_UNSUB,  ctx->g_bound_list[bnd_rpct_hop_evt_unsub]);
-  extract_boundary(HOP_EVT_O,      ctx->g_bound_list[bnd_rpct_hop_evt_msg]);
 }
 /*---------------------------------------------------------------------------*/

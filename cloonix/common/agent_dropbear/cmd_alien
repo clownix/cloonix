@@ -1,21 +1,70 @@
 #!/bin/bash
-
-# On debian, do: sudo apt-get install libc6-dev-i386
-# dpkg --add-architecture i386
-# deb [arch=amd64,i386] http://deb.debian.org/debian buster main contrib non-free
-# sudo apt-get install libnl-3-dev:i386
-# sudo apt-get install libnl-genl-3-dev:i386
-# sudo apt-get install libnl-3-dev
-# sudo apt-get install libnl-genl-3-dev
-
-
-
 HERE=`pwd`
 set -e
+
+cd ${HERE}/../lib_rpct
+make clean
+make
+
 AGENT_BIN_ALIEN=${HERE}/agent_bin_alien/
+AGENT_LIB_ALIEN=${AGENT_BIN_ALIEN}/lib_x86_64/
 rm -rf ${AGENT_BIN_ALIEN}
-mkdir -p ${AGENT_BIN_ALIEN}
-${HERE}/cmd_hwsim_i386
-${HERE}/cmd_hwsim_x86_64
-${HERE}/cmd_i386
-${HERE}/cmd_x86_64
+
+mkdir -p ${AGENT_LIB_ALIEN}
+
+LIB_CLOWNIX=${HERE}/../lib_io_clownix
+
+export CC=gcc
+export AR=ar
+export RANLIB=ranlib
+export CFLAGS=""
+
+cd $LIB_CLOWNIX
+export CFLAGS="-DNO_HMAC_CIPHER"
+export LDFLAGS=
+make clean
+make
+
+cd ${HERE}/cloonix_dropbear
+export CFLAGS=
+export LDFLAGS=
+make clean
+make dropbear
+
+LIBU=$(ldd dropbear | grep libutil.so |awk '{print $3}')
+LIBC=$(ldd dropbear | grep libc.so |awk '{print $3}')
+LIBD=$(ldd dropbear | grep ld-linux-x86-64.so.2 |awk '{print $1}')
+
+echo
+echo
+echo $LIBU
+echo $LIBC
+echo $LIBD
+echo
+echo
+echo
+
+cd ${HERE}/cloonix_dropbear
+LIB_DST=/mnt/cloonix_config_fs/lib_x86_64
+export CFLAGS=
+export LDFLAGS="-Wl,-rpath -Wl,${LIB_DST}"
+export LDFLAGS="${LDFLAGS} -Wl,--dynamic-linker -Wl,${LIB_DST}/ld-linux-x86-64.so.2"
+make clean
+make dropbear
+
+cp dropbear ${AGENT_BIN_ALIEN}/dropbear_cloonix_sshd
+cp -vf $LIBU ${AGENT_LIB_ALIEN}
+cp -vf $LIBC ${AGENT_LIB_ALIEN}
+cp -vf $LIBD ${AGENT_LIB_ALIEN}
+
+cd ${HERE}/cloonix_agent
+make clean
+make
+
+cp cloonix_agent ${AGENT_BIN_ALIEN}/cloonix_agent
+make clean
+
+cd $LIB_CLOWNIX
+make clean
+
+

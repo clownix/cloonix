@@ -56,7 +56,6 @@ typedef struct t_callback_end
 t_pid_lst *create_list_pid(int *nb);
 
 static t_callback_end callback_end_tab[MAX_CALLBACK_END];
-static t_cb_end_automate callback_rm_cloonix_ok = NULL;
 
 static int lock_self_destruction_dir;
 static int glob_req_self_destruction;
@@ -96,63 +95,6 @@ int get_lock_self_destruction_dir(void)
 int get_glob_req_self_destruction(void)
 {
   return glob_req_self_destruction;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void end_clownix_rm(void *ptr, int status, char *nm)
-{
-  char *path = (char *) ptr;
-  if (status)
-    {
-    KERR("rm %s ko", path);
-    exit(-1);
-    }
-  else
-    {
-    if (callback_rm_cloonix_ok)
-      callback_rm_cloonix_ok(NULL, 0, NULL);
-    else
-      KOUT(" ");
-    } 
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int start_clownix_rm(void *ptr)
-{
-  char *path = (char *) ptr;
-  char *argv[] =  {"/bin/rm", "-rf", path, NULL};
-  execv("/bin/rm", argv);
-  return 0;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void auto_rm_cloonix(t_cb_end_automate cb)
-{
-  static char path[MAX_PATH_LEN];
-  strcpy(path, cfg_get_work());
-  callback_rm_cloonix_ok = cb;
-  pid_clone_launch(start_clownix_rm, end_clownix_rm, NULL,
-                   (void *)path, (void *)path,  NULL, 
-                   (char *)__FUNCTION__, -1, 1);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void check_for_work_dir_inexistance(t_cb_end_automate cb)
-{
-  struct stat stat_path;
-  if (stat(cfg_get_work(), &stat_path) == 0)
-    {
-    printf( "Path: \"%s\" already exists, destroing it\n\n",cfg_get_work());
-    auto_rm_cloonix(cb);
-    }
-  else
-    {
-    cb(NULL, 0, NULL);
-    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -214,27 +156,21 @@ void last_action_self_destruction(void *data)
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dpdk_d2d_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_xyx_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dpdk_a2b_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dpdk_nat_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_snf_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dpdk_qemu_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dpdk_cloonix_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_endp_sock_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dtach_sock_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_cli_sock_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_snf_pcap_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_muswitch_sock_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_muswitch_traf_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(cfg_get_work(), err))
     event_print("DELETE PROBLEM: %s\n", err);

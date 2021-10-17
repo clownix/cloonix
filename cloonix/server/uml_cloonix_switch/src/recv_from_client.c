@@ -44,32 +44,27 @@
 #include "qmp.h"
 #include "doorways_mngt.h"
 #include "doors_rpc.h"
-#include "c2c.h"
 #include "xwy.h"
-#include "mulan_mngt.h"
-#include "endp_mngt.h"
-#include "endp_evt.h"
 #include "hop_event.h"
-#include "c2c_utils.h"
 #include "qmp.h"
 #include "dpdk_ovs.h"
-#include "dpdk_dyn.h"
-#include "dpdk_tap.h"
-#include "dpdk_snf.h"
 #include "dpdk_d2d.h"
+#include "dpdk_tap.h"
+#include "dpdk_kvm.h"
+#include "dpdk_phy.h"
+#include "dpdk_nat.h"
 #include "dpdk_a2b.h"
+#include "dpdk_xyx.h"
 #include "suid_power.h"
-#include "edp_mngt.h"
-#include "snf_dpdk_process.h"
 #include "nat_dpdk_process.h"
 #include "d2d_dpdk_process.h"
+#include "xyx_dpdk_process.h"
 #include "a2b_dpdk_process.h"
 #include "list_commands.h"
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
 int inside_cloonix(char **name);
 extern int clownix_server_fork_llid;
-static void add_lan_endp(int llid, int tid, char *name, int num, char *lan);
 static int g_in_cloonix;
 static char *g_cloonix_vm_name;
 
@@ -118,13 +113,10 @@ typedef struct t_timer_endp
   int  timer_lan_ko_resp;
   int  llid;
   int  tid;
-  int  eth_type;
-  int  vm_id;
   char name[MAX_NAME_LEN];
   int  num;
   char lan[MAX_NAME_LEN];
   int  count;
-  char label[MAX_PATH_LEN];
   struct t_timer_endp *prev;
   struct t_timer_endp *next;
 } t_timer_endp;
@@ -144,7 +136,7 @@ static int get_inhib_new_clients(void)
 {
   if (g_inhib_new_clients)
     {
-    KERR("Server being killed, no new client");
+    KERR("ERROR Server being killed, no new client");
     event_print("Server being killed, no new client");
     }
   return g_inhib_new_clients;
@@ -176,7 +168,7 @@ int recv_coherency_locked(void)
     glob_coherency_fail_count = 0;
   if  ((glob_coherency_fail_count > 0) && 
        (glob_coherency_fail_count % 100 == 0))
-    KERR("LOCK TOO LONG %d", glob_coherency_fail_count);
+    KERR("ERROR LOCK TOO LONG %d", glob_coherency_fail_count);
   return glob_coherency;
 }
 /*---------------------------------------------------------------------------*/
@@ -296,7 +288,7 @@ static void timer_del_vm(void *data)
     else if (tz->nb_try == 2)
       {
       snprintf(err, MAX_PATH_LEN-1, "FAILED HALT %s", kvm->name);
-      KERR("%s", err);
+      KERR("ERROR %s", err);
       send_status_ko(llid, tid, err);
       }
     }
@@ -333,6 +325,7 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
   char err[MAX_PATH_LEN];
   switch(cmd)
     {
+
     case vmcmd_del:
       if (vm)
         {
@@ -345,6 +338,7 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
         send_status_ko(llid, tid, err);
         }
       break;
+
     case vmcmd_halt_with_guest:
       if (vm)
         {
@@ -365,6 +359,7 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
         send_status_ko(llid, tid, err);
         }
       break;
+
     case vmcmd_reboot_with_guest:
       if (vm)
         {
@@ -385,6 +380,7 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
         send_status_ko(llid, tid, err);
         }
       break;
+
     case vmcmd_halt_with_qemu:
       if (vm)
         qmp_request_qemu_halt(name, llid, tid);
@@ -394,6 +390,7 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
         send_status_ko(llid, tid, err);
         }
       break;
+
     case vmcmd_reboot_with_qemu:
       if (vm)
         qmp_request_qemu_reboot(name, llid, tid);
@@ -403,75 +400,106 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
         send_status_ko(llid, tid, err);
         }
       break;
+
     case vmcmd_promiscious_flag_set:
       recv_promiscious(llid, tid, name, param, 1);
       break;
+
     case vmcmd_promiscious_flag_unset:
       recv_promiscious(llid, tid, name, param, 0);
       break;
+
     default:
-      KERR("%d", cmd);
+      KERR("ERROR %d", cmd);
       break;
     }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void local_add_lan(int llid, int tid, int vm_id,
-                          char *name, int num, char *lan)
+static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
 {
   char info[MAX_PRINT_LEN];
-  int tidx, type;
+  t_vm *vm = cfg_get_vm(name);
+  t_eth_table *eth_tab = NULL;
+  int endp_type = dpdk_xyx_exists(name, num);
+  if (vm != NULL)
+    eth_tab = vm->kvm.eth_table;
+
   if (get_inhib_new_clients())
     {
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
-    KERR("%s %d %s", name, num, lan);
+    KERR("ERROR %s %d %s", name, num, lan);
     }
   else if (cfg_name_is_in_use(1, lan, info))
     {
     send_status_ko(llid, tid, info);
-    KERR("%s %d %s", name, num, lan);
-    }
-  else if (dpdk_dyn_eth_exists(name, num))
-    {
-    if (dpdk_dyn_add_lan_to_eth(llid, tid, lan, name, num, info))
-      {
-      send_status_ko(llid, tid, info);
-      KERR("%s %d %s", name, num, lan);
-      }
-    }
-  else if (mulan_is_zombie(lan))
-    {
-    sprintf( info, "lan %s is zombie",  lan);
-    send_status_ko(llid, tid, info);
-    KERR("%s %d %s", name, num, lan);
-    }
-  else if (!endp_mngt_exists(name, num, &type))
-    {
-    sprintf(info, "endp %s %d not found", name, num);
-    send_status_ko(llid, tid, info);
-    KERR("%s %d %s", name, num, lan);
-    }
-  else if (endp_evt_lan_find(name, num, lan, &tidx))
-    {
-    sprintf(info, "%s %d already has %s ulan", name, num, lan);
-    send_status_ko(llid, tid, info);
-    KERR("%s %d %s", name, num, lan);
-    }
-  else if (endp_evt_lan_full(name, num, &tidx))
-    {
-    sprintf(info, "%s in %d ulan max increase MAX_TRAF_ENDPOINT and recompile",
-            name, MAX_TRAF_ENDPOINT);
-    send_status_ko(llid, tid, info);
-    KERR("%s %d %s", name, num, lan);
+    KERR("ERROR %s %d %s", name, num, lan);
     }
   else
     {
-    event_print("Adding lan %s in %s %d", lan, name, num);
-    endp_evt_add_lan(llid, tid, name, num, lan, tidx);
+    if (dpdk_d2d_find(name))
+      dpdk_d2d_add_lan(llid, tid, name, lan);
+    else if (dpdk_a2b_exists(name))
+      {
+      if (dpdk_a2b_add_lan(llid, tid, name, num, lan))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %d %s", name, num, lan);
+        }
+      }
+    else if (dpdk_nat_exists(name))
+      {
+      if (dpdk_nat_add_lan(llid, tid, name, lan))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %s", name, lan);
+        }
+      }
+    else if (endp_type == endp_type_tap)
+      {
+      if (dpdk_tap_add_lan(llid, tid, name, lan))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %d %s", name, num, lan);
+        }
+      }
+    else if (endp_type == endp_type_phy)
+      {
+      if (dpdk_phy_add_lan(llid, tid, name, lan))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %d %s", name, num, lan);
+        }
+      }
+    else if (endp_type == endp_type_kvm)
+      {
+      if ((vm == NULL) ||
+          (eth_tab[num].eth_type != eth_type_dpdk) ||
+          (num >= vm->kvm.nb_tot_eth))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %d %s", name, num, lan);
+        }
+      else
+        {
+        if (dpdk_kvm_add_lan(llid, tid, name, num, lan))
+          {
+          send_status_ko(llid, tid, "failure");
+          KERR("ERROR %s %d %s", name, num, lan);
+          }
+        }
+      }
+    else
+      {
+      snprintf(info, MAX_PATH_LEN, "%s %d not found", name, num);
+      send_status_ko(llid, tid, info);
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 static t_timer_endp *timer_find(char *name, int num)
@@ -488,25 +516,6 @@ static t_timer_endp *timer_find(char *name, int num)
       }
     }
   return cur;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static t_timer_endp *timer_alloc(int vm_id, char *name, int num)
-{
-  t_timer_endp *timer = timer_find(name, num);
-  if (timer)
-    KOUT("%s %d", name, num);
-  timer = (t_timer_endp *)clownix_malloc(sizeof(t_timer_endp), 4);
-  memset(timer, 0, sizeof(t_timer_endp));
-  strncpy(timer->name, name, MAX_NAME_LEN-1);
-  timer->num = num;
-  timer->vm_id = vm_id;
-  if (g_head_timer)
-    g_head_timer->prev = timer;
-  timer->next = g_head_timer;
-  g_head_timer = timer;
-  return timer;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -528,186 +537,59 @@ static void timer_endp(void *data)
 {
   t_timer_endp *te = (t_timer_endp *) data;
   char err[MAX_PATH_LEN];
-  int success_end = 0;
-  if (te->eth_type == eth_type_sock)
+  int endp_type_exists = dpdk_xyx_exists(te->name, te->num);
+  int d2d_exists = dpdk_d2d_exists(te->name);
+  int a2b_exists = dpdk_a2b_exists(te->name);
+  int nat_exists = dpdk_nat_exists(te->name);
+  if (endp_type_exists || d2d_exists || a2b_exists || nat_exists)
     {
-    if (endp_evt_exists(te->name, te->num))
-      success_end = 1;
-    }
-  else if (te->eth_type == eth_type_dpdk)
-    {
-    if (dpdk_dyn_eth_exists(te->name, te->num))
-      success_end = 1;
-    }
-  else
-    KOUT("%d", te->eth_type);
-  if (success_end == 1)
-    {
-    local_add_lan(te->llid,te->tid,te->vm_id,te->name,te->num,te->lan);
+    local_add_lan(te->llid, te->tid, te->name, te->num, te->lan);
     timer_free(te);
     }
   else
     {
+    KERR("DELAY ADD LAN");
     te->count++;
     if (te->count >= 50)
       {
-      sprintf(err, "bad endpoint start: %s %d %s",te->name,te->num,te->lan);
+      sprintf(err, "ERROR ENDP: %s %d %s",te->name, te->num, te->lan);
       send_status_ko(te->llid, te->tid, err);
       timer_free(te);
       }
     else
       {
-      clownix_timeout_add(50, timer_endp, (void *) te, NULL, NULL);
+      clownix_timeout_add(20, timer_endp, (void *) te, NULL, NULL);
       }
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void timer_endp_init(int llid, int tid, int eth_type, int vm_id,
-                            char *name, int num, char *lan)
+static void timer_endp_init(int llid, int tid, char *name, int num, char *lan)
 {
   t_timer_endp *te = timer_find(name, num);
   if (te)
     {
     send_status_ko(llid, tid, "endpoint already waiting");
-    KERR("%s %d %s", name, num, lan);
+    KERR("ERROR %s %d %s", name, num, lan);
     }
   else
     {
-    te = timer_alloc(vm_id, name, num);
+    te = (t_timer_endp *)clownix_malloc(sizeof(t_timer_endp), 4);
+    memset(te, 0, sizeof(t_timer_endp));
+    strncpy(te->name, name, MAX_NAME_LEN-1);
+    strncpy(te->lan, lan, MAX_NAME_LEN-1);
+    te->num = num;
     te->llid = llid;
     te->tid = tid;
-    te->eth_type = eth_type;
-    te->vm_id = vm_id;
-    strncpy(te->lan, lan, MAX_NAME_LEN-1);
-    clownix_timeout_add(50, timer_endp, (void *) te, NULL, NULL);
+    if (g_head_timer)
+      g_head_timer->prev = te;
+    te->next = g_head_timer;
+    g_head_timer = te;
+    clownix_timeout_add(20, timer_endp, (void *) te, NULL, NULL);
     }
 }
 /*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void add_lan_endp(int llid, int tid, char *name, int num, char *lan)
-{
-  int endp_type, eth_type, type, vm_id = 0;
-  t_vm *vm = cfg_get_vm(name);
-  char info[MAX_PATH_LEN];
-  t_eth_table *eth_tab = NULL;
-  event_print("Rx Req add lan not delayed %s in %s %d", lan, name, num);
-  if (vm)
-    {
-    eth_tab = vm->kvm.eth_table;
-    vm_id = vm->kvm.vm_id;
-    if (num >= vm->kvm.nb_tot_eth)
-      {
-      send_status_ko(llid, tid, info);
-      KERR("%s %d %s", name, num, lan);
-      return;
-      }
-    }
-  if (edp_mngt_exists(name, &endp_type))
-    {
-    if (num != 0)
-      KERR("%s %s", name, lan); 
-    if (edp_mngt_add_lan(llid, tid, name, lan, info))
-      {
-      send_status_ko(llid, tid, info);
-      KERR("%s %d %s", name, num, lan);
-      }
-    }
-  else if (dpdk_d2d_find(name))
-    {
-    dpdk_d2d_add_lan(llid, tid, name, lan);
-    }
-  else if (dpdk_a2b_exists(name))
-    {
-    if ((num != 0) && (num != 1))
-      {
-      send_status_ko(llid, tid, "only 0 or 1 for a2b");
-      KERR("%s %d %s", name, num, lan);
-      }
-    else
-      dpdk_a2b_add_lan(llid, tid, name, num, lan);
-    }
-  else if ((vm) &&
-           (eth_tab[num].eth_type != eth_type_sock) &&
-           (eth_tab[num].eth_type != eth_type_wlan))
-    {
-    if (eth_tab[num].eth_type == eth_type_dpdk)
-      {
-      if (edp_mngt_lan_exists(lan, &eth_type, &endp_type))
-        {
-        if ((eth_type != eth_type_none) && (eth_type != eth_type_dpdk))
-          {
-          snprintf(info, MAX_PATH_LEN, "%s and %s not compat1", name, lan);
-          send_status_ko(llid, tid, info);
-          KERR("%s %d %s", name, num, lan);
-          }
-        else
-          {
-          timer_endp_init(llid, tid, eth_type_dpdk, vm_id, name, num, lan);
-          }
-        }
-      else if (mulan_can_be_found_with_name(lan))
-        {
-        snprintf(info, MAX_PATH_LEN, "%s and %s not compat2", name, lan);
-        send_status_ko(llid, tid, info);
-        KERR("%s %d %s", name, num, lan);
-        }
-      else
-        {
-        timer_endp_init(llid, tid, eth_type_dpdk, vm_id, name, num, lan);
-        }
-      }
-    }
-  else
-    {
-    if (!endp_mngt_exists(name, num, &type))
-      {
-      snprintf(info, MAX_PATH_LEN, "endp_mngt %s %d not found", name, num);
-      send_status_ko(llid, tid, info);
-      KERR("%s %d %s", name, num, lan);
-      }
-    else if (edp_mngt_lan_exists(lan, &eth_type, &endp_type))
-      {
-      if ((eth_type != eth_type_none) && (eth_type != eth_type_sock))
-        {
-        snprintf(info,MAX_PATH_LEN,"%s %d SOCK %s is not", name, num, lan);
-        send_status_ko(llid, tid, info);
-        KERR("%s %d %s", name, num, lan);
-        }
-      else if (endp_type == endp_type_pci)
-        {
-        snprintf(info,MAX_PATH_LEN,"%s %d SOCK not compat pci", name, num);
-        send_status_ko(llid, tid, info);
-        KERR("%s %d %s", name, num, lan);
-        }
-      else if ((type != endp_type_kvm_sock) &&
-               (type != endp_type_c2c)  &&
-               (type != endp_type_snf))
-        {
-        snprintf(info,MAX_PATH_LEN,"%s %d not compatible", name, num);
-        send_status_ko(llid, tid, info);
-        KERR("%s %d %s", name, num, lan);
-        }
-      else 
-        {
-        timer_endp_init(llid, tid, eth_type_sock, vm_id, name, num, lan);
-        }
-      }
-    else if (dpdk_dyn_lan_exists(lan))
-      {
-      snprintf(info,MAX_PATH_LEN,"%s %d SOCK %s is DPDK", name, num, lan);
-      send_status_ko(llid, tid, info);
-      KERR("%s %d %s", name, num, lan);
-      }
-    else 
-      {
-      timer_endp_init(llid, tid, eth_type_sock, vm_id, name, num, lan);
-      }
-    }
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void delayed_coherency_cmd_timeout(void *data)
@@ -728,11 +610,11 @@ static void delayed_coherency_cmd_timeout(void *data)
         clownix_timeout_add(20, delayed_coherency_cmd_timeout, data,
                             &g_coherency_abs_beat_timer,
                             &g_coherency_ref_timer);
-        KERR("%s", cur->name);
+        KERR("WAIT %s", cur->name);
         }
       else
         {
-        add_lan_endp(cur->llid, cur->tid, cur->name, cur->num, cur->lan);
+        timer_endp_init(cur->llid, cur->tid, cur->name, cur->num, cur->lan);
         coherency_del_chain(cur);
         }
       cur = next;
@@ -749,12 +631,12 @@ void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan)
   if (get_inhib_new_clients())
     {
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
-    KERR(" ");
+    KERR("ERROR AUTODESTRUCT_ON");
     }
   else if (cfg_name_is_in_use(1, lan, info))
     {
     send_status_ko(llid, tid, info);
-    KERR("%s", info);
+    KERR("ERROR %s", info);
     }
   else 
     {
@@ -762,14 +644,16 @@ void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan)
       {
       g_head_coherency = coherency_add_chain(llid, tid, name, num, lan);
       if (!g_coherency_abs_beat_timer)
+        {
         clownix_timeout_add(20, delayed_coherency_cmd_timeout,
                             (void *) g_head_coherency,
                             &g_coherency_abs_beat_timer,
                             &g_coherency_ref_timer);
+        }
       }  
     else
       {
-      add_lan_endp(llid, tid, name, num, lan);
+      timer_endp_init(llid, tid, name, num, lan);
       }
     }
 }
@@ -807,49 +691,47 @@ void recv_event_topo_sub(int llid, int tid)
 void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
 {
   char info[MAX_PRINT_LEN];
-  int endp_type, tidx;
+  int endp_type = dpdk_xyx_exists(name, num);
   event_print("Rx Req del lan %s of %s %d", lan, name, num);
-  if (edp_mngt_exists(name, &endp_type))
-    {
-    if (num != 0)
-      KERR("%s %s", name, lan); 
-    if (edp_mngt_del_lan(llid, tid, name, lan, info))
-      send_status_ko(llid, tid, info);
-    else
-      send_status_ok(llid, tid, "OK");
-    }
-  else if (dpdk_ovs_eth_exists(name, num))
-    {
-    if (dpdk_dyn_del_lan_from_eth(llid, tid, lan, name, num, info))
-      send_status_ko(llid, tid, info);
-    }
-  else if (dpdk_d2d_lan_exists_in_d2d(name, lan, 0))
+  if (dpdk_d2d_lan_exists_in_d2d(name, lan, 0))
     {
     dpdk_d2d_del_lan(llid, tid, name, lan);
     }
   else if (dpdk_a2b_lan_exists_in_a2b(name, num, lan))
     {
-    dpdk_a2b_del_lan(llid, tid, name, num, lan);
+    if (dpdk_a2b_del_lan(llid, tid, name, num, lan))
+      send_status_ko(llid, tid, "failure del lan");
     }
-  else if (!lan_get_with_name(lan))
+  else if (dpdk_nat_lan_exists_in_nat(name, lan))
     {
-    sprintf(info, "lan %s does not exist", lan);
-    send_status_ko(llid, tid, info);
+    if (dpdk_nat_del_lan(llid, tid, name, lan))
+      send_status_ko(llid, tid, "failure del lan");
     }
-  else if (!endp_evt_lan_find(name, num, lan, &tidx))
+  else if (endp_type == endp_type_tap)
     {
-    sprintf(info, "lan %s not found in %s", lan, name);
-    send_status_ko(llid, tid, info);
+    if (!dpdk_xyx_lan_exists_in_xyx(name, 0, lan))
+      send_status_ko(llid, tid, "lan not found");
+    else if (dpdk_tap_del_lan(llid, tid, name, lan))
+      send_status_ko(llid, tid, "failure");
     }
-  else if (endp_evt_del_lan(name, num, tidx, lan))
+  else if (endp_type == endp_type_phy)
     {
-    sprintf(info, "Abnormal: lan %s not found in %s %d", lan, name, num);
-    send_status_ko(llid, tid, info);
+    if (!dpdk_xyx_lan_exists_in_xyx(name, 0, lan))
+      send_status_ko(llid, tid, "lan not found");
+    else if (dpdk_phy_del_lan(llid, tid, name, lan))
+      send_status_ko(llid, tid, "failure");
+    }
+  else if (endp_type == endp_type_kvm)
+    {
+    if (!dpdk_xyx_lan_exists_in_xyx(name, num, lan))
+      send_status_ko(llid, tid, "lan not found");
+    else if (dpdk_kvm_del_lan(llid, tid, name, num, lan))
+      send_status_ko(llid, tid, "failure");
     }
   else
     {
-    send_status_ok(llid, tid, "endpointdellan");
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    sprintf(info, "Del lan %s %d %s fail", name, num, lan);
+    send_status_ko(llid, tid, info);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -1055,8 +937,7 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info,
-                         int nb_sock, int nb_dpdk, int nb_wlan)
+static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info, int nb_dpdk)
 {
   int result = 0;
   char rootfs[2*MAX_PATH_LEN];
@@ -1143,19 +1024,9 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info,
        kvm->name, kvm->nb_tot_eth, prop_flags_ascii_get(kvm->vm_config_flags));
   if (!result)
     {
-    if (nb_sock > MAX_SOCK_VM)
-      {
-      sprintf(info, "Maximum classic ethernet %d per machine", MAX_SOCK_VM);
-      result = -1;
-      }
     if (nb_dpdk > MAX_DPDK_VM)
       {
       sprintf(info, "Maximum dpdk ethernet %d per machine", MAX_DPDK_VM);
-      result = -1;
-      }
-    if (nb_wlan > MAX_WLAN_VM)
-      {
-      sprintf(info, "Maximum wifi lan %d per machine", MAX_WLAN_VM);
       result = -1;
       }
     }
@@ -1234,7 +1105,7 @@ static int cow_look_clone(void *data)
 static void delayed_add_vm(t_timer_zombie *tz)
 {
   int i, vm_id, result = -1;
-  int nb_sock = 0, nb_dpdk = 0, nb_wlan = 0;
+  int nb_dpdk = 0;
   char mac[6];
   char info[MAX_PRINT_LEN];
   char natplug_name[2*MAX_NAME_LEN];
@@ -1260,13 +1131,13 @@ static void delayed_add_vm(t_timer_zombie *tz)
     {
     recv_coherency_unlock();
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
-    KERR("%s", kvm->name);
+    KERR("ERROR %s", kvm->name);
     }
   else if (cfg_name_is_in_use(0, kvm->name, use))
     {
     recv_coherency_unlock();
     send_status_ko(llid, tid, use);
-    KERR("%s", kvm->name);
+    KERR("ERROR %s", kvm->name);
     }
   else if (cfg_is_a_newborn(kvm->name))
     {
@@ -1274,7 +1145,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
     event_print("%s", info);
     recv_coherency_unlock();
     send_status_ko(llid, tid, info);
-    KERR("%s", kvm->name);
+    KERR("ERROR %s", kvm->name);
     }
   else if ((kvm->vm_config_flags & VM_CONFIG_FLAG_NATPLUG) && 
            ((cfg_name_is_in_use(0, natplug_name, use)) ||
@@ -1285,16 +1156,16 @@ static void delayed_add_vm(t_timer_zombie *tz)
     event_print("%s", info);
     recv_coherency_unlock();
     send_status_ko(llid, tid, info);
-    KERR("%s", kvm->name);
+    KERR("ERROR %s", kvm->name);
     }
   else if (utils_get_eth_numbers(kvm->nb_tot_eth, kvm->eth_table,
-                                 &nb_sock, &nb_dpdk, &nb_wlan))
+                                 &nb_dpdk))
     {
     sprintf(info, "Bad eth_table %s", kvm->name);
     event_print("%s", info);
     recv_coherency_unlock();
     send_status_ko(llid, tid, info);
-    KERR("%s", kvm->name);
+    KERR("ERROR %s", kvm->name);
     }
   else
     {
@@ -1322,20 +1193,16 @@ static void delayed_add_vm(t_timer_zombie *tz)
         kvm->eth_table[i].randmac = 1;
         }
       }
-    result = test_topo_kvm(kvm,vm_id,info,nb_sock,nb_dpdk,nb_wlan);
+    result = test_topo_kvm(kvm, vm_id, info, nb_dpdk);
     if (result)
       {
       send_status_ko(llid, tid, info);
       recv_coherency_unlock();
       cfg_del_newborn(kvm->name);
-      KERR("%s", kvm->name);
+      KERR("ERROR %s", kvm->name);
       }
     else
       {
-      if (nb_dpdk)
-        {
-        dpdk_ovs_add_vm(kvm->name, kvm->nb_tot_eth, kvm->eth_table);
-        }
       cow_look = (t_add_vm_cow_look *) 
                  clownix_malloc(sizeof(t_add_vm_cow_look), 7);
       memset(cow_look, 0, sizeof(t_add_vm_cow_look));
@@ -1344,7 +1211,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
       cow_look->vm_id = vm_id;
       memcpy(&(cow_look->kvm), kvm, sizeof(t_topo_kvm));
       pid_clone_launch(cow_look_clone, cow_look_clone_death,
-                       cow_look_clone_msg, cow_look, cow_look, cow_look, 
+                       cow_look_clone_msg, cow_look, cow_look, cow_look,
                        kvm->name, -1, 1);
       }
     }
@@ -1364,7 +1231,7 @@ static void timer_zombie(void *data)
     send_status_ko(tz->llid, tz->tid, err);
     clownix_free(tz, __FUNCTION__);
     recv_coherency_unlock();
-    KERR("%s", tz->kvm.name);
+    KERR("ERROR %s", tz->kvm.name);
     }
   else
     {
@@ -1386,7 +1253,7 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
     {
     sprintf(err, "Machine: \"%s\" already exists", kvm->name);
     event_print("%s", err);
-    KERR("%s", err);
+    KERR("ERROR %s", err);
     send_status_ko(llid, tid, err);
     }
   else
@@ -1418,26 +1285,23 @@ void recv_list_commands_req(int llid, int tid, int is_layout)
 /*****************************************************************************/
 t_pid_lst *create_list_pid(int *nb)
 {
-  int i,j, nb_vm, nb_endp, nb_sum, nb_mulan, nb_ovs;
-  int nb_snf_dpdk, nb_nat_dpdk, nb_d2d_dpdk, nb_a2b_dpdk;
+  int i,j, nb_vm, nb_sum, nb_ovs;
+  int nb_nat_dpdk, nb_d2d_dpdk, nb_a2b_dpdk, nb_xyx_dpdk;
   t_lst_pid *ovs_pid = NULL;
-  t_lst_pid *endp_pid = NULL;
-  t_lst_pid *mulan_pid = NULL;
-  t_lst_pid *snf_dpdk_pid = NULL;
   t_lst_pid *nat_dpdk_pid = NULL;
   t_lst_pid *d2d_dpdk_pid = NULL;
   t_lst_pid *a2b_dpdk_pid = NULL;
+  t_lst_pid *xyx_dpdk_pid = NULL;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_pid_lst *lst;
-  nb_endp  = endp_mngt_get_all_pid(&endp_pid);
-  nb_mulan = mulan_get_all_pid(&mulan_pid);
-  nb_snf_dpdk = snf_dpdk_get_all_pid(&snf_dpdk_pid);
   nb_nat_dpdk = nat_dpdk_get_all_pid(&nat_dpdk_pid);
   nb_d2d_dpdk = d2d_dpdk_get_all_pid(&d2d_dpdk_pid);
+  nb_xyx_dpdk = xyx_dpdk_get_all_pid(&xyx_dpdk_pid);
   nb_a2b_dpdk = a2b_dpdk_get_all_pid(&a2b_dpdk_pid);
   nb_ovs   = dpdk_ovs_get_all_pid(&ovs_pid);
-  nb_sum   = nb_ovs + nb_vm + nb_endp + nb_mulan + 10;
-  nb_sum   += nb_snf_dpdk + nb_nat_dpdk + nb_d2d_dpdk + nb_a2b_dpdk;
+  nb_sum   = nb_ovs + nb_vm + 10;
+  nb_sum   += nb_nat_dpdk + nb_d2d_dpdk;
+  nb_sum   += nb_a2b_dpdk + nb_xyx_dpdk;
   lst = (t_pid_lst *)clownix_malloc(nb_sum*sizeof(t_pid_lst),18);
   memset(lst, 0, nb_sum*sizeof(t_pid_lst));
   for (i=0, j=0; i<nb_vm; i++)
@@ -1452,27 +1316,6 @@ t_pid_lst *create_list_pid(int *nb)
     }
   if (vm)
     KOUT(" ");
-  for (i=0 ; i<nb_endp; i++)
-    {
-    strncpy(lst[j].name, endp_pid[i].name, MAX_NAME_LEN-1);
-    lst[j].pid = endp_pid[i].pid;
-    j++;
-    }
-  clownix_free(endp_pid, __FUNCTION__);
-  for (i=0 ; i<nb_mulan; i++)
-    {
-    strncpy(lst[j].name, mulan_pid[i].name, MAX_NAME_LEN-1);
-    lst[j].pid = mulan_pid[i].pid;
-    j++;
-    }
-  clownix_free(mulan_pid, __FUNCTION__);
-  for (i=0 ; i<nb_snf_dpdk; i++)
-    {
-    strncpy(lst[j].name, snf_dpdk_pid[i].name, MAX_NAME_LEN-1);
-    lst[j].pid = snf_dpdk_pid[i].pid;
-    j++;
-    }
-  clownix_free(snf_dpdk_pid, __FUNCTION__);
   for (i=0 ; i<nb_nat_dpdk; i++)
     {
     strncpy(lst[j].name, nat_dpdk_pid[i].name, MAX_NAME_LEN-1);
@@ -1480,6 +1323,14 @@ t_pid_lst *create_list_pid(int *nb)
     j++;
     }
   clownix_free(nat_dpdk_pid, __FUNCTION__);
+
+  for (i=0 ; i<nb_xyx_dpdk; i++)
+    {
+    strncpy(lst[j].name, xyx_dpdk_pid[i].name, MAX_NAME_LEN-1);
+    lst[j].pid = xyx_dpdk_pid[i].pid;
+    j++;
+    }
+  clownix_free(xyx_dpdk_pid, __FUNCTION__);
 
   for (i=0 ; i<nb_a2b_dpdk; i++)
     {
@@ -1616,11 +1467,10 @@ static void timer_del_all(void *data)
       found = 1;
     vm = vm->next;
     }
-  if ((found == 0) && (dpdk_ovs_still_present()))
-    {
-    KERR("OVS STILL PRESENT");
-    found = 1;
-    }
+  found += dpdk_nat_get_qty();
+  found += dpdk_xyx_get_qty();
+  found += dpdk_a2b_get_qty();
+  found += dpdk_d2d_get_qty();
   if (found)
     {
     td->count += 1;
@@ -1636,10 +1486,6 @@ static void timer_del_all(void *data)
     {
     dpdk_d2d_all_del();
     suid_power_req_kill_all();
-    mulan_del_all();
-    c2c_free_all();
-    endp_mngt_stop_all_sat();
-    edp_mngt_del_all();
     clownix_timeout_add(200, timer_del_all_end, (void *) td, NULL, NULL);
     }
 }
@@ -1657,7 +1503,7 @@ void recv_del_all(int llid, int tid)
     poweroff_vm(0, 0, vm);
     vm = vm->next;
     }
-  dpdk_ovs_urgent_client_destruct();
+  dpdk_ovs_urgent_client_destruct(0);
   td = (t_timer_del *) clownix_malloc(sizeof(t_timer_del), 3);
   memset(td, 0, sizeof(t_timer_del));
   td->llid = llid;
@@ -1679,7 +1525,7 @@ void recv_kill_uml_clownix(int llid, int tid)
     poweroff_vm(0, 0, vm);
     vm = vm->next;
     }
-  dpdk_ovs_urgent_client_destruct();
+  dpdk_ovs_urgent_client_destruct(1);
   td = (t_timer_del *) clownix_malloc(sizeof(t_timer_del), 3);
   memset(td, 0, sizeof(t_timer_del));
   td->llid = llid;
@@ -1743,92 +1589,9 @@ void recv_topo_small_event_unsub(int llid, int tid)
 }
 /*---------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-void local_add_sat(int llid, int tid, char *name, int type,
-                   t_c2c_req_info *c2c_info)
-{
-  char info[MAX_PATH_LEN];
-  int endp_type;
-  if ((type == endp_type_phy) ||
-      (type == endp_type_pci) ||
-      (type == endp_type_tap) ||
-      (type == endp_type_nat) ||
-      (type == endp_type_snf))
-    {
-    if (!edp_mngt_exists(name, &endp_type))
-      {
-      if (edp_mngt_add(llid, tid, name, type))
-        {
-        KERR("%s", name);
-        send_status_ko(llid, tid, "KO");
-        }
-      }
-    else
-      {
-      KERR("%s", name);
-      send_status_ko(llid, tid, "KO");
-      }
-    }
-  else if (endp_mngt_start(llid, tid, name, 0, type))
-    {
-    snprintf( info, MAX_PATH_LEN-1, "Bad start of %s", name);
-    send_status_ko(llid, tid, info);
-    }
-  else if (type == endp_type_c2c)
-    {
-    if (!c2c_info)
-      {
-      KERR("%s", name);
-      sprintf( info, "Bad c2c param info %s", name);
-      send_status_ko(llid, tid, info);
-      endp_mngt_stop(name, 0);
-      }
-    else  if (c2c_create_master_begin(name, c2c_info->ip_slave,
-                                            c2c_info->port_slave,
-                                            c2c_info->passwd_slave))
-      {
-      KERR("%s", name);
-      sprintf( info, "Bad c2c begin %s", name);
-      send_status_ko(llid, tid, info);
-      endp_mngt_stop(name, 0);
-      }
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_add_sat(int llid, int tid, char *name, int type, 
-                  t_c2c_req_info *c2c_info)
-{
-  char info[MAX_PRINT_LEN];
-  char use[MAX_PATH_LEN];
-  event_print("Rx Req add %s %d", name, type);
-  if (get_inhib_new_clients())
-    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
-  else if (cfg_name_is_in_use(0, name, use))
-    send_status_ko(llid, tid, use);
-  else if ((type != endp_type_tap) &&
-           (type != endp_type_phy) &&
-           (type != endp_type_pci) &&
-           (type != endp_type_nat) &&
-           (type != endp_type_snf) &&
-           (type != endp_type_c2c) &&
-           (type != endp_type_wif))
-    {
-    sprintf(info, "%s Bad type: %d", name, type);
-    send_status_ko(llid, tid, info);
-    }
-  else 
-    {
-    local_add_sat(llid, tid, name, type, c2c_info); 
-    }
-}
-/*--------------------------------------------------------------------------*/
-
 /****************************************************************************/
 void recv_del_sat(int llid, int tid, char *name)
 {
-  int endp_type, type;
   char info[MAX_PATH_LEN];
   event_print("Rx Req del %s", name);
   t_d2d_cnx *d2d = dpdk_d2d_find(name);
@@ -1839,14 +1602,6 @@ void recv_del_sat(int llid, int tid, char *name)
     else
       send_status_ok(llid, tid, "");
     }
-  else if (edp_mngt_exists(name, &endp_type))
-    {
-    if (edp_mngt_del(llid, tid, name))
-      {
-      KERR("%s", name);
-      send_status_ko(llid, tid, "KO");
-      }
-    }
   else if (dpdk_a2b_exists(name))
     {
     if (dpdk_a2b_del(name))
@@ -1854,23 +1609,29 @@ void recv_del_sat(int llid, int tid, char *name)
     else
       send_status_ok(llid, tid, "");
     }
-  else if (!endp_mngt_exists(name, 0, &type))
+  else if (dpdk_nat_exists(name))
     {
-    snprintf(info, MAX_PATH_LEN-1, "sat %s not found", name);
-    send_status_ko(llid, tid, info);
+    if (dpdk_nat_del(llid, tid, name))
+      send_status_ko(llid, tid, "nat delete fail");
+    else
+      send_status_ok(llid, tid, "");
     }
-  else if ((type == endp_type_kvm_sock) || (type == endp_type_kvm_wlan))
+  else if (dpdk_xyx_exists(name, 0) == endp_type_tap)
     {
-    snprintf(info, MAX_PATH_LEN-1, "%s is a kvm", name);
-    send_status_ko(llid, tid, info);
+    if (dpdk_tap_del(llid, tid, name))
+      send_status_ko(llid, tid, "tap delete fail");
+    else
+      send_status_ok(llid, tid, "");
+    }
+  else if (dpdk_xyx_exists(name, 0) == endp_type_phy)
+    {
+    if (dpdk_phy_del(llid, tid, name))
+      send_status_ko(llid, tid, "tap delete fail");
+    else
+      send_status_ok(llid, tid, "");
     }
   else 
-    {
-    if (endp_mngt_stop(name, 0))
-      KERR("%s", name);
-    send_status_ok(llid, tid, "del usat");
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    }
+    KERR("ERROR %s", name);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1937,6 +1698,87 @@ void recv_qmp_req(int llid, int tid, char *name, char *msg)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_nat_add(int llid, int tid, char *name)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char err[MAX_PATH_LEN];
+  event_print("Rx Req add nat %s", name);
+  if (get_inhib_new_clients())
+    {
+    KERR("ERROR %s %s", locnet, name);
+    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    }
+  else if (cfg_name_is_in_use(0, name, err))
+    {
+    KERR("ERROR %s %s", locnet, name);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    if (dpdk_nat_add(llid, tid, name))
+      {
+      KERR("ERROR %s %s", locnet, name);
+      send_status_ko(llid, tid, "recv_nat_add ko");
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_phy_add(int llid, int tid, char *name)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char err[MAX_PATH_LEN];
+  event_print("Rx Req add phy %s", name);
+  if (get_inhib_new_clients())
+    {
+    KERR("ERROR %s %s", locnet, name);
+    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    }
+  else if (cfg_name_is_in_use(0, name, err))
+    {
+    KERR("ERROR %s %s", locnet, name);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    if (dpdk_phy_add(llid, tid, name))
+      {
+      KERR("ERROR %s %s", locnet, name);
+      send_status_ko(llid, tid, "recv_phy_add ko");
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_tap_add(int llid, int tid, char *name)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char err[MAX_PATH_LEN];
+  event_print("Rx Req add tap %s", name);
+  if (get_inhib_new_clients())
+    {
+    KERR("ERROR %s %s", locnet, name);
+    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    }
+  else if (cfg_name_is_in_use(0, name, err))
+    {
+    KERR("ERROR %s %s", locnet, name);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    if (dpdk_tap_add(llid, tid, name))
+      {
+      KERR("ERROR %s %s", locnet, name);
+      send_status_ko(llid, tid, "recv_tap_add ko");
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_a2b_add(int llid, int tid, char *name)
 {
   char *locnet = cfg_get_cloonix_name();
@@ -1944,19 +1786,19 @@ void recv_a2b_add(int llid, int tid, char *name)
   event_print("Rx Req add a2b %s", name);
   if (get_inhib_new_clients())
     {
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
     }
   else if (cfg_name_is_in_use(0, name, err))
     {
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     send_status_ko(llid, tid, err);
     }
   else
     {
     if (dpdk_a2b_add(llid, tid, name))
       {
-      KERR("%s %s", locnet, name);
+      KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "dpdk_a2b_add ko");
       }
     }
@@ -1968,7 +1810,7 @@ void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
 {
   char err[MAX_PATH_LEN];
   memset(err, 0, MAX_PATH_LEN);
-  event_print("Rx Req cnf a2b %s dir:%d type:%d val:%d",name,dir,type,val);
+  event_print("Rx Req cnf a2b %s dir:%d type:%d val:%d", dir, type, val);
   KERR("%s %d %d %d ", name, dir, type, val);
   if (!dpdk_a2b_exists(name))
     {
@@ -1980,8 +1822,8 @@ void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
     snprintf(err, MAX_PATH_LEN-1, "A2B %s wrong dir 0 or 1", name);
     send_status_ko(llid, tid, err);
     }
-  else if ((type != a2b_type_delay) &&
-           (type != a2b_type_loss)  &&
+  else if ((type != a2b_type_delay)  &&
+           (type != a2b_type_loss)   &&
            (type != a2b_type_qsize)  &&
            (type != a2b_type_bsize)  &&
            (type != a2b_type_brate))
@@ -1998,6 +1840,37 @@ void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
+{
+  char err[MAX_PATH_LEN];
+  int endp_type = dpdk_xyx_exists(name, 0);
+  memset(err, 0, MAX_PATH_LEN);
+  event_print("Rx Req cnf a2b %s type:%d "
+              "mac=%hhX:%hhX:%hhX:%hhX:%hhX:%hhX", name, type,
+              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  KERR("%s %d ", name, type);
+  if ((endp_type != endp_type_tap) &&
+      (endp_type != endp_type_phy))
+    {
+    snprintf(err, MAX_PATH_LEN-1, "XYX %s not tap or phy", name);
+    send_status_ko(llid, tid, err);
+    KERR("ERROR %s %d ", name, type);
+    }
+  else if (type != xyx_type_mac_mangle)
+    {
+    snprintf(err, MAX_PATH_LEN-1, "XYX %s wrong type %d", name, type);
+    send_status_ko(llid, tid, err);
+    KERR("ERROR %s %d ", name, type);
+    }
+  else
+    {
+    dpdk_xyx_cnf(name, type, mac);
+    send_status_ok(llid, tid, "");
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_d2d_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                   char *dist, uint32_t dist_ip, uint16_t dist_port,
                   char *dist_passwd, uint32_t dist_udp_ip)
@@ -2007,12 +1880,12 @@ void recv_d2d_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
   event_print("Rx Req add d2d %s", name);
   if (get_inhib_new_clients())
     {
-    KERR("%s %s %s", locnet, name, dist);
+    KERR("ERROR %s %s %s", locnet, name, dist);
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
     }
   else if (cfg_name_is_in_use(0, name, err))
     {
-    KERR("%s %s %s", locnet, name, dist);
+    KERR("ERROR %s %s %s", locnet, name, dist);
     send_status_ko(llid, tid, err);
     }
   else
@@ -2020,7 +1893,7 @@ void recv_d2d_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
     if (dpdk_d2d_add(name, loc_udp_ip, dist, dist_ip, dist_port,
                                        dist_passwd, dist_udp_ip))
       {
-      KERR("%s %s %s", locnet, name, dist);
+      KERR("ERROR %s %s %s", locnet, name, dist);
       send_status_ko(llid, tid, "dpdk_d2d_add ko");
       }
     else
@@ -2028,14 +1901,6 @@ void recv_d2d_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
       send_status_ok(llid, tid, "");
       }
     }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_peer_mac *tabmac)
-{
-  dpdk_d2d_peer_mac(llid, tid, d2d_name, nb_mac, tabmac);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -2050,11 +1915,11 @@ void recv_d2d_peer_create(int llid, int tid, char *name,
     {
     if (get_inhib_new_clients())
       {
-      KERR("%s %s %s %s", locnet, name, dist, loc);
+      KERR("ERROR %s %s %s %s", locnet, name, dist, loc);
       }
     else if (cfg_name_is_in_use(0, name, err))
       {
-      KERR("%s %s %s %s %s", locnet, name, dist, loc, err);
+      KERR("ERROR %s %s %s %s %s", locnet, name, dist, loc, err);
       }
     else
       {
@@ -2067,7 +1932,7 @@ void recv_d2d_peer_create(int llid, int tid, char *name,
     if (d2d)
       dpdk_d2d_peer_add_ack(llid, tid, name, dist, loc, is_ack);
     else
-      KERR("%s %s %s %s", locnet, name, dist, loc);
+      KERR("ERROR %s %s %s %s", locnet, name, dist, loc);
     }
 }
 /*--------------------------------------------------------------------------*/

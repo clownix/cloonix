@@ -87,43 +87,38 @@ void help_del_vm(char *line)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
-void help_add_sat(char *line)
+void help_add_nat(char *line)
 {
   printf("\n\n\n%s <name>\n\n", line);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void help_add_wif(char *line)
+void help_add_phy(char *line)
 {
   printf("\n\n\n%s <name>\n\n", line);
-  printf("\n%s wlan0\n\n", line);
-  printf("  Specifique to have a raw socket to a wlan\n");
-  printf("  real hardware host interface, the name of the\n");
-  printf("  real interface must be given. \n");
-  printf("  Swaps mac address to show the real wlan mac to the outside\n");
-  printf("  Do not use wif, hack for personal use.\n\n\n");
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+void help_add_tap(char *line)
+{
+  printf("\n\n\n%s <name>\n\n", line);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void help_add_a2b(char *line)
+{
+  printf("\n\n\n%s <name>\n\n", line);
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void help_del_sat(char *line)
 {
   printf("\n\n\n%s <sat>\n\n\n", line);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_add_c2c(char *line)
-{
-  printf("\n\n\n%s <name> <distant_name>",line);
-  printf("\n\tDistant cloonix server name:");
-  printf("\n%s\n", cloonix_conf_info_get_names());
-  printf("\n\nexemple:\n");
-  printf("\t%s to_mito mito\n\n\n", line);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -149,51 +144,6 @@ void help_add_vl2sat(char *line)
 void help_del_vl2sat(char *line)
 {
   printf("\n\n\n%s <name> <num> <lan>\n\n\n", line);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_snf_on(char *line)
-{
-  printf("\n\n\n%s <name>\n\n\n", line);
-}
-void help_snf_off(char *line)
-{
-  printf("\n\n\n%s <name>\n\n\n", line);
-}
-void help_snf_get_file(char *line)
-{
-  printf("\n\n\n%s <name>\n\n\n", line);
-}
-void help_snf_set_file(char *line)
-{
-  printf("\n\n\n%s <name> <pcap file path>\n\n\n", line);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_mud_lan(char *line)
-{
-  printf("\n\n\n%s <name> \"txt of msg\"\n\n\n", line);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_mud_sat(char *line)
-{
-  printf("\n\n\n%s <name> \"txt of msg\"", line);
-  printf("\n%s nat \"whatip Cloon1\"\n\n\n", line);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_mud_eth(char *line)
-{
-  printf("\n\n\n%s Cloon1 0 \"set_link 0\"", line);
-  printf("\n%s Cloon1 0 \"set_promisc 0\"\n", line);
-  printf("\n%s Cloon1 0 \"set_shaping 100\"", line);
-  printf("\n (value for set_shaping is in kilo bytes per sec)");
-  printf("\n\n\n");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -247,21 +197,13 @@ void help_cnf_a2b(char *line)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void help_hwsim_config(char *line)
+void help_cnf_xyx(char *line)
 {
-  printf("\n\n%s <name> <num> <txt>\n", line);
+  printf("\n\n%s <name> <cmd>\n", line);
+  printf("\ncmd =  \"mac_mangle=XX:XX:XX:XX:XX:XX\"");
   printf("\n\n");
 }
 /*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_hwsim_dump(char *line)
-{
-  printf("\n\n%s <name> <num>\n", line);
-  printf("\n\n");
-}
-/*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 void help_sub_qmp(char *line)
@@ -277,6 +219,7 @@ void help_snd_qmp(char *l)
 {
   printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"system_reset\\\" }\"",l);
   printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-status\\\" }\"",l);
+  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-block-jobs\\\",\\\"arguments\\\":{}}\"",l);
   printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-commands\\\" }\"",l);
   printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-block\\\" }\"",l);
   printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-blockstats\\\" }\"",l);

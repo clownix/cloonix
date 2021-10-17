@@ -37,9 +37,9 @@ static void create_node_resp(t_topo_kvm *kvm)
 {
   int hidden_on_graph, color_choice;
   double x, y;
-  double tx[MAX_SOCK_VM+MAX_WLAN_VM];
-  double ty[MAX_SOCK_VM+MAX_WLAN_VM];
-  int32_t thidden_on_graph[MAX_SOCK_VM+MAX_WLAN_VM];
+  double tx[MAX_DPDK_VM];
+  double ty[MAX_DPDK_VM];
+  int32_t thidden_on_graph[MAX_DPDK_VM];
 
   get_node_layout_x_y(kvm->name, &color_choice, &x, &y, &hidden_on_graph, 
                       tx, ty, thidden_on_graph);
@@ -54,48 +54,67 @@ static void create_node_resp(t_topo_kvm *kvm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_sat_resp(char *name, int type, t_topo_c2c *c2c,
-                            t_topo_d2d *d2d, t_topo_a2b *a2b)
+void timer_create_obj_resp(void *data)
 {
   double x, y, xa, ya, xb, yb;
   int hidden;
-  get_gene_layout_x_y(bank_type_sat, name, type,
-                      &x, &y, &xa, &ya, &xb, &yb, &hidden);
-  bank_sat_create(name, type, c2c, d2d, a2b, x, y, xa, ya, xb, yb, hidden);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void timer_create_obj_resp(void *data)
-{
+  char *name;
   t_item_obj_resp *pa = (t_item_obj_resp *) data;
   if (pa->kvm)
     {
     create_node_resp(pa->kvm);
     clownix_free(pa->kvm, __FUNCTION__);
     }
-  else if (pa->c2c)
-    {
-    create_sat_resp(pa->c2c->name, endp_type_c2c, pa->c2c, NULL, NULL);
-    clownix_free(pa->c2c, __FUNCTION__);
-    }
-  else if (pa->d2d)
-    {
-    create_sat_resp(pa->d2d->name, endp_type_d2d, NULL, pa->d2d, NULL);
-    clownix_free(pa->d2d, __FUNCTION__);
-    }
-  else if (pa->a2b)
-    {
-    create_sat_resp(pa->a2b->name, endp_type_a2b, NULL, NULL, pa->a2b);
-    clownix_free(pa->a2b, __FUNCTION__);
-    }
-  else if (pa->sat)
-    {
-    create_sat_resp(pa->sat->name, pa->sat->type, NULL, NULL, NULL);
-    clownix_free(pa->sat, __FUNCTION__);
-    }
   else
-    KOUT(" ");
+    {
+    if (pa->d2d)
+      {
+      name = pa->d2d->name;
+      get_gene_layout_x_y(bank_type_sat, name,
+                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
+      bank_sat_create(name, endp_type_d2d, pa->d2d, NULL,
+                      x, y, xa, ya, xb, yb, hidden);
+      clownix_free(pa->d2d, __FUNCTION__);
+      }
+    else if (pa->a2b)
+      {
+      name = pa->a2b->name;
+      get_gene_layout_x_y(bank_type_sat, name,
+                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
+      bank_sat_create(name, endp_type_a2b, NULL, pa->a2b,
+                      x, y, xa, ya, xb, yb, hidden);
+      clownix_free(pa->a2b, __FUNCTION__);
+      }
+    else if (pa->tap)
+      {
+      name = pa->tap->name;
+      get_gene_layout_x_y(bank_type_sat, name,
+                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
+      bank_sat_create(name, endp_type_tap, NULL, NULL,
+                      x, y, xa, ya, xb, yb, hidden);
+      clownix_free(pa->tap, __FUNCTION__);
+      }
+    else if (pa->nat)
+      {
+      name = pa->nat->name;
+      get_gene_layout_x_y(bank_type_sat, name,
+                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
+      bank_sat_create(name, endp_type_nat, NULL, NULL,
+                      x, y, xa, ya, xb, yb, hidden);
+      clownix_free(pa->nat, __FUNCTION__);
+      }
+    else if (pa->phy)
+      {
+      name = pa->phy->name;
+      get_gene_layout_x_y(bank_type_sat, name,
+                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
+      bank_sat_create(name, endp_type_phy, NULL, NULL,
+                      x, y, xa, ya, xb, yb, hidden);
+      clownix_free(pa->phy, __FUNCTION__);
+      }
+    else
+      KOUT(" ");
+    }
   clownix_free(pa, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
@@ -109,7 +128,7 @@ void timer_create_item_resp(void *data)
   switch(lan_pa->bank_type)
     {
     case bank_type_lan:
-      get_gene_layout_x_y(lan_pa->bank_type, lan_pa->name, lan_pa->mutype, 
+      get_gene_layout_x_y(lan_pa->bank_type, lan_pa->name,
                           &x, &y,  &xa, &ya, &xb, &yb, &hidden_on_graph);
       bank_lan_create(lan_pa->name,  x, y, hidden_on_graph);
       break;

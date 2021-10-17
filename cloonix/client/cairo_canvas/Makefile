@@ -3,10 +3,8 @@ CLOONIX_COMMON=../../../cloonix/common
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 UTILS=${CLOONIX_COMMON}/lib_utils/
-RPC_C2C=${CLOONIX_COMMON}/lib_rpc_c2c/
 RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout/
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
-BLKD=${CLOONIX_COMMON}/lib_blkd
 RPCT=${CLOONIX_COMMON}/lib_rpct
 
 
@@ -27,7 +25,6 @@ INCLUDES= -I. $(shell pkg-config --cflags gtk+-3.0) \
           -I${GLOB_INCLUDE} \
           -I${RPC_CLOWNIX}/include \
           -I${UTILS}/include \
-          -I${RPC_C2C}/include \
           -I${RPC_LAYOUT}/include \
           -I${LIB_CLIENT}/include \
           -I${LIB_INTF}/include \
@@ -38,7 +35,6 @@ INCLUDES= -I. $(shell pkg-config --cflags gtk+-3.0) \
 
 LIBS = $(shell pkg-config --libs gtk+-3.0) \
        -L${LIB_CLIENT}/ -lglibclient \
-       -L${RPC_C2C}/ -lrpc_c2c \
        -L${RPC_LAYOUT}/ -lrpc_layout \
        -L${RPC_CLOWNIX}/ -lrpc_clownix \
        -L${LIB_INTF}/ -linterface \
@@ -46,7 +42,6 @@ LIBS = $(shell pkg-config --libs gtk+-3.0) \
        -L${LIB_SUBSETS}/ -lsubsets \
        -L${LIB_BDPLOT}/ -lbdplot \
        -L${IO_CLOWNIX}/ -lio_clownix \
-       -L${BLKD}/ -lblkd \
        -L${RPCT}/ -lrpct \
        -lssl -lcrypto -lrt \
        -L./crcanvas_gtk/ -lcrcanvas_gtk \
@@ -57,7 +52,7 @@ LIBS = $(shell pkg-config --libs gtk+-3.0) \
 
 SRCS     = popup.c topo.c menus.c cloonix.c move.c menu_utils.c \
            main_timer_loop.c canvas_ctx.c eventfull_eth.c make_layout.c \
-           menu_dialog_kvm.c menu_dialog_c2c.c menu_dialog_d2d.c layout_topo.c 
+           menu_dialog_kvm.c menu_dialog_d2d.c layout_topo.c 
 
 OBJ      = $(SRCS:.c=.o)
 OBJ_DIR  = ./obj/

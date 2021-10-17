@@ -18,7 +18,21 @@
 #define MAX_CLOWNIX_BOUND_LEN      64
 #define MIN_CLOWNIX_BOUND_LEN      2
 
-
+/*---------------------------------------------------------------------------*/
+#define NAT_ADD          "<nat_add>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "</nat_add>"
+/*---------------------------------------------------------------------------*/
+#define PHY_ADD          "<phy_add>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "</phy_add>"
+/*---------------------------------------------------------------------------*/
+#define TAP_ADD          "<tap_add>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "</tap_add>"
 /*---------------------------------------------------------------------------*/
 #define A2B_ADD          "<a2b_add>"\
                          "  <tid> %d </tid>\n"\
@@ -29,9 +43,17 @@
                          "  <tid>    %d </tid>\n"\
                          "  <name>   %s </name>\n"\
                          "  <dir>    %d </dir>\n"\
-                         "  <type>    %d </type>\n"\
+                         "  <type>   %d </type>\n"\
                          "  <val>    %d </val>\n"\
                          "</a2b_cnf>"
+
+#define XYX_CNF          "<xyx_cnf>"\
+                         "  <tid>    %d </tid>\n"\
+                         "  <name>   %s </name>\n"\
+                         "  <type>   %d </type>\n"\
+                         "  <mac>    %hhX:%hhX:%hhX:%hhX:%hhX:%hhX  </mac>\n"\
+                         "</xyx_cnf>"
+
 
 /*---------------------------------------------------------------------------*/
 #define D2D_MAC_O        "<d2d_mac>\n"\
@@ -131,25 +153,6 @@
                          "  <txt> %s </txt>\n"\
                          "</ko>"
 /*---------------------------------------------------------------------------*/
-#define MUCLI_DIALOG_REQ_O "<mucli_req_dialog>\n"\
-                           "  <tid> %d </tid>\n"\
-                           "  <name> %s </name>\n"\
-                           "  <eth> %d </eth>\n"
-
-#define MUCLI_DIALOG_REQ_I "  <mucli_dialog_req_bound>%s</mucli_dialog_req_bound>\n"
-
-#define MUCLI_DIALOG_REQ_C "</mucli_req_dialog>"
-/*---------------------------------------------------------------------------*/
-#define MUCLI_DIALOG_RESP_O "<mucli_resp_dialog>\n"\
-                            "  <tid> %d </tid>\n"\
-                            "  <name> %s </name>\n"\
-                            "  <eth> %d </eth>\n"\
-                            "  <status> %d </status>\n"
-
-#define MUCLI_DIALOG_RESP_I "  <mucli_dialog_resp_bound>%s</mucli_dialog_resp_bound>\n"
-
-#define MUCLI_DIALOG_RESP_C "</mucli_resp_dialog>"
-/*---------------------------------------------------------------------------*/
 #define WORK_DIR_REQ     "<work_dir_req>\n"\
                          "  <tid> %d </tid>\n"\
                          "</work_dir_req>"
@@ -226,18 +229,6 @@
                          "  <save_type> %d </save_type>\n"\
                          "  <sav_rootfs_path> %s </sav_rootfs_path>\n"\
                          "</sav_vm>"
-
-#define ADD_SAT_C2C      "<sat_c2c>\n"\
-                         "  <tid> %d </tid>\n"\
-                         "  name:%s \n"\
-                         "  c2c_slave:%s ip_slave:%d \n"\
-                         "  port_slave:%d passwd_slave:%s \n"\
-                         "</sat_c2c>\n"
-
-#define ADD_SAT_NON_C2C "<sat_non_c2c>\n"\
-                         "  <tid> %d </tid>\n"\
-                        "  name:%s type:%d \n"\
-                        "</sat_non_c2c>\n"
 
 #define DEL_SAT          "<del_sat>\n"\
                          "  <tid> %d </tid>\n"\
@@ -342,18 +333,6 @@
 #define EVENT_SYS_C \
                       "</system_info>"
 /*---------------------------------------------------------------------------*/
-#define BLKD_REPORTS_SUB "<blkd_reports_sub>\n"\
-                         "  <tid> %d </tid>\n"\
-                         "  <sub> %d </sub>\n"\
-                         "</blkd_reports_sub>"
-
-#define BLKD_REPORTS_O "<blkd_reports>\n"\
-                       "  <tid> %d </tid>\n"\
-                       "  <nb_reports> %d </nb_reports>\n"
-
-
-#define BLKD_REPORTS_C "</blkd_reports>"
-/*---------------------------------------------------------------------------*/
 #define TOPO_SMALL_EVENT_SUB      "<topo_small_event_sub>\n"\
                               "  <tid> %d </tid>\n"\
                               "</topo_small_event_sub>"
@@ -387,9 +366,9 @@
                               "  network:%s username:%s server_port:%d \n"\
                               "  work_dir:%s bulk_dir:%s bin_dir:%s \n"\
                               "  flags_config:%d \n"\
-                              "  nb_kvm:%d nb_c2c:%d nb_d2d:%d nb_a2b:%d \n"\
-                              "  nb_sat:%d nb_endp:%d nb_phy:%d nb_pci:%d \n"\
-                              "  nb_bridges:%d nb_mirrors:%d \n"
+                              "  nb_kvm:%d nb_d2d:%d nb_tap:%d nb_phy:%d \n"\
+                              "  nb_a2b:%d nb_nat:%d nb_endp:%d \n"\
+                              "  nb_info_phy:%d nb_bridges:%d \n"
 
 #define EVENT_TOPO_C          "</event_topo>\n"\
 
@@ -407,12 +386,6 @@
 
 #define EVENT_TOPO_KVM_C      "</kvm>\n"
                         
-#define EVENT_TOPO_C2C        "<c2c>\n"\
-                              "  name:%s \n"\
-                              "  master:%s slave:%s local_is_master:%d \n"\
-                              "  peered:%d ip_slave:%x port_slave%d \n"\
-                              "</c2c>\n"
-
 #define EVENT_TOPO_D2D        "<d2d>\n"\
                               "  name: %s \n"\
                               "  dist_cloonix: %s \n"\
@@ -443,12 +416,19 @@
                               "  brate1: %d \n"\
                               "</a2b>\n"
 
-#define EVENT_TOPO_SAT        "<sat>\n"\
-                              "  name:%s \n"\
-                              "  type:%d \n"\
-                              "</sat>\n"
+#define EVENT_TOPO_NAT        "<nat>\n"\
+                              "  name:   %s \n"\
+                              "</nat>\n"
+
+#define EVENT_TOPO_TAP        "<tap>\n"\
+                              "  name:   %s \n"\
+                              "</tap>\n"
 
 #define EVENT_TOPO_PHY        "<phy>\n"\
+                              "  name:   %s \n"\
+                              "</phy>\n"
+
+#define EVENT_TOPO_INFO_PHY   "<info_phy>\n"\
                               "  index:%d \n"\
                               "  flags:%X \n"\
                               "  name:%s \n"\
@@ -457,7 +437,7 @@
                               "  mac:%s \n"\
                               "  vendor:%s \n"\
                               "  device:%s \n"\
-                              "</phy>\n"
+                              "</info_phy>\n"
 
 #define EVENT_TOPO_PCI        "<pci>\n"\
                               "  pci:%s \n"\
@@ -472,10 +452,6 @@
 #define EVENT_TOPO_BRIDGES_I  "<port_name> %s </port_name>\n"
 
 #define EVENT_TOPO_BRIDGES_C  "</bridges>\n"
-
-#define EVENT_TOPO_MIRRORS    "<mirrors>\n"\
-                              "  mirror_name: %s \n"\
-                              "</mirrors>\n"
 
 #define EVENT_TOPO_LAN        "  <lan> %s </lan>\n"
 

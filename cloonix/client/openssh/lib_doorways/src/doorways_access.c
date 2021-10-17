@@ -199,10 +199,9 @@ static void cb_doors_end(int llid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int callback_connect(void *ptr, int llid, int fd)
+static int callback_connect(int llid, int fd)
 {
   char buf[2*MAX_NAME_LEN];
-  (void) ptr;
   if (g_door_llid == 0)
     {
     g_door_llid = doorways_sock_client_inet_end(doors_type_openssh, llid, fd,

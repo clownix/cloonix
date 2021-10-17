@@ -15,32 +15,35 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int  fmt_tx_add_lan_pci_dpdk(int tid, char *lan, char *pci);
-int  fmt_tx_del_lan_pci_dpdk(int tid, char *lan, char *pci);
-int  fmt_tx_add_lan_phy_port(int tid, char *lan, char *phy);
-int  fmt_tx_del_lan_phy_port(int tid, char *lan, char *phy);
+int  fmt_tx_add_phy(int tid, char *name);
+int  fmt_tx_del_phy(int tid, char *name);
 int  fmt_tx_add_tap(int tid, char *name);
 int  fmt_tx_del_tap(int tid, char *name);
+int  fmt_tx_add_kvm1(int tid, char *name, int num);
+int  fmt_tx_add_kvm2(int tid, char *name, int num);
+int  fmt_tx_del_kvm(int tid, char *name, int num);
+
+int  fmt_tx_add_lan(int tid, char *lan);
+int  fmt_tx_del_lan(int tid, char *lan);
+
 int  fmt_tx_add_lan_tap(int tid, char *lan, char *name);
 int  fmt_tx_del_lan_tap(int tid, char *lan, char *name);
-int  fmt_tx_add_lan_br(int tid, char *lan);
-int  fmt_tx_del_lan_br(int tid, char *lan);
 
-int  fmt_tx_add_lan_snf(int tid, char *lan, char *name);
-int  fmt_tx_del_lan_snf(int tid, char *lan, char *name);
+int  fmt_tx_add_lan_phy(int tid, char *lan, char *name);
+int  fmt_tx_del_lan_phy(int tid, char *lan, char *name);
+
 int  fmt_tx_add_lan_nat(int tid, char *lan, char *name);
 int  fmt_tx_del_lan_nat(int tid, char *lan, char *name);
+
+int  fmt_tx_add_lan_kvm(int tid, char *lan, char *name, int num);
+int  fmt_tx_del_lan_kvm(int tid, char *lan, char *name, int num);
+
 int  fmt_tx_add_lan_a2b(int tid, char *lan, char *name, int num);
 int  fmt_tx_del_lan_a2b(int tid, char *lan, char *name, int num);
+
 int  fmt_tx_add_lan_d2d(int tid, char *lan, char *name);
 int  fmt_tx_del_lan_d2d(int tid, char *lan, char *name);
 
-int  fmt_tx_add_eth(int tid, char *name, int num, char *strmac);
-int  fmt_tx_del_eth(int tid, char *name, int num);
-int  fmt_tx_add_lan_eth(int tid, char *lan, char *name, int num);
-int  fmt_tx_del_lan_eth(int tid, char *lan, char *name, int num);
-
-void fmt_rx_rpct_recv_diag_msg(int llid, int tid, char *line);
-void fmt_rx_rpct_recv_evt_msg(int llid, int tid, char *line);
+void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line);
 /*--------------------------------------------------------------------------*/
 

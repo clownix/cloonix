@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 NET=nemo
-LINUX=buster_fr
+LINUX=bullseye
 LIST_CISCO="cisco1 cisco2 cisco3" 
 LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk

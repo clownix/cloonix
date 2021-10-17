@@ -36,8 +36,6 @@
 #include "automates.h"
 #include "llid_trace.h"
 #include "stats_counters.h"
-#include "blkd_sub.h"
-#include "blkd_data.h"
 
 #define MAX_TIME_SAMPLES 1000
 
@@ -219,10 +217,6 @@ static void heartbeat (int delta)
       sys = create_sys_event();
       event_subscriber_send(sub_evt_sys, (void *)sys);
       last_delta = 0;
-      blkd_heartbeat(NULL);
-      rpct_heartbeat(NULL);
-      blkd_sub_heartbeat();
-      blkd_data_heartbeat();
       llid_count_beat();
       }
     if (ten_seconde_count == 20)

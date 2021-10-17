@@ -1,77 +1,97 @@
 -----------------------------------------------------------------------------
 AGPLv3 tool to create networks of kvm virtual machines.
-
 See directory cloonix for the LICENCE
-
 See clownix.net for a documentation (which is not up to date).
 
-All usefull downloads for this version are in
-http://clownix.net/downloads/cloonix-17-00
 -----------------------------------------------------------------------------
+DOWNLOADS:
 
-Tested on virtual machines installed with:
+http://clownix.net/downloads/cloonix-18-00
 
-            buster (debian 10),
+-----------------------------------------------------------------------------
+COMPILED AND TESTED ON:
+
             bullseye (debian 11),
-            focal (ubuntu 20.04),
-            groovy (ubuntu 20.10),
             hirsute (ubuntu 21.04),
             tumbleweed (rolling opensuse),
             centos8,
-            fedora33,
             fedora34.
 
-Does not compile on:
-            opensuse153.
 
 Compilation and run should work, on the above but for other distributions,
-you may have to ajust needed packages, look in file install_depends for
+you may have to adjust needed packages, look in file install_depends for
 hints on necessary packages.
 
 -----------------------------------------------------------------------------
-HOWTO INSTALL:
+INSTALL:
 
-The cloonix github store seem to have added characters to scripts last
-time I used it, dos2unix repairs the errors but I would advise the use of
-the direct tar.gz download from clownix.net as following:
- 
-wget http://clownix.net/downloads/cloonix-17-00/cloonix-v17-00.tar.gz
-
-tar xvf cloonix-v17-00.tar.gz
-
-cd cloonix-v17-00
-
-(It is assumed that sudo makes the command run as root.)
+wget http://clownix.net/downloads/cloonix-18-00/cloonix-v18-00.tar.gz
+tar xvf cloonix-v18-00.tar.gz
+cd cloonix-v18-00
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-17-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-18-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
 
 -----------------------------------------------------------------------------
-HOWTO GET A WORKING VM:
-See availlable qcow2 vm at http://clownix.net/downloads/cloonix-17-00/bulk
+GET A WORKING VM:
+
+wget http://clownix.net/downloads/cloonix-18-00/bulk/bullseye.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
+cp bullseye.qcow2.gz ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-wget http://clownix.net/downloads/cloonix-17-00/bulk/buster.qcow2.gz
-gunzip buster.qcow2.gz
+gunzip bullseye.qcow2.gz
 
 -----------------------------------------------------------------------------
-
------------------------------------------------------------------------------
-HOWTO START BASIC NET:
+REQUIRED HOST CUSTOM
 
 Check that your cpu is equiped with the necessary option:
-
 egrep -c '(vmx|svm)' /proc/cpuinfo
-
 The result must be non-zero
 
-To have the kvm_intel loaded at each start of your host (for an intel):
+The host must have 1 Giga size hugepages.
+For this configuration, put in "/etc/default/grub":
 
-echo kvm_intel >> /etc/modules 
+GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugepages=5"
+Then "update-grub" or "grub2-mkconfig --output=/boot/grub2/grub.cfg"
+
+To check:
+mount |grep hugepages
+grep Huge /proc/meminfo
+
+-----------------------------------------------------------------------------
+LAUNCH:
+
+cd cloonix/quickstart
+./ping.sh
+
+-----------------------------------------------------------------------------
+CISCO DEMO:
+
+After cloonix install, go in "tools/cisco" directory and execute
+the 3 steps to have a cisco network running ospf.
+You have to be patient, ciscos are very long to start.
+
+-----------------------------------------------------------------------------
+MIKROTIK DEMO:
+
+After cloonix install, go in "tools/mikrotik" directory and execute steps.
+
+-----------------------------------------------------------------------------
+WIRESHARK:
+
+wireshark problems: Make wireshark usable by non-root user, on debian the way
+to go is for debian:
+echo "wireshark-common wireshark-common/install-setuid boolean true" > preseed
+sudo debconf-set-selections preseed
+sudo dpkg-reconfigure  wireshark
+sudo adduser ${USER} wireshark
+
+-----------------------------------------------------------------------------
+NESTED CLOONIX:
 
 If you need the nested function of kvm, to put a cloonix network inside a
 cloonix vm guest, you can test if you have the necessary config:
@@ -80,75 +100,7 @@ cat /sys/module/kvm_intel/parameters/nested
 
 If you do not have Y after this cat, then you can do:
 
-echo 'GRUB_CMDLINE_LINUX="kvm-intel.nested=1"' >> /etc/default/grub
-
-update-grub
-
-After any of the above commands, the host must be rebooted, then:
+GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugepages=5 kvm-intel.nested=1"
 
 -----------------------------------------------------------------------------
-For the first test of cloonix:
-cd cloonix/quickstart
 
-./ping.sh sock
------------------------------------------------------------------------------
-
------------------------------------------------------------------------------
-TO START DPDK/OVS NET:  (Lower latency, Higher Throughput, advised)
------------------------------------------------------------------------------
-The host must have 1 Giga size hugepages, I chose to have 5 hugepages:
------------------------------------------------------------------------------
-
-To have the correct hugepage configuration, put in /etc/default/grub: 
-
-GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugepages=5"
-
-Then
-
-update-grub
-    or
-grub2-mkconfig --output=/boot/grub2/grub.cfg
-
-mount |grep hugepages
-Check pagesize=1024M
-
-grep Huge /proc/meminfo
-Check the number
-
-Automatic kvm insert with exec rights for users at startup::
-
-echo kvm_intel >> /etc/modules
-
-cat > /etc/udev/rules.d/65-kvm.rules << EOF
-KERNEL=="kvm", NAME="%k", GROUP="kvm", MODE="0666"
-EOF
-
-
-For ovs, log for the nemo network is at:
-
-cat ${HOME}/nemo/dpdk/ovs-vswitchd.log
-
-Inspect ovs data:
-
-cloonix_ovs nemo vsctl show
-
------------------------------------------------------------------------------
-CISCO DEMO:
-After cloonix install, go in "tools/cisco" directory and execute
-the 3 steps to have a cisco network running ospf.
-You have to be patient, ciscos are very long to start.
------------------------------------------------------------------------------
-MIKROTIK DEMO:
-After cloonix install, go in "tools/mikrotik" directory and execute steps.
------------------------------------------------------------------------------
-cloonix also supports wlan:
-cd cloonix/quickstart/mac80211_hwsim
-./hwsim.sh
------------------------------------------------------------------------------
-wireshark problems: Make wireshark usable by non-root user, on debian the way
-to go is:
-echo "wireshark-common wireshark-common/install-setuid boolean true" > preseed
-debconf-set-selections preseed
-dpkg-reconfigure  wireshark
-adduser ${USER} wireshark
------------------------------------------------------------------------------

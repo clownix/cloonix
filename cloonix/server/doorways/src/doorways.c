@@ -37,7 +37,6 @@
 #include "stats.h"
 #include "doorways_sock.h"
 #include "dispach.h"
-#include "c2c.h"
 #include "pid_clone.h"
 /*--------------------------------------------------------------------------*/
 static int  g_doorways_llid;
@@ -99,50 +98,14 @@ static time_t my_second(void)
 /****************************************************************************/
 static void heartbeat (int delta)
 {
-  static int count_ticks_blkd = 0;
-  static int count_ticks_rpct = 0;
   static int g_time_count = 0;
   int cur_sec = my_second();
-  count_ticks_blkd += 1;
-  count_ticks_rpct += 1;
-  if (count_ticks_blkd == 5)
-    {
-    blkd_heartbeat(NULL);
-    count_ticks_blkd = 0;
-    }
-  if (count_ticks_rpct == 100)
-    {
-    rpct_heartbeat(NULL);
-    count_ticks_rpct = 0;
-    }
   if (cur_sec >= g_time_count+1)
     {
     g_time_count += 1;
     stats_heartbeat(cur_sec);
     }
 
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_req_idx(int llid, int tid, char *name)
-{
-  c2c_from_switch_req_idx(name);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_req_conx(int llid, int tid, char *name, int peer_idx,
-                             uint32_t peer_ip, int peer_port, char *passwd)
-{
-  c2c_from_switch_req_conx(name, peer_idx, peer_ip, peer_port, passwd);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void doors_recv_c2c_req_free(int llid, int tid, char *name)
-{
-  c2c_from_switch_req_free(name);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -172,31 +135,31 @@ void doors_recv_command(int llid, int tid, char *name, char *cmd)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
+void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
-  rpct_send_pid_resp(ptr, llid, tid, name, num, cloonix_get_pid(), getpid());
+  rpct_send_pid_resp(llid, tid, name, num, cloonix_get_pid(), getpid());
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_kil_req(void *ptr, int llid, int tid)
+void rpct_recv_kil_req(int llid, int tid)
 {
   exit(0);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop)
+void rpct_recv_hop_sub(int llid, int tid, int flags_hop)
 {
-  rpct_hop_print_add_sub(ptr, llid, tid, flags_hop);
-  DOUT(NULL, FLAG_HOP_DOORS, "Hello from doors process %d", getpid());
+  rpct_hop_print_add_sub(llid, tid, flags_hop);
+  DOUT(FLAG_HOP_DOORS, "Hello from doors process %d", getpid());
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_unsub(void *ptr, int llid, int tid)
+void rpct_recv_hop_unsub(int llid, int tid)
 {
-  rpct_hop_print_del_sub(ptr, llid);
+  rpct_hop_print_del_sub(llid);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -204,7 +167,7 @@ void rpct_recv_hop_unsub(void *ptr, int llid, int tid)
 /****************************************************************************/
 void doors_recv_add_vm(int llid,int tid,char *name, char *way2agent)
 {
-  DOUT(NULL, FLAG_HOP_DOORS, "%s %s", __FUNCTION__, name);
+  DOUT(FLAG_HOP_DOORS, "%s %s", __FUNCTION__, name);
   llid_backdoor_begin_unix(name, way2agent);
 }
 /*--------------------------------------------------------------------------*/
@@ -212,13 +175,13 @@ void doors_recv_add_vm(int llid,int tid,char *name, char *way2agent)
 /****************************************************************************/
 void doors_recv_del_vm(int llid, int tid, char *name)
 {
-  DOUT(NULL, FLAG_HOP_DOORS, "%s %s", __FUNCTION__, name);
+  DOUT(FLAG_HOP_DOORS, "%s %s", __FUNCTION__, name);
   llid_backdoor_end_unix(name);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void err_ctrl_cb (void *ptr, int llid, int err, int from)
+static void err_ctrl_cb (int llid, int err, int from)
 {
   exit(0);
 }
@@ -229,7 +192,7 @@ static void rx_ctrl_cb (int llid, int len, char *buf)
 {
   if (doors_xml_decoder(llid, len, buf))
     {
-    if (rpct_decoder(NULL, llid, len, buf))
+    if (rpct_decoder(llid, len, buf))
       KOUT("%s", buf);
     }
 }
@@ -257,7 +220,7 @@ static void end_of_init(char *passwd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void connect_from_ctrl_client(void *ptr, int llid, int llid_new)
+static void connect_from_ctrl_client(int llid, int llid_new)
 {
   msg_mngt_set_callbacks (llid_new, err_ctrl_cb, rx_ctrl_cb);
   g_doorways_llid = llid_new;
@@ -266,7 +229,7 @@ static void connect_from_ctrl_client(void *ptr, int llid, int llid_new)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void connect_dummy(void *ptr, int llid, int llid_new)
+static void connect_dummy(int llid, int llid_new)
 {
   KOUT(" ");
 }
@@ -342,7 +305,6 @@ int main (int argc, char *argv[])
   char *ctrl_path;
   doors_xml_init();
   x11_init();
-  c2c_init();
   msg_mngt_init(get_name(argv[1]), IO_MAX_BUF_LEN);
   dispach_init();
   pid_clone_init();

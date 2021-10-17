@@ -14,8 +14,7 @@ AR?=ar
 RANLIB?=ranlib
 CC?=gcc
 
-SRC = report.c \
-      rpct.c 
+SRC = rpct.c
 
 all: $(shell mkdir -p ./obj) $(LIB)
 

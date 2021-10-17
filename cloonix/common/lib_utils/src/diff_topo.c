@@ -40,11 +40,11 @@ static int topo_find_kvm(char *name, t_topo_info *topo)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int topo_find_c2c(char *name, t_topo_info *topo)
+static int topo_find_d2d(char *name, t_topo_info *topo)
 {
   int i, found = 0;
-  for (i=0; i< topo->nb_c2c; i++)
-    if (!strcmp(name, topo->c2c[i].name))
+  for (i=0; i< topo->nb_d2d; i++)
+    if (!strcmp(name, topo->d2d[i].name))
       {
       found = 1;
       break;
@@ -54,11 +54,11 @@ static int topo_find_c2c(char *name, t_topo_info *topo)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int topo_find_d2d(char *name, t_topo_info *topo)
+static int topo_find_tap(char *name, t_topo_info *topo)
 {
   int i, found = 0;
-  for (i=0; i< topo->nb_d2d; i++)
-    if (!strcmp(name, topo->d2d[i].name))
+  for (i=0; i< topo->nb_tap; i++)
+    if (!strcmp(name, topo->tap[i].name))
       {
       found = 1;
       break;
@@ -82,11 +82,25 @@ static int topo_find_a2b(char *name, t_topo_info *topo)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int topo_find_sat(char *name, t_topo_info *topo)
+static int topo_find_nat(char *name, t_topo_info *topo)
 {
   int i, found = 0;
-  for (i=0; i< topo->nb_sat; i++)
-    if (!strcmp(name, topo->sat[i].name))
+  for (i=0; i< topo->nb_nat; i++)
+    if (!strcmp(name, topo->nat[i].name))
+      {
+      found = 1;
+      break;
+      }
+  return found;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int topo_find_phy(char *name, t_topo_info *topo)
+{
+  int i, found = 0;
+  for (i=0; i< topo->nb_phy; i++)
+    if (!strcmp(name, topo->phy[i].name))
       {
       found = 1;
       break;
@@ -156,15 +170,15 @@ static t_topo_kvm_chain *topo_get_kvm_chain(t_topo_info *topo)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static t_topo_c2c_chain *topo_get_c2c_chain(t_topo_info *topo)
+static t_topo_d2d_chain *topo_get_d2d_chain(t_topo_info *topo)
 {
   int i;
-  t_topo_c2c_chain *cur, *res = NULL;
-  for (i=0; i< topo->nb_c2c; i++)
+  t_topo_d2d_chain *cur, *res = NULL;
+  for (i=0; i< topo->nb_d2d; i++)
     {
-    cur = (t_topo_c2c_chain *) clownix_malloc(sizeof(t_topo_c2c_chain), 3);
-    memset(cur, 0, sizeof(t_topo_c2c_chain));
-    memcpy(&(cur->c2c), &(topo->c2c[i]), sizeof(t_topo_c2c));
+    cur = (t_topo_d2d_chain *) clownix_malloc(sizeof(t_topo_d2d_chain), 3);
+    memset(cur, 0, sizeof(t_topo_d2d_chain));
+    memcpy(&(cur->d2d), &(topo->d2d[i]), sizeof(t_topo_d2d));
     cur->next = res;
     if (res)
       res->prev = cur;
@@ -175,15 +189,15 @@ static t_topo_c2c_chain *topo_get_c2c_chain(t_topo_info *topo)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static t_topo_d2d_chain *topo_get_d2d_chain(t_topo_info *topo)
+static t_topo_tap_chain *topo_get_tap_chain(t_topo_info *topo)
 {
   int i;
-  t_topo_d2d_chain *cur, *res = NULL;
-  for (i=0; i< topo->nb_d2d; i++)
+  t_topo_tap_chain *cur, *res = NULL;
+  for (i=0; i< topo->nb_tap; i++)
     {
-    cur = (t_topo_d2d_chain *) clownix_malloc(sizeof(t_topo_d2d_chain), 3);
-    memset(cur, 0, sizeof(t_topo_d2d_chain));
-    memcpy(&(cur->d2d), &(topo->d2d[i]), sizeof(t_topo_d2d));
+    cur = (t_topo_tap_chain *) clownix_malloc(sizeof(t_topo_tap_chain), 3);
+    memset(cur, 0, sizeof(t_topo_tap_chain));
+    memcpy(&(cur->tap), &(topo->tap[i]), sizeof(t_topo_tap));
     cur->next = res;
     if (res)
       res->prev = cur;
@@ -212,17 +226,35 @@ static t_topo_a2b_chain *topo_get_a2b_chain(t_topo_info *topo)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
-static t_topo_sat_chain *topo_get_sat_chain(t_topo_info *topo)
+static t_topo_nat_chain *topo_get_nat_chain(t_topo_info *topo)
 {
   int i;
-  t_topo_sat_chain *cur, *res = NULL;
-  for (i=0; i< topo->nb_sat; i++)
+  t_topo_nat_chain *cur, *res = NULL;
+  for (i=0; i< topo->nb_nat; i++)
     {
-    cur = (t_topo_sat_chain *) clownix_malloc(sizeof(t_topo_sat_chain), 3);
-    memset(cur, 0, sizeof(t_topo_sat_chain));
-    memcpy(&(cur->sat), &(topo->sat[i]), sizeof(t_topo_sat));
+    cur = (t_topo_nat_chain *) clownix_malloc(sizeof(t_topo_nat_chain), 3);
+    memset(cur, 0, sizeof(t_topo_nat_chain));
+    memcpy(&(cur->nat), &(topo->nat[i]), sizeof(t_topo_nat));
+    cur->next = res;
+    if (res)
+      res->prev = cur;
+    res = cur;
+    }
+  return res;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static t_topo_phy_chain *topo_get_phy_chain(t_topo_info *topo)
+{
+  int i;
+  t_topo_phy_chain *cur, *res = NULL;
+  for (i=0; i< topo->nb_phy; i++)
+    {
+    cur = (t_topo_phy_chain *) clownix_malloc(sizeof(t_topo_phy_chain), 3);
+    memset(cur, 0, sizeof(t_topo_phy_chain));
+    memcpy(&(cur->phy), &(topo->phy[i]), sizeof(t_topo_phy));
     cur->next = res;
     if (res)
       res->prev = cur;
@@ -315,9 +347,9 @@ static void topo_free_kvm_chain(t_topo_kvm_chain *ch)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void topo_free_c2c_chain(t_topo_c2c_chain *ch)
+static void topo_free_d2d_chain(t_topo_d2d_chain *ch)
 {
-  t_topo_c2c_chain *next, *cur = ch;
+  t_topo_d2d_chain *next, *cur = ch;
   while(cur)
     {
     next = cur->next;
@@ -328,9 +360,9 @@ static void topo_free_c2c_chain(t_topo_c2c_chain *ch)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void topo_free_d2d_chain(t_topo_d2d_chain *ch)
+static void topo_free_tap_chain(t_topo_tap_chain *ch)
 {
-  t_topo_d2d_chain *next, *cur = ch;
+  t_topo_tap_chain *next, *cur = ch;
   while(cur)
     {
     next = cur->next;
@@ -353,12 +385,23 @@ static void topo_free_a2b_chain(t_topo_a2b_chain *ch)
 }
 /*--------------------------------------------------------------------------*/
 
-
+/*****************************************************************************/
+static void topo_free_nat_chain(t_topo_nat_chain *ch)
+{
+  t_topo_nat_chain *next, *cur = ch;
+  while(cur)
+    {
+    next = cur->next;
+    clownix_free(cur, __FUNCTION__);
+    cur = next;
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void topo_free_sat_chain(t_topo_sat_chain *ch)
+static void topo_free_phy_chain(t_topo_phy_chain *ch)
 {
-  t_topo_sat_chain *next, *cur = ch;
+  t_topo_phy_chain *next, *cur = ch;
   while(cur)
     {
     next = cur->next;
@@ -417,13 +460,13 @@ void take_out_from_kvm_chain(t_topo_kvm_chain **ch, t_topo_info *topo)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void take_out_from_c2c_chain(t_topo_c2c_chain **ch, t_topo_info *topo)
+void take_out_from_d2d_chain(t_topo_d2d_chain **ch, t_topo_info *topo)
 {
-  t_topo_c2c_chain *next, *cur = *ch;
+  t_topo_d2d_chain *next, *cur = *ch;
   while (cur)
     {
     next = cur->next;
-    if (topo_find_c2c(cur->c2c.name, topo))
+    if (topo_find_d2d(cur->d2d.name, topo))
       {
       if (cur->next)
         cur->next->prev = cur->prev;
@@ -432,20 +475,20 @@ void take_out_from_c2c_chain(t_topo_c2c_chain **ch, t_topo_info *topo)
       if (cur == *ch)
         *ch = cur->next;
       clownix_free(cur, __FUNCTION__);
-      } 
+      }
     cur = next;
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void take_out_from_d2d_chain(t_topo_d2d_chain **ch, t_topo_info *topo)
+void take_out_from_tap_chain(t_topo_tap_chain **ch, t_topo_info *topo)
 {
-  t_topo_d2d_chain *next, *cur = *ch;
+  t_topo_tap_chain *next, *cur = *ch;
   while (cur)
     {
     next = cur->next;
-    if (topo_find_d2d(cur->d2d.name, topo))
+    if (topo_find_tap(cur->tap.name, topo))
       {
       if (cur->next)
         cur->next->prev = cur->prev;
@@ -482,15 +525,14 @@ void take_out_from_a2b_chain(t_topo_a2b_chain **ch, t_topo_info *topo)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
-void take_out_from_sat_chain(t_topo_sat_chain **ch, t_topo_info *topo)
+void take_out_from_nat_chain(t_topo_nat_chain **ch, t_topo_info *topo)
 {
-  t_topo_sat_chain *next, *cur = *ch;
+  t_topo_nat_chain *next, *cur = *ch;
   while (cur)
     {
     next = cur->next;
-    if (topo_find_sat(cur->sat.name, topo))
+    if (topo_find_nat(cur->nat.name, topo))
       {
       if (cur->next)
         cur->next->prev = cur->prev;
@@ -499,7 +541,29 @@ void take_out_from_sat_chain(t_topo_sat_chain **ch, t_topo_info *topo)
       if (cur == *ch)
         *ch = cur->next;
       clownix_free(cur, __FUNCTION__);
-      } 
+      }
+    cur = next;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void take_out_from_phy_chain(t_topo_phy_chain **ch, t_topo_info *topo)
+{
+  t_topo_phy_chain *next, *cur = *ch;
+  while (cur)
+    {
+    next = cur->next;
+    if (topo_find_phy(cur->phy.name, topo))
+      {
+      if (cur->next)
+        cur->next->prev = cur->prev;
+      if (cur->prev)
+        cur->prev->next = cur->next;
+      if (cur == *ch)
+        *ch = cur->next;
+      clownix_free(cur, __FUNCTION__);
+      }
     cur = next;
     }
 }
@@ -559,21 +623,25 @@ t_topo_differences *topo_get_diffs(t_topo_info *newt, t_topo_info *oldt)
   if (oldt)
     diffs.del_kvm   = topo_get_kvm_chain(oldt);
 
-  diffs.add_c2c     = topo_get_c2c_chain(newt);
-  if (oldt)
-    diffs.del_c2c   = topo_get_c2c_chain(oldt);
-
   diffs.add_d2d     = topo_get_d2d_chain(newt);
   if (oldt)
     diffs.del_d2d   = topo_get_d2d_chain(oldt);
+
+  diffs.add_tap     = topo_get_tap_chain(newt);
+  if (oldt)
+    diffs.del_tap   = topo_get_tap_chain(oldt);
 
   diffs.add_a2b     = topo_get_a2b_chain(newt);
   if (oldt)
     diffs.del_a2b   = topo_get_a2b_chain(oldt);
 
-  diffs.add_sat     = topo_get_sat_chain(newt);
+  diffs.add_nat     = topo_get_nat_chain(newt);
   if (oldt)
-    diffs.del_sat   = topo_get_sat_chain(oldt);
+    diffs.del_nat   = topo_get_nat_chain(oldt);
+
+  diffs.add_phy     = topo_get_phy_chain(newt);
+  if (oldt)
+    diffs.del_phy   = topo_get_phy_chain(oldt);
 
   diffs.add_lan     = topo_get_lan_chain(newt);
   if (oldt)
@@ -589,17 +657,17 @@ t_topo_differences *topo_get_diffs(t_topo_info *newt, t_topo_info *oldt)
   if (diffs.del_kvm && newt)
     take_out_from_kvm_chain(&(diffs.del_kvm), newt);
 
-  if (diffs.add_c2c && oldt)
-    take_out_from_c2c_chain(&(diffs.add_c2c), oldt);
-
-  if (diffs.del_c2c && newt)
-    take_out_from_c2c_chain(&(diffs.del_c2c), newt);
-
   if (diffs.add_d2d && oldt)
     take_out_from_d2d_chain(&(diffs.add_d2d), oldt);
 
   if (diffs.del_d2d && newt)
     take_out_from_d2d_chain(&(diffs.del_d2d), newt);
+
+  if (diffs.add_tap && oldt)
+    take_out_from_tap_chain(&(diffs.add_tap), oldt);
+
+  if (diffs.del_tap && newt)
+    take_out_from_tap_chain(&(diffs.del_tap), newt);
 
   if (diffs.add_a2b && oldt)
     take_out_from_a2b_chain(&(diffs.add_a2b), oldt);
@@ -607,12 +675,17 @@ t_topo_differences *topo_get_diffs(t_topo_info *newt, t_topo_info *oldt)
   if (diffs.del_a2b && newt)
     take_out_from_a2b_chain(&(diffs.del_a2b), newt);
 
+  if (diffs.add_nat && oldt)
+    take_out_from_nat_chain(&(diffs.add_nat), oldt);
 
-  if (diffs.add_sat && oldt)
-    take_out_from_sat_chain(&(diffs.add_sat), oldt);
+  if (diffs.del_nat && newt)
+    take_out_from_nat_chain(&(diffs.del_nat), newt);
 
-  if (diffs.del_sat && newt)
-    take_out_from_sat_chain(&(diffs.del_sat), newt);
+  if (diffs.add_phy && oldt)
+    take_out_from_phy_chain(&(diffs.add_phy), oldt);
+
+  if (diffs.del_phy && newt)
+    take_out_from_phy_chain(&(diffs.del_phy), newt);
 
   if (diffs.add_lan && oldt)
     take_out_from_lan_chain(&(diffs.add_lan), oldt);
@@ -634,17 +707,19 @@ t_topo_differences *topo_get_diffs(t_topo_info *newt, t_topo_info *oldt)
 void topo_free_diffs(t_topo_differences *diffs)
 {
   topo_free_kvm_chain(diffs->add_kvm);
-  topo_free_c2c_chain(diffs->add_c2c);
   topo_free_d2d_chain(diffs->add_d2d);
+  topo_free_tap_chain(diffs->add_tap);
   topo_free_a2b_chain(diffs->add_a2b);
-  topo_free_sat_chain(diffs->add_sat);
+  topo_free_nat_chain(diffs->add_nat);
+  topo_free_phy_chain(diffs->add_phy);
   topo_free_lan_chain(diffs->add_lan);
   topo_free_edge_chain(diffs->add_edge);
   topo_free_kvm_chain(diffs->del_kvm);
-  topo_free_c2c_chain(diffs->del_c2c);
   topo_free_d2d_chain(diffs->del_d2d);
+  topo_free_tap_chain(diffs->del_tap);
   topo_free_a2b_chain(diffs->del_a2b);
-  topo_free_sat_chain(diffs->del_sat);
+  topo_free_nat_chain(diffs->del_nat);
+  topo_free_phy_chain(diffs->del_phy);
   topo_free_lan_chain(diffs->del_lan);
   topo_free_edge_chain(diffs->del_edge);
 }

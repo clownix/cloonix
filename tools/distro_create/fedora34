@@ -56,7 +56,7 @@ fct_umount_wkmntloops()
 #########################################################################
 fct_check_uid
 set +e
-for i in qemu-img yum blkid wget sgdisk partprobe; do
+for i in qemu-img dnf blkid wget sgdisk partprobe; do
   path_bin=$(which $i)
   if [ -z $path_bin ]; then
     echo $i  DOES NOT EXIST
@@ -126,15 +126,15 @@ gpgcheck=0
 EOF
 
 
-yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install bash.$basearch
-yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install libcurl-minimal.$basearch
-yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl.$basearch
-yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl-libs.$basearch
-yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install rpm.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install bash.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install libcurl-minimal.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl-libs.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install rpm.$basearch
 set +e
-yum --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install dnf
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install dnf
 for i in fedora updates; do
-  chroot /tmp/wkmntloops/ rpm --install --nodeps /var/cache/yum/${i}/packages/*
+  chroot /tmp/wkmntloops/ rpm --install --nodeps /var/cache/dnf/${i}/packages/*
 done
 set -e
 

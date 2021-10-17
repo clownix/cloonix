@@ -49,7 +49,7 @@ fct_umount_wkmntloops()
 #########################################################################
 fct_check_uid
 set +e
-for i in qemu-img rpm yum blkid wget sgdisk partprobe; do
+for i in qemu-img rpm dnf blkid wget sgdisk partprobe; do
   path_bin=$(which $i)
   if [ -z $path_bin ]; then
     echo $i  DOES NOT EXIST
@@ -104,7 +104,7 @@ EOF
 done
 
 
-yum --releasever=8 --installroot=/tmp/wkmntloops -y install dnf
+dnf --releasever=8 --installroot=/tmp/wkmntloops -y install dnf
 #-----------------------------------------------------------------------#
 if [ -e /etc/resolv.conf ]; then
   cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"

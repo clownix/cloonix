@@ -15,13 +15,12 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void wireshark_launch(char *name, int num);
 void edge_ctx_menu(t_bank_item *bitem);
 void node_ctx_menu(t_bank_item *bitem);
 void intf_ctx_menu(t_bank_item *bitem);
 void lan_ctx_menu(t_bank_item *bitem);
 void sat_ctx_menu(t_bank_item *bitem);
-void snf_ctx_menu(t_bank_item *bitem);
-void c2c_ctx_menu(t_bank_item *bitem);
 void eth_ctx_menu(t_bank_item *bitem);
 void menu_init(void);
 

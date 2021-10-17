@@ -2,12 +2,8 @@
 HERE=`pwd`
 NET=nemo
 LIST="centos8 \
-      buster \
       bullseye \
       fedora34 \
-      fedora33 \
-      focal \
-      groovy \
       hirsute \
       tumbleweed"
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 
-for i in lib_blkd lib_rpct lib_io_clownix xwy/libmdl xwy/libcli ; do
+for i in lib_rpct lib_io_clownix xwy/libmdl xwy/libcli ; do
   cd ${HERE}/../../common/${i}/
   make clean
 done

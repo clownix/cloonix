@@ -2,12 +2,10 @@ OBJ_DIR=obj/
 LIB = libio_clownix.a
 VPATH = ./src/
 WARNINGS=-Wall
-BLKD=../lib_blkd
 
 GLOB_INCLUDE=../glob_include
 INCLUDES= -I./src \
           -I./include \
-          -I${BLKD}/include \
           -I${GLOB_INCLUDE} 
 
 CFLAGS+=-fPIC -g $(WARNINGS) $(INCLUDES) -lrt 

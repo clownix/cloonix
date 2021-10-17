@@ -23,95 +23,12 @@
 #include "rpc_clownix.h"
 
 
-void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
-void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
-void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line) {KOUT();}
-void rpct_recv_cli_req(void *ptr, int llid, int tid,
-                    int cli_llid, int cli_tid, char *line) {KOUT();}
-void rpct_recv_cli_resp(void *ptr, int llid, int tid,
-                     int cli_llid, int cli_tid, char *line) {KOUT();}
-
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line) {KOUT();}
+void rpct_recv_poldiag_msg(int llid, int tid, char *line) {KOUT();}
 
 void recv_qmp_sub(int llid, int tid, char *name){KOUT(" ");};
 void recv_qmp_req(int llid, int tid, char *name, char *msg){KOUT(" ");};
 
-
-/*****************************************************************************/
-void rpct_recv_report(void *ptr, int llid, t_blkd_item *item)
-{
-  KOUT("%p %d %p", ptr, llid, item);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_mucli_dialog_req(int llid, int tid, char *name, int num, char *line)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
-void recv_c2c_create(int llid, int tid, char *name, 
-                     int ip_slave, int port_slave)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-/****************************************************************************/
-void recv_c2c_peer_create(int llid, int tid, char *name,
-                          char *master_cloonix, int master_idx,
-                          int ip_slave, int port_slave)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void recv_c2c_peer_ping(int llid, int tid, char *name)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
-void recv_c2c_ack_peer_create(int llid, int tid, char *name,
-                                    char *orig_cloonix_name,
-                                    char *peer_cloonix_name,
-                                    int orig_doors_idx,
-                                    int peer_doors_idx,
-                                    int status)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-/****************************************************************************/
-void recv_c2c_delete(int llid, int tid, char *name)
-{
-  KOUT(" ");
-}
-/*-------------------------------------------------------------------------*/
-/****************************************************************************/
-void recv_c2c_peer_delete(int llid, int tid, char *name)
-{
-  KOUT(" ");
-}
-/*-------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void recv_c2c_add_lan(int llid, int tid, char *name, char *lan)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void recv_c2c_del_lan(int llid, int tid, char *name, char *lan)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void recv_evt_stats_endp_sub(int llid, int tid, char *name, int num, int sub)
@@ -129,13 +46,6 @@ void recv_evt_stats_sysinfo_sub(int llid, int tid, char *name, int sub)
 
 /****************************************************************************/
 void recv_blkd_reports_sub(int llid, int tid, int sub)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void recv_evt_stats_c2c_sub(int llid, int tid, char *name, int sub)
 {
   KOUT(" ");
 }
@@ -263,14 +173,6 @@ void recv_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_add_sat(int llid, int tid, char *name, 
-                  int mutype, t_c2c_req_info *c2c_req_info)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void recv_del_sat(int llid, int tid, char *name)
 {
   KOUT(" ");
@@ -350,16 +252,16 @@ void recv_sav_vm(int llid, int tid, char *name, int type, char *path)
 }
 /*--------------------------------------------------------------------------*/
 
-void rpct_recv_kil_req(void *ptr, int llid, int tid){KOUT();}
+void rpct_recv_kil_req(int llid, int tid){KOUT();}
 /*****************************************************************************/
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
+void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   KOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
+void rpct_recv_pid_resp(int llid, int tid, char *name, int num,
                         int toppid, int pid)
 {
   KOUT(" ");
@@ -367,14 +269,14 @@ void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop)
+void rpct_recv_hop_sub(int llid, int tid, int flags_hop)
 {
   KOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_unsub(void *ptr, int llid, int tid)
+void rpct_recv_hop_unsub(int llid, int tid)
 {
   KOUT(" ");
 }
@@ -382,7 +284,7 @@ void rpct_recv_hop_unsub(void *ptr, int llid, int tid)
 
 
 /*****************************************************************************/
-void rpct_recv_hop_msg(void *ptr, int llid, int tid, int flags_hop, char *txt)
+void rpct_recv_hop_msg(int llid, int tid, int flags_hop, char *txt)
 {
   KOUT(" ");
 }
@@ -419,13 +321,6 @@ void recv_d2d_add(int llid, int tid, char *name, uint32_t local_udp_ip,
 }
 /*--------------------------------------------------------------------------*/
 
-void recv_d2d_peer_mac(int llid, int tid, char *d2d_name,
-                       int nb_mac, t_peer_mac *mac)
-{
-  KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-
 
 void recv_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
                           char *distant_cloonix, char *local_cloonix)
@@ -443,9 +338,18 @@ void recv_d2d_peer_ping(int llid, int tid, char *d2d_name, int status)
 
 void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
 {KOUT(" ");}
+void recv_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
+{KOUT(" ");}
 
+void recv_tap_add(int llid, int tid, char *name)
+{KOUT(" ");}
 void recv_a2b_add(int llid, int tid, char *name)
 {KOUT(" ");}
+void recv_nat_add(int llid, int tid, char *name)
+{KOUT(" ");}
+void recv_phy_add(int llid, int tid, char *name)
+{KOUT(" ");}
+
 /*--------------------------------------------------------------------------*/
 
 

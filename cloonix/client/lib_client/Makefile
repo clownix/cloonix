@@ -1,7 +1,6 @@
 CLOONIX_COMMON=../../../cloonix/common
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix
-RPC_C2C=${CLOONIX_COMMON}/lib_rpc_c2c
 RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout
 UTILS=${CLOONIX_COMMON}/lib_utils/
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
@@ -25,7 +24,6 @@ INCLUDES= -I./include \
           -I${GLOB_INCLUDE} \
           -I${IO_CLOWNIX}/include \
           -I${RPC_CLOWNIX}/include \
-          -I${RPC_C2C}/include \
           -I${RPC_LAYOUT}/include \
           -I${UTILS}/include 
 

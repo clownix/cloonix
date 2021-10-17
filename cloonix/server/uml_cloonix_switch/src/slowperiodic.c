@@ -61,7 +61,8 @@ static int get_bulk_files(t_slowperiodic **slowperiodic)
         continue;
       if (ent->d_type == DT_REG)
         {
-        snprintf((*slowperiodic)[nb].name, MAX_NAME_LEN-1, ent->d_name);
+        memset((*slowperiodic)[nb].name, 0, MAX_NAME_LEN);
+        strncpy((*slowperiodic)[nb].name, ent->d_name, MAX_NAME_LEN-1);
         nb += 1;
         }
       if (nb >= max)

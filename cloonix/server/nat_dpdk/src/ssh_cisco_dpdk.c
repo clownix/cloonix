@@ -90,7 +90,6 @@ static t_arp *g_head_arp;
 
 static uint16_t g_sport;
 
-void req_unix2inet_conpath_evt(int llid, char *name);
 
 
 /****************************************************************************/
@@ -363,7 +362,6 @@ void ssh_cisco_dpdk_arp_resp(uint8_t *dmac, uint32_t dip)
           KERR("%X", dip);
         else
           { 
-          req_unix2inet_conpath_evt(llid, vm);
           memcpy(cur->smac, smac, 6);
           memcpy(cur->dmac, dmac, 6);
           cur->flagseq = flagseq;

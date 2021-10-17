@@ -167,7 +167,7 @@ void send_to_traf_client(int dido_llid, int val, int len, char *buf)
   else
     {
     if (val != doors_val_none)
-      DOUT(NULL, FLAG_HOP_DOORS, "CLIENT_TX: %d %s", dido_llid, buf);
+      DOUT(FLAG_HOP_DOORS, "CLIENT_TX: %d %s", dido_llid, buf);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -220,8 +220,7 @@ static void traf_shutdown(int dido_llid, int line)
         llid_backdoor_tx(lt->name, lt->backdoor_llid, lt->dido_llid, 
                          strlen(LABREAK) + 1, header_type_ctrl_agent, 
                          header_val_del_dido_llid, g_buf);
-        DOUT(NULL, FLAG_HOP_DOORS, "BACKDOOR_TX: %d %s", 
-                                   dido_llid, g_buf+headsize);
+        DOUT(FLAG_HOP_DOORS, "BACKDOOR_TX: %d %s", dido_llid, g_buf+headsize);
         }
       llid_backdoor_del_traf(lt->name, lt->backdoor_llid, dido_llid);
       }
@@ -390,7 +389,7 @@ static int start_link2agent_auto(t_llid_traf *lt, int len, char *data)
           llid_backdoor_tx(lt->name, lt->backdoor_llid, lt->dido_llid, 
                            rlen + 1, header_type_ctrl_agent, 
                            header_val_add_dido_llid, g_buf);
-          DOUT(NULL, FLAG_HOP_DOORS, "BACKDOOR_TX: %d %s",  
+          DOUT(FLAG_HOP_DOORS, "BACKDOOR_TX: %d %s",  
                                      lt->dido_llid, g_buf+headsize);
           result = 0;
           }
@@ -494,7 +493,7 @@ void llid_traf_rx_from_client(int dido_llid, int len, char *buf)
   lt = llid_traf_get(dido_llid);
   if (!lt)
     {
-    DOUT(NULL, FLAG_HOP_DOORS, "CLIENT_RX: %d %s", dido_llid, buf);
+    DOUT(FLAG_HOP_DOORS, "CLIENT_RX: %d %s", dido_llid, buf);
     llid_traf_alloc(dido_llid);
     lt = llid_traf_get(dido_llid);
     if (!lt)

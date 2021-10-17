@@ -116,10 +116,10 @@ static gboolean glib_cb (GIOChannel   *source,
     return FALSE;
   gtl->tag = 0;
   if (condition & G_IO_OUT)
-    gtl->glibtx(NULL, gtl->llid, gtl->fd);
+    gtl->glibtx(gtl->llid, gtl->fd);
   else if (condition & G_IO_IN)
     {
-    if (!gtl->glibrx(NULL, gtl->llid, gtl->fd))
+    if (!gtl->glibrx(gtl->llid, gtl->fd))
       {
       gtl->fail_count++;
       if (gtl->fail_count >= 5)

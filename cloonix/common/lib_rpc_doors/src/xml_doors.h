@@ -18,60 +18,6 @@
 #define MAX_CLOWNIX_BOUND_LEN      64
 #define MIN_CLOWNIX_BOUND_LEN      2
 /*---------------------------------------------------------------------------*/
-#define C2C_REQ_IDX   "<c2c_req_idx>\n"\
-                      "  <tid>  %d </tid>\n"\
-                      "  <name> %s </name>\n"\
-                      "</c2c_req_idx>\n"
-/*---------------------------------------------------------------------------*/
-#define C2C_RESP_IDX  "<c2c_resp_idx>\n"\
-                      "  <tid>  %d </tid>\n"\
-                      "  <name> %s </name>\n"\
-                      "  <local_idx>  %d </local_idx>\n"\
-                      "</c2c_resp_idx>\n"
-/*---------------------------------------------------------------------------*/
-#define C2C_REQ_CONX  "<c2c_req_conx>\n"\
-                      "  <tid>  %d </tid>\n"\
-                      "  <name> %s </name>\n"\
-                      "  <peer_idx>  %d </peer_idx>\n"\
-                      "  <peer_ip>  %d </peer_ip>\n"\
-                      "  <peer_port> %d </peer_port>\n"\
-                      "  <passwd> %s </passwd>\n"\
-                      "</c2c_req_conx>\n"
-/*---------------------------------------------------------------------------*/
-#define C2C_RESP_CONX  "<c2c_resp_conx>\n"\
-                       "  <tid>  %d </tid>\n"\
-                       "  <name> %s </name>\n"\
-                       "  <fd>  %d </fd>\n"\
-                       "  <status>  %d </status>\n"\
-                       "</c2c_resp_conx>\n"
-/*---------------------------------------------------------------------------*/
-#define C2C_REQ_FREE  "<c2c_req_free>\n"\
-                      "  <tid>  %d </tid>\n"\
-                      "  <name> %s </name>\n"\
-                      "</c2c_req_free>\n"
-/*---------------------------------------------------------------------------*/
-#define C2C_CLONE_BIRTH "<c2c_clone_birth>\n"\
-                        "  <tid>  %d </tid>\n"\
-                        "  <net_name> %s </net_name>\n"\
-                        "  <name> %s </name>\n"\
-                        "  <fd>  %d </fd>\n"\
-                        "  <endp_type>  %d </endp_type>\n"\
-                        "  <bin_path> %s </bin_path>\n"\
-                        "  <sock> %s </sock>\n"\
-                        "</c2c_clone_birth>\n"
-/*---------------------------------------------------------------------------*/
-#define C2C_CLONE_BIRTH_PID "<c2c_clone_birth_pid>\n"\
-                            "  <tid>  %d </tid>\n"\
-                            "  <name> %s </name>\n"\
-                            "  <pid>  %d </pid>\n"\
-                            "</c2c_clone_birth_pid>\n"
-/*---------------------------------------------------------------------------*/
-#define C2C_CLONE_DEATH "<c2c_clone_death>\n"\
-                        "  <tid>  %d </tid>\n"\
-                        "  <name> %s </name>\n"\
-                        "</c2c_clone_death>\n"
-/*---------------------------------------------------------------------------*/
-
 /*---------------------------------------------------------------------------*/
 #define INFO_O  "<doors_any_info>\n"\
                  "  <tid>  %d </tid>\n"\

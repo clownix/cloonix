@@ -277,13 +277,13 @@ void dhcp_arp_management(struct rte_mbuf *m)
     {
     if (tip == htonl(our_cisco_ip))
       {
-      mc = (uint8_t *) &(eth->d_addr);
+      mc = (uint8_t *) &(eth->dst_addr);
       utils_get_mac(NAT_MAC_CISCO, mac);
       if (memcmp(mc, mac, 6))
         KERR("%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
               mc[0],mc[1],mc[2],mc[3],mc[4],mc[5]); 
       else
-        ssh_cisco_dpdk_arp_resp((uint8_t *)(&(eth->s_addr)), ntohl(sip));
+        ssh_cisco_dpdk_arp_resp((uint8_t *)(&(eth->src_addr)), ntohl(sip));
       }
     else
       {
@@ -305,13 +305,13 @@ void dhcp_arp_management(struct rte_mbuf *m)
       }
     if (ok == 1)
       {
-      eth->d_addr = eth->s_addr;
-      eth->s_addr = (*((struct rte_ether_addr *)mac));
+      eth->dst_addr = eth->src_addr;
+      eth->src_addr = (*((struct rte_ether_addr *)mac));
       ahdr->arp_opcode = rte_cpu_to_be_16(RTE_ARP_OP_REPLY);
       adata->arp_tip = adata->arp_sip;
       adata->arp_sip = tip;
       adata->arp_tha = adata->arp_sha;
-      adata->arp_sha = eth->s_addr;
+      adata->arp_sha = eth->src_addr;
       txq_dpdk_enqueue(m, 0);
       }
     }

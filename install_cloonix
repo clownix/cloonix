@@ -15,7 +15,7 @@ fi
 #----------------------------------------------------------
 for i in cloonix_dta cloonix_mon cloonix_osh cloonix_xwy \
          cloonix_cli cloonix_gui cloonix_net cloonix_scp \
-         cloonix_zor cloonix_ice cloonix_ocp \
+         cloonix_ice cloonix_ocp \
          cloonix_ssh cloonix_ovs; do 
   rm -f /usr/local/bin/${i}
 done
@@ -25,22 +25,20 @@ cd /usr/local/bin
 tar zxvf ${HERE}/${CLOONIX}
 chown -R root:root /usr/local/bin/cloonix*
 SERV_BIN_PATH=/usr/local/bin/cloonix/server
-MUTAP=${SERV_BIN_PATH}/muswitch/mutap/cloonix_mutap
 OVS_DRV=${SERV_BIN_PATH}/ovs_drv/cloonix_ovs_drv
 SUID_POWER=${SERV_BIN_PATH}/suid_power/cloonix_suid_power
-SNF_DPDK=${SERV_BIN_PATH}/dpdk/bin/cloonix_snf_dpdk
 NAT_DPDK=${SERV_BIN_PATH}/dpdk/bin/cloonix_nat_dpdk
 D2D_DPDK=${SERV_BIN_PATH}/dpdk/bin/cloonix_d2d_dpdk
+XYX_DPDK=${SERV_BIN_PATH}/dpdk/bin/cloonix_xyx_dpdk
 A2B_DPDK=${SERV_BIN_PATH}/dpdk/bin/cloonix_a2b_dpdk
 USBHELP=/usr/local/bin/cloonix/common/spice/spice_lib
 USBHELP+=/libexec/spice-client-glib-usb-acl-helper
-chmod u+s ${MUTAP}
 chmod u+s ${OVS_DRV}
 chmod u+s ${SUID_POWER}
-chmod u+s ${SNF_DPDK}
 chmod u+s ${NAT_DPDK}
 chmod u+s ${D2D_DPDK}
 chmod u+s ${A2B_DPDK}
+chmod u+s ${XYX_DPDK}
 chmod u+s ${USBHELP}
 #----------------------------------------------------------
 rm -f ${HERE}/${CLOONIX}

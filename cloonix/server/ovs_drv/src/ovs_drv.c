@@ -34,6 +34,8 @@
 
 #define CLOONIX_DIAG_LOG  "cloonix_diag.log"
 
+void clean_all_upon_error(void);
+
 static char g_net_name[MAX_NAME_LEN];
 static char g_ovs_bin[MAX_PATH_LEN];
 static char g_dpdk_dir[MAX_PATH_LEN];
@@ -195,7 +197,6 @@ void unlink_files(char *dpdk_dir)
     if (call_my_popen(dpdk_dir, 3, g_arg)) 
       KERR(" ");
     sync();
-    usleep(5000);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -213,53 +214,45 @@ void unlink_dir(char *dpdk_dir)
     {
     if (call_my_popen(dpdk_dir, 3, g_arg)) 
       KERR(" ");
-    usleep(10000);
+    sync();
     }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void timeout_rpct_heartbeat(void *data)
+static void timeout_heartbeat(void *data)
 {
-  rpct_heartbeat(NULL);
-  if (g_ovsdb_launched && g_ovs_launched)
+  if (g_ovs_pid > 0)
     {
-    if (g_ovs_pid > 0)
+    if (kill(g_ovs_pid, 0))
       {
-      if (kill(g_ovs_pid, 0))
-        {
-        KERR("ovs pid %d diseapeared, killing ovsdb", g_ovs_pid);
-        if (g_ovsdb_pid > 0)
-          kill(g_ovsdb_pid, SIGKILL);
-        kill(g_ovs_pid, SIGKILL);
-        KOUT(" ");
-        }
+      KERR("ERROR HEARTBEAT ovs %d ovsdb %d", g_ovs_pid, g_ovsdb_pid);
+      clean_all_upon_error();
+      KOUT("ERROR HEARTBEAT ovs %d ovsdb %d", g_ovs_pid, g_ovsdb_pid);
       }
-    if (g_ovsdb_pid > 0)
-      {
-      if (kill(g_ovsdb_pid, 0))
-        {
-        KERR("ovsdb pid %d diseapeared, killing ovs", g_ovsdb_pid);
-        if (g_ovs_pid > 0)
-          kill(g_ovs_pid, SIGKILL);
-        kill(g_ovsdb_pid, SIGKILL);
-        KOUT(" ");
-        }
-      }
-    if ((g_ovsdb_pid <= 0) && (g_ovs_pid <= 0))
-      KOUT(" ");
     }
-  clownix_timeout_add(100, timeout_rpct_heartbeat, NULL, NULL, NULL);
+  if (g_ovsdb_pid > 0)
+    {
+    if (kill(g_ovsdb_pid, 0))
+      {
+      KERR("ERROR HEARTBEAT ovs %d ovsdb %d", g_ovs_pid, g_ovsdb_pid);
+      clean_all_upon_error();
+      KOUT("ERROR HEARTBEAT ovs %d ovsdb %d", g_ovs_pid, g_ovsdb_pid);
+      }
+    }
+  clownix_timeout_add(50, timeout_heartbeat, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void timeout_blkd_heartbeat(void *data)
+static void timeout_heartbeat_start(void *data)
 {
-  blkd_heartbeat(NULL);
-  clownix_timeout_add(1, timeout_blkd_heartbeat, NULL, NULL, NULL);
+  if ((g_ovsdb_pid <= 0) || (g_ovs_pid <= 0))
+    KOUT("ERROR HEARTBEAT ovs %d ovsdb %d", g_ovs_pid, g_ovsdb_pid);
+  clownix_timeout_add(50, timeout_heartbeat, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 static int mycmp(char *req, char *targ)
@@ -292,21 +285,7 @@ static void log_write_req_resp(char *line, char *respb)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_evt_msg(void *ptr, int llid, int tid, char *line)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void rpct_recv_report(void *ptr, int llid, t_blkd_item *item)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
+void rpct_recv_pid_resp(int llid, int tid, char *name, int num,
                         int toppid, int pid)
 {
   KOUT(" ");
@@ -314,49 +293,41 @@ void rpct_recv_pid_resp(void *ptr, int llid, int tid, char *name, int num,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_msg(void *ptr, int llid, int tid, int flags_hop, char *txt)
+void rpct_recv_hop_msg(int llid, int tid, int flags_hop, char *txt)
 {
   KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_sub(void *ptr, int llid, int tid, int flags_hop)
+void rpct_recv_hop_sub(int llid, int tid, int flags_hop)
 {
-  DOUT(NULL, FLAG_HOP_DIAG, "Hello from ovs_drv");
-  rpct_hop_print_add_sub(NULL, llid, tid, flags_hop);
+  DOUT(FLAG_HOP_SIGDIAG, "Hello from ovs_drv");
+  rpct_hop_print_add_sub(llid, tid, flags_hop);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_hop_unsub(void *ptr, int llid, int tid)
+void rpct_recv_hop_unsub(int llid, int tid)
 {
-  rpct_hop_print_del_sub(ptr, llid);
+  rpct_hop_print_del_sub(llid);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_kil_req(void *ptr, int llid, int tid)
+void rpct_recv_kil_req(int llid, int tid)
 {
   KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void rpct_recv_pid_req(void *ptr, int llid, int tid, char *name, int num)
+void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   if ((g_ovs_pid == 0) && (g_ovsdb_pid == 0)) 
-    rpct_send_pid_resp(ptr, llid, tid, name, num, 0, getpid());
+    rpct_send_pid_resp(llid, tid, name, num, 0, getpid());
   else
-    rpct_send_pid_resp(ptr, llid, tid, name, num, g_ovs_pid, g_ovsdb_pid);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void rpct_recv_cli_resp(void *ptr, int llid, int tid,
-                     int cli_llid, int cli_tid, char *line)
-{
-  KOUT(" ");
+    rpct_send_pid_resp(llid, tid, name, num, g_ovs_pid, g_ovsdb_pid);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -378,139 +349,127 @@ void clean_all_upon_error(void)
     }
   unlink(get_pidfile_ovsdb(g_dpdk_dir));
   unlink(get_pidfile_ovs(g_dpdk_dir));
-  usleep(10000);
   g_ovsdb_pid = -1;
   g_ovs_pid = -1;
   g_ovs_launched = 0;
   g_ovsdb_launched = 0;
   unlink_dir(g_dpdk_dir);
+  sync();
 }
 /*---------------------------------------------------------------------------*/
 
+
+/****************************************************************************/
+void rpct_recv_poldiag_msg(int llid, int tid, char *line)
+{
+  KERR("%s", line);
+}
+/*--------------------------------------------------------------------------*/
+
 /*****************************************************************************/
-void rpct_recv_diag_msg(void *ptr, int llid, int tid, char *line)
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   uint32_t lcore_mask, cpu_mask, socket_mem;
   char *bin = g_ovs_bin;
   char *db = g_dpdk_dir;
-  int num, cloonix_llid;
+  int num;
   char respb[MAX_PATH_LEN];
   char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
-  char mac[MAC_ADDR_LEN];
   if (!file_exists(g_dpdk_dir))
     KOUT("%s", g_dpdk_dir);
   if (!is_directory_writable(g_dpdk_dir))
     KOUT("%s", g_dpdk_dir);
+  DOUT(FLAG_HOP_SIGDIAG, "OVS %s", line);
   memset(respb, 0, MAX_PATH_LEN); 
-  if (!mycmp(line, "cloonixovs_req_suidroot"))
+  if (!mycmp(line, 
+          "cloonixovs_req_suidroot"))
     action_req_suidroot(respb);
   else if (sscanf(line,
-           "cloonixovs_req_ovsdb lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
+          "cloonixovs_req_ovsdb lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
                                  &lcore_mask, &socket_mem, &cpu_mask) == 3)
     action_req_ovsdb(bin, db, respb, lcore_mask, socket_mem, cpu_mask);
   else if (sscanf(line,
-           "cloonixovs_req_ovs lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
+          "cloonixovs_req_ovs lcore_mask=0x%x socket_mem=%d cpu_mask=0x%x",
                                  &lcore_mask, &socket_mem, &cpu_mask) == 3)
     action_req_ovs_switch(bin, db, respb, lcore_mask, socket_mem, cpu_mask);
-
+  else if (sscanf(line, 
+          "cloonixovs_add_phy name=%s", name) == 1)
+    action_add_phy(respb, name);
   else if (sscanf(line,
-           "cloonixovs_add_lan_pci_dpdk lan=%s pci=%s", lan, name) == 2)
-    action_add_lan_pci_dpdk(respb, lan, name);
+          "cloonixovs_del_phy name=%s", name) == 1)
+    action_del_phy(respb, name);
   else if (sscanf(line,
-           "cloonixovs_del_lan_pci_dpdk lan=%s pci=%s", lan, name) == 2)
-    action_del_lan_pci_dpdk(respb, lan, name);
-
+          "cloonixovs_add_tap name=%s", name) == 1)
+    action_add_tap(respb, name);
   else if (sscanf(line,
-           "cloonixovs_add_lan_phy_port lan=%s phy=%s", lan, name) == 2)
-    action_add_lan_phy_port(respb, lan, name);
+          "cloonixovs_del_tap name=%s", name) == 1)
+    action_del_tap(respb, name);
+  else if (sscanf(line, 
+          "cloonixovs_add_kvm1 name=%s num=%d", name, &num) == 2)
+    action_add_kvm1(respb, name, num);
   else if (sscanf(line,
-           "cloonixovs_del_lan_phy_port lan=%s phy=%s", lan, name) == 2)
-    action_del_lan_phy_port(respb, lan, name);
+          "cloonixovs_add_kvm2 name=%s num=%d", name, &num) == 2)
+    action_add_kvm2(respb, name, num);
+  else if (sscanf(line,
+          "cloonixovs_del_kvm name=%s num=%d", name, &num) == 2)
+    action_del_kvm(respb, name, num);
+  else if (sscanf(line,
+          "cloonixovs_add_lan lan=%s", name) == 1)
+    action_add_lan(respb, name);
+  else if (sscanf(line,
+          "cloonixovs_del_lan lan=%s", name) == 1)
+    action_del_lan(respb, name);
+  else if (sscanf(line,
+          "cloonixovs_add_lan_nat lan=%s name=%s",lan,name) == 2)
+    action_add_lan_nat(respb, lan, name);
+  else if (sscanf(line,
+          "cloonixovs_del_lan_nat lan=%s name=%s",lan,name) == 2)
+    action_del_lan_nat(respb, lan, name);
+  else if (sscanf(line,
+          "cloonixovs_add_lan_d2d lan=%s name=%s",lan,name) == 2)
+    action_add_lan_d2d(respb, lan, name);
+  else if (sscanf(line,
+          "cloonixovs_del_lan_d2d lan=%s name=%s",lan,name) == 2)
+    action_del_lan_d2d(respb, lan, name);
+  else if (sscanf(line,
+          "cloonixovs_add_lan_a2b lan=%s name=%s num=%d",lan,name,&num) == 3)
+    action_add_lan_a2b(respb, lan, name, num);
+  else if (sscanf(line,
+          "cloonixovs_del_lan_a2b lan=%s name=%s num=%d",lan,name,&num) == 3)
+    action_del_lan_a2b(respb, lan, name, num);
+  else if (sscanf(line,
+          "cloonixovs_add_lan_kvm lan=%s name=%s num=%d",lan,name,&num) == 3)
+    action_add_lan_kvm(respb, lan, name, num);
+  else if (sscanf(line,
+          "cloonixovs_del_lan_kvm lan=%s name=%s num=%d",lan,name,&num) == 3)
+    action_del_lan_kvm(respb, lan, name, num);
+  else if(sscanf(line,
+         "cloonixovs_add_lan_tap lan=%s name=%s", lan, name) == 2)
+    action_add_lan_tap(respb, lan, name);
+  else if(sscanf(line,
+         "cloonixovs_del_lan_tap lan=%s name=%s", lan, name) == 2)
+    action_del_lan_tap(respb, lan, name);
+  else if(sscanf(line,
+         "cloonixovs_add_lan_phy lan=%s name=%s", lan, name) == 2)
+    action_add_lan_phy(respb, lan, name);
+  else if(sscanf(line,
+         "cloonixovs_del_lan_phy lan=%s name=%s", lan, name) == 2)
+    action_del_lan_phy(respb, lan, name);
 
-  else if (action_add_eth_req(line, name, &num, mac))
-    action_add_eth_br(respb, name, num, mac);
-  else if (sscanf(line,"cloonixovs_del_eth name=%s num=%d", name, &num) == 2)
-    action_del_eth_br(respb, name, num);
-  else if (sscanf(line,"cloonixovs_add_lan_br lan=%s", name) == 1)
-    action_add_lan_br(respb, name);
-  else if (sscanf(line,"cloonixovs_del_lan_br lan=%s", name) == 1)
-    action_del_lan_br(respb, name);
-
-  else if (sscanf(line,"cloonixovs_add_lan_snf lan=%s name=%s",lan,name) == 2)
-    action_add_lan_snf_br(respb, lan, name);
-  else if (sscanf(line,"cloonixovs_del_lan_snf lan=%s name=%s",lan,name) == 2)
-    action_del_lan_snf_br(respb, lan, name);
-  else if (sscanf(line,"cloonixovs_add_lan_nat lan=%s name=%s",lan,name) == 2)
-    action_add_lan_nat_br(respb, lan, name);
-  else if (sscanf(line,"cloonixovs_del_lan_nat lan=%s name=%s",lan,name) == 2)
-    action_del_lan_nat_br(respb, lan, name);
-
-  else if (sscanf(line,"cloonixovs_add_lan_d2d lan=%s name=%s",lan,name) == 2)
-    action_add_lan_d2d_br(respb, lan, name);
-  else if (sscanf(line,"cloonixovs_del_lan_d2d lan=%s name=%s",lan,name) == 2)
-    action_del_lan_d2d_br(respb, lan, name);
-
-  else if (sscanf(line,"cloonixovs_add_lan_a2b lan=%s name=%s",lan,name) == 2)
-    action_add_lan_a2b_br(respb, lan, name);
-  else if (sscanf(line,"cloonixovs_del_lan_a2b lan=%s name=%s",lan,name) == 2)
-    action_del_lan_a2b_br(respb, lan, name);
-
-  else if (sscanf(line,"cloonixovs_add_lan_b2a lan=%s name=%s",lan,name) == 2)
-    action_add_lan_b2a_br(respb, lan, name);
-  else if (sscanf(line,"cloonixovs_del_lan_b2a lan=%s name=%s",lan,name) == 2)
-    action_del_lan_b2a_br(respb, lan, name);
-
-  else if (sscanf(line,"cloonixovs_add_lan_eth lan=%s name=%s num=%d",
-                       lan, name, &num) == 3)
-    action_add_lan_eth_br(respb, lan, name, num);
-  else if (sscanf(line, "cloonixovs_del_lan_eth lan=%s name=%s num=%d",
-                        lan, name, &num) == 3)
-    action_del_lan_eth_br(respb, lan, name, num);
-  else if (sscanf(line, "cloonixovs_add_tap name=%s", name))
-    action_add_tap_br(respb, name);
-  else if (sscanf(line, "cloonixovs_del_tap name=%s", name))
-    action_del_tap_br(respb, name);
-  else if(sscanf(line,"cloonixovs_add_lan_tap lan=%s name=%s", lan, name))
-    action_add_lan_tap_br(respb, lan, name);
-  else if(sscanf(line,"cloonixovs_del_lan_tap lan=%s name=%s", lan, name))
-    action_del_lan_tap_br(respb, lan, name);
   else if (!strcmp(line, "cloonixovs_req_destroy"))
     action_req_destroy();
   else
     KOUT("%s", line);
-  cloonix_llid = blkd_get_cloonix_llid(NULL);
-  if (!cloonix_llid)
-    KOUT(" ");
-  if (cloonix_llid != llid)
-    KOUT("%d %d", cloonix_llid, llid);
-
   log_write_req_resp(line, respb);
-
-  rpct_send_diag_msg(NULL, llid, tid, respb);
-
+  rpct_send_sigdiag_msg(llid, tid, respb);
 }
 /*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void rpct_recv_app_msg(void *ptr, int llid, int tid, char *line)
-{
-  KERR("%s", line);
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void rpct_recv_cli_req(void *ptr, int llid, int tid,
-                    int cli_llid, int cli_tid, char *line)
-{
-  KERR("%s", line);
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void rx_cloonix_cb(int llid, int len, char *buf)
 {
-  if (rpct_decoder(NULL, llid, len, buf))
+  if (rpct_decoder(llid, len, buf))
     {
     KOUT("%s", buf);
     }
@@ -518,7 +477,7 @@ static void rx_cloonix_cb(int llid, int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void cloonix_err_cb(void *ptr, int llid, int err, int from)
+static void cloonix_err_cb(int llid, int err, int from)
 {
   KERR(" ");
   action_req_destroy();
@@ -526,11 +485,8 @@ static void cloonix_err_cb(void *ptr, int llid, int err, int from)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void cloonix_connect(void *ptr, int llid, int llid_new)
+static void cloonix_connect(int llid, int llid_new)
 {
-  int cloonix_llid = blkd_get_cloonix_llid(NULL);
-  if (!cloonix_llid)
-    blkd_set_cloonix_llid(ptr, llid_new);
   msg_mngt_set_callbacks (llid_new, cloonix_err_cb, rx_cloonix_cb);
   g_cloonix_fd = get_fd_with_llid(llid_new);
 }
@@ -539,17 +495,9 @@ static void cloonix_connect(void *ptr, int llid, int llid_new)
 /*****************************************************************************/
 static void cmd_interrupt(int signo)
 {
-  if (g_ovs_pid > 0)
-    {
-    if (kill(g_ovs_pid, SIGKILL))
-      KERR("Received SIGKILL no kill %d", g_ovs_pid);
-    }
-  if (g_ovsdb_pid > 0)
-    {
-    if (kill(g_ovsdb_pid, SIGKILL))
-      KERR("Received SIGKILL no kill %d", g_ovsdb_pid);
-    }
-  KOUT("Received SIGKILL");
+  KERR("ERROR INTERRUPT");
+  clean_all_upon_error();
+  KOUT("ERROR Received SIGKILL");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -582,7 +530,7 @@ static void cloonix_part_init(char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void clean_before_exit(void *ptr)
+void clean_before_exit()
 {
   KERR("OVS");
   action_req_destroy();
@@ -633,8 +581,8 @@ int main (int argc, char *argv[])
   unlink_dir(g_dpdk_dir);
   signal(SIGINT, cmd_interrupt);
   cloonix_part_init(ctl_argv);
-  clownix_timeout_add(100, timeout_rpct_heartbeat, NULL, NULL, NULL);
-  clownix_timeout_add(100, timeout_blkd_heartbeat, NULL, NULL, NULL);
+  clownix_timeout_add(1000, timeout_heartbeat_start, NULL, NULL, NULL);
+  daemon(0,0);
   msg_mngt_loop();
   return 0;
 }

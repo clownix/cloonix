@@ -83,11 +83,11 @@ struct cmd_struct level_layout_cmd[] = {
 {"hide_sat", "Hide sat on graph",  NULL, cmd_sat_hide,   help_sat_hide},
 {"hide_lan", "Hide lan on graph", NULL, cmd_lan_hide,   help_lan_hide},
 {"xy_kvm",  "Move kvm on graph", NULL, cmd_vm_xy, help_vm_xy},
-{"xy_sat",  "Move tap,snf,c2c... on graph",  NULL, cmd_sat_xy,   help_sat_xy},
+{"xy_sat",  "Move tap,a2b... on graph",  NULL, cmd_sat_xy,   help_sat_xy},
 {"xy_lan",  "Move lan on graph", NULL, cmd_lan_xy,   help_lan_xy},
 {"abs_xy_kvm", "Places kvm ", NULL, cmd_vm_abs_xy, help_vm_abs_xy},
 {"abs_xy_eth", "Places kvm eth ",NULL,cmd_eth_abs_xy, help_eth_abs_xy},
-{"abs_xy_sat", "Places tap,snf,c2c... ",  NULL, cmd_sat_abs_xy,   help_sat_abs_xy},
+{"abs_xy_sat", "Places tap,a2b... ",  NULL, cmd_sat_abs_xy,   help_sat_abs_xy},
 {"abs_xy_lan", "Places lan ", NULL, cmd_lan_abs_xy,  help_lan_abs_xy},
 {"help",  "",                            level_layout_cmd, NULL, NULL},
 };
@@ -97,17 +97,11 @@ struct cmd_struct level_layout_cmd[] = {
 struct cmd_struct level_add_cmd[] = {
 {"lan", "Add lan (emulated cable)", NULL, cmd_add_vl2sat, help_add_vl2sat},
 {"kvm", "Add kvm (virtualized machine)", NULL,cmd_add_vm_kvm,help_add_vm_kvm},
-{"phy", "Add phy (host network interface)",  NULL, cmd_add_phy, help_add_sat},
-{"pci", "Add pci (dpdk pci of ethernet)",  NULL, cmd_add_pci, help_add_sat},
-{"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_sat},
-{"snf", "Add snf (emulated cable sniffer)",  NULL, cmd_add_snf, help_add_sat},
-{"d2d", "Add d2d (cloonix to cloonix dpdk cable)", NULL,
-                                         cmd_add_d2d, help_add_d2d},
-{"c2c", "Add c2c (cloonix to cloonix cable)",NULL,cmd_add_c2c,help_add_c2c},
-{"nat", "Add nat (slirp to access ip)",NULL, cmd_add_nat, help_add_sat},
-{"a2b", "Add a2b (traffic shaping)",NULL, cmd_add_a2b, help_add_sat},
-{"wif", "Add wif (special interface for wlan use)",  NULL, cmd_add_wif, 
-                                                           help_add_wif},
+{"phy", "Add phy (host network interface)",  NULL, cmd_add_phy, help_add_phy},
+{"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_tap},
+{"nat", "Add nat (access host ip)",NULL, cmd_add_nat, help_add_nat},
+{"a2b", "Add a2b (traffic delay shaping)",NULL, cmd_add_a2b, help_add_a2b},
+{"d2d", "Add d2d (cloonix 2 cloonix cable)", NULL, cmd_add_d2d, help_add_d2d},
 {"help",  "",                     level_add_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
@@ -128,7 +122,7 @@ struct cmd_struct level_sav_cmd[] = {
 struct cmd_struct level_del_cmd[] = {
 {"lan", "Delete lan", NULL, cmd_del_vl2sat, help_del_vl2sat},
 {"kvm", "Delete kvm",  NULL, cmd_del_vm, help_del_vm},
-{"sat", "Delete tap,snf,c2c",  NULL, cmd_del_sat, help_del_sat},
+{"sat", "Delete non-kvm, non-lan",  NULL, cmd_del_sat, help_del_sat},
 {"help",  "",                     level_del_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
@@ -145,23 +139,12 @@ struct cmd_struct level_vm_cmd[] = {
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-struct cmd_struct level_hwsim_cmd[] = {
-{"mod",  "Hwsim config modify", NULL, cmd_hwsim_config, help_hwsim_config},
-{"dmp",  "Hwsim config dump", NULL,   cmd_hwsim_dump, help_hwsim_dump},
-{"help",  "",                         level_hwsim_cmd, NULL, NULL},
-};
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
 struct cmd_struct level_cnf_cmd[] = {
 {"ovs",  "Conf openvswitch dpdk", NULL, cmd_dpdk_ovs_cnf, help_dpdk_ovs_cnf},
 {"kvm",  "Virtual machine actions",    level_vm_cmd, NULL, NULL},
-{"a2b",  "A2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
-{"hws",  "Hwsim actions", level_hwsim_cmd, NULL, NULL},
+{"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
+{"xyx",  "xyx config", NULL, cmd_cnf_xyx, help_cnf_xyx},
 {"lay",  "Layout modifications on canvas", level_layout_cmd, NULL, NULL},
-{"lan",  "Send cmd to mulan", NULL, cmd_mud_lan, help_mud_lan},
-{"eth",  "Send cmd to mueth", NULL, cmd_mud_eth, help_mud_eth},
-{"sat",  "Send cmd to musat", NULL, cmd_mud_sat, help_mud_sat},
 {"help",  "",                     level_cnf_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
@@ -199,7 +182,6 @@ struct cmd_struct level_main_cmd[] = {
 {"pid", "dump pids of processes", NULL, cmd_pid_dump, NULL},
 {"evt", "prints events",         NULL,  cmd_event_print, NULL},
 {"sys", "prints system stats",   NULL,  cmd_event_sys, NULL},
-{"blk", "prints blkd debug",   NULL,  cmd_event_blkd, NULL},
 {"qmp", "qemu machine protocol cmd", level_qmp_cmd,  NULL, NULL},
 {"help",   "",                    level_main_cmd, NULL, NULL},
 };
@@ -436,7 +418,7 @@ static void stub_rx_cb(int llid,int tid,int type,int val,int len,char *buf)
       g_current_llid = llid;
       if (doors_io_basic_decoder(llid, len, buf))
         {
-        if (rpct_decoder(NULL, llid, len, buf))
+        if (rpct_decoder(llid, len, buf))
           KOUT("%s", buf);
         }
       }
@@ -470,7 +452,7 @@ static void stub_doorways_tx(int llid, int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int callback_connect(void *ptr, int llid, int fd)
+static int callback_connect(int llid, int fd)
 {
   int i, doors_llid; 
   for (i=0; i<g_nb_cloonix_servers; i++)

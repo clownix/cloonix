@@ -42,9 +42,7 @@ typedef struct t_list_names
 } t_list_names;
 
 static int g_nb_brgs;
-static int g_nb_mirs;
 static t_topo_bridges g_brgs[MAX_OVS_BRIDGES];
-static t_topo_mirrors g_mirs[MAX_OVS_MIRRORS];
 static t_list_names *g_head_names;
 
 /****************************************************************************/
@@ -85,7 +83,7 @@ static void update_bridges(char *bin, char *sock)
     {
     while (fgets(line, MAX_PATH_LEN-1, fh) != NULL)
       {
-      if ((!strncmp(line, "br_", strlen("br_"))) ||
+      if ((!strncmp(line, "_b_", strlen("_b_"))) ||
           (name_exists_in_list(line)))
         {
         ptr_start = g_brgs[g_nb_brgs].br;
@@ -122,7 +120,7 @@ static void update_ports_bridge(char *bin, char *sock, t_topo_bridges *tbr)
     {
     while (fgets(line, MAX_PATH_LEN-1, fh) != NULL)
       {
-      if ((!strncmp(line, "pt_", strlen("pt_"))) ||
+      if ((!strncmp(line, "_p_", strlen("_p_"))) ||
           (name_exists_in_list(line)))
         {
         ptr_start = tbr->ports[tbr->nb_ports];
@@ -145,44 +143,6 @@ static void update_ports_bridge(char *bin, char *sock, t_topo_bridges *tbr)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void update_mirrors(char *bin, char *sock)
-{
-  FILE *fh;
-  char cmd[2*MAX_PATH_LEN];
-  char line[MAX_PATH_LEN];
-  char *ptr;
-  char *ptr_start, *ptr_end;
-  memset(cmd, 0, 2*MAX_PATH_LEN);
-  snprintf(cmd, 2*MAX_PATH_LEN-1, 
-           "%s --db=unix:%s list mirror | grep name", bin, sock);
-  fh = popen(cmd, "r");
-  if (fh)
-    {
-    while (fgets(line, MAX_PATH_LEN-1, fh) != NULL)
-      {
-      ptr = strstr(line, "mi_");
-      if (ptr)
-        {
-        ptr_start = g_mirs[g_nb_mirs].mir;
-        strncpy(ptr_start, ptr, MAX_NAME_LEN-1);
-        ptr_end = ptr_start + strcspn(ptr_start, " \r\n\t");
-        *ptr_end = 0;
-        if (strlen(ptr_start))
-          {
-          g_nb_mirs += 1;
-          if (g_nb_mirs == MAX_OVS_MIRRORS)
-            KOUT("%d %s", g_nb_mirs, line);
-          }
-        }
-      }
-    fclose(fh);
-    }
-  else
-    KERR("%s", cmd);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int estimate_max_string_size(void)
 {
   int i, j, result = (10 * MAX_NAME_LEN);
@@ -192,8 +152,6 @@ static int estimate_max_string_size(void)
     for (j=0; j<g_brgs[i].nb_ports; j++)
       result += 2*MAX_NAME_LEN;
     }
-  for (i=0; i<g_nb_mirs; i++)
-    result += 2*MAX_NAME_LEN;
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -212,15 +170,6 @@ static int format_bridges(char *msg, int idx)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int format_mirrors(char *msg, int idx)
-{
-  int len = 0;
-  len += sprintf(msg+len, "<mir> %s </mir>", g_mirs[idx].mir);
-  return len;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void format_msg(char *msg)
 {
   int i, len = 0;
@@ -229,10 +178,6 @@ static void format_msg(char *msg)
   for (i=0; i<g_nb_brgs; i++)
     len += format_bridges(msg+len, i); 
   len += sprintf(msg+len, "</ovs_bridges>");
-  len += sprintf(msg+len, "<ovs_mirrors> %d ", g_nb_mirs);
-  for (i=0; i<g_nb_mirs; i++)
-    len += format_mirrors(msg+len, i); 
-  len += sprintf(msg+len, "</ovs_mirrors>");
   len += sprintf(msg+len, "</ovs_topo_config>");
 }
 /*--------------------------------------------------------------------------*/
@@ -290,15 +235,12 @@ char *ovs_get_topo(char *bin_dir, char *work_dir)
   snprintf(bin_vsctl,MAX_PATH_LEN-1,"%s/server/dpdk/bin/ovs-vsctl",bin_dir);
   snprintf(ovsdb_sock,MAX_PATH_LEN-1,"%s/dpdk/ovsdb_server.sock",work_dir);
   g_nb_brgs = 0;
-  g_nb_mirs = 0;
   memset(g_brgs, 0, MAX_OVS_BRIDGES * sizeof(t_topo_bridges));
-  memset(g_mirs, 0, MAX_OVS_MIRRORS * sizeof(t_topo_mirrors));
   if (!access(ovsdb_sock, F_OK))
     {
     update_bridges(bin_vsctl, ovsdb_sock);
     for (i=0; i<g_nb_brgs; i++)
       update_ports_bridge(bin_vsctl, ovsdb_sock, &(g_brgs[i]));
-    update_mirrors(bin_vsctl, ovsdb_sock);
     }
   len = estimate_max_string_size();
   msg = (char *) malloc(len);
@@ -312,9 +254,7 @@ char *ovs_get_topo(char *bin_dir, char *work_dir)
 void ovs_get_init(void)
 {
   g_nb_brgs = 0;
-  g_nb_mirs = 0;
   memset(g_brgs, 0, MAX_OVS_BRIDGES * sizeof(t_topo_bridges));
-  memset(g_mirs, 0, MAX_OVS_MIRRORS * sizeof(t_topo_mirrors));
   g_head_names = NULL;
 }
 /*--------------------------------------------------------------------------*/

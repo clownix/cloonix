@@ -1,13 +1,10 @@
 #/bin/bash
 set +e
 
+
 LIST="centos8 \
       fedora34 \
-      fedora33 \
-      focal \
-      groovy \
       hirsute \
-      buster \
       bullseye \
       tumbleweed"
 

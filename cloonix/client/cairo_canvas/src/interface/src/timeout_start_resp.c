@@ -52,18 +52,6 @@ void from_cloonix_switch_create_node(t_topo_kvm *kvm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void from_cloonix_switch_create_c2c(t_topo_c2c *c2c)
-{
-  t_item_obj_resp *pa;
-  pa = (t_item_obj_resp *)clownix_malloc(sizeof(t_item_obj_resp), 21);
-  memset(pa, 0, sizeof(t_item_obj_resp));
-  pa->c2c = (t_topo_c2c *) clownix_malloc(sizeof(t_topo_c2c), 22);
-  memcpy(pa->c2c, c2c, sizeof(t_topo_c2c));
-  clownix_timeout_add(1, timer_create_obj_resp, (void *)pa, NULL,NULL);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void from_cloonix_switch_create_d2d(t_topo_d2d *d2d)
 {
   t_item_obj_resp *pa;
@@ -71,6 +59,42 @@ void from_cloonix_switch_create_d2d(t_topo_d2d *d2d)
   memset(pa, 0, sizeof(t_item_obj_resp));
   pa->d2d = (t_topo_d2d *) clownix_malloc(sizeof(t_topo_d2d), 22);
   memcpy(pa->d2d, d2d, sizeof(t_topo_d2d));
+  clownix_timeout_add(1, timer_create_obj_resp, (void *)pa, NULL,NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void from_cloonix_switch_create_nat(t_topo_nat *nat)
+{
+  t_item_obj_resp *pa;
+  pa = (t_item_obj_resp *)clownix_malloc(sizeof(t_item_obj_resp), 21);
+  memset(pa, 0, sizeof(t_item_obj_resp));
+  pa->nat = (t_topo_nat *) clownix_malloc(sizeof(t_topo_nat), 22);
+  memcpy(pa->nat, nat, sizeof(t_topo_nat));
+  clownix_timeout_add(1, timer_create_obj_resp, (void *)pa, NULL,NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void from_cloonix_switch_create_phy(t_topo_phy *phy)
+{
+  t_item_obj_resp *pa;
+  pa = (t_item_obj_resp *)clownix_malloc(sizeof(t_item_obj_resp), 21);
+  memset(pa, 0, sizeof(t_item_obj_resp));
+  pa->phy = (t_topo_phy *) clownix_malloc(sizeof(t_topo_phy), 22);
+  memcpy(pa->phy, phy, sizeof(t_topo_phy));
+  clownix_timeout_add(1, timer_create_obj_resp, (void *)pa, NULL,NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void from_cloonix_switch_create_tap(t_topo_tap *tap)
+{
+  t_item_obj_resp *pa;
+  pa = (t_item_obj_resp *)clownix_malloc(sizeof(t_item_obj_resp), 21);
+  memset(pa, 0, sizeof(t_item_obj_resp));
+  pa->tap = (t_topo_tap *) clownix_malloc(sizeof(t_topo_tap), 22);
+  memcpy(pa->tap, tap, sizeof(t_topo_tap));
   clownix_timeout_add(1, timer_create_obj_resp, (void *)pa, NULL,NULL);
 }
 /*--------------------------------------------------------------------------*/
@@ -88,26 +112,12 @@ void from_cloonix_switch_create_a2b(t_topo_a2b *a2b)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void from_cloonix_switch_create_sat(t_topo_sat *sat)
-{
-  t_item_obj_resp *pa;
-  pa = (t_item_obj_resp *)clownix_malloc(sizeof(t_item_obj_resp), 21);
-  memset(pa, 0, sizeof(t_item_obj_resp));
-  pa->sat = (t_topo_sat *) clownix_malloc(sizeof(t_topo_sat), 22);
-  memcpy(pa->sat, sat, sizeof(t_topo_sat));
-  clownix_timeout_add(1, timer_create_obj_resp, (void *)pa, NULL,NULL);
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
 void from_cloonix_switch_create_lan(char *name)
 {
   t_item_lan_resp *pa;
   pa = (t_item_lan_resp *) clownix_malloc(sizeof(t_item_lan_resp), 12);
   memset(pa, 0, sizeof(t_item_lan_resp));
   pa->bank_type = bank_type_lan;
-  pa->mutype = mulan_type;
   strncpy(pa->name, name, MAX_NAME_LEN-1);
   clownix_timeout_add(1,timer_create_item_resp,(void *)pa,NULL,NULL);
 

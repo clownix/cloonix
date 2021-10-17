@@ -33,4 +33,4 @@ $(LIB): $(OBJS)
 	$(RANLIB) $(LIB)
 
 clean:
-	@-rm -vf $(OBJ_DIR)*.o *~ $(VPATH)/*~ $(LIB)
+	@-rm -rvf $(OBJ_DIR) *~ $(VPATH)/*~ $(LIB)

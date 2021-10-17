@@ -20,8 +20,6 @@ void automates_init(void);
 /*---------------------------------------------------------------------------*/
 void auto_self_destruction(int llid, int tid);
 /*---------------------------------------------------------------------------*/
-void check_for_work_dir_inexistance(t_cb_end_automate cb);
-/*---------------------------------------------------------------------------*/
 void automates_safety_heartbeat(void);
 /*---------------------------------------------------------------------------*/
 void inc_lock_self_destruction_dir(void);
