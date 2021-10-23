@@ -97,7 +97,7 @@ static int my_popen(char *dpdk_dir, char *argv[], char *env[])
     timeout_pid = fork();
     if (timeout_pid == 0)
       {
-      sleep(6);
+      sleep(2);
       exit(1);
       }
     exited_pid = wait(&chld_state);

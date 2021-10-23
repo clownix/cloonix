@@ -91,7 +91,8 @@ int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab, int *dpdk)
   (*dpdk) = 0;
   for (i=0; i<nb_tot_eth; i++)
     {
-    if (eth_tab[i].eth_type == eth_type_dpdk)
+    if ((eth_tab[i].eth_type == endp_type_ethd) ||
+        (eth_tab[i].eth_type == endp_type_eths))
       (*dpdk)++;
     else
       {

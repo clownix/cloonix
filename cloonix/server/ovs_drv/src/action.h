@@ -15,9 +15,14 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void action_add_kvm1(char *respb, char *name, int num);
-void action_add_kvm2(char *respb, char *name, int num);
-void action_del_kvm(char *respb, char *name, int num);
+void action_add_ethds(char *respb, char *name, int num);
+void action_add_eths2(char *respb, char *name, int num);
+void action_del_ethds(char *respb, char *name, int num);
+void action_add_lan_ethd(char *respb, char *lan, char *name, int num);
+void action_del_lan_ethd(char *respb, char *lan, char *name, int num);
+void action_add_lan_eths(char *respb, char *lan, char *name, int num);
+void action_del_lan_eths(char *respb, char *lan, char *name, int num);
+
 void action_add_lan(char *respb, char *lan);
 void action_del_lan(char *respb, char *lan);
 void action_add_lan_nat(char *respb, char *lan, char *name);
@@ -26,8 +31,6 @@ void action_add_lan_d2d(char *respb, char *lan, char *name);
 void action_del_lan_d2d(char *respb, char *lan, char *name);
 void action_add_lan_a2b(char *respb, char *lan, char *name, int num);
 void action_del_lan_a2b(char *respb, char *lan, char *name, int num);
-void action_add_lan_kvm(char *respb, char *lan, char *name, int num);
-void action_del_lan_kvm(char *respb, char *lan, char *name, int num);
 void action_add_phy(char *respb, char *name);
 void action_del_phy(char *respb, char *name);
 void action_add_tap(char *respb, char *name);

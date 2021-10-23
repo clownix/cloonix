@@ -406,14 +406,14 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
           "cloonixovs_del_tap name=%s", name) == 1)
     action_del_tap(respb, name);
   else if (sscanf(line, 
-          "cloonixovs_add_kvm1 name=%s num=%d", name, &num) == 2)
-    action_add_kvm1(respb, name, num);
+          "cloonixovs_add_ethds name=%s num=%d", name, &num) == 2)
+    action_add_ethds(respb, name, num);
   else if (sscanf(line,
-          "cloonixovs_add_kvm2 name=%s num=%d", name, &num) == 2)
-    action_add_kvm2(respb, name, num);
+          "cloonixovs_add_eths2 name=%s num=%d", name, &num) == 2)
+    action_add_eths2(respb, name, num);
   else if (sscanf(line,
-          "cloonixovs_del_kvm name=%s num=%d", name, &num) == 2)
-    action_del_kvm(respb, name, num);
+          "cloonixovs_del_ethds name=%s num=%d", name, &num) == 2)
+    action_del_ethds(respb, name, num);
   else if (sscanf(line,
           "cloonixovs_add_lan lan=%s", name) == 1)
     action_add_lan(respb, name);
@@ -439,11 +439,17 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
           "cloonixovs_del_lan_a2b lan=%s name=%s num=%d",lan,name,&num) == 3)
     action_del_lan_a2b(respb, lan, name, num);
   else if (sscanf(line,
-          "cloonixovs_add_lan_kvm lan=%s name=%s num=%d",lan,name,&num) == 3)
-    action_add_lan_kvm(respb, lan, name, num);
+          "cloonixovs_add_lan_ethd lan=%s name=%s num=%d",lan,name,&num) == 3)
+    action_add_lan_ethd(respb, lan, name, num);
   else if (sscanf(line,
-          "cloonixovs_del_lan_kvm lan=%s name=%s num=%d",lan,name,&num) == 3)
-    action_del_lan_kvm(respb, lan, name, num);
+          "cloonixovs_del_lan_ethd lan=%s name=%s num=%d",lan,name,&num) == 3)
+    action_del_lan_ethd(respb, lan, name, num);
+  else if (sscanf(line,
+          "cloonixovs_add_lan_eths lan=%s name=%s num=%d",lan,name,&num) == 3)
+    action_add_lan_eths(respb, lan, name, num);
+  else if (sscanf(line,
+          "cloonixovs_del_lan_eths lan=%s name=%s num=%d",lan,name,&num) == 3)
+    action_del_lan_eths(respb, lan, name, num);
   else if(sscanf(line,
          "cloonixovs_add_lan_tap lan=%s name=%s", lan, name) == 2)
     action_add_lan_tap(respb, lan, name);

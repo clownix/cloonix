@@ -86,7 +86,8 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
 
   for (i=0; i < nb_tot_eth; i++)
     {
-    if (eth_tab[i].eth_type == eth_type_dpdk)
+    if ((eth_tab[i].eth_type == endp_type_ethd) ||
+        (eth_tab[i].eth_type == endp_type_eths))
       add_new_eth(name, i, tx[i], ty[i], thidden[i]);
     }
 }

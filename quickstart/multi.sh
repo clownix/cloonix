@@ -1,7 +1,7 @@
 #!/bin/bash
 NET=nemo
 DIST=bullseye
-PARAMS="ram=1000 cpu=2 eth=ddd"
+PARAMS="ram=1000 cpu=2 eth=d"
 PHY=enx0050b69de279
 NUM=20
 
@@ -21,11 +21,11 @@ cloonix_gui $NET
 
 sleep 10
 
-cloonix_cli $NET add nat nat1
-cloonix_cli $NET add d2d d2d_to_mito mito
+#cloonix_cli $NET add nat nat1
+#cloonix_cli $NET add d2d d2d_to_mito mito
 cloonix_cli $NET add tap top
-cloonix_cli $NET add phy ${PHY}
-cloonix_cli $NET add a2b a2b1 
+#  cloonix_cli $NET add phy ${PHY}
+#cloonix_cli $NET add a2b a2b1 
 # cloonix_cli $NET add kvm one ${PARAMS} ${DIST}.qcow2 & 
 # cloonix_cli $NET add kvm two ${PARAMS} ${DIST}.qcow2 & 
 # cloonix_cli $NET add lan one 0 lanx

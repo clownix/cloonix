@@ -15,8 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define MAX_PKT_BURST 32
-
 void udp_tx_sig(int len, uint8_t *buf);
 int  udp_get_traffic_mngt(void);
 void udp_enter_traffic_mngt(void);

@@ -17,5 +17,5 @@
 /*****************************************************************************/
 void vhost_client_init(void);
 void vhost_client_stop(void);
-void vhost_client_start(char *path, char *memid);
+void vhost_client_start(char *memid, char *path);
 /*--------------------------------------------------------------------------*/

@@ -65,22 +65,6 @@ static char *g_rte_argv[8];
 static uint32_t g_cpu_flags;
 /*--------------------------------------------------------------------------*/
 
-#define RANDOM_APPEND_SIZE 6
-/*****************************************************************************/
-static char *random_str(void)
-{
-  static char rd[RANDOM_APPEND_SIZE+1];
-  int i;
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  srand(ts.tv_nsec);
-  memset (rd, 0 , RANDOM_APPEND_SIZE+1);
-  for (i=0; i<RANDOM_APPEND_SIZE; i++)
-    rd[i] = 'A' + (rand() % 26);
-  return rd;
-}
-/*---------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 static uint8_t *get_mac(char *str_mac)
 {
@@ -200,7 +184,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       txq_dpdk_init();
       ssh_cisco_llid_init(g_cisco_path);
       ssh_cisco_dpdk_init();
-      vhost_client_start(g_nat_socket, g_memid);
+      vhost_client_start(g_memid, g_nat_socket);
       }
     }
   else if (!strncmp(line,
@@ -289,7 +273,7 @@ int main (int argc, char *argv[])
   char *sock = NAT_DPDK_SOCK_DIR;
   char *net = g_net_name;
   char *nat = g_nat_name;
-  if (argc != 5)
+  if (argc != 6)
     KOUT("%d", argc);
   g_llid = 0;
   g_watchdog_ok = 0;
@@ -309,8 +293,8 @@ int main (int argc, char *argv[])
   snprintf(g_prefix, MAX_PATH_LEN-1, "--file-prefix=cloonix%s", net);
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, nat);
   snprintf(g_cisco_path, MAX_PATH_LEN-1,"%s/%s/%s_0_u2i", root, sock, nat);
-  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s", nat, random_str());
   sscanf(argv[4], "%X", &g_cpu_flags);
+  strncpy(g_memid, argv[5], MAX_NAME_LEN-1);
   if (!access(g_ctrl_path, F_OK))
     {
     KERR("%s exists ERASING", g_ctrl_path);

@@ -40,39 +40,39 @@
 
 
 /****************************************************************************/
-int fmt_tx_add_kvm1(int tid, char *name, int num)
+int fmt_tx_add_ethds(int tid, char *name, int num)
 {
   int result;
   char cmd[2*MAX_PATH_LEN];
   memset(cmd, 0, 2*MAX_PATH_LEN);
   sprintf(cmd,
-  "cloonixovs_add_kvm1 name=%s num=%d", name, num);
+  "cloonixovs_add_ethds name=%s num=%d", name, num);
   result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_add_kvm2(int tid, char *name, int num)
+int fmt_tx_add_eths2(int tid, char *name, int num)
 {
   int result;
   char cmd[2*MAX_PATH_LEN];
   memset(cmd, 0, 2*MAX_PATH_LEN);
   sprintf(cmd,
-  "cloonixovs_add_kvm2 name=%s num=%d", name, num);
+  "cloonixovs_add_eths2 name=%s num=%d", name, num);
   result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_del_kvm(int tid, char *name, int num)
+int fmt_tx_del_ethds(int tid, char *name, int num)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   sprintf(cmd,
-  "cloonixovs_del_kvm name=%s num=%d", name, num);
+  "cloonixovs_del_ethds name=%s num=%d", name, num);
   result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
   return result;
 }
@@ -289,13 +289,13 @@ int fmt_tx_del_lan_d2d(int tid, char *lan, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_add_lan_kvm(int tid, char *lan, char *name, int num)
+int fmt_tx_add_lan_ethd(int tid, char *lan, char *name, int num)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_add_lan_kvm lan=%s name=%s num=%d", lan, name, num);
+  "cloonixovs_add_lan_ethd lan=%s name=%s num=%d", lan, name, num);
   result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
   return result;
 }
@@ -303,17 +303,46 @@ int fmt_tx_add_lan_kvm(int tid, char *lan, char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_del_lan_kvm(int tid, char *lan, char *name, int num)
+int fmt_tx_del_lan_ethd(int tid, char *lan, char *name, int num)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "cloonixovs_del_lan_kvm lan=%s name=%s num=%d", lan, name, num);
+  "cloonixovs_del_lan_ethd lan=%s name=%s num=%d", lan, name, num);
   result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
   return result;
 }
 /*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+int fmt_tx_add_lan_eths(int tid, char *lan, char *name, int num)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "cloonixovs_add_lan_eths lan=%s name=%s num=%d", lan, name, num);
+  result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fmt_tx_del_lan_eths(int tid, char *lan, char *name, int num)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "cloonixovs_del_lan_eths lan=%s name=%s num=%d", lan, name, num);
+  result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
@@ -362,38 +391,54 @@ void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
                         lan, name, &num) == 3)
     dpdk_msg_ack_lan_endp(tid, lan, name, num, 0, 0, "OK");
 
-  else if (sscanf(line, "OK cloonixovs_add_kvm1 name=%s num=%d",
+  else if (sscanf(line, "OK cloonixovs_add_ethds name=%s num=%d",
                         name, &num) == 2)
     dpdk_kvm_resp_add(0, name, num);
-  else if (sscanf(line, "KO cloonixovs_add_kvm1 name=%s num=%d",
+  else if (sscanf(line, "KO cloonixovs_add_ethds name=%s num=%d",
                         name, &num) == 2)
     dpdk_kvm_resp_add(1, name, num);
-  else if (sscanf(line, "OK cloonixovs_add_kvm2 name=%s num=%d",
+  else if (sscanf(line, "OK cloonixovs_add_eths2 name=%s num=%d",
                         name, &num) == 2)
-    dpdk_kvm_resp_add_end(0, name, num);
-  else if (sscanf(line, "KO cloonixovs_add_kvm2 name=%s num=%d",
+    dpdk_kvm_resp_add_eths2(0, name, num);
+  else if (sscanf(line, "KO cloonixovs_add_eths2 name=%s num=%d",
                         name, &num) == 2)
-    dpdk_kvm_resp_add_end(1, name, num);
-  else if (sscanf(line, "OK cloonixovs_del_kvm name=%s num=%d",
+    dpdk_kvm_resp_add_eths2(1, name, num);
+
+  else if (sscanf(line, "OK cloonixovs_del_ethds name=%s num=%d",
                         name, &num) == 2)
     dpdk_kvm_resp_del(0, name, num);
-  else if (sscanf(line, "KO cloonixovs_del_kvm name=%s num=%d",
+  else if (sscanf(line, "KO cloonixovs_del_ethds name=%s num=%d",
                         name, &num) == 2)
     dpdk_kvm_resp_del(1, name, num);
 
-
-  else if (sscanf(line, "OK cloonixovs_add_lan_kvm lan=%s name=%s num=%d",
+  else if (sscanf(line, "OK cloonixovs_add_lan_ethd lan=%s name=%s num=%d",
                         lan, name, &num) == 3)
     dpdk_msg_ack_lan_endp(tid, lan, name, num, 1, 0, "OK");
-  else if (sscanf(line, "KO cloonixovs_add_lan_kvm lan=%s name=%s num=%d",
+  else if (sscanf(line, "KO cloonixovs_add_lan_ethd lan=%s name=%s num=%d",
                         lan, name, &num) == 3)
     dpdk_msg_ack_lan_endp(tid, lan, name, num, 1, 1, "KO");
-  else if (sscanf(line, "OK cloonixovs_del_lan_kvm lan=%s name=%s num=%d",
+  else if (sscanf(line, "OK cloonixovs_del_lan_ethd lan=%s name=%s num=%d",
                         lan, name, &num) == 3)
     dpdk_msg_ack_lan_endp(tid, lan, name, num, 0, 0, "OK");
-  else if (sscanf(line, "KO cloonixovs_del_lan_kvm lan=%s name=%s num=%d",
+  else if (sscanf(line, "KO cloonixovs_del_lan_ethd lan=%s name=%s num=%d",
                         lan, name, &num) == 3)
     dpdk_msg_ack_lan_endp(tid, lan, name, num, 0, 1, "KO");
+
+
+  else if (sscanf(line, "OK cloonixovs_add_lan_eths lan=%s name=%s num=%d",
+                        lan, name, &num) == 3)
+    dpdk_msg_ack_lan_endp(tid, lan, name, num, 1, 0, "OK");
+  else if (sscanf(line, "KO cloonixovs_add_lan_eths lan=%s name=%s num=%d",
+                        lan, name, &num) == 3)
+    dpdk_msg_ack_lan_endp(tid, lan, name, num, 1, 1, "KO");
+  else if (sscanf(line, "OK cloonixovs_del_lan_eths lan=%s name=%s num=%d",
+                        lan, name, &num) == 3)
+    dpdk_msg_ack_lan_endp(tid, lan, name, num, 0, 0, "OK");
+  else if (sscanf(line, "KO cloonixovs_del_lan_eths lan=%s name=%s num=%d",
+                        lan, name, &num) == 3)
+    dpdk_msg_ack_lan_endp(tid, lan, name, num, 0, 1, "KO");
+
+
 
   else if (sscanf(line,"OK cloonixovs_add_tap name=%s", name) == 1)
     dpdk_tap_resp_add(0, name);

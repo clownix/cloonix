@@ -335,10 +335,11 @@ void qmp_conn_end(char *name)
       eth_tab = vm->kvm.eth_table;
       for (i=0; i<vm->kvm.nb_tot_eth; i++)
         {
-        if (eth_tab[i].eth_type == eth_type_dpdk)
+        if ((eth_tab[i].eth_type == endp_type_ethd) ||
+            (eth_tab[i].eth_type == endp_type_eths))
           {
           KERR("DELETH FOR VM %s %d", name, i);
-          if (dpdk_kvm_del(0, 0, name, i))
+          if (dpdk_kvm_del(0, 0, name, i, eth_tab[i].eth_type))
             KERR("ERROR %s %d", name, i);
           }
         }

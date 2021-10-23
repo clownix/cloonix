@@ -58,8 +58,10 @@ static void eth_tab_to_str(char *out, int nb_tot_eth, t_eth_table *eth_tab)
     {
     if (i > MAX_DPDK_VM)
       KOUT("%d", nb_tot_eth); 
-    if(eth_tab[i].eth_type == eth_type_dpdk)
+    if(eth_tab[i].eth_type == endp_type_ethd)
       out[i] = 'd';
+    else if(eth_tab[i].eth_type == endp_type_eths)
+      out[i] = 's';
     else
       KOUT("%d %d", i, nb_tot_eth); 
     }

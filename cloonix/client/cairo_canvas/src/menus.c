@@ -818,11 +818,30 @@ static void intf_item_info(GtkWidget *mn, t_item_ident *pm)
       KOUT(" ");
     if ((num < 0) || (num >= att_node->pbi.pbi_node->nb_tot_eth))
       KOUT(" ");
-    if (att_node->pbi.pbi_node->eth_tab[num].eth_type == eth_type_dpdk)
+    if (att_node->pbi.pbi_node->eth_tab[num].eth_type == endp_type_ethd)
       display_info(title, "dpdk");
+    else if (att_node->pbi.pbi_node->eth_tab[num].eth_type == endp_type_eths)
+      display_info(title, "spdk");
     else
       display_info(title, " ");
     }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int get_endp_type_eths(t_bank_item *bitem)
+{ 
+  t_bank_item *att_node;
+  int num, result = 0;
+  att_node = bitem->att_node;
+  num = bitem->num;
+  if (!att_node)
+    KOUT(" ");
+  if ((num < 0) || (num >= att_node->pbi.pbi_node->nb_tot_eth))
+    KOUT(" ");
+  if (att_node->pbi.pbi_node->eth_tab[num].eth_type == endp_type_eths)
+    result = 1;
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -833,10 +852,11 @@ void intf_ctx_menu(t_bank_item *bitem)
   GtkWidget *separator, *menu = gtk_menu_new();
   GtkWidget *item_hidden, *item_info, *item_wireshark;
   t_item_ident *pm = get_and_init_pm(bitem);
+  int is_spdk = get_endp_type_eths(bitem);
   bitem->pbi.menu_on = 1;
 
-  item_wireshark = gtk_menu_item_new_with_label("wireshark");
-
+  if (is_spdk)
+    item_wireshark = gtk_menu_item_new_with_label("wireshark");
 
   item_promisc_on = gtk_menu_item_new_with_label("Promisc on");
   item_promisc_off = gtk_menu_item_new_with_label("Promisc off");
@@ -845,8 +865,9 @@ void intf_ctx_menu(t_bank_item *bitem)
   item_info = gtk_menu_item_new_with_label("Info");
   separator = gtk_separator_menu_item_new();
 
-  g_signal_connect(G_OBJECT(item_wireshark), "activate",
-                   G_CALLBACK(sat_item_wireshark), (gpointer) pm);
+  if (is_spdk)
+    g_signal_connect(G_OBJECT(item_wireshark), "activate",
+                     G_CALLBACK(sat_item_wireshark), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_monitor), "activate",
                    G_CALLBACK(intf_item_monitor), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_promisc_on), "activate",
@@ -861,7 +882,8 @@ void intf_ctx_menu(t_bank_item *bitem)
 
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
+  if (is_spdk)
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_monitor);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);

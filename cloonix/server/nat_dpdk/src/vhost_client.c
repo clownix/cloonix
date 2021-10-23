@@ -50,7 +50,6 @@
 #include "tcp_flagseq.h"
 
 
-#define MAX_PKT_BURST 32
 
 static struct rte_mempool *g_mempool;
 static int g_enable;
@@ -188,14 +187,14 @@ void vhost_client_end_and_exit(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void vhost_client_start(char *path, char *memid)
+void vhost_client_start(char *memid, char *path)
 {
   uint64_t flags = 0;
   uint64_t unsup_flags = (1ULL << VIRTIO_NET_F_STATUS);
   int i, j, err, sid;
-  uint32_t mcache = 128;
-  uint32_t mbufs = 512;
-  uint32_t msize = 2048;
+  uint32_t mcache = MBUF_MCACHE;
+  uint32_t mbufs = MBUF_MAX;
+  uint32_t msize = MBUF_SIZE;
 
   memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
   memset(g_nat_socket, 0, MAX_PATH_LEN);
@@ -229,18 +228,11 @@ void vhost_client_start(char *path, char *memid)
   err = rte_vhost_driver_start(path);
   if (err)
     KOUT(" ");
-  g_mempool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
+  g_mempool = rte_mempool_lookup(g_memid);
+  if (g_mempool == NULL)
+    g_mempool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
   if (!g_mempool)
-    {
-    if (rte_errno == EEXIST)
-      {
-      g_mempool = rte_mempool_lookup(g_memid);
-      if (!g_mempool)
-        KOUT("%s %d", g_memid, rte_errno);
-      }
-    else
-      KOUT(" ");
-    }
+    KOUT("%s %d", g_memid, rte_errno);
   i = rte_get_next_lcore(-1, 1, 0);
   j = rte_get_next_lcore(i, 1, 0);
   if (j < RTE_MAX_LCORE)

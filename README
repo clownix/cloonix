@@ -3,10 +3,15 @@ AGPLv3 tool to create networks of kvm virtual machines.
 See directory cloonix for the LICENCE
 See clownix.net for a documentation (which is not up to date).
 
+NOTE: The version 18-00 had a default interface for virtual machines with
+      an integrated spy. That features limits the total number of interfaces.
+      The version 18-01 has no spy for the vm but has no limitations.
+      The integrated wireshark spy will be corrected in next cloonix version.
+
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-18-00
+http://clownix.net/downloads/cloonix-18-01
 
 -----------------------------------------------------------------------------
 COMPILED AND TESTED ON:
@@ -25,12 +30,12 @@ hints on necessary packages.
 -----------------------------------------------------------------------------
 INSTALL:
 
-wget http://clownix.net/downloads/cloonix-18-00/cloonix-v18-00.tar.gz
-tar xvf cloonix-v18-00.tar.gz
-cd cloonix-v18-00
+wget http://clownix.net/downloads/cloonix-18-01/cloonix-v18-01.tar.gz
+tar xvf cloonix-v18-01.tar.gz
+cd cloonix-v18-01
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-18-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-18-01/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
@@ -38,7 +43,7 @@ tar xvf targz_store.tar.gz
 -----------------------------------------------------------------------------
 GET A WORKING VM:
 
-wget http://clownix.net/downloads/cloonix-18-00/bulk/bullseye.qcow2.gz
+wget http://clownix.net/downloads/cloonix-18-01/bulk/bullseye.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cp bullseye.qcow2.gz ${HOME}/cloonix_data/bulk
@@ -67,6 +72,21 @@ LAUNCH:
 
 cd cloonix/quickstart
 ./ping.sh
+
+In this demo, the vms are launched with an "s" interface, this interface
+permits to have wireshark upon a double-click on an interface.
+The number of "s" interfaces in a cloonix is limited, use the "d" interface
+when the spy is not used.
+Note: s or d can be found in the PARAM definition in the ping.sh file: 
+PARAMS="ram=2000 cpu=2 eth=s"
+
+wireshark problems: wireshark is called from the gui software, it must be
+installed to be usable by non-root user.
+On debian the way to go is:
+echo "wireshark-common wireshark-common/install-setuid boolean true" > preseed
+sudo debconf-set-selections preseed
+sudo dpkg-reconfigure  wireshark
+sudo adduser ${USER} wireshark
 
 -----------------------------------------------------------------------------
 CISCO DEMO:

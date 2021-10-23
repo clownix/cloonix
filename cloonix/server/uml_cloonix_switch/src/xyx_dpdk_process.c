@@ -56,6 +56,7 @@ static char g_root_path[MAX_PATH_LEN];
 static char g_bin_xyx[MAX_PATH_LEN];
 static t_xyx_dpdk *g_head_xyx_dpdk;
 
+char *get_memid(void);
 int get_glob_req_self_destruction(void);
 uint32_t get_cpu_mask(void);
 
@@ -114,13 +115,14 @@ static void process_demonized(void *unused_data, int status, char *name)
 /*****************************************************************************/
 static void xyx_dpdk_start(char *name)
 {
-  static char *argv[6];
+  static char *argv[7];
   argv[0] = g_bin_xyx;
   argv[1] = g_cloonix_net;
   argv[2] = g_root_path;
   argv[3] = name;
   argv[4] = g_ascii_cpu_mask;
-  argv[5] = NULL;
+  argv[5] = get_memid();
+  argv[6] = NULL;
   pid_clone_launch(utils_execve, process_demonized, NULL,
                    (void *) argv, NULL, NULL, name, -1, 1);
 }

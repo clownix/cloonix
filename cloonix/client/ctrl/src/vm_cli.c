@@ -230,7 +230,9 @@ static int check_eth_desc(char *eth_desc, char *err,
     for (i=0; (result == 0) && (i < len); i++)
       {
       if (eth_desc[i] == 'd')
-        eth_tab[i].eth_type = eth_type_dpdk;
+        eth_tab[i].eth_type = endp_type_ethd;
+      else if (eth_desc[i] == 's')
+        eth_tab[i].eth_type = endp_type_eths;
       else
         {
         sprintf(err, "Found bad char: %c in string", eth_desc[i]);
@@ -242,7 +244,8 @@ static int check_eth_desc(char *eth_desc, char *err,
     {
     for (i=0; i < max; i++)
       {
-      if (eth_tab[i].eth_type == eth_type_dpdk)
+      if ((eth_tab[i].eth_type == endp_type_ethd) ||
+          (eth_tab[i].eth_type == endp_type_eths))
         dpdk += 1;
       }
     if (dpdk > MAX_DPDK_VM)

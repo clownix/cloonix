@@ -56,6 +56,7 @@ typedef struct t_xyx_cnx
   int add_llid;
   int add_tid;
   int timer_count;
+  int eths_done_ok;
   struct t_xyx_cnx *prev;
   struct t_xyx_cnx *next;
 } t_xyx_cnx;
@@ -84,6 +85,7 @@ t_topo_endp *translate_topo_endp_xyx(int *nb);
 void dpdk_xyx_resp_add(int is_ko, char *name, int num);
 void dpdk_xyx_resp_del(int is_ko, char *name, int num);
 void dpdk_xyx_cnf(char *name, int type, uint8_t *mac);
+void dpdk_xyx_eths2_resp_ok(char *name, int num);
 void dpdk_xyx_init(void);
 /*--------------------------------------------------------------------------*/
 

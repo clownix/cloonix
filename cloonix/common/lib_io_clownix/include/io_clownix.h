@@ -39,6 +39,14 @@ void set_fd_not_to_close(int fd);
 
 
 
+#define MAX_PKT_BURST 32
+#define MBUF_MCACHE 128
+#define MBUF_MAX 512
+#define MBUF_SIZE 2048
+
+
+
+
 #define IO_MAX_BUF_LEN 50000
 #define MAX_STR_LEN 250
 

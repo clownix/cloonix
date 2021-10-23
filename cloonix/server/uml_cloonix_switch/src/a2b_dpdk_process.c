@@ -54,6 +54,7 @@ static char g_root_path[MAX_PATH_LEN];
 static char g_bin_a2b[MAX_PATH_LEN];
 static t_a2b_dpdk *g_head_a2b_dpdk;
 
+char *get_memid(void);
 int get_glob_req_self_destruction(void);
 uint32_t get_cpu_mask(void);
 
@@ -118,7 +119,8 @@ static void a2b_dpdk_start(char *name)
   argv[2] = g_root_path;
   argv[3] = name;
   argv[4] = g_ascii_cpu_mask;
-  argv[5] = NULL;
+  argv[5] = get_memid();
+  argv[6] = NULL;
   pid_clone_launch(utils_execve, process_demonized, NULL,
                    (void *) argv, NULL, NULL, name, -1, 1);
 }

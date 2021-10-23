@@ -76,7 +76,7 @@ int ovs_cmd_del_lan(char *ovsb, char *dpdkd, char *lan)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_cmd_add_lan_kvm(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
+int ovs_cmd_add_lan_eths(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 {
   int result = 0;
   char name[MAX_NAME_LEN];
@@ -106,7 +106,7 @@ int ovs_cmd_add_lan_kvm(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_cmd_del_lan_kvm(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
+int ovs_cmd_del_lan_eths(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
@@ -130,7 +130,7 @@ int ovs_cmd_del_lan_kvm(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 
 
 /*****************************************************************************/
-int ovs_cmd_add_lan_fvm(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
+int ovs_cmd_add_lan_ethd(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 {
   int result = 0;
   char name[MAX_NAME_LEN];
@@ -166,7 +166,7 @@ int ovs_cmd_add_lan_fvm(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_cmd_del_lan_fvm(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
+int ovs_cmd_del_lan_ethd(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
@@ -189,7 +189,7 @@ int ovs_cmd_del_lan_fvm(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_cmd_add_kvm1(char *ovsb, char *dpdkd, char *nm, int num)
+int ovs_cmd_add_ethds(char *ovsb, char *dpdkd, char *nm, int num)
 {
   char cmd[MAX_ARG_LEN];
   char lan[MAX_NAME_LEN];
@@ -225,7 +225,7 @@ int ovs_cmd_add_kvm1(char *ovsb, char *dpdkd, char *nm, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_cmd_add_kvm2(char *ovsb, char *dpdkd, char *nm, int num)
+int ovs_cmd_add_eths2(char *ovsb, char *dpdkd, char *nm, int num)
 {
   char cmd[MAX_ARG_LEN];
   char lan[MAX_NAME_LEN];
@@ -282,7 +282,7 @@ int ovs_cmd_add_kvm2(char *ovsb, char *dpdkd, char *nm, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_cmd_del_kvm(char *ovsb, char *dpdkd, char *nm, int num)
+int ovs_cmd_del_ethds(char *ovsb, char *dpdkd, char *nm, int num)
 {
   char cmd[MAX_ARG_LEN];
   char lan[MAX_NAME_LEN];

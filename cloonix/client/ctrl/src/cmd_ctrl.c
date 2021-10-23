@@ -128,8 +128,11 @@ static char *get_type_endp(int type)
     case endp_type_phy:
       result = "phy"; 
       break;
-    case endp_type_kvm:
-      result = "kvm"; 
+    case endp_type_ethd:
+      result = "ethd"; 
+      break;
+    case endp_type_eths:
+      result = "eths"; 
       break;
     case endp_type_tap:
       result = "tap"; 

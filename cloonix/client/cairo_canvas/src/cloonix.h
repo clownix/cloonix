@@ -35,8 +35,8 @@ typedef struct t_custom_vm
   int  current_number;
   int  cpu;
   int  mem;
-  int  eth;
-  t_eth_table eth_table[MAX_DPDK_VM];
+  int  nb_tot_eth;
+  t_eth_table eth_tab[MAX_DPDK_VM];
 } t_custom_vm;
 
 

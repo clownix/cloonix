@@ -120,7 +120,7 @@ static t_xyx_cnx *find_xyx(char *name, int num)
     {
     memset(cname, 0, MAX_NAME_LEN);
     strncpy(cname, name, MAX_NAME_LEN-6);
-    if (cur->endp_type == endp_type_kvm)
+    if (cur->endp_type == endp_type_eths)
       {
       memset(ext, 0, 6);
       snprintf(ext, 5, "_%d", num);
@@ -167,16 +167,18 @@ static t_xyx_cnx *alloc_xyx(int llid, int tid, char *name, int num,
     suid_power_rec_name(cur->nm, 1);
     KERR("ALLOC TAP %s", name);
     }
-  if (endp_type == endp_type_phy)
+  else if (endp_type == endp_type_phy)
     {
     suid_power_rec_name(cur->nm, 1);
     KERR("ALLOC PHY %s", name);
     }
-  if (endp_type == endp_type_kvm)
+  else if (endp_type == endp_type_eths)
     {
-    KERR("ALLOC KVM %s %d", name, num);
+    KERR("ALLOC ETH KVM SPY %s %d", name, num);
     snprintf(ext, 5, "_%d", num); 
     }
+  else
+    KOUT("%s %d", name, num);
   strcat(cur->name, ext);
   if (g_head_xyx)
     g_head_xyx->prev = cur;
@@ -195,13 +197,16 @@ static void free_xyx(t_xyx_cnx *cur)
     suid_power_rec_name(cur->nm, 0);
     KERR("FREE TAP %s", cur->name);
     }
-  if (cur->endp_type == endp_type_phy)
+  else if (cur->endp_type == endp_type_phy)
     {
     suid_power_rec_name(cur->nm, 0);
     KERR("FREE PHY %s", cur->name);
     }
-  if (cur->endp_type == endp_type_kvm)
-    KERR("FREE KVM %s", cur->name);
+  else if (cur->endp_type == endp_type_eths)
+    KERR("FREE ETH KVM SPY %s %d", cur->name, cur->num);
+  else
+    KOUT("%s %d", cur->name, cur->num);
+
   if (cur->lan.attached_lan_ok == 1)
     KERR("ERROR %s", cur->lan.lan);
   if (strlen(cur->lan.lan))
@@ -374,8 +379,8 @@ void dpdk_xyx_event_from_xyx_dpdk_process(char *name, int on)
             dpdk_msg_send_del_lan_tap(lan, cur->nm);
           else if (cur->endp_type == endp_type_phy)
             dpdk_msg_send_del_lan_phy(lan, cur->nm);
-          else if (cur->endp_type == endp_type_kvm)
-            dpdk_msg_send_del_lan_kvm(lan, cur->nm, cur->num);
+          else if (cur->endp_type == endp_type_eths)
+            dpdk_msg_send_del_lan_eths(lan, cur->nm, cur->num);
           else
             KOUT("ERROR  %s", name);
           KERR("ERROR %s %s", name, lan);
@@ -431,9 +436,9 @@ int dpdk_xyx_add_lan(int llid, int tid, char *name, int num, char *lan)
       else
         result = 0;
       }
-    else if (cur->endp_type == endp_type_kvm)
+    else if (cur->endp_type == endp_type_eths)
       {
-      if (dpdk_msg_send_add_lan_kvm(lan, name, num))
+      if (dpdk_msg_send_add_lan_eths(lan, name, num))
         KERR("ERROR %s %s %d", lan, name, num);
       else
         result = 0;
@@ -482,9 +487,9 @@ int dpdk_xyx_del_lan(int llid, int tid, char *name, int num, char *lan)
       if (dpdk_msg_send_del_lan_phy(lan, name))
         KERR("ERROR %s %s", lan, name);
       }
-    else if (cur->endp_type == endp_type_kvm)
+    else if (cur->endp_type == endp_type_eths)
       {
-      if (dpdk_msg_send_del_lan_kvm(lan, name, num))
+      if (dpdk_msg_send_del_lan_eths(lan, name, num))
         KERR("ERROR %s %s %d", lan, name, num);
       }
     else
@@ -509,7 +514,7 @@ int dpdk_xyx_add(int llid, int tid, char *name, int num, int endp_type)
     KERR("ERROR %s %d", name, num);
   else if ((endp_type != endp_type_tap) &&
            (endp_type != endp_type_phy) &&
-           (endp_type != endp_type_kvm))
+           (endp_type != endp_type_eths))
     KERR("ERROR %s %d %d", name, num, endp_type);
   else
     {
@@ -550,9 +555,9 @@ int dpdk_xyx_del(int llid, int tid, char *name, int num)
         if (dpdk_msg_send_del_lan_phy(lan, name))
           KERR("ERROR %s %s", lan, name);
         }
-      else if (cur->endp_type == endp_type_kvm)
+      else if (cur->endp_type == endp_type_eths)
         {
-        if (dpdk_msg_send_del_lan_kvm(lan, name, num))
+        if (dpdk_msg_send_del_lan_eths(lan, name, num))
           KERR("ERROR %s %s %d", lan, name, num);
         }
       else
@@ -570,9 +575,9 @@ int dpdk_xyx_del(int llid, int tid, char *name, int num)
       if (fmt_tx_del_phy(0, name))
         KERR("ERROR %s", name);
       }
-    else if (cur->endp_type == endp_type_kvm)
+    else if (cur->endp_type == endp_type_eths)
       {
-      if (fmt_tx_del_kvm(0, name, num))
+      if (fmt_tx_del_ethds(0, name, num))
         KERR("ERROR %s %d", name, num);
       }
     else
@@ -733,7 +738,7 @@ t_xyx_cnx *dpdk_xyx_get_first(int *nb_tap, int *nb_phy, int *nb_kvm)
       *nb_tap += 1;
     if (cur->endp_type == endp_type_phy)
       *nb_phy += 1;
-    if (cur->endp_type == endp_type_kvm)
+    if (cur->endp_type == endp_type_eths)
       *nb_kvm += 1;
     cur = cur->next;
     }
@@ -747,7 +752,7 @@ t_topo_endp *translate_topo_endp_xyx(int *nb)
   t_xyx_cnx *cur = g_head_xyx;
   int len, nb_endp = 0;
   t_topo_endp *endp;
-  len = (2 * g_nb_xyx) * sizeof(t_topo_endp);
+  len = g_nb_xyx * sizeof(t_topo_endp);
   endp = (t_topo_endp *) clownix_malloc( len, 13);
   memset(endp, 0, len);
   while(cur)
@@ -772,7 +777,7 @@ t_topo_endp *translate_topo_endp_xyx(int *nb)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void timer_end_kvm_ovs(void *data)
+static void timer_end_eths2_ovs(void *data)
 {
   char *name = (char *) data;
   t_xyx_cnx *cur = find_xyx_fullname(name);
@@ -780,8 +785,15 @@ static void timer_end_kvm_ovs(void *data)
     KERR("ERROR %s %d", cur->nm, cur->num);
   else
     {
-    if (fmt_tx_add_kvm2(0, cur->nm, cur->num))
+    if (cur->eths_done_ok != 0)
       KERR("ERROR %s %d", cur->nm, cur->num);
+    else
+      {
+      if (fmt_tx_add_eths2(0, cur->nm, cur->num))
+        KERR("ERROR %s %d", cur->nm, cur->num);
+      else
+        KERR("MMMMMMMMMMMMMMMMMMMMMMMMMM  %s %d", cur->nm, cur->num);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -812,15 +824,17 @@ static void timer_start_ovs_req(void *data)
         KERR("ERROR %s", name);
       clownix_free(name, __FUNCTION__);
       }
-    else if (cur->endp_type == endp_type_kvm)
+    else if (cur->endp_type == endp_type_eths)
       {
-      if (fmt_tx_add_kvm1(0, cur->nm, cur->num))
+      if (fmt_tx_add_ethds(0, cur->nm, cur->num))
         {
         KERR("ERROR %s %d", cur->nm, cur->num);
         clownix_free(name, __FUNCTION__);
         }
       else
-        clownix_timeout_add(200, timer_end_kvm_ovs, data, NULL, NULL);
+        {
+        clownix_timeout_add(10, timer_end_eths2_ovs, data, NULL, NULL);
+        }
       }
     else
       KOUT("ERROR  %s", name);
@@ -861,10 +875,12 @@ void dpdk_xyx_resp_add(int is_ko, char *name, int num)
     {
     if (cur->endp_type == endp_type_tap)
       KERR("CREATE TAP OK %s", name);
-    if (cur->endp_type == endp_type_phy)
+    else if (cur->endp_type == endp_type_phy)
       KERR("CREATE PHY OK %s", name);
-    if (cur->endp_type == endp_type_kvm)
-      KERR("CREATE KVM OK %s %d", name, num);
+    else if (cur->endp_type == endp_type_eths)
+      KERR("CREATE ETH KVM SPY OK %s %d", name, num);
+    else
+      KOUT("ERROR %s %d", name, num);
     cur->ovs_started_and_running = 1;
     utils_send_status_ok(&(cur->add_llid),&(cur->add_tid));
     }
@@ -889,10 +905,12 @@ void dpdk_xyx_resp_del(int is_ko, char *name, int num)
       {
       if (cur->endp_type == endp_type_tap)
         KERR("DELETE TAP OK %s", name);
-      if (cur->endp_type == endp_type_phy)
+      else if (cur->endp_type == endp_type_phy)
         KERR("DELETE PHY OK %s", name);
-      if (cur->endp_type == endp_type_kvm)
-        KERR("DELETE KVM OK %s %d", name, num);
+      else if (cur->endp_type == endp_type_eths)
+        KERR("DELETE ETH KVM SPY OK %s %d", name, num);
+      else
+        KOUT("ERROR %s %d", name, num);
       }
     }
 }
@@ -931,9 +949,19 @@ int dpdk_xyx_ready(char *name, int num)
   t_xyx_cnx *cur = find_xyx(name, num);
   if (cur == NULL)
     KERR("ERROR %s %d", name, num);
-  else
+  else if (cur->endp_type == endp_type_tap)
     result = (cur->ovs_started_and_running &&
               cur->vhost_started_and_running);
+  else if (cur->endp_type == endp_type_phy)
+    result = (cur->ovs_started_and_running &&
+              cur->vhost_started_and_running);
+  else if (cur->endp_type == endp_type_eths)
+    result = (cur->ovs_started_and_running &&
+              cur->vhost_started_and_running &&
+              cur->eths_done_ok);
+  else
+    KOUT("%d", cur->endp_type);
+
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -951,6 +979,45 @@ int dpdk_xyx_lan_empty(char *name, int num)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+void dpdk_xyx_eths2_resp_ok(char *name, int num)
+{
+  t_xyx_cnx *cur = find_xyx(name, num);
+  if (cur == NULL)
+    KERR("ERROR %s %d", cur->nm, cur->num);
+  else
+    {
+    KERR("MMMMMMMMMMMMMMMMMMMMMMMMMM  %s %d", cur->nm, cur->num);
+    cur->eths_done_ok = 1;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void dpdk_xyx_eths2_vm_pinging(char *name, int num)
+{
+  t_xyx_cnx *cur = find_xyx(name, num);
+  if (cur == NULL)
+    KERR("ERROR %s %d", cur->nm, cur->num);
+  else
+    {
+    if (cur->eths_done_ok == 0)
+      {
+      if (cur->endp_type != endp_type_eths)
+        KERR("ERROR %s %d", cur->nm, cur->num);
+      else
+        {
+        if (fmt_tx_add_eths2(0, cur->nm, cur->num))
+          KERR("ERROR %s %d", cur->nm, cur->num);
+        else
+          {
+          KERR("MMMMMMMMMMMMMMMMMMMMMMMMMM  %s %d", cur->nm, cur->num);
+          }
+        }
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void dpdk_xyx_init(void)

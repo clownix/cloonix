@@ -40,6 +40,7 @@
 #include "menu_utils.h"
 
 
+int get_endp_type_eths(t_bank_item *bitem);
 void canvas_ctx_menu(gdouble x, gdouble y);
 
 typedef struct
@@ -290,7 +291,8 @@ static void process_mouse_double_click(t_bank_item *bitem)
 
     case bank_type_eth:
       bitem->pbi.flag = flag_normal;
-      wireshark_launch(bitem->name, bitem->num);
+      if (get_endp_type_eths(bitem))
+        wireshark_launch(bitem->name, bitem->num);
       break;
 
     case bank_type_sat:

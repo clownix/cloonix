@@ -66,6 +66,8 @@
 #include "a2b_dpdk_process.h"
 #include "xyx_dpdk_process.h"
 
+
+
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
 static int g_i_am_in_cloonix;
@@ -80,6 +82,7 @@ static int g_machine_nb_cpu;
 static int g_machine_hugepages_nb;
 static int g_machine_hugepages_size;
 
+
 char *used_binaries[] =
 {
   "/bin/rm",
@@ -93,6 +96,29 @@ char *used_binaries[] =
   NULL,
 };
 /*--------------------------------------------------------------------------*/
+
+
+#define RANDOM_APPEND_SIZE 24
+static char *random_str(void)
+{
+  static char rd[RANDOM_APPEND_SIZE+1];
+  int i;
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  srand(ts.tv_nsec);
+  memset (rd, 0 , RANDOM_APPEND_SIZE+1);
+  for (i=0; i<RANDOM_APPEND_SIZE; i++)
+    rd[i] = 'A' + (rand() % 26);
+  return rd;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *get_memid(void)
+{
+  return (random_str());
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void init_g_user(void)

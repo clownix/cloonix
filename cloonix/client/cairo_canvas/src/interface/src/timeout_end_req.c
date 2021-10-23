@@ -84,7 +84,7 @@ void timer_create_item_node_req(void *data)
     set_node_layout_x_y(cust_vm->name, 0, pa->x, pa->y, 0, 
                         pa->tx, pa->ty, thidden_on_graph);
     client_add_vm(0, callback_end, cust_vm->name,
-                  cust_vm->eth, cust_vm->eth_table,
+                  cust_vm->nb_tot_eth, cust_vm->eth_tab,
                   vm_config_flags, natplug, cust_vm->cpu, cust_vm->mem,
                   NULL, cust_vm->kvm_used_rootfs, NULL, NULL, 
                   NULL, ptr_p9_host_share);

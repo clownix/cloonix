@@ -422,6 +422,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
   char info[MAX_PRINT_LEN];
   t_vm *vm = cfg_get_vm(name);
   t_eth_table *eth_tab = NULL;
+  int endp_dpdk = dpdk_kvm_exists(name, num);
   int endp_type = dpdk_xyx_exists(name, num);
   if (vm != NULL)
     eth_tab = vm->kvm.eth_table;
@@ -472,10 +473,10 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
         KERR("ERROR %s %d %s", name, num, lan);
         }
       }
-    else if (endp_type == endp_type_kvm)
+    else if (endp_type == endp_type_eths)
       {
       if ((vm == NULL) ||
-          (eth_tab[num].eth_type != eth_type_dpdk) ||
+          (eth_tab[num].eth_type != endp_type_eths) ||
           (num >= vm->kvm.nb_tot_eth))
         {
         send_status_ko(llid, tid, "failure");
@@ -483,7 +484,25 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
         }
       else
         {
-        if (dpdk_kvm_add_lan(llid, tid, name, num, lan))
+        if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_eths))
+          {
+          send_status_ko(llid, tid, "failure");
+          KERR("ERROR %s %d %s", name, num, lan);
+          }
+        }
+      }
+    else if (endp_dpdk == endp_type_ethd)
+      {
+      if ((vm == NULL) ||
+          (eth_tab[num].eth_type != endp_type_ethd) || 
+          (num >= vm->kvm.nb_tot_eth))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %d %s", name, num, lan);
+        }
+      else
+        {
+        if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_ethd))
           {
           send_status_ko(llid, tid, "failure");
           KERR("ERROR %s %d %s", name, num, lan);
@@ -537,11 +556,13 @@ static void timer_endp(void *data)
 {
   t_timer_endp *te = (t_timer_endp *) data;
   char err[MAX_PATH_LEN];
+  int endp_dpdk = dpdk_kvm_exists(te->name, te->num);
   int endp_type_exists = dpdk_xyx_exists(te->name, te->num);
   int d2d_exists = dpdk_d2d_exists(te->name);
   int a2b_exists = dpdk_a2b_exists(te->name);
   int nat_exists = dpdk_nat_exists(te->name);
-  if (endp_type_exists || d2d_exists || a2b_exists || nat_exists)
+  if (endp_dpdk || endp_type_exists ||
+      d2d_exists || a2b_exists || nat_exists)
     {
     local_add_lan(te->llid, te->tid, te->name, te->num, te->lan);
     timer_free(te);
@@ -691,6 +712,7 @@ void recv_event_topo_sub(int llid, int tid)
 void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
 {
   char info[MAX_PRINT_LEN];
+  int endp_dpdk = dpdk_kvm_exists(name, num);
   int endp_type = dpdk_xyx_exists(name, num);
   event_print("Rx Req del lan %s of %s %d", lan, name, num);
   if (dpdk_d2d_lan_exists_in_d2d(name, lan, 0))
@@ -721,11 +743,16 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
     else if (dpdk_phy_del_lan(llid, tid, name, lan))
       send_status_ko(llid, tid, "failure");
     }
-  else if (endp_type == endp_type_kvm)
+  else if (endp_type == endp_type_eths)
     {
     if (!dpdk_xyx_lan_exists_in_xyx(name, num, lan))
       send_status_ko(llid, tid, "lan not found");
-    else if (dpdk_kvm_del_lan(llid, tid, name, num, lan))
+    else if (dpdk_kvm_del_lan(llid, tid, name, num, lan, endp_type_eths))
+      send_status_ko(llid, tid, "failure");
+    }
+  else if (endp_dpdk == endp_type_ethd)
+    {
+    if (dpdk_kvm_del_lan(llid, tid, name, num, lan, endp_type_ethd))
       send_status_ko(llid, tid, "failure");
     }
   else

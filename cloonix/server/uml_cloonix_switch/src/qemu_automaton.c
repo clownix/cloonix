@@ -346,7 +346,8 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
   len = sprintf(cmd_start, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
   for (i = 0; i < vm->kvm.nb_tot_eth; i++)
     {
-    if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
+    if ((vm->kvm.eth_table[i].eth_type == endp_type_ethd) ||
+        (vm->kvm.eth_table[i].eth_type == endp_type_eths))
       len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_net(vm,i));
     }
   if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NOBACKDOOR))
@@ -650,7 +651,8 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
     case auto_delay_possible_ovs_start:
       for (i = 0; i < vm->kvm.nb_tot_eth; i++)
         {
-        if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
+        if ((vm->kvm.eth_table[i].eth_type == endp_type_ethd) ||
+            (vm->kvm.eth_table[i].eth_type == endp_type_eths))
           nb_dpdk += 1;
         }
       if (nb_dpdk)
@@ -683,7 +685,7 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
       arm_static_vm_timeout(name, 100);
       break;
     case auto_create_vm_connect:
-      timer_utils_finish_vm_init(vm->kvm.vm_id, 2000);
+      timer_utils_finish_vm_init(vm->kvm.vm_id, 5000);
       qmonitor_begin_qemu_unix(name);
       qmp_begin_qemu_unix(name);
       qhvc0_begin_qemu_unix(name);

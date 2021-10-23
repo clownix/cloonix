@@ -44,8 +44,6 @@
 
 
 
-#define MAX_PKT_BURST 32
-
 static int g_enable[2];
 static char g_a2b0_socket[MAX_PATH_LEN];
 static char g_a2b1_socket[MAX_PATH_LEN];
@@ -280,16 +278,18 @@ void vhost_client_start(char *memid, char *path0, char *path1)
 {
   uint64_t flags = 0;
   int i, err, sid;
-  uint32_t mcache = 128;
-  uint32_t mbufs = 512;
-  uint32_t msize = 2048;
+  uint32_t mcache = MBUF_MCACHE;
+  uint32_t mbufs = MBUF_MAX;
+  uint32_t msize = MBUF_SIZE;
 
   sid = rte_lcore_to_socket_id(rte_get_main_lcore());
   if (sid < 0)
     KOUT(" ");
   strncpy(g_a2b0_socket, path0, MAX_PATH_LEN-1);
   strncpy(g_a2b1_socket, path1, MAX_PATH_LEN-1);
-  g_mempool = rte_pktmbuf_pool_create(memid, mbufs, mcache, 0, msize, sid);
+  g_mempool = rte_mempool_lookup(memid);
+  if (!g_mempool)
+    g_mempool = rte_pktmbuf_pool_create(memid, mbufs, mcache, 0, msize, sid);
   if (!g_mempool)
     KOUT(" ");
 

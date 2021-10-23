@@ -648,7 +648,8 @@ char *dpdk_ovs_format_net(t_vm *vm, int eth)
 
   for (i = 0; i < vm->kvm.nb_tot_eth; i++)
     {
-    if (vm->kvm.eth_table[i].eth_type == eth_type_dpdk)
+    if ((vm->kvm.eth_table[i].eth_type == endp_type_ethd) ||
+        (vm->kvm.eth_table[i].eth_type == endp_type_eths))
       {
       first_dpdk = i;
       break;

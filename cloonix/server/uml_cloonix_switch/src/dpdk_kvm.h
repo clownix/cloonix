@@ -15,14 +15,18 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+t_topo_endp *translate_topo_endp_ethd(int *nb);
+int dpdk_kvm_exists(char *name, int num);
 void dpdk_kvm_add_whole_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab);
 void dpdk_kvm_resp_add_lan(int is_ko, char *lan, char *name, int num);
 void dpdk_kvm_resp_del_lan(int is_ko, char *lan, char *name, int num);
-int dpdk_kvm_add_lan(int llid, int tid, char *name, int num, char *lan);
-int dpdk_kvm_del_lan(int llid, int tid, char *name, int num,  char *lan);
-int dpdk_kvm_del(int llid, int tid, char *name, int num);
+int dpdk_kvm_add_lan(int llid, int tid, char *name, int num,
+                     char *lan, int endp_type);
+int dpdk_kvm_del_lan(int llid, int tid, char *name, int num,
+                     char *lan, int endp_type);
+int dpdk_kvm_del(int llid, int tid, char *name, int num, int endp_type);
 void dpdk_kvm_resp_add(int is_ko, char *name, int num);
-void dpdk_kvm_resp_add_end(int is_ko, char *name, int num);
+void dpdk_kvm_resp_add_eths2(int is_ko, char *name, int num);
 void dpdk_kvm_resp_del(int is_ko, char *name, int num);
 void dpdk_kvm_init(void);
 /*--------------------------------------------------------------------------*/

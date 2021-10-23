@@ -15,13 +15,15 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int ovs_cmd_add_lan(char *ovs_bin, char *dpdk_dir, char *lan);
-int ovs_cmd_del_lan(char *ovs_bin, char *dpdk_dir, char *lan);
-int ovs_cmd_add_lan_kvm(char *ovs_bin, char *dpdk_dir, char *lan, char *name, int num);
-int ovs_cmd_del_lan_kvm(char *ovs_bin, char *dpdk_dir, char *lan, char *name, int num);
-int ovs_cmd_add_kvm1(char *ovs_bin, char *dpdk_dir, char *name, int num);
-int ovs_cmd_add_kvm2(char *ovs_bin, char *dpdk_dir, char *name, int num);
-int ovs_cmd_del_kvm(char *ovs_bin, char *dpdk_dir, char *name, int num);
+int ovs_cmd_add_lan_ethd(char *ovs, char *dpdk, char *lan, char *name, int num);
+int ovs_cmd_del_lan_ethd(char *ovs, char *dpdk, char *lan, char *name, int num);
+int ovs_cmd_add_lan_eths(char *ovs, char *dpdk, char *lan, char *name, int num);
+int ovs_cmd_del_lan_eths(char *ovs, char *dpdk, char *lan, char *name, int num);
+
+int ovs_cmd_add_ethds(char *ovs, char *dpdk, char *name, int num);
+int ovs_cmd_add_eths2(char *ovs, char *dpdk, char *name, int num);
+int ovs_cmd_del_ethds(char *ovs, char *dpdk, char *name, int num);
+
 int ovs_cmd_add_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
 int ovs_cmd_del_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
 int ovs_cmd_add_lan_d2d(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
@@ -36,5 +38,7 @@ int ovs_cmd_add_lan_tap(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
 int ovs_cmd_del_lan_tap(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
 int ovs_cmd_add_lan_a2b(char *ovs_bin, char *dpdk_dir, char *lan, char *name, int num);
 int ovs_cmd_del_lan_a2b(char *ovs_bin, char *dpdk_dir, char *lan, char *name, int num);
+int ovs_cmd_add_lan(char *ovs_bin, char *dpdk_dir, char *lan);
+int ovs_cmd_del_lan(char *ovs_bin, char *dpdk_dir, char *lan);
 /*---------------------------------------------------------------------------*/
 

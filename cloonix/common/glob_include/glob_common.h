@@ -115,13 +115,6 @@
 #define MSG_DIGEST_LEN 32
 
 
-enum{
-  eth_type_min = 0,
-  eth_type_none,
-  eth_type_dpdk,
-  eth_type_max,
-};
-
 
 enum{
   doors_type_min = 100,

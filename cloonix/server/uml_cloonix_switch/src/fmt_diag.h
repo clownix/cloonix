@@ -19,9 +19,11 @@ int  fmt_tx_add_phy(int tid, char *name);
 int  fmt_tx_del_phy(int tid, char *name);
 int  fmt_tx_add_tap(int tid, char *name);
 int  fmt_tx_del_tap(int tid, char *name);
-int  fmt_tx_add_kvm1(int tid, char *name, int num);
-int  fmt_tx_add_kvm2(int tid, char *name, int num);
-int  fmt_tx_del_kvm(int tid, char *name, int num);
+
+int fmt_tx_add_ethds(int tid, char *name, int num);
+int fmt_tx_add_eths2(int tid, char *name, int num);
+
+int  fmt_tx_del_ethds(int tid, char *name, int num);
 
 int  fmt_tx_add_lan(int tid, char *lan);
 int  fmt_tx_del_lan(int tid, char *lan);
@@ -35,8 +37,11 @@ int  fmt_tx_del_lan_phy(int tid, char *lan, char *name);
 int  fmt_tx_add_lan_nat(int tid, char *lan, char *name);
 int  fmt_tx_del_lan_nat(int tid, char *lan, char *name);
 
-int  fmt_tx_add_lan_kvm(int tid, char *lan, char *name, int num);
-int  fmt_tx_del_lan_kvm(int tid, char *lan, char *name, int num);
+int  fmt_tx_add_lan_ethd(int tid, char *lan, char *name, int num);
+int  fmt_tx_del_lan_ethd(int tid, char *lan, char *name, int num);
+
+int  fmt_tx_add_lan_eths(int tid, char *lan, char *name, int num);
+int  fmt_tx_del_lan_eths(int tid, char *lan, char *name, int num);
 
 int  fmt_tx_add_lan_a2b(int tid, char *lan, char *name, int num);
 int  fmt_tx_del_lan_a2b(int tid, char *lan, char *name, int num);

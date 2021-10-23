@@ -73,6 +73,7 @@ cd ${HERE}/tainted_qemu/
                      --enable-vhost-crypto
                      --enable-debug-info
                      --enable-debug
+                     --enable-debug-mutex
                      --enable-linux-aio
                      --enable-curses
                      --disable-vte

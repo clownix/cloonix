@@ -62,11 +62,13 @@ int cloonix_get_pid(void);
 #define MAX_SELECT_CHANNELS 500
 
 enum {
-  endp_type_tap=13,
+  endp_type_none=13,
+  endp_type_tap,
   endp_type_phy,
   endp_type_a2b,
   endp_type_nat,
-  endp_type_kvm,
+  endp_type_ethd,
+  endp_type_eths,
   endp_type_d2d,
 };
 

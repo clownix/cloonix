@@ -68,24 +68,6 @@ static int g_started_vhost;
 static uint32_t g_cpu_flags;
 /*--------------------------------------------------------------------------*/
 
-#define RANDOM_APPEND_SIZE 6
-#define FLOW_TAB_SIZE 2048
-#define FLOW_TAB_PORT 7681
-/*****************************************************************************/
-static char *random_str(void)
-{
-  static char rd[RANDOM_APPEND_SIZE+1];
-  int i;
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  srand(ts.tv_nsec);
-  memset (rd, 0 , RANDOM_APPEND_SIZE+1);
-  for (i=0; i<RANDOM_APPEND_SIZE; i++)
-    rd[i] = 'A' + (rand() % 26);
-  return rd;
-}
-/*---------------------------------------------------------------------------*/
-
 /****************************************************************************/
 static int check_and_set_uid(void)
 {
@@ -265,7 +247,8 @@ static char *get_cpu_from_flags(uint32_t flags)
     }
   cpu = i;
   memset(g_lcore_cpu, 0, MAX_NAME_LEN);
-  snprintf(g_lcore_cpu, MAX_NAME_LEN-1, "--lcores=0@0,1@%d,2@%d", cpu, cpu);
+//  snprintf(g_lcore_cpu, MAX_NAME_LEN-1, "--lcores=0@0,1@%d,2@%d", cpu, cpu);
+  snprintf(g_lcore_cpu, MAX_NAME_LEN-1, "--lcores=0@0,1@%d", cpu);
   return g_lcore_cpu;
 }
 /*--------------------------------------------------------------------------*/
@@ -296,7 +279,7 @@ int main (int argc, char *argv[])
   char *snf = SNF_PCAP_DIR;
   char *net = g_net_name;
   char *xyx = g_xyx_name;
-  if (argc != 5)
+  if (argc != 6)
     KOUT("%d", argc);
   g_llid = 0;
   g_watchdog_ok = 0;
@@ -319,8 +302,8 @@ int main (int argc, char *argv[])
   snprintf(g_prefix, MAX_PATH_LEN-1, "--file-prefix=cloonix%s", net);
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, xyx);
   snprintf(g_snf_path, MAX_PATH_LEN-1,"%s/%s/%s", root, snf, xyx);
-  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s", xyx, random_str());
   sscanf(argv[4], "%X", &g_cpu_flags);
+  strncpy(g_memid, argv[5], MAX_NAME_LEN-1);
   if (!access(g_ctrl_path, F_OK))
     {
     KERR("ERROR %s exists ERASING", g_ctrl_path);

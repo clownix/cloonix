@@ -63,24 +63,6 @@ static int g_started_vhost;
 static uint32_t g_cpu_flags;
 /*--------------------------------------------------------------------------*/
 
-#define RANDOM_APPEND_SIZE 6
-#define FLOW_TAB_SIZE 2048
-#define FLOW_TAB_PORT 7681
-/*****************************************************************************/
-static char *random_str(void)
-{
-  static char rd[RANDOM_APPEND_SIZE+1];
-  int i;
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  srand(ts.tv_nsec);
-  memset (rd, 0 , RANDOM_APPEND_SIZE+1);
-  for (i=0; i<RANDOM_APPEND_SIZE; i++)
-    rd[i] = 'A' + (rand() % 26);
-  return rd;
-}
-/*---------------------------------------------------------------------------*/
-
 /****************************************************************************/
 static int check_and_set_uid(void)
 {
@@ -270,7 +252,7 @@ int main (int argc, char *argv[])
   char *sock = A2B_DPDK_SOCK_DIR;
   char *net = g_net_name;
   char *a2b = g_a2b_name;
-  if (argc != 5)
+  if (argc != 6)
     KOUT("%d", argc);
   g_llid = 0;
   g_watchdog_ok = 0;
@@ -291,8 +273,8 @@ int main (int argc, char *argv[])
   snprintf(g_a2b1_socket, MAX_PATH_LEN-1, "%s/dpdk/b2a_%s", root, a2b);
   snprintf(g_prefix, MAX_PATH_LEN-1, "--file-prefix=cloonix%s", net);
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/%s", root, sock, a2b);
-  snprintf(g_memid, MAX_NAME_LEN-1, "%s%s", a2b, random_str());
   sscanf(argv[4], "%X", &g_cpu_flags);
+  strncpy(g_memid, argv[5], MAX_NAME_LEN-1);
   if (!access(g_ctrl_path, F_OK))
     {
     KERR("%s exists ERASING", g_ctrl_path);

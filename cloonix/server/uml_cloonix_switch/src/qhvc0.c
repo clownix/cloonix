@@ -42,6 +42,7 @@
 #include "doors_rpc.h"
 #include "header_sock.h"
 #include "suid_power.h"
+#include "dpdk_xyx.h"
 
 
 #define END_HVCO_CMD_MARKER "end_of_hvc0_cloonix_cmd_marker"

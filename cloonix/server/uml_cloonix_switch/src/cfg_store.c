@@ -43,6 +43,7 @@
 #include "dpdk_ovs.h"
 #include "dpdk_d2d.h"
 #include "dpdk_xyx.h"
+#include "dpdk_kvm.h"
 #include "dpdk_a2b.h"
 #include "dpdk_phy.h"
 #include "dpdk_nat.h"
@@ -573,8 +574,8 @@ static void fill_topo_kvm(t_topo_kvm *kvm, t_vm *vm)
 static t_topo_info *alloc_all_fields(int nb_vm,
                                      int nb_endp_d2d, int nb_endp_a2b,
                                      int nb_endp_xyx, int nb_endp_nat,
-                                     int nb_d2d, int nb_a2b, int nb_tap,
-                                     int nb_phy, int nb_nat,
+                                     int nb_endp_ethd, int nb_d2d, int nb_a2b,
+                                     int nb_tap, int nb_phy, int nb_nat,
                                      int nb_bridges, int nb_info_phy)
 {
   t_topo_info *topo = (t_topo_info *) clownix_malloc(sizeof(t_topo_info), 3);
@@ -588,7 +589,8 @@ static t_topo_info *alloc_all_fields(int nb_vm,
   topo->nb_phy = nb_phy;
   topo->nb_info_phy = nb_info_phy;
   topo->nb_bridges = nb_bridges;
-  topo->nb_endp = nb_endp_d2d + nb_endp_a2b + nb_endp_xyx + nb_endp_nat;
+  topo->nb_endp = nb_endp_d2d + nb_endp_a2b + nb_endp_xyx +
+                  nb_endp_nat + nb_endp_ethd;
  if (topo->nb_kvm)
     {
     topo->kvm =
@@ -734,19 +736,20 @@ static void fill_topo_a2b(t_topo_a2b *topo_a2b, t_a2b_cnx *a2b)
 t_topo_info *cfg_produce_topo_info(void)
 {
   int i, nb_vm;
-  int nb_endp_xyx, nb_endp_d2d, nb_endp_a2b, nb_endp_nat;
-  int nb_d2d, nb_a2b, nb_tap, nb_nat, nb_phy, nb_kvm, nb_info_phy;
-  int i_endp=0, i_tap=0, i_phy=0; 
+  int nb_endp_xyx, nb_endp_ethd, nb_endp_d2d, nb_endp_a2b, nb_endp_nat;
+  int nb_d2d, nb_a2b, nb_tap, nb_nat, nb_phy, nb_eths;
+  int i_endp=0, i_tap=0, i_phy=0, nb_info_phy; 
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
   t_topo_info_phy *info_phy;
   t_topo_bridges *bridges;
   t_topo_endp *d2d_endp = translate_topo_endp_d2d(&nb_endp_d2d);
   t_topo_endp *xyx_endp = translate_topo_endp_xyx(&nb_endp_xyx);
+  t_topo_endp *ethd_endp = translate_topo_endp_ethd(&nb_endp_ethd);
   t_topo_endp *a2b_endp = translate_topo_endp_a2b(&nb_endp_a2b);
   t_topo_endp *nat_endp = translate_topo_endp_nat(&nb_endp_nat);
   int nb_bridges = suid_power_get_topo_bridges(&bridges);
   t_d2d_cnx *d2d = dpdk_d2d_get_first(&nb_d2d);
-  t_xyx_cnx *xyx = dpdk_xyx_get_first(&nb_tap, &nb_phy, &nb_kvm);
+  t_xyx_cnx *xyx = dpdk_xyx_get_first(&nb_tap, &nb_phy, &nb_eths);
   t_a2b_cnx *a2b = dpdk_a2b_get_first(&nb_a2b);
   t_nat_cnx *nat = dpdk_nat_get_first(&nb_nat);
 
@@ -754,8 +757,9 @@ t_topo_info *cfg_produce_topo_info(void)
 
   t_topo_info *topo = alloc_all_fields(nb_vm, nb_endp_d2d,
                                        nb_endp_a2b, nb_endp_xyx, nb_endp_nat,
-                                       nb_d2d, nb_a2b, nb_tap, nb_phy, nb_nat,
-                                       nb_bridges, nb_info_phy);
+                                       nb_endp_ethd, nb_d2d, nb_a2b, nb_tap,
+                                       nb_phy, nb_nat, nb_bridges,
+                                       nb_info_phy);
 
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
 
@@ -798,9 +802,9 @@ t_topo_info *cfg_produce_topo_info(void)
       KOUT(" ");
     }
 
-  if (nb_tap + nb_phy + nb_kvm)
+  if (nb_tap + nb_phy + nb_eths)
     {
-    for (i=0; i < nb_tap + nb_phy + nb_kvm; i++)
+    for (i=0; i < nb_tap + nb_phy + nb_eths; i++)
       {
       if (!xyx)
         KOUT(" ");
@@ -812,7 +816,7 @@ t_topo_info *cfg_produce_topo_info(void)
         {
         fill_topo_phy(&(topo->phy[i_phy++]), xyx);
         }
-      else if (xyx->endp_type == endp_type_kvm)
+      else if (xyx->endp_type == endp_type_eths) 
         {
         }
       else
@@ -849,6 +853,14 @@ t_topo_info *cfg_produce_topo_info(void)
     if (i_endp == topo->nb_endp)
       KOUT(" ");
     copy_endp(&(topo->endp[i_endp]), &(xyx_endp[i]));
+    i_endp += 1;
+    }
+
+  for (i=0; i<nb_endp_ethd; i++)
+    {
+    if (i_endp == topo->nb_endp)
+      KOUT(" ");
+    copy_endp(&(topo->endp[i_endp]), &(ethd_endp[i]));
     i_endp += 1;
     }
 

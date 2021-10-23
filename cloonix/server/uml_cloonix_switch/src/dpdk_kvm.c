@@ -30,13 +30,30 @@
 #include "event_subscriber.h"
 #include "dpdk_xyx.h"
 #include "dpdk_ovs.h"
+#include "fmt_diag.h"
+#include "dpdk_msg.h"
 
+
+typedef struct t_ethd_cnx
+{
+  char name[MAX_NAME_LEN];
+  int num;
+  int ready;
+  char lan[MAX_NAME_LEN];
+  int waiting_ack_add_lan;
+  int waiting_ack_del_lan;
+  int attached_lan_ok;
+  int llid;
+  int tid;
+  struct t_ethd_cnx *prev;
+  struct t_ethd_cnx *next;
+} t_ethd_cnx;
 
 typedef struct t_kvm_cnx
 {
   char name[MAX_NAME_LEN];
   int nb_tot_eth;
-  t_eth_table eth_table[MAX_DPDK_VM];
+  t_eth_table eth_tab[MAX_DPDK_VM];
   int  dyn_vm_add_eth_done;
   int  dyn_vm_add_eth_todo;
   int  dyn_vm_add_acked;
@@ -60,7 +77,64 @@ typedef struct t_add_lan
 
 static t_kvm_cnx *g_head_kvm;
 static t_add_lan *g_head_lan;
+static t_ethd_cnx *g_head_ethd;
+static int g_nb_ethd;
 
+/*****************************************************************************/
+static t_ethd_cnx *ethd_find(char *name, int num)
+{
+  t_ethd_cnx *cur = g_head_ethd;
+  if (strlen(name))
+    {
+    while(cur && (strcmp(cur->name, name) || (cur->num != num)))
+      {
+      cur = cur->next;
+      }
+    }
+  return cur;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void ethd_alloc(char *name, int num)
+{
+  t_ethd_cnx *cur  = ethd_find(name, num);
+  if (cur)
+    KERR("ERROR KVMETH ALLOC ETHD %s %d", name, num);
+  else
+    {
+    cur  = (t_ethd_cnx *) clownix_malloc(sizeof(t_ethd_cnx), 6);
+    memset(cur, 0, sizeof(t_ethd_cnx));
+    strncpy(cur->name, name, MAX_NAME_LEN-1);
+    cur->num = num;
+    if (g_head_ethd)
+      g_head_ethd->prev = cur;
+    cur->next = g_head_ethd;
+    g_head_ethd = cur;
+    g_nb_ethd += 1;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void ethd_free(char *name, int num)
+{
+  t_ethd_cnx *cur  = ethd_find(name, num);
+  if (!cur)
+    KERR("ERROR %s %d", name, num);
+  else
+    {
+    if (cur->prev)
+      cur->prev->next = cur->next;
+    if (cur->next)
+      cur->next->prev = cur->prev;
+    if (cur == g_head_ethd)
+      g_head_ethd = cur->next;
+    clownix_free(cur, __FUNCTION__);
+    g_nb_ethd -= 1;
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static t_kvm_cnx *kvm_find(char *name)
@@ -80,7 +154,7 @@ static void kvm_alloc(char *name, int nb_tot_eth, t_eth_table *eth_tab)
   memset(cur, 0, sizeof(t_kvm_cnx));
   strncpy(cur->name, name, MAX_NAME_LEN-1);
   cur->nb_tot_eth = nb_tot_eth;
-  memcpy(cur->eth_table, eth_tab, nb_tot_eth * sizeof(t_eth_table));
+  memcpy(cur->eth_tab, eth_tab, nb_tot_eth * sizeof(t_eth_table));
   cur->dyn_vm_add_acked = 1; 
   cur->decrementer = 1;
   if (g_head_kvm)
@@ -154,10 +228,24 @@ static void lan_free(t_add_lan *cur)
 
 
 /*****************************************************************************/
-static int dpdk_kvm_add(char *name, int num)
+static int dpdk_kvm_add(char *name, int num, int eth_type)
 {
-  KERR("KVMETH ADDETH %s %d", name, num);
-  return (dpdk_xyx_add(0, 0, name, num, endp_type_kvm));
+  int result;
+  if (eth_type == endp_type_ethd)
+    {
+    if (fmt_tx_add_ethds(0, name, num))
+      KERR("ERROR %s %d", name, num);
+    else
+      {
+      ethd_alloc(name, num);
+      result = 0;
+      }
+    }
+  else if (eth_type == endp_type_eths)
+    result = dpdk_xyx_add(0, 0, name, num, endp_type_eths);
+  else
+    KOUT("%d", eth_type);
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -171,14 +259,15 @@ static void try_connect_kvm(t_kvm_cnx *cur)
     {
     for (i = cur->dyn_vm_add_eth_todo; i < cur->nb_tot_eth; i++)
       {
-      if (cur->eth_table[i].eth_type == eth_type_dpdk)
+      if ((cur->eth_tab[i].eth_type == endp_type_ethd) ||
+          (cur->eth_tab[i].eth_type == endp_type_eths))
         {
         endp_path = utils_get_dpdk_endp_path(cur->name, i);
         if (!access(endp_path, F_OK))
           {
           success = 1;
           cur->dyn_vm_add_eth_todo = i+1;
-          if (dpdk_kvm_add(cur->name, i))
+          if (dpdk_kvm_add(cur->name, i, cur->eth_tab[i].eth_type))
             KERR("ERROR %s %d", cur->name, i);
           else
             cur->dyn_vm_add_acked = 0; 
@@ -191,7 +280,8 @@ static void try_connect_kvm(t_kvm_cnx *cur)
       some_more = 0;
       for (i = cur->dyn_vm_add_eth_todo; i < cur->nb_tot_eth; i++)
         {
-        if (cur->eth_table[i].eth_type == eth_type_dpdk)
+        if ((cur->eth_tab[i].eth_type == endp_type_ethd) ||
+            (cur->eth_tab[i].eth_type == endp_type_eths))
           some_more = 1;
         }
       if (some_more == 0)
@@ -282,6 +372,17 @@ static void timer_beat(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int dpdk_kvm_exists(char *name, int num)
+{
+  int result = 0;
+  t_ethd_cnx *cur = ethd_find(name, num);
+  if (cur)
+    result = endp_type_ethd;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void dpdk_kvm_add_whole_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab)
 {
   int i;
@@ -294,7 +395,8 @@ void dpdk_kvm_add_whole_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab)
     {
     for (i = 0; i < nb_tot_eth; i++)
       {
-      if (eth_tab[i].eth_type == eth_type_dpdk)
+      if ((eth_tab[i].eth_type == endp_type_ethd) ||
+          (eth_tab[i].eth_type == endp_type_eths))
         {
         endp_path = utils_get_dpdk_endp_path(name, i);
         unlink(endp_path);
@@ -308,69 +410,193 @@ void dpdk_kvm_add_whole_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int dpdk_kvm_del(int llid, int tid, char *name, int num)
+int dpdk_kvm_del(int llid, int tid, char *name, int num, int eth_type)
 {
-  KERR("KVMETH DELETH %s %d", name, num);
-  return (dpdk_xyx_del(llid, tid, name, num));
+  int result = -1;
+  t_ethd_cnx *cur;
+  if (eth_type == endp_type_ethd)
+    {
+    cur  = ethd_find(name, num);
+    if (cur != NULL)
+      {
+      if ((strlen(cur->lan)) &&
+          ((cur->waiting_ack_add_lan == 1) ||
+          (cur->attached_lan_ok == 1)))
+        {
+        if (cur->waiting_ack_del_lan == 1)
+          KERR("ERROR %s %d", name, num);
+        if (dpdk_msg_send_del_lan_ethd(cur->lan, name, num))
+          KERR("ERROR %s %s %d", cur->lan, name, num);
+        cur->attached_lan_ok = 0;
+        cur->waiting_ack_del_lan = 1;
+        }
+      if (fmt_tx_del_ethds(0, name, num))
+        KERR("ERROR %s %d", name, num);
+      }
+    else
+      KERR("ERROR DELETH %s %d", name, num);
+    }
+  else
+    {
+    result = dpdk_xyx_del(llid, tid, name, num);
+    }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void dpdk_kvm_resp_add_lan(int is_ko, char *lan, char *name, int num)
 {
-  KERR("KVMETH RESP ADDLAN %s %d %s", name, num, lan);
-  dpdk_xyx_resp_add_lan(is_ko, lan, name, num);
+  t_ethd_cnx *cur = ethd_find(name, num);
+  if (cur)
+    {
+    cur->attached_lan_ok = 1;
+    cur->waiting_ack_add_lan = 0;
+    utils_send_status_ok(&(cur->llid),&(cur->tid));
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    }
+  else
+    {
+    dpdk_xyx_resp_add_lan(is_ko, lan, name, num);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void dpdk_kvm_resp_del_lan(int is_ko, char *lan, char *name, int num)
 {
-  KERR("KVMETH RESP DELLAN %s %d %s", name, num, lan);
-  dpdk_xyx_resp_del_lan(is_ko, lan, name, num);
+  t_ethd_cnx *cur = ethd_find(name, num);
+  if (cur)
+    {
+    cur->attached_lan_ok = 0;
+    cur->waiting_ack_del_lan = 0;
+    memset(cur->lan, 0, MAX_NAME_LEN);
+    utils_send_status_ok(&(cur->llid),&(cur->tid));
+    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    }
+  else
+    {
+    dpdk_xyx_resp_del_lan(is_ko, lan, name, num);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int dpdk_kvm_add_lan(int llid, int tid, char *name, int num, char *lan)
+int dpdk_kvm_add_lan(int llid, int tid, char *name, int num, char *lan,
+                     int endp_type)
 {
   int result = -1;
-  if (dpdk_xyx_exists(name, num))
+  t_ethd_cnx *cur;
+  if (endp_type == endp_type_ethd)
     {
-    KERR("KVMETH ADDLAN START %s %d %s", name, num, lan);
-    if (lan_find(name) == NULL)
+    cur  = ethd_find(name, num);
+    if (cur == NULL)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else if (cur->ready != 1)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else if (cur->waiting_ack_del_lan)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else if (cur->waiting_ack_add_lan)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else if (cur->attached_lan_ok)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else
       {
-      lan_alloc(llid, tid, name, num, lan);
-      result = 0;
+      if (dpdk_msg_send_add_lan_ethd(lan, name, num))
+        KERR("ERROR %s %d %s", name, num, lan);
+      else
+        {
+        if (strlen(cur->lan))
+          {
+          KERR("ERROR %s %d %s", name, num, lan);
+          memset(cur->lan, 0, MAX_NAME_LEN);
+          }
+        cur->waiting_ack_add_lan = 1;
+        strncpy(cur->lan, lan, MAX_NAME_LEN-1);
+        cur->llid = llid;
+        cur->tid = tid;
+        result = 0;
+        }
+      }
+    }
+  else
+    {
+    if (dpdk_xyx_exists(name, num))
+      {
+      KERR("KVMETH ADDLAN START %s %d %s", name, num, lan);
+      if (lan_find(name) == NULL)
+        {
+        lan_alloc(llid, tid, name, num, lan);
+        result = 0;
+        }
+      else
+        KERR("ERROR KVMETH ADDLAN %s %d %s", name, num, lan);
       }
     else
       KERR("ERROR KVMETH ADDLAN %s %d %s", name, num, lan);
     }
-  else
-    KERR("ERROR KVMETH ADDLAN %s %d %s", name, num, lan);
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int dpdk_kvm_del_lan(int llid, int tid, char *name, int num, char *lan)
+int dpdk_kvm_del_lan(int llid, int tid, char *name, int num, char *lan,
+                     int endp_type)
 {
+  int result = -1;
+  t_ethd_cnx *cur;
   KERR("KVMETH DELLAN %s %d %s", name, num, lan);
-  return (dpdk_xyx_del_lan(llid, tid, name, num, lan));
+  if (endp_type == endp_type_ethd)
+    {
+    cur  = ethd_find(name, num);
+    if (cur == NULL)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else if (cur->ready != 1)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else if (cur->waiting_ack_del_lan)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else if (cur->waiting_ack_add_lan)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else if (cur->attached_lan_ok == 0)
+      KERR("ERROR ETHD %s %d %s", name, num, lan);
+    else if (strcmp(lan, cur->lan))
+      KERR("ERROR ETHD %s %d %s %s", name, num, lan, cur->lan);
+    else
+      {
+      if (dpdk_msg_send_del_lan_ethd(lan, name, num))
+        KERR("ERROR %s %s %d", lan, name, num);
+      else
+        {
+        cur->waiting_ack_del_lan = 1;
+        cur->llid = llid;
+        cur->tid = tid;
+        result = 0;
+        }
+      }
+    }
+  else
+    {
+    result = dpdk_xyx_del_lan(llid, tid, name, num, lan);
+    }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void dpdk_kvm_resp_add(int is_ko, char *name, int num)
 {
+  t_ethd_cnx *ethd;
   t_kvm_cnx *cur = kvm_find(name);
-  KERR("KVMETH RESP ADDETH %s %d", name, num);
   if (cur == NULL)
     KERR("ERROR KVM %s %d", name, num);
   else
     {
+    ethd = ethd_find(name, num);
     cur->dyn_vm_add_acked = 1; 
-    dpdk_xyx_resp_add(is_ko, name, num);
+    if (ethd == NULL)
+      dpdk_xyx_resp_add(is_ko, name, num);
+    else
+      ethd->ready = 1;
     if (cur->dyn_vm_add_eth_done == 1) 
       kvm_free(cur->name);
     }
@@ -378,25 +604,68 @@ void dpdk_kvm_resp_add(int is_ko, char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void dpdk_kvm_resp_add_end(int is_ko, char *name, int num)
+void dpdk_kvm_resp_add_eths2(int is_ko, char *name, int num)
 {
   KERR("KVMETH RESP ADDETH END %s %d", name, num);
+  if (is_ko)
+    KERR("ERROR RESP ADDETH END KO %s %d", name, num);
+  else
+    dpdk_xyx_eths2_resp_ok(name, num);
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void dpdk_kvm_resp_del(int is_ko, char *name, int num)
 {
+  t_ethd_cnx *cur;
   char *endp_path = utils_get_dpdk_endp_path(name, num);
-  KERR("KVMETH RESP DELETH %s %d", name, num);
-  dpdk_xyx_resp_del(is_ko, name, num);
+  cur  = ethd_find(name, num);
+  if (cur != NULL)
+    {
+    ethd_free(name, num);
+    }
+  else
+    {
+    dpdk_xyx_resp_del(is_ko, name, num);
+    }
   unlink(endp_path);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+t_topo_endp *translate_topo_endp_ethd(int *nb)
+{
+  t_ethd_cnx *cur = g_head_ethd;
+  int len, nb_endp = 0;
+  t_topo_endp *endp;
+  len = g_nb_ethd * sizeof(t_topo_endp);
+  endp = (t_topo_endp *) clownix_malloc( len, 13);
+  memset(endp, 0, len);
+  while(cur)
+    {
+    len = sizeof(t_lan_group_item);
+    endp[nb_endp].lan.lan = (t_lan_group_item *)clownix_malloc(len, 2);
+    memset(endp[nb_endp].lan.lan, 0, len);
+    strncpy(endp[nb_endp].name, cur->name, MAX_NAME_LEN-1);
+    endp[nb_endp].num = cur->num;
+    endp[nb_endp].type = endp_type_ethd;
+    if (strlen(cur->lan))
+      {
+      strncpy(endp[nb_endp].lan.lan[0].lan, cur->lan, MAX_NAME_LEN-1);
+      endp[nb_endp].lan.nb_lan = 1;
+      }
+    nb_endp += 1;
+    cur = cur->next;
+    }
+  *nb = nb_endp;
+  return endp;
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void dpdk_kvm_init(void)
 {
+  g_nb_ethd = 0;
   g_head_kvm = NULL;
   g_head_lan = NULL;
   clownix_timeout_add(5, timer_beat, NULL, NULL, NULL);
