@@ -82,6 +82,8 @@ void client_cnf_a2b(int tid, t_end_cb cb, char *name,
 void client_cnf_xyx(int tid, t_end_cb cb, char *name,
                     int type, uint8_t *mac);
 
+void client_cnf_nat(int tid, t_end_cb cb, char *name, char *cmd);
+
 void client_add_tap(int tid, t_end_cb cb, char *name);
 void client_add_phy(int tid, t_end_cb cb, char *name);
 void client_add_nat(int tid, t_end_cb cb, char *name);

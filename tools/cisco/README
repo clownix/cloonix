@@ -6,7 +6,7 @@ The goal of this chapter is to create a c8000v qcow2 that has the following
 requirements:
 
 - The cloonix backdoor is not activated, ie cloonix_ssh and cloonix_scp will
-  not work. (--nobackdoor option is used for this).
+  not work. (--nobackdoor option is used for the cisco).
   The cloonix backdoor uses virtual serial ports not supported in non-linux vm.
 
 - The command "show license udi" must always give the same result in case a

@@ -142,6 +142,7 @@ struct cmd_struct level_vm_cmd[] = {
 struct cmd_struct level_cnf_cmd[] = {
 {"ovs",  "Conf openvswitch dpdk", NULL, cmd_dpdk_ovs_cnf, help_dpdk_ovs_cnf},
 {"kvm",  "Virtual machine actions",    level_vm_cmd, NULL, NULL},
+{"nat",  "nat config", NULL, cmd_cnf_nat, help_cnf_nat},
 {"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
 {"xyx",  "xyx config", NULL, cmd_cnf_xyx, help_cnf_xyx},
 {"lay",  "Layout modifications on canvas", level_layout_cmd, NULL, NULL},

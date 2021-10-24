@@ -164,13 +164,9 @@ void doors_send_del_vm(int llid, int tid, char *name)
 /*****************************************************************************/
 static void dispatcher(int llid, int bnd_evt, char *msg)
 {
-  int pid, fd, endp_type, tid, peer_idx, peer_port, status, local_idx;
-  uint32_t peer_ip;
+  int tid;
   char *ptrs, *ptre;
-  char net_name[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
-  char passwd[MSG_DIGEST_LEN];
-  char bin_path[MAX_PATH_LEN];
   char sock[MAX_PATH_LEN];
   switch(bnd_evt)
     {

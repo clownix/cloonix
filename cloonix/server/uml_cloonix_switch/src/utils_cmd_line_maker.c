@@ -42,6 +42,7 @@
 #include "doorways_mngt.h"
 #include "suid_power.h"
 #include "nat_dpdk_process.h"
+#include "dpdk_nat.h"
 
 
 char **get_saved_environ(void);
@@ -199,16 +200,6 @@ int utils_get_gid_user(void)
   return result;
 }
 /*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_cli_sock_dir(void)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,"%s/%s", cfg_get_root_work(), CLI_SOCK_DIR);
-  return path;
-}
-/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 char *utils_get_snf_pcap_dir(void)
@@ -512,7 +503,7 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
     send_status_ok(llid, tid, "addvm");
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
     {
-//    edp_mngt_cisco_nat_create(vm->kvm.name);
+    dpdk_nat_cisco_add(vm->kvm.name);
     }
   nat_dpdk_vm_event();
 }

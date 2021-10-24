@@ -711,6 +711,28 @@ int cmd_cnf_xyx(int argc, char **argv)
 }
 /*---------------------------------------------------------------------------*/
 
+
+/*****************************************************************************/
+int cmd_cnf_nat(int argc, char **argv)
+{
+  int result = -1;
+  if (argc == 2)
+    {
+    if (!strncmp("whatip=", argv[1], strlen("whatip=")))
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_cnf_nat(0, callback_end, argv[0], argv[1]);
+      }
+    else
+      KERR("ERROR %s %s", argv[0], argv[1]);
+    }
+  else
+    KERR("ERROR %d", argc);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 int cmd_del_sat(int argc, char **argv)
 {

@@ -1875,7 +1875,6 @@ void recv_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
   event_print("Rx Req cnf a2b %s type:%d "
               "mac=%hhX:%hhX:%hhX:%hhX:%hhX:%hhX", name, type,
               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  KERR("%s %d ", name, type);
   if ((endp_type != endp_type_tap) &&
       (endp_type != endp_type_phy))
     {
@@ -1893,6 +1892,48 @@ void recv_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
     {
     dpdk_xyx_cnf(name, type, mac);
     send_status_ok(llid, tid, "");
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
+{
+  t_vm *vm;
+  char *ptr;
+  event_print("Rx Req cnf nat %s %s", name, cmd);
+  if (!dpdk_nat_exists(name))
+    {
+    send_status_ko(llid, tid, "error nat not found");
+    KERR("ERROR %s %s ", name, cmd);
+    }
+  else if (strncmp("whatip=", cmd, strlen("whatip=")))
+    {
+    send_status_ko(llid, tid, "error nat bad cmd");
+    KERR("ERROR %s %s ", name, cmd);
+    }
+  else
+    {
+    ptr = &(cmd[strlen("whatip=")]);
+    if (strlen(ptr) <= 1)
+      {
+      send_status_ko(llid, tid, "error nat cnf cmd");
+      KERR("ERROR %s %s ", name, cmd);
+      }
+    else
+      {
+      vm = cfg_get_vm(ptr);
+      if (vm == NULL)
+        {
+        send_status_ko(llid, tid, "error nat vm not found");
+        KERR("ERROR %s %s ", name, cmd);
+        }
+      else  if (nat_dpdk_whatip(llid, tid, name, ptr))
+        {
+        send_status_ko(llid, tid, "error nat cnf");
+        KERR("ERROR %s %s ", name, cmd);
+        }
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

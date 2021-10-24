@@ -102,6 +102,9 @@ void help_cnf_a2b(char *line);
 int cmd_cnf_xyx(int argc, char **argv);
 void help_cnf_xyx(char *line);
 /*---------------------------------------------------------------------------*/
+int cmd_cnf_nat(int argc, char **argv);
+void help_cnf_nat(char *line);
+/*---------------------------------------------------------------------------*/
 
 
 

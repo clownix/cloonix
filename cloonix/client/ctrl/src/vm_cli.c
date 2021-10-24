@@ -38,10 +38,10 @@ void help_add_vm_kvm(char *line)
   line);
   printf("\n\tram is the mem_qty in mega");
   printf("\n\tcpu is the number of processors");
-  printf("\n\teth_description: d is for dpdk");
+  printf("\n\teth_description: d is for dpdk without spy");
   printf("\n\teth_description example:");
-  printf("\n\t\t  eth=ddd says eth0 eth1 and eth2 dpdk interfaces");
-  printf("\n\tdpdk: low latency and high throughput, max:%d", MAX_DPDK_VM);
+  printf("\n\t\t  eth=sdd says eth0 eth1 and eth2 dpdk interfaces eth0 is spyable");
+  printf("\n\tMax eth: %d", MAX_DPDK_VM);
   printf("\n\t[options]");
   printf("\n\t       --nobackdoor ");
   printf("\n\t       --natplug=<num of eth for nat> ");
@@ -63,11 +63,11 @@ void help_add_vm_kvm(char *line)
   printf("\n\nexample:\n\n");
 
   printf("\n%s vm_name ram=2000 cpu=4 eth=sss bullseye.qcow2\n", line);
-  printf("This will give 3 eth based on cloonix sockets\n");
+  printf("This will give 3 eth that are wireshark spy compatible\n");
   printf("\n%s vm_name ram=2000 cpu=4 eth=ddd bullseye.qcow2\n", line);
-  printf("This will give 3 eth based on dpdk\n");
+  printf("This will give 3 eth based on dpdk without spy\n");
   printf("\n%s vm_name ram=2000 cpu=4 eth=dsd bullseye.qcow2 --persistent\n", line);
-  printf("This will give 3 eth, eth0 is dpdk, eth1 is sock eth2 is dpdk\n");
+  printf("This will give 3 eth, eth0 is dpdk, eth1 is spyable eth2 is dpdk\n");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/

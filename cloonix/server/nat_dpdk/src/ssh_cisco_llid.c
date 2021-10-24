@@ -83,7 +83,7 @@ static void alloc_ssh_cisco(int llid)
 {
   t_ssh_cisco *cur = (t_ssh_cisco *) utils_malloc(sizeof(t_ssh_cisco));
   if (cur == NULL)
-    KERR(" ");
+    KERR("ERROR ");
   else
     {
     memset(cur, 0, sizeof(t_ssh_cisco));
@@ -122,7 +122,7 @@ static int get_info_from_buf(int len, char *ibuf, char *remote_user,
   char *buf = (char *) utils_malloc(len);
   char str_ip[MAX_NAME_LEN];
   if (buf == NULL)
-    KERR(" ");
+    KERR("ERROR ");
   else
     {
     memcpy(buf, ibuf, len);
@@ -134,20 +134,20 @@ static int get_info_from_buf(int len, char *ibuf, char *remote_user,
       }
     ptr = (strstr(buf, "cloonix_info_end"));
     if (!(ptr))
-      KERR("%d %s", len, buf);
+      KERR("ERROR %d %s", len, buf);
     else
       {
       *ptr = 0;
       if (sscanf(buf, CLOONIX_INFO, remote_user, str_ip, &port) != 3)
-        KERR("%d %s", len, buf);
+        KERR("ERROR %d %s", len, buf);
       else if (ip_string_to_int (remote_ip, str_ip))
-        KERR("%d %s", len, buf);
+        KERR("ERROR %d %s", len, buf);
       else
         {
         *remote_port = (port & 0xFFFF);
         ptr = ptr + strlen("cloonix_info_end");
         if ((*ptr) != 0)
-          KERR("%d %s", len, buf);
+          KERR("ERROR %d %s", len, buf);
         else
           result = 0;
         }
@@ -170,7 +170,7 @@ static int rx_cb(int llid, int fd)
   t_ssh_cisco *cur = find_ssh_cisco(llid);
   data = (uint8_t *) utils_malloc(MAX_RXTX_LEN);
   if (data == NULL)
-    KERR(" ");
+    KERR("ERROR  ");
   else
     {
     data_len = read(fd, data, MAX_RXTX_LEN - g_offset - 4);
@@ -178,7 +178,7 @@ static int rx_cb(int llid, int fd)
       {
       if (msg_exist_channel(llid))
         msg_delete_channel(llid);
-      KERR("%d", llid);
+      KERR("ERROR %d", llid);
       utils_free(data);
       }
     else if (data_len == 0)
@@ -190,7 +190,7 @@ static int rx_cb(int llid, int fd)
       {
       if ((errno != EAGAIN) && (errno != EINTR))
         {
-        KERR("%d", llid);
+        KERR("ERROR %d", llid);
         free_ssh_cisco(cur);
         }
       utils_free(data);
@@ -201,12 +201,12 @@ static int rx_cb(int llid, int fd)
         {
         if (get_info_from_buf(data_len, (char *) data, user, &ip, &port))
           {
-          KERR("%s", data);
+          KERR("ERROR %s", data);
           free_ssh_cisco(cur);
           }
         else if (!machine_name_exists_with_ip(ip, vm))
           {
-          KERR("%s", data);
+          KERR("ERROR %s", data);
           free_ssh_cisco(cur);
           }
         else
@@ -234,7 +234,7 @@ static void err_cb(int llid, int err, int from)
     {
     if (msg_exist_channel(llid))
       msg_delete_channel(llid);
-    KERR("CISCO SSH TRAFFIC ERROR %d %d", err, from);
+    KERR("ERROR CISCO SSH TRAFFIC ERROR %d %d", err, from);
     }
   else
     {
@@ -248,7 +248,7 @@ static void listen_error(int llid, int err, int from)
 {
   if (msg_exist_channel(llid))
     msg_delete_channel(llid);
-  KERR("CISCO SSH LISTEN PROBLEM %d %d", err, from);
+  KERR("ERROR CISCO SSH LISTEN PROBLEM %d %d", err, from);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -259,7 +259,7 @@ static int listen_event(int llid, int fd)
   util_fd_accept(fd, &traffic_fd, __FUNCTION__);
   traffic_llid = msg_watch_fd(traffic_fd, rx_cb, err_cb, "cisco_u2i");
   if (traffic_llid == 0)
-    KERR("CONNECT FOR CISCO SSH PROBLEM");
+    KERR("ERROR CONNECT FOR CISCO SSH PROBLEM");
   else
     alloc_ssh_cisco(traffic_llid);
   return 0;
@@ -295,13 +295,13 @@ void ssh_cisco_llid_init(char *cisco_u2i)
   int fd = util_socket_listen_unix(cisco_u2i);
   if (fd < 0)
     {
-    KERR("SOCKET FOR CISCO SSH PROBLEM %s", cisco_u2i);
+    KERR("ERROR SOCKET FOR CISCO SSH PROBLEM %s", cisco_u2i);
     }
   else
     {
     listen_llid = msg_watch_fd(fd, listen_event , listen_error, "cisco_u2i");
     if (listen_llid == 0)
-      KERR("SOCKET FOR CISCO SSH PROBLEM %s", cisco_u2i);
+      KERR("ERROR SOCKET FOR CISCO SSH PROBLEM %s", cisco_u2i);
     }
   g_offset  = sizeof(struct rte_ether_hdr);
   g_offset += sizeof(struct rte_ipv4_hdr);

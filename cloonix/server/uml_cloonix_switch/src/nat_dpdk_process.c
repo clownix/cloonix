@@ -243,6 +243,10 @@ int nat_dpdk_diag_llid(int llid)
 void nat_dpdk_sigdiag_resp(int llid, int tid, char *line)
 {
   t_nat_dpdk *cur = find_nat_dpdk_with_llid(llid);
+  char name[MAX_NAME_LEN];
+  char ip[MAX_NAME_LEN];
+  char msg[MAX_PATH_LEN];
+  int cli_llid, cli_tid;
   if (cur == NULL)
     KERR("ERROR %s", line);
   else if (!strcmp(line,
@@ -256,8 +260,51 @@ void nat_dpdk_sigdiag_resp(int llid, int tid, char *line)
     nat_dpdk_vm_event();
     dpdk_nat_event_from_nat_dpdk_process(cur->name, 1);
     }
+  else if (sscanf(line,
+  "cloonixnat_whatip_ok cli_llid=%d cli_tid=%d name=%s ip=%s",
+           &cli_llid, &cli_tid, name, ip) == 4)
+    {
+    memset(msg, 0, MAX_PATH_LEN);
+    snprintf(msg, MAX_PATH_LEN-1, "OK=%s", ip);
+    if (msg_exist_channel(cli_llid))
+      send_status_ok(cli_llid, cli_tid, msg);
+    else
+      KERR("ERROR %s", line);
+    }
+  else if (sscanf(line,
+  "cloonixnat_whatip_ko cli_llid=%d cli_tid=%d name=%s",
+           &cli_llid, &cli_tid, name) == 3)
+    {
+    if (msg_exist_channel(cli_llid))
+      send_status_ko(cli_llid, cli_tid, "KO");
+    else
+      KERR("ERROR %s", line);
+    }
   else
     KERR("ERROR nat_dpdk: %s %s", g_cloonix_net, line);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int nat_dpdk_whatip(int llid, int tid, char *nat_name, char *name)
+{
+  char msg[MAX_PATH_LEN];
+  t_nat_dpdk *cur = find_nat_dpdk(nat_name);
+  int result = -1;
+  if (cur == NULL)
+    KERR("ERROR %s not found", nat_name);
+  else if (!msg_exist_channel(cur->llid))
+    KERR("ERROR %s not connected", nat_name);
+  else
+    {
+    result = 0;
+    memset(msg, 0, MAX_PATH_LEN);
+    snprintf(msg, MAX_PATH_LEN-1, 
+    "cloonixnat_whatip cli_llid=%d cli_tid=%d name=%s", llid, tid, name);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_nat_dpdk, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 

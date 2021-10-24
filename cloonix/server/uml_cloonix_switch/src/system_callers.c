@@ -260,7 +260,6 @@ void my_mv_dir(char *src_dir,char *dst_dir, char *src_name,char *dst_name)
 /*****************************************************************************/
 void mk_endp_dir(void)
 {
-  my_mkdir(utils_get_cli_sock_dir(), 0);
   my_mkdir(utils_get_snf_pcap_dir(), 1);
 }
 /*--------------------------------------------------------------------------*/

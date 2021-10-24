@@ -3,7 +3,7 @@ AGPLv3 tool to create networks of kvm virtual machines.
 See directory cloonix for the LICENCE
 See clownix.net for a documentation (which is not up to date).
 
-NOTE: The version 18-02 has the blinking interfaces if you choose the "s" value
+NOTE: The version 18-03 has the blinking interfaces if you choose the "s" value
       for the eth configuration (eth=sss for 3 spyable interfaces).
       A double-click on a spyable interface launches wireshark for this
       interface.
@@ -11,7 +11,7 @@ NOTE: The version 18-02 has the blinking interfaces if you choose the "s" value
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-18-02
+http://clownix.net/downloads/cloonix-18-03
 
 -----------------------------------------------------------------------------
 COMPILED AND TESTED ON:
@@ -30,12 +30,12 @@ hints on necessary packages.
 -----------------------------------------------------------------------------
 INSTALL:
 
-wget http://clownix.net/downloads/cloonix-18-02/cloonix-v18-02.tar.gz
-tar xvf cloonix-v18-02.tar.gz
-cd cloonix-v18-02
+wget http://clownix.net/downloads/cloonix-18-03/cloonix-v18-03.tar.gz
+tar xvf cloonix-v18-03.tar.gz
+cd cloonix-v18-03
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-18-02/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-18-03/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
@@ -43,7 +43,7 @@ tar xvf targz_store.tar.gz
 -----------------------------------------------------------------------------
 GET A WORKING VM:
 
-wget http://clownix.net/downloads/cloonix-18-02/bulk/bullseye.qcow2.gz
+wget http://clownix.net/downloads/cloonix-18-03/bulk/bullseye.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cp bullseye.qcow2.gz ${HOME}/cloonix_data/bulk

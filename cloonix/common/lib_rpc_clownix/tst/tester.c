@@ -83,7 +83,6 @@ static int count_hop_name_list = 0;
 static int count_hop_get_name_list = 0;
 
 
-static int count_evt_msg = 0;
 static int count_sigdiag_msg = 0;
 static int count_poldiag_msg = 0;
 static int count_rpc_kil_req  = 0;
@@ -109,6 +108,7 @@ static int count_tap_add = 0;
 static int count_a2b_add = 0;
 static int count_a2b_cnf = 0;
 static int count_xyx_cnf = 0;
+static int count_nat_cnf = 0;
 
 /*****************************************************************************/
 static void print_all_count(void)
@@ -161,7 +161,6 @@ static void print_all_count(void)
   printf("%d\n", count_hop_name_list);
   printf("%d\n", count_hop_get_name_list);
 
-  printf("%d\n", count_evt_msg);
   printf("%d\n", count_sigdiag_msg);
   printf("%d\n", count_poldiag_msg);
   printf("%d\n", count_rpc_pid_req);
@@ -184,6 +183,7 @@ static void print_all_count(void)
   printf("%d\n", count_a2b_add);
   printf("%d\n", count_a2b_cnf);
   printf("%d\n", count_xyx_cnf);
+  printf("%d\n", count_nat_cnf);
 
   printf("END COUNT\n");
 }
@@ -2478,6 +2478,34 @@ void recv_xyx_cnf(int llid, int itid, char *iname,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_nat_cnf(int llid, int itid, char *iname, char *icmd)
+{
+  static char name[MAX_NAME_LEN];
+  static char cmd[MAX_PRINT_LEN];
+  static int tid;
+  if (i_am_client)
+    {
+    if (count_nat_cnf)
+      {
+      if (strcmp(iname, name))
+        KOUT(" ");
+      if (strcmp(icmd, cmd))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      }
+    tid = rand();
+    random_choice_str(name, MAX_NAME_LEN);
+    random_choice_str(cmd, MAX_PRINT_LEN);
+    send_nat_cnf(llid, tid, name, cmd);
+    }
+  else
+    send_nat_cnf(llid, itid, iname, icmd);
+  count_nat_cnf++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_d2d_add(int llid, int itid, char *id2d_name, uint32_t ilocal_udp_ip,
                   char *islave_cloonix, uint32_t iip, uint16_t iport,
                   char *ipasswd, uint32_t iudp_ip)
@@ -2724,6 +2752,7 @@ static void send_first_burst(int llid)
   recv_a2b_add(llid, 0, NULL);
   recv_a2b_cnf(llid, 0, NULL, 0, 0, 0);
   recv_xyx_cnf(llid, 0, NULL, 0, NULL);
+  recv_nat_cnf(llid, 0, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 

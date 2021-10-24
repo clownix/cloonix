@@ -57,16 +57,16 @@ port=$(echo $cloonix_info |awk '{print $4}')
 passwd=$(echo $cloonix_info |awk '{print $6}')
 
 set +e
-get_ip=$(cloonix_cli ${cloonix_name} cnf sat ${nat_name} "whatip ${vm_name}")
-resp=${get_ip%% *}
-ip_vm=${get_ip##* }
-if [ "${resp}" != "RESPOK" ]; then
+get_ip=$(cloonix_cli ${cloonix_name} cnf nat ${nat_name} whatip=${vm_name})
+resp=${get_ip%%=*}
+ip_vm=${get_ip##*=}
+if [ "${resp}" != "OK OK" ]; then
   echo ${get_ip}
   exit
 fi
 
 PARAMS="${ip}=${port}=${passwd}=${nat_name}@user=${user_name}=ip=${ip_vm}=port=22=cloonix_info_end"
-SOCK=${CLOONIX_WORK}/${cloonix_name}/cli
+SOCK=${CLOONIX_WORK}/${cloonix_name}/nat_dpdk
 if [ ! -e $SOCK ]; then
   mkdir -p $SOCK
 fi

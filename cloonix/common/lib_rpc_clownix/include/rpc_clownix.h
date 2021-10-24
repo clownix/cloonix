@@ -29,7 +29,6 @@
 #define NAT_DPDK_SOCK_DIR "nat_dpdk"
 #define A2B_DPDK_SOCK_DIR "a2b_dpdk"
 #define D2D_DPDK_SOCK_DIR "d2d_dpdk"
-#define CLI_SOCK_DIR "cli"
 #define SNF_PCAP_DIR "snf"
 
 
@@ -397,6 +396,8 @@ void send_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
 void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
 void send_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
 void recv_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
+void send_nat_cnf(int llid, int tid, char *name, char *cmd);
+void recv_nat_cnf(int llid, int tid, char *name, char *cmd);
 /*---------------------------------------------------------------------------*/
 void send_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
                   char *slave_cloonix, uint32_t ip, uint16_t port,

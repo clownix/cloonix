@@ -74,7 +74,7 @@ static uint8_t *get_mac(char *str_mac)
   if (sscanf(str_mac, "%02X:%02X:%02X:%02X:%02X:%02X",
                       &(mac[0]), &(mac[1]), &(mac[2]),
                       &(mac[3]), &(mac[4]), &(mac[5])) != 6)
-    KERR("%s", str_mac);
+    KERR("ERROR %s", str_mac);
   else
     {
     for (i=0; i<6; i++)
@@ -121,11 +121,11 @@ static void heartbeat (int delta)
 void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   if (llid != g_llid)
-    KERR("%s %s %d %d", g_net_name, name, llid, g_llid);
+    KERR("ERROR %s %s %d %d", g_net_name, name, llid, g_llid);
   if (tid != type_hop_nat_dpdk)
-    KERR("%s %s %d %d", g_net_name, name, llid, g_llid);
+    KERR("ERROR %s %s %d %d", g_net_name, name, llid, g_llid);
   if (strcmp(g_nat_name, name))
-    KERR("%s %s %s %d %d", g_net_name, name, g_nat_name, llid, g_llid);
+    KERR("ERROR %s %s %s %d %d", g_net_name, name, g_nat_name, llid, g_llid);
   rpct_send_pid_resp(llid, tid, name, num, cloonix_get_pid(), getpid());
   g_watchdog_ok = 1;
 }
@@ -150,24 +150,27 @@ void rpct_recv_kil_req(int llid, int tid)
 /****************************************************************************/
 void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 {
-  KERR("%s", line);
+  KERR("ERROR %s", line);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
-  int num, ret;
+  int num, ret, cli_llid, cli_tid;
   char resp[MAX_PATH_LEN];
   char mac[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
+  char str_ip[MAX_NAME_LEN];
   uint8_t *mc;
+  uint32_t addr_ip;
+
   DOUT(FLAG_HOP_SIGDIAG, "NAT %s", line);
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
-    KERR("%s %d %d", g_net_name, llid, g_llid);
+    KERR("ERROR %s %d %d", g_net_name, llid, g_llid);
   if (tid != type_hop_nat_dpdk)
-    KERR("%s %d %d", g_net_name, tid, type_hop_nat_dpdk);
+    KERR("ERROR %s %d %d", g_net_name, tid, type_hop_nat_dpdk);
   if (!strncmp(line,
   "cloonixnat_suidroot", strlen("cloonixnat_suidroot")))
     {
@@ -193,7 +196,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     machine_begin();
     }
   else if (sscanf(line,
-  "cloonixnat_machine_add %s eth:%d mac:%s", name, &num, mac))
+  "cloonixnat_machine_add %s eth:%d mac:%s", name, &num, mac) == 3)
     {
     mc = get_mac(mac);
     machine_add(name, num, mc);
@@ -203,8 +206,29 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     {
     machine_end();
     }
+  else if (sscanf(line,
+  "cloonixnat_whatip cli_llid=%d cli_tid=%d name=%s",
+  &cli_llid, &cli_tid, name) == 3)
+    {
+    memset(resp, 0, MAX_PATH_LEN);
+    addr_ip = machine_ip_get(name);
+    if (addr_ip)
+      {
+      int_to_ip_string(addr_ip, str_ip);
+      snprintf(resp,MAX_PATH_LEN-1,
+      "cloonixnat_whatip_ok cli_llid=%d cli_tid=%d name=%s ip=%s",
+      cli_llid, cli_tid, name, str_ip);
+      }
+    else
+      {
+      snprintf(resp,MAX_PATH_LEN-1,
+      "cloonixnat_whatip_ko cli_llid=%d cli_tid=%d name=%s",
+      cli_llid, cli_tid, name);
+      }
+    rpct_send_sigdiag_msg(llid, tid, resp);
+    }
   else
-    KERR("%s %s", g_net_name, line);
+    KERR("ERROR %s %s", g_net_name, line);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -212,7 +236,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 /****************************************************************************/
 static void err_ctrl_cb(int llid, int err, int from)
 {
-  KERR("NAT DPDK SELF DESTRUCT CONNECTION");
+  KERR("ERROR NAT DPDK SELF DESTRUCT CONNECTION");
   rpct_recv_kil_req(0, 0);
 }
 /*--------------------------------------------------------------------------*/
@@ -241,7 +265,7 @@ static void fct_timeout_self_destruct(void *data)
 {
   if (g_watchdog_ok == 0)
     {
-    KERR("NAT DPDK SELF DESTRUCT WATCHDOG");
+    KERR("ERROR NAT DPDK SELF DESTRUCT WATCHDOG");
     rpct_recv_kil_req(0, 0);
     }
   g_watchdog_ok = 0;
@@ -297,12 +321,12 @@ int main (int argc, char *argv[])
   strncpy(g_memid, argv[5], MAX_NAME_LEN-1);
   if (!access(g_ctrl_path, F_OK))
     {
-    KERR("%s exists ERASING", g_ctrl_path);
+    KERR("WARNING %s exists ERASING", g_ctrl_path);
     unlink(g_ctrl_path);
     }
   if (!access(g_cisco_path, F_OK))
     {
-    KERR("%s exists ERASING", g_cisco_path);
+    KERR("WARNING %s exists ERASING", g_cisco_path);
     unlink(g_cisco_path);
     }
   vhost_client_init();

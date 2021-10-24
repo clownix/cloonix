@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int nat_dpdk_whatip(int llid, int tid, char *nat_name, char *name);
 int nat_dpdk_llid_exists_with_name(char *name);
 int nat_dpdk_name_exists_with_llid(int llid, char *name);
 void nat_dpdk_vm_event(void);

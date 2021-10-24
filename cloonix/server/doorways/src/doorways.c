@@ -50,7 +50,7 @@ static int g_server_inet_port;
 char *get_u2i_nat_path_with_name(char *nat)
 {
   static char path[2*MAX_PATH_LEN];
-  snprintf(path, 2*MAX_PATH_LEN, "%s/endp/%s_0_u2i", g_root_work, nat);
+  snprintf(path, 2*MAX_PATH_LEN, "%s/nat_dpdk/%s_0_u2i", g_root_work, nat);
   path[MAX_PATH_LEN-1] = 0;
   return path;
 }

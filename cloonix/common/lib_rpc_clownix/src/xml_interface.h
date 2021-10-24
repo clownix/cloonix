@@ -54,6 +54,13 @@
                          "  <mac>    %hhX:%hhX:%hhX:%hhX:%hhX:%hhX  </mac>\n"\
                          "</xyx_cnf>"
 
+#define NAT_CNF          "<nat_cnf>"\
+                         "  <tid>  %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <cmd>  %s </cmd>\n"\
+                         "</nat_cnf>"
+
+
 
 /*---------------------------------------------------------------------------*/
 #define D2D_MAC_O        "<d2d_mac>\n"\

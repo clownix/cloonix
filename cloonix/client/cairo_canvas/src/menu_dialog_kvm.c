@@ -424,7 +424,7 @@ void menu_dialog_vm_init(void)
   for (i=0; i<MAX_DPDK_VM; i++)
     g_custom_vm.eth_tab[i].eth_type = endp_type_none;
   for (i=0; i<g_custom_vm.nb_tot_eth; i++)
-    g_custom_vm.eth_tab[i].eth_type = endp_type_ethd;
+    g_custom_vm.eth_tab[i].eth_type = endp_type_eths;
   g_custom_dialog = NULL;
   memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   g_nb_bulkvm = 0;

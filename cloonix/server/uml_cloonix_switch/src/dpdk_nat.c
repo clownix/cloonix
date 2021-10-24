@@ -40,6 +40,8 @@
 #include "dpdk_ovs.h"
 #include "dpdk_nat.h"
 #include "dpdk_msg.h"
+#include "dpdk_kvm.h"
+#include "dpdk_xyx.h"
 #include "fmt_diag.h"
 #include "qmp.h"
 #include "system_callers.h"
@@ -149,6 +151,55 @@ static void timer_beat(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timer_add_nat_vm(void *data)
+{
+  char *name = (char *) data;
+  t_vm *vm = cfg_get_vm(name);
+  char cisconat[MAX_NAME_LEN];
+  char lan[MAX_NAME_LEN];
+  int num;
+  if (!vm)
+    KERR("ERROR %s", name);
+  else
+    {
+    memset(cisconat, 0, MAX_NAME_LEN);
+    memset(lan, 0, MAX_NAME_LEN);
+    snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
+    snprintf(lan, MAX_NAME_LEN-1, "lan_nat_%s", name);
+    num = vm->kvm.vm_config_param;
+    if (vm->kvm.eth_table[num].eth_type == endp_type_ethd)
+      {
+      if (!dpdk_kvm_exists(name, num))
+        KERR("ERROR %s %d", name, num);
+      else
+        {
+        if (dpdk_kvm_add_lan(0, 0, name, num, lan, endp_type_ethd))
+          KERR("ERROR %s %d", name, num);
+        else if (dpdk_nat_add_lan(0, 0, cisconat, lan))
+          KERR("ERROR CREATING CISCO NAT LAN %s %d", name, num);
+        }
+      }
+    else if (vm->kvm.eth_table[num].eth_type == endp_type_eths)
+      {
+      if (!dpdk_xyx_exists(name, num))
+        KERR("ERROR %s %d", name, num);
+      else
+        {
+        if (dpdk_kvm_add_lan(0, 0, name, num, lan, endp_type_eths))
+          KERR("ERROR %s %d", name, num);
+        else if (dpdk_nat_add_lan(0, 0, cisconat, lan))
+          KERR("ERROR CREATING CISCO NAT LAN %s %d", name, num);
+        }
+      }
+    else
+      KERR("ERROR %s %d", name, num);
+    }
+  free(data);
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 int dpdk_nat_get_qty(void)
 {
   int result = 0;
@@ -225,7 +276,6 @@ void dpdk_nat_event_from_nat_dpdk_process(char *name, int on)
     }
   else if ((on == -1) || (on == 0))
     {
-    KERR("PROCESS NAT OFF %s", name);
     if (on == -1)
       KERR("ERROR %s", name);
     if (cur->to_be_destroyed == 1)
@@ -234,7 +284,6 @@ void dpdk_nat_event_from_nat_dpdk_process(char *name, int on)
     }
   else
     {
-    KERR("PROCESS NAT ON %s", name);
     if (cur->process_cmd_on == 0)
       KERR("ERROR %s", name);
     cur->process_cmd_on = 1; 
@@ -406,7 +455,6 @@ int dpdk_nat_add(int llid, int tid, char *name)
     KERR("ERROR %s", name);
   else
     {
-    KERR("NAT ADD %s", name);
     cur = alloc_nat(name);
     cur->add_llid = llid;
     cur->add_tid = tid;
@@ -431,7 +479,6 @@ int dpdk_nat_del(int llid, int tid, char *name)
     KERR("ERROR %s %s", name, cur->lan);
   else
     {
-    KERR("NAT DEL %s", name);
     cur->del_llid = llid;
     cur->del_tid = tid;
     if ((strlen(cur->lan)) && (cur->attached_lan_ok == 1))
@@ -488,6 +535,44 @@ t_topo_endp *translate_topo_endp_nat(int *nb)
     }
   *nb = nb_endp;
   return endp;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void dpdk_nat_cisco_add(char *name)
+{
+  t_vm *vm = cfg_get_vm(name);
+  char cisconat[MAX_NAME_LEN];
+  char *nm;
+  if (!vm)
+    KERR("ERROR CREATING CISCO NAT %s", name);
+  else
+    {  
+    memset(cisconat, 0, MAX_NAME_LEN); 
+    snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
+    if (dpdk_nat_add(0, 0, cisconat))
+      {
+      KERR("ERROR CREATING CISCO NAT %s", cisconat);
+      }
+    else
+      {
+      nm = (char *) malloc(MAX_NAME_LEN);
+      memset(nm, 0, MAX_NAME_LEN);
+      strncpy(nm, name, MAX_NAME_LEN-1);
+      clownix_timeout_add(300, timer_add_nat_vm, (void *)nm, NULL, NULL);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void dpdk_nat_cisco_del(char *name)
+{
+  char cisconat[MAX_NAME_LEN];
+  memset(cisconat, 0, MAX_NAME_LEN);
+  snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
+  if (dpdk_nat_del(0, 0, name))
+    KERR("ERROR %s", name);
 }
 /*--------------------------------------------------------------------------*/
 

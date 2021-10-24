@@ -52,6 +52,7 @@
 #include "stats_counters_sysinfo.h"
 #include "dpdk_ovs.h"
 #include "dpdk_kvm.h"
+#include "dpdk_nat.h"
 #include "suid_power.h"
 
 
@@ -392,7 +393,7 @@ void machine_death( char *name, int error_death)
       }
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
       {
-//      edp_mngt_cisco_nat_destroy(name);
+      dpdk_nat_cisco_del(name);
       }
     doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
     qhvc0_end_qemu_unix(vm->kvm.name);

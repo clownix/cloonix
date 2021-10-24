@@ -49,6 +49,8 @@ int dpdk_nat_add_lan(int llid, int tid, char *name, char *lan);
 int dpdk_nat_del_lan(int llid, int tid, char *name, char *lan);
 int dpdk_nat_add(int llid, int tid, char *name);
 int dpdk_nat_del(int llid, int tid, char *name);
+void dpdk_nat_cisco_add(char *name);
+void dpdk_nat_cisco_del(char *name);
 
 t_nat_cnx *dpdk_nat_get_first(int *nb_nat);
 t_topo_endp *translate_topo_endp_nat(int *nb);

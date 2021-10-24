@@ -340,6 +340,8 @@ void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
 {KOUT(" ");}
 void recv_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
 {KOUT(" ");}
+void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
+{KOUT(" ");}
 
 void recv_tap_add(int llid, int tid, char *name)
 {KOUT(" ");}

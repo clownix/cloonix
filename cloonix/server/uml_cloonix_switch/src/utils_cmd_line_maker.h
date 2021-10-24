@@ -59,7 +59,6 @@ char *utils_get_cloonix_switch_path(void);
 void free_wake_up_eths(t_vm *vm);
 void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death);
 /*--------------------------------------------------------------------------*/
-char *utils_get_cli_sock_dir(void);
 char *utils_get_dpdk_endp_path(char *name, int num);
 char *utils_get_dpdk_ovs_path(char *name);
 /*--------------------------------------------------------------------------*/

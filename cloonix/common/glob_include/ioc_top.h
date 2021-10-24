@@ -63,12 +63,12 @@ int cloonix_get_pid(void);
 
 enum {
   endp_type_none=13,
+  endp_type_ethd,
+  endp_type_eths,
   endp_type_tap,
   endp_type_phy,
   endp_type_a2b,
   endp_type_nat,
-  endp_type_ethd,
-  endp_type_eths,
   endp_type_d2d,
 };
 

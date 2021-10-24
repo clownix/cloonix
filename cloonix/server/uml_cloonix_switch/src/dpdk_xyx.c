@@ -99,14 +99,13 @@ static void nb_to_text(int state, char *label)
 /****************************************************************************/
 static void state_progress_up(t_xyx_cnx *cur, int state)
 {
-  char *locnet = cfg_get_cloonix_name();
+//char *locnet = cfg_get_cloonix_name();
   char olab[MAX_NAME_LEN];
   char nlab[MAX_NAME_LEN];
   nb_to_text(cur->state_up, olab);
   cur->state_up = state;
   nb_to_text(cur->state_up, nlab);
-//  KERR("STATE XYX %s %s %d  %s ----> %s", locnet, cur->name, cur->num,
-//                                          olab, nlab);
+//KERR("STATE XYX %s %s %d  %s ----> %s",locnet,cur->name,cur->num,olab,nlab);
 }
 /*--------------------------------------------------------------------------*/
 

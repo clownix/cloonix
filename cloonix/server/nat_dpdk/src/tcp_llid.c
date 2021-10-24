@@ -160,7 +160,7 @@ static void timeout_connect(void *data)
     lid = msg_watch_fd(ctx->fd, rx_cb, err_cb, "tcpnat");
     if (lid == 0)
       {
-      KERR("%X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
+      KERR("ERROR %X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
       tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, -1);
       }
     else
@@ -175,7 +175,7 @@ static void timeout_connect(void *data)
     ctx->count += 1;
     if (ctx->count == 200)
       {
-      KERR("%X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
+      KERR("ERROR %X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
       tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, -1);
       utils_free(ctx);
       }
@@ -184,7 +184,7 @@ static void timeout_connect(void *data)
       ctx->fd = open_connect_tcp_sock(ctx->dip, ctx->dport);
       if (ctx->fd < 0)
         {
-        KERR("%X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
+        KERR("ERROR %X %X %hu %hu", ctx->sip, ctx->dip, ctx->sport, ctx->dport);
         tcp_connect_resp(ctx->sip, ctx->dip, ctx->sport, ctx->dport, 0, -1);
         utils_free(ctx);
         }

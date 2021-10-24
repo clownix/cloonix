@@ -95,6 +95,7 @@ enum
   bnd_a2b_add,
   bnd_a2b_cnf,
   bnd_xyx_cnf,
+  bnd_nat_cnf,
 
   bnd_max,
   };
@@ -1993,6 +1994,23 @@ void send_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void send_nat_cnf(int llid, int tid, char *name, char *cmd)
+{
+  int len = 0;
+  if (name[0] == 0)
+    KOUT(" ");
+  if (strlen(name) >= MAX_NAME_LEN)
+    KOUT(" ");
+  if (cmd[0] == 0)
+    KOUT(" ");
+  if (strlen(cmd) >= MAX_PRINT_LEN)
+    KOUT(" ");
+  len = sprintf(sndbuf, NAT_CNF, tid, name, cmd);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void send_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
                   char *dcloonix, uint32_t ip, uint16_t port,
                   char *passwd, uint32_t udp_ip)
@@ -2522,6 +2540,13 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_xyx_cnf(llid, tid, name, type, mac);
       break;
 
+   case bnd_nat_cnf:
+      if (sscanf(msg, NAT_CNF, &tid, name, info) != 3)
+        KOUT("%s", msg);
+      recv_nat_cnf(llid, tid, name, info);
+      break;
+
+
 
     default:
       KOUT("%s", msg);
@@ -2682,6 +2707,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(A2B_ADD, bound_list[bnd_a2b_add]);
   extract_boundary(A2B_CNF, bound_list[bnd_a2b_cnf]);
   extract_boundary(XYX_CNF, bound_list[bnd_xyx_cnf]);
+  extract_boundary(NAT_CNF, bound_list[bnd_nat_cnf]);
 }
 /*---------------------------------------------------------------------------*/
 

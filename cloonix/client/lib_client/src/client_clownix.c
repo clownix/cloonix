@@ -656,6 +656,20 @@ void client_cnf_xyx(int tid, t_end_cb cb, char *name, int type, uint8_t *mac)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void client_cnf_nat(int tid, t_end_cb cb, char *name, char *cmd)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_nat_cnf(g_llid, new_tid, name, cmd);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void client_del_sat(int tid, t_end_cb cb, char *name)
 {
   int new_tid;
