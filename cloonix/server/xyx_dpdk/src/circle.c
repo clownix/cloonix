@@ -205,18 +205,23 @@ int circle_peek(int id, uint64_t *len, uint64_t *usec, struct rte_mbuf **mbuf)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void circle_swap(int id)
+int circle_swap(int id, int pcap_nok)
 {
+  int result = pcap_nok;
   t_circle_elem *elem = elem_get(&(g_circle[id].rxcq_set));
   if (!elem)
     KOUT(" ");
   if (g_cnf_mac_mangle == 1)
     elem_transform(id, elem);
-  if (id == 1)
-    utils_to_endp(elem->usec, elem->mbuf);
-  else
-    utils_from_endp(elem->usec, elem->mbuf);
+  if (result == 0)
+    {
+    if (id == 1)
+      result = utils_to_endp(elem->usec, elem->mbuf);
+    else
+      result = utils_from_endp(elem->usec, elem->mbuf);
+    }
   elem_put(&(g_circle[id].txcq_set), elem);
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 

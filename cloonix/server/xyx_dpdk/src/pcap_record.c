@@ -34,9 +34,9 @@
 #include "inotify_trigger.h"
 #include "eventfull.h"
 
-void send_config_modif(void);
 
 static int g_fd;
+static int g_working_ok;
 static char g_pcap_file[MAX_PATH_LEN];
 
 
@@ -59,19 +59,28 @@ typedef struct pcaprec_hdr_s
   uint32_t orig_len;
 } pcaprec_hdr_s; 
 
+/*****************************************************************************/
+static void timer_pcap_record_start_phase1(void *data)
+{
+  if (mkfifo(g_pcap_file, 0666) == -1)
+    {
+    KERR("ERROR %s", strerror(errno));
+    g_working_ok = 0;
+    }
+  else
+    {
+    inotify_trigger_init(g_pcap_file);
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void pcap_record_start_phase1(void)
 {
-KERR(" ");
-  g_fd = -1;
-  unlink(g_pcap_file);
-  if (mkfifo(g_pcap_file, 0666) == -1)
-    KOUT("%s", strerror(errno));
-  inotify_trigger_init(g_pcap_file);
-  send_config_modif();
+  clownix_timeout_add(50, timer_pcap_record_start_phase1, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 void pcap_record_unlink(void)
@@ -80,6 +89,7 @@ void pcap_record_unlink(void)
     close(g_fd);
   unlink(g_pcap_file);
   g_fd = -1;
+  g_working_ok = 0;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -88,27 +98,21 @@ void pcap_record_close_and_reinit(void)
 {
   if (g_fd != -1)
     close(g_fd);
+  g_fd = -1;
+  g_working_ok = 0;
+  unlink(g_pcap_file);
   pcap_record_start_phase1();
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int pcap_record_is_on(void)
-{
-  int result = 0;
-  if (g_fd != -1)
-    result = 1;
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void pcap_record_rx_packet(uint64_t usec, int len, uint8_t *buf)
+int pcap_record_rx_packet(uint64_t usec, int len, uint8_t *buf)
 {
   int ln, hlen = sizeof(pcaprec_hdr_s);
   uint64_t tmp;
   pcaprec_hdr_s rec_hdr_s;
-  if (g_fd != -1)
+  int result = -1;
+  if ((g_working_ok == 1) && (g_fd != -1))
     {
     memset(&rec_hdr_s, 0, sizeof(pcaprec_hdr_s));
     tmp = usec/1000000;
@@ -119,18 +123,21 @@ void pcap_record_rx_packet(uint64_t usec, int len, uint8_t *buf)
     ln = write(g_fd, (void *)&rec_hdr_s, hlen);
     if (ln != hlen)
       {
-      inotify_trigger_end();
-      KERR("STOP SNIFFER: %d %d %s", ln, hlen, strerror(errno));
+      KERR("ERROR SNIFFER: %d %d %s", ln, hlen, strerror(errno));
+      g_working_ok = 0;
       }
     else
       {
       if (write(g_fd, (void *) buf, len) != len)
         {
-        inotify_trigger_end();
-        KERR("STOP SNIFFER: %s", strerror(errno));
+        KERR("ERROR SNIFFER: %s", strerror(errno));
+        g_working_ok = 0;
         }
+      else
+        result = 0;
       }
     }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -142,18 +149,22 @@ void pcap_record_start_phase2(void)
     {
     g_fd = open(g_pcap_file, O_WRONLY);
     if (g_fd < 0)
-      KOUT("%s", strerror(errno));
-    memset(&hdr_s, 0, sizeof(pcap_hdr_s));
-    hdr_s.magic_number   = 0xa1b2c3d4;
-    hdr_s.version_major  = 2;
-    hdr_s.version_minor  = 4;
-    hdr_s.thiszone       = 0;
-    hdr_s.sigfigs        = 0;
-    hdr_s.snaplen        = 65535;
-    hdr_s.network        = 1;
-    if (write(g_fd,(void *)&hdr_s,sizeof(pcap_hdr_s))!= sizeof(pcap_hdr_s))
-      KOUT("%s", strerror(errno));
-    send_config_modif();
+      KERR("ERROR %s", strerror(errno));
+    else
+      {
+      memset(&hdr_s, 0, sizeof(pcap_hdr_s));
+      hdr_s.magic_number   = 0xa1b2c3d4;
+      hdr_s.version_major  = 2;
+      hdr_s.version_minor  = 4;
+      hdr_s.thiszone       = 0;
+      hdr_s.sigfigs        = 0;
+      hdr_s.snaplen        = 65535;
+      hdr_s.network        = 1;
+      if (write(g_fd,(void *)&hdr_s,sizeof(pcap_hdr_s))!= sizeof(pcap_hdr_s))
+        KERR("ERROR %s", strerror(errno));
+      else
+        g_working_ok = 1;
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -161,9 +172,10 @@ void pcap_record_start_phase2(void)
 /*****************************************************************************/
 void pcap_record_init(char *pcap_record)
 {
-  g_fd = -1;
   memset(g_pcap_file, 0, MAX_PATH_LEN);
   strncpy(g_pcap_file, pcap_record, MAX_PATH_LEN-1); 
+  g_fd = -1;
+  unlink(g_pcap_file);
   pcap_record_start_phase1();
 }
 /*--------------------------------------------------------------------------*/

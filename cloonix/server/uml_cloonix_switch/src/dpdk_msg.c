@@ -107,7 +107,6 @@ static void lan_refcount_inc(char *lan, int line)
   else
     {
     cur->refcount += 1; 
-KERR("LAN REFCOUNT INC %s %d", lan, cur->refcount);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -125,7 +124,6 @@ static int lan_refcount_dec(char *lan, int line)
       {
       cur->refcount -= 1; 
       result = cur->refcount;
-KERR("LAN REFCOUNT DEC %s %d", lan, cur->refcount);
       }
     }
   return (result);
@@ -142,7 +140,6 @@ static void lan_alloc(char *lan)
     g_head_ovslan->prev = cur;
   cur->next = g_head_ovslan;
   g_head_ovslan = cur;
-KERR("BASELAN ALLOC %s", lan);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -163,7 +160,6 @@ static void lan_free_final(char *lan)
       if (cur == g_head_ovslan)
         g_head_ovslan = cur->next;
       clownix_free(cur, __FUNCTION__);
-KERR("BASELAN FREE %s", lan);
       }
     }
 }
@@ -390,7 +386,7 @@ static void delay_add_lan_endp(void *data)
       }
     else
       {
-      KERR("DELAY %s %s %d %d", req->lan, req->name, req->num, req->type);
+      KERR("ERROR DELAY %s %s %d %d", req->lan, req->name, req->num, req->type);
       if ((req->type == ovsreq_add_lan_ethd) ||
           (req->type == ovsreq_add_lan_eths))
         dpdk_kvm_resp_add_lan(1, req->lan, req->name, req->num);
@@ -418,7 +414,6 @@ int dpdk_msg_send_add_lan_tap(char *lan, char *name)
   int result = -1, tid = utils_get_next_tid();
   t_ovslan *cur = lan_find(lan);
   t_ovsreq *ovsreq;
-  KERR("MSG ADD LAN TAP %s %s", name, lan);
   if (cur == NULL)
     {
     result = fmt_tx_add_lan(tid, lan);
@@ -456,7 +451,6 @@ int dpdk_msg_send_add_lan_phy(char *lan, char *name)
   int result = -1, tid = utils_get_next_tid();
   t_ovslan *cur = lan_find(lan);
   t_ovsreq *ovsreq;
-  KERR("MSG ADD LAN PHY %s %s", name, lan);
   if (cur == NULL)
     {
     result = fmt_tx_add_lan(tid, lan);
@@ -494,7 +488,6 @@ int dpdk_msg_send_add_lan_ethd(char *lan, char *name, int num)
   int result = -1, tid = utils_get_next_tid();
   t_ovslan *cur = lan_find(lan);
   t_ovsreq *ovsreq;
-  KERR("MSG ADD LAN ETH %s %d %s", name, num, lan);
   if (cur == NULL)
     {
     result = fmt_tx_add_lan(tid, lan);
@@ -532,7 +525,6 @@ int dpdk_msg_send_add_lan_eths(char *lan, char *name, int num)
   int result = -1, tid = utils_get_next_tid();
   t_ovslan *cur = lan_find(lan);
   t_ovsreq *ovsreq;
-  KERR("MSG ADD LAN ETH %s %d %s", name, num, lan);
   if (cur == NULL)
     {
     result = fmt_tx_add_lan(tid, lan);
@@ -571,7 +563,6 @@ int dpdk_msg_send_add_lan_nat(char *lan, char *name)
   int result = -1, tid = utils_get_next_tid();
   t_ovslan *cur = lan_find(lan);
   t_ovsreq *ovsreq;
-  KERR("MSG ADD LAN NAT %s %s", name, lan);
   if (cur == NULL)
     {
     result = fmt_tx_add_lan(tid, lan);
@@ -609,7 +600,6 @@ int dpdk_msg_send_add_lan_a2b(char *lan, char *name, int num)
   int result = -1, tid = utils_get_next_tid();
   t_ovslan *cur = lan_find(lan);
   t_ovsreq *ovsreq;
-  KERR("MSG ADD LAN A2B %s %d %s", name, num, lan);
   if (cur == NULL)
     {
     result = fmt_tx_add_lan(tid, lan);
@@ -648,7 +638,6 @@ int dpdk_msg_send_add_lan_d2d(char *lan, char *name)
   int result = -1, tid = utils_get_next_tid(); 
   t_ovslan *cur = lan_find(lan);
   t_ovsreq *ovsreq;
-  KERR("MSG ADD LAN D2D %s %s", name, lan);
   if (cur == NULL)
     {
     result = fmt_tx_add_lan(tid, lan);
@@ -685,7 +674,6 @@ int dpdk_msg_send_add_lan_d2d(char *lan, char *name)
 int dpdk_msg_send_del_lan_tap(char *lan, char *name)
 {
   int result, tid = utils_get_next_tid();
-  KERR("MSG DEL LAN TAP %s %s", name, lan);
   if (!lan_find(lan))
     KERR("ERROR %s %s", lan, name);
   result = fmt_tx_del_lan_tap(tid, lan, name);
@@ -701,7 +689,6 @@ int dpdk_msg_send_del_lan_tap(char *lan, char *name)
 int dpdk_msg_send_del_lan_phy(char *lan, char *name)
 {
   int result, tid = utils_get_next_tid();
-  KERR("MSG DEL LAN PHY %s %s", name, lan);
   if (!lan_find(lan))
     KERR("ERROR %s %s", lan, name);
   result = fmt_tx_del_lan_phy(tid, lan, name);
@@ -717,7 +704,6 @@ int dpdk_msg_send_del_lan_phy(char *lan, char *name)
 int dpdk_msg_send_del_lan_ethd(char *lan, char *name, int num)
 {
   int result, tid = utils_get_next_tid();
-  KERR("MSG DEL LAN ETH %s %d %s", name, num, lan);
   if (!lan_find(lan))
     KERR("ERROR %s %s %d", lan, name, num);
   result = fmt_tx_del_lan_ethd(tid, lan, name, num);
@@ -733,7 +719,6 @@ int dpdk_msg_send_del_lan_ethd(char *lan, char *name, int num)
 int dpdk_msg_send_del_lan_eths(char *lan, char *name, int num)
 {
   int result, tid = utils_get_next_tid();
-  KERR("MSG DEL LAN ETH %s %d %s", name, num, lan);
   if (!lan_find(lan))
     KERR("ERROR %s %s %d", lan, name, num);
   result = fmt_tx_del_lan_eths(tid, lan, name, num);
@@ -751,7 +736,6 @@ int dpdk_msg_send_del_lan_eths(char *lan, char *name, int num)
 int dpdk_msg_send_del_lan_nat(char *lan, char *name)
 {
   int result, tid = utils_get_next_tid();
-  KERR("MSG DEL LAN NAT %s %s", name, lan);
   if (!lan_find(lan))
     KERR("ERROR %s %s", lan, name);
   result = fmt_tx_del_lan_nat(tid, lan, name);
@@ -767,7 +751,6 @@ int dpdk_msg_send_del_lan_nat(char *lan, char *name)
 int dpdk_msg_send_del_lan_a2b(char *lan, char *name, int num)
 {
   int result, tid = utils_get_next_tid();
-  KERR("MSG DEL LAN A2B %s %d %s", name, num, lan);
   if (!lan_find(lan))
     KERR("ERROR %s %s %d", lan, name, num);
   result = fmt_tx_del_lan_a2b(tid, lan, name, num);
@@ -783,7 +766,6 @@ int dpdk_msg_send_del_lan_a2b(char *lan, char *name, int num)
 int dpdk_msg_send_del_lan_d2d(char *lan, char *name)
 {
   int result, tid = utils_get_next_tid();
-  KERR("MSG DEL LAN D2D %s %s", name, lan);
   if (!lan_find(lan))
     KERR("ERROR %s %s", lan, name);
   result = fmt_tx_del_lan_d2d(tid, lan, name);
@@ -805,32 +787,26 @@ static void transmit_add_ack(int tid, t_ovsreq *cur, int is_ko)
   if ((cur->type == ovsreq_add_lan_ethd) ||
       (cur->type == ovsreq_add_lan_eths))
     {
-    KERR("ACKOVS ADD ETH %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_kvm_resp_add_lan(is_ko, cur->lan, cur->name, cur->num);
     }
   else if (cur->type == ovsreq_add_lan_nat)
     {
-    KERR("ACKOVS ADD NAT %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_nat_resp_add_lan(is_ko, cur->lan, cur->name);
     }
   else if (cur->type == ovsreq_add_lan_tap)
     {
-    KERR("ACKOVS ADD TAP %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_tap_resp_add_lan(is_ko, cur->lan, cur->name);
     }
   else if (cur->type == ovsreq_add_lan_phy)
     {
-    KERR("ACKOVS ADD PHY %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_phy_resp_add_lan(is_ko, cur->lan, cur->name);
     }
   else if (cur->type == ovsreq_add_lan_a2b)
     {
-    KERR("ACKOVS ADD A2B %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_a2b_resp_add_lan(is_ko, cur->lan, cur->name, cur->num);
     }
   else if (cur->type == ovsreq_add_lan_d2d)
     {
-    KERR("ACKOVS ADD D2D %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_d2d_resp_add_lan(is_ko, cur->lan, cur->name);
     }
   else
@@ -848,7 +824,6 @@ static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
     {
     ntid = utils_get_next_tid();
     ovsreq_alloc(ntid, cur->type, cur->lan, cur->name, cur->num);
-    KERR("LAST REFCOUNT LAN SEND DEL LAN TO OVS %s", cur->lan);
     if (fmt_tx_del_lan(ntid, cur->lan))
       {
       KERR("ERROR %s", cur->lan);
@@ -868,32 +843,26 @@ static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
   if ((cur->type == ovsreq_del_lan_ethd) ||
       (cur->type == ovsreq_del_lan_eths))
     {
-    KERR("ACKOVS DEL ETH %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_kvm_resp_del_lan(is_ko, cur->lan, cur->name, cur->num);
     }
   else if (cur->type == ovsreq_del_lan_nat)
     {
-    KERR("ACKOVS DEL NAT %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_nat_resp_del_lan(is_ko, cur->lan, cur->name);
     }
   else if (cur->type == ovsreq_del_lan_tap)
     {
-    KERR("ACKOVS DEL TAP %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_tap_resp_del_lan(is_ko, cur->lan, cur->name);
     }
   else if (cur->type == ovsreq_del_lan_phy)
     {
-    KERR("ACKOVS DEL PHY %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_phy_resp_del_lan(is_ko, cur->lan, cur->name);
     }
   else if (cur->type == ovsreq_del_lan_a2b)
     {
-    KERR("ACKOVS DEL A2B %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_a2b_resp_del_lan(is_ko, cur->lan, cur->name, cur->num);
     }
   else if (cur->type == ovsreq_del_lan_d2d)
     {
-    KERR("ACKOVS DEL D2D %d %s %d %s", is_ko, cur->name, cur->num, cur->lan);
     dpdk_d2d_resp_del_lan(is_ko, cur->lan, cur->name);
     }
   else
@@ -914,7 +883,6 @@ void dpdk_msg_ack_lan_endp(int tid, char *lan, char *name, int num,
     }
   else
     {
-    KERR("ACKOVS ENDP %d %s %d %s %s", is_ko, name, num, lan, lab);
     if (strcmp(lan, cur->lan))
       KERR("ERROR %s %s is_add:%d is_ko:%d", lan, cur->lan, is_add, is_ko);
     else if (strcmp(name, cur->name))
@@ -945,7 +913,6 @@ void dpdk_msg_ack_lan(int tid, char *lan, int is_add, int is_ko, char *lab)
     }
   else
     {
-    KERR("ACKOVS LAN %d %s %s", is_ko, lan, lab);
     if (strcmp(lan, cur->lan))
       KERR("ERROR %s %s is_add:%d is_ko:%d", lan, cur->lan, is_add, is_ko);
     if (is_add)

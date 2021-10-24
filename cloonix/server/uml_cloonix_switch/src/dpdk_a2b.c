@@ -117,7 +117,7 @@ static void state_progress_up(t_a2b_cnx *cur, int state)
   nb_to_text(cur->state_up, olab);
   cur->state_up = state;
   nb_to_text(cur->state_up, nlab);
-  KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
+//  KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -148,7 +148,6 @@ static t_a2b_cnx *alloc_a2b(int llid, int tid, char *name)
   cur->next = g_head_a2b;
   g_head_a2b = cur;
   g_nb_a2b += 1;
-  KERR("ALLOC A2B %s", name);
   return cur;
 }
 /*--------------------------------------------------------------------------*/
@@ -160,7 +159,6 @@ static void free_a2b(t_a2b_cnx *cur)
   char lan0[MAX_NAME_LEN];
   char lan1[MAX_NAME_LEN];
   int i;
-  KERR("FREE A2B %s", cur->name);
   memset(name, 0, MAX_NAME_LEN);
   memset(lan0, 0, MAX_NAME_LEN);
   memset(lan1, 0, MAX_NAME_LEN);
@@ -544,7 +542,7 @@ int dpdk_a2b_lan_exists_in_a2b(char *name, int num, char *lan)
   int result = 0;
   t_a2b_cnx *cur = find_a2b(name);
   if ((num != 0) && (num != 1))
-    KERR("%d", num);
+    KERR("ERROR %d", num);
   else if(cur)
     {
     if (!strcmp(lan, cur->side[num].lan))
@@ -625,11 +623,11 @@ void dpdk_a2b_cnf(char *name, int dir, int type, int val)
   t_a2b_cnx *cur = find_a2b(name);
   if (!cur)
     {
-    KERR("%s %d %d %d", name, dir, type, val);
+    KERR("ERROR %s %d %d %d", name, dir, type, val);
     }
   else if ((dir != 0) && (dir != 1))
     {
-    KERR("%s %d %d %d", name, dir, type, val);
+    KERR("ERROR %s %d %d %d", name, dir, type, val);
     }
   else if (type == a2b_type_delay)
     {
@@ -657,7 +655,7 @@ void dpdk_a2b_cnf(char *name, int dir, int type, int val)
     a2b_dpdk_cnf(name, dir, type, val);
     }
   else
-    KERR("%s %d %d %d", name, dir, type, val);
+    KERR("ERROR %s %d %d %d", name, dir, type, val);
   event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
 }
 /*--------------------------------------------------------------------------*/
@@ -667,7 +665,7 @@ void dpdk_a2b_vhost_started(char *name)
 {
   t_a2b_cnx *cur = find_a2b(name);
   if (!cur)
-    KERR("%s", name);
+    KERR("ERROR %s", name);
   else
     {
     cur->vhost_started_and_running = 1;

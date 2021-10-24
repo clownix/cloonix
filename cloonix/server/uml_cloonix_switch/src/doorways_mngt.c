@@ -215,7 +215,7 @@ void doors_pid_resp(int llid, char *name, int pid)
     event_print("DOORWAYS PID CHANGE: %d to %d", g_doorways_pid, pid);
     if (g_this_is_not_first_start)
       {
-      KERR("DOORWAYS PID CHANGE: %d to %d", g_doorways_pid, pid);
+      KERR("WARNING DOORWAYS PID CHANGE: %d to %d", g_doorways_pid, pid);
       xwy_request_doors_connect();
       }
     }

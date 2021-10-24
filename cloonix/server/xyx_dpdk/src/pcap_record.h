@@ -18,8 +18,7 @@
 void pcap_record_unlink(void);
 void pcap_record_start_phase2(void);
 void pcap_record_close_and_reinit(void);
-int  pcap_record_is_on(void);
-void pcap_record_rx_packet(uint64_t usec, int len, uint8_t *buf);
+int pcap_record_rx_packet(uint64_t usec, int len, uint8_t *buf);
 void pcap_record_init(char *pcap_file);
 /*--------------------------------------------------------------------------*/
 

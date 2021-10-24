@@ -58,7 +58,6 @@ typedef struct t_kvm_cnx
   int  dyn_vm_add_eth_todo;
   int  dyn_vm_add_acked;
   int  dyn_vm_add_not_acked;
-  int  decrementer;
   struct t_kvm_cnx *prev;
   struct t_kvm_cnx *next;
 } t_kvm_cnx;
@@ -150,13 +149,11 @@ static t_kvm_cnx *kvm_find(char *name)
 static void kvm_alloc(char *name, int nb_tot_eth, t_eth_table *eth_tab)
 {
   t_kvm_cnx *cur  = (t_kvm_cnx *) clownix_malloc(sizeof(t_kvm_cnx), 6);
-  KERR("KVMETH CTX ALLOC VM %s", name);
   memset(cur, 0, sizeof(t_kvm_cnx));
   strncpy(cur->name, name, MAX_NAME_LEN-1);
   cur->nb_tot_eth = nb_tot_eth;
   memcpy(cur->eth_tab, eth_tab, nb_tot_eth * sizeof(t_eth_table));
   cur->dyn_vm_add_acked = 1; 
-  cur->decrementer = 1;
   if (g_head_kvm)
     g_head_kvm->prev = cur;
   cur->next = g_head_kvm;
@@ -168,7 +165,6 @@ static void kvm_alloc(char *name, int nb_tot_eth, t_eth_table *eth_tab)
 static void kvm_free(char *name)
 {
   t_kvm_cnx *cur = kvm_find(name);
-  KERR("KVMETH CTX FREE VM %s", name);
   if (!cur)
     KERR("%s", name);
   else
@@ -198,7 +194,6 @@ static t_add_lan *lan_find(char *name)
 static void lan_alloc(int llid, int tid, char *name, int num, char *lan)
 {
   t_add_lan *cur  = (t_add_lan *) clownix_malloc(sizeof(t_add_lan), 6);
-  KERR("KVMETH ADDLAN ALLOC %s %d %s", name, num, lan);
   memset(cur, 0, sizeof(t_add_lan));
   strncpy(cur->name, name, MAX_NAME_LEN-1);
   strncpy(cur->lan, lan, MAX_NAME_LEN-1);
@@ -215,7 +210,6 @@ static void lan_alloc(int llid, int tid, char *name, int num, char *lan)
 /*****************************************************************************/
 static void lan_free(t_add_lan *cur)
 {
-  KERR("KVMETH ADDLAN FREE %s %d %s", cur->name, cur->num, cur->lan);
   if (cur->prev)
     cur->prev->next = cur->next;
   if (cur->next)
@@ -318,11 +312,6 @@ static void timer_beat(void *data)
       {
       KERR("WARNING KVMETH VM NOT PRESENT %s", cur->name);
       kvm_free(cur->name);
-      }
-    else if (cur->decrementer > 0)
-      {
-      cur->decrementer -= 1;
-      KERR("WARNING KVMETH VM NOT READY %s", cur->name);
       }
     else
       {
@@ -523,7 +512,6 @@ int dpdk_kvm_add_lan(int llid, int tid, char *name, int num, char *lan,
     {
     if (dpdk_xyx_exists(name, num))
       {
-      KERR("KVMETH ADDLAN START %s %d %s", name, num, lan);
       if (lan_find(name) == NULL)
         {
         lan_alloc(llid, tid, name, num, lan);
@@ -545,7 +533,6 @@ int dpdk_kvm_del_lan(int llid, int tid, char *name, int num, char *lan,
 {
   int result = -1;
   t_ethd_cnx *cur;
-  KERR("KVMETH DELLAN %s %d %s", name, num, lan);
   if (endp_type == endp_type_ethd)
     {
     cur  = ethd_find(name, num);
@@ -606,7 +593,6 @@ void dpdk_kvm_resp_add(int is_ko, char *name, int num)
 /*****************************************************************************/
 void dpdk_kvm_resp_add_eths2(int is_ko, char *name, int num)
 {
-  KERR("KVMETH RESP ADDETH END %s %d", name, num);
   if (is_ko)
     KERR("ERROR RESP ADDETH END KO %s %d", name, num);
   else

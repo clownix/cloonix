@@ -191,12 +191,12 @@ static void sched_mngt(int id, uint64_t current_usec, uint64_t delta)
   uint64_t len;
   uint64_t usec;
   struct rte_mbuf *mbuf;
-  int result = -1;
+  int result = -1, pcap_nok = 0;
   if (!circle_peek(id, &len, &usec, &mbuf))
     result = 0;
   while(result == 0)
     {
-    circle_swap(id);
+    pcap_nok = circle_swap(id, pcap_nok);
     result = -1;
     if (!circle_peek(id, &len, &usec, &mbuf))
       result = 0;
@@ -317,12 +317,9 @@ void vhost_client_start(char *memid, char *path0, char *path1)
     KOUT(" ");
   g_mempool = rte_mempool_lookup(memid);
   if (g_mempool == NULL)
-    {
-    KERR("FIRST TIME %s", memid);
     g_mempool = rte_pktmbuf_pool_create(memid, mbufs, mcache, 0, msize, sid);
-    }
   else
-    KERR("SECOND TIME %s", memid);
+    KERR("WARNING MEMPOOL EXISTS %s", memid);
   if (!g_mempool)
     KOUT("%s", path0);
   vhost_client_start_id(0, sid, path0);

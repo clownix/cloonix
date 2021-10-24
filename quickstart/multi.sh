@@ -1,9 +1,9 @@
 #!/bin/bash
 NET=nemo
 DIST=bullseye
-PARAMS="ram=1000 cpu=2 eth=d"
+PARAMS="ram=1000 cpu=2 eth=s"
 PHY=enx0050b69de279
-NUM=20
+NUM=40
 
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -23,7 +23,7 @@ sleep 10
 
 #cloonix_cli $NET add nat nat1
 #cloonix_cli $NET add d2d d2d_to_mito mito
-cloonix_cli $NET add tap top
+# cloonix_cli $NET add tap top
 #  cloonix_cli $NET add phy ${PHY}
 #cloonix_cli $NET add a2b a2b1 
 # cloonix_cli $NET add kvm one ${PARAMS} ${DIST}.qcow2 & 
@@ -36,6 +36,7 @@ cloonix_cli $NET add tap top
 #######################################################################
 for ((i=0;i<${NUM};i++)); do
   cloonix_cli $NET add kvm vm${i} ${PARAMS} ${DIST}.qcow2 & 
+  sleep 3
 done
 #----------------------------------------------------------------------
 for ((i=0;i<${NUM};i++)); do

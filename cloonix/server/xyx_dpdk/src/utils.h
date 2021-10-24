@@ -15,8 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void utils_to_endp(uint64_t usec, struct rte_mbuf *mbuf);
-void utils_from_endp(uint64_t usec, struct rte_mbuf *mbuf);
+int utils_to_endp(uint64_t usec, struct rte_mbuf *mbuf);
+int utils_from_endp(uint64_t usec, struct rte_mbuf *mbuf);
 void utils_checksum_compute(struct rte_mbuf *mbuf);
 void utils_init(char *name, char *pcap_file);
 /*---------------------------------------------------------------------------*/

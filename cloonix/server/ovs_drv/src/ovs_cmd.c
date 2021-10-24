@@ -46,7 +46,6 @@ int ovs_cmd_add_lan(char *ovsb, char *dpdkd, char *lan)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: ADD LAN %s", lan);
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1, "-- add-br _b_%s", lan);
   if (ovs_vsctl(ovsb, dpdkd, cmd))
@@ -63,7 +62,6 @@ int ovs_cmd_del_lan(char *ovsb, char *dpdkd, char *lan)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN]; 
-  KERR("OVSCMD: DEL LAN %s", lan);
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1, "-- del-br _b_%s", lan);
   if (ovs_vsctl(ovsb, dpdkd, cmd))
@@ -82,7 +80,6 @@ int ovs_cmd_add_lan_eths(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
   char name[MAX_NAME_LEN];
   char cmd[MAX_ARG_LEN]; 
 
-  KERR("OVSCMD: ADD LAN ETH %s %d %s", nm, num, lan);
   memset(name, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
@@ -112,7 +109,6 @@ int ovs_cmd_del_lan_eths(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
   char cmd[MAX_ARG_LEN];
   char name[MAX_NAME_LEN];
 
-  KERR("OVSCMD: DEL LAN ETH %s %d %s", nm, num, lan);
   memset(name, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
@@ -136,7 +132,6 @@ int ovs_cmd_add_lan_ethd(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
   char name[MAX_NAME_LEN];
   char cmd[MAX_ARG_LEN];
 
-  KERR("OVSCMD: ADD LAN ETH %s %d %s", nm, num, lan);
   memset(name, 0, MAX_NAME_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
 
@@ -172,7 +167,6 @@ int ovs_cmd_del_lan_ethd(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
   char cmd[MAX_ARG_LEN];
   char name[MAX_NAME_LEN];
 
-  KERR("OVSCMD: DEL LAN ETH %s %d %s", nm, num, lan);
   memset(name, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
@@ -197,7 +191,6 @@ int ovs_cmd_add_ethds(char *ovsb, char *dpdkd, char *nm, int num)
   char *wname = name;
   int result = 0;
 
-  KERR("OVSCMD: ADD ETH FIRST PART %s %d", nm, num);
   memset(name, 0, MAX_NAME_LEN);
   memset(lan, 0, MAX_NAME_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
@@ -233,7 +226,6 @@ int ovs_cmd_add_eths2(char *ovsb, char *dpdkd, char *nm, int num)
   char *wname = name;
   int result = 0;
   
-  KERR("OVSCMD: ADD ETH SECOND PART %s %d", nm, num);
   memset(name, 0, MAX_NAME_LEN);
   memset(lan, 0, MAX_NAME_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
@@ -290,7 +282,6 @@ int ovs_cmd_del_ethds(char *ovsb, char *dpdkd, char *nm, int num)
   char *wname = name;
   int result = 0;
 
-  KERR("OVSCMD: DEL ETH %s %d", nm, num);
   memset(name, 0, MAX_NAME_LEN);
   memset(lan, 0, MAX_NAME_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
@@ -319,7 +310,7 @@ int ovs_cmd_add_lan_nat(char *ovsb, char *dpdkd, char *lan, char *name)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: ADD LAN NAT %s %s", name, lan);
+
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
                 "-- set bridge _b_%s datapath_type=netdev "
@@ -344,7 +335,7 @@ int ovs_cmd_del_lan_nat(char *ovsb, char *dpdkd, char *lan, char *name)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: DEL LAN NAT %s %s", name, lan);
+
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_%s", lan, name);
   if (ovs_vsctl(ovsb, dpdkd, cmd))
@@ -361,7 +352,7 @@ int ovs_cmd_add_lan_d2d(char *ovsb, char *dpdkd, char *lan, char *name)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: ADD LAN D2D %s %s", name, lan);
+
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
                 "-- set bridge _b_%s datapath_type=netdev "
@@ -386,7 +377,7 @@ int ovs_cmd_del_lan_d2d(char *ovsb, char *dpdkd, char *lan, char *name)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: DEL LAN D2D %s %s", name, lan);
+
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_%s", lan, name);
   if (ovs_vsctl(ovsb, dpdkd, cmd))
@@ -404,7 +395,7 @@ int ovs_cmd_add_phy(char *ovsb, char *dpdkd, char *name)
   int result = 0;
   char cmd[MAX_ARG_LEN];
   char lan[MAX_NAME_LEN];
-  KERR("OVSCMD: ADD PHY %s", name);
+
   memset(lan, 0, MAX_NAME_LEN);
   snprintf(lan, MAX_NAME_LEN-1, "_p_%s", name);
 
@@ -437,20 +428,20 @@ int ovs_cmd_add_phy(char *ovsb, char *dpdkd, char *name)
 
   return result;
 }
+/*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
 int ovs_cmd_del_phy(char *ovsb, char *dpdkd, char *name)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
   char lan[MAX_NAME_LEN];
-  KERR("OVSCMD: DEL PHY %s", name);
+
   memset(lan, 0, MAX_NAME_LEN);
   snprintf(lan, MAX_NAME_LEN-1, "_p_%s", name);
-  if (ifdev_set_intf_flags_iff_up_down(name, 0))
-    KERR("%s", name);
+  ifdev_set_intf_flags_iff_up_down(name, 0);
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1,
-               "-- del-br _b_%s", lan);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-br _b_%s", lan);
   if (ovs_vsctl(ovsb, dpdkd, cmd))
     {
     KERR("ERROR OVSCMD: DEL PHY %s", name);
@@ -458,11 +449,14 @@ int ovs_cmd_del_phy(char *ovsb, char *dpdkd, char *name)
     }
   return result;
 }
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int ovs_cmd_add_lan_phy(char *ovsb, char *dpdkd, char *lan, char *name)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: ADD LAN %s %s", name, lan);
+
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
                 "-- set bridge _b_%s datapath_type=netdev "
@@ -480,11 +474,14 @@ int ovs_cmd_add_lan_phy(char *ovsb, char *dpdkd, char *lan, char *name)
     }
   return result;
 }
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int ovs_cmd_del_lan_phy(char *ovsb, char *dpdkd, char *lan, char *name)
 {
   char cmd[MAX_ARG_LEN];
   int result = 0;
-  KERR("OVSCMD: DEL LAN %s %s", name, lan);
+
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_1%s", lan, name);
   if (ovs_vsctl(ovsb, dpdkd, cmd))
@@ -497,62 +494,12 @@ int ovs_cmd_del_lan_phy(char *ovsb, char *dpdkd, char *lan, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/*
-int ovs_cmd_add_phy(char *ovsb, char *dpdkd, char *name)
-{
-  int result = 0;
-  KERR("OVSCMD: ADD PHY RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %s", name);
-  if (ifdev_set_intf_flags_iff_up_down(name, 1))
-    KERR("ERROR OVSCMD: ADD PHY %s", name);
-  ifdev_disable_offloading(name);
-  return result;
-}
-int ovs_cmd_del_phy(char *ovsb, char *dpdkd, char *name)
-{
-  int result = 0;
-  KERR("OVSCMD: DEL PHY RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %s", name);
-  return result;
-}
-int ovs_cmd_add_lan_phy(char *ovsb, char *dpdkd, char *lan, char *name)
-{
-  int result = 0;
-  char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: ADD LAN RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %s %s", name, lan);
-  memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1,
-                "-- add-port _b_%s %s", lan, name);
-
-  if (ovs_vsctl(ovsb, dpdkd, cmd))
-    {
-    KERR("ERROR OVSCMD: ADD LAN %s %s", name, lan);
-    result = -1;
-    }
-  return result;
-}
-int ovs_cmd_del_lan_phy(char *ovsb, char *dpdkd, char *lan, char *name)
-{
-  char cmd[MAX_ARG_LEN];
-  int result = 0;
-  KERR("OVSCMD: DEL LAN RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %s %s", name, lan);
-  memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s %s", lan, name);
-  if (ovs_vsctl(ovsb, dpdkd, cmd))
-    {
-    KERR("ERROR OVSCMD: DEL LAN %s %s", name, lan);
-    result = -1;
-    }
-  return result;
-}
-*/
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 int ovs_cmd_add_tap(char *ovsb, char *dpdkd, char *name)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
   char lan[MAX_NAME_LEN];
-  KERR("OVSCMD: ADD TAP %s", name);
+
   memset(lan, 0, MAX_NAME_LEN);
   snprintf(lan, MAX_NAME_LEN-1, "_p_%s", name);
 
@@ -613,7 +560,6 @@ int ovs_cmd_del_tap(char *ovsb, char *dpdkd, char *name)
   char cmd[MAX_ARG_LEN];
   char lan[MAX_NAME_LEN];
 
-  KERR("OVSCMD: DEL TAP %s", name);
   memset(lan, 0, MAX_NAME_LEN);
   snprintf(lan, MAX_NAME_LEN-1, "_p_%s", name);
   if (ifdev_set_intf_flags_iff_up_down(name, 0))
@@ -642,7 +588,7 @@ int ovs_cmd_add_lan_tap(char *ovsb, char *dpdkd, char *lan, char *name)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: ADD LAN %s %s", name, lan);
+
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1,
                 "-- set bridge _b_%s datapath_type=netdev "
@@ -667,7 +613,7 @@ int ovs_cmd_del_lan_tap(char *ovsb, char *dpdkd, char *lan, char *name)
 {
   char cmd[MAX_ARG_LEN];
   int result = 0;
-  KERR("OVSCMD: DEL LAN %s %s", name, lan);
+
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_1%s", lan, name);
   if (ovs_vsctl(ovsb, dpdkd, cmd))
@@ -684,7 +630,7 @@ int ovs_cmd_add_lan_a2b(char *ovsb, char *dpdkd, char *lan, char *name, int num)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: ADD LAN %s %s %d", name, lan, num);
+
   memset(cmd, 0, MAX_ARG_LEN);
   if (num == 0)
     {
@@ -730,7 +676,7 @@ int ovs_cmd_del_lan_a2b(char *ovsb, char *dpdkd, char *lan, char *name, int num)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
-  KERR("OVSCMD: DEL LAN %s %s %d", name, lan, num);
+
   memset(cmd, 0, MAX_ARG_LEN);
   if (num == 0)
     snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_0%s", lan, name);

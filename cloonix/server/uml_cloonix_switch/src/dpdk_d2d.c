@@ -126,7 +126,7 @@ static void state_progress_up(t_d2d_cnx *cur, int state)
   nb_to_text(cur->state_up, olab);
   cur->state_up = state;
   nb_to_text(cur->state_up, nlab);
-  KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
+  //KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -139,7 +139,7 @@ static void state_progress_down(t_d2d_cnx *cur, int state)
   nb_to_text(cur->state_down, olab);
   cur->state_down = state;
   nb_to_text(cur->state_down, nlab);
-  KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
+  //KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -208,15 +208,15 @@ static void dpdk_d2d_reset_con_params(t_d2d_cnx *cur)
 {
   char *locnet = cfg_get_cloonix_name();
   if (cur->peer_llid)
-    KERR("%s %s", locnet, cur->name);
+    KERR("ERROR %s %s", locnet, cur->name);
   if (cur->received_del_lan_req)
-    KERR("%s %s", locnet, cur->name);
+    KERR("ERROR %s %s", locnet, cur->name);
   if (cur->peer_llid_connect)
-    KERR("%s %s", locnet, cur->name);
+    KERR("ERROR %s %s", locnet, cur->name);
   if (cur->lan_add_cli_llid)
-    KERR("%s %s", locnet, cur->name);
+    KERR("ERROR %s %s", locnet, cur->name);
   if (cur->lan_del_cli_llid)
-    KERR("%s %s", locnet, cur->name);
+    KERR("ERROR %s %s", locnet, cur->name);
   cur->loc_udp_port = 0;
   cur->dist_udp_port = 0;
   cur->lan_ovs_is_attached = 0; 
@@ -245,7 +245,7 @@ static void process_peer_bad_status_received(t_d2d_cnx *cur)
       (cur->lan_ovs_is_attached == 0) &&
       (cur->tcp_connection_peered == 0))
     {
-    KERR("%s %s PEER BAD STATUS RECEIVED", locnet, cur->name);
+    KERR("ERROR %s %s PEER BAD STATUS RECEIVED", locnet, cur->name);
     wrap_disconnect_to_peer(cur);
     if ((cur->local_is_master == 0) ||
         (cur->master_del_req == 1))
@@ -263,7 +263,7 @@ static void process_peer_bad_status_received(t_d2d_cnx *cur)
     if ((cur->waiting_ack_del_lan != 0) ||
         (cur->waiting_ack_add_lan != 0))
       {
-      KERR("%s %s PEER BAD STATUS RECEIVED", locnet, cur->name);
+      KERR("ERROR %s %s PEER BAD STATUS RECEIVED", locnet, cur->name);
       cur->process_waiting_error += 1;
       if (cur->process_waiting_error == 20)
         {
@@ -280,17 +280,17 @@ static void process_peer_bad_status_received(t_d2d_cnx *cur)
       }
     else
       {
-      KERR("%s %s PEER BAD STATUS RECEIVED", locnet, cur->name);
+      KERR("ERROR %s %s PEER BAD STATUS RECEIVED", locnet, cur->name);
       if (cur->lan_ovs_is_attached)
         {
         if (!strlen(cur->lan))
-          KERR("%s %s", locnet, cur->name);
+          KERR("ERROR %s %s", locnet, cur->name);
         else
           {
           if (!dpdk_msg_send_del_lan_d2d(cur->lan, cur->name))
             cur->waiting_ack_del_lan = 1;
           else
-            KERR("%s %s", locnet, cur->name);
+            KERR("ERROR %s %s", locnet, cur->name);
           }
         cur->lan_ovs_is_attached = 0;
         }
@@ -311,7 +311,7 @@ static void process_watchdog_count(t_d2d_cnx *cur)
   cur->watchdog_count += 1;
   if (cur->watchdog_count == 5)
     {
-    KERR("WATCHDOG PING %s %s", locnet, cur->name);
+    KERR("WARNING WATCHDOG PING %s %s", locnet, cur->name);
     cur->peer_bad_status_received = 1;
     wrap_send_d2d_peer_ping(cur, -1);
     }
@@ -428,14 +428,14 @@ void dpdk_d2d_event_from_d2d_dpdk_process(char *name, int on)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s %d", locnet, name, on);
+    KERR("ERROR %s %s %d", locnet, name, on);
     }
   else
     {
     if (on == 1)
       {
       if (cur->state_up != state_up_initialised)
-        KERR("BAD STATE: %s", nb_to_text_raw(cur->state_up));
+        KERR("ERROR BAD STATE: %s", nb_to_text_raw(cur->state_up));
       else
         {
         d2d_dpdk_get_udp_port(name);
@@ -445,7 +445,7 @@ void dpdk_d2d_event_from_d2d_dpdk_process(char *name, int on)
     else
       {
       if (on == -1)
-        KERR("%s %s %d", locnet, name, on);
+        KERR("ERROR %s %s %d", locnet, name, on);
       cur->peer_bad_status_received = 1;
       cur->tcp_connection_peered = 0;
       }
@@ -460,19 +460,19 @@ void dpdk_d2d_resp_add_lan(int is_ko, char *lan, char *name)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s %s %d", locnet, name, lan, is_ko);
+    KERR("ERROR %s %s %s %d", locnet, name, lan, is_ko);
     }
   else if (strcmp(lan, cur->lan))
     {
-    KERR("%s %s %s %d", locnet, name, lan, is_ko);
+    KERR("ERROR %s %s %s %d", locnet, name, lan, is_ko);
     }
   else if (cur->waiting_ack_add_lan == 0)
     {
-    KERR("%s %s %s %d", locnet, name, lan, is_ko);
+    KERR("ERROR %s %s %s %d", locnet, name, lan, is_ko);
     }
   else if (is_ko)
     {
-    KERR("%s %s %s %d", locnet, name, lan, is_ko);
+    KERR("ERROR %s %s %s %d", locnet, name, lan, is_ko);
     utils_send_status_ko(&(cur->lan_add_cli_llid),
                          &(cur->lan_add_cli_tid),
                          "openvswitch error");
@@ -496,19 +496,19 @@ void dpdk_d2d_resp_del_lan(int is_ko, char *lan, char *name)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s %s %d", locnet, name, lan, is_ko);
+    KERR("ERROR %s %s %s %d", locnet, name, lan, is_ko);
     }
   else if (strcmp(lan, cur->lan))
     {
-    KERR("%s %s %s %d", locnet, name, lan, is_ko);
+    KERR("ERROR %s %s %s %d", locnet, name, lan, is_ko);
     }
   else if (cur->waiting_ack_del_lan == 0)
     {
-    KERR("%s %s %s %d", locnet, name, lan, is_ko);
+    KERR("ERROR %s %s %s %d", locnet, name, lan, is_ko);
     }
   else if (is_ko) 
     {
-    KERR("%s %s %s %d", locnet, name, lan, is_ko);
+    KERR("ERROR %s %s %s %d", locnet, name, lan, is_ko);
     utils_send_status_ko(&(cur->lan_del_cli_llid),
                          &(cur->lan_del_cli_tid),
                          "openvswitch status error");
@@ -582,15 +582,15 @@ void dpdk_d2d_peer_conf(int llid, int tid, char *name, int peer_status,
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     }
   else if (tid != cur->ref_tid)
     {
-    KERR("%s %s %d %d", locnet, name, tid, cur->ref_tid);
+    KERR("ERROR %s %s %d %d", locnet, name, tid, cur->ref_tid);
     }
   else if (peer_status == -1)
     {
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     cur->peer_bad_status_received = 1;
     }
   else
@@ -617,7 +617,7 @@ static void master_and_slave_ping_process(t_d2d_cnx *cur, int peer_status)
       (cur->udp_dist_port_chosen == 1))
     {
     if ((cur->dist_udp_ip == 0) || (cur->dist_udp_port == 0))
-      KERR("%s %x %hu", locnet, cur->dist_udp_ip, cur->dist_udp_port);
+      KERR("ERROR %s %x %hu", locnet, cur->dist_udp_ip, cur->dist_udp_port);
     else
       d2d_dpdk_set_dist_udp_ip_port(cur->name, cur->dist_udp_ip,
                                     cur->dist_udp_port);
@@ -648,11 +648,11 @@ void dpdk_d2d_peer_ping(int llid, int tid, char *name, int peer_status)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s", locnet, name); 
+    KERR("ERROR %s %s", locnet, name); 
     }
   else if (tid != cur->ref_tid)
     {
-    KERR("%s %s %d %d", locnet, name, tid, cur->ref_tid); 
+    KERR("ERROR %s %s %d %d", locnet, name, tid, cur->ref_tid); 
     } 
   else if (peer_status == -1)
     {
@@ -669,7 +669,7 @@ void dpdk_d2d_peer_ping(int llid, int tid, char *name, int peer_status)
         cur->udp_probe_qty_sent += 1;
         if (cur->udp_probe_qty_sent > 25)
           {
-          KERR("%s %s %d", locnet, cur->name, cur->udp_probe_qty_sent);
+          KERR("ERROR %s %s %d", locnet, cur->name, cur->udp_probe_qty_sent);
           cur->udp_probe_qty_sent = 0;
           }
         d2d_dpdk_send_probe_udp(cur->name);
@@ -693,7 +693,7 @@ int dpdk_d2d_add(char *name, uint32_t loc_udp_ip,
   char *locnet = cfg_get_cloonix_name();
   if (cur)
     {
-    KERR("%s %s %s", locnet, name, dist); 
+    KERR("ERROR %s %s %s", locnet, name, dist); 
     }
   else
     {
@@ -720,11 +720,11 @@ void dpdk_d2d_peer_add(int llid, int tid, char *name, char *dist, char *loc)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (cur)
     {
-    KERR("%s %s %s", locnet, name, dist); 
+    KERR("ERROR %s %s %s", locnet, name, dist); 
     }
   else if (strcmp(loc, locnet))
     {
-    KERR("%s %s %s %s", locnet, name, dist, loc);
+    KERR("ERROR %s %s %s %s", locnet, name, dist, loc);
     }
   else
     {
@@ -747,19 +747,19 @@ void dpdk_d2d_peer_add_ack(int llid, int tid, char *name,
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s %s", locnet, name, dist);
+    KERR("ERROR %s %s %s", locnet, name, dist);
     }
   else if (strcmp(loc, locnet))
     {
-    KERR("%s %s %s %s", locnet, name, dist, loc);
+    KERR("ERROR %s %s %s %s", locnet, name, dist, loc);
     }
   else if (cur->local_is_master == 0)
     {
-    KERR("%s %s %s %s", locnet, name, dist, loc);
+    KERR("ERROR %s %s %s %s", locnet, name, dist, loc);
     }
    else if (tid != cur->ref_tid)
     {
-    KERR("%s %s %d %d", locnet, name, tid, cur->ref_tid);
+    KERR("ERROR %s %s %d %d", locnet, name, tid, cur->ref_tid);
     }
   else
     {
@@ -779,22 +779,21 @@ int dpdk_d2d_del(char *name, char *err)
   if (!cur)
     {
     snprintf(err, MAX_PATH_LEN-1, "%s d2d %s not found", locnet, name);
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     }
   else if (cur->local_is_master == 0)
     {
     snprintf(err, MAX_PATH_LEN-1,
              "%s %s is slave, must kill master", locnet, name);
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     }
   else if (cur->waiting_ack_add_lan == 1)
     {
     snprintf(err, MAX_PATH_LEN-1, "%s d2d %s occupied", locnet, name);
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     } 
   else
     {
-KERR("DEL D2D %s %s", locnet, name);
     cur->peer_bad_status_received = 1;
     cur->master_del_req = 1;
     wrap_send_d2d_peer_ping(cur, -1);
@@ -811,7 +810,7 @@ void dpdk_d2d_vhost_started(char *name)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     }
   else
     {
@@ -829,11 +828,11 @@ void dpdk_d2d_get_udp_port_done(char *name, uint16_t port, int peer_status)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s %hu", locnet, name, port);
+    KERR("ERROR %s %s %hu", locnet, name, port);
     }
   else if (peer_status)
     {
-    KERR("%s %s", locnet, cur->name);
+    KERR("ERROR %s %s", locnet, cur->name);
     cur->peer_bad_status_received = 1;
     }
   else
@@ -852,7 +851,7 @@ void dpdk_d2d_dist_udp_ip_port_done(char *name)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     }
   else
     {
@@ -868,7 +867,7 @@ void dpdk_d2d_receive_probe_udp(char *name)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     }
   else
     {
@@ -910,17 +909,17 @@ void dpdk_d2d_add_lan(int llid, int tid, char *name, char *lan)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s %s", locnet, name, lan);
+    KERR("ERROR %s %s %s", locnet, name, lan);
     send_status_ko(llid, tid, "not found");
     }
   else if (cur->lan_add_cli_llid)
     {
-    KERR("%s %s %s", locnet, name, lan);
+    KERR("ERROR %s %s %s", locnet, name, lan);
     send_status_ko(llid, tid, "command to be processed");
     }
   else if (strlen(cur->lan) != 0)
     {
-    KERR("%s %s %s %s", locnet, name, lan, cur->lan);
+    KERR("ERROR %s %s %s %s", locnet, name, lan, cur->lan);
     send_status_ko(llid, tid, "a vlan is stored");
     }
   else
@@ -939,14 +938,14 @@ void dpdk_d2d_vhost_stopped(char *name)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s", locnet, name);
+    KERR("ERROR %s %s", locnet, name);
     }
   else
     {
     state_progress_down(cur, state_down_vhost_stopped);
     if (dpdk_msg_send_del_lan_d2d(cur->lan, cur->name))
       {
-      KERR("%s %s %s", locnet, name, cur->lan);
+      KERR("ERROR %s %s %s", locnet, name, cur->lan);
       send_status_ko(cur->lan_del_cli_llid, cur->lan_del_cli_tid, "impossible");
       if (strlen(cur->lan))
         {
@@ -971,32 +970,32 @@ void dpdk_d2d_del_lan(int llid, int tid, char *name, char *lan)
   t_d2d_cnx *cur = dpdk_d2d_find(name);
   if (!cur)
     {
-    KERR("%s %s %s", locnet, name, lan);
+    KERR("ERROR %s %s %s", locnet, name, lan);
     send_status_ko(llid, tid, "not found");
     }
   else if (cur->lan_del_cli_llid)
     {
-    KERR("%s %s %s", locnet, name, lan);
+    KERR("ERROR %s %s %s", locnet, name, lan);
     send_status_ko(llid, tid, "command to be processed");
     }
   else if (strcmp(cur->lan, lan))
     {
-    KERR("%s %s %s %s", locnet, name, lan, cur->lan);
+    KERR("ERROR %s %s %s %s", locnet, name, lan, cur->lan);
     send_status_ko(llid, tid, "a vlan is stored");
     }
   else if (cur->waiting_ack_del_lan == 1)
     {
-    KERR("%s %s %s", locnet, name, lan);
+    KERR("ERROR %s %s %s", locnet, name, lan);
     send_status_ko(llid, tid, "command to be processed");
     }
   else if (cur->lan_ovs_is_attached == 0)
     {
-    KERR("%s %s %s", locnet, name, lan);
+    KERR("ERROR %s %s %s", locnet, name, lan);
     send_status_ko(llid, tid, "lan not attached");
     }
   else if (cur->vhost_started_and_running != 1)
     {
-    KERR("%s %s %s", locnet, name, lan);
+    KERR("ERROR %s %s %s", locnet, name, lan);
     send_status_ko(llid, tid, "vhost not started");
     }
   else

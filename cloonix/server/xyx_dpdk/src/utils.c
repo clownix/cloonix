@@ -155,26 +155,28 @@ void utils_checksum_compute(struct rte_mbuf *mbuf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void utils_to_endp(uint64_t usec, struct rte_mbuf *mbuf)
+int utils_to_endp(uint64_t usec, struct rte_mbuf *mbuf)
 {
   uint8_t *data;
-  int len;
+  int len, result;;
   len = (int) (mbuf->pkt_len);
   data = rte_pktmbuf_mtod_offset(mbuf, uint8_t *, 0);
-  pcap_record_rx_packet(usec, len, data);
+  result = pcap_record_rx_packet(usec, len, data);
   eventfull_hook_spy(0, len, data);
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void utils_from_endp(uint64_t usec, struct rte_mbuf *mbuf)
+int utils_from_endp(uint64_t usec, struct rte_mbuf *mbuf)
 { 
   uint8_t *data;
-  int len;
+  int len, result;;
   len = (int) (mbuf->pkt_len);
   data = rte_pktmbuf_mtod_offset(mbuf, uint8_t *, 0);
-  pcap_record_rx_packet(usec, len, data);
+  result = pcap_record_rx_packet(usec, len, data);
   eventfull_hook_spy(1, len, data);
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 

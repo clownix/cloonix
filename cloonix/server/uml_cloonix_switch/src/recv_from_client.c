@@ -569,10 +569,10 @@ static void timer_endp(void *data)
     }
   else
     {
-    KERR("DELAY ADD LAN");
     te->count++;
     if (te->count >= 50)
       {
+      KERR("ERROR DELAY ADD LAN END");
       sprintf(err, "ERROR ENDP: %s %d %s",te->name, te->num, te->lan);
       send_status_ko(te->llid, te->tid, err);
       timer_free(te);

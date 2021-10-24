@@ -261,17 +261,6 @@ int get_cloonix_llid(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void send_config_modif(void)
-{
-  char resp[MAX_PATH_LEN];
-  memset(resp, 0, MAX_PATH_LEN);
-  snprintf(resp, MAX_PATH_LEN-1,
-  "cloonixsnf_GET_CONF_RESP %s %d", g_xyx_name, pcap_record_is_on());
-  rpct_send_poldiag_msg(get_cloonix_llid(), type_hop_xyx_dpdk, resp);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int main (int argc, char *argv[])
 {
   char *root = g_root_path;

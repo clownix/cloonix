@@ -498,7 +498,7 @@ void chunk_chain_delete(t_data_channel *dchan)
     {
     }
   else
-    KOUT(" ");
+    KOUT("ERROR %d", dchan->decoding_state);
 }
 /*---------------------------------------------------------------------------*/
 

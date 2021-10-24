@@ -105,8 +105,8 @@ static void state_progress_up(t_xyx_cnx *cur, int state)
   nb_to_text(cur->state_up, olab);
   cur->state_up = state;
   nb_to_text(cur->state_up, nlab);
-  KERR("STATE XYX %s %s %d  %s ----> %s", locnet, cur->name, cur->num,
-                                          olab, nlab);
+//  KERR("STATE XYX %s %s %d  %s ----> %s", locnet, cur->name, cur->num,
+//                                          olab, nlab);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -165,16 +165,13 @@ static t_xyx_cnx *alloc_xyx(int llid, int tid, char *name, int num,
   if (endp_type == endp_type_tap)
     {
     suid_power_rec_name(cur->nm, 1);
-    KERR("ALLOC TAP %s", name);
     }
   else if (endp_type == endp_type_phy)
     {
     suid_power_rec_name(cur->nm, 1);
-    KERR("ALLOC PHY %s", name);
     }
   else if (endp_type == endp_type_eths)
     {
-    KERR("ALLOC ETH KVM SPY %s %d", name, num);
     snprintf(ext, 5, "_%d", num); 
     }
   else
@@ -195,15 +192,14 @@ static void free_xyx(t_xyx_cnx *cur)
   if (cur->endp_type == endp_type_tap)
     {
     suid_power_rec_name(cur->nm, 0);
-    KERR("FREE TAP %s", cur->name);
     }
   else if (cur->endp_type == endp_type_phy)
     {
     suid_power_rec_name(cur->nm, 0);
-    KERR("FREE PHY %s", cur->name);
     }
   else if (cur->endp_type == endp_type_eths)
-    KERR("FREE ETH KVM SPY %s %d", cur->name, cur->num);
+    {
+    }
   else
     KOUT("%s %d", cur->name, cur->num);
 
@@ -321,10 +317,6 @@ void dpdk_xyx_resp_add_lan(int is_ko, char *lan, char *name, int num)
       cur->lan.attached_lan_ok = 1;
       event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
       state_progress_up(cur, state_up_lan_ovs_resp);
-      if (cur->endp_type == endp_type_tap)
-        KERR("ADD LAN TAP OK %s %d lan:%s", name, num, lan);
-      if (cur->endp_type == endp_type_phy)
-        KERR("ADD LAN PHY OK %s %d lan:%s", name, num, lan);
       }
     }
 }
@@ -351,10 +343,6 @@ void dpdk_xyx_resp_del_lan(int is_ko, char *lan, char *name, int num)
     memset(cur->lan.lan, 0, MAX_NAME_LEN);
     utils_send_status_ok(&(cur->lan.llid),&(cur->lan.tid));
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
-    if (cur->endp_type == endp_type_tap)
-      KERR("DEL LAN TAP OK %s %d lan:%s", name, num, lan);
-    if (cur->endp_type == endp_type_phy)
-      KERR("DEL LAN PHY OK %s %d lan:%s", name, num, lan);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -791,8 +779,6 @@ static void timer_end_eths2_ovs(void *data)
       {
       if (fmt_tx_add_eths2(0, cur->nm, cur->num))
         KERR("ERROR %s %d", cur->nm, cur->num);
-      else
-        KERR("MMMMMMMMMMMMMMMMMMMMMMMMMM  %s %d", cur->nm, cur->num);
       }
     }
 }
@@ -873,14 +859,6 @@ void dpdk_xyx_resp_add(int is_ko, char *name, int num)
     }
   else
     {
-    if (cur->endp_type == endp_type_tap)
-      KERR("CREATE TAP OK %s", name);
-    else if (cur->endp_type == endp_type_phy)
-      KERR("CREATE PHY OK %s", name);
-    else if (cur->endp_type == endp_type_eths)
-      KERR("CREATE ETH KVM SPY OK %s %d", name, num);
-    else
-      KOUT("ERROR %s %d", name, num);
     cur->ovs_started_and_running = 1;
     utils_send_status_ok(&(cur->add_llid),&(cur->add_tid));
     }
@@ -986,10 +964,7 @@ void dpdk_xyx_eths2_resp_ok(char *name, int num)
   if (cur == NULL)
     KERR("ERROR %s %d", cur->nm, cur->num);
   else
-    {
-    KERR("MMMMMMMMMMMMMMMMMMMMMMMMMM  %s %d", cur->nm, cur->num);
     cur->eths_done_ok = 1;
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -1009,10 +984,6 @@ void dpdk_xyx_eths2_vm_pinging(char *name, int num)
         {
         if (fmt_tx_add_eths2(0, cur->nm, cur->num))
           KERR("ERROR %s %d", cur->nm, cur->num);
-        else
-          {
-          KERR("MMMMMMMMMMMMMMMMMMMMMMMMMM  %s %d", cur->nm, cur->num);
-          }
         }
       }
     }

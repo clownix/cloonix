@@ -79,7 +79,7 @@ static int rx_inot(int llid, int fd)
 static void err_inot(int llid, int err, int from)
 {
   inotify_trigger_end();
-  KOUT("%d", llid);
+  KERR("ERROR %d", llid);
 }
 /*-------------------------------------------------------------------------*/
 
@@ -88,9 +88,15 @@ void inotify_trigger_end(void)
 {
   if (msg_exist_channel(g_llid))
     msg_delete_channel(g_llid);
-  inotify_rm_watch(g_fdnotify, g_wd); 
-  close(g_wd);
-  close(g_fdnotify);
+  if ((g_fdnotify != -1) && (g_wd != -1))
+    inotify_rm_watch(g_fdnotify, g_wd); 
+  if (g_wd != -1)
+    close(g_wd);
+  if (g_fdnotify != -1)
+    close(g_fdnotify);
+  g_llid = -1;
+  g_wd = -1;
+  g_fdnotify = -1;
   pcap_record_close_and_reinit();
 }
 /*-------------------------------------------------------------------------*/
@@ -98,13 +104,16 @@ void inotify_trigger_end(void)
 /*****************************************************************************/
 void inotify_trigger_init(char *path_file)
 {
-KERR("%s", path_file);
   g_fdnotify = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   if (g_fdnotify == -1)
-    KOUT("%s", strerror(errno));
-  g_wd = inotify_add_watch(g_fdnotify, path_file, IN_OPEN | IN_CLOSE);
-  if (g_wd == -1)
-    KOUT("%s", strerror(errno));
-  g_llid = msg_watch_fd(g_fdnotify, rx_inot, err_inot, "inotify_trigger");
+    KERR("ERROR %s", strerror(errno));
+  else
+    {
+    g_wd = inotify_add_watch(g_fdnotify, path_file, IN_OPEN | IN_CLOSE);
+    if (g_wd == -1)
+      KERR("ERROR %s", strerror(errno));
+    else
+      g_llid = msg_watch_fd(g_fdnotify, rx_inot, err_inot, "inotify_trigger");
+    }
 }
 /*---------------------------------------------------------------------------*/

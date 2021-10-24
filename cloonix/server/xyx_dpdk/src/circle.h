@@ -17,7 +17,7 @@
 /*****************************************************************************/
 int  circle_nb(int id);
 int  circle_peek(int id, uint64_t *len, uint64_t *usec, struct rte_mbuf **mbuf);
-void circle_swap(int id);
+int circle_swap(int id, int pcap_nok);
 struct rte_mbuf *circle_get(int id);
 void circle_put(int id, uint64_t len, uint64_t usec, struct rte_mbuf *mbuf);
 void circle_flush(int id);

@@ -1,6 +1,6 @@
 diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdinfo-cfile.py
 --- dpdk/buildtools/gen-pmdinfo-cfile.py	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-10-23 08:48:49.622531340 +0200
++++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-10-23 20:07:23.674084354 +0200
 @@ -14,7 +14,7 @@
          stdout=subprocess.PIPE, check=True, cwd=temp
      )
@@ -12,7 +12,7 @@ diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdi
      subprocess.run(pmdinfogen + paths + [output], check=True)
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
 --- dpdk/drivers/meson.build	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2021-10-23 08:48:49.622531340 +0200
++++ dpdk_tainted/drivers/meson.build	2021-10-23 20:07:23.674084354 +0200
 @@ -162,6 +162,7 @@
          tmp_lib = static_library('tmp_' + lib_name, sources,
                  include_directories: includes,
@@ -31,7 +31,7 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
          # create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost.h dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h
 --- dpdk/drivers/net/virtio/virtio_user/vhost.h	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h	2021-10-23 08:48:49.622531340 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h	2021-10-23 20:07:23.674084354 +0200
 @@ -15,6 +15,26 @@
  #include "../virtio_logs.h"
  #include "../virtqueue.h"
@@ -61,7 +61,7 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost.h dpdk_tainted/drivers/net/
  	unsigned int num;
 diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c
 --- dpdk/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-23 08:50:21.674530486 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-23 20:07:23.674084354 +0200
 @@ -104,6 +104,23 @@
  #define VHOST_USER_PAYLOAD_SIZE \
  	(sizeof(struct vhost_user_msg) - VHOST_USER_HDR_SIZE)
@@ -91,9 +91,9 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers
  	int ret, sz_hdr = VHOST_USER_HDR_SIZE, sz_payload;
  
 +//cloonix TOLOOKAT
-+KERR("BEFORE RECV vhost_user_read pid:%d", getpid());
++//KERR("BEFORE RECV vhost_user_read pid:%d", getpid());
  	ret = recv(fd, (void *)msg, sz_hdr, 0);
-+KERR("AFTER RECV vhost_user_read ret:%d", ret);
++//KERR("AFTER RECV vhost_user_read ret:%d", ret);
  	if (ret < 0) {
  		PMD_DRV_LOG(ERR, "Failed to recv msg header: %s", strerror(errno));
  		return -1;
@@ -102,15 +102,15 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers
  
  	if (sz_payload) {
 +//cloonix TOLOOKAT
-+KERR("BEFORE RECV vhost_user_read pid:%d", getpid());
++//KERR("BEFORE RECV vhost_user_read pid:%d", getpid());
  		ret = recv(fd, (void *)((char *)msg + sz_hdr), sz_payload, 0);
-+KERR("AFTER RECV vhost_user_read ret:%d", ret);
++//KERR("AFTER RECV vhost_user_read ret:%d", ret);
  		if (ret < 0) {
  			PMD_DRV_LOG(ERR, "Failed to recv msg payload: %s", strerror(errno));
  			return -1;
 diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c
 --- dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-23 08:51:12.130530018 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-23 20:07:23.674084354 +0200
 @@ -23,6 +23,7 @@
  
  #define VIRTIO_USER_MEM_EVENT_CLB_NAME "virtio_user_mem_event_clb"
@@ -119,7 +119,19 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/dr
  const char * const virtio_user_backend_strings[] = {
  	[VIRTIO_USER_BACKEND_UNKNOWN] = "VIRTIO_USER_BACKEND_UNKNOWN",
  	[VIRTIO_USER_BACKEND_VHOST_USER] = "VHOST_USER",
-@@ -443,6 +444,9 @@
+@@ -327,8 +328,11 @@
+ 	} else {
+ 		ret = virtio_user_dev_get_mac(dev);
+ 		if (ret) {
++/*
++cloonix
+ 			PMD_DRV_LOG(ERR, "(%s) No valid MAC in devargs or device, use random",
+ 					dev->path);
++*/
+ 			return;
+ 		}
+ 
+@@ -443,6 +447,9 @@
  	if (msl->external)
  		return;
  
@@ -129,9 +141,24 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/dr
  	pthread_mutex_lock(&dev->mutex);
  
  	if (dev->started == false)
+diff -Naur dpdk/lib/eal/common/eal_common_devargs.c dpdk_tainted/lib/eal/common/eal_common_devargs.c
+--- dpdk/lib/eal/common/eal_common_devargs.c	2021-10-17 13:34:14.000000000 +0200
++++ dpdk_tainted/lib/eal/common/eal_common_devargs.c	2021-10-23 20:07:23.674084354 +0200
+@@ -88,8 +88,11 @@
+ 	/* Split each sub-lists. */
+ 	nblayer = devargs_layer_count(devstr);
+ 	if (nblayer > RTE_DIM(layers)) {
++/*
++cloonix 
+ 		RTE_LOG(ERR, EAL, "Invalid format: too many layers (%zu)\n",
+ 			nblayer);
++*/
+ 		ret = -E2BIG;
+ 		goto get_out;
+ 	}
 diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/eal_common_options.c
 --- dpdk/lib/eal/common/eal_common_options.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-10-23 08:48:49.622531340 +0200
++++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-10-23 20:07:23.674084354 +0200
 @@ -125,7 +125,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
@@ -145,7 +172,7 @@ diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/
  /*
 diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
 --- dpdk/lib/eal/linux/eal.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/linux/eal.c	2021-10-23 08:48:49.622531340 +0200
++++ dpdk_tainted/lib/eal/linux/eal.c	2021-10-23 20:07:23.674084354 +0200
 @@ -27,6 +27,7 @@
  #endif
  #include <linux/version.h>
@@ -322,7 +349,7 @@ diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
  		enum rte_iova_mode iova_mode = rte_bus_get_iommu_class();
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
 --- dpdk/lib/meson.build	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2021-10-23 08:48:49.622531340 +0200
++++ dpdk_tainted/lib/meson.build	2021-10-23 20:07:23.674084354 +0200
 @@ -197,6 +197,7 @@
              c_args: cflags,
              dependencies: static_deps,
@@ -339,3 +366,15 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
              install: true)
      shared_dep = declare_dependency(link_with: shared_lib,
              include_directories: includes,
+diff -Naur dpdk/meson_options.txt dpdk_tainted/meson_options.txt
+--- dpdk/meson_options.txt	2021-10-17 13:34:14.000000000 +0200
++++ dpdk_tainted/meson_options.txt	2021-10-23 20:08:00.654734540 +0200
+@@ -32,7 +32,7 @@
+        'Path to the kernel for building kernel modules. Headers must be in $kernel_dir or $kernel_dir/build. Modules will be installed in /lib/modules.')
+ option('machine', type: 'string', value: 'auto', description:
+        'Alias of cpu_instruction_set.')
+-option('max_ethports', type: 'integer', value: 32, description:
++option('max_ethports', type: 'integer', value: 512, description:
+        'maximum number of Ethernet devices')
+ option('max_lcores', type: 'string', value: 'default', description:
+        'Set maximum number of cores/threads supported by EAL; "default" is different per-arch, "detect" detects the number of cores on the build machine.')

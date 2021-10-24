@@ -200,8 +200,8 @@ static void timer_monitoring(void *data)
     }
   else
     {
-    if (g_nb_pid_resp_warning > 15)
-      KERR("%d", g_nb_pid_resp_warning);
+    if (g_nb_pid_resp_warning == 20)
+      KERR("WARNING MONITOR %d", g_nb_pid_resp_warning);
     g_abs_beat_timer = 0;
     g_ref_timer = 0;
     clownix_timeout_add(100, timer_monitoring, NULL,
