@@ -149,9 +149,7 @@ static void lan_free_final(char *lan)
   t_ovslan *cur = lan_find(lan);
   if (cur)
     {
-    if (cur->must_send_del == 1)
-      KERR("ERROR LAN FREE %s NOT POSSIBLE", lan);
-    else
+    if (cur->must_send_del == 0)
       {
       if (cur->next)
         cur->next->prev = cur->prev;

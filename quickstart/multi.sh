@@ -1,9 +1,12 @@
 #!/bin/bash
+
+set -x
+
 NET=nemo
 DIST=bullseye
 PARAMS="ram=1000 cpu=2 eth=s"
 PHY=enx0050b69de279
-NUM=40
+NUM=30
 
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)

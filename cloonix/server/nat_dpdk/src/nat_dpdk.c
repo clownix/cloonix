@@ -329,6 +329,11 @@ int main (int argc, char *argv[])
     KERR("WARNING %s exists ERASING", g_cisco_path);
     unlink(g_cisco_path);
     }
+  if (!access(g_nat_socket, F_OK))
+    {
+    KERR("WARNING %s exists ERASING", g_nat_socket);
+    unlink(g_nat_socket);
+    }
   vhost_client_init();
   msg_mngt_init("nat_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);

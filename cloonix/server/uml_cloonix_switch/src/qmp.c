@@ -323,27 +323,10 @@ void qmp_conn_end(char *name)
   t_qmp *qmp = find_qmp(name);
   t_qmp_sub *cur, *next;
   t_qmp_req *req;
-  t_vm   *vm = cfg_get_vm(name);
-  t_eth_table *eth_tab;
-  int i;
   if (!qmp)
     KERR("%s", name);
   else
     {
-    if (vm)
-      {
-      eth_tab = vm->kvm.eth_table;
-      for (i=0; i<vm->kvm.nb_tot_eth; i++)
-        {
-        if ((eth_tab[i].eth_type == endp_type_ethd) ||
-            (eth_tab[i].eth_type == endp_type_eths))
-          {
-          KERR("DELETH FOR VM %s %d", name, i);
-          if (dpdk_kvm_del(0, 0, name, i, eth_tab[i].eth_type))
-            KERR("ERROR %s %d", name, i);
-          }
-        }
-      }
     cur = qmp->head_qmp_sub;
     while(cur)
       {

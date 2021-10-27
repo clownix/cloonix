@@ -157,12 +157,12 @@ static void del_all_depends(void)
 {
   if (dpdk_nat_get_qty())
     dpdk_nat_end_ovs();
-  if (dpdk_xyx_get_qty())
-    dpdk_xyx_end_ovs();
   if (dpdk_a2b_get_qty())
     dpdk_a2b_end_ovs();
   if (dpdk_d2d_get_qty())
     dpdk_d2d_end_ovs();
+  if (dpdk_xyx_get_qty())
+    dpdk_xyx_end_ovs();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -698,24 +698,11 @@ int dpdk_ovs_still_present(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void dpdk_ovs_urgent_client_destruct(int end_cloonix)
+void dpdk_ovs_client_destruct(void)
 {
   t_ovs *cur = g_head_ovs;
   if (cur)
-    {
-    if (end_cloonix == 0)
-      {
-      del_all_depends();
-      }
-    else
-      {
-      if (cur->destroy_requested == 0)
-        {
-        KERR("ERROR URGENT DESTRUCT");
-        set_destroy_requested(cur, 4);
-        }
-      }
-    }
+    del_all_depends();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -746,6 +733,15 @@ int get_daemon_done(void)
     result = cur->daemon_done;
     } 
   return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void dpdk_ovs_destroy(void)
+{
+  t_ovs *cur = g_head_ovs;
+  if (cur)
+    set_destroy_requested(cur, 2);
 }
 /*---------------------------------------------------------------------------*/
 

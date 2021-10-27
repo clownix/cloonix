@@ -477,7 +477,7 @@ void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death)
   tid = vm->wake_up_eths->tid;
   free_wake_up_eths(vm);
   if (!cfg_is_a_zombie(vm->kvm.name))
-    machine_death(vm->kvm.name, error_death);
+    poweroff_vm(0, 0, vm);
   if (llid)
     {
     memset(err, 0, MAX_PATH_LEN);

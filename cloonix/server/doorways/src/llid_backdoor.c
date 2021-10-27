@@ -759,7 +759,6 @@ static void action_ga_heartbeat_on_working_llid(t_backdoor_vm *bvm)
       {
       bvm->fail_ping_agent_rx = 0;
       doors_send_event(get_doorways_llid(), 0, bvm->name, PING_KO);
-      KERR("%s PING_KO", bvm->name);
       bvm->ping_status = ping_ko;
       }
     bvm->last_ping_agent_rx = bvm->ping_agent_rx;

@@ -85,7 +85,7 @@ t_topo_endp *translate_topo_endp_xyx(int *nb);
 void dpdk_xyx_resp_add(int is_ko, char *name, int num);
 void dpdk_xyx_resp_del(int is_ko, char *name, int num);
 void dpdk_xyx_cnf(char *name, int type, uint8_t *mac);
-void dpdk_xyx_eths2_resp_ok(char *name, int num);
+void dpdk_xyx_eths2_resp_ok(int is_ok, char *name, int num);
 void dpdk_xyx_init(void);
 /*--------------------------------------------------------------------------*/
 

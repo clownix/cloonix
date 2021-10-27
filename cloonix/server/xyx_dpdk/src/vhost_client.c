@@ -46,17 +46,21 @@
 
 typedef struct t_wrk
 {
-  int enable;
+  int created;
+  int rx_enable;
+  int tx_enable;
   char socket[MAX_PATH_LEN];
   struct vhost_device_ops virtio_net_ops;
 } t_wrk;
 
 static int g_rxtx_worker;
+static int g_rxtx_worker_active;
 static uint32_t volatile g_lock;
 static int g_running_lcore;
-static struct rte_mempool *g_mempool;
 static t_wrk g_wrk[2];
 void end_clean_unlink(void);
+static char g_name[MAX_NAME_LEN];
+static char g_memid[MAX_NAME_LEN];
 
 /****************************************************************************/
 static void vhost_lock_acquire(void)
@@ -90,8 +94,11 @@ static int virtio_new_device(int vid)
 {
   if ((vid != 0) && (vid != 1))
     KOUT("%d", vid);
+  vhost_lock_acquire();
   rte_vhost_enable_guest_notification(vid, 0, 0);
   rte_vhost_enable_guest_notification(vid, 1, 0);
+  g_wrk[vid].created = 1;
+  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -99,7 +106,6 @@ static int virtio_new_device(int vid)
 /****************************************************************************/
 static int virtio_features_changed(int vid, uint64_t features)
 {
-  KERR("%lu", features);
   return features; 
 }
 /*--------------------------------------------------------------------------*/
@@ -107,24 +113,28 @@ static int virtio_features_changed(int vid, uint64_t features)
 /****************************************************************************/
 static void virtio_destroy_device(int vid)
 {
-  KERR("ERROR DESTROY DEVICE %d", vid);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
-  if ((vid != 0) && (vid != 1))
-    KOUT("%d %d %d", vid, queue_id, enable);
+  vhost_lock_acquire();
   if (queue_id==0)
     {
     if (enable)
-      g_wrk[vid].enable = 1;
+      g_wrk[vid].rx_enable = 1;
     else
-      g_wrk[vid].enable = 0;
+      g_wrk[vid].rx_enable = 0;
     }
-  else if (queue_id != 1)
-    KOUT("%d", queue_id);
+  else
+    {
+    if (enable)
+      g_wrk[vid].tx_enable = 1;
+    else
+      g_wrk[vid].tx_enable = 0;
+    }
+  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -171,14 +181,14 @@ static void flush_tx_circle(int id)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int store_rx_circle(int id, uint64_t arrival_usec)
+static int store_rx_circle(int id, uint64_t usec, struct rte_mempool *mpool)
 {
   struct rte_mbuf *pkts_rx[MAX_PKT_BURST];
   int nb_rx, result = -1;
-  nb_rx = rte_vhost_dequeue_burst(id, 1, g_mempool, pkts_rx, MAX_PKT_BURST);
+  nb_rx = rte_vhost_dequeue_burst(id, 1, mpool, pkts_rx, MAX_PKT_BURST);
   if (nb_rx)
     {
-    enqueue(id, arrival_usec, nb_rx, pkts_rx);
+    enqueue(id, usec, nb_rx, pkts_rx);
     result = 0;
     }
   return result;
@@ -186,7 +196,7 @@ static int store_rx_circle(int id, uint64_t arrival_usec)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void sched_mngt(int id, uint64_t current_usec, uint64_t delta)
+static void sched_mngt(int id)
 {
   uint64_t len;
   uint64_t usec;
@@ -207,39 +217,63 @@ static void sched_mngt(int id, uint64_t current_usec, uint64_t delta)
 /****************************************************************************/
 static int rxtx_worker(void *data)
 {
-  uint64_t arrival_usec, delta_usec, last_usec;
-  int id;
+  int id, sid;
+  uint32_t mcache = MBUF_MCACHE;
+  uint32_t mbufs = MBUF_MAX;
+  uint32_t msize = MBUF_SIZE;
+  struct rte_mempool *mpool;
+
+  if (rte_lcore_id() != g_running_lcore) 
+    KOUT("%s", g_name);
+  sid = rte_lcore_to_socket_id(rte_lcore_id());
+  mpool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
+  if (!mpool)
+    KOUT("%s", g_name);
+
+  g_rxtx_worker_active = 1;
+
   while(g_rxtx_worker)
     {
-    if (!(g_wrk[0].enable && g_wrk[1].enable))
+    if (!(g_wrk[0].rx_enable && g_wrk[1].rx_enable && g_wrk[0].created &&
+          g_wrk[0].tx_enable && g_wrk[1].tx_enable && g_wrk[1].created))
       {
       rte_pause();
       usleep(500);
-      last_usec = get_usec();
       }
     else
+      break;
+    }
+
+
+  while(g_rxtx_worker)
+    {
+    rte_pause();
+    usleep(80);
+    if (g_rxtx_worker)
       {
-      rte_pause();
-      usleep(80);
-      if (g_rxtx_worker)
+      vhost_lock_acquire();
+      if (g_rxtx_worker &&
+          g_wrk[0].created && g_wrk[1].created &&
+          g_wrk[0].rx_enable && g_wrk[1].rx_enable &&
+          g_wrk[0].tx_enable && g_wrk[1].tx_enable)
         {
-        vhost_lock_acquire();
-        arrival_usec = get_usec();
-        delta_usec = arrival_usec - last_usec;
-        last_usec = arrival_usec;
         for (id=0; id<2; id++)
           {
-          store_rx_circle(id, arrival_usec);
-          sched_mngt(id, arrival_usec, delta_usec);
+          store_rx_circle(id, get_usec(), mpool);
+          sched_mngt(id);
           flush_tx_circle(id);
           circle_clean(id);
           }
-        vhost_lock_release();
         }
+      vhost_lock_release();
       }
     }
   for (id=0; id<2; id++)
+    {
     circle_flush(id);
+    rte_vhost_driver_unregister(g_wrk[id].socket);
+    }
+  rte_mempool_free(mpool);
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -247,28 +281,14 @@ static int rxtx_worker(void *data)
 /****************************************************************************/
 void vhost_client_end_and_exit(void)
 {
-  int i, err;
-  vhost_lock_acquire();
   g_rxtx_worker = 0;
-  vhost_lock_release();
-  if (g_running_lcore == -1) 
-    KERR("ERROR XYX STOP");
-  else
+  if (g_running_lcore != -1)
+    {
     rte_eal_wait_lcore(g_running_lcore);
-  g_running_lcore = -1;
-  for (i=0; i<2; i++)
-    {
-    err = rte_vhost_driver_unregister(g_wrk[i].socket);
-    if (err)
-      KERR("ERROR XYX UNREGISTER %d", i);
+    g_running_lcore = -1;
     }
-  if (g_mempool)
-    {
-    rte_mempool_free(g_mempool);
-    g_mempool = NULL;
-    }
-  KERR("WARNING ");
   end_clean_unlink();
+  rte_exit(EXIT_SUCCESS, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -276,7 +296,7 @@ void vhost_client_end_and_exit(void)
 void vhost_client_start_id(int id, int sid, char *path)
 {
   uint64_t flags = 0;
-  int i, err;
+  int err;
   strncpy(g_wrk[id].socket, path, MAX_PATH_LEN-1);
   g_wrk[id].virtio_net_ops.new_device          = virtio_new_device;
   g_wrk[id].virtio_net_ops.destroy_device      = virtio_destroy_device;
@@ -291,47 +311,42 @@ void vhost_client_start_id(int id, int sid, char *path)
   err = rte_vhost_driver_start(path);
   if (err)
     KOUT(" ");
-  if (id == 0)
-    {
-    i = rte_get_next_lcore(-1, 1, 0);
-    if (i >= RTE_MAX_LCORE)
-      KOUT("%d", i);
-    g_running_lcore = i;
-    }
-  else
-    {
-    g_rxtx_worker = 1;
-    rte_eal_remote_launch(rxtx_worker, NULL, g_running_lcore);
-    }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void vhost_client_start(char *memid, char *path0, char *path1)
 {
-  uint32_t mcache = MBUF_MCACHE;
-  uint32_t mbufs = MBUF_MAX;
-  uint32_t msize = MBUF_SIZE;
-  int sid = rte_lcore_to_socket_id(rte_get_main_lcore());
+  int sid;
+  g_running_lcore = rte_get_next_lcore(-1, 1, 0);
+    if (g_running_lcore >= RTE_MAX_LCORE)
+      KOUT("%d", g_running_lcore);
+  sid = rte_lcore_to_socket_id(rte_lcore_id());
   if (sid < 0)
     KOUT(" ");
-  g_mempool = rte_mempool_lookup(memid);
-  if (g_mempool == NULL)
-    g_mempool = rte_pktmbuf_pool_create(memid, mbufs, mcache, 0, msize, sid);
-  else
-    KERR("WARNING MEMPOOL EXISTS %s", memid);
-  if (!g_mempool)
-    KOUT("%s", path0);
+  memset(g_memid, 0, MAX_NAME_LEN);
+  strncpy(g_memid, memid, MAX_NAME_LEN-1);
   vhost_client_start_id(0, sid, path0);
   vhost_client_start_id(1, sid, path1);
+  g_rxtx_worker = 1;
+  rte_eal_remote_launch(rxtx_worker, NULL, g_running_lcore);
+  while(g_rxtx_worker_active == 0)
+    {
+    usleep(10000);
+    rte_pause();
+    }
+  usleep(100000);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void vhost_client_init(void)
+void vhost_client_init(char *name)
 {
+  memset(g_name, 0, MAX_NAME_LEN);
   memset(g_wrk, 0, 2*sizeof(t_wrk));
+  strncpy(g_name,  name, MAX_NAME_LEN-1);
   g_running_lcore = -1;
+  g_rxtx_worker_active = 0;
 }
 /*--------------------------------------------------------------------------*/
 

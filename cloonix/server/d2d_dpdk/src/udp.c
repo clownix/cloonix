@@ -53,7 +53,6 @@
 #define MHID 4 
 #define MAXUDPLEN (MHID+MHLN+MHNB+PLEN+PHEAD)
 
-struct rte_mempool *get_rte_mempool(void);
 static struct sockaddr_in g_loc_addr;
 static struct sockaddr_in g_dist_addr;
 static int g_llid;
@@ -196,12 +195,12 @@ int udp_read_bulk(int *nb_packets, uint8_t **start)
 
 /****************************************************************************/
 static int process_udp_rx(int nb_packets, int tot_len, uint8_t *pkts,
-                          struct rte_mbuf **mbufs)
+                          struct rte_mbuf **mbufs, struct rte_mempool *mpool)
 {
   int i, len, result = 0, len_done = 0;
   uint8_t *ptr = pkts;
   char *data;
-  if (rte_pktmbuf_alloc_bulk(get_rte_mempool(), mbufs, nb_packets))
+  if (rte_pktmbuf_alloc_bulk(mpool, mbufs, nb_packets))
     {
     KERR("NO MEM 1");
     result = -1;
@@ -369,7 +368,7 @@ void udp_enter_traffic_mngt(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int  udp_rx_burst(int *nb, struct rte_mbuf **mbuf)
+int  udp_rx_burst(int *nb, struct rte_mbuf **mbuf, struct rte_mempool *mpool)
 {
   int nb_packets;
   uint8_t *pkts;
@@ -377,7 +376,7 @@ int  udp_rx_burst(int *nb, struct rte_mbuf **mbuf)
   *nb = 0;
   if (result > 0)
     {
-    result = process_udp_rx(nb_packets, result, pkts, mbuf);
+    result = process_udp_rx(nb_packets, result, pkts, mbuf, mpool);
     if (result != -1)
       *nb = nb_packets;
     }

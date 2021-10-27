@@ -264,7 +264,7 @@ int ovs_cmd_add_eths2(char *ovsb, char *dpdkd, char *nm, int num)
                 dpdkd, name);
     if (ovs_vsctl(ovsb, dpdkd, cmd))
       {
-      KERR("ERROR OVSCMD: ADD TAP %s", name);
+      KERR("ERROR OVSCMD: ADD ETH2 %s", name);
       result = -1;
       }
     }
@@ -286,6 +286,13 @@ int ovs_cmd_del_ethds(char *ovsb, char *dpdkd, char *nm, int num)
   memset(lan, 0, MAX_NAME_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
   snprintf(lan, MAX_NAME_LEN-1, "_p_%s", wname);
+
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_0%s", lan, name);
+  if (ovs_vsctl(ovsb, dpdkd, cmd))
+    {
+    KERR("ERROR OVSCMD: DEL PORT ETH %s %d", name, num);
+    result = -1;
+    }
 
   snprintf(cmd, MAX_ARG_LEN-1, "-- del-br _b_%s", name);
   if (ovs_vsctl(ovsb, dpdkd, cmd))

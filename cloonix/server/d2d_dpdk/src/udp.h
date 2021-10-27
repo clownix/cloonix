@@ -21,6 +21,6 @@ void udp_enter_traffic_mngt(void);
 void udp_close(void);
 void udp_fill_dist_addr(uint32_t ip, uint16_t udp_port);
 int  udp_tx_burst(int nb, struct rte_mbuf **mbuf);
-int  udp_rx_burst(int *nb, struct rte_mbuf **mbuf);
+int  udp_rx_burst(int *nb, struct rte_mbuf **mbuf, struct rte_mempool *mpool);
 int  udp_init(void);
 /*--------------------------------------------------------------------------*/

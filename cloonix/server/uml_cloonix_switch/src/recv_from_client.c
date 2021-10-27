@@ -264,19 +264,24 @@ static void timer_del_vm(void *data)
   t_vm *vm = cfg_get_vm(kvm->name);
   if (!vm)
     {
-    send_status_ok(llid, tid, "delvm");
+    if (llid)
+      send_status_ok(llid, tid, "delvm");
     }
   else
     {
     pid = suid_power_get_pid(vm->kvm.vm_id);
     if ((pid == 0) || (vm->vm_to_be_killed))
       {
-      send_status_ok(llid, tid, "delvm");
+      if (llid)
+        send_status_ok(llid, tid, "delvm");
       }
     else if (tz->nb_try == 0)
       {
+      if (!(vm->kvm.vm_config_flags & VM_FLAG_CLOONIX_AGENT_PING_OK))
+        qmp_request_qemu_halt(tz->kvm.name, 0, 0);
+      else
+        doors_send_command(get_doorways_llid(), 0, tz->kvm.name, HALT_REQUEST);
       tz->nb_try = 1;
-      qmp_request_qemu_halt(kvm->name, 0, 0);
       clownix_timeout_add(250, timer_del_vm, (void *) tz, NULL, NULL);
       }
     else if (tz->nb_try == 1)
@@ -289,32 +294,35 @@ static void timer_del_vm(void *data)
       {
       snprintf(err, MAX_PATH_LEN-1, "FAILED HALT %s", kvm->name);
       KERR("ERROR %s", err);
-      send_status_ko(llid, tid, err);
+      if (llid)
+        send_status_ko(llid, tid, err);
       }
     }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void poweroff_vm(int llid, int tid, t_vm *vm)
+void poweroff_vm(int llid, int tid, t_vm *vm)
 {
   t_timer_zombie *tz;
+  t_eth_table *eth_tab = vm->kvm.eth_table;
+  int i;
+  for (i=0; i<vm->kvm.nb_tot_eth; i++)
+    {
+    if ((eth_tab[i].eth_type == endp_type_ethd) ||
+        (eth_tab[i].eth_type == endp_type_eths))
+      {
+      if (dpdk_kvm_del(0, 0, vm->kvm.name, i, eth_tab[i].eth_type))
+        KERR("ERROR %s %d", vm->kvm.name, i);
+      eth_tab[i].eth_type = endp_type_none;
+      }
+    }
   tz = (t_timer_zombie *) clownix_malloc(sizeof(t_timer_zombie), 3);
   memset(tz, 0, sizeof(t_timer_zombie));
   tz->llid = llid;
   tz->tid = tid;
   memcpy(&(tz->kvm), &(vm->kvm), sizeof(t_topo_kvm));
-  if (!(vm->kvm.vm_config_flags & VM_FLAG_CLOONIX_AGENT_PING_OK))
-    {
-    tz->nb_try = 1;
-    qmp_request_qemu_halt(tz->kvm.name, 0, 0);
-    }
-  else
-    {
-    tz->nb_try = 0;
-    doors_send_command(get_doorways_llid(), 0, tz->kvm.name, HALT_REQUEST);
-    }
-  clownix_timeout_add(250, timer_del_vm, (void *) tz, NULL, NULL);
+  clownix_timeout_add(400, timer_del_vm, (void *) tz, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1467,13 +1475,31 @@ void recv_evt_print_unsub(int llid, int tid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void del_all_start(void)
+{
+  int i, nb;
+  t_vm *vm = cfg_get_first_vm(&nb);
+  g_inhib_new_clients = 1;
+  event_print("Rx Req Self-Destruction");
+  dpdk_ovs_client_destruct();
+  for (i=0; i<nb; i++)
+    {
+    poweroff_vm(0, 0, vm);
+    vm = vm->next;
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void timer_del_all_end(void *data)
 {
   t_timer_del *td = (t_timer_del *) data;;
+  suid_power_req_kill_all();
   if (td->kill_cloonix)
     auto_self_destruction(td->llid, td->tid);
   else
     {
+    g_inhib_new_clients = 0;
     glob_coherency = 0;
     send_status_ok(td->llid, td->tid, "delall");
     event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
@@ -1512,8 +1538,7 @@ static void timer_del_all(void *data)
   else
     {
     dpdk_d2d_all_del();
-    suid_power_req_kill_all();
-    clownix_timeout_add(200, timer_del_all_end, (void *) td, NULL, NULL);
+    clownix_timeout_add(400, timer_del_all_end, (void *) td, NULL, NULL);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -1522,15 +1547,7 @@ static void timer_del_all(void *data)
 void recv_del_all(int llid, int tid)
 {
   t_timer_del *td;
-  int i, nb;
-  t_vm *vm = cfg_get_first_vm(&nb);
-  event_print("Rx Req Delete ALL");
-  for (i=0; i<nb; i++)
-    {
-    poweroff_vm(0, 0, vm);
-    vm = vm->next;
-    }
-  dpdk_ovs_urgent_client_destruct(0);
+  del_all_start();
   td = (t_timer_del *) clownix_malloc(sizeof(t_timer_del), 3);
   memset(td, 0, sizeof(t_timer_del));
   td->llid = llid;
@@ -1543,16 +1560,7 @@ void recv_del_all(int llid, int tid)
 void recv_kill_uml_clownix(int llid, int tid)
 { 
   t_timer_del *td;
-  int i, nb; 
-  t_vm *vm = cfg_get_first_vm(&nb);
-  g_inhib_new_clients = 1;
-  event_print("Rx Req Self-Destruction");
-  for (i=0; i<nb; i++)
-    {
-    poweroff_vm(0, 0, vm);
-    vm = vm->next;
-    }
-  dpdk_ovs_urgent_client_destruct(1);
+  del_all_start();
   td = (t_timer_del *) clownix_malloc(sizeof(t_timer_del), 3);
   memset(td, 0, sizeof(t_timer_del));
   td->llid = llid;

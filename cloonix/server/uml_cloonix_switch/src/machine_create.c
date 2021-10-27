@@ -317,8 +317,8 @@ static void death_of_mkdir_clone(void *data, int status, char *name)
     else
       {
       send_status_ko(vm_building->llid, vm_building->tid, err);
-      KERR("%s", err);
-      machine_death(vm_building->kvm.name, error_death_run);
+      KERR("ERROR %s", err);
+      poweroff_vm(0, 0, vm);
       recv_coherency_unlock();
       }
     }
@@ -370,12 +370,11 @@ void machine_death( char *name, int error_death)
       if ((eth_tab[i].eth_type == endp_type_ethd) ||
           (eth_tab[i].eth_type == endp_type_eths))
         {
-        KERR("DELETH FOR VM %s %d", name, i);
+        KERR("ERROR %s %d", vm->kvm.name, i);
         if (dpdk_kvm_del(0, 0, vm->kvm.name, i, eth_tab[i].eth_type))
           KERR("ERROR %s %d", vm->kvm.name, i);
         }
       }
-
 
     vm->vm_to_be_killed = 1;
     if ((error_death) && 

@@ -118,25 +118,15 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 /****************************************************************************/
 void end_clean_unlink(void)
 {
-  KERR("WARNING %s", g_ctrl_path);
   unlink(g_ctrl_path);
   unlink(g_snf_path);
-  rte_exit(EXIT_SUCCESS, "Exit xyx");
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void rpct_recv_kil_req(int llid, int tid)
 {
-  KERR("WARNING %s", g_ctrl_path);
-  if (g_started_vhost)
-    {
-    vhost_client_end_and_exit();
-    }
-  else
-    {
-    end_clean_unlink();
-    }
+  vhost_client_end_and_exit();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -247,7 +237,6 @@ static char *get_cpu_from_flags(uint32_t flags)
     }
   cpu = i;
   memset(g_lcore_cpu, 0, MAX_NAME_LEN);
-//  snprintf(g_lcore_cpu, MAX_NAME_LEN-1, "--lcores=0@0,1@%d,2@%d", cpu, cpu);
   snprintf(g_lcore_cpu, MAX_NAME_LEN-1, "--lcores=0@0,1@%d", cpu);
   return g_lcore_cpu;
 }
@@ -303,9 +292,19 @@ int main (int argc, char *argv[])
     KERR("ERROR %s exists ERASING", g_snf_path);
     unlink(g_snf_path);
     }
+  if (!access(g_xyx0_socket, F_OK))
+    {
+    KERR("ERROR %s exists ERASING", g_xyx0_socket);
+    unlink(g_xyx0_socket);
+    }
+  if (!access(g_xyx1_socket, F_OK))
+    {
+    KERR("ERROR %s exists ERASING", g_xyx1_socket);
+    unlink(g_xyx1_socket);
+    }
 
   circle_init();
-  vhost_client_init();
+  vhost_client_init(g_xyx_name);
   init_packet_arp_mangle();
   msg_mngt_init("xyx_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);

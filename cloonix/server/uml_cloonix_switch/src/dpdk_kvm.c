@@ -324,7 +324,7 @@ static void timer_beat(void *data)
         if (cur->dyn_vm_add_not_acked == 500)
           {
           KERR("ERROR %s", cur->name);
-          machine_death(cur->name, error_death_noovstime);
+          poweroff_vm(0, 0, vm);
           }
         }
       }
@@ -594,9 +594,12 @@ void dpdk_kvm_resp_add(int is_ko, char *name, int num)
 void dpdk_kvm_resp_add_eths2(int is_ko, char *name, int num)
 {
   if (is_ko)
+    {
     KERR("ERROR RESP ADDETH END KO %s %d", name, num);
+    dpdk_xyx_eths2_resp_ok(0, name, num);
+    }
   else
-    dpdk_xyx_eths2_resp_ok(name, num);
+    dpdk_xyx_eths2_resp_ok(1, name, num);
 }
 /*--------------------------------------------------------------------------*/
 

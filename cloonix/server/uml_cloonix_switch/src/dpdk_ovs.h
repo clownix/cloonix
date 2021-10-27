@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void dpdk_ovs_destroy(void);
 int get_daemon_done(void);
 void dpdk_ovs_cnf(uint32_t lcore_mask, uint32_t socket_mem, uint32_t cpu_mask);
 int dpdk_ovs_collect_dpdk(t_eventfull_endp *eventfull);
@@ -26,7 +27,7 @@ void dpdk_ovs_init(uint32_t lcore, uint32_t mem, uint32_t cpu);
 int  dpdk_ovs_get_all_pid(t_lst_pid **lst_pid);
 char *dpdk_ovs_format_net(t_vm *vm, int eth);
 int dpdk_ovs_still_present(void);
-void dpdk_ovs_urgent_client_destruct(int end_cloonix);
+void dpdk_ovs_client_destruct(void);
 /*--------------------------------------------------------------------------*/
 
 

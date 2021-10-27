@@ -121,8 +121,6 @@ void end_clean_unlink(void)
 void rpct_recv_kil_req(int llid, int tid)
 {
   vhost_client_stop();
-  udp_close();
-  rte_exit(EXIT_SUCCESS, "Exit d2d");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -331,6 +329,11 @@ int main (int argc, char *argv[])
     {
     KERR("%s exists ERASING", g_ctrl_path);
     unlink(g_ctrl_path);
+    }
+  if (!access(g_d2d_socket, F_OK))
+    {
+    KERR("%s exists ERASING", g_d2d_socket);
+    unlink(g_d2d_socket);
     }
   vhost_client_init();
   msg_mngt_init("d2d_dpdk", IO_MAX_BUF_LEN);

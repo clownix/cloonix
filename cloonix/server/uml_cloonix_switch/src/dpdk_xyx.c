@@ -246,7 +246,7 @@ static void timer_xyx_msg_beat(void *data)
         (cur->lan.waiting_ack_del_lan == 1))
       {
       cur->lan.timer_count += 1;
-      if (cur->lan.timer_count > 20)
+      if (cur->lan.timer_count > 100)
         {
         KERR("ERROR TIMEOUT %s add:%d del:%d", cur->name,
                                                cur->lan.waiting_ack_add_lan,
@@ -257,12 +257,12 @@ static void timer_xyx_msg_beat(void *data)
       }
     if (cur->to_be_destroyed == 1)
       {
-      if ((cur->lan.waiting_ack_add_lan == 1)  ||
+      if ((cur->lan.waiting_ack_del_lan == 1)  ||
           (cur->lan.attached_lan_ok == 1))
         cur->to_be_destroyed_count += 1;
       else
         xyx_dpdk_start_stop_process(cur->name, 0);
-      if (cur->to_be_destroyed_count == 20)
+      if (cur->to_be_destroyed_count > 100)
         {
         KERR("ERROR TIMEOUT %s", cur->name);
         xyx_dpdk_start_stop_process(cur->name, 0);
@@ -378,6 +378,26 @@ void dpdk_xyx_event_from_xyx_dpdk_process(char *name, int on)
         KERR("ERROR %s", name);
         utils_send_status_ko(&(cur->add_llid), &(cur->add_tid), "error");
         }
+/*
+    if (cur->endp_type == endp_type_tap)
+      {
+      if (fmt_tx_del_tap(0, cur->nm))
+        KERR("ERROR %s", cur->nm);
+      }
+    else if (cur->endp_type == endp_type_phy)
+      {
+      if (fmt_tx_del_phy(0, cur->nm))
+        KERR("ERROR %s", cur->nm);
+      }
+    else if (cur->endp_type == endp_type_eths)
+      {
+      if (fmt_tx_del_ethds(0, cur->nm, cur->num))
+        KERR("ERROR %s %d", cur->nm, cur->num);
+      }
+    else
+      KOUT("ERROR  %s", name);
+*/
+
       free_xyx(cur);
       }
     else
@@ -521,9 +541,7 @@ int dpdk_xyx_del(int llid, int tid, char *name, int num)
   int result = -1;
   char *lan;
   t_xyx_cnx *cur = find_xyx(name, num);
-  if (!cur)
-    KERR("ERROR %s %d", name, num);
-  else
+  if (cur)
     {
     lan = cur->lan.lan;
     if ((strlen(lan)) &&
@@ -552,6 +570,7 @@ int dpdk_xyx_del(int llid, int tid, char *name, int num)
       cur->lan.attached_lan_ok = 0;
       cur->lan.waiting_ack_del_lan = 1;
       }
+//    xyx_dpdk_start_stop_process(cur->name, 0);
     if (cur->endp_type == endp_type_tap)
       {
       if (fmt_tx_del_tap(0, name))
@@ -564,8 +583,8 @@ int dpdk_xyx_del(int llid, int tid, char *name, int num)
       }
     else if (cur->endp_type == endp_type_eths)
       {
-      if (fmt_tx_del_ethds(0, name, num))
-        KERR("ERROR %s %d", name, num);
+      if (fmt_tx_del_ethds(0, cur->nm, num))
+        KERR("ERROR %s %d", cur->nm, num);
       }
     else
       KOUT("ERROR  %s", name);
@@ -617,7 +636,8 @@ void dpdk_xyx_end_ovs(void)
   while(cur)
     {
     next = cur->next;
-    dpdk_xyx_del(0, 0, cur->nm, cur->num);
+    if (cur->endp_type != endp_type_eths)
+      dpdk_xyx_del(0, 0, cur->nm, cur->num);
     cur = next;
     }
 }
@@ -769,7 +789,7 @@ static void timer_end_eths2_ovs(void *data)
   char *name = (char *) data;
   t_xyx_cnx *cur = find_xyx_fullname(name);
   if (cur == NULL)
-    KERR("ERROR %s %d", cur->nm, cur->num);
+    KERR("ERROR %s", name);
   else
     {
     if (cur->eths_done_ok != 0)
@@ -780,6 +800,7 @@ static void timer_end_eths2_ovs(void *data)
         KERR("ERROR %s %d", cur->nm, cur->num);
       }
     }
+  clownix_free(name, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -818,7 +839,7 @@ static void timer_start_ovs_req(void *data)
         }
       else
         {
-        clownix_timeout_add(10, timer_end_eths2_ovs, data, NULL, NULL);
+        clownix_timeout_add(400, timer_end_eths2_ovs, data, NULL, NULL);
         }
       }
     else
@@ -859,7 +880,8 @@ void dpdk_xyx_resp_add(int is_ko, char *name, int num)
   else
     {
     cur->ovs_started_and_running = 1;
-    utils_send_status_ok(&(cur->add_llid),&(cur->add_tid));
+    if (cur->endp_type != endp_type_eths)
+      utils_send_status_ok(&(cur->add_llid),&(cur->add_tid));
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -874,21 +896,7 @@ void dpdk_xyx_resp_del(int is_ko, char *name, int num)
     {
     cur->to_be_destroyed = 1;
     if (is_ko)
-      {
-      KERR("ERROR %s %d", name, num);
       utils_send_status_ko(&(cur->lan.llid), &(cur->lan.tid), "error");
-      }
-    else
-      {
-      if (cur->endp_type == endp_type_tap)
-        KERR("DELETE TAP OK %s", name);
-      else if (cur->endp_type == endp_type_phy)
-        KERR("DELETE PHY OK %s", name);
-      else if (cur->endp_type == endp_type_eths)
-        KERR("DELETE ETH KVM SPY OK %s %d", name, num);
-      else
-        KOUT("ERROR %s %d", name, num);
-      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -957,13 +965,25 @@ int dpdk_xyx_lan_empty(char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dpdk_xyx_eths2_resp_ok(char *name, int num)
+void dpdk_xyx_eths2_resp_ok(int is_ok, char *name, int num)
 {
   t_xyx_cnx *cur = find_xyx(name, num);
   if (cur == NULL)
     KERR("ERROR %s %d", cur->nm, cur->num);
   else
-    cur->eths_done_ok = 1;
+    {
+    if (is_ok)
+      {
+      cur->eths_done_ok = 1;
+      utils_send_status_ok(&(cur->add_llid),&(cur->add_tid));
+      }
+    else
+      {
+      KERR("ERROR %s %d", name, num);
+      utils_send_status_ko(&(cur->lan.llid), &(cur->lan.tid), "error");
+      cur->to_be_destroyed = 1;
+      }
+    }
 }
 /*--------------------------------------------------------------------------*/
 

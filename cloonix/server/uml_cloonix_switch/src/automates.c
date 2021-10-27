@@ -237,6 +237,7 @@ void auto_self_destruction(int llid, int tid)
   glob_req_self_destruction = 1;
   llid_tid->llid = llid;
   llid_tid->tid = tid;
+  dpdk_ovs_destroy();
   clownix_timeout_add(10, action_self_destruction, (void *)llid_tid, 
                       NULL, NULL);
 }

@@ -127,9 +127,7 @@ static void timeout_delete_vm(void *data)
     {
     if (!vm->vm_to_be_killed)
       {
-      event_print("The pid was not found in the /proc, KILLING machine %s", 
-                  vm->kvm.name);
-      machine_death(vm->kvm.name, error_death_nopid);
+      poweroff_vm(0, 0, vm);
       }
     }
   clownix_free(data, __FUNCTION__);

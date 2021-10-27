@@ -530,12 +530,12 @@ static void timer_qemu_monitor_name(void *data)
         if (vm->count_no_pid_yet > 20)
           {
           KERR("ERROR QEMU PID ABSENT");
-          machine_death(name, error_death_pid_diseapeared);
+          poweroff_vm(0, 0, vm);
           }
         }
       else
         {
-        machine_death(name, error_death_pid_diseapeared);
+        poweroff_vm(0, 0, vm);
         }
       }
     else

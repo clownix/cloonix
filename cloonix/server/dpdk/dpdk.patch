@@ -1,6 +1,6 @@
 diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdinfo-cfile.py
 --- dpdk/buildtools/gen-pmdinfo-cfile.py	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-10-23 20:07:23.674084354 +0200
++++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-10-25 17:21:10.998095852 +0200
 @@ -14,7 +14,7 @@
          stdout=subprocess.PIPE, check=True, cwd=temp
      )
@@ -12,7 +12,7 @@ diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdi
      subprocess.run(pmdinfogen + paths + [output], check=True)
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
 --- dpdk/drivers/meson.build	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2021-10-23 20:07:23.674084354 +0200
++++ dpdk_tainted/drivers/meson.build	2021-10-25 17:21:10.998095852 +0200
 @@ -162,6 +162,7 @@
          tmp_lib = static_library('tmp_' + lib_name, sources,
                  include_directories: includes,
@@ -31,7 +31,7 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
          # create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost.h dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h
 --- dpdk/drivers/net/virtio/virtio_user/vhost.h	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h	2021-10-23 20:07:23.674084354 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h	2021-10-25 17:21:10.998095852 +0200
 @@ -15,6 +15,26 @@
  #include "../virtio_logs.h"
  #include "../virtqueue.h"
@@ -61,7 +61,7 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost.h dpdk_tainted/drivers/net/
  	unsigned int num;
 diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c
 --- dpdk/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-23 20:07:23.674084354 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-25 17:22:20.502092864 +0200
 @@ -104,6 +104,23 @@
  #define VHOST_USER_PAYLOAD_SIZE \
  	(sizeof(struct vhost_user_msg) - VHOST_USER_HDR_SIZE)
@@ -108,9 +108,27 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers
  		if (ret < 0) {
  			PMD_DRV_LOG(ERR, "Failed to recv msg payload: %s", strerror(errno));
  			return -1;
+@@ -513,6 +536,8 @@
+ 		.payload.state = *state,
+ 	};
+ 
++//cloonix TOLOOKAT
++//KERR("BEFORE WRITE vhost_user_set_vring pid:%d", getpid());
+ 	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
+ 	if (ret < 0) {
+ 		PMD_DRV_LOG(ERR, "Failed to set vring state (request %d)", req);
+@@ -525,6 +550,8 @@
+ static int
+ vhost_user_set_vring_enable(struct virtio_user_dev *dev, struct vhost_vring_state *state)
+ {
++//cloonix TOLOOKAT
++//KERR("BEFORE WRITE vhost_user_set_vringenable pid:%d", getpid());
+ 	return vhost_user_set_vring(dev, VHOST_USER_SET_VRING_ENABLE, state);
+ }
+ 
 diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c
 --- dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-23 20:07:23.674084354 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-25 17:23:03.470091017 +0200
 @@ -23,6 +23,7 @@
  
  #define VIRTIO_USER_MEM_EVENT_CLB_NAME "virtio_user_mem_event_clb"
@@ -131,19 +149,18 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/dr
  			return;
  		}
  
-@@ -443,6 +447,9 @@
+@@ -443,6 +447,8 @@
  	if (msl->external)
  		return;
  
 +//cloonix TOLOOKAT
-+KERR("ERROR TOLOOKAT RETURN PREVENTS DEADLOCK pid:%d", getpid());
-+return;
++KERR("ERROR TOLOOKAT MAY DEADLOCK pid:%d", getpid());
  	pthread_mutex_lock(&dev->mutex);
  
  	if (dev->started == false)
 diff -Naur dpdk/lib/eal/common/eal_common_devargs.c dpdk_tainted/lib/eal/common/eal_common_devargs.c
 --- dpdk/lib/eal/common/eal_common_devargs.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/common/eal_common_devargs.c	2021-10-23 20:07:23.674084354 +0200
++++ dpdk_tainted/lib/eal/common/eal_common_devargs.c	2021-10-25 17:21:10.998095852 +0200
 @@ -88,8 +88,11 @@
  	/* Split each sub-lists. */
  	nblayer = devargs_layer_count(devstr);
@@ -158,7 +175,7 @@ diff -Naur dpdk/lib/eal/common/eal_common_devargs.c dpdk_tainted/lib/eal/common/
  	}
 diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/eal_common_options.c
 --- dpdk/lib/eal/common/eal_common_options.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-10-23 20:07:23.674084354 +0200
++++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-10-25 17:21:10.998095852 +0200
 @@ -125,7 +125,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
@@ -172,7 +189,7 @@ diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/
  /*
 diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
 --- dpdk/lib/eal/linux/eal.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/linux/eal.c	2021-10-23 20:07:23.674084354 +0200
++++ dpdk_tainted/lib/eal/linux/eal.c	2021-10-25 17:21:10.998095852 +0200
 @@ -27,6 +27,7 @@
  #endif
  #include <linux/version.h>
@@ -349,7 +366,7 @@ diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
  		enum rte_iova_mode iova_mode = rte_bus_get_iommu_class();
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
 --- dpdk/lib/meson.build	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2021-10-23 20:07:23.674084354 +0200
++++ dpdk_tainted/lib/meson.build	2021-10-25 17:21:10.998095852 +0200
 @@ -197,6 +197,7 @@
              c_args: cflags,
              dependencies: static_deps,
@@ -368,7 +385,7 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
              include_directories: includes,
 diff -Naur dpdk/meson_options.txt dpdk_tainted/meson_options.txt
 --- dpdk/meson_options.txt	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/meson_options.txt	2021-10-23 20:08:00.654734540 +0200
++++ dpdk_tainted/meson_options.txt	2021-10-25 17:21:11.002095852 +0200
 @@ -32,7 +32,7 @@
         'Path to the kernel for building kernel modules. Headers must be in $kernel_dir or $kernel_dir/build. Modules will be installed in /lib/modules.')
  option('machine', type: 'string', value: 'auto', description:

@@ -356,8 +356,8 @@ static void timer_connect_qmp(void *data)
           qrec->count_conn_timeout += 1;
           if (qrec->count_conn_timeout > 150)
             {
-            KERR("%s", pname);
-            machine_death(pname, error_death_noovstime);
+            KERR("ERROR %s", pname);
+            poweroff_vm(0, 0, vm);
             qrec_free(qrec, 1);
             }
           else

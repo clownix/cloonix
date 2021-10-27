@@ -114,21 +114,13 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 void end_clean_unlink(void)
 {
   unlink(g_ctrl_path);
-  rte_exit(EXIT_SUCCESS, "Exit a2b");
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void rpct_recv_kil_req(int llid, int tid)
 {
-  if (g_started_vhost)
-    {
-    vhost_client_end_and_exit();
-    }
-  else
-    {
-    end_clean_unlink();
-    }
+  vhost_client_end_and_exit();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -280,6 +272,17 @@ int main (int argc, char *argv[])
     KERR("%s exists ERASING", g_ctrl_path);
     unlink(g_ctrl_path);
     }
+  if (!access(g_a2b0_socket, F_OK))
+    {
+    KERR("%s exists ERASING", g_a2b0_socket);
+    unlink(g_a2b0_socket);
+    }
+  if (!access(g_a2b1_socket, F_OK))
+    {
+    KERR("%s exists ERASING", g_a2b1_socket);
+    unlink(g_a2b1_socket);
+    }
+
   vhost_client_init();
   msg_mngt_init("a2b_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
