@@ -890,9 +890,7 @@ void dpdk_xyx_resp_add(int is_ko, char *name, int num)
 void dpdk_xyx_resp_del(int is_ko, char *name, int num)
 {
   t_xyx_cnx *cur = find_xyx(name, num);
-  if (!cur)
-    KERR("ERROR %s %d", name, num);
-  else
+  if (cur)
     {
     cur->to_be_destroyed = 1;
     if (is_ko)

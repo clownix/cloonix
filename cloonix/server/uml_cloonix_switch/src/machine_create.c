@@ -354,28 +354,13 @@ void machine_recv_add_vm(int llid, int tid, t_topo_kvm *kvm, int vm_id)
 /*****************************************************************************/
 void machine_death( char *name, int error_death)
 {
-  int i;
   t_vm *vm = cfg_get_vm(name);
-  t_eth_table *eth_tab;
   if ((!vm) || (vm->vm_to_be_killed == 1))
     {
     KERR("%s %d", name, error_death);
     }
   else
     {
-
-    eth_tab = vm->kvm.eth_table;
-    for (i=0; i<vm->kvm.nb_tot_eth; i++)
-      {
-      if ((eth_tab[i].eth_type == endp_type_ethd) ||
-          (eth_tab[i].eth_type == endp_type_eths))
-        {
-        KERR("ERROR %s %d", vm->kvm.name, i);
-        if (dpdk_kvm_del(0, 0, vm->kvm.name, i, eth_tab[i].eth_type))
-          KERR("ERROR %s %d", vm->kvm.name, i);
-        }
-      }
-
     vm->vm_to_be_killed = 1;
     if ((error_death) && 
         (error_death != error_death_qmp) &&

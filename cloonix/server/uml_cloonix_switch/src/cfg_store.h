@@ -56,6 +56,7 @@ typedef struct t_vm
   int pid_of_cp_clone;
   int locked_vm;
   int vm_to_be_killed;
+  int vm_poweroff_done;
   int count_no_pid_yet;
   int qmp_conn;
   t_wake_up_eths *wake_up_eths;

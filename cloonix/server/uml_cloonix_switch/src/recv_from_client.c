@@ -266,31 +266,48 @@ static void timer_del_vm(void *data)
     {
     if (llid)
       send_status_ok(llid, tid, "delvm");
+    } 
+  else if (tz->nb_try == 0)
+    {
+    if (!(vm->kvm.vm_config_flags & VM_FLAG_CLOONIX_AGENT_PING_OK))
+      {
+      qmp_request_qemu_halt(tz->kvm.name, 0, 0);
+      }
+    else
+      {
+      doors_send_command(get_doorways_llid(), 0, tz->kvm.name, HALT_REQUEST);
+      }
+    tz->nb_try = 1;
+    clownix_timeout_add(250, timer_del_vm, (void *) tz, NULL, NULL);
     }
-  else
+  else if (vm->vm_to_be_killed == 0)
+    {
+     machine_death(kvm->name, error_death_noerr); 
+     clownix_timeout_add(250, timer_del_vm, (void *) tz, NULL, NULL);
+    }
+  else if (tz->nb_try == 1)
     {
     pid = suid_power_get_pid(vm->kvm.vm_id);
-    if ((pid == 0) || (vm->vm_to_be_killed))
+    if (pid == 0)
       {
       if (llid)
         send_status_ok(llid, tid, "delvm");
       }
-    else if (tz->nb_try == 0)
-      {
-      if (!(vm->kvm.vm_config_flags & VM_FLAG_CLOONIX_AGENT_PING_OK))
-        qmp_request_qemu_halt(tz->kvm.name, 0, 0);
-      else
-        doors_send_command(get_doorways_llid(), 0, tz->kvm.name, HALT_REQUEST);
-      tz->nb_try = 1;
-      clownix_timeout_add(250, timer_del_vm, (void *) tz, NULL, NULL);
-      }
-    else if (tz->nb_try == 1)
+    else
       {
       tz->nb_try = 2;
-      machine_death(kvm->name, error_death_noerr);
-      clownix_timeout_add(500, timer_del_vm, (void *) tz, NULL, NULL);
+      clownix_timeout_add(250, timer_del_vm, (void *) tz, NULL, NULL);
       }
-    else if (tz->nb_try == 2)
+    }
+  else if (tz->nb_try == 2)
+    {
+    pid = suid_power_get_pid(vm->kvm.vm_id);
+    if (pid == 0)
+      {
+      if (llid)
+        send_status_ok(llid, tid, "delvm");
+      }
+    else
       {
       snprintf(err, MAX_PATH_LEN-1, "FAILED HALT %s", kvm->name);
       KERR("ERROR %s", err);
@@ -298,6 +315,8 @@ static void timer_del_vm(void *data)
         send_status_ko(llid, tid, err);
       }
     }
+  else
+    KERR("ERROR IMPOSSIBLE");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -307,22 +326,26 @@ void poweroff_vm(int llid, int tid, t_vm *vm)
   t_timer_zombie *tz;
   t_eth_table *eth_tab = vm->kvm.eth_table;
   int i;
-  for (i=0; i<vm->kvm.nb_tot_eth; i++)
+  if (vm->vm_poweroff_done == 0)
     {
-    if ((eth_tab[i].eth_type == endp_type_ethd) ||
-        (eth_tab[i].eth_type == endp_type_eths))
+    vm->vm_poweroff_done = 1;
+    for (i=0; i<vm->kvm.nb_tot_eth; i++)
       {
-      if (dpdk_kvm_del(0, 0, vm->kvm.name, i, eth_tab[i].eth_type))
-        KERR("ERROR %s %d", vm->kvm.name, i);
-      eth_tab[i].eth_type = endp_type_none;
+      if ((eth_tab[i].eth_type == endp_type_ethd) ||
+          (eth_tab[i].eth_type == endp_type_eths))
+        {
+        if (dpdk_kvm_del(0, 0, vm->kvm.name, i, eth_tab[i].eth_type))
+          KERR("ERROR %s %d", vm->kvm.name, i);
+        eth_tab[i].eth_type = endp_type_none;
+        }
       }
+    tz = (t_timer_zombie *) clownix_malloc(sizeof(t_timer_zombie), 3);
+    memset(tz, 0, sizeof(t_timer_zombie));
+    tz->llid = llid;
+    tz->tid = tid;
+    memcpy(&(tz->kvm), &(vm->kvm), sizeof(t_topo_kvm));
+    clownix_timeout_add(300, timer_del_vm, (void *) tz, NULL, NULL);
     }
-  tz = (t_timer_zombie *) clownix_malloc(sizeof(t_timer_zombie), 3);
-  memset(tz, 0, sizeof(t_timer_zombie));
-  tz->llid = llid;
-  tz->tid = tid;
-  memcpy(&(tz->kvm), &(vm->kvm), sizeof(t_topo_kvm));
-  clownix_timeout_add(400, timer_del_vm, (void *) tz, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1494,6 +1517,7 @@ static void del_all_start(void)
 static void timer_del_all_end(void *data)
 {
   t_timer_del *td = (t_timer_del *) data;;
+KERR("DELALL 5");
   suid_power_req_kill_all();
   if (td->kill_cloonix)
     auto_self_destruction(td->llid, td->tid);
@@ -1514,6 +1538,7 @@ static void timer_del_all(void *data)
   int i, nb_vm, found = 0;
   t_timer_del *td = (t_timer_del *) data;;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
+KERR("DELALL 2");
   for (i=0; i<nb_vm; i++)
     {
     if (suid_power_get_pid(vm->kvm.vm_id))
@@ -1526,9 +1551,11 @@ static void timer_del_all(void *data)
   found += dpdk_d2d_get_qty();
   if (found)
     {
+KERR("DELALL 3");
     td->count += 1;
     if (td->count > 50)
       {
+KERR("DELALL ERR3");
       send_status_ko(td->llid, td->tid, "fail delall");
       clownix_free(td, __FUNCTION__);
       }
@@ -1537,6 +1564,7 @@ static void timer_del_all(void *data)
     }
   else
     {
+KERR("DELALL 4");
     dpdk_d2d_all_del();
     clownix_timeout_add(400, timer_del_all_end, (void *) td, NULL, NULL);
     }
@@ -1552,6 +1580,7 @@ void recv_del_all(int llid, int tid)
   memset(td, 0, sizeof(t_timer_del));
   td->llid = llid;
   td->tid = tid;
+KERR("DELALL 1");
   clownix_timeout_add(300, timer_del_all, (void *) td, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -1566,6 +1595,7 @@ void recv_kill_uml_clownix(int llid, int tid)
   td->llid = llid;
   td->tid = tid;
   td->kill_cloonix = 1;
+KERR("KILLDELALL 1");
   clownix_timeout_add(300, timer_del_all, (void *) td, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
