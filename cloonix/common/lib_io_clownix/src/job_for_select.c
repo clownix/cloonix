@@ -51,7 +51,6 @@ typedef struct t_job_idx_pool
   int fifo_free_index[MAX_JOBS_MASK+1];
   uint32_t volatile read_idx;
   uint32_t volatile write_idx;
-  uint32_t volatile lock;
   } t_job_idx_pool;
 /*---------------------------------------------------------------------------*/
 
@@ -85,7 +84,6 @@ static void job_idx_pool_init(t_jfs_obj *jfs)
     jfs->job_idx_pool.fifo_free_index[i] = i+1;
   jfs->job_idx_pool.read_idx = 0;
   jfs->job_idx_pool.write_idx = 0;
-  jfs->job_idx_pool.lock = 0;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -94,7 +92,6 @@ static int job_idx_pool_alloc(t_jfs_obj *jfs)
 {
   int job_idx = 0;
   uint32_t read_idx, write_idx, new_read_idx;
-  while (__sync_lock_test_and_set(&(jfs->job_idx_pool.lock), 1));
   read_idx  = jfs->job_idx_pool.read_idx;
   write_idx = jfs->job_idx_pool.write_idx;
   if ((write_idx - (read_idx+1)) & MAX_JOBS_MASK)
@@ -108,7 +105,6 @@ static int job_idx_pool_alloc(t_jfs_obj *jfs)
                                     read_idx, new_read_idx) != read_idx)
       KOUT("%x %x", new_read_idx, read_idx);
     }
-  __sync_lock_release(&(jfs->job_idx_pool.lock));
   return job_idx;
 }
 /*---------------------------------------------------------------------------*/
@@ -117,7 +113,6 @@ static int job_idx_pool_alloc(t_jfs_obj *jfs)
 static void job_idx_pool_release(t_jfs_obj *jfs, int job_idx)
 {
   uint32_t read_idx, write_idx, new_write_idx;
-  while (__sync_lock_test_and_set(&(jfs->job_idx_pool.lock), 1));
   read_idx  = jfs->job_idx_pool.read_idx;
   write_idx = jfs->job_idx_pool.write_idx;
   if ((read_idx - write_idx) & MAX_JOBS_MASK)
@@ -133,7 +128,6 @@ static void job_idx_pool_release(t_jfs_obj *jfs, int job_idx)
     }
   else
     KOUT("%d", job_idx);
-  __sync_lock_release(&(jfs->job_idx_pool.lock));
 }
 /*---------------------------------------------------------------------------*/
 

@@ -98,7 +98,13 @@ static int my_popen(char *dpdk_dir, char *argv[], char *env[])
     if (timeout_pid == 0)
       {
       sleep(4);
-      KERR("TIMEOUT");
+      KERR("TIMEOUT SLOW CMD 1 %s", make_cmd_str(argv));
+      sleep(4);
+      KERR("TIMEOUT SLOW CMD 2 %s", make_cmd_str(argv));
+      sleep(4);
+      KERR("TIMEOUT SLOW CMD 3 %s", make_cmd_str(argv));
+      sleep(4);
+      KERR("TIMEOUT FAILURE CMD %s", make_cmd_str(argv));
       exit(1);
       }
     exited_pid = wait(&chld_state);
@@ -144,6 +150,7 @@ int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
   memset(argv, 0, NB_ARG * sizeof(char *));
   for (i=0; i<nb; i++)
     argv[i] = arg[i];
+  argv[i] = NULL;
   while(protect_reentry)
     {
     KERR("ERROR REENTRY my_popen");

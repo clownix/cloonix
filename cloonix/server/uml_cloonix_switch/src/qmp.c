@@ -528,7 +528,7 @@ static void dialog_resp_return(t_qmp *qmp, int llid, int tid, int status)
       {
       if (qmp_dialog_req(qmp->name, llid, tid, "", dialog_resp_save))
         {
-        KERR("%s", qmp->name);
+        KERR("ERROR %s", qmp->name);
         if ((llid) && (llid_trace_exists(llid)))
           send_status_ko(llid, tid, "qmp save ko");
         }
@@ -641,11 +641,12 @@ void qmp_msg_recv(char *name, char *msg)
 /****************************************************************************/
 static void timer_fifo_visit(void *data)
 {
-  t_qmp *cur = g_head_qmp;
+  t_qmp *next, *cur = g_head_qmp;
   t_qmp_req *req;
   t_vm *vm;
   while(cur)
     {
+    next = cur->next;
     req = cur->head_qmp_req;
     if (req)
       {
@@ -686,7 +687,7 @@ static void timer_fifo_visit(void *data)
           }
         }
       }
-    cur = cur->next;
+    cur = next;
     }
   clownix_timeout_add(10, timer_fifo_visit, NULL, NULL, NULL);
 }

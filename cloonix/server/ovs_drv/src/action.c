@@ -102,20 +102,39 @@ void action_del_lan_phy(char *respb, char *lan, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void action_add_ethds(char *respb, char *name, int num)
+void action_add_ethd(char *respb, char *name, int num)
 {
   char *bin = get_ovs_bin();
   char *db = get_dpdk_dir();
-  if (ovs_cmd_add_ethds(bin, db, name, num))
+  if (ovs_cmd_add_ethd(bin, db, name, num))
     {
     snprintf(respb, MAX_PATH_LEN-1,
-             "KO cloonixovs_add_ethds name=%s num=%d", name, num);
+             "KO cloonixovs_add_ethd name=%s num=%d", name, num);
     KERR("%s", respb);
     }
   else
     {
     snprintf(respb, MAX_PATH_LEN-1,
-             "OK cloonixovs_add_ethds name=%s num=%d", name, num);
+             "OK cloonixovs_add_ethd name=%s num=%d", name, num);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void action_add_eths1(char *respb, char *name, int num)
+{
+  char *bin = get_ovs_bin();
+  char *db = get_dpdk_dir();
+  if (ovs_cmd_add_eths1(bin, db, name, num))
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_eths1 name=%s num=%d", name, num);
+    KERR("%s", respb);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_add_eths1 name=%s num=%d", name, num);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -140,20 +159,39 @@ void action_add_eths2(char *respb, char *name, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void action_del_ethds(char *respb, char *name, int num)
+void action_del_eths(char *respb, char *name, int num)
 {
   char *bin = get_ovs_bin();
   char *db = get_dpdk_dir();
-  if (ovs_cmd_del_ethds(bin, db, name, num))
+  if (ovs_cmd_del_eths(bin, db, name, num))
     {
     snprintf(respb, MAX_PATH_LEN-1,
-             "KO cloonixovs_del_ethds name=%s num=%d", name, num);
+             "KO cloonixovs_del_eths name=%s num=%d", name, num);
     KERR("%s", respb);
     }
   else
     {
     snprintf(respb, MAX_PATH_LEN-1,
-             "OK cloonixovs_del_ethds name=%s num=%d", name, num);
+             "OK cloonixovs_del_eths name=%s num=%d", name, num);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void action_del_ethd(char *respb, char *name, int num)
+{
+  char *bin = get_ovs_bin();
+  char *db = get_dpdk_dir();
+  if (ovs_cmd_del_ethd(bin, db, name, num))
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_ethd name=%s num=%d", name, num);
+    KERR("%s", respb);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_del_ethd name=%s num=%d", name, num);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -619,7 +657,6 @@ void action_req_destroy(void)
   char *db = get_dpdk_dir();
   int ovsdb_pid = get_ovsdb_pid();
   int ovs_pid = get_ovs_pid();
-  KERR("KILLING OVS AND OVSDB ovs_pid=%d ovsdb_pid=%d", ovs_pid, ovsdb_pid);
   if (ovs_pid > 0)
     kill(ovs_pid, SIGKILL);
   if (ovsdb_pid > 0)

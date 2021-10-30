@@ -45,7 +45,6 @@
 static int g_rx_enable;
 static int g_tx_enable;
 static int g_created;
-static char g_memid[MAX_NAME_LEN];
 static char g_d2d_socket[MAX_PATH_LEN];
 
 static int g_rxtx_worker;
@@ -55,6 +54,8 @@ static struct vhost_device_ops g_virtio_net_device_ops;
 
 static uint32_t volatile g_lock;
 static int g_running_lcore;
+
+static struct rte_mempool *g_mpool;
 
 void end_clean_unlink(void);
 char *get_net_name(void);
@@ -117,25 +118,23 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rxtx_worker(void *arg __rte_unused)
+static int rxtx_worker(void *data)
 {
   struct rte_mbuf *pkts_rx[MAX_PKT_BURST];
   struct rte_mbuf *pkts_tx[MAX_PKT_BURST];
-  int sid, i, nb_tx_offst, nb, nb_rx,  nb_tx = 0;
-  struct rte_mempool *mpool;
   uint32_t mcache = MBUF_MCACHE;
   uint32_t mbufs = MBUF_MAX;
   uint32_t msize = MBUF_SIZE;
-
-  if (rte_lcore_id() != g_running_lcore)
-    KOUT(" ");
-
-  sid = rte_lcore_to_socket_id(rte_lcore_id());
+  int i, nb_tx_offst, nb, nb_rx,  nb_tx = 0;
+  char *memid = (char *) data;
+  int sid = rte_lcore_to_socket_id(rte_lcore_id());
   if (sid < 0)
     KOUT("ERROR SOCKET ID");
-  mpool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
-  if (!mpool)
+
+  g_mpool = rte_pktmbuf_pool_create(memid, mbufs, mcache, 0, msize, sid);
+  if (!g_mpool)
     KOUT("ERROR MEMORY POOL CREATE %d", rte_errno);
+
 
   g_rxtx_worker_active = 1;
 
@@ -147,7 +146,7 @@ static int rxtx_worker(void *arg __rte_unused)
       {
       if (nb_tx == 0)
         {
-        udp_rx_burst(&nb_tx, pkts_tx, mpool);
+        udp_rx_burst(&nb_tx, pkts_tx, g_mpool);
         nb_tx_offst = 0;
         }
       if (nb_tx != 0)
@@ -161,18 +160,16 @@ static int rxtx_worker(void *arg __rte_unused)
         if (nb_tx_offst == nb_tx)
           nb_tx = 0;
         }
-      nb_rx = rte_vhost_dequeue_burst(0, 1, mpool, pkts_rx, MAX_PKT_BURST);
+      nb_rx = rte_vhost_dequeue_burst(0, 1, g_mpool, pkts_rx, MAX_PKT_BURST);
       while(nb_rx)
         {
         if (udp_tx_burst(nb_rx, &(pkts_rx[0])))
           break;
-        nb_rx = rte_vhost_dequeue_burst(0, 1, mpool, pkts_rx, MAX_PKT_BURST);
+        nb_rx = rte_vhost_dequeue_burst(0, 1, g_mpool, pkts_rx, MAX_PKT_BURST);
         }
       }
     vhost_lock_release();
     }
-  rte_vhost_driver_unregister(g_d2d_socket);
-  rte_mempool_free(mpool);
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -187,6 +184,10 @@ void vhost_client_stop(void)
     g_running_lcore = -1;
     }
   udp_close();
+
+  rte_vhost_driver_unregister(g_d2d_socket);
+  rte_mempool_free(g_mpool);
+
   end_clean_unlink();
   rte_exit(EXIT_SUCCESS, NULL);
 }
@@ -210,17 +211,15 @@ void vhost_client_start(char *memid, char *path)
 
   sid = rte_lcore_to_socket_id(rte_lcore_id());
   if (sid < 0)
-    KOUT(" ");
+    KOUT("ERROR SOCKET ID");
 
   g_lock = 0;
   memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
   memset(g_d2d_socket, 0, MAX_PATH_LEN);
-  memset(g_memid, 0, MAX_NAME_LEN);
   g_virtio_net_device_ops.new_device          = virtio_new_device;
   g_virtio_net_device_ops.destroy_device      = virtio_destroy_device;
   g_virtio_net_device_ops.vring_state_changed = virtio_vring_state_changed;
   strncpy(g_d2d_socket, path, MAX_PATH_LEN-1);
-  strncpy(g_memid, memid, MAX_NAME_LEN-1);
   g_rxtx_worker = 1;
   err = rte_vhost_driver_register(path, flags);
   if (err)
@@ -242,7 +241,7 @@ void vhost_client_start(char *memid, char *path)
     g_running_lcore = i;
   else
     KOUT(" ");
-  rte_eal_remote_launch(rxtx_worker, NULL, g_running_lcore);
+  rte_eal_remote_launch(rxtx_worker, (void *) memid, g_running_lcore);
   while(g_rxtx_worker_active == 0)
     {
     usleep(10000);
@@ -259,7 +258,6 @@ void vhost_client_init(void)
   g_rx_enable = 0;
   g_tx_enable = 0;
   g_created = 0;
-  memset(g_memid, 0, MAX_NAME_LEN);
   memset(g_d2d_socket, 0, MAX_PATH_LEN);
   g_rxtx_worker = 0;
   g_rxtx_worker_active = 0;

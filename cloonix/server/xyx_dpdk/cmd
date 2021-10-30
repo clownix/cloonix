@@ -42,6 +42,7 @@ cat > meson.build << EOF
 project('cloonix_xyx_dpdk', 'c')
 
 cflags = ['-march=native']
+cflags += ['-g']
 cflags += ['-fPIC']
 cflags += ['-DALLOW_EXPERIMENTAL_API']
 

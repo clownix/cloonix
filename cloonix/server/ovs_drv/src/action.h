@@ -15,9 +15,11 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void action_add_ethds(char *respb, char *name, int num);
+void action_add_ethd(char *respb, char *name, int num);
+void action_del_ethd(char *respb, char *name, int num);
+void action_add_eths1(char *respb, char *name, int num);
 void action_add_eths2(char *respb, char *name, int num);
-void action_del_ethds(char *respb, char *name, int num);
+void action_del_eths(char *respb, char *name, int num);
 void action_add_lan_ethd(char *respb, char *lan, char *name, int num);
 void action_del_lan_ethd(char *respb, char *lan, char *name, int num);
 void action_add_lan_eths(char *respb, char *lan, char *name, int num);

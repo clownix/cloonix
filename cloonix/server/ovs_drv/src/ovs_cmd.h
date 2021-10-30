@@ -20,9 +20,12 @@ int ovs_cmd_del_lan_ethd(char *ovs, char *dpdk, char *lan, char *name, int num);
 int ovs_cmd_add_lan_eths(char *ovs, char *dpdk, char *lan, char *name, int num);
 int ovs_cmd_del_lan_eths(char *ovs, char *dpdk, char *lan, char *name, int num);
 
-int ovs_cmd_add_ethds(char *ovs, char *dpdk, char *name, int num);
+int ovs_cmd_add_ethd(char *ovs, char *dpdk, char *name, int num);
+int ovs_cmd_del_ethd(char *ovs, char *dpdk, char *name, int num);
+
+int ovs_cmd_add_eths1(char *ovs, char *dpdk, char *name, int num);
 int ovs_cmd_add_eths2(char *ovs, char *dpdk, char *name, int num);
-int ovs_cmd_del_ethds(char *ovs, char *dpdk, char *name, int num);
+int ovs_cmd_del_eths(char *ovs, char *dpdk, char *name, int num);
 
 int ovs_cmd_add_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
 int ovs_cmd_del_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name);

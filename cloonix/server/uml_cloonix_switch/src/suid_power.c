@@ -181,7 +181,7 @@ static void timer_monitoring(void *data)
     g_nb_pid_resp_warning++;
   else
     g_nb_pid_resp_warning = 0;
-  if (g_nb_pid_resp_warning > 45)
+  if (g_nb_pid_resp_warning > 100)
     {
     if (g_abs_beat_timer)
       {
@@ -200,7 +200,7 @@ static void timer_monitoring(void *data)
     }
   else
     {
-    if (g_nb_pid_resp_warning == 20)
+    if (g_nb_pid_resp_warning == 50)
       KERR("WARNING MONITOR %d", g_nb_pid_resp_warning);
     g_abs_beat_timer = 0;
     g_ref_timer = 0;
@@ -494,12 +494,27 @@ void suid_power_kill_vm(int vm_id)
   if ((g_llid) && (msg_exist_channel(g_llid)))
     {
     memset(req, 0, MAX_PATH_LEN);
-    snprintf(req, MAX_PATH_LEN-1, "cloonixsuid_req_kill vm_id: %d", vm_id);
+    snprintf(req, MAX_PATH_LEN-1, "cloonixsuid_req_vm_kill vm_id: %d", vm_id);
     hop_event_hook(g_llid, FLAG_HOP_SIGDIAG, req);
     rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, req);
     }
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void suid_power_kill_pid(int pid)
+{
+  char req[MAX_PATH_LEN];
+  if ((g_llid) && (msg_exist_channel(g_llid)))
+    {
+    memset(req, 0, MAX_PATH_LEN);
+    snprintf(req, MAX_PATH_LEN-1, "cloonixsuid_req_pid_kill pid: %d", pid);
+    hop_event_hook(g_llid, FLAG_HOP_SIGDIAG, req);
+    rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, req);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 void suid_power_ifup_phy(char *phy)
@@ -538,23 +553,6 @@ int suid_power_rec_name(char *name, int on)
     {
     memset(req, 0, MAX_PATH_LEN);
     snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_rec_name: %s on: %d", name, on);
-    hop_event_hook(g_llid, FLAG_HOP_SIGDIAG, req);
-    rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, req);
-    result = 0;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int suid_power_req_kill_all(void)
-{
-  int result = -1;
-  char req[MAX_PATH_LEN];
-  if ((g_llid) && (msg_exist_channel(g_llid)))
-    {
-    memset(req, 0, MAX_PATH_LEN);
-    snprintf(req,MAX_PATH_LEN-1,"cloonixsuid_req_kill_all");
     hop_event_hook(g_llid, FLAG_HOP_SIGDIAG, req);
     rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, req);
     result = 0;

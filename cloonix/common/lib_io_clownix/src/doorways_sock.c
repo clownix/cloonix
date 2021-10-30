@@ -1004,8 +1004,6 @@ int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
         KERR("%d %d", (int) dchan->tot_txq_size, MAX_TOT_LEN_DOORWAYS_Q);
         }
       }
-    else
-      KERR(" ");
     }
   return result;
 }

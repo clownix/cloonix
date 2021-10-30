@@ -51,8 +51,7 @@
 
 
 
-static struct rte_mempool *g_mempool;
-static char g_memid[MAX_NAME_LEN];
+static struct rte_mempool *g_mpool;
 static char g_nat_socket[MAX_PATH_LEN];
 static int  g_rx_enable;
 static int  g_tx_enable;
@@ -72,7 +71,7 @@ void end_clean_unlink(void);
 /****************************************************************************/
 struct rte_mempool *get_rte_mempool(void)
 {
-  return g_mempool;
+  return g_mpool;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -132,23 +131,24 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rxtx_worker(void *arg __rte_unused)
+static int rxtx_worker(void *data)
 {
   struct rte_mbuf *pkts_rx[MAX_PKT_BURST];
   struct rte_mbuf *mbuf;
-  int sid, i, nb;
+  int i, nb;
   uint32_t mcache = MBUF_MCACHE;
   uint32_t mbufs = MBUF_MAX;
   uint32_t msize = MBUF_SIZE;
+  char *memid = (char *) data;
+  int sid = rte_lcore_to_socket_id(rte_lcore_id());
+  
 
-  if (rte_lcore_id() != g_running_lcore)
-    KOUT(" ");
-  sid = rte_lcore_to_socket_id(rte_lcore_id());
   if (sid < 0)
     KOUT(" ");
-  g_mempool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
-  if (!g_mempool)
-    KOUT("%s %d", g_memid, rte_errno);
+
+  g_mpool = rte_pktmbuf_pool_create(memid, mbufs, mcache, 0, msize, sid);
+  if (!g_mpool)
+    KOUT("%d", rte_errno);
 
   g_rxtx_worker_active = 1;
 
@@ -173,7 +173,7 @@ static int rxtx_worker(void *arg __rte_unused)
         mbuf = txq_dpdk_dequeue_begin();
         }
 
-      nb = rte_vhost_dequeue_burst(0, 1, g_mempool, pkts_rx, MAX_PKT_BURST);
+      nb = rte_vhost_dequeue_burst(0, 1, g_mpool, pkts_rx, MAX_PKT_BURST);
       for (i=0; i<nb; i++)
         rxq_dpdk_enqueue(pkts_rx[i]);
       rxtx_job_trigger();
@@ -183,8 +183,6 @@ static int rxtx_worker(void *arg __rte_unused)
   tcp_flush_all();
   txq_dpdk_flush();
   rxq_dpdk_flush();
-  rte_vhost_driver_unregister(g_nat_socket);
-  rte_mempool_free(g_mempool);
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -198,6 +196,8 @@ void vhost_client_end_and_exit(void)
     rte_eal_wait_lcore(g_running_lcore);
     g_running_lcore = -1;
     }
+  rte_vhost_driver_unregister(g_nat_socket);
+  rte_mempool_free(g_mpool);
   end_clean_unlink();
   rte_exit(EXIT_SUCCESS, NULL);
 }
@@ -212,12 +212,10 @@ void vhost_client_start(char *memid, char *path)
 
   memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
   memset(g_nat_socket, 0, MAX_PATH_LEN);
-  memset(g_memid, 0, MAX_NAME_LEN);
   g_virtio_net_device_ops.new_device          = virtio_new_device;
   g_virtio_net_device_ops.destroy_device      = virtio_destroy_device;
   g_virtio_net_device_ops.vring_state_changed = virtio_vring_state_changed;
   strncpy(g_nat_socket, path, MAX_PATH_LEN-1);
-  strncpy(g_memid, memid, MAX_NAME_LEN-1);
   g_rxtx_worker = 1;
   dhcp_init();
   udp_init();
@@ -234,9 +232,11 @@ void vhost_client_start(char *memid, char *path)
     g_running_lcore = i;
   else
     KOUT(" ");
+
   sid = rte_lcore_to_socket_id(rte_lcore_id());
   if (sid < 0)
     KOUT(" ");
+
   err = rte_vhost_driver_register(path, flags);
   if (err)
     KOUT(" ");
@@ -249,7 +249,7 @@ void vhost_client_start(char *memid, char *path)
   err = rte_vhost_driver_start(path);
   if (err)
     KOUT(" ");
-  rte_eal_remote_launch(rxtx_worker, NULL, g_running_lcore);
+  rte_eal_remote_launch(rxtx_worker, (void *) memid, g_running_lcore);
   while(g_rxtx_worker_active == 0)
     {
     usleep(10000);
@@ -263,11 +263,10 @@ void vhost_client_start(char *memid, char *path)
 void vhost_client_init(void)
 { 
   g_running_lcore = -1;
-  g_mempool = NULL;
+  g_mpool = NULL;
   g_rx_enable = 0;
   g_tx_enable = 0;
   g_created = 0;
-  memset(g_memid, 0, MAX_NAME_LEN);
   memset(g_nat_socket, 0, MAX_PATH_LEN);
   g_rxtx_worker = 0;
   g_rxtx_worker_active = 0;

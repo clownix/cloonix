@@ -60,7 +60,8 @@ static int g_running_lcore;
 static t_wrk g_wrk[2];
 void end_clean_unlink(void);
 static char g_name[MAX_NAME_LEN];
-static char g_memid[MAX_NAME_LEN];
+static struct rte_mempool *g_mpool;
+
 
 /****************************************************************************/
 static void vhost_lock_acquire(void)
@@ -217,17 +218,18 @@ static void sched_mngt(int id)
 /****************************************************************************/
 static int rxtx_worker(void *data)
 {
-  int id, sid;
+  int id;
   uint32_t mcache = MBUF_MCACHE;
   uint32_t mbufs = MBUF_MAX;
   uint32_t msize = MBUF_SIZE;
-  struct rte_mempool *mpool;
+  char *memid = (char *) data;
+  int sid = rte_lcore_to_socket_id(rte_lcore_id());
 
-  if (rte_lcore_id() != g_running_lcore) 
-    KOUT("%s", g_name);
-  sid = rte_lcore_to_socket_id(rte_lcore_id());
-  mpool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
-  if (!mpool)
+  if (sid < 0)
+    KOUT(" ");
+
+  g_mpool = rte_pktmbuf_pool_create(memid, mbufs, mcache, 0, msize, sid);
+  if (!g_mpool)
     KOUT("%s", g_name);
 
   g_rxtx_worker_active = 1;
@@ -237,8 +239,7 @@ static int rxtx_worker(void *data)
     if (!(g_wrk[0].rx_enable && g_wrk[1].rx_enable && g_wrk[0].created &&
           g_wrk[0].tx_enable && g_wrk[1].tx_enable && g_wrk[1].created))
       {
-      rte_pause();
-      usleep(500);
+      usleep(200);
       }
     else
       break;
@@ -247,8 +248,7 @@ static int rxtx_worker(void *data)
 
   while(g_rxtx_worker)
     {
-    rte_pause();
-    usleep(80);
+    usleep(100);
     if (g_rxtx_worker)
       {
       vhost_lock_acquire();
@@ -259,7 +259,7 @@ static int rxtx_worker(void *data)
         {
         for (id=0; id<2; id++)
           {
-          store_rx_circle(id, get_usec(), mpool);
+          store_rx_circle(id, get_usec(), g_mpool);
           sched_mngt(id);
           flush_tx_circle(id);
           circle_clean(id);
@@ -268,12 +268,10 @@ static int rxtx_worker(void *data)
       vhost_lock_release();
       }
     }
+
   for (id=0; id<2; id++)
-    {
     circle_flush(id);
-    rte_vhost_driver_unregister(g_wrk[id].socket);
-    }
-  rte_mempool_free(mpool);
+
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -281,12 +279,20 @@ static int rxtx_worker(void *data)
 /****************************************************************************/
 void vhost_client_end_and_exit(void)
 {
+  int i;
   g_rxtx_worker = 0;
   if (g_running_lcore != -1)
     {
     rte_eal_wait_lcore(g_running_lcore);
     g_running_lcore = -1;
     }
+  for (i=0; i<2; i++)
+    {
+    circle_flush(i);
+    rte_vhost_driver_unregister(g_wrk[i].socket);
+    }
+  rte_mempool_free(g_mpool);
+
   end_clean_unlink();
   rte_exit(EXIT_SUCCESS, NULL);
 }
@@ -318,18 +324,22 @@ void vhost_client_start_id(int id, int sid, char *path)
 void vhost_client_start(char *memid, char *path0, char *path1)
 {
   int sid;
+
   g_running_lcore = rte_get_next_lcore(-1, 1, 0);
     if (g_running_lcore >= RTE_MAX_LCORE)
       KOUT("%d", g_running_lcore);
   sid = rte_lcore_to_socket_id(rte_lcore_id());
   if (sid < 0)
     KOUT(" ");
-  memset(g_memid, 0, MAX_NAME_LEN);
-  strncpy(g_memid, memid, MAX_NAME_LEN-1);
+
+  sid = rte_lcore_to_socket_id(rte_lcore_id());
+
   vhost_client_start_id(0, sid, path0);
   vhost_client_start_id(1, sid, path1);
+
   g_rxtx_worker = 1;
-  rte_eal_remote_launch(rxtx_worker, NULL, g_running_lcore);
+  rte_eal_remote_launch(rxtx_worker, (void *) memid, g_running_lcore);
+
   while(g_rxtx_worker_active == 0)
     {
     usleep(10000);

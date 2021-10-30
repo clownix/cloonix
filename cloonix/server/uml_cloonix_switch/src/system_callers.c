@@ -168,17 +168,17 @@ void my_mkdir(char *dst_dir, int wr_all)
   if (result)
     {
     if (errno != EEXIST)
-      KOUT("%s, %d", dst_dir, errno);
+      KERR("ERROR %s, %d", dst_dir, errno);
     else
       {
       if (stat(dst_dir, &stat_file))
-        KOUT("%s, %d", dst_dir, errno);
+        KERR("ERROR %s, %d", dst_dir, errno);
       if (!S_ISDIR(stat_file.st_mode))
         {
-        KERR("%s", dst_dir);
+        KERR("ERROR %s", dst_dir);
         unlink(dst_dir);
         if (mkdir(dst_dir, mode_mkdir))
-          KOUT("%s, %d", dst_dir, errno);
+          KERR("ERROR %s, %d", dst_dir, errno);
         }
       }
     }

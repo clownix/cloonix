@@ -279,7 +279,7 @@ static char *get_cpu_from_flags(uint32_t flags)
     }
   cpu = i;
   memset(g_lcore_cpu, 0, MAX_NAME_LEN);
-  snprintf(g_lcore_cpu, MAX_NAME_LEN-1, "--lcores=0@0,%d@%d", cpu, cpu);
+  snprintf(g_lcore_cpu, MAX_NAME_LEN-1, "--lcores=0@0,1@%d", cpu);
   return g_lcore_cpu;
 }
 /*--------------------------------------------------------------------------*/

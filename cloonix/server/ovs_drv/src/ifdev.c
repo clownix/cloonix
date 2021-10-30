@@ -93,12 +93,11 @@ int ifdev_set_intf_flags_iff_up_down(char *intf, int up)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int SetEthtoolValue(char *intf, int cmd, uint32_t value)
+static void SetEthtoolValue(char *intf, int cmd, uint32_t value)
 {
   struct ifreq ifr;
   int fd;
   struct ethtool_value ethv;
-  int result = -1;
   memset(&ifr, 0, sizeof(ifr));
   fd = socket(AF_INET, SOCK_DGRAM, 0);
   if (fd == -1)
@@ -107,12 +106,8 @@ static int SetEthtoolValue(char *intf, int cmd, uint32_t value)
   ethv.cmd = cmd;
   ethv.data = value; 
   ifr.ifr_data = (void *) &ethv;
-  if (ioctl(fd, SIOCETHTOOL, (char *)&ifr) < 0)
-    KERR("ERROR IOCTL %s %s", intf, strerror(errno));
-  else
-    result = 0;
+  ioctl(fd, SIOCETHTOOL, (char *)&ifr);
   close(fd);
-  return result;
  }
 /*---------------------------------------------------------------------------*/
 

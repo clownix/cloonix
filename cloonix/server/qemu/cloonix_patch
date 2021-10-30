@@ -1,6 +1,6 @@
 diff -Naur qemu_vip/configure tainted_qemu/configure
 --- qemu_vip/configure	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/configure	2021-10-27 14:49:57.677105135 +0200
++++ tainted_qemu/configure	2021-10-30 12:25:18.744141101 +0200
 @@ -2978,6 +2978,20 @@
      cpuid_h=yes
  fi
@@ -22,9 +22,33 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
  ##########################################
  # avx2 optimization requirement check
  #
+diff -Naur qemu_vip/hw/virtio/vhost.c tainted_qemu/hw/virtio/vhost.c
+--- qemu_vip/hw/virtio/vhost.c	2021-10-16 20:16:28.000000000 +0200
++++ tainted_qemu/hw/virtio/vhost.c	2021-10-30 12:26:52.004663218 +0200
+@@ -1218,7 +1218,7 @@
+ 
+     r = dev->vhost_ops->vhost_get_vring_base(dev, &state);
+     if (r < 0) {
+-        VHOST_OPS_DEBUG("vhost VQ %u ring restore failed: %d", idx, r);
++//cloonix it happens        VHOST_OPS_DEBUG("vhost VQ %u ring restore failed: %d", idx, r);
+         /* Connection to the backend is broken, so let's sync internal
+          * last avail idx to the device used idx.
+          */
+diff -Naur qemu_vip/hw/virtio/vhost-user.c tainted_qemu/hw/virtio/vhost-user.c
+--- qemu_vip/hw/virtio/vhost-user.c	2021-10-16 20:16:28.000000000 +0200
++++ tainted_qemu/hw/virtio/vhost-user.c	2021-10-30 12:25:18.744141101 +0200
+@@ -471,7 +471,7 @@
+     }
+ 
+     if (qemu_chr_fe_set_msgfds(chr, fds, fd_num) < 0) {
+-        error_report("Failed to set msg fds.");
++//cloonix it happens        error_report("Failed to set msg fds.");
+         return -1;
+     }
+ 
 diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/virtio.h
 --- qemu_vip/include/hw/virtio/virtio.h	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/include/hw/virtio/virtio.h	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/include/hw/virtio/virtio.h	2021-10-30 12:25:18.744141101 +0200
 @@ -322,6 +322,7 @@
  VirtQueue *virtio_vector_first_queue(VirtIODevice *vdev, uint16_t vector);
  VirtQueue *virtio_vector_next_queue(VirtQueue *vq);
@@ -35,7 +59,7 @@ diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/vi
      assert(fbit < 64);
 diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virtio/virtio-net.h
 --- qemu_vip/include/hw/virtio/virtio-net.h	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/include/hw/virtio/virtio-net.h	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/include/hw/virtio/virtio-net.h	2021-10-30 12:25:18.744141101 +0200
 @@ -26,6 +26,7 @@
  #define TYPE_VIRTIO_NET "virtio-net-device"
  OBJECT_DECLARE_SIMPLE_TYPE(VirtIONet, VIRTIO_NET)
@@ -84,7 +108,7 @@ diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virti
  
 diff -Naur qemu_vip/include/qemu/bitops.h tainted_qemu/include/qemu/bitops.h
 --- qemu_vip/include/qemu/bitops.h	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/include/qemu/bitops.h	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/include/qemu/bitops.h	2021-10-30 12:25:18.744141101 +0200
 @@ -12,12 +12,14 @@
  #ifndef BITOPS_H
  #define BITOPS_H
@@ -103,7 +127,7 @@ diff -Naur qemu_vip/include/qemu/bitops.h tainted_qemu/include/qemu/bitops.h
  #define BIT_ULL(nr)             (1ULL << (nr))
 diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
 --- qemu_vip/include/qemu/error-report.h	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/include/qemu/error-report.h	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/include/qemu/error-report.h	2021-10-30 12:25:18.744141101 +0200
 @@ -13,6 +13,26 @@
  #ifndef QEMU_ERROR_REPORT_H
  #define QEMU_ERROR_REPORT_H
@@ -144,7 +168,7 @@ diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-
  bool error_report_once_cond(bool *printed, const char *fmt, ...)
 diff -Naur qemu_vip/include/qemu-common.h tainted_qemu/include/qemu-common.h
 --- qemu_vip/include/qemu-common.h	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/include/qemu-common.h	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/include/qemu-common.h	2021-10-30 12:25:18.744141101 +0200
 @@ -139,4 +139,13 @@
   * returned. */
  bool dump_in_progress(void);
@@ -161,7 +185,7 @@ diff -Naur qemu_vip/include/qemu-common.h tainted_qemu/include/qemu-common.h
  #endif
 diff -Naur qemu_vip/qapi/net.json tainted_qemu/qapi/net.json
 --- qemu_vip/qapi/net.json	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/qapi/net.json	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/qapi/net.json	2021-10-30 12:25:18.744141101 +0200
 @@ -462,7 +462,7 @@
  #        @vhost-vdpa since 5.1
  ##
@@ -173,7 +197,7 @@ diff -Naur qemu_vip/qapi/net.json tainted_qemu/qapi/net.json
  ##
 diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
 --- qemu_vip/qemu-options.hx	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/qemu-options.hx	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/qemu-options.hx	2021-10-30 12:25:18.748141123 +0200
 @@ -2664,6 +2664,7 @@
      "                Use group 'groupname' and mode 'octalmode' to change default\n"
      "                ownership and permissions for communication port.\n"
@@ -184,7 +208,7 @@ diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
      "                attach to the existing netmap-enabled network interface 'name', or to a\n"
 diff -Naur qemu_vip/softmmu/vl.c tainted_qemu/softmmu/vl.c
 --- qemu_vip/softmmu/vl.c	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/softmmu/vl.c	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/softmmu/vl.c	2021-10-30 12:25:18.748141123 +0200
 @@ -129,6 +129,8 @@
  
  #include "config-host.h"
@@ -194,9 +218,29 @@ diff -Naur qemu_vip/softmmu/vl.c tainted_qemu/softmmu/vl.c
  #define MAX_VIRTIO_CONSOLES 1
  
  typedef struct BlockdevOptionsQueueEntry {
+diff -Naur qemu_vip/util/error.c tainted_qemu/util/error.c
+--- qemu_vip/util/error.c	2021-10-16 20:16:28.000000000 +0200
++++ tainted_qemu/util/error.c	2021-10-30 12:25:18.748141123 +0200
+@@ -223,10 +223,13 @@
+ 
+ void error_report_err(Error *err)
+ {
+-    error_report("%s", error_get_pretty(err));
+-    if (err->hint) {
++//cloonix
++    if (!strstr(err->msg, "Unexpected end-of-file before all data were read"))
++      {
++      error_report("%s", error_get_pretty(err));
++      if (err->hint)
+         error_printf("%s", err->hint->str);
+-    }
++      }
+     error_free(err);
+ }
+ 
 diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
 --- qemu_vip/util/oslib-posix.c	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/util/oslib-posix.c	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/util/oslib-posix.c	2021-10-30 12:25:18.748141123 +0200
 @@ -78,6 +78,8 @@
      size_t numpages;
      size_t hpagesize;
@@ -276,7 +320,7 @@ diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
      qemu_cond_broadcast(&page_cond);
 diff -Naur qemu_vip/util/qemu-error.c tainted_qemu/util/qemu-error.c
 --- qemu_vip/util/qemu-error.c	2021-10-16 20:16:28.000000000 +0200
-+++ tainted_qemu/util/qemu-error.c	2021-10-27 14:49:57.681105135 +0200
++++ tainted_qemu/util/qemu-error.c	2021-10-30 12:25:18.748141123 +0200
 @@ -279,6 +279,7 @@
   * Prepend the current location and append a newline.
   * It's wrong to call this in a QMP monitor.  Use error_setg() there.

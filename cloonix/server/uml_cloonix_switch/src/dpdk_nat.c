@@ -475,8 +475,6 @@ int dpdk_nat_del(int llid, int tid, char *name)
     KERR("ERROR %s", name);
   else if (cur->waiting_ack_add_lan)
     KERR("ERROR %s %s", name, cur->lan);
-  else if (cur->waiting_ack_del_lan)
-    KERR("ERROR %s %s", name, cur->lan);
   else
     {
     cur->del_llid = llid;

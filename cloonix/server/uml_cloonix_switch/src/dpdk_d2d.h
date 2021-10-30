@@ -94,7 +94,6 @@ void dpdk_d2d_get_udp_port_done(char *name, uint16_t udp_port, int status);
 void dpdk_d2d_dist_udp_ip_port_done(char *name);
 void dpdk_d2d_receive_probe_udp(char *name);
 int  dpdk_d2d_get_qty(void);
-void dpdk_d2d_all_del(void);
 void dpdk_d2d_add_lan(int llid, int tid, char *name, char *lan);
 void dpdk_d2d_del_lan(int llid, int tid, char *name, char *lan);
 char *dpdk_d2d_get_next(char *name);

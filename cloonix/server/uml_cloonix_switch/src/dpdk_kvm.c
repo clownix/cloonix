@@ -227,7 +227,7 @@ static int dpdk_kvm_add(char *name, int num, int eth_type)
   int result;
   if (eth_type == endp_type_ethd)
     {
-    if (fmt_tx_add_ethds(0, name, num))
+    if (fmt_tx_add_ethd(0, name, num))
       KERR("ERROR %s %d", name, num);
     else
       {
@@ -351,12 +351,13 @@ static void timer_beat(void *data)
       if (cl->count > 500)
         {
         KERR("ERROR KVMETH ADD %s %d %s", cl->name, cl->num, cl->lan);
+        utils_send_status_ko(&(cl->llid), &(cl->tid), "timeout");
         lan_free(cl);
         }
       }
     cl = next_cl;
     }
-  clownix_timeout_add(10, timer_beat, NULL, NULL, NULL);
+  clownix_timeout_add(50, timer_beat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -418,8 +419,9 @@ int dpdk_kvm_del(int llid, int tid, char *name, int num, int eth_type)
           KERR("ERROR %s %s %d", cur->lan, name, num);
         cur->attached_lan_ok = 0;
         cur->waiting_ack_del_lan = 1;
+        result = 0;
         }
-      if (fmt_tx_del_ethds(0, name, num))
+      if (fmt_tx_del_ethd(0, name, num))
         KERR("ERROR %s %d", name, num);
       }
     else
@@ -482,7 +484,7 @@ int dpdk_kvm_add_lan(int llid, int tid, char *name, int num, char *lan,
     if (cur == NULL)
       KERR("ERROR ETHD %s %d %s", name, num, lan);
     else if (cur->ready != 1)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR ETHD NOT READY %s %d %s", name, num, lan);
     else if (cur->waiting_ack_del_lan)
       KERR("ERROR ETHD %s %d %s", name, num, lan);
     else if (cur->waiting_ack_add_lan)
@@ -608,6 +610,20 @@ void dpdk_kvm_resp_del(int is_ko, char *name, int num)
 {
   t_ethd_cnx *cur;
   char *endp_path = utils_get_dpdk_endp_path(name, num);
+  t_vm *vm = cfg_get_vm(name);
+  t_eth_table *eth_tab;
+
+  if (vm)
+    {
+    eth_tab = vm->kvm.eth_table;
+    if (eth_tab[num].eth_type == endp_type_waiting)
+      {
+      eth_tab[num].eth_type = endp_type_waiting_done;
+      }
+    else
+      KERR("ERROR %s %d %d", name, num, eth_tab[num].eth_type);
+    }
+
   cur  = ethd_find(name, num);
   if (cur != NULL)
     {

@@ -405,15 +405,24 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   else if (sscanf(line,
           "cloonixovs_del_tap name=%s", name) == 1)
     action_del_tap(respb, name);
+
   else if (sscanf(line, 
-          "cloonixovs_add_ethds name=%s num=%d", name, &num) == 2)
-    action_add_ethds(respb, name, num);
+          "cloonixovs_add_ethd name=%s num=%d", name, &num) == 2)
+    action_add_ethd(respb, name, num);
+  else if (sscanf(line,
+          "cloonixovs_del_ethd name=%s num=%d", name, &num) == 2)
+    action_del_ethd(respb, name, num);
+
+  else if (sscanf(line, 
+          "cloonixovs_add_eths1 name=%s num=%d", name, &num) == 2)
+    action_add_eths1(respb, name, num);
   else if (sscanf(line,
           "cloonixovs_add_eths2 name=%s num=%d", name, &num) == 2)
     action_add_eths2(respb, name, num);
   else if (sscanf(line,
-          "cloonixovs_del_ethds name=%s num=%d", name, &num) == 2)
-    action_del_ethds(respb, name, num);
+          "cloonixovs_del_eths name=%s num=%d", name, &num) == 2)
+    action_del_eths(respb, name, num);
+
   else if (sscanf(line,
           "cloonixovs_add_lan lan=%s", name) == 1)
     action_add_lan(respb, name);
@@ -485,7 +494,7 @@ static void rx_cloonix_cb(int llid, int len, char *buf)
 /*****************************************************************************/
 static void cloonix_err_cb(int llid, int err, int from)
 {
-  KERR(" ");
+  KERR("ERROR ");
   action_req_destroy();
 }
 /*---------------------------------------------------------------------------*/

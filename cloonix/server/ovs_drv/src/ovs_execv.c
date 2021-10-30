@@ -372,6 +372,18 @@ static int send_config_ovs( char *net, char *ovs_bin, char *dpdk_dir,
       result = -1;
       }
     }
+
+  /*---------------------------------------------------------*/
+  if (result != -1)
+    {
+    if (ovs_vsctl(ovs_bin, dpdk_dir,
+                     "--no-wait set Open_vSwitch . "
+                     "other_config:bond-rebalance-interval=0"))
+      {
+      KERR("Fail launch ovsbd server ");
+      result = -1;
+      }
+    }
   /*---------------------------------------------------------*/
   if (result != -1)
     {

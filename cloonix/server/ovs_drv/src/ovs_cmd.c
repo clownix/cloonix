@@ -171,7 +171,8 @@ int ovs_cmd_del_lan_ethd(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
 
-  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_1%s", lan, name);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_%s_%s", lan, lan, name);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_%s_%s", name, name,lan);
 
   if (ovs_vsctl(ovsb, dpdkd, cmd))
     {
@@ -183,18 +184,14 @@ int ovs_cmd_del_lan_ethd(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_cmd_add_ethds(char *ovsb, char *dpdkd, char *nm, int num)
+int ovs_cmd_add_ethd(char *ovsb, char *dpdkd, char *nm, int num)
 {
   char cmd[MAX_ARG_LEN];
-  char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
-  char *wname = name;
   int result = 0;
 
   memset(name, 0, MAX_NAME_LEN);
-  memset(lan, 0, MAX_NAME_LEN);
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
-  snprintf(lan, MAX_NAME_LEN-1, "_p_%s", wname);
 
   if (result == 0)
     {
@@ -208,7 +205,38 @@ int ovs_cmd_add_ethds(char *ovsb, char *dpdkd, char *nm, int num)
            name, name, name, name, name, dpdkd, name);
     if (ovs_vsctl(ovsb, dpdkd, cmd))
       {
-      KERR("ERROR OVSCMD: ADD LAN ETH %s %d %s", name, num, lan);
+      KERR("ERROR OVSCMD: ADD ETHD %s %d", nm, num);
+      result = -1;
+      }
+    }
+
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_cmd_add_eths1(char *ovsb, char *dpdkd, char *nm, int num)
+{
+  char cmd[MAX_ARG_LEN];
+  char name[MAX_NAME_LEN];
+  int result = 0;
+
+  memset(name, 0, MAX_NAME_LEN);
+  snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
+
+  if (result == 0)
+    {
+    memset(cmd, 0, MAX_ARG_LEN);
+    snprintf(cmd, MAX_ARG_LEN-1,
+           "-- add-br _b_%s "
+           "-- set bridge _b_%s datapath_type=netdev "
+           "-- add-port _b_%s _p_%s "
+           "-- set Interface _p_%s type=dpdkvhostuserclient"
+           " options:vhost-server-path=%s_qemu/%s",
+           name, name, name, name, name, dpdkd, name);
+    if (ovs_vsctl(ovsb, dpdkd, cmd))
+      {
+      KERR("ERROR OVSCMD: ADD ETHS %s %d", nm, num);
       result = -1;
       }
     }
@@ -274,7 +302,29 @@ int ovs_cmd_add_eths2(char *ovsb, char *dpdkd, char *nm, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_cmd_del_ethds(char *ovsb, char *dpdkd, char *nm, int num)
+int ovs_cmd_del_ethd(char *ovsb, char *dpdkd, char *nm, int num)
+{
+  char cmd[MAX_ARG_LEN];
+  char name[MAX_NAME_LEN];
+  int result = 0;
+
+  memset(name, 0, MAX_NAME_LEN);
+  snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
+
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-br _b_%s", name);
+  if (ovs_vsctl(ovsb, dpdkd, cmd))
+    {
+    KERR("ERROR OVSCMD: DEL ETHD %s %d", nm, num);
+    result = -1;
+    }
+
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+int ovs_cmd_del_eths(char *ovsb, char *dpdkd, char *nm, int num)
 {
   char cmd[MAX_ARG_LEN];
   char lan[MAX_NAME_LEN];

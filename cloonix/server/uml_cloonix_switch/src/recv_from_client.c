@@ -75,8 +75,10 @@ typedef struct t_timer_del
 {
   int llid;
   int tid;
-  int count;
+  int tzcount;
   int kill_cloonix;
+  int pid_nb;
+  t_pid_lst *pid_lst;
 } t_timer_del;
 /*---------------------------------------------------------------------------*/
 typedef struct t_timer_zombie
@@ -259,9 +261,10 @@ static void timer_del_vm(void *data)
 {
   char err[MAX_PATH_LEN];
   t_timer_zombie *tz = (t_timer_zombie *) data;;
-  int pid, llid = tz->llid, tid = tz->tid;
+  int i, pid, llid = tz->llid, tid = tz->tid, todel;
   t_topo_kvm *kvm = &(tz->kvm);
   t_vm *vm = cfg_get_vm(kvm->name);
+  t_eth_table *eth_tab;
   if (!vm)
     {
     if (llid)
@@ -269,21 +272,53 @@ static void timer_del_vm(void *data)
     } 
   else if (tz->nb_try == 0)
     {
-    if (!(vm->kvm.vm_config_flags & VM_FLAG_CLOONIX_AGENT_PING_OK))
+    eth_tab = vm->kvm.eth_table; 
+    todel = 1;
+    for (i=0; i<vm->kvm.nb_tot_eth; i++)
       {
-      qmp_request_qemu_halt(tz->kvm.name, 0, 0);
+      if (eth_tab[i].eth_type != endp_type_waiting_done)
+        todel = 0;
       }
-    else
+    if (todel == 0)
       {
-      doors_send_command(get_doorways_llid(), 0, tz->kvm.name, HALT_REQUEST);
+      tz->count += 1;
+      if (tz->count >= 20)
+        {
+        for (i=0; i<vm->kvm.nb_tot_eth; i++)
+          {
+          if (eth_tab[i].eth_type != endp_type_waiting_done)
+            {
+            pid = xyx_dpdk_get_pid(tz->kvm.name, i);
+            if (pid)
+              {
+              suid_power_kill_pid(pid);
+              }
+            else
+              KERR("ERROR GET PID %s %d", tz->kvm.name, i);
+            }
+          }
+        KERR("ERROR TIMEOUT %s", tz->kvm.name);
+        todel = 1;
+        }
       }
-    tz->nb_try = 1;
-    clownix_timeout_add(250, timer_del_vm, (void *) tz, NULL, NULL);
+    if (todel == 1)
+      {
+      if (!(vm->kvm.vm_config_flags & VM_FLAG_CLOONIX_AGENT_PING_OK))
+        {
+        qmp_request_qemu_halt(tz->kvm.name, 0, 0);
+        }
+      else
+        {
+        doors_send_command(get_doorways_llid(), 0, tz->kvm.name, HALT_REQUEST);
+        }
+      tz->nb_try = 1;
+      }
+    clownix_timeout_add(200, timer_del_vm, (void *) tz, NULL, NULL);
     }
   else if (vm->vm_to_be_killed == 0)
     {
      machine_death(kvm->name, error_death_noerr); 
-     clownix_timeout_add(250, timer_del_vm, (void *) tz, NULL, NULL);
+     clownix_timeout_add(200, timer_del_vm, (void *) tz, NULL, NULL);
     }
   else if (tz->nb_try == 1)
     {
@@ -296,7 +331,7 @@ static void timer_del_vm(void *data)
     else
       {
       tz->nb_try = 2;
-      clownix_timeout_add(250, timer_del_vm, (void *) tz, NULL, NULL);
+      clownix_timeout_add(200, timer_del_vm, (void *) tz, NULL, NULL);
       }
     }
   else if (tz->nb_try == 2)
@@ -336,7 +371,7 @@ void poweroff_vm(int llid, int tid, t_vm *vm)
         {
         if (dpdk_kvm_del(0, 0, vm->kvm.name, i, eth_tab[i].eth_type))
           KERR("ERROR %s %d", vm->kvm.name, i);
-        eth_tab[i].eth_type = endp_type_none;
+        eth_tab[i].eth_type = endp_type_waiting;
         }
       }
     tz = (t_timer_zombie *) clownix_malloc(sizeof(t_timer_zombie), 3);
@@ -344,7 +379,7 @@ void poweroff_vm(int llid, int tid, t_vm *vm)
     tz->llid = llid;
     tz->tid = tid;
     memcpy(&(tz->kvm), &(vm->kvm), sizeof(t_topo_kvm));
-    clownix_timeout_add(300, timer_del_vm, (void *) tz, NULL, NULL);
+    clownix_timeout_add(200, timer_del_vm, (void *) tz, NULL, NULL);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -1504,7 +1539,6 @@ static void del_all_start(void)
   t_vm *vm = cfg_get_first_vm(&nb);
   g_inhib_new_clients = 1;
   event_print("Rx Req Self-Destruction");
-  dpdk_ovs_client_destruct();
   for (i=0; i<nb; i++)
     {
     poweroff_vm(0, 0, vm);
@@ -1517,10 +1551,27 @@ static void del_all_start(void)
 static void timer_del_all_end(void *data)
 {
   t_timer_del *td = (t_timer_del *) data;;
-KERR("DELALL 5");
-  suid_power_req_kill_all();
+  int i;
+
+  for (i=0; i<td->pid_nb; i++)
+    {
+    if (strcmp(td->pid_lst[i].name, "doors")         &&
+        strcmp(td->pid_lst[i].name, "xwy")           &&
+        strcmp(td->pid_lst[i].name, "ovsdb")         &&
+        strcmp(td->pid_lst[i].name, "ovsdb-server")  &&
+        strcmp(td->pid_lst[i].name, "ovs-vswitchd")  &&
+        strcmp(td->pid_lst[i].name, "suid_power")    &&
+        strcmp(td->pid_lst[i].name, "cloonix_server")) 
+      {
+      suid_power_kill_pid(td->pid_lst[i].pid);
+      }
+    }
+  clownix_free(td->pid_lst, __FUNCTION__);
   if (td->kill_cloonix)
+    {
+    dpdk_ovs_destroy();
     auto_self_destruction(td->llid, td->tid);
+    }
   else
     {
     g_inhib_new_clients = 0;
@@ -1535,27 +1586,22 @@ KERR("DELALL 5");
 /*****************************************************************************/
 static void timer_del_all(void *data)
 { 
-  int i, nb_vm, found = 0;
+  int nb_vm, found = 0;
   t_timer_del *td = (t_timer_del *) data;;
-  t_vm *vm = cfg_get_first_vm(&nb_vm);
-KERR("DELALL 2");
-  for (i=0; i<nb_vm; i++)
-    {
-    if (suid_power_get_pid(vm->kvm.vm_id))
-      found = 1;
-    vm = vm->next;
-    }
+
+  cfg_get_first_vm(&nb_vm);
+  found = nb_vm;
   found += dpdk_nat_get_qty();
   found += dpdk_xyx_get_qty();
   found += dpdk_a2b_get_qty();
   found += dpdk_d2d_get_qty();
   if (found)
     {
-KERR("DELALL 3");
-    td->count += 1;
-    if (td->count > 50)
+    if (nb_vm == 0)
+      dpdk_ovs_client_destruct();
+    td->tzcount += 1;
+    if (td->tzcount > 50)
       {
-KERR("DELALL ERR3");
       send_status_ko(td->llid, td->tid, "fail delall");
       clownix_free(td, __FUNCTION__);
       }
@@ -1564,8 +1610,6 @@ KERR("DELALL ERR3");
     }
   else
     {
-KERR("DELALL 4");
-    dpdk_d2d_all_del();
     clownix_timeout_add(400, timer_del_all_end, (void *) td, NULL, NULL);
     }
 }
@@ -1580,7 +1624,7 @@ void recv_del_all(int llid, int tid)
   memset(td, 0, sizeof(t_timer_del));
   td->llid = llid;
   td->tid = tid;
-KERR("DELALL 1");
+  td->pid_lst = create_list_pid(&(td->pid_nb));
   clownix_timeout_add(300, timer_del_all, (void *) td, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -1595,7 +1639,7 @@ void recv_kill_uml_clownix(int llid, int tid)
   td->llid = llid;
   td->tid = tid;
   td->kill_cloonix = 1;
-KERR("KILLDELALL 1");
+  td->pid_lst = create_list_pid(&(td->pid_nb));
   clownix_timeout_add(300, timer_del_all, (void *) td, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/

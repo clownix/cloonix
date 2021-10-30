@@ -84,6 +84,7 @@ typedef struct t_ovs
   int global_pid_req_watch;
   int daemon_done_count;
   int daemon_done;
+  int last_msg_req_destroy_sent;
 } t_ovs;
 /*--------------------------------------------------------------------------*/
 
@@ -169,7 +170,6 @@ static void del_all_depends(void)
 /****************************************************************************/
 static void set_destroy_requested(t_ovs *cur, int val)
 {
-  KERR("SET DESTROY REQUESTED VAL = %d", val);
   del_all_depends();
   cur->destroy_requested = val;
 }
@@ -283,22 +283,28 @@ static int ovs_birth(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void send_last_msg_req_destroy(t_ovs *cur)
+{
+  try_send_msg_ovs(cur, msg_type_diag, 0, "cloonixovs_req_destroy");
+  cur->last_msg_req_destroy_sent = 1;
+  cur->destroy_requested = 1;
+}
+
+/****************************************************************************/
 static void check_on_destroy_requested(t_ovs *cur)
 {
   char *sock;
   if (cur->destroy_requested > 2)
     {
-    KERR("DESTROY REQUESTED %d", cur->destroy_requested);
     cur->destroy_requested -= 1;
     }
   else if (cur->destroy_requested == 2)
     {
-    try_send_msg_ovs(cur, msg_type_diag, 0, "cloonixovs_req_destroy");
+    send_last_msg_req_destroy(cur);
     cur->destroy_requested -= 1;
     }
   else if (cur->destroy_requested == 1)
     { 
-    KERR("DESTROY REQUESTED END");
     event_print("End OpenVSwitch %s", cur->name);
     sock = utils_get_dpdk_ovs_path(cur->name);
     if (cur->llid)
@@ -314,7 +320,6 @@ static void check_on_destroy_requested(t_ovs *cur)
         KERR("ERROR: ovs was alive");
       }
     unlink(sock);
-    mk_dpdk_ovs_db_dir();
     ovs_free(cur->name);
     }
 } 
@@ -384,7 +389,7 @@ static void timer_ovs_beat(void *data)
   t_ovs *cur = g_head_ovs;
   int type_hop_tid = type_hop_ovsdb;
   char msg[MAX_PATH_LEN];
-  if (cur)
+  if ((cur) && (cur->last_msg_req_destroy_sent == 0))
     {
     if (!cur->clone_start_pid)
       KERR("ERROR");
@@ -466,6 +471,9 @@ static void timer_ovs_beat(void *data)
           }
         }
       }
+    }
+  if (cur)
+    {
     check_on_destroy_requested(cur);
     cur->global_pid_req_watch += 1;
     if (cur->global_pid_req_watch > 150)
@@ -741,7 +749,7 @@ void dpdk_ovs_destroy(void)
 {
   t_ovs *cur = g_head_ovs;
   if (cur)
-    set_destroy_requested(cur, 2);
+    send_last_msg_req_destroy(cur);
 }
 /*---------------------------------------------------------------------------*/
 

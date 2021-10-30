@@ -65,6 +65,11 @@ static t_qrec *g_llid_qrec[CLOWNIX_MAX_CHANNELS];
 static t_qrec *get_qrec_with_name(char *name)
 {
   t_qrec *cur = g_head_qrec;
+  if (strlen(name) <= 1)
+    {
+    cur = NULL;
+    KERR("ERROR  ");
+    }
   while(cur)
     {
     if (!strcmp(name, cur->name))
@@ -96,15 +101,21 @@ static void set_qrec_with_llid(int llid, t_qrec *q)
 /****************************************************************************/
 static void qrec_alloc(char *name, t_end_conn end_cb)
 {
-  t_qrec *q = (t_qrec *) clownix_malloc(sizeof(t_qrec), 6);
-  memset(q, 0, sizeof(t_qrec));
-  strncpy(q->name, name, MAX_NAME_LEN-1);
-  q->end_cb = end_cb;
-  q->prev = NULL;
-  if (g_head_qrec)
-    g_head_qrec->prev = q;
-  q->next = g_head_qrec; 
-  g_head_qrec = q;
+  t_qrec *q;
+  if (strlen(name) <= 1)
+    KERR("ERROR ");
+  else
+    {
+    q = (t_qrec *) clownix_malloc(sizeof(t_qrec), 6);
+    memset(q, 0, sizeof(t_qrec));
+    strncpy(q->name, name, MAX_NAME_LEN-1);
+    q->end_cb = end_cb;
+    q->prev = NULL;
+    if (g_head_qrec)
+      g_head_qrec->prev = q;
+    q->next = g_head_qrec; 
+    g_head_qrec = q;
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -120,7 +131,7 @@ static void qrec_free(t_qrec *qrec, int transmit)
     {
     q = get_qrec_with_llid(qrec->llid);
     if (qrec != q)
-      KERR("%s", name); 
+      KERR("ERROR %s", name); 
     set_qrec_with_llid(qrec->llid, NULL);
     llid_trace_free(qrec->llid, 0, __FUNCTION__);
     }
@@ -246,7 +257,7 @@ static int qmp_rx_cb(int llid, int fd)
   char *buf, *ptr, *next_ptr;
   t_qrec *qrec = get_qrec_with_llid(llid);
   if (!qrec)
-    KERR(" ");
+    KERR("ERROR  ");
   else
     {
     max = MAX_RPC_MSG_LEN - qrec->resp_offset;
@@ -254,13 +265,13 @@ static int qmp_rx_cb(int llid, int fd)
     len = util_read(buf, max, fd);
     if (len < 0)
       {
-      KERR("%s", qrec->name);
+      KERR("ERROR %s", qrec->name);
       qrec_free(qrec, 1);
       }
     else
       {
       if (len == max)
-        KERR("%s %s %d", qrec->name, qrec->resp, len);
+        KERR("ERROR %s %s %d", qrec->name, qrec->resp, len);
       else
         {
         ptr = qrec->resp;
@@ -301,7 +312,7 @@ static void qmp_err_cb (int llid, int err, int from)
 {
   t_qrec *qrec = get_qrec_with_llid(llid);
   if (!qrec)
-    KERR(" ");
+    KERR("ERROR ");
   else
     qrec_free(qrec, 1);
 }
@@ -320,13 +331,13 @@ static void timer_connect_qmp(void *data)
   if (!qrec)
     return;
   if (qrec->llid)
-    KERR("%s %d", pname, qrec->llid);
+    KERR("ERROR %s %d", pname, qrec->llid);
   else
     {
     vm = cfg_get_vm(pname);
     if (!vm)
       {
-      KERR("%s", pname);
+      KERR("ERROR %s", pname);
       qrec_free(qrec, 1);
       }
     else
@@ -421,8 +432,8 @@ int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_resp cb)
     {
     if (vm->vm_to_be_killed)
       {
-      qrec_free(qrec, 1);
       KERR("%s", name);
+      qrec_free(qrec, 1);
       return result;
       }
     }

@@ -63,6 +63,8 @@ int cloonix_get_pid(void);
 
 enum {
   endp_type_none=13,
+  endp_type_waiting,
+  endp_type_waiting_done,
   endp_type_ethd,
   endp_type_eths,
   endp_type_tap,

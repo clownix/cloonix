@@ -40,17 +40,31 @@
 
 
 /****************************************************************************/
-int fmt_tx_add_ethds(int tid, char *name, int num)
+int fmt_tx_add_ethd(int tid, char *name, int num)
 {
   int result;
   char cmd[2*MAX_PATH_LEN];
   memset(cmd, 0, 2*MAX_PATH_LEN);
   sprintf(cmd,
-  "cloonixovs_add_ethds name=%s num=%d", name, num);
+  "cloonixovs_add_ethd name=%s num=%d", name, num);
   result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
   return result;
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fmt_tx_add_eths1(int tid, char *name, int num)
+{
+  int result;
+  char cmd[2*MAX_PATH_LEN];
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  sprintf(cmd,
+  "cloonixovs_add_eths1 name=%s num=%d", name, num);
+  result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 int fmt_tx_add_eths2(int tid, char *name, int num)
@@ -66,13 +80,26 @@ int fmt_tx_add_eths2(int tid, char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_del_ethds(int tid, char *name, int num)
+int fmt_tx_del_ethd(int tid, char *name, int num)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   sprintf(cmd,
-  "cloonixovs_del_ethds name=%s num=%d", name, num);
+  "cloonixovs_del_ethd name=%s num=%d", name, num);
+  result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fmt_tx_del_eths(int tid, char *name, int num)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  sprintf(cmd,
+  "cloonixovs_del_eths name=%s num=%d", name, num);
   result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
   return result;
 }
@@ -391,12 +418,21 @@ void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
                         lan, name, &num) == 3)
     dpdk_msg_ack_lan_endp(tid, lan, name, num, 0, 0, "OK");
 
-  else if (sscanf(line, "OK cloonixovs_add_ethds name=%s num=%d",
+  else if (sscanf(line, "OK cloonixovs_add_ethd name=%s num=%d",
                         name, &num) == 2)
     dpdk_kvm_resp_add(0, name, num);
-  else if (sscanf(line, "KO cloonixovs_add_ethds name=%s num=%d",
+  else if (sscanf(line, "KO cloonixovs_add_ethd name=%s num=%d",
                         name, &num) == 2)
     dpdk_kvm_resp_add(1, name, num);
+
+  else if (sscanf(line, "OK cloonixovs_add_eths1 name=%s num=%d",
+                        name, &num) == 2)
+    dpdk_kvm_resp_add(0, name, num);
+  else if (sscanf(line, "KO cloonixovs_add_eths1 name=%s num=%d",
+                        name, &num) == 2)
+    dpdk_kvm_resp_add(1, name, num);
+
+
   else if (sscanf(line, "OK cloonixovs_add_eths2 name=%s num=%d",
                         name, &num) == 2)
     dpdk_kvm_resp_add_eths2(0, name, num);
@@ -404,10 +440,17 @@ void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
                         name, &num) == 2)
     dpdk_kvm_resp_add_eths2(1, name, num);
 
-  else if (sscanf(line, "OK cloonixovs_del_ethds name=%s num=%d",
+  else if (sscanf(line, "OK cloonixovs_del_ethd name=%s num=%d",
                         name, &num) == 2)
     dpdk_kvm_resp_del(0, name, num);
-  else if (sscanf(line, "KO cloonixovs_del_ethds name=%s num=%d",
+  else if (sscanf(line, "KO cloonixovs_del_ethd name=%s num=%d",
+                        name, &num) == 2)
+    dpdk_kvm_resp_del(1, name, num);
+
+  else if (sscanf(line, "OK cloonixovs_del_eths name=%s num=%d",
+                        name, &num) == 2)
+    dpdk_kvm_resp_del(0, name, num);
+  else if (sscanf(line, "KO cloonixovs_del_eths name=%s num=%d",
                         name, &num) == 2)
     dpdk_kvm_resp_del(1, name, num);
 

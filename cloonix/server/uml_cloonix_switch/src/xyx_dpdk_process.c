@@ -443,7 +443,24 @@ int xyx_dpdk_llid_exists_with_name(char *name)
 }
 /*--------------------------------------------------------------------------*/
 
-
+/****************************************************************************/
+int xyx_dpdk_get_pid(char *name, int num)
+{
+  t_xyx_dpdk *cur;
+  int result = 0;
+  char cname[MAX_NAME_LEN];
+  char ext[6];
+  memset(cname, 0, MAX_NAME_LEN);
+  strncpy(cname, name, MAX_NAME_LEN-6);
+  memset(ext, 0, 6);
+  snprintf(ext, 5, "_%d", num);
+  strcat(cname, ext);
+  cur = find_xyx_dpdk(cname);
+  if (cur)
+    result = cur->pid;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void xyx_dpdk_cnf(char *name, int type, uint8_t *mac)

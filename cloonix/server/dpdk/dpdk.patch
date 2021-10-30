@@ -1,6 +1,6 @@
 diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdinfo-cfile.py
 --- dpdk/buildtools/gen-pmdinfo-cfile.py	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-10-25 17:21:10.998095852 +0200
++++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-10-29 22:49:53.921109585 +0200
 @@ -14,7 +14,7 @@
          stdout=subprocess.PIPE, check=True, cwd=temp
      )
@@ -12,7 +12,7 @@ diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdi
      subprocess.run(pmdinfogen + paths + [output], check=True)
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
 --- dpdk/drivers/meson.build	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2021-10-25 17:21:10.998095852 +0200
++++ dpdk_tainted/drivers/meson.build	2021-10-29 22:49:53.921109585 +0200
 @@ -162,6 +162,7 @@
          tmp_lib = static_library('tmp_' + lib_name, sources,
                  include_directories: includes,
@@ -31,7 +31,7 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
          # create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost.h dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h
 --- dpdk/drivers/net/virtio/virtio_user/vhost.h	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h	2021-10-25 17:21:10.998095852 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h	2021-10-29 22:49:53.921109585 +0200
 @@ -15,6 +15,26 @@
  #include "../virtio_logs.h"
  #include "../virtqueue.h"
@@ -61,7 +61,7 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost.h dpdk_tainted/drivers/net/
  	unsigned int num;
 diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c
 --- dpdk/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-25 17:22:20.502092864 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-29 22:49:53.921109585 +0200
 @@ -104,6 +104,23 @@
  #define VHOST_USER_PAYLOAD_SIZE \
  	(sizeof(struct vhost_user_msg) - VHOST_USER_HDR_SIZE)
@@ -128,7 +128,7 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers
  
 diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c
 --- dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-25 17:23:03.470091017 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-29 22:49:53.921109585 +0200
 @@ -23,6 +23,7 @@
  
  #define VIRTIO_USER_MEM_EVENT_CLB_NAME "virtio_user_mem_event_clb"
@@ -160,7 +160,7 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/dr
  	if (dev->started == false)
 diff -Naur dpdk/lib/eal/common/eal_common_devargs.c dpdk_tainted/lib/eal/common/eal_common_devargs.c
 --- dpdk/lib/eal/common/eal_common_devargs.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/common/eal_common_devargs.c	2021-10-25 17:21:10.998095852 +0200
++++ dpdk_tainted/lib/eal/common/eal_common_devargs.c	2021-10-29 22:49:53.921109585 +0200
 @@ -88,8 +88,11 @@
  	/* Split each sub-lists. */
  	nblayer = devargs_layer_count(devstr);
@@ -175,7 +175,7 @@ diff -Naur dpdk/lib/eal/common/eal_common_devargs.c dpdk_tainted/lib/eal/common/
  	}
 diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/eal_common_options.c
 --- dpdk/lib/eal/common/eal_common_options.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-10-25 17:21:10.998095852 +0200
++++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-10-29 22:49:53.921109585 +0200
 @@ -125,7 +125,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
@@ -189,7 +189,7 @@ diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/
  /*
 diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
 --- dpdk/lib/eal/linux/eal.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/linux/eal.c	2021-10-25 17:21:10.998095852 +0200
++++ dpdk_tainted/lib/eal/linux/eal.c	2021-10-29 22:49:53.921109585 +0200
 @@ -27,6 +27,7 @@
  #endif
  #include <linux/version.h>
@@ -366,8 +366,16 @@ diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
  		enum rte_iova_mode iova_mode = rte_bus_get_iommu_class();
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
 --- dpdk/lib/meson.build	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2021-10-25 17:21:10.998095852 +0200
-@@ -197,6 +197,7 @@
++++ dpdk_tainted/lib/meson.build	2021-10-29 22:52:35.201721127 +0200
+@@ -110,6 +110,7 @@
+ 
+ 
+ default_cflags = machine_args
++default_cflags += ['-g']
+ default_cflags += ['-DALLOW_EXPERIMENTAL_API']
+ default_cflags += ['-DALLOW_INTERNAL_API']
+ 
+@@ -197,6 +198,7 @@
              c_args: cflags,
              dependencies: static_deps,
              include_directories: includes,
@@ -375,7 +383,7 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
              install: true)
      static_dep = declare_dependency(
              include_directories: includes,
-@@ -261,6 +262,7 @@
+@@ -261,6 +263,7 @@
              link_depends: lk_deps,
              version: abi_version,
              soversion: so_version,
@@ -385,13 +393,13 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
              include_directories: includes,
 diff -Naur dpdk/meson_options.txt dpdk_tainted/meson_options.txt
 --- dpdk/meson_options.txt	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/meson_options.txt	2021-10-25 17:21:11.002095852 +0200
++++ dpdk_tainted/meson_options.txt	2021-10-29 22:49:53.921109585 +0200
 @@ -32,7 +32,7 @@
         'Path to the kernel for building kernel modules. Headers must be in $kernel_dir or $kernel_dir/build. Modules will be installed in /lib/modules.')
  option('machine', type: 'string', value: 'auto', description:
         'Alias of cpu_instruction_set.')
 -option('max_ethports', type: 'integer', value: 32, description:
-+option('max_ethports', type: 'integer', value: 512, description:
++option('max_ethports', type: 'integer', value: 255, description:
         'maximum number of Ethernet devices')
  option('max_lcores', type: 'string', value: 'default', description:
         'Set maximum number of cores/threads supported by EAL; "default" is different per-arch, "detect" detects the number of cores on the build machine.')

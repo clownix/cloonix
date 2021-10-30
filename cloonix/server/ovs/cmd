@@ -20,7 +20,7 @@ patch -p1 < ${HERE}/ovs.patch
 ./boot.sh
 export DPDK_NETDEV=1
 export PKG_CONFIG_PATH=${DPDK}/lib/pkgconfig
-CFLAGS="-I${DPDK}/include -DALLOW_EXPERIMENTAL_API "
+CFLAGS="-g -I${DPDK}/include -DALLOW_EXPERIMENTAL_API "
 CFLAGS+="-pthread -lm -ldl -lnuma -lpcap -lrt -fPIC -lunwind"
 export CFLAGS=$CFLAGS
 export LDFLAGS="-L${DPDK}/lib -fPIC"

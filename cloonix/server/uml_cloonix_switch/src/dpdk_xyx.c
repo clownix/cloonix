@@ -378,26 +378,6 @@ void dpdk_xyx_event_from_xyx_dpdk_process(char *name, int on)
         KERR("ERROR %s", name);
         utils_send_status_ko(&(cur->add_llid), &(cur->add_tid), "error");
         }
-/*
-    if (cur->endp_type == endp_type_tap)
-      {
-      if (fmt_tx_del_tap(0, cur->nm))
-        KERR("ERROR %s", cur->nm);
-      }
-    else if (cur->endp_type == endp_type_phy)
-      {
-      if (fmt_tx_del_phy(0, cur->nm))
-        KERR("ERROR %s", cur->nm);
-      }
-    else if (cur->endp_type == endp_type_eths)
-      {
-      if (fmt_tx_del_ethds(0, cur->nm, cur->num))
-        KERR("ERROR %s %d", cur->nm, cur->num);
-      }
-    else
-      KOUT("ERROR  %s", name);
-*/
-
       free_xyx(cur);
       }
     else
@@ -570,7 +550,6 @@ int dpdk_xyx_del(int llid, int tid, char *name, int num)
       cur->lan.attached_lan_ok = 0;
       cur->lan.waiting_ack_del_lan = 1;
       }
-//    xyx_dpdk_start_stop_process(cur->name, 0);
     if (cur->endp_type == endp_type_tap)
       {
       if (fmt_tx_del_tap(0, name))
@@ -583,7 +562,7 @@ int dpdk_xyx_del(int llid, int tid, char *name, int num)
       }
     else if (cur->endp_type == endp_type_eths)
       {
-      if (fmt_tx_del_ethds(0, cur->nm, num))
+      if (fmt_tx_del_eths(0, cur->nm, num))
         KERR("ERROR %s %d", cur->nm, num);
       }
     else
@@ -832,14 +811,14 @@ static void timer_start_ovs_req(void *data)
       }
     else if (cur->endp_type == endp_type_eths)
       {
-      if (fmt_tx_add_ethds(0, cur->nm, cur->num))
+      if (fmt_tx_add_eths1(0, cur->nm, cur->num))
         {
         KERR("ERROR %s %d", cur->nm, cur->num);
         clownix_free(name, __FUNCTION__);
         }
       else
         {
-        clownix_timeout_add(400, timer_end_eths2_ovs, data, NULL, NULL);
+        clownix_timeout_add(200, timer_end_eths2_ovs, data, NULL, NULL);
         }
       }
     else
@@ -967,7 +946,7 @@ void dpdk_xyx_eths2_resp_ok(int is_ok, char *name, int num)
 {
   t_xyx_cnx *cur = find_xyx(name, num);
   if (cur == NULL)
-    KERR("ERROR %s %d", cur->nm, cur->num);
+    KERR("ERROR %s %d", name, num);
   else
     {
     if (is_ok)
@@ -990,7 +969,7 @@ void dpdk_xyx_eths2_vm_pinging(char *name, int num)
 {
   t_xyx_cnx *cur = find_xyx(name, num);
   if (cur == NULL)
-    KERR("ERROR %s %d", cur->nm, cur->num);
+    KERR("ERROR %s %d", name, num);
   else
     {
     if (cur->eths_done_ok == 0)

@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int xyx_dpdk_get_pid(char *name, int num);
 void xyx_dpdk_cnf(char *name, int type, uint8_t *mac);
 void xyx_dpdk_start_vhost(char *name);
 int xyx_dpdk_llid_exists_with_name(char *name);

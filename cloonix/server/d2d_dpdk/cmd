@@ -54,6 +54,7 @@ crypto = dependency('libcrypto')
 
 cflags = ['-march=native']
 cflags += ['-fPIC']
+cflags += ['-g']
 cflags += ['-DALLOW_EXPERIMENTAL_API']
 
 sources = files('src/d2d_dpdk.c',

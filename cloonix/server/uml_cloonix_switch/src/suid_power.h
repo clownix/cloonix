@@ -15,9 +15,9 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void suid_power_kill_pid(int pid);
 void suid_power_llid_closed(int llid);
 int suid_power_rec_name(char *name, int on);
-int suid_power_req_kill_all(void);
 int suid_power_pid(void);
 void suid_power_ifup_phy(char *phy);
 void suid_power_ifdown_phy(char *phy);

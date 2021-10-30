@@ -43,6 +43,7 @@ project('cloonix_a2b_dpdk', 'c')
 
 cflags = ['-march=native']
 cflags += ['-fPIC']
+cflags += ['-g']
 cflags += ['-DALLOW_EXPERIMENTAL_API']
 
 incdir = include_directories('${DPDK}/include',

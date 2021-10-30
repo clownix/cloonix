@@ -689,7 +689,7 @@ void watch_tx(int llid, int len, char *str_tx)
 {
   char *ntx;
   int cidx;
-  if (len)
+  if ((msg_exist_channel(llid)) && len)
     {
     if ((len<0) || (len > MAX_TOT_LEN_QDAT))
       KOUT("%d", len);

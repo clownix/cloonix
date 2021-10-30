@@ -57,8 +57,8 @@ static struct vhost_device_ops g_virtio_net_device_ops0;
 static struct vhost_device_ops g_virtio_net_device_ops1;
 static uint32_t volatile g_lock;
 static int g_running_lcore;
-static char g_memid[MAX_NAME_LEN];
 
+static struct rte_mempool *g_mpool;
 
 void end_clean_unlink(void);
 
@@ -216,25 +216,22 @@ static int store_rx_circle(int id, uint64_t usec, struct rte_mempool *mpool)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rxtx_worker(void *unused)
+static int rxtx_worker(void *data)
 {
-  int sid, i;
-  struct rte_mempool *mpool;
-  uint64_t arrival_usec, delta_usec, last_usec;
+  int i;
   uint32_t mcache = MBUF_MCACHE;
   uint32_t mbufs = MBUF_MAX;
   uint32_t msize = MBUF_SIZE;
-  (void) unused;
-
-  if (rte_lcore_id() != g_running_lcore)
-    KOUT(" ");
-
-  sid = rte_lcore_to_socket_id(rte_lcore_id());
+  uint64_t arrival_usec, delta_usec, last_usec;
+  char *memid = (char *) data;
+  int sid = rte_lcore_to_socket_id(rte_lcore_id());
   if (sid < 0)
     KOUT("ERROR SOCKET ID");
-  mpool = rte_pktmbuf_pool_create(g_memid, mbufs, mcache, 0, msize, sid);
-  if (!mpool)
+
+  g_mpool = rte_pktmbuf_pool_create(memid, mbufs, mcache, 0, msize, sid);
+  if (!g_mpool)
     KOUT("ERROR MEMORY POOL CREATE");
+
 
   g_rxtx_worker_active = 1;
 
@@ -244,8 +241,7 @@ static int rxtx_worker(void *unused)
           g_tx_enable[0] && g_tx_enable[1] &&
           g_create[0] && g_create[1]))
       {
-      usleep(5000);
-      rte_pause();
+      usleep(200);
       last_usec = get_usec();
       }
     else
@@ -254,8 +250,7 @@ static int rxtx_worker(void *unused)
 
   while(g_rxtx_worker)
     {
-    rte_pause();
-    usleep(60);
+    usleep(100);
     vhost_lock_acquire();
     if ((g_rxtx_worker &&
          g_rx_enable[0] && g_rx_enable[1] &&
@@ -267,7 +262,7 @@ static int rxtx_worker(void *unused)
       last_usec = arrival_usec;
       for (i=0; i<2; i++)
         { 
-        store_rx_circle(i, arrival_usec, mpool);
+        store_rx_circle(i, arrival_usec, g_mpool);
         sched_mngt(i, arrival_usec, delta_usec);
         flush_tx_circle(i);
         }
@@ -277,9 +272,6 @@ static int rxtx_worker(void *unused)
     vhost_lock_release();
     }
   circle_flush();
-  rte_vhost_driver_unregister(g_a2b0_socket);
-  rte_vhost_driver_unregister(g_a2b1_socket);
-  rte_mempool_free(mpool);
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -293,6 +285,11 @@ void vhost_client_end_and_exit()
     rte_eal_wait_lcore(g_running_lcore);
     g_running_lcore = -1;
     }
+
+  rte_vhost_driver_unregister(g_a2b0_socket);
+  rte_vhost_driver_unregister(g_a2b1_socket);
+  rte_mempool_free(g_mpool);
+
   end_clean_unlink();
   rte_exit(EXIT_SUCCESS, NULL);
 }
@@ -315,7 +312,6 @@ void vhost_client_start(char *memid, char *path0, char *path1)
 
   strncpy(g_a2b0_socket, path0, MAX_PATH_LEN-1);
   strncpy(g_a2b1_socket, path1, MAX_PATH_LEN-1);
-  strncpy(g_memid, memid, MAX_NAME_LEN-1);;
 
   g_virtio_net_device_ops0.new_device          = virtio_new_device;
   g_virtio_net_device_ops0.destroy_device      = virtio_destroy_device;
@@ -349,8 +345,7 @@ void vhost_client_start(char *memid, char *path0, char *path1)
   if (err)
     KOUT("ERROR");
 
-
-  rte_eal_remote_launch(rxtx_worker, NULL, g_running_lcore);
+  rte_eal_remote_launch(rxtx_worker, (void *) memid, g_running_lcore);
   while(g_rxtx_worker_active == 0)
     {
     usleep(10000);
@@ -375,7 +370,6 @@ void vhost_client_init(void)
   g_rxtx_worker_active = 0;
   memset(g_a2b0_socket, 0, MAX_PATH_LEN);
   memset(g_a2b1_socket, 0, MAX_PATH_LEN);
-  memset(g_memid, 0, MAX_NAME_LEN);
   memset(&g_virtio_net_device_ops0, 0, sizeof(struct vhost_device_ops));
   memset(&g_virtio_net_device_ops1, 0, sizeof(struct vhost_device_ops));
   circle_init();

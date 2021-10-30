@@ -31,6 +31,7 @@ for i in 1 2; do
 done
 #----------------------------------------------------------------------
 
+sleep 1
 
 cloonix_cli $NET add lan vm1 0 lan
 cloonix_cli $NET add lan vm2 0 lan

@@ -20,10 +20,12 @@ int  fmt_tx_del_phy(int tid, char *name);
 int  fmt_tx_add_tap(int tid, char *name);
 int  fmt_tx_del_tap(int tid, char *name);
 
-int fmt_tx_add_ethds(int tid, char *name, int num);
-int fmt_tx_add_eths2(int tid, char *name, int num);
+int  fmt_tx_add_ethd(int tid, char *name, int num);
+int  fmt_tx_del_ethd(int tid, char *name, int num);
 
-int  fmt_tx_del_ethds(int tid, char *name, int num);
+int  fmt_tx_add_eths1(int tid, char *name, int num);
+int  fmt_tx_add_eths2(int tid, char *name, int num);
+int  fmt_tx_del_eths(int tid, char *name, int num);
 
 int  fmt_tx_add_lan(int tid, char *lan);
 int  fmt_tx_del_lan(int tid, char *lan);

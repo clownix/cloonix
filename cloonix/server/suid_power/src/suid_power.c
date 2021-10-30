@@ -511,7 +511,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   char name[MAX_NAME_LEN];
   char resp[MAX_PATH_LEN];
   char dtach[MAX_PATH_LEN];
-  int on, argc, vm_id;
+  int on, argc, vm_id, pid;
   t_vmon *cur;
 
   DOUT(FLAG_HOP_SIGDIAG, "SUID %s", line);
@@ -549,7 +549,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       KERR("ERROR Bad ifdown %s", name);
     }
   else if (sscanf(line,
-  "cloonixsuid_req_kill vm_id: %d", &vm_id) == 1)
+  "cloonixsuid_req_vm_kill vm_id: %d", &vm_id) == 1)
     {
     cur = find_vmon_by_vm_id(vm_id);
     if (!cur)
@@ -562,13 +562,14 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       }
     }
   else if (sscanf(line,
+  "cloonixsuid_req_pid_kill pid: %d", &pid) == 1)
+    {
+    if (!kill(pid, SIGTERM))
+      KERR("ERROR BECAUSE GOOD KILL %d", pid);
+    }
+  else if (sscanf(line,
   "cloonixsuid_rec_name: %s on: %d", name, &on) == 2)
     ovs_get_rec_name(name, on);
-  else if (!strcmp(line,
-  "cloonixsuid_req_kill_all"))
-    {
-    req_kill_clean_all();
-    }
   else
     KERR("%s %s", g_network_name, line);
 }

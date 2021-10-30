@@ -57,7 +57,6 @@ static t_add_lan *lan_find(char *name)
 static void lan_alloc(int llid, int tid, char *name, int num, char *lan)
 {
   t_add_lan *cur  = (t_add_lan *) clownix_malloc(sizeof(t_add_lan), 6);
-  KERR("KVMETH LAN ALLOC %s", name);
   memset(cur, 0, sizeof(t_add_lan));
   strncpy(cur->name, name, MAX_NAME_LEN-1);
   strncpy(cur->lan, lan, MAX_NAME_LEN-1);
@@ -74,7 +73,6 @@ static void lan_alloc(int llid, int tid, char *name, int num, char *lan)
 /*****************************************************************************/
 static void lan_free(t_add_lan *cur)
 {
-  KERR("KVMETH LAN FREE %s", cur->name);
   if (cur->prev)
     cur->prev->next = cur->next;
   if (cur->next)
@@ -123,7 +121,6 @@ static void timer_beat(void *data)
 /*****************************************************************************/
 int dpdk_tap_add(int llid, int tid, char *name)
 {
-  KERR("TAP ADD %s", name);
   return (dpdk_xyx_add(llid, tid, name, 0, endp_type_tap));
 }
 /*--------------------------------------------------------------------------*/
@@ -131,7 +128,6 @@ int dpdk_tap_add(int llid, int tid, char *name)
 /*****************************************************************************/
 int dpdk_tap_del(int llid, int tid, char *name)
 {
-  KERR("TAP DEL %s", name);
   return (dpdk_xyx_del(llid, tid, name, 0));
 }
 /*--------------------------------------------------------------------------*/
@@ -139,7 +135,6 @@ int dpdk_tap_del(int llid, int tid, char *name)
 /*****************************************************************************/
 void dpdk_tap_resp_add_lan(int is_ko, char *lan, char *name)
 {
-  KERR("TAP RESP ADD LAN %s", name);
   dpdk_xyx_resp_add_lan(is_ko, lan, name, 0);
 }
 /*--------------------------------------------------------------------------*/
@@ -147,7 +142,6 @@ void dpdk_tap_resp_add_lan(int is_ko, char *lan, char *name)
 /*****************************************************************************/
 void dpdk_tap_resp_del_lan(int is_ko, char *lan, char *name)
 {
-  KERR("TAP RESP DEL LAN %s", name);
   dpdk_xyx_resp_del_lan(is_ko, lan, name, 0);
 }
 /*--------------------------------------------------------------------------*/
@@ -156,7 +150,6 @@ void dpdk_tap_resp_del_lan(int is_ko, char *lan, char *name)
 int dpdk_tap_add_lan(int llid, int tid, char *name, char *lan)
 {
   int result = -1;
-  KERR("TAP ADD LAN %s", name);
   if (dpdk_xyx_exists(name, 0))
     {
     if (lan_find(name) == NULL)
@@ -176,7 +169,6 @@ int dpdk_tap_add_lan(int llid, int tid, char *name, char *lan)
 /*****************************************************************************/
 int dpdk_tap_del_lan(int llid, int tid, char *name,  char *lan)
 {
-  KERR("TAP DEL LAN %s", name);
   return (dpdk_xyx_del_lan(llid, tid, name, 0, lan));
 }
 /*--------------------------------------------------------------------------*/
@@ -184,7 +176,6 @@ int dpdk_tap_del_lan(int llid, int tid, char *name,  char *lan)
 /*****************************************************************************/
 void dpdk_tap_resp_add(int is_ko, char *name)
 {
-  KERR("TAP RESP ADD %s", name);
   dpdk_xyx_resp_add(is_ko, name, 0);
 }
 /*--------------------------------------------------------------------------*/
@@ -192,7 +183,6 @@ void dpdk_tap_resp_add(int is_ko, char *name)
 /*****************************************************************************/
 void dpdk_tap_resp_del(int is_ko, char *name)
 {
-  KERR("TAP RESP DEL %s", name);
   dpdk_xyx_resp_del(is_ko, name, 0);
 }
 /*--------------------------------------------------------------------------*/
