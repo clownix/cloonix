@@ -69,6 +69,7 @@ static int g_in_cloonix;
 static char *g_cloonix_vm_name;
 
 int file_exists(char *path, int mode);
+int get_conf_rank(void);
 
 /*****************************************************************************/
 typedef struct t_timer_del
@@ -276,7 +277,7 @@ static void timer_del_vm(void *data)
     todel = 1;
     for (i=0; i<vm->kvm.nb_tot_eth; i++)
       {
-      if (eth_tab[i].eth_type != endp_type_waiting_done)
+      if (eth_tab[i].endp_type != endp_type_waiting_done)
         todel = 0;
       }
     if (todel == 0)
@@ -286,7 +287,7 @@ static void timer_del_vm(void *data)
         {
         for (i=0; i<vm->kvm.nb_tot_eth; i++)
           {
-          if (eth_tab[i].eth_type != endp_type_waiting_done)
+          if (eth_tab[i].endp_type != endp_type_waiting_done)
             {
             pid = xyx_dpdk_get_pid(tz->kvm.name, i);
             if (pid)
@@ -313,14 +314,14 @@ static void timer_del_vm(void *data)
         }
       tz->nb_try = 1;
       }
-    clownix_timeout_add(200, timer_del_vm, (void *) tz, NULL, NULL);
+    clownix_timeout_add(100, timer_del_vm, (void *) tz, NULL, NULL);
     }
   else if (vm->vm_to_be_killed == 0)
     {
      machine_death(kvm->name, error_death_noerr); 
-     clownix_timeout_add(200, timer_del_vm, (void *) tz, NULL, NULL);
+     clownix_timeout_add(100, timer_del_vm, (void *) tz, NULL, NULL);
     }
-  else if (tz->nb_try == 1)
+  else if ((tz->nb_try == 1) || (tz->nb_try == 2) || (tz->nb_try == 3))
     {
     pid = suid_power_get_pid(vm->kvm.vm_id);
     if (pid == 0)
@@ -330,11 +331,11 @@ static void timer_del_vm(void *data)
       }
     else
       {
-      tz->nb_try = 2;
-      clownix_timeout_add(200, timer_del_vm, (void *) tz, NULL, NULL);
+      tz->nb_try += 1;
+      clownix_timeout_add(100, timer_del_vm, (void *) tz, NULL, NULL);
       }
     }
-  else if (tz->nb_try == 2)
+  else if (tz->nb_try == 4)
     {
     pid = suid_power_get_pid(vm->kvm.vm_id);
     if (pid == 0)
@@ -366,12 +367,16 @@ void poweroff_vm(int llid, int tid, t_vm *vm)
     vm->vm_poweroff_done = 1;
     for (i=0; i<vm->kvm.nb_tot_eth; i++)
       {
-      if ((eth_tab[i].eth_type == endp_type_ethd) ||
-          (eth_tab[i].eth_type == endp_type_eths))
+      if ((eth_tab[i].endp_type == endp_type_ethd) ||
+          (eth_tab[i].endp_type == endp_type_eths) ||
+          (eth_tab[i].endp_type == endp_type_ethv))
         {
-        if (dpdk_kvm_del(0, 0, vm->kvm.name, i, eth_tab[i].eth_type))
+        if (dpdk_kvm_del(0, 0, vm->kvm.name, i, eth_tab[i].endp_type))
           KERR("ERROR %s %d", vm->kvm.name, i);
-        eth_tab[i].eth_type = endp_type_waiting;
+        if (eth_tab[i].endp_type == endp_type_ethv)
+          eth_tab[i].endp_type = endp_type_waiting_done;
+        else
+          eth_tab[i].endp_type = endp_type_waiting;
         }
       }
     tz = (t_timer_zombie *) clownix_malloc(sizeof(t_timer_zombie), 3);
@@ -379,7 +384,7 @@ void poweroff_vm(int llid, int tid, t_vm *vm)
     tz->llid = llid;
     tz->tid = tid;
     memcpy(&(tz->kvm), &(vm->kvm), sizeof(t_topo_kvm));
-    clownix_timeout_add(200, timer_del_vm, (void *) tz, NULL, NULL);
+    clownix_timeout_add(100, timer_del_vm, (void *) tz, NULL, NULL);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -542,7 +547,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
     else if (endp_type == endp_type_eths)
       {
       if ((vm == NULL) ||
-          (eth_tab[num].eth_type != endp_type_eths) ||
+          (eth_tab[num].endp_type != endp_type_eths) ||
           (num >= vm->kvm.nb_tot_eth))
         {
         send_status_ko(llid, tid, "failure");
@@ -560,7 +565,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
     else if (endp_dpdk == endp_type_ethd)
       {
       if ((vm == NULL) ||
-          (eth_tab[num].eth_type != endp_type_ethd) || 
+          (eth_tab[num].endp_type != endp_type_ethd) || 
           (num >= vm->kvm.nb_tot_eth))
         {
         send_status_ko(llid, tid, "failure");
@@ -569,6 +574,24 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
       else
         {
         if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_ethd))
+          {
+          send_status_ko(llid, tid, "failure");
+          KERR("ERROR %s %d %s", name, num, lan);
+          }
+        }
+      }
+    else if (endp_dpdk == endp_type_ethv)
+      {
+      if ((vm == NULL) ||
+          (eth_tab[num].endp_type != endp_type_ethv) ||
+          (num >= vm->kvm.nb_tot_eth))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %d %s", name, num, lan);
+        }
+      else
+        {
+        if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_ethv))
           {
           send_status_ko(llid, tid, "failure");
           KERR("ERROR %s %d %s", name, num, lan);
@@ -636,7 +659,7 @@ static void timer_endp(void *data)
   else
     {
     te->count++;
-    if (te->count >= 50)
+    if (te->count >= 100)
       {
       KERR("ERROR DELAY ADD LAN END");
       sprintf(err, "ERROR ENDP: %s %d %s",te->name, te->num, te->lan);
@@ -819,6 +842,11 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   else if (endp_dpdk == endp_type_ethd)
     {
     if (dpdk_kvm_del_lan(llid, tid, name, num, lan, endp_type_ethd))
+      send_status_ko(llid, tid, "failure");
+    }
+  else if (endp_dpdk == endp_type_ethv)
+    {
+    if (dpdk_kvm_del_lan(llid, tid, name, num, lan, endp_type_ethv))
       send_status_ko(llid, tid, "failure");
     }
   else
@@ -1285,6 +1313,13 @@ static void delayed_add_vm(t_timer_zombie *tz)
         kvm->eth_table[i].mac_addr[5] = i;
         kvm->eth_table[i].randmac = 1;
         }
+      if ((strlen(kvm->eth_table[i].vhost_ifname) == 0) ||
+          (!strcmp(kvm->eth_table[i].vhost_ifname, "noname")))
+        {
+        memset(kvm->eth_table[i].vhost_ifname, 0, MAX_NAME_LEN);
+        snprintf(kvm->eth_table[i].vhost_ifname, (MAX_NAME_LEN-1),
+                 "vho_%d_%d_%d",get_conf_rank(), vm_id, i);
+        }
       }
     result = test_topo_kvm(kvm, vm_id, info, nb_dpdk);
     if (result)
@@ -1606,11 +1641,11 @@ static void timer_del_all(void *data)
       clownix_free(td, __FUNCTION__);
       }
     else
-      clownix_timeout_add(100, timer_del_all, (void *) td, NULL, NULL);
+      clownix_timeout_add(50, timer_del_all, (void *) td, NULL, NULL);
     }
   else
     {
-    clownix_timeout_add(400, timer_del_all_end, (void *) td, NULL, NULL);
+    clownix_timeout_add(50, timer_del_all_end, (void *) td, NULL, NULL);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -1625,7 +1660,7 @@ void recv_del_all(int llid, int tid)
   td->llid = llid;
   td->tid = tid;
   td->pid_lst = create_list_pid(&(td->pid_nb));
-  clownix_timeout_add(300, timer_del_all, (void *) td, NULL, NULL);
+  clownix_timeout_add(200, timer_del_all, (void *) td, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1640,7 +1675,7 @@ void recv_kill_uml_clownix(int llid, int tid)
   td->tid = tid;
   td->kill_cloonix = 1;
   td->pid_lst = create_list_pid(&(td->pid_nb));
-  clownix_timeout_add(300, timer_del_all, (void *) td, NULL, NULL);
+  clownix_timeout_add(200, timer_del_all, (void *) td, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 

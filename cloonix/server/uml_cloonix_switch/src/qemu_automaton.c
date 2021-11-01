@@ -346,9 +346,20 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
   len = sprintf(cmd_start, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
   for (i = 0; i < vm->kvm.nb_tot_eth; i++)
     {
-    if ((vm->kvm.eth_table[i].eth_type == endp_type_ethd) ||
-        (vm->kvm.eth_table[i].eth_type == endp_type_eths))
-      len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_net(vm,i));
+    if ((vm->kvm.eth_table[i].endp_type == endp_type_ethd) ||
+        (vm->kvm.eth_table[i].endp_type == endp_type_eths))
+      len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_ethd_eths(vm,i));
+    if (vm->kvm.eth_table[i].endp_type == endp_type_ethd)
+      len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_ethd(vm,i));
+    else if (vm->kvm.eth_table[i].endp_type == endp_type_eths)
+      len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_eths(vm,i));
+    else if (vm->kvm.eth_table[i].endp_type == endp_type_ethv)
+      {
+      len += sprintf(cmd_start+len,"%s",
+             dpdk_ovs_format_ethv(vm, i, vm->kvm.eth_table[i].vhost_ifname));
+      }
+    else
+      KERR("ERROR %d", vm->kvm.eth_table[i].endp_type);
     }
   if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NOBACKDOOR))
     {
@@ -651,8 +662,9 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
     case auto_delay_possible_ovs_start:
       for (i = 0; i < vm->kvm.nb_tot_eth; i++)
         {
-        if ((vm->kvm.eth_table[i].eth_type == endp_type_ethd) ||
-            (vm->kvm.eth_table[i].eth_type == endp_type_eths))
+        if ((vm->kvm.eth_table[i].endp_type == endp_type_ethd) ||
+            (vm->kvm.eth_table[i].endp_type == endp_type_eths) ||
+            (vm->kvm.eth_table[i].endp_type == endp_type_ethv))
           nb_dpdk += 1;
         }
       if (nb_dpdk)

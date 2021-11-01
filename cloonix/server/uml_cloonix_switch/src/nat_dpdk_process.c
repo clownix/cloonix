@@ -421,8 +421,9 @@ void nat_dpdk_vm_event(void)
         {
         for (j=0; j<vm->kvm.nb_tot_eth; j++)
           {
-          if ((vm->kvm.eth_table[j].eth_type == endp_type_ethd) ||
-              (vm->kvm.eth_table[j].eth_type == endp_type_eths))
+          if ((vm->kvm.eth_table[j].endp_type == endp_type_ethd) ||
+              (vm->kvm.eth_table[j].endp_type == endp_type_eths) ||
+              (vm->kvm.eth_table[j].endp_type == endp_type_ethv))
             {
             m = vm->kvm.eth_table[j].mac_addr;
             name = vm->kvm.name;

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 PARAMS="ram=2000 cpu=2 eth=s"
 DIST=bullseye
 NET=nemo
@@ -49,15 +47,7 @@ cloonix_ssh $NET vm2 "ip addr add dev eth0 1.1.1.2/24"
 cloonix_ssh $NET vm2 "ip link set dev eth0 up"
 #----------------------------------------------------------------------
 echo
-#----------------------------------------------------------------------
-sleep 1
-urxvt -title vm1 -e cloonix_ssh $NET vm1 "iperf3 -s" &
-sleep 2
-urxvt -title vm2 -e cloonix_ssh $NET vm2 "iperf3 -c 1.1.1.1 -t 10000" &
-#----------------------------------------------------------------------
-
-sleep 30
-
+cloonix_ssh $NET vm1 "iperf3 -s" &
+urxvt -title vm2 -e cloonix_ssh $NET vm2 "iperf3 -c 1.1.1.1"
 kill $(jobs -p)
-
-echo DONE
+#----------------------------------------------------------------------

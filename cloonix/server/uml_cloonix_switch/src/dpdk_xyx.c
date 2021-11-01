@@ -325,23 +325,24 @@ void dpdk_xyx_resp_add_lan(int is_ko, char *lan, char *name, int num)
 void dpdk_xyx_resp_del_lan(int is_ko, char *lan, char *name, int num)
 {
   t_xyx_cnx *cur = find_xyx(name, num);
-  if (!cur)
-    KERR("ERROR %s %s %d", lan, name, num);
-  else if (strcmp(lan, cur->lan.lan))
-    KERR("ERROR %s %s %d %s", lan, name, num, cur->lan.lan);
-  else
+  if (cur)
     {
-    if (cur->lan.attached_lan_ok == 1) 
-      KERR("ERROR %d %s %s %d", is_ko, lan, name, num);
-    if (cur->lan.waiting_ack_add_lan == 1)
-      KERR("ERROR %d %s %s %d", is_ko, lan, name, num);
-    if (cur->lan.waiting_ack_del_lan == 0)
-      KERR("ERROR %d %s %s %d", is_ko, lan, name, num);
-    cur->lan.attached_lan_ok = 0; 
-    cur->lan.waiting_ack_del_lan = 0;
-    memset(cur->lan.lan, 0, MAX_NAME_LEN);
-    utils_send_status_ok(&(cur->lan.llid),&(cur->lan.tid));
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    if (strcmp(lan, cur->lan.lan))
+      KERR("ERROR %s %s %d %s", lan, name, num, cur->lan.lan);
+    else
+      {
+      if (cur->lan.attached_lan_ok == 1) 
+        KERR("ERROR %d %s %s %d", is_ko, lan, name, num);
+      if (cur->lan.waiting_ack_add_lan == 1)
+        KERR("ERROR %d %s %s %d", is_ko, lan, name, num);
+      if (cur->lan.waiting_ack_del_lan == 0)
+        KERR("ERROR %d %s %s %d", is_ko, lan, name, num);
+      cur->lan.attached_lan_ok = 0; 
+      cur->lan.waiting_ack_del_lan = 0;
+      memset(cur->lan.lan, 0, MAX_NAME_LEN);
+      utils_send_status_ok(&(cur->lan.llid),&(cur->lan.tid));
+      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

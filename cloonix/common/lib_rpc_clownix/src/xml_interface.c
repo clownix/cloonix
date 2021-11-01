@@ -679,7 +679,7 @@ void send_topo_small_event(int llid, int tid, char *name,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int topo_eth_format(char *buf, int eth_type, int randmac, char *ifname,
+static int topo_eth_format(char *buf, int endp_type, int randmac, char *ifname,
                            char mac[MAC_ADDR_LEN])
 {
   int len = 0;
@@ -689,7 +689,7 @@ static int topo_eth_format(char *buf, int eth_type, int randmac, char *ifname,
     strncpy(tmp_ifname, ifname, MAX_NAME_LEN-1);
   else
     strncpy(tmp_ifname, "noname", MAX_NAME_LEN-1);
-  len += sprintf(buf+len, VM_ETH_TABLE, eth_type, randmac, tmp_ifname,
+  len += sprintf(buf+len, VM_ETH_TABLE, endp_type, randmac, tmp_ifname,
                      (mac[0]) & 0xFF, (mac[1]) & 0xFF, (mac[2]) & 0xFF,
                      (mac[3]) & 0xFF, (mac[4]) & 0xFF, (mac[5]) & 0xFF);
   return len;
@@ -720,7 +720,7 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
                                        kvm.cpu,
                                        kvm.nb_tot_eth);
   for (i=0; i < kvm.nb_tot_eth; i++)
-    len += topo_eth_format(buf+len, kvm.eth_table[i].eth_type, 
+    len += topo_eth_format(buf+len, kvm.eth_table[i].endp_type, 
                                     kvm.eth_table[i].randmac,
                                     kvm.eth_table[i].vhost_ifname,
                                     kvm.eth_table[i].mac_addr);
@@ -891,6 +891,7 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
   topo_config_check_str(&(topo->clc), __LINE__);
   topo_config_swapon(&cf, &(topo->clc));
   len = sprintf(sndbuf, EVENT_TOPO_O, tid, cf.version,
+                                           topo->conf_rank,
                                            cf.network,
                                            cf.username,
                                            cf.server_port,
@@ -1036,7 +1037,7 @@ void send_status_ko(int llid, int tid, char *reason)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void get_one_eth_table(char *buf, int *eth_type, int *randmac,
+static void get_one_eth_table(char *buf, int *endp_type, int *randmac,
                               char *ifname,  char mac[MAC_ADDR_LEN])
 {
   int i;
@@ -1047,7 +1048,7 @@ static void get_one_eth_table(char *buf, int *eth_type, int *randmac,
   memset(tmp_ifname, 0, MAX_NAME_LEN);
   if (!ptr)
     KOUT("%s\n", buf);
-  if (sscanf(ptr, VM_ETH_TABLE, eth_type, randmac, tmp_ifname,
+  if (sscanf(ptr, VM_ETH_TABLE, endp_type, randmac, tmp_ifname,
                                &(var[0]), &(var[1]), &(var[2]),
                                &(var[3]), &(var[4]), &(var[5])) != 9) 
       KOUT("%s\n", buf);
@@ -1069,7 +1070,7 @@ static void get_eth_table(char *buf, int nb_tot_eth, t_eth_table *eth_table)
     ptr = strstr(ptr, "<eth_table>");
     if (!ptr)
       KOUT("%s\n%d\n", buf, nb_tot_eth);
-    get_one_eth_table(ptr, &(eth_table[i].eth_type), &(eth_table[i].randmac),
+    get_one_eth_table(ptr, &(eth_table[i].endp_type), &(eth_table[i].randmac),
                       eth_table[i].vhost_ifname,
                       eth_table[i].mac_addr); 
     ptr = strstr(ptr, "</eth_table>");
@@ -1083,21 +1084,21 @@ static void get_eth_table(char *buf, int nb_tot_eth, t_eth_table *eth_table)
 /*****************************************************************************/
 static int make_eth_table(char *buf, int nb, t_eth_table *eth_tab)
 {
-  int i, eth_type, randmac, len = 0;
+  int i, endp_type, randmac, len = 0;
   char *ifname, *mac;
   char tmp_ifname[MAX_NAME_LEN];
   for (i=0; i<nb; i++)
     {
     mac = eth_tab[i].mac_addr;
     randmac = eth_tab[i].randmac;
-    eth_type = eth_tab[i].eth_type;
+    endp_type = eth_tab[i].endp_type;
     ifname = eth_tab[i].vhost_ifname;
     memset(tmp_ifname, 0, MAX_NAME_LEN);
     if (strlen(ifname))
       strncpy(tmp_ifname, ifname, MAX_NAME_LEN-1);
     else
       strncpy(tmp_ifname, "noname", MAX_NAME_LEN-1);
-    len += sprintf(buf+len, VM_ETH_TABLE, eth_type, randmac, tmp_ifname,
+    len += sprintf(buf+len, VM_ETH_TABLE, endp_type, randmac, tmp_ifname,
                       (mac[0]) & 0xFF, (mac[1]) & 0xFF, (mac[2]) & 0xFF,
                       (mac[3]) & 0xFF, (mac[4]) & 0xFF, (mac[5]) & 0xFF);
     }
@@ -1592,6 +1593,7 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
   memset(topo, 0, sizeof(t_topo_info));
   memset(&icf, 0, sizeof(t_topo_clc));
   if (sscanf(msg, EVENT_TOPO_O, tid, icf.version,
+                                     &(topo->conf_rank),
                                      icf.network,
                                      icf.username,
                                      &(icf.server_port),
@@ -1607,7 +1609,7 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
                                      &(topo->nb_nat),
                                      &(topo->nb_endp),
                                      &(topo->nb_info_phy),
-                                     &(topo->nb_bridges)) != 18)
+                                     &(topo->nb_bridges)) != 19)
     KOUT("%s", msg);
   topo_config_swapoff(&(topo->clc), &icf);
   len = topo->nb_kvm*sizeof(t_topo_kvm);

@@ -92,13 +92,14 @@ int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab, int *dpdk)
   (*dpdk) = 0;
   for (i=0; i<nb_tot_eth; i++)
     {
-    if ((eth_tab[i].eth_type == endp_type_ethd) ||
-        (eth_tab[i].eth_type == endp_type_eths))
+    if ((eth_tab[i].endp_type == endp_type_ethd) ||
+        (eth_tab[i].endp_type == endp_type_eths) ||
+        (eth_tab[i].endp_type == endp_type_ethv))
       (*dpdk)++;
     else
       {
-      KERR("%d %d %d", nb_tot_eth, i, eth_tab[i].eth_type);
-      sprintf(info, "Bad input %d for eth_type", eth_tab[i].eth_type);
+      KERR("%d %d %d", nb_tot_eth, i, eth_tab[i].endp_type);
+      sprintf(info, "Bad input %d for endp_type", eth_tab[i].endp_type);
       event_print("%s", info);
       result = -1;
       }

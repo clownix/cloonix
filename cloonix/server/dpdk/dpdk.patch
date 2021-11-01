@@ -1,6 +1,6 @@
 diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdinfo-cfile.py
---- dpdk/buildtools/gen-pmdinfo-cfile.py	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-10-29 22:49:53.921109585 +0200
+--- dpdk/buildtools/gen-pmdinfo-cfile.py	2021-10-30 18:01:37.000000000 +0200
++++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-10-30 18:03:11.466371333 +0200
 @@ -14,7 +14,7 @@
          stdout=subprocess.PIPE, check=True, cwd=temp
      )
@@ -11,9 +11,9 @@ diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdi
      paths = [os.path.join(temp, name) for name in names]
      subprocess.run(pmdinfogen + paths + [output], check=True)
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2021-10-29 22:49:53.921109585 +0200
-@@ -162,6 +162,7 @@
+--- dpdk/drivers/meson.build	2021-10-30 18:01:37.000000000 +0200
++++ dpdk_tainted/drivers/meson.build	2021-10-30 18:03:11.466371333 +0200
+@@ -163,6 +163,7 @@
          tmp_lib = static_library('tmp_' + lib_name, sources,
                  include_directories: includes,
                  dependencies: static_deps,
@@ -21,7 +21,7 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
                  c_args: cflags)
          objs += tmp_lib.extract_all_objects(recursive: true)
          sources = custom_target(out_filename,
-@@ -226,6 +227,7 @@
+@@ -227,6 +228,7 @@
                  version: abi_version,
                  soversion: so_version,
                  install: true,
@@ -30,8 +30,8 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
  
          # create a dependency object and add it to the global dictionary so
 diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost.h dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h
---- dpdk/drivers/net/virtio/virtio_user/vhost.h	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h	2021-10-29 22:49:53.921109585 +0200
+--- dpdk/drivers/net/virtio/virtio_user/vhost.h	2021-10-30 18:01:38.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h	2021-10-30 18:03:11.466371333 +0200
 @@ -15,6 +15,26 @@
  #include "../virtio_logs.h"
  #include "../virtqueue.h"
@@ -60,8 +60,8 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost.h dpdk_tainted/drivers/net/
  	unsigned int index;
  	unsigned int num;
 diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c
---- dpdk/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-29 22:49:53.921109585 +0200
+--- dpdk/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-30 18:01:38.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-30 18:03:11.466371333 +0200
 @@ -104,6 +104,23 @@
  #define VHOST_USER_PAYLOAD_SIZE \
  	(sizeof(struct vhost_user_msg) - VHOST_USER_HDR_SIZE)
@@ -127,8 +127,8 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers
  }
  
 diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c
---- dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-17 13:34:13.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-29 22:49:53.921109585 +0200
+--- dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-30 18:01:38.000000000 +0200
++++ dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-30 18:03:11.466371333 +0200
 @@ -23,6 +23,7 @@
  
  #define VIRTIO_USER_MEM_EVENT_CLB_NAME "virtio_user_mem_event_clb"
@@ -149,7 +149,7 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/dr
  			return;
  		}
  
-@@ -443,6 +447,8 @@
+@@ -457,6 +461,8 @@
  	if (msl->external)
  		return;
  
@@ -158,24 +158,9 @@ diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/dr
  	pthread_mutex_lock(&dev->mutex);
  
  	if (dev->started == false)
-diff -Naur dpdk/lib/eal/common/eal_common_devargs.c dpdk_tainted/lib/eal/common/eal_common_devargs.c
---- dpdk/lib/eal/common/eal_common_devargs.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/common/eal_common_devargs.c	2021-10-29 22:49:53.921109585 +0200
-@@ -88,8 +88,11 @@
- 	/* Split each sub-lists. */
- 	nblayer = devargs_layer_count(devstr);
- 	if (nblayer > RTE_DIM(layers)) {
-+/*
-+cloonix 
- 		RTE_LOG(ERR, EAL, "Invalid format: too many layers (%zu)\n",
- 			nblayer);
-+*/
- 		ret = -E2BIG;
- 		goto get_out;
- 	}
 diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/eal_common_options.c
---- dpdk/lib/eal/common/eal_common_options.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-10-29 22:49:53.921109585 +0200
+--- dpdk/lib/eal/common/eal_common_options.c	2021-10-30 18:01:38.000000000 +0200
++++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-10-30 18:03:11.466371333 +0200
 @@ -125,7 +125,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
@@ -188,8 +173,8 @@ diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/
  
  /*
 diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
---- dpdk/lib/eal/linux/eal.c	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/eal/linux/eal.c	2021-10-29 22:49:53.921109585 +0200
+--- dpdk/lib/eal/linux/eal.c	2021-10-30 18:01:38.000000000 +0200
++++ dpdk_tainted/lib/eal/linux/eal.c	2021-10-30 18:03:11.466371333 +0200
 @@ -27,6 +27,7 @@
  #endif
  #include <linux/version.h>
@@ -365,9 +350,9 @@ diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
  		/* autodetect the IOVA mapping mode */
  		enum rte_iova_mode iova_mode = rte_bus_get_iommu_class();
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2021-10-29 22:52:35.201721127 +0200
-@@ -110,6 +110,7 @@
+--- dpdk/lib/meson.build	2021-10-30 18:01:38.000000000 +0200
++++ dpdk_tainted/lib/meson.build	2021-10-30 18:03:11.466371333 +0200
+@@ -83,6 +83,7 @@
  
  
  default_cflags = machine_args
@@ -375,7 +360,7 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
  default_cflags += ['-DALLOW_EXPERIMENTAL_API']
  default_cflags += ['-DALLOW_INTERNAL_API']
  
-@@ -197,6 +198,7 @@
+@@ -170,6 +171,7 @@
              c_args: cflags,
              dependencies: static_deps,
              include_directories: includes,
@@ -383,7 +368,7 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
              install: true)
      static_dep = declare_dependency(
              include_directories: includes,
-@@ -261,6 +263,7 @@
+@@ -234,6 +236,7 @@
              link_depends: lk_deps,
              version: abi_version,
              soversion: so_version,
@@ -392,8 +377,8 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
      shared_dep = declare_dependency(link_with: shared_lib,
              include_directories: includes,
 diff -Naur dpdk/meson_options.txt dpdk_tainted/meson_options.txt
---- dpdk/meson_options.txt	2021-10-17 13:34:14.000000000 +0200
-+++ dpdk_tainted/meson_options.txt	2021-10-29 22:49:53.921109585 +0200
+--- dpdk/meson_options.txt	2021-10-30 18:01:38.000000000 +0200
++++ dpdk_tainted/meson_options.txt	2021-10-30 18:03:11.466371333 +0200
 @@ -32,7 +32,7 @@
         'Path to the kernel for building kernel modules. Headers must be in $kernel_dir or $kernel_dir/build. Modules will be installed in /lib/modules.')
  option('machine', type: 'string', value: 'auto', description:

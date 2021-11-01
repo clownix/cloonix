@@ -27,6 +27,9 @@ void dpdk_msg_send_del_kvm(char *name, int num);
 int dpdk_msg_send_add_lan_ethd(char *lan_name, char *name, int num);
 int dpdk_msg_send_del_lan_ethd(char *lan_name, char *name, int num);
 
+int dpdk_msg_send_add_lan_ethv(char *lan_name, char *name, int num, char *vhost);
+int dpdk_msg_send_del_lan_ethv(char *lan_name, char *name, int num, char *vhost);
+
 int dpdk_msg_send_add_lan_eths(char *lan_name, char *name, int num);
 int dpdk_msg_send_del_lan_eths(char *lan_name, char *name, int num);
 

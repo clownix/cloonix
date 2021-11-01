@@ -520,7 +520,7 @@ static char *init_local_cloonix_bin_path(char *curdir, char *callbin)
 /*****************************************************************************/
 int main (int argc, char *argv[])
 {
-  int i, result;
+  int i, rank, result;
   if (argc < 2)
     KOUT("%d", argc);
   g_inhibited = 0;
@@ -552,7 +552,7 @@ int main (int argc, char *argv[])
     }
   else
     {
-    g_cloonix_conf_info = cloonix_conf_info_get(argv[2]); 
+    g_cloonix_conf_info = cloonix_cnf_info_get(argv[2], &rank); 
     if (!g_cloonix_conf_info)
       {
       printf("\nBAD NAME %s:", argv[2]);

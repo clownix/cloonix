@@ -39,7 +39,7 @@ char *cloonix_conf_info_get_work(void);
 char *cloonix_conf_info_get_tree(void);
 char *cloonix_conf_info_get_bulk(void);
 char *cloonix_conf_info_get_names(void);
-t_cloonix_conf_info *cloonix_conf_info_get(char *name);
+t_cloonix_conf_info *cloonix_cnf_info_get(char *name, int *rank);
 void cloonix_conf_info_get_all(int *nb, t_cloonix_conf_info **tab);
 int cloonix_conf_info_init(char *path_conf);
 /*--------------------------------------------------------------------------*/

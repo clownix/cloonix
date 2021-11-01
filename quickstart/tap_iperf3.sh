@@ -46,20 +46,11 @@ cloonix_ssh $NET vm1 "ip link set dev eth0 up"
 sudo ip addr add dev tap001 172.21.0.2/24
 sudo ip link set dev tap001 up
 #----------------------------------------------------------------------
-sleep 1
-#----------------------------------------------------------------------
-urxvt -title server2 -e cloonix_ssh $NET vm1 "iperf3 -s" &
-urxvt -title server1 -e iperf3 -s &
+cloonix_ssh $NET vm1 "iperf3 -s" &
+iperf3 -s &
 sleep 1
 echo
-echo
-urxvt -title tohost -e cloonix_ssh $NET vm1 "iperf3 -c 172.21.0.2 -t 10000" &
-sleep 1
-urxvt -title tovm -e iperf3 -c 172.21.0.1 -t 10000  &
-
-sleep 20
-
+urxvt -title tohost -e cloonix_ssh $NET vm1 "iperf3 -c 172.21.0.2"
+urxvt -title tovm -e iperf3 -c 172.21.0.1
 kill $(jobs -p)
-
-echo DONE
 #----------------------------------------------------------------------

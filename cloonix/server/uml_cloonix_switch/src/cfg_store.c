@@ -60,6 +60,8 @@ static int glob_vm_id;
 static t_newborn *head_newborn;
 /*---------------------------------------------------------------------------*/
 
+int get_conf_rank(void);
+
 /*****************************************************************************/
 static t_vm *find_vm(char *name)
 {
@@ -574,7 +576,7 @@ static void fill_topo_kvm(t_topo_kvm *kvm, t_vm *vm)
 static t_topo_info *alloc_all_fields(int nb_vm,
                                      int nb_endp_d2d, int nb_endp_a2b,
                                      int nb_endp_xyx, int nb_endp_nat,
-                                     int nb_endp_ethd, int nb_d2d, int nb_a2b,
+                                     int nb_endp_ethdv, int nb_d2d, int nb_a2b,
                                      int nb_tap, int nb_phy, int nb_nat,
                                      int nb_bridges, int nb_info_phy)
 {
@@ -590,7 +592,7 @@ static t_topo_info *alloc_all_fields(int nb_vm,
   topo->nb_info_phy = nb_info_phy;
   topo->nb_bridges = nb_bridges;
   topo->nb_endp = nb_endp_d2d + nb_endp_a2b + nb_endp_xyx +
-                  nb_endp_nat + nb_endp_ethd;
+                  nb_endp_nat + nb_endp_ethdv;
  if (topo->nb_kvm)
     {
     topo->kvm =
@@ -736,7 +738,7 @@ static void fill_topo_a2b(t_topo_a2b *topo_a2b, t_a2b_cnx *a2b)
 t_topo_info *cfg_produce_topo_info(void)
 {
   int i, nb_vm;
-  int nb_endp_xyx, nb_endp_ethd, nb_endp_d2d, nb_endp_a2b, nb_endp_nat;
+  int nb_endp_xyx, nb_endp_ethdv, nb_endp_d2d, nb_endp_a2b, nb_endp_nat;
   int nb_d2d, nb_a2b, nb_tap, nb_nat, nb_phy, nb_eths;
   int i_endp=0, i_tap=0, i_phy=0, nb_info_phy; 
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
@@ -744,7 +746,7 @@ t_topo_info *cfg_produce_topo_info(void)
   t_topo_bridges *bridges;
   t_topo_endp *d2d_endp = translate_topo_endp_d2d(&nb_endp_d2d);
   t_topo_endp *xyx_endp = translate_topo_endp_xyx(&nb_endp_xyx);
-  t_topo_endp *ethd_endp = translate_topo_endp_ethd(&nb_endp_ethd);
+  t_topo_endp *ethdv_endp = translate_topo_endp_ethdv(&nb_endp_ethdv);
   t_topo_endp *a2b_endp = translate_topo_endp_a2b(&nb_endp_a2b);
   t_topo_endp *nat_endp = translate_topo_endp_nat(&nb_endp_nat);
   int nb_bridges = suid_power_get_topo_bridges(&bridges);
@@ -757,12 +759,13 @@ t_topo_info *cfg_produce_topo_info(void)
 
   t_topo_info *topo = alloc_all_fields(nb_vm, nb_endp_d2d,
                                        nb_endp_a2b, nb_endp_xyx, nb_endp_nat,
-                                       nb_endp_ethd, nb_d2d, nb_a2b, nb_tap,
+                                       nb_endp_ethdv, nb_d2d, nb_a2b, nb_tap,
                                        nb_phy, nb_nat, nb_bridges,
                                        nb_info_phy);
 
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
 
+  topo->conf_rank = get_conf_rank();
   if (topo->nb_kvm)
     {
     for (i=0; i<topo->nb_kvm; i++)
@@ -856,11 +859,11 @@ t_topo_info *cfg_produce_topo_info(void)
     i_endp += 1;
     }
 
-  for (i=0; i<nb_endp_ethd; i++)
+  for (i=0; i<nb_endp_ethdv; i++)
     {
     if (i_endp == topo->nb_endp)
       KOUT(" ");
-    copy_endp(&(topo->endp[i_endp]), &(ethd_endp[i]));
+    copy_endp(&(topo->endp[i_endp]), &(ethdv_endp[i]));
     i_endp += 1;
     }
 

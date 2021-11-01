@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 NET=nemo
 DIST=bullseye
 PARAMS="ram=1000 cpu=4 eth=s"

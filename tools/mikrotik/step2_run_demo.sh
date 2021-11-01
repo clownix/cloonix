@@ -39,7 +39,6 @@ for i in ${LIST_LINUX} ; do
   cloonix_cli ${NET} add kvm ${i} ${PARAMS} ${LINUX}.qcow2 &
 done
 
-
 PARAMS="ram=2000 cpu=4 eth=dddd"
 cloonix_cli ${NET} add kvm mikro ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
 

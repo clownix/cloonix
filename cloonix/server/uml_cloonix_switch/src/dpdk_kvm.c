@@ -32,12 +32,24 @@
 #include "dpdk_ovs.h"
 #include "fmt_diag.h"
 #include "dpdk_msg.h"
+#include "suid_power.h"
 
 
-typedef struct t_ethd_cnx
+typedef struct t_alloc_delay
 {
   char name[MAX_NAME_LEN];
   int num;
+  int endp_type;
+  char vhost[MAX_NAME_LEN];
+} t_alloc_delay;
+
+
+typedef struct t_ethdv_cnx
+{
+  char name[MAX_NAME_LEN];
+  int num;
+  char vhost[MAX_NAME_LEN];
+  int endp_type;
   int ready;
   char lan[MAX_NAME_LEN];
   int waiting_ack_add_lan;
@@ -45,9 +57,9 @@ typedef struct t_ethd_cnx
   int attached_lan_ok;
   int llid;
   int tid;
-  struct t_ethd_cnx *prev;
-  struct t_ethd_cnx *next;
-} t_ethd_cnx;
+  struct t_ethdv_cnx *prev;
+  struct t_ethdv_cnx *next;
+} t_ethdv_cnx;
 
 typedef struct t_kvm_cnx
 {
@@ -76,13 +88,13 @@ typedef struct t_add_lan
 
 static t_kvm_cnx *g_head_kvm;
 static t_add_lan *g_head_lan;
-static t_ethd_cnx *g_head_ethd;
-static int g_nb_ethd;
+static t_ethdv_cnx *g_head_ethdv;
+static int g_nb_ethdv;
 
 /*****************************************************************************/
-static t_ethd_cnx *ethd_find(char *name, int num)
+static t_ethdv_cnx *ethdv_find(char *name, int num)
 {
-  t_ethd_cnx *cur = g_head_ethd;
+  t_ethdv_cnx *cur = g_head_ethdv;
   if (strlen(name))
     {
     while(cur && (strcmp(cur->name, name) || (cur->num != num)))
@@ -95,30 +107,33 @@ static t_ethd_cnx *ethd_find(char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void ethd_alloc(char *name, int num)
+static void ethdv_alloc(char *name, int num, int endp_type, char *vhost)
 {
-  t_ethd_cnx *cur  = ethd_find(name, num);
+  t_ethdv_cnx *cur  = ethdv_find(name, num);
   if (cur)
     KERR("ERROR KVMETH ALLOC ETHD %s %d", name, num);
   else
     {
-    cur  = (t_ethd_cnx *) clownix_malloc(sizeof(t_ethd_cnx), 6);
-    memset(cur, 0, sizeof(t_ethd_cnx));
+    cur  = (t_ethdv_cnx *) clownix_malloc(sizeof(t_ethdv_cnx), 6);
+    memset(cur, 0, sizeof(t_ethdv_cnx));
     strncpy(cur->name, name, MAX_NAME_LEN-1);
+    if (vhost)
+      strncpy(cur->vhost, vhost, MAX_NAME_LEN-1);
     cur->num = num;
-    if (g_head_ethd)
-      g_head_ethd->prev = cur;
-    cur->next = g_head_ethd;
-    g_head_ethd = cur;
-    g_nb_ethd += 1;
+    cur->endp_type = endp_type;
+    if (g_head_ethdv)
+      g_head_ethdv->prev = cur;
+    cur->next = g_head_ethdv;
+    g_head_ethdv = cur;
+    g_nb_ethdv += 1;
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void ethd_free(char *name, int num)
+static void ethdv_free(char *name, int num)
 {
-  t_ethd_cnx *cur  = ethd_find(name, num);
+  t_ethdv_cnx *cur  = ethdv_find(name, num);
   if (!cur)
     KERR("ERROR %s %d", name, num);
   else
@@ -127,10 +142,10 @@ static void ethd_free(char *name, int num)
       cur->prev->next = cur->next;
     if (cur->next)
       cur->next->prev = cur->prev;
-    if (cur == g_head_ethd)
-      g_head_ethd = cur->next;
+    if (cur == g_head_ethdv)
+      g_head_ethdv = cur->next;
     clownix_free(cur, __FUNCTION__);
-    g_nb_ethd -= 1;
+    g_nb_ethdv -= 1;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -220,25 +235,45 @@ static void lan_free(t_add_lan *cur)
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+static void timer_alloc_delay(void *data)
+{
+  t_alloc_delay *ald = (t_alloc_delay *) data;
+  ethdv_alloc(ald->name, ald->num, ald->endp_type, ald->vhost);
+  clownix_free(ald, __FUNCTION__);
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int dpdk_kvm_add(char *name, int num, int eth_type)
+static int dpdk_kvm_add_vm(char *name, int num, int endp_type, char *vhost)
 {
   int result;
-  if (eth_type == endp_type_ethd)
+  t_alloc_delay *ald;
+  if (endp_type == endp_type_ethd)
     {
     if (fmt_tx_add_ethd(0, name, num))
       KERR("ERROR %s %d", name, num);
     else
       {
-      ethd_alloc(name, num);
+      ethdv_alloc(name, num, endp_type, NULL);
       result = 0;
       }
     }
-  else if (eth_type == endp_type_eths)
+  else if (endp_type == endp_type_ethv)
+    {
+    ald = (t_alloc_delay *) clownix_malloc(sizeof(t_alloc_delay), 6);
+    memset(ald, 0, sizeof(t_alloc_delay));
+    strncpy(ald->name, name, MAX_NAME_LEN-1);
+    strncpy(ald->vhost, vhost, MAX_NAME_LEN-1);
+    ald->num = num;
+    ald->endp_type = endp_type_ethv;
+    clownix_timeout_add(500, timer_alloc_delay, ald, NULL, NULL);
+    result = 0;
+    }
+  else if (endp_type == endp_type_eths)
     result = dpdk_xyx_add(0, 0, name, num, endp_type_eths);
   else
-    KOUT("%d", eth_type);
+    KOUT("%d", endp_type);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -253,15 +288,15 @@ static void try_connect_kvm(t_kvm_cnx *cur)
     {
     for (i = cur->dyn_vm_add_eth_todo; i < cur->nb_tot_eth; i++)
       {
-      if ((cur->eth_tab[i].eth_type == endp_type_ethd) ||
-          (cur->eth_tab[i].eth_type == endp_type_eths))
+      if ((cur->eth_tab[i].endp_type == endp_type_ethd) ||
+          (cur->eth_tab[i].endp_type == endp_type_eths))
         {
         endp_path = utils_get_dpdk_endp_path(cur->name, i);
         if (!access(endp_path, F_OK))
           {
           success = 1;
           cur->dyn_vm_add_eth_todo = i+1;
-          if (dpdk_kvm_add(cur->name, i, cur->eth_tab[i].eth_type))
+          if (dpdk_kvm_add_vm(cur->name, i, cur->eth_tab[i].endp_type, NULL))
             KERR("ERROR %s %d", cur->name, i);
           else
             cur->dyn_vm_add_acked = 0; 
@@ -274,8 +309,8 @@ static void try_connect_kvm(t_kvm_cnx *cur)
       some_more = 0;
       for (i = cur->dyn_vm_add_eth_todo; i < cur->nb_tot_eth; i++)
         {
-        if ((cur->eth_tab[i].eth_type == endp_type_ethd) ||
-            (cur->eth_tab[i].eth_type == endp_type_eths))
+        if ((cur->eth_tab[i].endp_type == endp_type_ethd) ||
+            (cur->eth_tab[i].endp_type == endp_type_eths))
           some_more = 1;
         }
       if (some_more == 0)
@@ -365,9 +400,9 @@ static void timer_beat(void *data)
 int dpdk_kvm_exists(char *name, int num)
 {
   int result = 0;
-  t_ethd_cnx *cur = ethd_find(name, num);
+  t_ethdv_cnx *cur = ethdv_find(name, num);
   if (cur)
-    result = endp_type_ethd;
+    result = cur->endp_type;
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -385,12 +420,17 @@ void dpdk_kvm_add_whole_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab)
     {
     for (i = 0; i < nb_tot_eth; i++)
       {
-      if ((eth_tab[i].eth_type == endp_type_ethd) ||
-          (eth_tab[i].eth_type == endp_type_eths))
+      if ((eth_tab[i].endp_type == endp_type_ethd) ||
+          (eth_tab[i].endp_type == endp_type_eths))
         {
         endp_path = utils_get_dpdk_endp_path(name, i);
         unlink(endp_path);
         must_add = 1;
+        }
+      else if (eth_tab[i].endp_type == endp_type_ethv)
+        {
+        suid_power_rec_name(eth_tab[i].vhost_ifname, 1);
+        dpdk_kvm_add_vm(name, i, endp_type_ethv, eth_tab[i].vhost_ifname);
         }
       }
     if (must_add == 1)
@@ -400,13 +440,13 @@ void dpdk_kvm_add_whole_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int dpdk_kvm_del(int llid, int tid, char *name, int num, int eth_type)
+int dpdk_kvm_del(int llid, int tid, char *name, int num, int endp_type)
 {
   int result = -1;
-  t_ethd_cnx *cur;
-  if (eth_type == endp_type_ethd)
+  t_ethdv_cnx *cur;
+  if (endp_type == endp_type_ethd)
     {
-    cur  = ethd_find(name, num);
+    cur  = ethdv_find(name, num);
     if (cur != NULL)
       {
       if ((strlen(cur->lan)) &&
@@ -427,6 +467,27 @@ int dpdk_kvm_del(int llid, int tid, char *name, int num, int eth_type)
     else
       KERR("ERROR DELETH %s %d", name, num);
     }
+  else if (endp_type == endp_type_ethv)
+    {
+    cur  = ethdv_find(name, num);
+    if (cur != NULL)
+      {
+      if ((strlen(cur->lan)) &&
+          ((cur->waiting_ack_add_lan == 1) ||
+          (cur->attached_lan_ok == 1)))
+        {
+        if (cur->waiting_ack_del_lan == 1)
+          KERR("ERROR %s %d", name, num);
+        if (dpdk_msg_send_del_lan_ethv(cur->lan, name, num, cur->vhost))
+          KERR("ERROR %s %s %d", cur->lan, name, num);
+        }
+      suid_power_rec_name(cur->vhost, 0);
+      ethdv_free(name, num);
+      result = 0;
+      }
+    else
+      KERR("ERROR DELETH %s %d", name, num);
+    }
   else
     {
     result = dpdk_xyx_del(llid, tid, name, num);
@@ -438,7 +499,7 @@ int dpdk_kvm_del(int llid, int tid, char *name, int num, int eth_type)
 /*****************************************************************************/
 void dpdk_kvm_resp_add_lan(int is_ko, char *lan, char *name, int num)
 {
-  t_ethd_cnx *cur = ethd_find(name, num);
+  t_ethdv_cnx *cur = ethdv_find(name, num);
   if (cur)
     {
     cur->attached_lan_ok = 1;
@@ -456,7 +517,7 @@ void dpdk_kvm_resp_add_lan(int is_ko, char *lan, char *name, int num)
 /*****************************************************************************/
 void dpdk_kvm_resp_del_lan(int is_ko, char *lan, char *name, int num)
 {
-  t_ethd_cnx *cur = ethd_find(name, num);
+  t_ethdv_cnx *cur = ethdv_find(name, num);
   if (cur)
     {
     cur->attached_lan_ok = 0;
@@ -477,29 +538,59 @@ int dpdk_kvm_add_lan(int llid, int tid, char *name, int num, char *lan,
                      int endp_type)
 {
   int result = -1;
-  t_ethd_cnx *cur;
+  t_ethdv_cnx *cur;
   if (endp_type == endp_type_ethd)
     {
-    cur  = ethd_find(name, num);
+    cur  = ethdv_find(name, num);
     if (cur == NULL)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR ADD LAN %s %d %s", name, num, lan);
     else if (cur->ready != 1)
       KERR("ERROR ETHD NOT READY %s %d %s", name, num, lan);
     else if (cur->waiting_ack_del_lan)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR ADD LAN %s %d %s", name, num, lan);
     else if (cur->waiting_ack_add_lan)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR ADD LAN %s %d %s", name, num, lan);
     else if (cur->attached_lan_ok)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR ADD LAN %s %d %s", name, num, lan);
     else
       {
       if (dpdk_msg_send_add_lan_ethd(lan, name, num))
-        KERR("ERROR %s %d %s", name, num, lan);
+        KERR("ERROR ADD LAN %s %d %s", name, num, lan);
       else
         {
         if (strlen(cur->lan))
           {
-          KERR("ERROR %s %d %s", name, num, lan);
+          KERR("ERROR ADD LAN %s %d %s", name, num, lan);
+          memset(cur->lan, 0, MAX_NAME_LEN);
+          }
+        cur->waiting_ack_add_lan = 1;
+        strncpy(cur->lan, lan, MAX_NAME_LEN-1);
+        cur->llid = llid;
+        cur->tid = tid;
+        result = 0;
+        }
+      }
+    }
+  else if (endp_type == endp_type_ethv)
+    {
+    cur  = ethdv_find(name, num);
+    if (cur == NULL)
+      KERR("ERROR ADD LAN %s %d %s", name, num, lan);
+    else if (cur->waiting_ack_del_lan)
+      KERR("ERROR ADD LAN %s %d %s", name, num, lan);
+    else if (cur->waiting_ack_add_lan)
+      KERR("ERROR ADD LAN %s %d %s", name, num, lan);
+    else if (cur->attached_lan_ok)
+      KERR("ERROR ADD LAN %s %d %s", name, num, lan);
+    else
+      {
+      if (dpdk_msg_send_add_lan_ethv(lan, name, num, cur->vhost))
+        KERR("ERROR ADD LAN %s %d %s", name, num, lan);
+      else
+        {
+        if (strlen(cur->lan))
+          {
+          KERR("ERROR ADD LAN %s %d %s", name, num, lan);
           memset(cur->lan, 0, MAX_NAME_LEN);
           }
         cur->waiting_ack_add_lan = 1;
@@ -534,33 +625,53 @@ int dpdk_kvm_del_lan(int llid, int tid, char *name, int num, char *lan,
                      int endp_type)
 {
   int result = -1;
-  t_ethd_cnx *cur;
+  t_ethdv_cnx *cur;
   if (endp_type == endp_type_ethd)
     {
-    cur  = ethd_find(name, num);
+    cur  = ethdv_find(name, num);
     if (cur == NULL)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR DEL LAN %s %d %s", name, num, lan);
     else if (cur->ready != 1)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR DEL LAN %s %d %s", name, num, lan);
     else if (cur->waiting_ack_del_lan)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR DEL LAN %s %d %s", name, num, lan);
     else if (cur->waiting_ack_add_lan)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR DEL LAN %s %d %s", name, num, lan);
     else if (cur->attached_lan_ok == 0)
-      KERR("ERROR ETHD %s %d %s", name, num, lan);
+      KERR("ERROR DEL LAN %s %d %s", name, num, lan);
     else if (strcmp(lan, cur->lan))
-      KERR("ERROR ETHD %s %d %s %s", name, num, lan, cur->lan);
+      KERR("ERROR DEL LAN %s %d %s %s", name, num, lan, cur->lan);
+    else if (dpdk_msg_send_del_lan_ethd(lan, name, num))
+      KERR("ERROR DEL LAN %s %s %d", lan, name, num);
     else
       {
-      if (dpdk_msg_send_del_lan_ethd(lan, name, num))
-        KERR("ERROR %s %s %d", lan, name, num);
-      else
-        {
-        cur->waiting_ack_del_lan = 1;
-        cur->llid = llid;
-        cur->tid = tid;
-        result = 0;
-        }
+      cur->waiting_ack_del_lan = 1;
+      cur->llid = llid;
+      cur->tid = tid;
+      result = 0;
+      }
+    }
+  else if (endp_type == endp_type_ethv)
+    {
+    cur  = ethdv_find(name, num);
+    if (cur == NULL)
+      KERR("ERROR DEL LAN ETHV %s %d %s", name, num, lan);
+    else if (cur->waiting_ack_del_lan)
+      KERR("ERROR DEL LAN %s %d %s", name, num, lan);
+    else if (cur->waiting_ack_add_lan)
+      KERR("ERROR DEL LAN %s %d %s", name, num, lan);
+    else if (cur->attached_lan_ok == 0)
+      KERR("ERROR DEL LAN %s %d %s", name, num, lan);
+    else if (strcmp(lan, cur->lan))
+      KERR("ERROR DEL LAN %s %d %s %s", name, num, lan, cur->lan);
+    else if (dpdk_msg_send_del_lan_ethv(lan, name, num, cur->vhost))
+      KERR("ERROR DEL LAN %s %s %d", lan, name, num);
+    else
+      {
+      cur->waiting_ack_del_lan = 1;
+      cur->llid = llid;
+      cur->tid = tid;
+      result = 0;
       }
     }
   else
@@ -574,13 +685,13 @@ int dpdk_kvm_del_lan(int llid, int tid, char *name, int num, char *lan,
 /*****************************************************************************/
 void dpdk_kvm_resp_add(int is_ko, char *name, int num)
 {
-  t_ethd_cnx *ethd;
+  t_ethdv_cnx *ethd;
   t_kvm_cnx *cur = kvm_find(name);
   if (cur == NULL)
     KERR("ERROR KVM %s %d", name, num);
   else
     {
-    ethd = ethd_find(name, num);
+    ethd = ethdv_find(name, num);
     cur->dyn_vm_add_acked = 1; 
     if (ethd == NULL)
       dpdk_xyx_resp_add(is_ko, name, num);
@@ -608,7 +719,7 @@ void dpdk_kvm_resp_add_eths2(int is_ko, char *name, int num)
 /*****************************************************************************/
 void dpdk_kvm_resp_del(int is_ko, char *name, int num)
 {
-  t_ethd_cnx *cur;
+  t_ethdv_cnx *cur;
   char *endp_path = utils_get_dpdk_endp_path(name, num);
   t_vm *vm = cfg_get_vm(name);
   t_eth_table *eth_tab;
@@ -616,18 +727,18 @@ void dpdk_kvm_resp_del(int is_ko, char *name, int num)
   if (vm)
     {
     eth_tab = vm->kvm.eth_table;
-    if (eth_tab[num].eth_type == endp_type_waiting)
+    if (eth_tab[num].endp_type == endp_type_waiting)
       {
-      eth_tab[num].eth_type = endp_type_waiting_done;
+      eth_tab[num].endp_type = endp_type_waiting_done;
       }
     else
-      KERR("ERROR %s %d %d", name, num, eth_tab[num].eth_type);
+      KERR("ERROR %s %d %d", name, num, eth_tab[num].endp_type);
     }
 
-  cur  = ethd_find(name, num);
+  cur  = ethdv_find(name, num);
   if (cur != NULL)
     {
-    ethd_free(name, num);
+    ethdv_free(name, num);
     }
   else
     {
@@ -638,12 +749,12 @@ void dpdk_kvm_resp_del(int is_ko, char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_topo_endp *translate_topo_endp_ethd(int *nb)
+t_topo_endp *translate_topo_endp_ethdv(int *nb)
 {
-  t_ethd_cnx *cur = g_head_ethd;
+  t_ethdv_cnx *cur = g_head_ethdv;
   int len, nb_endp = 0;
   t_topo_endp *endp;
-  len = g_nb_ethd * sizeof(t_topo_endp);
+  len = g_nb_ethdv * sizeof(t_topo_endp);
   endp = (t_topo_endp *) clownix_malloc( len, 13);
   memset(endp, 0, len);
   while(cur)
@@ -653,7 +764,7 @@ t_topo_endp *translate_topo_endp_ethd(int *nb)
     memset(endp[nb_endp].lan.lan, 0, len);
     strncpy(endp[nb_endp].name, cur->name, MAX_NAME_LEN-1);
     endp[nb_endp].num = cur->num;
-    endp[nb_endp].type = endp_type_ethd;
+    endp[nb_endp].type = cur->endp_type;
     if (strlen(cur->lan))
       {
       strncpy(endp[nb_endp].lan.lan[0].lan, cur->lan, MAX_NAME_LEN-1);
@@ -670,7 +781,7 @@ t_topo_endp *translate_topo_endp_ethd(int *nb)
 /*****************************************************************************/
 void dpdk_kvm_init(void)
 {
-  g_nb_ethd = 0;
+  g_nb_ethdv = 0;
   g_head_kvm = NULL;
   g_head_lan = NULL;
   clownix_timeout_add(5, timer_beat, NULL, NULL, NULL);

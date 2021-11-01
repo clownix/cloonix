@@ -15,8 +15,12 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int ovs_cmd_add_lan_ethv(char *ovs, char *dpdk, char *lan, char *vhost);
+int ovs_cmd_del_lan_ethv(char *ovs, char *dpdk, char *lan, char *vhost);
+
 int ovs_cmd_add_lan_ethd(char *ovs, char *dpdk, char *lan, char *name, int num);
 int ovs_cmd_del_lan_ethd(char *ovs, char *dpdk, char *lan, char *name, int num);
+
 int ovs_cmd_add_lan_eths(char *ovs, char *dpdk, char *lan, char *name, int num);
 int ovs_cmd_del_lan_eths(char *ovs, char *dpdk, char *lan, char *name, int num);
 

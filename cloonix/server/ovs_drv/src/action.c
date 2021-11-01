@@ -368,6 +368,27 @@ void action_add_lan_ethd(char *respb, char *lan, char *name, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void action_add_lan_ethv(char *respb, char *lan, char *name, int num, char *vhost)
+{
+  char *bin = get_ovs_bin();
+  char *db = get_dpdk_dir();
+  if (ovs_cmd_add_lan_ethv(bin, db, lan, vhost))
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_add_lan_ethv lan=%s name=%s num=%d vhost=%s",
+             lan, name, num, vhost);
+    KERR("%s", respb);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_add_lan_ethv lan=%s name=%s num=%d vhost=%s",
+             lan, name, num, vhost);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void action_add_lan_eths(char *respb, char *lan, char *name, int num)
 {
   char *bin = get_ovs_bin();
@@ -409,6 +430,26 @@ void action_del_lan_ethd(char *respb, char *lan, char *name, int num)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+void action_del_lan_ethv(char *respb, char *lan, char *name, int num, char *vhost)
+{
+  char *bin = get_ovs_bin();
+  char *db = get_dpdk_dir();
+  if (ovs_cmd_del_lan_ethv(bin, db, lan, vhost))
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO cloonixovs_del_lan_ethv lan=%s name=%s num=%d vhost=%s",
+             lan, name, num, vhost);
+    KERR("%s", respb);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK cloonixovs_del_lan_ethv lan=%s name=%s num=%d vhost=%s",
+             lan, name, num, vhost);
+    }
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void action_del_lan_eths(char *respb, char *lan, char *name, int num)

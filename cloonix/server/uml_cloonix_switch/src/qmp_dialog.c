@@ -421,55 +421,57 @@ int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_resp cb)
   int result = -1;
   t_qrec *qrec = get_qrec_with_name(name);
   t_timeout_resp *timeout;
-  vm = cfg_get_vm(name);
-  if (!vm)
-    {
-    KERR("%s", name);
-    qrec_free(qrec, 1);
-    return result;
-    }
+  if (!qrec)
+    KERR("ERROR %s", name);
   else
     {
-    if (vm->vm_to_be_killed)
+    vm = cfg_get_vm(name);
+    if (!vm)
       {
       KERR("%s", name);
       qrec_free(qrec, 1);
       return result;
       }
-    }
-  if (!qrec)
-    KERR("%s", name);
-  else if (qrec->resp_cb)
-    KERR("%s", name);
-  else if (strlen(req) >= MAX_RPC_MSG_LEN)
-    KERR("%s %d %d", name, (int)strlen(req), MAX_RPC_MSG_LEN);
-  else if ((!qrec->llid) || (!msg_exist_channel(qrec->llid)))  
-    {
-    KERR("%s", name);
-    qmp_dialog_free(name);
-    }
-  else if ((strlen(req)) && (!req_message_braces_complete(req)))
-    {
-    KERR("%s", name);
-    cb(name, llid, tid, req, "invalid braces syntax"); 
-    }
-  else
-    {
-    if (strlen(req))
+    else
       {
-      timeout = (t_timeout_resp *) clownix_malloc(sizeof(t_timeout_resp), 6);
-      memset(timeout, 0, sizeof(t_timeout_resp));
-      strncpy(timeout->name, name, MAX_NAME_LEN-1);
-      timeout->ref_id = qrec->ref_id;
-      clownix_timeout_add(1500, timeout_resp_qmp, (void *) timeout, NULL, NULL);
-      strncpy(qrec->req, req, MAX_RPC_MSG_LEN-1);
-      qmp_msg_send(qrec->name, req);
-      watch_tx(qrec->llid, strlen(req), req);
+      if (vm->vm_to_be_killed)
+        {
+        qrec_free(qrec, 1);
+        return result;
+        }
       }
-    qrec->resp_llid = llid;
-    qrec->resp_tid = tid;
-    qrec->resp_cb = cb;
-    result = 0;
+    if (qrec->resp_cb)
+      KERR("%s", name);
+    else if (strlen(req) >= MAX_RPC_MSG_LEN)
+      KERR("%s %d %d", name, (int)strlen(req), MAX_RPC_MSG_LEN);
+    else if ((!qrec->llid) || (!msg_exist_channel(qrec->llid)))  
+      {
+      KERR("%s", name);
+      qmp_dialog_free(name);
+      }
+    else if ((strlen(req)) && (!req_message_braces_complete(req)))
+      {
+      KERR("%s", name);
+      cb(name, llid, tid, req, "invalid braces syntax"); 
+      }
+    else
+      {
+      if (strlen(req))
+        {
+        timeout = (t_timeout_resp *) clownix_malloc(sizeof(t_timeout_resp),6);
+        memset(timeout, 0, sizeof(t_timeout_resp));
+        strncpy(timeout->name, name, MAX_NAME_LEN-1);
+        timeout->ref_id = qrec->ref_id;
+        clownix_timeout_add(1500,timeout_resp_qmp,(void *)timeout,NULL,NULL);
+        strncpy(qrec->req, req, MAX_RPC_MSG_LEN-1);
+        qmp_msg_send(qrec->name, req);
+        watch_tx(qrec->llid, strlen(req), req);
+        }
+      qrec->resp_llid = llid;
+      qrec->resp_tid = tid;
+      qrec->resp_cb = cb;
+      result = 0;
+      }
     }
   return result;
 }

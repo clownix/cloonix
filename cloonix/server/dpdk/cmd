@@ -20,6 +20,7 @@ ninja
 DESTDIR=${HERE} ninja install
 cp -vrf ${HERE}/usr/local/bin     ${HERE}
 cp -vrf ${HERE}/usr/local/include ${HERE}
+cp -vrf ${HERE}/dpdk/lib/ethdev/ethdev_driver.h ${HERE}/include
 mkdir -p ${HERE}/lib
 if [ -d ${HERE}/usr/local/lib64 ]; then
   cp -vrf ${HERE}/usr/local/lib64/* ${HERE}/lib

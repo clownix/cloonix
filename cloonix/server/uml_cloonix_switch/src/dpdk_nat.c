@@ -113,16 +113,27 @@ static void timer_beat(void *data)
 
     if (cur->to_be_destroyed == 1)
       {
-      if (cur->process_cmd_on == 1)
+      if ((cur->process_cmd_on == 1)  &&
+          (!cur->waiting_ack_add_lan) &&
+          (!cur->waiting_ack_del_lan))
         {
         cur->process_cmd_on = 0;
         nat_dpdk_start_stop_process(cur->name, 0);
         }
-      cur->to_be_destroyed_timer_count += 1;
-      if (cur->to_be_destroyed_timer_count == 10)
-        utils_send_status_ok(&(cur->del_llid), &(cur->del_tid));
-      if (cur->to_be_destroyed_timer_count > 20)
+      if (cur->process_running == 0)
+        {
         free_nat(cur);
+        }
+      else
+        {
+        cur->to_be_destroyed_timer_count += 1;
+        if (cur->to_be_destroyed_timer_count == 10)
+          utils_send_status_ok(&(cur->del_llid), &(cur->del_tid));
+        if (cur->to_be_destroyed_timer_count > 20)
+          {
+          free_nat(cur);
+          }
+        }
       }
     if ((cur->waiting_ack_add_lan) || (cur->waiting_ack_del_lan))
       {
@@ -167,7 +178,7 @@ static void timer_add_nat_vm(void *data)
     snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
     snprintf(lan, MAX_NAME_LEN-1, "lan_nat_%s", name);
     num = vm->kvm.vm_config_param;
-    if (vm->kvm.eth_table[num].eth_type == endp_type_ethd)
+    if (vm->kvm.eth_table[num].endp_type == endp_type_ethd)
       {
       if (!dpdk_kvm_exists(name, num))
         KERR("ERROR %s %d", name, num);
@@ -179,7 +190,7 @@ static void timer_add_nat_vm(void *data)
           KERR("ERROR CREATING CISCO NAT LAN %s %d", name, num);
         }
       }
-    else if (vm->kvm.eth_table[num].eth_type == endp_type_eths)
+    else if (vm->kvm.eth_table[num].endp_type == endp_type_eths)
       {
       if (!dpdk_xyx_exists(name, num))
         KERR("ERROR %s %d", name, num);
@@ -243,7 +254,6 @@ void dpdk_nat_resp_add_lan(int is_ko, char *lan, char *name)
 /****************************************************************************/
 void dpdk_nat_resp_del_lan(int is_ko, char *lan, char *name)
 {
-  int is_ok = 0;
   t_nat_cnx *cur = find_nat(name);
   if (!cur)
     KERR("ERROR %s %s", lan, name);
@@ -258,10 +268,10 @@ void dpdk_nat_resp_del_lan(int is_ko, char *lan, char *name)
     cur->waiting_ack_del_lan = 0;
     cur->attached_lan_ok = 0;
     memset(cur->lan, 0, MAX_NAME_LEN);
-    if (is_ok)
-      utils_send_status_ok(&(cur->del_llid), &(cur->del_tid));
-    else
+    if (is_ko)
       utils_send_status_ko(&(cur->del_llid), &(cur->del_tid), "error del");
+    else
+      utils_send_status_ok(&(cur->del_llid), &(cur->del_tid));
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -542,22 +552,33 @@ void dpdk_nat_cisco_add(char *name)
   t_vm *vm = cfg_get_vm(name);
   char cisconat[MAX_NAME_LEN];
   char *nm;
+  int num;
   if (!vm)
     KERR("ERROR CREATING CISCO NAT %s", name);
   else
     {  
-    memset(cisconat, 0, MAX_NAME_LEN); 
-    snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
-    if (dpdk_nat_add(0, 0, cisconat))
+    num = vm->kvm.vm_config_param;
+    if ((vm->kvm.eth_table[num].endp_type != endp_type_ethd) &&
+        (vm->kvm.eth_table[num].endp_type != endp_type_eths))
       {
-      KERR("ERROR CREATING CISCO NAT %s", cisconat);
+      KERR("ERROR CREATING CISCO NAT %s %d %d",
+           name, num, vm->kvm.eth_table[num].endp_type);
       }
     else
       {
-      nm = (char *) malloc(MAX_NAME_LEN);
-      memset(nm, 0, MAX_NAME_LEN);
-      strncpy(nm, name, MAX_NAME_LEN-1);
-      clownix_timeout_add(300, timer_add_nat_vm, (void *)nm, NULL, NULL);
+      memset(cisconat, 0, MAX_NAME_LEN); 
+      snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
+      if (dpdk_nat_add(0, 0, cisconat))
+        {
+        KERR("ERROR CREATING CISCO NAT %s", cisconat);
+        }
+      else
+        {
+        nm = (char *) malloc(MAX_NAME_LEN);
+        memset(nm, 0, MAX_NAME_LEN);
+        strncpy(nm, name, MAX_NAME_LEN-1);
+        clownix_timeout_add(300, timer_add_nat_vm, (void *)nm, NULL, NULL);
+        }
       }
     }
 }

@@ -376,6 +376,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   char respb[MAX_PATH_LEN];
   char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
+  char vhost[MAX_NAME_LEN];
   if (!file_exists(g_dpdk_dir))
     KOUT("%s", g_dpdk_dir);
   if (!is_directory_writable(g_dpdk_dir))
@@ -447,12 +448,23 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   else if (sscanf(line,
           "cloonixovs_del_lan_a2b lan=%s name=%s num=%d",lan,name,&num) == 3)
     action_del_lan_a2b(respb, lan, name, num);
+
   else if (sscanf(line,
           "cloonixovs_add_lan_ethd lan=%s name=%s num=%d",lan,name,&num) == 3)
     action_add_lan_ethd(respb, lan, name, num);
   else if (sscanf(line,
           "cloonixovs_del_lan_ethd lan=%s name=%s num=%d",lan,name,&num) == 3)
     action_del_lan_ethd(respb, lan, name, num);
+
+  else if (sscanf(line,
+          "cloonixovs_add_lan_ethv lan=%s name=%s num=%d vhost=%s",
+          lan, name, &num, vhost) == 4)
+    action_add_lan_ethv(respb, lan, name, num, vhost);
+  else if (sscanf(line,
+          "cloonixovs_del_lan_ethv lan=%s name=%s num=%d vhost=%s",
+          lan, name, &num, vhost) == 4)
+    action_del_lan_ethv(respb, lan, name, num, vhost);
+
   else if (sscanf(line,
           "cloonixovs_add_lan_eths lan=%s name=%s num=%d",lan,name,&num) == 3)
     action_add_lan_eths(respb, lan, name, num);

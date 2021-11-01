@@ -57,6 +57,7 @@ t_custom_d2d *get_custom_d2d (void)
 static void update_d2d_cust(t_custom_d2d *cust, GtkWidget *name, 
                             GtkWidget *cloonix_slave)
 {
+  int rank;
   char *tmp;
   char savname[MAX_NAME_LEN];
   char savslave[MAX_NAME_LEN];
@@ -70,7 +71,7 @@ static void update_d2d_cust(t_custom_d2d *cust, GtkWidget *name,
     KERR("%s %s", savname, savname);
   else
     {
-    cnf = cloonix_conf_info_get(savslave);
+    cnf = cloonix_cnf_info_get(savslave, &rank);
     if (!cnf)
       insert_next_warning(cloonix_conf_info_get_names(), 1);
     else

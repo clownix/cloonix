@@ -1,6 +1,6 @@
 diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
---- ovs/acinclude.m4	2021-08-29 17:22:49.000000000 +0200
-+++ ovs_tainted/acinclude.m4	2021-08-29 17:30:55.549392714 +0200
+--- ovs/acinclude.m4	2021-10-30 18:01:19.000000000 +0200
++++ ovs_tainted/acinclude.m4	2021-10-30 19:13:50.759185538 +0200
 @@ -434,6 +434,10 @@
            esac
      esac
@@ -30,9 +30,29 @@ diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
    AM_CONDITIONAL([DPDK_NETDEV], test "$DPDKLIB_FOUND" = true)
  ])
  
+diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
+--- ovs/lib/netdev-dpdk.c	2021-10-30 18:01:19.000000000 +0200
++++ ovs_tainted/lib/netdev-dpdk.c	2021-10-30 19:15:11.683554754 +0200
+@@ -38,6 +38,7 @@
+ #include <rte_pci.h>
+ #include <rte_version.h>
+ #include <rte_vhost.h>
++#include <ethdev_driver.h>
+ 
+ #include "cmap.h"
+ #include "coverage.h"
+@@ -5272,7 +5273,7 @@
+                                  struct rte_flow_query_count *query,
+                                  struct rte_flow_error *error)
+ {
+-    struct rte_flow_action_count count = { .shared = 0, .id = 0 };
++    struct rte_flow_action_count count = { .id = 0 };
+     const struct rte_flow_action actions[] = {
+         {
+             .type = RTE_FLOW_ACTION_TYPE_COUNT,
 diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
---- ovs/ofproto/ofproto-dpif.c	2021-08-29 17:22:49.000000000 +0200
-+++ ovs_tainted/ofproto/ofproto-dpif.c	2021-08-29 17:31:04.401434418 +0200
+--- ovs/ofproto/ofproto-dpif.c	2021-10-30 18:01:19.000000000 +0200
++++ ovs_tainted/ofproto/ofproto-dpif.c	2021-10-30 19:13:50.759185538 +0200
 @@ -748,7 +748,7 @@
          return 0;
      }
@@ -42,4 +62,3 @@ diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
  
      /* Remove any existing datapaths, since we assume we're the only
       * userspace controlling the datapath. */
- 

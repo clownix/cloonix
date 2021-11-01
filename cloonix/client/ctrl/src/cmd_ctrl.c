@@ -134,6 +134,9 @@ static char *get_type_endp(int type)
     case endp_type_eths:
       result = "eths"; 
       break;
+    case endp_type_ethv:
+      result = "ethv"; 
+      break;
     case endp_type_tap:
       result = "tap"; 
       break;
@@ -278,6 +281,7 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
 
   printf("\n");
 
+  printf("conf_rank: %d\n", topo->conf_rank);
   for (i=0; i<topo->nb_kvm; i++)
     {
     if (i == 0)
@@ -752,14 +756,14 @@ int cmd_del_sat(int argc, char **argv)
 /*****************************************************************************/
 int cmd_add_d2d(int argc, char **argv)
 {
-  int result = -1;
+  int rank, result = -1;
   t_cloonix_conf_info *cnf, *local_cnf;
   char *d2d_name;
   char *slave_cloonix;
   if (argc == 2)
     {
     d2d_name =  argv[0];
-    cnf = cloonix_conf_info_get(argv[1]);
+    cnf = cloonix_cnf_info_get(argv[1], &rank);
     if (!cnf)
       printf("\nd2d dest names: %s\n\n", cloonix_conf_info_get_names());
     else

@@ -124,6 +124,44 @@ int ovs_cmd_del_lan_eths(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+int ovs_cmd_add_lan_ethv(char *ovsb, char *dpdkd, char *lan, char *vhost)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- add-port _b_%s %s", lan, vhost);
+  if (ovs_vsctl(ovsb, dpdkd, cmd))
+    {
+    KERR("ERROR OVSCMD: ADD LAN ETH %s %s", lan, vhost);
+    result = -1;
+    }
+  if (result == 0)
+    {
+    if (ifdev_set_intf_flags_iff_up_down(vhost, 1))
+      KERR("ERROR LINK UP %s", vhost);
+    }
+
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_cmd_del_lan_ethv(char *ovsb, char *dpdkd, char *lan, char *vhost)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  ifdev_set_intf_flags_iff_up_down(vhost, 0);
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s %s", lan, vhost);
+  if (ovs_vsctl(ovsb, dpdkd, cmd))
+    {
+    KERR("ERROR OVSCMD: DEL LAN ETH %s %s", lan, vhost);
+    result = -1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int ovs_cmd_add_lan_ethd(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
@@ -201,8 +239,9 @@ int ovs_cmd_add_ethd(char *ovsb, char *dpdkd, char *nm, int num)
            "-- set bridge _b_%s datapath_type=netdev "
            "-- add-port _b_%s _p_%s "
            "-- set Interface _p_%s type=dpdkvhostuserclient"
-           " options:vhost-server-path=%s_qemu/%s",
-           name, name, name, name, name, dpdkd, name);
+           " options:vhost-server-path=%s_qemu/%s"
+           " options:n_rxq=%d",
+           name, name, name, name, name, dpdkd, name, MQ_QUEUES);
     if (ovs_vsctl(ovsb, dpdkd, cmd))
       {
       KERR("ERROR OVSCMD: ADD ETHD %s %d", nm, num);

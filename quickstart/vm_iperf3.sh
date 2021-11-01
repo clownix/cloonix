@@ -1,9 +1,7 @@
 #!/bin/bash
 
-set -x
 
-
-PARAMS="ram=2000 cpu=2 eth=s"
+PARAMS="ram=2000 cpu=2 eth=sdv"
 NET=nemo
 DIST=bullseye
 
@@ -31,10 +29,10 @@ for i in 1 2; do
 done
 #----------------------------------------------------------------------
 
-sleep 1
-
-cloonix_cli $NET add lan vm1 0 lan
-cloonix_cli $NET add lan vm2 0 lan
+for i in 0 1 2 ; do
+  cloonix_cli $NET add lan vm1 ${i} lan${i}
+  cloonix_cli $NET add lan vm2 ${i} lan${i}
+done
 
 #######################################################################
 set +e
@@ -47,23 +45,18 @@ done
 set -e
 #----------------------------------------------------------------------
 
-
 #######################################################################
-cloonix_ssh $NET vm1 "ip addr add dev eth0 1.1.1.1/24"
-cloonix_ssh $NET vm2 "ip addr add dev eth0 1.1.1.2/24"
-cloonix_ssh $NET vm1 "ip link set dev eth0 up"
-cloonix_ssh $NET vm2 "ip link set dev eth0 up"
+for i in 0 1 2 ; do
+  cloonix_ssh $NET vm1 "ip addr add dev eth${i} $((i+1)).1.1.1/24"
+  cloonix_ssh $NET vm2 "ip addr add dev eth${i} $((i+1)).1.1.2/24"
+  cloonix_ssh $NET vm1 "ip link set dev eth${i} up"
+  cloonix_ssh $NET vm2 "ip link set dev eth${i} up"
+done
 #----------------------------------------------------------------------
-echo
+cloonix_ssh $NET vm2 "iperf3 -s" &
 #----------------------------------------------------------------------
-sleep 10
-urxvt -title server -e cloonix_ssh $NET vm2 "iperf3 -s" &
-sleep 2
-urxvt -title client -e cloonix_ssh $NET vm1 "iperf3 -c 1.1.1.2 -t 10000" &
-#----------------------------------------------------------------------
-
-sleep 10000
-
+sleep 1
+urxvt -title spyable -e cloonix_ssh $NET vm1 "iperf3 -c 1.1.1.2"
+urxvt -title dpdk -e cloonix_ssh $NET vm1 "iperf3 -c 2.1.1.2"
+urxvt -title vhost -e cloonix_ssh $NET vm1 "iperf3 -c 3.1.1.2"
 kill $(jobs -p)
-
-echo DONE

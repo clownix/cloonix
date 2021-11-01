@@ -42,6 +42,9 @@ int  fmt_tx_del_lan_nat(int tid, char *lan, char *name);
 int  fmt_tx_add_lan_ethd(int tid, char *lan, char *name, int num);
 int  fmt_tx_del_lan_ethd(int tid, char *lan, char *name, int num);
 
+int  fmt_tx_add_lan_ethv(int tid, char *lan, char *name, int num, char *vhost);
+int  fmt_tx_del_lan_ethv(int tid, char *lan, char *name, int num, char *vhost);
+
 int  fmt_tx_add_lan_eths(int tid, char *lan, char *name, int num);
 int  fmt_tx_del_lan_eths(int tid, char *lan, char *name, int num);
 

@@ -364,9 +364,9 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
     {
     for (k=0; k < MAX_DPDK_VM; k++)
       {
-      if (kvm->eth_table[k].eth_type != ikvm->eth_table[k].eth_type)
+      if (kvm->eth_table[k].endp_type != ikvm->eth_table[k].endp_type)
         {
-        KERR("%d %d",kvm->eth_table[k].eth_type,ikvm->eth_table[k].eth_type);
+        KERR("%d %d",kvm->eth_table[k].endp_type,ikvm->eth_table[k].endp_type);
         result = -1;
         }
       if (kvm->eth_table[k].randmac != ikvm->eth_table[k].randmac)
@@ -429,7 +429,7 @@ static void random_kvm(t_topo_kvm *kvm)
   kvm->nb_tot_eth = my_rand(MAX_DPDK_VM);
   for (k=0; k < kvm->nb_tot_eth; k++)
     {
-    kvm->eth_table[k].eth_type = (rand() & 0x04) + 1;
+    kvm->eth_table[k].endp_type = (rand() & 0x04) + 1;
     kvm->eth_table[k].randmac = rand();
     random_choice_str(kvm->eth_table[k].vhost_ifname, MAX_NAME_LEN-1);
     for (l=0; l < 6; l++)
@@ -555,7 +555,7 @@ static t_topo_info *random_topo_gen(void)
   memset(topo, 0, sizeof(t_topo_info));
 
   random_clc(&(topo->clc));
-
+  topo->conf_rank = my_rand(50);
   topo->nb_kvm = my_rand(30);
   topo->nb_d2d = my_rand(10);
   topo->nb_a2b = my_rand(10);
@@ -1541,6 +1541,8 @@ void recv_event_topo(int llid, int itid, t_topo_info *itopo)
     {
     if (count_event_topo)
       {
+      if (topo->conf_rank != itopo->conf_rank)
+        KOUT("%d %d", topo->conf_rank, itopo->conf_rank);
       topo_config_diff(&(itopo->clc), &(topo->clc));
       if (topo->nb_kvm != itopo->nb_kvm)
         KOUT("%d %d", topo->nb_kvm, itopo->nb_kvm);

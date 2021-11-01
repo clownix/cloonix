@@ -342,6 +342,34 @@ int fmt_tx_del_lan_ethd(int tid, char *lan, char *name, int num)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+int fmt_tx_add_lan_ethv(int tid, char *lan, char *name, int num, char *vhost)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "cloonixovs_add_lan_ethv lan=%s name=%s num=%d vhost=%s",
+  lan, name, num, vhost);
+  result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fmt_tx_del_lan_ethv(int tid, char *lan, char *name, int num, char *vhost)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "cloonixovs_del_lan_ethv lan=%s name=%s num=%d vhost=%s",
+  lan, name, num, vhost);
+  result = dpdk_ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int fmt_tx_add_lan_eths(int tid, char *lan, char *name, int num)
@@ -377,6 +405,7 @@ void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   int num;
   char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
+  char vhost[MAX_NAME_LEN];
 
   if (sscanf(line, "KO cloonixovs_add_lan lan=%s", lan) == 1)
     dpdk_msg_ack_lan(tid, lan, 1, 1, "KO");
@@ -481,6 +510,19 @@ void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
                         lan, name, &num) == 3)
     dpdk_msg_ack_lan_endp(tid, lan, name, num, 0, 1, "KO");
 
+
+  else if (sscanf(line, "OK cloonixovs_add_lan_ethv lan=%s name=%s num=%d vhost=%s",
+                        lan, name, &num, vhost) == 4)
+    dpdk_msg_ack_lan_endp(tid, lan, name, num, 1, 0, "OK");
+  else if (sscanf(line, "KO cloonixovs_add_lan_ethv lan=%s name=%s num=%d vhost=%s",
+                        lan, name, &num, vhost) == 4)
+    dpdk_msg_ack_lan_endp(tid, lan, name, num, 1, 1, "KO");
+  else if (sscanf(line, "OK cloonixovs_del_lan_ethv lan=%s name=%s num=%d vhost=%s",
+                        lan, name, &num, vhost) == 4)
+    dpdk_msg_ack_lan_endp(tid, lan, name, num, 0, 0, "OK");
+  else if (sscanf(line, "KO cloonixovs_del_lan_ethv lan=%s name=%s num=%d vhost=%s",
+                        lan, name, &num, vhost) == 4)
+    dpdk_msg_ack_lan_endp(tid, lan, name, num, 0, 1, "KO");
 
 
   else if (sscanf(line,"OK cloonixovs_add_tap name=%s", name) == 1)

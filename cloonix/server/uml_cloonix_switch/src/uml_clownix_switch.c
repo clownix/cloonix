@@ -81,6 +81,7 @@ static char **g_saved_environ;
 static int g_machine_nb_cpu;
 static int g_machine_hugepages_nb;
 static int g_machine_hugepages_size;
+static int g_conf_rank;
 
 
 char *used_binaries[] =
@@ -110,6 +111,13 @@ static char *random_str(void)
   for (i=0; i<RANDOM_APPEND_SIZE; i++)
     rd[i] = 'A' + (rand() % 26);
   return rd;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int get_conf_rank(void)
+{
+  return g_conf_rank;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -384,7 +392,8 @@ static void launching(void)
   set_cloonix_name(cfg_get_cloonix_name());
   printf("\n\n");
   printf("     Cloonix Version:        %s\n",cfg_get_version());
-  printf("     Cloonix Name:           %s\n",cfg_get_cloonix_name());
+  printf("     Cloonix Name:           %s (rank:%d)\n",
+                                       cfg_get_cloonix_name(),get_conf_rank());
   printf("     Cloonix Tree:           %s\n",cfg_get_bin_dir());
   printf("     Work Zone Path:         %s\n",cfg_get_root_work());
   printf("     Bulk Path:              %s\n",cfg_get_bulk());
@@ -451,7 +460,8 @@ static t_topo_clc *get_parsed_config(char *name)
 {
   char input[2*MAX_PATH_LEN];
   t_topo_clc *conf = NULL;
-  t_cloonix_conf_info *cloonix_conf = cloonix_conf_info_get(name);
+  t_cloonix_conf_info *cloonix_conf;
+  cloonix_conf = cloonix_cnf_info_get(name, &g_conf_rank);
   if (!cloonix_conf)
     {
     printf("name:%s not in config file\n", name);

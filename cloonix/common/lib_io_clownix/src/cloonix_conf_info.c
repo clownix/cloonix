@@ -190,7 +190,7 @@ char *cloonix_conf_info_get_names(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-t_cloonix_conf_info *cloonix_conf_info_get(char *name)
+t_cloonix_conf_info *cloonix_cnf_info_get(char *name, int *rank)
 {
   int i;
   t_cloonix_conf_info *result = NULL;
@@ -199,6 +199,7 @@ t_cloonix_conf_info *cloonix_conf_info_get(char *name)
     if (!strcmp(g_name2info[i].name, name))
       {
       result = &(g_name2info[i]);
+      *rank = i+1;
       break;
       }
     }

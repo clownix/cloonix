@@ -501,6 +501,7 @@ static void init_local_cloonix_bin_path(char *curdir, char *callbin)
 int main(int argc, char *argv[])
 {
   char xvt[MAX_PATH_LEN];
+  int rank;
   g_i_am_in_cloonix = i_am_inside_cloonix(g_i_am_in_cloonix_name);
   main_timeout = 0;
   eth_choice = 0;
@@ -514,7 +515,7 @@ int main(int argc, char *argv[])
     printf("\n\n%s\n\n", cloonix_conf_info_get_names());
     exit(1);
     }
-  g_cloonix_conf_info = cloonix_conf_info_get(argv[2]);
+  g_cloonix_conf_info = cloonix_cnf_info_get(argv[2], &rank);
   if (!g_cloonix_conf_info)
     {
     printf("\nBAD NAME %s:", argv[2]);

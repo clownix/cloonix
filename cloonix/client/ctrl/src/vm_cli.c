@@ -91,7 +91,7 @@ static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
       {
       if ((num < 0) || (num > nb_tot_eth))
         printf("\nBad interface number: %s\n", str);
-      else if(eth_tab[num].eth_type == 0)
+      else if(eth_tab[num].endp_type == 0)
         printf("\nInterface number unused: %s\n", str);
       else
         {
@@ -230,9 +230,11 @@ static int check_eth_desc(char *eth_desc, char *err,
     for (i=0; (result == 0) && (i < len); i++)
       {
       if (eth_desc[i] == 'd')
-        eth_tab[i].eth_type = endp_type_ethd;
+        eth_tab[i].endp_type = endp_type_ethd;
       else if (eth_desc[i] == 's')
-        eth_tab[i].eth_type = endp_type_eths;
+        eth_tab[i].endp_type = endp_type_eths;
+      else if (eth_desc[i] == 'v')
+        eth_tab[i].endp_type = endp_type_ethv;
       else
         {
         sprintf(err, "Found bad char: %c in string", eth_desc[i]);
@@ -244,8 +246,9 @@ static int check_eth_desc(char *eth_desc, char *err,
     {
     for (i=0; i < max; i++)
       {
-      if ((eth_tab[i].eth_type == endp_type_ethd) ||
-          (eth_tab[i].eth_type == endp_type_eths))
+      if ((eth_tab[i].endp_type == endp_type_ethd) ||
+          (eth_tab[i].endp_type == endp_type_eths) ||
+          (eth_tab[i].endp_type == endp_type_ethv))
         dpdk += 1;
       }
     if (dpdk > MAX_DPDK_VM)

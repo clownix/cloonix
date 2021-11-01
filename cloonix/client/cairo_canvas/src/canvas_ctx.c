@@ -120,8 +120,9 @@ static void call_cloonix_interface_d2d_create(double x, double y)
   t_d2d_req_info d2d_req_info;
   t_custom_d2d *d2d = get_custom_d2d();
   double x0=x, y0=y;
+  int rank;
   t_cloonix_conf_info *cnf, *local_cnf;
-  cnf = cloonix_conf_info_get(d2d->dist_cloonix);
+  cnf = cloonix_cnf_info_get(d2d->dist_cloonix, &rank);
   if (!cnf)
     insert_next_warning(cloonix_conf_info_get_names(), 1);
   else

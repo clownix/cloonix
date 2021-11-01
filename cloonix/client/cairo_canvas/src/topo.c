@@ -40,7 +40,7 @@
 #include "menu_utils.h"
 
 
-int get_endp_type_eths(t_bank_item *bitem);
+int get_endp_type(t_bank_item *bitem);
 void canvas_ctx_menu(gdouble x, gdouble y);
 
 typedef struct
@@ -291,7 +291,7 @@ static void process_mouse_double_click(t_bank_item *bitem)
 
     case bank_type_eth:
       bitem->pbi.flag = flag_normal;
-      if (get_endp_type_eths(bitem))
+      if (get_endp_type(bitem) == endp_type_eths)
         wireshark_launch(bitem->name, bitem->num);
       break;
 
@@ -698,7 +698,7 @@ static void on_item_paint_nat(CrItem *item, cairo_t *c)
 /****************************************************************************/
 static void on_item_paint_eth(CrItem *item, cairo_t *c)
 {
-  int flag, flag_trace, flag_grabbed;
+  int endp_type, flag, flag_trace, flag_grabbed;
   t_bank_item *bitem = from_critem_to_bank_item(item);
   flag = bitem->pbi.flag;
   flag_trace = bitem->pbi.flag_trace;
@@ -719,7 +719,13 @@ static void on_item_paint_eth(CrItem *item, cairo_t *c)
   cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, INTF_DIA/2, 0, 2*M_PI);
   if (bitem->bank_type == bank_type_eth)
     {
-    paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
+    endp_type = get_endp_type(bitem);
+    if (endp_type == endp_type_ethd)
+      paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
+    else if (endp_type == endp_type_eths)
+      paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
+    else if (endp_type == endp_type_ethv)
+      paint_select(c,flag,flag_trace,&lightcyan,&red,&lightmagenta);
     }
   else
     KOUT("%d", bitem->bank_type);

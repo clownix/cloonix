@@ -111,6 +111,9 @@
 #define DIR_UMID "umid"
 #define CLOONIX_VM_WORKDIR "vm"
 
+#define MQ_QUEUES 4
+#define MQ_VECTORS ((2 * MQ_QUEUES) + 2)
+
 
 #define MSG_DIGEST_LEN 32
 
@@ -176,7 +179,7 @@ typedef struct t_lan_group
 /*---------------------------------------------------------------------------*/
 typedef struct t_eth_table
 {
-  int  eth_type;
+  int  endp_type;
   int  randmac;
   char mac_addr[8];
   char vhost_ifname[MAX_NAME_LEN];
@@ -275,6 +278,7 @@ typedef struct t_topo_info
 {
   t_topo_clc clc;
 
+  int conf_rank;
   int nb_kvm;
   t_topo_kvm *kvm;
 

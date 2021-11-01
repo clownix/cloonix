@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-t_topo_endp *translate_topo_endp_ethd(int *nb);
+t_topo_endp *translate_topo_endp_ethdv(int *nb);
 int dpdk_kvm_exists(char *name, int num);
 void dpdk_kvm_add_whole_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab);
 void dpdk_kvm_resp_add_lan(int is_ko, char *lan, char *name, int num);

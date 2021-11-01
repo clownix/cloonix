@@ -15,6 +15,10 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+char *dpdk_ovs_format_ethd_eths(t_vm *vm, int eth);
+char *dpdk_ovs_format_ethd(t_vm *vm, int eth);
+char *dpdk_ovs_format_eths(t_vm *vm, int eth);
+char *dpdk_ovs_format_ethv(t_vm *vm, int eth, char *ifname);
 void dpdk_ovs_destroy(void);
 int get_daemon_done(void);
 void dpdk_ovs_cnf(uint32_t lcore_mask, uint32_t socket_mem, uint32_t cpu_mask);
@@ -25,7 +29,6 @@ void dpdk_ovs_pid_resp(int llid, char *name, int toppid, int pid);
 int  dpdk_ovs_find_with_llid(int llid);
 void dpdk_ovs_init(uint32_t lcore, uint32_t mem, uint32_t cpu);
 int  dpdk_ovs_get_all_pid(t_lst_pid **lst_pid);
-char *dpdk_ovs_format_net(t_vm *vm, int eth);
 int dpdk_ovs_still_present(void);
 void dpdk_ovs_client_destruct(void);
 /*--------------------------------------------------------------------------*/

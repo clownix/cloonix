@@ -20,8 +20,11 @@ void action_del_ethd(char *respb, char *name, int num);
 void action_add_eths1(char *respb, char *name, int num);
 void action_add_eths2(char *respb, char *name, int num);
 void action_del_eths(char *respb, char *name, int num);
+
 void action_add_lan_ethd(char *respb, char *lan, char *name, int num);
 void action_del_lan_ethd(char *respb, char *lan, char *name, int num);
+void action_add_lan_ethv(char *respb, char *lan, char *name, int num, char *vhost);
+void action_del_lan_ethv(char *respb, char *lan, char *name, int num, char *vhost);
 void action_add_lan_eths(char *respb, char *lan, char *name, int num);
 void action_del_lan_eths(char *respb, char *lan, char *name, int num);
 

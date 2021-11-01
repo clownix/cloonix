@@ -647,17 +647,15 @@ int dpdk_ovs_try_send_sigdiag_msg(int tid, char *cmd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *dpdk_ovs_format_net(t_vm *vm, int eth)
+char *dpdk_ovs_format_ethd_eths(t_vm *vm, int eth)
 {
-  static char net_cmd[MAX_PATH_LEN*3];
+  static char cmd[MAX_PATH_LEN*3];
   int i, first_dpdk = 0xFFFF, len = 0;
-  char *mc = vm->kvm.eth_table[eth].mac_addr;
-  char *endp_path = utils_get_dpdk_endp_path(vm->kvm.name, eth);
-
+  memset(cmd, 0, MAX_PATH_LEN*3);
   for (i = 0; i < vm->kvm.nb_tot_eth; i++)
     {
-    if ((vm->kvm.eth_table[i].eth_type == endp_type_ethd) ||
-        (vm->kvm.eth_table[i].eth_type == endp_type_eths))
+    if ((vm->kvm.eth_table[i].endp_type == endp_type_ethd) ||
+        (vm->kvm.eth_table[i].endp_type == endp_type_eths))
       {
       first_dpdk = i;
       break;
@@ -665,30 +663,80 @@ char *dpdk_ovs_format_net(t_vm *vm, int eth)
     }
   if (first_dpdk == 0xFFFF)
     KOUT("%d", eth);
-  
   if (eth == first_dpdk)
     {
-    len += sprintf(net_cmd+len, " -object memory-backend-file,id=mem0,"
-                                "size=%dM,share=on,mem-path=%s"
-                                " -numa node,memdev=mem0 -mem-prealloc",
-                                vm->kvm.mem, cfg_get_root_work());
-    }
+    len += sprintf(cmd+len, " -object memory-backend-file,id=mem0,"
+                            "size=%dM,share=on,mem-path=%s"
+                            " -numa node,memdev=mem0 -mem-prealloc",
+                            vm->kvm.mem, cfg_get_root_work());
+    } 
+  return cmd;
+}
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+char *dpdk_ovs_format_ethd(t_vm *vm, int eth)
+{
+  static char cmd[MAX_PATH_LEN*3];
+  int len = 0;
+  char *mc = vm->kvm.eth_table[eth].mac_addr;
+  char *endp_path = utils_get_dpdk_endp_path(vm->kvm.name, eth);
+  memset(cmd, 0, MAX_PATH_LEN*3);
+  len += sprintf(cmd+len, " -chardev socket,id=chard%d,path=%s,server=on",
+                          eth, endp_path);
+  len += sprintf(cmd+len, " -netdev type=vhost-user,id=net%d,"
+                          "chardev=chard%d,queues=%d",eth,eth,MQ_QUEUES);
+  len += sprintf(cmd+len, " -device virtio-net-pci,netdev=net%d,"
+                          "mac=%02X:%02X:%02X:%02X:%02X:%02X,"
+                          "bus=pci.0,addr=0x%x,csum=off,guest_csum=off,"
+                          "guest_tso4=off,guest_tso6=off,guest_ecn=off,"
+                          "mq=on,vectors=%d",
+                          eth, mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF,
+                          mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF, eth+5,
+                          MQ_VECTORS);
+  return cmd;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+char *dpdk_ovs_format_eths(t_vm *vm, int eth)
+{
+  static char net_cmd[MAX_PATH_LEN*3];
+  int len = 0;
+  char *mc = vm->kvm.eth_table[eth].mac_addr;
+  char *endp_path = utils_get_dpdk_endp_path(vm->kvm.name, eth);
+  memset(net_cmd, 0, MAX_PATH_LEN*3);
   len += sprintf(net_cmd+len, " -chardev socket,id=chard%d,path=%s,server=on",
                               eth, endp_path);
-
   len += sprintf(net_cmd+len, " -netdev type=vhost-user,id=net%d,"
                               "chardev=chard%d", eth, eth);
-  
   len += sprintf(net_cmd+len, " -device virtio-net-pci,netdev=net%d,"
                               "mac=%02X:%02X:%02X:%02X:%02X:%02X,"
                               "bus=pci.0,addr=0x%x,csum=off,guest_csum=off,"
-                              "guest_tso4=off,guest_tso6=off,guest_ecn=off,"
-                              "mrg_rxbuf=off",
+                              "guest_tso4=off,guest_tso6=off,guest_ecn=off",
                               eth, mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF,
                               mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF, eth+5);
-
   return net_cmd;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+char *dpdk_ovs_format_ethv(t_vm *vm, int eth, char *ifname)
+{
+  static char cmd[MAX_PATH_LEN*3];
+  int len = 0;
+  char *mc = vm->kvm.eth_table[eth].mac_addr;
+  memset(cmd, 0, MAX_PATH_LEN*3);
+  len += sprintf(cmd+len," -device virtio-net-pci,netdev=nvhost%d", eth);
+  len += sprintf(cmd+len,",mac=%02X:%02X:%02X:%02X:%02X:%02X",
+                         mc[0] & 0xFF, mc[1] & 0xFF, mc[2] & 0xFF,
+                         mc[3] & 0xFF, mc[4] & 0xFF, mc[5] & 0xFF);
+  len += sprintf(cmd+len,",bus=pci.0,addr=0x%x", eth+5);
+  len += sprintf(cmd+len,",mq=on,vectors=%d", MQ_VECTORS);
+  len += sprintf(cmd+len," -netdev type=tap,id=nvhost%d,vhost=on,", eth);
+  len += sprintf(cmd+len,"vhostforce=on,queues=%d,", MQ_QUEUES);
+  len += sprintf(cmd+len,"ifname=%s,script=no,downscript=no", ifname);
+  return cmd;
 }
 /*--------------------------------------------------------------------------*/
 

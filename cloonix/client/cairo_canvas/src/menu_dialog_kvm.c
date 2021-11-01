@@ -28,7 +28,7 @@
 #include "rpc_clownix.h"
 #include "cloonix.h"
 
-#define ETH_TYPE_MAX 3
+#define ETH_TYPE_MAX 4
 #define ETH_LINE_MAX 7
 
 GtkWidget *get_main_window(void);
@@ -39,41 +39,41 @@ static int g_nb_bulkvm;
 static GtkWidget *g_custom_dialog, *g_entry_rootfs;
 void menu_choice_kvm(void);
 
-typedef struct t_cb_eth_type
+typedef struct t_cb_endp_type
 {
   int rank;
-  int eth_type;
+  int endp_type;
   GtkWidget **rad;
-} t_cb_eth_type;
+} t_cb_endp_type;
 
 
 /****************************************************************************/
-static void free_eth_type(GtkWidget *check, gpointer user_data)
+static void free_endp_type(GtkWidget *check, gpointer user_data)
 {
-  t_cb_eth_type **cb_eth_type = (t_cb_eth_type **) user_data;
+  t_cb_endp_type **cb_endp_type = (t_cb_endp_type **) user_data;
   int i;
   for (i=0; i<ETH_TYPE_MAX; i++)
-    free(cb_eth_type[i]);
-  free(cb_eth_type);
+    free(cb_endp_type[i]);
+  free(cb_endp_type);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void eth_type_cb(GtkWidget *check, gpointer user_data)
+static void endp_type_cb(GtkWidget *check, gpointer user_data)
 {
-  t_cb_eth_type *cb_eth_type = (t_cb_eth_type *) user_data;
+  t_cb_endp_type *cb_endp_type = (t_cb_endp_type *) user_data;
   t_custom_vm *cust_vm = get_ptr_custom_vm();
   int i,j,k, max_rank = MAX_DPDK_VM;
-  int nb_tot_eth = 0, rank = cb_eth_type->rank;
-  int eth_type = cb_eth_type->eth_type;
-  GtkWidget **rad = cb_eth_type->rad;
-  cust_vm->eth_tab[rank].eth_type = eth_type;
+  int nb_tot_eth = 0, rank = cb_endp_type->rank;
+  int endp_type = cb_endp_type->endp_type;
+  GtkWidget **rad = cb_endp_type->rad;
+  cust_vm->eth_tab[rank].endp_type = endp_type;
 
-  if (eth_type == endp_type_none)
+  if (endp_type == endp_type_none)
     {
     for (i=rank + 1; i<max_rank; i++)
       {
-      cust_vm->eth_tab[i].eth_type = endp_type_none;
+      cust_vm->eth_tab[i].endp_type = endp_type_none;
       if (i < ETH_LINE_MAX)
         {
         k = ETH_TYPE_MAX * i;
@@ -88,19 +88,21 @@ static void eth_type_cb(GtkWidget *check, gpointer user_data)
     for (i=0; i<rank; i++)
       {
       k = ETH_TYPE_MAX * rank;
-      if (cust_vm->eth_tab[i].eth_type == endp_type_none)
+      if (cust_vm->eth_tab[i].endp_type == endp_type_none)
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[k]),TRUE);
       }
     }
   for (i=0; i < max_rank; i++)
     {
-    if (cust_vm->eth_tab[i].eth_type == endp_type_eths)
+    if (cust_vm->eth_tab[i].endp_type == endp_type_eths)
       nb_tot_eth += 1;
-    else if (cust_vm->eth_tab[i].eth_type == endp_type_ethd)
+    else if (cust_vm->eth_tab[i].endp_type == endp_type_ethd)
       nb_tot_eth += 1;
-    else if ((cust_vm->eth_tab[i].eth_type != endp_type_none) &&
-             (cust_vm->eth_tab[i].eth_type != 0))
-      KOUT("%d %d %d", i, nb_tot_eth, cust_vm->eth_tab[i].eth_type);
+    else if (cust_vm->eth_tab[i].endp_type == endp_type_ethv)
+      nb_tot_eth += 1;
+    else if ((cust_vm->eth_tab[i].endp_type != endp_type_none) &&
+             (cust_vm->eth_tab[i].endp_type != 0))
+      KOUT("%d %d %d", i, nb_tot_eth, cust_vm->eth_tab[i].endp_type);
     }
   cust_vm->nb_tot_eth = nb_tot_eth;
 }
@@ -123,34 +125,35 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
 {
   unsigned long int i;
   GtkWidget *hbox;
-  t_cb_eth_type **cb_eth_type;
+  t_cb_endp_type **cb_endp_type;
   char title[MAX_NAME_LEN];
   unsigned long int endp_type[ETH_TYPE_MAX]={endp_type_none,
                                              endp_type_ethd,
-                                             endp_type_eths};
+                                             endp_type_eths,
+                                             endp_type_ethv};
 
   memset(title, 0, MAX_NAME_LEN);
   snprintf(title, MAX_NAME_LEN-1, "Eth%d", rank);
-  cb_eth_type = (t_cb_eth_type **) malloc(ETH_TYPE_MAX * sizeof(t_cb_eth_type *));
+  cb_endp_type = (t_cb_endp_type **) malloc(ETH_TYPE_MAX * sizeof(t_cb_endp_type *));
   for (i=0; i<ETH_TYPE_MAX; i++)
     {
-    cb_eth_type[i] = (t_cb_eth_type *) malloc(sizeof(t_cb_eth_type));
-    memset(cb_eth_type[i], 0, sizeof(t_cb_eth_type));
-    cb_eth_type[i]->rank = rank;
-    cb_eth_type[i]->eth_type = endp_type[i];
-    cb_eth_type[i]->rad = rad;
+    cb_endp_type[i] = (t_cb_endp_type *) malloc(sizeof(t_cb_endp_type));
+    memset(cb_endp_type[i], 0, sizeof(t_cb_endp_type));
+    cb_endp_type[i]->rank = rank;
+    cb_endp_type[i]->endp_type = endp_type[i];
+    cb_endp_type[i]->rad = rad;
     }
   hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   for (i=0; i<ETH_TYPE_MAX; i++)
     {
     gtk_box_pack_start(GTK_BOX(hbox),rad[ETH_TYPE_MAX*rank+i],TRUE,TRUE,10);
     g_signal_connect(G_OBJECT(rad[ETH_TYPE_MAX*rank+i]),"clicked",
-                       (GCallback) eth_type_cb,
-                       (gpointer) cb_eth_type[i]);
+                       (GCallback) endp_type_cb,
+                       (gpointer) cb_endp_type[i]);
     }
   append_grid(grid, hbox, title, (*line_nb)++);
   g_signal_connect (G_OBJECT (hbox), "destroy",
-                    (GCallback) free_eth_type, cb_eth_type);
+                    (GCallback) free_endp_type, cb_endp_type);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -284,11 +287,8 @@ static void custom_vm_dialog(t_custom_vm *cust)
   GtkWidget *grid, *parent, *is_persistent;
   GtkWidget *has_nobackdoor, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
-  char *lib[ETH_TYPE_MAX] = {"n", "d", "s"};
+  char *lib[ETH_TYPE_MAX] = {"n", "d", "s", "v"};
   t_custom_vm *cust_vm;
-
-
-
 
   if (g_custom_dialog)
     return;
@@ -358,10 +358,10 @@ static void custom_vm_dialog(t_custom_vm *cust)
     group = NULL;
     for (j=0; j<ETH_TYPE_MAX; j++)
       {
-      k= i*ETH_TYPE_MAX + j;
+      k = i*ETH_TYPE_MAX + j;
       rad[k] = gtk_radio_button_new_with_label(group,lib[j]);
       group  = gtk_radio_button_get_group(GTK_RADIO_BUTTON(rad[k]));
-      if (cust_vm->eth_tab[i].eth_type == j+endp_type_none)
+      if (cust_vm->eth_tab[i].endp_type == j+endp_type_none)
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[k]),TRUE);
       }
     }
@@ -369,7 +369,6 @@ static void custom_vm_dialog(t_custom_vm *cust)
     {
     flags_eth_check_button(grid, &line_nb, i, rad);
     }
-
 
   gtk_container_set_border_width(GTK_CONTAINER(grid), ETH_TYPE_MAX);
   gtk_box_pack_start(
@@ -422,9 +421,9 @@ void menu_dialog_vm_init(void)
   g_custom_vm.mem = 2000;
   g_custom_vm.nb_tot_eth = 3;
   for (i=0; i<MAX_DPDK_VM; i++)
-    g_custom_vm.eth_tab[i].eth_type = endp_type_none;
+    g_custom_vm.eth_tab[i].endp_type = endp_type_none;
   for (i=0; i<g_custom_vm.nb_tot_eth; i++)
-    g_custom_vm.eth_tab[i].eth_type = endp_type_eths;
+    g_custom_vm.eth_tab[i].endp_type = endp_type_eths;
   g_custom_dialog = NULL;
   memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   g_nb_bulkvm = 0;

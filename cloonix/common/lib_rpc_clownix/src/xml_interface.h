@@ -216,7 +216,7 @@
                          "  <nb_tot_eth> %d </nb_tot_eth>"
 
 #define VM_ETH_TABLE     "<eth_table>\n"\
-                         "  <eth_type> %d </eth_type>\n"\
+                         "  <endp_type> %d </endp_type>\n"\
                          "  <randmac> %d </randmac>\n"\
                          "  <ifname> %s </ifname>\n"\
                          "  <mac> %02X %02X %02X %02X %02X %02X </mac>\n"\
@@ -370,6 +370,7 @@
 #define EVENT_TOPO_O          "<event_topo>\n"\
                               "  <tid> %d </tid>\n"\
                               "  version:%s \n"\
+                              "  conf_rank:%d \n"\
                               "  network:%s username:%s server_port:%d \n"\
                               "  work_dir:%s bulk_dir:%s bin_dir:%s \n"\
                               "  flags_config:%d \n"\
