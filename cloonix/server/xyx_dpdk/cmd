@@ -59,7 +59,6 @@ rpct = cmplr.find_library('librpct', dirs : '${HERE}/${RPCT}')
 
 sources = files('src/xyx_dpdk.c',
                 'src/vhost_client.c',
-                'src/utils.c',
                 'src/circle.c',
                 'src/packet_arp_mangle.c',
                 'src/eventfull.c',

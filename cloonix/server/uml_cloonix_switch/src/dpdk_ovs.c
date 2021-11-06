@@ -688,15 +688,15 @@ char *dpdk_ovs_format_ethd(t_vm *vm, int eth)
                           "chardev=chard%d,queues=%d",eth,eth,MQ_QUEUES);
   len += sprintf(cmd+len, " -device virtio-net-pci,netdev=net%d,"
                           "mac=%02X:%02X:%02X:%02X:%02X:%02X,"
-                          "bus=pci.0,addr=0x%x,csum=off,guest_csum=off,"
-                          "guest_tso4=off,guest_tso6=off,guest_ecn=off,"
-                          "mq=on,vectors=%d",
+                          "bus=pci.0,addr=0x%x,mq=on,vectors=%d",
                           eth, mc[0]&0xFF, mc[1]&0xFF, mc[2]&0xFF,
                           mc[3]&0xFF, mc[4]&0xFF, mc[5]&0xFF, eth+5,
                           MQ_VECTORS);
   return cmd;
 }
 /*--------------------------------------------------------------------------*/
+//                          "bus=pci.0,addr=0x%x,csum=off,guest_csum=off,"
+//                          "guest_tso4=off,guest_tso6=off,guest_ecn=off,"
 
 /****************************************************************************/
 char *dpdk_ovs_format_eths(t_vm *vm, int eth)
@@ -731,14 +731,15 @@ char *dpdk_ovs_format_ethv(t_vm *vm, int eth, char *ifname)
   len += sprintf(cmd+len,",mac=%02X:%02X:%02X:%02X:%02X:%02X",
                          mc[0] & 0xFF, mc[1] & 0xFF, mc[2] & 0xFF,
                          mc[3] & 0xFF, mc[4] & 0xFF, mc[5] & 0xFF);
-  len += sprintf(cmd+len,",bus=pci.0,addr=0x%x", eth+5);
-  len += sprintf(cmd+len,",mq=on,vectors=%d", MQ_VECTORS);
+  len += sprintf(cmd+len,",bus=pci.0,addr=0x%x,mq=on,vectors=%d",
+                          eth+5,  MQ_VECTORS);
   len += sprintf(cmd+len," -netdev type=tap,id=nvhost%d,vhost=on,", eth);
-  len += sprintf(cmd+len,"vhostforce=on,queues=%d,", MQ_QUEUES);
+  len += sprintf(cmd+len,"queues=%d,", MQ_QUEUES);
   len += sprintf(cmd+len,"ifname=%s,script=no,downscript=no", ifname);
   return cmd;
 }
 /*--------------------------------------------------------------------------*/
+//                         ",csum=off,guest_csum=off,guest_tso4=off,guest_tso6=off,guest_ecn=off"
 
 /****************************************************************************/
 int dpdk_ovs_still_present(void)

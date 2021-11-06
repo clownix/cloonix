@@ -55,26 +55,12 @@ static int g_rxtx_worker_active;
 
 static struct vhost_device_ops g_virtio_net_device_ops0;
 static struct vhost_device_ops g_virtio_net_device_ops1;
-static uint32_t volatile g_lock;
 static int g_running_lcore;
 
 static struct rte_mempool *g_mpool;
 
 void end_clean_unlink(void);
 
-/****************************************************************************/
-static void vhost_lock_acquire(void)
-{
-  while (__sync_lock_test_and_set(&(g_lock), 1));
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void vhost_lock_release(void)
-{
-  __sync_lock_release(&(g_lock));
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static uint64_t get_usec(void)
@@ -92,11 +78,9 @@ static uint64_t get_usec(void)
 /****************************************************************************/
 static int virtio_new_device(int vid)
 {
-  vhost_lock_acquire();
   rte_vhost_enable_guest_notification(vid, 0, 0);
   rte_vhost_enable_guest_notification(vid, 1, 0);
   g_create[vid] = 1;
-  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -121,7 +105,6 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
   if ((vid != 0) && (vid != 1))
     KOUT("%d %d %d", vid, queue_id, enable);
-  vhost_lock_acquire();
   if (queue_id==0)
     {
     if (enable)
@@ -136,7 +119,6 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
     else
       g_tx_enable[vid] = 0;
     }
-  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -251,7 +233,6 @@ static int rxtx_worker(void *data)
   while(g_rxtx_worker)
     {
     usleep(100);
-    vhost_lock_acquire();
     if ((g_rxtx_worker &&
          g_rx_enable[0] && g_rx_enable[1] &&
          g_tx_enable[0] && g_tx_enable[1] &&
@@ -269,7 +250,6 @@ static int rxtx_worker(void *data)
       }
     else
       last_usec = arrival_usec;
-    vhost_lock_release();
     }
   circle_flush();
   return 0;

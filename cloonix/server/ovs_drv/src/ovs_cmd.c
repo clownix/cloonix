@@ -210,8 +210,12 @@ int ovs_cmd_del_lan_ethd(char *ovsb, char *dpdkd, char *lan, char *nm, int num)
   snprintf(name, MAX_NAME_LEN-1, "%s_%d", nm, num);
 
   snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_%s_%s", lan, lan, name);
+  if (ovs_vsctl(ovsb, dpdkd, cmd))
+    {
+    KERR("ERROR OVSCMD: DEL LAN ETH %s %d %s", name, num, lan);
+    result = -1;
+    }
   snprintf(cmd, MAX_ARG_LEN-1, "-- del-port _b_%s _p_%s_%s", name, name,lan);
-
   if (ovs_vsctl(ovsb, dpdkd, cmd))
     {
     KERR("ERROR OVSCMD: DEL LAN ETH %s %d %s", name, num, lan);

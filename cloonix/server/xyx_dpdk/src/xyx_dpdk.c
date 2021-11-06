@@ -43,7 +43,6 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "vhost_client.h"
-#include "utils.h"
 #include "circle.h"
 #include "packet_arp_mangle.h"
 #include "pcap_record.h"
@@ -308,7 +307,8 @@ int main (int argc, char *argv[])
   init_packet_arp_mangle();
   msg_mngt_init("xyx_dpdk", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
-  utils_init(g_xyx_name, g_snf_path);
+  pcap_record_init(g_snf_path);
+  eventfull_init(g_xyx_name);
   string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");
   g_rte_argv[0] = argv[0];
   g_rte_argv[1] = "--iova-mode=va";

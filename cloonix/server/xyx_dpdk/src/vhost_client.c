@@ -55,7 +55,6 @@ typedef struct t_wrk
 
 static int g_rxtx_worker;
 static int g_rxtx_worker_active;
-static uint32_t volatile g_lock;
 static int g_running_lcore;
 static t_wrk g_wrk[2];
 void end_clean_unlink(void);
@@ -63,19 +62,6 @@ static char g_name[MAX_NAME_LEN];
 static struct rte_mempool *g_mpool;
 
 
-/****************************************************************************/
-static void vhost_lock_acquire(void)
-{
-  while (__sync_lock_test_and_set(&(g_lock), 1));
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void vhost_lock_release(void)
-{
-  __sync_lock_release(&(g_lock));
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static uint64_t get_usec(void)
@@ -95,11 +81,9 @@ static int virtio_new_device(int vid)
 {
   if ((vid != 0) && (vid != 1))
     KOUT("%d", vid);
-  vhost_lock_acquire();
   rte_vhost_enable_guest_notification(vid, 0, 0);
   rte_vhost_enable_guest_notification(vid, 1, 0);
   g_wrk[vid].created = 1;
-  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -118,9 +102,27 @@ static void virtio_destroy_device(int vid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int virtio_new_connection(int vid)
+{
+  return 0;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void virtio_guest_notified(int vid)
+{
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void virtio_destroy_connection(int vid)
+{
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
-  vhost_lock_acquire();
   if (queue_id==0)
     {
     if (enable)
@@ -135,7 +137,6 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
     else
       g_wrk[vid].tx_enable = 0;
     }
-  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -245,13 +246,11 @@ static int rxtx_worker(void *data)
       break;
     }
 
-
   while(g_rxtx_worker)
     {
     usleep(100);
     if (g_rxtx_worker)
       {
-      vhost_lock_acquire();
       if (g_rxtx_worker &&
           g_wrk[0].created && g_wrk[1].created &&
           g_wrk[0].rx_enable && g_wrk[1].rx_enable &&
@@ -265,7 +264,6 @@ static int rxtx_worker(void *data)
           circle_clean(id);
           }
         }
-      vhost_lock_release();
       }
     }
 
@@ -308,6 +306,12 @@ void vhost_client_start_id(int id, int sid, char *path)
   g_wrk[id].virtio_net_ops.destroy_device      = virtio_destroy_device;
   g_wrk[id].virtio_net_ops.vring_state_changed = virtio_vring_state_changed;
   g_wrk[id].virtio_net_ops.features_changed    = virtio_features_changed;
+  g_wrk[id].virtio_net_ops.new_connection      = virtio_new_connection;
+  g_wrk[id].virtio_net_ops.destroy_connection  = virtio_destroy_connection;
+  g_wrk[id].virtio_net_ops.guest_notified      = virtio_guest_notified;
+
+
+
   err = rte_vhost_driver_register(path, flags);
   if (err)
     KOUT(" ");

@@ -1,6 +1,6 @@
 diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdinfo-cfile.py
---- dpdk/buildtools/gen-pmdinfo-cfile.py	2021-10-30 18:01:37.000000000 +0200
-+++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-10-30 18:03:11.466371333 +0200
+--- dpdk/buildtools/gen-pmdinfo-cfile.py	2021-11-01 09:05:29.000000000 +0100
++++ dpdk_tainted/buildtools/gen-pmdinfo-cfile.py	2021-11-06 10:28:31.672491872 +0100
 @@ -14,7 +14,7 @@
          stdout=subprocess.PIPE, check=True, cwd=temp
      )
@@ -11,8 +11,8 @@ diff -Naur dpdk/buildtools/gen-pmdinfo-cfile.py dpdk_tainted/buildtools/gen-pmdi
      paths = [os.path.join(temp, name) for name in names]
      subprocess.run(pmdinfogen + paths + [output], check=True)
 diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
---- dpdk/drivers/meson.build	2021-10-30 18:01:37.000000000 +0200
-+++ dpdk_tainted/drivers/meson.build	2021-10-30 18:03:11.466371333 +0200
+--- dpdk/drivers/meson.build	2021-11-01 09:05:29.000000000 +0100
++++ dpdk_tainted/drivers/meson.build	2021-11-06 10:28:31.672491872 +0100
 @@ -163,6 +163,7 @@
          tmp_lib = static_library('tmp_' + lib_name, sources,
                  include_directories: includes,
@@ -29,138 +29,24 @@ diff -Naur dpdk/drivers/meson.build dpdk_tainted/drivers/meson.build
                  install_dir: driver_install_path)
  
          # create a dependency object and add it to the global dictionary so
-diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost.h dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h
---- dpdk/drivers/net/virtio/virtio_user/vhost.h	2021-10-30 18:01:38.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost.h	2021-10-30 18:03:11.466371333 +0200
-@@ -15,6 +15,26 @@
- #include "../virtio_logs.h"
- #include "../virtqueue.h"
+diff -Naur dpdk/drivers/net/virtio/virtio_ethdev.c dpdk_tainted/drivers/net/virtio/virtio_ethdev.c
+--- dpdk/drivers/net/virtio/virtio_ethdev.c	2021-11-01 09:05:29.000000000 +0100
++++ dpdk_tainted/drivers/net/virtio/virtio_ethdev.c	2021-11-06 10:41:00.789485815 +0100
+@@ -1747,9 +1747,11 @@
+ 	hw->weak_barriers = !virtio_with_feature(hw, VIRTIO_F_ORDER_PLATFORM);
  
-+#include <syslog.h>
-+#include <sys/syscall.h>
-+#include <bits/time.h>
-+
-+
-+
-+/*****************************************************************************/
-+long long cloonix_get_usec(void);
-+/*---------------------------------------------------------------------------*/
-+#define KERR(format, a...)                               \
-+ do {                                                    \
-+    syslog(LOG_ERR | LOG_USER, "%lld %s"                 \
-+    " line:%d " format "\n", cloonix_get_usec(),          \
-+    (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
-+     __LINE__, ## a);                                    \
-+    } while (0)
-+/*---------------------------------------------------------------------------*/
-+
-+
-+
- struct vhost_vring_state {
- 	unsigned int index;
- 	unsigned int num;
-diff -Naur dpdk/drivers/net/virtio/virtio_user/vhost_user.c dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c
---- dpdk/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-30 18:01:38.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/vhost_user.c	2021-10-30 18:03:11.466371333 +0200
-@@ -104,6 +104,23 @@
- #define VHOST_USER_PAYLOAD_SIZE \
- 	(sizeof(struct vhost_user_msg) - VHOST_USER_HDR_SIZE)
- 
-+
-+
-+/*****************************************************************************/
-+long long cloonix_get_usec(void)
-+{
-+  struct timespec ts;
-+  long long result;
-+  if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &ts))
-+    syslog(LOG_ERR | LOG_USER, "ERROR CLOCK_MONOTONIC");
-+  result = (long long) (ts.tv_sec);
-+  result *= 1000000;
-+  result += ts.tv_nsec / 1000;
-+  return result;
-+}
-+/*---------------------------------------------------------------------------*/
-+
-+
- static int
- vhost_user_write(int fd, struct vhost_user_msg *msg, int *fds, int fd_num)
- {
-@@ -147,7 +164,10 @@
- 	uint32_t valid_flags = VHOST_USER_REPLY_MASK | VHOST_USER_VERSION;
- 	int ret, sz_hdr = VHOST_USER_HDR_SIZE, sz_payload;
- 
-+//cloonix TOLOOKAT
-+//KERR("BEFORE RECV vhost_user_read pid:%d", getpid());
- 	ret = recv(fd, (void *)msg, sz_hdr, 0);
-+//KERR("AFTER RECV vhost_user_read ret:%d", ret);
- 	if (ret < 0) {
- 		PMD_DRV_LOG(ERR, "Failed to recv msg header: %s", strerror(errno));
- 		return -1;
-@@ -173,7 +193,10 @@
- 	}
- 
- 	if (sz_payload) {
-+//cloonix TOLOOKAT
-+//KERR("BEFORE RECV vhost_user_read pid:%d", getpid());
- 		ret = recv(fd, (void *)((char *)msg + sz_hdr), sz_payload, 0);
-+//KERR("AFTER RECV vhost_user_read ret:%d", ret);
- 		if (ret < 0) {
- 			PMD_DRV_LOG(ERR, "Failed to recv msg payload: %s", strerror(errno));
- 			return -1;
-@@ -513,6 +536,8 @@
- 		.payload.state = *state,
- 	};
- 
-+//cloonix TOLOOKAT
-+//KERR("BEFORE WRITE vhost_user_set_vring pid:%d", getpid());
- 	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
- 	if (ret < 0) {
- 		PMD_DRV_LOG(ERR, "Failed to set vring state (request %d)", req);
-@@ -525,6 +550,8 @@
- static int
- vhost_user_set_vring_enable(struct virtio_user_dev *dev, struct vhost_vring_state *state)
- {
-+//cloonix TOLOOKAT
-+//KERR("BEFORE WRITE vhost_user_set_vringenable pid:%d", getpid());
- 	return vhost_user_set_vring(dev, VHOST_USER_SET_VRING_ENABLE, state);
- }
- 
-diff -Naur dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c
---- dpdk/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-30 18:01:38.000000000 +0200
-+++ dpdk_tainted/drivers/net/virtio/virtio_user/virtio_user_dev.c	2021-10-30 18:03:11.466371333 +0200
-@@ -23,6 +23,7 @@
- 
- #define VIRTIO_USER_MEM_EVENT_CLB_NAME "virtio_user_mem_event_clb"
- 
-+
- const char * const virtio_user_backend_strings[] = {
- 	[VIRTIO_USER_BACKEND_UNKNOWN] = "VIRTIO_USER_BACKEND_UNKNOWN",
- 	[VIRTIO_USER_BACKEND_VHOST_USER] = "VHOST_USER",
-@@ -327,8 +328,11 @@
- 	} else {
- 		ret = virtio_user_dev_get_mac(dev);
- 		if (ret) {
-+/*
-+cloonix
- 			PMD_DRV_LOG(ERR, "(%s) No valid MAC in devargs or device, use random",
- 					dev->path);
+ 	/* If host does not support both status and MSI-X then disable LSC */
++/* cloonix
+ 	if (virtio_with_feature(hw, VIRTIO_NET_F_STATUS) && hw->intr_lsc)
+ 		eth_dev->data->dev_flags |= RTE_ETH_DEV_INTR_LSC;
+ 	else
 +*/
- 			return;
- 		}
+ 		eth_dev->data->dev_flags &= ~RTE_ETH_DEV_INTR_LSC;
  
-@@ -457,6 +461,8 @@
- 	if (msl->external)
- 		return;
- 
-+//cloonix TOLOOKAT
-+KERR("ERROR TOLOOKAT MAY DEADLOCK pid:%d", getpid());
- 	pthread_mutex_lock(&dev->mutex);
- 
- 	if (dev->started == false)
+ 	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/eal_common_options.c
---- dpdk/lib/eal/common/eal_common_options.c	2021-10-30 18:01:38.000000000 +0200
-+++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-10-30 18:03:11.466371333 +0200
+--- dpdk/lib/eal/common/eal_common_options.c	2021-11-01 09:05:29.000000000 +0100
++++ dpdk_tainted/lib/eal/common/eal_common_options.c	2021-11-06 10:28:31.672491872 +0100
 @@ -125,7 +125,9 @@
  
  #ifndef RTE_EXEC_ENV_WINDOWS
@@ -173,8 +59,8 @@ diff -Naur dpdk/lib/eal/common/eal_common_options.c dpdk_tainted/lib/eal/common/
  
  /*
 diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
---- dpdk/lib/eal/linux/eal.c	2021-10-30 18:01:38.000000000 +0200
-+++ dpdk_tainted/lib/eal/linux/eal.c	2021-10-30 18:03:11.466371333 +0200
+--- dpdk/lib/eal/linux/eal.c	2021-11-01 09:05:29.000000000 +0100
++++ dpdk_tainted/lib/eal/linux/eal.c	2021-11-06 10:28:31.672491872 +0100
 @@ -27,6 +27,7 @@
  #endif
  #include <linux/version.h>
@@ -350,8 +236,8 @@ diff -Naur dpdk/lib/eal/linux/eal.c dpdk_tainted/lib/eal/linux/eal.c
  		/* autodetect the IOVA mapping mode */
  		enum rte_iova_mode iova_mode = rte_bus_get_iommu_class();
 diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
---- dpdk/lib/meson.build	2021-10-30 18:01:38.000000000 +0200
-+++ dpdk_tainted/lib/meson.build	2021-10-30 18:03:11.466371333 +0200
+--- dpdk/lib/meson.build	2021-11-01 09:05:29.000000000 +0100
++++ dpdk_tainted/lib/meson.build	2021-11-06 10:28:31.672491872 +0100
 @@ -83,6 +83,7 @@
  
  
@@ -377,8 +263,8 @@ diff -Naur dpdk/lib/meson.build dpdk_tainted/lib/meson.build
      shared_dep = declare_dependency(link_with: shared_lib,
              include_directories: includes,
 diff -Naur dpdk/meson_options.txt dpdk_tainted/meson_options.txt
---- dpdk/meson_options.txt	2021-10-30 18:01:38.000000000 +0200
-+++ dpdk_tainted/meson_options.txt	2021-10-30 18:03:11.466371333 +0200
+--- dpdk/meson_options.txt	2021-11-01 09:05:29.000000000 +0100
++++ dpdk_tainted/meson_options.txt	2021-11-06 10:28:31.672491872 +0100
 @@ -32,7 +32,7 @@
         'Path to the kernel for building kernel modules. Headers must be in $kernel_dir or $kernel_dir/build. Modules will be installed in /lib/modules.')
  option('machine', type: 'string', value: 'auto', description:

@@ -39,8 +39,6 @@ typedef struct t_alloc_delay
 {
   char name[MAX_NAME_LEN];
   int num;
-  int endp_type;
-  char vhost[MAX_NAME_LEN];
 } t_alloc_delay;
 
 
@@ -239,7 +237,11 @@ static void lan_free(t_add_lan *cur)
 static void timer_alloc_delay(void *data)
 {
   t_alloc_delay *ald = (t_alloc_delay *) data;
-  ethdv_alloc(ald->name, ald->num, ald->endp_type, ald->vhost);
+  t_ethdv_cnx *cur  = ethdv_find(ald->name, ald->num);
+  if (!cur)
+    KERR("ERROR KVMETH ALLOC DELAY %s %d", ald->name, ald->num);
+  else
+    cur->ready = 1;
   clownix_free(ald, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
@@ -264,10 +266,9 @@ static int dpdk_kvm_add_vm(char *name, int num, int endp_type, char *vhost)
     ald = (t_alloc_delay *) clownix_malloc(sizeof(t_alloc_delay), 6);
     memset(ald, 0, sizeof(t_alloc_delay));
     strncpy(ald->name, name, MAX_NAME_LEN-1);
-    strncpy(ald->vhost, vhost, MAX_NAME_LEN-1);
     ald->num = num;
-    ald->endp_type = endp_type_ethv;
-    clownix_timeout_add(500, timer_alloc_delay, ald, NULL, NULL);
+    ethdv_alloc(name, num, endp_type, vhost);
+    clownix_timeout_add(1000, timer_alloc_delay, ald, NULL, NULL);
     result = 0;
     }
   else if (endp_type == endp_type_eths)
@@ -401,7 +402,7 @@ int dpdk_kvm_exists(char *name, int num)
 {
   int result = 0;
   t_ethdv_cnx *cur = ethdv_find(name, num);
-  if (cur)
+  if ((cur) && (cur->ready == 1))
     result = cur->endp_type;
   return result;
 }

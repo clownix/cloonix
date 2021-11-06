@@ -39,7 +39,6 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "circle.h"
-#include "utils.h"
 #include "packet_arp_mangle.h"
 
 static int g_cnf_mac_mangle;
@@ -75,6 +74,33 @@ typedef struct t_circle
 
 static t_circle_elem g_elem[2][CIRCLE_MASK+1];
 static t_circle g_circle[2];
+
+
+/*****************************************************************************/
+static int utils_to_endp(uint64_t usec, struct rte_mbuf *mbuf)
+{
+  uint8_t *data;
+  int len, result;;
+  len = (int) (mbuf->pkt_len);
+  data = rte_pktmbuf_mtod_offset(mbuf, uint8_t *, 0);
+  result = pcap_record_rx_packet(usec, len, data);
+  eventfull_hook_spy(0, len, data);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int utils_from_endp(uint64_t usec, struct rte_mbuf *mbuf)
+{
+  uint8_t *data;
+  int len, result;;
+  len = (int) (mbuf->pkt_len);
+  data = rte_pktmbuf_mtod_offset(mbuf, uint8_t *, 0);
+  result = pcap_record_rx_packet(usec, len, data);
+  eventfull_hook_spy(1, len, data);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void elem_transform(int id, t_circle_elem *elem)

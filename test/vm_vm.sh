@@ -1,5 +1,6 @@
 #!/bin/bash
-PARAMS="ram=2000 cpu=2 eth=v"
+
+PARAMS="ram=2000 cpu=2 eth=s"
 NET=nemo
 DIST=bullseye
 
@@ -46,8 +47,8 @@ set -e
 #----------------------------------------------------------------------
 
 #######################################################################
-cloonix_ssh $NET one "ip addr add dev eth0 11.11.11.1/24"
-cloonix_ssh $NET two "ip addr add dev eth0 11.11.11.2/24"
+cloonix_ssh $NET one "ip addr add dev eth0 1.1.1.1/24"
+cloonix_ssh $NET two "ip addr add dev eth0 1.1.1.2/24"
 for i in one two ; do
   cloonix_ssh $NET ${i} "ip link set dev eth0 up"
 done
@@ -58,30 +59,17 @@ done
 
 
 while [ 1 ]; do
-
-sleep 3
-cloonix_ssh $NET one "ping -c 3 11.11.11.2"
-sleep 1
+cloonix_ssh $NET one "ping -c 1 1.1.1.2"
 cloonix_cli $NET del lan one 0 lan1
 sleep 1
-set +e
-cloonix_ssh $NET one "ping -c 1 -w 2 11.11.11.2"
-set -e
 cloonix_cli $NET add lan one 0 lan1
-
-sleep 3
-cloonix_ssh $NET one "ping -c 3 11.11.11.2"
-sleep 1
-cloonix_cli $NET del lan one 0 lan1
-cloonix_cli $NET del lan two 0 lan1
-sleep 1
-set +e
-cloonix_ssh $NET one "ping -c 1 -w 2 11.11.11.2"
-set -e
-cloonix_cli $NET add lan one 0 lan1
-cloonix_cli $NET add lan two 0 lan1
-
-
+#  cloonix_ssh $NET one "ping -c 1 1.1.1.2"
+#  sleep 1
+#  cloonix_cli $NET del lan one 0 lan1
+#  cloonix_cli $NET del lan two 0 lan1
+#  sleep 1
+#  cloonix_cli $NET add lan one 0 lan1
+#  cloonix_cli $NET add lan two 0 lan1
 done
 
 

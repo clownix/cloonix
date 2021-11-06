@@ -61,7 +61,6 @@ static int g_rxtx_worker;
 static int  g_rxtx_worker_active;
 static struct vhost_device_ops g_virtio_net_device_ops;
 
-static uint32_t volatile g_lock;
 static int g_running_lcore;
 
 
@@ -76,27 +75,11 @@ struct rte_mempool *get_rte_mempool(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void vhost_lock_acquire(void)
-{
-  while (__sync_lock_test_and_set(&(g_lock), 1));
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void vhost_lock_release(void)
-{
-  __sync_lock_release(&(g_lock));
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int virtio_new_device(int vid)
 {
-  vhost_lock_acquire();
   rte_vhost_enable_guest_notification(vid, 0, 0);
   rte_vhost_enable_guest_notification(vid, 1, 0);
   g_created = 1;
-  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -110,7 +93,6 @@ static void virtio_destroy_device(int vid)
 /****************************************************************************/
 static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
-  vhost_lock_acquire();
   if (queue_id==0)
     {
     if (enable)
@@ -125,7 +107,6 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
     else
       g_tx_enable = 0;
     }
-  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -155,7 +136,6 @@ static int rxtx_worker(void *data)
   while(g_rxtx_worker)
     {
     usleep(100);
-    vhost_lock_acquire();
     if ((g_rxtx_worker) && (g_rx_enable) && (g_tx_enable) && (g_created))
       {
       mbuf = txq_dpdk_dequeue_begin();
@@ -178,7 +158,6 @@ static int rxtx_worker(void *data)
         rxq_dpdk_enqueue(pkts_rx[i]);
       rxtx_job_trigger();
       }
-    vhost_lock_release();
     }
   tcp_flush_all();
   txq_dpdk_flush();

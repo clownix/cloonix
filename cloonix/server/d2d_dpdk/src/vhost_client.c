@@ -52,7 +52,6 @@ static int  g_rxtx_worker_active;
 
 static struct vhost_device_ops g_virtio_net_device_ops;
 
-static uint32_t volatile g_lock;
 static int g_running_lcore;
 
 static struct rte_mempool *g_mpool;
@@ -63,27 +62,11 @@ char *get_d2d_name(void);
 
 
 /****************************************************************************/
-static void vhost_lock_acquire(void)
-{
-  while (__sync_lock_test_and_set(&(g_lock), 1));
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void vhost_lock_release(void)
-{
-  __sync_lock_release(&(g_lock));
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int virtio_new_device(int vid)
 {
-  vhost_lock_acquire();
   rte_vhost_enable_guest_notification(vid, 0, 0);
   rte_vhost_enable_guest_notification(vid, 1, 0);
   g_created = 1;
-  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -97,7 +80,6 @@ static void virtio_destroy_device(int vid)
 /****************************************************************************/
 static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
-  vhost_lock_acquire();
   if (queue_id==0)
     {
     if (enable)
@@ -112,7 +94,6 @@ static int virtio_vring_state_changed(int vid, uint16_t queue_id, int enable)
     else
       g_tx_enable = 0;
     }
-  vhost_lock_release();
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -141,7 +122,6 @@ static int rxtx_worker(void *data)
   while(g_rxtx_worker)
     {
     usleep(50);
-    vhost_lock_acquire();
     if ((g_rxtx_worker) && (g_rx_enable) && (g_tx_enable) && (g_created))
       {
       if (nb_tx == 0)
@@ -168,7 +148,6 @@ static int rxtx_worker(void *data)
         nb_rx = rte_vhost_dequeue_burst(0, 1, g_mpool, pkts_rx, MAX_PKT_BURST);
         }
       }
-    vhost_lock_release();
     }
   return 0;
 }
@@ -213,7 +192,6 @@ void vhost_client_start(char *memid, char *path)
   if (sid < 0)
     KOUT("ERROR SOCKET ID");
 
-  g_lock = 0;
   memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
   memset(g_d2d_socket, 0, MAX_PATH_LEN);
   g_virtio_net_device_ops.new_device          = virtio_new_device;
