@@ -30,7 +30,6 @@ done
   for i in meson_ninja \
            agent_dropbear \
            xwy \
-           spice \
            lib_rpc_clownix \
            lib_utils \
            lib_rpc_qmonitor \
@@ -56,7 +55,6 @@ done
             doorways \
             suid_power \
             uml_cloonix_switch \
-            spice \
             qemu \
             nat_dpdk \
             d2d_dpdk \

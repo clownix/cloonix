@@ -18,7 +18,6 @@ rm -rf tmpbuild_bis
   for i in meson_ninja \
            agent_dropbear \
            xwy \
-           spice \
            lib_rpc_clownix \
            lib_rpc_qmonitor \
            lib_rpc_doors \

@@ -1,6 +1,6 @@
 diff -Naur spice-gtk/src/cloonix.c tainted_spice/src/cloonix.c
 --- spice-gtk/src/cloonix.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloonix.c	2021-04-10 12:57:36.120709855 +0200
++++ tainted_spice/src/cloonix.c	2021-11-14 19:29:55.306201118 +0100
 @@ -0,0 +1,613 @@
 +#include <unistd.h>
 +#include <stdlib.h>
@@ -617,12 +617,12 @@ diff -Naur spice-gtk/src/cloonix.c tainted_spice/src/cloonix.c
 +
 diff -Naur spice-gtk/src/cloonix.h tainted_spice/src/cloonix.h
 --- spice-gtk/src/cloonix.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloonix.h	2021-04-10 12:57:36.120709855 +0200
++++ tainted_spice/src/cloonix.h	2021-11-14 19:30:07.970278748 +0100
 @@ -0,0 +1,22 @@
 +
 +
 +#include <syslog.h>
-+#include "../../../glob_include/glob_common.h"
++#include "../../../../common/glob_include/glob_common.h"
 +
 +
 +#define MAX_FD_NUMBER_CTX  100
@@ -643,7 +643,7 @@ diff -Naur spice-gtk/src/cloonix.h tainted_spice/src/cloonix.h
 +
 diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 --- spice-gtk/src/hmac_cipher.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.c	2021-04-10 12:57:36.120709855 +0200
++++ tainted_spice/src/hmac_cipher.c	2021-11-14 19:29:55.310201144 +0100
 @@ -0,0 +1,146 @@
 +/****************************************************************************/
 +/* Copyright (C) 2006-2014 Cloonix <clownix@clownix.net>  License RPL       */
@@ -793,7 +793,7 @@ diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 +
 diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 --- spice-gtk/src/hmac_cipher.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.h	2021-04-10 12:57:36.120709855 +0200
++++ tainted_spice/src/hmac_cipher.h	2021-11-14 19:29:55.310201144 +0100
 @@ -0,0 +1,28 @@
 +/*****************************************************************************/
 +/*    Copyright (C)  2006-2012    Cloonix,    <clownix@clownix.net>          */
@@ -824,8 +824,8 @@ diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 +
 +
 diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
---- spice-gtk/src/meson.build	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/src/meson.build	2021-04-10 12:57:36.120709855 +0200
+--- spice-gtk/src/meson.build	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/src/meson.build	2021-11-14 19:29:55.310201144 +0100
 @@ -85,6 +85,8 @@
    'spice-client.c',
    'spice-option.c',
@@ -836,8 +836,8 @@ diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
    'usb-device-manager.c',
  ]
 diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
---- spice-gtk/src/spice-channel.c	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/src/spice-channel.c	2021-04-10 12:57:36.120709855 +0200
+--- spice-gtk/src/spice-channel.c	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/src/spice-channel.c	2021-11-14 19:29:55.310201144 +0100
 @@ -48,6 +48,11 @@
  
  G_STATIC_ASSERT(sizeof(SpiceChannelClass) == sizeof(GObjectClass) + 19 * sizeof(gpointer));
@@ -912,8 +912,8 @@ diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
      c->conn = spice_session_channel_open_host(c->session, channel, &c->tls, &c->error);
      if (c->conn == NULL) {
 diff -Naur spice-gtk/src/spice-common.h tainted_spice/src/spice-common.h
---- spice-gtk/src/spice-common.h	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/src/spice-common.h	2021-04-10 12:57:36.120709855 +0200
+--- spice-gtk/src/spice-common.h	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/src/spice-common.h	2021-11-14 19:29:55.310201144 +0100
 @@ -30,3 +30,13 @@
  #include "common/marshaller.h"
  
@@ -929,8 +929,8 @@ diff -Naur spice-gtk/src/spice-common.h tainted_spice/src/spice-common.h
 +
 +
 diff -Naur spice-gtk/src/spice-gstaudio.c tainted_spice/src/spice-gstaudio.c
---- spice-gtk/src/spice-gstaudio.c	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/src/spice-gstaudio.c	2021-04-10 12:57:36.120709855 +0200
+--- spice-gtk/src/spice-gstaudio.c	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/src/spice-gstaudio.c	2021-11-14 19:29:55.310201144 +0100
 @@ -349,46 +349,6 @@
  
  #define VOLUME_NORMAL 65535
@@ -1142,8 +1142,8 @@ diff -Naur spice-gtk/src/spice-gstaudio.c tainted_spice/src/spice-gstaudio.c
  
      if (fake_channel) {
 diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
---- spice-gtk/src/spice-session.c	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/src/spice-session.c	2021-04-10 12:57:36.120709855 +0200
+--- spice-gtk/src/spice-session.c	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/src/spice-session.c	2021-11-14 19:29:55.310201144 +0100
 @@ -20,9 +20,8 @@
  #include <gio/gnetworking.h>
  #include <gio/gio.h>
@@ -1546,8 +1546,8 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
  {
      g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-priv.h
---- spice-gtk/src/spice-session-priv.h	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/src/spice-session-priv.h	2021-04-10 12:57:36.120709855 +0200
+--- spice-gtk/src/spice-session-priv.h	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/src/spice-session-priv.h	2021-11-14 19:29:55.310201144 +0100
 @@ -59,6 +59,8 @@
  void spice_session_get_pubkey(SpiceSession *session, guint8 **pubkey, guint *size);
  guint spice_session_get_verify(SpiceSession *session);
@@ -1558,8 +1558,8 @@ diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-pr
  const gchar* spice_session_get_host(SpiceSession *session);
  const gchar* spice_session_get_cert_subject(SpiceSession *session);
 diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
---- spice-gtk/src/spice-widget-egl.c	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/src/spice-widget-egl.c	2021-04-10 12:57:36.124709877 +0200
+--- spice-gtk/src/spice-widget-egl.c	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/src/spice-widget-egl.c	2021-11-14 19:29:55.310201144 +0100
 @@ -218,7 +218,7 @@
  #endif
  
@@ -1620,8 +1620,8 @@ diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
                                         (EGLClientBuffer)NULL,
                                         attrs);
 diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
---- spice-gtk/src/usb-acl-helper.c	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/src/usb-acl-helper.c	2021-04-10 12:57:36.124709877 +0200
+--- spice-gtk/src/usb-acl-helper.c	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/src/usb-acl-helper.c	2021-11-14 19:29:55.310201144 +0100
 @@ -183,7 +183,7 @@
      gsize bytes_written;
      const gchar *acl_helper = g_getenv("SPICE_USB_ACL_BINARY");
@@ -1632,8 +1632,8 @@ diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
      gint in, out;
      gchar buf[128];
 diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
---- spice-gtk/tools/spice-cmdline.c	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/tools/spice-cmdline.c	2021-04-10 12:57:36.124709877 +0200
+--- spice-gtk/tools/spice-cmdline.c	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/tools/spice-cmdline.c	2021-11-14 19:29:55.310201144 +0100
 @@ -27,9 +27,25 @@
  static char *tls_port;
  static char *password;
@@ -1673,8 +1673,8 @@ diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
          g_object_set(session, "uri", uri, NULL);
      if (host)
 diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
---- spice-gtk/tools/spicy.c	2021-04-10 12:47:42.000000000 +0200
-+++ tainted_spice/tools/spicy.c	2021-04-10 12:57:36.124709877 +0200
+--- spice-gtk/tools/spicy.c	2021-11-14 09:41:33.000000000 +0100
++++ tainted_spice/tools/spicy.c	2021-11-14 19:29:55.310201144 +0100
 @@ -1268,29 +1268,29 @@
  
  static void recent_add(SpiceSession *session)

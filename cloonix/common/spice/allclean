@@ -1,5 +1,0 @@
-#!/bin/bash
-HERE=`pwd`
-TARGET=${HERE}/spice_lib
-rm -rf ${TARGET}
-

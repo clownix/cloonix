@@ -60,7 +60,10 @@ if [ -z $ID ]; then
   exit 1
 fi
 
-export LD_LIBRARY_PATH=${CLOONIX_TREE}/common/spice/spice_lib
-BIN_ICE=${CLOONIX_TREE}/common/spice/spice_lib/bin/spicy
+
+export LD_LIBRARY_PATH=${CLOONIX_TREE}/client/spice/lib
+
+BIN_ICE=${CLOONIX_TREE}/client/spice/bin/spicy
+echo ${BIN_ICE}
 ${BIN_ICE} --title=${1}/${2} -d ${ip}:${port} -c ${DIST_CLOONIX_WORK}/vm/vm${ID}/spice_sock -w ${passwd}
 

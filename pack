@@ -34,17 +34,6 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
     rm -rf ${CLOONIX_COMMON}/agent_dropbear/${i}
   done
 #----------------------------------------------------------
-  for i in cmd allclean spice_protocol spice_usb \
-           get_new_spice_protocol.sh get_new_usbredir.sh; do
-    rm -rf ${CLOONIX_COMMON}/spice/${i}
-  done
-#----------------------------------------------------------
-  for i in spice share spice_client spice-protocol \
-           spice_server usbredir include \
-           pkgconfig spice-1 spice-server usr ; do
-    rm -rf ${CLOONIX_COMMON}/spice/spice_lib/${i}
-  done
-#----------------------------------------------------------
   rm -rf ${CLOONIX_COMMON}/glob_include
 #----------------------------------------------------------
   for i in lib_io_clownix lib_rpc_doors lib_rpct \
@@ -53,8 +42,6 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
            meson_ninja ; do
     rm -rf ${CLOONIX_COMMON}/${i}
   done
-#----------------------------------------------------------
-  rm -rf ${CLOONIX_SERVER}/spice
 #----------------------------------------------------------
   for i in  doorways \
             suid_power \
@@ -103,7 +90,10 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -rf ${CLOONIX_SERVER}/ovs
 #----------------------------------------------------------
   rm -rf ${CLOONIX_CLIENT}/lib_client
-  rm -rf ${CLOONIX_CLIENT}/spice
+#----------------------------------------------------------
+  for i in allclean cmd include share spice_client usr ; do
+    rm -rf ${CLOONIX_CLIENT}/spice/${i}
+  done
 #----------------------------------------------------------
   for i in crcanvas_gtk Makefile obj src allclean cmd ; do 
     rm -rf ${CLOONIX_CLIENT}/cairo_canvas/${i}

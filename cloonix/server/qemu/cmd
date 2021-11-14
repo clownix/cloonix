@@ -12,23 +12,6 @@ if [ ! -f ${NINJA}/ninja/ninja ]; then
   cd ${HERE}
 fi
 
-if [ ! -f ${DBASE}/common/spice/spice_lib/pkgconfig/spice-protocol.pc ]; then
-  echo Doing COMMON SPICE
-  sleep 1
-  cd ${DBASE}/common/spice
-  ./cmd
-  cd ${HERE}
-fi
-
-if [ ! -f ${DBASE}/common/spice/spice_lib/pkgconfig/spice-server.pc ]; then
-  echo Doing SERVER SPICE
-  sleep 1
-  cd ${DBASE}/server/spice/
-  ./cmd
-  cd ${HERE}
-fi
-
-
 echo Doing LIBS
 sleep 1
 
@@ -37,14 +20,7 @@ make
 cd ${HERE}
 
 
-PKGCONFIG=${DBASE}/common/spice/spice_lib/pkgconfig
 export PATH=${NINJA}/ninja:$PATH
-export PKG_CONFIG_PATH=${PKGCONFIG}
-export QEMU_CFLAGS="-fPIE -DPIE -I${DBASE}/common/spice/spice_lib/include \
-                    -I${DBASE}/common/glob_include"
-export QEMU_LDFLAGS="-pie -L${DBASE}/common/spice/spice_lib -lepoxy \
-                     -Wl,-rpath,/usr/local/bin/cloonix/common/spice/spice_lib"
-
 echo Doing untar and patch
 sleep 1
 

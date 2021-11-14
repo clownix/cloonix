@@ -255,7 +255,7 @@ char *get_path_to_qemu_spice(void)
 {
   char *result = NULL;
   static char path[MAX_PATH_LEN];
-  sprintf(path,"%s/common/spice/spice_lib/bin/spicy",get_local_cloonix_tree());
+  sprintf(path,"%s/client/spice/bin/spicy", get_local_cloonix_tree());
   if (file_exists_exec(path))
     result = path;
   return result;
