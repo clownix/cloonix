@@ -37,10 +37,7 @@ here are the git sources for what can be found in targz_store:
   * https://github.com/mesonbuild/meson.git
   * https://github.com/ninja-build/ninja.git
   * https://git.qemu.org/git/qemu.git
-  * https://gitlab.freedesktop.org/spice/spice-protocol.git
-  * https://gitlab.freedesktop.org/spice/spice.git
   * https://gitlab.freedesktop.org/spice/spice-gtk.git
-  * https://gitlab.freedesktop.org/spice/usbredir.git
   * https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-8.6p1.tar.gz
 
 
