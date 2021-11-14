@@ -50,7 +50,7 @@ static char g_d2d_socket[MAX_PATH_LEN];
 static int g_rxtx_worker;
 static int  g_rxtx_worker_active;
 
-static struct vhost_device_ops g_virtio_net_device_ops;
+static struct rte_vhost_device_ops g_virtio_net_device_ops;
 
 static int g_running_lcore;
 
@@ -192,7 +192,7 @@ void vhost_client_start(char *memid, char *path)
   if (sid < 0)
     KOUT("ERROR SOCKET ID");
 
-  memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
+  memset(&(g_virtio_net_device_ops), 0, sizeof(struct rte_vhost_device_ops));
   memset(g_d2d_socket, 0, MAX_PATH_LEN);
   g_virtio_net_device_ops.new_device          = virtio_new_device;
   g_virtio_net_device_ops.destroy_device      = virtio_destroy_device;
@@ -240,7 +240,7 @@ void vhost_client_init(void)
   g_rxtx_worker = 0;
   g_rxtx_worker_active = 0;
   g_running_lcore = -1;
-  memset(&g_virtio_net_device_ops, 0, sizeof(struct vhost_device_ops));
+  memset(&g_virtio_net_device_ops, 0, sizeof(struct rte_vhost_device_ops));
 }
 /*--------------------------------------------------------------------------*/
 

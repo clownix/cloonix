@@ -258,6 +258,31 @@ static void recv_promiscious(int llid, int tid, char *name, int eth, int on)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int end_of_timer_del_vm(int llid, int tid, t_vm *vm)
+{
+  int pid, result = -1;
+  if (vm)
+    {
+    pid = suid_power_get_pid(vm->kvm.vm_id);
+    if (pid == 0)
+      {
+      result = 0;
+      if (vm->vm_to_be_killed == 0)
+        {
+        machine_death(vm->kvm.name, error_death_noerr);
+        }      
+      }      
+    }
+  if ((result == 0) && (llid))
+    {
+    send_status_ok(llid, tid, "delvm");
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 static void timer_del_vm(void *data)
 {
   char err[MAX_PATH_LEN];
@@ -283,7 +308,7 @@ static void timer_del_vm(void *data)
     if (todel == 0)
       {
       tz->count += 1;
-      if (tz->count >= 20)
+      if (tz->count >= 30)
         {
         for (i=0; i<vm->kvm.nb_tot_eth; i++)
           {
@@ -304,55 +329,26 @@ static void timer_del_vm(void *data)
       }
     if (todel == 1)
       {
-      if (!(vm->kvm.vm_config_flags & VM_FLAG_CLOONIX_AGENT_PING_OK))
-        {
-        qmp_request_qemu_halt(tz->kvm.name, 0, 0);
-        }
-      else
-        {
-        doors_send_command(get_doorways_llid(), 0, tz->kvm.name, HALT_REQUEST);
-        }
+      qmp_request_qemu_halt(tz->kvm.name, 0, 0);
       tz->nb_try = 1;
       }
     clownix_timeout_add(100, timer_del_vm, (void *) tz, NULL, NULL);
     }
-  else if (vm->vm_to_be_killed == 0)
+  else if (tz->nb_try < 20)
     {
-     machine_death(kvm->name, error_death_noerr); 
-     clownix_timeout_add(100, timer_del_vm, (void *) tz, NULL, NULL);
-    }
-  else if ((tz->nb_try == 1) || (tz->nb_try == 2) || (tz->nb_try == 3))
-    {
-    pid = suid_power_get_pid(vm->kvm.vm_id);
-    if (pid == 0)
-      {
-      if (llid)
-        send_status_ok(llid, tid, "delvm");
-      }
-    else
+    if (end_of_timer_del_vm(llid, tid, vm))
       {
       tz->nb_try += 1;
       clownix_timeout_add(100, timer_del_vm, (void *) tz, NULL, NULL);
       }
     }
-  else if (tz->nb_try == 4)
-    {
-    pid = suid_power_get_pid(vm->kvm.vm_id);
-    if (pid == 0)
-      {
-      if (llid)
-        send_status_ok(llid, tid, "delvm");
-      }
-    else
-      {
-      snprintf(err, MAX_PATH_LEN-1, "FAILED HALT %s", kvm->name);
-      KERR("ERROR %s", err);
-      if (llid)
-        send_status_ko(llid, tid, err);
-      }
-    }
   else
-    KERR("ERROR IMPOSSIBLE");
+    {
+    snprintf(err, MAX_PATH_LEN-1, "FAILED HALT %s", kvm->name);
+    KERR("ERROR %s", err);
+    if (llid)
+      send_status_ko(llid, tid, err);
+    }
 }
 /*---------------------------------------------------------------------------*/
 

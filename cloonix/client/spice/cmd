@@ -38,7 +38,7 @@ export DESTDIR=${TARGET}
 export PATH=${TARGET}/bin:${MESON_NINJA}/ninja:${MESON_NINJA}/meson:$PATH
 
 cd ${TARGET}/spice_client
-sed -i s/UNKNOWN/0.37/ ./build-aux/git-version-gen
+sed -i s/UNKNOWN/0.39/ ./build-aux/git-version-gen
 sed -i s"%'-Wextra',%'-Wextra',\n'-Wl,-rpath',\n'-Wl,/usr/local/bin/cloonix/common/spice/spice_lib',%" meson.build
 
 meson.py build

@@ -1,20 +1,25 @@
 #!/bin/bash
 HERE=`pwd`
 NET=nemo
-DISTRO=fedora34
+DISTRO=impish
 NAME=${DISTRO}
 QCOW2=${DISTRO}.qcow2
-releasever=34
-basearch=x86_64
-MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
-FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/${basearch}/os
-FEDORA_MODULAR=${MIRROR}/releases/${releasever}/Modular/${basearch}/os
-FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/${basearch}
-FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/${basearch}
+UBUNTU_REPO="http://fr.archive.ubuntu.com/ubuntu"
+
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 CLOONIX_BULK=$(cat $CLOONIX_CONFIG |grep CLOONIX_BULK | awk -F = "{print \$2}")
 BULK=$(eval echo $CLOONIX_BULK)
+if [ ! -e ${BULK}/${DISTRO}.qcow2 ]; then
+  echo
+  echo Need a small virtual qcow2 to test cloonix inside vm.
+  echo Missing:
+  echo ${BULK}/${DISTRO}.qcow2
+  echo
+  exit 1
+fi
+
+
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
 if [ "x$is_started" == "x" ]; then
@@ -36,7 +41,8 @@ cloonix_gui $NET
 #----------------------------------------------------------------------
 cloonix_cli ${NET} add nat nat
 #----------------------------------------------------------------------
-cloonix_cli $NET add kvm $NAME ram=8000 cpu=4 eth=d full_$QCOW2 --persistent
+PARAMS="ram=8000 cpu=4 eth=s"
+cloonix_cli $NET add kvm $NAME $PARAMS full_$QCOW2 --persistent
 #----------------------------------------------------------------------
 sleep 3
 cloonix_cli ${NET} add lan ${NAME} 0 lan1
@@ -57,45 +63,26 @@ cloonix_scp $NET ${HERE}/../../install_depends ${NAME}:/root
 #----------------------------------------------------------------------
 cloonix_scp $NET ${BULK}/bullseye.qcow2 ${NAME}:/root/cloonix_data/bulk
 #----------------------------------------------------------------------
+cloonix_ssh $NET ${NAME} "echo \"wireshark-common "\
+                         "wireshark-common/install-setuid boolean true\" "\
+                         " > /tmp/custom_preseed.txt"
+cloonix_ssh $NET ${NAME} "debconf-set-selections /tmp/custom_preseed.txt"
 cloonix_ssh $NET ${NAME} "dhclient"
 #----------------------------------------------------------------------
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/fedora.repo << EOF
-[fedora]
-name=Fedora $releasever - $basearch
-baseurl=${FEDORA_MAIN}
-enabled=1
-gpgcheck=0
-EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/fedora-updates.repo << EOF
-[updates]
-name=Fedora $releasever - $basearch - Updates
-baseurl=${FEDORA_MAIN_UPDATES}
-enabled=1
-gpgcheck=0
-EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/fedora-modular.repo << EOF
-[fedora-modular]
-name=Fedora Modular $releasever - $basearch
-baseurl=${FEDORA_MODULAR}
-enabled=1
-gpgcheck=0
-EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/fedora-updates-modular.repo << EOF
-[fedora-modular-updates]
-name=Fedora Modular $releasever - $basearch - Updates
-baseurl=${FEDORA_MODULAR_UPDATES}
-enabled=1
-gpgcheck=0
+cloonix_ssh ${NET} ${NAME} "cat > /etc/apt/sources.list << EOF
+deb ${UBUNTU_REPO} ${DISTRO} main universe
+deb ${UBUNTU_REPO} ${DISTRO}-security main universe 
+deb ${UBUNTU_REPO} ${DISTRO}-updates main universe 
 EOF"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
 nameserver 172.17.0.3
 EOF"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "dnf update -y"
+cloonix_ssh $NET ${NAME} "./install_depends"
 #----------------------------------------------------------------------
 set +e
-for ((i=0;i<3;i++)); do
+for ((i=0;i<2;i++)); do
   cloonix_ssh $NET ${NAME} "./install_depends"
   sleep 10
 done
@@ -109,12 +96,15 @@ printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" > /tmp/grub
 
 cloonix_scp $NET /tmp/grub ${NAME}:/etc/default
 
-cloonix_ssh $NET ${NAME} "grub2-mkconfig -o /boot/grub2/grub.cfg"
+cloonix_ssh $NET ${NAME} "update-grub"
 
 cloonix_ssh $NET ${NAME} "sync"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "poweroff"
 echo $QCOW2 done
 #----------------------------------------------------------------------
+
+
+
 
 

@@ -1,9 +1,12 @@
 #/bin/bash
 set +e
 
+
 LIST="centos8 \
-      fedora34 \
+      fedora35 \
       hirsute \
+      impish \
+      bookworm \
       bullseye \
       tumbleweed"
 

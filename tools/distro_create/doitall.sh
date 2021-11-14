@@ -4,11 +4,11 @@ set -e
 HERE=`pwd`
 
 LIST="centos8 \
-      fedora34 \
       opensuse153 \
       hirsute \
       bullseye \
       bullseye_fr \
+      fedora35 \
       openwrt"
 
 CLOONIX_BULK=${HOME}/cloonix_data/bulk

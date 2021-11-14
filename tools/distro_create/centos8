@@ -112,7 +112,7 @@ fi
 #-----------------------------------------------------------------------#
 list_pkt="kernel grub2-pc passwd openssh-clients "
 list_pkt+="xorg-x11-xauth iputils dhclient sudo kbd "
-list_pkt+="vim net-tools iw dracut"
+list_pkt+="vim net-tools dracut"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 sleep 5
 echo dnf --releasever=8 clean packages

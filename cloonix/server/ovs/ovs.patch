@@ -1,6 +1,6 @@
 diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
---- ovs/acinclude.m4	2021-10-30 18:01:19.000000000 +0200
-+++ ovs_tainted/acinclude.m4	2021-10-30 19:13:50.759185538 +0200
+--- ovs/acinclude.m4	2021-11-09 22:20:13.000000000 +0100
++++ ovs_tainted/acinclude.m4	2021-11-09 23:35:54.798212973 +0100
 @@ -434,6 +434,10 @@
            esac
      esac
@@ -31,8 +31,8 @@ diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
  ])
  
 diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
---- ovs/lib/netdev-dpdk.c	2021-10-30 18:01:19.000000000 +0200
-+++ ovs_tainted/lib/netdev-dpdk.c	2021-10-30 19:15:11.683554754 +0200
+--- ovs/lib/netdev-dpdk.c	2021-11-09 22:20:13.000000000 +0100
++++ ovs_tainted/lib/netdev-dpdk.c	2021-11-09 23:36:22.753965842 +0100
 @@ -38,6 +38,7 @@
  #include <rte_pci.h>
  #include <rte_version.h>
@@ -41,6 +41,15 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
  
  #include "cmap.h"
  #include "coverage.h"
+@@ -181,7 +182,7 @@
+ static void destroy_connection(int vid);
+ static void vhost_guest_notified(int vid);
+ 
+-static const struct vhost_device_ops virtio_net_device_ops =
++static const struct rte_vhost_device_ops virtio_net_device_ops =
+ {
+     .new_device =  new_device,
+     .destroy_device = destroy_device,
 @@ -5272,7 +5273,7 @@
                                   struct rte_flow_query_count *query,
                                   struct rte_flow_error *error)
@@ -51,8 +60,8 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
          {
              .type = RTE_FLOW_ACTION_TYPE_COUNT,
 diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
---- ovs/ofproto/ofproto-dpif.c	2021-10-30 18:01:19.000000000 +0200
-+++ ovs_tainted/ofproto/ofproto-dpif.c	2021-10-30 19:13:50.759185538 +0200
+--- ovs/ofproto/ofproto-dpif.c	2021-11-09 22:20:13.000000000 +0100
++++ ovs_tainted/ofproto/ofproto-dpif.c	2021-11-09 23:35:54.798212973 +0100
 @@ -748,7 +748,7 @@
          return 0;
      }

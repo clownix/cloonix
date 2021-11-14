@@ -40,6 +40,8 @@
 #include "rpc_clownix.h"
 #include "circle.h"
 #include "packet_arp_mangle.h"
+#include "pcap_record.h"
+#include "eventfull.h"
 
 static int g_cnf_mac_mangle;
 

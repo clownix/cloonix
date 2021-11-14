@@ -50,7 +50,7 @@ typedef struct t_wrk
   int rx_enable;
   int tx_enable;
   char socket[MAX_PATH_LEN];
-  struct vhost_device_ops virtio_net_ops;
+  struct rte_vhost_device_ops virtio_net_ops;
 } t_wrk;
 
 static int g_rxtx_worker;

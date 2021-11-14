@@ -1,8 +1,8 @@
 #!/bin/bash
+
 HERE=`pwd`
 NET=nemo
 LINUX=bullseye
-LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk
 NAME=mikrotik
 
@@ -34,15 +34,21 @@ set -e
 cloonix_gui ${NET}
 
 #######################################################################
-PARAMS="ram=2000 cpu=2 eth=dd"
-for i in ${LIST_LINUX} ; do
-  cloonix_cli ${NET} add kvm ${i} ${PARAMS} ${LINUX}.qcow2 &
-done
+PARAMS="ram=2000 cpu=2 eth=ss"
+cloonix_cli ${NET} add kvm linux1 ${PARAMS} ${LINUX}.qcow2 &
+cloonix_cli ${NET} add kvm linux2 ${PARAMS} ${LINUX}.qcow2 &
 
-PARAMS="ram=2000 cpu=4 eth=dddd"
+PARAMS="ram=2000 cpu=4 eth=ssss"
 cloonix_cli ${NET} add kvm mikro ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
 
+#######################################################################
 sleep 10
+for i in linux1 linux2 ; do
+  while ! cloonix_ssh ${NET} ${i} "echo"; do
+    echo ${i} not ready, waiting 3 sec
+    sleep 3
+  done
+done
 #######################################################################
 cloonix_cli ${NET} add lan linux1 0 lan1
 cloonix_cli ${NET} add lan mikro 1 lan1
@@ -63,13 +69,6 @@ while [ 1 ]; do
   sleep 3
 done
 #######################################################################
-for i in $LIST_LINUX ; do
-  while ! cloonix_ssh ${NET} ${i} "echo"; do
-    echo ${i} not ready, waiting 3 sec
-    sleep 3
-  done
-done
-#######################################################################
-cloonix_osh nemo mikro "ip address print"
+cloonix_osh ${NET} mikro "ip address print"
 #######################################################################
 

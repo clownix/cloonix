@@ -95,8 +95,7 @@ if [ -e /etc/resolv.conf ]; then
 fi
 #-----------------------------------------------------------------------#
 list_pkt="kernel-default grub2-i386-pc iproute2 "
-list_pkt+="openssh xauth sudo kbd vim net-tools "
-list_pkt+="iw dracut dhcp-client "
+list_pkt+="openssh xauth sudo kbd vim net-tools dracut dhcp-client "
 list_pkt+="curl lvm2 ntfs-3g mdadm biosdevname tar"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ zypper --non-interactive install $list_pkt

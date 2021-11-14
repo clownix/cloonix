@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 NET=nemo
-DISTRO=fedora34
+DISTRO=fedora35
 NAME=${DISTRO}
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -21,7 +21,8 @@ cloonix_gui $NET
 #----------------------------------------------------------------------
 cloonix_cli ${NET} add nat nat
 #----------------------------------------------------------------------
-cloonix_cli $NET add kvm $NAME ram=8000 cpu=4 eth=d full_${NAME}.qcow2 --persistent
+PARAMS="ram=8000 cpu=4 eth=s"
+cloonix_cli $NET add kvm $NAME $PARAMS full_${NAME}.qcow2 --persistent
 #----------------------------------------------------------------------
 sleep 3
 cloonix_cli ${NET} add lan ${NAME} 0 lan1

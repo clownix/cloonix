@@ -1,10 +1,13 @@
 #/bin/bash
 HERE=`pwd`
 NET=nemo
+
 LIST="centos8 \
-      bullseye \
-      fedora34 \
+      fedora35 \
       hirsute \
+      impish \
+      bookworm \
+      bullseye \
       tumbleweed"
 
 set -x

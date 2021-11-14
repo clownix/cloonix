@@ -53,8 +53,8 @@ static char g_a2b1_socket[MAX_PATH_LEN];
 static int g_rxtx_worker;
 static int g_rxtx_worker_active;
 
-static struct vhost_device_ops g_virtio_net_device_ops0;
-static struct vhost_device_ops g_virtio_net_device_ops1;
+static struct rte_vhost_device_ops g_virtio_net_device_ops0;
+static struct rte_vhost_device_ops g_virtio_net_device_ops1;
 static int g_running_lcore;
 
 static struct rte_mempool *g_mpool;
@@ -350,8 +350,8 @@ void vhost_client_init(void)
   g_rxtx_worker_active = 0;
   memset(g_a2b0_socket, 0, MAX_PATH_LEN);
   memset(g_a2b1_socket, 0, MAX_PATH_LEN);
-  memset(&g_virtio_net_device_ops0, 0, sizeof(struct vhost_device_ops));
-  memset(&g_virtio_net_device_ops1, 0, sizeof(struct vhost_device_ops));
+  memset(&g_virtio_net_device_ops0, 0, sizeof(struct rte_vhost_device_ops));
+  memset(&g_virtio_net_device_ops1, 0, sizeof(struct rte_vhost_device_ops));
   circle_init();
   sched_init();
 }

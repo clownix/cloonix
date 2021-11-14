@@ -9,6 +9,9 @@ CLOONIX_BULK=${HOME}/cloonix_data/bulk
 
 cp -f ${CLOONIX_BULK}/opensuse153.qcow2 ${CLOONIX_BULK}/tumbleweed.qcow2
 
+sync
+sleep 2
+sync
 
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -28,7 +31,8 @@ cloonix_gui $NET
 #----------------------------------------------------------------------
 cloonix_cli ${NET} add nat nat
 #----------------------------------------------------------------------
-cloonix_cli $NET add kvm $NAME ram=8000 cpu=4 eth=d ${NAME}.qcow2 --persistent
+PARAMS="ram=8000 cpu=4 eth=s"
+cloonix_cli $NET add kvm $NAME $PARAMS ${NAME}.qcow2 --persistent
 #----------------------------------------------------------------------
 sleep 3
 cloonix_cli ${NET} add lan ${NAME} 0 lan1

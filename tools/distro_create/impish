@@ -1,15 +1,9 @@
 #!/bin/bash
-set -e
 HERE=`pwd`
-releasever=34
-basearch=x86_64
-DISTRO=fedora34
+#----------------------------------------------------------------------#
+DISTRO=impish
 ROOTFS=/root/${DISTRO}
-MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
-FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/${basearch}/os
-FEDORA_MODULAR=${MIRROR}/releases/${releasever}/Modular/${basearch}/os
-FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/${basearch}
-FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/${basearch}
+UBUNTU_REPO="http://fr.archive.ubuntu.com/ubuntu"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -56,13 +50,18 @@ fct_umount_wkmntloops()
 #########################################################################
 fct_check_uid
 set +e
-for i in qemu-img dnf blkid wget sgdisk partprobe; do
+for i in qemu-img debootstrap blkid wget sgdisk partprobe; do
   path_bin=$(which $i)
   if [ -z $path_bin ]; then
     echo $i  DOES NOT EXIST
     exit -1
   fi
 done
+#qemu-img: qemu-utils
+#debootstrap: debootstrap
+#blkid: util-linux
+#sgdisk: gdisk
+#partprobe: parted
 
 if [ -e $ROOTFS ]; then
   echo $ROOTFS already exists
@@ -73,106 +72,42 @@ fct_check_losetup
 set -e
 fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
-set +e
-for i in ${FEDORA_MAIN} ${FEDORA_MAIN_UPDATES} \
-         ${FEDORA_MODULAR} ${FEDORA_MODULAR_UPDATES};
-do
-  wget --no-check-certificate --delete-after ${i} 1>/dev/null 2>&1
-  OK=$?
-  if [ "$OK" != "0" ]; then
-    echo ERROR wget ${i}
-    exit 1
-  fi
-echo
-echo REPO OK ${i}
-echo
-done
-set -e
-#-----------------------------------------------------------------------#
-cd /tmp/wkmntloops
-
-mkdir -p /tmp/wkmntloops/etc/yum.repos.d
-
-cat > /tmp/wkmntloops/etc/yum.repos.d/fedora.repo << EOF
-[fedora]
-name=Fedora $releasever - $basearch
-baseurl=${FEDORA_MAIN}
-enabled=1
-gpgcheck=0
-EOF
-
-cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates.repo << EOF
-[updates]
-name=Fedora $releasever - $basearch - Updates
-baseurl=${FEDORA_MAIN_UPDATES}
-enabled=1
-gpgcheck=0
-EOF
-
-cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-modular.repo << EOF
-[fedora-modular]
-name=Fedora Modular $releasever - $basearch
-baseurl=${FEDORA_MODULAR}
-enabled=1
-gpgcheck=0
-EOF
-
-cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates-modular.repo << EOF
-[fedora-modular-updates]
-name=Fedora Modular $releasever - $basearch - Updates
-baseurl=${FEDORA_MODULAR_UPDATES}
-enabled=1
-gpgcheck=0
-EOF
-
-
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install bash.$basearch
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install libcurl-minimal.$basearch
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl.$basearch
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl-libs.$basearch
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install rpm.$basearch
-set +e
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install dnf
-for i in fedora updates; do
-  chroot /tmp/wkmntloops/ rpm --install --nodeps /var/cache/dnf/${i}/packages/*
-done
-set -e
-
-#-----------------------------------------------------------------------#
-if [ -e /etc/resolv.conf ]; then
-  cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
+if [ ! -e /usr/share/debootstrap/scripts/${DISTRO} ]; then
+  cd /usr/share/debootstrap/scripts
+  ln -s gutsy ${DISTRO}
+  cd $HERE
 fi
 #-----------------------------------------------------------------------#
-list_pkt="kernel grub2-pc passwd openssh-clients "
-list_pkt+="xorg-x11-xauth iputils dhclient sudo kbd "
-list_pkt+="vim net-tools iw dracut"
-for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
-sleep 5
-echo dnf clean packages
-chroot /tmp/wkmntloops/ dnf clean packages
-echo dnf -y update
-chroot /tmp/wkmntloops/ dnf -y update
-echo dnf -y install
-chroot /tmp/wkmntloops/ dnf -y install $list_pkt
-chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
 
+list_pkt="linux-generic,grub-pc,openssh-client,bash-completion,"
+list_pkt+="xauth,sudo,kbd,vim,net-tools,initramfs-tools"
+
+debootstrap --no-check-certificate --no-check-gpg --arch amd64 \
+            --include=$list_pkt \
+            ${DISTRO} \
+            /tmp/wkmntloops ${UBUNTU_REPO}
+#-----------------------------------------------------------------------#
+cat > /tmp/wkmntloops/etc/apt/sources.list << EOF
+deb ${UBUNTU_REPO} ${DISTRO} main universe
+deb ${UBUNTU_REPO} ${DISTRO}-security main universe 
+deb ${UBUNTU_REPO} ${DISTRO}-updates main universe 
+EOF
+#-----------------------------------------------------------------------#
+for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
+chroot /tmp/wkmntloops/ grub-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
 KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
 printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" \
-        > /tmp/wkmntloops/etc/default/grub
-
-for i in $(ls /tmp/wkmntloops/boot | grep vmlinuz);do vmlinuz=$i;done
-version=${vmlinuz#*vmlinuz-}
-echo $version
-list="virtio_scsi virtio_blk virtio_console"
-chroot /tmp/wkmntloops/ dracut --add-drivers "$list" --force /boot/initramfs-${version}.img $version
-
-chroot /tmp/wkmntloops/ grub2-mkconfig -o /boot/grub2/grub.cfg
-uuid=$(blkid | grep cloonix)
+        >> /tmp/wkmntloops/etc/default/grub
+chroot /tmp/wkmntloops/ update-grub
+echo "source /etc/bash_completion" >> /tmp/wkmntloops/root/.bashrc
+sync /dev/loop0
+umount /tmp/wkmntloops/{dev,proc,sys}
+#-----------------------------------------------------------------------#
+uuid=$(blkid | grep loop0p2 | grep cloonix)
 uuid=${uuid#*UUID=\"}
 uuid=${uuid%%\"*}
 echo $uuid
-sync /dev/loop0
-umount /tmp/wkmntloops/{dev,proc,sys}
+
 #-----------------------------------------------------------------------#
 cat > /tmp/wkmntloops/etc/fstab  << EOF
 UUID=$uuid  /            ext4     defaults                      0 0 

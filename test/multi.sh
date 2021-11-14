@@ -19,12 +19,6 @@ fi
 cloonix_gui $NET
 #----------------------------------------------------------------------
 
-cloonix_cli $NET add nat nat1
-cloonix_cli $NET add lan nat1 0 lan1
-cloonix_cli $NET add tap top
-cloonix_cli $NET add lan top 0 lan1
-cloonix_cli $NET add a2b a2b1 
-cloonix_cli $NET add lan a2b1 0 lan1
 
 #######################################################################
 for ((i=0;i<${NUM};i++)); do

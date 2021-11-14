@@ -59,7 +59,7 @@ static int  g_created;
 
 static int g_rxtx_worker;
 static int  g_rxtx_worker_active;
-static struct vhost_device_ops g_virtio_net_device_ops;
+static struct rte_vhost_device_ops g_virtio_net_device_ops;
 
 static int g_running_lcore;
 
@@ -189,7 +189,7 @@ void vhost_client_start(char *memid, char *path)
   uint64_t unsup_flags = (1ULL << VIRTIO_NET_F_STATUS);
   int i, j, err, sid;
 
-  memset(&(g_virtio_net_device_ops), 0, sizeof(struct vhost_device_ops));
+  memset(&(g_virtio_net_device_ops), 0, sizeof(struct rte_vhost_device_ops));
   memset(g_nat_socket, 0, MAX_PATH_LEN);
   g_virtio_net_device_ops.new_device          = virtio_new_device;
   g_virtio_net_device_ops.destroy_device      = virtio_destroy_device;
@@ -249,7 +249,7 @@ void vhost_client_init(void)
   memset(g_nat_socket, 0, MAX_PATH_LEN);
   g_rxtx_worker = 0;
   g_rxtx_worker_active = 0;
-  memset(&g_virtio_net_device_ops, 0, sizeof(struct vhost_device_ops));
+  memset(&g_virtio_net_device_ops, 0, sizeof(struct rte_vhost_device_ops));
 }
 /*--------------------------------------------------------------------------*/
 

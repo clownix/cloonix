@@ -41,7 +41,8 @@ cloonix_gui $NET
 #----------------------------------------------------------------------
 cloonix_cli ${NET} add nat nat
 #----------------------------------------------------------------------
-cloonix_cli $NET add kvm $NAME ram=8000 cpu=4 eth=d full_$QCOW2 --persistent
+PARAMS="ram=8000 cpu=4 eth=s"
+cloonix_cli $NET add kvm $NAME $PARAMS full_$QCOW2 --persistent
 #----------------------------------------------------------------------
 sleep 3
 cloonix_cli ${NET} add lan ${NAME} 0 lan1

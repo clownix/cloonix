@@ -73,9 +73,8 @@ if [ ! -e /usr/share/debootstrap/scripts/${DISTRO} ]; then
   cd $HERE
 fi
 #-----------------------------------------------------------------------#
-list_pkt="linux-generic,grub-pc,openssh-client,"
-list_pkt+="xauth,sudo,kbd,vim,net-tools,"
-list_pkt+="acpi-support,iw,initramfs-tools"
+list_pkt="linux-generic,grub-pc,openssh-client,bash-completion,"
+list_pkt+="xauth,sudo,kbd,vim,net-tools,initramfs-tools"
 
 debootstrap --no-check-certificate --no-check-gpg \
         --arch amd64 \
