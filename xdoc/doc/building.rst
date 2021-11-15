@@ -150,4 +150,16 @@ distributions:
     * *fedora35,*
     * *tumbleweed (rolling opensuse).*
 
+In the particular case of centos8, spice-protocol version is too old,
+you must do the following prior to cloonix compilation::
+
+  dnf install git
+  dnf install meson
+  git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-protocol.git
+  cd spice-protocol/
+  meson build
+  meson configure build/ -Dprefix=/usr
+  cd build
+  ninja install
+
 
