@@ -29,8 +29,10 @@ COMPILED AND TESTED ON:
             impish  (ubuntu 21.10),
             hirsute (ubuntu 21.05),
             tumbleweed (rolling opensuse),
-            centos8,
             fedora35.
+
+WARNING: does not compile on centos8, too old spice-protocol version and
+does not seem to compile on impish for the moment.
 
 
 Compilation and run should work, on the above but for other distributions,
