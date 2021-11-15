@@ -3,7 +3,7 @@ AGPLv3 tool to create networks of kvm virtual machines.
 See directory cloonix for the LICENCE
 See clownix.net for a documentation (which is not up to date).
 
-NOTE: The version 20-00 has 3 possible uses of ovs for a vm interface:
+NOTE: The version 20-01 has 3 possible uses of ovs for a vm interface:
       s, d or v, s gives blinking interfaces that are spyable, d is for
       the dpdk interface not spyable and v is for vhost interface not
       spyable.
@@ -19,7 +19,7 @@ NOTE: The version 20-00 has 3 possible uses of ovs for a vm interface:
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-20-00
+http://clownix.net/downloads/cloonix-20-01
 
 -----------------------------------------------------------------------------
 COMPILED AND TESTED ON:
@@ -29,25 +29,37 @@ COMPILED AND TESTED ON:
             impish  (ubuntu 21.10),
             hirsute (ubuntu 21.05),
             tumbleweed (rolling opensuse),
-            fedora35.
+            fedora35
+            centos8.
 
-WARNING: does not compile on centos8, too old spice-protocol version and
-does not seem to compile on impish for the moment.
+WARNING: does not compile on centos8, too old spice-protocol version.
+For centos8, you must do the following prior to cloonix compilation:
 
+  dnf install git
+  dnf install meson
+  git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-protocol.git
+  cd spice-protocol/
+  meson build
+  meson configure build/ -Dprefix=/usr
+  cd build
+  ninja install
 
-Compilation and run should work, on the above but for other distributions,
-you may have to adjust needed packages, look in file install_depends for
-hints on necessary packages.
+This will update the spice-protocol version on your host machine.
+
+Compilation and run should work, on the above distribution (with the special
+spice-protocol update for centos8). For other distributions, you may have to
+adjust needed packages, look in file install_depends for hints on necessary
+packages.
 
 -----------------------------------------------------------------------------
 INSTALL:
 
-wget http://clownix.net/downloads/cloonix-20-00/cloonix-20-00.tar.gz
-tar xvf cloonix-20-00.tar.gz
-cd cloonix-20-00
+wget http://clownix.net/downloads/cloonix-20-01/cloonix-20-01.tar.gz
+tar xvf cloonix-20-01.tar.gz
+cd cloonix-20-01
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-20-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-20-01/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
@@ -55,7 +67,7 @@ tar xvf targz_store.tar.gz
 -----------------------------------------------------------------------------
 GET A WORKING VM:
 
-wget http://clownix.net/downloads/cloonix-20-00/bulk/bullseye.qcow2.gz
+wget http://clownix.net/downloads/cloonix-20-01/bulk/bullseye.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cp bullseye.qcow2.gz ${HOME}/cloonix_data/bulk
@@ -135,4 +147,5 @@ If you do not have Y after this cat, then you can do:
 GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugepages=5 kvm-intel.nested=1"
 
 -----------------------------------------------------------------------------
+
 
