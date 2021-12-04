@@ -187,11 +187,12 @@ void help_cnf_a2b(char *line)
   printf("\n\n%s <name> <dir> <cmd> <val>\n", line);
   printf("\nname is the a2b name.");
   printf("\ndir =  0 or 1");
-  printf("\ncmd =  \"loss\" \"delay\" \"rate\"");
+  printf("\ncmd =  \"loss\" \"delay\" \"rate\" \"silentms\"");
   printf("\nval is an integer.\n");
   printf("\nloss: 0 = no loss 10000 = all lost.\n");
   printf("\ndelay: milli-sec.\n");
   printf("\nrate : kilo-octets per second throughput.\n");
+  printf("\nsilentms : millisecondes of silence giving bursty throughput.\n");
   printf("\n\n");
 }
 /*---------------------------------------------------------------------------*/

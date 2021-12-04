@@ -634,6 +634,11 @@ void dpdk_a2b_cnf(char *name, int dir, int type, int val)
     cur->side[dir].delay = val;
     a2b_dpdk_cnf(name, dir, type, val);
     }
+  else if (type == a2b_type_silentms)
+    {
+    cur->side[dir].silentms = val;
+    a2b_dpdk_cnf(name, dir, type, val);
+    }
   else if (type == a2b_type_loss)
     {
     cur->side[dir].loss = val;

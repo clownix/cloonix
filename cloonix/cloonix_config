@@ -1,5 +1,5 @@
 ##################################################
-CLOONIX_VERSION=20-01
+CLOONIX_VERSION=21-00
 CLOONIX_TREE=/usr/local/bin/cloonix
 CLOONIX_WORK=${HOME}/cloonix_data
 CLOONIX_BULK=${HOME}/cloonix_data/bulk

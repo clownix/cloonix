@@ -178,6 +178,7 @@ static int launcher(char *argv[])
     if (timeout_pid == 0)
       {
       sleep(3);
+      KERR("EXIT MAIN SUIDPOWER");
       exit(1);
       }
     exited_pid = wait(&chld_state);
@@ -191,6 +192,7 @@ static int launcher(char *argv[])
       }
     else
       {
+      KERR("KILL MAIN SUIDPOWER");
       kill(worker_pid, SIGKILL);
       }
     wait(NULL);
@@ -208,6 +210,7 @@ static int launcher(char *argv[])
     {
     if (errno != ECHILD)
       KERR("Unexpected error %s", strerror(errno));
+    KERR("END WAIT MAIN SUIDPOWER");
     } 
   return status;
 }
@@ -419,6 +422,7 @@ static void req_kill_clean_all(void)
     {
     next = cur->next;
     pid = read_umid_pid(cur->vm_id);
+
     if (pid > 0)
       {
       kill(cur->pid, SIGTERM);
@@ -445,6 +449,7 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 void rpct_recv_kil_req(int llid, int tid)
 {
   req_kill_clean_all();
+  KERR("RX KIL REQ");
   exit(0);
 }
 /*--------------------------------------------------------------------------*/
@@ -564,7 +569,9 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   else if (sscanf(line,
   "cloonixsuid_req_pid_kill pid: %d", &pid) == 1)
     {
-    if (!kill(pid, SIGTERM))
+    if (pid <= 0)
+      KERR("ERROR BECAUSE BAD pid %d", pid);
+    else if (!kill(pid, SIGTERM))
       KERR("ERROR BECAUSE GOOD KILL %d", pid);
     }
   else if (sscanf(line,
@@ -579,6 +586,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 static void err_ctrl_cb (int llid, int err, int from)
 {
   req_kill_clean_all();
+  KERR("SUIDPOWER RECEIVED DISCONNECT");
   exit(0);
 }
 /*--------------------------------------------------------------------------*/

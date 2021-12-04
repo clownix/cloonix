@@ -487,11 +487,14 @@ static void random_a2b(t_topo_a2b *a2b)
   a2b->qsize[0] = rand();
   a2b->bsize[0] = rand();
   a2b->brate[0] = rand();
+  a2b->silentms[0]  = rand();
+
   a2b->delay[1] = rand();
   a2b->loss[1]  = rand();
   a2b->qsize[1] = rand();
   a2b->bsize[1] = rand();
   a2b->brate[1] = rand();
+  a2b->silentms[1]  = rand();
 }
 /*---------------------------------------------------------------------------*/
 

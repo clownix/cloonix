@@ -55,6 +55,6 @@ for DISTRO in $LIST; do
 done
 
 for DISTRO in $LIST; do
-  cloonix_ssh $NET ${DISTRO} "cd sources ; ./doitall" &
+  cloonix_ssh $NET ${DISTRO} "cd sources ; ./doitall; sleep 5" &
 done
 sleep 10000

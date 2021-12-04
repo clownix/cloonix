@@ -16,7 +16,7 @@
 /*                                                                           */
 /*****************************************************************************/
 void suid_power_kill_pid(int pid);
-void suid_power_llid_closed(int llid);
+void suid_power_llid_closed(int llid, int from_clone, const char* fct);
 int suid_power_rec_name(char *name, int on);
 int suid_power_pid(void);
 void suid_power_ifup_phy(char *phy);

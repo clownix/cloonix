@@ -127,6 +127,16 @@ int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug)
     }
   if (cust_vm->is_full_virt)
     vm_config_flags |= VM_CONFIG_FLAG_FULL_VIRT;
+
+  if (cust_vm->is_i386)
+    {
+    vm_config_flags |= VM_CONFIG_FLAG_I386;
+    }
+  else
+    {
+    vm_config_flags &= ~VM_CONFIG_FLAG_I386;
+    }
+
   if (cust_vm->is_persistent)
     {
     vm_config_flags |= VM_CONFIG_FLAG_PERSISTENT;

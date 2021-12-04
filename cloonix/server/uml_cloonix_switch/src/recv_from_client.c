@@ -346,6 +346,11 @@ static void timer_del_vm(void *data)
     {
     snprintf(err, MAX_PATH_LEN-1, "FAILED HALT %s", kvm->name);
     KERR("ERROR %s", err);
+    if (vm->vm_to_be_killed == 0)
+      {
+      KERR("ERROR %s", err);
+      machine_death(vm->kvm.name, error_death_noerr);
+      }
     if (llid)
       send_status_ko(llid, tid, err);
     }
@@ -1594,7 +1599,8 @@ static void timer_del_all_end(void *data)
         strcmp(td->pid_lst[i].name, "suid_power")    &&
         strcmp(td->pid_lst[i].name, "cloonix_server")) 
       {
-      suid_power_kill_pid(td->pid_lst[i].pid);
+      if (td->pid_lst[i].pid)
+        suid_power_kill_pid(td->pid_lst[i].pid);
       }
     }
   clownix_free(td->pid_lst, __FUNCTION__);
@@ -1633,11 +1639,10 @@ static void timer_del_all(void *data)
     td->tzcount += 1;
     if (td->tzcount > 50)
       {
+      dpdk_ovs_client_destruct();
       send_status_ko(td->llid, td->tid, "fail delall");
-      clownix_free(td, __FUNCTION__);
       }
-    else
-      clownix_timeout_add(50, timer_del_all, (void *) td, NULL, NULL);
+    clownix_timeout_add(50, timer_del_all, (void *) td, NULL, NULL);
     }
   else
     {
@@ -1950,7 +1955,7 @@ void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
 {
   char err[MAX_PATH_LEN];
   memset(err, 0, MAX_PATH_LEN);
-  event_print("Rx Req cnf a2b %s dir:%d type:%d val:%d", dir, type, val);
+  event_print("Rx Req cnf a2b %s dir:%d type:%d val:%d",name,dir,type,val);
   KERR("%s %d %d %d ", name, dir, type, val);
   if (!dpdk_a2b_exists(name))
     {
@@ -1966,7 +1971,8 @@ void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
            (type != a2b_type_loss)   &&
            (type != a2b_type_qsize)  &&
            (type != a2b_type_bsize)  &&
-           (type != a2b_type_brate))
+           (type != a2b_type_brate)  &&
+           (type != a2b_type_silentms))
     {
     snprintf(err, MAX_PATH_LEN-1, "A2B %s wrong type %d", name, type);
     send_status_ko(llid, tid, err);

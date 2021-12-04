@@ -417,11 +417,13 @@
                               "  qsize0: %d \n"\
                               "  bsize0: %d \n"\
                               "  brate0: %d \n"\
+                              "  silentms0: %d \n"\
                               "  delay1: %d \n"\
                               "  loss1:  %d \n"\
                               "  qsize1: %d \n"\
                               "  bsize1: %d \n"\
                               "  brate1: %d \n"\
+                              "  silentms1: %d \n"\
                               "</a2b>\n"
 
 #define EVENT_TOPO_NAT        "<nat>\n"\

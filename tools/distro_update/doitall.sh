@@ -10,8 +10,6 @@ LIST="centos8 \
       bullseye \
       tumbleweed"
 
-LIST="tumbleweed"
-
 
 for i in ${LIST}; do
   echo BEGIN ${i} 

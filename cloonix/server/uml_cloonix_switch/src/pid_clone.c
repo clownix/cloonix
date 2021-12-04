@@ -45,6 +45,7 @@
   #include "llid_trace.h"
   #include "event_subscriber.h"
   #include "qmp.h"
+void suid_power_fork_closed(void);
 #endif
 
 #define XML_OPEN  "<ascii_free_format_text>"
@@ -468,6 +469,7 @@ static int forked_fct(void *ptr)
 
 #if !defined(IS_DOORWAYS)
 
+  suid_power_fork_closed();
   llid_free_all_llid();
   cloonix_lock_fd_close();
   job_for_select_close_fd();

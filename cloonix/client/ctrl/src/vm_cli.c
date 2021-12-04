@@ -43,6 +43,7 @@ void help_add_vm_kvm(char *line)
   printf("\n\t\t  eth=sdd says eth0 eth1 and eth2 dpdk interfaces eth0 is spyable");
   printf("\n\tMax eth: %d", MAX_DPDK_VM);
   printf("\n\t[options]");
+  printf("\n\t       --i386 ");
   printf("\n\t       --nobackdoor ");
   printf("\n\t       --natplug=<num of eth for nat> ");
   printf("\n\t       --persistent ");
@@ -131,7 +132,9 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
 
   for (i=0; i<argc; i++)
     {
-    if (!strcmp(argv[i], "--persistent"))
+    if (!strcmp(argv[i], "--i386"))
+      prop_flags |= VM_CONFIG_FLAG_I386;
+    else if (!strcmp(argv[i], "--persistent"))
       prop_flags |= VM_CONFIG_FLAG_PERSISTENT;
     else if (!strcmp(argv[i], "--fullvirt"))
       prop_flags |= VM_CONFIG_FLAG_FULL_VIRT;

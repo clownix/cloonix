@@ -93,6 +93,7 @@
 
 #define MAC_ADDR_LEN 6
 #define VM_CONFIG_FLAG_PERSISTENT      0x00001
+#define VM_CONFIG_FLAG_I386            0x00002
 #define VM_CONFIG_FLAG_9P_SHARED       0x00004
 #define VM_CONFIG_FLAG_FULL_VIRT       0x00008
 #define VM_CONFIG_FLAG_BALLOONING      0x00010
@@ -240,6 +241,7 @@ typedef struct t_topo_a2b
   int qsize[2];
   int bsize[2];
   int brate[2];
+  int silentms[2];
   } t_topo_a2b;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_nat

@@ -4,7 +4,6 @@ cd ${HERE}/../lib_rpct
 make clean
 make
 cd ${HERE}
-# ./cmd_alien
 ./cmd_local
 
 

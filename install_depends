@@ -34,7 +34,10 @@ fct_get_debian_packages()
               libibverbs-dev xorriso wireshark liblz4-dev \
               libcacard-dev pciutils libunwind-dev cmake \
               libgl1-mesa-dev libffi-dev libaio-dev libxml2-dev \
-              libvirglrenderer-dev libspice-server-dev libusbredirparser-dev
+              libvirglrenderer-dev libspice-server-dev libusbredirparser-dev \
+              crun
+
+#              golang libyajl-dev libseccomp-dev libsystemd-dev
 
 }
 #--------------------------------------------------------------------------

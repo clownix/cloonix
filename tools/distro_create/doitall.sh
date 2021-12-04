@@ -3,12 +3,12 @@ set -e
 
 HERE=`pwd`
 
-LIST="centos8 \
-      opensuse153 \
+LIST="impish \
       hirsute \
+      centos8 \
       bullseye \
-      bullseye_fr \
       fedora35 \
+      bookworm \
       openwrt"
 
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
@@ -32,4 +32,6 @@ for i in ${LIST}; do
   echo END ${i}  
 done
 
-./tumbleweed
+# sudo ${HERE}/opensuse154
+# sudo mv -v /root/opensuse154.qcow2 ${CLOONIX_BULK}
+# ./tumbleweed

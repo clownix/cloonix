@@ -36,6 +36,7 @@
 typedef struct t_cdrom_config
 {
   char name[MAX_NAME_LEN];
+  int is_i386;
   int vm_id;
   int has_p9_host_share;
   char tmp_conf[MAX_PATH_LEN];
@@ -45,7 +46,7 @@ typedef struct t_cdrom_config
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int create_tmp_config(int vm_id, char *name, 
+static int create_tmp_config(int vm_id, char *name, int is_i386, 
                              int has_p9_host_share,
                              char *err)
 {
@@ -53,12 +54,18 @@ static int create_tmp_config(int vm_id, char *name,
   char agent_dir[MAX_PATH_LEN];
   char *tmp_conf_dir;
   memset(agent_dir, 0, MAX_PATH_LEN);
-  snprintf(agent_dir, MAX_PATH_LEN-1, 
-           "%s/common/agent_dropbear/agent_bin_alien/", cfg_get_bin_dir());
+  if (is_i386)
+    snprintf(agent_dir, MAX_PATH_LEN-1, 
+             "%s/common/agent_dropbear/agent_bin_alien_i386/",
+             cfg_get_bin_dir());
+  else
+    snprintf(agent_dir, MAX_PATH_LEN-1, 
+             "%s/common/agent_dropbear/agent_bin_alien/",
+             cfg_get_bin_dir());
   tmp_conf_dir = utils_dir_conf_tmp(vm_id);
   my_cp_file(agent_dir, tmp_conf_dir, "cloonix_agent");
   my_cp_file(agent_dir, tmp_conf_dir, "dropbear_cloonix_sshd");
-  my_cp_dir(agent_dir, tmp_conf_dir, "lib_x86_64", "lib_x86_64");
+  my_cp_dir(agent_dir, tmp_conf_dir, "lib", "lib");
   make_config_cloonix_vm_name(tmp_conf_dir, name);
   make_config_cloonix_vm_p9_host_share(tmp_conf_dir, has_p9_host_share);
   return result;
@@ -76,6 +83,7 @@ static int fct_in_clone_context(void *data)
                    cdrom_conf->tmp_conf, NULL, 
                  };
   if (create_tmp_config(cdrom_conf->vm_id, cdrom_conf->name, 
+                        cdrom_conf->is_i386,
                         cdrom_conf->has_p9_host_share,
                         err))
     {
@@ -170,6 +178,7 @@ static void cdrom_config_creation(t_vm *vm)
   cdrom_conf->vm_id = vm->kvm.vm_id;
   cdrom_conf->has_p9_host_share = vm->kvm.vm_config_flags & 
                                  VM_CONFIG_FLAG_9P_SHARED;
+  cdrom_conf->is_i386 = vm->kvm.vm_config_flags & VM_CONFIG_FLAG_I386;
   strncpy(cdrom_conf->tmp_conf, tmp_conf, MAX_PATH_LEN-1);
   strncpy(cdrom_conf->cdrom_path, cdrom_path, MAX_PATH_LEN-1);
   pid_clone_launch(fct_in_clone_context, death_of_clone_in_main_context,

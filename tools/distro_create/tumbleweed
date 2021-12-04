@@ -7,7 +7,7 @@ REPO=http://download.opensuse.org/tumbleweed/repo
 UPDATE=http://download.opensuse.org/update/tumbleweed
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
 
-cp -f ${CLOONIX_BULK}/opensuse153.qcow2 ${CLOONIX_BULK}/tumbleweed.qcow2
+cp -f ${CLOONIX_BULK}/opensuse154.qcow2 ${CLOONIX_BULK}/tumbleweed.qcow2
 
 sync
 sleep 2
@@ -48,24 +48,30 @@ done
 set -e
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "ip link set eth0 up"
+cloonix_ssh ${NET} ${NAME} "systemctl restart wickedd-dhcp4.service"
 cloonix_ssh ${NET} ${NAME} "systemctl restart wicked.service"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "mkdir /etc/zypp/repos.d/old"
 cloonix_ssh ${NET} ${NAME} "mv /etc/zypp/repos.d/*.repo /etc/zypp/repos.d/old"
 cloonix_ssh ${NET} ${NAME} "zypper ar -f -c ${REPO}/oss repo-oss"
 cloonix_ssh ${NET} ${NAME} "zypper ar -f -c ${REPO}/non-oss repo-non-oss"
-cloonix_ssh ${NET} ${NAME} "zypper ar -f -c ${REPO}/debug repo-debug"
 cloonix_ssh ${NET} ${NAME} "zypper ar -f -c ${UPDATE} repo-update"
 cloonix_ssh ${NET} ${NAME} "zypper lr -u"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "zypper cc -a"
-cloonix_ssh ${NET} ${NAME} "zypper ref"
-cloonix_ssh ${NET} ${NAME} "zypper dup --allow-vendor-change"
+cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
+cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks dist-upgrade --allow-vendor-change"
+cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
+cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks dist-upgrade --allow-vendor-change"
+cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
+cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks dist-upgrade --allow-vendor-change"
+
+cloonix_ssh ${NET} ${NAME} "grub2-mkconfig --output=/boot/grub2/grub.cfg"
 cloonix_ssh ${NET} ${NAME} "sync"
 sleep 2
 cloonix_ssh ${NET} ${NAME} "sync"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "poweroff"
+#cloonix_ssh $NET ${NAME} "poweroff"
 echo $QCOW2 done
 #----------------------------------------------------------------------
 

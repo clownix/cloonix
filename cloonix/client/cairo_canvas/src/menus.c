@@ -251,7 +251,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   t_bank_item *bitem;
   static char title[MAX_PATH_LEN];
   static char text[MAX_TEXT];
-  int is_persistent, is_backed, is_inside_cloonix;
+  int is_i386, is_persistent, is_backed, is_inside_cloonix;
   int has_p9_host_share, is_natplug; 
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
   int is_full_virt, has_no_reboot, has_added_disk, with_pxe, len = 0;
@@ -267,6 +267,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
       }
     vm_config_flags = bitem->pbi.pbi_node->node_vm_config_flags;
     is_persistent = vm_config_flags & VM_CONFIG_FLAG_PERSISTENT;
+    is_i386 = vm_config_flags & VM_CONFIG_FLAG_I386;
     is_full_virt  = vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT;
     is_backed   = vm_config_flags & VM_FLAG_DERIVED_BACKING;
     is_inside_cloonix = vm_config_flags & VM_FLAG_IS_INSIDE_CLOONIX;
@@ -278,6 +279,8 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     is_natplug = vm_config_flags & VM_CONFIG_FLAG_NATPLUG;
     has_p9_host_share = vm_config_flags & VM_CONFIG_FLAG_9P_SHARED;
 
+    if (is_i386)
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tI386");
     if (is_natplug)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tNATPLUG");
     if (has_p9_host_share)
@@ -382,17 +385,18 @@ static int d2d_item_info(char *text,  t_bank_item *bitem)
 static int a2b_item_info(char *text,  t_bank_item *bitem)
 {
   int i, len = 0;
-  int *delay, *loss, *qsize, *bsize, *brate;
+  int *delay, *loss, *qsize, *bsize, *brate, *silentms;
   delay = bitem->pbi.pbi_sat->topo_a2b.delay; 
   loss  = bitem->pbi.pbi_sat->topo_a2b.loss; 
   qsize = bitem->pbi.pbi_sat->topo_a2b.qsize; 
   bsize = bitem->pbi.pbi_sat->topo_a2b.bsize; 
   brate = bitem->pbi.pbi_sat->topo_a2b.brate; 
+  silentms = bitem->pbi.pbi_sat->topo_a2b.silentms; 
   len += sprintf(text+len, "\nA2B: %s\n", bitem->name);
   for (i=0; i<2; i++)
     {
-    len += sprintf(text+len, "\nSide%d: delay=%d loss=%d",
-                             i, delay[i], loss[i]);
+    len += sprintf(text+len, "\nSide%d: delay=%d loss=%d silentms=%d",
+                             i, delay[i], loss[i], silentms[i]);
     len += sprintf(text+len, "\nSide%d: qsize=%d bsize=%d rate=%d\n",
                              i, qsize[i], bsize[i], brate[i]);
     }

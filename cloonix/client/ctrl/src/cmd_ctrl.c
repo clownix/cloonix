@@ -262,14 +262,15 @@ static void nat_info(t_topo_nat *nat)
 /****************************************************************************/
 static void a2b_info(t_topo_a2b *a2b)
 {
-  int i, *delay, *loss, *brate;
+  int i, *delay, *loss, *brate, *silentms;
   delay = a2b->delay;
   loss  = a2b->loss;
   brate = a2b->brate;
+  silentms = a2b->silentms;
   for (i=0; i<2; i++)
     {
-    printf("\na2b:%s:side%d: delay=%d loss=%d rate=%d",
-           a2b->name, i, delay[i], loss[i], brate[i]);
+    printf("\na2b:%s:side%d: delay=%d loss=%d rate=%d silentms=%d",
+           a2b->name, i, delay[i], loss[i], brate[i], silentms[i]);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -670,6 +671,8 @@ int cmd_cnf_a2b(int argc, char **argv)
       cmd = a2b_type_bsize;
     else if (!strcmp("rate", argv[2]))
       cmd = a2b_type_brate;
+    else if (!strcmp("silentms", argv[2]))
+      cmd = a2b_type_silentms;
     if ((dir >= 0) && (val >= 0) && (cmd > 0))
       {
       result = 0;

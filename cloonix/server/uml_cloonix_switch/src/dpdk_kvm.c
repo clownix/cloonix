@@ -338,6 +338,7 @@ static void timer_beat(void *data)
     if (ovs_ok != 1)
       {
       KERR("ERROR KVMETH OVS NOT READY %s", cur->name);
+      kvm_free(cur->name);
       }
     else if ((vm != NULL) && (vm->vm_to_be_killed == 1))
       {

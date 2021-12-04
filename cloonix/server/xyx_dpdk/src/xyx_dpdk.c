@@ -166,7 +166,9 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     ret = rte_eal_init(7, g_rte_argv);
     if (ret < 0)
       KOUT("Cannot init EAL %d\n", rte_errno);
+
     vhost_client_start(g_memid, g_xyx0_socket, g_xyx1_socket);
+
     g_started_vhost = 1;
     snprintf(resp, MAX_PATH_LEN-1, 
     "cloonixxyx_vhost_start_ok %s", name);

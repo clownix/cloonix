@@ -24,6 +24,8 @@ fi
 #----------------------------------------------------------------------
 cp -f ${BULK}/${QCOW2} ${BULK}/full_${QCOW2}
 sync
+sleep 10
+sync
 #######################################################################
 cloonix_gui $NET
 #----------------------------------------------------------------------
@@ -63,12 +65,13 @@ DHCP=yes
 EOF"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "ip link set eth0 up"
+cloonix_ssh ${NET} ${NAME} "systemctl restart wickedd-dhcp4.service"
 cloonix_ssh ${NET} ${NAME} "systemctl restart wicked.service"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "zypper ref"
-cloonix_ssh $NET ${NAME} "zypper --non-interactive refresh"
-cloonix_ssh $NET ${NAME} "zypper --non-interactive update"
-cloonix_ssh $NET ${NAME} "zypper --non-interactive install tar"
+cloonix_ssh $NET ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
+cloonix_ssh $NET ${NAME} "zypper --non-interactive --no-gpg-checks update"
+cloonix_ssh $NET ${NAME} "zypper --non-interactive --no-gpg-checks install tar"
 #----------------------------------------------------------------------
 set +e
 for ((i=0;i<3;i++)); do

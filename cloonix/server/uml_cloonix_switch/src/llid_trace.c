@@ -385,7 +385,7 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
   if ((llid <1) || (llid >= CLOWNIX_MAX_CHANNELS))
     KOUT("%s %d", fct, llid);
 
-  suid_power_llid_closed(llid);
+  suid_power_llid_closed(llid, from_clone, fct);
   d2d_dpdk_llid_closed(llid);
   xyx_dpdk_llid_closed(llid);
   a2b_dpdk_llid_closed(llid);

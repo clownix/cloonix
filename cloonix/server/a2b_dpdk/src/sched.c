@@ -49,6 +49,8 @@ static uint64_t g_cnf_delay[2];
 static uint64_t g_cnf_qsize[2]; 
 static uint64_t g_cnf_bsize[2]; 
 static uint64_t g_cnf_brate[2]; 
+static uint64_t g_cnf_silentms[2]; 
+static uint64_t g_cnf_startsilentms[2]; 
 
 static uint64_t g_tocken[2];
 static uint64_t g_pkt_stop[2];
@@ -155,12 +157,14 @@ void sched_cnf(int dir, int type, int val)
       g_cnf_qsize[dir] = (uint64_t ) ((g_cnf_brate[dir] * 1000));
     g_cnf_bsize[dir] = (uint64_t ) ((g_cnf_brate[dir] * 1000000) / 8)+2000000;
     }
+  else if (type == a2b_type_silentms)
+    g_cnf_silentms[dir] = (uint64_t ) val * 1000;
   else
     KERR("ERROR %d %d %d", dir, type, val);
 
-  KERR("CNF SCHED %d: rate %ld  qsize %ld  bsize %ld  loss %ld",
+  KERR("CNF SCHED %d: rate %ld  qsize %ld  bsize %ld  loss %ld silentms %ld",
         dir, g_cnf_brate[dir], g_cnf_qsize[dir],
-        g_cnf_bsize[dir]/1000, g_cnf_loss[dir]);
+        g_cnf_bsize[dir]/1000, g_cnf_loss[dir], g_cnf_silentms[dir]);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -171,29 +175,51 @@ void sched_mngt(int id, uint64_t current_usec, uint64_t delta)
   uint64_t usec;
   struct rte_mbuf *mbuf;
   int result = -1;
-  g_tocken[id] += (g_cnf_brate[id] * delta);
-  if (g_tocken[id] > (g_cnf_bsize[id]))
+  if (g_cnf_silentms[id])
     {
-    g_tocken[id] = (g_cnf_bsize[id]);
+    if (current_usec >= (g_cnf_startsilentms[id] + g_cnf_silentms[id]))
+      {
+      if (!circle_peek(id, &len, &usec, &mbuf))
+        {
+        result = 0;
+        g_cnf_startsilentms[id] = current_usec; 
+        }
+      while(result == 0)
+        {
+        circle_swap(id);
+        sched_dec_queue_stored(id, len);
+        result = -1;
+        if (!circle_peek(id, &len, &usec, &mbuf))
+          result = 0;
+        }
+      }
     }
-  if (!circle_peek(id, &len, &usec, &mbuf))
+  else
     {
-    if (g_cnf_delay[id] == 0)
-      result = shaped_dequeue(id, len);
-    else if ((current_usec - usec) >= g_cnf_delay[id])
-      result = shaped_dequeue(id, len);
-    }
-  while(result == 0)
-    {
-    circle_swap(id);
-    sched_dec_queue_stored(id, len);
-    result = -1;
+    g_tocken[id] += (g_cnf_brate[id] * delta);
+    if (g_tocken[id] > (g_cnf_bsize[id]))
+      {
+      g_tocken[id] = (g_cnf_bsize[id]);
+      }
     if (!circle_peek(id, &len, &usec, &mbuf))
       {
       if (g_cnf_delay[id] == 0)
         result = shaped_dequeue(id, len);
       else if ((current_usec - usec) >= g_cnf_delay[id])
         result = shaped_dequeue(id, len);
+      }
+    while(result == 0)
+      {
+      circle_swap(id);
+      sched_dec_queue_stored(id, len);
+      result = -1;
+      if (!circle_peek(id, &len, &usec, &mbuf))
+        {
+        if (g_cnf_delay[id] == 0)
+          result = shaped_dequeue(id, len);
+        else if ((current_usec - usec) >= g_cnf_delay[id])
+          result = shaped_dequeue(id, len);
+        }
       }
     }
 }
@@ -244,6 +270,7 @@ void sched_init(void)
     g_cnf_qsize[i] = 0;
     g_cnf_bsize[i] = 0;
     g_cnf_brate[i] = 0;
+    g_cnf_silentms[i] = 0;
     g_tocken[i] = 0;
     g_pkt_stop[i] = 0;
     g_pkt_drop[i] = 0;

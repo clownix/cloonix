@@ -33,6 +33,8 @@ fi
 #----------------------------------------------------------------------
 cp -f ${BULK}/${QCOW2} ${BULK}/full_${QCOW2}
 sync
+sleep 10
+sync
 #######################################################################
 cloonix_gui $NET
 #----------------------------------------------------------------------
@@ -58,7 +60,7 @@ cloonix_ssh $NET ${NAME} "mkdir -p /root/cloonix_data/bulk"
 #----------------------------------------------------------------------
 cloonix_scp $NET ${HERE}/../../install_depends ${NAME}:/root
 #----------------------------------------------------------------------
-cloonix_scp $NET ${BULK}/${DISTRO}.qcow2 ${NAME}:/root/cloonix_data/bulk
+cloonix_scp $NET ${BULK}/bullseye.qcow2 ${NAME}:/root/cloonix_data/bulk
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "echo \"wireshark-common "\
                          "wireshark-common/install-setuid boolean true\" "\

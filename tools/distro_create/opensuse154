@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
-DISTRO=opensuse153
+DISTRO=opensuse154
 ROOTFS=/root/${DISTRO}
 OPENSUSE_MIRROR=http://download.opensuse.org
-OPENSUSE=${OPENSUSE_MIRROR}/distribution/leap/15.3/repo/oss/
-OPENSUSE_UPDATES=${OPENSUSE_MIRROR}/update/leap/15.3/oss/
+OPENSUSE=${OPENSUSE_MIRROR}/distribution/leap/15.4/repo/oss/
+OPENSUSE_UPDATES=${OPENSUSE_MIRROR}/update/leap/15.4/oss/
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -82,9 +82,9 @@ do
   echo REPO OK ${i}
   echo
 done
-set -e
-zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE} 15.3-oss
-zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE_UPDATES} 15.3-oss-updates
+
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE} 15.4-oss
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE_UPDATES} 15.4-oss-updates
 zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys refresh
 zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys update
 zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install systemd

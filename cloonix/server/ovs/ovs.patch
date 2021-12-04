@@ -1,6 +1,6 @@
 diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
---- ovs/acinclude.m4	2021-11-09 22:20:13.000000000 +0100
-+++ ovs_tainted/acinclude.m4	2021-11-09 23:35:54.798212973 +0100
+--- ovs/acinclude.m4	2021-11-27 15:39:37.000000000 +0100
++++ ovs_tainted/acinclude.m4	2021-12-03 07:49:01.129772606 +0100
 @@ -434,6 +434,10 @@
            esac
      esac
@@ -31,8 +31,8 @@ diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
  ])
  
 diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
---- ovs/lib/netdev-dpdk.c	2021-11-09 22:20:13.000000000 +0100
-+++ ovs_tainted/lib/netdev-dpdk.c	2021-11-09 23:36:22.753965842 +0100
+--- ovs/lib/netdev-dpdk.c	2021-11-27 15:39:37.000000000 +0100
++++ ovs_tainted/lib/netdev-dpdk.c	2021-12-03 07:49:01.129772606 +0100
 @@ -38,6 +38,7 @@
  #include <rte_pci.h>
  #include <rte_version.h>
@@ -60,8 +60,8 @@ diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
          {
              .type = RTE_FLOW_ACTION_TYPE_COUNT,
 diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
---- ovs/ofproto/ofproto-dpif.c	2021-11-09 22:20:13.000000000 +0100
-+++ ovs_tainted/ofproto/ofproto-dpif.c	2021-11-09 23:35:54.798212973 +0100
+--- ovs/ofproto/ofproto-dpif.c	2021-11-27 15:39:37.000000000 +0100
++++ ovs_tainted/ofproto/ofproto-dpif.c	2021-12-03 07:49:01.133772620 +0100
 @@ -748,7 +748,7 @@
          return 0;
      }

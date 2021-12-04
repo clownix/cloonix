@@ -802,11 +802,13 @@ static int topo_a2b_format(char *buf, t_topo_a2b *a2b)
                                      a2b->qsize[0],
                                      a2b->bsize[0],
                                      a2b->brate[0],
+                                     a2b->silentms[0],
                                      a2b->delay[1],
                                      a2b->loss[1],
                                      a2b->qsize[1],
                                      a2b->bsize[1],
-                                     a2b->brate[1]);
+                                     a2b->brate[1],
+                                     a2b->silentms[1]);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -1505,11 +1507,13 @@ static void helper_fill_topo_a2b(char *msg, t_topo_a2b *a2b)
                                   &(a2b->qsize[0]),
                                   &(a2b->bsize[0]),
                                   &(a2b->brate[0]),
+                                  &(a2b->silentms[0]),
                                   &(a2b->delay[1]),
                                   &(a2b->loss[1]),
                                   &(a2b->qsize[1]),
                                   &(a2b->bsize[1]),
-                                  &(a2b->brate[1])) != 11)
+                                  &(a2b->brate[1]),
+                                  &(a2b->silentms[1])) != 13)
     KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/

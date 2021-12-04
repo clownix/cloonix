@@ -61,6 +61,7 @@ enum{
   a2b_type_qsize,
   a2b_type_bsize,
   a2b_type_brate,
+  a2b_type_silentms,
   xyx_type_mac_mangle,
 };
 

@@ -23,6 +23,7 @@ typedef struct t_a2b_side
   int qsize;
   int bsize;
   int brate;
+  int silentms;
   int waiting_ack_add_lan;
   int waiting_ack_del_lan;
   int attached_lan_ok;

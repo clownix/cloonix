@@ -726,11 +726,13 @@ static void fill_topo_a2b(t_topo_a2b *topo_a2b, t_a2b_cnx *a2b)
   topo_a2b->qsize[0] = a2b->side[0].qsize;
   topo_a2b->bsize[0] = a2b->side[0].bsize;
   topo_a2b->brate[0] = a2b->side[0].brate;
+  topo_a2b->silentms[0] = a2b->side[0].silentms;
   topo_a2b->delay[1] = a2b->side[1].delay;
   topo_a2b->loss[1]  = a2b->side[1].loss;
   topo_a2b->qsize[1] = a2b->side[1].qsize;
   topo_a2b->bsize[1] = a2b->side[1].bsize;
   topo_a2b->brate[1] = a2b->side[1].brate;
+  topo_a2b->silentms[1] = a2b->side[1].silentms;
 }
 /*---------------------------------------------------------------------------*/
 

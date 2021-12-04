@@ -66,7 +66,7 @@ static int g_nb_brgs;
 static t_topo_bridges g_brgs[MAX_OVS_BRIDGES];
 
 int get_glob_req_self_destruction(void);
-
+static int g_no_more_timeout;
 
 /****************************************************************************/
 static void unformat_bridges(char *msg)
@@ -176,6 +176,8 @@ static void timer_monitoring(void *data)
   char *req;
   if (get_glob_req_self_destruction())
     return;
+  if (g_no_more_timeout == 1)
+    return;
   count += 1;
   if (old_nb_pid_resp == g_nb_pid_resp)
     g_nb_pid_resp_warning++;
@@ -189,12 +191,12 @@ static void timer_monitoring(void *data)
       g_abs_beat_timer = 0;
       g_ref_timer = 0;
       }
+    KERR("RESTARTING SUID_POWER %d", g_llid);
     llid_trace_free(g_llid, 0, __FUNCTION__);
     hop_event_free(g_llid);
     g_llid = 0; 
     g_nb_pid_resp_warning = 0;
     event_print("SUID_POWER CONTACT LOSS");
-    KERR("TRY KILLING SUID_POWER");
     suid_power_start();
     g_first_ever_start = 0;
     }
@@ -228,6 +230,8 @@ static void timer_connect(void *data)
   int llid;
   char *ctrl = (char *) data;
   if (get_glob_req_self_destruction())
+    return;
+  if (g_no_more_timeout == 1)
     return;
   llid = string_client_unix(ctrl, uml_clownix_switch_error_cb,
                                   uml_clownix_switch_rx_cb, "suid_power");
@@ -569,10 +573,24 @@ int suid_power_pid(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void suid_power_llid_closed(int llid)
+void suid_power_llid_closed(int llid, int from_clone, const char* fct)
 {
   if (llid == g_llid)
     {
+    KERR("SUID_POWER CONNECTION CLOSED");
+    g_no_more_timeout = 1;
+    g_llid = 0;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void suid_power_fork_closed(void)
+{
+  if ((g_llid) && (msg_exist_channel(g_llid)))
+    {
+    msg_delete_channel(g_llid);
+    g_llid = 0;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -594,6 +612,7 @@ void suid_power_init(void)
   g_first_ever_start = 0;
   g_suid_power_root_resp_ok = 0;
   g_nb_phy = 0;
+  g_no_more_timeout = 0;
   memset(g_topo_info_phy, 0, MAX_PHY * sizeof(t_topo_info_phy));
   memset(g_root_path, 0, MAX_PATH_LEN);
   memset(g_bin_suid, 0, MAX_PATH_LEN);

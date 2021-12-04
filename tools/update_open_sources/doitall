@@ -1,7 +1,4 @@
 #!/bin/bash
-./get_new_qemu.sh
-./get_new_spice_protocol.sh
-./get_new_usbredir.sh
-./get_new_spicy.sh
-./get_new_spice_serv.sh
-./get_new_ovs_dpdk.sh
+./get_qemu.sh
+./get_spicy.sh
+./get_ovs_dpdk.sh
