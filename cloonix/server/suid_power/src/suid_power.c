@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -37,6 +37,8 @@
 #include "rpc_clownix.h"
 #include "net_phy.h"
 #include "ovs_get.h"
+#include "container.h"
+#include "launcher.h"
 
 /*--------------------------------------------------------------------------*/
 static int  g_llid;
@@ -45,7 +47,6 @@ static char g_network_name[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
 static char g_root_work[MAX_PATH_LEN];
 static char g_bin_dir[MAX_PATH_LEN];
-static char *g_saved_environ[4];
 /*--------------------------------------------------------------------------*/
 enum {
   state_idle = 1,
@@ -129,90 +130,6 @@ static void free_vmon(t_vmon *cur)
   if (cur == g_head_vmon)
     g_head_vmon = cur->next;
   free(cur);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static char **get_saved_environ(void)
-{
-  return (g_saved_environ);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void clean_all_llid(void)
-{
-  int llid, nb_chan, i;
-  clownix_timeout_del_all();
-  nb_chan = get_clownix_channels_nb();
-  for (i=0; i<=nb_chan; i++)
-    {
-    llid = channel_get_llid_with_cidx(i);
-    if (llid)
-      {
-      if (msg_exist_channel(llid))
-        msg_delete_channel(llid);
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static int launcher(char *argv[])
-{
-  char **env = get_saved_environ();
-  int exited_pid, timeout_pid, worker_pid, chld_state, pid, status=77;
-  pid_t rc_pid;
-  if ((pid = fork()) < 0)
-    KOUT(" ");
-  if (pid == 0)
-    {
-    clean_all_llid();
-    worker_pid = fork();
-    if (worker_pid == 0)
-      {
-      execve(argv[0], argv, env);
-      KOUT("FORK error %s", strerror(errno));
-      }
-    timeout_pid = fork();
-    if (timeout_pid == 0)
-      {
-      sleep(3);
-      KERR("EXIT MAIN SUIDPOWER");
-      exit(1);
-      }
-    exited_pid = wait(&chld_state);
-    if (exited_pid == worker_pid)
-      {
-      if (WIFEXITED(chld_state))
-        status = WEXITSTATUS(chld_state);
-      if (WIFSIGNALED(chld_state))
-        KERR("Child exited via signal %d\n",WTERMSIG(chld_state));
-      kill(timeout_pid, SIGKILL);
-      }
-    else
-      {
-      KERR("KILL MAIN SUIDPOWER");
-      kill(worker_pid, SIGKILL);
-      }
-    wait(NULL);
-    exit(status);
-    }
-  rc_pid = waitpid(pid, &chld_state, 0);
-  if (rc_pid > 0)
-    {
-    if (WIFEXITED(chld_state))
-      status = WEXITSTATUS(chld_state);
-    if (WIFSIGNALED(chld_state))
-      KERR("Child exited via signal %d\n",WTERMSIG(chld_state));
-    } 
-  else
-    {
-    if (errno != ECHILD)
-      KERR("Unexpected error %s", strerror(errno));
-    KERR("END WAIT MAIN SUIDPOWER");
-    } 
-  return status;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -391,6 +308,7 @@ static void heartbeat (int delta)
     {
     count_ticks_blkd = 0;
     automate_pid_monitor();
+    container_beat(g_llid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -505,6 +423,11 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
     rpct_send_poldiag_msg(llid, tid, str_net_ovs);
     free(str_net_ovs);
     }
+  else if (!strncmp(line,
+  "cloonixsuid_container", strlen("cloonixsuid_container")))
+    {
+    container_recv_poldiag_msg(llid, tid, line);
+    }
   else
     KERR("%s %s", g_network_name, line);
 }
@@ -577,8 +500,11 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   else if (sscanf(line,
   "cloonixsuid_rec_name: %s on: %d", name, &on) == 2)
     ovs_get_rec_name(name, on);
+  else if (!strncmp(line,
+  "cloonixsuid_container", strlen("cloonixsuid_container")))
+    container_recv_sigdiag_msg(llid, tid, line);
   else
-    KERR("%s %s", g_network_name, line);
+    KERR("ERROR %s %s", g_network_name, line);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -586,7 +512,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 static void err_ctrl_cb (int llid, int err, int from)
 {
   req_kill_clean_all();
-  KERR("SUIDPOWER RECEIVED DISCONNECT");
+  KERR("SUIDPOWER RECEIVED DISCONNECT %d %d", err, from);
   exit(0);
 }
 /*--------------------------------------------------------------------------*/
@@ -632,10 +558,8 @@ int main (int argc, char *argv[])
   g_watchdog_ok = 0;
   if (argc != 7)
     KOUT(" ");
-  g_saved_environ[0] = argv[4]; //username
-  g_saved_environ[1] = argv[5]; //home
-  g_saved_environ[2] = argv[6]; //spice_env
-  g_saved_environ[3] = NULL;
+  container_init();
+  set_saved_environ(argv[4], argv[5], argv[6]);
   msg_mngt_init("suid_power", IO_MAX_BUF_LEN);
   memset(g_network_name, 0, MAX_NAME_LEN);
   memset(ctrl_path, 0, MAX_PATH_LEN);

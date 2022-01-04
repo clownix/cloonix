@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -76,14 +76,6 @@ void help_halt_vm(char *line)
 {
   printf("\n\n\n%s <name>\n", line);
   printf("\nRequest a poweroff to the cloonix agent\n\n\n");
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
-void help_del_vm(char *line)
-{
-  printf("\n\n\n%s <name>\n\n\n", line);
 }
 /*---------------------------------------------------------------------------*/
 

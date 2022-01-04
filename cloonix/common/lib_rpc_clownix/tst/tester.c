@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -68,7 +68,8 @@ static int count_dpdk_ovs_cnf=0;
 
 static int count_eventfull=0;
 static int count_eventfull_sub=0;
-static int count_slowperiodic=0;
+static int count_slowperiodic_qcow2=0;
+static int count_slowperiodic_img=0;
 static int count_slowperiodic_sub=0;
 
 static int count_evt_stats_endp_sub=0;
@@ -104,6 +105,7 @@ static int count_d2d_peer_ping = 0;
 static int count_nat_add = 0;
 static int count_phy_add = 0;
 static int count_tap_add = 0;
+static int count_cnt_add = 0;
 
 static int count_a2b_add = 0;
 static int count_a2b_cnf = 0;
@@ -146,7 +148,8 @@ static void print_all_count(void)
   printf("%d\n", count_eventfull_sub);
   printf("%d\n", count_eventfull);
   printf("%d\n", count_slowperiodic_sub);
-  printf("%d\n", count_slowperiodic);
+  printf("%d\n", count_slowperiodic_qcow2);
+  printf("%d\n", count_slowperiodic_img);
   printf("%d\n", count_sav_vm);
 
   printf("%d\n", count_evt_stats_endp_sub);
@@ -179,6 +182,7 @@ static void print_all_count(void)
   printf("%d\n", count_d2d_peer_ping);
 
   printf("%d\n", count_tap_add);
+  printf("%d\n", count_cnt_add);
 
   printf("%d\n", count_a2b_add);
   printf("%d\n", count_a2b_cnf);
@@ -278,6 +282,64 @@ static void topo_config_diff(t_topo_clc *cfa, t_topo_clc *cfb)
     KERR("%d %d", cfa->server_port, cfb->server_port);
   if (cfa->flags_config != cfb->flags_config)
     KERR("%d %d", cfa->flags_config, cfb->flags_config);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int topo_cnt_diff(t_topo_cnt *icnt, t_topo_cnt *cnt)
+{
+  int k, l, result = 0;
+  if (cnt->ping_ok != icnt->ping_ok)
+    {
+    KERR("%d %d", cnt->ping_ok, icnt->ping_ok);
+    result = -1;
+    }
+  else if (strcmp(cnt->name, icnt->name))
+    {
+    KERR("%s %s", cnt->name, icnt->name);
+    result = -1;
+    }
+  else   if (strcmp(cnt->image, icnt->image))
+    {
+    KERR("%s %s", cnt->image, icnt->image);
+    result = -1;
+    }
+  else
+    {
+    for (k=0; k < MAX_DPDK_VM; k++)
+      {
+      if (cnt->eth_table[k].endp_type != icnt->eth_table[k].endp_type)
+        {
+        KERR("%d %d",cnt->eth_table[k].endp_type,icnt->eth_table[k].endp_type);
+        result = -1;
+        }
+      if (cnt->eth_table[k].randmac != icnt->eth_table[k].randmac)
+        {
+        KERR("%d %d",cnt->eth_table[k].randmac,icnt->eth_table[k].randmac);
+        result = -1;
+        }
+      if (strcmp(cnt->eth_table[k].vhost_ifname,
+                 icnt->eth_table[k].vhost_ifname))
+        {
+        KERR("%s %s", cnt->eth_table[k].vhost_ifname,
+                      icnt->eth_table[k].vhost_ifname);
+        result = -1;
+        }
+      for (l=0; l < 6; l++)
+        {
+        if (cnt->eth_table[k].mac_addr[l] != icnt->eth_table[k].mac_addr[l])
+          {
+          KERR("%d %d", cnt->eth_table[k].mac_addr[l],
+                        icnt->eth_table[k].mac_addr[l]);
+          result = -1;
+          }
+        }
+      }
+    if (memcmp(cnt->eth_table, icnt->eth_table,
+       MAX_DPDK_VM*sizeof(t_eth_table)))
+      KERR(" ");
+    }
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -396,6 +458,25 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
       KERR(" ");
     }
   return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void random_cnt(t_topo_cnt *cnt)
+{
+  int k, l;
+  random_choice_str(cnt->name, MAX_NAME_LEN);
+  random_choice_str(cnt->image, MAX_PATH_LEN);
+  cnt->nb_tot_eth = my_rand(MAX_DPDK_VM);
+  cnt->ping_ok = my_rand(20);
+  for (k=0; k < cnt->nb_tot_eth; k++)
+    {
+    cnt->eth_table[k].endp_type = (rand() & 0x04) + 1;
+    cnt->eth_table[k].randmac = rand();
+    random_choice_str(cnt->eth_table[k].vhost_ifname, MAX_NAME_LEN-1);
+    for (l=0; l < 6; l++)
+      cnt->eth_table[k].mac_addr[l] = rand() & 0xFF;
+    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -559,7 +640,8 @@ static t_topo_info *random_topo_gen(void)
 
   random_clc(&(topo->clc));
   topo->conf_rank = my_rand(50);
-  topo->nb_kvm = my_rand(30);
+  topo->nb_cnt = my_rand(10);
+  topo->nb_kvm = my_rand(10);
   topo->nb_d2d = my_rand(10);
   topo->nb_a2b = my_rand(10);
   topo->nb_tap = my_rand(10);
@@ -568,6 +650,17 @@ static t_topo_info *random_topo_gen(void)
   topo->nb_endp = my_rand(50);
   topo->nb_info_phy = my_rand(10);
   topo->nb_bridges = my_rand(10);
+
+  if (topo->nb_cnt)
+    {
+    topo->cnt =
+    (t_topo_cnt *)clownix_malloc(topo->nb_cnt * sizeof(t_topo_cnt),3);
+    memset(topo->cnt, 0, topo->nb_cnt * sizeof(t_topo_cnt));
+    for (i=0; i<topo->nb_cnt; i++)
+      {
+      random_cnt(&(topo->cnt[i]));
+      }
+    }
 
   if (topo->nb_kvm)
     {
@@ -1549,8 +1642,12 @@ void recv_event_topo(int llid, int itid, t_topo_info *itopo)
       topo_config_diff(&(itopo->clc), &(topo->clc));
       if (topo->nb_kvm != itopo->nb_kvm)
         KOUT("%d %d", topo->nb_kvm, itopo->nb_kvm);
+      if (topo->nb_cnt != itopo->nb_cnt)
+        KOUT("%d %d", topo->nb_cnt, itopo->nb_cnt);
+      for (i=0; i<topo->nb_cnt; i++)
+        topo_cnt_diff(&(itopo->cnt[i]), &(topo->cnt[i]));
       for (i=0; i<topo->nb_kvm; i++)
-      topo_kvm_diff(&(itopo->kvm[i]), &(topo->kvm[i]));
+        topo_kvm_diff(&(itopo->kvm[i]), &(topo->kvm[i]));
       if (topo_compare(itopo, topo))
         KOUT("%d ", topo_compare(itopo, topo));
       topo_free_topo(topo);
@@ -2199,14 +2296,14 @@ void recv_slowperiodic_sub(int llid, int itid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_slowperiodic(int llid, int itid, int inb, t_slowperiodic *ispic)
+void recv_slowperiodic_qcow2(int llid, int itid, int inb, t_slowperiodic *ispic)
 {
   int i;
   static int nb, tid;
   static t_slowperiodic spic[MAX_TEST_TUX];
   if (i_am_client)
     {
-    if (count_slowperiodic)
+    if (count_slowperiodic_qcow2)
       {
       if (itid != tid)
         KOUT(" ");
@@ -2220,11 +2317,41 @@ void recv_slowperiodic(int llid, int itid, int inb, t_slowperiodic *ispic)
     memset(spic, 0, MAX_TEST_TUX * sizeof(t_slowperiodic));
     for (i=0; i<nb; i++)
       random_choice_str(spic[i].name, MAX_NAME_LEN);
-    send_slowperiodic(llid, tid, nb, spic);
+    send_slowperiodic_qcow2(llid, tid, nb, spic);
     }
   else
-    send_slowperiodic(llid, itid, inb, ispic);
-  count_slowperiodic++;
+    send_slowperiodic_qcow2(llid, itid, inb, ispic);
+  count_slowperiodic_qcow2++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_slowperiodic_img(int llid, int itid, int inb, t_slowperiodic *ispic)
+{
+  int i;
+  static int nb, tid;
+  static t_slowperiodic spic[MAX_TEST_TUX];
+  if (i_am_client)
+    {
+    if (count_slowperiodic_img)
+      {
+      if (itid != tid)
+        KOUT(" ");
+      if (inb != nb)
+        KOUT(" ");
+      if (memcmp(spic, ispic, nb * sizeof(t_slowperiodic)))
+        KOUT(" ");
+      }
+    tid = rand();
+    nb = rand() % MAX_TEST_TUX;
+    memset(spic, 0, MAX_TEST_TUX * sizeof(t_slowperiodic));
+    for (i=0; i<nb; i++)
+      random_choice_str(spic[i].name, MAX_NAME_LEN);
+    send_slowperiodic_img(llid, tid, nb, spic);
+    }
+  else
+    send_slowperiodic_img(llid, itid, inb, ispic);
+  count_slowperiodic_img++;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -2360,6 +2487,30 @@ void recv_phy_add(int llid, int itid, char *iname)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+void recv_cnt_add(int llid, int itid, t_topo_cnt *icnt)
+{
+  static t_topo_cnt cnt;
+  static int tid;
+  if (i_am_client)
+    {
+    if (count_cnt_add)
+      {
+      if (topo_cnt_diff(&cnt, icnt))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      }
+    tid = rand();
+    memset(&cnt, 0, sizeof(t_topo_cnt));
+    random_cnt(&cnt);
+    send_cnt_add(llid, tid, &cnt);
+    }
+  else
+    send_cnt_add(llid, itid, icnt);
+  count_cnt_add++;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void recv_tap_add(int llid, int itid, char *iname)
@@ -2384,8 +2535,6 @@ void recv_tap_add(int llid, int itid, char *iname)
   count_tap_add++;
 }
 /*---------------------------------------------------------------------------*/
-
-
 
 /*****************************************************************************/
 void recv_a2b_add(int llid, int itid, char *iname)
@@ -2719,7 +2868,8 @@ static void send_first_burst(int llid)
   recv_eventfull_sub(llid, 0);
   recv_eventfull(llid, 0, 0, NULL);
   recv_slowperiodic_sub(llid, 0);
-  recv_slowperiodic(llid, 0, 0, NULL);
+  recv_slowperiodic_qcow2(llid, 0, 0, NULL);
+  recv_slowperiodic_img(llid, 0, 0, NULL);
   recv_sav_vm(llid, 0, NULL, 0, NULL);
   recv_evt_stats_endp_sub(llid, 0, NULL, 0, 0);
   recv_evt_stats_endp(llid, 0, NULL, NULL, 0, NULL, 0);
@@ -2753,6 +2903,7 @@ static void send_first_burst(int llid)
   recv_nat_add(llid, 0, NULL);
   recv_phy_add(llid, 0, NULL);
   recv_tap_add(llid, 0, NULL);
+  recv_cnt_add(llid, 0, NULL);
 
   recv_a2b_add(llid, 0, NULL);
   recv_a2b_cnf(llid, 0, NULL, 0, 0, 0);

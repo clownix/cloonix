@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -19,31 +19,6 @@
 #define WIDTH 300
 #define HEIGH 200
 
-typedef struct t_custom_vm
-{
-  char name[MAX_NAME_LEN];
-  char kvm_used_rootfs[MAX_PATH_LEN];
-  char kvm_p9_host_share[MAX_PATH_LEN];
-  int  type;
-  int  is_full_virt;
-  int  is_persistent;
-  int  is_i386;
-  int  is_sda_disk;
-  int  nobackdoor_flag;
-  int  natplug_flag;
-  int  natplug;
-  int  has_p9_host_share;
-  int  current_number;
-  int  cpu;
-  int  mem;
-  int  nb_tot_eth;
-  t_eth_table eth_tab[MAX_DPDK_VM];
-} t_custom_vm;
-
-
-t_custom_vm *get_ptr_custom_vm (void);
-
-void get_custom_vm (t_custom_vm **cust_vm);
 
 void set_buttons_colors_red(void);
 void set_buttons_colors_green(void);
@@ -65,7 +40,6 @@ int inside_cloonix(char **name);
 
 char **get_argv_local_xwy(char *name);
 
-int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug);
 void cloonix_get_xvt(char *xvt);
 char *local_get_cloonix_name(void);
 char *get_password(void);

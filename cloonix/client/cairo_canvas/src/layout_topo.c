@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -35,6 +35,8 @@
 #include "topo.h"
 #include "layout_topo.h"
 
+static int g_x_cnt_coord[MAX_POLAR_COORD];
+static int g_y_cnt_coord[MAX_POLAR_COORD];
 static int g_x_node_coord[MAX_POLAR_COORD];
 static int g_y_node_coord[MAX_POLAR_COORD];
 static int g_x_a2b_coord[MAX_POLAR_COORD];
@@ -348,6 +350,8 @@ static void add_layout_node(t_layout_node *node)
   if (cur)
     {
     bitem = look_for_node_with_id(node->name);
+    if (!bitem)
+      bitem = look_for_cnt_with_id(node->name);
     if (bitem)
       {
       acur = make_layout_node(bitem);
@@ -458,6 +462,31 @@ void layout_round_node_eth_coords(double *x, double *y)
     iy = (int) *y;
     if ((ix >= g_x_node_coord[i]-1) && (ix <= g_x_node_coord[i]+1) && 
         (iy >= g_y_node_coord[i]-1) && (iy <= g_y_node_coord[i]+1)) 
+      {
+      result = 1;
+      *x = (double) ix;
+      *y = (double) iy;
+      }
+    }
+  if (result == 0)
+    {
+    *x = 0;
+    *y = 0;
+    KERR("KO %g %g   %d %d", *x, *y, ix, iy);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void layout_round_cnt_eth_coords(double *x, double *y)
+{
+  int i, ix, iy, result = 0;
+  for (i=0; (!result) && (i<MAX_POLAR_COORD); i++)
+    {
+    ix = (int) *x;
+    iy = (int) *y;
+    if ((ix >= g_x_cnt_coord[i]-1) && (ix <= g_x_cnt_coord[i]+1) &&
+        (iy >= g_y_cnt_coord[i]-1) && (iy <= g_y_cnt_coord[i]+1))
       {
       result = 1;
       *x = (double) ix;
@@ -600,6 +629,7 @@ static void timer_synchro(void *data)
     {
     switch (cur->bank_type)
       {
+      case bank_type_cnt:
       case bank_type_node:
         layout_node_xml = find_node_xml(cur->name);
         layout_node = make_layout_node(cur);
@@ -695,6 +725,8 @@ void layout_topo_init(void)
     {
     idx = (double) (2*i);
     idx = idx/100;
+    g_x_cnt_coord[i] =  (CNT_NODE_DIA * VAL_INTF_POS_NODE * (sin(idx)));
+    g_y_cnt_coord[i] = -(CNT_NODE_DIA * VAL_INTF_POS_NODE * (cos(idx)));
     g_x_node_coord[i] =  (NODE_DIA * VAL_INTF_POS_NODE * (sin(idx)));
     g_y_node_coord[i] = -(NODE_DIA * VAL_INTF_POS_NODE * (cos(idx)));
     g_x_a2b_coord[i] =  (A2B_DIA * VAL_INTF_POS_A2B * (sin(idx)));

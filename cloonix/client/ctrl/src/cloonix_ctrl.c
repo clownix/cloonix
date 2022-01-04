@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -98,6 +98,7 @@ struct cmd_struct level_add_cmd[] = {
 {"lan", "Add lan (emulated cable)", NULL, cmd_add_vl2sat, help_add_vl2sat},
 {"kvm", "Add kvm (virtualized machine)", NULL,cmd_add_vm_kvm,help_add_vm_kvm},
 {"phy", "Add phy (host network interface)",  NULL, cmd_add_phy, help_add_phy},
+{"cnt", "Add container",  NULL, cmd_add_cnt, help_add_cnt},
 {"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_tap},
 {"nat", "Add nat (access host ip)",NULL, cmd_add_nat, help_add_nat},
 {"a2b", "Add a2b (traffic delay shaping)",NULL, cmd_add_a2b, help_add_a2b},
@@ -121,8 +122,7 @@ struct cmd_struct level_sav_cmd[] = {
 /****************************************************************************/
 struct cmd_struct level_del_cmd[] = {
 {"lan", "Delete lan", NULL, cmd_del_vl2sat, help_del_vl2sat},
-{"kvm", "Delete kvm",  NULL, cmd_del_vm, help_del_vm},
-{"sat", "Delete non-kvm, non-lan",  NULL, cmd_del_sat, help_del_sat},
+{"sat", "Delete non-lan",  NULL, cmd_del_sat, help_del_sat},
 {"help",  "",                     level_del_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/

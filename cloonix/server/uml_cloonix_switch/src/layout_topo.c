@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -31,6 +31,7 @@
 #include "dpdk_a2b.h"
 #include "dpdk_xyx.h"
 #include "dpdk_nat.h"
+#include "container.h"
 
 #define MAX_MS_OF_INSERT 3600000
 
@@ -602,7 +603,7 @@ void recv_layout_event_sub(int llid, int tid, int on)
 static void layout_modif_node(int llid, int tid, 
                               char *name, int type, int val1, int val2)
 {
-  int i;
+  int i, nb_eth;
   t_vm *vm;
   char info[MAX_PRINT_LEN];
   t_layout_node layout;
@@ -610,7 +611,7 @@ static void layout_modif_node(int llid, int tid,
   t_layout_node_xml *cur;
   cur = find_node_xml(name);
   vm = cfg_get_vm(name);
-  if (vm)
+  if ((vm) || (container_name_exists(name, &nb_eth)))
     {
     if (!cur)
       KERR("%s", name);
@@ -649,6 +650,7 @@ static void layout_modif_node(int llid, int tid,
     {
     sprintf(info, "KO %s not found", name);
     send_status_ko(llid, tid, info);
+    KERR("%s", info);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -1025,14 +1027,18 @@ void layout_llid_destroy(int llid)
 /*****************************************************************************/
 void layout_add_vm(char *name, int llid)
 {
+  int nb_eth;
   t_vm *vm;
   t_layout_node layout;
   vm = cfg_get_vm(name);
-  if (!vm)
+  if ((!vm) && (!container_name_exists(name, &nb_eth)))
     KERR("%s", name);
   else
     {
-    make_default_layout_node(&layout, name, vm->kvm.nb_tot_eth); 
+    if (vm)
+      make_default_layout_node(&layout, name, vm->kvm.nb_tot_eth); 
+    else
+      make_default_layout_node(&layout, name, nb_eth); 
     add_layout_node(&layout);
     if (!(g_head_layout_sub) ||
          ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))

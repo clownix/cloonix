@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -148,7 +148,7 @@ void my_mv_file(char *dsrc, char *ddst, char *name)
 
 
 /****************************************************************************/
-void my_mkdir(char *dst_dir, int wr_all)
+int my_mkdir(char *dst_dir, int wr_all)
 {
   int result;
   mode_t old_mask, mode_mkdir;
@@ -173,16 +173,19 @@ void my_mkdir(char *dst_dir, int wr_all)
       {
       if (stat(dst_dir, &stat_file))
         KERR("ERROR %s, %d", dst_dir, errno);
-      if (!S_ISDIR(stat_file.st_mode))
+      else if (!S_ISDIR(stat_file.st_mode))
         {
         KERR("ERROR %s", dst_dir);
         unlink(dst_dir);
         if (mkdir(dst_dir, mode_mkdir))
           KERR("ERROR %s, %d", dst_dir, errno);
         }
+      else
+        result = 0;
       }
     }
   umask (old_mask);
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -254,6 +257,13 @@ void my_mv_dir(char *src_dir,char *dst_dir, char *src_name,char *dst_name)
       KOUT("%d", errno);
     }
   rmdir(src_sub_dir);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void mk_cnt_dir(void)
+{
+  my_mkdir(utils_get_cnt_dir(), 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -351,6 +361,21 @@ int mk_machine_dirs(char *name, int vm_id)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int mk_cnt_dirs(char *dir_path, char *name)
+{
+  int result = 0;
+  char path[MAX_PATH_LEN];
+  sprintf(path,"%s/%s", dir_path, name);
+  if (my_mkdir(path, 1))
+    {
+    result = -1;
+    KERR("ERROR %s %s", dir_path, name);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int unlink_sub_dir_files_except_dir(char *dir, char *err)
 {
   int result = 0;
@@ -436,7 +461,22 @@ int unlink_sub_dir_files(char *dir, char *err)
 }
 /*---------------------------------------------------------------------------*/
 
-
+/*****************************************************************************/
+int rm_cnt_dirs(char *dir_path, char *name)
+{
+  int result = 0;
+  char err[MAX_PRINT_LEN];
+  char dir[MAX_PATH_LEN];
+  strcpy(err, "NO_ERROR\n");
+  sprintf(dir, "%s/%s", dir_path, name);
+  if (unlink_sub_dir_files(dir, err))
+    {
+    KERR("%s %s", dir, err);
+    result = -1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int rm_machine_dirs(int vm_id, char *err)

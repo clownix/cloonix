@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -196,11 +196,17 @@
                            "  <tid> %d </tid>\n"\
                            "</slowperiodic_sub>"
 /*---------------------------------------------------------------------------*/
-#define SLOWPERIODIC_O     "<slowperiodic>\n"\
-                           "  <tid> %d </tid>\n"\
-                           "  nb:%d \n"
+#define SLOWPERIODIC_QCOW2_O  "<slowperiodic_qcow2>\n"\
+                              "  <tid> %d </tid>\n"\
+                              "  nb:%d \n"
 
-#define SLOWPERIODIC_C     "</slowperiodic>"
+#define SLOWPERIODIC_QCOW2_C     "</slowperiodic_qcow2>"
+/*---------------------------------------------------------------------------*/
+#define SLOWPERIODIC_IMG_O   "<slowperiodic_img>\n"\
+                             "  <tid> %d </tid>\n"\
+                             "  nb:%d \n"
+
+#define SLOWPERIODIC_IMG_C     "</slowperiodic_img>"
 /*---------------------------------------------------------------------------*/
 #define SLOWPERIODIC_SPIC  "<slowperiodic_spic>\n"\
                            "  name:%s \n"\
@@ -229,6 +235,17 @@
                          "  <added_disk> %s </added_disk>\n"\
                          "  <p9_host_share> %s </p9_host_share>\n"\
                          "</add_vm>"
+/*---------------------------------------------------------------------------*/
+#define ADD_CNT_O         "<add_cnt>\n"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <ping_ok> %d </ping_ok>\n"\
+                         "  <nb_tot_eth> %d </nb_tot_eth>"
+
+#define ADD_CNT_C        "  <image> %s </image>\n"\
+                         "</add_cnt>"
+/*---------------------------------------------------------------------------*/
+
 
 #define SAV_VM           "<sav_vm>\n"\
                          "  <tid> %d </tid>\n"\
@@ -374,7 +391,8 @@
                               "  network:%s username:%s server_port:%d \n"\
                               "  work_dir:%s bulk_dir:%s bin_dir:%s \n"\
                               "  flags_config:%d \n"\
-                              "  nb_kvm:%d nb_d2d:%d nb_tap:%d nb_phy:%d \n"\
+                              "  nb_cnt:%d nb_kvm:%d \n"\
+                              "  nb_d2d:%d nb_tap:%d nb_phy:%d \n"\
                               "  nb_a2b:%d nb_nat:%d nb_endp:%d \n"\
                               "  nb_info_phy:%d nb_bridges:%d \n"
 
@@ -393,6 +411,16 @@
                               "  mem: %d cpu: %d nb_tot_eth: %d "
 
 #define EVENT_TOPO_KVM_C      "</kvm>\n"
+
+
+#define EVENT_TOPO_CNT_O      "<cnt>\n"\
+                              "  name: %s \n"\
+                              "  image: %s \n"\
+                              "  ping_ok: %d \n"\
+                              "  nb_tot_eth: %d "
+
+#define EVENT_TOPO_CNT_C      "</cnt>\n"
+
                         
 #define EVENT_TOPO_D2D        "<d2d>\n"\
                               "  name: %s \n"\

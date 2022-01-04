@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -112,44 +112,6 @@ char *local_get_cloonix_name(void)
   return (g_clc.network);
 }
 /*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug)
-{
-  int vm_config_flags = 0;
-  *natplug = 0;
-  if (cust_vm->nobackdoor_flag)
-    vm_config_flags |= VM_CONFIG_FLAG_NOBACKDOOR;
-  if (cust_vm->natplug_flag)
-    {
-    vm_config_flags |= VM_CONFIG_FLAG_NATPLUG;
-    *natplug = cust_vm->natplug;
-    }
-  if (cust_vm->is_full_virt)
-    vm_config_flags |= VM_CONFIG_FLAG_FULL_VIRT;
-
-  if (cust_vm->is_i386)
-    {
-    vm_config_flags |= VM_CONFIG_FLAG_I386;
-    }
-  else
-    {
-    vm_config_flags &= ~VM_CONFIG_FLAG_I386;
-    }
-
-  if (cust_vm->is_persistent)
-    {
-    vm_config_flags |= VM_CONFIG_FLAG_PERSISTENT;
-    }
-  else
-    {
-    vm_config_flags &= ~VM_CONFIG_FLAG_PERSISTENT;
-    }
-  if (cust_vm->has_p9_host_share)
-    vm_config_flags |= VM_CONFIG_FLAG_9P_SHARED;
-  return vm_config_flags;
-}
-/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int inside_cloonix(char **name)

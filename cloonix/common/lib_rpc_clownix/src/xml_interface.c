@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -79,7 +79,8 @@ enum
   bnd_eventfull_sub,
   bnd_eventfull,
   bnd_slowperiodic_sub,
-  bnd_slowperiodic,
+  bnd_slowperiodic_qcow2,
+  bnd_slowperiodic_img,
   bnd_sub_evt_stats_endp,
   bnd_evt_stats_endp,
   bnd_sub_evt_stats_sysinfo,
@@ -91,6 +92,7 @@ enum
 
   bnd_nat_add,
   bnd_phy_add,
+  bnd_cnt_add,
   bnd_tap_add,
   bnd_a2b_add,
   bnd_a2b_cnf,
@@ -697,30 +699,51 @@ static int topo_eth_format(char *buf, int endp_type, int randmac, char *ifname,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int topo_cnt_format(char *buf, t_topo_cnt *cnt)
+{
+  int i, len;
+  if ((strlen(cnt->name) == 0) ||
+      (strlen(cnt->image) == 0))
+    KOUT("name:%s image:%s", cnt->name, cnt->image);
+  len = sprintf(buf, EVENT_TOPO_CNT_O, cnt->name, 
+                                       cnt->image,  
+                                       cnt->ping_ok,
+                                       cnt->nb_tot_eth);
+  for (i=0; i < cnt->nb_tot_eth; i++)
+    len += topo_eth_format(buf+len, cnt->eth_table[i].endp_type, 
+                                    cnt->eth_table[i].randmac,
+                                    cnt->eth_table[i].vhost_ifname,
+                                    cnt->eth_table[i].mac_addr);
+  len += sprintf(buf+len, EVENT_TOPO_CNT_C);
+  return len;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
 {
   t_topo_kvm kvm;
   int i, len;
 
   topo_kvm_check_str(ikvm, __LINE__);
-  topo_kvm_swapon(&kvm, ikvm); 
+  topo_kvm_swapon(&kvm, ikvm);
 
-  len = sprintf(buf, EVENT_TOPO_KVM_O, kvm.name, 
-                                       kvm.install_cdrom,  
-                                       kvm.added_cdrom,  
-                                       kvm.added_disk,  
-                                       kvm.p9_host_share,  
-                                       kvm.linux_kernel, 
-                                       kvm.rootfs_used,  
-                                       kvm.rootfs_backing,  
-                                       kvm.vm_id, 
-                                       kvm.vm_config_flags,  
-                                       kvm.vm_config_param,  
-                                       kvm.mem, 
+  len = sprintf(buf, EVENT_TOPO_KVM_O, kvm.name,
+                                       kvm.install_cdrom,
+                                       kvm.added_cdrom,
+                                       kvm.added_disk,
+                                       kvm.p9_host_share,
+                                       kvm.linux_kernel,
+                                       kvm.rootfs_used,
+                                       kvm.rootfs_backing,
+                                       kvm.vm_id,
+                                       kvm.vm_config_flags,
+                                       kvm.vm_config_param,
+                                       kvm.mem,
                                        kvm.cpu,
                                        kvm.nb_tot_eth);
   for (i=0; i < kvm.nb_tot_eth; i++)
-    len += topo_eth_format(buf+len, kvm.eth_table[i].endp_type, 
+    len += topo_eth_format(buf+len, kvm.eth_table[i].endp_type,
                                     kvm.eth_table[i].randmac,
                                     kvm.eth_table[i].vhost_ifname,
                                     kvm.eth_table[i].mac_addr);
@@ -901,6 +924,7 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
                                            cf.bulk_dir,
                                            cf.bin_dir,
                                            cf.flags_config,
+                                           topo->nb_cnt,
                                            topo->nb_kvm,
                                            topo->nb_d2d,
                                            topo->nb_tap,
@@ -911,6 +935,8 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
                                            topo->nb_info_phy,
                                            topo->nb_bridges);
 
+  for (i=0; i<topo->nb_cnt; i++)
+    len += topo_cnt_format(sndbuf+len, &(topo->cnt[i]));
   for (i=0; i<topo->nb_kvm; i++)
     len += topo_kvm_format(sndbuf+len, &(topo->kvm[i]));
   for (i=0; i<topo->nb_d2d; i++)
@@ -1426,27 +1452,42 @@ static void helper_event_sys(char *msg, t_sys_info *sys, int *tid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void helper_fill_topo_cnt(char *msg, t_topo_cnt *cnt)
+{
+  if (sscanf(msg, EVENT_TOPO_CNT_O, cnt->name, 
+                                    cnt->image,  
+                                    &(cnt->ping_ok),
+                                    &(cnt->nb_tot_eth)) != 4)
+    KOUT("%s", msg);
+  if ((strlen(cnt->name) == 0) ||
+      (strlen(cnt->image) == 0))
+    KOUT("%s", msg);
+  get_eth_table(msg, cnt->nb_tot_eth, cnt->eth_table);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
 {
   t_topo_kvm ikvm;
   memset(&ikvm, 0, sizeof(t_topo_kvm));
-  if (sscanf(msg, EVENT_TOPO_KVM_O, ikvm.name, 
-                                    ikvm.install_cdrom,  
-                                    ikvm.added_cdrom,  
-                                    ikvm.added_disk,  
-                                    ikvm.p9_host_share,  
-                                    ikvm.linux_kernel,  
-                                    ikvm.rootfs_used,  
-                                    ikvm.rootfs_backing,  
-                                    &(ikvm.vm_id), 
-                                    &(ikvm.vm_config_flags),  
-                                    &(ikvm.vm_config_param),  
+  if (sscanf(msg, EVENT_TOPO_KVM_O, ikvm.name,
+                                    ikvm.install_cdrom,
+                                    ikvm.added_cdrom,
+                                    ikvm.added_disk,
+                                    ikvm.p9_host_share,
+                                    ikvm.linux_kernel,
+                                    ikvm.rootfs_used,
+                                    ikvm.rootfs_backing,
+                                    &(ikvm.vm_id),
+                                    &(ikvm.vm_config_flags),
+                                    &(ikvm.vm_config_param),
                                     &(ikvm.mem),
                                     &(ikvm.cpu),
                                     &(ikvm.nb_tot_eth)) != 14)
     KOUT("%s", msg);
   get_eth_table(msg, ikvm.nb_tot_eth, ikvm.eth_table);
-  topo_kvm_swapoff(kvm, &ikvm); 
+  topo_kvm_swapoff(kvm, &ikvm);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1605,6 +1646,7 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
                                      icf.bulk_dir,
                                      icf.bin_dir,
                                      &(icf.flags_config),
+                                     &(topo->nb_cnt),
                                      &(topo->nb_kvm),
                                      &(topo->nb_d2d),
                                      &(topo->nb_tap),
@@ -1613,39 +1655,54 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
                                      &(topo->nb_nat),
                                      &(topo->nb_endp),
                                      &(topo->nb_info_phy),
-                                     &(topo->nb_bridges)) != 19)
+                                     &(topo->nb_bridges)) != 20)
     KOUT("%s", msg);
   topo_config_swapoff(&(topo->clc), &icf);
+  len = topo->nb_cnt*sizeof(t_topo_cnt);
+  topo->cnt= (t_topo_cnt *) clownix_malloc(len, 18);
+  memset(topo->cnt, 0, len);
   len = topo->nb_kvm*sizeof(t_topo_kvm);
-  topo->kvm= (t_topo_kvm *) clownix_malloc(len, 16);
+  topo->kvm= (t_topo_kvm *) clownix_malloc(len, 19);
   memset(topo->kvm, 0, len);
   len = topo->nb_d2d*sizeof(t_topo_d2d);
-  topo->d2d= (t_topo_d2d *) clownix_malloc(len, 16);
+  topo->d2d= (t_topo_d2d *) clownix_malloc(len, 20);
   memset(topo->d2d, 0, len);
   len = topo->nb_tap*sizeof(t_topo_tap);
-  topo->tap= (t_topo_tap *) clownix_malloc(len, 16);
+  topo->tap= (t_topo_tap *) clownix_malloc(len, 21);
   memset(topo->tap, 0, len);
   len = topo->nb_phy*sizeof(t_topo_phy);
-  topo->phy= (t_topo_phy *) clownix_malloc(len, 16);
+  topo->phy= (t_topo_phy *) clownix_malloc(len, 22);
   memset(topo->phy, 0, len);
   len = topo->nb_a2b*sizeof(t_topo_a2b);
-  topo->a2b= (t_topo_a2b *) clownix_malloc(len, 16);
+  topo->a2b= (t_topo_a2b *) clownix_malloc(len, 23);
   memset(topo->a2b, 0, len);
 
   len = topo->nb_nat*sizeof(t_topo_nat);
-  topo->nat= (t_topo_nat *) clownix_malloc(len, 16);
+  topo->nat= (t_topo_nat *) clownix_malloc(len, 24);
   memset(topo->nat, 0, len);
 
   len = topo->nb_endp*sizeof(t_topo_endp);
-  topo->endp=(t_topo_endp *)clownix_malloc(len, 16);
+  topo->endp=(t_topo_endp *)clownix_malloc(len, 25);
   memset(topo->endp, 0, len);
 
   len = topo->nb_info_phy*sizeof(t_topo_info_phy);
-  topo->info_phy= (t_topo_info_phy *) clownix_malloc(len, 16);
+  topo->info_phy= (t_topo_info_phy *) clownix_malloc(len, 26);
   memset(topo->info_phy, 0, len);
   len = topo->nb_bridges*sizeof(t_topo_bridges);
-  topo->bridges= (t_topo_bridges *) clownix_malloc(len, 16);
+  topo->bridges= (t_topo_bridges *) clownix_malloc(len, 27);
   memset(topo->bridges, 0, len);
+
+  for (i=0; i<topo->nb_cnt; i++)
+    {
+    ptr = strstr(ptr, "<cnt>");
+    if (!ptr)
+      KOUT("%d,%d\n%s\n", topo->nb_cnt, i, msg);
+    helper_fill_topo_cnt(ptr, &(topo->cnt[i]));
+    ptr = strstr(ptr, "</cnt>");
+    if (!ptr)
+      KOUT(" ");
+    }
+
   for (i=0; i<topo->nb_kvm; i++)
     {
     ptr = strstr(ptr, "<kvm>");
@@ -1814,13 +1871,25 @@ void send_slowperiodic_sub(int llid, int tid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_slowperiodic(int llid, int tid, int nb, t_slowperiodic *spic)
+void send_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic)
 {
   int i, len = 0;
-  len += sprintf(sndbuf+len, SLOWPERIODIC_O, tid, nb);
+  len += sprintf(sndbuf+len, SLOWPERIODIC_QCOW2_O, tid, nb);
   for (i=0; i<nb; i++)
     len += sprintf(sndbuf+len, SLOWPERIODIC_SPIC, spic[i].name);
-  len += sprintf(sndbuf+len, SLOWPERIODIC_C);
+  len += sprintf(sndbuf+len, SLOWPERIODIC_QCOW2_C);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic)
+{
+  int i, len = 0;
+  len += sprintf(sndbuf+len, SLOWPERIODIC_IMG_O, tid, nb);
+  for (i=0; i<nb; i++)
+    len += sprintf(sndbuf+len, SLOWPERIODIC_SPIC, spic[i].name);
+  len += sprintf(sndbuf+len, SLOWPERIODIC_IMG_C);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -1955,6 +2024,25 @@ void send_tap_add(int llid, int tid, char *name)
   if (strlen(name) >= MAX_NAME_LEN)
     KOUT(" ");
   len = sprintf(sndbuf, TAP_ADD, tid, name);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
+{
+  int len = 0;
+  if ((strlen(cnt->name) == 0) ||
+      (strlen(cnt->image) == 0))
+    KOUT("name:%s image:%s", cnt->name, cnt->image);
+  if (strlen(cnt->name) >= MAX_NAME_LEN)
+    KOUT(" ");
+  if (strlen(cnt->image) >= MAX_PATH_LEN)
+    KOUT(" ");
+  len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->name, cnt->ping_ok,
+                cnt->nb_tot_eth);
+  len += make_eth_table(sndbuf+len, cnt->nb_tot_eth, cnt->eth_table);
+  len += sprintf(sndbuf+len, ADD_CNT_C, cnt->image);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -2116,6 +2204,7 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
   char *parm1, *parm2;
   t_topo_kvm ikvm;
   t_topo_kvm kvm;
+  t_topo_cnt cnt;
   char network[MAX_NAME_LEN];
   char dnet[MAX_NAME_LEN];
   char lnet[MAX_NAME_LEN];
@@ -2440,14 +2529,25 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_slowperiodic_sub(llid, tid);
       break;
 
-    case bnd_slowperiodic:
-      if (sscanf(msg, SLOWPERIODIC_O, &tid, &nb) != 2)
+    case bnd_slowperiodic_qcow2:
+      if (sscanf(msg, SLOWPERIODIC_QCOW2_O, &tid, &nb) != 2)
         KOUT("%s", msg);
       len = nb * sizeof(t_slowperiodic);
       slowperiodic = (t_slowperiodic *)clownix_malloc(len, 23);
       memset(slowperiodic, 0, len);
       helper_slowperiodic(msg, nb, slowperiodic);
-      recv_slowperiodic(llid, tid, nb, slowperiodic);
+      recv_slowperiodic_qcow2(llid, tid, nb, slowperiodic);
+      clownix_free(slowperiodic, __FUNCTION__);
+      break;
+
+    case bnd_slowperiodic_img:
+      if (sscanf(msg, SLOWPERIODIC_IMG_O, &tid, &nb) != 2)
+        KOUT("%s", msg);
+      len = nb * sizeof(t_slowperiodic);
+      slowperiodic = (t_slowperiodic *)clownix_malloc(len, 23);
+      memset(slowperiodic, 0, len);
+      helper_slowperiodic(msg, nb, slowperiodic);
+      recv_slowperiodic_img(llid, tid, nb, slowperiodic);
       clownix_free(slowperiodic, __FUNCTION__);
       break;
 
@@ -2512,6 +2612,20 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       if (sscanf(msg, TAP_ADD, &tid, name) != 2)
         KOUT("%s", msg);
       recv_tap_add(llid, tid, name);
+      break;
+
+    case bnd_cnt_add:
+      memset(&cnt, 0, sizeof(t_topo_cnt));
+      if (sscanf(msg, ADD_CNT_O, &tid, cnt.name, &(cnt.ping_ok),
+                 &(cnt.nb_tot_eth)) != 4)
+        KOUT("%s", msg);
+      get_eth_table(msg, cnt.nb_tot_eth, cnt.eth_table);
+      ptr = strstr(msg, "<image>");
+      if (!ptr)
+        KOUT("%s", msg);
+      if (sscanf(ptr, ADD_CNT_C, cnt.image) != 1)
+        KOUT("%s", msg);
+      recv_cnt_add(llid, tid, &cnt);
       break;
 
     case bnd_nat_add:
@@ -2653,6 +2767,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   memset (bound_list, 0, bnd_max * MAX_CLOWNIX_BOUND_LEN);
   extract_boundary(STATUS_OK,      bound_list[bnd_status_ok]);
   extract_boundary(STATUS_KO,      bound_list[bnd_status_ko]);
+  extract_boundary(ADD_CNT_O,      bound_list[bnd_cnt_add]);
   extract_boundary(ADD_VM_O,       bound_list[bnd_add_vm]);
   extract_boundary(SAV_VM,         bound_list[bnd_sav_vm]);
   extract_boundary(DEL_SAT,        bound_list[bnd_del_sat]);
@@ -2684,7 +2799,8 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(EVENTFULL_SUB, bound_list[bnd_eventfull_sub]);
   extract_boundary(EVENTFULL_O, bound_list[bnd_eventfull]);
   extract_boundary(SLOWPERIODIC_SUB, bound_list[bnd_slowperiodic_sub]);
-  extract_boundary(SLOWPERIODIC_O, bound_list[bnd_slowperiodic]);
+  extract_boundary(SLOWPERIODIC_QCOW2_O, bound_list[bnd_slowperiodic_qcow2]);
+  extract_boundary(SLOWPERIODIC_IMG_O, bound_list[bnd_slowperiodic_img]);
   extract_boundary(SUB_EVT_STATS_ENDP, bound_list[bnd_sub_evt_stats_endp]);
   extract_boundary(EVT_STATS_ENDP_O, bound_list[bnd_evt_stats_endp]);
   extract_boundary(SUB_EVT_STATS_SYSINFO,bound_list[bnd_sub_evt_stats_sysinfo]);

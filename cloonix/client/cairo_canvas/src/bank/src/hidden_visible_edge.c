@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -119,7 +119,8 @@ static void del_bitem(t_bank_item *bi)
 void hidden_visible_del_bitem(t_bank_item *bi)
 {
   t_list_bank_item *cur;
-  if (bi->bank_type == bank_type_node)
+  if ((bi->bank_type == bank_type_node) ||
+      (bi->bank_type == bank_type_cnt))
     {
     cur = bi->head_eth_list;
     while (cur)
@@ -196,7 +197,8 @@ static void restore_all_edges(t_bank_item *bi)
 static void hidden_visible_event_bitem(t_bank_item *bi)
 {
   t_list_bank_item *intf;
-  if (bi->bank_type == bank_type_node) 
+  if ((bi->bank_type == bank_type_node) ||
+      (bi->bank_type == bank_type_cnt))
     {
     intf = bi->head_eth_list;
     while (intf)

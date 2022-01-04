@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -69,6 +69,8 @@
 #define MAX_TRAF_ENDPOINT 4
 
 #define MAX_POLAR_COORD 314
+#define CNT_DIA 55
+#define CNT_NODE_DIA 65
 #define NODE_DIA 75
 #define A2B_DIA 30 
 #define VAL_INTF_POS_NODE 0.5 
@@ -205,6 +207,16 @@ typedef struct t_topo_kvm
   char added_disk[MAX_PATH_LEN];
   char p9_host_share[MAX_PATH_LEN];
 } t_topo_kvm;
+
+/*---------------------------------------------------------------------------*/
+typedef struct t_topo_cnt
+{
+  char name[MAX_NAME_LEN];
+  int  ping_ok;
+  int  nb_tot_eth;
+  t_eth_table eth_table[MAX_DPDK_VM];
+  char image[MAX_PATH_LEN];
+} t_topo_cnt;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_d2d
   {
@@ -281,6 +293,10 @@ typedef struct t_topo_info
   t_topo_clc clc;
 
   int conf_rank;
+  
+  int nb_cnt;
+  t_topo_cnt *cnt;
+
   int nb_kvm;
   t_topo_kvm *kvm;
 

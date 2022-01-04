@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -27,10 +27,12 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "cloonix.h"
+#include "menu_dialog_kvm.h"
 
 #define ETH_TYPE_MAX 4
 #define ETH_LINE_MAX 7
 
+GtkWidget *get_bulkvm(void);
 GtkWidget *get_main_window(void);
 static t_custom_vm g_custom_vm;
 static t_slowperiodic g_bulkvm[MAX_BULK_FILES];
@@ -62,7 +64,7 @@ static void free_endp_type(GtkWidget *check, gpointer user_data)
 static void endp_type_cb(GtkWidget *check, gpointer user_data)
 {
   t_cb_endp_type *cb_endp_type = (t_cb_endp_type *) user_data;
-  t_custom_vm *cust_vm = get_ptr_custom_vm();
+  t_custom_vm *cust_vm = &g_custom_vm;
   int i,j,k, max_rank = MAX_DPDK_VM;
   int nb_tot_eth = 0, rank = cb_endp_type->rank;
   int endp_type = cb_endp_type->endp_type;
@@ -163,65 +165,6 @@ static void qcow2_get(GtkWidget *check, gpointer data)
 {
   char *name = (char *) data;
   gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), name);
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void set_bulkvm(int nb, t_slowperiodic *slowperiodic)
-{
-  if (nb<0 || nb >= MAX_BULK_FILES)
-    KOUT("%d", nb);
-  g_nb_bulkvm = nb;
-  memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  memcpy(g_bulkvm, slowperiodic, g_nb_bulkvm * sizeof(t_slowperiodic));
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static GtkWidget *get_bulkvm(void)
-{
-  int i;
-  GtkWidget *el, *menu = NULL;
-  GSList *group = NULL;
-  gpointer data;
-  memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  if (g_nb_bulkvm > 0)
-    {
-    menu = gtk_menu_new();
-    for (i=0; i<g_nb_bulkvm; i++)
-      {
-      el = gtk_radio_menu_item_new_with_label(group, g_bulkvm_photo[i].name);
-      if (i == 0)
-        group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(el));
-      gtk_menu_shell_append(GTK_MENU_SHELL(menu), el);
-      data = (gpointer) g_bulkvm_photo[i].name;
-      g_signal_connect(G_OBJECT(el),"activate",(GCallback)qcow2_get,data);
-      }
-    }
-  return menu;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-t_custom_vm *get_ptr_custom_vm (void)
-{
-  return (&g_custom_vm);
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void get_custom_vm (t_custom_vm **cust_vm)
-{
-  static t_custom_vm cust;
-  *cust_vm = &cust;
-  memcpy(&cust, &g_custom_vm, sizeof(t_custom_vm));
-  if (!strcmp(g_custom_vm.name, "Cloon"))
-    {
-    g_custom_vm.current_number += 1;
-    sprintf(cust.name, "%s%d", g_custom_vm.name, g_custom_vm.current_number);
-    }
-  else
-    sprintf(cust.name, "%s", g_custom_vm.name);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -351,7 +294,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
   gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
   gtk_widget_show_all(bulkvm_menu);
 
-  cust_vm = get_ptr_custom_vm();
+  cust_vm = &g_custom_vm;
 
   for (i=0; i<ETH_LINE_MAX; i++)
     {
@@ -391,6 +334,96 @@ static void custom_vm_dialog(t_custom_vm *cust)
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+GtkWidget *get_bulkvm(void)
+{
+  int i;
+  GtkWidget *el, *menu = NULL;
+  GSList *group = NULL;
+  gpointer data;
+  memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  if (g_nb_bulkvm > 0)
+    {
+    menu = gtk_menu_new();
+    for (i=0; i<g_nb_bulkvm; i++)
+      {
+      el = gtk_radio_menu_item_new_with_label(group, g_bulkvm_photo[i].name);
+      if (i == 0)
+        group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(el));
+      gtk_menu_shell_append(GTK_MENU_SHELL(menu), el);
+      data = (gpointer) g_bulkvm_photo[i].name;
+      g_signal_connect(G_OBJECT(el),"activate",(GCallback)qcow2_get,data);
+      }
+    }
+  return menu;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug)
+{
+  int vm_config_flags = 0;
+  *natplug = 0;
+  if (cust_vm->nobackdoor_flag)
+    vm_config_flags |= VM_CONFIG_FLAG_NOBACKDOOR;
+  if (cust_vm->natplug_flag)
+    {
+    vm_config_flags |= VM_CONFIG_FLAG_NATPLUG;
+    *natplug = cust_vm->natplug;
+    }
+  if (cust_vm->is_full_virt)
+    vm_config_flags |= VM_CONFIG_FLAG_FULL_VIRT;
+
+  if (cust_vm->is_i386)
+    {
+    vm_config_flags |= VM_CONFIG_FLAG_I386;
+    }
+  else
+    {
+    vm_config_flags &= ~VM_CONFIG_FLAG_I386;
+    }
+
+  if (cust_vm->is_persistent)
+    {
+    vm_config_flags |= VM_CONFIG_FLAG_PERSISTENT;
+    }
+  else
+    {
+    vm_config_flags &= ~VM_CONFIG_FLAG_PERSISTENT;
+    }
+  if (cust_vm->has_p9_host_share)
+    vm_config_flags |= VM_CONFIG_FLAG_9P_SHARED;
+  return vm_config_flags;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void get_custom_vm (t_custom_vm **cust_vm)
+{
+  static t_custom_vm cust;
+  *cust_vm = &cust;
+  memcpy(&cust, &g_custom_vm, sizeof(t_custom_vm));
+  if (!strcmp(g_custom_vm.name, "Cloon"))
+    {
+    g_custom_vm.current_number += 1;
+    sprintf(cust.name, "%s%d", g_custom_vm.name, g_custom_vm.current_number);
+    }
+  else
+    sprintf(cust.name, "%s", g_custom_vm.name);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void set_bulkvm(int nb, t_slowperiodic *slowperiodic)
+{
+  if (nb<0 || nb >= MAX_BULK_FILES)
+    KOUT("%d", nb);
+  g_nb_bulkvm = nb;
+  memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  memcpy(g_bulkvm, slowperiodic, g_nb_bulkvm * sizeof(t_slowperiodic));
+}
+/*--------------------------------------------------------------------------*/
+
 /****************************************************************************/
 void menu_choice_kvm(void)
 {
@@ -399,7 +432,7 @@ void menu_choice_kvm(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void menu_dialog_vm_init(void)
+void menu_dialog_kvm_init(void)
 {
   int i;
   char *name;

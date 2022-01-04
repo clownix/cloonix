@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -212,6 +212,18 @@ char *utils_get_snf_pcap_dir(void)
   return path;
 }
 /*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_cnt_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, CONTAINER_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 char *utils_get_dpdk_ovs_path(char *name)

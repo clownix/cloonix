@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -34,6 +34,12 @@ int suid_power_get_pid(int vm_id);
 int suid_power_get_topo_info_phy(t_topo_info_phy **phy);
 
 int suid_power_get_topo_bridges(t_topo_bridges **bridges);
+int suid_power_create_container(int cli_llid, int cli_tid,
+                                int cloonix_rank, int vm_id,
+                                t_topo_cnt *cnt, char *err);
+int suid_power_delete_container(int cli_llid, int cli_tid,
+                                char *name, char *err);
+int suid_power_delete_all_container(void);
 
 void suid_power_init(void);
 /*--------------------------------------------------------------------------*/

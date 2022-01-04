@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -18,6 +18,7 @@
 void wireshark_launch(char *name, int num);
 void edge_ctx_menu(t_bank_item *bitem);
 void node_ctx_menu(t_bank_item *bitem);
+void cnt_ctx_menu(t_bank_item *bitem);
 void intf_ctx_menu(t_bank_item *bitem);
 void lan_ctx_menu(t_bank_item *bitem);
 void sat_ctx_menu(t_bank_item *bitem);

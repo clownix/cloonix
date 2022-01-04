@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -53,7 +53,6 @@ enum
   auto_create_vm_connect,
   auto_max,
   };
-
 
 #define CDROM_CONFIG_ISO "cdrom_config.iso"
 #define DIR_CONF "config"

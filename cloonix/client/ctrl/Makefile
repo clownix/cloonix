@@ -14,7 +14,7 @@ WARNINGS=-Wall
 VPATH=src
 
 EXE = cloonix_ctrl
-SRC = cloonix_ctrl.c cmd_ctrl.c help.c vm_cli.c \
+SRC = cloonix_ctrl.c cnt_cli.c cmd_ctrl.c help.c vm_cli.c \
       struct_2_ascii.c  cmd_layout.c
 
 

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -239,8 +239,16 @@ void modif_position_eth(t_bank_item *bitem, double xi, double yi)
       }
     else
       {
-      tx = (vx * (NODE_DIA*VAL_INTF_POS_NODE))/dist;
-      ty = (vy * (NODE_DIA*VAL_INTF_POS_NODE))/dist;
+      if (bitem->att_node->bank_type == bank_type_cnt)
+        {
+        tx = (vx * (CNT_NODE_DIA*VAL_INTF_POS_NODE))/dist;
+        ty = (vy * (CNT_NODE_DIA*VAL_INTF_POS_NODE))/dist;
+        }
+      else
+        {
+        tx = (vx * (NODE_DIA*VAL_INTF_POS_NODE))/dist;
+        ty = (vy * (NODE_DIA*VAL_INTF_POS_NODE))/dist;
+        }
       }
     }
   mat = cr_item_get_matrix(CR_ITEM(bitem->cr_item));
@@ -284,6 +292,10 @@ static void process_mouse_double_click(t_bank_item *bitem)
       selectioned_flip_flop(bitem);
       break;
 
+    case bank_type_cnt:
+      launch_xterm_double_click_cnt(bitem->name);
+      break;
+
     case bank_type_node:
       config_flags = bitem->pbi.pbi_node->node_vm_config_flags;
       launch_xterm_double_click(bitem->name, config_flags);
@@ -317,6 +329,7 @@ static void process_mouse_motion(GdkEvent *event,
   x = event->motion.x;
   y = event->motion.y;
   if ((bitem->bank_type == bank_type_node) ||
+      (bitem->bank_type == bank_type_cnt)  ||
       (bitem->bank_type == bank_type_lan)  ||
       (bitem->bank_type == bank_type_sat))
     {
@@ -345,6 +358,12 @@ static void menu_caller(t_bank_item *bitem)
       node_ctx_menu(bitem);
       bitem->pbi.menu_on = 1;
       break;
+
+    case bank_type_cnt:
+      cnt_ctx_menu(bitem);
+      bitem->pbi.menu_on = 1;
+      break;
+
     case bank_type_lan:
       if (!is_selectable(bitem))
         {
@@ -378,6 +397,7 @@ static void menu_caller(t_bank_item *bitem)
 static void fct_button_1_pressed(t_bank_item *bitem, int pressed)
 {
   if ((bitem->bank_type == bank_type_node) ||
+      (bitem->bank_type == bank_type_cnt) ||
       (bitem->bank_type == bank_type_eth) ||
       (bitem->bank_type == bank_type_lan) ||
       (bitem->bank_type == bank_type_sat))
@@ -389,6 +409,7 @@ static void fct_button_1_pressed(t_bank_item *bitem, int pressed)
 static void fct_button_1_moved(t_bank_item *bitem, int moved)
 {
   if ((bitem->bank_type == bank_type_node) ||
+      (bitem->bank_type == bank_type_cnt) ||
       (bitem->bank_type == bank_type_lan) ||
       (bitem->bank_type == bank_type_eth) ||
       (bitem->bank_type == bank_type_sat))
@@ -402,7 +423,8 @@ static void fct_bitem_moved_by_operator(t_bank_item *bitem)
   t_layout_node *layout_node;
   t_layout_sat *layout_sat;
   t_layout_lan *layout_lan;
-  if (bitem->bank_type == bank_type_node) 
+  if ((bitem->bank_type == bank_type_node) || 
+      (bitem->bank_type == bank_type_cnt)) 
     {
     layout_node = make_layout_node(bitem);
     layout_send_layout_node(layout_node);
@@ -438,7 +460,8 @@ static void fct_bitem_moved_by_operator(t_bank_item *bitem)
 /****************************************************************************/
 static void fct_button_1_double_click(t_bank_item *bitem, int hit)
 {
-  if (bitem->bank_type == bank_type_node) 
+  if ((bitem->bank_type == bank_type_node) ||
+      (bitem->bank_type == bank_type_cnt))
     bitem->button_1_double_click = hit;
 }
 /*--------------------------------------------------------------------------*/
@@ -831,6 +854,29 @@ static void on_item_paint_node(CrItem *item, cairo_t *c)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void on_item_paint_cnt(CrItem *item, cairo_t *c)
+{
+  t_bank_item *bitem = from_critem_to_bank_item(item);
+  if (!bitem)
+    KOUT(" ");
+  cairo_new_path(c);
+  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
+  if (bitem->pbi.pbi_cnt->cnt_evt_ping_ok)
+    cairo_set_source_rgba (c, 0.50, 0.50, 1.0, 1.0);
+  else
+    cairo_set_source_rgba (c, 0.50, 0.30, 0.30, 1.0);
+  cairo_fill(c);
+  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
+  if (bitem->pbi.grabbed)
+    cairo_set_source_rgba (c, white.r, white.g, white.b, 1.0);
+  else
+    cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
+  cairo_set_line_width(c, bitem->pbi.line_width);
+  cairo_stroke(c);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void sat_rectangle(cairo_t *c, double x0, double y0, double d0)
 {
   cairo_move_to (c, x0 - d0, y0 - d0);
@@ -1017,6 +1063,8 @@ static CrItem *on_item_test(CrItem *item, cairo_t *c, double x, double y)
       cairo_arc (c, x0, y0, INTF_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_node) 
       cairo_arc (c, x0, y0, NODE_DIA/2, 0, 2*M_PI);
+    else if (bitem->bank_type == bank_type_cnt) 
+      cairo_arc (c, x0, y0, CNT_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_sat)
       {
       if (is_a_nat(bitem))
@@ -1070,6 +1118,8 @@ static gboolean on_item_calcb(CrItem *item, cairo_t *c,
       cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, INTF_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_node)
       cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, NODE_DIA/2, 0, 2*M_PI);
+    else if (bitem->bank_type == bank_type_cnt)
+      cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_sat)
       {
       if (is_a_nat(bitem))
@@ -1222,6 +1272,8 @@ void topo_add_cr_item_to_canvas(t_bank_item *bitem, t_bank_item *bnode)
     g_signal_connect(item, "paint", (GCallback) on_item_paint_eth, NULL);
   else if (bitem->bank_type == bank_type_node) 
     g_signal_connect(item, "paint", (GCallback) on_item_paint_node, NULL);
+  else if (bitem->bank_type == bank_type_cnt) 
+    g_signal_connect(item, "paint", (GCallback) on_item_paint_cnt, NULL);
   else if (bitem->bank_type == bank_type_sat)  
     {
     if (is_a_nat(bitem))
@@ -1307,6 +1359,8 @@ void topo_cr_item_text(t_bank_item *bitem, double x, double y, char *name)
     cr_text_new (CR_ITEM(bitem->cr_item), bitem->pbi.x0 - 8, 
                  bitem->pbi.y0 + 8, "cpu", "font", "Sans 6", NULL);
     }
+  else if (bitem->bank_type == bank_type_cnt) 
+    cr_text_new (CR_ITEM(bitem->cr_item), x, y, name,  "font", "Sans 8", NULL);
   else
     cr_text_new (CR_ITEM(bitem->cr_item), x, y, name, "font", "Sans 7", NULL);
 }
@@ -1361,6 +1415,7 @@ void topo_get_absolute_coords(t_bank_item *bitem)
 
     case bank_type_lan:
     case bank_type_node:
+    case bank_type_cnt:
     case bank_type_sat:
       mat = cr_item_get_matrix(CR_ITEM(bitem->cr_item));
       cairo_matrix_transform_point(mat, &x, &y);

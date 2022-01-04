@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,6 +15,13 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+typedef struct t_topo_cnt_chain
+{
+  t_topo_cnt cnt;
+  struct t_topo_cnt_chain *prev;
+  struct t_topo_cnt_chain *next;
+} t_topo_cnt_chain;
+/*--------------------------------------------------------------------------*/
 typedef struct t_topo_kvm_chain
 {
   t_topo_kvm kvm;
@@ -75,6 +82,8 @@ typedef struct t_topo_edge_chain
 /*--------------------------------------------------------------------------*/
 typedef struct t_topo_differences
 {
+  t_topo_cnt_chain  *add_cnt;
+  t_topo_cnt_chain  *del_cnt;
   t_topo_kvm_chain  *add_kvm;
   t_topo_kvm_chain  *del_kvm;
   t_topo_d2d_chain  *add_d2d;

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -115,6 +115,19 @@ static void timer_ping_evt(void *data)
   bitem = look_for_node_with_id(evt->name);
   if (bitem)
     timer_ping_evt_node(bitem, evt->evt);
+  else
+    {
+    bitem = look_for_cnt_with_id(evt->name);
+    if (bitem)
+      {
+      if (evt->evt == vm_evt_cloonix_ga_ping_ok)
+        bitem->pbi.pbi_cnt->cnt_evt_ping_ok = 1;
+      else if (evt->evt == vm_evt_cloonix_ga_ping_ko)
+        bitem->pbi.pbi_cnt->cnt_evt_ping_ok = 0;
+      else
+        KERR("ERROR %d", evt->evt);
+      }
+    }
   clownix_free(data, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -34,8 +34,8 @@ int cmd_qreboot_vm(int argc, char **argv);
 int cmd_qhalt_vm(int argc, char **argv);
 int cmd_reboot_vm(int argc, char **argv);
 int cmd_halt_vm(int argc, char **argv);
-int cmd_del_vm(int argc, char **argv);
 int cmd_add_tap(int argc, char **argv);
+int cmd_add_cnt(int argc, char **argv);
 int cmd_add_phy(int argc, char **argv);
 int cmd_add_a2b(int argc, char **argv);
 int cmd_add_nat(int argc, char **argv);
@@ -65,10 +65,10 @@ void help_qreboot_vm(char *line);
 void help_halt_vm(char *line);
 void help_reboot_vm(char *line);
 void help_qhalt_vm(char *line);
-void help_del_vm(char *line);
 void help_add_nat(char *line);
 void help_add_phy(char *line);
 void help_add_tap(char *line);
+void help_add_cnt(char *line);
 void help_add_a2b(char *line);
 void help_add_d2d(char *line);
 void help_del_sat(char *line);

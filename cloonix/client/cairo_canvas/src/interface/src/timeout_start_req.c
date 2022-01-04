@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -63,12 +63,13 @@ static void gene_delete_item_req(int bank_type, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void to_cloonix_switch_create_node(double x, double y,
+void to_cloonix_switch_create_node(int is_cnt, double x, double y,
                                    double *tx, double *ty)
 {
   t_item_node_req *pa;
   pa = (t_item_node_req *) clownix_malloc(sizeof(t_item_node_req), 12);
   memset(pa, 0, sizeof(t_item_node_req));
+  pa->is_cnt = is_cnt;
   pa->x = x;
   pa->y = y;
   memcpy(pa->tx, tx, MAX_DPDK_VM * sizeof(double));

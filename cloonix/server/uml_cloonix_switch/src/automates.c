@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -167,6 +167,8 @@ void last_action_self_destruction(void *data)
   if (unlink_sub_dir_files_except_dir(utils_get_dpdk_cloonix_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dtach_sock_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_cnt_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_snf_pcap_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);

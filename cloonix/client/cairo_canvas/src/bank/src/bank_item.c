@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -388,6 +388,7 @@ static t_bank_item *bank_look_for_item(int bank_type, char *name, int num,
     KOUT(" %d", bank_type);
   switch(bank_type)
     {
+    case bank_type_cnt:
     case bank_type_node:
     case bank_type_lan:
     case bank_type_sat:
@@ -438,6 +439,15 @@ t_bank_item *look_for_node_with_id(char *name)
 {
   t_bank_item *result;
   result = bank_look_for_item(bank_type_node, name, 0, NULL);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+t_bank_item *look_for_cnt_with_id(char *name)
+{
+  t_bank_item *result;
+  result = bank_look_for_item(bank_type_cnt, name, 0, NULL);
   return result;
 }
 /*--------------------------------------------------------------------------*/

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -22,15 +22,13 @@
 #define CLOONIX_SWITCH "cloonix_switch"
 #define XWY_TRAFFIC_SOCK "xwy_traf"
 #define XWY_CONTROL_SOCK "xwy_ctrl"
-#define MUSWITCH_SOCK_DIR "mu"
-#define MUSWITCH_TRAF_DIR "tmu"
 #define SUID_POWER_SOCK_DIR "suid_power"
 #define XYX_DPDK_SOCK_DIR "xyx_dpdk"
 #define NAT_DPDK_SOCK_DIR "nat_dpdk"
 #define A2B_DPDK_SOCK_DIR "a2b_dpdk"
 #define D2D_DPDK_SOCK_DIR "d2d_dpdk"
 #define SNF_PCAP_DIR "snf"
-
+#define CONTAINER_DIR "cnt"
 
 #define MAX_STATS_ITEMS 30
 
@@ -82,7 +80,6 @@ enum {
 
 enum {
   vmcmd_min = 0,
-  vmcmd_del,
   vmcmd_halt_with_guest,
   vmcmd_reboot_with_guest,
   vmcmd_halt_with_qemu,
@@ -279,6 +276,10 @@ void recv_status_ok(int llid, int tid, char *txt);
 void send_status_ko(int llid, int tid, char *reason);
 void recv_status_ko(int llid, int tid, char *reason);
 
+/*---------------------------------------------------------------------------*/
+void send_cnt_add(int llid, int tid, t_topo_cnt *cnt);
+void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt);
+/*---------------------------------------------------------------------------*/
 void send_add_vm(int llid, int tid, t_topo_kvm *kvm);
 void recv_add_vm(int llid, int tid, t_topo_kvm *kvm);
 void send_sav_vm(int llid, int tid, char *name, int type, char *sav_vm_path);
@@ -299,8 +300,10 @@ void recv_eventfull(int llid, int tid, int nb_endp, t_eventfull_endp *endp);
 
 void send_slowperiodic_sub(int llid, int tid);
 void recv_slowperiodic_sub(int llid, int tid);
-void send_slowperiodic(int llid, int tid, int nb, t_slowperiodic *spic); 
-void recv_slowperiodic(int llid, int tid, int nb, t_slowperiodic *spic);
+void send_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic); 
+void recv_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic);
+void send_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic); 
+void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic);
 
 void send_list_pid_req(int llid, int tid);
 void recv_list_pid_req(int llid, int tid);

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -343,6 +343,8 @@ void recv_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
 void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
 {KOUT(" ");}
 
+void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
+{KOUT(" ");}
 void recv_tap_add(int llid, int tid, char *name)
 {KOUT(" ");}
 void recv_a2b_add(int llid, int tid, char *name)

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -54,6 +54,24 @@ static void create_node_resp(t_topo_kvm *kvm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void create_cnt_resp(t_topo_cnt *cnt)
+{
+  int hidden_on_graph, color_choice;
+  double x, y;
+  double tx[MAX_DPDK_VM];
+  double ty[MAX_DPDK_VM];
+  int32_t thidden_on_graph[MAX_DPDK_VM];
+
+  get_node_layout_x_y(cnt->name, &color_choice, &x, &y, &hidden_on_graph,
+                      tx, ty, thidden_on_graph);
+
+  bank_cnt_create(cnt->name, cnt->image, cnt->ping_ok,
+                  cnt->nb_tot_eth, cnt->eth_table,
+                  x, y, hidden_on_graph, tx, ty, thidden_on_graph);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void timer_create_obj_resp(void *data)
 {
   double x, y, xa, ya, xb, yb;
@@ -65,56 +83,58 @@ void timer_create_obj_resp(void *data)
     create_node_resp(pa->kvm);
     clownix_free(pa->kvm, __FUNCTION__);
     }
-  else
+  else if (pa->cnt)
     {
-    if (pa->d2d)
-      {
-      name = pa->d2d->name;
-      get_gene_layout_x_y(bank_type_sat, name,
-                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
-      bank_sat_create(name, endp_type_d2d, pa->d2d, NULL,
-                      x, y, xa, ya, xb, yb, hidden);
-      clownix_free(pa->d2d, __FUNCTION__);
-      }
-    else if (pa->a2b)
-      {
-      name = pa->a2b->name;
-      get_gene_layout_x_y(bank_type_sat, name,
-                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
-      bank_sat_create(name, endp_type_a2b, NULL, pa->a2b,
-                      x, y, xa, ya, xb, yb, hidden);
-      clownix_free(pa->a2b, __FUNCTION__);
-      }
-    else if (pa->tap)
-      {
-      name = pa->tap->name;
-      get_gene_layout_x_y(bank_type_sat, name,
-                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
-      bank_sat_create(name, endp_type_tap, NULL, NULL,
-                      x, y, xa, ya, xb, yb, hidden);
-      clownix_free(pa->tap, __FUNCTION__);
-      }
-    else if (pa->nat)
-      {
-      name = pa->nat->name;
-      get_gene_layout_x_y(bank_type_sat, name,
-                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
-      bank_sat_create(name, endp_type_nat, NULL, NULL,
-                      x, y, xa, ya, xb, yb, hidden);
-      clownix_free(pa->nat, __FUNCTION__);
-      }
-    else if (pa->phy)
-      {
-      name = pa->phy->name;
-      get_gene_layout_x_y(bank_type_sat, name,
-                          &x, &y, &xa, &ya, &xb, &yb, &hidden);
-      bank_sat_create(name, endp_type_phy, NULL, NULL,
-                      x, y, xa, ya, xb, yb, hidden);
-      clownix_free(pa->phy, __FUNCTION__);
-      }
-    else
-      KOUT(" ");
+    create_cnt_resp(pa->cnt);
+    clownix_free(pa->cnt, __FUNCTION__);
     }
+  else if (pa->d2d)
+    {
+    name = pa->d2d->name;
+    get_gene_layout_x_y(bank_type_sat, name,
+                        &x, &y, &xa, &ya, &xb, &yb, &hidden);
+    bank_sat_create(name, endp_type_d2d, pa->d2d, NULL,
+                    x, y, xa, ya, xb, yb, hidden);
+    clownix_free(pa->d2d, __FUNCTION__);
+    }
+  else if (pa->a2b)
+    {
+    name = pa->a2b->name;
+    get_gene_layout_x_y(bank_type_sat, name,
+                        &x, &y, &xa, &ya, &xb, &yb, &hidden);
+    bank_sat_create(name, endp_type_a2b, NULL, pa->a2b,
+                    x, y, xa, ya, xb, yb, hidden);
+    clownix_free(pa->a2b, __FUNCTION__);
+    }
+  else if (pa->tap)
+    {
+    name = pa->tap->name;
+    get_gene_layout_x_y(bank_type_sat, name,
+                        &x, &y, &xa, &ya, &xb, &yb, &hidden);
+    bank_sat_create(name, endp_type_tap, NULL, NULL,
+                    x, y, xa, ya, xb, yb, hidden);
+    clownix_free(pa->tap, __FUNCTION__);
+    }
+  else if (pa->nat)
+    {
+    name = pa->nat->name;
+    get_gene_layout_x_y(bank_type_sat, name,
+                        &x, &y, &xa, &ya, &xb, &yb, &hidden);
+    bank_sat_create(name, endp_type_nat, NULL, NULL,
+                    x, y, xa, ya, xb, yb, hidden);
+    clownix_free(pa->nat, __FUNCTION__);
+    }
+  else if (pa->phy)
+    {
+    name = pa->phy->name;
+    get_gene_layout_x_y(bank_type_sat, name,
+                        &x, &y, &xa, &ya, &xb, &yb, &hidden);
+    bank_sat_create(name, endp_type_phy, NULL, NULL,
+                    x, y, xa, ya, xb, yb, hidden);
+    clownix_free(pa->phy, __FUNCTION__);
+    }
+  else
+    KOUT(" ");
   clownix_free(pa, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
@@ -155,6 +175,9 @@ void timer_delete_item_resp(void *data)
   t_item_delete_resp *pa = (t_item_delete_resp *) data;
   switch(pa->bank_type)
     {
+    case bank_type_cnt:
+      bank_cnt_delete(pa->name);
+      break;
     case bank_type_node:
       bank_node_delete(pa->name);
       break;

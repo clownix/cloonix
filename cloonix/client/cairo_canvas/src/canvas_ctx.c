@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -45,6 +45,7 @@
 #include "menus.h"
 #include "hidden_visible_edge.h"
 #include "menu_dialog_kvm.h"
+#include "menu_dialog_cnt.h"
 #include "menu_dialog_d2d.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
@@ -190,9 +191,49 @@ static void call_cloonix_interface_node_create(double x, double y)
       }
     }
   topo_get_matrix_inv_transform_point(&x0, &y0);
-  to_cloonix_switch_create_node(x0, y0, tx, ty);
+  to_cloonix_switch_create_node(0, x0, y0, tx, ty);
 }
 /*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+static void call_cloonix_interface_node_cnt_create(double x, double y) 
+{ 
+  int rest, i;
+  double tx[MAX_DPDK_VM];
+  double ty[MAX_DPDK_VM];
+  double x0=x, y0=y;
+  memset(tx, 0, (MAX_DPDK_VM) * sizeof(double));
+  memset(ty, 0, (MAX_DPDK_VM) * sizeof(double));
+  for (i=0; i<MAX_DPDK_VM; i++)
+    {
+    rest = i%4; 
+    if (rest == 0)
+      {
+      tx[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
+      ty[i] = (double) (-NODE_DIA * VAL_INTF_POS_NODE);
+      }
+    if (rest == 1)
+      {
+      tx[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
+      ty[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
+      }
+    if (rest == 2)
+      {
+      tx[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
+      ty[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
+      }
+    if (rest == 3)
+      {
+      tx[i] = (double) (-NODE_DIA * VAL_INTF_POS_NODE);
+      ty[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
+      }
+    }
+  topo_get_matrix_inv_transform_point(&x0, &y0);
+  to_cloonix_switch_create_node(1, x0, y0, tx, ty);
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 static void hidden_visible_check_toggled(GtkToggleButton *check, 
@@ -203,7 +244,8 @@ static void hidden_visible_check_toggled(GtkToggleButton *check,
   if (gtk_toggle_button_get_active(check))
     val = 1;
   hidden_visible_modification(bi, val);
-  if (bi->bank_type == bank_type_node) 
+  if ((bi->bank_type == bank_type_node) ||
+      (bi->bank_type == bank_type_cnt))
     {
     intf = bi->head_eth_list;
     while (intf)
@@ -445,6 +487,13 @@ static void kvm_act(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void cnt_act(void)
+{
+  call_cloonix_interface_node_cnt_create(g_x_mouse, g_y_mouse);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void d2d_act(void)
 {
   call_cloonix_interface_d2d_create(g_x_mouse, g_y_mouse);
@@ -471,6 +520,14 @@ static void kvm_cact(void)
   menu_choice_kvm();
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void cnt_cact(void)
+{
+  menu_choice_cnt();
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 static void display_info(char *title, char *text)
@@ -658,6 +715,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *separator1 = gtk_separator_menu_item_new();
   GtkWidget *lan  = gtk_menu_item_new_with_label("lan");
   GtkWidget *kvm  = gtk_menu_item_new_with_label("kvm");
+  GtkWidget *cnt  = gtk_menu_item_new_with_label("cnt");
   GtkWidget *nat  = gtk_menu_item_new_with_label("nat");
   GtkWidget *tap  = gtk_menu_item_new_with_label("tap");
   GtkWidget *d2d  = gtk_menu_item_new_with_label("d2d");
@@ -666,11 +724,14 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *ovs  = gtk_menu_item_new_with_label("ovs");
   GtkWidget *cmd  = gtk_menu_item_new_with_label("cmd_list");
   GtkWidget *kvm_conf = gtk_menu_item_new_with_label("Kvm_conf");
+  GtkWidget *cnt_conf = gtk_menu_item_new_with_label("Cnt_conf");
   GtkWidget *other= gtk_menu_item_new_with_label("Other");
   g_x_mouse = (double) x;
   g_y_mouse = (double) y;
   g_signal_connect_swapped(G_OBJECT(kvm), "activate",
                           (GCallback)kvm_act, NULL);
+  g_signal_connect_swapped(G_OBJECT(cnt), "activate",
+                          (GCallback)cnt_act, NULL);
   g_signal_connect_swapped(G_OBJECT(lan), "activate",
                           (GCallback)lan_act, NULL);
   g_signal_connect_swapped(G_OBJECT(tap), "activate",
@@ -683,6 +744,8 @@ void canvas_ctx_menu(gdouble x, gdouble y)
                           (GCallback)nat_act, NULL);
   g_signal_connect_swapped(G_OBJECT(kvm_conf), "activate",
                           (GCallback)kvm_cact, NULL);
+  g_signal_connect_swapped(G_OBJECT(cnt_conf), "activate",
+                          (GCallback)cnt_cact, NULL);
   g_signal_connect_swapped(G_OBJECT(ovs), "activate",
                           (GCallback)ovs_cact, NULL);
   g_signal_connect_swapped(G_OBJECT(cmd), "activate",
@@ -690,6 +753,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
 
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), lan);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), cnt);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), nat);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), tap);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), d2d);
@@ -697,6 +761,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), phy);
   phy_sub_menu(phy);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm_conf);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), cnt_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator1);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), ovs);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), cmd);

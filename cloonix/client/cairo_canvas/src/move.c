@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -380,6 +380,7 @@ static void spring_force_item(t_bank_item *bitem)
 {
   t_list_bank_item *cur;
   if ((bitem->bank_type == bank_type_node) ||
+      (bitem->bank_type == bank_type_cnt) ||
       ((bitem->bank_type == bank_type_sat) && 
         (bitem->pbi.endp_type == endp_type_a2b)))
     {
@@ -438,6 +439,8 @@ static void set_close_range_repulse_force(t_bank_item *bitem, t_bank_item *cur)
   factor = repulse_k/10;
   if (bitem->bank_type == bank_type_node) 
     min_dist = 2000;
+  else if (bitem->bank_type == bank_type_cnt) 
+    min_dist = 1000;
   else
     min_dist = 300;
 

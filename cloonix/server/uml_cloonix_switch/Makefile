@@ -62,6 +62,7 @@ SRC = \
       dpdk_phy.c \
       dpdk_kvm.c \
       dispatch_diag_msg.c \
+      container.c \
       server_stub.c
 
 INCLUDES= -I./src \

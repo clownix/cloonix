@@ -3,7 +3,7 @@ HERE=`pwd`
 TARGZ=${HERE}/../../targz_store
 rm -rf spice-gtk*
 rm -f ${TARGZ}/spice-gtk_*.tar.gz
-git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-gtk.git
+git clone --depth=1 https://github.com/freedesktop/spice-gtk.git
 cd ${HERE}/spice-gtk
 COMMITGTK=$(git log --pretty=format:"%H")
 git submodule init

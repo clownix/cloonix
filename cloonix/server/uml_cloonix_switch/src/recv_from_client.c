@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -61,6 +61,7 @@
 #include "xyx_dpdk_process.h"
 #include "a2b_dpdk_process.h"
 #include "list_commands.h"
+#include "container.h"
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
 int inside_cloonix(char **name);
@@ -104,7 +105,7 @@ typedef struct t_coherency_delay
 /*---------------------------------------------------------------------------*/
 typedef struct t_add_vm_cow_look
 {
-  char msg[MAX_PRINT_LEN];
+  char msg[MAX_PATH_LEN];
   int llid;
   int tid;
   int vm_id;
@@ -133,6 +134,21 @@ static long long g_coherency_abs_beat_timer;
 static int g_coherency_ref_timer;
 static int g_inhib_new_clients;
 
+/*****************************************************************************/
+static int is_spyable_lan(char *lan)
+{
+  int result = 0;
+  if (dpdk_xyx_lan_exists(lan))
+    result = 1;
+  if (dpdk_a2b_lan_exists(lan))
+    result = 1;
+  if (dpdk_nat_lan_exists(lan))
+    result = 1;
+  if (dpdk_d2d_lan_exists(lan))
+    result = 1;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static int get_inhib_new_clients(void)
@@ -235,7 +251,7 @@ void recv_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu)
 /*****************************************************************************/
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on)
 {
-  char info[MAX_PRINT_LEN];
+  char info[MAX_PATH_LEN];
   t_vm *vm;
   vm = cfg_get_vm(name);
   event_print("Rx Req promisc %d for  %s eth%d", on, name, eth);
@@ -397,20 +413,6 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
   char err[MAX_PATH_LEN];
   switch(cmd)
     {
-
-    case vmcmd_del:
-      if (vm)
-        {
-        event_print("Rx Req del machine %s", name);
-        poweroff_vm(llid, tid, vm);
-        }
-      else
-        {
-        snprintf(err, MAX_PATH_LEN-1, "ERROR: %s NOT FOUND", name);
-        send_status_ko(llid, tid, err);
-        }
-      break;
-
     case vmcmd_halt_with_guest:
       if (vm)
         {
@@ -491,11 +493,13 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
 /*****************************************************************************/
 static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
 {
-  char info[MAX_PRINT_LEN];
+  char info[MAX_PATH_LEN];
   t_vm *vm = cfg_get_vm(name);
   t_eth_table *eth_tab = NULL;
+  int nb_eth;
   int endp_dpdk = dpdk_kvm_exists(name, num);
   int endp_type = dpdk_xyx_exists(name, num);
+  int cnt_exists = container_info(name, &nb_eth, &eth_tab);
   if (vm != NULL)
     eth_tab = vm->kvm.eth_table;
 
@@ -509,102 +513,127 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
     send_status_ko(llid, tid, info);
     KERR("ERROR %s %d %s", name, num, lan);
     }
-  else
+  else if (cnt_exists)
     {
-    if (dpdk_d2d_find(name))
-      dpdk_d2d_add_lan(llid, tid, name, lan);
-    else if (dpdk_a2b_exists(name))
+    if (nb_eth <= num)
       {
-      if (dpdk_a2b_add_lan(llid, tid, name, num, lan))
-        {
-        send_status_ko(llid, tid, "failure");
-        KERR("ERROR %s %d %s", name, num, lan);
-        }
-      }
-    else if (dpdk_nat_exists(name))
-      {
-      if (dpdk_nat_add_lan(llid, tid, name, lan))
-        {
-        send_status_ko(llid, tid, "failure");
-        KERR("ERROR %s %s", name, lan);
-        }
-      }
-    else if (endp_type == endp_type_tap)
-      {
-      if (dpdk_tap_add_lan(llid, tid, name, lan))
-        {
-        send_status_ko(llid, tid, "failure");
-        KERR("ERROR %s %d %s", name, num, lan);
-        }
-      }
-    else if (endp_type == endp_type_phy)
-      {
-      if (dpdk_phy_add_lan(llid, tid, name, lan))
-        {
-        send_status_ko(llid, tid, "failure");
-        KERR("ERROR %s %d %s", name, num, lan);
-        }
-      }
-    else if (endp_type == endp_type_eths)
-      {
-      if ((vm == NULL) ||
-          (eth_tab[num].endp_type != endp_type_eths) ||
-          (num >= vm->kvm.nb_tot_eth))
-        {
-        send_status_ko(llid, tid, "failure");
-        KERR("ERROR %s %d %s", name, num, lan);
-        }
-      else
-        {
-        if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_eths))
-          {
-          send_status_ko(llid, tid, "failure");
-          KERR("ERROR %s %d %s", name, num, lan);
-          }
-        }
-      }
-    else if (endp_dpdk == endp_type_ethd)
-      {
-      if ((vm == NULL) ||
-          (eth_tab[num].endp_type != endp_type_ethd) || 
-          (num >= vm->kvm.nb_tot_eth))
-        {
-        send_status_ko(llid, tid, "failure");
-        KERR("ERROR %s %d %s", name, num, lan);
-        }
-      else
-        {
-        if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_ethd))
-          {
-          send_status_ko(llid, tid, "failure");
-          KERR("ERROR %s %d %s", name, num, lan);
-          }
-        }
-      }
-    else if (endp_dpdk == endp_type_ethv)
-      {
-      if ((vm == NULL) ||
-          (eth_tab[num].endp_type != endp_type_ethv) ||
-          (num >= vm->kvm.nb_tot_eth))
-        {
-        send_status_ko(llid, tid, "failure");
-        KERR("ERROR %s %d %s", name, num, lan);
-        }
-      else
-        {
-        if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_ethv))
-          {
-          send_status_ko(llid, tid, "failure");
-          KERR("ERROR %s %d %s", name, num, lan);
-          }
-        }
+      send_status_ko(llid, tid, "eth does not exist");
+      KERR("ERROR %s %d %s", name, num, lan);
       }
     else
       {
-      snprintf(info, MAX_PATH_LEN, "%s %d not found", name, num);
-      send_status_ko(llid, tid, info);
+      if (container_add_lan(llid, tid, name, num, lan, info))
+        {
+        send_status_ko(llid, tid, info);
+        KERR("ERROR %s", info);
+        }
+      }
+    }
+  else if (dpdk_d2d_find(name))
+    {
+    dpdk_d2d_add_lan(llid, tid, name, lan);
+    }
+  else if (dpdk_a2b_exists(name))
+    {
+    if (dpdk_a2b_add_lan(llid, tid, name, num, lan))
+      {
+      send_status_ko(llid, tid, "failure");
       KERR("ERROR %s %d %s", name, num, lan);
       }
+    }
+  else if (dpdk_nat_exists(name))
+    {
+    if (dpdk_nat_add_lan(llid, tid, name, lan))
+      {
+      send_status_ko(llid, tid, "failure");
+      KERR("ERROR %s %s", name, lan);
+      }
+    }
+  else if (endp_type == endp_type_tap)
+    {
+    if (dpdk_tap_add_lan(llid, tid, name, lan))
+      {
+      send_status_ko(llid, tid, "failure");
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
+    }
+  else if (endp_type == endp_type_phy)
+    {
+    if (dpdk_phy_add_lan(llid, tid, name, lan))
+      {
+      send_status_ko(llid, tid, "failure");
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
+    }
+  else if (endp_type == endp_type_eths)
+    {
+    if ((vm == NULL) ||
+        (eth_tab[num].endp_type != endp_type_eths) ||
+        (num >= vm->kvm.nb_tot_eth))
+      {
+      send_status_ko(llid, tid, "failure");
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
+    else
+      {
+      if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_eths))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %d %s", name, num, lan);
+        }
+      }
+    }
+  else if (endp_dpdk == endp_type_ethd)
+    {
+    if ((vm == NULL) ||
+        (eth_tab[num].endp_type != endp_type_ethd) || 
+        (num >= vm->kvm.nb_tot_eth))
+      {
+      send_status_ko(llid, tid, "failure");
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
+    else if (is_spyable_lan(lan))
+      {
+      send_status_ko(llid, tid, "failure incompatible with spyable");
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
+    else
+      {
+      if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_ethd))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %d %s", name, num, lan);
+        }
+      }
+    }
+  else if (endp_dpdk == endp_type_ethv)
+    {
+    if ((vm == NULL) ||
+        (eth_tab[num].endp_type != endp_type_ethv) ||
+        (num >= vm->kvm.nb_tot_eth))
+      {
+      send_status_ko(llid, tid, "failure");
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
+    else if (is_spyable_lan(lan))
+      {
+      send_status_ko(llid, tid, "failure incompatible with spyable");
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
+    else
+      {
+      if (dpdk_kvm_add_lan(llid, tid, name, num, lan, endp_type_ethv))
+        {
+        send_status_ko(llid, tid, "failure");
+        KERR("ERROR %s %d %s", name, num, lan);
+        }
+      }
+    }
+  else
+    {
+    snprintf(info, MAX_PATH_LEN, "%s %d not found", name, num);
+    send_status_ko(llid, tid, info);
+    KERR("ERROR %s %d %s", name, num, lan);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -651,7 +680,10 @@ static void timer_endp(void *data)
   int d2d_exists = dpdk_d2d_exists(te->name);
   int a2b_exists = dpdk_a2b_exists(te->name);
   int nat_exists = dpdk_nat_exists(te->name);
-  if (endp_dpdk || endp_type_exists ||
+  int nb_eth;
+  t_eth_table *eth_tab;
+  int cnt_exists = container_info(te->name, &nb_eth, &eth_tab);
+  if (endp_dpdk || endp_type_exists || cnt_exists ||
       d2d_exists || a2b_exists || nat_exists)
     {
     local_add_lan(te->llid, te->tid, te->name, te->num, te->lan);
@@ -801,11 +833,36 @@ void recv_event_topo_sub(int llid, int tid)
 /*****************************************************************************/
 void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
 {
-  char info[MAX_PRINT_LEN];
+  char info[MAX_PATH_LEN];
   int endp_dpdk = dpdk_kvm_exists(name, num);
   int endp_type = dpdk_xyx_exists(name, num);
+  t_eth_table *eth_tab = NULL;
+  int nb_eth;
+  int cnt_exists = container_info(name, &nb_eth, &eth_tab);
   event_print("Rx Req del lan %s of %s %d", lan, name, num);
-  if (dpdk_d2d_lan_exists_in_d2d(name, lan, 0))
+
+  if (container_name_exists(name, &nb_eth))
+    {
+    if (!cnt_exists)
+      {
+      send_status_ko(llid, tid, "eth operation ongoing");
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
+    else if (nb_eth <= num)
+      {
+      send_status_ko(llid, tid, "eth does not exist");
+      KERR("ERROR %s %d %s", name, num, lan);
+      }
+    else
+      {
+      if (container_del_lan(llid, tid, name, num, lan, info))
+        {
+        send_status_ko(llid, tid, info);
+        KERR("ERROR %s", info);
+        }
+      }
+    }
+  else if (dpdk_d2d_lan_exists_in_d2d(name, lan, 0))
     {
     dpdk_d2d_del_lan(llid, tid, name, lan);
     }
@@ -1167,7 +1224,7 @@ static void cow_look_clone_msg(void *data, char *msg)
     ptr = strchr(msg, '/');
     if (ptr)
       {
-      strncpy(add_vm->msg, ptr, MAX_PRINT_LEN-1);
+      strncpy(add_vm->msg, ptr, MAX_PATH_LEN-1);
       KERR("%s", add_vm->msg);
       }
     }
@@ -1229,7 +1286,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
   int i, vm_id, result = -1;
   int nb_dpdk = 0;
   char mac[6];
-  char info[MAX_PRINT_LEN];
+  char info[MAX_PATH_LEN];
   char natplug_name[2*MAX_NAME_LEN];
   char lan_natplug_name[2*MAX_NAME_LEN];
   char use[MAX_PATH_LEN];
@@ -1237,6 +1294,8 @@ static void delayed_add_vm(t_timer_zombie *tz)
   int llid = tz->llid, tid = tz->tid;
   t_topo_kvm *kvm = &(tz->kvm);
   t_vm   *vm = cfg_get_vm(kvm->name);
+  char *npn = natplug_name;
+  char *lnpn = lan_natplug_name;
   info[0] = 0;
   memset(mac, 0, 6);
   memset(natplug_name, 0, 2*MAX_NAME_LEN);
@@ -1273,8 +1332,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
            ((cfg_name_is_in_use(0, natplug_name, use)) ||
             (cfg_name_is_in_use(0, lan_natplug_name, use))))
     {
-    sprintf(info, "Cisco needs nat \"%s\" or \"%s\", already exists",
-            natplug_name, lan_natplug_name);
+    sprintf(info, "Cisco needs nat \"%s\" or \"%s\", exists", npn, lnpn);
     event_print("%s", info);
     recv_coherency_unlock();
     send_status_ko(llid, tid, info);
@@ -1414,21 +1472,23 @@ void recv_list_commands_req(int llid, int tid, int is_layout)
 /*****************************************************************************/
 t_pid_lst *create_list_pid(int *nb)
 {
-  int i,j, nb_vm, nb_sum, nb_ovs;
+  int i,j, nb_vm, nb_cnt, nb_sum, nb_ovs;
   int nb_nat_dpdk, nb_d2d_dpdk, nb_a2b_dpdk, nb_xyx_dpdk;
   t_lst_pid *ovs_pid = NULL;
+  t_lst_pid *cnt_pid = NULL;
   t_lst_pid *nat_dpdk_pid = NULL;
   t_lst_pid *d2d_dpdk_pid = NULL;
   t_lst_pid *a2b_dpdk_pid = NULL;
   t_lst_pid *xyx_dpdk_pid = NULL;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_pid_lst *lst;
+  nb_cnt = container_get_all_pid(&cnt_pid);
   nb_nat_dpdk = nat_dpdk_get_all_pid(&nat_dpdk_pid);
   nb_d2d_dpdk = d2d_dpdk_get_all_pid(&d2d_dpdk_pid);
   nb_xyx_dpdk = xyx_dpdk_get_all_pid(&xyx_dpdk_pid);
   nb_a2b_dpdk = a2b_dpdk_get_all_pid(&a2b_dpdk_pid);
   nb_ovs   = dpdk_ovs_get_all_pid(&ovs_pid);
-  nb_sum   = nb_ovs + nb_vm + 10;
+  nb_sum   = nb_ovs + nb_vm + nb_cnt + 10;
   nb_sum   += nb_nat_dpdk + nb_d2d_dpdk;
   nb_sum   += nb_a2b_dpdk + nb_xyx_dpdk;
   lst = (t_pid_lst *)clownix_malloc(nb_sum*sizeof(t_pid_lst),18);
@@ -1445,6 +1505,15 @@ t_pid_lst *create_list_pid(int *nb)
     }
   if (vm)
     KOUT(" ");
+
+  for (i=0 ; i<nb_cnt; i++)
+    {
+    strncpy(lst[j].name, cnt_pid[i].name, MAX_NAME_LEN-1);
+    lst[j].pid = cnt_pid[i].pid;
+    j++;
+    }
+  clownix_free(cnt_pid, __FUNCTION__);
+
   for (i=0 ; i<nb_nat_dpdk; i++)
     {
     strncpy(lst[j].name, nat_dpdk_pid[i].name, MAX_NAME_LEN-1);
@@ -1580,6 +1649,7 @@ static void del_all_start(void)
     poweroff_vm(0, 0, vm);
     vm = vm->next;
     }
+  suid_power_delete_all_container();
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1623,18 +1693,19 @@ static void timer_del_all_end(void *data)
 /*****************************************************************************/
 static void timer_del_all(void *data)
 { 
-  int nb_vm, found = 0;
+  int nb_vm, nb_cnt, found = 0;
   t_timer_del *td = (t_timer_del *) data;;
 
   cfg_get_first_vm(&nb_vm);
-  found = nb_vm;
+  nb_cnt = suid_power_delete_all_container();
+  found = nb_vm + nb_cnt;
   found += dpdk_nat_get_qty();
   found += dpdk_xyx_get_qty();
   found += dpdk_a2b_get_qty();
   found += dpdk_d2d_get_qty();
   if (found)
     {
-    if (nb_vm == 0)
+    if (nb_vm + nb_cnt == 0)
       dpdk_ovs_client_destruct();
     td->tzcount += 1;
     if (td->tzcount > 50)
@@ -1737,10 +1808,17 @@ void recv_topo_small_event_unsub(int llid, int tid)
 /****************************************************************************/
 void recv_del_sat(int llid, int tid, char *name)
 {
+  int nb_eth;
   char info[MAX_PATH_LEN];
   event_print("Rx Req del %s", name);
   t_d2d_cnx *d2d = dpdk_d2d_find(name);
-  if (d2d)
+  t_vm *vm = cfg_get_vm(name);
+  if (vm)
+    {
+    event_print("Rx Req del machine %s", name);
+    poweroff_vm(llid, tid, vm);
+    }
+  else if (d2d)
     {
     if (dpdk_d2d_del(name, info))
       send_status_ko(llid, tid, info);
@@ -1775,8 +1853,19 @@ void recv_del_sat(int llid, int tid, char *name)
     else
       send_status_ok(llid, tid, "");
     }
+  else if (container_name_exists(name, &nb_eth))
+    {
+    if (suid_power_delete_container(llid, tid, name, info))
+      {
+      KERR("ERROR %s", info);
+      send_status_ko(llid, tid, info);
+      }
+    }
   else 
+    {
+    send_status_ko(llid, tid, "NOT FOUND");
     KERR("ERROR %s", name);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -2139,6 +2228,51 @@ void recv_d2d_peer_conf(int llid, int tid, char *name,
 void recv_d2d_peer_ping(int llid, int tid, char *name, int status)
 {
   dpdk_d2d_peer_ping(llid, tid, name, status);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char err[MAX_PATH_LEN];
+  int i, cloonix_rank, vm_id;
+
+  event_print("Rx Req add cnt %s", cnt->name);
+  if (get_inhib_new_clients())
+    {
+    KERR("ERROR %s %s", locnet, cnt->name);
+    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    }
+  else if (cfg_name_is_in_use(0, cnt->name, err))
+    {
+    KERR("ERROR %s %s", locnet, cnt->name);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    cloonix_rank = get_conf_rank();
+    vm_id = cfg_alloc_vm_id();
+    for (i=0; i < cnt->nb_tot_eth; i++)
+      {
+      if (cnt->eth_table[i].mac_addr[0] == 0)
+        {
+        cnt->eth_table[i].mac_addr[0] = 0x2;
+        cnt->eth_table[i].mac_addr[1] = 0xFF & rand();
+        cnt->eth_table[i].mac_addr[2] = 0xFF & rand();
+        cnt->eth_table[i].mac_addr[3] = 0xFF & rand();
+        cnt->eth_table[i].mac_addr[4] = vm_id%100;
+        cnt->eth_table[i].mac_addr[5] = i;
+        cnt->eth_table[i].randmac = 1;
+        }
+      }
+    if (suid_power_create_container(llid, tid, cloonix_rank, vm_id, cnt, err))
+      {
+      KERR("ERROR %s", err);
+      cfg_free_vm_id(vm_id);
+      send_status_ko(llid, tid, err);
+      }
+    }
 }
 /*--------------------------------------------------------------------------*/
 

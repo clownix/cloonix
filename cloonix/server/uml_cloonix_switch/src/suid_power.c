@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -39,6 +39,7 @@
 #include "hop_event.h"
 #include "dpdk_ovs.h"
 #include "llid_trace.h"
+#include "container.h"
 
 static long long g_abs_beat_timer;
 static int g_ref_timer;
@@ -74,11 +75,11 @@ static void unformat_bridges(char *msg)
   int i, j, nb, nb_port;
   char *ptr = strstr(msg, "<ovs_bridges>");
   if (!ptr)
-    KERR("%s", msg);
+    KERR("ERROR %s", msg);
   else
     {
     if (sscanf(ptr, "<ovs_bridges> %d ", &nb) != 1)
-      KERR("%s", msg);
+      KERR("ERROR %s", msg);
     else
       {
       if ((nb < 0) || (nb >= MAX_OVS_BRIDGES))
@@ -119,7 +120,7 @@ static void ovs_topo_arrival(char *msg)
     return;
   ptr = strstr(msg, "</ovs_topo_config>");
   if (!ptr)
-    KERR("%s", msg);
+    KERR("ERROR %s", msg);
   else
     {  
     nb_brgs = g_nb_brgs;
@@ -178,6 +179,7 @@ static void timer_monitoring(void *data)
     return;
   if (g_no_more_timeout == 1)
     return;
+  container_timer_beat(g_llid);
   count += 1;
   if (old_nb_pid_resp == g_nb_pid_resp)
     g_nb_pid_resp_warning++;
@@ -191,7 +193,7 @@ static void timer_monitoring(void *data)
       g_abs_beat_timer = 0;
       g_ref_timer = 0;
       }
-    KERR("RESTARTING SUID_POWER %d", g_llid);
+    KERR("ERROR RESTARTING SUID_POWER %d", g_llid);
     llid_trace_free(g_llid, 0, __FUNCTION__);
     hop_event_free(g_llid);
     g_llid = 0; 
@@ -211,6 +213,7 @@ static void timer_monitoring(void *data)
     rpct_send_pid_req(g_llid, type_hop_suid_power, "suid_power", 0);
     if (count % 2)
       {
+      container_poldiag_req(g_llid, FLAG_HOP_POLDIAG);
       req = "cloonixsuid_req_phy";
       hop_event_hook(g_llid, FLAG_HOP_POLDIAG, req);
       rpct_send_poldiag_msg(g_llid, type_hop_suid_power, req);
@@ -242,7 +245,7 @@ static void timer_connect(void *data)
     g_llid = llid;
     llid_trace_alloc(llid, "suid_power", 0, 0, type_llid_trace_endp_suid);
     if (hop_event_alloc(llid, type_hop_suid_power, "suid_power", 0))
-      KERR(" ");
+      KERR("ERROR  ");
     rpct_send_pid_req(llid, type_hop_suid_power, "suid_power", 0);
     if (g_abs_beat_timer)
       clownix_timeout_del(g_abs_beat_timer, g_ref_timer, __FILE__, __LINE__);
@@ -295,13 +298,13 @@ void suid_power_pid_resp(int llid, int tid, char *name, int pid)
   if (get_glob_req_self_destruction())
     return;
   if (llid != g_llid)
-    KERR("%d %d", llid, g_llid);
+    KERR("ERROR %d %d", llid, g_llid);
   if ((tid != type_hop_suid_power) || (strcmp(name, "suid_power")))
-    KERR("%d %d %s", tid, type_hop_suid_power, name);
+    KERR("ERROR %d %d %s", tid, type_hop_suid_power, name);
   if ((g_suid_power_pid) && (g_suid_power_pid != pid))
     {
     event_print("SUID_POWER PID CHANGE: %d to %d", g_suid_power_pid, pid);
-    KERR("SUID_POWER PID CHANGE: %d to %d", g_suid_power_pid, pid);
+    KERR("ERROR SUID_POWER PID CHANGE: %d to %d", g_suid_power_pid, pid);
     }
   g_nb_pid_resp++;
   g_suid_power_pid = pid;
@@ -315,7 +318,7 @@ void suid_power_pid_resp(int llid, int tid, char *name, int pid)
       rpct_send_sigdiag_msg(llid, type_hop_suid_power, msg);
       }
     else
-      KERR("%d", g_llid);
+      KERR("ERROR %d", g_llid);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -344,9 +347,9 @@ void suid_power_poldiag_resp(int llid, int tid, char *line)
   t_topo_info_phy *phy;
 
   if (llid != g_llid)
-    KERR("%d %d", llid, g_llid);
+    KERR("ERROR %d %d", llid, g_llid);
   if (tid != type_hop_suid_power)
-    KERR("%d %d", tid, type_hop_suid_power);
+    KERR("ERROR %d %d", tid, type_hop_suid_power);
 
   if (!strncmp(line,
   "<ovs_topo_config>", strlen("<ovs_topo_config>")))
@@ -390,6 +393,13 @@ void suid_power_poldiag_resp(int llid, int tid, char *line)
       }
     free(phy);
     }
+  else if (!strncmp(line,
+  "cloonixsuid_container", strlen("cloonixsuid_container")))
+    {
+    container_poldiag_resp(g_llid, line);
+    }
+  else
+    KERR("ERROR %s", line);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -400,9 +410,9 @@ void suid_power_sigdiag_resp(int llid, int tid, char *line)
   int vm_id, pid;
 
   if (llid != g_llid)
-    KERR("%d %d", llid, g_llid);
+    KERR("ERROR %d %d", llid, g_llid);
   if (tid != type_hop_suid_power)
-    KERR("%d %d", tid, type_hop_suid_power);
+    KERR("ERROR %d %d", tid, type_hop_suid_power);
 
   if (!strcmp(line,
   "cloonixsuid_resp_suidroot_ko"))
@@ -431,7 +441,7 @@ void suid_power_sigdiag_resp(int llid, int tid, char *line)
            &vm_id, &pid) == 2)
     {
     if ((vm_id < 0) || (vm_id >= MAX_VM))
-      KERR("%s", line);
+      KERR("ERROR %s", line);
     else
       g_tab_pid[vm_id] = pid;
     }
@@ -439,10 +449,13 @@ void suid_power_sigdiag_resp(int llid, int tid, char *line)
   "cloonixsuid_resp_pid_ko vm_id=%d", &vm_id) == 1)
     {
     if ((vm_id < 0) || (vm_id >= MAX_VM))
-      KERR("%s", line);
+      KERR("ERROR %s", line);
     else
       g_tab_pid[vm_id] = 0;
     }
+  else if (!strncmp(line,
+  "cloonixsuid_container", strlen("cloonixsuid_container")))
+    container_sigdiag_resp(g_llid, line);
   else 
     KERR("ERROR suid_power: %s %s", g_cloonix_net, line);
 }
@@ -519,7 +532,6 @@ void suid_power_kill_pid(int pid)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 void suid_power_ifup_phy(char *phy)
 {
@@ -577,7 +589,7 @@ void suid_power_llid_closed(int llid, int from_clone, const char* fct)
 {
   if (llid == g_llid)
     {
-    KERR("SUID_POWER CONNECTION CLOSED");
+    KERR("ERROR SUID_POWER CONNECTION CLOSED");
     g_no_more_timeout = 1;
     g_llid = 0;
     }
@@ -592,6 +604,46 @@ void suid_power_fork_closed(void)
     msg_delete_channel(g_llid);
     g_llid = 0;
     }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int suid_power_create_container(int cli_llid, int cli_tid, 
+                                int cloonix_rank, int vm_id,
+                                t_topo_cnt *cnt, char *err)
+{
+  int result = -1;
+  memset(err, 0, MAX_PATH_LEN);
+  if ((g_llid) && (msg_exist_channel(g_llid)))
+    {
+    result = container_create(g_llid, cli_llid, cli_tid,
+                              cloonix_rank, vm_id, cnt, err);
+    }
+  else
+    {
+    snprintf(err, MAX_PATH_LEN-1, 
+    "ERROR Bad Connection suid_power, %s create fail", cnt->name);  
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int suid_power_delete_container(int cli_llid, int cli_tid,
+                                char *name, char *err)
+{
+  int result = 0;
+  memset(err, 0, MAX_PATH_LEN);
+  if (container_delete(g_llid, cli_llid, cli_tid, name, err))
+    result = -1;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int suid_power_delete_all_container(void)
+{
+  return (container_delete_all(g_llid));
 }
 /*--------------------------------------------------------------------------*/
 

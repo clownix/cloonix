@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -36,9 +36,10 @@
 #include "lib_topo.h"
 #include "utils.h"
 #include "canvas_ctx.h"
+#include "menu_dialog_cnt.h"
+#include "menu_dialog_kvm.h"
 
 int check_before_start_launch(char **argv);
-void set_bulkvm(int nb, t_slowperiodic *slowperiodic);
 void wireshark_kill(char *name);
 
 /*---------------------------------------------------------------------------*/
@@ -171,6 +172,33 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void launch_xterm_double_click_cnt(char *name_vm)
+{
+  static char title[2*MAX_NAME_LEN+1];
+  static char net[MAX_NAME_LEN];
+  static char name[MAX_NAME_LEN];
+  static char cmd[2*MAX_PATH_LEN];
+  static char xvt[MAX_PATH_LEN];
+  static char *argv[] = {xvt, "-T", title, "-e",
+                         "/bin/bash", "-c", cmd, NULL};
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  memset(title, 0, 2*MAX_NAME_LEN+1);
+  memset(name, 0, MAX_NAME_LEN);
+  memset(net, 0, MAX_NAME_LEN);
+  cloonix_get_xvt(xvt);
+  strncpy(name, name_vm, MAX_NAME_LEN);
+  strncpy(net, local_get_cloonix_name(), MAX_NAME_LEN);
+
+  snprintf(title, 2*MAX_NAME_LEN, "%s/%s", local_get_cloonix_name(), name);
+  snprintf(cmd, 2*MAX_PATH_LEN-1,
+           "sudo /usr/bin/crun exec %s tini-static -s -g -p SIGKILL bash", name);
+  if (check_before_start_launch(argv))
+    pid_clone_launch(start_launch, NULL, NULL, (void *)(argv),
+                     NULL, NULL, name_vm, -1, 0);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void callback_topo(int tid, t_topo_info *topo)
 {
   t_topo_differences *diffs = NULL;
@@ -195,9 +223,16 @@ void callback_topo(int tid, t_topo_info *topo)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void slowperiodic_cb(int nb, t_slowperiodic *spic)
+static void slowperiodic_qcow2_cb(int nb, t_slowperiodic *spic)
 {
   set_bulkvm(nb, spic);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void slowperiodic_img_cb(int nb, t_slowperiodic *spic)
+{
+  set_bulcnt(nb, spic);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -233,7 +268,7 @@ void timer_topo_subscribe(void *data)
   client_topo_small_event_sub(0, topo_small_event_cb);
   layout_set_ready_for_send();
   client_req_eventfull(eventfull_cb);
-  client_req_slowperiodic(slowperiodic_cb);
+  client_req_slowperiodic(slowperiodic_qcow2_cb, slowperiodic_img_cb);
 }
 /*--------------------------------------------------------------------------*/
 

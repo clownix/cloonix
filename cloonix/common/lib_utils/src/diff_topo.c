@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -24,6 +24,19 @@
 #include "io_clownix.h"
 #include "lib_topo.h"
 
+/****************************************************************************/
+static int topo_find_cnt(char *name, t_topo_info *topo)
+{
+  int i, found = 0;
+  for (i=0; i< topo->nb_cnt; i++)
+    if (!strcmp(name, topo->cnt[i].name))
+      {
+      found = 1;
+      break;
+      }
+  return found;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int topo_find_kvm(char *name, t_topo_info *topo)
@@ -147,6 +160,25 @@ static int topo_find_edge(char *name, int num, char *lan, t_topo_info *topo)
       }
     }
   return found;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static t_topo_cnt_chain *topo_get_cnt_chain(t_topo_info *topo)
+{
+  int i;
+  t_topo_cnt_chain *cur, *res = NULL;
+  for (i=0; i< topo->nb_cnt; i++)
+    {
+    cur = (t_topo_cnt_chain *) clownix_malloc(sizeof(t_topo_cnt_chain), 3);
+    memset(cur, 0, sizeof(t_topo_cnt_chain));
+    memcpy(&(cur->cnt), &(topo->cnt[i]), sizeof(t_topo_cnt));
+    cur->next = res;
+    if (res)
+      res->prev = cur;
+    res = cur;
+    }
+  return res;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -334,6 +366,19 @@ static t_topo_edge_chain *topo_get_edge_chain(t_topo_info *topo)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void topo_free_cnt_chain(t_topo_cnt_chain *ch)
+{
+  t_topo_cnt_chain *next, *cur = ch;
+  while(cur)
+    {
+    next = cur->next;
+    clownix_free(cur, __FUNCTION__);
+    cur = next;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void topo_free_kvm_chain(t_topo_kvm_chain *ch)
 {
   t_topo_kvm_chain *next, *cur = ch;
@@ -432,6 +477,28 @@ static void topo_free_edge_chain(t_topo_edge_chain *ch)
     {
     next = cur->next;
     clownix_free(cur, __FUNCTION__);
+    cur = next;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void take_out_from_cnt_chain(t_topo_cnt_chain **ch, t_topo_info *topo)
+{
+  t_topo_cnt_chain *next, *cur = *ch;
+  while (cur)
+    {
+    next = cur->next;
+    if (topo_find_cnt(cur->cnt.name, topo))
+      {
+      if (cur->next)
+        cur->next->prev = cur->prev;
+      if (cur->prev)
+        cur->prev->next = cur->next;
+      if (cur == *ch)
+        *ch = cur->next;
+      clownix_free(cur, __FUNCTION__);
+      }
     cur = next;
     }
 }
@@ -619,6 +686,10 @@ t_topo_differences *topo_get_diffs(t_topo_info *newt, t_topo_info *oldt)
   static t_topo_differences diffs;
   memset(&diffs, 0, sizeof(t_topo_differences));
 
+  diffs.add_cnt     = topo_get_cnt_chain(newt);
+  if (oldt)
+    diffs.del_cnt   = topo_get_cnt_chain(oldt);
+
   diffs.add_kvm     = topo_get_kvm_chain(newt);
   if (oldt)
     diffs.del_kvm   = topo_get_kvm_chain(oldt);
@@ -650,6 +721,12 @@ t_topo_differences *topo_get_diffs(t_topo_info *newt, t_topo_info *oldt)
   diffs.add_edge    = topo_get_edge_chain(newt);
   if (oldt)
     diffs.del_edge  = topo_get_edge_chain(oldt);
+
+  if (diffs.add_cnt && oldt)
+    take_out_from_cnt_chain(&(diffs.add_cnt), oldt);
+
+  if (diffs.del_cnt && newt)
+    take_out_from_cnt_chain(&(diffs.del_cnt), newt);
 
   if (diffs.add_kvm && oldt)
     take_out_from_kvm_chain(&(diffs.add_kvm), oldt);
@@ -706,6 +783,7 @@ t_topo_differences *topo_get_diffs(t_topo_info *newt, t_topo_info *oldt)
 /****************************************************************************/
 void topo_free_diffs(t_topo_differences *diffs)
 {
+  topo_free_cnt_chain(diffs->add_cnt);
   topo_free_kvm_chain(diffs->add_kvm);
   topo_free_d2d_chain(diffs->add_d2d);
   topo_free_tap_chain(diffs->add_tap);
@@ -714,6 +792,7 @@ void topo_free_diffs(t_topo_differences *diffs)
   topo_free_phy_chain(diffs->add_phy);
   topo_free_lan_chain(diffs->add_lan);
   topo_free_edge_chain(diffs->add_edge);
+  topo_free_cnt_chain(diffs->del_cnt);
   topo_free_kvm_chain(diffs->del_kvm);
   topo_free_d2d_chain(diffs->del_d2d);
   topo_free_tap_chain(diffs->del_tap);

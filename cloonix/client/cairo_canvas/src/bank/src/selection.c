@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -108,6 +108,7 @@ void selectioned_item_delete(t_bank_item *bitem)
   switch(bitem->bank_type)
     {
     case bank_type_node:
+    case bank_type_cnt:
     case bank_type_sat:
     case bank_type_eth:
       break;

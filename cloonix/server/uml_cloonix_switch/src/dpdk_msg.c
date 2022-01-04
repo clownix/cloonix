@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -41,6 +41,7 @@
 #include "dpdk_d2d.h"
 #include "dpdk_xyx.h"
 #include "utils_cmd_line_maker.h"
+#include "container.h"
 
 enum {
      ovsreq_add_lan_nat = 15,
@@ -50,9 +51,11 @@ enum {
      ovsreq_add_lan_d2d,
      ovsreq_del_lan_d2d,
      ovsreq_add_lan_ethd,
+     ovsreq_add_lan_ethv_cnt,
      ovsreq_add_lan_ethv,
      ovsreq_add_lan_eths,
      ovsreq_del_lan_ethd,
+     ovsreq_del_lan_ethv_cnt,
      ovsreq_del_lan_ethv,
      ovsreq_del_lan_eths,
      ovsreq_add_lan_tap,
@@ -337,6 +340,20 @@ static void delay_add_lan_endp(void *data)
         ovsreq_free(req->tid);
         }
       }
+    else if (req->type == ovsreq_add_lan_ethv_cnt)
+      {
+      if (strlen(req->vhost) == 0)
+        KERR("ERROR %s %s %d", req->lan, req->name, req->num);
+      else
+        result = fmt_tx_add_lan_ethv(req->tid, req->lan, req->name,
+                                     req->num, req->vhost);
+      if (result)
+        {
+        KERR("ERROR %s %s %d", req->lan, req->name, req->num);
+        container_resp_add_lan(1, req->lan, req->name, req->num);
+        ovsreq_free(req->tid);
+        }
+      }
     else if (req->type == ovsreq_add_lan_eths)
       {
       result = fmt_tx_add_lan_eths(req->tid,req->lan,req->name,req->num);
@@ -404,9 +421,11 @@ static void delay_add_lan_endp(void *data)
     else
       {
       KERR("ERROR DELAY %s %s %d %d", req->lan, req->name, req->num, req->type);
-      if ((req->type == ovsreq_add_lan_ethd) ||
-          (req->type == ovsreq_add_lan_ethv) ||
-          (req->type == ovsreq_add_lan_eths))
+      if (req->type == ovsreq_add_lan_ethv_cnt)
+        container_resp_add_lan(1, req->lan, req->name, req->num);
+      else if ((req->type == ovsreq_add_lan_ethd) ||
+               (req->type == ovsreq_add_lan_ethv) ||
+               (req->type == ovsreq_add_lan_eths))
         dpdk_kvm_resp_add_lan(1, req->lan, req->name, req->num);
       else if (req->type == ovsreq_add_lan_nat)
         dpdk_nat_resp_add_lan(1, req->lan, req->name);
@@ -578,6 +597,46 @@ int dpdk_msg_send_add_lan_ethv(char *lan, char *name, int num, char *vhost)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int dpdk_msg_send_add_lan_ethv_cnt(char *lan, char *name, int num, char *vhost)
+{
+  int result = -1, tid = utils_get_next_tid();
+  t_ovslan *cur = lan_find(lan);
+  t_ovsreq *ovsreq;
+  if (cur == NULL)
+    {
+    result = fmt_tx_add_lan(tid, lan);
+    if (result)
+      {
+      KERR("ERROR %s %s %d", lan, name, num);
+      }
+    else
+      {
+      lan_alloc(lan);
+      ovsreq_alloc(tid, ovsreq_add_lan_ethv_cnt, lan, name, num, vhost);
+      }
+    }
+  else if (cur->refcount > 0)
+    {
+    if (strlen(vhost) == 0)
+      KERR("ERROR %s %s %d", lan, name, num);
+    else
+      result = fmt_tx_add_lan_ethv(tid, lan, name, num, vhost);
+    if (result)
+      KERR("ERROR %s %s %d", lan, name, num);
+    else
+      ovsreq_alloc(tid, ovsreq_add_lan_ethv_cnt, lan, name, num, vhost);
+    }
+  else
+    {
+    result = 0;
+    ovsreq = ovsreq_alloc(tid, ovsreq_add_lan_ethv_cnt, lan,name,num,vhost);
+    clownix_timeout_add(5, delay_add_lan_endp,(void *) ovsreq, NULL, NULL);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int dpdk_msg_send_add_lan_eths(char *lan, char *name, int num)
 {
   int result = -1, tid = utils_get_next_tid();
@@ -613,7 +672,6 @@ int dpdk_msg_send_add_lan_eths(char *lan, char *name, int num)
   return result;
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 int dpdk_msg_send_add_lan_nat(char *lan, char *name)
@@ -688,7 +746,6 @@ int dpdk_msg_send_add_lan_a2b(char *lan, char *name, int num)
   return result;
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 int dpdk_msg_send_add_lan_d2d(char *lan, char *name)
@@ -792,6 +849,24 @@ int dpdk_msg_send_del_lan_ethv(char *lan, char *name, int num, char *vhost)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int dpdk_msg_send_del_lan_ethv_cnt(char *lan, char *name, int num, char *vhost)
+{
+  int result = -1, tid = utils_get_next_tid();
+  if (!lan_find(lan))
+    KERR("ERROR %s %s %d", lan, name, num);
+  else if (strlen(vhost) == 0)
+    KERR("ERROR %s %s %d", lan, name, num);
+  else
+    result = fmt_tx_del_lan_ethv(tid, lan, name, num, vhost);
+  if (result)
+    KERR("ERROR %s %s %d", lan, name, num);
+  else
+    ovsreq_alloc(tid, ovsreq_del_lan_ethv_cnt, lan, name, num, vhost);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int dpdk_msg_send_del_lan_eths(char *lan, char *name, int num)
 {
   int result, tid = utils_get_next_tid();
@@ -805,8 +880,6 @@ int dpdk_msg_send_del_lan_eths(char *lan, char *name, int num)
   return result;
 }
 /*--------------------------------------------------------------------------*/
-
-
 
 /****************************************************************************/
 int dpdk_msg_send_del_lan_nat(char *lan, char *name)
@@ -860,9 +933,13 @@ static void transmit_add_ack(int tid, t_ovsreq *cur, int is_ko)
     KERR("ERROR %s %s %d", cur->lan, cur->name, cur->num);
   if (is_ko == 0)
     lan_refcount_inc(cur->lan, __LINE__);
-  if ((cur->type == ovsreq_add_lan_ethd) ||
-      (cur->type == ovsreq_add_lan_ethv) ||
-      (cur->type == ovsreq_add_lan_eths))
+  if (cur->type == ovsreq_add_lan_ethv_cnt)
+    {
+    container_resp_add_lan(is_ko, cur->lan, cur->name, cur->num);
+    }
+  else if ((cur->type == ovsreq_add_lan_ethd) ||
+           (cur->type == ovsreq_add_lan_ethv) ||
+           (cur->type == ovsreq_add_lan_eths))
     {
     dpdk_kvm_resp_add_lan(is_ko, cur->lan, cur->name, cur->num);
     }
@@ -901,7 +978,9 @@ static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
     {
     ntid = utils_get_next_tid();
     if ((cur->type == ovsreq_add_lan_ethv) ||
-        (cur->type == ovsreq_del_lan_ethv))
+        (cur->type == ovsreq_del_lan_ethv) ||
+        (cur->type == ovsreq_add_lan_ethv_cnt) ||
+        (cur->type == ovsreq_del_lan_ethv_cnt))
       ovsreq_alloc(ntid, cur->type, cur->lan, cur->name, cur->num, cur->vhost);
     else
       ovsreq_alloc(ntid, cur->type, cur->lan, cur->name, cur->num, NULL);
@@ -921,9 +1000,13 @@ static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
         KERR("ERROR LAN %s", cur->lan);
       }
     }
-  if ((cur->type == ovsreq_del_lan_ethd) ||
-      (cur->type == ovsreq_del_lan_ethv) ||
-      (cur->type == ovsreq_del_lan_eths))
+  if (cur->type == ovsreq_del_lan_ethv_cnt)
+    {
+    container_resp_del_lan(is_ko, cur->lan, cur->name, cur->num);
+    }
+  else if ((cur->type == ovsreq_del_lan_ethd) ||
+           (cur->type == ovsreq_del_lan_ethv) ||
+           (cur->type == ovsreq_del_lan_eths))
     {
     dpdk_kvm_resp_del_lan(is_ko, cur->lan, cur->name, cur->num);
     }
@@ -1013,8 +1096,10 @@ void dpdk_msg_ack_lan(int tid, char *lan, int is_add, int is_ko, char *lab)
           lanreq->must_send_del = 1;
         lan_refcount_inc(cur->lan, __LINE__);
         ntid = utils_get_next_tid();
-        if ((cur->type == ovsreq_add_lan_ethv) ||
-            (cur->type == ovsreq_del_lan_ethv))
+        if ((cur->type == ovsreq_add_lan_ethv)     ||
+            (cur->type == ovsreq_del_lan_ethv)     ||
+            (cur->type == ovsreq_add_lan_ethv_cnt) ||
+            (cur->type == ovsreq_del_lan_ethv_cnt))
           ovsreq = ovsreq_alloc(ntid, cur->type, cur->lan,
                                 cur->name, cur->num, cur->vhost);
         else
@@ -1124,6 +1209,21 @@ static void timer_msg_beat(void *data)
           dpdk_kvm_resp_del_lan(1, cur->lan, cur->name, cur->num);
           ovsreq_free(cur->tid);
         break;
+
+        case ovsreq_add_lan_ethv_cnt:
+          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
+                                            cur->name, cur->num);
+          container_resp_add_lan(1, cur->lan, cur->name, cur->num);
+          ovsreq_free(cur->tid);
+        break;
+
+        case ovsreq_del_lan_ethv_cnt:
+          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
+                                      cur->name, cur->num);
+          container_resp_del_lan(1, cur->lan, cur->name, cur->num);
+          ovsreq_free(cur->tid);
+        break;
+
 
         default:
           KOUT("%d", cur->type);

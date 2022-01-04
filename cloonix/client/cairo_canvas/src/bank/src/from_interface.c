@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -94,6 +94,25 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+void bank_cnt_create(char *name, char *image, int ping_ok,
+                      int nb_tot_eth, t_eth_table *eth_tab,
+                      double x, double y, int hidden_on_graph,
+                      double *tx, double *ty, int32_t *thidden)
+{
+  int i;
+  add_new_cnt(name,image,x,y,hidden_on_graph, ping_ok, nb_tot_eth, eth_tab);
+  for (i=0; i < nb_tot_eth; i++)
+    {
+    if ((eth_tab[i].endp_type == endp_type_ethd) ||
+        (eth_tab[i].endp_type == endp_type_eths) ||
+        (eth_tab[i].endp_type == endp_type_ethv))
+      {
+      add_new_eth(name, i, tx[i], ty[i], thidden[i]);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void bank_sat_create(char *name, int endp_type,
@@ -166,6 +185,18 @@ void bank_node_delete(char *name)
 {
   t_bank_item *node;
   node = look_for_node_with_id(name);
+  if (node)
+    {
+    delete_bitem(node);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void bank_cnt_delete(char *name)
+{
+  t_bank_item *node;
+  node = look_for_cnt_with_id(name);
   if (node)
     {
     delete_bitem(node);

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -176,7 +176,14 @@ void recv_eventfull(int llid, int tid, int nb_endp, t_eventfull_endp *endp)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_slowperiodic(int llid, int tid, int nb, t_slowperiodic *spic)
+void recv_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic)
+{
+  KOUT(" ");
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic)
 {
   KOUT(" ");
 }

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -36,6 +36,18 @@ static void gene_delete_item(int bank_type, char *name)
   pa->bank_type = bank_type;
   strncpy(pa->name, name, MAX_NAME_LEN-1);
   clownix_timeout_add(1,timer_delete_item_resp,(void *)pa,NULL,NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void from_cloonix_switch_create_cnt(t_topo_cnt *cnt)
+{
+  t_item_obj_resp *pa;
+  pa = (t_item_obj_resp *)clownix_malloc(sizeof(t_item_obj_resp), 21);
+  memset(pa, 0, sizeof(t_item_obj_resp));
+  pa->cnt = (t_topo_cnt *) clownix_malloc(sizeof(t_topo_cnt), 22);
+  memcpy(pa->cnt, cnt, sizeof(t_topo_cnt));
+  clownix_timeout_add(1, timer_create_obj_resp, (void *)pa, NULL,NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -140,24 +152,36 @@ void from_cloonix_switch_create_edge(char *name, int num, char *lan)
 /****************************************************************************/
 void from_cloonix_switch_delete_node(char *name)
 {
-  t_bank_item *node = look_for_node_with_id(name);
-  if (!node)
-    KOUT("%s", name);
-  gene_delete_item(node->bank_type, name);
+  t_bank_item *bitem = look_for_node_with_id(name);
+  if (bitem)
+    gene_delete_item(bitem->bank_type, name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void from_cloonix_switch_delete_cnt(char *name)
+{
+  t_bank_item *bitem = look_for_cnt_with_id(name);
+  if (bitem)
+    gene_delete_item(bitem->bank_type, name);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void from_cloonix_switch_delete_sat(char *name)
 {
-  gene_delete_item(bank_type_sat, name);
+  t_bank_item *bitem = look_for_sat_with_id(name);
+  if (bitem)
+    gene_delete_item(bitem->bank_type, name);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void from_cloonix_switch_delete_lan(char *lan)
+void from_cloonix_switch_delete_lan(char *name)
 {
-  gene_delete_item(bank_type_lan, lan);
+  t_bank_item *bitem = look_for_lan_with_id(name);
+  if (bitem)
+    gene_delete_item(bitem->bank_type, name);
 }
 /*--------------------------------------------------------------------------*/
 

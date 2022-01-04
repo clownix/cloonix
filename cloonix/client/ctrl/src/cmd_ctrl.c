@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -577,22 +577,6 @@ int cmd_sav_full(int argc, char **argv)
 int cmd_sav_derived(int argc, char **argv)
 {
   int result = local_cmd_sav(0, argc, argv);
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_del_vm(int argc, char **argv)
-{
-  int result = -1;
-  char *name;
-  if (argc == 1)
-    {
-    result = 0;
-    name = argv[0];
-    init_connection_to_uml_cloonix_switch();
-    client_del_vm(0, callback_end, name);
-    }
   return result;
 }
 /*---------------------------------------------------------------------------*/

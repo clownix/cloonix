@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -49,6 +49,7 @@
 #include "dpdk_nat.h"
 #include "suid_power.h"
 #include "nat_dpdk_process.h"
+#include "container.h"
 
 
 /*---------------------------------------------------------------------------*/
@@ -89,7 +90,7 @@ static t_vm *find_vm(char *name)
 /*****************************************************************************/
 int cfg_name_is_in_use(int is_lan, char *name, char *use)
 {
-  int result = 0;
+  int nb_eth, result = 0;
   t_d2d_cnx *d2d = dpdk_d2d_find(name);
   memset(use, 0, MAX_PATH_LEN);
   if (d2d)
@@ -127,6 +128,11 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
   else if (find_vm(name))
     {
     snprintf(use, MAX_NAME_LEN, "%s is used by running vm", name);
+    result = 1;
+    }
+  else if (container_name_exists(name, &nb_eth))
+    {
+    snprintf(use, MAX_NAME_LEN, "%s is used by container", name);
     result = 1;
     }
   else if ((!is_lan) && (lan_get_with_name(name)))
@@ -566,6 +572,13 @@ char *cfg_get_version(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void fill_topo_cnt(t_topo_cnt *topo_cnt, t_cnt *cnt)
+{
+  memcpy(topo_cnt, &(cnt->cnt), sizeof(t_topo_cnt));
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void fill_topo_kvm(t_topo_kvm *kvm, t_vm *vm)
 {
   memcpy(kvm, &(vm->kvm), sizeof(t_topo_kvm));
@@ -573,7 +586,7 @@ static void fill_topo_kvm(t_topo_kvm *kvm, t_vm *vm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static t_topo_info *alloc_all_fields(int nb_vm,
+static t_topo_info *alloc_all_fields(int nb_vm, int nb_cnt, int nb_endp_cnt,
                                      int nb_endp_d2d, int nb_endp_a2b,
                                      int nb_endp_xyx, int nb_endp_nat,
                                      int nb_endp_ethdv, int nb_d2d, int nb_a2b,
@@ -583,6 +596,7 @@ static t_topo_info *alloc_all_fields(int nb_vm,
   t_topo_info *topo = (t_topo_info *) clownix_malloc(sizeof(t_topo_info), 3);
   int len;
   memset(topo, 0, sizeof(t_topo_info));
+  topo->nb_cnt = nb_cnt;
   topo->nb_kvm = nb_vm;
   topo->nb_a2b = nb_a2b;
   topo->nb_tap = nb_tap;
@@ -591,8 +605,14 @@ static t_topo_info *alloc_all_fields(int nb_vm,
   topo->nb_phy = nb_phy;
   topo->nb_info_phy = nb_info_phy;
   topo->nb_bridges = nb_bridges;
-  topo->nb_endp = nb_endp_d2d + nb_endp_a2b + nb_endp_xyx +
+  topo->nb_endp = nb_endp_cnt + nb_endp_d2d + nb_endp_a2b + nb_endp_xyx +
                   nb_endp_nat + nb_endp_ethdv;
+ if (topo->nb_cnt)
+    {
+    topo->cnt =
+    (t_topo_cnt *)clownix_malloc(topo->nb_cnt * sizeof(t_topo_cnt),3);
+    memset(topo->cnt, 0, topo->nb_cnt * sizeof(t_topo_cnt));
+    }
  if (topo->nb_kvm)
     {
     topo->kvm =
@@ -739,13 +759,15 @@ static void fill_topo_a2b(t_topo_a2b *topo_a2b, t_a2b_cnx *a2b)
 /*****************************************************************************/
 t_topo_info *cfg_produce_topo_info(void)
 {
-  int i, nb_vm;
+  int i, nb_vm, nb_cnt;
   int nb_endp_xyx, nb_endp_ethdv, nb_endp_d2d, nb_endp_a2b, nb_endp_nat;
-  int nb_d2d, nb_a2b, nb_tap, nb_nat, nb_phy, nb_eths;
+  int nb_endp_cnt, nb_d2d, nb_a2b, nb_tap, nb_nat, nb_phy, nb_eths;
   int i_endp=0, i_tap=0, i_phy=0, nb_info_phy; 
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
+  t_cnt *cnt = container_get_first_cnt(&nb_cnt);
   t_topo_info_phy *info_phy;
   t_topo_bridges *bridges;
+  t_topo_endp *cnt_endp = translate_topo_endp_cnt(&nb_endp_cnt);
   t_topo_endp *d2d_endp = translate_topo_endp_d2d(&nb_endp_d2d);
   t_topo_endp *xyx_endp = translate_topo_endp_xyx(&nb_endp_xyx);
   t_topo_endp *ethdv_endp = translate_topo_endp_ethdv(&nb_endp_ethdv);
@@ -759,7 +781,7 @@ t_topo_info *cfg_produce_topo_info(void)
 
   nb_info_phy = suid_power_get_topo_info_phy(&info_phy);
 
-  t_topo_info *topo = alloc_all_fields(nb_vm, nb_endp_d2d,
+  t_topo_info *topo = alloc_all_fields(nb_vm, nb_cnt, nb_endp_cnt, nb_endp_d2d,
                                        nb_endp_a2b, nb_endp_xyx, nb_endp_nat,
                                        nb_endp_ethdv, nb_d2d, nb_a2b, nb_tap,
                                        nb_phy, nb_nat, nb_bridges,
@@ -768,6 +790,20 @@ t_topo_info *cfg_produce_topo_info(void)
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
 
   topo->conf_rank = get_conf_rank();
+
+  if (topo->nb_cnt)
+    {
+    for (i=0; i<topo->nb_cnt; i++)
+      {
+      if (!cnt)
+        KOUT(" ");
+      fill_topo_cnt(&(topo->cnt[i]), cnt);
+      cnt = cnt->next;
+      }
+    if (cnt)
+      KOUT(" ");
+    }
+
   if (topo->nb_kvm)
     {
     for (i=0; i<topo->nb_kvm; i++)
@@ -845,6 +881,14 @@ t_topo_info *cfg_produce_topo_info(void)
       KOUT(" ");
     }
 
+  for (i=0; i<nb_endp_cnt; i++)
+    {
+    if (i_endp == topo->nb_endp)
+      KOUT(" ");
+    copy_endp(&(topo->endp[i_endp]), &(cnt_endp[i]));
+    i_endp += 1;
+    }
+
   for (i=0; i<nb_endp_d2d; i++)
     {
     if (i_endp == topo->nb_endp)
@@ -885,8 +929,6 @@ t_topo_info *cfg_produce_topo_info(void)
     i_endp += 1;
     }
 
-
-
   for (i=0; i<nb_info_phy; i++)
     {
     memcpy(&(topo->info_phy[i]), &(info_phy[i]), sizeof(t_topo_info_phy)); 
@@ -897,6 +939,7 @@ t_topo_info *cfg_produce_topo_info(void)
     memcpy(&(topo->bridges[i]), &(bridges[i]), sizeof(t_topo_bridges));
     }
 
+  clownix_free(cnt_endp, __FUNCTION__);
   clownix_free(d2d_endp, __FUNCTION__);
   clownix_free(a2b_endp, __FUNCTION__);
   clownix_free(xyx_endp, __FUNCTION__);

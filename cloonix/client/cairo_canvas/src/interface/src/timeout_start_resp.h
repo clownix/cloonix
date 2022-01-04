@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -17,6 +17,7 @@
 /*****************************************************************************/
 typedef struct t_item_obj_resp
 {
+  t_topo_cnt *cnt;
   t_topo_kvm *kvm;
   t_topo_d2d *d2d;
   t_topo_a2b *a2b;

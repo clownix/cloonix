@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -29,7 +29,10 @@ void delete_bitem(t_bank_item *bitem);
 void selectioned_item_init(void);
 void selectioned_item_delete(t_bank_item *bitem);
 /*--------------------------------------------------------------------------*/
-
+int add_new_cnt(char *name, char *image,
+                 double x, double y, int hidden_on_graph,
+                 int ping_ok, int nb_tot_eth, t_eth_table *eth_tab);
+/*--------------------------------------------------------------------------*/
 int add_new_node(char *name, char *kernel, char *rootfs_used,
                  char *rootfs_backing,  char *install_cdrom, 
                  char *added_cdrom, char *added_disk,

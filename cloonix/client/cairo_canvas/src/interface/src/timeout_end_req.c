@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -32,15 +32,11 @@
 #include "make_layout.h"
 #include "cloonix.h"
 #include "lib_topo.h"
-
-
-
-
-
+#include "menu_dialog_kvm.h"
+#include "menu_dialog_cnt.h"
 
 static t_topo_info *topo_info = NULL;
 static int topo_count = 0;
-
 
 /*****************************************************************************/
 static void callback_end(int tid, int status, char *info)
@@ -54,7 +50,6 @@ static void callback_end(int tid, int status, char *info)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 void topo_info_update(t_topo_info *topo)
 {
@@ -64,7 +59,6 @@ void topo_info_update(t_topo_info *topo)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 void timer_create_item_node_req(void *data)
 {
@@ -72,25 +66,41 @@ void timer_create_item_node_req(void *data)
   int32_t thidden_on_graph[MAX_DPDK_VM];
   int i, vm_config_flags, natplug = 0;
   t_custom_vm *cust_vm;
+  t_custom_cnt *cust_cnt;
+  t_topo_cnt cust_topo_cnt;
   t_item_node_req *pa = (t_item_node_req *) data;
-  get_custom_vm (&cust_vm);
-  for (i=0; i<MAX_DPDK_VM; i++)
-    thidden_on_graph[i] = 0;
-  if (cust_vm->has_p9_host_share)
-    ptr_p9_host_share = cust_vm->kvm_p9_host_share;
-  if (cust_vm->kvm_used_rootfs[0])
+  if (pa->is_cnt == 0)
     {
-    vm_config_flags = get_vm_config_flags(cust_vm, &natplug);
-    set_node_layout_x_y(cust_vm->name, 0, pa->x, pa->y, 0, 
-                        pa->tx, pa->ty, thidden_on_graph);
-    client_add_vm(0, callback_end, cust_vm->name,
-                  cust_vm->nb_tot_eth, cust_vm->eth_tab,
-                  vm_config_flags, natplug, cust_vm->cpu, cust_vm->mem,
-                  NULL, cust_vm->kvm_used_rootfs, NULL, NULL, 
-                  NULL, ptr_p9_host_share);
+    get_custom_vm(&cust_vm);
+    for (i=0; i<MAX_DPDK_VM; i++)
+      thidden_on_graph[i] = 0;
+    if (cust_vm->has_p9_host_share)
+      ptr_p9_host_share = cust_vm->kvm_p9_host_share;
+    if (cust_vm->kvm_used_rootfs[0])
+      {
+      vm_config_flags = get_vm_config_flags(cust_vm, &natplug);
+      set_node_layout_x_y(cust_vm->name, 0, pa->x, pa->y, 0, 
+                          pa->tx, pa->ty, thidden_on_graph);
+      client_add_vm(0, callback_end, cust_vm->name,
+                    cust_vm->nb_tot_eth, cust_vm->eth_tab,
+                    vm_config_flags, natplug, cust_vm->cpu, cust_vm->mem,
+                    NULL, cust_vm->kvm_used_rootfs, NULL, NULL, 
+                    NULL, ptr_p9_host_share);
+      }
+    else
+      insert_next_warning("rootfs is empty!", 1);
     }
   else
-    insert_next_warning("rootfs is empty!", 1);
+    {
+    get_custom_cnt(&cust_cnt);
+    memset(&cust_topo_cnt, 0, sizeof(t_topo_cnt));
+    strncpy(cust_topo_cnt.name, cust_cnt->name, MAX_NAME_LEN-1);
+    cust_topo_cnt.nb_tot_eth = cust_cnt->nb_tot_eth;
+    memcpy(cust_topo_cnt.eth_table, cust_cnt->eth_table,
+           cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));
+    strncpy(cust_topo_cnt.image, cust_cnt->image, MAX_PATH_LEN-1);
+    client_add_cnt(0, callback_end, &cust_topo_cnt);
+    }
   clownix_free(pa, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
@@ -159,8 +169,7 @@ void timer_delete_item_req(void *data)
   switch(pa->bank_type)
     {
     case bank_type_node:
-      client_del_vm(0, callback_end, pa->name);
-      break;
+    case bank_type_cnt:
     case bank_type_sat:
       client_del_sat(0, callback_end, pa->name);
       break;

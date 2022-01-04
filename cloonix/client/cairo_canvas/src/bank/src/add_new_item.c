@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -65,7 +65,6 @@ int is_a_d2d(t_bank_item *bitem)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 int is_a_a2b(t_bank_item *bitem)
 {
@@ -82,7 +81,6 @@ t_bank_item *get_currently_in_item_surface(void)
   return currently_in_item_surface;
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void centralized_item_z_pos(t_bank_item *bitem)
@@ -115,7 +113,6 @@ static void centralized_item_z_pos(t_bank_item *bitem)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void get_object_mass(t_bank_item *bitem)
 {
@@ -123,6 +120,9 @@ static void get_object_mass(t_bank_item *bitem)
     {
     case bank_type_node:
       bitem->pbi.mass = (double) 200;
+    break;
+    case bank_type_cnt:
+      bitem->pbi.mass = (double) 120;
     break;
     case bank_type_eth:
     case bank_type_lan:
@@ -165,9 +165,9 @@ static t_bank_item *centralized_item_creation(int bank_type, char *name,
   bitem->pbi.y2 = y2;
   bitem->pbi.dist = dist;
   get_object_mass(bitem);
-  if (bitem->bank_type == bank_type_node) 
-    eventfull_obj_create(name);
-  else if (bitem->bank_type == bank_type_sat)
+  if ((bitem->bank_type == bank_type_node) ||
+      (bitem->bank_type == bank_type_cnt) ||
+      (bitem->bank_type == bank_type_sat))
     eventfull_obj_create(name);
   return (bitem);
 }
@@ -177,9 +177,9 @@ static t_bank_item *centralized_item_creation(int bank_type, char *name,
 static void centralized_item_deletion(t_bank_item *bitem, int eorig)
 {
   leave_item_action_surface(bitem);
-  if (bitem->bank_type == bank_type_node) 
-    eventfull_obj_delete(bitem->name);
-  else if (bitem->bank_type == bank_type_sat)
+  if ((bitem->bank_type == bank_type_node) ||
+      (bitem->bank_type == bank_type_cnt) ||
+      (bitem->bank_type == bank_type_sat))
     eventfull_obj_delete(bitem->name);
   topo_remove_cr_item(bitem);
   bank_del_item(bitem, eorig);
@@ -300,8 +300,6 @@ static void attached_obj_associations_delete(t_bank_item *bitem)
 }
 /*--------------------------------------------------------------------------*/
 
-
-
 /****************************************************************************/
 static void attached_associations_delete(t_bank_item *bitem)
 {
@@ -312,6 +310,7 @@ static void attached_associations_delete(t_bank_item *bitem)
       break;
 
     case bank_type_node:
+    case bank_type_cnt:
     case bank_type_sat:
     case bank_type_eth:
     case bank_type_lan:
@@ -354,7 +353,8 @@ static void attached_edge_associations_create(t_bank_item *bitem)
 static void local_attached_edge_update_all(t_bank_item *bitem)
 {
   t_list_bank_item *cur, *next;
-  if ((bitem->bank_type == bank_type_node))
+  if ((bitem->bank_type == bank_type_node) ||
+      (bitem->bank_type == bank_type_cnt))
     {
     cur = bitem->head_eth_list;
     while (cur)
@@ -464,7 +464,6 @@ void write_item_name(t_bank_item *bitem)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void write_node_name(t_bank_item *bitem)
 {
@@ -479,11 +478,25 @@ static void write_node_name(t_bank_item *bitem)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void write_cnt_name(t_bank_item *bitem)
+{
+  double x0,y0;
+  double dx, dy;
+  x0 = bitem->pbi.x0;
+  y0 = bitem->pbi.y0;
+  dy = -10;
+  dx = -CNT_DIA/2 + 12;
+  topo_cr_item_text(bitem, x0 + dx, y0 + dy, bitem->name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void delete_bitem(t_bank_item *bitem)
 {
   switch (bitem->bank_type)
     {
     case bank_type_node:
+    case bank_type_cnt:
     case bank_type_sat:
     case bank_type_lan:
     case bank_type_eth:
@@ -650,11 +663,20 @@ int add_new_eth(char *name, int num,
   
   bnode = look_for_node_with_id(name);
   if (!bnode)
-     {
-     bnode = look_for_sat_with_id(name);
-     if (bnode->pbi.endp_type != endp_type_a2b)
-       KOUT("%s", name);
-     }
+    {
+    bnode = look_for_sat_with_id(name);
+    if (bnode)
+      {
+      if (bnode->pbi.endp_type != endp_type_a2b)
+        KOUT("%s", name);
+      }
+    else
+      {
+      bnode = look_for_cnt_with_id(name);
+      if (!bnode)
+        KOUT("%s", name);
+      }
+    }
   if ((num <0) || (num > MAX_DPDK_VM))
     KOUT(" ");
   if ((!bnode) || (bank_get_item(bank_type, name, num, NULL)))
@@ -734,6 +756,41 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+int add_new_cnt(char *name, char *image,
+                 double x, double y, int hidden_on_graph,
+                 int ping_ok, int nb_tot_eth, t_eth_table *eth_tab)
+{
+  int result = 0;
+  t_bank_item *bitem;
+  if (bank_get_item(bank_type_cnt, name,  0, NULL))
+    {
+    result = -1;
+    }
+  else
+    {
+    bitem = centralized_item_creation(bank_type_cnt, name, NULL, 0,
+                                      NULL, NULL, NULL,
+                                      x, y, hidden_on_graph, 0,
+                                      0, 0, 0, 0, 0,
+                                      eorig_noedge);
+    bitem->pbi.pbi_cnt = (t_pbi_cnt *) clownix_malloc(sizeof(t_pbi_cnt), 14);
+    memset(bitem->pbi.pbi_cnt, 0, sizeof(t_pbi_cnt));
+    strncpy(bitem->pbi.pbi_cnt->image, image, MAX_PATH_LEN-1);
+    bitem->pbi.pbi_cnt->cnt_evt_ping_ok = ping_ok;
+    bitem->pbi.pbi_cnt->nb_tot_eth = nb_tot_eth;
+    memcpy(bitem->pbi.pbi_cnt->eth_tab, eth_tab,
+           nb_tot_eth * sizeof(t_eth_table));
+    topo_add_cr_item_to_canvas(bitem, NULL);
+    write_cnt_name(bitem);
+    topo_get_absolute_coords(bitem);
+    centralized_item_z_pos(bitem);
+    if (bitem->pbi.hidden_on_graph)
+      topo_bitem_hide(bitem);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void enter_item_surface(t_bank_item *bitem)

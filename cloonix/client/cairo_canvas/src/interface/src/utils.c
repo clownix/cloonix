@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -33,6 +33,7 @@
 /****************************************************************************/
 void process_all_diffs(t_topo_differences *diffs)
 {
+  t_topo_cnt_chain   *add_cnt  = diffs->add_cnt;
   t_topo_kvm_chain   *add_kvm  = diffs->add_kvm;
   t_topo_d2d_chain   *add_d2d  = diffs->add_d2d;
   t_topo_tap_chain   *add_tap  = diffs->add_tap;
@@ -42,6 +43,7 @@ void process_all_diffs(t_topo_differences *diffs)
   t_topo_lan_chain   *add_lan  = diffs->add_lan;
   t_topo_edge_chain  *add_edge = diffs->add_edge;
 
+  t_topo_cnt_chain   *del_cnt  = diffs->del_cnt;
   t_topo_kvm_chain   *del_kvm  = diffs->del_kvm;
   t_topo_d2d_chain   *del_d2d  = diffs->del_d2d;
   t_topo_tap_chain   *del_tap  = diffs->del_tap;
@@ -51,6 +53,11 @@ void process_all_diffs(t_topo_differences *diffs)
   t_topo_lan_chain   *del_lan  = diffs->del_lan;
   t_topo_edge_chain  *del_edge = diffs->del_edge;
 
+  while(add_cnt)
+    {
+    from_cloonix_switch_create_cnt(&(add_cnt->cnt));
+    add_cnt = add_cnt->next;
+    }
 
   while(add_kvm)
     {
@@ -105,6 +112,12 @@ void process_all_diffs(t_topo_differences *diffs)
     {
     from_cloonix_switch_delete_edge(del_edge->name,del_edge->num,del_edge->lan);
     del_edge = del_edge->next;
+    }
+
+  while(del_cnt)
+    {
+    from_cloonix_switch_delete_cnt(del_cnt->cnt.name);
+    del_cnt = del_cnt->next;
     }
 
   while(del_kvm)

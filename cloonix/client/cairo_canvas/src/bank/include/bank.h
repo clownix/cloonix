@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -35,6 +35,14 @@ typedef struct t_pbi_node
   int  node_evt_qmp_conn_ok;
 } t_pbi_node;
 
+typedef struct t_pbi_cnt
+{
+  int  cnt_evt_ping_ok;
+  char image[MAX_PATH_LEN];
+  int  nb_tot_eth;
+  t_eth_table eth_tab[MAX_DPDK_VM];
+} t_pbi_cnt;
+
 typedef struct t_pbi_sat
 {
   t_topo_d2d topo_d2d;
@@ -45,8 +53,9 @@ typedef struct t_pbi_sat
 
 typedef struct t_params_bank_item
 {
-  t_pbi_node  *pbi_node;
-  t_pbi_sat *pbi_sat;
+  t_pbi_node *pbi_node;
+  t_pbi_cnt  *pbi_cnt;
+  t_pbi_sat  *pbi_sat;
   int color_choice;
   int hidden_on_graph;
   int endp_type;
@@ -78,6 +87,7 @@ enum
   bank_type_min = 0,
   bank_type_all_edges_items,
   bank_type_all_non_edges_items,
+  bank_type_cnt,
   bank_type_node,
   bank_type_eth,
   bank_type_sat,
@@ -150,12 +160,18 @@ void init_bank_item(void);
 int get_nb_total_items(void);
 t_bank_item *get_first_glob_bitem(void);
 /*--------------------------------------------------------------------------*/
+t_bank_item *look_for_cnt_with_id(char *name);
 t_bank_item *look_for_node_with_id(char *name);
 void look_for_lan_and_del_all(void);
 t_bank_item *look_for_lan_with_id(char *name);
 int is_first_brtcl_on_canvas(void);
 t_bank_item *look_for_sat_with_id(char *name);
 t_bank_item *look_for_eth_with_id(char *name, int num);
+/*--------------------------------------------------------------------------*/
+void bank_cnt_create(char *name, char *image, int ping_ok,
+                     int nb_tot_eth, t_eth_table *eth_tab,
+                     double x, double y, int hidden_on_graph,
+                     double *tx, double *ty, int32_t *thidden);
 /*--------------------------------------------------------------------------*/
 void bank_node_create(char *name, char *kernel, char *rootfs_used,
                       char *rootfs_backing, char *install_cdrom,
@@ -176,6 +192,7 @@ void bank_lan_create(char *name,  double x, double y, int hidden_on_graph);
 /*--------------------------------------------------------------------------*/
 void bank_edge_delete(char *name, int num, char *lan);
 void bank_node_delete(char *name);
+void bank_cnt_delete(char *name);
 void bank_sat_delete(char *name);
 void bank_lan_delete(char *name);
 /*--------------------------------------------------------------------------*/

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -42,7 +42,9 @@ static int topo_vlg_diff(t_lan_group *vlg, t_lan_group *ref)
 /*****************************************************************************/
 int topo_compare(t_topo_info *topo, t_topo_info *ref)
 {
-  int i;
+  int i, j;
+  if (topo->nb_cnt  != ref->nb_cnt)
+    return 1;
   if (topo->nb_kvm  != ref->nb_kvm)
     return 1;
   if (topo->nb_d2d  != ref->nb_d2d)
@@ -61,6 +63,50 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
     return 7;
   if (memcmp(&(topo->clc), &(ref->clc), sizeof(t_topo_clc)))
     return 5;
+  if (topo->nb_cnt)
+    {
+    if (!topo->cnt)
+      return 6;
+    if (!ref->cnt)
+      return 7;
+    for (i=0; i<topo->nb_cnt; i++)
+      {
+      if (memcmp(&(topo->cnt[i]), &(ref->cnt[i]), sizeof(t_topo_cnt)))
+        {
+        KERR("%s %s", topo->cnt[i].name, ref->cnt[i].name);
+        KERR("%s %s", topo->cnt[i].image, ref->cnt[i].image);
+        KERR("%d %d", topo->cnt[i].nb_tot_eth, ref->cnt[i].nb_tot_eth);
+for(j=0; j<topo->cnt[i].nb_tot_eth; j++)
+{
+        KERR("%d %d %s", topo->cnt[i].eth_table[j].endp_type,
+                         topo->cnt[i].eth_table[j].randmac,
+                         topo->cnt[i].eth_table[j].vhost_ifname);
+
+KERR("%hhu %hhu %hhu %hhu %hhu %hhu", 
+topo->cnt[i].eth_table[j].mac_addr[0],
+topo->cnt[i].eth_table[j].mac_addr[1],
+topo->cnt[i].eth_table[j].mac_addr[2],
+topo->cnt[i].eth_table[j].mac_addr[3],
+topo->cnt[i].eth_table[j].mac_addr[4],
+topo->cnt[i].eth_table[j].mac_addr[5]);
+
+KERR("%hhu %hhu %hhu %hhu %hhu %hhu", 
+ref->cnt[i].eth_table[j].mac_addr[0],
+ref->cnt[i].eth_table[j].mac_addr[1],
+ref->cnt[i].eth_table[j].mac_addr[2],
+ref->cnt[i].eth_table[j].mac_addr[3],
+ref->cnt[i].eth_table[j].mac_addr[4],
+ref->cnt[i].eth_table[j].mac_addr[5]);
+
+        KERR("%d %d %s", ref->cnt[i].eth_table[j].endp_type,
+                         ref->cnt[i].eth_table[j].randmac,
+                         ref->cnt[i].eth_table[j].vhost_ifname);
+
+}
+        return (1000+i);
+        }
+      }
+    }
   if (topo->nb_kvm)
     {
     if (!topo->kvm)
@@ -198,6 +244,7 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
   topo = (t_topo_info *) clownix_malloc(sizeof(t_topo_info), 25);
   memset(topo, 0, sizeof(t_topo_info));
   
+  topo->nb_cnt = ref->nb_cnt;
   topo->nb_kvm = ref->nb_kvm;
   topo->nb_d2d = ref->nb_d2d;
   topo->nb_tap = ref->nb_tap;
@@ -208,6 +255,13 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
   topo->nb_endp = ref->nb_endp;
 
   memcpy(&(topo->clc), &(ref->clc), sizeof(t_topo_clc));
+
+  if (topo->nb_cnt)
+    {
+    topo->cnt =
+    (t_topo_cnt *)clownix_malloc(ref->nb_cnt*sizeof(t_topo_cnt),26);
+    memcpy(topo->cnt, ref->cnt, ref->nb_cnt*sizeof(t_topo_cnt));
+    }
 
   if (topo->nb_kvm)
     {
@@ -286,12 +340,14 @@ void topo_free_topo(t_topo_info *topo)
     {
     for (i=0; i<topo->nb_endp; i++)
       clownix_free(topo->endp[i].lan.lan, __FUNCTION__);
+    clownix_free(topo->cnt, __FUNCTION__);
     clownix_free(topo->kvm, __FUNCTION__);
     clownix_free(topo->d2d, __FUNCTION__);
     clownix_free(topo->tap, __FUNCTION__);
     clownix_free(topo->a2b, __FUNCTION__);
     clownix_free(topo->nat, __FUNCTION__);
     clownix_free(topo->phy, __FUNCTION__);
+    clownix_free(topo->info_phy, __FUNCTION__);
     clownix_free(topo->bridges, __FUNCTION__);
     clownix_free(topo->endp, __FUNCTION__);
     clownix_free(topo, __FUNCTION__);

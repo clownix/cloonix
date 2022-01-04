@@ -1,0 +1,680 @@
+/*****************************************************************************/
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
+/*                                                                           */
+/*  This program is free software: you can redistribute it and/or modify     */
+/*  it under the terms of the GNU Affero General Public License as           */
+/*  published by the Free Software Foundation, either version 3 of the       */
+/*  License, or (at your option) any later version.                          */
+/*                                                                           */
+/*  This program is distributed in the hope that it will be useful,          */
+/*  but WITHOUT ANY WARRANTY; without even the implied warranty of           */
+/*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            */
+/*  GNU Affero General Public License for more details.a                     */
+/*                                                                           */
+/*  You should have received a copy of the GNU Affero General Public License */
+/*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
+/*                                                                           */
+/*****************************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/wait.h>
+
+#include "io_clownix.h"
+#include "launcher.h"
+#include "config_json.h"
+#include "container.h"
+#include "loop_img.h"
+#include "cnt_utils.h"
+
+
+void clean_all_llid(void);
+
+static char losetup_bin[MAX_PATH_LEN];
+static char mount_bin[MAX_PATH_LEN];
+static char umount_bin[MAX_PATH_LEN];
+static char ip_bin[MAX_PATH_LEN];
+
+FILE *my_popen(const char *command, const char *type)
+{
+//  KERR("COMMAND:%s", command);
+  return popen(command, type);
+}
+
+/****************************************************************************/
+static int get_file_len(char *file_name)
+{
+  int result = -1;
+  struct stat statbuf;
+  if (stat(file_name, &statbuf) == 0)
+    result = statbuf.st_size;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static char *read_whole_file(char *file_name, int *len)
+{
+  char *buf = NULL;
+  int fd, readlen;
+  *len = get_file_len(file_name);
+  if (*len == -1)
+    KERR("ERROR Cannot get size of file %s\n", file_name);
+  else if (*len)
+    {
+    fd = open(file_name, O_RDONLY);
+    if (fd > 0)
+      {
+      buf = (char *) malloc((*len+1) *sizeof(char));
+      readlen = read(fd, buf, *len);
+      if (readlen != *len)
+        {
+        KERR("ERROR Length of file error %s\n", file_name);
+        free(buf);
+        buf = NULL;
+        }
+      else
+        buf[*len] = 0;
+      close (fd);
+      }
+    else
+      KERR("ERROR Cannot open file  %s\n", file_name);
+    }
+  else
+    {
+    buf = (char *) malloc(sizeof(char));
+    buf[0] = 0;
+    }
+  return buf;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int write_whole_file(char *file_name, char *buf, int len)
+{
+  int result = -1;
+  int fd, writelen;
+  if (!access(file_name, F_OK))
+    {
+    KERR("ERROR %s already exists", file_name);
+    unlink(file_name);
+    }
+  fd = open(file_name, O_CREAT|O_WRONLY, 00666);
+  if (fd > 0)
+    {
+    writelen = write(fd, buf, len);
+    if (writelen != len)
+      KERR("ERROR write of file %s", file_name);
+    else
+      result = 0;
+    close (fd);
+    }
+  else
+    KERR("ERROR open of file %s", file_name);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void my_cp_file(char *dsrc, char *ddst, char *name)
+{
+  char src_file[MAX_PATH_LEN+MAX_NAME_LEN];
+  char dst_file[MAX_PATH_LEN+MAX_NAME_LEN];
+  struct stat stat_file;
+  int len;
+  char *buf;
+  snprintf(src_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dsrc, name);
+  snprintf(dst_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", ddst, name);
+  src_file[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
+  dst_file[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
+  if (!stat(src_file, &stat_file))
+    {
+    buf = read_whole_file(src_file, &len);
+    if (buf)
+      {
+      unlink(dst_file);
+      if (!write_whole_file(dst_file, buf, len))
+        chmod(dst_file, stat_file.st_mode);
+      }
+    free(buf);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static char *get_config_json(char *rootfs_path, char *nspace_path)
+{
+  char *buf;
+  int len = strlen(CONFIG_JSON);
+  len += (2 * MAX_PATH_LEN);
+  buf = (char *) malloc(len);
+  memset(buf, 0, len);
+  snprintf(buf, len-1, CONFIG_JSON, rootfs_path, nspace_path); 
+  return buf;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int my_mkdir(char *dst_dir)
+{
+  int result;
+  mode_t old_mask, mode_mkdir;
+  struct stat stat_file;
+  old_mask = umask (0077);
+  mode_mkdir = 0700;
+  result = mkdir(dst_dir, mode_mkdir);
+  if (result)
+    {
+    if (errno != EEXIST)
+      KERR("ERROR %s, %d", dst_dir, errno);
+    else
+      {
+      if (stat(dst_dir, &stat_file))
+        KERR("ERROR %s, %d", dst_dir, errno);
+      else if (!S_ISDIR(stat_file.st_mode))
+        {
+        KERR("ERROR %s", dst_dir);
+        unlink(dst_dir);
+        if (mkdir(dst_dir, mode_mkdir))
+          KERR("ERROR %s, %d", dst_dir, errno);
+        }
+      else
+        result = 0;
+      }
+    }
+  umask (old_mask);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int execute_cmd(char *cmd, int trace)
+{
+  int result = 0;
+  FILE *fp;
+  char line[MAX_PATH_LEN];
+  char *ptr;
+  fp = my_popen(cmd, "r");
+  if (fp == NULL)
+    result = -1;
+  else
+    {
+    while ( fgets( line, sizeof line, fp))
+      {
+      ptr = strchr(line, '\r');
+      if (ptr)
+        *ptr = 0;
+      ptr = strchr(line, '\n');
+      if (ptr)
+        *ptr = 0;
+      if (trace)
+        KERR("%s %s", cmd, line);
+      result = -1;
+      }
+    pclose(fp);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int check_mount_does_not_exist(char *path)
+{
+  int result = 0;
+  char cmd[2*MAX_PATH_LEN];
+  char *mount = mount_bin;
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  snprintf(cmd, 2*MAX_PATH_LEN-1, "%s | grep %s 2>&1", mount, path);
+  if (execute_cmd(cmd, 1))
+    {
+    KERR("ERROR %s", cmd);
+    result = -1;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int dir_cnt_create(char *bulk, char *image, char *cnt_dir,
+                          char *name, char *agent_dir)
+{
+  int result = -1;
+  char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN); 
+  snprintf(path, MAX_PATH_LEN-1, "%s/mnt/%s", bulk, image);
+  if (my_mkdir(path))
+    KERR("ERROR %s", path);
+  else
+    {
+    memset(path, 0, MAX_PATH_LEN); 
+    snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, UPPER);
+    if (my_mkdir(path))
+      KERR("ERROR %s", path);
+    else
+      {
+      my_cp_file(agent_dir, path, "cloonix_parrot_srv");
+      my_cp_file(agent_dir, path, "cloonix_parrot_cli");
+      memset(path, 0, MAX_PATH_LEN); 
+      snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, WORKDIR);
+      if (my_mkdir(path))
+        KERR("ERROR %s", path);
+      else
+        {
+        memset(path, 0, MAX_PATH_LEN); 
+        snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, ROOTFS);
+        if (my_mkdir(path))
+          KERR("ERROR %s", path);
+        else
+          result = 0;
+        }
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int read_crun_create_pid(char *name)
+{
+  FILE *fp;
+  char *ptr;
+  int count= 0, create_pid = 0;
+  char cmd[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+  int nb_tries = 6;
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "crun state %s |grep \"\\\"pid\\\"\" |awk '{ print $2 }'", name);
+  while(create_pid == 0)
+    {
+    count += 1;
+    if (count > nb_tries)
+      break;
+    memset(line, 0, MAX_PATH_LEN);
+    fp = my_popen(cmd, "r");
+    if (fp == NULL)
+      KERR("ERROR %s", cmd);
+    else
+      {
+      if(fgets(line, MAX_PATH_LEN-1, fp))
+        {
+        ptr = strchr(line, ',');
+        if (ptr)
+          *ptr = 0;
+        create_pid = atoi(line);
+        }
+      pclose(fp);
+      }
+    usleep(3000);
+    }
+  return create_pid;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void check_netns_and_clean(char *name, char *nspace, int cloonix_rank,
+                                  int vm_id, int nb_eth)
+{
+  int i;
+  char cmd[MAX_PATH_LEN];
+  char *ip = ip_bin;
+  int pid = read_crun_create_pid(name);
+  if (pid)
+    kill(pid, 9);
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "/usr/bin/crun delete %s", name);
+  execute_cmd(cmd, 0);
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s 2>&1 >/dev/null",ip,nspace);
+  execute_cmd(cmd, 0);
+  for (i=0; i<nb_eth; i++)
+    {
+    snprintf(cmd, MAX_PATH_LEN-1, "%s link del name vgt_%d_%d_%d 2>&1",
+             ip, cloonix_rank, vm_id, i);
+    execute_cmd(cmd, 0);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int cnt_utils_create_overlay(char *path, char *lower)
+{
+  int result = -1;
+  char cmd[2*MAX_PATH_LEN];
+  char *mount = mount_bin;
+
+  if (check_mount_does_not_exist(path))
+    KERR("%s", path);
+  else
+    {
+    memset(cmd, 0, 2*MAX_PATH_LEN);
+    snprintf(cmd, 2*MAX_PATH_LEN-1,
+    "%s none -t overlay -o lowerdir=%s,upperdir=%s/%s,workdir=%s/%s %s/%s 2>&1",
+    mount, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
+    if (execute_cmd(cmd, 1))
+      KERR("%s", cmd);
+    else
+      result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int cnt_utils_create_crun_create(char *cnt_dir, char *name)
+{
+  char cnf[MAX_PATH_LEN];
+  char *argv[5];
+  int pid, wstatus;
+  memset(cnf, 0, MAX_PATH_LEN);
+  snprintf(cnf, MAX_PATH_LEN-1, "--config=%s/%s/config.json", cnt_dir, name);
+  argv[0] = "/usr/bin/crun";
+  argv[1] = "create";
+  argv[2] = cnf;
+  argv[3] = name;
+  argv[4] = NULL;
+  if ((pid = fork()) < 0)
+    KOUT(" ");
+  if (pid == 0)
+    {
+    clean_all_llid();
+    execv(argv[0], argv);
+    }
+  else
+    {
+    waitpid(pid, &wstatus, 0);
+    pid = read_crun_create_pid(name);
+    if (pid == 0)
+      KERR("ERROR DID NOT GET CREATE PID FOR %s", name);
+    }
+  return pid;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int cnt_utils_create_config_json(char *path, char *rootfs, char *nspace)
+{
+  int len, result;
+  char json_path[MAX_PATH_LEN];
+  char *buf = get_config_json(rootfs, nspace);
+  memset(json_path, 0, MAX_PATH_LEN);
+  snprintf(json_path, MAX_PATH_LEN-1, "%s/config.json", path); 
+  len = strlen(buf);
+  result = write_whole_file(json_path, buf, len);
+  free(buf);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int nspace_create(char *name, char *nspace, int cloonix_rank,
+                         int vm_id, int nb_eth, t_eth_mac *eth_mac)
+{
+  int i, result = -1;
+  char cmd[MAX_PATH_LEN];         
+  char *ip = ip_bin;
+  char *mac;
+  check_netns_and_clean(name, nspace, cloonix_rank, vm_id, nb_eth);
+  memset(cmd, 0, MAX_PATH_LEN);         
+  snprintf(cmd, MAX_PATH_LEN-1, "%s netns add %s 2>&1", ip, nspace);
+  if (execute_cmd(cmd, 1))
+    KERR("ERROR %s", cmd);
+  else
+    {
+    usleep(10000);
+    result = 0;
+    for (i=0; i<nb_eth; i++)
+      {
+      mac = eth_mac[i].mac;
+      snprintf(cmd, MAX_PATH_LEN-1,
+      "%s link add name vgt_%d_%d_%d type veth peer name eth%d "
+      "address %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx  2>&1",
+      ip, cloonix_rank, vm_id, i, i, mac[0], mac[1], mac[2],
+      mac[3], mac[4], mac[5]);
+      if (execute_cmd(cmd, 1))
+        {
+        KERR("%s", cmd);
+        result = -1;
+        break;
+        }
+      snprintf(cmd, MAX_PATH_LEN-1,
+      "%s link set eth%d netns %s 2>&1", ip, i, nspace);
+      if (execute_cmd(cmd, 1))
+        {
+        KERR("ERROR %s", cmd);
+        result = -1;
+        break;
+        }
+      snprintf(cmd, MAX_PATH_LEN-1,
+      "%s netns exec %s ip link set eth%d up 2>&1", ip, nspace, i);
+      if (execute_cmd(cmd, 1))
+        {
+        KERR("ERROR %s", cmd);
+        result = -1;
+        break;
+        }
+      }
+    snprintf(cmd, MAX_PATH_LEN-1,
+    "%s netns exec %s ip link set lo up 2>&1", ip, nspace);
+    if (execute_cmd(cmd, 1))
+      {
+      KERR("ERROR %s", cmd);
+      result = -1;
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int cnt_utils_create_net(char *bulk, char *image, char *name, char *cnt_dir,
+                         char *nspace, int cloonix_rank, int vm_id,
+                         int nb_eth, t_eth_mac *eth_mac, char *agent_dir)
+{
+  int result = -1;
+  if (dir_cnt_create(bulk, image, cnt_dir, name, agent_dir))
+    KERR("ERROR %s %s %s", cnt_dir, name, nspace);
+  else if (nspace_create(name, nspace, cloonix_rank, vm_id, nb_eth, eth_mac))
+    KERR("ERROR %s %s %s", cnt_dir, name, nspace);
+  else
+    result = 0;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int cnt_utils_delete_net(char *nspace)
+{
+  int result = 0;
+  char cmd[MAX_PATH_LEN];
+  char *ip = ip_bin;
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s 2>&1", ip, nspace);
+  if (execute_cmd(cmd, 1))
+    {
+    KERR("ERROR %s", cmd);
+    result = -1;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int cnt_utils_delete_overlay(char *name, char *cnt_dir, char *bulk, char *image)
+{
+  int result = 0;
+  char cmd[MAX_PATH_LEN];
+  char *umount = umount_bin;
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s %s/%s/%s 2>&1",
+           umount, cnt_dir, name, ROOTFS);
+  if (execute_cmd(cmd, 1))
+    {
+    KERR("ERROR %s", cmd);
+    result = -1;
+    }
+  if (loop_img_del(name, bulk, image, cnt_dir))
+    {
+    KERR("ERROR %s", name);
+    result = -1;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int cnt_utils_delete_crun_stop(char *name, int crun_pid)
+{
+  int pid, result = -1;
+  char cmd[MAX_PATH_LEN];
+  if (crun_pid > 0)
+    result = kill(crun_pid, 9);
+  else
+    {
+    pid = read_crun_create_pid(name);
+    if (pid > 0)
+      result = kill(pid, 9);
+    }
+  memset(cmd, 0, MAX_PATH_LEN); 
+  snprintf(cmd, MAX_PATH_LEN-1, "/usr/bin/crun delete %s", name);
+  if (execute_cmd(cmd, 1))
+    {
+    KERR("ERROR %s", cmd);
+    result = -1;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+char *get_losetup_bin(void)
+{
+  return losetup_bin;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+char *get_mount_bin(void)
+{
+  return mount_bin;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+char *get_umount_bin(void)
+{
+  return umount_bin;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+char *get_ip_bin(void)
+{
+  return ip_bin;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int cnt_utils_create_crun_start(char *name)
+{
+  int result = -1;
+  FILE *fp;
+  char cmd[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  memset(line, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "/usr/bin/crun start %s 2>&1", name);
+  fp = my_popen(cmd, "r");
+  if (fp == NULL)
+    KERR("ERROR %s", cmd);
+  else 
+    {
+    if (!fgets(line, MAX_PATH_LEN-1, fp))
+      result = 0;
+    else
+      KERR("ERROR %s %s", cmd, line);
+    pclose(fp);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int cnt_utils_create_crun_run_check(char *name)
+{ 
+  int result = -1;
+  FILE *fp;
+  char cmd[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+  char *ptr;
+  memset(cmd, 0, MAX_PATH_LEN);
+  memset(line, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "/usr/bin/crun exec %s /cloonix_parrot_cli 2>&1", name);
+  fp = my_popen(cmd, "r");
+  if (fp == NULL)
+    KERR("ERROR %s", cmd);
+  else
+    {
+    if (!fgets(line, MAX_PATH_LEN-1, fp))
+      KERR("ERROR %s", cmd);
+    else
+      {
+      ptr = strchr(line, '\r');
+      if (ptr)
+        *ptr = 0;
+      ptr = strchr(line, '\n');
+      if (ptr)
+        *ptr = 0;
+      if (!strcmp(line, "cloonix"))
+        result = 0;
+      else
+        KERR("ERROR %s %s", cmd, line);
+      }
+    pclose(fp);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void cnt_utils_init(void)
+{
+  memset(losetup_bin, 0, MAX_PATH_LEN);
+  memset(mount_bin, 0, MAX_PATH_LEN);
+  memset(ip_bin, 0, MAX_PATH_LEN);
+  if (!access("/sbin/losetup", F_OK))
+    strcpy(losetup_bin, "/sbin/losetup");
+  else if (!access("/bin/losetup", F_OK))
+    strcpy(losetup_bin, "/bin/losetup");
+  else
+    KERR("ERROR ERROR ERROR losetup binary not found");
+  if (!access("/sbin/mount", F_OK))
+    strcpy(mount_bin, "/sbin/mount");
+  else if (!access("/bin/mount", F_OK))
+    strcpy(mount_bin, "/bin/mount");
+  else
+    KERR("ERROR ERROR ERROR mount binary not found");
+  if (!access("/sbin/umount", F_OK))
+    strcpy(umount_bin, "/sbin/umount");
+  else if (!access("/bin/umount", F_OK))
+    strcpy(umount_bin, "/bin/umount");
+  else
+    KERR("ERROR ERROR ERROR umount binary not found");
+  if (!access("/sbin/ip", F_OK))
+    strcpy(ip_bin, "/sbin/ip");
+  else if (!access("/bin/ip", F_OK))
+    strcpy(ip_bin, "/bin/ip");
+  else
+    KERR("ERROR ERROR ERROR ip binary not found");
+  if (access("/usr/bin/crun", F_OK))
+    KERR("ERROR ERROR ERROR /usr/bin/crun binary not found");
+}
+/*--------------------------------------------------------------------------*/

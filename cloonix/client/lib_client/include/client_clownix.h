@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -68,8 +68,6 @@ void client_dpdk_ovs_cnf(int tid, t_end_cb cb, int lcore, int mem, int cpu);
 void client_sav_vm(int tid, t_end_cb cb, char *nm, int type, char *new_dir_path);
 void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest);
 void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest);
-void client_del_vm(int tid, t_end_cb cb, char *nm);
-
 
 void client_add_d2d(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
                     char *slave_cloonix, uint32_t ip, uint16_t port,
@@ -83,6 +81,8 @@ void client_cnf_xyx(int tid, t_end_cb cb, char *name,
                     int type, uint8_t *mac);
 
 void client_cnf_nat(int tid, t_end_cb cb, char *name, char *cmd);
+
+void client_add_cnt(int tid, t_end_cb cb, t_topo_cnt *cnt);
 
 void client_add_tap(int tid, t_end_cb cb, char *name);
 void client_add_phy(int tid, t_end_cb cb, char *name);
@@ -123,7 +123,7 @@ void client_sav_list_commands(int tid, t_list_commands_cb cb, char *dirpath);
 void client_req_pids(int tid, t_pid_cb cb);
 
 void client_req_eventfull(t_eventfull_cb cb);
-void client_req_slowperiodic(t_slowperiodic_cb cb);
+void client_req_slowperiodic(t_slowperiodic_cb cb_qcow2, t_slowperiodic_cb cb_img);
 
 int cmd_ftopo_recv(char *topo_dir, t_progress_txt_cb pcb);
 

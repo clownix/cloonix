@@ -34,10 +34,8 @@ fct_get_debian_packages()
               libibverbs-dev xorriso wireshark liblz4-dev \
               libcacard-dev pciutils libunwind-dev cmake \
               libgl1-mesa-dev libffi-dev libaio-dev libxml2-dev \
-              libvirglrenderer-dev libspice-server-dev libusbredirparser-dev \
-              crun
-
-#              golang libyajl-dev libseccomp-dev libsystemd-dev
+              libvirglrenderer-dev libspice-server-dev \
+              libusbredirparser-dev crun
 
 }
 #--------------------------------------------------------------------------
@@ -77,8 +75,8 @@ fct_get_opensuse_packages()
          libnuma-devel json-glib-devel bzip2 libgbm-devel \
          libopus-devel rxvt-unicode xorriso libdrm-devel \
          liblz4-devel libcacard-devel pciutils libpcap-devel \
-         libunwind-devel rxvt-unicode python3-setuptools \
-         cmake Mesa-libGL-devel libffi-devel libaio-devel libxml2-devel \
+         libunwind-devel rxvt-unicode python3-setuptools cmake \
+         Mesa-libGL-devel libffi-devel libaio-devel libxml2-devel \
          virglrenderer-devel libspice-server-devel usbredir-devel
 }
 #--------------------------------------------------------------------------

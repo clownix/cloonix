@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -43,7 +43,8 @@ static t_evt_stats_endp_cb clownix_evt_stats_endp_cb;
 static t_evt_stats_sysinfo_cb clownix_evt_stats_sysinfo_cb;
 
 static t_eventfull_cb clownix_eventfull_cb;
-static t_slowperiodic_cb clownix_slowperiodic_cb;
+static t_slowperiodic_cb clownix_slowperiodic_qcow2_cb;
+static t_slowperiodic_cb clownix_slowperiodic_img_cb;
 
 static t_get_path_cb clownix_get_path_cb;
 
@@ -234,15 +235,31 @@ void recv_eventfull(int llid, int tid, int nb_endp, t_eventfull_endp *endp)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_slowperiodic(int llid, int tid, int nb, t_slowperiodic *spic)
+void recv_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic)
 {
   if (!msg_exist_channel(llid))
     KOUT(" ");
   if (tid != 777)
     KOUT(" ");
-  if (!clownix_slowperiodic_cb)
+  if (!clownix_slowperiodic_qcow2_cb)
     KOUT(" ");
-  clownix_slowperiodic_cb(nb, spic);
+  clownix_slowperiodic_qcow2_cb(nb, spic);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic)
+{
+  if (!msg_exist_channel(llid))
+    KOUT(" ");
+  if (tid != 777)
+    KOUT(" ");
+  if (!clownix_slowperiodic_img_cb)
+    KOUT(" ");
+  clownix_slowperiodic_img_cb(nb, spic);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(llid);
 #endif
@@ -416,11 +433,13 @@ void client_req_eventfull(t_eventfull_cb cb)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_req_slowperiodic(t_slowperiodic_cb cb)
+void client_req_slowperiodic(t_slowperiodic_cb cb_qcow2,
+                             t_slowperiodic_cb cb_img)
 {
   if (!g_llid)
     KOUT(" ");
-  clownix_slowperiodic_cb = cb;
+  clownix_slowperiodic_qcow2_cb = cb_qcow2;
+  clownix_slowperiodic_img_cb = cb_img;
   send_slowperiodic_sub(g_llid, 777);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
@@ -534,20 +553,6 @@ void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_del_vm(int tid, t_end_cb cb, char *nm)
-{
-  int new_tid;
-  if (!g_llid)
-    KOUT(" ");
-  new_tid = set_response_callback(cb, tid);
-  send_vmcmd(g_llid, new_tid, nm, vmcmd_del, 0);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(g_llid);
-#endif  
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void client_add_d2d(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip, 
                     char *slave_cloonix, uint32_t ip, uint16_t port,
                     char *passwd, uint32_t udp_ip)
@@ -606,6 +611,20 @@ void client_add_tap(int tid, t_end_cb cb, char *name)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
   send_tap_add(g_llid, new_tid, name);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void client_add_cnt(int tid, t_end_cb cb, t_topo_cnt *cnt)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_cnt_add(g_llid, new_tid, cnt);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif

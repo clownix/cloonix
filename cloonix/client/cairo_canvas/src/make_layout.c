@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -70,7 +70,12 @@ t_layout_node *make_layout_node(t_bank_item *cur)
     if (cur->pbi.endp_type == endp_type_a2b)
       layout_round_a2b_eth_coords(&x, &y);
     else
-      layout_round_node_eth_coords(&x, &y);
+      {
+      if (cur->bank_type == bank_type_cnt)
+        layout_round_cnt_eth_coords(&x, &y);
+      else
+        layout_round_node_eth_coords(&x, &y);
+      }
     layout_node.eth_wlan[i].x =  x;
     layout_node.eth_wlan[i].y = y;
     layout_node.eth_wlan[i].hidden_on_graph = eth->bitem->pbi.hidden_on_graph;

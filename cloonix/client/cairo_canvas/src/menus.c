@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -40,6 +40,7 @@
 #include "menus.h"
 #include "hidden_visible_edge.h"
 #include "menu_dialog_kvm.h"
+#include "menu_dialog_cnt.h"
 #include "menu_dialog_d2d.h"
 #include "bdplot.h"
 
@@ -246,6 +247,29 @@ static void node_sav_derived(GtkWidget *mn, t_item_ident *pm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void cnt_item_info(GtkWidget *mn, t_item_ident *pm)
+{
+  t_bank_item *bitem;
+  static char title[MAX_PATH_LEN];
+  static char text[MAX_TEXT];
+  int len = 0;
+  bitem = look_for_cnt_with_id(pm->name);
+  if (bitem)
+    {
+    if (bitem->bank_type != bank_type_cnt)
+      KOUT("%s", bitem->name);
+    snprintf(title, MAX_PATH_LEN, "%s", bitem->name);
+    title[MAX_TITLE-1] = 0;
+    len += snprintf(text + len, MAX_TEXT-len, "\t\tCONTAINER");
+    len += snprintf(text + len, MAX_TEXT-len-1, "\nImage: %s", 
+                     bitem->pbi.pbi_cnt->image);
+    text[MAX_TEXT-1] = 0;
+    display_info(title, text);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void node_item_info(GtkWidget *mn, t_item_ident *pm)
 {
   t_bank_item *bitem;
@@ -258,13 +282,12 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   bitem = look_for_node_with_id(pm->name);
   if (bitem)
     {
+    if (bitem->bank_type != bank_type_node)
+      KOUT("%s", bitem->name);
     snprintf(title, MAX_PATH_LEN, "%s", bitem->name);
     title[MAX_TITLE-1] = 0;
-    if (bitem->bank_type == bank_type_node)
-      {
-      len += snprintf(text + len, MAX_TEXT-len, "\t\tQEMU_KVM");
-      text[MAX_TEXT-1] = 0;
-      }
+    len += snprintf(text + len, MAX_TEXT-len, "\t\tQEMU_KVM");
+    text[MAX_TEXT-1] = 0;
     vm_config_flags = bitem->pbi.pbi_node->node_vm_config_flags;
     is_persistent = vm_config_flags & VM_CONFIG_FLAG_PERSISTENT;
     is_i386 = vm_config_flags & VM_CONFIG_FLAG_I386;
@@ -403,8 +426,6 @@ static int a2b_item_info(char *text,  t_bank_item *bitem)
   return len;
 }
 /*--------------------------------------------------------------------------*/
-
-
 
 /****************************************************************************/
 static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
@@ -568,6 +589,16 @@ static void node_item_delete(GtkWidget *mn, t_item_ident *pm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void cnt_item_delete(GtkWidget *mn, t_item_ident *pm)
+{
+  t_bank_item *bitem;
+  bitem = look_for_cnt_with_id(pm->name);
+  if (bitem)
+    to_cloonix_switch_delete_sat(pm->name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void lan_item_delete(GtkWidget *mn, t_item_ident *pm)
 {
   t_bank_item *edge=NULL, *bitem;
@@ -618,7 +649,6 @@ static void hidden_visible_eth(GtkWidget *mn, t_item_ident *pm)
     hidden_visible_modification(bitem, 1);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void hidden_visible_lan(GtkWidget *mn, t_item_ident *pm)
@@ -843,11 +873,20 @@ int get_endp_type(t_bank_item *bitem)
   num = bitem->num;
   if (!att_node)
     KOUT(" ");
-  if ((!is_a_a2b(att_node)) && (att_node->pbi.pbi_node))
+  if (!is_a_a2b(att_node))
     {
-    if ((num < 0) || (num >= att_node->pbi.pbi_node->nb_tot_eth))
-      KOUT(" ");
-    result = att_node->pbi.pbi_node->eth_tab[num].endp_type;
+    if (att_node->pbi.pbi_node)
+      {
+      if ((num < 0) || (num >= att_node->pbi.pbi_node->nb_tot_eth))
+        KOUT(" ");
+      result = att_node->pbi.pbi_node->eth_tab[num].endp_type;
+      }
+    else if (att_node->pbi.pbi_cnt)
+      {
+      if ((num < 0) || (num >= att_node->pbi.pbi_cnt->nb_tot_eth))
+        KOUT(" ");
+      result = att_node->pbi.pbi_cnt->eth_tab[num].endp_type;
+      }
     }
   return result;
 }
@@ -913,21 +952,17 @@ void node_ctx_menu(t_bank_item *bitem)
   char *derived_rootfs = "save derived rootfs"; 
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
-  if (bitem->bank_type == bank_type_node) 
-    {
-    if (get_path_to_qemu_spice())
-      desktop = gtk_menu_item_new_with_label("spice desktop");
-    xterm_qmonitor = gtk_menu_item_new_with_label("qemu monitor");
-    }
-  if (bitem->bank_type == bank_type_node) 
-    {
-    save_whole = gtk_menu_item_new_with_label(whole_rootfs);
-    save_derived = gtk_menu_item_new_with_label(derived_rootfs);
-    greboot_vm = gtk_menu_item_new_with_label("reboot by cloonix guest agent");
-    ghalt_vm = gtk_menu_item_new_with_label("halt by cloonix guest agent");
-    qreboot_vm = gtk_menu_item_new_with_label("reboot by qemu");
-    qhalt_vm = gtk_menu_item_new_with_label("halt by qemu");
-    }
+  if (bitem->bank_type != bank_type_node)
+    KOUT("%s", bitem->name);
+  if (get_path_to_qemu_spice())
+    desktop = gtk_menu_item_new_with_label("spice desktop");
+  xterm_qmonitor = gtk_menu_item_new_with_label("qemu monitor");
+  save_whole = gtk_menu_item_new_with_label(whole_rootfs);
+  save_derived = gtk_menu_item_new_with_label(derived_rootfs);
+  greboot_vm = gtk_menu_item_new_with_label("reboot by cloonix guest agent");
+  ghalt_vm = gtk_menu_item_new_with_label("halt by cloonix guest agent");
+  qreboot_vm = gtk_menu_item_new_with_label("reboot by qemu");
+  qhalt_vm = gtk_menu_item_new_with_label("halt by qemu");
   dtach_console = gtk_menu_item_new_with_label("dtach console");
   item_info = gtk_menu_item_new_with_label("Info");
   item_color = gtk_menu_item_new_with_label("Color");
@@ -945,43 +980,36 @@ void node_ctx_menu(t_bank_item *bitem)
                    G_CALLBACK(menu_hidden), (gpointer) pm);
   g_signal_connect(G_OBJECT(dtach_console), "activate",
                    G_CALLBACK(node_dtach_console), (gpointer) pm);
-  if (bitem->bank_type == bank_type_node) 
-    {
-    if (desktop)
-      g_signal_connect(G_OBJECT(desktop), "activate",
-                       G_CALLBACK(node_qemu_spice), (gpointer) pm);
-    g_signal_connect(G_OBJECT(xterm_qmonitor), "activate",
+  if (desktop)
+    g_signal_connect(G_OBJECT(desktop), "activate",
+                     G_CALLBACK(node_qemu_spice), (gpointer) pm);
+  g_signal_connect(G_OBJECT(xterm_qmonitor), "activate",
                    G_CALLBACK(node_xterm_qmonitor), (gpointer) pm);
-    }
-  if ((bitem->bank_type == bank_type_node) && (desktop)) 
+  if (desktop)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), desktop);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), dtach_console);
-  if (bitem->bank_type == bank_type_node) 
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), xterm_qmonitor);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), xterm_qmonitor);
 
-  if (bitem->bank_type == bank_type_node) 
-    {
-    g_signal_connect(G_OBJECT(save_whole), "activate",
-                     G_CALLBACK(node_sav_whole), (gpointer) pm);
-    g_signal_connect(G_OBJECT(save_derived), "activate",
-                     G_CALLBACK(node_sav_derived), (gpointer) pm);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), save_whole);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), save_derived);
+  g_signal_connect(G_OBJECT(save_whole), "activate",
+                   G_CALLBACK(node_sav_whole), (gpointer) pm);
+  g_signal_connect(G_OBJECT(save_derived), "activate",
+                   G_CALLBACK(node_sav_derived), (gpointer) pm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), save_whole);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), save_derived);
 
-    g_signal_connect(G_OBJECT(greboot_vm), "activate",
-                     G_CALLBACK(node_greboot_vm), (gpointer) pm);
-    g_signal_connect(G_OBJECT(qreboot_vm), "activate",
-                     G_CALLBACK(node_qreboot_vm), (gpointer) pm);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), greboot_vm);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), qreboot_vm);
+  g_signal_connect(G_OBJECT(greboot_vm), "activate",
+                   G_CALLBACK(node_greboot_vm), (gpointer) pm);
+  g_signal_connect(G_OBJECT(qreboot_vm), "activate",
+                   G_CALLBACK(node_qreboot_vm), (gpointer) pm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), greboot_vm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), qreboot_vm);
 
-    g_signal_connect(G_OBJECT(ghalt_vm), "activate",
-                     G_CALLBACK(node_ghalt_vm), (gpointer) pm);
-    g_signal_connect(G_OBJECT(qhalt_vm), "activate",
-                     G_CALLBACK(node_qhalt_vm), (gpointer) pm);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), ghalt_vm);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), qhalt_vm);
-    }
+  g_signal_connect(G_OBJECT(ghalt_vm), "activate",
+                   G_CALLBACK(node_ghalt_vm), (gpointer) pm);
+  g_signal_connect(G_OBJECT(qhalt_vm), "activate",
+                   G_CALLBACK(node_qhalt_vm), (gpointer) pm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), ghalt_vm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), qhalt_vm);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator2);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_color);
@@ -995,10 +1023,34 @@ void node_ctx_menu(t_bank_item *bitem)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void cnt_ctx_menu(t_bank_item *bitem)
+{
+  GtkWidget *item_info, *item_delete, *menu = gtk_menu_new();
+  t_item_ident *pm = get_and_init_pm(bitem);
+  bitem->pbi.menu_on = 1;
+  if (bitem->bank_type != bank_type_cnt)
+    KOUT("%s", bitem->name);
+  item_info = gtk_menu_item_new_with_label("Info");
+  item_delete = gtk_menu_item_new_with_label("Delete");
+  g_signal_connect(G_OBJECT(item_info), "activate",
+                   G_CALLBACK(cnt_item_info), (gpointer) pm);
+  g_signal_connect(G_OBJECT(item_delete), "activate",
+                   G_CALLBACK(cnt_item_delete), (gpointer) pm);
+  g_signal_connect(G_OBJECT(menu), "hide",
+                   G_CALLBACK(menu_hidden), (gpointer) pm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
+  gtk_widget_show_all(menu);
+  gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void menu_init(void)
 {
   menu_utils_init();
-  menu_dialog_vm_init();
+  menu_dialog_kvm_init();
+  menu_dialog_cnt_init();
   menu_dialog_d2d_init();
   memset(g_sav_whole, 0, MAX_PATH_LEN);
   memset(g_sav_derived, 0, MAX_PATH_LEN);

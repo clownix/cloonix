@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -21,6 +21,7 @@ void layout_send_layout_sat(t_layout_sat *layout);
 void clean_layout_xml(void);
 t_layout_xml *get_current_layout_xml(void);
 void layout_round_node_eth_coords(double *x, double *y);
+void layout_round_cnt_eth_coords(double *x, double *y);
 void layout_round_a2b_eth_coords(double *x, double *y);
 void layout_set_ready_for_send(void);
 int layout_get_ready_for_send(void);

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2021 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -29,6 +29,9 @@ int dpdk_msg_send_del_lan_ethd(char *lan_name, char *name, int num);
 
 int dpdk_msg_send_add_lan_ethv(char *lan_name, char *name, int num, char *vhost);
 int dpdk_msg_send_del_lan_ethv(char *lan_name, char *name, int num, char *vhost);
+
+int dpdk_msg_send_add_lan_ethv_cnt(char *lan_name, char *name, int num, char *vhost);
+int dpdk_msg_send_del_lan_ethv_cnt(char *lan_name, char *name, int num, char *vhost);
 
 int dpdk_msg_send_add_lan_eths(char *lan_name, char *name, int num);
 int dpdk_msg_send_del_lan_eths(char *lan_name, char *name, int num);
