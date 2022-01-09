@@ -269,33 +269,32 @@ static void create_net_eth(char *line, char *resp, char *name,
 {
   t_container *cur;
   cur = find_container(name);
-  if (cur == NULL)
-    KERR("ERROR %s", name);
-  else if (num >= MAX_DPDK_VM)
-    KERR("ERROR %s", name);
-  else
+  if (cur != NULL)
     {
-    memcpy(cur->eth_mac[num].mac, mac, 6);
-KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO %hhx %hhx %hhx %hhx %hhx %hhx",
-mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]); 
-    if (num+1 < cur->nb_eth) 
-      {
-      memset(resp, 0, MAX_PATH_LEN);
-      }
+    if (num >= MAX_DPDK_VM)
+      KERR("ERROR %s", name);
     else
       {
-      if (cnt_utils_create_net(cur->bulk, cur->image, name, cur->cnt_dir,
-                               cur->nspace, cur->cloonix_rank, cur->vm_id,
-                               cur->nb_eth, cur->eth_mac, cur->agent_dir))
+      memcpy(cur->eth_mac[num].mac, mac, 6);
+      if (num+1 < cur->nb_eth) 
         {
-        KERR("ERROR %s", name);
-        snprintf(resp, MAX_PATH_LEN-1,
-        "cloonixsuid_container_create_net_resp_ko name=%s", name);
+        memset(resp, 0, MAX_PATH_LEN);
         }
       else
         {
-        snprintf(resp, MAX_PATH_LEN-1,
-        "cloonixsuid_container_create_net_resp_ok name=%s", name);
+        if (cnt_utils_create_net(cur->bulk, cur->image, name, cur->cnt_dir,
+                                 cur->nspace, cur->cloonix_rank, cur->vm_id,
+                                 cur->nb_eth, cur->eth_mac, cur->agent_dir))
+          {
+          KERR("ERROR %s", name);
+          snprintf(resp, MAX_PATH_LEN-1,
+          "cloonixsuid_container_create_net_resp_ko name=%s", name);
+          }
+        else
+          {
+          snprintf(resp, MAX_PATH_LEN-1,
+          "cloonixsuid_container_create_net_resp_ok name=%s", name);
+          }
         }
       }
     }
@@ -496,7 +495,6 @@ void container_recv_sigdiag_msg(int llid, int tid, char *line)
   char mac[6];
   int num, nb_eth, cloonix_rank, vm_id;
   memset(resp, 0, MAX_PATH_LEN);
-  snprintf(resp, MAX_PATH_LEN-1, "cloonixsuid_container_ERROR");
   if (sscanf(line, 
   "cloonixsuid_container_create_net name=%s bulk=%s "
   "image=%s nb=%d rank=%d vm_id=%d cnt_dir=%s agent_dir=%s",
@@ -542,9 +540,7 @@ void container_recv_sigdiag_msg(int llid, int tid, char *line)
   "cloonixsuid_container_ERROR name=%s", name) == 1)
     {
     cur = find_container(name);
-    if (cur == NULL)
-      KERR("ERROR NOT FOUND %s, %s", name, line);
-    else
+    if (cur != NULL)
       {
       KERR("ERROR MUST ERASE %s, %s", name, line);
       urgent_destroy_cnt(cur);

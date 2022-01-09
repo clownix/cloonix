@@ -32,6 +32,6 @@ for i in ${LIST}; do
   echo END ${i}  
 done
 
-# sudo ${HERE}/opensuse154
-# sudo mv -v /root/opensuse154.qcow2 ${CLOONIX_BULK}
-# ./tumbleweed
+sudo ${HERE}/opensuse154
+sudo mv -v /root/opensuse154.qcow2 ${CLOONIX_BULK}
+./tumbleweed

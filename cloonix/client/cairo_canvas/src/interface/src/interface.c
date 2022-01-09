@@ -191,7 +191,7 @@ void launch_xterm_double_click_cnt(char *name_vm)
 
   snprintf(title, 2*MAX_NAME_LEN, "%s/%s", local_get_cloonix_name(), name);
   snprintf(cmd, 2*MAX_PATH_LEN-1,
-           "sudo /usr/bin/crun exec %s tini-static -s -g -p SIGKILL bash", name);
+           "sudo /usr/bin/crun exec %s bash", name);
   if (check_before_start_launch(argv))
     pid_clone_launch(start_launch, NULL, NULL, (void *)(argv),
                      NULL, NULL, name_vm, -1, 0);

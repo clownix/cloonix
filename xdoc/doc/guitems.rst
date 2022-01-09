@@ -17,13 +17,25 @@ Here is the list of all the cloonix objects working for with dpdk:
 * **d2d** used to reach another cloonix server through udp messages.
 * **a2b** used for shaping/delay/loss of packets.
 
+New:
+
+* **cnt** uses crun to run a container, (a very light vm).
+
+cnt
+===
+
+This is a running instance of a container, it is mainly a running process
+inside a private file-system with a private namespace ip stack.
+The the connections for the ethernets within the container are possible
+only with **vhost** type of openvswitch lan connection.
+See container chapter to have info on the technics involved for this
+new guitem.
+
 kvm
 ===
 
 This is a running instance of a qemu virtual machine, most of the launching
-options are fixed within cloonix, which is both a great simplification for
-users and also a pain when cloonix has not got the qemu option that the user
-would like to have.
+options are fixed within cloonix.
 
 There are a few cloonix configuration parameters that are necessary, such
 as cpu number, ram quantity, eth types **spyable**, **dpdk**, or **vhost**.

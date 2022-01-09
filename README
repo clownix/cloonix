@@ -2,27 +2,15 @@
 AGPLv3 tool to create networks of kvm virtual machines.
 See directory cloonix for the LICENCE
 See clownix.net for a documentation (which is not up to date).
+http://clownix.net/doc_stored/build-22-01/html/index.html doc.
 
-NOTE: The version 22-00 has a new type of element: a crun based container.
+NOTE: The version 22-01 has a new type of element: a crun based container.
       See at the end of this README for details of this new feature.
-
-NOTE: The version 21-00 has 3 possible uses of ovs for a vm interface:
-      s, d or v, s gives blinking interfaces that are spyable, d is for
-      the dpdk interface not spyable and v is for vhost interface not
-      spyable.
-      A double-click on a spyable interface launches wireshark for this
-      interface.
-      The a2b, d2d and tap cloonix objects must be used with the spyable
-      interface. Fast interfaces are d and v, the v (vhost) can also
-      be used to get a faster tap named:
-      "vho_<cloonix_rank>_<vmi_dx>_<eth_num>"
-      As an example, the vhost (ie tap) interface created for the first
-      vm of the nemo network and ethernet 0 is: "vho_1_1_0".
 
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-22-00
+http://clownix.net/downloads/cloonix-22-01
 
 -----------------------------------------------------------------------------
 COMPILED AND TESTED ON:
@@ -62,12 +50,12 @@ packages.
 -----------------------------------------------------------------------------
 INSTALL:
 
-wget http://clownix.net/downloads/cloonix-22-00/cloonix-22-00.tar.gz
-tar xvf cloonix-22-00.tar.gz
-cd cloonix-22-00
+wget http://clownix.net/downloads/cloonix-22-01/cloonix-22-01.tar.gz
+tar xvf cloonix-22-01.tar.gz
+cd cloonix-22-01
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-22-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-22-01/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
@@ -75,7 +63,7 @@ tar xvf targz_store.tar.gz
 -----------------------------------------------------------------------------
 GET A WORKING VM:
 
-wget http://clownix.net/downloads/cloonix-22-00/bulk/bullseye.qcow2.gz
+wget http://clownix.net/downloads/cloonix-22-01/bulk/bullseye.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cp bullseye.qcow2.gz ${HOME}/cloonix_data/bulk
@@ -157,6 +145,8 @@ GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugep
 -----------------------------------------------------------------------------
 NEW CONTAINER CRUN BASED VM:
 
+See details for the container use in cloonix, see container chapter in
+the http://clownix.net/doc_stored/build-22-01/html/index.html doc.
 For a quick test, as you need the sudo program to elevate privileges to
 root level with no password for crun control, you have to open as root
 the /etc/sudoers file and put in the "# User privilege specification" section:
@@ -164,183 +154,66 @@ the /etc/sudoers file and put in the "# User privilege specification" section:
 
 You must put the following downloaded image file in the bulk directory of
 cloonix:
-wget http://clownix.net/downloads/cloonix-22-00/bulk/bullseye.img.gz
+wget http://clownix.net/downloads/cloonix-22-01/bulk/bullseye.img.gz
 
 
-Then the following commands should work:
+Then the following script should work:
+
+cd cloonix/quickstart
+ping_cnt.sh
+
+Or use the following list of commands:
 
 cloonix_net nemo
 cloonix_gui nemo
-cloonix_cli nemo add cnt Cnt1 eth=vvv bookworm.img
-cloonix_cli nemo add cnt Cnt2 eth=vvv bookworm.img
+cloonix_cli nemo add cnt Cnt1 eth=v bookworm.img
+cloonix_cli nemo add cnt Cnt2 eth=v bookworm.img
 cloonix_cli nemo add lan Cnt1 0 lan1
 cloonix_cli nemo add lan Cnt2 0 lan1
 sudo crun exec Cnt1 ifconfig eth0 1.1.1.1/24
 sudo crun exec Cnt2 ifconfig eth0 1.1.1.2/24
 sudo crun exec Cnt1 ping 1.1.1.2
 
-To have a bash shell within a container with command line:
+To have a bash shell within a container, call the command line:
+
+sudo crun exec Cnt1 bash
+
+If the container has the tini-static binary within, then you can call:
 
 sudo crun exec Cnt1 tini-static -s -g -p SIGKILL bash
 
-NOTE: tini-static is used to be able to do Ctrl-C on the command.
+tini-static permits the correct working of the Ctrl-C interrupt.
 
 You can also use the cairo gui:
 On the gui, a double-click above a container shell.
 
-============================================================================
-             TECHNICAL BASES FOR THE NEW CRUN FEATURE
-                      CONTAINER FROM SCRATCH
-============================================================================
- 
 ==============================================================================
-                   1  CONTAINER BOOKWORM IMAGE CREATE
-==============================================================================
-The first step is the building of bookworm.img, the image file that will be used
-in cloonix. The following commands lead with the help of the debootstrap
-util to the building of this image file.
--------------------------------------------------------------------------------
-dd if=/dev/zero of=bookworm.img bs=100M count=10
-losetup -fP bookworm.img
-mkfs.ext4 /root/bookworm.img
-mkdir -p /root/tmp_mnt
-mount -o loop /dev/loop0 /root/tmp_mnt
+HOWTO CONVERT A DOCKER TO THE CLOONIX IMAGE:
 
-export DEBOOTSTRAP_DIR=/root/debootstrap-1.0.126+nmu1
+First, convert the docker into a tar of the root file-system, we will
+call the tar file layer.tar and put it in /root directory.
 
-INCLUDES="openssh-client,iperf3,vim,bash-completion,net-tools,tcpdump,tini,frr-doc,frr"
+As root, do the following commands to get the docker.img file:
 
-cd /root/debootstrap-1.0.126+nmu1
-./debootstrap  --no-check-certificate \
-               --no-check-gpg \
-               --arch amd64 \
-               --include=${INCLUDES} \
-               bookworm \
-               /root/tmp_mnt \
-               http://deb.debian.org/debian
-
-umount /root/tmp_mnt
-DEVLOOP=$(losetup -l | grep bookworm.img | awk '{print $1}')
+dd if=/dev/zero of=docker.img bs=100M count=10
+losetup -fP docker.img
+DEVLOOP=$(losetup -l | grep docker.img | awk '{print $1}')
+echo $DEVLOOP
+mkfs.ext4 docker.img
+mkdir -p tmp_mnt
+mount -o loop $DEVLOOP tmp_mnt
+cd tmp_mnt    
+tar xvf /root/layer.tar
+cd ..
+umount tmp_mnt
 losetup -d $DEVLOOP
-rmdir /root/tmp_mnt
--------------------------------------------------------------------------------
+rmdir tmp_mnt
 
+Then put the result file in the BULK directory of cloonix, usually
+in ${HOME}/cloonix_data/bulk.
 
-==============================================================================
-                2  CONTAINER COPY ON WRITE ROOTFS CREATE
-==============================================================================
-With the image file created above, a particular way to mount it can be used
-to have "Copy On Write" feature, that means the original file is never
-writen upon but all the file-system deltas are saved in sub-directories, the
-whole thing giving the impression of a writable root file-system.
-The following commands are a way to test this rootfs creation.
--------------------------------------------------------------------------------
+cp docker.img ${HOME}/cloonix_data/bulk 
 
-losetup -fP bookworm.img
-DEVLOOP=$(losetup -l | grep bookworm.img | awk '{print $1}')
-mkdir -p /root/overlay/{lower,upper,workdir,rootfs}
-mount -o loop $DEVLOOP /root/overlay/lower
-LW="/root/overlay/lower"
-UP="/root/overlay/upper"
-WK="/root/overlay/workdir"
-RT="/root/overlay/rootfs"
-mount none -t overlay -o lowerdir=${LW},upperdir=${UP},workdir=${WK} ${RT}
-
--------------------------------------------------------------------------------
-# Notes:
-#   lower is not writen
-#   workdir is used before atomic copy to upper
-#   upper is written with delta of rootfs from template image mounted on lower.
--------------------------------------------------------------------------------
-
-==============================================================================
-
-==============================================================================
-                    3  CONTAINER NETWORK CREATE
-==============================================================================
-Now that the file-system has been taken care of, we have to have an isolated
-ip stack for our container, for this, the namespaces are used, the following
-commands create a namespace cloonix_1_1, creates a veth pair (vgt_1_1_0,eth0)
-and sends the eth0 one in the cloonix_1_1 namespace. This namespace will be
-put in the config.json file of the crun and that will give the eth0 interface
-to the new container machine. Do the following commands to have the namespace.
--------------------------------------------------------------------------------
- 
-ip netns ls
-ip netns add cloonix_1_1
-ip link add name vgt_1_1_0 type veth peer name eth0
-ip link set eth0 netns cloonix_1_1
-ip netns exec cloonix_1_1 ip link set lo up
-ip netns exec cloonix_1_1 ip link set eth0 up
--------------------------------------------------------------------------------
-
-
-==============================================================================
-                       4  CONTAINER CONFIG CREATION
-==============================================================================
-The crun software takes a config.json file as input, to help having a template
-for this config, the command "crun spec" creates the config. The adaptation
-of the config can be done then by copy-paste of the following commands.
--------------------------------------------------------------------------------
-
-crun spec
-
-sed -i s"%\"path\": \(.*\)%\"path\": \"/root/overlay/rootfs\",%" config.json
-sed -i s"/\"readonly\": \(.*\)/\"readonly\": \"false\"/" config.json
-sed -i s"%\"network\"%\"network\",\n\t\t\t\t\"path\": \"/var/run/netns/cloonix_1_1\"%" config.json
-sed -i s"/\"terminal\": \(.*\)/\"terminal\": \"false\",/" config.json
-sed -i s"%\"CAP_KILL\",%\"CAP_KILL\",\n\t\t\t\t\"CAP_NET_RAW\",%" config.json
-sed -i s"%\"CAP_KILL\",%\"CAP_KILL\",\n\t\t\t\t\"CAP_NET_ADMIN\",%" config.json
-
--------------------------------------------------------------------------------
-
-
-==============================================================================
-                          5   CONTAINER RUN
-==============================================================================
-
-crun list
-
-crun create --config=/root/config.json Cloon1
-
-crun list
-
-crun exec Cloon1 tini-static -s -g -p SIGKILL bash
-
-crun list
-
-==============================================================================
-                          6  CLEAN ALL
-==============================================================================
-
-crun list
-kill -9 <pid>
-crun list
-crun delete Cloon1
-crun list
-
-ip netns ls
-ip netns del cloonix_1_1
-ip netns ls
-
-umount /root/overlay/rootfs
-umount /root/overlay/lower
-DEVLOOP=$(losetup -l | grep bookworm.img | awk '{print $1}')
-losetup -d $DEVLOOP
-
-rm -vrf config.json  bookworm.img  overlay
-==============================================================================
-
-Of course, with cloonix software all the above steps are done automatically to
-simplify the use of those w container machines.
-
-This is a work in progress but the end of year holidays are finished and
-this is delivered as is for the moment, real work for money will take
-most of my time from now on. Anyways, this container prototype has
-probably a great future, it is so light and fast!
-
-Vincent Perrier
-==============================================================================
 
 
 

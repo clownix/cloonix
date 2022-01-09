@@ -71,7 +71,7 @@ cloonix_ssh ${NET} ${NAME} "sync"
 sleep 2
 cloonix_ssh ${NET} ${NAME} "sync"
 #----------------------------------------------------------------------
-#cloonix_ssh $NET ${NAME} "poweroff"
+cloonix_ssh $NET ${NAME} "poweroff"
 echo $QCOW2 done
 #----------------------------------------------------------------------
 

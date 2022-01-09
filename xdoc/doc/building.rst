@@ -162,4 +162,4 @@ you must do the following prior to cloonix compilation::
   cd build
   ninja install
 
-
+The tumbleweed presents a compilation problem, to be investigated when possible.

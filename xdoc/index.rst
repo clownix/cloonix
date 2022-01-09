@@ -68,12 +68,15 @@ These necessary softwares are associated to a cloonix version, download it::
 
     wget http://clownix.net/downloads/cloonix-__LAST__/targz_store.tar.gz
 
-The virtual machines have file-systems that are qcow2 files, you
+The virtual machines have file-systems that are .qcow2 files, you
 can download qcow2 guest virtual machines here:
 
-    * `Qcow2 guests <http://clownix.net/downloads/cloonix-__LAST__/bulk>`_
+    * `Qcow2 guests <http://clownix.net/downloads/cloonix-__LAST__/qcow2>`_
 
+The containers have file-systems that are .img files, you can download
+guest containers here:
 
+    * `Img guests <http://clownix.net/downloads/cloonix-__LAST__/img>`_
 
 
 Content
@@ -91,3 +94,5 @@ Content
      doc/dpdk.rst
      doc/cisco.rst
      doc/mikrotik.rst
+     doc/container.rst
+     doc/ovs.rst
