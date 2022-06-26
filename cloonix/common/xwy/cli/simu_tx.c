@@ -79,13 +79,13 @@ static int write_first_el(t_simu_tx *stx)
       {
       if (errno != EINTR && errno != EAGAIN)
         {
-        KERR("%d %s", el->fd, strerror(errno));
+        XERR("%d %s", el->fd, strerror(errno));
         result = -2;
         }
       }
     else if (len == 0)
       {
-      KERR("WRITE CLOSED DIALOG %d", el->fd);
+      XERR("WRITE CLOSED DIALOG %d", el->fd);
       result = -2;
       }
     else
@@ -94,7 +94,7 @@ static int write_first_el(t_simu_tx *stx)
       if (el->offset == el->payload)
         result = 0;
       else
-        KERR("DIALOG WRITE %d %d %d", el->fd, len, el->payload-el->offset);
+        XERR("DIALOG WRITE %d %d %d", el->fd, len, el->payload-el->offset);
       }
     }
   return result;
@@ -121,14 +121,14 @@ static void chain_el(t_simu_tx *stx, t_simu_tx_el *el)
   if (stx->first)
     {
     if (!stx->last)
-      KOUT(" ");
+      XOUT(" ");
     stx->last->next = el;
     stx->last = el;
     }
   else
     {
     if (stx->last)
-      KOUT(" ");
+      XOUT(" ");
     stx->first = el;
     stx->last = el;
     }
@@ -179,9 +179,9 @@ void simu_tx_fdset(int llid)
 {
   t_simu_tx *stx;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("LLID OUT OF RANGE %d", llid);
+    XOUT("LLID OUT OF RANGE %d", llid);
   if (!g_simu_tx[llid - 0])
-    KOUT("LLID NOT OPEN %d", llid);
+    XOUT("LLID NOT OPEN %d", llid);
   stx = g_simu_tx[llid - 0];
   if (simu_tx_queue_non_empty(stx))
     stx->sock_fd_epev->events |= EPOLLOUT;
@@ -193,12 +193,12 @@ void simu_tx_fdiset(int llid)
 {
   t_simu_tx *stx;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("LLID OUT OF RANGE %d", llid);
+    XOUT("LLID OUT OF RANGE %d", llid);
   if (!g_simu_tx[llid - 0])
-    KOUT("LLID NOT OPEN %d", llid);
+    XOUT("LLID NOT OPEN %d", llid);
   stx = g_simu_tx[llid - 0];
   if (simu_tx_ready(stx))
-    KOUT("%d", llid);
+    XOUT("%d", llid);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -207,13 +207,13 @@ void simu_tx_send(int llid, int len, char *buf)
 {
   t_simu_tx *stx;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("LLID OUT OF RANGE %d", llid);
+    XOUT("LLID OUT OF RANGE %d", llid);
   if (!g_simu_tx[llid - 0])
-    KOUT("LLID NOT OPEN %d", llid);
+    XOUT("LLID NOT OPEN %d", llid);
   stx = g_simu_tx[llid - 0];
   chain_buf(stx, len, buf);
   if (simu_tx_ready(stx))
-    KOUT("%d", llid);
+    XOUT("%d", llid);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -224,9 +224,9 @@ int simu_tx_open(int llid, int sock_fd, struct epoll_event *sock_fd_epev)
   int result = -1;
   t_simu_tx *stx;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("LLID OUT OF RANGE %d", llid);
+    XOUT("LLID OUT OF RANGE %d", llid);
   if (g_simu_tx[llid - 0])
-    KOUT("LLID EXISTS %d", llid);
+    XOUT("LLID EXISTS %d", llid);
   else
     {
     stx = (t_simu_tx *) wrap_malloc(sizeof(t_simu_tx));
@@ -245,17 +245,17 @@ void simu_tx_close(int llid)
 {
   t_simu_tx *stx;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("LLID OUT OF RANGE %d", llid);
+    XOUT("LLID OUT OF RANGE %d", llid);
   if (!g_simu_tx[llid - 0])
-    KOUT("LLID DOES NOT EXISTS %d", llid);
+    XOUT("LLID DOES NOT EXISTS %d", llid);
   else
     {
     stx = g_simu_tx[llid - 0];
     g_simu_tx[llid - 0] = NULL;
     if (stx->llid != llid)
-      KOUT("LLID INCOHERENT %d %d", stx->llid, llid);
+      XOUT("LLID INCOHERENT %d %d", stx->llid, llid);
     if (stx->first)
-      KERR("CLOSE PURGE DATA %d %d %d el", llid, stx->sock_fd, stx->nb_els);
+      XERR("CLOSE PURGE DATA %d %d %d el", llid, stx->sock_fd, stx->nb_els);
     while(stx->first)
       free_first_el(stx);
     wrap_free(stx, __LINE__);

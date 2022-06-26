@@ -4,7 +4,9 @@ NET=nemo
 DISTRO=centos8
 NAME=${DISTRO}
 QCOW2=${DISTRO}.qcow2
-CLOONIX_CENTOS8_REPO=https://mirrors.edge.kernel.org/centos/8
+
+CLOONIX_CENTOS8_REPO=https://mirrors.edge.kernel.org/centos/8-stream
+
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
 CLOONIX_BULK=$(cat $CLOONIX_CONFIG |grep CLOONIX_BULK | awk -F = "{print \$2}")
@@ -49,7 +51,8 @@ cloonix_ssh $NET ${NAME} "mkdir -p /root/cloonix_data/bulk"
 #----------------------------------------------------------------------
 cloonix_scp $NET ${HERE}/../../install_depends ${NAME}:/root
 #----------------------------------------------------------------------
-cloonix_scp $NET ${BULK}/bullseye.qcow2 ${NAME}:/root/cloonix_data/bulk
+cloonix_scp $NET ${BULK}/bookworm.img ${NAME}:/root/cloonix_data/bulk
+cloonix_scp $NET ${BULK}/bookworm.qcow2 ${NAME}:/root/cloonix_data/bulk
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "dhclient"
 #----------------------------------------------------------------------

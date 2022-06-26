@@ -64,13 +64,13 @@ void from_cloonix_switch_create_node(t_topo_kvm *kvm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void from_cloonix_switch_create_d2d(t_topo_d2d *d2d)
+void from_cloonix_switch_create_c2c(t_topo_c2c *c2c)
 {
   t_item_obj_resp *pa;
   pa = (t_item_obj_resp *)clownix_malloc(sizeof(t_item_obj_resp), 21);
   memset(pa, 0, sizeof(t_item_obj_resp));
-  pa->d2d = (t_topo_d2d *) clownix_malloc(sizeof(t_topo_d2d), 22);
-  memcpy(pa->d2d, d2d, sizeof(t_topo_d2d));
+  pa->c2c = (t_topo_c2c *) clownix_malloc(sizeof(t_topo_c2c), 22);
+  memcpy(pa->c2c, c2c, sizeof(t_topo_c2c));
   timer_create_obj_resp((void *)pa);
 }
 /*--------------------------------------------------------------------------*/

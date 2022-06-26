@@ -33,7 +33,7 @@ runopts opts; /* GLOBAL */
 
 
 void print_version() {
-	fprintf(stderr, "Dropbear cloonix\n");
+	fprintf(stderr, "Dropbear cloon\n");
 }
 
 

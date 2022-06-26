@@ -29,7 +29,6 @@ int  llid_get_event2llid(int event, int prev_llid, int *llid, int *tid);
 
 int  llid_get_type_of_con(int llid, char *name, int *id);
 void llid_free_all_llid(void);
-void llid_set_qmonitor(int llid, char *name, int val);
 void llid_count_beat(void);
 int  llid_get_count_beat(int llid);
 /*---------------------------------------------------------------------------*/

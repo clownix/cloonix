@@ -63,7 +63,7 @@ void topo_info_update(t_topo_info *topo)
 void timer_create_item_node_req(void *data)
 {
   char *ptr_p9_host_share = NULL;
-  int32_t thidden_on_graph[MAX_DPDK_VM];
+  int32_t thidden_on_graph[MAX_ETH_VM];
   int i, vm_config_flags, natplug = 0;
   t_custom_vm *cust_vm;
   t_custom_cnt *cust_cnt;
@@ -72,7 +72,7 @@ void timer_create_item_node_req(void *data)
   if (pa->is_cnt == 0)
     {
     get_custom_vm(&cust_vm);
-    for (i=0; i<MAX_DPDK_VM; i++)
+    for (i=0; i<MAX_ETH_VM; i++)
       thidden_on_graph[i] = 0;
     if (cust_vm->has_p9_host_share)
       ptr_p9_host_share = cust_vm->kvm_p9_host_share;
@@ -99,6 +99,8 @@ void timer_create_item_node_req(void *data)
     memcpy(cust_topo_cnt.eth_table, cust_cnt->eth_table,
            cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));
     strncpy(cust_topo_cnt.image, cust_cnt->image, MAX_PATH_LEN-1);
+    strncpy(cust_topo_cnt.customer_launch, cust_cnt->customer_launch,
+            MAX_PATH_LEN-1);
     client_add_cnt(0, callback_end, &cust_topo_cnt);
     }
   clownix_free(pa, __FUNCTION__);
@@ -109,7 +111,7 @@ void timer_create_item_node_req(void *data)
 void timer_create_item_req(void *data)
 {
   t_item_req *pa = (t_item_req *) data;
-  t_d2d_req_info *d2d = &(pa->d2d_req_info); 
+  t_c2c_req_info *c2c = &(pa->c2c_req_info); 
   set_gene_layout_x_y(pa->bank_type, pa->name, pa->x, pa->y, 
                       pa->xa, pa->ya, pa->xb, pa->yb, 0);
   switch(pa->bank_type)
@@ -118,14 +120,14 @@ void timer_create_item_req(void *data)
       from_cloonix_switch_create_lan(pa->name);
       break;
     case bank_type_sat:
-      if (pa->endp_type == endp_type_d2d)
+      if (pa->endp_type == endp_type_c2c)
         {
-        if ((!strlen(pa->name)) || (!strlen(d2d->dist_cloonix)))
+        if ((!strlen(pa->name)) || (!strlen(c2c->dist_cloon)))
           KOUT(" ");
-        client_add_d2d(0, callback_end, pa->name, d2d->loc_udp_ip,
-                       d2d->dist_cloonix, d2d->dist_tcp_ip,
-                       d2d->dist_tcp_port, d2d->dist_passwd,
-                       d2d->dist_udp_ip);
+        client_add_c2c(0, callback_end, pa->name, c2c->loc_udp_ip,
+                       c2c->dist_cloon, c2c->dist_tcp_ip,
+                       c2c->dist_tcp_port, c2c->dist_passwd,
+                       c2c->dist_udp_ip);
         }
       else if (pa->endp_type == endp_type_a2b)
         client_add_a2b(0, callback_end, pa->name);

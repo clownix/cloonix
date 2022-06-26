@@ -49,29 +49,26 @@
 #include "file_read_write.h"
 #include "utils_cmd_line_maker.h"
 #include "layout_topo.h"
-#include "rpc_qmonitor.h"
-#include "qmonitor.h"
 #include "qmp.h"
-#include "qhvc0.h"
 #include "doorways_mngt.h"
 #include "doorways_sock.h"
 #include "xwy.h"
 #include "hop_event.h"
 #include "cloonix_conf_info.h"
 #include "qmp_dialog.h"
-#include "dpdk_ovs.h"
+#include "qga_dialog.h"
+#include "ovs.h"
+#include "ovs_snf.h"
+#include "ovs_nat.h"
+#include "ovs_c2c.h"
 #include "suid_power.h"
-#include "nat_dpdk_process.h"
-#include "d2d_dpdk_process.h"
-#include "a2b_dpdk_process.h"
-#include "xyx_dpdk_process.h"
-#include "container.h"
+#include "cnt.h"
 
 
 
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
-static int g_i_am_in_cloonix;
+static int g_i_am_in_cloon;
 static char g_i_am_in_cloonix_name[MAX_NAME_LEN];
 
 
@@ -79,9 +76,6 @@ static int g_cloonix_lock_fd = 0;
 static int g_machine_is_kvm_able;
 static char g_user[MAX_NAME_LEN];
 static char **g_saved_environ;
-static int g_machine_nb_cpu;
-static int g_machine_hugepages_nb;
-static int g_machine_hugepages_size;
 static int g_conf_rank;
 
 
@@ -95,37 +89,17 @@ char *used_binaries[] =
   "/bin/chmod",
   "/bin/cp",
   "/bin/ln",
+  SBIN_IP,
+  USR_BIN_PRLIMIT,
   NULL,
 };
 /*--------------------------------------------------------------------------*/
 
 
-#define RANDOM_APPEND_SIZE 24
-static char *random_str(void)
-{
-  static char rd[RANDOM_APPEND_SIZE+1];
-  int i;
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  srand(ts.tv_nsec);
-  memset (rd, 0 , RANDOM_APPEND_SIZE+1);
-  for (i=0; i<RANDOM_APPEND_SIZE; i++)
-    rd[i] = 'A' + (rand() % 26);
-  return rd;
-}
-/*---------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 int get_conf_rank(void)
 {
   return g_conf_rank;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *get_memid(void)
-{
-  return (random_str());
 }
 /*---------------------------------------------------------------------------*/
 
@@ -140,13 +114,6 @@ static void init_g_user(void)
     printf("Could not get user name\n");
     KOUT("Could not get user name");
     }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-uint32_t get_cpu_mask(void)
-{
-  return (g_cloonix_conf_info->cpu_mask);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -318,8 +285,7 @@ static void mk_and_tst_work_path(void)
   mk_cnt_dir();
   mk_endp_dir();
   mk_dtach_dir();
-  mk_dpdk_ovs_db_dir();
-  mk_dpdk_dir();
+  mk_ovs_db_dir();
   sprintf(path1, "%s/cloonix_lock",  cfg_get_root_work());
   check_for_another_instance(path1, 0);
 }
@@ -341,8 +307,6 @@ void uml_clownix_switch_rx_cb(int llid, int len, char *buf)
     result = doors_io_basic_decoder(llid, len, buf);
   if (result == -1)
     result = doors_io_layout_decoder(llid, len, buf);
-  if (result == -1)
-    result = doors_io_qmonitor_decoder(llid, len, buf);
   if (result == -1)
     result = doors_xml_decoder(llid, len, buf);
   if (result == -1)
@@ -398,10 +362,10 @@ static void launching(void)
     }
   set_cloonix_name(cfg_get_cloonix_name());
   printf("\n\n");
-  printf("     Cloonix Version:        %s\n",cfg_get_version());
-  printf("     Cloonix Name:           %s (rank:%d)\n",
+  printf("     Cloon Version:        %s\n",cfg_get_version());
+  printf("     Cloon Name:           %s (rank:%d)\n",
                                        cfg_get_cloonix_name(),get_conf_rank());
-  printf("     Cloonix Tree:           %s\n",cfg_get_bin_dir());
+  printf("     Cloon Tree:           %s\n",cfg_get_bin_dir());
   printf("     Work Zone Path:         %s\n",cfg_get_root_work());
   printf("     Bulk Path:              %s\n",cfg_get_bulk());
   printf("     Server Doors Port:      %d\n",cfg_get_server_port());
@@ -414,27 +378,10 @@ static void launching(void)
     printf("BADCONF\n");
     KOUT("BADCONF");
     }
-  if ((1 << g_machine_nb_cpu) <= g_cloonix_conf_info->cpu_mask)
-    {
-    printf("WARNING! Probable dpdk config error, "
-           "nb cpu on host: %d cpu_mask Ox%x\n\n",
-            g_machine_nb_cpu, g_cloonix_conf_info->cpu_mask);
-    }
-  if (g_machine_hugepages_size < 1024*1024)
-    {
-    printf("WARNING! Probable dpdk config error, hugepages_size: %d\n\n",
-            g_machine_hugepages_size);
-    }
-  if ((g_cloonix_conf_info->socket_mem) >
-      (g_machine_hugepages_nb * (g_machine_hugepages_size/1024)))
-    {
-    printf("WARNING! Probable dpdk config error, "
-           "1 giga hugepages: %d mem wanted: %dM\n\n",
-           g_machine_hugepages_nb, g_cloonix_conf_info->socket_mem);
-    }
-  dpdk_ovs_init(g_cloonix_conf_info->lcore_mask,
-                g_cloonix_conf_info->socket_mem,
-                g_cloonix_conf_info->cpu_mask);
+  ovs_init();
+  ovs_snf_init();
+  ovs_nat_init();
+  ovs_c2c_init();
   doorways_first_start();
   sprintf(clownlock, "%s/cloonix_lock", cfg_get_root_work());
   check_for_another_instance(clownlock, 1);
@@ -501,47 +448,6 @@ static t_topo_clc *get_parsed_config(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int test_machine_nb_cpu(void)
-{
-  int nb_cpu = 0;
-  FILE *fhd;
-  char result[500];
-  fhd = fopen("/proc/cpuinfo", "r");
-  if (fhd)
-    {
-    while(fgets(result, 500, fhd))
-      {
-      if (!strncmp(result, "processor", strlen("processor")))
-        nb_cpu += 1;
-      }
-    fclose(fhd);
-    }
-  return nb_cpu;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void test_machine_nb_hugePages(int *nb_hpages, int *hp_size)
-{
-  int nb;
-  FILE *fhd;
-  char result[500];
-  fhd = fopen("/proc/meminfo", "r");
-  if (fhd)
-    {
-    while(fgets(result, 500, fhd))
-      {
-      if (sscanf(result, "HugePages_Total: %d", &nb) == 1)
-        *nb_hpages = nb;
-      if (sscanf(result, "Hugepagesize: %d", &nb) == 1)
-        *hp_size = nb;
-      }
-    fclose(fhd);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int test_machine_is_kvm_able(void)
 {
   int found = 0;
@@ -592,10 +498,10 @@ static int tst_port_is_not_used(int port)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int inside_cloonix(char **name)
+int inside_cloon(char **name)
 {
   *name = g_i_am_in_cloonix_name;
-  return g_i_am_in_cloonix;
+  return g_i_am_in_cloon;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -643,14 +549,14 @@ void check_for_work_dir_inexistance(void)
 /*****************************************************************************/
 int main (int argc, char *argv[])
 {
-  long long date_us;
+  uint64_t date_us;
   t_topo_clc *conf;
   struct timespec ts;
   int llid;
 
   if (clock_gettime(CLOCK_MONOTONIC, &ts))
     KOUT(" ");
-  g_i_am_in_cloonix = i_am_inside_cloonix(g_i_am_in_cloonix_name);
+  g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
 
   init_g_user();
   job_for_select_init();
@@ -658,8 +564,6 @@ int main (int argc, char *argv[])
   recv_init();
   g_cloonix_lock_fd = 0;
   g_machine_is_kvm_able = test_machine_is_kvm_able();
-  g_machine_nb_cpu = test_machine_nb_cpu();
-  test_machine_nb_hugePages(&g_machine_hugepages_nb,&g_machine_hugepages_size);
   if (argc != 3)
     usage(argv[0]);
   if (cloonix_conf_info_init(argv[1]))
@@ -675,7 +579,6 @@ int main (int argc, char *argv[])
   event_subscriber_init();
   doors_io_basic_xml_init(string_tx);
   doors_io_layout_xml_init(string_tx);
-  doors_io_qmonitor_xml_init(string_tx);
   automates_init();
   g_saved_environ = save_environ();
   msg_mngt_init(cfg_get_cloonix_name(), IO_MAX_BUF_LEN);
@@ -704,16 +607,11 @@ int main (int argc, char *argv[])
   stats_counters_init();
   stats_counters_sysinfo_init();
   hop_init();
-  init_qmonitor();
   qmp_dialog_init();
   qmp_init();
-  init_qhvc0();
+  qga_dialog_init();
   suid_power_init();
-  nat_dpdk_init();
-  xyx_dpdk_init();
-  a2b_dpdk_init();
-  d2d_dpdk_init();
-  container_init();
+  cnt_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
   layout_topo_init();

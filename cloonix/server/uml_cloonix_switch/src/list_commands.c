@@ -29,10 +29,7 @@
 #include "cfg_store.h"
 #include "lan_to_name.h"
 #include "layout_topo.h"
-#include "dpdk_xyx.h"
-#include "dpdk_a2b.h"
-#include "dpdk_d2d.h"
-#include "dpdk_ovs.h"
+#include "ovs.h"
 
 
 
@@ -56,11 +53,9 @@ static void eth_tab_to_str(char *out, int nb_tot_eth, t_eth_table *eth_tab)
   memset(out, 0, MAX_NAME_LEN);
   for (i=0 ; i < nb_tot_eth; i++)
     {
-    if (i > MAX_DPDK_VM)
+    if (i > MAX_ETH_VM)
       KOUT("%d", nb_tot_eth); 
-    if(eth_tab[i].endp_type == endp_type_ethd)
-      out[i] = 'd';
-    else if(eth_tab[i].endp_type == endp_type_eths)
+    if(eth_tab[i].endp_type == endp_type_eths)
       out[i] = 's';
     else if(eth_tab[i].endp_type == endp_type_ethv)
       out[i] = 'v';
@@ -118,54 +113,6 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
                            mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);
         }
       }
-    result += 1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int build_add_a2b_cmd(int offset, t_list_commands *hlist, char *name)
-{
-  int result = offset;
-  t_list_commands *list = &(hlist[offset]);
-  if (can_increment_index(result))
-    {
-    sprintf(list->cmd, "cloonix_cli %s add a2b %s",
-            cfg_get_cloonix_name(), name);
-    result += 1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int build_add_d2d_cmd(int offset, t_list_commands *hlist,
-                             char *name, char *dist_cloonix)
-{
-  int result = offset;
-  t_list_commands *list = &(hlist[offset]);
-  if (can_increment_index(result))
-    {
-    sprintf(list->cmd, "cloonix_cli %s add d2d %s %s",
-            cfg_get_cloonix_name(), name, dist_cloonix);
-    result += 1;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
-static int build_add_sat_lan_cmd(int offset, t_list_commands *hlist, 
-                                 char *name, int num, char *lan)
-{
-  int result = offset;
-  t_list_commands *list = &(hlist[offset]);
-  if (can_increment_index(result))
-    {
-    sprintf(list->cmd, "cloonix_cli %s add lan %s %d %s", 
-                        cfg_get_cloonix_name(), name, num, lan);
     result += 1;
     }
   return result;
@@ -285,33 +232,6 @@ static int build_layout_node(int offset, t_list_commands *hlist,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int build_layout_sat(int offset, t_list_commands *hlist, 
-                            t_layout_sat *sat)
-{
-  int result = offset;
-  t_list_commands *list = &(hlist[result]);
-  if (can_increment_index(result))
-    {
-    sprintf(list->cmd, "cloonix_cli %s cnf lay abs_xy_sat %s %d %d",
-                       cfg_get_cloonix_name(), sat->name, 
-                       (int) sat->x, (int) sat->y);
-    result += 1;
-    if (sat->hidden_on_graph)
-      {
-      if (can_increment_index(result))
-        {
-        list = &(hlist[result]);
-        sprintf(list->cmd, "cloonix_cli %s cnf lay hide_sat %s 1", 
-                           cfg_get_cloonix_name(), sat->name);
-        result += 1;
-        }
-      }
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int build_layout_lan(int offset, t_list_commands *hlist, 
                             t_layout_lan *lan)
 {
@@ -353,53 +273,6 @@ static int produce_list_vm_cmd(int offset, t_list_commands *hlist,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int produce_list_ovs_lan_cmd(int offset, t_list_commands *hlist)
-{
-  int nb_endp_a2b, nb_endp_d2d, nb_endp_xyx;
-  int  i, j, result=offset;
-  t_topo_endp *xyx_endp = translate_topo_endp_xyx(&nb_endp_xyx);
-  t_topo_endp *a2b_endp = translate_topo_endp_a2b(&nb_endp_a2b);
-  t_topo_endp *d2d_endp = translate_topo_endp_d2d(&nb_endp_d2d);
-
-  for (i=0; i<nb_endp_xyx; i++)
-    {
-    for (j=0; j<xyx_endp[i].lan.nb_lan; j++)
-      {
-      result = build_add_sat_lan_cmd(result, hlist,
-                                     xyx_endp[i].name,
-                                     xyx_endp[i].num,
-                                     xyx_endp[i].lan.lan[j].lan);
-      }
-    }
-
-  for (i=0; i<nb_endp_a2b; i++)
-    {
-    for (j=0; j<a2b_endp[i].lan.nb_lan; j++)
-      {
-      result = build_add_sat_lan_cmd(result, hlist,
-                                     a2b_endp[i].name,
-                                     a2b_endp[i].num,
-                                     a2b_endp[i].lan.lan[j].lan);
-      }
-    }
-  for (i=0; i<nb_endp_d2d; i++)
-    {
-    for (j=0; j<d2d_endp[i].lan.nb_lan; j++)
-      {
-      result = build_add_sat_lan_cmd(result, hlist,
-                                     d2d_endp[i].name,
-                                     d2d_endp[i].num,
-                                     d2d_endp[i].lan.lan[j].lan);
-      }
-    }
-  clownix_free(xyx_endp, __FUNCTION__);
-  clownix_free(a2b_endp, __FUNCTION__);
-  clownix_free(d2d_endp, __FUNCTION__);
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int produce_list_canvas_layout_cmd(int offset, t_list_commands *hlist, 
                                           int go, int width, int height, 
                                           int cx, int cy, int cw, int ch)
@@ -428,22 +301,6 @@ static int produce_list_layout_node_cmd(int offset, t_list_commands *hlist,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int produce_list_layout_sat_cmd(int offset, t_list_commands *hlist,
-                                       t_layout_sat_xml *sat_xml)    
-{
-  int result = offset;
-  t_layout_sat_xml *cur = sat_xml;
-  while(cur)
-    {
-    result = build_layout_sat(result, hlist, &(cur->sat));
-    cur = cur->next;
-    }
-  return result;
-
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int produce_list_layout_lan_cmd(int offset, t_list_commands *hlist,
                                        t_layout_lan_xml *lan_xml)    
 {
@@ -459,31 +316,6 @@ static int produce_list_layout_lan_cmd(int offset, t_list_commands *hlist,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int produce_list_sat_cmd(int offset, t_list_commands *hlist)
-{
-  int i, result = offset;
-  int nb_d2d, nb_a2b;
-  t_d2d_cnx *d2d = dpdk_d2d_get_first(&nb_d2d);
-  t_a2b_cnx *a2b = dpdk_a2b_get_first(&nb_a2b);
-
-  for (i=0; i<nb_a2b; i++)
-    {
-    result = build_add_a2b_cmd(result, hlist, a2b->name);
-    a2b = a2b->next;
-    }
-
-  for (i=0; i<nb_d2d; i++)
-    {
-    if (d2d->local_is_master)
-      result = build_add_d2d_cmd(result, hlist, d2d->name, d2d->dist_cloonix);
-    d2d = d2d->next;
-    }
-
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 int produce_list_commands(t_list_commands *hlist, int is_layout)
 {
   int nb_vm, result = 0;
@@ -494,15 +326,12 @@ int produce_list_commands(t_list_commands *hlist, int is_layout)
   if (is_layout == 0)
     {
     result = produce_list_vm_cmd(result, hlist, nb_vm, vm); 
-    result = produce_list_sat_cmd(result, hlist);
-    result = produce_list_ovs_lan_cmd(result, hlist);
     }
   else
     {
     get_layout_main_params(&go, &width, &height, &cx, &cy, &cw, &ch);
     layout_xml = get_layout_xml_chain();
     result = produce_list_layout_node_cmd(result, hlist, layout_xml->node_xml);
-    result = produce_list_layout_sat_cmd(result, hlist, layout_xml->sat_xml);
     result = produce_list_layout_lan_cmd(result, hlist, layout_xml->lan_xml);
     result = produce_list_canvas_layout_cmd(result, hlist, go, width, height, 
                                                               cx, cy, cw, ch);

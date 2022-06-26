@@ -22,13 +22,16 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include <sys/syscall.h>
+#include <bits/time.h>
 
 
-#include "ioc_top.h"
+#include "glob_common.h"
 /*---------------------------------------------------------------------------*/
 
 
 
+static int g_pid;
 
 
 typedef struct t_sub_llid
@@ -136,6 +139,50 @@ static void interface_send_evt_txt (int flags_hop, char *line)
     }
 }
 /*-----------------------------------------------------------------------*/
+
+
+
+/*****************************************************************************/
+uint64_t cloonix_get_msec(void)
+{
+  struct timespec ts;
+  uint64_t result;
+  if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &ts))
+    KOUT(" ");
+  result = (uint64_t) (ts.tv_sec);
+  result *= 1000;
+  result += ((uint64_t) ts.tv_nsec) / 1000000;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+uint64_t cloonix_get_usec(void)
+{
+  struct timespec ts;
+  uint64_t result;
+  if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &ts))
+    KOUT(" ");
+  result = (uint64_t) (ts.tv_sec);
+  result *= 1000000;
+  result += ts.tv_nsec / 1000;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void cloonix_set_pid(int pid)
+{
+  g_pid = pid;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cloonix_get_pid(void)
+{
+  return g_pid;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void rpct_hop_print_add_sub(int llid, int tid, int flags)

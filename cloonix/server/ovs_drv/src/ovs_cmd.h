@@ -15,37 +15,20 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int ovs_cmd_add_lan_ethv(char *ovs, char *dpdk, char *lan, char *vhost);
-int ovs_cmd_del_lan_ethv(char *ovs, char *dpdk, char *lan, char *vhost);
+int ovs_cmd_vhost_up(char *ovs_bin, char *ovs_dir,
+                     char *name, int num, char *vhost);
+int ovs_cmd_add_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,
+                        char *vhost, char *lan);
+int ovs_cmd_del_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,
+                        char *vhost, char *lan);
+int ovs_cmd_add_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost);
+int ovs_cmd_del_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost);
 
-int ovs_cmd_add_lan_ethd(char *ovs, char *dpdk, char *lan, char *name, int num);
-int ovs_cmd_del_lan_ethd(char *ovs, char *dpdk, char *lan, char *name, int num);
+int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
+                    char *vhost, char *mac);
+int ovs_cmd_del_tap(char *ovs_bin, char *ovs_dir, char *name, char *vhost);
 
-int ovs_cmd_add_lan_eths(char *ovs, char *dpdk, char *lan, char *name, int num);
-int ovs_cmd_del_lan_eths(char *ovs, char *dpdk, char *lan, char *name, int num);
-
-int ovs_cmd_add_ethd(char *ovs, char *dpdk, char *name, int num);
-int ovs_cmd_del_ethd(char *ovs, char *dpdk, char *name, int num);
-
-int ovs_cmd_add_eths1(char *ovs, char *dpdk, char *name, int num);
-int ovs_cmd_add_eths2(char *ovs, char *dpdk, char *name, int num);
-int ovs_cmd_del_eths(char *ovs, char *dpdk, char *name, int num);
-
-int ovs_cmd_add_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
-int ovs_cmd_del_lan_nat(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
-int ovs_cmd_add_lan_d2d(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
-int ovs_cmd_del_lan_d2d(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
-int ovs_cmd_add_phy(char *ovs_bin, char *dpdk_dir, char *name);
-int ovs_cmd_del_phy(char *ovs_bin, char *dpdk_dir, char *name);
-int ovs_cmd_add_lan_phy(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
-int ovs_cmd_del_lan_phy(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
-int ovs_cmd_add_tap(char *ovs_bin, char *dpdk_dir, char *name);
-int ovs_cmd_del_tap(char *ovs_bin, char *dpdk_dir, char *name);
-int ovs_cmd_add_lan_tap(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
-int ovs_cmd_del_lan_tap(char *ovs_bin, char *dpdk_dir, char *lan, char *name);
-int ovs_cmd_add_lan_a2b(char *ovs_bin, char *dpdk_dir, char *lan, char *name, int num);
-int ovs_cmd_del_lan_a2b(char *ovs_bin, char *dpdk_dir, char *lan, char *name, int num);
-int ovs_cmd_add_lan(char *ovs_bin, char *dpdk_dir, char *lan);
-int ovs_cmd_del_lan(char *ovs_bin, char *dpdk_dir, char *lan);
+int ovs_cmd_add_lan(char *ovs_bin, char *ovs_dir, char *lan);
+int ovs_cmd_del_lan(char *ovs_bin, char *ovs_dir, char *lan);
 /*---------------------------------------------------------------------------*/
 

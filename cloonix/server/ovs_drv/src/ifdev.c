@@ -36,6 +36,9 @@
 #include <time.h>
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
+#include <arpa/inet.h>
+
+
 
 #include "io_clownix.h"
 #include "ovs_execv.h"
@@ -56,6 +59,41 @@ static int get_intf_flags_iff(char *intf, int *flags)
   if(io == 0)
     {
     *flags = ifr.ifr_flags;
+    result = 0;
+    }
+  close(s);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+
+
+/*****************************************************************************/
+int ifdev_get_intf_hwaddr(char *intf, char *mac)
+{
+  int result = -1, s, io;
+  struct ifreq ifr;
+  unsigned char *mc;
+  memset(mac, 0, MAX_NAME_LEN);
+  s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  if (s == -1)
+    KOUT(" ");
+  memset(&ifr, 0, sizeof(struct ifreq));
+  memcpy(ifr.ifr_name, intf, IFNAMSIZ);
+  ifr.ifr_name[IFNAMSIZ-1] = 0;
+  io = ioctl(s, SIOCGIFHWADDR, &ifr);
+  if(io)
+    KERR("ERROR %s", strerror(errno));
+  else
+    {
+    if (ifr.ifr_hwaddr.sa_family!=ARPHRD_ETHER)
+      KERR("ERROR %s", strerror(errno));
+    else
+      {
+      mc = (unsigned char*)ifr.ifr_hwaddr.sa_data;
+      snprintf(mac, MAX_NAME_LEN-1, "%02X:%02X:%02X:%02X:%02X:%02X",
+               mc[0],mc[1],mc[2],mc[3],mc[4],mc[5]);
+      }
     result = 0;
     }
   close(s);
@@ -85,7 +123,7 @@ int ifdev_set_intf_flags_iff_up_down(char *intf, int up)
     if(!io)
       result = 0;
     else
-      KERR(" ");
+      KERR("ERROR %s", strerror(errno));
     close(s);
     }
   return result;

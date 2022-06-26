@@ -19,7 +19,7 @@
 /****************************************************************************/
 typedef struct t_chain_node
 {
-  char name[TOPO_MAX_NAME_LEN];
+  char name[TOPO_MAX_NAME_LEN+1];
   int nb_id;
   unsigned long dist;
   struct t_chain_node *next;

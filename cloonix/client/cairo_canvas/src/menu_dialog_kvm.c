@@ -29,8 +29,9 @@
 #include "cloonix.h"
 #include "menu_dialog_kvm.h"
 
-#define ETH_TYPE_MAX 4
+#define ETH_TYPE_MAX 3
 #define ETH_LINE_MAX 7
+
 
 GtkWidget *get_bulkvm(void);
 GtkWidget *get_main_window(void);
@@ -40,6 +41,7 @@ static t_slowperiodic g_bulkvm_photo[MAX_BULK_FILES];
 static int g_nb_bulkvm;
 static GtkWidget *g_custom_dialog, *g_entry_rootfs;
 void menu_choice_kvm(void);
+
 
 typedef struct t_cb_endp_type
 {
@@ -65,7 +67,7 @@ static void endp_type_cb(GtkWidget *check, gpointer user_data)
 {
   t_cb_endp_type *cb_endp_type = (t_cb_endp_type *) user_data;
   t_custom_vm *cust_vm = &g_custom_vm;
-  int i,j,k, max_rank = MAX_DPDK_VM;
+  int i,j,k, max_rank = MAX_ETH_VM;
   int nb_tot_eth = 0, rank = cb_endp_type->rank;
   int endp_type = cb_endp_type->endp_type;
   GtkWidget **rad = cb_endp_type->rad;
@@ -98,8 +100,6 @@ static void endp_type_cb(GtkWidget *check, gpointer user_data)
     {
     if (cust_vm->eth_tab[i].endp_type == endp_type_eths)
       nb_tot_eth += 1;
-    else if (cust_vm->eth_tab[i].endp_type == endp_type_ethd)
-      nb_tot_eth += 1;
     else if (cust_vm->eth_tab[i].endp_type == endp_type_ethv)
       nb_tot_eth += 1;
     else if ((cust_vm->eth_tab[i].endp_type != endp_type_none) &&
@@ -109,6 +109,7 @@ static void endp_type_cb(GtkWidget *check, gpointer user_data)
   cust_vm->nb_tot_eth = nb_tot_eth;
 }
 /*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
@@ -130,7 +131,6 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
   t_cb_endp_type **cb_endp_type;
   char title[MAX_NAME_LEN];
   unsigned long int endp_type[ETH_TYPE_MAX]={endp_type_none,
-                                             endp_type_ethd,
                                              endp_type_eths,
                                              endp_type_ethv};
 
@@ -158,7 +158,6 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
                     (GCallback) free_endp_type, cb_endp_type);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void qcow2_get(GtkWidget *check, gpointer data)
@@ -230,8 +229,10 @@ static void custom_vm_dialog(t_custom_vm *cust)
   GtkWidget *grid, *parent, *is_persistent;
   GtkWidget *has_nobackdoor, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
-  char *lib[ETH_TYPE_MAX] = {"n", "d", "s", "v"};
+  char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
   t_custom_vm *cust_vm;
+
+
 
   if (g_custom_dialog)
     return;
@@ -284,16 +285,6 @@ static void custom_vm_dialog(t_custom_vm *cust)
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_ram), cust->mem);
   append_grid(grid, entry_ram, "Ram:", line_nb++);
 
-  g_entry_rootfs = gtk_entry_new();
-  gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), cust->kvm_used_rootfs);
-  append_grid(grid, g_entry_rootfs, "Rootfs:", line_nb++);
-
-  qcow2_rootfs = gtk_menu_button_new ();
-  append_grid(grid, qcow2_rootfs, "Choice:", line_nb++);
-  bulkvm_menu = get_bulkvm();
-  gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
-  gtk_widget_show_all(bulkvm_menu);
-
   cust_vm = &g_custom_vm;
 
   for (i=0; i<ETH_LINE_MAX; i++)
@@ -314,6 +305,18 @@ static void custom_vm_dialog(t_custom_vm *cust)
     }
 
   gtk_container_set_border_width(GTK_CONTAINER(grid), ETH_TYPE_MAX);
+
+  g_entry_rootfs = gtk_entry_new();
+  gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), cust->kvm_used_rootfs);
+  append_grid(grid, g_entry_rootfs, "Rootfs:", line_nb++);
+
+  qcow2_rootfs = gtk_menu_button_new ();
+  append_grid(grid, qcow2_rootfs, "Choice:", line_nb++);
+  bulkvm_menu = get_bulkvm();
+  gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
+  gtk_widget_show_all(bulkvm_menu);
+
+
   gtk_box_pack_start(
         GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(g_custom_dialog))),
         grid, TRUE, TRUE, 0);
@@ -327,7 +330,8 @@ static void custom_vm_dialog(t_custom_vm *cust)
     }
   else
     {
-    update_cust(cust, entry_name, entry_p9_host_share, entry_cpu, entry_ram);
+    update_cust(cust, entry_name, entry_p9_host_share,
+                entry_cpu, entry_ram);
     gtk_widget_destroy(g_custom_dialog);
     g_custom_dialog = NULL;
     }
@@ -437,7 +441,7 @@ void menu_dialog_kvm_init(void)
   int i;
   char *name;
   memset(&g_custom_vm, 0, sizeof(t_custom_vm)); 
-  if (inside_cloonix(&name))
+  if (inside_cloon(&name))
     snprintf(g_custom_vm.name, MAX_NAME_LEN-3, "IN_%s_n", name);
   else
     strcpy(g_custom_vm.name, "Cloon");
@@ -453,10 +457,8 @@ void menu_dialog_kvm_init(void)
   g_custom_vm.cpu = 2;
   g_custom_vm.mem = 2000;
   g_custom_vm.nb_tot_eth = 3;
-  for (i=0; i<MAX_DPDK_VM; i++)
-    g_custom_vm.eth_tab[i].endp_type = endp_type_none;
   for (i=0; i<g_custom_vm.nb_tot_eth; i++)
-    g_custom_vm.eth_tab[i].endp_type = endp_type_eths;
+    g_custom_vm.eth_tab[i].endp_type = endp_type_ethv;
   g_custom_dialog = NULL;
   memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   g_nb_bulkvm = 0;

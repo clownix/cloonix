@@ -41,7 +41,7 @@ void help_add_vm_kvm(char *line)
   printf("\n\teth_description: d is for dpdk without spy");
   printf("\n\teth_description example:");
   printf("\n\t\t  eth=sdd says eth0 eth1 and eth2 dpdk interfaces eth0 is spyable");
-  printf("\n\tMax eth: %d", MAX_DPDK_VM);
+  printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
   printf("\n\t       --i386 ");
   printf("\n\t       --nobackdoor ");
@@ -220,7 +220,7 @@ static int check_eth_desc(char *eth_desc, char *err,
 
 {
   int i, dpdk=0, result = 0;
-  int len, max = MAX_DPDK_VM;
+  int len, max = MAX_ETH_VM;
   memset(eth_tab, 0, max * sizeof(t_eth_table)); 
   len = strlen(eth_desc);
   if (len >= max)
@@ -232,9 +232,7 @@ static int check_eth_desc(char *eth_desc, char *err,
     {
     for (i=0; (result == 0) && (i < len); i++)
       {
-      if (eth_desc[i] == 'd')
-        eth_tab[i].endp_type = endp_type_ethd;
-      else if (eth_desc[i] == 's')
+      if (eth_desc[i] == 's')
         eth_tab[i].endp_type = endp_type_eths;
       else if (eth_desc[i] == 'v')
         eth_tab[i].endp_type = endp_type_ethv;
@@ -249,14 +247,13 @@ static int check_eth_desc(char *eth_desc, char *err,
     {
     for (i=0; i < max; i++)
       {
-      if ((eth_tab[i].endp_type == endp_type_ethd) ||
-          (eth_tab[i].endp_type == endp_type_eths) ||
+      if ((eth_tab[i].endp_type == endp_type_eths) ||
           (eth_tab[i].endp_type == endp_type_ethv))
         dpdk += 1;
       }
-    if (dpdk > MAX_DPDK_VM)
+    if (dpdk > MAX_ETH_VM)
       {
-      sprintf(err, "Too many dpdk interfaces, %d max: %d",dpdk,MAX_DPDK_VM);
+      sprintf(err, "Too many dpdk interfaces, %d max: %d",dpdk,MAX_ETH_VM);
       result = -1;
       }
     }
@@ -272,7 +269,7 @@ int cmd_add_vm_kvm(int argc, char **argv)
   char *rootfs, *name;
   char eth_string[MAX_PATH_LEN];
   char err[MAX_PATH_LEN];
-  t_eth_table eth_tab[MAX_DPDK_VM];
+  t_eth_table eth_tab[MAX_ETH_VM];
   if (argc < 4) 
     printf("\nNot enough parameters for add kvm\n");
 

@@ -15,7 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void ovs_get_rec_name(char *name, int on);
 char *ovs_get_topo(char *bin_dir, char *work_dir);
 void ovs_get_init(void);
 /*--------------------------------------------------------------------------*/

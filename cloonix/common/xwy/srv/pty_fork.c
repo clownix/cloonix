@@ -52,7 +52,7 @@ static t_pty_cli *g_pty_cli_head;
 
 static int g_sig_write_fd;
 static int g_sig_read_fd;
-static int g_listen_sock_cloonix;
+static int g_listen_sock_cloon;
 static char g_home[MAX_TXT_LEN];
 static char g_user[MAX_TXT_LEN];
 static char g_xdg_runtime_dir[MAX_TXT_LEN];
@@ -119,7 +119,7 @@ static int send_msg_type_end(uint32_t randid, int sock_fd, char status)
   int len = MAX_MSG_LEN+g_msg_header_len, result;
   t_msg *msg;
   if (sock_fd == -1)
-    KERR(" ");
+    XERR(" ");
   else
     {
     msg = (t_msg *) wrap_malloc(len);
@@ -149,13 +149,13 @@ static int xauth_add_magic_cookie(int display_val, char *magic_cookie)
            "xauth -f %s add %s %s %s",xaf,dpyname,MAGIC_COOKIE,magic_cookie);
   fp = popen(cmd, "r");
   if (fp == NULL)
-    KERR("%s", cmd);
+    XERR("%s", cmd);
   else
     {
     if (fgets(buf, MAX_TXT_LEN-1, fp))
-      KERR("%s %s", cmd, buf);
+      XERR("%s %s", cmd, buf);
     if (pclose(fp))
-      KERR("%s", cmd);
+      XERR("%s", cmd);
     else
       result = 0;
     }
@@ -171,7 +171,7 @@ static void clean_xauthority(char *xauthority_file, char *end_file)
   strcat(xauth_locks, end_file);
   unlink(xauth_locks);
   if (wrap_file_exists(xauth_locks))
-    KOUT("XAUTHORITY file lock  %s", xauth_locks);
+    XOUT("XAUTHORITY file lock  %s", xauth_locks);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -194,7 +194,7 @@ static void init_all_env(void)
   if (!home)
     {
     snprintf(g_home, MAX_TXT_LEN-1, "HOME=%s", "/root");
-    sprintf(g_xauthority_file, "/root/.CloonixXauthority_root"); 
+    sprintf(g_xauthority_file, "/root/.Cloonauthority_root"); 
     snprintf(g_xauthority, MAX_TXT_LEN-1, "XAUTHORITY=%s", g_xauthority_file); 
     }
   else
@@ -203,7 +203,7 @@ static void init_all_env(void)
     snprintf(g_xdg_runtime_dir, MAX_TXT_LEN-1,
              "XDG_RUNTIME_DIR=%s", xdg_runtime_dir);
     snprintf(g_xauthority_file, MAX_TXT_LEN-1, 
-             "/tmp/.CloonixXauthority_%s", user); 
+             "/tmp/.Cloonauthority_%s", user); 
     snprintf(g_xauthority, MAX_TXT_LEN-1, "XAUTHORITY=%s", g_xauthority_file); 
     }
   unlink(g_xauthority_file);
@@ -211,12 +211,12 @@ static void init_all_env(void)
   clean_xauthority(g_xauthority_file, "-l");
   clean_xauthority(g_xauthority_file, "-n");
   if (wrap_touch(g_xauthority_file))
-    KOUT("XAUTHORITY file %s", g_xauthority_file);
+    XOUT("XAUTHORITY file %s", g_xauthority_file);
   snprintf(g_path,  MAX_TXT_LEN-1, "PATH=/usr/sbin:/usr/bin:/sbin:/bin");
   snprintf(g_term,  MAX_TXT_LEN-1, "TERM=xterm");
   snprintf(g_shell, MAX_TXT_LEN-1, "SHELL=/bin/bash");
   if (clearenv())
-    KERR("Bad Clear ENV ");
+    XERR("Bad Clear ENV ");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -252,7 +252,7 @@ static char **create_env(int display_val, char *ttyname)
       env[i++] = envttyname;
     }
   else
-    KERR("Problem setting DISPLAY");
+    XERR("Problem setting DISPLAY");
   return env;
 }
 /*--------------------------------------------------------------------------*/
@@ -277,7 +277,7 @@ static void create_argv_from_cmd(char *cmd, char **argv)
       cmd_ptr = strchr(ptr[i]+1, '"');
       if (!cmd_ptr)
         {
-        KERR("%s", cmd);
+        XERR("%s", cmd);
         break;
         }
       ptr[i] += 1;
@@ -307,7 +307,7 @@ static void helper_wrap_forkpty(int action, uint32_t randid, int sock_fd,
   if ((action == action_bash) || (action == action_cmd))
     {
     if (wrap_openpty(&pty_fd, &ttyfd, ttyname, fd_type_fork_pty))
-      KOUT(" ");
+      XOUT(" ");
     }
   env = create_env(display_val, ttyname); 
   prctl(PR_SET_PDEATHSIG, SIGHUP);
@@ -319,7 +319,7 @@ static void helper_wrap_forkpty(int action, uint32_t randid, int sock_fd,
     prctl(PR_SET_CHILD_SUBREAPER);
     prctl(PR_SET_PDEATHSIG, SIGHUP);
     if (setsid() < 0)
-      KOUT("setsid: %s", strerror(errno));
+      XOUT("setsid: %s", strerror(errno));
 
     if (action == action_dae)
       {
@@ -336,11 +336,11 @@ static void helper_wrap_forkpty(int action, uint32_t randid, int sock_fd,
       wrap_pty_make_controlling_tty(ttyfd, ttyname);
 
       if (dup2(ttyfd, 0) < 0)
-        KERR("dup2 stdin: %s", strerror(errno));
+        XERR("dup2 stdin: %s", strerror(errno));
       if (dup2(ttyfd, 1) < 0)
-        KERR("dup2 stdout: %s", strerror(errno));
+        XERR("dup2 stdout: %s", strerror(errno));
       if (dup2(ttyfd, 2) < 0)
-        KERR("dup2 stderr: %s", strerror(errno));
+        XERR("dup2 stderr: %s", strerror(errno));
       close(ttyfd);
       wrap_nonnonblock(0);
       wrap_nonnonblock(1);
@@ -364,11 +364,11 @@ static void helper_wrap_forkpty(int action, uint32_t randid, int sock_fd,
       }
     execve(argv[0], argv, env);
     for (i=0; (argv[i] != NULL) && (i < MAX_ARGC); i++)
-      KERR("ARG %d : %s", i, argv[i]);
-    KOUT("%s", strerror(errno));
+      XERR("ARG %d : %s", i, argv[i]);
+    XOUT("%s", strerror(errno));
     }
   else if (pid < 0)
-    KOUT("%s", strerror(errno));
+    XOUT("%s", strerror(errno));
   else
     {
     pty_cli_alloc(pty_fd, pid, sock_fd, randid);
@@ -438,7 +438,7 @@ static void sig_evt_action(int sig_read_fd)
   char buf[1], exstat;
   len = wrap_read_sig(sig_read_fd, buf, 1);
   if ((len != 1) || (buf[0] != 's'))
-    KOUT("%d %s", len, buf);
+    XOUT("%d %s", len, buf);
   else
     {
     child_death_detection();
@@ -454,7 +454,7 @@ static void child_exit(int sig)
   buf[0] = 's';
   len = write(g_sig_write_fd, buf, 1);
   if (len != 1)
-    KOUT("%d %s", len, strerror(errno));
+    XOUT("%d %s", len, strerror(errno));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -505,7 +505,7 @@ void pty_fork_fdisset(fd_set *readfds, fd_set *writefds)
       if (FD_ISSET(cur->pty_fd, writefds))
         {
         if (low_write_fd(cur->pty_fd))
-          KERR(" ");
+          XERR(" ");
         }
       }
     cur = cur->next;
@@ -551,7 +551,7 @@ void pty_fork_msg_type_win_size(int sock_fd, int len, char *buf)
   if (cli)
     {
     if (len > 16)
-      KOUT("%d", len);
+      XOUT("%d", len);
     if (cli->pty_fd != -1)
       {
       memcpy(win_size_buf, buf, 16);
@@ -596,10 +596,10 @@ void pty_fork_init(void)
   int pipe_fd[2];
 
   if (signal(SIGCHLD, child_exit) == SIG_ERR)
-    KERR("%s", strerror(errno));
+    XERR("%s", strerror(errno));
   init_all_env();
   if (wrap_pipe(pipe_fd, fd_type_pipe_sig, __FUNCTION__) < 0)
-    KOUT(" ");
+    XOUT(" ");
   g_sig_write_fd = pipe_fd[1];
   g_sig_read_fd = pipe_fd[0];
 }

@@ -37,9 +37,9 @@ static void create_node_resp(t_topo_kvm *kvm)
 {
   int hidden_on_graph, color_choice;
   double x, y;
-  double tx[MAX_DPDK_VM];
-  double ty[MAX_DPDK_VM];
-  int32_t thidden_on_graph[MAX_DPDK_VM];
+  double tx[MAX_ETH_VM];
+  double ty[MAX_ETH_VM];
+  int32_t thidden_on_graph[MAX_ETH_VM];
 
   get_node_layout_x_y(kvm->name, &color_choice, &x, &y, &hidden_on_graph, 
                       tx, ty, thidden_on_graph);
@@ -58,15 +58,15 @@ static void create_cnt_resp(t_topo_cnt *cnt)
 {
   int hidden_on_graph, color_choice;
   double x, y;
-  double tx[MAX_DPDK_VM];
-  double ty[MAX_DPDK_VM];
-  int32_t thidden_on_graph[MAX_DPDK_VM];
+  double tx[MAX_ETH_VM];
+  double ty[MAX_ETH_VM];
+  int32_t thidden_on_graph[MAX_ETH_VM];
 
   get_node_layout_x_y(cnt->name, &color_choice, &x, &y, &hidden_on_graph,
                       tx, ty, thidden_on_graph);
 
-  bank_cnt_create(cnt->name, cnt->image, cnt->ping_ok,
-                  cnt->nb_tot_eth, cnt->eth_table,
+  bank_cnt_create(cnt->name, cnt->image, cnt->customer_launch, cnt->vm_id,
+                  cnt->ping_ok, cnt->nb_tot_eth, cnt->eth_table,
                   x, y, hidden_on_graph, tx, ty, thidden_on_graph);
 }
 /*--------------------------------------------------------------------------*/
@@ -88,14 +88,14 @@ void timer_create_obj_resp(void *data)
     create_cnt_resp(pa->cnt);
     clownix_free(pa->cnt, __FUNCTION__);
     }
-  else if (pa->d2d)
+  else if (pa->c2c)
     {
-    name = pa->d2d->name;
+    name = pa->c2c->name;
     get_gene_layout_x_y(bank_type_sat, name,
                         &x, &y, &xa, &ya, &xb, &yb, &hidden);
-    bank_sat_create(name, endp_type_d2d, pa->d2d, NULL,
+    bank_sat_create(name, endp_type_c2c, pa->c2c, NULL,
                     x, y, xa, ya, xb, yb, hidden);
-    clownix_free(pa->d2d, __FUNCTION__);
+    clownix_free(pa->c2c, __FUNCTION__);
     }
   else if (pa->a2b)
     {

@@ -30,16 +30,12 @@
 #include "slowperiodic.h"
 #include "layout_topo.h"
 #include "file_read_write.h"
-#include "qmonitor.h"
 #include "qmp.h"
 #include "hop_event.h"
 #include "stats_counters.h"
 #include "stats_counters_sysinfo.h"
-#include "nat_dpdk_process.h"
-#include "d2d_dpdk_process.h"
-#include "xyx_dpdk_process.h"
-#include "a2b_dpdk_process.h"
 #include "suid_power.h"
+#include "ovs_snf.h"
 /*---------------------------------------------------------------------------*/
 typedef struct t_event_to_llid
 {
@@ -64,9 +60,7 @@ typedef struct t_llid_trace_data
   int type;
   int num;
   int son_connected; 
-  int is_qmonitor; 
   int count_beat;
-  char qmonitor[MAX_NAME_LEN];
   int sub_event_tab[sub_evt_max];
   struct t_llid_trace_data *prev;
   struct t_llid_trace_data *next;
@@ -118,9 +112,6 @@ static char *llid_trace_translate_type(int type_llid_trace)
       break;
     case type_llid_trace_jfs:
       result = "trace_jfs";
-      break;
-    case type_llid_trace_unix_qmonitor:
-      result = "trace_unix_qmonitor";
       break;
     case type_llid_trace_unix_xwy:
       result = "trace_unix_xwy";
@@ -335,6 +326,7 @@ static void trace_fd_insert(int type)
 {
   trace_fd_qty[type_llid_trace_all] += 1;
   trace_fd_qty[type] += 1;
+//KERR("NB OPEN FD : %d", trace_fd_qty[type_llid_trace_all]);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -347,6 +339,7 @@ static void trace_fd_extract(int type)
     KOUT(" ");
   if (trace_fd_qty[type_llid_trace_all] < 0)
     KOUT(" ");
+//KERR("NB OPEN FD : %d", trace_fd_qty[type_llid_trace_all]);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -386,26 +379,17 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
     KOUT("%s %d", fct, llid);
 
   suid_power_llid_closed(llid, from_clone, fct);
-  d2d_dpdk_llid_closed(llid);
-  xyx_dpdk_llid_closed(llid);
-  a2b_dpdk_llid_closed(llid);
-  nat_dpdk_llid_closed(llid);
-  qmp_event_free(llid);
   hop_event_free(llid);
   eventfull_llid_delete(llid);
   slowperiodic_llid_delete(llid);
   layout_llid_destroy(llid);
   stats_counters_llid_close(llid);
   stats_counters_sysinfo_llid_close(llid);
+  ovs_snf_llid_closed(llid);
 
   cur = llid_trace_data[llid];
   if (cur)
     {
-    if (cur->is_qmonitor)
-      {
-      cur->is_qmonitor = 0;
-      qmonitor_llid_free(cur->qmonitor, llid);
-      }
     trace_fd_extract(cur->type);
     if (cur->vm_id)
       extract_llid_from_vm_id_chain(cur->vm_id, llid);
@@ -475,22 +459,6 @@ void llid_free_all_llid(void)
     cur = llid_trace_data[i];
     if (cur)
       llid_trace_free(i, 1, __FUNCTION__);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void llid_set_qmonitor(int llid, char *name, int val)
-{
-  t_llid_trace_data *cur;
-  if ((llid <1) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("%d", llid);
-  cur = llid_trace_data[llid];
-  if (cur)
-    {
-    memset(cur->qmonitor, 0, MAX_NAME_LEN);
-    strncpy(cur->qmonitor, name, MAX_NAME_LEN-1);
-    cur->is_qmonitor = val;
     }
 }
 /*---------------------------------------------------------------------------*/

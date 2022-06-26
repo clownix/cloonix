@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
-HERE=`pwd`
 ROOTFS=/root/centos8
-MIRROR=https://mirrors.edge.kernel.org/centos/8
+MIRROR=https://mirrors.edge.kernel.org/centos/8-stream
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -81,7 +80,6 @@ do
 done
 set -e
 #-----------------------------------------------------------------------#
-cd /tmp/wkmntloops
 mkdir -p /tmp/wkmntloops/etc/yum.repos.d
 
 for i in AppStream \
@@ -91,8 +89,7 @@ for i in AppStream \
          PowerTools \
          centosplus \
          cr \
-         extras \
-         fasttrack ; do
+         extras ; do
 
 cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-${i}.repo << EOF
 [${i}]
@@ -106,13 +103,12 @@ done
 
 dnf --releasever=8 --installroot=/tmp/wkmntloops -y install dnf
 #-----------------------------------------------------------------------#
-if [ -e /etc/resolv.conf ]; then
-  cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
-fi
+rm -f /tmp/wkmntloops/etc/resolv.conf
+cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
 #-----------------------------------------------------------------------#
 list_pkt="kernel grub2-pc passwd openssh-clients "
 list_pkt+="xorg-x11-xauth iputils dhclient sudo kbd "
-list_pkt+="vim net-tools dracut"
+list_pkt+="vim net-tools dracut qemu-guest-agent"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 sleep 5
 echo dnf --releasever=8 clean packages
@@ -138,6 +134,11 @@ uuid=$(blkid | grep cloonix)
 uuid=${uuid#*UUID=\"}
 uuid=${uuid%%\"*}
 echo $uuid
+
+
+sed -i s"/BLACKLIST_RPC/#BLACKLIST_RPC/" /tmp/wkmntloops/etc/sysconfig/qemu-ga
+
+
 sync /dev/loop0
 umount /tmp/wkmntloops/{dev,proc,sys}
 #-----------------------------------------------------------------------#
@@ -154,18 +155,6 @@ chroot /tmp/wkmntloops/ passwd root <<EOF
 root
 root
 EOF
-#-----------------------------------------------------------------------#
-cat > /tmp/wkmntloops/etc/systemd/system/serial-getty@hvc0.service << EOF
-[Service]
-ExecStart=-/sbin/agetty -a root hvc0
-Type=idle
-Restart=always
-RestartSec=0
-EOF
-#-----------------------------------------------------------------------#
-cd /tmp/wkmntloops/etc/systemd/system/getty.target.wants
-ln -s /etc/systemd/system/serial-getty@hvc0.service serial-getty@hvc0.service
-cd ${HERE}
 #-----------------------------------------------------------------------#
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#

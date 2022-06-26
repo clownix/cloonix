@@ -134,7 +134,7 @@ static void timer_clones_check(void *data)
         } 
       }
     }
-  clownix_timeout_add(50, timer_clones_check, NULL, NULL, NULL); 
+  clownix_timeout_add(500, timer_clones_check, NULL, NULL, NULL); 
 }
 /*---------------------------------------------------------------------------*/
 
@@ -485,7 +485,7 @@ void pid_clone_init(void)
   memset(clone_ctx, 0, MAX_FORK_IDENT * sizeof(t_clone_ctx));
   current_max_pid = 0;
   nb_running_pids = 0;
-  clownix_timeout_add(100, timer_clones_check, NULL, NULL, NULL); 
+  clownix_timeout_add(500, timer_clones_check, NULL, NULL, NULL); 
 }
 /*---------------------------------------------------------------------------*/
 

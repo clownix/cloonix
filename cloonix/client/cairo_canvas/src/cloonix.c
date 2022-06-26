@@ -52,6 +52,9 @@
 #include "bdplot.h"
 
 
+void interface_topo_subscribe(void);
+
+void timeout_periodic_work(void *data);
 
 
 /*--------------------------------------------------------------------------*/
@@ -59,13 +62,14 @@ gboolean refresh_request_timeout (gpointer  data);
 void topo_set_signals(GtkWidget *window);
 GtkWidget *topo_canvas(void);
 
+static int g_cloonix_rank;
 
 static t_topo_clc g_clc;
 
 static int eth_choice = 0;
 static GtkWidget *g_main_window;
 
-static int g_i_am_in_cloonix;
+static int g_i_am_in_cloon;
 static char g_i_am_in_cloonix_name[MAX_NAME_LEN];
 
 static gint main_win_x, main_win_y, main_win_width, main_win_height;
@@ -80,6 +84,12 @@ static t_cloonix_conf_info *g_cloonix_conf_info;
 
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+int get_cloonix_rank(void)
+{
+  return g_cloonix_rank;
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 t_cloonix_conf_info *get_own_cloonix_conf_info(void)
@@ -114,10 +124,10 @@ char *local_get_cloonix_name(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int inside_cloonix(char **name)
+int inside_cloon(char **name)
 {
   *name = g_i_am_in_cloonix_name;
-  return g_i_am_in_cloonix;
+  return g_i_am_in_cloon;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -363,7 +373,7 @@ void main_timer_activation(void)
 {
   if (main_timeout)
     g_source_remove(main_timeout);
-  main_timeout = g_timeout_add(100,refresh_request_timeout,(gpointer) NULL);
+  main_timeout = g_timeout_add(10, refresh_request_timeout, (gpointer) NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -385,7 +395,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   eth_choice = 0;
   if (strcmp(conf->version, cloonix_conf_info_get_version()))
     {
-    printf("\n\nCloonix Version client:%s DIFFER FROM server:%s\n\n", 
+    printf("\n\nCloon Version client:%s DIFFER FROM server:%s\n\n", 
            cloonix_conf_info_get_version(), conf->version);
     exit(-1);
     }
@@ -401,7 +411,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   strcpy(g_dtach_work_path, tmp_dtach_work_path); 
 
   snprintf(tmp_distant_snf_dir, 2*MAX_PATH_LEN, "%s/%s",
-           g_clc.work_dir, SNF_PCAP_DIR);
+           g_clc.work_dir, SNF_DIR);
   tmp_distant_snf_dir[MAX_PATH_LEN-1] = 0;
   strcpy(g_distant_snf_dir, tmp_distant_snf_dir);
 
@@ -412,9 +422,9 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 
   g_main_window = window;
   init_set_main_window_coords();
-//  g_signal_connect (G_OBJECT (window), "destroy",
-//		      (GCallback) destroy_handler, NULL);
-  if (g_i_am_in_cloonix)
+  g_signal_connect (G_OBJECT (window), "destroy",
+		      (GCallback) destroy_handler, NULL);
+  if (g_i_am_in_cloon)
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", 
              g_i_am_in_cloonix_name, local_get_cloonix_name());
   else
@@ -430,6 +440,9 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   gtk_container_add (GTK_CONTAINER (window), scrolled);
   gtk_widget_show_all(window);
   main_timer_activation();
+  send_layout_event_sub(get_clownix_main_llid(), 0, 1);
+  glib_prepare_rx_tx(get_clownix_main_llid());
+  interface_topo_subscribe();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -473,8 +486,7 @@ static void init_local_cloonix_bin_path(char *curdir, char *callbin)
 int main(int argc, char *argv[])
 {
   char xvt[MAX_PATH_LEN];
-  int rank;
-  g_i_am_in_cloonix = i_am_inside_cloonix(g_i_am_in_cloonix_name);
+  g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
   main_timeout = 0;
   eth_choice = 0;
   if (argc < 2)
@@ -487,7 +499,7 @@ int main(int argc, char *argv[])
     printf("\n\n%s\n\n", cloonix_conf_info_get_names());
     exit(1);
     }
-  g_cloonix_conf_info = cloonix_cnf_info_get(argv[2], &rank);
+  g_cloonix_conf_info = cloonix_cnf_info_get(argv[2], &g_cloonix_rank);
   if (!g_cloonix_conf_info)
     {
     printf("\nBAD NAME %s:", argv[2]);
@@ -520,6 +532,7 @@ int main(int argc, char *argv[])
   layout_topo_init();
   request_move_stop_go(1);
   bdplot_init();
+  clownix_timeout_add(10, timeout_periodic_work, NULL, NULL, NULL);
   gtk_main();
   return 0;
 }

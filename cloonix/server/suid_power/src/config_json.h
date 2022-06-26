@@ -7,7 +7,7 @@
 "			\"gid\": 0\n"\
 "		},\n"\
 "               \"args\": [\n"\
-"                       \"/cloonix_parrot_srv\"\n"\
+"                       \"/usr/bin/cloonix_init_starter.sh\"\n"\
 "               ],\n"\
 "		\"env\": [\n"\
 "			\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n"\
@@ -18,36 +18,56 @@
 "			\"bounding\": [\n"\
 "				\"CAP_AUDIT_WRITE\",\n"\
 "				\"CAP_KILL\",\n"\
+"				\"CAP_SYS_ADMIN\",\n"\
+"                               \"CAP_IPC_LOCK\",\n"\
+"				\"CAP_MKNOD\",\n"\
 "				\"CAP_NET_ADMIN\",\n"\
 "				\"CAP_NET_RAW\",\n"\
+"				\"CAP_NET_BROADCAST\",\n"\
 "				\"CAP_NET_BIND_SERVICE\"\n"\
 "			],\n"\
 "			\"effective\": [\n"\
 "				\"CAP_AUDIT_WRITE\",\n"\
 "				\"CAP_KILL\",\n"\
+"				\"CAP_SYS_ADMIN\",\n"\
+"                               \"CAP_IPC_LOCK\",\n"\
+"				\"CAP_MKNOD\",\n"\
 "				\"CAP_NET_ADMIN\",\n"\
 "				\"CAP_NET_RAW\",\n"\
+"				\"CAP_NET_BROADCAST\",\n"\
 "				\"CAP_NET_BIND_SERVICE\"\n"\
 "			],\n"\
 "			\"inheritable\": [\n"\
 "				\"CAP_AUDIT_WRITE\",\n"\
 "				\"CAP_KILL\",\n"\
+"				\"CAP_SYS_ADMIN\",\n"\
+"                               \"CAP_IPC_LOCK\",\n"\
+"				\"CAP_MKNOD\",\n"\
 "				\"CAP_NET_ADMIN\",\n"\
 "				\"CAP_NET_RAW\",\n"\
+"				\"CAP_NET_BROADCAST\",\n"\
 "				\"CAP_NET_BIND_SERVICE\"\n"\
 "			],\n"\
 "			\"permitted\": [\n"\
 "				\"CAP_AUDIT_WRITE\",\n"\
 "				\"CAP_KILL\",\n"\
+"				\"CAP_SYS_ADMIN\",\n"\
+"                               \"CAP_IPC_LOCK\",\n"\
+"				\"CAP_MKNOD\",\n"\
 "				\"CAP_NET_ADMIN\",\n"\
 "				\"CAP_NET_RAW\",\n"\
+"				\"CAP_NET_BROADCAST\",\n"\
 "				\"CAP_NET_BIND_SERVICE\"\n"\
 "			],\n"\
 "			\"ambient\": [\n"\
 "				\"CAP_AUDIT_WRITE\",\n"\
 "				\"CAP_KILL\",\n"\
+"				\"CAP_SYS_ADMIN\",\n"\
+"                               \"CAP_IPC_LOCK\",\n"\
+"				\"CAP_MKNOD\",\n"\
 "				\"CAP_NET_ADMIN\",\n"\
 "				\"CAP_NET_RAW\",\n"\
+"				\"CAP_NET_BROADCAST\",\n"\
 "				\"CAP_NET_BIND_SERVICE\"\n"\
 "			]\n"\
 "		},\n"\
@@ -174,6 +194,9 @@
 "			\"/sys/firmware\",\n"\
 "			\"/proc/scsi\"\n"\
 "		],\n"\
+"		\"sysctl\": {\n"\
+"                          \"net.ipv4.ip_forward\": \"1\"\n"\
+"                          },\n"\
 "		\"readonlyPaths\": [\n"\
 "			\"/proc/bus\",\n"\
 "			\"/proc/fs\",\n"\

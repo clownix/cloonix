@@ -36,7 +36,6 @@ static int g_timeout_flipflop_freeze;
 static int g_one_eventfull_has_arrived;
 static int glob_eventfull_has_arrived;
 /*--------------------------------------------------------------------------*/
-int nb_sec_without_stats;
 
 typedef struct t_ping_evt
 {
@@ -160,20 +159,49 @@ void ping_enqueue_evt(char *name, int evt)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void eventfull_periodic_work(void)
+void timeout_periodic_work(void *data)
 {
-  static int count = 0;
-  count++;
-  if (get_nb_total_items())
-    move_manager_single_step();
-  if (count == 10)
+  static int count_repaint = 0;
+  static int count_move = 0;
+  int nb = get_nb_total_items();
+  count_repaint += 1;
+  count_move += 1;
+  if (nb < 200)
     {
-    count = 0;
-    nb_sec_without_stats++;
+    count_repaint = 0;
+    count_move = 0;
     }
-  topo_repaint_request();
+  else if (nb < 400)
+    {
+    if (count_repaint == 5) 
+      count_repaint = 0;
+    if (count_move == 2) 
+      count_move = 0;
+    }
+  else if (nb < 800)
+    {
+    if (count_repaint == 10) 
+      count_repaint = 0;
+    if (count_move == 5) 
+      count_move = 0;
+    }
+  else
+    {
+    if (count_repaint == 15) 
+      count_repaint = 0;
+    if (count_move == 10) 
+      count_move = 0;
+    }
+  if (count_move == 0)
+    move_manager_single_step();
+  if (count_repaint == 0)
+    topo_repaint_request();
+
+  clownix_timeout_add(2, timeout_periodic_work, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
+
+
 
 /*****************************************************************************/
 gboolean refresh_request_timeout (gpointer data)
@@ -183,7 +211,7 @@ gboolean refresh_request_timeout (gpointer data)
   if (g_one_eventfull_has_arrived)
     {
     glob_eventfull_has_arrived++;
-    if (glob_eventfull_has_arrived >= 60)
+    if (glob_eventfull_has_arrived >= 1000)
       KOUT("CONTACT LOST");
     }
   return TRUE;

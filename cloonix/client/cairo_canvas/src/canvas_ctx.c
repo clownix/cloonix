@@ -46,7 +46,7 @@
 #include "hidden_visible_edge.h"
 #include "menu_dialog_kvm.h"
 #include "menu_dialog_cnt.h"
-#include "menu_dialog_d2d.h"
+#include "menu_dialog_c2c.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
 #include "cloonix_conf_info.h"
@@ -98,12 +98,14 @@ static void call_cloonix_interface_tap_create(double x, double y)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+/*
 static void call_cloonix_interface_phy_create(char *name, double x, double y)
 {
   double x0=x, y0=y;
   topo_get_matrix_inv_transform_point(&x0, &y0);
   to_cloonix_switch_create_sat(name, endp_type_phy, NULL, x0, y0);
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -116,35 +118,36 @@ static void call_cloonix_interface_nat_create(double x, double y)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void call_cloonix_interface_d2d_create(double x, double y)
+static void call_cloonix_interface_c2c_create(double x, double y)
 {
-  t_d2d_req_info d2d_req_info;
-  t_custom_d2d *d2d = get_custom_d2d();
+  t_c2c_req_info c2c_req_info;
+  t_custom_c2c *c2c = get_custom_c2c();
   double x0=x, y0=y;
   int rank;
   t_cloonix_conf_info *cnf, *local_cnf;
-  cnf = cloonix_cnf_info_get(d2d->dist_cloonix, &rank);
+  cnf = cloonix_cnf_info_get(c2c->dist_cloon, &rank);
   if (!cnf)
     insert_next_warning(cloonix_conf_info_get_names(), 1);
   else
     {
     local_cnf = get_own_cloonix_conf_info();
-    memset(&d2d_req_info, 0, sizeof(t_d2d_req_info));
-    strncpy(d2d_req_info.name, d2d->name, MAX_NAME_LEN-1);  
-    strncpy(d2d_req_info.dist_cloonix, d2d->dist_cloonix, MAX_NAME_LEN-1);
-    strncpy(d2d_req_info.dist_passwd, cnf->passwd, MSG_DIGEST_LEN-1);
-    d2d_req_info.loc_udp_ip = local_cnf->d2d_udp_ip; 
-    d2d_req_info.dist_tcp_ip = cnf->ip;
-    d2d_req_info.dist_tcp_port = (uint16_t) (cnf->port & 0xFFFF);
-    d2d_req_info.dist_udp_ip = cnf->d2d_udp_ip;;
+    memset(&c2c_req_info, 0, sizeof(t_c2c_req_info));
+    strncpy(c2c_req_info.name, c2c->name, MAX_NAME_LEN-1);  
+    strncpy(c2c_req_info.dist_cloon, c2c->dist_cloon, MAX_NAME_LEN-1);
+    strncpy(c2c_req_info.dist_passwd, cnf->passwd, MSG_DIGEST_LEN-1);
+    c2c_req_info.loc_udp_ip = local_cnf->c2c_udp_ip; 
+    c2c_req_info.dist_tcp_ip = cnf->ip;
+    c2c_req_info.dist_tcp_port = (uint16_t) (cnf->port & 0xFFFF);
+    c2c_req_info.dist_udp_ip = cnf->c2c_udp_ip;;
     topo_get_matrix_inv_transform_point(&x0, &y0);
-    to_cloonix_switch_create_sat(d2d->name, endp_type_d2d,
-                                 &(d2d_req_info), x0, y0);
+    to_cloonix_switch_create_sat(c2c->name, endp_type_c2c,
+                                 &(c2c_req_info), x0, y0);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+/*
 static void call_cloonix_interface_a2b_create(double x, double y)
 {
   double x0=x, y0=y;
@@ -155,18 +158,19 @@ static void call_cloonix_interface_a2b_create(double x, double y)
   topo_get_matrix_inv_transform_point(&x0, &y0);
   to_cloonix_switch_create_sat(name, endp_type_a2b, NULL, x0, y0);
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void call_cloonix_interface_node_create(double x, double y)
 {
   int rest, i;
-  double tx[MAX_DPDK_VM];
-  double ty[MAX_DPDK_VM];
+  double tx[MAX_ETH_VM];
+  double ty[MAX_ETH_VM];
   double x0=x, y0=y;
-  memset(tx, 0, (MAX_DPDK_VM) * sizeof(double));
-  memset(ty, 0, (MAX_DPDK_VM) * sizeof(double));
-  for (i=0; i<MAX_DPDK_VM; i++)
+  memset(tx, 0, (MAX_ETH_VM) * sizeof(double));
+  memset(ty, 0, (MAX_ETH_VM) * sizeof(double));
+  for (i=0; i<MAX_ETH_VM; i++)
     {
     rest = i%4;
     if (rest == 0)
@@ -200,12 +204,12 @@ static void call_cloonix_interface_node_create(double x, double y)
 static void call_cloonix_interface_node_cnt_create(double x, double y) 
 { 
   int rest, i;
-  double tx[MAX_DPDK_VM];
-  double ty[MAX_DPDK_VM];
+  double tx[MAX_ETH_VM];
+  double ty[MAX_ETH_VM];
   double x0=x, y0=y;
-  memset(tx, 0, (MAX_DPDK_VM) * sizeof(double));
-  memset(ty, 0, (MAX_DPDK_VM) * sizeof(double));
-  for (i=0; i<MAX_DPDK_VM; i++)
+  memset(tx, 0, (MAX_ETH_VM) * sizeof(double));
+  memset(ty, 0, (MAX_ETH_VM) * sizeof(double));
+  for (i=0; i<MAX_ETH_VM; i++)
     {
     rest = i%4; 
     if (rest == 0)
@@ -494,17 +498,19 @@ static void cnt_act(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void d2d_act(void)
+static void c2c_act(void)
 {
-  call_cloonix_interface_d2d_create(g_x_mouse, g_y_mouse);
+  call_cloonix_interface_c2c_create(g_x_mouse, g_y_mouse);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+/*
 static void a2b_act(void)
 {
   call_cloonix_interface_a2b_create(g_x_mouse, g_y_mouse);
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -528,84 +534,25 @@ static void cnt_cact(void)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
-static void display_info(char *title, char *text)
+static void c2c_cact(void)
 {
-  GtkWidget *window, *scrolled_win, *textview;
-  GtkTextIter iter;
-  GtkTextBuffer *buffer;
-  window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_modal (GTK_WINDOW(window), FALSE);
-  gtk_window_set_title(GTK_WINDOW (window), title);
-  gtk_container_set_border_width(GTK_CONTAINER(window), 0);
-  gtk_window_set_default_size(GTK_WINDOW(window), 300, 200);
-  scrolled_win = gtk_scrolled_window_new(NULL, NULL);
-  textview = gtk_text_view_new();
-  buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
-  gtk_text_buffer_get_end_iter(buffer, &iter);
-  gtk_text_buffer_insert(buffer, &iter, text, -1);
-  gtk_text_buffer_get_end_iter(buffer, &iter);
-  gtk_text_buffer_insert(buffer, &iter, "\n", -1);
-  gtk_container_add(GTK_CONTAINER(scrolled_win), textview);
-  gtk_container_add(GTK_CONTAINER(window), scrolled_win);
-  gtk_widget_show_all (window);
+  menu_choice_c2c_params();
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int estimate_max_string_size(void)
-{
-  int i, j, result = (10 * MAX_NAME_LEN);
-  for (i=0; i<g_nb_brgs; i++)
-    {
-    result += MAX_NAME_LEN;
-    for (j=0; j<g_brgs[i].nb_ports; j++)
-      result += MAX_NAME_LEN;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void ovs_cact(void)
-{
-  char *msg, *name;
-  int nb_ports, i, j, len = estimate_max_string_size();
-  msg = (char *) malloc(len);
-  len = 0;
-  len += sprintf(msg+len, " %d BRIDGES:\n", g_nb_brgs);
-  for (i=0; i<g_nb_brgs; i++)
-    {
-    name = g_brgs[i].br;
-    nb_ports = g_brgs[i].nb_ports;
-    len += sprintf(msg+len, "\n\t%s    nb_ports: %d\n", name, nb_ports);
-    for (j=0; j<g_brgs[i].nb_ports; j++)
-      len += sprintf(msg+len, "\t\t\t\t%s\n", g_brgs[i].ports[j]);
-    }
-  display_info("OVS CONFIG", msg);
-  free(msg);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void d2d_cact(void)
-{
-  menu_choice_d2d_params();
-}
-/*--------------------------------------------------------------------------*/
-
-
-
-/****************************************************************************/
+/*
 static void cphy(gpointer data)
 {
   unsigned long i = (unsigned long) data;
   call_cloonix_interface_phy_create(g_topo_phy[i].name, g_x_mouse, g_y_mouse);
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+/*
 static void phy_sub_menu(GtkWidget *phy)
 {
   unsigned long i;
@@ -622,12 +569,13 @@ static void phy_sub_menu(GtkWidget *phy)
     }
   gtk_menu_item_set_submenu(GTK_MENU_ITEM(phy), menu);
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void other_sub_menu(GtkWidget *other)
 {
-  GtkWidget *d2d_conf = gtk_menu_item_new_with_label("d2d_conf");
+  GtkWidget *c2c_conf = gtk_menu_item_new_with_label("c2c_conf");
   GtkWidget *stop = gtk_menu_item_new_with_label("Motion");
   GtkWidget *warnings = gtk_menu_item_new_with_label("Previous Warnings");
   GtkWidget *hidden_visible = gtk_menu_item_new_with_label("Hidden/Visible");
@@ -636,8 +584,8 @@ static void other_sub_menu(GtkWidget *other)
   GtkWidget *menu = gtk_menu_new();
   if (!other)
     KOUT(" ");
-  g_signal_connect_swapped(G_OBJECT(d2d_conf), "activate",
-                                         (GCallback)d2d_cact, NULL);
+  g_signal_connect_swapped(G_OBJECT(c2c_conf), "activate",
+                                         (GCallback)c2c_cact, NULL);
   g_signal_connect_swapped(G_OBJECT(del), "activate",
                                          (GCallback)topo_delete, NULL);
   g_signal_connect_swapped(G_OBJECT(lst), "activate",
@@ -646,7 +594,7 @@ static void other_sub_menu(GtkWidget *other)
                                          (GCallback)show_old_warnings, NULL);
   g_signal_connect_swapped(G_OBJECT(hidden_visible), "activate",
                                          (GCallback)hidden_visible_cb, NULL);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), d2d_conf);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), c2c_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), del);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), lst);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), warnings);
@@ -718,10 +666,9 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *cnt  = gtk_menu_item_new_with_label("cnt");
   GtkWidget *nat  = gtk_menu_item_new_with_label("nat");
   GtkWidget *tap  = gtk_menu_item_new_with_label("tap");
-  GtkWidget *d2d  = gtk_menu_item_new_with_label("d2d");
-  GtkWidget *a2b  = gtk_menu_item_new_with_label("a2b");
-  GtkWidget *phy  = gtk_menu_item_new_with_label("phy");
-  GtkWidget *ovs  = gtk_menu_item_new_with_label("ovs");
+  GtkWidget *c2c  = gtk_menu_item_new_with_label("c2c");
+//  GtkWidget *a2b  = gtk_menu_item_new_with_label("a2b");
+//  GtkWidget *phy  = gtk_menu_item_new_with_label("phy");
   GtkWidget *cmd  = gtk_menu_item_new_with_label("cmd_list");
   GtkWidget *kvm_conf = gtk_menu_item_new_with_label("Kvm_conf");
   GtkWidget *cnt_conf = gtk_menu_item_new_with_label("Cnt_conf");
@@ -736,18 +683,18 @@ void canvas_ctx_menu(gdouble x, gdouble y)
                           (GCallback)lan_act, NULL);
   g_signal_connect_swapped(G_OBJECT(tap), "activate",
                           (GCallback)tap_act, NULL);
-  g_signal_connect_swapped(G_OBJECT(d2d), "activate",
-                          (GCallback)d2d_act, NULL);
+  g_signal_connect_swapped(G_OBJECT(c2c), "activate",
+                          (GCallback)c2c_act, NULL);
+/*
   g_signal_connect_swapped(G_OBJECT(a2b), "activate",
                           (GCallback)a2b_act, NULL);
+*/
   g_signal_connect_swapped(G_OBJECT(nat), "activate",
                           (GCallback)nat_act, NULL);
   g_signal_connect_swapped(G_OBJECT(kvm_conf), "activate",
                           (GCallback)kvm_cact, NULL);
   g_signal_connect_swapped(G_OBJECT(cnt_conf), "activate",
                           (GCallback)cnt_cact, NULL);
-  g_signal_connect_swapped(G_OBJECT(ovs), "activate",
-                          (GCallback)ovs_cact, NULL);
   g_signal_connect_swapped(G_OBJECT(cmd), "activate",
                           (GCallback)cmd_cact, NULL);
 
@@ -756,14 +703,13 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), cnt);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), nat);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), tap);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), d2d);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), a2b);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), phy);
-  phy_sub_menu(phy);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), c2c);
+//  gtk_menu_shell_append(GTK_MENU_SHELL(menu), a2b);
+//  gtk_menu_shell_append(GTK_MENU_SHELL(menu), phy);
+//  phy_sub_menu(phy);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), cnt_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator1);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), ovs);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), cmd);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), other);
   other_sub_menu(other);

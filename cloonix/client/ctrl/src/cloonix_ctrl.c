@@ -83,11 +83,11 @@ struct cmd_struct level_layout_cmd[] = {
 {"hide_sat", "Hide sat on graph",  NULL, cmd_sat_hide,   help_sat_hide},
 {"hide_lan", "Hide lan on graph", NULL, cmd_lan_hide,   help_lan_hide},
 {"xy_kvm",  "Move kvm on graph", NULL, cmd_vm_xy, help_vm_xy},
-{"xy_sat",  "Move tap,a2b... on graph",  NULL, cmd_sat_xy,   help_sat_xy},
+{"xy_sat",  "Move tap,nat... on graph",  NULL, cmd_sat_xy,   help_sat_xy},
 {"xy_lan",  "Move lan on graph", NULL, cmd_lan_xy,   help_lan_xy},
 {"abs_xy_kvm", "Places kvm ", NULL, cmd_vm_abs_xy, help_vm_abs_xy},
 {"abs_xy_eth", "Places kvm eth ",NULL,cmd_eth_abs_xy, help_eth_abs_xy},
-{"abs_xy_sat", "Places tap,a2b... ",  NULL, cmd_sat_abs_xy,   help_sat_abs_xy},
+{"abs_xy_sat", "Places tap,nat... ",  NULL, cmd_sat_abs_xy,   help_sat_abs_xy},
 {"abs_xy_lan", "Places lan ", NULL, cmd_lan_abs_xy,  help_lan_abs_xy},
 {"help",  "",                            level_layout_cmd, NULL, NULL},
 };
@@ -101,23 +101,13 @@ struct cmd_struct level_add_cmd[] = {
 {"cnt", "Add container",  NULL, cmd_add_cnt, help_add_cnt},
 {"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_tap},
 {"nat", "Add nat (access host ip)",NULL, cmd_add_nat, help_add_nat},
-{"a2b", "Add a2b (traffic delay shaping)",NULL, cmd_add_a2b, help_add_a2b},
-{"d2d", "Add d2d (cloonix 2 cloonix cable)", NULL, cmd_add_d2d, help_add_d2d},
+//{"a2b", "Add a2b (traffic delay shaping)",NULL, cmd_add_a2b, help_add_a2b},
+{"c2c", "Add c2c (cloon 2 cloon cable)", NULL, cmd_add_c2c, help_add_c2c},
 {"help",  "",                     level_add_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-
-struct cmd_struct level_sav_cmd[] = {
-{"derived", "Save derived qcow2", NULL, cmd_sav_derived, 
-                                      help_sav_derived},
-{"full", "Save backing and derived in one qcow2", NULL, cmd_sav_full,
-                                                        help_sav_full},
-{"help",  "",                     level_sav_cmd, NULL, NULL},
-};
-/*---------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 struct cmd_struct level_del_cmd[] = {
@@ -130,21 +120,17 @@ struct cmd_struct level_del_cmd[] = {
 
 /****************************************************************************/
 struct cmd_struct level_vm_cmd[] = {
-{"reboot","Reboot by cloonix guest agent",NULL,cmd_reboot_vm,help_reboot_vm},
-{"halt",  "Poweroff by cloonix guest agent",NULL,cmd_halt_vm, help_halt_vm},
-{"qreboot", "Reboot by qemu",  NULL, cmd_qreboot_vm, help_qreboot_vm},
-{"qhalt",   "Poweroff by qemu", NULL, cmd_qhalt_vm, help_qhalt_vm},
+{"reboot", "Reboot by qemu",  NULL, cmd_qreboot_vm, help_qreboot_vm},
 {"help",  "",                     level_vm_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 struct cmd_struct level_cnf_cmd[] = {
-{"ovs",  "Conf openvswitch dpdk", NULL, cmd_dpdk_ovs_cnf, help_dpdk_ovs_cnf},
 {"kvm",  "Virtual machine actions",    level_vm_cmd, NULL, NULL},
 {"nat",  "nat config", NULL, cmd_cnf_nat, help_cnf_nat},
-{"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
-{"xyx",  "xyx config", NULL, cmd_cnf_xyx, help_cnf_xyx},
+//{"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
+{"c2c",  "c2c config", NULL, cmd_cnf_c2c, help_cnf_c2c},
 {"lay",  "Layout modifications on canvas", level_layout_cmd, NULL, NULL},
 {"help",  "",                     level_cnf_cmd, NULL, NULL},
 };
@@ -158,32 +144,24 @@ struct cmd_struct level_sub_cmd[] = {
 };
 /*---------------------------------------------------------------------------*/
 
-/****************************************************************************/
-struct cmd_struct level_qmp_cmd[] = {
-{"sub",  "Subscribe to qmp of vm", NULL, cmd_sub_qmp, help_sub_qmp},
-{"snd",  "Send qmp request", NULL, cmd_snd_qmp, help_snd_qmp},
-{"help",  "",                     level_qmp_cmd, NULL, NULL},
-};
-/*---------------------------------------------------------------------------*/
-
 /*---------------------------------------------------------------------------*/
 struct cmd_struct level_main_cmd[] = {
+{"snf", "Add wireshark capability on item",NULL, cmd_add_snf, help_add_snf},
 {"kil", "Destroys all objects, cleans and kills switch", NULL, cmd_kill, NULL},
-{"rma", "Destroys all cloonix objects and graphs",  NULL, cmd_delall,    NULL},
+{"rma", "Destroys all cloon objects and graphs",  NULL, cmd_delall,    NULL},
 {"dcf", "Dump config", NULL,  cmd_config_dump, NULL},
 {"dmp", "Dump topo", NULL,  cmd_topo_dump, NULL},
 {"lst", "List commands to replay topo", NULL,  cmd_list_commands, NULL},
 {"lay", "List topo layout", NULL,  cmd_lay_commands, NULL},
-{"add", "Add one cloonix object to topo", level_add_cmd, NULL, NULL},
-{"del", "Del one cloonix object from topo", level_del_cmd, NULL, NULL},
-{"sav", "Save sub-menu", level_sav_cmd, NULL,  NULL},
-{"cnf", "Configure a cloonix object", level_cnf_cmd, NULL, NULL},
+{"add", "Add one cloon object to topo", level_add_cmd, NULL, NULL},
+{"del", "Del one cloon object from topo", level_del_cmd, NULL, NULL},
+{"sav", "Save in qcow2", NULL, cmd_sav_full, help_sav_full},
+{"cnf", "Configure a cloon object", level_cnf_cmd, NULL, NULL},
 {"sub", "Subscribe to stats counters", level_sub_cmd, NULL, NULL},
 {"hop", "dump 1 hop debug", NULL, cmd_event_hop, help_event_hop},
 {"pid", "dump pids of processes", NULL, cmd_pid_dump, NULL},
 {"evt", "prints events",         NULL,  cmd_event_print, NULL},
 {"sys", "prints system stats",   NULL,  cmd_event_sys, NULL},
-{"qmp", "qemu machine protocol cmd", level_qmp_cmd,  NULL, NULL},
 {"help",   "",                    level_main_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
@@ -359,7 +337,7 @@ static void timout_connect_target(void *data)
 void init_connection_to_uml_cloonix_switch(void)
 {
   client_init("ctrl", g_cloonix_server_sock, g_cloonix_password);
-  clownix_timeout_add(200, timout_connect_target, NULL, NULL, NULL);
+  clownix_timeout_add(500, timout_connect_target, NULL, NULL, NULL);
   while (!client_is_connected())
     msg_mngt_loop_once();
   g_inhibited = 1;
@@ -547,7 +525,7 @@ int main (int argc, char *argv[])
                                       g_cloonix_conf_info[i].port,
                                       callback_connect);
       }
-    clownix_timeout_add(200, timout_connect, NULL, NULL, NULL);
+    clownix_timeout_add(500, timout_connect, NULL, NULL, NULL);
     client_loop();
     }
   else

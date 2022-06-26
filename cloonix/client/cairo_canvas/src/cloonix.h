@@ -36,7 +36,7 @@ char *get_spice_vm_path(int vm_id);
 
 
 char *get_cmd_path(void);
-int inside_cloonix(char **name);
+int inside_cloon(char **name);
 
 char **get_argv_local_xwy(char *name);
 

@@ -40,7 +40,6 @@
 #include "menu_utils.h"
 
 
-int get_endp_type(t_bank_item *bitem);
 void canvas_ctx_menu(gdouble x, gdouble y);
 
 typedef struct
@@ -95,21 +94,23 @@ static void update_layout_center_scale(const char *from)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void paint_color_of_d2d(t_bank_item *bitem, cairo_t *c)
+static void paint_color_of_c2c(t_bank_item *bitem, cairo_t *c)
 {
-  if (is_a_d2d(bitem))
+  if (is_a_c2c(bitem))
     {
-    if ((bitem->pbi.pbi_sat->topo_d2d.tcp_connection_peered) &&
-        (bitem->pbi.pbi_sat->topo_d2d.udp_connection_peered) &&
-        (bitem->pbi.pbi_sat->topo_d2d.ovs_lan_attach_ready))
+    if ((bitem->pbi.pbi_sat->topo_c2c.tcp_connection_peered) &&
+             (bitem->pbi.pbi_sat->topo_c2c.udp_connection_peered))
+      {
       cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
-    else if ((bitem->pbi.pbi_sat->topo_d2d.tcp_connection_peered) &&
-             (bitem->pbi.pbi_sat->topo_d2d.udp_connection_peered))
-      cairo_set_source_rgba (c, orange.r, orange.g, orange.b, 0.8);
-    else if (bitem->pbi.pbi_sat->topo_d2d.tcp_connection_peered)
+      }
+    else if (bitem->pbi.pbi_sat->topo_c2c.tcp_connection_peered)
+      {
       cairo_set_source_rgba (c, lightred.r, lightred.g, lightred.b, 0.8);
+      }
     else
+      {
       cairo_set_source_rgba (c, red.r, red.g, red.b, 0.8);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -158,7 +159,8 @@ CrItem *get_glob_canvas_root(void)
 void topo_get_matrix_inv_transform_point(double *x, double *y)
 {
   CrItem *root = get_glob_canvas_root();
-  cairo_matrix_transform_point(cr_item_get_inverse_matrix(root), x, y);
+  if (root)
+    cairo_matrix_transform_point(cr_item_get_inverse_matrix(root), x, y);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -284,7 +286,8 @@ void move_manager_rotate(t_bank_item *bitem, double x1, double y1)
 /****************************************************************************/
 static void process_mouse_double_click(t_bank_item *bitem)
 {
-  int config_flags;
+  t_bank_item *att_node;
+  int vm_id, endp_type, config_flags;
   switch(bitem->bank_type)
     {
 
@@ -303,15 +306,42 @@ static void process_mouse_double_click(t_bank_item *bitem)
 
     case bank_type_eth:
       bitem->pbi.flag = flag_normal;
-      if (get_endp_type(bitem) == endp_type_eths)
-        wireshark_launch(bitem->name, bitem->num);
+      att_node = bitem->att_node;
+      if (!att_node)
+        KOUT(" ");
+      if (bitem->num < 0)
+        KOUT("%s %d", bitem->name, bitem->num);
+      if (att_node->bank_type == bank_type_node)
+        {
+        if (bitem->num >= att_node->pbi.pbi_node->nb_tot_eth)
+          KOUT("%s %d", bitem->name, bitem->num);
+        vm_id = att_node->pbi.pbi_node->node_vm_id;
+        endp_type = att_node->pbi.pbi_node->eth_tab[bitem->num].endp_type;
+        if ((endp_type != endp_type_eths) &&
+            (endp_type != endp_type_ethv))
+          KOUT("%s %d", bitem->name, bitem->num);
+        }
+      else if (att_node->bank_type == bank_type_cnt)
+        {
+        if (bitem->num >= att_node->pbi.pbi_cnt->nb_tot_eth)
+          KOUT("%s %d", bitem->name, bitem->num);
+        vm_id = att_node->pbi.pbi_cnt->cnt_vm_id;
+        endp_type = att_node->pbi.pbi_cnt->eth_tab[bitem->num].endp_type;
+        if ((endp_type != endp_type_eths) &&
+            (endp_type != endp_type_ethv))
+          KOUT("%s %d", bitem->name, bitem->num);
+        }
+      if (endp_type == endp_type_eths)
+        wireshark_launch(0, vm_id, bitem->name, bitem->num);
+      else if (endp_type == endp_type_ethv)
+        wireshark_launch(1, vm_id, bitem->name, bitem->num);
       break;
 
     case bank_type_sat:
       bitem->pbi.flag = flag_normal;
       if ((bitem->pbi.endp_type == endp_type_phy) ||
           (bitem->pbi.endp_type == endp_type_tap))
-        wireshark_launch(bitem->name, 0);
+        wireshark_launch(0, 0, bitem->name, 0);
       break;
 
     default:
@@ -632,7 +662,7 @@ static void paint_select_source_color(t_bank_item *bitem, cairo_t *c)
   switch (bitem->bank_type)
     {
     case bank_type_sat:
-      paint_color_of_d2d(bitem, c);
+      paint_color_of_c2c(bitem, c);
       break;
     case bank_type_lan:
       paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
@@ -722,7 +752,7 @@ static void on_item_paint_nat(CrItem *item, cairo_t *c)
 static void on_item_paint_eth(CrItem *item, cairo_t *c)
 {
   int endp_type, flag, flag_trace, flag_grabbed;
-  t_bank_item *bitem = from_critem_to_bank_item(item);
+  t_bank_item *att_node, *bitem = from_critem_to_bank_item(item);
   flag = bitem->pbi.flag;
   flag_trace = bitem->pbi.flag_trace;
   flag_grabbed = bitem->pbi.grabbed;
@@ -742,10 +772,36 @@ static void on_item_paint_eth(CrItem *item, cairo_t *c)
   cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, INTF_DIA/2, 0, 2*M_PI);
   if (bitem->bank_type == bank_type_eth)
     {
-    endp_type = get_endp_type(bitem);
-    if (endp_type == endp_type_ethd)
-      paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
-    else if (endp_type == endp_type_eths)
+    att_node = bitem->att_node;
+    if (!att_node)
+      KOUT(" ");
+    if (bitem->num < 0)
+      KOUT("%s %d", bitem->name, bitem->num);
+    if (att_node->bank_type == bank_type_node)
+      {
+      if (bitem->num >= att_node->pbi.pbi_node->nb_tot_eth)
+        KOUT("%s %d", bitem->name, bitem->num);
+      endp_type = att_node->pbi.pbi_node->eth_tab[bitem->num].endp_type;
+      if ((endp_type != endp_type_eths) &&
+          (endp_type != endp_type_ethv))
+        KOUT("%s %d", bitem->name, bitem->num);
+      }
+    else if (att_node->bank_type == bank_type_cnt)
+      {
+      if (bitem->num >= att_node->pbi.pbi_cnt->nb_tot_eth)
+        KOUT("%s %d", bitem->name, bitem->num);
+      endp_type = att_node->pbi.pbi_cnt->eth_tab[bitem->num].endp_type;
+      if ((endp_type != endp_type_eths) &&
+          (endp_type != endp_type_ethv))
+        KOUT("%s %d", bitem->name, bitem->num);
+      }
+    else if (att_node->bank_type == bank_type_sat)
+      {
+      KERR("%s %d", bitem->name, bitem->num);
+      }
+    else
+      KOUT("%s %d", bitem->name, bitem->num);
+    if (endp_type == endp_type_eths)
       paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
     else if (endp_type == endp_type_ethv)
       paint_select(c,flag,flag_trace,&lightcyan,&red,&lightmagenta);
@@ -964,7 +1020,7 @@ static void on_item_paint_a2b(CrItem *item, cairo_t *c)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void on_item_paint_d2d(CrItem *item, cairo_t *c)
+static void on_item_paint_c2c(CrItem *item, cairo_t *c)
 {
   t_bank_item *bitem = from_critem_to_bank_item(item);
   double x0,y0, d0;
@@ -976,12 +1032,12 @@ static void on_item_paint_d2d(CrItem *item, cairo_t *c)
 
   if (bitem->pbi.blink_tx)
     {
-    d0 = D2D_DIA/2+D2D_DIA/6; 
+    d0 = C2C_DIA/2+C2C_DIA/6; 
     sat_lozange(c, x0, y0, d0);
     cairo_set_source_rgba (c, orange.r, orange.g, orange.b, 0.8);
     cairo_fill(c);
     }
-  d0 = D2D_DIA/2; 
+  d0 = C2C_DIA/2; 
   sat_lozange(c, x0, y0, d0);
   cairo_close_path (c);
   if (bitem->pbi.grabbed)
@@ -989,7 +1045,7 @@ static void on_item_paint_d2d(CrItem *item, cairo_t *c)
   else
     cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
   cairo_stroke_preserve(c);
-  paint_color_of_d2d(bitem, c);
+  paint_color_of_c2c(bitem, c);
   cairo_fill(c);
   if (bitem->pbi.blink_rx)
     {
@@ -1069,9 +1125,9 @@ static CrItem *on_item_test(CrItem *item, cairo_t *c, double x, double y)
       {
       if (is_a_nat(bitem))
         cairo_arc (c, x0, y0, NAT_RAD, 0, 2*M_PI);
-      else if (is_a_d2d(bitem))
+      else if (is_a_c2c(bitem))
         {
-        d0 = D2D_DIA/2;
+        d0 = C2C_DIA/2;
         sat_lozange(c, x0, y0, d0);
         cairo_close_path (c);
         }
@@ -1278,8 +1334,8 @@ void topo_add_cr_item_to_canvas(t_bank_item *bitem, t_bank_item *bnode)
     {
     if (is_a_nat(bitem))
       g_signal_connect(item, "paint", (GCallback) on_item_paint_nat, NULL);
-    else if (is_a_d2d(bitem))
-      g_signal_connect(item, "paint", (GCallback) on_item_paint_d2d, NULL);
+    else if (is_a_c2c(bitem))
+      g_signal_connect(item, "paint", (GCallback) on_item_paint_c2c, NULL);
     else if (is_a_a2b(bitem))
       g_signal_connect(item, "paint", (GCallback) on_item_paint_a2b, NULL);
     else

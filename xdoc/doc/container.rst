@@ -1,4 +1,4 @@
-.. image:: /png/clownix64.png 
+.. image:: /png/cloonix128.png 
    :align: right
 
 ==============================
@@ -21,21 +21,21 @@ The following commands does the building of the image::
     dd if=/dev/zero of=bookworm.img bs=100M count=10
     mkfs.ext4 bookworm.img
     losetup -fP bookworm.img
-    mkdir -p tmp_mnt
+    mkdir -p /root/tmp_mnt
     DEVLOOP=$(losetup -l | grep bookworm.img | awk '{print $1}')
     echo $DEVLOOP
-    mount -o loop $DEVLOOP tmp_mnt
+    mount -o loop $DEVLOOP /root/tmp_mnt
     export DEBOOTSTRAP_DIR=/root/debootstrap-1.0.126+nmu1
     INCLUDES="openssh-client,vim,bash-completion,net-tools,tcpdump,tini"
-    cd /root/debootstrap-1.0.126+nmu1
-    ./debootstrap  --no-check-certificate \
+    ${DEBOOTSTRAP_DIR}/debootstrap  \
+                   --no-check-certificate \
                    --no-check-gpg \
                    --arch amd64 \
                    --include=${INCLUDES} \
                    bookworm \
-                   tmp_mnt \
+                   /root/tmp_mnt \
                    http://deb.debian.org/debian
-    umount tmp_mnt
+    umount /root/tmp_mnt
     losetup -d $DEVLOOP
     rmdir tmp_mnt
 

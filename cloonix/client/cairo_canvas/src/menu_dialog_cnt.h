@@ -19,8 +19,9 @@ typedef struct t_custom_cnt
 {
   char name[MAX_NAME_LEN];
   int  nb_tot_eth;
-  t_eth_table eth_table[MAX_DPDK_VM];
+  t_eth_table eth_table[MAX_ETH_VM];
   char image[MAX_PATH_LEN];
+  char customer_launch[MAX_PATH_LEN];
   int current_number;
 } t_custom_cnt;
 

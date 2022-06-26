@@ -30,17 +30,17 @@
 #include "io_clownix.h"
 #include "launcher.h"
 #include "config_json.h"
-#include "container.h"
+#include "cnt.h"
 #include "loop_img.h"
 #include "cnt_utils.h"
 
 
 void clean_all_llid(void);
+char *get_net_name(void);
 
 static char losetup_bin[MAX_PATH_LEN];
 static char mount_bin[MAX_PATH_LEN];
 static char umount_bin[MAX_PATH_LEN];
-static char ip_bin[MAX_PATH_LEN];
 
 FILE *my_popen(const char *command, const char *type)
 {
@@ -149,6 +149,63 @@ static void my_cp_file(char *dsrc, char *ddst, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void my_cp_and_sed_file(char *dsrc, char *ddst, char *name,
+                               char *customer_launch)
+{
+  char src_file[MAX_PATH_LEN+MAX_NAME_LEN];
+  char dst_file[MAX_PATH_LEN+MAX_NAME_LEN];
+  struct stat stat_file;
+  int len;
+  char *buf1, *buf2, *ptr1, *ptr2, *ptr3;
+  snprintf(src_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dsrc, name);
+  snprintf(dst_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", ddst, name);
+  src_file[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
+  dst_file[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
+  if (!stat(src_file, &stat_file))
+    {
+    buf1 = read_whole_file(src_file, &len);
+    if (buf1)
+      {
+      unlink(dst_file);
+      ptr1 = buf1;
+      ptr2 = strstr(ptr1, "__CUSTOMER_LAUNCHER_SCRIPT__");
+      ptr3 = ptr2 + strlen("__CUSTOMER_LAUNCHER_SCRIPT__");
+      if (ptr2 == NULL)
+        {
+        KERR("ERROR: %s %s %s", name, customer_launch, ptr1);
+        if (!write_whole_file(dst_file, buf1, len))
+          chmod(dst_file, stat_file.st_mode);
+        free(buf1);
+        }
+      else
+        {
+        len += strlen(customer_launch);
+        buf2 = (char *) malloc((len+1) *sizeof(char));
+        memset(buf2, 0, len+1);
+        *ptr2 = 0;
+        if ((strlen(ptr1) + strlen(customer_launch) + strlen(ptr3)) >= len)
+          {
+          KERR("ERROR: %s %s", name, customer_launch);
+          if (!write_whole_file(dst_file, buf1, len))
+            chmod(dst_file, stat_file.st_mode);
+          }
+        else 
+          {
+          strncpy(buf2, ptr1, len);
+          strcat(buf2, customer_launch);
+          strcat(buf2, ptr3);
+          if (!write_whole_file(dst_file, buf2, len))
+            chmod(dst_file, stat_file.st_mode);
+          }
+        free(buf1);
+        free(buf2);
+        }
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static char *get_config_json(char *rootfs_path, char *nspace_path)
 {
   char *buf;
@@ -240,10 +297,11 @@ static int check_mount_does_not_exist(char *path)
   return result;
 }
 /*--------------------------------------------------------------------------*/
-
+ 
 /****************************************************************************/
 static int dir_cnt_create(char *bulk, char *image, char *cnt_dir,
-                          char *name, char *agent_dir)
+                          char *name, char *agent_dir,
+                          char *customer_launch)
 {
   int result = -1;
   char path[MAX_PATH_LEN];
@@ -254,25 +312,41 @@ static int dir_cnt_create(char *bulk, char *image, char *cnt_dir,
   else
     {
     memset(path, 0, MAX_PATH_LEN); 
-    snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, UPPER);
+    snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s/", cnt_dir, name, UPPER);
     if (my_mkdir(path))
       KERR("ERROR %s", path);
     else
       {
-      my_cp_file(agent_dir, path, "cloonix_parrot_srv");
-      my_cp_file(agent_dir, path, "cloonix_parrot_cli");
-      memset(path, 0, MAX_PATH_LEN); 
-      snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, WORKDIR);
+      memset(path, 0, MAX_PATH_LEN);
+      snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s/usr", cnt_dir, name, UPPER);
       if (my_mkdir(path))
         KERR("ERROR %s", path);
       else
         {
-        memset(path, 0, MAX_PATH_LEN); 
-        snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, ROOTFS);
+        memset(path, 0, MAX_PATH_LEN);
+        snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s/usr/bin",cnt_dir,name,UPPER);
         if (my_mkdir(path))
           KERR("ERROR %s", path);
         else
-          result = 0;
+          {
+          my_cp_and_sed_file(agent_dir, path, "cloonix_init_starter.sh",
+                             customer_launch);
+          my_cp_file(agent_dir, path, "cloonix_parrot_srv");
+          my_cp_file(agent_dir, path, "cloonix_parrot_cli");
+          memset(path, 0, MAX_PATH_LEN); 
+          snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, WORKDIR);
+          if (my_mkdir(path))
+            KERR("ERROR %s", path);
+          else
+            {
+            memset(path, 0, MAX_PATH_LEN); 
+            snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, ROOTFS);
+            if (my_mkdir(path))
+              KERR("ERROR %s", path);
+            else
+              result = 0;
+            }
+          }
         }
       }
     }
@@ -319,12 +393,11 @@ static int read_crun_create_pid(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void check_netns_and_clean(char *name, char *nspace, int cloonix_rank,
+static void check_netns_and_clean(char *name, char *nspace,
                                   int vm_id, int nb_eth)
 {
   int i;
   char cmd[MAX_PATH_LEN];
-  char *ip = ip_bin;
   int pid = read_crun_create_pid(name);
   if (pid)
     kill(pid, 9);
@@ -332,12 +405,13 @@ static void check_netns_and_clean(char *name, char *nspace, int cloonix_rank,
   snprintf(cmd, MAX_PATH_LEN-1, "/usr/bin/crun delete %s", name);
   execute_cmd(cmd, 0);
   memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s 2>&1 >/dev/null",ip,nspace);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s 2>&1 >/dev/null",
+           SBIN_IP, nspace);
   execute_cmd(cmd, 0);
   for (i=0; i<nb_eth; i++)
     {
-    snprintf(cmd, MAX_PATH_LEN-1, "%s link del name vgt_%d_%d_%d 2>&1",
-             ip, cloonix_rank, vm_id, i);
+    snprintf(cmd, MAX_PATH_LEN-1, "%s link del name %s%d_%d 2>&1",
+             SBIN_IP, OVS_BRIDGE_PORT, vm_id, i);
     execute_cmd(cmd, 0);
     }
 }
@@ -419,11 +493,11 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
 {
   int i, result = -1;
   char cmd[MAX_PATH_LEN];         
-  char *ip = ip_bin;
   char *mac;
-  check_netns_and_clean(name, nspace, cloonix_rank, vm_id, nb_eth);
+  check_netns_and_clean(name, nspace, vm_id, nb_eth);
   memset(cmd, 0, MAX_PATH_LEN);         
-  snprintf(cmd, MAX_PATH_LEN-1, "%s netns add %s 2>&1", ip, nspace);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s netns add %s 2>&1",
+           SBIN_IP, nspace);
   if (execute_cmd(cmd, 1))
     KERR("ERROR %s", cmd);
   else
@@ -434,9 +508,9 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
       {
       mac = eth_mac[i].mac;
       snprintf(cmd, MAX_PATH_LEN-1,
-      "%s link add name vgt_%d_%d_%d type veth peer name eth%d "
+      "%s link add name %s%d_%d type veth peer name cnt%d "
       "address %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx  2>&1",
-      ip, cloonix_rank, vm_id, i, i, mac[0], mac[1], mac[2],
+      SBIN_IP, OVS_BRIDGE_PORT, vm_id, i, i, mac[0], mac[1], mac[2],
       mac[3], mac[4], mac[5]);
       if (execute_cmd(cmd, 1))
         {
@@ -445,7 +519,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
         break;
         }
       snprintf(cmd, MAX_PATH_LEN-1,
-      "%s link set eth%d netns %s 2>&1", ip, i, nspace);
+      "%s link set cnt%d netns %s 2>&1", SBIN_IP, i, nspace);
       if (execute_cmd(cmd, 1))
         {
         KERR("ERROR %s", cmd);
@@ -453,7 +527,17 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
         break;
         }
       snprintf(cmd, MAX_PATH_LEN-1,
-      "%s netns exec %s ip link set eth%d up 2>&1", ip, nspace, i);
+      "%s link set %s%d_%d netns %s_%s 2>&1",
+      SBIN_IP, OVS_BRIDGE_PORT, vm_id, i, BASE_NAMESPACE, get_net_name());
+      if (execute_cmd(cmd, 1))
+        {
+        KERR("ERROR %s", cmd);
+        result = -1;
+        break;
+        }
+
+      snprintf(cmd, MAX_PATH_LEN-1,
+      "%s netns exec %s ip link set cnt%d up 2>&1", SBIN_IP, nspace, i);
       if (execute_cmd(cmd, 1))
         {
         KERR("ERROR %s", cmd);
@@ -462,7 +546,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
         }
       }
     snprintf(cmd, MAX_PATH_LEN-1,
-    "%s netns exec %s ip link set lo up 2>&1", ip, nspace);
+    "%s netns exec %s ip link set lo up 2>&1", SBIN_IP, nspace);
     if (execute_cmd(cmd, 1))
       {
       KERR("ERROR %s", cmd);
@@ -476,11 +560,12 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
 /****************************************************************************/
 int cnt_utils_create_net(char *bulk, char *image, char *name, char *cnt_dir,
                          char *nspace, int cloonix_rank, int vm_id,
-                         int nb_eth, t_eth_mac *eth_mac, char *agent_dir)
+                         int nb_eth, t_eth_mac *eth_mac, char *agent_dir,
+                         char *customer_launch)
 {
   int result = -1;
-  if (dir_cnt_create(bulk, image, cnt_dir, name, agent_dir))
-    KERR("ERROR %s %s %s", cnt_dir, name, nspace);
+  if (dir_cnt_create(bulk, image, cnt_dir, name, agent_dir, customer_launch))
+    KERR("ERROR %s %s %s %s", cnt_dir, name, nspace, customer_launch);
   else if (nspace_create(name, nspace, cloonix_rank, vm_id, nb_eth, eth_mac))
     KERR("ERROR %s %s %s", cnt_dir, name, nspace);
   else
@@ -494,9 +579,8 @@ int cnt_utils_delete_net(char *nspace)
 {
   int result = 0;
   char cmd[MAX_PATH_LEN];
-  char *ip = ip_bin;
   memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s 2>&1", ip, nspace);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s 2>&1", SBIN_IP, nspace);
   if (execute_cmd(cmd, 1))
     {
     KERR("ERROR %s", cmd);
@@ -575,13 +659,6 @@ char *get_umount_bin(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *get_ip_bin(void)
-{
-  return ip_bin;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int cnt_utils_create_crun_start(char *name)
 {
   int result = -1;
@@ -617,7 +694,7 @@ int cnt_utils_create_crun_run_check(char *name)
   memset(cmd, 0, MAX_PATH_LEN);
   memset(line, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "/usr/bin/crun exec %s /cloonix_parrot_cli 2>&1", name);
+  "/usr/bin/crun exec %s /usr/bin/cloonix_parrot_cli 2>&1", name);
   fp = my_popen(cmd, "r");
   if (fp == NULL)
     KERR("ERROR %s", cmd);
@@ -636,7 +713,7 @@ int cnt_utils_create_crun_run_check(char *name)
       if (!strcmp(line, "cloonix"))
         result = 0;
       else
-        KERR("ERROR %s %s", cmd, line);
+        KERR("ERROR %s", line);
       }
     pclose(fp);
     }
@@ -649,7 +726,6 @@ void cnt_utils_init(void)
 {
   memset(losetup_bin, 0, MAX_PATH_LEN);
   memset(mount_bin, 0, MAX_PATH_LEN);
-  memset(ip_bin, 0, MAX_PATH_LEN);
   if (!access("/sbin/losetup", F_OK))
     strcpy(losetup_bin, "/sbin/losetup");
   else if (!access("/bin/losetup", F_OK))
@@ -668,12 +744,6 @@ void cnt_utils_init(void)
     strcpy(umount_bin, "/bin/umount");
   else
     KERR("ERROR ERROR ERROR umount binary not found");
-  if (!access("/sbin/ip", F_OK))
-    strcpy(ip_bin, "/sbin/ip");
-  else if (!access("/bin/ip", F_OK))
-    strcpy(ip_bin, "/bin/ip");
-  else
-    KERR("ERROR ERROR ERROR ip binary not found");
   if (access("/usr/bin/crun", F_OK))
     KERR("ERROR ERROR ERROR /usr/bin/crun binary not found");
 }

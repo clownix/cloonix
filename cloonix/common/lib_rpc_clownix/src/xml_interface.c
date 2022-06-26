@@ -36,10 +36,12 @@ enum
   {
   bnd_min = 0,
 
-  bnd_d2d_add,
-  bnd_d2d_peer_create,
-  bnd_d2d_peer_conf,
-  bnd_d2d_peer_ping,
+  bnd_snf_add,
+
+  bnd_c2c_add,
+  bnd_c2c_peer_create,
+  bnd_c2c_peer_conf,
+  bnd_c2c_peer_ping,
 
   bnd_hop_get_list,
   bnd_hop_list,
@@ -75,7 +77,6 @@ enum
   bnd_work_dir_req,
   bnd_work_dir_resp,
   bnd_vmcmd,
-  bnd_dpdk_ovs_cnf,
   bnd_eventfull_sub,
   bnd_eventfull,
   bnd_slowperiodic_sub,
@@ -85,10 +86,6 @@ enum
   bnd_evt_stats_endp,
   bnd_sub_evt_stats_sysinfo,
   bnd_evt_stats_sysinfo,
-  bnd_qmp_all_sub,
-  bnd_qmp_sub,
-  bnd_qmp_req,
-  bnd_qmp_msg,
 
   bnd_nat_add,
   bnd_phy_add,
@@ -703,18 +700,21 @@ static int topo_cnt_format(char *buf, t_topo_cnt *cnt)
 {
   int i, len;
   if ((strlen(cnt->name) == 0) ||
-      (strlen(cnt->image) == 0))
-    KOUT("name:%s image:%s", cnt->name, cnt->image);
+      (strlen(cnt->image) == 0) ||
+      (strlen(cnt->customer_launch) == 0))
+    KOUT("name:%s image:%s l:%s", cnt->name, cnt->image, cnt->customer_launch);
   len = sprintf(buf, EVENT_TOPO_CNT_O, cnt->name, 
                                        cnt->image,  
                                        cnt->ping_ok,
+                                       cnt->vm_id,
                                        cnt->nb_tot_eth);
   for (i=0; i < cnt->nb_tot_eth; i++)
     len += topo_eth_format(buf+len, cnt->eth_table[i].endp_type, 
                                     cnt->eth_table[i].randmac,
                                     cnt->eth_table[i].vhost_ifname,
                                     cnt->eth_table[i].mac_addr);
-  len += sprintf(buf+len, EVENT_TOPO_CNT_C);
+
+  len += sprintf(buf+len, EVENT_TOPO_CNT_C, cnt->customer_launch);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -753,34 +753,33 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int topo_d2d_format(char *buf, t_topo_d2d *d2d)
+static int topo_c2c_format(char *buf, t_topo_c2c *c2c)
 {
   int len;
   char lan[MAX_NAME_LEN];
-  if ((!d2d->name) || (!d2d->dist_cloonix) || (!d2d->lan))
-    KOUT("%p %p", d2d->name, d2d->dist_cloonix);
-  if (!strlen(d2d->name) || (strlen(d2d->name) >= MAX_NAME_LEN))
+  if ((!c2c->name) || (!c2c->dist_cloon) || (!c2c->lan))
+    KOUT("%p %p", c2c->name, c2c->dist_cloon);
+  if (!strlen(c2c->name) || (strlen(c2c->name) >= MAX_NAME_LEN))
      KOUT(" ");
-  if (!strlen(d2d->dist_cloonix) || (strlen(d2d->dist_cloonix) >= MAX_NAME_LEN))
+  if (!strlen(c2c->dist_cloon) || (strlen(c2c->dist_cloon) >= MAX_NAME_LEN))
      KOUT(" ");
   memset(lan, 0, MAX_NAME_LEN);
-  if (strlen(d2d->lan) == 0)
+  if (strlen(c2c->lan) == 0)
     strncpy(lan, "name_to_erase_upon_extract", MAX_NAME_LEN-1); 
   else
-    strncpy(lan, d2d->lan, MAX_NAME_LEN-1); 
-  len = sprintf(buf, EVENT_TOPO_D2D, d2d->name,
-                                     d2d->dist_cloonix,
+    strncpy(lan, c2c->lan, MAX_NAME_LEN-1); 
+  len = sprintf(buf, EVENT_TOPO_C2C, c2c->name,
+                                     c2c->dist_cloon,
                                      lan,
-                                     d2d->local_is_master,
-                                     d2d->dist_tcp_ip,
-                                     d2d->dist_tcp_port,
-                                     d2d->loc_udp_ip,
-                                     d2d->dist_udp_ip,
-                                     d2d->loc_udp_port,
-                                     d2d->dist_udp_port,
-                                     d2d->tcp_connection_peered,
-                                     d2d->udp_connection_peered,
-                                     d2d->ovs_lan_attach_ready);
+                                     c2c->local_is_master,
+                                     c2c->dist_tcp_ip,
+                                     c2c->dist_tcp_port,
+                                     c2c->loc_udp_ip,
+                                     c2c->dist_udp_ip,
+                                     c2c->loc_udp_port,
+                                     c2c->dist_udp_port,
+                                     c2c->tcp_connection_peered,
+                                     c2c->udp_connection_peered);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -926,7 +925,7 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
                                            cf.flags_config,
                                            topo->nb_cnt,
                                            topo->nb_kvm,
-                                           topo->nb_d2d,
+                                           topo->nb_c2c,
                                            topo->nb_tap,
                                            topo->nb_phy,
                                            topo->nb_a2b,
@@ -939,8 +938,8 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
     len += topo_cnt_format(sndbuf+len, &(topo->cnt[i]));
   for (i=0; i<topo->nb_kvm; i++)
     len += topo_kvm_format(sndbuf+len, &(topo->kvm[i]));
-  for (i=0; i<topo->nb_d2d; i++)
-    len += topo_d2d_format(sndbuf+len, &(topo->d2d[i]));
+  for (i=0; i<topo->nb_c2c; i++)
+    len += topo_c2c_format(sndbuf+len, &(topo->c2c[i]));
   for (i=0; i<topo->nb_tap; i++)
     len += topo_tap_format(sndbuf+len, &(topo->tap[i]));
   for (i=0; i<topo->nb_phy; i++)
@@ -1158,7 +1157,7 @@ void send_add_vm(int llid, int tid, t_topo_kvm *ikvm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_sav_vm(int llid, int tid, char *name, int type, char *sav_rootfs_path)
+void send_sav_vm(int llid, int tid, char *name, char *sav_rootfs_path)
 {
   int len = 0;
   if (name[0] == 0)
@@ -1169,7 +1168,7 @@ void send_sav_vm(int llid, int tid, char *name, int type, char *sav_rootfs_path)
     KOUT(" ");
   if (strlen(sav_rootfs_path) >= MAX_PATH_LEN)
     KOUT(" ");
-  len = sprintf(sndbuf, SAV_VM, tid, name, type, sav_rootfs_path);
+  len = sprintf(sndbuf, SAV_VM, tid, name, sav_rootfs_path);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -1298,15 +1297,6 @@ void send_vmcmd(int llid, int tid, char *name, int vmcmd, int param)
   if ((!name) || (strlen(name)==0) || (strlen(name) >= MAX_NAME_LEN))
     KOUT(" ");
   len = sprintf(sndbuf, VMCMD, tid, name, vmcmd, param);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void send_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu)
-{
-  int len = 0;
-  len = sprintf(sndbuf, DPDK_OVS_CONFIG, tid, lcore, mem, cpu);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -1452,17 +1442,36 @@ static void helper_event_sys(char *msg, t_sys_info *sys, int *tid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void helper_fill_topo_cnt(char *msg, t_topo_cnt *cnt)
+static void helper_fill_topo_cnt(char *msg_in, t_topo_cnt *cnt)
 {
+  char *ptr1, *ptr2;
+  int len = strlen(msg_in);
+  char *msg = (char *) malloc(len+1);
+  memcpy(msg, msg_in, len);
+  msg[len] = 0;
   if (sscanf(msg, EVENT_TOPO_CNT_O, cnt->name, 
                                     cnt->image,  
                                     &(cnt->ping_ok),
-                                    &(cnt->nb_tot_eth)) != 4)
-    KOUT("%s", msg);
-  if ((strlen(cnt->name) == 0) ||
-      (strlen(cnt->image) == 0))
+                                    &(cnt->vm_id),
+                                    &(cnt->nb_tot_eth)) != 5)
     KOUT("%s", msg);
   get_eth_table(msg, cnt->nb_tot_eth, cnt->eth_table);
+  ptr1 = strstr(msg, "<customer_launch> ");
+  if(!ptr1)
+    KOUT("%s", msg);
+  ptr2 = strstr(msg, " </customer_launch>");
+  if(!ptr2)
+    KOUT("%s", msg);
+  *ptr2 = 0;
+  len = strlen("<customer_launch> ");
+  if (strlen(ptr1) - len >= MAX_PATH_LEN)
+    KOUT("%s", msg);
+  strncpy(cnt->customer_launch, ptr1+len, MAX_PATH_LEN-1); 
+  if ((strlen(cnt->name) == 0) ||
+      (strlen(cnt->image) == 0) ||
+      (strlen(cnt->customer_launch) == 0))
+    KOUT("%s", msg);
+  free(msg);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1492,25 +1501,24 @@ static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void helper_fill_topo_d2d(char *msg, t_topo_d2d *d2d)
+static void helper_fill_topo_c2c(char *msg, t_topo_c2c *c2c)
 {
 
-  if (sscanf(msg, EVENT_TOPO_D2D, d2d->name,
-                                  d2d->dist_cloonix,
-                                  d2d->lan,
-                                  &(d2d->local_is_master),
-                                  &(d2d->dist_tcp_ip),
-                                  &(d2d->dist_tcp_port),
-                                  &(d2d->loc_udp_ip),
-                                  &(d2d->dist_udp_ip),
-                                  &(d2d->loc_udp_port),
-                                  &(d2d->dist_udp_port),
-                                  &(d2d->tcp_connection_peered),
-                                  &(d2d->udp_connection_peered),
-                                  &(d2d->ovs_lan_attach_ready)) != 13)
-    KOUT(" ");
-  if (!strcmp(d2d->lan, "name_to_erase_upon_extract"))
-    memset(d2d->lan, 0, MAX_NAME_LEN);
+  if (sscanf(msg, EVENT_TOPO_C2C, c2c->name,
+                                  c2c->dist_cloon,
+                                  c2c->lan,
+                                  &(c2c->local_is_master),
+                                  &(c2c->dist_tcp_ip),
+                                  &(c2c->dist_tcp_port),
+                                  &(c2c->loc_udp_ip),
+                                  &(c2c->dist_udp_ip),
+                                  &(c2c->loc_udp_port),
+                                  &(c2c->dist_udp_port),
+                                  &(c2c->tcp_connection_peered),
+                                  &(c2c->udp_connection_peered)) != 12)
+    KOUT("%s", msg);
+  if (!strcmp(c2c->lan, "name_to_erase_upon_extract"))
+    memset(c2c->lan, 0, MAX_NAME_LEN);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1648,7 +1656,7 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
                                      &(icf.flags_config),
                                      &(topo->nb_cnt),
                                      &(topo->nb_kvm),
-                                     &(topo->nb_d2d),
+                                     &(topo->nb_c2c),
                                      &(topo->nb_tap),
                                      &(topo->nb_phy),
                                      &(topo->nb_a2b),
@@ -1664,9 +1672,9 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
   len = topo->nb_kvm*sizeof(t_topo_kvm);
   topo->kvm= (t_topo_kvm *) clownix_malloc(len, 19);
   memset(topo->kvm, 0, len);
-  len = topo->nb_d2d*sizeof(t_topo_d2d);
-  topo->d2d= (t_topo_d2d *) clownix_malloc(len, 20);
-  memset(topo->d2d, 0, len);
+  len = topo->nb_c2c*sizeof(t_topo_c2c);
+  topo->c2c= (t_topo_c2c *) clownix_malloc(len, 20);
+  memset(topo->c2c, 0, len);
   len = topo->nb_tap*sizeof(t_topo_tap);
   topo->tap= (t_topo_tap *) clownix_malloc(len, 21);
   memset(topo->tap, 0, len);
@@ -1714,13 +1722,13 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
       KOUT(" ");
     }
 
-  for (i=0; i<topo->nb_d2d; i++)
+  for (i=0; i<topo->nb_c2c; i++)
     {
-    ptr = strstr(ptr, "<d2d>");
+    ptr = strstr(ptr, "<c2c>");
     if (!ptr)
-      KOUT("%d,%d\n%s\n", topo->nb_d2d, i, msg);
-    helper_fill_topo_d2d(ptr, &(topo->d2d[i]));
-    ptr = strstr(ptr, "</d2d>");
+      KOUT("%d,%d\n%s\n", topo->nb_c2c, i, msg);
+    helper_fill_topo_c2c(ptr, &(topo->c2c[i]));
+    ptr = strstr(ptr, "</c2c>");
     if (!ptr)
       KOUT(" ");
     }
@@ -1914,54 +1922,6 @@ static void helper_slowperiodic(char *msg, int nb, t_slowperiodic *spic)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_qmp_sub(int llid, int tid, char *name)
-{
-  int len = 0;
-  if (!name)
-    {
-    len = sprintf(sndbuf, QMP_ALL_SUB, tid);
-    }
-  else
-    {
-    if ((strlen(name)==0) || (strlen(name) >= MAX_NAME_LEN))
-      KOUT(" ");
-    len = sprintf(sndbuf, QMP_SUB, tid, name);
-    }
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void send_qmp_req(int llid, int tid, char *name, char *line)
-{
-  int len = 0;
-  if ((!name) || (strlen(name)==0) || (strlen(name) >= MAX_NAME_LEN))
-    KOUT(" ");
-  if ((!line) || (strlen(line)==0) || (strlen(line) >= MAX_RPC_MSG_LEN))
-    KOUT(" ");
-  len = sprintf(sndbuf, QMP_REQ_O, tid, name);
-  len += sprintf(sndbuf+len, QMP_LINE, line);
-  len += sprintf(sndbuf+len, QMP_REQ_C);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void send_qmp_resp(int llid, int tid, char *name, char *line, int status)
-{
-  int len = 0;
-  if ((!name) || (strlen(name)==0) || (strlen(name) >= MAX_NAME_LEN))
-    KOUT(" ");
-  if ((!line) || (strlen(line)==0) || (strlen(line) >= MAX_RPC_MSG_LEN))
-    KOUT(" ");
-  len = sprintf(sndbuf, QMP_MSG_O, tid, name, status);
-  len += sprintf(sndbuf+len, QMP_LINE, line);
-  len += sprintf(sndbuf+len, QMP_MSG_C);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static char *extract_rpc_msg(char *msg, char *bound)
 {
   int len;
@@ -2033,16 +1993,19 @@ void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
 {
   int len = 0;
   if ((strlen(cnt->name) == 0) ||
-      (strlen(cnt->image) == 0))
-    KOUT("name:%s image:%s", cnt->name, cnt->image);
+      (strlen(cnt->image) == 0) ||
+      (strlen(cnt->customer_launch) == 0))
+    KOUT("name:%s image:%s l:%s", cnt->name,cnt->image,cnt->customer_launch);
   if (strlen(cnt->name) >= MAX_NAME_LEN)
     KOUT(" ");
   if (strlen(cnt->image) >= MAX_PATH_LEN)
     KOUT(" ");
+  if (strlen(cnt->customer_launch) >= MAX_PATH_LEN)
+    KOUT(" ");
   len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->name, cnt->ping_ok,
-                cnt->nb_tot_eth);
+                cnt->vm_id, cnt->nb_tot_eth);
   len += make_eth_table(sndbuf+len, cnt->nb_tot_eth, cnt->eth_table);
-  len += sprintf(sndbuf+len, ADD_CNT_C, cnt->image);
+  len += sprintf(sndbuf+len, ADD_CNT_C, cnt->customer_launch, cnt->image);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -2074,7 +2037,7 @@ void send_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
+void send_c2c_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
 {
   int len = 0;
   if (name[0] == 0)
@@ -2105,87 +2068,127 @@ void send_nat_cnf(int llid, int tid, char *name, char *cmd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
-                  char *dcloonix, uint32_t ip, uint16_t port,
+void send_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip, 
+                  char *dcloon, uint32_t ip, uint16_t port,
                   char *passwd, uint32_t udp_ip)
 {
   int len = 0;
-  if (d2d_name[0] == 0)
+  if (c2c_name[0] == 0)
     KOUT(" ");
-  if (strlen(d2d_name) >= MAX_NAME_LEN)
+  if (strlen(c2c_name) >= MAX_NAME_LEN)
     KOUT(" ");
-  if (dcloonix[0] == 0)
+  if (dcloon[0] == 0)
     KOUT(" ");
-  if (strlen(dcloonix) >= MAX_NAME_LEN)
+  if (strlen(dcloon) >= MAX_NAME_LEN)
     KOUT(" ");
   if (passwd[0] == 0)
     KOUT(" ");
   if (strlen(passwd) >= MSG_DIGEST_LEN)
     KOUT(" ");
-  len = sprintf(sndbuf, D2D_ADD, tid, d2d_name, local_udp_ip, 
-                dcloonix, ip, port, passwd, udp_ip);
+  len = sprintf(sndbuf, C2C_ADD, tid, c2c_name, local_udp_ip, 
+                dcloon, ip, port, passwd, udp_ip);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
-void send_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
-                          char *lcloonix, char *dcloonix)
+void send_snf_add(int llid, int tid, char *name, int num, int val)
 {
   int len = 0;
-  if (d2d_name[0] == 0)
+  if (name[0] == 0)
     KOUT(" ");
-  if (strlen(d2d_name) >= MAX_NAME_LEN)
+  if (strlen(name) >= MAX_NAME_LEN)
     KOUT(" ");
-  if (lcloonix[0] == 0)
-    KOUT(" ");
-  if (strlen(lcloonix) >= MAX_NAME_LEN)
-    KOUT(" ");
-  if (dcloonix[0] == 0)
-    KOUT(" ");
-  if (strlen(dcloonix) >= MAX_NAME_LEN)
-    KOUT(" ");
-  len = sprintf(sndbuf, D2D_CREATE, tid,d2d_name,is_ack,lcloonix,dcloonix);
+  len = sprintf(sndbuf, SNF_ADD, tid, name, num, val);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_d2d_peer_conf(int llid, int tid, char *d2d_name, int is_ack,
-                        char *lcloonix, char *dcloonix,
+void send_c2c_peer_create(int llid, int tid, char *c2c_name, int is_ack,
+                          char *lcloon, char *dcloon)
+{
+  int len = 0;
+  if (c2c_name[0] == 0)
+    KOUT(" ");
+  if (strlen(c2c_name) >= MAX_NAME_LEN)
+    KOUT(" ");
+  if (lcloon[0] == 0)
+    KOUT(" ");
+  if (strlen(lcloon) >= MAX_NAME_LEN)
+    KOUT(" ");
+  if (dcloon[0] == 0)
+    KOUT(" ");
+  if (strlen(dcloon) >= MAX_NAME_LEN)
+    KOUT(" ");
+  len = sprintf(sndbuf, C2C_CREATE, tid,c2c_name,is_ack,lcloon,dcloon);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_c2c_peer_conf(int llid, int tid, char *c2c_name, int is_ack,
+                        char *lcloon, char *dcloon,
                         uint32_t ludp_ip, uint32_t dudp_ip,
                         uint16_t ludp_port, uint16_t dudp_port)
 {
   int len = 0;
-  if (d2d_name[0] == 0)
+  if (c2c_name[0] == 0)
     KOUT(" ");
-  if (strlen(d2d_name) >= MAX_NAME_LEN)
+  if (strlen(c2c_name) >= MAX_NAME_LEN)
     KOUT(" ");
-  if (lcloonix[0] == 0)
+  if (lcloon[0] == 0)
     KOUT(" ");
-  if (strlen(lcloonix) >= MAX_NAME_LEN)
+  if (strlen(lcloon) >= MAX_NAME_LEN)
     KOUT(" ");
-  if (dcloonix[0] == 0)
+  if (dcloon[0] == 0)
     KOUT(" ");
-  if (strlen(dcloonix) >= MAX_NAME_LEN)
+  if (strlen(dcloon) >= MAX_NAME_LEN)
     KOUT(" ");
-  len = sprintf(sndbuf, D2D_CONF, tid, d2d_name, is_ack, lcloonix, dcloonix,
+  len = sprintf(sndbuf, C2C_CONF, tid, c2c_name, is_ack, lcloon, dcloon,
                 ludp_ip, dudp_ip, ludp_port, dudp_port);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_d2d_peer_ping(int llid, int tid, char *d2d_name, int status)
+void send_c2c_peer_ping(int llid, int tid, char *c2c_name, int status)
 {
   int len = 0;
-  if (d2d_name[0] == 0)
+  if (c2c_name[0] == 0)
     KOUT(" ");
-  if (strlen(d2d_name) >= MAX_NAME_LEN)
+  if (strlen(c2c_name) >= MAX_NAME_LEN)
     KOUT(" ");
-  len = sprintf(sndbuf, D2D_PING, tid, d2d_name, status);
+  len = sprintf(sndbuf, C2C_PING, tid, c2c_name, status);
   my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void customer_launch_get(char *msg_in, t_topo_cnt *cnt)
+{
+  char *ptr, *ptr1, *ptr2;
+  int len = strlen(msg_in);
+  char *msg = (char *) malloc(len+1);
+  memcpy(msg, msg_in, len);
+  msg[len] = 0;
+  ptr = strstr(msg, "<image> ");
+  if (!ptr)
+    KOUT("%s", msg);
+  if (sscanf(ptr, "<image> %s </image>", cnt->image) != 1)
+    KOUT("%s", ptr);
+  ptr1 = strstr(msg, "<customer_launch> ");
+  if(!ptr1)
+    KOUT("%s", msg);
+  ptr2 = strstr(ptr1, " </customer_launch>");
+  if(!ptr2)
+    KOUT("%s", msg);
+  *ptr2 = 0;
+  len = strlen("<customer_launch> ");
+  if (strlen(ptr1) - len >= MAX_PATH_LEN)
+    KOUT("%s", msg);
+  strncpy(cnt->customer_launch, ptr1+len, MAX_PATH_LEN-1);
+  free(msg);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -2193,7 +2196,7 @@ void send_d2d_peer_ping(int llid, int tid, char *d2d_name, int status)
 static void dispatcher(int llid, int bnd_evt, char *msg)
 {
   int len, nb, flags_hop, num, is_layout;
-  int vmcmd, param, status, sub, lcore, mem, cpu;
+  int vmcmd, param, status, sub;
   int type, qty, tid, dir, val; 
   uint32_t ip, dudp_ip, ludp_ip;
   uint16_t lport, dport;
@@ -2411,9 +2414,9 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_add_vm(llid, tid, &kvm);
       break;
     case bnd_sav_vm:
-      if (sscanf(msg, SAV_VM, &tid, name, &type, path) != 4)
+      if (sscanf(msg, SAV_VM, &tid, name, path) != 3)
         KOUT("%s", msg);
-      recv_sav_vm(llid, tid, name, type, path);
+      recv_sav_vm(llid, tid, name, path);
       break;
 
     case bnd_del_sat:
@@ -2500,12 +2503,6 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_vmcmd(llid, tid, name, vmcmd, param);
       break;
 
-    case bnd_dpdk_ovs_cnf:
-      if (sscanf(msg, DPDK_OVS_CONFIG, &tid, &lcore, &mem, &cpu) != 4)
-        KOUT("%s", msg);
-      recv_dpdk_ovs_cnf(llid, tid, lcore, mem, cpu);
-      break;
-
     case bnd_eventfull_sub:
       if (sscanf(msg, EVENTFULL_SUB, &tid) != 1)
         KOUT("%s", msg);
@@ -2551,61 +2548,39 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       clownix_free(slowperiodic, __FUNCTION__);
       break;
 
-    case bnd_qmp_all_sub:
-      if (sscanf(msg, QMP_ALL_SUB, &tid) != 1)
-        KOUT("%s", msg);
-      recv_qmp_sub(llid, tid, NULL);
-      break;
-
-    case bnd_qmp_sub:
-      if (sscanf(msg, QMP_SUB, &tid, name) != 2)
-        KOUT("%s", msg);
-      recv_qmp_sub(llid, tid, name);
-      break;
-
-    case bnd_qmp_req:
-      if (sscanf(msg, QMP_REQ_O, &tid, name) != 2)
-        KOUT("%s", msg);
-      line = extract_rpc_msg(msg, "msgqmp_req_boundyzzy");
-      recv_qmp_req(llid, tid, name, line);
-      clownix_free(line, __FUNCTION__);
-      break;
-
-    case bnd_qmp_msg:
-      if (sscanf(msg, QMP_MSG_O, &tid, name, &status) != 3)
-        KOUT("%s", msg);
-      line = extract_rpc_msg(msg, "msgqmp_req_boundyzzy");
-      recv_qmp_resp(llid, tid, name, line, status);
-      clownix_free(line, __FUNCTION__);
-      break;
-
-    case bnd_d2d_add:
-      if (sscanf(msg, D2D_ADD, &tid, name, &ludp_ip,
+    case bnd_c2c_add:
+      if (sscanf(msg, C2C_ADD, &tid, name, &ludp_ip,
                                network, &ip, &dport,
                                param1, &dudp_ip) != 8)
         KOUT("%s", msg);
-      recv_d2d_add(llid, tid, name, ludp_ip, network, ip,
+      recv_c2c_add(llid, tid, name, ludp_ip, network, ip,
                    dport, param1, dudp_ip);
       break;
 
-    case bnd_d2d_peer_create:
-      if (sscanf(msg, D2D_CREATE, &tid, name, &status, lnet, dnet) != 5)
+    case bnd_snf_add:
+      if (sscanf(msg, SNF_ADD, &tid, name, &num, &val) != 4)
         KOUT("%s", msg);
-      recv_d2d_peer_create(llid, tid, name, status, lnet, dnet);
+      recv_snf_add(llid, tid, name, num, val);
       break;
 
-    case bnd_d2d_peer_conf:
-      if (sscanf(msg, D2D_CONF, &tid, name, &status, lnet, dnet,
+    case bnd_c2c_peer_create:
+      if (sscanf(msg, C2C_CREATE, &tid, name, &status, lnet, dnet) != 5)
+        KOUT("%s", msg);
+      recv_c2c_peer_create(llid, tid, name, status, lnet, dnet);
+      break;
+
+    case bnd_c2c_peer_conf:
+      if (sscanf(msg, C2C_CONF, &tid, name, &status, lnet, dnet,
                                 &ludp_ip, &dudp_ip, &lport, &dport) != 9)
         KOUT("%s", msg);
-      recv_d2d_peer_conf(llid, tid, name, status, lnet, dnet,
+      recv_c2c_peer_conf(llid, tid, name, status, lnet, dnet,
                          ludp_ip, dudp_ip, lport, dport);
       break;
 
-    case bnd_d2d_peer_ping:
-      if (sscanf(msg, D2D_PING, &tid, name, &status) != 3)
+    case bnd_c2c_peer_ping:
+      if (sscanf(msg, C2C_PING, &tid, name, &status) != 3)
         KOUT("%s", msg);
-      recv_d2d_peer_ping(llid, tid, name, status);
+      recv_c2c_peer_ping(llid, tid, name, status);
       break;
 
     case bnd_tap_add:
@@ -2617,14 +2592,10 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
     case bnd_cnt_add:
       memset(&cnt, 0, sizeof(t_topo_cnt));
       if (sscanf(msg, ADD_CNT_O, &tid, cnt.name, &(cnt.ping_ok),
-                 &(cnt.nb_tot_eth)) != 4)
+                 &(cnt.vm_id), &(cnt.nb_tot_eth)) != 5)
         KOUT("%s", msg);
       get_eth_table(msg, cnt.nb_tot_eth, cnt.eth_table);
-      ptr = strstr(msg, "<image>");
-      if (!ptr)
-        KOUT("%s", msg);
-      if (sscanf(ptr, ADD_CNT_C, cnt.image) != 1)
-        KOUT("%s", msg);
+      customer_launch_get(msg, &cnt);
       recv_cnt_add(llid, tid, &cnt);
       break;
 
@@ -2657,7 +2628,7 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
                                &(mac[0]), &(mac[1]), &(mac[2]),
                                &(mac[3]), &(mac[4]), &(mac[5])) != 9)
         KOUT("%s", msg);
-      recv_xyx_cnf(llid, tid, name, type, mac);
+      recv_c2c_cnf(llid, tid, name, type, mac);
       break;
 
    case bnd_nat_cnf:
@@ -2707,9 +2678,6 @@ char *llid_trace_lib(int type)
       break;
     case type_llid_trace_jfs:
       result = "jfs";
-      break;
-    case type_llid_trace_unix_qmonitor:
-      result = "unix qemu monitor";
       break;
     case type_llid_trace_unix_xwy:
       result = "unix xwy control";
@@ -2795,7 +2763,6 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(WORK_DIR_REQ,  bound_list[bnd_work_dir_req]);
   extract_boundary(WORK_DIR_RESP, bound_list[bnd_work_dir_resp]);
   extract_boundary(VMCMD, bound_list[bnd_vmcmd]);
-  extract_boundary(DPDK_OVS_CONFIG, bound_list[bnd_dpdk_ovs_cnf]);
   extract_boundary(EVENTFULL_SUB, bound_list[bnd_eventfull_sub]);
   extract_boundary(EVENTFULL_O, bound_list[bnd_eventfull]);
   extract_boundary(SLOWPERIODIC_SUB, bound_list[bnd_slowperiodic_sub]);
@@ -2812,15 +2779,11 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(HOP_EVT_DOORS_UNSUB, bound_list[bnd_hop_evt_doors_unsub]);
   extract_boundary(HOP_EVT_DOORS_O,   bound_list[bnd_hop_evt_doors]);
 
-  extract_boundary(QMP_ALL_SUB, bound_list[bnd_qmp_all_sub]);
-  extract_boundary(QMP_SUB, bound_list[bnd_qmp_sub]);
-  extract_boundary(QMP_REQ_O, bound_list[bnd_qmp_req]);
-  extract_boundary(QMP_MSG_O, bound_list[bnd_qmp_msg]);
-
-  extract_boundary(D2D_ADD, bound_list[bnd_d2d_add]);
-  extract_boundary(D2D_CREATE, bound_list[bnd_d2d_peer_create]);
-  extract_boundary(D2D_CONF, bound_list[bnd_d2d_peer_conf]);
-  extract_boundary(D2D_PING, bound_list[bnd_d2d_peer_ping]);
+  extract_boundary(SNF_ADD, bound_list[bnd_snf_add]);
+  extract_boundary(C2C_ADD, bound_list[bnd_c2c_add]);
+  extract_boundary(C2C_CREATE, bound_list[bnd_c2c_peer_create]);
+  extract_boundary(C2C_CONF, bound_list[bnd_c2c_peer_conf]);
+  extract_boundary(C2C_PING, bound_list[bnd_c2c_peer_ping]);
 
   extract_boundary(NAT_ADD, bound_list[bnd_nat_add]);
   extract_boundary(PHY_ADD, bound_list[bnd_phy_add]);

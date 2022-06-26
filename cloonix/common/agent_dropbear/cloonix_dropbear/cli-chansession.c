@@ -1,5 +1,5 @@
 /****************************************************************************/
-/* Copy-pasted-modified for cloonix                License GPL-3.0+         */
+/* Copy-pasted-modified for cloon                License GPL-3.0+         */
 /*--------------------------------------------------------------------------*/
 /* Original code from:                                                      */
 /*                            Dropbear SSH                                  */

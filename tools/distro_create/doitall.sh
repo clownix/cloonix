@@ -3,13 +3,13 @@ set -e
 
 HERE=`pwd`
 
-LIST="impish \
+LIST="jammy \
+      impish \
       hirsute \
       centos8 \
       bullseye \
       fedora35 \
-      bookworm \
-      openwrt"
+      bookworm"
 
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
 mkdir -p ${CLOONIX_BULK}

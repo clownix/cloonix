@@ -29,13 +29,14 @@
 #include "cloonix.h"
 #include "menu_dialog_cnt.h"
 
-#define ETH_TYPE_MAX 4
+#define ETH_TYPE_MAX 3
 #define ETH_LINE_MAX 7
+
 
 GtkWidget *get_bulcnt(void);
 GtkWidget *get_main_window(void);
 static t_custom_cnt g_custom_cnt;
-static GtkWidget *g_custom_dialog, *g_entry_image;
+static GtkWidget *g_custom_dialog, *g_entry_image,  *g_entry_customer_launch;
 void menu_choice_cnt(void);
 static t_slowperiodic g_bulcnt[MAX_BULK_FILES];
 static t_slowperiodic g_bulcnt_photo[MAX_BULK_FILES];
@@ -94,6 +95,36 @@ void set_bulcnt(int nb, t_slowperiodic *slowperiodic)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
+{
+  GtkWidget *lb;
+  gtk_grid_insert_row(GTK_GRID(grid), ln);
+  lb = gtk_label_new(lab);
+  gtk_grid_attach(GTK_GRID(grid), lb, 0, ln, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), entry, 1, ln, 1, 1);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void update_cust(t_custom_cnt *cust, GtkWidget *entry_name)
+{
+  char *tmp;
+  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_name));
+  memset(cust->name, 0, MAX_NAME_LEN);
+  strncpy(cust->name, tmp, MAX_NAME_LEN-1);
+
+  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(g_entry_image));
+  memset(cust->image, 0, MAX_NAME_LEN);
+  strncpy(cust->image, tmp, MAX_NAME_LEN-1);
+
+  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(g_entry_customer_launch));
+  memset(cust->customer_launch, 0, MAX_PATH_LEN);
+  strncpy(cust->customer_launch, tmp, MAX_PATH_LEN-1);
+
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void free_endp_type(GtkWidget *check, gpointer user_data)
 {
   t_cb_endp_type **cb_endp_type = (t_cb_endp_type **) user_data;
@@ -109,7 +140,7 @@ static void endp_type_cb(GtkWidget *check, gpointer user_data)
 {
   t_cb_endp_type *cb_endp_type = (t_cb_endp_type *) user_data;
   t_custom_cnt *cust_vm = &g_custom_cnt;
-  int i,j,k, max_rank = MAX_DPDK_VM;
+  int i,j,k, max_rank = MAX_ETH_VM;
   int nb_tot_eth = 0, rank = cb_endp_type->rank;
   int endp_type = cb_endp_type->endp_type;
   GtkWidget **rad = cb_endp_type->rad;
@@ -142,8 +173,6 @@ static void endp_type_cb(GtkWidget *check, gpointer user_data)
     {
     if (cust_vm->eth_table[i].endp_type == endp_type_eths)
       nb_tot_eth += 1;
-    else if (cust_vm->eth_table[i].endp_type == endp_type_ethd)
-      nb_tot_eth += 1;
     else if (cust_vm->eth_table[i].endp_type == endp_type_ethv)
       nb_tot_eth += 1;
     else if ((cust_vm->eth_table[i].endp_type != endp_type_none) &&
@@ -154,16 +183,6 @@ static void endp_type_cb(GtkWidget *check, gpointer user_data)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
-{
-  GtkWidget *lb;
-  gtk_grid_insert_row(GTK_GRID(grid), ln);
-  lb = gtk_label_new(lab);
-  gtk_grid_attach(GTK_GRID(grid), lb, 0, ln, 1, 1);
-  gtk_grid_attach(GTK_GRID(grid), entry, 1, ln, 1, 1);
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
@@ -174,7 +193,6 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
   t_cb_endp_type **cb_endp_type;
   char title[MAX_NAME_LEN];
   unsigned long int endp_type[ETH_TYPE_MAX]={endp_type_none,
-                                             endp_type_ethd,
                                              endp_type_eths,
                                              endp_type_ethv};
 
@@ -203,20 +221,7 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void update_cust(t_custom_cnt *cust, GtkWidget *entry_name) 
-{
-  char *tmp;
-  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_name));
-  memset(cust->name, 0, MAX_NAME_LEN);
-  strncpy(cust->name, tmp, MAX_NAME_LEN-1);
 
-  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(g_entry_image));
-  memset(cust->image, 0, MAX_NAME_LEN);
-  strncpy(cust->image, tmp, MAX_NAME_LEN-1);
-
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void custom_vm_dialog(t_custom_cnt *cust)
@@ -227,8 +232,10 @@ static void custom_vm_dialog(t_custom_cnt *cust)
   GtkWidget *grid, *parent;
   GtkWidget *image_menu, *bulcnt_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
-  char *lib[ETH_TYPE_MAX] = {"n", "d", "s", "v"};
+  char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
   t_custom_cnt *cust_vm;
+
+
 
   if (g_custom_dialog)
     return;
@@ -247,17 +254,12 @@ static void custom_vm_dialog(t_custom_cnt *cust)
   gtk_entry_set_text(GTK_ENTRY(entry_name), cust->name);
   append_grid(grid, entry_name, "Name:", line_nb++);
 
-  g_entry_image = gtk_entry_new();
-  gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->image);
-  append_grid(grid, g_entry_image, "Image:", line_nb++);
-
-  image_menu = gtk_menu_button_new ();
-  append_grid(grid, image_menu, "Choice:", line_nb++);
-  bulcnt_menu = get_bulcnt();
-  gtk_menu_button_set_popup ((GtkMenuButton *) image_menu, bulcnt_menu);
-  gtk_widget_show_all(bulcnt_menu);
+  g_entry_customer_launch = gtk_entry_new();
+  gtk_entry_set_text(GTK_ENTRY(g_entry_customer_launch), cust->customer_launch);
+  append_grid(grid, g_entry_customer_launch, "Customer_launch:", line_nb++);
 
   cust_vm = &g_custom_cnt;
+
 
   for (i=0; i<ETH_LINE_MAX; i++)
     {
@@ -276,7 +278,20 @@ static void custom_vm_dialog(t_custom_cnt *cust)
     flags_eth_check_button(grid, &line_nb, i, rad);
     }
 
+
   gtk_container_set_border_width(GTK_CONTAINER(grid), ETH_TYPE_MAX);
+
+
+  g_entry_image = gtk_entry_new();
+  gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->image);
+  append_grid(grid, g_entry_image, "Image:", line_nb++);
+
+  image_menu = gtk_menu_button_new ();
+  append_grid(grid, image_menu, "Choice:", line_nb++);
+  bulcnt_menu = get_bulcnt();
+  gtk_menu_button_set_popup ((GtkMenuButton *) image_menu, bulcnt_menu);
+  gtk_widget_show_all(bulcnt_menu);
+
   gtk_box_pack_start(
         GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(g_custom_dialog))),
         grid, TRUE, TRUE, 0);
@@ -327,9 +342,8 @@ void menu_dialog_cnt_init(void)
   memset(&g_custom_cnt, 0, sizeof(t_custom_cnt)); 
   strcpy(g_custom_cnt.name, "Cnt");
   strcpy(g_custom_cnt.image, "bookworm.img");
+  strcpy(g_custom_cnt.customer_launch, "/usr/sbin/rsyslogd");
   g_custom_cnt.nb_tot_eth = 3;
-  for (i=0; i<MAX_DPDK_VM; i++)
-    g_custom_cnt.eth_table[i].endp_type = endp_type_none;
   for (i=0; i<g_custom_cnt.nb_tot_eth; i++)
     g_custom_cnt.eth_table[i].endp_type = endp_type_ethv;
   g_custom_dialog = NULL;

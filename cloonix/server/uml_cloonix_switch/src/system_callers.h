@@ -18,8 +18,6 @@
 void mk_cnt_dir(void);
 void mk_endp_dir(void);
 void mk_dtach_dir(void);
-void mk_dpdk_dir(void);
-void mk_dpdk_ovs_db_dir(void);
 int unlink_sub_dir_files(char *dir, char *err);
 int unlink_sub_dir_files_except_dir(char *dir, char *err);
 
@@ -41,6 +39,7 @@ void my_mv_dir(char *src_dir,char *dst_dir,
 int get_pty(int *master_fdp, int *slave_fdp, char *slave_name);
 int check_pid_is_clownix( int pid, int vm_id);
 
+void mk_ovs_db_dir(void);
 
 
 

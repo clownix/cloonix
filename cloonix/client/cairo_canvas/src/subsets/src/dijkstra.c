@@ -25,11 +25,11 @@
 #define SIG_TOPO_LOADING 0xCAFECAFE
 #define SIG_TOPO_WAITEND 0xDECADECA
 /*****************************************************************************/
-typedef char t_node_name[TOPO_MAX_NAME_LEN]; 
+typedef char t_node_name[TOPO_MAX_NAME_LEN+1]; 
 /*****************************************************************************/
 typedef struct t_links
 {
-  char name[TOPO_MAX_NAME_LEN];
+  char name[TOPO_MAX_NAME_LEN+1];
   unsigned long dist;
   unsigned long idx_name;
 } t_links;
@@ -89,8 +89,6 @@ static int nb_node_alloc = 0;
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           summary_node_alloc                                    */
-/*---------------------------------------------------------------------------*/
 static void summary_node_alloc (int *p_idx)
 {
   t_topo *top = &mytopo;
@@ -103,8 +101,6 @@ static void summary_node_alloc (int *p_idx)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           summary_node_free                                     */
-/*---------------------------------------------------------------------------*/
 static void summary_node_free (int idx)
 {
   t_topo *top = &mytopo;
@@ -115,8 +111,6 @@ static void summary_node_free (int idx)
 /*****************************************************************************/
 
 /*****************************************************************************/
-/* FUNCTION:            topoalloc                                           */
-/*---------------------------------------------------------------------------*/
 static void *topoalloc (size_t size)
 {
   void *res = clownix_malloc(size, 22);
@@ -128,8 +122,6 @@ static void *topoalloc (size_t size)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           topofree                                             */
-/*---------------------------------------------------------------------------*/
 static void topofree (void * addr)
 {
   if (addr)
@@ -141,8 +133,6 @@ static void topofree (void * addr)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           node_alloc                                           */
-/*---------------------------------------------------------------------------*/
 static void *node_alloc (size_t size)
 {
   void *res = clownix_malloc(size, 22);
@@ -154,8 +144,6 @@ static void *node_alloc (size_t size)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           node_free                                             */
-/*---------------------------------------------------------------------------*/
 static void node_free (void * addr)
 {
   if (addr)
@@ -168,20 +156,16 @@ static void node_free (void * addr)
 
 
 /*****************************************************************************/
-/* FUNCTION:           chk_node_name                                         */
-/*---------------------------------------------------------------------------*/
 void chk_node_name(char *name, const char *fct)
 {
   if (!name)
     KOUT("%s", fct);
-  if ((name[0] == 0) || (strlen(name) >= TOPO_MAX_NAME_LEN))
+  if ((name[0] == 0) || (strlen(name) > TOPO_MAX_NAME_LEN))
     KOUT("%s  %s", fct, name);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           alloc_node                                            */
-/*---------------------------------------------------------------------------*/
 static t_chain_node *alloc_node(char *name, int nb_id, unsigned long dist)
 {
   t_chain_node *result;
@@ -199,8 +183,6 @@ static t_chain_node *alloc_node(char *name, int nb_id, unsigned long dist)
 
 
 /*****************************************************************************/
-/* FUNCTION:           get_hashing_val                                       */
-/*---------------------------------------------------------------------------*/
 static void get_hashing_val(int maxnode, unsigned long *hash_val, 
                                          unsigned long *hash_bits)
 {
@@ -225,8 +207,6 @@ static void get_hashing_val(int maxnode, unsigned long *hash_val,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           index_hash_code                                       */
-/*---------------------------------------------------------------------------*/
 static int index_hash_code (char *node_name, unsigned long hash_val, 
                                              unsigned long hash_bits)
 {
@@ -244,8 +224,6 @@ static int index_hash_code (char *node_name, unsigned long hash_val,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           name2index                                            */
-/*---------------------------------------------------------------------------*/
 static int name2index(char *node_name)
 {
   int index;
@@ -272,8 +250,6 @@ static int name2index(char *node_name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           index2name                                            */
-/*---------------------------------------------------------------------------*/
 static char *index2name(int idx)
 {
   t_topo *top = &mytopo;
@@ -285,8 +261,6 @@ static char *index2name(int idx)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           create_index_2_name                                   */
-/*---------------------------------------------------------------------------*/
 static void create_index_2_name(char *node_name, int idx)
 {
   int hash_index;
@@ -312,8 +286,6 @@ static void create_index_2_name(char *node_name, int idx)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           delete_index_2_name                                   */
-/*---------------------------------------------------------------------------*/
 static void delete_index_2_name(char *node_name)
 {
   int index, hash_index, count = 0;
@@ -343,8 +315,6 @@ static void delete_index_2_name(char *node_name)
 
 
 /*****************************************************************************/
-/* FUNCTION:           put_in_list                                           */
-/*---------------------------------------------------------------------------*/
 static t_chain_inode *put_in_list(t_chain_inode *list,t_chain_inode *node)
 {
   t_chain_inode *curr;
@@ -390,8 +360,6 @@ static t_chain_inode *put_in_list(t_chain_inode *list,t_chain_inode *node)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           fast_put_in_list                                      */
-/*---------------------------------------------------------------------------*/
 static void fast_put_in_list( t_chain_inode *list, t_chain_inode *node)
 {
   t_chain_inode *curr;
@@ -420,8 +388,6 @@ static void fast_put_in_list( t_chain_inode *list, t_chain_inode *node)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           free_list                                             */
-/*---------------------------------------------------------------------------*/
 static void free_list(t_chain_node *list)
 {
   t_chain_node *p_node;
@@ -439,8 +405,6 @@ static void free_list(t_chain_node *list)
 
 
 /*****************************************************************************/
-/* FUNCTION:           dijkstra                                              */
-/*---------------------------------------------------------------------------*/
 static void dijkstra (int idx_start)
 {
   struct t_chain_inode *wtlist = NULL, *wt1;
@@ -537,8 +501,6 @@ static void dijkstra (int idx_start)
 
 
 /*****************************************************************************/
-/* FUNCTION:           get_path                                              */
-/*---------------------------------------------------------------------------*/
 t_chain_node **get_path(char *start, int *nb)
 {
   int i, start_idx, prev_idx, len;
@@ -615,8 +577,6 @@ t_chain_node **get_path(char *start, int *nb)
 
 
 /*****************************************************************************/
-/* FUNCTION:           alloc_topo                                            */
-/*---------------------------------------------------------------------------*/
 void reset_topo (void)
 {
   int i;
@@ -638,8 +598,6 @@ void reset_topo (void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           alloc_topo                                            */
-/*---------------------------------------------------------------------------*/
 void alloc_topo (int imax_nodes, int imax_neighbors)
 {
   int i;
@@ -685,8 +643,6 @@ void alloc_topo (int imax_nodes, int imax_neighbors)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           free_topo                                             */
-/*---------------------------------------------------------------------------*/
 void free_topo  (void)
 {
   t_topo *top = &mytopo;
@@ -705,8 +661,6 @@ void free_topo  (void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:             free_path                                           */
-/*---------------------------------------------------------------------------*/
 void free_path (int nb, t_chain_node **path)
 {
   int i;
@@ -719,8 +673,6 @@ void free_path (int nb, t_chain_node **path)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           create_node_topo                                      */
-/*---------------------------------------------------------------------------*/
 void create_node_topo(char *node)
 {
   int i, found_idx;
@@ -746,8 +698,6 @@ void create_node_topo(char *node)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           delete_node_topo                                      */
-/*---------------------------------------------------------------------------*/
 void delete_node_topo(char *node)
 {
   int i,j;
@@ -787,8 +737,6 @@ void delete_node_topo(char *node)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:           create_link_topo                                      */
-/*---------------------------------------------------------------------------*/
 void create_link_topo(char *start, char *end, unsigned long dist)
 {
   int i, start_idx, end_idx;
@@ -804,9 +752,11 @@ void create_link_topo(char *start, char *end, unsigned long dist)
   end_idx = name2index(end);
   if (!(start_idx)||(!end_idx)||(start_idx==end_idx))
     KOUT(" ");
+/*
   for (i=0; i<top->max_neighbors; i++)
     if (!strcmp(top->summary.links_tab[start_idx][i].name, end))
       KOUT("%s", end);
+*/
   for (i=0; !done && (i<top->max_neighbors); i++)
     {
     if (!top->summary.links_tab[start_idx][i].name[0])
@@ -824,8 +774,6 @@ void create_link_topo(char *start, char *end, unsigned long dist)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:            modif_link_topo                                      */
-/*---------------------------------------------------------------------------*/
 void modif_link_topo(char *start, char *end, unsigned long dist)
 {
   int i, link_idx=-1, idx_start, idx_end;
@@ -849,8 +797,6 @@ void modif_link_topo(char *start, char *end, unsigned long dist)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-/* FUNCTION:                  node_exists                                    */
-/*---------------------------------------------------------------------------*/
 int node_exists(char *target)
 {
   int result = name2index(target);

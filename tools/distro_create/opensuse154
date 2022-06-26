@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-HERE=`pwd`
 DISTRO=opensuse154
 ROOTFS=/root/${DISTRO}
 OPENSUSE_MIRROR=http://download.opensuse.org
@@ -90,13 +89,13 @@ zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-impor
 zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install systemd
 zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install zypper
 #-----------------------------------------------------------------------#
-if [ -e /etc/resolv.conf ]; then
-  cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
-fi
+rm -f /tmp/wkmntloops/etc/resolv.conf
+cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
 #-----------------------------------------------------------------------#
 list_pkt="kernel-default grub2-i386-pc iproute2 "
 list_pkt+="openssh xauth sudo kbd vim net-tools dracut dhcp-client "
-list_pkt+="curl lvm2 ntfs-3g mdadm biosdevname tar"
+list_pkt+="curl lvm2 ntfs-3g mdadm biosdevname tar "
+list_pkt+="qemu-guest-agent"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ zypper --non-interactive install $list_pkt
 chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
@@ -154,18 +153,6 @@ chroot /tmp/wkmntloops/ passwd root <<EOF
 root
 root
 EOF
-#-----------------------------------------------------------------------#
-cat > /tmp/wkmntloops/etc/systemd/system/serial-getty@hvc0.service << EOF
-[Service]
-ExecStart=-/sbin/agetty -a root hvc0
-Type=idle
-Restart=always
-RestartSec=0
-EOF
-#-----------------------------------------------------------------------#
-cd /tmp/wkmntloops/etc/systemd/system/getty.target.wants
-ln -s /etc/systemd/system/serial-getty@hvc0.service serial-getty@hvc0.service
-cd ${HERE}
 #-----------------------------------------------------------------------#
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#

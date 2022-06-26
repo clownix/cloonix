@@ -20,11 +20,10 @@ typedef struct t_eth_mac
   char mac[8];
 } t_eth_mac;
 
-void container_beat(int llid);
+void cnt_beat(int llid);
 char *get_losetup_bin(void);
 char *get_mount_bin(void);
 char *get_umount_bin(void);
-char *get_ip_bin(void);
 
 FILE *my_popen(const char *command, const char *type);
 
@@ -34,7 +33,8 @@ int cnt_utils_delete_net(char *nspace);
 
 int cnt_utils_create_net(char *bulk, char *image, char *name, char *cnt_dir,
                          char *nspace, int cloonix_rank, int vm_id,
-                         int nb_eth, t_eth_mac *eth_mac, char *agent_dir);
+                         int nb_eth, t_eth_mac *eth_mac, char *agent_dir,
+                         char *customer_launch);
 
 int cnt_utils_create_crun_create(char *cnt_dir, char *name);
 int cnt_utils_create_crun_start(char *name);

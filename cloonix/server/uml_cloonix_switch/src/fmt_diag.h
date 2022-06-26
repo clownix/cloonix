@@ -15,44 +15,15 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int  fmt_tx_add_phy(int tid, char *name);
-int  fmt_tx_del_phy(int tid, char *name);
-int  fmt_tx_add_tap(int tid, char *name);
-int  fmt_tx_del_tap(int tid, char *name);
-
-int  fmt_tx_add_ethd(int tid, char *name, int num);
-int  fmt_tx_del_ethd(int tid, char *name, int num);
-
-int  fmt_tx_add_eths1(int tid, char *name, int num);
-int  fmt_tx_add_eths2(int tid, char *name, int num);
-int  fmt_tx_del_eths(int tid, char *name, int num);
-
-int  fmt_tx_add_lan(int tid, char *lan);
-int  fmt_tx_del_lan(int tid, char *lan);
-
-int  fmt_tx_add_lan_tap(int tid, char *lan, char *name);
-int  fmt_tx_del_lan_tap(int tid, char *lan, char *name);
-
-int  fmt_tx_add_lan_phy(int tid, char *lan, char *name);
-int  fmt_tx_del_lan_phy(int tid, char *lan, char *name);
-
-int  fmt_tx_add_lan_nat(int tid, char *lan, char *name);
-int  fmt_tx_del_lan_nat(int tid, char *lan, char *name);
-
-int  fmt_tx_add_lan_ethd(int tid, char *lan, char *name, int num);
-int  fmt_tx_del_lan_ethd(int tid, char *lan, char *name, int num);
-
-int  fmt_tx_add_lan_ethv(int tid, char *lan, char *name, int num, char *vhost);
-int  fmt_tx_del_lan_ethv(int tid, char *lan, char *name, int num, char *vhost);
-
-int  fmt_tx_add_lan_eths(int tid, char *lan, char *name, int num);
-int  fmt_tx_del_lan_eths(int tid, char *lan, char *name, int num);
-
-int  fmt_tx_add_lan_a2b(int tid, char *lan, char *name, int num);
-int  fmt_tx_del_lan_a2b(int tid, char *lan, char *name, int num);
-
-int  fmt_tx_add_lan_d2d(int tid, char *lan, char *name);
-int  fmt_tx_del_lan_d2d(int tid, char *lan, char *name);
+int fmt_tx_add_lan(int tid, char *lan);
+int fmt_tx_del_lan(int tid, char *lan);
+int fmt_tx_add_tap(int tid, char *name, char *vhost, char *mac);
+int fmt_tx_del_tap(int tid, char *name, char *vhost);
+int fmt_tx_vhost_up(int tid, char *name, int num, char *vhost);
+int fmt_tx_add_snf_lan(int tid, char *name, int num, char *vhost, char *lan);
+int fmt_tx_del_snf_lan(int tid, char *name, int num, char *vhost, char *lan);
+int fmt_tx_add_lan_endp(int tid, char *name, int num, char *vhost, char *lan);
+int fmt_tx_del_lan_endp(int tid, char *name, int num, char *vhost, char *lan);
 
 void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line);
 /*--------------------------------------------------------------------------*/

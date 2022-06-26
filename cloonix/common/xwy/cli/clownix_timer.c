@@ -94,7 +94,7 @@ static int unplug_elem(t_timeout_elem **head, t_timeout_elem *elem)
     *head = elem->next;
   plugged_elem--;
   if (plugged_elem < 0)
-    KOUT(" ");
+    XOUT(" ");
   wrap_free(elem, __LINE__);
   return result;
 }
@@ -125,7 +125,7 @@ void clownix_timeout_add(int nb_beats, t_fct_timeout cb, void *data,
   int ref1, ref2;
   if ((nb_beats < MIN_TIMEOUT_BEATS) || 
       (nb_beats >= MAX_TIMEOUT_BEATS))
-    KOUT("%d", nb_beats);
+    XOUT("%d", nb_beats);
   abs = current_beat + nb_beats;
   ref1 = (int) (abs % MAX_TIMEOUT_BEATS);
   ref2 = plug_elem(&(grape[ref1]), cb, data);
@@ -183,7 +183,7 @@ void *clownix_timeout_del(long long abs_beat, int ref,
     result = 0;
     }
   if (abs_beat && result) 
-    KOUT("%s line:%d    %lld %lld %d %d\n", file, line, 
+    XOUT("%s line:%d    %lld %lld %d %d\n", file, line, 
          abs_beat, current_beat, ref1, ref2);
   return data;
 }

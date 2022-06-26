@@ -41,8 +41,9 @@
 #include "file_read_write.h"
 #include "doorways_mngt.h"
 #include "suid_power.h"
-#include "nat_dpdk_process.h"
-#include "dpdk_nat.h"
+#include "cnt.h"
+#include "ovs_nat.h"
+#include "qga_dialog.h"
 
 
 char **get_saved_environ(void);
@@ -85,17 +86,16 @@ int utils_get_next_tid(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab, int *dpdk)
+int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab, int *eth_nb)
 {
   int i, result = 0;
   char info[MAX_PATH_LEN];
-  (*dpdk) = 0;
+  (*eth_nb) = 0;
   for (i=0; i<nb_tot_eth; i++)
     {
-    if ((eth_tab[i].endp_type == endp_type_ethd) ||
-        (eth_tab[i].endp_type == endp_type_eths) ||
+    if ((eth_tab[i].endp_type == endp_type_eths) ||
         (eth_tab[i].endp_type == endp_type_ethv))
-      (*dpdk)++;
+      (*eth_nb)++;
     else
       {
       KERR("%d %d %d", nb_tot_eth, i, eth_tab[i].endp_type);
@@ -105,50 +105,6 @@ int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab, int *dpdk)
       }
     }
   return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_xyx_dpdk_bin_path(void)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,
-           "%s/server/dpdk/bin/cloonix_xyx_dpdk", cfg_get_bin_dir());
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_a2b_dpdk_bin_path(void)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,
-           "%s/server/dpdk/bin/cloonix_a2b_dpdk", cfg_get_bin_dir());
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_nat_dpdk_bin_path(void)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,
-           "%s/server/dpdk/bin/cloonix_nat_dpdk", cfg_get_bin_dir());
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_d2d_dpdk_bin_path(void)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,
-           "%s/server/dpdk/bin/cloonix_d2d_dpdk", cfg_get_bin_dir());
-  return path;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -208,7 +164,7 @@ char *utils_get_snf_pcap_dir(void)
   static char path[MAX_PATH_LEN];
   char *root = cfg_get_root_work();
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, SNF_PCAP_DIR);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, SNF_DIR);
   return path;
 }
 /*--------------------------------------------------------------------------*/
@@ -219,47 +175,47 @@ char *utils_get_cnt_dir(void)
   static char path[MAX_PATH_LEN];
   char *root = cfg_get_root_work();
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, CONTAINER_DIR);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, CNT_DIR);
   return path;
 }
 /*--------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
-char *utils_get_dpdk_ovs_path(char *name)
+char *utils_get_c2c_dir(void)
 {
   static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s", utils_get_dpdk_cloonix_dir(), name);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, C2C_DIR);
   return path;
 }
-/*---------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_endp_path(char *name, int num)
+char *utils_get_nat_dir(void)
 {
   static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s_%d", 
-                                 utils_get_dpdk_qemu_dir(), name, num);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, NAT_DIR);
   return path;
 }
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_qmonitor_path(int vm_id)
-{
-  static char path[MAX_PATH_LEN];
-  sprintf(path, "%s/%s", cfg_get_work_vm(vm_id), QMONITOR_UNIX);
-  return path;
-}
-/*---------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 char *utils_get_qmp_path(int vm_id)
 {
   static char path[MAX_PATH_LEN];
   sprintf(path, "%s/%s", cfg_get_work_vm(vm_id), QMP_UNIX);
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_qga_path(int vm_id)
+{
+  static char path[MAX_PATH_LEN];
+  sprintf(path, "%s/%s", cfg_get_work_vm(vm_id), QGA_UNIX);
   return path;
 }
 /*---------------------------------------------------------------------------*/
@@ -274,37 +230,10 @@ char *utils_get_cloonix_switch_path(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_qhvc0_path(int vm_id)
-{
-  static char path[MAX_PATH_LEN];
-  sprintf(path, "%s/%s", cfg_get_work_vm(vm_id), QHVCO_UNIX);
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 char *utils_get_qbackdoor_path(int vm_id)
 {
   static char path[MAX_PATH_LEN];
   sprintf(path, "%s/%s", cfg_get_work_vm(vm_id), QBACKDOOR_UNIX);
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_qbackdoor_hvc0_path(int vm_id)
-{
-  static char path[MAX_PATH_LEN];
-  sprintf(path, "%s/%s", cfg_get_work_vm(vm_id), QBACKDOOR_HVCO_UNIX);
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_dpdk_ovs_bin_dir(void)
-{
-  static char path[MAX_PATH_LEN];
-  sprintf(path, "%s/server/dpdk", cfg_get_bin_dir());
   return path;
 }
 /*---------------------------------------------------------------------------*/
@@ -328,65 +257,70 @@ char *utils_get_dtach_sock_dir(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_ovs_db_dir(void)
+char *utils_get_ovs_dir(void)
 {
-  static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s", cfg_get_root_work(), DIR_DPDK);
-  return dpdk;
+  static char ovs[MAX_PATH_LEN];
+  sprintf(ovs, "%s/%s", cfg_get_root_work(), DIR_OVS);
+  return ovs;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_qemu_dir(void)
+char *utils_get_ovs_bin_dir(void)
 {
-  static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s_qemu", cfg_get_root_work(), DIR_DPDK);
-  return dpdk;
+  static char ovs[MAX_PATH_LEN];
+  snprintf(ovs, MAX_PATH_LEN-1, "%s/server/%s", cfg_get_bin_dir(), DIR_OVS);
+  return ovs;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_nat_dir(void)
+char *utils_get_ovs_drv_bin_dir(void)
 {
-  static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s", cfg_get_root_work(), NAT_DPDK_SOCK_DIR);
-  return dpdk;
+  static char ovs_drv[MAX_PATH_LEN];
+  snprintf(ovs_drv, MAX_PATH_LEN-1, 
+           "%s/server/ovs_drv/cloonix_ovs_drv", cfg_get_bin_dir());
+  return ovs_drv;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_xyx_dir(void)
+char *utils_get_ovs_snf_bin_dir(void)
 {
-  static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s", cfg_get_root_work(), XYX_DPDK_SOCK_DIR);
-  return dpdk;
+  static char ovs_snf[MAX_PATH_LEN];
+  snprintf(ovs_snf, MAX_PATH_LEN-1, 
+           "%s/server/ovs_snf/cloonix_ovs_snf", cfg_get_bin_dir());
+  return ovs_snf;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_a2b_dir(void)
+char *utils_get_ovs_nat_bin_dir(void)
 {
-  static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s", cfg_get_root_work(), A2B_DPDK_SOCK_DIR);
-  return dpdk;
+  static char ovs_nat[MAX_PATH_LEN];
+  snprintf(ovs_nat, MAX_PATH_LEN-1,
+           "%s/server/ovs_nat/cloonix_ovs_nat", cfg_get_bin_dir());
+  return ovs_nat;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_d2d_dir(void)
+char *utils_get_ovs_c2c_bin_dir(void)
 {
-  static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s", cfg_get_root_work(), D2D_DPDK_SOCK_DIR);
-  return dpdk;
+  static char ovs_c2c[MAX_PATH_LEN];
+  snprintf(ovs_c2c, MAX_PATH_LEN-1,
+           "%s/server/ovs_c2c/cloonix_ovs_c2c", cfg_get_bin_dir());
+  return ovs_c2c;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_dpdk_cloonix_dir(void)
+char *utils_get_ovs_path(char *name)
 {
-  static char dpdk[MAX_PATH_LEN];
-  sprintf(dpdk, "%s/%s_cloonix", cfg_get_root_work(), DIR_DPDK);
-  return dpdk;
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1, "%s/%s", utils_get_ovs_dir(), name);
+  return path;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -499,7 +433,7 @@ void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death)
                error_death); 
     send_status_ko(llid, tid, err);
     }
-  event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+  cfg_hysteresis_send_topo_info();
 }
 /*---------------------------------------------------------------------------*/
 
@@ -516,9 +450,9 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
     send_status_ok(llid, tid, "addvm");
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
     {
-    dpdk_nat_cisco_add(vm->kvm.name);
+    ovs_nat_cisco_add(vm->kvm.name);
     }
-  nat_dpdk_vm_event();
+  ovs_nat_vm_event();
 }
 /*---------------------------------------------------------------------------*/
 
@@ -673,6 +607,20 @@ char *util_get_xorrisofs(void)
   return path;
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int util_get_max_tempo_fail(void)
+{
+  int nb, nb_vm, nb_cnt;
+  t_vm  *vm  = cfg_get_first_vm(&nb_vm);
+  t_cnt *cnt = cnt_get_first_cnt(&nb_cnt);
+  (void) vm;
+  (void) cnt;
+  nb = nb_vm + nb_cnt/3;
+  return (nb*200 + 5000); 
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 void utils_init(void)

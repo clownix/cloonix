@@ -22,7 +22,7 @@ typedef struct t_wake_up_eths
   int llid;
   int tid;
   int state;
-  int dpdk_count;
+  int eth_count;
   int nb_reqs_with_no_resp;
   long long automate_abs_beat; 
   int automate_ref;
@@ -103,6 +103,7 @@ int cfg_unset_vm(t_vm *vm);
 /*---------------------------------------------------------------------------*/
 t_vm *find_vm_with_id(int vm_id);
 t_vm   *cfg_get_vm(char *name);
+int cfg_vm_snf(char *name, int num);
 int cfg_get_vm_locked(t_vm *vm);
 void cfg_set_vm_locked(t_vm *vm);
 void cfg_reset_vm_locked(t_vm *vm);
@@ -113,8 +114,8 @@ void cfg_inc_lan_stats_tx_idx(int delta);
 
 void cfg_set_lock_fd(int fd);
 int  cfg_get_lock_fd(void);
-int  cfg_alloc_vm_id(void);
-void cfg_free_vm_id(int vm_id);
+int  cfg_alloc_obj_id(void);
+void cfg_free_obj_id(int vm_id);
 
 
 t_zombie *cfg_is_a_zombie_with_vm_id(int vm_id);
@@ -142,6 +143,7 @@ int32_t cfg_get_trace_fd_qty(int type);
 t_topo_info *cfg_produce_topo_info(void);
 
 
+int cfg_zombie_qty(void);
 
 /*****************************************************************************/
 void recv_init(void);
@@ -154,6 +156,12 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use);
 /*---------------------------------------------------------------------------*/
 int cfg_get_name_with_mac(char *mac, char *vmname);
 /*---------------------------------------------------------------------------*/
+void cfg_send_vm_evt_qmp_conn_ok(char *name);
+void cfg_send_vm_evt_cloonix_ga_ping_ok(char *name);
+void cfg_send_vm_evt_cloonix_ga_ping_ko(char *name);
+void cfg_hysteresis_send_topo_info(void);
+/*---------------------------------------------------------------------------*/
+
 
 
 

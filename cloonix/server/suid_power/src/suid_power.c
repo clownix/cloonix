@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -37,15 +38,16 @@
 #include "rpc_clownix.h"
 #include "net_phy.h"
 #include "ovs_get.h"
-#include "container.h"
+#include "cnt.h"
 #include "launcher.h"
 
 /*--------------------------------------------------------------------------*/
+static int  g_cloonix_rank;
 static int  g_llid;
 static int  g_watchdog_ok;
 static char g_network_name[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
-static char g_root_work[MAX_PATH_LEN];
+static char g_root_work_kvm[MAX_PATH_LEN];
 static char g_bin_dir[MAX_PATH_LEN];
 /*--------------------------------------------------------------------------*/
 enum {
@@ -67,6 +69,10 @@ typedef struct t_vmon
 
 static t_vmon *g_head_vmon;
 
+char *get_net_name(void)
+{
+  return g_network_name;
+}
 
 /****************************************************************************/
 static t_vmon *find_vmon_by_name(char *name)
@@ -137,7 +143,7 @@ static void free_vmon(t_vmon *cur)
 static char *get_work_vm_path(int vm_id)
 {
   static char path[MAX_PATH_LEN];
-  char *root = g_root_work;
+  char *root = g_root_work_kvm;
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path,MAX_PATH_LEN-1, "%s/vm%d", root, vm_id);
   return(path);
@@ -266,7 +272,7 @@ static void automate_pid_monitor(void)
         {
         memset(resp, 0, MAX_PATH_LEN);
         snprintf(resp, MAX_PATH_LEN-1,
-                 "cloonixsuid_resp_pid_ok vm_id=%d pid=%d", cur->vm_id, pid);
+                 "cloonsuid_resp_pid_ok vm_id=%d pid=%d", cur->vm_id, pid);
         rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, resp);
         cur->pid = pid;
         cur->state = state_running;
@@ -279,7 +285,7 @@ static void automate_pid_monitor(void)
         {
         memset(resp, 0, MAX_PATH_LEN);
         snprintf(resp, MAX_PATH_LEN-1,
-                 "cloonixsuid_resp_pid_ko vm_id=%d", cur->vm_id);
+                 "cloonsuid_resp_pid_ko vm_id=%d", cur->vm_id);
         rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, resp);
         cur->state = state_lost_pid;
         if (cur->pid > 0)
@@ -308,18 +314,19 @@ static void heartbeat (int delta)
     {
     count_ticks_blkd = 0;
     automate_pid_monitor();
-    container_beat(g_llid);
+    cnt_beat(g_llid);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+/*
 static char *cloonix_resp_phy(int nb_phy, t_topo_info_phy *phy)
 {
   int i, ln, len = MAX_PATH_LEN + (nb_phy * MAX_NAME_LEN * 4);
   char *buf = (char *) malloc(len);
   memset(buf, 0, len);
-  ln = sprintf(buf, "cloonixsuid_resp_phy nb_phys=%d", nb_phy); 
+  ln = sprintf(buf, "cloonsuid_resp_phy nb_phys=%d", nb_phy); 
   for (i=0; i<nb_phy; i++)
     {
     ln += sprintf(buf+ln,
@@ -329,13 +336,17 @@ static char *cloonix_resp_phy(int nb_phy, t_topo_info_phy *phy)
     }
   return buf;
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void req_kill_clean_all(void)
 {
+  char root_work_cnt[MAX_PATH_LEN];
+  char *root = g_root_path;
   int pid;
   t_vmon *next, *cur = g_head_vmon;
+  cnt_kill_all();
   while(cur)
     {
     next = cur->next;
@@ -348,6 +359,8 @@ static void req_kill_clean_all(void)
       }
     cur = next;
     }
+  snprintf(root_work_cnt, MAX_PATH_LEN-1,"%s/%s", root, CNT_DIR);
+  unlink(root_work_cnt);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -367,7 +380,6 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 void rpct_recv_kil_req(int llid, int tid)
 {
   req_kill_clean_all();
-  KERR("RX KIL REQ");
   exit(0);
 }
 /*--------------------------------------------------------------------------*/
@@ -386,14 +398,14 @@ static void qemu_launch(char *name, int vm_id, int argc,
   if (result)
     {
     snprintf(resp, MAX_PATH_LEN-1,
-             "cloonixsuid_resp_launch_vm_ko name=%s", name);
+             "cloonsuid_resp_launch_vm_ko name=%s", name);
     rpct_send_sigdiag_msg(llid, tid, resp);
     free_vmon(cur);
     }
   else
     {
     snprintf(resp, MAX_PATH_LEN-1,
-             "cloonixsuid_resp_launch_vm_ok name=%s",name);
+             "cloonsuid_resp_launch_vm_ok name=%s",name);
     rpct_send_sigdiag_msg(llid, tid, resp);
     }
   free(argv);
@@ -404,29 +416,35 @@ static void qemu_launch(char *name, int vm_id, int argc,
 /****************************************************************************/
 void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 {
-  char *str_net_phy, *str_net_ovs;
-  int nb_phy;
-  t_topo_info_phy *net_phy;
+//  char *str_net_phy, *str_net_ovs;
+//  int nb_phy;
+//  t_topo_info_phy *net_phy;
   DOUT(FLAG_HOP_POLDIAG, "SUID %s", line);
   if (!strcmp(line,
-  "cloonixsuid_req_phy"))
+  "cloonsuid_req_phy"))
     {
+    KERR("ERROR cloonsuid_req_phy");
+/*
     net_phy = net_phy_get(&nb_phy);
     str_net_phy = cloonix_resp_phy(nb_phy, net_phy);
     rpct_send_poldiag_msg(llid, tid, str_net_phy);
     free(str_net_phy);
+*/
     }
   else if (!strcmp(line,
-  "cloonixsuid_req_ovs"))
+  "cloonsuid_req_ovs"))
     {
+    KERR("ERROR cloonsuid_req_ovs");
+/*
     str_net_ovs = ovs_get_topo(g_bin_dir, g_root_path);
     rpct_send_poldiag_msg(llid, tid, str_net_ovs);
     free(str_net_ovs);
+*/
     }
   else if (!strncmp(line,
-  "cloonixsuid_container", strlen("cloonixsuid_container")))
+  "cloonsuid_cnt", strlen("cloonsuid_cnt")))
     {
-    container_recv_poldiag_msg(llid, tid, line);
+    cnt_recv_poldiag_msg(llid, tid, line);
     }
   else
     KERR("%s %s", g_network_name, line);
@@ -439,7 +457,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   char name[MAX_NAME_LEN];
   char resp[MAX_PATH_LEN];
   char dtach[MAX_PATH_LEN];
-  int on, argc, vm_id, pid;
+  int argc, vm_id, pid;
   t_vmon *cur;
 
   DOUT(FLAG_HOP_SIGDIAG, "SUID %s", line);
@@ -449,15 +467,15 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   if (tid != type_hop_suid_power)
     KERR("%s %d %d", g_network_name, tid, type_hop_suid_power);
   if (!strncmp(line,
-  "cloonixsuid_req_suidroot", strlen("cloonixsuid_req_suidroot")))
+  "cloonsuid_req_suidroot", strlen("cloonsuid_req_suidroot")))
     {
     if (check_and_set_uid())
-      rpct_send_sigdiag_msg(llid, tid, "cloonixsuid_resp_suidroot_ko");
+      rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ko");
     else
-      rpct_send_sigdiag_msg(llid, tid, "cloonixsuid_resp_suidroot_ok");
+      rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ok");
     }
   else if (sscanf(line, 
-  "cloonixsuid_req_launch name=%s vm_id=%d dtach=%s argc=%d:",
+  "cloonsuid_req_launch name=%s vm_id=%d dtach=%s argc=%d:",
          name, &vm_id, dtach, &argc) == 4)
     {
     qemu_launch(name, vm_id, argc, line, resp, llid, tid);
@@ -465,19 +483,19 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       KERR("%s", dtach);
     }
   else if (sscanf(line,
-  "cloonixsuid_req_ifup phy: %s", name) == 1)
+  "cloonsuid_req_ifup phy: %s", name) == 1)
     {
     if (net_phy_flags_iff_up_down(name, 1))
       KERR("ERROR Bad ifup %s", name);
     }
   else if (sscanf(line,
-  "cloonixsuid_req_ifdown phy: %s", name) == 1)
+  "cloonsuid_req_ifdown phy: %s", name) == 1)
     {
     if (net_phy_flags_iff_up_down(name, 0))
       KERR("ERROR Bad ifdown %s", name);
     }
   else if (sscanf(line,
-  "cloonixsuid_req_vm_kill vm_id: %d", &vm_id) == 1)
+  "cloonsuid_req_vm_kill vm_id: %d", &vm_id) == 1)
     {
     cur = find_vmon_by_vm_id(vm_id);
     if (!cur)
@@ -486,23 +504,27 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       {
       if (kill(cur->pid, SIGTERM))
         KERR("ERROR Bad kill %d", vm_id);
+      else
+        {
+        memset(resp, 0, MAX_PATH_LEN);
+        snprintf(resp, MAX_PATH_LEN-1,
+                 "cloonsuid_resp_pid_ko vm_id=%d", vm_id);
+        rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, resp);
+        }
       free_vmon(cur);
       }
     }
   else if (sscanf(line,
-  "cloonixsuid_req_pid_kill pid: %d", &pid) == 1)
+  "cloonsuid_req_pid_kill pid: %d", &pid) == 1)
     {
     if (pid <= 0)
       KERR("ERROR BECAUSE BAD pid %d", pid);
     else if (!kill(pid, SIGTERM))
       KERR("ERROR BECAUSE GOOD KILL %d", pid);
     }
-  else if (sscanf(line,
-  "cloonixsuid_rec_name: %s on: %d", name, &on) == 2)
-    ovs_get_rec_name(name, on);
   else if (!strncmp(line,
-  "cloonixsuid_container", strlen("cloonixsuid_container")))
-    container_recv_sigdiag_msg(llid, tid, line);
+  "cloonsuid_cnt", strlen("cloonsuid_cnt")))
+    cnt_recv_sigdiag_msg(llid, tid, line);
   else
     KERR("ERROR %s %s", g_network_name, line);
 }
@@ -542,7 +564,14 @@ static void fct_timeout_self_destruct(void *data)
   if (g_watchdog_ok == 0)
     KOUT("SUID_POWER SELF DESTRUCT");
   g_watchdog_ok = 0;
-  clownix_timeout_add(500, fct_timeout_self_destruct, NULL, NULL, NULL);
+  clownix_timeout_add(1500, fct_timeout_self_destruct, NULL, NULL, NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int get_cloonix_rank(void)
+{
+  return (g_cloonix_rank);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -556,21 +585,23 @@ int main (int argc, char *argv[])
   g_head_vmon = NULL;
   g_llid = 0;
   g_watchdog_ok = 0;
-  if (argc != 7)
+  if (argc != 8)
     KOUT(" ");
-  container_init();
-  set_saved_environ(argv[4], argv[5], argv[6]);
+  cnt_init();
+  set_saved_environ(argv[5], argv[6], argv[7]);
   msg_mngt_init("suid_power", IO_MAX_BUF_LEN);
   memset(g_network_name, 0, MAX_NAME_LEN);
   memset(ctrl_path, 0, MAX_PATH_LEN);
   memset(g_root_path, 0, MAX_PATH_LEN);
-  memset(g_root_work, 0, MAX_PATH_LEN);
+  memset(g_root_work_kvm, 0, MAX_PATH_LEN);
   memset(g_bin_dir, 0, MAX_PATH_LEN);
   strncpy(g_network_name, argv[1], MAX_NAME_LEN-1);
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
   strncpy(g_bin_dir, argv[3], MAX_PATH_LEN-1);
+  if (sscanf(argv[4], "%d", &g_cloonix_rank) != 1)
+    KOUT("ERROR %s", argv[4]);
   root = g_root_path;
-  snprintf(g_root_work,MAX_PATH_LEN-1,"%s/%s", root, CLOONIX_VM_WORKDIR);
+  snprintf(g_root_work_kvm,MAX_PATH_LEN-1,"%s/%s", root, CLOONIX_VM_WORKDIR);
   snprintf(ctrl_path,MAX_PATH_LEN-1,"%s/%s", root, SUID_POWER_SOCK_DIR);
   unlink(ctrl_path);
   msg_mngt_heartbeat_init(heartbeat);

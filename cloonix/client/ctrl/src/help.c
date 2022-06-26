@@ -66,7 +66,7 @@ void help_qhalt_vm(char *line)
 void help_reboot_vm(char *line)
 {
   printf("\n\n\n%s <name>\n", line);
-  printf("\nRequest a reboot to the cloonix agent\n\n\n");
+  printf("\nRequest a reboot to the cloon agent\n\n\n");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -75,7 +75,7 @@ void help_reboot_vm(char *line)
 void help_halt_vm(char *line)
 {
   printf("\n\n\n%s <name>\n", line);
-  printf("\nRequest a poweroff to the cloonix agent\n\n\n");
+  printf("\nRequest a poweroff to the cloon agent\n\n\n");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -83,6 +83,14 @@ void help_halt_vm(char *line)
 void help_add_nat(char *line)
 {
   printf("\n\n\n%s <name>\n\n", line);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void help_add_snf(char *line)
+{
+  printf("\n\n\n%s <name> <num> <on>\n", line);
+  printf("\n%s Cloon1 0 1\n", line);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -115,10 +123,10 @@ void help_del_sat(char *line)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void help_add_d2d(char *line)
+void help_add_c2c(char *line)
 {
   printf("\n\n\n%s <name> <distant_name>",line);
-  printf("\n\tDistant cloonix server name:");
+  printf("\n\tDistant cloon server name:");
   printf("\n%s\n", cloonix_conf_info_get_names());
   printf("\n\nexemple:\n");
   printf("\t%s to_mito mito\n\n\n", line);
@@ -190,7 +198,7 @@ void help_cnf_a2b(char *line)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void help_cnf_xyx(char *line)
+void help_cnf_c2c(char *line)
 {
   printf("\n\n%s <name> <cmd>\n", line);
   printf("\ncmd =  \"mac_mangle=XX:XX:XX:XX:XX:XX\"");
@@ -203,41 +211,6 @@ void help_cnf_nat(char *line)
 {
   printf("\n\n%s <name> <cmd>\n", line);
   printf("\ncmd = \"whatip=vm_name\"");
-  printf("\n\n");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_sub_qmp(char *line)
-{
-  printf("\n\n%s <name>\n", line);
-  printf("\n\n%s\n", line);
-  printf("\n\n");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_snd_qmp(char *l)
-{
-  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"system_reset\\\" }\"",l);
-  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-status\\\" }\"",l);
-  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-block-jobs\\\",\\\"arguments\\\":{}}\"",l);
-  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-commands\\\" }\"",l);
-  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-block\\\" }\"",l);
-  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-blockstats\\\" }\"",l);
-  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"query-cpus\\\" }\"",l);
-  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"system_powerdown\\\" }\"",l);
-  printf("\n%s Cloon1 \"{ \\\"execute\\\": \\\"quit\\\" }\"",l);
-  printf("\n...\n\n");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void help_dpdk_ovs_cnf(char *line)
-{
-  printf("\n\n%s <lcore_mask> <socket_mem> <cpu_mask>", line);
-  printf("\n\n%s 0x%%X %%d 0x%%X", line);
-  printf("\n%s 0x01 2048 0x0F\n", line);
   printf("\n\n");
 }
 /*---------------------------------------------------------------------------*/

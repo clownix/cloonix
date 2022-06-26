@@ -29,13 +29,13 @@
 int debug_get_trunc_usec(void);
 
 
-#define KERR(format, a...)                                     \
+#define XERR(format, a...)                                     \
  do {                                                          \
     syslog(LOG_ERR | LOG_USER, "%010d WARN %s line:%d " format "\n", \
     debug_get_trunc_usec(), basename(__FILE__), __LINE__, ## a);   \
     } while (0)
 
-#define KOUT(format, a...)                                     \
+#define XOUT(format, a...)                                     \
  do {                                                          \
     syslog(LOG_ERR | LOG_USER, "%010d KILL %s line:%d " format "\n", \
     debug_get_trunc_usec(),  basename(__FILE__), __LINE__, ## a);   \
@@ -109,8 +109,8 @@ enum
   fd_type_x11_wr_x11,
   fd_type_x11_wr_soc,
   fd_type_x11,
-  fd_type_listen_cloonix,
-  fd_type_cloonix,
+  fd_type_listen_cloon,
+  fd_type_cloon,
   fd_type_max, 
 };
 

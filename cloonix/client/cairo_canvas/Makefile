@@ -52,14 +52,14 @@ LIBS = $(shell pkg-config --libs gtk+-3.0) \
 
 SRCS     = popup.c topo.c menus.c cloonix.c move.c menu_utils.c \
            main_timer_loop.c canvas_ctx.c eventfull_eth.c make_layout.c \
-           menu_dialog_kvm.c menu_dialog_d2d.c layout_topo.c menu_dialog_cnt.c 
+           menu_dialog_kvm.c menu_dialog_c2c.c layout_topo.c menu_dialog_cnt.c 
 
 OBJ      = $(SRCS:.c=.o)
 OBJ_DIR  = ./obj/
 OBJS     = $(addprefix $(OBJ_DIR), $(OBJ))
 
 
-CFLAGS   = -g -rdynamic $(WARNINGS) $(INCLUDES) -DWITH_GLIB -D_GNU_SOURCE
+CFLAGS   = -g $(WARNINGS) $(INCLUDES) -DWITH_GLIB -D_GNU_SOURCE
 
  
 CFLAGS+= -DGTK_DISABLE_SINGLE_INCLUDES \

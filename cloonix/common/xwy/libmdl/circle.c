@@ -55,12 +55,12 @@ void circ_free_slot_put(t_circ_ctx *circ_ctx, void *elem)
   tail = (uint32_t) circ_ctx->free_tail;
   if ((circ_free_space(head, tail) == 0) ||
       (circ_ctx->free_queue[head].elem != NULL))
-    KOUT(" ");
+    XOUT(" ");
   circ_ctx->free_queue[head].elem = elem;
   new_head = (head + 1) & CIRC_FREE_MASK;
   MEMORY_BARRIER();
   if (__sync_val_compare_and_swap(&(circ_ctx->free_head),head,new_head)!=head)
-    KOUT(" ");
+    XOUT(" ");
   __sync_lock_release(&(circ_ctx->free_lock));
 }
 /*--------------------------------------------------------------------------*/
@@ -77,12 +77,12 @@ void *circ_free_slot_get(t_circ_ctx *circ_ctx)
     {
     elem = circ_ctx->free_queue[tail].elem;
     if (!elem)
-      KOUT(" ");
+      XOUT(" ");
     circ_ctx->free_queue[tail].elem = NULL;
     new_tail = (tail + 1) & CIRC_FREE_MASK;
     MEMORY_BARRIER();
     if (__sync_val_compare_and_swap(&(circ_ctx->free_tail),tail,new_tail)!=tail)
-      KOUT(" ");
+      XOUT(" ");
     }
   __sync_lock_release(&(circ_ctx->free_lock));
   return elem;
@@ -114,7 +114,7 @@ void circ_tx_slot_put(t_circ_ctx *circ_ctx, void *elem, int bytes)
   tail = (uint32_t) circ_ctx->tx_tail;
   if ((circ_tx_space(head, tail) == 0) ||
       (circ_ctx->tx_queue[head].elem != NULL))
-    KOUT(" ");
+    XOUT(" ");
   circ_ctx->tx_queue[head].elem = elem;
   circ_ctx->tx_queue[head].bytes = bytes;
   new_head = (head + 1) & CIRC_TX_MASK;
@@ -122,7 +122,7 @@ void circ_tx_slot_put(t_circ_ctx *circ_ctx, void *elem, int bytes)
   __sync_fetch_and_add (&(circ_ctx->tx_stored_bytes), bytes); 
   if (__sync_val_compare_and_swap(&(circ_ctx->tx_head),
                                   head, new_head) != head)
-    KOUT(" ");
+    XOUT(" ");
   __sync_lock_release(&(circ_ctx->tx_lock));
 }
 /*--------------------------------------------------------------------------*/
@@ -140,13 +140,13 @@ void *circ_tx_slot_get(t_circ_ctx *circ_ctx)
     elem = circ_ctx->tx_queue[tail].elem;
     bytes = circ_ctx->tx_queue[tail].bytes;
     if (!elem)
-      KOUT(" ");
+      XOUT(" ");
     circ_ctx->tx_queue[tail].elem = NULL;
     new_tail = (tail + 1) & CIRC_TX_MASK;
     MEMORY_BARRIER();
     __sync_fetch_and_sub (&(circ_ctx->tx_stored_bytes), bytes); 
     if (__sync_val_compare_and_swap(&(circ_ctx->tx_tail),tail,new_tail)!=tail)
-      KOUT(" ");
+      XOUT(" ");
     }
   __sync_lock_release(&(circ_ctx->tx_lock));
   return elem;

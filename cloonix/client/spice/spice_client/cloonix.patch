@@ -1,7 +1,21 @@
-diff -Naur spice-gtk/src/cloonix.c tainted_spice/src/cloonix.c
---- spice-gtk/src/cloonix.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloonix.c	2021-12-11 11:43:17.117075736 +0100
-@@ -0,0 +1,613 @@
+diff -Naur spice-gtk/meson.build tainted_spice/meson.build
+--- spice-gtk/meson.build	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/meson.build	2022-05-21 15:07:19.726395337 +0200
+@@ -50,8 +50,8 @@
+ spice_protocol_version = spice_common.get_variable('spice_protocol_version')
+ 
+ subproject('keycodemapdb')
+-keymapgen = files('subprojects/keycodemapdb/tools/keymap-gen')
+-keymapcsv = files('subprojects/keycodemapdb/data/keymaps.csv')
++keymapgen = files('keymap-gen')
++keymapcsv = files('keymaps.csv')
+ 
+ #
+ # check for system headers
+diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
+--- spice-gtk/src/cloon.c	1970-01-01 01:00:00.000000000 +0100
++++ tainted_spice/src/cloon.c	2022-05-21 15:10:22.717463749 +0200
+@@ -0,0 +1,609 @@
 +#include <unistd.h>
 +#include <stdlib.h>
 +#include <stdio.h>
@@ -16,7 +30,7 @@ diff -Naur spice-gtk/src/cloonix.c tainted_spice/src/cloonix.c
 +#include <glib-object.h>
 +#include <gio/gio.h>
 +
-+#include "cloonix.h"
++#include "cloon.h"
 +#include "hmac_cipher.h"
 +
 +
@@ -48,14 +62,6 @@ diff -Naur spice-gtk/src/cloonix.c tainted_spice/src/cloonix.c
 +static t_sock_ctx *g_sock_ctx[MAX_FD_NUMBER_CTX];
 +
 +
-+long long cloonix_get_msec(void);
-+/*****************************************************************************/
-+long long cloonix_get_msec(void)
-+{
-+  return 0;
-+}
-+/*---------------------------------------------------------------------------*/
-+
 +/*****************************************************************************/
 +static int test_file_is_socket(char *path)
 +{
@@ -70,6 +76,10 @@ diff -Naur spice-gtk/src/cloonix.c tainted_spice/src/cloonix.c
 +}
 +/*---------------------------------------------------------------------------*/
 +
++uint64_t cloonix_get_msec(void)
++{
++  return 0;
++}
 +/****************************************************************************/
 +static int tst_port(char *str_port, int *port)
 +{
@@ -615,9 +625,9 @@ diff -Naur spice-gtk/src/cloonix.c tainted_spice/src/cloonix.c
 +
 +
 +
-diff -Naur spice-gtk/src/cloonix.h tainted_spice/src/cloonix.h
---- spice-gtk/src/cloonix.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloonix.h	2021-12-11 11:43:17.117075736 +0100
+diff -Naur spice-gtk/src/cloon.h tainted_spice/src/cloon.h
+--- spice-gtk/src/cloon.h	1970-01-01 01:00:00.000000000 +0100
++++ tainted_spice/src/cloon.h	2022-05-21 15:07:19.726395337 +0200
 @@ -0,0 +1,22 @@
 +
 +
@@ -643,7 +653,7 @@ diff -Naur spice-gtk/src/cloonix.h tainted_spice/src/cloonix.h
 +
 diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 --- spice-gtk/src/hmac_cipher.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.c	2021-12-11 11:44:32.795179622 +0100
++++ tainted_spice/src/hmac_cipher.c	2022-05-21 15:07:19.726395337 +0200
 @@ -0,0 +1,144 @@
 +/*****************************************************************************/
 +/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
@@ -791,10 +801,10 @@ diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 +
 diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 --- spice-gtk/src/hmac_cipher.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.h	2021-12-11 11:43:17.117075736 +0100
++++ tainted_spice/src/hmac_cipher.h	2022-05-21 15:07:19.726395337 +0200
 @@ -0,0 +1,28 @@
 +/*****************************************************************************/
-+/*    Copyright (C)  2006-2022    Cloonix,    <clownix@clownix.net>          */
++/*    Copyright (C)  2006-2022    Cloon,    <clownix@clownix.net>          */
 +/*****************************************************************************/
 +/*                                                                           */
 +/*    This program is free software: you can redistribute it and/or modify   */
@@ -822,27 +832,27 @@ diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 +
 +
 diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
---- spice-gtk/src/meson.build	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/src/meson.build	2021-12-11 11:43:17.117075736 +0100
+--- spice-gtk/src/meson.build	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/src/meson.build	2022-05-21 15:07:19.726395337 +0200
 @@ -85,6 +85,8 @@
    'spice-client.c',
    'spice-option.c',
    'spice-session.c',
-+  'cloonix.c',
++  'cloon.c',
 +  'hmac_cipher.c',
    'spice-util.c',
    'usb-device-manager.c',
  ]
 diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
---- spice-gtk/src/spice-channel.c	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/src/spice-channel.c	2021-12-11 11:43:17.117075736 +0100
+--- spice-gtk/src/spice-channel.c	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/src/spice-channel.c	2022-05-21 15:07:19.726395337 +0200
 @@ -48,6 +48,11 @@
  
  G_STATIC_ASSERT(sizeof(SpiceChannelClass) == sizeof(GObjectClass) + 19 * sizeof(gpointer));
  
-+/*CLOONIX*/
-+#include "cloonix.h"
-+/*CLOONIX*/
++/*CLOON*/
++#include "cloon.h"
++/*CLOON*/
 +
 +
  static void spice_channel_handle_msg(SpiceChannel *channel, SpiceMsgIn *msg);
@@ -909,26 +919,9 @@ diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
  reconnect:
      c->conn = spice_session_channel_open_host(c->session, channel, &c->tls, &c->error);
      if (c->conn == NULL) {
-diff -Naur spice-gtk/src/spice-common.h tainted_spice/src/spice-common.h
---- spice-gtk/src/spice-common.h	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/src/spice-common.h	2021-12-11 11:43:17.117075736 +0100
-@@ -30,3 +30,13 @@
- #include "common/marshaller.h"
- 
- #include "spice-util.h"
-+
-+
-+#include <syslog.h>
-+#define DKERR(format, a...)              \
-+ do {                                                   \
-+    syslog(LOG_ERR, "%s line:%d " format, \
-+    __FUNCTION__,__LINE__, ## a);              \
-+    } while (0)
-+
-+
 diff -Naur spice-gtk/src/spice-gstaudio.c tainted_spice/src/spice-gstaudio.c
---- spice-gtk/src/spice-gstaudio.c	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/src/spice-gstaudio.c	2021-12-11 11:43:17.117075736 +0100
+--- spice-gtk/src/spice-gstaudio.c	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/src/spice-gstaudio.c	2022-05-21 15:07:19.726395337 +0200
 @@ -349,46 +349,6 @@
  
  #define VOLUME_NORMAL 65535
@@ -1140,8 +1133,8 @@ diff -Naur spice-gtk/src/spice-gstaudio.c tainted_spice/src/spice-gstaudio.c
  
      if (fake_channel) {
 diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
---- spice-gtk/src/spice-session.c	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/src/spice-session.c	2021-12-11 11:43:17.117075736 +0100
+--- spice-gtk/src/spice-session.c	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/src/spice-session.c	2022-05-21 15:07:19.726395337 +0200
 @@ -20,9 +20,8 @@
  #include <gio/gnetworking.h>
  #include <gio/gio.h>
@@ -1149,7 +1142,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
 -#ifdef G_OS_UNIX
  #include <gio/gunixsocketaddress.h>
 -#endif
-+#include "cloonix.h"
++#include "cloon.h"
  
  #include "spice-client.h"
  #include "spice-common.h"
@@ -1191,7 +1184,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
      } else if (s->host != NULL) {
          const char *port, *scheme;
 +
-+//cloonix suppress errors
++//cloon suppress errors
 +return NULL;
 +
          g_return_val_if_fail(s->port != NULL || s->tls_port != NULL, NULL);
@@ -1299,7 +1292,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
 +    /**
 +     * SpiceSession:cloonix_doors:
 +     *
-+     * Add of the cloonix server to connect to
++     * Add of the cloon server to connect to
 +     *
 +     **/
 +    g_object_class_install_property
@@ -1316,7 +1309,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
 +    /**
 +     * SpiceSession:cloonix_spice:
 +     *
-+     * Unix socket access of the spice inside the cloonix server
++     * Unix socket access of the spice inside the cloon server
 +     *
 +     **/
 +    g_object_class_install_property
@@ -1544,8 +1537,8 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
  {
      g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-priv.h
---- spice-gtk/src/spice-session-priv.h	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/src/spice-session-priv.h	2021-12-11 11:43:17.117075736 +0100
+--- spice-gtk/src/spice-session-priv.h	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/src/spice-session-priv.h	2022-05-21 15:07:19.726395337 +0200
 @@ -59,6 +59,8 @@
  void spice_session_get_pubkey(SpiceSession *session, guint8 **pubkey, guint *size);
  guint spice_session_get_verify(SpiceSession *session);
@@ -1556,8 +1549,8 @@ diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-pr
  const gchar* spice_session_get_host(SpiceSession *session);
  const gchar* spice_session_get_cert_subject(SpiceSession *session);
 diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
---- spice-gtk/src/spice-widget-egl.c	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/src/spice-widget-egl.c	2021-12-11 11:43:17.117075736 +0100
+--- spice-gtk/src/spice-widget-egl.c	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/src/spice-widget-egl.c	2022-05-21 15:07:19.726395337 +0200
 @@ -218,7 +218,7 @@
  #endif
  
@@ -1618,8 +1611,8 @@ diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
                                         (EGLClientBuffer)NULL,
                                         attrs);
 diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
---- spice-gtk/src/usb-acl-helper.c	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/src/usb-acl-helper.c	2021-12-11 11:43:17.117075736 +0100
+--- spice-gtk/src/usb-acl-helper.c	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/src/usb-acl-helper.c	2022-05-21 15:07:19.726395337 +0200
 @@ -183,7 +183,7 @@
      gsize bytes_written;
      const gchar *acl_helper = g_getenv("SPICE_USB_ACL_BINARY");
@@ -1630,8 +1623,8 @@ diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
      gint in, out;
      gchar buf[128];
 diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
---- spice-gtk/tools/spice-cmdline.c	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/tools/spice-cmdline.c	2021-12-11 11:43:17.117075736 +0100
+--- spice-gtk/tools/spice-cmdline.c	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/tools/spice-cmdline.c	2022-05-21 15:07:19.726395337 +0200
 @@ -27,9 +27,25 @@
  static char *tls_port;
  static char *password;
@@ -1646,14 +1639,14 @@ diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
 +        .short_name       = 'd',
 +        .arg              = G_OPTION_ARG_STRING,
 +        .arg_data         = &cloonix_doors,
-+        .description      = N_("Cloonix door path"),
++        .description      = N_("Cloon door path"),
 +        .arg_description  = N_("<cloonix_doors>"),
 +    },{
 +        .long_name        = "cloonix-spice",
 +        .short_name       = 'c',
 +        .arg              = G_OPTION_ARG_STRING,
 +        .arg_data         = &cloonix_spice,
-+        .description      = N_("Cloonix spice server path"),
++        .description      = N_("Cloon spice server path"),
 +        .arg_description  = N_("<cloonix_spice>"),
 +    },{
          .long_name        = "uri",
@@ -1671,8 +1664,8 @@ diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
          g_object_set(session, "uri", uri, NULL);
      if (host)
 diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
---- spice-gtk/tools/spicy.c	2021-12-04 08:55:22.000000000 +0100
-+++ tainted_spice/tools/spicy.c	2021-12-11 11:43:17.117075736 +0100
+--- spice-gtk/tools/spicy.c	2022-05-16 16:46:28.000000000 +0200
++++ tainted_spice/tools/spicy.c	2022-05-21 15:07:19.726395337 +0200
 @@ -1268,29 +1268,29 @@
  
  static void recent_add(SpiceSession *session)
@@ -1700,7 +1693,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
 -        g_warning("Recent item couldn't be added successfully");
 -
 -    g_free(uri);
-+//cloonix suppress error
++//cloon suppress error
 +//    GtkRecentManager *recent;
 +//    GtkRecentData meta = {
 +//        .mime_type    = (char*)"application/x-spice",

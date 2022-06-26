@@ -1,4 +1,4 @@
-.. image:: /png/clownix64.png 
+.. image:: /png/cloonix128.png 
    :align: right
 
 ============

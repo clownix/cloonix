@@ -19,7 +19,7 @@
 /*---------------------------------------------------------------------------*/
 typedef struct t_subelem
 {
-  char name[TOPO_MAX_NAME_LEN];
+  char name[TOPO_MAX_NAME_LEN+1];
   struct t_subelem *next;
 } t_subelem;
 /*---------------------------------------------------------------------------*/

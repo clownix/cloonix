@@ -103,7 +103,7 @@ static char *get_item(char *input_string)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int i_am_inside_cloonix(char *name)
+int i_am_inside_cloon(char *name)
 {
   int result, len;
   char err[MAX_PATH_LEN];

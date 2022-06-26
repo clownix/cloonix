@@ -29,12 +29,12 @@ typedef struct t_topo_kvm_chain
   struct t_topo_kvm_chain *next;
 } t_topo_kvm_chain;
 /*--------------------------------------------------------------------------*/
-typedef struct t_topo_d2d_chain
+typedef struct t_topo_c2c_chain
 {
-  t_topo_d2d d2d;
-  struct t_topo_d2d_chain *prev;
-  struct t_topo_d2d_chain *next;
-} t_topo_d2d_chain;
+  t_topo_c2c c2c;
+  struct t_topo_c2c_chain *prev;
+  struct t_topo_c2c_chain *next;
+} t_topo_c2c_chain;
 /*--------------------------------------------------------------------------*/
 typedef struct t_topo_tap_chain
 {
@@ -86,8 +86,8 @@ typedef struct t_topo_differences
   t_topo_cnt_chain  *del_cnt;
   t_topo_kvm_chain  *add_kvm;
   t_topo_kvm_chain  *del_kvm;
-  t_topo_d2d_chain  *add_d2d;
-  t_topo_d2d_chain  *del_d2d;
+  t_topo_c2c_chain  *add_c2c;
+  t_topo_c2c_chain  *del_c2c;
   t_topo_tap_chain  *add_tap;
   t_topo_tap_chain  *del_tap;
   t_topo_a2b_chain  *add_a2b;

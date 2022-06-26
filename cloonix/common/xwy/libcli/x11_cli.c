@@ -66,7 +66,7 @@ void xcli_killed_x11(int cli_idx)
     if (in_zero == 0)
       { 
       in_zero = 1;
-      KERR("%d", cli_idx);
+      XERR("%d", cli_idx);
       for (i=1; i<MAX_IDX_X11; i++)
         {
         if (g_conn[i])
@@ -77,7 +77,7 @@ void xcli_killed_x11(int cli_idx)
     }
   else if (!conn)
     {
-    KERR("%d", cli_idx);
+    XERR("%d", cli_idx);
     }
   else
     {
@@ -100,7 +100,7 @@ static void check_fd_unique(int x11_fd)
     if (g_conn[i])
       {
       if (x11_fd == g_conn[i]->x11_fd)
-        KOUT("%d %d %d", i, x11_fd, g_conn[i]->x11_fd);
+        XOUT("%d %d %d", i, x11_fd, g_conn[i]->x11_fd);
       }
     }
 }
@@ -113,7 +113,7 @@ static void conn_ack_ass(int llid, int cli_idx)
   t_conn_cli_x11 *conn;
 
   if (!g_conn[cli_idx])
-    KERR("%d", cli_idx);
+    XERR("%d", cli_idx);
   else
     {
     conn = g_conn[cli_idx];
@@ -132,11 +132,11 @@ static void create_conn_and_ack(int srv_idx, int cli_idx, int x11_fd)
   t_conn_cli_x11 *conn;
 
   if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-    KOUT("%d %d", srv_idx, cli_idx);
+    XOUT("%d %d", srv_idx, cli_idx);
   if (g_conn[cli_idx])
-    KOUT("%d %d", srv_idx, cli_idx);
+    XOUT("%d %d", srv_idx, cli_idx);
   if (x11_tx_open(x11_fd))
-    KOUT("%d %d", srv_idx, cli_idx);
+    XOUT("%d %d", srv_idx, cli_idx);
   conn = (t_conn_cli_x11 *) wrap_malloc(len);
   memset(conn, 0, sizeof(t_conn_cli_x11));
   conn->srv_idx       = srv_idx;
@@ -157,7 +157,7 @@ static void sub_x11_conn(int srv_idx, int cli_idx, int x11_fd)
   int llid_ass, sock_fd_ass = -1;
   if (x11_fd < 0)
     {
-    KERR("%s", strerror(errno));
+    XERR("%s", strerror(errno));
     xcli_send_msg_type_x11_connect_ack(cli_idx, "KO");
     }
   else
@@ -175,9 +175,9 @@ static void x11_connect(int srv_idx, int cli_idx)
   int x11_fd = -1;
 
   if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-    KOUT("%d %d", srv_idx, cli_idx);
+    XOUT("%d %d", srv_idx, cli_idx);
   if ((cli_idx <= 0) || (cli_idx >= MAX_IDX_X11))
-    KOUT("%d %d", srv_idx, cli_idx);
+    XOUT("%d %d", srv_idx, cli_idx);
   if (strlen(get_x11_path()))
     {
     x11_fd = wrap_socket_connect_unix(get_x11_path(), 
@@ -194,7 +194,7 @@ static void x11_connect(int srv_idx, int cli_idx)
     }
   else
     {
-    KERR("No display unix path");
+    XERR("No display unix path");
     xcli_send_msg_type_x11_connect_ack(cli_idx, "KO");
     }
 }
@@ -206,11 +206,11 @@ void x11_cli_write_to_x11(int cli_idx, int len, char *buf)
   t_conn_cli_x11 *conn;
 
   if (!g_conn[cli_idx])
-    KOUT("%d", cli_idx);
+    XOUT("%d", cli_idx);
   conn = g_conn[cli_idx];
 
   if (x11_tx_add_queue(conn->x11_fd, len, buf))
-    KERR("%d", cli_idx);
+    XERR("%d", cli_idx);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -233,7 +233,7 @@ void x11_cli_set_params(int cli_idx, int llid_ass, int tid, int type)
 {
   t_conn_cli_x11 *conn = g_conn[cli_idx];
   if (!conn)
-    KOUT("%d", cli_idx); 
+    XOUT("%d", cli_idx); 
   conn->llid_ass = llid_ass;
   conn->tid = tid;
   conn->type = type;
@@ -249,12 +249,12 @@ static int read_from_x11(t_conn_cli_x11 *conn, int fd)
   len = read(fd, buf, MAX_X11_MSG_LEN);
   if (len == 0)
     {
-    KERR(" ");
+    XERR(" ");
     }
   else if (len < 0)
     {
     if (errno != EINTR && errno != EAGAIN)
-      KERR("%s", strerror(errno));
+      XERR("%s", strerror(errno));
     else
       result = 0;
     }
@@ -285,7 +285,7 @@ int x11_fd_epollin_epollout_action(uint32_t evts, int fd)
           result += 1;
           if (read_from_x11(conn, fd))
             {
-            KERR("%d", i);
+            XERR("%d", i);
             xcli_killed_x11(i);
             }
           }
@@ -294,7 +294,7 @@ int x11_fd_epollin_epollout_action(uint32_t evts, int fd)
           result += 1;
           if (x11_tx_ready(fd))
             {
-            KERR("%d", i);
+            XERR("%d", i);
             xcli_killed_x11(i);
             }
           }
@@ -321,7 +321,7 @@ void x11_fd_epollin_epollout_setup(void)
         conn->x11_fd_epev->events |= EPOLLOUT;
       if (epoll_ctl(epfd, EPOLL_CTL_MOD, conn->x11_fd, 
                                          conn->x11_fd_epev))
-        KOUT(" ");
+        XOUT(" ");
       }
     }
 }
@@ -355,7 +355,7 @@ void rx_x11_msg_cb(uint32_t randid, int llid, int type,
       break;
 
    default:
-      KOUT("%d", type);
+      XOUT("%d", type);
     }
 }
 /*--------------------------------------------------------------------------*/

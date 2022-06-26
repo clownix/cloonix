@@ -76,10 +76,10 @@ int fd_spy_add(int fd, int fd_type, int line)
   char *type;
 
   if (fd < 0)
-    KOUT("%d wrap line:%d", fd, line);
+    XOUT("%d wrap line:%d", fd, line);
 
   if (fd >= MAX_FD_NUM)
-    KERR("Too big fd:%d max:%d wrap line:%d", fd, MAX_FD_NUM, line);
+    XERR("Too big fd:%d max:%d wrap line:%d", fd, MAX_FD_NUM, line);
   else
     {
     result = 0;
@@ -87,7 +87,7 @@ int fd_spy_add(int fd, int fd_type, int line)
     if (fd_spy)
       {
       type = debug_get_fd_type_txt(fd_spy->type);
-      KERR("FD EXISTS %d %s", fd, type);
+      XERR("FD EXISTS %d %s", fd, type);
       }
     else
       {
@@ -108,12 +108,12 @@ void fd_spy_modify(int fd, int fd_type)
   t_fd_spy *fd_spy;
 
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    KOUT("%d", fd);
+    XOUT("%d", fd);
 
   fd_spy = g_fd_spy[fd];
   if (!fd_spy)
     {
-    KERR("FD DOES NOT EXIST %d", fd);
+    XERR("FD DOES NOT EXIST %d", fd);
     }
   else
     {
@@ -128,12 +128,12 @@ void fd_spy_del(int fd)
   t_fd_spy *fd_spy;
 
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    KOUT("%d", fd);
+    XOUT("%d", fd);
 
   fd_spy = g_fd_spy[fd];
   if (!fd_spy)
     {
-    KERR("FD DOES NOT EXIST %d", fd);
+    XERR("FD DOES NOT EXIST %d", fd);
     }
   else
     {

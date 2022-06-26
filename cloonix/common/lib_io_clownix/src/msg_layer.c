@@ -57,52 +57,6 @@ void doorways_linker_helper(void);
 void cloonix_conf_linker_helper(void);
 
 
-
-
-static int g_pid;
-
-/*****************************************************************************/
-long long cloonix_get_msec(void)
-{
-  struct timespec ts;
-  long long result;
-  if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &ts))
-    KOUT(" ");
-  result = (long long) (ts.tv_sec);
-  result *= 1000;
-  result += ((long long) ts.tv_nsec) / 1000000;
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-long long cloonix_get_usec(void)
-{
-  struct timespec ts;
-  long long result;
-  if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &ts))
-    KOUT(" ");
-  result = (long long) (ts.tv_sec);
-  result *= 1000000;
-  result += ts.tv_nsec / 1000;
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void cloonix_set_pid(int pid)
-{
-  g_pid = pid;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cloonix_get_pid(void)
-{
-  return g_pid;
-}
-/*---------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 int get_tot_txq_size(int cidx)
 {

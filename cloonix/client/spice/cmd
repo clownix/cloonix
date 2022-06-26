@@ -15,6 +15,10 @@ fi
 cd ${HERE}/spice_client
 ./patched_create
 
+cp -vf tainted_spice/subprojects/keycodemapdb/tools/keymap-gen tainted_spice 
+cp -vf tainted_spice/subprojects/keycodemapdb/data/keymaps.csv tainted_spice
+
+
 export DESTDIR=${TARGET}
 export PATH=${TARGET}/bin:${MESON_NINJA}/ninja:${MESON_NINJA}/meson:$PATH
 

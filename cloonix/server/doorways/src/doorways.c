@@ -103,7 +103,7 @@ static void heartbeat (int delta)
   if (cur_sec >= g_time_count+1)
     {
     g_time_count += 1;
-    stats_heartbeat(cur_sec);
+    //stats_heartbeat(cur_sec);
     }
 
 }

@@ -38,7 +38,6 @@
 #include "system_callers.h"
 #include "automates.h"
 #include "doorways_mngt.h"
-#include "qhvc0.h"
 #include "qmp.h"
 #include "hop_event.h"
 #include "header_sock.h"
@@ -47,6 +46,7 @@
 #include "xwy.h"
 #include "uml_clownix_switch.h"
 #include "suid_power.h"
+#include "qga_dialog.h"
 
 
 void timer_utils_finish_vm_init(int vm_id, int val);
@@ -114,7 +114,6 @@ static void recv_sysinfo_vals(char *name, char *line)
     used_mem = totalram - freeram;
     used_mem /= 1000;
     }
-  qmp_agent_sysinfo(name, (int) used_mem);
   stats_counters_sysinfo_update(name, uptime, load1, load5, load15,
                                 totalram, freeram, cachedram, sharedram, 
                                 bufferram, totalswap, freeswap, procs,
@@ -132,11 +131,11 @@ void doors_recv_event(int llid, int tid, char *name, char *line)
     {
     if (!strcmp(line, BACKDOOR_CONNECTED))
       {
-      qhvc0_event_backdoor(name, backdoor_evt_connected);
+      qga_event_backdoor(name, backdoor_evt_connected);
       }
     else if (!strcmp(line, BACKDOOR_DISCONNECTED))
       {
-      qhvc0_event_backdoor(name, backdoor_evt_disconnected);
+      qga_event_backdoor(name, backdoor_evt_disconnected);
       }
     else if (!strncmp(line, AGENT_SYSINFO, strlen(AGENT_SYSINFO)))
       {
@@ -149,10 +148,10 @@ void doors_recv_event(int llid, int tid, char *name, char *line)
     else if (!strcmp(line, PING_OK))
       {
       timer_utils_finish_vm_init(vm->kvm.vm_id, 1);
-      qhvc0_event_backdoor(name, backdoor_evt_ping_ok);
+      qga_event_backdoor(name, backdoor_evt_ping_ok);
       }
     else if (!strcmp(line, PING_KO))
-      qhvc0_event_backdoor(name, backdoor_evt_ping_ko);
+      qga_event_backdoor(name, backdoor_evt_ping_ko);
     else
       KOUT("%s", line);
     } 
@@ -251,7 +250,6 @@ static void timer_doorways_connect(void *data)
     if (hop_event_alloc(llid, type_hop_doors, "doors", 0))
       KERR(" ");
     llid_trace_alloc(llid, "DOORWAYS", 0,0,type_llid_trace_doorways);
-    qhvc0_reinit_vm_in_doorways();
     rpct_send_pid_req(llid, type_hop_doors, "doors", 0);
     if (g_abs_beat_timer)
       clownix_timeout_del(g_abs_beat_timer, g_ref_timer, __FILE__, __LINE__);

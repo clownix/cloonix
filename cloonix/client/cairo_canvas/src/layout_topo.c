@@ -402,11 +402,11 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
 void recv_layout_node(int llid, int tid, t_layout_node *layout)
 {
   int i;
-  double tx[MAX_DPDK_VM];
-  double ty[MAX_DPDK_VM];
-  int hidden_on_graph[MAX_DPDK_VM];
+  double tx[MAX_ETH_VM];
+  double ty[MAX_ETH_VM];
+  int hidden_on_graph[MAX_ETH_VM];
   add_layout_node(layout);
-  for (i=0; i<MAX_DPDK_VM; i++)
+  for (i=0; i<MAX_ETH_VM; i++)
     {
     if (i<layout->nb_eth_wlan)
       {
@@ -668,7 +668,7 @@ static void timer_synchro(void *data)
     cur = cur->glob_next;
     }
   glib_prepare_rx_tx(get_clownix_main_llid());
-  clownix_timeout_add(100, timer_synchro, NULL, &glob_abs_beat, &glob_ref);
+  clownix_timeout_add(500, timer_synchro, NULL, &glob_abs_beat, &glob_ref);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -720,7 +720,7 @@ void layout_topo_init(void)
   g_ready_for_send = 0;
   glob_layout_xml = (t_layout_xml *) clownix_malloc(sizeof(t_layout_xml), 7);
   memset(glob_layout_xml, 0, sizeof(t_layout_xml));
-  clownix_timeout_add(100, timer_synchro, NULL, &glob_abs_beat, &glob_ref);
+  clownix_timeout_add(500, timer_synchro, NULL, &glob_abs_beat, &glob_ref);
   for (i=0; i<MAX_POLAR_COORD; i++)
     {
     idx = (double) (2*i);

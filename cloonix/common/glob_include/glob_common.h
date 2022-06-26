@@ -21,50 +21,77 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <linux/if.h>
-#ifndef MAX_NAME_LEN
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <syslog.h>
+#include <string.h>
+
+
+uint64_t cloonix_get_msec(void);
+uint64_t cloonix_get_usec(void);
+void cloonix_set_pid(int pid);
+int cloonix_get_pid(void);
+
+
 #define MAX_NAME_LEN 64
-#endif
 
-#ifndef MAX_PATH_LEN
 #define MAX_PATH_LEN 256
-#endif
 
-#ifndef KERR
 #define KERR(format, a...)                               \
  do {                                                    \
-    syslog(LOG_ERR | LOG_USER, "%07u %s"                 \
+    syslog(LOG_ERR | LOG_USER, "KERR:%07u %s"                 \
     " line:%d " format "\n", (unsigned int) cloonix_get_msec(),   \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
      __LINE__, ## a);                                    \
     } while (0)
-#endif
 
-#ifndef KOUT
 #define KOUT(format, a...)                               \
  do {                                                    \
-    syslog(LOG_ERR | LOG_USER, "KILL %07u %s"            \
+    syslog(LOG_ERR | LOG_USER, "KERR KILL %07u %s"            \
     " line:%d   " format "\n\n", (unsigned int) cloonix_get_msec(),  \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
      __LINE__, ## a);                                    \
     exit(-1);                                            \
     } while (0)
-#endif
+
+
+#define CLOWNIX_MAX_CHANNELS 10000
+#define MAX_SELECT_CHANNELS 2000
+
+enum {
+  endp_type_none=13,
+  endp_type_eths,
+  endp_type_ethv,
+  endp_type_tap,
+  endp_type_phy,
+  endp_type_a2b,
+  endp_type_nat,
+  endp_type_c2c,
+};
+
+typedef void (*t_fd_local_flow_ctrl)(int llid, int stop);
+typedef void (*t_fd_dist_flow_ctrl)(int llid, char *name, int num,
+                                    int tidx, int rank, int stop);
+typedef void (*t_fd_error)(int llid, int err, int from);
+typedef int  (*t_fd_event)(int llid, int fd);
+typedef void (*t_fd_connect)(int llid, int llid_new);
 
 
 #define NAT_IP_CISCO  "172.17.0.1"
 #define NAT_IP_GW     "172.17.0.2"
 #define NAT_IP_DNS    "172.17.0.3"
-#define NAT_MAC_CISCO "42:CA:FE:13:07:01"
-#define NAT_MAC_GW    "42:CA:FE:13:07:02"
-#define NAT_MAC_DNS   "42:CA:FE:13:07:03"
+#define NAT_MAC_CISCO "42:0A:0E:13:07:01"
+#define NAT_MAC_GW    "42:0A:0E:13:07:02"
+#define NAT_MAC_DNS   "42:0A:0E:13:07:03"
 
 
-#define MAX_OVS_BRIDGES    500
-#define MAX_OVS_PORTS      100 
+#define MAX_VM             1000
+#define MAX_OVS_BRIDGES    1500
+#define MAX_OVS_PORTS      MAX_VM
 #define MAX_PHY            16
 #define MAX_PCI            16
-#define MAX_VM             100
-#define MAX_DPDK_VM        12
+#define MAX_ETH_VM         32
 
 #define MAX_TRAF_ENDPOINT 4
 
@@ -108,7 +135,7 @@
 #define VM_CONFIG_FLAG_WITH_PXE        0x08000
 
 #define VM_FLAG_DERIVED_BACKING        0x10000
-#define VM_FLAG_IS_INSIDE_CLOONIX      0x20000
+#define VM_FLAG_IS_INSIDE_CLOON      0x20000
 #define VM_FLAG_CLOONIX_AGENT_PING_OK  0x80000
 
 #define DIR_UMID "umid"
@@ -120,7 +147,49 @@
 
 #define MSG_DIGEST_LEN 32
 
+#define NO_DEFINED_VALUE "NO_DEFINED_VALUE_ITEM"
+#define DTACH_SOCK "dtach"
+#define DOORS_CTRL_SOCK "doors_ctrl_sock"
+#define SPICE_SOCK "spice_sock"
+#define CLOONIX_SWITCH "cloonix_switch"
+#define XWY_TRAFFIC_SOCK "xwy_traf"
+#define XWY_CONTROL_SOCK "xwy_ctrl"
+#define SUID_POWER_SOCK_DIR "suid_power"
+#define SNF_DIR "snf"
+#define NAT_DIR "nat"
+#define C2C_DIR "c2c"
+#define CNT_DIR "cnt"
 
+#define MAX_STATS_ITEMS 30
+
+#define MAX_LAN           (0x5FFF + 2)
+#define MAX_FD_QTY         5000
+#define MAX_BUF_SIZE       2000
+#define MAX_ITEM_LEN       200
+#define MAX_TYPE_LEN       32
+#define MAX_BIG_BUF        20000 
+#define MAX_PRINT_LEN      10000
+#define HALF_SEC_BEAT      50 
+#define MAX_ARGC_ARGV      100
+#define MAX_INTF_MNGT      100
+#define SPY_TX "spy_tx"
+#define SPY_RX "spy_rx"
+
+#define MAX_LIST_COMMANDS_LEN     256
+#define MAX_LIST_COMMANDS_QTY     5000
+
+#define ROOTFS_STATIC_PREFIX "rootfs_"
+#define NVRAM_STATIC_PREFIX "nvram_"
+
+#define MAX_PEER_MAC 50
+                                                                                
+#define OVS_BRIDGE_PORT "_k_"
+#define OVS_BRIDGE   "_b_"
+
+#define SBIN_IP "/sbin/ip"
+#define USR_BIN_PRLIMIT "/usr/bin/prlimit"
+#define BASE_NAMESPACE "cloonix"
+#define PATH_NAMESPACE "/run/netns/"
 
 enum{
   doors_type_min = 100,
@@ -196,7 +265,7 @@ typedef struct t_topo_kvm
   int  cpu;
   int  mem;
   int  nb_tot_eth;
-  t_eth_table eth_table[MAX_DPDK_VM];
+  t_eth_table eth_table[MAX_ETH_VM];
   int  vm_id;
   char linux_kernel[MAX_NAME_LEN];
   char rootfs_input[MAX_PATH_LEN];
@@ -213,15 +282,17 @@ typedef struct t_topo_cnt
 {
   char name[MAX_NAME_LEN];
   int  ping_ok;
+  int  vm_id;
   int  nb_tot_eth;
-  t_eth_table eth_table[MAX_DPDK_VM];
+  t_eth_table eth_table[MAX_ETH_VM];
   char image[MAX_PATH_LEN];
+  char customer_launch[MAX_PATH_LEN];
 } t_topo_cnt;
 /*---------------------------------------------------------------------------*/
-typedef struct t_topo_d2d
+typedef struct t_topo_c2c
   {
   char name[MAX_NAME_LEN];
-  char dist_cloonix[MAX_NAME_LEN];
+  char dist_cloon[MAX_NAME_LEN];
   char lan[MAX_NAME_LEN];
   int local_is_master;
   uint32_t dist_tcp_ip;
@@ -232,8 +303,7 @@ typedef struct t_topo_d2d
   uint16_t dist_udp_port;
   int tcp_connection_peered;
   int udp_connection_peered;
-  int ovs_lan_attach_ready;
-  } t_topo_d2d;
+  } t_topo_c2c;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_tap
   {
@@ -300,8 +370,8 @@ typedef struct t_topo_info
   int nb_kvm;
   t_topo_kvm *kvm;
 
-  int nb_d2d;
-  t_topo_d2d *d2d;
+  int nb_c2c;
+  t_topo_c2c *c2c;
 
   int nb_nat;
   t_topo_nat *nat;
@@ -330,5 +400,103 @@ typedef struct t_topo_info
 
 
 
+enum
+  {
+  bnd_rpct_min = 0,
+  bnd_rpct_sigdiag_msg,
+  bnd_rpct_poldiag_msg,
+  bnd_rpct_cli_req,
+  bnd_rpct_cli_resp,
+  bnd_rpct_kil_req,
+  bnd_rpct_pid_req,
+  bnd_rpct_pid_resp,
+  bnd_rpct_hop_evt_sub,
+  bnd_rpct_hop_evt_unsub,
+  bnd_rpct_hop_evt_msg,
+  bnd_rpct_max,
+  };
 
+/*---------------------------------------------------------------------------*/
+#define MUSIGDIAG_MSG_O  "<sigdiag_msg>\n"\
+                         "  <tid> %d </tid>\n"
+
+#define MUSIGDIAG_MSG_I "<sigdiag_msg_delimiter>%s</sigdiag_msg_delimiter>\n"
+
+#define MUSIGDIAG_MSG_C  "</sigdiag_msg>"
+/*---------------------------------------------------------------------------*/
+#define MUPOLDIAG_MSG_O  "<poldiag_msg>\n"\
+                         "  <tid> %d </tid>\n"
+
+#define MUPOLDIAG_MSG_I "<poldiag_msg_delimiter>%s</poldiag_msg_delimiter>\n"
+
+#define MUPOLDIAG_MSG_C  "</poldiag_msg>"
+/*---------------------------------------------------------------------------*/
+#define HOP_PID_REQ   "<hop_req_pid>\n"\
+                       "  <tid> %d </tid>\n"\
+                       "  name:%s num:%d \n"\
+                       "</hop_req_pid>"
+/*---------------------------------------------------------------------------*/
+#define HOP_PID_RESP  "<hop_resp_pid>\n"\
+                       "  <tid> %d </tid>\n"\
+                       "  name:%s num:%d toppid:%d pid:%d \n"\
+                       "</hop_resp_pid>"
+/*---------------------------------------------------------------------------*/
+#define HOP_KIL_REQ   "<hop_req_kil>\n"\
+                       "  <tid> %d </tid>\n"\
+                       "</hop_req_kil>"
+/*---------------------------------------------------------------------------*/
+#define HOP_EVT_O "<hop_event_txt>\n"\
+                  "  <tid> %d </tid>\n"\
+                  "  <flags_hop> %d </flags_hop>\n"
+
+#define HOP_EVT_C "</hop_event_txt>"
+/*---------------------------------------------------------------------------*/
+#define HOP_FREE_TXT  "  <hop_free_txt_joker>%s</hop_free_txt_joker>\n"
+/*---------------------------------------------------------------------------*/
+#define HOP_EVT_SUB "<hop_evt_sub>\n"\
+                    "  <tid> %d </tid>\n"\
+                    "  <flags_hop> %d </flags_hop>\n"\
+                    "</hop_evt_sub>"
+/*---------------------------------------------------------------------------*/
+#define HOP_EVT_UNSUB "<hop_evt_unsub>\n"\
+                      "  <tid> %d </tid>\n"\
+                      "</hop_evt_unsub>"
+
+/*---------------------------------------------------------------------------*/
+void rpct_send_sigdiag_msg(int llid, int tid, char *line);
+void rpct_send_poldiag_msg(int llid, int tid, char *line);
+void rpct_recv_sigdiag_msg(int llid, int tid, char *line);
+void rpct_recv_poldiag_msg(int llid, int tid, char *line);
+/*---------------------------------------------------------------------------*/
+void rpct_send_pid_req(int llid, int tid, char *name, int num);
+void rpct_recv_pid_req(int llid, int tid, char *name, int num);
+/*---------------------------------------------------------------------------*/
+void rpct_send_kil_req(int llid, int tid);
+void rpct_recv_kil_req(int llid, int tid);
+/*---------------------------------------------------------------------------*/
+void rpct_send_pid_resp(int llid, int tid,
+                        char *name, int num, int toppid, int pid);
+void rpct_recv_pid_resp(int llid, int tid,
+                        char *name, int num, int toppid, int pid);
+/*---------------------------------------------------------------------------*/
+void rpct_send_hop_sub(int llid, int tid, int flags_hop);
+void rpct_recv_hop_sub(int llid, int tid, int flags_hop);
+/*---------------------------------------------------------------------------*/
+void rpct_send_hop_unsub(int llid, int tid);
+void rpct_recv_hop_unsub(int llid, int tid);
+/*---------------------------------------------------------------------------*/
+void rpct_send_hop_msg(int llid, int tid,
+                      int flags_hop, char *txt);
+void rpct_recv_hop_msg(int llid, int tid,
+                      int flags_hop, char *txt);
+/*---------------------------------------------------------------------------*/
+void rpct_hop_print_add_sub(int llid, int tid, int flags_hop);
+void rpct_hop_print_del_sub(int llid);
+void rpct_hop_print(int flags_hop, const char * format, ...);
+/*---------------------------------------------------------------------------*/
+typedef void (*t_rpct_tx)(int llid, int len, char *buf);
+int  rpct_decoder(int llid, int len, char *str_rx);
+void rpct_redirect_string_tx(t_rpct_tx rpc_tx);
+void rpct_init(t_rpct_tx rpc_tx);
+/****************************************************************************/
 

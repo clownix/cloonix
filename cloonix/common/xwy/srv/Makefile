@@ -1,4 +1,4 @@
-SOURCES = main_srv.c x11_fwd.c scp_srv.c tools.c cloonix.c \
+SOURCES = main_srv.c x11_fwd.c scp_srv.c tools.c cloon.c \
           pty_fork.c first_x11_magic.c
 CFLAGS += -I../libmdl -g 
 LDFLAGS += -L../libmdl -lmdl -lutil -lpthread

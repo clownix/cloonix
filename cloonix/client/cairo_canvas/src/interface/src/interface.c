@@ -39,6 +39,7 @@
 #include "menu_dialog_cnt.h"
 #include "menu_dialog_kvm.h"
 
+void layout_set_ready_for_send(void);
 int check_before_start_launch(char **argv);
 void wireshark_kill(char *name);
 
@@ -53,6 +54,12 @@ typedef struct t_vm_config
 } t_vm_config;
 /*---------------------------------------------------------------------------*/
 
+typedef struct t_enqueue_event
+{
+  int nb_endp;
+  t_eventfull_endp *endp;
+} t_enqueue_event;
+
 /*--------------------------------------------------------------------------*/
 static t_topo_info *current_topo = NULL;
 static int g_not_first_callback_topo;
@@ -64,27 +71,25 @@ static char *g_glob_path;
 
 char *get_doors_client_addr(void);
 
-void layout_set_ready_for_send(void);
 
 
 /****************************************************************************/
-static void d2d_update_bitem(t_topo_info *topo)
+static void c2c_update_bitem(t_topo_info *topo)
 {
   int i;
-  t_topo_d2d *cur;
+  t_topo_c2c *cur;
   t_bank_item *bitem;
-  for (i=0; i<topo->nb_d2d; i++)
+  for (i=0; i<topo->nb_c2c; i++)
     {
-    cur = &(topo->d2d[i]);
+    cur = &(topo->c2c[i]);
     bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
-    if ((bitem) && (bitem->pbi.endp_type == endp_type_d2d))
+    if ((bitem) && (bitem->pbi.endp_type == endp_type_c2c))
       {
-      memcpy(&(bitem->pbi.pbi_sat->topo_d2d), cur, sizeof(t_topo_d2d));
+      memcpy(&(bitem->pbi.pbi_sat->topo_c2c), cur, sizeof(t_topo_c2c));
       }
     }  
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void a2b_update_bitem(t_topo_info *topo)
@@ -117,8 +122,6 @@ int get_vm_id_from_topo(char *name)
   return found;
 }
 /*--------------------------------------------------------------------------*/
-
-
 
 /*****************************************************************************/
 static int start_launch(void *ptr)
@@ -199,8 +202,9 @@ void launch_xterm_double_click_cnt(char *name_vm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void callback_topo(int tid, t_topo_info *topo)
+static void timer_callback_topo(void *data)
 {
+  t_topo_info *topo = (t_topo_info *) data;
   t_topo_differences *diffs = NULL;
   if ((!current_topo) || (topo_compare(topo, current_topo)))
     {
@@ -209,7 +213,7 @@ void callback_topo(int tid, t_topo_info *topo)
     current_topo = topo_duplicate(topo);
     process_all_diffs(diffs);
     topo_free_diffs(diffs);
-    d2d_update_bitem(topo);
+    c2c_update_bitem(topo);
     a2b_update_bitem(topo);
     }
   if (g_not_first_callback_topo == 0)
@@ -219,6 +223,15 @@ void callback_topo(int tid, t_topo_info *topo)
     }
   update_topo_phy(topo->nb_info_phy, topo->info_phy);
   update_topo_bridges(topo->nb_bridges, topo->bridges);
+  topo_free_topo(topo);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void callback_topo(int tid, t_topo_info *topo)
+{
+  t_topo_info *ntopo = topo_duplicate(topo);
+  clownix_timeout_add(1, timer_callback_topo, (void *) ntopo, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -237,14 +250,32 @@ static void slowperiodic_img_cb(int nb, t_slowperiodic *spic)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void eventfull_cb(int nb_endp, t_eventfull_endp *endp)
+static void timer_enqueue_eventfull(void *data)
 {
+  t_enqueue_event *evt = (t_enqueue_event *) data;
+  int nb_endp = evt->nb_endp;
+  t_eventfull_endp *endp = evt->endp;
   eventfull_has_arrived();
   eventfull_arrival(nb_endp, endp);
-  eventfull_periodic_work();
+  clownix_free(evt->endp, __FUNCTION__);
+  clownix_free(evt, __FUNCTION__);
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void eventfull_cb(int nb_endp, t_eventfull_endp *endp)
+{
+  t_enqueue_event *evt;
+  int len = nb_endp * sizeof(t_eventfull_endp);;
+  evt = (t_enqueue_event *) clownix_malloc(sizeof(t_enqueue_event), 5);
+  memset(evt, 0, sizeof(t_enqueue_event));
+  evt->endp = (t_eventfull_endp *) clownix_malloc(len, 5);
+  memset(evt->endp, 0, len);
+  evt->nb_endp = nb_endp;
+  memcpy(evt->endp, endp, len);
+  clownix_timeout_add(1, timer_enqueue_eventfull, (void *) evt, NULL, NULL);
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void topo_small_event_cb(int tid, char *name, 
@@ -254,30 +285,11 @@ static void topo_small_event_cb(int tid, char *name,
       (evt == vm_evt_qmp_conn_ko)       ||
       (evt == vm_evt_cloonix_ga_ping_ok)||
       (evt == vm_evt_cloonix_ga_ping_ko))
+    {
     ping_enqueue_evt(name, evt);
+    }
   else
     KOUT(" ");
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
-void timer_topo_subscribe(void *data)
-{
-  client_topo_sub(0,callback_topo);
-  client_topo_small_event_sub(0, topo_small_event_cb);
-  layout_set_ready_for_send();
-  client_req_eventfull(eventfull_cb);
-  client_req_slowperiodic(slowperiodic_qcow2_cb, slowperiodic_img_cb);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void timer_layout_subscribe(void *data)
-{
-  send_layout_event_sub(get_clownix_main_llid(), 0, 1);
-  glib_prepare_rx_tx(get_clownix_main_llid());
-  clownix_timeout_add(20, timer_topo_subscribe, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -293,8 +305,25 @@ void timer_client_is_connected(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void interface_switch_init(char *path, char *password)
+void timer_topo_subscribe(void *data)
+{
+  client_topo_small_event_sub(0, topo_small_event_cb);
+  layout_set_ready_for_send();
+  client_req_eventfull(eventfull_cb);
+  client_req_slowperiodic(slowperiodic_qcow2_cb, slowperiodic_img_cb);
+}
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+void interface_topo_subscribe(void)
+{
+  client_topo_sub(0, callback_topo);
+  clownix_timeout_add(150, timer_topo_subscribe, NULL, NULL, NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void interface_switch_init(char *path, char *password)
 {
   g_not_first_callback_topo = 0;
   glob_nb_vm_config = 0;
@@ -310,7 +339,6 @@ void interface_switch_init(char *path, char *password)
   clownix_timeout_add(300, timer_client_is_connected, NULL, NULL, NULL);
   while(!client_is_connected())
     msg_mngt_loop_once();
-  clownix_timeout_add(1, timer_layout_subscribe, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -44,15 +44,12 @@
 #include "automates.h"
 #include "llid_trace.h"
 #include "cdrom_creation_clone.h"
-#include "qmonitor.h"
 #include "qmp.h"
-#include "qhvc0.h"
 #include "doorways_mngt.h"
 #include "stats_counters.h"
 #include "stats_counters_sysinfo.h"
-#include "dpdk_ovs.h"
-#include "dpdk_kvm.h"
-#include "dpdk_nat.h"
+#include "ovs.h"
+#include "kvm.h"
 #include "suid_power.h"
 
 
@@ -85,32 +82,24 @@ typedef struct t_vm_building
 static void death_of_rmdir_clone(void *data, int status, char *name)
 {
   t_action_rm_dir *act = (t_action_rm_dir *) data;
-  int pid, result;
+  int pid;
   t_vm *vm = find_vm_with_id(act->vm_id);
   if (vm)
     {
     pid = suid_power_get_pid(vm->kvm.vm_id);
     if (pid)
-      {
-      suid_power_kill_vm(vm->kvm.vm_id);
-      }
+      KERR("ERROR %s %d", name, act->vm_id);
     if (cfg_unset_vm(vm) != act->vm_id)
       KOUT(" ");
-    cfg_free_vm_id(act->vm_id);
-    event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+    cfg_free_obj_id(act->vm_id);
+    cfg_hysteresis_send_topo_info();
     }
   if (cfg_is_a_zombie(act->name))
-    {
-    pid = suid_power_get_pid(act->vm_id);
-    if (pid)
-      KERR("%s %d", name, act->vm_id);
     cfg_del_zombie(act->name);
-    result = status;
-    }
   else
     KOUT(" ");
-  event_print("End erasing %s data status %d", act->name, result);
-  event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+  event_print("End erasing %s data status %d", act->name, status);
+  cfg_hysteresis_send_topo_info();
   dec_lock_self_destruction_dir();
   clownix_free(act, __FUNCTION__);
 }
@@ -146,8 +135,11 @@ static int rmdir_clone(void *data)
 static void action_rm_dir_timed(void *data)
 {
   t_action_rm_dir *act = (t_action_rm_dir *) data;
-  pid_clone_launch(rmdir_clone, death_of_rmdir_clone, NULL,
-                   (void *) act, (void *) act, NULL, act->name, -1, 1);
+  if(!suid_power_get_pid(act->vm_id))
+    pid_clone_launch(rmdir_clone, death_of_rmdir_clone, NULL,
+                     (void *) act, (void *) act, NULL, act->name, -1, 1);
+  else
+    clownix_timeout_add(100, action_rm_dir_timed, (void *) act, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -160,7 +152,7 @@ static void timeout_erase_dir_zombie(int vm_id, char *name)
   memset(act, 0, sizeof(t_action_rm_dir));
   act->vm_id = vm_id; 
   strcpy(act->name, name);
-  clownix_timeout_add(200, action_rm_dir_timed, (void *) act, NULL, NULL);
+  clownix_timeout_add(100, action_rm_dir_timed, (void *) act, NULL, NULL);
   inc_lock_self_destruction_dir();
 }
 /*---------------------------------------------------------------------------*/
@@ -311,8 +303,8 @@ static void death_of_mkdir_clone(void *data, int status, char *name)
     if (!run_linux_virtual_machine(vm_building->llid, vm_building->tid,
                                    vm_building->kvm.name, vm, err))
       {
-      dpdk_kvm_add_whole_vm(vm->kvm.name, vm->kvm.nb_tot_eth, vm->kvm.eth_table);
-      event_subscriber_send(sub_evt_topo, cfg_produce_topo_info());
+      kvm_add_whole_vm(vm->kvm.name, vm->kvm.nb_tot_eth, vm->kvm.eth_table);
+      cfg_hysteresis_send_topo_info();
       }
     else
       {
@@ -365,24 +357,13 @@ void machine_death( char *name, int error_death)
     if ((error_death) && 
         (error_death != error_death_qmp) &&
         (error_death != error_death_nopid) &&
-        (error_death != error_death_pid_diseapeared) &&
-        (error_death != error_death_qmonitor))
+        (error_death != error_death_pid_diseapeared))
       KERR("%s %s %d ", __FUNCTION__, vm->kvm.name, error_death);
-    else if ((error_death == error_death_noovs) ||
-             (error_death == error_death_noovstime) ||
-             (error_death == error_death_noovseth))
-      {
-      KERR("%s REQ KILL %s %d ", __FUNCTION__, vm->kvm.name, error_death);
-      suid_power_kill_vm(vm->kvm.vm_id);
-      }
+    suid_power_kill_vm(vm->kvm.vm_id);
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
       {
-      dpdk_nat_cisco_del(name);
       }
     doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
-    qhvc0_end_qemu_unix(vm->kvm.name);
-    qmonitor_end_qemu_unix(vm->kvm.name);
-    qmp_request_qemu_halt(vm->kvm.name, 0, 0);
     if (vm->pid_of_cp_clone)
       {
       KERR("CP ROOTFS SIGKILL %s, PID %d", vm->kvm.name, vm->pid_of_cp_clone);

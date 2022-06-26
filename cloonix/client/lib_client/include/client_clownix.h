@@ -22,7 +22,6 @@ typedef void (*t_evt_stats_sysinfo_cb)(int tid, char *name,
                                        t_stats_sysinfo *stats, 
                                        char *df, int status);
 
-typedef void (*t_qmp_cb)(int tid, char *name, char *line, int status);
 typedef void (*t_list_commands_cb)(int tid, int qty, t_list_commands *list);
 typedef void (*t_progress_txt_cb)(int status, int last, char *txt);
 typedef void (*t_end_cb)(int tid, int status, char *err);
@@ -64,20 +63,20 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
                    char *root_fs, char *install_cdrom, char *added_cdrom,
                    char *added_disk, char *p9_host_share);
 
-void client_dpdk_ovs_cnf(int tid, t_end_cb cb, int lcore, int mem, int cpu);
-void client_sav_vm(int tid, t_end_cb cb, char *nm, int type, char *new_dir_path);
-void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest);
-void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest);
+void client_sav_vm(int tid, t_end_cb cb, char *nm, char *new_dir_path);
+void client_reboot_vm(int tid, t_end_cb cb, char *nm);
 
-void client_add_d2d(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
-                    char *slave_cloonix, uint32_t ip, uint16_t port,
+void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
+                    char *slave_cloon, uint32_t ip, uint16_t port,
                     char *passwd, uint32_t udp_ip);
+
+void client_add_snf(int tid, t_end_cb cb, char *name, int num, int on);
 
 void client_add_a2b(int tid, t_end_cb cb, char *name);
 void client_cnf_a2b(int tid, t_end_cb cb, char *name,
                     int dir, int type, int val);
 
-void client_cnf_xyx(int tid, t_end_cb cb, char *name,
+void client_cnf_c2c(int tid, t_end_cb cb, char *name,
                     int type, uint8_t *mac);
 
 void client_cnf_nat(int tid, t_end_cb cb, char *name, char *cmd);
@@ -130,10 +129,6 @@ int cmd_ftopo_recv(char *topo_dir, t_progress_txt_cb pcb);
 int cmd_topo_send(char *topo_dir, t_progress_txt_cb pcb);
 
 int set_response_callback(t_end_cb cb, int tid);
-
-void set_qmp_callback(t_qmp_cb cb);
-void client_qmp_sub(int tid, char *name);
-void client_qmp_snd(int tid, char *name, char *msg);
 
 
 int llid_client_doors_connect(char *path, char *passwd, 

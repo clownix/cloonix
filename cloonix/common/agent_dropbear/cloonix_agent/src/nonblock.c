@@ -93,8 +93,8 @@ static int do_write(int fd, t_elem *elem)
   int len, result = 0;
   char *buf = elem->buf + elem->len_done;
   int len_to_do = elem->len - elem->len_done;
-  if (len_to_do < 0)
-    KOUT(" ");
+  if (len_to_do <= 0)
+    KOUT("%d ", len_to_do);
   len = write(fd, buf, len_to_do);
   if (len != len_to_do)
     {

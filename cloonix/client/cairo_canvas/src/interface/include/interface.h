@@ -15,22 +15,22 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-typedef struct t_d2d_req_info
+typedef struct t_c2c_req_info
 {
   char name[MAX_NAME_LEN];
   uint32_t loc_udp_ip;
-  char dist_cloonix[MAX_NAME_LEN];
+  char dist_cloon[MAX_NAME_LEN];
   char dist_passwd[MSG_DIGEST_LEN];
   uint32_t dist_tcp_ip;
   uint16_t dist_tcp_port;
   uint32_t dist_udp_ip;
-} t_d2d_req_info;
+} t_c2c_req_info;
 
 void to_cloonix_switch_create_node(int is_cnt, double x, double y,
                                    double *tx, double *ty);
 /*--------------------------------------------------------------------------*/
 void to_cloonix_switch_create_sat(char *name, int type,
-                                  t_d2d_req_info *d2d, 
+                                  t_c2c_req_info *c2c, 
                                   double x, double y);
 /*--------------------------------------------------------------------------*/
 void to_cloonix_switch_create_lan(char *lan, double x, double y);
@@ -47,7 +47,7 @@ void to_cloonix_switch_delete_edge(char *name, int num, char *lan);
 /*--------------------------------------------------------------------------*/
 void from_cloonix_switch_create_cnt(t_topo_cnt *cnt);
 void from_cloonix_switch_create_node(t_topo_kvm *kvm);
-void from_cloonix_switch_create_d2d(t_topo_d2d *d2d);
+void from_cloonix_switch_create_c2c(t_topo_c2c *c2c);
 void from_cloonix_switch_create_a2b(t_topo_a2b *a2b);
 void from_cloonix_switch_create_tap(t_topo_tap *tap);
 void from_cloonix_switch_create_nat(t_topo_nat *nat);

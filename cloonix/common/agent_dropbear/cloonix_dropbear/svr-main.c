@@ -39,7 +39,7 @@ static int listensockets(void)
   int result = cloonix_socket_listen_unix(svr_opts.unix_dropbear_sock);
   return result;
 }
-/*CLOONIX*/
+/*CLOON*/
 
 static void sigchld_handler(int dummy);
 //static void sigsegv_handler(int);

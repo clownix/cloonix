@@ -33,7 +33,7 @@ typedef struct t_custom_vm
   int  cpu;
   int  mem;
   int  nb_tot_eth;
-  t_eth_table eth_tab[MAX_DPDK_VM];
+  t_eth_table eth_tab[MAX_ETH_VM];
 } t_custom_vm;
 
 int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug);

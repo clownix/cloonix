@@ -65,10 +65,10 @@ enum
 #define QEMU_AARCH64_EXE "qemu-system-aarch64"
 #define QEMU_IMG "qemu-img"
 #define DIR_CLOONIX_DISKS "disks"
-#define DIR_DPDK "dpdk"
+#define DIR_OVS "ovs"
 #define QMONITOR_UNIX "mon"
 #define QMP_UNIX "qmp"
-#define QHVCO_UNIX "qhvc0"
+#define QGA_UNIX "qga"
 #define QBACKDOOR_UNIX "qdagent"
 #define QBACKDOOR_HVCO_UNIX "qdhvc"
 

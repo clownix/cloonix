@@ -143,9 +143,9 @@ static int get_driver_mac_pci(t_topo_info_phy *phy)
   FILE *fh;
   sprintf(path, "/sys/class/net/%s/device/uevent", phy->name);
   fh = fopen(path, "r");
+  memset(devtype, 0, MAX_NAME_LEN);
   if (fh)
     {
-    memset(devtype, 0, MAX_NAME_LEN);
     while (fgets(line, MAX_PATH_LEN-1, fh) != NULL)
       {
       if (sscanf(line, "DRIVER=%s", ident) == 1)
@@ -205,6 +205,39 @@ static int get_driver_mac_pci(t_topo_info_phy *phy)
         (strlen(phy->drv) != 0) &&
         (strlen(phy->mac) != 0))
       result = 0;
+    }
+  else
+    {
+    sprintf(path, "/sys/class/net/%s/uevent", phy->name);
+    fh = fopen(path, "r");
+    if (fh)
+      {
+      while (fgets(line, MAX_PATH_LEN-1, fh) != NULL)
+        {
+        if (sscanf(line, "DEVTYPE=%s", ident) == 1)
+          strncpy(devtype, ident, MAX_NAME_LEN-1);
+        }
+      fclose(fh);
+      }
+    if (strlen(devtype))
+      {
+      strcpy(phy->vendor, devtype);
+      strcpy(phy->device, devtype);
+      strcpy(phy->pci, devtype);
+      strcpy(phy->drv, devtype);
+      sprintf(path, "/sys/class/net/%s/address", phy->name);
+      fh = fopen(path, "r");
+      if (fh)
+        {
+        if (fgets(phy->mac, MAX_NAME_LEN-1, fh) == NULL)
+          KERR("%s", phy->name);
+        else
+          result = 0;
+        fclose(fh);
+        }
+      else
+        KERR("%s", path);
+      }
     }
   return result;
 }

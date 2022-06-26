@@ -73,7 +73,7 @@ static void win_size_chg(int sig)
   char buf[1];
   buf[0] = 'w';
   if (write(g_win_chg_write_fd, buf, 1) == -1)
-    KERR("Unable to write to g_win_chg_write_fd: %s", strerror(errno));
+    XERR("Unable to write to g_win_chg_write_fd: %s", strerror(errno));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -84,7 +84,7 @@ void xcli_send_msg_type_x11_connect_ack(int cli_idx, char *txt)
   t_msg *msg = (t_msg *) wrap_malloc(len);
   int srv_idx = x11_cli_get_srv_idx(cli_idx);
   if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-    KOUT("%d %d", srv_idx, cli_idx);
+    XOUT("%d %d", srv_idx, cli_idx);
   mdl_set_header_vals(msg, g_randid, msg_type_x11_connect_ack,
                       fd_type_cli, srv_idx, cli_idx);
   msg->len = sprintf(msg->buf, "%s", txt) + 1;
@@ -117,7 +117,7 @@ static void send_msg_type_open_pty(int action, uint32_t randid,
   if (cmd)
     {
     if (strlen(cmd) > MAX_MSG_LEN - 1)
-      KOUT("%d", strlen(cmd));
+      XOUT("%d", strlen(cmd));
     if (action == action_cmd)
       type = msg_type_open_cmd;
     else
@@ -191,7 +191,7 @@ static void restore_term(void)
 static void config_term(void)
 {
   if (atexit(restore_term))
-    KOUT("%s", strerror(errno));
+    XOUT("%s", strerror(errno));
   memset(&g_cur_term, 0, sizeof(struct termios));
   g_cur_term.c_iflag |= IGNPAR;
   g_cur_term.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL);
@@ -211,7 +211,7 @@ static void rx_bash_err_cb (void *ptr, int llid, int fd, char *err)
 {
   (void) ptr;
   (void) fd;
-  KOUT("%s", err);
+  XOUT("%s", err);
   exit(0);
 }
 /*--------------------------------------------------------------------------*/
@@ -225,13 +225,13 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
   mdl_get_header_vals(msg, &randid, &type, &from, &srv_idx, &cli_idx);
   DEBUG_DUMP_RXMSG(msg);
   if (randid != xcli_get_randid())
-    KERR("%08X %08X", randid, xcli_get_randid());
+    XERR("%08X %08X", randid, xcli_get_randid());
   else switch(type)
     {
 
     case msg_type_data_cli_pty:
       if (low_write_raw(1, msg, 0))
-        KOUT(" ");
+        XOUT(" ");
       break;
 
     case msg_type_end_cli_pty:
@@ -243,7 +243,7 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
 
     case msg_type_x11_init:
       if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-        KOUT("%d %s", srv_idx, msg->buf);
+        XOUT("%d %s", srv_idx, msg->buf);
       x11_init_resp(srv_idx, msg);
       send_msg_type_open_pty(g_action, g_randid, srv_idx, g_bash_cmd);
       if ((g_action == action_bash) || 
@@ -251,19 +251,19 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
           (g_action == action_cmd))
         send_msg_type_win_size(g_randid);
       else
-        KOUT("%d", g_action);
+        XOUT("%d", g_action);
       break;
 
     case msg_type_x11_info_flow:
     case msg_type_x11_connect:
     case msg_type_randid_associated_ack:
       if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-        KOUT("%d %d", srv_idx, cli_idx);
+        XOUT("%d %d", srv_idx, cli_idx);
       rx_x11_msg_cb(randid, llid, type, srv_idx, cli_idx, msg);
       break;
 
     default:
-      KOUT("%ld", type);
+      XOUT("%ld", type);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -277,7 +277,7 @@ static void zero_input_rx(void)
   msg = (t_msg *) wrap_malloc(len);
   len = wrap_read_zero(0, msg->buf, MAX_MSG_LEN);
   if (len <= 0)
-    KOUT(" ");
+    XOUT(" ");
   mdl_set_header_vals(msg, g_randid, msg_type_data_pty, fd_type_pty,0,0);
   msg->len = len;
   mdl_prepare_header_msg(get_write_seqnum(), msg);
@@ -291,7 +291,7 @@ static void win_chg_input_rx(int win_chg_fd)
 {
   char buf[16];
   if (read(win_chg_fd, buf, sizeof(buf)) == -1)
-    KERR("Could not read from win_chg_fd: %s", strerror(errno));
+    XERR("Could not read from win_chg_fd: %s", strerror(errno));
   send_msg_type_win_size(g_randid);
 }
 /*--------------------------------------------------------------------------*/
@@ -299,7 +299,7 @@ static void win_chg_input_rx(int win_chg_fd)
 /****************************************************************************/
 static void cli_warn(int sig)
 {
-  KERR("%d", sig);
+  XERR("%d", sig);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -318,10 +318,10 @@ static int setup_win_pipe(int *win_chg_fd)
     config_term();
 
     if (signal(SIGPIPE, cli_warn) == SIG_ERR)
-      KERR("%s", strerror(errno));
+      XERR("%s", strerror(errno));
 
     if (signal(SIGWINCH, win_size_chg) == SIG_ERR)
-      KERR("%s", strerror(errno));
+      XERR("%s", strerror(errno));
     result = 0;
     }
   return result;
@@ -357,7 +357,7 @@ void xcli_send_randid_associated_end(int llid, int tid, int type, int cli_idx)
   int srv_idx = x11_cli_get_srv_idx(cli_idx);
   if (srv_idx < 0)
     {
-    KERR("%d", cli_idx);
+    XERR("%d", cli_idx);
     g_sock_fd_ass_close(cli_idx);
     }
   else
@@ -392,10 +392,10 @@ void xcli_fct_before_epoll(int epfd)
       win_chg_fd = g_win_chg_fd_epev->data.fd;
       g_zero_fd_epev->events = EPOLLIN;
       if (epoll_ctl(epfd, EPOLL_CTL_MOD, zero_fd, g_zero_fd_epev))
-        KOUT(" ");
+        XOUT(" ");
       g_win_chg_fd_epev->events = EPOLLIN;
       if (epoll_ctl(epfd, EPOLL_CTL_MOD, win_chg_fd, g_win_chg_fd_epev))
-        KOUT(" ");
+        XOUT(" ");
       }
     x11_fd_epollin_epollout_setup();
     }
@@ -457,7 +457,7 @@ int xcli_fct_after_epoll(int nb, struct epoll_event *events)
       result += x11_fd_epollin_epollout_action(evts, fd);
       }
     if (low_write_fd(1))
-      KOUT(" ");
+      XOUT(" ");
     }
   return result;
 }
@@ -497,7 +497,7 @@ void xcli_init(int epfd, int llid, int tid, int type,
   mdl_open(1, fd_type_one, wrap_write_one, wrap_read_kout);
   send_msg_type_randid(g_randid);
   if (clearenv())
-    KOUT("Bad Clear ENV ");
+    XOUT("Bad Clear ENV ");
   if ((action == action_bash) ||
       (action == action_dae)  ||
       (action == action_cmd))
@@ -510,7 +510,7 @@ void xcli_init(int epfd, int llid, int tid, int type,
     else
       {
       if (setup_win_pipe(&win_chg_fd))
-        KOUT(" ");
+        XOUT(" ");
       g_win_chg_fd_epev = wrap_epoll_event_alloc(epfd, win_chg_fd, 2);
       }
     }
@@ -523,7 +523,7 @@ void xcli_init(int epfd, int llid, int tid, int type,
     scp_send_put(llid, tid, type, g_sock_fd_tx, src, dst);
     }
   else
-    KOUT("%d", action);
+    XOUT("%d", action);
 }
 /*--------------------------------------------------------------------------*/
 

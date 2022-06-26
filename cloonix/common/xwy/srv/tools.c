@@ -34,7 +34,7 @@ int tools_port_already_in_use(int port)
   struct sockaddr_in serv_addr;
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0)
-    KOUT("%s", strerror(errno));
+    XOUT("%s", strerror(errno));
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -43,10 +43,10 @@ int tools_port_already_in_use(int port)
     {
     result = 1;
     if (errno != EADDRINUSE)
-      KERR("%s", strerror(errno));
+      XERR("%s", strerror(errno));
     }
   if (close (sockfd) < 0 )
-    KOUT("%s", strerror(errno));
+    XOUT("%s", strerror(errno));
   return result;
 }
 /*---------------------------------------------------------------------------*/

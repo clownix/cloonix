@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int ifdev_get_intf_hwaddr(char *intf, char *mac);
 int ifdev_set_intf_flags_iff_up_down(char *intf, int up);
 void ifdev_disable_offloading(char *intf);
 /*---------------------------------------------------------------------------*/

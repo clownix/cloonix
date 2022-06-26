@@ -41,14 +41,14 @@
 #include "hidden_visible_edge.h"
 #include "menu_dialog_kvm.h"
 #include "menu_dialog_cnt.h"
-#include "menu_dialog_d2d.h"
+#include "menu_dialog_c2c.h"
 #include "bdplot.h"
 
 
+int get_cloonix_rank(void);
 GtkWidget *get_main_window(void);
 
 static char g_sav_whole[MAX_PATH_LEN];
-static char g_sav_derived[MAX_PATH_LEN];
 int format_phy_info(char *name, char *txt);
 
 
@@ -71,8 +71,6 @@ void call_cloonix_interface_edge_delete(t_bank_item *bitem)
     KOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
-
-
 
 /****************************************************************************/
 static void display_info(char *title, char *text)
@@ -119,7 +117,6 @@ static void menu_hidden(GtkWidget *mn, t_item_ident *pm)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void end_cb_node_reboot(int tid, int status, char *err)
 {
@@ -130,18 +127,6 @@ static void end_cb_node_reboot(int tid, int status, char *err)
 
 }
 /*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void end_cb_node_halt(int tid, int status, char *err)
-{
-  if (status)
-    insert_next_warning(err, 1);
-  else
-    insert_next_warning("SEND HALT VM OK", 1);
-
-}
-/*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void end_cb_node_sav_rootfs(int tid, int status, char *err)
@@ -157,11 +142,10 @@ static void end_cb_node_sav_rootfs(int tid, int status, char *err)
 /****************************************************************************/
 static void node_sav_rootfs(GtkWidget *mn, t_item_ident *pm)
 {
-  int response, save_whole;
+  int response;
   char *tmp;
   char name[MAX_NAME_LEN];
   GtkWidget *entry_rootfs, *parent, *dialog;
-  save_whole = pm->joker_param;
   memset(name, 0, MAX_NAME_LEN);
   strncpy(name, pm->name, MAX_NAME_LEN-1);
   parent = get_main_window();
@@ -172,10 +156,7 @@ static void node_sav_rootfs(GtkWidget *mn, t_item_ident *pm)
                                         NULL);
   gtk_window_set_default_size(GTK_WINDOW(dialog), 300, 20);
   entry_rootfs = gtk_entry_new();
-  if (save_whole)
-    gtk_entry_set_text(GTK_ENTRY(entry_rootfs), g_sav_whole);
-  else
-    gtk_entry_set_text(GTK_ENTRY(entry_rootfs), g_sav_derived);
+  gtk_entry_set_text(GTK_ENTRY(entry_rootfs), g_sav_whole);
   gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
                      entry_rootfs, TRUE, TRUE, 0);
   gtk_widget_show_all(dialog);
@@ -183,19 +164,11 @@ static void node_sav_rootfs(GtkWidget *mn, t_item_ident *pm)
   if (response == GTK_RESPONSE_ACCEPT)
     {
     tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_rootfs));
-    if (save_whole)
-      {
-      memset(g_sav_whole, 0, MAX_PATH_LEN);
-      strncpy(g_sav_whole, tmp, MAX_PATH_LEN-1);
-      }
-    else
-      {
-      memset(g_sav_derived, 0, MAX_PATH_LEN);
-      strncpy(g_sav_derived, tmp, MAX_PATH_LEN-1);
-      }
+    memset(g_sav_whole, 0, MAX_PATH_LEN);
+    strncpy(g_sav_whole, tmp, MAX_PATH_LEN-1);
     if (tmp && strlen(tmp))
       {
-      client_sav_vm(0, end_cb_node_sav_rootfs, name, save_whole, tmp);
+      client_sav_vm(0, end_cb_node_sav_rootfs, name, tmp);
       }
     }
   gtk_widget_destroy(dialog);
@@ -205,43 +178,13 @@ static void node_sav_rootfs(GtkWidget *mn, t_item_ident *pm)
 /****************************************************************************/
 static void node_qreboot_vm(GtkWidget *mn, t_item_ident *pm)
 {
-  client_reboot_vm(0, end_cb_node_reboot, pm->name, 0);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void node_greboot_vm(GtkWidget *mn, t_item_ident *pm)
-{
-  client_reboot_vm(0, end_cb_node_reboot, pm->name, 1);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void node_qhalt_vm(GtkWidget *mn, t_item_ident *pm)
-{
-  client_reboot_vm(0, end_cb_node_halt, pm->name, 0);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void node_ghalt_vm(GtkWidget *mn, t_item_ident *pm)
-{
-  client_reboot_vm(0, end_cb_node_halt, pm->name, 1);
+  client_reboot_vm(0, end_cb_node_reboot, pm->name);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void node_sav_whole(GtkWidget *mn, t_item_ident *pm)
 {
-  pm->joker_param = 1;
-  node_sav_rootfs(mn, pm);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void node_sav_derived(GtkWidget *mn, t_item_ident *pm)
-{
-  pm->joker_param = 0;
   node_sav_rootfs(mn, pm);
 }
 /*--------------------------------------------------------------------------*/
@@ -263,6 +206,8 @@ static void cnt_item_info(GtkWidget *mn, t_item_ident *pm)
     len += snprintf(text + len, MAX_TEXT-len, "\t\tCONTAINER");
     len += snprintf(text + len, MAX_TEXT-len-1, "\nImage: %s", 
                      bitem->pbi.pbi_cnt->image);
+    len += snprintf(text + len, MAX_TEXT-len-1, "\nCustomer_launch: %s", 
+                     bitem->pbi.pbi_cnt->customer_launch);
     text[MAX_TEXT-1] = 0;
     display_info(title, text);
     }
@@ -275,7 +220,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   t_bank_item *bitem;
   static char title[MAX_PATH_LEN];
   static char text[MAX_TEXT];
-  int is_i386, is_persistent, is_backed, is_inside_cloonix;
+  int is_i386, is_persistent, is_backed, is_inside_cloon;
   int has_p9_host_share, is_natplug; 
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
   int is_full_virt, has_no_reboot, has_added_disk, with_pxe, len = 0;
@@ -293,7 +238,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     is_i386 = vm_config_flags & VM_CONFIG_FLAG_I386;
     is_full_virt  = vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT;
     is_backed   = vm_config_flags & VM_FLAG_DERIVED_BACKING;
-    is_inside_cloonix = vm_config_flags & VM_FLAG_IS_INSIDE_CLOONIX;
+    is_inside_cloon = vm_config_flags & VM_FLAG_IS_INSIDE_CLOON;
     has_install_cdrom = vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM;
     has_no_reboot = vm_config_flags & VM_CONFIG_FLAG_NO_REBOOT;
     with_pxe = vm_config_flags & VM_CONFIG_FLAG_WITH_PXE;
@@ -328,8 +273,8 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
       len += snprintf(text + len, MAX_TEXT-len-1, "\nRootfs: %s", 
                      bitem->pbi.pbi_node->node_rootfs_sod);
       }
-    if (is_inside_cloonix)
-      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tIS INSIDE CLOONIX");
+    if (is_inside_cloon)
+      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tIS INSIDE CLOON");
     if (has_install_cdrom)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n INSTALL_CDROM: %s",
                      bitem->pbi.pbi_node->install_cdrom);
@@ -350,54 +295,48 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int d2d_item_info(char *text,  t_bank_item *bitem)
+static int c2c_item_info(char *text,  t_bank_item *bitem)
 {
   int len = 0;
   uint16_t tcp_port, loc_udp_port, dist_udp_port;
   int local_is_master, tcp_connection_peered;
-  int udp_connection_peered, ovs_lan_attach_ready;
+  int udp_connection_peered;
   char tcp_ip[MAX_NAME_LEN];
   char loc_udp_ip[MAX_NAME_LEN];
   char dist_udp_ip[MAX_NAME_LEN];
-  char *dist_cloonix = bitem->pbi.pbi_sat->topo_d2d.dist_cloonix; 
-  char *lan = bitem->pbi.pbi_sat->topo_d2d.lan; 
-  int_to_ip_string (bitem->pbi.pbi_sat->topo_d2d.dist_tcp_ip, tcp_ip);
-  int_to_ip_string (bitem->pbi.pbi_sat->topo_d2d.dist_udp_ip, dist_udp_ip);
-  int_to_ip_string (bitem->pbi.pbi_sat->topo_d2d.loc_udp_ip, loc_udp_ip);
-  tcp_port = bitem->pbi.pbi_sat->topo_d2d.dist_tcp_port;
-  loc_udp_port = bitem->pbi.pbi_sat->topo_d2d.loc_udp_port;
-  dist_udp_port = bitem->pbi.pbi_sat->topo_d2d.dist_udp_port;
-  local_is_master = bitem->pbi.pbi_sat->topo_d2d.local_is_master;
-  tcp_connection_peered = bitem->pbi.pbi_sat->topo_d2d.tcp_connection_peered;
-  udp_connection_peered = bitem->pbi.pbi_sat->topo_d2d.udp_connection_peered;
-  ovs_lan_attach_ready = bitem->pbi.pbi_sat->topo_d2d.ovs_lan_attach_ready;
+  char *dist_cloon = bitem->pbi.pbi_sat->topo_c2c.dist_cloon; 
+  int_to_ip_string (bitem->pbi.pbi_sat->topo_c2c.dist_tcp_ip, tcp_ip);
+  int_to_ip_string (bitem->pbi.pbi_sat->topo_c2c.dist_udp_ip, dist_udp_ip);
+  int_to_ip_string (bitem->pbi.pbi_sat->topo_c2c.loc_udp_ip, loc_udp_ip);
+  tcp_port = bitem->pbi.pbi_sat->topo_c2c.dist_tcp_port;
+  loc_udp_port = bitem->pbi.pbi_sat->topo_c2c.loc_udp_port;
+  dist_udp_port = bitem->pbi.pbi_sat->topo_c2c.dist_udp_port;
+  local_is_master = bitem->pbi.pbi_sat->topo_c2c.local_is_master;
+  tcp_connection_peered = bitem->pbi.pbi_sat->topo_c2c.tcp_connection_peered;
+  udp_connection_peered = bitem->pbi.pbi_sat->topo_c2c.udp_connection_peered;
   if (local_is_master)
     {
     len += sprintf(text + len,"\nLOCAL IS MASTER");
     if (tcp_connection_peered)
       {
       len += sprintf(text + len,"\nTCP PEERED %s %s:%hu",
-                               dist_cloonix, tcp_ip, tcp_port);
+                               dist_cloon, tcp_ip, tcp_port);
       }
     else
       {
       len += sprintf(text + len,"\nTCP NOT PEERED %s %s:%hu",
-                               dist_cloonix, tcp_ip, tcp_port);
+                               dist_cloon, tcp_ip, tcp_port);
       }
     }
   else
     {
     len += sprintf(text + len,"\nDISTANT IS MASTER");
-    len += sprintf(text + len,"\nTCP PEERED %s", dist_cloonix);
+    len += sprintf(text + len,"\nTCP PEERED %s", dist_cloon);
     }
   if (udp_connection_peered)
     len += sprintf(text + len,"\nUDP PEERED");
   else
     len += sprintf(text + len,"\nUDP NOT PEERED");
-  if (ovs_lan_attach_ready)
-    len += sprintf(text + len,"\nOVS LAN ATTACHED %s", lan);
-  else
-    len += sprintf(text + len,"\nOVS LAN NOT ATTACHED");
   len += sprintf(text + len,"\nUdp loc  %s:%hu", loc_udp_ip, loc_udp_port);
   len += sprintf(text + len,"\nUdp dist %s:%hu", dist_udp_ip, dist_udp_port);
   return len;
@@ -405,6 +344,7 @@ static int d2d_item_info(char *text,  t_bank_item *bitem)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+/*
 static int a2b_item_info(char *text,  t_bank_item *bitem)
 {
   int i, len = 0;
@@ -425,6 +365,7 @@ static int a2b_item_info(char *text,  t_bank_item *bitem)
     }
   return len;
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -445,10 +386,12 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
       len += sprintf(text + len, "\nTAP");
     else if (bitem->pbi.endp_type == endp_type_nat)
       len += sprintf(text + len, "\nNAT");
-    else if (bitem->pbi.endp_type == endp_type_d2d)
-      len += d2d_item_info(text + len, bitem);
+    else if (bitem->pbi.endp_type == endp_type_c2c)
+      len += c2c_item_info(text + len, bitem);
+/*
     else if (bitem->pbi.endp_type == endp_type_a2b)
       len += a2b_item_info(text + len, bitem);
+*/
     display_info(title, text);
     }
 }
@@ -683,7 +626,20 @@ static void hidden_visible_node(GtkWidget *mn, t_item_ident *pm)
 /****************************************************************************/
 static void sat_item_wireshark(GtkWidget *mn, t_item_ident *pm)
 {
-  wireshark_launch(pm->name, pm->num);
+  if ((pm->endp_type == endp_type_phy) ||
+      (pm->endp_type == endp_type_tap))
+    {
+    if (pm->bank_type != bank_type_sat)
+      KOUT("%s %d", pm->name, pm->num);
+    wireshark_launch(0, 0, pm->name, pm->num);
+    }
+  else if ((pm->endp_type == endp_type_eths) || 
+           (pm->endp_type == endp_type_ethv))
+    {
+    wireshark_launch(1, pm->vm_id, pm->name, pm->num);
+    }
+  else
+    KOUT("%s %d", pm->name, pm->num);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -711,32 +667,95 @@ static void edge_item_delete(GtkWidget *mn, t_item_ident *pm)
 static t_item_ident *get_and_init_pm(t_bank_item *bitem)
 {
   t_item_ident *pm;
+  t_bank_item *att_node;
   pm = (t_item_ident *)clownix_malloc(sizeof(t_item_ident),18);
   memset(pm, 0, sizeof(t_item_ident));
   strncpy(pm->name, bitem->name, MAX_NAME_LEN-1);
   strncpy(pm->lan, bitem->lan, MAX_NAME_LEN-1);
   pm->num = bitem->num;
   pm->bank_type = bitem->bank_type;
+  switch (bitem->bank_type)
+    {
+    case bank_type_node:
+      break;
+    case bank_type_cnt:
+      break;
+    case bank_type_lan:
+      break;
+    case bank_type_eth:
+      att_node = bitem->att_node;
+      if (!att_node)
+        KOUT(" ");
+      if (bitem->num < 0)
+        KOUT("%s %d", bitem->name, bitem->num);
+      if (att_node->bank_type == bank_type_node)
+        {
+        if (bitem->num >= att_node->pbi.pbi_node->nb_tot_eth)
+          KOUT("%s %d", bitem->name, bitem->num);
+        pm->vm_id = att_node->pbi.pbi_node->node_vm_id;
+        pm->endp_type = att_node->pbi.pbi_node->eth_tab[bitem->num].endp_type;
+        if ((pm->endp_type != endp_type_eths) &&
+            (pm->endp_type != endp_type_ethv))
+          KOUT("%s %d", bitem->name, bitem->num);
+        }
+      else if (att_node->bank_type == bank_type_cnt)
+        {
+        if (bitem->num >= att_node->pbi.pbi_cnt->nb_tot_eth)
+          KOUT("%s %d", bitem->name, bitem->num);
+        pm->vm_id = att_node->pbi.pbi_cnt->cnt_vm_id;
+        pm->endp_type = att_node->pbi.pbi_cnt->eth_tab[bitem->num].endp_type;
+        if ((pm->endp_type != endp_type_eths) &&
+            (pm->endp_type != endp_type_ethv))
+          KOUT("%s %d", bitem->name, bitem->num);
+        }
+      else if (att_node->bank_type == bank_type_sat)
+        {
+        KERR("%s %d", bitem->name, bitem->num); 
+        }
+      else
+        KOUT("%s %d", bitem->name, bitem->num); 
+      break;
+    case bank_type_sat:
+      if ((bitem->pbi.endp_type == endp_type_phy) ||
+          (bitem->pbi.endp_type == endp_type_tap))
+        pm->endp_type = bitem->pbi.endp_type;
+      break;
+    case bank_type_edge:
+      break;
+    default:
+      KOUT("%d", bitem->bank_type);
+    }
   return pm;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void wireshark_launch(char *name, int num)
+void wireshark_launch(int is_vhost, int vm_id, char *name, int num)
 {
-  t_bank_item *bitem, *bnode;
+  t_bank_item *bitem, *bnode, *bcnt;
   char full_name[MAX_NAME_LEN];
   bitem = look_for_sat_with_id(name);
   bnode = look_for_node_with_id(name);
+  bcnt = look_for_cnt_with_id(name);
+  memset(full_name, 0, MAX_NAME_LEN);
+  snprintf(full_name, MAX_NAME_LEN-1, "%s_%d", name, num);
   if (bitem)
     {
-    start_wireshark(name);
+    start_wireshark_dpdk(name);
     }
   else if(bnode)
     {
-    memset(full_name, 0, MAX_NAME_LEN);
-    snprintf(full_name, MAX_NAME_LEN-1, "%s_%d", name, num);
-    start_wireshark(full_name);
+    if (is_vhost)
+      start_wireshark_vhost(0, vm_id, name, num);
+    else
+      start_wireshark_dpdk(full_name);
+    }
+  else if(bcnt)
+    {
+    if (is_vhost)
+      start_wireshark_vhost(1, vm_id, name, num);
+    else
+      start_wireshark_dpdk(full_name);
     }
   else
     KERR("ERROR: wireshark for %s %d", name, num);
@@ -802,16 +821,14 @@ void sat_ctx_menu(t_bank_item *bitem)
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
 
-  if ((bitem->pbi.endp_type == endp_type_phy) ||
-      (bitem->pbi.endp_type == endp_type_tap))
+  if (pm->endp_type)
     item_wireshark = gtk_menu_item_new_with_label("wireshark");
 
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
   item_delete = gtk_menu_item_new_with_label("Delete");
   item_info = gtk_menu_item_new_with_label("Info");
 
-  if ((bitem->pbi.endp_type == endp_type_phy) ||
-      (bitem->pbi.endp_type == endp_type_tap))
+  if (pm->endp_type)
     g_signal_connect(G_OBJECT(item_wireshark), "activate",
                      G_CALLBACK(sat_item_wireshark), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_delete), "activate",
@@ -823,8 +840,7 @@ void sat_ctx_menu(t_bank_item *bitem)
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
 
-  if ((bitem->pbi.endp_type == endp_type_phy) ||
-      (bitem->pbi.endp_type == endp_type_tap))
+  if (pm->endp_type)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
@@ -854,41 +870,11 @@ static void intf_item_info(GtkWidget *mn, t_item_ident *pm)
       KOUT(" ");
     if (att_node->pbi.pbi_node->eth_tab[num].endp_type == endp_type_ethv)
       display_info(title, "vhost");
-    else if (att_node->pbi.pbi_node->eth_tab[num].endp_type == endp_type_ethd)
-      display_info(title, "dpdk");
     else if (att_node->pbi.pbi_node->eth_tab[num].endp_type == endp_type_eths)
       display_info(title, "spyed");
     else
       display_info(title, " ");
     }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int get_endp_type(t_bank_item *bitem)
-{ 
-  t_bank_item *att_node;
-  int num, result = endp_type_ethd;
-  att_node = bitem->att_node;
-  num = bitem->num;
-  if (!att_node)
-    KOUT(" ");
-  if (!is_a_a2b(att_node))
-    {
-    if (att_node->pbi.pbi_node)
-      {
-      if ((num < 0) || (num >= att_node->pbi.pbi_node->nb_tot_eth))
-        KOUT(" ");
-      result = att_node->pbi.pbi_node->eth_tab[num].endp_type;
-      }
-    else if (att_node->pbi.pbi_cnt)
-      {
-      if ((num < 0) || (num >= att_node->pbi.pbi_cnt->nb_tot_eth))
-        KOUT(" ");
-      result = att_node->pbi.pbi_cnt->eth_tab[num].endp_type;
-      }
-    }
-  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -899,20 +885,18 @@ void intf_ctx_menu(t_bank_item *bitem)
   GtkWidget *separator, *menu = gtk_menu_new();
   GtkWidget *item_hidden, *item_info, *item_wireshark;
   t_item_ident *pm = get_and_init_pm(bitem);
-  int is_spdk = get_endp_type(bitem);
   bitem->pbi.menu_on = 1;
-
-  if (is_spdk)
+  if ((pm->endp_type == endp_type_ethv) || 
+      (pm->endp_type == endp_type_eths))
     item_wireshark = gtk_menu_item_new_with_label("wireshark");
-
   item_promisc_on = gtk_menu_item_new_with_label("Promisc on");
   item_promisc_off = gtk_menu_item_new_with_label("Promisc off");
   item_monitor = gtk_menu_item_new_with_label("Monitor");
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
   item_info = gtk_menu_item_new_with_label("Info");
   separator = gtk_separator_menu_item_new();
-
-  if (is_spdk == endp_type_eths)
+  if ((pm->endp_type == endp_type_ethv) || 
+      (pm->endp_type == endp_type_eths))
     g_signal_connect(G_OBJECT(item_wireshark), "activate",
                      G_CALLBACK(sat_item_wireshark), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_monitor), "activate",
@@ -929,7 +913,8 @@ void intf_ctx_menu(t_bank_item *bitem)
 
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
-  if (is_spdk == endp_type_eths)
+  if ((pm->endp_type == endp_type_ethv) || 
+      (pm->endp_type == endp_type_eths))
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_monitor);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator);
@@ -943,27 +928,20 @@ void intf_ctx_menu(t_bank_item *bitem)
 /****************************************************************************/
 void node_ctx_menu(t_bank_item *bitem)
 {
-  GtkWidget *dtach_console, *desktop=NULL, *xterm_qmonitor;
+  GtkWidget *dtach_console, *desktop=NULL;
   GtkWidget *item_delete, *item_info, *item_color;
-  GtkWidget *save_whole, *save_derived, *qreboot_vm, *greboot_vm;
+  GtkWidget *save_whole, *qreboot_vm;
   GtkWidget *separator, *separator2, *menu = gtk_menu_new();
-  GtkWidget *item_hidden, *qhalt_vm, *ghalt_vm;
-  char *whole_rootfs = "save whole rootfs"; 
-  char *derived_rootfs = "save derived rootfs"; 
+  GtkWidget *item_hidden;
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
   if (bitem->bank_type != bank_type_node)
     KOUT("%s", bitem->name);
   if (get_path_to_qemu_spice())
-    desktop = gtk_menu_item_new_with_label("spice desktop");
-  xterm_qmonitor = gtk_menu_item_new_with_label("qemu monitor");
-  save_whole = gtk_menu_item_new_with_label(whole_rootfs);
-  save_derived = gtk_menu_item_new_with_label(derived_rootfs);
-  greboot_vm = gtk_menu_item_new_with_label("reboot by cloonix guest agent");
-  ghalt_vm = gtk_menu_item_new_with_label("halt by cloonix guest agent");
-  qreboot_vm = gtk_menu_item_new_with_label("reboot by qemu");
-  qhalt_vm = gtk_menu_item_new_with_label("halt by qemu");
-  dtach_console = gtk_menu_item_new_with_label("dtach console");
+    desktop = gtk_menu_item_new_with_label("Spice");
+  save_whole = gtk_menu_item_new_with_label("Save");
+  qreboot_vm = gtk_menu_item_new_with_label("Reboot");
+  dtach_console = gtk_menu_item_new_with_label("Console");
   item_info = gtk_menu_item_new_with_label("Info");
   item_color = gtk_menu_item_new_with_label("Color");
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
@@ -983,39 +961,24 @@ void node_ctx_menu(t_bank_item *bitem)
   if (desktop)
     g_signal_connect(G_OBJECT(desktop), "activate",
                      G_CALLBACK(node_qemu_spice), (gpointer) pm);
-  g_signal_connect(G_OBJECT(xterm_qmonitor), "activate",
-                   G_CALLBACK(node_xterm_qmonitor), (gpointer) pm);
   if (desktop)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), desktop);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), dtach_console);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), xterm_qmonitor);
 
   g_signal_connect(G_OBJECT(save_whole), "activate",
                    G_CALLBACK(node_sav_whole), (gpointer) pm);
-  g_signal_connect(G_OBJECT(save_derived), "activate",
-                   G_CALLBACK(node_sav_derived), (gpointer) pm);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), save_whole);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), save_derived);
 
-  g_signal_connect(G_OBJECT(greboot_vm), "activate",
-                   G_CALLBACK(node_greboot_vm), (gpointer) pm);
   g_signal_connect(G_OBJECT(qreboot_vm), "activate",
                    G_CALLBACK(node_qreboot_vm), (gpointer) pm);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), greboot_vm);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), qreboot_vm);
 
-  g_signal_connect(G_OBJECT(ghalt_vm), "activate",
-                   G_CALLBACK(node_ghalt_vm), (gpointer) pm);
-  g_signal_connect(G_OBJECT(qhalt_vm), "activate",
-                   G_CALLBACK(node_qhalt_vm), (gpointer) pm);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), ghalt_vm);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), qhalt_vm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator2);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_color);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   node_item_color(item_color, pm);
   gtk_widget_show_all(menu);
   gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
@@ -1051,13 +1014,10 @@ void menu_init(void)
   menu_utils_init();
   menu_dialog_kvm_init();
   menu_dialog_cnt_init();
-  menu_dialog_d2d_init();
+  menu_dialog_c2c_init();
   memset(g_sav_whole, 0, MAX_PATH_LEN);
-  memset(g_sav_derived, 0, MAX_PATH_LEN);
   snprintf(g_sav_whole, MAX_PATH_LEN-1, 
            "%s/sav_whole.qcow2", getenv("HOME"));
-  snprintf(g_sav_derived, MAX_PATH_LEN-1, 
-           "%s/sav_derived.qcow2", getenv("HOME"));
 }
 /*--------------------------------------------------------------------------*/
 

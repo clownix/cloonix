@@ -69,13 +69,13 @@ static t_x11 *g_x11[MAX_FD_NUM];
 /*****************************************************************************/
 static void dialog_err(int sock_fd, int srv_idx, int cli_idx, char *buf)
 {
-  KOUT(" ");
+  XOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 
 static void dialog_killed(int sock_fd, int srv_idx, int cli_idx, char *buf)
 {
-  KOUT(" ");
+  XOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 static void dialog_stats(int sock_fd, int srv_idx, int cli_idx,
@@ -83,7 +83,7 @@ static void dialog_stats(int sock_fd, int srv_idx, int cli_idx,
                          int rxpkts, long long rxbytes, char *buf)
 
 {
-  KOUT(" ");
+  XOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -92,9 +92,9 @@ static void dialog_wake(int sock_fd, int srv_idx, int cli_idx, char *buf)
 {
   t_x11 *x11;
   if ((sock_fd < 0) || (sock_fd >= MAX_FD_NUM))
-    KOUT("%d", sock_fd);
+    XOUT("%d", sock_fd);
   if (!(g_x11[sock_fd]))
-    KERR("%d", sock_fd);
+    XERR("%d", sock_fd);
   else
     {
     x11 = g_x11[sock_fd];
@@ -109,7 +109,7 @@ static void dialog_wake(int sock_fd, int srv_idx, int cli_idx, char *buf)
 static void terminate_thread(t_x11 *x11, int line, int fd)
 {
 //  if (line)
-//    KERR("LINE:%d (%d-%d) fd:%d", line, x11->srv_idx, x11->cli_idx, fd);
+//    XERR("LINE:%d (%d-%d) fd:%d", line, x11->srv_idx, x11->cli_idx, fd);
   x11->thread_on = 0;
   wrap_nonnonblock(x11->diag_thread_fd);
   dialog_send_killed(x11->diag_thread_fd, x11->sock_fd_ass,
@@ -196,13 +196,13 @@ static int read_from_sock(t_x11 *x11)
   len = wrap_read_x11_rd_soc(x11->sock_fd_ass, msg->buf, MAX_X11_MSG_LEN);
   if (len == 0)
     {
-    KERR(" ");
+    XERR(" ");
     wrap_free(msg, __LINE__);
     }
   else if (len < 0)
     {
     if (errno != EINTR && errno != EAGAIN)
-      KERR("%s", strerror(errno));
+      XERR("%s", strerror(errno));
     else
       result = 0;
     wrap_free(msg, __LINE__);
@@ -227,14 +227,14 @@ static int read_from_x11(t_x11 *x11)
   len = wrap_read_x11_rd_x11(x11->x11_fd, msg->buf, MAX_X11_MSG_LEN);
   if (len == 0)
     {
-    KERR("%d %d X11 READ 0 READ READ 0 TOT:%lld",
+    XERR("%d %d X11 READ 0 READ READ 0 TOT:%lld",
          x11->sock_fd_ass,x11->x11_fd, x11->btx);
     terminate_thread(x11, 0, x11->x11_fd);
     wrap_free(msg, __LINE__);
     }
   else if (len < 0)
     {
-    KERR("%s", strerror(errno));
+    XERR("%s", strerror(errno));
     terminate_thread(x11, 0, x11->x11_fd);
     wrap_free(msg, __LINE__);
     }
@@ -256,7 +256,7 @@ static void *thread_x11(void *arg)
   struct epoll_event events[MAX_EPOLL_EVENTS];
   t_x11 *x11 = (t_x11 *) arg;
   if (!x11)
-    KOUT(" ");
+    XOUT(" ");
 
   thread_spy_add(x11->sock_fd_ass, x11->x11_fd, x11->epfd, thread_type_x11);
   x11->epev_x11_fd = wrap_epoll_event_alloc(x11->epfd, x11->x11_fd, 4);
@@ -285,7 +285,7 @@ static void *thread_x11(void *arg)
     if (result < 0)
       {
       if (errno != EINTR)
-        KOUT("%s\n ", strerror(errno));
+        XOUT("%s\n ", strerror(errno));
       }
 
 
@@ -304,7 +304,7 @@ static void *thread_x11(void *arg)
         {
         if (evts & (~(EPOLLIN | EPOLLOUT)))
           {
-          KERR("%X", evts);
+          XERR("%X", evts);
           terminate_thread(x11, __LINE__, fd);
           }
         else if (fd == x11->x11_fd)
@@ -388,11 +388,11 @@ int thread_x11_open(uint32_t randid, int server_side, int sock_fd_ass,
   int result = -1;
   t_x11 *x11;
   if ((sock_fd_ass < 0) || (sock_fd_ass >= MAX_FD_NUM))
-    KOUT("%d", sock_fd_ass);
+    XOUT("%d", sock_fd_ass);
   if ((x11_fd < 0) || (x11_fd >= MAX_FD_NUM))
-    KOUT("%d", x11_fd);
+    XOUT("%d", x11_fd);
   if (g_x11[sock_fd_ass])
-    KOUT("%d", sock_fd_ass);
+    XOUT("%d", sock_fd_ass);
   x11 = (t_x11 *) wrap_malloc(sizeof(t_x11));
   memset(x11, 0, sizeof(t_x11));
   x11->sock_fd_ass        = sock_fd_ass;
@@ -418,7 +418,7 @@ int thread_x11_open(uint32_t randid, int server_side, int sock_fd_ass,
   g_x11[sock_fd_ass] = x11;
   if (pthread_create(&x11->thread_x11, NULL, thread_x11, (void *) x11) != 0)
     {
-    KERR("sock:%d srv:%d cli:%d",sock_fd_ass, x11->srv_idx, x11->cli_idx);
+    XERR("sock:%d srv:%d cli:%d",sock_fd_ass, x11->srv_idx, x11->cli_idx);
     g_x11[sock_fd_ass] = NULL;
     wrap_free(x11, __LINE__);
     }
@@ -434,9 +434,9 @@ void thread_x11_start(int sock_fd_ass)
 {
   t_x11 *x11;
   if ((sock_fd_ass < 0) || (sock_fd_ass >= MAX_FD_NUM))
-    KOUT("%d", sock_fd_ass);
+    XOUT("%d", sock_fd_ass);
   if (!(g_x11[sock_fd_ass]))
-    KOUT("%d", sock_fd_ass);
+    XOUT("%d", sock_fd_ass);
   x11 = g_x11[sock_fd_ass];
   x11->thread_waiting = 0;
 }
@@ -449,7 +449,7 @@ void thread_x11_close(int sock_fd_ass)
   t_x11 *x11;
   wrap_mutex_lock();
   if ((sock_fd_ass < 0) || (sock_fd_ass >= MAX_FD_NUM))
-    KOUT("%d", sock_fd_ass);
+    XOUT("%d", sock_fd_ass);
   if (g_x11[sock_fd_ass])
     {
     x11 = g_x11[sock_fd_ass];
@@ -458,7 +458,7 @@ void thread_x11_close(int sock_fd_ass)
     x11->thread_terminating = 0;
 
     if (pthread_join(x11->thread_x11, NULL)) 
-      KERR(" ");
+      XERR(" ");
 
     dialog_close(x11->diag_main_fd);
     dialog_close(x11->diag_thread_fd);
@@ -479,7 +479,7 @@ int thread_x11_exists(int sock_fd_ass)
   t_x11 *x11;
   int result = 0;
   if ((sock_fd_ass < 0) || (sock_fd_ass >= MAX_FD_NUM))
-    KOUT("%d", sock_fd_ass);
+    XOUT("%d", sock_fd_ass);
   if (g_x11[sock_fd_ass])
     result = 1;
   return result;

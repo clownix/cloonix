@@ -42,6 +42,7 @@
 #include "layout_x_y.h"
 
 
+int get_cloonix_rank(void);
 char *get_distant_snf_dir(void);
 char *get_doors_client_addr(void);
 
@@ -56,7 +57,6 @@ static char g_sav_dir[MAX_PATH_LEN];
 /****************************************************************************/
 enum {
   type_pid_none=0,
-  type_pid_qmonitor,
   type_pid_spicy_gtk,
   type_pid_wireshark,
   type_pid_dtach,
@@ -185,12 +185,6 @@ static void death_pid_wait_launch(void *data, int status, char *name)
   switch (pid_wait->type)
     {
 
-    case type_pid_qmonitor:
-      pid = bank_get_qmonitor_pid(pid_wait->name);
-      if (pid == pid_wait->pid)
-        bank_set_qmonitor_pid(pid_wait->name, 0);
-      break;
-
     case type_pid_spicy_gtk:
       pid = bank_get_spicy_gtk_pid(pid_wait->name);
       if (pid == pid_wait->pid)
@@ -233,13 +227,6 @@ static void launch_new_pid(t_pid_wait *pid_wait)
   int pid;
   switch (pid_wait->type)
     {
-
-    case type_pid_qmonitor:
-      pid = pid_clone_launch(start_launch, death_pid_wait_launch, NULL,
-                             (void *)(pid_wait->argv), (void *) pid_wait,
-                             NULL, pid_wait->name, -1, 0);
-      bank_set_qmonitor_pid(pid_wait->name, pid);
-      break;
 
     case type_pid_spicy_gtk:
       pid = pid_clone_launch(start_launch, death_pid_wait_launch, NULL,
@@ -287,9 +274,6 @@ static void launch_pid_wait(int type, char *nm, char **argv)
   int i, pid;
   switch (type)
     {
-    case type_pid_qmonitor:
-      pid = bank_get_qmonitor_pid(nm);
-      break;
     case type_pid_spicy_gtk:
       pid = bank_get_spicy_gtk_pid(nm);
       break;
@@ -370,7 +354,45 @@ static void start_qemu_spice(char *password, char *path, t_qemu_spice_item *it)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void start_wireshark(char *name)
+static char *get_eth_name(int is_cnt, int rank, int vm_id, int num)
+{
+  static char eth_name[MAX_NAME_LEN];
+  memset(eth_name, 0, MAX_NAME_LEN);
+  snprintf(eth_name, MAX_PATH_LEN-1, "%s%d_%d_%d",
+           OVS_BRIDGE_PORT, rank, vm_id, num);
+  return eth_name;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+void start_wireshark_vhost(int is_cnt, int vm_id, char *name, int num)
+{
+  int rank = get_cloonix_rank();
+  char *eth = get_eth_name(is_cnt, rank, vm_id, num);
+  char bin_path[MAX_PATH_LEN];
+  char config[MAX_PATH_LEN];
+  char cloonix_name[MAX_NAME_LEN];
+  char *argv[]={bin_path, config, cloonix_name, "-dae",
+                       "/usr/bin/wireshark",
+                       "-o", "capture.no_interface_load:TRUE",
+                       "-o", "gui.ask_unsaved:FALSE",
+                       "-k", "-i", eth, NULL};
+  memset(bin_path, 0, MAX_PATH_LEN);
+  memset(config, 0, MAX_PATH_LEN);
+  memset(cloonix_name, 0, MAX_NAME_LEN);
+  snprintf(bin_path, MAX_PATH_LEN-1,
+                     "%s/client/xwycli/xwycli", get_local_cloonix_tree());
+  snprintf(config, MAX_PATH_LEN-1,
+                     "%s/cloonix_config", get_local_cloonix_tree());
+  snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
+  if (check_before_start_launch(argv))
+    launch_pid_wait(type_pid_wireshark, name, argv);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void start_wireshark_dpdk(char *name)
 {
   char bin_path[MAX_PATH_LEN];
   char config[MAX_PATH_LEN];
@@ -446,28 +468,6 @@ void node_dtach_console(GtkWidget *mn, t_item_ident *pm)
   char **argv = get_argv_local_xwy(nm);
   if (check_before_start_launch(argv))
     launch_pid_wait(type_pid_dtach, nm, argv);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void node_xterm_qmonitor(GtkWidget *mn, t_item_ident *pm)
-{
-  static char title[2*MAX_NAME_LEN];
-  static char nm[MAX_NAME_LEN];
-  static char cmd[MAX_PATH_LEN];
-  static char xvt[MAX_PATH_LEN];
-  char *argv[] = {xvt, "-T", title, "-e", "/bin/bash", "-c", cmd, NULL};
-  memset(title, 0, 2*MAX_NAME_LEN);
-  memset(nm, 0, MAX_NAME_LEN);
-  memset(cmd, 0, MAX_PATH_LEN);
-  cloonix_get_xvt(xvt);
-  strncpy(nm, pm->name, MAX_NAME_LEN-1);
-  snprintf(title, 2*MAX_NAME_LEN-1, "%s/%s", local_get_cloonix_name(), nm);
-  sprintf(cmd, "%s/client/qmonitor/qmonitor %s %s %s; sleep 5", 
-               get_distant_cloonix_tree(), get_doors_client_addr(),
-               get_password(), nm); 
-  if (check_before_start_launch(argv))
-    launch_pid_wait(type_pid_qmonitor, nm, argv);
 }
 /*--------------------------------------------------------------------------*/
 

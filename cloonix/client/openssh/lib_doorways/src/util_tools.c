@@ -191,7 +191,7 @@ char *get_random_choice_str(void)
 {
   static char name[8];
   int i, chance;
-  long long date_us = cloonix_get_usec();
+  uint64_t date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
   memset (name, 0 , 8);
   for (i=0; i < 4; i++)

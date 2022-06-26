@@ -85,7 +85,10 @@ static int fd_accept(int fd_listen)
 int main(int argc, char *argv[])
 {
   fd_set infd;
-  int ret, fd_echo, fd_listen = socket_listen_unix("/tmp/cloonix_parrot");
+  int ret, fd_echo, fd_listen;
+
+  daemon(0,0);
+  fd_listen = socket_listen_unix("/tmp/cloonix_parrot");
   for (;;)
     {
     FD_ZERO(&infd);

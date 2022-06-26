@@ -34,40 +34,9 @@
 #include "io_clownix.h"
 #include "ovs_get.h"
 
-typedef struct t_list_names
-{
-  char name[MAX_NAME_LEN];
-  struct t_list_names *prev;
-  struct t_list_names *next;
-} t_list_names;
-
 static int g_nb_brgs;
 static t_topo_bridges g_brgs[MAX_OVS_BRIDGES];
-static t_list_names *g_head_names;
 
-/****************************************************************************/
-static int name_exists_in_list(char *line)
-{
-  int result = 0;
-  char cpy_line[MAX_PATH_LEN];
-  char *ptr_start, *ptr_end;
-  t_list_names *cur = g_head_names;
-
-  strncpy(cpy_line, line, MAX_PATH_LEN-1);
-  cpy_line[MAX_PATH_LEN-1] = 0;
-  ptr_start = cpy_line;
-  ptr_end = ptr_start + strcspn(ptr_start, " \r\n\t");
-  *ptr_end = 0;
-  while (cur)
-    {
-    if ((strlen(cur->name) > 1) &&
-        (!strncmp(line, cur->name, strlen(cur->name))))
-      result = 1;
-    cur = cur->next;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void update_bridges(char *bin, char *sock)
@@ -83,8 +52,7 @@ static void update_bridges(char *bin, char *sock)
     {
     while (fgets(line, MAX_PATH_LEN-1, fh) != NULL)
       {
-      if ((!strncmp(line, "_b_", strlen("_b_"))) ||
-          (name_exists_in_list(line)))
+      if (!strncmp(line, OVS_BRIDGE, strlen(OVS_BRIDGE)))
         {
         ptr_start = g_brgs[g_nb_brgs].br;
         strncpy(g_brgs[g_nb_brgs].br, line, MAX_NAME_LEN-1);
@@ -109,9 +77,12 @@ static void update_bridges(char *bin, char *sock)
 static void update_ports_bridge(char *bin, char *sock, t_topo_bridges *tbr)
 {
   FILE *fh;
+  char tap[MAX_NAME_LEN];
   char cmd[2*MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
   char *ptr_start, *ptr_end;
+  memset(tap, 0, MAX_NAME_LEN);
+  snprintf(tap, MAX_NAME_LEN-1, "s%s", OVS_BRIDGE_PORT);
   memset(cmd, 0, 2*MAX_PATH_LEN);
   snprintf(cmd, 2*MAX_PATH_LEN-1, "%s --db=unix:%s list-ports %s",
            bin, sock, tbr->br);
@@ -120,8 +91,8 @@ static void update_ports_bridge(char *bin, char *sock, t_topo_bridges *tbr)
     {
     while (fgets(line, MAX_PATH_LEN-1, fh) != NULL)
       {
-      if ((!strncmp(line, "_p_", strlen("_p_"))) ||
-          (name_exists_in_list(line)))
+      if ((!strncmp(line, OVS_BRIDGE_PORT, strlen(OVS_BRIDGE_PORT))) ||
+          (!strncmp(line, tap, strlen(tap))))
         {
         ptr_start = tbr->ports[tbr->nb_ports];
         strncpy(ptr_start, line, MAX_NAME_LEN-1);
@@ -183,47 +154,6 @@ static void format_msg(char *msg)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_get_rec_name(char *name, int on)
-{
-  t_list_names *cur = g_head_names;
-  while (cur)
-    {
-    if (!strcmp(cur->name, name))
-      break;
-    cur = cur->next;
-    }
-  if (on)
-    {
-    if (!cur)
-      {
-      cur = (t_list_names *) malloc(sizeof(t_list_names));
-      memset(cur, 0, sizeof(t_list_names));
-      strncpy(cur->name, name, MAX_NAME_LEN-1);
-      if (g_head_names)
-        g_head_names->prev = cur;
-      cur->next = g_head_names;
-      g_head_names = cur;
-      }
-    }
-  else
-    {
-    if (!cur)
-      KERR("%s", name);
-    else
-      {
-      if (cur->prev)
-        cur->prev->next = cur->next;
-      if (cur->next)
-        cur->next->prev = cur->prev;
-      if (cur == g_head_names)
-        g_head_names = cur->next;
-      free(cur);
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 char *ovs_get_topo(char *bin_dir, char *work_dir)
 {
   int i, len;
@@ -232,8 +162,8 @@ char *ovs_get_topo(char *bin_dir, char *work_dir)
   char *msg;
   memset(bin_vsctl, 0, MAX_PATH_LEN);
   memset(ovsdb_sock, 0, MAX_PATH_LEN);
-  snprintf(bin_vsctl,MAX_PATH_LEN-1,"%s/server/dpdk/bin/ovs-vsctl",bin_dir);
-  snprintf(ovsdb_sock,MAX_PATH_LEN-1,"%s/dpdk/ovsdb_server.sock",work_dir);
+  snprintf(bin_vsctl,MAX_PATH_LEN-1,"%s/server/ovs/bin/ovs-vsctl",bin_dir);
+  snprintf(ovsdb_sock,MAX_PATH_LEN-1,"%s/ovs/ovsdb_server.sock",work_dir);
   g_nb_brgs = 0;
   memset(g_brgs, 0, MAX_OVS_BRIDGES * sizeof(t_topo_bridges));
   if (!access(ovsdb_sock, F_OK))
@@ -255,6 +185,5 @@ void ovs_get_init(void)
 {
   g_nb_brgs = 0;
   memset(g_brgs, 0, MAX_OVS_BRIDGES * sizeof(t_topo_bridges));
-  g_head_names = NULL;
 }
 /*--------------------------------------------------------------------------*/

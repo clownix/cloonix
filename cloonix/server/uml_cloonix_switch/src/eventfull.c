@@ -28,12 +28,8 @@
 #include "event_subscriber.h"
 #include "machine_create.h"
 #include "utils_cmd_line_maker.h"
-#include "dpdk_ovs.h"
-#include "dpdk_xyx.h"
-#include "dpdk_nat.h"
-#include "dpdk_a2b.h"
-#include "dpdk_d2d.h"
-#include "dpdk_phy.h"
+#include "ovs_snf.h"
+#include "cnt.h"
 
 
 /*****************************************************************************/
@@ -214,37 +210,43 @@ static void refresh_ram_cpu_vm(int nb, t_vm *head_vm)
 static void timeout_collect_eventfull(void *data)
 {
   static int count = 0;
-  t_eventfull_endp *eventfull_endp;
-  int nb_vm, llid, tid, tot_evt;
-  t_vm *vm   = cfg_get_first_vm(&nb_vm);
+  int nb, llid, tid, nb_vm, nb_cnt;
+  t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_eventfull_subs *cur = head_eventfull_subs;
-  int nb;
-  tot_evt  = dpdk_xyx_get_qty() + dpdk_nat_get_qty() + dpdk_d2d_get_qty();
-  tot_evt += (2 * dpdk_a2b_get_qty());
-  eventfull_endp = 
+  int tot_evt = ovs_snf_get_qty(); 
+  t_eventfull_endp *eventfull_endp;
+
+  cnt_get_first_cnt(&nb_cnt);
+  eventfull_endp =
   (t_eventfull_endp *) clownix_malloc(tot_evt * sizeof(t_eventfull_endp), 13);
   memset(eventfull_endp, 0, tot_evt * sizeof(t_eventfull_endp));
+
   count++;
   if (count == 10)
     {
     refresh_ram_cpu_vm(nb_vm, vm);
     count = 0;
     }
-  nb = dpdk_xyx_collect_dpdk(&(eventfull_endp[0]));
+  nb = ovs_snf_collect_snf(&(eventfull_endp[0]));
   while (cur)
     {
     llid = cur->llid;
     tid = cur->tid;
     if (msg_exist_channel(llid))
       {
-      send_eventfull(llid, tid, nb, eventfull_endp); 
+      send_eventfull(llid, tid, nb, eventfull_endp);
       }
     else
       event_print ("EVENTFULL ERROR!!!!!!");
     cur = cur->next;
     }
-  clownix_timeout_add(10, timeout_collect_eventfull, NULL, NULL, NULL);
-  clownix_free(eventfull_endp, __FUNCTION__); 
+  clownix_free(eventfull_endp, __FUNCTION__);
+  if ((nb_vm + nb_cnt) < 50)
+    clownix_timeout_add(10, timeout_collect_eventfull, NULL, NULL, NULL);
+  else if ((nb_vm + nb_cnt) < 200)
+    clownix_timeout_add(20, timeout_collect_eventfull, NULL, NULL, NULL);
+  else
+    clownix_timeout_add(40, timeout_collect_eventfull, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 

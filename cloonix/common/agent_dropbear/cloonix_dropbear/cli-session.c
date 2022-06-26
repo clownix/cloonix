@@ -1,5 +1,5 @@
 /*
- * Stolen for cloonix from:
+ * Stolen for cloon from:
  * Dropbear - a SSH2 server
  * SSH client implementation
 */

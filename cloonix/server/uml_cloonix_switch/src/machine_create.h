@@ -37,11 +37,9 @@ enum
   error_death_kvmcb,
   error_death_kvmmonitor,
   error_death_kvmstartko,
-  error_death_qmonitor,
   error_death_qmp,
   error_death_pid_diseapeared,
   error_death_timeout_no_pid,
-  error_death_no_dpdk,
 };
 void machine_death(char *name, int error_death);
 void machine_recv_add_vm(int llid, int tid, t_topo_kvm *kvm, int vm_id); 

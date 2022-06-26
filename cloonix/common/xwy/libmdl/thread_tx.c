@@ -58,13 +58,13 @@ static int try_send_el_successfull(t_lw_el *el)
     {
     if (errno != EINTR && errno != EAGAIN)
       {
-      KERR("%s", strerror(errno));
+      XERR("%s", strerror(errno));
       result = -1;
       }
     }
   else if (len == 0)
     {
-    KERR(" ");
+    XERR(" ");
     result = -1;
     }
   else
@@ -98,9 +98,9 @@ static int transmit_circ_tx(int sock_fd)
   t_lw_el *el;
   t_tx *tx;
   if ((sock_fd < 0) || (sock_fd >= MAX_FD_NUM))
-    KOUT("%d", sock_fd);
+    XOUT("%d", sock_fd);
   else if (!g_tx[sock_fd])
-    KOUT("%d", sock_fd);
+    XOUT("%d", sock_fd);
   else
     {
     tx = g_tx[sock_fd];
@@ -115,7 +115,7 @@ static int transmit_circ_tx(int sock_fd)
       if (tx->count > 50000)
         {
         tx->thread_tx_on = 0;
-        KERR("%d %d", tx->current_el->offst, tx->current_el->payload);
+        XERR("%d %d", tx->current_el->offst, tx->current_el->payload);
         result = -1;
         }
       else
@@ -138,7 +138,7 @@ static int transmit_circ_tx(int sock_fd)
 /****************************************************************************/
 static void cli_warn(int sig)
 {
-  KERR("%d", sig);
+  XERR("%d", sig);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -147,10 +147,10 @@ static void *thread_tx(void *arg)
 {
   t_tx *tx = (t_tx *) arg;
   if (!tx)
-    KOUT(" ");
+    XOUT(" ");
   thread_spy_add(tx->dst_fd, -1, -1, thread_type_tx);
   if (signal(SIGPIPE, cli_warn) == SIG_ERR)
-    KERR("%s", strerror(errno));
+    XERR("%s", strerror(errno));
 
   while(tx->thread_waiting)
     usleep(10000);
@@ -165,7 +165,7 @@ static void *thread_tx(void *arg)
       {
       if (transmit_circ_tx(tx->dst_fd))
         {
-        KERR(" ");
+        XERR(" ");
         tx->thread_tx_on = 0;
         break;
         }
@@ -185,9 +185,9 @@ int thread_tx_add_el(t_lw_el *el, int len)
   int result = -1;
   t_tx *tx;
   if ((el->fd_dst < 0) || (el->fd_dst >= MAX_FD_NUM))
-    KOUT("%d", el->fd_dst);
+    XOUT("%d", el->fd_dst);
   if (!(g_tx[el->fd_dst]))
-    KERR("%d", el->fd_dst);
+    XERR("%d", el->fd_dst);
   else
     {
     tx = g_tx[el->fd_dst];
@@ -204,9 +204,9 @@ int thread_tx_get_levels(int fd_dst, int *used_slot_nb, int *stored_bytes)
   int result = -1;
   t_tx *tx;
   if ((fd_dst < 0) || (fd_dst >= MAX_FD_NUM))
-    KOUT("%d", fd_dst);
+    XOUT("%d", fd_dst);
   if (!(g_tx[fd_dst]))
-    KERR("%d", fd_dst);
+    XERR("%d", fd_dst);
   else
     {
     tx = g_tx[fd_dst];
@@ -237,9 +237,9 @@ void thread_tx_open(int dst_fd)
 {
   t_tx *tx;
   if ((dst_fd < 0) || (dst_fd >= MAX_FD_NUM))
-    KOUT("%d", dst_fd);
+    XOUT("%d", dst_fd);
   if (g_tx[dst_fd])
-    KOUT("%d", dst_fd);
+    XOUT("%d", dst_fd);
   tx = (t_tx *) wrap_malloc(sizeof(t_tx));
   memset(tx, 0, sizeof(t_tx));
   tx->circ_ctx = (t_circ_ctx *) wrap_malloc(sizeof(t_circ_ctx));
@@ -252,7 +252,7 @@ void thread_tx_open(int dst_fd)
   tx->thread_tx_on = 1;
   g_tx[dst_fd] = tx;
   if (pthread_create(&tx->thread_tx, NULL, thread_tx, (void *) tx) != 0)
-    KOUT(" ");
+    XOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -261,18 +261,18 @@ void thread_tx_close(int dst_fd)
 { 
   t_tx *tx;
   if (dst_fd == -1)
-    KERR(" ");
+    XERR(" ");
   else
     {
     if ((dst_fd < 0) || (dst_fd >= MAX_FD_NUM))
-      KOUT("%d", dst_fd);
+      XOUT("%d", dst_fd);
     tx = g_tx[dst_fd];
     if (tx)
       {
       tx->thread_waiting = 0;
       tx->thread_tx_on = 0;
       if (pthread_join(tx->thread_tx, NULL))
-        KERR(" ");
+        XERR(" ");
       g_tx[dst_fd] = NULL;
       wrap_free(tx, __LINE__);
       }
@@ -285,9 +285,9 @@ void thread_tx_start(int dst_fd)
 { 
     t_tx *tx;
   if ((dst_fd < 0) || (dst_fd >= MAX_FD_NUM))
-    KOUT("%d", dst_fd);
+    XOUT("%d", dst_fd);
   if (!(g_tx[dst_fd]))
-    KOUT("%d", dst_fd);
+    XOUT("%d", dst_fd);
   tx = g_tx[dst_fd];
   tx->thread_abort = 0;
   tx->thread_waiting = 0;
@@ -299,9 +299,9 @@ void thread_tx_abort(int dst_fd)
 {
     t_tx *tx;
   if ((dst_fd < 0) || (dst_fd >= MAX_FD_NUM))
-    KOUT("%d", dst_fd);
+    XOUT("%d", dst_fd);
   if (!(g_tx[dst_fd]))
-    KOUT("%d", dst_fd);
+    XOUT("%d", dst_fd);
   tx = g_tx[dst_fd];
   tx->thread_waiting = 0;
 }
@@ -312,9 +312,9 @@ void thread_tx_purge_el(int dst_fd)
 {
     t_tx *tx;
   if ((dst_fd < 0) || (dst_fd >= MAX_FD_NUM))
-    KOUT("%d", dst_fd);
+    XOUT("%d", dst_fd);
   if (!(g_tx[dst_fd]))
-    KOUT("%d", dst_fd);
+    XOUT("%d", dst_fd);
   tx = g_tx[dst_fd];
   purge_el_to_free(tx);
 }

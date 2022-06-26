@@ -10,15 +10,13 @@ echo TARGET:
 echo $TMPBUILD
 #----------------------------------------------------------
 rm -rf ${TMPBUILD}
-mkdir -p ${TMPBUILD}
-cp -r ${HERE}/targz_store ${TMPBUILD}
+mkdir -p ${TMPBUILD}/targz_store
+cp -f ${HERE}/targz_store/* ${TMPBUILD}/targz_store
 cp -r ${HERE}/cloonix ${TMPBUILD}
 #----------------------------------------------------------
-for i in cloonix_net cloonix_ssh cloonix_scp \
-         cloonix_cli cloonix_gui \
-         cloonix_osh cloonix_ocp cloonix_dta \
-         cloonix_xwy cloonix_ice cloonix_mon \
-         cloonix_ovs; do
+for i in cloonix_dta cloonix_osh cloonix_xwy \
+         cloonix_cli cloonix_gui cloonix_net cloonix_scp \
+         cloonix_ice cloonix_ocp cloonix_ssh cloonix_ovs; do 
   mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
 done
 #----------------------------------------------------------
@@ -32,7 +30,6 @@ done
            xwy \
            lib_rpc_clownix \
            lib_utils \
-           lib_rpc_qmonitor \
            lib_rpc_doors \
            lib_rpc_layout ; do
 
@@ -42,6 +39,7 @@ done
     echo ${CLOONIX_COMMON}/${i}
     echo
     echo
+    sleep 2
     ./cmd
   done
 #----------------------------------------------------------
@@ -50,17 +48,15 @@ done
   echo
   sleep 1
 #----------------------------------------------------------
-  for i in  dpdk \
-            ovs \
+  for i in  ovs \
             doorways \
             suid_power \
             uml_cloonix_switch \
             qemu \
-            nat_dpdk \
-            d2d_dpdk \
-            xyx_dpdk \
-            a2b_dpdk \
             ovs_drv \
+            ovs_snf \
+            ovs_nat \
+            ovs_c2c \
             dtach; do
 
     echo
@@ -68,6 +64,7 @@ done
     echo ${CLOONIX_SERVER}/${i}
     echo
     echo
+    sleep 2
     cd ${CLOONIX_SERVER}/${i}
     ./cmd
   done
@@ -81,7 +78,6 @@ done
   for i in  lib_client \
             ctrl \
             xwycli \
-            qmonitor \
             cairo_canvas/crcanvas_gtk \
             cairo_canvas/src/bank \
             cairo_canvas/src/interface \
@@ -96,6 +92,7 @@ done
     echo ${CLOONIX_CLIENT}/${i}
     echo
     echo
+    sleep 2
     cd ${CLOONIX_CLIENT}/${i}
     ./cmd
   done

@@ -4,7 +4,6 @@ IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 RPC_DOORS=${CLOONIX_COMMON}/lib_rpc_doors/
-RPC_QMONITOR=${CLOONIX_COMMON}/lib_rpc_qmonitor/
 RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout
 UTILS=${CLOONIX_COMMON}/lib_utils/
 RPCT=${CLOONIX_COMMON}/lib_rpct
@@ -36,33 +35,27 @@ SRC = \
       qemu_automaton.c \
       hop_event.c \
       layout_topo.c \
-      qmonitor.c \
       qmp_dialog.c \
       qmp.c \
-      qhvc0.c \
+      qga_dialog.c \
       xwy.c \
+      kvm.c \
+      ovs.c \
+      ovs_snf.c \
+      ovs_nat.c \
+      ovs_tap.c \
+      ovs_c2c.c \
+      c2c_peer.c \
+      msg.c \
       list_commands.c \
       stats_counters.c \
       stats_counters_sysinfo.c \
       fmt_diag.c \
       slowperiodic.c \
       suid_power.c \
-      dpdk_d2d.c \
-      dpdk_d2d_peer.c \
-      xyx_dpdk_process.c \
-      a2b_dpdk_process.c \
-      d2d_dpdk_process.c \
-      nat_dpdk_process.c \
-      dpdk_ovs.c \
-      dpdk_msg.c \
-      dpdk_tap.c \
-      dpdk_xyx.c \
-      dpdk_nat.c \
-      dpdk_a2b.c \
-      dpdk_phy.c \
-      dpdk_kvm.c \
       dispatch_diag_msg.c \
-      container.c \
+      cnt.c \
+      base64.c \
       server_stub.c
 
 INCLUDES= -I./src \
@@ -72,7 +65,6 @@ INCLUDES= -I./src \
           -I${RPC_DOORS}/include \
           -I${UTILS}/include \
           -I${RPC_CLOWNIX}/include \
-          -I${RPC_QMONITOR}/include \
           -I${AGENT_INCLUDE}
 
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
@@ -80,7 +72,6 @@ LIBS = -L${IO_CLOWNIX} -lio_clownix \
        -L${RPC_LAYOUT} -lrpc_layout \
        -L${RPC_DOORS} -lrpc_doors \
        -L${RPC_CLOWNIX} -lrpc_clownix \
-       -L${RPC_QMONITOR} -lrpc_qmonitor \
        -L${UTILS} -lutils -lcrypto -lrt \
        -lutil -lm 
 

@@ -1,0 +1,61 @@
+/*****************************************************************************/
+/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
+/*                                                                           */
+/*  This program is free software: you can redistribute it and/or modify     */
+/*  it under the terms of the GNU Affero General Public License as           */
+/*  published by the Free Software Foundation, either version 3 of the       */
+/*  License, or (at your option) any later version.                          */
+/*                                                                           */
+/*  This program is distributed in the hope that it will be useful,          */
+/*  but WITHOUT ANY WARRANTY; without even the implied warranty of           */
+/*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            */
+/*  GNU Affero General Public License for more details.a                     */
+/*                                                                           */
+/*  You should have received a copy of the GNU Affero General Public License */
+/*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
+/*                                                                           */
+/*****************************************************************************/
+typedef struct t_ovs_nat
+{
+  char name[MAX_NAME_LEN];
+  char vhost[MAX_NAME_LEN];
+  char mac[MAX_NAME_LEN];
+  char lan[MAX_NAME_LEN];
+  char lan_added[MAX_NAME_LEN];
+  int  del_nat_req;
+  char socket[MAX_PATH_LEN];
+  int count;
+  int llid;
+  int pid;
+  int nat_id;
+  int closed_count;
+  int suid_root_done;
+  int watchdog_count;
+  int cli_llid;
+  int cli_tid;
+  struct t_ovs_nat *prev;
+  struct t_ovs_nat *next;
+} t_ovs_nat;
+
+t_ovs_nat *ovs_nat_get_first(int *nb_nat);
+void ovs_nat_llid_closed(int llid);
+void ovs_nat_pid_resp(int llid, char *name, int pid);
+int  ovs_nat_get_all_pid(t_lst_pid **lst_pid);
+int  ovs_nat_diag_llid(int llid);
+void ovs_nat_sigdiag_resp(int llid, int tid, char *line);
+void ovs_nat_poldiag_resp(int llid, int tid, char *line);
+void ovs_nat_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan);
+void ovs_nat_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan);
+int  ovs_nat_exists(char *name);
+int  ovs_nat_snf(char *name);
+
+void ovs_nat_add(int llid, int tid, char *name);
+void ovs_nat_del(int llid, int tid, char *name);
+void ovs_nat_add_lan(int llid, int tid, char *name, char *lan);
+void ovs_nat_del_lan(int llid, int tid, char *name, char *lan);
+t_topo_endp *ovs_nat_translate_topo_endp(int *nb);
+
+void ovs_nat_vm_event(void);
+void ovs_nat_cisco_add(char *name);
+void ovs_nat_init(void);
+/*--------------------------------------------------------------------------*/

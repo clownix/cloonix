@@ -1,8 +1,8 @@
 diff -Naur qemu_vip/configure tainted_qemu/configure
---- qemu_vip/configure	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/configure	2022-01-04 15:43:27.939061819 +0100
-@@ -2876,6 +2876,20 @@
-     cpuid_h=yes
+--- qemu_vip/configure	2022-06-16 20:25:01.000000000 +0200
++++ tainted_qemu/configure	2022-06-19 18:41:53.463324345 +0200
+@@ -2186,6 +2186,20 @@
+   QEMU_LDFLAGS="-fsanitize=undefined $QEMU_LDFLAGS"
  fi
  
 + ##########################################
@@ -20,36 +20,12 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
 +  libs_softmmu="$libs_softmmu $openssl_libs"
 +fi
  ##########################################
- # avx2 optimization requirement check
- #
-diff -Naur qemu_vip/hw/virtio/vhost.c tainted_qemu/hw/virtio/vhost.c
---- qemu_vip/hw/virtio/vhost.c	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/hw/virtio/vhost.c	2022-01-04 15:43:27.939061819 +0100
-@@ -1218,7 +1218,7 @@
  
-     r = dev->vhost_ops->vhost_get_vring_base(dev, &state);
-     if (r < 0) {
--        VHOST_OPS_DEBUG("vhost VQ %u ring restore failed: %d", idx, r);
-+//cloonix it happens        VHOST_OPS_DEBUG("vhost VQ %u ring restore failed: %d", idx, r);
-         /* Connection to the backend is broken, so let's sync internal
-          * last avail idx to the device used idx.
-          */
-diff -Naur qemu_vip/hw/virtio/vhost-user.c tainted_qemu/hw/virtio/vhost-user.c
---- qemu_vip/hw/virtio/vhost-user.c	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/hw/virtio/vhost-user.c	2022-01-04 15:43:27.939061819 +0100
-@@ -471,7 +471,7 @@
-     }
- 
-     if (qemu_chr_fe_set_msgfds(chr, fds, fd_num) < 0) {
--        error_report("Failed to set msg fds.");
-+//cloonix it happens        error_report("Failed to set msg fds.");
-         return -1;
-     }
- 
+ # Exclude --warn-common with TSan to suppress warnings from the TSan libraries.
 diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/virtio.h
---- qemu_vip/include/hw/virtio/virtio.h	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/include/hw/virtio/virtio.h	2022-01-04 15:43:27.939061819 +0100
-@@ -322,6 +322,7 @@
+--- qemu_vip/include/hw/virtio/virtio.h	2022-06-16 20:25:01.000000000 +0200
++++ tainted_qemu/include/hw/virtio/virtio.h	2022-06-19 18:41:53.463324345 +0200
+@@ -325,6 +325,7 @@
  VirtQueue *virtio_vector_first_queue(VirtIODevice *vdev, uint16_t vector);
  VirtQueue *virtio_vector_next_queue(VirtQueue *vq);
  
@@ -58,8 +34,8 @@ diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/vi
  {
      assert(fbit < 64);
 diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virtio/virtio-net.h
---- qemu_vip/include/hw/virtio/virtio-net.h	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/include/hw/virtio/virtio-net.h	2022-01-04 15:43:27.939061819 +0100
+--- qemu_vip/include/hw/virtio/virtio-net.h	2022-06-16 20:25:01.000000000 +0200
++++ tainted_qemu/include/hw/virtio/virtio-net.h	2022-06-19 18:41:53.463324345 +0200
 @@ -26,6 +26,7 @@
  #define TYPE_VIRTIO_NET "virtio-net-device"
  OBJECT_DECLARE_SIMPLE_TYPE(VirtIONet, VIRTIO_NET)
@@ -107,8 +83,8 @@ diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virti
  } VirtIONetQueue;
  
 diff -Naur qemu_vip/include/qemu/bitops.h tainted_qemu/include/qemu/bitops.h
---- qemu_vip/include/qemu/bitops.h	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/include/qemu/bitops.h	2022-01-04 15:43:27.939061819 +0100
+--- qemu_vip/include/qemu/bitops.h	2022-06-16 20:25:01.000000000 +0200
++++ tainted_qemu/include/qemu/bitops.h	2022-06-19 18:41:53.463324345 +0200
 @@ -12,12 +12,14 @@
  #ifndef BITOPS_H
  #define BITOPS_H
@@ -126,8 +102,8 @@ diff -Naur qemu_vip/include/qemu/bitops.h tainted_qemu/include/qemu/bitops.h
  #define BIT(nr)                 (1UL << (nr))
  #define BIT_ULL(nr)             (1ULL << (nr))
 diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
---- qemu_vip/include/qemu/error-report.h	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/include/qemu/error-report.h	2022-01-04 15:43:27.939061819 +0100
+--- qemu_vip/include/qemu/error-report.h	2022-06-16 20:25:01.000000000 +0200
++++ tainted_qemu/include/qemu/error-report.h	2022-06-19 18:41:53.463324345 +0200
 @@ -13,6 +13,26 @@
  #ifndef QEMU_ERROR_REPORT_H
  #define QEMU_ERROR_REPORT_H
@@ -155,62 +131,19 @@ diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-
  typedef struct Location {
      /* all members are private to qemu-error.c */
      enum { LOC_NONE, LOC_CMDLINE, LOC_FILE } kind;
-@@ -39,8 +59,8 @@
- void warn_vreport(const char *fmt, va_list ap) GCC_FMT_ATTR(1, 0);
- void info_vreport(const char *fmt, va_list ap) GCC_FMT_ATTR(1, 0);
+@@ -37,8 +57,6 @@
+ void warn_vreport(const char *fmt, va_list ap) G_GNUC_PRINTF(1, 0);
+ void info_vreport(const char *fmt, va_list ap) G_GNUC_PRINTF(1, 0);
  
--void error_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
--void warn_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
-+//void error_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
-+//void warn_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
- void info_report(const char *fmt, ...) GCC_FMT_ATTR(1, 2);
+-void error_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
+-void warn_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
+ void info_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
  
  bool error_report_once_cond(bool *printed, const char *fmt, ...)
-diff -Naur qemu_vip/include/qemu-common.h tainted_qemu/include/qemu-common.h
---- qemu_vip/include/qemu-common.h	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/include/qemu-common.h	2022-01-04 15:43:27.939061819 +0100
-@@ -139,4 +139,13 @@
-  * returned. */
- bool dump_in_progress(void);
- 
-+
-+
-+#include <syslog.h>
-+#define DKERR(format, a...)              \
-+ do {                                                   \
-+    syslog(LOG_ERR, "%s line:%d " format, \
-+    __FUNCTION__,__LINE__, ## a);              \
-+    } while (0)
-+
- #endif
-diff -Naur qemu_vip/pc-bios/optionrom/Makefile tainted_qemu/pc-bios/optionrom/Makefile
---- qemu_vip/pc-bios/optionrom/Makefile	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/pc-bios/optionrom/Makefile	2022-01-04 15:43:27.939061819 +0100
-@@ -7,7 +7,7 @@
- 	@true
- 
- include ../../config-host.mak
--CFLAGS = -O2 -g
-+CFLAGS = -O2 -g -fcf-protection=none
- 
- quiet-command = $(if $(V),$1,$(if $(2),@printf "  %-7s %s\n" $2 $3 && $1, @$1))
- cc-option = $(if $(shell $(CC) $1 -c -o /dev/null -xc /dev/null >/dev/null 2>&1 && echo OK), $1, $2)
-diff -Naur qemu_vip/qapi/net.json tainted_qemu/qapi/net.json
---- qemu_vip/qapi/net.json	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/qapi/net.json	2022-01-04 15:43:27.939061819 +0100
-@@ -462,7 +462,7 @@
- #        @vhost-vdpa since 5.1
- ##
- { 'enum': 'NetClientDriver',
--  'data': [ 'none', 'nic', 'user', 'tap', 'l2tpv3', 'socket', 'vde',
-+  'data': [ 'none', 'nic', 'user', 'tap', 'l2tpv3', 'socket', 'vde', 
-             'bridge', 'hubport', 'netmap', 'vhost-user', 'vhost-vdpa' ] }
- 
- ##
 diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
---- qemu_vip/qemu-options.hx	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/qemu-options.hx	2022-01-04 15:43:27.939061819 +0100
-@@ -2727,6 +2727,7 @@
+--- qemu_vip/qemu-options.hx	2022-06-16 20:25:01.000000000 +0200
++++ tainted_qemu/qemu-options.hx	2022-06-19 18:41:53.467315692 +0200
+@@ -2729,6 +2729,7 @@
      "                Use group 'groupname' and mode 'octalmode' to change default\n"
      "                ownership and permissions for communication port.\n"
  #endif
@@ -219,15 +152,15 @@ diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
      "-netdev netmap,id=str,ifname=name[,devname=nmname]\n"
      "                attach to the existing netmap-enabled network interface 'name', or to a\n"
 diff -Naur qemu_vip/util/error.c tainted_qemu/util/error.c
---- qemu_vip/util/error.c	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/util/error.c	2022-01-04 15:43:27.939061819 +0100
+--- qemu_vip/util/error.c	2022-06-16 20:25:01.000000000 +0200
++++ tainted_qemu/util/error.c	2022-06-19 18:41:53.467315692 +0200
 @@ -223,10 +223,13 @@
  
  void error_report_err(Error *err)
  {
 -    error_report("%s", error_get_pretty(err));
 -    if (err->hint) {
-+//cloonix
++//cloon
 +    if (!strstr(err->msg, "Unexpected end-of-file before all data were read"))
 +      {
 +      error_report("%s", error_get_pretty(err));
@@ -238,129 +171,36 @@ diff -Naur qemu_vip/util/error.c tainted_qemu/util/error.c
      error_free(err);
  }
  
-diff -Naur qemu_vip/util/oslib-posix.c tainted_qemu/util/oslib-posix.c
---- qemu_vip/util/oslib-posix.c	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/util/oslib-posix.c	2022-01-04 15:43:27.939061819 +0100
-@@ -78,6 +78,8 @@
-     size_t numpages;
-     size_t hpagesize;
-     QemuThread pgthread;
-+    int  index;
-+    int  check_point_of_passage;
-     sigjmp_buf env;
- };
- typedef struct MemsetThread MemsetThread;
-@@ -458,6 +460,7 @@
-      * contention with allocation of the thread stacks.  Do not start
-      * clearing until all threads have been created.
-      */
-+    memset_args->check_point_of_passage = 1;
-     qemu_mutex_lock(&page_mutex);
-     while(!threads_created_flag){
-         qemu_cond_wait(&page_cond, &page_mutex);
-@@ -476,7 +479,8 @@
-         size_t numpages = memset_args->numpages;
-         size_t hpagesize = memset_args->hpagesize;
-         size_t i;
--        for (i = 0; i < numpages; i++) {
-+// Slow code, test of not going through it for cloonix.
-+//        for (i = 0; i < numpages; i++) {
-             /*
-              * Read & write back the same value, so we don't
-              * corrupt existing user/app data that might be
-@@ -489,9 +493,9 @@
-              * don't need to write at all so we don't cause
-              * wear on the storage backing the region...
-              */
--            *(volatile char *)addr = *addr;
--            addr += hpagesize;
--        }
-+//            *(volatile char *)addr = *addr;
-+//            addr += hpagesize;
-+//        }
-     }
-     pthread_sigmask(SIG_SETMASK, &oldset, NULL);
-     return NULL;
-@@ -515,7 +519,7 @@
-     static gsize initialized = 0;
-     size_t numpages_per_thread, leftover;
-     char *addr = area;
--    int i = 0;
-+    int not_ready = 1, i = 0;
- 
-     if (g_once_init_enter(&initialized)) {
-         qemu_mutex_init(&page_mutex);
-@@ -530,6 +534,7 @@
-     numpages_per_thread = numpages / memset_num_threads;
-     leftover = numpages % memset_num_threads;
-     for (i = 0; i < memset_num_threads; i++) {
-+        memset_thread[i].index = i;
-         memset_thread[i].addr = addr;
-         memset_thread[i].numpages = numpages_per_thread + (i < leftover);
-         memset_thread[i].hpagesize = hpagesize;
-@@ -538,7 +543,18 @@
-                            QEMU_THREAD_JOINABLE);
-         addr += memset_thread[i].numpages * hpagesize;
-     }
--
-+    while (not_ready)
-+      {
-+      not_ready = 0;
-+      for (i = 0; i < memset_num_threads; i++) {
-+        if (memset_thread[i].check_point_of_passage == 0)
-+          {
-+          not_ready = 1;
-+          fprintf(stderr, "Thread not fully started: %d\n", i);
-+          usleep(1);
-+          }
-+        }
-+      }
-     qemu_mutex_lock(&page_mutex);
-     threads_created_flag = true;
-     qemu_cond_broadcast(&page_cond);
-diff -Naur qemu_vip/util/qemu-error.c tainted_qemu/util/qemu-error.c
---- qemu_vip/util/qemu-error.c	2022-01-03 18:34:41.000000000 +0100
-+++ tainted_qemu/util/qemu-error.c	2022-01-04 15:43:27.939061819 +0100
-@@ -279,6 +279,7 @@
+diff -Naur qemu_vip/util/error-report.c tainted_qemu/util/error-report.c
+--- qemu_vip/util/error-report.c	2022-06-16 20:25:01.000000000 +0200
++++ tainted_qemu/util/error-report.c	2022-06-19 18:41:53.467315692 +0200
+@@ -267,14 +267,6 @@
   * Prepend the current location and append a newline.
   * It's wrong to call this in a QMP monitor.  Use error_setg() there.
   */
-+/*
- void error_report(const char *fmt, ...)
- {
-     va_list ap;
-@@ -287,6 +288,7 @@
-     vreport(REPORT_TYPE_ERROR, fmt, ap);
-     va_end(ap);
- }
-+*/
+-void error_report(const char *fmt, ...)
+-{
+-    va_list ap;
+-
+-    va_start(ap, fmt);
+-    vreport(REPORT_TYPE_ERROR, fmt, ap);
+-    va_end(ap);
+-}
  
  /*
   * Print a warning message to current monitor if we have one, else to stderr.
-@@ -294,6 +296,7 @@
+@@ -282,14 +274,6 @@
   * single phrase, with no newline or trailing punctuation.
   * Prepend the current location and append a newline.
   */
-+/*
- void warn_report(const char *fmt, ...)
- {
-     va_list ap;
-@@ -302,6 +305,7 @@
-     vreport(REPORT_TYPE_WARNING, fmt, ap);
-     va_end(ap);
- }
-+*/
+-void warn_report(const char *fmt, ...)
+-{
+-    va_list ap;
+-
+-    va_start(ap, fmt);
+-    vreport(REPORT_TYPE_WARNING, fmt, ap);
+-    va_end(ap);
+-}
  
  /*
   * Print an information message to current monitor if we have one, else to
-@@ -387,8 +391,10 @@
- 
-         break;
-     case G_LOG_LEVEL_WARNING:
-+/*
-         warn_report("%s%s%s",
-                     log_domain ?: "", log_domain ? ": " : "", message);
-+*/
-         break;
-     case G_LOG_LEVEL_CRITICAL:
-     case G_LOG_LEVEL_ERROR:

@@ -76,3 +76,4 @@ gcc -o cloonix_parrot_srv parrot_srv.c
 
 mv cloonix_parrot_srv ${AGENT_BIN_ALIEN}
 mv cloonix_parrot_cli ${AGENT_BIN_ALIEN}
+cp cloonix_init_starter.sh ${AGENT_BIN_ALIEN}

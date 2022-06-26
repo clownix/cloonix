@@ -52,7 +52,7 @@ static void init_x11_magic(void)
     {
     ln = snprintf(&(g_magic_cookie[i]), 2, "%x", (rand() & 0xF));
     if (ln != 1)
-      KOUT("%d", ln);
+      XOUT("%d", ln);
     }
   g_magic_cookie[2*MAGIC_COOKIE_LEN] = 0;
 }
@@ -127,7 +127,7 @@ static int x11_init_unix(char *display, int num)
   snprintf(g_x11_path, MAX_TXT_LEN-1, UNIX_X11_SOCKET_PREFIX, num);
   if (access(g_x11_path, F_OK))
     {
-    KERR("X11 socket not found: %s", g_x11_path);
+    XERR("X11 socket not found: %s", g_x11_path);
     memset(g_x11_path, 0, MAX_TXT_LEN);
     }
   else
@@ -150,7 +150,7 @@ static int x11_init_inet(char *display, int num)
                                     fd_type_x11_connect_tst, __FUNCTION__);
   if (tmp_fd < 0)
     {
-    KERR("X11 port not working: %d", g_x11_port);
+    XERR("X11 port not working: %d", g_x11_port);
     g_x11_port = 0;
     }
   else
@@ -206,7 +206,7 @@ void x11_init_resp(int srv_idx, t_msg *msg)
     {
     if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
       {
-      KOUT("%d", srv_idx);
+      XOUT("%d", srv_idx);
       }
     else
       {
@@ -216,7 +216,7 @@ void x11_init_resp(int srv_idx, t_msg *msg)
     }
   else
     {
-    KOUT("%s", msg->buf);
+    XOUT("%s", msg->buf);
     }
   wrap_free(msg, __LINE__);
 }
@@ -233,7 +233,7 @@ void x11_init_magic(void)
   memset(g_x11_path, 0, MAX_TXT_LEN);
   if (!display)
     {
-    KERR("MAGIC X11 no DISPLAY");
+    XERR("MAGIC X11 no DISPLAY");
     init_x11_magic();
     }
   else
@@ -244,7 +244,7 @@ void x11_init_magic(void)
       if (x11_init_unix(display, val))
         {
         display = NULL;
-        KERR("MAGIC X11 Problem with unix magic");
+        XERR("MAGIC X11 Problem with unix magic");
         }
       }
     else if (sscanf(display, "localhost:%d.0", &val) == 1)
@@ -252,19 +252,19 @@ void x11_init_magic(void)
       if (x11_init_inet(display, val))
         {
         display = NULL;
-        KERR("MAGIC X11 Problem with inet magic");
+        XERR("MAGIC X11 Problem with inet magic");
         }
       }
     else
       {
       display = NULL;
-      KERR("MAGIC X11 Problem with magic");
+      XERR("MAGIC X11 Problem with magic");
       }
     if (display == NULL)
       init_x11_magic();
     else if (get_xauth_magic(display, err))
       {
-      KERR("MAGIC X11 get_xauth_magic %s", err);
+      XERR("MAGIC X11 get_xauth_magic %s", err);
       init_x11_magic();
       }
     }

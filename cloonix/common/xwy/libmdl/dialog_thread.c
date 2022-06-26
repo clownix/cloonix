@@ -78,13 +78,13 @@ static int write_first_el(t_dialog_rec *pr)
       {
       if (errno != EINTR && errno != EAGAIN)
         {
-        KERR("%d %s", pr->fd, strerror(errno));
+        XERR("%d %s", pr->fd, strerror(errno));
         result = -2;
         }
       }
     else if (len == 0)
       {
-      KERR("WRITE CLOSED DIALOG %d", pr->fd);
+      XERR("WRITE CLOSED DIALOG %d", pr->fd);
       result = -2;
       }
     else
@@ -93,7 +93,7 @@ static int write_first_el(t_dialog_rec *pr)
       if (el->offset == el->payload)
         result = 0;
       else
-        KERR("DIALOG WRITE %d %d %d", pr->fd, len, el->payload-el->offset);
+        XERR("DIALOG WRITE %d %d %d", pr->fd, len, el->payload-el->offset);
       }
     }
   return result;
@@ -123,14 +123,14 @@ static void chain_el(t_dialog_rec *pr, t_dialog_el *el)
   if (pr->first)
     {
     if (!pr->last)
-      KOUT(" ");
+      XOUT(" ");
     pr->last->next = el;
     pr->last = el;
     }
   else
     {
     if (pr->last)
-      KOUT(" ");
+      XOUT(" ");
     pr->first = el;
     pr->last = el;
     }
@@ -146,7 +146,7 @@ static void chain_msg(t_dialog_rec *pr, char *msg)
   t_dialog_el *el;
   len_msg = strlen(msg) + 1;
   if ((len_msg <= 0) || (len_msg >= 0xFF) ||  (len_msg >= MAX_TXT_LEN))
-    KOUT("%d", len_msg);
+    XOUT("%d", len_msg);
   bufln = (char) len_msg;
   el = alloc_el(pr->fd, pr->outflow, len_msg, msg, bufln); 
   chain_el(pr, el);
@@ -159,9 +159,9 @@ static int send_any(int fd, char *buf, int sock_fd, int srv_idx, int cli_idx)
   int result = -1;
   t_dialog_rec *pr;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    KOUT("DIALOG FD OUT OF RANGE %d", fd);
+    XOUT("DIALOG FD OUT OF RANGE %d", fd);
   if (!g_dialog_rec[fd])
-    KERR("DIALOG FD DOES NOT EXISTS %d", fd);
+    XERR("DIALOG FD DOES NOT EXISTS %d", fd);
   else 
     {
     pr = g_dialog_rec[fd];
@@ -216,7 +216,7 @@ void dialog_recv_buf(char *buf, int sock_fd, int srv_idx, int cli_idx,
     {
     if ((srv_idx != srv) || (cli_idx != cli))
       {
-      KERR("%d %d %d  %d %d", sock_fd, srv_idx, cli_idx, srv, cli);
+      XERR("%d %d %d  %d %d", sock_fd, srv_idx, cli_idx, srv, cli);
       err(sock_fd, srv_idx, cli_idx, buf);
       }
     else
@@ -228,7 +228,7 @@ void dialog_recv_buf(char *buf, int sock_fd, int srv_idx, int cli_idx,
     {
     if ((srv_idx != srv) || (cli_idx != cli))
       {
-      KERR("%d %d %d  %d %d", sock_fd, srv_idx, cli_idx, srv, cli);
+      XERR("%d %d %d  %d %d", sock_fd, srv_idx, cli_idx, srv, cli);
       err(sock_fd, srv_idx, cli_idx, buf);
       }
     else
@@ -241,7 +241,7 @@ void dialog_recv_buf(char *buf, int sock_fd, int srv_idx, int cli_idx,
     {
     if ((srv_idx != srv) || (cli_idx != cli))
       {
-      KERR("%d %d %d  %d %d", sock_fd, srv_idx, cli_idx, srv, cli);
+      XERR("%d %d %d  %d %d", sock_fd, srv_idx, cli_idx, srv, cli);
       err(sock_fd, srv_idx, cli_idx, buf);
       }
     else
@@ -265,9 +265,9 @@ int dialog_recv_fd(int fd, int sock_fd, int srv_idx, int cli_idx,
   char bufln;
   t_dialog_rec *pr;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    KOUT("DIALOG FD OUT OF RANGE %d", fd);
+    XOUT("DIALOG FD OUT OF RANGE %d", fd);
   if (!g_dialog_rec[fd])
-    KERR("DIALOG FD DOES NOT EXISTS %d", fd);
+    XERR("DIALOG FD DOES NOT EXISTS %d", fd);
   else
     {
     pr = g_dialog_rec[fd];
@@ -276,14 +276,14 @@ int dialog_recv_fd(int fd, int sock_fd, int srv_idx, int cli_idx,
       len = pr->inflow(fd, &bufln, 1);
       if (len == 0)
         {
-        KERR(" ");
+        XERR(" ");
         return -1;
         }
       else if (len < 0 )
         {
         if ((errno != EINTR) && (errno != EAGAIN))
           {
-          KERR("%s", strerror(errno));
+          XERR("%s", strerror(errno));
           return -1;
           }
         else
@@ -291,7 +291,7 @@ int dialog_recv_fd(int fd, int sock_fd, int srv_idx, int cli_idx,
         }
       else if (len != 1)
         {
-        KERR(" ");
+        XERR(" ");
         return -1;
         }
       else
@@ -303,20 +303,20 @@ int dialog_recv_fd(int fd, int sock_fd, int srv_idx, int cli_idx,
       }
     ln_expected = pr->payload - pr->offset;
     if (ln_expected < 0)
-      KOUT("%d %d", pr->payload, pr->offset);
+      XOUT("%d %d", pr->payload, pr->offset);
     if ((pr->offset + ln_expected) > MAX_TXT_LEN)
-      KOUT("%d %d", pr->payload, pr->offset);
+      XOUT("%d %d", pr->payload, pr->offset);
     len = pr->inflow(fd, (void *)(pr->rx + pr->offset), ln_expected);
     if (len == 0)
       {
-      KERR(" ");
+      XERR(" ");
       return -1;
       }
     else if (len < 0 )
       {
       if ((errno != EINTR) && (errno != EAGAIN))
         {
-        KERR("%s", strerror(errno));
+        XERR("%s", strerror(errno));
         return -1;
         }
       else
@@ -335,7 +335,7 @@ int dialog_recv_fd(int fd, int sock_fd, int srv_idx, int cli_idx,
       result = 0;
       }
     else
-      KOUT("%d %d", len, ln_expected);
+      XOUT("%d %d", len, ln_expected);
     }
   return result;
 }
@@ -346,9 +346,9 @@ int dialog_tx_queue_non_empty(int fd)
 {
   int result = 0;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    KOUT("DIALOG FD OUT OF RANGE %d", fd);
+    XOUT("DIALOG FD OUT OF RANGE %d", fd);
   if (!g_dialog_rec[fd])
-    KERR("DIALOG FD DOES NOT EXISTS %d", fd);
+    XERR("DIALOG FD DOES NOT EXISTS %d", fd);
   else if (g_dialog_rec[fd]->first)
     result = 1;
   return result;
@@ -361,12 +361,12 @@ int dialog_tx_ready(int fd)
   int result, used;
   t_dialog_rec *pr;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    KOUT("DIALOG FD OUT OF RANGE %d", fd);
+    XOUT("DIALOG FD OUT OF RANGE %d", fd);
   pr = g_dialog_rec[fd];
   if (!pr)
-    KOUT("DIALOG FD DOES NOT EXIST %d", fd);
+    XOUT("DIALOG FD DOES NOT EXIST %d", fd);
   if (pr->fd != fd)
-    KOUT("DIALOG FD INCOHERENT %d %d", pr->fd, fd);
+    XOUT("DIALOG FD INCOHERENT %d %d", pr->fd, fd);
   while(1)
     {
     result = write_first_el(pr);
@@ -388,9 +388,9 @@ int dialog_open(int fd, t_outflow outflow, t_inflow inflow)
   int result = -1;
   t_dialog_rec *pr;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    KOUT("DIALOG FD OUT OF RANGE %d", fd);
+    XOUT("DIALOG FD OUT OF RANGE %d", fd);
   if (g_dialog_rec[fd])
-    KERR("DIALOG FD EXISTS %d", fd);
+    XERR("DIALOG FD EXISTS %d", fd);
   else
     {
     pr = (t_dialog_rec *) wrap_malloc(sizeof(t_dialog_rec));
@@ -409,17 +409,17 @@ void dialog_close(int fd)
 {
   t_dialog_rec *pr;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    KOUT("DIALOG FD OUT OF RANGE %d", fd);
+    XOUT("DIALOG FD OUT OF RANGE %d", fd);
   if (!g_dialog_rec[fd])
-    KERR("DIALOG FD DOES NOT EXISTS %d", fd);
+    XERR("DIALOG FD DOES NOT EXISTS %d", fd);
   else
     {
     pr = g_dialog_rec[fd];
     g_dialog_rec[fd] = NULL;
     if (pr->fd != fd)
-      KOUT("DIALOG FD INCOHERENT %d %d", pr->fd, fd);
+      XOUT("DIALOG FD INCOHERENT %d %d", pr->fd, fd);
     if (pr->first)
-      KERR("CLOSE PURGE LEFT DATA %d  %d el", fd, pr->nb_els);
+      XERR("CLOSE PURGE LEFT DATA %d  %d el", fd, pr->nb_els);
     while(pr->first)
       free_first_el(pr);
     wrap_free(pr, __LINE__);

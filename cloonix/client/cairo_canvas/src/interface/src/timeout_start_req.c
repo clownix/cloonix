@@ -72,15 +72,15 @@ void to_cloonix_switch_create_node(int is_cnt, double x, double y,
   pa->is_cnt = is_cnt;
   pa->x = x;
   pa->y = y;
-  memcpy(pa->tx, tx, MAX_DPDK_VM * sizeof(double));
-  memcpy(pa->ty, ty, MAX_DPDK_VM * sizeof(double));
+  memcpy(pa->tx, tx, MAX_ETH_VM * sizeof(double));
+  memcpy(pa->ty, ty, MAX_ETH_VM * sizeof(double));
   clownix_timeout_add(1, timer_create_item_node_req,(void *)pa, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void to_cloonix_switch_create_sat(char *name, int endp_type, 
-                                  t_d2d_req_info *d2d_req_info,
+                                  t_c2c_req_info *c2c_req_info,
                                   double x, double y)
 {
   t_item_req *pa;
@@ -89,8 +89,8 @@ void to_cloonix_switch_create_sat(char *name, int endp_type,
   pa->bank_type = bank_type_sat;
   strncpy(pa->name, name, MAX_NAME_LEN-1);
   pa->endp_type = endp_type;
-  if (d2d_req_info)
-    memcpy(&(pa->d2d_req_info), d2d_req_info, sizeof(t_d2d_req_info));
+  if (c2c_req_info)
+    memcpy(&(pa->c2c_req_info), c2c_req_info, sizeof(t_c2c_req_info));
   pa->x = x;
   pa->y = y;
   clownix_timeout_add(1, timer_create_item_req, (void *)pa, NULL, NULL);

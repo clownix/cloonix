@@ -34,18 +34,19 @@ void callback_end(int tid, int status, char *err);
 /***************************************************************************/
 void help_add_cnt(char *line)
 {
-  printf("\n\n\n %s <name> eth=<eth_description> <image> [options]\n",
+  printf("\n\n\n %s <name> eth=<eth_description> <image> <customer_launch> [options]\n",
   line);
-  printf("\n\teth_description: d is for dpdk without spy");
+  printf("\n\timage is a file containing the root file system.");
+  printf("\n\tcustomer_launch is optionnal, a script that is in container.");
   printf("\n\teth_description example:");
-  printf("\n\t\t  eth=sdd says eth0 eth1 and eth2 dpdk interfaces eth0 is spyable");
-  printf("\n\tMax eth: %d", MAX_DPDK_VM);
+  printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
+  printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\nexample:\n\n");
   printf("\n%s vm_name eth=sss bullseye.img\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s vm_name eth=ddd bullseye.img\n", line);
+  printf("\n%s vm_name eth=vvv bullseye.img \"sleep 100\"\n", line);
   printf("This will give 3 eth that are not spyable\n");
   printf("\n\n\n");
 }
@@ -95,7 +96,8 @@ static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
 
 /***************************************************************************/
 static int local_add_cnt(char *name, int nb_tot_eth, t_eth_table *eth_tab,
-                         char *image, int argc, char **argv)
+                         char *image, char *customer_launch,
+                         int argc, char **argv)
 {
   int i, result = 0;
   t_topo_cnt cnt;
@@ -126,6 +128,7 @@ static int local_add_cnt(char *name, int nb_tot_eth, t_eth_table *eth_tab,
     cnt.nb_tot_eth = nb_tot_eth;
     memcpy(cnt.eth_table, eth_tab, nb_tot_eth * sizeof(t_eth_table));
     strncpy(cnt.image, image, MAX_PATH_LEN-1);
+    strncpy(cnt.customer_launch, customer_launch, MAX_PATH_LEN-1);
     client_add_cnt(0, callback_end, &cnt);
     }
   return result;
@@ -139,7 +142,7 @@ static int check_eth_desc(char *eth_desc, char *err,
 
 {
   int i, dpdk=0, result = 0;
-  int len, max = MAX_DPDK_VM;
+  int len, max = MAX_ETH_VM;
   memset(eth_tab, 0, max * sizeof(t_eth_table)); 
   len = strlen(eth_desc);
   if (len >= max)
@@ -151,9 +154,7 @@ static int check_eth_desc(char *eth_desc, char *err,
     {
     for (i=0; (result == 0) && (i < len); i++)
       {
-      if (eth_desc[i] == 'd')
-        eth_tab[i].endp_type = endp_type_ethd;
-      else if (eth_desc[i] == 's')
+      if (eth_desc[i] == 's')
         eth_tab[i].endp_type = endp_type_eths;
       else if (eth_desc[i] == 'v')
         eth_tab[i].endp_type = endp_type_ethv;
@@ -168,14 +169,13 @@ static int check_eth_desc(char *eth_desc, char *err,
     {
     for (i=0; i < max; i++)
       {
-      if ((eth_tab[i].endp_type == endp_type_ethd) ||
-          (eth_tab[i].endp_type == endp_type_eths) ||
+      if ((eth_tab[i].endp_type == endp_type_eths) ||
           (eth_tab[i].endp_type == endp_type_ethv))
         dpdk += 1;
       }
-    if (dpdk > MAX_DPDK_VM)
+    if (dpdk > MAX_ETH_VM)
       {
-      sprintf(err, "Too many dpdk interfaces, %d max: %d",dpdk,MAX_DPDK_VM);
+      sprintf(err, "Too many dpdk interfaces, %d max: %d",dpdk,MAX_ETH_VM);
       result = -1;
       }
     }
@@ -188,22 +188,32 @@ static int check_eth_desc(char *eth_desc, char *err,
 int cmd_add_cnt(int argc, char **argv)
 {
   int nb_eth, result = -1;
-  char *image, *name;
+  char *image, *customer_launch, *name;
   char eth_string[MAX_PATH_LEN];
   char err[MAX_PATH_LEN];
-  t_eth_table etht[MAX_DPDK_VM];
+  t_eth_table etht[MAX_ETH_VM];
   if (argc < 3) 
-    printf("\nNot enough parameters for add kvm\n");
-
-  if (sscanf(argv[1], "eth=%s", eth_string) != 1)
-    printf("\nBad eth= parameter %s\n", argv[1]);
-  else if (check_eth_desc(eth_string, err, &nb_eth, etht))
-    printf("\nBad eth= parameter %s %s\n", argv[1], err);
+    printf("\nNot enough parameters for add cnt\n");
   else
     {
-    name = argv[0];
-    image = argv[2];
-    result = local_add_cnt(name, nb_eth, etht, image, argc-3, &(argv[3])); 
+    if (sscanf(argv[1], "eth=%s", eth_string) != 1)
+      printf("\nBad eth= parameter %s\n", argv[1]);
+    else if (check_eth_desc(eth_string, err, &nb_eth, etht))
+      printf("\nBad eth= parameter %s %s\n", argv[1], err);
+    else
+      {
+      name = argv[0];
+      image = argv[2];
+      if (argc == 3)
+        result = local_add_cnt(name, nb_eth, etht, image, "sleep 1000",
+                               argc-3, &(argv[3])); 
+      else
+        {
+        customer_launch = argv[3];
+        result = local_add_cnt(name, nb_eth, etht, image, customer_launch,
+                               argc-4, &(argv[4])); 
+        }
+      }
     }
   return result;
 }

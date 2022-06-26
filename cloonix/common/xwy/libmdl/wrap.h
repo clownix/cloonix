@@ -27,7 +27,7 @@ ssize_t wrap_write_x11_soc(int s, const void *buf, long unsigned int len);
 ssize_t wrap_write_pty(int s, const void *buf, long unsigned int len);
 ssize_t wrap_write_scp(int s, const void *buf, long unsigned int len);
 ssize_t wrap_write_dialog_thread(int s, const void *buf, long unsigned int len);
-ssize_t wrap_write_cloonix(int s, const void *buf, long unsigned int len);
+ssize_t wrap_write_cloon(int s, const void *buf, long unsigned int len);
 ssize_t wrap_write_kout(int s, const void *buf, long unsigned int len);
 ssize_t wrap_read_cli(int s, void *buf, size_t len);
 ssize_t wrap_read_srv(int s, void *buf, size_t len);
@@ -38,7 +38,7 @@ ssize_t wrap_read_scp(int s, void *buf, size_t len);
 ssize_t wrap_read_zero(int s, void *buf, size_t len);
 ssize_t wrap_read_sig(int s, void *buf, size_t len);
 ssize_t wrap_read_dialog_thread(int s, void *buf, size_t len);
-ssize_t wrap_read_cloonix(int s, void *buf, size_t len);
+ssize_t wrap_read_cloon(int s, void *buf, size_t len);
 ssize_t wrap_read_kout(int s, void *buf, size_t len);
 /*--------------------------------------------------------------------------*/
 int wrap_accept(int fd_listen, int fd_type, int is_tcp, const char *fct);

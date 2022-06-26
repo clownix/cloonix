@@ -96,7 +96,7 @@ int main (int argc, char *argv[])
 {
   int i, action=action_bash;
   char *src=NULL, *dst=NULL, *cmd=NULL;
-  int nb_cloonix;
+  int nb_cloon;
   t_cloonix_conf_info *cloonix_conf;
   t_cloonix_conf_info *cnf;
   if (argc < 3)
@@ -105,15 +105,15 @@ int main (int argc, char *argv[])
     KOUT("%s", argv[1]);
   if (argc > 3)
     {
-    if (get_input_params_cloonix(argc-3, argv+3, &action, &src, &dst, &cmd))
+    if (get_input_params_cloon(argc-3, argv+3, &action, &src, &dst, &cmd))
       usage();
     }
   DEBUG_INIT(0);
   init_local_cloonix_bin_path(argv[0]);
   doorways_sock_init();
   msg_mngt_init("ctrl", IO_MAX_BUF_LEN);
-  cloonix_conf_info_get_all(&nb_cloonix, &cloonix_conf);
-  for (i=0; i<nb_cloonix; i++)
+  cloonix_conf_info_get_all(&nb_cloon, &cloonix_conf);
+  for (i=0; i<nb_cloon; i++)
     {
     if (!strcmp(argv[2], cloonix_conf[i].name))
       {
@@ -125,9 +125,9 @@ int main (int argc, char *argv[])
       break;
       }
     }
-  if (i == nb_cloonix)
+  if (i == nb_cloon)
     {
-    printf("\nCloonix name %s not found in cloonix_config\n", argv[2]);
+    printf("\nCloon name %s not found in cloonix_config\n", argv[2]);
     usage();
     }
   msg_mngt_loop();

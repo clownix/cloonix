@@ -202,7 +202,7 @@ static void timer_monitor_xwy_pid(void *data)
     }
   else
     KOUT("%d", g_xwy_state);
-  clownix_timeout_add(100, timer_monitor_xwy_pid, NULL, NULL, NULL);
+  clownix_timeout_add(500, timer_monitor_xwy_pid, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -250,7 +250,7 @@ void init_xwy(void)
   snprintf(g_xwy_params.unix_control_sock, MAX_PATH_LEN, "%s/%s", 
                                    cfg_get_root_work(), XWY_CONTROL_SOCK);
   g_xwy_params.unix_control_sock[MAX_PATH_LEN-1] = 0;
-  clownix_timeout_add(100, timer_monitor_xwy_pid, NULL, NULL, NULL);
+  clownix_timeout_add(500, timer_monitor_xwy_pid, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

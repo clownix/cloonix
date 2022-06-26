@@ -20,3 +20,4 @@ mv spice-gtk tainted_spice
 cd tainted_spice
 patch -p1 < ../cloonix.patch
 
+

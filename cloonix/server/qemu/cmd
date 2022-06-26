@@ -45,8 +45,6 @@ cd ${HERE}/tainted_qemu/
                      --enable-vhost-kernel
                      --enable-vhost-user
                      --enable-pie
-                     --enable-vhost-scsi
-                     --enable-vhost-crypto
                      --enable-debug-info
                      --enable-debug
                      --enable-debug-mutex
@@ -57,7 +55,6 @@ cd ${HERE}/tainted_qemu/
                      --disable-snappy
                      --disable-bzip2
                      --disable-slirp
-                     --disable-vhost-vsock
                      --disable-tcg
                      --disable-debug-tcg
                      --disable-virtfs
@@ -78,7 +75,7 @@ cd ${HERE}/tainted_qemu/
                      --disable-vnc
                      --disable-vnc-sasl
                      --disable-vnc-jpeg
-                     --disable-vnc-png
+                     --disable-png
                      --disable-cocoa
                      --disable-xen
                      --disable-xen-pci-passthrough

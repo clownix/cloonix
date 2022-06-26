@@ -15,43 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define NO_DEFINED_VALUE "NO_DEFINED_VALUE_ITEM"
-#define DTACH_SOCK "dtach"
-#define DOORS_CTRL_SOCK "doors_ctrl_sock"
-#define SPICE_SOCK "spice_sock"
-#define CLOONIX_SWITCH "cloonix_switch"
-#define XWY_TRAFFIC_SOCK "xwy_traf"
-#define XWY_CONTROL_SOCK "xwy_ctrl"
-#define SUID_POWER_SOCK_DIR "suid_power"
-#define XYX_DPDK_SOCK_DIR "xyx_dpdk"
-#define NAT_DPDK_SOCK_DIR "nat_dpdk"
-#define A2B_DPDK_SOCK_DIR "a2b_dpdk"
-#define D2D_DPDK_SOCK_DIR "d2d_dpdk"
-#define SNF_PCAP_DIR "snf"
-#define CONTAINER_DIR "cnt"
-
-#define MAX_STATS_ITEMS 30
-
-#define MAX_LAN           (0x3FFF + 2)
-#define MAX_FD_QTY         5000
-#define MAX_BUF_SIZE       2000
-#define MAX_ITEM_LEN       200
-#define MAX_TYPE_LEN       32
-#define MAX_BIG_BUF        20000 
-#define MAX_PRINT_LEN      10000
-#define HALF_SEC_BEAT      50 
-#define MAX_ARGC_ARGV      100
-#define MAX_INTF_MNGT      100
-#define SPY_TX "spy_tx"
-#define SPY_RX "spy_rx"
-
-#define MAX_LIST_COMMANDS_LEN     256
-#define MAX_LIST_COMMANDS_QTY     500
-
-#define ROOTFS_STATIC_PREFIX "rootfs_"
-#define NVRAM_STATIC_PREFIX "nvram_"
-
-#define MAX_PEER_MAC 50
 
 enum{
   a2b_type_delay = 12,
@@ -60,7 +23,7 @@ enum{
   a2b_type_bsize,
   a2b_type_brate,
   a2b_type_silentms,
-  xyx_type_mac_mangle,
+  c2c_type_mac_mangle,
 };
 
 enum {
@@ -70,19 +33,16 @@ enum {
     type_hop_endp,
     type_hop_doors,
     type_hop_suid_power,
-    type_hop_nat_dpdk,
-    type_hop_d2d_dpdk,
-    type_hop_a2b_dpdk,
-    type_hop_xyx_dpdk,
+    type_hop_nat,
+    type_hop_c2c,
+    type_hop_a2b,
+    type_hop_snf,
     type_hop_max
     };
 
 
 enum {
   vmcmd_min = 0,
-  vmcmd_halt_with_guest,
-  vmcmd_reboot_with_guest,
-  vmcmd_halt_with_qemu,
   vmcmd_reboot_with_qemu,
   vmcmd_promiscious_flag_set,
   vmcmd_promiscious_flag_unset,
@@ -94,12 +54,12 @@ enum
 {
   vm_evt_none = 0,
   vm_evt_poll_not_used,
-  vm_evt_qmp_conn_ok,
-  vm_evt_qmp_conn_ko,
   vm_evt_ping_ok,
   vm_evt_ping_ko,
   vm_evt_cloonix_ga_ping_ok,
   vm_evt_cloonix_ga_ping_ko,
+  vm_evt_qmp_conn_ok,
+  vm_evt_qmp_conn_ko,
   vm_evt_max,
 };
 
@@ -119,8 +79,8 @@ enum
   type_llid_trace_endp_ovs,
   type_llid_trace_endp_ovsdb,
   type_llid_trace_jfs,
-  type_llid_trace_unix_qmonitor,
   type_llid_trace_unix_xwy,
+  type_llid_trace_unix_qmp,
   type_llid_trace_endp_suid,
   type_llid_max,
 };
@@ -282,8 +242,8 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt);
 /*---------------------------------------------------------------------------*/
 void send_add_vm(int llid, int tid, t_topo_kvm *kvm);
 void recv_add_vm(int llid, int tid, t_topo_kvm *kvm);
-void send_sav_vm(int llid, int tid, char *name, int type, char *sav_vm_path);
-void recv_sav_vm(int llid, int tid, char *name, int type, char *sav_vm_path);
+void send_sav_vm(int llid, int tid, char *name, char *sav_vm_path);
+void recv_sav_vm(int llid, int tid, char *name, char *sav_vm_path);
 
 void send_del_sat(int llid, int tid, char *name);
 void recv_del_sat(int llid, int tid, char *name);
@@ -372,21 +332,11 @@ void recv_topo_small_event(int llid, int tid, char *name,
 void sys_info_free(t_sys_info *sys);
 char *llid_trace_lib(int type);
 
-void send_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu);
-void recv_dpdk_ovs_cnf(int llid, int tid, int lcore, int mem, int cpu);
-
 void send_vmcmd(int llid, int tid, char *name, int vmcmd, int param);
 void recv_vmcmd(int llid, int tid, char *name, int vmcmd, int param);
 
 /*---------------------------------------------------------------------------*/
 char *prop_flags_ascii_get(int prop_flags);
-/*---------------------------------------------------------------------------*/
-void send_qmp_sub(int llid, int tid, char *name);
-void recv_qmp_sub(int llid, int tid, char *name);
-void send_qmp_req(int llid, int tid, char *name, char *msg);
-void recv_qmp_req(int llid, int tid, char *name, char *msg);
-void send_qmp_resp(int llid, int tid, char *name, char *line, int status);
-void recv_qmp_resp(int llid, int tid, char *name, char *line, int status);
 /*---------------------------------------------------------------------------*/
 void send_nat_add(int llid, int tid, char *name);
 void recv_nat_add(int llid, int tid, char *name);
@@ -398,37 +348,41 @@ void send_a2b_add(int llid, int tid, char *name);
 void recv_a2b_add(int llid, int tid, char *name);
 void send_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
 void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
-void send_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
-void recv_xyx_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
+void send_c2c_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
+void recv_c2c_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
 void send_nat_cnf(int llid, int tid, char *name, char *cmd);
 void recv_nat_cnf(int llid, int tid, char *name, char *cmd);
 /*---------------------------------------------------------------------------*/
-void send_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
-                  char *slave_cloonix, uint32_t ip, uint16_t port,
+void send_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip, 
+                  char *slave_cloon, uint32_t ip, uint16_t port,
                   char *passwd, uint32_t udp_ip);
 
-void recv_d2d_add(int llid, int tid, char *d2d_name, uint32_t local_udp_ip, 
-                  char *slave_cloonix, uint32_t ip, uint16_t port,
+void recv_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip, 
+                  char *slave_cloon, uint32_t ip, uint16_t port,
                   char *passwd, uint32_t udp_ip);
 
-void send_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
-                          char *local_cloonix, char *distant_cloonix);
+void send_snf_add(int llid, int tid, char *name, int num, int val);
 
-void recv_d2d_peer_create(int llid, int tid, char *d2d_name, int is_ack,
-                          char *distant_cloonix, char *local_cloonix);
+void recv_snf_add(int llid, int tid, char *name, int num, int val);
 
-void send_d2d_peer_conf(int llid, int tid, char *d2d_name, int is_ack,
-                        char *local_cloonix,     char *distant_cloonix,
+void send_c2c_peer_create(int llid, int tid, char *c2c_name, int is_ack,
+                          char *local_cloon, char *distant_cloon);
+
+void recv_c2c_peer_create(int llid, int tid, char *c2c_name, int is_ack,
+                          char *distant_cloon, char *local_cloon);
+
+void send_c2c_peer_conf(int llid, int tid, char *c2c_name, int is_ack,
+                        char *local_cloon,     char *distant_cloon,
                         uint32_t local_udp_ip,   uint32_t distant_udp_ip,
                         uint16_t local_udp_port, uint16_t distant_udp_port);
 
-void recv_d2d_peer_conf(int llid, int tid, char *d2d_name, int is_ack,
-                        char *distant_cloonix,     char *local_cloonix,
+void recv_c2c_peer_conf(int llid, int tid, char *c2c_name, int is_ack,
+                        char *distant_cloon,     char *local_cloon,
                         uint32_t distant_udp_ip,   uint32_t local_udp_ip,
                         uint16_t distant_udp_port, uint16_t local_udp_port);
 
-void send_d2d_peer_ping(int llid, int tid, char *d2d_name, int status);
+void send_c2c_peer_ping(int llid, int tid, char *c2c_name, int status);
 
-void recv_d2d_peer_ping(int llid, int tid, char *d2d_name, int status);
+void recv_c2c_peer_ping(int llid, int tid, char *c2c_name, int status);
 void doors_io_basic_tx_set(t_llid_tx llid_tx);
 /*---------------------------------------------------------------------------*/

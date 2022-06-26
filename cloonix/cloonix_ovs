@@ -23,7 +23,8 @@ LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
 
 if (( ${#} < 2 )); then
   echo
-  echo "cloonix_ovs <net> < testpmd vsctl ofctl appctl procinfo kni > ..."
+  echo "cloonix_ovs <net> --help"
+  echo "cloonix_ovs <net> show"
   echo
   echo net:
   echo $LIST
@@ -32,44 +33,10 @@ if (( ${#} < 2 )); then
 fi
 
 cloonix_name=$1
-ovs_type=$2
-export OVS_BINDIR="${CLOONIX_TREE}/server/dpdk"
-export OVS_RUNDIR="${WORK}/${cloonix_name}/dpdk"
+shift 1
+
+export OVS_BINDIR="${CLOONIX_TREE}/server/ovs"
+export OVS_RUNDIR="${WORK}/${cloonix_name}/ovs"
 export OVS_DBDIR=$OVS_RUNDIR
 export XDG_RUNTIME_DIR=$OVS_RUNDIR
-
-shift 2
-
-case $ovs_type in
-
-  testpmd)
-    sudo ${OVS_BINDIR}/bin/dpdk-testpmd "$@"
-      ;;
-  kni)
-    sudo ${OVS_BINDIR}/bin/dpdk-kni "$@"
-      ;;
-  ofctl)
-    sudo OVS_RUNDIR=$OVS_RUNDIR XDG_RUNTIME_DIR=$OVS_RUNDIR ${OVS_BINDIR}/bin/ovs-ofctl "$@"
-      ;;
-  vsctl)
-    sudo ${OVS_BINDIR}/bin/ovs-vsctl --db=unix:${OVS_DBDIR}/ovsdb_server.sock "$@"
-      ;;
-  procinfo)
-    sudo XDG_RUNTIME_DIR=$OVS_RUNDIR ${OVS_BINDIR}/bin/dpdk-proc-info --file-prefix=cloonix${cloonix_name} "$@"
-      ;;
-  appctl)
-    sudo ${OVS_BINDIR}/bin/ovs-appctl --target=${OVS_DBDIR}/ovs-vswitchd.ctl "$@"
-      ;;
-    *)
-  echo choice:
-  echo
-  echo "        ofctl"
-  echo "        appctl"
-  echo "        vsctl"
-  echo "        procinfo"
-  echo "        kni"
-  echo "        testpmd"
-  echo
-      ;;
-esac
-
+sudo ${OVS_BINDIR}/bin/ovs-vsctl --db=unix:${OVS_DBDIR}/ovsdb_server.sock "$@"

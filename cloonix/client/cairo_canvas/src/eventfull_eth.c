@@ -39,7 +39,7 @@ typedef struct t_obj_blinks
   char name[MAX_NAME_LEN];
   int to_be_deleted;
   int nb_eth;
-  t_eth_blinks eth_blinks[MAX_DPDK_VM];
+  t_eth_blinks eth_blinks[MAX_ETH_VM];
   t_bank_item *bitem;  
   struct t_obj_blinks *hash_prev;
   struct t_obj_blinks *hash_next;
@@ -163,7 +163,7 @@ void eventfull_arrival(int nb_endp, t_eventfull_endp *endp)
     if (cur)
       {
       num = endp[i].num;
-      if ((num < 0) || (num > MAX_DPDK_VM))
+      if ((num < 0) || (num > MAX_ETH_VM))
         KOUT("%d", num);
       if ((cur->bitem->pbi.pbi_node) && (num == 0))
         {

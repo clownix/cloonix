@@ -60,11 +60,11 @@ static char *make_cmd_str(char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void add_cmd_to_log(char *dpdk_dir, char *argv[])
+static void add_cmd_to_log(char *ovs_dir, char *argv[])
 {
   FILE *fp_log;
   char pth[MAX_ARG_LEN];
-  snprintf(pth, MAX_ARG_LEN-1, "%s/%s", dpdk_dir, CLOONIX_CMD_LOG);
+  snprintf(pth, MAX_ARG_LEN-1, "%s/%s", ovs_dir, CLOONIX_CMD_LOG);
   fp_log = fopen(pth, "a+");
   if (!fp_log) 
     KERR("%s", strerror(errno));
@@ -76,11 +76,11 @@ static void add_cmd_to_log(char *dpdk_dir, char *argv[])
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int my_popen(char *dpdk_dir, char *argv[], char *env[])
+static int my_popen(char *ovs_dir, char *argv[], char *env[])
 {
   int exited_pid, timeout_pid, worker_pid, chld_state, pid, status=97;
   pid_t rc_pid;
-  add_cmd_to_log(dpdk_dir, argv);
+  add_cmd_to_log(ovs_dir, argv);
   if ((pid = fork()) < 0)
     KOUT(" ");
   if (pid == 0)
@@ -97,14 +97,14 @@ static int my_popen(char *dpdk_dir, char *argv[], char *env[])
     timeout_pid = fork();
     if (timeout_pid == 0)
       {
-      sleep(4);
-      KERR("TIMEOUT SLOW CMD 1 %s", make_cmd_str(argv));
-      sleep(4);
-      KERR("TIMEOUT SLOW CMD 2 %s", make_cmd_str(argv));
-      sleep(4);
-      KERR("TIMEOUT SLOW CMD 3 %s", make_cmd_str(argv));
-      sleep(4);
-      KERR("TIMEOUT FAILURE CMD %s", make_cmd_str(argv));
+      sleep(10);
+      KERR("WARNING TIMEOUT SLOW CMD 1 %s", make_cmd_str(argv));
+      sleep(8);
+      KERR("WARNING TIMEOUT SLOW CMD 2 %s", make_cmd_str(argv));
+      sleep(8);
+      KERR("WARNING TIMEOUT SLOW CMD 3 %s", make_cmd_str(argv));
+      sleep(8);
+      KERR("ERROR TIMEOUT CMD %s", make_cmd_str(argv));
       exit(1);
       }
     exited_pid = wait(&chld_state);
@@ -142,7 +142,8 @@ static int my_popen(char *dpdk_dir, char *argv[], char *env[])
 
 
 /*****************************************************************************/
-int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
+int call_my_popen(char *ovs_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN],
+                  int quiet, const char *fct, int line)
 {
   static int protect_reentry = 0;
   int i, result = 0;
@@ -153,13 +154,16 @@ int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
   argv[i] = NULL;
   while(protect_reentry)
     {
-    KERR("ERROR REENTRY my_popen");
+    KERR("ERROR REENTRY my_popen %s %d", fct, line);
     usleep(10000);
     }
   protect_reentry = 1;
-  if (my_popen(dpdk_dir, argv, g_environ))
+  if (my_popen(ovs_dir, argv, g_environ))
     {
-    KERR("%s", make_cmd_str(argv));
+    if (quiet == 0)
+      KERR("ERROR NOT QUIET  %s %d %s", fct, line, make_cmd_str(argv));
+    else if (quiet == 2)
+      KERR("ERROR OVS COMMAND %s %d %s", fct, line, make_cmd_str(argv));
     result = -1;
     }
   protect_reentry = 0;
@@ -168,17 +172,17 @@ int call_my_popen(char *dpdk_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN])
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void init_environ(char *net, char *ovs_bin, char *dpdk_dir)
+void init_environ(char *net, char *ovs_bin, char *ovs_dir)
 {
   int i;
   static char env[NB_ENV][MAX_ENV_LEN];
   memset(env, 0, NB_ENV * MAX_ENV_LEN * sizeof(char));
   memset(g_environ, 0, NB_ENV * sizeof(char *));
   snprintf(env[0], MAX_ENV_LEN-1, "OVS_BINDIR=%s", ovs_bin);
-  snprintf(env[1], MAX_ENV_LEN-1, "OVS_RUNDIR=%s", dpdk_dir);
-  snprintf(env[2], MAX_ENV_LEN-1, "OVS_LOGDIR=%s", dpdk_dir);
-  snprintf(env[3], MAX_ENV_LEN-1, "OVS_DBDIR=%s", dpdk_dir);
-  snprintf(env[4], MAX_ENV_LEN-1, "XDG_RUNTIME_DIR=%s", dpdk_dir);
+  snprintf(env[1], MAX_ENV_LEN-1, "OVS_RUNDIR=%s", ovs_dir);
+  snprintf(env[2], MAX_ENV_LEN-1, "OVS_LOGDIR=%s", ovs_dir);
+  snprintf(env[3], MAX_ENV_LEN-1, "OVS_DBDIR=%s", ovs_dir);
+  snprintf(env[4], MAX_ENV_LEN-1, "XDG_RUNTIME_DIR=%s", ovs_dir);
   snprintf(env[5], MAX_ENV_LEN-1, "CLOONIX_NET=%s", net);
   for (i=0; i<NB_ENV-1; i++)
     g_environ[i] = env[i];

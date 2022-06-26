@@ -52,7 +52,7 @@ void thread_spy_add(int fd, int fd_bis, int epfd, int fd_type)
     if (g_thread_spy_tx[fd])
       {
       type = debug_get_thread_type_txt(fd_type);
-      KERR("THREAD EXISTS %d %s", fd, type);
+      XERR("THREAD EXISTS %d %s", fd, type);
       }
     else
       g_thread_spy_tx[fd] = spy;
@@ -62,7 +62,7 @@ void thread_spy_add(int fd, int fd_bis, int epfd, int fd_type)
     if (g_thread_spy_x11[fd])
       {
       type = debug_get_thread_type_txt(fd_type);
-      KERR("THREAD EXISTS %d %s", fd, type);
+      XERR("THREAD EXISTS %d %s", fd, type);
       }
     else
       g_thread_spy_x11[fd] = spy;
@@ -70,7 +70,7 @@ void thread_spy_add(int fd, int fd_bis, int epfd, int fd_type)
   else
     {
     type = debug_get_thread_type_txt(fd_type);
-    KERR("Wrong type %d %s", fd, type);
+    XERR("Wrong type %d %s", fd, type);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -83,7 +83,7 @@ void thread_spy_del(int fd, int fd_type)
     {
     spy = g_thread_spy_tx[fd];;
     if (!spy)
-      KERR("THREAD DOES NOT EXIST %d", fd);
+      XERR("THREAD DOES NOT EXIST %d", fd);
     else
       {
       g_thread_spy_tx[fd] = NULL;
@@ -94,7 +94,7 @@ void thread_spy_del(int fd, int fd_type)
     {
     spy = g_thread_spy_x11[fd];;
     if (!spy)
-      KERR("THREAD DOES NOT EXIST %d", fd);
+      XERR("THREAD DOES NOT EXIST %d", fd);
     else
       {
       g_thread_spy_x11[fd] = NULL;
@@ -102,7 +102,7 @@ void thread_spy_del(int fd, int fd_type)
       }
     }
   else
-    KERR("Wrong type %d %s", fd, fd_type);
+    XERR("Wrong type %d %s", fd, fd_type);
 }
 /*---------------------------------------------------------------------------*/
 

@@ -117,7 +117,7 @@ static int check_source_file_path(char *src_file, char *dst_dir, char **dst)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int get_input_params_cloonix(int argc, char **argv, int *action,
+int get_input_params_cloon(int argc, char **argv, int *action,
                              char **src, char **dst, char **cmd)
 {
   int result = 0;
@@ -231,7 +231,7 @@ int get_input_params(int argc, char **argv, int *action, int *ip, int *port,
     printf("\n\nNeeds ip and port at least\n\n");
     }
   if ((result ==0 ) && (argc > 3))
-    result = get_input_params_cloonix(argc-3, argv+3, action, src, dst, cmd);
+    result = get_input_params_cloon(argc-3, argv+3, action, src, dst, cmd);
   return result;
 }
 /*--------------------------------------------------------------------------*/

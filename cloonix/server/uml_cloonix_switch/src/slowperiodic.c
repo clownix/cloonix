@@ -124,7 +124,7 @@ static void action_send_slowperiodic(void)
 static void timeout_collect_slowperiodic(void *data)
 {
   action_send_slowperiodic();
-  clownix_timeout_add(500, timeout_collect_slowperiodic, NULL, NULL, NULL);
+  clownix_timeout_add(1000, timeout_collect_slowperiodic, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -170,7 +170,7 @@ void slowperiodic_llid_delete(int llid)
 void slowperiodic_init(void)
 {
   head_subs = NULL;
-  clownix_timeout_add(500, timeout_collect_slowperiodic, NULL, NULL, NULL);
+  clownix_timeout_add(1000, timeout_collect_slowperiodic, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
 

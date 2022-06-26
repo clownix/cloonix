@@ -19,7 +19,7 @@ typedef struct t_item_obj_resp
 {
   t_topo_cnt *cnt;
   t_topo_kvm *kvm;
-  t_topo_d2d *d2d;
+  t_topo_c2c *c2c;
   t_topo_a2b *a2b;
   t_topo_nat *nat;
   t_topo_phy *phy;

@@ -2,60 +2,41 @@
 AGPLv3 tool to create networks of kvm virtual machines.
 See directory cloonix for the LICENCE
 See clownix.net for a documentation (which is not up to date).
-http://clownix.net/doc_stored/build-22-01/html/index.html doc.
+http://clownix.net/doc_stored/build-23-00/html/index.html doc.
 
-NOTE: The version 22-01 has a new type of element: a crun based container.
-      See at the end of this README for details of this new feature.
+NOTE: The version 23-00 has BIG CHANGES: dpdk has been erased from cloonix.
+      The openvswitch associated to vhost interfaces is fast enough.
+
+NOTE: From this version, qemu-guest-agent sometimes called qemu-ga
+      must be installed inside the guests to have the best of cloonix.
 
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-22-01
+http://clownix.net/downloads/cloonix-23-00
 
 -----------------------------------------------------------------------------
 COMPILED AND TESTED ON:
 
-            bookworm (debian 12),
-            bullseye (debian 11),
+            jammy   (ubuntu 22.04),
             impish  (ubuntu 21.10),
             hirsute (ubuntu 21.05),
+            bookworm (debian 12),
+            bullseye (debian 11),
             tumbleweed (rolling opensuse),
             fedora35
-            centos8.
 
-WARNING: does not compile on centos8, too old spice-protocol version.
-For centos8, you must do the following prior to cloonix compilation:
-
-  dnf install git
-  dnf install meson
-  git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-protocol.git
-  cd spice-protocol/
-  meson build
-  meson configure build/ -Dprefix=/usr
-  cd build
-  ninja install
-
-This will update the spice-protocol version on your host machine.
-
-
-NOTE: tumbleweed has a compilation problem that must be investigated, a
-      Python pyparsing problem.
-
-
-Compilation and run should work, on the above distribution (with the special
-spice-protocol update for centos8). For other distributions, you may have to
-adjust needed packages, look in file install_depends for hints on necessary
-packages.
+Compilation and run should work, on the above distribution.
 
 -----------------------------------------------------------------------------
 INSTALL:
 
-wget http://clownix.net/downloads/cloonix-22-01/cloonix-22-01.tar.gz
-tar xvf cloonix-22-01.tar.gz
-cd cloonix-22-01
+wget http://clownix.net/downloads/cloonix-23-00/cloonix-23-00.tar.gz
+tar xvf cloonix-23-00.tar.gz
+cd cloonix-23-00
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-22-01/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-23-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
@@ -63,12 +44,12 @@ tar xvf targz_store.tar.gz
 -----------------------------------------------------------------------------
 GET A WORKING VM:
 
-wget http://clownix.net/downloads/cloonix-22-01/bulk/bullseye.qcow2.gz
+wget http://clownix.net/downloads/cloonix-23-00/bulk/bookworm.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
-cp bullseye.qcow2.gz ${HOME}/cloonix_data/bulk
+cp bookworm.qcow2.gz ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
-gunzip bullseye.qcow2.gz
+gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
 REQUIRED HOST CUSTOM
@@ -77,27 +58,17 @@ Check that your cpu is equiped with the necessary option:
 egrep -c '(vmx|svm)' /proc/cpuinfo
 The result must be non-zero
 
-The host must have 1 Giga size hugepages.
-For this configuration, put in "/etc/default/grub":
-
-GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugepages=5"
-Then "update-grub" or "grub2-mkconfig --output=/boot/grub2/grub.cfg"
-
-To check:
-mount |grep hugepages
-grep Huge /proc/meminfo
-
 -----------------------------------------------------------------------------
 LAUNCH:
 
 cd cloonix/quickstart
-./ping.sh
+./ping_kvm.sh
 
 In this demo, the vms are launched with an "s" interface, this interface
 permits to have wireshark upon a double-click on an interface.
-The number of "s" interfaces in a cloonix is limited, use the "d" interface
+The number of "s" interfaces in a cloonix is limited, use the "v" interface
 when the spy is not used.
-Note: s or d can be found in the PARAM definition in the ping.sh file: 
+Note: s or v can be found in the PARAM definition in the ping.sh file: 
 PARAMS="ram=2000 cpu=2 eth=s"
 
 wireshark problems: wireshark is called from the gui software, it must be
@@ -109,44 +80,10 @@ sudo dpkg-reconfigure  wireshark
 sudo adduser ${USER} wireshark
 
 -----------------------------------------------------------------------------
-CISCO DEMO:
-
-After cloonix install, go in "tools/cisco" directory and execute
-the 3 steps to have a cisco network running ospf.
-You have to be patient, ciscos are very long to start.
-
------------------------------------------------------------------------------
-MIKROTIK DEMO:
-
-After cloonix install, go in "tools/mikrotik" directory and execute steps.
-
------------------------------------------------------------------------------
-WIRESHARK:
-
-wireshark problems: Make wireshark usable by non-root user, on debian the way
-to go is for debian:
-echo "wireshark-common wireshark-common/install-setuid boolean true" > preseed
-sudo debconf-set-selections preseed
-sudo dpkg-reconfigure  wireshark
-sudo adduser ${USER} wireshark
-
------------------------------------------------------------------------------
-NESTED CLOONIX:
-
-If you need the nested function of kvm, to put a cloonix network inside a
-cloonix vm guest, you can test if you have the necessary config:
-
-cat /sys/module/kvm_intel/parameters/nested
-
-If you do not have Y after this cat, then you can do:
-
-GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugepages=5 kvm-intel.nested=1"
-
------------------------------------------------------------------------------
-NEW CONTAINER CRUN BASED VM:
+CONTAINER CRUN BASED VM:
 
 See details for the container use in cloonix, see container chapter in
-the http://clownix.net/doc_stored/build-22-01/html/index.html doc.
+the http://clownix.net/doc_stored/build-23-00/html/index.html doc.
 For a quick test, as you need the sudo program to elevate privileges to
 root level with no password for crun control, you have to open as root
 the /etc/sudoers file and put in the "# User privilege specification" section:
@@ -154,13 +91,15 @@ the /etc/sudoers file and put in the "# User privilege specification" section:
 
 You must put the following downloaded image file in the bulk directory of
 cloonix:
-wget http://clownix.net/downloads/cloonix-22-01/bulk/bullseye.img.gz
-
+wget http://clownix.net/downloads/cloonix-23-00/bulk/bookworm.img.gz
+cp bookworm.img.gz ${HOME}/cloonix_data/bulk
+cd ${HOME}/cloonix_data/bulk
+gunzip bookworm.img.gz
 
 Then the following script should work:
 
 cd cloonix/quickstart
-ping_cnt.sh
+ping_crun.sh
 
 Or use the following list of commands:
 
@@ -178,44 +117,33 @@ To have a bash shell within a container, call the command line:
 
 sudo crun exec Cnt1 bash
 
-If the container has the tini-static binary within, then you can call:
-
-sudo crun exec Cnt1 tini-static -s -g -p SIGKILL bash
-
-tini-static permits the correct working of the Ctrl-C interrupt.
-
 You can also use the cairo gui:
 On the gui, a double-click above a container shell.
 
 ==============================================================================
-HOWTO CONVERT A DOCKER TO THE CLOONIX IMAGE:
+CREATE CRUN IMAGE
 
-First, convert the docker into a tar of the root file-system, we will
-call the tar file layer.tar and put it in /root directory.
-
-As root, do the following commands to get the docker.img file:
-
-dd if=/dev/zero of=docker.img bs=100M count=10
-losetup -fP docker.img
-DEVLOOP=$(losetup -l | grep docker.img | awk '{print $1}')
+dd if=/dev/zero of=bookworm.img bs=100M count=10
+mkfs.ext4 bookworm.img
+losetup -fP bookworm.img
+mkdir -p /root/tmp_mnt
+DEVLOOP=$(losetup -l | grep bookworm.img | awk '{print $1}')
 echo $DEVLOOP
-mkfs.ext4 docker.img
-mkdir -p tmp_mnt
-mount -o loop $DEVLOOP tmp_mnt
-cd tmp_mnt    
-tar xvf /root/layer.tar
-cd ..
-umount tmp_mnt
+mount -o loop $DEVLOOP /root/tmp_mnt
+export DEBOOTSTRAP_DIR=/root/debootstrap-1.0.126+nmu1
+INCLUDES="openssh-client,vim,bash-completion,net-tools,tcpdump,tini"
+${DEBOOTSTRAP_DIR}/debootstrap  \
+               --no-check-certificate \
+               --no-check-gpg \
+               --arch amd64 \
+               --include=${INCLUDES} \
+               bookworm \
+               /root/tmp_mnt \
+               http://deb.debian.org/debian
+umount /root/tmp_mnt
 losetup -d $DEVLOOP
 rmdir tmp_mnt
-
-Then put the result file in the BULK directory of cloonix, usually
-in ${HOME}/cloonix_data/bulk.
-
-cp docker.img ${HOME}/cloonix_data/bulk 
-
-
-
+==============================================================================
 
 
 

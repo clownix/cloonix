@@ -23,6 +23,7 @@
 #include "commun_daemon.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
+#include "msg.h"
 
 
 
@@ -139,6 +140,7 @@ int lan_add_name(char *name, int llid)
     if (glob_total_elems >= MAX_LAN)
       KOUT(" ");
     layout_add_lan(name, llid);
+    msg_lan_add_name(name);
     }
   else
     target = tab_elems[idx];
@@ -168,6 +170,8 @@ int lan_del_name(char *name)
       if (glob_total_elems < 0)
         KOUT(" ");
       layout_del_lan(name);
+      msg_lan_del_name(name);
+      target_idx = 2*MAX_LAN;
       }
     }
   return target_idx;

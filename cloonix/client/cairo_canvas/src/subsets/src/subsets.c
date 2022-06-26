@@ -25,15 +25,15 @@
 /*****************************************************************************/
 typedef struct t_link
 {
-  char src[TOPO_MAX_NAME_LEN];
-  char dst[TOPO_MAX_NAME_LEN];
+  char src[TOPO_MAX_NAME_LEN+1];
+  char dst[TOPO_MAX_NAME_LEN+1];
   struct t_link *prev;
   struct t_link *next;
 } t_link;
 /*---------------------------------------------------------------------------*/
 typedef struct t_node
 {
-  char name[TOPO_MAX_NAME_LEN];
+  char name[TOPO_MAX_NAME_LEN+1];
   struct t_node *prev;
   struct t_node *next;
 } t_node;
@@ -81,7 +81,7 @@ static t_link *find_link_one_node(char *src)
 static void insert_node(char *name)
 {
   t_node *node;
-  if (strlen(name) != 3)
+  if (strlen(name) != 4)
     KOUT("%s", name);
   if (!find_node(name))
     {

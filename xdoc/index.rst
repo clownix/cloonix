@@ -1,4 +1,4 @@
-.. image:: /png/clownix128.png 
+.. image:: /png/smile_cloonix_title.png 
    :align: right
 
 =====================

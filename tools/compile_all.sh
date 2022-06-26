@@ -2,8 +2,8 @@
 HERE=`pwd`
 NET=nemo
 
-LIST="centos8 \
-      fedora35 \
+LIST="fedora35 \
+      jammy \
       hirsute \
       impish \
       bookworm \
@@ -38,7 +38,7 @@ cloonix_gui $NET
 
 #######################################################################
 for DISTRO in $LIST; do
-  cloonix_cli $NET add kvm $DISTRO ram=8000 cpu=8 eth=d full_${DISTRO}.qcow2 &
+  cloonix_cli $NET add kvm $DISTRO ram=8000 cpu=8 eth=s full_${DISTRO}.qcow2 &
 done
 
 for DISTRO in $LIST; do

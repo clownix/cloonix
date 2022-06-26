@@ -1,6 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 #----------------------------------------------------------------------#
+# Ubuntu 21.10
 DISTRO=impish
 ROOTFS=/root/${DISTRO}
 UBUNTU_REPO="http://fr.archive.ubuntu.com/ubuntu"
@@ -80,9 +81,11 @@ fi
 #-----------------------------------------------------------------------#
 
 list_pkt="linux-generic,grub-pc,openssh-client,bash-completion,"
-list_pkt+="xauth,sudo,kbd,vim,net-tools,initramfs-tools"
+list_pkt+="xauth,sudo,kbd,vim,net-tools,initramfs-tools,"
+list_pkt+="qemu-guest-agent"
 
 debootstrap --no-check-certificate --no-check-gpg --arch amd64 \
+            --components=kernel,multiverse,universe,main \
             --include=$list_pkt \
             ${DISTRO} \
             /tmp/wkmntloops ${UBUNTU_REPO}
@@ -122,18 +125,6 @@ chroot /tmp/wkmntloops/ passwd root <<EOF
 root
 root
 EOF
-#-----------------------------------------------------------------------#
-cat > /tmp/wkmntloops/etc/systemd/system/serial-getty@hvc0.service << EOF
-[Service]
-ExecStart=-/sbin/agetty -a root hvc0
-Type=idle
-Restart=always
-RestartSec=0
-EOF
-#-----------------------------------------------------------------------#
-cd /tmp/wkmntloops/etc/systemd/system/getty.target.wants
-ln -s /etc/systemd/system/serial-getty@hvc0.service serial-getty@hvc0.service
-cd ${HERE}
 #-----------------------------------------------------------------------#
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#

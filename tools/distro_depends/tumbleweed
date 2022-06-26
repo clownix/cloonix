@@ -51,12 +51,15 @@ cloonix_ssh $NET ${NAME} "mkdir -p /root/cloonix_data/bulk"
 #----------------------------------------------------------------------
 cloonix_scp $NET ${HERE}/../../install_depends ${NAME}:/root
 #----------------------------------------------------------------------
-cloonix_scp $NET ${BULK}/bullseye.qcow2 ${NAME}:/root/cloonix_data/bulk
+cloonix_scp $NET ${BULK}/bookworm.img ${NAME}:/root/cloonix_data/bulk
+cloonix_scp $NET ${BULK}/bookworm.qcow2 ${NAME}:/root/cloonix_data/bulk
 #----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "rm -f /etc/resolv.conf"
 cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
 nameserver 172.17.0.3
 EOF"
 #----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "mkdir -p /etc/systemd/network"
 cloonix_ssh ${NET} ${NAME} "cat > /etc/systemd/network/01_cf.network << EOF
 [Match]
 Name=eth0

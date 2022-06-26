@@ -128,9 +128,6 @@ static char *get_type_endp(int type)
     case endp_type_phy:
       result = "phy"; 
       break;
-    case endp_type_ethd:
-      result = "ethd"; 
-      break;
     case endp_type_eths:
       result = "eths"; 
       break;
@@ -146,8 +143,8 @@ static char *get_type_endp(int type)
     case endp_type_a2b:
       result = "a2b"; 
       break;
-    case endp_type_d2d:
-      result = "d2d"; 
+    case endp_type_c2c:
+      result = "c2c"; 
       break;
     default:
       KOUT("%d", type);
@@ -187,54 +184,48 @@ static void print_bridges_info(t_topo_bridges *br)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void d2d_info(t_topo_d2d *d2d)
+static void c2c_info(t_topo_c2c *c2c)
 {
   uint16_t tcp_port, loc_udp_port, dist_udp_port;
   int local_is_master, tcp_connection_peered;
-  int udp_connection_peered, ovs_lan_attach_ready;
+  int udp_connection_peered;
   char tcp_ip[MAX_NAME_LEN];
   char loc_udp_ip[MAX_NAME_LEN];
   char dist_udp_ip[MAX_NAME_LEN];
-  char *dist = d2d->dist_cloonix;
-  char *lan = d2d->lan;
-  char *nm = d2d->name;
-  int_to_ip_string (d2d->dist_tcp_ip, tcp_ip);
-  int_to_ip_string (d2d->dist_udp_ip, dist_udp_ip);
-  int_to_ip_string (d2d->loc_udp_ip, loc_udp_ip);
-  tcp_port = d2d->dist_tcp_port;
-  loc_udp_port = d2d->loc_udp_port;
-  dist_udp_port = d2d->dist_udp_port;
-  local_is_master = d2d->local_is_master;
-  tcp_connection_peered = d2d->tcp_connection_peered;
-  udp_connection_peered = d2d->udp_connection_peered;
-  ovs_lan_attach_ready = d2d->ovs_lan_attach_ready;
+  char *dist = c2c->dist_cloon;
+  char *nm = c2c->name;
+  int_to_ip_string (c2c->dist_tcp_ip, tcp_ip);
+  int_to_ip_string (c2c->dist_udp_ip, dist_udp_ip);
+  int_to_ip_string (c2c->loc_udp_ip, loc_udp_ip);
+  tcp_port = c2c->dist_tcp_port;
+  loc_udp_port = c2c->loc_udp_port;
+  dist_udp_port = c2c->dist_udp_port;
+  local_is_master = c2c->local_is_master;
+  tcp_connection_peered = c2c->tcp_connection_peered;
+  udp_connection_peered = c2c->udp_connection_peered;
   if (local_is_master)
     {
-    printf("\nd2d:%s:Local_is_master", nm);
+    printf("\nc2c:%s:Local_is_master", nm);
     if (tcp_connection_peered)
       {
-      printf("\nd2d:%s:tcp_peered %s %s:%hu", nm, dist, tcp_ip, tcp_port);
+      printf("\nc2c:%s:tcp_peered %s %s:%hu", nm, dist, tcp_ip, tcp_port);
       }
     else
       {
-      printf("\nd2d:%s:tcp_not_peered %s %s:%hu", nm, dist, tcp_ip, tcp_port);
+      printf("\nc2c:%s:tcp_not_peered %s %s:%hu", nm, dist, tcp_ip, tcp_port);
       }
     }
   else
     {
-    printf("\nd2d:%s:distant_is_master", nm);
-    printf("\nd2d:%s:tcp_peered %s", nm, dist);
+    printf("\nc2c:%s:distant_is_master", nm);
+    printf("\nc2c:%s:tcp_peered %s", nm, dist);
     }
   if (udp_connection_peered)
-    printf("\nd2d:%s:udp_peered", nm);
+    printf("\nc2c:%s:udp_peered", nm);
   else
-    printf("\nd2d:%s:udp_not_peered", nm);
-  if (ovs_lan_attach_ready)
-    printf("\nd2d:%s:ovs_lan_attached %s", nm, lan);
-  else
-    printf("\nd2d:%s:ovs_lan_not_attached", nm);
-  printf("\nd2d:%s:udp_local %s:%hu", nm, loc_udp_ip, loc_udp_port);
-  printf("\nd2d:%s:udp_distant %s:%hu", nm, dist_udp_ip, dist_udp_port);
+    printf("\nc2c:%s:udp_not_peered", nm);
+  printf("\nc2c:%s:udp_local %s:%hu", nm, loc_udp_ip, loc_udp_port);
+  printf("\nc2c:%s:udp_distant %s:%hu", nm, dist_udp_ip, dist_udp_port);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -293,11 +284,11 @@ static void callback_topo_topo(int tid, t_topo_info *topo)
       printf("\n%s vm_id: %d ko", topo->kvm[i].name, topo->kvm[i].vm_id);
     }
 
-  for (i=0; i<topo->nb_d2d; i++)
+  for (i=0; i<topo->nb_c2c; i++)
     {
     if (i == 0)
       printf("\n");
-    d2d_info(&(topo->d2d[i]));
+    c2c_info(&(topo->c2c[i]));
     }
 
   for (i=0; i<topo->nb_tap; i++)
@@ -470,63 +461,6 @@ int cmd_pid_dump(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int cmd_halt_vm(int argc, char **argv)
-{
-  int result = -1;
-  char *name; 
-  if (argc == 1)
-    {
-    name = argv[0];
-    if (strlen(name)>2)
-      {
-      result = 0;
-      init_connection_to_uml_cloonix_switch();
-      client_halt_vm(0, callback_end, name, 1);
-      }
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_reboot_vm(int argc, char **argv)
-{
-  int result = -1;
-  char *name;
-  if (argc == 1)
-    {
-    name = argv[0];
-    if (strlen(name)>2)
-      {
-      result = 0;
-      init_connection_to_uml_cloonix_switch();
-      client_reboot_vm(0, callback_end, name, 1);
-      }
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_qhalt_vm(int argc, char **argv)
-{
-  int result = -1;
-  char *name;
-  if (argc == 1)
-    {
-    name = argv[0];
-    if (strlen(name)>2)
-      {
-      result = 0;
-      init_connection_to_uml_cloonix_switch();
-      client_halt_vm(0, callback_end, name, 0);
-      }
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 int cmd_qreboot_vm(int argc, char **argv)
 {
   int result = -1;
@@ -538,7 +472,7 @@ int cmd_qreboot_vm(int argc, char **argv)
       {
       result = 0;
       init_connection_to_uml_cloonix_switch();
-      client_reboot_vm(0, callback_end, name, 0);
+      client_reboot_vm(0, callback_end, name);
       }
     }
   return result;
@@ -546,7 +480,7 @@ int cmd_qreboot_vm(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int local_cmd_sav(int is_full, int argc, char **argv)
+int cmd_sav_full(int argc, char **argv)
 {
   int result = -1;
   char *name, *sav_rootfs_path;
@@ -558,25 +492,9 @@ static int local_cmd_sav(int is_full, int argc, char **argv)
       {
       result = 0;
       init_connection_to_uml_cloonix_switch();
-      client_sav_vm(0, callback_end, name, is_full, sav_rootfs_path);
+      client_sav_vm(0, callback_end, name, sav_rootfs_path);
       }
     }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_sav_full(int argc, char **argv)
-{
-  int result = local_cmd_sav(1, argc, argv);
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_sav_derived(int argc, char **argv)
-{
-  int result = local_cmd_sav(0, argc, argv);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -638,6 +556,29 @@ int cmd_add_nat(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int cmd_add_snf(int argc, char **argv)
+{
+  int num, val, result = -1;
+  if (argc == 3)
+    {
+    num = param_tester(argv[1], 0, MAX_ETH_VM);
+    val = param_tester(argv[2], 0, 1);
+    if ((num >= 0) && (val >= 0))
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_add_snf(0, callback_end, argv[0], num, val);
+      }
+    else
+      KERR("%s %s %s", argv[0], argv[1], argv[2]);
+    }
+  else
+    KERR("%d", argc);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int cmd_cnf_a2b(int argc, char **argv)
 {
   int dir, val, cmd = -1, result = -1;
@@ -673,7 +614,7 @@ int cmd_cnf_a2b(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int cmd_cnf_xyx(int argc, char **argv)
+int cmd_cnf_c2c(int argc, char **argv)
 {
   int cmd = -1, result = -1;
   uint8_t mac[6];
@@ -681,14 +622,14 @@ int cmd_cnf_xyx(int argc, char **argv)
     {
     if (!strncmp("mac_mangle=", argv[1], strlen("mac_mangle=")))
       {
-      cmd = xyx_type_mac_mangle;
+      cmd = c2c_type_mac_mangle;
       if (sscanf(argv[1], "mac_mangle=%hhX:%hhX:%hhX:%hhX:%hhX:%hhX",
                  &(mac[0]), &(mac[1]), &(mac[2]),
                  &(mac[3]), &(mac[4]), &(mac[5])) == 6)
         {
         result = 0;
         init_connection_to_uml_cloonix_switch();
-        client_cnf_xyx(0, callback_end, argv[0], cmd, mac);
+        client_cnf_c2c(0, callback_end, argv[0], cmd, mac);
         }
       else
         KERR("%s %s", argv[0], argv[1]);
@@ -741,28 +682,28 @@ int cmd_del_sat(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int cmd_add_d2d(int argc, char **argv)
+int cmd_add_c2c(int argc, char **argv)
 {
   int rank, result = -1;
   t_cloonix_conf_info *cnf, *local_cnf;
-  char *d2d_name;
-  char *slave_cloonix;
+  char *c2c_name;
+  char *slave_cloon;
   if (argc == 2)
     {
-    d2d_name =  argv[0];
+    c2c_name =  argv[0];
     cnf = cloonix_cnf_info_get(argv[1], &rank);
     if (!cnf)
-      printf("\nd2d dest names: %s\n\n", cloonix_conf_info_get_names());
+      printf("\nc2c dest names: %s\n\n", cloonix_conf_info_get_names());
     else
       {
       result = 0;
-      slave_cloonix = argv[1];
-      printf("\nd2d is at: %s\n\n", cnf->doors);
+      slave_cloon = argv[1];
+      printf("\nc2c is at: %s\n\n", cnf->doors);
       init_connection_to_uml_cloonix_switch();
       local_cnf = get_own_cloonix_conf_info();
-      client_add_d2d(0, callback_end, d2d_name, local_cnf->d2d_udp_ip,
-                     slave_cloonix, cnf->ip, (cnf->port & 0xFFFF),
-                     cnf->passwd, cnf->d2d_udp_ip);
+      client_add_c2c(0, callback_end, c2c_name, local_cnf->c2c_udp_ip,
+                     slave_cloon, cnf->ip, (cnf->port & 0xFFFF),
+                     cnf->passwd, cnf->c2c_udp_ip);
       }
     }
   return result;
@@ -777,7 +718,7 @@ int cmd_add_vl2sat(int argc, char **argv)
   if (argc == 3)
     {
     name = argv[0];
-    num = param_tester(argv[1], 0, MAX_DPDK_VM);
+    num = param_tester(argv[1], 0, MAX_ETH_VM);
     if (num != -1)
       {
       result = 0;
@@ -798,51 +739,13 @@ int cmd_del_vl2sat(int argc, char **argv)
   if (argc == 3)
     {
     name = argv[0];
-    num = param_tester(argv[1], 0, MAX_DPDK_VM);
+    num = param_tester(argv[1], 0, MAX_ETH_VM);
     if (num != -1)
       {
       result = 0;
       lan = argv[2];
       init_connection_to_uml_cloonix_switch();
       client_del_lan_endp(0, callback_end, name, num, lan);
-      }
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_dpdk_ovs_cnf(int argc, char **argv)
-{
-  int lcore, mem, cpu, result = -1;
-  if (argc == 3)
-    {
-    if (sscanf(argv[0], "0x%X", &lcore) != 1)
-      {
-      if (sscanf(argv[0], "0x%x", &lcore) != 1)
-        {
-        printf("Bad param: %s\n", argv[0]); 
-        lcore = -1;
-        }
-      }
-    if (sscanf(argv[1], "%d", &mem) != 1) 
-      {
-      printf("Bad param: %s\n", argv[1]); 
-      mem = -1;
-      }
-    if (sscanf(argv[2], "0x%X", &cpu) != 1)
-      {
-      if (sscanf(argv[2], "0x%x", &cpu) != 1)
-        {
-        printf("Bad param: %s\n", argv[2]);
-        cpu = -1;
-        }
-      }
-    if ((lcore != -1) && (mem != -1) && (cpu != -1))
-      {
-      result = 0;
-      init_connection_to_uml_cloonix_switch();
-      client_dpdk_ovs_cnf(0, callback_end, lcore, mem, cpu);
       }
     }
   return result;
@@ -1038,7 +941,7 @@ int cmd_sub_endp(int argc, char **argv)
   int num, result = -1;
   if (argc == 2)
     {
-    num = param_tester(argv[1], 0, MAX_DPDK_VM);
+    num = param_tester(argv[1], 0, MAX_ETH_VM);
     if (num != -1)
       {
       result = 0;
@@ -1050,62 +953,3 @@ int cmd_sub_endp(int argc, char **argv)
 }
 /*---------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-static void qmp_cb(int tid, char *name, char *line, int status)
-{
-  printf("\n%s", line);
-  if (status)
-    {
-    printf("\n");
-    exit(1);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void qmp_sub_cb(int tid, char *name, char *line, int status)
-{
-  qmp_cb(tid, name, line, status);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void qmp_nosub_cb(int tid, char *name, char *line, int status)
-{
-  qmp_cb(tid, name, line, status);
-  exit(0);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_sub_qmp(int argc, char **argv)
-{
-  int result = -1;
-  if ((argc == 0) || (argc == 1))
-    {
-    result = 0;
-    init_connection_to_uml_cloonix_switch();
-    set_qmp_callback(qmp_sub_cb);
-    if (argc == 1)
-      client_qmp_sub(0, argv[0]);
-    else
-      client_qmp_sub(0, NULL);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cmd_snd_qmp(int argc, char **argv)
-{
-  int result = -1;
-  if (argc == 2)
-    {
-    result = 0;
-    init_connection_to_uml_cloonix_switch();
-    set_qmp_callback(qmp_nosub_cb);
-    client_qmp_snd(0, argv[0], argv[1]);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/

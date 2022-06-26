@@ -34,6 +34,7 @@ static t_head_bank head_bank[bank_type_max];
 /*--------------------------------------------------------------------------*/
 static int max_edge_nb_per_item;
 /*--------------------------------------------------------------------------*/
+static int g_hysteresis_refresh_topo_info;
 
 
 /****************************************************************************/
@@ -48,8 +49,8 @@ static void free_all_connected_groups(void)
     while(cur)
       {
       next = cur->group_next;
-      cur->group_next = 0;
-      cur->group_head = 0;
+      cur->group_next = NULL;
+      cur->group_head = NULL;
       cur = next;
       }
     next_group = cur_group->next;
@@ -301,12 +302,13 @@ static void chain_to_head(t_bank_item *bitem)
 
 
 /****************************************************************************/
-void refresh_all_connected_groups(void)
+static void timer_refresh_all_connected_groups(void *data)
 {
   t_subsets *subsets;
   int nb_nodes = get_nb_total_items();
   int nb_edges = get_max_edge_nb_per_item();
   t_bank_item *cur = head_bank[bank_type_all_edges_items].head;
+  g_hysteresis_refresh_topo_info = 0;
   free_all_connected_groups();
   if (nb_nodes >= 2)
     {
@@ -330,6 +332,19 @@ void refresh_all_connected_groups(void)
     subsets = get_subsets();
     alloc_all_connected_groups(subsets);
     free_subsets();
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+void refresh_all_connected_groups(void)
+{
+  free_all_connected_groups();
+  if (g_hysteresis_refresh_topo_info == 0)
+    {
+    g_hysteresis_refresh_topo_info = 1;
+    clownix_timeout_add(10, timer_refresh_all_connected_groups, NULL, NULL, NULL);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -576,26 +591,6 @@ t_list_bank_item *get_head_connected_groups(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int bank_get_qmonitor_pid(char *name)
-{
-  t_bank_item *bitem = look_for_node_with_id(name);
-  int result = 0;
-  if (bitem)
-    result = bitem->qmonitor_pid;
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void bank_set_qmonitor_pid(char *name, int val)
-{
-  t_bank_item *bitem = look_for_node_with_id(name);
-  if (bitem)
-    bitem->qmonitor_pid = val;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int bank_get_dtach_pid(char *name)
 {
   t_bank_item *bitem = look_for_node_with_id(name);
@@ -659,6 +654,7 @@ void bank_set_wireshark_pid(char *name, int val)
 /****************************************************************************/
 void init_bank_item(void)
 {
+  g_hysteresis_refresh_topo_info = 0;
   memset(head_bank, 0, bank_type_max*sizeof(t_head_bank));
   selectioned_item_init();
   max_edge_nb_per_item = 0;

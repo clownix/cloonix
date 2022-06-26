@@ -35,7 +35,7 @@
 #define MAX_ASCII_LEN 200
 
 
-#define VIRTIOPORT "/dev/virtio-ports/net.cloonix.0"
+#define VIRTIOPORT "/dev/virtio-ports/net.cloon.0"
 #define UNIX_DROPBEAR_SOCK "/tmp/unix_cloonix_dropbear_sock"
 #define UNIX_X11_SOCKET_DIR "/tmp/.X11-unix"
 #define UNIX_X11_SOCKET_PREFIX "/tmp/.X11-unix/X"

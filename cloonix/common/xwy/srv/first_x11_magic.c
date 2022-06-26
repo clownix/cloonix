@@ -39,12 +39,12 @@ static int read_with_wait(int x11_fd, char *buf, int len_to_get)
     len = wrap_read_x11_rd_x11(x11_fd, buf, len_to_get);
     if (len == 0)
       {
-      KERR("%d  X11 READ 0", x11_fd);
+      XERR("%d  X11 READ 0", x11_fd);
       break;
       }
     else if (len < 0)
       {
-      KERR("%d  %s", x11_fd, strerror(errno));
+      XERR("%d  %s", x11_fd, strerror(errno));
       if ((errno != EINTR) && (errno != EAGAIN))
         break;
       }
@@ -92,7 +92,7 @@ static int x11_spoofing_read_12(char *data, int *pl, int *dl)
     }
   else
     {
-    KERR("END THREAD %02X", data[0] & 0xFF);
+    XERR("END THREAD %02X", data[0] & 0xFF);
     }
   result = ((*pl + 3) & ~3) + ((*dl + 3) & ~3);
   return result;
@@ -108,10 +108,10 @@ t_msg *first_read_magic(uint32_t randid, int x11_fd,
   char *ptr_cookie;
   t_msg *msg = helper_read_from_x11(randid, x11_fd, 12, srv_idx, cli_idx);
   if (!msg)
-    KERR("(%d-%d) %d", srv_idx, cli_idx, x11_fd);
+    XERR("(%d-%d) %d", srv_idx, cli_idx, x11_fd);
   else if (msg->len != 12)
     {
-    KERR("(%d-%d) %d     len: %d", srv_idx, cli_idx, x11_fd, len);
+    XERR("(%d-%d) %d     len: %d", srv_idx, cli_idx, x11_fd, len);
     wrap_free(msg, __LINE__);
     msg = NULL;
     }
@@ -121,7 +121,7 @@ t_msg *first_read_magic(uint32_t randid, int x11_fd,
     len = read_with_wait(x11_fd, msg->buf + 12, ln_to_read);
     if (len != ln_to_read)
       {
-      KERR("(%d-%d) %d  %d %d", srv_idx, cli_idx, x11_fd, len, ln_to_read);
+      XERR("(%d-%d) %d  %d %d", srv_idx, cli_idx, x11_fd, len, ln_to_read);
       wrap_free(msg, __LINE__);
       msg = NULL;
       }
@@ -131,13 +131,13 @@ t_msg *first_read_magic(uint32_t randid, int x11_fd,
       if ((proto_len != strlen(MAGIC_COOKIE)) ||
           (memcmp(msg->buf + 12, MAGIC_COOKIE, proto_len)) != 0)
         {
-        KERR("(%d-%d) %d %s", srv_idx, cli_idx, x11_fd, msg->buf + 12);
+        XERR("(%d-%d) %d %s", srv_idx, cli_idx, x11_fd, msg->buf + 12);
         wrap_free(msg, __LINE__);
         msg = NULL;
         }
       else if (data_len != MAGIC_COOKIE_LEN)
         {
-        KERR("(%d-%d) %d %d", srv_idx, cli_idx, x11_fd, data_len);
+        XERR("(%d-%d) %d %d", srv_idx, cli_idx, x11_fd, data_len);
         wrap_free(msg, __LINE__);
         msg = NULL;
         }
@@ -149,7 +149,7 @@ t_msg *first_read_magic(uint32_t randid, int x11_fd,
           snprintf(&(magic[2*i]), 3, "%02x", ptr_cookie[i] & 0xFF);
         magic[2*MAGIC_COOKIE_LEN] = 0;
         if (strcmp(magic, magic_cookie))
-          KERR("%s DIFFER: expected: %s\n received: %s\n",
+          XERR("%s DIFFER: expected: %s\n received: %s\n",
                MAGIC_COOKIE, magic, magic_cookie);
         }
       }

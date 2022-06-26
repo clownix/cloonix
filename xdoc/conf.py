@@ -12,7 +12,7 @@ html_theme_options = {
     "sidebarwidth": "10"
 }
 html_title = project
-html_favicon = "./png/clownix32.png"
+html_favicon = "./png/cloonix32.png"
 html_static_path = ['./png']
 html_domain_indices = False
 html_use_index = False

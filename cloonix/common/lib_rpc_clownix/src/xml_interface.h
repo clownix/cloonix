@@ -63,18 +63,25 @@
 
 
 /*---------------------------------------------------------------------------*/
-#define D2D_MAC_O        "<d2d_mac>\n"\
+#define C2C_MAC_O        "<c2c_mac>\n"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
                          "  <nb_mac> %d </nb_mac>\n"
 
-#define D2D_MAC_I        "  <mac> %s </mac>\n"
+#define C2C_MAC_I        "  <mac> %s </mac>\n"
 
-#define D2D_MAC_C        "</d2d_mac>\n"
+#define C2C_MAC_C        "</c2c_mac>\n"
 /*---------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------*/
-#define D2D_ADD          "<d2d_add>"\
+#define SNF_ADD          "<snf_add>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <num> %d </num>\n"\
+                         "  <val> %d </val>\n"\
+                         "</snf_add>"
+/*---------------------------------------------------------------------------*/
+#define C2C_ADD          "<c2c_add>"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
                          "  <local_udp_ip> %x </local_udp_ip>\n"\
@@ -83,17 +90,17 @@
                          "  <port> %hu </port>\n"\
                          "  <passwd> %s </passwd>\n"\
                          "  <udp_ip> %x </udp_ip>\n"\
-                         "</d2d_add>"
+                         "</c2c_add>"
 
-#define D2D_CREATE       "<d2d_create>"\
+#define C2C_CREATE       "<c2c_create>"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
                          "  <is_ack> %d </is_ack>\n"\
                          "  <mnet> %s </mnet>\n"\
                          "  <snet> %s </snet>\n"\
-                         "</d2d_create>"
+                         "</c2c_create>"
 
-#define D2D_CONF         "<d2d_conf>"\
+#define C2C_CONF         "<c2c_conf>"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
                          "  <is_ack> %d </is_ack>\n"\
@@ -103,13 +110,13 @@
                          "  <sip> %x </sip>\n"\
                          "  <mport> %hu </mport>\n"\
                          "  <sport> %hu </sport>\n"\
-                         "</d2d_conf>"
+                         "</c2c_conf>"
 
-#define D2D_PING         "<d2d_ping>"\
+#define C2C_PING         "<c2c_ping>"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
                          "  <status> %d </status>\n"\
-                         "</d2d_ping>"
+                         "</c2c_ping>"
 
 /*---------------------------------------------------------------------------*/
 #define HOP_GET_LIST_NAME    "<hop_get_list_name>\n"\
@@ -240,9 +247,11 @@
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
                          "  <ping_ok> %d </ping_ok>\n"\
+                         "  <vm_id> %d </vm_id>\n"\
                          "  <nb_tot_eth> %d </nb_tot_eth>"
 
-#define ADD_CNT_C        "  <image> %s </image>\n"\
+#define ADD_CNT_C        "<customer_launch> %s </customer_launch>\n"\
+                         "  <image> %s </image>\n"\
                          "</add_cnt>"
 /*---------------------------------------------------------------------------*/
 
@@ -250,7 +259,6 @@
 #define SAV_VM           "<sav_vm>\n"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
-                         "  <save_type> %d </save_type>\n"\
                          "  <sav_rootfs_path> %s </sav_rootfs_path>\n"\
                          "</sav_vm>"
 
@@ -392,7 +400,7 @@
                               "  work_dir:%s bulk_dir:%s bin_dir:%s \n"\
                               "  flags_config:%d \n"\
                               "  nb_cnt:%d nb_kvm:%d \n"\
-                              "  nb_d2d:%d nb_tap:%d nb_phy:%d \n"\
+                              "  nb_c2c:%d nb_tap:%d nb_phy:%d \n"\
                               "  nb_a2b:%d nb_nat:%d nb_endp:%d \n"\
                               "  nb_info_phy:%d nb_bridges:%d \n"
 
@@ -417,14 +425,15 @@
                               "  name: %s \n"\
                               "  image: %s \n"\
                               "  ping_ok: %d \n"\
+                              "  vm_id: %d \n"\
                               "  nb_tot_eth: %d "
 
-#define EVENT_TOPO_CNT_C      "</cnt>\n"
-
+#define EVENT_TOPO_CNT_C      "  <customer_launch> %s </customer_launch>\n"\
+                              "</cnt>\n"
                         
-#define EVENT_TOPO_D2D        "<d2d>\n"\
+#define EVENT_TOPO_C2C        "<c2c>\n"\
                               "  name: %s \n"\
-                              "  dist_cloonix: %s \n"\
+                              "  dist_cloon: %s \n"\
                               "  lan: %s \n"\
                               "  local_is_master: %d \n"\
                               "  dist_tcp_ip:    %x \n"\
@@ -435,8 +444,7 @@
                               "  dist_udp_port:  %hu \n"\
                               "  tcp_connection: %d \n"\
                               "  udp_connection: %d \n"\
-                              "  ovs_lan_attach: %d \n"\
-                              "</d2d>\n"
+                              "</c2c>\n"
 
 #define EVENT_TOPO_A2B        "<a2b>\n"\
                               "  name:   %s \n"\
@@ -505,13 +513,6 @@
                          "  <param> %d </param>\n"\
                          "</vmcmd>"
 /*---------------------------------------------------------------------------*/
-#define DPDK_OVS_CONFIG  "<dpdk_ovs_cnf>\n"\
-                         "  <tid>   %d </tid>\n"\
-                         "  <lcore> %d </lcore>\n"\
-                         "  <mem>   %d </mem>\n"\
-                         "  <cpu>   %d </cpu>\n"\
-                         "</dpdk_ovs_cnf>"
-/*---------------------------------------------------------------------------*/
 #define EVT_STATS_ITEM      "<item>\n"\
                             "  ms: %d ptx: %d btx: %d prx: %d brx: %d \n"\
                             "</item>"
@@ -551,30 +552,6 @@
 
 
 #define EVT_STATS_SYSINFOC "</evt_stats_sysinfo>\n"
-/*---------------------------------------------------------------------------*/
-#define QMP_ALL_SUB "<qmpy_all_sub>\n"\
-                    "  <tid>  %d </tid>\n"\
-                    "</qmpy_all_sub>"
-/*---------------------------------------------------------------------------*/
-#define QMP_SUB   "<qmpy_sub>\n"\
-                  "  <tid>  %d </tid>\n"\
-                  "  <name> %s </name>\n"\
-                  "</qmpy_sub>"
-/*---------------------------------------------------------------------------*/
-#define QMP_REQ_O "<qmpy_req>\n"\
-                  "  <tid>  %d </tid>\n"\
-                  "  <name> %s </name>\n"
-
-#define QMP_REQ_C "</qmpy_req>"
-/*---------------------------------------------------------------------------*/
-#define QMP_MSG_O "<qmpy_msg>\n"\
-                  "  <tid>  %d </tid>\n"\
-                  "  <name> %s </name>\n"\
-                  "  <status>  %d </status>\n"
-
-#define QMP_MSG_C "</qmpy_msg>"
-/*---------------------------------------------------------------------------*/
-#define QMP_LINE  "<msgqmp_req_boundyzzy>%s</msgqmp_req_boundyzzy>\n"\
 /*---------------------------------------------------------------------------*/
 
 

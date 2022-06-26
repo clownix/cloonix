@@ -50,6 +50,7 @@ sources = files('src/ovs_drv.c',
                 'src/my_popen.c',
                 'src/ovs_cmd.c',
                 'src/ifdev.c',
+                'src/netns.c',
                 'src/ovs_execv.c')
 
 executable('cloonix_ovs_drv', sources, include_directories : incdir,

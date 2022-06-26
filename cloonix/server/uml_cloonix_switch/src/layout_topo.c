@@ -27,11 +27,10 @@
 #include "event_subscriber.h"
 #include "lan_to_name.h"
 #include "llid_trace.h"
-#include "dpdk_d2d.h"
-#include "dpdk_a2b.h"
-#include "dpdk_xyx.h"
-#include "dpdk_nat.h"
-#include "container.h"
+#include "cnt.h"
+#include "ovs_nat.h"
+#include "ovs_c2c.h"
+#include "ovs_tap.h"
 
 #define MAX_MS_OF_INSERT 3600000
 
@@ -509,21 +508,22 @@ void recv_layout_lan(int llid, int tid, t_layout_lan *layout)
   else
     {
     xml = find_lan_xml(layout->name);
-    send_layout_lan(llid, tid, &(xml->lan));
+    if (!xml)
+      KERR("ERROR %s", layout->name);
+    else
+      send_layout_lan(llid, tid, &(xml->lan));
     }
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
 {
   t_layout_sub *cur = g_head_layout_sub;
   t_layout_sat_xml *xml;
-  if ((!dpdk_d2d_find(layout->name)) &&
-      (!dpdk_a2b_exists(layout->name)) &&
-      (!dpdk_xyx_name_exists(layout->name)) &&
-      (!dpdk_nat_exists(layout->name)))
+  if ((!ovs_nat_exists(layout->name)) &&
+      (!ovs_c2c_exists(layout->name)) &&
+      (!ovs_tap_exists(layout->name)))
     KERR("%s", layout->name);
   else
     {
@@ -555,9 +555,7 @@ void recv_layout_node(int llid, int tid, t_layout_node *layout)
 {
   t_layout_sub *cur = g_head_layout_sub;
   t_layout_node_xml *xml = find_node_xml(layout->name);
-  if (!xml) 
-    KERR("%s", layout->name);
-  else
+  if (xml) 
     {
     if (authorized_to_modify_data_bank_layout(llid, tid, 0))
       {
@@ -611,7 +609,7 @@ static void layout_modif_node(int llid, int tid,
   t_layout_node_xml *cur;
   cur = find_node_xml(name);
   vm = cfg_get_vm(name);
-  if ((vm) || (container_name_exists(name, &nb_eth)))
+  if ((vm) || (cnt_name_exists(name, &nb_eth)))
     {
     if (!cur)
       KERR("%s", name);
@@ -1031,7 +1029,7 @@ void layout_add_vm(char *name, int llid)
   t_vm *vm;
   t_layout_node layout;
   vm = cfg_get_vm(name);
-  if ((!vm) && (!container_name_exists(name, &nb_eth)))
+  if ((!vm) && (!cnt_name_exists(name, &nb_eth)))
     KERR("%s", name);
   else
     {

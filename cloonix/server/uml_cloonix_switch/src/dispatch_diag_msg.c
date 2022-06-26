@@ -27,22 +27,17 @@
 #include "doors_rpc.h"
 #include "cfg_store.h"
 #include "automates.h"
-#include "dpdk_ovs.h"
-#include "dpdk_xyx.h"
 #include "suid_power.h"
 #include "hop_event.h"
-#include "nat_dpdk_process.h"
-#include "d2d_dpdk_process.h"
-#include "a2b_dpdk_process.h"
-#include "xyx_dpdk_process.h"
+#include "ovs.h"
+#include "ovs_snf.h"
+#include "ovs_nat.h"
+#include "ovs_c2c.h"
 
 
 /*****************************************************************************/
 void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 {
-  char name[MAX_NAME_LEN];
-  int ms, ptx, btx, prx, brx; 
-
   if (get_glob_req_self_destruction())
     return;
 
@@ -51,16 +46,24 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
     hop_event_hook(llid, FLAG_HOP_POLDIAG, line);
     suid_power_poldiag_resp(llid, tid, line);
     }
+  else if (ovs_snf_diag_llid(llid))
+    {
+    hop_event_hook(llid, FLAG_HOP_POLDIAG, line);
+    ovs_snf_poldiag_resp(llid, tid, line);
+    }
+  else if (ovs_nat_diag_llid(llid))
+    {
+    hop_event_hook(llid, FLAG_HOP_POLDIAG, line);
+    ovs_nat_poldiag_resp(llid, tid, line);
+    }
+  else if (ovs_c2c_diag_llid(llid))
+    {
+    hop_event_hook(llid, FLAG_HOP_POLDIAG, line);
+    ovs_c2c_poldiag_resp(llid, tid, line);
+    }
   else
     {
-    if (sscanf(line, "endp_eventfull_tx_rx %s %d %d %d %d %d",
-                     name, &ms, &ptx, &btx, &prx, &brx) == 6)
-      {
-      if (!dpdk_xyx_exists_fullname(name))
-        KERR("ERROR DISPATCH %s", line);
-      else
-        dpdk_xyx_eventfull(name, ms, ptx, btx, prx, brx);
-      }
+    KERR("ERROR DISPATCH %s", line);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -76,30 +79,25 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
     suid_power_sigdiag_resp(llid, tid, line);
     }
-  else if (xyx_dpdk_diag_llid(llid))
+  else if (ovs_find_with_llid(llid))
     {
     hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
-    xyx_dpdk_sigdiag_resp(llid, tid, line);
+    ovs_rpct_recv_sigdiag_msg(llid, tid, line);
     }
-  else if (nat_dpdk_diag_llid(llid))
+  else if (ovs_snf_diag_llid(llid))
     {
     hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
-    nat_dpdk_sigdiag_resp(llid, tid, line);
+    ovs_snf_sigdiag_resp(llid, tid, line);
     }
-  else if (a2b_dpdk_diag_llid(llid))
+  else if (ovs_nat_diag_llid(llid))
     {
     hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
-    a2b_dpdk_sigdiag_resp(llid, tid, line);
+    ovs_nat_sigdiag_resp(llid, tid, line);
     }
-  else if (d2d_dpdk_diag_llid(llid))
+  else if (ovs_c2c_diag_llid(llid))
     {
     hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
-    d2d_dpdk_sigdiag_resp(llid, tid, line);
-    }
-  else if (dpdk_ovs_find_with_llid(llid))
-    {
-    hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
-    dpdk_ovs_rpct_recv_sigdiag_msg(llid, tid, line);
+    ovs_c2c_sigdiag_resp(llid, tid, line);
     }
   else
     {

@@ -86,8 +86,7 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
 
   for (i=0; i < nb_tot_eth; i++)
     {
-    if ((eth_tab[i].endp_type == endp_type_ethd) ||
-        (eth_tab[i].endp_type == endp_type_eths) ||
+    if ((eth_tab[i].endp_type == endp_type_eths) ||
         (eth_tab[i].endp_type == endp_type_ethv))
       add_new_eth(name, i, tx[i], ty[i], thidden[i]);
     }
@@ -95,17 +94,17 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void bank_cnt_create(char *name, char *image, int ping_ok,
-                      int nb_tot_eth, t_eth_table *eth_tab,
-                      double x, double y, int hidden_on_graph,
-                      double *tx, double *ty, int32_t *thidden)
+void bank_cnt_create(char *name, char *image, char *customer_launch, int vm_id,
+                     int ping_ok, int nb_tot_eth, t_eth_table *eth_tab,
+                     double x, double y, int hidden_on_graph,
+                     double *tx, double *ty, int32_t *thidden)
 {
   int i;
-  add_new_cnt(name,image,x,y,hidden_on_graph, ping_ok, nb_tot_eth, eth_tab);
+  add_new_cnt(name, image, customer_launch, vm_id, x, y, hidden_on_graph,
+              ping_ok, nb_tot_eth, eth_tab);
   for (i=0; i < nb_tot_eth; i++)
     {
-    if ((eth_tab[i].endp_type == endp_type_ethd) ||
-        (eth_tab[i].endp_type == endp_type_eths) ||
+    if ((eth_tab[i].endp_type == endp_type_eths) ||
         (eth_tab[i].endp_type == endp_type_ethv))
       {
       add_new_eth(name, i, tx[i], ty[i], thidden[i]);
@@ -116,7 +115,7 @@ void bank_cnt_create(char *name, char *image, int ping_ok,
 
 /****************************************************************************/
 void bank_sat_create(char *name, int endp_type,
-                     t_topo_d2d *d2d, t_topo_a2b *a2b,
+                     t_topo_c2c *c2c, t_topo_a2b *a2b,
                      double x, double y, double xa, double ya,
                      double xb, double yb, int hidden)
 {
@@ -126,7 +125,7 @@ void bank_sat_create(char *name, int endp_type,
     KERR("%s", name);
   else
     {
-    add_new_sat(name, endp_type, d2d, a2b, x, y, hidden);
+    add_new_sat(name, endp_type, c2c, a2b, x, y, hidden);
     if (endp_type == endp_type_a2b)
       {
       add_new_eth(name, 0, xa, ya, hidden);

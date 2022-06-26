@@ -21,7 +21,9 @@
 #include "io_clownix.h"
 #include "bijection.h"
 
-#define BASIC_MASK 0xFFF
+#define TOPO_MAX_NAME_LEN 4
+
+#define BASIC_MASK 0x1FFF
 #define BIJ_MAX_NAME_LEN (MAX_NAME_LEN+2+2)
 
 /*---------------------------------------------------------------------------*/
@@ -170,8 +172,8 @@ static char *bij_add (char *name)
   idx_bis = find_elem_with_name(name);
   if (idx != idx_bis)
     KOUT(" ");
-  sprintf(tag, "%03X", idx);
-  if (strlen(tag) != 3)
+  sprintf(tag, "%04X", idx);
+  if (strlen(tag) != TOPO_MAX_NAME_LEN)
     KOUT(" ");
   return tag;
 }
@@ -217,9 +219,9 @@ static char *bij_get_name_with_tag(char *tag)
   t_bij *bij = &glob_bij;
   int num;
   char *result = NULL;
-  if (strlen(tag) != 3)
+  if (strlen(tag) != TOPO_MAX_NAME_LEN)
     KOUT(" ");
-  if (sscanf(tag, "%03X", &num) != 1)
+  if (sscanf(tag, "%04X", &num) != 1)
     KOUT(" ");
   if (bij->tab_elems[num])
     result = bij->tab_elems[num]->name;

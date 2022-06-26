@@ -35,11 +35,13 @@
 #include "event_subscriber.h"
 #include "qmp.h"
 #include "qmp_dialog.h"
+#include "qga_dialog.h"
 #include "llid_trace.h"
 #include "doors_rpc.h"
 #include "doorways_mngt.h"
-#include "dpdk_ovs.h"
-#include "dpdk_kvm.h"
+#include "ovs.h"
+#include "kvm.h"
+#include "msg.h"
 
 
 #define QMP_RESET     "{ \"execute\": \"system_reset\" }\n"
@@ -82,6 +84,14 @@ enum {
 };
 
 /*--------------------------------------------------------------------------*/
+typedef struct t_timer_save_rootfs
+{
+char name[MAX_NAME_LEN];
+char path[MAX_PATH_LEN];
+int llid;
+int tid;
+} t_timer_save_rootfs;
+/*--------------------------------------------------------------------------*/
 typedef struct t_qmp_req
 {
   int llid;
@@ -93,31 +103,21 @@ typedef struct t_qmp_req
 /*--------------------------------------------------------------------------*/
 
 /*--------------------------------------------------------------------------*/
-typedef struct t_qmp_sub
-{
-  int llid;
-  int tid;
-  struct t_qmp_sub *prev;
-  struct t_qmp_sub *next;
-} t_qmp_sub;
-/*--------------------------------------------------------------------------*/
-
-/*--------------------------------------------------------------------------*/
 typedef struct t_qmp
 {
   char name[MAX_NAME_LEN];
   int capa_sent;
   int capa_acked;
   int waiting_for;
+  int first_connect;
+  int renew_request_qemu_halt;
   t_qmp_req *head_qmp_req;
-  t_qmp_sub *head_qmp_sub;
   struct t_qmp *prev;
   struct t_qmp *next;
 } t_qmp;
 /*--------------------------------------------------------------------------*/
 
 static t_qmp *g_head_qmp;
-static t_qmp_sub *g_head_all_qmp_sub;
 
 /****************************************************************************/
 static void alloc_tail_qmp_req(t_qmp *qmp, int llid, int tid, char *msg)
@@ -170,7 +170,7 @@ static t_qmp *find_qmp(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void alloc_qmp(char *name)
+static void alloc_qmp(char *name, int first)
 {
   t_qmp *cur = (t_qmp *) clownix_malloc(sizeof(t_qmp), 3);
   memset(cur, 0, sizeof(t_qmp));
@@ -178,6 +178,7 @@ static void alloc_qmp(char *name)
   if (g_head_qmp)
     g_head_qmp->prev = cur;
   cur->next = g_head_qmp;
+  cur->first_connect = first;
   g_head_qmp = cur;
 }
 /*--------------------------------------------------------------------------*/
@@ -196,185 +197,29 @@ static void free_qmp(t_qmp *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_qmp_sub *find_qmp_sub(t_qmp *qmp, int llid)
-{
-  t_qmp_sub *cur;
-  if (qmp)
-    cur = qmp->head_qmp_sub;
-  else
-    cur = g_head_all_qmp_sub;
-  while (cur)
-    {
-    if (cur->llid == llid)
-      break;
-    cur = cur->next;
-    }
-  return cur;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void alloc_qmp_sub(t_qmp *qmp, int llid, int tid)
-{
-  t_qmp_sub *cur = find_qmp_sub(qmp, llid);
-  if (cur)
-    KERR(" ");
-  else
-    {
-    cur = (t_qmp_sub *) clownix_malloc(sizeof(t_qmp_sub), 3);
-    memset(cur, 0, sizeof(t_qmp_sub));
-    cur->llid = llid;
-    cur->tid = tid;
-    if (qmp)
-      {
-      if (qmp->head_qmp_sub)
-        qmp->head_qmp_sub->prev = cur;
-      cur->next = qmp->head_qmp_sub;
-      qmp->head_qmp_sub = cur;
-      }
-    else
-      {
-      if (g_head_all_qmp_sub)
-        g_head_all_qmp_sub->prev = cur;
-      cur->next = g_head_all_qmp_sub;
-      g_head_all_qmp_sub = cur;
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void free_qmp_sub(t_qmp *qmp, t_qmp_sub *cur)
-{
-  if (cur->next)
-    cur->next->prev = cur->prev;
-  if (cur->prev)
-    cur->prev->next = cur->next;
-  if (qmp)
-    {
-    if (cur == qmp->head_qmp_sub)
-      qmp->head_qmp_sub = cur->next;
-    }
-  else
-    {
-    if (cur == g_head_all_qmp_sub)
-      g_head_all_qmp_sub = cur->next;
-    }
-  clownix_free(cur, __FUNCTION__);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void qmp_agent_sysinfo(char *name, int used_mem_agent)
-{
-  t_vm   *vm;
-  vm = cfg_get_vm(name);
-  if ((vm) && 
-      (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_BALLOONING))
-    {
-//TODO
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void report_msg(int llid, int tid, char *name, char *msg, int to_vm)
-{
-  char fmsg[MAX_RPC_MSG_LEN];
-  if (strlen(msg) > (MAX_RPC_MSG_LEN-100))
-    KERR("%s %d", msg, (int) strlen(msg));
-  memset(fmsg, 0, MAX_RPC_MSG_LEN);
-  if (to_vm)
-    snprintf(fmsg, MAX_RPC_MSG_LEN-1, "cloonix-->%s:%s", name, msg);
-  else
-    snprintf(fmsg, MAX_RPC_MSG_LEN-1, "%s-->cloonix:%s", name, msg);
-  send_qmp_resp(llid, tid, name, fmsg, 0);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void qmp_msg_send(char *name, char *msg)
-{
-  t_qmp *qmp = find_qmp(name);
-  t_qmp_sub *cur;
-  if (!qmp)
-    KERR("%s", name);
-  else
-    {
-    cur = qmp->head_qmp_sub;
-    while(cur)
-      {
-      report_msg(cur->llid, cur->tid, name, msg, 1);
-      cur = cur->next;
-      }
-    cur = g_head_all_qmp_sub;
-    while(cur)
-      {
-      report_msg(cur->llid, cur->tid, name, msg, 1);
-      cur = cur->next;
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void qmp_conn_end(char *name)
 {
   t_qmp *qmp = find_qmp(name);
-  t_qmp_sub *cur, *next;
-  t_qmp_req *req;
-  if (!qmp)
-    KERR("%s", name);
+  qmp_dialog_free(name);
+  if (qmp)
+    free_qmp(qmp);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void qmp_begin_qemu_unix(char *name, int first)
+{
+  if (find_qmp(name))
+    {
+    qmp_conn_end(name);
+    alloc_qmp(name, first);
+    qmp_dialog_alloc(name, qmp_conn_end);
+    }
   else
     {
-    cur = qmp->head_qmp_sub;
-    while(cur)
-      {
-      next = cur->next;
-      if (llid_trace_exists(cur->llid))
-        llid_trace_free(cur->llid, 0, __FUNCTION__);
-      else
-        {
-        KERR("%s", name);
-        free_qmp_sub(qmp, cur);
-        }
-      cur = next;
-      }
-    while(qmp->head_qmp_req)
-      {
-      req = qmp->head_qmp_req;
-      if (llid_trace_exists(req->llid))
-        send_qmp_resp(req->llid, req->tid, name, "error machine deleted", -1);
-      free_head_qmp_req(qmp);
-      }
-    free_qmp(qmp);
+    alloc_qmp(name, first);
+    qmp_dialog_alloc(name, qmp_conn_end);
     }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void qmp_event_free(int llid)
-{
-  t_qmp *cur = g_head_qmp;
-  t_qmp_sub *sub;
-  while(cur)
-    {
-    sub = find_qmp_sub(cur, llid);
-    if (sub)
-      free_qmp_sub(cur, sub);
-    cur = cur->next;
-    }
-  sub = find_qmp_sub(NULL, llid);
-  if (sub)
-    free_qmp_sub(NULL, sub);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void qmp_begin_qemu_unix(char *name)
-{
-  alloc_qmp(name);
-  qmp_dialog_alloc(name, qmp_conn_end);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -382,28 +227,13 @@ void qmp_begin_qemu_unix(char *name)
 void qmp_clean_all_data(void)
 {
   t_qmp *next, *cur = g_head_qmp;
-  t_qmp_sub *cursub, *nextsub;
   while(cur)
     {
     next = cur->next; 
-    cursub = cur->head_qmp_sub;
-    while (cursub)
-      {
-      nextsub = cursub->next;
-      free_qmp_sub(cur, cursub);
-      cursub = nextsub;
-      }
     while(cur->head_qmp_req)
       free_head_qmp_req(cur);
     free_qmp(cur);
     cur = next;
-    }
-  cursub = g_head_all_qmp_sub;
-  while (cursub)
-    {
-    nextsub = cursub->next;
-    free_qmp_sub(cur, cursub);
-    cursub = nextsub;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -466,63 +296,79 @@ static void dialog_resp_return(t_qmp *qmp, int llid, int tid, int status)
 {
   char *pname;
   t_vm *vm = cfg_get_vm(qmp->name);
+  char *eth_name;
+  t_eth_table *eth_tab;
+  int i;
   if (qmp->waiting_for == waiting_for_capa_return)
     {
     if (!vm)
       KERR("%s", qmp->name);
     else
-      doors_send_add_vm(get_doorways_llid(), 0, vm->kvm.name,
-                        utils_get_qbackdoor_path(vm->kvm.vm_id));
+      {
+      if (status)
+        KERR("ERROR %s", qmp->name);
+      else
+        {
+        doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
+        doors_send_add_vm(get_doorways_llid(), 0, vm->kvm.name,
+                          utils_get_qbackdoor_path(vm->kvm.vm_id));
+        if (qmp->first_connect)
+          {
+          eth_tab = vm->kvm.eth_table;
+          for (i = 0; i < vm->kvm.nb_tot_eth; i++)
+            {
+            eth_name = eth_tab[i].vhost_ifname;
+            if (msg_send_vhost_up(qmp->name, i, eth_name))
+              KERR("ERROR KVMETH %s %d %s", qmp->name, i, eth_name);
+            }
+          }
+        }
+      }
     qmp->capa_acked = 1;
     qmp->waiting_for = waiting_for_nothing;
     }
   else if (qmp->waiting_for == waiting_for_reboot_return)
     {
-    if ((llid) && (llid_trace_exists(llid)))
-      {
-      if (status)
-        send_status_ko(llid, tid, "qmp reboot ko");
-      else
-        send_status_ok(llid, tid, "qmp reboot ok");
-      }
+    qmp->waiting_for = waiting_for_nothing;
+    if (status)
+      KERR("ERROR %s", qmp->name);
     else
       {
-      if (status)
-        KERR("%s", qmp->name);
+      if (qmp->first_connect == 0)
+        {
+        qmp_conn_end(qmp->name);
+        }
       }
-    qmp->waiting_for = waiting_for_nothing;
     }
   else if (qmp->waiting_for == waiting_for_shutdown_return)
     {
-    if ((llid) && (llid_trace_exists(llid)))
-      {
-      if (status)
-        send_status_ko(llid, tid, "qmp shutdown ko");
-      else
-        send_status_ok(llid, tid, "qmp shutdown ok");
-      }
-    else
-      {
-      if (status)
-        KERR("%s", qmp->name);
-      }
+    if (status)
+      KERR("ERROR %s", qmp->name);
     pname = (char *) clownix_malloc(MAX_NAME_LEN, 3);
     memset(pname, 0, MAX_NAME_LEN);
     strncpy(pname, qmp->name, MAX_NAME_LEN-1);
-    clownix_timeout_add(250, timer_waiting_for_shutdown, pname, NULL, NULL);
+    clownix_timeout_add(5, timer_waiting_for_shutdown, pname, NULL, NULL);
     }
   else if (qmp->waiting_for == waiting_for_quit_return)
     {
     qmp->waiting_for = waiting_for_nothing;
+    if (qmp->first_connect == 0)
+      {
+      qmp_conn_end(qmp->name);
+      }
     }
   else if (qmp->waiting_for == waiting_for_save_return)
     {
     if (status)
       {
-      KERR("%s", qmp->name);
+      KERR("ERROR %s", qmp->name);
       if ((llid) && (llid_trace_exists(llid)))
         send_status_ko(llid, tid, "qmp save ko");
       qmp->waiting_for = waiting_for_nothing;
+      if (qmp->first_connect == 0)
+        {
+        qmp_conn_end(qmp->name);
+        }
       }
     else
       {
@@ -540,9 +386,10 @@ static void dialog_resp_return(t_qmp *qmp, int llid, int tid, int status)
     }
   else if (qmp->waiting_for == waiting_for_save_end_return)
     {
+    qmp->waiting_for = waiting_for_nothing;
     if (status)
       {
-      KERR("%s", qmp->name);
+      KERR("ERROR %s", qmp->name);
       if ((llid) && (llid_trace_exists(llid)))
         send_status_ko(llid, tid, "qmp save ko");
       }
@@ -550,14 +397,28 @@ static void dialog_resp_return(t_qmp *qmp, int llid, int tid, int status)
       {
       if ((llid) && (llid_trace_exists(llid)))
         send_status_ok(llid, tid, "qmp save ok");
+      if (qmp->first_connect == 0)
+        {
+        qmp_conn_end(qmp->name);
+        }
       }
-    qmp->waiting_for = waiting_for_nothing;
     }
   else if (qmp->waiting_for == waiting_for_nothing)
     {
+    KERR("ERROR %s", qmp->name);
+    if (qmp->first_connect == 0)
+      {
+      qmp_conn_end(qmp->name);
+      }
     }
   else
-    KERR("%s %d", qmp->name, qmp->waiting_for);
+    {
+    KERR("ERROR %s %d", qmp->name, qmp->waiting_for);
+    if (qmp->first_connect == 0)
+      {
+      qmp_conn_end(qmp->name);
+      }
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -570,10 +431,7 @@ static void dialog_resp(char *name, int llid, int tid, char *req, char *resp)
   else
     {
     if (!qmp->waiting_for)
-      {
-      if ((llid) && (llid_trace_exists(llid)))
-        report_msg(llid, tid, name, resp, 0);
-      }
+      KERR("%s %s %s", name, req, resp);
     else
       {
       if ((!strncmp(resp, "{\"return\":", strlen("{\"return\":"))) ||
@@ -587,11 +445,11 @@ static void dialog_resp(char *name, int llid, int tid, char *req, char *resp)
         }
       else if (!strncmp(resp, "timeout_qmp_resp", strlen("timeout_qmp_resp")))
         {
-        KERR("TIMEOUT %s", resp);
+        KERR("WARNING TIMEOUT %s %s %s", name, resp, req);
         dialog_resp_return(qmp, llid, tid, -1);
         }
       else
-        KERR("%d %s %s %s", qmp->waiting_for, name, req, resp);
+        KERR("ERROR %d %s %s %s", qmp->waiting_for, name, req, resp);
       }
     }
 }
@@ -601,23 +459,10 @@ static void dialog_resp(char *name, int llid, int tid, char *req, char *resp)
 void qmp_msg_recv(char *name, char *msg)
 {
   t_qmp *qmp = find_qmp(name);
-  t_qmp_sub *cur;
   if (!qmp)
     KERR("%s", name);
   else
     {
-    cur = qmp->head_qmp_sub;
-    while(cur)
-      {
-      report_msg(cur->llid, cur->tid, name, msg, 0);
-      cur = cur->next;
-      }
-    cur = g_head_all_qmp_sub;
-    while(cur)
-      {
-      report_msg(cur->llid, cur->tid, name, msg, 0);
-      cur = cur->next;
-      }
     if (qmp->capa_sent == 0)
       {
       if (!strncmp(msg, "{\"QMP\":", strlen("{\"QMP\":")))
@@ -653,7 +498,7 @@ static void timer_fifo_visit(void *data)
       if (cur->waiting_for == waiting_for_save_block_job_ready)
         {
         if ((req->llid) && llid_trace_exists(req->llid))
-          send_qmp_resp(req->llid,req->tid,cur->name,"error saving block",-1);
+          send_status_ko(req->llid, req->tid, "qmp ko");
         free_head_qmp_req(cur);
         }
       else if (((cur->capa_acked && (req->llid)) || (req->llid == 0))  && 
@@ -677,10 +522,11 @@ static void timer_fifo_visit(void *data)
           else
             {
             req->count += 1;
-            if (req->count > 10)
+            if (req->count > 20)
               {
+              KERR("ERROR TIMEOUT %s", req->req);
               if ((req->llid) && llid_trace_exists(req->llid))
-                send_qmp_resp(req->llid,req->tid,cur->name,"error timeout",-1);
+                send_status_ko(req->llid, req->tid, "qmp ko");
               free_head_qmp_req(cur);
               }
             }
@@ -697,33 +543,51 @@ static void timer_fifo_visit(void *data)
 void qmp_init(void)
 {
   g_head_qmp = NULL;
-  g_head_all_qmp_sub = NULL;
   clownix_timeout_add(10, timer_fifo_visit, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void format_qmp_start_save(char *name, char *path, int stype, char *req)
+static void format_qmp_start_save(char *name, char *path, char *req)
 {
   char type[MAX_NAME_LEN];
   memset(req, 0, MAX_RPC_MSG_LEN);
   memset(type, 0, MAX_NAME_LEN);
-  if (stype)
-    snprintf(type, MAX_NAME_LEN-1, "full");
-  else
-    snprintf(type, MAX_NAME_LEN-1, "top");
+  snprintf(type, MAX_NAME_LEN-1, "full");
   snprintf(req, MAX_RPC_MSG_LEN-1, QMP_START_SAVE, name, name, path, type);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void qmp_request_save_rootfs(char *name, char *path, int llid,
-                             int tid, int stype)
+static void timer_request_save_rootfs(void *data)
+{
+  t_timer_save_rootfs *tm = (t_timer_save_rootfs *) data;
+  t_qmp *qmp = find_qmp(tm->name);
+  if (qmp)
+    {
+    qmp_request_save_rootfs(tm->name, tm->path, tm->llid, tm->tid);
+    }
+  clownix_free(data, __FUNCTION__);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void qmp_request_save_rootfs(char *name, char *path, int llid, int tid)
 {
   char req[MAX_RPC_MSG_LEN];
   t_qmp *qmp = find_qmp(name);
+  t_timer_save_rootfs *tm;
   if (!qmp)
-    send_status_ko(llid, tid, "error qmp not found");
+    {
+    qmp_begin_qemu_unix(name, 0);
+    tm = (t_timer_save_rootfs *) clownix_malloc(sizeof(t_timer_save_rootfs), 3);
+    memset(tm, 0, sizeof(t_timer_save_rootfs));
+    strncpy(tm->name, name, MAX_NAME_LEN-1);
+    strncpy(tm->path, path, MAX_PATH_LEN-1);
+    tm->llid = llid;
+    tm->tid = tid;
+    clownix_timeout_add(20, timer_request_save_rootfs, tm, NULL, NULL);
+    }
   else if (qmp->waiting_for != waiting_for_nothing)
     {
     memset(req, 0, MAX_RPC_MSG_LEN);
@@ -733,7 +597,7 @@ void qmp_request_save_rootfs(char *name, char *path, int llid,
     }
   else
     {
-    format_qmp_start_save(name, path, stype, req);
+    format_qmp_start_save(name, path, req);
     alloc_tail_qmp_req(qmp, llid, tid, req);
     qmp->waiting_for = waiting_for_save_return;
     }
@@ -741,97 +605,112 @@ void qmp_request_save_rootfs(char *name, char *path, int llid,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void qmp_request_qemu_reboot(char *name, int llid, int tid)
+static void timer_request_qemu_reboot(void *data)
+{
+  char *pname = (char *) data;
+  t_qmp *qmp = find_qmp(pname);
+  if (qmp)
+    {
+    qmp_request_qemu_reboot(pname);
+    }
+  clownix_free(pname, __FUNCTION__);
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+void qmp_request_qemu_reboot(char *name)
 {
   char req[MAX_RPC_MSG_LEN];
   t_qmp *qmp = find_qmp(name);
+  char *pname;
   if (!qmp)
-    send_status_ko(llid, tid, "error qmp not found");
+    {
+    KERR("WARNING RECONNECT FOR REQUEST REBOOT ONE %s", name);
+    qmp_begin_qemu_unix(name, 0);
+    pname = (char *) clownix_malloc(MAX_NAME_LEN, 3);
+    memset(pname, 0, MAX_NAME_LEN);
+    strncpy(pname, name, MAX_NAME_LEN-1);
+    clownix_timeout_add(20, timer_request_qemu_reboot, pname, NULL, NULL);
+    }
   else if (qmp->waiting_for != waiting_for_nothing)
     {
+    KERR("WARNING DIFFERED REQUEST REBOOT %s", name);
     memset(req, 0, MAX_RPC_MSG_LEN);
     snprintf(req, MAX_RPC_MSG_LEN-1, "error qmp doing something %d",
              qmp->waiting_for);
-    send_status_ko(llid, tid, req);
+    pname = (char *) clownix_malloc(MAX_NAME_LEN, 3);
+    memset(pname, 0, MAX_NAME_LEN);
+    strncpy(pname, name, MAX_NAME_LEN-1);
+    clownix_timeout_add(10, timer_request_qemu_reboot, pname, NULL, NULL);
     }
   else
     {
-    alloc_tail_qmp_req(qmp, llid, tid, QMP_RESET);
+    alloc_tail_qmp_req(qmp, 0, 0, QMP_RESET);
     qmp->waiting_for = waiting_for_reboot_return;
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void qmp_request_qemu_halt(char *name, int llid, int tid)
+static void timer_qmp_request_qemu_halt(void *data)
 {
+  char *name = (char *) data;
   t_qmp *qmp = find_qmp(name);
-  char req[MAX_RPC_MSG_LEN];
   if (!qmp)
     {
-    if (llid)
-      send_status_ko(llid, tid, "error qmp not found");
-    }
-  else if (qmp->waiting_for != waiting_for_nothing)
-    {
-    if (qmp->waiting_for != waiting_for_shutdown_return)
-      KERR("%s  %d", name, qmp->waiting_for);
-    if (llid)
-
-    {
-    memset(req, 0, MAX_RPC_MSG_LEN);
-    snprintf(req, MAX_RPC_MSG_LEN-1, "error qmp doing something %d",
-             qmp->waiting_for);
-    send_status_ko(llid, tid, req);
-    }
-    }
-  else
-    {
-    alloc_tail_qmp_req(qmp, llid, tid, QMP_SHUTDOWN);
-    qmp->waiting_for = waiting_for_shutdown_return;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void qmp_request_sub(char *name, int llid, int tid)
-{
-  t_qmp *qmp = NULL;
-  if (name)
-    qmp = find_qmp(name);
-  if (!llid_trace_exists(llid))
-    KERR("%s %d", name, llid);
-  else if ((name) && (!qmp))
-    send_qmp_resp(llid, tid, name, "error qmp not found", -1);
-  else
-    alloc_qmp_sub(qmp, llid, tid);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void qmp_request_snd(char *name, int llid, int tid, char *msg)
-{ 
-  t_qmp *qmp = find_qmp(name);
-  char req[MAX_RPC_MSG_LEN];
-  if (!qmp)
-    {
-    send_qmp_resp(llid, tid, name, "error qmp not found", -1);
+    KERR("ERROR %s", name);
+    clownix_free(data, __FUNCTION__);
     }
   else
     {
     if (qmp->waiting_for != waiting_for_nothing)
       {
-      memset(req, 0, MAX_RPC_MSG_LEN);
-      snprintf(req, MAX_RPC_MSG_LEN-1, "error qmp doing something %d",
-               qmp->waiting_for);
-      send_qmp_resp(llid, tid, name, req, -1);
+      qmp->renew_request_qemu_halt += 1;
+      if (qmp->renew_request_qemu_halt > 50)
+        {
+        KERR("ERROR %s", name);
+        clownix_free(data, __FUNCTION__);
+        }
+      else 
+        clownix_timeout_add(5, timer_qmp_request_qemu_halt, name, NULL, NULL);
       }
     else
       {
-      KERR("%s %s %d", name, msg, qmp->waiting_for);
-      alloc_tail_qmp_req(qmp, llid, tid, msg);
+      alloc_tail_qmp_req(qmp, 0, 0, QMP_SHUTDOWN);
+      qmp->waiting_for = waiting_for_shutdown_return;
+      clownix_free(data, __FUNCTION__);
       }
     }
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void qmp_request_qemu_halt(char *name)
+{
+  t_qmp *qmp = find_qmp(name);
+  char *pname;
+  if (!qmp)
+    {
+    qmp_begin_qemu_unix(name, 0);
+    pname = (char *) clownix_malloc(MAX_NAME_LEN, 3);
+    memset(pname, 0, MAX_NAME_LEN);
+    strncpy(pname, name, MAX_NAME_LEN-1);
+    clownix_timeout_add(10, timer_qmp_request_qemu_halt, pname, NULL, NULL);
+    }
+  else if (qmp->waiting_for != waiting_for_nothing)
+    {
+    pname = (char *) clownix_malloc(MAX_NAME_LEN, 3);
+    memset(pname, 0, MAX_NAME_LEN);
+    strncpy(pname, name, MAX_NAME_LEN-1);
+    clownix_timeout_add(10, timer_qmp_request_qemu_halt, pname, NULL, NULL);
+    }
+  else
+    {
+    alloc_tail_qmp_req(qmp, 0, 0, QMP_SHUTDOWN);
+    qmp->waiting_for = waiting_for_shutdown_return;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
 

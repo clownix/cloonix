@@ -56,10 +56,10 @@ int is_a_nat(t_bank_item *bitem)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int is_a_d2d(t_bank_item *bitem)
+int is_a_c2c(t_bank_item *bitem)
 {
   int result = 0;
-  if (bitem->pbi.endp_type == endp_type_d2d)
+  if (bitem->pbi.endp_type == endp_type_c2c)
     result = 1;
   return result;
 }
@@ -612,7 +612,7 @@ int add_new_lan(char *name, double x, double y, int hidden_on_graph)
 
 /****************************************************************************/
 int add_new_sat(char *name, int endp_type,
-                t_topo_d2d *d2d, t_topo_a2b *a2b,
+                t_topo_c2c *c2c, t_topo_a2b *a2b,
                 double x, double y, int hidden_on_graph)
 {
   int result = 0;
@@ -636,8 +636,8 @@ int add_new_sat(char *name, int endp_type,
     bitem->pbi.pbi_sat =
     (t_pbi_sat *) clownix_malloc(sizeof(t_pbi_sat), 14);
     memset(bitem->pbi.pbi_sat, 0, sizeof(t_pbi_sat));
-    if (d2d)
-      memcpy(&(bitem->pbi.pbi_sat->topo_d2d), d2d, sizeof(t_topo_d2d));
+    if (c2c)
+      memcpy(&(bitem->pbi.pbi_sat->topo_c2c), c2c, sizeof(t_topo_c2c));
     if (a2b)
       memcpy(&(bitem->pbi.pbi_sat->topo_a2b), a2b, sizeof(t_topo_a2b));
     topo_add_cr_item_to_canvas(bitem, NULL);
@@ -677,7 +677,7 @@ int add_new_eth(char *name, int num,
         KOUT("%s", name);
       }
     }
-  if ((num <0) || (num > MAX_DPDK_VM))
+  if ((num <0) || (num > MAX_ETH_VM))
     KOUT(" ");
   if ((!bnode) || (bank_get_item(bank_type, name, num, NULL)))
     result = -1;
@@ -757,7 +757,7 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int add_new_cnt(char *name, char *image,
+int add_new_cnt(char *name, char *image, char *customer_launch, int vm_id,
                  double x, double y, int hidden_on_graph,
                  int ping_ok, int nb_tot_eth, t_eth_table *eth_tab)
 {
@@ -777,7 +777,10 @@ int add_new_cnt(char *name, char *image,
     bitem->pbi.pbi_cnt = (t_pbi_cnt *) clownix_malloc(sizeof(t_pbi_cnt), 14);
     memset(bitem->pbi.pbi_cnt, 0, sizeof(t_pbi_cnt));
     strncpy(bitem->pbi.pbi_cnt->image, image, MAX_PATH_LEN-1);
+    strncpy(bitem->pbi.pbi_cnt->customer_launch, customer_launch,
+            MAX_PATH_LEN-1);
     bitem->pbi.pbi_cnt->cnt_evt_ping_ok = ping_ok;
+    bitem->pbi.pbi_cnt->cnt_vm_id = vm_id;
     bitem->pbi.pbi_cnt->nb_tot_eth = nb_tot_eth;
     memcpy(bitem->pbi.pbi_cnt->eth_tab, eth_tab,
            nb_tot_eth * sizeof(t_eth_table));

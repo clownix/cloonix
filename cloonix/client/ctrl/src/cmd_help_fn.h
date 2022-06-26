@@ -22,7 +22,6 @@ int cmd_ftopo_get(int argc, char **argv);
 int cmd_event_print(int argc, char **argv);
 int cmd_event_sys(int argc, char **argv);
 /*---------------------------------------------------------------------------*/
-int cmd_dpdk_ovs_cnf(int argc, char **argv);
 int cmd_kill(int argc, char **argv);
 int cmd_delall(int argc, char **argv);
 int cmd_name_dump(int argc, char **argv);
@@ -31,28 +30,18 @@ int cmd_topo_dump(int argc, char **argv);
 int cmd_pid_dump(int argc, char **argv);
 int cmd_add_vm_kvm(int argc, char **argv);
 int cmd_qreboot_vm(int argc, char **argv);
-int cmd_qhalt_vm(int argc, char **argv);
-int cmd_reboot_vm(int argc, char **argv);
-int cmd_halt_vm(int argc, char **argv);
 int cmd_add_tap(int argc, char **argv);
 int cmd_add_cnt(int argc, char **argv);
 int cmd_add_phy(int argc, char **argv);
 int cmd_add_a2b(int argc, char **argv);
 int cmd_add_nat(int argc, char **argv);
+int cmd_add_snf(int argc, char **argv);
 int cmd_del_sat(int argc, char **argv);
-int cmd_add_d2d(int argc, char **argv);
+int cmd_add_c2c(int argc, char **argv);
 int cmd_add_vl2sat(int argc, char **argv);
 int cmd_del_vl2sat(int argc, char **argv);
 /*---------------------------------------------------------------------------*/
-int cmd_sav_derived(int argc, char **argv);
 int cmd_sav_full(int argc, char **argv);
-/*---------------------------------------------------------------------------*/
-int cmd_sub_qmp(int argc, char **argv);
-int cmd_snd_qmp(int argc, char **argv);
-/*---------------------------------------------------------------------------*/
-void help_dpdk_ovs_cnf(char *line);
-void help_sub_qmp(char *line);
-void help_snd_qmp(char *line);
 /*---------------------------------------------------------------------------*/
 void help_sav_derived(char *line);
 void help_sav_full(char *line);
@@ -66,11 +55,12 @@ void help_halt_vm(char *line);
 void help_reboot_vm(char *line);
 void help_qhalt_vm(char *line);
 void help_add_nat(char *line);
+void help_add_snf(char *line);
 void help_add_phy(char *line);
 void help_add_tap(char *line);
 void help_add_cnt(char *line);
 void help_add_a2b(char *line);
-void help_add_d2d(char *line);
+void help_add_c2c(char *line);
 void help_del_sat(char *line);
 void help_add_vl2sat(char *line);
 void help_del_vl2sat(char *line);
@@ -99,8 +89,8 @@ void help_sub_sysinfo(char *line);
 int cmd_cnf_a2b(int argc, char **argv);
 void help_cnf_a2b(char *line);
 /*---------------------------------------------------------------------------*/
-int cmd_cnf_xyx(int argc, char **argv);
-void help_cnf_xyx(char *line);
+int cmd_cnf_c2c(int argc, char **argv);
+void help_cnf_c2c(char *line);
 /*---------------------------------------------------------------------------*/
 int cmd_cnf_nat(int argc, char **argv);
 void help_cnf_nat(char *line);

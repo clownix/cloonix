@@ -271,6 +271,8 @@ void mk_cnt_dir(void)
 void mk_endp_dir(void)
 {
   my_mkdir(utils_get_snf_pcap_dir(), 1);
+  my_mkdir(utils_get_c2c_dir(), 1);
+  my_mkdir(utils_get_nat_dir(), 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -285,12 +287,12 @@ void mk_dtach_dir(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void mk_dpdk_ovs_db_dir(void)
+void mk_ovs_db_dir(void)
 {
   char pth[MAX_PATH_LEN+MAX_NAME_LEN];
   DIR *dirptr;
   struct dirent *ent;
-  char *ovsdb_dir = utils_get_dpdk_ovs_db_dir();
+  char *ovsdb_dir = utils_get_ovs_dir();
   if (!access(ovsdb_dir, F_OK))
     {
     dirptr = opendir(ovsdb_dir);
@@ -322,18 +324,6 @@ void mk_dpdk_ovs_db_dir(void)
   my_mkdir(ovsdb_dir, 1);
 }
 /*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void mk_dpdk_dir(void)
-{
-  my_mkdir(utils_get_dpdk_qemu_dir(), 0);
-  my_mkdir(utils_get_dpdk_nat_dir(), 0);
-  my_mkdir(utils_get_dpdk_xyx_dir(), 0);
-  my_mkdir(utils_get_dpdk_a2b_dir(), 0);
-  my_mkdir(utils_get_dpdk_d2d_dir(), 0);
-  my_mkdir(utils_get_dpdk_cloonix_dir(), 0);
-}
-/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int mk_machine_dirs(char *name, int vm_id)
@@ -536,33 +526,21 @@ int rm_machine_dirs(int vm_id, char *err)
         pth[maxlenpth-1] = 0;
         unlink(pth);
         }
-      else if (!strcmp(QMONITOR_UNIX, ent->d_name))
-        {
-        snprintf(pth, maxlenpth, "%s", utils_get_qmonitor_path(vm_id));
-        pth[maxlenpth-1] = 0;
-        unlink(pth);
-        }
      else if (!strcmp(QMP_UNIX, ent->d_name))
         {
         snprintf(pth, maxlenpth, "%s", utils_get_qmp_path(vm_id));
         pth[maxlenpth-1] = 0;
         unlink(pth);
         }
-     else if (!strcmp(QHVCO_UNIX, ent->d_name))
+     else if (!strcmp(QGA_UNIX, ent->d_name))
         {
-        snprintf(pth, maxlenpth, "%s", utils_get_qhvc0_path(vm_id));
+        snprintf(pth, maxlenpth, "%s", utils_get_qga_path(vm_id));
         pth[maxlenpth-1] = 0;
         unlink(pth);
         }
      else if (!strcmp(QBACKDOOR_UNIX, ent->d_name))
         {
         snprintf(pth, maxlenpth, "%s", utils_get_qbackdoor_path(vm_id));
-        pth[maxlenpth-1] = 0;
-        unlink(pth);
-        }
-     else if (!strcmp(QBACKDOOR_HVCO_UNIX, ent->d_name))
-        {
-        snprintf(pth, maxlenpth, "%s", utils_get_qbackdoor_hvc0_path(vm_id));
         pth[maxlenpth-1] = 0;
         unlink(pth);
         }

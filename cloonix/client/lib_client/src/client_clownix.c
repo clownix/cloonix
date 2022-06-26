@@ -31,7 +31,6 @@
 
 static int g_llid;
 static int g_connect_llid;
-static t_qmp_cb qmp_cb;
 static t_list_commands_cb clownix_list_commands_cb;
 static t_pid_cb   clownix_pid_cb;
 static t_print_cb clownix_print_cb;
@@ -98,47 +97,6 @@ void call_response_callback(int tid, int status, char *reason)
     }
 }
 /*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void set_qmp_callback(t_qmp_cb cb)
-{
-  qmp_cb = cb;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_qmp_resp(int llid, int tid, char *name, char *line, int status)
-{
-  if (qmp_cb)
-    qmp_cb(tid, name, line, status);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void client_qmp_sub(int tid, char *name)
-{
-  if (!g_llid)
-    KOUT(" ");
-  send_qmp_sub(g_llid, tid, name);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(g_llid);
-#endif
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void client_qmp_snd(int tid, char *name, char *msg)
-{
-  if (!g_llid)
-    KOUT(" ");
-  send_qmp_req(g_llid, tid, name, msg);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(g_llid);
-#endif
-}
-/*---------------------------------------------------------------------------*/
-
-
 
 /*****************************************************************************/
 int get_clownix_main_llid(void)
@@ -488,14 +446,13 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_sav_vm(int tid, t_end_cb cb, char *nm, 
-                   int type, char *sav_rootfs_path)
+void client_sav_vm(int tid, t_end_cb cb, char *nm, char *sav_rootfs_path)
 {
   int new_tid;
   if (!g_llid)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_sav_vm(g_llid, new_tid, nm, type, sav_rootfs_path);
+  send_sav_vm(g_llid, new_tid, nm, sav_rootfs_path);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -503,16 +460,13 @@ void client_sav_vm(int tid, t_end_cb cb, char *nm,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest)
+void client_reboot_vm(int tid, t_end_cb cb, char *nm)
 {
   int new_tid;
   if (!g_llid)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  if (by_guest)
-    send_vmcmd(g_llid, new_tid, nm, vmcmd_reboot_with_guest, 0);
-  else
-    send_vmcmd(g_llid, new_tid, nm, vmcmd_reboot_with_qemu, 0);
+  send_vmcmd(g_llid, new_tid, nm, vmcmd_reboot_with_qemu, 0);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -520,54 +474,39 @@ void client_reboot_vm(int tid, t_end_cb cb, char *nm, int by_guest)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_dpdk_ovs_cnf(int tid, t_end_cb cb, int lcore, int mem, int cpu)
-{
-  int new_tid;
-  if (!g_llid)
-    KOUT(" ");
-  new_tid = set_response_callback(cb, tid);
-  send_dpdk_ovs_cnf(g_llid, new_tid, lcore, mem, cpu);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(g_llid);
-#endif
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void client_halt_vm(int tid, t_end_cb cb, char *nm, int by_guest)
-{
-  int new_tid;
-  if (!g_llid)
-    KOUT(" ");
-  new_tid = set_response_callback(cb, tid);
-  if (!g_llid)
-    KOUT(" ");
-  if (by_guest)
-    send_vmcmd(g_llid, new_tid, nm, vmcmd_halt_with_guest, 0);
-  else
-    send_vmcmd(g_llid, new_tid, nm, vmcmd_halt_with_qemu, 0);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(g_llid);
-#endif
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void client_add_d2d(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip, 
-                    char *slave_cloonix, uint32_t ip, uint16_t port,
+void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip, 
+                    char *slave_cloon, uint32_t ip, uint16_t port,
                     char *passwd, uint32_t udp_ip)
 {
   int new_tid;
   if (!g_llid)
     KOUT(" ");
-  if ((!name) || (!slave_cloonix))
+  if ((!name) || (!slave_cloon))
     KOUT(" ");
-  if ((!strlen(name)) || !(strlen(slave_cloonix)))
+  if ((!strlen(name)) || !(strlen(slave_cloon)))
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_d2d_add(g_llid, new_tid, name, local_udp_ip,
-               slave_cloonix, ip, port,
+  send_c2c_add(g_llid, new_tid, name, local_udp_ip,
+               slave_cloon, ip, port,
                passwd, udp_ip);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void client_add_snf(int tid, t_end_cb cb, char *name, int num, int on)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  if (!name)
+    KOUT(" ");
+  if (!strlen(name))
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_snf_add(g_llid, new_tid, name, num, on);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -661,13 +600,13 @@ void client_cnf_a2b(int tid, t_end_cb cb, char *name,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_cnf_xyx(int tid, t_end_cb cb, char *name, int type, uint8_t *mac)
+void client_cnf_c2c(int tid, t_end_cb cb, char *name, int type, uint8_t *mac)
 {
   int new_tid;
   if (!g_llid)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_xyx_cnf(g_llid, new_tid, name, type, mac);
+  send_c2c_cnf(g_llid, new_tid, name, type, mac);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -1059,7 +998,7 @@ void client_init(char *name, char *path, char *password)
     exit(-1);
     }
   g_connect_llid = llid;
-  clownix_timeout_add(300, timeout_connect_doors, NULL, NULL, NULL);
+  clownix_timeout_add(800, timeout_connect_doors, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

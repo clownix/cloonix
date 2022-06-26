@@ -8,7 +8,7 @@ OBJ_DIR=obj/
 EXE = cloonix_suid_power
 
 SRC = suid_power.c stub.c net_phy.c ovs_get.c \
-      launcher.c container.c cnt_utils.c loop_img.c
+      launcher.c cnt.c cnt_utils.c loop_img.c
 
 VPATH=./src
 

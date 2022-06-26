@@ -35,7 +35,7 @@ void process_all_diffs(t_topo_differences *diffs)
 {
   t_topo_cnt_chain   *add_cnt  = diffs->add_cnt;
   t_topo_kvm_chain   *add_kvm  = diffs->add_kvm;
-  t_topo_d2d_chain   *add_d2d  = diffs->add_d2d;
+  t_topo_c2c_chain   *add_c2c  = diffs->add_c2c;
   t_topo_tap_chain   *add_tap  = diffs->add_tap;
   t_topo_a2b_chain   *add_a2b  = diffs->add_a2b;
   t_topo_nat_chain   *add_nat  = diffs->add_nat;
@@ -45,7 +45,7 @@ void process_all_diffs(t_topo_differences *diffs)
 
   t_topo_cnt_chain   *del_cnt  = diffs->del_cnt;
   t_topo_kvm_chain   *del_kvm  = diffs->del_kvm;
-  t_topo_d2d_chain   *del_d2d  = diffs->del_d2d;
+  t_topo_c2c_chain   *del_c2c  = diffs->del_c2c;
   t_topo_tap_chain   *del_tap  = diffs->del_tap;
   t_topo_a2b_chain   *del_a2b  = diffs->del_a2b;
   t_topo_nat_chain   *del_nat  = diffs->del_nat;
@@ -65,10 +65,10 @@ void process_all_diffs(t_topo_differences *diffs)
     add_kvm = add_kvm->next;
     }
 
-  while(add_d2d)
+  while(add_c2c)
     {
-    from_cloonix_switch_create_d2d(&(add_d2d->d2d));
-    add_d2d = add_d2d->next;
+    from_cloonix_switch_create_c2c(&(add_c2c->c2c));
+    add_c2c = add_c2c->next;
     }
 
   while(add_tap)
@@ -126,10 +126,10 @@ void process_all_diffs(t_topo_differences *diffs)
     del_kvm = del_kvm->next;
     }
 
-  while(del_d2d)
+  while(del_c2c)
     {
-    from_cloonix_switch_delete_sat(del_d2d->d2d.name);
-    del_d2d = del_d2d->next;
+    from_cloonix_switch_delete_sat(del_c2c->c2c.name);
+    del_c2c = del_c2c->next;
     }
 
   while(del_tap)

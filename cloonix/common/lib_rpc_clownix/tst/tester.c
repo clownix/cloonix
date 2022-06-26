@@ -64,7 +64,6 @@ static int count_event_sys_sub=0;
 static int count_event_sys_unsub=0;
 static int count_event_sys=0;
 static int count_vmcmd=0;
-static int count_dpdk_ovs_cnf=0;
 
 static int count_eventfull=0;
 static int count_eventfull_sub=0;
@@ -93,14 +92,11 @@ static int count_cmd_resp_txt = 0;
 static int count_cmd_resp_txt_sub = 0;
 static int count_cmd_resp_txt_unsub = 0;
 
-static int count_qmp_sub = 0;
-static int count_qmp_req = 0;
-static int count_qmp_resp = 0;
-
-static int count_d2d_add = 0;
-static int count_d2d_peer_create = 0;
-static int count_d2d_peer_conf = 0;
-static int count_d2d_peer_ping = 0;
+static int count_snf_add = 0;
+static int count_c2c_add = 0;
+static int count_c2c_peer_create = 0;
+static int count_c2c_peer_conf = 0;
+static int count_c2c_peer_ping = 0;
 
 static int count_nat_add = 0;
 static int count_phy_add = 0;
@@ -144,7 +140,6 @@ static void print_all_count(void)
   printf("%d\n", count_work_dir_req);
   printf("%d\n", count_work_dir_resp);
   printf("%d\n", count_vmcmd);
-  printf("%d\n", count_dpdk_ovs_cnf);
   printf("%d\n", count_eventfull_sub);
   printf("%d\n", count_eventfull);
   printf("%d\n", count_slowperiodic_sub);
@@ -172,14 +167,11 @@ static void print_all_count(void)
   printf("%d\n", count_cmd_resp_txt_sub);
   printf("%d\n", count_cmd_resp_txt_unsub);
 
-  printf("%d\n", count_qmp_sub);
-  printf("%d\n", count_qmp_req);
-  printf("%d\n", count_qmp_resp);
-
-  printf("%d\n", count_d2d_add);
-  printf("%d\n", count_d2d_peer_create);
-  printf("%d\n", count_d2d_peer_conf);
-  printf("%d\n", count_d2d_peer_ping);
+  printf("%d\n", count_snf_add);
+  printf("%d\n", count_c2c_add);
+  printf("%d\n", count_c2c_peer_create);
+  printf("%d\n", count_c2c_peer_conf);
+  printf("%d\n", count_c2c_peer_ping);
 
   printf("%d\n", count_tap_add);
   printf("%d\n", count_cnt_add);
@@ -289,7 +281,12 @@ static void topo_config_diff(t_topo_clc *cfa, t_topo_clc *cfb)
 static int topo_cnt_diff(t_topo_cnt *icnt, t_topo_cnt *cnt)
 {
   int k, l, result = 0;
-  if (cnt->ping_ok != icnt->ping_ok)
+  if (cnt->vm_id != icnt->vm_id)
+    {
+    KERR("%d %d", cnt->vm_id, icnt->vm_id);
+    result = -1;
+    }
+  else if (cnt->ping_ok != icnt->ping_ok)
     {
     KERR("%d %d", cnt->ping_ok, icnt->ping_ok);
     result = -1;
@@ -304,9 +301,14 @@ static int topo_cnt_diff(t_topo_cnt *icnt, t_topo_cnt *cnt)
     KERR("%s %s", cnt->image, icnt->image);
     result = -1;
     }
+  else   if (strcmp(cnt->customer_launch, icnt->customer_launch))
+    {
+    KERR("%s %s", cnt->customer_launch, icnt->customer_launch);
+    result = -1;
+    }
   else
     {
-    for (k=0; k < MAX_DPDK_VM; k++)
+    for (k=0; k < MAX_ETH_VM; k++)
       {
       if (cnt->eth_table[k].endp_type != icnt->eth_table[k].endp_type)
         {
@@ -336,7 +338,7 @@ static int topo_cnt_diff(t_topo_cnt *icnt, t_topo_cnt *cnt)
         }
       }
     if (memcmp(cnt->eth_table, icnt->eth_table,
-       MAX_DPDK_VM*sizeof(t_eth_table)))
+       MAX_ETH_VM*sizeof(t_eth_table)))
       KERR(" ");
     }
   return result;
@@ -424,7 +426,7 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
     }
   else
     {
-    for (k=0; k < MAX_DPDK_VM; k++)
+    for (k=0; k < MAX_ETH_VM; k++)
       {
       if (kvm->eth_table[k].endp_type != ikvm->eth_table[k].endp_type)
         {
@@ -454,7 +456,7 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
         }
       }
     if (memcmp(kvm->eth_table, ikvm->eth_table,
-       MAX_DPDK_VM*sizeof(t_eth_table)))
+       MAX_ETH_VM*sizeof(t_eth_table)))
       KERR(" ");
     }
   return result;
@@ -467,8 +469,10 @@ static void random_cnt(t_topo_cnt *cnt)
   int k, l;
   random_choice_str(cnt->name, MAX_NAME_LEN);
   random_choice_str(cnt->image, MAX_PATH_LEN);
-  cnt->nb_tot_eth = my_rand(MAX_DPDK_VM);
+  random_choice_str(cnt->customer_launch, MAX_PATH_LEN);
+  cnt->nb_tot_eth = my_rand(MAX_ETH_VM);
   cnt->ping_ok = my_rand(20);
+  cnt->vm_id = my_rand(120);
   for (k=0; k < cnt->nb_tot_eth; k++)
     {
     cnt->eth_table[k].endp_type = (rand() & 0x04) + 1;
@@ -507,7 +511,7 @@ static void random_kvm(t_topo_kvm *kvm)
   kvm->mem = rand();
   kvm->vm_config_flags = rand();
   kvm->vm_config_param = rand();
-  kvm->nb_tot_eth = my_rand(MAX_DPDK_VM);
+  kvm->nb_tot_eth = my_rand(MAX_ETH_VM);
   for (k=0; k < kvm->nb_tot_eth; k++)
     {
     kvm->eth_table[k].endp_type = (rand() & 0x04) + 1;
@@ -520,21 +524,20 @@ static void random_kvm(t_topo_kvm *kvm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void random_d2d(t_topo_d2d *d2d)
+static void random_c2c(t_topo_c2c *c2c)
 {
-  random_choice_str(d2d->name, MAX_NAME_LEN);
-  random_choice_str(d2d->dist_cloonix, MAX_NAME_LEN);
-  random_choice_str(d2d->lan, MAX_NAME_LEN);
-  d2d->local_is_master = rand();
-  d2d->dist_tcp_ip = rand();
-  d2d->dist_tcp_port = rand();
-  d2d->loc_udp_ip = rand();
-  d2d->dist_udp_ip = rand();
-  d2d->loc_udp_port = rand();
-  d2d->dist_udp_port = rand();
-  d2d->tcp_connection_peered = rand();
-  d2d->udp_connection_peered = rand();
-  d2d->ovs_lan_attach_ready = rand();
+  random_choice_str(c2c->name, MAX_NAME_LEN);
+  random_choice_str(c2c->dist_cloon, MAX_NAME_LEN);
+  random_choice_str(c2c->lan, MAX_NAME_LEN);
+  c2c->local_is_master = rand();
+  c2c->dist_tcp_ip = rand();
+  c2c->dist_tcp_port = rand();
+  c2c->loc_udp_ip = rand();
+  c2c->dist_udp_ip = rand();
+  c2c->loc_udp_port = rand();
+  c2c->dist_udp_port = rand();
+  c2c->tcp_connection_peered = rand();
+  c2c->udp_connection_peered = rand();
 }
 /*---------------------------------------------------------------------------*/
 
@@ -642,7 +645,7 @@ static t_topo_info *random_topo_gen(void)
   topo->conf_rank = my_rand(50);
   topo->nb_cnt = my_rand(10);
   topo->nb_kvm = my_rand(10);
-  topo->nb_d2d = my_rand(10);
+  topo->nb_c2c = my_rand(10);
   topo->nb_a2b = my_rand(10);
   topo->nb_tap = my_rand(10);
   topo->nb_nat = my_rand(10);
@@ -674,13 +677,13 @@ static t_topo_info *random_topo_gen(void)
       }
     }
 
-  if (topo->nb_d2d)
+  if (topo->nb_c2c)
     {
-    topo->d2d =
-    (t_topo_d2d *)clownix_malloc(topo->nb_d2d * sizeof(t_topo_d2d),3);
-    memset(topo->d2d, 0, topo->nb_d2d * sizeof(t_topo_d2d));
-    for (i=0; i<topo->nb_d2d; i++)
-      random_d2d(&(topo->d2d[i]));
+    topo->c2c =
+    (t_topo_c2c *)clownix_malloc(topo->nb_c2c * sizeof(t_topo_c2c),3);
+    memset(topo->c2c, 0, topo->nb_c2c * sizeof(t_topo_c2c));
+    for (i=0; i<topo->nb_c2c; i++)
+      random_c2c(&(topo->c2c[i]));
     }
 
   if (topo->nb_a2b)
@@ -1884,10 +1887,9 @@ void recv_add_vm(int llid, int itid, t_topo_kvm *ikvm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_sav_vm(int llid, int itid, char *iname, int itype, char *ipath)
+void recv_sav_vm(int llid, int itid, char *iname, char *ipath)
 {
   static int tid;
-  static int type;
   static char name[MAX_NAME_LEN];
   static char path[MAX_PATH_LEN];
   if (i_am_client)
@@ -1900,17 +1902,14 @@ void recv_sav_vm(int llid, int itid, char *iname, int itype, char *ipath)
         KOUT(" ");
       if (itid != tid)
         KOUT(" ");
-      if (itype != type)
-        KOUT(" ");
       }
     tid = rand();
-    type = rand();
     random_choice_str(name, MAX_NAME_LEN);
     random_choice_str(path, MAX_PATH_LEN);
-    send_sav_vm(llid, tid, name, type, path);
+    send_sav_vm(llid, tid, name, path);
     }
   else
-    send_sav_vm(llid, itid, iname, itype, ipath);
+    send_sav_vm(llid, itid, iname, ipath);
   count_sav_vm++;
 }
 /*---------------------------------------------------------------------------*/
@@ -2197,35 +2196,6 @@ void recv_vmcmd(int llid, int itid, char *iname, int icmd, int iparam)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_dpdk_ovs_cnf(int llid, int itid, int ilcore, int imem, int icpu)
-{
-  static int tid, lcore, mem, cpu;
-  if (i_am_client)
-    {
-    if (count_dpdk_ovs_cnf)
-      {
-      if (lcore != ilcore)
-        KOUT(" ");
-      if (mem != imem)
-        KOUT(" ");
-      if (cpu != icpu)
-        KOUT(" ");
-      if (tid != itid)
-        KOUT(" ");
-      }
-    tid   = rand();
-    lcore = rand();
-    mem   = rand();
-    cpu   = rand();
-    send_dpdk_ovs_cnf(llid, tid, lcore, mem, cpu);
-    }
-  else
-    send_dpdk_ovs_cnf(llid, itid, ilcore, imem, icpu);
-  count_dpdk_ovs_cnf++;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void recv_eventfull_sub(int llid, int itid)
 {
   static int tid;
@@ -2352,89 +2322,6 @@ void recv_slowperiodic_img(int llid, int itid, int inb, t_slowperiodic *ispic)
   else
     send_slowperiodic_img(llid, itid, inb, ispic);
   count_slowperiodic_img++;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_qmp_sub(int llid, int itid, char *iname)
-{
-  static char name[MAX_NAME_LEN];
-  static int tid;
-  if (i_am_client)
-    {
-    if (count_qmp_sub)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    send_qmp_sub(llid, tid, name);
-    }
-  else
-    send_qmp_sub(llid, itid, iname);
-  count_qmp_sub++;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_qmp_req(int llid, int itid, char *iname, char *iline)
-{
-  static char name[MAX_NAME_LEN];
-  static char line[MAX_RPC_MSG_LEN];
-  static int tid;
-  if (i_am_client)
-    {
-    if (count_qmp_req)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (strcmp(iline, line))
-        KOUT("\n\n%s\n\n%s\n", iline, line);
-      if (itid != tid)
-        KOUT(" ");
-      }
-    tid = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    random_choice_str(line, MAX_RPC_MSG_LEN);
-    send_qmp_req(llid, tid, name, line);
-    }
-  else
-    send_qmp_req(llid, itid, iname, iline);
-  count_qmp_req++;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_qmp_resp(int llid, int itid, char *iname, char *iline, int istatus)
-{
-  static char name[MAX_NAME_LEN];
-  static char line[MAX_RPC_MSG_LEN];
-  static int tid, status;
-  if (i_am_client)
-    {
-    if (count_qmp_resp)
-      {
-      if (strcmp(iname, name))
-        KOUT(" ");
-      if (strcmp(iline, line))
-        KOUT("\n\n%s\n\n%s\n", iline, line);
-      if (itid != tid)
-        KOUT(" ");
-      if (istatus != status)
-        KOUT(" ");
-      }
-    tid = rand();
-    status = rand();
-    random_choice_str(name, MAX_NAME_LEN);
-    random_choice_str(line, MAX_RPC_MSG_LEN);
-    send_qmp_resp(llid, tid, name, line, status);
-    }
-  else
-    send_qmp_resp(llid, itid, iname, iline, istatus);
-  count_qmp_resp++;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -2595,7 +2482,7 @@ void recv_a2b_cnf(int llid, int itid, char *iname,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_xyx_cnf(int llid, int itid, char *iname,
+void recv_c2c_cnf(int llid, int itid, char *iname,
                   int itype, uint8_t *imac)
 {
   int i;
@@ -2623,10 +2510,10 @@ void recv_xyx_cnf(int llid, int itid, char *iname,
     for (i=0; i<6; i++)
       mac[i] = rand();
     random_choice_str(name, MAX_NAME_LEN);
-    send_xyx_cnf(llid, tid, name, type, mac);
+    send_c2c_cnf(llid, tid, name, type, mac);
     }
   else
-    send_xyx_cnf(llid, itid, iname, itype, imac);
+    send_c2c_cnf(llid, itid, iname, itype, imac);
   count_xyx_cnf++;
 }
 /*---------------------------------------------------------------------------*/
@@ -2660,25 +2547,25 @@ void recv_nat_cnf(int llid, int itid, char *iname, char *icmd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_d2d_add(int llid, int itid, char *id2d_name, uint32_t ilocal_udp_ip,
-                  char *islave_cloonix, uint32_t iip, uint16_t iport,
+void recv_c2c_add(int llid, int itid, char *ic2c_name, uint32_t ilocal_udp_ip,
+                  char *islave_cloon, uint32_t iip, uint16_t iport,
                   char *ipasswd, uint32_t iudp_ip)
 {
-  static char d2d_name[MAX_NAME_LEN];
-  static char slave_cloonix[MAX_NAME_LEN];
+  static char c2c_name[MAX_NAME_LEN];
+  static char slave_cloon[MAX_NAME_LEN];
   static char passwd[MSG_DIGEST_LEN];
   static int tid;
   static uint32_t ip, local_udp_ip, udp_ip;
   static uint16_t port;
   if (i_am_client)
     {
-    if (count_d2d_add)
+    if (count_c2c_add)
       {
       if (strcmp(ipasswd, passwd))
         KOUT(" ");
-      if (strcmp(id2d_name, d2d_name))
+      if (strcmp(ic2c_name, c2c_name))
         KOUT(" ");
-      if (strcmp(islave_cloonix, slave_cloonix))
+      if (strcmp(islave_cloon, slave_cloon))
         KOUT(" ");
       if (iip != ip)
         KOUT(" ");
@@ -2697,35 +2584,66 @@ void recv_d2d_add(int llid, int itid, char *id2d_name, uint32_t ilocal_udp_ip,
     udp_ip = rand();
     port = rand() & 0xFFFF;
     random_choice_str(passwd, MSG_DIGEST_LEN);
-    random_choice_str(d2d_name, MAX_NAME_LEN);
-    random_choice_str(slave_cloonix, MAX_NAME_LEN);
-    send_d2d_add(llid, tid, d2d_name, local_udp_ip,
-                 slave_cloonix, ip, port, passwd, udp_ip);
+    random_choice_str(c2c_name, MAX_NAME_LEN);
+    random_choice_str(slave_cloon, MAX_NAME_LEN);
+    send_c2c_add(llid, tid, c2c_name, local_udp_ip,
+                 slave_cloon, ip, port, passwd, udp_ip);
     }
   else
-    send_d2d_add(llid, itid, id2d_name, ilocal_udp_ip,
-                 islave_cloonix, iip, iport, ipasswd, iudp_ip);
-  count_d2d_add++;
+    send_c2c_add(llid, itid, ic2c_name, ilocal_udp_ip,
+                 islave_cloon, iip, iport, ipasswd, iudp_ip);
+  count_c2c_add++;
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+void recv_snf_add(int llid, int itid, char *iname, int inum, int ival)
+{
+  static char name[MAX_NAME_LEN];
+  static int tid, num, val;
+  if (i_am_client)
+    {
+    if (count_snf_add)
+      {
+      if (strcmp(iname, name))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (inum != num)
+        KOUT(" ");
+      if (ival != val)
+        KOUT(" ");
+      }
+    tid = rand();
+    num = rand();
+    val = rand();
+    random_choice_str(name, MAX_NAME_LEN);
+    send_snf_add(llid, tid, name, num, val);
+    }
+  else
+    send_snf_add(llid, itid, iname, inum, ival);
+  count_snf_add++;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_d2d_peer_create(int llid, int itid, char *id2d_name, int iis_ack,
-                          char *idistant_cloonix, char *ilocal_cloonix)
+void recv_c2c_peer_create(int llid, int itid, char *ic2c_name, int iis_ack,
+                          char *idistant_cloon, char *ilocal_cloon)
 {
-  static char d2d_name[MAX_NAME_LEN];
-  static char distant_cloonix[MAX_NAME_LEN];
-  static char local_cloonix[MAX_NAME_LEN];
+  static char c2c_name[MAX_NAME_LEN];
+  static char distant_cloon[MAX_NAME_LEN];
+  static char local_cloon[MAX_NAME_LEN];
   static int tid, is_ack;
   if (i_am_client)
     {
-    if (count_d2d_peer_create)
+    if (count_c2c_peer_create)
       {
-      if (strcmp(id2d_name, d2d_name))
+      if (strcmp(ic2c_name, c2c_name))
         KOUT(" ");
-      if (strcmp(idistant_cloonix, distant_cloonix))
+      if (strcmp(idistant_cloon, distant_cloon))
         KOUT(" ");
-      if (strcmp(ilocal_cloonix, local_cloonix))
+      if (strcmp(ilocal_cloon, local_cloon))
         KOUT(" ");
       if (itid != tid)
         KOUT(" ");
@@ -2734,44 +2652,44 @@ void recv_d2d_peer_create(int llid, int itid, char *id2d_name, int iis_ack,
       }
     is_ack = rand();
     tid = rand();
-    random_choice_str(d2d_name, MAX_NAME_LEN);
-    random_choice_str(distant_cloonix, MAX_NAME_LEN);
-    random_choice_str(local_cloonix, MAX_NAME_LEN);
-    send_d2d_peer_create(llid, tid, d2d_name, is_ack,
-                         distant_cloonix, local_cloonix);
+    random_choice_str(c2c_name, MAX_NAME_LEN);
+    random_choice_str(distant_cloon, MAX_NAME_LEN);
+    random_choice_str(local_cloon, MAX_NAME_LEN);
+    send_c2c_peer_create(llid, tid, c2c_name, is_ack,
+                         distant_cloon, local_cloon);
     }
   else
-    send_d2d_peer_create(llid, itid, id2d_name, iis_ack,
-                         idistant_cloonix, ilocal_cloonix);
-  count_d2d_peer_create++;
+    send_c2c_peer_create(llid, itid, ic2c_name, iis_ack,
+                         idistant_cloon, ilocal_cloon);
+  count_c2c_peer_create++;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_d2d_peer_conf(int llid, int itid, char *id2d_name, int iis_ack,
-                        char *idistant_cloonix,     char *ilocal_cloonix,
+void recv_c2c_peer_conf(int llid, int itid, char *ic2c_name, int iis_ack,
+                        char *idistant_cloon,     char *ilocal_cloon,
                         uint32_t idudp_ip,   uint32_t iludp_ip,
                         uint16_t idudp_port, uint16_t iludp_port)
 {
-  static char d2d_name[MAX_NAME_LEN];
-  static char distant_cloonix[MAX_NAME_LEN];
-  static char local_cloonix[MAX_NAME_LEN];
+  static char c2c_name[MAX_NAME_LEN];
+  static char distant_cloon[MAX_NAME_LEN];
+  static char local_cloon[MAX_NAME_LEN];
   static int tid, is_ack;
   static uint32_t dudp_ip, ludp_ip;
   static uint16_t dudp_port, ludp_port;
   if (i_am_client)
     {
-    if (count_d2d_peer_conf)
+    if (count_c2c_peer_conf)
       {
-      if (strcmp(id2d_name, d2d_name))
+      if (strcmp(ic2c_name, c2c_name))
         KOUT(" ");
       if (itid != tid)
         KOUT(" ");
       if (iis_ack != is_ack)
         KOUT(" ");
-      if (strcmp(idistant_cloonix, distant_cloonix))
+      if (strcmp(idistant_cloon, distant_cloon))
         KOUT(" ");
-      if (strcmp(ilocal_cloonix, local_cloonix))
+      if (strcmp(ilocal_cloon, local_cloon))
         KOUT(" ");
       if (iludp_ip != ludp_ip)
         KOUT(" ");
@@ -2788,31 +2706,31 @@ void recv_d2d_peer_conf(int llid, int itid, char *id2d_name, int iis_ack,
     dudp_ip = rand();
     ludp_port = rand() & 0xFFFF;
     dudp_port = rand() & 0xFFFF;
-    random_choice_str(d2d_name, MAX_NAME_LEN);
-    random_choice_str(distant_cloonix, MAX_NAME_LEN);
-    random_choice_str(local_cloonix, MAX_NAME_LEN);
-    send_d2d_peer_conf(llid, tid, d2d_name, is_ack, distant_cloonix,
-                       local_cloonix, dudp_ip, ludp_ip,
+    random_choice_str(c2c_name, MAX_NAME_LEN);
+    random_choice_str(distant_cloon, MAX_NAME_LEN);
+    random_choice_str(local_cloon, MAX_NAME_LEN);
+    send_c2c_peer_conf(llid, tid, c2c_name, is_ack, distant_cloon,
+                       local_cloon, dudp_ip, ludp_ip,
                        dudp_port, ludp_port);
     }
   else
-    send_d2d_peer_conf(llid, itid, id2d_name, iis_ack, idistant_cloonix,
-                       ilocal_cloonix, idudp_ip, iludp_ip,
+    send_c2c_peer_conf(llid, itid, ic2c_name, iis_ack, idistant_cloon,
+                       ilocal_cloon, idudp_ip, iludp_ip,
                        idudp_port, iludp_port);
-  count_d2d_peer_conf++;
+  count_c2c_peer_conf++;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_d2d_peer_ping(int llid, int itid, char *id2d_name, int istatus)
+void recv_c2c_peer_ping(int llid, int itid, char *ic2c_name, int istatus)
 {
-  static char d2d_name[MAX_NAME_LEN];
+  static char c2c_name[MAX_NAME_LEN];
   static int tid, status;
   if (i_am_client)
     {
-    if (count_d2d_peer_ping)
+    if (count_c2c_peer_ping)
       {
-      if (strcmp(id2d_name, d2d_name))
+      if (strcmp(ic2c_name, c2c_name))
         KOUT(" ");
       if (itid != tid)
         KOUT(" ");
@@ -2821,12 +2739,12 @@ void recv_d2d_peer_ping(int llid, int itid, char *id2d_name, int istatus)
       }
     tid = rand();
     status = rand();
-    random_choice_str(d2d_name, MAX_NAME_LEN);
-    send_d2d_peer_ping(llid, tid, d2d_name, status);
+    random_choice_str(c2c_name, MAX_NAME_LEN);
+    send_c2c_peer_ping(llid, tid, c2c_name, status);
     }
   else
-    send_d2d_peer_ping(llid, itid, id2d_name, istatus);
-  count_d2d_peer_ping++;
+    send_c2c_peer_ping(llid, itid, ic2c_name, istatus);
+  count_c2c_peer_ping++;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -2864,13 +2782,12 @@ static void send_first_burst(int llid)
   recv_work_dir_req(llid, 0);
   recv_work_dir_resp(llid, 0, NULL);
   recv_vmcmd(llid, 0, NULL, 0, 0);
-  recv_dpdk_ovs_cnf(llid, 0, 0, 0, 0);
   recv_eventfull_sub(llid, 0);
   recv_eventfull(llid, 0, 0, NULL);
   recv_slowperiodic_sub(llid, 0);
   recv_slowperiodic_qcow2(llid, 0, 0, NULL);
   recv_slowperiodic_img(llid, 0, 0, NULL);
-  recv_sav_vm(llid, 0, NULL, 0, NULL);
+  recv_sav_vm(llid, 0, NULL, NULL);
   recv_evt_stats_endp_sub(llid, 0, NULL, 0, 0);
   recv_evt_stats_endp(llid, 0, NULL, NULL, 0, NULL, 0);
   recv_evt_stats_sysinfo_sub(llid, 0, NULL, 0);
@@ -2891,14 +2808,12 @@ static void send_first_burst(int llid)
   rpct_recv_hop_unsub(llid, 0);
   rpct_recv_hop_msg(llid, 0, 0, NULL);
 
-  recv_qmp_sub(llid, 0, NULL);
-  recv_qmp_req(llid, 0, NULL, NULL);
-  recv_qmp_resp(llid, 0, NULL, NULL, 0);
+  recv_snf_add(llid, 0,  NULL, 0, 0);
 
-  recv_d2d_add(llid, 0,  NULL, 0, NULL, 0, 0, NULL, 0);
-  recv_d2d_peer_create(llid, 0, NULL, 0, NULL, NULL);
-  recv_d2d_peer_conf(llid, 0, NULL, 0, NULL, NULL, 0,0,0,0);
-  recv_d2d_peer_ping(llid, 0, NULL, 0);
+  recv_c2c_add(llid, 0,  NULL, 0, NULL, 0, 0, NULL, 0);
+  recv_c2c_peer_create(llid, 0, NULL, 0, NULL, NULL);
+  recv_c2c_peer_conf(llid, 0, NULL, 0, NULL, NULL, 0,0,0,0);
+  recv_c2c_peer_ping(llid, 0, NULL, 0);
 
   recv_nat_add(llid, 0, NULL);
   recv_phy_add(llid, 0, NULL);
@@ -2907,7 +2822,7 @@ static void send_first_burst(int llid)
 
   recv_a2b_add(llid, 0, NULL);
   recv_a2b_cnf(llid, 0, NULL, 0, 0, 0);
-  recv_xyx_cnf(llid, 0, NULL, 0, NULL);
+  recv_c2c_cnf(llid, 0, NULL, 0, NULL);
   recv_nat_cnf(llid, 0, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/

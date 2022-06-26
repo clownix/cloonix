@@ -1,4 +1,4 @@
-.. image:: /png/clownix64.png 
+.. image:: /png/cloonix128.png 
    :align: right
 
 ===================
@@ -29,9 +29,6 @@ client net name, ports and password::
       cloonix_port     43211
       cloonix_passwd   nemoclown
       d2d_udp_ip       127.0.0.1
-      lcore_mask       0x1
-      socket_mem       1024
-      cpu_mask         0x08
     }
 
 * nemo: name used to reference the server.
@@ -43,9 +40,6 @@ client net name, ports and password::
 * d2d_udp_ip: for the d2d connection, udp ports are negociated on the
   tcp connection between cloonix, ip address used by distant cloonix
   to reach local nemo cloonix will be d2d_udp_ip.
-* lcore_mask: only tested for 1 lcore machines.
-* socket_mem: memory from hugepage.
-* cpu_mask: if you have 2 networks for one host, pick different masks.
 
 The user must follow the syntax in this template to add or change configured
 server name and addresses::
@@ -55,22 +49,7 @@ server name and addresses::
       cloonix_port     <port_number>
       cloonix_passwd   <password>
       d2d_udp_ip       <ip_number>
-      lcore_mask       0x<hexa mask>
-      socket_mem       <mem>
-      cpu_mask         0x<hexa mask>
     }
-
-
-The default ovs/dpdk configuration in cloonix is in the cloonix_config
-file, it is for nemo::
-  
-    lcore_mask=0x01 socket_mem=1024 cpu_mask=0x08
-  
-For mito network, in the cloonix_config, you have::
-
-    lcore_mask=0x01 socket_mem=1024 cpu_mask=0x04
-
-That way, the cpu used by nemo is not the same as the one used by mito.
 
 
 Working dir

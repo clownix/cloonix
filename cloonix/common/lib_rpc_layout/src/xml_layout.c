@@ -289,7 +289,7 @@ static void helper_get_eth(int nb, t_layout_eth_wlan *eth_wlan, char *msg)
   int i;
   char *ptr = msg;
   int xe, xd, ye, yd;
-  if ((nb < 0) || (nb > MAX_DPDK_VM))
+  if ((nb < 0) || (nb > MAX_ETH_VM))
     KOUT("%d", nb);
   for (i=0; i<nb; i++)
     {

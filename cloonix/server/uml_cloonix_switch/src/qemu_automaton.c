@@ -38,14 +38,13 @@
 #include "automates.h"
 #include "util_sock.h"
 #include "utils_cmd_line_maker.h"
-#include "qmonitor.h"
 #include "qmp.h"
-#include "qhvc0.h"
 #include "doorways_mngt.h"
 #include "doors_rpc.h"
 #include "file_read_write.h"
-#include "dpdk_ovs.h"
+#include "ovs.h"
 #include "suid_power.h"
+#include "qga_dialog.h"
 
 #define DRIVE_PARAMS_CISCO " -drive file=%s,index=%d,media=disk,if=virtio,cache=directsync"
 #define DRIVE_PARAMS " -drive file=%s,index=%d,media=disk,if=virtio"
@@ -72,6 +71,7 @@
                   " -device virtio-blk,drive=%s"
 
 
+
 typedef struct t_cprootfs_config
 {
   char name[MAX_NAME_LEN];
@@ -82,7 +82,7 @@ typedef struct t_cprootfs_config
 
 /*--------------------------------------------------------------------------*/
 
-int inside_cloonix(char **name);
+int inside_cloon(char **name);
 
 void qemu_vm_automaton(void *unused_data, int status, char *name);
 
@@ -290,25 +290,23 @@ static void derived_file_creation_request(t_vm *vm)
    " -global kvm-pit.lost_tick_policy=delay"\
    " -no-hpet -boot strict=on"
 
-#define QEMU_OPTS_MON_QMP \
-   " -chardev socket,id=mon1,path=%s,server=on,wait=off"\
-   " -mon chardev=mon1,mode=readline"\
+#define QEMU_OPTS_QMP \
    " -chardev socket,id=qmp1,path=%s,server=on,wait=off"\
    " -mon chardev=qmp1,mode=control"
 
-#define QEMU_OPTS_CLOONIX \
+#define QEMU_OPTS_CLOON \
    " -device virtio-serial-pci"\
    " -device virtio-mouse-pci"\
    " -device virtio-keyboard-pci"\
    " -chardev socket,path=%s,server=on,wait=off,id=cloon0"\
-   " -device virtserialport,chardev=cloon0,name=net.cloonix.0"\
-   " -chardev socket,path=%s,server=on,wait=off,id=hvc0"\
-   " -device virtconsole,chardev=hvc0"\
+   " -device virtserialport,chardev=cloon0,name=net.cloon.0"\
+   " -chardev socket,path=%s,server=on,wait=off,id=qga0" \
+   " -device virtserialport,chardev=qga0,name=org.qemu.guest_agent.0" \
+   " -chardev spicevmc,id=spice0,name=vdagent" \
+   " -device virtserialport,chardev=spice0,name=com.redhat.spice.0"\
    " -device virtio-balloon-pci,id=balloon0"\
    " -object rng-random,filename=/dev/urandom,id=rng0"\
-   " -device virtio-rng-pci,rng=rng0"\
-   " -device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0"\
-   " -chardev spicevmc,id=spicechannel0,name=vdagent"
+   " -device virtio-rng-pci,rng=rng0"
 
 #define QEMU_SPICE \
    " -device virtio-vga"\
@@ -321,6 +319,8 @@ static void derived_file_creation_request(t_vm *vm)
    " -chardev spicevmc,id=charredir1,name=usbredir"\
    " -device usb-redir,chardev=charredir1"\
    " -spice unix=on,addr=%s,disable-ticketing=on"
+
+
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -335,7 +335,7 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     KOUT(" ");
   spice_path = utils_get_spice_path(vm->kvm.vm_id);
   nb_cpu = vm->kvm.cpu;
-  if (inside_cloonix(&gname))
+  if (inside_cloon(&gname))
     {
     strcpy(cpu_type, "kvm64");
     }
@@ -346,26 +346,20 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
   len = sprintf(cmd_start, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
   for (i = 0; i < vm->kvm.nb_tot_eth; i++)
     {
-    if ((vm->kvm.eth_table[i].endp_type == endp_type_ethd) ||
-        (vm->kvm.eth_table[i].endp_type == endp_type_eths))
-      len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_ethd_eths(vm,i));
-    if (vm->kvm.eth_table[i].endp_type == endp_type_ethd)
-      len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_ethd(vm,i));
-    else if (vm->kvm.eth_table[i].endp_type == endp_type_eths)
-      len+=sprintf(cmd_start+len,"%s", dpdk_ovs_format_eths(vm,i));
-    else if (vm->kvm.eth_table[i].endp_type == endp_type_ethv)
+    if ((vm->kvm.eth_table[i].endp_type == endp_type_eths) ||
+        (vm->kvm.eth_table[i].endp_type == endp_type_ethv))
       {
       len += sprintf(cmd_start+len,"%s",
-             dpdk_ovs_format_ethv(vm, i, vm->kvm.eth_table[i].vhost_ifname));
+             ovs_format_ethv(vm, i, vm->kvm.eth_table[i].vhost_ifname));
       }
     else
       KERR("ERROR %d", vm->kvm.eth_table[i].endp_type);
     }
   if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NOBACKDOOR))
     {
-    len += sprintf(cmd_start+len, QEMU_OPTS_CLOONIX, 
+    len += sprintf(cmd_start+len, QEMU_OPTS_CLOON, 
                    utils_get_qbackdoor_path(vm->kvm.vm_id),
-                   utils_get_qhvc0_path(vm->kvm.vm_id));
+                   utils_get_qga_path(vm->kvm.vm_id));
     }
   len = sprintf(linux_cmd, " %s"
                         " -pidfile %s/%s/pid"
@@ -438,8 +432,7 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     {
     len += sprintf(linux_cmd+len, ADDED_CDROM, vm->kvm.added_cdrom);
     }
-  len += sprintf(linux_cmd+len, QEMU_OPTS_MON_QMP,
-                 utils_get_qmonitor_path(vm->kvm.vm_id),
+  len += sprintf(linux_cmd+len, QEMU_OPTS_QMP,
                  utils_get_qmp_path(vm->kvm.vm_id));
   return len;
 }
@@ -453,7 +446,9 @@ static char *qemu_cmd_format(t_vm *vm)
   char path_qemu_exe[MAX_PATH_LEN];
   memset(cmd, 0,  MAX_BIG_BUF);
   memset(path_qemu_exe, 0, MAX_PATH_LEN);
-  snprintf(path_qemu_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s",
+  snprintf(path_qemu_exe, MAX_PATH_LEN-1, 
+           "%s netns exec %s_%s %s/server/qemu/%s",
+           SBIN_IP, BASE_NAMESPACE, cfg_get_cloonix_name(),
            cfg_get_bin_dir(), QEMU_EXE);
   len += snprintf(cmd, MAX_BIG_BUF-1, "%s -L %s/server/qemu ",
                   path_qemu_exe, cfg_get_bin_dir());
@@ -480,8 +475,8 @@ static char **create_qemu_argv(t_vm *vm)
   int i = 0;
   static char **argv;
   char *kvm_exe = qemu_cmd_format(vm);
-  argv = (char **)clownix_malloc(10 * sizeof(char *), 13);
-  memset(argv, 0, 10 * sizeof(char *));
+  argv = (char **)clownix_malloc(20 * sizeof(char *), 13);
+  memset(argv, 0, 20 * sizeof(char *));
   argv[i++] = alloc_argv(utils_get_dtach_bin_path());
   argv[i++] = alloc_argv("-n");
   argv[i++] = alloc_argv(utils_get_dtach_sock_path(vm->kvm.name));
@@ -584,7 +579,7 @@ static void launch_qemu_vm_end(char *name)
     strncpy(qemu_monitor_name, vm->kvm.name, MAX_NAME_LEN-1);
     clownix_timeout_add(10, timer_qemu_monitor_name,
                         (void *) qemu_monitor_name, NULL, NULL);
-    clownix_timeout_add(500, timer_launch_end, (void *) time_name, NULL, NULL);
+    clownix_timeout_add(3000, timer_launch_end, (void *) time_name, NULL, NULL);
    }
 }
 /*--------------------------------------------------------------------------*/
@@ -623,7 +618,7 @@ static void arm_static_vm_timeout(char *name, int delay)
 void qemu_vm_automaton(void *unused_data, int status, char *name) 
 {
   char err[MAX_PRINT_LEN];
-  int i, state, nb_dpdk = 0;
+  int time_end, i, state, nb_eth = 0;
   t_vm   *vm = cfg_get_vm(name);
   t_wake_up_eths *wake_up;
   if (!vm)
@@ -662,18 +657,17 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
     case auto_delay_possible_ovs_start:
       for (i = 0; i < vm->kvm.nb_tot_eth; i++)
         {
-        if ((vm->kvm.eth_table[i].endp_type == endp_type_ethd) ||
-            (vm->kvm.eth_table[i].endp_type == endp_type_eths) ||
+        if ((vm->kvm.eth_table[i].endp_type == endp_type_eths) ||
             (vm->kvm.eth_table[i].endp_type == endp_type_ethv))
-          nb_dpdk += 1;
+          nb_eth += 1;
         }
-      if (nb_dpdk)
+      if (nb_eth)
         {
-        wake_up->dpdk_count += 1;
-        if (wake_up->dpdk_count > 100)
+        wake_up->eth_count += 1;
+        if (wake_up->eth_count > 100)
           {
-          KERR("ERROR dpdk ovs start when creating %s\n", name);
-          sprintf(err, "ERROR dpdk ovs start when creating %s\n", name);
+          KERR("ERROR ovs start when creating %s\n", name);
+          sprintf(err, "ERROR ovs start when creating %s\n", name);
           event_print(err);
           send_status_ko(wake_up->llid, wake_up->tid, err);
           free_wake_up_eths_and_delete_vm(vm, error_death_qemuerr);
@@ -697,10 +691,10 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
       arm_static_vm_timeout(name, 100);
       break;
     case auto_create_vm_connect:
-      timer_utils_finish_vm_init(vm->kvm.vm_id, 5000);
-      qmonitor_begin_qemu_unix(name);
-      qmp_begin_qemu_unix(name);
-      qhvc0_begin_qemu_unix(name);
+      time_end = util_get_max_tempo_fail();
+      time_end += 200;
+      timer_utils_finish_vm_init(vm->kvm.vm_id, time_end);
+      qmp_begin_qemu_unix(name, 1);
       recv_coherency_unlock();
       break;
     default:

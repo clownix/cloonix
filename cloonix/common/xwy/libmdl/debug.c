@@ -47,7 +47,7 @@ char *debug_get_thread_type_txt(int type)
     result = "thread_type_x11";
     break;
     default:
-      KERR("%d", type);
+      XERR("%d", type);
     }
   return result;
 }
@@ -134,14 +134,14 @@ char *debug_get_fd_type_txt(int type)
     case fd_type_x11:
     result = "x11";
     break;
-    case fd_type_cloonix:
-    result = "cloonix";
+    case fd_type_cloon:
+    result = "cloon";
     break;
-    case fd_type_listen_cloonix:
-    result = "listen_cloonix";
+    case fd_type_listen_cloon:
+    result = "listen_cloon";
     break;
     default:
-      KERR("%d", type);
+      XERR("%d", type);
     }
   return result;
 }
@@ -154,7 +154,7 @@ int debug_get_trunc_usec(void)
   long long date;
   int result;
   if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC_RAW, &ts))
-    KOUT(" ");
+    XOUT(" ");
   date = (long long) (ts.tv_sec);
   date *= 1000000;
   date += ((long long) ts.tv_nsec) / 1000;
@@ -449,7 +449,7 @@ void debug_init(int is_srv)
   g_debug_logfile = fopen(log_file, "w");
   wrap_chmod_666(log_file);
   if (g_debug_logfile == NULL)
-    KOUT(" ");
+    XOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 

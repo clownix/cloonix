@@ -75,10 +75,10 @@ void my_cp_link(char *dir_src, char *dir_dst, char *name)
     {
     sprintf(link_name, "%s/%s", dir_dst, name);
     if (symlink (link_val, link_name))
-      KERR("ERROR writing link:  %s  %s", link_name, strerror(errno));
+      XERR("ERROR writing link:  %s  %s", link_name, strerror(errno));
     }
   else
-    KERR("ERROR reading link: %s  %s", link_name, strerror(errno));
+    XERR("ERROR reading link: %s  %s", link_name, strerror(errno));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -136,10 +136,10 @@ void my_cp_dir(char *src_dir, char *dst_dir, char *src_name, char *dst_name)
       else if(ent->d_type == DT_LNK)
         my_cp_link(src_sub_dir, dst_sub_dir, ent->d_name);
       else
-        KERR("Wrong type of file %s/%s", src_sub_dir, ent->d_name);
+        XERR("Wrong type of file %s/%s", src_sub_dir, ent->d_name);
       }
     if (closedir(dirptr))
-      KOUT("%s", strerror(errno));
+      XOUT("%s", strerror(errno));
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -165,7 +165,7 @@ static void recv_scp_data_end(void)
   t_msg *msg = (t_msg *) wrap_malloc(len);
   uint32_t randid = xcli_get_randid();
   if (g_scp_fd == -1)
-    KOUT(" ");
+    XOUT(" ");
   close(g_scp_fd);
   g_scp_fd = -1;
   mdl_set_header_vals(msg,randid,msg_type_scp_data_end_ack,fd_type_scp,0,0);
@@ -181,10 +181,10 @@ static void recv_scp_data(t_msg *msg)
 {
   int len;
   if (g_scp_fd == -1)
-    KOUT(" ");
+    XOUT(" ");
   len = wrap_write_scp(g_scp_fd, msg->buf, msg->len);
   if ((len < 0) || (len != msg->len))
-    KOUT("%d %ld %s", len, msg->len, strerror(errno));
+    XOUT("%d %ld %s", len, msg->len, strerror(errno));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -199,19 +199,19 @@ static void recv_scp_ready(int llid, int type, t_msg *msg)
     exit(1);
     }
   if (sscanf(msg->buf, "OK %s %s", src, complete_dst) != 2)
-    KOUT("%s", msg->buf);
+    XOUT("%s", msg->buf);
   if (type == msg_type_scp_ready_to_rcv)
     {
     g_scp_fd = open(src, O_RDONLY);
     if (g_scp_fd == -1)
-      KOUT("%s %s", src, strerror(errno));
+      XOUT("%s %s", src, strerror(errno));
     g_mdl_src = g_scp_fd;
     }
   else
     {
     g_scp_fd = open(complete_dst, O_CREAT|O_EXCL|O_WRONLY, 0644);
     if (g_scp_fd == -1)
-      KOUT("%s %s", complete_dst, strerror(errno));
+      XOUT("%s %s", complete_dst, strerror(errno));
     g_mdl_src = g_scp_fd;
     send_scp_data_begin();
     }
@@ -222,7 +222,7 @@ static void recv_scp_ready(int llid, int type, t_msg *msg)
 void rx_scp_err_cb (void *ptr, int llid, int fd, char *err)
 {
   (void) ptr;
-  KOUT("%d  %s", fd,  err);
+  XOUT("%d  %s", fd,  err);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -235,7 +235,7 @@ void rx_scp_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
   DEBUG_DUMP_RXMSG(msg);
   (void) ptr;
   if (randid != xcli_get_randid())
-    KERR("%08X %08X", randid, xcli_get_randid());
+    XERR("%08X %08X", randid, xcli_get_randid());
   else switch(type)
     {
     case msg_type_end_cli_pty:
@@ -255,7 +255,7 @@ void rx_scp_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
       exit(0);
       break;
     default:
-      KOUT("%ld", type);
+      XOUT("%ld", type);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -286,7 +286,7 @@ void scp_send_data()
   msg = (t_msg *) wrap_malloc(len);
   len = wrap_read_scp(g_scp_fd, msg->buf, MAX_MSG_LEN);
   if (len < 0)
-    KOUT("%s", strerror(errno));
+    XOUT("%s", strerror(errno));
   if (len == 0)
      {
      scp_send_data_end();

@@ -47,7 +47,7 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
     return 1;
   if (topo->nb_kvm  != ref->nb_kvm)
     return 1;
-  if (topo->nb_d2d  != ref->nb_d2d)
+  if (topo->nb_c2c  != ref->nb_c2c)
     return 6;
   if (topo->nb_tap  != ref->nb_tap)
     return 7;
@@ -75,6 +75,7 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
         {
         KERR("%s %s", topo->cnt[i].name, ref->cnt[i].name);
         KERR("%s %s", topo->cnt[i].image, ref->cnt[i].image);
+        KERR("%s %s", topo->cnt[i].customer_launch, ref->cnt[i].customer_launch);
         KERR("%d %d", topo->cnt[i].nb_tot_eth, ref->cnt[i].nb_tot_eth);
 for(j=0; j<topo->cnt[i].nb_tot_eth; j++)
 {
@@ -119,15 +120,15 @@ ref->cnt[i].eth_table[j].mac_addr[5]);
         return (1000+i);
       }
     }
-  if (topo->nb_d2d)
+  if (topo->nb_c2c)
     {
-    if (!topo->d2d)
+    if (!topo->c2c)
       return 118;
-    if (!ref->d2d)
+    if (!ref->c2c)
       return 119;
-    for (i=0; i<topo->nb_d2d; i++)
+    for (i=0; i<topo->nb_c2c; i++)
       {
-      if (memcmp(&(topo->d2d[i]), &(ref->d2d[i]), sizeof(t_topo_d2d)))
+      if (memcmp(&(topo->c2c[i]), &(ref->c2c[i]), sizeof(t_topo_c2c)))
         return (251+i);
       }
     }
@@ -246,7 +247,7 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
   
   topo->nb_cnt = ref->nb_cnt;
   topo->nb_kvm = ref->nb_kvm;
-  topo->nb_d2d = ref->nb_d2d;
+  topo->nb_c2c = ref->nb_c2c;
   topo->nb_tap = ref->nb_tap;
   topo->nb_a2b = ref->nb_a2b;
   topo->nb_nat = ref->nb_nat;
@@ -270,11 +271,11 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
     memcpy(topo->kvm, ref->kvm, ref->nb_kvm*sizeof(t_topo_kvm)); 
     }
 
-  if (topo->nb_d2d)
+  if (topo->nb_c2c)
     {
-    topo->d2d =
-    (t_topo_d2d *)clownix_malloc(ref->nb_d2d*sizeof(t_topo_d2d),28);
-    memcpy(topo->d2d, ref->d2d, ref->nb_d2d*sizeof(t_topo_d2d));
+    topo->c2c =
+    (t_topo_c2c *)clownix_malloc(ref->nb_c2c*sizeof(t_topo_c2c),28);
+    memcpy(topo->c2c, ref->c2c, ref->nb_c2c*sizeof(t_topo_c2c));
     }
 
   if (topo->nb_tap)
@@ -342,7 +343,7 @@ void topo_free_topo(t_topo_info *topo)
       clownix_free(topo->endp[i].lan.lan, __FUNCTION__);
     clownix_free(topo->cnt, __FUNCTION__);
     clownix_free(topo->kvm, __FUNCTION__);
-    clownix_free(topo->d2d, __FUNCTION__);
+    clownix_free(topo->c2c, __FUNCTION__);
     clownix_free(topo->tap, __FUNCTION__);
     clownix_free(topo->a2b, __FUNCTION__);
     clownix_free(topo->nat, __FUNCTION__);

@@ -34,14 +34,13 @@
 #include "machine_create.h"
 #include "system_callers.h"
 #include "utils_cmd_line_maker.h"
-#include "qmonitor.h"
 #include "qmp.h"
-#include "qhvc0.h"
 #include "xwy.h"
+#include "ovs.h"
 #include "llid_trace.h"
 #include "doorways_mngt.h"
-#include "dpdk_ovs.h"
 #include "doors_rpc.h"
+#include "suid_power.h"
 
 #define MAX_CALLBACK_END 50
 
@@ -63,7 +62,7 @@ static int glob_req_self_destruction;
 /*****************************************************************************/
 static int self_destruction_ok(void)
 {
-  if ((dpdk_ovs_still_present() == 0) &&
+  if ((ovs_still_present() == 0) &&
       (lock_self_destruction_dir == 0)) 
     return 1;
   return 0;
@@ -105,7 +104,6 @@ void extremely_last_action(void *data)
   int i, nb, tot;
   t_pid_lst *lst = create_list_pid(&nb);
   (void) lst;
-  doors_send_command(get_doorways_llid(), 0, "noname", STOP_DOORS_LISTENING);
   if (nb)
     {
     count_time += 1;
@@ -146,31 +144,22 @@ void last_action_self_destruction(void *data)
   t_llid_tid *llid_tid = (t_llid_tid *) data;
   char path[MAX_PATH_LEN];
   char err[MAX_PRINT_LEN];
-  pid_clone_kill_single(doorways_get_distant_pid());
   llid_free_all_llid();
   sprintf(path, "%s/cloonix_lock", cfg_get_root_work());
   unlink(path);
   sprintf(path, "%s", pid_get_clone_internal_com());
   unlink(path);
-  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_ovs_db_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_d2d_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_xyx_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_a2b_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_nat_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_qemu_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_dpdk_cloonix_dir(), err))
+  if (unlink_sub_dir_files_except_dir(utils_get_ovs_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_dtach_sock_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_cnt_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_snf_pcap_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_c2c_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_nat_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(cfg_get_work(), err))
     event_print("DELETE PROBLEM: %s\n", err);
@@ -196,10 +185,7 @@ static void action_self_destruction(void *data)
     }
   if ((self_destruction_ok()) || (count > 500))
     {
-    if ((count < 300) && 
-        ((qmonitor_still_present()) || 
-         (dpdk_ovs_still_present()) ||
-         (qhvc0_still_present()))) 
+    if ((count < 300) && (ovs_still_present()))
       {
       count++;
       clownix_timeout_add(20, action_self_destruction, (void *)llid_tid, 
@@ -216,6 +202,8 @@ static void action_self_destruction(void *data)
         }
       else
         {
+        suid_power_kill();
+        pid_clone_kill_single(doorways_get_distant_pid());
         event_print("Self-destruction triggered");
         clownix_timeout_add(20, last_action_self_destruction, (void *)llid_tid, 
                             NULL, NULL);

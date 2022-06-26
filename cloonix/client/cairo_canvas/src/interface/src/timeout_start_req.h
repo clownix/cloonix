@@ -20,8 +20,8 @@ typedef struct t_item_node_req
   int is_cnt;
   double x;
   double y;
-  double tx[MAX_DPDK_VM];
-  double ty[MAX_DPDK_VM];
+  double tx[MAX_ETH_VM];
+  double ty[MAX_ETH_VM];
 } t_item_node_req;
 /*--------------------------------------------------------------------------*/
 typedef struct t_item_req
@@ -30,7 +30,7 @@ typedef struct t_item_req
   char name[MAX_NAME_LEN];
   char path[MAX_PATH_LEN];
   int endp_type;
-  t_d2d_req_info d2d_req_info;
+  t_c2c_req_info c2c_req_info;
   double x;
   double y;
   double xa;

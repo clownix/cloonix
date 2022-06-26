@@ -15,9 +15,9 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void suid_power_kill(void);
 void suid_power_kill_pid(int pid);
 void suid_power_llid_closed(int llid, int from_clone, const char* fct);
-int suid_power_rec_name(char *name, int on);
 int suid_power_pid(void);
 void suid_power_ifup_phy(char *phy);
 void suid_power_ifdown_phy(char *phy);
@@ -34,12 +34,10 @@ int suid_power_get_pid(int vm_id);
 int suid_power_get_topo_info_phy(t_topo_info_phy **phy);
 
 int suid_power_get_topo_bridges(t_topo_bridges **bridges);
-int suid_power_create_container(int cli_llid, int cli_tid,
-                                int cloonix_rank, int vm_id,
+int suid_power_create_cnt(int cli_llid, int cli_tid, int vm_id,
                                 t_topo_cnt *cnt, char *err);
-int suid_power_delete_container(int cli_llid, int cli_tid,
-                                char *name, char *err);
-int suid_power_delete_all_container(void);
+void suid_power_delete_cnt(int cli_llid, int cli_tid, char *name);
+int suid_power_delete_cnt_all(void);
 
 void suid_power_init(void);
 /*--------------------------------------------------------------------------*/

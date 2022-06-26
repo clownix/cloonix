@@ -18,6 +18,6 @@
 int get_input_params(int argc, char **argv, int *action, int *ip, int *port,
                      char **src, char **dst, char **cmd);
 
-int get_input_params_cloonix(int argc, char **argv, int *action, 
+int get_input_params_cloon(int argc, char **argv, int *action, 
                              char **src, char **dst, char **cmd);
 /*---------------------------------------------------------------------------*/

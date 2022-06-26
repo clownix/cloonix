@@ -27,12 +27,11 @@
 #include "llid_trace.h"
 #include "hop_event.h"
 #include "doorways_mngt.h"
-#include "dpdk_ovs.h"
+#include "ovs.h"
+#include "ovs_snf.h"
+#include "ovs_nat.h"
+#include "ovs_c2c.h"
 #include "suid_power.h"
-#include "nat_dpdk_process.h"
-#include "d2d_dpdk_process.h"
-#include "xyx_dpdk_process.h"
-#include "a2b_dpdk_process.h"
 
 
 /*---------------------------------------------------------------------------*/
@@ -464,18 +463,16 @@ void rpct_recv_pid_resp(int llid, int tid, char *name, int num,
 {
   if (tid == type_hop_suid_power)
     suid_power_pid_resp(llid, tid, name, pid);
-  else if (tid == type_hop_nat_dpdk)
-    nat_dpdk_pid_resp(llid, tid, name, pid);
-  else if (tid == type_hop_xyx_dpdk)
-    xyx_dpdk_pid_resp(llid, tid, name, pid);
-  else if (tid == type_hop_a2b_dpdk)
-    a2b_dpdk_pid_resp(llid, tid, name, pid);
-  else if (tid == type_hop_d2d_dpdk)
-    d2d_dpdk_pid_resp(llid, tid, name, pid);
   else if (tid == type_hop_doors)
     doors_pid_resp(llid, name, pid);
+  else if (tid == type_hop_snf)
+    ovs_snf_pid_resp(llid, name, pid);
+  else if (tid == type_hop_nat)
+    ovs_nat_pid_resp(llid, name, pid);
+  else if (tid == type_hop_c2c)
+    ovs_c2c_pid_resp(llid, name, pid);
   else if ((tid == type_hop_ovs) || (tid == type_hop_ovsdb)) 
-    dpdk_ovs_pid_resp(llid, name, toppid, pid);
+    ovs_pid_resp(llid, name, toppid, pid);
   else
     KERR("%d %s %d", tid, name, pid);
 }
@@ -498,7 +495,7 @@ void hop_event_hook(int llid, int flag, char *iline)
       while ((cur_client) && (cur_client->flags_hop & flag))
         {
         send_hop_evt_doors(cur_client->llid, cur_client->tid,
-                           flag, "cloonix", line);
+                           flag, "cloon", line);
         cur_client = cur_client->next;
         }
       }

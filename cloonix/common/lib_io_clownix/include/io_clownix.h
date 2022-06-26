@@ -26,7 +26,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "ioc_top.h"
+#include "glob_common.h"
 
 
 int i_am_a_clone(void);

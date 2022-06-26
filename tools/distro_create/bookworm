@@ -1,5 +1,4 @@
 #!/bin/bash
-HERE=`pwd`
 #----------------------------------------------------------------------#
 DISTRO=bookworm
 DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
@@ -68,9 +67,10 @@ fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
 list_pkt="linux-image-amd64,grub-efi-amd64-signed,grub2,"
 list_pkt+="openssh-client,locales,iperf3,htop,"
-list_pkt+="console-data,kbd,keyboard-configuration,xauth,sudo,vim,"
-list_pkt+="bash-completion,net-tools,pciutils,iftop,"
-list_pkt+="tcpdump,ethtool,lsof,file"
+list_pkt+="console-data,console-setup,kbd,keyboard-configuration,"
+list_pkt+="xauth,sudo,vim,bash-completion,net-tools,pciutils,"
+list_pkt+="iftop,tcpdump,ethtool,htop,lsof,file,qemu-guest-agent"
+
 debootstrap --no-check-certificate \
 	    --no-check-gpg \
             --arch amd64 \
@@ -116,18 +116,6 @@ chroot /tmp/wkmntloops passwd admin <<EOF
 admin
 admin
 EOF
-#-----------------------------------------------------------------------#
-cat > /tmp/wkmntloops/etc/systemd/system/serial-getty@hvc0.service << EOF
-[Service]
-ExecStart=-/sbin/agetty -a root hvc0
-Type=idle
-Restart=always
-RestartSec=0
-EOF
-#-----------------------------------------------------------------------#
-cd /tmp/wkmntloops/etc/systemd/system/getty.target.wants
-ln -s /etc/systemd/system/serial-getty@hvc0.service serial-getty@hvc0.service 
-cd ${HERE}
 #-----------------------------------------------------------------------#
 sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
 sed -i s"/set mouse/\"set mouse/" $DEFVIM

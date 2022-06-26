@@ -1,73 +1,28 @@
-diff -Naur ovs/acinclude.m4 ovs_tainted/acinclude.m4
---- ovs/acinclude.m4	2021-12-23 19:26:18.000000000 +0100
-+++ ovs_tainted/acinclude.m4	2021-12-24 11:59:23.199224233 +0100
-@@ -434,6 +434,10 @@
-           esac
-     esac
+diff -Naur ovs/lib/poll-loop.c ovs_tainted/lib/poll-loop.c
+--- ovs/lib/poll-loop.c	2022-06-23 22:36:48.000000000 +0200
++++ ovs_tainted/lib/poll-loop.c	2022-06-26 15:31:02.962918433 +0200
+@@ -64,7 +64,7 @@
+     struct poll_node *node;
  
-+    DPDK_INCLUDE="$DPDK_INCLUDES"
-+    DPDK_LIB="$DPDK_LIBS"
-+
-+
-     ovs_save_CFLAGS="$CFLAGS"
-     ovs_save_LDFLAGS="$LDFLAGS"
-     CFLAGS="$CFLAGS $DPDK_INCLUDE"
-@@ -482,7 +486,7 @@
-     OVS_FIND_DEPENDENCY([dlopen], [dl], [libdl])
+     /* Both 'fd' and 'wevent' cannot be set. */
+-    ovs_assert(!fd != !wevent);
++// cloonix fd is null on vm    ovs_assert(!fd != !wevent);
  
-     AC_MSG_CHECKING([whether linking with dpdk works])
--    LIBS="$DPDK_LIB $LIBS"
-+    LIBS="$DPDK_LIB"
-     AC_LINK_IFELSE(
-       [AC_LANG_PROGRAM([#include <rte_config.h>
-                         #include <rte_eal.h>],
-@@ -530,6 +534,8 @@
-     AC_DEFINE([DPDK_NETDEV], [1], [System uses the DPDK module.])
-   fi
+     HMAP_FOR_EACH_WITH_HASH (node, hmap_node,
+                              hash_2words(fd, (uint32_t)wevent),
+@@ -108,7 +108,7 @@
+     COVERAGE_INC(poll_create_node);
  
-+  DPDK_vswitchd_LDFLAGS=$DPDK_LIB
-+
-   AM_CONDITIONAL([DPDK_NETDEV], test "$DPDKLIB_FOUND" = true)
- ])
+     /* Both 'fd' and 'wevent' cannot be set. */
+-    ovs_assert(!fd != !wevent);
++//cloonix fd can be 0    ovs_assert(!fd != !wevent);
  
-diff -Naur ovs/lib/dpdk.c ovs_tainted/lib/dpdk.c
---- ovs/lib/dpdk.c	2021-12-23 19:26:18.000000000 +0100
-+++ ovs_tainted/lib/dpdk.c	2021-12-24 12:01:23.635224620 +0100
-@@ -405,12 +405,13 @@
-     svec_add(&args, ovs_get_program_name());
-     construct_dpdk_args(ovs_other_config, &args);
- 
--#ifdef DPDK_IN_MEMORY_SUPPORTED
--    if (!args_contains(&args, "--in-memory") &&
--            !args_contains(&args, "--legacy-mem")) {
--        svec_add(&args, "--in-memory");
--    }
--#endif
-+//cloonix
-+//#ifdef DPDK_IN_MEMORY_SUPPORTED
-+//    if (!args_contains(&args, "--in-memory") &&
-+//            !args_contains(&args, "--legacy-mem")) {
-+//        svec_add(&args, "--in-memory");
-+//    }
-+//#endif
- 
-     if (args_contains(&args, "-c") || args_contains(&args, "-l")) {
-         auto_determine = false;
-diff -Naur ovs/lib/netdev-dpdk.c ovs_tainted/lib/netdev-dpdk.c
---- ovs/lib/netdev-dpdk.c	2021-12-23 19:26:18.000000000 +0100
-+++ ovs_tainted/lib/netdev-dpdk.c	2021-12-24 11:59:23.203224233 +0100
-@@ -38,6 +38,7 @@
- #include <rte_pci.h>
- #include <rte_version.h>
- #include <rte_vhost.h>
-+#include <ethdev_driver.h>
- 
- #include "cmap.h"
- #include "coverage.h"
+     /* Check for duplicate.  If found, "or" the events. */
+     node = find_poll_node(loop, fd, wevent);
 diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
---- ovs/ofproto/ofproto-dpif.c	2021-12-23 19:26:18.000000000 +0100
-+++ ovs_tainted/ofproto/ofproto-dpif.c	2021-12-24 11:59:23.203224233 +0100
-@@ -748,7 +748,7 @@
+--- ovs/ofproto/ofproto-dpif.c	2022-06-23 22:36:48.000000000 +0200
++++ ovs_tainted/ofproto/ofproto-dpif.c	2022-06-26 15:30:06.838651014 +0200
+@@ -744,7 +744,7 @@
          return 0;
      }
  

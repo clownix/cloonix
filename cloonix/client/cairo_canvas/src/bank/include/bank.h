@@ -16,6 +16,8 @@
 /*                                                                           */
 /*****************************************************************************/
 
+#define TOPO_MAX_NAME_LEN 4
+
 typedef struct t_pbi_node
 {
   char node_kernel[MAX_NAME_LEN];
@@ -26,7 +28,7 @@ typedef struct t_pbi_node
   char added_disk[MAX_PATH_LEN];
   int  node_vm_id;
   int  nb_tot_eth;
-  t_eth_table eth_tab[MAX_DPDK_VM];
+  t_eth_table eth_tab[MAX_ETH_VM];
   int  node_vm_config_flags;
   int  node_ram;
   int  node_cpu;
@@ -39,13 +41,15 @@ typedef struct t_pbi_cnt
 {
   int  cnt_evt_ping_ok;
   char image[MAX_PATH_LEN];
+  char customer_launch[MAX_PATH_LEN];
+  int  cnt_vm_id;
   int  nb_tot_eth;
-  t_eth_table eth_tab[MAX_DPDK_VM];
+  t_eth_table eth_tab[MAX_ETH_VM];
 } t_pbi_cnt;
 
 typedef struct t_pbi_sat
 {
-  t_topo_d2d topo_d2d;
+  t_topo_c2c topo_c2c;
   t_topo_a2b topo_a2b;
   t_topo_nat topo_nat;
 } t_pbi_sat;
@@ -113,11 +117,10 @@ typedef struct t_bank_item
   int  button_1_double_click;
   int  spicy_gtk_pid;
   int  dtach_pid;
-  int  qmonitor_pid;
   int  wireshark_pid;
   long long abs_beat_eua_timeout;
   int ref_eua_timeout;
-  char tag[4];
+  char tag[TOPO_MAX_NAME_LEN+1];
   char name[MAX_PATH_LEN];
   char lan[MAX_PATH_LEN];
   int  num;
@@ -168,8 +171,8 @@ int is_first_brtcl_on_canvas(void);
 t_bank_item *look_for_sat_with_id(char *name);
 t_bank_item *look_for_eth_with_id(char *name, int num);
 /*--------------------------------------------------------------------------*/
-void bank_cnt_create(char *name, char *image, int ping_ok,
-                     int nb_tot_eth, t_eth_table *eth_tab,
+void bank_cnt_create(char *name, char *image, char *customer_launch, int vm_id,
+                     int ping_ok, int nb_tot_eth, t_eth_table *eth_tab,
                      double x, double y, int hidden_on_graph,
                      double *tx, double *ty, int32_t *thidden);
 /*--------------------------------------------------------------------------*/
@@ -183,7 +186,7 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
 /*--------------------------------------------------------------------------*/
 void bank_edge_create(char *name, int num, char *lan); 
 void bank_sat_create(char *name, int endp_type,
-                     t_topo_d2d *d2d, t_topo_a2b *a2b,
+                     t_topo_c2c *c2c, t_topo_a2b *a2b,
                      double x, double y, 
                      double xa, double ya, 
                      double xb, double yb, 
@@ -203,8 +206,6 @@ t_bank_item *get_head_lan(void);
 /*--------------------------------------------------------------------------*/
 void refresh_all_connected_groups(void);
 /*--------------------------------------------------------------------------*/
-int bank_get_qmonitor_pid(char *name);
-void bank_set_qmonitor_pid(char *name, int val);
 int bank_get_dtach_pid(char *name);
 void bank_set_dtach_pid(char *name, int val);
 int bank_get_spicy_gtk_pid(char *name);
@@ -214,7 +215,7 @@ void bank_set_wireshark_pid(char *name, int val);
 /*--------------------------------------------------------------------------*/
 
 int is_a_nat(t_bank_item *bitem);
-int is_a_d2d(t_bank_item *bitem);
+int is_a_c2c(t_bank_item *bitem);
 int is_a_a2b(t_bank_item *bitem);
 
 

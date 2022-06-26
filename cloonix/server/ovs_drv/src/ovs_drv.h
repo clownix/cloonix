@@ -17,7 +17,7 @@
 /*****************************************************************************/
 void clean_all_upon_error(void);
 char *get_ovs_bin(void);
-char *get_dpdk_dir(void);
+char *get_ovs_dir(void);
 int get_ovsdb_pid(void);
 void set_ovsdb_pid(int pid);
 int get_ovs_pid(void);
@@ -27,7 +27,5 @@ int get_ovs_launched(void);
 int get_ovsdb_launched(void);
 void set_ovs_launched(int val);
 void set_ovsdb_launched(int val);
-void unlink_files(char *dpdk_dir);
-void unlink_dir(char *dpdk_dir);
 /*---------------------------------------------------------------------------*/
 

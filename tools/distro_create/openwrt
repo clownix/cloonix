@@ -2,11 +2,11 @@
 #-----------------------------------------------------------------------#
 HERE=`pwd`
 DISTRO=openwrt
-OPENWRT=https://downloads.openwrt.org/releases/21.02.1/targets/x86/64
+OPENWRT=https://downloads.openwrt.org/releases/21.02.3/targets/x86/64
 ROOTFS=/root/${DISTRO}
 OFFSET=17301504
 OFFSET_BOOT=262144
-OPENWRT_IMG=openwrt-21.02.1-x86-64-generic-ext4-combined.img
+OPENWRT_IMG=openwrt-21.02.3-x86-64-generic-ext4-combined.img
 
 for i in qemu-img gunzip wget; do
   path_bin=$(which $i)
@@ -39,9 +39,8 @@ fi
   losetup -o $OFFSET /dev/loop1 /dev/loop0
   mount /dev/loop1 /tmp/wkmntloops
 #--------------------------------------------------------------------#
-if [ -e /etc/resolv.conf ]; then
-  cp -f /etc/resolv.conf "/tmp/wkmntloops/tmp"
-fi
+rm -f /tmp/wkmntloops/etc/resolv.conf
+cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
 #-----------------------------------------------------------------------#
   cat > /tmp/wkmntloops/chroot_cmds  << "EOF"
 #!/bin/ash

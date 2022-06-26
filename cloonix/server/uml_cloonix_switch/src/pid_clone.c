@@ -57,8 +57,8 @@ void suid_power_fork_closed(void);
 #define SENDER_PID     "SENDER_PID:"
 
 
-#define MAX_FORK_IDENT 500
-#define MAX_DEAD_PIDS_CIRCLE 50
+#define MAX_FORK_IDENT 5000
+#define MAX_DEAD_PIDS_CIRCLE 500
 #define PROCESS_STACK 500*1024
 
 void cloonix_lock_fd_close(void);

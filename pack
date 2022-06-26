@@ -37,8 +37,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -rf ${CLOONIX_COMMON}/glob_include
 #----------------------------------------------------------
   for i in lib_io_clownix lib_rpc_doors lib_rpct \
-           lib_rpc_layout lib_utils \
-           lib_rpc_clownix lib_rpc_qmonitor \
+           lib_rpc_layout lib_utils lib_rpc_clownix \
            meson_ninja ; do
     rm -rf ${CLOONIX_COMMON}/${i}
   done
@@ -53,13 +52,18 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
     rm -rf ${CLOONIX_SERVER}/${i}/include
   done
 #----------------------------------------------------------
-  rm -rf ${CLOONIX_SERVER}/ovs_drv/build
-  rm -rf ${CLOONIX_SERVER}/ovs_drv/usr
+  for i in build \
+           usr \
+           src ; do
+    rm -rf ${CLOONIX_SERVER}/ovs_drv/${i}
+    rm -rf ${CLOONIX_SERVER}/ovs_snf/${i}
+    rm -rf ${CLOONIX_SERVER}/ovs_nat/${i}
+    rm -rf ${CLOONIX_SERVER}/ovs_c2c/${i}
+  done
   for i in allclean cmd meson.build; do
     rm -f ${CLOONIX_SERVER}/ovs_drv/${i}
-  done
-  for i in nat_dpdk d2d_dpdk a2b_dpdk xyx_dpdk; do
-    rm -rf ${CLOONIX_SERVER}/${i}
+    rm -f ${CLOONIX_SERVER}/ovs_snf/${i}
+    rm -f ${CLOONIX_SERVER}/ovs_c2c/${i}
   done
   for i in cmd allclean qemu_bin \
            cloonix_patch mkpatch patched_create ; do
@@ -70,24 +74,12 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
   rm -f ${CLOONIX_SERVER}/dtach/cmd
   rm -f ${CLOONIX_SERVER}/dtach/dtach_source.tar.gz
 #----------------------------------------------------------
-  SCHEMA=${CLOONIX_SERVER}/dpdk/share/openvswitch/vswitch.ovsschema
-  cp -f ${SCHEMA} ${CLOONIX_SERVER}/dpdk
-  for i in allclean cmd dpdk dpdk.patch etc share \
-           mkpatch patched_create sbin usr var ovs \
-           pmds-20.0.2 ; do
-    rm -rf ${CLOONIX_SERVER}/dpdk/${i}
-    rm -f ${CLOONIX_SERVER}/dpdk/lib/*.a
-  done
-  PKG=${CLOONIX_SERVER}/dpdk/lib/pkgconfig/libdpdk.pc
-  DPDK=/usr/local/bin/cloonix/server/dpdk
-  sed -i s"%libdir=\(.*\)%libdir=${DPDK}/lib%" $PKG
-  sed -i s"%includedir=\(.*\)%includedir=${DPDK}/include%" $PKG
-#----------------------------------------------------------
+  SCHEMA=${CLOONIX_SERVER}/ovs/share/openvswitch/vswitch.ovsschema
+  cp -f ${SCHEMA} ${CLOONIX_SERVER}/ovs
   for i in allclean cmd ovs ovs.patch \
            mkpatch patched_create ; do
     rm -rf ${CLOONIX_SERVER}/ovs/${i}
   done
-  rm -rf ${CLOONIX_SERVER}/ovs
 #----------------------------------------------------------
   rm -rf ${CLOONIX_CLIENT}/lib_client
 #----------------------------------------------------------
@@ -99,9 +91,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
     rm -rf ${CLOONIX_CLIENT}/cairo_canvas/${i}
   done
 #----------------------------------------------------------
-  for i in  ctrl \
-            xwycli \
-            qmonitor ; do
+  for i in  ctrl xwycli ; do
     rm -f ${CLOONIX_CLIENT}/${i}/Makefile
     rm -rf ${CLOONIX_CLIENT}/${i}/obj
     rm -rf ${CLOONIX_CLIENT}/${i}/include
