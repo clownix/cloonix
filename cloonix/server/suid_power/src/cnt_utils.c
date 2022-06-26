@@ -537,7 +537,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
         }
 
       snprintf(cmd, MAX_PATH_LEN-1,
-      "%s netns exec %s ip link set cnt%d up 2>&1", SBIN_IP, nspace, i);
+      "%s netns exec %s %s link set cnt%d up 2>&1",SBIN_IP,nspace,SBIN_IP,i);
       if (execute_cmd(cmd, 1))
         {
         KERR("ERROR %s", cmd);
@@ -546,7 +546,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
         }
       }
     snprintf(cmd, MAX_PATH_LEN-1,
-    "%s netns exec %s ip link set lo up 2>&1", SBIN_IP, nspace);
+    "%s netns exec %s %s link set lo up 2>&1", SBIN_IP, nspace, SBIN_IP);
     if (execute_cmd(cmd, 1))
       {
       KERR("ERROR %s", cmd);
