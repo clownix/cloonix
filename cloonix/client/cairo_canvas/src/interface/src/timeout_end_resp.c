@@ -35,20 +35,20 @@
 /****************************************************************************/
 static void create_node_resp(t_topo_kvm *kvm)
 {
-  int hidden_on_graph, color_choice;
+  int hidden_on_graph;
   double x, y;
   double tx[MAX_ETH_VM];
   double ty[MAX_ETH_VM];
   int32_t thidden_on_graph[MAX_ETH_VM];
 
-  get_node_layout_x_y(kvm->name, &color_choice, &x, &y, &hidden_on_graph, 
+  get_node_layout_x_y(kvm->name, &x, &y, &hidden_on_graph, 
                       tx, ty, thidden_on_graph);
 
   bank_node_create(kvm->name, kvm->linux_kernel, kvm->rootfs_used, 
                    kvm->rootfs_backing,  kvm->install_cdrom,
                    kvm->added_cdrom, kvm->added_disk, 
                    kvm->nb_tot_eth, kvm->eth_table, 
-                   color_choice, kvm->vm_id, kvm->vm_config_flags,
+                   kvm->color, kvm->vm_id, kvm->vm_config_flags,
                    x, y, hidden_on_graph, tx, ty, thidden_on_graph);
 }
 /*--------------------------------------------------------------------------*/
@@ -56,13 +56,13 @@ static void create_node_resp(t_topo_kvm *kvm)
 /****************************************************************************/
 static void create_cnt_resp(t_topo_cnt *cnt)
 {
-  int hidden_on_graph, color_choice;
+  int hidden_on_graph;
   double x, y;
   double tx[MAX_ETH_VM];
   double ty[MAX_ETH_VM];
   int32_t thidden_on_graph[MAX_ETH_VM];
 
-  get_node_layout_x_y(cnt->name, &color_choice, &x, &y, &hidden_on_graph,
+  get_node_layout_x_y(cnt->name, &x, &y, &hidden_on_graph,
                       tx, ty, thidden_on_graph);
 
   bank_cnt_create(cnt->name, cnt->image, cnt->customer_launch, cnt->vm_id,
@@ -75,7 +75,7 @@ static void create_cnt_resp(t_topo_cnt *cnt)
 void timer_create_obj_resp(void *data)
 {
   double x, y, xa, ya, xb, yb;
-  int hidden;
+  int endp_type, hidden;
   char *name;
   t_item_obj_resp *pa = (t_item_obj_resp *) data;
   if (pa->kvm)
@@ -91,9 +91,10 @@ void timer_create_obj_resp(void *data)
   else if (pa->c2c)
     {
     name = pa->c2c->name;
+    endp_type = pa->c2c->endp_type;
     get_gene_layout_x_y(bank_type_sat, name,
                         &x, &y, &xa, &ya, &xb, &yb, &hidden);
-    bank_sat_create(name, endp_type_c2c, pa->c2c, NULL,
+    bank_sat_create(name, endp_type, pa->c2c, NULL,
                     x, y, xa, ya, xb, yb, hidden);
     clownix_free(pa->c2c, __FUNCTION__);
     }
@@ -109,18 +110,20 @@ void timer_create_obj_resp(void *data)
   else if (pa->tap)
     {
     name = pa->tap->name;
+    endp_type = pa->tap->endp_type;
     get_gene_layout_x_y(bank_type_sat, name,
                         &x, &y, &xa, &ya, &xb, &yb, &hidden);
-    bank_sat_create(name, endp_type_tap, NULL, NULL,
+    bank_sat_create(name, endp_type, NULL, NULL,
                     x, y, xa, ya, xb, yb, hidden);
     clownix_free(pa->tap, __FUNCTION__);
     }
   else if (pa->nat)
     {
     name = pa->nat->name;
+    endp_type = pa->nat->endp_type;
     get_gene_layout_x_y(bank_type_sat, name,
                         &x, &y, &xa, &ya, &xb, &yb, &hidden);
-    bank_sat_create(name, endp_type_nat, NULL, NULL,
+    bank_sat_create(name, endp_type, NULL, NULL,
                     x, y, xa, ya, xb, yb, hidden);
     clownix_free(pa->nat, __FUNCTION__);
     }

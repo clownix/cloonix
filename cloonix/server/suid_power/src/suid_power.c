@@ -36,8 +36,6 @@
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
-#include "net_phy.h"
-#include "ovs_get.h"
 #include "cnt.h"
 #include "launcher.h"
 
@@ -69,10 +67,63 @@ typedef struct t_vmon
 
 static t_vmon *g_head_vmon;
 
+/*****************************************************************************/
 char *get_net_name(void)
 {
   return g_network_name;
 }
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int get_intf_flags_iff(char *intf, int *flags)
+{
+  int result = -1, s, io;
+  struct ifreq ifr;
+  s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  if (s == -1)
+    KOUT(" ");
+  memset(&ifr, 0, sizeof(struct ifreq));
+  memcpy(ifr.ifr_name, intf, IFNAMSIZ);
+  ifr.ifr_name[IFNAMSIZ-1] = 0;
+  io = ioctl (s, SIOCGIFFLAGS, &ifr);
+  if(io == 0)
+    {
+    *flags = ifr.ifr_flags;
+    result = 0;
+    }
+  close(s);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int net_phy_flags_iff_up_down(char *intf, int up)
+{
+  int result = -1, s, io;
+  struct ifreq ifr;
+  int flags;
+  if (!get_intf_flags_iff(intf, &flags))
+    {
+    s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    if (s == -1)
+      KOUT(" ");
+    memset(&ifr, 0, sizeof(struct ifreq));
+    memcpy(ifr.ifr_name, intf, IFNAMSIZ);
+    ifr.ifr_name[IFNAMSIZ-1] = 0;
+    if (up)
+      ifr.ifr_flags = flags | IFF_UP;
+    else
+      ifr.ifr_flags = flags & ~IFF_UP;
+    io = ioctl (s, SIOCSIFFLAGS, &ifr);
+    if(!io)
+      result = 0;
+    else
+      KERR(" ");
+    close(s);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static t_vmon *find_vmon_by_name(char *name)
@@ -320,26 +371,6 @@ static void heartbeat (int delta)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-/*
-static char *cloonix_resp_phy(int nb_phy, t_topo_info_phy *phy)
-{
-  int i, ln, len = MAX_PATH_LEN + (nb_phy * MAX_NAME_LEN * 4);
-  char *buf = (char *) malloc(len);
-  memset(buf, 0, len);
-  ln = sprintf(buf, "cloonsuid_resp_phy nb_phys=%d", nb_phy); 
-  for (i=0; i<nb_phy; i++)
-    {
-    ln += sprintf(buf+ln,
-          " phy:%s idx:%d flags:%X drv:%s pci:%s mac:%s vendor:%s device:%s",
-          phy[i].name, phy[i].index, phy[i].flags, phy[i].drv,
-          phy[i].pci, phy[i].mac, phy[i].vendor, phy[i].device); 
-    }
-  return buf;
-}
-*/
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void req_kill_clean_all(void)
 {
   char root_work_cnt[MAX_PATH_LEN];
@@ -416,32 +447,8 @@ static void qemu_launch(char *name, int vm_id, int argc,
 /****************************************************************************/
 void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 {
-//  char *str_net_phy, *str_net_ovs;
-//  int nb_phy;
-//  t_topo_info_phy *net_phy;
   DOUT(FLAG_HOP_POLDIAG, "SUID %s", line);
-  if (!strcmp(line,
-  "cloonsuid_req_phy"))
-    {
-    KERR("ERROR cloonsuid_req_phy");
-/*
-    net_phy = net_phy_get(&nb_phy);
-    str_net_phy = cloonix_resp_phy(nb_phy, net_phy);
-    rpct_send_poldiag_msg(llid, tid, str_net_phy);
-    free(str_net_phy);
-*/
-    }
-  else if (!strcmp(line,
-  "cloonsuid_req_ovs"))
-    {
-    KERR("ERROR cloonsuid_req_ovs");
-/*
-    str_net_ovs = ovs_get_topo(g_bin_dir, g_root_path);
-    rpct_send_poldiag_msg(llid, tid, str_net_ovs);
-    free(str_net_ovs);
-*/
-    }
-  else if (!strncmp(line,
+  if (!strncmp(line,
   "cloonsuid_cnt", strlen("cloonsuid_cnt")))
     {
     cnt_recv_poldiag_msg(llid, tid, line);
@@ -580,8 +587,6 @@ int main (int argc, char *argv[])
 {
   char ctrl_path[MAX_PATH_LEN];
   char *root;
-  net_phy_init();
-  ovs_get_init();
   g_head_vmon = NULL;
   g_llid = 0;
   g_watchdog_ok = 0;

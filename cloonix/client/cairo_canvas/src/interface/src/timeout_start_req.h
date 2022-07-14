@@ -52,8 +52,17 @@ typedef struct t_delete_item_req
   char name[MAX_NAME_LEN];
 } t_delete_item_req;
 /*--------------------------------------------------------------------------*/
+typedef struct t_dyn_snf_req
+{
+  int bank_type;
+  char name[MAX_NAME_LEN];
+  int num;
+  int on;
+} t_dyn_snf_req;
+/*--------------------------------------------------------------------------*/
 
 /*--------------------------------------------------------------------------*/
+void timer_dyn_snf_req(void *data);
 void timer_create_item_node_req(void *param);
 void timer_create_item_sat_req(void *param);
 void timer_create_item_req(void *param);

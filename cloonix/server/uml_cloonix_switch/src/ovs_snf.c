@@ -30,30 +30,38 @@
 #include "utils_cmd_line_maker.h"
 #include "uml_clownix_switch.h"
 #include "hop_event.h"
+#include "ovs_nat.h"
+#include "ovs_tap.h"
+#include "ovs_c2c.h"
 #include "ovs_snf.h"
 #include "llid_trace.h"
 #include "msg.h"
 #include "cnt.h"
 #include "stats_counters.h"
+#include "lan_to_name.h"
 
 typedef struct t_snf
 {
   char tap[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   int  num;
+  int item_type;
   char vhost[MAX_NAME_LEN];
   char socket[MAX_PATH_LEN];
+  char lan[MAX_NAME_LEN];
   int count;
   int llid;
   int pid;
   int closed_count;
   int suid_root_done;
+  int send_mac_done;
   int watchdog_count;
   int ms;
   int pkt_tx;
   int pkt_rx;
   int byte_tx;
   int byte_rx;
+  t_fct_cb callback_process_up;
   struct t_snf *prev;
   struct t_snf *next;
 } t_snf;
@@ -66,10 +74,40 @@ static int g_nb_snf;
 
 int get_glob_req_self_destruction(void);
 
+
+
 /****************************************************************************/
 int ovs_snf_get_qty(void)
 {
   return (g_nb_snf);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static t_snf *find_snf_with_lan(char *lan)
+{
+  t_snf *cur = g_head_snf;
+  while(cur)
+    {
+    if (!strcmp(cur->lan, lan))
+      break;
+    cur = cur->next;
+    }
+  return cur;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static t_snf *find_snf_with_name_num(char *name, int num)
+{
+  t_snf *cur = g_head_snf;
+  while(cur)
+    {
+    if ((!strcmp(cur->name, name)) && (cur->num == num))
+      break;
+    cur = cur->next;
+    }
+  return cur;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -101,23 +139,131 @@ static void free_snf(t_snf *cur)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void update_snf_rx_mac(char *name, int llid)
+{
+  char msg[MAX_PATH_LEN];
+  t_item_el *icur;
+  t_item_mac *imac;
+  char *mc;
+  icur = lan_get_head_item(name);
+  if (!icur)
+    KERR("ERROR %s", name);
+  else
+    {
+    snprintf(msg, MAX_PATH_LEN-1, "cloonsnf_mac_spyed_purge");
+    rpct_send_sigdiag_msg(llid, type_hop_snf, msg);
+    hop_event_hook(llid, FLAG_HOP_SIGDIAG, msg);
+    while(icur)
+      {
+      imac = icur->head_mac;
+      while(imac)
+        {
+        mc = imac->mac;
+        snprintf(msg, MAX_PATH_LEN-1, "cloonsnf_mac_spyed_rx_on=%s", mc);
+        rpct_send_sigdiag_msg(llid, type_hop_snf, msg);
+        hop_event_hook(llid, FLAG_HOP_SIGDIAG, msg);
+        imac = imac->next;
+        }
+      icur = icur->next;
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void send_mac_to_snf(t_snf *cur)
+{
+  uint8_t *mc;
+  t_eth_table *eth_tab;
+  t_vm *vm = cfg_get_vm(cur->name);
+  int nb_eth;
+  char mac_spyed_on[MAX_NAME_LEN];
+  char msg[MAX_PATH_LEN];
+  t_ovs_tap *tap_exists = ovs_tap_exists(cur->name);
+  t_ovs_nat *nat_exists = ovs_nat_exists(cur->name);
+  t_ovs_c2c *c2c_exists = ovs_c2c_exists(cur->name);
+  memset(msg, 0, MAX_PATH_LEN);
+  if (nat_exists)
+    {
+    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",NAT_MAC_CISCO);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    memset(msg, 0, MAX_PATH_LEN);
+    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",NAT_MAC_GW);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    memset(msg, 0, MAX_PATH_LEN);
+    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",NAT_MAC_DNS);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    }
+  else if (tap_exists)
+    {
+    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",tap_exists->mac);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    }
+  else if (c2c_exists)
+    {
+    }
+  else if (vm)
+    {
+    eth_tab = vm->kvm.eth_table;
+    mc = (uint8_t *) eth_tab[cur->num].mac_addr;
+    snprintf(mac_spyed_on, MAX_NAME_LEN-1,
+             "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+             mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
+    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",mac_spyed_on);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    }
+  else if (cnt_info(cur->name, &nb_eth, &eth_tab))
+    {
+    mc = (uint8_t *) eth_tab[cur->num].mac_addr;
+    snprintf(mac_spyed_on, MAX_NAME_LEN-1,
+             "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+             mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
+    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",mac_spyed_on);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    }
+  else
+    KERR("ERROR %s", cur->name);
+}
+/*--------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static void process_demonized(void *unused_data, int status, char *tap)
 {
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void timer_kil_req(void *data)
+{
+  char *name = (char *) data;
+  t_snf *cur = find_snf(name);
+  if (!cur)
+    KERR("ERROR %s", name); 
+  else
+    {
+    rpct_send_kil_req(cur->llid, type_hop_snf);
+    }
+  clownix_free(data, __FUNCTION__);
+}
+/*---------------------------------------------------------------------------*/
+
 /*****************************************************************************/
-static void snf_start(char *tap, char *mac, char *name_num)
+static void snf_start(char *tap, char *name_num)
 {
   static char *argv[8];
   argv[0] = g_bin_snf;
   argv[1] = g_cloonix_net;
   argv[2] = g_root_path;
   argv[3] = tap;
-  argv[4] = mac;
-  argv[5] = name_num;
-  argv[6] = NULL;
+  argv[4] = name_num;
+  argv[5] = NULL;
   pid_clone_launch(utils_execve, process_demonized, NULL,
                    (void *) argv, NULL, NULL, tap, -1, 1);
 }
@@ -183,8 +329,14 @@ static void timer_heartbeat(void *data)
         hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
         }
       }
+    else if (cur->send_mac_done == 0)
+      {
+      send_mac_to_snf(cur);
+      cur->send_mac_done = 1;
+      }
     else if (cur->watchdog_count >= 150)
       {
+      KERR("ERROR %s %s %s", cur->name, cur->socket, cur->tap);
       free_snf(cur);
       }
     else
@@ -220,6 +372,8 @@ void ovs_snf_pid_resp(int llid, char *tap, int pid)
     if ((cur->pid == 0) && (cur->suid_root_done == 1))
       {
       cur->pid = pid;
+      if (cur->callback_process_up != NULL)
+        cur->callback_process_up(cur->name, cur->num, cur->vhost);
       }
     else if (cur->pid && (cur->pid != pid))
       {
@@ -334,46 +488,6 @@ void ovs_snf_sigdiag_resp(int llid, int tid, char *line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_snf_start_stop_process(char *name, int num, char *vhost,
-                                char *tap, int on, char *mac)
-{
-  t_snf *cur = find_snf(tap);
-  char *root = g_root_path;
-  char name_num[MAX_NAME_LEN];
-  if (on)
-    {
-    if (cur)
-      KERR("ERROR %s %d %s %s", name, num, vhost, tap);
-    else
-      {
-      memset(name_num, 0, MAX_NAME_LEN);
-      snprintf(name_num, MAX_NAME_LEN-1, "%s_%d", name, num);
-      cur = (t_snf *) malloc(sizeof(t_snf));
-      memset(cur, 0, sizeof(t_snf));
-      strncpy(cur->tap, tap, MAX_NAME_LEN-1);
-      strncpy(cur->name, name, MAX_NAME_LEN-1);
-      cur->num = num;
-      strncpy(cur->vhost, vhost, MAX_NAME_LEN-1);
-      snprintf(cur->socket, MAX_NAME_LEN-1, "%s/%s/c%s", root, SNF_DIR, tap);
-      if (g_head_snf)
-        g_head_snf->prev = cur;
-      cur->next = g_head_snf;
-      g_head_snf = cur; 
-      snf_start(tap, mac, name_num);
-      g_nb_snf += 1;
-      }
-    }
-  else
-    {
-    if (!cur)
-      KERR("ERROR %s %d %s %s", name, num, vhost, tap);
-    else
-      rpct_send_kil_req(cur->llid, type_hop_snf);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int ovs_snf_get_all_pid(t_lst_pid **lst_pid)
 {
   t_lst_pid *glob_lst = NULL;
@@ -427,21 +541,78 @@ void ovs_snf_llid_closed(int llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void ovs_dyn_snf_stop_process(char *tap)
+{
+  t_snf *cur = find_snf(tap);
+  char *copy_tap;
+  if (!cur)
+    KERR("ERROR %s", tap);
+  else
+    {
+    copy_tap = (char *) clownix_malloc(MAX_NAME_LEN, 5);
+    memset(copy_tap, 0, MAX_NAME_LEN);
+    strncpy(copy_tap, tap, MAX_NAME_LEN-1);
+    clownix_timeout_add(100, timer_kil_req, copy_tap, NULL, NULL);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void ovs_dyn_snf_start_process(char *name, int num, int item_type,
+                               char *vhost, t_fct_cb cb)
+{
+  t_snf *cur;
+  char *root = g_root_path;
+  char name_num[MAX_NAME_LEN];
+  char tap[MAX_NAME_LEN];
+  char *tp = tap;
+
+  memset(name_num, 0, MAX_NAME_LEN);
+  snprintf(name_num, MAX_NAME_LEN-1, "%s_%d", name, num);
+  memset(tap, 0, MAX_NAME_LEN);
+  snprintf(tap, MAX_NAME_LEN-1, "s%s", vhost);
+  cur = find_snf(tap);
+  if (cur)
+    KERR("ERROR %s %d %s", name, num, vhost);
+  else if ((item_type != item_type_keth) && (item_type != item_type_ceth) &&
+           (item_type != item_type_tap) && (item_type != item_type_c2c) &&
+           (item_type != item_type_nat))
+    KERR("ERROR %s %d %s %d", name, num, vhost, item_type);
+  else
+    {
+    cur = (t_snf *) malloc(sizeof(t_snf));
+    memset(cur, 0, sizeof(t_snf));
+    strncpy(cur->tap, tap, MAX_NAME_LEN-1);
+    strncpy(cur->name, name, MAX_NAME_LEN-1);
+    cur->num = num;
+    cur->item_type = item_type;
+    strncpy(cur->vhost, vhost, MAX_NAME_LEN-1);
+    snprintf(cur->socket, MAX_NAME_LEN-1, "%s/%s/c%s", root, SNF_DIR, tp);
+    cur->callback_process_up = cb;
+    if (g_head_snf)
+      g_head_snf->prev = cur;
+    cur->next = g_head_snf;
+    g_head_snf = cur;
+    snf_start(tap, name_num);
+    g_nb_snf += 1;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void ovs_snf_resp_msg_vhost_up(int is_ko, char *vhost, char *name, int num)
 {
-  char tap[MAX_NAME_LEN];
-  uint8_t *mc;
   t_vm   *vm;
-  int nb_eth;
+  int nb_eth, item_type;
   t_eth_table *eth_tab;
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   int found = 0;
-  char mac_spyed_on[MAX_NAME_LEN];
 
   if (cnt_exists)
     {
     if ((num >=0 ) && (num < nb_eth))
       found = 1;
+    item_type = item_type_ceth;
     }
   else
     {
@@ -453,6 +624,7 @@ void ovs_snf_resp_msg_vhost_up(int is_ko, char *vhost, char *name, int num)
       eth_tab = vm->kvm.eth_table; 
       if ((num >=0 ) && (num < nb_eth))
         found = 1;
+      item_type = item_type_keth;
       }
     }
 
@@ -463,16 +635,7 @@ void ovs_snf_resp_msg_vhost_up(int is_ko, char *vhost, char *name, int num)
   else 
     {
     if (eth_tab[num].endp_type == endp_type_eths)
-      {
-      memset(mac_spyed_on, 0, MAX_NAME_LEN);
-      mc = (uint8_t *) eth_tab[num].mac_addr;
-      snprintf(mac_spyed_on, MAX_NAME_LEN-1,
-               "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-               mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
-      memset(tap, 0, MAX_NAME_LEN);
-      snprintf(tap, MAX_NAME_LEN-1, "s%s", vhost);
-      ovs_snf_start_stop_process(name, num, vhost, tap, 1, mac_spyed_on);
-      }
+      ovs_dyn_snf_start_process(name, num, item_type, vhost, NULL);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -494,13 +657,65 @@ void ovs_snf_resp_msg_del_lan(int is_ko, char *vhost, char *name, int num, char 
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void ovs_snf_c2c_update_mac(char *name)
+{
+  t_snf *cur = find_snf_with_name_num(name, 0);
+  if (cur)
+    update_snf_rx_mac(cur->lan, cur->llid);
+  else
+    KERR("WARNING NOT FOUND %s", name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void ovs_snf_lan_mac_change(char *lan)
+{
+  t_snf *cur = find_snf_with_lan(lan);
+  if (cur)
+    {
+    if (cur->item_type == item_type_c2c)
+      {
+      update_snf_rx_mac(lan, cur->llid);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int ovs_snf_send_add_snf_lan(char *name, int num, char *vhost, char *lan)
+{
+  t_snf *cur = find_snf_with_name_num(name, num);
+  if (!cur)  
+    KERR("ERROR %s %d %s %s", name, num, vhost, lan);
+  else
+    {
+    memset(cur->lan, 0, MAX_NAME_LEN);
+    strncpy(cur->lan, lan, MAX_NAME_LEN-1);
+    }
+  return(msg_send_add_snf_lan(name, num, vhost, lan));
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int ovs_snf_send_del_snf_lan(char *name, int num, char *vhost, char *lan)
+{
+  t_snf *cur = find_snf_with_name_num(name, num);
+  if (!cur)  
+    KERR("ERROR %s %d %s %s", name, num, vhost, lan);
+  else
+    {
+    memset(cur->lan, 0, MAX_NAME_LEN);
+    }
+  return(msg_send_del_snf_lan(name, num, vhost, lan));
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void ovs_snf_init(void)
 {
   char *root = cfg_get_root_work();
   char *net = cfg_get_cloonix_name();
   char *bin_snf = utils_get_ovs_snf_bin_dir();
-
-
   g_nb_snf = 0;
   g_head_snf = NULL;
   memset(g_cloonix_net, 0, MAX_NAME_LEN);

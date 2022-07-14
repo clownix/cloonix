@@ -36,6 +36,7 @@
 #include "cnt.h"
 #include "c2c_peer.h"
 #include "lan_to_name.h"
+#include "ovs_snf.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -110,6 +111,7 @@ t_ovs_c2c *find_c2c(char *name)
 /*****************************************************************************/
 static void free_c2c(t_ovs_c2c *cur)
 {
+  t_ovs_c2c *ncur;
   cfg_free_obj_id(cur->c2c_id);
   if (cur->llid)
     {
@@ -119,7 +121,7 @@ static void free_c2c(t_ovs_c2c *cur)
   if (strlen(cur->lan_added))
     {
     KERR("%s %s", cur->name, cur->lan_added);
-    lan_del_name(cur->lan_added);
+    lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
     }
   if (cur->prev)
     cur->prev->next = cur->next;
@@ -128,6 +130,20 @@ static void free_c2c(t_ovs_c2c *cur)
   if (cur == g_head_c2c)
     g_head_c2c = cur->next;
   g_nb_c2c -= 1;
+  if (cur->must_restart)
+    {
+    KERR("WARNING RESTARTING %s", cur->name);
+    ovs_c2c_add(0,0, cur->name, cur->topo.loc_udp_ip, cur->topo.dist_cloon, cur->topo.dist_tcp_ip,
+                cur->topo.dist_tcp_port, cur->dist_passwd, cur->topo.dist_udp_ip);
+    ncur = find_c2c(cur->name);
+    if (!ncur)
+      KERR("ERROR %s", cur->name);
+    else if (strlen(cur->must_restart_lan))
+      {
+      strncpy(ncur->lan_waiting, cur->must_restart_lan, MAX_NAME_LEN-1);
+      strncpy(ncur->topo.lan, cur->must_restart_lan, MAX_NAME_LEN-1);
+      }
+    }
   free(cur);
   cfg_hysteresis_send_topo_info();
 }
@@ -145,6 +161,7 @@ static t_ovs_c2c *alloc_c2c_base(char *name, char *dist_name)
   memset(cur, 0, sizeof(t_ovs_c2c));
   strncpy(cur->name, name, MAX_NAME_LEN-1);
   cur->c2c_id = id;
+  cur->topo.endp_type = endp_type_c2cv;
   mc[0] = 0x2;
   mc[1] = 0xFF & rand();
   mc[2] = 0xFF & rand();
@@ -202,7 +219,6 @@ static t_ovs_c2c *alloc_c2c_peer(int llid, int tid, char *name, char *dist_name)
 /*****************************************************************************/
 static void destroy_c2c(t_ovs_c2c *cur)
 {
-KERR("OOOOOOOOOO DESTROY %d", cur->destroy_c2c_done);
   if (cur->destroy_c2c_done == 0)
     {
     cur->destroy_c2c_done = 1;
@@ -218,7 +234,6 @@ static void carefull_free_c2c(char *name)
 {
   t_ovs_c2c *cur = find_c2c(name);
   int val = 0;
-KERR("OOOOOOOOOO DESTROY %d %d", cur->destroy_c2c_req, cur->free_c2c_req);
   if (!cur)
     KOUT("ERROR %s", name);
   if ((cur->destroy_c2c_req != 0) ||
@@ -228,19 +243,19 @@ KERR("OOOOOOOOOO DESTROY %d %d", cur->destroy_c2c_req, cur->free_c2c_req);
     {
     if (strlen(cur->lan_added))
       {
-      if (!strlen(cur->topo.lan))
+      if (!strlen(cur->lan_attached))
         KERR("ERROR %s %s", name, cur->lan_added);
-      val = lan_del_name(cur->lan_added);
+      val = lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
         free_c2c(cur);
       else
         {
-        if (!strlen(cur->topo.lan))
+        if (!strlen(cur->lan_attached))
           KERR("ERROR %s %s", name, cur->lan_added);
         else
           msg_send_del_lan_endp(ovsreq_del_c2c_lan, name, 0,
-                                cur->vhost, cur->topo.lan);
+                                cur->vhost, cur->lan_attached);
         cur->free_c2c_req = 1;
         }
       }
@@ -255,7 +270,6 @@ static void carefull_destroy_c2c(char *name)
 {
   t_ovs_c2c *cur = find_c2c(name);
   int val = 0;
-KERR("OOOOOOOOOO DESTROY %d %d", cur->destroy_c2c_req, cur->free_c2c_req);
   if (!cur)
     KOUT("ERROR %s", name);
   if ((cur->destroy_c2c_req != 0) ||
@@ -265,19 +279,19 @@ KERR("OOOOOOOOOO DESTROY %d %d", cur->destroy_c2c_req, cur->free_c2c_req);
     {    
     if (strlen(cur->lan_added))
       {
-      if (!strlen(cur->topo.lan))
+      if (!strlen(cur->lan_attached))
         KERR("ERROR %s %s", name, cur->lan_added);
-      val = lan_del_name(cur->lan_added);
+      val = lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
         destroy_c2c(cur);
       else
         {
-        if (!strlen(cur->topo.lan))
+        if (!strlen(cur->lan_attached))
           KERR("ERROR %s %s", name, cur->lan_added);
         else
           msg_send_del_lan_endp(ovsreq_del_c2c_lan, name, 0,
-                                cur->vhost, cur->topo.lan);
+                                cur->vhost, cur->lan_attached);
         cur->destroy_c2c_req = 1;
         }
       }
@@ -408,11 +422,20 @@ static void timer_heartbeat(void *data)
       carefull_free_c2c(cur->name);
     else
       {
-      cur->peer_watchdog_count += 1;
+      if (cur->topo.tcp_connection_peered)
+        cur->peer_watchdog_count += 1;
       if (cur->peer_watchdog_count >= 10)
         {
         KERR("ERROR %s %s", locnet, cur->name);
+        if (strlen(cur->lan_attached))
+          strncpy(cur->must_restart_lan, cur->lan_attached, MAX_NAME_LEN-1);
+        else if (strlen(cur->lan_added))
+          strncpy(cur->must_restart_lan, cur->lan_added, MAX_NAME_LEN-1);
+        else if (strlen(cur->lan_waiting))
+          strncpy(cur->must_restart_lan, cur->lan_waiting, MAX_NAME_LEN-1);
         carefull_destroy_c2c(cur->name);
+        if (cur->topo.local_is_master == 1)
+          cur->must_restart = 1;
         }
       else
         {
@@ -439,6 +462,24 @@ static void timer_heartbeat(void *data)
           else
             wrap_send_c2c_peer_ping(cur, 0);
           }
+        if ((cur->udp_loc_port_chosen == 1) &&
+            (cur->peer_conf_done == 0))
+          {
+          if (!wrap_send_c2c_peer_conf(cur, 0))
+            cur->peer_conf_done = 1;
+          }
+        if ((cur->topo.tcp_connection_peered == 1) &&
+            (cur->topo.udp_connection_peered == 1) &&
+            (strlen(cur->lan_waiting)))
+          {
+          strncpy(cur->lan_added, cur->lan_waiting, MAX_NAME_LEN-1);
+          memset(cur->lan_waiting, 0, MAX_NAME_LEN);
+          lan_add_name(cur->lan_added, item_c2c, cur->name, 0);
+          if (msg_send_add_lan_endp(ovsreq_add_c2c_lan, cur->name, 0,
+                                    cur->vhost, cur->lan_added))
+            KERR("ERROR %s", cur->name);
+          }
+
         }
       }
     cur = next;
@@ -501,8 +542,29 @@ static void c2c_get_udp_port_done(char *name, uint16_t port, int peer_status)
   else
     {
     cur->topo.loc_udp_port = port;
-    wrap_send_c2c_peer_conf(cur, 0);
     cur->udp_loc_port_chosen = 1;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void snf_process_started(char *name, int num, char *vhost)
+{
+  t_ovs_c2c *cur = find_c2c(name);
+
+  if (cur == NULL)
+    KERR("ERROR %s %d", name, num);
+  else
+    {
+    if (strlen(cur->lan_attached))
+      {
+      ovs_snf_send_add_snf_lan(name, num, cur->vhost, cur->lan_attached);
+      ovs_snf_c2c_update_mac(name);
+      }
+    else
+      {
+      cur->must_call_snf_process_started = 1;
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -738,19 +800,24 @@ void ovs_c2c_resp_add_lan(int is_ko, char *name, int num,
     KERR("ERROR %d %s", is_ko, name); 
   else
     {
-    if (strlen(cur->topo.lan))
-      KERR("ERROR: %s %s", name, cur->topo.lan);
+    if (strlen(cur->lan_attached))
+      KERR("ERROR: %s %s", name, cur->lan_attached);
+    memset(cur->lan_waiting, 0, MAX_NAME_LEN);
+    memset(cur->lan_attached, 0, MAX_NAME_LEN);
     memset(cur->topo.lan, 0, MAX_NAME_LEN);
     if (is_ko)
       {
       KERR("ERROR %d %s", is_ko, name);
-      utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), name);
       }
     else
       {
+      strncpy(cur->lan_attached, lan, MAX_NAME_LEN);
       strncpy(cur->topo.lan, lan, MAX_NAME_LEN);
-      cfg_hysteresis_send_topo_info();
-      utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
+      if (cur->must_call_snf_process_started)
+        {
+        snf_process_started(name, num, vhost);
+        cur->must_call_snf_process_started = 0;
+        }
       }
     }
 }
@@ -765,6 +832,8 @@ void ovs_c2c_resp_del_lan(int is_ko, char *name, int num,
     KERR("ERROR %d %s", is_ko, name);
   else if (cur->destroy_c2c_req == 1)
     {
+    memset(cur->lan_attached, 0, MAX_NAME_LEN);
+    memset(cur->lan_waiting, 0, MAX_NAME_LEN);
     memset(cur->topo.lan, 0, MAX_NAME_LEN);
     destroy_c2c(cur);
     cur->destroy_c2c_req = 0;
@@ -775,21 +844,21 @@ void ovs_c2c_resp_del_lan(int is_ko, char *name, int num,
     }
   else
     {
+    memset(cur->lan_attached, 0, MAX_NAME_LEN);
+    memset(cur->lan_waiting, 0, MAX_NAME_LEN);
     memset(cur->topo.lan, 0, MAX_NAME_LEN);
     if (is_ko)
       KERR("ERROR %d %s", is_ko, name);
     }
+  cfg_hysteresis_send_topo_info();
 }
 /*--------------------------------------------------------------------------*/
 
 
 /****************************************************************************/
-int ovs_c2c_exists(char *name)
+t_ovs_c2c *ovs_c2c_exists(char *name)
 {
-  int result = 0;
-  if (find_c2c(name))
-    result = 1;
-  return result;
+  return (find_c2c(name));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -827,7 +896,7 @@ t_topo_endp *ovs_c2c_translate_topo_endp(int *nb)
       memset(endp[nb_endp].lan.lan, 0, len);
       strncpy(endp[nb_endp].name, cur->name, MAX_NAME_LEN-1);
       endp[nb_endp].num = 0;
-      endp[nb_endp].type = endp_type_ethv;
+      endp[nb_endp].type = cur->topo.endp_type;
       strncpy(endp[nb_endp].lan.lan[0].lan, cur->topo.lan, MAX_NAME_LEN-1);
       endp[nb_endp].lan.nb_lan = 1;
       nb_endp += 1;
@@ -840,7 +909,7 @@ t_topo_endp *ovs_c2c_translate_topo_endp(int *nb)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_c2c_add(int cli_llid, int cli_tid, char *name, uint32_t loc_udp_ip,
+void ovs_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                  char *dist_name, uint32_t dist_ip, uint16_t dist_port,
                  char *dist_passwd, uint32_t dist_udp_ip)
 {
@@ -848,7 +917,8 @@ void ovs_c2c_add(int cli_llid, int cli_tid, char *name, uint32_t loc_udp_ip,
   if (cur)
     {
     KERR("ERROR %s", name);
-    send_status_ko(cli_llid, cli_tid, "Exists already");
+    if (llid)
+      send_status_ko(llid, tid, "Exists already");
     }
   else
     {
@@ -857,7 +927,8 @@ void ovs_c2c_add(int cli_llid, int cli_tid, char *name, uint32_t loc_udp_ip,
     cur = find_c2c(name);
     if (!cur)
       KOUT(" ");
-    send_status_ok(cli_llid, cli_tid, "OK");
+    if (llid)
+      send_status_ok(llid, tid, "OK");
     c2c_start(name, cur->vhost);
     state_progress_up(cur, state_up_initialised);
     }
@@ -865,104 +936,99 @@ void ovs_c2c_add(int cli_llid, int cli_tid, char *name, uint32_t loc_udp_ip,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_c2c_del(int cli_llid, int cli_tid, char *name)
+void ovs_c2c_del(int llid, int tid, char *name)
 {
   t_ovs_c2c *cur = find_c2c(name);
   if (!cur)
     {
     KERR("ERROR %s", name);
-    if (cli_llid)
-      send_status_ko(cli_llid, cli_tid, "Does not exist");
+    if (llid)
+      send_status_ko(llid, tid, "Does not exist");
     }
   else if (cur->destroy_c2c_req)
     {
     KERR("ERROR %s", name);
-    if (cli_llid)
-      send_status_ko(cli_llid, cli_tid, "Not ready");
+    if (llid)
+      send_status_ko(llid, tid, "Not ready");
     }
   else if (cur->free_c2c_req)
     {
     KERR("ERROR %s", name);
-    if (cli_llid)
-      send_status_ko(cli_llid, cli_tid, "Not ready");
+    if (llid)
+      send_status_ko(llid, tid, "Not ready");
     }
   else
     {
-    if (cli_llid)
-      send_status_ok(cli_llid, cli_tid, "OK");
+    if (llid)
+      send_status_ok(llid, tid, "OK");
     carefull_destroy_c2c(cur->name);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_c2c_add_lan(int cli_llid, int cli_tid, char *name, char *lan)
+void ovs_c2c_add_lan(int llid, int tid, char *name, char *lan)
 {
   t_ovs_c2c *cur = find_c2c(name);
   if (!cur)
     {
     KERR("ERROR %s", name);
-    send_status_ko(cli_llid, cli_tid, "Does not exist");
+    send_status_ko(llid, tid, "Does not exist");
     }
   else if (cur->destroy_c2c_req)
     {
     KERR("ERROR %s", name);
-    send_status_ko(cli_llid, cli_tid, "Not ready");
+    send_status_ko(llid, tid, "Not ready");
     }
   else if (cur->free_c2c_req)
     {
     KERR("ERROR %s", name);
-    send_status_ko(cli_llid, cli_tid, "Not ready");
+    send_status_ko(llid, tid, "Not ready");
     }
-  else if (strlen(cur->topo.lan))
+  else if (strlen(cur->lan_attached))
     {
-    KERR("ERROR %s %s", name, cur->topo.lan);
-    send_status_ko(cli_llid, cli_tid, "Lan exists");
+    KERR("ERROR %s %s", name, cur->lan_attached);
+    send_status_ko(llid, tid, "Lan exists");
     }
-  else if (cur->topo.tcp_connection_peered == 0)
+  else if (strlen(cur->lan_added))
     {
-    KERR("ERROR %s %s", name, cur->topo.lan);
-    send_status_ko(cli_llid, cli_tid, "Not tcp peered");
+    KERR("ERROR %s %s", name, cur->lan_added);
+    send_status_ko(llid, tid, "Lan added exists");
     }
-  else if (cur->topo.udp_connection_peered == 0)
+  else if (strlen(cur->lan_waiting))
     {
-    KERR("ERROR %s %s", name, cur->topo.lan);
-    send_status_ko(cli_llid, cli_tid, "Not udp peered");
+    KERR("ERROR %s %s", name, cur->lan_waiting);
+    send_status_ko(llid, tid, "Lan waiting exists");
     }
   else
     {
-    strncpy(cur->lan_added, lan, MAX_NAME_LEN);
-    lan_add_name(cur->lan_added, cli_llid);
-    cur->cli_llid = cli_llid;
-    cur->cli_tid = cli_tid;
-    if (msg_send_add_lan_endp(ovsreq_add_c2c_lan, name, 0, cur->vhost, lan))
-      {
-      KERR("ERROR %s", name);
-      utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), name);
-      }
+    strncpy(cur->lan_waiting, lan, MAX_NAME_LEN-1);
+    strncpy(cur->topo.lan, lan, MAX_NAME_LEN-1);
+    send_status_ok(llid, tid, "ok");
+    cfg_hysteresis_send_topo_info();
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_c2c_del_lan(int cli_llid, int cli_tid, char *name, char *lan)
+void ovs_c2c_del_lan(int llid, int tid, char *name, char *lan)
 {
   t_ovs_c2c *cur = find_c2c(name);
   int val = 0;
   if (!cur)
     {
     KERR("ERROR %s", name);
-    send_status_ko(cli_llid, cli_tid, "Does not exist");
+    send_status_ko(llid, tid, "Does not exist");
     }
   else if (cur->destroy_c2c_req)
     {
     KERR("ERROR %s", name);
-    send_status_ko(cli_llid, cli_tid, "Not ready");
+    send_status_ko(llid, tid, "Not ready");
     }
   else if (cur->free_c2c_req)
     {
     KERR("ERROR %s", name);
-    send_status_ko(cli_llid, cli_tid, "Not ready");
+    send_status_ko(llid, tid, "Not ready");
     }
   else
     {
@@ -970,19 +1036,21 @@ void ovs_c2c_del_lan(int cli_llid, int cli_tid, char *name, char *lan)
       KERR("ERROR: %s %s", name, lan);
     else
       {
-      val = lan_del_name(cur->lan_added);
+      val = lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       }
     if (val == 2*MAX_LAN)
       {
+      memset(cur->lan_attached, 0, MAX_NAME_LEN);
+      memset(cur->lan_waiting, 0, MAX_NAME_LEN);
       memset(cur->topo.lan, 0, MAX_NAME_LEN);
       cfg_hysteresis_send_topo_info();
-      send_status_ok(cli_llid, cli_tid, "OK");
+      send_status_ok(llid, tid, "OK");
       }
     else if (msg_send_del_lan_endp(ovsreq_del_c2c_lan, name, 0, cur->vhost, lan))
-      send_status_ko(cli_llid, cli_tid, "ERROR");
+      send_status_ko(llid, tid, "ERROR");
     else
-      send_status_ok(cli_llid, cli_tid, "OK");
+      send_status_ok(llid, tid, "OK");
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1131,7 +1199,15 @@ void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status)
     else if (peer_status == -1)
       {
       KERR("ERROR %s %s", locnet, name);
+      if (strlen(cur->lan_attached))
+        strncpy(cur->must_restart_lan, cur->lan_attached, MAX_NAME_LEN-1);
+      else if (strlen(cur->lan_added))
+        strncpy(cur->must_restart_lan, cur->lan_added, MAX_NAME_LEN-1);
+      else if (strlen(cur->lan_waiting))
+        strncpy(cur->must_restart_lan, cur->lan_waiting, MAX_NAME_LEN-1);
       carefull_destroy_c2c(cur->name);
+      if (cur->topo.local_is_master == 1)
+        cur->must_restart = 1;
       }
     else
       {
@@ -1187,10 +1263,54 @@ int ovs_c2c_mac_mangle(char *name, uint8_t *mac)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int  ovs_c2c_snf(char *name)
+int  ovs_c2c_dyn_snf(char *name, int val)
 {
-  int result = 0;
-  KERR("OOOOOOOOOOOOOOOOOOOOOOOO %s", name);
+  int result = -1;
+  t_ovs_c2c *cur = find_c2c(name);
+  char tap[MAX_NAME_LEN];
+  char *vh;
+
+  if (tap == NULL)
+    KERR("ERROR %s %d", name, val);
+  else
+    {
+    if (val)
+      {
+      if (cur->topo.endp_type == endp_type_c2cs)
+        KERR("ERROR %s", name);
+      else
+        {
+        cur->del_snf_ethv_sent = 0;
+        cur->topo.endp_type = endp_type_c2cs;
+        ovs_dyn_snf_start_process(name, 0, item_type_c2c,
+                                  cur->vhost, snf_process_started);
+        result = 0;
+        }
+      }
+    else
+      {
+      if (cur->topo.endp_type == endp_type_c2cv)
+        KERR("ERROR %s", name);
+      else
+        {
+        cur->topo.endp_type = endp_type_c2cv;
+        memset(tap, 0, MAX_NAME_LEN);
+        vh = cur->vhost;
+        snprintf(tap, MAX_NAME_LEN-1, "s%s", vh);
+        if (cur->del_snf_ethv_sent == 0)
+          {
+          cur->del_snf_ethv_sent = 1;
+          if (strlen(cur->lan_added))
+            {
+            if (ovs_snf_send_del_snf_lan(name, 0, cur->vhost, cur->lan_added))
+              KERR("ERROR DEL KVMETH %s %s", name, cur->lan_added);
+            }
+          ovs_dyn_snf_stop_process(tap);
+          }
+        result = 0;
+        }
+      }
+    }
   return result;
 }
 /*--------------------------------------------------------------------------*/

@@ -13,9 +13,7 @@ Here is the list of all the cloonix objects working for with dpdk:
 * **lan** hub used to connect all other cloonix objects together.
 * **nat** used to reach the internet, (slirp is its old name).
 * **tap** used to reach a tap of the host machine.
-* **phy** this show the physical interfaces of the host (enp6s0 above image).
-* **d2d** used to reach another cloonix server through udp messages.
-* **a2b** used for shaping/delay/loss of packets.
+* **c2c** used to reach another cloonix server through udp messages.
 
 New:
 

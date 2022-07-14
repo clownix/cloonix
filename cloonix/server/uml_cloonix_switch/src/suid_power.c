@@ -178,7 +178,6 @@ static void timer_monitoring(void *data)
 {
   static int old_nb_pid_resp;
   static int count = 0;
-//  char *req;
   if (get_glob_req_self_destruction())
     return;
   if (g_no_more_timeout == 1)
@@ -215,20 +214,6 @@ static void timer_monitoring(void *data)
     clownix_timeout_add(100, timer_monitoring, NULL,
                        &(g_abs_beat_timer), &(g_ref_timer));
     rpct_send_pid_req(g_llid, type_hop_suid_power, "suid_power", 0);
-    if (count % 2)
-      {
-
-      cnt_poldiag_req(g_llid, FLAG_HOP_POLDIAG);
-      /*
-      req = "cloonsuid_req_phy";
-      hop_event_hook(g_llid, FLAG_HOP_POLDIAG, req);
-      rpct_send_poldiag_msg(g_llid, type_hop_suid_power, req);
-      req = "cloonsuid_req_ovs";
-      hop_event_hook(g_llid, FLAG_HOP_POLDIAG, req);
-      rpct_send_poldiag_msg(g_llid, type_hop_suid_power, req);
-      */
-
-      }
     old_nb_pid_resp = g_nb_pid_resp;
     }
 }
@@ -401,11 +386,6 @@ void suid_power_poldiag_resp(int llid, int tid, char *line)
       cfg_hysteresis_send_topo_info();
       }
     free(phy);
-    }
-  else if (!strncmp(line,
-  "cloonsuid_cnt", strlen("cloonsuid_cnt")))
-    {
-    cnt_poldiag_resp(g_llid, line);
     }
   else
     KERR("ERROR %s", line);

@@ -26,7 +26,7 @@ to display and reproduce complex network scenarios .
 In a few words, cloonix is a AGPLv3 set of C software elements working
 together aiming at the coherent usage of multiple well known open
 source softwares, the main ones being: **qemu-kvm**, **openvswitch**,
-**dpdk**, **spice**, **wireshark** and **openssh**.
+**spice**, **wireshark** and **openssh**.
 
 Cloonix manages clusters of virtual machines, the server is controled
 by **clients** that act at a distance or on the same host.
@@ -38,15 +38,17 @@ it creates and controls **guitems** that run on the server and are
 pictured on the gui canvas launched with **cloonix_gui**.
 
 The main guitem is the **kvm** virtual machine, around this guitem there
-are 6 other: **lan**, **nat**, **tap**, **phy**, **d2d**, **a2b**,
+are 5 other: **cnt**, **lan**, **nat**, **tap**, **c2c**,
 those guitems are described within this documentation.
 
 The **kvm** virtual machines can be connected by cloonix commands, the
 emulated connections between virtual machines are based on **openvswitch**
-and **dpdk** and pictured by the **lan** guitem.
+and pictured by the **lan** guitem.
 
 Emulated desktops for the virtual machines are provided through **spice**
 launched with a right-click when above the **kvm** on the gui.
+
+A double-click on a blue virtual machine kvm or cnt creates a shell on this virtual. 
 
 A double-click on a virtual machine interface (small circle bordering the vm)
 opens a **wireshark** spy that displays the packets running through this
@@ -91,7 +93,6 @@ Content
      doc/configure.rst
      doc/clients.rst
      doc/guitems.rst
-     doc/dpdk.rst
      doc/cisco.rst
      doc/mikrotik.rst
      doc/container.rst

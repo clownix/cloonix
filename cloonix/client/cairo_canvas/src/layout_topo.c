@@ -421,7 +421,7 @@ void recv_layout_node(int llid, int tid, t_layout_node *layout)
       hidden_on_graph[i] = 0;
       }
     }
-  set_node_layout_x_y(layout->name, layout->color,
+  set_node_layout_x_y(layout->name, 
                       layout->x, layout->y, 
                       layout->hidden_on_graph,
                       tx, ty, hidden_on_graph);
@@ -442,13 +442,6 @@ void clean_layout_xml(void)
   free_layout_xml_struct(glob_layout_xml);
   clownix_timeout_del(glob_abs_beat, glob_ref, __FILE__, __LINE__);
   layout_topo_init();
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-t_layout_xml *get_current_layout_xml(void)
-{
-  return glob_layout_xml;
 }
 /*---------------------------------------------------------------------------*/
 

@@ -176,6 +176,40 @@ char *get_distant_cloonix_tree(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char **get_argv_local_xwy_cnt(char *name)
+{
+  static char bin_path[MAX_PATH_LEN];
+  static char config[MAX_PATH_LEN];
+  static char cloonix_name[MAX_NAME_LEN];
+  static char cmd[MAX_PATH_LEN];
+  static char path[MAX_PATH_LEN];
+  static char nm[MAX_NAME_LEN];
+  static char title[MAX_PATH_LEN];
+  static char xvt[MAX_PATH_LEN];
+  static char *argv[]={xvt, "-T", title, "-e",bin_path, config,
+                       cloonix_name, "-cmd", 
+                       "sudo", "crun", "exec", nm, "sh", NULL};
+  memset(bin_path, 0, MAX_PATH_LEN);
+  memset(config, 0, MAX_PATH_LEN);
+  memset(cloonix_name, 0, MAX_NAME_LEN);
+  memset(cmd, 0, MAX_PATH_LEN);
+  memset(path, 0, MAX_PATH_LEN);
+  memset(nm, 0, MAX_NAME_LEN);
+  memset(title, 0, MAX_PATH_LEN);
+  memset(xvt, 0, MAX_PATH_LEN);
+  cloonix_get_xvt(xvt);
+  strncpy(nm, name, MAX_NAME_LEN-1);
+  snprintf(title, MAX_PATH_LEN-1, "%s/%s", local_get_cloonix_name(), nm);
+  snprintf(bin_path, MAX_PATH_LEN-1,
+                     "%s/client/xwycli/xwycli", get_local_cloonix_tree());
+  snprintf(config, MAX_PATH_LEN-1,
+                     "%s/cloonix_config", get_local_cloonix_tree());
+  snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
+  return (argv);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char **get_argv_local_xwy(char *name)
 {
   static char bin_path[MAX_PATH_LEN];

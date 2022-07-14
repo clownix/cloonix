@@ -43,6 +43,7 @@ void help_add_cnt(char *line)
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
+  printf("\n\t       --persistent ");
   printf("\n\nexample:\n\n");
   printf("\n%s vm_name eth=sss bullseye.img\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
@@ -99,7 +100,7 @@ static int local_add_cnt(char *name, int nb_tot_eth, t_eth_table *eth_tab,
                          char *image, char *customer_launch,
                          int argc, char **argv)
 {
-  int i, result = 0;
+  int i, persistent = 0, result = 0;
   t_topo_cnt cnt;
 
   for (i=0; i<argc; i++)
@@ -113,6 +114,10 @@ static int local_add_cnt(char *name, int nb_tot_eth, t_eth_table *eth_tab,
         break;
         }
       }
+    else if (!strncmp(argv[i], "--persistent", strlen("--persistent")))
+      {
+      persistent = 1;
+      }
     else
       {
       printf("\nERROR: %s not an option\n\n", argv[i]);
@@ -125,6 +130,7 @@ static int local_add_cnt(char *name, int nb_tot_eth, t_eth_table *eth_tab,
     init_connection_to_uml_cloonix_switch();
     memset(&cnt, 0, sizeof(t_topo_cnt));
     strncpy(cnt.name, name, MAX_NAME_LEN-1);
+    cnt.is_persistent = persistent;
     cnt.nb_tot_eth = nb_tot_eth;
     memcpy(cnt.eth_table, eth_tab, nb_tot_eth * sizeof(t_eth_table));
     strncpy(cnt.image, image, MAX_PATH_LEN-1);
@@ -187,7 +193,7 @@ static int check_eth_desc(char *eth_desc, char *err,
 /***************************************************************************/
 int cmd_add_cnt(int argc, char **argv)
 {
-  int nb_eth, result = -1;
+  int i, nb_eth, non_opt_argc, result = -1;
   char *image, *customer_launch, *name;
   char eth_string[MAX_PATH_LEN];
   char err[MAX_PATH_LEN];
@@ -202,9 +208,15 @@ int cmd_add_cnt(int argc, char **argv)
       printf("\nBad eth= parameter %s %s\n", argv[1], err);
     else
       {
+      non_opt_argc = 0;
+      for (i=0; i<argc; i++)
+        {
+        if ((argv[i][0] != '-') && (argv[i][1] != '-'))
+          non_opt_argc += 1;
+        }
       name = argv[0];
       image = argv[2];
-      if (argc == 3)
+      if (non_opt_argc == 3)
         result = local_add_cnt(name, nb_eth, etht, image, "sleep 1000",
                                argc-3, &(argv[3])); 
       else

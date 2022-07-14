@@ -42,7 +42,6 @@ typedef struct t_node_layout
 {
   char name[MAX_NAME_LEN];
   int num;
-  int color_choice;
   int hidden_on_graph;
   double x; 
   double y;
@@ -112,7 +111,7 @@ static void unset_gene_layout(int bank_type, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void set_node_layout_x_y(char *name, int color_choice,
+void set_node_layout_x_y(char *name, 
                          double x, double y, int hidden_on_graph,
                          double *tx, double *ty,
                          int32_t *thidden_on_graph)
@@ -126,7 +125,6 @@ void set_node_layout_x_y(char *name, int color_choice,
   nl->x = x;
   nl->y = y;
   nl->hidden_on_graph = hidden_on_graph;
-  nl->color_choice = color_choice;
   memcpy(nl->tx, tx, (MAX_ETH_VM)*sizeof(double));
   memcpy(nl->ty, ty, (MAX_ETH_VM)*sizeof(double));
   for (i=0; i<MAX_ETH_VM; i++)
@@ -139,7 +137,7 @@ void set_node_layout_x_y(char *name, int color_choice,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void get_node_layout_x_y(char *name, int *color_choice,
+void get_node_layout_x_y(char *name,
                          double *x, double *y, int *hidden_on_graph,
                          double *tx, double *ty,
                          int32_t *thidden_on_graph)
@@ -152,7 +150,6 @@ void get_node_layout_x_y(char *name, int *color_choice,
     {
     *x = cur->x;
     *y = cur->y;
-    *color_choice = cur->color_choice;
     *hidden_on_graph = cur->hidden_on_graph;
     memcpy(tx, cur->tx, (MAX_ETH_VM)*sizeof(double));
     memcpy(ty, cur->ty, (MAX_ETH_VM)*sizeof(double));
@@ -164,7 +161,6 @@ void get_node_layout_x_y(char *name, int *color_choice,
     {
     *x = START_POS;
     *y = START_POS;
-    *color_choice = 0;
     *hidden_on_graph = 0;
     memset(tx, 0, (MAX_ETH_VM)*sizeof(double));
     memset(ty, 0, (MAX_ETH_VM)*sizeof(double));

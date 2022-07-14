@@ -95,6 +95,18 @@ void set_bulcnt(int nb, t_slowperiodic *slowperiodic)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void is_persistent_toggle (GtkToggleButton *togglebutton,
+                              gpointer user_data)
+{
+  if (gtk_toggle_button_get_active(togglebutton))
+    g_custom_cnt.is_persistent = 1;
+  else
+    g_custom_cnt.is_persistent = 0;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
 {
   GtkWidget *lb;
@@ -228,14 +240,11 @@ static void custom_vm_dialog(t_custom_cnt *cust)
 {
   int i, j, k, response, line_nb = 0;
   GSList *group = NULL;
-  GtkWidget *entry_name; 
-  GtkWidget *grid, *parent;
-  GtkWidget *image_menu, *bulcnt_menu;
+  GtkWidget *entry_name, *grid, *parent;
+  GtkWidget *image_menu, *bulcnt_menu, *is_persistent;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
-  t_custom_cnt *cust_vm;
-
-
+  t_custom_cnt *cust_vm = &g_custom_cnt;
 
   if (g_custom_dialog)
     return;
@@ -250,6 +259,14 @@ static void custom_vm_dialog(t_custom_cnt *cust)
                                                   NULL);
   gtk_window_set_default_size(GTK_WINDOW(g_custom_dialog), 300, 20);
 
+  is_persistent = gtk_check_button_new_with_label("persistent_rootfs");
+  if (cust_vm->is_persistent)
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), TRUE);
+  else
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), FALSE);
+  g_signal_connect(is_persistent,"toggled",G_CALLBACK(is_persistent_toggle),NULL);
+  append_grid(grid, is_persistent, "remanence:", line_nb++);
+
   entry_name = gtk_entry_new();
   gtk_entry_set_text(GTK_ENTRY(entry_name), cust->name);
   append_grid(grid, entry_name, "Name:", line_nb++);
@@ -258,7 +275,6 @@ static void custom_vm_dialog(t_custom_cnt *cust)
   gtk_entry_set_text(GTK_ENTRY(g_entry_customer_launch), cust->customer_launch);
   append_grid(grid, g_entry_customer_launch, "Customer_launch:", line_nb++);
 
-  cust_vm = &g_custom_cnt;
 
 
   for (i=0; i<ETH_LINE_MAX; i++)

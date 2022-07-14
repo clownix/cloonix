@@ -332,6 +332,8 @@ void recv_c2c_peer_conf(int llid, int tid, char *c2c_name, int is_ack,
 
 void recv_c2c_peer_ping(int llid, int tid, char *c2c_name, int status)
 {KOUT(" ");}
+void recv_color_item(int llid, int tid, char *name, int color)
+{KOUT(" ");}
 /*--------------------------------------------------------------------------*/
 
 void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)

@@ -336,7 +336,7 @@ static int link_associate(t_llid_traf *lt, char *cookie,
     in_idx_x11 = 0;
   llid_traf_associate(lt, name, llid_backdoor, lt->dido_llid);
   lt->auto_state = auto_state_wait_agent_link;
-  arm_auto_timer_with_resp(lt, "KO timeout", name, 1000);
+  arm_auto_timer_with_resp(lt, "KOo timeout", name, 2000);
   return in_idx_x11;
 }
 /*--------------------------------------------------------------------------*/

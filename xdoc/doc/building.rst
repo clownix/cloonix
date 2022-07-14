@@ -33,7 +33,6 @@ are regularly updated through scripts in tools/update_open_sources,
 here are the git sources for what can be found in targz_store:
 
   * https://github.com/openvswitch/ovs.git
-  * https://github.com/DPDK/dpdk.git
   * https://github.com/mesonbuild/meson.git
   * https://github.com/ninja-build/ninja.git
   * https://git.qemu.org/git/qemu.git
@@ -43,9 +42,6 @@ here are the git sources for what can be found in targz_store:
 
 Install
 =======
-
-For DPDK use, you need to do some host commands to have hugepages, this is
-described in the system requirement of this doc.
 
 The installation of cloonix is provided from source only with compilation
 on host and install in /usr/local/bin/cloonix of the host. For more info
@@ -58,8 +54,6 @@ which will install all the necessary developement packages on your host.
 and::
 
     ./doitall
-
-which takes a long time.
 
 Here under is the complete list of commands for this installation::
   
@@ -93,8 +87,8 @@ Here is the complete list of commands to download our first vm guest::
 
     mkdir -p ${HOME}/cloonix_data/bulk
     cd ${HOME}/cloonix_data/bulk
-    wget http://clownix.net/downloads/cloonix-__LAST__/bulk/buster.qcow2.gz
-    gunzip buster.qcow2.gz
+    wget http://clownix.net/downloads/cloonix-__LAST__/bulk/bookworm.qcow2.gz
+    gunzip bookworm.qcow2.gz
 
 
 Running
@@ -107,7 +101,7 @@ For the first run, use the ping.sh script with the sock option as follows
 to avoid any dpdk host misconfiguration problems::
 
     cd ${HOME}/cloonix-__LAST__/quickstart
-    ./ping.sh
+    ./ping_kvm.sh
 
 Here is a typical manual start for a server and a gui client::
 
@@ -116,9 +110,6 @@ Here is a typical manual start for a server and a gui client::
 
 The cloonix_gui is the first client to launch as it will show the cloonix
 objects in real time as they are created.
-Be aware that the default kvm configuration in the gui uses dpdk, to test
-with sock, you have to use the Kvm_conf canvas menu to pick s for the eth
-interfaces (s for sock).
 
 The cloonix_gui provides cloonix_ssh by a double-click on a blue virtual
 machine, cloonix_ssh natively provides an x11 path.
@@ -129,9 +120,9 @@ Saving
 
 The saving of a vm is done with the following commands::
     
-    cloonix_cli nemo sav full <name> <complete_file_path>
+    cloonix_cli nemo sav <name> <complete_file_path>
 
-The full save creates an autonomous qcow2 file merging the derived and the
+The save creates an autonomous qcow2 file merging the derived and the
 backing files into one.
 
 
@@ -142,24 +133,10 @@ The install_depends file has been tested to install the correct dependancies
 and the compilation and first run was successfull for the following
 distributions:
 
-    * *bookworm (debian 12),*
-    * *bullseye (debian 11),*
-    * *impish   (ubuntu 21.10),*
-    * *hirsute (ubuntu 21.04),*
-    * *centos8,*
-    * *fedora35,*
-    * *tumbleweed (rolling opensuse).*
-
-In the particular case of centos8, spice-protocol version is too old,
-you must do the following prior to cloonix compilation::
-
-  dnf install git
-  dnf install meson
-  git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-protocol.git
-  cd spice-protocol/
-  meson build
-  meson configure build/ -Dprefix=/usr
-  cd build
-  ninja install
-
-The tumbleweed presents a compilation problem, to be investigated when possible.
+    * *jammy   (ubuntu 22.04),
+    * *impish  (ubuntu 21.10),
+    * *hirsute (ubuntu 21.05),
+    * *bookworm (debian 12),
+    * *bullseye (debian 11),
+    * *tumbleweed (rolling opensuse),
+    * *fedora35

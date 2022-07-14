@@ -71,12 +71,14 @@ void from_cloonix_switch_delete_edge(char *name, int num, char *lan);
 void interface_switch_init(char *path, char *password);
 /*--------------------------------------------------------------------------*/
 void launch_xterm_double_click(char *name, int vm_config_flags);
-void launch_xterm_double_click_cnt(char *name);
 /*--------------------------------------------------------------------------*/
 int get_vm_id_from_topo(char *name);
 /*--------------------------------------------------------------------------*/
 void timer_layout_subscribe(void *data);
 /*--------------------------------------------------------------------------*/
+void to_cloonix_switch_dyn_snf_req(int bank_type, char *name, int num, int on);
+/*--------------------------------------------------------------------------*/
+
 
 
 

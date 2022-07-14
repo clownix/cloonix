@@ -93,7 +93,7 @@ static void call_cloonix_interface_tap_create(double x, double y)
   snprintf(name, IFNAMSIZ-1, "%stap%d", net_name, num++);
   name[IFNAMSIZ-1] = 0;
   topo_get_matrix_inv_transform_point(&x0, &y0);
-  to_cloonix_switch_create_sat(name, endp_type_tap, NULL, x0, y0);
+  to_cloonix_switch_create_sat(name, endp_type_tapv, NULL, x0, y0);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -113,7 +113,7 @@ static void call_cloonix_interface_nat_create(double x, double y)
 {
   double x0=x, y0=y;
   topo_get_matrix_inv_transform_point(&x0, &y0);
-  to_cloonix_switch_create_sat("nat", endp_type_nat, NULL, x0, y0);
+  to_cloonix_switch_create_sat("nat", endp_type_natv, NULL, x0, y0);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -140,7 +140,7 @@ static void call_cloonix_interface_c2c_create(double x, double y)
     c2c_req_info.dist_tcp_port = (uint16_t) (cnf->port & 0xFFFF);
     c2c_req_info.dist_udp_ip = cnf->c2c_udp_ip;;
     topo_get_matrix_inv_transform_point(&x0, &y0);
-    to_cloonix_switch_create_sat(c2c->name, endp_type_c2c,
+    to_cloonix_switch_create_sat(c2c->name, endp_type_c2cv,
                                  &(c2c_req_info), x0, y0);
     }
 }

@@ -65,6 +65,8 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
 
 void client_sav_vm(int tid, t_end_cb cb, char *nm, char *new_dir_path);
 void client_reboot_vm(int tid, t_end_cb cb, char *nm);
+void client_color_kvm(int tid, t_end_cb cb, char *name, int num);
+void client_color_cnt(int tid, t_end_cb cb, char *name, int num);
 
 void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
                     char *slave_cloon, uint32_t ip, uint16_t port,

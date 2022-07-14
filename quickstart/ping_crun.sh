@@ -31,7 +31,7 @@ done
 sleep 2
 
 for i in 1 2 ; do
-  sudo crun exec Crun${i} ifconfig cnt0 1.1.1.${i}/24 up
+  sudo crun exec Crun${i} ifconfig eth0 1.1.1.${i}/24 up
 done
 #----------------------------------------------------------------------
 

@@ -137,7 +137,7 @@ static int free_cnt(char *name)
     for (i=0; i<MAX_ETH_VM; i++)
       {
       if (strlen(cur->att_lan[i].lan_added))
-        lan_del_name(cur->att_lan[i].lan_added);
+        lan_del_name(cur->att_lan[i].lan_added, item_cnt, name, i);
       }
     layout_del_vm(name);
     cfg_free_obj_id(cur->cnt.vm_id);
@@ -207,7 +207,7 @@ void cnt_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
       eth_name = cur->cnt.eth_table[num].vhost_ifname;
       if (cur->cnt.eth_table[num].endp_type == endp_type_eths)
         {
-        msg_send_add_snf_lan(name, num, eth_name, lan);
+        ovs_snf_send_add_snf_lan(name, num, eth_name, lan);
         }
       }
     cur->lan_add_waiting_ack = 0;
@@ -220,7 +220,6 @@ void cnt_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
 void cnt_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan)
 {
   t_cnt *cur = find_cnt(name);
-  char *eth_name;
   if (cur == NULL)
     KERR("ERROR RESP ADD LAN %d %s %s %d", is_ko, lan, name, num);
   else
@@ -232,13 +231,10 @@ void cnt_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan)
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       if ((num < 0) || (num >= cur->cnt.nb_tot_eth))
         KOUT("ERROR %d", num);
-      eth_name = cur->cnt.eth_table[num].vhost_ifname;
       if ((cur->cnt.eth_table[num].endp_type == endp_type_eths) &&
           (strlen(lan)) &&
           (cur->del_snf_ethv_sent[num] == 0))
-        {
-        msg_send_del_snf_lan(name, num, eth_name, lan);
-        }
+        KERR("ERROR: %s %d", name, num);
       }
     cur->lan_del_waiting_ack = 0;
     if (cur->att_lan[num].lan_attached_ok)
@@ -310,85 +306,6 @@ t_topo_endp *cnt_translate_topo_endp(int *nb)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void cnt_poldiag_resp(int llid, char *line)
-{
-  t_cnt *cur;
-  char name[MAX_NAME_LEN];
-  if (!strcmp(line, "cloonsuid_cnt_infos"))
-    {
-    }
-  else if (sscanf(line,
-      "cloonsuid_cnt_get_crun_run_check_resp_ok %s", name) == 1) 
-    {
-    cur = find_cnt(name);
-    if (cur == NULL)
-      KERR("ERROR %s", line);
-    else
-      {
-      if (cur->count_ping_no_send_ok > 10)
-        {
-        cur->count_ping_no_send_ok = 0;
-        cfg_send_vm_evt_cloonix_ga_ping_ok(name);
-        }
-      else if (cur->cnt.ping_ok == 0)
-        {
-        cur->cnt.ping_ok = 1;
-        cfg_send_vm_evt_cloonix_ga_ping_ok(name);
-        }
-      else
-        cur->count_ping_no_send_ok += 1;
-      }
-    }
-  else if (sscanf(line,
-      "cloonsuid_cnt_get_crun_run_check_resp_ko %s", name) == 1) 
-    {
-    cur = find_cnt(name);
-    if (cur != NULL)
-      {
-      if (cur->count_ping_no_send_ko > 10)
-        {
-        cur->count_ping_no_send_ko = 0;
-        cfg_send_vm_evt_cloonix_ga_ping_ko(name);
-        }
-      else if (cur->cnt.ping_ok == 1)
-        {
-        cur->cnt.ping_ok = 0;
-        cfg_send_vm_evt_cloonix_ga_ping_ko(name);
-        }
-      else
-        cur->count_ping_no_send_ko += 1;
-      }
-    }
-  else
-    KERR("ERROR %s", line);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void cnt_poldiag_req(int llid, int tid)
-{
-  t_cnt *cur = g_head_cnt;
-  char req[MAX_PATH_LEN];
-  memset(req, 0, MAX_PATH_LEN);
-  snprintf(req, MAX_PATH_LEN-1, "cloonsuid_cnt_get_infos");
-  hop_event_hook(llid, tid, req);
-  rpct_send_poldiag_msg(llid, type_hop_suid_power, req);
-  while (cur)
-    {
-    if (cur->crun_pid > 0)
-      {
-      memset(req, 0, MAX_PATH_LEN);
-      snprintf(req, MAX_PATH_LEN-1,
-      "cloonsuid_cnt_get_crun_run_check %s", cur->cnt.name);
-      hop_event_hook(llid, tid, req);
-      rpct_send_poldiag_msg(llid, type_hop_suid_power, req);
-      }
-    cur = cur->next;
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void cnt_sigdiag_resp(int llid, char *line)
 {
   int crun_pid;
@@ -406,7 +323,8 @@ void cnt_sigdiag_resp(int llid, char *line)
     else
       {
       snprintf(req, MAX_PATH_LEN-1, 
-               "cloonsuid_cnt_create_config_json name=%s", name);
+               "cloonsuid_cnt_create_config_json name=%s is_persistent=%d",
+               name, cur->cnt.is_persistent);
       if (send_sig_suid_power(llid, req))
         KERR("ERROR %d %s", llid, name);
       }
@@ -436,7 +354,8 @@ void cnt_sigdiag_resp(int llid, char *line)
     else
       {
       snprintf(req, MAX_PATH_LEN-1,
-               "cloonsuid_cnt_create_overlay name=%s", name);
+               "cloonsuid_cnt_create_overlay name=%s is_persistent=%d",
+               name, cur->cnt.is_persistent);
       if (send_sig_suid_power(llid, req))
         KERR("ERROR %d %s", llid, name);
       }
@@ -532,6 +451,23 @@ void cnt_sigdiag_resp(int llid, char *line)
       free_cnt(name);
       }
     }
+
+  else if (sscanf(line,
+      "cloonsuid_cnt_parrot_test_ok %s", name) == 1)
+    {
+    cur = find_cnt(name);
+    if (cur == NULL)
+      KERR("ERROR %s", line);
+    else
+      {
+KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOO %s", line);
+      cur->cnt.ping_ok = 1;
+      cfg_send_vm_evt_cloonix_ga_ping_ok(name);
+      if (send_sig_suid_power(llid, line))
+        KERR("ERROR %d %s", llid, name);
+      }
+    }
+
 
   else
     KERR("ERROR %s", line);
@@ -656,7 +592,7 @@ static void timer_cnt_delete(void *data)
   char req[MAX_PATH_LEN];
   char tap[MAX_NAME_LEN];
   int val, i, cannot_be_deleted = 0;
-  char *eth_name;
+  char *eth_name, *lan;
 
   if (cur == NULL)
     {
@@ -673,24 +609,20 @@ static void timer_cnt_delete(void *data)
     for (i=0; i<cur->cnt.nb_tot_eth; i++)
       {
       eth_name = cur->cnt.eth_table[i].vhost_ifname;
+      lan = cur->att_lan[i].lan;
+      memset(tap, 0, MAX_NAME_LEN); 
+      snprintf(tap, MAX_NAME_LEN-1, "s%s", eth_name);
       if ((cur->cnt.eth_table[i].endp_type == endp_type_eths) &&
           (cur->del_snf_ethv_sent[i] == 0))
         {
+        cur->del_snf_ethv_sent[i] = 1;
         cannot_be_deleted += 1;
-        if (strlen(cur->att_lan[i].lan))
+        if (strlen(lan))
           {
-          if (msg_send_del_snf_lan(cd->name,i,eth_name,cur->att_lan[i].lan))
-            KERR("ERROR DEL KVMETH %s %d %s %s",
-                  cd->name, i, eth_name, cur->att_lan[i].lan);
+          if (ovs_snf_send_del_snf_lan(cd->name, i, eth_name, lan))
+            KERR("ERROR DEL KVMETH %s %d %s %s", cd->name, i, eth_name, lan);
           }
-        else if ((!msg_ovsreq_exists_vhost_lan(eth_name,cur->att_lan[i].lan)) &&
-                 (cur->del_snf_ethv_lan_sent[i] == 0))
-          {
-          cur->del_snf_ethv_sent[i] = 1;
-          memset(tap, 0, MAX_NAME_LEN); 
-          snprintf(tap, MAX_NAME_LEN-1, "s%s", eth_name);
-          ovs_snf_start_stop_process(cd->name, i, eth_name, tap, 0, NULL);
-          }
+        ovs_dyn_snf_stop_process(tap);
         }
       }
     if ((cannot_be_deleted) && (cd->count < 100))
@@ -710,7 +642,7 @@ static void timer_cnt_delete(void *data)
           {
           eth_name = cur->cnt.eth_table[i].vhost_ifname;
           cannot_be_deleted += 1;
-          val = lan_del_name(cur->att_lan[i].lan_added);
+          val = lan_del_name(cur->att_lan[i].lan_added, item_cnt, cd->name, i);
           if (val != 2*MAX_LAN)
             {
             eth_name = get_eth_name(cur->cnt.vm_id, i);
@@ -840,7 +772,7 @@ void cnt_timer_beat(int llid)
     else
       {
       cur->count_add += 1;
-      if (cur->count_add >= 15)
+      if (cur->count_add >= 30)
         { 
         KERR("ERROR TIMOUT %s", cur->cnt.name);
         error_timer_beat_action(llid, cur);
@@ -851,7 +783,7 @@ void cnt_timer_beat(int llid)
     else
       {
       cur->count_del += 1;
-      if (cur->count_del >= 15)
+      if (cur->count_del >= 30)
         { 
         KERR("ERROR TIMOUT %s", cur->cnt.name);
         error_timer_beat_action(llid, cur);
@@ -862,7 +794,7 @@ void cnt_timer_beat(int llid)
     else
       {
       cur->count_llid += 1;
-      if (cur->count_llid >= 15)
+      if (cur->count_llid >= 100)
         { 
         KERR("ERROR TIMOUT %s", cur->cnt.name);
         error_timer_beat_action(llid, cur);
@@ -917,6 +849,8 @@ int cnt_add_lan(int llid, int tid, char *name, int num,
   int result = -1;
   t_cnt *cur = find_cnt(name);
   char *eth_name;
+  char *mac;
+  char str_mac[MAX_NAME_LEN];
   memset(err, 0, MAX_PATH_LEN);
   if (cur == NULL)
     {
@@ -947,7 +881,13 @@ int cnt_add_lan(int llid, int tid, char *name, int num,
     {
     memset(cur->att_lan[num].lan_added, 0, MAX_NAME_LEN);
     strncpy(cur->att_lan[num].lan_added, lan, MAX_NAME_LEN-1);
-    lan_add_name(cur->att_lan[num].lan_added, llid);
+    lan_add_name(cur->att_lan[num].lan_added, item_cnt, name, num);
+    mac = cur->cnt.eth_table[num].mac_addr;
+    memset(str_mac, 0, MAX_NAME_LEN);
+    snprintf(str_mac, MAX_NAME_LEN-1,
+             "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    lan_add_mac(cur->att_lan[num].lan_added, item_cnt, name, num, str_mac);
     eth_name = get_eth_name(cur->cnt.vm_id, num);
     if (msg_send_add_lan_endp(ovsreq_add_cnt_lan, name, num, eth_name, lan))
       {
@@ -1014,7 +954,7 @@ int cnt_del_lan(int llid, int tid, char *name, int num,
       KERR("ERROR: %s %d %s", name, num, lan);
     else
       {
-      val = lan_del_name(cur->att_lan[num].lan_added);
+      val = lan_del_name(cur->att_lan[num].lan_added, item_cnt, name, num);
       memset(cur->att_lan[num].lan_added, 0, MAX_NAME_LEN);
       }
     if (val != 2*MAX_LAN)
@@ -1046,11 +986,91 @@ int cnt_del_lan(int llid, int tid, char *name, int num,
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int cnt_snf(char *name, int num)
+static void snf_process_started(char *name, int num, char *vhost)
 {
-  int result = 0;
-  KERR("OOOOOOOOOOOOOOOOOOO %s %d", name, num);
+  t_cnt *cur = find_cnt(name);
+  char *lan, *eth_name;
+  if (cur == NULL)
+    KERR("ERROR %s %d", name, num);
+  else
+    {
+    if ((num < 0) || (num >= cur->cnt.nb_tot_eth))
+      KOUT("ERROR %s %d", name, num);
+    if (cur->att_lan[num].lan_attached_ok == 1)
+      {
+      lan = cur->att_lan[num].lan;
+      eth_name = cur->cnt.eth_table[num].vhost_ifname;
+      ovs_snf_send_add_snf_lan(name, num, eth_name, lan);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cnt_dyn_snf(char *name, int num, int val)
+{
+  char *eth_name, *lan;
+  int result = -1;
+  t_cnt *cur = find_cnt(name);
+  char tap[MAX_NAME_LEN];
+  if (cur == NULL)
+    KERR("ERROR %s %d", name, num);
+  else
+    {
+    if ((num < 0) || (num >= cur->cnt.nb_tot_eth))
+      KOUT("ERROR %s %d", name, num);
+    if (val)
+      {
+      if (cur->cnt.eth_table[num].endp_type == endp_type_eths)
+        KERR("ERROR %s %d", name, num);
+      else
+        {
+        eth_name = cur->cnt.eth_table[num].vhost_ifname;
+        cur->cnt.eth_table[num].endp_type = endp_type_eths;
+        ovs_dyn_snf_start_process(name, num, item_type_ceth,
+                                  eth_name, snf_process_started);
+        result = 0;
+        }
+      }
+    else
+      {
+      if (cur->cnt.eth_table[num].endp_type == endp_type_ethv)
+        KERR("ERROR %s %d", name, num);
+      else
+        {
+        cur->cnt.eth_table[num].endp_type = endp_type_ethv;
+        eth_name = cur->cnt.eth_table[num].vhost_ifname;
+        lan = cur->att_lan[num].lan;
+        memset(tap, 0, MAX_NAME_LEN);
+        snprintf(tap, MAX_NAME_LEN-1, "s%s", eth_name);
+        if (cur->del_snf_ethv_sent[num] == 0)
+          {
+          cur->del_snf_ethv_sent[num] = 1;
+          if (strlen(lan))
+            {
+            if (ovs_snf_send_del_snf_lan(name, num, eth_name, lan))
+              KERR("ERROR DEL KVMETH %s %d %s %s", name, num, eth_name, lan);
+            }
+          ovs_dyn_snf_stop_process(tap);
+          }
+        result = 0;
+        }
+      }
+    }
   return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void cnt_set_color(char *name, int color)
+{
+  t_cnt *cur = find_cnt(name);
+  if (!cur)
+    KERR("ERROR %s", name);
+  else
+    {
+    cur->cnt.color = color;
+    }
 }
 /*--------------------------------------------------------------------------*/
 

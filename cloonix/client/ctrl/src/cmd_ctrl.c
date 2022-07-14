@@ -134,17 +134,26 @@ static char *get_type_endp(int type)
     case endp_type_ethv:
       result = "ethv"; 
       break;
-    case endp_type_tap:
-      result = "tap"; 
+    case endp_type_taps:
+      result = "taps"; 
       break;
-    case endp_type_nat:
-      result = "nat"; 
+    case endp_type_tapv:
+      result = "tapv"; 
+      break;
+    case endp_type_nats:
+      result = "nats"; 
+      break;
+    case endp_type_natv:
+      result = "natv"; 
       break;
     case endp_type_a2b:
       result = "a2b"; 
       break;
-    case endp_type_c2c:
-      result = "c2c"; 
+    case endp_type_c2cs:
+      result = "c2cs"; 
+      break;
+    case endp_type_c2cv:
+      result = "c2cv"; 
       break;
     default:
       KOUT("%d", type);
@@ -473,6 +482,46 @@ int cmd_qreboot_vm(int argc, char **argv)
       result = 0;
       init_connection_to_uml_cloonix_switch();
       client_reboot_vm(0, callback_end, name);
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_color_kvm(int argc, char **argv)
+{
+  int num, result = -1;
+  char *name;
+  if (argc == 2)
+    {
+    name = argv[0];
+    num = param_tester(argv[1], 0, MAX_COLOR);
+    if ((num >= 0) && (strlen(name)>2))
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_color_kvm(0, callback_end, name, num);
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_color_cnt(int argc, char **argv)
+{
+  int num, result = -1;
+  char *name;
+  if (argc == 2)
+    {
+    name = argv[0];
+    num = param_tester(argv[1], 0, MAX_COLOR);
+    if (strlen(name)>2)
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_color_cnt(0, callback_end, name, num);
       }
     }
   return result;

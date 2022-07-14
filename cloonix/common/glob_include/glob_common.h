@@ -63,12 +63,25 @@ enum {
   endp_type_none=13,
   endp_type_eths,
   endp_type_ethv,
-  endp_type_tap,
+  endp_type_taps,
+  endp_type_tapv,
   endp_type_phy,
   endp_type_a2b,
-  endp_type_nat,
-  endp_type_c2c,
+  endp_type_nats,
+  endp_type_natv,
+  endp_type_c2cs,
+  endp_type_c2cv,
 };
+
+enum {
+  item_type_none=113,
+  item_type_keth,
+  item_type_ceth,
+  item_type_tap,
+  item_type_c2c,
+  item_type_nat,
+};
+
 
 typedef void (*t_fd_local_flow_ctrl)(int llid, int stop);
 typedef void (*t_fd_dist_flow_ctrl)(int llid, char *name, int num,
@@ -92,6 +105,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define MAX_PHY            16
 #define MAX_PCI            16
 #define MAX_ETH_VM         32
+#define MAX_COLOR         10
 
 #define MAX_TRAF_ENDPOINT 4
 
@@ -267,6 +281,7 @@ typedef struct t_topo_kvm
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
   int  vm_id;
+  int  color;
   char linux_kernel[MAX_NAME_LEN];
   char rootfs_input[MAX_PATH_LEN];
   char rootfs_used[MAX_PATH_LEN];
@@ -281,8 +296,10 @@ typedef struct t_topo_kvm
 typedef struct t_topo_cnt
 {
   char name[MAX_NAME_LEN];
+  int  is_persistent;
   int  ping_ok;
   int  vm_id;
+  int  color;
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
   char image[MAX_PATH_LEN];
@@ -292,6 +309,7 @@ typedef struct t_topo_cnt
 typedef struct t_topo_c2c
   {
   char name[MAX_NAME_LEN];
+  int endp_type;
   char dist_cloon[MAX_NAME_LEN];
   char lan[MAX_NAME_LEN];
   int local_is_master;
@@ -308,6 +326,7 @@ typedef struct t_topo_c2c
 typedef struct t_topo_tap
   {
   char name[MAX_NAME_LEN];
+  int endp_type;
   } t_topo_tap;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_phy
@@ -329,6 +348,7 @@ typedef struct t_topo_a2b
 typedef struct t_topo_nat
   {
   char name[MAX_NAME_LEN];
+  int endp_type;
   } t_topo_nat;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_endp

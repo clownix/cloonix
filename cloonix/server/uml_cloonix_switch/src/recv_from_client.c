@@ -358,9 +358,9 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
   int nb_eth;
   int endp_kvm = kvm_exists(name, num);
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
-  int tap_exists = ovs_tap_exists(name);
-  int nat_exists = ovs_nat_exists(name);
-  int c2c_exists = ovs_c2c_exists(name);
+  t_ovs_tap *tap_exists = ovs_tap_exists(name);
+  t_ovs_nat *nat_exists = ovs_nat_exists(name);
+  t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   if (vm != NULL)
     eth_tab = vm->kvm.eth_table;
 
@@ -403,7 +403,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
       }
     else
       {
-      if (kvm_add_lan(llid, tid, name, num, lan, endp_kvm))
+      if (kvm_add_lan(llid, tid, name, num, lan, endp_kvm, eth_tab))
         {
         send_status_ko(llid, tid, "failure");
         KERR("ERROR %s %d %s", name, num, lan);
@@ -465,9 +465,9 @@ static void timer_endp(void *data)
   int nb_eth;
   t_eth_table *eth_tab;
   int cnt_exists = cnt_info(te->name, &nb_eth, &eth_tab);
-  int tap_exists = ovs_tap_exists(te->name);
-  int nat_exists = ovs_nat_exists(te->name);
-  int c2c_exists = ovs_c2c_exists(te->name);
+  t_ovs_tap *tap_exists = ovs_tap_exists(te->name);
+  t_ovs_nat *nat_exists = ovs_nat_exists(te->name);
+  t_ovs_c2c *c2c_exists = ovs_c2c_exists(te->name);
 
   if (endp_kvm || cnt_exists || tap_exists || nat_exists || c2c_exists) 
     {
@@ -623,9 +623,9 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   t_eth_table *eth_tab = NULL;
   int nb_eth;
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
-  int tap_exists = ovs_tap_exists(name);
-  int nat_exists = ovs_nat_exists(name);
-  int c2c_exists = ovs_c2c_exists(name);
+  t_ovs_tap *tap_exists = ovs_tap_exists(name);
+  t_ovs_nat *nat_exists = ovs_nat_exists(name);
+  t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   event_print("Rx Req del lan %s of %s %d", lan, name, num);
 
   if (cnt_name_exists(name, &nb_eth))
@@ -1660,56 +1660,68 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
   char err[MAX_PATH_LEN];
   t_vm   *vm = cfg_get_vm(name);
   int nb_eth;
+  t_ovs_tap *tap_exists = ovs_tap_exists(name);
+  t_ovs_nat *nat_exists = ovs_nat_exists(name);
+  t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   event_print("Rx Req add snf %s %d %d", name, num, val);
   if (get_inhib_new_clients())
     {
     KERR("ERROR %s %s", locnet, name);
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
     }
-  else if (ovs_nat_exists(name))
+  else if (nat_exists)
     {
     if (num != 0)
       {
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "bad num");
       }
-    else if (ovs_nat_snf(name))
+    else if (ovs_nat_dyn_snf(name, val))
       {
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "error");
       }
     else
+      {
       send_status_ok(llid, tid, "ok");
+      cfg_hysteresis_send_topo_info();
+      }
     }
-  else if (ovs_tap_exists(name))
+  else if (tap_exists)
     {
     if (num != 0)
       {
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "bad num");
       }
-    else if (ovs_tap_snf(name))
+    else if (ovs_tap_dyn_snf(name, val))
       {
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "error");
       }
     else
+      {
       send_status_ok(llid, tid, "ok");
+      cfg_hysteresis_send_topo_info();
+      }
     }
-  else if (ovs_c2c_exists(name))
+  else if (c2c_exists)
     {
     if (num != 0)
       {
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "bad num");
       }
-    else if (ovs_c2c_snf(name))
+    else if (ovs_c2c_dyn_snf(name, val))
       {
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "error");
       }
     else
+      {
       send_status_ok(llid, tid, "ok");
+      cfg_hysteresis_send_topo_info();
+      }
     }
   else if (vm)
     {
@@ -1718,13 +1730,16 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
       sprintf( err, "eth%d for machine %s does not exist", num, name);
       send_status_ko(llid, tid, err);
       }
-    else if (cfg_vm_snf(name, num))
+    else if (kvm_dyn_snf(name, num, val))
       {
       KERR("ERROR %s %s %d", locnet, name, num);
       send_status_ko(llid, tid, "error");
       }
     else
+      {
       send_status_ok(llid, tid, "ok");
+      cfg_hysteresis_send_topo_info();
+      }
     }
   else if (cnt_name_exists(name, &nb_eth))
     {
@@ -1733,13 +1748,16 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
       sprintf( err, "eth%d for machine %s does not exist", num, name);
       send_status_ko(llid, tid, err);
       }
-    else if (cnt_snf(name, num))
+    else if (cnt_dyn_snf(name, num, val))
       {
       KERR("ERROR %s %s %d", locnet, name, num);
       send_status_ko(llid, tid, "error");
       }
     else
+      {
       send_status_ok(llid, tid, "ok");
+      cfg_hysteresis_send_topo_info();
+      }
     }
   else
     {
@@ -1930,6 +1948,38 @@ void recv_c2c_peer_ping(int llid, int tid, char *name, int status)
   ovs_c2c_peer_ping(llid, tid, name, status);
 }
 /*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_color_item(int llid, int tid, char *name, int color)
+{
+  char info[MAX_PATH_LEN];
+  t_vm *vm = cfg_get_vm(name);
+  t_eth_table *eth_tab;
+  int nb_eth;
+  int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
+  event_print("Rx Req color %d for  %s", color, name);
+  if ((!cnt_exists) && (!vm))
+    {
+    sprintf( info, "Machine %s does not exist", name);
+    send_status_ko(llid, tid, info);
+    }
+  else
+    {
+    send_status_ok(llid, tid, "ok");
+    if (vm)
+      {
+      vm->kvm.color = color;
+      }
+    else
+      {
+      cnt_set_color(name, color);
+      }
+    cfg_hysteresis_send_topo_info();
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+
 
 /*****************************************************************************/
 void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)

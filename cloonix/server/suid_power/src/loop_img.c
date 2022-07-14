@@ -282,8 +282,9 @@ static int loop_mount_exists(char *bulk, char *image)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void mount_del(char *cnt_dir, char *loop)
+static void mount_del(char *bulk, char *image, char *cnt_dir, char *loop)
 {
+  char mnt[MAX_PATH_LEN];
   char cmd[MAX_PATH_LEN];
   char resp[MAX_PATH_LEN];
   char *mount = get_mount_bin();
@@ -326,6 +327,9 @@ static void mount_del(char *cnt_dir, char *loop)
         if (fgets(resp, MAX_PATH_LEN-1, fp1))
           KERR("ERROR %s %s", cmd, resp);
         pclose(fp2);
+        snprintf(mnt, MAX_PATH_LEN-1, "%s/mnt/%s", bulk, image);
+        if (rmdir(mnt))
+          KERR("ERROR Dir: %s could not be deleted\n", mnt);
         }
       }
     pclose(fp1);
@@ -356,7 +360,7 @@ static void remove_loop(char *name, char *bulk, char *image, char *cnt_dir)
   char resp[MAX_PATH_LEN];
   while (!losetup_get(bulk, image, resp))
     {
-    mount_del(cnt_dir, resp);
+    mount_del(bulk, image, cnt_dir, resp);
     losetup_del(resp);
     count += 1;
     if (count > 10)

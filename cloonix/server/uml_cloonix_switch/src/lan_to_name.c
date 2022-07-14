@@ -24,9 +24,8 @@
 #include "layout_rpc.h"
 #include "layout_topo.h"
 #include "msg.h"
-
-
-
+#include "lan_to_name.h"
+#include "ovs_snf.h"
 
 
 /*---------------------------------------------------------------------------*/
@@ -35,6 +34,7 @@ typedef struct t_bij_elem
   char name[MAX_NAME_LEN];
   int idx;
   int nb_users;
+  t_item_el *head_item;
 } t_bij_elem;
 /*---------------------------------------------------------------------------*/
 static int glob_total_elems;
@@ -121,7 +121,75 @@ static int find_free_idx_for_name(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int lan_add_name(char *name, int llid)
+static t_item_el *find_item_el(t_bij_elem *target, int item_type,
+                               char *item_name, int item_num)
+{
+  t_item_el *cur = target->head_item;
+  while(cur)
+    {
+    if ((cur->item_type == item_type) &&
+        (!strcmp(cur->item_name, item_name)) &&
+        (cur->item_num == item_num))
+      break;
+    cur = cur->next;
+    }
+  return cur;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void add_item_mac(char *name, t_item_el *el, char *mac)
+{
+
+  t_item_mac *cur = (t_item_mac *) malloc(sizeof(t_item_mac));
+  memset(cur, 0, sizeof(t_item_mac));
+  strncpy(cur->mac, mac, MAX_NAME_LEN-1);
+  cur->next = el->head_mac;
+  el->head_mac = cur;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void add_item_el(t_bij_elem *target, int item_type,
+                        char *item_name, int item_num)
+{
+  t_item_el *cur = (t_item_el *) malloc(sizeof(t_item_el));
+  memset(cur, 0, sizeof(t_item_el));
+  cur->item_type = item_type;
+  strncpy(cur->item_name, item_name, MAX_NAME_LEN-1); 
+  cur->item_num = item_num;
+  if (target->head_item)
+    target->head_item->prev = cur;
+  cur->next = target->head_item;
+  target->head_item = cur;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void del_item_el(t_bij_elem *target, int item_type,
+                        char *item_name, int item_num)
+{
+  t_item_mac *nx, *mc;
+  t_item_el *cur = find_item_el(target, item_type, item_name, item_num);
+  if (!cur)
+    KERR("ERROR %s %d %s %d", target->name, item_type, item_name, item_num); 
+  else
+    {
+    mc = cur->head_mac;
+    while(mc)
+      {
+      nx = mc->next;
+      free(mc);
+      mc = nx;
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+
+
+/*****************************************************************************/
+int lan_add_name(char *name, int item_type, char *item_name, int item_num)
 {
   int idx;
   t_bij_elem *target;
@@ -139,20 +207,50 @@ int lan_add_name(char *name, int llid)
     glob_total_elems++;
     if (glob_total_elems >= MAX_LAN)
       KOUT(" ");
-    layout_add_lan(name, llid);
+    layout_add_lan(name, 0);
     msg_lan_add_name(name);
+    add_item_el(target, item_type, item_name, item_num);
     }
   else
+    {
     target = tab_elems[idx];
+    add_item_el(target, item_type, item_name, item_num);
+    }
   target->nb_users += 1;
   return idx;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int lan_del_name(char *name)
+void lan_add_mac(char *name, int item_type,
+                 char *item_name, int item_num, char *mac)
+{
+  int idx;
+  t_bij_elem *target;
+  t_item_el *el;
+  if ((!name) || (!name[0]) || (strlen(name) >= MAX_NAME_LEN))
+    KOUT(" ");
+  idx = find_elem_with_name(name);
+  if (!idx)
+    KERR("ERROR %s %d %s %d %s", name, item_type, item_name, item_num, mac);
+  else
+    {
+    target = tab_elems[idx];
+    el = find_item_el(target, item_type, item_name, item_num);
+    if (!el)
+      KERR("ERROR %s %d %s %d %s", name, item_type, item_name, item_num, mac);
+    else
+      add_item_mac(name, el, mac);
+    ovs_snf_lan_mac_change(name);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int lan_del_name(char *name, int item_type, char *item_name, int item_num)
 {
   int target_idx;
+  t_bij_elem *target;
   if ((!name) || (!name[0]) || (strlen(name) >= MAX_NAME_LEN))
     KOUT(" ");
   target_idx = find_elem_with_name(name);
@@ -160,8 +258,9 @@ int lan_del_name(char *name)
     {
     if (tab_elems[target_idx]->nb_users <= 0)
       KOUT(" ");
+    target = tab_elems[target_idx];
+    del_item_el(target, item_type, item_name, item_num);
     tab_elems[target_idx]->nb_users -= 1;
-
     if (tab_elems[target_idx]->nb_users == 0)
       {
       clownix_free(tab_elems[target_idx], __FUNCTION__);
@@ -173,6 +272,7 @@ int lan_del_name(char *name)
       msg_lan_del_name(name);
       target_idx = 2*MAX_LAN;
       }
+    ovs_snf_lan_mac_change(name);
     }
   return target_idx;
 }
@@ -190,12 +290,16 @@ int lan_get_with_name(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *lan_get_with_num(int num)
+t_item_el *lan_get_head_item(char *name)
 {
-  char *result = NULL;
-  if (tab_elems[num])
-    result = tab_elems[num]->name;
-  return result;
+  int target_idx;
+  t_item_el *cur = NULL;
+  if ((!name) || (!name[0]) || (strlen(name) >= MAX_NAME_LEN))
+    KOUT("%p", name);
+  target_idx = find_elem_with_name(name);
+  if (target_idx)
+    cur = tab_elems[target_idx]->head_item;
+  return cur;
 }
 /*---------------------------------------------------------------------------*/
 

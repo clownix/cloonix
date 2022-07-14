@@ -31,6 +31,7 @@
 #include "ovs_tap.h"
 #include "msg.h"
 #include "lan_to_name.h"
+#include "ovs_snf.h"
 
 
 static t_ovs_tap *g_head_tap;
@@ -57,7 +58,7 @@ static void free_tap(t_ovs_tap *cur)
 {
   cfg_free_obj_id(cur->tap_id);
   if (strlen(cur->lan_added))
-    lan_del_name(cur->lan_added);
+    lan_del_name(cur->lan_added, item_tap, cur->name, 0);
   if (cur->prev)
     cur->prev->next = cur->next;
   if (cur->next)
@@ -81,6 +82,7 @@ static void alloc_tap(int llid, int tid, char *name)
   cur->tap_id = id;
   cur->llid = llid;
   cur->tid = tid;
+  cur->endp_type = endp_type_tapv;
   mc[0] = 0x2;
   mc[1] = 0xFF & rand();
   mc[2] = 0xFF & rand();
@@ -181,12 +183,9 @@ void ovs_tap_resp_msg_tap(int is_ko, int is_add, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int ovs_tap_exists(char *name)
+t_ovs_tap *ovs_tap_exists(char *name)
 {
-  int result = 0;
-  if (find_tap(name))
-    result = 1;
-  return result;
+  return (find_tap(name));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -250,7 +249,7 @@ void ovs_tap_del(int llid, int tid, char *name)
       {
       if (!strlen(cur->lan))
         KERR("ERROR %s %s", name, cur->lan_added);
-      val = lan_del_name(cur->lan_added);
+      val = lan_del_name(cur->lan_added, item_tap, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
         {
@@ -298,7 +297,8 @@ void ovs_tap_add_lan(int llid, int tid, char *name, char *lan)
   else
     {
     strncpy(cur->lan_added, lan, MAX_NAME_LEN);
-    lan_add_name(cur->lan_added, llid);
+    lan_add_name(cur->lan_added, item_tap, name, 0);
+    lan_add_mac(cur->lan_added, item_tap, name, 0, cur->mac);
     cur->llid = llid;
     cur->tid = tid;
     if (msg_send_add_lan_endp(ovsreq_add_tap_lan, name, 0, cur->vhost, lan))
@@ -331,7 +331,7 @@ void ovs_tap_del_lan(int llid, int tid, char *name, char *lan)
       KERR("ERROR: %s %s", name, lan);
     else
       {
-      val = lan_del_name(cur->lan_added);
+      val = lan_del_name(cur->lan_added, item_tap, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       }
     if (val == 2*MAX_LAN)
@@ -376,7 +376,7 @@ t_topo_endp *ovs_tap_translate_topo_endp(int *nb)
       memset(endp[nb_endp].lan.lan, 0, len);
       strncpy(endp[nb_endp].name, cur->name, MAX_NAME_LEN-1);
       endp[nb_endp].num = 0;
-      endp[nb_endp].type = endp_type_ethv;
+      endp[nb_endp].type = cur->endp_type;
       strncpy(endp[nb_endp].lan.lan[0].lan, cur->lan, MAX_NAME_LEN-1);
       endp[nb_endp].lan.nb_lan = 1;
       nb_endp += 1;
@@ -388,15 +388,73 @@ t_topo_endp *ovs_tap_translate_topo_endp(int *nb)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-int  ovs_tap_snf(char *name)
+/*****************************************************************************/
+static void snf_process_started(char *name, int num, char *vhost)
 {
-  int result = 0;
-  KERR("OOOOOOOOOOOOOOOOOO %s", name);
-  return result;
+  t_ovs_tap *cur = find_tap(name);
+
+  if (cur == NULL)
+    KERR("ERROR %s %d", name, num);
+  else
+    {
+    if (strlen(cur->lan))
+      ovs_snf_send_add_snf_lan(name, num, cur->vhost, cur->lan);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+int  ovs_tap_dyn_snf(char *name, int val)
+{
+  int result = -1;
+  t_ovs_tap *cur = find_tap(name);
+  char tap[MAX_NAME_LEN];
+  char *vh;
+
+  if (tap == NULL)
+    KERR("ERROR %s %d", name, val);
+  else
+    {
+    if (val)
+      {
+      if (cur->endp_type == endp_type_taps)
+        KERR("ERROR %s", name);
+      else
+        {
+        cur->del_snf_ethv_sent = 0;
+        cur->endp_type = endp_type_taps;
+        ovs_dyn_snf_start_process(name, 0, item_type_tap,
+                                  cur->vhost, snf_process_started);
+        result = 0;
+        }
+      }
+    else
+      {
+      if (cur->endp_type == endp_type_tapv)
+        KERR("ERROR %s", name);
+      else
+        {
+        cur->endp_type = endp_type_tapv;
+        memset(tap, 0, MAX_NAME_LEN);
+        vh = cur->vhost;
+        snprintf(tap, MAX_NAME_LEN-1, "s%s", vh);
+        if (cur->del_snf_ethv_sent == 0)
+          {
+          cur->del_snf_ethv_sent = 1;
+          if (strlen(cur->lan))
+            {
+            if (ovs_snf_send_del_snf_lan(name, 0, cur->vhost, cur->lan))
+              KERR("ERROR DEL KVMETH %s %s", name, cur->lan);
+            }
+          ovs_dyn_snf_stop_process(tap);
+          }
+        result = 0;
+        }
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void ovs_tap_init(void)

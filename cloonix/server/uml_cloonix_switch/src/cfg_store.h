@@ -103,7 +103,6 @@ int cfg_unset_vm(t_vm *vm);
 /*---------------------------------------------------------------------------*/
 t_vm *find_vm_with_id(int vm_id);
 t_vm   *cfg_get_vm(char *name);
-int cfg_vm_snf(char *name, int num);
 int cfg_get_vm_locked(t_vm *vm);
 void cfg_set_vm_locked(t_vm *vm);
 void cfg_reset_vm_locked(t_vm *vm);

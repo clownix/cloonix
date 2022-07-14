@@ -17,12 +17,14 @@
 /*****************************************************************************/
 typedef struct t_ovs_c2c
 {
+  int must_restart;
   char socket[MAX_PATH_LEN];
   char name[MAX_NAME_LEN];
   char vhost[MAX_NAME_LEN];
   char mac[MAX_NAME_LEN];
   char dist_passwd[MSG_DIGEST_LEN];
   int  destroy_c2c_req;
+  int  del_snf_ethv_sent;
   int  free_c2c_req;
   int count;
   int llid;
@@ -30,11 +32,9 @@ typedef struct t_ovs_c2c
   int c2c_id;
   int closed_count;
   int suid_root_done;
+  int peer_conf_done;
   t_topo_c2c topo;
 
-
-  int cli_llid;
-  int cli_tid;
 
 
   int ref_tid;
@@ -62,7 +62,11 @@ typedef struct t_ovs_c2c
   int destroy_c2c_done;
 
   char lan_added[MAX_NAME_LEN];
+  char lan_waiting[MAX_NAME_LEN];
+  char lan_attached[MAX_NAME_LEN];
+  char must_restart_lan[MAX_NAME_LEN];
 
+  int must_call_snf_process_started;
 
 
 
@@ -79,8 +83,8 @@ void ovs_c2c_sigdiag_resp(int llid, int tid, char *line);
 void ovs_c2c_poldiag_resp(int llid, int tid, char *line);
 void ovs_c2c_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan);
 void ovs_c2c_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan);
-int  ovs_c2c_exists(char *name);
-int  ovs_c2c_snf(char *name);
+t_ovs_c2c *ovs_c2c_exists(char *name);
+int  ovs_c2c_dyn_snf(char *name, int val);
 
 void ovs_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                  char *dist, uint32_t dist_ip, uint16_t dist_port,

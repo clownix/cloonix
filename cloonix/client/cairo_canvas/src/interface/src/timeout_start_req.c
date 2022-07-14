@@ -31,7 +31,19 @@
 t_topo_info *get_current_topo(void);
 
 
-
+/****************************************************************************/
+static void gene_dyn_snf_req(int bank_type, char *name, int num, int on)
+{
+  t_dyn_snf_req *pa;
+  pa = (t_dyn_snf_req *)clownix_malloc(sizeof(t_dyn_snf_req), 12);
+  memset(pa, 0, sizeof(t_dyn_snf_req));
+  pa->bank_type = bank_type;
+  strncpy(pa->name, name, MAX_NAME_LEN-1);
+  pa->num = num;
+  pa->on = on;
+  clownix_timeout_add(1, timer_dyn_snf_req, (void *)pa, NULL, NULL);
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void gene_create_item_req(int bank_type, char *name, char *path,
@@ -94,6 +106,14 @@ void to_cloonix_switch_create_sat(char *name, int endp_type,
   pa->x = x;
   pa->y = y;
   clownix_timeout_add(1, timer_create_item_req, (void *)pa, NULL, NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+void to_cloonix_switch_dyn_snf_req(int bank_type, char *name, int num, int on)
+{
+  gene_dyn_snf_req(bank_type, name, num, on);
 }
 /*--------------------------------------------------------------------------*/
 

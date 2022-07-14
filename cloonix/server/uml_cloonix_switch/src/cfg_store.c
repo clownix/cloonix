@@ -599,6 +599,7 @@ static void fill_topo_nat(t_topo_nat *topo_nat, t_ovs_nat *nat)
 {
   memset(topo_nat, 0, sizeof(t_topo_nat));
   strncpy(topo_nat->name, nat->name, MAX_NAME_LEN);
+  topo_nat->endp_type = nat->endp_type;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -614,6 +615,7 @@ static void fill_topo_tap(t_topo_tap *topo_tap, t_ovs_tap *tap)
 {
   memset(topo_tap, 0, sizeof(t_topo_tap));
   strncpy(topo_tap->name, tap->name, MAX_NAME_LEN);
+  topo_tap->endp_type = tap->endp_type;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -713,11 +715,8 @@ t_topo_info *cfg_produce_topo_info(void)
   t_ovs_c2c *c2c = ovs_c2c_get_first(&nb_c2c);
   t_ovs_tap *tap = ovs_tap_get_first(&nb_tap);
   int nb_endp = nb_endp_cnt+nb_endp_kvm+nb_endp_tap+nb_endp_nat+nb_endp_c2c;
-
-
   t_topo_info *topo = alloc_all_fields(nb_vm, nb_cnt, nb_nat, nb_c2c, nb_tap,
                                        nb_endp, nb_bridges);
-
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
 
   topo->conf_rank = get_conf_rank();
@@ -946,15 +945,6 @@ void cfg_send_vm_evt_qmp_conn_ok(char *name)
   strncpy(vm_evt.name, name, MAX_NAME_LEN-1);
   vm_evt.evt = vm_evt_qmp_conn_ok;
   event_subscriber_send(topo_small_event, (void *) &vm_evt);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cfg_vm_snf(char *name, int num)
-{
-  int result = 0;
-  KERR("OOOOOOOOOOOOOOOO %s %d", name, num);
-  return result;
 }
 /*---------------------------------------------------------------------------*/
 

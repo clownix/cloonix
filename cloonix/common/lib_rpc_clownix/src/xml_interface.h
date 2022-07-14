@@ -118,6 +118,13 @@
                          "  <status> %d </status>\n"\
                          "</c2c_ping>"
 
+#define COLOR_ITEM       "<color_item>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <color> %d </color>\n"\
+                         "</color_item>"
+
+
 /*---------------------------------------------------------------------------*/
 #define HOP_GET_LIST_NAME    "<hop_get_list_name>\n"\
                              "  <tid> %d </tid>\n"\
@@ -219,9 +226,11 @@
                            "  name:%s \n"\
                            "</slowperiodic_spic>"
 /*---------------------------------------------------------------------------*/
-#define ADD_VM_O         "<add_vm>\n"\
+#define ADD_KVM_O        "<add_kvm>\n"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
+                         "  <vm_id> %d </vm_id>\n"\
+                         "  <color> %d </color>\n"\
                          "  <vm_config_flags> %d </vm_config_flags>\n"\
                          "  <vm_config_param> %d </vm_config_param>\n"\
                          "  <mem> %d </mem>\n"\
@@ -235,19 +244,21 @@
                          "  <mac> %02X %02X %02X %02X %02X %02X </mac>\n"\
                          "</eth_table>"
 
-#define ADD_VM_C         "  <linux_kernel> %s </linux_kernel>\n"\
+#define ADD_KVM_C        "  <linux_kernel> %s </linux_kernel>\n"\
                          "  <rootfs_input> %s </rootfs_input>\n"\
                          "  <install_cdrom> %s </install_cdrom>\n"\
                          "  <added_cdrom> %s </added_cdrom>\n"\
                          "  <added_disk> %s </added_disk>\n"\
                          "  <p9_host_share> %s </p9_host_share>\n"\
-                         "</add_vm>"
+                         "</add_kvm>"
 /*---------------------------------------------------------------------------*/
 #define ADD_CNT_O         "<add_cnt>\n"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
-                         "  <ping_ok> %d </ping_ok>\n"\
+                         "  <is_persistent> %d </is_persistent>\n"\
                          "  <vm_id> %d </vm_id>\n"\
+                         "  <color> %d </color>\n"\
+                         "  <ping_ok> %d </ping_ok>\n"\
                          "  <nb_tot_eth> %d </nb_tot_eth>"
 
 #define ADD_CNT_C        "<customer_launch> %s </customer_launch>\n"\
@@ -365,11 +376,11 @@
 #define EVENT_SYS_C \
                       "</system_info>"
 /*---------------------------------------------------------------------------*/
-#define TOPO_SMALL_EVENT_SUB      "<topo_small_event_sub>\n"\
+#define TOPO_SMALL_EVENT_SUB  "<topo_small_event_sub>\n"\
                               "  <tid> %d </tid>\n"\
                               "</topo_small_event_sub>"
 
-#define TOPO_SMALL_EVENT_UNSUB    "<topo_small_event_unsub>\n"\
+#define TOPO_SMALL_EVENT_UNSUB  "<topo_small_event_unsub>\n"\
                               "  <tid> %d </tid>\n"\
                               "</topo_small_event_unsub>"
 
@@ -408,6 +419,8 @@
 
 #define EVENT_TOPO_KVM_O      "<kvm>\n"\
                               "  name: %s \n"\
+                              "  vm_id: %d \n"\
+                              "  color: %d \n"\
                               "  install_cdrom: %s \n"\
                               "  added_cdrom: %s \n"\
                               "  added_disk: %s \n"\
@@ -415,7 +428,7 @@
                               "  linux_kernel: %s \n"\
                               "  rootfs_used: %s \n"\
                               "  rootfs_backing: %s \n"\
-                              "  vm_id: %d vm_config_flags: %d vm_config_param: %d \n"\
+                              "  vm_config_flags: %d vm_config_param: %d \n"\
                               "  mem: %d cpu: %d nb_tot_eth: %d "
 
 #define EVENT_TOPO_KVM_C      "</kvm>\n"
@@ -423,9 +436,11 @@
 
 #define EVENT_TOPO_CNT_O      "<cnt>\n"\
                               "  name: %s \n"\
+                              "  is_persistent: %d \n"\
+                              "  vm_id: %d \n"\
+                              "  color: %d \n"\
                               "  image: %s \n"\
                               "  ping_ok: %d \n"\
-                              "  vm_id: %d \n"\
                               "  nb_tot_eth: %d "
 
 #define EVENT_TOPO_CNT_C      "  <customer_launch> %s </customer_launch>\n"\
@@ -433,6 +448,7 @@
                         
 #define EVENT_TOPO_C2C        "<c2c>\n"\
                               "  name: %s \n"\
+                              "  endp_type: %d \n"\
                               "  dist_cloon: %s \n"\
                               "  lan: %s \n"\
                               "  local_is_master: %d \n"\
@@ -464,10 +480,12 @@
 
 #define EVENT_TOPO_NAT        "<nat>\n"\
                               "  name:   %s \n"\
+                              "  endp_type: %d \n"\
                               "</nat>\n"
 
 #define EVENT_TOPO_TAP        "<tap>\n"\
                               "  name:   %s \n"\
+                              "  endp_type: %d \n"\
                               "</tap>\n"
 
 #define EVENT_TOPO_PHY        "<phy>\n"\

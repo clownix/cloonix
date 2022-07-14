@@ -45,7 +45,6 @@ while ! cloonix_ssh $NET ${NAME} "echo" 2>/dev/null; do
   echo ${NAME} not ready, waiting 5 sec
   sleep 5
 done
-set -e
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "ip link set eth0 up"
 cloonix_ssh ${NET} ${NAME} "systemctl restart wickedd-dhcp4.service"
@@ -64,14 +63,12 @@ cloonix_ssh ${NET} ${NAME} "zypper ar  -f -c ${UPDATE} repo-update"
 cloonix_ssh ${NET} ${NAME} "zypper --gpg-auto-import-keys lr -u"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "zypper cc -a"
-set +e
 cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
 cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks dist-upgrade --allow-vendor-change"
 cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
 cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks dist-upgrade --allow-vendor-change"
 cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
 cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks dist-upgrade --allow-vendor-change"
-set -e
 
 cloonix_ssh ${NET} ${NAME} "grub2-mkconfig --output=/boot/grub2/grub.cfg"
 cloonix_ssh ${NET} ${NAME} "sync"

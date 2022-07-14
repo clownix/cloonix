@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void wireshark_launch(int is_vhost, int vm_id, char *name, int num);
+void wireshark_launch(int vm_id, char *name, int num);
 void edge_ctx_menu(t_bank_item *bitem);
 void node_ctx_menu(t_bank_item *bitem);
 void cnt_ctx_menu(t_bank_item *bitem);

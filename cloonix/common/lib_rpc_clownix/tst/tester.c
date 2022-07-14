@@ -98,6 +98,8 @@ static int count_c2c_peer_create = 0;
 static int count_c2c_peer_conf = 0;
 static int count_c2c_peer_ping = 0;
 
+static int count_color_item = 0;
+
 static int count_nat_add = 0;
 static int count_phy_add = 0;
 static int count_tap_add = 0;
@@ -172,6 +174,8 @@ static void print_all_count(void)
   printf("%d\n", count_c2c_peer_create);
   printf("%d\n", count_c2c_peer_conf);
   printf("%d\n", count_c2c_peer_ping);
+
+  printf("%d\n", count_color_item);
 
   printf("%d\n", count_tap_add);
   printf("%d\n", count_cnt_add);
@@ -282,6 +286,11 @@ static int topo_cnt_diff(t_topo_cnt *icnt, t_topo_cnt *cnt)
 {
   int k, l, result = 0;
   if (cnt->vm_id != icnt->vm_id)
+    {
+    KERR("%d %d", cnt->vm_id, icnt->vm_id);
+    result = -1;
+    }
+  else if (cnt->is_persistent != icnt->is_persistent)
     {
     KERR("%d %d", cnt->vm_id, icnt->vm_id);
     result = -1;
@@ -473,6 +482,7 @@ static void random_cnt(t_topo_cnt *cnt)
   cnt->nb_tot_eth = my_rand(MAX_ETH_VM);
   cnt->ping_ok = my_rand(20);
   cnt->vm_id = my_rand(120);
+  cnt->is_persistent = my_rand(120);
   for (k=0; k < cnt->nb_tot_eth; k++)
     {
     cnt->eth_table[k].endp_type = (rand() & 0x04) + 1;
@@ -2748,7 +2758,32 @@ void recv_c2c_peer_ping(int llid, int itid, char *ic2c_name, int istatus)
 }
 /*---------------------------------------------------------------------------*/
 
-
+/*****************************************************************************/
+void recv_color_item(int llid, int itid, char *iname, int icolor)
+{
+  static char name[MAX_NAME_LEN];
+  static int tid, color;
+  if (i_am_client)
+    {
+    if (count_color_item)
+      {
+      if (strcmp(iname, name))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (icolor != color)
+        KOUT(" ");
+      }
+    tid = rand();
+    color = rand();
+    random_choice_str(name, MAX_NAME_LEN);
+    send_color_item(llid, tid, name, color);
+    }
+  else
+    send_color_item(llid, itid, iname, icolor);
+  count_color_item++;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 /* FUNCTION: send_first_burst                                              */
@@ -2814,6 +2849,8 @@ static void send_first_burst(int llid)
   recv_c2c_peer_create(llid, 0, NULL, 0, NULL, NULL);
   recv_c2c_peer_conf(llid, 0, NULL, 0, NULL, NULL, 0,0,0,0);
   recv_c2c_peer_ping(llid, 0, NULL, 0);
+
+  recv_color_item(llid, 0, NULL, 0);
 
   recv_nat_add(llid, 0, NULL);
   recv_phy_add(llid, 0, NULL);

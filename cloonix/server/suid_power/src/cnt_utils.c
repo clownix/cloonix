@@ -39,6 +39,7 @@ void clean_all_llid(void);
 char *get_net_name(void);
 
 static char losetup_bin[MAX_PATH_LEN];
+static char ln_bin[MAX_PATH_LEN];
 static char mount_bin[MAX_PATH_LEN];
 static char umount_bin[MAX_PATH_LEN];
 
@@ -206,14 +207,22 @@ static void my_cp_and_sed_file(char *dsrc, char *ddst, char *name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char *get_config_json(char *rootfs_path, char *nspace_path)
+static char *get_config_json(char *rootfs, char *nspace, int is_persistent)
 {
   char *buf;
-  int len = strlen(CONFIG_JSON);
+  int len = strlen(CONFIG_JSON) + (5 * strlen(CONFIG_JSON_CAPA));
+  char *starter;
+  if (is_persistent)
+    starter = "\"sleep\",\"30000\"\n";
+  else
+    starter = "\"/usr/bin/cloonix_init_starter.sh\"\n";
   len += (2 * MAX_PATH_LEN);
   buf = (char *) malloc(len);
   memset(buf, 0, len);
-  snprintf(buf, len-1, CONFIG_JSON, rootfs_path, nspace_path); 
+  snprintf(buf, len-1, CONFIG_JSON, starter,
+                                    CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
+                                    CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
+                                    CONFIG_JSON_CAPA, rootfs, nspace); 
   return buf;
 }
 /*--------------------------------------------------------------------------*/
@@ -418,7 +427,7 @@ static void check_netns_and_clean(char *name, char *nspace,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int cnt_utils_create_overlay(char *path, char *lower)
+int cnt_utils_create_overlay(char *path, char *lower, int is_persistent)
 {
   int result = -1;
   char cmd[2*MAX_PATH_LEN];
@@ -429,13 +438,20 @@ int cnt_utils_create_overlay(char *path, char *lower)
   else
     {
     memset(cmd, 0, 2*MAX_PATH_LEN);
-    snprintf(cmd, 2*MAX_PATH_LEN-1,
-    "%s none -t overlay -o lowerdir=%s,upperdir=%s/%s,workdir=%s/%s %s/%s 2>&1",
-    mount, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
-    if (execute_cmd(cmd, 1))
-      KERR("%s", cmd);
-    else
+    if (is_persistent)
+      {
       result = 0;
+      }
+    else
+      {
+      snprintf(cmd, 2*MAX_PATH_LEN-1,
+      "%s none -t overlay -o lowerdir=%s,upperdir=%s/%s,workdir=%s/%s %s/%s 2>&1",
+      mount, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
+      if (execute_cmd(cmd, 1))
+        KERR("%s", cmd);
+      else
+        result = 0;
+      }
     }
   return result;
 }
@@ -473,11 +489,12 @@ int cnt_utils_create_crun_create(char *cnt_dir, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int cnt_utils_create_config_json(char *path, char *rootfs, char *nspace)
+int cnt_utils_create_config_json(char *path, char *rootfs,
+                                 char *nspace, int is_persistent)
 {
   int len, result;
   char json_path[MAX_PATH_LEN];
-  char *buf = get_config_json(rootfs, nspace);
+  char *buf = get_config_json(rootfs, nspace, is_persistent);
   memset(json_path, 0, MAX_PATH_LEN);
   snprintf(json_path, MAX_PATH_LEN-1, "%s/config.json", path); 
   len = strlen(buf);
@@ -508,7 +525,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
       {
       mac = eth_mac[i].mac;
       snprintf(cmd, MAX_PATH_LEN-1,
-      "%s link add name %s%d_%d type veth peer name cnt%d "
+      "%s link add name %s%d_%d type veth peer name tmpcnt%d "
       "address %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx  2>&1",
       SBIN_IP, OVS_BRIDGE_PORT, vm_id, i, i, mac[0], mac[1], mac[2],
       mac[3], mac[4], mac[5]);
@@ -519,7 +536,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
         break;
         }
       snprintf(cmd, MAX_PATH_LEN-1,
-      "%s link set cnt%d netns %s 2>&1", SBIN_IP, i, nspace);
+      "%s link set tmpcnt%d netns %s 2>&1", SBIN_IP, i, nspace);
       if (execute_cmd(cmd, 1))
         {
         KERR("ERROR %s", cmd);
@@ -537,7 +554,18 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
         }
 
       snprintf(cmd, MAX_PATH_LEN-1,
-      "%s netns exec %s %s link set cnt%d up 2>&1",SBIN_IP,nspace,SBIN_IP,i);
+      "%s netns exec %s %s link set tmpcnt%d name eth%d 2>&1",
+      SBIN_IP, nspace, SBIN_IP, i, i);
+      if (execute_cmd(cmd, 1))
+        {
+        KERR("ERROR %s", cmd);
+        result = -1;
+        break;
+        }
+
+      snprintf(cmd, MAX_PATH_LEN-1,
+      "%s netns exec %s %s link set eth%d up 2>&1",
+      SBIN_IP, nspace, SBIN_IP, i);
       if (execute_cmd(cmd, 1))
         {
         KERR("ERROR %s", cmd);
@@ -732,6 +760,12 @@ void cnt_utils_init(void)
     strcpy(losetup_bin, "/bin/losetup");
   else
     KERR("ERROR ERROR ERROR losetup binary not found");
+  if (!access("/sbin/ln", F_OK))
+    strcpy(ln_bin, "/sbin/ln");
+  else if (!access("/bin/ln", F_OK))
+    strcpy(ln_bin, "/bin/ln");
+  else
+    KERR("ERROR ERROR ERROR ln binary not found");
   if (!access("/sbin/mount", F_OK))
     strcpy(mount_bin, "/sbin/mount");
   else if (!access("/bin/mount", F_OK))

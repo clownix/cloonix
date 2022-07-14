@@ -79,7 +79,7 @@ void timer_create_item_node_req(void *data)
     if (cust_vm->kvm_used_rootfs[0])
       {
       vm_config_flags = get_vm_config_flags(cust_vm, &natplug);
-      set_node_layout_x_y(cust_vm->name, 0, pa->x, pa->y, 0, 
+      set_node_layout_x_y(cust_vm->name, pa->x, pa->y, 0, 
                           pa->tx, pa->ty, thidden_on_graph);
       client_add_vm(0, callback_end, cust_vm->name,
                     cust_vm->nb_tot_eth, cust_vm->eth_tab,
@@ -95,6 +95,7 @@ void timer_create_item_node_req(void *data)
     get_custom_cnt(&cust_cnt);
     memset(&cust_topo_cnt, 0, sizeof(t_topo_cnt));
     strncpy(cust_topo_cnt.name, cust_cnt->name, MAX_NAME_LEN-1);
+    cust_topo_cnt.is_persistent = cust_cnt->is_persistent;
     cust_topo_cnt.nb_tot_eth = cust_cnt->nb_tot_eth;
     memcpy(cust_topo_cnt.eth_table, cust_cnt->eth_table,
            cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));
@@ -120,7 +121,7 @@ void timer_create_item_req(void *data)
       from_cloonix_switch_create_lan(pa->name);
       break;
     case bank_type_sat:
-      if (pa->endp_type == endp_type_c2c)
+      if (pa->endp_type == endp_type_c2cv)
         {
         if ((!strlen(pa->name)) || (!strlen(c2c->dist_cloon)))
           KOUT(" ");
@@ -131,9 +132,9 @@ void timer_create_item_req(void *data)
         }
       else if (pa->endp_type == endp_type_a2b)
         client_add_a2b(0, callback_end, pa->name);
-      else if (pa->endp_type == endp_type_tap)
+      else if (pa->endp_type == endp_type_tapv)
         client_add_tap(0, callback_end, pa->name);
-      else if (pa->endp_type == endp_type_nat)
+      else if (pa->endp_type == endp_type_natv)
         client_add_nat(0, callback_end, pa->name);
       else if (pa->endp_type == endp_type_phy)
         client_add_phy(0, callback_end, pa->name);
@@ -161,6 +162,14 @@ void timer_delete_edge_req(void *data)
 {
   t_edge_req *pa = (t_edge_req *) data;
   client_del_lan_endp(0, callback_end, pa->name, pa->num, pa->lan);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void timer_dyn_snf_req(void *data)
+{
+  t_dyn_snf_req *pa = (t_dyn_snf_req *) data;
+  client_add_snf(0, callback_end, pa->name, pa->num, pa->on);
 }
 /*--------------------------------------------------------------------------*/
 

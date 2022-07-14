@@ -58,7 +58,6 @@ typedef struct t_ethv_cnx
   int attached_lan_ok;
   int llid;
   int tid;
-  int del_snf_ethv_lan_sent;
   int del_snf_ethv_sent;
   struct t_ethv_cnx *prev;
   struct t_ethv_cnx *next;
@@ -117,7 +116,7 @@ static void ethv_free(char *name, int num)
     if (strlen(cur->lan_added))
       {
       KERR("ERROR %s %d %s", name, num, cur->lan_added);
-      lan_del_name(cur->lan_added);
+      lan_del_name(cur->lan_added, item_kvm, name, num);
       }
     if (cur->prev)
       cur->prev->next = cur->next;
@@ -250,27 +249,22 @@ void kvm_del(int llid, int tid, char *name, int num,
       if ((endp_type == endp_type_eths) &&
           (cur->del_snf_ethv_sent == 0))
         {
+        cur->del_snf_ethv_sent = 1;
         *can_delete = 0;
-        if ((strlen(cur->lan) && (cur->del_snf_ethv_lan_sent == 0)))
+        if (strlen(cur->lan))
           {
-          cur->del_snf_ethv_lan_sent = 1;
-          if (msg_send_del_snf_lan(name, num, cur->vhost, cur->lan))
+          if (ovs_snf_send_del_snf_lan(name, num, cur->vhost, cur->lan))
             KERR("ERROR SNF %s %d %s %s", name, num, cur->vhost, cur->lan);
           }
-        else if ((!msg_ovsreq_exists_vhost_lan(cur->vhost, cur->lan)) &&
-                 (cur->del_snf_ethv_sent == 0))
-          {
-          cur->del_snf_ethv_sent = 1;
-          memset(tap, 0, MAX_NAME_LEN);
-          vh = cur->vhost;
-          snprintf(tap, MAX_NAME_LEN-1, "s%s", vh);
-          ovs_snf_start_stop_process(name, num, cur->vhost, tap, 0, NULL);
-          }
+        memset(tap, 0, MAX_NAME_LEN);
+        vh = cur->vhost;
+        snprintf(tap, MAX_NAME_LEN-1, "s%s", vh);
+        ovs_dyn_snf_stop_process(tap);
         }
       else if (strlen(cur->lan_added))
         {
         *can_delete = 0;
-        val = lan_del_name(cur->lan_added);
+        val = lan_del_name(cur->lan_added, item_kvm, name, num);
         if (val != 2*MAX_LAN)
           {
           if (msg_send_del_lan_endp(ovsreq_del_kvm_lan, 
@@ -312,7 +306,7 @@ void kvm_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
       if ((cur->endp_type == endp_type_eths) &&
           (strlen(cur->lan)))
         {
-        msg_send_add_snf_lan(cur->name, cur->num, cur->vhost, cur->lan);
+        ovs_snf_send_add_snf_lan(cur->name, cur->num, cur->vhost, cur->lan);
         }
       }
     cur->waiting_ack_add_lan = 0;
@@ -335,7 +329,7 @@ void kvm_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan)
         (strlen(cur->lan)) &&
         (cur->del_snf_ethv_sent == 0))
       {
-      msg_send_del_snf_lan(name, num, cur->vhost, cur->lan);
+      ovs_snf_send_del_snf_lan(name, num, cur->vhost, cur->lan);
       }
     if (cur->attached_lan_ok == 1)
       {
@@ -352,11 +346,13 @@ void kvm_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int kvm_add_lan(int llid, int tid, char *name, int num, char *lan,
-                     int endp_type)
+int kvm_add_lan(int llid, int tid, char *name, int num,
+                     char *lan, int endp_type, t_eth_table *eth_tab)
 {
   int result = -1;
   t_ethv_cnx *cur;
+  char *mac;
+  char str_mac[MAX_NAME_LEN];
   if ((endp_type == endp_type_eths) ||
       (endp_type == endp_type_ethv))
     {
@@ -372,7 +368,13 @@ int kvm_add_lan(int llid, int tid, char *name, int num, char *lan,
     else
       {
       strncpy(cur->lan_added, lan, MAX_NAME_LEN);
-      lan_add_name(cur->lan_added, llid);
+      lan_add_name(cur->lan_added, item_kvm, name, num);
+      mac = eth_tab[num].mac_addr;
+      memset(str_mac, 0, MAX_NAME_LEN);
+      snprintf(str_mac, MAX_NAME_LEN-1,
+               "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      lan_add_mac(cur->lan_added, item_kvm, name, num, str_mac);
       if (msg_send_add_lan_endp(ovsreq_add_kvm_lan, name, num,
                                 cur->vhost, lan))
         KERR("ERROR ADD LAN %s %d %s", name, num, lan);
@@ -425,7 +427,7 @@ int kvm_del_lan(int llid, int tid, char *name, int num, char *lan,
         KERR("ERROR: %s %d %s", name, num, lan);
       else
         {
-        val = lan_del_name(cur->lan_added);
+        val = lan_del_name(cur->lan_added, item_kvm, name, num);
         memset(cur->lan_added, 0, MAX_NAME_LEN);
         }
       if (val != 2*MAX_LAN)
@@ -480,6 +482,90 @@ t_topo_endp *kvm_translate_topo_endp(int *nb)
   return endp;
 }
 /*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void snf_process_started(char *name, int num, char *vhost)
+{
+  t_ethv_cnx *cur  = ethv_find(name, num);
+  char *eth_name;
+  t_vm *vm = cfg_get_vm(name);
+  t_eth_table *eth_tab;
+
+  if (vm == NULL)
+    KERR("ERROR %s %d", name, num);
+  else if (cur == NULL)
+    KERR("ERROR %s %d", name, num);
+  else
+    {
+    eth_tab = vm->kvm.eth_table;
+    if (cur->attached_lan_ok == 1)
+      {
+      eth_name = eth_tab[num].vhost_ifname;
+      ovs_snf_send_add_snf_lan(name, num, eth_name, cur->lan);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int kvm_dyn_snf(char *name, int num, int val)
+{
+  char *eth_name;
+  int result = -1;
+  t_ethv_cnx *cur  = ethv_find(name, num);
+  char tap[MAX_NAME_LEN];
+  t_vm *vm = cfg_get_vm(name);
+  t_eth_table *eth_tab;
+
+  if (vm == NULL)
+    KERR("ERROR %s %d", name, num);
+  else if (cur == NULL)
+    KERR("ERROR %s %d", name, num);
+  else
+    {
+    eth_tab = vm->kvm.eth_table;
+    if (val)
+      {
+      if (eth_tab[num].endp_type == endp_type_eths)
+        KERR("ERROR %s %d", name, num);
+      else
+        {
+        eth_name = eth_tab[num].vhost_ifname;
+        eth_tab[num].endp_type = endp_type_eths;
+        cur->endp_type = endp_type_eths;
+        ovs_dyn_snf_start_process(name, num, item_type_keth,
+                                  eth_name, snf_process_started);
+        result = 0;
+        }
+      }
+    else
+      {
+      if (eth_tab[num].endp_type == endp_type_ethv)
+        KERR("ERROR %s %d", name, num);
+      else
+        {
+        eth_name = eth_tab[num].vhost_ifname;
+        eth_tab[num].endp_type = endp_type_ethv;
+        cur->endp_type = endp_type_ethv;
+        memset(tap, 0, MAX_NAME_LEN);
+        snprintf(tap, MAX_NAME_LEN-1, "s%s", eth_name);
+        if (cur->del_snf_ethv_sent == 0)
+          {
+          cur->del_snf_ethv_sent = 1;
+          if (strlen(cur->lan))
+            {
+            if (ovs_snf_send_del_snf_lan(name, num, eth_name, cur->lan))
+              KERR("ERROR DEL KVMETH %s %d %s %s", name,num,eth_name,cur->lan);
+            }
+          ovs_dyn_snf_stop_process(tap);
+          }
+        result = 0;
+        }
+      }
+    }
+  return result;
+} 
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void kvm_init(void)

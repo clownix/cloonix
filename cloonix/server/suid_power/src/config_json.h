@@ -1,3 +1,46 @@
+#define CONFIG_JSON_CAPA "\"CAP_CHOWN\",\n"\
+"                         \"CAP_DAC_OVERRIDE\",\n"\
+"                         \"CAP_DAC_READ_SEARCH\",\n"\
+"                         \"CAP_FOWNER\",\n"\
+"                         \"CAP_FSETID\",\n"\
+"                         \"CAP_KILL\",\n"\
+"                         \"CAP_SETGID\",\n"\
+"                         \"CAP_SETUID\",\n"\
+"                         \"CAP_SETPCAP\",\n"\
+"                         \"CAP_LINUX_IMMUTABLE\",\n"\
+"                         \"CAP_NET_BIND_SERVICE\",\n"\
+"                         \"CAP_NET_BROADCAST\",\n"\
+"                         \"CAP_NET_ADMIN\",\n"\
+"                         \"CAP_NET_RAW\",\n"\
+"                         \"CAP_IPC_LOCK\",\n"\
+"                         \"CAP_IPC_OWNER\",\n"\
+"                         \"CAP_SYS_MODULE\",\n"\
+"                         \"CAP_SYS_RAWIO\",\n"\
+"                         \"CAP_SYS_CHROOT\",\n"\
+"                         \"CAP_SYS_PTRACE\",\n"\
+"                         \"CAP_SYS_PACCT\",\n"\
+"                         \"CAP_SYS_ADMIN\",\n"\
+"                         \"CAP_SYS_BOOT\",\n"\
+"                         \"CAP_SYS_NICE\",\n"\
+"                         \"CAP_SYS_RESOURCE\",\n"\
+"                         \"CAP_SYS_TIME\",\n"\
+"                         \"CAP_SYS_TTY_CONFIG\",\n"\
+"                         \"CAP_MKNOD\",\n"\
+"                         \"CAP_LEASE\",\n"\
+"                         \"CAP_AUDIT_WRITE\",\n"\
+"                         \"CAP_AUDIT_CONTROL\",\n"\
+"                         \"CAP_SETFCAP\",\n"\
+"                         \"CAP_MAC_OVERRIDE\",\n"\
+"                         \"CAP_MAC_ADMIN\",\n"\
+"                         \"CAP_SYSLOG\",\n"\
+"                         \"CAP_WAKE_ALARM\",\n"\
+"                         \"CAP_BLOCK_SUSPEND\",\n"\
+"                         \"CAP_AUDIT_READ\",\n"\
+"                         \"CAP_PERFMON\",\n"\
+"                         \"CAP_BPF\",\n"\
+"                         \"CAP_CHECKPOINT_RESTORE\"\n"
+
+
 #define CONFIG_JSON "  {\n"\
 "	\"ociVersion\": \"1.0.0\",\n"\
 "	\"process\": {\n"\
@@ -7,7 +50,7 @@
 "			\"gid\": 0\n"\
 "		},\n"\
 "               \"args\": [\n"\
-"                       \"/usr/bin/cloonix_init_starter.sh\"\n"\
+"                       %s\n"\
 "               ],\n"\
 "		\"env\": [\n"\
 "			\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n"\
@@ -16,59 +59,19 @@
 "		\"cwd\": \"/\",\n"\
 "		\"capabilities\": {\n"\
 "			\"bounding\": [\n"\
-"				\"CAP_AUDIT_WRITE\",\n"\
-"				\"CAP_KILL\",\n"\
-"				\"CAP_SYS_ADMIN\",\n"\
-"                               \"CAP_IPC_LOCK\",\n"\
-"				\"CAP_MKNOD\",\n"\
-"				\"CAP_NET_ADMIN\",\n"\
-"				\"CAP_NET_RAW\",\n"\
-"				\"CAP_NET_BROADCAST\",\n"\
-"				\"CAP_NET_BIND_SERVICE\"\n"\
+"				%s\n"\
 "			],\n"\
 "			\"effective\": [\n"\
-"				\"CAP_AUDIT_WRITE\",\n"\
-"				\"CAP_KILL\",\n"\
-"				\"CAP_SYS_ADMIN\",\n"\
-"                               \"CAP_IPC_LOCK\",\n"\
-"				\"CAP_MKNOD\",\n"\
-"				\"CAP_NET_ADMIN\",\n"\
-"				\"CAP_NET_RAW\",\n"\
-"				\"CAP_NET_BROADCAST\",\n"\
-"				\"CAP_NET_BIND_SERVICE\"\n"\
+"				%s\n"\
 "			],\n"\
 "			\"inheritable\": [\n"\
-"				\"CAP_AUDIT_WRITE\",\n"\
-"				\"CAP_KILL\",\n"\
-"				\"CAP_SYS_ADMIN\",\n"\
-"                               \"CAP_IPC_LOCK\",\n"\
-"				\"CAP_MKNOD\",\n"\
-"				\"CAP_NET_ADMIN\",\n"\
-"				\"CAP_NET_RAW\",\n"\
-"				\"CAP_NET_BROADCAST\",\n"\
-"				\"CAP_NET_BIND_SERVICE\"\n"\
+"				%s\n"\
 "			],\n"\
 "			\"permitted\": [\n"\
-"				\"CAP_AUDIT_WRITE\",\n"\
-"				\"CAP_KILL\",\n"\
-"				\"CAP_SYS_ADMIN\",\n"\
-"                               \"CAP_IPC_LOCK\",\n"\
-"				\"CAP_MKNOD\",\n"\
-"				\"CAP_NET_ADMIN\",\n"\
-"				\"CAP_NET_RAW\",\n"\
-"				\"CAP_NET_BROADCAST\",\n"\
-"				\"CAP_NET_BIND_SERVICE\"\n"\
+"				%s\n"\
 "			],\n"\
 "			\"ambient\": [\n"\
-"				\"CAP_AUDIT_WRITE\",\n"\
-"				\"CAP_KILL\",\n"\
-"				\"CAP_SYS_ADMIN\",\n"\
-"                               \"CAP_IPC_LOCK\",\n"\
-"				\"CAP_MKNOD\",\n"\
-"				\"CAP_NET_ADMIN\",\n"\
-"				\"CAP_NET_RAW\",\n"\
-"				\"CAP_NET_BROADCAST\",\n"\
-"				\"CAP_NET_BIND_SERVICE\"\n"\
+"				%s\n"\
 "			]\n"\
 "		},\n"\
 "		\"rlimits\": [\n"\
@@ -86,6 +89,12 @@
 "	},\n"\
 "	\"hostname\": \"crun\",\n"\
 "	\"mounts\": [\n"\
+"               {\n"\
+"                       \"destination\": \"/lib/modules\",\n"\
+"                       \"type\": \"none\",\n"\
+"                       \"source\": \"/lib/modules\",\n"\
+"                       \"options\": [\"rbind\",\"ro\"]\n"\
+"               },\n"\
 "		{\n"\
 "			\"destination\": \"/proc\",\n"\
 "			\"type\": \"proc\",\n"\
@@ -162,7 +171,20 @@
 "		}\n"\
 "	],\n"\
 "	\"linux\": {\n"\
+"		\"device\": [\n"\
+"			{\n"\
+"				\"path\": \"/dev/net/tun\",\n"\
+"				\"type\": \"c\",\n"\
+"				\"major\": 10,\n"\
+"				\"minor\": 200,\n"\
+"				\"fileMode\": 438,\n"\
+"				\"uid\": 0,\n"\
+"				\"gid\": 0\n"\
+"			}\n"\
+"		],\n"\
 "		\"resources\": {\n"\
+"				\"allow\": true,\n"\
+"				\"access\": \"rwm\"\n"\
 "		},\n"\
 "		\"namespaces\": [\n"\
 "			{\n"\

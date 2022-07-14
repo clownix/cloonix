@@ -194,12 +194,11 @@ void wrap_send_c2c_peer_create(t_ovs_c2c *cur, int is_ack)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void wrap_send_c2c_peer_conf(t_ovs_c2c *cur, int is_ack)
+int wrap_send_c2c_peer_conf(t_ovs_c2c *cur, int is_ack)
 {
   char *locnet = cfg_get_cloonix_name();
-  if (!msg_exist_channel(cur->peer_llid))
-    KERR("ERROR %s %s", locnet, cur->name);
-  else
+  int result = -1;
+  if (msg_exist_channel(cur->peer_llid))
     {
     locnet = cfg_get_cloonix_name();  
     if (cur->topo.local_is_master)
@@ -218,7 +217,9 @@ void wrap_send_c2c_peer_conf(t_ovs_c2c *cur, int is_ack)
                          cur->topo.loc_udp_ip, cur->topo.dist_udp_ip,
                          cur->topo.loc_udp_port, cur->topo.dist_udp_port);
       }
+    result = 0;
     }
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 

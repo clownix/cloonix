@@ -139,5 +139,19 @@ Make wireshark usable by non-root user, on debian the way to go is::
     sudo dpkg-reconfigure  wireshark
     sudo adduser ${USER} wireshark
 
+Or just set the suid bit of /usr/bin/dumpcap::
 
+    chown root:root /usr/bin/dumpcap
+    chmod +s /usr/bin/dumpcap
+    chmod +x /usr/bin/dumpcap
+
+
+
+Sudo configuration for containers
+=================================
+
+you need the sudo program to elevate privileges to root level with no password for
+crun control, you have to open as root the /etc/sudoers file and put in the
+"# User privilege specification" section:
+<user>  ALL=(ALL:ALL) NOPASSWD: ALL
 

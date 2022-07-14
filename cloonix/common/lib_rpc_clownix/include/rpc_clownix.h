@@ -385,4 +385,7 @@ void send_c2c_peer_ping(int llid, int tid, char *c2c_name, int status);
 
 void recv_c2c_peer_ping(int llid, int tid, char *c2c_name, int status);
 void doors_io_basic_tx_set(t_llid_tx llid_tx);
+
+void send_color_item(int llid, int tid, char *name, int color);
+void recv_color_item(int llid, int tid, char *name, int color);
 /*---------------------------------------------------------------------------*/

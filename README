@@ -1,22 +1,20 @@
 -----------------------------------------------------------------------------
-AGPLv3 tool to create networks of kvm virtual machines.
+AGPLv3 tool to create networks of kvm virtual machines or crun containers
+connected through the openvswitch software.
 See directory cloonix for the LICENCE
-See clownix.net for a documentation (which is not up to date).
-http://clownix.net/doc_stored/build-23-00/html/index.html doc.
+See clownix.net for a documentation (usually not up to date).
+http://clownix.net/doc_stored/build-24-00/html/index.html doc.
 
-NOTE: The version 23-00 has BIG CHANGES: dpdk has been erased from cloonix.
-      The openvswitch associated to vhost interfaces is fast enough.
-
-NOTE: From this version, qemu-guest-agent sometimes called qemu-ga
-      must be installed inside the guests to have the best of cloonix.
+NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
+      inside the kvm guests to have the best of cloonix.
 
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-23-00
+http://clownix.net/downloads/cloonix-24-00
 
 -----------------------------------------------------------------------------
-COMPILED AND TESTED ON:
+THIS SOFTWARE HAS BEEN COMPILED AND TESTED ON:
 
             jammy   (ubuntu 22.04),
             impish  (ubuntu 21.10),
@@ -26,25 +24,23 @@ COMPILED AND TESTED ON:
             tumbleweed (rolling opensuse),
             fedora35
 
-Compilation and run should work, on the above distribution.
-
 -----------------------------------------------------------------------------
-INSTALL:
+INSTALL CLOONIX ON YOUR HOST:
 
-wget http://clownix.net/downloads/cloonix-23-00/cloonix-23-00.tar.gz
-tar xvf cloonix-23-00.tar.gz
-cd cloonix-23-00
+wget http://clownix.net/downloads/cloonix-24-00/cloonix-24-00.tar.gz
+tar xvf cloonix-24-00.tar.gz
+cd cloonix-24-00
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-23-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-24-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
 
 -----------------------------------------------------------------------------
-GET A WORKING VM:
+FOR KVM GET A WORKING QCOW AND PUT IT IN BULK:
 
-wget http://clownix.net/downloads/cloonix-23-00/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-24-00/bulk/bookworm.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cp bookworm.qcow2.gz ${HOME}/cloonix_data/bulk
@@ -52,97 +48,49 @@ cd ${HOME}/cloonix_data/bulk
 gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
-REQUIRED HOST CUSTOM
+FOR CRUN GET A WORKING IMG AND PUT IT IN BULK:
 
-Check that your cpu is equiped with the necessary option:
-egrep -c '(vmx|svm)' /proc/cpuinfo
-The result must be non-zero
-
------------------------------------------------------------------------------
-LAUNCH:
-
-cd cloonix/quickstart
-./ping_kvm.sh
-
-In this demo, the vms are launched with an "s" interface, this interface
-permits to have wireshark upon a double-click on an interface.
-The number of "s" interfaces in a cloonix is limited, use the "v" interface
-when the spy is not used.
-Note: s or v can be found in the PARAM definition in the ping.sh file: 
-PARAMS="ram=2000 cpu=2 eth=s"
-
-wireshark problems: wireshark is called from the gui software, it must be
-installed to be usable by non-root user.
-On debian the way to go is:
-echo "wireshark-common wireshark-common/install-setuid boolean true" > preseed
-sudo debconf-set-selections preseed
-sudo dpkg-reconfigure  wireshark
-sudo adduser ${USER} wireshark
-
------------------------------------------------------------------------------
-CONTAINER CRUN BASED VM:
-
-See details for the container use in cloonix, see container chapter in
-the http://clownix.net/doc_stored/build-23-00/html/index.html doc.
-For a quick test, as you need the sudo program to elevate privileges to
-root level with no password for crun control, you have to open as root
-the /etc/sudoers file and put in the "# User privilege specification" section:
-<user>  ALL=(ALL:ALL) NOPASSWD: ALL
-
-You must put the following downloaded image file in the bulk directory of
-cloonix:
-wget http://clownix.net/downloads/cloonix-23-00/bulk/bookworm.img.gz
+wget http://clownix.net/downloads/cloonix-24-00/bulk/bookworm.img.gz
 cp bookworm.img.gz ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
 gunzip bookworm.img.gz
 
-Then the following script should work:
+-----------------------------------------------------------------------------
+LAUNCH KVM EXAMPLE:
 
 cd cloonix/quickstart
-ping_crun.sh
+./ping_kvm.sh
 
-Or use the following list of commands:
+On the gui, a double-click on the blue machine gives a shell,
+a double-click on the green interface gives a wireshark spy,
+a right-click on the blue machine gives a spice desktop.
 
-cloonix_net nemo
-cloonix_gui nemo
-cloonix_cli nemo add cnt Cnt1 eth=v bookworm.img
-cloonix_cli nemo add cnt Cnt2 eth=v bookworm.img
-cloonix_cli nemo add lan Cnt1 0 lan1
-cloonix_cli nemo add lan Cnt2 0 lan1
-sudo crun exec Cnt1 ifconfig eth0 1.1.1.1/24
-sudo crun exec Cnt2 ifconfig eth0 1.1.1.2/24
-sudo crun exec Cnt1 ping 1.1.1.2
 
-To have a bash shell within a container, call the command line:
+-----------------------------------------------------------------------------
+LAUNCH CRUN EXAMPLE:
 
-sudo crun exec Cnt1 bash
+For a quick test, you need the sudo program to elevate privileges to
+root level with no password for crun control.
 
-You can also use the cairo gui:
-On the gui, a double-click above a container shell.
+cd cloonix/quickstart
+./ping_crun.sh
 
-==============================================================================
-CREATE CRUN IMAGE
+To have a bash shell within a container, the command line is:
 
-dd if=/dev/zero of=bookworm.img bs=100M count=10
-mkfs.ext4 bookworm.img
-losetup -fP bookworm.img
-mkdir -p /root/tmp_mnt
-DEVLOOP=$(losetup -l | grep bookworm.img | awk '{print $1}')
-echo $DEVLOOP
-mount -o loop $DEVLOOP /root/tmp_mnt
-export DEBOOTSTRAP_DIR=/root/debootstrap-1.0.126+nmu1
-INCLUDES="openssh-client,vim,bash-completion,net-tools,tcpdump,tini"
-${DEBOOTSTRAP_DIR}/debootstrap  \
-               --no-check-certificate \
-               --no-check-gpg \
-               --arch amd64 \
-               --include=${INCLUDES} \
-               bookworm \
-               /root/tmp_mnt \
-               http://deb.debian.org/debian
-umount /root/tmp_mnt
-losetup -d $DEVLOOP
-rmdir tmp_mnt
+sudo crun exec <name> bash
+
+On the gui, a double-click on the blue machine gives a shell,
+a double-click on the green interface gives a wireshark spy.
+
+Note: openwrt is special, it has ash instead of bash and it does
+not turn blue because the libc is different. TODO
+
+-----------------------------------------------------------------------------
+CREATION OF THE QCOW2 AND IMG FILES:
+
+cd cloonix/quickstart/create_kvm/ for qcow2
+cd cloonix/quickstart/create_crun/ for img 
+
 ==============================================================================
 
 

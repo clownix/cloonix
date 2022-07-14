@@ -108,8 +108,6 @@ struct cmd_struct level_add_cmd[] = {
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-
-/****************************************************************************/
 struct cmd_struct level_del_cmd[] = {
 {"lan", "Delete lan", NULL, cmd_del_vl2sat, help_del_vl2sat},
 {"sat", "Delete non-lan",  NULL, cmd_del_sat, help_del_sat},
@@ -117,17 +115,25 @@ struct cmd_struct level_del_cmd[] = {
 };
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+struct cmd_struct level_cnt_cmd[] = {
+{"color", "Color of cnt",  NULL, cmd_color_cnt, help_color_cnt},
+{"help",  "",                     level_cnt_cmd, NULL, NULL},
+};
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-struct cmd_struct level_vm_cmd[] = {
+struct cmd_struct level_kvm_cmd[] = {
+{"color", "Color of kvm",  NULL, cmd_color_kvm, help_color_kvm},
 {"reboot", "Reboot by qemu",  NULL, cmd_qreboot_vm, help_qreboot_vm},
-{"help",  "",                     level_vm_cmd, NULL, NULL},
+{"help",  "",                     level_kvm_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 struct cmd_struct level_cnf_cmd[] = {
-{"kvm",  "Virtual machine actions",    level_vm_cmd, NULL, NULL},
+{"kvm",  "Kvm config",    level_kvm_cmd, NULL, NULL},
+{"cnt",  "Container config",    level_cnt_cmd, NULL, NULL},
 {"nat",  "nat config", NULL, cmd_cnf_nat, help_cnf_nat},
 //{"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
 {"c2c",  "c2c config", NULL, cmd_cnf_c2c, help_cnf_c2c},

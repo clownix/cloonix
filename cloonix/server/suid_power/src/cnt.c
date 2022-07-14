@@ -56,6 +56,7 @@ typedef struct t_cnt
   int vm_id;
   int crun_pid;
   int crun_pid_count;
+  int parrot_test;
   struct t_cnt *prev;
   struct t_cnt *next;
 } t_cnt;
@@ -205,6 +206,19 @@ void cnt_beat(int llid)
           urgent_destroy_cnt(cur);
           }
         }
+      else
+        {
+        if (cur->parrot_test == 0)
+          {
+          if (!cnt_utils_create_crun_run_check(cur->name))
+            {
+            snprintf(resp, MAX_PATH_LEN-1,
+            "cloonsuid_cnt_parrot_test_ok %s", cur->name);
+            rpct_send_sigdiag_msg(llid, type_hop_suid_power, resp);
+KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOO %s", resp);
+            }
+          }
+        }
       }
     cur = next;
     }
@@ -214,32 +228,7 @@ void cnt_beat(int llid)
 /****************************************************************************/
 void cnt_recv_poldiag_msg(int llid, int tid, char *line)
 {
-  char name[MAX_NAME_LEN];
-  char resp[MAX_PATH_LEN];
-  memset(resp, 0, MAX_PATH_LEN);
-  if (!strcmp(line,
-  "cloonsuid_cnt_get_infos"))
-    {
-    snprintf(resp, MAX_PATH_LEN-1, "%s", "cloonsuid_cnt_infos");
-    }
-  else if (sscanf(line,
-  "cloonsuid_cnt_get_crun_run_check %s", name) == 1) 
-    {
-    if (!cnt_utils_create_crun_run_check(name))
-      {
-      snprintf(resp, MAX_PATH_LEN-1,
-      "cloonsuid_cnt_get_crun_run_check_resp_ok %s", name);
-      } 
-    else
-      {
-      snprintf(resp, MAX_PATH_LEN-1,
-      "cloonsuid_cnt_get_crun_run_check_resp_ko %s", name);
-      } 
-    }
-  else
-    KERR("ERROR %s", line);
-  if (strlen(resp))
-    rpct_send_poldiag_msg(llid, tid, resp);
+  KERR("ERROR %s", line);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -262,9 +251,9 @@ static void create_net(char *line, char *resp, char *name, char *bulk,
   if (cur != NULL)
     KERR("ERROR %s", name);
   else if (access(bulk_image, F_OK))
-    KERR("ERROR %s", name);
+    KERR("ERROR %s %s", name, bulk_image);
   else if (nb_eth >= MAX_ETH_VM)
-    KERR("ERROR %s", name);
+    KERR("ERROR %s too big nb_eth:%d", name, nb_eth);
   else
     {
     alloc_cnt(name, bulk, image, nb_eth, nspace,
@@ -315,11 +304,12 @@ static void create_net_eth(char *line, char *resp, char *name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_config_json(char *line, char *resp, char *name)
+static void create_config_json(char *line, char *resp,
+                               char *name, int is_persistent)
 {
   t_cnt *cur;
   char path[MAX_PATH_LEN];
-  char *cnt_dir;
+  char *cnt_dir, *bulk, *image;
   cur = find_cnt(name);
   if (cur == NULL)
     {
@@ -330,10 +320,18 @@ static void create_config_json(char *line, char *resp, char *name)
     }
   else
     {
+    bulk = cur->bulk;
+    image = cur->image;
+    if (is_persistent)
+      {
+      memset(cur->rootfs_path, 0, MAX_PATH_LEN);
+      snprintf(cur->rootfs_path, MAX_PATH_LEN-1, "%s/mnt/%s", bulk, image);
+      }
     cnt_dir = cur->cnt_dir;
     memset(path, 0, MAX_PATH_LEN);
     snprintf(path, MAX_PATH_LEN-1, "%s/%s", cnt_dir, cur->name);
-    if (cnt_utils_create_config_json(path,cur->rootfs_path,cur->nspace_path))
+    if (cnt_utils_create_config_json(path, cur->rootfs_path,
+                                     cur->nspace_path, is_persistent))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -379,7 +377,8 @@ static void create_loop_img(char *line, char *resp, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_overlay(char *line, char *resp, char *name)
+static void create_overlay(char *line, char *resp,
+                           char *name, int is_persistent)
 {
   t_cnt *cur;
   char path[MAX_PATH_LEN];
@@ -406,7 +405,7 @@ static void create_overlay(char *line, char *resp, char *name)
       cnt_dir = cur->cnt_dir;
       memset(path, 0, MAX_PATH_LEN);
       snprintf(path, MAX_PATH_LEN-1, "%s/%s", cnt_dir, cur->name);
-      if (cnt_utils_create_overlay(path, loop_img))
+      if (cnt_utils_create_overlay(path, loop_img, is_persistent))
         {
         KERR("ERROR %s", line);
         snprintf(resp, MAX_PATH_LEN-1,
@@ -507,7 +506,7 @@ void cnt_recv_sigdiag_msg(int llid, int tid, char *line)
   char agent_dir[MAX_PATH_LEN];
   char customer_launch[MAX_PATH_LEN];
   char mac[6], *ptr;
-  int len, num, nb_eth, cloonix_rank, vm_id;
+  int len, num, nb_eth, cloonix_rank, vm_id, is_persistent;
 
   cloonix_rank = get_cloonix_rank();
   memset(resp, 0, MAX_PATH_LEN);
@@ -541,9 +540,10 @@ void cnt_recv_sigdiag_msg(int llid, int tid, char *line)
     create_net_eth(line, resp, name, num, mac);
     }
   else if (sscanf(line,
-  "cloonsuid_cnt_create_config_json name=%s", name) == 1)
+  "cloonsuid_cnt_create_config_json name=%s is_persistent=%d",
+  name, &is_persistent) == 2)
     {
-    create_config_json(line, resp, name);
+    create_config_json(line, resp, name, is_persistent);
     }
   else if (sscanf(line,
   "cloonsuid_cnt_create_loop_img name=%s", name) == 1)
@@ -551,9 +551,10 @@ void cnt_recv_sigdiag_msg(int llid, int tid, char *line)
     create_loop_img(line, resp, name);
     }
   else if (sscanf(line,
-  "cloonsuid_cnt_create_overlay name=%s", name) == 1)
+  "cloonsuid_cnt_create_overlay name=%s is_persistent=%d",
+  name, &is_persistent) == 2)
     {
-    create_overlay(line, resp, name);
+    create_overlay(line, resp, name, is_persistent);
     }
   else if (sscanf(line,
   "cloonsuid_cnt_create_crun_start name=%s", name) == 1)
@@ -575,6 +576,19 @@ void cnt_recv_sigdiag_msg(int llid, int tid, char *line)
       urgent_destroy_cnt(cur);
       }
     }
+  else if (sscanf(line,
+  "cloonsuid_cnt_parrot_test_ok %s", name) == 1)
+    {
+    cur = find_cnt(name);
+    if (cur == NULL)
+      KERR("ERROR: %s", name);
+    else
+      { 
+KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOO %s", resp);
+      cur->parrot_test = 1;
+      }
+    }
+
   else
     KERR("ERROR %s", line);
   if (strlen(resp))

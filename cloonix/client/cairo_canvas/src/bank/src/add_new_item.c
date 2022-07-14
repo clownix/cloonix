@@ -45,35 +45,6 @@ static t_bank_item *currently_in_item_surface;
 
 static void attached_obj_associations_delete(t_bank_item *bitem);
 
-/****************************************************************************/
-int is_a_nat(t_bank_item *bitem)
-{
-  int result = 0;
-  if (bitem->pbi.endp_type == endp_type_nat)
-    result = 1;
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int is_a_c2c(t_bank_item *bitem)
-{
-  int result = 0;
-  if (bitem->pbi.endp_type == endp_type_c2c)
-    result = 1;
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int is_a_a2b(t_bank_item *bitem)
-{
-  int result = 0;
-  if (bitem->pbi.endp_type == endp_type_a2b)
-    result = 1;
-  return result;
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 t_bank_item *get_currently_in_item_surface(void)

@@ -35,6 +35,7 @@
 #include "msg.h"
 #include "cnt.h"
 #include "lan_to_name.h"
+#include "ovs_snf.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -64,7 +65,7 @@ static void free_nat(t_ovs_nat *cur)
 {
   cfg_free_obj_id(cur->nat_id);
   if (strlen(cur->lan_added))
-    lan_del_name(cur->lan_added);
+    lan_del_name(cur->lan_added, item_nat, cur->name, 0);
   if (cur->llid)
     {
     llid_trace_free(cur->llid, 0, __FUNCTION__);
@@ -115,6 +116,7 @@ static void alloc_nat(int cli_llid, int cli_tid, char *name)
   cur->nat_id = id;
   cur->cli_llid = cli_llid;
   cur->cli_tid = cli_tid;
+  cur->endp_type = endp_type_natv;
   mc[0] = 0x2;
   mc[1] = 0xFF & rand();
   mc[2] = 0xFF & rand();
@@ -440,12 +442,9 @@ void ovs_nat_resp_del_lan(int is_ko, char *name, int num,
 
 
 /****************************************************************************/
-int ovs_nat_exists(char *name)
+t_ovs_nat *ovs_nat_exists(char *name)
 {
-  int result = 0;
-  if (find_nat(name))
-    result = 1;
-  return result;
+  return (find_nat(name));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -483,7 +482,7 @@ t_topo_endp *ovs_nat_translate_topo_endp(int *nb)
       memset(endp[nb_endp].lan.lan, 0, len);
       strncpy(endp[nb_endp].name, cur->name, MAX_NAME_LEN-1);
       endp[nb_endp].num = 0;
-      endp[nb_endp].type = endp_type_ethv;
+      endp[nb_endp].type = cur->endp_type;
       strncpy(endp[nb_endp].lan.lan[0].lan, cur->lan, MAX_NAME_LEN-1);
       endp[nb_endp].lan.nb_lan = 1;
       nb_endp += 1;
@@ -539,7 +538,7 @@ void ovs_nat_del(int cli_llid, int cli_tid, char *name)
       {
       if (!strlen(cur->lan))
         KERR("ERROR %s %s", name, cur->lan_added);
-      val = lan_del_name(cur->lan_added);
+      val = lan_del_name(cur->lan_added, item_nat, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
         {
@@ -586,7 +585,10 @@ void ovs_nat_add_lan(int cli_llid, int cli_tid, char *name, char *lan)
   else
     {
     strncpy(cur->lan_added, lan, MAX_NAME_LEN);
-    lan_add_name(cur->lan_added, cli_llid);
+    lan_add_name(cur->lan_added, item_nat, cur->name, 0);
+    lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_CISCO);
+    lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_GW);
+    lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_DNS);
     cur->cli_llid = cli_llid;
     cur->cli_tid = cli_tid;
     if (msg_send_add_lan_endp(ovsreq_add_nat_lan, name, 0,
@@ -620,7 +622,7 @@ void ovs_nat_del_lan(int cli_llid, int cli_tid, char *name, char *lan)
       KERR("ERROR: %s %s", name, lan);
     else
       {
-      val = lan_del_name(cur->lan_added);
+      val = lan_del_name(cur->lan_added, item_nat, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       }
     if (val == 2*MAX_LAN)
@@ -744,10 +746,69 @@ void ovs_nat_cisco_add(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int  ovs_nat_snf(char *name)
+static void snf_process_started(char *name, int num, char *vhost)
 {
-  int result = 0;
-  KERR("OOOOOOOOOOOOOOOOOO %s", name);
+  t_ovs_nat *cur = find_nat(name);
+
+  if (cur == NULL)
+    KERR("ERROR %s %d", name, num);
+  else
+    {
+    if (strlen(cur->lan))
+      ovs_snf_send_add_snf_lan(name, num, cur->vhost, cur->lan);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int  ovs_nat_dyn_snf(char *name, int val)
+{
+  int result = -1;
+  t_ovs_nat *cur = find_nat(name);
+  char tap[MAX_NAME_LEN];
+  char *vh;
+
+  if (tap == NULL)
+    KERR("ERROR %s %d", name, val);
+  else
+    {
+    if (val)
+      {
+      if (cur->endp_type == endp_type_nats)
+        KERR("ERROR %s", name);
+      else
+        {
+        cur->del_snf_ethv_sent = 0;
+        cur->endp_type = endp_type_nats;
+        ovs_dyn_snf_start_process(name, 0, item_type_nat,
+                                  cur->vhost, snf_process_started);
+        result = 0;
+        }
+      }
+    else
+      {
+      if (cur->endp_type == endp_type_natv)
+        KERR("ERROR %s", name);
+      else
+        {
+        cur->endp_type = endp_type_natv;
+        memset(tap, 0, MAX_NAME_LEN);
+        vh = cur->vhost;
+        snprintf(tap, MAX_NAME_LEN-1, "s%s", vh);
+        if (cur->del_snf_ethv_sent == 0)
+          {
+          cur->del_snf_ethv_sent = 1;
+          if (strlen(cur->lan))
+            {
+            if (ovs_snf_send_del_snf_lan(name, 0, cur->vhost, cur->lan))
+              KERR("ERROR DEL KVMETH %s %s", name, cur->lan);
+            }
+          ovs_dyn_snf_stop_process(tap);
+          }
+        result = 0;
+        }
+      }
+    }
   return result;
 }
 /*--------------------------------------------------------------------------*/

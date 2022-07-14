@@ -19,7 +19,6 @@ void layout_send_layout_node(t_layout_node *layout);
 void layout_send_layout_lan(t_layout_lan *layout);
 void layout_send_layout_sat(t_layout_sat *layout);
 void clean_layout_xml(void);
-t_layout_xml *get_current_layout_xml(void);
 void layout_round_node_eth_coords(double *x, double *y);
 void layout_round_cnt_eth_coords(double *x, double *y);
 void layout_round_a2b_eth_coords(double *x, double *y);

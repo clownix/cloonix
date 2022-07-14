@@ -474,6 +474,34 @@ void client_reboot_vm(int tid, t_end_cb cb, char *nm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void client_color_kvm(int tid, t_end_cb cb, char *name, int color)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_color_item(g_llid, new_tid, name, color); 
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void client_color_cnt(int tid, t_end_cb cb, char *name, int color)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_color_item(g_llid, new_tid, name, color);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip, 
                     char *slave_cloon, uint32_t ip, uint16_t port,
                     char *passwd, uint32_t udp_ip)

@@ -15,7 +15,10 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int tun_tap_open(char *name, char *mac_spyed_on);
+void tun_tap_purge_mac(void);
+void tun_tap_add_mac(int tx, char *mac_spyed_on);
+void tun_tap_del_mac(int tx, char *mac_spyed_on);
+int tun_tap_open(char *name);
 /*---------------------------------------------------------------------------*/
 
 

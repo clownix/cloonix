@@ -21,12 +21,13 @@ void kvm_add_whole_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab);
 void kvm_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan);
 void kvm_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan);
 int kvm_add_lan(int llid, int tid, char *name, int num,
-                     char *lan, int endp_type);
+                     char *lan, int endp_type, t_eth_table *eth_tab);
 int kvm_del_lan(int llid, int tid, char *name, int num,
                      char *lan, int endp_type);
 void kvm_del(int llid, int tid, char *name, int num,
              int endp_type, int *can_delete);
 int kvm_lan_added_exists(char *name, int num);
+int kvm_dyn_snf(char *name, int num, int val);
 void kvm_init(void);
 /*--------------------------------------------------------------------------*/
 

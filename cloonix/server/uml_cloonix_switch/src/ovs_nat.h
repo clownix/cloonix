@@ -28,11 +28,13 @@ typedef struct t_ovs_nat
   int llid;
   int pid;
   int nat_id;
+  int endp_type;
   int closed_count;
   int suid_root_done;
   int watchdog_count;
   int cli_llid;
   int cli_tid;
+  int del_snf_ethv_sent;
   struct t_ovs_nat *prev;
   struct t_ovs_nat *next;
 } t_ovs_nat;
@@ -46,8 +48,8 @@ void ovs_nat_sigdiag_resp(int llid, int tid, char *line);
 void ovs_nat_poldiag_resp(int llid, int tid, char *line);
 void ovs_nat_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan);
 void ovs_nat_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan);
-int  ovs_nat_exists(char *name);
-int  ovs_nat_snf(char *name);
+t_ovs_nat *ovs_nat_exists(char *name);
+int  ovs_nat_dyn_snf(char *name, int val);
 
 void ovs_nat_add(int llid, int tid, char *name);
 void ovs_nat_del(int llid, int tid, char *name);

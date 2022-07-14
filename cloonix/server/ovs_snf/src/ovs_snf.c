@@ -49,7 +49,6 @@ static char g_snf_name[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
 static char g_ctrl_path[MAX_PATH_LEN];
 static char g_snf_path[MAX_PATH_LEN];
-static char g_mac_spyed[MAX_NAME_LEN];
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -100,16 +99,10 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void end_clean_unlink(void)
+void rpct_recv_kil_req(int llid, int tid)
 {
   unlink(g_ctrl_path);
   unlink(g_snf_path);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void rpct_recv_kil_req(int llid, int tid)
-{
   exit(0);
 }
 /*--------------------------------------------------------------------------*/
@@ -125,6 +118,7 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   char resp[MAX_PATH_LEN];
+  char mac[MAX_NAME_LEN];
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
     KERR("%s %d %d", g_net_name, llid, g_llid);
@@ -139,6 +133,31 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     else
       snprintf(resp, MAX_PATH_LEN-1, "cloonsnf_suidroot_ok %s", g_snf_name);
     rpct_send_sigdiag_msg(llid, tid, resp);
+    }
+  else if (sscanf(line,
+  "cloonsnf_mac_spyed_tx_on=%s", mac) == 1) 
+    {
+    tun_tap_add_mac(1, mac);
+    }
+  else if (sscanf(line,
+  "cloonsnf_mac_spyed_tx_off=%s", mac) == 1) 
+    {
+    tun_tap_del_mac(1, mac);
+    }
+  else if (sscanf(line,
+  "cloonsnf_mac_spyed_rx_on=%s", mac) == 1)
+    {
+    tun_tap_add_mac(0, mac);
+    }
+  else if (sscanf(line,
+  "cloonsnf_mac_spyed_rx_off=%s", mac) == 1)
+    {
+    tun_tap_del_mac(0, mac);
+    }
+  else if (!strcmp(line,
+  "cloonsnf_mac_spyed_purge"))
+    {
+    tun_tap_purge_mac();
     }
   else
     KERR("ERROR %s %s", g_net_name, line);
@@ -197,7 +216,7 @@ int main (int argc, char *argv[])
   char *root = g_root_path;
   char *snf = g_snf_name;
   int fd;
-  if (argc != 6)
+  if (argc != 5)
     KOUT("%d", argc);
   g_llid = 0;
   g_watchdog_ok = 0;
@@ -206,13 +225,11 @@ int main (int argc, char *argv[])
   memset(g_root_path, 0, MAX_PATH_LEN);
   memset(g_ctrl_path, 0, MAX_PATH_LEN);
   memset(g_snf_path, 0, MAX_PATH_LEN);
-  memset(g_mac_spyed, 0, MAX_NAME_LEN);
   strncpy(g_net_name,  argv[1], MAX_NAME_LEN-1);
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
   strncpy(g_snf_name,  argv[3], MAX_NAME_LEN-1);
-  strncpy(g_mac_spyed, argv[4], MAX_NAME_LEN-1);
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/c%s", root, SNF_DIR, snf);
-  snprintf(g_snf_path, MAX_PATH_LEN-1,"%s/%s/%s", root, SNF_DIR, argv[5]);
+  snprintf(g_snf_path, MAX_PATH_LEN-1,"%s/%s/%s", root, SNF_DIR, argv[4]);
   snprintf(g_netns_namespace, MAX_PATH_LEN-1, "%s%s_%s",
            PATH_NAMESPACE, BASE_NAMESPACE, g_net_name);
 
@@ -225,7 +242,7 @@ int main (int argc, char *argv[])
     KOUT(" ");
   if (setns(fd, CLONE_NEWNET) != 0)
     KOUT(" ");
-  if (tun_tap_open(snf, g_mac_spyed))
+  if (tun_tap_open(snf))
     KOUT("Problem tap %s\n", snf);
   if (!access(g_ctrl_path, F_OK))
     {

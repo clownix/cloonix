@@ -23,9 +23,11 @@ typedef struct t_ovs_tap
   char lan[MAX_NAME_LEN];
   char lan_added[MAX_NAME_LEN];
   int  del_tap_req;
+  int  del_snf_ethv_sent;
   int  llid;
   int  tid;
   int  tap_id;
+  int  endp_type;
   struct t_ovs_tap *prev;
   struct t_ovs_tap *next;
 } t_ovs_tap;
@@ -36,8 +38,8 @@ void ovs_tap_resp_add_lan(int is_ko, char *name, int num,
                           char *vhost, char *lan);
 void ovs_tap_resp_del_lan(int is_ko, char *name, int num,
                           char *vhost, char *lan);
-int  ovs_tap_exists(char *name);
-int  ovs_tap_snf(char *name);
+t_ovs_tap *ovs_tap_exists(char *name);
+int  ovs_tap_dyn_snf(char *name, int val);
 void ovs_tap_add(int llid, int tid, char *name);
 void ovs_tap_del(int llid, int tid, char *name);
 void ovs_tap_add_lan(int llid, int tid, char *name, char *lan);

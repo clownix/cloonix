@@ -462,6 +462,26 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void launch_xterm_double_click_cnt(char *name_vm)
+{
+  char **argv = get_argv_local_xwy_cnt(name_vm);
+  if (check_before_start_launch(argv))
+    launch_pid_wait(type_pid_dtach, name_vm, argv);
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+void cnt_crun_exec(GtkWidget *mn, t_item_ident *pm)
+{
+  char *nm = pm->name;
+  char **argv = get_argv_local_xwy_cnt(nm);
+  if (check_before_start_launch(argv))
+    launch_pid_wait(type_pid_dtach, nm, argv);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void node_dtach_console(GtkWidget *mn, t_item_ident *pm)
 {
   char *nm = pm->name;

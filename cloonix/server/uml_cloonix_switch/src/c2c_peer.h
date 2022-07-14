@@ -18,8 +18,8 @@
 void wrap_disconnect_to_peer(t_ovs_c2c *c2c);
 void wrap_try_connect_to_peer(t_ovs_c2c *c2c);
 void wrap_send_c2c_peer_create(t_ovs_c2c *c2c, int is_ack);
-void wrap_send_c2c_peer_conf(t_ovs_c2c *c2c, int is_ack);
 void wrap_send_c2c_peer_ping(t_ovs_c2c *c2c,  int status);
+int wrap_send_c2c_peer_conf(t_ovs_c2c *cur, int is_ack);
 /*---------------------------------------------------------------------------*/
 
 

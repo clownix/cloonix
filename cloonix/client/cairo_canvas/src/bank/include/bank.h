@@ -214,10 +214,6 @@ int bank_get_wireshark_pid(char *name);
 void bank_set_wireshark_pid(char *name, int val);
 /*--------------------------------------------------------------------------*/
 
-int is_a_nat(t_bank_item *bitem);
-int is_a_c2c(t_bank_item *bitem);
-int is_a_a2b(t_bank_item *bitem);
-
 
 
 

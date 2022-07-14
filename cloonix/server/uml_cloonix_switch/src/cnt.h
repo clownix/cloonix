@@ -27,14 +27,11 @@ typedef struct t_cnt
   t_topo_cnt cnt;
   t_lan_cnt att_lan[MAX_ETH_VM];
   int poweroff_done;
-  int del_snf_ethv_lan_sent[MAX_ETH_VM];
   int del_snf_ethv_sent[MAX_ETH_VM];
   int lan_add_waiting_ack;
   int lan_del_waiting_ack;
   int count_add;
   int count_del;
-  int count_ping_no_send_ok;
-  int count_ping_no_send_ko;
   int cloonix_rank;
   int count_llid;
   int cli_llid;
@@ -53,9 +50,7 @@ int  cnt_add_lan(int llid, int tid, char *name, int num,
 int  cnt_del_lan(int llid, int tid, char *name, int num,
                        char *lan, char *err);
 int  cnt_name_exists(char *name, int *nb_eth);
-int cnt_snf(char *name, int num);
-void cnt_poldiag_resp(int llid, char *line);
-void cnt_poldiag_req(int llid, int tid);
+int cnt_dyn_snf(char *name, int num, int val);
 void cnt_sigdiag_resp(int llid, char *line);
 int  cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
                       t_topo_cnt *cnt, char *info);
@@ -64,5 +59,6 @@ int  cnt_delete_all(int llid);
 void cnt_timer_beat(int llid);
 int  cnt_info(char *name, int *nb_eth, t_eth_table **eth_table);
 int  cnt_get_all_pid(t_lst_pid **lst_pid);
+void cnt_set_color(char *name, int color);
 void cnt_init(void);
 /*---------------------------------------------------------------------------*/

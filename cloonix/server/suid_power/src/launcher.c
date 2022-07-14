@@ -35,8 +35,6 @@
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
-#include "net_phy.h"
-#include "ovs_get.h"
 #include "launcher.h"
 
 static char *g_saved_environ[4];

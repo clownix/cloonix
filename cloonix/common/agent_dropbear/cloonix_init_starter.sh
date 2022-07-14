@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 /usr/bin/cloonix_parrot_srv
 

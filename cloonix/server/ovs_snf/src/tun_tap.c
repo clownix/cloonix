@@ -39,10 +39,36 @@
 #define MAX_TAP_BUF_LEN 2000
 
 static char g_tap_name[MAX_NAME_LEN];
-static char g_mac_spyed_on[MAX_NAME_LEN];
 static int g_llid;
 static uint8_t g_buf[MAX_TAP_BUF_LEN];
-static uint8_t g_mac_src[6];
+
+typedef struct t_mac_src
+{
+  uint8_t mac[6];
+  struct t_mac_src *prev;
+  struct t_mac_src *next;
+} t_mac_src;
+
+static t_mac_src *g_head_mac_tx;
+static t_mac_src *g_head_mac_rx;
+
+/*****************************************************************************/
+static t_mac_src *find_mac(int tx, uint8_t *mac)
+{
+  t_mac_src *cur;
+  if (tx)
+    cur = g_head_mac_tx;
+  else
+    cur = g_head_mac_rx;
+  while(cur)
+    {
+    if (!memcmp(cur->mac, mac, 6))
+      break;
+    cur = cur->next;
+    }
+  return cur;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static inline uint8_t *get_src_mac(uint8_t *data)
@@ -54,13 +80,36 @@ static inline uint8_t *get_src_mac(uint8_t *data)
 /****************************************************************************/
 static int rx_tap(int llid, int fd)
 {
-  int len, is_tx = 0;
+  int len, is_tx, set_tx = 0;
   uint64_t usec;
-  if (llid != g_llid)
-    KOUT("ERROR: %d %d", llid, g_llid);
-  len = read(fd, g_buf, MAX_TAP_BUF_LEN);
-  if (!memcmp(g_mac_src, get_src_mac(g_buf), 6))
+  uint8_t *mac = get_src_mac(g_buf);
+  t_mac_src *cur = NULL;
+
+  if ((g_head_mac_tx != NULL) && (g_head_mac_rx != NULL))
+    KERR("ERROR %s", g_tap_name);
+  else if (g_head_mac_tx != NULL)
+    {
+    is_tx = 0;
+    set_tx = 1;
+    cur = g_head_mac_tx; 
+    }
+  else if (g_head_mac_rx != NULL)
+    {
     is_tx = 1;
+    set_tx = 0;
+    cur = g_head_mac_rx; 
+    }
+  
+  len = read(fd, g_buf, MAX_TAP_BUF_LEN);
+  while(cur)
+    {
+    if (!memcmp(cur->mac, mac, 6))
+      {
+      is_tx = set_tx;
+      break;
+      }
+    cur = cur->next;
+    }
   if (len <= 0)
     KERR("ERROR TAP %s", g_tap_name);
   else
@@ -127,11 +176,11 @@ static int set_intf_flags_iff_up_and_promisc(char *intf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int open_tap(char *tap, char *mac, char *err)
+static int open_tap(char *tap, char *err)
 {
   int result = -1;
   struct ifreq ifr;
-  int i, flags, fd;
+  int flags, fd;
   uid_t owner = getuid();
   if ((fd = open("/dev/net/tun", O_RDWR)) < 0)
     sprintf(err, "\nError open \"/dev/net/tun\", %d\n", errno);
@@ -149,42 +198,115 @@ static int open_tap(char *tap, char *mac, char *err)
     else if(ioctl(fd, TUNSETGROUP, owner) < 0)
       sprintf(err, "\nError ioctl TUNSETGROUP \"%s\", %d", tap,  errno);
     else
-      {
-      memset(&ifr, 0, sizeof(struct ifreq));
-      strcpy(ifr.ifr_name, tap);
-      ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-      if (ioctl(fd, SIOCGIFHWADDR, &ifr) != -1)
-        {
-        for (i=0; i<MAC_ADDR_LEN; i++)
-          mac[i] = ifr.ifr_hwaddr.sa_data[i];
-        result = 0;
-        result = fd;
-        }
-      }
+      result = fd;
     }
   return result;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int tun_tap_open(char *name, char *mac_spyed_on)
+void tun_tap_add_mac(int tx, char *mac_spyed_on)
+{
+  t_mac_src *cur;
+  uint8_t mac[6];
+  if (sscanf(mac_spyed_on, "%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX",
+      &(mac[0]),&(mac[1]),&(mac[2]),&(mac[3]),&(mac[4]),&(mac[5])) != 6)
+    KERR("%s", mac_spyed_on);
+  else if (find_mac(tx, mac))
+    KERR("ERROR EXISTS %s", mac_spyed_on); 
+  else
+    {
+    cur = (t_mac_src *) malloc(sizeof(t_mac_src));
+    memset(cur, 0, sizeof(t_mac_src));
+    memcpy(cur->mac, mac, 6); 
+    if (tx)
+      {
+      if (g_head_mac_tx)
+        g_head_mac_tx->prev = cur;
+      cur->next = g_head_mac_tx;
+      g_head_mac_tx = cur;
+      }
+    else
+      {
+      if (g_head_mac_rx)
+        g_head_mac_rx->prev = cur;
+      cur->next = g_head_mac_rx;
+      g_head_mac_rx = cur;
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void tun_tap_del_mac(int tx, char *mac_spyed_on)
+{
+  t_mac_src *cur; 
+  uint8_t mac[6];
+  if (sscanf(mac_spyed_on, "%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX",
+      &(mac[0]),&(mac[1]),&(mac[2]),&(mac[3]),&(mac[4]),&(mac[5])) != 6)
+    KERR("%s", mac_spyed_on);
+  else
+    {
+    cur = find_mac(tx, mac);
+    if (!cur)
+      KERR("ERROR DOES NOT EXIST %s", mac_spyed_on);
+    else
+      {
+      memcpy(cur->mac, mac, 6); 
+      if (cur->prev)
+        cur->prev->next = cur->next;
+      if (cur->next)
+        cur->next->prev = cur->prev;
+      if (tx)
+        {
+        if (g_head_mac_tx == cur)
+          g_head_mac_tx = cur->next;
+        }
+      else
+        {
+        if (g_head_mac_rx == cur)
+          g_head_mac_rx = cur->next;
+        }
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void tun_tap_purge_mac(void)
+{
+  t_mac_src *next, *cur;
+  cur = g_head_mac_tx;
+  while(cur)
+    {
+    next = cur->next;
+    free(cur);
+    cur = next;
+    }
+  g_head_mac_tx = NULL;
+
+  cur = g_head_mac_rx;
+  while(cur)
+    {
+    next = cur->next;
+    free(cur);
+    cur = next;
+    }
+  g_head_mac_rx = NULL;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int tun_tap_open(char *name)
 {
   char err[MAX_PATH_LEN];
-  char mac[MAX_NAME_LEN];
   int fd, result = -1;
+  g_head_mac_tx = NULL;
+  g_head_mac_rx = NULL;
   memset(err, 0, MAX_PATH_LEN);
-  memset(mac, 0, MAX_NAME_LEN);
-  memset(g_mac_spyed_on, 0, MAX_NAME_LEN);
   memset(g_tap_name, 0, MAX_NAME_LEN);
   strncpy(g_tap_name, name, MAX_NAME_LEN-1);
-  strncpy(g_mac_spyed_on, mac_spyed_on, MAX_NAME_LEN-1);
-
-  if (sscanf(mac_spyed_on, "%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX",
-      &(g_mac_src[0]), &(g_mac_src[1]), &(g_mac_src[2]),
-      &(g_mac_src[3]), &(g_mac_src[4]), &(g_mac_src[5])) != 6)
-    KOUT("%s", mac_spyed_on);
-
-  fd = open_tap(g_tap_name, mac, err);
+  fd = open_tap(g_tap_name, err);
   if (fd > 0)
     {
     if (set_intf_flags_iff_up_and_promisc(g_tap_name))

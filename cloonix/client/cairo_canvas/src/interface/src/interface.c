@@ -73,6 +73,78 @@ char *get_doors_client_addr(void);
 
 
 
+
+/****************************************************************************/
+static void kvm_update_bitem(t_topo_info *topo)
+{
+  int i,j, endp_type, prev_endp_type;
+  t_topo_kvm *cur;
+  t_bank_item *bitem;
+  t_list_bank_item *eth_bitem;
+  for (i=0; i<topo->nb_kvm; i++)
+    {
+    cur = &(topo->kvm[i]);
+    bitem = bank_get_item(bank_type_node, cur->name, 0, NULL);
+    if (bitem)
+      {
+      bitem->pbi.color_choice = topo->kvm[i].color;
+      eth_bitem = bitem->head_eth_list;
+      while(eth_bitem)
+        {
+        j = eth_bitem->bitem->num;
+        endp_type = topo->kvm[i].eth_table[j].endp_type;
+        prev_endp_type = bitem->pbi.pbi_node->eth_tab[j].endp_type;
+        if ((endp_type != endp_type_eths) &&
+            (endp_type != endp_type_ethv))
+          KERR("%s %d", cur->name, endp_type);
+        else if ((prev_endp_type != endp_type_eths) &&
+                 (prev_endp_type != endp_type_ethv))
+          KERR("%s %d", cur->name, prev_endp_type);
+        else
+          bitem->pbi.pbi_node->eth_tab[j].endp_type = endp_type;
+        eth_bitem = eth_bitem->next;
+        }
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void cnt_update_bitem(t_topo_info *topo)
+{
+  int i,j, endp_type, prev_endp_type;
+  t_topo_cnt *cur;
+  t_bank_item *bitem;
+  t_list_bank_item *eth_bitem;
+  for (i=0; i<topo->nb_cnt; i++)
+    {
+    cur = &(topo->cnt[i]);
+    bitem = bank_get_item(bank_type_cnt, cur->name, 0, NULL);
+    if (bitem) 
+      {
+      bitem->pbi.pbi_cnt->cnt_evt_ping_ok = topo->cnt[i].ping_ok;
+      bitem->pbi.color_choice = topo->cnt[i].color;
+      eth_bitem = bitem->head_eth_list;
+      while(eth_bitem)
+        { 
+        j = eth_bitem->bitem->num;
+        endp_type = topo->cnt[i].eth_table[j].endp_type;
+        prev_endp_type = bitem->pbi.pbi_cnt->eth_tab[j].endp_type;
+        if ((endp_type != endp_type_eths) &&
+            (endp_type != endp_type_ethv))
+          KERR("%s %d", cur->name, endp_type);
+        else if ((prev_endp_type != endp_type_eths) &&
+                 (prev_endp_type != endp_type_ethv))
+          KERR("%s %d", cur->name, prev_endp_type);
+        else
+          bitem->pbi.pbi_cnt->eth_tab[j].endp_type = endp_type;
+        eth_bitem = eth_bitem->next;
+        } 
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
 /****************************************************************************/
 static void c2c_update_bitem(t_topo_info *topo)
 {
@@ -83,11 +155,64 @@ static void c2c_update_bitem(t_topo_info *topo)
     {
     cur = &(topo->c2c[i]);
     bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
-    if ((bitem) && (bitem->pbi.endp_type == endp_type_c2c))
+    if ((bitem) && ((bitem->pbi.endp_type == endp_type_c2cs) ||
+                    (bitem->pbi.endp_type == endp_type_c2cv)))
       {
       memcpy(&(bitem->pbi.pbi_sat->topo_c2c), cur, sizeof(t_topo_c2c));
+      if ((cur->endp_type != endp_type_c2cs) &&
+          (cur->endp_type != endp_type_c2cv))
+        KERR("ERROR %s %d", cur->name,  cur->endp_type);
+      else
+        bitem->pbi.endp_type = cur->endp_type;
       }
     }  
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void tap_update_bitem(t_topo_info *topo)
+{
+  int i;
+  t_topo_tap *cur;
+  t_bank_item *bitem;
+  for (i=0; i<topo->nb_tap; i++)
+    {
+    cur = &(topo->tap[i]);
+    bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
+    if ((bitem) && ((bitem->pbi.endp_type == endp_type_taps) ||
+                    (bitem->pbi.endp_type == endp_type_tapv)))
+      {
+      if ((cur->endp_type != endp_type_taps) &&
+          (cur->endp_type != endp_type_tapv))
+        KERR("ERROR %s %d", cur->name,  cur->endp_type);
+      else
+        bitem->pbi.endp_type = cur->endp_type;
+      }
+    }  
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void nat_update_bitem(t_topo_info *topo)
+{
+  int i;
+  t_topo_nat *cur;
+  t_bank_item *bitem;
+  for (i=0; i<topo->nb_nat; i++)
+    {
+    cur = &(topo->nat[i]);
+    bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
+    if ((bitem) && ((bitem->pbi.endp_type == endp_type_nats) ||
+                    (bitem->pbi.endp_type == endp_type_natv)))
+      {
+      memcpy(&(bitem->pbi.pbi_sat->topo_nat), cur, sizeof(t_topo_nat));
+      if ((cur->endp_type != endp_type_nats) &&
+          (cur->endp_type != endp_type_natv))
+        KERR("ERROR %s %d", cur->name,  cur->endp_type);
+      else
+        bitem->pbi.endp_type = cur->endp_type;
+      }
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -175,33 +300,6 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void launch_xterm_double_click_cnt(char *name_vm)
-{
-  static char title[2*MAX_NAME_LEN+1];
-  static char net[MAX_NAME_LEN];
-  static char name[MAX_NAME_LEN];
-  static char cmd[2*MAX_PATH_LEN];
-  static char xvt[MAX_PATH_LEN];
-  static char *argv[] = {xvt, "-T", title, "-e",
-                         "/bin/bash", "-c", cmd, NULL};
-  memset(cmd, 0, 2*MAX_PATH_LEN);
-  memset(title, 0, 2*MAX_NAME_LEN+1);
-  memset(name, 0, MAX_NAME_LEN);
-  memset(net, 0, MAX_NAME_LEN);
-  cloonix_get_xvt(xvt);
-  strncpy(name, name_vm, MAX_NAME_LEN);
-  strncpy(net, local_get_cloonix_name(), MAX_NAME_LEN);
-
-  snprintf(title, 2*MAX_NAME_LEN, "%s/%s", local_get_cloonix_name(), name);
-  snprintf(cmd, 2*MAX_PATH_LEN-1,
-           "sudo /usr/bin/crun exec %s bash", name);
-  if (check_before_start_launch(argv))
-    pid_clone_launch(start_launch, NULL, NULL, (void *)(argv),
-                     NULL, NULL, name_vm, -1, 0);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void timer_callback_topo(void *data)
 {
   t_topo_info *topo = (t_topo_info *) data;
@@ -214,7 +312,11 @@ static void timer_callback_topo(void *data)
     process_all_diffs(diffs);
     topo_free_diffs(diffs);
     c2c_update_bitem(topo);
+    tap_update_bitem(topo);
+    nat_update_bitem(topo);
     a2b_update_bitem(topo);
+    cnt_update_bitem(topo);
+    kvm_update_bitem(topo);
     }
   if (g_not_first_callback_topo == 0)
     {

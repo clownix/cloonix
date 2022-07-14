@@ -382,11 +382,14 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
     title[2*MAX_NAME_LEN-1] = 0;
     if (bitem->pbi.endp_type == endp_type_phy)
       len += format_phy_info(bitem->name, text);
-    else if (bitem->pbi.endp_type == endp_type_tap)
+    else if ((bitem->pbi.endp_type == endp_type_taps) ||
+             (bitem->pbi.endp_type == endp_type_tapv))
       len += sprintf(text + len, "\nTAP");
-    else if (bitem->pbi.endp_type == endp_type_nat)
+    else if ((bitem->pbi.endp_type == endp_type_nats) ||
+             (bitem->pbi.endp_type == endp_type_natv))
       len += sprintf(text + len, "\nNAT");
-    else if (bitem->pbi.endp_type == endp_type_c2c)
+    else if ((bitem->pbi.endp_type == endp_type_c2cs) ||
+             (bitem->pbi.endp_type == endp_type_c2cv))
       len += c2c_item_info(text + len, bitem);
 /*
     else if (bitem->pbi.endp_type == endp_type_a2b)
@@ -626,20 +629,7 @@ static void hidden_visible_node(GtkWidget *mn, t_item_ident *pm)
 /****************************************************************************/
 static void sat_item_wireshark(GtkWidget *mn, t_item_ident *pm)
 {
-  if ((pm->endp_type == endp_type_phy) ||
-      (pm->endp_type == endp_type_tap))
-    {
-    if (pm->bank_type != bank_type_sat)
-      KOUT("%s %d", pm->name, pm->num);
-    wireshark_launch(0, 0, pm->name, pm->num);
-    }
-  else if ((pm->endp_type == endp_type_eths) || 
-           (pm->endp_type == endp_type_ethv))
-    {
-    wireshark_launch(1, pm->vm_id, pm->name, pm->num);
-    }
-  else
-    KOUT("%s %d", pm->name, pm->num);
+  wireshark_launch(pm->vm_id, pm->name, pm->num);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -716,8 +706,6 @@ static t_item_ident *get_and_init_pm(t_bank_item *bitem)
         KOUT("%s %d", bitem->name, bitem->num); 
       break;
     case bank_type_sat:
-      if ((bitem->pbi.endp_type == endp_type_phy) ||
-          (bitem->pbi.endp_type == endp_type_tap))
         pm->endp_type = bitem->pbi.endp_type;
       break;
     case bank_type_edge:
@@ -730,7 +718,21 @@ static t_item_ident *get_and_init_pm(t_bank_item *bitem)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void wireshark_launch(int is_vhost, int vm_id, char *name, int num)
+static void intf_item_dyn_snf_on(GtkWidget *mn, t_item_ident *pm)
+{
+  to_cloonix_switch_dyn_snf_req(pm->bank_type, pm->name, pm->num, 1);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void intf_item_dyn_snf_off(GtkWidget *mn, t_item_ident *pm)
+{
+  to_cloonix_switch_dyn_snf_req(pm->bank_type, pm->name, pm->num, 0);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void wireshark_launch(int vm_id, char *name, int num)
 {
   t_bank_item *bitem, *bnode, *bcnt;
   char full_name[MAX_NAME_LEN];
@@ -739,23 +741,9 @@ void wireshark_launch(int is_vhost, int vm_id, char *name, int num)
   bcnt = look_for_cnt_with_id(name);
   memset(full_name, 0, MAX_NAME_LEN);
   snprintf(full_name, MAX_NAME_LEN-1, "%s_%d", name, num);
-  if (bitem)
+  if ((bitem) || (bnode) || (bcnt))
     {
-    start_wireshark_dpdk(name);
-    }
-  else if(bnode)
-    {
-    if (is_vhost)
-      start_wireshark_vhost(0, vm_id, name, num);
-    else
-      start_wireshark_dpdk(full_name);
-    }
-  else if(bcnt)
-    {
-    if (is_vhost)
-      start_wireshark_vhost(1, vm_id, name, num);
-    else
-      start_wireshark_dpdk(full_name);
+    start_wireshark_dpdk(full_name);
     }
   else
     KERR("ERROR: wireshark for %s %d", name, num);
@@ -817,20 +805,43 @@ void lan_ctx_menu(t_bank_item *bitem)
 void sat_ctx_menu(t_bank_item *bitem)
 {
   GtkWidget *item_delete, *item_hidden, *item_info, *item_wireshark;
-  GtkWidget *menu = gtk_menu_new();
+  GtkWidget *item_dyn_snf, *menu = gtk_menu_new();
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
 
-  if (pm->endp_type)
+  if ((pm->endp_type == endp_type_tapv) ||
+      (pm->endp_type == endp_type_natv) ||
+      (pm->endp_type == endp_type_c2cv))
+    item_dyn_snf = gtk_menu_item_new_with_label("Add snf capa");
+
+  if ((pm->endp_type == endp_type_taps) ||
+      (pm->endp_type == endp_type_nats) ||
+      (pm->endp_type == endp_type_c2cs))
+    {
     item_wireshark = gtk_menu_item_new_with_label("wireshark");
+    item_dyn_snf = gtk_menu_item_new_with_label("Del snf capa");
+    }
 
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
   item_delete = gtk_menu_item_new_with_label("Delete");
   item_info = gtk_menu_item_new_with_label("Info");
 
-  if (pm->endp_type)
+  if ((pm->endp_type == endp_type_tapv) ||
+      (pm->endp_type == endp_type_natv) ||
+      (pm->endp_type == endp_type_c2cv))
+    g_signal_connect(G_OBJECT(item_dyn_snf), "activate",
+                     G_CALLBACK(intf_item_dyn_snf_on), (gpointer) pm);
+
+  if ((pm->endp_type == endp_type_taps) ||
+      (pm->endp_type == endp_type_nats) ||
+      (pm->endp_type == endp_type_c2cs))
+    {
     g_signal_connect(G_OBJECT(item_wireshark), "activate",
                      G_CALLBACK(sat_item_wireshark), (gpointer) pm);
+    g_signal_connect(G_OBJECT(item_dyn_snf), "activate",
+                     G_CALLBACK(intf_item_dyn_snf_off), (gpointer) pm);
+    }
+
   g_signal_connect(G_OBJECT(item_delete), "activate",
                    G_CALLBACK(sat_item_delete), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_hidden), "activate",
@@ -840,8 +851,12 @@ void sat_ctx_menu(t_bank_item *bitem)
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
 
-  if (pm->endp_type)
+  if ((pm->endp_type == endp_type_taps) ||
+      (pm->endp_type == endp_type_nats) ||
+      (pm->endp_type == endp_type_c2cs))
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
+
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dyn_snf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
@@ -883,22 +898,32 @@ void intf_ctx_menu(t_bank_item *bitem)
 {
   GtkWidget *item_promisc_on, *item_promisc_off, *item_monitor; 
   GtkWidget *separator, *menu = gtk_menu_new();
-  GtkWidget *item_hidden, *item_info, *item_wireshark;
+  GtkWidget *item_hidden, *item_info, *item_wireshark, *item_dyn_snf;
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
-  if ((pm->endp_type == endp_type_ethv) || 
-      (pm->endp_type == endp_type_eths))
+  if (pm->endp_type == endp_type_ethv)
+    item_dyn_snf = gtk_menu_item_new_with_label("Add snf capa");
+  if (pm->endp_type == endp_type_eths)
+    {
     item_wireshark = gtk_menu_item_new_with_label("wireshark");
+    item_dyn_snf = gtk_menu_item_new_with_label("Del snf capa");
+    }
   item_promisc_on = gtk_menu_item_new_with_label("Promisc on");
   item_promisc_off = gtk_menu_item_new_with_label("Promisc off");
   item_monitor = gtk_menu_item_new_with_label("Monitor");
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
   item_info = gtk_menu_item_new_with_label("Info");
   separator = gtk_separator_menu_item_new();
-  if ((pm->endp_type == endp_type_ethv) || 
-      (pm->endp_type == endp_type_eths))
+  if (pm->endp_type == endp_type_ethv)
+    g_signal_connect(G_OBJECT(item_dyn_snf), "activate",
+                     G_CALLBACK(intf_item_dyn_snf_on), (gpointer) pm);
+  if (pm->endp_type == endp_type_eths)
+    {
     g_signal_connect(G_OBJECT(item_wireshark), "activate",
                      G_CALLBACK(sat_item_wireshark), (gpointer) pm);
+    g_signal_connect(G_OBJECT(item_dyn_snf), "activate",
+                     G_CALLBACK(intf_item_dyn_snf_off), (gpointer) pm);
+    }
   g_signal_connect(G_OBJECT(item_monitor), "activate",
                    G_CALLBACK(intf_item_monitor), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_promisc_on), "activate",
@@ -913,9 +938,13 @@ void intf_ctx_menu(t_bank_item *bitem)
 
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
-  if ((pm->endp_type == endp_type_ethv) || 
-      (pm->endp_type == endp_type_eths))
+  if (pm->endp_type == endp_type_ethv)
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dyn_snf);
+  if (pm->endp_type == endp_type_eths)
+    {
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dyn_snf);
+    }
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_monitor);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
@@ -989,18 +1018,25 @@ void node_ctx_menu(t_bank_item *bitem)
 void cnt_ctx_menu(t_bank_item *bitem)
 {
   GtkWidget *item_info, *item_delete, *menu = gtk_menu_new();
+  GtkWidget *item_test;
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
   if (bitem->bank_type != bank_type_cnt)
     KOUT("%s", bitem->name);
+
+  item_test = gtk_menu_item_new_with_label("Test");
   item_info = gtk_menu_item_new_with_label("Info");
   item_delete = gtk_menu_item_new_with_label("Delete");
+
+  g_signal_connect(G_OBJECT(item_test), "activate",
+                   G_CALLBACK(cnt_crun_exec), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_info), "activate",
                    G_CALLBACK(cnt_item_info), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_delete), "activate",
                    G_CALLBACK(cnt_item_delete), (gpointer) pm);
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_test);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_widget_show_all(menu);

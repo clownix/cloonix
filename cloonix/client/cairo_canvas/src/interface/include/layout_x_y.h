@@ -15,12 +15,12 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void set_node_layout_x_y(char *name, int color_choice,
+void set_node_layout_x_y(char *name, 
                          double x, double y, int hidden_on_graph, 
                          double *tx, double *ty,
                          int32_t *thidden_on_graph); 
 /*---------------------------------------------------------------------------*/
-void get_node_layout_x_y(char *name, int *color_choice, 
+void get_node_layout_x_y(char *name, 
                          double *x, double *y, int *hidden_on_graph, 
                          double *tx, double *ty,
                          int32_t *thidden_on_graph);

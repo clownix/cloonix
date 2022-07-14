@@ -23,6 +23,7 @@ typedef struct t_custom_cnt
   char image[MAX_PATH_LEN];
   char customer_launch[MAX_PATH_LEN];
   int current_number;
+  int is_persistent;
 } t_custom_cnt;
 
 void set_bulcnt(int nb, t_slowperiodic *slowperiodic);

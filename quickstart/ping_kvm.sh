@@ -23,11 +23,14 @@ cloonix_gui $NET
 
 #######################################################################
 for i in 1 2 ; do
-  cloonix_cli $NET add kvm Cloon${i} ${PARAMS} ${DIST}.qcow2
-  cloonix_cli $NET add lan Cloon${i} 0 lan1
+  cloonix_cli $NET add kvm Cloon${i} ${PARAMS} ${DIST}.qcow2 &
 done
 #----------------------------------------------------------------------
-
+sleep 4
+#----------------------------------------------------------------------
+for i in 1 2 ; do
+  cloonix_cli $NET add lan Cloon${i} 0 lan1
+done
 #######################################################################
 set +e
 for i in 1 2 ; do

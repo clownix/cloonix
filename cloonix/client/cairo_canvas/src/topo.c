@@ -57,8 +57,8 @@ typedef struct t_ccol
 } t_ccol;
 /*--------------------------------------------------------------------------*/
 static t_ccol orange, black, blue, green, cyan, red, magenta, brown, 
-              lightgrey, darkgrey, lightblue, lightgreen, lightcyan, 
-              lightred, lightmagenta, yellow, white;
+              lightgrey, darkgrey, lightblue, lightblue2, lightgreen,
+              lightcyan, lightred, lightmagenta, yellow, white;
 
 CrCanvas *glob_canvas = NULL;
 GtkWidget *gtkwidget_canvas;
@@ -96,12 +96,16 @@ static void update_layout_center_scale(const char *from)
 /****************************************************************************/
 static void paint_color_of_c2c(t_bank_item *bitem, cairo_t *c)
 {
-  if (is_a_c2c(bitem))
+  if ((bitem->pbi.endp_type == endp_type_c2cs) ||
+      (bitem->pbi.endp_type == endp_type_c2cv))
     {
     if ((bitem->pbi.pbi_sat->topo_c2c.tcp_connection_peered) &&
              (bitem->pbi.pbi_sat->topo_c2c.udp_connection_peered))
       {
-      cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
+      if (bitem->pbi.endp_type == endp_type_c2cs)
+        cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
+      else
+        cairo_set_source_rgba (c, lightcyan.r, lightcyan.g, lightcyan.b, 1.0);
       }
     else if (bitem->pbi.pbi_sat->topo_c2c.tcp_connection_peered)
       {
@@ -112,6 +116,8 @@ static void paint_color_of_c2c(t_bank_item *bitem, cairo_t *c)
       cairo_set_source_rgba (c, red.r, red.g, red.b, 0.8);
       }
     }
+  else
+    KERR("ERROR %s %d", bitem->name, bitem->pbi.endp_type);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -178,6 +184,7 @@ static void init_colors(void)
   lightgrey.r    = 0.66;  lightgrey.g    = 0.66;  lightgrey.b    = 0.66;
   darkgrey.r     = 0.33;  darkgrey.g     = 0.33;  darkgrey.b     = 0.33;
   lightblue.r    = 0.50;  lightblue.g    = 0.50;  lightblue.b    = 1.00;
+  lightblue2.r    = 0.30;  lightblue2.g    = 0.30;  lightblue2.b    = 1.00;
   lightgreen.r   = 0.33;  lightgreen.g   = 1.00;  lightgreen.b   = 0.33;
   lightcyan.r    = 0.33;  lightcyan.g    = 1.00;  lightcyan.b    = 1.00;
   lightred.r     = 1.00;  lightred.g     = 0.33;  lightred.b     = 0.33;
@@ -332,16 +339,19 @@ static void process_mouse_double_click(t_bank_item *bitem)
           KOUT("%s %d", bitem->name, bitem->num);
         }
       if (endp_type == endp_type_eths)
-        wireshark_launch(0, vm_id, bitem->name, bitem->num);
-      else if (endp_type == endp_type_ethv)
-        wireshark_launch(1, vm_id, bitem->name, bitem->num);
+        wireshark_launch(vm_id, bitem->name, bitem->num);
+      else
+        KERR("WARNING %s %d", bitem->name, bitem->num);
       break;
 
     case bank_type_sat:
       bitem->pbi.flag = flag_normal;
-      if ((bitem->pbi.endp_type == endp_type_phy) ||
-          (bitem->pbi.endp_type == endp_type_tap))
-        wireshark_launch(0, 0, bitem->name, 0);
+      if ((bitem->pbi.endp_type == endp_type_nats) ||
+          (bitem->pbi.endp_type == endp_type_taps) ||
+          (bitem->pbi.endp_type == endp_type_c2cs))
+        wireshark_launch(0, bitem->name, 0);
+      else
+        KERR("WARNING %s", bitem->name);
       break;
 
     default:
@@ -654,34 +664,6 @@ static void paint_select(cairo_t *c, int flag, int flag_trace,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void paint_select_source_color(t_bank_item *bitem, cairo_t *c)
-{
-  int flag, flag_trace;
-  flag = bitem->pbi.flag;
-  flag_trace = bitem->pbi.flag_trace;
-  switch (bitem->bank_type)
-    {
-    case bank_type_sat:
-      paint_color_of_c2c(bitem, c);
-      break;
-    case bank_type_lan:
-      paint_select(c,flag,flag_trace,&lightgrey,&red,&lightmagenta);
-      break;
-    case bank_type_edge:
-      paint_select(c,flag,flag_trace,&lightgreen,&red,&lightmagenta);
-      break;
-    default:
-      KOUT("%d", bitem->bank_type);
-    }
-  cairo_fill_preserve(c);
-  if (bitem->pbi.grabbed)
-    cairo_set_source_rgba (c, white.r, white.g, white.b, 1.0);
-  else
-    cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void cairo_elem(cairo_t *c, int bank_type, double x0, double y0,
                                                   double x1, double y1)
 {
@@ -729,8 +711,12 @@ static void on_item_paint_nat(CrItem *item, cairo_t *c)
     cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
   cairo_stroke_preserve(c);
 
-  cairo_set_source_rgba (c, lightcyan.r, lightcyan.g, lightcyan.b, 0.8);
-
+  if (bitem->pbi.endp_type == endp_type_nats)
+    cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 0.8);
+  else if (bitem->pbi.endp_type == endp_type_natv)
+    cairo_set_source_rgba (c, lightcyan.r, lightcyan.g, lightcyan.b, 0.8);
+  else
+    KERR("ERROR %s %d", bitem->name, bitem->pbi.endp_type);
 
   cairo_fill(c);
   if (bitem->pbi.blink_rx)
@@ -875,8 +861,10 @@ static void on_item_paint_node(CrItem *item, cairo_t *c)
   else
     {
     if (bitem->pbi.color_choice == 1)
-        cairo_set_source_rgba (c, cyan.r, cyan.g, cyan.b, 1.0);
+        cairo_set_source_rgba (c, lightblue2.r, lightblue2.g, lightblue2.b, 1.0);
     else if (bitem->pbi.color_choice == 2)
+        cairo_set_source_rgba (c, cyan.r, cyan.g, cyan.b, 1.0);
+    else if (bitem->pbi.color_choice == 3)
         cairo_set_source_rgba (c, brown.r, brown.g, brown.b, 1.0);
     else
       {
@@ -943,7 +931,7 @@ static void sat_rectangle(cairo_t *c, double x0, double y0, double d0)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void on_item_paint_sat(CrItem *item, cairo_t *c)
+static void on_item_paint_tap(CrItem *item, cairo_t *c)
 {
   t_bank_item *bitem = from_critem_to_bank_item(item);
   double x0,y0, d0;
@@ -967,7 +955,12 @@ static void on_item_paint_sat(CrItem *item, cairo_t *c)
   else
     cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
   cairo_stroke_preserve(c);
-  cairo_set_source_rgba (c, lightcyan.r, lightcyan.g, lightcyan.b, 1.0);
+  if (bitem->pbi.endp_type == endp_type_taps)
+    cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
+  else if (bitem->pbi.endp_type == endp_type_tapv)
+    cairo_set_source_rgba (c, lightcyan.r, lightcyan.g, lightcyan.b, 1.0);
+  else
+    KERR("ERROR %s %d", bitem->name, bitem->pbi.endp_type);
   cairo_fill(c);
   if (bitem->pbi.blink_rx)
     {
@@ -1063,19 +1056,52 @@ static void on_item_paint_c2c(CrItem *item, cairo_t *c)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void on_item_paint(CrItem *item, cairo_t *c)
+static void on_item_paint_lan(CrItem *item, cairo_t *c)
 {
+  int flag, flag_trace;
   t_bank_item *bitem = from_critem_to_bank_item(item);
   if (!bitem)
     KOUT(" ");
   cairo_new_path(c);
-  cairo_elem(c, bitem->bank_type, bitem->pbi.x0, bitem->pbi.y0, 
+  cairo_elem(c, bitem->bank_type, bitem->pbi.x0, bitem->pbi.y0,
              bitem->pbi.x1, bitem->pbi.y1);
-  paint_select_source_color(bitem, c);
+  flag = bitem->pbi.flag;
+  flag_trace = bitem->pbi.flag_trace;
+  paint_select(c, flag, flag_trace, &lightgrey, &red, &lightmagenta);
+  cairo_fill_preserve(c);
+  if (bitem->pbi.grabbed)
+    cairo_set_source_rgba (c, white.r, white.g, white.b, 1.0);
+  else
+    cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
   cairo_set_line_width(c, bitem->pbi.line_width);
   cairo_stroke(c);
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void on_item_paint_edge(CrItem *item, cairo_t *c)
+{
+  int flag, flag_trace;
+  t_bank_item *bitem = from_critem_to_bank_item(item);
+  if (!bitem)
+    KOUT(" ");
+  cairo_new_path(c);
+  cairo_elem(c, bitem->bank_type, bitem->pbi.x0, bitem->pbi.y0,
+             bitem->pbi.x1, bitem->pbi.y1);
+  flag = bitem->pbi.flag;
+  flag_trace = bitem->pbi.flag_trace;
+  paint_select(c, flag, flag_trace, &lightgreen, &red, &lightmagenta);
+  cairo_fill_preserve(c);
+  if (bitem->pbi.grabbed)
+    cairo_set_source_rgba (c, white.r, white.g, white.b, 1.0);
+  else
+    cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
+  cairo_set_line_width(c, bitem->pbi.line_width);
+  cairo_stroke(c);
+}
+/*--------------------------------------------------------------------------*/
+
+
 
 /****************************************************************************/
 static void edge_sensitivity_surface(cairo_t *c, double x0, double y0,
@@ -1123,15 +1149,17 @@ static CrItem *on_item_test(CrItem *item, cairo_t *c, double x, double y)
       cairo_arc (c, x0, y0, CNT_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_sat)
       {
-      if (is_a_nat(bitem))
+      if ((bitem->pbi.endp_type == endp_type_nats) ||
+          (bitem->pbi.endp_type == endp_type_natv))
         cairo_arc (c, x0, y0, NAT_RAD, 0, 2*M_PI);
-      else if (is_a_c2c(bitem))
+      else if ((bitem->pbi.endp_type == endp_type_c2cs) ||
+               (bitem->pbi.endp_type == endp_type_c2cv))
         {
         d0 = C2C_DIA/2;
         sat_lozange(c, x0, y0, d0);
         cairo_close_path (c);
         }
-      else if (is_a_a2b(bitem))
+      else if (bitem->pbi.endp_type == endp_type_a2b)
         {
         d0 = A2B_DIA/2;
         cairo_arc (c, x0, y0, d0, 0, 2*M_PI);
@@ -1178,7 +1206,8 @@ static gboolean on_item_calcb(CrItem *item, cairo_t *c,
       cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_sat)
       {
-      if (is_a_nat(bitem))
+      if ((bitem->pbi.endp_type == endp_type_nats) ||
+          (bitem->pbi.endp_type == endp_type_natv))
         cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, SNIFF_RAD, 0, 2*M_PI);
       else
         {
@@ -1332,17 +1361,34 @@ void topo_add_cr_item_to_canvas(t_bank_item *bitem, t_bank_item *bnode)
     g_signal_connect(item, "paint", (GCallback) on_item_paint_cnt, NULL);
   else if (bitem->bank_type == bank_type_sat)  
     {
-    if (is_a_nat(bitem))
+    if ((bitem->pbi.endp_type == endp_type_nats) ||
+        (bitem->pbi.endp_type == endp_type_natv))
+      {
       g_signal_connect(item, "paint", (GCallback) on_item_paint_nat, NULL);
-    else if (is_a_c2c(bitem))
+      }
+    else if ((bitem->pbi.endp_type == endp_type_c2cs) ||
+             (bitem->pbi.endp_type == endp_type_c2cv))
+      {
       g_signal_connect(item, "paint", (GCallback) on_item_paint_c2c, NULL);
-    else if (is_a_a2b(bitem))
+      }
+    else if (bitem->pbi.endp_type == endp_type_a2b)
+      {
       g_signal_connect(item, "paint", (GCallback) on_item_paint_a2b, NULL);
+      }
+    else if ((bitem->pbi.endp_type == endp_type_taps) ||
+             (bitem->pbi.endp_type == endp_type_tapv))
+      {
+      g_signal_connect(item, "paint", (GCallback) on_item_paint_tap, NULL);
+      }
     else
-      g_signal_connect(item, "paint", (GCallback) on_item_paint_sat, NULL);
+      KOUT("ERROR %s %d", bitem->name, bitem->pbi.endp_type);
     }
+  else if (bitem->bank_type == bank_type_lan)  
+    g_signal_connect(item, "paint", (GCallback) on_item_paint_lan, NULL);
+  else if (bitem->bank_type == bank_type_edge)  
+    g_signal_connect(item, "paint", (GCallback) on_item_paint_edge, NULL);
   else
-    g_signal_connect(item, "paint", (GCallback) on_item_paint, NULL);
+    KOUT("ERROR %s %d", bitem->name, bitem->pbi.endp_type);
   g_signal_connect(item, "test",  (GCallback) on_item_test,  NULL);
   g_signal_connect(item, "calculate_bounds", (GCallback) on_item_calcb, NULL);
   if (bitem->bank_type == bank_type_eth)  
@@ -1423,8 +1469,6 @@ void topo_cr_item_text(t_bank_item *bitem, double x, double y, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-/*                       topo_get_matrix_transform_point                    */
-/*--------------------------------------------------------------------------*/
 void topo_get_matrix_transform_point(t_bank_item *bitem, double *x, double *y)
 {
   cairo_matrix_t *mat;

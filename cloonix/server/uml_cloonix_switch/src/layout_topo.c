@@ -106,7 +106,7 @@ static int authorized_to_modify_data_bank_layout(int llid, int tid,
         }
       else
         {
-        if (g_head_layout_sub->llid != llid)
+        if (llid && (g_head_layout_sub->llid != llid))
           result = 0;
         }
       }
@@ -328,6 +328,7 @@ static void add_layout_node(t_layout_node *node)
 /*****************************************************************************/
 static void update_layout_lan(char *name, double x, double y, int hidden)
 {
+  t_layout_lan layout;
   t_layout_lan_xml *cur = find_lan_xml(name);
   if (cur)
     {
@@ -335,6 +336,20 @@ static void update_layout_lan(char *name, double x, double y, int hidden)
     cur->lan.y = y;
     cur->lan.hidden_on_graph = hidden;
     }
+  else
+    {
+    make_default_layout_lan(&layout, name);
+    add_layout_lan(&layout);
+    cur = find_lan_xml(name);
+    if (!cur)
+      KERR("ERROR %s", name);
+    else
+      {
+      cur->lan.x = x;
+      cur->lan.y = y;
+      cur->lan.hidden_on_graph = hidden;
+      }
+    } 
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1096,15 +1111,28 @@ void layout_del_sat(char *name)
 void layout_add_lan(char *name, int llid)
 {
   t_layout_lan layout;
+  t_layout_lan_xml *xml;
   if (!lan_get_with_name(name))
     KERR("%s", name);
   else
     {
-    make_default_layout_lan(&layout, name);
-    add_layout_lan(&layout);
-    if (!(g_head_layout_sub) ||
-         ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))
-      recv_layout_lan(0, 0, &layout);
+    xml = find_lan_xml(name);
+    if (!xml)
+      {
+      make_default_layout_lan(&layout, name);
+      add_layout_lan(&layout);
+      }
+    xml = find_lan_xml(name);
+    if (!xml)
+      KERR("%s", name);
+    else
+      {
+      if (!(g_head_layout_sub) ||
+          ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))
+        {
+        recv_layout_lan(0, 0, &(xml->lan));
+        }
+      }
     }
 }
 /*---------------------------------------------------------------------------*/

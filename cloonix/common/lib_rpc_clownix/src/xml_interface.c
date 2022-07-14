@@ -43,6 +43,8 @@ enum
   bnd_c2c_peer_conf,
   bnd_c2c_peer_ping,
 
+  bnd_color_item,
+
   bnd_hop_get_list,
   bnd_hop_list,
   bnd_hop_evt_doors_sub,
@@ -704,9 +706,11 @@ static int topo_cnt_format(char *buf, t_topo_cnt *cnt)
       (strlen(cnt->customer_launch) == 0))
     KOUT("name:%s image:%s l:%s", cnt->name, cnt->image, cnt->customer_launch);
   len = sprintf(buf, EVENT_TOPO_CNT_O, cnt->name, 
+                                       cnt->is_persistent,
+                                       cnt->vm_id,
+                                       cnt->color,
                                        cnt->image,  
                                        cnt->ping_ok,
-                                       cnt->vm_id,
                                        cnt->nb_tot_eth);
   for (i=0; i < cnt->nb_tot_eth; i++)
     len += topo_eth_format(buf+len, cnt->eth_table[i].endp_type, 
@@ -729,6 +733,8 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
   topo_kvm_swapon(&kvm, ikvm);
 
   len = sprintf(buf, EVENT_TOPO_KVM_O, kvm.name,
+                                       kvm.vm_id,
+                                       kvm.color,
                                        kvm.install_cdrom,
                                        kvm.added_cdrom,
                                        kvm.added_disk,
@@ -736,7 +742,6 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
                                        kvm.linux_kernel,
                                        kvm.rootfs_used,
                                        kvm.rootfs_backing,
-                                       kvm.vm_id,
                                        kvm.vm_config_flags,
                                        kvm.vm_config_param,
                                        kvm.mem,
@@ -769,6 +774,7 @@ static int topo_c2c_format(char *buf, t_topo_c2c *c2c)
   else
     strncpy(lan, c2c->lan, MAX_NAME_LEN-1); 
   len = sprintf(buf, EVENT_TOPO_C2C, c2c->name,
+                                     c2c->endp_type,
                                      c2c->dist_cloon,
                                      lan,
                                      c2c->local_is_master,
@@ -792,7 +798,7 @@ static int topo_nat_format(char *buf, t_topo_nat *nat)
     KOUT(" ");
   if (!strlen(nat->name) || (strlen(nat->name) >= MAX_NAME_LEN))
      KOUT(" ");
-  len = sprintf(buf, EVENT_TOPO_NAT, nat->name);
+  len = sprintf(buf, EVENT_TOPO_NAT, nat->name, nat->endp_type);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -805,7 +811,7 @@ static int topo_tap_format(char *buf, t_topo_tap *tap)
     KOUT(" ");
   if (!strlen(tap->name) || (strlen(tap->name) >= MAX_NAME_LEN))
      KOUT(" ");
-  len = sprintf(buf, EVENT_TOPO_TAP, tap->name);
+  len = sprintf(buf, EVENT_TOPO_TAP, tap->name, tap->endp_type);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -1142,12 +1148,13 @@ void send_add_vm(int llid, int tid, t_topo_kvm *ikvm)
   topo_kvm_check_str(ikvm, __LINE__);
   topo_kvm_swapon(&kvm, ikvm); 
 
-  len = sprintf(sndbuf, ADD_VM_O, tid, kvm.name, kvm.vm_config_flags,
-                kvm.vm_config_param, kvm.mem, kvm.cpu, kvm.nb_tot_eth);
+  len = sprintf(sndbuf, ADD_KVM_O, tid, kvm.name, kvm.vm_id, kvm.color,
+                kvm.vm_config_flags, kvm.vm_config_param,
+                kvm.mem, kvm.cpu, kvm.nb_tot_eth);
 
   len += make_eth_table(sndbuf+len, kvm.nb_tot_eth, kvm.eth_table);
 
-  len += sprintf(sndbuf+len, ADD_VM_C, kvm.linux_kernel, 
+  len += sprintf(sndbuf+len, ADD_KVM_C, kvm.linux_kernel, 
                              kvm.rootfs_input, kvm.install_cdrom,
                              kvm.added_cdrom, kvm.added_disk,
                              kvm.p9_host_share);
@@ -1450,10 +1457,12 @@ static void helper_fill_topo_cnt(char *msg_in, t_topo_cnt *cnt)
   memcpy(msg, msg_in, len);
   msg[len] = 0;
   if (sscanf(msg, EVENT_TOPO_CNT_O, cnt->name, 
+                                    &(cnt->is_persistent),
+                                    &(cnt->vm_id),
+                                    &(cnt->color),
                                     cnt->image,  
                                     &(cnt->ping_ok),
-                                    &(cnt->vm_id),
-                                    &(cnt->nb_tot_eth)) != 5)
+                                    &(cnt->nb_tot_eth)) != 7)
     KOUT("%s", msg);
   get_eth_table(msg, cnt->nb_tot_eth, cnt->eth_table);
   ptr1 = strstr(msg, "<customer_launch> ");
@@ -1481,6 +1490,8 @@ static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
   t_topo_kvm ikvm;
   memset(&ikvm, 0, sizeof(t_topo_kvm));
   if (sscanf(msg, EVENT_TOPO_KVM_O, ikvm.name,
+                                    &(ikvm.vm_id),
+                                    &(ikvm.color),
                                     ikvm.install_cdrom,
                                     ikvm.added_cdrom,
                                     ikvm.added_disk,
@@ -1488,12 +1499,11 @@ static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
                                     ikvm.linux_kernel,
                                     ikvm.rootfs_used,
                                     ikvm.rootfs_backing,
-                                    &(ikvm.vm_id),
                                     &(ikvm.vm_config_flags),
                                     &(ikvm.vm_config_param),
                                     &(ikvm.mem),
                                     &(ikvm.cpu),
-                                    &(ikvm.nb_tot_eth)) != 14)
+                                    &(ikvm.nb_tot_eth)) != 15)
     KOUT("%s", msg);
   get_eth_table(msg, ikvm.nb_tot_eth, ikvm.eth_table);
   topo_kvm_swapoff(kvm, &ikvm);
@@ -1505,6 +1515,7 @@ static void helper_fill_topo_c2c(char *msg, t_topo_c2c *c2c)
 {
 
   if (sscanf(msg, EVENT_TOPO_C2C, c2c->name,
+                                  &(c2c->endp_type),
                                   c2c->dist_cloon,
                                   c2c->lan,
                                   &(c2c->local_is_master),
@@ -1515,7 +1526,7 @@ static void helper_fill_topo_c2c(char *msg, t_topo_c2c *c2c)
                                   &(c2c->loc_udp_port),
                                   &(c2c->dist_udp_port),
                                   &(c2c->tcp_connection_peered),
-                                  &(c2c->udp_connection_peered)) != 12)
+                                  &(c2c->udp_connection_peered)) != 13)
     KOUT("%s", msg);
   if (!strcmp(c2c->lan, "name_to_erase_upon_extract"))
     memset(c2c->lan, 0, MAX_NAME_LEN);
@@ -1525,7 +1536,7 @@ static void helper_fill_topo_c2c(char *msg, t_topo_c2c *c2c)
 /*****************************************************************************/
 static void helper_fill_topo_nat(char *msg, t_topo_nat *nat)
 {
-  if (sscanf(msg, EVENT_TOPO_NAT, nat->name) != 1)
+  if (sscanf(msg, EVENT_TOPO_NAT, nat->name, &(nat->endp_type)) != 2)
     KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
@@ -1533,7 +1544,7 @@ static void helper_fill_topo_nat(char *msg, t_topo_nat *nat)
 /*****************************************************************************/
 static void helper_fill_topo_tap(char *msg, t_topo_tap *tap)
 {
-  if (sscanf(msg, EVENT_TOPO_TAP, tap->name) != 1)
+  if (sscanf(msg, EVENT_TOPO_TAP, tap->name, &(tap->endp_type)) != 2)
     KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
@@ -2002,8 +2013,8 @@ void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     KOUT(" ");
   if (strlen(cnt->customer_launch) >= MAX_PATH_LEN)
     KOUT(" ");
-  len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->name, cnt->ping_ok,
-                cnt->vm_id, cnt->nb_tot_eth);
+  len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->name, cnt->is_persistent,
+                cnt->vm_id, cnt->color, cnt->ping_ok, cnt->nb_tot_eth);
   len += make_eth_table(sndbuf+len, cnt->nb_tot_eth, cnt->eth_table);
   len += sprintf(sndbuf+len, ADD_CNT_C, cnt->customer_launch, cnt->image);
   my_msg_mngt_tx(llid, len, sndbuf);
@@ -2163,6 +2174,20 @@ void send_c2c_peer_ping(int llid, int tid, char *c2c_name, int status)
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_color_item(int llid, int tid, char *name, int color)
+{
+  int len = 0;
+  if (name[0] == 0)
+    KOUT(" ");
+  if (strlen(name) >= MAX_NAME_LEN)
+    KOUT(" ");
+  len = sprintf(sndbuf, COLOR_ITEM, tid, name, color);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 static void customer_launch_get(char *msg_in, t_topo_cnt *cnt)
@@ -2395,20 +2420,21 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
 
     case bnd_add_vm:
       memset(&ikvm, 0, sizeof(t_topo_kvm));
-      if (sscanf(msg, ADD_VM_O, &tid, ikvm.name, 
-                 &(ikvm.vm_config_flags), &(ikvm.vm_config_param),
-                 &(ikvm.mem), &(ikvm.cpu), &(ikvm.nb_tot_eth)) != 7)
+      if (sscanf(msg, ADD_KVM_O, &tid, ikvm.name, &(ikvm.vm_id),
+                 &(ikvm.color), &(ikvm.vm_config_flags),
+                 &(ikvm.vm_config_param), &(ikvm.mem), &(ikvm.cpu),
+                 &(ikvm.nb_tot_eth)) != 9)
         KOUT("%s", msg);
       get_eth_table(msg, ikvm.nb_tot_eth, ikvm.eth_table);
       ptr = strstr(msg, "<linux_kernel>");
       if (!ptr)
         KOUT("%s", msg);
-      if (sscanf(ptr, ADD_VM_C, ikvm.linux_kernel, 
-                                ikvm.rootfs_input, 
-                                ikvm.install_cdrom, 
-                                ikvm.added_cdrom, 
-                                ikvm.added_disk, 
-                                ikvm.p9_host_share) != 6) 
+      if (sscanf(ptr, ADD_KVM_C, ikvm.linux_kernel, 
+                                 ikvm.rootfs_input, 
+                                 ikvm.install_cdrom, 
+                                 ikvm.added_cdrom, 
+                                 ikvm.added_disk, 
+                                 ikvm.p9_host_share) != 6) 
         KOUT("%s", msg);
       topo_kvm_swapoff(&kvm, &ikvm); 
       recv_add_vm(llid, tid, &kvm);
@@ -2583,6 +2609,12 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_c2c_peer_ping(llid, tid, name, status);
       break;
 
+    case bnd_color_item:
+      if (sscanf(msg, COLOR_ITEM, &tid, name, &num) != 3)
+        KOUT("%s", msg);
+      recv_color_item(llid, tid, name, num);
+      break;
+
     case bnd_tap_add:
       if (sscanf(msg, TAP_ADD, &tid, name) != 2)
         KOUT("%s", msg);
@@ -2591,8 +2623,9 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
 
     case bnd_cnt_add:
       memset(&cnt, 0, sizeof(t_topo_cnt));
-      if (sscanf(msg, ADD_CNT_O, &tid, cnt.name, &(cnt.ping_ok),
-                 &(cnt.vm_id), &(cnt.nb_tot_eth)) != 5)
+      if (sscanf(msg, ADD_CNT_O, &tid, cnt.name, &(cnt.is_persistent),
+                 &(cnt.vm_id), &(cnt.color), &(cnt.ping_ok),
+                 &(cnt.nb_tot_eth)) != 7)
         KOUT("%s", msg);
       get_eth_table(msg, cnt.nb_tot_eth, cnt.eth_table);
       customer_launch_get(msg, &cnt);
@@ -2736,7 +2769,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(STATUS_OK,      bound_list[bnd_status_ok]);
   extract_boundary(STATUS_KO,      bound_list[bnd_status_ko]);
   extract_boundary(ADD_CNT_O,      bound_list[bnd_cnt_add]);
-  extract_boundary(ADD_VM_O,       bound_list[bnd_add_vm]);
+  extract_boundary(ADD_KVM_O,      bound_list[bnd_add_vm]);
   extract_boundary(SAV_VM,         bound_list[bnd_sav_vm]);
   extract_boundary(DEL_SAT,        bound_list[bnd_del_sat]);
   extract_boundary(ADD_LAN_ENDP, bound_list[bnd_add_lan_endp]);
@@ -2784,6 +2817,8 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(C2C_CREATE, bound_list[bnd_c2c_peer_create]);
   extract_boundary(C2C_CONF, bound_list[bnd_c2c_peer_conf]);
   extract_boundary(C2C_PING, bound_list[bnd_c2c_peer_ping]);
+
+  extract_boundary(COLOR_ITEM, bound_list[bnd_color_item]);
 
   extract_boundary(NAT_ADD, bound_list[bnd_nat_add]);
   extract_boundary(PHY_ADD, bound_list[bnd_phy_add]);
