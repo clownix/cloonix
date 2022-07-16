@@ -294,7 +294,7 @@ void move_manager_rotate(t_bank_item *bitem, double x1, double y1)
 static void process_mouse_double_click(t_bank_item *bitem)
 {
   t_bank_item *att_node;
-  int vm_id, endp_type, config_flags;
+  int vm_id, endp_type, config_flags=0;
   switch(bitem->bank_type)
     {
 
@@ -303,7 +303,7 @@ static void process_mouse_double_click(t_bank_item *bitem)
       break;
 
     case bank_type_cnt:
-      launch_xterm_double_click_cnt(bitem->name);
+      launch_xterm_double_click(bitem->name, config_flags);
       break;
 
     case bank_type_node:

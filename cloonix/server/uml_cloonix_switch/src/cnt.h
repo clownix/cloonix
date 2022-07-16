@@ -60,5 +60,8 @@ void cnt_timer_beat(int llid);
 int  cnt_info(char *name, int *nb_eth, t_eth_table **eth_table);
 int  cnt_get_all_pid(t_lst_pid **lst_pid);
 void cnt_set_color(char *name, int color);
+void cnt_doorways_ping_ok(char *name);
+void cnt_doorways_ping_ko(char *name);
+void cnt_doorways_up_and_running(char *name);
 void cnt_init(void);
 /*---------------------------------------------------------------------------*/

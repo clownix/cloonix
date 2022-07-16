@@ -841,6 +841,8 @@ static void plug_to_backdoor_llid(t_backdoor_vm *bvm)
       KOUT(" ");
     llid_setup(bvm, llid, fd);
     }
+  else
+    KERR("ERROR %s", bvm->backdoor);
 }
 /*--------------------------------------------------------------------------*/
 

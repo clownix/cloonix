@@ -621,6 +621,15 @@ int util_get_max_tempo_fail(void)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+char *utils_get_cnt_dropbear(char *name)
+{
+  char *cnt_dir = utils_get_cnt_dir();
+  static char path[MAX_PATH_LEN];
+  snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/mountbear/sock", cnt_dir, name);
+  return path;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void utils_init(void)

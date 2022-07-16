@@ -38,6 +38,8 @@
 #include "ovs_snf.h"
 #include "msg.h"
 #include "lan_to_name.h"
+#include "doors_rpc.h"
+#include "doorways_mngt.h"
 
 typedef struct t_cnt_delete
 {
@@ -388,6 +390,9 @@ void cnt_sigdiag_resp(int llid, char *line)
       cur->crun_pid = crun_pid;
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       cnt_vhost_begin(cur);
+      doors_send_del_vm(get_doorways_llid(), 0, name);
+      doors_send_add_vm(get_doorways_llid(), 0, name, 
+                        utils_get_cnt_dropbear(name));
       }
     }
 
@@ -451,23 +456,6 @@ void cnt_sigdiag_resp(int llid, char *line)
       free_cnt(name);
       }
     }
-
-  else if (sscanf(line,
-      "cloonsuid_cnt_parrot_test_ok %s", name) == 1)
-    {
-    cur = find_cnt(name);
-    if (cur == NULL)
-      KERR("ERROR %s", line);
-    else
-      {
-KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOO %s", line);
-      cur->cnt.ping_ok = 1;
-      cfg_send_vm_evt_cloonix_ga_ping_ok(name);
-      if (send_sig_suid_power(llid, line))
-        KERR("ERROR %d %s", llid, name);
-      }
-    }
-
 
   else
     KERR("ERROR %s", line);
@@ -674,6 +662,7 @@ static void timer_cnt_delete(void *data)
           KERR("ERROR DEL KVM ETH %s", cd->name);
         memset(req, 0, MAX_PATH_LEN);
         snprintf(req,MAX_PATH_LEN-1,"cloonsuid_cnt_delete name=%s",cd->name);
+        doors_send_del_vm(get_doorways_llid(), 0, cd->name);
         if (send_sig_suid_power(cd->llid, req))
           {
           snprintf(err, MAX_PATH_LEN-1, "ERROR %s delete", cd->name);
@@ -1073,6 +1062,47 @@ void cnt_set_color(char *name, int color)
     }
 }
 /*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void cnt_doorways_ping_ok(char *name)
+{
+  t_cnt *cur = find_cnt(name);
+  if (cur == NULL)
+    KERR("ERROR %s", name);
+  else
+    {
+    cur->cnt.ping_ok = 1;
+    cfg_send_vm_evt_cloonix_ga_ping_ok(name);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void cnt_doorways_ping_ko(char *name)
+{
+  t_cnt *cur = find_cnt(name);
+  if (cur == NULL)
+    KERR("ERROR %s", name);
+  else
+    {
+    cur->cnt.ping_ok = 0;
+    cfg_send_vm_evt_cloonix_ga_ping_ko(name);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void cnt_doorways_up_and_running(char *name)
+{
+  int door_llid = get_doorways_llid(); 
+  t_cnt *cur = find_cnt(name);
+  if (cur == NULL)
+    KERR("ERROR %s", name);
+  else
+    doors_send_command(door_llid, 0, name, CLOONIX_UP_VPORT_AND_RUNNING);
+}
+/*--------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 void cnt_init(void)

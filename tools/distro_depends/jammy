@@ -101,6 +101,7 @@ cloonix_scp $NET /tmp/grub ${NAME}:/etc/default
 
 cloonix_ssh $NET ${NAME} "update-grub"
 
+#cloonix_ssh $NET ${NAME} "apt-get install qemu-guest-agent"
 cloonix_ssh $NET ${NAME} "sync"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "poweroff"

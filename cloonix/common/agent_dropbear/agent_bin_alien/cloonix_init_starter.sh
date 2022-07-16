@@ -1,13 +1,11 @@
 #!/bin/sh
 
-/usr/bin/cloonix_parrot_srv
+/mnt/cloonix_config_fs/cloonix_agent
+/mnt/cloonix_config_fs/dropbear_cloonix_sshd
 
 __CUSTOMER_LAUNCHER_SCRIPT__
 
-count=0
 while [ 1 ]; do
-  sleep 60
-  count=$((count+1))
-  echo $count 
-  printf "${count}mn since start\n" > /tmp/cloonix_init_starter.count
+  sleep 3000
 done
+

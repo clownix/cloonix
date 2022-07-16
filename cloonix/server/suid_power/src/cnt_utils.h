@@ -28,7 +28,8 @@ char *get_umount_bin(void);
 FILE *my_popen(const char *command, const char *type);
 
 int cnt_utils_delete_crun_stop(char *name, int crun_pid);
-int cnt_utils_delete_overlay(char *name, char *cnt_dir, char *bulk, char *image);
+int cnt_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
+                             char *image, int is_persistent);
 int cnt_utils_delete_net(char *nspace);
 
 int cnt_utils_create_net(char *bulk, char *image, char *name, char *cnt_dir,
@@ -38,9 +39,8 @@ int cnt_utils_create_net(char *bulk, char *image, char *name, char *cnt_dir,
 
 int cnt_utils_create_crun_create(char *cnt_dir, char *name);
 int cnt_utils_create_crun_start(char *name);
-int cnt_utils_create_crun_run_check(char *name);
 int cnt_utils_create_overlay(char *path, char *image, int is_persistent);
-int cnt_utils_create_config_json(char *path, char *rootfs,
-                                 char *nspace, int is_persistent);
+int cnt_utils_create_config_json(char *path, char *rootfs, char *nspace,
+                                 char *cloonix_dropbear, int is_persistent);
 void cnt_utils_init(void);
 /*--------------------------------------------------------------------------*/

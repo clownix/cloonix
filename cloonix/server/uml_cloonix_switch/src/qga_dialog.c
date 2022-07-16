@@ -743,25 +743,33 @@ static void timer_heartbeat_qga(void *data)
 /****************************************************************************/
 void qga_dialog_begin(char *name)
 {
+  t_vm *vm;
   char *pname;
   t_qrec *qrec;
+
   if (!name)
     KOUT(" ");
   if (strlen(name) < 1)
-    KERR(" ");
+    KERR("ERROR ");
   else 
     {
-    qrec = get_qrec_with_name(name);
-    if (!qrec)
-      {
-      qrec_alloc(name);
-      pname = (char *) clownix_malloc(MAX_NAME_LEN, 6);
-      memset(pname, 0, MAX_NAME_LEN);
-      strncpy(pname, name, MAX_NAME_LEN-1);
-      clownix_timeout_add(10, timer_connect_qga, (void *) pname, NULL, NULL);
-      }
+    vm = cfg_get_vm(name);
+    if (vm == NULL)
+      KERR("ERROR %s", name);
     else
-      KERR("ERROR  %s exists", name);
+      {
+      qrec = get_qrec_with_name(name);
+      if (!qrec)
+        {
+        qrec_alloc(name);
+        pname = (char *) clownix_malloc(MAX_NAME_LEN, 6);
+        memset(pname, 0, MAX_NAME_LEN);
+        strncpy(pname, name, MAX_NAME_LEN-1);
+        clownix_timeout_add(10, timer_connect_qga, (void *) pname, NULL, NULL);
+        }
+      else
+        KERR("ERROR  %s exists", name);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

@@ -1018,25 +1018,20 @@ void node_ctx_menu(t_bank_item *bitem)
 void cnt_ctx_menu(t_bank_item *bitem)
 {
   GtkWidget *item_info, *item_delete, *menu = gtk_menu_new();
-  GtkWidget *item_test;
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
   if (bitem->bank_type != bank_type_cnt)
     KOUT("%s", bitem->name);
 
-  item_test = gtk_menu_item_new_with_label("Test");
   item_info = gtk_menu_item_new_with_label("Info");
   item_delete = gtk_menu_item_new_with_label("Delete");
 
-  g_signal_connect(G_OBJECT(item_test), "activate",
-                   G_CALLBACK(cnt_crun_exec), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_info), "activate",
                    G_CALLBACK(cnt_item_info), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_delete), "activate",
                    G_CALLBACK(cnt_item_delete), (gpointer) pm);
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_test);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_widget_show_all(menu);

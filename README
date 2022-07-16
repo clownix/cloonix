@@ -75,10 +75,6 @@ root level with no password for crun control.
 cd cloonix/quickstart
 ./ping_crun.sh
 
-To have a bash shell within a container, the command line is:
-
-sudo crun exec <name> bash
-
 On the gui, a double-click on the blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy.
 

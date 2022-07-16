@@ -20,7 +20,7 @@ host machine.
 
 The place where all compiled cloonix bin and libs are installed is:
 /usr/local/bin/cloonix
-The host machine can have qemu, openvswitch and dpdk installed, cloonix will
+The host machine can have qemu, openvswitch and spice installed, cloonix will
 use its own version of these softwares.
 This way of working gives a very simple way to uninstall cloonix with a simple
 "rm -rf /usr/local/bin/cloonix*"
@@ -28,7 +28,7 @@ This way of working gives a very simple way to uninstall cloonix with a simple
 Sources associated to dpdk/ovs
 ==============================
 
-The external open sources used in cloonix for qemu, dpdk, ovs ...
+The external open sources used in cloonix for qemu, ovs, spice ...
 are regularly updated through scripts in tools/update_open_sources,
 here are the git sources for what can be found in targz_store:
 
@@ -83,12 +83,15 @@ cloonix_config file::
 
      ${HOME}/cloonix_data/bulk
 
-Here is the complete list of commands to download our first vm guest::
+Here is the complete list of commands to download our first vm guest,
+qcow2 for kvm and img for crun::
 
     mkdir -p ${HOME}/cloonix_data/bulk
     cd ${HOME}/cloonix_data/bulk
     wget http://clownix.net/downloads/cloonix-__LAST__/bulk/bookworm.qcow2.gz
+    wget http://clownix.net/downloads/cloonix-__LAST__/bulk/bookworm.img.gz
     gunzip bookworm.qcow2.gz
+    gunzip bookworm.img.gz
 
 
 Running
@@ -96,12 +99,10 @@ Running
 
 In most cases, the first try is done on the same host for the server and
 client cloonix, the pre-configured cloonix "nemo" name is the usual
-default choice. Before run, have a look at the Host Customisation chapter.
-For the first run, use the ping.sh script with the sock option as follows
-to avoid any dpdk host misconfiguration problems::
+default choice::
 
     cd ${HOME}/cloonix-__LAST__/quickstart
-    ./ping_kvm.sh
+    ./ping_kvm.sh or ./ping_crun.sh
 
 Here is a typical manual start for a server and a gui client::
 
@@ -111,14 +112,14 @@ Here is a typical manual start for a server and a gui client::
 The cloonix_gui is the first client to launch as it will show the cloonix
 objects in real time as they are created.
 
-The cloonix_gui provides cloonix_ssh by a double-click on a blue virtual
-machine, cloonix_ssh natively provides an x11 path.
+The cloonix_gui provides a shell for kvm or crun virtual with a double-click
+on a blue virtual machine.
 
 
 Saving
 ======
 
-The saving of a vm is done with the following commands::
+The saving of a kvm type vm is done with the following commands::
     
     cloonix_cli nemo sav <name> <complete_file_path>
 

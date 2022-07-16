@@ -15,13 +15,13 @@ This is the documentation for the cloonix open source hosted at
 Cloonix is a tool that helps in the creation of emulated networks made
 with virtual machines and emulated connections.
 
-Its first goal is an easy and visual use of complex open sources such as
+Its first goal is an easy usage of complex open sources such as
 qemu-kvm and openvswitch through visual items that will be called
 **guitems** throughout this doc.
 
-Its second goal is to have people share network demonstrations based
-on cloonix, small scripts based on cloonix commands can be shared
-to display and reproduce complex network scenarios .
+Its second goal is to have people share network scripts of topology
+demonstrations based on cloonix, it makes reproduction of complex
+network scenarios easy.
 
 In a few words, cloonix is a AGPLv3 set of C software elements working
 together aiming at the coherent usage of multiple well known open
@@ -29,7 +29,7 @@ source softwares, the main ones being: **qemu-kvm**, **openvswitch**,
 **spice**, **wireshark** and **openssh**.
 
 Cloonix manages clusters of virtual machines, the server is controled
-by **clients** that act at a distance or on the same host.
+by **clients** that act from a distant host or on the same host.
 All cloonix clients are named **cloonix_xxx** xxx can be one of the
 following: gui, cli, ssh, scp, dta, ice, mon, osh, ocp, ovs, xwy.
 
@@ -37,18 +37,19 @@ The cloonix server is launched on the server and is named **cloonix_net**,
 it creates and controls **guitems** that run on the server and are
 pictured on the gui canvas launched with **cloonix_gui**.
 
-The main guitem is the **kvm** virtual machine, around this guitem there
-are 5 other: **cnt**, **lan**, **nat**, **tap**, **c2c**,
+The main guitem is a machine representation, it is either a **kvm**
+virtual machine or a **cnt** crun container. Around this guitem there
+are 4 other: **lan**, **nat**, **tap**, **c2c**,
 those guitems are described within this documentation.
 
-The **kvm** virtual machines can be connected by cloonix commands, the
+The **kvm** or **cnt** machines can be connected by cloonix commands, the
 emulated connections between virtual machines are based on **openvswitch**
 and pictured by the **lan** guitem.
 
-Emulated desktops for the virtual machines are provided through **spice**
-launched with a right-click when above the **kvm** on the gui.
+Emulated desktops for the **kvm** virtual machines are provided through
+**spice** launched with a right-click when above the **kvm** on the gui.
 
-A double-click on a blue virtual machine kvm or cnt creates a shell on this virtual. 
+A double-click on a blue virtual machine kvm or cnt creates a shell. 
 
 A double-click on a virtual machine interface (small circle bordering the vm)
 opens a **wireshark** spy that displays the packets running through this
@@ -73,12 +74,12 @@ These necessary softwares are associated to a cloonix version, download it::
 The virtual machines have file-systems that are .qcow2 files, you
 can download qcow2 guest virtual machines here:
 
-    * `Qcow2 guests <http://clownix.net/downloads/cloonix-__LAST__/qcow2>`_
+    * `Qcow2 guests <http://clownix.net/downloads/cloonix-__LAST__/bulk>`_
 
 The containers have file-systems that are .img files, you can download
 guest containers here:
 
-    * `Img guests <http://clownix.net/downloads/cloonix-__LAST__/img>`_
+    * `Img guests <http://clownix.net/downloads/cloonix-__LAST__/bulk>`_
 
 
 Content

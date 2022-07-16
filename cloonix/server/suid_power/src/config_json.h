@@ -90,6 +90,12 @@
 "	\"hostname\": \"crun\",\n"\
 "	\"mounts\": [\n"\
 "               {\n"\
+"                       \"destination\": \"/mnt\",\n"\
+"                       \"type\": \"none\",\n"\
+"                       \"source\": \"%s\",\n"\
+"                       \"options\": [\"rbind\",\"rw\"]\n"\
+"               },\n"\
+"               {\n"\
 "                       \"destination\": \"/lib/modules\",\n"\
 "                       \"type\": \"none\",\n"\
 "                       \"source\": \"/lib/modules\",\n"\

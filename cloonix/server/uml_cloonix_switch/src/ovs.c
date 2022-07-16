@@ -465,11 +465,8 @@ static void timer_ovs_beat(void *data)
       clownix_timeout_add(50, timer_ovs_beat, NULL, NULL, NULL);
     check_on_destroy_requested(cur);
     cur->global_pid_req_watch += 1;
-    if (cur->global_pid_req_watch > 500)
-      {
-      KERR("ERROR OVS %s NOT GIVING PID", cur->name);
-      set_destroy_requested(cur, 1);
-      }
+    if (cur->global_pid_req_watch > 1000)
+      KOUT("ERROR OVS %s NOT GIVING PID", cur->name);
     }
 }
 /*---------------------------------------------------------------------------*/

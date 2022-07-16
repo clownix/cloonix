@@ -22,7 +22,6 @@ to control the cloonix server, here is a full list the clients:
   * *cloonix_xwy*  Distant server cloonix command, supports X11.
 
 
-
 cloonix_gui
 ===========
 
@@ -49,43 +48,41 @@ nemo to have the menu under (do *cloonix_net nemo* to launch nemo)::
     sources$ cloonix_cli nemo
     
     |-------------------------------------------------------------------------|
-    | cloonix_cli nemo Version:19-01                                          |
+    | cloonix_cli nemo Version:24-00                                          |
     |-------------------------------------------------------------------------|
+    |    snf             : Add wireshark capability on item                   |
     |    kil             : Destroys all objects, cleans and kills switch      |
-    |    rma             : Destroys all cloonix objects and graphs            |
+    |    rma             : Destroys all cloon objects and graphs              |
     |    dcf             : Dump config                                        |
     |    dmp             : Dump topo                                          |
     |    lst             : List commands to replay topo                       |
     |    lay             : List topo layout                                   |
-    |    add             : Add one cloonix object to topo                     |
-    |    del             : Del one cloonix object from topo                   |
-    |    sav             : Save sub-menu                                      |
-    |    cnf             : Configure a cloonix object                         |
+    |    add             : Add one cloon object to topo                       |
+    |    del             : Del one cloon object from topo                     |
+    |    sav             : Save in qcow2                                      |
+    |    cnf             : Configure a cloon object                           |
     |    sub             : Subscribe to stats counters                        |
     |    hop             : dump 1 hop debug                                   |
     |    pid             : dump pids of processes                             |
     |    evt             : prints events                                      |
     |    sys             : prints system stats                                |
-    |    qmp             : qemu machine protocol cmd                          |
     |-------------------------------------------------------------------------|
-    
 
 Then hit *cloonix_cli nemo add* to have the next possible choices::
 
     sources$ cloonix_cli nemo add
     
     |-------------------------------------------------------------------------|
-    | cloonix_cli nemo Version:19-01add                                       |
+    | cloonix_cli nemo Version:24-00add                                       |
     |-------------------------------------------------------------------------|
     |    lan             : Add lan (emulated cable)                           |
     |    kvm             : Add kvm (virtualized machine)                      |
     |    phy             : Add phy (host network interface)                   |
+    |    cnt             : Add container                                      |
     |    tap             : Add tap (host network interface)                   |
     |    nat             : Add nat (access host ip)                           |
-    |    a2b             : Add a2b (traffic delay shaping)                    |
-    |    d2d             : Add d2d (cloonix 2 cloonix cable)                  |
+    |    c2c             : Add c2c (cloon 2 cloon cable)                      |
     |-------------------------------------------------------------------------|
-
 
   Then hit *cloonix_cli nemo add kvm*, you get the help for this command, the
   add kvm is the most complex command for the cloonix_cli.
@@ -108,7 +105,7 @@ password.
 Such access is very usefull to test network solutions on guests without
 any unwanted network debug access on the device under test.
 
-This tool is a way to launch root commands into a kvm guest.
+This tool is a way to launch root commands into a kvm or crun guest.
 The way to use it is similar to the ssh::
    
     cloonix_ssh nemo vm_name

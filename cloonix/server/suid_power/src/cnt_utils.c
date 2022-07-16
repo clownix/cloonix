@@ -207,22 +207,21 @@ static void my_cp_and_sed_file(char *dsrc, char *ddst, char *name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char *get_config_json(char *rootfs, char *nspace, int is_persistent)
+static char *get_config_json(char *rootfs, char *nspace,
+                             char *cloonix_dropbear, int is_persistent)
 {
   char *buf;
   int len = strlen(CONFIG_JSON) + (5 * strlen(CONFIG_JSON_CAPA));
   char *starter;
-  if (is_persistent)
-    starter = "\"sleep\",\"30000\"\n";
-  else
-    starter = "\"/usr/bin/cloonix_init_starter.sh\"\n";
+  starter = "\"/mnt/cloonix_config_fs/cloonix_init_starter.sh\"\n";
   len += (2 * MAX_PATH_LEN);
   buf = (char *) malloc(len);
   memset(buf, 0, len);
   snprintf(buf, len-1, CONFIG_JSON, starter,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
-                                    CONFIG_JSON_CAPA, rootfs, nspace); 
+                                    CONFIG_JSON_CAPA, rootfs, 
+                                    cloonix_dropbear, nspace); 
   return buf;
 }
 /*--------------------------------------------------------------------------*/
@@ -308,19 +307,17 @@ static int check_mount_does_not_exist(char *path)
 /*--------------------------------------------------------------------------*/
  
 /****************************************************************************/
-static int dir_cnt_create(char *bulk, char *image, char *cnt_dir,
-                          char *name, char *agent_dir,
-                          char *customer_launch)
+static int create_all_dirs(char *bulk, char *image, char *cnt_dir, char *name)
 {
   int result = -1;
   char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN); 
+  memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1, "%s/mnt/%s", bulk, image);
   if (my_mkdir(path))
     KERR("ERROR %s", path);
   else
     {
-    memset(path, 0, MAX_PATH_LEN); 
+    memset(path, 0, MAX_PATH_LEN);
     snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s/", cnt_dir, name, UPPER);
     if (my_mkdir(path))
       KERR("ERROR %s", path);
@@ -338,26 +335,85 @@ static int dir_cnt_create(char *bulk, char *image, char *cnt_dir,
           KERR("ERROR %s", path);
         else
           {
-          my_cp_and_sed_file(agent_dir, path, "cloonix_init_starter.sh",
-                             customer_launch);
-          my_cp_file(agent_dir, path, "cloonix_parrot_srv");
-          my_cp_file(agent_dir, path, "cloonix_parrot_cli");
-          memset(path, 0, MAX_PATH_LEN); 
-          snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, WORKDIR);
+          memset(path, 0, MAX_PATH_LEN);
+          snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt", cnt_dir, name);
           if (my_mkdir(path))
             KERR("ERROR %s", path);
           else
             {
-            memset(path, 0, MAX_PATH_LEN); 
-            snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, ROOTFS);
+            chmod(path, 0777);
+            memset(path, 0, MAX_PATH_LEN);
+            snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/mountbear",
+                     cnt_dir, name);
             if (my_mkdir(path))
               KERR("ERROR %s", path);
             else
-              result = 0;
+              {
+              chmod(path, 0777);
+              memset(path, 0, MAX_PATH_LEN);
+              snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs",
+                       cnt_dir, name);
+              if (my_mkdir(path))
+                KERR("ERROR %s", path);
+              else
+                {
+                memset(path, 0, MAX_PATH_LEN);
+                snprintf(path, MAX_PATH_LEN-1, 
+                         "%s/%s/mnt/cloonix_config_fs/lib", cnt_dir, name);
+                if (my_mkdir(path))
+                  KERR("ERROR %s", path);
+                else
+                  {
+                  snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s",
+                           cnt_dir, name, WORKDIR);
+                  if (my_mkdir(path))
+                    KERR("ERROR %s", path);
+                  else
+                    {
+                    memset(path, 0, MAX_PATH_LEN);
+                    snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s",
+                             cnt_dir, name, ROOTFS);
+                    if (my_mkdir(path))
+                      KERR("ERROR %s", path);
+                    else
+                      result = 0;
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
+    }
+  return result;
+}
+ 
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+static int dir_cnt_create(char *bulk, char *image, char *cnt_dir,
+                          char *name, char *agent_dir, char *launch)
+{
+  char path[MAX_PATH_LEN];
+  char libpath[MAX_PATH_LEN];
+  int result = create_all_dirs(bulk, image, cnt_dir, name);
+  if (result == 0)
+    {
+    memset(path, 0, MAX_PATH_LEN);
+    snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs",
+             cnt_dir, name);
+    my_cp_and_sed_file(agent_dir, path, "cloonix_init_starter.sh", launch);
+    my_cp_file(agent_dir, path, "cloonix_agent");
+    my_cp_file(agent_dir, path, "dropbear_cloonix_sshd");
+
+    snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs/lib",
+             cnt_dir, name);
+    snprintf(libpath, MAX_PATH_LEN-1, "%s/lib", agent_dir);
+    my_cp_file(libpath, path, "ld-linux-x86-64.so.2");
+    my_cp_file(libpath, path, "libc.so.6");
+    my_cp_file(libpath, path, "libutil.so.1");
     }
   return result;
 }
@@ -489,12 +545,12 @@ int cnt_utils_create_crun_create(char *cnt_dir, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int cnt_utils_create_config_json(char *path, char *rootfs,
-                                 char *nspace, int is_persistent)
+int cnt_utils_create_config_json(char *path, char *rootfs, char *nspace,
+                                 char *cloonix_dropbear, int is_persistent)
 {
   int len, result;
   char json_path[MAX_PATH_LEN];
-  char *buf = get_config_json(rootfs, nspace, is_persistent);
+  char *buf = get_config_json(rootfs,nspace,cloonix_dropbear,is_persistent);
   memset(json_path, 0, MAX_PATH_LEN);
   snprintf(json_path, MAX_PATH_LEN-1, "%s/config.json", path); 
   len = strlen(buf);
@@ -619,18 +675,23 @@ int cnt_utils_delete_net(char *nspace)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int cnt_utils_delete_overlay(char *name, char *cnt_dir, char *bulk, char *image)
+int cnt_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
+                             char *image, int is_persistent)
 {
   int result = 0;
   char cmd[MAX_PATH_LEN];
   char *umount = umount_bin;
-  memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1, "%s %s/%s/%s 2>&1",
-           umount, cnt_dir, name, ROOTFS);
-  if (execute_cmd(cmd, 1))
+
+  if (is_persistent == 0)
     {
-    KERR("ERROR %s", cmd);
-    result = -1;
+    memset(cmd, 0, MAX_PATH_LEN);
+    snprintf(cmd, MAX_PATH_LEN-1, "%s %s/%s/%s 2>&1",
+             umount, cnt_dir, name, ROOTFS);
+    if (execute_cmd(cmd, 1))
+      {
+      KERR("ERROR %s", cmd);
+      result = -1;
+      }
     }
   if (loop_img_del(name, bulk, image, cnt_dir))
     {
@@ -705,44 +766,6 @@ int cnt_utils_create_crun_start(char *name)
       result = 0;
     else
       KERR("ERROR %s %s", cmd, line);
-    pclose(fp);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int cnt_utils_create_crun_run_check(char *name)
-{ 
-  int result = -1;
-  FILE *fp;
-  char cmd[MAX_PATH_LEN];
-  char line[MAX_PATH_LEN];
-  char *ptr;
-  memset(cmd, 0, MAX_PATH_LEN);
-  memset(line, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1,
-  "/usr/bin/crun exec %s /usr/bin/cloonix_parrot_cli 2>&1", name);
-  fp = my_popen(cmd, "r");
-  if (fp == NULL)
-    KERR("ERROR %s", cmd);
-  else
-    {
-    if (!fgets(line, MAX_PATH_LEN-1, fp))
-      KERR("ERROR %s", cmd);
-    else
-      {
-      ptr = strchr(line, '\r');
-      if (ptr)
-        *ptr = 0;
-      ptr = strchr(line, '\n');
-      if (ptr)
-        *ptr = 0;
-      if (!strcmp(line, "cloonix"))
-        result = 0;
-      else
-        KERR("ERROR %s", line);
-      }
     pclose(fp);
     }
   return result;

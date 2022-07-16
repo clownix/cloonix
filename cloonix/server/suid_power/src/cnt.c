@@ -50,13 +50,14 @@ typedef struct t_cnt
   char agent_dir[MAX_PATH_LEN];
   char rootfs_path[MAX_PATH_LEN];
   char nspace_path[MAX_PATH_LEN];
+  char mountbear[MAX_PATH_LEN];
   int nb_eth;
   t_eth_mac eth_mac[MAX_ETH_VM];
   int cloonix_rank;
   int vm_id;
   int crun_pid;
   int crun_pid_count;
-  int parrot_test;
+  int is_persistent;
   struct t_cnt *prev;
   struct t_cnt *next;
 } t_cnt;
@@ -95,6 +96,7 @@ static void alloc_cnt(char *name, char *bulk, char *image, int nb_eth,
   strncpy(cur->nspace, nspace, MAX_NAME_LEN-1);
   snprintf(cur->nspace_path, MAX_PATH_LEN-1, "%s/%s", PATH_NAMESPACE, nspace);
   snprintf(cur->rootfs_path, MAX_PATH_LEN-1,"%s/%s/%s",cnt_dir,name,ROOTFS);
+  snprintf(cur->mountbear, MAX_PATH_LEN-1,"%s/%s/mnt", cnt_dir, name);
   cur->nb_eth = nb_eth;
   cur->cloonix_rank = cloonix_rank;
   cur->vm_id = vm_id; 
@@ -173,7 +175,8 @@ static void urgent_destroy_cnt(t_cnt *cur)
   strncpy(cnt_dir, cur->cnt_dir, MAX_PATH_LEN-1); 
   strncpy(name, cur->name, MAX_NAME_LEN-1); 
   cnt_utils_delete_crun_stop(name, cur->crun_pid);
-  cnt_utils_delete_overlay(name, cnt_dir, cur->bulk, cur->image);
+  cnt_utils_delete_overlay(name, cnt_dir, cur->bulk,
+                           cur->image, cur->is_persistent);
   cnt_utils_delete_net(cur->nspace);
   free_cnt(cur);
   unlink_all_files(cnt_dir, name);
@@ -195,7 +198,7 @@ void cnt_beat(int llid)
       waitpid(cur->crun_pid, &wstatus, WNOHANG);
       if (kill(cur->crun_pid, 0))
         {
-        if (cur->crun_pid_count > 10)
+        if (cur->crun_pid_count > 100)
           {
           KERR("ERROR %d %s", cur->crun_pid, cur->name);
           memset(resp, 0, MAX_PATH_LEN);
@@ -204,19 +207,6 @@ void cnt_beat(int llid)
                    cur->name, cur->crun_pid);
           rpct_send_sigdiag_msg(llid, type_hop_suid_power, resp);
           urgent_destroy_cnt(cur);
-          }
-        }
-      else
-        {
-        if (cur->parrot_test == 0)
-          {
-          if (!cnt_utils_create_crun_run_check(cur->name))
-            {
-            snprintf(resp, MAX_PATH_LEN-1,
-            "cloonsuid_cnt_parrot_test_ok %s", cur->name);
-            rpct_send_sigdiag_msg(llid, type_hop_suid_power, resp);
-KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOO %s", resp);
-            }
           }
         }
       }
@@ -326,12 +316,13 @@ static void create_config_json(char *line, char *resp,
       {
       memset(cur->rootfs_path, 0, MAX_PATH_LEN);
       snprintf(cur->rootfs_path, MAX_PATH_LEN-1, "%s/mnt/%s", bulk, image);
+      cur->is_persistent = is_persistent;
       }
     cnt_dir = cur->cnt_dir;
     memset(path, 0, MAX_PATH_LEN);
     snprintf(path, MAX_PATH_LEN-1, "%s/%s", cnt_dir, cur->name);
-    if (cnt_utils_create_config_json(path, cur->rootfs_path,
-                                     cur->nspace_path, is_persistent))
+    if (cnt_utils_create_config_json(path,cur->rootfs_path,cur->nspace_path,
+                                     cur->mountbear, is_persistent))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -478,7 +469,8 @@ static void delete_cnt(char *line, char *resp, char *nm)
     strncpy(name, cur->name, MAX_NAME_LEN-1); 
     if (cnt_utils_delete_crun_stop(nm, cur->crun_pid))
       KERR("ERROR %s", line);
-    cnt_utils_delete_overlay(cur->name, cur->cnt_dir, cur->bulk, cur->image);
+    cnt_utils_delete_overlay(cur->name, cur->cnt_dir, cur->bulk,
+                             cur->image, cur->is_persistent);
     if (cnt_utils_delete_net(cur->nspace))
       {
       KERR("ERROR %s", line);
@@ -574,18 +566,6 @@ void cnt_recv_sigdiag_msg(int llid, int tid, char *line)
       {
       KERR("ERROR MUST ERASE %s, %s", name, line);
       urgent_destroy_cnt(cur);
-      }
-    }
-  else if (sscanf(line,
-  "cloonsuid_cnt_parrot_test_ok %s", name) == 1)
-    {
-    cur = find_cnt(name);
-    if (cur == NULL)
-      KERR("ERROR: %s", name);
-    else
-      { 
-KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOO %s", resp);
-      cur->parrot_test = 1;
       }
     }
 

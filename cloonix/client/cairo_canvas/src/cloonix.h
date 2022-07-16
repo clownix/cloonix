@@ -39,7 +39,6 @@ char *get_cmd_path(void);
 int inside_cloon(char **name);
 
 char **get_argv_local_xwy(char *name);
-char **get_argv_local_xwy_cnt(char *name);
 
 void cloonix_get_xvt(char *xvt);
 char *local_get_cloonix_name(void);

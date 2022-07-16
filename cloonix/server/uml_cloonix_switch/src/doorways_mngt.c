@@ -47,6 +47,8 @@
 #include "uml_clownix_switch.h"
 #include "suid_power.h"
 #include "qga_dialog.h"
+#include "commun_daemon.h"
+#include "cnt.h"
 
 
 void timer_utils_finish_vm_init(int vm_id, int val);
@@ -125,33 +127,55 @@ static void recv_sysinfo_vals(char *name, char *line)
 void doors_recv_event(int llid, int tid, char *name, char *line)
 {
   t_vm   *vm = cfg_get_vm(name);
-  if (!vm)
+  int door_llid, nb_eth, cnt_exists = cnt_name_exists(name, &nb_eth);
+  if ((!vm) && (!cnt_exists))
+    {
     KERR("FROM DOORS NOT FOUND: %s %s", name, line);
+    doors_send_del_vm(get_doorways_llid(), 0, name);
+    }
   else
     {
     if (!strcmp(line, BACKDOOR_CONNECTED))
       {
-      qga_event_backdoor(name, backdoor_evt_connected);
+      if (vm == NULL)
+        cnt_doorways_up_and_running(name);
+      else
+        qga_event_backdoor(name, backdoor_evt_connected);
       }
     else if (!strcmp(line, BACKDOOR_DISCONNECTED))
       {
-      qga_event_backdoor(name, backdoor_evt_disconnected);
+      if (vm == NULL)
+        KERR("ERROR %s", name);
+      else
+        qga_event_backdoor(name, backdoor_evt_disconnected);
       }
     else if (!strncmp(line, AGENT_SYSINFO, strlen(AGENT_SYSINFO)))
       {
-      recv_sysinfo_vals(name, line + strlen(AGENT_SYSINFO) + 1);
+      if (vm != NULL)
+        recv_sysinfo_vals(name, line + strlen(AGENT_SYSINFO) + 1);
       }
     else if (!strncmp(line, AGENT_SYSINFO_DF, strlen(AGENT_SYSINFO_DF)))
       {
-      stats_counters_sysinfo_update_df(name,line+strlen(AGENT_SYSINFO_DF)+1);
+      if (vm != NULL)
+        stats_counters_sysinfo_update_df(name,line+strlen(AGENT_SYSINFO_DF)+1);
       }
     else if (!strcmp(line, PING_OK))
       {
-      timer_utils_finish_vm_init(vm->kvm.vm_id, 1);
-      qga_event_backdoor(name, backdoor_evt_ping_ok);
+      if (vm == NULL)
+        cnt_doorways_ping_ok(name);
+      else
+        {
+        timer_utils_finish_vm_init(vm->kvm.vm_id, 1);
+        qga_event_backdoor(name, backdoor_evt_ping_ok);
+        }
       }
     else if (!strcmp(line, PING_KO))
-      qga_event_backdoor(name, backdoor_evt_ping_ko);
+      {
+      if (vm == NULL)
+        cnt_doorways_ping_ko(name);
+      else
+        qga_event_backdoor(name, backdoor_evt_ping_ko);
+      }
     else
       KOUT("%s", line);
     } 

@@ -70,4 +70,6 @@ char *utils_get_ovs_snf_bin_dir(void);
 char *utils_get_ovs_nat_bin_dir(void);
 char *utils_get_ovs_c2c_bin_dir(void);
 int util_get_max_tempo_fail(void);
+char *utils_get_cnt_dropbear(char *name);
+
 /****************************************************************************/
