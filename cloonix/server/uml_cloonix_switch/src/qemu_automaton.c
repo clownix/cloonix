@@ -46,14 +46,17 @@
 #include "suid_power.h"
 #include "qga_dialog.h"
 
-#define DRIVE_PARAMS_CISCO " -drive file=%s,index=%d,media=disk,if=virtio,cache=directsync"
+#define DRIVE_PARAMS_CISCO " -device virtio-scsi-pci,id=scsi"\
+                           " -device scsi-hd,drive=hd"\
+                           " -drive if=none,id=hd,file=%s"
+
 #define DRIVE_PARAMS " -drive file=%s,index=%d,media=disk,if=virtio"
 
 #define VIRTIO_9P " -fsdev local,id=fsdev0,security_model=passthrough,path=%s"\
                   " -device virtio-9p-pci,id=fs0,fsdev=fsdev0,mount_tag=%s"
 
 #define DRIVE_FULL_VIRT " -blockdev node-name=%s,driver=qcow2,"\
-                        "file.driver=file,file.node-name=file,file.filename=%s" \
+                        "file.driver=file,file.node-name=file,file.filename=%s"\
                         " -device ide-hd,bus=ide.0,unit=0,drive=%s"
 
 #define INSTALL_DISK " -boot d -drive file=%s,index=%d,media=disk,if=virtio"
@@ -66,10 +69,10 @@
 
 #define ADDED_CDROM " -drive file=%s,media=cdrom"
 
-#define BLOCKNAME " -blockdev node-name=%s,driver=qcow2,"\
-                  "file.driver=file,file.node-name=file,file.filename=%s" \
-                  " -device virtio-blk,drive=%s"
-
+#define BLOCKNAME " -device virtio-scsi-pci,id=virtio_scsi_pci0"\
+                  " -blockdev driver=file,cache.direct=off,cache.no-flush=on,filename=%s,node-name=lol%s"\ 
+                  " -blockdev driver=qcow2,node-name=%s,file=lol%s"\
+                  " -device scsi-hd,drive=%s"
 
 
 typedef struct t_cprootfs_config
@@ -355,7 +358,7 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     else
       KERR("ERROR %d", vm->kvm.eth_table[i].endp_type);
     }
-  if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NOBACKDOOR))
+  if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NO_QEMU_GA))
     {
     len += sprintf(cmd_start+len, QEMU_OPTS_CLOON, 
                    utils_get_qbackdoor_path(vm->kvm.vm_id),
@@ -408,16 +411,16 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
                      vm->kvm.name, rootfs, vm->kvm.name );
     else
       {
-      if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NOBACKDOOR)
+      if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NO_QEMU_GA)
         {
-        len += sprintf(linux_cmd+len, DRIVE_PARAMS_CISCO, rootfs, 0);
+        len += sprintf(linux_cmd+len, DRIVE_PARAMS_CISCO, rootfs);
         len += sprintf(linux_cmd+len,
           " -uuid 1c54ff10-774c-4e63-9896-4c18d66b50b1");
         }
       else
         {
-        len += sprintf(linux_cmd+len, BLOCKNAME, 
-                       vm->kvm.name, rootfs, vm->kvm.name );
+        len += sprintf(linux_cmd+len, BLOCKNAME, rootfs, vm->kvm.name, 
+                       vm->kvm.name, vm->kvm.name, vm->kvm.name);
         }
       } 
     cdrom = utils_get_cdrom_path_name(vm->kvm.vm_id);
@@ -693,7 +696,10 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
     case auto_create_vm_connect:
       time_end = util_get_max_tempo_fail();
       time_end += 200;
-      timer_utils_finish_vm_init(vm->kvm.vm_id, time_end);
+      if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NO_QEMU_GA)
+        timer_utils_finish_vm_init(vm->kvm.vm_id, 1);
+      else
+        timer_utils_finish_vm_init(vm->kvm.vm_id, time_end);
       qmp_begin_qemu_unix(name, 1);
       recv_coherency_unlock();
       break;

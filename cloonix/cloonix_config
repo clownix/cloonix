@@ -34,10 +34,10 @@ CLOONIX_NET: fido {
 
 ##################################################
 CLOONIX_NET: pipo {
-  cloonix_ip       172.16.0.88
+  cloonix_ip       1.1.1.1
   cloonix_port     45214
   cloonix_passwd   pipoclown
-  c2c_udp_ip     172.16.0.88
+  c2c_udp_ip     1.1.1.1
 }
 #-------------------------------------------------
 

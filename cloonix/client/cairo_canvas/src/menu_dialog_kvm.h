@@ -25,7 +25,7 @@ typedef struct t_custom_vm
   int  is_persistent;
   int  is_i386;
   int  is_sda_disk;
-  int  nobackdoor_flag;
+  int  no_qemu_ga;
   int  natplug_flag;
   int  natplug;
   int  has_p9_host_share;

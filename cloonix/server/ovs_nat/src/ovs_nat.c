@@ -38,6 +38,7 @@
 #include "rxtx.h"
 #include "tun_tap.h"
 #include "machine.h"
+#include "ssh_cisco_llid.h"
 
 
 
@@ -52,6 +53,8 @@ static char g_vhost[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
 static char g_ctrl_path[MAX_PATH_LEN];
 static char g_nat_path[MAX_PATH_LEN];
+static char g_cisco_path[MAX_PATH_LEN];
+
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -107,6 +110,7 @@ void rpct_recv_kil_req(int llid, int tid)
 {
   unlink(g_ctrl_path);
   unlink(g_nat_path);
+  unlink(g_cisco_path);
   if (g_netns_pid > 0)
     kill(g_netns_pid, SIGKILL);
   exit(0);
@@ -125,8 +129,10 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   char resp[MAX_PATH_LEN];
   char name[MAX_NAME_LEN];
+  char str_ip[MAX_NAME_LEN];
+  int num, cli_llid, cli_tid;
+  uint32_t addr_ip;
   uint8_t m[6];
-  int num;
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
     KERR("ERROR %s %d %d", g_net_name, llid, g_llid);
@@ -160,6 +166,26 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   "nat_machine_end", strlen("nat_machine_end")))
     {
     machine_end();
+    }
+
+  else if (sscanf(line,
+  "nat_whatip cli_llid=%d cli_tid=%d name=%s",&cli_llid,&cli_tid,name) == 3)
+    {
+    memset(resp, 0, MAX_PATH_LEN);
+    addr_ip = machine_ip_get(name);
+    if (addr_ip)
+      {
+      int_to_ip_string(addr_ip, str_ip);
+      snprintf(resp,MAX_PATH_LEN-1,
+      "nat_whatip_ok cli_llid=%d cli_tid=%d name=%s ip=%s",
+      cli_llid, cli_tid, name, str_ip);
+      }
+    else
+      {
+      snprintf(resp,MAX_PATH_LEN-1,
+      "nat_whatip_ko cli_llid=%d cli_tid=%d name=%s",cli_llid,cli_tid,name);
+      }
+    rpct_send_sigdiag_msg(llid, tid, resp);
     }
 
 
@@ -231,12 +257,15 @@ int main (int argc, char *argv[])
   memset(g_nat_name, 0, MAX_NAME_LEN);
   memset(g_vhost, 0, MAX_NAME_LEN);
   memset(g_nat_path, 0, MAX_PATH_LEN);
+  memset(g_cisco_path, 0, MAX_PATH_LEN);
+
   strncpy(g_net_name,  argv[1], MAX_NAME_LEN-1);
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
   strncpy(g_nat_name,  argv[3], MAX_NAME_LEN-1);
   strncpy(g_vhost,  argv[4], MAX_NAME_LEN-1);
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/c%s", root, NAT_DIR, nat);
   snprintf(g_nat_path, MAX_PATH_LEN-1,"%s/%s/%s", root, NAT_DIR, nat);
+  snprintf(g_cisco_path, MAX_PATH_LEN-1,"%s/%s/%s_0_u2i", root, NAT_DIR, nat);
   snprintf(g_netns_namespace, MAX_PATH_LEN-1, "%s%s_%s",
            PATH_NAMESPACE, BASE_NAMESPACE, g_net_name);
 
@@ -256,7 +285,14 @@ int main (int argc, char *argv[])
     KERR("ERROR %s exists ERASING", g_nat_path);
     unlink(g_nat_path);
     }
+  if (!access(g_cisco_path, F_OK))
+    {
+    KERR("ERROR %s exists ERASING", g_cisco_path);
+    unlink(g_cisco_path);
+    }
   string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");
+  ssh_cisco_llid_init(g_cisco_path);
+
   daemon(0,0);
   seteuid(getuid());
   cloonix_set_pid(getpid());

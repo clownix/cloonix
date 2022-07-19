@@ -51,6 +51,7 @@
 #include "ovs.h"
 #include "kvm.h"
 #include "suid_power.h"
+#include "ovs_nat.h"
 
 
 
@@ -362,6 +363,7 @@ void machine_death( char *name, int error_death)
     suid_power_kill_vm(vm->kvm.vm_id);
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
       {
+      ovs_nat_cisco_nat_destroy(name);
       }
     doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
     if (vm->pid_of_cp_clone)

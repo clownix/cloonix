@@ -270,7 +270,7 @@ void dhcp_arp_management(int len, uint8_t *buf)
         KERR("ERROR %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
               mc[0],mc[1],mc[2],mc[3],mc[4],mc[5]); 
       else
-        ssh_cisco_nat_arp_resp(&(buf[6]), ntohl(sip));
+        ssh_cisco_nat_arp_resp(&(buf[6]), sip);
       }
     else
       {

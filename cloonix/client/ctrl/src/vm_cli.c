@@ -44,7 +44,7 @@ void help_add_vm_kvm(char *line)
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
   printf("\n\t       --i386 ");
-  printf("\n\t       --nobackdoor ");
+  printf("\n\t       --no_qemu_ga ");
   printf("\n\t       --natplug=<num of eth for nat> ");
   printf("\n\t       --persistent ");
   printf("\n\t       --9p_share=<host_shared_dir_file_path>");
@@ -56,7 +56,7 @@ void help_add_vm_kvm(char *line)
   printf("\n\t       --fullvirt");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\t       --balloon");
-  printf("\n\t for the nobackdoor option, if set, the vm will not have special cloonix_ssh option.\n");
+  printf("\n\t for the no_qemu_ga option, it must be set if you do not have the qemu_guest_agent int your guest.\n");
   printf("\n\t for the natplug= option, if set, the vm will have special cloonix_osh option.\n");
   printf("\n\t for the persistent option, if set, those writes are persistent after shutwown.\n");
   printf("\n\t for the 9p_share, the shared dir mount point is");
@@ -170,9 +170,9 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
       prop_flags |= VM_CONFIG_FLAG_ADDED_DISK;
       added_disk = argv[i] + strlen("--added_disk=");
       }
-    else if (!strcmp(argv[i], "--nobackdoor"))
+    else if (!strcmp(argv[i], "--no_qemu_ga"))
       {
-      prop_flags |= VM_CONFIG_FLAG_NOBACKDOOR;
+      prop_flags |= VM_CONFIG_FLAG_NO_QEMU_GA;
       }
     else if (!strncmp(argv[i], "--natplug=", strlen("--natplug=")))
       {

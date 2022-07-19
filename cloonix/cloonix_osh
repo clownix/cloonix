@@ -66,7 +66,7 @@ if [ "${resp}" != "OK OK" ]; then
 fi
 
 PARAMS="${ip}=${port}=${passwd}=${nat_name}@user=${user_name}=ip=${ip_vm}=port=22=cloonix_info_end"
-SOCK=${CLOONIX_WORK}/${cloonix_name}/nat_dpdk
+SOCK=${CLOONIX_WORK}/${cloonix_name}/nat
 if [ ! -e $SOCK ]; then
   mkdir -p $SOCK
 fi

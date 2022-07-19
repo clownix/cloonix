@@ -144,7 +144,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define VM_CONFIG_FLAG_NO_REBOOT       0x00040
 #define VM_CONFIG_FLAG_ADDED_CDROM     0x00080
 #define VM_CONFIG_FLAG_ADDED_DISK      0x00100
-#define VM_CONFIG_FLAG_NOBACKDOOR      0x00200
+#define VM_CONFIG_FLAG_NO_QEMU_GA      0x00200
 #define VM_CONFIG_FLAG_NATPLUG         0x00400
 #define VM_CONFIG_FLAG_WITH_PXE        0x08000
 

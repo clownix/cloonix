@@ -474,9 +474,7 @@ int qmp_dialog_req(char *name, int llid, int tid, char *req, t_dialog_qmp_resp c
         }
       else
         {
-        if (strlen(req) == 0)
-          KERR("ERROR %s %s", name, req);
-        else
+        if (strlen(req) != 0)
           {
           timeout = (t_timeout_resp *) clownix_malloc(sizeof(t_timeout_resp),6);
           memset(timeout, 0, sizeof(t_timeout_resp));

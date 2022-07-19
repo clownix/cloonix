@@ -127,7 +127,7 @@ static void recv_sysinfo_vals(char *name, char *line)
 void doors_recv_event(int llid, int tid, char *name, char *line)
 {
   t_vm   *vm = cfg_get_vm(name);
-  int door_llid, nb_eth, cnt_exists = cnt_name_exists(name, &nb_eth);
+  int nb_eth, cnt_exists = cnt_name_exists(name, &nb_eth);
   if ((!vm) && (!cnt_exists))
     {
     KERR("FROM DOORS NOT FOUND: %s %s", name, line);

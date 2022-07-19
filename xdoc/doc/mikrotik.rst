@@ -24,7 +24,7 @@ makes the cloonix_ssh and cloonix_scp possible does not exist in an
 non-linux or non-rootable environment, as a convention of color, when
 cloonix server can send and receive messages from the cloonix agent within the
 guest vm, the guest vm gets the blue color.
-For this no backdoor cloonix vm, cloonix option --nobackdoor is used.
+For this no backdoor cloonix vm, cloonix option --no_qemu_ga is used.
   
 Notice also that the mikrotik has a nat attached to its interface eth0.
 This nat permits to have the equivalent of cloonix_ssh and cloonix_scp

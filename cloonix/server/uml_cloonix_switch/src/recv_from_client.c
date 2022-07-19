@@ -1889,9 +1889,42 @@ void recv_c2c_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
 /*****************************************************************************/
 void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
 {
+  t_vm *vm;
+  char *ptr;
   event_print("Rx Req cnf nat %s %s", name, cmd);
-  send_status_ko(llid, tid, "error nat not found");
-  KERR("ERROR %s %s ", name, cmd);
+  if (!ovs_nat_exists(name))
+    {
+    send_status_ko(llid, tid, "error nat not found");
+    KERR("ERROR %s %s ", name, cmd);
+    }
+  else if (strncmp("whatip=", cmd, strlen("whatip=")))
+    {
+    send_status_ko(llid, tid, "error nat bad cmd");
+    KERR("ERROR %s %s ", name, cmd);
+    }
+  else
+    {
+    ptr = &(cmd[strlen("whatip=")]);
+    if (strlen(ptr) <= 1)
+      {
+      send_status_ko(llid, tid, "error nat cnf cmd");
+      KERR("ERROR %s %s ", name, cmd);
+      }
+    else
+      {
+      vm = cfg_get_vm(ptr);
+      if (vm == NULL)
+        {
+        send_status_ko(llid, tid, "error nat vm not found");
+        KERR("ERROR %s %s ", name, cmd);
+        }
+      else  if (ovs_nat_whatip(llid, tid, name, ptr))
+        {
+        send_status_ko(llid, tid, "error nat cnf");
+        KERR("ERROR %s %s ", name, cmd);
+        }
+      }
+    }
 }
 /*--------------------------------------------------------------------------*/
 

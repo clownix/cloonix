@@ -36,6 +36,7 @@
 #include "cnt.h"
 #include "lan_to_name.h"
 #include "ovs_snf.h"
+#include "kvm.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -88,7 +89,8 @@ static void timer_free_nat(void *data)
 {
   char *name = (char *) data;
   t_ovs_nat *cur = find_nat(name);
-  free_nat(cur);
+  if (cur)
+    free_nat(cur);
   clownix_free(data, __FUNCTION__);
 } 
 /*--------------------------------------------------------------------------*/
@@ -303,7 +305,11 @@ void ovs_nat_poldiag_resp(int llid, int tid, char *line)
 void ovs_nat_sigdiag_resp(int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
+  char msg[MAX_PATH_LEN];
   t_ovs_nat *cur;
+  char ip[MAX_NAME_LEN];
+  int cli_llid, cli_tid;
+
   if (sscanf(line,
   "nat_suidroot_ko %s", name) == 1)
     {
@@ -325,6 +331,29 @@ void ovs_nat_sigdiag_resp(int llid, int tid, char *line)
       cur->count = 0;
       }
     }
+
+ else if (sscanf(line,
+  "nat_whatip_ok cli_llid=%d cli_tid=%d name=%s ip=%s",
+           &cli_llid, &cli_tid, name, ip) == 4)
+    {
+    memset(msg, 0, MAX_PATH_LEN);
+    snprintf(msg, MAX_PATH_LEN-1, "OK=%s", ip);
+    if (msg_exist_channel(cli_llid))
+      send_status_ok(cli_llid, cli_tid, msg);
+    else
+      KERR("ERROR %s", line);
+    }
+  else if (sscanf(line,
+  "nat_whatip_ko cli_llid=%d cli_tid=%d name=%s",
+           &cli_llid, &cli_tid, name) == 3)
+    {
+    if (msg_exist_channel(cli_llid))
+      send_status_ko(cli_llid, cli_tid, "KO");
+    else
+      KERR("ERROR %s", line);
+    }
+
+
   else
     KERR("ERROR nat: %s %s", g_cloonix_net, line);
 }
@@ -440,7 +469,6 @@ void ovs_nat_resp_del_lan(int is_ko, char *name, int num,
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 t_ovs_nat *ovs_nat_exists(char *name)
 {
@@ -500,7 +528,8 @@ void ovs_nat_add(int cli_llid, int cli_tid, char *name)
   t_ovs_nat *cur = find_nat(name);
   if (cur)
     {
-    send_status_ko(cli_llid, cli_tid, "Exists already");
+    if (cli_llid)
+      send_status_ko(cli_llid, cli_tid, "Exists already");
     }
   else
     {
@@ -570,17 +599,20 @@ void ovs_nat_add_lan(int cli_llid, int cli_tid, char *name, char *lan)
   if (!cur)
     {
     KERR("ERROR %s", name);
-    send_status_ko(cli_llid, cli_tid, "Does not exist");
+    if (cli_llid)
+      send_status_ko(cli_llid, cli_tid, "Does not exist");
     }
   else if ((cur->cli_llid) || (cur->del_nat_req))
     {
     KERR("ERROR %s %d %d", name, cur->cli_llid, cur->del_nat_req);
-    send_status_ko(cli_llid, cli_tid, "Not ready");
+    if (cli_llid)
+      send_status_ko(cli_llid, cli_tid, "Not ready");
     }
   else if (strlen(cur->lan))
     {
     KERR("ERROR %s %s", name, cur->lan);
-    send_status_ko(cli_llid, cli_tid, "Lan exists");
+    if (cli_llid)
+      send_status_ko(cli_llid, cli_tid, "Lan exists");
     }
   else
     {
@@ -719,29 +751,34 @@ void ovs_nat_vm_event(void)
 /****************************************************************************/
 void ovs_nat_cisco_add(char *name)
 {
-/*
   t_vm *vm = cfg_get_vm(name);
   char cisconat[MAX_NAME_LEN];
+  char lan[MAX_NAME_LEN];
+  t_eth_table *eth_tab;
+  int num, endp_type;
   char *nm;
-  int num;
   if (!vm)
     KERR("ERROR CREATING CISCO NAT %s", name);
   else
     {
-    num = vm->kvm.vm_config_param;
     memset(cisconat, 0, MAX_NAME_LEN);
     snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
-    if (dpdk_nat_add(0, 0, cisconat))
-      KERR("ERROR CREATING CISCO NAT %s", cisconat);
-    else
-      {
-      nm = (char *) malloc(MAX_NAME_LEN);
-      memset(nm, 0, MAX_NAME_LEN);
-      strncpy(nm, name, MAX_NAME_LEN-1);
-      clownix_timeout_add(300, timer_add_nat_vm, (void *)nm, NULL, NULL);
-      }
+    ovs_nat_add(0, 0, cisconat);
+    nm = (char *) malloc(MAX_NAME_LEN);
+    memset(nm, 0, MAX_NAME_LEN);
+    strncpy(nm, name, MAX_NAME_LEN-1);
+    memset(cisconat, 0, MAX_NAME_LEN);
+    memset(lan, 0, MAX_NAME_LEN);
+    snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
+    snprintf(lan, MAX_NAME_LEN-1, "lan_nat_%s", name);
+    num = vm->kvm.vm_config_param;
+    ovs_nat_add_lan(0, 0, cisconat, lan);
+    eth_tab = vm->kvm.eth_table;
+    endp_type = kvm_exists(name, num);
+    if (kvm_add_lan(0, 0, name, num, lan, endp_type, eth_tab))
+      KERR("ERROR %s %d %s", name, num, lan);
+
     }
-*/
 }
 /*--------------------------------------------------------------------------*/
 
@@ -768,7 +805,7 @@ int  ovs_nat_dyn_snf(char *name, int val)
   char tap[MAX_NAME_LEN];
   char *vh;
 
-  if (tap == NULL)
+  if (cur == NULL)
     KERR("ERROR %s %d", name, val);
   else
     {
@@ -808,6 +845,39 @@ int  ovs_nat_dyn_snf(char *name, int val)
         result = 0;
         }
       }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void ovs_nat_cisco_nat_destroy(char *name)
+{
+  char cisconat[MAX_NAME_LEN];
+  memset(cisconat, 0, MAX_NAME_LEN);
+  snprintf(cisconat, MAX_NAME_LEN-1, "nat_%s", name);
+  ovs_nat_del(0, 0, cisconat);
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int ovs_nat_whatip(int llid, int tid, char *nat_name, char *name)
+{
+  char msg[MAX_PATH_LEN];
+  t_ovs_nat *cur = find_nat(nat_name);
+  int result = -1;
+  if (cur == NULL)
+    KERR("ERROR %s not found", nat_name);
+  else if (!msg_exist_channel(cur->llid))
+    KERR("ERROR %s not connected", nat_name);
+  else
+    {
+    result = 0;
+    memset(msg, 0, MAX_PATH_LEN);
+    snprintf(msg, MAX_PATH_LEN-1,
+    "nat_whatip cli_llid=%d cli_tid=%d name=%s", llid, tid, name);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_nat, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
   return result;
 }

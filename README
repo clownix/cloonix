@@ -87,6 +87,11 @@ CREATION OF THE QCOW2 AND IMG FILES:
 cd cloonix/quickstart/create_kvm/ for qcow2
 cd cloonix/quickstart/create_crun/ for img 
 
+-----------------------------------------------------------------------------
+TEST OF CISCO FEATURE:
+
+cd cloonix/quickstart/cisco
+
 ==============================================================================
 
 

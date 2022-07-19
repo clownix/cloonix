@@ -168,12 +168,12 @@ static void qcow2_get(GtkWidget *check, gpointer data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void has_nobackdoor_toggle(GtkToggleButton *togglebutton, gpointer user_data)
+static void has_no_qemu_ga_toggle(GtkToggleButton *togglebutton, gpointer user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton))
-    g_custom_vm.nobackdoor_flag = 1;
+    g_custom_vm.no_qemu_ga = 1;
   else
-    g_custom_vm.nobackdoor_flag = 0;
+    g_custom_vm.no_qemu_ga = 0;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -227,7 +227,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
   GtkWidget *entry_name, *entry_ram; 
   GtkWidget *entry_p9_host_share=NULL, *entry_cpu=NULL; 
   GtkWidget *grid, *parent, *is_persistent;
-  GtkWidget *has_nobackdoor, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
+  GtkWidget *has_no_qemu_ga, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
   t_custom_vm *cust_vm;
@@ -259,13 +259,13 @@ static void custom_vm_dialog(t_custom_vm *cust)
   g_signal_connect(is_persistent,"toggled",G_CALLBACK(is_persistent_toggle),NULL);
 
 
-  has_nobackdoor = gtk_check_button_new_with_label("nobackdoor_flag");
-  if (g_custom_vm.nobackdoor_flag)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_nobackdoor), TRUE);
+  has_no_qemu_ga = gtk_check_button_new_with_label("no_qemu_ga");
+  if (g_custom_vm.no_qemu_ga)
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_no_qemu_ga), TRUE);
   else
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_nobackdoor), FALSE);
-  g_signal_connect(has_nobackdoor,"toggled", G_CALLBACK(has_nobackdoor_toggle),NULL);
-  append_grid(grid, has_nobackdoor, "No hvc0 backdoor", line_nb++);
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(has_no_qemu_ga), FALSE);
+  g_signal_connect(has_no_qemu_ga,"toggled", G_CALLBACK(has_no_qemu_ga_toggle),NULL);
+  append_grid(grid, has_no_qemu_ga, "No qemu guest agent", line_nb++);
 
   has_natplug = gtk_check_button_new_with_label("natplug_flag");
   if (g_custom_vm.natplug_flag)
@@ -368,8 +368,8 @@ int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug)
 {
   int vm_config_flags = 0;
   *natplug = 0;
-  if (cust_vm->nobackdoor_flag)
-    vm_config_flags |= VM_CONFIG_FLAG_NOBACKDOOR;
+  if (cust_vm->no_qemu_ga)
+    vm_config_flags |= VM_CONFIG_FLAG_NO_QEMU_GA;
   if (cust_vm->natplug_flag)
     {
     vm_config_flags |= VM_CONFIG_FLAG_NATPLUG;
@@ -451,7 +451,7 @@ void menu_dialog_kvm_init(void)
   g_custom_vm.is_sda_disk = 0;
   g_custom_vm.is_full_virt = 0;
   g_custom_vm.has_p9_host_share = 0;
-  g_custom_vm.nobackdoor_flag = 0;
+  g_custom_vm.no_qemu_ga = 0;
   g_custom_vm.natplug_flag = 0;
   g_custom_vm.natplug = 0;
   g_custom_vm.cpu = 2;

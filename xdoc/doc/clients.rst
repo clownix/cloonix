@@ -136,7 +136,7 @@ The cisco and the mikrotik virtual machines cannot run an agent to have the
 cloonix_ssh backdoor, for these type of machines, if you add at vm creation
 the options::
 
-    --nobackdoor --natplug=0
+    --no_qemu_ga --natplug=0
 
 Then you can use the commands that replace cloonix_ssh and cloonix_scp::
 

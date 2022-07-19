@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 NET=nemo
-LINUX=bullseye
+LINUX=bookworm
 LIST_CISCO="cisco1 cisco2 cisco3" 
 LIST_LINUX="linux1 linux2" 
 BULK=${HOME}/cloonix_data/bulk
@@ -35,16 +35,16 @@ set -e
 cloonix_gui ${NET}
 
 #######################################################################
-PARAMS="ram=2000 cpu=2 eth=ss"
+PARAMS="ram=2000 cpu=2 eth=vv"
 for i in ${LIST_LINUX} ; do
   cloonix_cli ${NET} add kvm ${i} ${PARAMS} ${LINUX}.qcow2 &
 done
 
 
-PARAMS="ram=5000 cpu=4 eth=ssss"
-cloonix_cli ${NET} add kvm cisco1 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
-cloonix_cli ${NET} add kvm cisco2 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
-cloonix_cli ${NET} add kvm cisco3 ${PARAMS} ${NAME}.qcow2 --nobackdoor --natplug=0 &
+PARAMS="ram=5000 cpu=4 eth=vvvv"
+cloonix_cli ${NET} add kvm cisco1 ${PARAMS} ${NAME}.qcow2 --no_qemu_ga --natplug=0 &
+cloonix_cli ${NET} add kvm cisco2 ${PARAMS} ${NAME}.qcow2 --no_qemu_ga --natplug=0 &
+cloonix_cli ${NET} add kvm cisco3 ${PARAMS} ${NAME}.qcow2 --no_qemu_ga --natplug=0 &
 
 sleep 30
 #######################################################################

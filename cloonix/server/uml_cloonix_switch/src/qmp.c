@@ -309,9 +309,12 @@ static void dialog_resp_return(t_qmp *qmp, int llid, int tid, int status)
         KERR("ERROR %s", qmp->name);
       else
         {
-        doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
-        doors_send_add_vm(get_doorways_llid(), 0, vm->kvm.name,
-                          utils_get_qbackdoor_path(vm->kvm.vm_id));
+        if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NO_QEMU_GA))
+          {
+          doors_send_del_vm(get_doorways_llid(), 0, vm->kvm.name);
+          doors_send_add_vm(get_doorways_llid(), 0, vm->kvm.name,
+                            utils_get_qbackdoor_path(vm->kvm.vm_id));
+          }
         if (qmp->first_connect)
           {
           eth_tab = vm->kvm.eth_table;
@@ -441,6 +444,7 @@ static void dialog_resp(char *name, int llid, int tid, char *req, char *resp)
         }
       else if (!strncmp(resp, "{\"error\":", strlen("{\"error\":")))
         {
+        KERR("ERROR %s %s %s", name, resp, req);
         dialog_resp_return(qmp, llid, tid, -1);
         }
       else if (!strncmp(resp, "timeout_qmp_resp", strlen("timeout_qmp_resp")))

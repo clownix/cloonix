@@ -56,8 +56,10 @@ void ovs_nat_del(int llid, int tid, char *name);
 void ovs_nat_add_lan(int llid, int tid, char *name, char *lan);
 void ovs_nat_del_lan(int llid, int tid, char *name, char *lan);
 t_topo_endp *ovs_nat_translate_topo_endp(int *nb);
+int ovs_nat_whatip(int llid, int tid, char *nat_name, char *name);
 
 void ovs_nat_vm_event(void);
 void ovs_nat_cisco_add(char *name);
+void ovs_nat_cisco_nat_destroy(char *name);
 void ovs_nat_init(void);
 /*--------------------------------------------------------------------------*/
