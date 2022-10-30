@@ -16,16 +16,6 @@
 /*                                                                           */
 /*****************************************************************************/
 
-enum{
-  a2b_type_delay = 12,
-  a2b_type_loss,
-  a2b_type_qsize,
-  a2b_type_bsize,
-  a2b_type_brate,
-  a2b_type_silentms,
-  c2c_type_mac_mangle,
-};
-
 enum {
     type_hop_unused = 0,
     type_hop_ovs,
@@ -245,8 +235,8 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm);
 void send_sav_vm(int llid, int tid, char *name, char *sav_vm_path);
 void recv_sav_vm(int llid, int tid, char *name, char *sav_vm_path);
 
-void send_del_sat(int llid, int tid, char *name);
-void recv_del_sat(int llid, int tid, char *name);
+void send_del_name(int llid, int tid, char *name);
+void recv_del_name(int llid, int tid, char *name);
 
 void send_add_lan_endp(int llid, int tid, char *name, int num, char *lan);
 void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan);
@@ -346,12 +336,12 @@ void send_tap_add(int llid, int tid, char *name);
 void recv_tap_add(int llid, int tid, char *name);
 void send_a2b_add(int llid, int tid, char *name);
 void recv_a2b_add(int llid, int tid, char *name);
-void send_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
-void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val);
-void send_c2c_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
-void recv_c2c_cnf(int llid, int tid, char *name, int type, uint8_t *mac);
+void send_c2c_cnf(int llid, int tid, char *name, char *cmd);
+void recv_c2c_cnf(int llid, int tid, char *name, char *cmd);
 void send_nat_cnf(int llid, int tid, char *name, char *cmd);
 void recv_nat_cnf(int llid, int tid, char *name, char *cmd);
+void send_a2b_cnf(int llid, int tid, char *name, char *cmd);
+void recv_a2b_cnf(int llid, int tid, char *name, char *cmd);
 /*---------------------------------------------------------------------------*/
 void send_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip, 
                   char *slave_cloon, uint32_t ip, uint16_t port,

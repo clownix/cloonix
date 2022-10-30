@@ -26,6 +26,7 @@
 
 
 
+
 char * stripcontrol(const char * text) {
 
 	char * ret;

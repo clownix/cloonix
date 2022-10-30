@@ -163,7 +163,7 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_del_sat(int llid, int tid, char *name)
+void recv_del_name(int llid, int tid, char *name)
 {
   KOUT(" ");
 }
@@ -336,9 +336,9 @@ void recv_color_item(int llid, int tid, char *name, int color)
 {KOUT(" ");}
 /*--------------------------------------------------------------------------*/
 
-void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
+void recv_a2b_cnf(int llid, int tid, char *name, char *cmd)
 {KOUT(" ");}
-void recv_c2c_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
+void recv_c2c_cnf(int llid, int tid, char *name, char *cmd)
 {KOUT(" ");}
 void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
 {KOUT(" ");}

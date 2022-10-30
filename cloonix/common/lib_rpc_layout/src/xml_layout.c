@@ -269,13 +269,13 @@ void send_layout_node(int llid, int tid, t_layout_node *layout_node)
                                          xe, xd, ye, yd,
                                          layout_node->hidden_on_graph,
                                          layout_node->color,
-                                         layout_node->nb_eth_wlan);
-    for (i=0; i<layout_node->nb_eth_wlan; i++)
+                                         layout_node->nb_eth);
+    for (i=0; i<layout_node->nb_eth; i++)
       {
-      double2int(&xe, &xd, layout_node->eth_wlan[i].x);
-      double2int(&ye, &yd, layout_node->eth_wlan[i].y);
+      double2int(&xe, &xd, layout_node->eth[i].x);
+      double2int(&ye, &yd, layout_node->eth[i].y);
       len += sprintf(g_sndbuf+len, LAYOUT_INTF, xe, xd, ye, yd,
-                                              layout_node->eth_wlan[i].hidden_on_graph);
+                                              layout_node->eth[i].hidden_on_graph);
       }
     len += sprintf(g_sndbuf+len, LAYOUT_NODE_C);
     my_msg_mngt_tx(llid, len, g_sndbuf);
@@ -284,7 +284,7 @@ void send_layout_node(int llid, int tid, t_layout_node *layout_node)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void helper_get_eth(int nb, t_layout_eth_wlan *eth_wlan, char *msg) 
+static void helper_get_eth(int nb, t_layout_eth *eth, char *msg) 
 {
   int i;
   char *ptr = msg;
@@ -297,10 +297,10 @@ static void helper_get_eth(int nb, t_layout_eth_wlan *eth_wlan, char *msg)
     if (!ptr)
       KOUT("%s", msg);
     if (sscanf(ptr, LAYOUT_INTF, &xe, &xd, &ye, &yd, 
-                                 &eth_wlan[i].hidden_on_graph) != 5)
+                                 &eth[i].hidden_on_graph) != 5)
       KOUT("%s", msg);
-    int2double(xe, xd, &(eth_wlan[i].x));
-    int2double(ye, yd, &(eth_wlan[i].y));
+    int2double(xe, xd, &(eth[i].x));
+    int2double(ye, yd, &(eth[i].y));
     ptr = strstr(ptr, "</eth_xyh>");
     if (!ptr)
       KOUT("%s", msg);
@@ -408,11 +408,11 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
                                      &xe, &xd, &ye, &yd,
                                      &(layout_node.hidden_on_graph),
                                      &(layout_node.color),
-                                    &(layout_node.nb_eth_wlan)) != 9)
+                                    &(layout_node.nb_eth)) != 9)
         KOUT("%s", msg);
       int2double(xe, xd, &(layout_node.x));
       int2double(ye, yd, &(layout_node.y));
-      helper_get_eth(layout_node.nb_eth_wlan, layout_node.eth_wlan, msg); 
+      helper_get_eth(layout_node.nb_eth, layout_node.eth, msg); 
       recv_layout_node(llid, tid, &layout_node);
       break;
 

@@ -33,20 +33,6 @@
 #define INIT_STR "127.0.0.1:43211=nemoclown=nat@user=root=ip=172.17.0.11=port=23456=cloonix_info_endturlututu"
 
 /*****************************************************************************/
-static int test_file_is_socket(char *path)
-{
-  int result = -1;
-  struct stat stat_file;
-  if (!stat(path, &stat_file))
-    {
-    if (S_ISSOCK(stat_file.st_mode))
-      result = 0;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static int connect_to_socket(char *path)
 {
   int result = -1;

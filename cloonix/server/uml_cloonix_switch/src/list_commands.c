@@ -176,7 +176,7 @@ static int build_center_scale_cmd(int offset, t_list_commands *hlist,
 
 /*****************************************************************************/
 static int build_layout_eth(int offset, t_list_commands *hlist, 
-                            char *name, int num, t_layout_eth_wlan *eth_wlan)
+                            char *name, int num, t_layout_eth *eth)
 {
   int result = offset;
   t_list_commands *list = &(hlist[result]);
@@ -184,9 +184,9 @@ static int build_layout_eth(int offset, t_list_commands *hlist,
     {
     sprintf(list->cmd, "cloonix_cli %s cnf lay abs_xy_eth %s %d %d",
                         cfg_get_cloonix_name(), name, num, 
-                        layout_node_solve(eth_wlan->x, eth_wlan->y));
+                        layout_node_solve(eth->x, eth->y));
     result += 1;
-    if (eth_wlan->hidden_on_graph)
+    if (eth->hidden_on_graph)
       {
       if (can_increment_index(result))
         {
@@ -225,8 +225,8 @@ static int build_layout_node(int offset, t_list_commands *hlist,
         }
       }
     }
-  for (i=0; i < node->nb_eth_wlan; i++)
-    result = build_layout_eth(result, hlist, node->name, i, &(node->eth_wlan[i])); 
+  for (i=0; i < node->nb_eth; i++)
+    result = build_layout_eth(result, hlist, node->name, i, &(node->eth[i])); 
   return result;
 }
 /*---------------------------------------------------------------------------*/

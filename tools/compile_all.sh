@@ -2,13 +2,12 @@
 HERE=`pwd`
 NET=nemo
 
-LIST="fedora35 \
+LIST="fedora36 \
       jammy \
-      hirsute \
-      impish \
       bookworm \
       bullseye \
       tumbleweed"
+
 
 set -x
 

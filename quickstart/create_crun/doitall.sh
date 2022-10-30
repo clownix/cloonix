@@ -3,9 +3,7 @@
 sudo ./bookworm
 sudo ./bullseye
 sudo ./centos8
-sudo ./fedora35
-sudo ./hirsute
-sudo ./impish
+sudo ./fedora36
 sudo ./jammy
-sudo ./opensuse154
+sudo ./opensuse155
 sudo ./openwrt

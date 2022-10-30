@@ -37,12 +37,12 @@ enum
   layout_modif_type_max,
 };
 /*---------------------------------------------------------------------------*/
-typedef struct t_layout_eth_wlan
+typedef struct t_layout_eth
 {
   double x;
   double y;
   int hidden_on_graph;
-} t_layout_eth_wlan;
+} t_layout_eth;
 /*--------------------------------------------------------------------------*/
 typedef struct t_layout_sat
 {
@@ -71,8 +71,8 @@ typedef struct t_layout_node
   double y;
   int hidden_on_graph;
   int color;
-  int nb_eth_wlan;
-  t_layout_eth_wlan eth_wlan[MAX_ETH_VM];
+  int nb_eth;
+  t_layout_eth eth[MAX_ETH_VM];
 } t_layout_node;
 /*--------------------------------------------------------------------------*/
 enum {

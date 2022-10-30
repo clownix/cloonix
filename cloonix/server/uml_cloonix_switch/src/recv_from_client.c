@@ -52,6 +52,7 @@
 #include "cnt.h"
 #include "ovs_snf.h"
 #include "ovs_nat.h"
+#include "ovs_a2b.h"
 #include "ovs_tap.h"
 #include "ovs_c2c.h"
 #include "msg.h"
@@ -360,6 +361,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
   t_ovs_nat *nat_exists = ovs_nat_exists(name);
+  t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   if (vm != NULL)
     eth_tab = vm->kvm.eth_table;
@@ -414,6 +416,8 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
     ovs_tap_add_lan(llid, tid, name, lan);
   else if ((nat_exists) && (num == 0))
     ovs_nat_add_lan(llid, tid, name, lan);
+  else if ((a2b_exists) && ((num == 0) || (num == 1)))
+    ovs_a2b_add_lan(llid, tid, name, num, lan);
   else if ((c2c_exists) && (num == 0))
     ovs_c2c_add_lan(llid, tid, name, lan);
   else
@@ -467,9 +471,11 @@ static void timer_endp(void *data)
   int cnt_exists = cnt_info(te->name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(te->name);
   t_ovs_nat *nat_exists = ovs_nat_exists(te->name);
+  t_ovs_a2b *a2b_exists = ovs_a2b_exists(te->name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(te->name);
 
-  if (endp_kvm || cnt_exists || tap_exists || nat_exists || c2c_exists) 
+  if (endp_kvm || cnt_exists || tap_exists ||
+      nat_exists || a2b_exists || c2c_exists) 
     {
     local_add_lan(te->llid, te->tid, te->name, te->num, te->lan);
     timer_free(te);
@@ -625,6 +631,7 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
   t_ovs_nat *nat_exists = ovs_nat_exists(name);
+  t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   event_print("Rx Req del lan %s of %s %d", lan, name, num);
 
@@ -659,6 +666,8 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
     ovs_tap_del_lan(llid, tid, name, lan);
   else if ((nat_exists) && (num == 0))
     ovs_nat_del_lan(llid, tid, name, lan);
+  else if ((a2b_exists) && ((num == 0) || (num == 1)))
+    ovs_a2b_del_lan(llid, tid, name, num, lan);
   else if ((c2c_exists) && (num == 0))
     ovs_c2c_del_lan(llid, tid, name, lan);
   else
@@ -1220,11 +1229,12 @@ void recv_list_commands_req(int llid, int tid, int is_layout)
 /*****************************************************************************/
 t_pid_lst *create_list_pid(int *nb)
 {
-  int i,j, nb_vm, nb_cnt, nb_snf, nb_nat, nb_c2c, nb_sum, nb_ovs;
+  int i,j, nb_vm, nb_cnt, nb_snf, nb_nat, nb_a2b, nb_c2c, nb_sum, nb_ovs;
   t_lst_pid *ovs_pid = NULL;
   t_lst_pid *cnt_pid = NULL;
   t_lst_pid *snf_pid = NULL;
   t_lst_pid *nat_pid = NULL;
+  t_lst_pid *a2b_pid = NULL;
   t_lst_pid *c2c_pid = NULL;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_pid_lst *lst;
@@ -1232,8 +1242,9 @@ t_pid_lst *create_list_pid(int *nb)
   nb_ovs = ovs_get_all_pid(&ovs_pid);
   nb_snf = ovs_snf_get_all_pid(&snf_pid);
   nb_nat = ovs_nat_get_all_pid(&nat_pid);
+  nb_a2b = ovs_a2b_get_all_pid(&a2b_pid);
   nb_c2c = ovs_c2c_get_all_pid(&c2c_pid);
-  nb_sum = nb_ovs + nb_vm + nb_cnt + nb_snf + nb_nat + nb_c2c + 10;
+  nb_sum = nb_ovs + nb_vm + nb_cnt + nb_snf + nb_nat + nb_a2b + nb_c2c + 10;
   lst = (t_pid_lst *)clownix_malloc(nb_sum*sizeof(t_pid_lst),18);
   memset(lst, 0, nb_sum*sizeof(t_pid_lst));
   for (i=0, j=0; i<nb_vm; i++)
@@ -1270,6 +1281,13 @@ t_pid_lst *create_list_pid(int *nb)
     j++;
     }
 
+  for (i=0 ; i<nb_a2b; i++)
+    {
+    strncpy(lst[j].name, a2b_pid[i].name, MAX_NAME_LEN-1);
+    lst[j].pid = a2b_pid[i].pid;
+    j++;
+    }
+
   for (i=0 ; i<nb_c2c; i++)
     {
     strncpy(lst[j].name, c2c_pid[i].name, MAX_NAME_LEN-1);
@@ -1281,6 +1299,7 @@ t_pid_lst *create_list_pid(int *nb)
   clownix_free(ovs_pid, __FUNCTION__);
   clownix_free(snf_pid, __FUNCTION__);
   clownix_free(nat_pid, __FUNCTION__);
+  clownix_free(a2b_pid, __FUNCTION__);
   clownix_free(c2c_pid, __FUNCTION__);
   strcpy(lst[j].name, "doors");
   lst[j].pid = doorways_get_distant_pid();
@@ -1407,15 +1426,17 @@ static void timer_del_all_end(void *data)
 static void timer_del_all(void *data)
 { 
   t_ovs_nat *nat, *nnat;
+  t_ovs_a2b *a2b, *na2b;
   t_ovs_c2c *c2c, *nc2c;
   t_ovs_tap *tap, *ntap;
-  int nb_vm, nb_cnt, nb_zombies, nb_nat, nb_c2c, nb_tap, found = 0;
+  int nb_vm, nb_cnt, nb_zombies, nb_nat, nb_a2b, nb_c2c, nb_tap, found = 0;
   t_timer_del *td = (t_timer_del *) data;;
   cfg_get_first_vm(&nb_vm);
   nb_cnt = suid_power_delete_cnt_all();
   nb_zombies = cfg_zombie_qty();
   tap = ovs_tap_get_first(&nb_tap);
   nat = ovs_nat_get_first(&nb_nat);
+  a2b = ovs_a2b_get_first(&nb_a2b);
   c2c = ovs_c2c_get_first(&nb_c2c);
   while(tap)
     {
@@ -1429,13 +1450,19 @@ static void timer_del_all(void *data)
     ovs_nat_del(0, 0, nat->name);
     nat = nnat;
     }
+  while(a2b)
+    {
+    na2b = a2b->next;
+    ovs_a2b_del(0, 0, a2b->name);
+    a2b = na2b;
+    }
   while(c2c)
     {
     nc2c = c2c->next;
     ovs_c2c_del(0, 0, c2c->name);
     c2c = nc2c;
     }
-  found = nb_vm + nb_cnt + nb_zombies + nb_tap + nb_nat + nb_c2c;
+  found = nb_vm + nb_cnt + nb_zombies + nb_tap + nb_nat + nb_a2b + nb_c2c;
   if (found)
     {
     td->tzcount += 1;
@@ -1536,7 +1563,7 @@ void recv_topo_small_event_unsub(int llid, int tid)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void recv_del_sat(int llid, int tid, char *name)
+void recv_del_name(int llid, int tid, char *name)
 {
   int nb_eth;
   event_print("Rx Req del %s", name);
@@ -1553,6 +1580,10 @@ void recv_del_sat(int llid, int tid, char *name)
   else if (ovs_tap_exists(name))
     {
     ovs_tap_del(llid, tid, name);
+    }
+  else if (ovs_a2b_exists(name))
+    {
+    ovs_a2b_del(llid, tid, name);
     }
   else if (ovs_nat_exists(name))
     {
@@ -1628,6 +1659,29 @@ void recv_nat_add(int llid, int tid, char *name)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_a2b_add(int llid, int tid, char *name)
+{
+  char *locnet = cfg_get_cloonix_name();
+  char err[MAX_PATH_LEN];
+  event_print("Rx Req add a2b %s", name);
+  if (get_inhib_new_clients())
+    {
+    KERR("ERROR %s %s", locnet, name);
+    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    }
+  else if (cfg_name_is_in_use(0, name, err))
+    {
+    KERR("ERROR %s %s", locnet, name);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    ovs_a2b_add(llid, tid, name);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                   char *dist, uint32_t dist_ip, uint16_t dist_port,
                   char *dist_passwd, uint32_t dist_udp_ip)
@@ -1662,6 +1716,7 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
   int nb_eth;
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
   t_ovs_nat *nat_exists = ovs_nat_exists(name);
+  t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   event_print("Rx Req add snf %s %d %d", name, num, val);
   if (get_inhib_new_clients())
@@ -1677,6 +1732,24 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
       send_status_ko(llid, tid, "bad num");
       }
     else if (ovs_nat_dyn_snf(name, val))
+      {
+      KERR("ERROR %s %s", locnet, name);
+      send_status_ko(llid, tid, "error");
+      }
+    else
+      {
+      send_status_ok(llid, tid, "ok");
+      cfg_hysteresis_send_topo_info();
+      }
+    }
+  else if (a2b_exists)
+    {
+    if ((num != 0) && ((num != 1)))
+      {
+      KERR("ERROR %s %s", locnet, name);
+      send_status_ko(llid, tid, "bad num");
+      }
+    else if (ovs_a2b_dyn_snf(name, num, val))
       {
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "error");
@@ -1815,71 +1888,25 @@ void recv_tap_add(int llid, int tid, char *name)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_a2b_add(int llid, int tid, char *name)
+void recv_c2c_cnf(int llid, int tid, char *name, char *cmd)
 {
-  char *locnet = cfg_get_cloonix_name();
-  char err[MAX_PATH_LEN];
-  event_print("Rx Req add a2b %s", name);
-  if (get_inhib_new_clients())
+  uint8_t mac[6];
+  if (strncmp("mac_mangle=", cmd, strlen("mac_mangle=")))
     {
-    KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
+    send_status_ko(llid, tid, cmd);
+    KERR("ERROR %s %s ", name, cmd);
     }
-  else if (cfg_name_is_in_use(0, name, err))
+  else if (sscanf(cmd, "mac_mangle=%hhX:%hhX:%hhX:%hhX:%hhX:%hhX",
+                  &(mac[0]), &(mac[1]), &(mac[2]),
+                  &(mac[3]), &(mac[4]), &(mac[5])) != 6)
     {
-    KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, err);
-    }
-  else
-    {
-    KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, "a2b_add ko");
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
-{
-  char err[MAX_PATH_LEN];
-  memset(err, 0, MAX_PATH_LEN);
-  event_print("Rx Req cnf a2b %s dir:%d type:%d val:%d",name,dir,type,val);
-  if ((dir != 0) && (dir != 1))
-    {
-    snprintf(err, MAX_PATH_LEN-1, "A2B %s wrong dir 0 or 1", name);
-    send_status_ko(llid, tid, err);
-    }
-  else if ((type != a2b_type_delay)  &&
-           (type != a2b_type_loss)   &&
-           (type != a2b_type_qsize)  &&
-           (type != a2b_type_bsize)  &&
-           (type != a2b_type_brate)  &&
-           (type != a2b_type_silentms))
-    {
-    snprintf(err, MAX_PATH_LEN-1, "A2B %s wrong type %d", name, type);
-    send_status_ko(llid, tid, err);
-    }
-  else
-    {
-    KERR("%s %d %d %d ", name, dir, type, val);
-    snprintf(err, MAX_PATH_LEN-1, "A2B %s not found", name);
-    send_status_ko(llid, tid, err);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_c2c_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
-{
-  if (type != c2c_type_mac_mangle)
-    {
-    send_status_ko(llid, tid, "Bad type");
-    KERR("ERROR %s %d ", name, type);
+    send_status_ko(llid, tid, cmd);
+    KERR("ERROR %s %s ", name, cmd);
     }
   else if (ovs_c2c_mac_mangle(name, mac))
     {
-    send_status_ko(llid, tid, "Bad type");
-    KERR("ERROR %s %d ", name, type);
+    send_status_ko(llid, tid, name);
+    KERR("ERROR %s %s ", name, cmd);
     }
   else
     send_status_ok(llid, tid, "OK");
@@ -1923,6 +1950,31 @@ void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
         send_status_ko(llid, tid, "error nat cnf");
         KERR("ERROR %s %s ", name, cmd);
         }
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_a2b_cnf(int llid, int tid, char *name, char *cmd)
+{
+  event_print("Rx Req cnf a2b %s %s", name, cmd);
+  if (!ovs_a2b_exists(name))
+    {
+    send_status_ko(llid, tid, "error a2b not found");
+    KERR("ERROR %s %s ", name, cmd);
+    }
+  else if (strncmp("whatip=", cmd, strlen("whatip=")))
+    {
+    send_status_ko(llid, tid, "error a2b bad cmd");
+    KERR("ERROR %s %s ", name, cmd);
+    }
+  else
+    {
+    if (ovs_a2b_param_config(llid, tid, name, cmd))
+      {
+      send_status_ko(llid, tid, "error a2b cnf cmd");
+      KERR("ERROR %s %s ", name, cmd);
       }
     }
 }

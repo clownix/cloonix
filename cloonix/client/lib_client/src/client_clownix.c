@@ -613,14 +613,13 @@ void client_add_a2b(int tid, t_end_cb cb, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_cnf_a2b(int tid, t_end_cb cb, char *name,
-                    int dir, int type, int val)
+void client_cnf_a2b(int tid, t_end_cb cb, char *name, char *cmd)
 {
   int new_tid;
   if (!g_llid)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_a2b_cnf(g_llid, new_tid, name, dir, type, val);
+  send_a2b_cnf(g_llid, new_tid, name, cmd);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -628,13 +627,13 @@ void client_cnf_a2b(int tid, t_end_cb cb, char *name,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_cnf_c2c(int tid, t_end_cb cb, char *name, int type, uint8_t *mac)
+void client_cnf_c2c(int tid, t_end_cb cb, char *name, char *cmd)
 {
   int new_tid;
   if (!g_llid)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_c2c_cnf(g_llid, new_tid, name, type, mac);
+  send_c2c_cnf(g_llid, new_tid, name, cmd);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
@@ -662,7 +661,7 @@ void client_del_sat(int tid, t_end_cb cb, char *name)
   if (!g_llid)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_del_sat(g_llid, new_tid, name);
+  send_del_name(g_llid, new_tid, name);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif

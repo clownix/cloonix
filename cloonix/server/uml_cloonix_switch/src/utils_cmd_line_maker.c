@@ -203,6 +203,17 @@ char *utils_get_nat_dir(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char *utils_get_a2b_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, A2B_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char *utils_get_qmp_path(int vm_id)
 {
   static char path[MAX_PATH_LEN];
@@ -301,6 +312,16 @@ char *utils_get_ovs_nat_bin_dir(void)
   snprintf(ovs_nat, MAX_PATH_LEN-1,
            "%s/server/ovs_nat/cloonix_ovs_nat", cfg_get_bin_dir());
   return ovs_nat;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_ovs_a2b_bin_dir(void)
+{
+  static char ovs_a2b[MAX_PATH_LEN];
+  snprintf(ovs_a2b, MAX_PATH_LEN-1,
+           "%s/server/ovs_a2b/cloonix_ovs_a2b", cfg_get_bin_dir());
+  return ovs_a2b;
 }
 /*---------------------------------------------------------------------------*/
 

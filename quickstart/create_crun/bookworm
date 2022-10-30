@@ -53,7 +53,7 @@ debootstrap --no-check-certificate \
             /tmp/wkmntloops ${REPO_STRETCH}
 
 
-DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
+DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
 sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
 sed -i s"/set mouse/\"set mouse/" $DEFVIM
 

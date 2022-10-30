@@ -1,10 +1,12 @@
 #!/bin/bash
 set -e
-DISTRO=opensuse154
+DISTRO=opensuse155
+DISTRONUM=15.5
 ROOTFS=/root/${DISTRO}
 OPENSUSE_MIRROR=http://download.opensuse.org
-OPENSUSE=${OPENSUSE_MIRROR}/distribution/leap/15.4/repo/oss/
-OPENSUSE_UPDATES=${OPENSUSE_MIRROR}/update/leap/15.4/oss/
+
+OPENSUSE=${OPENSUSE_MIRROR}/distribution/leap/${DISTRONUM}/repo/oss
+OPENSUSE_UPDATES=${OPENSUSE_MIRROR}/update/leap/${DISTRONUM}/oss
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -39,12 +41,6 @@ fct_create_32G_mount_wkmntloops()
   mkfs.ext4 -F -L "cloonix" /dev/loop0p2
   mkdir -p /tmp/wkmntloops
   mount /dev/loop0p2 /tmp/wkmntloops
-}
-#----------------------------------------------------------------------#
-fct_umount_wkmntloops()
-{
-  umount /tmp/wkmntloops
-  losetup -d /dev/loop0
 }
 #----------------------------------------------------------------------#
 
@@ -82,47 +78,67 @@ do
   echo
 done
 
-zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE} 15.4-oss
-zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE_UPDATES} 15.4-oss-updates
+
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE} ${DISTRONUM}-oss
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE_UPDATES} ${DISTRONUM}-oss-updates
 zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys refresh
 zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys update
-zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install systemd
-zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install zypper
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys install systemd
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys install zypper
+
 #-----------------------------------------------------------------------#
 rm -f /tmp/wkmntloops/etc/resolv.conf
 cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
 #-----------------------------------------------------------------------#
-list_pkt="kernel-default grub2-i386-pc iproute2 "
-list_pkt+="openssh xauth sudo kbd vim net-tools dracut dhcp-client "
-list_pkt+="curl lvm2 ntfs-3g mdadm biosdevname tar "
-list_pkt+="qemu-guest-agent"
-for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
-chroot /tmp/wkmntloops/ zypper --non-interactive install $list_pkt
-chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
+for d in dev sys proc; do
+  mkdir -p /tmp/wkmntloops/$d
+  mount --bind /$d /tmp/wkmntloops/$d
+done
 
-KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0 ipv6.disable=1"
+chroot /tmp/wkmntloops/ zypper --non-interactive --no-gpg-checks --gpg-auto-import-keys refresh
+chroot /tmp/wkmntloops/ zypper --non-interactive --no-gpg-checks --gpg-auto-import-keys update
+chroot /tmp/wkmntloops/ zypper --non-interactive --no-gpg-checks --gpg-auto-import-keys dist-upgrade --allow-vendor-change
+
+chroot /tmp/wkmntloops/ zypper --non-interactive --no-gpg-checks --gpg-auto-import-keys refresh
+chroot /tmp/wkmntloops/ zypper --non-interactive --no-gpg-checks --gpg-auto-import-keys update
+chroot /tmp/wkmntloops/ zypper --non-interactive --no-gpg-checks --gpg-auto-import-keys dist-upgrade --allow-vendor-change
+
+#-----------------------------------------------------------------------#
+list_pkt="kernel-default-extra "
+list_pkt+="grub2-i386-pc dracut dracut-extra ignition-dracut-grub2 grub2 grubby "
+list_pkt+="dhcp-client iproute2 openssh xauth sudo kbd vim net-tools "
+list_pkt+="curl mdadm biosdevname tar qemu-guest-agent"
+#-----------------------------------------------------------------------#
+chroot /tmp/wkmntloops/ zypper --non-interactive install $list_pkt
+chroot /tmp/wkmntloops/ zypper --non-interactive install -t pattern base
+chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
+#-----------------------------------------------------------------------#
+KERN="console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0 ipv6.disable=1"
 printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" \
         > /tmp/wkmntloops/etc/default/grub
 
-version=$(ls /tmp/wkmntloops/lib/modules/)
+version=$(ls /tmp/wkmntloops/lib/modules/ | grep default)
 if [ ! -e /tmp/wkmntloops/boot/vmlinuz-${version} ]; then
   echo ERROR:
   ls /tmp/wkmntloops/lib/modules/
   ls /tmp/wkmntloops/boot/
   umount /tmp/wkmntloops/{dev,proc,sys}
+  umount /tmp/wkmntloops
+  losetup -d /dev/loop0
   exit 1
 fi
 echo $version
-list="virtio_pci virtio_scsi virtio_blk virtio_gpu virtio_input virtio_console virtio_rng virtio_net"
-chroot /tmp/wkmntloops/ dracut --add-drivers "$list" --force /boot/initrd-${version}.img $version
-
+chroot /tmp/wkmntloops/ zstd -d /lib/modules/${version}/kernel/drivers/scsi/virtio_scsi.ko.zst
+chroot /tmp/wkmntloops/ zstd -d /lib/modules/${version}/kernel/drivers/scsi/sd_mod.ko.zst 
+list="sd_mod virtio_scsi"
+chroot /tmp/wkmntloops/ dracut --add-drivers "${list}" --force /boot/initrd-${version} $version
 chroot /tmp/wkmntloops/ grub2-mkconfig -o /boot/grub2/grub.cfg
 uuid=$(blkid | grep cloonix)
 uuid=${uuid#*UUID=\"}
 uuid=${uuid%%\"*}
 echo $uuid
-sync /dev/loop0
-umount /tmp/wkmntloops/{dev,proc,sys}
+
+
 #-----------------------------------------------------------------------#
 cat > /tmp/wkmntloops/etc/fstab  << EOF
 UUID=$uuid  /            ext4     defaults                      0 0 
@@ -154,7 +170,10 @@ root
 root
 EOF
 #-----------------------------------------------------------------------#
-fct_umount_wkmntloops
+sync /dev/loop0
+umount /tmp/wkmntloops/{dev,proc,sys}
+umount /tmp/wkmntloops
+losetup -d /dev/loop0
 #-----------------------------------------------------------------------#
 qemu-img convert -O qcow2 $ROOTFS ${ROOTFS}.qcow2
 rm -f $ROOTFS

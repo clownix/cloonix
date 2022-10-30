@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-releasever=35
+releasever=36
 basearch=x86_64
 DISTRO=fedora${releasever}
 ROOTFS=/root/${DISTRO}

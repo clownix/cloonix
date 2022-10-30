@@ -5,8 +5,6 @@ set +e
 LIST="centos8 \
       fedora35 \
       jammy \
-      hirsute \
-      impish \
       bookworm \
       bullseye \
       tumbleweed"

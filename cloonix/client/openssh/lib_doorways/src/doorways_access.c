@@ -339,14 +339,14 @@ static void first_read_process(int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void err_cli_cb (void *ptr, int llid, int err, int from)
+static void err_cli_cb (int llid, int err, int from)
 {
   local_exit(1);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int rx_cli_cb(void *ptr, int llid, int fd)
+static int rx_cli_cb(int llid, int fd)
 {
   int len = read(fd, g_buf, MAX_CLI_RX);
   if (len == 0)
@@ -374,7 +374,7 @@ static int rx_cli_cb(void *ptr, int llid, int fd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int listen_event_cb(void *ptr, int llid, int fd)
+static int listen_event_cb(int llid, int fd)
 {
   int cli_fd;
   util_fd_accept(fd, &cli_fd, __FUNCTION__);
@@ -399,7 +399,7 @@ static int listen_event_cb(void *ptr, int llid, int fd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void listen_err_cb(void *ptr, int llid, int err, int from)
+static void listen_err_cb(int llid, int err, int from)
 {
   fprintf(stderr, "Listen channel error");
   local_exit(1);

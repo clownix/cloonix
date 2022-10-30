@@ -101,7 +101,7 @@ struct cmd_struct level_add_cmd[] = {
 {"cnt", "Add container",  NULL, cmd_add_cnt, help_add_cnt},
 {"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_tap},
 {"nat", "Add nat (access host ip)",NULL, cmd_add_nat, help_add_nat},
-//{"a2b", "Add a2b (traffic delay shaping)",NULL, cmd_add_a2b, help_add_a2b},
+{"a2b", "Add a2b (traffic delay shaping)",NULL, cmd_add_a2b, help_add_a2b},
 {"c2c", "Add c2c (cloon 2 cloon cable)", NULL, cmd_add_c2c, help_add_c2c},
 {"help",  "",                     level_add_cmd, NULL, NULL},
 };
@@ -135,7 +135,7 @@ struct cmd_struct level_cnf_cmd[] = {
 {"kvm",  "Kvm config",    level_kvm_cmd, NULL, NULL},
 {"cnt",  "Container config",    level_cnt_cmd, NULL, NULL},
 {"nat",  "nat config", NULL, cmd_cnf_nat, help_cnf_nat},
-//{"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
+{"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
 {"c2c",  "c2c config", NULL, cmd_cnf_c2c, help_cnf_c2c},
 {"lay",  "Layout modifications on canvas", level_layout_cmd, NULL, NULL},
 {"help",  "",                     level_cnf_cmd, NULL, NULL},

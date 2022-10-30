@@ -51,7 +51,6 @@ for ((i=0;i<2;i++)); do
   cloonix_ssh $NET ${NAME} "./install_depends"
   sleep 10
 done
-exit
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "rm -f install_depends"
 #----------------------------------------------------------------------

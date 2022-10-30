@@ -40,19 +40,16 @@
                          "</a2b_add>"
 
 #define A2B_CNF          "<a2b_cnf>"\
-                         "  <tid>    %d </tid>\n"\
-                         "  <name>   %s </name>\n"\
-                         "  <dir>    %d </dir>\n"\
-                         "  <type>   %d </type>\n"\
-                         "  <val>    %d </val>\n"\
+                         "  <tid>  %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <cmd>  %s </cmd>\n"\
                          "</a2b_cnf>"
 
-#define XYX_CNF          "<xyx_cnf>"\
-                         "  <tid>    %d </tid>\n"\
-                         "  <name>   %s </name>\n"\
-                         "  <type>   %d </type>\n"\
-                         "  <mac>    %hhX:%hhX:%hhX:%hhX:%hhX:%hhX  </mac>\n"\
-                         "</xyx_cnf>"
+#define C2C_CNF          "<c2c_cnf>"\
+                         "  <tid>  %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <cmd>  %s </cmd>\n"\
+                         "</c2c_cnf>"
 
 #define NAT_CNF          "<nat_cnf>"\
                          "  <tid>  %d </tid>\n"\
@@ -273,10 +270,10 @@
                          "  <sav_rootfs_path> %s </sav_rootfs_path>\n"\
                          "</sav_vm>"
 
-#define DEL_SAT          "<del_sat>\n"\
+#define DEL_SAT          "<del_name>\n"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
-                         "</del_sat>"
+                         "</del_name>"
 
 #define ADD_LAN_ENDP     "<add_lan_endp>\n"\
                          "  <tid> %d </tid>\n"\
@@ -464,18 +461,8 @@
 
 #define EVENT_TOPO_A2B        "<a2b>\n"\
                               "  name:   %s \n"\
-                              "  delay0: %d \n"\
-                              "  loss0:  %d \n"\
-                              "  qsize0: %d \n"\
-                              "  bsize0: %d \n"\
-                              "  brate0: %d \n"\
-                              "  silentms0: %d \n"\
-                              "  delay1: %d \n"\
-                              "  loss1:  %d \n"\
-                              "  qsize1: %d \n"\
-                              "  bsize1: %d \n"\
-                              "  brate1: %d \n"\
-                              "  silentms1: %d \n"\
+                              "  endp_type0: %d \n"\
+                              "  endp_type1: %d \n"\
                               "</a2b>\n"
 
 #define EVENT_TOPO_NAT        "<nat>\n"\

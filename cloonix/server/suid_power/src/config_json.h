@@ -223,7 +223,9 @@
 "			\"/proc/scsi\"\n"\
 "		],\n"\
 "		\"sysctl\": {\n"\
-"                          \"net.ipv4.ip_forward\": \"1\"\n"\
+"                          \"net.ipv4.ip_forward\": \"1\",\n"\
+"                          \"net.ipv6.conf.all.disable_ipv6\": \"1\",\n"\
+"                          \"net.ipv6.conf.default.disable_ipv6\": \"1\"\n"\
 "                          },\n"\
 "		\"readonlyPaths\": [\n"\
 "			\"/proc/bus\",\n"\

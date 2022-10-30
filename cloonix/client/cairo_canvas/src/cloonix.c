@@ -419,6 +419,8 @@ void work_dir_resp(int tid, t_topo_clc *conf)
     KOUT("Error in gtk_init_check function");
 
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_accept_focus(GTK_WINDOW(window), FALSE);
+
 
   g_main_window = window;
   init_set_main_window_coords();

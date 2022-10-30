@@ -37,5 +37,6 @@ void ovs_snf_resp_msg_del_lan(int is_ko, char *vhost, char *name, int num, char 
 void ovs_snf_resp_msg_vhost_up(int is_ko, char *vhost, char *name, int num);
 void ovs_snf_lan_mac_change(char *lan);
 void ovs_snf_c2c_update_mac(char *name);
+void ovs_snf_a2b_update_mac(char *name);
 void ovs_snf_init(void);
 /*--------------------------------------------------------------------------*/

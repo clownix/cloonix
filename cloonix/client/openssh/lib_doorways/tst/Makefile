@@ -3,13 +3,11 @@ EXE = tst
 SRC = doorways_tst.c 
 WARNINGS=-Wall
 IO_CLOWNIX=../../../../common/lib_io_clownix
-RPCT=../../../../common/lib_rpct
 
 INCLUDES= -I../include
           
 LIBS = -L../ -ldoorways \
        -L${IO_CLOWNIX} -lio_clownix \
-       -L${RPCT} -lrpct \
        -ldoorways -lssl -lcrypto -lrt
 
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)

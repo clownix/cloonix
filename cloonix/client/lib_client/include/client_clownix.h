@@ -73,14 +73,10 @@ void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
                     char *passwd, uint32_t udp_ip);
 
 void client_add_snf(int tid, t_end_cb cb, char *name, int num, int on);
-
 void client_add_a2b(int tid, t_end_cb cb, char *name);
-void client_cnf_a2b(int tid, t_end_cb cb, char *name,
-                    int dir, int type, int val);
 
-void client_cnf_c2c(int tid, t_end_cb cb, char *name,
-                    int type, uint8_t *mac);
-
+void client_cnf_a2b(int tid, t_end_cb cb, char *name, char *cmd);
+void client_cnf_c2c(int tid, t_end_cb cb, char *name, char *cmd);
 void client_cnf_nat(int tid, t_end_cb cb, char *name, char *cmd);
 
 void client_add_cnt(int tid, t_end_cb cb, t_topo_cnt *cnt);

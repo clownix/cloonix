@@ -55,7 +55,7 @@ enum
   bnd_status_ko,
   bnd_add_vm,
   bnd_sav_vm,
-  bnd_del_sat,
+  bnd_del_name,
   bnd_add_lan_endp,
   bnd_del_lan_endp,
   bnd_kill_uml_clownix,
@@ -824,19 +824,8 @@ static int topo_a2b_format(char *buf, t_topo_a2b *a2b)
     KOUT(" ");
   if (!strlen(a2b->name) || (strlen(a2b->name) >= MAX_NAME_LEN))
      KOUT(" ");
-  len = sprintf(buf, EVENT_TOPO_A2B, a2b->name,
-                                     a2b->delay[0],
-                                     a2b->loss[0],
-                                     a2b->qsize[0],
-                                     a2b->bsize[0],
-                                     a2b->brate[0],
-                                     a2b->silentms[0],
-                                     a2b->delay[1],
-                                     a2b->loss[1],
-                                     a2b->qsize[1],
-                                     a2b->bsize[1],
-                                     a2b->brate[1],
-                                     a2b->silentms[1]);
+  len = sprintf(buf, EVENT_TOPO_A2B, a2b->name, a2b->endp_type0,
+                                                a2b->endp_type1);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -1181,7 +1170,7 @@ void send_sav_vm(int llid, int tid, char *name, char *sav_rootfs_path)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_del_sat(int llid, int tid, char *name)
+void send_del_name(int llid, int tid, char *name)
 {
   int len = 0;
   if (name[0] == 0)
@@ -1561,19 +1550,8 @@ static void helper_fill_topo_phy(char *msg, t_topo_phy *phy)
 /*****************************************************************************/
 static void helper_fill_topo_a2b(char *msg, t_topo_a2b *a2b)
 {
-  if (sscanf(msg, EVENT_TOPO_A2B, a2b->name,
-                                  &(a2b->delay[0]),
-                                  &(a2b->loss[0]),
-                                  &(a2b->qsize[0]),
-                                  &(a2b->bsize[0]),
-                                  &(a2b->brate[0]),
-                                  &(a2b->silentms[0]),
-                                  &(a2b->delay[1]),
-                                  &(a2b->loss[1]),
-                                  &(a2b->qsize[1]),
-                                  &(a2b->bsize[1]),
-                                  &(a2b->brate[1]),
-                                  &(a2b->silentms[1])) != 13)
+  if (sscanf(msg, EVENT_TOPO_A2B, a2b->name, &(a2b->endp_type0),
+                                             &(a2b->endp_type1)) != 3)
     KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
@@ -2035,28 +2013,14 @@ void send_a2b_add(int llid, int tid, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_a2b_cnf(int llid, int tid, char *name, int dir, int type, int val)
+void send_c2c_cnf(int llid, int tid, char *name, char *cmd)
 {
   int len = 0;
   if (name[0] == 0)
     KOUT(" ");
   if (strlen(name) >= MAX_NAME_LEN)
     KOUT(" ");
-  len = sprintf(sndbuf, A2B_CNF, tid, name, dir, type, val);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void send_c2c_cnf(int llid, int tid, char *name, int type, uint8_t *mac)
-{
-  int len = 0;
-  if (name[0] == 0)
-    KOUT(" ");
-  if (strlen(name) >= MAX_NAME_LEN)
-    KOUT(" ");
-  len = sprintf(sndbuf, XYX_CNF, tid, name, type,
-                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  len = sprintf(sndbuf, C2C_CNF, tid, name, cmd);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -2074,6 +2038,23 @@ void send_nat_cnf(int llid, int tid, char *name, char *cmd)
   if (strlen(cmd) >= MAX_PRINT_LEN)
     KOUT(" ");
   len = sprintf(sndbuf, NAT_CNF, tid, name, cmd);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_a2b_cnf(int llid, int tid, char *name, char *cmd)
+{
+  int len = 0;
+  if (name[0] == 0)
+    KOUT(" ");
+  if (strlen(name) >= MAX_NAME_LEN)
+    KOUT(" ");
+  if (cmd[0] == 0)
+    KOUT(" ");
+  if (strlen(cmd) >= MAX_PRINT_LEN)
+    KOUT(" ");
+  len = sprintf(sndbuf, A2B_CNF, tid, name, cmd);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -2222,7 +2203,7 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
 {
   int len, nb, flags_hop, num, is_layout;
   int vmcmd, param, status, sub;
-  int type, qty, tid, dir, val; 
+  int type, qty, tid, val; 
   uint32_t ip, dudp_ip, ludp_ip;
   uint16_t lport, dport;
   t_topo_clc  icf;
@@ -2250,7 +2231,6 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
   t_stats_counts stats_counts;
   t_stats_sysinfo stats_sysinfo;
   t_hop_list *list;
-  uint8_t mac[6];
 
 
   switch(bnd_evt)
@@ -2445,10 +2425,10 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_sav_vm(llid, tid, name, path);
       break;
 
-    case bnd_del_sat:
+    case bnd_del_name:
       if (sscanf(msg, DEL_SAT, &tid, name) != 2)
         KOUT("%s", msg);
-      recv_del_sat(llid, tid, name);
+      recv_del_name(llid, tid, name);
       break;
 
     case bnd_add_lan_endp:
@@ -2650,24 +2630,22 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_phy_add(llid, tid, name);
       break;
 
-    case bnd_a2b_cnf:
-      if (sscanf(msg, A2B_CNF, &tid, name, &dir, &type, &val) != 5)
-        KOUT("%s", msg);
-      recv_a2b_cnf(llid, tid, name, dir, type, val);
-      break;
-
     case bnd_xyx_cnf:
-      if (sscanf(msg, XYX_CNF, &tid, name, &type,
-                               &(mac[0]), &(mac[1]), &(mac[2]),
-                               &(mac[3]), &(mac[4]), &(mac[5])) != 9)
+      if (sscanf(msg, C2C_CNF, &tid, name, info) != 3)
         KOUT("%s", msg);
-      recv_c2c_cnf(llid, tid, name, type, mac);
+      recv_c2c_cnf(llid, tid, name, info);
       break;
 
    case bnd_nat_cnf:
       if (sscanf(msg, NAT_CNF, &tid, name, info) != 3)
         KOUT("%s", msg);
       recv_nat_cnf(llid, tid, name, info);
+      break;
+
+   case bnd_a2b_cnf:
+      if (sscanf(msg, A2B_CNF, &tid, name, info) != 3)
+        KOUT("%s", msg);
+      recv_a2b_cnf(llid, tid, name, info);
       break;
 
 
@@ -2771,7 +2749,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(ADD_CNT_O,      bound_list[bnd_cnt_add]);
   extract_boundary(ADD_KVM_O,      bound_list[bnd_add_vm]);
   extract_boundary(SAV_VM,         bound_list[bnd_sav_vm]);
-  extract_boundary(DEL_SAT,        bound_list[bnd_del_sat]);
+  extract_boundary(DEL_SAT,        bound_list[bnd_del_name]);
   extract_boundary(ADD_LAN_ENDP, bound_list[bnd_add_lan_endp]);
   extract_boundary(DEL_LAN_ENDP, bound_list[bnd_del_lan_endp]);
   extract_boundary(KILL_UML_CLOWNIX,bound_list[bnd_kill_uml_clownix]);
@@ -2826,7 +2804,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
 
   extract_boundary(A2B_ADD, bound_list[bnd_a2b_add]);
   extract_boundary(A2B_CNF, bound_list[bnd_a2b_cnf]);
-  extract_boundary(XYX_CNF, bound_list[bnd_xyx_cnf]);
+  extract_boundary(C2C_CNF, bound_list[bnd_xyx_cnf]);
   extract_boundary(NAT_CNF, bound_list[bnd_nat_cnf]);
 }
 /*---------------------------------------------------------------------------*/

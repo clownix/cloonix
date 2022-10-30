@@ -15,10 +15,6 @@ fi
 echo Doing LIBS
 sleep 1
 
-cd ${DBASE}/common/lib_rpct
-make
-cd ${HERE}
-
 
 export PATH=${NINJA}/ninja:$PATH
 echo Doing untar and patch

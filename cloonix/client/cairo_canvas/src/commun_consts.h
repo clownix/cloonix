@@ -22,7 +22,7 @@
 #define TAP_DIA 30
 #define MOVE_CURSOR_MAX 100.0
 #define NAT_RAD 14
-#define SNIFF_RAD 15
+#define A2B_RAD 15
 
 
 

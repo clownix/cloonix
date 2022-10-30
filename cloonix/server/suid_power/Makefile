@@ -2,7 +2,6 @@ CLOONIX_COMMON=../../common
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
-RPCT=${CLOONIX_COMMON}/lib_rpct
 
 OBJ_DIR=obj/
 EXE = cloonix_suid_power
@@ -20,7 +19,6 @@ INCLUDES= -I./src \
           -I${RPC_CLOWNIX}/include
 
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
-       -L${RPCT} -lrpct \
        -lcrypto
 
 CFLAGS+= -g -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)

@@ -15,6 +15,7 @@ RANLIB?=ranlib
 CC?=gcc
 
 SRC =  channel.c \
+       rpct.c \
        util_sock.c \
        msg_layer.c \
        clownix_timer.c \

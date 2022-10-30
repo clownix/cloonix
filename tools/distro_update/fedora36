@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 NET=nemo
-DISTRO=hirsute
+DISTRO=fedora36
 NAME=${DISTRO}
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -39,11 +39,9 @@ set -e
 #----------------------------------------------------------------------
 cloonix_scp $NET ${HERE}/../../install_depends ${NAME}:/root
 #----------------------------------------------------------------------
-cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
-nameserver 172.17.0.3
-EOF"
-#----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "dhclient"
+#----------------------------------------------------------------------
+cloonix_ssh $NET ${NAME} "dnf update -y"
 #----------------------------------------------------------------------
 set +e
 for ((i=0;i<2;i++)); do
@@ -54,13 +52,9 @@ done
 cloonix_ssh $NET ${NAME} "rm -f install_depends"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "sync"
-exit
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "poweroff"
 echo $QCOW2 done
 #----------------------------------------------------------------------
-
-
-
 
 

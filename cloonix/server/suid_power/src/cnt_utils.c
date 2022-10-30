@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <dirent.h>
 
 #include "io_clownix.h"
 #include "launcher.h"
@@ -229,30 +230,40 @@ static char *get_config_json(char *rootfs, char *nspace,
 /****************************************************************************/
 static int my_mkdir(char *dst_dir)
 {
-  int result;
+  int result = -1;
   mode_t old_mask, mode_mkdir;
-  struct stat stat_file;
-  old_mask = umask (0077);
   mode_mkdir = 0700;
+  if (cnt_utils_unlink_sub_dir_files(dst_dir) == 0)
+    {
+    old_mask = umask (0077);
+    result = mkdir(dst_dir, mode_mkdir);
+    if (result)
+      {
+      if (errno != EEXIST)
+        KERR("ERROR %s, %d", dst_dir, errno);
+      else
+        KERR("WARNING ALREADY EXISTS %s", dst_dir);
+      }
+    umask (old_mask);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int my_mkdir_if_not_exists(char *dst_dir)
+{
+  int result = -1;
+  mode_t old_mask, mode_mkdir;
+  mode_mkdir = 0700;
+  old_mask = umask (0077);
   result = mkdir(dst_dir, mode_mkdir);
   if (result)
     {
     if (errno != EEXIST)
       KERR("ERROR %s, %d", dst_dir, errno);
     else
-      {
-      if (stat(dst_dir, &stat_file))
-        KERR("ERROR %s, %d", dst_dir, errno);
-      else if (!S_ISDIR(stat_file.st_mode))
-        {
-        KERR("ERROR %s", dst_dir);
-        unlink(dst_dir);
-        if (mkdir(dst_dir, mode_mkdir))
-          KERR("ERROR %s, %d", dst_dir, errno);
-        }
-      else
-        result = 0;
-      }
+      result = 0;
     }
   umask (old_mask);
   return result;
@@ -313,7 +324,7 @@ static int create_all_dirs(char *bulk, char *image, char *cnt_dir, char *name)
   char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1, "%s/mnt/%s", bulk, image);
-  if (my_mkdir(path))
+  if (my_mkdir_if_not_exists(path))
     KERR("ERROR %s", path);
   else
     {
@@ -482,12 +493,52 @@ static void check_netns_and_clean(char *name, char *nspace,
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+int cnt_utils_unlink_sub_dir_files(char *dir)
+{
+  int result = 0;
+  char pth[MAX_PATH_LEN+MAX_NAME_LEN];
+  DIR *dirptr;
+  struct dirent *ent;
+  dirptr = opendir(dir);
+  if (dirptr)
+    {
+    while ((result == 0) && ((ent = readdir(dirptr)) != NULL))
+      {
+      if (!strcmp(ent->d_name, "."))
+        continue;
+      if (!strcmp(ent->d_name, ".."))
+        continue;
+      snprintf(pth, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dir, ent->d_name);
+      pth[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
+      if(ent->d_type == DT_DIR)
+        result = cnt_utils_unlink_sub_dir_files(pth);
+      else if (unlink(pth))
+        {
+        KERR("ERROR File: %s could not be deleted\n", pth);
+        result = -1;
+        }
+      }
+    if (closedir(dirptr))
+      KOUT("%d", errno);
+    if (rmdir(dir))
+      {
+      KERR("ERROR Dir: %s could not be deleted\n", pth);
+      result = -1;
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
 /****************************************************************************/
 int cnt_utils_create_overlay(char *path, char *lower, int is_persistent)
 {
   int result = -1;
   char cmd[2*MAX_PATH_LEN];
+  char mnt[MAX_PATH_LEN];
   char *mount = mount_bin;
+  char *mn = mnt;
 
   if (check_mount_does_not_exist(path))
     KERR("%s", path);
@@ -500,9 +551,11 @@ int cnt_utils_create_overlay(char *path, char *lower, int is_persistent)
       }
     else
       {
+      memset(mnt, 0, MAX_PATH_LEN);
+      snprintf(mnt, MAX_PATH_LEN-1, "/proc/%d/ns/mnt", getpid()); 
       snprintf(cmd, 2*MAX_PATH_LEN-1,
-      "%s none -t overlay -o lowerdir=%s,upperdir=%s/%s,workdir=%s/%s %s/%s 2>&1",
-      mount, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
+      "%s --namespace %s none -t overlay -o lowerdir=%s,upperdir=%s/%s,workdir=%s/%s %s/%s 2>&1",
+      mount, mn, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
       if (execute_cmd(cmd, 1))
         KERR("%s", cmd);
       else

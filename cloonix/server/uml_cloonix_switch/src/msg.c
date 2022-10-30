@@ -39,6 +39,7 @@
 #include "ovs_snf.h"
 #include "ovs_tap.h"
 #include "ovs_nat.h"
+#include "ovs_a2b.h"
 #include "ovs_c2c.h"
 #include "lan_to_name.h"
 
@@ -140,6 +141,7 @@ int msg_send_add_lan_endp(int ovsreq_tag, char *name, int num,
            (ovsreq_tag != ovsreq_add_cnt_lan) &&
            (ovsreq_tag != ovsreq_add_tap_lan) &&
            (ovsreq_tag != ovsreq_add_nat_lan) &&
+           (ovsreq_tag != ovsreq_add_a2b_lan) &&
            (ovsreq_tag != ovsreq_add_c2c_lan))
     KERR("ERROR %s %d %s %s %d", name, num, vhost, lan, ovsreq_tag);
   else if (!lan_get_with_name(lan))
@@ -168,6 +170,7 @@ int msg_send_del_lan_endp(int ovsreq_tag, char *name, int num,
            (ovsreq_tag != ovsreq_del_cnt_lan) &&
            (ovsreq_tag != ovsreq_del_tap_lan) &&
            (ovsreq_tag != ovsreq_del_nat_lan) &&
+           (ovsreq_tag != ovsreq_del_a2b_lan) &&
            (ovsreq_tag != ovsreq_del_c2c_lan))
     KERR("ERROR %s %d %s %s %d", name, num, vhost, lan, ovsreq_tag);
   else if (!lan_get_with_name(lan))
@@ -293,6 +296,8 @@ static void transmit_add_ack(int tid, t_ovsreq *cur, int is_ko)
     ovs_tap_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_add_nat_lan)
     ovs_nat_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
+  else if (cur->type == ovsreq_add_a2b_lan)
+    ovs_a2b_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_add_c2c_lan)
     ovs_c2c_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else
@@ -313,6 +318,8 @@ static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
     ovs_tap_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_del_nat_lan)
     ovs_nat_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
+  else if (cur->type == ovsreq_del_a2b_lan)
+    ovs_a2b_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_del_c2c_lan)
     ovs_c2c_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else
@@ -532,6 +539,20 @@ static void timer_msg_beat(void *data)
           KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
                                             cur->name, cur->num);
           ovs_nat_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
+          ovsreq_free(cur);
+        break;
+
+       case ovsreq_add_a2b_lan:
+          KERR("ERROR TIMEOUT %d %s %s %s", cur->tid, cur->vhost,
+                                            cur->name, cur->lan);
+          ovs_a2b_resp_add_lan(1, cur->name, 0, cur->vhost, cur->lan);
+          ovsreq_free(cur);
+        break;
+
+        case ovsreq_del_a2b_lan:
+          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
+                                            cur->name, cur->num);
+          ovs_a2b_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 

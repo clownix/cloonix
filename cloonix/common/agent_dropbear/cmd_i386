@@ -10,7 +10,6 @@ AGENT_LIB_ALIEN=${AGENT_BIN_ALIEN}/lib/
 mkdir -p ${AGENT_LIB_ALIEN}
 
 LIB_CLOWNIX=${HERE}/../lib_io_clownix
-RPCT=${HERE}/../lib_rpct
 
 export CC=gcc
 export AR=ar
@@ -22,13 +21,6 @@ export CFLAGS="-m32 -DNO_HMAC_CIPHER"
 export LDFLAGS=-m32
 make clean
 make
-
-cd $RPCT
-export CFLAGS="-m32 -DNO_HMAC_CIPHER"
-export LDFLAGS=-m32
-make clean
-make
-
 
 cd ${HERE}/cloonix_dropbear
 export CFLAGS="-m32"
@@ -72,9 +64,6 @@ cp cloonix_agent ${AGENT_BIN_ALIEN}/cloonix_agent
 make clean
 
 cd $LIB_CLOWNIX
-make clean
-
-cd $RPCT
 make clean
 
 

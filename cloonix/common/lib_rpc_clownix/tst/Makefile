@@ -6,7 +6,6 @@ WARNINGS=-Wall
 IO_CLOWNIX=../../lib_io_clownix
 GLOB_INCLUDE=../../glob_include
 UTILS=../../lib_utils
-RPCT=../../lib_rpct/
 
 INCLUDES= -I../src \
           -I../include \
@@ -17,7 +16,6 @@ INCLUDES= -I../src \
           
 LIBS = -L../ -lrpc_clownix \
        -L${IO_CLOWNIX} -lio_clownix \
-       -L${RPCT} -lrpct \
        -L${UTILS} -lutils -lssl -lcrypto -lrt
 
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)

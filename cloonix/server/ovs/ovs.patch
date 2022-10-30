@@ -1,6 +1,25 @@
+diff -Naur ovs/lib/dpif-netlink.c ovs_tainted/lib/dpif-netlink.c
+--- ovs/lib/dpif-netlink.c	2022-10-28 17:09:31.000000000 +0200
++++ ovs_tainted/lib/dpif-netlink.c	2022-10-29 17:36:27.293690504 +0200
+@@ -4602,13 +4602,13 @@
+ dpif_netlink_init(void)
+ {
+     static struct ovsthread_once once = OVSTHREAD_ONCE_INITIALIZER;
+-    static int error;
++    static int error = 0;
+ 
+     if (ovsthread_once_start(&once)) {
+         error = nl_lookup_genl_family(OVS_DATAPATH_FAMILY,
+                                       &ovs_datapath_family);
+         if (error) {
+-            VLOG_INFO("Generic Netlink family '%s' does not exist. "
++            VLOG_ERR("Generic Netlink family '%s' does not exist. "
+                       "The Open vSwitch kernel module is probably not loaded.",
+                       OVS_DATAPATH_FAMILY);
+         }
 diff -Naur ovs/lib/poll-loop.c ovs_tainted/lib/poll-loop.c
---- ovs/lib/poll-loop.c	2022-06-23 22:36:48.000000000 +0200
-+++ ovs_tainted/lib/poll-loop.c	2022-06-26 15:31:02.962918433 +0200
+--- ovs/lib/poll-loop.c	2022-10-28 17:09:31.000000000 +0200
++++ ovs_tainted/lib/poll-loop.c	2022-10-29 17:35:44.753134770 +0200
 @@ -64,7 +64,7 @@
      struct poll_node *node;
  
@@ -20,8 +39,8 @@ diff -Naur ovs/lib/poll-loop.c ovs_tainted/lib/poll-loop.c
      /* Check for duplicate.  If found, "or" the events. */
      node = find_poll_node(loop, fd, wevent);
 diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
---- ovs/ofproto/ofproto-dpif.c	2022-06-23 22:36:48.000000000 +0200
-+++ ovs_tainted/ofproto/ofproto-dpif.c	2022-06-26 15:30:06.838651014 +0200
+--- ovs/ofproto/ofproto-dpif.c	2022-10-28 17:09:31.000000000 +0200
++++ ovs_tainted/ofproto/ofproto-dpif.c	2022-10-29 17:35:44.753134770 +0200
 @@ -744,7 +744,7 @@
          return 0;
      }

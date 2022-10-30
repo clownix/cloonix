@@ -30,15 +30,8 @@ int call_my_popen(char *ovs_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN],
 int ovs_execv_add_lan_br(char *ovs_bin, char *ovs_dir, char *lan_name);
 int ovs_execv_del_lan_br(char *ovs_bin, char *ovs_dir, char *lan_name);
 
-int ovs_execv_add_lan_nat(char *ovs_bin, char *ovs_dir, char *lan, char *name);
-int ovs_execv_del_lan_nat(char *ovs_bin, char *ovs_dir, char *lan, char *name);
 int ovs_execv_add_lan_c2c(char *ovs_bin, char *ovs_dir, char *lan, char *name);
 int ovs_execv_del_lan_c2c(char *ovs_bin, char *ovs_dir, char *lan, char *name);
-
-int ovs_execv_add_lan_a2b(char *ovs_bin, char *ovs_dir, char *lan, char *name);
-int ovs_execv_del_lan_a2b(char *ovs_bin, char *ovs_dir, char *lan, char *name);
-int ovs_execv_add_lan_b2a(char *ovs_bin, char *ovs_dir, char *lan, char *name);
-int ovs_execv_del_lan_b2a(char *ovs_bin, char *ovs_dir, char *lan, char *name);
 
 int ovs_execv_add_lan_eth(char *ovs_bin, char *ovs_dir, char *lan_name,
                           char *vm_name, int num);

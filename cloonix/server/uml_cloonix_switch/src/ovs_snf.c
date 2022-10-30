@@ -31,6 +31,7 @@
 #include "uml_clownix_switch.h"
 #include "hop_event.h"
 #include "ovs_nat.h"
+#include "ovs_a2b.h"
 #include "ovs_tap.h"
 #include "ovs_c2c.h"
 #include "ovs_snf.h"
@@ -182,6 +183,7 @@ static void send_mac_to_snf(t_snf *cur)
   char msg[MAX_PATH_LEN];
   t_ovs_tap *tap_exists = ovs_tap_exists(cur->name);
   t_ovs_nat *nat_exists = ovs_nat_exists(cur->name);
+  t_ovs_a2b *a2b_exists = ovs_a2b_exists(cur->name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(cur->name);
   memset(msg, 0, MAX_PATH_LEN);
   if (nat_exists)
@@ -203,6 +205,9 @@ static void send_mac_to_snf(t_snf *cur)
     snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",tap_exists->mac);
     rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
     hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    }
+  else if (a2b_exists)
+    {
     }
   else if (c2c_exists)
     {
@@ -576,7 +581,7 @@ void ovs_dyn_snf_start_process(char *name, int num, int item_type,
     KERR("ERROR %s %d %s", name, num, vhost);
   else if ((item_type != item_type_keth) && (item_type != item_type_ceth) &&
            (item_type != item_type_tap) && (item_type != item_type_c2c) &&
-           (item_type != item_type_nat))
+           (item_type != item_type_nat) && (item_type != item_type_a2b))
     KERR("ERROR %s %d %s %d", name, num, vhost, item_type);
   else
     {
@@ -668,12 +673,23 @@ void ovs_snf_c2c_update_mac(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void ovs_snf_a2b_update_mac(char *name)
+{
+  t_snf *cur = find_snf_with_name_num(name, 0);
+  if (cur)
+    update_snf_rx_mac(cur->lan, cur->llid);
+  else
+    KERR("WARNING NOT FOUND %s", name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void ovs_snf_lan_mac_change(char *lan)
 {
   t_snf *cur = find_snf_with_lan(lan);
   if (cur)
     {
-    if (cur->item_type == item_type_c2c)
+    if ((cur->item_type==item_type_c2c)||(cur->item_type==item_type_a2b))
       {
       update_snf_rx_mac(lan, cur->llid);
       }

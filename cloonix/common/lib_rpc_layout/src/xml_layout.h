@@ -102,7 +102,7 @@
                       "<y> %d.%d </y>\n"\
                       "<hidden> %d </hidden>\n"\
                       "<color> %d </color>\n"\
-                      "<nb_eth_wlan> %d </nb_eth_wlan>  \n"
+                      "<nb_eth> %d </nb_eth>  \n"
 
 #define LAYOUT_NODE_C \
                      "</layout_node>"

@@ -6,9 +6,6 @@ make clean
 cd $HERE/../lib_utils/
 make clean
 
-cd $HERE/../lib_rpct/
-make clean
-
 cd $HERE/tst
 make clean
 

@@ -357,15 +357,15 @@ static void add_layout_node(t_layout_node *node)
       acur = make_layout_node(bitem);
       modif_position_layout(bitem, node->x - acur->x, 
                                    node->y - acur->y);
-      for (i=0; i<node->nb_eth_wlan; i++)
+      for (i=0; i<node->nb_eth; i++)
         {
         eth_bitem = look_for_eth_with_id(node->name, i);
         if (!eth_bitem)
           KOUT(" ");
         modif_position_eth(eth_bitem,
-                           node->eth_wlan[i].x + node->x, 
-                           node->eth_wlan[i].y + node->y);
-        eth_bitem->pbi.hidden_on_graph = node->eth_wlan[i].hidden_on_graph;
+                           node->eth[i].x + node->x, 
+                           node->eth[i].y + node->y);
+        eth_bitem->pbi.hidden_on_graph = node->eth[i].hidden_on_graph;
         }
       hidden_visible_modification(bitem, node->hidden_on_graph);
       }
@@ -408,11 +408,11 @@ void recv_layout_node(int llid, int tid, t_layout_node *layout)
   add_layout_node(layout);
   for (i=0; i<MAX_ETH_VM; i++)
     {
-    if (i<layout->nb_eth_wlan)
+    if (i<layout->nb_eth)
       {
-      tx[i] = layout->eth_wlan[i].x;
-      ty[i] = layout->eth_wlan[i].y;
-      hidden_on_graph[i] = layout->eth_wlan[i].hidden_on_graph;
+      tx[i] = layout->eth[i].x;
+      ty[i] = layout->eth[i].y;
+      hidden_on_graph[i] = layout->eth[i].hidden_on_graph;
       }
     else
       {
@@ -555,7 +555,7 @@ static int diff_lan(t_layout_lan_xml *layout_xml, t_layout_lan *layout)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int diff_eth(t_layout_eth_wlan *layout_xml, t_layout_eth_wlan *layout)
+static int diff_eth(t_layout_eth *layout_xml, t_layout_eth *layout)
 {
   int result = 0;
   if (fabs (layout_xml->x - layout->x) > 1)
@@ -572,8 +572,8 @@ static int diff_eth(t_layout_eth_wlan *layout_xml, t_layout_eth_wlan *layout)
 static int diff_node(t_layout_node_xml *layout_xml, t_layout_node *layout)
 {
   int i, result = 0;
-  t_layout_eth_wlan *layout_eth_xml;
-  t_layout_eth_wlan *layout_eth;
+  t_layout_eth *layout_eth_xml;
+  t_layout_eth *layout_eth;
   if (!result)
     {
     if (fabs (layout_xml->node.x - layout->x) > 1)
@@ -591,10 +591,10 @@ static int diff_node(t_layout_node_xml *layout_xml, t_layout_node *layout)
     }
   if (!result)
     {
-    for (i=0; (!result) && (i<layout->nb_eth_wlan); i++)
+    for (i=0; (!result) && (i<layout->nb_eth); i++)
       {
-      layout_eth_xml = &(layout_xml->node.eth_wlan[i]);
-      layout_eth = &(layout->eth_wlan[i]);
+      layout_eth_xml = &(layout_xml->node.eth[i]);
+      layout_eth = &(layout->eth[i]);
       if (diff_eth(layout_eth_xml, layout_eth))
         {
         result = 1;

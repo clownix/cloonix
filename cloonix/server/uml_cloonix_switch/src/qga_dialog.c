@@ -238,7 +238,7 @@ static void reload_upon_problem(char *name)
   cur = get_qrec_with_name(pname);
   if (cur)
     qrec_free(cur);
-  qmp_request_qemu_reboot(pname);
+  KERR("ERROR %s", name);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -264,6 +264,7 @@ void qga_event_backdoor(char *name, int backdoor_evt)
       flag_ping_to_cloonix_agent_ko(name);
       llid = get_doorways_llid();
       doors_send_command(llid, 0, name, CLOONIX_DOWN_AND_NOT_RUNNING);
+      KERR("ERROR backdoor agent disconnected %s", name);
       reload_upon_problem(name);
       }
     else
@@ -298,7 +299,7 @@ static void automate_tx_qga_msg(t_qrec *cur)
       }
     if (cur->count_no_response > 400)
       {
-      KERR("WARNING RELOAD %s", cur->name);
+      KERR("WARNING RELOAD REBOOT NECESSARY %s", cur->name);
       reload_upon_problem(cur->name);
       }
     }
@@ -317,6 +318,7 @@ static void automate_tx_qga_msg(t_qrec *cur)
       {
       KERR("WARNING RELOAD %s", cur->name);
       reload_upon_problem(cur->name);
+      qmp_request_qemu_reboot(cur->name);
       }
     KERR("WARNING SYNC WAIT %s", cur->name);
     }
@@ -334,6 +336,7 @@ static void automate_tx_qga_msg(t_qrec *cur)
       {
       KERR("WARNING RELOAD %s", cur->name);
       reload_upon_problem(cur->name);
+      qmp_request_qemu_reboot(cur->name);
       }
     KERR("WARNING OPEN WAIT %s", cur->name);
     }
@@ -366,6 +369,7 @@ static void automate_tx_qga_msg(t_qrec *cur)
       {
       KERR("WARNING RELOAD %s", cur->name);
       reload_upon_problem(cur->name);
+      qmp_request_qemu_reboot(cur->name);
       }
     KERR("WARNING CHMOD WAIT %s", cur->name);
     }
@@ -388,6 +392,7 @@ static void automate_tx_qga_msg(t_qrec *cur)
       {
       KERR("WARNING RELOAD %s", cur->name);
       reload_upon_problem(cur->name);
+      qmp_request_qemu_reboot(cur->name);
       }
     KERR("WARNING EXEC WAIT %s", cur->name);
     }
@@ -540,6 +545,7 @@ static int automate_rx_qga_msg(t_qrec *cur, char *msg)
       {
       KERR("ERROR RELOADING %s %s", cur->name, msg);
       reload_upon_problem(cur->name);
+      qmp_request_qemu_reboot(cur->name);
       result = -1;
       }
     else if (sscanf(ptr, "exitcode\": %d", &val) == 1)

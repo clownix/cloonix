@@ -34,7 +34,7 @@ rm -rf tmpbuild_bis
   done 
   rm -f ${CLOONIX_SERVER}/dtach/dtach
 
-  for i in ovs qemu ovs_drv ovs_snf ovs_nat ovs_c2c ; do
+  for i in ovs qemu ovs_drv ovs_snf ovs_nat ovs_c2c ovs_a2b ; do
     cd ${CLOONIX_SERVER}/${i}
     ./allclean
   done

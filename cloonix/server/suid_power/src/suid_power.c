@@ -32,12 +32,17 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
+#include <sched.h>
+#include <sys/mount.h>
+
+
 
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "cnt.h"
 #include "launcher.h"
+#include "cnt_utils.h"
 
 /*--------------------------------------------------------------------------*/
 static int  g_cloonix_rank;
@@ -391,7 +396,7 @@ static void req_kill_clean_all(void)
     cur = next;
     }
   snprintf(root_work_cnt, MAX_PATH_LEN-1,"%s/%s", root, CNT_DIR);
-  unlink(root_work_cnt);
+  cnt_utils_unlink_sub_dir_files(root_work_cnt);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -464,7 +469,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   char name[MAX_NAME_LEN];
   char resp[MAX_PATH_LEN];
   char dtach[MAX_PATH_LEN];
-  int argc, vm_id, pid;
+  int  argc, vm_id, pid;
   t_vmon *cur;
 
   DOUT(FLAG_HOP_SIGDIAG, "SUID %s", line);
@@ -479,7 +484,12 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     if (check_and_set_uid())
       rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ko");
     else
+      {
+      if (unshare(CLONE_NEWNS) == -1)
+        KOUT("ERROR unshare");
+      mount(NULL, "/", NULL, MS_SLAVE | MS_REC, NULL);
       rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ok");
+      }
     }
   else if (sscanf(line, 
   "cloonsuid_req_launch name=%s vm_id=%d dtach=%s argc=%d:",

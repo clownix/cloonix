@@ -3,7 +3,7 @@
 DEBIAN_REPO="http://deb.debian.org/debian"
 
 #----------------------------------------------------------------------#
-ROOTFS=/root/impish.img
+ROOTFS=/root/bullseye_fr.img
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -44,15 +44,13 @@ mkdir -p /tmp/wkmntloops
 DEVLOOP=$(losetup -l | grep ${ROOTFS} | awk '{print $1}')
 echo $DEVLOOP
 mount -o loop $DEVLOOP /tmp/wkmntloops
-INCLUDES="openssh-client,vim,bash-completion,net-tools,tcpdump"
-COMPONENT="kernel,multiverse,universe,main"
-
+INCLUDES="locales,console-data,console-setup,kbd,keyboard-configuration,"
+INCLUDES+="openssh-client,vim,bash-completion,net-tools,tcpdump"
 debootstrap --no-check-certificate \
 	    --no-check-gpg \
             --arch amd64 \
             --include=${INCLUDES} \
-            --components=${COMPONENT} \
-            impish \
+            bullseye \
             /tmp/wkmntloops ${REPO_STRETCH}
 
 
@@ -60,6 +58,26 @@ DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
 sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
 sed -i s"/set mouse/\"set mouse/" $DEFVIM
 
+cat > /tmp/wkmntloops/root/debconf_selection << EOF
+locales locales_to_be_generated multiselect fr_FR.UTF-8 UTF-8
+locales locales/default_environment_locale select fr_FR.UTF-8
+keyboard-configuration keyboard-configuration/layoutcode string fr
+keyboard-configuration keyboard-configuration/variant select Français - Français (variante)
+keyboard-configuration keyboard-configuration/model select Generic 105-key (Intl) PC
+keyboard-configuration keyboard-configuration/xkb-keymap select fr(latin9)
+EOF
+chroot /tmp/wkmntloops/ debconf-set-selections /root/debconf_selection
+rm -f /tmp/wkmntloops/etc/default/locale
+rm -f /tmp/wkmntloops/etc/default/keyboard
+sed -i s"/# fr_FR.UTF-8/fr_FR.UTF-8/" /tmp/wkmntloops/etc/locale.gen
+export DEBCONF_NONINTERACTIVE_SEEN=true
+
+for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
+chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive locales
+chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive console-setup
+chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive keyboard-configuration
+sync /dev/loop0
+umount /tmp/wkmntloops/{dev,proc,sys}
 umount /tmp/wkmntloops
 losetup -d $DEVLOOP
 rmdir /tmp/wkmntloops

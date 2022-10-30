@@ -33,6 +33,7 @@
 #include "ovs_snf.h"
 #include "ovs_nat.h"
 #include "ovs_c2c.h"
+#include "ovs_a2b.h"
 
 
 /*****************************************************************************/
@@ -98,6 +99,11 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     {
     hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
     ovs_c2c_sigdiag_resp(llid, tid, line);
+    }
+  else if (ovs_a2b_diag_llid(llid))
+    {
+    hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
+    ovs_a2b_sigdiag_resp(llid, tid, line);
     }
   else
     {

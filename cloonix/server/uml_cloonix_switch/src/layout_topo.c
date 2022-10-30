@@ -31,6 +31,7 @@
 #include "ovs_nat.h"
 #include "ovs_c2c.h"
 #include "ovs_tap.h"
+#include "ovs_a2b.h"
 
 #define MAX_MS_OF_INSERT 3600000
 
@@ -130,25 +131,25 @@ static void layout_kill_all_graphs(void)
 
 /****************************************************************************/
 static void make_default_layout_node(t_layout_node *layout, 
-                              char *name, int nb_eth_wlan)
+                              char *name, int nb_eth)
 {
   int i, rest;
   memset(layout, 0, sizeof(t_layout_node));
   strncpy(layout->name, name, MAX_NAME_LEN-1);
-  layout->nb_eth_wlan = nb_eth_wlan;
+  layout->nb_eth = nb_eth;
   layout->x = 100;
   layout->y = 100;
-  for (i=0; i<nb_eth_wlan; i++)
+  for (i=0; i<nb_eth; i++)
     {
     rest = i%4;
     if (rest == 0)
-      layout->eth_wlan[i].y = NODE_DIA * VAL_INTF_POS_NODE;
+      layout->eth[i].y = NODE_DIA * VAL_INTF_POS_NODE;
     if (rest == 1)
-      layout->eth_wlan[i].x = NODE_DIA * VAL_INTF_POS_NODE;
+      layout->eth[i].x = NODE_DIA * VAL_INTF_POS_NODE;
     if (rest == 2)
-      layout->eth_wlan[i].y = -NODE_DIA * VAL_INTF_POS_NODE;
+      layout->eth[i].y = -NODE_DIA * VAL_INTF_POS_NODE;
     if (rest == 3)
-      layout->eth_wlan[i].x = -NODE_DIA * VAL_INTF_POS_NODE;
+      layout->eth[i].x = -NODE_DIA * VAL_INTF_POS_NODE;
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -376,7 +377,7 @@ static void update_layout_sat(char *name,
 
 /*****************************************************************************/
 static void update_layout_node(char *name, double x, double y, int hidden,
-                               int nb_eth_wlan, t_layout_eth_wlan *eth_wlan)
+                               int nb_eth, t_layout_eth *eth)
 {
   int i;
   t_layout_node_xml *cur = find_node_xml(name);
@@ -387,9 +388,9 @@ static void update_layout_node(char *name, double x, double y, int hidden,
     cur->node.x = x;
     cur->node.y = y;
     cur->node.hidden_on_graph = hidden;
-    for (i=0; i<nb_eth_wlan; i++)
-      memcpy(&(cur->node.eth_wlan[i]), &(eth_wlan[i]),
-              sizeof(t_layout_eth_wlan));
+    for (i=0; i<nb_eth; i++)
+      memcpy(&(cur->node.eth[i]), &(eth[i]),
+              sizeof(t_layout_eth));
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -538,6 +539,7 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
   t_layout_sat_xml *xml;
   if ((!ovs_nat_exists(layout->name)) &&
       (!ovs_c2c_exists(layout->name)) &&
+      (!ovs_a2b_exists(layout->name)) &&
       (!ovs_tap_exists(layout->name)))
     KERR("%s", layout->name);
   else
@@ -581,8 +583,8 @@ void recv_layout_node(int llid, int tid, t_layout_node *layout)
         cur = cur->next;
         }
       update_layout_node(layout->name, layout->x, layout->y,
-                         layout->hidden_on_graph, layout->nb_eth_wlan,
-                         layout->eth_wlan);
+                         layout->hidden_on_graph, layout->nb_eth,
+                         layout->eth);
       }
     else
       {
@@ -637,8 +639,8 @@ static void layout_modif_node(int llid, int tid,
       {
       case 0:
         layout.hidden_on_graph = val1;
-        for (i=0;i<layout.nb_eth_wlan; i++)
-          layout.eth_wlan[i].hidden_on_graph = val1;
+        for (i=0;i<layout.nb_eth; i++)
+          layout.eth[i].hidden_on_graph = val1;
         break;
       case 1:
         real_val1 = (double) val1;
@@ -692,7 +694,7 @@ static void layout_modif_eth(int llid, int tid, char *name, int num,
     switch (type)
       {
       case 0:
-        layout.eth_wlan[num].hidden_on_graph = val1;
+        layout.eth[num].hidden_on_graph = val1;
         recv_layout_node(0, 0, &layout);
         sprintf(info, "OK %s %d", name, val1);
         send_status_ok(llid, tid, info);
@@ -708,8 +710,8 @@ static void layout_modif_eth(int llid, int tid, char *name, int num,
           {
           real_val1 = (double) g_node_x_coord[val1];
           real_val2 = (double) g_node_y_coord[val1];
-          layout.eth_wlan[num].x = real_val1;
-          layout.eth_wlan[num].y = real_val2;
+          layout.eth[num].x = real_val1;
+          layout.eth[num].y = real_val2;
           recv_layout_node(0, 0, &layout);
           sprintf(info, "OK %s %d", name, val1);
           send_status_ok(llid, tid, info);
@@ -1077,19 +1079,14 @@ void layout_del_vm(char *name)
 void layout_add_sat(char *name, int llid)
 {
   t_layout_sat layout;
-
-     memset(&layout, 0, sizeof(t_layout_sat));
-      strncpy(layout.name, name, MAX_NAME_LEN-1);
-      layout.x = 50;
-      layout.y = 50;
-//      if (type == endp_type_a2b)
-        {
-        layout.xa = A2B_DIA * VAL_INTF_POS_A2B;
-        layout.ya = A2B_DIA * VAL_INTF_POS_A2B;
-        layout.xb = -A2B_DIA * VAL_INTF_POS_A2B;
-        layout.yb = A2B_DIA * VAL_INTF_POS_A2B;
-        }
-
+  memset(&layout, 0, sizeof(t_layout_sat));
+  strncpy(layout.name, name, MAX_NAME_LEN-1);
+  layout.x = 50;
+  layout.y = 50;
+  layout.xa = A2B_DIA * VAL_INTF_POS_A2B;
+  layout.ya = A2B_DIA * VAL_INTF_POS_A2B;
+  layout.xb = -A2B_DIA * VAL_INTF_POS_A2B;
+  layout.yb = A2B_DIA * VAL_INTF_POS_A2B;
   add_layout_sat(&layout);
   if (!(g_head_layout_sub) ||
        ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))

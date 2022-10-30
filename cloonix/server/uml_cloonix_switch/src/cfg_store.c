@@ -44,6 +44,7 @@
 #include "cnt.h"
 #include "kvm.h"
 #include "ovs_nat.h"
+#include "ovs_a2b.h"
 #include "ovs_c2c.h"
 #include "ovs_tap.h"
 #include "ovs_snf.h"
@@ -121,6 +122,11 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
   else if (ovs_nat_exists(name))
     {
     snprintf(use, MAX_NAME_LEN, "%s is used by nat", name);
+    result = 1;
+    }
+  else if (ovs_a2b_exists(name))
+    {
+    snprintf(use, MAX_NAME_LEN, "%s is used by a2b", name);
     result = 1;
     }
   else if (ovs_c2c_exists(name))
@@ -604,6 +610,16 @@ static void fill_topo_nat(t_topo_nat *topo_nat, t_ovs_nat *nat)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void fill_topo_a2b(t_topo_a2b *topo_a2b, t_ovs_a2b *a2b)
+{
+  memset(topo_a2b, 0, sizeof(t_topo_a2b));
+  strncpy(topo_a2b->name, a2b->name, MAX_NAME_LEN);
+  topo_a2b->endp_type0 = a2b->side[0].endp_type;
+  topo_a2b->endp_type1 = a2b->side[1].endp_type;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void fill_topo_c2c(t_topo_c2c *topo_c2c, t_ovs_c2c *c2c)
 {
   memcpy(topo_c2c, &(c2c->topo), sizeof(t_topo_c2c));
@@ -620,8 +636,8 @@ static void fill_topo_tap(t_topo_tap *topo_tap, t_ovs_tap *tap)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static t_topo_info *alloc_all_fields(int nb_vm, int nb_cnt,
-                                     int nb_nat, int nb_c2c, int nb_tap,
+static t_topo_info *alloc_all_fields(int nb_vm, int nb_cnt, int nb_nat,
+                                     int nb_a2b, int nb_c2c, int nb_tap,
                                      int nb_endp, int nb_bridges)
 {
   t_topo_info *topo = (t_topo_info *) clownix_malloc(sizeof(t_topo_info), 3);
@@ -630,6 +646,7 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_cnt,
   topo->nb_cnt = nb_cnt;
   topo->nb_kvm = nb_vm;
   topo->nb_nat = nb_nat;
+  topo->nb_a2b = nb_a2b;
   topo->nb_c2c = nb_c2c;
   topo->nb_tap = nb_tap;
   topo->nb_endp = nb_endp;
@@ -651,6 +668,12 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_cnt,
     topo->nat =
     (t_topo_nat *)clownix_malloc(topo->nb_nat * sizeof(t_topo_nat),3);
     memset(topo->nat, 0, topo->nb_nat * sizeof(t_topo_nat));
+    }
+  if (topo->nb_a2b)
+    {
+    topo->a2b =
+    (t_topo_a2b *)clownix_malloc(topo->nb_a2b * sizeof(t_topo_a2b),3);
+    memset(topo->a2b, 0, topo->nb_a2b * sizeof(t_topo_a2b));
     }
   if (topo->nb_c2c)
     {
@@ -699,24 +722,27 @@ static void copy_endp(t_topo_endp *dst, t_topo_endp *src)
 /*****************************************************************************/
 t_topo_info *cfg_produce_topo_info(void)
 {
-  int i, nb_tap, nb_c2c, nb_nat, nb_vm, nb_cnt;
-  int nb_endp_kvm, nb_endp_cnt, nb_endp_tap, nb_endp_nat;
+  int i, nb_tap, nb_c2c, nb_nat, nb_a2b, nb_vm, nb_cnt;
+  int nb_endp_kvm, nb_endp_cnt, nb_endp_tap, nb_endp_nat, nb_endp_a2b;
   int nb_endp_c2c, i_endp=0;
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
   t_cnt *cnt = cnt_get_first_cnt(&nb_cnt);
   t_topo_bridges *bridges;
   t_topo_endp *c2c_endp = ovs_c2c_translate_topo_endp(&nb_endp_c2c);
   t_topo_endp *nat_endp = ovs_nat_translate_topo_endp(&nb_endp_nat);
+  t_topo_endp *a2b_endp = ovs_a2b_translate_topo_endp(&nb_endp_a2b);
   t_topo_endp *tap_endp = ovs_tap_translate_topo_endp(&nb_endp_tap);
   t_topo_endp *cnt_endp = cnt_translate_topo_endp(&nb_endp_cnt);
   t_topo_endp *kvm_endp = kvm_translate_topo_endp(&nb_endp_kvm);
   int nb_bridges = suid_power_get_topo_bridges(&bridges);
   t_ovs_nat *nat = ovs_nat_get_first(&nb_nat);
+  t_ovs_a2b *a2b = ovs_a2b_get_first(&nb_a2b);
   t_ovs_c2c *c2c = ovs_c2c_get_first(&nb_c2c);
   t_ovs_tap *tap = ovs_tap_get_first(&nb_tap);
-  int nb_endp = nb_endp_cnt+nb_endp_kvm+nb_endp_tap+nb_endp_nat+nb_endp_c2c;
-  t_topo_info *topo = alloc_all_fields(nb_vm, nb_cnt, nb_nat, nb_c2c, nb_tap,
-                                       nb_endp, nb_bridges);
+  int nb_endp = nb_endp_cnt + nb_endp_kvm + nb_endp_tap +
+                nb_endp_nat + nb_endp_a2b + nb_endp_c2c;
+  t_topo_info *topo = alloc_all_fields(nb_vm, nb_cnt, nb_nat, nb_a2b,
+                                       nb_c2c, nb_tap, nb_endp, nb_bridges);
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
 
   topo->conf_rank = get_conf_rank();
@@ -757,6 +783,19 @@ t_topo_info *cfg_produce_topo_info(void)
       nat = nat->next;
       }
     if (nat)
+      KOUT(" ");
+    }
+
+  if (topo->nb_a2b)
+    {
+    for (i=0; i<topo->nb_a2b; i++)
+      {
+      if (!a2b)
+        KOUT(" ");
+      fill_topo_a2b(&(topo->a2b[i]), a2b);
+      a2b = a2b->next;
+      }
+    if (a2b)
       KOUT(" ");
     }
 
@@ -815,6 +854,14 @@ t_topo_info *cfg_produce_topo_info(void)
     if (i_endp == topo->nb_endp)
       KOUT(" ");
     copy_endp(&(topo->endp[i_endp]), &(nat_endp[i]));
+    i_endp += 1;
+    }
+
+  for (i=0; i<nb_endp_a2b; i++)
+    {
+    if (i_endp == topo->nb_endp)
+      KOUT(" ");
+    copy_endp(&(topo->endp[i_endp]), &(a2b_endp[i]));
     i_endp += 1;
     }
 

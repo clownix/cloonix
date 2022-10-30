@@ -66,7 +66,7 @@ typedef struct t_ovs_c2c
   char lan_attached[MAX_NAME_LEN];
   char must_restart_lan[MAX_NAME_LEN];
 
-  int must_call_snf_process_started;
+  int must_call_snf_started;
 
 
 

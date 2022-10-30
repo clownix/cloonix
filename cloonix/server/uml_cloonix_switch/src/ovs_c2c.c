@@ -548,7 +548,7 @@ static void c2c_get_udp_port_done(char *name, uint16_t port, int peer_status)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void snf_process_started(char *name, int num, char *vhost)
+static void snf_started(char *name, int num, char *vhost)
 {
   t_ovs_c2c *cur = find_c2c(name);
 
@@ -563,7 +563,7 @@ static void snf_process_started(char *name, int num, char *vhost)
       }
     else
       {
-      cur->must_call_snf_process_started = 1;
+      cur->must_call_snf_started = 1;
       }
     }
 }
@@ -813,10 +813,10 @@ void ovs_c2c_resp_add_lan(int is_ko, char *name, int num,
       {
       strncpy(cur->lan_attached, lan, MAX_NAME_LEN);
       strncpy(cur->topo.lan, lan, MAX_NAME_LEN);
-      if (cur->must_call_snf_process_started)
+      if (cur->must_call_snf_started)
         {
-        snf_process_started(name, num, vhost);
-        cur->must_call_snf_process_started = 0;
+        snf_started(name, num, vhost);
+        cur->must_call_snf_started = 0;
         }
       }
     }
@@ -1283,7 +1283,7 @@ int  ovs_c2c_dyn_snf(char *name, int val)
         cur->del_snf_ethv_sent = 0;
         cur->topo.endp_type = endp_type_c2cs;
         ovs_dyn_snf_start_process(name, 0, item_type_c2c,
-                                  cur->vhost, snf_process_started);
+                                  cur->vhost, snf_started);
         result = 0;
         }
       }

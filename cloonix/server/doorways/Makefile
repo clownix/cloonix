@@ -5,7 +5,6 @@ GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 RPC_DOORS=${CLOONIX_COMMON}/lib_rpc_doors/
 UTILS=${CLOONIX_COMMON}/lib_utils/
-RPCT=${CLOONIX_COMMON}/lib_rpct
 AGENT_INCLUDE=${CLOONIX_COMMON}/agent_dropbear/cloonix_agent/src
 
 
@@ -32,7 +31,6 @@ INCLUDES= -I./src \
 LIBS = -L${RPC_DOORS} -lrpc_doors \
        -L${UTILS} -lutils \
        -L${IO_CLOWNIX} -lio_clownix \
-       -L${RPCT} -lrpct \
        -lssl -lcrypto -lrt -lm
 
 CFLAGS+= -g -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)

@@ -262,16 +262,7 @@ static void nat_info(t_topo_nat *nat)
 /****************************************************************************/
 static void a2b_info(t_topo_a2b *a2b)
 {
-  int i, *delay, *loss, *brate, *silentms;
-  delay = a2b->delay;
-  loss  = a2b->loss;
-  brate = a2b->brate;
-  silentms = a2b->silentms;
-  for (i=0; i<2; i++)
-    {
-    printf("\na2b:%s:side%d: delay=%d loss=%d rate=%d silentms=%d",
-           a2b->name, i, delay[i], loss[i], brate[i], silentms[i]);
-    }
+  printf("\na2b:%s", a2b->name);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -630,34 +621,15 @@ int cmd_add_snf(int argc, char **argv)
 /*****************************************************************************/
 int cmd_cnf_a2b(int argc, char **argv)
 {
-  int dir, val, cmd = -1, result = -1;
-  if (argc == 4)
+  int result = -1;
+  if (argc == 2)
     {
-    dir = param_tester(argv[1], 0, 1);
-    val = param_get(argv[3]);
-    if (!strcmp("delay", argv[2]))
-      cmd = a2b_type_delay;
-    else if (!strcmp("loss", argv[2]))
-      cmd = a2b_type_loss;
-    else if (!strcmp("qsize", argv[2]))
-      cmd = a2b_type_qsize;
-    else if (!strcmp("bsize", argv[2]))
-      cmd = a2b_type_bsize;
-    else if (!strcmp("rate", argv[2]))
-      cmd = a2b_type_brate;
-    else if (!strcmp("silentms", argv[2]))
-      cmd = a2b_type_silentms;
-    if ((dir >= 0) && (val >= 0) && (cmd > 0))
-      {
-      result = 0;
-      init_connection_to_uml_cloonix_switch();
-      client_cnf_a2b(0, callback_end, argv[0], dir, cmd, val);
-      }
-    else
-      KERR("%s %s %s %s", argv[0], argv[1], argv[2], argv[3]);
+    result = 0;
+    init_connection_to_uml_cloonix_switch();
+    client_cnf_a2b(0, callback_end, argv[0], argv[1]);
     }
   else
-    KERR("%d", argc);
+    KERR("ERROR %d", argc);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -665,20 +637,19 @@ int cmd_cnf_a2b(int argc, char **argv)
 /*****************************************************************************/
 int cmd_cnf_c2c(int argc, char **argv)
 {
-  int cmd = -1, result = -1;
+  int result = -1;
   uint8_t mac[6];
   if (argc == 2)
     {
     if (!strncmp("mac_mangle=", argv[1], strlen("mac_mangle=")))
       {
-      cmd = c2c_type_mac_mangle;
       if (sscanf(argv[1], "mac_mangle=%hhX:%hhX:%hhX:%hhX:%hhX:%hhX",
                  &(mac[0]), &(mac[1]), &(mac[2]),
                  &(mac[3]), &(mac[4]), &(mac[5])) == 6)
         {
         result = 0;
         init_connection_to_uml_cloonix_switch();
-        client_cnf_c2c(0, callback_end, argv[0], cmd, mac);
+        client_cnf_c2c(0, callback_end, argv[0], argv[1]);
         }
       else
         KERR("%s %s", argv[0], argv[1]);

@@ -338,6 +338,24 @@ static void process_mouse_double_click(t_bank_item *bitem)
             (endp_type != endp_type_ethv))
           KOUT("%s %d", bitem->name, bitem->num);
         }
+      else if (att_node->bank_type == bank_type_sat)
+        {
+        if (bitem->att_node->pbi.endp_type == endp_type_a2b)
+          {
+          if (bitem->num == 0)
+            endp_type = att_node->pbi.pbi_sat->topo_a2b.endp_type0;
+          else if (bitem->num == 1)
+            endp_type = att_node->pbi.pbi_sat->topo_a2b.endp_type1;
+          else
+            KOUT("%s %d", bitem->name, bitem->num);
+          if ((endp_type != endp_type_eths) &&
+              (endp_type != endp_type_ethv))
+            KOUT("%s %d", bitem->name, bitem->num);
+          }
+        else
+          KERR("%s %d", bitem->name, bitem->num);
+        }
+
       if (endp_type == endp_type_eths)
         wireshark_launch(vm_id, bitem->name, bitem->num);
       else
@@ -471,7 +489,7 @@ static void fct_bitem_moved_by_operator(t_bank_item *bitem)
     }
   else if (bitem->bank_type == bank_type_eth)
     {
-    if (bitem->pbi.endp_type == endp_type_a2b)
+    if (bitem->att_node->pbi.endp_type == endp_type_a2b)
       {
       layout_sat = make_layout_sat(bitem->att_node);
       layout_send_layout_sat(layout_sat);
@@ -783,7 +801,15 @@ static void on_item_paint_eth(CrItem *item, cairo_t *c)
       }
     else if (att_node->bank_type == bank_type_sat)
       {
-      KERR("%s %d", bitem->name, bitem->num);
+      if (bitem->num == 0)
+        endp_type = att_node->pbi.pbi_sat->topo_a2b.endp_type0;
+      else if (bitem->num == 1)
+        endp_type = att_node->pbi.pbi_sat->topo_a2b.endp_type1;
+      else
+        KOUT("%s %d", bitem->name, bitem->num);
+      if ((endp_type != endp_type_eths) &&
+          (endp_type != endp_type_ethv))
+        KOUT("%s %d", bitem->name, bitem->num);
       }
     else
       KOUT("%s %d", bitem->name, bitem->num);
@@ -1207,8 +1233,9 @@ static gboolean on_item_calcb(CrItem *item, cairo_t *c,
     else if (bitem->bank_type == bank_type_sat)
       {
       if ((bitem->pbi.endp_type == endp_type_nats) ||
-          (bitem->pbi.endp_type == endp_type_natv))
-        cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, SNIFF_RAD, 0, 2*M_PI);
+          (bitem->pbi.endp_type == endp_type_natv) ||
+          (bitem->pbi.endp_type == endp_type_a2b))
+        cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, A2B_RAD, 0, 2*M_PI);
       else
         {
         cairo_move_to (c, bitem->pbi.x0-TAP_DIA/2, bitem->pbi.y0-TAP_DIA/2);

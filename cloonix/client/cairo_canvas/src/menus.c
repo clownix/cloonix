@@ -344,28 +344,12 @@ static int c2c_item_info(char *text,  t_bank_item *bitem)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-/*
 static int a2b_item_info(char *text,  t_bank_item *bitem)
 {
-  int i, len = 0;
-  int *delay, *loss, *qsize, *bsize, *brate, *silentms;
-  delay = bitem->pbi.pbi_sat->topo_a2b.delay; 
-  loss  = bitem->pbi.pbi_sat->topo_a2b.loss; 
-  qsize = bitem->pbi.pbi_sat->topo_a2b.qsize; 
-  bsize = bitem->pbi.pbi_sat->topo_a2b.bsize; 
-  brate = bitem->pbi.pbi_sat->topo_a2b.brate; 
-  silentms = bitem->pbi.pbi_sat->topo_a2b.silentms; 
+  int len =0;
   len += sprintf(text+len, "\nA2B: %s\n", bitem->name);
-  for (i=0; i<2; i++)
-    {
-    len += sprintf(text+len, "\nSide%d: delay=%d loss=%d silentms=%d",
-                             i, delay[i], loss[i], silentms[i]);
-    len += sprintf(text+len, "\nSide%d: qsize=%d bsize=%d rate=%d\n",
-                             i, qsize[i], bsize[i], brate[i]);
-    }
   return len;
 }
-*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -391,10 +375,8 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
     else if ((bitem->pbi.endp_type == endp_type_c2cs) ||
              (bitem->pbi.endp_type == endp_type_c2cv))
       len += c2c_item_info(text + len, bitem);
-/*
     else if (bitem->pbi.endp_type == endp_type_a2b)
       len += a2b_item_info(text + len, bitem);
-*/
     display_info(title, text);
     }
 }
@@ -700,7 +682,13 @@ static t_item_ident *get_and_init_pm(t_bank_item *bitem)
         }
       else if (att_node->bank_type == bank_type_sat)
         {
-        KERR("%s %d", bitem->name, bitem->num); 
+        if (bitem->num == 0)
+          pm->endp_type = att_node->pbi.pbi_sat->topo_a2b.endp_type0;
+        else if (bitem->num == 1)
+          pm->endp_type = att_node->pbi.pbi_sat->topo_a2b.endp_type1;
+        if ((pm->endp_type != endp_type_eths) &&
+            (pm->endp_type != endp_type_ethv))
+          KOUT("%s %d", bitem->name, bitem->num);
         }
       else
         KOUT("%s %d", bitem->name, bitem->num); 
@@ -856,7 +844,10 @@ void sat_ctx_menu(t_bank_item *bitem)
       (pm->endp_type == endp_type_c2cs))
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
 
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dyn_snf);
+  if ((pm->endp_type == endp_type_tapv) ||
+      (pm->endp_type == endp_type_natv) ||
+      (pm->endp_type == endp_type_c2cv))
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dyn_snf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
@@ -881,14 +872,40 @@ static void intf_item_info(GtkWidget *mn, t_item_ident *pm)
     num = bitem->num;
     if (!att_node)
       KOUT(" ");
-    if ((num < 0) || (num >= att_node->pbi.pbi_node->nb_tot_eth))
-      KOUT(" ");
-    if (att_node->pbi.pbi_node->eth_tab[num].endp_type == endp_type_ethv)
-      display_info(title, "vhost");
-    else if (att_node->pbi.pbi_node->eth_tab[num].endp_type == endp_type_eths)
-      display_info(title, "spyed");
+    if (bitem->att_node->pbi.endp_type == endp_type_a2b)
+      {
+      if (num == 0)
+        {
+        if (att_node->pbi.pbi_sat->topo_a2b.endp_type0 == endp_type_ethv)
+          display_info(title, "vhost");
+        else if (att_node->pbi.pbi_sat->topo_a2b.endp_type0 == endp_type_eths)
+          display_info(title, "spyed");
+        else
+          KOUT(" ");
+        }
+      else if (num == 1)
+        {
+        if (att_node->pbi.pbi_sat->topo_a2b.endp_type1 == endp_type_ethv)
+          display_info(title, "vhost");
+        else if (att_node->pbi.pbi_sat->topo_a2b.endp_type1 == endp_type_eths)
+          display_info(title, "spyed");
+        else
+          KOUT(" ");
+        }
+      else
+        KOUT(" ");
+      }
     else
-      display_info(title, " ");
+      {
+      if ((num < 0) || (num >= att_node->pbi.pbi_node->nb_tot_eth))
+        KOUT(" ");
+      if (att_node->pbi.pbi_node->eth_tab[num].endp_type == endp_type_ethv)
+        display_info(title, "vhost");
+      else if (att_node->pbi.pbi_node->eth_tab[num].endp_type == endp_type_eths)
+        display_info(title, "spyed");
+      else
+        KOUT(" ");
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

@@ -2,10 +2,6 @@
 HERE=`pwd`
 set -e
 
-cd ${HERE}/../lib_rpct
-make clean
-make
-
 AGENT_BIN_ALIEN=${HERE}/agent_bin_alien/
 AGENT_LIB_ALIEN=${AGENT_BIN_ALIEN}/lib/
 rm -rf ${AGENT_BIN_ALIEN}

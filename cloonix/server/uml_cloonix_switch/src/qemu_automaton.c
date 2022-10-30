@@ -70,7 +70,7 @@
 #define ADDED_CDROM " -drive file=%s,media=cdrom"
 
 #define BLOCKNAME " -device virtio-scsi-pci,id=virtio_scsi_pci0"\
-                  " -blockdev driver=file,cache.direct=off,cache.no-flush=on,filename=%s,node-name=lol%s"\ 
+                  " -blockdev driver=file,cache.direct=off,cache.no-flush=on,filename=%s,node-name=lol%s"\
                   " -blockdev driver=qcow2,node-name=%s,file=lol%s"\
                   " -device scsi-hd,drive=%s"
 

@@ -5,9 +5,6 @@ NINJA=${HERE}/${CLOONIX_COMMON}/meson_ninja
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
-RPCT=${CLOONIX_COMMON}/lib_rpct
-
-
 
 ./allclean
 
@@ -18,10 +15,6 @@ fi
 if [ ! -f ${RPC_CLOWNIX}/librpc_clownix.a ]; then
   cd ${RPC_CLOWNIX}
   ./cmd
-fi
-if [ ! -f ${RPCT}/librpct.a ]; then
-  cd ${RPCT}
-  make
 fi
 if [ ! -f ${NINJA}/ninja/ninja ]; then
   cd ${NINJA}
@@ -46,7 +39,6 @@ incdir = include_directories('${IO_CLOWNIX}/include',
 crypto = dependency('libcrypto')
 cmplr = meson.get_compiler('c')
 io_clownix = cmplr.find_library('libio_clownix', dirs : '${HERE}/${IO_CLOWNIX}')
-rpct = cmplr.find_library('librpct', dirs : '${HERE}/${RPCT}')
 
 sources = files('src/ovs_nat.c',
                 'src/tun_tap.c',
@@ -65,7 +57,7 @@ sources = files('src/ovs_nat.c',
                 'src/stub.c')
 
 executable('cloonix_ovs_nat', sources, include_directories : incdir,
-            dependencies : [io_clownix,rpct,crypto],
+            dependencies : [io_clownix,crypto],
             c_args: cflags,
             install : true)
 

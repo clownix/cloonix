@@ -273,6 +273,7 @@ void mk_endp_dir(void)
   my_mkdir(utils_get_snf_pcap_dir(), 1);
   my_mkdir(utils_get_c2c_dir(), 1);
   my_mkdir(utils_get_nat_dir(), 1);
+  my_mkdir(utils_get_a2b_dir(), 1);
 }
 /*--------------------------------------------------------------------------*/
 

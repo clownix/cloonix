@@ -46,7 +46,7 @@ t_layout_node *make_layout_node(t_bank_item *cur)
   layout_node.y = cur->pbi.position_y;
   layout_node.hidden_on_graph = cur->pbi.hidden_on_graph;
   layout_node.color = cur->pbi.color_choice;
-  layout_node.nb_eth_wlan = cur->num;
+  layout_node.nb_eth = cur->num;
   eth = cur->head_eth_list;
   if (eth)
     {
@@ -76,9 +76,9 @@ t_layout_node *make_layout_node(t_bank_item *cur)
       else
         layout_round_node_eth_coords(&x, &y);
       }
-    layout_node.eth_wlan[i].x =  x;
-    layout_node.eth_wlan[i].y = y;
-    layout_node.eth_wlan[i].hidden_on_graph = eth->bitem->pbi.hidden_on_graph;
+    layout_node.eth[i].x =  x;
+    layout_node.eth[i].y = y;
+    layout_node.eth[i].hidden_on_graph = eth->bitem->pbi.hidden_on_graph;
     eth = eth->prev;
     }
   return (&layout_node);

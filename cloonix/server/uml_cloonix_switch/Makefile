@@ -6,7 +6,6 @@ RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 RPC_DOORS=${CLOONIX_COMMON}/lib_rpc_doors/
 RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout
 UTILS=${CLOONIX_COMMON}/lib_utils/
-RPCT=${CLOONIX_COMMON}/lib_rpct
 AGENT_INCLUDE=${CLOONIX_COMMON}/agent_dropbear/cloonix_agent/src
 
 
@@ -43,6 +42,7 @@ SRC = \
       ovs.c \
       ovs_snf.c \
       ovs_nat.c \
+      ovs_a2b.c \
       ovs_tap.c \
       ovs_c2c.c \
       c2c_peer.c \
@@ -68,7 +68,6 @@ INCLUDES= -I./src \
           -I${AGENT_INCLUDE}
 
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
-       -L${RPCT} -lrpct \
        -L${RPC_LAYOUT} -lrpc_layout \
        -L${RPC_DOORS} -lrpc_doors \
        -L${RPC_CLOWNIX} -lrpc_clownix \

@@ -5,7 +5,6 @@ GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 UTILS=${CLOONIX_COMMON}/lib_utils/
 RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout/
-RPCT=${CLOONIX_COMMON}/lib_rpct
 
 LIB_CLIENT=../lib_client
 
@@ -29,7 +28,6 @@ INCLUDES= -I./src \
 
 LIBS = -L${LIB_CLIENT}/ -lclient \
        -L${IO_CLOWNIX} -lio_clownix \
-       -L${RPCT} -lrpct \
        -L${RPC_LAYOUT}/ -lrpc_layout \
        -L${RPC_CLOWNIX}/ -lrpc_clownix \
        -L${UTILS}/ -lutils \

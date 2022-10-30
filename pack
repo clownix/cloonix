@@ -36,7 +36,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
 #----------------------------------------------------------
   rm -rf ${CLOONIX_COMMON}/glob_include
 #----------------------------------------------------------
-  for i in lib_io_clownix lib_rpc_doors lib_rpct \
+  for i in lib_io_clownix lib_rpc_doors \
            lib_rpc_layout lib_utils lib_rpc_clownix \
            meson_ninja ; do
     rm -rf ${CLOONIX_COMMON}/${i}

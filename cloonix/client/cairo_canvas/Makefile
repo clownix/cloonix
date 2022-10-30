@@ -5,7 +5,6 @@ RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 UTILS=${CLOONIX_COMMON}/lib_utils/
 RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout/
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
-RPCT=${CLOONIX_COMMON}/lib_rpct
 
 
 LIB_CLIENT=../lib_client
@@ -42,7 +41,6 @@ LIBS = $(shell pkg-config --libs gtk+-3.0) \
        -L${LIB_SUBSETS}/ -lsubsets \
        -L${LIB_BDPLOT}/ -lbdplot \
        -L${IO_CLOWNIX}/ -lio_clownix \
-       -L${RPCT}/ -lrpct \
        -lssl -lcrypto -lrt \
        -L./crcanvas_gtk/ -lcrcanvas_gtk \
        -L${LIB_CLIENT}/ -lglibclient \

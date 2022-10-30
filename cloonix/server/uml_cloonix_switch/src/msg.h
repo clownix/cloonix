@@ -26,6 +26,8 @@ enum {
      ovsreq_del_nat_lan,
      ovsreq_add_c2c_lan,
      ovsreq_del_c2c_lan,
+     ovsreq_add_a2b_lan,
+     ovsreq_del_a2b_lan,
      ovsreq_vhost_up,
      ovsreq_add_tap,
      ovsreq_del_tap,

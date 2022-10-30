@@ -1,7 +1,7 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
 DISTRO=bookworm
-DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
+DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
 ROOTFS=/root/${DISTRO}
 DEBIAN_REPO="http://deb.debian.org/debian"
 #----------------------------------------------------------------------#

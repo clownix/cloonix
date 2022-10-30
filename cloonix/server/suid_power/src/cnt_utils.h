@@ -26,6 +26,7 @@ char *get_mount_bin(void);
 char *get_umount_bin(void);
 
 FILE *my_popen(const char *command, const char *type);
+int cnt_utils_unlink_sub_dir_files(char *dir);
 
 int cnt_utils_delete_crun_stop(char *name, int crun_pid);
 int cnt_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,

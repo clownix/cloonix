@@ -43,7 +43,7 @@ static int selectioned_resolve(t_bank_item *bitem)
           KOUT(" ");
         if (bitem->att_node->bank_type == bank_type_sat)
           {
-          if (bitem->att_node->pbi.endp_type != endp_type_a2b) 
+          if (bitem->att_node->pbi.endp_type != endp_type_a2b)
             KERR("%s %d", bitem->name, bitem->att_node->pbi.endp_type);
           else
             {

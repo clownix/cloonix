@@ -40,16 +40,16 @@ int cloonix_get_pid(void);
 
 #define KERR(format, a...)                               \
  do {                                                    \
-    syslog(LOG_ERR | LOG_USER, "KERR:%07u %s"                 \
-    " line:%d " format "\n", (unsigned int) cloonix_get_msec(),   \
+    syslog(LOG_ERR | LOG_USER, "KERR: %s"                 \
+    " line:%d " format "\n",   \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
      __LINE__, ## a);                                    \
     } while (0)
 
 #define KOUT(format, a...)                               \
  do {                                                    \
-    syslog(LOG_ERR | LOG_USER, "KERR KILL %07u %s"            \
-    " line:%d   " format "\n\n", (unsigned int) cloonix_get_msec(),  \
+    syslog(LOG_ERR | LOG_USER, "KERR KILL %s"            \
+    " line:%d   " format "\n\n",  \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
      __LINE__, ## a);                                    \
     exit(-1);                                            \
@@ -65,12 +65,12 @@ enum {
   endp_type_ethv,
   endp_type_taps,
   endp_type_tapv,
-  endp_type_phy,
-  endp_type_a2b,
   endp_type_nats,
   endp_type_natv,
   endp_type_c2cs,
   endp_type_c2cv,
+  endp_type_phy,
+  endp_type_a2b,
 };
 
 enum {
@@ -79,6 +79,7 @@ enum {
   item_type_ceth,
   item_type_tap,
   item_type_c2c,
+  item_type_a2b,
   item_type_nat,
 };
 
@@ -171,6 +172,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define SUID_POWER_SOCK_DIR "suid_power"
 #define SNF_DIR "snf"
 #define NAT_DIR "nat"
+#define A2B_DIR "a2b"
 #define C2C_DIR "c2c"
 #define CNT_DIR "cnt"
 
@@ -337,12 +339,8 @@ typedef struct t_topo_phy
 typedef struct t_topo_a2b
   {
   char name[MAX_NAME_LEN];
-  int delay[2];
-  int loss[2];
-  int qsize[2];
-  int bsize[2];
-  int brate[2];
-  int silentms[2];
+  int endp_type0;
+  int endp_type1;
   } t_topo_a2b;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_nat

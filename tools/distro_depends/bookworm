@@ -55,7 +55,6 @@ while ! cloonix_ssh $NET ${NAME} "echo" 2>/dev/null; do
   echo ${NAME} not ready, waiting 5 sec
   sleep 5
 done
-set -e
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "mkdir -p /root/cloonix_data/bulk"
 #----------------------------------------------------------------------
@@ -78,7 +77,6 @@ cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
 nameserver 172.17.0.3
 EOF"
 #----------------------------------------------------------------------
-set +e
 for ((i=0;i<2;i++)); do
   cloonix_ssh $NET ${NAME} "./install_depends"
   sleep 10
@@ -87,13 +85,16 @@ done
 cloonix_ssh $NET ${NAME} "rm -f install_depends"
 #----------------------------------------------------------------------
 KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial "
-KERN+="net.ifnames=0 "
-KERN+="default_hugepagesz=1G hugepagesz=1G hugepages=2"
+KERN+="net.ifnames=0"
 printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" > /tmp/grub
 
 cloonix_scp $NET /tmp/grub ${NAME}:/etc/default
 
 cloonix_ssh $NET ${NAME} "update-grub"
+
+cloonix_ssh $NET ${NAME} "sed -i s/BindsTo/After/ /lib/systemd/system/qemu-guest-agent.service"
+cloonix_ssh $NET ${NAME} "echo \"WantedBy=multi-user.target\" >> /lib/systemd/system/qemu-guest-agent.service"
+cloonix_ssh $NET ${NAME} "systemctl enable qemu-guest-agent.service"
 
 cloonix_ssh $NET ${NAME} "sync"
 #----------------------------------------------------------------------

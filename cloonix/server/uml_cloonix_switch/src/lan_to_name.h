@@ -20,6 +20,7 @@ enum {
   item_kvm,
   item_tap,
   item_nat,
+  item_a2b,
   item_c2c,
 };
 

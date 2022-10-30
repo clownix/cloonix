@@ -30,6 +30,7 @@
 #include "ovs.h"
 #include "ovs_snf.h"
 #include "ovs_nat.h"
+#include "ovs_a2b.h"
 #include "ovs_c2c.h"
 #include "suid_power.h"
 
@@ -469,6 +470,8 @@ void rpct_recv_pid_resp(int llid, int tid, char *name, int num,
     ovs_snf_pid_resp(llid, name, pid);
   else if (tid == type_hop_nat)
     ovs_nat_pid_resp(llid, name, pid);
+  else if (tid == type_hop_a2b)
+    ovs_a2b_pid_resp(llid, name, pid);
   else if (tid == type_hop_c2c)
     ovs_c2c_pid_resp(llid, name, pid);
   else if ((tid == type_hop_ovs) || (tid == type_hop_ovsdb)) 
