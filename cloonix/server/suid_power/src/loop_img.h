@@ -15,8 +15,11 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int loop_img_check(char *bulk, char *image, int is_persistent);
 char *loop_img_get(char *name, char *bulk, char *image);
-int loop_img_add(char *name, char *bulk, char *image, char *cnt_dir);
-int loop_img_del(char *name, char *bulk, char *image, char *cnt_dir);
+int loop_img_add(char *name, char *bulk, char *image,
+                 char *cnt_dir, int is_persistent);
+int loop_img_del(char *name, char *bulk, char *image,
+                 char *cnt_dir, int is_persistent);
 void loop_img_init(void);
 /*--------------------------------------------------------------------------*/

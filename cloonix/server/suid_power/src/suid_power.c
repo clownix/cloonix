@@ -73,6 +73,13 @@ typedef struct t_vmon
 static t_vmon *g_head_vmon;
 
 /*****************************************************************************/
+char *get_bin_dir(void)
+{
+  return g_bin_dir;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 char *get_net_name(void)
 {
   return g_network_name;
@@ -602,7 +609,6 @@ int main (int argc, char *argv[])
   g_watchdog_ok = 0;
   if (argc != 8)
     KOUT(" ");
-  cnt_init();
   set_saved_environ(argv[5], argv[6], argv[7]);
   msg_mngt_init("suid_power", IO_MAX_BUF_LEN);
   memset(g_network_name, 0, MAX_NAME_LEN);
@@ -615,6 +621,7 @@ int main (int argc, char *argv[])
   strncpy(g_bin_dir, argv[3], MAX_PATH_LEN-1);
   if (sscanf(argv[4], "%d", &g_cloonix_rank) != 1)
     KOUT("ERROR %s", argv[4]);
+  cnt_init();
   root = g_root_path;
   snprintf(g_root_work_kvm,MAX_PATH_LEN-1,"%s/%s", root, CLOONIX_VM_WORKDIR);
   snprintf(ctrl_path,MAX_PATH_LEN-1,"%s/%s", root, SUID_POWER_SOCK_DIR);

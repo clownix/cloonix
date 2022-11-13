@@ -38,8 +38,10 @@
 
 void clean_all_llid(void);
 char *get_net_name(void);
+char *get_bin_dir(void);
 
 static char losetup_bin[MAX_PATH_LEN];
+static char ext4fuse_bin[MAX_PATH_LEN];
 static char ln_bin[MAX_PATH_LEN];
 static char mount_bin[MAX_PATH_LEN];
 static char umount_bin[MAX_PATH_LEN];
@@ -209,7 +211,8 @@ static void my_cp_and_sed_file(char *dsrc, char *ddst, char *name,
 
 /****************************************************************************/
 static char *get_config_json(char *rootfs, char *nspace,
-                             char *cloonix_dropbear, int is_persistent)
+                             char *cloonix_dropbear, char *mounttmp,
+                             int is_persistent)
 {
   char *buf;
   int len = strlen(CONFIG_JSON) + (5 * strlen(CONFIG_JSON_CAPA));
@@ -222,7 +225,7 @@ static char *get_config_json(char *rootfs, char *nspace,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, rootfs, 
-                                    cloonix_dropbear, nspace); 
+                                    cloonix_dropbear, mounttmp, nspace); 
   return buf;
 }
 /*--------------------------------------------------------------------------*/
@@ -318,6 +321,70 @@ static int check_mount_does_not_exist(char *path)
 /*--------------------------------------------------------------------------*/
  
 /****************************************************************************/
+static int create_mnt_tmp_dirs(char *cnt_dir, char *name)
+{
+  int result = -1;
+  char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1, "%s/%s/tmp", cnt_dir, name);
+  if (my_mkdir(path))
+    KERR("ERROR %s", path);
+  else
+    {
+    chmod(path, 0777);
+    memset(path, 0, MAX_PATH_LEN);
+    snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt", cnt_dir, name);
+    if (my_mkdir(path))
+      KERR("ERROR %s", path);
+    else
+      {
+      chmod(path, 0777);
+      memset(path, 0, MAX_PATH_LEN);
+      snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/mountbear",
+               cnt_dir, name);
+      if (my_mkdir(path))
+        KERR("ERROR %s", path);
+      else
+        {
+        chmod(path, 0777);
+        memset(path, 0, MAX_PATH_LEN);
+        snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs",
+                 cnt_dir, name);
+        if (my_mkdir(path))
+          KERR("ERROR %s", path);
+        else
+          {
+          memset(path, 0, MAX_PATH_LEN);
+          snprintf(path, MAX_PATH_LEN-1,
+                   "%s/%s/mnt/cloonix_config_fs/lib", cnt_dir, name);
+          if (my_mkdir(path))
+            KERR("ERROR %s", path);
+          else
+            {
+            snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s",
+                     cnt_dir, name, WORKDIR);
+            if (my_mkdir(path))
+              KERR("ERROR %s", path);
+            else
+              {
+              memset(path, 0, MAX_PATH_LEN);
+              snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s",
+                       cnt_dir, name, ROOTFS);
+              if (my_mkdir(path))
+                KERR("ERROR %s", path);
+              else
+                result = 0;
+              }
+            }
+          }
+        }
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static int create_all_dirs(char *bulk, char *image, char *cnt_dir, char *name)
 {
   int result = -1;
@@ -345,55 +412,7 @@ static int create_all_dirs(char *bulk, char *image, char *cnt_dir, char *name)
         if (my_mkdir(path))
           KERR("ERROR %s", path);
         else
-          {
-          memset(path, 0, MAX_PATH_LEN);
-          snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt", cnt_dir, name);
-          if (my_mkdir(path))
-            KERR("ERROR %s", path);
-          else
-            {
-            chmod(path, 0777);
-            memset(path, 0, MAX_PATH_LEN);
-            snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/mountbear",
-                     cnt_dir, name);
-            if (my_mkdir(path))
-              KERR("ERROR %s", path);
-            else
-              {
-              chmod(path, 0777);
-              memset(path, 0, MAX_PATH_LEN);
-              snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs",
-                       cnt_dir, name);
-              if (my_mkdir(path))
-                KERR("ERROR %s", path);
-              else
-                {
-                memset(path, 0, MAX_PATH_LEN);
-                snprintf(path, MAX_PATH_LEN-1, 
-                         "%s/%s/mnt/cloonix_config_fs/lib", cnt_dir, name);
-                if (my_mkdir(path))
-                  KERR("ERROR %s", path);
-                else
-                  {
-                  snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s",
-                           cnt_dir, name, WORKDIR);
-                  if (my_mkdir(path))
-                    KERR("ERROR %s", path);
-                  else
-                    {
-                    memset(path, 0, MAX_PATH_LEN);
-                    snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s",
-                             cnt_dir, name, ROOTFS);
-                    if (my_mkdir(path))
-                      KERR("ERROR %s", path);
-                    else
-                      result = 0;
-                    }
-                  }
-                }
-              }
-            }
-          }
+          result = create_mnt_tmp_dirs(cnt_dir, name);
         }
       }
     }
@@ -536,9 +555,7 @@ int cnt_utils_create_overlay(char *path, char *lower, int is_persistent)
 {
   int result = -1;
   char cmd[2*MAX_PATH_LEN];
-  char mnt[MAX_PATH_LEN];
-  char *mount = mount_bin;
-  char *mn = mnt;
+//  char *mount = mount_bin;
 
   if (check_mount_does_not_exist(path))
     KERR("%s", path);
@@ -551,11 +568,13 @@ int cnt_utils_create_overlay(char *path, char *lower, int is_persistent)
       }
     else
       {
-      memset(mnt, 0, MAX_PATH_LEN);
-      snprintf(mnt, MAX_PATH_LEN-1, "/proc/%d/ns/mnt", getpid()); 
+//      snprintf(cmd, 2*MAX_PATH_LEN-1,
+//      "%s none -t overlay -o lowerdir=%s,upperdir=%s/%s,workdir=%s/%s %s/%s 2>&1",
+//      mount,  lower, path, UPPER, path, WORKDIR, path, ROOTFS);
+
       snprintf(cmd, 2*MAX_PATH_LEN-1,
-      "%s --namespace %s none -t overlay -o lowerdir=%s,upperdir=%s/%s,workdir=%s/%s %s/%s 2>&1",
-      mount, mn, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
+      "/usr/bin/fuse-overlayfs -o lowerdir=%s -o upperdir=%s/%s -o workdir=%s/%s %s/%s 2>&1",
+      lower, path, UPPER, path, WORKDIR, path, ROOTFS);
       if (execute_cmd(cmd, 1))
         KERR("%s", cmd);
       else
@@ -599,11 +618,13 @@ int cnt_utils_create_crun_create(char *cnt_dir, char *name)
 
 /****************************************************************************/
 int cnt_utils_create_config_json(char *path, char *rootfs, char *nspace,
-                                 char *cloonix_dropbear, int is_persistent)
+                                 char *cloonix_dropbear, 
+                                 char *mounttmp, int is_persistent)
 {
   int len, result;
   char json_path[MAX_PATH_LEN];
-  char *buf = get_config_json(rootfs,nspace,cloonix_dropbear,is_persistent);
+  char *buf = get_config_json(rootfs, nspace, cloonix_dropbear,
+                              mounttmp, is_persistent);
   memset(json_path, 0, MAX_PATH_LEN);
   snprintf(json_path, MAX_PATH_LEN-1, "%s/config.json", path); 
   len = strlen(buf);
@@ -746,7 +767,7 @@ int cnt_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
       result = -1;
       }
     }
-  if (loop_img_del(name, bulk, image, cnt_dir))
+  if (loop_img_del(name, bulk, image, cnt_dir, is_persistent))
     {
     KERR("ERROR %s", name);
     result = -1;
@@ -776,6 +797,13 @@ int cnt_utils_delete_crun_stop(char *name, int crun_pid)
     result = -1;
     }
   return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+char *get_ext4fuse_bin(void)
+{
+  return ext4fuse_bin;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -825,17 +853,35 @@ int cnt_utils_create_crun_start(char *name)
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+char *utils_get_suid_power_bin_path(void)
+{
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
 /****************************************************************************/
 void cnt_utils_init(void)
 {
-  memset(losetup_bin, 0, MAX_PATH_LEN);
   memset(mount_bin, 0, MAX_PATH_LEN);
+  memset(umount_bin, 0, MAX_PATH_LEN);
+  memset(ln_bin, 0, MAX_PATH_LEN);
+  memset(losetup_bin, 0, MAX_PATH_LEN);
+  memset(ext4fuse_bin, 0, MAX_PATH_LEN);
+
   if (!access("/sbin/losetup", F_OK))
     strcpy(losetup_bin, "/sbin/losetup");
   else if (!access("/bin/losetup", F_OK))
     strcpy(losetup_bin, "/bin/losetup");
   else
     KERR("ERROR ERROR ERROR losetup binary not found");
+
+  snprintf(ext4fuse_bin, MAX_PATH_LEN-1,
+           "%s/server/gerard_lledo/ext4fuse",
+           get_bin_dir());
+
   if (!access("/sbin/ln", F_OK))
     strcpy(ln_bin, "/sbin/ln");
   else if (!access("/bin/ln", F_OK))

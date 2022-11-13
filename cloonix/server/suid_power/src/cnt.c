@@ -51,6 +51,7 @@ typedef struct t_cnt
   char rootfs_path[MAX_PATH_LEN];
   char nspace_path[MAX_PATH_LEN];
   char mountbear[MAX_PATH_LEN];
+  char mounttmp[MAX_PATH_LEN];
   int nb_eth;
   t_eth_mac eth_mac[MAX_ETH_VM];
   int cloonix_rank;
@@ -97,6 +98,7 @@ static void alloc_cnt(char *name, char *bulk, char *image, int nb_eth,
   snprintf(cur->nspace_path, MAX_PATH_LEN-1, "%s/%s", PATH_NAMESPACE, nspace);
   snprintf(cur->rootfs_path, MAX_PATH_LEN-1,"%s/%s/%s",cnt_dir,name,ROOTFS);
   snprintf(cur->mountbear, MAX_PATH_LEN-1,"%s/%s/mnt", cnt_dir, name);
+  snprintf(cur->mounttmp, MAX_PATH_LEN-1,"%s/%s/tmp", cnt_dir, name);
   cur->nb_eth = nb_eth;
   cur->cloonix_rank = cloonix_rank;
   cur->vm_id = vm_id; 
@@ -322,7 +324,8 @@ static void create_config_json(char *line, char *resp,
     memset(path, 0, MAX_PATH_LEN);
     snprintf(path, MAX_PATH_LEN-1, "%s/%s", cnt_dir, cur->name);
     if (cnt_utils_create_config_json(path,cur->rootfs_path,cur->nspace_path,
-                                     cur->mountbear, is_persistent))
+                                     cur->mountbear, cur->mounttmp,
+                                     is_persistent))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -340,7 +343,8 @@ static void create_config_json(char *line, char *resp,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_loop_img(char *line, char *resp, char *name)
+static void create_loop_img(char *line, char *resp,
+                            char *name, int is_persistent)
 {
   t_cnt *cur;
   cur = find_cnt(name);
@@ -352,7 +356,7 @@ static void create_loop_img(char *line, char *resp, char *name)
     }
   else
     {
-    if (loop_img_add(name, cur->bulk, cur->image, cur->cnt_dir))
+    if (loop_img_add(name, cur->bulk, cur->image, cur->cnt_dir, is_persistent))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -504,14 +508,21 @@ void cnt_recv_sigdiag_msg(int llid, int tid, char *line)
   memset(resp, 0, MAX_PATH_LEN);
   if (sscanf(line, 
   "cloonsuid_cnt_create_net name=%s bulk=%s "
-  "image=%s nb=%d vm_id=%d cnt_dir=%s agent_dir=%s",
+  "image=%s nb=%d vm_id=%d cnt_dir=%s agent_dir=%s "
+  "is_persistent=%d",
   name, bulk, image, &nb_eth, &vm_id,
-  cnt_dir, agent_dir) == 7)
+  cnt_dir, agent_dir, &is_persistent) == 8)
     {
     ptr = strstr(line, "customer_launch=");
     if (ptr == NULL)
       {
       KERR("ERROR %s", line);
+      snprintf(resp, MAX_PATH_LEN-1,
+               "cloonsuid_cnt_create_net_resp_ko name=%s", name);
+      } 
+    else if (loop_img_check(bulk, image, is_persistent))
+      {
+      KERR("ERROR FILE SYSTEM BUSY (persistent is unique) %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
                "cloonsuid_cnt_create_net_resp_ko name=%s", name);
       } 
@@ -538,9 +549,10 @@ void cnt_recv_sigdiag_msg(int llid, int tid, char *line)
     create_config_json(line, resp, name, is_persistent);
     }
   else if (sscanf(line,
-  "cloonsuid_cnt_create_loop_img name=%s", name) == 1)
+  "cloonsuid_cnt_create_loop_img name=%s is_persistent=%d",
+  name, &is_persistent) == 2)
     {
-    create_loop_img(line, resp, name);
+    create_loop_img(line, resp, name, is_persistent);
     }
   else if (sscanf(line,
   "cloonsuid_cnt_create_overlay name=%s is_persistent=%d",

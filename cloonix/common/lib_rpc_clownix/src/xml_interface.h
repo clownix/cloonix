@@ -42,8 +42,12 @@
 #define A2B_CNF          "<a2b_cnf>"\
                          "  <tid>  %d </tid>\n"\
                          "  <name> %s </name>\n"\
-                         "  <cmd>  %s </cmd>\n"\
+                         "  <cmd>%s</cmd>\n"\
                          "</a2b_cnf>"
+
+#define A2B_CNF_BIS      "<a2b_cnf>"\
+                         "  <tid>  %d </tid>\n"\
+                         "  <name> %s </name>\n"
 
 #define C2C_CNF          "<c2c_cnf>"\
                          "  <tid>  %d </tid>\n"\

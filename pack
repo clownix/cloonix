@@ -44,6 +44,7 @@ CLOONIX_CLIENT=${TMPBUILD_BIS}/cloonix/client
 #----------------------------------------------------------
   for i in  doorways \
             suid_power \
+            gerard_lledo \
             uml_cloonix_switch ; do
     rm -f ${CLOONIX_SERVER}/${i}/cmd
     rm -f ${CLOONIX_SERVER}/${i}/Makefile

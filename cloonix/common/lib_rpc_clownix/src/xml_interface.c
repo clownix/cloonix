@@ -2643,9 +2643,17 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       break;
 
    case bnd_a2b_cnf:
-      if (sscanf(msg, A2B_CNF, &tid, name, info) != 3)
+      if (sscanf(msg, A2B_CNF_BIS, &tid, name) != 2)
         KOUT("%s", msg);
-      recv_a2b_cnf(llid, tid, name, info);
+      line = strstr(msg, "<cmd>");
+      if (!line)
+        KOUT("%s", msg);
+      line += strlen("<cmd>");
+      ptr = strstr(line, "</cmd>");
+      if (!ptr)
+        KOUT("%s", msg);
+      *ptr = 0;
+      recv_a2b_cnf(llid, tid, name, line);
       break;
 
 

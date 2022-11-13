@@ -1,9 +1,8 @@
 #/bin/bash
 set +e
 
-
 LIST="centos8 \
-      fedora35 \
+      fedora36 \
       jammy \
       bookworm \
       bullseye \

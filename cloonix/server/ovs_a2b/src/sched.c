@@ -129,7 +129,7 @@ void sched_cnf(int dir, char *type, int val)
     g_cnf_qsize[dir] = (uint64_t ) val * 1000;
   else if (!strcmp(type, "bsize"))
     g_cnf_bsize[dir] = (uint64_t ) val * 1000000;
-  else if (!strcmp(type, "brate"))
+  else if (!strcmp(type, "rate"))
     {
     g_cnf_brate[dir] = (uint64_t ) val;
     if (val > 1000)
@@ -143,9 +143,9 @@ void sched_cnf(int dir, char *type, int val)
   else
     KERR("ERROR %d %s %d", dir, type, val);
 
-  KERR("CNF SCHED %d: rate %ld  qsize %ld  bsize %ld  loss %ld",
+  KERR("CNF SCHED %d: rate %ld  qsize %ld  bsize %ld  loss %ld delay %ld",
        dir, g_cnf_brate[dir], g_cnf_qsize[dir],
-       g_cnf_bsize[dir]/1000, g_cnf_loss[dir]);
+       g_cnf_bsize[dir]/1000, g_cnf_loss[dir], g_cnf_delay[dir]);
 }
 /*--------------------------------------------------------------------------*/
 

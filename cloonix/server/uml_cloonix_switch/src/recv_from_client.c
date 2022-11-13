@@ -1964,11 +1964,6 @@ void recv_a2b_cnf(int llid, int tid, char *name, char *cmd)
     send_status_ko(llid, tid, "error a2b not found");
     KERR("ERROR %s %s ", name, cmd);
     }
-  else if (strncmp("whatip=", cmd, strlen("whatip=")))
-    {
-    send_status_ko(llid, tid, "error a2b bad cmd");
-    KERR("ERROR %s %s ", name, cmd);
-    }
   else
     {
     if (ovs_a2b_param_config(llid, tid, name, cmd))

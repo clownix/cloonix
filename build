@@ -51,6 +51,7 @@ done
   for i in  ovs \
             doorways \
             suid_power \
+            gerard_lledo \
             uml_cloonix_switch \
             qemu \
             ovs_drv \

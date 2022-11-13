@@ -341,7 +341,8 @@ void cnt_sigdiag_resp(int llid, char *line)
     else
       {
       snprintf(req, MAX_PATH_LEN-1,
-               "cloonsuid_cnt_create_loop_img name=%s", name);
+               "cloonsuid_cnt_create_loop_img name=%s is_persistent=%d",
+               name, cur->cnt.is_persistent);
       if (send_sig_suid_power(llid, req))
         KERR("ERROR %d %s", llid, name);
       }
@@ -540,9 +541,9 @@ int cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
       snprintf(req, 2*MAX_PATH_LEN-1, 
       "cloonsuid_cnt_create_net name=%s "
       "bulk=%s image=%s nb=%d vm_id=%d cnt_dir=%s "
-      "agent_dir=%s customer_launch=%s",
+      "agent_dir=%s is_persistent=%d customer_launch=%s",
       cnt->name, cfg_get_bulk(), image, cnt->nb_tot_eth,
-      vm_id, cnt_dir, agd, cnt->customer_launch);
+      vm_id, cnt_dir, agd, cnt->is_persistent, cnt->customer_launch);
       if (send_sig_suid_power(llid, req))
         {
         snprintf(err, MAX_PATH_LEN-1,

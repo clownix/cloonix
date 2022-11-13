@@ -236,9 +236,9 @@ static void reload_upon_problem(char *name)
   strncpy(pname, name, MAX_NAME_LEN-1);
   clownix_timeout_add(400, timer_reload_qga, (void *) pname, NULL, NULL);
   cur = get_qrec_with_name(pname);
+  KERR("ERROR %s", name);
   if (cur)
     qrec_free(cur);
-  KERR("ERROR %s", name);
 }
 /*--------------------------------------------------------------------------*/
 

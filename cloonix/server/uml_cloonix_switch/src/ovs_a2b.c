@@ -248,6 +248,17 @@ static void timer_heartbeat(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int param_config_check(char *name, char *input)
+{
+  int dir, val, result = -1;
+  char cmd[MAX_PATH_LEN];
+  if (sscanf(input, "dir=%d cmd=%s val=%d", &dir, cmd, &val) == 3) 
+    result = 0;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void ovs_a2b_pid_resp(int llid, char *name, int pid)
 {
   t_ovs_a2b *cur = find_a2b(name);
@@ -350,21 +361,19 @@ void ovs_a2b_sigdiag_resp(int llid, int tid, char *line)
     }
 
   else if (sscanf(line,
-  "a2b_param_config_ok %d %d %s %s", &cli_llid, &cli_tid, name, msg) == 4)
+  "a2b_param_config_ok %d %d %s", &cli_llid, &cli_tid, name) == 3)
     {
-KERR("TRACE %s %s", name, msg);
     if (msg_exist_channel(cli_llid))
-      send_status_ok(cli_llid, cli_tid, msg);
+      send_status_ok(cli_llid, cli_tid, name);
     else
       KERR("ERROR %s", line);
     }
 
   else if (sscanf(line,
-  "a2b_param_config_ko %d %d %s %s", &cli_llid, &cli_tid, name, msg) == 4)
+  "a2b_param_config_ko %d %d %s", &cli_llid, &cli_tid, name) == 3)
     {
-KERR("TRACE %s %s", name, msg);
     if (msg_exist_channel(cli_llid))
-      send_status_ko(cli_llid, cli_tid, msg);
+      send_status_ko(cli_llid, cli_tid, name);
     else
       KERR("ERROR %s", line);
     }
@@ -888,13 +897,15 @@ int ovs_a2b_param_config(int llid, int tid, char *name, char *cmd)
   char msg[MAX_PATH_LEN];
   t_ovs_a2b *cur = find_a2b(name);
   if (!cur)
-    KERR("ERROR %s", name);
+    KERR("ERROR %s %s", name, cmd);
+  else if (param_config_check(name, cmd))
+    KERR("ERROR %s %s", name, cmd);
   else
     {
     result = 0;
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1,
-             "a2b_param_config %d %d %s %s", llid, tid, name, cmd);
+             "a2b_param_config %d %d %s dir_cmd_val=%s", llid, tid, name, cmd);
     rpct_send_sigdiag_msg(cur->llid, type_hop_a2b, msg);
     hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }

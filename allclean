@@ -28,6 +28,7 @@ rm -rf tmpbuild_bis
 #----------------------------------------------------------
   for i in  doorways \
             suid_power \
+            gerard_lledo \
             uml_cloonix_switch ; do
     cd ${CLOONIX_SERVER}/${i}
     make clean

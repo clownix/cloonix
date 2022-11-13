@@ -199,7 +199,8 @@ void help_event_hop(char *line)
 /*****************************************************************************/
 void help_cnf_a2b(char *line)
 {
-  printf("\n\n%s <name> <dir> <cmd> <val>\n", line);
+  printf("\n\n%s <name> \"dir=<int-val> cmd=<string-val> val=<int-val>\"\n",
+         line);
   printf("\nname is the a2b name.");
   printf("\ndir =  0 or 1");
   printf("\ncmd =  \"loss\" \"delay\" \"rate\" \"silentms\"");
@@ -208,6 +209,8 @@ void help_cnf_a2b(char *line)
   printf("\ndelay: milli-sec.\n");
   printf("\nrate : kilo-octets per second throughput.\n");
   printf("\nsilentms : millisecondes of silence giving bursty throughput.\n");
+  printf("\n\n%s a2b1 \"dir=0 cmd=delay val=1000\"\n",
+         line);
   printf("\n\n");
 }
 /*---------------------------------------------------------------------------*/

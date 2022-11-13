@@ -22,6 +22,7 @@ typedef struct t_eth_mac
 
 void cnt_beat(int llid);
 char *get_losetup_bin(void);
+char *get_ext4fuse_bin(void);
 char *get_mount_bin(void);
 char *get_umount_bin(void);
 
@@ -42,6 +43,7 @@ int cnt_utils_create_crun_create(char *cnt_dir, char *name);
 int cnt_utils_create_crun_start(char *name);
 int cnt_utils_create_overlay(char *path, char *image, int is_persistent);
 int cnt_utils_create_config_json(char *path, char *rootfs, char *nspace,
-                                 char *cloonix_dropbear, int is_persistent);
+                                 char *cloonix_dropbear, 
+                                 char *mounttmp, int is_persistent);
 void cnt_utils_init(void);
 /*--------------------------------------------------------------------------*/

@@ -629,7 +629,7 @@ int cmd_cnf_a2b(int argc, char **argv)
     client_cnf_a2b(0, callback_end, argv[0], argv[1]);
     }
   else
-    KERR("ERROR %d", argc);
+    KERR("ERROR NB PARAMS %d", argc);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -784,7 +784,7 @@ int cmd_event_print(int argc, char **argv)
 /*****************************************************************************/
 int cmd_event_sys(int argc, char **argv)
 {
-    init_connection_to_uml_cloonix_switch();
+  init_connection_to_uml_cloonix_switch();
   client_sys_sub(0, callback_sys);
   return 0;
 }

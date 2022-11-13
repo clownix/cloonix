@@ -37,6 +37,7 @@
 #include "utils.h"
 #include "rxtx.h"
 #include "tun_tap.h"
+#include "sched.h"
 
 
 
@@ -77,18 +78,6 @@ static int check_and_set_uid(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void heartbeat (int delta)
-{
-  static int count_ticks_blkd = 0;
-  count_ticks_blkd += 1;
-  if (count_ticks_blkd == 10)
-    {
-    count_ticks_blkd = 0;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   if (llid != g_llid)
@@ -101,7 +90,6 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
   g_watchdog_ok = 1;
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void rpct_recv_kil_req(int llid, int tid)
@@ -125,10 +113,10 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   char resp[MAX_PATH_LEN];
-  char msg[MAX_PATH_LEN];
   char name[MAX_NAME_LEN];
-  char *m = msg;
-  int cli_llid, cli_tid;
+  char cmd[MAX_NAME_LEN];
+  char *msg;
+  int cli_llid, cli_tid, dir, val;
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
     KERR("ERROR %s %d %d", g_net_name, llid, g_llid);
@@ -145,12 +133,25 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (sscanf(line,
-  "a2b_param_config %d %d %s %s", &cli_llid, &cli_tid, name, m) == 4)
+  "a2b_param_config %d %d %s", &cli_llid, &cli_tid, name) == 3)
     {
-    snprintf(resp, MAX_PATH_LEN-1,
-             "a2b_param_config_ko %d %d %s %s", cli_llid, cli_tid, name, m);
-    rpct_send_sigdiag_msg(llid, tid, resp);
-KERR("TRACE %s %s", g_net_name, line);
+    msg = strstr(line, "dir_cmd_val=");
+    if (!msg)
+      KERR("ERROR %s %s", g_net_name, line);
+    else
+      {
+      msg += strlen("dir_cmd_val=");
+      if (sscanf(msg, "dir=%d cmd=%s val=%d", &dir, cmd, &val) == 3) 
+        {
+        snprintf(resp, MAX_PATH_LEN-1,
+                 "a2b_param_config_ok %d %d %s",cli_llid,cli_tid,name);
+        sched_cnf(dir, cmd, val);
+        }
+      else
+        snprintf(resp, MAX_PATH_LEN-1,
+                 "a2b_param_config_ko %d %d %s",cli_llid,cli_tid,name);
+      rpct_send_sigdiag_msg(llid, tid, resp);
+      }
     }
   else
     KERR("ERROR %s %s", g_net_name, line);
@@ -192,7 +193,7 @@ static void fct_timeout_self_destruct(void *data)
     KOUT("EXIT");
     }
   g_watchdog_ok = 0;
-  clownix_timeout_add(500, fct_timeout_self_destruct, NULL, NULL, NULL);
+  clownix_timeout_add(5000, fct_timeout_self_destruct, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -238,7 +239,7 @@ int main (int argc, char *argv[])
                              &fd_rx_from_tap1, &fd_tx_to_tap1);
 
   msg_mngt_init("a2b", IO_MAX_BUF_LEN);
-  msg_mngt_heartbeat_init(heartbeat);
+  msg_mngt_heartbeat_ms_set(1);
   rxtx_init(fd_rx_from_tap0, fd_tx_to_tap0, fd_rx_from_tap1, fd_tx_to_tap1);
   if (!access(g_ctrl_path, F_OK))
     {
@@ -255,7 +256,7 @@ int main (int argc, char *argv[])
   daemon(0,0);
   seteuid(getuid());
   cloonix_set_pid(getpid());
-  clownix_timeout_add(1500, fct_timeout_self_destruct, NULL, NULL, NULL);
+  clownix_timeout_add(15000, fct_timeout_self_destruct, NULL, NULL, NULL);
   msg_mngt_loop();
   return 0;
 }

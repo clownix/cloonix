@@ -96,6 +96,12 @@
 "                       \"options\": [\"rbind\",\"rw\"]\n"\
 "               },\n"\
 "               {\n"\
+"                       \"destination\": \"/tmp\",\n"\
+"                       \"type\": \"none\",\n"\
+"                       \"source\": \"%s\",\n"\
+"                       \"options\": [\"rbind\",\"rw\"]\n"\
+"               },\n"\
+"               {\n"\
 "                       \"destination\": \"/lib/modules\",\n"\
 "                       \"type\": \"none\",\n"\
 "                       \"source\": \"/lib/modules\",\n"\
