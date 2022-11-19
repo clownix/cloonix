@@ -1,4 +1,6 @@
 Howto use a cisco with cloonix.
+First google "c8000v-universalk9.17.04.01a.iso index"
+If you can download c8000v-universalk9.17.04.01a.iso then you are good to go...
 
 1) Qcow2 cisco creation from an iso.
 

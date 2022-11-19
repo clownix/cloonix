@@ -3,7 +3,7 @@ HERE=`pwd`
 TARGET=/tmp/cisco_initial_configuration
 CISCO_PRECONFIG_ISO=${TARGET}/iosxe_config.iso
 CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu"
-CISCO_ISO=/media/perrier/Samsung_T5/archives/iso/c8000v-universalk9.17.04.01a.iso
+CISCO_ISO=/home/perrier/c8000v-universalk9.17.04.01a.iso
 NAME=c8000
 CISCO_QCOW2=${HOME}/cloonix_data/bulk/${NAME}.qcow2
 
@@ -35,7 +35,9 @@ sleep 1
 sudo ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 \
      -L ${CLOONIX_QEMU_BIN} -enable-kvm -m 6000 \
      -cpu host,+vmx -smp 4 -no-reboot \
-     -drive file=${CISCO_QCOW2},index=0,media=disk,if=virtio,cache=none \
+     -drive file=${CISCO_QCOW2},id=hd,media=disk,cache=none,if=none \
+     -device virtio-scsi-pci,id=scsi \
+     -device scsi-hd,drive=hd \
      -uuid 1c54ff10-774c-4e63-9896-4c18d66b50b1 \
      -boot d \
      -cdrom ${CISCO_ISO}
@@ -53,7 +55,9 @@ echo
 sudo ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 \
      -L ${CLOONIX_QEMU_BIN} -enable-kvm -m 6000 \
      -cpu host,+vmx -smp 4 -no-reboot \
-     -drive file=${CISCO_QCOW2},index=0,media=disk,if=virtio,cache=none \
+     -drive file=${CISCO_QCOW2},id=hd,media=disk,cache=none,if=none \
+     -device virtio-scsi-pci,id=scsi \
+     -device scsi-hd,drive=hd \
      -uuid 1c54ff10-774c-4e63-9896-4c18d66b50b1 \
      -netdev type=tap,id=net71,vhost=on,ifname=tap71,script=no,downscript=no \
      -device virtio-net-pci,netdev=net71 \

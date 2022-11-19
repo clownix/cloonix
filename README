@@ -3,18 +3,15 @@ AGPLv3 tool to create networks of kvm virtual machines or crun containers
 connected through the openvswitch software.
 See directory cloonix for the LICENCE
 See clownix.net for a documentation (usually not up to date).
-http://clownix.net/doc_stored/build-25-00/html/index.html doc.
+http://clownix.net/doc_stored/build-26-00/html/index.html doc.
 
 NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
       inside the kvm guests to have the best of cloonix.
 
-      The a2b feature is not finished, it will create loss, delay and
-      bandwidth limitation on a lan.
-
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-25-00
+http://clownix.net/downloads/cloonix-26-00
 
 -----------------------------------------------------------------------------
 THIS SOFTWARE HAS BEEN COMPILED AND TESTED ON:
@@ -28,12 +25,12 @@ THIS SOFTWARE HAS BEEN COMPILED AND TESTED ON:
 -----------------------------------------------------------------------------
 INSTALL CLOONIX ON YOUR HOST:
 
-wget http://clownix.net/downloads/cloonix-25-00/cloonix-25-00.tar.gz
-tar xvf cloonix-25-00.tar.gz
-cd cloonix-25-00
+wget http://clownix.net/downloads/cloonix-26-00/cloonix-26-00.tar.gz
+tar xvf cloonix-26-00.tar.gz
+cd cloonix-26-00
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-25-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-26-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
@@ -41,7 +38,7 @@ tar xvf targz_store.tar.gz
 -----------------------------------------------------------------------------
 FOR KVM GET A WORKING QCOW AND PUT IT IN BULK:
 
-wget http://clownix.net/downloads/cloonix-25-00/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-26-00/bulk/bookworm.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cp bookworm.qcow2.gz ${HOME}/cloonix_data/bulk
@@ -51,7 +48,7 @@ gunzip bookworm.qcow2.gz
 -----------------------------------------------------------------------------
 FOR CRUN GET A WORKING IMG AND PUT IT IN BULK:
 
-wget http://clownix.net/downloads/cloonix-25-00/bulk/bookworm.img.gz
+wget http://clownix.net/downloads/cloonix-26-00/bulk/bookworm.img.gz
 cp bookworm.img.gz ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
 gunzip bookworm.img.gz
@@ -65,7 +62,8 @@ cd cloonix/quickstart
 On the gui, a double-click on the blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy,
 a right-click on the blue machine gives a spice desktop.
-
+If wireshark problems, authorize wireshark for non-root and
+do "sudo adduser ${USER} wireshark".
 
 -----------------------------------------------------------------------------
 LAUNCH CRUN EXAMPLE:
@@ -79,9 +77,6 @@ cd cloonix/quickstart
 On the gui, a double-click on the blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy.
 
-Note: openwrt is special, it has ash instead of bash and it does
-not turn blue because the libc is different. TODO
-
 Note: the containers have hardware coded ip_forward disable_ipv6,
 see in file cloonix/server/suid_power/src/config_json.h and change
 to your convenience.
@@ -93,9 +88,10 @@ cd cloonix/quickstart/create_kvm/ for qcow2
 cd cloonix/quickstart/create_crun/ for img 
 
 -----------------------------------------------------------------------------
-TEST OF CISCO FEATURE:
+TEST OF CISCO OR MIKROTIK FEATURE:
 
 cd cloonix/quickstart/cisco
+cd cloonix/quickstart/mikrotik
 
 ==============================================================================
 
