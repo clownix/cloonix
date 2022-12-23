@@ -6,8 +6,9 @@ WORK=${HERE}/work_targz_store
 
 rm -rf ${WORK}
 mkdir -vp ${WORK}
-cd ${WORK}
 
+#-----------------------------------------------------
+cd ${WORK}
 git clone --depth=1 https://git.qemu.org/git/qemu.git
 cd ${WORK}/qemu
 COMMIT=$(git log --pretty=format:"%H")
@@ -24,34 +25,66 @@ rm -rf qemu
 rm -rf qemu_vip
 rm -f qemu.tar.gz
 mv qemu_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
 
-
+#-----------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://github.com/openvswitch/ovs.git
-git clone --depth=1 https://github.com/mesonbuild/meson.git
-git clone --depth=1 https://github.com/ninja-build/ninja.git
+cd ${WORK}/ovs
+COMMIT=$(git log --pretty=format:"%H")
+cd ${WORK}
+tar zcvf ovs_${COMMIT}.tar.gz ovs
+rm -rf ovs
+mv ovs_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
 
-for i in ovs meson ninja; do
-  cd ${WORK}/${i}
-  COMMIT=$(git log --pretty=format:"%H")
-  cd ${WORK}
-  tar zcvf ${i}_${COMMIT}.tar.gz ${i}
-  rm -rf ${i}
-  mv ${i}_${COMMIT}.tar.gz ${TARGZ}
-done
-
+#-----------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://github.com/freedesktop/spice-gtk.git
 cd ${WORK}/spice-gtk
-COMMITGTK=$(git log --pretty=format:"%H")
+COMMIT=$(git log --pretty=format:"%H")
 git submodule init
 git submodule update --recursive
-
 cd ${WORK}
-tar zcvf spice-gtk_${COMMITGTK}.tar.gz spice-gtk
+tar zcvf spice-gtk_${COMMIT}.tar.gz spice-gtk
 rm -rf spice-gtk
-mv spice-gtk_${COMMITGTK}.tar.gz ${TARGZ}
+mv spice-gtk_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
 
+#-----------------------------------------------------
+cd ${WORK}
+git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-protocol.git
+cd spice-protocol
+COMMIT=$(git log --pretty=format:"%H")
+cd ${WORK}
+tar zcvf spice-protocol_${COMMIT}.tar.gz spice-protocol
+rm -rf spice-protocol
+mv spice-protocol_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
+
+#-----------------------------------------------------
+cd ${WORK}
+git clone --depth=1 https://gitlab.freedesktop.org/spice/spice.git
+cd spice
+COMMIT=$(git log --pretty=format:"%H")
+git submodule init
+git submodule update --recursive
+cd ${WORK}
+tar zcvf spice_${COMMIT}.tar.gz spice
+rm -rf spice
+mv spice_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
+
+#-----------------------------------------------------
+cd ${WORK}
+git clone --depth=1 https://gitlab.freedesktop.org/spice/usbredir.git
+cd usbredir
+COMMIT=$(git log --pretty=format:"%H")
+cd ${WORK}
+tar zcvf usbredir_${COMMIT}.tar.gz usbredir 
+rm -rf usbredir
+mv usbredir_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
 
 cd ${HERE}
 rmdir work_targz_store

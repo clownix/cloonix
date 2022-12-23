@@ -370,12 +370,15 @@ static void send_c2c_suidroot_attempt(t_ovs_c2c *cur)
     cur->count += 1;
     if (cur->count == 20)
       {
-      KERR("%s %s", cur->socket, cur->name);
+      KERR("ERROR %s %s", cur->socket, cur->name);
       free_c2c(cur);
       }
     else
       {
-      rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
+      if (!msg_exist_channel(cur->llid))
+        KERR("ERROR %s %s", cur->socket, cur->name);
+      else
+        rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
       hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       }
     }
@@ -502,14 +505,20 @@ static void c2c_receive_probe_udp(char *name)
       {
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "c2c_send_probe_udp %s", name);
-      rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
+      if (!msg_exist_channel(cur->llid))
+        KERR("ERROR %s %s", locnet, cur->name);
+      else
+        rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
       hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       }
     else
       {
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "c2c_enter_traffic_udp %s", name);
-      rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
+      if (!msg_exist_channel(cur->llid))
+        KERR("ERROR %s %s", locnet, cur->name);
+      else
+        rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
       hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       }
     }
@@ -625,7 +634,10 @@ void ovs_c2c_pid_resp(int llid, char *name, int pid)
       cur->pid = pid;
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "c2c_get_udp_port %s", name);
-      rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
+      if (!msg_exist_channel(cur->llid))
+        KERR("ERROR %s", cur->name);
+      else
+        rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
       hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
       }
     else if (cur->pid && (cur->pid != pid))
@@ -1123,7 +1135,10 @@ static void c2c_set_dist_udp_ip_port(char *name, uint32_t ip, uint16_t port)
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "c2c_set_dist_udp_ip_port %s %x %hu",
              name, ip, port);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
+    if (!msg_exist_channel(cur->llid))
+      KERR("ERROR %s", cur->name);
+    else
+      rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
     hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
@@ -1153,7 +1168,10 @@ static void master_and_slave_ping_process(t_ovs_c2c *cur, int peer_status)
     {
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "c2c_enter_traffic_udp %s", cur->name);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
+    if (!msg_exist_channel(cur->llid))
+      KERR("ERROR %s", cur->name);
+    else
+      rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
     hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
   else if ((cur->topo.udp_connection_peered == 1) &&
@@ -1178,7 +1196,10 @@ static void c2c_send_probe_udp(char *name)
     {
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1, "c2c_send_probe_udp %s", name);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
+    if (!msg_exist_channel(cur->llid))
+      KERR("ERROR %s", cur->name);
+    else
+      rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
     hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
 }
@@ -1254,7 +1275,10 @@ int ovs_c2c_mac_mangle(char *name, uint8_t *mac)
     snprintf(msg, MAX_PATH_LEN-1,
     "c2c_mac_mangle %s %hhX:%hhX:%hhX:%hhX:%hhX:%hhX", cur->name,
                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
+    if (!msg_exist_channel(cur->llid))
+      KERR("ERROR %s", cur->name);
+    else
+      rpct_send_sigdiag_msg(cur->llid, type_hop_c2c, msg);
     hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     result = 0;
     }

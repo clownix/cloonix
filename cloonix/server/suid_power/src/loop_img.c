@@ -30,8 +30,8 @@
 #include "io_clownix.h"
 #include "launcher.h"
 #include "config_json.h"
-#include "cnt.h"
-#include "cnt_utils.h"
+#include "crun.h"
+#include "crun_utils.h"
 
 
 struct t_elem;
@@ -164,7 +164,7 @@ static int losetup_get(char *bulk, char *image, char *resp)
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s -l | grep %s/%s | awk '{print $1}'", losetup, bulk, image);
-  fp = my_popen(cmd, "r");
+  fp = popen(cmd, "r");
   if (fp == NULL)
     KERR("ERROR %s %s", bulk, image);
   else
@@ -173,7 +173,6 @@ static int losetup_get(char *bulk, char *image, char *resp)
       pclose(fp);
     else
       {
-      pclose(fp);
       ptr = strchr(resp, '\r');
       if (ptr) 
         *ptr = 0;
@@ -184,6 +183,7 @@ static int losetup_get(char *bulk, char *image, char *resp)
         KERR("%s", cmd);
       else
         result = 0;
+      pclose(fp);
       }
     }
   return result;
@@ -208,7 +208,7 @@ static int loop_mount_create(char *bulk, char *image, int is_persistent)
     memset(cmd, 0, 2*MAX_PATH_LEN);
     snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -fPL %s/%s 2>&1",
              losetup, bulk, image);
-    fp = my_popen(cmd, "r");
+    fp = popen(cmd, "r");
     if (fp == NULL)
       KERR("ERROR %s %s", bulk, image);
     else if (fgets(resp, MAX_PATH_LEN-1, fp))
@@ -225,9 +225,9 @@ static int loop_mount_create(char *bulk, char *image, int is_persistent)
       else
         {
         memset(cmd, 0, 2*MAX_PATH_LEN);
-        snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -o loop %s %s/mnt/%s 2>&1",
-                 mount, resp, bulk, image);
-        fp = my_popen(cmd, "r");
+        snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -o loop %s %s/%s 2>&1",
+                 mount, resp, get_mnt_loop_dir(), image);
+        fp = popen(cmd, "r");
         if (fp == NULL)
           KERR("ERROR %s %s %s", bulk, image, resp);
         else
@@ -245,17 +245,14 @@ static int loop_mount_create(char *bulk, char *image, int is_persistent)
     {
     memset(cmd, 0, 2*MAX_PATH_LEN);
     snprintf(cmd, 2*MAX_PATH_LEN-1,
-             "%s %s/%s  %s/mnt/%s 2>&1", ext4fuse, bulk, image, bulk, image);
-//    snprintf(cmd, 2*MAX_PATH_LEN-1,
-//             "/usr/bin/nsenter -t %d -m %s %s/%s  %s/mnt/%s 2>&1",
-//             getpid(), ext4fuse, bulk, image, bulk, image);
-    fp = my_popen(cmd, "r");
+    "%s %s/%s  %s/%s 2>&1", ext4fuse, bulk, image, get_mnt_loop_dir(), image);
+    fp = popen(cmd, "r");
     if (fp == NULL)
       KERR("ERROR %s", cmd);
     else if (fgets(resp, MAX_PATH_LEN-1, fp))
       {
-      pclose(fp);
       KERR("ERROR %s %s", cmd, resp);
+      pclose(fp);
       }
     else
       {
@@ -280,19 +277,21 @@ static int loop_mount_exists(char *bulk, char *image, int is_persistent)
 
   memset(cmd, 0, 2*MAX_PATH_LEN);
   memset(mnt, 0, MAX_PATH_LEN);
-  snprintf(mnt, MAX_PATH_LEN-1, "%s/mnt/%s", bulk, image);
-
+  snprintf(mnt, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
   if (is_persistent)
     {
     if (!losetup_get(bulk, image, resp))
       {
       snprintf(cmd, 2*MAX_PATH_LEN-1,
                "%s | grep %s | awk '{print $3}' 2>&1", mount, resp);
-      fp = my_popen(cmd, "r");
+      fp = popen(cmd, "r");
       if (fp == NULL)
         KERR("ERROR %s %s", bulk, image);
       else if (!fgets(resp, MAX_PATH_LEN-1, fp))
+        {
+        KERR("ERROR %s %s %s", bulk, image, cmd);
         pclose(fp);
+        }
       else
         {
         pclose(fp);
@@ -310,13 +309,15 @@ static int loop_mount_exists(char *bulk, char *image, int is_persistent)
   else
     {
     snprintf(cmd, 2*MAX_PATH_LEN-1,
-             "%s | grep fuse.ext4fuse | grep %s | awk '{print $3}' 2>&1",
-             mount, mnt);
-    fp = my_popen(cmd, "r");
+    "%s | grep fuse.ext4fuse | grep %s | awk '{print $3}'", mount, mnt);
+    fp = popen(cmd, "r");
     if (fp == NULL)
       KERR("ERROR %s %s", bulk, image);
     else if (!fgets(resp, MAX_PATH_LEN-1, fp))
+      {
+      KERR("ERROR %s %s %s", bulk, image, cmd);
       pclose(fp);
+      }
     else
       {
       pclose(fp);
@@ -326,7 +327,9 @@ static int loop_mount_exists(char *bulk, char *image, int is_persistent)
       ptr = strchr(resp, '\n');
       if (ptr)
         *ptr = 0;
-      if (!strcmp(resp, mnt))
+      if (strcmp(resp, mnt))
+        KERR("ERROR %s %s %s", bulk, image, resp);
+      else
         result = 1;
       }
     }
@@ -335,42 +338,53 @@ static int loop_mount_exists(char *bulk, char *image, int is_persistent)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timeout_del_path(void *data)
+{
+  char *pmnt = (char *)data;
+  if (rmdir(pmnt))
+    KERR("ERROR Dir: %s could not be deleted\n", pmnt);
+  free(data);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void mount_del(char *bulk, char *image,
                       char *cnt_dir, int is_persistent, char *loop)
 {
-  char mnt[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
   char resp[MAX_PATH_LEN];
   char *mount = get_mount_bin();
   char *umount = get_umount_bin();
   FILE *fp1, *fp2;
+  char *pmnt;
 
   memset(cmd, 0, 2*MAX_PATH_LEN);
   snprintf(cmd, 2*MAX_PATH_LEN-1,
            "%s | grep %s | awk '{print $3}' 2>&1",
            mount, cnt_dir);
-  fp1 = my_popen(cmd, "r");
+  fp1 = popen(cmd, "r");
   if (fp1 == NULL)
     KERR("ERROR %s", cmd);
   else if (fgets(resp, MAX_PATH_LEN-1, fp1))
     {
     memset(cmd, 0, 2*MAX_PATH_LEN);
-    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", umount, resp);
-    fp2 = my_popen(cmd, "r");
+    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s 2>&1", umount, resp);
+    fp2 = popen(cmd, "r");
     if (fp2 == NULL)
       KERR("ERROR %s", cmd);
-    pclose(fp2);
+    else
+      pclose(fp2);
     }
   pclose(fp1);
   memset(cmd, 0, 2*MAX_PATH_LEN);
   if (is_persistent)
-    snprintf(cmd, MAX_PATH_LEN-1, "%s | grep %s | awk '{print $3}'",
+    snprintf(cmd, MAX_PATH_LEN-1, "%s | grep %s | awk '{print $3}' 2>&1",
              mount, loop);
   else
     snprintf(cmd, MAX_PATH_LEN-1,
-             "%s | grep fuse.ext4fuse | grep %s/mnt/%s | awk '{print $3}' 2>&1",
-             mount , bulk, image);
-  fp1 = my_popen(cmd, "r");
+             "%s | grep fuse.ext4fuse | grep %s/%s | awk '{print $3}' 2>&1",
+             mount , get_mnt_loop_dir(), image);
+  fp1 = popen(cmd, "r");
   if (fp1 == NULL)
     KERR("ERROR %s", cmd);
   else
@@ -378,18 +392,19 @@ static void mount_del(char *bulk, char *image,
     if (fgets(resp, MAX_PATH_LEN-1, fp1))
       {
       memset(cmd, 0, 2*MAX_PATH_LEN);
-      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", umount, resp);
-      fp2 = my_popen(cmd, "r");
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s 2>&1", umount, resp);
+      fp2 = popen(cmd, "r");
       if (fp2 == NULL)
         KERR("ERROR %s", cmd);
       else
         {
-        if (fgets(resp, MAX_PATH_LEN-1, fp1))
+        if (fgets(resp, MAX_PATH_LEN-1, fp2))
           KERR("ERROR %s %s", cmd, resp);
+        pmnt = (char *) malloc(MAX_PATH_LEN);
+        memset(pmnt, 0, MAX_PATH_LEN);
+        snprintf(pmnt, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
+        clownix_timeout_add(100, timeout_del_path, (void *)pmnt, NULL, NULL);
         pclose(fp2);
-        snprintf(mnt, MAX_PATH_LEN-1, "%s/mnt/%s", bulk, image);
-        if (rmdir(mnt))
-          KERR("ERROR Dir: %s could not be deleted\n", mnt);
         }
       }
     pclose(fp1);
@@ -449,7 +464,7 @@ static void losetup_del(char *loop)
   FILE *fp;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s -d %s 2>&1", losetup, loop);
-  fp = my_popen(cmd, "r");
+  fp = popen(cmd, "r");
   if (fp == NULL)
     KERR("ERROR %s", loop);
   else
@@ -521,7 +536,7 @@ char *loop_img_get(char *name, char *bulk, char *image)
   char pth[MAX_PATH_LEN];
   memset(mnt, 0, MAX_PATH_LEN);
   memset(pth, 0, MAX_PATH_LEN);
-  snprintf(mnt, MAX_PATH_LEN-1, "%s/mnt/%s", bulk, image);
+  snprintf(mnt, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
   snprintf(pth, MAX_PATH_LEN-1, "%s/%s", bulk, image);
   cur = find_loop(pth); 
   elem = find_elem(name);

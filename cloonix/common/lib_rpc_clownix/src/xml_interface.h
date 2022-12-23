@@ -215,13 +215,25 @@
                               "  <tid> %d </tid>\n"\
                               "  nb:%d \n"
 
-#define SLOWPERIODIC_QCOW2_C     "</slowperiodic_qcow2>"
+#define SLOWPERIODIC_QCOW2_C  "</slowperiodic_qcow2>"
 /*---------------------------------------------------------------------------*/
-#define SLOWPERIODIC_IMG_O   "<slowperiodic_img>\n"\
-                             "  <tid> %d </tid>\n"\
-                             "  nb:%d \n"
+#define SLOWPERIODIC_IMG_O    "<slowperiodic_img>\n"\
+                              "  <tid> %d </tid>\n"\
+                              "  nb:%d \n"
 
-#define SLOWPERIODIC_IMG_C     "</slowperiodic_img>"
+#define SLOWPERIODIC_IMG_C    "</slowperiodic_img>"
+/*---------------------------------------------------------------------------*/
+#define SLOWPERIODIC_DOCKER_O "<slowperiodic_docker>\n"\
+                              "  <tid> %d </tid>\n"\
+                              "  nb:%d \n"
+
+#define SLOWPERIODIC_DOCKER_C "</slowperiodic_docker>"
+/*---------------------------------------------------------------------------*/
+#define SLOWPERIODIC_PODMAN_O "<slowperiodic_podman>\n"\
+                              "  <tid> %d </tid>\n"\
+                              "  nb:%d \n"
+
+#define SLOWPERIODIC_PODMAN_C "</slowperiodic_podman>"
 /*---------------------------------------------------------------------------*/
 #define SLOWPERIODIC_SPIC  "<slowperiodic_spic>\n"\
                            "  name:%s \n"\
@@ -255,6 +267,7 @@
 /*---------------------------------------------------------------------------*/
 #define ADD_CNT_O         "<add_cnt>\n"\
                          "  <tid> %d </tid>\n"\
+                         "  <brandtype> %s </brandtype>\n"\
                          "  <name> %s </name>\n"\
                          "  <is_persistent> %d </is_persistent>\n"\
                          "  <vm_id> %d </vm_id>\n"\
@@ -436,6 +449,7 @@
 
 
 #define EVENT_TOPO_CNT_O      "<cnt>\n"\
+                              "  brandtype: %s \n"\
                               "  name: %s \n"\
                               "  is_persistent: %d \n"\
                               "  vm_id: %d \n"\

@@ -23,7 +23,7 @@ cloonix_gui $NET
 
 #######################################################################
 for i in 1 2 ; do
-  cloonix_cli $NET add cnt Crun${i} eth=ss ${DIST}.img
+  cloonix_cli $NET add cru Crun${i} eth=ss ${DIST}.img
   cloonix_cli $NET add lan Crun${i} 0 lan1
 done
 #----------------------------------------------------------------------

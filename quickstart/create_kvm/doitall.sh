@@ -3,9 +3,9 @@ set -e
 
 HERE=`pwd`
 
-LIST="openwrt \
+LIST="centos9 \
+      openwrt \
       jammy \
-      centos8 \
       bullseye \
       fedora36 \
       bookworm"

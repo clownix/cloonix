@@ -40,12 +40,15 @@
 #include "lan_to_name.h"
 #include "doors_rpc.h"
 #include "doorways_mngt.h"
+#include "crun.h"
+#include "docker.h"
 
 typedef struct t_cnt_delete
 {
   int llid;
   int cli_llid;
   int cli_tid;
+  char brandtype[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   int count;
 } t_cnt_delete;
@@ -67,7 +70,7 @@ static int get_nb_cnt(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_cnt *find_cnt(char *name)
+t_cnt *find_cnt(char *name)
 {
   t_cnt *cur = g_head_cnt;
   while (cur)
@@ -142,7 +145,6 @@ static int free_cnt(char *name)
         lan_del_name(cur->att_lan[i].lan_added, item_cnt, name, i);
       }
     layout_del_vm(name);
-    cfg_free_obj_id(cur->cnt.vm_id);
     if (cur->prev)
       cur->prev->next = cur->next;
     if (cur->next)
@@ -157,8 +159,35 @@ static int free_cnt(char *name)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+int cnt_free_cnt(char *name)
+{
+  t_cnt *cur = find_cnt(name);
+  int result;
+  if (cur != NULL)
+    cfg_free_obj_id(cur->cnt.vm_id);
+  result = free_cnt(name);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+
 /*****************************************************************************/
-static int send_sig_suid_power(int llid, char *msg)
+int send_pol_suid_power(int llid, char *msg)
+{
+  int result = -1;
+  if ((llid) && (msg_exist_channel(llid)))
+    {
+    hop_event_hook(llid, FLAG_HOP_POLDIAG, msg);
+    rpct_send_poldiag_msg(llid, type_hop_suid_power, msg);
+    result = 0;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int send_sig_suid_power(int llid, char *msg)
 {
   int result = -1;
   if ((llid) && (msg_exist_channel(llid)))
@@ -172,7 +201,7 @@ static int send_sig_suid_power(int llid, char *msg)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void cnt_vhost_begin(t_cnt *cnt)
+void cnt_vhost_and_doors_begin(t_cnt *cnt)
 {
   char *eth_name, *name;
   int i;
@@ -183,6 +212,8 @@ static void cnt_vhost_begin(t_cnt *cnt)
     if (msg_send_vhost_up(name, i, eth_name))
       KERR("ERROR KVMETH %s %d %s", name, i, eth_name);
     }
+  doors_send_del_vm(get_doorways_llid(), 0, name);
+  doors_send_add_vm(get_doorways_llid(), 0, name, utils_get_cnt_dropbear(name));
 }
 /*---------------------------------------------------------------------------*/
 
@@ -308,162 +339,6 @@ t_topo_endp *cnt_translate_topo_endp(int *nb)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void cnt_sigdiag_resp(int llid, char *line)
-{
-  int crun_pid;
-  t_cnt *cur;
-  char name[MAX_NAME_LEN];
-  char req[MAX_PATH_LEN];
-  memset(req, 0, MAX_PATH_LEN);
-
-  if (sscanf(line, 
-  "cloonsuid_cnt_create_net_resp_ok name=%s", name) == 1)
-    {
-    cur = find_cnt(name);
-    if (cur == NULL) 
-      KERR("ERROR %s", name);
-    else
-      {
-      snprintf(req, MAX_PATH_LEN-1, 
-               "cloonsuid_cnt_create_config_json name=%s is_persistent=%d",
-               name, cur->cnt.is_persistent);
-      if (send_sig_suid_power(llid, req))
-        KERR("ERROR %d %s", llid, name);
-      }
-    }
-
-  else if (sscanf(line,
-  "cloonsuid_cnt_create_config_json_resp_ok name=%s", name) == 1)
-    {
-    cur = find_cnt(name);
-    if (cur == NULL)
-      KERR("ERROR %s", name);
-    else
-      {
-      snprintf(req, MAX_PATH_LEN-1,
-               "cloonsuid_cnt_create_loop_img name=%s is_persistent=%d",
-               name, cur->cnt.is_persistent);
-      if (send_sig_suid_power(llid, req))
-        KERR("ERROR %d %s", llid, name);
-      }
-    }
-
-  else if (sscanf(line,
-  "cloonsuid_cnt_create_loop_img_resp_ok name=%s", name) == 1)
-    {
-    cur = find_cnt(name);
-    if (cur == NULL)
-      KERR("ERROR %s", name);
-    else
-      {
-      snprintf(req, MAX_PATH_LEN-1,
-               "cloonsuid_cnt_create_overlay name=%s is_persistent=%d",
-               name, cur->cnt.is_persistent);
-      if (send_sig_suid_power(llid, req))
-        KERR("ERROR %d %s", llid, name);
-      }
-    }
-
-  else if (sscanf(line,
-  "cloonsuid_cnt_create_overlay_resp_ok name=%s", name) == 1)
-    {
-    cur = find_cnt(name);
-    if (cur == NULL)
-      KERR("ERROR %s", name);
-    else
-      {
-      snprintf(req, MAX_PATH_LEN-1,
-               "cloonsuid_cnt_create_crun_start name=%s", name);
-      if (send_sig_suid_power(llid, req))
-        KERR("ERROR %d %s", llid, name);
-      }
-    }
-
-  else if (sscanf(line,
-  "cloonsuid_cnt_create_crun_start_resp_ok name=%s crun_pid=%d",
-  name, &crun_pid) == 2)
-    {
-    cur = find_cnt(name);
-    if (cur == NULL)
-      KERR("ERROR %s", name);
-    else
-      {
-      cur->crun_pid = crun_pid;
-      utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
-      cnt_vhost_begin(cur);
-      doors_send_del_vm(get_doorways_llid(), 0, name);
-      doors_send_add_vm(get_doorways_llid(), 0, name, 
-                        utils_get_cnt_dropbear(name));
-      }
-    }
-
-  else if (sscanf(line, 
-  "cloonsuid_cnt_delete_resp_ok name=%s", name) == 1)
-    {
-    cur = find_cnt(name);
-    if (cur == NULL) 
-      KERR("ERROR %s", name);
-    else
-      {
-      utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
-      free_cnt(name);
-      }
-    }
-
-  else if (sscanf(line,
-  "cloonsuid_cnt_killed name=%s crun_pid=%d", name, &crun_pid) == 2)
-    {
-    KERR("ERROR %s", line);
-    cur = find_cnt(name);
-    if (cur == NULL) 
-      KERR("ERROR %s", name);
-    else
-      {
-      utils_send_status_ko(&(cur->cli_llid),&(cur->cli_tid),"CNT KILLED");
-      free_cnt(name);
-      }
-    }
-
-  else if ((sscanf(line,
-  "cloonsuid_cnt_create_net_resp_ko name=%s", name) == 1) ||
-           (sscanf(line,
-  "cloonsuid_cnt_create_overlay_resp_ko name=%s", name) == 1) ||
-           (sscanf(line,
-  "cloonsuid_cnt_create_crun_start_resp_ko name=%s", name) == 1) ||
-           (sscanf(line,
-  "cloonsuid_cnt_delete_resp_ko name=%s", name) == 1))
-    {
-    KERR("ERROR %s", line);
-    cur = find_cnt(name);
-    if (cur != NULL)
-      {
-      memset(req, 0, MAX_PATH_LEN);
-      snprintf(req, MAX_PATH_LEN-1,
-      "cloonsuid_cnt_ERROR name=%s", name);
-      if (send_sig_suid_power(llid, req))
-        KERR("ERROR %d %s", llid, name);
-      utils_send_status_ko(&(cur->cli_llid),&(cur->cli_tid),"CNT ERROR");
-      free_cnt(name);
-      }
-    }
-  else if (sscanf(line, 
-  "cloonsuid_cnt_ERROR name=%s", name) == 1)
-    {
-    KERR("ERROR %s", name);
-    cur = find_cnt(name);
-    if (cur != NULL)
-      {
-      utils_send_status_ko(&(cur->cli_llid),&(cur->cli_tid),"ERROR CNT");
-      free_cnt(name);
-      }
-    }
-
-  else
-    KERR("ERROR %s", line);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 int cnt_name_exists(char *name, int *nb_eth)
 {
   int result = 0;
@@ -503,14 +378,11 @@ int cnt_info(char *name, int *nb_eth, t_eth_table **eth_table)
 
 /*****************************************************************************/
 int cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
-                     t_topo_cnt *cnt, char *err)
+               t_topo_cnt *cnt, char *err)
 {
   int i, abort = 0, result = -1;
-  char req[2*MAX_PATH_LEN];
   char agent_dir[MAX_PATH_LEN];
-  char *image, *mac;
   char *cnt_dir = utils_get_cnt_dir();
-  char *agd = agent_dir; 
   char *eth_name;
 
   for (i=0; i<cnt->nb_tot_eth; i++)
@@ -519,8 +391,8 @@ int cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
         (cnt->eth_table[i].endp_type != endp_type_eths))
       {
       snprintf(err, MAX_PATH_LEN-1,
-      "ERROR %s eth%d must be vhost", cnt->name, i);
-      KERR("%s", err);
+               "%s eth%d must be vhost or spy", cnt->name, i);
+      KERR("ERROR %s", err);
       abort = 1;
       }
     eth_name = get_eth_name(vm_id, i);
@@ -529,43 +401,36 @@ int cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
     }
   if (abort == 0)
     {
-
+    result = 0;
     if (alloc_cnt(cli_llid, cli_tid, cnt,
                         vm_id, cnt_dir, err) == 0)
       {
       memset(agent_dir, 0, MAX_PATH_LEN);
       snprintf(agent_dir, MAX_PATH_LEN-1, 
       "%s/common/agent_dropbear/agent_bin_alien", cfg_get_bin_dir());
-      image = cnt->image;
-      memset(req, 0, 2*MAX_PATH_LEN);
-      snprintf(req, 2*MAX_PATH_LEN-1, 
-      "cloonsuid_cnt_create_net name=%s "
-      "bulk=%s image=%s nb=%d vm_id=%d cnt_dir=%s "
-      "agent_dir=%s is_persistent=%d customer_launch=%s",
-      cnt->name, cfg_get_bulk(), image, cnt->nb_tot_eth,
-      vm_id, cnt_dir, agd, cnt->is_persistent, cnt->customer_launch);
-      if (send_sig_suid_power(llid, req))
+      if (!strcmp(cnt->brandtype, "crun"))
         {
-        snprintf(err, MAX_PATH_LEN-1,
-        "ERROR %s Bad command create_net to suid_power", cnt->name);
-        KERR("%s", err);
-        free_cnt(cnt->name);
+        if (crun_create(llid, vm_id, cnt, agent_dir))
+          {
+          result = -1;
+          snprintf(err, MAX_PATH_LEN-1, "%s crun create", cnt->name);
+          KERR("ERROR %s", cnt->name);
+          free_cnt(cnt->name);
+          }
+        }
+      else if ((!strcmp(cnt->brandtype, "docker")) ||
+               (!strcmp(cnt->brandtype, "podman")))
+        {
+        if (docker_create(llid, vm_id, cnt, agent_dir))
+          {
+          result = -1;
+          snprintf(err,MAX_PATH_LEN-1,"err %s %s", cnt->name, cnt->brandtype);
+          KERR("ERROR %s", err);
+          free_cnt(cnt->name);
+          }
         }
       else
-        {
-        for (i=0; i<cnt->nb_tot_eth; i++)
-          {
-          memset(req, 0, 2*MAX_PATH_LEN);
-          mac = cnt->eth_table[i].mac_addr;
-          snprintf(req, 2*MAX_PATH_LEN-1,
-          "cloonsuid_cnt_create_eth name=%s num=%d "
-          "mac=0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx",
-          cnt->name, i, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-          if (send_sig_suid_power(llid, req))
-            KERR("ERROR %s", cnt->name);
-          }
-        result = 0;
-        }
+        KOUT("ERROR TYPE %s", cnt->brandtype);
       }
     }
   return result;
@@ -592,7 +457,9 @@ static void timer_cnt_delete(void *data)
       send_status_ko(cd->cli_llid, cd->cli_tid, err);
     }
   else if (msg_ovsreq_get_qty() > 50)
+    {
     clownix_timeout_add(10, timer_cnt_delete, (void *) cd, NULL, NULL);
+    }
   else
     {
     for (i=0; i<cur->cnt.nb_tot_eth; i++)
@@ -662,7 +529,14 @@ static void timer_cnt_delete(void *data)
         if (cannot_be_deleted)
           KERR("ERROR DEL KVM ETH %s", cd->name);
         memset(req, 0, MAX_PATH_LEN);
-        snprintf(req,MAX_PATH_LEN-1,"cloonsuid_cnt_delete name=%s",cd->name);
+        if (!strcmp(cur->cnt.brandtype, "crun"))
+          snprintf(req,MAX_PATH_LEN-1,"cloonsuid_crun_delete name=%s", cd->name);
+        else if ((!strcmp(cur->cnt.brandtype, "docker")) ||
+                 (!strcmp(cur->cnt.brandtype, "podman")))
+          snprintf(req,MAX_PATH_LEN-1,"cloonsuid_docker_delete brandtype=%s name=%s",
+          cd->brandtype, cd->name);
+        else
+          KOUT("ERROR TYPE %s", cur->cnt.brandtype);
         doors_send_del_vm(get_doorways_llid(), 0, cd->name);
         if (send_sig_suid_power(cd->llid, req))
           {
@@ -711,6 +585,7 @@ int cnt_delete(int llid, int cli_llid, int cli_tid, char *name)
     cd->llid = llid;
     cd->cli_llid = cli_llid;
     cd->cli_tid = cli_tid;
+    strncpy(cd->brandtype, cur->cnt.brandtype, MAX_NAME_LEN-1);
     strncpy(cd->name, name, MAX_NAME_LEN-1);
     timer_cnt_delete((void *) cd);
     result = 0;
@@ -741,12 +616,18 @@ static void error_timer_beat_action(int llid, t_cnt *cur)
 {
   char req[MAX_PATH_LEN];
   memset(req, 0, MAX_PATH_LEN);
-  snprintf(req, MAX_PATH_LEN-1,
-  "cloonsuid_cnt_ERROR name=%s", cur->cnt.name);
+  if (!strcmp(cur->cnt.brandtype, "crun"))
+    snprintf(req, MAX_PATH_LEN-1, "cloonsuid_crun_ERROR name=%s", cur->cnt.name);
+  else if ((!strcmp(cur->cnt.brandtype, "docker")) ||
+           (!strcmp(cur->cnt.brandtype, "podman")))
+    snprintf(req, MAX_PATH_LEN-1, "cloonsuid_docker_ERROR brandtype=%s name=%s",
+    cur->cnt.brandtype, cur->cnt.name);
+  else
+    KOUT("ERROR TYPE %s", cur->cnt.brandtype);
   if (send_sig_suid_power(llid, req))
     KERR("ERROR %d %s", llid, cur->cnt.name);
   utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), "TIMOUT");
-  free_cnt(cur->cnt.name);
+  cnt_free_cnt(cur->cnt.name);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -804,7 +685,7 @@ int  cnt_get_all_pid(t_lst_pid **lst_pid)
   event_print("%s", __FUNCTION__);
   while(cur)
     {
-    if (cur->crun_pid)
+    if (cur->cnt_pid)
       result++;
     cur = cur->next;
     }
@@ -816,10 +697,10 @@ int  cnt_get_all_pid(t_lst_pid **lst_pid)
     i = 0;
     while(cur)
       {
-      if (cur->crun_pid)
+      if (cur->cnt_pid)
         {
         strncpy(glob_lst[i].name, cur->cnt.name, MAX_NAME_LEN-1);
-        glob_lst[i].pid = cur->crun_pid;
+        glob_lst[i].pid = cur->cnt_pid;
         i++;
         }
       cur = cur->next;
@@ -833,8 +714,7 @@ int  cnt_get_all_pid(t_lst_pid **lst_pid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int cnt_add_lan(int llid, int tid, char *name, int num,
-                      char *lan, char *err)
+int cnt_add_lan(int llid, int tid, char *name, int num, char *lan, char *err)
 {
   int result = -1;
   t_cnt *cur = find_cnt(name);
@@ -899,8 +779,7 @@ int cnt_add_lan(int llid, int tid, char *name, int num,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int cnt_del_lan(int llid, int tid, char *name, int num,
-                      char *lan, char *err)
+int cnt_del_lan(int llid, int tid, char *name, int num, char *lan, char *err)
 {
   int val, result = -1;
   t_cnt *cur = find_cnt(name);

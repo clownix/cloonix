@@ -120,7 +120,10 @@ void client_sav_list_commands(int tid, t_list_commands_cb cb, char *dirpath);
 void client_req_pids(int tid, t_pid_cb cb);
 
 void client_req_eventfull(t_eventfull_cb cb);
-void client_req_slowperiodic(t_slowperiodic_cb cb_qcow2, t_slowperiodic_cb cb_img);
+void client_req_slowperiodic(t_slowperiodic_cb cb_qcow2,
+                             t_slowperiodic_cb cb_img,
+                             t_slowperiodic_cb cb_docker,
+                             t_slowperiodic_cb cb_podman);
 
 int cmd_ftopo_recv(char *topo_dir, t_progress_txt_cb pcb);
 

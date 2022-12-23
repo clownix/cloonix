@@ -65,6 +65,7 @@
 #include "ovs_c2c.h"
 #include "suid_power.h"
 #include "cnt.h"
+#include "docker.h"
 
 
 
@@ -235,7 +236,6 @@ static void mk_and_tst_work_path(void)
 {
   char path1[MAX_PATH_LEN];
   char path2[MAX_PATH_LEN];
-  char bulk_mnt[MAX_PATH_LEN];
   char *ptr;
   memset(path1, 0, MAX_PATH_LEN);
   memset(path2, 0, MAX_PATH_LEN);
@@ -279,11 +279,8 @@ static void mk_and_tst_work_path(void)
     printf("%d Bad work dir in config: %s\n", __LINE__, cfg_get_root_work());
     KOUT("%s", cfg_get_root_work());
     }
-  memset(bulk_mnt, 0, MAX_PATH_LEN);
-  snprintf(bulk_mnt, MAX_PATH_LEN-1, "%s/mnt", cfg_get_bulk());
   my_mkdir(cfg_get_root_work(), 0);
   my_mkdir(cfg_get_bulk(), 0);
-  my_mkdir(bulk_mnt, 0);
   mk_cnt_dir();
   mk_endp_dir();
   mk_dtach_dir();
@@ -616,6 +613,7 @@ int main (int argc, char *argv[])
   qga_dialog_init();
   suid_power_init();
   cnt_init();
+  docker_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
   layout_topo_init();

@@ -2,7 +2,6 @@
 
 HERE=`pwd`
 CLOONIX_COMMON=../../common
-NINJA=${HERE}/${CLOONIX_COMMON}/meson_ninja
 IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
 GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
@@ -19,14 +18,6 @@ if [ ! -f ${RPC_CLOWNIX}/librpc_clownix.a ]; then
   cd ${RPC_CLOWNIX}
   ./cmd
 fi
-if [ ! -f ${NINJA}/ninja/ninja ]; then
-  cd ${NINJA}
-  ./cmd
-  cd ${HERE}
-fi
-
-export PATH=${NINJA}/ninja:${NINJA}/meson:$PATH
-
 cat > meson.build << EOF
 project('cloonix_ovs_a2b', 'c')
 
@@ -58,7 +49,7 @@ executable('cloonix_ovs_a2b', sources, include_directories : incdir,
 
 EOF
 
-meson.py build
+meson build
 cd build
 ninja
 DESTDIR=${HERE} ninja install

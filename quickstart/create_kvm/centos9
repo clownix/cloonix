@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
-ROOTFS=/root/centos8
-MIRROR=https://mirrors.edge.kernel.org/centos/8-stream
+ROOTFS=/root/centos9
+MIRROR="https://mirror.stream.centos.org/9-stream"
+
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -47,6 +48,7 @@ fct_umount_wkmntloops()
 
 #########################################################################
 fct_check_uid
+#----------------------------------------------------------------------#
 set +e
 for i in qemu-img rpm dnf blkid wget sgdisk partprobe; do
   path_bin=$(which $i)
@@ -63,37 +65,18 @@ fi
 
 fct_check_losetup
 set -e
-fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
-set +e
-for i in ${MIRROR}/BaseOS/x86_64/os ${MIRROR}/AppStream/x86_64/os;
-do
-  wget --no-check-certificate --delete-after ${i} 1>/dev/null 2>&1
-  OK=$?
-  if [ "$OK" != "0" ]; then
-    echo ERROR wget ${i}
-    exit 1
-  fi
-  echo
-  echo REPO OK ${i}
-  echo
-done
-set -e
+fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
 mkdir -p /tmp/wkmntloops/etc/yum.repos.d
 
 for i in AppStream \
          BaseOS \
-         Devel \
-         HighAvailability \
-         PowerTools \
-         centosplus \
-         cr \
-         extras ; do
+         CRB; do
 
 cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-${i}.repo << EOF
 [${i}]
-name=CentOS-8 - ${i}
+name=CentOS-9 - ${i}
 baseurl=${MIRROR}/${i}/x86_64/os
 gpgcheck=0
 EOF
@@ -101,7 +84,7 @@ EOF
 done
 
 
-dnf --releasever=8 --installroot=/tmp/wkmntloops -y install dnf
+dnf --releasever=9 --installroot=/tmp/wkmntloops -y install dnf
 #-----------------------------------------------------------------------#
 rm -f /tmp/wkmntloops/etc/resolv.conf
 cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
@@ -111,12 +94,12 @@ list_pkt+="xorg-x11-xauth iputils dhclient sudo kbd "
 list_pkt+="vim net-tools dracut qemu-guest-agent"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 sleep 5
-echo dnf --releasever=8 clean packages
-chroot /tmp/wkmntloops/ dnf --releasever=8 clean packages
-echo dnf --releasever=8 -y update
-chroot /tmp/wkmntloops/ dnf --releasever=8 -y update
-echo dnf --releasever=8 -y install
-chroot /tmp/wkmntloops/ dnf --releasever=8 -y install $list_pkt
+echo dnf --releasever=9 clean packages
+chroot /tmp/wkmntloops/ dnf --releasever=9 clean packages
+echo dnf --releasever=9 -y update
+chroot /tmp/wkmntloops/ dnf --releasever=9 -y update
+echo dnf --releasever=9 -y install
+chroot /tmp/wkmntloops/ dnf --releasever=9 -y install $list_pkt
 chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
 
 KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
@@ -126,7 +109,7 @@ printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" \
 for i in $(ls /tmp/wkmntloops/boot | grep vmlinuz);do vmlinuz=$i;done
 version=${vmlinuz#*vmlinuz-}
 echo $version
-list="virtio_scsi virtio_blk virtio_console" 
+list="sd_mod virtio_scsi" 
 chroot /tmp/wkmntloops/ dracut --add-drivers "$list" --force /boot/initramfs-${version}.img $version 
 
 chroot /tmp/wkmntloops/ grub2-mkconfig -o /boot/grub2/grub.cfg
@@ -137,7 +120,6 @@ echo $uuid
 
 
 sed -i s"/BLACKLIST_RPC/#BLACKLIST_RPC/" /tmp/wkmntloops/etc/sysconfig/qemu-ga
-
 
 sync /dev/loop0
 umount /tmp/wkmntloops/{dev,proc,sys}

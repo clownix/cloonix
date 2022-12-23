@@ -1604,7 +1604,7 @@ diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
      const gchar *acl_helper = g_getenv("SPICE_USB_ACL_BINARY");
      if (acl_helper == NULL)
 -        acl_helper = ACL_HELPER_PATH"/spice-client-glib-usb-acl-helper";
-+        acl_helper = "/usr/local/bin/cloonix/common/spice/spice_lib/libexec/spice-client-glib-usb-acl-helper";
++        acl_helper = "/usr/local/bin/cloonix/client/spice/spice-client-glib-usb-acl-helper";
      gchar *argv[] = { (char*)acl_helper, NULL };
      gint in, out;
      gchar buf[128];

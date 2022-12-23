@@ -264,6 +264,7 @@ void my_mv_dir(char *src_dir,char *dst_dir, char *src_name,char *dst_name)
 void mk_cnt_dir(void)
 {
   my_mkdir(utils_get_cnt_dir(), 1);
+  my_mkdir(utils_get_mnt_dir(), 1);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -36,7 +36,7 @@ int cloonix_get_pid(void);
 
 #define MAX_NAME_LEN 64
 
-#define MAX_PATH_LEN 256
+#define MAX_PATH_LEN 300
 
 #define KERR(format, a...)                               \
  do {                                                    \
@@ -175,6 +175,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define A2B_DIR "a2b"
 #define C2C_DIR "c2c"
 #define CNT_DIR "cnt"
+#define MNT_DIR "mnt"
 
 #define MAX_STATS_ITEMS 30
 
@@ -297,6 +298,7 @@ typedef struct t_topo_kvm
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_cnt
 {
+  char brandtype[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   int  is_persistent;
   int  ping_ok;

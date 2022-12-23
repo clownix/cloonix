@@ -347,9 +347,25 @@ static void slowperiodic_qcow2_cb(int nb, t_slowperiodic *spic)
 /****************************************************************************/
 static void slowperiodic_img_cb(int nb, t_slowperiodic *spic)
 {
-  set_bulcnt(nb, spic);
+  set_bulcru(nb, spic);
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void slowperiodic_docker_cb(int nb, t_slowperiodic *spic)
+{
+  set_buldoc(nb, spic);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void slowperiodic_podman_cb(int nb, t_slowperiodic *spic)
+{
+  set_bulpod(nb, spic);
+}
+/*--------------------------------------------------------------------------*/
+
+
 
 /****************************************************************************/
 static void timer_enqueue_eventfull(void *data)
@@ -412,7 +428,10 @@ void timer_topo_subscribe(void *data)
   client_topo_small_event_sub(0, topo_small_event_cb);
   layout_set_ready_for_send();
   client_req_eventfull(eventfull_cb);
-  client_req_slowperiodic(slowperiodic_qcow2_cb, slowperiodic_img_cb);
+  client_req_slowperiodic(slowperiodic_qcow2_cb,
+                          slowperiodic_img_cb,
+                          slowperiodic_docker_cb,
+                          slowperiodic_podman_cb);
 }
 /*--------------------------------------------------------------------------*/
 

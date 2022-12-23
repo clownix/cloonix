@@ -1,17 +1,37 @@
 -----------------------------------------------------------------------------
-AGPLv3 tool to create networks of kvm virtual machines or crun containers
-connected through the openvswitch software.
-See directory cloonix for the LICENCE
-See clownix.net for a documentation (usually not up to date).
-http://clownix.net/doc_stored/build-26-00/html/index.html doc.
+Cloonix is an AGPLv3 software that constitute a tool to create networks of
+kvm virtual machines or crun, docker and podman containers.
+
+The network connecting the virtual machines and containers is created through
+the use of the openvswitch software running inside a net namespace so that
+your host is not polluted with bridges and "ip addr" on your host shows clean
+results.
+
+The openvswitch commands are simplified by cloonix which provides a very
+simple user interface to connect virtual machines and containers through
+virtual lans.
+
+Cloonix provides root access pseudo-ssh and pseudo-scp (ssh and scp equivalent)
+for every virtual machines or containers without use of any ip interface
+inside the virtual machines or container.
+
+Cloonix provides a graphical interactive canvas showing the topology for
+your network.
+
+See clownix.net for a documentation (which is usually not up to date).
+http://clownix.net/doc_stored/build-27-00/html/index.html doc.
 
 NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
-      inside the kvm guests to have the best of cloonix.
+      inside the kvm guests virtual machines to have the pseudo-ssh and
+      pseudo-scp.
+      For the cisco or mikrotik particular case, cloonix provides another
+      type of pseudo-ssh and pseudo-scp not using qemu-guest-agent but
+      entering through one of the ip interface of the virtual.
 
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-26-00
+http://clownix.net/downloads/cloonix-27-00
 
 -----------------------------------------------------------------------------
 THIS SOFTWARE HAS BEEN COMPILED AND TESTED ON:
@@ -21,24 +41,29 @@ THIS SOFTWARE HAS BEEN COMPILED AND TESTED ON:
             bullseye (debian 11),
             tumbleweed (rolling opensuse),
             fedora36
+            centos9
 
 -----------------------------------------------------------------------------
 INSTALL CLOONIX ON YOUR HOST:
 
-wget http://clownix.net/downloads/cloonix-26-00/cloonix-26-00.tar.gz
-tar xvf cloonix-26-00.tar.gz
-cd cloonix-26-00
+wget http://clownix.net/downloads/cloonix-27-00/cloonix-27-00.tar.gz
+tar xvf cloonix-27-00.tar.gz
+cd cloonix-27-00
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-26-00/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-27-00/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
 
------------------------------------------------------------------------------
-FOR KVM GET A WORKING QCOW AND PUT IT IN BULK:
+NOTE: Before calling ./install_depends, you can take out the installation
+      of the podman which is not necessary for using cloonix with kvm or
+      crun.
 
-wget http://clownix.net/downloads/cloonix-26-00/bulk/bookworm.qcow2.gz
+-----------------------------------------------------------------------------
+FOR KVM VIRTUAL MACHINE GET A WORKING QCOW AND PUT IT IN BULK:
+
+wget http://clownix.net/downloads/cloonix-27-00/bulk/bookworm.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cp bookworm.qcow2.gz ${HOME}/cloonix_data/bulk
@@ -46,9 +71,9 @@ cd ${HOME}/cloonix_data/bulk
 gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
-FOR CRUN GET A WORKING IMG AND PUT IT IN BULK:
+FOR CRUN CONTAINER GET A WORKING IMG AND PUT IT IN BULK:
 
-wget http://clownix.net/downloads/cloonix-26-00/bulk/bookworm.img.gz
+wget http://clownix.net/downloads/cloonix-27-00/bulk/bookworm.img.gz
 cp bookworm.img.gz ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
 gunzip bookworm.img.gz
@@ -68,9 +93,6 @@ do "sudo adduser ${USER} wireshark".
 -----------------------------------------------------------------------------
 LAUNCH CRUN EXAMPLE:
 
-For a quick test, you need the sudo program to elevate privileges to
-root level with no password for crun control.
-
 cd cloonix/quickstart
 ./ping_crun.sh
 
@@ -79,7 +101,7 @@ a double-click on the green interface gives a wireshark spy.
 
 Note: the containers have hardware coded ip_forward disable_ipv6,
 see in file cloonix/server/suid_power/src/config_json.h and change
-to your convenience.
+configuration to your convenience.
 
 -----------------------------------------------------------------------------
 CREATION OF THE QCOW2 AND IMG FILES:

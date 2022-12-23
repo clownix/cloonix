@@ -23,15 +23,14 @@ done
   echo
   echo BUILDING COMMON
   echo
-  sleep 1
 #----------------------------------------------------------
-  for i in meson_ninja \
-           agent_dropbear \
+  for i in agent_dropbear \
            xwy \
            lib_rpc_clownix \
            lib_utils \
            lib_rpc_doors \
-           lib_rpc_layout ; do
+           lib_rpc_layout \
+           spice_lib ; do
 
     cd ${CLOONIX_COMMON}/${i}
     echo
@@ -39,14 +38,12 @@ done
     echo ${CLOONIX_COMMON}/${i}
     echo
     echo
-    sleep 2
     ./cmd
   done
 #----------------------------------------------------------
   echo
   echo BUILDING SERVER
   echo
-  sleep 1
 #----------------------------------------------------------
   for i in  ovs \
             doorways \
@@ -66,7 +63,6 @@ done
     echo ${CLOONIX_SERVER}/${i}
     echo
     echo
-    sleep 2
     cd ${CLOONIX_SERVER}/${i}
     ./cmd
   done
@@ -75,7 +71,6 @@ done
   echo
   echo BUILDING CLIENT
   echo
-  sleep 1
 #----------------------------------------------------------
   for i in  lib_client \
             ctrl \
@@ -94,7 +89,6 @@ done
     echo ${CLOONIX_CLIENT}/${i}
     echo
     echo
-    sleep 2
     cd ${CLOONIX_CLIENT}/${i}
     ./cmd
   done

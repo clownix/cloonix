@@ -222,7 +222,7 @@ static void update_cust(t_custom_vm *cust, GtkWidget *entry_name,
 /****************************************************************************/
 static void custom_vm_dialog(t_custom_vm *cust)
 {
-  int i, j, k, response, line_nb = 0;
+  int i, j, k, response, line_nb = 0, found=0;
   GSList *group = NULL;
   GtkWidget *entry_name, *entry_ram; 
   GtkWidget *entry_p9_host_share=NULL, *entry_cpu=NULL; 
@@ -230,12 +230,19 @@ static void custom_vm_dialog(t_custom_vm *cust)
   GtkWidget *has_no_qemu_ga, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
-  t_custom_vm *cust_vm;
-
-
 
   if (g_custom_dialog)
     return;
+
+  memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  for (i=0; i<g_nb_bulkvm; i++)
+    {
+    if (!strcmp(cust->kvm_used_rootfs, g_bulkvm_photo[i].name))
+      found = 1;
+    }
+  if ((found == 0) && (g_nb_bulkvm >= 1))
+    strncpy(cust->kvm_used_rootfs, g_bulkvm_photo[0].name, MAX_NAME_LEN-1);
+
   grid = gtk_grid_new();
   gtk_grid_insert_column(GTK_GRID(grid), 0);
   gtk_grid_insert_column(GTK_GRID(grid), 1);
@@ -285,7 +292,6 @@ static void custom_vm_dialog(t_custom_vm *cust)
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_ram), cust->mem);
   append_grid(grid, entry_ram, "Ram:", line_nb++);
 
-  cust_vm = &g_custom_vm;
 
   for (i=0; i<ETH_LINE_MAX; i++)
     {
@@ -295,7 +301,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
       k = i*ETH_TYPE_MAX + j;
       rad[k] = gtk_radio_button_new_with_label(group,lib[j]);
       group  = gtk_radio_button_get_group(GTK_RADIO_BUTTON(rad[k]));
-      if (cust_vm->eth_tab[i].endp_type == j+endp_type_none)
+      if (cust->eth_tab[i].endp_type == j+endp_type_none)
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[k]),TRUE);
       }
     }
@@ -312,9 +318,12 @@ static void custom_vm_dialog(t_custom_vm *cust)
 
   qcow2_rootfs = gtk_menu_button_new ();
   append_grid(grid, qcow2_rootfs, "Choice:", line_nb++);
-  bulkvm_menu = get_bulkvm();
-  gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
-  gtk_widget_show_all(bulkvm_menu);
+  if (g_nb_bulkvm > 0)
+    {
+    bulkvm_menu = get_bulkvm();
+    gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
+    gtk_widget_show_all(bulkvm_menu);
+    }
 
 
   gtk_box_pack_start(
@@ -341,11 +350,12 @@ static void custom_vm_dialog(t_custom_vm *cust)
 /*****************************************************************************/
 GtkWidget *get_bulkvm(void)
 {
-  int i;
-  GtkWidget *el, *menu = NULL;
+  int i, found = 0;
+  GtkWidget *el0, *el, *menu = NULL;
   GSList *group = NULL;
   gpointer data;
   memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  t_custom_vm *cust = &g_custom_vm;
   if (g_nb_bulkvm > 0)
     {
     menu = gtk_menu_new();
@@ -353,10 +363,23 @@ GtkWidget *get_bulkvm(void)
       {
       el = gtk_radio_menu_item_new_with_label(group, g_bulkvm_photo[i].name);
       if (i == 0)
+        {
+        el0 = el;
         group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(el));
+        }
       gtk_menu_shell_append(GTK_MENU_SHELL(menu), el);
       data = (gpointer) g_bulkvm_photo[i].name;
       g_signal_connect(G_OBJECT(el),"activate",(GCallback)qcow2_get,data);
+      if (!strcmp(cust->kvm_used_rootfs, g_bulkvm_photo[i].name))
+        {
+        found = 1;
+        gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el), TRUE);
+        }
+      }
+    if (found == 0)
+      {
+      strncpy(cust->kvm_used_rootfs, g_bulkvm_photo[0].name, MAX_NAME_LEN-1);
+      gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el0), TRUE);
       }
     }
   return menu;
@@ -458,7 +481,7 @@ void menu_dialog_kvm_init(void)
   g_custom_vm.mem = 2000;
   g_custom_vm.nb_tot_eth = 3;
   for (i=0; i<g_custom_vm.nb_tot_eth; i++)
-    g_custom_vm.eth_tab[i].endp_type = endp_type_ethv;
+    g_custom_vm.eth_tab[i].endp_type = endp_type_eths;
   g_custom_dialog = NULL;
   memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   g_nb_bulkvm = 0;

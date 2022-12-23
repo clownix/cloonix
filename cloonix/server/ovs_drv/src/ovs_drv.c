@@ -115,14 +115,14 @@ static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
   sprintf(arg[1], "link");
   sprintf(arg[2], "add");
   sprintf(arg[3], "name");
-  sprintf(arg[4], name);
+  sprintf(arg[4], "%s", name);
   sprintf(arg[5], "address");
-  sprintf(arg[6], mac);
+  sprintf(arg[6], "%s", mac);
   sprintf(arg[7], "type");
   sprintf(arg[8], "veth");
   sprintf(arg[9], "peer");
   sprintf(arg[10], "name");
-  sprintf(arg[11], vhost);
+  sprintf(arg[11], "%s", vhost);
   result = call_my_popen(ovs_dir, 12, arg, 2, __FUNCTION__, 1);
   if (result)
     KERR("ERROR %s %s", name, mac);
@@ -132,9 +132,9 @@ static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
     sprintf(arg[0], SBIN_IP);
     sprintf(arg[1], "link");
     sprintf(arg[2], "set");
-    sprintf(arg[3], vhost);
+    sprintf(arg[3], "%s", vhost);
     sprintf(arg[4], "netns");
-    sprintf(arg[5], get_ns());
+    sprintf(arg[5], "%s", get_ns());
     result = call_my_popen(ovs_dir, 6, arg, 2, __FUNCTION__, 2);
     if (result)
       KERR("ERROR %s %s", name, mac);
@@ -143,11 +143,11 @@ static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
       memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
       sprintf(arg[0], SBIN_IP);
       sprintf(arg[1], "-netns");
-      sprintf(arg[2], get_ns());
+      sprintf(arg[2], "%s", get_ns());
       sprintf(arg[3], "link");
       sprintf(arg[4], "set");
       sprintf(arg[5], "dev");
-      sprintf(arg[6], vhost);
+      sprintf(arg[6], "%s", vhost);
       sprintf(arg[7], "up");
       result = call_my_popen(ovs_dir, 8, arg, 2, __FUNCTION__, 3);
       if (result)
@@ -159,7 +159,7 @@ static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
         sprintf(arg[1], "link");
         sprintf(arg[2], "set");
         sprintf(arg[3], "dev");
-        sprintf(arg[4], name);
+        sprintf(arg[4], "%s", name);
         sprintf(arg[5], "up");
         result = call_my_popen(ovs_dir, 6, arg, 2, __FUNCTION__, 4);
         }

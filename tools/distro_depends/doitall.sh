@@ -1,9 +1,9 @@
 #/bin/bash
-set +e
+set -e
 
-LIST="centos8 \
+LIST="centos9  \
       fedora36 \
-      jammy \
+      jammy    \
       bookworm \
       bullseye \
       tumbleweed"

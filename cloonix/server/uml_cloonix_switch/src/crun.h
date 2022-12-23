@@ -15,15 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define UPPER "upper"
-#define WORKDIR "workdir"
-#define ROOTFS "rootfs"
-
-void cnt_kill_all(void);
-void cnt_recv_poldiag_msg(int llid, int tid, char *line);
-void cnt_recv_sigdiag_msg(int llid, int tid, char *line);
-void cnt_beat(int llid);
-void cnt_init(void);
+void crun_sigdiag_resp(int llid, char *line);
+int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent);
 /*--------------------------------------------------------------------------*/
 
 

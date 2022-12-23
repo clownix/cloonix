@@ -32,7 +32,7 @@ void callback_end(int tid, int status, char *err);
 
 
 /***************************************************************************/
-void help_add_cnt(char *line)
+void help_add_cru(char *line)
 {
   printf("\n\n\n %s <name> eth=<eth_description> <image> <customer_launch> [options]\n",
   line);
@@ -52,6 +52,50 @@ void help_add_cnt(char *line)
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
+
+/***************************************************************************/
+void help_add_doc(char *line)
+{
+  printf("\n\n\n %s <name> eth=<eth_description> <image> <customer_launch> [options]\n",
+  line);
+  printf("\n\timage is an existing docker image.");
+  printf("\n\tcustomer_launch is optionnal, a script that is in container.");
+  printf("\n\teth_description example:");
+  printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
+  printf("\n\tMax eth: %d", MAX_ETH_VM);
+  printf("\n\t[options]");
+  printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
+  printf("\n\nexample:\n\n");
+  printf("\n%s vm_name eth=sss docker_image_name\n", line);
+  printf("This will give 3 eth that are wireshark spy compatible\n");
+  printf("\n%s vm_name eth=vvv docker_image_name \"sleep 100\"\n", line);
+  printf("This will give 3 eth that are not spyable\n");
+  printf("\n\n\n");
+}
+/*-------------------------------------------------------------------------*/
+
+/***************************************************************************/
+void help_add_pod(char *line)
+{
+  printf("\n\n\n %s <name> eth=<eth_description> <image> <customer_launch> [options]\n",
+  line);
+  printf("\n\timage is an existing podman image.");
+  printf("\n\tcustomer_launch is optionnal, a script that is in container.");
+  printf("\n\teth_description example:");
+  printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
+  printf("\n\tMax eth: %d", MAX_ETH_VM);
+  printf("\n\t[options]");
+  printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
+  printf("\n\nexample:\n\n");
+  printf("\n%s vm_name eth=sss podman_image_name\n", line);
+  printf("This will give 3 eth that are wireshark spy compatible\n");
+  printf("\n%s vm_name eth=vvv podman_image_name \"sleep 100\"\n", line);
+  printf("This will give 3 eth that are not spyable\n");
+  printf("\n\n\n");
+}
+/*-------------------------------------------------------------------------*/
+
+
 
 /***************************************************************************/
 static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
@@ -96,7 +140,8 @@ static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
 /*-------------------------------------------------------------------------*/
 
 /***************************************************************************/
-static int local_add_cnt(char *name, int nb_tot_eth, t_eth_table *eth_tab,
+static int local_add_cnt(char *type, char *name, int nb_tot_eth,
+                         t_eth_table *eth_tab,
                          char *image, char *customer_launch,
                          int argc, char **argv)
 {
@@ -129,6 +174,7 @@ static int local_add_cnt(char *name, int nb_tot_eth, t_eth_table *eth_tab,
     {
     init_connection_to_uml_cloonix_switch();
     memset(&cnt, 0, sizeof(t_topo_cnt));
+    strncpy(cnt.brandtype, type, MAX_NAME_LEN-1);
     strncpy(cnt.name, name, MAX_NAME_LEN-1);
     cnt.is_persistent = persistent;
     cnt.nb_tot_eth = nb_tot_eth;
@@ -191,7 +237,7 @@ static int check_eth_desc(char *eth_desc, char *err,
 /*---------------------------------------------------------------------------*/
 
 /***************************************************************************/
-int cmd_add_cnt(int argc, char **argv)
+static int cmd_add_cnt(char *type, int argc, char **argv)
 {
   int i, nb_eth, non_opt_argc, result = -1;
   char *image, *customer_launch, *name;
@@ -217,12 +263,12 @@ int cmd_add_cnt(int argc, char **argv)
       name = argv[0];
       image = argv[2];
       if (non_opt_argc == 3)
-        result = local_add_cnt(name, nb_eth, etht, image, "sleep 1000",
+        result = local_add_cnt(type, name, nb_eth, etht, image, "sleep 1000",
                                argc-3, &(argv[3])); 
       else
         {
         customer_launch = argv[3];
-        result = local_add_cnt(name, nb_eth, etht, image, customer_launch,
+        result = local_add_cnt(type, name, nb_eth, etht, image, customer_launch,
                                argc-4, &(argv[4])); 
         }
       }
@@ -231,13 +277,26 @@ int cmd_add_cnt(int argc, char **argv)
 }
 /*-------------------------------------------------------------------------*/
 
+/***************************************************************************/
+int cmd_add_cru(int argc, char **argv)
+{
+  return cmd_add_cnt("crun", argc, argv);
+}
+/*-------------------------------------------------------------------------*/
 
+/***************************************************************************/
+int cmd_add_doc(int argc, char **argv)
+{
+  return cmd_add_cnt("docker", argc, argv);
+}
+/*-------------------------------------------------------------------------*/
 
-
-
-
-
-
+/***************************************************************************/
+int cmd_add_pod(int argc, char **argv)
+{
+  return cmd_add_cnt("podman", argc, argv);
+}
+/*-------------------------------------------------------------------------*/
 
 
 

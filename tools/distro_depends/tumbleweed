@@ -70,7 +70,6 @@ cloonix_ssh ${NET} ${NAME} "ip link set eth0 up"
 cloonix_ssh ${NET} ${NAME} "systemctl restart wickedd-dhcp4.service"
 cloonix_ssh ${NET} ${NAME} "systemctl restart wicked.service"
 #----------------------------------------------------------------------
-cloonix_ssh $NET ${NAME} "zypper ref"
 cloonix_ssh $NET ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
 cloonix_ssh $NET ${NAME} "zypper --non-interactive --no-gpg-checks update"
 cloonix_ssh $NET ${NAME} "zypper --non-interactive --no-gpg-checks install tar"
@@ -89,10 +88,6 @@ printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" > /tmp/grub
 cloonix_scp $NET /tmp/grub ${NAME}:/etc/default
 
 cloonix_ssh $NET ${NAME} "grub2-mkconfig -o /boot/grub2/grub.cfg"
-
-cloonix_ssh $NET ${NAME} "sed -i s/BindsTo/After/ /lib/systemd/system/qemu-guest-agent.service"
-cloonix_ssh $NET ${NAME} "echo \"WantedBy=multi-user.target\" >> /lib/systemd/system/qemu-guest-agent.service"
-cloonix_ssh $NET ${NAME} "systemctl enable qemu-guest-agent.service"
 
 cloonix_ssh $NET ${NAME} "sync"
 #----------------------------------------------------------------------

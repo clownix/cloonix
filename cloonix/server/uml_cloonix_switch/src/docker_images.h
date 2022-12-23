@@ -15,35 +15,18 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-typedef struct t_eth_mac
+typedef struct t_image_doc
 {
-  char mac[8];
-} t_eth_mac;
-
-void cnt_beat(int llid);
-char *get_losetup_bin(void);
-char *get_ext4fuse_bin(void);
-char *get_mount_bin(void);
-char *get_umount_bin(void);
-
-FILE *my_popen(const char *command, const char *type);
-int cnt_utils_unlink_sub_dir_files(char *dir);
-
-int cnt_utils_delete_crun_stop(char *name, int crun_pid);
-int cnt_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
-                             char *image, int is_persistent);
-int cnt_utils_delete_net(char *nspace);
-
-int cnt_utils_create_net(char *bulk, char *image, char *name, char *cnt_dir,
-                         char *nspace, int cloonix_rank, int vm_id,
-                         int nb_eth, t_eth_mac *eth_mac, char *agent_dir,
-                         char *customer_launch);
-
-int cnt_utils_create_crun_create(char *cnt_dir, char *name);
-int cnt_utils_create_crun_start(char *name);
-int cnt_utils_create_overlay(char *path, char *image, int is_persistent);
-int cnt_utils_create_config_json(char *path, char *rootfs, char *nspace,
-                                 char *cloonix_dropbear, 
-                                 char *mounttmp, int is_persistent);
-void cnt_utils_init(void);
+  char brandtype[MAX_NAME_LEN];
+  char image_name[MAX_NAME_LEN];
+  struct t_image_doc *next;
+} t_image_doc;
 /*--------------------------------------------------------------------------*/
+void add_slave_image_doc(char *brandtype, char *image_name);
+void clean_slave_image_chain(void);
+void swap_slave_master_image(void);
+int docker_images_exists(char *brandtype, char *image_name);
+int docker_image_get_list(char *brandname, t_slowperiodic **slowperiodic);
+void docker_images_init(void);
+/*--------------------------------------------------------------------------*/
+

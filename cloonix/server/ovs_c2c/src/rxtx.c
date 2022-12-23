@@ -53,10 +53,7 @@ void rxtx_tx_enqueue(int len, uint8_t *buf)
   g_buf_tx[2] = (len & 0xFF00) >> 8;
   g_buf_tx[3] =  len & 0xFF;
   if (g_mac_mangle)
-    {
-    if (packet_arp_mangle(udp2tap, len, buf))
-      KERR("ERROR %d", len);
-    }
+    packet_arp_mangle(udp2tap, len, buf);
   memcpy(g_buf_tx + HEADER_TAP_MSG, buf, len);  
   tx = write(g_fd_tx_to_tap, g_buf_tx, len + HEADER_TAP_MSG);
   if (tx != len + HEADER_TAP_MSG)
@@ -73,10 +70,7 @@ static void rxtx_packet_rx(int len, uint8_t *buf)
   if (green_light)
     {
     if (g_mac_mangle)
-      {
-      if (packet_arp_mangle(udp2tap, len, buf))
-        KERR("ERROR %d", len);
-      }
+      packet_arp_mangle(udp2tap, len, buf);
     burst = get_udp_burst_tx();
     memcpy(burst[0].buf, buf, len);
     burst[0].len = len;

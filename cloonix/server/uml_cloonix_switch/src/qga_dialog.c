@@ -202,6 +202,7 @@ static void flag_ping_to_cloonix_agent_ok(char *name)
 static void timer_reload_qga(void *data)
 {
   char *name = (char *) data;
+  KERR("ERROR LAUNCH timer_reload_qga, %s", name);
   qmp_begin_qemu_unix(name, 0);
   clownix_free(name, __FUNCTION__);
 }
@@ -236,7 +237,7 @@ static void reload_upon_problem(char *name)
   strncpy(pname, name, MAX_NAME_LEN-1);
   clownix_timeout_add(400, timer_reload_qga, (void *) pname, NULL, NULL);
   cur = get_qrec_with_name(pname);
-  KERR("ERROR %s", name);
+  KERR("ERROR LAUNCH timer_reload_qga, %s", name);
   if (cur)
     qrec_free(cur);
 }
@@ -371,7 +372,8 @@ static void automate_tx_qga_msg(t_qrec *cur)
       reload_upon_problem(cur->name);
       qmp_request_qemu_reboot(cur->name);
       }
-    KERR("WARNING CHMOD WAIT %s", cur->name);
+    KERR("WARNING ERROR CHMOD WAIT %s", cur->name);
+    cur->file_status = 2;
     }
   else if ((cur->chmod_exec == 2) && (cur->chmod_status == 0))
     {

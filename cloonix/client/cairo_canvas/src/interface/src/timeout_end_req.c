@@ -94,12 +94,18 @@ void timer_create_item_node_req(void *data)
     {
     get_custom_cnt(&cust_cnt);
     memset(&cust_topo_cnt, 0, sizeof(t_topo_cnt));
+    strncpy(cust_topo_cnt.brandtype, cust_cnt->brandtype, MAX_NAME_LEN-1);
     strncpy(cust_topo_cnt.name, cust_cnt->name, MAX_NAME_LEN-1);
     cust_topo_cnt.is_persistent = cust_cnt->is_persistent;
     cust_topo_cnt.nb_tot_eth = cust_cnt->nb_tot_eth;
     memcpy(cust_topo_cnt.eth_table, cust_cnt->eth_table,
            cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));
-    strncpy(cust_topo_cnt.image, cust_cnt->image, MAX_PATH_LEN-1);
+    if (!strcmp(cust_cnt->brandtype, "crun"))
+      strncpy(cust_topo_cnt.image, cust_cnt->cru_image, MAX_PATH_LEN-1);
+    else if (!strcmp(cust_cnt->brandtype, "docker"))
+      strncpy(cust_topo_cnt.image, cust_cnt->doc_image, MAX_PATH_LEN-1);
+    else if (!strcmp(cust_cnt->brandtype, "podman"))
+      strncpy(cust_topo_cnt.image, cust_cnt->pod_image, MAX_PATH_LEN-1);
     strncpy(cust_topo_cnt.customer_launch, cust_cnt->customer_launch,
             MAX_PATH_LEN-1);
     client_add_cnt(0, callback_end, &cust_topo_cnt);

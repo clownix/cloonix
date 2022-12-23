@@ -1,11 +1,10 @@
 #!/bin/bash
 HERE=`pwd`
 NET=nemo
-DISTRO=centos8
+DISTRO=centos9
 NAME=${DISTRO}
 QCOW2=${DISTRO}.qcow2
-
-CLOONIX_CENTOS8_REPO=https://mirrors.edge.kernel.org/centos/8-stream
+MIRROR="https://mirror.stream.centos.org/9-stream"
 
 #######################################################################
 CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
@@ -55,37 +54,6 @@ cloonix_scp $NET ${BULK}/bookworm.qcow2 ${NAME}:/root/cloonix_data/bulk
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "dhclient"
 #----------------------------------------------------------------------
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-Base.repo << EOF
-[base]
-name=CentOS-8 - Base
-baseurl=${CLOONIX_CENTOS8_REPO}/BaseOS/x86_64/os
-gpgcheck=0
-EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-AppStream.repo << EOF
-[AppStream]
-name=CentOS-8 - AppStream
-baseurl=${CLOONIX_CENTOS8_REPO}/AppStream/x86_64/os
-gpgcheck=0
-EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-Extras.repo << EOF
-[extras]
-name=CentOS-8 - Extras
-baseurl=${CLOONIX_CENTOS8_REPO}/extras/x86_64/os
-gpgcheck=0
-EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-PowerTools.repo << EOF
-[PowerTools]
-name=CentOS-8 - PowerTools
-baseurl=${CLOONIX_CENTOS8_REPO}/PowerTools/x86_64/os
-gpgcheck=0
-EOF"
-cloonix_ssh ${NET} ${NAME} "cat > /etc/yum.repos.d/CentOS-Cloud.repo << EOF
-[Cloud]
-name=CentOS-8 - Cloud
-baseurl=${CLOONIX_CENTOS8_REPO}/cloud/x86_64/openstack-train
-gpgcheck=0
-EOF"
-#----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
 nameserver 172.17.0.3
 EOF"
@@ -99,18 +67,11 @@ done
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "rm -f install_depends"
 #----------------------------------------------------------------------
-KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial "
-KERN+="net.ifnames=0"
-printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" > /tmp/grub
-
+KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
+cloonix_scp $NET ${NAME}:/etc/default/grub /tmp/grub
+printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" >> /tmp/grub
 cloonix_scp $NET /tmp/grub ${NAME}:/etc/default
-
 cloonix_ssh $NET ${NAME} "grub2-mkconfig -o /boot/grub2/grub.cfg"
-
-cloonix_ssh $NET ${NAME} "sed -i s/BindsTo/After/ /lib/systemd/system/qemu-guest-agent.service"
-cloonix_ssh $NET ${NAME} "echo \"WantedBy=multi-user.target\" >> /lib/systemd/system/qemu-guest-agent.service"
-cloonix_ssh $NET ${NAME} "systemctl enable qemu-guest-agent.service"
-
 cloonix_ssh $NET ${NAME} "sync"
 #----------------------------------------------------------------------
 cloonix_ssh $NET ${NAME} "poweroff"

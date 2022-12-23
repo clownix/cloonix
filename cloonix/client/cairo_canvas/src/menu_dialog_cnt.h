@@ -15,18 +15,30 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+enum
+{
+  brand_crun=7,
+  brand_docker,
+  brand_podman,
+};
+
 typedef struct t_custom_cnt
 {
+  char brandtype[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
-  char image[MAX_PATH_LEN];
+  char cru_image[MAX_NAME_LEN];
+  char doc_image[MAX_NAME_LEN];
+  char pod_image[MAX_NAME_LEN];
   char customer_launch[MAX_PATH_LEN];
   int current_number;
   int is_persistent;
 } t_custom_cnt;
 
-void set_bulcnt(int nb, t_slowperiodic *slowperiodic);
+void set_bulcru(int nb, t_slowperiodic *slowperiodic);
+void set_buldoc(int nb, t_slowperiodic *slowperiodic);
+void set_bulpod(int nb, t_slowperiodic *slowperiodic);
 void get_custom_cnt(t_custom_cnt **cust_cnt);
 void menu_choice_cnt(void);
 void menu_dialog_cnt_init(void);

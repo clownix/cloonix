@@ -84,6 +84,8 @@ enum
   bnd_slowperiodic_sub,
   bnd_slowperiodic_qcow2,
   bnd_slowperiodic_img,
+  bnd_slowperiodic_docker,
+  bnd_slowperiodic_podman,
   bnd_sub_evt_stats_endp,
   bnd_evt_stats_endp,
   bnd_sub_evt_stats_sysinfo,
@@ -703,9 +705,10 @@ static int topo_cnt_format(char *buf, t_topo_cnt *cnt)
   int i, len;
   if ((strlen(cnt->name) == 0) ||
       (strlen(cnt->image) == 0) ||
+      (strlen(cnt->brandtype) == 0) ||
       (strlen(cnt->customer_launch) == 0))
     KOUT("name:%s image:%s l:%s", cnt->name, cnt->image, cnt->customer_launch);
-  len = sprintf(buf, EVENT_TOPO_CNT_O, cnt->name, 
+  len = sprintf(buf, EVENT_TOPO_CNT_O, cnt->brandtype, cnt->name, 
                                        cnt->is_persistent,
                                        cnt->vm_id,
                                        cnt->color,
@@ -1445,13 +1448,13 @@ static void helper_fill_topo_cnt(char *msg_in, t_topo_cnt *cnt)
   char *msg = (char *) malloc(len+1);
   memcpy(msg, msg_in, len);
   msg[len] = 0;
-  if (sscanf(msg, EVENT_TOPO_CNT_O, cnt->name, 
+  if (sscanf(msg, EVENT_TOPO_CNT_O, cnt->brandtype, cnt->name, 
                                     &(cnt->is_persistent),
                                     &(cnt->vm_id),
                                     &(cnt->color),
                                     cnt->image,  
                                     &(cnt->ping_ok),
-                                    &(cnt->nb_tot_eth)) != 7)
+                                    &(cnt->nb_tot_eth)) != 8)
     KOUT("%s", msg);
   get_eth_table(msg, cnt->nb_tot_eth, cnt->eth_table);
   ptr1 = strstr(msg, "<customer_launch> ");
@@ -1873,7 +1876,11 @@ void send_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic)
   int i, len = 0;
   len += sprintf(sndbuf+len, SLOWPERIODIC_QCOW2_O, tid, nb);
   for (i=0; i<nb; i++)
+    {
+    if (strlen(spic[i].name) == 0)
+      KOUT("ERROR %d", i);
     len += sprintf(sndbuf+len, SLOWPERIODIC_SPIC, spic[i].name);
+    }
   len += sprintf(sndbuf+len, SLOWPERIODIC_QCOW2_C);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
@@ -1885,8 +1892,44 @@ void send_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic)
   int i, len = 0;
   len += sprintf(sndbuf+len, SLOWPERIODIC_IMG_O, tid, nb);
   for (i=0; i<nb; i++)
+    {
+    if (strlen(spic[i].name) == 0)
+      KOUT("ERROR %d", i);
     len += sprintf(sndbuf+len, SLOWPERIODIC_SPIC, spic[i].name);
+    }
   len += sprintf(sndbuf+len, SLOWPERIODIC_IMG_C);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_slowperiodic_docker(int llid, int tid, int nb, t_slowperiodic *spic)
+{
+  int i, len = 0;
+  len += sprintf(sndbuf+len, SLOWPERIODIC_DOCKER_O, tid, nb);
+  for (i=0; i<nb; i++)
+    {
+    if (strlen(spic[i].name) == 0)
+      KOUT("ERROR %d", i);
+    len += sprintf(sndbuf+len, SLOWPERIODIC_SPIC, spic[i].name);
+    }
+  len += sprintf(sndbuf+len, SLOWPERIODIC_DOCKER_C);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_slowperiodic_podman(int llid, int tid, int nb, t_slowperiodic *spic)
+{
+  int i, len = 0;
+  len += sprintf(sndbuf+len, SLOWPERIODIC_PODMAN_O, tid, nb);
+  for (i=0; i<nb; i++)
+    {
+    if (strlen(spic[i].name) == 0)
+      KOUT("ERROR %d", i);
+    len += sprintf(sndbuf+len, SLOWPERIODIC_SPIC, spic[i].name);
+    }
+  len += sprintf(sndbuf+len, SLOWPERIODIC_PODMAN_C);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -1983,6 +2026,7 @@ void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
   int len = 0;
   if ((strlen(cnt->name) == 0) ||
       (strlen(cnt->image) == 0) ||
+      (strlen(cnt->brandtype) == 0) ||
       (strlen(cnt->customer_launch) == 0))
     KOUT("name:%s image:%s l:%s", cnt->name,cnt->image,cnt->customer_launch);
   if (strlen(cnt->name) >= MAX_NAME_LEN)
@@ -1991,8 +2035,9 @@ void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     KOUT(" ");
   if (strlen(cnt->customer_launch) >= MAX_PATH_LEN)
     KOUT(" ");
-  len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->name, cnt->is_persistent,
-                cnt->vm_id, cnt->color, cnt->ping_ok, cnt->nb_tot_eth);
+  len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->brandtype, cnt->name,
+                cnt->is_persistent, cnt->vm_id, cnt->color, cnt->ping_ok,
+                cnt->nb_tot_eth);
   len += make_eth_table(sndbuf+len, cnt->nb_tot_eth, cnt->eth_table);
   len += sprintf(sndbuf+len, ADD_CNT_C, cnt->customer_launch, cnt->image);
   my_msg_mngt_tx(llid, len, sndbuf);
@@ -2554,6 +2599,28 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       clownix_free(slowperiodic, __FUNCTION__);
       break;
 
+    case bnd_slowperiodic_docker:
+      if (sscanf(msg, SLOWPERIODIC_DOCKER_O, &tid, &nb) != 2)
+        KOUT("%s", msg);
+      len = nb * sizeof(t_slowperiodic);
+      slowperiodic = (t_slowperiodic *)clownix_malloc(len, 23);
+      memset(slowperiodic, 0, len);
+      helper_slowperiodic(msg, nb, slowperiodic);
+      recv_slowperiodic_docker(llid, tid, nb, slowperiodic);
+      clownix_free(slowperiodic, __FUNCTION__);
+      break;
+
+    case bnd_slowperiodic_podman:
+      if (sscanf(msg, SLOWPERIODIC_PODMAN_O, &tid, &nb) != 2)
+        KOUT("%s", msg);
+      len = nb * sizeof(t_slowperiodic);
+      slowperiodic = (t_slowperiodic *)clownix_malloc(len, 23);
+      memset(slowperiodic, 0, len);
+      helper_slowperiodic(msg, nb, slowperiodic);
+      recv_slowperiodic_podman(llid, tid, nb, slowperiodic);
+      clownix_free(slowperiodic, __FUNCTION__);
+      break;
+
     case bnd_c2c_add:
       if (sscanf(msg, C2C_ADD, &tid, name, &ludp_ip,
                                network, &ip, &dport,
@@ -2603,9 +2670,9 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
 
     case bnd_cnt_add:
       memset(&cnt, 0, sizeof(t_topo_cnt));
-      if (sscanf(msg, ADD_CNT_O, &tid, cnt.name, &(cnt.is_persistent),
-                 &(cnt.vm_id), &(cnt.color), &(cnt.ping_ok),
-                 &(cnt.nb_tot_eth)) != 7)
+      if (sscanf(msg, ADD_CNT_O, &tid, cnt.brandtype, cnt.name,
+                 &(cnt.is_persistent), &(cnt.vm_id), &(cnt.color),
+                 &(cnt.ping_ok), &(cnt.nb_tot_eth)) != 8)
         KOUT("%s", msg);
       get_eth_table(msg, cnt.nb_tot_eth, cnt.eth_table);
       customer_launch_get(msg, &cnt);
@@ -2787,6 +2854,8 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(SLOWPERIODIC_SUB, bound_list[bnd_slowperiodic_sub]);
   extract_boundary(SLOWPERIODIC_QCOW2_O, bound_list[bnd_slowperiodic_qcow2]);
   extract_boundary(SLOWPERIODIC_IMG_O, bound_list[bnd_slowperiodic_img]);
+  extract_boundary(SLOWPERIODIC_DOCKER_O, bound_list[bnd_slowperiodic_docker]);
+  extract_boundary(SLOWPERIODIC_PODMAN_O, bound_list[bnd_slowperiodic_podman]);
   extract_boundary(SUB_EVT_STATS_ENDP, bound_list[bnd_sub_evt_stats_endp]);
   extract_boundary(EVT_STATS_ENDP_O, bound_list[bnd_evt_stats_endp]);
   extract_boundary(SUB_EVT_STATS_SYSINFO,bound_list[bnd_sub_evt_stats_sysinfo]);

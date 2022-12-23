@@ -1,0 +1,82 @@
+lib_rpc_clownix/tst/tester.c:  if (cnt->vm_id != icnt->vm_id)
+lib_rpc_clownix/tst/tester.c:    KERR("%d %d", cnt->vm_id, icnt->vm_id);
+lib_rpc_clownix/tst/tester.c:  else if (cnt->is_persistent != icnt->is_persistent)
+lib_rpc_clownix/tst/tester.c:    KERR("%d %d", cnt->vm_id, icnt->vm_id);
+lib_rpc_clownix/tst/tester.c:  else if (cnt->ping_ok != icnt->ping_ok)
+lib_rpc_clownix/tst/tester.c:    KERR("%d %d", cnt->ping_ok, icnt->ping_ok);
+lib_rpc_clownix/tst/tester.c:  else if (strcmp(cnt->type, icnt->type))
+lib_rpc_clownix/tst/tester.c:    KERR("%s %s", cnt->type, icnt->type);
+lib_rpc_clownix/tst/tester.c:  else if (strcmp(cnt->name, icnt->name))
+lib_rpc_clownix/tst/tester.c:    KERR("%s %s", cnt->name, icnt->name);
+lib_rpc_clownix/tst/tester.c:  else   if (strcmp(cnt->image, icnt->image))
+lib_rpc_clownix/tst/tester.c:    KERR("%s %s", cnt->image, icnt->image);
+lib_rpc_clownix/tst/tester.c:  else   if (strcmp(cnt->customer_launch, icnt->customer_launch))
+lib_rpc_clownix/tst/tester.c:    KERR("%s %s", cnt->customer_launch, icnt->customer_launch);
+lib_rpc_clownix/tst/tester.c:      if (cnt->eth_table[k].endp_type != icnt->eth_table[k].endp_type)
+lib_rpc_clownix/tst/tester.c:        KERR("%d %d",cnt->eth_table[k].endp_type,icnt->eth_table[k].endp_type);
+lib_rpc_clownix/tst/tester.c:      if (cnt->eth_table[k].randmac != icnt->eth_table[k].randmac)
+lib_rpc_clownix/tst/tester.c:        KERR("%d %d",cnt->eth_table[k].randmac,icnt->eth_table[k].randmac);
+lib_rpc_clownix/tst/tester.c:      if (strcmp(cnt->eth_table[k].vhost_ifname,
+lib_rpc_clownix/tst/tester.c:                 icnt->eth_table[k].vhost_ifname))
+lib_rpc_clownix/tst/tester.c:        KERR("%s %s", cnt->eth_table[k].vhost_ifname,
+lib_rpc_clownix/tst/tester.c:                      icnt->eth_table[k].vhost_ifname);
+lib_rpc_clownix/tst/tester.c:        if (cnt->eth_table[k].mac_addr[l] != icnt->eth_table[k].mac_addr[l])
+lib_rpc_clownix/tst/tester.c:          KERR("%d %d", cnt->eth_table[k].mac_addr[l],
+lib_rpc_clownix/tst/tester.c:                        icnt->eth_table[k].mac_addr[l]);
+lib_rpc_clownix/tst/tester.c:    if (memcmp(cnt->eth_table, icnt->eth_table,
+lib_rpc_clownix/tst/tester.c:  random_choice_str(cnt->type, MAX_NAME_LEN);
+lib_rpc_clownix/tst/tester.c:  random_choice_str(cnt->name, MAX_NAME_LEN);
+lib_rpc_clownix/tst/tester.c:  random_choice_str(cnt->image, MAX_PATH_LEN);
+lib_rpc_clownix/tst/tester.c:  random_choice_str(cnt->customer_launch, MAX_PATH_LEN);
+lib_rpc_clownix/tst/tester.c:  cnt->nb_tot_eth = my_rand(MAX_ETH_VM);
+lib_rpc_clownix/tst/tester.c:  cnt->ping_ok = my_rand(20);
+lib_rpc_clownix/tst/tester.c:  cnt->vm_id = my_rand(120);
+lib_rpc_clownix/tst/tester.c:  cnt->is_persistent = my_rand(120);
+lib_rpc_clownix/tst/tester.c:  for (k=0; k < cnt->nb_tot_eth; k++)
+lib_rpc_clownix/tst/tester.c:    cnt->eth_table[k].endp_type = (rand() & 0x04) + 1;
+lib_rpc_clownix/tst/tester.c:    cnt->eth_table[k].randmac = rand();
+lib_rpc_clownix/tst/tester.c:    random_choice_str(cnt->eth_table[k].vhost_ifname, MAX_NAME_LEN-1);
+lib_rpc_clownix/tst/tester.c:      cnt->eth_table[k].mac_addr[l] = rand() & 0xFF;
+lib_rpc_clownix/src/xml_interface.c:  if ((strlen(cnt->name) == 0) ||
+lib_rpc_clownix/src/xml_interface.c:      (strlen(cnt->image) == 0) ||
+lib_rpc_clownix/src/xml_interface.c:      (strlen(cnt->customer_launch) == 0))
+lib_rpc_clownix/src/xml_interface.c:    KOUT("name:%s image:%s l:%s", cnt->name, cnt->image, cnt->customer_launch);
+lib_rpc_clownix/src/xml_interface.c:  len = sprintf(buf, EVENT_TOPO_CNT_O, cnt->type, cnt->name, 
+lib_rpc_clownix/src/xml_interface.c:                                       cnt->is_persistent,
+lib_rpc_clownix/src/xml_interface.c:                                       cnt->vm_id,
+lib_rpc_clownix/src/xml_interface.c:                                       cnt->color,
+lib_rpc_clownix/src/xml_interface.c:                                       cnt->image,  
+lib_rpc_clownix/src/xml_interface.c:                                       cnt->ping_ok,
+lib_rpc_clownix/src/xml_interface.c:                                       cnt->nb_tot_eth);
+lib_rpc_clownix/src/xml_interface.c:  for (i=0; i < cnt->nb_tot_eth; i++)
+lib_rpc_clownix/src/xml_interface.c:    len += topo_eth_format(buf+len, cnt->eth_table[i].endp_type, 
+lib_rpc_clownix/src/xml_interface.c:                                    cnt->eth_table[i].randmac,
+lib_rpc_clownix/src/xml_interface.c:                                    cnt->eth_table[i].vhost_ifname,
+lib_rpc_clownix/src/xml_interface.c:                                    cnt->eth_table[i].mac_addr);
+lib_rpc_clownix/src/xml_interface.c:  len += sprintf(buf+len, EVENT_TOPO_CNT_C, cnt->customer_launch);
+lib_rpc_clownix/src/xml_interface.c:  if (sscanf(msg, EVENT_TOPO_CNT_O, cnt->type, cnt->name, 
+lib_rpc_clownix/src/xml_interface.c:                                    &(cnt->is_persistent),
+lib_rpc_clownix/src/xml_interface.c:                                    &(cnt->vm_id),
+lib_rpc_clownix/src/xml_interface.c:                                    &(cnt->color),
+lib_rpc_clownix/src/xml_interface.c:                                    cnt->image,  
+lib_rpc_clownix/src/xml_interface.c:                                    &(cnt->ping_ok),
+lib_rpc_clownix/src/xml_interface.c:                                    &(cnt->nb_tot_eth)) != 7)
+lib_rpc_clownix/src/xml_interface.c:  get_eth_table(msg, cnt->nb_tot_eth, cnt->eth_table);
+lib_rpc_clownix/src/xml_interface.c:  strncpy(cnt->customer_launch, ptr1+len, MAX_PATH_LEN-1); 
+lib_rpc_clownix/src/xml_interface.c:  if ((strlen(cnt->name) == 0) ||
+lib_rpc_clownix/src/xml_interface.c:      (strlen(cnt->image) == 0) ||
+lib_rpc_clownix/src/xml_interface.c:      (strlen(cnt->customer_launch) == 0))
+lib_rpc_clownix/src/xml_interface.c:  if ((strlen(cnt->name) == 0) ||
+lib_rpc_clownix/src/xml_interface.c:      (strlen(cnt->image) == 0) ||
+lib_rpc_clownix/src/xml_interface.c:      (strlen(cnt->customer_launch) == 0))
+lib_rpc_clownix/src/xml_interface.c:    KOUT("name:%s image:%s l:%s", cnt->name,cnt->image,cnt->customer_launch);
+lib_rpc_clownix/src/xml_interface.c:  if (strlen(cnt->name) >= MAX_NAME_LEN)
+lib_rpc_clownix/src/xml_interface.c:  if (strlen(cnt->image) >= MAX_PATH_LEN)
+lib_rpc_clownix/src/xml_interface.c:  if (strlen(cnt->customer_launch) >= MAX_PATH_LEN)
+lib_rpc_clownix/src/xml_interface.c:  len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->type, cnt->name,
+lib_rpc_clownix/src/xml_interface.c:                cnt->is_persistent, cnt->vm_id, cnt->color, cnt->ping_ok,
+lib_rpc_clownix/src/xml_interface.c:                cnt->nb_tot_eth);
+lib_rpc_clownix/src/xml_interface.c:  len += make_eth_table(sndbuf+len, cnt->nb_tot_eth, cnt->eth_table);
+lib_rpc_clownix/src/xml_interface.c:  len += sprintf(sndbuf+len, ADD_CNT_C, cnt->customer_launch, cnt->image);
+lib_rpc_clownix/src/xml_interface.c:  if (sscanf(ptr, "<image> %s </image>", cnt->image) != 1)
+lib_rpc_clownix/src/xml_interface.c:  strncpy(cnt->customer_launch, ptr1+len, MAX_PATH_LEN-1);

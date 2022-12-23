@@ -16,6 +16,7 @@
 /*                                                                           */
 /*****************************************************************************/
 char *utils_get_cnt_dir(void);
+char *utils_get_mnt_dir(void);
 
 char *utils_get_c2c_dir(void);
 char *utils_get_nat_dir(void);

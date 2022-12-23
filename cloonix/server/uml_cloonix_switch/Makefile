@@ -55,6 +55,9 @@ SRC = \
       suid_power.c \
       dispatch_diag_msg.c \
       cnt.c \
+      crun.c \
+      docker.c \
+      docker_images.c \
       base64.c \
       server_stub.c
 

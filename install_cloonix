@@ -25,15 +25,14 @@ tar zxvf ${HERE}/${CLOONIX}
 chown root:root /usr/local/bin/cloonix/
 chown -R root:root /usr/local/bin/cloonix/*
 SERV_BIN_PATH=/usr/local/bin/cloonix/server
+CLI_BIN_PATH=/usr/local/bin/cloonix/client
 OVS_DRV=${SERV_BIN_PATH}/ovs_drv/cloonix_ovs_drv
 OVS_SNF=${SERV_BIN_PATH}/ovs_snf/cloonix_ovs_snf
 OVS_NAT=${SERV_BIN_PATH}/ovs_nat/cloonix_ovs_nat
 OVS_A2B=${SERV_BIN_PATH}/ovs_a2b/cloonix_ovs_a2b
 OVS_C2C=${SERV_BIN_PATH}/ovs_c2c/cloonix_ovs_c2c
 SUID_POWER=${SERV_BIN_PATH}/suid_power/cloonix_suid_power
-
-USBHELP=/usr/local/bin/cloonix/client/spice
-USBHELP+=/libexec/spice-client-glib-usb-acl-helper
+USBHELP=${CLI_BIN_PATH}/spice/spice-client-glib-usb-acl-helper
 
 chmod u+s ${OVS_C2C}
 chmod u+s ${OVS_NAT}

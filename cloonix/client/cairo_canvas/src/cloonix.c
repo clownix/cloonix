@@ -237,7 +237,7 @@ char *get_path_to_qemu_spice(void)
 {
   char *result = NULL;
   static char path[MAX_PATH_LEN];
-  sprintf(path,"%s/client/spice/bin/spicy", get_local_cloonix_tree());
+  sprintf(path,"%s/client/spice/spicy", get_local_cloonix_tree());
   if (file_exists_exec(path))
     result = path;
   return result;
@@ -401,7 +401,6 @@ void work_dir_resp(int tid, t_topo_clc *conf)
     }
   daemon(0,1);
   move_init();
-  menu_init();
   popup_init();
   memcpy(&g_clc, conf, sizeof(t_topo_clc));
 
@@ -422,6 +421,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   gtk_window_set_accept_focus(GTK_WINDOW(window), FALSE);
 
 
+  menu_init();
   g_main_window = window;
   init_set_main_window_coords();
   g_signal_connect (G_OBJECT (window), "destroy",

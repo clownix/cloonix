@@ -1,14 +1,8 @@
 #!/bin/bash
 HERE=`pwd`
-NINJA=${HERE}/../../common/meson_ninja
 OVS=${HERE}
 TARGZ=../../../targz_store
 ./allclean
-if [ ! -f ${NINJA}/ninja/ninja ]; then
-  cd ${NINJA}
-  ./cmd
-fi
-cd ${HERE}
 mkdir -p ${OVS}/bin
 tar xvf ${TARGZ}/ovs_*.tar.gz
 cd ${HERE}/ovs

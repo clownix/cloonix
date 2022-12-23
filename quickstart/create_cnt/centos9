@@ -1,8 +1,8 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
-MIRROR=https://mirrors.edge.kernel.org/centos/8-stream
+MIRROR=https://mirrors.edge.kernel.org/centos/9-stream
 #----------------------------------------------------------------------#
-ROOTFS=/root/centos8.img
+ROOTFS=/root/centos9.img
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -71,7 +71,7 @@ for i in AppStream \
 
 cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-${i}.repo << EOF
 [${i}]
-name=CentOS-8 - ${i}
+name=CentOS-9 - ${i}
 baseurl=${MIRROR}/${i}/x86_64/os
 gpgcheck=0
 EOF
@@ -79,7 +79,7 @@ EOF
 done
 
 
-dnf --releasever=8 --installroot=/tmp/wkmntloops -y install dnf
+dnf --releasever=9 --installroot=/tmp/wkmntloops -y install dnf
 #-----------------------------------------------------------------------#
 rm -f /tmp/wkmntloops/etc/resolv.conf
 cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
@@ -87,12 +87,12 @@ cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
 list_pkt="dhclient sudo vim net-tools"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 sleep 5
-echo dnf --releasever=8 clean packages
-chroot /tmp/wkmntloops/ dnf --releasever=8 clean packages
-echo dnf --releasever=8 -y update
-chroot /tmp/wkmntloops/ dnf --releasever=8 -y update
-echo dnf --releasever=8 -y install
-chroot /tmp/wkmntloops/ dnf --releasever=8 -y install $list_pkt
+echo dnf --releasever=9 clean packages
+chroot /tmp/wkmntloops/ dnf --releasever=9 clean packages
+echo dnf --releasever=9 -y update
+chroot /tmp/wkmntloops/ dnf --releasever=9 -y update
+echo dnf --releasever=9 -y install
+chroot /tmp/wkmntloops/ dnf --releasever=9 -y install $list_pkt
 umount /tmp/wkmntloops/{dev,proc,sys}
 #-----------------------------------------------------------------------#
 umount /tmp/wkmntloops

@@ -624,26 +624,11 @@ void llid_backdoor_cloonix_down_and_not_running(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-/*
-static void timer_vm_release(void *data)
-{
-  unsigned long ul_llid = (unsigned long) data;
-  t_backdoor_vm *bvm = vm_get_with_backdoor_llid((int)ul_llid);
-  if (bvm)
-    vm_end_release(bvm);
-}
-*/
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void differed_vm_release(t_backdoor_vm *bvm)
 {
-  unsigned long ul_llid;
-  ul_llid = (unsigned long) bvm->backdoor_llid;
   clean_connect_timer(bvm);
   clean_heartbeat_timer(bvm);
   vm_end_release(bvm);
-//  clownix_timeout_add(10, timer_vm_release, (void *) ul_llid, NULL, NULL);
 }   
 /*--------------------------------------------------------------------------*/
 

@@ -15,13 +15,12 @@ rm -f cloonix-${CLOONIX_VERSION}.tar.gz
 rm -rf tmpbuild
 rm -rf tmpbuild_bis
 #----------------------------------------------------------
-  for i in meson_ninja \
-           agent_dropbear \
+  for i in agent_dropbear \
            xwy \
            lib_rpc_clownix \
            lib_rpc_doors \
-           lib_rpc_layout ; do
-
+           lib_rpc_layout \
+           spice_lib ; do
     cd ${CLOONIX_COMMON}/${i}
     ./allclean
   done
@@ -35,7 +34,8 @@ rm -rf tmpbuild_bis
   done 
   rm -f ${CLOONIX_SERVER}/dtach/dtach
 
-  for i in ovs qemu ovs_drv ovs_snf ovs_nat ovs_c2c ovs_a2b ; do
+  for i in ovs ovs_drv ovs_snf ovs_nat ovs_c2c ovs_a2b \
+           qemu ; do
     cd ${CLOONIX_SERVER}/${i}
     ./allclean
   done

@@ -447,10 +447,10 @@ static void callback_list_commands(int tid, int qty, t_list_commands *list)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void cmd_cact(void)
-{
-  client_list_commands(0, callback_list_commands);
-}
+//static void cmd_cact(void)
+//{
+//  client_list_commands(0, callback_list_commands);
+//}
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -665,7 +665,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *c2c  = gtk_menu_item_new_with_label("c2c");
   GtkWidget *a2b  = gtk_menu_item_new_with_label("a2b");
 //  GtkWidget *phy  = gtk_menu_item_new_with_label("phy");
-  GtkWidget *cmd  = gtk_menu_item_new_with_label("cmd_list");
+//  GtkWidget *cmd  = gtk_menu_item_new_with_label("cmd_list");
   GtkWidget *kvm_conf = gtk_menu_item_new_with_label("Kvm_conf");
   GtkWidget *cnt_conf = gtk_menu_item_new_with_label("Cnt_conf");
   GtkWidget *other= gtk_menu_item_new_with_label("Other");
@@ -689,8 +689,8 @@ void canvas_ctx_menu(gdouble x, gdouble y)
                           (GCallback)kvm_cact, NULL);
   g_signal_connect_swapped(G_OBJECT(cnt_conf), "activate",
                           (GCallback)cnt_cact, NULL);
-  g_signal_connect_swapped(G_OBJECT(cmd), "activate",
-                          (GCallback)cmd_cact, NULL);
+//  g_signal_connect_swapped(G_OBJECT(cmd), "activate",
+//                          (GCallback)cmd_cact, NULL);
 
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), lan);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm);
@@ -704,7 +704,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), cnt_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator1);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), cmd);
+//  gtk_menu_shell_append(GTK_MENU_SHELL(menu), cmd);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), other);
   other_sub_menu(other);
   gtk_widget_show_all(menu);

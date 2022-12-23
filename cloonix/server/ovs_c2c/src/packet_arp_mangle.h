@@ -16,6 +16,6 @@
 /*                                                                           */
 /*****************************************************************************/
 void init_packet_arp_mangle(void);
-int packet_arp_mangle(int udp2tap, int len, uint8_t *data);
+void packet_arp_mangle(int udp2tap, int len, uint8_t *data);
 void set_arp_mangle_mac_hwaddr(uint8_t *mac);
 /*---------------------------------------------------------------------------*/

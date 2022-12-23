@@ -1,0 +1,8 @@
+#!/bin/bash
+
+rm -rf lib*
+rm -rf spice*
+rm -rf usb*
+rm -rf include share bin usr pkgconfig
+
+

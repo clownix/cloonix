@@ -1,26 +1,14 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
-DBASE=${HERE}/../..
-NINJA=${DBASE}/common/meson_ninja
 ./allclean
-if [ ! -f ${NINJA}/ninja/ninja ]; then
-  echo Doing NINJA
-  sleep 1
-  cd ${NINJA}
-  ./cmd
-  cd ${HERE}
-fi
-
-echo Doing LIBS
-sleep 1
-
-
-export PATH=${NINJA}/ninja:$PATH
-echo Doing untar and patch
-sleep 1
-
 ./patched_create
+export PKG_CONFIG_PATH=${HERE}/../../common/spice_lib/pkgconfig
+export QEMU_CFLAGS="-I${HERE}/../../common/spice_lib/include"
+export QEMU_LDFLAGS="-L${HERE}/../../common/spice_lib/ -Wl,-rpath,/usr/local/bin/cloonix/common/spice_lib"
+export CFLAGS="-I${HERE}/../../common/spice_lib/include"
+export LDFLAGS="-L${HERE}/../../common/spice_lib/ -Wl,-rpath,/usr/local/bin/cloonix/common/spice_lib"
+
 
 cd ${HERE}/tainted_qemu/
 
@@ -32,20 +20,19 @@ cd ${HERE}/tainted_qemu/
                      --enable-spice
                      --enable-usb-redir
                      --enable-linux-user
-                     --enable-coroutine-pool
                      --enable-opengl
                      --enable-gtk
-                     --enable-numa
-                     --enable-virglrenderer
                      --enable-vhost-net
                      --enable-vhost-kernel
-                     --enable-vhost-user
                      --enable-pie
-                     --enable-debug-info
-                     --enable-debug
-                     --enable-debug-mutex
-                     --enable-linux-aio
-                     --enable-curses
+                     --disable-coroutine-pool
+                     --disable-numa
+                     --disable-curses
+                     --disable-linux-aio
+                     --disable-debug-info
+                     --disable-debug-mutex
+                     --disable-vhost-user
+                     --disable-virglrenderer
                      --disable-vte
                      --disable-lzo
                      --disable-snappy

@@ -66,6 +66,7 @@ cloonix_ssh ${NET} ${NAME} "zypper cc -a"
 cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
 cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks update"
 
+echo NEXT STEP BY HAND IN SPICE CONSOLE!!!!!!!!!!!!!!!!!!!!!!
 exit
 cloonix_ssh ${NET} ${NAME} "zypper --non-interactive --no-gpg-checks dist-upgrade --allow-vendor-change"
 

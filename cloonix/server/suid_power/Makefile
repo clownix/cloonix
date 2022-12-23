@@ -6,8 +6,8 @@ RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 OBJ_DIR=obj/
 EXE = cloonix_suid_power
 
-SRC = suid_power.c stub.c launcher.c \
-      cnt.c cnt_utils.c loop_img.c
+SRC = suid_power.c stub.c launcher.c crun.c \
+      crun_utils.c loop_img.c docker.c docker_images.c
 
 VPATH=./src
 

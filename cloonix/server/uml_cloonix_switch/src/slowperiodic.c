@@ -28,6 +28,7 @@
 #include "cfg_store.h"
 #include "event_subscriber.h"
 #include "utils_cmd_line_maker.h"
+#include "docker_images.h"
 
 
 /*****************************************************************************/
@@ -51,6 +52,8 @@ static int ends_with_suffix(char *str, char *suffix)
     KOUT(" ");
   lenstr = strlen(str);
   lensuffix = strlen(suffix);
+  if ((lenstr==0) || (lensuffix==0))
+    KOUT("ERROR %lu %lu", lenstr, lensuffix);
   if (lensuffix < lenstr)
     result = (strncmp(str + lenstr - lensuffix, suffix, lensuffix) == 0);
   return result;
@@ -78,7 +81,6 @@ static int get_bulk_files(t_slowperiodic **slowperiodic, char *suffix)
         {
         if (ends_with_suffix(ent->d_name, suffix))
           {
-          memset((*slowperiodic)[nb].name, 0, MAX_NAME_LEN);
           strncpy((*slowperiodic)[nb].name, ent->d_name, MAX_NAME_LEN-1);
           nb += 1;
           }
@@ -96,20 +98,30 @@ static int get_bulk_files(t_slowperiodic **slowperiodic, char *suffix)
 /*****************************************************************************/
 static void action_send_slowperiodic(void)
 {
-  int llid, tid, nb_qcow2, nb_img;
+  int llid, tid, nb_qcow2, nb_img, nb_doc, nb_pod;
   t_slowperiodic *slowperiodic_qcow2;
   t_slowperiodic *slowperiodic_img;
+  t_slowperiodic *slowperiodic_doc;
+  t_slowperiodic *slowperiodic_pod;
   t_slowperiodic_subs *cur = head_subs;
   nb_qcow2 = get_bulk_files(&slowperiodic_qcow2, ".qcow2");
   nb_img = get_bulk_files(&slowperiodic_img, ".img");
+  nb_doc = docker_image_get_list("docker", &slowperiodic_doc);
+  nb_pod = docker_image_get_list("podman", &slowperiodic_pod);
   while (cur)
     {
     llid = cur->llid;
     tid = cur->tid;
     if (msg_exist_channel(llid))
       {
-      send_slowperiodic_qcow2(llid, tid, nb_qcow2, slowperiodic_qcow2);
-      send_slowperiodic_img(llid, tid, nb_img, slowperiodic_img);
+      if (nb_qcow2)
+        send_slowperiodic_qcow2(llid, tid, nb_qcow2, slowperiodic_qcow2);
+      if (nb_img)
+        send_slowperiodic_img(llid, tid, nb_img, slowperiodic_img);
+      if (nb_doc)
+        send_slowperiodic_docker(llid, tid, nb_doc, slowperiodic_doc);
+      if (nb_pod)
+        send_slowperiodic_podman(llid, tid, nb_pod, slowperiodic_pod);
       }
     else
       event_print ("SLOWPERIODIC ERROR!!!!!!");
@@ -117,6 +129,10 @@ static void action_send_slowperiodic(void)
     }
   clownix_free(slowperiodic_qcow2, __FUNCTION__);
   clownix_free(slowperiodic_img, __FUNCTION__);
+  if (nb_doc)
+    clownix_free(slowperiodic_doc, __FUNCTION__);
+  if (nb_pod)
+    clownix_free(slowperiodic_pod, __FUNCTION__);
 }
 /*---------------------------------------------------------------------------*/
 

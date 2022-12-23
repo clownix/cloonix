@@ -1,6 +1,6 @@
 diff -Naur qemu_vip/configure tainted_qemu/configure
---- qemu_vip/configure	2022-11-17 18:39:38.000000000 +0100
-+++ tainted_qemu/configure	2022-11-18 23:06:14.806131693 +0100
+--- qemu_vip/configure	2022-12-07 01:53:34.000000000 +0100
++++ tainted_qemu/configure	2022-12-09 21:53:22.041550986 +0100
 @@ -2237,6 +2237,20 @@
    QEMU_LDFLAGS="-fsanitize=undefined $QEMU_LDFLAGS"
  fi
@@ -23,9 +23,9 @@ diff -Naur qemu_vip/configure tainted_qemu/configure
  # Guest agent Windows MSI package
  
 diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/virtio.h
---- qemu_vip/include/hw/virtio/virtio.h	2022-11-17 18:39:38.000000000 +0100
-+++ tainted_qemu/include/hw/virtio/virtio.h	2022-11-18 23:06:14.806131693 +0100
-@@ -351,6 +351,7 @@
+--- qemu_vip/include/hw/virtio/virtio.h	2022-12-07 01:53:34.000000000 +0100
++++ tainted_qemu/include/hw/virtio/virtio.h	2022-12-09 21:53:22.041550986 +0100
+@@ -358,6 +358,7 @@
  VirtQueue *virtio_vector_first_queue(VirtIODevice *vdev, uint16_t vector);
  VirtQueue *virtio_vector_next_queue(VirtQueue *vq);
  
@@ -34,8 +34,8 @@ diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/vi
  {
      assert(fbit < 64);
 diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virtio/virtio-net.h
---- qemu_vip/include/hw/virtio/virtio-net.h	2022-11-17 18:39:38.000000000 +0100
-+++ tainted_qemu/include/hw/virtio/virtio-net.h	2022-11-18 23:06:14.806131693 +0100
+--- qemu_vip/include/hw/virtio/virtio-net.h	2022-12-07 01:53:34.000000000 +0100
++++ tainted_qemu/include/hw/virtio/virtio-net.h	2022-12-09 21:53:22.041550986 +0100
 @@ -26,6 +26,7 @@
  #define TYPE_VIRTIO_NET "virtio-net-device"
  OBJECT_DECLARE_SIMPLE_TYPE(VirtIONet, VIRTIO_NET)
@@ -83,8 +83,8 @@ diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virti
  } VirtIONetQueue;
  
 diff -Naur qemu_vip/include/qemu/bitops.h tainted_qemu/include/qemu/bitops.h
---- qemu_vip/include/qemu/bitops.h	2022-11-17 18:39:38.000000000 +0100
-+++ tainted_qemu/include/qemu/bitops.h	2022-11-18 23:06:14.806131693 +0100
+--- qemu_vip/include/qemu/bitops.h	2022-12-07 01:53:34.000000000 +0100
++++ tainted_qemu/include/qemu/bitops.h	2022-12-09 21:53:22.041550986 +0100
 @@ -12,12 +12,14 @@
  #ifndef BITOPS_H
  #define BITOPS_H
@@ -102,8 +102,8 @@ diff -Naur qemu_vip/include/qemu/bitops.h tainted_qemu/include/qemu/bitops.h
  #define BIT(nr)                 (1UL << (nr))
  #define BIT_ULL(nr)             (1ULL << (nr))
 diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
---- qemu_vip/include/qemu/error-report.h	2022-11-17 18:39:38.000000000 +0100
-+++ tainted_qemu/include/qemu/error-report.h	2022-11-18 23:06:14.806131693 +0100
+--- qemu_vip/include/qemu/error-report.h	2022-12-07 01:53:34.000000000 +0100
++++ tainted_qemu/include/qemu/error-report.h	2022-12-09 21:53:22.041550986 +0100
 @@ -13,6 +13,26 @@
  #ifndef QEMU_ERROR_REPORT_H
  #define QEMU_ERROR_REPORT_H
@@ -141,8 +141,8 @@ diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-
  
  bool error_report_once_cond(bool *printed, const char *fmt, ...)
 diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
---- qemu_vip/qemu-options.hx	2022-11-17 18:39:38.000000000 +0100
-+++ tainted_qemu/qemu-options.hx	2022-11-18 23:06:14.806131693 +0100
+--- qemu_vip/qemu-options.hx	2022-12-07 01:53:34.000000000 +0100
++++ tainted_qemu/qemu-options.hx	2022-12-09 21:53:22.041550986 +0100
 @@ -2787,6 +2787,7 @@
      "                Use group 'groupname' and mode 'octalmode' to change default\n"
      "                ownership and permissions for communication port.\n"
@@ -152,8 +152,8 @@ diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
      "-netdev netmap,id=str,ifname=name[,devname=nmname]\n"
      "                attach to the existing netmap-enabled network interface 'name', or to a\n"
 diff -Naur qemu_vip/util/error.c tainted_qemu/util/error.c
---- qemu_vip/util/error.c	2022-11-17 18:39:38.000000000 +0100
-+++ tainted_qemu/util/error.c	2022-11-18 23:06:14.806131693 +0100
+--- qemu_vip/util/error.c	2022-12-07 01:53:34.000000000 +0100
++++ tainted_qemu/util/error.c	2022-12-09 21:53:22.041550986 +0100
 @@ -223,10 +223,13 @@
  
  void error_report_err(Error *err)
@@ -172,8 +172,8 @@ diff -Naur qemu_vip/util/error.c tainted_qemu/util/error.c
  }
  
 diff -Naur qemu_vip/util/error-report.c tainted_qemu/util/error-report.c
---- qemu_vip/util/error-report.c	2022-11-17 18:39:38.000000000 +0100
-+++ tainted_qemu/util/error-report.c	2022-11-18 23:06:14.806131693 +0100
+--- qemu_vip/util/error-report.c	2022-12-07 01:53:34.000000000 +0100
++++ tainted_qemu/util/error-report.c	2022-12-09 21:53:22.041550986 +0100
 @@ -267,14 +267,6 @@
   * Prepend the current location and append a newline.
   * It's wrong to call this in a QMP monitor.  Use error_setg() there.

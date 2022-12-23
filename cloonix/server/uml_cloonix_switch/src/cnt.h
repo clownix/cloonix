@@ -36,7 +36,7 @@ typedef struct t_cnt
   int count_llid;
   int cli_llid;
   int cli_tid;
-  int crun_pid;
+  int cnt_pid;
   struct t_cnt *prev;
   struct t_cnt *next;
 } t_cnt;
@@ -51,7 +51,6 @@ int  cnt_del_lan(int llid, int tid, char *name, int num,
                        char *lan, char *err);
 int  cnt_name_exists(char *name, int *nb_eth);
 int cnt_dyn_snf(char *name, int num, int val);
-void cnt_sigdiag_resp(int llid, char *line);
 int  cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
                       t_topo_cnt *cnt, char *info);
 int  cnt_delete(int llid, int cli_llid, int cli_tid, char *name);
@@ -63,5 +62,10 @@ void cnt_set_color(char *name, int color);
 void cnt_doorways_ping_ok(char *name);
 void cnt_doorways_ping_ko(char *name);
 void cnt_doorways_up_and_running(char *name);
+t_cnt *find_cnt(char *name);
+int send_sig_suid_power(int llid, char *msg);
+int send_pol_suid_power(int llid, char *msg);
+void cnt_vhost_and_doors_begin(t_cnt *cnt);
+int cnt_free_cnt(char *name);
 void cnt_init(void);
 /*---------------------------------------------------------------------------*/

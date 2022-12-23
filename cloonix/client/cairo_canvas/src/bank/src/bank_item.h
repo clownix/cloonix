@@ -29,9 +29,9 @@ void delete_bitem(t_bank_item *bitem);
 void selectioned_item_init(void);
 void selectioned_item_delete(t_bank_item *bitem);
 /*--------------------------------------------------------------------------*/
-int add_new_cnt(char *name, char *image, char *customer_launch, int vm_id,
-                 double x, double y, int hidden_on_graph,
-                 int ping_ok, int nb_tot_eth, t_eth_table *eth_tab);
+int add_new_cnt(char *type, char *name, char *image, char *customer_launch,
+                int vm_id, double x, double y, int hidden_on_graph,
+                int ping_ok, int nb_tot_eth, t_eth_table *eth_tab);
 /*--------------------------------------------------------------------------*/
 int add_new_node(char *name, char *kernel, char *rootfs_used,
                  char *rootfs_backing,  char *install_cdrom, 

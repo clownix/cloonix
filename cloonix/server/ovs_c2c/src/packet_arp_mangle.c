@@ -313,19 +313,18 @@ static int tst_ip_input(int len, uint8_t *data, int *real_len)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int packet_arp_mangle(int udp2tap, int len, uint8_t *data)
+void packet_arp_mangle(int udp2tap, int len, uint8_t *data)
 {
-  int result = 0;
   int proto, real_len;
   int private_net_ip;
   uint8_t *private_net_mac;
+  if (!data)
+    KOUT(" ");
   if (len < 40)
     { 
     KERR("TOO SHORT PACKET %d", len);
-    return result;
+    return;
     }
-  if (!data)
-    KOUT(" ");
   proto = get_proto(len, data);
   switch (proto)
     {
@@ -335,9 +334,9 @@ int packet_arp_mangle(int udp2tap, int len, uint8_t *data)
         {
         get_arp_sender_ip(data, &private_net_ip);
         associate_privates(private_net_ip, get_arp_sender_mac(data));
-//        KERR("ARPTX IP-MAC ASSOCIATION: %s %s", 
-//                    get_ip_string(private_net_ip), 
-//                    get_mac_string(get_arp_sender_mac(data)));
+        KERR("ARPTX IP-MAC ASSOCIATION: %s %s", 
+                    get_ip_string(private_net_ip), 
+                    get_mac_string(get_arp_sender_mac(data)));
         if (src_mac_is_unicast(data))
           put_src_mac(get_wif_hwaddr(), data);
         put_arp_sender_mac(get_wif_hwaddr(), data);
@@ -348,8 +347,8 @@ int packet_arp_mangle(int udp2tap, int len, uint8_t *data)
         private_net_mac = get_association(private_net_ip);
         if (private_net_mac)
           {
-//          KERR("RXGETARP: %s %s", get_ip_string(private_net_ip), 
-//                                         get_mac_string(private_net_mac));
+          KERR("RXGETARP: %s %s", get_ip_string(private_net_ip), 
+                                         get_mac_string(private_net_mac));
           if (dst_mac_is_unicast(data))
             put_dst_mac(private_net_mac, data);
           put_arp_target_mac(private_net_mac, data);
@@ -403,12 +402,11 @@ int packet_arp_mangle(int udp2tap, int len, uint8_t *data)
         }
       break;
     case proto_none:
-//      KERR("NOT SUPPORTED PROTO");
+      KERR("NOT SUPPORTED PROTO");
       break;
     default:
       KOUT("%d", proto);
     }
-  return result;
 }
 /*---------------------------------------------------------------------------*/
 

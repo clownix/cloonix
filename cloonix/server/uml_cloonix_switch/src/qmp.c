@@ -211,12 +211,16 @@ void qmp_begin_qemu_unix(char *name, int first)
 {
   if (find_qmp(name))
     {
+    if (first == 0)
+      KERR("ERROR LAUNCH %s", name);
     qmp_conn_end(name);
     alloc_qmp(name, first);
     qmp_dialog_alloc(name, qmp_conn_end);
     }
   else
     {
+    if (first == 0)
+      KERR("ERROR LAUNCH %s", name);
     alloc_qmp(name, first);
     qmp_dialog_alloc(name, qmp_conn_end);
     }
@@ -625,7 +629,6 @@ static void timer_request_qemu_reboot(void *data)
 /****************************************************************************/
 void qmp_request_qemu_reboot(char *name)
 {
-  char req[MAX_RPC_MSG_LEN];
   t_qmp *qmp = find_qmp(name);
   char *pname;
   if (!qmp)
@@ -639,14 +642,10 @@ void qmp_request_qemu_reboot(char *name)
     }
   else if (qmp->waiting_for != waiting_for_nothing)
     {
-    KERR("WARNING DIFFERED REQUEST REBOOT %s", name);
-    memset(req, 0, MAX_RPC_MSG_LEN);
-    snprintf(req, MAX_RPC_MSG_LEN-1, "error qmp doing something %d",
-             qmp->waiting_for);
-    pname = (char *) clownix_malloc(MAX_NAME_LEN, 3);
-    memset(pname, 0, MAX_NAME_LEN);
-    strncpy(pname, name, MAX_NAME_LEN-1);
-    clownix_timeout_add(10, timer_request_qemu_reboot, pname, NULL, NULL);
+    KERR("WARNING ERROR? DIFFERED REQUEST REBOOT %s", name);
+    KERR("WARNING QMP DOING SOMETHING %s %d", name, qmp->waiting_for);
+    alloc_tail_qmp_req(qmp, 0, 0, QMP_RESET);
+    qmp->waiting_for = waiting_for_reboot_return;
     }
   else
     {

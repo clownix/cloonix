@@ -453,9 +453,10 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
     }
   else
     {
-    sprintf(info, 
-            "Missing:       %s/common/spice/spice_lib/bin/spicy", 
-            get_local_cloonix_tree());
+    KERR("ERROR Missing: %s/client/spice/spicy",
+    get_local_cloonix_tree());
+    sprintf(info, "Missing: %s/client/spice/spicy", 
+    get_local_cloonix_tree());
     insert_next_warning(info, 1);
     }
 }

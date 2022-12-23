@@ -40,6 +40,8 @@
 #include "ovs.h"
 #include "llid_trace.h"
 #include "cnt.h"
+#include "crun.h"
+#include "docker.h"
 
 static long long g_abs_beat_timer;
 static int g_ref_timer;
@@ -184,6 +186,11 @@ static void timer_monitoring(void *data)
     return;
   cnt_timer_beat(g_llid);
   count += 1;
+  if (count == 10)
+    {
+    count = 0;
+    docker_timer_beat(g_llid);
+    }
   if (old_nb_pid_resp == g_nb_pid_resp)
     g_nb_pid_resp_warning++;
   else
@@ -310,6 +317,7 @@ void suid_power_pid_resp(int llid, int tid, char *name, int pid)
       {
       hop_event_hook(llid, FLAG_HOP_SIGDIAG, msg);
       rpct_send_sigdiag_msg(llid, type_hop_suid_power, msg);
+      docker_timer_beat(g_llid);
       }
     else
       KERR("ERROR %d", g_llid);
@@ -387,6 +395,8 @@ void suid_power_poldiag_resp(int llid, int tid, char *line)
       }
     free(phy);
     }
+  else if (!strncmp(line, "cloonsuid_docker", strlen("cloonsuid_docker")))
+    docker_poldiag_resp(llid, line);
   else
     KERR("ERROR %s", line);
 }
@@ -443,8 +453,11 @@ void suid_power_sigdiag_resp(int llid, int tid, char *line)
       g_tab_pid[vm_id] = 0;
     }
   else if (!strncmp(line,
-  "cloonsuid_cnt", strlen("cloonsuid_cnt")))
-    cnt_sigdiag_resp(g_llid, line);
+  "cloonsuid_crun", strlen("cloonsuid_crun")))
+    crun_sigdiag_resp(g_llid, line);
+  else if (!strncmp(line,
+  "cloonsuid_docker", strlen("cloonsuid_docker")))
+    docker_sigdiag_resp(g_llid, line);
   else 
     KERR("ERROR suid_power: %s %s", g_cloonix_net, line);
 }

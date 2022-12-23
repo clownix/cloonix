@@ -1,6 +1,6 @@
 #!/bin/bash
 HERE=`pwd`
-./all_clean
+./allclean
 
 cd ${HERE}/../../common/lib_io_clownix
 make clean

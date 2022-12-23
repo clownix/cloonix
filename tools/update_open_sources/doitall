@@ -1,4 +1,0 @@
-#!/bin/bash
-./get_qemu.sh
-./get_ovs_dpdk.sh
-./get_spicy.sh

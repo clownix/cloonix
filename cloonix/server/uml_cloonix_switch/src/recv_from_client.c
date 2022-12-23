@@ -2079,6 +2079,15 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     KERR("ERROR %s %s", locnet, cnt->name);
     send_status_ko(llid, tid, err);
     }
+  else if ((strcmp(cnt->brandtype, "crun")) &&
+           (strcmp(cnt->brandtype, "docker")) &&
+           (strcmp(cnt->brandtype, "podman")))
+    {
+    snprintf(err, MAX_PATH_LEN-1, "%s %s bad brandtype:%s",
+             locnet, cnt->name, cnt->brandtype);
+    KERR("ERROR %s", err);
+    send_status_ko(llid, tid, err);
+    }
   else
     {
     vm_id = cfg_alloc_obj_id();

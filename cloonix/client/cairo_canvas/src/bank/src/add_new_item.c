@@ -728,9 +728,9 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int add_new_cnt(char *name, char *image, char *customer_launch, int vm_id,
-                 double x, double y, int hidden_on_graph,
-                 int ping_ok, int nb_tot_eth, t_eth_table *eth_tab)
+int add_new_cnt(char *type, char *name, char *image, char *customer_launch,
+                int vm_id, double x, double y, int hidden_on_graph,
+                int ping_ok, int nb_tot_eth, t_eth_table *eth_tab)
 {
   int result = 0;
   t_bank_item *bitem;
@@ -747,6 +747,7 @@ int add_new_cnt(char *name, char *image, char *customer_launch, int vm_id,
                                       eorig_noedge);
     bitem->pbi.pbi_cnt = (t_pbi_cnt *) clownix_malloc(sizeof(t_pbi_cnt), 14);
     memset(bitem->pbi.pbi_cnt, 0, sizeof(t_pbi_cnt));
+    strncpy(bitem->pbi.pbi_cnt->type, type, MAX_NAME_LEN-1);
     strncpy(bitem->pbi.pbi_cnt->image, image, MAX_PATH_LEN-1);
     strncpy(bitem->pbi.pbi_cnt->customer_launch, customer_launch,
             MAX_PATH_LEN-1);
