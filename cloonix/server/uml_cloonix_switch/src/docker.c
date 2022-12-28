@@ -67,7 +67,8 @@ void docker_sigdiag_resp(int llid, char *line)
       }
     }
   else if (sscanf(line,
-  "cloonsuid_docker_resp_launch_ok brandtype=%s name=%s vm_id=%d image=%s pid=%d",
+  "cloonsuid_docker_resp_launch_ok brandtype=%s name=%s "
+  "vm_id=%d image=%s pid=%d",
      type, name, &vm_id, image, &pid) == 5)
     {
     cur = find_cnt(name);

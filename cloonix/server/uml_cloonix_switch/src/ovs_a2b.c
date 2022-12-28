@@ -498,6 +498,7 @@ void ovs_a2b_resp_del_lan(int is_ko, char *name, int num,
 {
   t_ovs_a2b *cur = find_a2b(name);
   int other;
+KERR("TRACE %s %d %s %s", name, num, vhost, lan);
   if (num == 0)
     other = 1;
   else if (num == 1)
@@ -508,6 +509,7 @@ void ovs_a2b_resp_del_lan(int is_ko, char *name, int num,
     KERR("ERROR %d %s", is_ko, name);
   else if (cur->side[num].del_a2b_req == 1)
     {
+KERR("TRACE %s", name);
     memset(cur->side[num].lan, 0, MAX_NAME_LEN);
     cur->side[num].del_a2b_req = 0;
     if (cur->side[other].del_a2b_req == 0)

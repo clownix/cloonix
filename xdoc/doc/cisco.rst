@@ -75,11 +75,11 @@ Cisco nat
  E  {      | 
     {      | SSH over TCP in inter server process unix socket
  R  {      |
-    {  +---+-------------+
- V  {  | process dpdk nat|
-    {  +---+-------------+
+    {  +---+-----------+
+ V  {  | process nat   |
+    {  +---+-----------+
  E  {      |
-    {      | RAW TCP (syn synack ...) over dpdk support 
+    {      | RAW TCP (syn synack ...) over ovs through a cloonix lan 
  R  {      |
     {   +--+-------+
     {   |   cisco  | 

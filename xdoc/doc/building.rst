@@ -1,9 +1,9 @@
 .. image:: /png/cloonix128.png 
    :align: right
 
-=====================
-Instructions for use
-=====================
+=============================
+Instructions for installation
+=============================
 
 
 How the building is done.
@@ -35,6 +35,9 @@ here are the git sources for what can be found in targz_store:
   * https://github.com/openvswitch/ovs.git
   * https://git.qemu.org/git/qemu.git
   * https://gitlab.freedesktop.org/spice/spice-gtk.git
+  * https://gitlab.freedesktop.org/spice/spice-protocol.git
+  * https://gitlab.freedesktop.org/spice/spice.git
+  * https://gitlab.freedesktop.org/spice/usbredir.git
   * https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-8.6p1.tar.gz
 
 
@@ -44,6 +47,9 @@ Install
 The installation of cloonix is provided from source only with compilation
 on host and install in /usr/local/bin/cloonix of the host. For more info
 on the dependancy, look into **install_depends** file.
+The podman package is not necessary for cloonix use, if you which, you can
+suppress the line installing it before launching the script.
+
 The 2 main steps to have a successfull installation are::
 
     sudo ./install_depends
@@ -56,10 +62,10 @@ and::
 Here under is the complete list of commands for this installation::
   
     cd ${HOME}
-    wget http://clownix.net/downloads/cloonix-__LAST__/cloonix-__LAST__.tar.gz
+    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/cloonix-__LAST__.tar.gz
     tar xvf cloonix-__LAST__.tar.gz
     cd cloonix-__LAST__
-    wget http://clownix.net/downloads/cloonix-__LAST__/targz_store.tar.gz
+    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/targz_store.tar.gz
     tar xvf targz_store.tar.gz
 
     sudo ./install_depends
@@ -69,6 +75,12 @@ Here under is the complete list of commands for this installation::
 To erase all trace of cloonix from the host ::
 
     rm -rf /usr/local/bin/cloonix*
+
+
+The cloonix source to compile and install is also on github::
+
+    git clone --depth=1 https://github.com/clownix/cloonix.git
+
 
 Guest download
 ==============
@@ -86,10 +98,15 @@ qcow2 for kvm and img for crun::
 
     mkdir -p ${HOME}/cloonix_data/bulk
     cd ${HOME}/cloonix_data/bulk
-    wget http://clownix.net/downloads/cloonix-__LAST__/bulk/bookworm.qcow2.gz
-    wget http://clownix.net/downloads/cloonix-__LAST__/bulk/bookworm.img.gz
+    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/bookworm.qcow2.gz
+    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/bookworm.img.gz
     gunzip bookworm.qcow2.gz
     gunzip bookworm.img.gz
+
+For the podman or docker container guests, you have to create a podman or docker
+image and then this image gets to be visible in the Cnt_conf sub-menu of the
+menu obtained upon a right-click when above the canvas. Note that you must click
+on the docker or podman container type to get to the list of images through Choice.
 
 
 Running
@@ -114,28 +131,16 @@ The cloonix_gui provides a shell for kvm or crun virtual with a double-click
 on a blue virtual machine.
 
 
-Saving
-======
-
-The saving of a kvm type vm is done with the following commands::
-    
-    cloonix_cli nemo sav <name> <complete_file_path>
-
-The save creates an autonomous qcow2 file merging the derived and the
-backing files into one.
-
-
 Tested on
 =========
 
 The install_depends file has been tested to install the correct dependancies
 and the compilation and first run was successfull for the following
-distributions:
+distributions::
 
     * *jammy   (ubuntu 22.04),
-    * *impish  (ubuntu 21.10),
-    * *hirsute (ubuntu 21.05),
     * *bookworm (debian 12),
     * *bullseye (debian 11),
     * *tumbleweed (rolling opensuse),
-    * *fedora35
+    * *fedora36
+    * *centos9

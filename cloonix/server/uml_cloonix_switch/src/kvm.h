@@ -15,6 +15,25 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+typedef struct t_ethv_cnx
+{
+  char name[MAX_NAME_LEN];
+  int num;
+  char vhost[MAX_NAME_LEN];
+  int endp_type;
+  int ready;
+  char lan[MAX_NAME_LEN];
+  char lan_added[MAX_NAME_LEN];
+  int waiting_ack_add_lan;
+  int waiting_ack_del_lan;
+  int attached_lan_ok;
+  int llid;
+  int tid;
+  int del_snf_ethv_sent;
+  struct t_ethv_cnx *prev;
+  struct t_ethv_cnx *next;
+} t_ethv_cnx;
+/*--------------------------------------------------------------------------*/
 t_topo_endp *kvm_translate_topo_endp(int *nb);
 int kvm_exists(char *name, int num);
 void kvm_add_whole_vm(char *name, int nb_tot_eth, t_eth_table *eth_tab);
@@ -28,6 +47,7 @@ void kvm_del(int llid, int tid, char *name, int num,
              int endp_type, int *can_delete);
 int kvm_lan_added_exists(char *name, int num);
 int kvm_dyn_snf(char *name, int num, int val);
+t_ethv_cnx *get_first_head_ethv(void);
 void kvm_init(void);
 /*--------------------------------------------------------------------------*/
 

@@ -99,35 +99,6 @@ Commands to have nested KVM in intel automaticaly from start of machine::
   
 Note that for grub2, it is: grub2-mkconfig --output=/boot/grub2/grub.cfg
 
-Dpdk openvswitch
-================
-
-The host must have 1 Giga size hugepages, here is a configuration for 5 hugepages (with also the nested capacity)::
-
-    GRUB_CMDLINE_LINUX="kvm-intel.nested=1 default_hugepagesz=1G hugepagesz=1G hugepages=5"
-
-    Do one of the commands:
-    grub-mkconfig --output=/boot/grub/grub.cfg
-    grub2-mkconfig --output=/boot/grub2/grub.cfg
-
-After any of the above commands, the host must be rebooted, then check:
-
-Check pagesize=1024M::
-
-    mount | grep hugepages
-
-Check the quantity of hugepages::
-
-    cat /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
-
-Check the meminfo for Huge::
-
-    grep Huge /proc/meminfo
-
-To track errors in case of failure associated to dpdk in case nemo is used:
-
-cat ${HOME}/cloonix_data/nemo/dpdk/ovs-vswitchd.log
-
 
 Wireshark
 =========
@@ -146,12 +117,8 @@ Or just set the suid bit of /usr/bin/dumpcap::
     chmod +x /usr/bin/dumpcap
 
 
+Docker and Podman
+=================
 
-Sudo configuration for containers
-=================================
-
-you need the sudo program to elevate privileges to root level with no password for
-crun control, you have to open as root the /etc/sudoers file and put in the
-"# User privilege specification" section:
-<user>  ALL=(ALL:ALL) NOPASSWD: ALL
-
+Your system must have Docker or Podman or both to be able to use docker or podman containers.
+The container image creation must be done outside of cloonix, cloonix can only launch existing images.

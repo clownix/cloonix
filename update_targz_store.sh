@@ -40,7 +40,7 @@ mv ovs_${COMMIT}.tar.gz ${TARGZ}
 
 #-----------------------------------------------------
 cd ${WORK}
-git clone --depth=1 https://github.com/freedesktop/spice-gtk.git
+git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-gtk.git
 cd ${WORK}/spice-gtk
 COMMIT=$(git log --pretty=format:"%H")
 git submodule init

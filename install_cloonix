@@ -13,12 +13,7 @@ if [ ! -e $CLOONIX ]; then
   exit
 fi
 #----------------------------------------------------------
-for i in cloonix_dta cloonix_osh cloonix_xwy \
-         cloonix_cli cloonix_gui cloonix_net cloonix_scp \
-         cloonix_ice cloonix_ocp cloonix_ssh cloonix_ovs; do 
-  rm -f /usr/local/bin/${i}
-done
-rm -rf /usr/local/bin/cloonix
+rm -rf /usr/local/bin/cloonix*
 mkdir -p /usr/local/bin
 cd /usr/local/bin
 tar zxvf ${HERE}/${CLOONIX}

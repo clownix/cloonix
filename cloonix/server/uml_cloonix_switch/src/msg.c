@@ -545,14 +545,14 @@ static void timer_msg_beat(void *data)
        case ovsreq_add_a2b_lan:
           KERR("ERROR TIMEOUT %d %s %s %s", cur->tid, cur->vhost,
                                             cur->name, cur->lan);
-          ovs_a2b_resp_add_lan(1, cur->name, 0, cur->vhost, cur->lan);
+          ovs_a2b_resp_add_lan(1, cur->name, cur->num, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_a2b_lan:
           KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
                                             cur->name, cur->num);
-          ovs_a2b_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
+          ovs_a2b_resp_del_lan(1, cur->name, cur->num, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 

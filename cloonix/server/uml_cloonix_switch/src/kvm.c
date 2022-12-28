@@ -34,6 +34,7 @@
 #include "suid_power.h"
 #include "ovs_snf.h"
 #include "lan_to_name.h"
+#include "kvm.h"
 
 
 typedef struct t_alloc_delay
@@ -43,25 +44,6 @@ typedef struct t_alloc_delay
   int count;
 } t_alloc_delay;
 
-
-typedef struct t_ethv_cnx
-{
-  char name[MAX_NAME_LEN];
-  int num;
-  char vhost[MAX_NAME_LEN];
-  int endp_type;
-  int ready;
-  char lan[MAX_NAME_LEN];
-  char lan_added[MAX_NAME_LEN];
-  int waiting_ack_add_lan;
-  int waiting_ack_del_lan;
-  int attached_lan_ok;
-  int llid;
-  int tid;
-  int del_snf_ethv_sent;
-  struct t_ethv_cnx *prev;
-  struct t_ethv_cnx *next;
-} t_ethv_cnx;
 
 static t_ethv_cnx *g_head_ethv;
 static int g_nb_ethv;
@@ -568,8 +550,16 @@ int kvm_dyn_snf(char *name, int num, int val)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+t_ethv_cnx *get_first_head_ethv(void)
+{
+  return g_head_ethv;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void kvm_init(void)
 {
+  g_head_ethv = NULL;
   g_nb_ethv = 0;
 }
 /*--------------------------------------------------------------------------*/

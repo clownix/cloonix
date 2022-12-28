@@ -14,9 +14,9 @@ mkdir -p ${TMPBUILD}/targz_store
 cp -f ${HERE}/targz_store/* ${TMPBUILD}/targz_store
 cp -r ${HERE}/cloonix ${TMPBUILD}
 #----------------------------------------------------------
-for i in cloonix_dta cloonix_osh cloonix_xwy \
+for i in cloonix_osh cloonix_ocp \
          cloonix_cli cloonix_gui cloonix_net cloonix_scp \
-         cloonix_ice cloonix_ocp cloonix_ssh cloonix_ovs; do 
+         cloonix_ice cloonix_ssh cloonix_ovs; do 
   mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
 done
 #----------------------------------------------------------

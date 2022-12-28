@@ -209,7 +209,7 @@ static void refresh_ram_cpu_vm(int nb, t_vm *head_vm)
 /*****************************************************************************/
 static void timeout_collect_eventfull(void *data)
 {
-  static int count = 0;
+  static int i, count = 0;
   int nb, llid, tid, nb_vm, nb_cnt;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_eventfull_subs *cur = head_eventfull_subs;
@@ -234,6 +234,18 @@ static void timeout_collect_eventfull(void *data)
     tid = cur->tid;
     if (msg_exist_channel(llid))
       {
+      for (i=0; i<nb; i++)
+        {
+        if (eventfull_endp[i].num == 0)
+          {
+          vm = cfg_get_vm(eventfull_endp[i].name);
+          if (vm)
+            {
+            eventfull_endp[i].ram  = vm->ram;
+            eventfull_endp[i].cpu  = vm->cpu;
+            }
+          }
+        }
       send_eventfull(llid, tid, nb, eventfull_endp);
       }
     else
