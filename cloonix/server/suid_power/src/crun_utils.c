@@ -155,7 +155,7 @@ static void my_cp_and_sed_file(char *dsrc, char *ddst, char *name,
   char src_file[MAX_PATH_LEN+MAX_NAME_LEN];
   char dst_file[MAX_PATH_LEN+MAX_NAME_LEN];
   struct stat stat_file;
-  int len;
+  int len, len_to_sub, len_to_add;
   char *buf1, *buf2, *ptr1, *ptr2, *ptr3;
   snprintf(src_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dsrc, name);
   snprintf(dst_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", ddst, name);
@@ -179,19 +179,25 @@ static void my_cp_and_sed_file(char *dsrc, char *ddst, char *name,
         }
       else
         {
-        len += strlen(customer_launch);
+        len_to_sub = strlen("__CUSTOMER_LAUNCHER_SCRIPT__");
+        len_to_add = 0;
+        len_to_add = strlen(customer_launch);
+        len -= len_to_sub;
+        len += len_to_add;
         buf2 = (char *) malloc((len+1) *sizeof(char));
         memset(buf2, 0, len+1);
         *ptr2 = 0;
-        if ((strlen(ptr1) + strlen(customer_launch) + strlen(ptr3)) >= len)
+        if ((strlen(ptr1) + len_to_add + strlen(ptr3)) > len)
           {
-          KERR("ERROR: %s %s", name, customer_launch);
+          KERR("ERROR: %s %lu %d %lu %d", src_file,
+               strlen(ptr1), len_to_add, strlen(ptr3), len);
+          KERR("ERROR: %s %s %s %s", name, customer_launch, ptr1, ptr3);
           if (!write_whole_file(dst_file, buf1, len))
             chmod(dst_file, stat_file.st_mode);
           }
         else 
           {
-          strncpy(buf2, ptr1, len);
+          strncpy(buf2, ptr1, len-len_to_add);
           strcat(buf2, customer_launch);
           strcat(buf2, ptr3);
           if (!write_whole_file(dst_file, buf2, len))
@@ -213,7 +219,7 @@ static char *get_config_json(char *rootfs, char *nspace,
   char *buf;
   int len = strlen(CONFIG_JSON) + (5 * strlen(CONFIG_JSON_CAPA));
   char *starter;
-  starter = "\"/mnt/cloonix_config_fs/cloonix_init_starter.sh\"\n";
+  starter = "\"/mnt/cloonix_config_fs/crun_init_starter.sh\"\n";
   len += (2 * MAX_PATH_LEN);
   buf = (char *) malloc(len);
   memset(buf, 0, len);
@@ -428,15 +434,15 @@ static int create_all_dirs(char *image, char *cnt_dir, char *name)
 
 
 /****************************************************************************/
-void dirs_agent_copy_starter(char *cnt_dir, char *name,
-                             char *agent_dir, char *launch)
+void dirs_agent_copy_starter_crun(char *cnt_dir, char *name,
+                                 char *agent_dir, char *launch)
 {
   char path[MAX_PATH_LEN];
   char libpath[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs",
            cnt_dir, name);
-  my_cp_and_sed_file(agent_dir, path, "cloonix_init_starter.sh", launch);
+  my_cp_and_sed_file(agent_dir, path, "crun_init_starter.sh", launch);
   my_cp_file(agent_dir, path, "cloonix_agent");
   my_cp_file(agent_dir, path, "dropbear_cloonix_sshd");
   snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs/lib",
@@ -447,6 +453,28 @@ void dirs_agent_copy_starter(char *cnt_dir, char *name,
   my_cp_file(libpath, path, "libutil.so.1");
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void dirs_agent_copy_starter_docker(char *cnt_dir, char *name,
+                                 char *agent_dir, char *launch)
+{
+  char path[MAX_PATH_LEN];
+  char libpath[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs",
+           cnt_dir, name);
+  my_cp_and_sed_file(agent_dir, path, "docker_init_starter.sh", launch);
+  my_cp_file(agent_dir, path, "cloonix_agent");
+  my_cp_file(agent_dir, path, "dropbear_cloonix_sshd");
+  snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs/lib",
+           cnt_dir, name);
+  snprintf(libpath, MAX_PATH_LEN-1, "%s/lib", agent_dir);
+  my_cp_file(libpath, path, "ld-linux-x86-64.so.2");
+  my_cp_file(libpath, path, "libc.so.6");
+  my_cp_file(libpath, path, "libutil.so.1");
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 static int read_crun_create_pid(char *name)
@@ -765,7 +793,7 @@ int crun_utils_create_net(char *image, char *name, char *cnt_dir,
     KERR("ERROR %s %s %s %s", cnt_dir, name, nspace, customer_launch);
   else
     {
-    dirs_agent_copy_starter(cnt_dir, name, agent_dir, customer_launch);
+    dirs_agent_copy_starter_crun(cnt_dir, name, agent_dir, customer_launch);
     if (nspace_create(name, nspace, cloonix_rank, vm_id, nb_eth, eth_mac))
       {
       KERR("ERROR %s %s %s", cnt_dir, name, nspace);

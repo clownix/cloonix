@@ -5,7 +5,5 @@
 
 __CUSTOMER_LAUNCHER_SCRIPT__
 
-while [ 1 ]; do
-  sleep 3000
-done
+sleep 7777d
 

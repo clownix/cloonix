@@ -135,6 +135,7 @@ Content
      :numbered:
      :maxdepth: 1
   
+     doc/release.rst
      doc/system.rst
      doc/building.rst
      doc/configure.rst

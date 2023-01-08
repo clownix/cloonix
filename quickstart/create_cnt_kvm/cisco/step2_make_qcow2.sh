@@ -3,7 +3,7 @@ HERE=`pwd`
 TARGET=/tmp/cisco_initial_configuration
 CISCO_PRECONFIG_ISO=${TARGET}/iosxe_config.iso
 CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu"
-CISCO_ISO=/home/perrier/c8000v-universalk9.17.04.01a.iso
+CISCO_ISO=/home/perrier/Bureau/archives/c8000v-universalk9.17.04.01a.iso
 NAME=c8000
 CISCO_QCOW2=${HOME}/cloonix_data/bulk/${NAME}.qcow2
 

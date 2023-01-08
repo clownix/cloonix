@@ -1,8 +1,10 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
-MIRROR=https://mirrors.edge.kernel.org/centos/9-stream
-#----------------------------------------------------------------------#
-ROOTFS=/root/centos9.img
+DISTRO=opensuse155
+ROOTFS=/root/${DISTRO}.img
+OPENSUSE_MIRROR=http://download.opensuse.org
+OPENSUSE=${OPENSUSE_MIRROR}/distribution/leap/15.5/repo/oss/
+OPENSUSE_UPDATES=${OPENSUSE_MIRROR}/update/leap/15.5/oss/
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -35,7 +37,7 @@ if [ -e $ROOTFS ]; then
 fi
 fct_check_losetup
 #-----------------------------------------------------------------------#
-for i in ${MIRROR}/BaseOS/x86_64/os ${MIRROR}/AppStream/x86_64/os;
+for i in ${OPENSUSE} ${OPENSUSE_UPDATES};
 do
   wget --no-check-certificate --delete-after ${i} 1>/dev/null 2>&1
   OK=$?
@@ -47,8 +49,6 @@ do
   echo REPO OK ${i}
   echo
 done
-
-set -e
 #-----------------------------------------------------------------------#
 dd if=/dev/zero of=${ROOTFS} bs=500M count=10
 mkfs.ext4 ${ROOTFS}
@@ -58,48 +58,25 @@ DEVLOOP=$(losetup -l | grep ${ROOTFS} | awk '{print $1}')
 echo $DEVLOOP
 mount -o loop $DEVLOOP /tmp/wkmntloops
 #-----------------------------------------------------------------------#
-mkdir -p /tmp/wkmntloops/etc/yum.repos.d
-
-for i in AppStream \
-         BaseOS \
-         Devel \
-         HighAvailability \
-         PowerTools \
-         centosplus \
-         cr \
-         extras ; do
-
-cat > /tmp/wkmntloops/etc/yum.repos.d/CentOS-${i}.repo << EOF
-[${i}]
-name=CentOS-9 - ${i}
-baseurl=${MIRROR}/${i}/x86_64/os
-gpgcheck=0
-EOF
-
-done
-
-
-dnf --releasever=9 --installroot=/tmp/wkmntloops -y install dnf
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE} 15.5-oss
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys addrepo ${OPENSUSE_UPDATES} 15.5-oss-updates
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys refresh
+zypper --root=/tmp/wkmntloops --non-interactive --no-gpg-checks --gpg-auto-import-keys update
+zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install systemd
+zypper --root=/tmp/wkmntloops  --non-interactive --no-gpg-checks --gpg-auto-import-keys install zypper
 #-----------------------------------------------------------------------#
 rm -f /tmp/wkmntloops/etc/resolv.conf
 cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
 #-----------------------------------------------------------------------#
-list_pkt="dhclient sudo vim net-tools"
+list_pkt="iproute2 sudo vim net-tools"
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
-sleep 5
-echo dnf --releasever=9 clean packages
-chroot /tmp/wkmntloops/ dnf --releasever=9 clean packages
-echo dnf --releasever=9 -y update
-chroot /tmp/wkmntloops/ dnf --releasever=9 -y update
-echo dnf --releasever=9 -y install
-chroot /tmp/wkmntloops/ dnf --releasever=9 -y install $list_pkt
+chroot /tmp/wkmntloops/ zypper --non-interactive install $list_pkt
+sync /dev/loop0
 umount /tmp/wkmntloops/{dev,proc,sys}
 #-----------------------------------------------------------------------#
 umount /tmp/wkmntloops
 losetup -d $DEVLOOP
 rmdir /tmp/wkmntloops
-#-----------------------------------------------------------------------#
-mv ${ROOTFS} /home/perrier/cloonix_data/bulk
 #-----------------------------------------------------------------------#
 
 

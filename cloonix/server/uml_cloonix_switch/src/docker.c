@@ -165,10 +165,11 @@ void docker_poldiag_resp(int llid, char *line)
 int docker_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
 {
   int result = -1;
-  char req[MAX_PATH_LEN];
+  char req[3*MAX_PATH_LEN];
   char *cnt_dir = utils_get_cnt_dir();
   char *name=cnt->name, *image=cnt->image;
   char *customer_launch = cnt->customer_launch;
+  char *startup_env = cnt->startup_env;
 
   if (!docker_images_exists(cnt->brandtype, image))
     {
@@ -177,11 +178,14 @@ int docker_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
     }
   else
     { 
-    memset(req, 0, MAX_PATH_LEN);
-    snprintf(req, MAX_PATH_LEN-1, 
+    memset(req, 0, 3*MAX_PATH_LEN);
+    snprintf(req, 3*MAX_PATH_LEN-1, 
     "cloonsuid_docker_req_launch brandtype=%s name=%s vm_id=%d "
-    "image=%s cnt_dir=%s agent=%s launch=%s",
-    cnt->brandtype, name, vm_id, image, cnt_dir, agent, customer_launch);
+    "image=%s cnt_dir=%s agent=%s "
+    "<customer_launch_keyid>%s</customer_launch_keyid> "
+    "<startup_env_keyid>%s</startup_env_keyid>\n",
+    cnt->brandtype, name, vm_id, image, cnt_dir, agent,
+    customer_launch, startup_env);
     if (send_sig_suid_power(llid, req))
       {
       KERR("ERROR %s Bad command launch to suid_power", cnt->name);

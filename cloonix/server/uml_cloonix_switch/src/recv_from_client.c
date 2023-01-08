@@ -2068,7 +2068,11 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
   char err[MAX_PATH_LEN];
   int i, vm_id;
 
-  event_print("Rx Req add cnt %s", cnt->name);
+  event_print("Rx Req add cnt name:%s brandtype:%s is_persistent:%d "
+              "image:%s customer_launch:%s startup_env:%s",
+              cnt->name, cnt->brandtype, cnt->is_persistent, cnt->image,
+              cnt->customer_launch, cnt->startup_env);
+
   if (get_inhib_new_clients())
     {
     KERR("ERROR %s %s", locnet, cnt->name);

@@ -48,12 +48,7 @@ INEOF
 mkdir /var/lock
 opkg install libopenssl1.1_1.1.1q-1_x86_64.ipk
 opkg install libustream-openssl20201210_2022-01-16-868fd881-2_x86_64.ipk --force-overwrite
-
 opkg update --force-checksum --no-check-certificate
-opkg install qemu-ga --force-checksum --no-check-certificate
-
-opkg update --force-checksum --no-check-certificate
-opkg install qemu-ga --force-checksum --no-check-certificate
 
 EOF
 
@@ -66,8 +61,6 @@ EOF
   losetup -d /dev/loop0
   cd /root
 #---------------------------------------------------------------------#
-mv ${ROOTFS} /home/perrier/cloonix_data/bulk
-#-----------------------------------------------------------------------#
 
 
 

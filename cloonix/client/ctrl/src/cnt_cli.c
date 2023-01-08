@@ -34,68 +34,49 @@ void callback_end(int tid, int status, char *err);
 /***************************************************************************/
 void help_add_cru(char *line)
 {
-  printf("\n\n\n %s <name> eth=<eth_description> <image> <customer_launch> [options]\n",
+  printf("\n\n\n %s <name> eth=<eth_description> <image> [options]\n",
   line);
   printf("\n\timage is a file containing the root file system.");
-  printf("\n\tcustomer_launch is optionnal, a script that is in container.");
   printf("\n\teth_description example:");
   printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
+  printf("\n\t       --customer_launch=\"<script with params>\"");
+  printf("\n\t       --persistent");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
-  printf("\n\t       --persistent ");
   printf("\n\nexample:\n\n");
   printf("\n%s vm_name eth=sss bullseye.img\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s vm_name eth=vvv bullseye.img \"sleep 100\"\n", line);
+  printf("\n%s vm_name eth=vvv bullseye.img --customer_launch=\"sleep 100\"\n", line);
   printf("This will give 3 eth that are not spyable\n");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
 
 /***************************************************************************/
-void help_add_doc(char *line)
+void help_add_doc_pod(char *line)
 {
-  printf("\n\n\n %s <name> eth=<eth_description> <image> <customer_launch> [options]\n",
+  printf("\n\n\n %s <name> eth=<eth_description> <image> [options]\n",
   line);
   printf("\n\timage is an existing docker image.");
-  printf("\n\tcustomer_launch is optionnal, a script that is in container.");
   printf("\n\teth_description example:");
   printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
+  printf("\n\t       --customer_launch=\"<script with params>\"");
+  printf("\n\t       --startup_env=\"<env_name=env_val env2_name=env2_val...>\"");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\nexample:\n\n");
-  printf("\n%s vm_name eth=sss docker_image_name\n", line);
+  printf("\n%s cnt1 eth=sss docker_image\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s vm_name eth=vvv docker_image_name \"sleep 100\"\n", line);
-  printf("This will give 3 eth that are not spyable\n");
+  printf("\n%s cnt1 eth=vv docker_image --customer_launch=\"sleep 8888d\"\n", line);
+  printf("This will give a container with 2 eth that are not spyable and will launch the sleep 8888d\n");
+  printf("\n%s cnt1 eth=s docker_image --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
+  printf("This will give 2 eth that are spyable and will start the container with\n");
+  printf("MYENV=myenv and CLOONIX=great env variables.\n");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
-
-/***************************************************************************/
-void help_add_pod(char *line)
-{
-  printf("\n\n\n %s <name> eth=<eth_description> <image> <customer_launch> [options]\n",
-  line);
-  printf("\n\timage is an existing podman image.");
-  printf("\n\tcustomer_launch is optionnal, a script that is in container.");
-  printf("\n\teth_description example:");
-  printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
-  printf("\n\tMax eth: %d", MAX_ETH_VM);
-  printf("\n\t[options]");
-  printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
-  printf("\n\nexample:\n\n");
-  printf("\n%s vm_name eth=sss podman_image_name\n", line);
-  printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s vm_name eth=vvv podman_image_name \"sleep 100\"\n", line);
-  printf("This will give 3 eth that are not spyable\n");
-  printf("\n\n\n");
-}
-/*-------------------------------------------------------------------------*/
-
-
 
 /***************************************************************************/
 static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
@@ -141,12 +122,13 @@ static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
 
 /***************************************************************************/
 static int local_add_cnt(char *type, char *name, int nb_tot_eth,
-                         t_eth_table *eth_tab,
-                         char *image, char *customer_launch,
+                         t_eth_table *eth_tab, char *image,
                          int argc, char **argv)
 {
   int i, persistent = 0, result = 0;
   t_topo_cnt cnt;
+  char *ptr;
+  memset(&cnt, 0, sizeof(t_topo_cnt));
 
   for (i=0; i<argc; i++)
     {
@@ -163,6 +145,19 @@ static int local_add_cnt(char *type, char *name, int nb_tot_eth,
       {
       persistent = 1;
       }
+    else if (!strncmp(argv[i], "--startup_env=", strlen("--startup_env=")))
+      {
+      ptr = argv[i] + strlen("--startup_env=");
+      if (strlen(ptr))
+        strncpy(cnt.startup_env, ptr, MAX_PATH_LEN-1);
+      }
+    else if (!strncmp(argv[i],"--customer_launch=",
+                      strlen("--customer_launch")))
+      {
+      ptr = argv[i] + strlen("--customer_launch=");
+      if (strlen(ptr))
+        strncpy(cnt.customer_launch, ptr, MAX_PATH_LEN-1);
+      }
     else
       {
       printf("\nERROR: %s not an option\n\n", argv[i]);
@@ -173,14 +168,12 @@ static int local_add_cnt(char *type, char *name, int nb_tot_eth,
   if (result == 0)
     {
     init_connection_to_uml_cloonix_switch();
-    memset(&cnt, 0, sizeof(t_topo_cnt));
     strncpy(cnt.brandtype, type, MAX_NAME_LEN-1);
     strncpy(cnt.name, name, MAX_NAME_LEN-1);
     cnt.is_persistent = persistent;
     cnt.nb_tot_eth = nb_tot_eth;
     memcpy(cnt.eth_table, eth_tab, nb_tot_eth * sizeof(t_eth_table));
     strncpy(cnt.image, image, MAX_PATH_LEN-1);
-    strncpy(cnt.customer_launch, customer_launch, MAX_PATH_LEN-1);
     client_add_cnt(0, callback_end, &cnt);
     }
   return result;
@@ -240,7 +233,7 @@ static int check_eth_desc(char *eth_desc, char *err,
 static int cmd_add_cnt(char *type, int argc, char **argv)
 {
   int i, nb_eth, non_opt_argc, result = -1;
-  char *image, *customer_launch, *name;
+  char *image, *name;
   char eth_string[MAX_PATH_LEN];
   char err[MAX_PATH_LEN];
   t_eth_table etht[MAX_ETH_VM];
@@ -262,15 +255,11 @@ static int cmd_add_cnt(char *type, int argc, char **argv)
         }
       name = argv[0];
       image = argv[2];
-      if (non_opt_argc == 3)
-        result = local_add_cnt(type, name, nb_eth, etht, image, "sleep 1000",
-                               argc-3, &(argv[3])); 
+      if (non_opt_argc != 3)
+        printf("\nNot enough parameters for add cnt\n");
       else
-        {
-        customer_launch = argv[3];
-        result = local_add_cnt(type, name, nb_eth, etht, image, customer_launch,
-                               argc-4, &(argv[4])); 
-        }
+        result = local_add_cnt(type, name, nb_eth, etht, image,
+                               argc-3, &(argv[3])); 
       }
     }
   return result;

@@ -45,21 +45,22 @@ echo 9 click on Choice and pick mikrotik.qcow2.
 echo 10 click on n for the Eth0 to have no ethernet.
 echo 11 click on OK.
 echo 12 In cloonix_gui, right-click and pick kvm.
-echo 13 The vm based on mikrotik.qcow2 should be visible.
+echo 13 The vm based on mikrotik.qcow2 should be visible WITH NO ETH.
 echo 
-echo 13 Right-click while above the vm, then pick the spice desktop.
-echo 14 In the spice desktop, put \"admin\" and return \(empty password\), choose a password....
-echo 15 put n for the software licence, press enter and choose a password....
-echo 16 When logged in as admin request dhclient at next startup as follows:
-printf "16.1 /system script add name=dhcpcnf source=\":delay 4;ip/dhcp-client/add interface=ether1\"\n"
-echo 16.2 /system scheduler add name=dhcpcnf on-event=dhcpcnf start-time=startup interval=0
-echo 17 Poweroff the vm with \"system/shutdown\".
+echo 13 Right-click while above the vm, then pick the Console rather than the Spice.
+echo 14 In the console press return, note that the Spice cannot handle copy-paste Console can.
+echo 15 In the Console, put \"admin\" and return \(empty password\), choose a password....
+echo 16 put n for the software licence, press enter and choose a password....
+echo 17 When logged in as admin request dhclient at next startup by copy-paste in Console as follows:
+printf "18 /system script add name=dhcpcnf source=\":delay 5;ip/dhcp-client/add interface=ether1\"\n"
+echo 19 /system scheduler add name=dhcpcnf on-event=dhcpcnf start-time=startup interval=5
+echo 20 Poweroff the vm with \"system/shutdown\".
 echo 
-echo 18 In cloonix_gui, right-click and pick kvm_conf.
-echo 19 Unselect persistent_rootfs.
-echo 20 click on s for the Eth0 Eth1 and Eth2 or whatever you whish as long as more than 1 eth.
-echo 21 In cloonix_gui, right-click and pick kvm.
-echo 22 After that a double-click on the vm should get a new terminal.
+echo 21 In cloonix_gui, right-click and pick kvm_conf.
+echo 22 Unselect persistent_rootfs but keep no_qemu_ga and natplug_flag.
+echo 23 click on s for the Eth0 Eth1 and Eth2 or whatever you whish as long as more than 1 eth.
+echo 24 In cloonix_gui, right-click and pick kvm.
+echo 25 After 10 seconds, a double-click on the vm should get a new terminal requesting the password.
 echo 
 
 

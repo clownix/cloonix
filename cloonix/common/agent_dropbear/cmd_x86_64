@@ -67,4 +67,5 @@ cd $LIB_CLOWNIX
 make clean
 
 cd ${HERE}
-cp cloonix_init_starter.sh ${AGENT_BIN_ALIEN}
+cp crun_init_starter.sh ${AGENT_BIN_ALIEN}
+cp docker_init_starter.sh ${AGENT_BIN_ALIEN}

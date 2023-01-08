@@ -415,6 +415,7 @@ static void req_kill_clean_all(void)
     }
   snprintf(root_work_crun, MAX_PATH_LEN-1,"%s/%s", root, CNT_DIR);
   crun_utils_unlink_sub_dir_files(root_work_crun);
+  crun_utils_unlink_sub_dir_files(g_mnt_loop_dir);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -275,8 +275,9 @@
                          "  <ping_ok> %d </ping_ok>\n"\
                          "  <nb_tot_eth> %d </nb_tot_eth>"
 
-#define ADD_CNT_C        "<customer_launch> %s </customer_launch>\n"\
-                         "  <image> %s </image>\n"\
+#define ADD_CNT_C        "<customer_launch_keyid>%s</customer_launch_keyid>\n"\
+                         "<startup_env_keyid>%s</startup_env_keyid>\n"\
+                         "<image> %s </image>\n"\
                          "</add_cnt>"
 /*---------------------------------------------------------------------------*/
 
@@ -458,7 +459,8 @@
                               "  ping_ok: %d \n"\
                               "  nb_tot_eth: %d "
 
-#define EVENT_TOPO_CNT_C      "  <customer_launch> %s </customer_launch>\n"\
+#define EVENT_TOPO_CNT_C      "<customer_launch_keyid>%s</customer_launch_keyid>\n"\
+                              "<startup_env_keyid>%s</startup_env_keyid>\n"\
                               "</cnt>\n"
                         
 #define EVENT_TOPO_C2C        "<c2c>\n"\

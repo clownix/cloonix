@@ -45,7 +45,7 @@ DEVLOOP=$(losetup -l | grep ${ROOTFS} | awk '{print $1}')
 echo $DEVLOOP
 mount -o loop $DEVLOOP /tmp/wkmntloops
 INCLUDES="locales,console-data,console-setup,kbd,keyboard-configuration,"
-INCLUDES+="openssh-client,vim,bash-completion,net-tools,tcpdump"
+INCLUDES+="openssh-client,vim,bash-completion,net-tools,tcpdump,iperf3"
 debootstrap --no-check-certificate \
 	    --no-check-gpg \
             --arch amd64 \
@@ -81,7 +81,5 @@ umount /tmp/wkmntloops/{dev,proc,sys}
 umount /tmp/wkmntloops
 losetup -d $DEVLOOP
 rmdir /tmp/wkmntloops
-#-----------------------------------------------------------------------#
-mv ${ROOTFS} /home/perrier/cloonix_data/bulk
 #-----------------------------------------------------------------------#
 

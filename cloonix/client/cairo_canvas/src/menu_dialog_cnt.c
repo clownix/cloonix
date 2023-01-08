@@ -525,10 +525,11 @@ void menu_dialog_cnt_init(void)
   memset(&g_custom_cnt, 0, sizeof(t_custom_cnt)); 
   strcpy(g_custom_cnt.brandtype, "crun");
   strcpy(g_custom_cnt.name, "Cnt");
-  strcpy(g_custom_cnt.cru_image, "bookworm.img");
-  strcpy(g_custom_cnt.doc_image, "bookworm");
-  strcpy(g_custom_cnt.pod_image, "localhost/bookworm");
-  strcpy(g_custom_cnt.customer_launch, "sleep 3000");
+  strcpy(g_custom_cnt.customer_launch,"sleep 8888d");
+  strcpy(g_custom_cnt.startup_env, "STARTUP_ENV=myenv");
+  strcpy(g_custom_cnt.cru_image,   "bookworm.img");
+  strcpy(g_custom_cnt.doc_image,   "bookworm");
+  strcpy(g_custom_cnt.pod_image,   "localhost/bookworm");
   g_custom_cnt.nb_tot_eth = 3;
   for (i=0; i<g_custom_cnt.nb_tot_eth; i++)
     g_custom_cnt.eth_table[i].endp_type = endp_type_eths;

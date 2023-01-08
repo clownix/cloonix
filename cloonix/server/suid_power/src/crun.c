@@ -158,11 +158,13 @@ static void unlink_sub_dir_files(char *dirname)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void unlink_all_files(char *cnt_dir, char *name)
+static void unlink_all_files(char *cnt_dir, char *name, char *image)
 {
   char pth[MAX_PATH_LEN];
   memset(pth, 0, MAX_PATH_LEN);
   snprintf(pth, MAX_PATH_LEN-1, "%s/%s", cnt_dir, name);
+  unlink_sub_dir_files(pth);
+  snprintf(pth, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
   unlink_sub_dir_files(pth);
 }
 /*---------------------------------------------------------------------------*/
@@ -180,7 +182,7 @@ static void urgent_destroy_crun(t_crun *cur)
   crun_utils_delete_overlay(name, cnt_dir, cur->bulk,
                             cur->image, cur->is_persistent);
   free_crun(cur);
-  unlink_all_files(cnt_dir, name);
+  unlink_all_files(cnt_dir, name, cur->image);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -477,7 +479,7 @@ static void delete_crun(char *line, char *resp, char *nm)
     snprintf(resp, MAX_PATH_LEN-1,
              "cloonsuid_crun_delete_resp_ok name=%s", nm);
     free_crun(cur);
-    unlink_all_files(cnt_dir, name);
+    unlink_all_files(cnt_dir, name, cur->image);
     }
 }
 /*--------------------------------------------------------------------------*/

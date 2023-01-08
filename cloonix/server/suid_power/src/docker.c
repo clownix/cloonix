@@ -31,9 +31,16 @@
 #include "docker_images.h"
 #include "crun_utils.h"
 
+enum
+{
+  end_launch_state_start=5,
+  end_launch_state_dropbear,
+};
+
 /*--------------------------------------------------------------------------*/
 typedef struct t_timeout_end_launch
 {
+  int end_launch_state;
   int count;
   int llid;
   int tid;
@@ -170,13 +177,33 @@ static void timeout_end_launch(void *data)
   t_timeout_end_launch *tel = (t_timeout_end_launch *) data;
   char resp[MAX_PATH_LEN];
   int pid;
-  docker_images_rebuild();
-  pid = docker_images_get_pid(tel->brandtype, tel->image, tel->id);
-  if (pid == 0)
+  FILE *fp;
+  char cmd[MAX_PATH_LEN];
+  char bin[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+
+  if (tel->end_launch_state == end_launch_state_start)
     {
-    KERR("ERROR %s %s %s %d", tel->name, tel->image, tel->id, tel->count);
-    tel->count += 1;
-    if (tel->count == 5)
+    docker_images_rebuild();
+    pid = docker_images_get_pid(tel->brandtype, tel->image, tel->id);
+    if (pid == 0)
+      {
+      KERR("ERROR %s %s %s %d", tel->name, tel->image, tel->id, tel->count);
+      tel->count += 1;
+      if (tel->count == 5)
+        {
+        KERR("ERROR %s %s %s", tel->name, tel->image, tel->id);
+        snprintf(resp, MAX_PATH_LEN-1,
+        "cloonsuid_docker_resp_launch_ko brandtype=%s name=%s vm_id=%d image=%s",
+        tel->brandtype, tel->name, tel->vm_id, tel->image);
+        if (msg_exist_channel(tel->llid))
+          rpct_send_sigdiag_msg(tel->llid, tel->tid, resp);
+        free(tel);
+        }
+      else
+        clownix_timeout_add(40, timeout_end_launch, (void *)tel, NULL, NULL);
+      }
+    else if (find_doc(tel->brandtype, tel->name))
       {
       KERR("ERROR %s %s %s", tel->name, tel->image, tel->id);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -187,26 +214,49 @@ static void timeout_end_launch(void *data)
       free(tel);
       }
     else
+      {
+      alloc_doc(tel->brandtype,tel->name,tel->image,tel->id,tel->vm_id,pid);
+      snprintf(resp, MAX_PATH_LEN-1,
+      "cloonsuid_docker_resp_launch_ok brandtype=%s name=%s vm_id=%d image=%s pid=%d",
+      tel->brandtype, tel->name, tel->vm_id, tel->image, pid);
+      if (msg_exist_channel(tel->llid))
+        rpct_send_sigdiag_msg(tel->llid, tel->tid, resp);
+      tel->end_launch_state = end_launch_state_dropbear;
       clownix_timeout_add(40, timeout_end_launch, (void *)tel, NULL, NULL);
+      }
     }
-  else if (find_doc(tel->brandtype, tel->name))
+  else if (tel->end_launch_state == end_launch_state_dropbear)
     {
-    KERR("ERROR %s %s %s", tel->name, tel->image, tel->id);
-    snprintf(resp, MAX_PATH_LEN-1,
-    "cloonsuid_docker_resp_launch_ko brandtype=%s name=%s vm_id=%d image=%s",
-    tel->brandtype, tel->name, tel->vm_id, tel->image);
-    if (msg_exist_channel(tel->llid))
-      rpct_send_sigdiag_msg(tel->llid, tel->tid, resp);
+    memset(cmd, 0, 2*MAX_PATH_LEN);
+    memset(bin, 0, MAX_PATH_LEN);
+    if (!strcmp(tel->brandtype, "docker"))
+      strncpy(bin, DOCKER_BIN, MAX_PATH_LEN-1);
+    else if (!strcmp(tel->brandtype, "podman"))
+      strncpy(bin, PODMAN_BIN, MAX_PATH_LEN-1);
+    else
+      KOUT("ERROR %s", tel->brandtype);
+    if ((pid = fork()) < 0)
+      KOUT(" ");
+    if (pid == 0)
+      {
+      snprintf(cmd, 2*MAX_PATH_LEN-1,
+      "%s exec %s /mnt/cloonix_config_fs/docker_init_starter.sh 2>&1", bin, tel->id);
+      fp = popen(cmd, "r");
+      if (fp == NULL)
+        KERR("ERROR %s", cmd);
+      else
+        {
+        if (fgets( line, sizeof line, fp))
+          KERR("ERROR %s %s", line, cmd);
+        }
+      pclose(fp);
+      exit(0);
+      }
     free(tel);
     }
   else
     {
-    alloc_doc(tel->brandtype,tel->name,tel->image,tel->id,tel->vm_id,pid);
-    snprintf(resp, MAX_PATH_LEN-1,
-    "cloonsuid_docker_resp_launch_ok brandtype=%s name=%s vm_id=%d image=%s pid=%d",
-    tel->brandtype, tel->name, tel->vm_id, tel->image, pid);
-    if (msg_exist_channel(tel->llid))
-      rpct_send_sigdiag_msg(tel->llid, tel->tid, resp);
+    KERR("ERROR %s %s %s", tel->name, tel->image, tel->id);
     free(tel);
     }
 }
@@ -228,19 +278,118 @@ static void suppress_previous_name(char *bin, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int launch_docker(int llid, int tid, int vm_id, char *cnt_dir,
-                         char *brandtype, char *name, char *image,
-                         char *agent_dir, char *launch)
+static void create_env_cmd(char *startup_env, char *env)
+{
+  char *ptr_start, *ptr;
+  int i, nb = 0;
+  char tmp[2*MAX_NAME_LEN];
+  memset(env, 0, MAX_PATH_LEN);
+  ptr = startup_env;
+  if (strlen(ptr))
+    {
+    nb = 1;
+    while(ptr)
+      {
+      ptr = strchr(ptr, ' ');
+      if (ptr)
+        {
+        nb += 1;
+        ptr += 1;
+        }
+      }
+    ptr_start = startup_env;
+    for (i=0; i<nb; i++)
+      {
+      ptr = strchr(ptr_start, ' ');
+      if (ptr)
+        {
+        *ptr = 0;
+        ptr += 1;
+        }
+      memset(tmp, 0, 2*MAX_NAME_LEN);
+      snprintf(tmp, 2*MAX_NAME_LEN-1, "--env=%s ", ptr_start);
+      strcat(env, tmp); 
+      ptr_start = ptr; 
+      }
+    }
+  else
+    strcat(env, " "); 
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int no_entrypoint_found(char *bin, char *id_image)
+{
+  int result = 1;
+  FILE *fp;
+  char line[MAX_PATH_LEN];
+  char cmd[MAX_PATH_LEN];
+  char *end;
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf (cmd, MAX_PATH_LEN-1, 
+            "%s inspect -f '{{.Config.Cmd}}' %s", bin, id_image);
+  fp = popen(cmd, "r");
+  if (fp == NULL)
+    KERR("ERROR %s", cmd);
+  else
+    {
+    if (fgets( line, sizeof line, fp))
+      {
+      end = strchr(line, '\r');
+      if (end)
+        *end = 0;
+      end = strchr(line, '\n');
+      if (end)
+        *end = 0;
+      if (strlen(line) > 4)
+        result = 0; 
+      }
+    else
+      KERR("ERROR %s", cmd);
+    pclose(fp);
+    }
+
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf (cmd, MAX_PATH_LEN-1,
+            "%s inspect -f '{{.Config.Entrypoint}}' %s", bin, id_image);
+  fp = popen(cmd, "r");
+  if (fp == NULL)
+    KERR("ERROR %s", cmd);
+  else
+    {
+    if (fgets( line, sizeof line, fp))
+      {
+      end = strchr(line, '\r');
+      if (end)
+        *end = 0;
+      end = strchr(line, '\n');
+      if (end)
+        *end = 0;
+      if (strlen(line) > 3)
+        result = 0;
+      }
+    else
+      KERR("ERROR %s", cmd);
+    pclose(fp);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int launch_docker(char *cnt_dir, char *brandtype, char *name,
+                         char *image, char *agent_dir, char *launch,
+                         char *startup_env, char *id, char *id_image)
 {
   FILE *fp;
   char line[MAX_PATH_LEN];
-  char cmd[2*MAX_PATH_LEN];
+  char cmd[3*MAX_PATH_LEN];
   char bin[MAX_PATH_LEN];
   char str1[MAX_PATH_LEN];
-  char *cloonix_launch="/mnt/cloonix_config_fs/cloonix_init_starter.sh";
+  char env[MAX_PATH_LEN];
+  char entrypoint[MAX_NAME_LEN];
   char *mountbear = str1;
   int result = -1;
-  t_timeout_end_launch *tel;
 
   memset(bin, 0, MAX_PATH_LEN);
   if (!strcmp(brandtype, "docker"))
@@ -253,16 +402,21 @@ static int launch_docker(int llid, int tid, int vm_id, char *cnt_dir,
     KERR("ERROR %s %s %s %s", cnt_dir, name, agent_dir, launch);
   else
     {
+    memset(entrypoint, 0, MAX_NAME_LEN);
+    strncpy(entrypoint, " ", MAX_NAME_LEN-1);
+    create_env_cmd(startup_env, env);
     suppress_previous_name(bin, name);
     memset(str1, 0, MAX_PATH_LEN);
     snprintf(str1, MAX_PATH_LEN-1,"%s/%s/mnt", cnt_dir, name);
-    dirs_agent_copy_starter(cnt_dir, name, agent_dir, launch);
-    memset(cmd, 0, 2*MAX_PATH_LEN);
-    snprintf(cmd, 2*MAX_PATH_LEN-1,
-    "%s run --name=%s --net=none --detach --privileged "
+    dirs_agent_copy_starter_docker(cnt_dir, name, agent_dir, launch);
+    if (no_entrypoint_found(bin, id_image))
+      strncpy(entrypoint, "sleep 7777d", MAX_NAME_LEN-1);
+    memset(cmd, 0, 3*MAX_PATH_LEN);
+    snprintf(cmd, 3*MAX_PATH_LEN-1,
+    "%s run --name=%s %s --net=none --detach --privileged "
     "--mount type=bind,source=/lib/modules,target=/lib/modules "
     "--mount type=bind,source=%s,target=/mnt %s %s 2>&1",
-    bin, name, mountbear, image, cloonix_launch);
+    bin, name, env, mountbear, image, entrypoint);
     fp = popen(cmd, "r");
     if (fp == NULL)
       KERR("ERROR %s", cmd);
@@ -273,16 +427,7 @@ static int launch_docker(int llid, int tid, int vm_id, char *cnt_dir,
         if (strlen(line) > 12)
           {
           line[12] = 0;
-          tel = (t_timeout_end_launch *) malloc(sizeof(t_timeout_end_launch));
-          memset(tel, 0, sizeof(t_timeout_end_launch));
-          tel->llid = llid;
-          tel->tid = tid;
-          tel->vm_id = vm_id;
-          strncpy(tel->brandtype, brandtype, MAX_NAME_LEN-1);
-          strncpy(tel->name, name, MAX_NAME_LEN-1);
-          strncpy(tel->image, image, MAX_NAME_LEN-1);
-          strncpy(tel->id, line, MAX_NAME_LEN-1);
-          clownix_timeout_add(40, timeout_end_launch, (void *)tel, NULL, NULL);
+          strncpy(id, line, MAX_NAME_LEN-1);
           result = 0;
           }
         else
@@ -311,17 +456,21 @@ void docker_recv_poldiag_msg(int llid, int tid, char *line)
 /****************************************************************************/
 void docker_recv_sigdiag_msg(int llid, int tid, char *line)
 {
+  char id[MAX_NAME_LEN];
   char type[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   char image[MAX_NAME_LEN];
+  char id_image[MAX_NAME_LEN];
   char agent_dir[MAX_PATH_LEN];
   char cnt_dir[MAX_PATH_LEN];
   char customer_launch[MAX_PATH_LEN];
-  int i, vm_id, num; 
+  char startup_env[MAX_PATH_LEN];
+  int i, vm_id, num, len; 
   char mac[6];
   char resp[MAX_PATH_LEN];
-  char *ptr;
+  char *ptr1, *ptr2;
   t_container *cur;
+  t_timeout_end_launch *tel;
 
   memset(resp, 0, MAX_PATH_LEN);
   
@@ -337,7 +486,7 @@ void docker_recv_sigdiag_msg(int llid, int tid, char *line)
       "cloonsuid_docker_resp_launch_ko brandtype=%s name=%s vm_id=%d image=%s",
       type, name, vm_id, image);
       }
-    else if (!docker_images_exits(type, image))
+    else if (!docker_images_exits(type, image, id_image))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -346,21 +495,55 @@ void docker_recv_sigdiag_msg(int llid, int tid, char *line)
       }
     else if (docker_images_container_name_already_used(type, name))
       {
-      KERR("ERROR %s", line);
+      KERR("ERROR docker_images_container_name_already_used %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
       "cloonsuid_docker_resp_launch_ko brandtype=%s name=%s vm_id=%d image=%s",
       type, name, vm_id, image);
       }
     else
       {
-      ptr = strstr(line, "launch=");
-      if (!ptr)
-        KOUT("ERROR %s", line);
-      ptr += strlen("launch=");
+      memset(startup_env, 0, MAX_PATH_LEN);
+      ptr1 = strstr(line, "<startup_env_keyid>");
+      if(!ptr1)
+        KOUT("%s", line);
+      ptr2 = strstr(line, "</startup_env_keyid>");
+      if(!ptr2)
+        KOUT("%s", line);
+      *ptr2 = 0;
+      len = strlen("<startup_env_keyid>");
+      if (strlen(ptr1) - len >= MAX_PATH_LEN)
+        KOUT("%s", line);
+      strncpy(startup_env, ptr1+len, MAX_PATH_LEN-1);
+
       memset(customer_launch, 0, MAX_PATH_LEN);
-      strncpy(customer_launch, ptr, MAX_PATH_LEN-1);
-      if (launch_docker(llid, tid, vm_id, cnt_dir, type, name,
-                        image, agent_dir, customer_launch))
+      ptr1 = strstr(line, "<customer_launch_keyid>");
+      if(!ptr1)
+        KOUT("%s", line);
+      ptr2 = strstr(line, "</customer_launch_keyid>");
+      if(!ptr2)
+        KOUT("%s", line);
+      *ptr2 = 0;
+      len = strlen("<customer_launch_keyid>");
+      if (strlen(ptr1) - len >= MAX_PATH_LEN)
+        KOUT("%s", line);
+      strncpy(customer_launch, ptr1+len, MAX_PATH_LEN-1);
+
+      if (!launch_docker(cnt_dir, type, name, image, agent_dir,
+                         customer_launch, startup_env, id, id_image))
+        {
+        tel = (t_timeout_end_launch *) malloc(sizeof(t_timeout_end_launch));
+        memset(tel, 0, sizeof(t_timeout_end_launch));
+        tel->end_launch_state = end_launch_state_start;
+        tel->llid = llid;
+        tel->tid = tid;
+        tel->vm_id = vm_id;
+        strncpy(tel->brandtype, type, MAX_NAME_LEN-1);
+        strncpy(tel->name, name, MAX_NAME_LEN-1);
+        strncpy(tel->image, image, MAX_NAME_LEN-1);
+        strncpy(tel->id, id, MAX_NAME_LEN-1);
+        clownix_timeout_add(40, timeout_end_launch, (void *)tel, NULL, NULL);
+        }
+      else
         {
         KERR("ERROR %s", line);
         snprintf(resp, MAX_PATH_LEN-1,

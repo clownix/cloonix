@@ -43,7 +43,9 @@ int crun_utils_create_config_json(char *path, char *rootfs, char *nspace,
 int crun_utils_docker_veth(char *name, int pid, int vm_id,
                            int nb_eth, t_eth_mac *eth_mac);
 int dirs_agent_create_mnt_tmp(char *cnt_dir, char *name);
-void dirs_agent_copy_starter(char *cnt_dir, char *name,
+void dirs_agent_copy_starter_crun(char *cnt_dir, char *name,
+                             char *agent_dir, char *launch);
+void dirs_agent_copy_starter_docker(char *cnt_dir, char *name,
                              char *agent_dir, char *launch);
 void crun_utils_init(void);
 char *get_mnt_loop_dir(void);

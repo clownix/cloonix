@@ -1,9 +1,13 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
-DEBIAN_REPO="http://deb.debian.org/debian"
-
+CLOONIX_BULK=/home/perrier/cloonix_data/bulk
 #----------------------------------------------------------------------#
-ROOTFS=/root/jammy.img
+IMAGE=${CLOONIX_BULK}/bookworm.img
+#----------------------------------------------------------------------#
+if [ ! -e $IMAGE ]; then
+  echo DOES NOT EXIST: $IMAGE
+  exit 1
+fi
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -29,41 +33,26 @@ fct_check_losetup()
 
 #########################################################################
 fct_check_uid
-set +e
-if [ -e $ROOTFS ]; then
-  echo $ROOTFS already exists
-  exit 1
-fi
 fct_check_losetup
-set -e
-#-----------------------------------------------------------------------#
-dd if=/dev/zero of=${ROOTFS} bs=500M count=10
-mkfs.ext4 ${ROOTFS}
-losetup -fP ${ROOTFS}
+losetup -fP ${IMAGE}
 mkdir -p /tmp/wkmntloops
-DEVLOOP=$(losetup -l | grep ${ROOTFS} | awk '{print $1}')
+DEVLOOP=$(losetup -l | grep ${IMAGE} | awk '{print $1}')
 echo $DEVLOOP
 mount -o loop $DEVLOOP /tmp/wkmntloops
-INCLUDES="openssh-client,vim,bash-completion,net-tools,tcpdump"
-COMPONENT="kernel,multiverse,universe,main"
 
-debootstrap --no-check-certificate \
-	    --no-check-gpg \
-            --arch amd64 \
-            --include=${INCLUDES} \
-            --components=${COMPONENT} \
-            jammy \
-            /tmp/wkmntloops ${REPO_STRETCH}
-
-
-DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
-sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
-sed -i s"/set mouse/\"set mouse/" $DEFVIM
-
+rm -rf /tmp/rootfs_podman
+cp -vrf /tmp/wkmntloops /tmp/rootfs_podman
 umount /tmp/wkmntloops
 losetup -d $DEVLOOP
 rmdir /tmp/wkmntloops
-#-----------------------------------------------------------------------#
-mv ${ROOTFS} /home/perrier/cloonix_data/bulk
+
+cat > /tmp/rootfs_podman/Dockerfile << EOF
+FROM scratch
+ADD . /
+EOF
+
+podman rmi bookworm 1>/dev/null 2>&1
+podman build -t bookworm /tmp/rootfs_podman/
+
 #-----------------------------------------------------------------------#
 

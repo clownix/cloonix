@@ -128,7 +128,5 @@ umount /tmp/wkmntloops
 losetup -d $DEVLOOP
 rmdir /tmp/wkmntloops
 #-----------------------------------------------------------------------#
-mv ${ROOTFS} /home/perrier/cloonix_data/bulk
-#-----------------------------------------------------------------------#
 
 

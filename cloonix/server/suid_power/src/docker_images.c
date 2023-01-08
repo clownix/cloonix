@@ -355,7 +355,7 @@ int docker_images_get_pid(char *brandtype, char *image_name, char *id)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int docker_images_exits(char *brandtype, char *name)
+int docker_images_exits(char *brandtype, char *name, char *image_id)
 {
   int i, result = 0;
   for (i=0; i<g_image_nb; i++)
@@ -363,7 +363,11 @@ int docker_images_exits(char *brandtype, char *name)
     if ((!strcmp(g_image[i].brandtype, brandtype)) &&
         ((!strcmp(g_image[i].image_name, name)) ||
          (!strcmp(g_image[i].image_id, name))))
+      {
+      memset(image_id, 0, MAX_NAME_LEN);
+      strncpy(image_id, g_image[i].image_id, MAX_NAME_LEN-1);
       result = 1;
+      }
     }
   return result;
 }

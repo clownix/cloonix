@@ -1,13 +1,9 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
-BULK="/home/perrier/cloonix_data/bulk"
+DEBIAN_REPO="http://deb.debian.org/debian"
+
 #----------------------------------------------------------------------#
-IMAGE=${BULK}/bookworm.img
-#----------------------------------------------------------------------#
-if [ ! -e $IMAGE ]; then
-  echo DOES NOT EXIST: $IMAGE
-  exit 1
-fi
+ROOTFS=/root/bullseye.img
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -33,26 +29,36 @@ fct_check_losetup()
 
 #########################################################################
 fct_check_uid
+set +e
+if [ -e $ROOTFS ]; then
+  echo $ROOTFS already exists
+  exit 1
+fi
 fct_check_losetup
-losetup -fP ${IMAGE}
+set -e
+#-----------------------------------------------------------------------#
+dd if=/dev/zero of=${ROOTFS} bs=500M count=10
+mkfs.ext4 ${ROOTFS}
+losetup -fP ${ROOTFS}
 mkdir -p /tmp/wkmntloops
-DEVLOOP=$(losetup -l | grep ${IMAGE} | awk '{print $1}')
+DEVLOOP=$(losetup -l | grep ${ROOTFS} | awk '{print $1}')
 echo $DEVLOOP
 mount -o loop $DEVLOOP /tmp/wkmntloops
+INCLUDES="openssh-client,vim,bash-completion,net-tools,tcpdump,iperf3"
+debootstrap --no-check-certificate \
+	    --no-check-gpg \
+            --arch amd64 \
+            --include=${INCLUDES} \
+            bullseye \
+            /tmp/wkmntloops ${REPO_STRETCH}
 
-rm -rf /tmp/rootfs_docker
-cp -vrf /tmp/wkmntloops /tmp/rootfs_docker
+
+DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
+sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
+sed -i s"/set mouse/\"set mouse/" $DEFVIM
+
 umount /tmp/wkmntloops
 losetup -d $DEVLOOP
 rmdir /tmp/wkmntloops
-
-cat > /tmp/rootfs_docker/Dockerfile << EOF
-FROM scratch
-ADD . /
-EOF
-
-docker rmi bookworm 1>/dev/null 2>&1
-docker build -t bookworm /tmp/rootfs_docker/
-
 #-----------------------------------------------------------------------#
 

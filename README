@@ -19,7 +19,7 @@ Cloonix provides a graphical interactive canvas showing the topology for
 your network.
 
 See clownix.net for a documentation (which is usually not up to date).
-http://clownix.net/doc_stored/build-27-01/html/index.html doc.
+http://clownix.net/doc_stored/build-27-02/html/index.html doc.
 
 NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
       inside the kvm guests virtual machines to have the pseudo-ssh and
@@ -46,9 +46,9 @@ THIS SOFTWARE HAS BEEN COMPILED AND TESTED ON:
 -----------------------------------------------------------------------------
 INSTALL CLOONIX ON YOUR HOST:
 
-wget http://clownix.net/downloads/cloonix-27/cloonix-27-01.tar.gz
-tar xvf cloonix-27-01.tar.gz
-cd cloonix-27-01
+wget http://clownix.net/downloads/cloonix-27/cloonix-27-02.tar.gz
+tar xvf cloonix-27-02.tar.gz
+cd cloonix-27-02
 sudo ./install_depends
 
 wget http://clownix.net/downloads/cloonix-27/targz_store.tar.gz
@@ -81,7 +81,7 @@ gunzip bookworm.img.gz
 -----------------------------------------------------------------------------
 LAUNCH KVM EXAMPLE:
 
-cd cloonix/quickstart
+cd cloonix/quickstart/demos
 ./ping_kvm.sh
 
 On the gui, a double-click on the blue machine gives a shell,
@@ -93,7 +93,7 @@ do "sudo adduser ${USER} wireshark".
 -----------------------------------------------------------------------------
 LAUNCH CRUN EXAMPLE:
 
-cd cloonix/quickstart
+cd cloonix/quickstart/demos
 ./ping_crun.sh
 
 On the gui, a double-click on the blue machine gives a shell,
@@ -106,14 +106,14 @@ configuration to your convenience.
 -----------------------------------------------------------------------------
 CREATION OF THE QCOW2 AND IMG FILES:
 
-cd cloonix/quickstart/create_kvm/ for qcow2
-cd cloonix/quickstart/create_crun/ for img 
+cd cloonix/quickstart/create_cnt_kvm/create_kvm for qcow2
+cd cloonix/quickstart/create_cnt_kvm/create_cnt for img 
 
 -----------------------------------------------------------------------------
 TEST OF CISCO OR MIKROTIK FEATURE:
 
-cd cloonix/quickstart/cisco
-cd cloonix/quickstart/mikrotik
+cd cloonix/quickstart/create_cnt_kvm/cisco
+cd cloonix/quickstart/create_cnt_kvm/mikrotik
 
 ==============================================================================
 

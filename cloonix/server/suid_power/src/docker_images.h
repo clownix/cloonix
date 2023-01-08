@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int docker_images_exits(char *brandtype, char *name);
+int docker_images_exits(char *brandtype, char *name, char *image_id);
 int docker_images_container_name_already_used(char *brandtype, char *name);
 int docker_images_get_pid(char *brandtype, char *image_name, char *id);
 void docker_images_rebuild(void);

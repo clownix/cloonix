@@ -324,6 +324,12 @@ static int topo_cnt_diff(t_topo_cnt *icnt, t_topo_cnt *cnt)
     KERR("%s %s", cnt->customer_launch, icnt->customer_launch);
     result = -1;
     }
+  else   if (strcmp(cnt->startup_env, icnt->startup_env))
+    {
+    KERR("%s %s", cnt->startup_env, icnt->startup_env);
+    result = -1;
+    }
+
   else
     {
     for (k=0; k < MAX_ETH_VM; k++)
@@ -489,6 +495,7 @@ static void random_cnt(t_topo_cnt *cnt)
   random_choice_str(cnt->name, MAX_NAME_LEN);
   random_choice_str(cnt->image, MAX_PATH_LEN);
   random_choice_str(cnt->customer_launch, MAX_PATH_LEN);
+  random_choice_str(cnt->startup_env, MAX_PATH_LEN);
   cnt->nb_tot_eth = my_rand(MAX_ETH_VM);
   cnt->ping_ok = my_rand(20);
   cnt->vm_id = my_rand(120);

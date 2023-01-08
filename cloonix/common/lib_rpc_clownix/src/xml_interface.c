@@ -703,11 +703,12 @@ static int topo_eth_format(char *buf, int endp_type, int randmac, char *ifname,
 static int topo_cnt_format(char *buf, t_topo_cnt *cnt)
 {
   int i, len;
+
   if ((strlen(cnt->name) == 0) ||
       (strlen(cnt->image) == 0) ||
-      (strlen(cnt->brandtype) == 0) ||
-      (strlen(cnt->customer_launch) == 0))
-    KOUT("name:%s image:%s l:%s", cnt->name, cnt->image, cnt->customer_launch);
+      (strlen(cnt->brandtype) == 0))
+    KOUT("name:%s image:%s", cnt->name, cnt->image);
+
   len = sprintf(buf, EVENT_TOPO_CNT_O, cnt->brandtype, cnt->name, 
                                        cnt->is_persistent,
                                        cnt->vm_id,
@@ -715,13 +716,15 @@ static int topo_cnt_format(char *buf, t_topo_cnt *cnt)
                                        cnt->image,  
                                        cnt->ping_ok,
                                        cnt->nb_tot_eth);
+
   for (i=0; i < cnt->nb_tot_eth; i++)
     len += topo_eth_format(buf+len, cnt->eth_table[i].endp_type, 
                                     cnt->eth_table[i].randmac,
                                     cnt->eth_table[i].vhost_ifname,
                                     cnt->eth_table[i].mac_addr);
 
-  len += sprintf(buf+len, EVENT_TOPO_CNT_C, cnt->customer_launch);
+  len += sprintf(buf+len, EVENT_TOPO_CNT_C,
+                 cnt->customer_launch, cnt->startup_env);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -1457,20 +1460,35 @@ static void helper_fill_topo_cnt(char *msg_in, t_topo_cnt *cnt)
                                     &(cnt->nb_tot_eth)) != 8)
     KOUT("%s", msg);
   get_eth_table(msg, cnt->nb_tot_eth, cnt->eth_table);
-  ptr1 = strstr(msg, "<customer_launch> ");
+
+  ptr1 = strstr(msg, "<startup_env_keyid>");
   if(!ptr1)
     KOUT("%s", msg);
-  ptr2 = strstr(msg, " </customer_launch>");
+  ptr2 = strstr(msg, "</startup_env_keyid>");
   if(!ptr2)
     KOUT("%s", msg);
   *ptr2 = 0;
-  len = strlen("<customer_launch> ");
+  len = strlen("<startup_env_keyid>");
   if (strlen(ptr1) - len >= MAX_PATH_LEN)
     KOUT("%s", msg);
-  strncpy(cnt->customer_launch, ptr1+len, MAX_PATH_LEN-1); 
+  strncpy(cnt->startup_env, ptr1+len, MAX_PATH_LEN-1); 
+
+  ptr1 = strstr(msg, "<customer_launch_keyid>");
+  if(!ptr1)
+    KOUT("%s", msg);
+  ptr2 = strstr(msg, "</customer_launch_keyid>");
+  if(!ptr2)
+    KOUT("%s", msg);
+  *ptr2 = 0;
+  len = strlen("<customer_launch_keyid>");
+  if (strlen(ptr1) - len >= MAX_PATH_LEN)
+    KOUT("%s", msg);
+
+  strncpy(cnt->customer_launch, ptr1+len, MAX_PATH_LEN-1);
+
+
   if ((strlen(cnt->name) == 0) ||
-      (strlen(cnt->image) == 0) ||
-      (strlen(cnt->customer_launch) == 0))
+      (strlen(cnt->image) == 0)) 
     KOUT("%s", msg);
   free(msg);
 }
@@ -2024,22 +2042,25 @@ void send_tap_add(int llid, int tid, char *name)
 void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
 {
   int len = 0;
+
   if ((strlen(cnt->name) == 0) ||
       (strlen(cnt->image) == 0) ||
-      (strlen(cnt->brandtype) == 0) ||
-      (strlen(cnt->customer_launch) == 0))
-    KOUT("name:%s image:%s l:%s", cnt->name,cnt->image,cnt->customer_launch);
+      (strlen(cnt->brandtype) == 0))
+    KOUT("name:%s image:%s", cnt->name, cnt->image);
   if (strlen(cnt->name) >= MAX_NAME_LEN)
     KOUT(" ");
   if (strlen(cnt->image) >= MAX_PATH_LEN)
     KOUT(" ");
   if (strlen(cnt->customer_launch) >= MAX_PATH_LEN)
     KOUT(" ");
+  if (strlen(cnt->startup_env) >= MAX_PATH_LEN)
+    KOUT(" ");
   len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->brandtype, cnt->name,
                 cnt->is_persistent, cnt->vm_id, cnt->color, cnt->ping_ok,
                 cnt->nb_tot_eth);
   len += make_eth_table(sndbuf+len, cnt->nb_tot_eth, cnt->eth_table);
-  len += sprintf(sndbuf+len, ADD_CNT_C, cnt->customer_launch, cnt->image);
+  len += sprintf(sndbuf+len, ADD_CNT_C, cnt->customer_launch,
+                 cnt->startup_env, cnt->image);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -2228,17 +2249,31 @@ static void customer_launch_get(char *msg_in, t_topo_cnt *cnt)
     KOUT("%s", msg);
   if (sscanf(ptr, "<image> %s </image>", cnt->image) != 1)
     KOUT("%s", ptr);
-  ptr1 = strstr(msg, "<customer_launch> ");
+
+  ptr1 = strstr(msg, "<startup_env_keyid>");
   if(!ptr1)
     KOUT("%s", msg);
-  ptr2 = strstr(ptr1, " </customer_launch>");
+  ptr2 = strstr(ptr1, "</startup_env_keyid>");
   if(!ptr2)
     KOUT("%s", msg);
   *ptr2 = 0;
-  len = strlen("<customer_launch> ");
+  len = strlen("<startup_env_keyid>");
+  if (strlen(ptr1) - len >= MAX_PATH_LEN)
+    KOUT("%s", msg);
+  strncpy(cnt->startup_env, ptr1+len, MAX_PATH_LEN-1);
+
+  ptr1 = strstr(msg, "<customer_launch_keyid>");
+  if(!ptr1)
+    KOUT("%s", msg);
+  ptr2 = strstr(ptr1, "</customer_launch_keyid>");
+  if(!ptr2)
+    KOUT("%s", msg);
+  *ptr2 = 0;
+  len = strlen("<customer_launch_keyid>");
   if (strlen(ptr1) - len >= MAX_PATH_LEN)
     KOUT("%s", msg);
   strncpy(cnt->customer_launch, ptr1+len, MAX_PATH_LEN-1);
+
   free(msg);
 }
 /*---------------------------------------------------------------------------*/

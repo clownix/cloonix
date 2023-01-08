@@ -308,6 +308,7 @@ typedef struct t_topo_cnt
   t_eth_table eth_table[MAX_ETH_VM];
   char image[MAX_PATH_LEN];
   char customer_launch[MAX_PATH_LEN];
+  char startup_env[MAX_PATH_LEN];
 } t_topo_cnt;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_c2c

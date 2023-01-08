@@ -32,6 +32,7 @@ typedef struct t_custom_cnt
   char doc_image[MAX_NAME_LEN];
   char pod_image[MAX_NAME_LEN];
   char customer_launch[MAX_PATH_LEN];
+  char startup_env[MAX_PATH_LEN];
   int current_number;
   int is_persistent;
 } t_custom_cnt;
