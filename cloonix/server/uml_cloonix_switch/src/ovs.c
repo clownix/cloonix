@@ -418,12 +418,12 @@ static void timer_ovs_beat(void *data)
       else if (cur->open_ovsdb_ok == 0)
         {
         cur->open_ovsdb_wait += 1;
-        if (cur->open_ovsdb_wait > 120)
+        if (cur->open_ovsdb_wait > 70)
           {
           KERR("ERROR OVSDB %s NOT RESPONDING", cur->name);
           set_destroy_requested(cur, 1);
           }
-        clownix_timeout_add(1, timer_ovs_beat, NULL, NULL, NULL);
+        clownix_timeout_add(3, timer_ovs_beat, NULL, NULL, NULL);
         }
       else if (cur->open_ovs == 0)
         {
@@ -434,12 +434,12 @@ static void timer_ovs_beat(void *data)
       else if (cur->open_ovs_ok == 0)
         {
         cur->open_ovs_wait += 1;
-        if (cur->open_ovs_wait > 50)
+        if (cur->open_ovs_wait > 70)
           {
           KERR("ERROR OVS %s NOT RESPONDING", cur->name);
           set_destroy_requested(cur, 1);
           }
-        clownix_timeout_add(1, timer_ovs_beat, NULL, NULL, NULL);
+        clownix_timeout_add(3, timer_ovs_beat, NULL, NULL, NULL);
         }
   
       else
