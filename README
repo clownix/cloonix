@@ -19,7 +19,7 @@ Cloonix provides a graphical interactive canvas showing the topology for
 your network.
 
 See clownix.net for a documentation (which is usually not up to date).
-http://clownix.net/doc_stored/build-27-02/html/index.html doc.
+http://clownix.net/doc_stored/build-28-00/html/index.html doc.
 
 NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
       inside the kvm guests virtual machines to have the pseudo-ssh and
@@ -31,7 +31,7 @@ NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-27
+http://clownix.net/downloads/cloonix-28
 
 -----------------------------------------------------------------------------
 THIS SOFTWARE HAS BEEN COMPILED AND TESTED ON:
@@ -46,12 +46,12 @@ THIS SOFTWARE HAS BEEN COMPILED AND TESTED ON:
 -----------------------------------------------------------------------------
 INSTALL CLOONIX ON YOUR HOST:
 
-wget http://clownix.net/downloads/cloonix-27/cloonix-27-02.tar.gz
-tar xvf cloonix-27-02.tar.gz
-cd cloonix-27-02
+wget http://clownix.net/downloads/cloonix-28/cloonix-28-00.tar.gz
+tar xvf cloonix-28-00.tar.gz
+cd cloonix-28-00
 sudo ./install_depends
 
-wget http://clownix.net/downloads/cloonix-27/targz_store.tar.gz
+wget http://clownix.net/downloads/cloonix-28/targz_store.tar.gz
 tar xvf targz_store.tar.gz
 
 ./doitall
@@ -63,7 +63,7 @@ NOTE: Before calling ./install_depends, you can take out the installation
 -----------------------------------------------------------------------------
 FOR KVM VIRTUAL MACHINE GET A WORKING QCOW AND PUT IT IN BULK:
 
-wget http://clownix.net/downloads/cloonix-27/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-28/bulk/bookworm.qcow2.gz
 
 mkdir -p ${HOME}/cloonix_data/bulk
 cp bookworm.qcow2.gz ${HOME}/cloonix_data/bulk
@@ -73,7 +73,7 @@ gunzip bookworm.qcow2.gz
 -----------------------------------------------------------------------------
 FOR CRUN CONTAINER GET A WORKING IMG AND PUT IT IN BULK:
 
-wget http://clownix.net/downloads/cloonix-27/bulk/bookworm.img.gz
+wget http://clownix.net/downloads/cloonix-28/bulk/bookworm.img.gz
 cp bookworm.img.gz ${HOME}/cloonix_data/bulk
 cd ${HOME}/cloonix_data/bulk
 gunzip bookworm.img.gz
