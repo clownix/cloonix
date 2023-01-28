@@ -22,6 +22,8 @@ enum {
      ovsreq_del_kvm_lan,
      ovsreq_add_tap_lan,
      ovsreq_del_tap_lan,
+     ovsreq_add_phy_lan,
+     ovsreq_del_phy_lan,
      ovsreq_add_nat_lan,
      ovsreq_del_nat_lan,
      ovsreq_add_c2c_lan,
@@ -31,12 +33,15 @@ enum {
      ovsreq_vhost_up,
      ovsreq_add_tap,
      ovsreq_del_tap,
+     ovsreq_add_phy,
+     ovsreq_del_phy,
      ovsreq_add_snf_lan,
      ovsreq_del_snf_lan,
      };
 
 void msg_vlan_exist_no_more(char *lan);
 void msg_ack_tap(int tid, int ko, int add, char *name, char *vhost, char *mc);
+void msg_ack_phy(int tid, int ko, int add, char *name, char *vhost);
 void msg_ack_lan(int tid, int ko, int add, char *lan);
 void msg_ack_vhost_up(int tid, int ko, char *name, int num, char *vhost);
 void msg_ack_snf_ethv(int tid, int ko, int add, char *name, int num,
@@ -48,6 +53,8 @@ void msg_ack_lan_endp(int tid, int ko, int add, char *name, int num,
 /*--------------------------------------------------------------------------*/
 int msg_send_add_tap(char *name, char *vhost, char *mac);
 int msg_send_del_tap(char *name, char *vhost);
+int msg_send_add_phy(char *name, char *vhost, char *mac);
+int msg_send_del_phy(char *name, char *vhost);
 int msg_send_vhost_up(char *name, int num, char *vhost);
 
 int msg_send_add_snf_lan(char *name, int num, char *vhost, char *lan);

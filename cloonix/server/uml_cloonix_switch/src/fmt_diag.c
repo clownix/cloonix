@@ -101,6 +101,32 @@ int fmt_tx_del_tap(int tid, char *name, char *vhost)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int fmt_tx_add_phy(int tid, char *name, char *vhost, char *mac)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "ovs_add_phy name=%s vhost=%s mac=%s", name, vhost, mac);
+  result = ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fmt_tx_del_phy(int tid, char *name, char *vhost)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "ovs_del_phy name=%s vhost=%s", name, vhost);
+  result = ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int fmt_tx_add_lan(int tid, char *lan)
 {
   int result;
@@ -187,6 +213,19 @@ void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   else if (sscanf(line,
   "KO ovs_del_tap name=%s", name) == 1)
     msg_ack_tap(tid, 1, 0, name, NULL, NULL);
+
+  else if (sscanf(line,
+  "OK ovs_add_phy name=%s vhost=%s", name, vhost) == 2)
+    msg_ack_phy(tid, 0, 1, name, vhost);
+  else if (sscanf(line,
+  "KO ovs_add_phy name=%s vhost=%s", name, vhost) == 2)
+    msg_ack_phy(tid, 1, 1, name, vhost);
+  else if (sscanf(line,
+  "OK ovs_del_phy name=%s", name) == 1)
+    msg_ack_phy(tid, 0, 0, name, NULL);
+  else if (sscanf(line,
+  "KO ovs_del_phy name=%s", name) == 1)
+    msg_ack_phy(tid, 1, 0, name, NULL);
 
   else if (sscanf(line,
   "OK ovs_vhost_up name=%s num=%d vhost=%s", name, &num, vhost) == 3)

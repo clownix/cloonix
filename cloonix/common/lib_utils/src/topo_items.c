@@ -253,6 +253,7 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
   topo->nb_a2b = ref->nb_a2b;
   topo->nb_nat = ref->nb_nat;
   topo->nb_phy = ref->nb_phy;
+  topo->nb_info_phy = ref->nb_info_phy;
   topo->nb_bridges = ref->nb_bridges;
   topo->nb_endp = ref->nb_endp;
 
@@ -313,6 +314,13 @@ t_topo_info *topo_duplicate(t_topo_info *ref)
     topo->bridges =
     (t_topo_bridges *)clownix_malloc(ref->nb_bridges*sizeof(t_topo_bridges),28);
     memcpy(topo->bridges, ref->bridges, ref->nb_bridges*sizeof(t_topo_bridges));
+    }
+
+  if (topo->nb_info_phy)
+    {
+    topo->info_phy =
+    (t_topo_info_phy *)clownix_malloc(ref->nb_info_phy*sizeof(t_topo_info_phy),28);
+    memcpy(topo->info_phy, ref->info_phy, ref->nb_info_phy*sizeof(t_topo_info_phy));
     }
 
   if (topo->nb_endp)

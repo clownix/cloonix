@@ -30,6 +30,7 @@ int  suid_power_diag_llid(int llid);
 void suid_power_pid_resp(int llid, int tid, char *name, int pid);
 void suid_power_first_start(void);
 int suid_power_get_pid(int vm_id);
+int suid_power_info_phy_exists(char *name);
 
 int suid_power_get_topo_info_phy(t_topo_info_phy **phy);
 

@@ -130,9 +130,10 @@ void timer_create_obj_resp(void *data)
   else if (pa->phy)
     {
     name = pa->phy->name;
+    endp_type = pa->phy->endp_type;
     get_gene_layout_x_y(bank_type_sat, name,
                         &x, &y, &xa, &ya, &xb, &yb, &hidden);
-    bank_sat_create(name, endp_type_phy, NULL, NULL,
+    bank_sat_create(name, endp_type, NULL, NULL,
                     x, y, xa, ya, xb, yb, hidden);
     clownix_free(pa->phy, __FUNCTION__);
     }

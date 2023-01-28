@@ -61,6 +61,7 @@
 #include "ovs_snf.h"
 #include "ovs_nat.h"
 #include "ovs_tap.h"
+#include "ovs_phy.h"
 #include "ovs_a2b.h"
 #include "ovs_c2c.h"
 #include "suid_power.h"
@@ -381,6 +382,7 @@ static void launching(void)
   ovs_snf_init();
   ovs_nat_init();
   ovs_tap_init();
+  ovs_phy_init();
   ovs_a2b_init();
   ovs_c2c_init();
   doorways_first_start();

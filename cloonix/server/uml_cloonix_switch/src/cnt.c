@@ -749,29 +749,30 @@ int cnt_add_lan(int llid, int tid, char *name, int num, char *lan, char *err)
     }
   else
     {
+    memset(cur->att_lan[num].lan, 0, MAX_NAME_LEN);
     memset(cur->att_lan[num].lan_added, 0, MAX_NAME_LEN);
-    strncpy(cur->att_lan[num].lan_added, lan, MAX_NAME_LEN-1);
-    lan_add_name(cur->att_lan[num].lan_added, item_cnt, name, num);
-    mac = cur->cnt.eth_table[num].mac_addr;
-    memset(str_mac, 0, MAX_NAME_LEN);
-    snprintf(str_mac, MAX_NAME_LEN-1,
-             "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    lan_add_mac(cur->att_lan[num].lan_added, item_cnt, name, num, str_mac);
     eth_name = get_eth_name(cur->cnt.vm_id, num);
+    lan_add_name(lan, item_cnt, name, num);
     if (msg_send_add_lan_endp(ovsreq_add_cnt_lan, name, num, eth_name, lan))
       {
       snprintf(err, MAX_PATH_LEN-1, "ERROR ADD LAN %s %d %s", name, num, lan); 
       KERR("%s", err);
+      lan_del_name(lan, item_cnt, name, num);
       }
     else
       {
+      strncpy(cur->att_lan[num].lan, lan, MAX_NAME_LEN-1);
+      strncpy(cur->att_lan[num].lan_added, lan, MAX_NAME_LEN-1);
+      mac = cur->cnt.eth_table[num].mac_addr;
+      memset(str_mac, 0, MAX_NAME_LEN);
+      snprintf(str_mac, MAX_NAME_LEN-1,
+               "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      lan_add_mac(cur->att_lan[num].lan_added, item_cnt, name, num, str_mac);
       result = 0;
       cur->cli_llid = llid;
       cur->cli_tid = tid;
       cur->lan_add_waiting_ack = 1;
-      memset(cur->att_lan[num].lan, 0, MAX_NAME_LEN);
-      strncpy(cur->att_lan[num].lan, lan, MAX_NAME_LEN-1);
       }
     }
   return result;

@@ -38,6 +38,7 @@
 #include "kvm.h"
 #include "ovs_snf.h"
 #include "ovs_tap.h"
+#include "ovs_phy.h"
 #include "ovs_nat.h"
 #include "ovs_a2b.h"
 #include "ovs_c2c.h"
@@ -140,6 +141,7 @@ int msg_send_add_lan_endp(int ovsreq_tag, char *name, int num,
   else if ((ovsreq_tag != ovsreq_add_kvm_lan) && 
            (ovsreq_tag != ovsreq_add_cnt_lan) &&
            (ovsreq_tag != ovsreq_add_tap_lan) &&
+           (ovsreq_tag != ovsreq_add_phy_lan) &&
            (ovsreq_tag != ovsreq_add_nat_lan) &&
            (ovsreq_tag != ovsreq_add_a2b_lan) &&
            (ovsreq_tag != ovsreq_add_c2c_lan))
@@ -169,6 +171,7 @@ int msg_send_del_lan_endp(int ovsreq_tag, char *name, int num,
   else if ((ovsreq_tag != ovsreq_del_kvm_lan) &&
            (ovsreq_tag != ovsreq_del_cnt_lan) &&
            (ovsreq_tag != ovsreq_del_tap_lan) &&
+           (ovsreq_tag != ovsreq_del_phy_lan) &&
            (ovsreq_tag != ovsreq_del_nat_lan) &&
            (ovsreq_tag != ovsreq_del_a2b_lan) &&
            (ovsreq_tag != ovsreq_del_c2c_lan))
@@ -246,6 +249,44 @@ int msg_send_del_tap(char *name, char *vhost)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int msg_send_add_phy(char *name, char *vhost, char *mac)
+{
+  int result = -1, tid = utils_get_next_tid();
+  if ((!name) || (!vhost) || (!mac))
+    KERR("ERROR");
+  else if (!(strlen(name)) || (!strlen(vhost)) || (!strlen(mac)))
+    KERR("ERROR %s %s", name, mac);
+  else if (fmt_tx_add_phy(tid, name, vhost, mac))
+    KERR("ERROR %s %s %s", name, vhost, mac);
+  else
+    {
+    ovsreq_alloc(tid, ovsreq_add_phy, name, 0, vhost, NULL);
+    result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int msg_send_del_phy(char *name, char *vhost)
+{
+  int result = -1, tid = utils_get_next_tid();
+  if ((!name) || (!vhost))
+    KERR("ERROR");
+  else if ((!strlen(name)) || (!strlen(vhost)))
+    KERR("ERROR %s %s", name, vhost);
+  else if (fmt_tx_del_phy(tid, name, vhost))
+    KERR("ERROR %s %s", name, vhost);
+  else
+    {
+    ovsreq_alloc(tid, ovsreq_del_phy, name, 0, vhost, NULL);
+    result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int msg_send_add_snf_lan(char *name, int num, char *vhost, char *lan)
 {
   int result = -1, tid = utils_get_next_tid();
@@ -294,6 +335,8 @@ static void transmit_add_ack(int tid, t_ovsreq *cur, int is_ko)
     kvm_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_add_tap_lan)
     ovs_tap_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
+  else if (cur->type == ovsreq_add_phy_lan)
+    ovs_phy_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_add_nat_lan)
     ovs_nat_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_add_a2b_lan)
@@ -316,6 +359,8 @@ static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
     kvm_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_del_tap_lan)
     ovs_tap_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
+  else if (cur->type == ovsreq_del_phy_lan)
+    ovs_phy_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_del_nat_lan)
     ovs_nat_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_del_a2b_lan)
@@ -415,6 +460,23 @@ void msg_ack_tap(int tid, int is_ko, int is_add, char *name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void msg_ack_phy(int tid, int is_ko, int is_add, char *name, char *vhost)
+{
+  t_ovsreq *cur = ovsreq_find(tid);
+  if (!cur)
+    {
+    KERR("ERROR is_ko:%d is_add:%d name:%s vhost:%s",
+         is_ko, is_add, name, vhost);
+    }
+  else
+    {
+    ovs_phy_resp_msg_phy(is_ko, is_add, name);
+    ovsreq_free(cur);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void msg_ack_snf_ethv(int tid, int is_ko, int is_add, char *name, int num,
                       char *vhost, char *lan)
 {
@@ -499,6 +561,18 @@ static void timer_msg_beat(void *data)
           ovsreq_free(cur);
         break;
 
+        case ovsreq_add_phy:
+          KERR("ERROR TIMEOUT %d %s %s", cur->tid, cur->vhost, cur->name );
+          ovs_phy_resp_msg_phy(1, 1, cur->name);
+          ovsreq_free(cur);
+        break;
+
+        case ovsreq_del_phy:
+          KERR("ERROR TIMEOUT %d %s %s", cur->tid, cur->vhost, cur->name );
+          ovs_phy_resp_msg_phy(1, 0, cur->name);
+          ovsreq_free(cur);
+        break;
+
 
         case ovsreq_add_snf_lan:
           KERR("ERROR TIMEOUT %d %s %s %d %s", cur->tid, cur->vhost,
@@ -525,6 +599,20 @@ static void timer_msg_beat(void *data)
           KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
                                             cur->name, cur->num);
           ovs_tap_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
+          ovsreq_free(cur);
+        break;
+
+        case ovsreq_add_phy_lan:
+          KERR("ERROR TIMEOUT %d %s %s %s", cur->tid, cur->vhost,
+                                            cur->name, cur->lan);
+          ovs_phy_resp_add_lan(1, cur->name, 0, cur->vhost, cur->lan);
+          ovsreq_free(cur);
+        break;
+
+        case ovsreq_del_phy_lan:
+          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
+                                            cur->name, cur->num);
+          ovs_phy_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 

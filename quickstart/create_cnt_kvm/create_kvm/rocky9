@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
-ROOTFS=/root/centos9
-MIRROR="https://mirror.stream.centos.org/9-stream"
+ROOTFS=/root/rocky9
+MIRROR="http://dl.rockylinux.org/pub/rocky/9.1/"
 
 #----------------------------------------------------------------------#
 fct_check_uid()
@@ -120,7 +120,6 @@ echo $uuid
 
 
 sed -i s"/BLACKLIST_RPC/#BLACKLIST_RPC/" /tmp/wkmntloops/etc/sysconfig/qemu-ga
-sed -i s"/BLOCK_RPCS/#BLOCK_RPCS/" /tmp/wkmntloops/etc/sysconfig/qemu-ga
 
 sync /dev/loop0
 umount /tmp/wkmntloops/{dev,proc,sys}

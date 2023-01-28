@@ -497,17 +497,11 @@
 
 #define EVENT_TOPO_PHY        "<phy>\n"\
                               "  name:   %s \n"\
+                              "  endp_type: %d \n"\
                               "</phy>\n"
 
 #define EVENT_TOPO_INFO_PHY   "<info_phy>\n"\
-                              "  index:%d \n"\
-                              "  flags:%X \n"\
                               "  name:%s \n"\
-                              "  drv:%s \n"\
-                              "  pci:%s \n"\
-                              "  mac:%s \n"\
-                              "  vendor:%s \n"\
-                              "  device:%s \n"\
                               "</info_phy>\n"
 
 #define EVENT_TOPO_PCI        "<pci>\n"\

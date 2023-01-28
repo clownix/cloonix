@@ -101,6 +101,7 @@ struct cmd_struct level_add_cmd[] = {
 {"doc", "Add container docker",  NULL, cmd_add_doc, help_add_doc_pod},
 {"pod", "Add container podman",  NULL, cmd_add_pod, help_add_doc_pod},
 {"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_tap},
+{"phy", "Add phy (real host network interface)",  NULL, cmd_add_phy, help_add_phy},
 {"nat", "Add nat (access host ip)",NULL, cmd_add_nat, help_add_nat},
 {"a2b", "Add a2b (traffic delay shaping)",NULL, cmd_add_a2b, help_add_a2b},
 {"c2c", "Add c2c (cloonix 2 cloonix cable)", NULL, cmd_add_c2c, help_add_c2c},

@@ -19,6 +19,7 @@ enum {
   item_cnt=7,
   item_kvm,
   item_tap,
+  item_phy,
   item_nat,
   item_a2b,
   item_c2c,

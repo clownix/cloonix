@@ -31,7 +31,7 @@ cd ${TARGET}
 rm -rf ${TARGET}/spice
 tar xvf ${TARGZ}/spice_*.tar.gz
 cd ${TARGET}/spice
-sed -i s"/UNKNOWN/0.12.5/" build-aux/git-version-gen
+sed -i s"/UNKNOWN/0.14.0/" build-aux/git-version-gen
 sed -i 52s"/true/false/" meson_options.txt
 sed -i s"/^run_command/#run_command/" meson.build
 export PKG_CONFIG_PATH=${TARGET}/pkgconfig

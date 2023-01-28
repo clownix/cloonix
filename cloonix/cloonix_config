@@ -1,5 +1,5 @@
 ##################################################
-CLOONIX_VERSION=27-02
+CLOONIX_VERSION=28-00
 CLOONIX_TREE=/usr/local/bin/cloonix
 CLOONIX_WORK=${HOME}/cloonix_data
 CLOONIX_BULK=${HOME}/cloonix_data/bulk
@@ -33,11 +33,29 @@ CLOONIX_NET: fido {
 #-------------------------------------------------
 
 ##################################################
-CLOONIX_NET: pipo {
-  cloonix_ip       1.1.1.1
+CLOONIX_NET: vip11 {
+  cloonix_ip       1.1.1.11
   cloonix_port     45214
   cloonix_passwd   pipoclown
-  c2c_udp_ip     1.1.1.1
+  c2c_udp_ip     1.1.1.11
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: vip12 {
+  cloonix_ip       1.1.1.12
+  cloonix_port     45214
+  cloonix_passwd   pipoclown
+  c2c_udp_ip     1.1.1.12
+}
+#-------------------------------------------------
+
+##################################################
+CLOONIX_NET: vip13 {
+  cloonix_ip       1.1.1.13
+  cloonix_port     45214
+  cloonix_passwd   pipoclown
+  c2c_udp_ip     1.1.1.13
 }
 #-------------------------------------------------
 

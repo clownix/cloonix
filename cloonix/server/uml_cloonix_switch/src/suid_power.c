@@ -188,6 +188,7 @@ static void timer_monitoring(void *data)
   count += 1;
   if (count == 10)
     {
+    rpct_send_poldiag_msg(g_llid, type_hop_suid_power, "cloonsuid_req_phy");
     count = 0;
     docker_timer_beat(g_llid);
     }
@@ -339,12 +340,8 @@ int suid_power_diag_llid(int llid)
 void suid_power_poldiag_resp(int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
-  char drv[MAX_NAME_LEN];
-  char pci[MAX_NAME_LEN];
-  char mac[MAX_NAME_LEN];
-  char vendor[MAX_NAME_LEN];
-  char device[MAX_NAME_LEN];
-  int i, prev_nb_phy, nb_phy, index, flags;
+  char phy_mac[MAX_NAME_LEN];
+  int i, prev_nb_phy, nb_phy;
   char *ptr;
   t_topo_info_phy *phy;
 
@@ -371,22 +368,14 @@ void suid_power_poldiag_resp(int llid, int tid, char *line)
     ptr = line;
     for (i=0; i<nb_phy; i++)
       {
-      ptr = strstr(ptr, "phy:");
+      ptr = strstr(ptr, "phy_name:");
       if (!ptr)
         KOUT("%s", line);
-      if (sscanf(ptr,
-          "phy:%s idx:%d flags:%X drv:%s pci:%s mac:%s vendor:%s device:%s",
-           name, &index, &flags, drv, pci, mac, vendor, device) != 8)
+      if (sscanf(ptr, "phy_name:%s phy_mac:%s", name, phy_mac) != 2)
         KOUT("%s", line);
-      ptr = strstr(ptr, "mac:");
-      g_topo_info_phy[i].index = index;
-      g_topo_info_phy[i].flags = flags;
       strncpy(g_topo_info_phy[i].name,   name, MAX_NAME_LEN-1);
-      strncpy(g_topo_info_phy[i].drv,     drv, MAX_NAME_LEN-1);
-      strncpy(g_topo_info_phy[i].pci,     pci, MAX_NAME_LEN-1);
-      strncpy(g_topo_info_phy[i].mac,     mac, MAX_NAME_LEN-1);
-      strncpy(g_topo_info_phy[i].vendor, vendor, MAX_NAME_LEN-1);
-      strncpy(g_topo_info_phy[i].device, device, MAX_NAME_LEN-1);
+      strncpy(g_topo_info_phy[i].phy_mac, phy_mac, MAX_NAME_LEN-1);
+      ptr += strlen("phy_name:");
       }
     if ((prev_nb_phy != nb_phy) ||
         (memcmp(phy, g_topo_info_phy, prev_nb_phy * sizeof(t_topo_info_phy))))
@@ -468,6 +457,19 @@ int suid_power_get_topo_info_phy(t_topo_info_phy **phy)
 {
   *phy = g_topo_info_phy;
   return g_nb_phy;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int suid_power_info_phy_exists(char *name)
+{
+  int i, result = 0;
+  for (i=0; i<g_nb_phy; i++)
+    {
+    if (!strcmp(g_topo_info_phy[i].name, name))
+      result = 1;
+    }
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 

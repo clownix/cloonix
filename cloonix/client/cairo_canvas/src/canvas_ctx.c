@@ -98,14 +98,12 @@ static void call_cloonix_interface_tap_create(double x, double y)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-/*
 static void call_cloonix_interface_phy_create(char *name, double x, double y)
 {
   double x0=x, y0=y;
   topo_get_matrix_inv_transform_point(&x0, &y0);
-  to_cloonix_switch_create_sat(name, endp_type_phy, NULL, x0, y0);
+  to_cloonix_switch_create_sat(name, endp_type_phyv, NULL, x0, y0);
 }
-*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -538,17 +536,14 @@ static void c2c_cact(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-/*
 static void cphy(gpointer data)
 {
   unsigned long i = (unsigned long) data;
   call_cloonix_interface_phy_create(g_topo_phy[i].name, g_x_mouse, g_y_mouse);
 }
-*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-/*
 static void phy_sub_menu(GtkWidget *phy)
 {
   unsigned long i;
@@ -565,7 +560,6 @@ static void phy_sub_menu(GtkWidget *phy)
     }
   gtk_menu_item_set_submenu(GTK_MENU_ITEM(phy), menu);
 }
-*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -602,39 +596,6 @@ static void other_sub_menu(GtkWidget *other)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int format_phy_info(char *name, char *txt)
-{
-  int i, found = 0, ln = 0;
-  int flags;
-  for (i=0; i<g_nb_phy; i++)
-    {
-    if (!strcmp(name, g_topo_phy[i].name))
-      {
-      found = 1;
-      flags = g_topo_phy[i].flags;
-      ln += sprintf(txt+ln, "Name:  %s\n", g_topo_phy[i].name);
-      ln += sprintf(txt+ln, "index: %d\n", g_topo_phy[i].index);
-      ln += sprintf(txt+ln, "drv:   %s\n", g_topo_phy[i].drv);
-      ln += sprintf(txt+ln, "pci:   %s\n", g_topo_phy[i].pci);
-      ln += sprintf(txt+ln, "mac:   %s\n", g_topo_phy[i].mac);
-      ln += sprintf(txt+ln, "vendor:   %s\n", g_topo_phy[i].vendor);
-      ln += sprintf(txt+ln, "device:   %s\n", g_topo_phy[i].device);
-      ln += sprintf(txt+ln, "flags: 0x%X\n", flags);
-      if (flags & IFF_UP)
-        ln += sprintf(txt+ln, "UP ");
-      if (flags & IFF_RUNNING)
-        ln += sprintf(txt+ln, "RUNNING ");
-      if (flags & IFF_PROMISC)
-        ln += sprintf(txt+ln, "PROMISC ");
-      }
-    }
-  if (found == 0)
-    ln += sprintf(txt, "Data not found");
-  return ln;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void update_topo_phy(int nb_phy, t_topo_info_phy *phy)
 {
   memset(g_topo_phy, 0, MAX_PHY * sizeof(t_topo_info_phy));
@@ -664,7 +625,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   GtkWidget *tap  = gtk_menu_item_new_with_label("tap");
   GtkWidget *c2c  = gtk_menu_item_new_with_label("c2c");
   GtkWidget *a2b  = gtk_menu_item_new_with_label("a2b");
-//  GtkWidget *phy  = gtk_menu_item_new_with_label("phy");
+  GtkWidget *phy  = gtk_menu_item_new_with_label("phy");
   GtkWidget *cmd  = gtk_menu_item_new_with_label("cmd_list");
   GtkWidget *kvm_conf = gtk_menu_item_new_with_label("Kvm_conf");
   GtkWidget *cnt_conf = gtk_menu_item_new_with_label("Cnt_conf");
@@ -699,8 +660,8 @@ void canvas_ctx_menu(gdouble x, gdouble y)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), tap);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), c2c);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), a2b);
-//  gtk_menu_shell_append(GTK_MENU_SHELL(menu), phy);
-//  phy_sub_menu(phy);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), phy);
+  phy_sub_menu(phy);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), kvm_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), cnt_conf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator1);

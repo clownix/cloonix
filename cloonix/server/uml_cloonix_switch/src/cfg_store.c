@@ -47,6 +47,7 @@
 #include "ovs_a2b.h"
 #include "ovs_c2c.h"
 #include "ovs_tap.h"
+#include "ovs_phy.h"
 #include "ovs_snf.h"
 #include "qga_dialog.h"
 
@@ -137,6 +138,11 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
   else if (ovs_tap_exists(name))
     {
     snprintf(use, MAX_NAME_LEN, "%s is used by tap", name);
+    result = 1;
+    }
+  else if (ovs_phy_exists(name))
+    {
+    snprintf(use, MAX_NAME_LEN, "%s is used by phy", name);
     result = 1;
     }
   else if ((!is_lan) && (lan_get_with_name(name)))
@@ -636,9 +642,19 @@ static void fill_topo_tap(t_topo_tap *topo_tap, t_ovs_tap *tap)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void fill_topo_phy(t_topo_phy *topo_phy, t_ovs_phy *phy)
+{
+  memset(topo_phy, 0, sizeof(t_topo_phy));
+  strncpy(topo_phy->name, phy->name, MAX_NAME_LEN);
+  topo_phy->endp_type = phy->endp_type;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static t_topo_info *alloc_all_fields(int nb_vm, int nb_cnt, int nb_nat,
                                      int nb_a2b, int nb_c2c, int nb_tap,
-                                     int nb_endp, int nb_bridges)
+                                     int nb_phy, int nb_endp, int nb_bridges,
+                                     int nb_info_phy)
 {
   t_topo_info *topo = (t_topo_info *) clownix_malloc(sizeof(t_topo_info), 3);
   int len;
@@ -649,7 +665,9 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_cnt, int nb_nat,
   topo->nb_a2b = nb_a2b;
   topo->nb_c2c = nb_c2c;
   topo->nb_tap = nb_tap;
+  topo->nb_phy = nb_phy;
   topo->nb_endp = nb_endp;
+  topo->nb_info_phy = nb_info_phy;
   topo->nb_bridges = nb_bridges;
   if (topo->nb_cnt)
     {
@@ -687,13 +705,25 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_cnt, int nb_nat,
     (t_topo_tap *)clownix_malloc(topo->nb_tap * sizeof(t_topo_tap),3);
     memset(topo->tap, 0, topo->nb_tap * sizeof(t_topo_tap));
     }
+  if (topo->nb_phy)
+    {
+    topo->phy =
+    (t_topo_phy *)clownix_malloc(topo->nb_phy * sizeof(t_topo_phy),3);
+    memset(topo->phy, 0, topo->nb_phy * sizeof(t_topo_phy));
+    }
   if (topo->nb_endp)
     {
     topo->endp =
     (t_topo_endp *)clownix_malloc(topo->nb_endp * sizeof(t_topo_endp),3);
     memset(topo->endp, 0, topo->nb_endp * sizeof(t_topo_endp));
     }
- if (topo->nb_bridges)
+  if (topo->nb_info_phy)
+    {
+    topo->info_phy =
+    (t_topo_info_phy *)clownix_malloc(topo->nb_info_phy * sizeof(t_topo_info_phy),3);
+    memset(topo->info_phy, 0, topo->nb_info_phy * sizeof(t_topo_info_phy));
+    }
+  if (topo->nb_bridges)
     {
     len = topo->nb_bridges * sizeof(t_topo_bridges);
     topo->bridges = (t_topo_bridges *)clownix_malloc(len,3);
@@ -722,16 +752,18 @@ static void copy_endp(t_topo_endp *dst, t_topo_endp *src)
 /*****************************************************************************/
 t_topo_info *cfg_produce_topo_info(void)
 {
-  int i, nb_tap, nb_c2c, nb_nat, nb_a2b, nb_vm, nb_cnt;
+  int i, nb_tap, nb_phy, nb_c2c, nb_nat, nb_a2b, nb_vm, nb_cnt;
   int nb_endp_kvm, nb_endp_cnt, nb_endp_tap, nb_endp_nat, nb_endp_a2b;
-  int nb_endp_c2c, i_endp=0;
+  int nb_endp_c2c, nb_endp_phy, i_endp=0;
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
   t_cnt *cnt = cnt_get_first_cnt(&nb_cnt);
+  t_topo_info_phy *info_phy;
   t_topo_bridges *bridges;
   t_topo_endp *c2c_endp = ovs_c2c_translate_topo_endp(&nb_endp_c2c);
   t_topo_endp *nat_endp = ovs_nat_translate_topo_endp(&nb_endp_nat);
   t_topo_endp *a2b_endp = ovs_a2b_translate_topo_endp(&nb_endp_a2b);
   t_topo_endp *tap_endp = ovs_tap_translate_topo_endp(&nb_endp_tap);
+  t_topo_endp *phy_endp = ovs_phy_translate_topo_endp(&nb_endp_phy);
   t_topo_endp *cnt_endp = cnt_translate_topo_endp(&nb_endp_cnt);
   t_topo_endp *kvm_endp = kvm_translate_topo_endp(&nb_endp_kvm);
   int nb_bridges = suid_power_get_topo_bridges(&bridges);
@@ -739,10 +771,14 @@ t_topo_info *cfg_produce_topo_info(void)
   t_ovs_a2b *a2b = ovs_a2b_get_first(&nb_a2b);
   t_ovs_c2c *c2c = ovs_c2c_get_first(&nb_c2c);
   t_ovs_tap *tap = ovs_tap_get_first(&nb_tap);
-  int nb_endp = nb_endp_cnt + nb_endp_kvm + nb_endp_tap +
+  t_ovs_phy *phy = ovs_phy_get_first(&nb_phy);
+  int nb_endp = nb_endp_cnt + nb_endp_kvm + nb_endp_tap + nb_endp_phy +
                 nb_endp_nat + nb_endp_a2b + nb_endp_c2c;
+  int nb_info_phy = suid_power_get_topo_info_phy(&info_phy);
   t_topo_info *topo = alloc_all_fields(nb_vm, nb_cnt, nb_nat, nb_a2b,
-                                       nb_c2c, nb_tap, nb_endp, nb_bridges);
+                                       nb_c2c, nb_tap, nb_phy, nb_endp,
+                                       nb_bridges, nb_info_phy);
+
   memcpy(&(topo->clc), &(cfg.clc), sizeof(t_topo_clc));
 
   topo->conf_rank = get_conf_rank();
@@ -825,6 +861,19 @@ t_topo_info *cfg_produce_topo_info(void)
       KOUT(" ");
     }
 
+  if (topo->nb_phy)
+    {
+    for (i=0; i<topo->nb_phy; i++)
+      {
+      if (!phy)
+        KOUT(" ");
+      fill_topo_phy(&(topo->phy[i]), phy);
+      phy = phy->next;
+      }
+    if (phy)
+      KOUT(" ");
+    }
+
   for (i=0; i<nb_endp_kvm; i++)
     {
     if (i_endp == topo->nb_endp)
@@ -846,6 +895,14 @@ t_topo_info *cfg_produce_topo_info(void)
     if (i_endp == topo->nb_endp)
       KOUT(" ");
     copy_endp(&(topo->endp[i_endp]), &(tap_endp[i]));
+    i_endp += 1;
+    }
+
+  for (i=0; i<nb_endp_phy; i++)
+    {
+    if (i_endp == topo->nb_endp)
+      KOUT(" ");
+    copy_endp(&(topo->endp[i_endp]), &(phy_endp[i]));
     i_endp += 1;
     }
 
@@ -871,6 +928,11 @@ t_topo_info *cfg_produce_topo_info(void)
       KOUT(" ");
     copy_endp(&(topo->endp[i_endp]), &(c2c_endp[i]));
     i_endp += 1;
+    }
+
+  for (i=0; i<nb_info_phy; i++)
+    {
+    memcpy(&(topo->info_phy[i]), &(info_phy[i]), sizeof(t_topo_info_phy));
     }
 
   for (i=0; i<nb_bridges; i++)

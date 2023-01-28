@@ -44,6 +44,7 @@ SRC = \
       ovs_nat.c \
       ovs_a2b.c \
       ovs_tap.c \
+      ovs_phy.c \
       ovs_c2c.c \
       c2c_peer.c \
       msg.c \

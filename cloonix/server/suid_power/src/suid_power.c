@@ -44,6 +44,7 @@
 #include "launcher.h"
 #include "crun_utils.h"
 #include "docker.h"
+#include "net_phy.h"
 
 /*--------------------------------------------------------------------------*/
 static int  g_cloonix_rank;
@@ -467,10 +468,26 @@ static void qemu_launch(char *name, int vm_id, int argc,
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static char *cloonix_resp_phy(int nb_phy, t_topo_info_phy *phy)
+{
+  int i, ln, len = MAX_PATH_LEN + (nb_phy * MAX_NAME_LEN * 4);
+  char *buf = (char *) malloc(len);
+  memset(buf, 0, len);
+  ln = sprintf(buf, "cloonsuid_resp_phy nb_phys=%d", nb_phy);
+  for (i=0; i<nb_phy; i++)
+    ln += sprintf(buf+ln, " phy_name:%s phy_mac:%s", phy[i].name,
+                                                     phy[i].phy_mac);
+  return buf;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 {
+  t_topo_info_phy *net_phy;
+  int nb_phy;
+  char *str_net_phy;
   DOUT(FLAG_HOP_POLDIAG, "SUID %s", line);
   if (llid != g_llid)
     KERR("%s %s", g_network_name, line);
@@ -483,6 +500,14 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
   "cloonsuid_docker", strlen("cloonsuid_docker")))
     {
     docker_recv_poldiag_msg(llid, tid, line);
+    }
+  else if (!strncmp(line,
+  "cloonsuid_req_phy", strlen("cloonsuid_req_phy")))
+    {
+    net_phy = net_phy_get(&nb_phy);
+    str_net_phy = cloonix_resp_phy(nb_phy, net_phy);
+    rpct_send_poldiag_msg(llid, tid, str_net_phy);
+    free(str_net_phy);
     }
   else
     KERR("%s %s", g_network_name, line);
@@ -657,6 +682,7 @@ int main (int argc, char *argv[])
   if (setenv("PATH", "/usr/sbin:/usr/bin:/sbin:/bin", 1))
     KOUT("ERROR setenv");
   docker_init();
+  net_phy_init();
   seteuid(getuid());
   cloonix_set_pid(getpid());
   clownix_timeout_add(1000, fct_timeout_self_destruct, NULL, NULL, NULL);

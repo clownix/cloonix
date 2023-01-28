@@ -5,6 +5,36 @@
 Software Release Information
 ============================
 
+v28-00
+======
+
+The **phy** item has been added, this permits to act on the real physical 
+interface of the host.
+When you add a phy interface to the canvas, this interface disapears from
+the list of interfaces of the host and appears in the namespace of the
+cloonix network.
+
+For example on my host I have an unsused physical interface named enp6s0,
+if I use the phy item to use this interface within the cloonix net nemo with
+the following command::
+
+    cloonix_cli nemo add phy enp6s0
+
+Then the enp6s0 interface disapears from the host ifconfig list, but it is not
+lost for every namespace, it can be visualised in the cloonix_nemo
+namespace through the following command::
+
+    ip netns exec cloonix_nemo ip address
+
+Then you can link this new interface to a lan of cloonix and through this
+lan to amy other item of cloonix.
+
+Beware that cloonix does not check that the interface is not used, if it is
+then you will lose the connectivity from this interface.
+
+
+
+
 v27-02
 ======
 

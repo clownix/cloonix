@@ -337,7 +337,7 @@ static int create_ovs_drv_process(char *name)
   strncpy(arg_ovsx->sock, sock, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->ovsx_bin, ovsx_bin, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->db_dir, ovs_db_dir, MAX_PATH_LEN-1);
-  clownix_timeout_add(1000, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
+  clownix_timeout_add(2000, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
   return pid;
 }
 /*--------------------------------------------------------------------------*/

@@ -31,6 +31,7 @@
 #include "ovs_nat.h"
 #include "ovs_c2c.h"
 #include "ovs_tap.h"
+#include "ovs_phy.h"
 #include "ovs_a2b.h"
 
 #define MAX_MS_OF_INSERT 3600000
@@ -540,7 +541,8 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
   if ((!ovs_nat_exists(layout->name)) &&
       (!ovs_c2c_exists(layout->name)) &&
       (!ovs_a2b_exists(layout->name)) &&
-      (!ovs_tap_exists(layout->name)))
+      (!ovs_tap_exists(layout->name)) &&
+      (!ovs_phy_exists(layout->name)))
     KERR("%s", layout->name);
   else
     {

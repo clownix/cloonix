@@ -142,7 +142,7 @@ void timer_create_item_req(void *data)
         client_add_tap(0, callback_end, pa->name);
       else if (pa->endp_type == endp_type_natv)
         client_add_nat(0, callback_end, pa->name);
-      else if (pa->endp_type == endp_type_phy)
+      else if (pa->endp_type == endp_type_phyv)
         client_add_phy(0, callback_end, pa->name);
       else
         KERR("%d %s %d", pa->bank_type, pa->name, pa->endp_type);

@@ -840,9 +840,11 @@ static int topo_a2b_format(char *buf, t_topo_a2b *a2b)
 static int topo_phy_format(char *buf, t_topo_phy *phy)
 {
   int len;
-  if (strlen(phy->name) == 0)
+  if (!phy->name)
     KOUT(" ");
-  len = sprintf(buf, EVENT_TOPO_PHY, phy->name);
+  if (!strlen(phy->name) || (strlen(phy->name) >= MAX_NAME_LEN))
+     KOUT(" ");
+  len = sprintf(buf, EVENT_TOPO_PHY, phy->name, phy->endp_type);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -851,16 +853,9 @@ static int topo_phy_format(char *buf, t_topo_phy *phy)
 static int topo_info_phy_format(char *buf, t_topo_info_phy *phy)
 {
   int len;
-  if ((strlen(phy->name) == 0) ||
-      (strlen(phy->drv) == 0)  ||
-      (strlen(phy->pci) == 0)  ||
-      (strlen(phy->mac) == 0)  ||
-      (strlen(phy->vendor) == 0) ||
-      (strlen(phy->device) == 0))
+  if (strlen(phy->name) == 0)
     KOUT(" ");
-  len = sprintf(buf, EVENT_TOPO_INFO_PHY, phy->index, phy->flags, phy->name,
-                                          phy->drv, phy->pci, phy->mac,
-                                          phy->vendor, phy->device);
+  len = sprintf(buf, EVENT_TOPO_INFO_PHY, phy->name);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -934,7 +929,6 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
                                            topo->nb_endp,
                                            topo->nb_info_phy,
                                            topo->nb_bridges);
-
   for (i=0; i<topo->nb_cnt; i++)
     len += topo_cnt_format(sndbuf+len, &(topo->cnt[i]));
   for (i=0; i<topo->nb_kvm; i++)
@@ -1562,7 +1556,7 @@ static void helper_fill_topo_tap(char *msg, t_topo_tap *tap)
 /*****************************************************************************/
 static void helper_fill_topo_phy(char *msg, t_topo_phy *phy)
 {
-  if (sscanf(msg, EVENT_TOPO_PHY, phy->name) != 1)
+  if (sscanf(msg, EVENT_TOPO_PHY, phy->name, &(phy->endp_type)) != 2)
     KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
@@ -1580,10 +1574,7 @@ static void helper_fill_topo_a2b(char *msg, t_topo_a2b *a2b)
 /*****************************************************************************/
 static void helper_fill_topo_info_phy(char *msg, t_topo_info_phy *phy)
 {
-  if (sscanf(msg, EVENT_TOPO_INFO_PHY, &(phy->index), &(phy->flags),
-                                       phy->name,
-                                       phy->drv, phy->pci, phy->mac,
-                                       phy->vendor, phy->device) != 8)
+  if (sscanf(msg, EVENT_TOPO_INFO_PHY, phy->name) != 1)
     KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
@@ -1694,15 +1685,12 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
   len = topo->nb_a2b*sizeof(t_topo_a2b);
   topo->a2b= (t_topo_a2b *) clownix_malloc(len, 23);
   memset(topo->a2b, 0, len);
-
   len = topo->nb_nat*sizeof(t_topo_nat);
   topo->nat= (t_topo_nat *) clownix_malloc(len, 24);
   memset(topo->nat, 0, len);
-
   len = topo->nb_endp*sizeof(t_topo_endp);
   topo->endp=(t_topo_endp *)clownix_malloc(len, 25);
   memset(topo->endp, 0, len);
-
   len = topo->nb_info_phy*sizeof(t_topo_info_phy);
   topo->info_phy= (t_topo_info_phy *) clownix_malloc(len, 26);
   memset(topo->info_phy, 0, len);

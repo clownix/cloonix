@@ -54,6 +54,7 @@
 #include "ovs_nat.h"
 #include "ovs_a2b.h"
 #include "ovs_tap.h"
+#include "ovs_phy.h"
 #include "ovs_c2c.h"
 #include "msg.h"
 
@@ -360,6 +361,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
   int endp_kvm = kvm_exists(name, num);
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
+  t_ovs_phy *phy_exists = ovs_phy_exists(name);
   t_ovs_nat *nat_exists = ovs_nat_exists(name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
@@ -414,6 +416,8 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
     }
   else if ((tap_exists) && (num == 0))
     ovs_tap_add_lan(llid, tid, name, lan);
+  else if ((phy_exists) && (num == 0))
+    ovs_phy_add_lan(llid, tid, name, lan);
   else if ((nat_exists) && (num == 0))
     ovs_nat_add_lan(llid, tid, name, lan);
   else if ((a2b_exists) && ((num == 0) || (num == 1)))
@@ -470,11 +474,12 @@ static void timer_endp(void *data)
   t_eth_table *eth_tab;
   int cnt_exists = cnt_info(te->name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(te->name);
+  t_ovs_phy *phy_exists = ovs_phy_exists(te->name);
   t_ovs_nat *nat_exists = ovs_nat_exists(te->name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(te->name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(te->name);
 
-  if (endp_kvm || cnt_exists || tap_exists ||
+  if (endp_kvm || cnt_exists || tap_exists || phy_exists ||
       nat_exists || a2b_exists || c2c_exists) 
     {
     local_add_lan(te->llid, te->tid, te->name, te->num, te->lan);
@@ -630,6 +635,7 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   int nb_eth;
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
+  t_ovs_phy *phy_exists = ovs_phy_exists(name);
   t_ovs_nat *nat_exists = ovs_nat_exists(name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
@@ -664,6 +670,8 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
     }
   else if ((tap_exists) && (num == 0))
     ovs_tap_del_lan(llid, tid, name, lan);
+  else if ((phy_exists) && (num == 0))
+    ovs_phy_del_lan(llid, tid, name, lan);
   else if ((nat_exists) && (num == 0))
     ovs_nat_del_lan(llid, tid, name, lan);
   else if ((a2b_exists) && ((num == 0) || (num == 1)))
@@ -1429,20 +1437,30 @@ static void timer_del_all(void *data)
   t_ovs_a2b *a2b, *na2b;
   t_ovs_c2c *c2c, *nc2c;
   t_ovs_tap *tap, *ntap;
-  int nb_vm, nb_cnt, nb_zombies, nb_nat, nb_a2b, nb_c2c, nb_tap, found = 0;
+  t_ovs_phy *phy, *nphy;
+  int nb_vm, nb_cnt, nb_zombies, nb_nat, nb_a2b, nb_c2c, nb_tap, nb_phy;
+  int found = 0;
   t_timer_del *td = (t_timer_del *) data;;
   cfg_get_first_vm(&nb_vm);
   nb_cnt = suid_power_delete_cnt_all();
   nb_zombies = cfg_zombie_qty();
   tap = ovs_tap_get_first(&nb_tap);
+  phy = ovs_phy_get_first(&nb_phy);
   nat = ovs_nat_get_first(&nb_nat);
   a2b = ovs_a2b_get_first(&nb_a2b);
   c2c = ovs_c2c_get_first(&nb_c2c);
+
   while(tap)
     {
     ntap = tap->next;
     ovs_tap_del(0, 0, tap->name); 
     tap = ntap;
+    }
+  while(phy)
+    {
+    nphy = phy->next;
+    ovs_phy_del(0, 0, phy->name);
+    phy = nphy;
     }
   while(nat)
     {
@@ -1462,7 +1480,7 @@ static void timer_del_all(void *data)
     ovs_c2c_del(0, 0, c2c->name);
     c2c = nc2c;
     }
-  found = nb_vm + nb_cnt + nb_zombies + nb_tap + nb_nat + nb_a2b + nb_c2c;
+  found = nb_vm+nb_cnt+nb_zombies+nb_tap+nb_phy+nb_nat+nb_a2b+nb_c2c;
   if (found)
     {
     td->tzcount += 1;
@@ -1580,6 +1598,10 @@ void recv_del_name(int llid, int tid, char *name)
   else if (ovs_tap_exists(name))
     {
     ovs_tap_del(llid, tid, name);
+    }
+  else if (ovs_phy_exists(name))
+    {
+    ovs_phy_del(llid, tid, name);
     }
   else if (ovs_a2b_exists(name))
     {
@@ -1715,6 +1737,7 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
   t_vm   *vm = cfg_get_vm(name);
   int nb_eth;
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
+  t_ovs_phy *phy_exists = ovs_phy_exists(name);
   t_ovs_nat *nat_exists = ovs_nat_exists(name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
@@ -1768,6 +1791,24 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
       send_status_ko(llid, tid, "bad num");
       }
     else if (ovs_tap_dyn_snf(name, val))
+      {
+      KERR("ERROR %s %s", locnet, name);
+      send_status_ko(llid, tid, "error");
+      }
+    else
+      {
+      send_status_ok(llid, tid, "ok");
+      cfg_hysteresis_send_topo_info();
+      }
+    }
+  else if (phy_exists)
+    {
+    if (num != 0)
+      {
+      KERR("ERROR %s %s", locnet, name);
+      send_status_ko(llid, tid, "bad num");
+      }
+    else if (ovs_phy_dyn_snf(name, val))
       {
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "error");
@@ -1856,10 +1897,14 @@ void recv_phy_add(int llid, int tid, char *name)
     KERR("ERROR %s %s", locnet, name);
     send_status_ko(llid, tid, err);
     }
-  else
+  else if (!suid_power_info_phy_exists(name))
     {
     KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, "recv_phy_add ko");
+    send_status_ko(llid, tid, "recv_phy_add name unknown");
+    }
+  else
+    {
+    ovs_phy_add(llid, tid, name);
     }
 }
 /*--------------------------------------------------------------------------*/

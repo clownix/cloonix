@@ -349,19 +349,22 @@ int kvm_add_lan(int llid, int tid, char *name, int num,
       KERR("ERROR ADD LAN %s %d %s", name, num, lan);
     else
       {
-      strncpy(cur->lan_added, lan, MAX_NAME_LEN);
-      lan_add_name(cur->lan_added, item_kvm, name, num);
-      mac = eth_tab[num].mac_addr;
-      memset(str_mac, 0, MAX_NAME_LEN);
-      snprintf(str_mac, MAX_NAME_LEN-1,
-               "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-      lan_add_mac(cur->lan_added, item_kvm, name, num, str_mac);
+      lan_add_name(lan, item_kvm, name, num);
       if (msg_send_add_lan_endp(ovsreq_add_kvm_lan, name, num,
-                                cur->vhost, lan))
+                                     cur->vhost, lan))
+        {
         KERR("ERROR ADD LAN %s %d %s", name, num, lan);
+        lan_del_name(lan, item_kvm, name, num);
+        }
       else
         {
+        strncpy(cur->lan_added, lan, MAX_NAME_LEN);
+        mac = eth_tab[num].mac_addr;
+        memset(str_mac, 0, MAX_NAME_LEN);
+        snprintf(str_mac, MAX_NAME_LEN-1,
+                 "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        lan_add_mac(cur->lan_added, item_kvm, name, num, str_mac);
         if (strlen(cur->lan))
           {
           KERR("ERROR ADD LAN %s %d %s", name, num, lan);

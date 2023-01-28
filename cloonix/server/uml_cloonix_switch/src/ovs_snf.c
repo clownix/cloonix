@@ -33,6 +33,7 @@
 #include "ovs_nat.h"
 #include "ovs_a2b.h"
 #include "ovs_tap.h"
+#include "ovs_phy.h"
 #include "ovs_c2c.h"
 #include "ovs_snf.h"
 #include "llid_trace.h"
@@ -181,6 +182,7 @@ static void send_mac_to_snf(t_snf *cur)
   int nb_eth;
   char mac_spyed_on[MAX_NAME_LEN];
   char msg[MAX_PATH_LEN];
+  t_ovs_phy *phy_exists = ovs_phy_exists(cur->name);
   t_ovs_tap *tap_exists = ovs_tap_exists(cur->name);
   t_ovs_nat *nat_exists = ovs_nat_exists(cur->name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(cur->name);
@@ -203,6 +205,12 @@ static void send_mac_to_snf(t_snf *cur)
   else if (tap_exists)
     {
     snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",tap_exists->mac);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+    }
+  else if (phy_exists)
+    {
+    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",phy_exists->phy_mac);
     rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
     hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }
@@ -578,10 +586,14 @@ void ovs_dyn_snf_start_process(char *name, int num, int item_type,
   snprintf(tap, MAX_NAME_LEN-1, "s%s", vhost);
   cur = find_snf(tap);
   if (cur)
+    {
     KERR("ERROR %s %d %s", name, num, vhost);
+    ovs_dyn_snf_stop_process(tap);
+    }
   else if ((item_type != item_type_keth) && (item_type != item_type_ceth) &&
            (item_type != item_type_tap) && (item_type != item_type_c2c) &&
-           (item_type != item_type_nat) && (item_type != item_type_a2b))
+           (item_type != item_type_nat) && (item_type != item_type_a2b) &&
+           (item_type != item_type_phy))
     KERR("ERROR %s %d %s %d", name, num, vhost, item_type);
   else
     {

@@ -24,11 +24,8 @@ int ovs_cmd_del_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,
 int ovs_cmd_add_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost);
 int ovs_cmd_del_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost);
 
-int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
-                    char *vhost, char *mac);
-int ovs_cmd_del_tap(char *ovs_bin, char *ovs_dir, char *name, char *vhost);
-
 int ovs_cmd_add_lan(char *ovs_bin, char *ovs_dir, char *lan);
 int ovs_cmd_del_lan(char *ovs_bin, char *ovs_dir, char *lan);
+
 /*---------------------------------------------------------------------------*/
 

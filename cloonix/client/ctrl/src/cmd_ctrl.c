@@ -125,8 +125,11 @@ static char *get_type_endp(int type)
   char *result = "notfound";
   switch (type)
     {
-    case endp_type_phy:
-      result = "phy"; 
+    case endp_type_phys:
+      result = "phys"; 
+      break;
+    case endp_type_phyv:
+      result = "phyv"; 
       break;
     case endp_type_eths:
       result = "eths"; 
@@ -176,9 +179,7 @@ static void print_endpoint_info(t_topo_endp *endp)
 /*****************************************************************************/
 static void print_phy_info(t_topo_info_phy *phy)
 {
-  printf("\n%s index:%d flags:0x%X drv:%s pci:%s mac:%s vendor:%s device:%s", 
-         phy->name, phy->index, phy->flags, phy->drv, phy->pci, phy->mac,
-         phy->vendor, phy->device);
+  printf("\n%s", phy->name);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -540,20 +541,6 @@ int cmd_sav_full(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int cmd_add_phy(int argc, char **argv)
-{
-  int result = -1;
-  if (argc == 1)
-    {
-    result = 0;
-    init_connection_to_uml_cloonix_switch();
-    client_add_phy(0, callback_end, argv[0]);
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 int cmd_add_tap(int argc, char **argv)
 {
   int result = -1;
@@ -562,6 +549,20 @@ int cmd_add_tap(int argc, char **argv)
     result = 0;
     init_connection_to_uml_cloonix_switch();
     client_add_tap(0, callback_end, argv[0]);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_add_phy(int argc, char **argv)
+{
+  int result = -1;
+  if (argc == 1)
+    {
+    result = 0;
+    init_connection_to_uml_cloonix_switch();
+    client_add_phy(0, callback_end, argv[0]);
     }
   return result;
 }

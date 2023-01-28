@@ -768,15 +768,19 @@ KERR("TRACE %s %d %s", name, num, lan);
     }
   else
     {
-    strncpy(cur->side[num].lan_added, lan, MAX_NAME_LEN);
-    lan_add_name(cur->side[num].lan_added, item_a2b, cur->name, num);
-    cur->cli_llid = cli_llid;
-    cur->cli_tid = cli_tid;
+    lan_add_name(lan, item_a2b, name, num);
     if (msg_send_add_lan_endp(ovsreq_add_a2b_lan, name, num,
-                              cur->side[num].vhost, lan))
+                                   cur->side[num].vhost, lan))
       {
       KERR("ERROR %s", name);
-      utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), name);
+      send_status_ko(cli_llid, cli_tid, "msg_send_add_lan_endp error");
+      lan_del_name(lan, item_a2b, name, num);
+      }
+    else
+      {
+      strncpy(cur->side[num].lan_added, lan, MAX_NAME_LEN);
+      cur->cli_llid = cli_llid;
+      cur->cli_tid = cli_tid;
       }
     }
 }

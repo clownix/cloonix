@@ -159,11 +159,7 @@ static void c2c_update_bitem(t_topo_info *topo)
                     (bitem->pbi.endp_type == endp_type_c2cv)))
       {
       memcpy(&(bitem->pbi.pbi_sat->topo_c2c), cur, sizeof(t_topo_c2c));
-      if ((cur->endp_type != endp_type_c2cs) &&
-          (cur->endp_type != endp_type_c2cv))
-        KERR("ERROR %s %d", cur->name,  cur->endp_type);
-      else
-        bitem->pbi.endp_type = cur->endp_type;
+      bitem->pbi.endp_type = cur->endp_type;
       }
     }  
 }
@@ -182,13 +178,28 @@ static void tap_update_bitem(t_topo_info *topo)
     if ((bitem) && ((bitem->pbi.endp_type == endp_type_taps) ||
                     (bitem->pbi.endp_type == endp_type_tapv)))
       {
-      if ((cur->endp_type != endp_type_taps) &&
-          (cur->endp_type != endp_type_tapv))
-        KERR("ERROR %s %d", cur->name,  cur->endp_type);
-      else
-        bitem->pbi.endp_type = cur->endp_type;
+      bitem->pbi.endp_type = cur->endp_type;
       }
     }  
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void phy_update_bitem(t_topo_info *topo)
+{
+  int i;
+  t_topo_phy *cur;
+  t_bank_item *bitem;
+  for (i=0; i<topo->nb_phy; i++)
+    {
+    cur = &(topo->phy[i]);
+    bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
+    if ((bitem) && ((bitem->pbi.endp_type == endp_type_phys) ||
+                    (bitem->pbi.endp_type == endp_type_phyv)))
+      {
+      bitem->pbi.endp_type = cur->endp_type;
+      }
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -206,11 +217,7 @@ static void nat_update_bitem(t_topo_info *topo)
                     (bitem->pbi.endp_type == endp_type_natv)))
       {
       memcpy(&(bitem->pbi.pbi_sat->topo_nat), cur, sizeof(t_topo_nat));
-      if ((cur->endp_type != endp_type_nats) &&
-          (cur->endp_type != endp_type_natv))
-        KERR("ERROR %s %d", cur->name,  cur->endp_type);
-      else
-        bitem->pbi.endp_type = cur->endp_type;
+      bitem->pbi.endp_type = cur->endp_type;
       }
     }
 }
@@ -313,6 +320,7 @@ static void timer_callback_topo(void *data)
     topo_free_diffs(diffs);
     c2c_update_bitem(topo);
     tap_update_bitem(topo);
+    phy_update_bitem(topo);
     nat_update_bitem(topo);
     a2b_update_bitem(topo);
     cnt_update_bitem(topo);

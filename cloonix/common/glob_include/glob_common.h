@@ -69,7 +69,8 @@ enum {
   endp_type_natv,
   endp_type_c2cs,
   endp_type_c2cv,
-  endp_type_phy,
+  endp_type_phys,
+  endp_type_phyv,
   endp_type_a2b,
 };
 
@@ -78,6 +79,7 @@ enum {
   item_type_keth,
   item_type_ceth,
   item_type_tap,
+  item_type_phy,
   item_type_c2c,
   item_type_a2b,
   item_type_nat,
@@ -103,8 +105,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define MAX_VM             1000
 #define MAX_OVS_BRIDGES    1500
 #define MAX_OVS_PORTS      MAX_VM
-#define MAX_PHY            16
-#define MAX_PCI            16
+#define MAX_PHY            32
 #define MAX_ETH_VM         32
 #define MAX_COLOR         10
 
@@ -337,6 +338,7 @@ typedef struct t_topo_tap
 typedef struct t_topo_phy
   {
   char name[MAX_NAME_LEN];
+  int endp_type;
   } t_topo_phy;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_a2b
@@ -362,14 +364,8 @@ typedef struct t_topo_endp
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_info_phy
 {
-  int  index;
-  int  flags;
   char name[MAX_NAME_LEN];
-  char drv[MAX_NAME_LEN];
-  char pci[MAX_NAME_LEN];
-  char mac[MAX_NAME_LEN];
-  char vendor[MAX_NAME_LEN];
-  char device[MAX_NAME_LEN];
+  char phy_mac[MAX_NAME_LEN];
 } t_topo_info_phy;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_bridges

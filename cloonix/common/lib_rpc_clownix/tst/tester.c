@@ -580,6 +580,7 @@ static void random_nat(t_topo_nat *nat)
 static void random_phy(t_topo_phy *phy)
 {
   random_choice_str(phy->name, MAX_NAME_LEN);
+  phy->endp_type = rand();
 }
 /*---------------------------------------------------------------------------*/
 
@@ -603,14 +604,7 @@ static void random_a2b(t_topo_a2b *a2b)
 /*****************************************************************************/
 static void random_info_phy(t_topo_info_phy *phy)
 {
-  phy->index = rand();
-  phy->flags = rand();
   random_choice_str(phy->name, MAX_NAME_LEN);
-  random_choice_str(phy->drv, MAX_NAME_LEN);
-  random_choice_str(phy->pci, MAX_NAME_LEN);
-  random_choice_str(phy->mac, MAX_NAME_LEN);
-  random_choice_str(phy->vendor, MAX_NAME_LEN);
-  random_choice_str(phy->device, MAX_NAME_LEN);
 }
 /*---------------------------------------------------------------------------*/
 

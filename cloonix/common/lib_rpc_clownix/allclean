@@ -12,4 +12,6 @@ make clean
 cd $HERE
 make clean
 
+rm -rf $HERE/build
+rm -f meson.build
 

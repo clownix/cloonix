@@ -28,21 +28,21 @@
 #include "event_subscriber.h"
 #include "utils_cmd_line_maker.h"
 #include "uml_clownix_switch.h"
-#include "ovs_tap.h"
+#include "ovs_phy.h"
 #include "msg.h"
 #include "lan_to_name.h"
 #include "ovs_snf.h"
 
 
-static t_ovs_tap *g_head_tap;
-static int g_nb_tap;
+static t_ovs_phy *g_head_phy;
+static int g_nb_phy;
 
 int get_glob_req_self_destruction(void);
 
 /****************************************************************************/
-static t_ovs_tap *find_tap(char *name)
+static t_ovs_phy *find_phy(char *name)
 {
-  t_ovs_tap *cur = g_head_tap;
+  t_ovs_phy *cur = g_head_phy;
   while(cur)
     {
     if (!strcmp(cur->name, name))
@@ -54,59 +54,60 @@ static t_ovs_tap *find_tap(char *name)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void free_tap(t_ovs_tap *cur)
+static void free_phy(t_ovs_phy *cur)
 {
-  cfg_free_obj_id(cur->tap_id);
+  cfg_free_obj_id(cur->phy_id);
   if (strlen(cur->lan_added))
-    lan_del_name(cur->lan_added, item_tap, cur->name, 0);
+    lan_del_name(cur->lan_added, item_phy, cur->name, 0);
   if (cur->prev)
     cur->prev->next = cur->next;
   if (cur->next)
     cur->next->prev = cur->prev;
-  if (cur == g_head_tap)
-    g_head_tap = cur->next;
-  g_nb_tap -= 1;
+  if (cur == g_head_phy)
+    g_head_phy = cur->next;
+  g_nb_phy -= 1;
   free(cur);
   cfg_hysteresis_send_topo_info();
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void alloc_tap(int llid, int tid, char *name)
+static void alloc_phy(int llid, int tid, char *name)
 {
   uint8_t mc[6];
   int id = cfg_alloc_obj_id();
-  t_ovs_tap *cur = (t_ovs_tap *) malloc(sizeof(t_ovs_tap));
-  memset(cur, 0, sizeof(t_ovs_tap));
+  t_ovs_phy *cur = (t_ovs_phy *) malloc(sizeof(t_ovs_phy));
+  memset(cur, 0, sizeof(t_ovs_phy));
   strncpy(cur->name, name, MAX_NAME_LEN-1);
-  cur->tap_id = id;
+  cur->phy_id = id;
   cur->llid = llid;
   cur->tid = tid;
-  cur->endp_type = endp_type_tapv;
+  cur->endp_type = endp_type_phyv;
   mc[0] = 0x2;
   mc[1] = 0xFF & rand();
   mc[2] = 0xFF & rand();
   mc[3] = 0xFF & rand();
-  mc[4] = cur->tap_id % 100;
+  mc[4] = cur->phy_id % 100;
   mc[5] = 0xFF & rand();
-  snprintf(cur->vhost, (MAX_NAME_LEN-1), "%s%d_0", OVS_BRIDGE_PORT, id);
-  snprintf(cur->mac, (MAX_NAME_LEN-1), 
+//  snprintf(cur->vhost, (MAX_NAME_LEN-1), "%s%d_0", OVS_BRIDGE_PORT, id);
+  snprintf(cur->vhost, (MAX_NAME_LEN-1), "%s", name);
+  snprintf(cur->phy_mac, (MAX_NAME_LEN-1), 
            "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
            mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
-  if (g_head_tap)
-    g_head_tap->prev = cur;
-  cur->next = g_head_tap;
-  g_head_tap = cur; 
-  g_nb_tap += 1;
+  if (g_head_phy)
+    g_head_phy->prev = cur;
+  cur->next = g_head_phy;
+  g_head_phy = cur; 
+  g_nb_phy += 1;
   cfg_hysteresis_send_topo_info();
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_tap_resp_add_lan(int is_ko, char *name, int num,
+void ovs_phy_resp_add_lan(int is_ko, char *name, int num,
                           char *vhost, char *lan)
 {
-  t_ovs_tap *cur = find_tap(name);
+  t_ovs_phy *cur = find_phy(name);
   if (!cur)
     KERR("ERROR %d %s", is_ko, name);
   else
@@ -130,16 +131,16 @@ void ovs_tap_resp_add_lan(int is_ko, char *name, int num,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_tap_resp_del_lan(int is_ko, char *name, int num, 
+void ovs_phy_resp_del_lan(int is_ko, char *name, int num, 
                           char *vhost, char *lan)
 {
-  t_ovs_tap *cur = find_tap(name);
+  t_ovs_phy *cur = find_phy(name);
   if (!cur)
     KERR("ERROR %d %s", is_ko, name);
-  else if (cur->del_tap_req == 1)
+  else if (cur->del_phy_req == 1)
     {
     memset(cur->lan, 0, MAX_NAME_LEN);
-    if (msg_send_del_tap(name, cur->vhost))
+    if (msg_send_del_phy(name, cur->vhost))
       KERR("ERROR %d %s", is_ko, name);
     }
   else
@@ -161,9 +162,9 @@ void ovs_tap_resp_del_lan(int is_ko, char *name, int num,
 
 
 /****************************************************************************/
-void ovs_tap_resp_msg_tap(int is_ko, int is_add, char *name)
+void ovs_phy_resp_msg_phy(int is_ko, int is_add, char *name)
 {
-  t_ovs_tap *cur = find_tap(name);
+  t_ovs_phy *cur = find_phy(name);
   if (!cur)
     KERR("ERROR %d %d %s", is_ko, is_add, name);
   else
@@ -177,40 +178,40 @@ void ovs_tap_resp_msg_tap(int is_ko, int is_add, char *name)
       utils_send_status_ok(&(cur->llid), &(cur->tid));
     
     if (is_add == 0)
-      free_tap(cur);
+      free_phy(cur);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_ovs_tap *ovs_tap_exists(char *name)
+t_ovs_phy *ovs_phy_exists(char *name)
 {
-  return (find_tap(name));
+  return (find_phy(name));
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_ovs_tap *ovs_tap_get_first(int *nb_tap)
+t_ovs_phy *ovs_phy_get_first(int *nb_phy)
 {
-  t_ovs_tap *result = g_head_tap;
-  *nb_tap = g_nb_tap;
+  t_ovs_phy *result = g_head_phy;
+  *nb_phy = g_nb_phy;
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_tap_add(int llid, int tid, char *name)
+void ovs_phy_add(int llid, int tid, char *name)
 {
-  t_ovs_tap *cur = find_tap(name);
+  t_ovs_phy *cur = find_phy(name);
   if (cur)
     send_status_ko(llid, tid, "Exists already");
   else
     {
-    alloc_tap(llid, tid, name);
-    cur = find_tap(name);
+    alloc_phy(llid, tid, name);
+    cur = find_phy(name);
     if (!cur)
       KOUT(" ");
-    if (msg_send_add_tap(name, cur->vhost, cur->mac))
+    if (msg_send_add_phy(name, cur->vhost, cur->phy_mac))
       {
       KERR("ERROR %s", name);
       utils_send_status_ko(&(cur->llid), &(cur->tid), name);
@@ -220,9 +221,9 @@ void ovs_tap_add(int llid, int tid, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_tap_del(int llid, int tid, char *name)
+void ovs_phy_del(int llid, int tid, char *name)
 {
-  t_ovs_tap *cur = find_tap(name);
+  t_ovs_phy *cur = find_phy(name);
   int val;
   if (!cur)
     {
@@ -232,11 +233,11 @@ void ovs_tap_del(int llid, int tid, char *name)
     }
   else if (cur->llid)
     {
-    KERR("ERROR %s %d %d", name, cur->llid, cur->del_tap_req);
+    KERR("ERROR %s %d %d", name, cur->llid, cur->del_phy_req);
     if (llid)
       send_status_ko(llid, tid, "Not ready");
     }
-  else if (cur->del_tap_req)
+  else if (cur->del_phy_req)
     {
     if (llid)
       send_status_ko(llid, tid, "Not ready");
@@ -249,11 +250,11 @@ void ovs_tap_del(int llid, int tid, char *name)
       {
       if (!strlen(cur->lan))
         KERR("ERROR %s %s", name, cur->lan_added);
-      val = lan_del_name(cur->lan_added, item_tap, cur->name, 0);
+      val = lan_del_name(cur->lan_added, item_phy, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
         {
-        if (msg_send_del_tap(name, cur->vhost))
+        if (msg_send_del_phy(name, cur->vhost))
           {
           KERR("ERROR %s", name);
           utils_send_status_ko(&(cur->llid), &(cur->tid), name);
@@ -261,12 +262,12 @@ void ovs_tap_del(int llid, int tid, char *name)
         }
       else
         {
-        msg_send_del_lan_endp(ovsreq_del_tap_lan, name, 0,
+        msg_send_del_lan_endp(ovsreq_del_phy_lan, name, 0,
                               cur->vhost, cur->lan);
-        cur->del_tap_req = 1;
+        cur->del_phy_req = 1;
         }
       }
-    else if (msg_send_del_tap(name, cur->vhost))
+    else if (msg_send_del_phy(name, cur->vhost))
       {
       KERR("ERROR %s", name);
       utils_send_status_ko(&(cur->llid), &(cur->tid), name);
@@ -276,17 +277,17 @@ void ovs_tap_del(int llid, int tid, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_tap_add_lan(int llid, int tid, char *name, char *lan)
+void ovs_phy_add_lan(int llid, int tid, char *name, char *lan)
 {
-  t_ovs_tap *cur = find_tap(name);
+  t_ovs_phy *cur = find_phy(name);
   if (!cur)
     {
     KERR("ERROR %s", name);
     send_status_ko(llid, tid, "Does not exist");
     }
-  else if ((cur->llid) || (cur->del_tap_req))
+  else if ((cur->llid) || (cur->del_phy_req))
     {
-    KERR("ERROR %s %d %d", name, cur->llid, cur->del_tap_req);
+    KERR("ERROR %s %d %d", name, cur->llid, cur->del_phy_req);
     send_status_ko(llid, tid, "Not ready");
     }
   else if (strlen(cur->lan))
@@ -296,17 +297,17 @@ void ovs_tap_add_lan(int llid, int tid, char *name, char *lan)
     }
   else
     {
-    lan_add_name(lan, item_tap, name, 0);
-    if (msg_send_add_lan_endp(ovsreq_add_tap_lan, name, 0, cur->vhost, lan))
+    lan_add_name(lan, item_phy, name, 0);
+    if (msg_send_add_lan_endp(ovsreq_add_phy_lan, name, 0, cur->vhost, lan))
       {
       KERR("ERROR %s %s", name, lan);
       send_status_ko(llid, tid, "msg_send_add_lan_endp error");
-      lan_del_name(lan, item_tap, name, 0);
+      lan_del_name(lan, item_phy, name, 0);
       }
     else
       {
       strncpy(cur->lan_added, lan, MAX_NAME_LEN);
-      lan_add_mac(cur->lan_added, item_tap, name, 0, cur->mac);
+      lan_add_mac(cur->lan_added, item_phy, name, 0, cur->phy_mac);
       cur->llid = llid;
       cur->tid = tid;
       }
@@ -315,18 +316,18 @@ void ovs_tap_add_lan(int llid, int tid, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_tap_del_lan(int llid, int tid, char *name, char *lan)
+void ovs_phy_del_lan(int llid, int tid, char *name, char *lan)
 {
-  t_ovs_tap *cur = find_tap(name);
+  t_ovs_phy *cur = find_phy(name);
   int val = 0;
   if (!cur)
     {
     KERR("ERROR %s", name);
     send_status_ko(llid, tid, "Does not exist");
     }
-  else if ((cur->llid) || (cur->del_tap_req))
+  else if ((cur->llid) || (cur->del_phy_req))
     {
-    KERR("ERROR %s %d %d", name, cur->llid, cur->del_tap_req);
+    KERR("ERROR %s %d %d", name, cur->llid, cur->del_phy_req);
     send_status_ko(llid, tid, "Not ready");
     }
   else
@@ -335,7 +336,7 @@ void ovs_tap_del_lan(int llid, int tid, char *name, char *lan)
       KERR("ERROR: %s %s", name, lan);
     else
       {
-      val = lan_del_name(cur->lan_added, item_tap, cur->name, 0);
+      val = lan_del_name(cur->lan_added, item_phy, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       }
     if (val == 2*MAX_LAN)
@@ -348,7 +349,7 @@ void ovs_tap_del_lan(int llid, int tid, char *name, char *lan)
       {
       cur->llid = llid;
       cur->tid = tid;
-      if (msg_send_del_lan_endp(ovsreq_del_tap_lan, name, 0, cur->vhost, lan))
+      if (msg_send_del_lan_endp(ovsreq_del_phy_lan, name, 0, cur->vhost, lan))
         utils_send_status_ko(&(cur->llid), &(cur->tid), name);
       }
     }
@@ -356,12 +357,12 @@ void ovs_tap_del_lan(int llid, int tid, char *name, char *lan)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-t_topo_endp *ovs_tap_translate_topo_endp(int *nb)
+t_topo_endp *ovs_phy_translate_topo_endp(int *nb)
 {
-  t_ovs_tap *cur;
+  t_ovs_phy *cur;
   int len, count = 0, nb_endp = 0;
   t_topo_endp *endp;
-  cur = g_head_tap;
+  cur = g_head_phy;
   while(cur)
     {
     if (strlen(cur->lan))
@@ -370,7 +371,7 @@ t_topo_endp *ovs_tap_translate_topo_endp(int *nb)
     }
   endp = (t_topo_endp *) clownix_malloc(count * sizeof(t_topo_endp), 13);
   memset(endp, 0, count * sizeof(t_topo_endp));
-  cur = g_head_tap;
+  cur = g_head_phy;
   while(cur)
     {
     if (strlen(cur->lan))
@@ -395,7 +396,7 @@ t_topo_endp *ovs_tap_translate_topo_endp(int *nb)
 /*****************************************************************************/
 static void snf_process_started(char *name, int num, char *vhost)
 {
-  t_ovs_tap *cur = find_tap(name);
+  t_ovs_phy *cur = find_phy(name);
 
   if (cur == NULL)
     KERR("ERROR %s %d", name, num);
@@ -408,40 +409,40 @@ static void snf_process_started(char *name, int num, char *vhost)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int  ovs_tap_dyn_snf(char *name, int val)
+int  ovs_phy_dyn_snf(char *name, int val)
 {
   int result = -1;
-  t_ovs_tap *cur = find_tap(name);
-  char tap[MAX_NAME_LEN];
+  t_ovs_phy *cur = find_phy(name);
+  char phy[MAX_NAME_LEN];
   char *vh;
 
-  if (tap == NULL)
+  if (phy == NULL)
     KERR("ERROR %s %d", name, val);
   else
     {
     if (val)
       {
-      if (cur->endp_type == endp_type_taps)
+      if (cur->endp_type == endp_type_phys)
         KERR("ERROR %s", name);
       else
         {
         cur->del_snf_ethv_sent = 0;
-        cur->endp_type = endp_type_taps;
-        ovs_dyn_snf_start_process(name, 0, item_type_tap,
+        cur->endp_type = endp_type_phys;
+        ovs_dyn_snf_start_process(name, 0, item_type_phy,
                                   cur->vhost, snf_process_started);
         result = 0;
         }
       }
     else
       {
-      if (cur->endp_type == endp_type_tapv)
+      if (cur->endp_type == endp_type_phyv)
         KERR("ERROR %s", name);
       else
         {
-        cur->endp_type = endp_type_tapv;
-        memset(tap, 0, MAX_NAME_LEN);
+        cur->endp_type = endp_type_phyv;
+        memset(phy, 0, MAX_NAME_LEN);
         vh = cur->vhost;
-        snprintf(tap, MAX_NAME_LEN-1, "s%s", vh);
+        snprintf(phy, MAX_NAME_LEN-1, "s%s", vh);
         if (cur->del_snf_ethv_sent == 0)
           {
           cur->del_snf_ethv_sent = 1;
@@ -450,7 +451,7 @@ int  ovs_tap_dyn_snf(char *name, int val)
             if (ovs_snf_send_del_snf_lan(name, 0, cur->vhost, cur->lan))
               KERR("ERROR DEL KVMETH %s %s", name, cur->lan);
             }
-          ovs_dyn_snf_stop_process(tap);
+          ovs_dyn_snf_stop_process(phy);
           }
         result = 0;
         }
@@ -461,10 +462,10 @@ int  ovs_tap_dyn_snf(char *name, int val)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_tap_init(void)
+void ovs_phy_init(void)
 {
-  g_nb_tap = 0;
-  g_head_tap = NULL;
+  g_nb_phy = 0;
+  g_head_phy = NULL;
 }
 /*--------------------------------------------------------------------------*/
 

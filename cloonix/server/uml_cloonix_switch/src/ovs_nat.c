@@ -616,18 +616,22 @@ void ovs_nat_add_lan(int cli_llid, int cli_tid, char *name, char *lan)
     }
   else
     {
-    strncpy(cur->lan_added, lan, MAX_NAME_LEN);
-    lan_add_name(cur->lan_added, item_nat, cur->name, 0);
-    lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_CISCO);
-    lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_GW);
-    lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_DNS);
-    cur->cli_llid = cli_llid;
-    cur->cli_tid = cli_tid;
+    lan_add_name(lan, item_nat, name, 0);
     if (msg_send_add_lan_endp(ovsreq_add_nat_lan, name, 0,
-                              cur->vhost, lan))
+                                  cur->vhost, lan))
       {
-      KERR("ERROR %s", name);
-      utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), name);
+      KERR("ERROR %s %s", name, lan);
+      send_status_ko(cli_llid, cli_tid, "msg_send_add_lan_endp error");
+      lan_del_name(lan, item_nat, name, 0);
+      }
+    else
+      {
+      strncpy(cur->lan_added, lan, MAX_NAME_LEN);
+      lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_CISCO);
+      lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_GW);
+      lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_DNS);
+      cur->cli_llid = cli_llid;
+      cur->cli_tid = cli_tid;
       }
     }
 }

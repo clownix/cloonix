@@ -28,6 +28,7 @@ Endpoint items
 * **tap** used to reach a vhost tap of the host machine.
 * **c2c** used to reach another cloonix server through udp messages.
 * **a2b** used to control the traffic flow (loss, delay and shaping).
+* **phy** used to bring a host physical interface into cloonix.
 
 
 cnt
@@ -105,4 +106,9 @@ a2b
 Configurable to create shaping or delay or loss in the packets going
 from A to B and same for packets going from B to A.
 
+phy
+---
+Used to bring a host physical ethernet interface into the cloonix
+namespace, the item when within the cloonix namespace can be connected
+to a lan and through it to another cloonix item.
 

@@ -366,6 +366,7 @@ static void process_mouse_double_click(t_bank_item *bitem)
       bitem->pbi.flag = flag_normal;
       if ((bitem->pbi.endp_type == endp_type_nats) ||
           (bitem->pbi.endp_type == endp_type_taps) ||
+          (bitem->pbi.endp_type == endp_type_phys) ||
           (bitem->pbi.endp_type == endp_type_c2cs))
         wireshark_launch(0, bitem->name, 0);
       else
@@ -981,9 +982,11 @@ static void on_item_paint_tap(CrItem *item, cairo_t *c)
   else
     cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
   cairo_stroke_preserve(c);
-  if (bitem->pbi.endp_type == endp_type_taps)
+  if ((bitem->pbi.endp_type == endp_type_taps) ||
+      (bitem->pbi.endp_type == endp_type_phys))
     cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
-  else if (bitem->pbi.endp_type == endp_type_tapv)
+  else if ((bitem->pbi.endp_type == endp_type_tapv) ||
+           (bitem->pbi.endp_type == endp_type_phyv))
     cairo_set_source_rgba (c, lightcyan.r, lightcyan.g, lightcyan.b, 1.0);
   else
     KERR("ERROR %s %d", bitem->name, bitem->pbi.endp_type);
@@ -1403,7 +1406,9 @@ void topo_add_cr_item_to_canvas(t_bank_item *bitem, t_bank_item *bnode)
       g_signal_connect(item, "paint", (GCallback) on_item_paint_a2b, NULL);
       }
     else if ((bitem->pbi.endp_type == endp_type_taps) ||
-             (bitem->pbi.endp_type == endp_type_tapv))
+             (bitem->pbi.endp_type == endp_type_tapv) ||
+             (bitem->pbi.endp_type == endp_type_phys) ||
+             (bitem->pbi.endp_type == endp_type_phyv))
       {
       g_signal_connect(item, "paint", (GCallback) on_item_paint_tap, NULL);
       }

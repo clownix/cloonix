@@ -475,14 +475,19 @@ static void timer_heartbeat(void *data)
             (cur->topo.udp_connection_peered == 1) &&
             (strlen(cur->lan_waiting)))
           {
-          strncpy(cur->lan_added, cur->lan_waiting, MAX_NAME_LEN-1);
-          memset(cur->lan_waiting, 0, MAX_NAME_LEN);
-          lan_add_name(cur->lan_added, item_c2c, cur->name, 0);
+          lan_add_name(cur->lan_waiting, item_c2c, cur->name, 0);
           if (msg_send_add_lan_endp(ovsreq_add_c2c_lan, cur->name, 0,
-                                    cur->vhost, cur->lan_added))
-            KERR("ERROR %s", cur->name);
+                                    cur->vhost, cur->lan_waiting))
+            {
+            KERR("ERROR %s %s", cur->name, cur->lan_waiting);
+            lan_del_name(cur->lan_waiting, item_c2c, cur->name, 0);
+            }
+          else
+            {
+            strncpy(cur->lan_added, cur->lan_waiting, MAX_NAME_LEN-1);
+            }
+          memset(cur->lan_waiting, 0, MAX_NAME_LEN);
           }
-
         }
       }
     cur = next;

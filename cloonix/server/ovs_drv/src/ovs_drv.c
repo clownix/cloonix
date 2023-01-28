@@ -170,7 +170,7 @@ static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int ovs_cmd_del_tap(char *ovs_bin, char *ovs_dir, char *name, char *vhost)
+static int ovs_cmd_del_tap(char *ovs_bin, char *ovs_dir, char *name, char *vhost)
 {
   int result;
   char arg[NB_ARG][MAX_ARG_LEN];
@@ -183,6 +183,77 @@ int ovs_cmd_del_tap(char *ovs_bin, char *ovs_dir, char *name, char *vhost)
   result = call_my_popen(ovs_dir, 5, arg, 2, __FUNCTION__, 1);
   if (result)
     KERR("ERROR %s %s", name, vhost);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int ovs_cmd_add_phy(char *ovs_bin, char *ovs_dir, char *name,
+                           char *vhost, char *mac)
+{
+  int result = 0;
+  char arg[NB_ARG][MAX_ARG_LEN];
+  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+  sprintf(arg[0], SBIN_IP);
+  sprintf(arg[1], "link");
+  sprintf(arg[2], "set");
+  sprintf(arg[3], "%s", name);
+  sprintf(arg[4], "netns");
+  sprintf(arg[5], "%s", get_ns());
+  result = call_my_popen(ovs_dir, 6, arg, 2, __FUNCTION__, 2);
+  if (result)
+    KERR("ERROR %s %s", name, mac);
+  else
+    {
+    memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+    sprintf(arg[0], SBIN_IP);
+    sprintf(arg[1], "-netns");
+    sprintf(arg[2], "%s", get_ns());
+    sprintf(arg[3], "link");
+    sprintf(arg[4], "set");
+    sprintf(arg[5], "dev");
+    sprintf(arg[6], "%s", name);
+    sprintf(arg[7], "up");
+    result = call_my_popen(ovs_dir, 8, arg, 2, __FUNCTION__, 3);
+    if (result)
+      KERR("ERROR %s %s", name, mac);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int ovs_cmd_del_phy(char *ovs_bin, char *ovs_dir, char *name, char *vhost)
+{
+  int result = 0;
+  char arg[NB_ARG][MAX_ARG_LEN];
+  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+  sprintf(arg[0], SBIN_IP);
+  sprintf(arg[1], "-netns");
+  sprintf(arg[2], "%s", get_ns());
+  sprintf(arg[3], "link");
+  sprintf(arg[4], "set");
+  sprintf(arg[5], "dev");
+  sprintf(arg[6], "%s", name);
+  sprintf(arg[7], "down");
+  result = call_my_popen(ovs_dir, 8, arg, 2, __FUNCTION__, 3);
+  if (result)
+    KERR("ERROR %s %s", name, vhost);
+  else
+    {
+    memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+    sprintf(arg[0], SBIN_IP);
+    sprintf(arg[1], "-netns");
+    sprintf(arg[2], "%s", get_ns());
+    sprintf(arg[3], "link");
+    sprintf(arg[4], "set");
+    sprintf(arg[5], "%s", name);
+    sprintf(arg[6], "netns");
+    sprintf(arg[7], "1");
+    result = call_my_popen(ovs_dir, 8, arg, 2, __FUNCTION__, 3);
+    if (result)
+      KERR("ERROR %s %s", name, vhost);
+    }
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -222,23 +293,55 @@ static void action_add_tap(char *bin, char *db, char *respb,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void action_del_tap(char *bin, char *db, char *respb, char *name, char *vhost)
+static void action_del_tap(char *bin, char *db, char *respb,
+                           char *name, char *vhost)
 {
   if (ovs_cmd_del_tap(bin, db, name, vhost))
     {
-    snprintf(respb, MAX_PATH_LEN-1, "KO ovs_del_tap name=%s vhost=%s",
-             name, vhost);
-    KERR("%s", respb);
+    snprintf(respb, MAX_PATH_LEN-1,
+    "KO ovs_del_tap name=%s vhost=%s", name, vhost);
     }
   else
     {
-    snprintf(respb, MAX_PATH_LEN-1, "OK ovs_del_tap name=%s vhost=%s",
-             name, vhost);
+    snprintf(respb, MAX_PATH_LEN-1,
+    "OK ovs_del_tap name=%s vhost=%s", name, vhost);
     }
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+static void action_add_phy(char *bin, char *db, char *respb,
+                           char *name, char *vhost, char *mac)
+{
+  if (ovs_cmd_add_phy(bin, db, name, vhost, mac))
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+    "KO ovs_add_phy name=%s vhost=%s mac=%s", name, vhost, mac);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+    "OK ovs_add_phy name=%s vhost=%s mac=%s", name, vhost, mac);
+    }
+}
+/*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+static void action_del_phy(char *bin, char *db, char *respb,
+                           char *name, char *vhost)
+{
+  if (ovs_cmd_del_phy(bin, db, name, vhost))
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+    "KO ovs_del_phy name=%s vhost=%s", name, vhost);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+    "OK ovs_del_phy name=%s vhost=%s", name, vhost);
+    }
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void common_end_of_all_destroy(void)
@@ -587,6 +690,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     {
     tx_to_netns(tid, "ovs_resp_ovs_ok");
     }
+
   else if (sscanf(line,
 "ovs_add_tap name=%s vhost=%s mac=%s", name, vhost, mac) == 3)
     {
@@ -601,6 +705,22 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     log_write_resp(tid, respb);
     rpct_send_sigdiag_msg(g_cloonix_llid, tid, respb);
     }
+
+  else if (sscanf(line,
+"ovs_add_phy name=%s vhost=%s mac=%s", name, vhost, mac) == 3)
+    {
+    action_add_phy(bin, db, respb, name, vhost, mac);
+    log_write_resp(tid, respb);
+    rpct_send_sigdiag_msg(g_cloonix_llid, tid, respb);
+    }
+  else if (sscanf(line,
+"ovs_del_phy name=%s vhost=%s", name, vhost) == 2)
+    {
+    action_del_phy(bin, db, respb, name, vhost);
+    log_write_resp(tid, respb);
+    rpct_send_sigdiag_msg(g_cloonix_llid, tid, respb);
+    }
+
   else
     {
     if (!strcmp(line,

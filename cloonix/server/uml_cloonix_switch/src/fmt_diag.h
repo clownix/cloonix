@@ -19,6 +19,8 @@ int fmt_tx_add_lan(int tid, char *lan);
 int fmt_tx_del_lan(int tid, char *lan);
 int fmt_tx_add_tap(int tid, char *name, char *vhost, char *mac);
 int fmt_tx_del_tap(int tid, char *name, char *vhost);
+int fmt_tx_add_phy(int tid, char *name, char *vhost, char *mac);
+int fmt_tx_del_phy(int tid, char *name, char *vhost);
 int fmt_tx_vhost_up(int tid, char *name, int num, char *vhost);
 int fmt_tx_add_snf_lan(int tid, char *name, int num, char *vhost, char *lan);
 int fmt_tx_del_snf_lan(int tid, char *name, int num, char *vhost, char *lan);

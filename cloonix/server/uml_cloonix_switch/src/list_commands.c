@@ -35,6 +35,7 @@
 #include "ovs_c2c.h"
 #include "ovs_a2b.h"
 #include "ovs_tap.h"
+#include "ovs_phy.h"
 #include "ovs_nat.h"
 
 
@@ -182,6 +183,31 @@ static int build_add_lan_tap_cmd(int offset, t_list_commands *hlist)
 {
   int nb;
   t_ovs_tap *cur = ovs_tap_get_first(&nb);
+  int result = offset;
+  t_list_commands *list;
+  while(cur)
+    {
+    if (strlen(cur->lan))
+      {
+      if (can_increment_index(result))
+        {
+        list = &(hlist[result]);
+        sprintf(list->cmd, "cloonix_cli %s add lan %s 0 %s",
+        cfg_get_cloonix_name(), cur->name, cur->lan);
+        result += 1;
+        }
+      }
+    cur = cur->next;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int build_add_lan_phy_cmd(int offset, t_list_commands *hlist)
+{
+  int nb;
+  t_ovs_phy *cur = ovs_phy_get_first(&nb);
   int result = offset;
   t_list_commands *list;
   while(cur)
@@ -528,6 +554,7 @@ int produce_list_commands(t_list_commands *hlist, int is_layout)
     result = build_add_lan_kvm_cmd(result, hlist);
     result = build_add_lan_cnt_cmd(result, hlist);
     result = build_add_lan_tap_cmd(result, hlist);
+    result = build_add_lan_phy_cmd(result, hlist);
     result = build_add_lan_nat_cmd(result, hlist);
     result = build_add_lan_a2b_cmd(result, hlist);
     result = build_add_lan_c2c_cmd(result, hlist);
