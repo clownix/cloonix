@@ -1,109 +1,6 @@
-diff -Naur qemu_vip/configure tainted_qemu/configure
---- qemu_vip/configure	2023-01-24 10:45:33.000000000 +0100
-+++ tainted_qemu/configure	2023-01-28 10:18:56.062327263 +0100
-@@ -2175,6 +2175,20 @@
-     ;;
- esac
- 
-+ ##########################################
-+# spice
-+if test "$spice" != "no" ; then
-+  spice_cflags=$($pkg_config --cflags spice-protocol spice-server 2>/dev/null)
-+  spice_libs=$($pkg_config --libs spice-protocol spice-server 2>/dev/null)
-+  spice="yes"
-+  libs_softmmu="$libs_softmmu $spice_libs"
-+  QEMU_CFLAGS="$QEMU_CFLAGS $spice_cflags"
-+  spice_protocol_version=$($pkg_config --modversion spice-protocol)
-+  spice_server_version=$($pkg_config --modversion spice-server)
-+  libs_softmmu="$libs_softmmu -ljpeg -lsasl2 -lopus"
-+  openssl_libs=$($pkg_config --libs openssl 2>/dev/null)
-+  libs_softmmu="$libs_softmmu $openssl_libs"
-+fi
- ##########################################
- # End of CC checks
- # After here, no more $cc or $ld runs
-diff -Naur qemu_vip/include/hw/virtio/virtio.h tainted_qemu/include/hw/virtio/virtio.h
---- qemu_vip/include/hw/virtio/virtio.h	2023-01-24 10:45:33.000000000 +0100
-+++ tainted_qemu/include/hw/virtio/virtio.h	2023-01-28 10:18:56.062327263 +0100
-@@ -381,6 +381,7 @@
- void virtio_config_set_guest_notifier_fd_handler(VirtIODevice *vdev,
-                                                  bool assign, bool with_irqfd);
- 
-+
- static inline void virtio_add_feature(uint64_t *features, unsigned int fbit)
- {
-     assert(fbit < 64);
-diff -Naur qemu_vip/include/hw/virtio/virtio-net.h tainted_qemu/include/hw/virtio/virtio-net.h
---- qemu_vip/include/hw/virtio/virtio-net.h	2023-01-24 10:45:33.000000000 +0100
-+++ tainted_qemu/include/hw/virtio/virtio-net.h	2023-01-28 10:18:56.062327263 +0100
-@@ -26,6 +26,7 @@
- #define TYPE_VIRTIO_NET "virtio-net-device"
- OBJECT_DECLARE_SIMPLE_TYPE(VirtIONet, VIRTIO_NET)
- 
-+
- #define TX_TIMER_INTERVAL 150000 /* 150 us */
- 
- /* Limit the number of packets that can be sent via a single flush
-@@ -38,6 +39,8 @@
- /* Maximum VIRTIO_NET_CTRL_MAC_TABLE_SET unicast + multicast entries. */
- #define MAC_TABLE_ENTRIES    64
- 
-+#define CLOONIX_CIRC_ELEM 0x1FF
-+
- typedef struct virtio_net_conf
- {
-     uint32_t txtimer;
-@@ -145,15 +148,28 @@
-     uint16_t default_queue;
- } VirtioNetRssData;
- 
-+typedef struct t_async_rx_el
-+{
-+  uint32_t volatile pool_put_lock;
-+  int pool_put;
-+  int pool_get;
-+  int pool_qty;
-+  VirtQueueElement *elem[CLOONIX_CIRC_ELEM + 1];
-+} t_async_rx_el;
-+
-+
- typedef struct VirtIONetQueue {
-     VirtQueue *rx_vq;
-     VirtQueue *tx_vq;
-     QEMUTimer *tx_timer;
-+    QEMUTimer *rx_timer;
-     QEMUBH *tx_bh;
-     uint32_t tx_waiting;
-+    int rx_waiting;
-     struct {
-         VirtQueueElement *elem;
-     } async_tx;
-+    t_async_rx_el async_rx_el;
-     struct VirtIONet *n;
- } VirtIONetQueue;
- 
-diff -Naur qemu_vip/include/qemu/bitops.h tainted_qemu/include/qemu/bitops.h
---- qemu_vip/include/qemu/bitops.h	2023-01-24 10:45:33.000000000 +0100
-+++ tainted_qemu/include/qemu/bitops.h	2023-01-28 10:18:56.062327263 +0100
-@@ -12,12 +12,14 @@
- #ifndef BITOPS_H
- #define BITOPS_H
- 
-+#include <asm/bitsperlong.h>
- 
- #include "host-utils.h"
- #include "atomic.h"
- 
- #define BITS_PER_BYTE           CHAR_BIT
--#define BITS_PER_LONG           (sizeof (unsigned long) * BITS_PER_BYTE)
-+//#define BITS_PER_LONG           (sizeof (unsigned long) * BITS_PER_BYTE)
-+#define BITS_PER_LONG          __BITS_PER_LONG
- 
- #define BIT(nr)                 (1UL << (nr))
- #define BIT_ULL(nr)             (1ULL << (nr))
 diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
---- qemu_vip/include/qemu/error-report.h	2023-01-24 10:45:33.000000000 +0100
-+++ tainted_qemu/include/qemu/error-report.h	2023-01-28 10:18:56.062327263 +0100
+--- qemu_vip/include/qemu/error-report.h	2023-04-30 00:07:17.000000000 +0200
++++ tainted_qemu/include/qemu/error-report.h	2023-05-29 19:46:26.003114827 +0200
 @@ -13,6 +13,26 @@
  #ifndef QEMU_ERROR_REPORT_H
  #define QEMU_ERROR_REPORT_H
@@ -140,21 +37,31 @@ diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-
  void info_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
  
  bool error_report_once_cond(bool *printed, const char *fmt, ...)
-diff -Naur qemu_vip/qemu-options.hx tainted_qemu/qemu-options.hx
---- qemu_vip/qemu-options.hx	2023-01-24 10:45:33.000000000 +0100
-+++ tainted_qemu/qemu-options.hx	2023-01-28 10:18:56.062327263 +0100
-@@ -2790,6 +2790,7 @@
-     "                Use group 'groupname' and mode 'octalmode' to change default\n"
-     "                ownership and permissions for communication port.\n"
- #endif
-+
- #ifdef CONFIG_NETMAP
-     "-netdev netmap,id=str,ifname=name[,devname=nmname]\n"
-     "                attach to the existing netmap-enabled network interface 'name', or to a\n"
+diff -Naur qemu_vip/meson.build tainted_qemu/meson.build
+--- qemu_vip/meson.build	2023-04-30 00:07:17.000000000 +0200
++++ tainted_qemu/meson.build	2023-05-29 19:47:09.411293027 +0200
+@@ -748,7 +748,7 @@
+ endif
+ spice = not_found
+ if not get_option('spice').auto() or have_system
+-  spice = dependency('spice-server', version: '>=0.14.0',
++  spice = dependency('cloonix-spice-server', version: '>=0.14.0',
+                      required: get_option('spice'),
+                      method: 'pkg-config', kwargs: static_kwargs)
+ endif
+@@ -1494,7 +1494,7 @@
+ endif
+ usbredir = not_found
+ if not get_option('usb_redir').auto() or have_system
+-  usbredir = dependency('libusbredirparser-0.5', required: get_option('usb_redir'),
++  usbredir = dependency('libcloonix-usbredirparser-0.5', required: get_option('usb_redir'),
+                         version: '>=0.6', method: 'pkg-config',
+                         kwargs: static_kwargs)
+ endif
 diff -Naur qemu_vip/util/error.c tainted_qemu/util/error.c
---- qemu_vip/util/error.c	2023-01-24 10:45:33.000000000 +0100
-+++ tainted_qemu/util/error.c	2023-01-28 10:18:56.062327263 +0100
-@@ -224,10 +224,13 @@
+--- qemu_vip/util/error.c	2023-04-30 00:07:17.000000000 +0200
++++ tainted_qemu/util/error.c	2023-05-29 19:46:26.003114827 +0200
+@@ -231,10 +231,13 @@
  
  void error_report_err(Error *err)
  {
@@ -172,8 +79,8 @@ diff -Naur qemu_vip/util/error.c tainted_qemu/util/error.c
  }
  
 diff -Naur qemu_vip/util/error-report.c tainted_qemu/util/error-report.c
---- qemu_vip/util/error-report.c	2023-01-24 10:45:33.000000000 +0100
-+++ tainted_qemu/util/error-report.c	2023-01-28 10:18:56.062327263 +0100
+--- qemu_vip/util/error-report.c	2023-04-30 00:07:17.000000000 +0200
++++ tainted_qemu/util/error-report.c	2023-05-29 19:46:26.003114827 +0200
 @@ -268,14 +268,6 @@
   * Prepend the current location and append a newline.
   * It's wrong to call this in a QMP monitor.  Use error_setg() there.

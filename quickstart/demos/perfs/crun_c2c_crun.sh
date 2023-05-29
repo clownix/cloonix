@@ -64,7 +64,8 @@ cloonix_ssh $NET2 Cloon2 "ip addr add dev eth0 1.1.1.2/24"
 cloonix_ssh $NET2 Cloon2 "ip link set dev eth0 up"
 #----------------------------------------------------------------------
 
-urxvt -e cloonix_ssh $NET Cloon1 "iperf3 -s -1" &
+URXVT=/usr/libexec/cloonix/client/cloonix-urxvt
+${URXVT} -e cloonix_ssh $NET Cloon1 "iperf3 -s -1" &
 sleep 1
 cloonix_ssh $NET2 Cloon2 "iperf3 -c 1.1.1.1"
 

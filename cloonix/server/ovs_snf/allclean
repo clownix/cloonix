@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm -f cloonix_ovs_snf
+rm -f cloonix-ovs-snf
 rm -rf build
 rm -rf usr
 rm -f meson.build

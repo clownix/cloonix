@@ -1,0 +1,110 @@
+#!/bin/bash
+#--------------------------------------------------------------------------
+printf "\n\tPackages to build cloonix will be installed.\n\n"
+#--------------------------------------------------------------------------
+if [ ! -e /etc/os-release ]; then 
+  printf "\n\tERROR: Not able to determine your distribution."
+  printf "\n\tYou must install the packages by hand.\n\n"
+  exit
+fi
+#--------------------------------------------------------------------------
+name=$(cat /etc/os-release |grep PRETTY_NAME)
+name=${name#*\"}
+name=${name%% *}
+#--------------------------------------------------------------------------
+if [ -z $name ]; then
+  name=$(cat /etc/os-release |grep ID_LIKE)
+  name=${name#*\"}
+  name=${name%%\"*}
+  if [ -z $name ]; then
+    printf "\n\tERROR: Not able to determine your distro from os-release."
+    printf "\n\tYou must install the packages by hand.\n\n"
+    exit
+  fi
+fi
+echo :${name}:
+#--------------------------------------------------------------------------
+fct_get_debian_packages()
+{
+  export DEBIAN_FRONTEND=noninteractive
+
+  apt-get -y install podman
+
+  apt-get -y install tar build-essential pkg-config intltool libtool \
+              meson ninja-build libssl-dev libusb-1.0-0-dev patch \
+              libglib2.0-dev libpixman-1-dev python3-six sudo xauth \
+              python3-pyparsing libjpeg-dev libgstreamer1.0-dev \
+              libgstreamer-plugins-base1.0-dev liblz4-dev libpcap-dev \
+              libsasl2-dev libfuse3-dev fuse-overlayfs libnuma-dev \
+              libepoxy-dev xorriso libgtk-3-dev libjson-glib-dev \
+              libacl1-dev libpolkit-gobject-1-dev crun cmake patchelf
+}
+#--------------------------------------------------------------------------
+fct_get_dnf_packages()
+{
+  dnf -y install podman
+
+  dnf -y install make gcc gcc-c++ libstdc++-devel intltool glibc-devel \
+                 libtool pkg-config glib2-devel meson ninja-build patch \
+                 tar openssl-devel libusb-devel glib2-devel pixman-devel \
+                 python3-six python3-pyparsing libjpeg-turbo-devel sudo \
+                 polkit-devel lz4-devel gstreamer1-devel libacl-devel \
+                 gstreamer1-plugins-base-devel cyrus-sasl-devel xauth \
+                 libunwind-devel numactl-devel gtk3-devel libepoxy-devel \
+                 libpcap-devel json-glib-devel libcap-ng-devel fuse3-devel \
+                 fuse-overlayfs bzip2 xorriso crun cmake patchelf
+}
+#--------------------------------------------------------------------------
+fct_get_opensuse_packages()
+{
+
+  zypper --non-interactive install podman
+
+  zypper --non-interactive install \
+         tar make gcc gcc-c++ glibc-devel meson ninja libtool \
+         libstdc++-devel intltool pkg-config openssl-devel patch \
+         libusb-1_0-devel glib2-devel libpixman-1-0-devel sudo xauth \
+         libjpeg62-devel gstreamer-devel gstreamer-plugins-base-devel \
+         liblz4-devel cyrus-sasl-devel fuse3-devel fuse-overlayfs bzip2 \
+         libnuma-devel libepoxy-devel gtk3-devel json-glib-devel \
+         libacl-devel polkit-devel libpcap-devel xorriso \
+         crun cmake patchelf
+}
+#--------------------------------------------------------------------------
+if [ $UID != 0 ]; then
+  printf "\n\tERROR: root privileges needed to install packages.\n\n"
+  exit
+fi
+case "$name" in
+  "Debian" | "Ubuntu" | "Kali")
+    printf "\n\tInstall tool is apt-get.\n\n"
+    apt-get --assume-yes update
+    fct_get_debian_packages
+  ;;
+  "CentOS")
+    printf "\n\tInstall tool is dnf.\n\n"
+    dnf update -y
+    dnf install -y epel-release epel-next-release
+    dnf update -y
+    fct_get_dnf_packages
+  ;;
+  "Fedora")
+    printf "\n\tInstall tool is dnf.\n\n"
+    dnf update -y
+    fct_get_dnf_packages
+  ;;
+  "openSUSE" | "suse")
+    printf "\n\tInstall tool is zypper.\n\n"
+    zypper update -y
+    fct_get_opensuse_packages
+  ;;
+  *)
+  printf "\n\tERROR: Your distribution: $name is not supported"
+  printf "\n\tYou must install the packages by hand.\n\n"
+  exit
+  ;;
+esac
+#--------------------------------------------------------------------------
+
+
+

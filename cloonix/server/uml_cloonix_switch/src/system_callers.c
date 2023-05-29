@@ -151,20 +151,11 @@ void my_mv_file(char *dsrc, char *ddst, char *name)
 int my_mkdir(char *dst_dir, int wr_all)
 {
   int result;
-  mode_t old_mask, mode_mkdir;
   struct stat stat_file;
   if (wr_all)
-    {
-    old_mask = umask (0000);
-    mode_mkdir = 0777;
-    result = mkdir(dst_dir, mode_mkdir);
-    }
+    result = mkdir(dst_dir, 0777);
   else
-    {
-    old_mask = umask (0077);
-    mode_mkdir = 0700;
-    result = mkdir(dst_dir, mode_mkdir);
-    }
+    result = mkdir(dst_dir, 0700);
   if (result)
     {
     if (errno != EEXIST)
@@ -177,14 +168,13 @@ int my_mkdir(char *dst_dir, int wr_all)
         {
         KERR("ERROR %s", dst_dir);
         unlink(dst_dir);
-        if (mkdir(dst_dir, mode_mkdir))
+        if (mkdir(dst_dir, 0777))
           KERR("ERROR %s, %d", dst_dir, errno);
         }
       else
         result = 0;
       }
     }
-  umask (old_mask);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -271,6 +261,8 @@ void mk_cnt_dir(void)
 /*****************************************************************************/
 void mk_endp_dir(void)
 {
+  my_mkdir(utils_get_crun_dir(), 1);
+  my_mkdir(utils_get_log_dir(), 1);
   my_mkdir(utils_get_snf_pcap_dir(), 1);
   my_mkdir(utils_get_c2c_dir(), 1);
   my_mkdir(utils_get_nat_dir(), 1);
@@ -306,18 +298,13 @@ void mk_ovs_db_dir(void)
           continue;
         if (!strcmp(ent->d_name, ".."))
           continue;
-        if (!strcmp(ent->d_name, "cloonix_diag.log"))
-          continue;
-        if (!strcmp(ent->d_name, "ovs-vswitchd.log"))
-          continue;
-        if (!strcmp(ent->d_name, "cloonix_ovs_req.log"))
-          continue;
-        snprintf(pth,MAX_PATH_LEN+MAX_NAME_LEN,"%s/%s",ovsdb_dir,ent->d_name);
-        pth[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
-        if(ent->d_type == DT_DIR)
-          KERR("%s Directory Found: %s will not delete\n", ovsdb_dir, pth);
-        else if (unlink(pth))
-          KERR("File: %s could not be deleted\n", pth);
+        if(ent->d_type != DT_DIR)
+          {
+          snprintf(pth,MAX_PATH_LEN+MAX_NAME_LEN,"%s/%s",ovsdb_dir,ent->d_name);
+          pth[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
+          if (unlink(pth))
+            KERR("File: %s could not be deleted\n", pth);
+          }
         }
       if (closedir(dirptr))
         KOUT("%d", errno);

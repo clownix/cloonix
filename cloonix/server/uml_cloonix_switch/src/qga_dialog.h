@@ -25,7 +25,6 @@ backdoor_evt_ping_ko,
 };
 
 void qga_event_backdoor(char *name, int backdoor_evt);
-void qga_dialog_begin(char *name);
 void qga_dialog_init(void);
 /*****************************************************************************/
 

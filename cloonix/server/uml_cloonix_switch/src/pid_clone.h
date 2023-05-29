@@ -25,7 +25,7 @@ int pid_clone_launch(t_fct_to_launch fct, t_launched_death death,
 void pid_clone_init(void);
 int get_nb_running_pids(void);
 void send_to_daddy (char *str);
-int my_popen(char *exe, char *argv[]);
+int clone_popen(char *exe, char *argv[]);
 char *pid_get_clone_internal_com(void);
 
 void pid_clone_kill_all(void);

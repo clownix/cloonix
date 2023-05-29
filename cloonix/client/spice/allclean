@@ -1,6 +1,6 @@
 #!/bin/bash
-rm -f spicy
-rm -f spice-client-glib-usb-acl-helper
+rm -f cloonix-spicy
+rm -f cloonix-spice-client-glib-usb-acl-helper
 cd ./spice_client
 ./allclean
 

@@ -62,36 +62,57 @@ static void init_x11_magic(void)
 static int get_xauth_magic(char *display, char *err)
 {
   int result = -1;
-  char cmd[MAX_TXT_LEN];
   char buf[MAX_TXT_LEN];
   char *ptr, *end;
   FILE *fp;
+  char *argv[5];
+  char *acmd;
+
+  memset(argv, 0, 5*sizeof(char *));
   memset(err, 0, MAX_TXT_LEN);
-  memset(cmd, 0, MAX_TXT_LEN);
   memset(buf, 0, MAX_TXT_LEN);
-  snprintf(cmd, MAX_TXT_LEN-1, "xauth list %s", display);
-  fp = popen(cmd, "r");
+  argv[0] = XAUTH_BIN;
+  argv[1] = "list";
+  argv[2] = display;
+  argv[3] = NULL;
+  acmd = mdl_argv_linear(argv);
+  fp = mdl_argv_popen(argv);
   if (fp == NULL)
-    snprintf(err, MAX_TXT_LEN-1, "%s, popen", cmd);
+    {
+    snprintf(err, MAX_TXT_LEN-1, "%s, popen", acmd);
+    XERR("ERROR %s", acmd);
+    }
   else
     {
     if (!fgets(buf, MAX_TXT_LEN-1, fp))
-      snprintf(err, MAX_TXT_LEN-1, "%s, fgets", cmd);
+      {
+      snprintf(err, MAX_TXT_LEN-1, "%s, fgets", acmd);
+      XERR("ERROR %s", acmd);
+      }
     else
       {
       if (!strlen(buf))
-        snprintf(err, MAX_TXT_LEN-1, "%s, strlen", cmd);
+        {
+        snprintf(err, MAX_TXT_LEN-1, "%s, strlen", acmd);
+        XERR("ERROR %s", acmd);
+        }
       else
         {
         ptr = strstr(buf, "MIT-MAGIC-COOKIE-1");
         if (!ptr)
+          {
           snprintf(err, MAX_TXT_LEN-1, "%s, MIT-MAGIC", buf);
+          XERR("ERROR %s  %s", acmd, buf);
+          }
         else
           {
           ptr += strlen("MIT-MAGIC-COOKIE-1");
           ptr += strspn(ptr, " \t");
           if (strlen(ptr) < 1)
+            {
             snprintf(err, MAX_TXT_LEN-1, "%s, MIT-MAGIC strlen1", buf);
+            XERR("ERROR %s  %s", acmd, buf);
+            }
           else
             {
             end = strchr(ptr, '\r');
@@ -101,7 +122,10 @@ static int get_xauth_magic(char *display, char *err)
             if (end)
               *end = 0;
             if (strlen(ptr) < 1)
+              {
               snprintf(err, MAX_TXT_LEN-1, "%s, MIT-MAGIC strlen2", buf);
+              XERR("ERROR %s  %s", acmd, buf);
+              }
             else
               {
               strncpy(g_magic_cookie, ptr, 2*MAGIC_COOKIE_LEN);
@@ -113,7 +137,10 @@ static int get_xauth_magic(char *display, char *err)
         }
       }
     if (pclose(fp))
-      snprintf(err, MAX_TXT_LEN-1, "%s, pclose", cmd);
+      {
+      snprintf(err, MAX_TXT_LEN-1, "%s, pclose", acmd);
+      XERR("ERROR %s", acmd);
+      }
     }
   return result;
 }
@@ -247,7 +274,7 @@ void x11_init_magic(void)
         XERR("MAGIC X11 Problem with unix magic");
         }
       }
-    else if (sscanf(display, "localhost:%d.0", &val) == 1)
+    else if (sscanf(display, "127.0.0.1:%d.0", &val) == 1)
       {
       if (x11_init_inet(display, val))
         {

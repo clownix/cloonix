@@ -63,45 +63,6 @@ void make_config_cloonix_vm_name(char *confpath, char *name)
 }
 /*---------------------------------------------------------------------------*/
 
-/****************************************************************************/
-void make_config_cloonix_vm_p9_host_share(char *confpath, int has_p9_host_share)
-{
-  char err[MAX_PATH_LEN];
-  char str[MAX_PATH_LEN];
-  char path[MAX_PATH_LEN];
-  memset(str, 0, MAX_PATH_LEN);
-  if (has_p9_host_share)
-    snprintf(str, MAX_PATH_LEN-1, "yes");
-  else
-    snprintf(str, MAX_PATH_LEN-1, "no");
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/cloonix_vm_p9_host_share", confpath);
-  if (write_whole_file(path, str, strlen(str), err))
-    KERR("%s", err);
-}
-/*---------------------------------------------------------------------------*/
-
-
-
-
-/****************************************************************************/
-/*
-static char *get_item(char *input_string)
-{
-  char *pstart = NULL;
-  char *pend;
-  pstart = input_string + strspn(input_string, " \t\r\n[");
-  pend = input_string + strlen(input_string);
-  while ((*(pend - 1) == '\n') || (*(pend - 1) == '\r') ||
-         (*(pend - 1) == '\t') || (*(pend - 1) == ' ')  ||
-         (*(pend - 1) == '>'))
-    pend = pend - 1;
-  *pend = 0;
-  return pstart;
-}
-*/
-/*--------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 int i_am_inside_cloon(char *name)
 {

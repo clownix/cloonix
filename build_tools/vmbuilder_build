@@ -1,0 +1,39 @@
+#!/bin/bash
+HERE=`pwd`
+NET=nemo
+NAME=dev
+QCOW2=builder.qcow2
+CLOONIX_TREE_ROOT=${HERE}/../
+#----------------------------------------------------------------------
+rm -f cloonix-*
+rm -rf /tmp/cloonix_build_tree
+mkdir -p /tmp/cloonix_build_tree
+cd ${HERE}/..
+./allclean
+cd ${HERE}/../..
+tar zcvf /tmp/cloonix_build_tree/sources.tar.gz ./sources
+cd ${HERE}
+#----------------------------------------------------------------------
+cloonix_net ${NET}
+cloonix_gui ${NET}
+#----------------------------------------------------------------------
+PARAMS="ram=8000 cpu=4 eth=s"
+cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2}
+#----------------------------------------------------------------------
+sleep 3
+#----------------------------------------------------------------------
+set +e
+while ! cloonix_ssh ${NET} ${NAME} "echo" 2>/dev/null; do
+  echo ${NAME} not ready, waiting 5 sec
+  sleep 5
+done
+#----------------------------------------------------------------------
+cloonix_scp ${NET} /tmp/cloonix_build_tree/sources.tar.gz ${NAME}:/root
+cloonix_ssh ${NET} ${NAME} "mkdir -p /var/lib/cloonix/bulk"
+cloonix_ssh ${NET} ${NAME} "tar xvf sources.tar.gz"
+cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall"
+#----------------------------------------------------------------------
+cloonix_scp ${NET} -r ${NAME}:/root/sources/build_tools/cloonix-bundle-* ${HERE}
+#----------------------------------------------------------------------
+
+

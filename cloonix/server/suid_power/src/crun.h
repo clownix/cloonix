@@ -23,7 +23,7 @@ void crun_kill_all(void);
 void crun_recv_poldiag_msg(int llid, int tid, char *line);
 void crun_recv_sigdiag_msg(int llid, int tid, char *line);
 void crun_beat(int llid);
-void crun_init(void);
+void crun_init(char *var_root);
 /*--------------------------------------------------------------------------*/
 
 

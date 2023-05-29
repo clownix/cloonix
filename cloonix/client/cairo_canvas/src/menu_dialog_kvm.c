@@ -200,7 +200,6 @@ static void is_persistent_toggle (GtkToggleButton *togglebutton,
 
 /****************************************************************************/
 static void update_cust(t_custom_vm *cust, GtkWidget *entry_name, 
-                        GtkWidget *entry_p9_host_share,
                         GtkWidget *entry_cpu, GtkWidget *entry_ram)
 {
   char *tmp;
@@ -224,8 +223,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
 {
   int i, j, k, response, line_nb = 0, found=0;
   GSList *group = NULL;
-  GtkWidget *entry_name, *entry_ram; 
-  GtkWidget *entry_p9_host_share=NULL, *entry_cpu=NULL; 
+  GtkWidget *entry_name, *entry_ram, *entry_cpu=NULL; 
   GtkWidget *grid, *parent, *is_persistent;
   GtkWidget *has_no_qemu_ga, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
@@ -339,8 +337,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
     }
   else
     {
-    update_cust(cust, entry_name, entry_p9_host_share,
-                entry_cpu, entry_ram);
+    update_cust(cust, entry_name, entry_cpu, entry_ram);
     gtk_widget_destroy(g_custom_dialog);
     g_custom_dialog = NULL;
     }
@@ -418,8 +415,6 @@ int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug)
     {
     vm_config_flags &= ~VM_CONFIG_FLAG_PERSISTENT;
     }
-  if (cust_vm->has_p9_host_share)
-    vm_config_flags |= VM_CONFIG_FLAG_9P_SHARED;
   return vm_config_flags;
 }
 /*--------------------------------------------------------------------------*/
@@ -473,7 +468,6 @@ void menu_dialog_kvm_init(void)
   g_custom_vm.is_persistent = 0;
   g_custom_vm.is_sda_disk = 0;
   g_custom_vm.is_full_virt = 0;
-  g_custom_vm.has_p9_host_share = 0;
   g_custom_vm.no_qemu_ga = 0;
   g_custom_vm.natplug_flag = 0;
   g_custom_vm.natplug = 0;

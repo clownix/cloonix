@@ -1,6 +1,6 @@
 OBJ_DIR=obj/
 VPATH=./src
-EXE = ext4fuse
+EXE = cloonix-ext4fuse
 
 CFLAGS  += -I.src -std=gnu99 -g3 -Wall -Wextra
 CFLAGS  += $(shell pkg-config fuse3 --cflags) -DFUSE_USE_VERSION=30

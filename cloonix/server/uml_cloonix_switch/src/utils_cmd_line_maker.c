@@ -26,7 +26,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/utsname.h>
-
+#include <sys/wait.h>
 
 
 #include "io_clownix.h"
@@ -46,13 +46,100 @@
 #include "qga_dialog.h"
 
 
-char **get_saved_environ(void);
 static char *glob_ptr_uname_r;
 void dec_creation_counter(t_wake_up_eths *wake_up_eths);
 void give_back_creation_counter(void);
 static uid_t glob_uid_user;
 static uid_t glob_gid_user;
 
+/****************************************************************************/
+void lio_clean_all_llid(void)
+{
+  int llid, nb_chan, i;
+  clownix_timeout_del_all();
+  nb_chan = get_clownix_channels_nb();
+  for (i=0; i<=nb_chan; i++)
+    {
+    llid = channel_get_llid_with_cidx(i);
+    if (llid)
+      {
+      if (msg_exist_channel(llid))
+        msg_delete_channel(llid);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *lio_linear(char *argv[])
+{
+  int i;
+  static char result[3*MAX_PATH_LEN];
+  memset(result, 0, 3*MAX_PATH_LEN);
+  for (i=0;  (argv[i] != NULL); i++)
+    {
+    strcat(result, argv[i]);
+    if (strlen(result) >= 2*MAX_PATH_LEN)
+      {
+      KERR("NOT POSSIBLE");
+      break;
+      }
+    strcat(result, " ");
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int lio_system(char *argv[])
+{
+  char *acmd = lio_linear(argv);
+  int chld_state, wstatus, result = -1;
+  int exited_pid, timeout_pid, worker_pid, pid;
+  if ((pid = fork()) < 0)
+    KOUT("ERROR");
+  if (pid == 0)
+    {
+    lio_clean_all_llid();
+    worker_pid = fork();
+    if (worker_pid == 0)
+      execv(argv[0], argv);
+    timeout_pid = fork();
+    if (timeout_pid == 0)
+      {
+      sleep(5);
+      KERR("WARNING TIMEOUT SLOW CMD 1 %s", acmd);
+      exit(1);
+      }
+    exited_pid = wait(&chld_state);
+    if (exited_pid == worker_pid)
+      {
+      if (WIFEXITED(chld_state))
+        wstatus = WEXITSTATUS(chld_state);
+      if (WIFSIGNALED(chld_state))
+        KERR("WARNING Child exited via signal %d\n", WTERMSIG(chld_state));
+      kill(timeout_pid, SIGKILL);
+      }
+    else
+      {
+      KERR("WARNING %s\n", acmd);
+      kill(worker_pid, SIGKILL);
+      }
+    wait(NULL);
+    exit(wstatus);
+    }
+  else
+    {
+    if (waitpid(pid, &wstatus, 0))
+      result = 0;
+    else if (wstatus)
+      KERR("ERROR %s", acmd);
+    else
+      result = 0;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void utils_send_status_ko(int *llid, int *tid, char *err)
@@ -114,31 +201,8 @@ char *utils_get_suid_power_bin_path(void)
   static char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1,
-           "%s/server/suid_power/cloonix_suid_power", cfg_get_bin_dir());
+           "%s/server/cloonix-suid-power", cfg_get_bin_dir());
   return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_qemu_img(void)
-{
-  static char path[MAX_PATH_LEN];
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/server/qemu/%s",
-           cfg_get_bin_dir(), QEMU_IMG);
-  return path;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_qemu_img_derived(char *backing_file, char *derived_file)
-{
-  static char cmd[2*MAX_PATH_LEN];
-  memset(cmd, 0,  2*MAX_PATH_LEN);
-  snprintf(cmd, 2*MAX_PATH_LEN-1, 
-           "%s create -f qcow2 -o backing_file=%s,backing_fmt=qcow2 %s", 
-            utils_get_qemu_img(), backing_file, derived_file);
-  return cmd;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -165,6 +229,28 @@ char *utils_get_snf_pcap_dir(void)
   char *root = cfg_get_root_work();
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, SNF_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_crun_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, CRUN_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_log_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, LOG_DIR);
   return path;
 }
 /*--------------------------------------------------------------------------*/
@@ -264,7 +350,7 @@ char *utils_get_qbackdoor_path(int vm_id)
 char *utils_get_dtach_bin_path(void)
 {
   static char dtach[MAX_PATH_LEN];
-  sprintf(dtach, "%s/server/dtach/dtach", cfg_get_bin_dir());
+  sprintf(dtach, "%s/server/cloonix-dtach", cfg_get_bin_dir());
   return dtach;
 }
 /*---------------------------------------------------------------------------*/
@@ -282,7 +368,7 @@ char *utils_get_dtach_sock_dir(void)
 char *utils_get_ovs_dir(void)
 {
   static char ovs[MAX_PATH_LEN];
-  sprintf(ovs, "%s/%s", cfg_get_root_work(), DIR_OVS);
+  sprintf(ovs, "%s", cfg_get_root_work());
   return ovs;
 }
 /*---------------------------------------------------------------------------*/
@@ -291,7 +377,7 @@ char *utils_get_ovs_dir(void)
 char *utils_get_ovs_bin_dir(void)
 {
   static char ovs[MAX_PATH_LEN];
-  snprintf(ovs, MAX_PATH_LEN-1, "%s/server/%s", cfg_get_bin_dir(), DIR_OVS);
+  snprintf(ovs, MAX_PATH_LEN-1, "%s/server", cfg_get_bin_dir());
   return ovs;
 }
 /*---------------------------------------------------------------------------*/
@@ -301,7 +387,7 @@ char *utils_get_ovs_drv_bin_dir(void)
 {
   static char ovs_drv[MAX_PATH_LEN];
   snprintf(ovs_drv, MAX_PATH_LEN-1, 
-           "%s/server/ovs_drv/cloonix_ovs_drv", cfg_get_bin_dir());
+           "%s/server/cloonix-ovs-drv", cfg_get_bin_dir());
   return ovs_drv;
 }
 /*---------------------------------------------------------------------------*/
@@ -311,7 +397,7 @@ char *utils_get_ovs_snf_bin_dir(void)
 {
   static char ovs_snf[MAX_PATH_LEN];
   snprintf(ovs_snf, MAX_PATH_LEN-1, 
-           "%s/server/ovs_snf/cloonix_ovs_snf", cfg_get_bin_dir());
+           "%s/server/cloonix-ovs-snf", cfg_get_bin_dir());
   return ovs_snf;
 }
 /*---------------------------------------------------------------------------*/
@@ -321,7 +407,7 @@ char *utils_get_ovs_nat_bin_dir(void)
 {
   static char ovs_nat[MAX_PATH_LEN];
   snprintf(ovs_nat, MAX_PATH_LEN-1,
-           "%s/server/ovs_nat/cloonix_ovs_nat", cfg_get_bin_dir());
+           "%s/server/cloonix-ovs-nat", cfg_get_bin_dir());
   return ovs_nat;
 }
 /*---------------------------------------------------------------------------*/
@@ -331,7 +417,7 @@ char *utils_get_ovs_a2b_bin_dir(void)
 {
   static char ovs_a2b[MAX_PATH_LEN];
   snprintf(ovs_a2b, MAX_PATH_LEN-1,
-           "%s/server/ovs_a2b/cloonix_ovs_a2b", cfg_get_bin_dir());
+           "%s/server/cloonix-ovs-a2b", cfg_get_bin_dir());
   return ovs_a2b;
 }
 /*---------------------------------------------------------------------------*/
@@ -341,7 +427,7 @@ char *utils_get_ovs_c2c_bin_dir(void)
 {
   static char ovs_c2c[MAX_PATH_LEN];
   snprintf(ovs_c2c, MAX_PATH_LEN-1,
-           "%s/server/ovs_c2c/cloonix_ovs_c2c", cfg_get_bin_dir());
+           "%s/server/cloonix-ovs-c2c", cfg_get_bin_dir());
   return ovs_c2c;
 }
 /*---------------------------------------------------------------------------*/
@@ -545,12 +631,13 @@ char *utils_get_disks_path_name(int vm_id)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_cdrom_path_name(int vm_id)
+char *utils_get_cdrom_path_name(t_vm *vm)
 {
-  static char config_iso[MAX_PATH_LEN];
-  sprintf(config_iso,"%s/%s", 
-          utils_get_disks_path_name(vm_id), CDROM_CONFIG_ISO);
-  return config_iso;
+  int is_i386 = vm->kvm.vm_config_flags & VM_CONFIG_FLAG_I386;
+  if (is_i386)
+    return("/usr/libexec/cloonix/server/insider_agents/insider_agent_i386.iso");
+  else
+    return("/usr/libexec/cloonix/server/insider_agents/insider_agent_x86_64.iso");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -595,11 +682,10 @@ void utils_send_creation_info(char *name, char **argv)
 
 
 /*****************************************************************************/
-int utils_execve(void *ptr)
+int utils_execv(void *ptr)
 {
   char **argv = (char **) ptr;
-  char **environ = get_saved_environ();
-  return (execve(argv[0], argv, environ));
+  return (execv(argv[0], argv));
 }
 /*---------------------------------------------------------------------------*/
 
@@ -628,15 +714,6 @@ char *utils_get_uname_r_mod_path(void)
     result = mod_path;
     }
   return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *util_get_xorrisofs(void)
-{
-  static char path[MAX_PATH_LEN];
-  snprintf(path, MAX_PATH_LEN-1, "/usr/bin/xorrisofs");
-  return path;
 }
 /*---------------------------------------------------------------------------*/
 

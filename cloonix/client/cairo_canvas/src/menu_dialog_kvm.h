@@ -19,7 +19,6 @@ typedef struct t_custom_vm
 {
   char name[MAX_NAME_LEN];
   char kvm_used_rootfs[MAX_PATH_LEN];
-  char kvm_p9_host_share[MAX_PATH_LEN];
   int  type;
   int  is_full_virt;
   int  is_persistent;
@@ -28,7 +27,6 @@ typedef struct t_custom_vm
   int  no_qemu_ga;
   int  natplug_flag;
   int  natplug;
-  int  has_p9_host_share;
   int  current_number;
   int  cpu;
   int  mem;

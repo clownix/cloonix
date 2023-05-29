@@ -47,6 +47,7 @@ typedef struct t_xwy_params
   char bin[MAX_PATH_LEN];
   char unix_traffic_sock[MAX_PATH_LEN];
   char unix_control_sock[MAX_PATH_LEN];
+  char cloonix_net_name[MAX_NAME_LEN];
 } t_xwy_params;
 
 enum {
@@ -87,6 +88,7 @@ static int start_xwy(void *data)
   char *argv[] = {dp->bin, 
                   dp->unix_traffic_sock,
                   dp->unix_control_sock,
+                  dp->cloonix_net_name,
                   NULL};
   execv(dp->bin, argv);
   return 0;
@@ -233,7 +235,7 @@ void xwy_request_doors_connect(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void init_xwy(void)
+void init_xwy(char *cloonix_net_name)
 {
   g_xwy_kill_req = 0;
   g_xwy_pid = 0;
@@ -241,7 +243,8 @@ void init_xwy(void)
   g_xwy_llid = 0;
   set_state(xwy_state_init);
   memset(&g_xwy_params, 0, sizeof(t_xwy_params));
-  snprintf(g_xwy_params.bin, MAX_PATH_LEN, "%s/common/xwy/cloonix_xwy_srv", 
+  snprintf(g_xwy_params.cloonix_net_name, MAX_NAME_LEN, cloonix_net_name);
+  snprintf(g_xwy_params.bin, MAX_PATH_LEN, "%s/server/cloonix-xwy-srv", 
                                             cfg_get_bin_dir());
   g_xwy_params.bin[MAX_PATH_LEN-1] = 0;
   snprintf(g_xwy_params.unix_traffic_sock, MAX_PATH_LEN, "%s/%s", 

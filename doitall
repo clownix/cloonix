@@ -1,14 +1,18 @@
 #!/bin/bash
 set -e
-CLOONIX_CONFIG=./cloonix/cloonix_config
-if [ ! -e $CLOONIX_CONFIG ]; then
+
+export CLOONIX_TREE_ROOT=`pwd`
+if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo NOT FOUND:
-  echo $CLOONIX_CONFIG
-  exit
+  echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
+  exit 1
 fi
-VERSION=$(cat ./cloonix/cloonix_config | grep CLOONIX_VERSION)
+VERSION=$(cat ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION)
 VERSION=${VERSION#*=}
 ./allclean
-./build
-./pack
-sudo ./install_cloonix cloonix-${VERSION}.tar.gz
+./build_tools/build_client
+./build_tools/build_server
+./build_tools/pack_common_before
+./build_tools/pack_client
+./build_tools/pack_server
+./build_tools/pack_common_after

@@ -1,9 +1,8 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
-CLOONIX_COMMON=${HERE}/../../../cloonix/common
 TARGZ=${HERE}/../../../targz_store
-TARGET=${CLOONIX_COMMON}/spice_lib
+TARGET=${HERE}/../spice_lib_client
 
 if [ ! -e ${TARGET}/pkgconfig ]; then
   cd ${TARGET}
@@ -18,19 +17,18 @@ export DESTDIR=${TARGET}
 export PATH=${TARGET}/bin:$PATH
 cd ${HERE}/spice_client/tainted_spice
 sed -i s/UNKNOWN/0.39/ ./build-aux/git-version-gen
-sed -i s"%'-Wextra',%'-Wextra',\n'-Wl,-rpath',\n'-Wl,/usr/local/bin/cloonix/common/spice_lib',%" meson.build
 
 meson build
 cd build
 ninja -v install
 
-cp -vf ${TARGET}/usr/local/bin/spicy ${HERE}
-cp -vf ${TARGET}/usr/local/libexec/spice-client-glib-usb-acl-helper ${HERE}
+cp -vf ${TARGET}/usr/local/bin/spicy ${HERE}/cloonix-spicy
+cp -vf ${TARGET}/usr/local/libexec/spice-client-glib-usb-acl-helper ${HERE}/cloonix-spice-client-glib-usb-acl-helper
 if [ -d  ${TARGET}/usr/local/lib/x86_64-linux-gnu ]; then
-  cp -vf ${TARGET}/usr/local/lib/x86_64-linux-gnu/libspice* ${TARGET}
+  cp -vf ${TARGET}/usr/local/lib/x86_64-linux-gnu/libcloonix-spice* ${TARGET}
 else
   if [ -d  ${TARGET}/usr/local/lib64 ]; then
-    cp -vf ${TARGET}/usr/local/lib64/libspice* ${TARGET}
+    cp -vf ${TARGET}/usr/local/lib64/libcloonix-spice* ${TARGET}
   else
     echo ERROR MISSING:
     echo ${TARGET}/lib/x86_64-linux-gnu

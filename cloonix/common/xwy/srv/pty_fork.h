@@ -24,5 +24,5 @@ void pty_fork_fdisset(fd_set *readfds, fd_set *writefds);
 void pty_fork_fdset(fd_set *readfds, fd_set *writefds);
 void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
                          char *cmd, int display_val);
-void pty_fork_init(void);
+void pty_fork_init(char *cloonix_net_name);
 /*--------------------------------------------------------------------------*/

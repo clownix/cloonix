@@ -1,0 +1,140 @@
+#!/bin/bash
+set -e
+releasever=38
+basearch=x86_64
+DISTRO=fedora${releasever}
+ROOTFS=/root/${DISTRO}.img
+MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
+FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/${basearch}/os
+FEDORA_MODULAR=${MIRROR}/releases/${releasever}/Modular/${basearch}/os
+FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/${basearch}
+FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/${basearch}
+#----------------------------------------------------------------------#
+fct_check_uid()
+{
+  if [ $UID != 0 ]; then
+    echo you must be root
+    exit -1
+  fi
+}
+#----------------------------------------------------------------------#
+fct_check_losetup()
+{
+  modprobe loop
+  if [[ "$(losetup -a )" != "" ]]; then
+    echo
+    echo
+    echo losetup -a should give nothing, it gives:
+    losetup -a
+    echo
+    exit -1
+  fi
+}
+#----------------------------------------------------------------------#
+
+#########################################################################
+fct_check_uid
+set +e
+for i in dnf wget ; do
+  path_bin=$(which $i)
+  if [ -z $path_bin ]; then
+    echo $i  DOES NOT EXIST
+    exit -1
+  fi
+done
+
+if [ -e $ROOTFS ]; then
+  echo $ROOTFS already exists
+  exit 1
+fi
+
+fct_check_losetup
+#-----------------------------------------------------------------------#
+set +e
+for i in ${FEDORA_MAIN} ${FEDORA_MAIN_UPDATES} \
+         ${FEDORA_MODULAR} ${FEDORA_MODULAR_UPDATES};
+do
+  wget --no-check-certificate --delete-after ${i} 1>/dev/null 2>&1
+  OK=$?
+  if [ "$OK" != "0" ]; then
+    echo ERROR wget ${i}
+    exit 1
+  fi
+echo
+echo REPO OK ${i}
+echo
+done
+set -e
+#-----------------------------------------------------------------------#
+dd if=/dev/zero of=${ROOTFS} bs=500M count=10
+mkfs.ext4 ${ROOTFS}
+losetup -fP ${ROOTFS}
+mkdir -p /tmp/wkmntloops
+DEVLOOP=$(losetup -l | grep ${ROOTFS} | awk '{print $1}')
+echo $DEVLOOP
+mount -o loop $DEVLOOP /tmp/wkmntloops
+mkdir -p /tmp/wkmntloops/etc/yum.repos.d
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora.repo << EOF
+[fedora]
+name=Fedora $releasever - $basearch
+baseurl=${FEDORA_MAIN}
+enabled=1
+gpgcheck=0
+EOF
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates.repo << EOF
+[updates]
+name=Fedora $releasever - $basearch - Updates
+baseurl=${FEDORA_MAIN_UPDATES}
+enabled=1
+gpgcheck=0
+EOF
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-modular.repo << EOF
+[fedora-modular]
+name=Fedora Modular $releasever - $basearch
+baseurl=${FEDORA_MODULAR}
+enabled=1
+gpgcheck=0
+EOF
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates-modular.repo << EOF
+[fedora-modular-updates]
+name=Fedora Modular $releasever - $basearch - Updates
+baseurl=${FEDORA_MODULAR_UPDATES}
+enabled=1
+gpgcheck=0
+EOF
+
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install bash.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install libcurl-minimal.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl-libs.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install rpm.$basearch
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install dnf
+
+#-----------------------------------------------------------------------#
+rm -f /tmp/wkmntloops/etc/resolv.conf
+cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
+#-----------------------------------------------------------------------#
+list_pkt="passwd openssh-clients iputils dhclient sudo kbd vim net-tools"
+for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
+sleep 5
+echo dnf clean packages
+chroot /tmp/wkmntloops/ dnf --releasever=${releasever} --nogpgcheck clean packages
+echo dnf -y update
+chroot /tmp/wkmntloops/ dnf --releasever=${releasever} --nogpgcheck -y update
+echo dnf -y install
+chroot /tmp/wkmntloops/ dnf --releasever=${releasever} --nogpgcheck -y install $list_pkt
+#-----------------------------------------------------------------------#
+chroot /tmp/wkmntloops/ passwd root <<EOF
+root
+root
+EOF
+#-----------------------------------------------------------------------#
+for d in dev sys proc; do umount /tmp/wkmntloops/$d; done
+umount /tmp/wkmntloops/
+losetup -d $DEVLOOP
+#-----------------------------------------------------------------------#
+

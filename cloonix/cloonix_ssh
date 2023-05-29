@@ -1,28 +1,22 @@
 #!/bin/bash
 set -e
-if [ -z $CLOONIX_CONFIG ]; then
-  CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
-fi
 
+CLOONIX_CONFIG="/usr/libexec/cloonix/common/etc/cloonix.cfg"
 if [ ! -f $CLOONIX_CONFIG ]; then
   echo "ERROR: $CLOONIX_CONFIG not found"
   exit 1
 fi
-CLOONIX_TREE=$(cat $CLOONIX_CONFIG |grep  CLOONIX_TREE | awk -F = '{print $2}')
-
-if [ ! -d ${CLOONIX_TREE} ]; then
-  echo "ERROR: ${CLOONIX_TREE} not found"
+BIN_SSH="/usr/libexec/cloonix/client/cloonix-dropbear-ssh"
+if [ ! -x ${BIN_SSH} ]; then
+  echo "ERROR: ${BIN_SSH} not found"
   exit 1
 fi
-
 LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
-
 if (( ${#} < 1 )); then
   echo  cloonix_name needed as parameter.
   echo $LIST
   exit 1
 fi
-
 cloonix_name=$1
 found=no
 for i in $LIST ; do
@@ -46,9 +40,19 @@ ip=$(echo $cloonix_info |awk '{print $2}')
 port=$(echo $cloonix_info |awk '{print $4}')
 passwd=$(echo $cloonix_info |awk '{print $6}')
 
-
 shift 1
 
-BIN_SSH=${CLOONIX_TREE}/common/agent_dropbear/agent_bin/dropbear_cloonix_ssh
+export FONTCONFIG_FILE="/usr/libexec/cloonix/common/etc/fonts/fonts.conf"
+export XDG_CONFIG_HOME="/usr/libexec/cloonix/common/share"
+export XDG_DATA_HOME="/usr/libexec/cloonix/common/share"
+export XDG_RUNTIME_DIR="/var/lib/cloonix/${cloonix_name}"
+export QT_PLUGIN_PATH="/usr/libexec/cloonix/common/lib/qt6/plugins"
+export QT_X11_NO_MITSHM="1"
+export QT_XCB_NO_MITSHM="1"
+export GTK_IM_MODULE_FILE="/usr/libexec/cloonix/common/lib/gtk-3.0/3.0.0/immodules.cache"
+export GDK_PIXBUF_MODULE_FILE="/usr/libexec/cloonix/common/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+export GST_PLUGIN_SYSTEM_PATH="/usr/libexec/cloonix/common/lib/gstreamer-1.0"
+export NO_AT_BRIDGE="1"
+
 ${BIN_SSH} ${ip}:${port} ${passwd} "$@"
 

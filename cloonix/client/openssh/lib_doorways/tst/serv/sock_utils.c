@@ -141,7 +141,6 @@ static int socket_listen_unix(char *pname)
 {
   int ret, fd, len, result = -1;
   struct sockaddr_un serv;
-  mode_t old_mask;
   if (strlen(pname) >= 108)
     printf("Name too long: %d", (int)(strlen(pname)));
   else
@@ -156,9 +155,7 @@ static int socket_listen_unix(char *pname)
       serv.sun_family = AF_UNIX;
       strncpy (serv.sun_path, pname, strlen(pname));
       len = sizeof (serv.sun_family) + strlen (serv.sun_path);
-      old_mask = umask (0000);
       ret = bind (fd, (struct sockaddr *) &serv, len);
-      umask (old_mask);
       if (ret != 0)
         {
         close(fd);

@@ -33,8 +33,7 @@ void node_dtach_console(GtkWidget *mn, t_item_ident *pm);
 void node_qemu_spice(GtkWidget *mn, t_item_ident *pm);
 GtkWidget *canvas_cursors(void);
 void topo_delete(GtkWidget *mn);
-void start_wireshark_dpdk(char *name);
-void start_wireshark_vhost(int is_cnt, int vm_id, char *name, int num);
+void start_wireshark(char *name, int num);
 
 
 

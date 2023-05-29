@@ -29,7 +29,6 @@
 #include "client_clownix.h"
 #include "popup.h"
 #include "main_timer_loop.h"
-#include "pid_clone.h"
 #include "bank.h"
 #include "eventfull_eth.h"
 #include "layout_rpc.h"
@@ -38,6 +37,7 @@
 #include "canvas_ctx.h"
 #include "menu_dialog_cnt.h"
 #include "menu_dialog_kvm.h"
+#include "pid_clone.h"
 
 void layout_set_ready_for_send(void);
 int check_before_start_launch(char **argv);
@@ -255,14 +255,14 @@ int get_vm_id_from_topo(char *name)
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
+/****************************************************************************/
 static int start_launch(void *ptr)
 {
   char **argv = (char **) ptr;
   execv(argv[0], argv);
   return 0;
 }
-/*---------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void launch_xterm_double_click(char *name_vm, int vm_config_flags)
@@ -270,38 +270,41 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
   static char title[2*MAX_NAME_LEN+1];
   static char net[MAX_NAME_LEN];
   static char name[MAX_NAME_LEN];
-  static char cmd[2*MAX_PATH_LEN];
-  static char xvt[MAX_PATH_LEN];
-  static char *argv[] = {xvt, "-T", title, "-e", 
-                         "/bin/bash", "-c", cmd, NULL};
-  static char *argvnatplug[] = {xvt, "-T", title, "-e", 
-                              "/usr/local/bin/cloonix_osh",
-                              net, name, NULL};
-  memset(cmd, 0, 2*MAX_PATH_LEN);
+  static char addr[MAX_NAME_LEN];
+  static char passwd[MAX_NAME_LEN];
+  static char *argv[] = {"/usr/libexec/cloonix/client/cloonix-urxvt",
+                         "-T", title, "-e",
+                         "/usr/libexec/cloonix/client/cloonix-dropbear-ssh",
+                         addr, passwd, name, NULL};
+  static char *argvnatplug[] = {"/usr/libexec/cloonix/client/cloonix-urxvt",
+                                "-T", title, "-e", "/usr/bin/cloonix_osh",
+                                net, name, NULL};
   memset(title, 0, 2*MAX_NAME_LEN+1);
   memset(name, 0, MAX_NAME_LEN);
-  memset(net, 0, MAX_NAME_LEN);
-  cloonix_get_xvt(xvt);
   strncpy(name, name_vm, MAX_NAME_LEN);
-  strncpy(net, local_get_cloonix_name(), MAX_NAME_LEN);
-
   if (vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
     {
+    memset(net, 0, MAX_NAME_LEN);
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", net, name);
+    strncpy(net, local_get_cloonix_name(), MAX_NAME_LEN);
     if (check_before_start_launch(argvnatplug))
+      {
       pid_clone_launch(start_launch, NULL, NULL, (void *)(argvnatplug),
                        NULL, NULL, name_vm, -1, 0);
+      }
     }
   else
     {
+    memset(addr, 0, MAX_NAME_LEN);
+    memset(passwd, 0, MAX_NAME_LEN);
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", local_get_cloonix_name(), name);
-    snprintf(cmd, 2*MAX_PATH_LEN-1,
-             "%s/common/agent_dropbear/agent_bin/dropbear_cloonix_ssh %s %s %s",
-             get_local_cloonix_tree(),  get_doors_client_addr(),
-             get_password(), name);
+    strncpy(addr, get_doors_client_addr(), MAX_NAME_LEN);
+    strncpy(passwd, get_password(), MAX_NAME_LEN);
     if (check_before_start_launch(argv))
+      {
       pid_clone_launch(start_launch, NULL, NULL, (void *)(argv),
                        NULL, NULL, name_vm, -1, 0);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

@@ -6,13 +6,10 @@ RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 RPC_DOORS=${CLOONIX_COMMON}/lib_rpc_doors/
 RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout
 UTILS=${CLOONIX_COMMON}/lib_utils/
-AGENT_INCLUDE=${CLOONIX_COMMON}/agent_dropbear/cloonix_agent/src
-
 
 OBJ_DIR=obj/
 VPATH = src
-EXE = uml_cloonix_switch
-#WARNINGS=-Wall -Wformat-truncation=0 -Wformat-overflow=0
+EXE = cloonix-main-server
 WARNINGS=-Wall
 
 SRC = \
@@ -30,7 +27,6 @@ SRC = \
       doorways_mngt.c \
       llid_trace.c \
       eventfull.c \
-      cdrom_creation_clone.c \
       qemu_automaton.c \
       hop_event.c \
       layout_topo.c \
@@ -68,8 +64,7 @@ INCLUDES= -I./src \
           -I${RPC_LAYOUT}/include \
           -I${RPC_DOORS}/include \
           -I${UTILS}/include \
-          -I${RPC_CLOWNIX}/include \
-          -I${AGENT_INCLUDE}
+          -I${RPC_CLOWNIX}/include
 
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
        -L${RPC_LAYOUT} -lrpc_layout \
@@ -80,7 +75,7 @@ LIBS = -L${IO_CLOWNIX} -lio_clownix \
 
 
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)  
-#LDFLAGS+= -rdynamic
+
 CC=gcc 
 all: $(shell mkdir -p ./obj) $(EXE)
 OBJ = $(SRC:.c=.o)

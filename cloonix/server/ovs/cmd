@@ -9,30 +9,24 @@ cd ${HERE}/ovs
 rm -rf .git
 patch -p1 < ${HERE}/ovs.patch
 ./boot.sh
+
 CFLAGS="-g -DALLOW_EXPERIMENTAL_API -pthread -lm -ldl -lnuma -lpcap -lrt -fPIC -lunwind"
 export CFLAGS=$CFLAGS
-export LDFLAGS="-fPIC"
 
 ./configure  --prefix=${HERE}
-
 make -j 6
 cd ${HERE}
 
 for i in ovsdb-client ovsdb-server ovsdb-tool; do
-  cp -f ${HERE}/ovs/ovsdb/${i} ${OVS}/bin
+  cp -f ${HERE}/ovs/ovsdb/${i} ${OVS}/bin/cloonix-${i}
 done
 
 for i in ovs-appctl ovs-ofctl ovs-vsctl; do
-  cp -f ${HERE}/ovs/utilities/${i} ${OVS}/bin
+  cp -f ${HERE}/ovs/utilities/${i} ${OVS}/bin/cloonix-${i}
 done
 
-cp -f ${HERE}/ovs/vswitchd/ovs-vswitchd ${OVS}/bin
+cp -f ${HERE}/ovs/vswitchd/ovs-vswitchd ${OVS}/bin/cloonix-ovs-vswitchd
 
 mkdir -p ${OVS}/share/openvswitch
-cp -f ${HERE}/ovs/vswitchd/vswitch.ovsschema ${OVS}/share/openvswitch
-
-exit
-for i in ovs_tainted ovs ; do
-  rm -rf ${HERE}/$i
-done
+cp -f ${HERE}/ovs/vswitchd/vswitch.ovsschema ${OVS}/cloonix-vswitch.ovsschema
 

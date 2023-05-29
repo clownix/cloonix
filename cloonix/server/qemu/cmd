@@ -3,104 +3,44 @@ set -e
 HERE=`pwd`
 ./allclean
 ./patched_create
-export PKG_CONFIG_PATH=${HERE}/../../common/spice_lib/pkgconfig
-export QEMU_CFLAGS="-I${HERE}/../../common/spice_lib/include"
-export QEMU_LDFLAGS="-L${HERE}/../../common/spice_lib/ -Wl,-rpath,/usr/local/bin/cloonix/common/spice_lib"
-export CFLAGS="-I${HERE}/../../common/spice_lib/include"
-export LDFLAGS="-L${HERE}/../../common/spice_lib/ -Wl,-rpath,/usr/local/bin/cloonix/common/spice_lib"
 
+
+
+export PKG_CONFIG_PATH=${HERE}/../spice_lib_server/pkgconfig
+export LDFLAGS="-L${HERE}/../spice_lib_server"
 
 cd ${HERE}/tainted_qemu/
 
  CONFIGURATION_OPTS="--prefix=/usr/local
                      --target-list=x86_64-softmmu
                      --python=/usr/bin/python3
-                     --enable-fdt
                      --enable-kvm
                      --enable-spice
                      --enable-usb-redir
-                     --enable-linux-user
-                     --enable-opengl
                      --enable-gtk
                      --enable-vhost-net
                      --enable-vhost-kernel
                      --enable-pie
-                     --disable-coroutine-pool
-                     --disable-numa
-                     --disable-curses
-                     --disable-linux-aio
-                     --disable-debug-info
-                     --disable-debug-mutex
-                     --disable-vhost-user
-                     --disable-virglrenderer
-                     --disable-vte
-                     --disable-lzo
-                     --disable-snappy
-                     --disable-bzip2
-                     --disable-slirp
-                     --disable-tcg
-                     --disable-debug-tcg
-                     --disable-virtfs
-                     --disable-strip
-                     --disable-modules
-                     --disable-libiscsi
-                     --disable-libusb
-                     --disable-tcg-interpreter
-                     --disable-bsd-user
-                     --disable-docs
-                     --disable-guest-agent
-                     --disable-guest-agent-msi
-                     --disable-sparse
-                     --disable-gnutls
-                     --disable-nettle
-                     --disable-gcrypt
-                     --disable-sdl
-                     --disable-vnc
-                     --disable-vnc-sasl
-                     --disable-vnc-jpeg
-                     --disable-png
-                     --disable-cocoa
-                     --disable-xen
-                     --disable-xen-pci-passthrough
-                     --disable-brlapi
-                     --disable-curl
-                     --disable-rdma
-                     --disable-vde
-                     --disable-netmap
-                     --disable-cap-ng
-                     --disable-attr
-                     --disable-rbd
-                     --disable-libnfs
-                     --disable-smartcard
-                     --disable-seccomp
-                     --disable-glusterfs
-                     --disable-tpm"
+                     --enable-tools
+                     --without-default-features"
 
 
+
+
+export CFLAGS=" -g"
+export LDFLAGS="-L${HERE}/../spice_lib_server "
 echo Doing CONFIGURE
-sleep 1
 ./configure  $CONFIGURATION_OPTS
 
 echo Doing QEMU
-sleep 1
-make clean
-make -j 5
+make -j 6
 
 echo MOVING QEMU RESULT BIN
-sleep 1
 
-mv build/qemu-system-x86_64   ${HERE}
-mv build/qemu-img             ${HERE}
+mv build/qemu-system-x86_64   ${HERE}/cloonix-qemu-system-x86_64
+mv build/qemu-img             ${HERE}/cloonix-qemu-img
 cp pc-bios/bios-256k.bin      ${HERE}
-cp pc-bios/kvmvapic.bin       ${HERE}
-cp pc-bios/vgabios.bin        ${HERE}
-cp pc-bios/vgabios-stdvga.bin ${HERE}
-cp pc-bios/vgabios-qxl.bin    ${HERE}
-cp pc-bios/vgabios-virtio.bin ${HERE}
 cp pc-bios/efi-virtio.rom     ${HERE}
-cp pc-bios/efi-e1000.rom      ${HERE}
-cp pc-bios/efi-ne2k_pci.rom   ${HERE}
-cp pc-bios/efi-rtl8139.rom    ${HERE}
-cp pc-bios/efi-vmxnet3.rom    ${HERE}
-
+cp pc-bios/kvmvapic.bin       ${HERE}
+cp pc-bios/vgabios-virtio.bin ${HERE}
 

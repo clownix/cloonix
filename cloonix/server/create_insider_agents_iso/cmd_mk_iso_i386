@@ -1,0 +1,71 @@
+#!/bin/bash
+HERE=`pwd`
+set -e
+
+# dpkg --add-architecture i386
+# sudo apt-get install g++-multilib libc6-dev-i386
+
+TARGET="${HERE}/../insider_agents"
+ISO_NAME="insider_agent_i386.iso"
+XORRISO="/usr/bin/xorrisofs"
+CDROM="${TARGET}/cdrom"
+
+rm -f ${TARGET}/${ISO_NAME}
+rm -rf ${CDROM}
+
+mkdir -p ${CDROM}/lib
+LIB_CLOWNIX=${HERE}/../../common/lib_io_clownix
+
+export CC=gcc
+export AR=ar
+export RANLIB=ranlib
+export CFLAGS=""
+
+cd $LIB_CLOWNIX
+export CFLAGS="-m32 -DNO_HMAC_CIPHER"
+export LDFLAGS=-m32
+make clean
+make
+
+cd ${HERE}/../../common/cloonix_dropbear
+export CFLAGS="-m32"
+export LDFLAGS="-m32"
+make clean
+make dropbear
+
+LIBC=$(ldd dropbear | grep libc.so |awk '{print $3}')
+LIBD=$(ldd dropbear | grep ld-linux |awk '{print $1}')
+
+echo
+echo
+echo $LIBC
+echo $LIBD
+LIBD_NAME=${LIBD##*/}
+echo $LIBD_NAME
+echo
+echo
+echo
+
+cd ${HERE}/../../common/cloonix_dropbear
+LIB_DST=/mnt/cloonix_config_fs/lib
+export CFLAGS="-m32"
+export LDFLAGS="-m32 -Wl,-rpath -Wl,${LIB_DST}"
+export LDFLAGS="${LDFLAGS} -Wl,--dynamic-linker -Wl,${LIB_DST}/${LIBD_NAME}"
+make clean
+make dropbear
+
+cp dropbear ${CDROM}/cloonix-dropbear-sshd
+cp -vf $LIBC ${CDROM}/lib
+cp -vf $LIBD ${CDROM}/lib
+
+cd ${HERE}/cloonix_agent
+make clean
+make
+cp cloonix-agent ${CDROM}
+make clean
+cd $LIB_CLOWNIX
+make clean
+
+${XORRISO} -o ${TARGET}/${ISO_NAME} ${CDROM}
+rm -rf ${CDROM}
+

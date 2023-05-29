@@ -1,8 +1,5 @@
 ##################################################
-CLOONIX_VERSION=28-00
-CLOONIX_TREE=/usr/local/bin/cloonix
-CLOONIX_WORK=${HOME}/cloonix_data
-CLOONIX_BULK=${HOME}/cloonix_data/bulk
+CLOONIX_VERSION=30-00
 #-------------------------------------------------
 
 ##################################################
@@ -58,6 +55,37 @@ CLOONIX_NET: vip13 {
   c2c_udp_ip     1.1.1.13
 }
 #-------------------------------------------------
+
+
+##################################################
+CLOONIX_NET: vip14 {
+  cloonix_ip       1.1.1.14
+  cloonix_port     45214
+  cloonix_passwd   pipoclown
+  c2c_udp_ip     1.1.1.14
+}
+#-------------------------------------------------
+
+
+##################################################
+CLOONIX_NET: vip15 {
+  cloonix_ip       1.1.1.15
+  cloonix_port     45214
+  cloonix_passwd   pipoclown
+  c2c_udp_ip     1.1.1.15
+}
+#-------------------------------------------------
+
+
+##################################################
+CLOONIX_NET: vip16 {
+  cloonix_ip       1.1.1.16
+  cloonix_port     45214
+  cloonix_passwd   pipoclown
+  c2c_udp_ip     1.1.1.16
+}
+#-------------------------------------------------
+
 
 ##################################################
 CLOONIX_NET: cucu {

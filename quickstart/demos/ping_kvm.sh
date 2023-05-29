@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PARAMS="ram=2000 cpu=2 eth=ss"
+PARAMS="ram=1000 cpu=2 eth=ss"
 NET=nemo
 DIST=bookworm
 
@@ -48,10 +48,7 @@ for i in 1 2 ; do
   cloonix_ssh $NET Cloon${i} "ip link set dev eth0 up"
 done
 #----------------------------------------------------------------------
-
-
 cloonix_ssh $NET Cloon1 "ping 1.1.1.2"
-
 #----------------------------------------------------------------------
 
 

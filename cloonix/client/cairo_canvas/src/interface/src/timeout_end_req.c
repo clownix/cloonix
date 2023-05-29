@@ -62,7 +62,6 @@ void topo_info_update(t_topo_info *topo)
 /****************************************************************************/
 void timer_create_item_node_req(void *data)
 {
-  char *ptr_p9_host_share = NULL;
   int32_t thidden_on_graph[MAX_ETH_VM];
   int i, vm_config_flags, natplug = 0;
   t_custom_vm *cust_vm;
@@ -74,8 +73,6 @@ void timer_create_item_node_req(void *data)
     get_custom_vm(&cust_vm);
     for (i=0; i<MAX_ETH_VM; i++)
       thidden_on_graph[i] = 0;
-    if (cust_vm->has_p9_host_share)
-      ptr_p9_host_share = cust_vm->kvm_p9_host_share;
     if (cust_vm->kvm_used_rootfs[0])
       {
       vm_config_flags = get_vm_config_flags(cust_vm, &natplug);
@@ -84,8 +81,7 @@ void timer_create_item_node_req(void *data)
       client_add_vm(0, callback_end, cust_vm->name,
                     cust_vm->nb_tot_eth, cust_vm->eth_tab,
                     vm_config_flags, natplug, cust_vm->cpu, cust_vm->mem,
-                    NULL, cust_vm->kvm_used_rootfs, NULL, NULL, 
-                    NULL, ptr_p9_host_share);
+                    NULL, cust_vm->kvm_used_rootfs, NULL, NULL, NULL);
       }
     else
       insert_next_warning("rootfs is empty!", 1);
@@ -143,7 +139,12 @@ void timer_create_item_req(void *data)
       else if (pa->endp_type == endp_type_natv)
         client_add_nat(0, callback_end, pa->name);
       else if (pa->endp_type == endp_type_phyv)
-        client_add_phy(0, callback_end, pa->name);
+        {
+        if (strlen(pa->name) == 0)
+          KERR("%d %d", pa->bank_type, pa->endp_type);
+        else
+          client_add_phy(0, callback_end, pa->name);
+        }
       else
         KERR("%d %s %d", pa->bank_type, pa->name, pa->endp_type);
       break;

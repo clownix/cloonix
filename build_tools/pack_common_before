@@ -1,0 +1,31 @@
+#!/bin/bash
+if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
+  echo PLEASE DEFINE CLOONIX_TREE_ROOT
+  exit 1
+fi
+if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
+  echo NOT FOUND:
+  echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
+  exit 1
+fi
+TARGZ_STORE=${CLOONIX_TREE_ROOT}/targz_store
+COMMON="${CLOONIX_TREE_ROOT}/build_tools/cloonix-common"
+mkdir -p ${COMMON}
+#----------------------------------------------------------
+tar --directory=${COMMON}       -xf ${TARGZ_STORE}/dataconf/etc.tar.gz
+tar --directory=${COMMON}       -xf ${TARGZ_STORE}/dataconf/share.tar.gz
+tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark/share_wireshark.tar.gz
+tar --directory=${COMMON}       -xf ${TARGZ_STORE}/shark/lib.tar.gz
+tar --directory=${COMMON}/lib   -xf ${TARGZ_STORE}/shark/qt6.tar.gz
+#----------------------------------------------------------
+mkdir -p ${COMMON}/lib64
+cp -f /lib64/ld-linux-x86-64.so.2 ${COMMON}/lib64
+cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
+#----------------------------------------------------------
+cp -rf /usr/lib/x86_64-linux-gnu/gtk-3.0 ${COMMON}/lib
+cp -rf /usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0 ${COMMON}/lib
+cp -rf /usr/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0 ${COMMON}/lib
+#----------------------------------------------------------
+cp -f /usr/bin/xauth ${COMMON}/cloonix-xauth
+cp -f /bin/bash ${COMMON}/cloonix-bash
+#----------------------------------------------------------

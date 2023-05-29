@@ -15,16 +15,17 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+
+#define SYNCHRO 1
+#define DAEMON 0 
+
+
 typedef struct t_eth_mac
 {
   char mac[8];
 } t_eth_mac;
 
 void crun_beat(int llid);
-char *get_losetup_bin(void);
-char *get_ext4fuse_bin(void);
-char *get_mount_bin(void);
-char *get_umount_bin(void);
 int crun_utils_unlink_sub_dir_files(char *dir);
 int crun_utils_delete_crun_stop(char *name, int crun_pid);
 int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
@@ -43,10 +44,14 @@ int crun_utils_create_config_json(char *path, char *rootfs, char *nspace,
 int crun_utils_docker_veth(char *name, int pid, int vm_id,
                            int nb_eth, t_eth_mac *eth_mac);
 int dirs_agent_create_mnt_tmp(char *cnt_dir, char *name);
-void dirs_agent_copy_starter_crun(char *cnt_dir, char *name,
+void dirs_agent_copy_starter(char *cnt_dir, char *name,
                              char *agent_dir, char *launch);
-void dirs_agent_copy_starter_docker(char *cnt_dir, char *name,
-                             char *agent_dir, char *launch);
-void crun_utils_init(void);
+void crun_utils_init(char *var_root);
 char *get_mnt_loop_dir(void);
+void lio_clean_all_llid(void);
+char *lio_linear(char *argv[]);
+FILE *cmd_lio_popen(char *cmd, int *child_pid);
+int execute_cmd(char *cmd, int synchro);
+void log_write_req(char *line);
+int force_waitpid(int pid, int *status);
 /*--------------------------------------------------------------------------*/

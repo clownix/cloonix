@@ -58,8 +58,6 @@ typedef struct t_check_dtach_duplicate
 /*---------------------------------------------------------------------------*/
 void dtach_duplicate_check(char *name, t_dtach_duplicate_callback cb);
 /*---------------------------------------------------------------------------*/
-void timeout_start_vm_create_automaton(void *data);
-/*---------------------------------------------------------------------------*/
 void poweroff_vm(int llid, int tid, t_vm *vm);
 /*---------------------------------------------------------------------------*/
 

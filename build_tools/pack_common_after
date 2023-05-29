@@ -1,0 +1,47 @@
+#!/bin/bash
+if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
+  echo PLEASE DEFINE CLOONIX_TREE_ROOT
+  exit 1
+fi
+if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
+  echo NOT FOUND:
+  echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
+  exit 1
+fi
+VERSION=$(cat ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION)
+VERSION=${VERSION#*=}
+LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/usr/libexec/cloonix/common/lib"
+COMMON="${CLOONIX_TREE_ROOT}/build_tools/cloonix-common"
+#----------------------------------------------------------
+for i in `find ${COMMON} -maxdepth 1 -type f` ; do
+  patchelf --set-rpath ${RPATH_LIB} ${i}
+  patchelf --set-interpreter ${LDLINUX} ${i}
+done
+#----------------------------------------------------------
+for i in `find ${COMMON}/lib -maxdepth 1 -type f` ; do
+  patchelf --set-rpath ${RPATH_LIB} ${i}
+done
+#----------------------------------------------------------
+for i in gdk-pixbuf-2.0 gstreamer-1.0 gtk-3.0 qt6 ; do 
+  for j in `find ${COMMON}/lib/${i} -name "*.so"` ; do
+    patchelf --set-rpath ${RPATH_LIB} ${j}
+  done
+done
+#----------------------------------------------------------
+
+cd ${CLOONIX_TREE_ROOT}/build_tools
+tar zcf cloonix-common.tar.gz cloonix-common
+tar zcf cloonix-client.tar.gz cloonix-client
+tar zcf cloonix-server.tar.gz cloonix-server
+rm -rf cloonix-common
+rm -rf cloonix-client
+rm -rf cloonix-server
+mkdir -p cloonix-bundle-${VERSION}
+cp -f install_cloonix    cloonix-bundle-${VERSION}
+mv cloonix-common.tar.gz cloonix-bundle-${VERSION}
+mv cloonix-client.tar.gz cloonix-bundle-${VERSION}
+mv cloonix-server.tar.gz cloonix-bundle-${VERSION}
+cp -f ${CLOONIX_TREE_ROOT}/quickstart/demos/ping_* cloonix-bundle-${VERSION}
+#----------------------------------------------------------
+

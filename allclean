@@ -1,42 +1,36 @@
 #!/bin/bash
-HERE=`pwd`
-CLOONIX_COMMON=${HERE}/cloonix/common
-CLOONIX_SERVER=${HERE}/cloonix/server
-CLOONIX_CLIENT=${HERE}/cloonix/client
-CLOONIX_CONFIG=${HERE}/cloonix/cloonix_config
-if [ ! -e $CLOONIX_CONFIG ]; then
+
+export CLOONIX_TREE_ROOT=`pwd`
+if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo NOT FOUND:
-  echo $CLOONIX_CONFIG
-  exit
+  echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
+  exit 1
 fi
-CLOONIX_VERSION=$(cat ./cloonix/cloonix_config | grep CLOONIX_VERSION)
-CLOONIX_VERSION=${CLOONIX_VERSION#*=}
-rm -f cloonix-${CLOONIX_VERSION}.tar.gz
-rm -rf tmpbuild
-rm -rf tmpbuild_bis
+VERSION=$(cat ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION)
+VERSION=${VERSION#*=}
 #----------------------------------------------------------
-  for i in agent_dropbear \
-           xwy \
-           lib_rpc_clownix \
+COMMON=${CLOONIX_TREE_ROOT}/cloonix/common
+CLIENT=${CLOONIX_TREE_ROOT}/cloonix/client
+SERVER=${CLOONIX_TREE_ROOT}/cloonix/server
+
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-common
+rm -f  ${CLOONIX_TREE_ROOT}/build_tools/cloonix-common.tar.gz
+
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-client
+rm -f  ${CLOONIX_TREE_ROOT}/build_tools/cloonix-client.tar.gz
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_client
+
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-server
+rm -f  ${CLOONIX_TREE_ROOT}/build_tools/cloonix-server.tar.gz
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_server
+#----------------------------------------------------------
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-${VERSION}
+#----------------------------------------------------------
+  for i in lib_rpc_clownix \
            lib_rpc_doors \
            lib_rpc_layout \
-           spice_lib ; do
-    cd ${CLOONIX_COMMON}/${i}
-    ./allclean
-  done
-#----------------------------------------------------------
-  for i in  doorways \
-            suid_power \
-            gerard_lledo \
-            uml_cloonix_switch ; do
-    cd ${CLOONIX_SERVER}/${i}
-    make clean
-  done 
-  rm -f ${CLOONIX_SERVER}/dtach/dtach
-
-  for i in ovs ovs_drv ovs_snf ovs_nat ovs_c2c ovs_a2b \
-           qemu ; do
-    cd ${CLOONIX_SERVER}/${i}
+           lib_utils; do
+    cd ${COMMON}/${i}
     ./allclean
   done
 #----------------------------------------------------------
@@ -49,11 +43,40 @@ rm -rf tmpbuild_bis
             cairo_canvas/src/subsets \
             cairo_canvas/src/bdplot \
             cairo_canvas ; do
-    cd ${CLOONIX_CLIENT}/${i}
+    cd ${CLIENT}/${i}
     make clean
   done
-  for i in  openssh spice ; do 
-    cd ${CLOONIX_CLIENT}/${i}
+#----------------------------------------------------------
+  for i in openssh \
+           rxvt \
+           spice \
+           spice_lib_client \
+           agent_dropbear ; do
+    cd ${CLIENT}/${i}
     ./allclean
   done
+#----------------------------------------------------------
+  for i in  doorways \
+            suid_power \
+            gerard_lledo \
+            uml_cloonix_switch ; do
+    cd ${SERVER}/${i}
+    make clean
+  done 
+  rm -f ${SERVER}/dtach/cloonix-dtach
+#----------------------------------------------------------
+  for i in ovs \
+           ovs_drv \
+           ovs_snf \
+           ovs_nat \
+           ovs_c2c \
+           ovs_a2b \
+           qemu \
+           xwy \
+           spice_lib_server ; do
+    cd ${SERVER}/${i}
+    ./allclean
+  done
+  rm -f ${SERVER}/insider_agents/insider_agent_x86_64.iso
+  rm -rf ${SERVER}/insider_agents/cdrom
 #----------------------------------------------------------

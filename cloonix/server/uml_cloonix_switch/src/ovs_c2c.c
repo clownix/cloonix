@@ -37,6 +37,8 @@
 #include "c2c_peer.h"
 #include "lan_to_name.h"
 #include "ovs_snf.h"
+#include "layout_rpc.h"
+#include "layout_topo.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -113,6 +115,7 @@ static void free_c2c(t_ovs_c2c *cur)
 {
   t_ovs_c2c *ncur;
   cfg_free_obj_id(cur->c2c_id);
+  layout_del_sat(cur->name);
   if (cur->llid)
     {
     llid_trace_free(cur->llid, 0, __FUNCTION__);
@@ -317,7 +320,7 @@ static void c2c_start(char *name, char *vhost)
   argv[3] = name;
   argv[4] = vhost;
   argv[5] = NULL;
-  pid_clone_launch(utils_execve, process_demonized, NULL,
+  pid_clone_launch(utils_execv, process_demonized, NULL,
                    (void *) argv, NULL, NULL, name, -1, 1);
 }
 /*---------------------------------------------------------------------------*/
@@ -636,6 +639,7 @@ void ovs_c2c_pid_resp(int llid, char *name, int pid)
     {
     if ((cur->pid == 0) && (cur->suid_root_done == 1))
       {
+      layout_add_sat(name, 0);
       cur->pid = pid;
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "c2c_get_udp_port %s", name);

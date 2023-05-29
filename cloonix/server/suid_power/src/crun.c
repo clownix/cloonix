@@ -31,7 +31,6 @@
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
-#include "launcher.h"
 #include "crun_utils.h"
 #include "crun.h"
 #include "loop_img.h"
@@ -189,7 +188,6 @@ static void urgent_destroy_crun(t_crun *cur)
 /****************************************************************************/
 void crun_beat(int llid)
 {
-  int wstatus;
   char resp[MAX_PATH_LEN];
   t_crun *next, *cur = g_head_crun;
   while (cur)
@@ -198,7 +196,6 @@ void crun_beat(int llid)
     if (cur->crun_pid != 0)
       {
       cur->crun_pid_count += 1;
-      waitpid(cur->crun_pid, &wstatus, WNOHANG);
       if (kill(cur->crun_pid, 0))
         {
         if (cur->crun_pid_count > 100)
@@ -263,7 +260,9 @@ static void create_net_eth(char *line, char *resp, char *name,
 {
   t_crun *cur;
   cur = find_crun(name);
-  if (cur != NULL)
+  if (cur == NULL)
+    KERR("ERROR %s", name);
+  else
     {
     if (num >= MAX_ETH_VM)
       KERR("ERROR %s", name);
@@ -323,6 +322,7 @@ static void create_config_json(char *line, char *resp,
     cnt_dir = cur->cnt_dir;
     memset(path, 0, MAX_PATH_LEN);
     snprintf(path, MAX_PATH_LEN-1, "%s/%s", cnt_dir, cur->name);
+
     if (crun_utils_create_config_json(path,cur->rootfs_path,cur->nspace_path,
                                      cur->mountbear, cur->mounttmp,
                                      is_persistent))
@@ -599,10 +599,10 @@ void crun_kill_all(void)
 
 
 /****************************************************************************/
-void crun_init(void)
+void crun_init(char *var_root)
 {
   g_head_crun = NULL;
-  crun_utils_init();
+  crun_utils_init(var_root);
   loop_img_init();
 }
 /*--------------------------------------------------------------------------*/

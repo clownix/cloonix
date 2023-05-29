@@ -139,22 +139,6 @@ char *get_doors_client_addr(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void cloonix_get_xvt(char *xvt)
-{
-  memset(xvt, 0, MAX_PATH_LEN);
-  if (!file_exists_exec("/usr/bin/urxvt"))
-    {
-    if (!file_exists_exec("/bin/xterm"))
-      KOUT("\n\nInstall \"rxvt-unicode\" or \"xterm\"\n\n");
-    else
-      strncpy(xvt, "/bin/xterm", MAX_PATH_LEN-1);
-    }
-  else
-    strncpy(xvt, "/usr/bin/urxvt", MAX_PATH_LEN-1);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static const char *get_dtach_work_path(void)
 {
   return (g_dtach_work_path);
@@ -180,35 +164,29 @@ char **get_argv_local_xwy(char *name)
 {
   static char bin_path[MAX_PATH_LEN];
   static char config[MAX_PATH_LEN];
-  static char cloonix_name[MAX_NAME_LEN];
   static char cmd[MAX_PATH_LEN];
   static char path[MAX_PATH_LEN];
   static char nm[MAX_NAME_LEN];
   static char title[MAX_PATH_LEN];
-  static char xvt[MAX_PATH_LEN];
-  static char *argv[]={xvt, "-T", title, "-e",bin_path, config,
-                       cloonix_name, "-cmd", cmd, "-a", path, NULL}; 
+  static char nemo[MAX_NAME_LEN];
+  char *locbintree = get_local_cloonix_tree();
+  char *dstbintree = get_distant_cloonix_tree();
+  static char *argv[]={"/usr/libexec/cloonix/client/cloonix-urxvt",
+                       "-T", title, "-e", bin_path, config, nemo,
+                       "-cmd", cmd, "-a", path, NULL}; 
   memset(bin_path, 0, MAX_PATH_LEN);
   memset(config, 0, MAX_PATH_LEN);
-  memset(cloonix_name, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_PATH_LEN);
   memset(path, 0, MAX_PATH_LEN);
   memset(nm, 0, MAX_NAME_LEN);
   memset(title, 0, MAX_PATH_LEN);
-  memset(xvt, 0, MAX_PATH_LEN);
-  cloonix_get_xvt(xvt);
+  memset(nemo, 0, MAX_NAME_LEN);
   strncpy(nm, name, MAX_NAME_LEN-1);
-  snprintf(title, MAX_PATH_LEN-1, "%s/%s", local_get_cloonix_name(), nm); 
-  snprintf(bin_path, MAX_PATH_LEN-1,
-                     "%s/client/xwycli/xwycli", get_local_cloonix_tree());
-
-  snprintf(config, MAX_PATH_LEN-1,
-                     "%s/cloonix_config", get_local_cloonix_tree());
-
-  snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
-
-  snprintf(cmd, MAX_PATH_LEN-1, "%s/server/dtach/dtach",
-           get_distant_cloonix_tree()); 
+  snprintf(nemo, MAX_NAME_LEN-1, "%s", local_get_cloonix_name()); 
+  snprintf(title, MAX_PATH_LEN-1, "%s/%s", nemo, nm); 
+  snprintf(bin_path, MAX_PATH_LEN-1, "%s/client/cloonix-xwycli", locbintree);
+  snprintf(config, MAX_PATH_LEN-1, "/usr/libexec/cloonix/common/etc/cloonix.cfg");
+  snprintf(cmd, MAX_PATH_LEN-1, "%s/server/cloonix-dtach", dstbintree);
   snprintf(path, MAX_PATH_LEN-1, "%s/%s", get_dtach_work_path(), nm);
   return (argv);
 }
@@ -225,8 +203,8 @@ GtkWidget *get_main_window(void)
 char *get_spice_vm_path(int vm_id)
 {
   static char path[2*MAX_PATH_LEN];
-  snprintf(path, 2*MAX_PATH_LEN, "%s/vm/vm%d/%s", 
-           g_clc.work_dir, vm_id, SPICE_SOCK);
+  snprintf(path, 2*MAX_PATH_LEN, "/var/lib/cloonix/%s/vm/vm%d/%s", 
+           g_clc.network, vm_id, SPICE_SOCK);
   path[2*MAX_PATH_LEN-1] = 0;
   return(path);
 }
@@ -237,7 +215,7 @@ char *get_path_to_qemu_spice(void)
 {
   char *result = NULL;
   static char path[MAX_PATH_LEN];
-  sprintf(path,"%s/client/spice/spicy", get_local_cloonix_tree());
+  sprintf(path,"%s/client/cloonix-spicy", get_local_cloonix_tree());
   if (file_exists_exec(path))
     result = path;
   return result;
@@ -392,6 +370,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   char tmp_distant_snf_dir[2*MAX_PATH_LEN];
   GtkWidget *window, *vbox;
   GtkWidget *scrolled;
+  GError *pixerror;
   eth_choice = 0;
   if (strcmp(conf->version, cloonix_conf_info_get_version()))
     {
@@ -404,18 +383,21 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   popup_init();
   memcpy(&g_clc, conf, sizeof(t_topo_clc));
 
-  snprintf(tmp_dtach_work_path, 2*MAX_PATH_LEN, "%s/%s",
-                                g_clc.work_dir, DTACH_SOCK);
+  snprintf(tmp_dtach_work_path, 2*MAX_PATH_LEN, "/var/lib/cloonix/%s/%s",
+                                g_clc.network, DTACH_SOCK);
   tmp_dtach_work_path[MAX_PATH_LEN-1] = 0;
   strcpy(g_dtach_work_path, tmp_dtach_work_path); 
 
-  snprintf(tmp_distant_snf_dir, 2*MAX_PATH_LEN, "%s/%s",
-           g_clc.work_dir, SNF_DIR);
+  snprintf(tmp_distant_snf_dir, 2*MAX_PATH_LEN, "/var/lib/cloonix/%s/%s",
+           g_clc.network, SNF_DIR);
   tmp_distant_snf_dir[MAX_PATH_LEN-1] = 0;
   strcpy(g_distant_snf_dir, tmp_distant_snf_dir);
 
   if (gtk_init_check(NULL, NULL) == FALSE)
     KOUT("Error in gtk_init_check function");
+
+  if (gdk_pixbuf_init_modules("/usr/libexec/cloonix/common/share", &pixerror))
+    KERR("ERROR gdk_pixbuf_init_modules");
 
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_accept_focus(GTK_WINDOW(window), FALSE);
@@ -467,17 +449,14 @@ static void init_local_cloonix_bin_path(char *curdir, char *callbin)
   if (!ptr)
     KOUT("%s", path);
   *ptr = 0;
+
   ptr = strrchr(path, '/');
   if (!ptr)
     KOUT("%s", path);
   *ptr = 0;
-  ptr = strrchr(path, '/');
-  if (!ptr)
-    KOUT("%s", path);
-  *ptr = 0;
+
   strncpy(g_cloonix_root_tree, path, MAX_PATH_LEN-1);
-  snprintf(path, 2*MAX_PATH_LEN,
-           "%s/client/cairo_canvas/cloonix_gui", g_cloonix_root_tree);
+  snprintf(path,2*MAX_PATH_LEN,"%s/client/cloonix-gui",g_cloonix_root_tree);
   path[MAX_PATH_LEN-1] = 0;
   if (access(path, X_OK))
     KOUT("%s", path);
@@ -487,7 +466,6 @@ static void init_local_cloonix_bin_path(char *curdir, char *callbin)
 /****************************************************************************/
 int main(int argc, char *argv[])
 {
-  char xvt[MAX_PATH_LEN];
   g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
   main_timeout = 0;
   eth_choice = 0;
@@ -513,8 +491,6 @@ int main(int argc, char *argv[])
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
   init_local_cloonix_bin_path(g_current_directory, argv[0]); 
-  cloonix_get_xvt(xvt);
-  printf("\nWill use:\n%s\n", xvt);
   if(!getenv("HOME"))
     KOUT("No HOME env");
   if(!getenv("USER"))

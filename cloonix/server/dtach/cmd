@@ -1,11 +1,13 @@
 #!/bin/bash
 HERE=`pwd`
+
 tar zxvf dtach_source.tar.gz
 cd ${HERE}/dtach_source
 ./configure
 make
+
 cd ${HERE}
-mv ${HERE}/dtach_source/dtach .
+cp -f ${HERE}/dtach_source/dtach ${HERE}/cloonix-dtach
 rm -rf ${HERE}/dtach_source
 
 

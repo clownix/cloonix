@@ -19,7 +19,7 @@ if [ ! -f ${RPC_CLOWNIX}/librpc_clownix.a ]; then
 fi
 
 cat > meson.build << EOF
-project('cloonix_ovs_c2c', 'c')
+project('cloonix-ovs-c2c', 'c')
 
 cflags = ['-march=native']
 cflags += ['-g']
@@ -41,7 +41,7 @@ sources = files('src/ovs_c2c.c',
                 'src/packet_arp_mangle.c',
                 'src/stub.c')
 
-executable('cloonix_ovs_c2c', sources, include_directories : incdir,
+executable('cloonix-ovs-c2c', sources, include_directories : incdir,
             dependencies : [io_clownix,crypto],
             c_args: cflags,
             install : true)
@@ -53,4 +53,4 @@ cd build
 ninja
 DESTDIR=${HERE} ninja install
 cd ${HERE}
-cp -vf build/cloonix_ovs_c2c ${HERE}
+cp -vf build/cloonix-ovs-c2c ${HERE}

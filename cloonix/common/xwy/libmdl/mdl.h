@@ -21,6 +21,8 @@
 
 #define MAX_X11_MSG_LEN 100000
 
+#define XAUTH_BIN "/usr/libexec/cloonix/common/cloonix-xauth"
+
 #include <string.h>
 #include <syslog.h>
 #include <libgen.h>
@@ -56,8 +58,6 @@ int debug_get_trunc_usec(void);
 
 #define UNIX_X11_SOCKET_PREFIX "/tmp/.X11-unix/X%d"
 #define UNIX_X11_DPYNAME "unix:%d.0"
-
-#define LOCALHOST_X11_DISPLAY "DISPLAY=localhost:%d.0"
 
 #define CLOONIX_KIL_REQ "KillYou"
 #define CLOONIX_PID_REQ "Your_Pid?"
@@ -183,6 +183,10 @@ void mdl_get_header_vals(t_msg *msg, uint32_t *randid, int *type, int *from,
 
 void mdl_set_header_vals(t_msg *msg, uint32_t randid, int type, int from,
                                      int srv_idx, int cli_idx);
+
+
+char *mdl_argv_linear(char **argv);
+FILE *mdl_argv_popen(char *argv[]);
 
 void mdl_heartbeat(void);
 

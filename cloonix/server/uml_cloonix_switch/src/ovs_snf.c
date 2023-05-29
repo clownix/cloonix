@@ -277,7 +277,7 @@ static void snf_start(char *tap, char *name_num)
   argv[3] = tap;
   argv[4] = name_num;
   argv[5] = NULL;
-  pid_clone_launch(utils_execve, process_demonized, NULL,
+  pid_clone_launch(utils_execv, process_demonized, NULL,
                    (void *) argv, NULL, NULL, tap, -1, 1);
 }
 /*---------------------------------------------------------------------------*/

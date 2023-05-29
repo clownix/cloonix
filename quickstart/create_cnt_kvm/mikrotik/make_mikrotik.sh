@@ -1,26 +1,21 @@
 #!/bin/bash
+https://download.mikrotik.com/routeros/7.8/netinstall-7.8.tar.gz
 
 HERE=`pwd`
-CLOONIX_QEMU_BIN="/usr/local/bin/cloonix/server/qemu"
-BULK="${HOME}/cloonix_data/bulk"
+CLOONIX_QEMU_BIN="/usr/libexec/cloonix/server/cloonix-qemu-system-x86_64"
+CLOONIX_QEMU_BIN_DIR="/usr/libexec/cloonix/server/qemu"
 NAME="mikrotik"
-ISOSRC="https://download.mikrotik.com/routeros/7.6/mikrotik-7.6.iso"
-ISO="${BULK}/mikrotik-7.6.iso"
-QCOW2="${BULK}/${NAME}.qcow2"
+ISOSRC="https://download.mikrotik.com/routeros/7.8/mikrotik-7.8.iso"
+ISO="/var/lib/cloonix/bulk/mikrotik-7.8.iso"
+QCOW2="/var/lib/cloonix/bulk/${NAME}.qcow2"
 
-if [ ! -e ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 ]; then
-  echo ${CLOONIX_QEMU_BIN}/qemu-system-x86_64 does not exist
+if [ ! -e ${CLOONIX_QEMU_BIN} ]; then
+  echo ${CLOONIX_QEMU_BIN} does not exist
   echo Install cloonix
   exit 1
 fi
 
-if [ ! -d ${BULK} ]; then
-  echo directory ${BULK} does not exist:
-  echo mkdir -p ${BULK}
-  exit 1
-fi
-
-cd ${BULK}
+cd /var/lib/cloonix/bulk
 if [ ! -e ${ISO} ]; then
   wget ${ISOSRC}
   if [ ! -e ${ISO} ]; then
@@ -65,14 +60,14 @@ echo
 
 
 
-rm -f ${BULK}/${NAME}.qcow2
+rm -f /var/lib/cloonix/bulk/${NAME}.qcow2
 qemu-img create -f qcow2 ${QCOW2} 5G
 sync
 sleep 1
 sync
 
-${CLOONIX_QEMU_BIN}/qemu-system-x86_64 \
-     -L ${CLOONIX_QEMU_BIN} -enable-kvm -m 2000 \
+${CLOONIX_QEMU_BIN} \
+     -L ${CLOONIX_QEMU_BIN_DIR} -enable-kvm -m 2000 \
      -cpu host,+vmx \
      -smp 4 \
      -vga virtio \
@@ -91,8 +86,8 @@ echo DONE ${QCOW2}
 exit
     
 
-${CLOONIX_QEMU_BIN}/qemu-system-x86_64 \
-     -L ${CLOONIX_QEMU_BIN} -enable-kvm -m 2000 \
+${CLOONIX_QEMU_BIN} \
+     -L ${CLOONIX_QEMU_BIN_DIR} -enable-kvm -m 2000 \
      -cpu host,+vmx \
      -smp 4 \
      -vga virtio \

@@ -275,11 +275,9 @@ int util_socket_listen_unix(char *pname)
 {
   int ret, fd, len;
   struct sockaddr_un serv;
-  mode_t old_mask;
 
   if (strlen(pname) >= 108)
     KOUT("%d", (int)(strlen(pname)));
-  old_mask = umask (0000);
   unlink (pname);
   fd = socket (AF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
@@ -292,11 +290,7 @@ int util_socket_listen_unix(char *pname)
   if (ret == 0)
     {
     ret = listen (fd, 50);
-    if (ret == 0)
-      {
-      umask (old_mask);
-      }
-    else
+    if (ret != 0)
       {
       close(fd);
       fd = -1;

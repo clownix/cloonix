@@ -7,6 +7,6 @@ make clean
 cd ${HERE}/lib_doorways/tst/serv
 make clean
 cd ${HERE}
-rm -f cloonix_u2i_ssh
-rm -f cloonix_u2i_scp
+rm -f cloonix-u2i-ssh
+rm -f cloonix-u2i-scp
 rm -rf tainted_openssh

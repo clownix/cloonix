@@ -36,12 +36,12 @@ void utils_finish_vm_init(void *ul_vm_id);
 char *utils_get_kernel_path_name(char *gkernel);
 char *utils_get_cow_path_name(int vm_id);
 void utils_send_creation_info(char *name, char **argv);
-int utils_execve(void *ptr);
+int utils_execv(void *ptr);
 char *utils_get_uname_r_mod_path(void);
 void utils_init(void);
 int utils_get_uid_user(void);
 int utils_get_gid_user(void);
-char *utils_get_cdrom_path_name(int vm_id);
+char *utils_get_cdrom_path_name(t_vm *vm);
 
 char *utils_get_disks_path_name(int vm_id);
 char *utils_get_qmp_path(int vm_id);
@@ -51,8 +51,6 @@ char *utils_get_qbackdoor_path(int vm_id);
 char *utils_get_dtach_bin_path(void);
 char *utils_get_dtach_sock_dir(void);
 char *utils_get_dtach_sock_path(char *name);
-char *utils_get_qemu_img(void);
-char *utils_qemu_img_derived(char *backing_file, char *derived_file);
 char *utils_get_spice_path(int vm_id);
 /*--------------------------------------------------------------------------*/
 char *utils_get_cloonix_switch_path(void);
@@ -61,8 +59,6 @@ void free_wake_up_eths(t_vm *vm);
 void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death);
 /*--------------------------------------------------------------------------*/
 void utils_format_gene(char *start, char *err, char *name, char **argv);
-/*--------------------------------------------------------------------------*/
-char *util_get_xorrisofs(void);
 /*--------------------------------------------------------------------------*/
 char *utils_get_ovs_path(char *name);
 char *utils_get_ovs_dir(void);
@@ -74,5 +70,7 @@ char *utils_get_ovs_a2b_bin_dir(void);
 char *utils_get_ovs_c2c_bin_dir(void);
 int util_get_max_tempo_fail(void);
 char *utils_get_cnt_dropbear(char *name);
-
+char *utils_get_crun_dir(void);
+int lio_system(char *argv[]);
+char *utils_get_log_dir(void);
 /****************************************************************************/

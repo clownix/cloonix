@@ -602,7 +602,7 @@ int main(int argc, char **argv)
 {
   struct timeval tv;
 
-  if(argc != 3)
+  if(argc != 4)
     usage(argv[0]);
 
   daemon(0,0);
@@ -613,7 +613,7 @@ int main(int argc, char **argv)
   dialog_init();
   x11_init_display();
   get_listen_sock_fd(argc, argv);
-  pty_fork_init();
+  pty_fork_init(argv[3]);
   cloonix_init(argv[2]);
   gettimeofday(&g_last_heartbeat_tv, NULL);
   g_timeout.tv_sec = 0;

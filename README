@@ -19,7 +19,7 @@ Cloonix provides a graphical interactive canvas showing the topology for
 your network.
 
 See clownix.net for a documentation (which is usually not up to date).
-http://clownix.net/doc_stored/build-28-00/html/index.html doc.
+http://clownix.net/doc_stored/build-30-00/html/index.html doc.
 
 NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
       inside the kvm guests virtual machines to have the pseudo-ssh and
@@ -28,72 +28,80 @@ NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
       type of pseudo-ssh and pseudo-scp not using qemu-guest-agent but
       entering through one of the ip interface of the virtual.
 
+NOTE: A very big change comes with version 30, the building of the binaries
+      is done on only one type of host: a debian bookworm and all the
+      necessary files and libraries are bundled with the software so as
+      to be able to install it on any distribution with no added packages.
+
+NOTE: It is now strongly advised to install with the bundle of binaries,
+      libraries and config files and not with the compilation of the
+      software. The binary should work on any linux.
+
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-28
+http://clownix.net/downloads/cloonix-30
 
 -----------------------------------------------------------------------------
-THIS SOFTWARE HAS BEEN COMPILED AND TESTED ON:
+THE SOFTWARE HAS BEEN COMPILED WITH DEBIAN BOOKWORM AND
+THE RESULTING BINARY AND LIBRARIES HAVE BEEN TESTED ON:
 
+            lunar   (ubuntu 23.04),
             jammy   (ubuntu 22.04),
             bookworm (debian 12),
             bullseye (debian 11),
+            fedora38,
+            fedora37,
+            centos9,
+            centos8,
             tumbleweed (rolling opensuse),
-            fedora36
-            centos9
 
 -----------------------------------------------------------------------------
-INSTALL CLOONIX ON YOUR HOST:
+INSTALL BINARY AND LIBRARIES ON YOU HOST
 
-wget http://clownix.net/downloads/cloonix-28/cloonix-28-00.tar.gz
-tar xvf cloonix-28-00.tar.gz
-cd cloonix-28-00
-sudo ./install_depends
+get http://clownix.net/downloads/cloonix-30/cloonix-bundle-30-00.tar.gz
+tar xvf cloonix-bundle-30-00.tar.gz
+cd cloonix-bundle-30-00
+sudo ./install_cloonix
 
-wget http://clownix.net/downloads/cloonix-28/targz_store.tar.gz
-tar xvf targz_store.tar.gz
+Note that there is no need for any other installation, all the necessary
+libraries are self-contained within the bundle.
 
-./doitall
-
-NOTE: Before calling ./install_depends, you can take out the installation
-      of the podman which is not necessary for using cloonix with kvm or
-      crun.
+Note that "rm -rf /var/lib/cloonix" and "rm -rf /usr/libexec/cloonix" destroy
+all traces of the cloonix installed, your host stays clean.  
 
 -----------------------------------------------------------------------------
 FOR KVM VIRTUAL MACHINE GET A WORKING QCOW AND PUT IT IN BULK:
 
-wget http://clownix.net/downloads/cloonix-28/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-30/bulk/bookworm.qcow2.gz
 
-mkdir -p ${HOME}/cloonix_data/bulk
-cp bookworm.qcow2.gz ${HOME}/cloonix_data/bulk
-cd ${HOME}/cloonix_data/bulk
+mkdir -p /var/lib/cloonix/bulk
+cp bookworm.qcow2.gz /var/lib/cloonix/bulk
+cd /var/lib/cloonix/bulk
 gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
 FOR CRUN CONTAINER GET A WORKING IMG AND PUT IT IN BULK:
 
 wget http://clownix.net/downloads/cloonix-28/bulk/bookworm.img.gz
-cp bookworm.img.gz ${HOME}/cloonix_data/bulk
-cd ${HOME}/cloonix_data/bulk
+cp bookworm.img.gz /var/lib/cloonix/bulk
+cd /var/lib/cloonix/bulk
 gunzip bookworm.img.gz
 
 -----------------------------------------------------------------------------
 LAUNCH KVM EXAMPLE:
 
-cd cloonix/quickstart/demos
+cd cloonix-bundle-30-00
 ./ping_kvm.sh
 
 On the gui, a double-click on the blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy,
 a right-click on the blue machine gives a spice desktop.
-If wireshark problems, authorize wireshark for non-root and
-do "sudo adduser ${USER} wireshark".
 
 -----------------------------------------------------------------------------
 LAUNCH CRUN EXAMPLE:
 
-cd cloonix/quickstart/demos
+cd cloonix-bundle-30-00
 ./ping_crun.sh
 
 On the gui, a double-click on the blue machine gives a shell,

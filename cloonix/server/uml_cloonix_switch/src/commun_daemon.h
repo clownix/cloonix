@@ -54,18 +54,12 @@ enum
   auto_max,
   };
 
-#define CDROM_CONFIG_ISO "cdrom_config.iso"
 #define DIR_CONF "config"
 #define FILE_COW "cow"
 #define CLOONIX_FILE_NAME "name"
 #define FILE_IMAGE "image.bin"
 #define CLOONIX_INTERNAL_COM "cloonix_internal_com"
-#define QEMU_EXE "qemu-system-x86_64"
-#define QEMU_ARM_EXE "qemu-system-arm"
-#define QEMU_AARCH64_EXE "qemu-system-aarch64"
-#define QEMU_IMG "qemu-img"
 #define DIR_CLOONIX_DISKS "disks"
-#define DIR_OVS "ovs"
 #define QMONITOR_UNIX "mon"
 #define QMP_UNIX "qmp"
 #define QGA_UNIX "qga"

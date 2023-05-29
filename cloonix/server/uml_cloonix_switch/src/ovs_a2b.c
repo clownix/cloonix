@@ -37,6 +37,8 @@
 #include "lan_to_name.h"
 #include "ovs_snf.h"
 #include "kvm.h"
+#include "layout_rpc.h"
+#include "layout_topo.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -65,6 +67,7 @@ static t_ovs_a2b *find_a2b(char *name)
 static void free_a2b(t_ovs_a2b *cur)
 {
   cfg_free_obj_id(cur->a2b_id);
+  layout_del_sat(cur->name);
   if (strlen(cur->side[0].lan_added))
     lan_del_name(cur->side[0].lan_added, item_a2b, cur->name, 0);
   if (strlen(cur->side[1].lan_added))
@@ -150,7 +153,7 @@ static void a2b_start(char *name, char *vhost0, char *vhost1)
   argv[4] = vhost0;
   argv[5] = vhost1;
   argv[6] = NULL;
-  pid_clone_launch(utils_execve, process_demonized, NULL,
+  pid_clone_launch(utils_execv, process_demonized, NULL,
                    (void *) argv, NULL, NULL, name, -1, 1);
 }
 /*---------------------------------------------------------------------------*/
@@ -269,6 +272,7 @@ void ovs_a2b_pid_resp(int llid, char *name, int pid)
     cur->watchdog_count = 0;
     if ((cur->pid == 0) && (cur->suid_root_done == 1))
       {
+      layout_add_sat(name, cur->cli_llid);
       cur->pid = pid;
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       cfg_hysteresis_send_topo_info();

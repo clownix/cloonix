@@ -445,10 +445,9 @@ void client_req_slowperiodic(t_slowperiodic_cb cb_qcow2,
 
 /*****************************************************************************/
 void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
-                   t_eth_table *eth_tab, int vm_config_flags,
-                   int vm_config_param, int cpu_qty, int mem_qty, char *kernel,
-                   char *root_fs, char *install_cdrom, char *added_cdrom, 
-                   char *added_disk, char *p9_host_share)
+                   t_eth_table *eth_tab, int vm_config_flags, int vm_cfg_param,
+                   int cpu_qty, int mem_qty, char *kernel, char *root_fs,
+                   char *install_cdrom, char *added_cdrom, char *added_disk)
 {
   t_topo_kvm kvm;
   int new_tid;
@@ -460,7 +459,7 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
     KOUT(" ");
   strncpy(kvm.name, nm, MAX_NAME_LEN - 1);
   kvm.vm_config_flags = vm_config_flags;
-  kvm.vm_config_param = vm_config_param;
+  kvm.vm_config_param = vm_cfg_param;
   kvm.cpu = cpu_qty;
   kvm.mem = mem_qty;
   kvm.nb_tot_eth = nb_tot_eth;
@@ -474,8 +473,6 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
     strncpy(kvm.added_cdrom, added_cdrom, MAX_PATH_LEN - 1);
   if (added_disk)
     strncpy(kvm.added_disk, added_disk, MAX_PATH_LEN - 1);
-  if (p9_host_share)
-    strncpy(kvm.p9_host_share, p9_host_share, MAX_PATH_LEN - 1);
   send_add_vm(g_llid, new_tid, &kvm);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
@@ -598,6 +595,8 @@ void client_add_phy(int tid, t_end_cb cb, char *name)
 {
   int new_tid;
   if (!g_llid)
+    KOUT(" ");
+  if ((!name) || (strlen(name) == 0))
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
   send_phy_add(g_llid, new_tid, name);

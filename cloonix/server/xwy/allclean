@@ -1,0 +1,14 @@
+#!/bin/bash
+HERE=`pwd`
+
+cd ${HERE}/../../common/xwy/libmdl
+make clean
+
+cd ${HERE}/../../common/xwy/libcli
+make clean
+
+cd ${HERE}/../../common/xwy/srv
+make clean
+
+rm -f ${HERE}/cloonix-xwy-srv
+

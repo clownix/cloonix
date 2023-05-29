@@ -22,9 +22,11 @@ requirements:
   entry with nat object (--natplug=num option is used for this).
 
 - The cisco must have ssh and scp and an associated rsa key to be accessed
-  without the need for a password. For this the id_rsa of cloonix is used.
+  without the need for a password. For this the private id_rsa used is in
+  cloonix_osh and cloonix_ocp and the id_rsa.pub is in step1_make_preconf_iso.sh.
   --natplug=num permit the cloonix commands cloonix_osh and cloonix_ocp to work,
-  those are the equivalent for a cisco of cloonix_ssh and cloonix_scp for a linux.
+  those are the equivalent for a cisco of cloonix_ssh and cloonix_scp for a
+  linux kvm machine.
 
 - The mac addresses of the interfaces must not be memorised in the cisco qcow2
   because a dose of random must be put into those mac addresses at VM creation,
@@ -49,8 +51,12 @@ Wait...
 ./step2_make_qcow2.sh
 Wait...
 
-3) Launch cloonix demo of ospf for 3 ciscos:
-./step3_run_demo.sh
+3) Pre-configure c8000.qcow2:
+./step3_iosxe_config.sh
+Wait...
+
+4) Launch cloonix demo of ospf for 3 ciscos:
+./step4_run_demo.sh
 Wait...
 
 The demo makes five vms, 2 with linux bullseye qcow2 and 3 ciscos.

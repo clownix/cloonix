@@ -1,0 +1,12 @@
+#!/bin/bash
+HERE=`pwd`
+set -e
+
+cd ${HERE}/../../common/lib_io_clownix
+make clean
+
+cd ${HERE}/../../common/cloonix_dropbear
+make clean
+
+rm -f ${HERE}/cloonix-dropbear-scp
+rm -f ${HERE}/cloonix-dropbear-ssh

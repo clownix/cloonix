@@ -1,0 +1,10 @@
+#!/bin/bash
+
+rm -rf lib*
+rm -rf usb*
+rm -rf spice*
+rm -rf pkgconfig
+rm -rf bin
+rm -rf share
+
+

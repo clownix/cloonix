@@ -1081,18 +1081,25 @@ void layout_del_vm(char *name)
 void layout_add_sat(char *name, int llid)
 {
   t_layout_sat layout;
-  memset(&layout, 0, sizeof(t_layout_sat));
-  strncpy(layout.name, name, MAX_NAME_LEN-1);
-  layout.x = 50;
-  layout.y = 50;
-  layout.xa = A2B_DIA * VAL_INTF_POS_A2B;
-  layout.ya = A2B_DIA * VAL_INTF_POS_A2B;
-  layout.xb = -A2B_DIA * VAL_INTF_POS_A2B;
-  layout.yb = A2B_DIA * VAL_INTF_POS_A2B;
-  add_layout_sat(&layout);
-  if (!(g_head_layout_sub) ||
-       ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))
-    recv_layout_sat(0, 0, &layout);
+  t_layout_sat_xml *xml;
+  xml = find_sat_xml(name);
+  if (xml)
+    KERR("%s %d", name, llid);
+  else
+    {
+    memset(&layout, 0, sizeof(t_layout_sat));
+    strncpy(layout.name, name, MAX_NAME_LEN-1);
+    layout.x = 50;
+    layout.y = 50;
+    layout.xa = A2B_DIA * VAL_INTF_POS_A2B;
+    layout.ya = A2B_DIA * VAL_INTF_POS_A2B;
+    layout.xb = -A2B_DIA * VAL_INTF_POS_A2B;
+    layout.yb = A2B_DIA * VAL_INTF_POS_A2B;
+    add_layout_sat(&layout);
+    if (!(g_head_layout_sub) ||
+         ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))
+      recv_layout_sat(0, 0, &layout);
+    }
 }
 /*---------------------------------------------------------------------------*/
 

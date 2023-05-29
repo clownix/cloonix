@@ -418,7 +418,7 @@ static void timer_ovs_beat(void *data)
       else if (cur->open_ovsdb_ok == 0)
         {
         cur->open_ovsdb_wait += 1;
-        if (cur->open_ovsdb_wait > 70)
+        if (cur->open_ovsdb_wait > 250)
           {
           KERR("ERROR OVSDB %s NOT RESPONDING", cur->name);
           set_destroy_requested(cur, 1);
@@ -500,13 +500,13 @@ int ovs_get_all_pid(t_lst_pid **lst_pid)
       }
     if (cur->ovsdb_pid > 0)
       {
-      strcpy(glob_lst[i].name, "ovsdb-server");
+      strcpy(glob_lst[i].name, "cloonix-ovsdb-server");
       glob_lst[i].pid = cur->ovsdb_pid;
       i++;
       }
     if (cur->ovs_pid > 0)
       {
-      strcpy(glob_lst[i].name, "ovs-vswitchd");
+      strcpy(glob_lst[i].name, "cloonix-ovs-vswitchd");
       glob_lst[i].pid = cur->ovs_pid;
       i++;
       }
@@ -577,8 +577,7 @@ void ovs_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     else if (!strcmp(line, "ovs_resp_suidroot_ko"))
       {
       KERR("ERROR: cloonix_ovs is not suid root");
-      KERR("%s", "\"sudo chmod u+s /usr/local/bin/cloonix"
-                 "/server/ovs/bin/ovs-vswitchd\"");
+      KERR("sudo chmod u+s /usr/libexec/cloonix/server/cloonix-ovs-vswitchd");
       set_destroy_requested(cur, 1);
       }
     else if (!strcmp(line, "ovs_resp_ovsdb_ko"))
@@ -593,7 +592,7 @@ void ovs_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       }
     else if (!strcmp(line, "ovs_resp_ovs_ko"))
       {
-      KERR("ERROR ovs-vswitchd FAIL");
+      KERR("ERROR cloonix-ovs-vswitchd FAIL");
       set_destroy_requested(cur, 1);
       }
     else if (!strncmp(line, "ovs_resp_ovs_ok", strlen("ovs_resp_ovs_ok")))

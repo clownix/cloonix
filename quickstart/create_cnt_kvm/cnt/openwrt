@@ -1,0 +1,67 @@
+#!/bin/bash
+#-----------------------------------------------------------------------#
+HERE=`pwd`
+DISTRO=openwrt
+OPENWRT=https://downloads.openwrt.org/releases/22.03.5/targets/x86/64
+ROOTFS=/root/${DISTRO}.img
+OPENWRT_IMG=openwrt-22.03.5-x86-64-generic-ext4-rootfs.img
+
+for i in qemu-img gunzip wget; do
+  path_bin=$(which $i)
+  if [ -z $path_bin ]; then
+    echo $i  DOES NOT EXIST
+    exit -1
+  fi
+done
+
+if [ $UID != 0 ]; then
+  echo you must be root
+  exit -1
+fi
+modprobe loop
+if [[ "$(losetup -a )" != "" ]]; then
+  echo
+  echo
+  echo losetup -a should give nothing, it gives:
+  losetup -a
+  echo
+  exit -1
+fi
+#---------------------------------------------------------------------------#
+  mkdir -p /tmp/wkmntloops
+  wget --no-check-certificate ${OPENWRT}/${OPENWRT_IMG}.gz
+  gunzip ${OPENWRT_IMG}.gz
+  mv -v ${OPENWRT_IMG} $ROOTFS
+  losetup /dev/loop0 $ROOTFS
+  mount /dev/loop0 /tmp/wkmntloops
+  cp -vf openwrt_ipk/lib* /tmp/wkmntloops
+#--------------------------------------------------------------------#
+rm -f /tmp/wkmntloops/etc/resolv.conf
+cp -f /etc/resolv.conf "/tmp/wkmntloops/etc"
+#-----------------------------------------------------------------------#
+  cat > /tmp/wkmntloops/chroot_cmds  << "EOF"
+#!/bin/ash
+passwd << "INEOF"
+rootroot
+rootroot
+INEOF
+mkdir /var/lock
+opkg install libopenssl1.1_1.1.1q-1_x86_64.ipk
+opkg install libustream-openssl20201210_2022-01-16-868fd881-2_x86_64.ipk --force-overwrite
+opkg update --force-checksum --no-check-certificate
+
+EOF
+
+  chmod +x /tmp/wkmntloops/chroot_cmds
+  chroot /tmp/wkmntloops /chroot_cmds
+
+  rm -f /tmp/wkmntloops/chroot_cmds
+  rm -f /tmp/wkmntloops/*.ipk
+  umount /tmp/wkmntloops
+  losetup -d /dev/loop0
+  cd /root
+#---------------------------------------------------------------------#
+
+
+
+

@@ -27,7 +27,6 @@ int file_exists(char *path, int mode);
 char *get_cloonix_config_path(void);
 int i_am_inside_cloon(char *name);
 void make_config_cloonix_vm_name(char *path, char *name);
-void make_config_cloonix_vm_p9_host_share(char *path, int has_p9_host_share);
 /*---------------------------------------------------------------------------*/
 
 

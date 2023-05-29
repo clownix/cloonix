@@ -24,11 +24,10 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
-
+#include <sys/wait.h>
 
 
 #include "io_clownix.h"
-#include "launcher.h"
 #include "config_json.h"
 #include "crun.h"
 #include "crun_utils.h"
@@ -155,22 +154,21 @@ static t_loop *free_loop_elem(t_elem *elem)
 /****************************************************************************/
 static int losetup_get(char *bulk, char *image, char *resp)
 {
-  int result = -1;
+  int child_pid, wstatus, result = -1;
   char cmd[MAX_PATH_LEN];
-  char *losetup = get_losetup_bin();
   FILE *fp;
   char *ptr;
   memset(resp, 0, MAX_PATH_LEN);
   memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1,
-           "%s -l | grep %s/%s | awk '{print $1}'", losetup, bulk, image);
-  fp = popen(cmd, "r");
+  snprintf(cmd, MAX_PATH_LEN-1, "%s -l | %s %s/%s | %s '{print $1}'",
+           LOSETUP_BIN, GREP_BIN, bulk, image, AWK_BIN);
+  fp = cmd_lio_popen(cmd, &child_pid);
   if (fp == NULL)
-    KERR("ERROR %s %s", bulk, image);
+    KERR("ERROR %s", cmd);
   else
     {
     if (!fgets(resp, MAX_PATH_LEN-1, fp))
-      pclose(fp);
+      KERR("ERROR %s", cmd);
     else
       {
       ptr = strchr(resp, '\r');
@@ -183,8 +181,10 @@ static int losetup_get(char *bulk, char *image, char *resp)
         KERR("%s", cmd);
       else
         result = 0;
-      pclose(fp);
       }
+    pclose(fp);
+    if (force_waitpid(child_pid, &wstatus))
+      KERR("ERROR");
     }
   return result;
 }
@@ -194,10 +194,7 @@ static int losetup_get(char *bulk, char *image, char *resp)
 /****************************************************************************/
 static int loop_mount_create(char *bulk, char *image, int is_persistent)
 {
-  int result = -1;
-  char *ext4fuse = get_ext4fuse_bin();
-  char *losetup = get_losetup_bin();
-  char *mount = get_mount_bin();
+  int child_pid, wstatus, result = -1;
   char cmd[2*MAX_PATH_LEN];
   char resp[MAX_PATH_LEN];
   FILE *fp;
@@ -206,59 +203,45 @@ static int loop_mount_create(char *bulk, char *image, int is_persistent)
   if (is_persistent)
     {
     memset(cmd, 0, 2*MAX_PATH_LEN);
-    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -fPL %s/%s 2>&1",
-             losetup, bulk, image);
-    fp = popen(cmd, "r");
+    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -fPL %s/%s",
+             LOSETUP_BIN, bulk, image);
+    fp = cmd_lio_popen(cmd, &child_pid);
     if (fp == NULL)
-      KERR("ERROR %s %s", bulk, image);
-    else if (fgets(resp, MAX_PATH_LEN-1, fp))
+      KERR("ERROR %s", cmd);
+    else 
       {
-      pclose(fp);
-      KERR("ERROR %s %s %s", bulk, image, resp);
-      }
-    else
-      {
-      pclose(fp);
-      memset(resp, 0, MAX_PATH_LEN);
-      if (losetup_get(bulk, image, resp))
-        KERR("ERROR %s %s %s", bulk, image, resp);
+      if (fgets(resp, MAX_PATH_LEN-1, fp))
+        KERR("ERROR %s %s", cmd, resp);
       else
         {
-        memset(cmd, 0, 2*MAX_PATH_LEN);
-        snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -o loop %s %s/%s 2>&1",
-                 mount, resp, get_mnt_loop_dir(), image);
-        fp = popen(cmd, "r");
-        if (fp == NULL)
+        memset(resp, 0, MAX_PATH_LEN);
+        if (losetup_get(bulk, image, resp))
           KERR("ERROR %s %s %s", bulk, image, resp);
         else
           {
-          if (fgets(resp, MAX_PATH_LEN-1, fp))
-            KERR("ERROR %s %s %s", bulk, image, resp);
+          memset(cmd, 0, 2*MAX_PATH_LEN);
+          snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -o loop %s %s/%s",
+                   MOUNT_BIN, resp, get_mnt_loop_dir(), image);
+          if (execute_cmd(cmd, SYNCHRO))
+            KERR("ERROR %s", cmd);
           else
             result = 0;
-          pclose(fp);
           }
         }
+      pclose(fp);
+      if (force_waitpid(child_pid, &wstatus))
+        KERR("ERROR");
       }
     }
   else
     {
     memset(cmd, 0, 2*MAX_PATH_LEN);
-    snprintf(cmd, 2*MAX_PATH_LEN-1,
-    "%s %s/%s  %s/%s 2>&1", ext4fuse, bulk, image, get_mnt_loop_dir(), image);
-    fp = popen(cmd, "r");
-    if (fp == NULL)
+    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s/%s  %s/%s",
+    EXT4FUSE_BIN, bulk, image, get_mnt_loop_dir(), image);
+    if (execute_cmd(cmd, SYNCHRO))
       KERR("ERROR %s", cmd);
-    else if (fgets(resp, MAX_PATH_LEN-1, fp))
-      {
-      KERR("ERROR %s %s", cmd, resp);
-      pclose(fp);
-      }
     else
-      {
-      pclose(fp);
       result = 0;
-      }
     }
   return result;
 }
@@ -267,11 +250,10 @@ static int loop_mount_create(char *bulk, char *image, int is_persistent)
 /****************************************************************************/
 static int loop_mount_exists(char *bulk, char *image, int is_persistent)
 {
-  int result = 0;
+  int child_pid, wstatus, result = 0;
   char cmd[2*MAX_PATH_LEN];
   char mnt[MAX_PATH_LEN];
   char resp[MAX_PATH_LEN];
-  char *mount = get_mount_bin();
   FILE *fp;
   char *ptr;
 
@@ -283,54 +265,62 @@ static int loop_mount_exists(char *bulk, char *image, int is_persistent)
     if (!losetup_get(bulk, image, resp))
       {
       snprintf(cmd, 2*MAX_PATH_LEN-1,
-               "%s | grep %s | awk '{print $3}' 2>&1", mount, resp);
-      fp = popen(cmd, "r");
+               "%s | %s %s | %s '{print $3}'",
+               MOUNT_BIN, GREP_BIN, resp, AWK_BIN);
+      fp = cmd_lio_popen(cmd, &child_pid);
       if (fp == NULL)
         KERR("ERROR %s %s", bulk, image);
-      else if (!fgets(resp, MAX_PATH_LEN-1, fp))
-        {
-        KERR("ERROR %s %s %s", bulk, image, cmd);
-        pclose(fp);
-        }
       else
         {
+        if (!fgets(resp, MAX_PATH_LEN-1, fp))
+          KERR("ERROR %s %s %s", bulk, image, cmd);
+        else
+          {
+          ptr = strchr(resp, '\r');
+          if (ptr)
+            *ptr = 0;
+          ptr = strchr(resp, '\n');
+          if (ptr)
+            *ptr = 0;
+          if (!strcmp(resp, mnt))
+            result = 1;
+          }
         pclose(fp);
+        if (force_waitpid(child_pid, &wstatus))
+          KERR("ERROR");
+        }
+      }
+    else
+      KERR("ERROR %s %s", bulk, image);
+    }
+  else
+    {
+    snprintf(cmd, 2*MAX_PATH_LEN-1,
+    "%s | %s fuse.cloonix-ext4fuse | %s %s | %s '{print $3}'",
+    MOUNT_BIN, GREP_BIN, GREP_BIN, mnt, AWK_BIN);
+    fp = cmd_lio_popen(cmd, &child_pid);
+    if (fp == NULL)
+      KERR("ERROR %s", cmd);
+    else
+      {
+      if (!fgets(resp, MAX_PATH_LEN-1, fp))
+        KERR("ERROR %s", cmd);
+      else
+        {
         ptr = strchr(resp, '\r');
         if (ptr)
           *ptr = 0;
         ptr = strchr(resp, '\n');
         if (ptr)
           *ptr = 0;
-        if (!strcmp(resp, mnt))
+        if (strcmp(resp, mnt))
+          KERR("ERROR %s %s %s", bulk, image, resp);
+        else
           result = 1;
         }
-      }
-    }
-  else
-    {
-    snprintf(cmd, 2*MAX_PATH_LEN-1,
-    "%s | grep fuse.ext4fuse | grep %s | awk '{print $3}'", mount, mnt);
-    fp = popen(cmd, "r");
-    if (fp == NULL)
-      KERR("ERROR %s %s", bulk, image);
-    else if (!fgets(resp, MAX_PATH_LEN-1, fp))
-      {
-      KERR("ERROR %s %s %s", bulk, image, cmd);
       pclose(fp);
-      }
-    else
-      {
-      pclose(fp);
-      ptr = strchr(resp, '\r');
-      if (ptr)
-        *ptr = 0;
-      ptr = strchr(resp, '\n');
-      if (ptr)
-        *ptr = 0;
-      if (strcmp(resp, mnt))
-        KERR("ERROR %s %s %s", bulk, image, resp);
-      else
-        result = 1;
+      if (force_waitpid(child_pid, &wstatus))
+        KERR("ERROR");
       }
     }
   return result;
@@ -353,61 +343,56 @@ static void mount_del(char *bulk, char *image,
 {
   char cmd[2*MAX_PATH_LEN];
   char resp[MAX_PATH_LEN];
-  char *mount = get_mount_bin();
-  char *umount = get_umount_bin();
-  FILE *fp1, *fp2;
+  FILE *fp;
   char *pmnt;
-
+  int child_pid, wstatus;
   memset(cmd, 0, 2*MAX_PATH_LEN);
   snprintf(cmd, 2*MAX_PATH_LEN-1,
-           "%s | grep %s | awk '{print $3}' 2>&1",
-           mount, cnt_dir);
-  fp1 = popen(cmd, "r");
-  if (fp1 == NULL)
-    KERR("ERROR %s", cmd);
-  else if (fgets(resp, MAX_PATH_LEN-1, fp1))
-    {
-    memset(cmd, 0, 2*MAX_PATH_LEN);
-    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s 2>&1", umount, resp);
-    fp2 = popen(cmd, "r");
-    if (fp2 == NULL)
-      KERR("ERROR %s", cmd);
-    else
-      pclose(fp2);
-    }
-  pclose(fp1);
-  memset(cmd, 0, 2*MAX_PATH_LEN);
-  if (is_persistent)
-    snprintf(cmd, MAX_PATH_LEN-1, "%s | grep %s | awk '{print $3}' 2>&1",
-             mount, loop);
-  else
-    snprintf(cmd, MAX_PATH_LEN-1,
-             "%s | grep fuse.ext4fuse | grep %s/%s | awk '{print $3}' 2>&1",
-             mount , get_mnt_loop_dir(), image);
-  fp1 = popen(cmd, "r");
-  if (fp1 == NULL)
+           "%s | %s %s | %s '{print $3}'",
+           MOUNT_BIN, GREP_BIN, cnt_dir, AWK_BIN);
+  fp = cmd_lio_popen(cmd, &child_pid);
+  if (fp == NULL)
     KERR("ERROR %s", cmd);
   else
     {
-    if (fgets(resp, MAX_PATH_LEN-1, fp1))
+    if (fgets(resp, MAX_PATH_LEN-1, fp))
       {
       memset(cmd, 0, 2*MAX_PATH_LEN);
-      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s 2>&1", umount, resp);
-      fp2 = popen(cmd, "r");
-      if (fp2 == NULL)
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", UMOUNT_BIN, resp);
+      if (execute_cmd(cmd, SYNCHRO))
         KERR("ERROR %s", cmd);
-      else
-        {
-        if (fgets(resp, MAX_PATH_LEN-1, fp2))
-          KERR("ERROR %s %s", cmd, resp);
-        pmnt = (char *) malloc(MAX_PATH_LEN);
-        memset(pmnt, 0, MAX_PATH_LEN);
-        snprintf(pmnt, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
-        clownix_timeout_add(100, timeout_del_path, (void *)pmnt, NULL, NULL);
-        pclose(fp2);
-        }
       }
-    pclose(fp1);
+    pclose(fp);
+    if (force_waitpid(child_pid, &wstatus))
+      KERR("ERROR");
+    }
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  if (is_persistent)
+    snprintf(cmd, MAX_PATH_LEN-1, "%s | %s %s | %s '{print $3}'",
+             MOUNT_BIN, GREP_BIN, loop, AWK_BIN);
+  else
+    snprintf(cmd, MAX_PATH_LEN-1,
+             "%s | %s fuse.cloonix-ext4fuse | %s %s/%s | %s '{print $3}'",
+             MOUNT_BIN, GREP_BIN, GREP_BIN, get_mnt_loop_dir(), image, AWK_BIN);
+  fp = cmd_lio_popen(cmd, &child_pid);
+  if (fp == NULL)
+    KERR("ERROR %s", cmd);
+  else
+    {
+    if (fgets(resp, MAX_PATH_LEN-1, fp))
+      {
+      memset(cmd, 0, 2*MAX_PATH_LEN);
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", UMOUNT_BIN, resp);
+      if (execute_cmd(cmd, SYNCHRO))
+        KERR("ERROR %s", cmd);
+      pmnt = (char *) malloc(MAX_PATH_LEN);
+      memset(pmnt, 0, MAX_PATH_LEN);
+      snprintf(pmnt, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
+      clownix_timeout_add(100, timeout_del_path, (void *)pmnt, NULL, NULL);
+      }
+    pclose(fp);
+    if (force_waitpid(child_pid, &wstatus))
+      KERR("ERROR");
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -447,6 +432,7 @@ int loop_img_add(char *name, char *bulk, char *image,
       KERR("ERROR %s %s %s", name, bulk, image);
     else
       {
+KERR("LOOP_MOUNT_CREATE DONE %s %s %s", name, bulk, image);
       cur = alloc_loop(pth, is_persistent);
       alloc_loop_elem(cur, name);
       result = 0;
@@ -460,15 +446,10 @@ int loop_img_add(char *name, char *bulk, char *image,
 static void losetup_del(char *loop)
 {
   char cmd[MAX_PATH_LEN];
-  char *losetup = get_losetup_bin();
-  FILE *fp;
   memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1, "%s -d %s 2>&1", losetup, loop);
-  fp = popen(cmd, "r");
-  if (fp == NULL)
-    KERR("ERROR %s", loop);
-  else
-    pclose(fp);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s -d %s", LOSETUP_BIN, loop);
+  if (execute_cmd(cmd, SYNCHRO))
+    KERR("ERROR %s", cmd);
 }
 /*--------------------------------------------------------------------------*/
 

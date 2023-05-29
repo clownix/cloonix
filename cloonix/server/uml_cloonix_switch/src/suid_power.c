@@ -61,7 +61,6 @@ static char g_conf_rank[MAX_NAME_LEN];
 static int g_tab_pid[MAX_VM];
 static t_qemu_vm_end g_qemu_vm_end;
 static void suid_power_start(void);
-char **get_saved_environ(void);
 
 static t_topo_info_phy g_topo_info_phy[MAX_PHY];
 static int g_nb_phy;
@@ -74,6 +73,7 @@ static int g_no_more_timeout;
 
 int get_conf_rank(void);
 
+static int g_destroy_req;
 
 /****************************************************************************/
 static void unformat_bridges(char *msg)
@@ -169,8 +169,9 @@ static char *linearize(t_vm *vm)
        name, vm_id, dtach, argc);
   for (i=0; i<argc; i++)
     {
-    ln += sprintf(line+ln, "\"%s\"", argv[i]);
+    ln += sprintf(line+ln, "\"%s", argv[i]);
     }
+  ln += sprintf(line+ln, "\"");
   return line;
 }
 /*---------------------------------------------------------------------------*/
@@ -196,7 +197,7 @@ static void timer_monitoring(void *data)
     g_nb_pid_resp_warning++;
   else
     g_nb_pid_resp_warning = 0;
-  if (g_nb_pid_resp_warning > 200)
+  if (g_nb_pid_resp_warning > 100)
     {
     if (g_abs_beat_timer)
       {
@@ -273,21 +274,19 @@ static void end_process(void *unused_data, int status, char *name)
 /*****************************************************************************/
 static void suid_power_start(void)
 {
-  static char *argv[9];
-  char **env = get_saved_environ();
+  char *argv[6];
+
   if (get_glob_req_self_destruction())
     return;
+
   argv[0] = g_bin_suid;
   argv[1] = g_cloonix_net;
   argv[2] = g_root_path;
   argv[3] = g_bin_dir;
   argv[4] = g_conf_rank;
-  argv[5] = env[0]; //username
-  argv[6] = env[1]; //home
-  argv[7] = env[2]; //spice_env
-  argv[8] = NULL;
+  argv[5] = NULL;
 
-  pid_clone_launch(utils_execve, end_process, NULL,
+  pid_clone_launch(utils_execv, end_process, NULL,
                  (void *) argv, NULL, NULL, "suid_power", -1, 1);
   clownix_timeout_add(100, timer_connect, (void *)g_sock_path,NULL,NULL);
 }
@@ -296,7 +295,8 @@ static void suid_power_start(void)
 /****************************************************************************/
 void suid_power_pid_resp(int llid, int tid, char *name, int pid)
 {
-  char *msg = "cloonsuid_req_suidroot";
+  char *msg1 = "cloonsuid_req_suidroot";
+  char *msg2 = "cloonsuid_req_phy";
   if (get_glob_req_self_destruction())
     return;
   if (llid != g_llid)
@@ -316,8 +316,10 @@ void suid_power_pid_resp(int llid, int tid, char *name, int pid)
     g_first_ever_start = 1;
     if ((g_llid) && (msg_exist_channel(g_llid)))
       {
-      hop_event_hook(llid, FLAG_HOP_SIGDIAG, msg);
-      rpct_send_sigdiag_msg(llid, type_hop_suid_power, msg);
+      hop_event_hook(llid, FLAG_HOP_SIGDIAG, msg1);
+      rpct_send_sigdiag_msg(llid, type_hop_suid_power, msg1);
+      hop_event_hook(llid, FLAG_HOP_SIGDIAG, msg2);
+      rpct_send_poldiag_msg(g_llid, type_hop_suid_power, msg2);
       docker_timer_beat(g_llid);
       }
     else
@@ -576,6 +578,8 @@ void suid_power_llid_closed(int llid, int from_clone, const char* fct)
 {
   if ((!from_clone) && (llid == g_llid))
     {
+    if (g_destroy_req == 0)
+      KOUT("ERROR UNEXPECTED SUID_POWER DISCONNECTION");
     g_no_more_timeout = 1;
     g_llid = 0;
     }
@@ -629,6 +633,7 @@ int suid_power_delete_cnt_all(void)
 /****************************************************************************/
 void suid_power_kill(void)
 {
+  g_destroy_req = 1;
   rpct_send_kil_req(g_llid, 0);
 }
 /*--------------------------------------------------------------------------*/
@@ -640,6 +645,7 @@ void suid_power_init(void)
   char *root_path;
   char *cloonix_net;
   memset(g_tab_pid, 0, MAX_VM * sizeof(int));
+  g_destroy_req = 0;
   g_suid_power_pid = 0;
   g_suid_power_last_pid = 0;
   g_abs_beat_timer = 0;

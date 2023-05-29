@@ -1,0 +1,72 @@
+#!/bin/bash
+#----------------------------------------------------------
+if [ $UID != 0 ]; then
+  printf "\n\tERROR: root privileges needed.\n\n"
+  exit 1
+fi
+#----------------------------------------------------------
+for i in cloonix-common.tar.gz \
+         cloonix-client.tar.gz \
+         cloonix-server.tar.gz ; do
+  if [ ! -e ${i} ]; then
+    echo NOT FOUND:
+    echo ${i}
+    exit
+  fi
+done
+#----------------------------------------------------------
+rm -vrf /usr/libexec/cloonix
+rm -vf  /usr/bin/cloonix_*
+#----------------------------------------------------------
+rm -rf /tmp/cloonix-common
+rm -rf /tmp/cloonix-client
+rm -rf /tmp/cloonix-server
+#----------------------------------------------------------
+tar --directory=/tmp -xf cloonix-common.tar.gz
+tar --directory=/tmp -xf cloonix-client.tar.gz
+tar --directory=/tmp -xf cloonix-server.tar.gz
+#----------------------------------------------------------
+mkdir -p /usr/libexec/cloonix/common
+cp -rf /tmp/cloonix-common/* /usr/libexec/cloonix/common
+chown -R root:root /usr/libexec/cloonix/common
+#----------------------------------------------------------
+mkdir -p /usr/libexec/cloonix/client
+cp -rf /tmp/cloonix-client/* /usr/libexec/cloonix/client
+chown -R root:root /usr/libexec/cloonix/client
+#----------------------------------------------------------
+for i in  cloonix_cli \
+          cloonix_gui \
+          cloonix_ice \
+          cloonix_ocp \
+          cloonix_osh \
+          cloonix_ovs \
+          cloonix_scp \
+          cloonix_ssh \
+          cloonix_wsk ; do
+  cp -f /tmp/cloonix-client/usr_bin/${i} /usr/bin
+done
+#----------------------------------------------------------
+chmod u+s /usr/libexec/cloonix/client/cloonix-spice-client-glib-usb-acl-helper
+ls -l /usr/libexec/cloonix/client/cloonix-spice-client-glib-usb-acl-helper
+#----------------------------------------------------------
+mkdir -p /usr/libexec/cloonix/server
+cp -rf /tmp/cloonix-server/* /usr/libexec/cloonix/server
+chown -R root:root /usr/libexec/cloonix/server
+#----------------------------------------------------------
+cp -f /tmp/cloonix-server/usr_bin/cloonix_net /usr/bin
+#----------------------------------------------------------
+for i in dumpcap \
+         cloonix-ovs-drv \
+         cloonix-ovs-snf \
+         cloonix-ovs-nat \
+         cloonix-ovs-a2b \
+         cloonix-ovs-c2c \
+         cloonix-suid-power ; do
+  chmod u+s /usr/libexec/cloonix/server/${i}
+  ls -l /usr/libexec/cloonix/server/${i}
+done
+#----------------------------------------------------------
+rm -rf /tmp/cloonix-common
+rm -rf /tmp/cloonix-client
+rm -rf /tmp/cloonix-server
+#----------------------------------------------------------

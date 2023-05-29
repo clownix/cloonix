@@ -303,6 +303,7 @@ static char *get_name(char *root_work)
 int main (int argc, char *argv[])
 {
   char *ctrl_path;
+  umask(0000);
   doors_xml_init();
   x11_init();
   msg_mngt_init(get_name(argv[1]), IO_MAX_BUF_LEN);

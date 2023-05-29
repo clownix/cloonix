@@ -490,13 +490,9 @@ static char *init_local_cloonix_bin_path(char *curdir, char *callbin)
   if (!ptr)
     KOUT("%s", path);
   *ptr = 0;
-  ptr = strrchr(path, '/');
-  if (!ptr)
-    KOUT("%s", path);
-  *ptr = 0;
   strncpy(g_cloonix_root_tree, path, MAX_PATH_LEN-1);
   snprintf(path, 2*MAX_PATH_LEN-1,
-           "%s/client/ctrl/cloonix_ctrl", g_cloonix_root_tree);
+           "%s/client/cloonix-ctrl", g_cloonix_root_tree);
   if (access(path, X_OK))
     KOUT("%s", path);
   return g_cloonix_root_tree;

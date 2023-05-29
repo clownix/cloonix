@@ -638,7 +638,7 @@ static int popenRWE(int *rp, char *exe, char *argv[])
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int my_popen(char *exe, char *argv[])
+int clone_popen(char *exe, char *argv[])
 {
   static int count = 0;
   int rpipe, pid, status;
@@ -667,7 +667,7 @@ int my_popen(char *exe, char *argv[])
       if (count == 10)
         KOUT(" ");
       usleep(10000);
-      KERR("my_popen slip");
+      KERR("clone_popen slip");
       }
     } while(!WIFEXITED(status));
 

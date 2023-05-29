@@ -48,9 +48,7 @@ char *get_glob_layout_path(void)
 void work_dir_resp(int tid, t_topo_clc *conf)
 {
   printf("CLOONIX_VERSION=%s\n", conf->version);
-  printf("CLOONIX_TREE=%s\n", conf->bin_dir);
-  printf("CLOONIX_WORK=%s\n", conf->work_dir);
-  printf("CLOONIX_BULK=%s\n", conf->bulk_dir);
+  printf("CLOONIX_BINARIES=%s\n", conf->bin_dir);
   exit(0);
 }
 /*---------------------------------------------------------------------------*/

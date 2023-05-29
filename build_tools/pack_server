@@ -1,0 +1,103 @@
+#!/bin/bash
+if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
+  echo PLEASE DEFINE CLOONIX_TREE_ROOT
+  exit 1
+fi
+if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
+  echo NOT FOUND:
+  echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
+  exit 1
+fi
+TMPBUILD=${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_server
+TARGZ_STORE=${CLOONIX_TREE_ROOT}/targz_store
+SERVER="${CLOONIX_TREE_ROOT}/build_tools/cloonix-server"
+COMMON="${CLOONIX_TREE_ROOT}/build_tools/cloonix-common"
+mkdir -p ${SERVER}
+cp -rf ${TMPBUILD}/cloonix/server/* ${SERVER}
+rm -rf ${SERVER}/spice_lib_server
+rm -rf ${SERVER}/iso_agent_dropbear
+rm -rf ${SERVER}/create_insider_agents_iso
+#----------------------------------------------------------
+mkdir -p ${SERVER}/usr_bin
+cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_net ${SERVER}/usr_bin
+#----------------------------------------------------------
+cp ${SERVER}/xwy/cloonix-xwy-srv ${SERVER}
+rm -rf ${SERVER}/xwy
+#----------------------------------------------------------
+cp -f ${SERVER}/suid_power/cloonix-suid-power ${SERVER}
+cp -f ${SERVER}/gerard_lledo/cloonix-ext4fuse ${SERVER}
+cp -f ${SERVER}/doorways/cloonix-doorways ${SERVER}
+cp -f ${SERVER}/suid_power/cloonix-suid-power ${SERVER}
+cp -f ${SERVER}/uml_cloonix_switch/cloonix-main-server ${SERVER}
+for i in  doorways \
+          suid_power \
+          gerard_lledo \
+          uml_cloonix_switch ; do
+  rm -rf ${SERVER}/${i}
+done
+#----------------------------------------------------------
+mkdir -p ${SERVER}/ovsschema
+cp -f ${SERVER}/ovs/cloonix-vswitch.ovsschema ${SERVER}/ovsschema
+for i in cloonix-ovsdb-server \
+         cloonix-ovs-vswitchd \
+         cloonix-ovsdb-tool \
+         cloonix-ovs-appctl \
+         cloonix-ovs-vsctl ; do
+  cp -f ${SERVER}/ovs/bin/${i} ${SERVER}
+done
+rm -rf ${SERVER}/ovs
+#----------------------------------------------------------
+cp -f ${SERVER}/ovs_c2c/cloonix-ovs-c2c ${SERVER}
+rm -rf ${SERVER}/ovs_c2c
+#----------------------------------------------------------
+cp -f ${SERVER}/ovs_a2b/cloonix-ovs-a2b ${SERVER}
+rm -rf ${SERVER}/ovs_a2b
+#----------------------------------------------------------
+cp -f ${SERVER}/ovs_drv/cloonix-ovs-drv ${SERVER}
+rm -rf ${SERVER}/ovs_drv
+#----------------------------------------------------------
+cp -f ${SERVER}/ovs_nat/cloonix-ovs-nat ${SERVER}
+rm -rf ${SERVER}/ovs_nat
+#----------------------------------------------------------
+cp -f ${SERVER}/ovs_snf/cloonix-ovs-snf ${SERVER}
+rm -rf ${SERVER}/ovs_snf
+#----------------------------------------------------------
+mv ${SERVER}/qemu/cloonix-qemu-system-x86_64 ${SERVER}
+mv ${SERVER}/qemu/cloonix-qemu-img ${SERVER}
+for i in cmd allclean qemu_bin tainted_qemu \
+         cloonix_patch mkpatch patched_create ; do
+  rm -rf ${SERVER}/qemu/${i}
+done
+#----------------------------------------------------------
+cp -f ${SERVER}/dtach/cloonix-dtach ${SERVER}
+rm -rf ${SERVER}/dtach
+#----------------------------------------------------------
+cp -f ${TARGZ_STORE}/shark/wireshark ${SERVER}/cloonix-wireshark
+cp -f ${TARGZ_STORE}/shark/dumpcap ${SERVER}
+cp -f ${TARGZ_STORE}/crun/crun ${SERVER}/cloonix-crun
+#----------------------------------------------------------
+LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/usr/libexec/cloonix/common/lib"
+#----------------------------------------------------------
+cp -f /sbin/ip      ${SERVER}/ip
+cp -f /bin/mount    ${SERVER}/cloonix-mount
+cp -f /bin/umount   ${SERVER}/cloonix-umount 
+cp -f /sbin/losetup ${SERVER}/cloonix-losetup
+cp -f /usr/bin/fuse-overlayfs ${SERVER}/cloonix-fuse-overlayfs
+cp -f /bin/mknod    ${SERVER}/cloonix-mknod 
+cp -f /bin/chmod    ${SERVER}/cloonix-chmod
+cp -f /usr/bin/awk  ${SERVER}/cloonix-awk 
+cp -f /bin/grep     ${SERVER}/cloonix-grep
+cp -f /usr/bin/osirrox ${SERVER}/cloonix-osirrox
+#----------------------------------------------------------
+for i in `find ${SERVER} -maxdepth 1 -type f` ; do
+  patchelf --set-rpath ${RPATH_LIB} ${i}
+  patchelf --set-interpreter ${LDLINUX} ${i}
+done
+#----------------------------------------------------------
+cd ${CLOONIX_TREE_ROOT}/build_tools
+gcc -o copy_libs fill_common.c
+./copy_libs ${SERVER} ${COMMON}/lib
+rm ./copy_libs
+rm -rf ${TMPBUILD}
+#----------------------------------------------------------

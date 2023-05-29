@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+
 
 #include "mdl.h"
 #include "low_write.h"
@@ -46,6 +48,81 @@ typedef struct t_mdl
 
 static t_mdl *g_mdl[MAX_FD_NUM];
 
+/*****************************************************************************/
+char *mdl_argv_linear(char **argv)
+{ 
+  int i; 
+  static char result[3*MAX_TXT_LEN];
+  memset(result, 0, 3*MAX_TXT_LEN);
+  for (i=0;  (argv[i] != NULL); i++)
+    {
+    strcat(result, argv[i]);
+    if (strlen(result) >= 2*MAX_TXT_LEN)
+      {
+      XERR("NOT POSSIBLE");
+      break;
+      }
+    strcat(result, " ");
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+FILE *mdl_argv_popen(char *argv[])
+{
+  int exited_pid, timeout_pid, worker_pid, chld_state, pid, status=97;
+  int pdes[2];
+  FILE *iop = NULL;
+
+  if (pipe(pdes))
+    XOUT("ERROR");
+  if ((pid = fork()) < 0)
+    XOUT("ERROR");
+  if (pid == 0)
+    {
+    (void) close(pdes[0]);
+    if (pdes[1] != STDOUT_FILENO)
+      {
+      (void)dup2(pdes[1], STDOUT_FILENO);
+      (void)close(pdes[1]);
+      }
+    worker_pid = fork();
+    if (worker_pid == 0)
+      {
+      execv(argv[0], argv);
+      XOUT("ERROR FORK error %s", strerror(errno));
+      }
+    timeout_pid = fork();
+    if (timeout_pid == 0)
+      {
+      sleep(5);
+      XERR("WARNING TIMEOUT SLOW CMD 1 %s", mdl_argv_linear(argv));
+      exit(1);
+      }
+    exited_pid = wait(&chld_state);
+    if (exited_pid == worker_pid)
+      {
+      if (WIFEXITED(chld_state))
+        status = WEXITSTATUS(chld_state);
+      if (WIFSIGNALED(chld_state))
+        XERR("WARNING Child exited via signal %d\n", WTERMSIG(chld_state));
+      kill(timeout_pid, SIGKILL);
+      }
+    else
+      {
+      kill(worker_pid, SIGKILL);
+      }
+    wait(NULL);
+    if (status)
+      XERR("WARNING STATUS %s", mdl_argv_linear(argv));
+    exit(status);
+    }
+  iop = fdopen(pdes[0], "r");
+  (void)close(pdes[1]);
+  return iop;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 uint16_t mdl_sum_calc(int len, uint8_t *buff)

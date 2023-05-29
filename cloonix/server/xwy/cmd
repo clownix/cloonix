@@ -1,0 +1,14 @@
+#!/bin/bash
+HERE=`pwd`
+
+cd ${HERE}/../../common/xwy/libmdl
+make
+
+cd ${HERE}/../../common/xwy/libcli
+make
+
+cd ${HERE}/../../common/xwy/srv
+make
+
+mv cloonix-xwy-srv ${HERE}
+

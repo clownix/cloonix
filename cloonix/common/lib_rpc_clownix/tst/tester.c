@@ -255,9 +255,7 @@ static void random_clc(t_topo_clc *conf)
   random_choice_str(conf->version,  MAX_NAME_LEN);
   random_choice_str(conf->network,  MAX_NAME_LEN);
   random_choice_str(conf->username, MAX_NAME_LEN);
-  random_choice_str(conf->work_dir, MAX_PATH_LEN);
   random_choice_str(conf->bin_dir, MAX_PATH_LEN);
-  random_choice_str(conf->bulk_dir, MAX_PATH_LEN);
   conf->server_port = rand();
   conf->flags_config = rand();
 }
@@ -272,12 +270,8 @@ static void topo_config_diff(t_topo_clc *cfa, t_topo_clc *cfb)
     KERR("%s %s", cfa->network,  cfb->network);
   if (strcmp(cfa->username, cfb->username))
     KERR("%s %s", cfa->username, cfb->username);
-  if (strcmp(cfa->work_dir, cfb->work_dir))
-    KERR("%s %s", cfa->work_dir, cfb->work_dir);
   if (strcmp(cfa->bin_dir,  cfb->bin_dir))
     KERR("%s %s", cfa->bin_dir,  cfb->bin_dir);
-  if (strcmp(cfa->bulk_dir, cfb->bulk_dir))
-    KERR("%s %s", cfa->bulk_dir, cfb->bulk_dir);
   if (cfa->server_port != cfb->server_port)
     KERR("%d %d", cfa->server_port, cfb->server_port);
   if (cfa->flags_config != cfb->flags_config)
@@ -413,11 +407,6 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
     KERR("%s %s", kvm->added_disk, ikvm->added_disk);
     result = -1;
     }
-  if (strcmp(kvm->p9_host_share, ikvm->p9_host_share))
-    {
-    KERR("%s %s", kvm->p9_host_share, ikvm->p9_host_share);
-    result = -1;
-    }
   if (kvm->vm_id != ikvm->vm_id)
     {
     KERR("%d %d", kvm->vm_id, ikvm->vm_id);
@@ -531,8 +520,6 @@ static void random_kvm(t_topo_kvm *kvm)
     random_choice_str(kvm->added_cdrom, MAX_PATH_LEN);
   if (my_rand(10))
     random_choice_str(kvm->added_disk, MAX_PATH_LEN);
-  if (my_rand(10))
-    random_choice_str(kvm->p9_host_share, MAX_PATH_LEN);
   kvm->vm_id = rand();
   kvm->cpu = rand();
   kvm->mem = rand();
@@ -1511,8 +1498,6 @@ void recv_work_dir_resp(int llid, int itid, t_topo_clc *iclc)
     random_choice_str(clc.username,MAX_NAME_LEN);
     clc.server_port = rand();
     random_choice_str(clc.bin_dir,MAX_PATH_LEN);
-    random_choice_str(clc.work_dir,MAX_PATH_LEN);
-    random_choice_str(clc.bulk_dir,MAX_PATH_LEN);
     clc.flags_config = rand();
     send_work_dir_resp(llid, tid, &clc);
     }

@@ -218,7 +218,7 @@ diff -Naur openssh-8.6p1/scp.c tainted_openssh/scp.c
 +    exit(255);
 +    }
 +  *ptr = 0;
-+  strcat(path, "/cloonix_u2i_ssh");
++  strcat(path, "/cloonix-u2i-ssh");
 +  return path;
 +}
 +/*--------------------------------------------------------------------------*/

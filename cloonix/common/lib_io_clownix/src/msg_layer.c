@@ -28,6 +28,9 @@
 #include <netinet/tcp.h>
 #include <sys/syscall.h>
 #include <bits/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 
 
 #include "io_clownix.h"
@@ -36,6 +39,7 @@
 #include "msg_layer.h"
 #include "chunk.h"
 #include "doorways_sock.h"
+
 
 #define MAX_TOT_LEN_QSIG 10000000
 #define MAX_TOT_LEN_QDAT 1000000000
@@ -55,6 +59,7 @@ static int g_fd_not_to_close_set = 0;
 
 void doorways_linker_helper(void);
 void cloonix_conf_linker_helper(void);
+
 
 
 /*****************************************************************************/

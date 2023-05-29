@@ -1,0 +1,9 @@
+#!/bin/bash
+
+rm -rf libptytty-2.0
+rm -rf install_libptytty
+rm -rf rxvt-unicode-9.31
+rm -rf install_rxvt
+rm -f urxvt
+
+

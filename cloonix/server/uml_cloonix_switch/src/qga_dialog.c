@@ -47,7 +47,7 @@
 
 #define QGA_CLOSE_FILE "{\"execute\":\"guest-file-close\", \"arguments\":{\"handle\":%d}}"
 
-#define QGA_EXEC_CHMOD "{\"execute\": \"guest-exec\", \"arguments\": { \"path\": \"%s\", \"arg\": [\"+x\", \"/tmp/cloonix_launcher\"],  \"capture-output\": true }}"
+#define QGA_EXEC_CHMOD "{\"execute\": \"guest-exec\", \"arguments\": { \"path\": \"chmod\", \"arg\": [\"+x\", \"/tmp/cloonix_launcher\"],  \"capture-output\": true }}"
 
 #define QGA_EXEC_FILE "{\"execute\": \"guest-exec\", \"arguments\": { \"path\": \"/tmp/cloonix_launcher\", \"capture-output\": true }}"
 
@@ -59,8 +59,8 @@
                 "mkdir -p /mnt/cloonix_config_fs\n"\
                 "mount /dev/sr0 /mnt/cloonix_config_fs\n"\
                 "mount -o remount,exec /dev/sr0\n"\
-                "/mnt/cloonix_config_fs/cloonix_agent\n"\
-                "/mnt/cloonix_config_fs/dropbear_cloonix_sshd\n"
+                "/mnt/cloonix_config_fs/cloonix-agent\n"\
+                "/mnt/cloonix_config_fs/cloonix-dropbear-sshd\n"
 
 
 typedef struct t_timeout_resp
@@ -73,7 +73,9 @@ typedef struct t_qrec
 {
   char name[MAX_NAME_LEN];
   int  llid;
+  int wait_before_first_call;
   int count_no_response;
+  int request_reboot_done;
   int ping_launch;
   int sync_launch;
   int sync_rand;
@@ -103,9 +105,20 @@ typedef struct t_qrec
 } t_qrec;
 /*--------------------------------------------------------------------------*/
 
+static int resp_message_braces_complete(char *whole_rx, char **next_rx);
+static int automate_rx_qga_msg(t_qrec *cur, char *msg);
 static t_qrec *g_head_qrec;
 static t_qrec *g_llid_qrec[CLOWNIX_MAX_CHANNELS];
 
+/****************************************************************************/
+static void reset_diag(t_qrec *q)
+{
+  q->ref_id += 1;
+  memset(q->req, 0, MAX_QGA_MSG_LEN);
+  memset(q->resp, 0, MAX_QGA_MSG_LEN);
+  q->resp_offset = 0;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static t_qrec *get_qrec_with_llid(int llid)
@@ -136,8 +149,8 @@ static void qrec_alloc(char *name)
     q = (t_qrec *) clownix_malloc(sizeof(t_qrec), 6);
     memset(q, 0, sizeof(t_qrec));
     strncpy(q->name, name, MAX_NAME_LEN-1);
-    q->prev = NULL;
     q->time_end = util_get_max_tempo_fail();
+    q->prev = NULL;
     if (g_head_qrec)
       g_head_qrec->prev = q;
     q->next = g_head_qrec;
@@ -198,15 +211,6 @@ static void flag_ping_to_cloonix_agent_ok(char *name)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void timer_reload_qga(void *data)
-{
-  char *name = (char *) data;
-  KERR("ERROR LAUNCH timer_reload_qga, %s", name);
-  qmp_begin_qemu_unix(name, 0);
-  clownix_free(name, __FUNCTION__);
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static t_qrec *get_qrec_with_name(char *name)
@@ -228,6 +232,16 @@ static t_qrec *get_qrec_with_name(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timer_reload_qmp(void *data)
+{
+  char *name = (char *) data;
+  KERR("ERROR timer_reload_qmp, %s", name);
+  qmp_begin_qemu_unix(name, 0);
+  clownix_free(name, __FUNCTION__);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void reload_upon_problem(char *name)
 {
   char *pname;
@@ -235,14 +249,183 @@ static void reload_upon_problem(char *name)
   pname = (char *) clownix_malloc(MAX_NAME_LEN, 6);
   memset(pname, 0, MAX_NAME_LEN);
   strncpy(pname, name, MAX_NAME_LEN-1);
-  clownix_timeout_add(400, timer_reload_qga, (void *) pname, NULL, NULL);
+  clownix_timeout_add(400, timer_reload_qmp, (void *) pname, NULL, NULL);
+  KERR("ERROR LAUNCH timer_reload_qmp, %s", name);
   cur = get_qrec_with_name(pname);
-  KERR("ERROR LAUNCH timer_reload_qga, %s", name);
   if (cur)
     qrec_free(cur);
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void qemu_ga_fail(char *name)
+{
+  t_qrec *cur = get_qrec_with_name(name);
+  t_qrec *prev, *next;
+  char tmp_name[MAX_NAME_LEN];
+  int time_end, llid; 
+  if (!cur)
+    KOUT("ERROR %s", name);
+  KERR("FAILED qemu_ga_fail %s", name);
+  memset(tmp_name, 0, MAX_NAME_LEN);
+  strncpy(tmp_name, name, MAX_NAME_LEN);
+  prev = cur->prev;
+  next = cur->next;
+  time_end = cur->time_end;
+  llid = cur->llid;
+  memset(cur, 0, sizeof(t_qrec));
+  strncpy(cur->name, tmp_name, MAX_NAME_LEN-1);
+  cur->time_end = time_end;
+  cur->prev = prev;
+  cur->next = next;
+  cur->llid = llid;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int qga_rx_cb(int llid, int fd)
+{
+  int len, max;
+  char *buf, *ptr, *next_ptr;
+  t_qrec *cur = get_qrec_with_llid(llid);
+  if (!cur)
+    KERR("ERROR  ");
+  else
+    {
+    max = MAX_QGA_MSG_LEN - cur->resp_offset;
+    buf = cur->resp + cur->resp_offset;
+    len = util_read(buf, max, fd);
+    if (len < 0)
+      {
+      KERR("ERROR %s", cur->name);
+      qrec_free(cur);
+      }
+    else
+      {
+      if (len == max)
+        KERR("ERROR %s %s %d", cur->name, cur->resp, len);
+      else
+        {
+        ptr = cur->resp;
+        if (ptr)
+          {
+          if (resp_message_braces_complete(ptr, &next_ptr))
+            {
+            if (automate_rx_qga_msg(cur, ptr) == 0)
+              reset_diag(cur);
+            }
+          else
+            cur->resp_offset += len;
+          }
+        }
+      }
+    }
+  return len;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void qga_err_cb (int llid, int err, int from)
+{
+  t_qrec *cur = get_qrec_with_llid(llid);
+  if (!cur)
+    KERR("ERROR ");
+  else
+    {
+    qrec_free(cur);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void timer_connect_qga(void *data)
+{
+  char *pname = (char *) data;
+  char *qga_path;
+  t_vm *vm = cfg_get_vm(pname);
+  t_qrec *cur = get_qrec_with_name(pname);
+  int fd, timer_restarted = 0;
+  if (!cur)
+    KERR("ERROR %s", pname);
+  else if (cur->llid)
+    KERR("ERROR %s %d", pname, cur->llid);
+  else if (!vm)
+    {
+    KERR("ERROR %s", pname);
+    qrec_free(cur);
+    }
+  else
+    {
+    qga_path = utils_get_qga_path(vm->kvm.vm_id);
+    if (util_nonblock_client_socket_unix(qga_path, &fd))
+      {
+      KERR("WARNING util_nonblock_client_socket_unix fail %s", pname);
+      cur->count_conn_timeout += 1;
+      if (cur->count_conn_timeout > 10)
+        {
+        KERR("ERROR %s", pname);
+        qrec_free(cur);
+        }
+      else
+        {
+        clownix_timeout_add(1, timer_connect_qga,(void *) pname, NULL, NULL);
+        timer_restarted = 1;
+        }
+      }
+    else
+      {
+      if (fd < 0)
+        KOUT(" ");
+      cur->llid = msg_watch_fd(fd, qga_rx_cb, qga_err_cb, "qga");
+      if (cur->llid == 0)
+        KOUT(" ");
+      llid_trace_alloc(cur->llid,"QMP", 0, 0, type_llid_trace_unix_qmp);
+      set_qrec_with_llid(cur->llid, cur);
+      }
+    }
+  if (!timer_restarted)
+    clownix_free(pname, __FUNCTION__);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void qga_dialog_begin(char *name)
+{
+  t_vm *vm;
+  char *pname;
+  t_qrec *qrec;
+
+  if (!name)
+    KOUT("ERROR");
+  if (strlen(name) < 1)
+    KERR("ERROR ");
+  else
+    {
+    vm = cfg_get_vm(name);
+    if (vm == NULL)
+      KERR("ERROR %s", name);
+    else
+      {
+      qrec = get_qrec_with_name(name);
+      if (!qrec)
+        {
+        qrec_alloc(name);
+        qrec = get_qrec_with_name(name);
+        if (!qrec)
+          KOUT("ERROR");
+        pname = (char *) clownix_malloc(MAX_NAME_LEN, 6);
+        memset(pname, 0, MAX_NAME_LEN);
+        strncpy(pname, name, MAX_NAME_LEN-1);
+        clownix_timeout_add(1, timer_connect_qga, (void *) pname, NULL, NULL);
+        }
+      else
+        {
+        KERR("ERROR  %s exists", name);
+        }
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void qga_event_backdoor(char *name, int backdoor_evt)
@@ -279,7 +462,6 @@ static void automate_tx_qga_msg(t_qrec *cur)
 {
   char req[MAX_QGA_MSG_LEN];
   char out[MAX_QGA_MSG_LEN];
-  char chmod_path[MAX_PATH_LEN];
   char *content = out;
   int llid;
 
@@ -293,18 +475,25 @@ static void automate_tx_qga_msg(t_qrec *cur)
   else if ((cur->ping_launch == 1) || (cur->ping_launch == 3))
     {
     cur->count_no_response += 1;
-    if ((cur->count_no_response%10) == 0 )
+    if ((cur->count_no_response%20) == 0 )
       {
       strncpy(req, QGA_PING, MAX_QGA_MSG_LEN-1);
       watch_tx(cur->llid, strlen(req), req);
       }
     if (cur->count_no_response > 400)
       {
-      KERR("WARNING RELOAD REBOOT NECESSARY %s", cur->name);
-      reload_upon_problem(cur->name);
+      if (cur->request_reboot_done == 0)
+        { 
+        cur->count_no_response = 0;
+        cur->request_reboot_done = 1;
+        KERR("WARNING!!! BAD QEMU GUEST AGENT START %s %d REBOOT", cur->name, cur->ping_launch);
+        qmp_request_qemu_reboot(cur->name);
+        qemu_ga_fail(cur->name);
+        }
+      else
+        KERR("ERROR BAD QEMU GUEST AGENT START %s", cur->name);
       }
     }
-
   else if (cur->sync_launch == 0)
     {
     cur->sync_rand = rand();
@@ -317,13 +506,19 @@ static void automate_tx_qga_msg(t_qrec *cur)
     cur->sync_launch_count += 1;
     if (cur->sync_launch_count > 400)
       {
-      KERR("WARNING RELOAD %s", cur->name);
-      reload_upon_problem(cur->name);
-      qmp_request_qemu_reboot(cur->name);
+      if (cur->request_reboot_done == 0)
+        { 
+        cur->sync_launch_count = 0;
+        cur->request_reboot_done = 1;
+        KERR("WARNING REBOOT %s", cur->name);
+        qmp_request_qemu_reboot(cur->name);
+        qemu_ga_fail(cur->name);
+        }
+      else
+        KERR("ERROR REBOOT %s", cur->name);
       }
     KERR("WARNING SYNC WAIT %s", cur->name);
     }
-
   else if ((cur->file_open == 0) && (cur->ping_launch == 4))
     {
     strncpy(req, QGA_OPEN_FILE, MAX_QGA_MSG_LEN-1);
@@ -335,9 +530,16 @@ static void automate_tx_qga_msg(t_qrec *cur)
     cur->file_open_count += 1;
     if(cur->file_open_count > 400)
       {
-      KERR("WARNING RELOAD %s", cur->name);
-      reload_upon_problem(cur->name);
-      qmp_request_qemu_reboot(cur->name);
+      if (cur->request_reboot_done == 0)
+        {
+        cur->file_open_count = 0;
+        cur->request_reboot_done = 1;
+        KERR("WARNING REBOOT %s", cur->name);
+        qmp_request_qemu_reboot(cur->name);
+        qemu_ga_fail(cur->name);
+        }
+      else
+        KERR("ERROR REBOOT %s", cur->name);
       }
     KERR("WARNING OPEN WAIT %s", cur->name);
     }
@@ -357,9 +559,7 @@ static void automate_tx_qga_msg(t_qrec *cur)
     }
   else if (cur->chmod_exec == 0)
     {
-    memset(chmod_path, 0, MAX_PATH_LEN);
-    strcpy(chmod_path, "/bin/chmod");
-    snprintf(req, MAX_QGA_MSG_LEN-1, QGA_EXEC_CHMOD, chmod_path);
+    snprintf(req, MAX_QGA_MSG_LEN-1, QGA_EXEC_CHMOD);
     watch_tx(cur->llid, strlen(req), req);
     cur->chmod_exec = 1;
     }
@@ -368,11 +568,18 @@ static void automate_tx_qga_msg(t_qrec *cur)
     cur->chmod_exec_count += 1;
     if (cur->chmod_exec_count > 400)
       {
-      KERR("WARNING RELOAD %s", cur->name);
-      reload_upon_problem(cur->name);
-      qmp_request_qemu_reboot(cur->name);
+      if (cur->request_reboot_done == 0)
+        {
+        cur->chmod_exec_count = 0;
+        cur->request_reboot_done = 1;
+        KERR("WARNING REBOOT %s", cur->name);
+        qmp_request_qemu_reboot(cur->name);
+        qemu_ga_fail(cur->name);
+        }
+      else
+        KERR("ERROR REBOOT %s", cur->name);
       }
-    KERR("WARNING ERROR CHMOD WAIT %s", cur->name);
+    KERR("WARNING CHMOD WAIT %s", cur->name);
     cur->file_status = 2;
     }
   else if ((cur->chmod_exec == 2) && (cur->chmod_status == 0))
@@ -392,9 +599,16 @@ static void automate_tx_qga_msg(t_qrec *cur)
     cur->file_exec_count += 1;
     if (cur->file_exec_count > 400) 
       {
-      KERR("WARNING RELOAD %s", cur->name);
-      reload_upon_problem(cur->name);
-      qmp_request_qemu_reboot(cur->name);
+      if (cur->request_reboot_done == 0)
+        {
+        cur->file_exec_count = 0;
+        cur->request_reboot_done = 1;
+        KERR("WARNING REBOOT %s", cur->name);
+        qmp_request_qemu_reboot(cur->name);
+        qemu_ga_fail(cur->name);
+        }
+      else
+        KERR("ERROR REBOOT %s", cur->name);
       }
     KERR("WARNING EXEC WAIT %s", cur->name);
     }
@@ -545,10 +759,16 @@ static int automate_rx_qga_msg(t_qrec *cur, char *msg)
     ptr = strstr(msg, "exitcode\":");
     if (!ptr)
       {
-      KERR("ERROR RELOADING %s %s", cur->name, msg);
-      reload_upon_problem(cur->name);
-      qmp_request_qemu_reboot(cur->name);
-      result = -1;
+      if (cur->request_reboot_done == 0)
+        {
+        cur->request_reboot_done = 1;
+        KERR("ERROR ONE REBOOTING %s %s", cur->name, msg);
+        qmp_request_qemu_reboot(cur->name);
+        qemu_ga_fail(cur->name);
+        result = -1;
+        }
+      else
+        KERR("ERROR TWO RELOADING %s %s", cur->name, msg);
       }
     else if (sscanf(ptr, "exitcode\": %d", &val) == 1)
       {
@@ -601,122 +821,6 @@ static int resp_message_braces_complete(char *whole_rx, char **next_rx)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void reset_diag(t_qrec *q)
-{
-  q->ref_id += 1;
-  memset(q->req, 0, MAX_QGA_MSG_LEN);
-  memset(q->resp, 0, MAX_QGA_MSG_LEN);
-  q->resp_offset = 0;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static int qga_rx_cb(int llid, int fd)
-{
-  int len, max;
-  char *buf, *ptr, *next_ptr;
-  t_qrec *cur = get_qrec_with_llid(llid);
-  if (!cur)
-    KERR("ERROR  ");
-  else
-    {
-    max = MAX_QGA_MSG_LEN - cur->resp_offset;
-    buf = cur->resp + cur->resp_offset;
-    len = util_read(buf, max, fd);
-    if (len < 0)
-      {
-      KERR("ERROR %s", cur->name);
-      qrec_free(cur);
-      }
-    else
-      {
-      if (len == max)
-        KERR("ERROR %s %s %d", cur->name, cur->resp, len);
-      else
-        {
-        ptr = cur->resp;
-        if (ptr)
-          {
-          if (resp_message_braces_complete(ptr, &next_ptr))
-            {
-            if (automate_rx_qga_msg(cur, ptr) == 0)
-              reset_diag(cur);
-            }
-          else
-            cur->resp_offset += len;
-          }
-        }
-      }
-    }
-  return len;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void qga_err_cb (int llid, int err, int from)
-{
-  t_qrec *cur = get_qrec_with_llid(llid);
-  if (!cur)
-    KERR("ERROR ");
-  else
-    {
-    qrec_free(cur);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
-static void timer_connect_qga(void *data)
-{
-  char *pname = (char *) data;
-  char *qga_path;
-  t_vm *vm = cfg_get_vm(pname);
-  t_qrec *cur = get_qrec_with_name(pname);
-  int fd, timer_restarted = 0;
-  if (!cur)
-    return;
-  if (cur->llid)
-    KERR("ERROR %s %d", pname, cur->llid);
-  else if (!vm)
-    {
-    KERR("ERROR %s", pname);
-    qrec_free(cur);
-    }
-  else
-    {
-    qga_path = utils_get_qga_path(vm->kvm.vm_id);
-    if (util_nonblock_client_socket_unix(qga_path, &fd))
-      {
-      cur->count_conn_timeout += 1;
-      if (cur->count_conn_timeout > 10)
-        {
-        KERR("ERROR %s", pname);
-        qrec_free(cur);
-        }
-      else
-        {
-        clownix_timeout_add(1,timer_connect_qga,(void *) pname,NULL,NULL);
-        timer_restarted = 1;
-        }
-      }
-    else
-      {
-      if (fd < 0)
-        KOUT(" ");
-      cur->llid = msg_watch_fd(fd, qga_rx_cb, qga_err_cb, "qga");
-      if (cur->llid == 0)
-        KOUT(" ");
-      llid_trace_alloc(cur->llid,"QMP", 0, 0, type_llid_trace_unix_qmp);
-      set_qrec_with_llid(cur->llid, cur);
-      }
-    }
-  if (!timer_restarted)
-    clownix_free(pname, __FUNCTION__);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int qga_dialog_is_ok(char *name)
 {
   t_vm *vm = cfg_get_vm(name);
@@ -740,45 +844,14 @@ static void timer_heartbeat_qga(void *data)
     next = cur->next;
     if (qga_dialog_is_ok(cur->name))
       {
-      automate_tx_qga_msg(cur);
+      if (cur->wait_before_first_call > 10)
+        automate_tx_qga_msg(cur);
+      else
+        cur->wait_before_first_call += 1;
       }
     cur = next;
     }
   clownix_timeout_add(10, timer_heartbeat_qga, NULL, NULL, NULL);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void qga_dialog_begin(char *name)
-{
-  t_vm *vm;
-  char *pname;
-  t_qrec *qrec;
-
-  if (!name)
-    KOUT(" ");
-  if (strlen(name) < 1)
-    KERR("ERROR ");
-  else 
-    {
-    vm = cfg_get_vm(name);
-    if (vm == NULL)
-      KERR("ERROR %s", name);
-    else
-      {
-      qrec = get_qrec_with_name(name);
-      if (!qrec)
-        {
-        qrec_alloc(name);
-        pname = (char *) clownix_malloc(MAX_NAME_LEN, 6);
-        memset(pname, 0, MAX_NAME_LEN);
-        strncpy(pname, name, MAX_NAME_LEN-1);
-        clownix_timeout_add(10, timer_connect_qga, (void *) pname, NULL, NULL);
-        }
-      else
-        KERR("ERROR  %s exists", name);
-      }
-    }
 }
 /*--------------------------------------------------------------------------*/
 

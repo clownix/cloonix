@@ -496,8 +496,6 @@ void xcli_init(int epfd, int llid, int tid, int type,
   mdl_open(0, fd_type_cli, NULL, NULL);
   mdl_open(1, fd_type_one, wrap_write_one, wrap_read_kout);
   send_msg_type_randid(g_randid);
-  if (clearenv())
-    XOUT("Bad Clear ENV ");
   if ((action == action_bash) ||
       (action == action_dae)  ||
       (action == action_cmd))

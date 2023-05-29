@@ -1,34 +1,60 @@
 #!/bin/bash
 set -e
-if [ -z $CLOONIX_CONFIG ]; then
-  CLOONIX_CONFIG=/usr/local/bin/cloonix/cloonix_config
-fi
 
+CLOONIX_CONFIG="/usr/libexec/cloonix/common/etc/cloonix.cfg"
 if [ ! -f $CLOONIX_CONFIG ]; then
   echo "ERROR: $CLOONIX_CONFIG not found"
   exit 1
 fi
-CLOONIX_TREE=$(cat $CLOONIX_CONFIG |grep CLOONIX_TREE | awk -F = '{print $2}')
-CLOONIX_WORK=$(cat $CLOONIX_CONFIG |grep CLOONIX_WORK | awk -F = '{print $2}')
-CLOONIX_WORK=$(eval echo $CLOONIX_WORK)
-
-
-
-if [ ! -d ${CLOONIX_TREE} ]; then
-  echo "ERROR: ${CLOONIX_TREE} not found"
+BIN_SSH="/usr/libexec/cloonix/client/cloonix-u2i-scp"
+if [ ! -x ${BIN_SSH} ]; then
+  echo "ERROR: ${BIN_SSH} not found"
   exit 1
 fi
-
 LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
-
 if (( ${#} < 1 )); then
   echo  cloonix_name needed as parameter.
   echo $LIST
   exit 1
 fi
 
-cloonix_name=$1
+#
+# The following private id_rsa corresponds to the id_rsa.pub that
+# is used in file step1_make_preconf_iso.sh for the cisco making.
+#
+rm -f /tmp/cloonix_private_id_rsa
+cat > /tmp/cloonix_private_id_rsa << EOF
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAxkepoiuYZD/HnpXL4raEarJi7EsMFkr5NoC/cv9SF8CPweIF
+JM66qe0CUd9Jw97Ov9ulTLPnoUQYFbjb/abOa7etijRx3vsvahgQSjYpOBXCngkd
+zooAvWymLYsBsZQo0QNtXdagP0lmti5eEX+/uCv/+IWGFx7tBT8UF8s58DruDRpm
+dwzGgh/fr2FwOklxjQO71gkIzd/fpQXevsj93CsUH3UzTrvTn8BrfrKABAAeH2Qd
+1yxTHRPcf9syEzMMA8YtwCPPO8vqobMt1tH6Yrl/c7DkxqCftWjPVx0mMJ/SHBOQ
+P4NMVr+fE6R0Y1WuWVwojs86uLAtOFBl5i+VmwIDAQABAoIBAAlCzZyCdsKv6+3v
+Ry+WoMavAEnTE4RzCgLOrqJ7ZGUxnEVM/jqC4VsQc9xJFpPsczGo26aifH4exRU2
+pifJw7hqQtPCsVLd3pARAanFr9UrxwREnrzH21L9oSFdbb3Skrl4dII+hQuPrRlz
+PveIRPcgLvt3mRS5YA6vrIuT9WfP85qt7QD4ibcDtb5+y93m0ayJty8YcgNCfqrF
+VdW40deeC4xzfBR6Q6edF4lho9O8Zl/9OTI3n/aS6xBl3qdN9y2hcIU9VTJQPErk
+jJMPb2ugZCeiXiFCPcZQGwn7oVeQsIbkBpkA7aYjATgIfsr7FVjZu8xkEhxr5aEQ
+9i/eiKECgYEA/zfrqdCvaYxi2bOa3u1nvRSsUbwsH6OFYye5WQhClqig+MQLN8Nu
+QZop4NswfwFnsIundcDgWzlT/EnuIA6qcsEW8Y4jRTi1uJqJDyDS3dHFXQHnu6c8
+oEoHJ5r32r93kbWRaJm+sbBrTOA2bH9bJX5NvfYCHMl0fbiY3UceRqsCgYEAxuMa
+29qBmjdwL11Udk/rMOLGABIITqL+PtRxsDGT54qG6jkfK6Lb0ZfMo7BfXM65Xr3W
+e875ErgaZZQaJOd2E1CEEWb0NWe+lMmfwJKz4q/p3bI5FL9ZX6Jr/wpJUDFXv051
+pxn5PPm9gFzvgkoFYSK5DoG6wmYoh4aGgPD3rNECgYEAhEHMZEH6xO21RC/o7+GD
+Qt71tZ2YGAU7WHj7egHnz/8u+/tL/OfPuTtUvGuaJBbsTvbwHvuGyH9a4IDHX+F5
+vuIFK8SGzpZmxXV/1VEjNURBzMLx/bLang3+yy1ph/h01BONePFDev17fWkriuos
+p69eRjS4P4a+UXBZ90GllOUCgYBVpWrljj0Nah43Z1t974B6ds2JLjrBklMmP1oN
+4+urY+4hYyPXKLS8l0AapVMLpkIRWHLKsiB0PS+w2ow/pCUmwB9/VvSHIvvhGspe
+pU4tqk9tltgZ5STZmBolpApaLEV7LpBfu0GnTmyaoGrLkpCqecdzRc5k9JUzd2zo
+jdw6YQKBgEB5T9gNNRpjjD2D8yJmyVDsCcHKUWO4kPejGhIQJ1hFLBsFv3DFmga8
+Ku+HluGo0TDABJUv1JBpVDeHBNprX3mHgud4fxKvoeG4eBfrjW5QsqIL34mrzT2b
+Tf6PmCDYsKOA79p2IYNG0aRiVMyTjb0JaDi/QJY65WR6Q5uoyCae
+-----END RSA PRIVATE KEY-----
+EOF
+chmod 400 /tmp/cloonix_private_id_rsa
 
+cloonix_name=$1
 found=no
 for i in $LIST ; do
   if [ "$cloonix_name" == "$i" ]; then
@@ -117,17 +143,27 @@ if [ "${resp}" != "OK OK" ]; then
 fi
 
 PARAMS="${ip}=${port}=${passwd}=${nat_name}@user=${user_name}=ip=${ip_vm}=port=22=cloonix_info_end"
-SOCK=${CLOONIX_WORK}/${cloonix_name}/cli
+SOCK=/var/lib/cloonix/${cloonix_name}/cli
 if [ ! -e $SOCK ]; then
   mkdir -p $SOCK
 fi
-BIN_SSH=${CLOONIX_TREE}/client/openssh/cloonix_u2i_scp
 
+export FONTCONFIG_FILE="/usr/libexec/cloonix/common/etc/fonts/fonts.conf"
+export XDG_CONFIG_HOME="/usr/libexec/cloonix/common/share"
+export XDG_DATA_HOME="/usr/libexec/cloonix/common/share"
+export XDG_RUNTIME_DIR="/var/lib/cloonix/${cloonix_name}"
+export QT_PLUGIN_PATH="/usr/libexec/cloonix/common/lib/qt6/plugins"
+export QT_X11_NO_MITSHM="1"
+export QT_XCB_NO_MITSHM="1"
+export GTK_IM_MODULE_FILE="/usr/libexec/cloonix/common/lib/gtk-3.0/3.0.0/immodules.cache"
+export GDK_PIXBUF_MODULE_FILE="/usr/libexec/cloonix/common/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+export GST_PLUGIN_SYSTEM_PATH="/usr/libexec/cloonix/common/lib/gstreamer-1.0"
+export NO_AT_BRIDGE="1"
 
 if [ "${file_source}" = "dist" ]; then
-  ${BIN_SSH} ${SOCK} -i ${CLOONIX_TREE}/id_rsa $recurs ${PARAMS}:$file_src $file_dst
+  ${BIN_SSH} ${SOCK} -i /tmp/cloonix_private_id_rsa $recurs ${PARAMS}:$file_src $file_dst
 else
-  ${BIN_SSH} ${SOCK} -i ${CLOONIX_TREE}/id_rsa $recurs $file_src ${PARAMS}:$file_dst
+  ${BIN_SSH} ${SOCK} -i /tmp/cloonix_private_id_rsa $recurs $file_src ${PARAMS}:$file_dst
 fi
 
 

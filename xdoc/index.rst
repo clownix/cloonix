@@ -123,6 +123,16 @@ use of cloonix can be for:
   * **experiments** on network-related softwares.
 
 
+Directories cloonix uses
+========================
+
+*/usr/bin* for the *cloonix_...* scripted command interfaces to the user.
+*/usr/bin/cloonix/* for all the cloonix binaries called.
+*/usr/lib/cloonix/* for all the cloonix libraries called.
+*/etc/cloonix/* for the cloonix configuration file.
+*/usr/share/cloonix* for the cloonix storage of virtual files .qcow2 and .img.
+*/var/lib/cloonix* for run-time storage of temporary files.
+
 You can grab a single file html of this doc to print it:
 
    * `Single html file cloonix doc <../singlehtml/index.html>`_

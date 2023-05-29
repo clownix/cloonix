@@ -1,6 +1,126 @@
+diff -Naur spice-gtk/meson.build tainted_spice/meson.build
+--- spice-gtk/meson.build	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/meson.build	2023-05-20 19:35:25.556344319 +0200
+@@ -5,7 +5,8 @@
+          version : run_command('build-aux/git-version-gen', '@0@/.tarball-version'.format(meson.project_source_root()), check : true).stdout().strip(),
+          license : 'LGPLv2.1',
+          meson_version : '>= 0.56',
+-         default_options : ['buildtype=debugoptimized',
++         default_options : ['default_library=static',
++                            'buildtype=debugoptimized',
+                             'warning_level=2'])
+ 
+ meson.add_dist_script('build-aux/meson-dist', meson.project_version(), meson.project_source_root())
+@@ -42,6 +43,7 @@
+ #
+ spice_common = subproject('spice-common',
+                           default_options : [
++                            'default_library=static',
+                             'generate-code=client',
+                             'spice-protocol-version=@0@'.format(spice_protocol_version),
+                           ])
+@@ -225,8 +227,8 @@
+ spice_gtk_has_usbredir = false
+ usbredir_version = '0.7.1'
+ usbredir_version_info = '>= @0@'.format(usbredir_version)
+-d1 = dependency('libusbredirparser-0.5', version: usbredir_version_info, required : get_option('usbredir'))
+-d2 = dependency('libusbredirhost', version: usbredir_version_info, required : get_option('usbredir'))
++d1 = dependency('libcloonix-usbredirparser-0.5', version: usbredir_version_info, required : get_option('usbredir'))
++d2 = dependency('libcloonix-usbredirhost', version: usbredir_version_info, required : get_option('usbredir'))
+ d3 = dependency('libusb-1.0', version : '>= 1.0.21', required : get_option('usbredir'))
+ summary_info += {'usbredir': d1.found() and d2.found() and d3.found()}
+ if d1.found() and d2.found() and d3.found()
+@@ -437,15 +439,15 @@
+ subdir('src')
+ subdir('tools')
+ subdir('tests')
+-if build_machine.system() == 'windows'
+-  message('Disabling gtk-doc while building on Windows')
+-else
+-  d = find_program('gtkdoc-scan', required : get_option('gtk_doc'))
+-  if d.found()
+-    subdir('doc')
+-  endif
+-  summary_info += {'gtk_doc': d.found()}
+-endif
++# if build_machine.system() == 'windows'
++#   message('Disabling gtk-doc while building on Windows')
++# else
++#   d = find_program('gtkdoc-scan', required : get_option('gtk_doc'))
++#   if d.found()
++#     subdir('doc')
++#   endif
++#   summary_info += {'gtk_doc': d.found()}
++# endif
+ subdir('data')
+ subdir('man')
+ subdir('po')
+diff -Naur spice-gtk/meson_options.txt tainted_spice/meson_options.txt
+--- spice-gtk/meson_options.txt	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/meson_options.txt	2023-05-20 19:36:08.856473334 +0200
+@@ -4,15 +4,17 @@
+ 
+ option('wayland-protocols',
+     type : 'feature',
++    value : 'disabled',
+     description: 'Enable wayland protocols')
+ 
+ option('webdav',
+     type : 'feature',
++    value : 'disabled',
+     description: 'Enable webdav support')
+ 
+ option('builtin-mjpeg',
+     type : 'boolean',
+-    value : true,
++    value : false,
+     description : 'Enable the builtin mjpeg video decoder')
+ 
+ option('usbredir',
+@@ -50,10 +52,12 @@
+ 
+ option('introspection',
+     type : 'feature',
++    value : 'disabled',
+     description: 'Check for GObject instrospection requirements')
+ 
+ option('vapi',
+     type : 'feature',
++    value : 'disabled',
+     description: 'Check for vala requirements')
+ 
+ option('alignment-checks',
+@@ -67,22 +71,27 @@
+ 
+ option('sasl',
+     type : 'feature',
++    value : 'disabled',
+     description : 'Use cyrus SASL authentication')
+ 
+ option('opus',
+     type : 'feature',
++    value : 'disabled',
+     description: 'Enable Opus audio codec')
+ 
+ option('smartcard',
+     type : 'feature',
++    value : 'disabled',
+     description : 'Enable smartcard support')
+ 
+ option('egl',
+     type : 'feature',
++    value : 'disabled',
+     description: 'EGL support')
+ 
+ option('gtk_doc',
+        type : 'feature',
++    value : 'disabled',
+        description : 'Generate API documentation with gtk-doc')
+ 
+ option('recorder',
 diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 --- spice-gtk/src/cloon.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloon.c	2023-01-28 10:21:55.514589062 +0100
++++ tainted_spice/src/cloon.c	2023-05-20 19:35:25.556344319 +0200
 @@ -0,0 +1,609 @@
 +#include <unistd.h>
 +#include <stdlib.h>
@@ -613,7 +733,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +
 diff -Naur spice-gtk/src/cloon.h tainted_spice/src/cloon.h
 --- spice-gtk/src/cloon.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloon.h	2023-01-28 10:21:55.514589062 +0100
++++ tainted_spice/src/cloon.h	2023-05-20 19:35:25.556344319 +0200
 @@ -0,0 +1,22 @@
 +
 +
@@ -639,7 +759,7 @@ diff -Naur spice-gtk/src/cloon.h tainted_spice/src/cloon.h
 +
 diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 --- spice-gtk/src/hmac_cipher.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.c	2023-01-28 10:21:55.514589062 +0100
++++ tainted_spice/src/hmac_cipher.c	2023-05-20 19:35:25.556344319 +0200
 @@ -0,0 +1,144 @@
 +/*****************************************************************************/
 +/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
@@ -787,7 +907,7 @@ diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 +
 diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 --- spice-gtk/src/hmac_cipher.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.h	2023-01-28 10:21:55.514589062 +0100
++++ tainted_spice/src/hmac_cipher.h	2023-05-20 19:35:25.556344319 +0200
 @@ -0,0 +1,28 @@
 +/*****************************************************************************/
 +/*    Copyright (C)  2006-2022    Cloon,    <clownix@clownix.net>          */
@@ -818,8 +938,8 @@ diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 +
 +
 diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
---- spice-gtk/src/meson.build	2023-01-27 21:41:45.000000000 +0100
-+++ tainted_spice/src/meson.build	2023-01-28 10:21:55.514589062 +0100
+--- spice-gtk/src/meson.build	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/src/meson.build	2023-05-20 19:35:25.556344319 +0200
 @@ -85,6 +85,8 @@
    'spice-client.c',
    'spice-option.c',
@@ -829,9 +949,27 @@ diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
    'spice-util.c',
    'usb-device-manager.c',
  ]
+@@ -201,7 +203,7 @@
+                                                     spice_client_glib_revision)
+ summary_info += {'libspice-client-glib.so version': spice_client_glib_so_version}
+ 
+-spice_client_glib_lib = library('spice-client-glib-2.0', spice_client_glib_sources,
++spice_client_glib_lib = library('cloonix-spice-client-glib-2.0', spice_client_glib_sources,
+                                 version : spice_client_glib_so_version,
+                                 install : true,
+                                 include_directories : spice_gtk_include,
+@@ -389,7 +391,7 @@
+                                                      spice_client_gtk_revision)
+   summary_info += {'libspice-client-gtk.so version': spice_client_gtk_so_version}
+ 
+-  spice_client_gtk_lib = library('spice-client-gtk-3.0', spice_client_gtk_sources,
++  spice_client_gtk_lib = library('cloonix-spice-client-gtk-3.0', spice_client_gtk_sources,
+                                  version : spice_client_gtk_so_version,
+                                  install : true,
+                                  link_args : [spice_gtk_version_script],
 diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
---- spice-gtk/src/spice-channel.c	2023-01-27 21:41:45.000000000 +0100
-+++ tainted_spice/src/spice-channel.c	2023-01-28 10:21:55.518589071 +0100
+--- spice-gtk/src/spice-channel.c	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/src/spice-channel.c	2023-05-20 19:35:25.556344319 +0200
 @@ -48,6 +48,11 @@
  
  G_STATIC_ASSERT(sizeof(SpiceChannelClass) == sizeof(GObjectClass) + 19 * sizeof(gpointer));
@@ -905,9 +1043,21 @@ diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
  reconnect:
      c->conn = spice_session_channel_open_host(c->session, channel, &c->tls, &c->error);
      if (c->conn == NULL) {
+diff -Naur spice-gtk/src/spice-client-glib-usb-acl-helper.c tainted_spice/src/spice-client-glib-usb-acl-helper.c
+--- spice-gtk/src/spice-client-glib-usb-acl-helper.c	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/src/spice-client-glib-usb-acl-helper.c	2023-05-20 19:35:25.556344319 +0200
+@@ -41,7 +41,7 @@
+         /* We print the error both to stdout, for the app invoking us and \
+            stderr for the end user */ \
+         fprintf(stdout, "Error " __VA_ARGS__); \
+-        fprintf(stderr, "spice-client-glib-usb-helper: Error " __VA_ARGS__); \
++        fprintf(stderr, "cloonix-spice-client-glib-usb-acl-helper: Error " __VA_ARGS__); \
+         exit_status = 1; \
+         cleanup(); \
+     } while (0)
 diff -Naur spice-gtk/src/spice-gstaudio.c tainted_spice/src/spice-gstaudio.c
---- spice-gtk/src/spice-gstaudio.c	2023-01-27 21:41:45.000000000 +0100
-+++ tainted_spice/src/spice-gstaudio.c	2023-01-28 10:21:55.518589071 +0100
+--- spice-gtk/src/spice-gstaudio.c	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/src/spice-gstaudio.c	2023-05-20 19:35:25.556344319 +0200
 @@ -349,46 +349,6 @@
  
  #define VOLUME_NORMAL 65535
@@ -1119,8 +1269,8 @@ diff -Naur spice-gtk/src/spice-gstaudio.c tainted_spice/src/spice-gstaudio.c
  
      if (fake_channel) {
 diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
---- spice-gtk/src/spice-session.c	2023-01-27 21:41:45.000000000 +0100
-+++ tainted_spice/src/spice-session.c	2023-01-28 10:21:55.518589071 +0100
+--- spice-gtk/src/spice-session.c	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/src/spice-session.c	2023-05-20 19:35:25.556344319 +0200
 @@ -20,9 +20,8 @@
  #include <gio/gnetworking.h>
  #include <gio/gio.h>
@@ -1523,8 +1673,8 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
  {
      g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-priv.h
---- spice-gtk/src/spice-session-priv.h	2023-01-27 21:41:45.000000000 +0100
-+++ tainted_spice/src/spice-session-priv.h	2023-01-28 10:21:55.518589071 +0100
+--- spice-gtk/src/spice-session-priv.h	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/src/spice-session-priv.h	2023-05-20 19:35:25.556344319 +0200
 @@ -59,6 +59,8 @@
  void spice_session_get_pubkey(SpiceSession *session, guint8 **pubkey, guint *size);
  guint spice_session_get_verify(SpiceSession *session);
@@ -1535,8 +1685,8 @@ diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-pr
  const gchar* spice_session_get_host(SpiceSession *session);
  const gchar* spice_session_get_cert_subject(SpiceSession *session);
 diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
---- spice-gtk/src/spice-widget-egl.c	2023-01-27 21:41:45.000000000 +0100
-+++ tainted_spice/src/spice-widget-egl.c	2023-01-28 10:21:55.518589071 +0100
+--- spice-gtk/src/spice-widget-egl.c	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/src/spice-widget-egl.c	2023-05-20 19:35:25.556344319 +0200
 @@ -226,7 +226,7 @@
  #endif
  
@@ -1597,20 +1747,60 @@ diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
                                         (EGLClientBuffer)NULL,
                                         attrs);
 diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
---- spice-gtk/src/usb-acl-helper.c	2023-01-27 21:41:45.000000000 +0100
-+++ tainted_spice/src/usb-acl-helper.c	2023-01-28 10:21:55.518589071 +0100
-@@ -183,7 +183,7 @@
+--- spice-gtk/src/usb-acl-helper.c	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/src/usb-acl-helper.c	2023-05-20 19:35:25.556344319 +0200
+@@ -24,6 +24,9 @@
+ #include <stdio.h>
+ #include <string.h>
+ 
++#include <glib-object.h>
++#include <gio/gio.h>
++#include "cloon.h"
+ #include "usb-acl-helper.h"
+ 
+ struct _SpiceUsbAclHelperPrivate {
+@@ -181,9 +184,9 @@
+     GIOStatus status;
+     GPid helper_pid;
      gsize bytes_written;
-     const gchar *acl_helper = g_getenv("SPICE_USB_ACL_BINARY");
-     if (acl_helper == NULL)
+-    const gchar *acl_helper = g_getenv("SPICE_USB_ACL_BINARY");
+-    if (acl_helper == NULL)
 -        acl_helper = ACL_HELPER_PATH"/spice-client-glib-usb-acl-helper";
-+        acl_helper = "/usr/local/bin/cloonix/client/spice/spice-client-glib-usb-acl-helper";
++//    const gchar *acl_helper = g_getenv("SPICE_USB_ACL_BINARY");
++//    if (acl_helper == NULL)
++    const gchar *acl_helper = "/usr/libexec/cloonix/client/cloonix-spice-client-glib-usb-acl-helper";
      gchar *argv[] = { (char*)acl_helper, NULL };
      gint in, out;
      gchar buf[128];
+@@ -217,6 +220,7 @@
+     g_io_channel_set_close_on_unref(priv->out_ch, TRUE);
+     status = g_io_channel_set_flags(priv->out_ch, G_IO_FLAG_NONBLOCK, &err);
+     if (status != G_IO_STATUS_NORMAL) {
++        KERR("ERROR %s", acl_helper);
+         g_task_return_error(task, err);
+         goto done;
+     }
+diff -Naur spice-gtk/subprojects/spice-common/meson.build tainted_spice/subprojects/spice-common/meson.build
+--- spice-gtk/subprojects/spice-common/meson.build	2023-04-30 22:39:02.000000000 +0200
++++ tainted_spice/subprojects/spice-common/meson.build	2023-05-20 19:35:25.556344319 +0200
+@@ -162,10 +162,10 @@
+ #
+ subdir('python_modules')
+ subdir('common')
+-if get_option('tests')
+-  subdir('tests')
+-endif
+-subdir('docs')
++# if get_option('tests')
++#   subdir('tests')
++# endif
++# subdir('docs')
+ 
+ #
+ # write config.h
 diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
---- spice-gtk/tools/spice-cmdline.c	2023-01-27 21:41:45.000000000 +0100
-+++ tainted_spice/tools/spice-cmdline.c	2023-01-28 10:21:55.518589071 +0100
+--- spice-gtk/tools/spice-cmdline.c	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/tools/spice-cmdline.c	2023-05-20 19:35:25.556344319 +0200
 @@ -27,9 +27,25 @@
  static char *tls_port;
  static char *password;
@@ -1650,9 +1840,9 @@ diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
          g_object_set(session, "uri", uri, NULL);
      if (host)
 diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
---- spice-gtk/tools/spicy.c	2023-01-27 21:41:45.000000000 +0100
-+++ tainted_spice/tools/spicy.c	2023-01-28 10:21:55.518589071 +0100
-@@ -1268,29 +1268,29 @@
+--- spice-gtk/tools/spicy.c	2023-04-30 22:38:59.000000000 +0200
++++ tainted_spice/tools/spicy.c	2023-05-20 19:35:25.556344319 +0200
+@@ -1272,29 +1272,29 @@
  
  static void recent_add(SpiceSession *session)
  {
@@ -1705,7 +1895,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  }
  
  static void main_channel_event(SpiceChannel *channel, SpiceChannelEvent event,
-@@ -1303,7 +1303,7 @@
+@@ -1307,7 +1307,7 @@
  
      switch (event) {
      case SPICE_CHANNEL_OPENED:
@@ -1714,7 +1904,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
          recent_add(conn->session);
          break;
      case SPICE_CHANNEL_SWITCHING:
-@@ -1311,7 +1311,7 @@
+@@ -1315,7 +1315,7 @@
          break;
      case SPICE_CHANNEL_CLOSED:
          /* this event is only sent if the channel was succesfully opened before */
@@ -1723,7 +1913,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
          connection_disconnect(conn);
          break;
      case SPICE_CHANNEL_ERROR_IO:
-@@ -2003,7 +2003,6 @@
+@@ -2012,7 +2012,6 @@
      GOptionContext *context;
      spice_connection *conn;
      gchar *conf_file, *conf;
@@ -1731,7 +1921,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  
      keyfile = g_key_file_new();
  
-@@ -2047,23 +2046,6 @@
+@@ -2056,23 +2055,6 @@
      spice_set_session_option(conn->session);
      spice_cmdline_session_setup(conn->session);
  

@@ -1,0 +1,29 @@
+#!/bin/bash
+HERE=`pwd`
+mkdir -p ${HERE}/install_libptytty
+tar xvf libptytty-2.0.tar.gz
+cd libptytty-2.0
+cmake -DCMAKE_INSTALL_PREFIX=${HERE}/install_libptytty -DBUILD_SHARED_LIBS=OFF .
+cmake --build .
+cmake --install .
+
+
+cd ${HERE}
+mkdir -p ${HERE}/install_rxvt
+export PKG_CONFIG_PATH=${HERE}/install_libptytty/lib/pkgconfig
+tar xvf rxvt-unicode-9.31.tar.bz2
+cd rxvt-unicode-9.31
+
+./configure --prefix=${HERE}/install_rxvt --disable-perl
+make
+make install
+
+cd ${HERE}
+cp ${HERE}/install_rxvt/bin/urxvt ${HERE}
+
+rm -rf libptytty-2.0
+rm -rf install_libptytty
+rm -rf rxvt-unicode-9.31
+rm -rf install_rxvt
+
+

@@ -93,9 +93,7 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
 {
   int nb_eth, result = 0;
   memset(use, 0, MAX_PATH_LEN);
-  if ((!strcmp(name, "doors")) ||
-           (!strcmp(name, "uml_cloonix_switch")) ||
-           (!strcmp(name, "cloon")))
+  if ((!strcmp(name, "bulk")) || (!strcmp(name, "cloonix")))
     {
     snprintf(use, MAX_NAME_LEN, "%s is for system use", name);
     result = 1;
@@ -529,9 +527,10 @@ char *cfg_get_ctrl_doors_sock(void)
 /*****************************************************************************/
 char *cfg_get_root_work(void)
 {
-  if (cfg.clc.work_dir[0] == 0)
-    KOUT(" ");
-  return(cfg.clc.work_dir);
+  static char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  sprintf(path, "/var/lib/cloonix/%s", cfg.clc.network);
+  return(path);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -570,10 +569,7 @@ char *cfg_get_bin_dir(void)
 char *cfg_get_bulk(void)
 {
   static char path[MAX_PATH_LEN];
-  if (cfg.clc.bulk_dir[0] == 0)
-    KOUT(" ");
-  memset(path, 0, MAX_PATH_LEN);
-  sprintf(path,"%s", cfg.clc.bulk_dir);
+  sprintf(path, "/var/lib/cloonix/bulk");
   return path;
 }
 /*---------------------------------------------------------------------------*/

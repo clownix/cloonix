@@ -18,12 +18,9 @@ Libraries that are recompiled are put into a separate tree only for cloonix
 use. This allows the use of customized libs with no impact on the official
 host machine.
 
-The place where all compiled cloonix bin and libs are installed is:
-/usr/local/bin/cloonix
 The host machine can have qemu, openvswitch and spice installed, cloonix will
 use its own version of these softwares.
-This way of working gives a very simple way to uninstall cloonix with a simple
-"rm -rf /usr/local/bin/cloonix*"
+
 
 Sources associated to dpdk/ovs
 ==============================
@@ -45,8 +42,16 @@ Install
 =======
 
 The installation of cloonix is provided from source only with compilation
-on host and install in /usr/local/bin/cloonix of the host. For more info
-on the dependancy, look into **install_depends** file.
+on host and install in::
+
+  //usr/libexec/cloonix/etc/cloonix.cfg                      config
+  /usr/libexec/cloonix/*                                     binaries
+  /usr/bin/cloonix_net                                       server script
+  /usr/bin/cloonix_(cli, gui, scp, ssh, ovs, ice, ocp, osh)  client scripts
+  /var/lib/cloonix/bulk/*                                    vm file-systems
+  /var/lib/cloonix/*                                         work directory
+
+For the dependancy, look into **install_depends** file.
 The podman package is not necessary for cloonix use, if you which, you can
 suppress the line installing it before launching the script.
 
@@ -72,9 +77,20 @@ Here under is the complete list of commands for this installation::
     ./doitall
 
 
-To erase all trace of cloonix from the host ::
+A simple way to uninstall cloonix is by erasing all the installed files
 
-    rm -rf /usr/local/bin/cloonix*
+
+The binaries and config file::
+
+  rm -rf /usr/libexec/cloonix
+
+The scripts that call the binaries::
+
+  rm -f /usr/bin/cloonix_*
+
+The storage of all the virtual machine files::
+
+  rm -f /var/lib/cloonix
 
 
 The cloonix source to compile and install is also on github::
@@ -87,17 +103,14 @@ Guest download
 
 Cloonix needs root file-systems to run guests, the above installation
 does not populate the guest qcow2 files, the server software expects to
-find those guests' file system inside a directory called **bulk**, here
-under is the default path of the bulk, it is configured inside the
-cloonix_config file::
+find those guests' file system inside a directory called **bulk**::
 
-     ${HOME}/cloonix_data/bulk
+     /var/lib/cloonix/bulk
 
 Here is the complete list of commands to download our first vm guest,
 qcow2 for kvm and img for crun::
 
-    mkdir -p ${HOME}/cloonix_data/bulk
-    cd ${HOME}/cloonix_data/bulk
+    cd /var/lib/cloonix/bulk
     wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/bookworm.qcow2.gz
     wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/bookworm.img.gz
     gunzip bookworm.qcow2.gz

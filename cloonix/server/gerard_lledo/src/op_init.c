@@ -21,12 +21,12 @@ void *op_init(struct fuse_conn_info *info, struct fuse_config *cfg)
     INFO("Using FUSE protocol %d.%d", info->proto_major, info->proto_minor);
 
     if (super_fill() != 0) {
-        ERR("ext4fuse cannot continue");
+        ERR("cloonix-ext4fuse cannot continue");
         abort();
     }
 
     if (super_group_fill() != 0) {
-        ERR("ext4fuse cannot continue");
+        ERR("cloonix-ext4fuse cannot continue");
         abort();
     }
 

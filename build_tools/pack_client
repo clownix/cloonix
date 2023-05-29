@@ -1,0 +1,72 @@
+#!/bin/bash
+set -x
+if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
+  echo PLEASE DEFINE CLOONIX_TREE_ROOT
+  exit 1
+fi
+if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
+  echo NOT FOUND:
+  echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
+  exit 1
+fi
+TMPBUILD=${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_client
+TARGZ_STORE=${CLOONIX_TREE_ROOT}/targz_store
+CLIENT="${CLOONIX_TREE_ROOT}/build_tools/cloonix-client"
+COMMON="${CLOONIX_TREE_ROOT}/build_tools/cloonix-common"
+mkdir -p ${CLIENT}
+cp -rf ${TMPBUILD}/cloonix/client/* ${CLIENT}
+#----------------------------------------------------------
+mkdir -p ${CLIENT}/usr_bin
+for i in  cloonix_cli \
+          cloonix_gui \
+          cloonix_ice \
+          cloonix_ocp \
+          cloonix_osh \
+          cloonix_ovs \
+          cloonix_scp \
+          cloonix_ssh \
+          cloonix_wsk ; do
+  cp -f ${CLOONIX_TREE_ROOT}/cloonix/${i} ${CLIENT}/usr_bin
+done
+#----------------------------------------------------------
+rm -rf ${CLIENT}/lib_client
+rm -rf ${CLIENT}/spice_lib_client
+#----------------------------------------------------------
+cp -f  ${CLIENT}/agent_dropbear/cloonix-dropbear-scp ${CLIENT}
+cp -f  ${CLIENT}/agent_dropbear/cloonix-dropbear-ssh ${CLIENT}
+rm -rf ${CLIENT}/agent_dropbear
+#----------------------------------------------------------
+cp -f ${CLIENT}/spice/cloonix-spice-client-glib-usb-acl-helper ${CLIENT}
+cp -f ${CLIENT}/spice/cloonix-spicy ${CLIENT}
+rm -rf ${CLIENT}/spice
+#----------------------------------------------------------
+cp -f ${CLIENT}/cairo_canvas/cloonix-gui ${CLIENT}
+rm -rf ${CLIENT}/cairo_canvas
+#----------------------------------------------------------
+cp -f ${CLIENT}/xwycli/cloonix-xwycli ${CLIENT}
+rm -rf ${CLIENT}/xwycli
+#----------------------------------------------------------
+cp -f ${CLIENT}/rxvt/urxvt ${CLIENT}/cloonix-urxvt
+rm -rf ${CLIENT}/rxvt
+#----------------------------------------------------------
+cp -f ${CLIENT}/ctrl/cloonix-ctrl ${CLIENT}
+rm -rf ${CLIENT}/ctrl
+#----------------------------------------------------------
+cp -f ${CLIENT}/openssh/cloonix-u2i-scp ${CLIENT}
+cp -f ${CLIENT}/openssh/cloonix-u2i-ssh ${CLIENT}
+rm -rf ${CLIENT}/openssh
+#----------------------------------------------------------
+LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/usr/libexec/cloonix/common/lib"
+#----------------------------------------------------------
+for i in `find ${CLIENT} -maxdepth 1 -type f` ; do
+  patchelf --set-rpath ${RPATH_LIB} ${i}
+  patchelf --set-interpreter ${LDLINUX} ${i}
+done
+#----------------------------------------------------------
+cd ${CLOONIX_TREE_ROOT}/build_tools
+gcc -o copy_libs fill_common.c
+./copy_libs ${CLIENT} ${COMMON}/lib
+rm ./copy_libs
+rm -rf ${TMPBUILD}
+#----------------------------------------------------------

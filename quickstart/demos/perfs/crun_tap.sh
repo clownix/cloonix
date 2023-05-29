@@ -43,8 +43,8 @@ sudo ip addr add dev tap1 1.1.1.2/24
 cloonix_ssh $NET Cloon1 "ip addr add dev eth0 1.1.1.1/24"
 cloonix_ssh $NET Cloon1 "ip link set dev eth0 up"
 #----------------------------------------------------------------------
-
-urxvt -e cloonix_ssh $NET Cloon1 "iperf3 -s -1" &
+URXVT=/usr/libexec/cloonix/client/cloonix-urxvt
+${URXVT} -e cloonix_ssh $NET Cloon1 "iperf3 -s -1" &
 sleep 1
 iperf3 -c 1.1.1.1
 #----------------------------------------------------------------------

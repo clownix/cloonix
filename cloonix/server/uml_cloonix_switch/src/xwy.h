@@ -18,7 +18,7 @@
 int xwy_pid(void);
 void xwy_request_doors_connect(void);
 void kill_xwy(void);
-void init_xwy(void);
+void init_xwy(char *cloonix_net_name);
 /*--------------------------------------------------------------------------*/
 
 

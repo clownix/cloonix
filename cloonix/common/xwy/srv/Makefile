@@ -5,9 +5,9 @@ LDFLAGS += -L../libmdl -lmdl -lutil -lpthread
 
 OBJECTS := $(patsubst %.c,obj/%.o,$(SOURCES))
 
-all: cloonix_xwy_srv
+all: cloonix-xwy-srv
 
-cloonix_xwy_srv: $(OBJECTS)
+cloonix-xwy-srv: $(OBJECTS)
 	$(CC) $^ -o $@ $(LDFLAGS)
 
 obj:
@@ -17,7 +17,7 @@ obj/%.o: %.c obj
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	$(RM) $(OBJECTS) cloonix_xwy_srv
+	$(RM) $(OBJECTS) cloonix-xwy-srv
 	if test -e obj; then rmdir obj; fi
 
 .PHONY: all clean

@@ -40,17 +40,13 @@
 #include "ovs_cmd.h"
 
 #define RANDOM_APPEND_SIZE 6
-#define OVSDB_SERVER_BIN  "bin/ovsdb-server"
-#define OVS_VSWITCHD_BIN  "bin/ovs-vswitchd"
-#define OVSDB_TOOL_BIN    "bin/ovsdb-tool"
-#define SCHEMA_TEMPLATE   "vswitch.ovsschema"
+#define SCHEMA_TEMPLATE   "cloonix-vswitch.ovsschema"
 
 #define OVSDB_SERVER_SOCK "ovsdb_server.sock"
 #define OVSDB_SERVER_CONF "ovsdb_server_conf"
 #define OVSDB_SERVER_PID  "ovsdb_server.pid"
 #define OVSDB_SERVER_CTL  "ovsdb_server.ctl"
 #define OVS_VSWITCHD_PID  "ovs-vswitchd.pid"
-#define OVS_VSWITCHD_LOG  "ovs-vswitchd.log"
 #define OVS_VSWITCHD_CTL  "ovs-vswitchd.ctl"
 
 static char g_arg[NB_ARG][MAX_ARG_LEN];
@@ -146,10 +142,12 @@ int ovs_vsctl(char *ovs_bin, char *ovs_dir, char *multi_arg_cmd)
 {
   int i, cmd_argc, result;
   char cmd_argv[NB_ARG][MAX_ARG_LEN];
+  char *argv[NB_ARG];
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   memset(cmd_argv, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+  memset(argv, 0, NB_ARG * sizeof(char *));
   cmd_argc = make_cmd_argv(cmd_argv, multi_arg_cmd);
-  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/bin/ovs-vsctl", ovs_bin);
+  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/cloonix-ovs-vsctl", ovs_bin);
   snprintf(g_arg[1],MAX_ARG_LEN-1, "--no-syslog");
   snprintf(g_arg[2],MAX_ARG_LEN-1, "--db=unix:%s/%s",
                                 ovs_dir, OVSDB_SERVER_SOCK);
@@ -157,7 +155,9 @@ int ovs_vsctl(char *ovs_bin, char *ovs_dir, char *multi_arg_cmd)
     {
     strncpy(g_arg[3+i], cmd_argv[i], MAX_ARG_LEN-1);
     }
-  result = call_my_popen(ovs_dir, cmd_argc+3, g_arg, 0, __FUNCTION__, 1);
+  for (i=0; i<cmd_argc+3; i++)
+    argv[i] = g_arg[i]; 
+  result = call_ovs_popen(ovs_dir, argv, 0, __FUNCTION__, 1);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -167,10 +167,12 @@ int ovs_vsctl_quiet(char *ovs_bin, char *ovs_dir, char *multi_arg_cmd)
 {
   int i, cmd_argc, result;
   char cmd_argv[NB_ARG][MAX_ARG_LEN];
+  char *argv[NB_ARG];
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   memset(cmd_argv, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+  memset(argv, 0, NB_ARG * sizeof(char *));
   cmd_argc = make_cmd_argv(cmd_argv, multi_arg_cmd);
-  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/bin/ovs-vsctl", ovs_bin);
+  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/cloonix-ovs-vsctl", ovs_bin);
   snprintf(g_arg[1],MAX_ARG_LEN-1, "--no-syslog");
   snprintf(g_arg[2],MAX_ARG_LEN-1, "--db=unix:%s/%s",
                                 ovs_dir, OVSDB_SERVER_SOCK);
@@ -178,7 +180,9 @@ int ovs_vsctl_quiet(char *ovs_bin, char *ovs_dir, char *multi_arg_cmd)
     {
     strncpy(g_arg[3+i], cmd_argv[i], MAX_ARG_LEN-1);
     }
-  result = call_my_popen(ovs_dir, cmd_argc+3, g_arg, 1, __FUNCTION__, 1);
+  for (i=0; i<cmd_argc+3; i++)
+    argv[i] = g_arg[i]; 
+  result = call_ovs_popen(ovs_dir, argv, 1, __FUNCTION__, 1);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -188,17 +192,21 @@ static int ovs_appctl(char *ovs_bin, char *ovs_dir, char *multi_arg_cmd)
 {
   int i, cmd_argc, result;
   char cmd_argv[NB_ARG][MAX_ARG_LEN];
+  char *argv[NB_ARG];
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   memset(cmd_argv, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
+  memset(argv, 0, NB_ARG * sizeof(char *));
   cmd_argc = make_cmd_argv(cmd_argv, multi_arg_cmd);
-  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/bin/ovs-appctl", ovs_bin);
+  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/cloonix-ovs-appctl", ovs_bin);
   snprintf(g_arg[1],MAX_ARG_LEN-1, "--target=%s/%s",
                                 ovs_dir, OVS_VSWITCHD_CTL);
   for (i=0; i<cmd_argc; i++)
     {
     strncpy(g_arg[2+i], cmd_argv[i], MAX_ARG_LEN-1);
     }
-  result = call_my_popen(ovs_dir, cmd_argc+2, g_arg, 0, __FUNCTION__, 1);
+  for (i=0; i<cmd_argc+2; i++)
+    argv[i] = g_arg[i]; 
+  result = call_ovs_popen(ovs_dir, argv, 0, __FUNCTION__, 1);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -206,12 +214,14 @@ static int ovs_appctl(char *ovs_bin, char *ovs_dir, char *multi_arg_cmd)
 /*****************************************************************************/
 static int launch_ovsdb_server(char *ovs_bin, char *ovs_dir)
 {
-  int result = -1;
+  int i, result = -1;
   char *pidfile = get_pidfile_ovsdb(ovs_dir);
+  char *argv[NB_ARG];
   if (file_exists(pidfile))
     unlink(get_pidfile_ovs(ovs_dir));
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/%s", ovs_bin, OVSDB_SERVER_BIN);
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s", OVSDB_SERVER_BIN);
   if (!file_exists(g_arg[0]))
     KOUT("MISSING %s", g_arg[0]);
   snprintf(g_arg[1],MAX_ARG_LEN-1,"%s/%s", ovs_dir, g_ovsdb_server_conf);
@@ -225,7 +235,9 @@ static int launch_ovsdb_server(char *ovs_bin, char *ovs_dir)
                                    ovs_dir, OVSDB_SERVER_CTL);
   snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=err");
   snprintf(g_arg[7], MAX_ARG_LEN-1, "--detach");
-  result = call_my_popen(ovs_dir, 8, g_arg, 0, __FUNCTION__, 1);
+  for (i=0; i<8; i++)
+    argv[i] = g_arg[i]; 
+  result = call_ovs_popen(ovs_dir, argv, 0, __FUNCTION__, 1);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -244,8 +256,9 @@ static void appctl_debug_fix(char *ovs_bin, char *ovs_dir, char *debug_cmd)
 /*****************************************************************************/
 static int launch_ovs_vswitchd(char *ovs_bin, char *ovs_dir)
 {
-  int result = -1;
+  int i, result = -1;
   char *pidfile = get_pidfile_ovs(ovs_dir);
+  char *argv[NB_ARG];
   if (file_exists(pidfile))
     {
     KERR("PIDFILE: %s EXISTS! ERROR", pidfile);
@@ -253,16 +266,20 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *ovs_dir)
     }
 
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
-  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/%s", ovs_bin, OVS_VSWITCHD_BIN);
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s", OVS_VSWITCHD_BIN);
   if (!file_exists(g_arg[0]))
     KOUT("MISSING %s", g_arg[0]);
   snprintf(g_arg[1],MAX_ARG_LEN-1, "unix:%s/%s", ovs_dir, OVSDB_SERVER_SOCK);
   snprintf(g_arg[2],MAX_ARG_LEN-1, "--pidfile=%s/%s",ovs_dir,OVS_VSWITCHD_PID);
-  snprintf(g_arg[3],MAX_ARG_LEN-1, "--log-file=%s/%s",ovs_dir,OVS_VSWITCHD_LOG);
+  snprintf(g_arg[3],MAX_ARG_LEN-1, "--log-file=%s/log/%s",
+           ovs_dir, DEBUG_LOG_VSWITCH);
   snprintf(g_arg[4],MAX_ARG_LEN-1, "--unixctl=%s/%s",ovs_dir,OVS_VSWITCHD_CTL);
   snprintf(g_arg[5],MAX_ARG_LEN-1, "--verbose=err");
   snprintf(g_arg[6],MAX_ARG_LEN-1, "--detach");
-  result = call_my_popen(ovs_dir, 7, g_arg, 0, __FUNCTION__, 1);
+  for (i=0; i<7; i++)
+    argv[i] = g_arg[i]; 
+  result = call_ovs_popen(ovs_dir, argv, 0, __FUNCTION__, 1);
   if (!result)
     {
     appctl_debug_fix(ovs_bin, ovs_dir, "ANY:syslog:err");
@@ -276,21 +293,40 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *ovs_dir)
 int create_ovsdb_server_conf(char *ovs_bin, char *ovs_dir)
 {
   int result = -1;
-  if (access(ovs_dir, F_OK))
-    KERR("ERROR %s", ovs_dir);
+  char flog[MAX_PATH_LEN];
+  char cmd[3*MAX_PATH_LEN];
+  FILE *fh;
+  char *argv[NB_ARG];
+  if (access(ovs_dir, W_OK))
+    KOUT("ERROR %s", ovs_dir);
   else
     {
+    memset(flog, 0, MAX_PATH_LEN);
+    memset(cmd, 0, 3*MAX_PATH_LEN);
+    memset(argv, 0, NB_ARG * sizeof(char *));
+    snprintf(flog, MAX_PATH_LEN-1, "%s/log/%s", ovs_dir, DEBUG_LOG_VSWITCH);
+    fh = fopen(flog, "w+");
+    fclose(fh);
+    chmod(flog, 0666);
+    if (access(flog, W_OK))
+      KOUT("ERROR %s", flog);
     memset(g_ovsdb_server_conf, 0, MAX_NAME_LEN);
     snprintf(g_ovsdb_server_conf, MAX_NAME_LEN-1,
              "%s%s", OVSDB_SERVER_CONF, random_str());
     memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-    snprintf(g_arg[0],MAX_ARG_LEN-1, "%s/%s", ovs_bin, OVSDB_TOOL_BIN);
-    if (!file_exists(g_arg[0]))
-      KOUT("MISSING %s", g_arg[0]);
-    snprintf(g_arg[1],MAX_ARG_LEN-1, "create");
-    snprintf(g_arg[2],MAX_ARG_LEN-1, "%s/%s", ovs_dir, g_ovsdb_server_conf);
-    snprintf(g_arg[3],MAX_ARG_LEN-1, "%s/%s", ovs_bin, SCHEMA_TEMPLATE);
-    result = call_my_popen(ovs_dir, 4, g_arg, 0, __FUNCTION__, 1);
+    snprintf(cmd, 3*MAX_PATH_LEN-1,
+             "%s create %s/%s %s/ovsschema/%s 2>%s",
+             OVSDB_TOOL_BIN,
+             ovs_dir, g_ovsdb_server_conf,
+             ovs_bin, SCHEMA_TEMPLATE,
+             flog);
+    argv[0] = BASH_BIN;
+    argv[1] = "-c";
+    argv[2] = cmd;
+    argv[3] = NULL;
+    result = call_ovs_popen(ovs_dir, argv, 0, __FUNCTION__, 1);
+if (result)
+KOUT("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEe");
     }
   return result;
 }
@@ -367,7 +403,6 @@ static void clean_and_wait(char *ovs_dir, int pid)
 int ovs_execv_ovs_vswitchd(char *net, char *ovs_bin, char *ovs_dir)
 {
   int pid, result = -1;
-  init_environ(net, ovs_bin, ovs_dir);
   if (launch_ovs_vswitchd(ovs_bin, ovs_dir))
     {
     KERR("ERROR Fail launch vswitchd server ");
@@ -407,7 +442,6 @@ int ovs_execv_ovs_vswitchd(char *net, char *ovs_bin, char *ovs_dir)
 int ovs_execv_ovsdb_server(char *net, char *ovs_bin, char *ovs_dir)
 {
   int pid, result = -1;
-  init_environ(net, ovs_bin, ovs_dir);
   if (launch_ovsdb_server(ovs_bin, ovs_dir))
     KERR("ERROR Fail launch ovsbd server ");
   else

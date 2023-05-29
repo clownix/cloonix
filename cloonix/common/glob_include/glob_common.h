@@ -139,7 +139,6 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define MAC_ADDR_LEN 6
 #define VM_CONFIG_FLAG_PERSISTENT      0x00001
 #define VM_CONFIG_FLAG_I386            0x00002
-#define VM_CONFIG_FLAG_9P_SHARED       0x00004
 #define VM_CONFIG_FLAG_FULL_VIRT       0x00008
 #define VM_CONFIG_FLAG_BALLOONING      0x00010
 #define VM_CONFIG_FLAG_INSTALL_CDROM   0x00020
@@ -171,12 +170,16 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define XWY_TRAFFIC_SOCK "xwy_traf"
 #define XWY_CONTROL_SOCK "xwy_ctrl"
 #define SUID_POWER_SOCK_DIR "suid_power"
+
+#define CRUN_DIR "crun"
 #define SNF_DIR "snf"
 #define NAT_DIR "nat"
 #define A2B_DIR "a2b"
 #define C2C_DIR "c2c"
 #define CNT_DIR "cnt"
 #define MNT_DIR "mnt"
+#define LOG_DIR "log"
+
 
 #define MAX_STATS_ITEMS 30
 
@@ -204,8 +207,32 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define OVS_BRIDGE_PORT "_k_"
 #define OVS_BRIDGE   "_b_"
 
-#define SBIN_IP "/sbin/ip"
-#define USR_BIN_PRLIMIT "/usr/bin/prlimit"
+#define XAUTH_BIN "/usr/libexec/cloonix/common/cloonix-xauth"
+#define BASH_BIN "/usr/libexec/cloonix/common/cloonix-bash"
+#define XWYCLI_BIN "/usr/libexec/cloonix/client/cloonix-xwycli"
+
+#define WIRESHARK_BIN "/usr/libexec/cloonix/server/cloonix-wireshark"
+#define CRUN_BIN "/usr/libexec/cloonix/server/cloonix-crun"
+#define IP_BIN "/usr/libexec/cloonix/server/ip"
+#define FUSE_OVERLAY_FS_BIN "/usr/libexec/cloonix/server/cloonix-fuse-overlayfs"
+#define EXT4FUSE_BIN "/usr/libexec/cloonix/server/cloonix-ext4fuse"
+#define MOUNT_BIN "/usr/libexec/cloonix/server/cloonix-mount"
+#define UMOUNT_BIN "/usr/libexec/cloonix/server/cloonix-umount"
+#define LOSETUP_BIN "/usr/libexec/cloonix/server/cloonix-losetup"
+#define GREP_BIN "/usr/libexec/cloonix/server/cloonix-grep"
+#define AWK_BIN "/usr/libexec/cloonix/server/cloonix-awk"
+#define MKNOD_BIN "/usr/libexec/cloonix/server/cloonix-mknod"
+#define CHMOD_BIN "/usr/libexec/cloonix/server/cloonix-chmod"
+#define OVSDB_SERVER_BIN "/usr/libexec/cloonix/server/cloonix-ovsdb-server"
+#define OVS_VSWITCHD_BIN "/usr/libexec/cloonix/server/cloonix-ovs-vswitchd"
+#define OVSDB_TOOL_BIN   "/usr/libexec/cloonix/server/cloonix-ovsdb-tool"
+#define OSIRROX_BIN "/usr/libexec/cloonix/server/cloonix-osirrox"
+
+
+#define DOCKER_BIN "/usr/bin/docker"
+#define PODMAN_BIN "/usr/bin/podman"
+
+
 #define BASE_NAMESPACE "cloonix"
 #define PATH_NAMESPACE "/run/netns/"
 
@@ -249,9 +276,7 @@ typedef struct t_topo_clc
   char version[MAX_NAME_LEN];
   char network[MAX_NAME_LEN];
   char username[MAX_NAME_LEN];
-  char work_dir[MAX_PATH_LEN];
   char bin_dir[MAX_PATH_LEN];
-  char bulk_dir[MAX_PATH_LEN];
   int  server_port;
   int  flags_config;
 } t_topo_clc;
@@ -293,7 +318,6 @@ typedef struct t_topo_kvm
   char install_cdrom[MAX_PATH_LEN];
   char added_cdrom[MAX_PATH_LEN];
   char added_disk[MAX_PATH_LEN];
-  char p9_host_share[MAX_PATH_LEN];
 } t_topo_kvm;
 
 /*---------------------------------------------------------------------------*/
@@ -516,4 +540,9 @@ int  rpct_decoder(int llid, int len, char *str_rx);
 void rpct_redirect_string_tx(t_rpct_tx rpc_tx);
 void rpct_init(t_rpct_tx rpc_tx);
 /****************************************************************************/
-
+#define DEBUG_LOG_DIALOG  "debug_dialog.log"
+#define DEBUG_LOG_OVS_CMD "debug_ovs_cmd.log"
+#define DEBUG_LOG_VSWITCH "debug_vswitch.log"
+#define DEBUG_LOG_SUID    "debug_suid_power.log"
+#define DEBUG_LOG_CRUN    "debug_crun.log"
+/****************************************************************************/

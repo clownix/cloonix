@@ -1,4 +1,3 @@
 #!/bin/bash
-make clean
-make -j 5
+make
 

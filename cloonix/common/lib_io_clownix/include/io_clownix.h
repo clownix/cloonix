@@ -60,7 +60,6 @@ int is_nonblock(int llid);
 
 
 void real_time_close_fd(void);
-int clownix_system (char * commande);
 
 
 int get_waked_in_with_cidx(int cidx);
@@ -166,7 +165,6 @@ void nonnonblock_fd(int fd);
 unsigned long channel_get_tx_queue_len(int llid);
 
 void ptr_doorways_client_tx(int llid, int len, char *buf);
-
 
 int msg_mngt_get_tx_queue_len(int llid);
 

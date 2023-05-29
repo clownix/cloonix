@@ -185,8 +185,6 @@
                          "  <network_name> %s </network_name>\n"\
                          "  <username> %s </username>\n"\
                          "  <server_port> %d </server_port>\n"\
-                         "  <work_dir> %s </work_dir>\n"\
-                         "  <bulk_dir> %s </bulk_dir>\n"\
                          "  <bin_dir> %s </bin_dir>\n"\
                          "  <flags> %d </flags>\n"\
                          "</work_dir_resp>"
@@ -262,7 +260,6 @@
                          "  <install_cdrom> %s </install_cdrom>\n"\
                          "  <added_cdrom> %s </added_cdrom>\n"\
                          "  <added_disk> %s </added_disk>\n"\
-                         "  <p9_host_share> %s </p9_host_share>\n"\
                          "</add_kvm>"
 /*---------------------------------------------------------------------------*/
 #define ADD_CNT_O         "<add_cnt>\n"\
@@ -423,7 +420,7 @@
                               "  version:%s \n"\
                               "  conf_rank:%d \n"\
                               "  network:%s username:%s server_port:%d \n"\
-                              "  work_dir:%s bulk_dir:%s bin_dir:%s \n"\
+                              "  bin_dir:%s \n"\
                               "  flags_config:%d \n"\
                               "  nb_cnt:%d nb_kvm:%d \n"\
                               "  nb_c2c:%d nb_tap:%d nb_phy:%d \n"\
@@ -439,7 +436,6 @@
                               "  install_cdrom: %s \n"\
                               "  added_cdrom: %s \n"\
                               "  added_disk: %s \n"\
-                              "  p9_host_share: %s \n"\
                               "  linux_kernel: %s \n"\
                               "  rootfs_used: %s \n"\
                               "  rootfs_backing: %s \n"\

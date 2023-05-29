@@ -52,9 +52,6 @@
 
 #define DRIVE_PARAMS " -drive file=%s,index=%d,media=disk,if=virtio"
 
-#define VIRTIO_9P " -fsdev local,id=fsdev0,security_model=passthrough,path=%s"\
-                  " -device virtio-9p-pci,id=fs0,fsdev=fsdev0,mount_tag=%s"
-
 #define DRIVE_FULL_VIRT " -blockdev node-name=%s,driver=qcow2,"\
                         "file.driver=file,file.node-name=file,file.filename=%s"\
                         " -device ide-hd,bus=ide.0,unit=0,drive=%s"
@@ -73,6 +70,9 @@
                   " -blockdev driver=file,cache.direct=off,cache.no-flush=on,filename=%s,node-name=lol%s"\
                   " -blockdev driver=qcow2,node-name=%s,file=lol%s"\
                   " -device scsi-hd,drive=%s"
+
+
+
 
 
 typedef struct t_cprootfs_config
@@ -197,24 +197,26 @@ static void cprootfs_clone_msg(void *data, char *msg)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int local_clownix_system (char *commande)
+static int local_cmd_system (char *cmd, char *par1, char *par2, char *par3,
+                             char *par4, char *par5, char *par6)
 {
   pid_t pid;
   int   status;
-  char **environ = NULL;
-  char * argv [4];
+  char *argv[8];
   char msg_dad[MAX_NAME_LEN];
-  if (commande == NULL)
-    return (1);
   if ((pid = fork ()) < 0)
     return (-1);
   if (pid == 0)
     {
-    argv[0] = "/bin/bash";
-    argv[1] = "-c";
-    argv[2] = commande;
-    argv[3] = NULL;
-    execve("/bin/bash", argv, environ);
+    argv[0] = cmd;
+    argv[1] = par1;
+    argv[2] = par2;
+    argv[3] = par3;
+    argv[4] = par4;
+    argv[5] = par5;
+    argv[6] = par6;
+    argv[7] = NULL;
+    execv(cmd, argv);
     exit (127);
     }
   memset(msg_dad, 0, MAX_NAME_LEN);
@@ -239,17 +241,17 @@ static int local_clownix_system (char *commande)
 static int cprootfs_clone(void *data)
 {
   int result;
-  char *cmd;
+  char *qimg = "/usr/libexec/cloonix/server/cloonix-qemu-img";
+  char parm[2*MAX_PATH_LEN];
   t_cprootfs_config *cprootfs = (t_cprootfs_config *) data;
-  cmd = utils_qemu_img_derived(cprootfs->backing, cprootfs->used);
-  result = local_clownix_system(cmd);
-  if (result)
-    KERR("%s", cmd);
-  snprintf(cmd, 2*MAX_PATH_LEN, "/bin/chmod +w %s", cprootfs->used);
-  result = clownix_system(cmd);
+  memset(parm, 0, 2*MAX_PATH_LEN);
+  snprintf(parm, 2*MAX_PATH_LEN-1,
+           "backing_file=%s,backing_fmt=qcow2", cprootfs->backing);
+  result = local_cmd_system(qimg, "create", "-f", "qcow2", "-o",
+                            parm, cprootfs->used);
   if (result)
     {
-    KERR("%s", cmd);
+    KERR("ERROR %s create -f qcow2 -o %s %s", qimg, parm, cprootfs->used);
     send_to_daddy("KO");
     }
   else
@@ -291,7 +293,7 @@ static void derived_file_creation_request(t_vm *vm)
    " -nodefaults"\
    " -rtc base=utc,driftfix=slew"\
    " -global kvm-pit.lost_tick_policy=delay"\
-   " -no-hpet -boot strict=on"
+   " -machine hpet=off -boot strict=on"
 
 #define QEMU_OPTS_QMP \
    " -chardev socket,id=qmp1,path=%s,server=on,wait=off"\
@@ -313,8 +315,8 @@ static void derived_file_creation_request(t_vm *vm)
 
 #define QEMU_SPICE \
    " -device virtio-vga"\
-   " -device ich9-intel-hda"\
-   " -device hda-micro"\
+   " -audiodev driver=spice,id=snd0"\
+   " -device AC97,audiodev=snd0"\
    " -device qemu-xhci"\
    " -device usb-tablet"\
    " -chardev spicevmc,id=charredir0,name=usbredir"\
@@ -327,10 +329,9 @@ static void derived_file_creation_request(t_vm *vm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
+static void create_linux_cmd_kvm(t_vm *vm, char *qemu_cmd)
 {
-  int i, nb_cpu, len;
-  char cmd_start[10000];
+  int i, nb_cpu, len = 0;
   char cpu_type[MAX_NAME_LEN];
   char *rootfs, *added_disk, *gname;
   char *spice_path, *cdrom;
@@ -339,20 +340,16 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
   spice_path = utils_get_spice_path(vm->kvm.vm_id);
   nb_cpu = vm->kvm.cpu;
   if (inside_cloon(&gname))
-    {
     strcpy(cpu_type, "kvm64");
-    }
   else
-    {
     strcpy(cpu_type, "host,-aes");
-    }
-  len = sprintf(cmd_start, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
+  len += sprintf(qemu_cmd+len, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
   for (i = 0; i < vm->kvm.nb_tot_eth; i++)
     {
     if ((vm->kvm.eth_table[i].endp_type == endp_type_eths) ||
         (vm->kvm.eth_table[i].endp_type == endp_type_ethv))
       {
-      len += sprintf(cmd_start+len,"%s",
+      len += sprintf(qemu_cmd+len, "%s",
              ovs_format_ethv(vm, i, vm->kvm.eth_table[i].vhost_ifname));
       }
     else
@@ -360,107 +357,72 @@ static int create_linux_cmd_kvm(t_vm *vm, char *linux_cmd)
     }
   if (!(vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NO_QEMU_GA))
     {
-    len += sprintf(cmd_start+len, QEMU_OPTS_CLOON, 
+    len += sprintf(qemu_cmd+len, QEMU_OPTS_CLOON, 
                    utils_get_qbackdoor_path(vm->kvm.vm_id),
                    utils_get_qga_path(vm->kvm.vm_id));
     }
-  len = sprintf(linux_cmd, " %s"
-                        " -pidfile %s/%s/pid"
-                        " -machine pc,accel=kvm,usb=off,dump-guest-core=off"
-                        " -cpu %s"
-                        " -smp %d,maxcpus=%d,cores=1",
-                        cmd_start, cfg_get_work_vm(vm->kvm.vm_id),
-                        DIR_UMID, cpu_type, nb_cpu, nb_cpu);
+  len += sprintf(qemu_cmd+len,
+                 " -pidfile %s/%s/pid"
+                 " -machine pc,accel=kvm,usb=off,dump-guest-core=off"
+                 " -cpu %s"
+                 " -smp %d,maxcpus=%d,cores=1",
+                 cfg_get_work_vm(vm->kvm.vm_id), DIR_UMID,
+                 cpu_type, nb_cpu, nb_cpu);
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_WITH_PXE)
-    len += sprintf(linux_cmd+len," -nographic -vga none");
+    len += sprintf(qemu_cmd+len," -nographic -vga none");
   else
-    len += sprintf(linux_cmd+len, QEMU_SPICE, spice_path);
-
-  if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_9P_SHARED)
-    {
-    if (vm->kvm.p9_host_share[0] == 0) 
-      KERR(" ");
-    else
-      {
-      if (!is_directory_readable(vm->kvm.p9_host_share))
-        KERR("%s", vm->kvm.p9_host_share);
-      else
-        len += sprintf(linux_cmd+len, VIRTIO_9P, vm->kvm.p9_host_share,
-                                                 vm->kvm.name);
-      }
-    }
+    len += sprintf(qemu_cmd+len, QEMU_SPICE, spice_path);
   rootfs = vm->kvm.rootfs_used;
   added_disk = vm->kvm.added_disk;
   if  (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NO_REBOOT)
     {
-    len += sprintf(linux_cmd+len, " -no-reboot");
+    len += sprintf(qemu_cmd+len, " -no-reboot");
     }
   if  (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_WITH_PXE)
     {
-    len += sprintf(linux_cmd+len, " -boot n");
+    len += sprintf(qemu_cmd+len, " -boot n");
     }
   if  (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM)
     {
-    len += sprintf(linux_cmd+len, INSTALL_DISK, rootfs, 0);
-    len += sprintf(linux_cmd+len, ADDED_CDROM, vm->kvm.install_cdrom);
+    len += sprintf(qemu_cmd+len, INSTALL_DISK, rootfs, 0);
+    len += sprintf(qemu_cmd+len, ADDED_CDROM, vm->kvm.install_cdrom);
     }
   else
     {
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT)
-      len += sprintf(linux_cmd+len, DRIVE_FULL_VIRT, 
+      len += sprintf(qemu_cmd+len, DRIVE_FULL_VIRT, 
                      vm->kvm.name, rootfs, vm->kvm.name );
     else
       {
       if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NO_QEMU_GA)
         {
-        len += sprintf(linux_cmd+len, DRIVE_PARAMS_CISCO, rootfs);
-        len += sprintf(linux_cmd+len,
+        len += sprintf(qemu_cmd+len, DRIVE_PARAMS_CISCO, rootfs);
+        len += sprintf(qemu_cmd+len,
           " -uuid 1c54ff10-774c-4e63-9896-4c18d66b50b1");
         }
       else
         {
-        len += sprintf(linux_cmd+len, BLOCKNAME, rootfs, vm->kvm.name, 
+        len += sprintf(qemu_cmd+len, BLOCKNAME, rootfs, vm->kvm.name, 
                        vm->kvm.name, vm->kvm.name, vm->kvm.name);
         }
       } 
-    cdrom = utils_get_cdrom_path_name(vm->kvm.vm_id);
-    len += sprintf(linux_cmd+len, AGENT_CDROM, cdrom);
+    cdrom = utils_get_cdrom_path_name(vm);
+    len += sprintf(qemu_cmd+len, AGENT_CDROM, cdrom);
   
     if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK)
       {
-      len += sprintf(linux_cmd+len, DRIVE_PARAMS, added_disk, 1);
+      len += sprintf(qemu_cmd+len, DRIVE_PARAMS, added_disk, 1);
       }
     }
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM)
     {
-    len += sprintf(linux_cmd+len, ADDED_CDROM, vm->kvm.added_cdrom);
+    len += sprintf(qemu_cmd+len, ADDED_CDROM, vm->kvm.added_cdrom);
     }
-  len += sprintf(linux_cmd+len, QEMU_OPTS_QMP,
+  len += sprintf(qemu_cmd+len, QEMU_OPTS_QMP,
                  utils_get_qmp_path(vm->kvm.vm_id));
-  return len;
 }
 /*--------------------------------------------------------------------------*/
               
-/****************************************************************************/
-static char *qemu_cmd_format(t_vm *vm)
-{
-  int len = 0;
-  char *cmd = (char *) clownix_malloc(MAX_BIG_BUF, 7);
-  char path_qemu_exe[MAX_PATH_LEN];
-  memset(cmd, 0,  MAX_BIG_BUF);
-  memset(path_qemu_exe, 0, MAX_PATH_LEN);
-  snprintf(path_qemu_exe, MAX_PATH_LEN-1, 
-           "%s netns exec %s_%s %s/server/qemu/%s",
-           SBIN_IP, BASE_NAMESPACE, cfg_get_cloonix_name(),
-           cfg_get_bin_dir(), QEMU_EXE);
-  len += snprintf(cmd, MAX_BIG_BUF-1, "%s -L %s/server/qemu ",
-                  path_qemu_exe, cfg_get_bin_dir());
-  len += create_linux_cmd_kvm(vm, cmd+len);
-  len += sprintf(cmd+len, " 2>/tmp/qemu_%s", vm->kvm.name);
-  return cmd;
-}
-/*--------------------------------------------------------------------------*/
-
 /****************************************************************************/
 static char *alloc_argv(char *str)
 {
@@ -477,15 +439,56 @@ static char **create_qemu_argv(t_vm *vm)
 {
   int i = 0;
   static char **argv;
-  char *kvm_exe = qemu_cmd_format(vm);
-  argv = (char **)clownix_malloc(20 * sizeof(char *), 13);
-  memset(argv, 0, 20 * sizeof(char *));
+  char qemu_cmd[10*MAX_PATH_LEN];
+  char namespace[MAX_PATH_LEN];
+  char qemu_bin[MAX_PATH_LEN];
+  char qemu_data[MAX_PATH_LEN];
+  char *ptr1, *ptr2;
+  memset(qemu_cmd, 0, 10*MAX_PATH_LEN);
+  memset(namespace, 0, MAX_PATH_LEN);
+  memset(qemu_bin, 0, MAX_PATH_LEN);
+  memset(qemu_data, 0, MAX_PATH_LEN);
+
+  snprintf(namespace, MAX_PATH_LEN-1, "%s_%s",
+           BASE_NAMESPACE, cfg_get_cloonix_name());
+  snprintf(qemu_bin, MAX_PATH_LEN-1, "%s/server/cloonix-qemu-system-x86_64",
+           cfg_get_bin_dir());
+  snprintf(qemu_data, MAX_PATH_LEN-1, "%s/server/qemu", cfg_get_bin_dir());
+  create_linux_cmd_kvm(vm, qemu_cmd);
+
+  argv = (char **)clownix_malloc(200 * sizeof(char *), 13);
+  memset(argv, 0, 200 * sizeof(char *));
   argv[i++] = alloc_argv(utils_get_dtach_bin_path());
   argv[i++] = alloc_argv("-n");
   argv[i++] = alloc_argv(utils_get_dtach_sock_path(vm->kvm.name));
-  argv[i++] = alloc_argv("/bin/bash");
-  argv[i++] = alloc_argv("-c");
-  argv[i++] = kvm_exe;
+  argv[i++] = alloc_argv(IP_BIN);
+  argv[i++] = alloc_argv("netns");
+  argv[i++] = alloc_argv("exec");
+  argv[i++] = alloc_argv(namespace);
+  argv[i++] = alloc_argv(qemu_bin);
+  argv[i++] = alloc_argv("-L");
+  argv[i++] = alloc_argv(qemu_data);
+  ptr1 = qemu_cmd;
+  ptr1 += strspn(ptr1, " "); 
+  while(ptr1)
+    {
+    if (i>190)
+      KOUT("ERROR");
+    ptr2 = ptr1 + strcspn(ptr1, " ");
+    if (ptr2)
+      {
+      *ptr2 = 0;
+      ptr2 += 1;
+      }
+    argv[i++] = alloc_argv(ptr1);
+    if ((ptr2) && (strlen(ptr2)))
+      {
+      ptr1 = ptr2;
+      ptr1 += strspn(ptr1, " "); 
+      }
+    else
+      ptr1 = NULL;
+    }
   argv[i++] = NULL;
   return argv;
 }

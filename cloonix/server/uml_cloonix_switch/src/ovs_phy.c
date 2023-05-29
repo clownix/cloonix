@@ -32,6 +32,8 @@
 #include "msg.h"
 #include "lan_to_name.h"
 #include "ovs_snf.h"
+#include "layout_rpc.h"
+#include "layout_topo.h"
 
 
 static t_ovs_phy *g_head_phy;
@@ -175,8 +177,13 @@ void ovs_phy_resp_msg_phy(int is_ko, int is_add, char *name)
       utils_send_status_ko(&(cur->llid), &(cur->tid), name);
       }
     else
+      {
+      if (is_add)
+        layout_add_sat(name, cur->llid);
+      else
+        layout_del_sat(name);
       utils_send_status_ok(&(cur->llid), &(cur->tid));
-    
+      } 
     if (is_add == 0)
       free_phy(cur);
     }

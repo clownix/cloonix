@@ -41,9 +41,8 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "crun.h"
-#include "launcher.h"
 #include "crun_utils.h"
-#include "docker.h"
+#include "dockir.h"
 #include "net_phy.h"
 
 /*--------------------------------------------------------------------------*/
@@ -279,36 +278,6 @@ static int read_umid_pid(int vm_id)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char **unlinearize(int nb, char *line)
-{
-  char **argv; 
-  int i;
-  char *ptr_end, *ptr_start = line;
-  argv = (char **) malloc((nb+1)*sizeof(char **));
-  memset(argv, 0, (nb+1)*sizeof(char **));
-  for (i=0; i<nb; i++)
-    {
-    if (*ptr_start != '"')
-      KERR("%s", line);
-    else
-      {
-      ptr_start += 1;
-      ptr_end = strchr(ptr_start, '"');
-      if (!ptr_end)
-        KERR("%s", line);
-      else
-        {
-        *ptr_end = 0;
-        argv[i] = ptr_start;
-        ptr_start = ptr_end + 1; 
-        }
-      }
-    }
-  return argv;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static int check_and_set_uid(void)
 {
   int result = -1;
@@ -319,12 +288,14 @@ static int check_and_set_uid(void)
   if (uid == 0)
     {
     result = 0;
-    umask (0000);
+    umask(0000);
     if (setuid(0))
       KOUT(" ");
     if (setgid(0))
       KOUT(" ");
     }
+  else
+    KERR("ERROR uid");
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -388,7 +359,7 @@ static void heartbeat (int delta)
     count_ticks_blkd = 0;
     automate_pid_monitor();
     crun_beat(g_llid);
-    docker_beat(g_llid);
+    dockir_beat(g_llid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -401,7 +372,7 @@ static void req_kill_clean_all(void)
   int pid;
   t_vmon *next, *cur = g_head_vmon;
   crun_kill_all();
-  docker_kill_all();
+  dockir_kill_all();
   while(cur)
     {
     next = cur->next;
@@ -445,12 +416,18 @@ static void qemu_launch(char *name, int vm_id, int argc,
                         char *line, char *resp, int llid, int tid)
 {
   int result;
-  char **argv;
-  char *ptr_arg;
+  char *ptr_start, *ptr;
   t_vmon *cur = alloc_vmon(name, vm_id);
-  ptr_arg = strchr(line, ':');
-  argv = unlinearize(argc, ptr_arg+1);
-  result = launcher(argv);
+  ptr_start = strchr(line, ':');
+  if (!ptr_start)
+    KOUT("ERROR %s", line);
+  ptr = strchr(ptr_start, '"');
+  while(ptr)
+    {
+    *ptr = ' ';
+    ptr = strchr(ptr, '"');
+    } 
+  result = execute_cmd(ptr_start+1, SYNCHRO);
   if (result)
     {
     snprintf(resp, MAX_PATH_LEN-1,
@@ -464,7 +441,6 @@ static void qemu_launch(char *name, int vm_id, int argc,
              "cloonsuid_resp_launch_vm_ok name=%s",name);
     rpct_send_sigdiag_msg(llid, tid, resp);
     }
-  free(argv);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -499,7 +475,7 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
   else if (!strncmp(line,
   "cloonsuid_docker", strlen("cloonsuid_docker")))
     {
-    docker_recv_poldiag_msg(llid, tid, line);
+    dockir_recv_poldiag_msg(llid, tid, line);
     }
   else if (!strncmp(line,
   "cloonsuid_req_phy", strlen("cloonsuid_req_phy")))
@@ -592,10 +568,14 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     }
   else if (!strncmp(line,
   "cloonsuid_crun", strlen("cloonsuid_crun")))
+    {
     crun_recv_sigdiag_msg(llid, tid, line);
+    }
   else if (!strncmp(line,
   "cloonsuid_docker", strlen("cloonsuid_docker")))
-    docker_recv_sigdiag_msg(llid, tid, line);
+    {
+    dockir_recv_sigdiag_msg(llid, tid, line);
+    }
   else
     KERR("ERROR %s %s", g_network_name, line);
 }
@@ -647,6 +627,22 @@ int get_cloonix_rank(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void run_dir_create(void)
+{
+  char path[MAX_PATH_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1, "/var/lib/cloonix");
+  check_and_set_uid();
+  mkdir(path, 0777);
+  chmod(path, 0777);
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1, "/var/lib/cloonix/bulk");
+  mkdir(path, 0777);
+  chmod(path, 0777);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int main (int argc, char *argv[])
 {
   char ctrl_path[MAX_PATH_LEN];
@@ -654,39 +650,41 @@ int main (int argc, char *argv[])
   g_head_vmon = NULL;
   g_llid = 0;
   g_watchdog_ok = 0;
-  if (argc != 8)
-    KOUT(" ");
-  set_saved_environ(argv[5], argv[6], argv[7]);
-  msg_mngt_init("suid_power", IO_MAX_BUF_LEN);
-  memset(g_network_name, 0, MAX_NAME_LEN);
-  memset(ctrl_path, 0, MAX_PATH_LEN);
-  memset(g_root_path, 0, MAX_PATH_LEN);
-  memset(g_root_work_kvm, 0, MAX_PATH_LEN);
-  memset(g_bin_dir, 0, MAX_PATH_LEN);
-  memset(g_mnt_loop_dir, 0, MAX_PATH_LEN);
-
-  strncpy(g_network_name, argv[1], MAX_NAME_LEN-1);
-  strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
-  strncpy(g_bin_dir, argv[3], MAX_PATH_LEN-1);
-  snprintf(g_mnt_loop_dir, MAX_PATH_LEN-1,"%s/%s", argv[2], MNT_DIR);
-  if (sscanf(argv[4], "%d", &g_cloonix_rank) != 1)
-    KOUT("ERROR %s", argv[4]);
-  crun_init();
-  root = g_root_path;
-  snprintf(g_root_work_kvm,MAX_PATH_LEN-1,"%s/%s", root, CLOONIX_VM_WORKDIR);
-  snprintf(ctrl_path,MAX_PATH_LEN-1,"%s/%s", root, SUID_POWER_SOCK_DIR);
-  unlink(ctrl_path);
-  msg_mngt_heartbeat_init(heartbeat);
-  string_server_unix(ctrl_path, connect_from_ctrl_client, "ctrl");
-  daemon(0,0);
-  if (setenv("PATH", "/usr/sbin:/usr/bin:/sbin:/bin", 1))
-    KOUT("ERROR setenv");
-  docker_init();
-  net_phy_init();
-  seteuid(getuid());
-  cloonix_set_pid(getpid());
-  clownix_timeout_add(1000, fct_timeout_self_destruct, NULL, NULL, NULL);
-  msg_mngt_loop();
+  if (argc == 1)
+    run_dir_create();
+  else
+    {
+    if (argc != 5)
+      KOUT(" ");
+    msg_mngt_init("suid_power", IO_MAX_BUF_LEN);
+    memset(g_network_name, 0, MAX_NAME_LEN);
+    memset(ctrl_path, 0, MAX_PATH_LEN);
+    memset(g_root_path, 0, MAX_PATH_LEN);
+    memset(g_root_work_kvm, 0, MAX_PATH_LEN);
+    memset(g_bin_dir, 0, MAX_PATH_LEN);
+    memset(g_mnt_loop_dir, 0, MAX_PATH_LEN);
+  
+    strncpy(g_network_name, argv[1], MAX_NAME_LEN-1);
+    strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
+    strncpy(g_bin_dir, argv[3], MAX_PATH_LEN-1);
+    snprintf(g_mnt_loop_dir, MAX_PATH_LEN-1,"%s/%s", argv[2], MNT_DIR);
+    if (sscanf(argv[4], "%d", &g_cloonix_rank) != 1)
+      KOUT("ERROR %s", argv[4]);
+    root = g_root_path;
+    crun_init(root);
+    snprintf(g_root_work_kvm,MAX_PATH_LEN-1,"%s/%s", root, CLOONIX_VM_WORKDIR);
+    snprintf(ctrl_path,MAX_PATH_LEN-1,"%s/%s", root, SUID_POWER_SOCK_DIR);
+    unlink(ctrl_path);
+    msg_mngt_heartbeat_init(heartbeat);
+    string_server_unix(ctrl_path, connect_from_ctrl_client, "ctrl");
+    daemon(0,0);
+    dockir_init();
+    net_phy_init();
+    seteuid(getuid());
+    cloonix_set_pid(getpid());
+    clownix_timeout_add(1000, fct_timeout_self_destruct, NULL, NULL, NULL);
+    msg_mngt_loop();
+    }
   return 0;
 }
 /*--------------------------------------------------------------------------*/

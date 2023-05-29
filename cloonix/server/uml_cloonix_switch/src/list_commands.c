@@ -98,8 +98,6 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
       len += sprintf(list->cmd + len, " --with_pxe");
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_BALLOONING)
       len += sprintf(list->cmd + len, " --balloon");
-    if (kvm->vm_config_flags & VM_CONFIG_FLAG_9P_SHARED)
-      len += sprintf(list->cmd + len, " --9p_share=%s", kvm->p9_host_share);
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM)
       len += sprintf(list->cmd + len, " --install_cdrom=%s",
                                          kvm->install_cdrom);
@@ -488,6 +486,33 @@ static int build_layout_lan(int offset, t_list_commands *hlist,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int build_layout_sat(int offset, t_list_commands *hlist,
+                            t_layout_sat *sat)
+{
+  int result = offset;
+  t_list_commands *list = &(hlist[result]);
+  if (can_increment_index(result))
+    {
+    sprintf(list->cmd, "cloonix_cli %s cnf lay abs_xy_sat %s %d %d",
+                       cfg_get_cloonix_name(), sat->name,
+                       (int) sat->x, (int) sat->y);
+    result += 1;
+    if (sat->hidden_on_graph)
+      {
+      if (can_increment_index(result))
+        {
+        list = &(hlist[result]);
+        sprintf(list->cmd, "cloonix_cli %s cnf lay hide_sat %s 1",
+                           cfg_get_cloonix_name(), sat->name);
+        result += 1;
+        }
+      }
+   }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static int produce_list_canvas_layout_cmd(int offset, t_list_commands *hlist, 
                                           int go, int width, int height, 
                                           int cx, int cy, int cw, int ch)
@@ -531,6 +556,21 @@ static int produce_list_layout_lan_cmd(int offset, t_list_commands *hlist,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int produce_list_layout_sat_cmd(int offset, t_list_commands *hlist,
+                                       t_layout_sat_xml *sat_xml)
+{
+  int result = offset;
+  t_layout_sat_xml *cur = sat_xml;
+  while(cur)
+    {
+    result = build_layout_sat(result, hlist, &(cur->sat));
+    cur = cur->next;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int produce_list_commands(t_list_commands *hlist, int is_layout)
 {
   int i, nb_vm, nb_cnt, result = 0;
@@ -565,6 +605,7 @@ int produce_list_commands(t_list_commands *hlist, int is_layout)
     layout_xml = get_layout_xml_chain();
     result = produce_list_layout_node_cmd(result, hlist, layout_xml->node_xml);
     result = produce_list_layout_lan_cmd(result, hlist, layout_xml->lan_xml);
+    result = produce_list_layout_sat_cmd(result, hlist, layout_xml->sat_xml);
     result = produce_list_canvas_layout_cmd(result, hlist, go, width, height, 
                                                               cx, cy, cw, ch);
     }

@@ -66,12 +66,8 @@ static char *init_local_cloonix_bin_path(char *callbin)
   if (!ptr)
     KOUT("%s", path);
   *ptr = 0;
-  ptr = strrchr(path, '/');
-  if (!ptr)
-    KOUT("%s", path);
-  *ptr = 0;
   strncpy(cloonix_root_tree, path, MAX_PATH_LEN-1);
-  snprintf(path, 2*MAX_PATH_LEN, "%s/client/xwycli/xwycli", cloonix_root_tree);
+  snprintf(path, 2*MAX_PATH_LEN, "%s/client/cloonix-xwycli", cloonix_root_tree);
   if (access(path, X_OK))
     KOUT("%s", path);
   return cloonix_root_tree;

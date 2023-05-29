@@ -197,7 +197,7 @@ void doorways_err_cb (int llid)
     g_doorways_llid = 0;
     if (!get_glob_req_self_destruction())
       {
-      KERR("Ctrl access to cloonix_doorways broken, re-launching\n");
+      KERR("Ctrl access to cloonix-doorways broken, re-launching\n");
       doorways_start();
       }
     }
@@ -327,7 +327,7 @@ static void doorways_start()
   if (!get_glob_req_self_destruction())
     {
     g_killed = 0;
-    pid_clone_launch(utils_execve, killed, NULL, (void *) argv,
+    pid_clone_launch(utils_execv, killed, NULL, (void *) argv,
                      NULL, NULL, "doorways", -1, 1);
     clownix_timeout_add(500, timer_doorways_protect, NULL, NULL, NULL); 
     clownix_timeout_add(50, timer_doorways_connect, 
@@ -387,8 +387,7 @@ void doorways_init(char *root_work, int server_port, char *password)
   g_doorways_llid = 0;
   g_abs_beat_timer = 0;
   g_ref_timer = 0;
-  sprintf(g_bin_doorways, 
-          "%s/server/doorways/cloonix_doorways", cfg_get_bin_dir());
+  sprintf(g_bin_doorways, "%s/server/cloonix-doorways", cfg_get_bin_dir());
   strncpy(g_root_work, root_work, MAX_PATH_LEN-1);
   snprintf(g_server_port, MAX_PATH_LEN-1, "%d", server_port);
   strncpy(g_password, password, MSG_DIGEST_LEN-1);

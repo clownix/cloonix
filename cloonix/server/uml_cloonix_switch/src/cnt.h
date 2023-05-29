@@ -32,6 +32,7 @@ typedef struct t_cnt
   int lan_del_waiting_ack;
   int count_add;
   int count_del;
+  int count_delete;
   int cloonix_rank;
   int count_llid;
   int cli_llid;

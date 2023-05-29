@@ -66,7 +66,6 @@ static int check_and_set_uid(void)
   if (uid == 0)
     {
     result = 0;
-    umask (0000);
     if (setuid(0))
       KOUT(" ");
     if (setgid(0))
@@ -272,6 +271,7 @@ int main (int argc, char *argv[])
   int fd_rx_from_tap, fd_tx_to_tap;
   if (argc != 5)
     KOUT("ERROR %d", argc);
+  umask(0000);
   g_llid = 0;
   g_watchdog_ok = 0;
   memset(g_net_name, 0, MAX_NAME_LEN);

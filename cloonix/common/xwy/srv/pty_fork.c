@@ -36,6 +36,7 @@
 
 
 #define MAX_ARGC 100
+#define MAX_PATH_LEN 300
 
 typedef struct t_pty_cli
 {
@@ -55,12 +56,8 @@ static int g_sig_read_fd;
 static int g_listen_sock_cloon;
 static char g_home[MAX_TXT_LEN];
 static char g_user[MAX_TXT_LEN];
-static char g_xdg_runtime_dir[MAX_TXT_LEN];
-static char g_path[MAX_TXT_LEN];
-static char g_term[MAX_TXT_LEN];
-static char g_shell[MAX_TXT_LEN];
 static char g_xauthority[MAX_TXT_LEN];
-static char g_xauthority_file[MAX_TXT_LEN];
+static char g_net_name[MAX_TXT_LEN];
 static struct timeval g_last_cloonix_tv;
 
 
@@ -137,25 +134,33 @@ static int xauth_add_magic_cookie(int display_val, char *magic_cookie)
 {
   int result = -1;
   char dpyname[MAX_TXT_LEN];
-  char cmd[2*MAX_TXT_LEN];
   char buf[MAX_TXT_LEN];
-  char *xaf = g_xauthority_file;
+  char *xaf = g_xauthority;
   FILE *fp;
-  memset(cmd, 0, 2*MAX_TXT_LEN);
+  char *argv[10];
+  char *acmd;
+  memset(argv, 0, 10*sizeof(char *));
   memset(buf, 0, MAX_TXT_LEN);
   memset(dpyname, 0, MAX_TXT_LEN);
   snprintf(dpyname, MAX_TXT_LEN-1, UNIX_X11_DPYNAME, display_val);
-  snprintf(cmd, 2*MAX_TXT_LEN-1,
-           "xauth -f %s add %s %s %s",xaf,dpyname,MAGIC_COOKIE,magic_cookie);
-  fp = popen(cmd, "r");
+  argv[0] = XAUTH_BIN;
+  argv[1] = "-f";
+  argv[2] = xaf;
+  argv[3] = "add";
+  argv[4] = dpyname;
+  argv[5] = MAGIC_COOKIE;
+  argv[6] = magic_cookie;
+  argv[7] = NULL;
+  acmd = mdl_argv_linear(argv);
+  fp = mdl_argv_popen(argv);
   if (fp == NULL)
-    XERR("%s", cmd);
+    XERR("ERROR %s", acmd);
   else
     {
     if (fgets(buf, MAX_TXT_LEN-1, fp))
-      XERR("%s %s", cmd, buf);
+      XERR("ERROR %s %s", acmd, buf);
     if (pclose(fp))
-      XERR("%s", cmd);
+      XERR("ERROR %s", acmd);
     else
       result = 0;
     }
@@ -171,89 +176,61 @@ static void clean_xauthority(char *xauthority_file, char *end_file)
   strcat(xauth_locks, end_file);
   unlink(xauth_locks);
   if (wrap_file_exists(xauth_locks))
-    XOUT("XAUTHORITY file lock  %s", xauth_locks);
+    XOUT("ERROR XAUTHORITY file lock  %s", xauth_locks);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void init_all_env(void)
+static void init_all_env(char *net_name)
 {
   char *home = getenv("HOME");
   char *user = getenv("USER");
-  char *xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
   memset(g_home, 0, MAX_TXT_LEN);
-  memset(g_xdg_runtime_dir, 0, MAX_TXT_LEN);
-  memset(g_path, 0, MAX_TXT_LEN);
-  memset(g_term, 0, MAX_TXT_LEN);
-  memset(g_shell, 0, MAX_TXT_LEN);
   memset(g_xauthority, 0, MAX_TXT_LEN);
-  memset(g_xauthority_file, 0, MAX_TXT_LEN);
   memset(g_user, 0, MAX_TXT_LEN);
   if (user)
     strncpy(g_user, user, MAX_TXT_LEN-1);
   if (!home)
     {
-    snprintf(g_home, MAX_TXT_LEN-1, "HOME=%s", "/root");
-    sprintf(g_xauthority_file, "/root/.Cloonauthority_root"); 
-    snprintf(g_xauthority, MAX_TXT_LEN-1, "XAUTHORITY=%s", g_xauthority_file); 
+    XERR("ERROR TOLOOKAT");
+    snprintf(g_home, MAX_TXT_LEN-1, "%s", "/root");
+    sprintf(g_xauthority, "/root/.Cloonauthority_root"); 
     }
   else
     {
-    snprintf(g_home, MAX_TXT_LEN-1, "HOME=%s", home);
-    snprintf(g_xdg_runtime_dir, MAX_TXT_LEN-1,
-             "XDG_RUNTIME_DIR=%s", xdg_runtime_dir);
-    snprintf(g_xauthority_file, MAX_TXT_LEN-1, 
-             "/tmp/.Cloonauthority_%s", user); 
-    snprintf(g_xauthority, MAX_TXT_LEN-1, "XAUTHORITY=%s", g_xauthority_file); 
+    snprintf(g_home, MAX_TXT_LEN-1, "%s", home);
+    snprintf(g_xauthority, MAX_TXT_LEN-1, 
+             "/var/lib/cloonix/%s/Cloonauthority_%s", net_name, user); 
     }
-  unlink(g_xauthority_file);
-  clean_xauthority(g_xauthority_file, "-c");
-  clean_xauthority(g_xauthority_file, "-l");
-  clean_xauthority(g_xauthority_file, "-n");
-  if (wrap_touch(g_xauthority_file))
-    XOUT("XAUTHORITY file %s", g_xauthority_file);
-  snprintf(g_path,  MAX_TXT_LEN-1, "PATH=/usr/sbin:/usr/bin:/sbin:/bin");
-  snprintf(g_term,  MAX_TXT_LEN-1, "TERM=xterm");
-  snprintf(g_shell, MAX_TXT_LEN-1, "SHELL=/bin/bash");
-  if (clearenv())
-    XERR("Bad Clear ENV ");
+  unlink(g_xauthority);
+  clean_xauthority(g_xauthority, "-c");
+  clean_xauthority(g_xauthority, "-l");
+  clean_xauthority(g_xauthority, "-n");
+  if (wrap_touch(g_xauthority))
+    XOUT("ERROR XAUTHORITY file %s", g_xauthority);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char **create_env(int display_val, char *ttyname)
+static void create_env(int display_val, char *ttyname)
 {
-  int i;
-  static char envttyname[MAX_TXT_LEN];
-  static char disp_str[MAX_TXT_LEN];
-  static char *env[] = {g_path, g_home, g_term, g_shell, NULL,
-                        NULL , NULL, NULL, NULL, NULL, NULL,
-                        NULL , NULL, NULL, NULL, NULL, NULL,
-                        NULL , NULL, NULL, NULL, NULL, NULL};
+  char disp_str[MAX_TXT_LEN];
+  char *path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+  memset(disp_str, 0, MAX_TXT_LEN);
   if (display_val > 0)
     {
-    memset(disp_str, 0, MAX_TXT_LEN);
-    snprintf(disp_str, MAX_TXT_LEN-1, LOCALHOST_X11_DISPLAY, display_val);
+    snprintf(disp_str, MAX_TXT_LEN-1, "127.0.0.1:%d.0", display_val);
+    setenv("DISPLAY", disp_str, 1);
     if (strlen(ttyname))
-      { 
-      strcpy (envttyname, "SSH_TTY=");
-      strcat (envttyname, ttyname);
-      }
-    i = 4;
-    env[i++] = g_xauthority;
-    env[i++] = g_xdg_runtime_dir;
-    env[i++] = disp_str;
-    env[i++] = "LIBGL_ALWAYS_INDIRECT=1";
-    env[i++] = "LIBGL_ALWAYS_SOFTWARE=1";
-    env[i++] = "LIBGL_DRI3_DISABLE=1";
-    env[i++] = "QT_X11_NO_MITSHM=1";
-    env[i++] = "QT_XCB_NO_MITSHM=1"; 
-    if (strlen(ttyname))
-      env[i++] = envttyname;
+      setenv("SSH_TTY", ttyname, 1);
+    setenv("PATH", path, 1);
+    setenv("HOME", g_home, 1);
+    setenv("XAUTHORITY", g_xauthority, 1);
+    setenv("TERM", "xterm", 1);
+    setenv("SHELL", "/bin/bash", 1);
     }
   else
     XERR("Problem setting DISPLAY");
-  return env;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -296,12 +273,11 @@ static void create_argv_from_cmd(char *cmd, char **argv)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void helper_wrap_forkpty(int action, uint32_t randid, int sock_fd,
-                                char *cmd, int display_val)
+void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
+                         char *cmd, int display_val)
 {
   char ttyname[MAX_TXT_LEN], *argv[MAX_ARGC];
   int i, pty_fd=-1, ttyfd, pid;
-  char **env;
   memset(argv, 0, MAX_ARGC * sizeof(char *));
   memset(ttyname, 0, MAX_TXT_LEN);
   if ((action == action_bash) || (action == action_cmd))
@@ -309,7 +285,6 @@ static void helper_wrap_forkpty(int action, uint32_t randid, int sock_fd,
     if (wrap_openpty(&pty_fd, &ttyfd, ttyname, fd_type_fork_pty))
       XOUT(" ");
     }
-  env = create_env(display_val, ttyname); 
   prctl(PR_SET_PDEATHSIG, SIGHUP);
   pid = fork();
   if (pid == 0)
@@ -348,21 +323,22 @@ static void helper_wrap_forkpty(int action, uint32_t randid, int sock_fd,
       }
     if (action == action_dae)
       {
+      create_env(display_val, ttyname); 
       create_argv_from_cmd(cmd, argv);
       }
     else if (action == action_bash)
       {
+      clearenv();
+      create_env(display_val, ttyname); 
       argv[0] = "/bin/bash";
       argv[1] = NULL;
       }
     else
       {
-      argv[0] = "/bin/bash";
-      argv[1] = "-c";
-      argv[2] = cmd;
-      argv[3] = NULL;
+      create_env(display_val, ttyname); 
+      create_argv_from_cmd(cmd, argv);
       }
-    execve(argv[0], argv, env);
+    execv(argv[0], argv);
     for (i=0; (argv[i] != NULL) && (i < MAX_ARGC); i++)
       XERR("ARG %d : %s", i, argv[i]);
     XOUT("%s", strerror(errno));
@@ -429,7 +405,6 @@ static void child_death_detection(void)
     }
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static void sig_evt_action(int sig_read_fd)
@@ -536,14 +511,6 @@ int pty_fork_get_max_fd(int val)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
-                         char *cmd, int display_val)
-{
- helper_wrap_forkpty(action, randid, sock_fd, cmd, display_val);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void pty_fork_msg_type_win_size(int sock_fd, int len, char *buf)
 {
   char win_size_buf[16];
@@ -591,13 +558,14 @@ int pty_fork_free_with_sock_fd(int sock_fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void pty_fork_init(void)
+void pty_fork_init(char *cloonix_net_name)
 {
   int pipe_fd[2];
-
+  memset(g_net_name, 0, MAX_TXT_LEN);
+  strncpy(g_net_name, cloonix_net_name, MAX_TXT_LEN-1);
   if (signal(SIGCHLD, child_exit) == SIG_ERR)
     XERR("%s", strerror(errno));
-  init_all_env();
+  init_all_env(cloonix_net_name);
   if (wrap_pipe(pipe_fd, fd_type_pipe_sig, __FUNCTION__) < 0)
     XOUT(" ");
   g_sig_write_fd = pipe_fd[1];

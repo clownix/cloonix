@@ -19,7 +19,6 @@ SRC =  channel.c \
        util_sock.c \
        msg_layer.c \
        clownix_timer.c \
-       clownix_system.c \
        chunk.c \
        rx_process.c \
        tx_process.c  \

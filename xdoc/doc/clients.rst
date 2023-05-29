@@ -121,7 +121,7 @@ Notes:
 For kvm virtual machine, in the guest there has to be an active service:
 qemu-guest-agent.service to have this service on qemu kvm.
 
-The color blue arrives when the cloonix_agent is operational and that
+The color blue arrives when the cloonix-agent is operational and that
 color indicates that the cloonix_ssh will work.
 
 cloonix_scp
@@ -161,7 +161,7 @@ The user "admin" must exist in the guest for this to work.
 look for "admin" inside cloonix_osh and change it if you which.
 
 The kvm machines where cloonix_osh is used will keep the red color indicating
-that the cloonix_agent is not operationnal.
+that the cloonix-agent is not operationnal.
 
 
 cloonix_ocp

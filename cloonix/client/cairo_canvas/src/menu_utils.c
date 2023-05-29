@@ -227,28 +227,24 @@ static void launch_new_pid(t_pid_wait *pid_wait)
   int pid;
   switch (pid_wait->type)
     {
-
     case type_pid_spicy_gtk:
       pid = pid_clone_launch(start_launch, death_pid_wait_launch, NULL,
                              (void *)(pid_wait->argv), (void *) pid_wait,
                              NULL, pid_wait->name, -1, 0);
       bank_set_spicy_gtk_pid(pid_wait->name, pid);
       break;
-
     case type_pid_wireshark:
       pid = pid_clone_launch(start_launch, death_pid_wait_launch, NULL,
                              (void *)(pid_wait->argv), (void *) pid_wait,
                              NULL, pid_wait->name, -1, 0);
       bank_set_wireshark_pid(pid_wait->name, pid);
       break;
-
     case type_pid_dtach:
       pid = pid_clone_launch(start_launch, death_pid_wait_launch, NULL,
                              (void *)(pid_wait->argv), (void *) pid_wait,
                              NULL, pid_wait->name, -1, 0);
       bank_set_dtach_pid(pid_wait->name, pid);
       break;
-
     default:
       KOUT(" ");
     }
@@ -338,82 +334,62 @@ int check_before_start_launch(char **argv)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void start_qemu_spice(char *password, char *path, t_qemu_spice_item *it)
+static void start_qemu_spice(char *name, int vm_id)
 {
-  char name[MAX_NAME_LEN];
+  char *spicy = "/usr/libexec/cloonix/client/cloonix-spicy";
+  char title[MAX_PATH_LEN];
   char net[MAX_NAME_LEN];
-  char *argv[] = { "cloonix_ice", net, name, NULL }; 
-  memset(name, 0, MAX_NAME_LEN);
+  char sock[2*MAX_PATH_LEN];
+  char *argv[10];
+  memset(title, 0, MAX_PATH_LEN);
   memset(net, 0, MAX_NAME_LEN);
-  snprintf (name, MAX_NAME_LEN, "%s", it->vm_name);
-  snprintf (net, MAX_NAME_LEN, "%s", local_get_cloonix_name());
-  name[MAX_NAME_LEN-1] = 0;
-  net[MAX_NAME_LEN-1] = 0;
-  launch_pid_wait(type_pid_spicy_gtk, it->vm_name, argv);
+  memset(sock, 0, 2*MAX_PATH_LEN);
+  memset(argv, 0, 10*sizeof(char *));
+  snprintf(net, MAX_NAME_LEN, "%s", local_get_cloonix_name());
+  snprintf(title, MAX_PATH_LEN-1, "--title=%s/%s", net, name);
+  snprintf(sock, 2*MAX_PATH_LEN-1,
+           "/var/lib/cloonix/%s/vm/vm%d/spice_sock", net, vm_id);
+  argv[0] = spicy;
+  argv[1] = title;
+  argv[2] = "-d";
+  argv[3] = get_doors_client_addr();
+  argv[4] = "-c";
+  argv[5] = sock;
+  argv[6] = "-w";
+  argv[7] = get_password();
+  argv[8] = NULL;
+  launch_pid_wait(type_pid_spicy_gtk, name, argv);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char *get_eth_name(int is_cnt, int rank, int vm_id, int num)
+void start_wireshark(char *vm_name, int num)
 {
-  static char eth_name[MAX_NAME_LEN];
-  memset(eth_name, 0, MAX_NAME_LEN);
-  snprintf(eth_name, MAX_PATH_LEN-1, "%s%d_%d_%d",
-           OVS_BRIDGE_PORT, rank, vm_id, num);
-  return eth_name;
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
-void start_wireshark_vhost(int is_cnt, int vm_id, char *name, int num)
-{
-  int rank = get_cloonix_rank();
-  char *eth = get_eth_name(is_cnt, rank, vm_id, num);
-  char bin_path[MAX_PATH_LEN];
-  char config[MAX_PATH_LEN];
-  char cloonix_name[MAX_NAME_LEN];
-  char *argv[]={bin_path, config, cloonix_name, "-dae",
-                       "/usr/bin/wireshark",
-                       "-o", "capture.no_interface_load:TRUE",
-                       "-o", "gui.ask_unsaved:FALSE",
-                       "-k", "-i", eth, NULL};
-  memset(bin_path, 0, MAX_PATH_LEN);
-  memset(config, 0, MAX_PATH_LEN);
-  memset(cloonix_name, 0, MAX_NAME_LEN);
-  snprintf(bin_path, MAX_PATH_LEN-1,
-                     "%s/client/xwycli/xwycli", get_local_cloonix_tree());
-  snprintf(config, MAX_PATH_LEN-1,
-                     "%s/cloonix_config", get_local_cloonix_tree());
-  snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
+  char *argv[15];
+  char *xwycli = XWYCLI_BIN;
+  char *cnf = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
+  char *net = local_get_cloonix_name();
+  char *wire = WIRESHARK_BIN;
+  char snf[2*MAX_PATH_LEN];
+  memset(argv, 0, 15*sizeof(char *));
+  memset(snf, 0, 2*MAX_PATH_LEN);
+  snprintf(snf, 2*MAX_PATH_LEN, "/var/lib/cloonix/%s/snf/%s_%d",
+           local_get_cloonix_name(), vm_name, num);
+  argv[0] = xwycli;
+  argv[1] = cnf;
+  argv[2] = net;
+  argv[3] = "-dae";
+  argv[4] = wire;
+  argv[5] = "-o";
+  argv[6] = "capture.no_interface_load:TRUE";
+  argv[7] = "-o";
+  argv[8] = "gui.ask_unsaved:FALSE";
+  argv[9] = "-k";
+  argv[10] = "-i";
+  argv[11] = snf;
+  argv[12] = NULL;
   if (check_before_start_launch(argv))
-    launch_pid_wait(type_pid_wireshark, name, argv);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void start_wireshark_dpdk(char *name)
-{
-  char bin_path[MAX_PATH_LEN];
-  char config[MAX_PATH_LEN];
-  char recpath[MAX_PATH_LEN];
-  char cloonix_name[MAX_NAME_LEN];
-  char *argv[]={bin_path, config, cloonix_name, "-dae",
-                       "/usr/bin/wireshark",
-                       "-o", "capture.no_interface_load:TRUE",
-                       "-o", "gui.ask_unsaved:FALSE",
-                       "-k", "-i", recpath, NULL}; 
-  memset(bin_path, 0, MAX_PATH_LEN);
-  memset(config, 0, MAX_PATH_LEN);
-  memset(cloonix_name, 0, MAX_NAME_LEN);
-  snprintf(bin_path, MAX_PATH_LEN-1,
-                     "%s/client/xwycli/xwycli", get_local_cloonix_tree());
-  snprintf(config, MAX_PATH_LEN-1,
-                     "%s/cloonix_config", get_local_cloonix_tree());
-  snprintf(cloonix_name, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
-  snprintf(recpath, MAX_PATH_LEN-1,"%s/%s", get_distant_snf_dir(), name);
-  if (check_before_start_launch(argv))
-    launch_pid_wait(type_pid_wireshark, name, argv);
+    launch_pid_wait(type_pid_wireshark, vm_name, argv);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -423,6 +399,7 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
   t_qemu_spice_item *it;
   char info[MAX_PRINT_LEN];
   char *path = get_path_to_qemu_spice();
+  char *bintree = get_local_cloonix_tree();
   int vm_id;
   if (path)
     {
@@ -437,11 +414,7 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
         }
       else
         {
-        snprintf(it->spice_server_path, MAX_PATH_LEN-1, "%s", 
-                                        get_spice_vm_path(vm_id));
-        snprintf(it->doors_server_path, MAX_NAME_LEN-1, "%s", 
-                                        get_doors_client_addr()); 
-        start_qemu_spice(get_password(), path, it);
+        start_qemu_spice(pm->name, vm_id);
         }
       qemu_spice_release_name(pm->name);
       }
@@ -453,10 +426,8 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
     }
   else
     {
-    KERR("ERROR Missing: %s/client/spice/spicy",
-    get_local_cloonix_tree());
-    sprintf(info, "Missing: %s/client/spice/spicy", 
-    get_local_cloonix_tree());
+    KERR("ERROR Missing: %s/client/cloonix-spicy", bintree);
+    sprintf(info, "Missing: %s/client/cloonix-spicy", bintree); 
     insert_next_warning(info, 1);
     }
 }

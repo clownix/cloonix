@@ -50,7 +50,8 @@ for i in 1 2 ; do
 done
 #----------------------------------------------------------------------
 
-urxvt -e cloonix_ssh $NET Cloon2 "iperf3 -s -1" &
+URXVT=/usr/libexec/cloonix/client/cloonix-urxvt
+${URXVT} -e cloonix_ssh $NET Cloon2 "iperf3 -s -1" &
 sleep 1
 cloonix_ssh $NET Cloon1 "iperf3 -c 1.1.1.2"
 

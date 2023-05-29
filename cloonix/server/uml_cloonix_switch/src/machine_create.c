@@ -43,7 +43,6 @@
 #include "utils_cmd_line_maker.h"
 #include "automates.h"
 #include "llid_trace.h"
-#include "cdrom_creation_clone.h"
 #include "qmp.h"
 #include "doorways_mngt.h"
 #include "stats_counters.h"
@@ -159,38 +158,7 @@ static void timeout_erase_dir_zombie(int vm_id, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void timeout_start_vm_create_automaton(void *data)
-{
-  char *vm_name = (char *) data;
-  t_vm   *vm = cfg_get_vm(vm_name);
-  t_wake_up_eths *wake_up_eths;
-  if (!vm)
-    {
-    KERR("POSSIBLE?");
-    recv_coherency_unlock();
-    }
-  else
-    {
-    wake_up_eths = vm->wake_up_eths;
-    if (!wake_up_eths)
-      {
-      KERR("POSSIBLE?");
-      recv_coherency_unlock();
-      }
-    else
-      {
-      if (strcmp(wake_up_eths->name, vm_name))
-        KOUT("%s %s", wake_up_eths->name, vm_name);
-      else 
-        qemu_vm_automaton(NULL, 0, vm->kvm.name);
-      }
-    }
-  clownix_free(data, __FUNCTION__);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void start_lock_and_watchdog(int llid, int tid, t_vm *vm, char *err)
+void run_linux_virtual_machine(int llid, int tid, t_vm *vm)
 {
   t_wake_up_eths *data;
   if (!vm)
@@ -205,18 +173,7 @@ static void start_lock_and_watchdog(int llid, int tid, t_vm *vm, char *err)
   strcpy(data->name, vm->kvm.name);
   vm->wake_up_eths = data;
   cfg_set_vm_locked(vm);
-  cdrom_config_creation_request(vm, vm->kvm.vm_config_flags);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int run_linux_virtual_machine(int llid, int tid, char *name, 
-                              t_vm *vm, char *err)
-{
-  int result = -1;
-  start_lock_and_watchdog(llid, tid, vm, err);
-  result = 0;
-  return result;
+  qemu_vm_automaton(NULL, 0, vm->kvm.name);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -301,19 +258,9 @@ static void death_of_mkdir_clone(void *data, int status, char *name)
     if (!vm)
       KOUT(" ");
 
-    if (!run_linux_virtual_machine(vm_building->llid, vm_building->tid,
-                                   vm_building->kvm.name, vm, err))
-      {
-      kvm_add_whole_vm(vm->kvm.name, vm->kvm.nb_tot_eth, vm->kvm.eth_table);
-      cfg_hysteresis_send_topo_info();
-      }
-    else
-      {
-      send_status_ko(vm_building->llid, vm_building->tid, err);
-      KERR("ERROR %s", err);
-      poweroff_vm(0, 0, vm);
-      recv_coherency_unlock();
-      }
+    run_linux_virtual_machine(vm_building->llid, vm_building->tid, vm);
+    kvm_add_whole_vm(vm->kvm.name, vm->kvm.nb_tot_eth, vm->kvm.eth_table);
+    cfg_hysteresis_send_topo_info();
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -433,7 +380,7 @@ static int dtach_duplicate_clone(void *data)
   char *sock = utils_get_dtach_sock_path(dtach->name);
 
   char *argv[] = { cmd, "-n", sock, "ls", NULL, };
-  my_popen(cmd, argv);
+  clone_popen(cmd, argv);
   return 0;
 }
 /*---------------------------------------------------------------------------*/

@@ -778,24 +778,42 @@ static int inside_cloonix_test_dev_kvm(char *err)
 {
   int major, minor;
   int result = -1;
-  char cmd[MAX_PATH_LEN];
+  char min[MAX_NAME_LEN];
+  char *argv[10];
+  memset(argv, 0, 10*sizeof(char *));
+  memset(min, 0, MAX_NAME_LEN);
   if (!get_dev_kvm_major_minor(&major, &minor, err))
     {
+    snprintf(min, MAX_NAME_LEN-1, "%d", minor);
     if (major == 10)
       {
-      sprintf(cmd, "/bin/mknod /dev/kvm c %d %d", major, minor);
-      if (!clownix_system(cmd))
+      argv[0] = MKNOD_BIN;
+      argv[1] = "/dev/kvm"; 
+      argv[2] = "c"; 
+      argv[3] = "10"; 
+      argv[4] = min; 
+      argv[5] = NULL; 
+      if (!lio_system(argv))
         {
         result = 0;
-        sprintf(cmd, "/bin/chmod 666 /dev/kvm");
-        clownix_system(cmd);
+        argv[0] = CHMOD_BIN;
+        argv[1] = "666"; 
+        argv[2] = "/dev/kvm"; 
+        argv[3] = NULL; 
+        if (!lio_system(argv))
+          KERR("ERROR %s 666 /dev/kvm", CHMOD_BIN);
         }
       else
-        sprintf(err, "/bin/mknod /dev/kvm c %d %d", major, minor);
+        {
+        sprintf(err, "%s /dev/kvm c %d %d", MKNOD_BIN, major, minor);
+        KERR("ERROR %s", err);
+        }
       }
     else
-      sprintf(err, "/dev/kvm: %d:%d major is not 10, something wrong\n",
-              major, minor);
+      {
+      sprintf(err, "/dev/kvm: %d:%d major not 10, wrong\n", major, minor);
+      KERR("ERROR %s", err);
+      }
     }
   return result;
 }
@@ -853,10 +871,11 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
   int result = 0;
   char bz_image[MAX_PATH_LEN];
   char qemu_kvm_exe[MAX_PATH_LEN];
+  char *iso;
   memset(bz_image, 0, MAX_PATH_LEN);
   memset(qemu_kvm_exe, 0, MAX_PATH_LEN);
-  snprintf(qemu_kvm_exe, MAX_PATH_LEN-1, "%s/server/qemu/%s", 
-           cfg_get_bin_dir(), QEMU_EXE);
+  snprintf(qemu_kvm_exe, MAX_PATH_LEN-1,
+           "%s/server/cloonix-qemu-system-x86_64", cfg_get_bin_dir());
   if (test_dev_kvm(info))
     result = -1;
   else if (!file_exists(qemu_kvm_exe, F_OK))
@@ -879,6 +898,17 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
     {
     sprintf(info, "Persistent write rootfs file: \"%s\" not writable \n", rootfs);
     result = -1;
+    }
+  else if (kvm->vm_config_flags & VM_CONFIG_FLAG_I386)
+    {
+    iso = "/usr/libexec/cloonix/server/insider_agents/insider_agent_i386.iso";
+    if (!file_exists(iso, F_OK))
+      {
+      sprintf(info, "Missing insider_agent_i386.iso "
+                    "call cmd_mk_iso_i386 in cloonix dev to create it.\n");
+      KERR("ERROR %s", info);
+      result = -1;
+      }
     }
   return result;
 }
@@ -1028,7 +1058,7 @@ static void cow_look_clone_death(void *data, int status, char *name)
 static int cow_look_clone(void *data)
 {
   t_add_vm_cow_look *add_vm = (t_add_vm_cow_look *) data;
-  char *cmd = utils_get_qemu_img();
+  char *cmd = "/usr/libexec/cloonix/server/cloonix-qemu-img";
   char rootfs[MAX_PATH_LEN];
   char *argv[] = { cmd, "info", rootfs, NULL, };
   memset(rootfs, 0, MAX_PATH_LEN);
@@ -1044,7 +1074,7 @@ static int cow_look_clone(void *data)
     }
   else
     KOUT("%X", add_vm->kvm.vm_config_flags);
-  my_popen(cmd, argv);
+  clone_popen(cmd, argv);
   return 0;
 }
 /*--------------------------------------------------------------------------*/

@@ -1,6 +1,29 @@
 #!/bin/bash
 HERE=`pwd`
 set -e
+CLOONIX_COMMON=../../common
+IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
+RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix
+LIB_UTILS=${CLOONIX_COMMON}/lib_utils
+RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout
+
+if [ ! -f ${IO_CLOWNIX}/libio_clownix.a ]; then
+  cd ${IO_CLOWNIX}
+  make
+fi
+if [ ! -f ${RPC_CLOWNIX}/librpc_clownix.a ]; then
+  cd ${RPC_CLOWNIX}
+  ./cmd
+fi
+if [ ! -f ${LIB_UTILS}/libutils.a ]; then
+  cd ${LIB_UTILS}
+  ./cmd
+fi
+if [ ! -f ${RPC_LAYOUT}/lib_rpc_layout.a ]; then
+  cd ${RPC_LAYOUT}
+  ./cmd
+fi
+
 for i in ${HERE}/../lib_client \
          ${HERE}/crcanvas_gtk \
          ${HERE}/src/bank \
@@ -24,7 +47,5 @@ echo
 echo
 cd ${HERE}
 
-make clean
 make
-
 

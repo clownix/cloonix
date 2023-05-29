@@ -58,10 +58,9 @@ void client_promisc_set(int tid, t_end_cb cb, char *name, int eth, int promisc);
 
 
 void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
-                   t_eth_table *eth_tab, int vm_config_flags,
-                   int vm_config_param, int cpu_qty, int mem_qty, char *kernel,
-                   char *root_fs, char *install_cdrom, char *added_cdrom,
-                   char *added_disk, char *p9_host_share);
+                   t_eth_table *eth_tab, int vm_config_flags, int vm_cfg_param,
+                   int cpu_qty, int mem_qty, char *kernel, char *root_fs,
+                   char *install_cdrom, char *added_cdrom, char *added_disk);
 
 void client_sav_vm(int tid, t_end_cb cb, char *nm, char *new_dir_path);
 void client_reboot_vm(int tid, t_end_cb cb, char *nm);

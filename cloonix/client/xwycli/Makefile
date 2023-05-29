@@ -11,7 +11,7 @@ OBJ_DIR=./obj/
 WARNINGS=-Wall 
 VPATH=src
 
-EXE = xwycli
+EXE = cloonix-xwycli
 SRC = main.c stub.c
 
 INCLUDES= -I./src \

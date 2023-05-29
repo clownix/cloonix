@@ -36,13 +36,13 @@
 #include <sched.h>
 #include <sys/mount.h>
 #include <libgen.h>
+#include <dirent.h>
+
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "ovs_execv.h"
 #include "action.h"
-
-#define CLOONIX_DIAG_LOG  "cloonix_diag.log"
 
 
 static char g_net_name[MAX_NAME_LEN];
@@ -57,7 +57,6 @@ static int g_cloonix_fd;
 static int g_netns_pid;
 static int g_ovsdb_pid;
 static int g_ovs_pid;
-static char g_arg[NB_ARG][MAX_ARG_LEN];
 static char g_name[MAX_NAME_LEN];
 static char g_path[MAX_PATH_LEN];
 static int g_fd_tx_to_netns;
@@ -68,26 +67,6 @@ static uint8_t g_head_msg[HEADER_NETNS_MSG];
 int netns_open(char *net_namespace, int *fd_rx, int *fd_tx,
                 char *ovs_bin, char *ovs_dir);
 
-/*****************************************************************************/
-static int bad_ovs_dir_start(char *ovs_dir)
-{
-  int result = 0;
-  if ((!strncmp("/bin", g_ovs_dir, strlen("/bin"))) ||
-      (!strncmp("/etc", g_ovs_dir, strlen("/etc"))) ||
-      (!strncmp("/run", g_ovs_dir, strlen("/run"))) ||
-      (!strncmp("/sys", g_ovs_dir, strlen("/sys"))) ||
-      (!strncmp("/var", g_ovs_dir, strlen("/var"))) ||
-      (!strncmp("/boot", g_ovs_dir, strlen("/boot"))) ||
-      (!strncmp("/lib", g_ovs_dir, strlen("/lib"))) ||
-      (!strncmp("/media", g_ovs_dir, strlen("/media"))) ||
-      (!strncmp("/proc", g_ovs_dir, strlen("/proc"))) ||
-      (!strncmp("/dev", g_ovs_dir, strlen("/dev"))) ||
-      (!strncmp("/usr", g_ovs_dir, strlen("/usr"))) ||
-      (!strncmp("/sbin", g_ovs_dir, strlen("/sbin"))))
-    result = 1;
-  return result;
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 char *get_ns(void)
@@ -109,59 +88,59 @@ static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
                            char *vhost, char *mac)
 {
   int result = 0;
-  char arg[NB_ARG][MAX_ARG_LEN];
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  sprintf(arg[0], SBIN_IP);
-  sprintf(arg[1], "link");
-  sprintf(arg[2], "add");
-  sprintf(arg[3], "name");
-  sprintf(arg[4], "%s", name);
-  sprintf(arg[5], "address");
-  sprintf(arg[6], "%s", mac);
-  sprintf(arg[7], "type");
-  sprintf(arg[8], "veth");
-  sprintf(arg[9], "peer");
-  sprintf(arg[10], "name");
-  sprintf(arg[11], "%s", vhost);
-  result = call_my_popen(ovs_dir, 12, arg, 2, __FUNCTION__, 1);
+  char *argv[NB_ARG];
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "link";
+  argv[2] = "add";
+  argv[3] = "name";
+  argv[4] = name;
+  argv[5] = "address";
+  argv[6] = mac;
+  argv[7] = "type";
+  argv[8] = "veth";
+  argv[9] = "peer";
+  argv[10]= "name";
+  argv[11]= vhost;
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 1);
   if (result)
     KERR("ERROR %s %s", name, mac);
   else
     {
-    memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-    sprintf(arg[0], SBIN_IP);
-    sprintf(arg[1], "link");
-    sprintf(arg[2], "set");
-    sprintf(arg[3], "%s", vhost);
-    sprintf(arg[4], "netns");
-    sprintf(arg[5], "%s", get_ns());
-    result = call_my_popen(ovs_dir, 6, arg, 2, __FUNCTION__, 2);
+    memset(argv, 0, NB_ARG * sizeof(char *));
+    argv[0] = IP_BIN;
+    argv[1] = "link";
+    argv[2] = "set";
+    argv[3] = vhost;
+    argv[4] = "netns";
+    argv[5] = get_ns();
+    result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 2);
     if (result)
       KERR("ERROR %s %s", name, mac);
     else
       {
-      memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-      sprintf(arg[0], SBIN_IP);
-      sprintf(arg[1], "-netns");
-      sprintf(arg[2], "%s", get_ns());
-      sprintf(arg[3], "link");
-      sprintf(arg[4], "set");
-      sprintf(arg[5], "dev");
-      sprintf(arg[6], "%s", vhost);
-      sprintf(arg[7], "up");
-      result = call_my_popen(ovs_dir, 8, arg, 2, __FUNCTION__, 3);
+      memset(argv, 0, NB_ARG * sizeof(char *));
+      argv[0] = IP_BIN;
+      argv[1] = "-netns";
+      argv[2] = get_ns();
+      argv[3] = "link";
+      argv[4] = "set";
+      argv[5] = "dev";
+      argv[6] = vhost;
+      argv[7] = "up";
+      result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
       if (result)
         KERR("ERROR %s %s", name, mac);
       else
         {
-        memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-        sprintf(arg[0], SBIN_IP);
-        sprintf(arg[1], "link");
-        sprintf(arg[2], "set");
-        sprintf(arg[3], "dev");
-        sprintf(arg[4], "%s", name);
-        sprintf(arg[5], "up");
-        result = call_my_popen(ovs_dir, 6, arg, 2, __FUNCTION__, 4);
+        memset(argv, 0, NB_ARG * sizeof(char *));
+        argv[0] = IP_BIN;
+        argv[1] = "link";
+        argv[2] = "set";
+        argv[3] = "dev";
+        argv[4] = name;
+        argv[5] = "up";
+        result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 4);
         }
       }
     }
@@ -173,14 +152,14 @@ static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
 static int ovs_cmd_del_tap(char *ovs_bin, char *ovs_dir, char *name, char *vhost)
 {
   int result;
-  char arg[NB_ARG][MAX_ARG_LEN];
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  sprintf(arg[0], SBIN_IP);
-  sprintf(arg[1], "link");
-  sprintf(arg[2], "del");
-  sprintf(arg[3], "name");
-  sprintf(arg[4], name);
-  result = call_my_popen(ovs_dir, 5, arg, 2, __FUNCTION__, 1);
+  char *argv[NB_ARG];
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "link";
+  argv[2] = "del";
+  argv[3] = "name";
+  argv[4] = name;
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 1);
   if (result)
     KERR("ERROR %s %s", name, vhost);
   return result;
@@ -192,29 +171,29 @@ static int ovs_cmd_add_phy(char *ovs_bin, char *ovs_dir, char *name,
                            char *vhost, char *mac)
 {
   int result = 0;
-  char arg[NB_ARG][MAX_ARG_LEN];
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  sprintf(arg[0], SBIN_IP);
-  sprintf(arg[1], "link");
-  sprintf(arg[2], "set");
-  sprintf(arg[3], "%s", name);
-  sprintf(arg[4], "netns");
-  sprintf(arg[5], "%s", get_ns());
-  result = call_my_popen(ovs_dir, 6, arg, 2, __FUNCTION__, 2);
+  char *argv[NB_ARG];
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "link";
+  argv[2] = "set";
+  argv[3] = name;
+  argv[4] = "netns";
+  argv[5] = get_ns();
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 2);
   if (result)
     KERR("ERROR %s %s", name, mac);
   else
     {
-    memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-    sprintf(arg[0], SBIN_IP);
-    sprintf(arg[1], "-netns");
-    sprintf(arg[2], "%s", get_ns());
-    sprintf(arg[3], "link");
-    sprintf(arg[4], "set");
-    sprintf(arg[5], "dev");
-    sprintf(arg[6], "%s", name);
-    sprintf(arg[7], "up");
-    result = call_my_popen(ovs_dir, 8, arg, 2, __FUNCTION__, 3);
+    memset(argv, 0, NB_ARG * sizeof(char *));
+    argv[0] = IP_BIN;
+    argv[1] = "-netns";
+    argv[2] = "%s", get_ns();
+    argv[3] = "link";
+    argv[4] = "set";
+    argv[5] = "dev";
+    argv[6] = name;
+    argv[7] = "up";
+    result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
     if (result)
       KERR("ERROR %s %s", name, mac);
     }
@@ -226,51 +205,34 @@ static int ovs_cmd_add_phy(char *ovs_bin, char *ovs_dir, char *name,
 static int ovs_cmd_del_phy(char *ovs_bin, char *ovs_dir, char *name, char *vhost)
 {
   int result = 0;
-  char arg[NB_ARG][MAX_ARG_LEN];
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  sprintf(arg[0], SBIN_IP);
-  sprintf(arg[1], "-netns");
-  sprintf(arg[2], "%s", get_ns());
-  sprintf(arg[3], "link");
-  sprintf(arg[4], "set");
-  sprintf(arg[5], "dev");
-  sprintf(arg[6], "%s", name);
-  sprintf(arg[7], "down");
-  result = call_my_popen(ovs_dir, 8, arg, 2, __FUNCTION__, 3);
+  char *argv[NB_ARG];
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "-netns";
+  argv[2] = get_ns();
+  argv[3] = "link";
+  argv[4] = "set";
+  argv[5] = "dev";
+  argv[6] = name;
+  argv[7] = "down";
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
   if (result)
     KERR("ERROR %s %s", name, vhost);
   else
     {
-    memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-    sprintf(arg[0], SBIN_IP);
-    sprintf(arg[1], "-netns");
-    sprintf(arg[2], "%s", get_ns());
-    sprintf(arg[3], "link");
-    sprintf(arg[4], "set");
-    sprintf(arg[5], "%s", name);
-    sprintf(arg[6], "netns");
-    sprintf(arg[7], "1");
-    result = call_my_popen(ovs_dir, 8, arg, 2, __FUNCTION__, 3);
+    memset(argv, 0, NB_ARG * sizeof(char *));
+    argv[0] = IP_BIN;
+    argv[1] = "-netns";
+    argv[2] = get_ns();
+    argv[3] = "link";
+    argv[4] = "set";
+    argv[5] = name;
+    argv[6] = "netns";
+    argv[7] = "1";
+    result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
     if (result)
       KERR("ERROR %s %s", name, vhost);
     }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int set_vswitchd_prlimit(char *ovs_bin, char *ovs_dir, int pid)
-{
-  int result;
-  char arg[NB_ARG][MAX_ARG_LEN];
-  memset(arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  sprintf(arg[0], USR_BIN_PRLIMIT);
-  sprintf(arg[1], "-p");
-  sprintf(arg[2], "%d", pid);
-  sprintf(arg[3], "--nofile=20480");
-  result = call_my_popen(ovs_dir, 4, arg, 2, __FUNCTION__, 1);
-  if (result)
-    KERR("ERROR %s %d", USR_BIN_PRLIMIT, pid);
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -344,10 +306,52 @@ static void action_del_phy(char *bin, char *db, char *respb,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int unlink_sub_dir_files(char *dir, int erase_dir)
+{
+  int result = 0;
+  char pth[MAX_PATH_LEN+MAX_NAME_LEN];
+  DIR *dirptr;
+  struct dirent *ent;
+  dirptr = opendir(dir);
+  if (dirptr)
+    {
+    while ((result == 0) && ((ent = readdir(dirptr)) != NULL))
+      {
+      if (!strcmp(ent->d_name, "."))
+        continue;
+      if (!strcmp(ent->d_name, ".."))
+        continue;
+      snprintf(pth, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dir, ent->d_name);
+      pth[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
+      if(ent->d_type == DT_DIR)
+        result = unlink_sub_dir_files(pth, 1);
+      else if (unlink(pth))
+        {
+        KERR("ERROR File: %s could not be deleted\n", pth);
+        result = -1;
+        }
+      }
+    if (closedir(dirptr))
+      KOUT("%d", errno);
+    if (erase_dir)
+      {
+      if (rmdir(dir))
+        {
+        KERR("ERROR Dir: %s could not be deleted\n", dir);
+        result = -1;
+        }
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void common_end_of_all_destroy(void)
 {
   char *db = g_ovs_dir;
-
+  char *var_dir = "/var/lib/cloonix";
+  char *argv[NB_ARG];
   close(g_fd_tx_to_netns);
   if (g_netns_pid > 0)
     kill(g_netns_pid, SIGKILL);
@@ -369,22 +373,18 @@ static void common_end_of_all_destroy(void)
   g_ovs_pid = -1;
   g_ovs_launched = 0;
   g_ovsdb_launched = 0;
-  memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  snprintf(g_arg[0],MAX_ARG_LEN-1, SBIN_IP);
-  snprintf(g_arg[1],MAX_ARG_LEN-1, "netns");
-  snprintf(g_arg[2],MAX_ARG_LEN-1, "del");
-  snprintf(g_arg[3],MAX_ARG_LEN-1, get_ns());
-  call_my_popen(db, 4, g_arg, 0, __FUNCTION__, 1);
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "netns";
+  argv[2] = "del";
+  argv[3] = get_ns();
+  call_ovs_popen(db, argv, 0, __FUNCTION__, 1);
   if (!access(db, F_OK))
     {
-    if ((strlen(db) > 10) && (strstr(db, g_net_name)) &&
-        (!bad_ovs_dir_start(db)))
+    if ((!strncmp(var_dir, g_ovs_dir, strlen(var_dir))) &&
+        (strstr(db, g_net_name)))
       {
-      memset(g_arg, 0, MAX_ARG_LEN * NB_ARG);
-      snprintf(g_arg[0], MAX_PATH_LEN-1,"/bin/rm");
-      snprintf(g_arg[1], MAX_PATH_LEN-1,"-fdR");
-      snprintf(g_arg[2], MAX_ARG_LEN-1,"%s/*", db);
-      if (call_my_popen(db, 3, g_arg, 0, __FUNCTION__, 2))
+      if (unlink_sub_dir_files(db, 1))
         KERR("ERROR ERASE %s", db);
       sync();
       }
@@ -405,8 +405,8 @@ static void log_write_req(int tid, char *line)
   snprintf(pth, MAX_PATH_LEN, "%s", g_ovs_dir);
   if ((strlen(pth) + MAX_NAME_LEN) >= MAX_PATH_LEN)
     KOUT("%d", (int) strlen(pth));
-  strcat(pth, "/");
-  strcat(pth, CLOONIX_DIAG_LOG);
+  strcat(pth, "/log/");
+  strcat(pth, DEBUG_LOG_DIALOG);
   fp_log = fopen(pth, "a+");
   if (fp_log)
     {
@@ -426,8 +426,8 @@ static void log_write_resp(int tid, char *respb)
   snprintf(pth, MAX_PATH_LEN, "%s", g_ovs_dir);
   if ((strlen(pth) + MAX_NAME_LEN) >= MAX_PATH_LEN)
     KOUT("%d", (int) strlen(pth));
-  strcat(pth, "/");
-  strcat(pth, CLOONIX_DIAG_LOG);
+  strcat(pth, "/log/");
+  strcat(pth, DEBUG_LOG_DIALOG);
   fp_log = fopen(pth, "a+");
   if (fp_log)
     {
@@ -487,10 +487,7 @@ static int rx_netns_cb(int llid, int fd)
       if (sscanf(line, "ovs_resp_ovsdb_ok pid=%d", &pid) == 1)
         g_ovsdb_pid = pid;
       if (sscanf(line, "ovs_resp_ovs_ok pid=%d", &pid) == 1)
-        {
         g_ovs_pid = pid;
-        set_vswitchd_prlimit(g_ovs_bin, g_ovs_dir, pid);
-        }
       if (!strcmp(line, "ovs_resp_ovsdb_ko"))
         common_end_of_all_destroy();
       if (!strcmp(line, "ovs_resp_ovs_ko"))
@@ -726,22 +723,6 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     if (!strcmp(line,
 "ovs_req_ovsdb"))
       {
-      if (!access(g_ovs_dir, F_OK))
-        {
-        if ((strlen(db) > 10) && (strstr(db, g_net_name)) &&
-            (!bad_ovs_dir_start(db)))
-          {
-          memset(g_arg, 0, MAX_ARG_LEN * NB_ARG);
-          snprintf(g_arg[0], MAX_PATH_LEN-1,"/bin/rm");
-          snprintf(g_arg[1], MAX_PATH_LEN-1,"-fdR");
-          snprintf(g_arg[2], MAX_ARG_LEN-1,"%s/*", g_ovs_dir);
-          if (call_my_popen(g_ovs_dir, 3, g_arg, 0, __FUNCTION__, 1))
-            KERR("ERROR %s", g_ovs_dir);
-          sync();
-          }
-        else
-          KERR("ERROR %s", db);
-        }
       }
     log_write_req(tid, line);
     tx_to_netns(tid, line);
@@ -817,21 +798,14 @@ static void cloonix_part_init(char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void clean_before_exit()
-{
-  KERR("OVS");
-  common_end_of_all_destroy();
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int main (int argc, char *argv[])
+int main (int argc, char *iargv[])
 {
   int llid, fd_rx_from_netns;
   char net[2*MAX_NAME_LEN];
   char name[2*MAX_NAME_LEN];
   char sock[2*MAX_PATH_LEN];
   char *ctl_argv[4] = {net, name, sock, NULL};
+  char *argv[NB_ARG];
   g_ovsdb_launched = 0;
   g_ovsdb_pid = 0;
   g_ovs_launched = 0;
@@ -846,41 +820,42 @@ int main (int argc, char *argv[])
   memset(sock, 0, MAX_PATH_LEN);
   memset(g_ovs_bin, 0, MAX_PATH_LEN);
   memset(g_ovs_dir, 0, MAX_PATH_LEN);
-  memcpy(net,  argv[1], MAX_NAME_LEN-1);
-  memcpy(name, argv[2], MAX_NAME_LEN-1);
-  memcpy(sock, argv[3], MAX_PATH_LEN-1);
-  memcpy(g_ovs_bin, argv[4], MAX_PATH_LEN-1);
-  memcpy(g_ovs_dir, argv[5], MAX_PATH_LEN-1);
+  strncpy(net,  iargv[1], MAX_NAME_LEN-1);
+  strncpy(name, iargv[2], MAX_NAME_LEN-1);
+  strncpy(sock, iargv[3], MAX_PATH_LEN-1);
+  strncpy(g_ovs_bin, iargv[4], MAX_PATH_LEN-1);
+  strncpy(g_ovs_dir, iargv[5], MAX_PATH_LEN-1);
+  init_environ(net, g_ovs_bin, g_ovs_dir);
 
   signal(SIGINT, cmd_interrupt);
   cloonix_part_init(ctl_argv);
-  clownix_timeout_add(1000, timeout_heartbeat_start, NULL, NULL, NULL);
+  clownix_timeout_add(2000, timeout_heartbeat_start, NULL, NULL, NULL);
 
   daemon(0,0);
 
-  memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  snprintf(g_arg[0],MAX_ARG_LEN-1, SBIN_IP);
-  snprintf(g_arg[1],MAX_ARG_LEN-1, "netns");
-  snprintf(g_arg[2],MAX_ARG_LEN-1, "del");
-  snprintf(g_arg[3],MAX_ARG_LEN-1, get_ns());
-  call_my_popen(g_ovs_dir, 4, g_arg, 1, __FUNCTION__, 1);
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "netns";
+  argv[2] = "del";
+  argv[3] = get_ns();
+  call_ovs_popen(g_ovs_dir, argv, 1, __FUNCTION__, 1);
 
-  memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  snprintf(g_arg[0],MAX_ARG_LEN-1, SBIN_IP);
-  snprintf(g_arg[1],MAX_ARG_LEN-1, "netns");
-  snprintf(g_arg[2],MAX_ARG_LEN-1, "add");
-  snprintf(g_arg[3],MAX_ARG_LEN-1, get_ns());
-  call_my_popen(g_ovs_dir, 4, g_arg, 0, __FUNCTION__, 2);
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "netns";
+  argv[2] = "add";
+  argv[3] = get_ns();
+  call_ovs_popen(g_ovs_dir, argv, 0, __FUNCTION__, 2);
 
-  memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
-  snprintf(g_arg[0],MAX_ARG_LEN-1, SBIN_IP);
-  snprintf(g_arg[1],MAX_ARG_LEN-1, "-netns");
-  snprintf(g_arg[2],MAX_ARG_LEN-1, get_ns());
-  snprintf(g_arg[3],MAX_ARG_LEN-1, "link");
-  snprintf(g_arg[4],MAX_ARG_LEN-1, "set");
-  snprintf(g_arg[5],MAX_ARG_LEN-1, "lo");
-  snprintf(g_arg[6],MAX_ARG_LEN-1, "up");
-  call_my_popen(g_ovs_dir, 7, g_arg, 0, __FUNCTION__, 3);
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "-netns";
+  argv[2] = get_ns();
+  argv[3] = "link";
+  argv[4] = "set";
+  argv[5] = "lo";
+  argv[6] = "up";
+  call_ovs_popen(g_ovs_dir, argv, 0, __FUNCTION__, 3);
 
   sync();
   sleep(1);

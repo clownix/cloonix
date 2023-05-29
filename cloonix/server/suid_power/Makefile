@@ -4,11 +4,11 @@ GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 
 OBJ_DIR=obj/
-EXE = cloonix_suid_power
+EXE = cloonix-suid-power
 
-SRC = suid_power.c stub.c launcher.c crun.c \
-      crun_utils.c loop_img.c docker.c \
-      net_phy.c docker_images.c
+SRC = suid_power.c stub.c crun.c \
+      crun_utils.c loop_img.c dockir.c \
+      net_phy.c dockerimages.c
 
 VPATH=./src
 

@@ -406,8 +406,8 @@ int cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
                         vm_id, cnt_dir, err) == 0)
       {
       memset(agent_dir, 0, MAX_PATH_LEN);
-      snprintf(agent_dir, MAX_PATH_LEN-1, 
-      "%s/common/agent_dropbear/agent_bin_alien", cfg_get_bin_dir());
+      snprintf(agent_dir, MAX_PATH_LEN-1,
+               "%s/server/insider_agents", cfg_get_bin_dir());
       if (!strcmp(cnt->brandtype, "crun"))
         {
         if (crun_create(llid, vm_id, cnt, agent_dir))
@@ -541,9 +541,10 @@ static void timer_cnt_delete(void *data)
         if (send_sig_suid_power(cd->llid, req))
           {
           snprintf(err, MAX_PATH_LEN-1, "ERROR %s delete", cd->name);
-          KERR("%s", err);
+          KERR("ERROR %s FREE ", cd->name);
           if (cd->cli_llid)
             send_status_ko(cd->cli_llid, cd->cli_tid, err);
+          cnt_free_cnt(cur->cnt.name);
           }
         else
           {
@@ -603,7 +604,11 @@ int cnt_delete_all(int llid)
   while (cur)
     {
     next = cur->next;
-    cnt_delete(llid, 0, 0, cur->cnt.name);
+    if (cur->count_delete > 5)
+      cnt_free_cnt(cur->cnt.name);
+    else
+      cnt_delete(llid, 0, 0, cur->cnt.name);
+    cur->count_delete += 1;
     result += 1;
     cur = next;
     }

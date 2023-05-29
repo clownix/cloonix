@@ -219,8 +219,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   t_bank_item *bitem;
   static char title[MAX_PATH_LEN];
   static char text[MAX_TEXT];
-  int is_i386, is_persistent, is_backed, is_inside_cloon;
-  int has_p9_host_share, is_natplug; 
+  int is_i386, is_persistent, is_backed, is_inside_cloon, is_natplug;
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
   int is_full_virt, has_no_reboot, has_added_disk, with_pxe, len = 0;
   bitem = look_for_node_with_id(pm->name);
@@ -244,14 +243,11 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     has_added_cdrom = vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM;
     has_added_disk = vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK;
     is_natplug = vm_config_flags & VM_CONFIG_FLAG_NATPLUG;
-    has_p9_host_share = vm_config_flags & VM_CONFIG_FLAG_9P_SHARED;
 
     if (is_i386)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tI386");
     if (is_natplug)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tNATPLUG");
-    if (has_p9_host_share)
-      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tP9_HOST_SHARE");
     if (is_persistent)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tPERSISTENT");
     else
@@ -723,15 +719,12 @@ static void intf_item_dyn_snf_off(GtkWidget *mn, t_item_ident *pm)
 void wireshark_launch(int vm_id, char *name, int num)
 {
   t_bank_item *bitem, *bnode, *bcnt;
-  char full_name[MAX_NAME_LEN];
   bitem = look_for_sat_with_id(name);
   bnode = look_for_node_with_id(name);
   bcnt = look_for_cnt_with_id(name);
-  memset(full_name, 0, MAX_NAME_LEN);
-  snprintf(full_name, MAX_NAME_LEN-1, "%s_%d", name, num);
   if ((bitem) || (bnode) || (bcnt))
     {
-    start_wireshark_dpdk(full_name);
+    start_wireshark(name, num);
     }
   else
     KERR("ERROR: wireshark for %s %d", name, num);

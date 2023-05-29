@@ -1,0 +1,93 @@
+#!/bin/bash
+HERE=`pwd`
+NET=nemo
+DISTRO=tumbleweed
+NAME=${DISTRO}
+QCOW2=${DISTRO}.qcow2
+#######################################################################
+BULK="/var/lib/cloonix/bulk"
+#######################################################################
+is_started=$(cloonix_cli $NET pid |grep cloonix_server)
+if [ "x$is_started" == "x" ]; then
+  printf "\nServer Not started, launching:"
+  printf "\ncloonix_net $NET:\n"
+  cloonix_net $NET
+  echo waiting 2 sec
+  sleep 2
+else
+  cloonix_cli $NET rma
+  echo waiting 10 sec
+  sleep 10
+fi
+#----------------------------------------------------------------------
+cp -f ${BULK}/${QCOW2} ${BULK}/full_${QCOW2}
+sync
+sleep 10
+sync
+#######################################################################
+cloonix_gui $NET
+#----------------------------------------------------------------------
+cloonix_cli ${NET} add nat nat
+#----------------------------------------------------------------------
+PARAMS="ram=8000 cpu=4 eth=s"
+cloonix_cli $NET add kvm $NAME $PARAMS full_$QCOW2 --persistent
+#----------------------------------------------------------------------
+sleep 3
+cloonix_cli ${NET} add lan ${NAME} 0 lan1
+cloonix_cli ${NET} add lan nat 0 lan1
+#----------------------------------------------------------------------
+
+#######################################################################
+set +e
+while ! cloonix_ssh $NET ${NAME} "echo" 2>/dev/null; do
+  echo ${NAME} not ready, waiting 5 sec
+  sleep 5
+done
+#----------------------------------------------------------------------
+cloonix_ssh $NET ${NAME} "mkdir -p /var/lib/cloonix/bulk"
+cloonix_ssh $NET ${NAME} "chmod 777 /var/lib/cloonix/bulk"
+#----------------------------------------------------------------------
+cloonix_scp $NET ${HERE}/../../build_tools/install_depends ${NAME}:/root
+#----------------------------------------------------------------------
+cloonix_scp $NET ${BULK}/bookworm.img ${NAME}:/var/lib/cloonix/bulk
+cloonix_scp $NET ${BULK}/bookworm.qcow2 ${NAME}:/var/lib/cloonix/bulk
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "rm -f /etc/resolv.conf"
+cloonix_ssh ${NET} ${NAME} "cat > /etc/resolv.conf << EOF
+nameserver 172.17.0.3
+EOF"
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "mkdir -p /etc/systemd/network"
+cloonix_ssh ${NET} ${NAME} "cat > /etc/systemd/network/01_cf.network << EOF
+[Match]
+Name=eth0
+[Network]
+DHCP=yes
+EOF"
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "ip link set eth0 up"
+cloonix_ssh ${NET} ${NAME} "systemctl restart wickedd-dhcp4.service"
+cloonix_ssh ${NET} ${NAME} "systemctl restart wicked.service"
+#----------------------------------------------------------------------
+cloonix_ssh $NET ${NAME} "zypper --non-interactive --no-gpg-checks refresh"
+cloonix_ssh $NET ${NAME} "zypper --non-interactive --no-gpg-checks update"
+cloonix_ssh $NET ${NAME} "zypper --non-interactive --no-gpg-checks install tar"
+#----------------------------------------------------------------------
+for ((i=0;i<3;i++)); do
+  cloonix_ssh $NET ${NAME} "./install_depends"
+  sleep 10
+done
+#----------------------------------------------------------------------
+cloonix_ssh $NET ${NAME} "rm -f install_depends"
+#----------------------------------------------------------------------
+KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial "
+KERN+="net.ifnames=0"
+printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" > /tmp/grub
+cloonix_scp $NET /tmp/grub ${NAME}:/etc/default
+cloonix_ssh $NET ${NAME} "grub2-mkconfig -o /boot/grub2/grub.cfg"
+cloonix_ssh $NET ${NAME} "sync"
+#----------------------------------------------------------------------
+cloonix_ssh $NET ${NAME} "poweroff"
+echo $QCOW2 done
+#----------------------------------------------------------------------
+

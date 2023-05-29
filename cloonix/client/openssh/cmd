@@ -3,11 +3,9 @@ HERE=`pwd`
 ./allclean
 
 cd ${HERE}/../../common/lib_io_clownix
-make clean
 make
 cd ${HERE}/lib_doorways
 mkdir -p obj
-make clean
 make
 cd ${HERE}
 path_openssl=$(which openssl)
@@ -15,12 +13,16 @@ if [ -z $path_openssl ]; then
   echo openssl dev required
   exit 1
 fi
+
+
 ./patched_create
 cd tainted_openssh
+
 ./configure
 make
-mv ssh cloonix_u2i_ssh
-mv scp cloonix_u2i_scp
-mv cloonix_u2i_ssh $HERE
-mv cloonix_u2i_scp $HERE
+
+mv ssh cloonix-u2i-ssh
+mv scp cloonix-u2i-scp
+mv cloonix-u2i-ssh $HERE
+mv cloonix-u2i-scp $HERE
 

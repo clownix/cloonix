@@ -1,6 +1,5 @@
 IO_CLOWNIX=../lib_io_clownix
 GLOB_INCLUDE=../glob_include
-AGENT_INCLUDE=../agent_dropbear/cloonix_agent/src
 UTILS=../lib_utils
 OBJ_DIR=obj/
 WARNINGS=-Wall -Wextra -Wstrict-prototypes
@@ -12,7 +11,6 @@ INCLUDES= -I./src \
           -I${GLOB_INCLUDE} \
           -I./include \
           -I${IO_CLOWNIX}/include \
-          -I${AGENT_INCLUDE} \
           -I${UTILS}/include
 
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)

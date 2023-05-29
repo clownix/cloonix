@@ -1,0 +1,46 @@
+#!/bin/bash
+HERE=`pwd`
+DISTRO=bookworm
+NET=nemo
+NAME=dev
+QCOW2=builder.qcow2
+BULK="/var/lib/cloonix/bulk"
+REPO="http://172.17.0.2/debian/bookworm"
+#----------------------------------------------------------------------
+cloonix_net ${NET}
+#----------------------------------------------------------------------
+echo cp -f ${BULK}/${DISTRO}.qcow2 ${BULK}/${QCOW2}
+cp -f ${BULK}/${DISTRO}.qcow2 ${BULK}/${QCOW2}
+#----------------------------------------------------------------------
+sync
+#----------------------------------------------------------------------
+cloonix_gui ${NET}
+cloonix_cli ${NET} add nat nat
+#----------------------------------------------------------------------
+PARAMS="ram=8000 cpu=4 eth=s"
+cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --persistent
+#----------------------------------------------------------------------
+sleep 3
+cloonix_cli ${NET} add lan ${NAME} 0 lan1
+cloonix_cli ${NET} add lan nat 0 lan1
+#----------------------------------------------------------------------
+set +e
+while ! cloonix_ssh ${NET} ${NAME} "echo" 2>/dev/null; do
+  echo ${NAME} not ready, waiting 5 sec
+  sleep 5
+done
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "dhclient eth0"
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "cat > /etc/apt/sources.list << EOF
+deb ${REPO} ${DISTRO} main contrib non-free
+EOF"
+#----------------------------------------------------------------------
+cloonix_scp ${NET} ${HERE}/install_depends ${NAME}:/root
+cloonix_ssh ${NET} ${NAME} "./install_depends"
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "sync"
+cloonix_ssh ${NET} ${NAME} "poweroff"
+#----------------------------------------------------------------------
+
+

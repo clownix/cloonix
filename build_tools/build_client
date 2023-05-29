@@ -1,0 +1,84 @@
+#!/bin/bash
+set -e
+if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
+  echo PLEASE DEFINE CLOONIX_TREE_ROOT
+  exit 1
+fi
+if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
+  echo NOT FOUND:
+  echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
+  exit 1
+fi
+TMPBUILD=${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_client
+COMMON=${TMPBUILD}/cloonix/common
+CLIENT=${TMPBUILD}/cloonix/client
+#----------------------------------------------------------
+echo TARGET:
+echo $TMPBUILD
+#----------------------------------------------------------
+rm -rf ${TMPBUILD}
+mkdir -p ${TMPBUILD}/targz_store
+cp -rf ${CLOONIX_TREE_ROOT}/targz_store/* ${TMPBUILD}/targz_store
+cp -r ${CLOONIX_TREE_ROOT}/cloonix ${TMPBUILD}
+#----------------------------------------------------------
+for i in cloonix_osh \
+         cloonix_ocp \
+         cloonix_cli \
+         cloonix_gui \
+         cloonix_net \
+         cloonix_scp \
+         cloonix_ice \
+         cloonix_ssh \
+         cloonix_wsk \
+         cloonix_ovs; do 
+  mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
+done
+#----------------------------------------------------------
+  echo
+  echo BUILDING COMMON
+  echo
+#----------------------------------------------------------
+  for i in lib_io_clownix \
+           lib_rpc_clownix \
+           lib_utils \
+           lib_rpc_doors \
+           lib_rpc_layout ; do
+
+    cd ${COMMON}/${i}
+    echo
+    echo DOING:
+    echo ${COMMON}/${i}
+    echo
+    echo
+    ./cmd
+  done
+#----------------------------------------------------------
+  echo
+  echo BUILDING CLIENT
+  echo
+#----------------------------------------------------------
+  for i in  spice_lib_client \
+            agent_dropbear \
+            lib_client \
+            ctrl \
+            xwycli \
+            rxvt \
+            cairo_canvas/crcanvas_gtk \
+            cairo_canvas/src/bank \
+            cairo_canvas/src/interface \
+            cairo_canvas/src/subsets \
+            cairo_canvas/src/bdplot \
+            cairo_canvas \
+            spice \
+            openssh; do
+
+    echo
+    echo DOING:
+    echo ${CLIENT}/${i}
+    echo
+    echo
+    cd ${CLIENT}/${i}
+    ./cmd
+  done
+#----------------------------------------------------------
+

@@ -267,11 +267,7 @@ static void topo_config_check_str(t_topo_clc *cf, int line)
     KOUT("%d", line);
   if (strlen(cf->username) >= MAX_NAME_LEN)
     KOUT("%d", line);
-  if (strlen(cf->work_dir) >= MAX_PATH_LEN)
-    KOUT("%d", line);
   if (strlen(cf->bin_dir)  >= MAX_PATH_LEN)
-    KOUT("%d", line);
-  if (strlen(cf->bulk_dir) >= MAX_PATH_LEN)
     KOUT("%d", line);
 }
 /*---------------------------------------------------------------------------*/
@@ -286,12 +282,8 @@ static void topo_config_swapon(t_topo_clc *cf, t_topo_clc *icf)
     strcpy(cf->network, NO_DEFINED_VALUE);
   if (strlen(cf->username) == 0)
     strcpy(cf->username, NO_DEFINED_VALUE);
-  if (strlen(cf->work_dir) == 0)
-    strcpy(cf->work_dir, NO_DEFINED_VALUE);
   if (strlen(cf->bin_dir) == 0)
     strcpy(cf->bin_dir, NO_DEFINED_VALUE);
-  if (strlen(cf->bulk_dir) == 0)
-    strcpy(cf->bulk_dir, NO_DEFINED_VALUE);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -305,12 +297,8 @@ static void topo_config_swapoff(t_topo_clc  *cf, t_topo_clc *icf)
     memset(cf->network, 0, MAX_NAME_LEN);
   if (!strcmp(cf->username, NO_DEFINED_VALUE))
     memset(cf->username, 0, MAX_NAME_LEN);
-  if (!strcmp(cf->work_dir, NO_DEFINED_VALUE))
-    memset(cf->work_dir, 0, MAX_NAME_LEN);
   if (!strcmp(cf->bin_dir, NO_DEFINED_VALUE))
     memset(cf->bin_dir, 0, MAX_NAME_LEN);
-  if (!strcmp(cf->bulk_dir, NO_DEFINED_VALUE))
-    memset(cf->bulk_dir, 0, MAX_NAME_LEN);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -332,8 +320,6 @@ static void topo_kvm_check_str(t_topo_kvm *kvm, int line)
   if (strlen(kvm->added_cdrom) >= MAX_PATH_LEN)
     KOUT("%d", line);
   if (strlen(kvm->added_disk) >= MAX_PATH_LEN)
-    KOUT("%d", line);
-  if (strlen(kvm->p9_host_share) >= MAX_PATH_LEN)
     KOUT("%d", line);
 }
 /*---------------------------------------------------------------------------*/
@@ -358,8 +344,6 @@ static void topo_kvm_swapon(t_topo_kvm *kvm, t_topo_kvm *ikvm)
     strcpy(kvm->added_cdrom, NO_DEFINED_VALUE);
   if (strlen(kvm->added_disk) == 0)
     strcpy(kvm->added_disk, NO_DEFINED_VALUE);
-  if (strlen(kvm->p9_host_share) == 0)
-    strcpy(kvm->p9_host_share, NO_DEFINED_VALUE);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -383,8 +367,6 @@ static void topo_kvm_swapoff(t_topo_kvm *kvm, t_topo_kvm *ikvm)
     memset(kvm->added_cdrom, 0, MAX_NAME_LEN);
   if (!strcmp(kvm->added_disk, NO_DEFINED_VALUE))
     memset(kvm->added_disk, 0, MAX_NAME_LEN);
-  if (!strcmp(kvm->p9_host_share, NO_DEFINED_VALUE))
-    memset(kvm->p9_host_share, 0, MAX_NAME_LEN);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -613,8 +595,6 @@ void send_work_dir_resp(int llid, int tid, t_topo_clc *icf)
                                        cf.network,
                                        cf.username,
                                        cf.server_port,
-                                       cf.work_dir,
-                                       cf.bulk_dir,
                                        cf.bin_dir,
                                        cf.flags_config);
   my_msg_mngt_tx(llid, len, sndbuf);
@@ -744,7 +724,6 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
                                        kvm.install_cdrom,
                                        kvm.added_cdrom,
                                        kvm.added_disk,
-                                       kvm.p9_host_share,
                                        kvm.linux_kernel,
                                        kvm.rootfs_used,
                                        kvm.rootfs_backing,
@@ -915,8 +894,6 @@ void send_event_topo(int llid, int tid, t_topo_info *topo)
                                            cf.network,
                                            cf.username,
                                            cf.server_port,
-                                           cf.work_dir,
-                                           cf.bulk_dir,
                                            cf.bin_dir,
                                            cf.flags_config,
                                            topo->nb_cnt,
@@ -1145,8 +1122,7 @@ void send_add_vm(int llid, int tid, t_topo_kvm *ikvm)
 
   len += sprintf(sndbuf+len, ADD_KVM_C, kvm.linux_kernel, 
                              kvm.rootfs_input, kvm.install_cdrom,
-                             kvm.added_cdrom, kvm.added_disk,
-                             kvm.p9_host_share);
+                             kvm.added_cdrom, kvm.added_disk);
 
   my_msg_mngt_tx(llid, len, sndbuf);
 }
@@ -1499,7 +1475,6 @@ static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
                                     ikvm.install_cdrom,
                                     ikvm.added_cdrom,
                                     ikvm.added_disk,
-                                    ikvm.p9_host_share,
                                     ikvm.linux_kernel,
                                     ikvm.rootfs_used,
                                     ikvm.rootfs_backing,
@@ -1507,7 +1482,7 @@ static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
                                     &(ikvm.vm_config_param),
                                     &(ikvm.mem),
                                     &(ikvm.cpu),
-                                    &(ikvm.nb_tot_eth)) != 15)
+                                    &(ikvm.nb_tot_eth)) != 14)
     KOUT("%s", msg);
   get_eth_table(msg, ikvm.nb_tot_eth, ikvm.eth_table);
   topo_kvm_swapoff(kvm, &ikvm);
@@ -1651,8 +1626,6 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
                                      icf.network,
                                      icf.username,
                                      &(icf.server_port),
-                                     icf.work_dir,
-                                     icf.bulk_dir,
                                      icf.bin_dir,
                                      &(icf.flags_config),
                                      &(topo->nb_cnt),
@@ -1664,7 +1637,7 @@ static t_topo_info *helper_event_topo (char *msg, int *tid)
                                      &(topo->nb_nat),
                                      &(topo->nb_endp),
                                      &(topo->nb_info_phy),
-                                     &(topo->nb_bridges)) != 20)
+                                     &(topo->nb_bridges)) != 18)
     KOUT("%s", msg);
   topo_config_swapoff(&(topo->clc), &icf);
   len = topo->nb_cnt*sizeof(t_topo_cnt);
@@ -2481,8 +2454,7 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
                                  ikvm.rootfs_input, 
                                  ikvm.install_cdrom, 
                                  ikvm.added_cdrom, 
-                                 ikvm.added_disk, 
-                                 ikvm.p9_host_share) != 6) 
+                                 ikvm.added_disk) != 5) 
         KOUT("%s", msg);
       topo_kvm_swapoff(&kvm, &ikvm); 
       recv_add_vm(llid, tid, &kvm);
@@ -2562,10 +2534,8 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
                                      icf.network,
                                      icf.username,
                                      &(icf.server_port),
-                                     icf.work_dir,
-                                     icf.bulk_dir,
                                      icf.bin_dir,
-                                     &(icf.flags_config)) != 9)
+                                     &(icf.flags_config)) != 7)
         KOUT("%s", msg);
       topo_config_swapoff(&cf, &icf);
       recv_work_dir_resp(llid, tid, &cf);

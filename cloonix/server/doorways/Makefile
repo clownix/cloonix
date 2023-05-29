@@ -5,11 +5,10 @@ GLOB_INCLUDE=${CLOONIX_COMMON}/glob_include
 RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix/
 RPC_DOORS=${CLOONIX_COMMON}/lib_rpc_doors/
 UTILS=${CLOONIX_COMMON}/lib_utils/
-AGENT_INCLUDE=${CLOONIX_COMMON}/agent_dropbear/cloonix_agent/src
 
 
 OBJ_DIR=obj/
-EXE = cloonix_doorways
+EXE = cloonix-doorways
 PID_CLONE=../uml_cloonix_switch/src
 VPATH=./src:${PID_CLONE}
 
@@ -21,7 +20,6 @@ WARNINGS=-Wall -Wstrict-prototypes -Wdeclaration-after-statement
 
 INCLUDES= -I./src \
           -I$(GLOB_INCLUDE) \
-          -I${AGENT_INCLUDE} \
           -I${RPC_DOORS}/include \
           -I${IO_CLOWNIX}/include \
           -I${RPC_CLOWNIX}/include \

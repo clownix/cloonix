@@ -1,6 +1,5 @@
 #!/bin/bash
 
-PARAMS="ram=2000 cpu=2 eth=ss"
 NET=nemo
 DIST=bookworm
 
@@ -21,6 +20,7 @@ sleep 2
 cloonix_gui $NET
 #----------------------------------------------------------------------
 
+
 #######################################################################
 for i in 1 2 ; do
   cloonix_cli $NET add cru Crun${i} eth=ss ${DIST}.img
@@ -28,15 +28,24 @@ for i in 1 2 ; do
 done
 #----------------------------------------------------------------------
 
-sleep 2
-
+#######################################################################
+set +e
 for i in 1 2 ; do
-  sudo crun exec Crun${i} ifconfig eth0 1.1.1.${i}/24 up
+  while ! cloonix_ssh $NET Crun${i} "echo" 2>/dev/null; do
+    echo Crun${i} not ready, waiting 5 sec
+    sleep 5
+  done
 done
+set -e
 #----------------------------------------------------------------------
 
-sudo crun exec Crun1 ping 1.1.1.2
 
+#######################################################################
+for i in 1 2 ; do
+  cloonix_ssh $NET Crun${i} "ip addr add dev eth0 1.1.1.${i}/24"
+done
+#----------------------------------------------------------------------
+cloonix_ssh $NET Crun1 "ping 1.1.1.2"
 #----------------------------------------------------------------------
 
 

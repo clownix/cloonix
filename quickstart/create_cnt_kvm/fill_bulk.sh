@@ -2,8 +2,8 @@
 
 HERE=`pwd`
 set -e
-cd ${HERE}/create_kvm 
+cd ${HERE}/kvm 
 ./doitall.sh
 
-cd ${HERE}/create_cnt
+cd ${HERE}/cnt
 ./doitall.sh

@@ -9,20 +9,16 @@ A physical machine can launch several cloonix servers identified by
 name, ip and port.
 
 The server and the client share the same configuration file called
-cloonix_config, this file gives the necessary info to both clients
-and servers.
+cloonix.cfg this file gives the necessary info to both clients and servers.
 
 The cloonix config file is installed at::
 
-    **/usr/local/bin/cloonix/cloonix_config**.
+    **/usr/libexec/cloonix/etc/cloonix.cfg**.
 
 In this file, there are informations on cloonix installation version and
 paths::
 
     CLOONIX_VERSION=__LAST__
-    CLOONIX_TREE=/usr/local/bin/cloonix
-    CLOONIX_WORK=${HOME}/cloonix_data
-    CLOONIX_BULK=${HOME}/cloonix_data/bulk
 
 The cloonix_config contains after the paths, all the cloonix server and
 client net name, ports and password::
@@ -58,8 +54,7 @@ server name and addresses::
 Working directory
 =================
 
-CLOONIX_WORK=${HOME}/cloonix_data is the place where the server will write
-all that is needed to run.
+/var/lib/cloonix is the place where the server will write all that is needed to run.
 It contains all the unix socket paths and the qcow2 files derived from the
 bulk qcow2 images.
 All the paths used by containers for their file-system mounts is here too.

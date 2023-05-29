@@ -24,8 +24,8 @@ int ovs_vsctl_quiet(char *ovs_bin, char *ovs_dir, char *multi_arg_cmd);
 int create_ovsdb_server_conf(char *ovs_bin, char *ovs_dir);
 
 void init_environ(char *net, char *ovs_bin, char *ovs_dir);
-int call_my_popen(char *ovs_dir, int nb, char arg[NB_ARG][MAX_ARG_LEN],
-                  int quiet, const char *fct, int line);
+int call_ovs_popen(char *ovs_dir, char **argv, int quiet,
+                   const char *fct, int line);
 
 int ovs_execv_add_lan_br(char *ovs_bin, char *ovs_dir, char *lan_name);
 int ovs_execv_del_lan_br(char *ovs_bin, char *ovs_dir, char *lan_name);

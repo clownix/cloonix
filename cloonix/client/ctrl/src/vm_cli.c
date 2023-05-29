@@ -58,9 +58,7 @@ void help_add_vm_kvm(char *line)
   printf("\n\t       --balloon");
   printf("\n\t for the no_qemu_ga option, it must be set if you do not have the qemu_guest_agent int your guest.\n");
   printf("\n\t for the natplug= option, if set, the vm will have special cloonix_osh option.\n");
-  printf("\n\t for the persistent option, if set, those writes are persistent after shutwown.\n");
-  printf("\n\t for the 9p_share, the shared dir mount point is");
-  printf("\n\t      /mnt/p9_host_share in the guest kvm.\n\n");
+  printf("\n\t for the persistent option, if set, those writes are persistent after shutwown.\n\n");
   printf("\n\nexample:\n\n");
 
   printf("\n%s vm_name ram=2000 cpu=4 eth=sss bullseye.qcow2\n", line);
@@ -122,7 +120,6 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
 {
   int i, result = 0, prop_flags = 0;
   char *img_linux = NULL;
-  char *p9_host_shared=NULL;
   char *install_cdrom=NULL;
   char *added_cdrom=NULL;
   char *added_disk=NULL;
@@ -140,11 +137,6 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
       prop_flags |= VM_CONFIG_FLAG_FULL_VIRT;
     else if (!strcmp(argv[i], "--balloon"))
       prop_flags |= VM_CONFIG_FLAG_BALLOONING;
-    else if (!strncmp(argv[i], "--9p_share=", strlen("--9p_share=")))
-      {
-      prop_flags |= VM_CONFIG_FLAG_9P_SHARED;
-      p9_host_shared = argv[i] + strlen("--9p_share=");
-      }
     else if (!strncmp(argv[i], "--install_cdrom=", strlen("--install_cdrom=")))
       {
       prop_flags |= VM_CONFIG_FLAG_INSTALL_CDROM;
@@ -207,7 +199,7 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
     init_connection_to_uml_cloonix_switch();
     client_add_vm(0, callback_end, name, nb_tot_eth, eth_tab, prop_flags,
                   nat_plug, cpu, mem, img_linux, rootfs, install_cdrom,
-                  added_cdrom, added_disk, p9_host_shared);
+                  added_cdrom, added_disk);
     }
   return result;
 }

@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <pwd.h>
+#include <dirent.h>
 
 
 #include "io_clownix.h"
@@ -78,26 +79,8 @@ static char g_i_am_in_cloonix_name[MAX_NAME_LEN];
 
 static int g_cloonix_lock_fd = 0;
 static int g_machine_is_kvm_able;
-static char g_user[MAX_NAME_LEN];
-static char **g_saved_environ;
+static char g_config_path[MAX_PATH_LEN];
 static int g_conf_rank;
-
-
-char *used_binaries[] =
-{
-  "/bin/rm",
-  "/bin/bash",
-  "/bin/sh",
-  "/bin/echo",
-  "/bin/dd",
-  "/bin/chmod",
-  "/bin/cp",
-  "/bin/ln",
-  SBIN_IP,
-  USR_BIN_PRLIMIT,
-  NULL,
-};
-/*--------------------------------------------------------------------------*/
 
 
 /*****************************************************************************/
@@ -106,27 +89,6 @@ int get_conf_rank(void)
   return g_conf_rank;
 }
 /*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void init_g_user(void)
-{
-  struct passwd *pass;
-  pass = getpwuid(getuid());
-  snprintf(g_user, MAX_NAME_LEN-1, "%s", pass->pw_name);
-  if (strlen(g_user) == 0)
-    {
-    printf("Could not get user name\n");
-    KOUT("Could not get user name");
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-char *get_user(void)
-{
-  return g_user;
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void cloonix_lock_fd_close(void)
@@ -146,36 +108,8 @@ int machine_is_kvm_able(void)
 /****************************************************************************/
 static void usage(char *name)
 {
-  printf("\n\n%s /usr/local/bin/cloonix/cloonix_config nemo\n\n\n", name);
+  printf("\n\n%s /usr/libexec/cloonix/etc/cloonix.cfg nemo\n\n\n", name);
   exit(-1);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void  check_used_binaries_presence(t_topo_clc *conf)
-{
-  int i=0;
-  char *suid_power_bin = utils_get_suid_power_bin_path();
-  while(used_binaries[i])
-    {
-    if (!file_exists(used_binaries[i], X_OK))
-      {
-      printf("\"%s\" not found or not executable\n", used_binaries[i]);
-      KOUT("\"%s\" not found or not executable\n", used_binaries[i]);
-      }
-    i++;
-    } 
-  if (!file_exists(util_get_xorrisofs(), X_OK))
-    {
-    printf("\"%s\" not found or not executable\n", util_get_xorrisofs());
-    KOUT("\"%s\" not found or not executable\n", util_get_xorrisofs());
-    }
-  if (!file_exists(suid_power_bin, X_OK))
-    {
-    printf("\"%s\" not found or not executable\n", suid_power_bin);
-    KOUT("\"%s\" not found or not executable\n", suid_power_bin);
-    }
-
 }
 /*--------------------------------------------------------------------------*/
 
@@ -209,7 +143,7 @@ static void check_for_another_instance(char *clownlock, int keep_fd)
       }
     memset (&lock, 0, sizeof(lock));
     fcntl (fd, F_GETLK, &lock);
-    printf ("\numl_cloonix_switch (pid=%d) already running, please kill it\n",
+    printf ("\ncloonix-main-server (pid=%d) already running, please kill it\n",
              lock.l_pid);
     printf(" \n\n\tcloonix_cli %s kil \n\n\n", cfg_get_cloonix_name());
     KOUT("Another instance with same work directory found\n");
@@ -238,6 +172,12 @@ static void mk_and_tst_work_path(void)
   char path1[MAX_PATH_LEN];
   char path2[MAX_PATH_LEN];
   char *ptr;
+  char *argv[3];
+  memset(argv, 0, 3*sizeof(char *)); 
+  argv[0] = utils_get_suid_power_bin_path();
+  argv[1] = NULL;
+  if (lio_system(argv))
+    KERR("ERROR %s", utils_get_suid_power_bin_path());
   memset(path1, 0, MAX_PATH_LEN);
   memset(path2, 0, MAX_PATH_LEN);
   strncpy(path1, cfg_get_root_work(), MAX_PATH_LEN-1); 
@@ -355,6 +295,7 @@ static void launching(void)
 {
   char clownlock[MAX_PATH_LEN];
   char *dtach = utils_get_dtach_bin_path();
+  char *net = cfg_get_cloonix_name();
   if (!file_exists(dtach, X_OK))
     {
     printf("\"%s\" not found or not executable\n", dtach);
@@ -362,13 +303,13 @@ static void launching(void)
     }
   set_cloonix_name(cfg_get_cloonix_name());
   printf("\n\n");
-  printf("     Cloon Version:        %s\n",cfg_get_version());
-  printf("     Cloon Name:           %s (rank:%d)\n",
-                                       cfg_get_cloonix_name(),get_conf_rank());
-  printf("     Cloon Tree:           %s\n",cfg_get_bin_dir());
-  printf("     Work Zone Path:         %s\n",cfg_get_root_work());
-  printf("     Bulk Path:              %s\n",cfg_get_bulk());
-  printf("     Server Doors Port:      %d\n",cfg_get_server_port());
+  printf("     Version:      %s\n",cfg_get_version());
+  printf("     Name:         %s (rank:%d)\n", net, get_conf_rank());
+  printf("     Config:       %s\n", g_config_path);
+  printf("     Binaries:     %s\n",cfg_get_bin_dir());
+  printf("     Work Zone:    %s\n",cfg_get_root_work());
+  printf("     Bulk Path:    %s\n",cfg_get_bulk());
+  printf("     Doors Port:   %d\n",cfg_get_server_port());
   printf("\n\n\n");
   if ((strlen(cfg_get_cloonix_name()) == 0) || 
       (strlen(cfg_get_bin_dir()) == 0)      || 
@@ -388,34 +329,14 @@ static void launching(void)
   doorways_first_start();
   sprintf(clownlock, "%s/cloonix_lock", cfg_get_root_work());
   check_for_another_instance(clownlock, 1);
-  init_xwy();
-
+  init_xwy(cfg_get_cloonix_name());
   clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void eval_bash(char *input, char *output, int max)
-{
-  FILE *fp;
-  char *ptr;
-  fp = popen(input, "r");
-  fgets(output, max, fp);
-  output[max] = 0;
-  pclose(fp);
-  ptr = strrchr(output, '/');
-  if (!ptr)
-    KOUT("%s %s", input, output);
-  if (strncmp(ptr, "/endofline", strlen("/endofline")))
-    KOUT("%s %s", input, output);
-  *ptr = 0;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static t_topo_clc *get_parsed_config(char *name)
 {
-  char input[2*MAX_PATH_LEN];
   t_topo_clc *conf = NULL;
   t_cloonix_conf_info *cloonix_conf;
   cloonix_conf = cloonix_cnf_info_get(name, &g_conf_rank);
@@ -429,21 +350,13 @@ static t_topo_clc *get_parsed_config(char *name)
     conf = &g_clc;
     memset(conf, 0, sizeof(t_topo_clc));
     snprintf(conf->version,MAX_NAME_LEN-1,"%s",cloonix_conf_info_get_version());
-    snprintf(conf->username, MAX_NAME_LEN, "%s", g_user); 
-    conf->username[MAX_NAME_LEN-1] = 0;
+    snprintf(conf->username, MAX_NAME_LEN-1, "%s", getenv("USER"));
+    if (strlen(conf->username) == 0)
+      KERR("ERROR USER");
     snprintf(conf->network, MAX_NAME_LEN, "%s", cloonix_conf->name); 
     conf->network[MAX_NAME_LEN-1] = 0;
     conf->server_port = cloonix_conf->port; 
-    snprintf(input, 2*MAX_PATH_LEN-1,"echo %s/%s/endofline",
-             cloonix_conf_info_get_work(), 
-                                                  cloonix_conf->name);
-    eval_bash(input, conf->work_dir, MAX_PATH_LEN-1);
-    snprintf(input, 2*MAX_PATH_LEN-1,"echo %s/endofline",
-             cloonix_conf_info_get_tree()); 
-    eval_bash(input, conf->bin_dir, MAX_PATH_LEN-1);
-    snprintf(input, 2*MAX_PATH_LEN-1,"echo %s/endofline",
-             cloonix_conf_info_get_bulk()); 
-    eval_bash(input, conf->bulk_dir, MAX_PATH_LEN-1);
+    strcpy(conf->bin_dir, "/usr/libexec/cloonix");
     g_cloonix_conf_info = cloonix_conf;
     }
   return conf;
@@ -509,42 +422,16 @@ int inside_cloon(char **name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char **get_saved_environ(void)
-{
-  return (g_saved_environ);
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
-static char **save_environ(void)
-{
-  static char username[MAX_NAME_LEN];
-  static char spice_env[MAX_NAME_LEN];
-  static char home[MAX_PATH_LEN];
-  static char *environ_normal[] = {username,home,spice_env,NULL };
-  char **environ;
-  memset(home, 0, MAX_PATH_LEN);
-  snprintf(home, MAX_PATH_LEN-1, "HOME=%s", getenv("HOME"));
-  memset(username, 0, MAX_NAME_LEN);
-  snprintf(username, MAX_NAME_LEN-1, "USER=%s", getenv("USER"));
-  environ = environ_normal;
-  snprintf(spice_env, MAX_NAME_LEN-1, "SPICE_DEBUG_ALLOW_MC=1");
-  return environ;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void check_for_work_dir_inexistance(void)
 {
   struct stat stat_path;
-  char cmd[2*MAX_PATH_LEN];
+  char err[2*MAX_PATH_LEN];
   if (stat(cfg_get_work(), &stat_path) == 0)
     {
-    printf( "Path: \"%s\" already exists, destroing it\n\n",cfg_get_work());
-    memset(cmd, 0, 2*MAX_PATH_LEN);
-    snprintf(cmd, 2*MAX_PATH_LEN-1, "/bin/rm -rf %s", cfg_get_work());
-    system(cmd);
+    if (unlink_sub_dir_files(cfg_get_work(), err))
+      KERR("ERROR destroing %s %s", cfg_get_work(), err);
+    else
+      printf( "Path: \"%s\" already exists, destroing it\n\n",cfg_get_work());
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -557,11 +444,11 @@ int main (int argc, char *argv[])
   struct timespec ts;
   int llid;
 
+  umask(0000);
   if (clock_gettime(CLOCK_MONOTONIC, &ts))
     KOUT(" ");
   g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
 
-  init_g_user();
   job_for_select_init();
   utils_init();
   recv_init();
@@ -569,21 +456,22 @@ int main (int argc, char *argv[])
   g_machine_is_kvm_able = test_machine_is_kvm_able();
   if (argc != 3)
     usage(argv[0]);
-  if (cloonix_conf_info_init(argv[1]))
+  memset(g_config_path, 0, MAX_PATH_LEN);
+  strncpy(g_config_path, argv[1], MAX_PATH_LEN-1);
+  if (cloonix_conf_info_init(g_config_path))
     KOUT("%s", argv[1]);
   conf = get_parsed_config(argv[2]);
   if (!conf)
     KOUT(" ");
   cfg_init();
   cfg_set_host_conf(conf);
-  check_used_binaries_presence(conf);
   lan_init();
   llid_trace_init();
   event_subscriber_init();
   doors_io_basic_xml_init(string_tx);
   doors_io_layout_xml_init(string_tx);
   automates_init();
-  g_saved_environ = save_environ();
+
   msg_mngt_init(cfg_get_cloonix_name(), IO_MAX_BUF_LEN);
   if (tst_port_is_not_used(conf->server_port))
     {

@@ -13,7 +13,7 @@ LIB_BANK=./src/bank
 LIB_SUBSETS=./src/subsets
 LIB_BDPLOT=./src/bdplot
 
-EXE      = cloonix_gui
+EXE      = cloonix-gui
 WARNINGS=-Wall
 VPATH=src:${LIB_CLIENT}:${LIB_INTF}/src
 
@@ -32,21 +32,21 @@ INCLUDES= -I. $(shell pkg-config --cflags gtk+-3.0) \
           -I${LIB_BDPLOT}/include \
           -I./crcanvas_gtk
 
-LIBS = $(shell pkg-config --libs gtk+-3.0) \
-       -L${LIB_CLIENT}/ -lglibclient \
-       -L${RPC_LAYOUT}/ -lrpc_layout \
-       -L${RPC_CLOWNIX}/ -lrpc_clownix \
-       -L${LIB_INTF}/ -linterface \
-       -L${LIB_BANK}/ -lbank \
-       -L${LIB_SUBSETS}/ -lsubsets \
-       -L${LIB_BDPLOT}/ -lbdplot \
-       -L${IO_CLOWNIX}/ -lio_clownix \
-       -lssl -lcrypto -lrt \
-       -L./crcanvas_gtk/ -lcrcanvas_gtk \
-       -L${LIB_CLIENT}/ -lglibclient \
+LIBS = -lc \
+       -L${LIB_CLIENT}  -lglibclient \
+       -L${RPC_LAYOUT}  -lrpc_layout \
+       -L${RPC_CLOWNIX} -lrpc_clownix \
+       -L${LIB_INTF}    -linterface \
+       -L${LIB_BANK}    -lbank \
+       -L${LIB_SUBSETS} -lsubsets \
+       -L${LIB_BDPLOT}  -lbdplot \
+       -L${IO_CLOWNIX}  -lio_clownix \
+       -L./crcanvas_gtk -lcrcanvas_gtk \
+       -L${UTILS}       -lutils \
+       $(shell pkg-config --libs gtk+-3.0) \
        $(shell pkg-config --libs pangocairo) \
-       -L${UTILS}/ -lutils -lm \
-       $(shell pkg-config --libs gtk+-3.0) 
+       -lssl -lcrypto -lrt -lm -lc \
+       -L${LIB_CLIENT}  -lglibclient
 
 SRCS     = popup.c topo.c menus.c cloonix.c move.c menu_utils.c \
            main_timer_loop.c canvas_ctx.c eventfull_eth.c make_layout.c \
@@ -57,7 +57,7 @@ OBJ_DIR  = ./obj/
 OBJS     = $(addprefix $(OBJ_DIR), $(OBJ))
 
 
-CFLAGS   = -g $(WARNINGS) $(INCLUDES) -DWITH_GLIB -D_GNU_SOURCE
+CFLAGS   += -g $(WARNINGS) $(INCLUDES) -DWITH_GLIB -D_GNU_SOURCE
 
  
 CFLAGS+= -DGTK_DISABLE_SINGLE_INCLUDES \
@@ -71,14 +71,14 @@ CC       = gcc
 all: $(shell mkdir -p ./obj) $(EXE)
 
 $(EXE): $(OBJS)
-	$(CC) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
+	$(CC) -o $@ $(OBJS) $(LDFLAGS) $(LIBS)
 	@echo
 
 $(OBJ_DIR)%.o: %.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 clean:	
-	@-rm -vf *~ cloonix_gui $(OBJ_DIR)*.o
+	@-rm -vf *~ cloonix-gui $(OBJ_DIR)*.o
 
 
 

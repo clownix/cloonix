@@ -335,10 +335,12 @@ static void begin_x11_listen_action(t_display_x11 *disp)
   x11_fd = wrap_accept(disp->x11_listen_fd,
                        fd_type_x11_accept, 1, __FUNCTION__);
   if (x11_fd < 0)
-    XERR("%s", strerror(errno));
+    {
+    XERR("ERROR %s", strerror(errno));
+    }
   else if (!check_fd_is_unique(x11_fd))
     {
-    XERR("Duplicate x11_fd");
+    XERR("ERROR Duplicate x11_fd");
     wrap_close (x11_fd, __FUNCTION__);
     }
   else
@@ -346,7 +348,7 @@ static void begin_x11_listen_action(t_display_x11 *disp)
     cli_idx = alloc_pool_idx(disp);
     if (cli_idx == 0)
       {
-      XERR("No space for new idx");
+      XERR("ERROR No space for new idx");
       wrap_close (x11_fd, __FUNCTION__);
       }
    else
@@ -356,7 +358,7 @@ static void begin_x11_listen_action(t_display_x11 *disp)
                                        disp->magic_cookie);
       if (first_x11_msg == NULL)
         {
-        XERR("Failed first read idx");
+        XERR("ERROR Failed first read idx");
         wrap_close (x11_fd, __FUNCTION__);
         }
       else
@@ -367,8 +369,7 @@ static void begin_x11_listen_action(t_display_x11 *disp)
         if (send_msg_type_x11_connect(disp->randid, disp->sock_fd,
                                       disp->srv_idx, cli_idx))
           {
-          XERR("%d %d", disp->sock_fd, cli_idx);
-XERR("%d", disp->srv_idx);
+          XERR("ERROR %d %d", disp->sock_fd, cli_idx);
           disconnect_cli_idx(disp, cli_idx);
           }
         }
@@ -390,7 +391,6 @@ static void terminate_x11(int p_fd[2],
     wrap_close(sock_fd_ass, __FUNCTION__);
   if (epfd != -1)
     wrap_close(epfd, __FUNCTION__);
-XERR("%d", disp->srv_idx);
   disconnect_cli_idx(disp, cli_idx);
 }
 /*--------------------------------------------------------------------------*/
@@ -582,7 +582,6 @@ void x11_free_display(int srv_idx)
       {
       if (disp->conn[i])
         {
-XERR("%d", disp->srv_idx);
         disconnect_cli_idx(disp, i);
         }
       }
@@ -671,8 +670,7 @@ void x11_fdisset(fd_set *readfds, fd_set *writefds)
                                srv_idx, j, dialog_err, dialog_wake,
                                dialog_killed, dialog_stats))
               {
-              XERR(" ");
-XERR("%d", cur->srv_idx);
+              XERR("ERROR");
               disconnect_cli_idx(cur, j);
               }
             }
@@ -680,8 +678,7 @@ XERR("%d", cur->srv_idx);
             {
             if (dialog_tx_ready(conn->diag_main_fd))
               {
-              XERR(" ");
-XERR("%d", cur->srv_idx);
+              XERR("ERROR");
               disconnect_cli_idx(cur, j);
               }
             }

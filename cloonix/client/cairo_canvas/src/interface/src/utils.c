@@ -23,7 +23,6 @@
 #include "doorways_sock.h"
 #include "client_clownix.h"
 #include "interface.h"
-#include "pid_clone.h"
 #include "bank.h"
 #include "move.h"
 #include "lib_topo.h"
