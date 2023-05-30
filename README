@@ -1,4 +1,5 @@
------------------------------------------------------------------------------
+==============================================================================
+
 Cloonix is an AGPLv3 software that constitute a tool to create networks of
 kvm virtual machines or crun, docker and podman containers.
 
@@ -18,80 +19,64 @@ inside the virtual machines or container.
 Cloonix provides a graphical interactive canvas showing the topology for
 your network.
 
+Building of the binaries is done on a debian bookworm and all the necessary
+files and libraries are collected and put into an autonomous bundle, this
+makes the bundle self-contained. No added files or packages are necessary.
+
 See clownix.net for a documentation (which is usually not up to date).
-http://clownix.net/doc_stored/build-30-00/html/index.html doc.
+http://clownix.net/doc_stored/build-30-01/html/index.html doc.
 
 NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
       inside the kvm guests virtual machines to have the pseudo-ssh and
       pseudo-scp.
-      For the cisco or mikrotik particular case, cloonix provides another
-      type of pseudo-ssh and pseudo-scp not using qemu-guest-agent but
-      entering through one of the ip interface of the virtual.
-
-NOTE: A very big change comes with version 30, the building of the binaries
-      is done on only one type of host: a debian bookworm and all the
-      necessary files and libraries are bundled with the software so as
-      to be able to install it on any distribution with no added packages.
 
 NOTE: It is now strongly advised to install with the bundle of binaries,
-      libraries and config files and not with the compilation of the
-      software. The binary should work on any linux.
+      libraries and config files, much simpler method than by compiling.
 
+NOTE: If you have an old version of cloonix, you must erase it first,
+      the way to erase the old version was: "rm -rf /usr/local/bin/cloonix*".
+      The new cloonix is not at the same place as before.
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
 http://clownix.net/downloads/cloonix-30
 
 -----------------------------------------------------------------------------
-THE SOFTWARE HAS BEEN COMPILED WITH DEBIAN BOOKWORM AND
-THE RESULTING BINARY AND LIBRARIES HAVE BEEN TESTED ON:
+INSTALL BINARY AND LIBRARIES ON YOUR HOST
 
-            lunar   (ubuntu 23.04),
-            jammy   (ubuntu 22.04),
-            bookworm (debian 12),
-            bullseye (debian 11),
-            fedora38,
-            fedora37,
-            centos9,
-            centos8,
-            tumbleweed (rolling opensuse),
-
------------------------------------------------------------------------------
-INSTALL BINARY AND LIBRARIES ON YOU HOST
-
-get http://clownix.net/downloads/cloonix-30/cloonix-bundle-30-00.tar.gz
-tar xvf cloonix-bundle-30-00.tar.gz
-cd cloonix-bundle-30-00
+wget http://clownix.net/downloads/cloonix-30/cloonix-bundle-30-01.tar.gz
+tar xvf cloonix-bundle-30-01.tar.gz
+cd cloonix-bundle-30-01
 sudo ./install_cloonix
 
-Note that there is no need for any other installation, all the necessary
-libraries are self-contained within the bundle.
-
-Note that "rm -rf /var/lib/cloonix" and "rm -rf /usr/libexec/cloonix" destroy
-all traces of the cloonix installed, your host stays clean.  
 
 -----------------------------------------------------------------------------
-FOR KVM VIRTUAL MACHINE GET A WORKING QCOW AND PUT IT IN BULK:
+TO UNINSTALL:
 
-wget http://clownix.net/downloads/cloonix-30/bulk/bookworm.qcow2.gz
+rm -f /usr/bin/cloonix_*
+rm -rf /usr/libexec/cloonix
+rm -rf /var/lib/cloonix
+
+-----------------------------------------------------------------------------
+GET A WORKING QCOW AND PUT IT IN BULK TO TEST KVM:
 
 mkdir -p /var/lib/cloonix/bulk
-cp bookworm.qcow2.gz /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
+wget http://clownix.net/downloads/cloonix-30/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
-FOR CRUN CONTAINER GET A WORKING IMG AND PUT IT IN BULK:
+GET A WORKING IMG AND PUT IT IN BULK TO TEST CRUN:
 
-wget http://clownix.net/downloads/cloonix-28/bulk/bookworm.img.gz
-cp bookworm.img.gz /var/lib/cloonix/bulk
+mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
+wget http://clownix.net/downloads/cloonix-30/bulk/bookworm.img.gz
 gunzip bookworm.img.gz
 
 -----------------------------------------------------------------------------
-LAUNCH KVM EXAMPLE:
+LAUNCH KVM SCRIPT:
 
-cd cloonix-bundle-30-00
+cd cloonix-bundle-30-01
 ./ping_kvm.sh
 
 On the gui, a double-click on the blue machine gives a shell,
@@ -99,45 +84,20 @@ a double-click on the green interface gives a wireshark spy,
 a right-click on the blue machine gives a spice desktop.
 
 -----------------------------------------------------------------------------
-LAUNCH CRUN EXAMPLE:
+LAUNCH CRUN SCRIPT:
 
-cd cloonix-bundle-30-00
+cd cloonix-bundle-30-01
 ./ping_crun.sh
 
 On the gui, a double-click on the blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy.
 
-Note: the containers have hardware coded ip_forward disable_ipv6,
-see in file cloonix/server/suid_power/src/config_json.h and change
-configuration to your convenience.
-
 -----------------------------------------------------------------------------
-CREATION OF THE QCOW2 AND IMG FILES:
+CISCO C8000 IN CLOONIX:
 
-cd cloonix/quickstart/create_cnt_kvm/create_kvm for qcow2
-cd cloonix/quickstart/create_cnt_kvm/create_cnt for img 
+cd cloonix-bundle-30-01/cisco
+follow the README.
 
------------------------------------------------------------------------------
-TEST OF CISCO OR MIKROTIK FEATURE:
-
-cd cloonix/quickstart/create_cnt_kvm/cisco
-cd cloonix/quickstart/create_cnt_kvm/mikrotik
-
------------------------------------------------------------------------------
-Beware: The phy item in cloonix represents real interfaces of the host machine,
-        the command to use this phy item in cloonix makes an interface dive
-        into the cloonix net namespace. As a consequence this command takes
-        the interface out from the list of host interfaces.
-
-        For example, in my host there is an interface named enp6s0, the
-        command: "cloonix_cli nemo add phy enp6s0" takes out that interface
-        from the host default namespace and puts it in the "cloonix_nemo"
-        namespace.
-        This interface it visible in its new namespace with the command:
-        "sudo ip netns exec cloonix_nemo ip link".
-
-        That means the phy item should not be used if the interface you wish
-        to use in cloonix is currently used by your host. 
 ==============================================================================
 
 

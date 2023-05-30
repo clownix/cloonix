@@ -17,8 +17,9 @@ you can see on the picture below.
 The 3 scripts in tools/cisco are:
 
   * *step1_make_preconf_iso.sh* create an iso with a cisco configuration.
-  * *step2_make_qcow2.sh*  creates the cisco qcow2.
-  * *step3_run_demo.sh*  This runs the demo and gives the picture above.
+  * *step2_make_qcow2.sh*  creates the cisco file-system c8000.qcow2.
+  * *step3_iosxe_config.sh* pre-configuration of the c8000.qcow2.
+  * *step4_run_demo.sh*  This runs a demo with 3 ciscos as shown above.
 
 Notice that the 3 ciscos are red, this is because the backdoor that
 makes the cloonix_ssh and cloonix_scp possible does not exist in an

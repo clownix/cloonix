@@ -111,4 +111,16 @@ phy
 Used to bring a host physical ethernet interface into the cloonix
 namespace, the item when within the cloonix namespace can be connected
 to a lan and through it to another cloonix item.
+Beware: The phy item in cloonix represents real interfaces of the host
+machine, the command to use this phy item in cloonix makes an interface dive
+into the cloonix net namespace.
+As a consequence this command takes the interface out from the list of
+host interfaces.
+
+For example, in my host there is an interface named enp6s0, the command:
+*"cloonix_cli nemo add phy enp6s0"* takes out that interface from the host
+default namespace and puts it in the "cloonix_nemo" namespace.
+This interface is visible in its new namespace with the command:
+*"sudo ip netns exec cloonix_nemo ip link"*.
+
 

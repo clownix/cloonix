@@ -15,7 +15,7 @@ if [ ! -e ${CLOONIX_QEMU_BIN} ]; then
   exit 1
 fi
 
-rm ${CISCO_QCOW2}
+rm -f ${CISCO_QCOW2}
 qemu-img create -f qcow2 ${CISCO_QCOW2} 60G
 
 sync

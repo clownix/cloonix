@@ -100,25 +100,9 @@ Commands to have nested KVM in intel automaticaly from start of machine::
 Note that for grub2, it is: grub2-mkconfig --output=/boot/grub2/grub.cfg
 
 
-Wireshark
-=========
-
-Make wireshark usable by non-root user, on debian the way to go is::
-
-    echo "wireshark-common wireshark-common/install-setuid boolean true" > preseed
-    sudo debconf-set-selections preseed
-    sudo dpkg-reconfigure  wireshark
-    sudo adduser ${USER} wireshark
-
-Or just set the suid bit of /usr/bin/dumpcap::
-
-    chown root:root /usr/bin/dumpcap
-    chmod +s /usr/bin/dumpcap
-    chmod +x /usr/bin/dumpcap
-
-
 Docker and Podman
 =================
 
 Your system must have Docker or Podman or both to be able to use docker or podman containers.
-The container image creation must be done outside of cloonix, cloonix can only launch existing images.
+The container image creation must be done outside of cloonix, cloonix can only launch existing
+docker or podman images.

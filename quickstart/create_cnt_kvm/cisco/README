@@ -1,47 +1,8 @@
 Howto use a cisco with cloonix.
 First google "c8000v-universalk9.17.04.01a.iso index"
 If you can download c8000v-universalk9.17.04.01a.iso then you are good to go...
+Change the line CISCO_ISO= in file step2_make_qcow2.sh.
 
-1) Qcow2 cisco creation from an iso.
-
-The goal of this chapter is to create a c8000v qcow2 that has the following
-requirements:
-
-- The cloonix backdoor is not activated, ie cloonix_ssh and cloonix_scp will
-  not work. (--no_qemu_ga option is used for the cisco).
-  The cloonix backdoor uses virtual serial ports not supported in non-linux vm.
-
-- The command "show license udi" must always give the same result in case a
-  paid licence is used with this cisco. The licence is lost if this identifier
-  changes for this a number uuid is hardcoded when the --no_qemu_ga option is used.
-
-- The cisco is configured with one interface (0 in this demo) with DHCP in
-  order to be able to have an administrative ip managed by the cloonix nat object.
-  This feature is associated to --natplug=0.
-  We can have the choice of which interface number will be used for cloonix
-  entry with nat object (--natplug=num option is used for this).
-
-- The cisco must have ssh and scp and an associated rsa key to be accessed
-  without the need for a password. For this the private id_rsa used is in
-  cloonix_osh and cloonix_ocp and the id_rsa.pub is in step1_make_preconf_iso.sh.
-  --natplug=num permit the cloonix commands cloonix_osh and cloonix_ocp to work,
-  those are the equivalent for a cisco of cloonix_ssh and cloonix_scp for a
-  linux kvm machine.
-
-- The mac addresses of the interfaces must not be memorised in the cisco qcow2
-  because a dose of random must be put into those mac addresses at VM creation,
-  this in order to use the same qcow2 for multiple instances of the cisco without
-  having identical macs on a lan.
-  "clear platform software vnic-if nvtable" cisco command is used for this.
-
-For all these requirement, we use a very usefull function of the cisco: the
-passing of an iso at the launch of the cisco. In this iso is the file
-"iosxe_config.txt" containing the pre-configuration that implements some
-of the requirements above, admin is the name for ssh, the cloonix public key
-id_rsa.pub is put in the authorized keys of the cisco, and DHCP is 
-configured for eth0 of the cisco.
-Note that "admin" is hardcoded in cloonix_osh and cloonix_ocp because it is
-the user used in mikrotik router, mikrotik also uses cloonix_osh and cloonix_ocp. 
 
 1) Create iosxe_config.iso: 
 ./step1_make_preconf_iso.sh
@@ -57,7 +18,7 @@ Wait...
 
 4) Launch cloonix demo of ospf for 3 ciscos:
 ./step4_run_demo.sh
-Wait...
+Wait at least one minute...
 
 The demo makes five vms, 2 with linux bullseye qcow2 and 3 ciscos.
 
@@ -65,12 +26,6 @@ There is a long wait with messages:
 "cisco1 returned: RESPKO UNKNOWN VM: cisco1"
 "cisco1 not ready"
  
-Be aware that Ctrl-C in the dtach console kills the qemu process and thus
-kills your virtual cisco machine.
-
-The best is never to use the dtach console but use the cloonix_osh and
-cloonix_ocp in the following way:
-
 cloonix_osh nemo cisco1
 cloonix_osh nemo cisco1 show ip interface brief
 cloonix_ocp nemo cisco1:running-config /tmp/cur_run
@@ -78,8 +33,8 @@ cloonix_ocp nemo /tmp/cur_run cisco1:running-config
 
 A double click while over the cisco gives the same as "cloonix_osh nemo cisco1"
 
-Note that the cisco stays red because the blue color comes only when an agent
-in the virtual machine responds to cloonix server which is not the case for
-"--no_qemu_ga" option.
+Note that the cisco stays red because the blue color comes only when
+qemu-guest-agent in the virtual machine responds to cloonix server which
+is not the case for "--no_qemu_ga" option.
  
 

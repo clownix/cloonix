@@ -17,6 +17,7 @@ to control the cloonix server, here is a full list the clients:
   * *cloonix_ocp*  Pseudo-ssh for vm without qemu_guest_agent (for cisco c8000).
   * *cloonix_ice*  Spice desktop command line launcher.
   * *cloonix_ovs*  Ovs command line for the embedded openvswitch.
+  * *cloonix_wsk* Command line to launch wireshark on a cloonix endpoint.
 
 
 cloonix_gui
@@ -197,4 +198,14 @@ test::
 
     cloonix_ovs nemo --help
     cloonix_ovs nemo show
+
+
+cloonix_wsk
+===========
+
+Cloonix uses an embedded version of wireshark, you can have access to
+this wireshark through the cloonix_wsk command, for example, you can
+test::
+
+    cloonix_wsk nemo Cloon1 0
 

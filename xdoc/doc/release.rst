@@ -5,6 +5,27 @@
 Software Release Information
 ============================
 
+v30-00 and v30-01
+=================
+
+Note that there is no v29, the v30 has a very big change in its delivery
+method. Earlier version were given source only with the constraint of
+compilation by the user.
+The compilation was a drawback to use cloonix because the target host had
+to be a developer distribution.
+This version has binary delivery, the binaries included are all self-contained,
+these binaries do not open any file comming from the host, all is included
+within the bundle. This makes the binary compatible with any distribution.
+
+Also, the locations of the binaries and qcow data have changed, it is now
+*/usr/libexec/cloonix* and */var/lib/cloonix* and of course, the handle
+scripts at */usr/bin/cloonix_xxx*.
+
+If you have an old version of cloonix, then you must erase it with:
+*rm -rf /usr/local/bin/cloonix*. If you do not, the old version will
+probably take precedence on the new version because the path has the
+/usr/local/bin before /usr/bin. 
+
 v28-00
 ======
 

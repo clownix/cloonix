@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+
 
 #include "io_clownix.h"
 #include "util_sock.h"
@@ -428,6 +432,7 @@ static int unix_socket_create(char *sockcli)
 /****************************************************************************/
 void doorways_access_init(char *sockcli)
 {
+  umask(0000);
   memset(g_sockcli, 0, MAX_PATH_LEN);
   strncpy(g_sockcli, sockcli, MAX_PATH_LEN-1);
   change_state(state_waiting_first_read);

@@ -34,15 +34,27 @@ The cloonix software is a part server and a part client(s).
 
 The server is launched with the **cloonix_net** command with a network name
 as parameter, the network name being one of the predefined names found in
-cloonix_config. The main process of the server listens to clients and obeys
-their commands, it also sends back the topology description.
+*/usr/libexec/cloonix/common/etc/cloonix.cfg*.
+The */usr/bin/cloonix_net* is a bash script that calls binaries and libraries
+located in */usr/libexec/cloonix/common* and */usr/libexec/cloonix/server*.
+The main process of the server listens to clients and obeys their commands,
+it also sends back the topology description.
 The connection to the server is a tcp stream protected by password.
 
 All cloonix clients are named **cloonix_xxx** xxx can be one of the
 following: gui, cli, ssh, scp, ice, osh, ocp, ovs.
+The */usr/bin/cloonix_xxx* are bash scripts that call binaries and libraries
+located in */usr/libexec/cloonix/common* and */usr/libexec/cloonix/client*.
+
 The main one **cloonix_gui** displays the topologie on a canvas also giving
 a possible interaction between the user and items on the canvas to send
 commands.
+
+The working directories for the software is located at:
+*/var/lib/cloonix/<net-name>*
+
+The storage directory for the virtual machines is located at:
+*/var/lib/cloonix/bulk*
 
 
 User view for cloonix
@@ -51,11 +63,13 @@ User view for cloonix
 As a user, the cloonix software is a set of manageable plugable **items**,
 each having a simple graphical representation in the **cloonix_gui** canvas.
 Items are plugged together by connection **lines** created by the user.
+Those lines emulate ethernet wires. 
 
 The **items** can be divided into two categories: those that include
 **endpoints**, an endpoint being the terminal point of one single **line**
 and the **crossroads** (the only crossroad item is the **lan**) which can
 support any number of lines to any number of endpoints.
+Those crossroads emulate ethernet hubs, those are realy ovs bridges.
 
 An item that is in the **endpoints** categorie contains either a single
 endpoint for example in the case of a **tap** item or, contains multiple
@@ -63,13 +77,7 @@ endpoints for example in the case of a virtual machine **kvm** within which
 there are several ethernet interfaces, in that case, each of those interfaces
 is one endpoint.
 
-In the **crossroads** category there is only the **lan** item. This is realy
-an ovs bridge (also named a switch) and the **endpoints** connected to it
-by **lines** are really ports that are attached to the ovs bridge represented
-by the lan.
-
-The user creates the items crossroads and endpoints then creates lines between
-the endpoints of the items that plug to lans, he can in this fashion make a
+The user creates lines, crossroads and endpoints, he can in this fashion make a
 network of virtual machines and visualize the resulting topology on the canvas.
 
 From the user view, the most important item in cloonix is the machine
@@ -79,33 +87,16 @@ The representation of a machine is a big circle that has satellite smaller
 circles with numbers in them. The small circles are the endpoints, they are
 graphical representations of the ethernet interfaces for the machine.
 
-These interfaces are the plugable parts from which a line to a **lan** can be
-connected. When a line is connected to a lan, the endpoint becomes a **port**
-in the lan bridge and the packets tx from this interface goes into the ovs
-bridge an accross the crossroad to other endpoints.
-
-From the user view, the second most important item is the **lan** which
-should have been called a switch instead because it is the representation
-of an openvswitch bridge, it connects all the lines that are attached to it.
-in the lan bridge, it acts exactly like an harware switch.
-
-Then there are several secondary items that can be put on the canvas:
-**nat**, **tap**, **c2c**, **a2b**.
-All those items have a specific graphical representation and are described
-latter within this documentation.
-
 To describe the user interaction with the canvas items of cloonix_gui,
 therafter are 4 examples of gui interaction:
 
 A double-click on a lan followed by a simple-click on an endpoint creates
 the line between endpoint and lan.
 
-A double-click on a blue virtual machine kvm or container cnt creates a
-root shell.
+A double-click on a blue virtual machine kvm or container cnt creates a root shell.
 
 A double-click on a virtual machine interface (small circle bordering the vm)
-opens a **wireshark** spy that displays the packets running through this
-interface.
+opens a **wireshark** spy that displays the packets running through this interface.
 
 A right-click when above the **kvm** virtual machine launches a **spice**
 graphical desktops.
@@ -126,12 +117,9 @@ use of cloonix can be for:
 Directories cloonix uses
 ========================
 
-*/usr/bin* for the *cloonix_...* scripted command interfaces to the user.
-*/usr/bin/cloonix/* for all the cloonix binaries called.
-*/usr/lib/cloonix/* for all the cloonix libraries called.
-*/etc/cloonix/* for the cloonix configuration file.
-*/usr/share/cloonix* for the cloonix storage of virtual files .qcow2 and .img.
-*/var/lib/cloonix* for run-time storage of temporary files.
+*/usr/libexec/cloonix/* for binaries, libraries and configuration files.
+*/var/lib/cloonix/bulk* for the cloonix storage of virtual files .qcow2 and .img.
+*/var/lib/cloonix/<net-name>* for run-time storage of temporary files.
 
 You can grab a single file html of this doc to print it:
 

@@ -556,9 +556,23 @@ void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void timer_cisco_add(void *data)
+{
+  char *name = (char *) data;
+  t_vm *vm = cfg_get_vm(name);
+  if (!vm)
+    KERR("ERROR %s", name);
+  else
+    ovs_nat_cisco_add(vm->kvm.name);
+  free(data);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void free_wake_up_eths_and_vm_ok(t_vm *vm)
 {
   int llid, tid;
+  char *nm;
   if ((!vm) || (!vm->wake_up_eths))
     KOUT(" ");
   llid = vm->wake_up_eths->llid;
@@ -568,7 +582,10 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
     send_status_ok(llid, tid, "addvm");
   if (vm->kvm.vm_config_flags & VM_CONFIG_FLAG_NATPLUG)
     {
-    ovs_nat_cisco_add(vm->kvm.name);
+    nm = (char *) malloc(MAX_NAME_LEN);
+    memset(nm, 0, MAX_NAME_LEN);
+    strncpy(nm, vm->kvm.name, MAX_NAME_LEN);
+    clownix_timeout_add(500, timer_cisco_add, (void *) nm, NULL, NULL);
     }
   ovs_nat_vm_event();
 }

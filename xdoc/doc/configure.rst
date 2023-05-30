@@ -51,12 +51,4 @@ server name and addresses::
     }
 
 
-Working directory
-=================
-
-/var/lib/cloonix is the place where the server will write all that is needed to run.
-It contains all the unix socket paths and the qcow2 files derived from the
-bulk qcow2 images.
-All the paths used by containers for their file-system mounts is here too.
-
 
