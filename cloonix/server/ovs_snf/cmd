@@ -19,7 +19,7 @@ fi
 cat > meson.build << EOF
 project('cloonix-ovs-snf', 'c')
 
-cflags = ['-march=native']
+cflags = ['-mtune=generic']
 cflags += ['-g']
 cflags += ['-fPIC']
 cflags += ['-DALLOW_EXPERIMENTAL_API']

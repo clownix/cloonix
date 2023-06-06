@@ -58,7 +58,6 @@ rm -rf ${CLIENT}/openssh
 #----------------------------------------------------------
 LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
 RPATH_LIB="/usr/libexec/cloonix/common/lib"
-#----------------------------------------------------------
 for i in `find ${CLIENT} -maxdepth 1 -type f` ; do
   patchelf --set-rpath ${RPATH_LIB} ${i}
   patchelf --set-interpreter ${LDLINUX} ${i}

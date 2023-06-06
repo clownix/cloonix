@@ -1,0 +1,9 @@
+#!/bin/bash
+HERE=`pwd`
+CRUN=${HERE}
+TARGZ=../../../targz_store
+./allclean
+tar xvf ${TARGZ}/crun_*.tar.gz
+cd ${HERE}/crun
+./configure
+make

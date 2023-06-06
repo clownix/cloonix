@@ -72,12 +72,11 @@ done
 cp -f ${SERVER}/dtach/cloonix-dtach ${SERVER}
 rm -rf ${SERVER}/dtach
 #----------------------------------------------------------
+cp -f ${SERVER}/crun/crun/crun ${SERVER}/cloonix-crun
+rm -rf ${SERVER}/crun
+#----------------------------------------------------------
 cp -f ${TARGZ_STORE}/shark/wireshark ${SERVER}/cloonix-wireshark
 cp -f ${TARGZ_STORE}/shark/dumpcap ${SERVER}
-cp -f ${TARGZ_STORE}/crun/crun ${SERVER}/cloonix-crun
-#----------------------------------------------------------
-LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-RPATH_LIB="/usr/libexec/cloonix/common/lib"
 #----------------------------------------------------------
 cp -f /sbin/ip      ${SERVER}/ip
 cp -f /bin/mount    ${SERVER}/cloonix-mount
@@ -90,6 +89,8 @@ cp -f /usr/bin/awk  ${SERVER}/cloonix-awk
 cp -f /bin/grep     ${SERVER}/cloonix-grep
 cp -f /usr/bin/osirrox ${SERVER}/cloonix-osirrox
 #----------------------------------------------------------
+LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/usr/libexec/cloonix/common/lib"
 for i in `find ${SERVER} -maxdepth 1 -type f` ; do
   patchelf --set-rpath ${RPATH_LIB} ${i}
   patchelf --set-interpreter ${LDLINUX} ${i}

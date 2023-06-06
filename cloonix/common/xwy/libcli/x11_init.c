@@ -260,7 +260,7 @@ void x11_init_magic(void)
   memset(g_x11_path, 0, MAX_TXT_LEN);
   if (!display)
     {
-    XERR("MAGIC X11 no DISPLAY");
+    XERR("ERROR MAGIC X11 no DISPLAY");
     init_x11_magic();
     }
   else
@@ -270,28 +270,36 @@ void x11_init_magic(void)
       {
       if (x11_init_unix(display, val))
         {
+        XERR("ERROR MAGIC X11 %s", display);
         display = NULL;
-        XERR("MAGIC X11 Problem with unix magic");
+        }
+      }
+    else if (sscanf(display, "localhost:%d.0", &val) == 1)
+      {
+      if (x11_init_inet(display, val))
+        {
+        XERR("ERROR MAGIC X11 %s", display);
+        display = NULL;
         }
       }
     else if (sscanf(display, "127.0.0.1:%d.0", &val) == 1)
       {
       if (x11_init_inet(display, val))
         {
+        XERR("ERROR MAGIC X11 %s", display);
         display = NULL;
-        XERR("MAGIC X11 Problem with inet magic");
         }
       }
     else
       {
+      XERR("ERROR MAGIC X11 %s", display);
       display = NULL;
-      XERR("MAGIC X11 Problem with magic");
       }
     if (display == NULL)
       init_x11_magic();
     else if (get_xauth_magic(display, err))
       {
-      XERR("MAGIC X11 get_xauth_magic %s", err);
+      XERR("ERROR MAGIC X11 get_xauth_magic %s %s", display, err);
       init_x11_magic();
       }
     }

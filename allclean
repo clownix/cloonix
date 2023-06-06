@@ -73,6 +73,7 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-${VERSION}
            ovs_a2b \
            qemu \
            xwy \
+           crun \
            spice_lib_server ; do
     cd ${SERVER}/${i}
     ./allclean

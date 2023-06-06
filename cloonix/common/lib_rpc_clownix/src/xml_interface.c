@@ -378,8 +378,7 @@ void send_hop_evt_doors_sub(int llid, int tid, int flags_hop,
   len = sprintf(sndbuf, HOP_EVT_DOORS_SUB_O, tid, flags_hop, nb);
   for (i=0; i<nb; i++)
     {
-    if ((list[i].name == NULL) ||
-        (strlen(list[i].name) == 0) ||
+    if ((strlen(list[i].name) == 0) ||
         (strlen(list[i].name) >= MAX_NAME_LEN))
       KOUT(" ");
     len += sprintf(sndbuf+len, HOP_LIST_NAME_I, list[i].type_hop,
@@ -431,8 +430,7 @@ void send_hop_name_list_doors(int llid, int tid, int nb, t_hop_list *list)
   len = sprintf(sndbuf, HOP_LIST_NAME_O, tid, nb);
   for (i=0; i<nb; i++)
     {
-    if ((list[i].name == NULL) ||
-        (strlen(list[i].name) == 0) ||
+    if ((strlen(list[i].name) == 0) ||
         (strlen(list[i].name) >= MAX_NAME_LEN))
       KOUT(" ");
     len += sprintf(sndbuf+len, HOP_LIST_NAME_I, list[i].type_hop,
@@ -747,8 +745,6 @@ static int topo_c2c_format(char *buf, t_topo_c2c *c2c)
 {
   int len;
   char lan[MAX_NAME_LEN];
-  if ((!c2c->name) || (!c2c->dist_cloon) || (!c2c->lan))
-    KOUT("%p %p", c2c->name, c2c->dist_cloon);
   if (!strlen(c2c->name) || (strlen(c2c->name) >= MAX_NAME_LEN))
      KOUT(" ");
   if (!strlen(c2c->dist_cloon) || (strlen(c2c->dist_cloon) >= MAX_NAME_LEN))
@@ -779,8 +775,6 @@ static int topo_c2c_format(char *buf, t_topo_c2c *c2c)
 static int topo_nat_format(char *buf, t_topo_nat *nat)
 {
   int len;
-  if (!nat->name)
-    KOUT(" ");
   if (!strlen(nat->name) || (strlen(nat->name) >= MAX_NAME_LEN))
      KOUT(" ");
   len = sprintf(buf, EVENT_TOPO_NAT, nat->name, nat->endp_type);
@@ -792,8 +786,6 @@ static int topo_nat_format(char *buf, t_topo_nat *nat)
 static int topo_tap_format(char *buf, t_topo_tap *tap)
 {
   int len;
-  if (!tap->name)
-    KOUT(" ");
   if (!strlen(tap->name) || (strlen(tap->name) >= MAX_NAME_LEN))
      KOUT(" ");
   len = sprintf(buf, EVENT_TOPO_TAP, tap->name, tap->endp_type);
@@ -805,8 +797,6 @@ static int topo_tap_format(char *buf, t_topo_tap *tap)
 static int topo_a2b_format(char *buf, t_topo_a2b *a2b)
 {
   int len;
-  if (!a2b->name)
-    KOUT(" ");
   if (!strlen(a2b->name) || (strlen(a2b->name) >= MAX_NAME_LEN))
      KOUT(" ");
   len = sprintf(buf, EVENT_TOPO_A2B, a2b->name, a2b->endp_type0,
@@ -819,8 +809,6 @@ static int topo_a2b_format(char *buf, t_topo_a2b *a2b)
 static int topo_phy_format(char *buf, t_topo_phy *phy)
 {
   int len;
-  if (!phy->name)
-    KOUT(" ");
   if (!strlen(phy->name) || (strlen(phy->name) >= MAX_NAME_LEN))
      KOUT(" ");
   len = sprintf(buf, EVENT_TOPO_PHY, phy->name, phy->endp_type);

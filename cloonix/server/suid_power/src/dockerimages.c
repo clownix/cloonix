@@ -395,11 +395,7 @@ void dockerimages_init(void)
   memset(g_container, 0, MAX_CONTAINER_TAB * sizeof(t_container_info));
   if (!access(DOCKER_BIN, F_OK))
     g_docker_ok = 1;
-  else
-    KERR("WARNING binary %s not found", DOCKER_BIN);
   if (!access(PODMAN_BIN, F_OK))
     g_podman_ok = 1;
-  else
-    KERR("WARNING binary %s not found", PODMAN_BIN);
 }
 /*--------------------------------------------------------------------------*/

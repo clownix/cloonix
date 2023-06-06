@@ -36,8 +36,22 @@ cloonix_ssh ${NET} ${NAME} "cat > /etc/apt/sources.list << EOF
 deb ${REPO} ${DISTRO} main contrib non-free
 EOF"
 #----------------------------------------------------------------------
-cloonix_scp ${NET} ${HERE}/install_depends ${NAME}:/root
-cloonix_ssh ${NET} ${NAME} "./install_depends"
+cloonix_ssh ${NET} ${NAME} "apt-get --assume-yes update"
+
+cloonix_ssh ${NET} ${NAME} "apt-get -y install tar build-essential \
+                            pkg-config intltool libtool meson ninja-build \
+                            libssl-dev libusb-1.0-0-dev patch libglib2.0-dev \
+                            libpixman-1-dev python3-six sudo xauth \
+                            python3-pyparsing libjpeg-dev libgstreamer1.0-dev \
+                            libgstreamer-plugins-base1.0-dev liblz4-dev \
+                            libpcap-dev libsasl2-dev libfuse3-dev \
+                            fuse-overlayfs libnuma-dev libepoxy-dev xorriso \
+                            libgtk-3-dev libjson-glib-dev libacl1-dev \
+                            libpolkit-gobject-1-dev cmake patchelf \
+                            libyajl-dev make git libsystemd-dev \
+                            libprotobuf-c-dev libcap-dev libseccomp-dev \
+                            libgcrypt20-dev go-md2man python3 python3-venv"
+
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"
 cloonix_ssh ${NET} ${NAME} "poweroff"

@@ -193,7 +193,6 @@ static void forked_process_netns(int fd_rx_from_parent)
   if (setns(fd, CLONE_NEWNET) != 0)
     KOUT("ERROR %s", g_netns_namespace);
   close(fd);
-
   fd_max = fd_rx_from_parent;
 
   while(1)

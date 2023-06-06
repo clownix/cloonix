@@ -46,7 +46,8 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
   echo BUILDING SERVER
   echo
 #----------------------------------------------------------
-  for i in  dtach \
+  for i in  crun \
+            dtach \
             spice_lib_server \
             qemu \
             xwy \

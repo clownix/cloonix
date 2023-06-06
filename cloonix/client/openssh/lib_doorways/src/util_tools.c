@@ -82,11 +82,11 @@ static void shift_right_2_char(char *str)
 /****************************************************************************/
 char *get_full_bin_path(char *input_callbin)
 {
-  static char path[MAX_PATH_LEN];
+  static char path[MAX_PATH_LEN+1];
   char callbin[MAX_PATH_LEN];
   int len, must_put_dot = 0;
   char *ptr;
-  memset(path, 0, MAX_PATH_LEN);
+  memset(path, 0, MAX_PATH_LEN+1);
   memset(callbin, 0, MAX_PATH_LEN);
   strncpy(callbin, input_callbin, MAX_PATH_LEN-1);
   if (!getcwd(path, MAX_PATH_LEN-1))

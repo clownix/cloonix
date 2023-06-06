@@ -9,6 +9,19 @@ mkdir -vp ${WORK}
 
 #-----------------------------------------------------
 cd ${WORK}
+git clone --depth=1 https://github.com/containers/crun.git
+cd ${WORK}/crun
+COMMIT=$(git log --pretty=format:"%H")
+./autogen.sh
+./configure
+cd ${WORK}
+tar zcvf crun_${COMMIT}.tar.gz crun
+rm -rf crun
+mv crun_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
+
+#-----------------------------------------------------
+cd ${WORK}
 git clone --depth=1 https://git.qemu.org/git/qemu.git
 cd ${WORK}/qemu
 COMMIT=$(git log --pretty=format:"%H")

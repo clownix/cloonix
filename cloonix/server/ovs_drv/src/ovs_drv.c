@@ -187,7 +187,7 @@ static int ovs_cmd_add_phy(char *ovs_bin, char *ovs_dir, char *name,
     memset(argv, 0, NB_ARG * sizeof(char *));
     argv[0] = IP_BIN;
     argv[1] = "-netns";
-    argv[2] = "%s", get_ns();
+    argv[2] = get_ns();
     argv[3] = "link";
     argv[4] = "set";
     argv[5] = "dev";
@@ -826,27 +826,22 @@ int main (int argc, char *iargv[])
   strncpy(g_ovs_bin, iargv[4], MAX_PATH_LEN-1);
   strncpy(g_ovs_dir, iargv[5], MAX_PATH_LEN-1);
   init_environ(net, g_ovs_bin, g_ovs_dir);
-
   signal(SIGINT, cmd_interrupt);
   cloonix_part_init(ctl_argv);
   clownix_timeout_add(2000, timeout_heartbeat_start, NULL, NULL, NULL);
-
   daemon(0,0);
-
   memset(argv, 0, NB_ARG * sizeof(char *));
   argv[0] = IP_BIN;
   argv[1] = "netns";
   argv[2] = "del";
   argv[3] = get_ns();
   call_ovs_popen(g_ovs_dir, argv, 1, __FUNCTION__, 1);
-
   memset(argv, 0, NB_ARG * sizeof(char *));
   argv[0] = IP_BIN;
   argv[1] = "netns";
   argv[2] = "add";
   argv[3] = get_ns();
   call_ovs_popen(g_ovs_dir, argv, 0, __FUNCTION__, 2);
-
   memset(argv, 0, NB_ARG * sizeof(char *));
   argv[0] = IP_BIN;
   argv[1] = "-netns";
@@ -856,17 +851,13 @@ int main (int argc, char *iargv[])
   argv[5] = "lo";
   argv[6] = "up";
   call_ovs_popen(g_ovs_dir, argv, 0, __FUNCTION__, 3);
-
   sync();
   sleep(1);
-
   g_netns_pid = netns_open(g_net_name, &fd_rx_from_netns, &g_fd_tx_to_netns,
                            g_ovs_bin, g_ovs_dir);
-
   llid = msg_watch_fd(fd_rx_from_netns, rx_netns_cb, rx_netns_err, "ovs");
   if (llid == 0)
     KOUT("ERROR OVS_DRV");
-
   msg_mngt_loop();
   return 0;
 }

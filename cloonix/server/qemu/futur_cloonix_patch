@@ -1,0 +1,113 @@
+diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
+--- qemu_vip/include/qemu/error-report.h	2023-06-01 17:30:29.000000000 +0200
++++ tainted_qemu/include/qemu/error-report.h	2023-06-01 23:22:07.178703159 +0200
+@@ -13,6 +13,26 @@
+ #ifndef QEMU_ERROR_REPORT_H
+ #define QEMU_ERROR_REPORT_H
+ 
++#include <syslog.h>
++#define error_report(format, a...)                    \
++ do {                                                    \
++    printf("\n%s line:%d " format,         \
++    __FUNCTION__,__LINE__, ## a);                \
++    syslog(LOG_ERR, "%s line:%d " format, \
++    __FUNCTION__,__LINE__, ## a);              \
++    exit(-1);                                            \
++    } while (0)
++
++#define warn_report(format, a...)             \
++ do {                                         \
++     printf("\n%s line:%d " format,         \
++      __FUNCTION__,__LINE__, ## a);           \
++     syslog(LOG_ERR, "%s line:%d " format, \
++     __FUNCTION__,__LINE__, ## a);            \
++     } while (0)
++
++
++
+ typedef struct Location {
+     /* all members are private to qemu-error.c */
+     enum { LOC_NONE, LOC_CMDLINE, LOC_FILE } kind;
+@@ -37,8 +57,6 @@
+ void warn_vreport(const char *fmt, va_list ap) G_GNUC_PRINTF(1, 0);
+ void info_vreport(const char *fmt, va_list ap) G_GNUC_PRINTF(1, 0);
+ 
+-void error_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
+-void warn_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
+ void info_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
+ 
+ bool error_report_once_cond(bool *printed, const char *fmt, ...)
+diff -Naur qemu_vip/meson.build tainted_qemu/meson.build
+--- qemu_vip/meson.build	2023-06-01 17:30:29.000000000 +0200
++++ tainted_qemu/meson.build	2023-06-01 23:23:59.282903265 +0200
+@@ -1043,7 +1043,7 @@
+ endif
+ spice = not_found
+ if not get_option('spice').auto() or have_system
+-  spice = dependency('spice-server', version: '>=0.14.0',
++  spice = dependency('cloonix-spice-server', version: '>=0.14.0',
+                      required: get_option('spice'),
+                      method: 'pkg-config')
+ endif
+@@ -1757,7 +1757,7 @@
+ endif
+ usbredir = not_found
+ if not get_option('usb_redir').auto() or have_system
+-  usbredir = dependency('libusbredirparser-0.5', required: get_option('usb_redir'),
++  usbredir = dependency('libcloonix-usbredirparser-0.5', required: get_option('usb_redir'),
+                         version: '>=0.6', method: 'pkg-config')
+ endif
+ libusb = not_found
+diff -Naur qemu_vip/util/error.c tainted_qemu/util/error.c
+--- qemu_vip/util/error.c	2023-06-01 17:30:29.000000000 +0200
++++ tainted_qemu/util/error.c	2023-06-01 23:22:07.182703165 +0200
+@@ -231,10 +231,13 @@
+ 
+ void error_report_err(Error *err)
+ {
+-    error_report("%s", error_get_pretty(err));
+-    if (err->hint) {
++//cloon
++    if (!strstr(err->msg, "Unexpected end-of-file before all data were read"))
++      {
++      error_report("%s", error_get_pretty(err));
++      if (err->hint)
+         error_printf("%s", err->hint->str);
+-    }
++      }
+     error_free(err);
+ }
+ 
+diff -Naur qemu_vip/util/error-report.c tainted_qemu/util/error-report.c
+--- qemu_vip/util/error-report.c	2023-06-01 17:30:29.000000000 +0200
++++ tainted_qemu/util/error-report.c	2023-06-01 23:22:07.182703165 +0200
+@@ -268,14 +268,6 @@
+  * Prepend the current location and append a newline.
+  * It's wrong to call this in a QMP monitor.  Use error_setg() there.
+  */
+-void error_report(const char *fmt, ...)
+-{
+-    va_list ap;
+-
+-    va_start(ap, fmt);
+-    vreport(REPORT_TYPE_ERROR, fmt, ap);
+-    va_end(ap);
+-}
+ 
+ /*
+  * Print a warning message to current monitor if we have one, else to stderr.
+@@ -283,14 +275,6 @@
+  * single phrase, with no newline or trailing punctuation.
+  * Prepend the current location and append a newline.
+  */
+-void warn_report(const char *fmt, ...)
+-{
+-    va_list ap;
+-
+-    va_start(ap, fmt);
+-    vreport(REPORT_TYPE_WARNING, fmt, ap);
+-    va_end(ap);
+-}
+ 
+ /*
+  * Print an information message to current monitor if we have one, else to

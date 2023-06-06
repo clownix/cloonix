@@ -228,6 +228,11 @@ static void create_env(int display_val, char *ttyname)
     setenv("XAUTHORITY", g_xauthority, 1);
     setenv("TERM", "xterm", 1);
     setenv("SHELL", "/bin/bash", 1);
+    setenv("LIBGL_ALWAYS_INDIRECT", "1", 1);
+    setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1);
+    setenv("LIBGL_DRI3_DISABLE", "1", 1);
+    setenv("QT_X11_NO_MITSHM", "1", 1);
+    setenv("QT_XCB_NO_MITSHM", "1", 1);
     }
   else
     XERR("Problem setting DISPLAY");

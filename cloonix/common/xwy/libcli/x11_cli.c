@@ -147,7 +147,6 @@ static void create_conn_and_ack(int srv_idx, int cli_idx, int x11_fd)
   conn->x11_fd_epev = wrap_epoll_event_alloc(epfd, x11_fd, 3);
   fd_spy_set_info(conn->x11_fd, srv_idx, cli_idx); 
   g_conn[cli_idx] = conn;
-
 }
 /*--------------------------------------------------------------------------*/
 
@@ -194,7 +193,7 @@ static void x11_connect(int srv_idx, int cli_idx)
     }
   else
     {
-    XERR("No display unix path");
+    XERR("ERROR No display unix path");
     xcli_send_msg_type_x11_connect_ack(cli_idx, "KO");
     }
 }

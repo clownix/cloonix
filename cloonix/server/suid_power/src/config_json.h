@@ -99,7 +99,7 @@
 "				\"soft\": 1024\n"\
 "			}\n"\
 "		],\n"\
-"		\"noNewPrivileges\": true\n"\
+"		\"noNewPrivileges\": false\n"\
 "	},\n"\
 "	\"root\": {\n"\
 "		\"path\": \"%s\",\n"\
