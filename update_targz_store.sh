@@ -9,6 +9,17 @@ mkdir -vp ${WORK}
 
 #-----------------------------------------------------
 cd ${WORK}
+git clone --depth=1 https://github.com/NixOS/patchelf.git
+cd ${WORK}/patchelf
+COMMIT=$(git log --pretty=format:"%H")
+./bootstrap.sh
+./configure
+cd ${WORK}
+tar zcvf patchelf_${COMMIT}.tar.gz patchelf 
+rm -rf patchelf
+mv patchelf_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
+cd ${WORK}
 git clone --depth=1 https://github.com/containers/crun.git
 cd ${WORK}/crun
 COMMIT=$(git log --pretty=format:"%H")

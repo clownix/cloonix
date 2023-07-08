@@ -6,25 +6,23 @@ if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
   exit 1
 fi
-VERSION=$(cat ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION)
-VERSION=${VERSION#*=}
 #----------------------------------------------------------
 COMMON=${CLOONIX_TREE_ROOT}/cloonix/common
 CLIENT=${CLOONIX_TREE_ROOT}/cloonix/client
 SERVER=${CLOONIX_TREE_ROOT}/cloonix/server
 
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-common
-rm -f  ${CLOONIX_TREE_ROOT}/build_tools/cloonix-common.tar.gz
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/common
+rm -f  ${CLOONIX_TREE_ROOT}/build_tools/common.tar.gz
 
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-client
-rm -f  ${CLOONIX_TREE_ROOT}/build_tools/cloonix-client.tar.gz
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/client
+rm -f  ${CLOONIX_TREE_ROOT}/build_tools/client.tar.gz
 rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_client
 
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-server
-rm -f  ${CLOONIX_TREE_ROOT}/build_tools/cloonix-server.tar.gz
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/server
+rm -f  ${CLOONIX_TREE_ROOT}/build_tools/server.tar.gz
 rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_server
 #----------------------------------------------------------
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-${VERSION}
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
 #----------------------------------------------------------
   for i in lib_rpc_clownix \
            lib_rpc_doors \

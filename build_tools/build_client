@@ -30,6 +30,7 @@ for i in cloonix_osh \
          cloonix_ice \
          cloonix_ssh \
          cloonix_wsk \
+         cloonix_wir \
          cloonix_ovs; do 
   mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
 done

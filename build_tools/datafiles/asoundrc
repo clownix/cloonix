@@ -1,0 +1,7 @@
+pcm.PCH { type hw; card PCH; }
+ctl.PCH { type hw; card PCH; }
+pcm.NVidia { type hw; card NVidia; }
+ctl.NVidia { type hw; card NVidia; }
+pcm.!default pcm.PCH
+ctl.!default ctl.PCH
+

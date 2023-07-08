@@ -2,17 +2,17 @@
 HERE=`pwd`
 NET=nemo
 NAME=dev
-QCOW2=builder.qcow2
-CLOONIX_TREE_ROOT=${HERE}/../
+QCOW2=fedora_builder.qcow2
+CLOONIX_TREE_ROOT=${HERE}/../..
 #----------------------------------------------------------------------
 rm -f cloonix-*
 rm -rf /tmp/cloonix_build_tree
 mkdir -p /tmp/cloonix_build_tree
-cd ${HERE}/..
+cd ${CLOONIX_TREE_ROOT}
 ./allclean
-cd ${HERE}/../..
+cd ${CLOONIX_TREE_ROOT}/..
 tar zcvf /tmp/cloonix_build_tree/sources.tar.gz ./sources
-cd ${HERE}
+cd ${CLOONIX_TREE_ROOT}/build_tools
 #----------------------------------------------------------------------
 cloonix_net ${NET}
 cloonix_gui ${NET}
@@ -33,7 +33,7 @@ cloonix_ssh ${NET} ${NAME} "mkdir -p /var/lib/cloonix/bulk"
 cloonix_ssh ${NET} ${NAME} "tar xvf sources.tar.gz"
 cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall"
 #----------------------------------------------------------------------
-cloonix_scp ${NET} -r ${NAME}:/root/sources/build_tools/cloonix-bundle-* ${HERE}
+cloonix_scp ${NET} -r ${NAME}:/root/sources/build_tools/cloonix-bundle-* ${CLOONIX_TREE_ROOT}/build_tools
 #----------------------------------------------------------------------
 
 

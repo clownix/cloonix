@@ -5,9 +5,9 @@ if [ $UID != 0 ]; then
   exit 1
 fi
 #----------------------------------------------------------
-for i in cloonix-common.tar.gz \
-         cloonix-client.tar.gz \
-         cloonix-server.tar.gz ; do
+for i in common.tar.gz \
+         client.tar.gz \
+         server.tar.gz ; do
   if [ ! -e ${i} ]; then
     echo NOT FOUND:
     echo ${i}
@@ -15,24 +15,28 @@ for i in cloonix-common.tar.gz \
   fi
 done
 #----------------------------------------------------------
-rm -vrf /usr/libexec/cloonix
-rm -vf  /usr/bin/cloonix_*
+rm -rf /usr/libexec/cloonix
+rm -f  /usr/bin/cloonix_*
 #----------------------------------------------------------
-rm -rf /tmp/cloonix-common
-rm -rf /tmp/cloonix-client
-rm -rf /tmp/cloonix-server
+rm -rf /tmp/common
+rm -rf /tmp/client
+rm -rf /tmp/server
 #----------------------------------------------------------
-tar --directory=/tmp -xf cloonix-common.tar.gz
-tar --directory=/tmp -xf cloonix-client.tar.gz
-tar --directory=/tmp -xf cloonix-server.tar.gz
+tar --directory=/tmp -xf common.tar.gz
+tar --directory=/tmp -xf client.tar.gz
+tar --directory=/tmp -xf server.tar.gz
 #----------------------------------------------------------
 mkdir -p /usr/libexec/cloonix/common
-cp -rf /tmp/cloonix-common/* /usr/libexec/cloonix/common
+cp -rf /tmp/common/* /usr/libexec/cloonix/common
 chown -R root:root /usr/libexec/cloonix/common
+chmod 755 /usr/libexec/cloonix/common/*
 #----------------------------------------------------------
 mkdir -p /usr/libexec/cloonix/client
-cp -rf /tmp/cloonix-client/* /usr/libexec/cloonix/client
+cp -rf /tmp/client/* /usr/libexec/cloonix/client
+rm -rf /usr/libexec/cloonix/client/usr_bin
+rm -rf /usr/libexec/cloonix/client/polkit-1
 chown -R root:root /usr/libexec/cloonix/client
+chmod 755 /usr/libexec/cloonix/client/*
 #----------------------------------------------------------
 for i in  cloonix_cli \
           cloonix_gui \
@@ -42,18 +46,27 @@ for i in  cloonix_cli \
           cloonix_ovs \
           cloonix_scp \
           cloonix_ssh \
+          cloonix_wir \
           cloonix_wsk ; do
-  cp -f /tmp/cloonix-client/usr_bin/${i} /usr/bin
+  cp -vf /tmp/client/usr_bin/${i} /usr/bin
 done
 #----------------------------------------------------------
+if [ -d /usr/share/polkit-1/actions ]; then
+  dstusb="/usr/share/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
+  srcusb="/tmp/client/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
+  if [ ! -e ${dstusb} ]; then
+    cp -f ${srcusb} ${dstusb}
+  fi
+fi
 chmod u+s /usr/libexec/cloonix/client/cloonix-spice-client-glib-usb-acl-helper
-ls -l /usr/libexec/cloonix/client/cloonix-spice-client-glib-usb-acl-helper
 #----------------------------------------------------------
 mkdir -p /usr/libexec/cloonix/server
-cp -rf /tmp/cloonix-server/* /usr/libexec/cloonix/server
+cp -rf /tmp/server/* /usr/libexec/cloonix/server
+rm -rf /usr/libexec/cloonix/server/usr_bin
 chown -R root:root /usr/libexec/cloonix/server
+chmod 755 /usr/libexec/cloonix/server/*
 #----------------------------------------------------------
-cp -f /tmp/cloonix-server/usr_bin/cloonix_net /usr/bin
+cp -vf /tmp/server/usr_bin/cloonix_net /usr/bin
 #----------------------------------------------------------
 for i in dumpcap \
          cloonix-ovs-drv \
@@ -63,10 +76,9 @@ for i in dumpcap \
          cloonix-ovs-c2c \
          cloonix-suid-power ; do
   chmod u+s /usr/libexec/cloonix/server/${i}
-  ls -l /usr/libexec/cloonix/server/${i}
 done
 #----------------------------------------------------------
-rm -rf /tmp/cloonix-common
-rm -rf /tmp/cloonix-client
-rm -rf /tmp/cloonix-server
+rm -rf /tmp/common
+rm -rf /tmp/client
+rm -rf /tmp/server
 #----------------------------------------------------------

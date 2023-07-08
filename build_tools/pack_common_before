@@ -9,23 +9,103 @@ if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
   exit 1
 fi
 TARGZ_STORE=${CLOONIX_TREE_ROOT}/targz_store
-COMMON="${CLOONIX_TREE_ROOT}/build_tools/cloonix-common"
-mkdir -p ${COMMON}
-#----------------------------------------------------------
-tar --directory=${COMMON}       -xf ${TARGZ_STORE}/dataconf/etc.tar.gz
-tar --directory=${COMMON}       -xf ${TARGZ_STORE}/dataconf/share.tar.gz
-tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark/share_wireshark.tar.gz
-tar --directory=${COMMON}       -xf ${TARGZ_STORE}/shark/lib.tar.gz
-tar --directory=${COMMON}/lib   -xf ${TARGZ_STORE}/shark/qt6.tar.gz
-#----------------------------------------------------------
+COMMON="${CLOONIX_TREE_ROOT}/build_tools/common"
+DATAFILES=${CLOONIX_TREE_ROOT}/build_tools/datafiles/
+pretty_name=$(cat /etc/os-release |grep PRETTY_NAME)
+pretty_name=${pretty_name#*\"}
+pretty_name=${pretty_name%% *}
+case "$pretty_name" in
+  "Debian")
+  ;;
+  "Fedora")
+  ;;
+  *)
+  printf "\n\tERROR: Your distribution: $pretty_name is not supported"
+  exit
+  ;;
+esac
 mkdir -p ${COMMON}/lib64
-cp -f /lib64/ld-linux-x86-64.so.2 ${COMMON}/lib64
-cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
+mkdir -p ${COMMON}/lib
+mkdir -p ${COMMON}/etc
+mkdir -p ${COMMON}/share
 #----------------------------------------------------------
-cp -rf /usr/lib/x86_64-linux-gnu/gtk-3.0 ${COMMON}/lib
-cp -rf /usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0 ${COMMON}/lib
-cp -rf /usr/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0 ${COMMON}/lib
+FROM_HERE=`pwd`
+tar --directory=/tmp -xf ${TARGZ_STORE}/patchelf_*.tar.gz
+cd /tmp/patchelf
+make
+cd $FROM_HERE
 #----------------------------------------------------------
+cp -rf /etc/fonts ${COMMON}/etc
+rm -f ${COMMON}/etc/fonts/fonts.conf
+cat > ${COMMON}/etc/fonts/fonts.conf << EOF
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+    <dir>/usr/libexec/cloonix/common/share</dir>
+</fontconfig>
+EOF
+
+#----------------------------------------------------------
+case "$pretty_name" in
+#----------------------------------------------------------
+"Debian")
+cp -rf /etc/pulse ${COMMON}/etc
+cat > ${COMMON}/etc/pulse/client.conf << EOF
+daemon-binary = ${COMMON}/cloonix-pulseaudio
+enable-shm = no
+EOF
 cp -f /usr/bin/xauth ${COMMON}/cloonix-xauth
 cp -f /bin/bash ${COMMON}/cloonix-bash
+cp -f /usr/bin/pulseaudio ${COMMON}/cloonix-pulseaudio
+for i in icons mime themes fonts gtk-3.0 \
+         gstreamer-1.0 applications pulseaudio ; do
+  cp -rf /usr/share/${i} ${COMMON}/share
+done
+;;
+#----------------------------------------------------------
+"Fedora")
+cp -f /usr/bin/xauth ${COMMON}/cloonix-xauth
+cp -f /bin/bash ${COMMON}/cloonix-bash
+cp -f /usr/bin/pulseaudio ${COMMON}/cloonix-pulseaudio
+for i in icons mime themes fonts gtk-3.0 \
+         gstreamer-1.0 applications ; do
+  cp -rf /usr/share/${i} ${COMMON}/share
+done
+;;
+esac
+#----------------------------------------------------------
+tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark/built_objects/share_wireshark.tar.gz
+mv ${COMMON}/share/share_wireshark ${COMMON}/share/wireshark
+#----------------------------------------------------------
+cp -f /lib64/ld-linux-x86-64.so.2 ${COMMON}/lib64
+cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
+cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_exports ${COMMON}/etc
+#----------------------------------------------------------
+case "$pretty_name" in
+  "Debian")
+    for i in qt6 gdk-pixbuf-2.0 gtk-3.0 \
+             gstreamer-1.0 pulseaudio ; do
+      cp -rf /usr/lib/x86_64-linux-gnu/${i} ${COMMON}/lib
+    done
+    cp /usr/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner ${COMMON}
+  ;;
+  "Fedora")
+    for i in qt6 gdk-pixbuf-2.0 gtk-3.0 \
+             gstreamer-1.0 pulseaudio ; do
+      cp -rf /usr/lib64/${i} ${COMMON}/lib
+    done
+    cp -f /usr/libexec/gstreamer-1.0/gst-plugin-scanner ${COMMON}
+  ;;
+  *)
+  printf "\n\tERROR: Your distribution: $pretty_name is not supported"
+  exit
+  ;;
+esac
+IMMOD=${COMMON}/lib/gtk-3.0/3.0.0
+LOADER=${COMMON}/lib/gdk-pixbuf-2.0/2.10.0
+ASOUNDRC=${COMMON}/share/alsa
+cp -f ${DATAFILES}/immodules.cache ${IMMOD}
+cp -f ${DATAFILES}/loaders.cache ${LOADER}
+cp -f ${DATAFILES}/asoundrc ${ASOUNDRC}
+#----------------------------------------------------------
 #----------------------------------------------------------

@@ -12,6 +12,7 @@ INCLUDES= -I. $(shell pkg-config --cflags gtk+-3.0) \
           -I$(GLOB_INCLUDE) \
           -I./include  
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g -rdynamic $(WARNINGS) $(INCLUDES)
 AR = ar
 RANLIB = ranlib

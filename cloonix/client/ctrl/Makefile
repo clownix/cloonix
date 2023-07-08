@@ -35,6 +35,7 @@ LIBS = -L${LIB_CLIENT}/ -lclient \
        -lssl -lcrypto -lrt -lm 
 
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)
 CC=gcc
 

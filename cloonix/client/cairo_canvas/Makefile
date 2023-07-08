@@ -57,6 +57,7 @@ OBJ_DIR  = ./obj/
 OBJS     = $(addprefix $(OBJ_DIR), $(OBJ))
 
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS   += -g $(WARNINGS) $(INCLUDES) -DWITH_GLIB -D_GNU_SOURCE
 
  

@@ -59,6 +59,17 @@ static void alloc_lib_all(char *name, char *path)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void create_libs_paragraph(FILE *col, char *common, char *name_lib)
+{
+  fprintf(col, "if [ -d %s/lib/%s ]; then\n", common, name_lib);
+  fprintf(col, "  for i in `find %s/lib/%s -type f` ; do\n",common,name_lib);
+  fprintf(col, "    ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
+  fprintf(col, "  done\n");
+  fprintf(col, "fi\n");
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static int create_libs_txt(char *path, char *common)
 {
   FILE *col;
@@ -70,33 +81,24 @@ static int create_libs_txt(char *path, char *common)
   else
     {
     fprintf(col, "#!/bin/bash\n");
+
     fprintf(col, "echo " " > %s\n", g_dumps);
+
     fprintf(col, "for i in `find %s -maxdepth 1 -type f` ; do\n", path);
-    fprintf(col, "  ldd -v ${i} >> %s\n", g_dumps);
+    fprintf(col, "  ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
     fprintf(col, "done\n");
-    fprintf(col, "if [ -d %s/lib/gdk-pixbuf-2.0 ]; then\n", common);
-    fprintf(col, "  for i in `find %s/lib/gdk-pixbuf-2.0 -name *.so -type f` ; do\n", common);
-    fprintf(col, "    ldd -v ${i} >> %s\n", g_dumps);
-    fprintf(col, "  done\n");
-    fprintf(col, "fi\n");
-    fprintf(col, "if [ -d %s/lib/gtk-3.0 ]; then\n", common);
-    fprintf(col, "  for i in `find %s/lib/gtk-3.0 -name *.so -type f` ; do\n", common);
-    fprintf(col, "    ldd -v ${i} >> %s\n", g_dumps);
-    fprintf(col, "  done\n");
-    fprintf(col, "fi\n");
-    fprintf(col, "if [ -d %s/lib/qt6 ]; then\n", common);
-    fprintf(col, "  for i in `find %s/lib/qt6 -name *.so -type f` ; do\n", common);
-    fprintf(col, "    ldd -v ${i} >> %s\n", g_dumps);
-    fprintf(col, "  done\n");
-    fprintf(col, "fi\n");
-    fprintf(col, "if [ -d %s/lib/gstreamer-1.0 ]; then\n", common);
-    fprintf(col, "  for i in `find %s/lib/gstreamer-1.0 -name *.so -type f` ; do\n", common);
-    fprintf(col, "    ldd -v ${i} >> %s\n", g_dumps);
-    fprintf(col, "  done\n");
-    fprintf(col, "fi\n");
+
     fprintf(col, "for i in `find %s -maxdepth 1 -type f` ; do\n", common);
-    fprintf(col, "  ldd -v ${i} >> %s\n", g_dumps);
+    fprintf(col, "  ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
     fprintf(col, "done\n");
+
+    create_libs_paragraph(col, common, "gdk-pixbuf-2.0");
+    create_libs_paragraph(col, common, "qt6");
+    create_libs_paragraph(col, common, "gtk-3.0");
+    create_libs_paragraph(col, common, "gstreamer-1.0");
+    create_libs_paragraph(col, common, "pulseaudio");
+
+
     fprintf(col, "echo " " >> %s\n", g_dumps);
     fclose(col);
     if (chmod(g_collect, 0700))
@@ -168,8 +170,8 @@ static void get_path_libs(FILE *dmp, FILE *debug1)
           ptr_line += strlen("=>");
           ptr_line = ptr_line + strspn(line, " \r\n\t");
           if ((!strncmp(ptr_line, "/usr/libexec/cloonix/", 21)) ||
-              (!strncmp(ptr_line, "/usr/lib/", 9)) ||
-              (!strncmp(ptr_line, "/lib/", 5)))
+              (!strncmp(ptr_line, "/usr/lib", 8)) ||
+              (!strncmp(ptr_line, "/lib", 4)))
             {
             endp = ptr_line + strcspn(ptr_line, " \r\n\t");
             if (endp)
@@ -203,32 +205,33 @@ static int file_exists(char *path)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int init_g_path(char *path, char *type, char *common)
+static int init_g_path(char *path, char *type, char *common, char *common_lib)
 {
   int result = -1;
-  char *ptr_type;
-  memset(type, 0, MAX_NAME_LEN);
+  char *ptr;
   memset(common, 0, MAX_PATH_LEN);
   strncpy(common, path, MAX_PATH_LEN-1);
-  ptr_type = strrchr(common, '/'); 
-  if (ptr_type)
+  ptr = strrchr(common, '/'); 
+  if (!ptr)
+    printf("ERROR PATH: %s", path);
+  else
     {
-    *ptr_type = 0;
-    ptr_type += 1;
-    if (strlen(ptr_type) > 2)
-      {
-      snprintf(type, MAX_NAME_LEN-1, "%s", ptr_type);
-      strcat(common, "/cloonix-common");
-      snprintf(g_collect, MAX_PATH_LEN-1, "/tmp/ext_collect_%s.sh", type);
-      snprintf(g_names, MAX_PATH_LEN-1, "/tmp/ext_names_%s.txt", type);
-      snprintf(g_paths, MAX_PATH_LEN-1, "/tmp/ext_paths_%s.txt", type);
-      snprintf(g_dumps, MAX_PATH_LEN-1, "/tmp/ext_dumps_%s.txt", type);
-      unlink(g_collect);
-      unlink(g_names);
-      unlink(g_paths);
-      unlink(g_dumps);
+    *ptr = 0;
+    strcat(common, "/common");
+    strncpy(common_lib, common, MAX_PATH_LEN-1);
+    strcat(common_lib, "/lib");
+    snprintf(g_collect, MAX_PATH_LEN-1, "/tmp/ext_collect_%s.sh", type);
+    snprintf(g_names, MAX_PATH_LEN-1, "/tmp/ext_names_%s.txt", type);
+    snprintf(g_paths, MAX_PATH_LEN-1, "/tmp/ext_paths_%s.txt", type);
+    snprintf(g_dumps, MAX_PATH_LEN-1, "/tmp/ext_dumps_%s.txt", type);
+    unlink(g_collect);
+    unlink(g_names);
+    unlink(g_paths);
+    unlink(g_dumps);
+    if (access(common_lib, W_OK))
+      printf("ERROR LIB PATH: %s %s", path, common_lib);
+    else
       result = 0;
-      }
     }
   return result;
 }
@@ -239,26 +242,18 @@ int main(int argc, char *argv[])
 {
   FILE *dmp, *debug1, *debug2;
   char cmd[MAX_PATH_LEN];
-  struct stat sb;
-  char *path, *solib;
-  char type[MAX_NAME_LEN];
+  char *path;
   char common[MAX_PATH_LEN];
+  char common_lib[MAX_PATH_LEN];
    
   g_head_lib_all = NULL;
   if (argc != 3)
     printf("Input path not given error\n");
-  else if ((access(argv[1], W_OK)) &&
-           (stat(argv[1], &sb) == 0) &&
-           (S_ISDIR(sb.st_mode)))
+  else if (access(argv[1], W_OK))
     printf("1File: %s error\n", argv[1]);
-  else if ((access(argv[2], W_OK)) &&
-           (stat(argv[2], &sb) == 0) &&
-           (S_ISDIR(sb.st_mode)))
-    printf("2File: %s error\n", argv[2]);
-  else if (!init_g_path(argv[1], type, common))
+  else if (!init_g_path(argv[1], argv[2], common, common_lib))
     {
     path = argv[1];
-    solib = argv[2];
     if (!create_libs_txt(path, common))
       {
       dmp = fopen(g_dumps, "r");
@@ -271,9 +266,9 @@ int main(int argc, char *argv[])
         fclose(dmp);
         fclose(debug1);
         debug2 = fopen(g_paths, "w+");
-        copy_lib_all(solib, debug2);
+        copy_lib_all(common_lib, debug2);
         fclose(debug2);
-        snprintf(cmd, MAX_PATH_LEN, "chmod -R 755 %s", solib); 
+        snprintf(cmd, MAX_PATH_LEN, "chmod -R 755 %s", common_lib); 
         system(cmd);
         }
       }

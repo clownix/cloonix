@@ -315,8 +315,11 @@ static void derived_file_creation_request(t_vm *vm)
 
 #define QEMU_SPICE \
    " -device virtio-vga"\
-   " -audiodev driver=spice,id=snd0"\
-   " -device AC97,audiodev=snd0"\
+   " -audiodev driver=spice,id=hda0"\
+   " -device intel-hda,id=hda0"\
+   " -device hda-output,bus=hda0.0"\
+   " -device hda-micro,bus=hda0.0"\
+   " -device hda-duplex,bus=hda0.0"\
    " -device qemu-xhci"\
    " -device usb-tablet"\
    " -chardev spicevmc,id=charredir0,name=usbredir"\
@@ -363,7 +366,8 @@ static void create_linux_cmd_kvm(t_vm *vm, char *qemu_cmd)
     }
   len += sprintf(qemu_cmd+len,
                  " -pidfile %s/%s/pid"
-                 " -machine pc,accel=kvm,usb=off,dump-guest-core=off"
+                 " -enable-kvm"
+                 " -machine q35,accel=kvm,usb=off,dump-guest-core=off,vmport=off"
                  " -cpu %s"
                  " -smp %d,maxcpus=%d,cores=1",
                  cfg_get_work_vm(vm->kvm.vm_id), DIR_UMID,

@@ -31,6 +31,7 @@ LIBS = -L${RPC_DOORS} -lrpc_doors \
        -L${IO_CLOWNIX} -lio_clownix \
        -lssl -lcrypto -lrt -lm
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)
 CC=gcc
 

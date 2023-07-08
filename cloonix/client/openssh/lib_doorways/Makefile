@@ -13,7 +13,8 @@ INCLUDES= -I./src \
           -I${IO_CLOWNIX}/include \
           -I${GLOB_INCLUDE}
 
-CFLAGS=-fPIC -g $(WARNINGS) $(INCLUDES)
+CFLAGS+=-mtune=generic -fno-stack-protector
+CFLAGS+=-fPIC -g $(WARNINGS) $(INCLUDES)
 AR = ar
 RANLIB = ranlib
 CC=gcc

@@ -18,6 +18,7 @@ LIBS = -L../ -lrpc_clownix \
        -L${IO_CLOWNIX} -lio_clownix \
        -L${UTILS} -lutils -lssl -lcrypto -lrt
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)
 CC=gcc
 all: $(EXE)

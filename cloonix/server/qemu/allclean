@@ -1,4 +1,10 @@
 #!/bin/bash
 HERE=`pwd`
+rm -f cloonix-qemu-system-x86_64
+rm -f cloonix-qemu-img
+rm -f efi-virtio.rom
+rm -f vgabios-virtio.bin
+rm -f bios-256k.bin
+rm -f kvmvapic.bin
 rm -rf ${HERE}/tainted_qemu
 

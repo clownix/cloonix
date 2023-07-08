@@ -22,6 +22,7 @@ INCLUDES= -I./src \
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
        -lcrypto
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)
 CC=gcc
 

@@ -15,6 +15,7 @@ LIBS = $(shell pkg-config --libs gtk+-3.0) \
        $(shell pkg-config --libs pangocairo) 
 
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g -Wall $(INCLUDES)
 
 CFLAGS+= -DGTK_DISABLE_SINGLE_INCLUDES \

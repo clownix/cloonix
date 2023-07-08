@@ -1,4 +1,5 @@
 #!/bin/bash
+rm -rf polkit-1
 rm -f cloonix-spicy
 rm -f cloonix-spice-client-glib-usb-acl-helper
 cd ./spice_client

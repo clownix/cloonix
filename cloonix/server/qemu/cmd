@@ -5,6 +5,11 @@ HERE=`pwd`
 ./patched_create
 
 
+if [ ! -d ${HERE}/../spice_lib_server/pkgconfig ]; then
+  cd ${HERE}/../spice_lib_server
+  ./cmd
+  cd ${HERE}
+fi
 
 export PKG_CONFIG_PATH=${HERE}/../spice_lib_server/pkgconfig
 export LDFLAGS="-L${HERE}/../spice_lib_server"
@@ -20,14 +25,13 @@ cd ${HERE}/tainted_qemu/
                      --enable-gtk
                      --enable-vhost-net
                      --enable-vhost-kernel
-                     --enable-pie
                      --enable-tools
+lzo
+sndio
                      --without-default-features"
 
 
-
-
-export CFLAGS=" -g"
+export CFLAGS="-mtune=generic -fno-stack-protector -g"
 export LDFLAGS="-L${HERE}/../spice_lib_server "
 echo Doing CONFIGURE
 ./configure  $CONFIGURATION_OPTS

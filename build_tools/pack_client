@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -9,10 +8,11 @@ if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
   exit 1
 fi
+PATCHELF=/tmp/patchelf/src/patchelf
 TMPBUILD=${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_client
 TARGZ_STORE=${CLOONIX_TREE_ROOT}/targz_store
-CLIENT="${CLOONIX_TREE_ROOT}/build_tools/cloonix-client"
-COMMON="${CLOONIX_TREE_ROOT}/build_tools/cloonix-common"
+CLIENT="${CLOONIX_TREE_ROOT}/build_tools/client"
+COMMON="${CLOONIX_TREE_ROOT}/build_tools/common"
 mkdir -p ${CLIENT}
 cp -rf ${TMPBUILD}/cloonix/client/* ${CLIENT}
 #----------------------------------------------------------
@@ -25,6 +25,7 @@ for i in  cloonix_cli \
           cloonix_ovs \
           cloonix_scp \
           cloonix_ssh \
+          cloonix_wir \
           cloonix_wsk ; do
   cp -f ${CLOONIX_TREE_ROOT}/cloonix/${i} ${CLIENT}/usr_bin
 done
@@ -37,6 +38,7 @@ cp -f  ${CLIENT}/agent_dropbear/cloonix-dropbear-ssh ${CLIENT}
 rm -rf ${CLIENT}/agent_dropbear
 #----------------------------------------------------------
 cp -f ${CLIENT}/spice/cloonix-spice-client-glib-usb-acl-helper ${CLIENT}
+cp -rf ${CLIENT}/spice/polkit-1 ${CLIENT}
 cp -f ${CLIENT}/spice/cloonix-spicy ${CLIENT}
 rm -rf ${CLIENT}/spice
 #----------------------------------------------------------
@@ -59,13 +61,13 @@ rm -rf ${CLIENT}/openssh
 LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
 RPATH_LIB="/usr/libexec/cloonix/common/lib"
 for i in `find ${CLIENT} -maxdepth 1 -type f` ; do
-  patchelf --set-rpath ${RPATH_LIB} ${i}
-  patchelf --set-interpreter ${LDLINUX} ${i}
+  ${PATCHELF} --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
 #----------------------------------------------------------
 cd ${CLOONIX_TREE_ROOT}/build_tools
 gcc -o copy_libs fill_common.c
-./copy_libs ${CLIENT} ${COMMON}/lib
+./copy_libs ${CLIENT} client
 rm ./copy_libs
 rm -rf ${TMPBUILD}
 #----------------------------------------------------------

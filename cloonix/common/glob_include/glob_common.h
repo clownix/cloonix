@@ -156,10 +156,6 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define DIR_UMID "umid"
 #define CLOONIX_VM_WORKDIR "vm"
 
-#define MQ_QUEUES 4
-#define MQ_VECTORS ((2 * MQ_QUEUES) + 2)
-
-
 #define MSG_DIGEST_LEN 32
 
 #define NO_DEFINED_VALUE "NO_DEFINED_VALUE_ITEM"

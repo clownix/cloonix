@@ -15,6 +15,7 @@ INCLUDES= -I./src \
           -I${RPC_CLOWNIX}/include \
           -I${UTILS}/include 
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)
 AR = ar
 RANLIB = ranlib

@@ -12,6 +12,8 @@ SOURCES = \
 
 OBJECTS := $(patsubst %.c,obj/%.o,$(SOURCES))
 
+CFLAGS+=-mtune=generic -fno-stack-protector
+
 RANLIB?=ranlib
 AR?=ar
 

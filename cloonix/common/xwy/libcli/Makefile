@@ -3,6 +3,8 @@ SOURCES = cli_lib.c getsock.c scp.c \
           xdoors.c
 
 OBJECTS := $(patsubst %.c,obj/%.o,$(SOURCES))
+
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS += -I../libmdl -I../../lib_io_clownix/include -I../../glob_include
 
 RANLIB?=ranlib

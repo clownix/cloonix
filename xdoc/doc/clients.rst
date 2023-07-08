@@ -18,6 +18,7 @@ to control the cloonix server, here is a full list the clients:
   * *cloonix_ice*  Spice desktop command line launcher.
   * *cloonix_ovs*  Ovs command line for the embedded openvswitch.
   * *cloonix_wsk* Command line to launch wireshark on a cloonix endpoint.
+  * *cloonix_wsk* Command line to launch wireshark on host.
 
 
 cloonix_gui

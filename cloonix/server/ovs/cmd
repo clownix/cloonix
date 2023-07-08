@@ -10,8 +10,7 @@ rm -rf .git
 patch -p1 < ${HERE}/ovs.patch
 ./boot.sh
 
-CFLAGS="-g -DALLOW_EXPERIMENTAL_API -pthread -lm -ldl -lnuma -lpcap -lrt -fPIC -lunwind"
-export CFLAGS=$CFLAGS
+export CFLAGS=" -mtune=generic -fno-stack-protector -g -DALLOW_EXPERIMENTAL_API -pthread -lm -ldl -lnuma -lpcap -lrt -fPIC -lunwind"
 
 ./configure  --prefix=${HERE}
 make -j 6

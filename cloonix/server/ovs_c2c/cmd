@@ -21,7 +21,8 @@ fi
 cat > meson.build << EOF
 project('cloonix-ovs-c2c', 'c')
 
-cflags = ['-mtune=generic']
+cflags =  ['-mtune=generic']
+cflags += ['-fno-stack-protector']
 cflags += ['-g']
 cflags += ['-fPIC']
 cflags += ['-DALLOW_EXPERIMENTAL_API']

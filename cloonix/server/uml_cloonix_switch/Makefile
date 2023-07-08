@@ -74,6 +74,7 @@ LIBS = -L${IO_CLOWNIX} -lio_clownix \
        -lutil -lm 
 
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)  
 
 CC=gcc 

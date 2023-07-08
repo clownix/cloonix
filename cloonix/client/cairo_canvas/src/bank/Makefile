@@ -21,6 +21,7 @@ INCLUDES= -I${IO_CLOWNIX}/include \
           -I${LIB_INTERFACE} \
           -I${UTILS}/include 
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g -rdynamic $(WARNINGS) $(INCLUDES)
 
 

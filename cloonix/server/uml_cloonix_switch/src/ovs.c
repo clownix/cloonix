@@ -639,14 +639,13 @@ char *ovs_format_ethv(t_vm *vm, int eth, char *ifname)
   int len = 0;
   char *mc = vm->kvm.eth_table[eth].mac_addr;
   memset(cmd, 0, MAX_PATH_LEN*3);
-  len += sprintf(cmd+len," -device virtio-net-pci,netdev=nvhost%d", eth);
+  len += sprintf(cmd+len,
+         " -device virtio-net-pci-non-transitional,netdev=nvhost%d", eth);
   len += sprintf(cmd+len,",mac=%02X:%02X:%02X:%02X:%02X:%02X",
                          mc[0] & 0xFF, mc[1] & 0xFF, mc[2] & 0xFF,
                          mc[3] & 0xFF, mc[4] & 0xFF, mc[5] & 0xFF);
-  len += sprintf(cmd+len,",bus=pci.0,addr=0x%x,mq=on,vectors=%d",
-                          eth+5,  MQ_VECTORS);
+  len += sprintf(cmd+len,",addr=0x%x", eth+5);
   len += sprintf(cmd+len," -netdev type=tap,id=nvhost%d,vhost=on,", eth);
-  len += sprintf(cmd+len,"queues=%d,", MQ_QUEUES);
   len += sprintf(cmd+len,"ifname=%s,script=no,downscript=no", ifname);
   return cmd;
 }

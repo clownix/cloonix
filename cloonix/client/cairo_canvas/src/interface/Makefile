@@ -26,6 +26,7 @@ INCLUDES= -I. $(shell pkg-config --cflags gtk+-3.0) \
           -I./include -I.. 
 
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g -rdynamic $(WARNINGS) $(INCLUDES) -DWITH_GLIB
 CFLAGS+= -DGTK_DISABLE_SINGLE_INCLUDES \
          -DGDK_DISABLE_DEPRECATED \

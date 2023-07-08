@@ -8,10 +8,11 @@ if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
   exit 1
 fi
+PATCHELF=/tmp/patchelf/src/patchelf
 TMPBUILD=${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_server
 TARGZ_STORE=${CLOONIX_TREE_ROOT}/targz_store
-SERVER="${CLOONIX_TREE_ROOT}/build_tools/cloonix-server"
-COMMON="${CLOONIX_TREE_ROOT}/build_tools/cloonix-common"
+SERVER="${CLOONIX_TREE_ROOT}/build_tools/server"
+COMMON="${CLOONIX_TREE_ROOT}/build_tools/common"
 mkdir -p ${SERVER}
 cp -rf ${TMPBUILD}/cloonix/server/* ${SERVER}
 rm -rf ${SERVER}/spice_lib_server
@@ -75,8 +76,8 @@ rm -rf ${SERVER}/dtach
 cp -f ${SERVER}/crun/crun/crun ${SERVER}/cloonix-crun
 rm -rf ${SERVER}/crun
 #----------------------------------------------------------
-cp -f ${TARGZ_STORE}/shark/wireshark ${SERVER}/cloonix-wireshark
-cp -f ${TARGZ_STORE}/shark/dumpcap ${SERVER}
+cp -f ${TARGZ_STORE}/shark/built_objects/wireshark ${SERVER}/cloonix-wireshark
+cp -f ${TARGZ_STORE}/shark/built_objects/dumpcap ${SERVER}
 #----------------------------------------------------------
 cp -f /sbin/ip      ${SERVER}/ip
 cp -f /bin/mount    ${SERVER}/cloonix-mount
@@ -92,13 +93,13 @@ cp -f /usr/bin/osirrox ${SERVER}/cloonix-osirrox
 LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
 RPATH_LIB="/usr/libexec/cloonix/common/lib"
 for i in `find ${SERVER} -maxdepth 1 -type f` ; do
-  patchelf --set-rpath ${RPATH_LIB} ${i}
-  patchelf --set-interpreter ${LDLINUX} ${i}
+  ${PATCHELF} --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
 #----------------------------------------------------------
 cd ${CLOONIX_TREE_ROOT}/build_tools
 gcc -o copy_libs fill_common.c
-./copy_libs ${SERVER} ${COMMON}/lib
+./copy_libs ${SERVER} server
 rm ./copy_libs
 rm -rf ${TMPBUILD}
 #----------------------------------------------------------

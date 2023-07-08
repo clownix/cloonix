@@ -26,6 +26,7 @@ LIBS = -L${IO_CLOWNIX} -lio_clownix \
        -lssl -lcrypto -lrt -lm -lutil -lpthread 
 
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)
 CC=gcc
 

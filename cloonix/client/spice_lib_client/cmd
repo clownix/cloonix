@@ -19,6 +19,7 @@ cd ${TARGET}
 rm -rf ${TARGET}/usbredir
 tar xvf ${TARGZ}/usbredir_*.tar.gz
 cd ${HERE}/usbredir/usbredirhost
+sed -i s"/libusbredirparser/libcloonix-usbredirparser/" meson.build
 sed -i s"/libusbredirhost/libcloonix-usbredirhost/" meson.build
 sed -i s"/library('usbredirhost'/library('cloonix-usbredirhost'/" meson.build
 cd ${HERE}/usbredir/usbredirparser

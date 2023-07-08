@@ -762,10 +762,11 @@ static int automate_rx_qga_msg(t_qrec *cur, char *msg)
       if (cur->request_reboot_done == 0)
         {
         cur->request_reboot_done = 1;
-        KERR("ERROR ONE REBOOTING %s %s", cur->name, msg);
-        qmp_request_qemu_reboot(cur->name);
-        qemu_ga_fail(cur->name);
-        result = -1;
+        KERR("ERROR UNRECOV NOT REBOOTING %s %s", cur->name, msg);
+        cur->file_status = 2;
+//        qmp_request_qemu_reboot(cur->name);
+//        qemu_ga_fail(cur->name);
+//        result = -1;
         }
       else
         KERR("ERROR TWO RELOADING %s %s", cur->name, msg);

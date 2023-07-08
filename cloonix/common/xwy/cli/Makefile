@@ -2,6 +2,8 @@ GLOB_INC=../../glob_include
 IO_CLOWNIX=../../lib_io_clownix/include
 
 SOURCES = main_cli.c simu_cloon.c simu_tx.c clownix_timer.c
+
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS += -I$(GLOB_INC) -I$(IO_CLOWNIX) -I../libmdl -I../libcli -g
 LDFLAGS += -L../libcli -lcli -L../libmdl -lmdl -lutil -lpthread
 

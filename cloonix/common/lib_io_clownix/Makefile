@@ -8,6 +8,7 @@ INCLUDES= -I./src \
           -I./include \
           -I${GLOB_INCLUDE} 
 
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS+=-fPIC -g $(WARNINGS) $(INCLUDES) -lrt 
 
 AR?=ar

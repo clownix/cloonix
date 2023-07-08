@@ -1,5 +1,7 @@
 SOURCES = main_srv.c x11_fwd.c scp_srv.c tools.c cloon.c \
           pty_fork.c first_x11_magic.c
+
+CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS += -I../libmdl -g 
 LDFLAGS += -L../libmdl -lmdl -lutil -lpthread
 

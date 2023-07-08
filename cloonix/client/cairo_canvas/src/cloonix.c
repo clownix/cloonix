@@ -57,6 +57,8 @@ void interface_topo_subscribe(void);
 void timeout_periodic_work(void *data);
 
 
+static int g_argc;
+static char *g_argv[10];
 /*--------------------------------------------------------------------------*/
 gboolean refresh_request_timeout (gpointer  data);
 void topo_set_signals(GtkWidget *window);
@@ -393,6 +395,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   tmp_distant_snf_dir[MAX_PATH_LEN-1] = 0;
   strcpy(g_distant_snf_dir, tmp_distant_snf_dir);
 
+//  if (gtk_init_check(&g_argc, &g_argv) == FALSE)
   if (gtk_init_check(NULL, NULL) == FALSE)
     KOUT("Error in gtk_init_check function");
 
@@ -466,6 +469,10 @@ static void init_local_cloonix_bin_path(char *curdir, char *callbin)
 /****************************************************************************/
 int main(int argc, char *argv[])
 {
+  g_argc = 2;
+  g_argv[0] = "/usr/libexec/cloonix/client/cloonix-gui";
+  g_argv[1] = "--no-xshm";
+  g_argv[2] = NULL;
   g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
   main_timeout = 0;
   eth_choice = 0;

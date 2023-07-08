@@ -39,14 +39,14 @@ NOTE: If you have an old version of cloonix, you must erase it first,
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-31
+http://clownix.net/downloads/cloonix-32
 
 -----------------------------------------------------------------------------
 INSTALL BINARY AND LIBRARIES ON YOUR HOST
 
-wget http://clownix.net/downloads/cloonix-31/cloonix-bundle-31-00.tar.gz
-tar xvf cloonix-bundle-31-00.tar.gz
-cd cloonix-bundle-31-00
+wget http://clownix.net/downloads/cloonix-32/cloonix-bundle-32-00.tar.gz
+tar xvf cloonix-bundle-32-00.tar.gz
+cd cloonix-bundle-32-00
 sudo ./install_cloonix
 
 
@@ -62,7 +62,7 @@ GET A WORKING QCOW AND PUT IT IN BULK TO TEST KVM:
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-31/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-32/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
@@ -70,13 +70,13 @@ GET A WORKING IMG AND PUT IT IN BULK TO TEST CRUN:
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-31/bulk/bookworm.img.gz
+wget http://clownix.net/downloads/cloonix-32/bulk/bookworm.img.gz
 gunzip bookworm.img.gz
 
 -----------------------------------------------------------------------------
 LAUNCH KVM SCRIPT:
 
-cd cloonix-bundle-31-00
+cd cloonix-bundle-32-00
 ./ping_kvm.sh
 
 On the gui, a double-click on the blue machine gives a shell,
@@ -86,7 +86,7 @@ a right-click on the blue machine gives a spice desktop.
 -----------------------------------------------------------------------------
 LAUNCH CRUN SCRIPT:
 
-cd cloonix-bundle-31-00
+cd cloonix-bundle-32-00
 ./ping_crun.sh
 
 On the gui, a double-click on the blue machine gives a shell,
@@ -95,7 +95,7 @@ a double-click on the green interface gives a wireshark spy.
 -----------------------------------------------------------------------------
 CISCO C8000 IN CLOONIX:
 
-cd cloonix-bundle-31-00/cisco
+cd cloonix-bundle-32-00/cisco
 follow the README.
 
 ==============================================================================

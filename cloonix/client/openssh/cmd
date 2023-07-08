@@ -19,6 +19,7 @@ fi
 cd tainted_openssh
 
 ./configure
+export CFLAGS="-mtune=generic -fno-stack-protector"
 make
 
 mv ssh cloonix-u2i-ssh

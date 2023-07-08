@@ -51,17 +51,7 @@ if [ -z $ID ]; then
   exit 1
 fi
 
-export FONTCONFIG_FILE="/usr/libexec/cloonix/common/etc/fonts/fonts.conf"
-export XDG_CONFIG_HOME="/usr/libexec/cloonix/common/share"
-export XDG_DATA_HOME="/usr/libexec/cloonix/common/share"
-export XDG_RUNTIME_DIR="/var/lib/cloonix/${cloonix_name}"
-export QT_PLUGIN_PATH="/usr/libexec/cloonix/common/lib/qt6/plugins"
-export QT_X11_NO_MITSHM="1"
-export QT_XCB_NO_MITSHM="1"
-export GTK_IM_MODULE_FILE="/usr/libexec/cloonix/common/lib/gtk-3.0/3.0.0/immodules.cache"
-export GDK_PIXBUF_MODULE_FILE="/usr/libexec/cloonix/common/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
-export GST_PLUGIN_SYSTEM_PATH="/usr/libexec/cloonix/common/lib/gstreamer-1.0"
-export NO_AT_BRIDGE="1"
+source /usr/libexec/cloonix/common/etc/cloonix_exports
 
 ${BIN_ICE} --title=${1}/${2} -d ${ip}:${port} -c /var/lib/cloonix/${cloonix_name}/vm/vm${ID}/spice_sock -w ${passwd} &
 

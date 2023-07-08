@@ -340,7 +340,7 @@ static void start_qemu_spice(char *name, int vm_id)
   char title[MAX_PATH_LEN];
   char net[MAX_NAME_LEN];
   char sock[2*MAX_PATH_LEN];
-  char *argv[10];
+  char *argv[11];
   memset(title, 0, MAX_PATH_LEN);
   memset(net, 0, MAX_NAME_LEN);
   memset(sock, 0, 2*MAX_PATH_LEN);

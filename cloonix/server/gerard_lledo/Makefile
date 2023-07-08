@@ -2,8 +2,9 @@ OBJ_DIR=obj/
 VPATH=./src
 EXE = cloonix-ext4fuse
 
-CFLAGS  += -I.src -std=gnu99 -g3 -Wall -Wextra
-CFLAGS  += $(shell pkg-config fuse3 --cflags) -DFUSE_USE_VERSION=30
+CFLAGS+=-mtune=generic -fno-stack-protector
+CFLAGS+= -I.src -std=gnu99 -g3 -Wall -Wextra
+CFLAGS+= $(shell pkg-config fuse3 --cflags) -DFUSE_USE_VERSION=30
 LDFLAGS += $(shell pkg-config fuse3 --libs)
 
 SRC = dcache.c fuse-main.c op_getattr.c op_read.c super.c \
