@@ -173,7 +173,7 @@ static void utils_fill_udp_ip_header(int len, uint8_t *data,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static uint16_t tcp_sum_calc(int len, uint8_t *buff, uint8_t *pseudo_header)
+static uint16_t sum_calc(int len, uint8_t *buff, uint8_t *pseudo_header)
 {
   int i, sum = 0;
   for (i=0; i<len; i=i+2)
@@ -196,6 +196,27 @@ static uint16_t tcp_sum_calc(int len, uint8_t *buff, uint8_t *pseudo_header)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void utils_fill_udp_csum(uint8_t  *buf_ip, uint32_t udp_len)
+{
+  int i;
+  uint8_t pseudo_header[12];
+  uint16_t checksum; 
+  uint8_t *buf = &(buf_ip[g_ip_len]);
+  buf[6]  = 0;
+  buf[7]  = 0;
+  for (i=0; i< 8; i++)
+    pseudo_header[i] = buf_ip[12+i]; 
+  pseudo_header[8]  = 0;
+  pseudo_header[9]  = IPPROTO_UDP;
+  pseudo_header[10] = (udp_len >> 8) & 0xFF;
+  pseudo_header[11] = udp_len & 0xFF;
+  checksum = sum_calc(udp_len, &(buf[0]), pseudo_header);
+  buf[6]  =  (checksum >> 8) & 0xFF;
+  buf[7]  =  checksum & 0xFF;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static uint16_t tcp_checksum(int len, uint8_t *data, uint8_t *iph)
 {
   int i;
@@ -207,7 +228,7 @@ static uint16_t tcp_checksum(int len, uint8_t *data, uint8_t *iph)
   pseudo_header[9]  = IPPROTO_TCP;
   pseudo_header[10] = (len >> 8) & 0xFF;
   pseudo_header[11] = len & 0xFF;
-  chksum = tcp_sum_calc(len, data, pseudo_header);
+  chksum = sum_calc(len, data, pseudo_header);
   return chksum;
 }
 /*---------------------------------------------------------------------------*/
@@ -312,6 +333,7 @@ void utils_fill_udp_packet(uint8_t *buf,    uint32_t data_len,
   utils_fill_ip_header(IPPROTO_UDP, len, &(buf[g_mac_len]), sip, dip);
   len = g_udp_len + data_len;
   utils_fill_udp_ip_header(len, &(buf[g_mac_len + g_ip_len]), sport, dport);
+  utils_fill_udp_csum(&(buf[g_mac_len]), len);
   len = g_mac_len + g_ip_len + g_udp_len + data_len;
   fcs = utils_frame_cksum(len, buf);
   buf[len + 3] = (fcs & 0xFF000000) >> 24;

@@ -44,7 +44,6 @@ static t_evt_stats_sysinfo_cb clownix_evt_stats_sysinfo_cb;
 static t_eventfull_cb clownix_eventfull_cb;
 static t_slowperiodic_cb clownix_slowperiodic_qcow2_cb;
 static t_slowperiodic_cb clownix_slowperiodic_img_cb;
-static t_slowperiodic_cb clownix_slowperiodic_docker_cb;
 static t_slowperiodic_cb clownix_slowperiodic_podman_cb;
 
 static t_get_path_cb clownix_get_path_cb;
@@ -220,22 +219,6 @@ void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic)
   if (!clownix_slowperiodic_img_cb)
     KOUT(" ");
   clownix_slowperiodic_img_cb(nb, spic);
-#ifdef WITH_GLIB
-  glib_prepare_rx_tx(llid);
-#endif
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_slowperiodic_docker(int llid, int tid, int nb, t_slowperiodic *spic)
-{
-  if (!msg_exist_channel(llid))
-    KOUT(" ");
-  if (tid != 777)
-    KOUT(" ");
-  if (!clownix_slowperiodic_docker_cb)
-    KOUT(" ");
-  clownix_slowperiodic_docker_cb(nb, spic);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(llid);
 #endif
@@ -427,14 +410,12 @@ void client_req_eventfull(t_eventfull_cb cb)
 /*****************************************************************************/
 void client_req_slowperiodic(t_slowperiodic_cb cb_qcow2,
                              t_slowperiodic_cb cb_img,
-                             t_slowperiodic_cb cb_docker,
                              t_slowperiodic_cb cb_podman)
 {
   if (!g_llid)
     KOUT(" ");
   clownix_slowperiodic_qcow2_cb = cb_qcow2;
   clownix_slowperiodic_img_cb = cb_img;
-  clownix_slowperiodic_docker_cb = cb_docker;
   clownix_slowperiodic_podman_cb = cb_podman;
   send_slowperiodic_sub(g_llid, 777);
 #ifdef WITH_GLIB
@@ -591,7 +572,7 @@ void client_add_nat(int tid, t_end_cb cb, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_add_phy(int tid, t_end_cb cb, char *name)
+void client_add_phy(int tid, t_end_cb cb, char *name, int type)
 {
   int new_tid;
   if (!g_llid)
@@ -599,7 +580,7 @@ void client_add_phy(int tid, t_end_cb cb, char *name)
   if ((!name) || (strlen(name) == 0))
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_phy_add(g_llid, new_tid, name);
+  send_phy_add(g_llid, new_tid, name, type);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif

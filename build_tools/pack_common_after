@@ -43,8 +43,9 @@ cp -f install_cloonix    cloonix-bundle-${VERSION}
 mv common.tar.gz cloonix-bundle-${VERSION}
 mv client.tar.gz cloonix-bundle-${VERSION}
 mv server.tar.gz cloonix-bundle-${VERSION}
-cp -f ${CLOONIX_TREE_ROOT}/quickstart/demos/ping_* cloonix-bundle-${VERSION}
 cp -f ${CLOONIX_TREE_ROOT}/README cloonix-bundle-${VERSION}
-cp -Rf ${CLOONIX_TREE_ROOT}/quickstart/create_cnt_kvm/cisco cloonix-bundle-${VERSION}
+cp -f ${CLOONIX_TREE_ROOT}/quickstart/ping_cnt.sh cloonix-bundle-${VERSION}
+cp -f ${CLOONIX_TREE_ROOT}/quickstart/ping_kvm.sh cloonix-bundle-${VERSION}
+cp -rf ${CLOONIX_TREE_ROOT}/quickstart/kvm_create/cisco cloonix-bundle-${VERSION}
 #----------------------------------------------------------
 

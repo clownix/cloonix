@@ -123,11 +123,17 @@ static char *get_type_endp(int type)
   char *result = "notfound";
   switch (type)
     {
-    case endp_type_phys:
-      result = "phys"; 
+    case endp_type_phyas:
+      result = "phyas"; 
       break;
-    case endp_type_phyv:
-      result = "phyv"; 
+    case endp_type_phyav:
+      result = "phyav"; 
+      break;
+    case endp_type_phyms:
+      result = "phyms"; 
+      break;
+    case endp_type_phymv:
+      result = "phymv"; 
       break;
     case endp_type_eths:
       result = "eths"; 
@@ -555,12 +561,19 @@ int cmd_add_tap(int argc, char **argv)
 /*****************************************************************************/
 int cmd_add_phy(int argc, char **argv)
 {
-  int result = -1;
-  if (argc == 1)
+  int num = -1, result = -1;
+  if (argc == 2)
     {
-    result = 0;
-    init_connection_to_uml_cloonix_switch();
-    client_add_phy(0, callback_end, argv[0]);
+    if (!strcmp(argv[1], "absorb"))
+      num = endp_type_phyav;
+    if (!strcmp(argv[1], "macvlan"))
+      num = endp_type_phymv;
+    if (num >= 0)
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_add_phy(0, callback_end, argv[0], num);
+      }
     }
   return result;
 }

@@ -64,14 +64,14 @@ void crun_sigdiag_resp(int llid, char *line)
     else
       {
       snprintf(req, MAX_PATH_LEN-1,
-               "cloonsuid_crun_create_loop_img name=%s is_persistent=%d",
+               "cloonsuid_crun_create_tar_img name=%s is_persistent=%d",
                name, cur->cnt.is_persistent);
       if (send_sig_suid_power(llid, req))
         KERR("ERROR %d %s", llid, name);
       }
     }
   else if (sscanf(line,
-  "cloonsuid_crun_create_loop_img_resp_ok name=%s", name) == 1)
+  "cloonsuid_crun_create_tar_img_resp_ok name=%s", name) == 1)
     {
     cur = find_cnt(name);
     if (cur == NULL)
@@ -181,16 +181,17 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
 {
   int i, result = -1;
   char req[2*MAX_PATH_LEN];
-  char *image, *mac;
+  char *image;
   char *cnt_dir = utils_get_cnt_dir();
+  unsigned char *mac;
   image = cnt->image;
   memset(req, 0, 2*MAX_PATH_LEN);
   snprintf(req, 2*MAX_PATH_LEN-1, 
   "cloonsuid_crun_create_net name=%s "
   "bulk=%s image=%s nb=%d vm_id=%d cnt_dir=%s "
-  "agent_dir=%s is_persistent=%d customer_launch=%s",
+  "agent_dir=%s is_persistent=%d",
   cnt->name, cfg_get_bulk(), image, cnt->nb_tot_eth,
-  vm_id, cnt_dir, agent, cnt->is_persistent, cnt->customer_launch);
+  vm_id, cnt_dir, agent, cnt->is_persistent);
   if (send_sig_suid_power(llid, req))
     {
     KERR("ERROR %s Bad command create_net to suid_power", cnt->name);

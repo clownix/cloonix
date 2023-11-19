@@ -98,12 +98,8 @@ void timer_create_item_node_req(void *data)
            cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));
     if (!strcmp(cust_cnt->brandtype, "crun"))
       strncpy(cust_topo_cnt.image, cust_cnt->cru_image, MAX_PATH_LEN-1);
-    else if (!strcmp(cust_cnt->brandtype, "docker"))
-      strncpy(cust_topo_cnt.image, cust_cnt->doc_image, MAX_PATH_LEN-1);
     else if (!strcmp(cust_cnt->brandtype, "podman"))
       strncpy(cust_topo_cnt.image, cust_cnt->pod_image, MAX_PATH_LEN-1);
-    strncpy(cust_topo_cnt.customer_launch, cust_cnt->customer_launch,
-            MAX_PATH_LEN-1);
     client_add_cnt(0, callback_end, &cust_topo_cnt);
     }
   clownix_free(pa, __FUNCTION__);
@@ -134,16 +130,24 @@ void timer_create_item_req(void *data)
         }
       else if (pa->endp_type == endp_type_a2b)
         client_add_a2b(0, callback_end, pa->name);
-      else if (pa->endp_type == endp_type_tapv)
+      else if (pa->endp_type == endp_type_taps)
         client_add_tap(0, callback_end, pa->name);
       else if (pa->endp_type == endp_type_natv)
         client_add_nat(0, callback_end, pa->name);
-      else if (pa->endp_type == endp_type_phyv)
+      else if ((pa->endp_type == endp_type_phyas) ||
+               (pa->endp_type == endp_type_phyms))
         {
         if (strlen(pa->name) == 0)
           KERR("%d %d", pa->bank_type, pa->endp_type);
         else
-          client_add_phy(0, callback_end, pa->name);
+          {
+          if (pa->endp_type == endp_type_phyas)
+            client_add_phy(0, callback_end, pa->name, endp_type_phyas);
+          else if (pa->endp_type == endp_type_phyms)
+            client_add_phy(0, callback_end, pa->name, endp_type_phyms);
+          else
+            KOUT("ERROR %s %d", pa->name, pa->endp_type);
+          }
         }
       else
         KERR("%d %s %d", pa->bank_type, pa->name, pa->endp_type);

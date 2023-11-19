@@ -84,22 +84,20 @@ static int rx_tap(int llid, int fd)
   uint64_t usec;
   uint8_t *mac = get_src_mac(g_buf);
   t_mac_src *cur = NULL;
-
-  if ((g_head_mac_tx != NULL) && (g_head_mac_rx != NULL))
-    KERR("ERROR %s", g_tap_name);
+  if ((g_head_mac_rx != NULL) && (g_head_mac_tx != NULL))
+    KERR("ERROR RX and TX both configured %s", g_tap_name);
+  if (g_head_mac_rx != NULL)
+    {
+    is_tx = 1;
+    set_tx = 0;
+    cur = g_head_mac_rx; 
+    }
   else if (g_head_mac_tx != NULL)
     {
     is_tx = 0;
     set_tx = 1;
     cur = g_head_mac_tx; 
     }
-  else if (g_head_mac_rx != NULL)
-    {
-    is_tx = 1;
-    set_tx = 0;
-    cur = g_head_mac_rx; 
-    }
-  
   len = read(fd, g_buf, MAX_TAP_BUF_LEN);
   while(cur)
     {

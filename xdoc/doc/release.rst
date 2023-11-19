@@ -5,6 +5,24 @@
 Software Release Information
 ============================
 
+v33-00
+======
+
+For this version ZIP files for the crun replace EXT4 files for the
+file-systems.
+
+The phy ethernet interface of the host can be used in cloonix
+without total disapearance from the host, thanks to the macvlan
+type.
+
+The client gui is locked in a non-root envirronment, if you need
+the spice usb absorption in the vm desktop, you must use spice
+through cloonix_ice and not with a right click on the cloonix_gui.
+
+Docker is not supported anymore, it was redondant with podman
+which I personaly prefer..
+
+
 v30-00 and v30-01
 =================
 
@@ -80,10 +98,6 @@ The version v27-02 also adds the possibility to give some environment variables
 at container startup, this is done with the option::
 
     --startup_env="<env_name=env_val env2_name=env2_val...>"
-
-The customer launch is now an option::
-
-    --customer_launch="<script with params>"
 
 Tor the help in docker/podman container creation, do ::
 

@@ -7,8 +7,8 @@ OBJ_DIR=obj/
 EXE = cloonix-suid-power
 
 SRC = suid_power.c stub.c crun.c \
-      crun_utils.c loop_img.c dockir.c \
-      net_phy.c dockerimages.c
+      crun_utils.c tar_img.c podman.c \
+      net_phy.c podmanimages.c
 
 VPATH=./src
 
@@ -22,8 +22,8 @@ INCLUDES= -I./src \
 LIBS = -L${IO_CLOWNIX} -lio_clownix \
        -lcrypto
 
-CFLAGS+=-mtune=generic -fno-stack-protector
-CFLAGS+= -g -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)
+CFLAGS+=-mtune=generic -fno-stack-protector -Wno-format-truncation
+CFLAGS+=-Wno-unused-variable -g -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)
 CC=gcc
 
 all: $(shell mkdir -p ./obj) $(EXE)

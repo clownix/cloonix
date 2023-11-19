@@ -27,6 +27,7 @@
 #define PHY_ADD          "<phy_add>"\
                          "  <tid> %d </tid>\n"\
                          "  <name> %s </name>\n"\
+                         "  <type> %d </type>\n"\
                          "</phy_add>"
 /*---------------------------------------------------------------------------*/
 #define TAP_ADD          "<tap_add>"\
@@ -221,12 +222,6 @@
 
 #define SLOWPERIODIC_IMG_C    "</slowperiodic_img>"
 /*---------------------------------------------------------------------------*/
-#define SLOWPERIODIC_DOCKER_O "<slowperiodic_docker>\n"\
-                              "  <tid> %d </tid>\n"\
-                              "  nb:%d \n"
-
-#define SLOWPERIODIC_DOCKER_C "</slowperiodic_docker>"
-/*---------------------------------------------------------------------------*/
 #define SLOWPERIODIC_PODMAN_O "<slowperiodic_podman>\n"\
                               "  <tid> %d </tid>\n"\
                               "  nb:%d \n"
@@ -272,8 +267,7 @@
                          "  <ping_ok> %d </ping_ok>\n"\
                          "  <nb_tot_eth> %d </nb_tot_eth>"
 
-#define ADD_CNT_C        "<customer_launch_keyid>%s</customer_launch_keyid>\n"\
-                         "<startup_env_keyid>%s</startup_env_keyid>\n"\
+#define ADD_CNT_C        "<startup_env_keyid>%s</startup_env_keyid>\n"\
                          "<image> %s </image>\n"\
                          "</add_cnt>"
 /*---------------------------------------------------------------------------*/
@@ -455,8 +449,7 @@
                               "  ping_ok: %d \n"\
                               "  nb_tot_eth: %d "
 
-#define EVENT_TOPO_CNT_C      "<customer_launch_keyid>%s</customer_launch_keyid>\n"\
-                              "<startup_env_keyid>%s</startup_env_keyid>\n"\
+#define EVENT_TOPO_CNT_C      "<startup_env_keyid>%s</startup_env_keyid>\n"\
                               "</cnt>\n"
                         
 #define EVENT_TOPO_C2C        "<c2c>\n"\

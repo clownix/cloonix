@@ -138,11 +138,6 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
     snprintf(use, MAX_NAME_LEN, "%s is used by tap", name);
     result = 1;
     }
-  else if (ovs_phy_exists(name))
-    {
-    snprintf(use, MAX_NAME_LEN, "%s is used by phy", name);
-    result = 1;
-    }
   else if ((!is_lan) && (lan_get_with_name(name)))
     {
     snprintf(use, MAX_NAME_LEN, "%s is a lan", name);
@@ -641,7 +636,7 @@ static void fill_topo_tap(t_topo_tap *topo_tap, t_ovs_tap *tap)
 static void fill_topo_phy(t_topo_phy *topo_phy, t_ovs_phy *phy)
 {
   memset(topo_phy, 0, sizeof(t_topo_phy));
-  strncpy(topo_phy->name, phy->name, MAX_NAME_LEN);
+  strncpy(topo_phy->name, phy->vhost, MAX_NAME_LEN);
   topo_phy->endp_type = phy->endp_type;
 }
 /*---------------------------------------------------------------------------*/
@@ -970,7 +965,7 @@ int cfg_get_name_with_mac(char *mac, char *vmname)
   t_vm *cur = cfg.vm_head;
   t_topo_kvm *topo_kvm;
   t_eth_table *eth_table;
-  char *addr;
+  unsigned char *addr;
   char mac_vm[MAX_NAME_LEN];
   for (i=0; i<cfg.nb_vm; i++)
     {

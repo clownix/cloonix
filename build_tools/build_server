@@ -54,7 +54,6 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
             ovs \
             doorways \
             suid_power \
-            gerard_lledo \
             uml_cloonix_switch \
             ovs_drv \
             ovs_snf \

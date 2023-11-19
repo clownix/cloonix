@@ -364,9 +364,10 @@ static void process_mouse_double_click(t_bank_item *bitem)
 
     case bank_type_sat:
       bitem->pbi.flag = flag_normal;
-      if ((bitem->pbi.endp_type == endp_type_nats) ||
-          (bitem->pbi.endp_type == endp_type_taps) ||
-          (bitem->pbi.endp_type == endp_type_phys) ||
+      if ((bitem->pbi.endp_type == endp_type_nats)  ||
+          (bitem->pbi.endp_type == endp_type_taps)  ||
+          (bitem->pbi.endp_type == endp_type_phyas) ||
+          (bitem->pbi.endp_type == endp_type_phyms) ||
           (bitem->pbi.endp_type == endp_type_c2cs))
         wireshark_launch(0, bitem->name, 0);
       else
@@ -983,10 +984,12 @@ static void on_item_paint_tap(CrItem *item, cairo_t *c)
     cairo_set_source_rgba (c, black.r, black.g, black.b, 1.0);
   cairo_stroke_preserve(c);
   if ((bitem->pbi.endp_type == endp_type_taps) ||
-      (bitem->pbi.endp_type == endp_type_phys))
+      (bitem->pbi.endp_type == endp_type_phyas) ||
+      (bitem->pbi.endp_type == endp_type_phyms))
     cairo_set_source_rgba (c, lightgreen.r, lightgreen.g, lightgreen.b, 1.0);
   else if ((bitem->pbi.endp_type == endp_type_tapv) ||
-           (bitem->pbi.endp_type == endp_type_phyv))
+           (bitem->pbi.endp_type == endp_type_phyav) ||
+           (bitem->pbi.endp_type == endp_type_phymv))
     cairo_set_source_rgba (c, lightcyan.r, lightcyan.g, lightcyan.b, 1.0);
   else
     KERR("ERROR %s %d", bitem->name, bitem->pbi.endp_type);
@@ -1407,8 +1410,10 @@ void topo_add_cr_item_to_canvas(t_bank_item *bitem, t_bank_item *bnode)
       }
     else if ((bitem->pbi.endp_type == endp_type_taps) ||
              (bitem->pbi.endp_type == endp_type_tapv) ||
-             (bitem->pbi.endp_type == endp_type_phys) ||
-             (bitem->pbi.endp_type == endp_type_phyv))
+             (bitem->pbi.endp_type == endp_type_phyas) ||
+             (bitem->pbi.endp_type == endp_type_phyav) ||
+             (bitem->pbi.endp_type == endp_type_phyms) ||
+             (bitem->pbi.endp_type == endp_type_phymv))
       {
       g_signal_connect(item, "paint", (GCallback) on_item_paint_tap, NULL);
       }

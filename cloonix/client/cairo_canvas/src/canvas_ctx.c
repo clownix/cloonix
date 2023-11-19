@@ -93,16 +93,25 @@ static void call_cloonix_interface_tap_create(double x, double y)
   snprintf(name, IFNAMSIZ-1, "%stap%d", net_name, num++);
   name[IFNAMSIZ-1] = 0;
   topo_get_matrix_inv_transform_point(&x0, &y0);
-  to_cloonix_switch_create_sat(name, endp_type_tapv, NULL, x0, y0);
+  to_cloonix_switch_create_sat(name, endp_type_taps, NULL, x0, y0);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void call_cloonix_interface_phy_create(char *name, double x, double y)
+static void call_interface_absorb_phy_create(char *name, double x, double y)
 {
   double x0=x, y0=y;
   topo_get_matrix_inv_transform_point(&x0, &y0);
-  to_cloonix_switch_create_sat(name, endp_type_phyv, NULL, x0, y0);
+  to_cloonix_switch_create_sat(name, endp_type_phyas, NULL, x0, y0);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void call_interface_macvlan_phy_create(char *name, double x, double y)
+{
+  double x0=x, y0=y;
+  topo_get_matrix_inv_transform_point(&x0, &y0);
+  to_cloonix_switch_create_sat(name, endp_type_phyms, NULL, x0, y0);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -536,10 +545,18 @@ static void c2c_cact(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void cphy(gpointer data)
+static void macvlan_phy(gpointer data)
 {
   unsigned long i = (unsigned long) data;
-  call_cloonix_interface_phy_create(g_topo_phy[i].name, g_x_mouse, g_y_mouse);
+  call_interface_macvlan_phy_create(g_topo_phy[i].name, g_x_mouse, g_y_mouse);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void absorb_phy(gpointer data)
+{
+  unsigned long i = (unsigned long) data;
+  call_interface_absorb_phy_create(g_topo_phy[i].name, g_x_mouse, g_y_mouse);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -547,18 +564,29 @@ static void cphy(gpointer data)
 static void phy_sub_menu(GtkWidget *phy)
 {
   unsigned long i;
-  GtkWidget *menu = gtk_menu_new();
-  GtkWidget *item;
+  GtkWidget *menu_intf = gtk_menu_new();
+  GtkWidget *menu, *item, *item_intf;
   if (!phy)
     KOUT(" ");
   for (i=0; i<g_nb_phy; i++)
     {
-    item = gtk_menu_item_new_with_label(g_topo_phy[i].name);
+    menu = gtk_menu_new();
+    item_intf = gtk_menu_item_new_with_label(g_topo_phy[i].name);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu_intf), item_intf);
+
+    item = gtk_menu_item_new_with_label("absorb");
     g_signal_connect_swapped(G_OBJECT(item), "activate",
-                             (GCallback) cphy, (gpointer) i);
+                             (GCallback) absorb_phy, (gpointer) i);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+    item = gtk_menu_item_new_with_label("macvlan");
+    g_signal_connect_swapped(G_OBJECT(item), "activate",
+                             (GCallback) macvlan_phy, (gpointer) i);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(item_intf), menu);
     }
-  gtk_menu_item_set_submenu(GTK_MENU_ITEM(phy), menu);
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(phy), menu_intf);
 }
 /*--------------------------------------------------------------------------*/
 

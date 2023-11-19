@@ -41,7 +41,9 @@
 #include "doors_rpc.h"
 #include "doorways_mngt.h"
 #include "crun.h"
-#include "docker.h"
+#include "podman.h"
+#include "ovs_phy.h"
+#include "mactopo.h"
 
 typedef struct t_cnt_delete
 {
@@ -142,7 +144,11 @@ static int free_cnt(char *name)
     for (i=0; i<MAX_ETH_VM; i++)
       {
       if (strlen(cur->att_lan[i].lan_added))
+        {
+        KERR("ERROR %s %d %s", name, i, cur->att_lan[i].lan_added);
+        mactopo_del_req(item_cnt, name, i, cur->att_lan[i].lan_added);
         lan_del_name(cur->att_lan[i].lan_added, item_cnt, name, i);
+        }
       }
     layout_del_vm(name);
     if (cur->prev)
@@ -223,16 +229,21 @@ void cnt_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
   t_cnt *cur = find_cnt(name);
   char *eth_name;
   if (cur == NULL)
+    {
+    mactopo_add_resp(0, name, num, lan);
     KERR("ERROR RESP ADD LAN %d %s %s %d", is_ko, lan, name, num);
+    }
   else
     {
     if (is_ko)
       {
+      mactopo_add_resp(0, name, num, lan);
       KERR("ERROR RESP ADD LAN %s %s %d", lan, name, num);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), "KO");
       }
     else
       {
+      mactopo_add_resp(item_cnt, name, num, lan);
       cur->att_lan[num].lan_attached_ok = 1; 
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       if ((num < 0) || (num >= cur->cnt.nb_tot_eth))
@@ -253,10 +264,14 @@ void cnt_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
 void cnt_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan)
 {
   t_cnt *cur = find_cnt(name);
-  if (cur == NULL)
+  if (!cur)
+    {
+    mactopo_del_resp(0, name, num, lan);
     KERR("ERROR RESP ADD LAN %d %s %s %d", is_ko, lan, name, num);
+    }
   else
     {
+    mactopo_del_resp(item_cnt, name, num, lan);
     if (is_ko)
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), "KO");
     else
@@ -267,7 +282,10 @@ void cnt_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan)
       if ((cur->cnt.eth_table[num].endp_type == endp_type_eths) &&
           (strlen(lan)) &&
           (cur->del_snf_ethv_sent[num] == 0))
-        KERR("ERROR: %s %d", name, num);
+        {
+        if (ovs_snf_send_del_snf_lan(name, num, vhost, lan))
+          KERR("ERROR %s %d %s %s", name, num, vhost, lan);
+        }
       }
     cur->lan_del_waiting_ack = 0;
     if (cur->att_lan[num].lan_attached_ok)
@@ -418,10 +436,9 @@ int cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
           free_cnt(cnt->name);
           }
         }
-      else if ((!strcmp(cnt->brandtype, "docker")) ||
-               (!strcmp(cnt->brandtype, "podman")))
+      else if (!strcmp(cnt->brandtype, "podman"))
         {
-        if (docker_create(llid, vm_id, cnt, agent_dir))
+        if (podman_create(llid, vm_id, cnt, agent_dir))
           {
           result = -1;
           snprintf(err,MAX_PATH_LEN-1,"err %s %s", cnt->name, cnt->brandtype);
@@ -498,6 +515,7 @@ static void timer_cnt_delete(void *data)
           {
           eth_name = cur->cnt.eth_table[i].vhost_ifname;
           cannot_be_deleted += 1;
+          mactopo_del_req(item_cnt, cd->name, i, cur->att_lan[i].lan_added);
           val = lan_del_name(cur->att_lan[i].lan_added, item_cnt, cd->name, i);
           if (val != 2*MAX_LAN)
             {
@@ -531,9 +549,8 @@ static void timer_cnt_delete(void *data)
         memset(req, 0, MAX_PATH_LEN);
         if (!strcmp(cur->cnt.brandtype, "crun"))
           snprintf(req,MAX_PATH_LEN-1,"cloonsuid_crun_delete name=%s", cd->name);
-        else if ((!strcmp(cur->cnt.brandtype, "docker")) ||
-                 (!strcmp(cur->cnt.brandtype, "podman")))
-          snprintf(req,MAX_PATH_LEN-1,"cloonsuid_docker_delete brandtype=%s name=%s",
+        else if (!strcmp(cur->cnt.brandtype, "podman"))
+          snprintf(req,MAX_PATH_LEN-1,"cloonsuid_podman_delete brandtype=%s name=%s",
           cd->brandtype, cd->name);
         else
           KOUT("ERROR TYPE %s", cur->cnt.brandtype);
@@ -623,9 +640,8 @@ static void error_timer_beat_action(int llid, t_cnt *cur)
   memset(req, 0, MAX_PATH_LEN);
   if (!strcmp(cur->cnt.brandtype, "crun"))
     snprintf(req, MAX_PATH_LEN-1, "cloonsuid_crun_ERROR name=%s", cur->cnt.name);
-  else if ((!strcmp(cur->cnt.brandtype, "docker")) ||
-           (!strcmp(cur->cnt.brandtype, "podman")))
-    snprintf(req, MAX_PATH_LEN-1, "cloonsuid_docker_ERROR brandtype=%s name=%s",
+  else if (!strcmp(cur->cnt.brandtype, "podman"))
+    snprintf(req, MAX_PATH_LEN-1, "cloonsuid_podman_ERROR brandtype=%s name=%s",
     cur->cnt.brandtype, cur->cnt.name);
   else
     KOUT("ERROR TYPE %s", cur->cnt.brandtype);
@@ -724,8 +740,6 @@ int cnt_add_lan(int llid, int tid, char *name, int num, char *lan, char *err)
   int result = -1;
   t_cnt *cur = find_cnt(name);
   char *eth_name;
-  char *mac;
-  char str_mac[MAX_NAME_LEN];
   memset(err, 0, MAX_PATH_LEN);
   if (cur == NULL)
     {
@@ -758,7 +772,16 @@ int cnt_add_lan(int llid, int tid, char *name, int num, char *lan, char *err)
     memset(cur->att_lan[num].lan_added, 0, MAX_NAME_LEN);
     eth_name = get_eth_name(cur->cnt.vm_id, num);
     lan_add_name(lan, item_cnt, name, num);
-    if (msg_send_add_lan_endp(ovsreq_add_cnt_lan, name, num, eth_name, lan))
+    if (mactopo_add_req(item_cnt, name, num, lan,
+                        cur->cnt.eth_table[num].vhost_ifname,
+                        cur->cnt.eth_table[num].mac_addr, err))
+      {     
+      KERR("ERROR %s %d %s %s", name, num, lan, err);
+      lan_del_name(lan, item_cnt, name, num);
+      }       
+
+    else if (msg_send_add_lan_endp(ovsreq_add_cnt_lan, name, num,
+                                   eth_name, lan))
       {
       snprintf(err, MAX_PATH_LEN-1, "ERROR ADD LAN %s %d %s", name, num, lan); 
       KERR("%s", err);
@@ -768,12 +791,6 @@ int cnt_add_lan(int llid, int tid, char *name, int num, char *lan, char *err)
       {
       strncpy(cur->att_lan[num].lan, lan, MAX_NAME_LEN-1);
       strncpy(cur->att_lan[num].lan_added, lan, MAX_NAME_LEN-1);
-      mac = cur->cnt.eth_table[num].mac_addr;
-      memset(str_mac, 0, MAX_NAME_LEN);
-      snprintf(str_mac, MAX_NAME_LEN-1,
-               "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-      lan_add_mac(cur->att_lan[num].lan_added, item_cnt, name, num, str_mac);
       result = 0;
       cur->cli_llid = llid;
       cur->cli_tid = tid;
@@ -829,6 +846,7 @@ int cnt_del_lan(int llid, int tid, char *name, int num, char *lan, char *err)
       KERR("ERROR: %s %d %s", name, num, lan);
     else
       {
+      mactopo_del_req(item_cnt, name, num, cur->att_lan[num].lan_added);
       val = lan_del_name(cur->att_lan[num].lan_added, item_cnt, name, num);
       memset(cur->att_lan[num].lan_added, 0, MAX_NAME_LEN);
       }

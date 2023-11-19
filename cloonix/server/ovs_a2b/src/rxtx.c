@@ -31,6 +31,7 @@
 #include "rxtx.h"
 #include "sched.h"
 #include "circle.h"
+#include "replace.h"
 
 
 static uint64_t g_prev_usec;
@@ -115,6 +116,7 @@ static void packet_rx(int id, int len, uint8_t *buf)
     pbuf = (t_pkt *) malloc(sizeof(t_pkt));
     pbuf->len = len;
     pbuf->pkt = pkt;
+    replace_packet(id, pbuf);
     circle_put(id, blen, usec, pbuf);
     sched_inc_queue_stored(id, blen);
     trigger_schedule(usec, 0);
@@ -204,6 +206,7 @@ void rxtx_init(int fd_rx_from_tap0, int fd_tx_to_tap0,
   g_fd_tx_to_tap0 = fd_tx_to_tap0;
   g_fd_rx_from_tap1 = fd_rx_from_tap1;
   g_fd_tx_to_tap1 = fd_tx_to_tap1;
+  replace_init();
   sched_init();
   circle_init();
   utils_init();

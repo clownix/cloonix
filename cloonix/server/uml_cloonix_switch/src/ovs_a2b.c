@@ -39,6 +39,7 @@
 #include "kvm.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
+#include "mactopo.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -69,9 +70,17 @@ static void free_a2b(t_ovs_a2b *cur)
   cfg_free_obj_id(cur->a2b_id);
   layout_del_sat(cur->name);
   if (strlen(cur->side[0].lan_added))
+    {
+    KERR("ERROR %s %s", cur->name, cur->side[0].lan_added);
+    mactopo_del_req(item_a2b, cur->name, 0, cur->side[0].lan_added);
     lan_del_name(cur->side[0].lan_added, item_a2b, cur->name, 0);
+    }
   if (strlen(cur->side[1].lan_added))
-    lan_del_name(cur->side[0].lan_added, item_a2b, cur->name, 1);
+    {
+    KERR("ERROR %s %s", cur->name, cur->side[1].lan_added);
+    mactopo_del_req(item_a2b, cur->name, 1, cur->side[1].lan_added);
+    lan_del_name(cur->side[1].lan_added, item_a2b, cur->name, 1);
+    }
   if (cur->llid)
     {
     llid_trace_free(cur->llid, 0, __FUNCTION__);
@@ -251,12 +260,51 @@ static void timer_heartbeat(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int param_config_check(char *name, char *input)
+static int param_config_check(char *name, char *input, int *dir,
+                              unsigned char targ[4], unsigned char src[4])
 {
-  int dir, val, result = -1;
+  int val, result = -1;
   char cmd[MAX_PATH_LEN];
-  if (sscanf(input, "dir=%d cmd=%s val=%d", &dir, cmd, &val) == 3) 
-    result = 0;
+  if (sscanf(input, "dir=%d cmd=%s val=%d", dir, cmd, &val) == 3) 
+    {
+    result = 1;
+    }
+  else if (strstr(input, "unreplace_ipdst"))
+    {
+    if (sscanf(input, "dir=%d", dir) == 1)
+      result = 2;
+    else
+      KERR("ERROR %s %s", name, input); 
+    }
+  else if (strstr(input, "unreplace_ipsrc"))
+    {
+    if (sscanf(input, "dir=%d", dir) == 1)
+      result = 3;
+    else
+      KERR("ERROR %s %s", name, input);
+    }
+  else if (strstr(input, "replace_ipdst"))
+    {
+    if (sscanf(input,
+        "dir=%d replace_ipdst %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
+         dir, &(targ[0]), &(targ[1]), &(targ[2]), &(targ[3]),
+         &(src[0]), &(src[1]), &(src[2]), &(src[3])) == 9)
+      result = 4;
+    else
+      KERR("ERROR %s %s", name, input); 
+    }
+  else if (strstr(input, "replace_ipsrc"))
+    {
+    if (sscanf(input,
+        "dir=%d replace_ipsrc %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
+         dir, &(targ[0]), &(targ[1]), &(targ[2]), &(targ[3]),
+         &(src[0]), &(src[1]), &(src[2]), &(src[3])) == 9)
+      result = 5;
+    else
+      KERR("ERROR %s %s", name, input); 
+    }
+  else
+    KERR("ERROR %s %s", name, input); 
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -453,7 +501,6 @@ static void snf_started(char *name, int num, char *vhost)
     if (strlen(lan))
       {
       ovs_snf_send_add_snf_lan(name, num, cur->side[num].vhost, lan);
-      ovs_snf_a2b_update_mac(name);
       }
     else
       {
@@ -468,9 +515,11 @@ void ovs_a2b_resp_add_lan(int is_ko, char *name, int num,
                          char *vhost, char *lan)
 {
   t_ovs_a2b *cur = find_a2b(name);
-KERR("TRACE %d %s %d %s %s", is_ko, name, num, vhost, lan);
   if (!cur)
+    {
+    mactopo_add_resp(0, name, num, lan);
     KERR("ERROR %d %s", is_ko, name); 
+    }
   else
     {
     if (strlen(cur->side[num].lan))
@@ -478,11 +527,13 @@ KERR("TRACE %d %s %d %s %s", is_ko, name, num, vhost, lan);
     memset(cur->side[num].lan, 0, MAX_NAME_LEN);
     if (is_ko)
       {
+      mactopo_add_resp(0, name, num, lan);
       KERR("ERROR %d %s", is_ko, name);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), name);
       }
     else
       {
+      mactopo_add_resp(item_a2b, name, num, lan);
       strncpy(cur->side[num].lan, lan, MAX_NAME_LEN);
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       cfg_hysteresis_send_topo_info();
@@ -502,7 +553,6 @@ void ovs_a2b_resp_del_lan(int is_ko, char *name, int num,
 {
   t_ovs_a2b *cur = find_a2b(name);
   int other;
-KERR("TRACE %s %d %s %s", name, num, vhost, lan);
   if (num == 0)
     other = 1;
   else if (num == 1)
@@ -510,10 +560,13 @@ KERR("TRACE %s %d %s %s", name, num, vhost, lan);
   else
     KERR("ERROR %d %s", is_ko, name);
   if (!cur)
+    {
+    mactopo_del_resp(0, name, num, lan);
     KERR("ERROR %d %s", is_ko, name);
+    }
   else if (cur->side[num].del_a2b_req == 1)
     {
-KERR("TRACE %s", name);
+    mactopo_del_resp(item_a2b, name, num, lan);
     memset(cur->side[num].lan, 0, MAX_NAME_LEN);
     cur->side[num].del_a2b_req = 0;
     if (cur->side[other].del_a2b_req == 0)
@@ -525,6 +578,7 @@ KERR("TRACE %s", name);
     }
   else
     {
+    mactopo_del_resp(item_a2b, name, num, lan);
     memset(cur->side[num].lan, 0, MAX_NAME_LEN);
     if (is_ko)
       {
@@ -656,27 +710,26 @@ void ovs_a2b_del(int cli_llid, int cli_tid, char *name)
         KERR("ERROR %s %s", name, cur->side[0].lan_added);
       if (!strlen(cur->side[1].lan))
         KERR("ERROR %s %s", name, cur->side[1].lan_added);
+      mactopo_del_req(item_a2b, cur->name, 0, cur->side[0].lan_added);
+      mactopo_del_req(item_a2b, cur->name, 1, cur->side[1].lan_added);
       val1 = lan_del_name(cur->side[0].lan_added, item_a2b, cur->name, 0);
-      memset(cur->side[0].lan_added, 0, MAX_NAME_LEN);
       val2 = lan_del_name(cur->side[1].lan_added, item_a2b, cur->name, 1);
+      memset(cur->side[0].lan_added, 0, MAX_NAME_LEN);
       memset(cur->side[1].lan_added, 0, MAX_NAME_LEN);
       if (val1 != 2*MAX_LAN)
         {
-KERR("TRACE %s", name);
         msg_send_del_lan_endp(ovsreq_del_a2b_lan, name, 0,
                               cur->side[0].vhost, cur->side[0].lan);
         cur->side[0].del_a2b_req = 1;
         }
       if (val2 != 2*MAX_LAN)
         {
-KERR("TRACE %s", name);
         msg_send_del_lan_endp(ovsreq_del_a2b_lan, name, 1,
                               cur->side[1].vhost, cur->side[1].lan);
         cur->side[1].del_a2b_req = 1;
         }
       if ((val1 == 2*MAX_LAN) && (val2 == 2*MAX_LAN))
         {
-KERR("TRACE %s", name);
         utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
         rpct_send_kil_req(cur->llid, type_hop_a2b);
         launch_timer_free_a2b(cur->name);
@@ -684,21 +737,19 @@ KERR("TRACE %s", name);
       }
     else if (strlen(cur->side[0].lan_added))
       {
-KERR("TRACE %s", name);
       if (!strlen(cur->side[0].lan))
         KERR("ERROR %s %s", name, cur->side[0].lan_added);
+      mactopo_del_req(item_a2b, cur->name, 0, cur->side[0].lan_added);
       val = lan_del_name(cur->side[0].lan_added, item_a2b, cur->name, 0);
       memset(cur->side[0].lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
         {
-KERR("TRACE %s", name);
         utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
         rpct_send_kil_req(cur->llid, type_hop_a2b);
         launch_timer_free_a2b(cur->name);
         }
       else
         {
-KERR("TRACE %s", name);
         msg_send_del_lan_endp(ovsreq_del_a2b_lan, name, 0,
                               cur->side[0].vhost, cur->side[0].lan);
         cur->side[0].del_a2b_req = 1;
@@ -706,21 +757,19 @@ KERR("TRACE %s", name);
       }
     else if (strlen(cur->side[1].lan_added))
       {
-KERR("TRACE %s", name);
       if (!strlen(cur->side[1].lan))
         KERR("ERROR %s %s", name, cur->side[1].lan_added);
+      mactopo_del_req(item_a2b, cur->name, 1, cur->side[1].lan_added);
       val = lan_del_name(cur->side[1].lan_added, item_a2b, cur->name, 1);
       memset(cur->side[1].lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
         {
-KERR("TRACE %s", name);
         utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
         rpct_send_kil_req(cur->llid, type_hop_a2b);
         launch_timer_free_a2b(cur->name);
         }
       else
         {
-KERR("TRACE %s", name);
         msg_send_del_lan_endp(ovsreq_del_a2b_lan, name, 0,
                               cur->side[1].vhost, cur->side[1].lan);
         cur->side[1].del_a2b_req = 1;
@@ -728,7 +777,6 @@ KERR("TRACE %s", name);
       }
     else
       {
-KERR("TRACE %s", name);
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       rpct_send_kil_req(cur->llid, type_hop_a2b);
       launch_timer_free_a2b(cur->name);
@@ -741,7 +789,7 @@ KERR("TRACE %s", name);
 void ovs_a2b_add_lan(int cli_llid, int cli_tid, char *name, int num, char *lan)
 {
   t_ovs_a2b *cur = find_a2b(name);
-KERR("TRACE %s %d %s", name, num, lan);
+  char err[MAX_PATH_LEN];
   if ((num != 0) && (num != 1))
     {
     KERR("ERROR %s %d", name, num);
@@ -773,7 +821,13 @@ KERR("TRACE %s %d %s", name, num, lan);
   else
     {
     lan_add_name(lan, item_a2b, name, num);
-    if (msg_send_add_lan_endp(ovsreq_add_a2b_lan, name, num,
+    if (mactopo_add_req(item_a2b, name, num, lan, NULL, NULL, err))
+      {
+      KERR("ERROR %s %d %s %s", name, num, lan, err);
+      send_status_ko(cli_llid, cli_tid, err);
+      lan_del_name(lan, item_a2b, name, num);
+      }
+    else if (msg_send_add_lan_endp(ovsreq_add_a2b_lan, name, num,
                                    cur->side[num].vhost, lan))
       {
       KERR("ERROR %s", name);
@@ -820,6 +874,7 @@ void ovs_a2b_del_lan(int cli_llid, int cli_tid, char *name, int num, char *lan)
       KERR("ERROR: %s %d %s", name, num, lan);
     else
       {
+      mactopo_del_req(item_a2b, cur->name, num, cur->side[num].lan_added);
       val = lan_del_name(cur->side[num].lan_added, item_a2b, cur->name, num);
       memset(cur->side[num].lan_added, 0, MAX_NAME_LEN);
       }
@@ -903,19 +958,63 @@ int  ovs_a2b_dyn_snf(char *name, int num, int val)
 /****************************************************************************/
 int ovs_a2b_param_config(int llid, int tid, char *name, char *cmd)
 {
-  int result = -1;
+  int ret, dir, result = -1;
   char msg[MAX_PATH_LEN];
+  unsigned char targ[4];
+  unsigned char src[4];
   t_ovs_a2b *cur = find_a2b(name);
-  if (!cur)
-    KERR("ERROR %s %s", name, cmd);
-  else if (param_config_check(name, cmd))
-    KERR("ERROR %s %s", name, cmd);
-  else
+  
+  memset(msg, 0, MAX_PATH_LEN);
+  if (cur)
     {
-    result = 0;
-    memset(msg, 0, MAX_PATH_LEN);
-    snprintf(msg, MAX_PATH_LEN-1,
-             "a2b_param_config %d %d %s dir_cmd_val=%s", llid, tid, name, cmd);
+    ret = param_config_check(name, cmd, &dir, targ, src);
+    if (ret == 1)
+      {
+      result = 0; 
+      snprintf(msg, MAX_PATH_LEN-1,
+               "a2b_param_config %d %d %s dir_cmd_val=%s", llid, tid, name, cmd);
+      }
+    else if (ret == 2)
+      {
+      result = 0;
+      snprintf(msg, MAX_PATH_LEN-1,
+               "a2b_param_config %d %d %s unreplace_ipdst dir=%d",
+               llid, tid, name, dir);
+      }
+    else if (ret == 3)
+      {
+      result = 0;
+      snprintf(msg, MAX_PATH_LEN-1,
+               "a2b_param_config %d %d %s unreplace_ipsrc dir=%d",
+               llid, tid, name, dir);
+      }
+    else if (ret == 4)
+      {
+      result = 0; 
+      snprintf(msg, MAX_PATH_LEN-1,
+               "a2b_param_config %d %d %s replace_ipdst "
+               "dir=%d %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
+               llid, tid, name, dir,
+               targ[0], targ[1], targ[2], targ[3],
+               src[0], src[1], src[2], src[3]);
+      }
+    else if (ret == 5)
+      {
+      result = 0; 
+      snprintf(msg, MAX_PATH_LEN-1,
+               "a2b_param_config %d %d %s replace_ipsrc "
+               "dir=%d %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
+               llid, tid, name, dir,
+               targ[0], targ[1], targ[2], targ[3],
+               src[0], src[1], src[2], src[3]);
+      }
+    else
+      KERR("ERROR %s %s", name, cmd);
+    }
+  else
+    KERR("ERROR %s %s", name, cmd);
+  if (result == 0)
+    {
     rpct_send_sigdiag_msg(cur->llid, type_hop_a2b, msg);
     hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
     }

@@ -65,8 +65,8 @@ static void create_cnt_resp(t_topo_cnt *cnt)
   get_node_layout_x_y(cnt->name, &x, &y, &hidden_on_graph,
                       tx, ty, thidden_on_graph);
 
-  bank_cnt_create(cnt->brandtype, cnt->name, cnt->image, cnt->customer_launch,
-                  cnt->vm_id, cnt->ping_ok, cnt->nb_tot_eth, cnt->eth_table,
+  bank_cnt_create(cnt->brandtype, cnt->name, cnt->image, cnt->vm_id, 
+                  cnt->ping_ok, cnt->nb_tot_eth, cnt->eth_table,
                   x, y, hidden_on_graph, tx, ty, thidden_on_graph);
 }
 /*--------------------------------------------------------------------------*/

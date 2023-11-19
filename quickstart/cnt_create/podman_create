@@ -1,0 +1,44 @@
+#!/bin/bash
+#----------------------------------------------------------------------#
+HERE=`pwd`
+BULK="/var/lib/cloonix/bulk"
+LIST="busybox  \
+      fedora39 \
+      centos9  \
+      jammy    \
+      bookworm"
+#----------------------------------------------------------------------#
+if [ $UID != 0 ]; then
+  echo you must be root
+  exit -1
+fi
+#----------------------------------------------------------------------#
+for i in ${LIST}; do
+  ZIP=${BULK}/${i}.zip
+  if [ ! -e $ZIP ]; then
+    echo DOES NOT EXIST: $ZIP
+  elif  [[ $(podman images | egrep -c ${i}) != 0 ]]; then
+    echo PODMAN ${i} EXISTS
+  else
+    echo CREATING PODMAN ${i}
+    ROOTFS=/tmp/rootfs_${i}
+    rm -rf ${ROOTFS}
+    mkdir -p ${ROOTFS}
+    cp ${ZIP} ${ROOTFS}
+    cd ${ROOTFS}
+    unzip ${i}
+    cd ${HERE}
+    rm -f ${ROOTFS}/${i}
+    cat > ${ROOTFS}/Dockerfile << EOF
+FROM scratch
+ADD . /
+EOF
+    podman build -t ${i} ${ROOTFS}
+    echo PODMAN ${i} DONE
+    echo
+    echo
+    sleep 5
+  fi
+done
+#-----------------------------------------------------------------------#
+

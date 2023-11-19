@@ -69,8 +69,10 @@ enum {
   endp_type_natv,
   endp_type_c2cs,
   endp_type_c2cv,
-  endp_type_phys,
-  endp_type_phyv,
+  endp_type_phyas,
+  endp_type_phyav,
+  endp_type_phyms,
+  endp_type_phymv,
   endp_type_a2b,
 };
 
@@ -204,17 +206,16 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define OVS_BRIDGE   "_b_"
 
 #define XAUTH_BIN "/usr/libexec/cloonix/common/cloonix-xauth"
-#define BASH_BIN "/usr/libexec/cloonix/common/cloonix-bash"
+#define BASH_BIN "/usr/libexec/cloonix/common/sh"
 #define XWYCLI_BIN "/usr/libexec/cloonix/client/cloonix-xwycli"
 
 #define WIRESHARK_BIN "/usr/libexec/cloonix/server/cloonix-wireshark"
 #define CRUN_BIN "/usr/libexec/cloonix/server/cloonix-crun"
 #define IP_BIN "/usr/libexec/cloonix/server/ip"
 #define FUSE_OVERLAY_FS_BIN "/usr/libexec/cloonix/server/cloonix-fuse-overlayfs"
-#define EXT4FUSE_BIN "/usr/libexec/cloonix/server/cloonix-ext4fuse"
+#define FUSEZIP_BIN "/usr/libexec/cloonix/server/cloonix-fuse-zip"
 #define MOUNT_BIN "/usr/libexec/cloonix/server/cloonix-mount"
 #define UMOUNT_BIN "/usr/libexec/cloonix/server/cloonix-umount"
-#define LOSETUP_BIN "/usr/libexec/cloonix/server/cloonix-losetup"
 #define GREP_BIN "/usr/libexec/cloonix/server/cloonix-grep"
 #define AWK_BIN "/usr/libexec/cloonix/server/cloonix-awk"
 #define MKNOD_BIN "/usr/libexec/cloonix/server/cloonix-mknod"
@@ -224,10 +225,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define OVSDB_TOOL_BIN   "/usr/libexec/cloonix/server/cloonix-ovsdb-tool"
 #define OSIRROX_BIN "/usr/libexec/cloonix/server/cloonix-osirrox"
 
-
-#define DOCKER_BIN "/usr/bin/docker"
 #define PODMAN_BIN "/usr/bin/podman"
-
 
 #define BASE_NAMESPACE "cloonix"
 #define PATH_NAMESPACE "/run/netns/"
@@ -292,7 +290,7 @@ typedef struct t_eth_table
 {
   int  endp_type;
   int  randmac;
-  char mac_addr[8];
+  unsigned char mac_addr[8];
   char vhost_ifname[MAX_NAME_LEN];
 } t_eth_table;
 /*---------------------------------------------------------------------------*/
@@ -328,7 +326,6 @@ typedef struct t_topo_cnt
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
   char image[MAX_PATH_LEN];
-  char customer_launch[MAX_PATH_LEN];
   char startup_env[MAX_PATH_LEN];
 } t_topo_cnt;
 /*---------------------------------------------------------------------------*/

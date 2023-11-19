@@ -39,6 +39,7 @@
 #include "ovs_snf.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
+#include "mactopo.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -124,6 +125,7 @@ static void free_c2c(t_ovs_c2c *cur)
   if (strlen(cur->lan_added))
     {
     KERR("%s %s", cur->name, cur->lan_added);
+    mactopo_del_req(item_c2c, cur->name, 0, cur->lan_added);
     lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
     }
   if (cur->prev)
@@ -136,16 +138,14 @@ static void free_c2c(t_ovs_c2c *cur)
   if (cur->must_restart)
     {
     KERR("WARNING RESTARTING %s", cur->name);
-    ovs_c2c_add(0,0, cur->name, cur->topo.loc_udp_ip, cur->topo.dist_cloon, cur->topo.dist_tcp_ip,
-                cur->topo.dist_tcp_port, cur->dist_passwd, cur->topo.dist_udp_ip);
+    ovs_c2c_add(0,0, cur->name, cur->topo.loc_udp_ip, cur->topo.dist_cloon,
+                cur->topo.dist_tcp_ip, cur->topo.dist_tcp_port,
+                cur->dist_passwd, cur->topo.dist_udp_ip);
     ncur = find_c2c(cur->name);
     if (!ncur)
       KERR("ERROR %s", cur->name);
     else if (strlen(cur->must_restart_lan))
-      {
       strncpy(ncur->lan_waiting, cur->must_restart_lan, MAX_NAME_LEN-1);
-      strncpy(ncur->topo.lan, cur->must_restart_lan, MAX_NAME_LEN-1);
-      }
     }
   free(cur);
   cfg_hysteresis_send_topo_info();
@@ -195,6 +195,7 @@ static void alloc_c2c_master(char *name, char *dist_name,
                              uint16_t dist_port, char *dist_passwd,
                              uint32_t dist_udp_ip)
 {
+  uint32_t localhost;
   t_ovs_c2c *cur = alloc_c2c_base(name, dist_name);
   memset(cur->dist_passwd, 0, MSG_DIGEST_LEN);
   strncpy(cur->dist_passwd, dist_passwd, MSG_DIGEST_LEN-1);
@@ -204,6 +205,12 @@ static void alloc_c2c_master(char *name, char *dist_name,
   cur->topo.loc_udp_ip = loc_udp_ip;
   cur->topo.dist_udp_ip = dist_udp_ip;
   cfg_hysteresis_send_topo_info();
+  ip_string_to_int(&localhost, "127.0.0.1");
+  if ((dist_ip != localhost) && (loc_udp_ip == localhost))
+    {
+    KERR("WARNING: giving distant c2c (not localhost) the local 127.0.0.1 address");
+    KERR("WARNING: distant c2c probably will not be able to reach back to us");
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -248,6 +255,7 @@ static void carefull_free_c2c(char *name)
       {
       if (!strlen(cur->lan_attached))
         KERR("ERROR %s %s", name, cur->lan_added);
+      mactopo_del_req(item_c2c, cur->name, 0, cur->lan_added);
       val = lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
@@ -284,6 +292,7 @@ static void carefull_destroy_c2c(char *name)
       {
       if (!strlen(cur->lan_attached))
         KERR("ERROR %s %s", name, cur->lan_added);
+      mactopo_del_req(item_c2c, cur->name, 0, cur->lan_added);
       val = lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
@@ -413,6 +422,7 @@ static void timer_heartbeat(void *data)
 {
   t_ovs_c2c *next, *cur = g_head_c2c;
   char *locnet = cfg_get_cloonix_name();
+  char err[MAX_PATH_LEN];
   if (get_glob_req_self_destruction())
     return;
   while(cur)
@@ -479,15 +489,26 @@ static void timer_heartbeat(void *data)
             (strlen(cur->lan_waiting)))
           {
           lan_add_name(cur->lan_waiting, item_c2c, cur->name, 0);
-          if (msg_send_add_lan_endp(ovsreq_add_c2c_lan, cur->name, 0,
+          if (mactopo_add_req(item_c2c, cur->name, 0, cur->lan_waiting,
+                              NULL, NULL, err))
+            {
+            KERR("ERROR %s %s %s", cur->name, cur->lan_waiting, err);
+            lan_del_name(cur->lan_waiting, item_c2c, cur->name, 0);
+            utils_send_status_ko(&cur->cli_llid, &cur->cli_tid, err);
+            }
+          else if (msg_send_add_lan_endp(ovsreq_add_c2c_lan, cur->name, 0,
                                     cur->vhost, cur->lan_waiting))
             {
             KERR("ERROR %s %s", cur->name, cur->lan_waiting);
             lan_del_name(cur->lan_waiting, item_c2c, cur->name, 0);
+            utils_send_status_ko(&cur->cli_llid, &cur->cli_tid, "msg_send ko");
             }
           else
             {
             strncpy(cur->lan_added, cur->lan_waiting, MAX_NAME_LEN-1);
+            strncpy(cur->topo.lan, cur->lan_waiting, MAX_NAME_LEN-1);
+            utils_send_status_ok(&cur->cli_llid, &cur->cli_tid);
+            cfg_hysteresis_send_topo_info();
             }
           memset(cur->lan_waiting, 0, MAX_NAME_LEN);
           }
@@ -576,7 +597,6 @@ static void snf_started(char *name, int num, char *vhost)
     if (strlen(cur->lan_attached))
       {
       ovs_snf_send_add_snf_lan(name, num, cur->vhost, cur->lan_attached);
-      ovs_snf_c2c_update_mac(name);
       }
     else
       {
@@ -818,7 +838,10 @@ void ovs_c2c_resp_add_lan(int is_ko, char *name, int num,
 {
   t_ovs_c2c *cur = find_c2c(name);
   if (!cur)
+    {
+    mactopo_add_resp(0, name, num, lan);
     KERR("ERROR %d %s", is_ko, name); 
+    }
   else
     {
     if (strlen(cur->lan_attached))
@@ -828,10 +851,12 @@ void ovs_c2c_resp_add_lan(int is_ko, char *name, int num,
     memset(cur->topo.lan, 0, MAX_NAME_LEN);
     if (is_ko)
       {
+      mactopo_add_resp(0, name, num, lan);
       KERR("ERROR %d %s", is_ko, name);
       }
     else
       {
+      mactopo_add_resp(item_c2c, name, num, lan);
       strncpy(cur->lan_attached, lan, MAX_NAME_LEN);
       strncpy(cur->topo.lan, lan, MAX_NAME_LEN);
       if (cur->must_call_snf_started)
@@ -850,9 +875,13 @@ void ovs_c2c_resp_del_lan(int is_ko, char *name, int num,
 {
   t_ovs_c2c *cur = find_c2c(name);
   if (!cur)
+    {
+    mactopo_del_resp(0, name, num, lan);
     KERR("ERROR %d %s", is_ko, name);
+    }
   else if (cur->destroy_c2c_req == 1)
     {
+    mactopo_del_resp(item_c2c, name, num, lan);
     memset(cur->lan_attached, 0, MAX_NAME_LEN);
     memset(cur->lan_waiting, 0, MAX_NAME_LEN);
     memset(cur->topo.lan, 0, MAX_NAME_LEN);
@@ -861,10 +890,12 @@ void ovs_c2c_resp_del_lan(int is_ko, char *name, int num,
     }
   else if (cur->free_c2c_req == 1)
     {
+    mactopo_del_resp(item_c2c, name, num, lan);
     free_c2c(cur);
     }
   else
     {
+    mactopo_del_resp(item_c2c, name, num, lan);
     memset(cur->lan_attached, 0, MAX_NAME_LEN);
     memset(cur->lan_waiting, 0, MAX_NAME_LEN);
     memset(cur->topo.lan, 0, MAX_NAME_LEN);
@@ -934,12 +965,19 @@ void ovs_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                  char *dist_name, uint32_t dist_ip, uint16_t dist_port,
                  char *dist_passwd, uint32_t dist_udp_ip)
 {
+  char *locnet = cfg_get_cloonix_name();
   t_ovs_c2c *cur = find_c2c(name);
   if (cur)
     {
     KERR("ERROR %s", name);
     if (llid)
       send_status_ko(llid, tid, "Exists already");
+    }
+  else if (!strcmp(locnet, dist_name))
+    {
+    KERR("ERROR %s", name);
+    if (llid)
+      send_status_ko(llid, tid, "Cannot c2c to our own name");
     }
   else
     {
@@ -1021,12 +1059,21 @@ void ovs_c2c_add_lan(int llid, int tid, char *name, char *lan)
     KERR("ERROR %s %s", name, cur->lan_waiting);
     send_status_ko(llid, tid, "Lan waiting exists");
     }
+  else if (cur->cli_llid || cur->cli_tid)
+    {
+    KERR("ERROR %s %s", name, cur->lan_waiting);
+    send_status_ko(llid, tid, "Probleme past req");
+    }
+  else if (cur->topo.tcp_connection_peered != 1)
+    {
+    KERR("ERROR %s", name);
+    send_status_ko(llid, tid, "Not ready tcp_connection_peered");
+    }
   else
     {
     strncpy(cur->lan_waiting, lan, MAX_NAME_LEN-1);
-    strncpy(cur->topo.lan, lan, MAX_NAME_LEN-1);
-    send_status_ok(llid, tid, "ok");
-    cfg_hysteresis_send_topo_info();
+    cur->cli_llid = llid;
+    cur->cli_tid = tid;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1057,6 +1104,7 @@ void ovs_c2c_del_lan(int llid, int tid, char *name, char *lan)
       KERR("ERROR: %s %s", name, lan);
     else
       {
+      mactopo_del_req(item_c2c, cur->name, 0, cur->lan_added);
       val = lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       }
@@ -1303,45 +1351,40 @@ int  ovs_c2c_dyn_snf(char *name, int val)
   char tap[MAX_NAME_LEN];
   char *vh;
 
-  if (tap == NULL)
-    KERR("ERROR %s %d", name, val);
-  else
+  if (val)
     {
-    if (val)
-      {
-      if (cur->topo.endp_type == endp_type_c2cs)
-        KERR("ERROR %s", name);
-      else
-        {
-        cur->del_snf_ethv_sent = 0;
-        cur->topo.endp_type = endp_type_c2cs;
-        ovs_dyn_snf_start_process(name, 0, item_type_c2c,
-                                  cur->vhost, snf_started);
-        result = 0;
-        }
-      }
+    if (cur->topo.endp_type == endp_type_c2cs)
+      KERR("ERROR %s", name);
     else
       {
-      if (cur->topo.endp_type == endp_type_c2cv)
-        KERR("ERROR %s", name);
-      else
+      cur->del_snf_ethv_sent = 0;
+      cur->topo.endp_type = endp_type_c2cs;
+      ovs_dyn_snf_start_process(name, 0, item_type_c2c,
+                                cur->vhost, snf_started);
+      result = 0;
+      }
+    }
+  else
+    {
+    if (cur->topo.endp_type == endp_type_c2cv)
+      KERR("ERROR %s", name);
+    else
+      {
+      cur->topo.endp_type = endp_type_c2cv;
+      memset(tap, 0, MAX_NAME_LEN);
+      vh = cur->vhost;
+      snprintf(tap, MAX_NAME_LEN-1, "s%s", vh);
+      if (cur->del_snf_ethv_sent == 0)
         {
-        cur->topo.endp_type = endp_type_c2cv;
-        memset(tap, 0, MAX_NAME_LEN);
-        vh = cur->vhost;
-        snprintf(tap, MAX_NAME_LEN-1, "s%s", vh);
-        if (cur->del_snf_ethv_sent == 0)
+        cur->del_snf_ethv_sent = 1;
+        if (strlen(cur->lan_added))
           {
-          cur->del_snf_ethv_sent = 1;
-          if (strlen(cur->lan_added))
-            {
-            if (ovs_snf_send_del_snf_lan(name, 0, cur->vhost, cur->lan_added))
-              KERR("ERROR DEL KVMETH %s %s", name, cur->lan_added);
-            }
-          ovs_dyn_snf_stop_process(tap);
+          if (ovs_snf_send_del_snf_lan(name, 0, cur->vhost, cur->lan_added))
+            KERR("ERROR DEL KVMETH %s %s", name, cur->lan_added);
           }
-        result = 0;
+        ovs_dyn_snf_stop_process(tap);
         }
+      result = 0;
       }
     }
   return result;

@@ -542,7 +542,7 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
       (!ovs_c2c_exists(layout->name)) &&
       (!ovs_a2b_exists(layout->name)) &&
       (!ovs_tap_exists(layout->name)) &&
-      (!ovs_phy_exists(layout->name)))
+      (!ovs_phy_exists_vhost(layout->name)))
     KERR("%s", layout->name);
   else
     {

@@ -190,13 +190,6 @@ void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_slowperiodic_docker(int llid, int tid, int nb, t_slowperiodic *spic)
-{
-  KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void recv_slowperiodic_podman(int llid, int tid, int nb, t_slowperiodic *spic)
 {
   KOUT(" ");

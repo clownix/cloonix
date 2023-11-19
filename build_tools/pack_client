@@ -25,13 +25,17 @@ for i in  cloonix_cli \
           cloonix_ovs \
           cloonix_scp \
           cloonix_ssh \
-          cloonix_wir \
+          cloonix_lsh \
+          cloonix_dsh \
           cloonix_wsk ; do
   cp -f ${CLOONIX_TREE_ROOT}/cloonix/${i} ${CLIENT}/usr_bin
 done
 #----------------------------------------------------------
 rm -rf ${CLIENT}/lib_client
 rm -rf ${CLIENT}/spice_lib_client
+#----------------------------------------------------------
+cp -f  ${CLIENT}/hide_dirs/cloonix-hide-dirs ${CLIENT}
+rm -rf ${CLIENT}/hide_dirs
 #----------------------------------------------------------
 cp -f  ${CLIENT}/agent_dropbear/cloonix-dropbear-scp ${CLIENT}
 cp -f  ${CLIENT}/agent_dropbear/cloonix-dropbear-ssh ${CLIENT}

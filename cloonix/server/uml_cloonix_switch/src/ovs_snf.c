@@ -41,6 +41,7 @@
 #include "cnt.h"
 #include "stats_counters.h"
 #include "lan_to_name.h"
+#include "mactopo.h"
 
 typedef struct t_snf
 {
@@ -56,7 +57,6 @@ typedef struct t_snf
   int pid;
   int closed_count;
   int suid_root_done;
-  int send_mac_done;
   int watchdog_count;
   int ms;
   int pkt_tx;
@@ -82,20 +82,6 @@ int get_glob_req_self_destruction(void);
 int ovs_snf_get_qty(void)
 {
   return (g_nb_snf);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static t_snf *find_snf_with_lan(char *lan)
-{
-  t_snf *cur = g_head_snf;
-  while(cur)
-    {
-    if (!strcmp(cur->lan, lan))
-      break;
-    cur = cur->next;
-    }
-  return cur;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -138,111 +124,6 @@ static void free_snf(t_snf *cur)
     g_head_snf = cur->next;
   g_nb_snf -= 1;
   free(cur);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void update_snf_rx_mac(char *name, int llid)
-{
-  char msg[MAX_PATH_LEN];
-  t_item_el *icur;
-  t_item_mac *imac;
-  char *mc;
-  icur = lan_get_head_item(name);
-  if (!icur)
-    KERR("ERROR %s", name);
-  else
-    {
-    snprintf(msg, MAX_PATH_LEN-1, "cloonsnf_mac_spyed_purge");
-    rpct_send_sigdiag_msg(llid, type_hop_snf, msg);
-    hop_event_hook(llid, FLAG_HOP_SIGDIAG, msg);
-    while(icur)
-      {
-      imac = icur->head_mac;
-      while(imac)
-        {
-        mc = imac->mac;
-        snprintf(msg, MAX_PATH_LEN-1, "cloonsnf_mac_spyed_rx_on=%s", mc);
-        rpct_send_sigdiag_msg(llid, type_hop_snf, msg);
-        hop_event_hook(llid, FLAG_HOP_SIGDIAG, msg);
-        imac = imac->next;
-        }
-      icur = icur->next;
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void send_mac_to_snf(t_snf *cur)
-{
-  uint8_t *mc;
-  t_eth_table *eth_tab;
-  t_vm *vm = cfg_get_vm(cur->name);
-  int nb_eth;
-  char mac_spyed_on[MAX_NAME_LEN];
-  char msg[MAX_PATH_LEN];
-  t_ovs_phy *phy_exists = ovs_phy_exists(cur->name);
-  t_ovs_tap *tap_exists = ovs_tap_exists(cur->name);
-  t_ovs_nat *nat_exists = ovs_nat_exists(cur->name);
-  t_ovs_a2b *a2b_exists = ovs_a2b_exists(cur->name);
-  t_ovs_c2c *c2c_exists = ovs_c2c_exists(cur->name);
-  memset(msg, 0, MAX_PATH_LEN);
-  if (nat_exists)
-    {
-    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",NAT_MAC_CISCO);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
-    memset(msg, 0, MAX_PATH_LEN);
-    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",NAT_MAC_GW);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
-    memset(msg, 0, MAX_PATH_LEN);
-    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",NAT_MAC_DNS);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
-    }
-  else if (tap_exists)
-    {
-    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",tap_exists->mac);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
-    }
-  else if (phy_exists)
-    {
-    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",phy_exists->phy_mac);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
-    }
-  else if (a2b_exists)
-    {
-    }
-  else if (c2c_exists)
-    {
-    }
-  else if (vm)
-    {
-    eth_tab = vm->kvm.eth_table;
-    mc = (uint8_t *) eth_tab[cur->num].mac_addr;
-    snprintf(mac_spyed_on, MAX_NAME_LEN-1,
-             "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-             mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
-    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",mac_spyed_on);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
-    }
-  else if (cnt_info(cur->name, &nb_eth, &eth_tab))
-    {
-    mc = (uint8_t *) eth_tab[cur->num].mac_addr;
-    snprintf(mac_spyed_on, MAX_NAME_LEN-1,
-             "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-             mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
-    snprintf(msg, MAX_PATH_LEN-1,"cloonsnf_mac_spyed_tx_on=%s",mac_spyed_on);
-    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
-    hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
-    }
-  else
-    KERR("ERROR %s", cur->name);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -341,11 +222,6 @@ static void timer_heartbeat(void *data)
         rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
         hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
         }
-      }
-    else if (cur->send_mac_done == 0)
-      {
-      send_mac_to_snf(cur);
-      cur->send_mac_done = 1;
       }
     else if (cur->watchdog_count >= 150)
       {
@@ -660,51 +536,32 @@ void ovs_snf_resp_msg_vhost_up(int is_ko, char *vhost, char *name, int num)
 /****************************************************************************/
 void ovs_snf_resp_msg_add_lan(int is_ko, char *vhost, char *name, int num, char *lan)
 {
-  if (is_ko)
+  t_snf *cur = find_snf_with_name_num(name, num);
+  if (!cur)  
     KERR("ERROR %s %d %s %s", name, num, vhost, lan);
+  else if (is_ko)
+    KERR("ERROR %s %d %s %s", name, num, vhost, lan);
+  else if (!cur->llid)  
+    KERR("ERROR %s %d %s %s", name, num, vhost, lan);
+  else
+    mactopo_snf_add(name, num, lan, cur->llid);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void ovs_snf_resp_msg_del_lan(int is_ko, char *vhost, char *name, int num, char *lan)
 {
-  if (is_ko)
+  t_snf *cur = find_snf_with_name_num(name, num);
+  if (!cur)  
     KERR("ERROR %s %d %s %s", name, num, vhost, lan);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void ovs_snf_c2c_update_mac(char *name)
-{
-  t_snf *cur = find_snf_with_name_num(name, 0);
-  if (cur)
-    update_snf_rx_mac(cur->lan, cur->llid);
-  else
-    KERR("WARNING NOT FOUND %s", name);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void ovs_snf_a2b_update_mac(char *name)
-{
-  t_snf *cur = find_snf_with_name_num(name, 0);
-  if (cur)
-    update_snf_rx_mac(cur->lan, cur->llid);
-  else
-    KERR("WARNING NOT FOUND %s", name);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void ovs_snf_lan_mac_change(char *lan)
-{
-  t_snf *cur = find_snf_with_lan(lan);
-  if (cur)
+  else 
     {
-    if ((cur->item_type==item_type_c2c)||(cur->item_type==item_type_a2b))
-      {
-      update_snf_rx_mac(lan, cur->llid);
-      }
+    if (is_ko)
+      KERR("ERROR %s %d %s %s", name, num, vhost, lan);
+    if (!cur->llid)  
+      KERR("ERROR %s %d %s %s", name, num, vhost, lan);
+    else
+      mactopo_snf_del(name, num, lan, cur->llid);
     }
 }
 /*--------------------------------------------------------------------------*/

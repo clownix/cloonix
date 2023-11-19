@@ -12,14 +12,15 @@ How the building is done.
 Cloonix recompiles most of the open-sources it uses and sometimes patches
 them for adjustments.
 Libraries are put into a separate zone only for cloonix use.
-This allows the use of customized libs with no impact on the official host machine.
+This allows the use of customized libs with no impact on the official host
+machine.
 
 The host machine can have qemu, openvswitch and spice installed, cloonix will
 use its own version of these softwares. None of the host's binary are called
-except for podman and docker.
+except for podman.
 
-Wireshark and crun are not required in the host, those software are embedded in
-the bundle delivered with cloonix binaries.
+Wireshark and crun are not required in the host, those software are embedded
+in the bundle delivered with cloonix binaries.
 
 
 Sources associated to dpdk/ovs
@@ -49,8 +50,8 @@ the *install_cloonix* script installs files in the folowing locations::
   /usr/libexec/cloonix/common                                binaries
   /usr/libexec/cloonix/client                                binaries
   /usr/libexec/cloonix/server                                binaries
-  /usr/bin/cloonix_net                                       server handle script
-  /usr/bin/cloonix_(cli, gui, scp, ssh, ovs, ice, ocp, osh)  client handle scripts
+  /usr/bin/cloonix_net                                       server script
+  /usr/bin/cloonix_(cli,gui,ice,ssh,scp,wsk,ovs,osh,ocp)     client scripts
 
 The software needs a working directory to provide its services, this working
 directory depends on the name of the launched cloonix net::
@@ -74,8 +75,7 @@ Cloonix needs root file-systems to run guests, the above installation
 does not populate the guest qcow2 files, the server software expects to
 find those guest file-systems inside a directory called **bulk**::
 
-  /var/lib/cloonix/bulk/*                                    vm file-systems
-
+  /var/lib/cloonix/bulk/*             kvm qcow2 and crun zip file-systems
 
 Here under is the complete list of commands to populate the bulk with qcow2::
 
@@ -84,20 +84,20 @@ Here under is the complete list of commands to populate the bulk with qcow2::
   wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/bookworm.qcow2.gz
   gunzip bookworm.qcow2.gz
 
-For the crun use, commands to populate the bulk with ext4 image files::
+For the crun use, commands to populate the bulk with zip file-systems::
 
-    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/bookworm.img.gz
-    gunzip bookworm.img.gz
+    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/busybox.zip.gz
+    gunzip busybox.zip.gz
 
-For the podman or docker container guests, you have to create a podman or docker
-image in your host outside of cloonix. This image gets to be visible in the Cnt_conf
+For the podman container guests, you have to create a podman image in your
+host outside of cloonix. This image gets to be visible in the Cnt_conf
 sub-menu of the menu obtained upon a right-click when above the canvas.
-Note that you must click on the docker or podman container type to get to the list
-of images through Choice.
+Note that you must click on the podman container type to get to the list of
+existing podman images.
 
 
-Erase cloonix from host
-=======================
+Howto erase cloonix from host
+=============================
 
 A simple way to uninstall cloonix is by erasing all the installed files
 The binaries and config file::
@@ -130,7 +130,7 @@ In the cloonix-bundle, scripts are added for an easy test::
 
   ./ping_kvm.sh
   or
-  ./ping_crun.sh
+  ./ping_cnt.sh
 
 Here is a typical manual start for a server and a gui client::
 

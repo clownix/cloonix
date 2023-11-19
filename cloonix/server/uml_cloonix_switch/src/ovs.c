@@ -332,7 +332,7 @@ static int create_ovs_drv_process(char *name)
   arg_ovsx = (t_arg_ovsx *) clownix_malloc(sizeof(t_arg_ovsx), 11);
   memset(arg_ovsx, 0, sizeof(t_arg_ovsx));
   strncpy(arg_ovsx->bin_path, bin_path, MAX_PATH_LEN-1);
-  strncpy(arg_ovsx->net, net, MAX_PATH_LEN-1);
+  strncpy(arg_ovsx->net, net, MAX_NAME_LEN-1);
   strncpy(arg_ovsx->name, name, MAX_NAME_LEN-1);
   strncpy(arg_ovsx->sock, sock, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->ovsx_bin, ovsx_bin, MAX_PATH_LEN-1);
@@ -637,7 +637,7 @@ char *ovs_format_ethv(t_vm *vm, int eth, char *ifname)
 {
   static char cmd[MAX_PATH_LEN*3];
   int len = 0;
-  char *mc = vm->kvm.eth_table[eth].mac_addr;
+  unsigned char *mc = vm->kvm.eth_table[eth].mac_addr;
   memset(cmd, 0, MAX_PATH_LEN*3);
   len += sprintf(cmd+len,
          " -device virtio-net-pci-non-transitional,netdev=nvhost%d", eth);

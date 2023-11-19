@@ -23,7 +23,7 @@ Endpoint items
 ==============
 
 * **kvm** guest virtual machine launched through qemu-kvm.
-* **cnt** guest container (crun, docker or podman).
+* **cnt** guest container (crun or podman).
 * **nat** used to reach the internet dhcp, routing and dns server.
 * **tap** used to reach a vhost tap of the host machine.
 * **c2c** used to reach another cloonix server through udp messages.
@@ -35,9 +35,8 @@ cnt
 ---
 This is a running instance of a container, in the case of crun, it is mainly
 a running process inside a private file-system with a private namespace ip
-stack. For the docker and podman cases, the docker or podman software is used
-for the running of the containers but cloonix manages their interfaces
-endpoints.
+stack. For the podman cases, the podman software is used for the running of
+the containers but cloonix manages their interfaces endpoints.
 
 
 kvm
@@ -100,27 +99,71 @@ of the distant cloonix.
 The master initialises and monitors the connection to the slave.
 As long as the master exists, it tries to connect to the slave.
 
+Beware: the master must have a c2c_udp_ip value that permits the distant
+cloonix to send back udp packets.
+
 
 a2b
 ---
 Configurable to create shaping or delay or loss in the packets going
 from A to B and same for packets going from B to A.
 
+
 phy
 ---
 Used to bring a host physical ethernet interface into the cloonix
 namespace, the item when within the cloonix namespace can be connected
 to a lan and through it to another cloonix item.
+
 Beware: The phy item in cloonix represents real interfaces of the host
 machine, the command to use this phy item in cloonix makes an interface dive
-into the cloonix net namespace.
+into the cloonix net namespace if you use the **absorb** type.
 As a consequence this command takes the interface out from the list of
 host interfaces.
 
-For example, in my host there is an interface named enp6s0, the command:
-*"cloonix_cli nemo add phy enp6s0"* takes out that interface from the host
-default namespace and puts it in the "cloonix_nemo" namespace.
-This interface is visible in its new namespace with the command:
-*"sudo ip netns exec cloonix_nemo ip link"*.
+For example, in my host there is an interface named enp6s0, the command::
+
+  *cloonix_cli nemo add phy enp6s0 absorb*
+
+takes out that interface from the host default namespace and puts it in
+the "cloonix_nemo" namespace.  This interface is visible in its new
+namespace with the command::
+
+  *sudo ip netns exec cloonix_nemo ip link*
+
+Another way to enter the namespace where the interface is::
+
+  ps aux | grep cloonix-ovsdb-server | grep nemo | awk "{print \$2}"
+  14030
+  sudo nsenter --net=/proc/14030/ns/net
+
+Once in the net namespace of the ovs sever, you should see the interface.
+It is important to note that for an absobed interface the suffix **_0**
+is added for later use of this item in cloonix, this is because of the
+other type of physical ethernet interface, the **macvlan** that can take
+the same name but exist in more than one instance.
+
+This means that to attach the phy to a lan, you must do::
+
+  cloonix_cli nemo add lan enp6s0_0 0 lanx
+
+This means also that to erase the phy from cloonix and put it back into the
+main namespace you must do::
+
+  cloonix_cli nemo del sat enp6s0_0
+
+Now, for the **macvlan**, the creation is done as follows::
+
+ *cloonix_cli nemo add phy enp6s0 macvlan*
+
+The suffix for the macvlan depends on its rank of creation, the first one
+will be with suffix **_1**, in our case, that gives enp6s0_1.
+
+The macvlan does not absorb the interface, it creates an instance in
+cloonix with its own mac, thus you can share a physical interface as
+if it were vlans.
+
+
+
 
 

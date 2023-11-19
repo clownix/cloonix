@@ -21,6 +21,8 @@ project('cloonix-ovs-drv', 'c')
 
 cflags =  ['-mtune=generic']
 cflags += ['-fno-stack-protector']
+cflags += ['-Wno-format-overflow']
+cflags += ['-Wno-format-truncation']
 cflags += ['-fPIC']
 cflags += ['-DALLOW_EXPERIMENTAL_API']
 

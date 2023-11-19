@@ -75,7 +75,6 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
         {
         KERR("%s %s", topo->cnt[i].name, ref->cnt[i].name);
         KERR("%s %s", topo->cnt[i].image, ref->cnt[i].image);
-        KERR("%s %s", topo->cnt[i].customer_launch, ref->cnt[i].customer_launch);
         KERR("%s %s", topo->cnt[i].startup_env, ref->cnt[i].startup_env);
         KERR("%d %d", topo->cnt[i].nb_tot_eth, ref->cnt[i].nb_tot_eth);
 for(j=0; j<topo->cnt[i].nb_tot_eth; j++)

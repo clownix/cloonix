@@ -66,10 +66,10 @@ static void process_msg_from_parent(char *line, char *respb)
 {
   char *bin = g_ovs_bin;
   char *db = g_ovs_dir;
-  int num;
   char lan[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   char vhost[MAX_NAME_LEN];
+  int num;
   memset(respb, 0, MAX_PATH_LEN);
 
   if (!mycmp(line,

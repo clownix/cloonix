@@ -1,9 +1,9 @@
 #!/bin/sh
-
+set +e
 /mnt/cloonix_config_fs/cloonix-agent
 /mnt/cloonix_config_fs/cloonix-dropbear-sshd
-
-__CUSTOMER_LAUNCHER_SCRIPT__
-
-sleep 7777d
+/mnt/cloonix_config_fs/crun_init_user.sh
+while [ 1 ]; do
+  sleep 3600
+done
 

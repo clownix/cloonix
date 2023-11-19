@@ -1,57 +1,16 @@
 #!/bin/bash
 set -e
-
-CLOONIX_CONFIG="/usr/libexec/cloonix/common/etc/cloonix.cfg"
-if [ ! -f $CLOONIX_CONFIG ]; then
-  echo "ERROR: $CLOONIX_CONFIG not found"
+if [ 2 -gt ${#} ]; then
+  echo  cloonix_name and vm_name needed as parameter.
   exit 1
 fi
-BIN_ICE="/usr/libexec/cloonix/client/cloonix-spicy"
-if [ ! -x $BIN_ICE ]; then
-  echo "ERROR: $BIN_ICE not found"
-  exit 1
-fi
-LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
-if (( ${#} < 1 )); then
-  echo
-  echo "$0 <net> <vm_name>"
-  echo
-  echo  cloonix_name needed as parameter.
-  echo $LIST
-  exit 1
-fi
+NSH="/usr/libexec/cloonix/client/cloonix-hide-dirs"
 cloonix_name=$1
-found=no
-for i in $LIST ; do
-  if [ "$cloonix_name" == "$i" ]; then
-    found=yes
-  fi
-done
-
-if [ "$found" == "no" ]; then
-  echo "ERROR: $cloonix_name not found in $CLOONIX_CONFIG"
-  echo $LIST
-  exit 1
-fi
-
-
-LINE_CLOONIX_CONFIG=$(cat $CLOONIX_CONFIG)
-LINE_CLOONIX_CONFIG=$(echo $LINE_CLOONIX_CONFIG)
-cloonix_info="${LINE_CLOONIX_CONFIG##*CLOONIX_NET: $cloonix_name \{}"
-cloonix_info="${cloonix_info%%\}*}"
-
-ip=$(echo $cloonix_info |awk '{print $2}')
-port=$(echo $cloonix_info |awk '{print $4}')
-passwd=$(echo $cloonix_info |awk '{print $6}')
-
-
-ID=$(cloonix_cli $cloonix_name dmp |grep "^$2 vm_id:" | awk '{print $3}')
+vm_name=$2
+ID=$(cloonix_cli $cloonix_name dmp |grep "^$vm_name vm_id:" | awk '{print $3}')
 if [ -z $ID ]; then
-  echo Bad param: $2
+  echo BAD PARAM, either $cloonix_name or $vm_name
   exit 1
 fi
-
-source /usr/libexec/cloonix/common/etc/cloonix_exports
-
-${BIN_ICE} --title=${1}/${2} -d ${ip}:${port} -c /var/lib/cloonix/${cloonix_name}/vm/vm${ID}/spice_sock -w ${passwd} &
+${NSH} "ice" ${cloonix_name} ${vm_name} ${ID}
 

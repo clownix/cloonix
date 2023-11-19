@@ -38,6 +38,8 @@
 #include "rxtx.h"
 #include "tun_tap.h"
 #include "sched.h"
+#include "circle.h"
+#include "replace.h"
 
 
 
@@ -109,6 +111,63 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int config_replace(char *line, int llid, int tid, char *resp,
+                          int cli_llid, int cli_tid, char *name)
+{
+  int dir, result = -1;
+  unsigned char t[4];
+  unsigned char s[4];
+  if (result && (!strncmp(line, "replace_ipdst", strlen("replace_ipdst"))))
+    {
+    if (sscanf(line,
+        "replace_ipdst dir=%d %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
+         &dir, &(t[0]), &(t[1]), &(t[2]), &(t[3]),
+         &(s[0]), &(s[1]), &(s[2]), &(s[3])) == 9)
+      {
+      result = 0;
+      snprintf(resp, MAX_PATH_LEN-1,
+               "a2b_param_config_ok %d %d %s", cli_llid, cli_tid, name);
+      replace_cnf(dir, "replace_ipdst", t, s);
+      }
+    }
+  if (result && (!strncmp(line, "replace_ipsrc", strlen("replace_ipsrc"))))
+    {
+    if (sscanf(line,
+        "replace_ipsrc dir=%d %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
+         &dir, &(t[0]), &(t[1]), &(t[2]), &(t[3]),
+         &(s[0]), &(s[1]), &(s[2]), &(s[3])) == 9)
+      {
+      result = 0;
+      snprintf(resp, MAX_PATH_LEN-1,
+               "a2b_param_config_ok %d %d %s", cli_llid, cli_tid, name);
+      replace_cnf(dir, "replace_ipsrc", t, s);
+      }
+    }
+  if (result && (!strncmp(line, "unreplace_ipdst", strlen("unreplace_ipdst"))))
+    {
+    if (sscanf(line, "unreplace_ipdst dir=%d", &dir) == 1)
+      {
+      result = 0;
+      snprintf(resp, MAX_PATH_LEN-1,
+               "a2b_param_config_ok %d %d %s", cli_llid, cli_tid, name);
+      replace_cnf(dir, "unreplace_ipdst", NULL, NULL);
+      }
+    }
+  if (result && (!strncmp(line, "unreplace_ipsrc", strlen("unreplace_ipsrc"))))
+    {
+    if (sscanf(line, "unreplace_ipsrc dir=%d", &dir) == 1)
+      {
+      result = 0;
+      snprintf(resp, MAX_PATH_LEN-1,
+               "a2b_param_config_ok %d %d %s", cli_llid, cli_tid, name);
+      replace_cnf(dir, "unreplace_ipsrc", NULL, NULL);
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   char resp[MAX_PATH_LEN];
@@ -134,23 +193,35 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   else if (sscanf(line,
   "a2b_param_config %d %d %s", &cli_llid, &cli_tid, name) == 3)
     {
+    snprintf(resp, MAX_PATH_LEN-1, "a2b_param_config_ko %d %d %s",
+             cli_llid, cli_tid, name);
     msg = strstr(line, "dir_cmd_val=");
-    if (!msg)
-      KERR("ERROR %s %s", g_net_name, line);
-    else
+    if (msg)
       {
       msg += strlen("dir_cmd_val=");
-      if (sscanf(msg, "dir=%d cmd=%s val=%d", &dir, cmd, &val) == 3) 
+      if (sscanf(msg, "dir=%d cmd=%s val=%d", &dir, cmd, &val) == 3)
         {
         snprintf(resp, MAX_PATH_LEN-1,
-                 "a2b_param_config_ok %d %d %s",cli_llid,cli_tid,name);
+                 "a2b_param_config_ok %d %d %s",
+                 cli_llid, cli_tid, name);
         sched_cnf(dir, cmd, val);
         }
-      else
-        snprintf(resp, MAX_PATH_LEN-1,
-                 "a2b_param_config_ko %d %d %s",cli_llid,cli_tid,name);
-      rpct_send_sigdiag_msg(llid, tid, resp);
       }
+    else
+      {
+      msg = strstr(line, "unreplace_ipdst");
+      if (!msg)
+        msg = strstr(line, "unreplace_ipsrc");
+      if (!msg)
+        msg = strstr(line, "replace_ipdst");
+      if (!msg)
+        msg = strstr(line, "replace_ipsrc");
+      if (!msg)
+        KERR("ERROR %s", line);
+      else if (config_replace(msg,llid,tid,resp,cli_llid,cli_tid,name))
+        KERR("ERROR %s", line);
+      }
+    rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else
     KERR("ERROR %s %s", g_net_name, line);

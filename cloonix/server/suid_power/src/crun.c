@@ -33,7 +33,7 @@
 #include "rpc_clownix.h"
 #include "crun_utils.h"
 #include "crun.h"
-#include "loop_img.h"
+#include "tar_img.h"
 
 int get_cloonix_rank(void);
 
@@ -45,7 +45,6 @@ typedef struct t_crun
   char bulk[MAX_PATH_LEN];
   char image[MAX_NAME_LEN];
   char cnt_dir[MAX_PATH_LEN];
-  char customer_launch[MAX_PATH_LEN];
   char agent_dir[MAX_PATH_LEN];
   char rootfs_path[MAX_PATH_LEN];
   char nspace_path[MAX_PATH_LEN];
@@ -82,8 +81,7 @@ static t_crun *find_crun(char *name)
 /****************************************************************************/
 static void alloc_crun(char *name, char *bulk, char *image, int nb_eth,
                             char *nspace, int cloonix_rank,
-                            int vm_id, char *cnt_dir, char *agent_dir,
-                            char *customer_launch)
+                            int vm_id, char *cnt_dir, char *agent_dir)
 {
   t_crun *cur = (t_crun *) malloc(sizeof(t_crun));
   memset(cur, 0, sizeof(t_crun));
@@ -91,7 +89,6 @@ static void alloc_crun(char *name, char *bulk, char *image, int nb_eth,
   strncpy(cur->bulk, bulk, MAX_PATH_LEN-1);
   strncpy(cur->image, image, MAX_NAME_LEN-1);
   strncpy(cur->cnt_dir, cnt_dir, MAX_PATH_LEN-1);
-  strncpy(cur->customer_launch, customer_launch, MAX_PATH_LEN-1);
   strncpy(cur->agent_dir, agent_dir, MAX_PATH_LEN-1);
   strncpy(cur->nspace, nspace, MAX_NAME_LEN-1);
   snprintf(cur->nspace_path, MAX_PATH_LEN-1, "%s%s", PATH_NAMESPACE, nspace);
@@ -157,14 +154,18 @@ static void unlink_sub_dir_files(char *dirname)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void unlink_all_files(char *cnt_dir, char *name, char *image)
+static void unlink_all_files(char *cnt_dir, char *name, char *image, char *bulk)
 {
   char pth[MAX_PATH_LEN];
   memset(pth, 0, MAX_PATH_LEN);
   snprintf(pth, MAX_PATH_LEN-1, "%s/%s", cnt_dir, name);
   unlink_sub_dir_files(pth);
   snprintf(pth, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
-  unlink_sub_dir_files(pth);
+  if (!tar_img_exists(bulk, image))
+    {
+    if (rmdir(pth))
+      KERR("ERROR Dir: %s could not be deleted\n", pth);
+    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -181,7 +182,7 @@ static void urgent_destroy_crun(t_crun *cur)
   crun_utils_delete_overlay(name, cnt_dir, cur->bulk,
                             cur->image, cur->is_persistent);
   free_crun(cur);
-  unlink_all_files(cnt_dir, name, cur->image);
+  unlink_all_files(cnt_dir, name, cur->image, cur->bulk);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -225,8 +226,7 @@ void crun_recv_poldiag_msg(int llid, int tid, char *line)
 /****************************************************************************/
 static void create_net(char *line, char *resp, char *name, char *bulk,
                        char *image, int nb_eth, int cloonix_rank,
-                       int vm_id, char *cnt_dir, char *agent_dir,
-                       char *customer_launch)
+                       int vm_id, char *cnt_dir, char *agent_dir)
 {
   char nspace[MAX_NAME_LEN];
   char bulk_image[MAX_PATH_LEN];
@@ -247,8 +247,7 @@ static void create_net(char *line, char *resp, char *name, char *bulk,
   else
     {
     alloc_crun(name, bulk, image, nb_eth, nspace,
-                    cloonix_rank, vm_id, cnt_dir, agent_dir,
-                    customer_launch);
+                    cloonix_rank, vm_id, cnt_dir, agent_dir);
     memset(resp, 0, MAX_PATH_LEN);
     }
 }
@@ -277,8 +276,7 @@ static void create_net_eth(char *line, char *resp, char *name,
         {
         if (crun_utils_create_net(cur->image, name, cur->cnt_dir,
                                  cur->nspace, cur->cloonix_rank, cur->vm_id,
-                                 cur->nb_eth, cur->eth_mac, cur->agent_dir,
-                                 cur->customer_launch))
+                                 cur->nb_eth, cur->eth_mac, cur->agent_dir))
           {
           KERR("ERROR %s", name);
           snprintf(resp, MAX_PATH_LEN-1,
@@ -343,7 +341,7 @@ static void create_config_json(char *line, char *resp,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_loop_img(char *line, char *resp,
+static void create_tar_img(char *line, char *resp,
                             char *name, int is_persistent)
 {
   t_crun *cur;
@@ -352,20 +350,20 @@ static void create_loop_img(char *line, char *resp,
     {
     KERR("ERROR %s", line);
     snprintf(resp, MAX_PATH_LEN-1,
-             "cloonsuid_crun_create_loop_img_resp_ko name=%s", name);
+             "cloonsuid_crun_create_tar_img_resp_ko name=%s", name);
     }
   else
     {
-    if (loop_img_add(name, cur->bulk, cur->image, cur->cnt_dir, is_persistent))
+    if (tar_img_add(name, cur->bulk, cur->image, cur->cnt_dir, is_persistent))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
-               "cloonsuid_crun_create_loop_img_resp_ko name=%s", name);
+               "cloonsuid_crun_create_tar_img_resp_ko name=%s", name);
       }
     else
       {
       snprintf(resp, MAX_PATH_LEN-1,
-               "cloonsuid_crun_create_loop_img_resp_ok name=%s", name);
+               "cloonsuid_crun_create_tar_img_resp_ok name=%s", name);
       }
     }
 }
@@ -378,7 +376,7 @@ static void create_overlay(char *line, char *resp,
   t_crun *cur;
   char path[MAX_PATH_LEN];
   char *cnt_dir;
-  char *loop_img;
+  char *tar_img;
   cur = find_crun(name);
   if (cur == NULL)
     {
@@ -388,8 +386,8 @@ static void create_overlay(char *line, char *resp,
     }
   else 
     {
-    loop_img = loop_img_get(name, cur->bulk, cur->image);
-    if (loop_img == NULL)
+    tar_img = tar_img_get(name, cur->bulk, cur->image);
+    if (tar_img == NULL)
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -400,7 +398,7 @@ static void create_overlay(char *line, char *resp,
       cnt_dir = cur->cnt_dir;
       memset(path, 0, MAX_PATH_LEN);
       snprintf(path, MAX_PATH_LEN-1, "%s/%s", cnt_dir, cur->name);
-      if (crun_utils_create_overlay(path, loop_img, is_persistent))
+      if (crun_utils_create_overlay(path, tar_img, is_persistent))
         {
         KERR("ERROR %s", line);
         snprintf(resp, MAX_PATH_LEN-1,
@@ -479,7 +477,7 @@ static void delete_crun(char *line, char *resp, char *nm)
     snprintf(resp, MAX_PATH_LEN-1,
              "cloonsuid_crun_delete_resp_ok name=%s", nm);
     free_crun(cur);
-    unlink_all_files(cnt_dir, name, cur->image);
+    unlink_all_files(cnt_dir, name, cur->image, cur->bulk);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -494,7 +492,6 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
   char resp[MAX_PATH_LEN];
   char cnt_dir[MAX_PATH_LEN];
   char agent_dir[MAX_PATH_LEN];
-  char customer_launch[MAX_PATH_LEN];
   char mac[6], *ptr;
   int len, num, nb_eth, cloonix_rank, vm_id, is_persistent;
 
@@ -507,14 +504,7 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
   name, bulk, image, &nb_eth, &vm_id,
   cnt_dir, agent_dir, &is_persistent) == 8)
     {
-    ptr = strstr(line, "customer_launch=");
-    if (ptr == NULL)
-      {
-      KERR("ERROR %s", line);
-      snprintf(resp, MAX_PATH_LEN-1,
-               "cloonsuid_crun_create_net_resp_ko name=%s", name);
-      } 
-    else if (loop_img_check(bulk, image, is_persistent))
+    if (tar_img_check(bulk, image, is_persistent))
       {
       KERR("ERROR FILE SYSTEM BUSY (persistent is unique) %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -522,11 +512,8 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
       } 
     else
       {
-      len = strlen("customer_launch=");
-      strncpy(customer_launch, ptr+len, MAX_PATH_LEN-1); 
       create_net(line, resp, name, bulk, image, nb_eth,
-                 cloonix_rank, vm_id, cnt_dir, agent_dir,
-                 customer_launch);
+                 cloonix_rank, vm_id, cnt_dir, agent_dir);
       }
     }
   else if (sscanf(line,
@@ -543,10 +530,10 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
     create_config_json(line, resp, name, is_persistent);
     }
   else if (sscanf(line,
-  "cloonsuid_crun_create_loop_img name=%s is_persistent=%d",
+  "cloonsuid_crun_create_tar_img name=%s is_persistent=%d",
   name, &is_persistent) == 2)
     {
-    create_loop_img(line, resp, name, is_persistent);
+    create_tar_img(line, resp, name, is_persistent);
     }
   else if (sscanf(line,
   "cloonsuid_crun_create_overlay name=%s is_persistent=%d",
@@ -575,7 +562,6 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
       urgent_destroy_crun(cur);
       }
     }
-
   else
     KERR("ERROR %s", line);
   if (strlen(resp))
@@ -603,6 +589,6 @@ void crun_init(char *var_root)
 {
   g_head_crun = NULL;
   crun_utils_init(var_root);
-  loop_img_init();
+  tar_img_init();
 }
 /*--------------------------------------------------------------------------*/

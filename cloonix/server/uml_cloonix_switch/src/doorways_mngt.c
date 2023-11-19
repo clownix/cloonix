@@ -216,7 +216,7 @@ static void monitoring_doorways(void *data)
     {
     event_print("DOORWAY CONTACT LOSS");
     KERR("TRY KILLING DOORWAYS");
-    if (!kill(old_nb_pid_resp, SIGKILL));
+    if (!kill(old_nb_pid_resp, SIGKILL))
       KERR("NO SUCCESS KILLING DOORWAYS");
     }
   g_abs_beat_timer = 0;

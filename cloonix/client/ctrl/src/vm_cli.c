@@ -61,11 +61,11 @@ void help_add_vm_kvm(char *line)
   printf("\n\t for the persistent option, if set, those writes are persistent after shutwown.\n\n");
   printf("\n\nexample:\n\n");
 
-  printf("\n%s vm_name ram=2000 cpu=4 eth=sss bullseye.qcow2\n", line);
+  printf("\n%s vm_name ram=2000 cpu=4 eth=sss bookworm.qcow2\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s vm_name ram=2000 cpu=4 eth=ddd bullseye.qcow2\n", line);
+  printf("\n%s vm_name ram=2000 cpu=4 eth=ddd bookworm.qcow2\n", line);
   printf("This will give 3 eth based on dpdk without spy\n");
-  printf("\n%s vm_name ram=2000 cpu=4 eth=dsd bullseye.qcow2 --persistent\n", line);
+  printf("\n%s vm_name ram=2000 cpu=4 eth=dsd bookworm.qcow2 --persistent\n", line);
   printf("This will give 3 eth, eth0 is dpdk, eth1 is spyable eth2 is dpdk\n");
   printf("\n\n\n");
 }

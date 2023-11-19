@@ -42,7 +42,7 @@
 #include "rpc_clownix.h"
 #include "crun.h"
 #include "crun_utils.h"
-#include "dockir.h"
+#include "podman.h"
 #include "net_phy.h"
 
 /*--------------------------------------------------------------------------*/
@@ -282,20 +282,27 @@ static int check_and_set_uid(void)
 {
   int result = -1;
   uid_t uid;
-  seteuid(0);
-  setegid(0);
-  uid = geteuid();
-  if (uid == 0)
+  if ((getuid() == 0) && getgid() == 0)
     {
     result = 0;
-    umask(0000);
-    if (setuid(0))
-      KOUT(" ");
-    if (setgid(0))
-      KOUT(" ");
     }
   else
-    KERR("ERROR uid");
+    {
+    seteuid(0);
+    setegid(0);
+    uid = geteuid();
+    if (uid == 0)
+      {
+      result = 0;
+      umask(0000);
+      if (setuid(0))
+        KOUT(" ");
+      if (setgid(0))
+        KOUT(" ");
+      }
+    else
+      KERR("ERROR uid %d", uid);
+    }
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -359,7 +366,7 @@ static void heartbeat (int delta)
     count_ticks_blkd = 0;
     automate_pid_monitor();
     crun_beat(g_llid);
-    dockir_beat(g_llid);
+    podman_beat(g_llid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -372,7 +379,7 @@ static void req_kill_clean_all(void)
   int pid;
   t_vmon *next, *cur = g_head_vmon;
   crun_kill_all();
-  dockir_kill_all();
+  podman_kill_all();
   while(cur)
     {
     next = cur->next;
@@ -427,7 +434,7 @@ static void qemu_launch(char *name, int vm_id, int argc,
     *ptr = ' ';
     ptr = strchr(ptr, '"');
     } 
-  result = execute_cmd(ptr_start+1, SYNCHRO);
+  result = execute_cmd(ptr_start+1);
   if (result)
     {
     snprintf(resp, MAX_PATH_LEN-1,
@@ -473,9 +480,9 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
     crun_recv_poldiag_msg(llid, tid, line);
     }
   else if (!strncmp(line,
-  "cloonsuid_docker", strlen("cloonsuid_docker")))
+  "cloonsuid_podman", strlen("cloonsuid_podman")))
     {
-    dockir_recv_poldiag_msg(llid, tid, line);
+    podman_recv_poldiag_msg(llid, tid, line);
     }
   else if (!strncmp(line,
   "cloonsuid_req_phy", strlen("cloonsuid_req_phy")))
@@ -572,9 +579,9 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     crun_recv_sigdiag_msg(llid, tid, line);
     }
   else if (!strncmp(line,
-  "cloonsuid_docker", strlen("cloonsuid_docker")))
+  "cloonsuid_podman", strlen("cloonsuid_podman")))
     {
-    dockir_recv_sigdiag_msg(llid, tid, line);
+    podman_recv_sigdiag_msg(llid, tid, line);
     }
   else
     KERR("ERROR %s %s", g_network_name, line);
@@ -678,7 +685,7 @@ int main (int argc, char *argv[])
     msg_mngt_heartbeat_init(heartbeat);
     string_server_unix(ctrl_path, connect_from_ctrl_client, "ctrl");
     daemon(0,0);
-    dockir_init();
+    podman_init();
     net_phy_init();
     seteuid(getuid());
     cloonix_set_pid(getpid());

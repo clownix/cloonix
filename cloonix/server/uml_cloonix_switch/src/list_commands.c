@@ -80,7 +80,7 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
   int result = offset;
   t_list_commands *list = &(hlist[offset]);
   char eth_desc[MAX_NAME_LEN];
-  char *mc;
+  unsigned char *mc;
   if (can_increment_index(result))
     {
     eth_tab_to_str(eth_desc, kvm->nb_tot_eth, kvm->eth_table);
@@ -118,6 +118,79 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
                            mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);
         }
       }
+    result += 1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int build_add_cnt_cmd(int offset, t_list_commands *hlist,
+                             t_topo_cnt *cnt)
+{
+  int i, len = 0;
+  int result = offset;
+  t_list_commands *list = &(hlist[offset]);
+  char eth_desc[MAX_NAME_LEN];
+  char shortbrand[MAX_NAME_LEN];
+  unsigned char *mc;
+  if (can_increment_index(result))
+    {
+    eth_tab_to_str(eth_desc, cnt->nb_tot_eth, cnt->eth_table);
+    if (!strcmp(cnt->brandtype, "crun"))
+      strcpy(shortbrand, "cru");
+    else if (!strcmp(cnt->brandtype, "podman"))
+      strcpy(shortbrand, "pod");
+    else
+      KOUT("ERROR %s", cnt->brandtype);
+    len += sprintf(list->cmd + len, "cloonix_cli %s add %s %s eth=%s %s",
+            cfg_get_cloonix_name(), shortbrand, cnt->name, eth_desc, cnt->image);
+    if (cnt->is_persistent)
+      len += sprintf(list->cmd + len, " --persistent");
+    for (i=0; i < cnt->nb_tot_eth; i++)
+      {
+      if (cnt->eth_table[i].randmac == 0)
+        {
+        mc = cnt->eth_table[i].mac_addr;
+        len += sprintf(list->cmd + len,
+        " --mac_addr=eth%d:%02x:%02x:%02x:%02x:%02x:%02x", i,
+                           mc[0]&0xff, mc[1]&0xff, mc[2]&0xff,
+                           mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);
+        }
+      }
+    result += 1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+static int build_add_sat_cmd(int offset, t_list_commands *hlist,
+                             char *sat_type, char *name)
+{
+  int len = 0, result = offset;;
+  t_list_commands *list = &(hlist[offset]);
+  if (can_increment_index(result))
+    {
+    len += sprintf(list->cmd + len, "cloonix_cli %s add %s %s", 
+                   cfg_get_cloonix_name(), sat_type, name);
+    result += 1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int build_add_c2c_cmd(int offset, t_list_commands *hlist, 
+                             char *name, char *dist_cloon)
+{
+  int len = 0, result = offset;;
+  t_list_commands *list = &(hlist[offset]);
+  if (can_increment_index(result))
+    {
+    len += sprintf(list->cmd + len, "cloonix_cli %s add c2c %s %s",
+                   cfg_get_cloonix_name(), name, dist_cloon);
     result += 1;
     }
   return result;
@@ -299,48 +372,6 @@ static int build_add_lan_a2b_cmd(int offset, t_list_commands *hlist)
         } 
       } 
     cur = cur->next;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int build_add_cnt_cmd(int offset, t_list_commands *hlist,
-                             t_topo_cnt *cnt)
-{
-  int i, len = 0;
-  int result = offset;
-  t_list_commands *list = &(hlist[offset]);
-  char eth_desc[MAX_NAME_LEN];
-  char shortbrand[MAX_NAME_LEN];
-  char *mc;
-  if (can_increment_index(result))
-    {
-    eth_tab_to_str(eth_desc, cnt->nb_tot_eth, cnt->eth_table);
-    if (!strcmp(cnt->brandtype, "crun"))
-      strcpy(shortbrand, "cru");
-    else if (!strcmp(cnt->brandtype, "docker"))
-      strcpy(shortbrand, "doc");
-    else if (!strcmp(cnt->brandtype, "podman"))
-      strcpy(shortbrand, "pod");
-    else
-      KOUT("ERROR %s", cnt->brandtype);
-    len += sprintf(list->cmd + len, "cloonix_cli %s add %s %s eth=%s %s",
-            cfg_get_cloonix_name(), shortbrand, cnt->name, eth_desc, cnt->image);
-    if (cnt->is_persistent)
-      len += sprintf(list->cmd + len, " --persistent");
-    for (i=0; i < cnt->nb_tot_eth; i++)
-      {
-      if (cnt->eth_table[i].randmac == 0)
-        {
-        mc = cnt->eth_table[i].mac_addr;
-        len += sprintf(list->cmd + len,
-        " --mac_addr=eth%d:%02x:%02x:%02x:%02x:%02x:%02x", i,
-                           mc[0]&0xff, mc[1]&0xff, mc[2]&0xff,
-                           mc[3]&0xff, mc[4]&0xff, mc[5]&0xff);
-        }
-      }
-    result += 1;
     }
   return result;
 }
@@ -574,10 +605,16 @@ static int produce_list_layout_sat_cmd(int offset, t_list_commands *hlist,
 int produce_list_commands(t_list_commands *hlist, int is_layout)
 {
   int i, nb_vm, nb_cnt, result = 0;
+  int nb_nat, nb_a2b, nb_c2c, nb_tap, nb_phy;
   t_vm  *vm  = cfg_get_first_vm(&nb_vm);
   t_cnt *cnt = cnt_get_first_cnt(&nb_cnt);
   int go, width, height, cx, cy, cw, ch;
   t_layout_xml *layout_xml;
+  t_ovs_nat *nat = ovs_nat_get_first(&nb_nat);
+  t_ovs_a2b *a2b = ovs_a2b_get_first(&nb_a2b);
+  t_ovs_c2c *c2c = ovs_c2c_get_first(&nb_c2c);
+  t_ovs_tap *tap = ovs_tap_get_first(&nb_tap);
+  t_ovs_phy *phy = ovs_phy_get_first(&nb_phy);
 
   if (is_layout == 0)
     {
@@ -590,6 +627,32 @@ int produce_list_commands(t_list_commands *hlist, int is_layout)
       {
       result = build_add_cnt_cmd(result, hlist, &(cnt->cnt));
       cnt = cnt->next;
+      }
+    while(tap)
+      {
+      result = build_add_sat_cmd(result, hlist, "tap", tap->name);
+      tap = tap->next;
+      }
+    while(phy)
+      {
+      result = build_add_sat_cmd(result, hlist, "phy", phy->name);
+      phy = phy->next;
+      }
+    while(nat)
+      {
+      result = build_add_sat_cmd(result, hlist, "nat", nat->name);
+      nat = nat->next;
+      }
+    while(a2b)
+      {
+      result = build_add_sat_cmd(result, hlist, "a2b", a2b->name);
+      a2b = a2b->next;
+      }
+    while(c2c)
+      {
+      result = build_add_c2c_cmd(result, hlist, c2c->topo.name,
+                                 c2c->topo.dist_cloon);
+      c2c = c2c->next;
       }
     result = build_add_lan_kvm_cmd(result, hlist);
     result = build_add_lan_cnt_cmd(result, hlist);

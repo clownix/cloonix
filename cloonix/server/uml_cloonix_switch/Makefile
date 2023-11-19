@@ -10,7 +10,7 @@ UTILS=${CLOONIX_COMMON}/lib_utils/
 OBJ_DIR=obj/
 VPATH = src
 EXE = cloonix-main-server
-WARNINGS=-Wall
+WARNINGS=-Wall -Wno-format-truncation -Wno-format-overflow
 
 SRC = \
       uml_clownix_switch.c \
@@ -53,9 +53,10 @@ SRC = \
       dispatch_diag_msg.c \
       cnt.c \
       crun.c \
-      docker.c \
-      docker_images.c \
+      podman.c \
+      podman_images.c \
       base64.c \
+      mactopo.c \
       server_stub.c
 
 INCLUDES= -I./src \

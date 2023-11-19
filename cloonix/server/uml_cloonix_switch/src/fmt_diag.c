@@ -101,26 +101,28 @@ int fmt_tx_del_tap(int tid, char *name, char *vhost)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_add_phy(int tid, char *name, char *vhost, char *mac)
+int fmt_tx_add_phy(int tid, char *name, char *vhost, char *mac, int num_macvlan)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "ovs_add_phy name=%s vhost=%s mac=%s", name, vhost, mac);
+  "ovs_add_phy name=%s vhost=%s mac=%s num_macvlan=%d",
+  name, vhost, mac, num_macvlan);
   result = ovs_try_send_sigdiag_msg(tid, cmd);
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fmt_tx_del_phy(int tid, char *name, char *vhost)
+int fmt_tx_del_phy(int tid, char *name, char *vhost, int num_macvlan)
 {
   int result;
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "ovs_del_phy name=%s vhost=%s", name, vhost);
+  "ovs_del_phy name=%s vhost=%s num_macvlan=%d",
+  name, vhost, num_macvlan);
   result = ovs_try_send_sigdiag_msg(tid, cmd);
   return result;
 }
@@ -161,6 +163,19 @@ int fmt_tx_add_lan_endp(int tid, char *name, int num, char *vhost, char *lan)
   snprintf(cmd, MAX_PATH_LEN-1,
   "ovs_add_lan_endp name=%s num=%d vhost=%s lan=%s", name, num, vhost, lan);
   result = ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fmt_tx_macvlan_mac(int type, char *macv, char *nmac)
+{
+  int result;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "ovs_change_macvlan_mac type=%d macv=%s nmac=%s", type, macv, nmac);
+  result = ovs_try_send_sigdiag_msg(0, cmd);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -215,17 +230,21 @@ void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     msg_ack_tap(tid, 1, 0, name, NULL, NULL);
 
   else if (sscanf(line,
-  "OK ovs_add_phy name=%s vhost=%s", name, vhost) == 2)
-    msg_ack_phy(tid, 0, 1, name, vhost);
+  "OK ovs_add_phy name=%s vhost=%s mac=%s num_macvlan=%d",
+  name, vhost, mac, &num) == 4)
+    msg_ack_phy(tid, 0, 1, name, num, vhost);
   else if (sscanf(line,
-  "KO ovs_add_phy name=%s vhost=%s", name, vhost) == 2)
-    msg_ack_phy(tid, 1, 1, name, vhost);
+  "KO ovs_add_phy name=%s vhost=%s mac=%s num_macvlan=%d",
+  name, vhost, mac, &num) == 4)
+    msg_ack_phy(tid, 1, 1, name, num, vhost);
   else if (sscanf(line,
-  "OK ovs_del_phy name=%s", name) == 1)
-    msg_ack_phy(tid, 0, 0, name, NULL);
+  "OK ovs_del_phy name=%s vhost=%s num_macvlan=%d",
+  name, vhost, &num) == 3)
+    msg_ack_phy(tid, 0, 0, name, num, vhost);
   else if (sscanf(line,
-  "KO ovs_del_phy name=%s", name) == 1)
-    msg_ack_phy(tid, 1, 0, name, NULL);
+  "KO ovs_del_phy name=%s vhost=%s num_macvlan=%d",
+  name, vhost, &num) == 3)
+    msg_ack_phy(tid, 1, 0, name, num, vhost);
 
   else if (sscanf(line,
   "OK ovs_vhost_up name=%s num=%d vhost=%s", name, &num, vhost) == 3)

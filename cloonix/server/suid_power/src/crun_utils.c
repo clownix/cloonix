@@ -33,7 +33,7 @@
 #include "io_clownix.h"
 #include "config_json.h"
 #include "crun.h"
-#include "loop_img.h"
+#include "tar_img.h"
 #include "crun_utils.h"
 
 #define MAX_ARGS_POPEN 100
@@ -189,20 +189,11 @@ static FILE *lio_popen(char *argv[], int *child_pid)
 }
 /*---------------------------------------------------------------------------*/
 
-// /usr/libexec/cloonix/server/cloonix-suid-power
-// /usr/libexec/cloonix/server/cloonix-ext4fuse
-// /usr/libexec/cloonix/server/cloonix-fuse-overlayfs
-// /usr/libexec/cloonix/server/cloonix-crun
-
-
 /*****************************************************************************/
 FILE *cmd_lio_popen(char *cmd, int *child_pid)
 {
-//  char *ptr1, *ptr2;
-//  char *ptr[MAX_ARGS_POPEN];
   static char *argv[MAX_ARGS_POPEN];
   char cpcmd[MAX_CMD_POPEN];
-//  int nb = 0;
   FILE *iop = NULL;
   if (!cmd)
     KOUT("ERROR");
@@ -212,19 +203,6 @@ FILE *cmd_lio_popen(char *cmd, int *child_pid)
     KOUT("ERROR %lu", strlen(cmd));
   strncpy(cpcmd, cmd, MAX_CMD_POPEN - 1);
   strcat(cpcmd, " 2>&1");
-/*
-    ptr1 = cpcmd;
-    ptr[nb++] = ptr1;
-    ptr2 = strchr(ptr1, '|');
-    while(ptr2)
-      {
-      *ptr2 = 0;
-      ptr1 = ptr2 + 1;
-      ptr1 += strspn(ptr1, " ");
-      ptr[nb++] = ptr1;
-      ptr2 = strchr(ptr1, '|');
-      }
-*/
   argv[0] = BASH_BIN;
   argv[1] = "-c";
   argv[2] = cpcmd;
@@ -236,7 +214,7 @@ FILE *cmd_lio_popen(char *cmd, int *child_pid)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int execute_cmd(char *cmd, int synchro)
+int execute_cmd(char *cmd)
 {
   int child_pid, wstatus, result = -1;
   FILE *fp = cmd_lio_popen(cmd, &child_pid);
@@ -244,68 +222,12 @@ int execute_cmd(char *cmd, int synchro)
     KERR("ERROR %s", cmd);
   else
     {
-    if (synchro)
-      {
-      if (force_waitpid(child_pid, &wstatus))
-        KERR("ERROR");
-      result = wstatus;    
-      }
-    else
-      {
-      KOUT("ERROR NOT USED");
-      result = child_pid;
-      }
+    if (force_waitpid(child_pid, &wstatus))
+      KERR("ERROR");
+    result = wstatus;    
     pclose(fp);
     }
   return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static int get_file_len(char *file_name)
-{
-  int result = -1;
-  struct stat statbuf;
-  if (stat(file_name, &statbuf) == 0)
-    result = statbuf.st_size;
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static char *read_whole_file(char *file_name, int *len)
-{
-  char *buf = NULL;
-  int fd, readlen;
-  *len = get_file_len(file_name);
-  if (*len == -1)
-    KERR("ERROR Cannot get size of file %s\n", file_name);
-  else if (*len)
-    {
-    fd = open(file_name, O_RDONLY);
-    if (fd > 0)
-      {
-      buf = (char *) malloc((*len+1) *sizeof(char));
-      readlen = read(fd, buf, *len);
-      if (readlen != *len)
-        {
-        KERR("ERROR Length of file error %s\n", file_name);
-        free(buf);
-        buf = NULL;
-        }
-      else
-        buf[*len] = 0;
-      close (fd);
-      }
-    else
-      KERR("ERROR Cannot open file  %s\n", file_name);
-    }
-  else
-    {
-    buf = (char *) malloc(sizeof(char));
-    buf[0] = 0;
-    }
-  return buf;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -336,73 +258,6 @@ static int write_whole_file(char *file_name, char *buf, int len)
   else
     KERR("ERROR open of file %s", file_name);
   return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void my_cp_and_sed_file(char *dsrc, char *ddst, char *name,
-                               char *customer_launch)
-{
-  char src_file[MAX_PATH_LEN+MAX_NAME_LEN];
-  char dst_file[MAX_PATH_LEN+MAX_NAME_LEN];
-  char cmd[2*MAX_PATH_LEN];
-  struct stat stat_file;
-  int len, len_to_sub, len_to_add;
-  char *buf1, *buf2, *ptr1, *ptr2, *ptr3;
-  snprintf(src_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", dsrc, name);
-  snprintf(dst_file, MAX_PATH_LEN+MAX_NAME_LEN, "%s/%s", ddst, name);
-  src_file[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
-  dst_file[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
-  if (!stat(src_file, &stat_file))
-    {
-    buf1 = read_whole_file(src_file, &len);
-    if (buf1)
-      {
-      unlink(dst_file);
-      memset(cmd, 0, 2*MAX_PATH_LEN);
-      snprintf(cmd, 2*MAX_PATH_LEN-1, "unlink %s", dst_file);
-      log_write_req(cmd);
-      ptr1 = buf1;
-      ptr2 = strstr(ptr1, "__CUSTOMER_LAUNCHER_SCRIPT__");
-      ptr3 = ptr2 + strlen("__CUSTOMER_LAUNCHER_SCRIPT__");
-      if (ptr2 == NULL)
-        {
-        KERR("ERROR: %s %s %s", name, customer_launch, ptr1);
-        if (!write_whole_file(dst_file, buf1, len))
-          chmod(dst_file, stat_file.st_mode);
-        free(buf1);
-        }
-      else
-        {
-        len_to_sub = strlen("__CUSTOMER_LAUNCHER_SCRIPT__");
-        len_to_add = 0;
-        len_to_add = strlen(customer_launch);
-        len -= len_to_sub;
-        len += len_to_add;
-        buf2 = (char *) malloc((len+1) *sizeof(char));
-        memset(buf2, 0, len+1);
-        *ptr2 = 0;
-        if ((strlen(ptr1) + len_to_add + strlen(ptr3)) > len)
-          {
-          KERR("ERROR: %s %lu %d %lu %d", src_file,
-               strlen(ptr1), len_to_add, strlen(ptr3), len);
-          KERR("ERROR: %s %s %s %s", name, customer_launch, ptr1, ptr3);
-          if (!write_whole_file(dst_file, buf1, len))
-            chmod(dst_file, stat_file.st_mode);
-          }
-        else 
-          {
-          strncpy(buf2, ptr1, len-len_to_add);
-          strcat(buf2, customer_launch);
-          strcat(buf2, ptr3);
-          if (!write_whole_file(dst_file, buf2, len))
-            chmod(dst_file, stat_file.st_mode);
-          }
-        free(buf1);
-        free(buf2);
-        }
-      }
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -477,7 +332,7 @@ static int check_mount_does_not_exist(char *path)
   char cmd[2*MAX_PATH_LEN];
   memset(cmd, 0, 2*MAX_PATH_LEN);
   snprintf(cmd,2*MAX_PATH_LEN-1,"%s | %s %s",MOUNT_BIN,GREP_BIN,path);
-  if (execute_cmd(cmd, SYNCHRO))
+  if (execute_cmd(cmd))
     {
     KERR("ERROR %s", cmd);
     result = -1;
@@ -597,21 +452,31 @@ static int create_all_dirs(char *image, char *cnt_dir, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dirs_agent_copy_starter(char *cnt_dir, char *name,
-                             char *agent_dir, char *launch)
+void dirs_agent_copy_starter(char *cnt_dir, char *name, char *agent_dir)
 {
   char path[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
+  char *etc_path="/usr/libexec/cloonix/common/etc";
   char *iso="/usr/libexec/cloonix/server/insider_agents/insider_agent_x86_64.iso";
   memset(path, 0, MAX_PATH_LEN);
   memset(cmd, 0, 2*MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs", cnt_dir, name);
   snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -osirrox on -indev %s -extract / %s",
            OSIRROX_BIN, iso, path); 
-  if (execute_cmd(cmd, SYNCHRO))
+  if (execute_cmd(cmd))
     KERR("ERROR %s", cmd);
-  my_cp_and_sed_file(agent_dir, path, "crun_init_starter.sh", launch);
-  my_cp_and_sed_file(agent_dir, path, "docker_init_starter.sh", launch);
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  snprintf(cmd, 2*MAX_PATH_LEN-1,
+           "cp -f %s/crun_init_user.sh %s/%s/mnt/cloonix_config_fs",
+           etc_path, cnt_dir, name);
+  if (execute_cmd(cmd))
+    KERR("ERROR %s", cmd);
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  snprintf(cmd, 2*MAX_PATH_LEN-1,
+           "cp -f %s/podman_init_user.sh %s/%s/mnt/cloonix_config_fs",
+           etc_path, cnt_dir, name);
+  if (execute_cmd(cmd))
+    KERR("ERROR %s", cmd);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -666,12 +531,12 @@ static void check_netns_and_clean(char *name, char *nspace,
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s >/dev/null",
            IP_BIN, nspace);
-  execute_cmd(cmd, SYNCHRO);
+  execute_cmd(cmd);
   for (i=0; i<nb_eth; i++)
     {
     snprintf(cmd, MAX_PATH_LEN-1, "%s link del name %s%d_%d",
              IP_BIN, OVS_BRIDGE_PORT, vm_id, i);
-    execute_cmd(cmd, SYNCHRO);
+    execute_cmd(cmd);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -745,7 +610,7 @@ int crun_utils_create_overlay(char *path, char *lower, int is_persistent)
       snprintf(cmd, 2*MAX_PATH_LEN-1,
       "%s -o lowerdir=%s -o upperdir=%s/%s -o workdir=%s/%s %s/%s",
       FUSE_OVERLAY_FS_BIN, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
-      if (execute_cmd(cmd, SYNCHRO))
+      if (execute_cmd(cmd))
         KERR("%s", cmd);
       result = 0;
       }
@@ -766,7 +631,7 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name)
   len += sprintf(cmd+len, " create"); 
   len += sprintf(cmd+len, " --config=%s/%s/config.json", cnt_dir, name);
   len += sprintf(cmd+len, " %s", name); 
-  if (execute_cmd(cmd, SYNCHRO))
+  if (execute_cmd(cmd))
     KERR("ERROR %s", cmd);
   pid = read_crun_create_pid(name);
   if (pid == 0)
@@ -810,7 +675,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
     "address %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
     IP_BIN, OVS_BRIDGE_PORT, vm_id, i, vm_id, i,
     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    if (execute_cmd(cmd, SYNCHRO))
+    if (execute_cmd(cmd))
       {
       KERR("%s", cmd);
       result = -1;
@@ -818,7 +683,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
       }
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s link set itp%d%d netns %s", IP_BIN, vm_id, i, nspace);
-    if (execute_cmd(cmd, SYNCHRO))
+    if (execute_cmd(cmd))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -827,7 +692,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s link set %s%d_%d netns %s_%s",
     IP_BIN, OVS_BRIDGE_PORT, vm_id, i, BASE_NAMESPACE, get_net_name());
-    if (execute_cmd(cmd, SYNCHRO))
+    if (execute_cmd(cmd))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -836,7 +701,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s netns exec %s %s link set itp%d%d name eth%d",
     IP_BIN, nspace, IP_BIN, vm_id, i, i);
-    if (execute_cmd(cmd, SYNCHRO))
+    if (execute_cmd(cmd))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -845,7 +710,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s netns exec %s %s link set eth%d up",
     IP_BIN, nspace, IP_BIN, i);
-    if (execute_cmd(cmd, SYNCHRO))
+    if (execute_cmd(cmd))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -871,11 +736,11 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
   snprintf(cmd, MAX_PATH_LEN-1, 
            "%s --log=%s --root=/var/lib/cloonix/%s/crun delete %s",
            CRUN_BIN, ptr, get_net_name(), name);
-  execute_cmd(cmd, SYNCHRO);
+  execute_cmd(cmd);
   check_netns_and_clean(name, nspace, vm_id, nb_eth);
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns add %s", IP_BIN, nspace);
-  if (execute_cmd(cmd, SYNCHRO))
+  if (execute_cmd(cmd))
     KERR("ERROR %s", cmd);
   else
     {
@@ -883,7 +748,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
     result = crun_utils_create_veth(vm_id, nspace, nb_eth, eth_mac);
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s netns exec %s %s link set lo up", IP_BIN, nspace, IP_BIN);
-    if (execute_cmd(cmd, SYNCHRO))
+    if (execute_cmd(cmd))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -894,7 +759,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int crun_utils_docker_veth(char *name, int pid, int vm_id,
+int crun_utils_podman_veth(char *name, int pid, int vm_id,
                            int nb_eth, t_eth_mac *eth_mac)
 {
   int i, result = -1;
@@ -916,14 +781,14 @@ int crun_utils_docker_veth(char *name, int pid, int vm_id,
     check_netns_and_clean(name, nspace, vm_id, nb_eth);
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s netns attach %s %d", IP_BIN, ns, pid); 
-    if (execute_cmd(cmd, SYNCHRO))
+    if (execute_cmd(cmd))
       KERR("ERROR %s", cmd);
     else
       {
       result = crun_utils_create_veth(vm_id, nspace, nb_eth, eth_mac);
       memset(cmd, 0, MAX_PATH_LEN);
       snprintf(cmd, MAX_PATH_LEN-1, "%s netns delete %s", IP_BIN, ns);
-      if (execute_cmd(cmd, SYNCHRO))
+      if (execute_cmd(cmd))
         KERR("ERROR %s", cmd);
       }
     }
@@ -933,16 +798,15 @@ int crun_utils_docker_veth(char *name, int pid, int vm_id,
 
 /****************************************************************************/
 int crun_utils_create_net(char *image, char *name, char *cnt_dir,
-                         char *nspace, int cloonix_rank, int vm_id,
-                         int nb_eth, t_eth_mac *eth_mac, char *agent_dir,
-                         char *customer_launch)
+                          char *nspace, int cloonix_rank, int vm_id,
+                          int nb_eth, t_eth_mac *eth_mac, char *agent_dir)
 {
   int result = create_all_dirs(image, cnt_dir, name);
   if (result)
-    KERR("ERROR %s %s %s %s", cnt_dir, name, nspace, customer_launch);
+    KERR("ERROR %s %s %s", cnt_dir, name, nspace);
   else
     {
-    dirs_agent_copy_starter(cnt_dir, name, agent_dir, customer_launch);
+    dirs_agent_copy_starter(cnt_dir, name, agent_dir);
     if (nspace_create(name, nspace, cloonix_rank, vm_id, nb_eth, eth_mac))
       {
       KERR("ERROR %s %s %s", cnt_dir, name, nspace);
@@ -960,7 +824,7 @@ int crun_utils_delete_net_nspace(char *nspace)
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s", IP_BIN, nspace);
-  if (execute_cmd(cmd, SYNCHRO))
+  if (execute_cmd(cmd))
     {
     KERR("ERROR %s", cmd);
     result = -1;
@@ -981,13 +845,13 @@ int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
     memset(cmd, 0, MAX_PATH_LEN);
     snprintf(cmd, MAX_PATH_LEN-1, "%s %s/%s/%s",
              UMOUNT_BIN, cnt_dir, name, ROOTFS);
-    if (execute_cmd(cmd, SYNCHRO))
+    if (execute_cmd(cmd))
       {
       KERR("ERROR %s", cmd);
       result = -1;
       }
     }
-  if (loop_img_del(name, bulk, image, cnt_dir, is_persistent))
+  if (tar_img_del(name, bulk, image, cnt_dir, is_persistent))
     {
     KERR("ERROR %s", name);
     result = -1;
@@ -1014,7 +878,7 @@ int crun_utils_delete_crun_stop(char *name, int crun_pid)
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s --log=%s --root=/var/lib/cloonix/%s/crun delete %s",
            CRUN_BIN, ptr, get_net_name(), name);
-  if (execute_cmd(cmd, SYNCHRO))
+  if (execute_cmd(cmd))
     {
     KERR("ERROR %s", cmd);
     result = -1;
@@ -1035,7 +899,7 @@ int crun_utils_create_crun_start(char *name)
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s --log=%s --root=/var/lib/cloonix/%s/crun start %s",
            CRUN_BIN, ptr, get_net_name(), name);
-  if (execute_cmd(cmd, SYNCHRO))
+  if (execute_cmd(cmd))
     {
     KERR("ERROR %s", cmd);
     result = -1;
@@ -1058,8 +922,8 @@ void crun_utils_init(char *log)
 {
   if (access(FUSE_OVERLAY_FS_BIN, X_OK))
     KERR("ERROR %s", FUSE_OVERLAY_FS_BIN);
-  if (access(EXT4FUSE_BIN, X_OK))
-    KERR("ERROR %s", EXT4FUSE_BIN);
+  if (access(FUSEZIP_BIN, X_OK))
+    KERR("ERROR %s", FUSEZIP_BIN);
   if (access(CRUN_BIN, X_OK))
     KERR("ERROR %s", CRUN_BIN);
   if (access(IP_BIN, X_OK))
@@ -1068,8 +932,6 @@ void crun_utils_init(char *log)
     KERR("ERROR %s", MOUNT_BIN);
   if (access(UMOUNT_BIN, X_OK))
     KERR("ERROR %s", UMOUNT_BIN);
-  if (access(LOSETUP_BIN, X_OK))
-    KERR("ERROR %s", LOSETUP_BIN);
   if (access(MKNOD_BIN, X_OK))
     KERR("ERROR %s", MKNOD_BIN);
   if (access(CHMOD_BIN, X_OK))

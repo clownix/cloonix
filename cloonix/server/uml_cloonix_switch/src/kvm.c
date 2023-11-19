@@ -35,6 +35,8 @@
 #include "ovs_snf.h"
 #include "lan_to_name.h"
 #include "kvm.h"
+#include "ovs_phy.h"
+#include "mactopo.h"
 
 
 typedef struct t_alloc_delay
@@ -98,6 +100,7 @@ static void ethv_free(char *name, int num)
     if (strlen(cur->lan_added))
       {
       KERR("ERROR %s %d %s", name, num, cur->lan_added);
+      mactopo_del_req(item_kvm, name, num, cur->lan_added);
       lan_del_name(cur->lan_added, item_kvm, name, num);
       }
     if (cur->prev)
@@ -245,6 +248,7 @@ void kvm_del(int llid, int tid, char *name, int num,
         }
       else if (strlen(cur->lan_added))
         {
+        mactopo_del_req(item_kvm, name, num, cur->lan_added);
         *can_delete = 0;
         val = lan_del_name(cur->lan_added, item_kvm, name, num);
         if (val != 2*MAX_LAN)
@@ -274,15 +278,22 @@ void kvm_del(int llid, int tid, char *name, int num,
 void kvm_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
 {
   t_ethv_cnx *cur = ethv_find(name, num);
-  if (cur)
+  if (!cur)
+    {
+    mactopo_add_resp(0, name, num, lan);
+    KERR("ERROR ADD LAN %s %d %s %d", name, num, lan, is_ko);
+    }
+  else
     {
     if (is_ko)
       {
+      mactopo_add_resp(0, name, num, lan);
       KERR("ERROR RESP ADD LAN %s %s %d", lan, name, num);
       utils_send_status_ko(&(cur->llid), &(cur->tid), "KO");
       }
     else
       {
+      mactopo_add_resp(item_kvm, name, num, lan);
       cur->attached_lan_ok = 1;
       utils_send_status_ok(&(cur->llid), &(cur->tid));
       if ((cur->endp_type == endp_type_eths) &&
@@ -294,10 +305,6 @@ void kvm_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
     cur->waiting_ack_add_lan = 0;
     cfg_hysteresis_send_topo_info();
     }
-  else
-    {
-    KERR("ERROR ADD LAN %s %d %s %d", name, num, lan, is_ko);
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -305,13 +312,20 @@ void kvm_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
 void kvm_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan)
 {
   t_ethv_cnx *cur = ethv_find(name, num);
-  if (cur)
+  if (!cur)
     {
+    mactopo_del_resp(0, name, num, lan);
+    KERR("ERROR: %s %d %s", name, num, lan);
+    }
+  else
+    {
+    mactopo_del_resp(item_kvm, name, num, lan);
     if ((cur->endp_type == endp_type_eths) &&
         (strlen(cur->lan)) &&
         (cur->del_snf_ethv_sent == 0))
       {
-      ovs_snf_send_del_snf_lan(name, num, cur->vhost, cur->lan);
+      if (ovs_snf_send_del_snf_lan(name, num, vhost, lan))
+        KERR("ERROR %s %d %s %s", name, num, vhost, lan);
       }
     if (cur->attached_lan_ok == 1)
       {
@@ -333,8 +347,7 @@ int kvm_add_lan(int llid, int tid, char *name, int num,
 {
   int result = -1;
   t_ethv_cnx *cur;
-  char *mac;
-  char str_mac[MAX_NAME_LEN];
+  char err[MAX_PATH_LEN];
   if ((endp_type == endp_type_eths) ||
       (endp_type == endp_type_ethv))
     {
@@ -350,8 +363,14 @@ int kvm_add_lan(int llid, int tid, char *name, int num,
     else
       {
       lan_add_name(lan, item_kvm, name, num);
-      if (msg_send_add_lan_endp(ovsreq_add_kvm_lan, name, num,
-                                     cur->vhost, lan))
+      if (mactopo_add_req(item_kvm, name, num, lan,
+                          cur->vhost, eth_tab[num].mac_addr, err))
+        {
+        KERR("ERROR %s %d %s %s", name, num, lan, err);
+        lan_del_name(lan, item_kvm, name, num);
+        }
+      else if (msg_send_add_lan_endp(ovsreq_add_kvm_lan, name, num,
+                                     cur->vhost,lan))
         {
         KERR("ERROR ADD LAN %s %d %s", name, num, lan);
         lan_del_name(lan, item_kvm, name, num);
@@ -359,12 +378,6 @@ int kvm_add_lan(int llid, int tid, char *name, int num,
       else
         {
         strncpy(cur->lan_added, lan, MAX_NAME_LEN);
-        mac = eth_tab[num].mac_addr;
-        memset(str_mac, 0, MAX_NAME_LEN);
-        snprintf(str_mac, MAX_NAME_LEN-1,
-                 "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-        lan_add_mac(cur->lan_added, item_kvm, name, num, str_mac);
         if (strlen(cur->lan))
           {
           KERR("ERROR ADD LAN %s %d %s", name, num, lan);
@@ -412,6 +425,7 @@ int kvm_del_lan(int llid, int tid, char *name, int num, char *lan,
         KERR("ERROR: %s %d %s", name, num, lan);
       else
         {
+        mactopo_del_req(item_kvm, name, num, cur->lan_added);
         val = lan_del_name(cur->lan_added, item_kvm, name, num);
         memset(cur->lan_added, 0, MAX_NAME_LEN);
         }

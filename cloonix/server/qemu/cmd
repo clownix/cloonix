@@ -21,18 +21,21 @@ cd ${HERE}/tainted_qemu/
                      --python=/usr/bin/python3
                      --enable-kvm
                      --enable-spice
+                     --enable-spice-protocol
                      --enable-usb-redir
                      --enable-gtk
                      --enable-vhost-net
                      --enable-vhost-kernel
                      --enable-tools
-lzo
-sndio
+                     --enable-pixman
+                     --enable-linux-io-uring
+                     --enable-linux-aio
+                     --enable-gio
                      --without-default-features"
 
 
-export CFLAGS="-mtune=generic -fno-stack-protector -g"
-export LDFLAGS="-L${HERE}/../spice_lib_server "
+export CFLAGS="-mtune=generic -fno-stack-protector  -g"
+export LDFLAGS="-L${HERE}/../spice_lib_server -lstdc++ "
 echo Doing CONFIGURE
 ./configure  $CONFIGURATION_OPTS
 

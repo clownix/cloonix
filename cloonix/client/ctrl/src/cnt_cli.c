@@ -41,37 +41,35 @@ void help_add_cru(char *line)
   printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
-  printf("\n\t       --customer_launch=\"<script with params>\"");
   printf("\n\t       --persistent");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\nexample:\n\n");
-  printf("\n%s vm_name eth=sss bullseye.img\n", line);
+  printf("\n%s vm_name eth=sss bookworm.zip\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s vm_name eth=vvv bullseye.img --customer_launch=\"sleep 100\"\n", line);
+  printf("\n%s vm_name eth=vvv bookworm.zip\n", line);
   printf("This will give 3 eth that are not spyable\n");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
 
 /***************************************************************************/
-void help_add_doc_pod(char *line)
+void help_add_pod(char *line)
 {
   printf("\n\n\n %s <name> eth=<eth_description> <image> [options]\n",
   line);
-  printf("\n\timage is an existing docker image.");
+  printf("\n\timage is an existing podman image.");
   printf("\n\teth_description example:");
   printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
-  printf("\n\t       --customer_launch=\"<script with params>\"");
   printf("\n\t       --startup_env=\"<env_name=env_val env2_name=env2_val...>\"");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\nexample:\n\n");
-  printf("\n%s cnt1 eth=sss docker_image\n", line);
+  printf("\n%s cnt1 eth=sss podman_image\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s cnt1 eth=vv docker_image --customer_launch=\"sleep 8888d\"\n", line);
+  printf("\n%s cnt1 eth=vv podman_image\n", line);
   printf("This will give a container with 2 eth that are not spyable and will launch the sleep 8888d\n");
-  printf("\n%s cnt1 eth=s docker_image --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
+  printf("\n%s cnt1 eth=s podman_image --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
   printf("This will give 2 eth that are spyable and will start the container with\n");
   printf("MYENV=myenv and CLOONIX=great env variables.\n");
   printf("\n\n\n");
@@ -150,13 +148,6 @@ static int local_add_cnt(char *type, char *name, int nb_tot_eth,
       ptr = argv[i] + strlen("--startup_env=");
       if (strlen(ptr))
         strncpy(cnt.startup_env, ptr, MAX_PATH_LEN-1);
-      }
-    else if (!strncmp(argv[i],"--customer_launch=",
-                      strlen("--customer_launch")))
-      {
-      ptr = argv[i] + strlen("--customer_launch=");
-      if (strlen(ptr))
-        strncpy(cnt.customer_launch, ptr, MAX_PATH_LEN-1);
       }
     else
       {
@@ -270,13 +261,6 @@ static int cmd_add_cnt(char *type, int argc, char **argv)
 int cmd_add_cru(int argc, char **argv)
 {
   return cmd_add_cnt("crun", argc, argv);
-}
-/*-------------------------------------------------------------------------*/
-
-/***************************************************************************/
-int cmd_add_doc(int argc, char **argv)
-{
-  return cmd_add_cnt("docker", argc, argv);
 }
 /*-------------------------------------------------------------------------*/
 

@@ -30,7 +30,8 @@ for i in cloonix_osh \
          cloonix_ice \
          cloonix_ssh \
          cloonix_wsk \
-         cloonix_wir \
+         cloonix_dsh \
+         cloonix_lsh \
          cloonix_ovs; do 
   mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
 done
@@ -58,7 +59,8 @@ done
   echo BUILDING CLIENT
   echo
 #----------------------------------------------------------
-  for i in  spice_lib_client \
+  for i in  hide_dirs \
+            spice_lib_client \
             agent_dropbear \
             lib_client \
             ctrl \

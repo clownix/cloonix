@@ -361,7 +361,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
   int endp_kvm = kvm_exists(name, num);
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
-  t_ovs_phy *phy_exists = ovs_phy_exists(name);
+  t_ovs_phy *phy_exists = ovs_phy_exists_vhost(name);
   t_ovs_nat *nat_exists = ovs_nat_exists(name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
@@ -474,7 +474,7 @@ static void timer_endp(void *data)
   t_eth_table *eth_tab;
   int cnt_exists = cnt_info(te->name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(te->name);
-  t_ovs_phy *phy_exists = ovs_phy_exists(te->name);
+  t_ovs_phy *phy_exists = ovs_phy_exists_vhost(te->name);
   t_ovs_nat *nat_exists = ovs_nat_exists(te->name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(te->name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(te->name);
@@ -635,7 +635,7 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   int nb_eth;
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
-  t_ovs_phy *phy_exists = ovs_phy_exists(name);
+  t_ovs_phy *phy_exists = ovs_phy_exists_vhost(name);
   t_ovs_nat *nat_exists = ovs_nat_exists(name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
@@ -1489,7 +1489,7 @@ static void timer_del_all(void *data)
   while(phy)
     {
     nphy = phy->next;
-    ovs_phy_del(0, 0, phy->name);
+    ovs_phy_del(0, 0, phy->vhost);
     phy = nphy;
     }
   while(nat)
@@ -1629,7 +1629,7 @@ void recv_del_name(int llid, int tid, char *name)
     {
     ovs_tap_del(llid, tid, name);
     }
-  else if (ovs_phy_exists(name))
+  else if (ovs_phy_exists_vhost(name))
     {
     ovs_phy_del(llid, tid, name);
     }
@@ -1767,7 +1767,7 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
   t_vm   *vm = cfg_get_vm(name);
   int nb_eth;
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
-  t_ovs_phy *phy_exists = ovs_phy_exists(name);
+  t_ovs_phy *phy_exists = ovs_phy_exists_vhost(name);
   t_ovs_nat *nat_exists = ovs_nat_exists(name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
@@ -1833,14 +1833,9 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
     }
   else if (phy_exists)
     {
-    if (num != 0)
+    if (ovs_phy_dyn_snf(name, val))
       {
-      KERR("ERROR %s %s", locnet, name);
-      send_status_ko(llid, tid, "bad num");
-      }
-    else if (ovs_phy_dyn_snf(name, val))
-      {
-      KERR("ERROR %s %s", locnet, name);
+      KERR("ERROR %s %s %d", locnet, name, val);
       send_status_ko(llid, tid, "error");
       }
     else
@@ -1912,7 +1907,7 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_phy_add(int llid, int tid, char *name)
+void recv_phy_add(int llid, int tid, char *name, int type)
 {
   char *locnet = cfg_get_cloonix_name();
   char err[MAX_PATH_LEN];
@@ -1934,7 +1929,7 @@ void recv_phy_add(int llid, int tid, char *name)
     }
   else
     {
-    ovs_phy_add(llid, tid, name);
+    ovs_phy_add(llid, tid, name, type);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -2144,9 +2139,9 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
   int i, vm_id;
 
   event_print("Rx Req add cnt name:%s brandtype:%s is_persistent:%d "
-              "image:%s customer_launch:%s startup_env:%s",
-              cnt->name, cnt->brandtype, cnt->is_persistent, cnt->image,
-              cnt->customer_launch, cnt->startup_env);
+              "image:%s startup_env:%s",
+              cnt->name, cnt->brandtype, cnt->is_persistent,
+              cnt->image, cnt->startup_env);
 
   if (get_inhib_new_clients())
     {
@@ -2159,7 +2154,6 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     send_status_ko(llid, tid, err);
     }
   else if ((strcmp(cnt->brandtype, "crun")) &&
-           (strcmp(cnt->brandtype, "docker")) &&
            (strcmp(cnt->brandtype, "podman")))
     {
     snprintf(err, MAX_PATH_LEN-1, "%s %s bad brandtype:%s",

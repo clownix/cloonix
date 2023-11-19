@@ -254,8 +254,6 @@ void send_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic);
 void recv_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic);
 void send_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic); 
 void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic);
-void send_slowperiodic_docker(int llid, int tid, int nb, t_slowperiodic *spic); 
-void recv_slowperiodic_docker(int llid, int tid, int nb, t_slowperiodic *spic);
 void send_slowperiodic_podman(int llid, int tid, int nb, t_slowperiodic *spic); 
 void recv_slowperiodic_podman(int llid, int tid, int nb, t_slowperiodic *spic);
 
@@ -334,8 +332,8 @@ char *prop_flags_ascii_get(int prop_flags);
 /*---------------------------------------------------------------------------*/
 void send_nat_add(int llid, int tid, char *name);
 void recv_nat_add(int llid, int tid, char *name);
-void send_phy_add(int llid, int tid, char *name);
-void recv_phy_add(int llid, int tid, char *name);
+void send_phy_add(int llid, int tid, char *name, int type);
+void recv_phy_add(int llid, int tid, char *name, int type);
 void send_tap_add(int llid, int tid, char *name);
 void recv_tap_add(int llid, int tid, char *name);
 void send_a2b_add(int llid, int tid, char *name);

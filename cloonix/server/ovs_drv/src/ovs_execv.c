@@ -325,8 +325,8 @@ int create_ovsdb_server_conf(char *ovs_bin, char *ovs_dir)
     argv[2] = cmd;
     argv[3] = NULL;
     result = call_ovs_popen(ovs_dir, argv, 0, __FUNCTION__, 1);
-if (result)
-KOUT("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEe");
+    if (result)
+      KOUT("ERROR FATALe");
     }
   return result;
 }

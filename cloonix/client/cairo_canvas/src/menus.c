@@ -205,8 +205,6 @@ static void cnt_item_info(GtkWidget *mn, t_item_ident *pm)
     len += snprintf(text + len, MAX_TEXT-len, "\t\tCONTAINER");
     len += snprintf(text + len, MAX_TEXT-len-1, "\nImage: %s", 
                      bitem->pbi.pbi_cnt->image);
-    len += snprintf(text + len, MAX_TEXT-len-1, "\nCustomer_launch: %s", 
-                     bitem->pbi.pbi_cnt->customer_launch);
     text[MAX_TEXT-1] = 0;
     display_info(title, text);
     }
@@ -359,8 +357,10 @@ static void sat_item_info(GtkWidget *mn, t_item_ident *pm)
     {
     snprintf(title, MAX_PATH_LEN, "%s", bitem->name);
     title[2*MAX_NAME_LEN-1] = 0;
-    if ((bitem->pbi.endp_type == endp_type_phys) ||
-        (bitem->pbi.endp_type == endp_type_phyv))
+    if ((bitem->pbi.endp_type == endp_type_phyas) ||
+        (bitem->pbi.endp_type == endp_type_phyav) ||
+        (bitem->pbi.endp_type == endp_type_phyms) ||
+        (bitem->pbi.endp_type == endp_type_phymv))
       len += sprintf(text + len, "\nPHY");
     else if ((bitem->pbi.endp_type == endp_type_taps) ||
              (bitem->pbi.endp_type == endp_type_tapv))
@@ -790,15 +790,17 @@ void sat_ctx_menu(t_bank_item *bitem)
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
 
-  if ((pm->endp_type == endp_type_tapv) ||
-      (pm->endp_type == endp_type_phyv) ||
-      (pm->endp_type == endp_type_natv) ||
+  if ((pm->endp_type == endp_type_tapv)  ||
+      (pm->endp_type == endp_type_phyav) ||
+      (pm->endp_type == endp_type_phymv) ||
+      (pm->endp_type == endp_type_natv)  ||
       (pm->endp_type == endp_type_c2cv))
     item_dyn_snf = gtk_menu_item_new_with_label("Add snf capa");
 
-  if ((pm->endp_type == endp_type_taps) ||
-      (pm->endp_type == endp_type_phys) ||
-      (pm->endp_type == endp_type_nats) ||
+  if ((pm->endp_type == endp_type_taps)  ||
+      (pm->endp_type == endp_type_phyas) ||
+      (pm->endp_type == endp_type_phyms) ||
+      (pm->endp_type == endp_type_nats)  ||
       (pm->endp_type == endp_type_c2cs))
     {
     item_wireshark = gtk_menu_item_new_with_label("wireshark");
@@ -809,16 +811,18 @@ void sat_ctx_menu(t_bank_item *bitem)
   item_delete = gtk_menu_item_new_with_label("Delete");
   item_info = gtk_menu_item_new_with_label("Info");
 
-  if ((pm->endp_type == endp_type_tapv) ||
-      (pm->endp_type == endp_type_phyv) ||
-      (pm->endp_type == endp_type_natv) ||
+  if ((pm->endp_type == endp_type_tapv)  ||
+      (pm->endp_type == endp_type_phyav) ||
+      (pm->endp_type == endp_type_phymv) ||
+      (pm->endp_type == endp_type_natv)  ||
       (pm->endp_type == endp_type_c2cv))
     g_signal_connect(G_OBJECT(item_dyn_snf), "activate",
                      G_CALLBACK(intf_item_dyn_snf_on), (gpointer) pm);
 
-  if ((pm->endp_type == endp_type_taps) ||
-      (pm->endp_type == endp_type_phys) ||
-      (pm->endp_type == endp_type_nats) ||
+  if ((pm->endp_type == endp_type_taps)  ||
+      (pm->endp_type == endp_type_phyas) ||
+      (pm->endp_type == endp_type_phyms) ||
+      (pm->endp_type == endp_type_nats)  ||
       (pm->endp_type == endp_type_c2cs))
     {
     g_signal_connect(G_OBJECT(item_wireshark), "activate",
@@ -836,18 +840,20 @@ void sat_ctx_menu(t_bank_item *bitem)
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
 
-  if ((pm->endp_type == endp_type_taps) ||
-      (pm->endp_type == endp_type_phys) ||
-      (pm->endp_type == endp_type_nats) ||
+  if ((pm->endp_type == endp_type_taps)  ||
+      (pm->endp_type == endp_type_phyas) ||
+      (pm->endp_type == endp_type_phyms) ||
+      (pm->endp_type == endp_type_nats)  ||
       (pm->endp_type == endp_type_c2cs))
     {
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wireshark);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dyn_snf);
     }
 
-  if ((pm->endp_type == endp_type_tapv) ||
-      (pm->endp_type == endp_type_phyv) ||
-      (pm->endp_type == endp_type_natv) ||
+  if ((pm->endp_type == endp_type_tapv)  ||
+      (pm->endp_type == endp_type_phyav) ||
+      (pm->endp_type == endp_type_phymv) ||
+      (pm->endp_type == endp_type_natv)  ||
       (pm->endp_type == endp_type_c2cv))
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dyn_snf);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_hidden);

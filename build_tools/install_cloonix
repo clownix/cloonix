@@ -46,7 +46,8 @@ for i in  cloonix_cli \
           cloonix_ovs \
           cloonix_scp \
           cloonix_ssh \
-          cloonix_wir \
+          cloonix_lsh \
+          cloonix_dsh \
           cloonix_wsk ; do
   cp -vf /tmp/client/usr_bin/${i} /usr/bin
 done
@@ -74,6 +75,7 @@ for i in dumpcap \
          cloonix-ovs-nat \
          cloonix-ovs-a2b \
          cloonix-ovs-c2c \
+         cloonix-ovs-vsctl \
          cloonix-suid-power ; do
   chmod u+s /usr/libexec/cloonix/server/${i}
 done

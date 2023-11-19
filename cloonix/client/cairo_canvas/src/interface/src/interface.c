@@ -194,8 +194,11 @@ static void phy_update_bitem(t_topo_info *topo)
     {
     cur = &(topo->phy[i]);
     bitem = bank_get_item(bank_type_sat, cur->name, 0, NULL);
-    if ((bitem) && ((bitem->pbi.endp_type == endp_type_phys) ||
-                    (bitem->pbi.endp_type == endp_type_phyv)))
+    if ((bitem) && 
+        ((bitem->pbi.endp_type == endp_type_phyas) ||
+         (bitem->pbi.endp_type == endp_type_phyav) ||
+         (bitem->pbi.endp_type == endp_type_phyms) ||
+         (bitem->pbi.endp_type == endp_type_phymv)))
       {
       bitem->pbi.endp_type = cur->endp_type;
       }
@@ -363,13 +366,6 @@ static void slowperiodic_img_cb(int nb, t_slowperiodic *spic)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void slowperiodic_docker_cb(int nb, t_slowperiodic *spic)
-{
-  set_buldoc(nb, spic);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void slowperiodic_podman_cb(int nb, t_slowperiodic *spic)
 {
   set_bulpod(nb, spic);
@@ -441,7 +437,6 @@ void timer_topo_subscribe(void *data)
   client_req_eventfull(eventfull_cb);
   client_req_slowperiodic(slowperiodic_qcow2_cb,
                           slowperiodic_img_cb,
-                          slowperiodic_docker_cb,
                           slowperiodic_podman_cb);
 }
 /*--------------------------------------------------------------------------*/

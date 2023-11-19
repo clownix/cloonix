@@ -42,7 +42,6 @@ typedef struct t_pbi_cnt
   int  cnt_evt_ping_ok;
   char type[MAX_NAME_LEN];
   char image[MAX_PATH_LEN];
-  char customer_launch[MAX_PATH_LEN];
   int  cnt_vm_id;
   int  nb_tot_eth;
   t_eth_table eth_tab[MAX_ETH_VM];
@@ -172,8 +171,7 @@ int is_first_brtcl_on_canvas(void);
 t_bank_item *look_for_sat_with_id(char *name);
 t_bank_item *look_for_eth_with_id(char *name, int num);
 /*--------------------------------------------------------------------------*/
-void bank_cnt_create(char *type, char *name, char *image,
-                     char *customer_launch, int vm_id,
+void bank_cnt_create(char *type, char *name, char *image, int vm_id,
                      int ping_ok, int nb_tot_eth, t_eth_table *eth_tab,
                      double x, double y, int hidden_on_graph,
                      double *tx, double *ty, int32_t *thidden);

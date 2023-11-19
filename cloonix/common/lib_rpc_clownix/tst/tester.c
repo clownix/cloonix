@@ -70,7 +70,6 @@ static int count_eventfull_sub=0;
 static int count_slowperiodic_qcow2=0;
 static int count_slowperiodic_img=0;
 static int count_slowperiodic_sub=0;
-static int count_slowperiodic_docker=0;
 static int count_slowperiodic_podman=0;
 
 static int count_evt_stats_endp_sub=0;
@@ -149,7 +148,6 @@ static void print_all_count(void)
   printf("%d\n", count_slowperiodic_sub);
   printf("%d\n", count_slowperiodic_qcow2);
   printf("%d\n", count_slowperiodic_img);
-  printf("%d\n", count_slowperiodic_docker);
   printf("%d\n", count_slowperiodic_podman);
   printf("%d\n", count_sav_vm);
 
@@ -311,11 +309,6 @@ static int topo_cnt_diff(t_topo_cnt *icnt, t_topo_cnt *cnt)
   else   if (strcmp(cnt->image, icnt->image))
     {
     KERR("%s %s", cnt->image, icnt->image);
-    result = -1;
-    }
-  else   if (strcmp(cnt->customer_launch, icnt->customer_launch))
-    {
-    KERR("%s %s", cnt->customer_launch, icnt->customer_launch);
     result = -1;
     }
   else   if (strcmp(cnt->startup_env, icnt->startup_env))
@@ -483,7 +476,6 @@ static void random_cnt(t_topo_cnt *cnt)
   random_choice_str(cnt->brandtype, MAX_NAME_LEN);
   random_choice_str(cnt->name, MAX_NAME_LEN);
   random_choice_str(cnt->image, MAX_PATH_LEN);
-  random_choice_str(cnt->customer_launch, MAX_PATH_LEN);
   random_choice_str(cnt->startup_env, MAX_PATH_LEN);
   cnt->nb_tot_eth = my_rand(MAX_ETH_VM);
   cnt->ping_ok = my_rand(20);
@@ -2323,36 +2315,6 @@ void recv_slowperiodic_img(int llid, int itid, int inb, t_slowperiodic *ispic)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_slowperiodic_docker(int llid, int itid, int inb, t_slowperiodic *ispic)
-{
-  int i;
-  static int nb, tid;
-  static t_slowperiodic spic[MAX_TEST_TUX];
-  if (i_am_client)
-    {
-    if (count_slowperiodic_docker)
-      {
-      if (itid != tid)
-        KOUT(" ");
-      if (inb != nb)
-        KOUT(" ");
-      if (memcmp(spic, ispic, nb * sizeof(t_slowperiodic)))
-        KOUT(" ");
-      }
-    tid = rand();
-    nb = rand() % MAX_TEST_TUX;
-    memset(spic, 0, MAX_TEST_TUX * sizeof(t_slowperiodic));
-    for (i=0; i<nb; i++)
-      random_choice_str(spic[i].name, MAX_NAME_LEN);
-    send_slowperiodic_docker(llid, tid, nb, spic);
-    }
-  else
-    send_slowperiodic_docker(llid, itid, inb, ispic);
-  count_slowperiodic_docker++;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void recv_slowperiodic_podman(int llid, int itid, int inb, t_slowperiodic *ispic)
 {
   int i;
@@ -2408,10 +2370,10 @@ void recv_nat_add(int llid, int itid, char *iname)
 
 
 /*****************************************************************************/
-void recv_phy_add(int llid, int itid, char *iname)
+void recv_phy_add(int llid, int itid, char *iname, int itype)
 {
   static char name[MAX_NAME_LEN];
-  static int tid;
+  static int tid, type;
   if (i_am_client)
     {
     if (count_phy_add)
@@ -2420,13 +2382,16 @@ void recv_phy_add(int llid, int itid, char *iname)
         KOUT(" ");
       if (itid != tid)
         KOUT(" ");
+      if (itype != type)
+        KOUT(" ");
       }
     tid = rand();
+    type = rand();
     random_choice_str(name, MAX_NAME_LEN);
-    send_phy_add(llid, tid, name);
+    send_phy_add(llid, tid, name, type);
     }
   else
-    send_phy_add(llid, itid, iname);
+    send_phy_add(llid, itid, iname, itype);
   count_phy_add++;
 }
 /*---------------------------------------------------------------------------*/
@@ -2854,7 +2819,6 @@ static void send_first_burst(int llid)
   recv_slowperiodic_sub(llid, 0);
   recv_slowperiodic_qcow2(llid, 0, 0, NULL);
   recv_slowperiodic_img(llid, 0, 0, NULL);
-  recv_slowperiodic_docker(llid, 0, 0, NULL);
   recv_slowperiodic_podman(llid, 0, 0, NULL);
   recv_sav_vm(llid, 0, NULL, NULL);
   recv_evt_stats_endp_sub(llid, 0, NULL, 0, 0);
@@ -2887,7 +2851,7 @@ static void send_first_burst(int llid)
   recv_color_item(llid, 0, NULL, 0);
 
   recv_nat_add(llid, 0, NULL);
-  recv_phy_add(llid, 0, NULL);
+  recv_phy_add(llid, 0, NULL, 0);
   recv_tap_add(llid, 0, NULL);
   recv_cnt_add(llid, 0, NULL);
 

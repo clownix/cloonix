@@ -351,7 +351,7 @@ void recv_a2b_add(int llid, int tid, char *name)
 {KOUT(" ");}
 void recv_nat_add(int llid, int tid, char *name)
 {KOUT(" ");}
-void recv_phy_add(int llid, int tid, char *name)
+void recv_phy_add(int llid, int tid, char *name, int type)
 {KOUT(" ");}
 
 /*--------------------------------------------------------------------------*/

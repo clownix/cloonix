@@ -249,18 +249,18 @@ int msg_send_del_tap(char *name, char *vhost)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int msg_send_add_phy(char *name, char *vhost, char *mac)
+int msg_send_add_phy(char *name, char *vhost, char *mac, int num_macvlan)
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost) || (!mac))
     KERR("ERROR");
   else if (!(strlen(name)) || (!strlen(vhost)) || (!strlen(mac)))
     KERR("ERROR %s %s", name, mac);
-  else if (fmt_tx_add_phy(tid, name, vhost, mac))
+  else if (fmt_tx_add_phy(tid, name, vhost, mac, num_macvlan))
     KERR("ERROR %s %s %s", name, vhost, mac);
   else
     {
-    ovsreq_alloc(tid, ovsreq_add_phy, name, 0, vhost, NULL);
+    ovsreq_alloc(tid, ovsreq_add_phy, name, num_macvlan, vhost, NULL);
     result = 0;
     }
   return result;
@@ -268,18 +268,18 @@ int msg_send_add_phy(char *name, char *vhost, char *mac)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int msg_send_del_phy(char *name, char *vhost)
+int msg_send_del_phy(char *name, char *vhost, int num_macvlan)
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost))
     KERR("ERROR");
   else if ((!strlen(name)) || (!strlen(vhost)))
     KERR("ERROR %s %s", name, vhost);
-  else if (fmt_tx_del_phy(tid, name, vhost))
+  else if (fmt_tx_del_phy(tid, name, vhost, num_macvlan))
     KERR("ERROR %s %s", name, vhost);
   else
     {
-    ovsreq_alloc(tid, ovsreq_del_phy, name, 0, vhost, NULL);
+    ovsreq_alloc(tid, ovsreq_del_phy, name, num_macvlan, vhost, NULL);
     result = 0;
     }
   return result;
@@ -460,7 +460,8 @@ void msg_ack_tap(int tid, int is_ko, int is_add, char *name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void msg_ack_phy(int tid, int is_ko, int is_add, char *name, char *vhost)
+void msg_ack_phy(int tid, int is_ko, int is_add, char *name,
+                 int num_macvlan, char *vhost)
 {
   t_ovsreq *cur = ovsreq_find(tid);
   if (!cur)
@@ -470,7 +471,9 @@ void msg_ack_phy(int tid, int is_ko, int is_add, char *name, char *vhost)
     }
   else
     {
-    ovs_phy_resp_msg_phy(is_ko, is_add, name);
+    if (strcmp(vhost, cur->vhost))
+      KERR("ERROR name:%s %s %s", name, vhost, cur->vhost);
+    ovs_phy_resp_msg_phy(is_ko, is_add, name, cur->num, vhost);
     ovsreq_free(cur);
     }
 }
@@ -563,13 +566,13 @@ static void timer_msg_beat(void *data)
 
         case ovsreq_add_phy:
           KERR("ERROR TIMEOUT %d %s %s", cur->tid, cur->vhost, cur->name );
-          ovs_phy_resp_msg_phy(1, 1, cur->name);
+          ovs_phy_resp_msg_phy(1, 1, cur->name, cur->num, cur->vhost);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_phy:
           KERR("ERROR TIMEOUT %d %s %s", cur->tid, cur->vhost, cur->name );
-          ovs_phy_resp_msg_phy(1, 0, cur->name);
+          ovs_phy_resp_msg_phy(1, 0, cur->name, cur->num, cur->vhost);
           ovsreq_free(cur);
         break;
 

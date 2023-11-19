@@ -26,13 +26,11 @@ cp ${SERVER}/xwy/cloonix-xwy-srv ${SERVER}
 rm -rf ${SERVER}/xwy
 #----------------------------------------------------------
 cp -f ${SERVER}/suid_power/cloonix-suid-power ${SERVER}
-cp -f ${SERVER}/gerard_lledo/cloonix-ext4fuse ${SERVER}
 cp -f ${SERVER}/doorways/cloonix-doorways ${SERVER}
 cp -f ${SERVER}/suid_power/cloonix-suid-power ${SERVER}
 cp -f ${SERVER}/uml_cloonix_switch/cloonix-main-server ${SERVER}
 for i in  doorways \
           suid_power \
-          gerard_lledo \
           uml_cloonix_switch ; do
   rm -rf ${SERVER}/${i}
 done
@@ -79,10 +77,10 @@ rm -rf ${SERVER}/crun
 cp -f ${TARGZ_STORE}/shark/built_objects/wireshark ${SERVER}/cloonix-wireshark
 cp -f ${TARGZ_STORE}/shark/built_objects/dumpcap ${SERVER}
 #----------------------------------------------------------
+cp -f /usr/bin/fuse-zip ${SERVER}//cloonix-fuse-zip
 cp -f /sbin/ip      ${SERVER}/ip
 cp -f /bin/mount    ${SERVER}/cloonix-mount
 cp -f /bin/umount   ${SERVER}/cloonix-umount 
-cp -f /sbin/losetup ${SERVER}/cloonix-losetup
 cp -f /usr/bin/fuse-overlayfs ${SERVER}/cloonix-fuse-overlayfs
 cp -f /bin/mknod    ${SERVER}/cloonix-mknod 
 cp -f /bin/chmod    ${SERVER}/cloonix-chmod

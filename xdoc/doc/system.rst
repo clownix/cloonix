@@ -100,9 +100,44 @@ Commands to have nested KVM in intel automaticaly from start of machine::
 Note that for grub2, it is: grub2-mkconfig --output=/boot/grub2/grub.cfg
 
 
-Docker and Podman
-=================
 
-Your system must have Docker or Podman or both to be able to use docker or podman containers.
-The container image creation must be done outside of cloonix, cloonix can only launch existing
-docker or podman images.
+Podman and Crun startup
+=======================
+
+If you want to customize the startup of the containers, you can change
+the following files::
+
+  /usr/libexec/cloonix/common/etc/crun_init_user.sh
+  /usr/libexec/cloonix/common/etc/podman_init_user.sh
+
+Podman
+=======
+
+Your system must have Podman to be able to use podman containers.
+The container image creation must be done outside of cloonix, cloonix can
+only launch existing podman images.
+
+
+Crun console
+============
+
+The cloonix_ssh and cloonix_scp should work but in case of a bug, if you
+think that the container is running, the following commands list the crun
+container running and launch a shell in the Cnt1 if it exists::
+
+  sudo /usr/libexec/cloonix/server/cloonix-crun --root=/var/lib/cloonix/nemo/crun/ list
+  sudo /usr/libexec/cloonix/server/cloonix-crun --root=/var/lib/cloonix/nemo/crun/ exec Cnt1 sh 
+
+
+Mounts and namespaces
+=====================
+
+The file system seen by the crun is private but you can get to see it
+with the following commands::
+
+  ps aux | grep "cloonix-suid-power nemo" | grep -v grep | awk "{print \$2}"
+  14022
+  sudo nsenter --mount=/proc/14022/ns/mnt
+  ls /var/lib/cloonix/nemo/mnt/busybox.zip
+
+

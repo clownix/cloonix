@@ -728,8 +728,8 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int add_new_cnt(char *type, char *name, char *image, char *customer_launch,
-                int vm_id, double x, double y, int hidden_on_graph,
+int add_new_cnt(char *type, char *name, char *image, int vm_id,
+                double x, double y, int hidden_on_graph,
                 int ping_ok, int nb_tot_eth, t_eth_table *eth_tab)
 {
   int result = 0;
@@ -749,8 +749,6 @@ int add_new_cnt(char *type, char *name, char *image, char *customer_launch,
     memset(bitem->pbi.pbi_cnt, 0, sizeof(t_pbi_cnt));
     strncpy(bitem->pbi.pbi_cnt->type, type, MAX_NAME_LEN-1);
     strncpy(bitem->pbi.pbi_cnt->image, image, MAX_PATH_LEN-1);
-    strncpy(bitem->pbi.pbi_cnt->customer_launch, customer_launch,
-            MAX_PATH_LEN-1);
     bitem->pbi.pbi_cnt->cnt_evt_ping_ok = ping_ok;
     bitem->pbi.pbi_cnt->cnt_vm_id = vm_id;
     bitem->pbi.pbi_cnt->nb_tot_eth = nb_tot_eth;

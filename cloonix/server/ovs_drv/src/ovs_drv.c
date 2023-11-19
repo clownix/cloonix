@@ -82,6 +82,152 @@ char *get_net_name(void)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+static void change_mac_macvlan(char *ovs_dir, char *name, char *mac)
+{
+  char *argv[NB_ARG];
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "-netns";
+  argv[2] = get_ns();
+  argv[3] = "link";
+  argv[4] = "set";
+  argv[5] = "dev";
+  argv[6] = name;
+  argv[7] = "addr";
+  argv[8] = mac;
+  if (call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3))
+    KERR("ERROR change_mac_macvlan %s %s", name, mac);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int put_in_namespace(char *ovs_dir, char *name)
+{
+  char *argv[NB_ARG];
+  int result;
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "link";
+  argv[2] = "set";
+  argv[3] = name;
+  argv[4] = "netns";
+  argv[5] = get_ns();
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int set_dev_up_in_namespace(char *ovs_dir, char *name)
+{
+  char *argv[NB_ARG];
+  int result;
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "-netns";
+  argv[2] = get_ns();
+  argv[3] = "link";
+  argv[4] = "set";
+  argv[5] = "dev";
+  argv[6] = name;
+  argv[7] = "up";
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int set_dev_down_in_namespace(char *ovs_dir, char *name)
+{
+  char *argv[NB_ARG];
+  int result;
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "-netns";
+  argv[2] = get_ns();
+  argv[3] = "link";
+  argv[4] = "set";
+  argv[5] = "dev";
+  argv[6] = name;
+  argv[7] = "down";
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int set_dev_up_link(char *ovs_dir, char *name)
+{
+  char *argv[NB_ARG];
+  int result;
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "link";
+  argv[2] = "set";
+  argv[3] = "dev";
+  argv[4] = name;
+  argv[5] = "up";
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 4);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int change_name_within_namespace(char *ovs_dir, char *onm, char *nnm)
+{
+  char *argv[NB_ARG];
+  int result;
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "-netns";
+  argv[2] = get_ns();
+  argv[3] = "link";
+  argv[4] = "set";
+  argv[5] = onm;
+  argv[6] = "name";
+  argv[7] = nnm;
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int put_back_in_main_namespace(char *ovs_dir, char *name)
+{ 
+  char *argv[NB_ARG];
+  int result;
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "-netns";
+  argv[2] = get_ns();
+  argv[3] = "link";
+  argv[4] = "set";
+  argv[5] = name;
+  argv[6] = "netns";
+  argv[7] = "1";
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
+  return result;
+} 
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int change_mac_address(char *ovs_dir, char *name, char *mac)
+{
+  char *argv[NB_ARG];
+  int result;
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "link";
+  argv[2] = "set";
+  argv[3] = "dev";
+  argv[4] = name;
+  argv[5] = "address";
+  argv[6] = mac;
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
@@ -107,40 +253,19 @@ static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
     KERR("ERROR %s %s", name, mac);
   else
     {
-    memset(argv, 0, NB_ARG * sizeof(char *));
-    argv[0] = IP_BIN;
-    argv[1] = "link";
-    argv[2] = "set";
-    argv[3] = vhost;
-    argv[4] = "netns";
-    argv[5] = get_ns();
-    result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 2);
+    result = put_in_namespace(ovs_dir, vhost);
     if (result)
       KERR("ERROR %s %s", name, mac);
     else
       {
-      memset(argv, 0, NB_ARG * sizeof(char *));
-      argv[0] = IP_BIN;
-      argv[1] = "-netns";
-      argv[2] = get_ns();
-      argv[3] = "link";
-      argv[4] = "set";
-      argv[5] = "dev";
-      argv[6] = vhost;
-      argv[7] = "up";
-      result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
+      result = set_dev_up_in_namespace(ovs_dir, vhost);
       if (result)
         KERR("ERROR %s %s", name, mac);
       else
         {
-        memset(argv, 0, NB_ARG * sizeof(char *));
-        argv[0] = IP_BIN;
-        argv[1] = "link";
-        argv[2] = "set";
-        argv[3] = "dev";
-        argv[4] = name;
-        argv[5] = "up";
-        result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 4);
+        result = set_dev_up_link(ovs_dir, name);
+        if (result)
+          KERR("ERROR %s %s", name, mac);
         }
       }
     }
@@ -167,33 +292,19 @@ static int ovs_cmd_del_tap(char *ovs_bin, char *ovs_dir, char *name, char *vhost
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int ovs_cmd_add_phy(char *ovs_bin, char *ovs_dir, char *name,
-                           char *vhost, char *mac)
+static int ovs_cmd_add_aphy(char *ovs_bin, char *ovs_dir, char *name,
+                            char *vhost, char *mac)
 {
-  int result = 0;
-  char *argv[NB_ARG];
-  memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
-  argv[1] = "link";
-  argv[2] = "set";
-  argv[3] = name;
-  argv[4] = "netns";
-  argv[5] = get_ns();
-  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 2);
-  if (result)
-    KERR("ERROR %s %s", name, mac);
+  int result;
+  if (change_mac_address(ovs_dir, name, mac))
+    KERR("ERROR %s %s %s", name, vhost, mac);
+  else if (put_in_namespace(ovs_dir, name))
+    KERR("ERROR %s %s %s", name, vhost, mac);
+  else if (change_name_within_namespace(ovs_dir, name, vhost))
+    KERR("ERROR %s %s %s", name, vhost, mac);
   else
     {
-    memset(argv, 0, NB_ARG * sizeof(char *));
-    argv[0] = IP_BIN;
-    argv[1] = "-netns";
-    argv[2] = get_ns();
-    argv[3] = "link";
-    argv[4] = "set";
-    argv[5] = "dev";
-    argv[6] = name;
-    argv[7] = "up";
-    result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
+    result = set_dev_up_in_namespace(ovs_dir, vhost);
     if (result)
       KERR("ERROR %s %s", name, mac);
     }
@@ -202,7 +313,88 @@ static int ovs_cmd_add_phy(char *ovs_bin, char *ovs_dir, char *name,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int ovs_cmd_del_phy(char *ovs_bin, char *ovs_dir, char *name, char *vhost)
+static int ovs_cmd_del_aphy(char *ovs_bin, char *ovs_dir,
+                            char *name, char *vhost)
+{
+  int result;
+  if (set_dev_down_in_namespace(ovs_dir, vhost))
+    KERR("ERROR %s %s", name, vhost);
+  else if (change_name_within_namespace(ovs_dir, vhost, name))
+    KERR("ERROR %s %s", name, vhost);
+  else
+    {
+    result = put_back_in_main_namespace(ovs_dir, name);
+    if (result)
+      KERR("ERROR %s %s", name, vhost);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int ovs_cmd_add_mphy(char *ovs_bin, char *ovs_dir, char *name,
+                            char *vhost, char *mac)
+{
+  static int tmpnum=0;
+  int result = 0;
+  char *argv[NB_ARG];
+  char macvlan[MAX_NAME_LEN];
+  tmpnum += 1;
+  if (tmpnum == 100)
+    tmpnum = 1;
+  memset(macvlan, 0, MAX_NAME_LEN);
+  snprintf(macvlan, MAX_NAME_LEN-1, "mcvl%d", tmpnum);
+  memset(argv, 0, NB_ARG * sizeof(char *));
+  argv[0] = IP_BIN;
+  argv[1] = "link";
+  argv[2] = "add";
+  argv[3] = macvlan;
+  argv[4] = "link";
+  argv[5] = name;
+  argv[6] = "type";
+  argv[7] = "macvlan";
+  argv[8] = "mode";
+  argv[9] = "bridge";
+  result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 2);
+  if (result)
+    KERR("ERROR %s %s", name, mac);
+  else
+    {
+    result = change_mac_address(ovs_dir, macvlan, mac);
+    if (result)
+      KERR("ERROR %s %s", name, mac);
+    else
+      {
+      result = put_in_namespace(ovs_dir, macvlan);
+      if (result)
+        KERR("ERROR %s %s", name, mac);
+      else
+        {
+        result = change_name_within_namespace(ovs_dir, macvlan, vhost);
+        if (result)
+          KERR("ERROR %s %s", name, mac);
+        else
+          {
+          result = set_dev_up_in_namespace(ovs_dir, vhost);
+          if (result)
+             KERR("ERROR %s %s", name, mac);
+          else
+            {
+            result = set_dev_up_link(ovs_dir, name);
+            if (result)
+              KERR("ERROR %s %s", name, mac);
+            }
+          }
+        }
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int ovs_cmd_del_mphy(char *ovs_bin, char *ovs_dir,
+                            char *name, char *vhost)
 {
   int result = 0;
   char *argv[NB_ARG];
@@ -213,7 +405,7 @@ static int ovs_cmd_del_phy(char *ovs_bin, char *ovs_dir, char *name, char *vhost
   argv[3] = "link";
   argv[4] = "set";
   argv[5] = "dev";
-  argv[6] = name;
+  argv[6] = vhost;
   argv[7] = "down";
   result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
   if (result)
@@ -225,10 +417,8 @@ static int ovs_cmd_del_phy(char *ovs_bin, char *ovs_dir, char *name, char *vhost
     argv[1] = "-netns";
     argv[2] = get_ns();
     argv[3] = "link";
-    argv[4] = "set";
-    argv[5] = name;
-    argv[6] = "netns";
-    argv[7] = "1";
+    argv[4] = "del";
+    argv[5] = vhost;
     result = call_ovs_popen(ovs_dir, argv, 2, __FUNCTION__, 3);
     if (result)
       KERR("ERROR %s %s", name, vhost);
@@ -273,34 +463,75 @@ static void action_del_tap(char *bin, char *db, char *respb,
 
 /*****************************************************************************/
 static void action_add_phy(char *bin, char *db, char *respb,
-                           char *name, char *vhost, char *mac)
+                           char *name, char *vhost, char *mac,
+                           int num_macvlan)
 {
-  if (ovs_cmd_add_phy(bin, db, name, vhost, mac))
+  if (num_macvlan == 0)
     {
-    snprintf(respb, MAX_PATH_LEN-1,
-    "KO ovs_add_phy name=%s vhost=%s mac=%s", name, vhost, mac);
+    if (ovs_cmd_add_aphy(bin, db, name, vhost, mac))
+      {
+      snprintf(respb, MAX_PATH_LEN-1,
+      "KO ovs_add_phy name=%s vhost=%s mac=%s num_macvlan=%d",
+      name, vhost, mac, num_macvlan);
+      }
+    else
+      {
+      snprintf(respb, MAX_PATH_LEN-1,
+      "OK ovs_add_phy name=%s vhost=%s mac=%s num_macvlan=%d",
+      name, vhost, mac, num_macvlan);
+      }
     }
   else
     {
-    snprintf(respb, MAX_PATH_LEN-1,
-    "OK ovs_add_phy name=%s vhost=%s mac=%s", name, vhost, mac);
+    if (ovs_cmd_add_mphy(bin, db, name, vhost, mac))
+      {
+      snprintf(respb, MAX_PATH_LEN-1,
+      "KO ovs_add_phy name=%s vhost=%s mac=%s num_macvlan=%d",
+      name, vhost, mac, num_macvlan);
+      }
+    else
+      {
+      snprintf(respb, MAX_PATH_LEN-1,
+      "OK ovs_add_phy name=%s vhost=%s mac=%s num_macvlan=%d",
+      name, vhost, mac, num_macvlan);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void action_del_phy(char *bin, char *db, char *respb,
-                           char *name, char *vhost)
+                           char *name, char *vhost, int num_macvlan)
 {
-  if (ovs_cmd_del_phy(bin, db, name, vhost))
+  if (num_macvlan == 0)
     {
-    snprintf(respb, MAX_PATH_LEN-1,
-    "KO ovs_del_phy name=%s vhost=%s", name, vhost);
+    if (ovs_cmd_del_aphy(bin, db, name, vhost))
+      {
+      snprintf(respb, MAX_PATH_LEN-1,
+      "KO ovs_del_phy name=%s vhost=%s num_macvlan=%d",
+      name, vhost, num_macvlan);
+      }
+    else
+      {
+      snprintf(respb, MAX_PATH_LEN-1,
+      "OK ovs_del_phy name=%s vhost=%s num_macvlan=%d",
+      name, vhost, num_macvlan);
+      }
     }
   else
     {
-    snprintf(respb, MAX_PATH_LEN-1,
-    "OK ovs_del_phy name=%s vhost=%s", name, vhost);
+    if (ovs_cmd_del_mphy(bin, db, name, vhost))
+      {
+      snprintf(respb, MAX_PATH_LEN-1,
+      "KO ovs_del_phy name=%s vhost=%s num_macvlan=%d",
+      name, vhost, num_macvlan);
+      }
+    else
+      {
+      snprintf(respb, MAX_PATH_LEN-1,
+      "OK ovs_del_phy name=%s vhost=%s num_macvlan=%d",
+      name, vhost, num_macvlan);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -662,8 +893,10 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   char *bin = g_ovs_bin;
   char *db = g_ovs_dir;
   char mac[MAX_NAME_LEN];
+  char macv[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   char vhost[MAX_NAME_LEN];
+  int  type, num_macvlan;
   memset(respb, 0, MAX_PATH_LEN);
 
   if (strlen(line) == 0)
@@ -704,20 +937,25 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     }
 
   else if (sscanf(line,
-"ovs_add_phy name=%s vhost=%s mac=%s", name, vhost, mac) == 3)
+"ovs_add_phy name=%s vhost=%s mac=%s num_macvlan=%d", name, vhost, mac, &num_macvlan) == 4)
     {
-    action_add_phy(bin, db, respb, name, vhost, mac);
+    action_add_phy(bin, db, respb, name, vhost, mac, num_macvlan);
     log_write_resp(tid, respb);
     rpct_send_sigdiag_msg(g_cloonix_llid, tid, respb);
     }
   else if (sscanf(line,
-"ovs_del_phy name=%s vhost=%s", name, vhost) == 2)
+"ovs_del_phy name=%s vhost=%s num_macvlan=%d", name, vhost, &num_macvlan) == 3)
     {
-    action_del_phy(bin, db, respb, name, vhost);
+    action_del_phy(bin, db, respb, name, vhost, num_macvlan);
     log_write_resp(tid, respb);
     rpct_send_sigdiag_msg(g_cloonix_llid, tid, respb);
     }
-
+  else if (sscanf(line,
+"ovs_change_macvlan_mac type=%d macv=%s nmac=%s", &type, macv, mac) == 3)
+    {
+    if (type == 1)
+      change_mac_macvlan(db, macv, mac);
+    }
   else
     {
     if (!strcmp(line,

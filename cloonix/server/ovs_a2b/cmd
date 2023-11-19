@@ -24,6 +24,8 @@ project('cloonix-ovs-a2b', 'c')
 
 cflags =  ['-mtune=generic']
 cflags += ['-fno-stack-protector']
+cflags += ['-Wno-format-overflow']
+cflags += ['-Wno-format-truncation']
 cflags += ['-g']
 cflags += ['-fPIC']
 cflags += ['-DALLOW_EXPERIMENTAL_API']
@@ -42,6 +44,7 @@ sources = files('src/ovs_a2b.c',
                 'src/rxtx.c',
                 'src/sched.c',
                 'src/circle.c',
+                'src/replace.c',
                 'src/stub.c')
 
 executable('cloonix-ovs-a2b', sources, include_directories : incdir,

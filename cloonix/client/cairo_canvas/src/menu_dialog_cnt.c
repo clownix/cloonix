@@ -35,13 +35,11 @@
 
 GtkWidget *get_main_window(void);
 static t_custom_cnt g_custom_cnt;
-static GtkWidget *g_custom_dialog, *g_entry_image,  *g_entry_customer_launch;
+static GtkWidget *g_custom_dialog, *g_entry_image;
 static GtkWidget *g_image_menu;
 void menu_choice_cnt(void);
 static t_slowperiodic g_bulcru[MAX_BULK_FILES];
 static int g_nb_bulcru;
-static t_slowperiodic g_buldoc[MAX_BULK_FILES];
-static int g_nb_buldoc;
 static t_slowperiodic g_bulpod[MAX_BULK_FILES];
 static int g_nb_bulpod;
 
@@ -62,11 +60,6 @@ static void img_get(GtkWidget *check, gpointer data)
     {
     memset(cust->cru_image, 0, MAX_NAME_LEN);
     strncpy(cust->cru_image, name, MAX_NAME_LEN-1);
-    }
-  else if (!strcmp(cust->brandtype, "docker"))
-    {
-    memset(cust->doc_image, 0, MAX_NAME_LEN);
-    strncpy(cust->doc_image, name, MAX_NAME_LEN-1);
     }
   else if (!strcmp(cust->brandtype, "podman"))
     {
@@ -124,11 +117,6 @@ static void setup_list_choices(void)
     gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->cru_image);
     menu = get_bul(g_nb_bulcru, g_bulcru, cust->cru_image);
     }
-  else if (!strcmp(cust->brandtype, "docker"))
-    {
-    gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->doc_image);
-    menu = get_bul(g_nb_buldoc, g_buldoc, cust->doc_image);
-    }
   else if (!strcmp(cust->brandtype, "podman"))
     {
     gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->pod_image);
@@ -152,17 +140,6 @@ void set_bulcru(int nb, t_slowperiodic *slowperiodic)
   g_nb_bulcru = nb;
   memset(g_bulcru, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   memcpy(g_bulcru, slowperiodic, g_nb_bulcru * sizeof(t_slowperiodic));
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void set_buldoc(int nb, t_slowperiodic *slowperiodic)
-{
-  if (nb<0 || nb >= MAX_BULK_FILES)
-    KOUT("%d", nb);
-  g_nb_buldoc = nb;
-  memset(g_buldoc, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  memcpy(g_buldoc, slowperiodic, g_nb_buldoc * sizeof(t_slowperiodic));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -206,12 +183,6 @@ static void update_cust(t_custom_cnt *cust, GtkWidget *entry_name)
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_name));
   memset(cust->name, 0, MAX_NAME_LEN);
   strncpy(cust->name, tmp, MAX_NAME_LEN-1);
-
-
-  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(g_entry_customer_launch));
-  memset(cust->customer_launch, 0, MAX_PATH_LEN);
-  strncpy(cust->customer_launch, tmp, MAX_PATH_LEN-1);
-
 }
 /*--------------------------------------------------------------------------*/
 
@@ -312,7 +283,7 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void crun_docker_podman_cb(GtkWidget *check, gpointer data)
+static void crun_podman_cb(GtkWidget *check, gpointer data)
 {
   int brand = (int) ((unsigned long) data);
   t_custom_cnt *cust = &g_custom_cnt;
@@ -320,8 +291,6 @@ static void crun_docker_podman_cb(GtkWidget *check, gpointer data)
     KOUT(" ");
   if (brand == brand_crun)
     strcpy(cust->brandtype, "crun");
-  else if (brand == brand_docker)
-    strcpy(cust->brandtype, "docker");
   else if (brand == brand_podman)
     strcpy(cust->brandtype, "podman");
   else
@@ -331,34 +300,27 @@ static void crun_docker_podman_cb(GtkWidget *check, gpointer data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static GtkWidget *crun_docker_podman(void)
+static GtkWidget *crun_podman(void)
 {
-  GtkWidget *result, *rad1, *rad2, *rad3;
+  GtkWidget *result, *rad1, *rad2;
   GSList *group = NULL;
   t_custom_cnt *cust = &g_custom_cnt;
   result = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   rad1 = gtk_radio_button_new_with_label(group, "crun");
   group = gtk_radio_button_get_group(GTK_RADIO_BUTTON(rad1));
-  rad2 = gtk_radio_button_new_with_label(group, "docker");
-  group = gtk_radio_button_get_group(GTK_RADIO_BUTTON(rad2));
-  rad3 = gtk_radio_button_new_with_label(group, "podman");
+  rad2 = gtk_radio_button_new_with_label(group, "podman");
   g_signal_connect(G_OBJECT(rad1),"clicked",
-            (GCallback)crun_docker_podman_cb, (gpointer) brand_crun);
+            (GCallback)crun_podman_cb, (gpointer) brand_crun);
   g_signal_connect(G_OBJECT(rad2),"clicked",
-            (GCallback)crun_docker_podman_cb, (gpointer) brand_docker);
-  g_signal_connect(G_OBJECT(rad3),"clicked",
-            (GCallback)crun_docker_podman_cb, (gpointer) brand_podman);
+            (GCallback)crun_podman_cb, (gpointer) brand_podman);
   if (!strcmp(cust->brandtype, "crun"))
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad1),TRUE);
-  else if (!strcmp(cust->brandtype, "docker"))
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad2),TRUE);
   else if (!strcmp(cust->brandtype, "podman"))
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad3),TRUE);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad2),TRUE);
   else
     KOUT("%s", cust->brandtype);
   gtk_box_pack_start(GTK_BOX(result), rad1, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(result), rad2, FALSE, FALSE, 0);
-  gtk_box_pack_start(GTK_BOX(result), rad3, FALSE, FALSE, 0);
   gtk_widget_show_all(result);
   return result;
 }
@@ -390,17 +352,6 @@ static void custom_vm_dialog(t_custom_cnt *cust)
       }
     if ((found == 0) && (g_nb_bulcru >= 1))
       strncpy(cust->cru_image, g_bulcru[0].name, MAX_NAME_LEN-1);
-    }
-  else if (!strcmp(cust->brandtype, "docker"))
-    {
-    strncpy(image, cust->doc_image, MAX_NAME_LEN);
-    for (i=0; i<g_nb_buldoc; i++)
-      {
-      if (!strcmp(cust->doc_image, g_buldoc[i].name))
-        found = 1;
-      }
-    if ((found == 0) && (g_nb_buldoc >= 1))
-      strncpy(cust->doc_image, g_buldoc[0].name, MAX_NAME_LEN-1);
     }
   else if (!strcmp(cust->brandtype, "podman"))
     {
@@ -438,16 +389,10 @@ static void custom_vm_dialog(t_custom_cnt *cust)
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), TRUE);
   else
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), FALSE);
-   
-  brand = crun_docker_podman();
-
+  brand = crun_podman();
   g_signal_connect(is_persistent,"toggled",G_CALLBACK(is_persistent_toggle),NULL);
   append_grid(grid, is_persistent, "remanence:", line_nb++);
   append_grid(grid, brand, "container:", line_nb++);
-
-  g_entry_customer_launch = gtk_entry_new();
-  gtk_entry_set_text(GTK_ENTRY(g_entry_customer_launch), cust->customer_launch);
-  append_grid(grid, g_entry_customer_launch, "Customer_launch:", line_nb++);
 
   for (i=0; i<ETH_LINE_MAX; i++)
     {
@@ -525,10 +470,8 @@ void menu_dialog_cnt_init(void)
   memset(&g_custom_cnt, 0, sizeof(t_custom_cnt)); 
   strcpy(g_custom_cnt.brandtype, "crun");
   strcpy(g_custom_cnt.name, "Cnt");
-  strcpy(g_custom_cnt.customer_launch,"sleep 8888d");
   strcpy(g_custom_cnt.startup_env, "STARTUP_ENV=myenv");
-  strcpy(g_custom_cnt.cru_image,   "bookworm.img");
-  strcpy(g_custom_cnt.doc_image,   "bookworm");
+  strcpy(g_custom_cnt.cru_image,   "bookworm.zip");
   strcpy(g_custom_cnt.pod_image,   "localhost/bookworm");
   g_custom_cnt.nb_tot_eth = 3;
   for (i=0; i<g_custom_cnt.nb_tot_eth; i++)

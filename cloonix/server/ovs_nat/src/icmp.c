@@ -139,8 +139,8 @@ static int rx_cb(int llid, int fd)
 {
   socklen_t slen;
   uint32_t src_ip_addr;
-  uint8_t *icmp;
-  uint8_t icmp_type, icmp_ident, icmp_seq_nb;
+  uint8_t *icmp, icmp_type;
+  uint16_t icmp_ident, icmp_seq_nb;
   t_icmp *cur;
   int rc;
   uint8_t data[MAX_RXTX_LEN];

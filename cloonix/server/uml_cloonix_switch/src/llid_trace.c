@@ -558,8 +558,8 @@ void llid_trace_init(void)
   for (i=0; i<type_llid_max; i++)
     trace_fd_qty[i] = 0;
   memset(llid_trace_data,0,CLOWNIX_MAX_CHANNELS*sizeof(t_llid_trace_data *));
-  memset(vm_to_llid, 0, MAX_VM*sizeof(t_vm_to_llid));
-  memset(event_to_llid, 0, sub_evt_max*sizeof(t_event_to_llid));
+  memset(vm_to_llid, 0, MAX_VM*sizeof(t_vm_to_llid *));
+  memset(event_to_llid, 0, sub_evt_max*sizeof(t_event_to_llid *));
 }
 /*---------------------------------------------------------------------------*/
 

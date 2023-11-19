@@ -95,3 +95,11 @@ are::
 Note that in the above dumps, the s_k_2_0 and s_k_1_0 ports are mirrors
 to spy on the _k_2_0 and _k_1_0 ports that are the eth0 of Cloon2 and eth0
 of Cloon1.
+
+Another way to enter the net namespace of a cloonix nemo network to 
+list the interfaces it sees would be::
+
+  ps aux | grep cloonix-ovsdb-server | grep nemo | awk "{print \$2}"
+  14030
+  sudo nsenter --net=/proc/14030/ns/net
+  ip link

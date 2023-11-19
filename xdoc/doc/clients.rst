@@ -17,8 +17,9 @@ to control the cloonix server, here is a full list the clients:
   * *cloonix_ocp*  Pseudo-ssh for vm without qemu_guest_agent (for cisco c8000).
   * *cloonix_ice*  Spice desktop command line launcher.
   * *cloonix_ovs*  Ovs command line for the embedded openvswitch.
-  * *cloonix_wsk* Command line to launch wireshark on a cloonix endpoint.
-  * *cloonix_wsk* Command line to launch wireshark on host.
+  * *cloonix_wsk*  Command line to launch wireshark on a cloonix endpoint.
+  * *cloonix_lsh*  Local bash on client with particular env.
+  * *cloonix_dsh*  Distant bash on server with particular env.
 
 
 cloonix_gui
@@ -40,6 +41,11 @@ A complete connection connects two or more endpoints through a lan crossroad.
 The endpoints can be interfaces of vm/container or an interface of an a2b item
 or a tap, a nat or c2c.
 
+Note the redirection of usb does not work in the spice desktop availlable
+with the cloonix_gui.
+
+Use the cloonix_ice to have the usb redirection possible.
+
 
 cloonix_cli
 ===========
@@ -48,10 +54,10 @@ Hit *cloonix_cli* and return, you can see the servers that can be joined and
 all the possible server names in config, notice that you must have launched
 nemo to have the menu under (do *cloonix_net nemo* to launch nemo)::
 
-    sources$ cloonix_cli nemo
+    sources$ cloonix_cli nemo help
     
     |-------------------------------------------------------------------------|
-    | cloonix_cli nemo Version:27-00                                          |
+    | cloonix_cli nemo Version:33-00                                          |
     |-------------------------------------------------------------------------|
     |    snf             : Add wireshark capability on item                   |
     |    kil             : Destroys all objects, cleans and kills switch      |
@@ -71,20 +77,19 @@ nemo to have the menu under (do *cloonix_net nemo* to launch nemo)::
     |    sys             : prints system stats                                |
     |-------------------------------------------------------------------------|
 
-
 Then hit *cloonix_cli nemo add* to have the next possible choices::
 
     sources$ cloonix_cli nemo add
     
     |-------------------------------------------------------------------------|
-    | cloonix_cli nemo Version:27-00add                                       |
+    | cloonix_cli nemo Version:33-00add                                       |
     |-------------------------------------------------------------------------|
     |    lan             : Add lan (emulated cable)                           |
     |    kvm             : Add kvm (virtualized machine)                      |
     |    cru             : Add container crun                                 |
-    |    doc             : Add container docker                               |
     |    pod             : Add container podman                               |
     |    tap             : Add tap (host network interface)                   |
+    |    phy             : Add phy (real host network interface)              |
     |    nat             : Add nat (access host ip)                           |
     |    a2b             : Add a2b (traffic delay shaping)                    |
     |    c2c             : Add c2c (cloonix 2 cloonix cable)                  |
@@ -125,6 +130,7 @@ qemu-guest-agent.service to have this service on qemu kvm.
 
 The color blue arrives when the cloonix-agent is operational and that
 color indicates that the cloonix_ssh will work.
+
 
 cloonix_scp
 ===========
@@ -186,6 +192,8 @@ cmd line::
   
     cloonix_ice <net_name> <vm_name>
   
+With this call for the spice desktop, the **usb redirection is possible**.
+
 
 cloonix_ovs
 ===========
@@ -205,8 +213,9 @@ cloonix_wsk
 ===========
 
 Cloonix uses an embedded version of wireshark, you can have access to
-this wireshark through the cloonix_wsk command, for example, you can
-test::
+this wireshark through the cloonix_wsk command, for example, if you
+have nemo running with a vm named Cloon1 in it, you can test::
 
     cloonix_wsk nemo Cloon1 0
+
 

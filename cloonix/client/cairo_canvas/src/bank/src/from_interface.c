@@ -94,15 +94,14 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void bank_cnt_create(char *type, char *name, char *image,
-                     char *customer_launch, int vm_id,
+void bank_cnt_create(char *type, char *name, char *image, int vm_id,
                      int ping_ok, int nb_tot_eth, t_eth_table *eth_tab,
                      double x, double y, int hidden_on_graph,
                      double *tx, double *ty, int32_t *thidden)
 {
   int i;
-  add_new_cnt(type, name, image, customer_launch, vm_id, x, y,
-              hidden_on_graph, ping_ok, nb_tot_eth, eth_tab);
+  add_new_cnt(type, name, image, vm_id, x, y, hidden_on_graph,
+              ping_ok, nb_tot_eth, eth_tab);
   for (i=0; i < nb_tot_eth; i++)
     {
     if ((eth_tab[i].endp_type == endp_type_eths) ||

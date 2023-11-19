@@ -212,6 +212,45 @@ static void init_all_env(char *net_name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void set_env_global_cloonix(void)
+{
+  setenv("PATH",  "/usr/libexec/cloonix/common:"
+                  "/usr/libexec/cloonix/client:"
+                  "/usr/libexec/cloonix/server", 1);
+  setenv("FONTCONFIG_FILE",
+  "/usr/libexec/cloonix/common/etc/fonts/fonts.conf", 1);
+  setenv("XDG_CONFIG_HOME",
+  "/usr/libexec/cloonix/common/share", 1);
+  setenv("XDG_DATA_HOME",
+  "/usr/libexec/cloonix/common/share", 1);
+  setenv("XDG_DATA_DIRS",
+  "/usr/libexec/cloonix/common/share", 1);
+  setenv("GTK_DATA_PREFIX",
+  "/usr/libexec/cloonix/common/share", 1);
+  setenv("GTK_EXE_PREFIX",
+  "/usr/libexec/cloonix/common", 1);
+  setenv("QT_PLUGIN_PATH",
+  "/usr/libexec/cloonix/common/lib/qt6/plugins", 1);
+  setenv("GTK_IM_MODULE_FILE",
+  "/usr/libexec/cloonix/common/lib/gtk-3.0/3.0.0/immodules.cache", 1);
+  setenv("GDK_PIXBUF_MODULE_FILE",
+  "/usr/libexec/cloonix/common/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache", 1);
+  setenv("GST_PLUGIN_SYSTEM_PATH",
+  "/usr/libexec/cloonix/common/lib/gstreamer-1.0", 1);
+  setenv("GST_PLUGIN_SCANNER",
+  "/usr/libexec/cloonix/common/gst-plugin-scanner", 1);
+  setenv("NO_AT_BRIDGE", "1", 1);
+  setenv("PULSE_CLIENTCONFIG",
+  "/usr/libexec/cloonix/common/etc/pulse/client.conf", 1);
+  setenv("LIBGL_ALWAYS_INDIRECT", "1", 1);
+  setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1);
+  setenv("LIBGL_DRI3_DISABLE", "1", 1);
+  setenv("QT_X11_NO_MITSHM", "1", 1);
+  setenv("QT_XCB_NO_MITSHM", "1", 1);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void create_env(int display_val, char *ttyname)
 {
   char disp_str[MAX_TXT_LEN];
@@ -228,11 +267,6 @@ static void create_env(int display_val, char *ttyname)
     setenv("XAUTHORITY", g_xauthority, 1);
     setenv("TERM", "xterm", 1);
     setenv("SHELL", "/bin/bash", 1);
-    setenv("LIBGL_ALWAYS_INDIRECT", "1", 1);
-    setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1);
-    setenv("LIBGL_DRI3_DISABLE", "1", 1);
-    setenv("QT_X11_NO_MITSHM", "1", 1);
-    setenv("QT_XCB_NO_MITSHM", "1", 1);
     }
   else
     XERR("Problem setting DISPLAY");
@@ -329,6 +363,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
     if (action == action_dae)
       {
       create_env(display_val, ttyname); 
+      set_env_global_cloonix();
       create_argv_from_cmd(cmd, argv);
       }
     else if (action == action_bash)

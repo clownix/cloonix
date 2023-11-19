@@ -43,6 +43,7 @@ cd ${WORK}
 mkdir qemu_vip
 cd ${WORK}/qemu_vip
 tar xvf ${WORK}/qemu.tar.gz
+meson subprojects download
 cd ${WORK}
 tar zcvf qemu_${COMMIT}.tar.gz qemu_vip
 rm -rf qemu

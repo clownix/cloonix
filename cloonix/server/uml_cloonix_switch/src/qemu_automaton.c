@@ -317,9 +317,7 @@ static void derived_file_creation_request(t_vm *vm)
    " -device virtio-vga"\
    " -audiodev driver=spice,id=hda0"\
    " -device intel-hda,id=hda0"\
-   " -device hda-output,bus=hda0.0"\
-   " -device hda-micro,bus=hda0.0"\
-   " -device hda-duplex,bus=hda0.0"\
+   " -device hda-duplex,bus=hda0.0,audiodev=hda0"\
    " -device qemu-xhci"\
    " -device usb-tablet"\
    " -chardev spicevmc,id=charredir0,name=usbredir"\

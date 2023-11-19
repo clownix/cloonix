@@ -81,7 +81,7 @@ void client_cnf_nat(int tid, t_end_cb cb, char *name, char *cmd);
 void client_add_cnt(int tid, t_end_cb cb, t_topo_cnt *cnt);
 
 void client_add_tap(int tid, t_end_cb cb, char *name);
-void client_add_phy(int tid, t_end_cb cb, char *name);
+void client_add_phy(int tid, t_end_cb cb, char *name, int type);
 void client_add_nat(int tid, t_end_cb cb, char *name);
 
 void client_del_sat(int tid, t_end_cb cb, char *name);
@@ -121,7 +121,6 @@ void client_req_pids(int tid, t_pid_cb cb);
 void client_req_eventfull(t_eventfull_cb cb);
 void client_req_slowperiodic(t_slowperiodic_cb cb_qcow2,
                              t_slowperiodic_cb cb_img,
-                             t_slowperiodic_cb cb_docker,
                              t_slowperiodic_cb cb_podman);
 
 int cmd_ftopo_recv(char *topo_dir, t_progress_txt_cb pcb);

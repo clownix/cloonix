@@ -67,8 +67,8 @@
 #include "ovs_c2c.h"
 #include "suid_power.h"
 #include "cnt.h"
-#include "docker.h"
-
+#include "podman.h"
+#include "mactopo.h"
 
 
 static t_topo_clc g_clc;
@@ -497,13 +497,14 @@ int main (int argc, char *argv[])
   init_heartbeat();
   stats_counters_init();
   stats_counters_sysinfo_init();
+  mactopo_init();
   hop_init();
   qmp_dialog_init();
   qmp_init();
   qga_dialog_init();
   suid_power_init();
   cnt_init();
-  docker_init();
+  podman_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
   layout_topo_init();

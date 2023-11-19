@@ -49,7 +49,7 @@ of a demo is easy using these tools.
 
 For the building of the cisco, you have to get a file such as:
   
-  *c8000v-universalk9.17.04.01a.iso*
+  *c8000v-universalk9.17.12.01a.iso*
 
 The script will probably still work with another iso from cisco.
   

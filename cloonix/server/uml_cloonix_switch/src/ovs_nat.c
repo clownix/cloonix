@@ -39,6 +39,7 @@
 #include "kvm.h"
 #include "layout_rpc.h"
 #include "layout_topo.h"
+#include "mactopo.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -69,7 +70,11 @@ static void free_nat(t_ovs_nat *cur)
   cfg_free_obj_id(cur->nat_id);
   layout_del_sat(cur->name);
   if (strlen(cur->lan_added))
+    {
+    KERR("%s %s", cur->name, cur->lan_added);
+    mactopo_del_req(item_nat, cur->name, 0, cur->lan_added);
     lan_del_name(cur->lan_added, item_nat, cur->name, 0);
+    }
   if (cur->llid)
     {
     llid_trace_free(cur->llid, 0, __FUNCTION__);
@@ -421,7 +426,10 @@ void ovs_nat_resp_add_lan(int is_ko, char *name, int num,
 {
   t_ovs_nat *cur = find_nat(name);
   if (!cur)
+    {
+    mactopo_add_resp(0, name, num, lan);
     KERR("ERROR %d %s", is_ko, name); 
+    }
   else
     {
     if (strlen(cur->lan))
@@ -429,11 +437,13 @@ void ovs_nat_resp_add_lan(int is_ko, char *name, int num,
     memset(cur->lan, 0, MAX_NAME_LEN);
     if (is_ko)
       {
+      mactopo_add_resp(0, name, num, lan);
       KERR("ERROR %d %s", is_ko, name);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), name);
       }
     else
       {
+      mactopo_add_resp(item_nat, name, num, lan);
       strncpy(cur->lan, lan, MAX_NAME_LEN);
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       cfg_hysteresis_send_topo_info();
@@ -448,9 +458,13 @@ void ovs_nat_resp_del_lan(int is_ko, char *name, int num,
 {
   t_ovs_nat *cur = find_nat(name);
   if (!cur)
+    {
+    mactopo_del_resp(0, name, num, lan);
     KERR("ERROR %d %s", is_ko, name);
+    }
   else if (cur->del_nat_req == 1)
     {
+    mactopo_del_resp(item_nat, name, num, lan);
     memset(cur->lan, 0, MAX_NAME_LEN);
     utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
     rpct_send_kil_req(cur->llid, type_hop_nat);
@@ -458,6 +472,7 @@ void ovs_nat_resp_del_lan(int is_ko, char *name, int num,
     }
   else
     {
+    mactopo_del_resp(item_nat, name, num, lan);
     memset(cur->lan, 0, MAX_NAME_LEN);
     if (is_ko)
       {
@@ -571,6 +586,7 @@ void ovs_nat_del(int cli_llid, int cli_tid, char *name)
       {
       if (!strlen(cur->lan))
         KERR("ERROR %s %s", name, cur->lan_added);
+      mactopo_del_req(item_nat, cur->name, 0, cur->lan_added);
       val = lan_del_name(cur->lan_added, item_nat, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
@@ -600,6 +616,7 @@ void ovs_nat_del(int cli_llid, int cli_tid, char *name)
 void ovs_nat_add_lan(int cli_llid, int cli_tid, char *name, char *lan)
 {
   t_ovs_nat *cur = find_nat(name);
+  char err[MAX_PATH_LEN];
   if (!cur)
     {
     KERR("ERROR %s", name);
@@ -621,8 +638,13 @@ void ovs_nat_add_lan(int cli_llid, int cli_tid, char *name, char *lan)
   else
     {
     lan_add_name(lan, item_nat, name, 0);
-    if (msg_send_add_lan_endp(ovsreq_add_nat_lan, name, 0,
-                                  cur->vhost, lan))
+    if (mactopo_add_req(item_nat, name, 0, lan, NULL, NULL, err))
+      {
+      KERR("ERROR %s %d %s %s", name, 0, lan, err);
+      send_status_ko(cli_llid, cli_tid, err);
+      lan_del_name(lan, item_nat, name, 0);
+      }
+    else if (msg_send_add_lan_endp(ovsreq_add_nat_lan, name, 0, cur->vhost, lan))
       {
       KERR("ERROR %s %s", name, lan);
       send_status_ko(cli_llid, cli_tid, "msg_send_add_lan_endp error");
@@ -631,9 +653,6 @@ void ovs_nat_add_lan(int cli_llid, int cli_tid, char *name, char *lan)
     else
       {
       strncpy(cur->lan_added, lan, MAX_NAME_LEN);
-      lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_CISCO);
-      lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_GW);
-      lan_add_mac(cur->lan_added, item_nat, cur->name, 0, NAT_MAC_DNS);
       cur->cli_llid = cli_llid;
       cur->cli_tid = cli_tid;
       }
@@ -662,6 +681,7 @@ void ovs_nat_del_lan(int cli_llid, int cli_tid, char *name, char *lan)
       KERR("ERROR: %s %s", name, lan);
     else
       {
+      mactopo_del_req(item_nat, cur->name, 0, cur->lan_added);
       val = lan_del_name(cur->lan_added, item_nat, cur->name, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       }
@@ -690,7 +710,8 @@ void ovs_nat_vm_event(void)
   t_cnt *cnt;
   char mac[MAX_NAME_LEN];
   char msg[MAX_PATH_LEN];
-  char *m, *name;
+  char *name;
+  unsigned char *m;
   t_ovs_nat *cur = g_head_nat;
   while(cur)
     {

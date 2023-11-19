@@ -20,7 +20,7 @@ tar xvf ${TARGZ}/spice_*.tar.gz
 cd ${TARGET}/spice/server/
 sed -i s"/library('spice-server'/library('cloonix-spice-server'/" meson.build
 cd ${TARGET}/spice
-sed -i s"/UNKNOWN/0.14.0/" build-aux/git-version-gen
+sed -i s"/UNKNOWN/0.14.5/" build-aux/git-version-gen
 sed -i 13s"/true/false/" meson_options.txt
 sed -i 41s"/true/false/" meson_options.txt
 sed -i 52s"/true/false/" meson_options.txt

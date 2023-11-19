@@ -33,25 +33,23 @@ int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
 int crun_utils_delete_net_nspace(char *nspace);
 int crun_utils_create_net(char *image, char *name, char *cnt_dir,
                          char *nspace, int cloonix_rank, int vm_id,
-                         int nb_eth, t_eth_mac *eth_mac, char *agent_dir,
-                         char *customer_launch);
+                         int nb_eth, t_eth_mac *eth_mac, char *agent_dir);
 int crun_utils_create_crun_create(char *cnt_dir, char *name);
 int crun_utils_create_crun_start(char *name);
 int crun_utils_create_overlay(char *path, char *image, int is_persistent);
 int crun_utils_create_config_json(char *path, char *rootfs, char *nspace,
                                  char *cloonix_dropbear, 
                                  char *mounttmp, int is_persistent);
-int crun_utils_docker_veth(char *name, int pid, int vm_id,
+int crun_utils_podman_veth(char *name, int pid, int vm_id,
                            int nb_eth, t_eth_mac *eth_mac);
 int dirs_agent_create_mnt_tmp(char *cnt_dir, char *name);
-void dirs_agent_copy_starter(char *cnt_dir, char *name,
-                             char *agent_dir, char *launch);
+void dirs_agent_copy_starter(char *cnt_dir, char *name, char *agent_dir);
 void crun_utils_init(char *var_root);
 char *get_mnt_loop_dir(void);
 void lio_clean_all_llid(void);
 char *lio_linear(char *argv[]);
 FILE *cmd_lio_popen(char *cmd, int *child_pid);
-int execute_cmd(char *cmd, int synchro);
+int execute_cmd(char *cmd);
 void log_write_req(char *line);
 int force_waitpid(int pid, int *status);
 /*--------------------------------------------------------------------------*/

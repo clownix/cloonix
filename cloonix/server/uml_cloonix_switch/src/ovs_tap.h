@@ -19,7 +19,7 @@ typedef struct t_ovs_tap
 {
   char name[MAX_NAME_LEN];
   char vhost[MAX_NAME_LEN];
-  char mac[MAX_NAME_LEN];
+  unsigned char mac_addr[8];
   char lan[MAX_NAME_LEN];
   char lan_added[MAX_NAME_LEN];
   int  del_tap_req;

@@ -46,10 +46,8 @@ typedef struct t_ovs_c2c
   int udp_loc_port_chosen;
   int udp_probe_qty_sent;
   int udp_connection_tx_configured;
-  int lan_add_cli_llid;
-  int lan_add_cli_tid;
-  int lan_del_cli_llid;
-  int lan_del_cli_tid;
+  int cli_llid;
+  int cli_tid;
   int waiting_ack_add_lan;
   int waiting_ack_del_lan;
   int process_waiting_error;
