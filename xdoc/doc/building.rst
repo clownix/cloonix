@@ -86,8 +86,7 @@ Here under is the complete list of commands to populate the bulk with qcow2::
 
 For the crun use, commands to populate the bulk with zip file-systems::
 
-    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/busybox.zip.gz
-    gunzip busybox.zip.gz
+    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/busybox.zip
 
 For the podman container guests, you have to create a podman image in your
 host outside of cloonix. This image gets to be visible in the Cnt_conf

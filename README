@@ -62,8 +62,7 @@ GET A WORKING ZIP AND PUT IT IN BULK TO TEST CRUN:
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-34/bulk/busybox.zip.gz
-gunzip busybox.zip.gz
+wget http://clownix.net/downloads/cloonix-34/bulk/busybox.zip
 
 -----------------------------------------------------------------------------
 LAUNCH TEST PINGS:
