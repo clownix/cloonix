@@ -260,12 +260,12 @@ static void suppress_previous_name(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_env_cmd(char *startup_env, char *env)
+static void create_env_podman(char *startup_env, char *env)
 {
   char *ptr_start, *ptr;
   int i, nb = 0;
   char tmp[2*MAX_NAME_LEN];
-  memset(env, 0, MAX_PATH_LEN);
+  memset(env, 0, MAX_PATH_LEN+MAX_NAME_LEN);
   ptr = startup_env;
   if (strlen(ptr))
     {
@@ -370,7 +370,7 @@ static int launch_podman(char *cnt_dir, char *brandtype, char *name,
   char line[MAX_PATH_LEN];
   char cmd[3*MAX_PATH_LEN];
   char str1[MAX_PATH_LEN];
-  char env[MAX_PATH_LEN];
+  char env[MAX_PATH_LEN+MAX_NAME_LEN];
   char entrypoint[MAX_NAME_LEN];
   char *mountbear = str1;
   int child_pid, wstatus, result = -1;
@@ -381,11 +381,11 @@ static int launch_podman(char *cnt_dir, char *brandtype, char *name,
     {
     memset(entrypoint, 0, MAX_NAME_LEN);
     strncpy(entrypoint, " ", MAX_NAME_LEN-1);
-    create_env_cmd(startup_env, env);
+    create_env_podman(startup_env, env);
     suppress_previous_name(name);
     memset(str1, 0, MAX_PATH_LEN);
     snprintf(str1, MAX_PATH_LEN-1,"%s/%s/mnt", cnt_dir, name);
-    dirs_agent_copy_starter(cnt_dir, name, agent_dir);
+    dirs_agent_copy_starter(cnt_dir, name, agent_dir, startup_env);
     if (no_entrypoint_found(id_image))
       strncpy(entrypoint, "sleep 7777d", MAX_NAME_LEN-1);
     memset(cmd, 0, 3*MAX_PATH_LEN);

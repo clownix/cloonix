@@ -49,8 +49,9 @@ void crun_sigdiag_resp(int llid, char *line)
     else
       {
       snprintf(req, MAX_PATH_LEN-1, 
-               "cloonsuid_crun_create_config_json name=%s is_persistent=%d",
-               name, cur->cnt.is_persistent);
+               "cloonsuid_crun_create_config_json name=%s is_persistent=%d "
+               "<startup_env_keyid>%s</startup_env_keyid>\n",
+               name, cur->cnt.is_persistent, cur->cnt.startup_env);
       if (send_sig_suid_power(llid, req))
         KERR("ERROR %d %s", llid, name);
       }
@@ -206,8 +207,10 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
       mac = cnt->eth_table[i].mac_addr;
       snprintf(req, 2*MAX_PATH_LEN-1,
       "cloonsuid_crun_create_eth name=%s num=%d "
-      "mac=0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx",
-      cnt->name, i, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      "mac=0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx "
+      "<startup_env_keyid>%s</startup_env_keyid>\n",
+      cnt->name, i, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+      cnt->startup_env);
       if (send_sig_suid_power(llid, req))
         {
         KERR("ERROR %s", cnt->name);

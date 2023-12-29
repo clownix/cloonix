@@ -38,59 +38,35 @@ EOF"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "apt-get --assume-yes update"
 
-cloonix_ssh ${NET} ${NAME} "apt-get -y install tar build-essential g++ cmake \
-                            pkg-config intltool libtool meson ninja-build \
-                            libssl-dev libusb-1.0-0-dev patch libglib2.0-dev \
-                            libpixman-1-dev python3-six sudo xauth \
-                            python3-pyparsing libjpeg-dev pulseaudio \
-                            libpulse-dev libgstreamer1.0-dev \
-                            libgstreamer-plugins-base1.0-dev \
-                            libgstreamer-plugins-bad1.0-dev \
-                            gstreamer1.0-plugins-bad-apps \
-                            gstreamer1.0-plugins-base-apps \
-                            liblz4-dev libpcap-dev libsasl2-dev libfuse3-dev \
-                            fuse-overlayfs libnuma-dev libepoxy-dev xorriso \
-                            libgtk-3-dev libjson-glib-dev libacl1-dev \
-                            libpolkit-gobject-1-dev busybox-static \
-                            libyajl-dev make git libsystemd-dev \
-                            libprotobuf-c-dev libcap-dev libseccomp-dev \
-                            libgcrypt20-dev go-md2man python3 python3-venv \
-                            locales libffi-dev libfdt-dev libfuse-dev \
-                            libarchive-dev libaio-dev liburing-dev \
-                            fuse-zip libasound2-dev"
-
-cloonix_ssh ${NET} ${NAME} "apt-get -y install libc-ares-dev \
-                                               libpcre2-dev \
-                                               flex \
-                                               libgcrypt-dev \
-                                               libspeexdsp-dev \
-                                               qt6-base-dev \
-                                               qt6-multimedia-dev \
-                                               qt6-tools-dev \
-                                               qt6-tools-dev-tools \
-                                               qt6-l10n-tools \
-                                               libqt6core5compat6-dev \
-                                               freeglut3-dev \
-                                               libvulkan-dev \
-                                               libxkbcommon-dev \
-                                               libnl-3-dev \
-                                               libkrb5-dev \
-                                               libsmi2-dev \
-                                               libsbc-dev \
-                                               liblua5.2-dev \
-                                               libnl-cli-3-dev \
-                                               libparse-yapp-perl \
-                                               libsnappy-dev \
-                                               libzstd-dev \
-                                               libspandsp-dev \
-                                               libxml2-dev \
-                                               libminizip-dev \
-                                               git \
-                                               perl \
-                                               xsltproc \
-                                               ccache \
-                                               doxygen"
-
+cloonix_ssh ${NET} ${NAME} "apt-get -y install \
+                      tar build-essential g++ cmake \
+                      pkg-config intltool libtool meson ninja-build \
+                      libssl-dev libusb-1.0-0-dev patch libglib2.0-dev \
+                      libpixman-1-dev python3 python3-six sudo xauth \
+                      python3-pyparsing python3-venv libjpeg-dev \
+                      pulseaudio libpulse-dev libgstreamer1.0-dev \
+                      libgstreamer-plugins-base1.0-dev \
+                      libgstreamer-plugins-bad1.0-dev \
+                      gstreamer1.0-plugins-bad-apps \
+                      gstreamer1.0-plugins-base-apps \
+                      liblz4-dev libpcap-dev libsasl2-dev libfuse3-dev \
+                      fuse-overlayfs libnuma-dev libepoxy-dev xorriso \
+                      libgtk-3-dev libjson-glib-dev libacl1-dev \
+                      libpolkit-gobject-1-dev busybox-static \
+                      libyajl-dev make git libsystemd-dev \
+                      libprotobuf-c-dev libcap-dev libseccomp-dev \
+                      libgcrypt20-dev go-md2man locales libffi-dev \
+                      libfdt-dev libfuse-dev libarchive-dev libaio-dev \
+                      liburing-dev fuse-zip libasound2-dev libc-ares-dev \
+                      libpcre2-dev flex libgcrypt-dev libspeexdsp-dev \
+                      qt6-base-dev qt6-multimedia-dev qt6-tools-dev \
+                      qt6-tools-dev-tools qt6-l10n-tools \
+                      libqt6core5compat6-dev freeglut3-dev libvulkan-dev \
+                      libxkbcommon-dev libnl-3-dev libkrb5-dev libsmi2-dev \
+                      libsbc-dev liblua5.2-dev libnl-cli-3-dev \
+                      libparse-yapp-perl libsnappy-dev libzstd-dev \
+                      libspandsp-dev libxml2-dev libminizip-dev \
+                      perl xsltproc ccache doxygen"
 
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"

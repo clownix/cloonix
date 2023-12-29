@@ -1,4 +1,4 @@
 #!/bin/sh
-echo "USER SCRIPT" > /tmp/crun_init_user.log
-# /bin/monit
+env > /tmp/crun_init_user_env.log
+/bin/monit
 

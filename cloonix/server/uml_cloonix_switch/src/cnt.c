@@ -868,9 +868,12 @@ int cnt_del_lan(int llid, int tid, char *name, int num, char *lan, char *err)
       }
     else
       {
+      cur->cli_llid = llid;
+      cur->cli_tid = tid;
       cur->lan_del_waiting_ack = 0;
       cur->att_lan[num].lan_attached_ok = 0;
       memset(cur->att_lan[num].lan, 0, MAX_NAME_LEN);
+      utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       result = 0;
       }
     }

@@ -24,6 +24,7 @@ cd ${HERE}/tainted_qemu/
                      --enable-spice-protocol
                      --enable-usb-redir
                      --enable-gtk
+                     --enable-vhost-user
                      --enable-vhost-net
                      --enable-vhost-kernel
                      --enable-tools
@@ -50,4 +51,5 @@ cp pc-bios/bios-256k.bin      ${HERE}
 cp pc-bios/efi-virtio.rom     ${HERE}
 cp pc-bios/kvmvapic.bin       ${HERE}
 cp pc-bios/vgabios-virtio.bin ${HERE}
+cp pc-bios/vgabios-qxl.bin    ${HERE}
 

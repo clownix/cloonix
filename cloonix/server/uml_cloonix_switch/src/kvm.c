@@ -429,6 +429,8 @@ int kvm_del_lan(int llid, int tid, char *name, int num, char *lan,
         val = lan_del_name(cur->lan_added, item_kvm, name, num);
         memset(cur->lan_added, 0, MAX_NAME_LEN);
         }
+      cur->llid = llid;
+      cur->tid = tid;
       if (val != 2*MAX_LAN)
         {
         if (msg_send_del_lan_endp(ovsreq_del_kvm_lan,name,num,cur->vhost,lan))
@@ -440,9 +442,8 @@ int kvm_del_lan(int llid, int tid, char *name, int num, char *lan,
         cur->attached_lan_ok = 0;
         cur->waiting_ack_del_lan = 0;
         memset(cur->lan, 0, MAX_NAME_LEN);
+        utils_send_status_ok(&(cur->llid),&(cur->tid));
         }
-      cur->llid = llid;
-      cur->tid = tid;
       result = 0;
       }
     }

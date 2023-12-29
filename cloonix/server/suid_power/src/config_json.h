@@ -73,6 +73,7 @@
 "		\"env\": [\n"\
 "			\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n"\
 "			\"TERM=xterm\"\n"\
+"                       %s\n"\
 "		],\n"\
 "		\"cwd\": \"/\",\n"\
 "		\"capabilities\": {\n"\

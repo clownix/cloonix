@@ -313,8 +313,11 @@ static void derived_file_creation_request(t_vm *vm)
    " -object rng-random,filename=/dev/urandom,id=rng0"\
    " -device virtio-rng-pci,rng=rng0"
 
+
+// TOTEST   " -device virtio-vga"
+
 #define QEMU_SPICE \
-   " -device virtio-vga"\
+   " -device qxl-vga"\
    " -audiodev driver=spice,id=hda0"\
    " -device intel-hda,id=hda0"\
    " -device hda-duplex,bus=hda0.0,audiodev=hda0"\

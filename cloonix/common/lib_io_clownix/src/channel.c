@@ -37,8 +37,10 @@
 
 #define HEARTBEAT_DEFAULT_TIMEOUT 10
 #define MAX_EPOLL_EVENTS_PER_RUN 50
+#define PERSEC_COUNTER_INSANE 150000
 
 
+static unsigned long g_new_second_arrival_count;
 static struct timeval last_heartbeat;
 static unsigned long long channel_total_recv;
 static unsigned long long channel_total_send;
@@ -460,6 +462,13 @@ void channel_heartbeat_ms_set (int heartbeat_ms)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void new_second_arrival(void)
+{
+  g_new_second_arrival_count = 0;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int heartbeat_mngt(int type)
 {
   static int heart_count=0;
@@ -470,6 +479,8 @@ int heartbeat_mngt(int type)
   my_gettimeofday(&cur);
   current_time.tv_sec = cur.tv_sec;
   current_time.tv_usec = cur.tv_usec;
+  if (cur.tv_sec > last_heartbeat.tv_sec)
+    new_second_arrival();
   delta = delta_beat(&cur, &last_heartbeat);
   if ((type == 0) || (delta >= (glob_heartbeat_ms_timeout*10)))
     {
@@ -819,6 +830,7 @@ void channel_loop(int once)
     if ((current_max_channels<0) || 
         (current_max_channels >= MAX_SELECT_CHANNELS))
       KOUT(" %d  %d", current_max_channels, MAX_SELECT_CHANNELS); 
+    g_new_second_arrival_count += 1;
     prepare_rx_tx_events();
     if (g_fct_before_epoll)
       g_fct_before_epoll(g_epfd);
@@ -828,6 +840,8 @@ void channel_loop(int once)
                         glob_heartbeat_ms_timeout);  
     if ( result < 0 )
       {
+if (g_new_second_arrival_count > PERSEC_COUNTER_INSANE)
+KERR("ERROR");
       if (errno == EINTR)
         {
         continue;
@@ -836,11 +850,15 @@ void channel_loop(int once)
       }
     if (result == 0)
       {
+if (g_new_second_arrival_count > PERSEC_COUNTER_INSANE)
+KERR("ERROR");
       heartbeat_mngt(0);
       continue;
       }
     else
       pb = heartbeat_mngt(1);
+if (g_new_second_arrival_count > PERSEC_COUNTER_INSANE)
+KERR("ERROR");
     slipery_select++;
     counter_select_speed++;
 
@@ -894,6 +912,7 @@ int channel_get_epfd(void)
 void channel_init(void)
 {
   int i;
+  g_new_second_arrival_count = 0;
   my_gettimeofday(&last_heartbeat);
   for (i=0; i<MAX_SELECT_CHANNELS; i++)
     {

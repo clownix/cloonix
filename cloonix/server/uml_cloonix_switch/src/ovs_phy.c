@@ -311,11 +311,9 @@ void ovs_phy_resp_msg_phy(int is_ko, int is_add,
       else
         {
         if (is_add)
-          {
-          layout_add_sat(name, cur->llid);
-          }
+          layout_add_sat(vhost, cur->llid);
         else
-          layout_del_sat(name);
+          layout_del_sat(vhost);
         utils_send_status_ok(&(cur->llid), &(cur->tid));
         } 
       if (is_add == 0)
@@ -418,7 +416,7 @@ void ovs_phy_del(int llid, int tid, char *name)
         item_phy_type = item_phya;
       else
         KOUT("ERROR %s %d", name, cur->endp_type);
-      mactopo_del_req(item_phy_type, cur->vhost,
+      mactopo_del_req(item_phy_type, cur->name,
                       cur->num_macvlan, cur->lan_added);
       val = lan_del_name(cur->lan_added, item_phy_type, cur->vhost, 0);
       memset(cur->lan_added, 0, MAX_NAME_LEN);

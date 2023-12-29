@@ -631,18 +631,111 @@ static void addchildpid(struct ChanSess *chansess, pid_t pid)
 }
 /*---------------------------------------------------------------------------*/
 
+
+/****************************************************************************/
+static int get_file_len(char *file_name)
+{
+  int result = -1;
+  struct stat statbuf;
+  if (stat(file_name, &statbuf) == 0)
+    result = statbuf.st_size;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static char *read_whole_file(char *file_name)
+{   
+  char *buf = NULL;
+  int len, fd, readlen;
+  len = get_file_len(file_name);
+  if (len == -1)
+    KERR("ERROR not found %s", file_name);
+  else if (len < 3)
+    KERR("ERROR size too small: %d  %s", len, file_name);
+  else
+    { 
+    fd = open(file_name, O_RDONLY);
+    if (fd < 0)
+      KERR("ERROR open %s", file_name);
+    else
+      {
+      buf = (char *) malloc((len+1)*sizeof(char));
+      readlen = read(fd, buf, len);
+      if (readlen != len)
+        {
+        KERR("ERROR read %s %d %d", file_name, readlen, len);
+        free(buf);
+        buf = NULL;
+        }
+      else
+        {
+        buf[len] = 0;
+        if (!strchr(buf, '='))
+          {
+          KERR("ERROR %s %s", file_name, buf);
+          free(buf);
+          buf = NULL;
+          }
+        }
+      }
+    }
+  return buf;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void startup_env_addnewvar(char *startup_env)
+{
+  char *key, *val, *ptr_equal, *ptr_blank;
+  key = startup_env; 
+  while (key != NULL)
+    {
+    ptr_equal = strchr(key, '=');
+    if (ptr_equal)
+      {
+      val = ptr_equal+1;
+      ptr_blank = strchr(val, ' ');
+      if (ptr_blank)
+        {
+        *ptr_equal = 0;
+        *ptr_blank = 0;
+        addnewvar(key, val); 
+        key = ptr_blank+1; 
+        }
+      else
+        {
+        *ptr_equal = 0;
+        addnewvar(key, val); 
+        key = NULL;
+        }
+      }
+    else
+      {
+      key = NULL;
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static void execchild(struct ChanSess *chansess)
 {
   char *usershell = NULL;
   char *login = NULL;
   char *pth="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+  char *startup_env = read_whole_file("/mnt/cloonix_config_fs/startup_env");
+
   unsetnonblocking(STDOUT_FILENO);
   unsetnonblocking(STDIN_FILENO);
   unsetnonblocking(STDERR_FILENO);
+
+
   if (chansess->i_run_in_kvm)
     {
     clearenv();
+    if (startup_env)
+      startup_env_addnewvar(startup_env);
     addnewvar("PATH", pth); 
     addnewvar("USER", "root");
     addnewvar("HOME", "/root");
@@ -652,7 +745,7 @@ static void execchild(struct ChanSess *chansess)
     if (chansess->cloonix_display)
       addnewvar("DISPLAY", chansess->cloonix_display);
     if (chdir("/root") < 0)
-      KOUT("Error changing directory");
+      KERR("Error changing directory");
     if (!access("/bin/login", X_OK))
       login = m_strdup("/bin/login -p -f root");
     }

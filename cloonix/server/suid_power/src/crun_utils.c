@@ -42,8 +42,10 @@
 
 char *get_net_name(void);
 char *get_bin_dir(void);
-char g_var_log[MAX_PATH_LEN];
-char g_var_crun_log[MAX_PATH_LEN];
+
+static char g_var_log[MAX_PATH_LEN];
+static char g_var_crun_log[MAX_PATH_LEN];
+static char g_var_crun_json[MAX_PATH_LEN];
 
 
 /*****************************************************************************/
@@ -222,6 +224,7 @@ int execute_cmd(char *cmd)
     KERR("ERROR %s", cmd);
   else
     {
+    log_write_req(cmd);
     if (force_waitpid(child_pid, &wstatus))
       KERR("ERROR");
     result = wstatus;    
@@ -262,22 +265,67 @@ static int write_whole_file(char *file_name, char *buf, int len)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void format_startup_env(char *startup_env, char *env)
+{
+  char *ptr_start, *ptr;
+  int i, nb = 0;
+  char tmp[2*MAX_NAME_LEN];
+  memset(env, 0, MAX_PATH_LEN+MAX_NAME_LEN);
+  ptr = startup_env;
+  if (strlen(ptr))
+    {
+    nb = 1;
+    while(ptr)
+      {
+      ptr = strchr(ptr, ' ');
+      if (ptr)
+        {
+        nb += 1;
+        ptr += 1;
+        }
+      }
+    ptr_start = startup_env;
+    for (i=0; i<nb; i++)
+      {
+      ptr = strchr(ptr_start, ' ');
+      if (ptr)
+        {
+        *ptr = 0;
+        ptr += 1;
+        }
+      memset(tmp, 0, 2*MAX_NAME_LEN);
+      snprintf(tmp, 2*MAX_NAME_LEN-1, ",\"%s\"", ptr_start);
+      strcat(env, tmp);
+      ptr_start = ptr;
+      }
+    }
+  else
+    strcat(env, " ");
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static char *get_config_json(char *rootfs, char *nspace,
                              char *cloonix_dropbear, char *mounttmp,
-                             int is_persistent)
+                             int is_persistent,  char *startup_env,
+                             char *name)
 {
   char *buf;
-  int len = strlen(CONFIG_JSON) + (5 * strlen(CONFIG_JSON_CAPA));
-  char *starter;
+  int len = strlen(CONFIG_JSON)+(5*strlen(CONFIG_JSON_CAPA))+3*MAX_PATH_LEN;
+  char env[MAX_PATH_LEN+MAX_NAME_LEN], *starter;
+  char log_json[MAX_PATH_LEN];
+  memset(log_json, 0, MAX_PATH_LEN);
+  snprintf(log_json, MAX_PATH_LEN-1, "%s/%s", g_var_crun_json, name); 
   starter = "\"/mnt/cloonix_config_fs/crun_init_starter.sh\"\n";
-  len += (2 * MAX_PATH_LEN);
+  format_startup_env(startup_env, env);
   buf = (char *) malloc(len);
   memset(buf, 0, len);
-  snprintf(buf, len-1, CONFIG_JSON, starter,
+  snprintf(buf, len-1, CONFIG_JSON, starter, env,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, rootfs, 
                                     cloonix_dropbear, mounttmp, nspace); 
+  write_whole_file(log_json, buf, strlen(buf));
   return buf;
 }
 /*--------------------------------------------------------------------------*/
@@ -452,7 +500,8 @@ static int create_all_dirs(char *image, char *cnt_dir, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dirs_agent_copy_starter(char *cnt_dir, char *name, char *agent_dir)
+void dirs_agent_copy_starter(char *cnt_dir, char *name, char *agent_dir,
+                             char *startup_env)
 {
   char path[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
@@ -477,6 +526,10 @@ void dirs_agent_copy_starter(char *cnt_dir, char *name, char *agent_dir)
            etc_path, cnt_dir, name);
   if (execute_cmd(cmd))
     KERR("ERROR %s", cmd);
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs/startup_env",
+           cnt_dir, name);
+  write_whole_file(path, startup_env, strlen(startup_env));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -642,13 +695,15 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name)
 
 /****************************************************************************/
 int crun_utils_create_config_json(char *path, char *rootfs, char *nspace,
-                                 char *cloonix_dropbear, 
-                                 char *mounttmp, int is_persistent)
+                                 char *cloonix_dropbear, char *mounttmp,
+                                 int is_persistent, char *startup_env,
+                                 char *name)
 {
   int len, result;
   char json_path[MAX_PATH_LEN];
   char *buf = get_config_json(rootfs, nspace, cloonix_dropbear,
-                              mounttmp, is_persistent);
+                              mounttmp, is_persistent,
+                              startup_env, name);
   memset(json_path, 0, MAX_PATH_LEN);
   snprintf(json_path, MAX_PATH_LEN-1, "%s/config.json", path); 
   len = strlen(buf);
@@ -799,14 +854,15 @@ int crun_utils_podman_veth(char *name, int pid, int vm_id,
 /****************************************************************************/
 int crun_utils_create_net(char *image, char *name, char *cnt_dir,
                           char *nspace, int cloonix_rank, int vm_id,
-                          int nb_eth, t_eth_mac *eth_mac, char *agent_dir)
+                          int nb_eth, t_eth_mac *eth_mac,
+                          char *agent_dir, char *startup_env)
 {
   int result = create_all_dirs(image, cnt_dir, name);
   if (result)
     KERR("ERROR %s %s %s", cnt_dir, name, nspace);
   else
     {
-    dirs_agent_copy_starter(cnt_dir, name, agent_dir);
+    dirs_agent_copy_starter(cnt_dir, name, agent_dir, startup_env);
     if (nspace_create(name, nspace, cloonix_rank, vm_id, nb_eth, eth_mac))
       {
       KERR("ERROR %s %s %s", cnt_dir, name, nspace);
@@ -940,5 +996,7 @@ void crun_utils_init(char *log)
   memset(g_var_crun_log, 0, MAX_PATH_LEN);
   snprintf(g_var_log,MAX_PATH_LEN-1,"%s/log/%s",log,DEBUG_LOG_SUID);
   snprintf(g_var_crun_log,MAX_PATH_LEN-1,"%s/log/%s",log,DEBUG_LOG_CRUN);
+  snprintf(g_var_crun_json,MAX_PATH_LEN-1,"%s/log/%s",log,DEBUG_LOG_JSON);
+  my_mkdir(g_var_crun_json);
 }
 /*--------------------------------------------------------------------------*/

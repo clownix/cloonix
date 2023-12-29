@@ -1,10 +1,9 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
 DISTRO=bookworm
-ROOTFS=/var/lib/cloonix/bulk/${DISTRO}
 DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
-REPO="http://deb.debian.org/debian"
-# REPO="http://127.0.0.1/debian/bookworm"
+ROOTFS=/var/lib/cloonix/bulk/bookworm_fr
+REPO="http://127.0.0.1/debian/${DISTRO}"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -66,9 +65,11 @@ fct_check_losetup
 set -e
 fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
-list_pkt="linux-image-amd64,grub2,openssh-client,vim,"
-list_pkt+="bash-completion,net-tools,file,qemu-guest-agent,"
-list_pkt+="locales"
+list_pkt="linux-image-amd64,grub-efi-amd64-signed,grub2,zstd,"
+list_pkt+="openssh-client,locales,iperf3,htop,strace,"
+list_pkt+="console-data,console-setup,kbd,keyboard-configuration,"
+list_pkt+="xauth,sudo,vim,bash-completion,net-tools,pciutils,"
+list_pkt+="iftop,tcpdump,ethtool,htop,lsof,file,qemu-guest-agent"
 
 debootstrap --no-check-certificate \
 	    --no-check-gpg \
@@ -76,6 +77,10 @@ debootstrap --no-check-certificate \
             --include=$list_pkt \
             ${DISTRO} \
             /tmp/wkmntloops ${REPO}
+#-----------------------------------------------------------------------#
+cat > /tmp/wkmntloops/etc/apt/sources.list << EOF
+deb http://deb.debian.org/debian ${DISTRO} main contrib non-free non-free-firmware
+EOF
 #-----------------------------------------------------------------------#
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ grub-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
@@ -106,7 +111,7 @@ root
 root
 EOF
 #-----------------------------------------------------------------------#
-chroot /tmp/wkmntloops useradd --create-home --shell /bin/bash user 
+chroot /tmp/wkmntloops useradd --create-home --shell /bin/bash user
 chroot /tmp/wkmntloops passwd user <<EOF
 user
 user
@@ -116,20 +121,32 @@ sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
 sed -i s"/set mouse/\"set mouse/" $DEFVIM
 #-----------------------------------------------------------------------#
 cat > /tmp/wkmntloops/root/debconf_selection << EOF
-locales locales_to_be_generated multiselect en_US.UTF-8 UTF-8
-locales locales/default_environment_locale select en_US.UTF-8
+locales locales_to_be_generated multiselect fr_FR.UTF-8 UTF-8
+locales locales/default_environment_locale select fr_FR.UTF-8
+keyboard-configuration keyboard-configuration/layoutcode string fr
+keyboard-configuration keyboard-configuration/variant select Français - Français (variante)
+keyboard-configuration keyboard-configuration/model select Generic 105-key (Intl) PC
+keyboard-configuration keyboard-configuration/xkb-keymap select fr(latin9)
 EOF
 chroot /tmp/wkmntloops/ debconf-set-selections /root/debconf_selection
 rm -f /tmp/wkmntloops/etc/default/locale
-sed -i s"/# en_US.UTF-8/en_US.UTF-8/" /tmp/wkmntloops/etc/locale.gen
+rm -f /tmp/wkmntloops/etc/default/keyboard
+sed -i s"/# fr_FR.UTF-8/fr_FR.UTF-8/" /tmp/wkmntloops/etc/locale.gen
 export DEBCONF_NONINTERACTIVE_SEEN=true
+
+
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive locales
+chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive console-setup
+chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive keyboard-configuration
 sync /dev/loop0
 umount /tmp/wkmntloops/{dev,proc,sys}
+#-----------------------------------------------------------------------#
+
+#-----------------------------------------------------------------------#
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#
-qemu-img convert -O qcow2 ${ROOTFS} ${ROOTFS}.qcow2
-rm -f ${ROOTFS}
+qemu-img convert -O qcow2 $ROOTFS ${ROOTFS}.qcow2
+rm -f $ROOTFS
 #-----------------------------------------------------------------------#
 

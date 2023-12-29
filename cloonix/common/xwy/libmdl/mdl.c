@@ -118,6 +118,7 @@ FILE *mdl_argv_popen(char *argv[])
       XERR("WARNING STATUS %s", mdl_argv_linear(argv));
     exit(status);
     }
+  wait(NULL);
   iop = fdopen(pdes[0], "r");
   (void)close(pdes[1]);
   return iop;

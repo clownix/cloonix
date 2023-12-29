@@ -5,6 +5,18 @@
 Software Release Information
 ============================
 
+v34-00
+======
+
+In this version, the zip containers can be made by service instead
+of by distro. See at quickstart/cnt_create the way to create some
+of the service-oriented zip containers.
+For the startup of the containers, I use the --startup_env="NODE_ID=x" to
+differentiate nodes coming from the same container, inside the container
+I usualy add a monit service that uses the NODE_ID env variable to
+configure the node.
+
+
 v33-00
 ======
 

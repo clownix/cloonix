@@ -1,7 +1,9 @@
+/****************************************************************************/
 /*
  * Inspired from (c) 2023 Richard Weinberger <richard@sigma-star.at>
  * This file is public domain.
  */
+/****************************************************************************/
 
 #define _GNU_SOURCE
 #include <assert.h>
@@ -17,6 +19,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define MAX_NARGS 40
 #define MAX_PATH_LEN 300
 static FILE *g_log_cmd;
 
@@ -72,6 +75,7 @@ static void set_env_ice_global_cloonix(void)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
 static void write_proc_self(const char *file, const char *content)
 {
   size_t len = strlen(content) + 1;
@@ -84,7 +88,9 @@ static void write_proc_self(const char *file, const char *content)
   assert(write(fd, content, len) == len);
   close(fd);
 }
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
 static void update_uidgid_map(uid_t from, uid_t to, bool is_user)
 {
   char *map_content;
@@ -95,12 +101,16 @@ static void update_uidgid_map(uid_t from, uid_t to, bool is_user)
     write_proc_self("gid_map", map_content);
   free(map_content);
 }
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
 static void deny_setgroups(void)
 {
   write_proc_self("setgroups", "deny\n");
 }
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
 static void become_uid0(uid_t orig_uid, gid_t orig_gid)
 {
   deny_setgroups();
@@ -109,7 +119,9 @@ static void become_uid0(uid_t orig_uid, gid_t orig_gid)
   assert(setuid(0) == 0);
   assert(setgid(0) == 0);
 }
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
 static void become_orig(uid_t orig_uid, gid_t orig_gid)
 {
   update_uidgid_map(orig_gid, 0, false);
@@ -117,7 +129,9 @@ static void become_orig(uid_t orig_uid, gid_t orig_gid)
   assert(setuid(orig_uid) == 0);
   assert(setgid(orig_gid) == 0);
 }
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
 static void hide_dir_if_necessary(const char *input)
 {
   struct stat sb;
@@ -134,8 +148,71 @@ static void hide_dir_if_necessary(const char *input)
       printf("!!!!!!!!!!!!!!!!! UNEXPECTED %s !!!!!!!!!!\n", input);
     }
 }
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+/*
+# The following private id_rsa corresponds to the id_rsa.pub that
+# is used in file step1_make_preconf_iso.sh for the cisco making.
+*/
+/****************************************************************************/
+static void create_cloonix_private_id_rsa(void)
+{
+  size_t len, wlen;
+  FILE *fh;
+  char *rsa =
+  "-----BEGIN RSA PRIVATE KEY-----\n"
+  "MIIEowIBAAKCAQEAxkepoiuYZD/HnpXL4raEarJi7EsMFkr5NoC/cv9SF8CPweIF\n"
+  "JM66qe0CUd9Jw97Ov9ulTLPnoUQYFbjb/abOa7etijRx3vsvahgQSjYpOBXCngkd\n"
+  "zooAvWymLYsBsZQo0QNtXdagP0lmti5eEX+/uCv/+IWGFx7tBT8UF8s58DruDRpm\n"
+  "dwzGgh/fr2FwOklxjQO71gkIzd/fpQXevsj93CsUH3UzTrvTn8BrfrKABAAeH2Qd\n"
+  "1yxTHRPcf9syEzMMA8YtwCPPO8vqobMt1tH6Yrl/c7DkxqCftWjPVx0mMJ/SHBOQ\n"
+  "P4NMVr+fE6R0Y1WuWVwojs86uLAtOFBl5i+VmwIDAQABAoIBAAlCzZyCdsKv6+3v\n"
+  "Ry+WoMavAEnTE4RzCgLOrqJ7ZGUxnEVM/jqC4VsQc9xJFpPsczGo26aifH4exRU2\n"
+  "pifJw7hqQtPCsVLd3pARAanFr9UrxwREnrzH21L9oSFdbb3Skrl4dII+hQuPrRlz\n"
+  "PveIRPcgLvt3mRS5YA6vrIuT9WfP85qt7QD4ibcDtb5+y93m0ayJty8YcgNCfqrF\n"
+  "VdW40deeC4xzfBR6Q6edF4lho9O8Zl/9OTI3n/aS6xBl3qdN9y2hcIU9VTJQPErk\n"
+  "jJMPb2ugZCeiXiFCPcZQGwn7oVeQsIbkBpkA7aYjATgIfsr7FVjZu8xkEhxr5aEQ\n"
+  "9i/eiKECgYEA/zfrqdCvaYxi2bOa3u1nvRSsUbwsH6OFYye5WQhClqig+MQLN8Nu\n"
+  "QZop4NswfwFnsIundcDgWzlT/EnuIA6qcsEW8Y4jRTi1uJqJDyDS3dHFXQHnu6c8\n"
+  "oEoHJ5r32r93kbWRaJm+sbBrTOA2bH9bJX5NvfYCHMl0fbiY3UceRqsCgYEAxuMa\n"
+  "29qBmjdwL11Udk/rMOLGABIITqL+PtRxsDGT54qG6jkfK6Lb0ZfMo7BfXM65Xr3W\n"
+  "e875ErgaZZQaJOd2E1CEEWb0NWe+lMmfwJKz4q/p3bI5FL9ZX6Jr/wpJUDFXv051\n"
+  "pxn5PPm9gFzvgkoFYSK5DoG6wmYoh4aGgPD3rNECgYEAhEHMZEH6xO21RC/o7+GD\n"
+  "Qt71tZ2YGAU7WHj7egHnz/8u+/tL/OfPuTtUvGuaJBbsTvbwHvuGyH9a4IDHX+F5\n"
+  "vuIFK8SGzpZmxXV/1VEjNURBzMLx/bLang3+yy1ph/h01BONePFDev17fWkriuos\n"
+  "p69eRjS4P4a+UXBZ90GllOUCgYBVpWrljj0Nah43Z1t974B6ds2JLjrBklMmP1oN\n"
+  "4+urY+4hYyPXKLS8l0AapVMLpkIRWHLKsiB0PS+w2ow/pCUmwB9/VvSHIvvhGspe\n"
+  "pU4tqk9tltgZ5STZmBolpApaLEV7LpBfu0GnTmyaoGrLkpCqecdzRc5k9JUzd2zo\n"
+  "jdw6YQKBgEB5T9gNNRpjjD2D8yJmyVDsCcHKUWO4kPejGhIQJ1hFLBsFv3DFmga8\n"
+  "Ku+HluGo0TDABJUv1JBpVDeHBNprX3mHgud4fxKvoeG4eBfrjW5QsqIL34mrzT2b\n"
+  "Tf6PmCDYsKOA79p2IYNG0aRiVMyTjb0JaDi/QJY65WR6Q5uoyCae\n"
+  "-----END RSA PRIVATE KEY-----";
+  len = strlen(rsa);
+  fh = fopen("/usr/tmp/cloonix_private_id_rsa", "w");
+  if (fh == NULL)
+    {
+    printf("ERROR1 create_cloonix_private_id_rsa\n");
+    exit(-1);
+    }
+  else
+    {
+    wlen = fwrite(rsa, 1, len, fh);
+    if (wlen != len)
+      {
+      printf("ERROR2 create_cloonix_private_id_rsa\n");
+      exit(-1);
+      }
+    else
+      {
+      fclose(fh);
+      chmod("/usr/tmp/cloonix_private_id_rsa", 0400);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
 static void setup_mounts(void)
 {
   char *curdir = get_current_dir_name();
@@ -153,6 +230,7 @@ static void setup_mounts(void)
   assert(mount("/usr/libexec/cloonix", "/var/lib/cloonix/libexec",
                NULL, MS_BIND, NULL) == 0);
   assert(mount("tmpfs", "/usr", "tmpfs", 0, NULL) == 0);
+  mkdir("/usr/tmp", 0777);
   mkdir("/usr/share", 0777);
   mkdir("/usr/libexec", 0777);
   mkdir("/usr/libexec/cloonix", 0777);
@@ -173,6 +251,7 @@ static void setup_mounts(void)
   chdir(curdir);
   free(curdir);
 }
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int get_ip_pass_port(FILE *fh, char *ip, char *pass, int *port)
@@ -195,7 +274,7 @@ static int get_ip_pass_port(FILE *fh, char *ip, char *pass, int *port)
     result = 0;
   return result;
 }
-/*---------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int check_net_name(char *cnf, char *name,
@@ -235,9 +314,34 @@ static int check_net_name(char *cnf, char *name,
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+static void log_ascii_cmd(char *argv[])
+{
+  int i;
+  if (g_log_cmd != NULL)
+    {
+    for (i=0;  (argv[i] != NULL); i++)
+      fprintf(g_log_cmd, "%s ", argv[i]);
+    fprintf(g_log_cmd, "\n");
+    fflush(g_log_cmd);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
 /****************************************************************************/
-void process_ocp(int argc, char **argv, char **new_argv,
-                 char *ip, int port, char *passwd)
+static void init_log_cmd(char *network_name)
+{
+  char log_path[MAX_PATH_LEN];
+  memset(log_path, 0, MAX_PATH_LEN);
+  snprintf(log_path, MAX_PATH_LEN-1,
+  "/var/lib/cloonix/%s/log/debug_cmd.log", network_name);
+  g_log_cmd = fopen(log_path, "a");
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void process_ocp(int argc, char **argv, char **new_argv,
+                        char *ip, int port, char *passwd)
 {
   static char sock[200];
   static char dist[300];
@@ -255,7 +359,7 @@ void process_ocp(int argc, char **argv, char **new_argv,
   new_argv[0] = "/usr/libexec/cloonix/client/cloonix-u2i-scp";
   new_argv[1] = sock;
   new_argv[2] = "-i";
-  new_argv[3] = "/tmp/cloonix_private_id_rsa";
+  new_argv[3] = "/usr/tmp/cloonix_private_id_rsa";
   if (!strcmp(argv[7], "y"))
     {
     new_argv[4] = "-r";
@@ -303,11 +407,11 @@ void process_ocp(int argc, char **argv, char **new_argv,
     exit(-1);
     }
 }
-/*---------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void process_osh(int argc, char **argv, char **new_argv,
-                 char *ip, int port, char *passwd)
+static void process_osh(int argc, char **argv, char **new_argv,
+                        char *ip, int port, char *passwd)
 {
   static char sock[200];
   static char ocp_param[200];
@@ -325,7 +429,7 @@ void process_osh(int argc, char **argv, char **new_argv,
   new_argv[0] = "/usr/libexec/cloonix/client/cloonix-u2i-ssh";
   new_argv[1] = sock;
   new_argv[2] = "-i";
-  new_argv[3] = "/tmp/cloonix_private_id_rsa";
+  new_argv[3] = "/usr/tmp/cloonix_private_id_rsa";
   new_argv[4] = ocp_param;
   for (i=0; i<20; i++)
     {
@@ -333,86 +437,20 @@ void process_osh(int argc, char **argv, char **new_argv,
       new_argv[5+i] = argv[5+i];
     }
 }
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void log_ascii_cmd(char *argv[])
-{
-  int i;
-  char result[3*MAX_PATH_LEN];
-  if (g_log_cmd != NULL)
-    {
-    memset(result, 0, 3*MAX_PATH_LEN);
-    for (i=0;  (argv[i] != NULL); i++)
-      {
-      strcat(result, argv[i]);
-      if (strlen(result) >= 2*MAX_PATH_LEN)
-        break;
-      strcat(result, " ");
-      }
-    fprintf(g_log_cmd, "%s\n", result);
-    fflush(g_log_cmd);
-    }
-}
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void init_log_cmd(char *network_name)
+static int initialise_new_argv(int argc, char **argv, char **new_argv,
+                               char *ip, int port, char *passwd)
 {
-  char log_path[MAX_PATH_LEN];
-  memset(log_path, 0, MAX_PATH_LEN);
-  snprintf(log_path, MAX_PATH_LEN-1,
-  "/var/lib/cloonix/%s/log/debug_cmd.log", network_name);
-  g_log_cmd = fopen(log_path, "a");
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int main(int argc, char *argv[])
-{
-  int fd;
-  char passwd[80];
-  char ip[80];
-  char ipport[100];
-  char title[120];
-  char sock[200];
-  char ocp_param[300];
-  int  i, port, pid;
-  char *cfg="/usr/libexec/cloonix/common/etc/cloonix.cfg";
-  char *new_argv[30];
-  uid_t my_uid = getuid();
-  gid_t my_gid = getgid();
-  g_log_cmd = NULL;
-  memset(new_argv, 0, 30*sizeof(char *));
-  if (argc < 3)
-    {
+  static char ipport[100];
+  static char title[120];
+  static char sock[200];
+  int i, result = 0;
 /*CLOONIX_LSH-----------------------*/
-    if (!strcmp("lsh", argv[1]))
-      {     
-      new_argv[0] = "/usr/libexec/cloonix/common/sh";
-      }
-    else if (!strcmp("cli", argv[1]))
-      {
-      new_argv[0] = "/usr/libexec/cloonix/client/cloonix-ctrl";
-      new_argv[1] = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
-      }
-    else
-      {
-      printf("ERROR1 PARAMS\n");
-      exit(-1);
-      }
-    }
-  else if (!check_net_name(cfg, argv[2], ip, passwd, &port))
-    {
-    printf("ERROR3 PARAM %s\n", argv[2]);
-    exit(-1);
-    }
-  if (argc >= 3)
-    {
-    init_log_cmd(argv[2]);
-    }
   if (!strcmp("lsh", argv[1]))
     {
+    new_argv[0] = "/usr/libexec/cloonix/common/sh";
     }
 /*CLOONIX_DSH-----------------------*/
   else if (!strcmp("dsh", argv[1]))
@@ -437,7 +475,7 @@ int main(int argc, char *argv[])
       new_argv[1] = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
       new_argv[2] = argv[2];
       new_argv[3] = argv[3];
-      for (i=0; i<20; i++)
+      for (i=0; i<MAX_NARGS; i++)
         {
         if (argc > 4+i)
           new_argv[4+i] = argv[4+i];
@@ -454,19 +492,20 @@ int main(int argc, char *argv[])
 /*CLOONIX_SCP-----------------------*/
   else if (!strcmp("scp", argv[1]))
     {
-    if ((argc != 5) && (argc != 6))
+    if (argc < 5)
       {
-      printf("ERROR5 PARAM NUMBER\n");
+      printf("ERROR5 PARAM NUMBER %d\n", argc);
       exit(-1);
       }
     sprintf(ipport, "%s:%d", ip, port);
     new_argv[0] = "/usr/libexec/cloonix/client/cloonix-dropbear-scp";
     new_argv[1] = ipport;
     new_argv[2] = passwd;
-    new_argv[3] = argv[3];
-    new_argv[4] = argv[4];
-    if (argc == 6)
-      new_argv[5] = argv[5];
+    for (i=0; i<MAX_NARGS; i++)
+      {
+      if (argc > 3+i)
+        new_argv[3+i] = argv[3+i];
+      }
     }
 /*CLOONIX_SSH-----------------------*/
   else if (!strcmp("ssh", argv[1]))
@@ -552,15 +591,53 @@ int main(int argc, char *argv[])
   else
     {
     printf("ERROR10 PARAM %s\n", argv[1]);
+    result = -1;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int main(int argc, char *argv[])
+{
+  int fd;
+  char passwd[80];
+  char ip[80];
+  char ocp_param[300];
+  int  port, pid;
+  char *cfg="/usr/libexec/cloonix/common/etc/cloonix.cfg";
+  char *new_argv[MAX_NARGS+10];
+  uid_t my_uid = getuid();
+  gid_t my_gid = getgid();
+  g_log_cmd = NULL;
+  memset(new_argv, 0, (MAX_NARGS+10)*sizeof(char *));
+  if (argc < 3)
+    {
+    if ((strcmp("lsh", argv[1])) &&
+        (strcmp("cli", argv[1])))
+      {
+      printf("ERROR1 PARAMS\n");
+      exit(-1);
+      }
+    }
+  else if (!check_net_name(cfg, argv[2], ip, passwd, &port))
+    {
+    printf("ERROR3 PARAM %s\n", argv[2]);
     exit(-1);
     }
-/*------------------------------------------------------------------------*/
-  if ((!strcmp("osh", argv[1])) || (!strcmp("ocp", argv[1])))
+  else
     {
-    log_ascii_cmd(new_argv);
-    execv(new_argv[0], new_argv);
+    init_log_cmd(argv[2]);
     }
-  else if (!strcmp("ice", argv[1]))
+/*--------------------------------------------------------------------------*/
+  if (initialise_new_argv(argc, argv, new_argv, ip, port, passwd))
+    {
+    printf("ERROR10 PARAM %s\n", argv[1]);
+    exit(-1);
+    }
+/*--------------------------------------------------------------------------*/
+/*CLOONIX_ICE-----------------------*/
+  if (!strcmp("ice", argv[1]))
     {
     pid = fork();
     if (pid < 0)
@@ -575,6 +652,8 @@ int main(int argc, char *argv[])
       execv(new_argv[0], new_argv);
       }
     }
+/*--------------------------------------------------------------------------*/
+/*CLOONIX_WSK-----------------------*/
   else if (!strcmp("wsk", argv[1]))
     {
     pid = fork();
@@ -614,6 +693,8 @@ int main(int argc, char *argv[])
       execv(new_argv[0], new_argv);
       }
     }
+/*--------------------------------------------------------------------------*/
+/*CLOONIX NOT WSK NOT ICE-----------------------*/
   else
     {
     assert(unshare(CLONE_NEWNS | CLONE_NEWUSER) == 0);
@@ -621,6 +702,10 @@ int main(int argc, char *argv[])
     setup_mounts();
     assert(unshare(CLONE_NEWUSER) == 0);
     become_orig(my_uid, my_gid);
+    if ((!strcmp("osh", argv[1])) ||
+        (!strcmp("ocp", argv[1])) ||
+        (!strcmp("lsh", argv[1])))
+      create_cloonix_private_id_rsa();
     set_env_global_cloonix();
     log_ascii_cmd(new_argv);
     execv(new_argv[0], new_argv);

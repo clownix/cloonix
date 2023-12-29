@@ -426,12 +426,13 @@ void check_for_work_dir_inexistance(void)
 {
   struct stat stat_path;
   char err[2*MAX_PATH_LEN];
-  if (stat(cfg_get_work(), &stat_path) == 0)
+  char *root_wk = cfg_get_root_work();
+  if (stat(root_wk, &stat_path) == 0)
     {
-    if (unlink_sub_dir_files(cfg_get_work(), err))
-      KERR("ERROR destroing %s %s", cfg_get_work(), err);
+    if (unlink_sub_dir_files(root_wk, err))
+      KERR("ERROR destroing %s %s", root_wk, err);
     else
-      printf( "Path: \"%s\" already exists, destroing it\n\n",cfg_get_work());
+      printf( "Path: \"%s\" already exists, destroing it\n\n", root_wk);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -490,9 +491,9 @@ int main (int argc, char *argv[])
     KOUT("\n\nFile: \"%s\" not found or not executable\n\n", 
          get_doorways_bin());
     }
+  check_for_work_dir_inexistance();
   mk_and_tst_work_path();
   pid_clone_init();
-  check_for_work_dir_inexistance();
   my_mkdir(cfg_get_work(), 0);
   init_heartbeat();
   stats_counters_init();

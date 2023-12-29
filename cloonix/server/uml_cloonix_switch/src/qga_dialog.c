@@ -480,7 +480,7 @@ static void automate_tx_qga_msg(t_qrec *cur)
       strncpy(req, QGA_PING, MAX_QGA_MSG_LEN-1);
       watch_tx(cur->llid, strlen(req), req);
       }
-    if (cur->count_no_response > 400)
+    if (cur->count_no_response > 800)
       {
       if (cur->request_reboot_done == 0)
         { 

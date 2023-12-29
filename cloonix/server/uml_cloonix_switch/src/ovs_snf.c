@@ -585,13 +585,16 @@ int ovs_snf_send_add_snf_lan(char *name, int num, char *vhost, char *lan)
 int ovs_snf_send_del_snf_lan(char *name, int num, char *vhost, char *lan)
 {
   t_snf *cur = find_snf_with_name_num(name, num);
+  int result = 0;
   if (!cur)  
     KERR("ERROR %s %d %s %s", name, num, vhost, lan);
   else
     {
     memset(cur->lan, 0, MAX_NAME_LEN);
+    if (lan_get_with_name(lan))
+      result = msg_send_del_snf_lan(name, num, vhost, lan);
     }
-  return(msg_send_del_snf_lan(name, num, vhost, lan));
+  return (result);
 }
 /*--------------------------------------------------------------------------*/
 

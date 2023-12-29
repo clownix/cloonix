@@ -24,7 +24,7 @@ files and libraries are collected and put into an autonomous bundle, this
 makes the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation (which is usually not up to date).
-http://clownix.net/doc_stored/build-33-00/html/index.html doc.
+http://clownix.net/doc_stored/build-34-00/html/index.html doc.
 
 NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
       inside the kvm guests virtual machines to have the pseudo-ssh and
@@ -32,14 +32,14 @@ NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
 -----------------------------------------------------------------------------
 DOWNLOADS:
 
-http://clownix.net/downloads/cloonix-33
+http://clownix.net/downloads/cloonix-34
 
 -----------------------------------------------------------------------------
 INSTALL BINARY AND LIBRARIES ON YOUR HOST
 
-wget http://clownix.net/downloads/cloonix-33/cloonix-bundle-33-00.tar.gz
-tar xvf cloonix-bundle-33-00.tar.gz
-cd cloonix-bundle-33-00
+wget http://clownix.net/downloads/cloonix-34/cloonix-bundle-34-00.tar.gz
+tar xvf cloonix-bundle-34-00.tar.gz
+cd cloonix-bundle-34-00
 sudo ./install_cloonix
 
 -----------------------------------------------------------------------------
@@ -54,7 +54,7 @@ GET A WORKING QCOW AND PUT IT IN BULK TO TEST KVM:
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-33/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-34/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
@@ -62,13 +62,13 @@ GET A WORKING ZIP AND PUT IT IN BULK TO TEST CRUN:
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-33/bulk/busybox.zip.gz
+wget http://clownix.net/downloads/cloonix-34/bulk/busybox.zip.gz
 gunzip busybox.zip.gz
 
 -----------------------------------------------------------------------------
 LAUNCH TEST PINGS:
 
-cd cloonix-bundle-33-00
+cd cloonix-bundle-34-00
 
 ./ping_kvm.sh
 

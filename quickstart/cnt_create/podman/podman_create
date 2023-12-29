@@ -3,9 +3,6 @@
 HERE=`pwd`
 BULK="/var/lib/cloonix/bulk"
 LIST="busybox  \
-      fedora39 \
-      centos9  \
-      jammy    \
       bookworm"
 #----------------------------------------------------------------------#
 if [ $UID != 0 ]; then

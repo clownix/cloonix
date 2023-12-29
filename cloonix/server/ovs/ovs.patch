@@ -1,7 +1,7 @@
 diff -Naur ovs/lib/dpif-netlink.c ovs_tainted/lib/dpif-netlink.c
---- ovs/lib/dpif-netlink.c	2023-11-11 13:05:47.000000000 +0100
-+++ ovs_tainted/lib/dpif-netlink.c	2023-11-11 15:26:30.369004540 +0100
-@@ -4612,13 +4612,13 @@
+--- ovs/lib/dpif-netlink.c	2023-12-08 22:28:42.000000000 +0100
++++ ovs_tainted/lib/dpif-netlink.c	2023-12-08 22:35:52.228330702 +0100
+@@ -4595,13 +4595,13 @@
  dpif_netlink_init(void)
  {
      static struct ovsthread_once once = OVSTHREAD_ONCE_INITIALIZER;
@@ -18,8 +18,8 @@ diff -Naur ovs/lib/dpif-netlink.c ovs_tainted/lib/dpif-netlink.c
                        OVS_DATAPATH_FAMILY);
          }
 diff -Naur ovs/lib/poll-loop.c ovs_tainted/lib/poll-loop.c
---- ovs/lib/poll-loop.c	2023-11-11 13:05:47.000000000 +0100
-+++ ovs_tainted/lib/poll-loop.c	2023-11-11 15:26:30.369004540 +0100
+--- ovs/lib/poll-loop.c	2023-12-08 22:28:42.000000000 +0100
++++ ovs_tainted/lib/poll-loop.c	2023-12-08 22:35:52.228330702 +0100
 @@ -64,7 +64,7 @@
      struct poll_node *node;
  
@@ -39,9 +39,9 @@ diff -Naur ovs/lib/poll-loop.c ovs_tainted/lib/poll-loop.c
      /* Check for duplicate.  If found, "or" the events. */
      node = find_poll_node(loop, fd, wevent);
 diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
---- ovs/ofproto/ofproto-dpif.c	2023-11-11 13:05:47.000000000 +0100
-+++ ovs_tainted/ofproto/ofproto-dpif.c	2023-11-11 15:26:30.369004540 +0100
-@@ -736,7 +736,7 @@
+--- ovs/ofproto/ofproto-dpif.c	2023-12-08 22:28:42.000000000 +0100
++++ ovs_tainted/ofproto/ofproto-dpif.c	2023-12-08 22:35:52.228330702 +0100
+@@ -738,7 +738,7 @@
          return 0;
      }
  

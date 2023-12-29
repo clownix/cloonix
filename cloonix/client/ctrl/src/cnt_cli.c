@@ -42,12 +42,16 @@ void help_add_cru(char *line)
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
   printf("\n\t       --persistent");
+  printf("\n\t       --startup_env=\"<env_name=env_val env2_name=env2_val...>\"");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\nexample:\n\n");
-  printf("\n%s vm_name eth=sss bookworm.zip\n", line);
+  printf("\n%s name eth=sss bookworm.zip\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s vm_name eth=vvv bookworm.zip\n", line);
+  printf("\n%s name eth=vvv bookworm.zip\n", line);
   printf("This will give 3 eth that are not spyable\n");
+  printf("\n%s name eth=s bookworm.zip --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
+  printf("This will give 1 eth spyable and will start the container with\n");
+  printf("MYENV=myenv and CLOONIX=great env variables.\n");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
@@ -68,7 +72,7 @@ void help_add_pod(char *line)
   printf("\n%s cnt1 eth=sss podman_image\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
   printf("\n%s cnt1 eth=vv podman_image\n", line);
-  printf("This will give a container with 2 eth that are not spyable and will launch the sleep 8888d\n");
+  printf("This will give a container with 2 eth that are not spyable\n");
   printf("\n%s cnt1 eth=s podman_image --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
   printf("This will give 2 eth that are spyable and will start the container with\n");
   printf("MYENV=myenv and CLOONIX=great env variables.\n");

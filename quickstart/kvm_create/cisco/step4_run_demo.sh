@@ -32,13 +32,13 @@ set -e
 cloonix_gui ${NET}
 
 #######################################################################
-PARAMS="ram=2000 cpu=2 eth=ss"
+PARAMS="ram=1000 cpu=2 eth=ss"
 for i in ${LIST_LINUX} ; do
   cloonix_cli ${NET} add kvm ${i} ${PARAMS} ${LINUX}.qcow2 &
 done
 
 
-PARAMS="ram=5000 cpu=4 eth=ssss"
+PARAMS="ram=4000 cpu=4 eth=ssss"
 cloonix_cli ${NET} add kvm cisco1 ${PARAMS} ${NAME}.qcow2 --no_qemu_ga --natplug=0 &
 cloonix_cli ${NET} add kvm cisco2 ${PARAMS} ${NAME}.qcow2 --no_qemu_ga --natplug=0 &
 cloonix_cli ${NET} add kvm cisco3 ${PARAMS} ${NAME}.qcow2 --no_qemu_ga --natplug=0 &

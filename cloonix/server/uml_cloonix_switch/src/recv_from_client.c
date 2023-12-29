@@ -1181,7 +1181,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
       send_status_ko(llid, tid, info);
       recv_coherency_unlock();
       cfg_del_newborn(kvm->name);
-      KERR("ERROR %s", kvm->name);
+      KERR("ERROR %s %s", kvm->name, info);
       }
     else
       {

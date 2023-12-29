@@ -35,8 +35,9 @@
 #include "wrap.h"
 
 
+#define MAX_NAME_LEN 100
 #define MAX_ARGC 100
-#define MAX_PATH_LEN 300
+#define MAX_PATH_LEN 500
 
 typedef struct t_pty_cli
 {
@@ -312,9 +313,65 @@ static void create_argv_from_cmd(char *cmd, char **argv)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int get_process_pid(char *cmdpath, char *sock)
+{
+  FILE *fp;
+  char line[MAX_PATH_LEN];
+  char name[MAX_NAME_LEN];
+  char cmd[MAX_PATH_LEN];
+  int pid, result = 0;
+  fp = popen("/usr/libexec/cloonix/common/ps", "r");
+  if (fp == NULL)
+    XERR("ERROR /usr/libexec/cloonix/common/ps");
+  else
+    {
+    memset(line, 0, MAX_PATH_LEN);
+    while (fgets(line, MAX_PATH_LEN-1, fp))
+      {
+      if (strstr(line, sock))
+        {
+        if (strstr(line, cmdpath))
+          {
+          if (sscanf(line, "%d %s %400c", &pid, name, cmd))
+            {
+            if (!strncmp(cmd, cmdpath, strlen(cmdpath)))
+              {
+              result = pid;
+              break;
+              }
+            }
+          }
+        }
+      }
+    pclose(fp);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void kill_previous_process(char *pwire, char *pdump, char *sock)
+{
+  int pid_wireshark, pid_dumpcap = 0;
+  pid_dumpcap = get_process_pid(pdump, sock);
+  pid_wireshark = get_process_pid(pwire, sock);
+  if (pid_dumpcap && pid_wireshark)
+    {
+    kill(pid_dumpcap, SIGKILL);
+    kill(pid_wireshark, SIGKILL);
+    XERR("KILL WIRESHARK %d", pid_wireshark);
+    usleep(100000);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
                          char *cmd, int display_val)
 {
+  char *pwireshark = "/usr/libexec/cloonix/server/cloonix-wireshark";
+  char *pdumpcap = "/usr/libexec/cloonix/server/dumpcap";
+  char *pvarlib = "/var/lib/cloonix/";
   char ttyname[MAX_TXT_LEN], *argv[MAX_ARGC];
   int i, pty_fd=-1, ttyfd, pid;
   memset(argv, 0, MAX_ARGC * sizeof(char *));
@@ -365,6 +422,16 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       create_env(display_val, ttyname); 
       set_env_global_cloonix();
       create_argv_from_cmd(cmd, argv);
+      if (!strcmp(argv[0], pwireshark))
+        {
+        i = 0;
+        while(argv[i])
+          {
+          if (!strncmp(argv[i], pvarlib, strlen(pvarlib)))
+            kill_previous_process(pwireshark, pdumpcap, argv[i]);
+          i++;
+          }
+        }
       }
     else if (action == action_bash)
       {

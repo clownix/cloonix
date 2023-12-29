@@ -538,4 +538,5 @@ void rpct_init(t_rpct_tx rpc_tx);
 #define DEBUG_LOG_VSWITCH "debug_vswitch.log"
 #define DEBUG_LOG_SUID    "debug_suid_power.log"
 #define DEBUG_LOG_CRUN    "debug_crun.log"
+#define DEBUG_LOG_JSON    "debug_crun_json"
 /****************************************************************************/
