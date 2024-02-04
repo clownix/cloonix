@@ -430,9 +430,9 @@ void check_for_work_dir_inexistance(void)
   if (stat(root_wk, &stat_path) == 0)
     {
     if (unlink_sub_dir_files(root_wk, err))
-      KERR("ERROR destroing %s %s", root_wk, err);
+      KERR("ERROR removing %s %s", root_wk, err);
     else
-      printf( "Path: \"%s\" already exists, destroing it\n\n", root_wk);
+      printf( "Path: \"%s\" already exists, removing it\n\n", root_wk);
     }
 }
 /*---------------------------------------------------------------------------*/
