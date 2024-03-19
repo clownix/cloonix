@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -428,7 +428,7 @@ void get_custom_vm (t_custom_vm **cust_vm)
   if (!strcmp(g_custom_vm.name, "Cloon"))
     {
     g_custom_vm.current_number += 1;
-    sprintf(cust.name, "%s%d", g_custom_vm.name, g_custom_vm.current_number);
+    sprintf(cust.name, "Cloon%d", g_custom_vm.current_number);
     }
   else
     sprintf(cust.name, "%s", g_custom_vm.name);

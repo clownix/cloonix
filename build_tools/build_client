@@ -22,6 +22,7 @@ cp -rf ${CLOONIX_TREE_ROOT}/targz_store/* ${TMPBUILD}/targz_store
 cp -r ${CLOONIX_TREE_ROOT}/cloonix ${TMPBUILD}
 #----------------------------------------------------------
 for i in cloonix_osh \
+         cloonix_rsh \
          cloonix_ocp \
          cloonix_cli \
          cloonix_gui \

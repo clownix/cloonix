@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -26,6 +26,7 @@ typedef struct t_cnt
 {
   t_topo_cnt cnt;
   t_lan_cnt att_lan[MAX_ETH_VM];
+  char mountbear[MAX_PATH_LEN];
   int poweroff_done;
   int del_snf_ethv_sent[MAX_ETH_VM];
   int lan_add_waiting_ack;
@@ -68,5 +69,6 @@ int send_sig_suid_power(int llid, char *msg);
 int send_pol_suid_power(int llid, char *msg);
 void cnt_vhost_and_doors_begin(t_cnt *cnt);
 int cnt_free_cnt(char *name);
+int cnt_is_crun(char *name);
 void cnt_init(void);
 /*---------------------------------------------------------------------------*/

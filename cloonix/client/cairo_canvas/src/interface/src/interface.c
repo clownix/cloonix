@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -41,7 +41,6 @@
 
 void layout_set_ready_for_send(void);
 int check_before_start_launch(char **argv);
-void wireshark_kill(char *name);
 
 /*---------------------------------------------------------------------------*/
 typedef struct t_vm_config
@@ -366,15 +365,6 @@ static void slowperiodic_img_cb(int nb, t_slowperiodic *spic)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void slowperiodic_podman_cb(int nb, t_slowperiodic *spic)
-{
-  set_bulpod(nb, spic);
-}
-/*--------------------------------------------------------------------------*/
-
-
-
-/****************************************************************************/
 static void timer_enqueue_eventfull(void *data)
 {
   t_enqueue_event *evt = (t_enqueue_event *) data;
@@ -435,9 +425,7 @@ void timer_topo_subscribe(void *data)
   client_topo_small_event_sub(0, topo_small_event_cb);
   layout_set_ready_for_send();
   client_req_eventfull(eventfull_cb);
-  client_req_slowperiodic(slowperiodic_qcow2_cb,
-                          slowperiodic_img_cb,
-                          slowperiodic_podman_cb);
+  client_req_slowperiodic(slowperiodic_qcow2_cb, slowperiodic_img_cb);
 }
 /*--------------------------------------------------------------------------*/
 

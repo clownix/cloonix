@@ -1,7 +1,25 @@
 #!/bin/bash
 HERE=`pwd`
-for i in ${HERE}/../lib_client \
-         ${HERE}/crcanvas_gtk \
+CLOONIX_COMMON=${HERE}/../../common
+IO_CLOWNIX=${CLOONIX_COMMON}/lib_io_clownix
+RPC_CLOWNIX=${CLOONIX_COMMON}/lib_rpc_clownix
+LIB_UTILS=${CLOONIX_COMMON}/lib_utils
+RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout
+
+cd ${IO_CLOWNIX}
+./allclean
+cd ${RPC_CLOWNIX}
+./allclean
+cd ${LIB_UTILS}
+./allclean
+cd ${RPC_LAYOUT}
+./allclean
+
+cd ${HERE}/../lib_client
+make clean
+
+
+for i in ${HERE}/crcanvas_gtk \
          ${HERE}/src/bank \
          ${HERE}/src/interface \
          ${HERE}/src/subsets \

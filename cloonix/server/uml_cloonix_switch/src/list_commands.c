@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -139,8 +139,6 @@ static int build_add_cnt_cmd(int offset, t_list_commands *hlist,
     eth_tab_to_str(eth_desc, cnt->nb_tot_eth, cnt->eth_table);
     if (!strcmp(cnt->brandtype, "crun"))
       strcpy(shortbrand, "cru");
-    else if (!strcmp(cnt->brandtype, "podman"))
-      strcpy(shortbrand, "pod");
     else
       KOUT("ERROR %s", cnt->brandtype);
     len += sprintf(list->cmd + len, "cloonix_cli %s add %s %s eth=%s %s",
@@ -442,7 +440,7 @@ static int build_layout_eth(int offset, t_list_commands *hlist,
     {
     sprintf(list->cmd, "cloonix_cli %s cnf lay abs_xy_eth %s %d %d",
                         cfg_get_cloonix_name(), name, num, 
-                        layout_node_solve(eth->x, eth->y));
+                        layout_node_solve(name, eth->x, eth->y));
     result += 1;
     if (eth->hidden_on_graph)
       {

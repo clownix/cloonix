@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -28,6 +29,7 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <pty.h>
+#include <sched.h>
 #include <sys/prctl.h>
 
 #include "mdl.h"
@@ -63,19 +65,39 @@ static struct timeval g_last_cloonix_tv;
 
 
 /****************************************************************************/
+static t_pty_cli *find_with_sock_fd(int sock_fd)
+{
+  t_pty_cli *cur = g_pty_cli_head;
+  while(cur)
+    {
+    if (cur->sock_fd == sock_fd)
+      break;
+    cur = cur->next;
+    }
+  return cur;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void pty_cli_alloc(int pty_fd, int pid, int sock_fd, uint32_t randid)
 {
   int i;
-  t_pty_cli *cli = (t_pty_cli *) wrap_malloc(sizeof(t_pty_cli));
-  memset(cli, 0, sizeof(t_pty_cli));
-  cli->pty_fd = pty_fd;
-  cli->pid = pid;
-  cli->sock_fd = sock_fd;
-  cli->randid = randid;
-  if (g_pty_cli_head)
-    g_pty_cli_head->prev = cli;
-  cli->next = g_pty_cli_head;
-  g_pty_cli_head = cli;
+  t_pty_cli *cli = find_with_sock_fd(sock_fd);
+  if (cli)
+    XERR("ERROR  pty_fd:%d pid:%d sock_fd:%d", pty_fd, pid, sock_fd);
+  else
+    {
+    cli = (t_pty_cli *) wrap_malloc(sizeof(t_pty_cli));
+    memset(cli, 0, sizeof(t_pty_cli));
+    cli->pty_fd = pty_fd;
+    cli->pid = pid;
+    cli->sock_fd = sock_fd;
+    cli->randid = randid;
+    if (g_pty_cli_head)
+      g_pty_cli_head->prev = cli;
+    cli->next = g_pty_cli_head;
+    g_pty_cli_head = cli;
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -94,20 +116,6 @@ static void pty_cli_free(t_pty_cli *cli)
     mdl_close(cli->pty_fd);
     }
   wrap_free(cli, __LINE__);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static t_pty_cli *find_with_sock_fd(int sock_fd)
-{
-  t_pty_cli *cur = g_pty_cli_head;
-  while(cur)
-    {
-    if (cur->sock_fd == sock_fd)
-      break;
-    cur = cur->next;
-    }
-  return cur;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -195,13 +203,13 @@ static void init_all_env(char *net_name)
     {
     XERR("ERROR TOLOOKAT");
     snprintf(g_home, MAX_TXT_LEN-1, "%s", "/root");
-    sprintf(g_xauthority, "/root/.Cloonauthority_root"); 
+    sprintf(g_xauthority, "/root/.Cloonauthority"); 
     }
   else
     {
     snprintf(g_home, MAX_TXT_LEN-1, "%s", home);
     snprintf(g_xauthority, MAX_TXT_LEN-1, 
-             "/var/lib/cloonix/%s/Cloonauthority_%s", net_name, user); 
+             "/var/lib/cloonix/%s/Cloonauthority", net_name); 
     }
   unlink(g_xauthority);
   clean_xauthority(g_xauthority, "-c");
@@ -248,14 +256,27 @@ static void set_env_global_cloonix(void)
   setenv("LIBGL_DRI3_DISABLE", "1", 1);
   setenv("QT_X11_NO_MITSHM", "1", 1);
   setenv("QT_XCB_NO_MITSHM", "1", 1);
+  setenv("XAUTHORITY", g_xauthority, 1);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_env(int display_val, char *ttyname)
+static void create_env_base(void)
+{
+  char *path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+  setenv("PATH", path, 1);
+  setenv("HOME", g_home, 1);
+  setenv("XAUTHORITY", g_xauthority, 1);
+  setenv("SHELL", "/bin/bash", 1);
+  setenv("TERMINFO", "/usr/libexec/cloonix/common/share/terminfo", 1);
+  setenv("TERM", "rxvt-unicode", 1);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void create_env_display(int display_val, char *ttyname)
 {
   char disp_str[MAX_TXT_LEN];
-  char *path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
   memset(disp_str, 0, MAX_TXT_LEN);
   if (display_val > 0)
     {
@@ -263,11 +284,6 @@ static void create_env(int display_val, char *ttyname)
     setenv("DISPLAY", disp_str, 1);
     if (strlen(ttyname))
       setenv("SSH_TTY", ttyname, 1);
-    setenv("PATH", path, 1);
-    setenv("HOME", g_home, 1);
-    setenv("XAUTHORITY", g_xauthority, 1);
-    setenv("TERM", "xterm", 1);
-    setenv("SHELL", "/bin/bash", 1);
     }
   else
     XERR("Problem setting DISPLAY");
@@ -287,7 +303,9 @@ static void create_argv_from_cmd(char *cmd, char **argv)
       break;
     len = strspn(cmd_ptr, " \t"); 
     if (len)
-      *cmd_ptr = 0;
+      {
+      cmd_ptr = cmd_ptr + len;;
+      }
     ptr[i] = cmd_ptr + len;
     if (ptr[i][0] == '"')
       {
@@ -305,7 +323,10 @@ static void create_argv_from_cmd(char *cmd, char **argv)
       {
       len = strcspn(ptr[i], " \t"); 
       cmd_ptr = ptr[i] + len;
+      *cmd_ptr = 0;
+      cmd_ptr += 1;
       }
+    len = strcspn(ptr[i], " \t"); 
     argv[i] = ptr[i];
     nb = i;
     }
@@ -366,6 +387,14 @@ static void kill_previous_process(char *pwire, char *pdump, char *sock)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void sigusr1_child_handler(int dummy)                           
+{                                          
+  XERR("WARNING  Parent died, child now exiting\n");    
+  exit(0);                                  
+}                            
+
+
+/****************************************************************************/
 void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
                          char *cmd, int display_val)
 {
@@ -374,52 +403,42 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
   char *pvarlib = "/var/lib/cloonix/";
   char ttyname[MAX_TXT_LEN], *argv[MAX_ARGC];
   int i, pty_fd=-1, ttyfd, pid;
+  char *ptr, *ptre;
   memset(argv, 0, MAX_ARGC * sizeof(char *));
   memset(ttyname, 0, MAX_TXT_LEN);
-  if ((action == action_bash) || (action == action_cmd))
+  clearenv();
+  if (action != action_dae)
     {
     if (wrap_openpty(&pty_fd, &ttyfd, ttyname, fd_type_fork_pty))
       XOUT(" ");
+    if (mdl_exists(pty_fd))
+      {
+      XERR("ERROR pty_fd %d exists in mdl", pty_fd);
+      return;
+      }
+    wrap_pty_make_controlling_tty(ttyfd, ttyname);
     }
-  prctl(PR_SET_PDEATHSIG, SIGHUP);
+  create_env_base(); 
+  create_env_display(display_val, ttyname); 
+
   pid = fork();
+  if (pid < 0)
+    XOUT("%s", strerror(errno));
   if (pid == 0)
     {
-    signal(SIGPIPE, SIG_DFL);
+    signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_DFL);
-    prctl(PR_SET_CHILD_SUBREAPER);
-    prctl(PR_SET_PDEATHSIG, SIGHUP);
+    if (signal(SIGUSR1, sigusr1_child_handler) == SIG_ERR)          
+       XERR("ERROR signal failed");                  
+    if (prctl(PR_SET_PDEATHSIG, SIGUSR1) < 0)              
+       XERR("ERROR prctl failed");                  
+    prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0);
     if (setsid() < 0)
       XOUT("setsid: %s", strerror(errno));
-
     if (action == action_dae)
       {
       for (i=0; i<MAX_FD_NUM; i++)
         close(i);
-      }
-    else
-      {
-      for (i=0; i<MAX_FD_NUM; i++)
-        {
-        if (i != ttyfd)
-          close(i);
-        }
-      wrap_pty_make_controlling_tty(ttyfd, ttyname);
-
-      if (dup2(ttyfd, 0) < 0)
-        XERR("dup2 stdin: %s", strerror(errno));
-      if (dup2(ttyfd, 1) < 0)
-        XERR("dup2 stdout: %s", strerror(errno));
-      if (dup2(ttyfd, 2) < 0)
-        XERR("dup2 stderr: %s", strerror(errno));
-      close(ttyfd);
-      wrap_nonnonblock(0);
-      wrap_nonnonblock(1);
-      wrap_nonnonblock(2);
-      }
-    if (action == action_dae)
-      {
-      create_env(display_val, ttyname); 
       set_env_global_cloonix();
       create_argv_from_cmd(cmd, argv);
       if (!strcmp(argv[0], pwireshark))
@@ -433,25 +452,56 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
           }
         }
       }
-    else if (action == action_bash)
-      {
-      clearenv();
-      create_env(display_val, ttyname); 
-      argv[0] = "/bin/bash";
-      argv[1] = NULL;
-      }
     else
       {
-      create_env(display_val, ttyname); 
-      create_argv_from_cmd(cmd, argv);
+      close(0);
+      close(1);
+      close(2);
+      if (dup2(ttyfd, 0) < 0)
+        XERR("dup2 stdin: %s", strerror(errno));
+      if (dup2(ttyfd, 1) < 0)
+        XERR("dup2 stdout: %s", strerror(errno));
+      if (dup2(ttyfd, 2) < 0)
+        XERR("dup2 stderr: %s", strerror(errno));
+      wrap_nonnonblock(0);
+      wrap_nonnonblock(1);
+      wrap_nonnonblock(2);
+      for (i=3; i<MAX_FD_NUM; i++)
+        close(i);
+      if (action == action_bash)
+        {
+        argv[0] = "/bin/bash";
+        argv[1] = NULL;
+        }
+      else if (action == action_crun)
+        {
+        argv[0] = "/usr/libexec/cloonix/common/sh";
+        argv[1] = "-c";
+        if (cmd[0] == '"')
+          {
+          ptr = cmd+1;
+          ptre = strchr(ptr, '"');
+          if (!ptre)
+            XERR("ERROR action_crun %s", cmd);
+          else
+            {
+            *ptre = 0;
+            argv[2] = ptr;
+            }
+          }
+        else
+          argv[2] = cmd;
+        argv[3] = NULL;
+        }
+      else  if (action == action_cmd)
+        {
+        create_argv_from_cmd(cmd, argv);
+        }
+      else
+        XOUT("ERROR %d", action);
       }
     execv(argv[0], argv);
-    for (i=0; (argv[i] != NULL) && (i < MAX_ARGC); i++)
-      XERR("ARG %d : %s", i, argv[i]);
-    XOUT("%s", strerror(errno));
     }
-  else if (pid < 0)
-    XOUT("%s", strerror(errno));
   else
     {
     pty_cli_alloc(pty_fd, pid, sock_fd, randid);
@@ -466,25 +516,40 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void cli_pty_fd_action(t_pty_cli *cli)
+static int cli_pty_fd_action(t_pty_cli *cli)
 {
+  int result = -1;
   t_msg *msg;
-  int len = MAX_MSG_LEN+g_msg_header_len, result = -1;
+  int len = MAX_MSG_LEN+g_msg_header_len;
   msg = (t_msg *) wrap_malloc(len);
   len = wrap_read_pty(cli->pty_fd, msg->buf, MAX_MSG_LEN);
-  if (len > 0)
+  if (len < 0)
+    {
+    if ((errno == EINTR) || (errno == EAGAIN))
+      result = 0;
+    else
+      XERR("ERROR cli_pty_fd_action pty_fd:%d %s",cli->pty_fd,strerror(errno));
+    }
+  else if (len == 0)
+    XERR("ERROR ZERO cli_pty_fd_action pty_fd:%d", cli->pty_fd);
+  else
     {
     mdl_set_header_vals(msg, cli->randid, msg_type_data_cli_pty,
                         fd_type_pty, 0, 0);
     msg->len = len;
     result = mdl_queue_write_msg(cli->sock_fd, msg);
+    if (result)
+      XERR("ERROR cli_pty_fd_action mdl_queue_write_msg sock_fd:%d pty_fd:%d",
+            cli->sock_fd, cli->pty_fd); 
     }
   if (result)
     {
+    XERR("ERROR cli_pty_fd_action pty_fd:%d", cli->pty_fd); 
     wrap_close(cli->pty_fd, __FUNCTION__);
     mdl_close(cli->pty_fd);
     cli->pty_fd = -1;
     }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -520,11 +585,9 @@ static void sig_evt_action(int sig_read_fd)
   char buf[1], exstat;
   len = wrap_read_sig(sig_read_fd, buf, 1);
   if ((len != 1) || (buf[0] != 's'))
-    XOUT("%d %s", len, buf);
+    XOUT("ERROR %d %s", len, buf);
   else
-    {
     child_death_detection();
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -573,27 +636,35 @@ void pty_fork_fdset(fd_set *readfds, fd_set *writefds)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void pty_fork_fdisset(fd_set *readfds, fd_set *writefds)
+int pty_fork_fdisset(fd_set *readfds, fd_set *writefds)
 {
- t_pty_cli *cur = g_pty_cli_head;
+  int result = 0;
+  t_pty_cli *cur = g_pty_cli_head;
   while(cur)
     {
     if (cur->pty_fd != -1)
       {
       if (FD_ISSET(cur->pty_fd, readfds))
         {
-        cli_pty_fd_action(cur);
+        result = cli_pty_fd_action(cur);
         }
-      if (FD_ISSET(cur->pty_fd, writefds))
+      if (result == 0)
         {
-        if (low_write_fd(cur->pty_fd))
-          XERR(" ");
+        if (FD_ISSET(cur->pty_fd, writefds))
+          {
+          if (low_write_fd(cur->pty_fd))
+            XERR("ERROR %d", cur->pty_fd);
+          }
         }
       }
     cur = cur->next;
     }
-  if (FD_ISSET(g_sig_read_fd, readfds))
-    sig_evt_action(g_sig_read_fd);
+  if (result == 0)
+    {
+    if (FD_ISSET(g_sig_read_fd, readfds))
+      sig_evt_action(g_sig_read_fd);
+    }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -671,7 +742,7 @@ void pty_fork_init(char *cloonix_net_name)
   memset(g_net_name, 0, MAX_TXT_LEN);
   strncpy(g_net_name, cloonix_net_name, MAX_TXT_LEN-1);
   if (signal(SIGCHLD, child_exit) == SIG_ERR)
-    XERR("%s", strerror(errno));
+    XERR("ERROR %s", strerror(errno));
   init_all_env(cloonix_net_name);
   if (wrap_pipe(pipe_fd, fd_type_pipe_sig, __FUNCTION__) < 0)
     XOUT(" ");

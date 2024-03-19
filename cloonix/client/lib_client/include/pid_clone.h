@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -17,7 +17,7 @@
 /*****************************************************************************/
 typedef void (*t_from_child_to_main)(void *data, char *msg);
 typedef int (*t_fct_to_launch)(void *data);
-typedef void (*t_launched_death)(void *data, int status, char *nm);
+typedef void (*t_launched_death)(void *data, int status, char *nm, int pid);
 int pid_clone_launch(t_fct_to_launch fct, t_launched_death death, 
                      t_from_child_to_main fct_msg, 
                      void *data_start, void *data_end, void *data_msg, 

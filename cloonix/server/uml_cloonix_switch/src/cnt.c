@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -41,9 +41,9 @@
 #include "doors_rpc.h"
 #include "doorways_mngt.h"
 #include "crun.h"
-#include "podman.h"
 #include "ovs_phy.h"
 #include "mactopo.h"
+#include "crun.h"
 
 typedef struct t_cnt_delete
 {
@@ -211,6 +211,8 @@ void cnt_vhost_and_doors_begin(t_cnt *cnt)
 {
   char *eth_name, *name;
   int i;
+  char sock[MAX_PATH_LEN];
+  memset(sock, 0, MAX_NAME_LEN);
   for (i=0; i<cnt->cnt.nb_tot_eth; i++)
     {
     eth_name = cnt->cnt.eth_table[i].vhost_ifname;
@@ -219,7 +221,8 @@ void cnt_vhost_and_doors_begin(t_cnt *cnt)
       KERR("ERROR KVMETH %s %d %s", name, i, eth_name);
     }
   doors_send_del_vm(get_doorways_llid(), 0, name);
-  doors_send_add_vm(get_doorways_llid(), 0, name, utils_get_cnt_dropbear(name));
+  snprintf(sock, MAX_PATH_LEN-1, "%s/mountbear/sock", cnt->mountbear);
+  doors_send_add_vm(get_doorways_llid(), 0, name, sock);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -436,16 +439,6 @@ int cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
           free_cnt(cnt->name);
           }
         }
-      else if (!strcmp(cnt->brandtype, "podman"))
-        {
-        if (podman_create(llid, vm_id, cnt, agent_dir))
-          {
-          result = -1;
-          snprintf(err,MAX_PATH_LEN-1,"err %s %s", cnt->name, cnt->brandtype);
-          KERR("ERROR %s", err);
-          free_cnt(cnt->name);
-          }
-        }
       else
         KOUT("ERROR TYPE %s", cnt->brandtype);
       }
@@ -549,9 +542,6 @@ static void timer_cnt_delete(void *data)
         memset(req, 0, MAX_PATH_LEN);
         if (!strcmp(cur->cnt.brandtype, "crun"))
           snprintf(req,MAX_PATH_LEN-1,"cloonsuid_crun_delete name=%s", cd->name);
-        else if (!strcmp(cur->cnt.brandtype, "podman"))
-          snprintf(req,MAX_PATH_LEN-1,"cloonsuid_podman_delete brandtype=%s name=%s",
-          cd->brandtype, cd->name);
         else
           KOUT("ERROR TYPE %s", cur->cnt.brandtype);
         doors_send_del_vm(get_doorways_llid(), 0, cd->name);
@@ -640,15 +630,26 @@ static void error_timer_beat_action(int llid, t_cnt *cur)
   memset(req, 0, MAX_PATH_LEN);
   if (!strcmp(cur->cnt.brandtype, "crun"))
     snprintf(req, MAX_PATH_LEN-1, "cloonsuid_crun_ERROR name=%s", cur->cnt.name);
-  else if (!strcmp(cur->cnt.brandtype, "podman"))
-    snprintf(req, MAX_PATH_LEN-1, "cloonsuid_podman_ERROR brandtype=%s name=%s",
-    cur->cnt.brandtype, cur->cnt.name);
   else
     KOUT("ERROR TYPE %s", cur->cnt.brandtype);
   if (send_sig_suid_power(llid, req))
     KERR("ERROR %d %s", llid, cur->cnt.name);
   utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), "TIMOUT");
   cnt_free_cnt(cur->cnt.name);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cnt_is_crun(char *name)
+{
+  t_cnt *cur = find_cnt(name);
+  int result = 0;
+  if (cur)
+    {
+    if (!strcmp(cur->cnt.brandtype, "crun"))
+      result = 1;
+    }
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 

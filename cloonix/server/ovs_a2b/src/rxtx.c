@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -109,7 +109,7 @@ static void packet_rx(int id, int len, uint8_t *buf)
   uint64_t blen = (uint64_t) len;
   uint8_t *pkt;
   t_pkt *pbuf;
-  if (sched_can_enqueue(id, blen))
+  if (sched_can_enqueue(id, blen, buf))
     {
     pkt = (uint8_t *) malloc(len);
     memcpy(pkt, buf, len);
@@ -122,7 +122,7 @@ static void packet_rx(int id, int len, uint8_t *buf)
     trigger_schedule(usec, 0);
     }
   else
-    KERR("DROP %d FULL CIRCLE len:%d", id, len);
+    KERR("SCHED DROP %d DSCP %02X len:%d", id, buf[15], len);
 }
 /*--------------------------------------------------------------------------*/
 

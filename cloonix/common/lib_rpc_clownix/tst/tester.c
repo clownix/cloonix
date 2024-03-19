@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -70,7 +70,6 @@ static int count_eventfull_sub=0;
 static int count_slowperiodic_qcow2=0;
 static int count_slowperiodic_img=0;
 static int count_slowperiodic_sub=0;
-static int count_slowperiodic_podman=0;
 
 static int count_evt_stats_endp_sub=0;
 static int count_evt_stats_endp=0;
@@ -108,6 +107,7 @@ static int count_cnt_add = 0;
 
 static int count_a2b_add = 0;
 static int count_a2b_cnf = 0;
+static int count_lan_cnf = 0;
 static int count_c2c_cnf = 0;
 static int count_nat_cnf = 0;
 
@@ -148,7 +148,6 @@ static void print_all_count(void)
   printf("%d\n", count_slowperiodic_sub);
   printf("%d\n", count_slowperiodic_qcow2);
   printf("%d\n", count_slowperiodic_img);
-  printf("%d\n", count_slowperiodic_podman);
   printf("%d\n", count_sav_vm);
 
   printf("%d\n", count_evt_stats_endp_sub);
@@ -184,6 +183,7 @@ static void print_all_count(void)
 
   printf("%d\n", count_a2b_add);
   printf("%d\n", count_a2b_cnf);
+  printf("%d\n", count_lan_cnf);
   printf("%d\n", count_c2c_cnf);
   printf("%d\n", count_nat_cnf);
 
@@ -2315,36 +2315,6 @@ void recv_slowperiodic_img(int llid, int itid, int inb, t_slowperiodic *ispic)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_slowperiodic_podman(int llid, int itid, int inb, t_slowperiodic *ispic)
-{
-  int i;
-  static int nb, tid;
-  static t_slowperiodic spic[MAX_TEST_TUX];
-  if (i_am_client)
-    {
-    if (count_slowperiodic_podman)
-      {
-      if (itid != tid)
-        KOUT(" ");
-      if (inb != nb)
-        KOUT(" ");
-      if (memcmp(spic, ispic, nb * sizeof(t_slowperiodic)))
-        KOUT(" ");
-      }
-    tid = rand();
-    nb = rand() % MAX_TEST_TUX;
-    memset(spic, 0, MAX_TEST_TUX * sizeof(t_slowperiodic));
-    for (i=0; i<nb; i++)
-      random_choice_str(spic[i].name, MAX_NAME_LEN);
-    send_slowperiodic_podman(llid, tid, nb, spic);
-    }
-  else
-    send_slowperiodic_podman(llid, itid, inb, ispic);
-  count_slowperiodic_podman++;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void recv_nat_add(int llid, int itid, char *iname)
 {
   static char name[MAX_NAME_LEN];
@@ -2550,6 +2520,34 @@ void recv_a2b_cnf(int llid, int itid, char *iname, char *icmd)
   else
     send_a2b_cnf(llid, itid, iname, icmd);
   count_a2b_cnf++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_lan_cnf(int llid, int itid, char *iname, char *icmd)
+{
+  static char name[MAX_NAME_LEN];
+  static char cmd[MAX_PRINT_LEN];
+  static int tid;
+  if (i_am_client)
+    {
+    if (count_lan_cnf)
+      {
+      if (strcmp(iname, name))
+        KOUT(" ");
+      if (strcmp(icmd, cmd))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      }
+    tid = rand();
+    random_choice_str(name, MAX_NAME_LEN);
+    random_choice_str(cmd, MAX_PRINT_LEN);
+    send_lan_cnf(llid, tid, name, cmd);
+    }
+  else
+    send_lan_cnf(llid, itid, iname, icmd);
+  count_lan_cnf++;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -2819,7 +2817,6 @@ static void send_first_burst(int llid)
   recv_slowperiodic_sub(llid, 0);
   recv_slowperiodic_qcow2(llid, 0, 0, NULL);
   recv_slowperiodic_img(llid, 0, 0, NULL);
-  recv_slowperiodic_podman(llid, 0, 0, NULL);
   recv_sav_vm(llid, 0, NULL, NULL);
   recv_evt_stats_endp_sub(llid, 0, NULL, 0, 0);
   recv_evt_stats_endp(llid, 0, NULL, NULL, 0, NULL, 0);
@@ -2857,6 +2854,7 @@ static void send_first_burst(int llid)
 
   recv_a2b_add(llid, 0, NULL);
   recv_a2b_cnf(llid, 0, NULL, NULL);
+  recv_lan_cnf(llid, 0, NULL, NULL);
   recv_c2c_cnf(llid, 0, NULL, NULL);
   recv_nat_cnf(llid, 0, NULL, NULL);
 }

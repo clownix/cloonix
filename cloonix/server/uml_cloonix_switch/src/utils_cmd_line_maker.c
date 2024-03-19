@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -744,16 +744,6 @@ int util_get_max_tempo_fail(void)
   (void) cnt;
   nb = nb_vm + nb_cnt/3;
   return (nb*200 + 5000); 
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *utils_get_cnt_dropbear(char *name)
-{
-  char *cnt_dir = utils_get_cnt_dir();
-  static char path[MAX_PATH_LEN];
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/mountbear/sock", cnt_dir, name);
-  return path;
 }
 /*---------------------------------------------------------------------------*/
 

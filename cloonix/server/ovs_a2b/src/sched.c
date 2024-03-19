@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -48,15 +48,42 @@ static uint64_t g_byt_loss[2];
 static uint64_t g_byt_enqueue[2];
 static uint64_t g_byt_dequeue[2];
 static uint64_t g_byt_stored[2];
+
+
+
+#define ETHERNET_HEADER_LEN     14
+#define IPV4_HEADER_LEN         20
+
+
 /*****************************************************************************/
-static int random_loss(int id)
+/*
+static int packet_rx_is_dscp_44(uint64_t len, uint8_t *buf)
+{
+  int result = 0;
+
+  if ((len > ETHERNET_HEADER_LEN + IPV4_HEADER_LEN) &&
+      ((buf[12] == 0x08) && (buf[13] == 0x00)) &&
+      (buf[15] == 0x44))
+    {
+    result = 1;
+    }
+  return result;
+}
+*/
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int random_loss(int id, uint64_t len, uint8_t *buf)
 {
   int cmp_loss, result = 0;
   if (g_cnf_loss[id])
     {
-    cmp_loss = (int) (rand()%TOTAL_LOSS_VALUE);
-    if (cmp_loss <= g_cnf_loss[id])
-      result = 1;
+//    if (packet_rx_is_dscp_44(len, buf))
+//      {
+      cmp_loss = (int) (rand()%TOTAL_LOSS_VALUE);
+      if (cmp_loss <= g_cnf_loss[id])
+        result = 1;
+//      }
     }
   return result;
 }
@@ -185,10 +212,10 @@ void sched_mngt(int id, uint64_t current_usec, uint64_t delta)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int sched_can_enqueue(int id, uint64_t len)
+int sched_can_enqueue(int id, uint64_t len, uint8_t *buf)
 {
   int result = 0;
-  if (random_loss(id))
+  if (random_loss(id, len, buf))
     {
     g_pkt_loss[id] += 1;
     g_byt_loss[id] += len;

@@ -104,11 +104,10 @@ Note that for grub2, it is: grub2-mkconfig --output=/boot/grub2/grub.cfg
 Podman and Crun startup
 =======================
 
-If you want to customize the startup of the containers, you can change
+If you want to customize the startup of the containers, you can create
 the following files::
 
-  /usr/libexec/cloonix/common/etc/crun_init_user.sh
-  /usr/libexec/cloonix/common/etc/podman_init_user.sh
+  /usr/bin/cloonix_startup_script.sh
 
 Podman
 =======

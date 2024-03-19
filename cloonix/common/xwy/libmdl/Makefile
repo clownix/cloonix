@@ -8,6 +8,7 @@ SOURCES = \
           circle.c \
           fd_spy.c \
           thread_spy.c \
+          cloonix_timer.c \
           dialog_thread.c
 
 OBJECTS := $(patsubst %.c,obj/%.o,$(SOURCES))

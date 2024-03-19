@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -639,6 +639,22 @@ int cmd_cnf_a2b(int argc, char **argv)
     result = 0;
     init_connection_to_uml_cloonix_switch();
     client_cnf_a2b(0, callback_end, argv[0], argv[1]);
+    }
+  else
+    KERR("ERROR NB PARAMS %d", argc);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_cnf_lan(int argc, char **argv)
+{
+  int result = -1;
+  if (argc == 2)
+    {
+    result = 0;
+    init_connection_to_uml_cloonix_switch();
+    client_cnf_lan(0, callback_end, argv[0], argv[1]);
     }
   else
     KERR("ERROR NB PARAMS %d", argc);

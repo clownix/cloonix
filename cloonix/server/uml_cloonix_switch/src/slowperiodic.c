@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -28,7 +28,6 @@
 #include "cfg_store.h"
 #include "event_subscriber.h"
 #include "utils_cmd_line_maker.h"
-#include "podman_images.h"
 
 
 /*****************************************************************************/
@@ -98,14 +97,12 @@ static int get_bulk_files(t_slowperiodic **slowperiodic, char *suffix)
 /*****************************************************************************/
 static void action_send_slowperiodic(void)
 {
-  int llid, tid, nb_qcow2, nb_img, nb_pod;
+  int llid, tid, nb_qcow2, nb_img;
   t_slowperiodic *slowperiodic_qcow2;
   t_slowperiodic *slowperiodic_img;
-  t_slowperiodic *slowperiodic_pod;
   t_slowperiodic_subs *cur = head_subs;
   nb_qcow2 = get_bulk_files(&slowperiodic_qcow2, ".qcow2");
   nb_img = get_bulk_files(&slowperiodic_img, ".zip");
-  nb_pod = podman_image_get_list("podman", &slowperiodic_pod);
   while (cur)
     {
     llid = cur->llid;
@@ -116,8 +113,6 @@ static void action_send_slowperiodic(void)
         send_slowperiodic_qcow2(llid, tid, nb_qcow2, slowperiodic_qcow2);
       if (nb_img)
         send_slowperiodic_img(llid, tid, nb_img, slowperiodic_img);
-      if (nb_pod)
-        send_slowperiodic_podman(llid, tid, nb_pod, slowperiodic_pod);
       }
     else
       event_print ("SLOWPERIODIC ERROR!!!!!!");
@@ -125,8 +120,6 @@ static void action_send_slowperiodic(void)
     }
   clownix_free(slowperiodic_qcow2, __FUNCTION__);
   clownix_free(slowperiodic_img, __FUNCTION__);
-  if (nb_pod)
-    clownix_free(slowperiodic_pod, __FUNCTION__);
 }
 /*---------------------------------------------------------------------------*/
 

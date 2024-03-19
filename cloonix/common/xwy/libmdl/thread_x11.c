@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -48,6 +48,7 @@ typedef struct t_x11
   int thread_on;
   int thread_waiting;
   int thread_terminating;
+  int thread_terminated;
   uint32_t randid;
   int server_side;
   int  ptx;
@@ -251,44 +252,37 @@ static int read_from_x11(t_x11 *x11)
 /*****************************************************************************/
 static void *thread_x11(void *arg)
 {
-  int i, fd, result;
+  int i, fd, result, fd_ass;
   uint32_t evts;
   struct epoll_event events[MAX_EPOLL_EVENTS];
   t_x11 *x11 = (t_x11 *) arg;
   if (!x11)
     XOUT(" ");
-
+  fd_ass = x11->sock_fd_ass;
   thread_spy_add(x11->sock_fd_ass, x11->x11_fd, x11->epfd, thread_type_x11);
   x11->epev_x11_fd = wrap_epoll_event_alloc(x11->epfd, x11->x11_fd, 4);
   x11->epev_soc_fd = wrap_epoll_event_alloc(x11->epfd, x11->sock_fd_ass, 5);
   mdl_open(x11->sock_fd_ass, fd_type_x11, wrap_write_x11_soc, wrap_read_kout);
   mdl_open(x11->x11_fd, fd_type_x11, wrap_write_x11_x11, wrap_read_kout);
-
   while(x11->thread_waiting)
-    usleep(1000);
-
+    usleep(10000);
   if (x11->first_x11_msg)
     {
     write_to_soc(x11, x11->first_x11_msg);
     x11->first_x11_msg = NULL;
     }
-
   while (x11->thread_on)
     {
     epev_x11_fd_set(x11);
     epev_soc_fd_set(x11);
     epev_diag_thread_fd_set(x11);
-
     memset(events, 0, MAX_EPOLL_EVENTS * sizeof(struct epoll_event));
-    result = epoll_wait(x11->epfd, events, MAX_EPOLL_EVENTS, -1);
-
+    result = epoll_wait(x11->epfd, events, MAX_EPOLL_EVENTS, 10);
     if (result < 0)
       {
       if (errno != EINTR)
         XOUT("%s\n ", strerror(errno));
       }
-
-
     for(i=0; (x11->thread_on) && (i<result); i++)
       {
       fd = events[i].data.fd;
@@ -362,10 +356,8 @@ static void *thread_x11(void *arg)
         }
       }
     }
-
   while(x11->thread_terminating)
-    usleep(1000);
-
+    usleep(10000);
   mdl_close(x11->sock_fd_ass);
   mdl_close(x11->x11_fd);
   wrap_epoll_event_free(x11->epfd, x11->epev_x11_fd);
@@ -374,8 +366,7 @@ static void *thread_x11(void *arg)
   wrap_close(x11->x11_fd, __FUNCTION__);
   wrap_close(x11->sock_fd_ass, __FUNCTION__);
   thread_spy_del(x11->sock_fd_ass, thread_type_x11);
-
-  pthread_exit(NULL);
+  x11->thread_terminated = 1;
   return NULL;
 }
 /*---------------------------------------------------------------------------*/
@@ -407,6 +398,7 @@ int thread_x11_open(uint32_t randid, int server_side, int sock_fd_ass,
   x11->thread_on = 1;
   x11->thread_waiting = 1;
   x11->thread_terminating = 1;
+  x11->thread_terminated = 0;
   x11->first_x11_msg = first_x11_msg;
 
   x11->epev_diag_thread_fd = wrap_epoll_event_alloc(x11->epfd,
@@ -456,16 +448,13 @@ void thread_x11_close(int sock_fd_ass)
     x11->thread_on = 0;
     x11->thread_waiting = 0;
     x11->thread_terminating = 0;
-
-    if (pthread_join(x11->thread_x11, NULL)) 
-      XERR(" ");
-
+    while(x11->thread_terminated == 0)
+      usleep(10000);
     dialog_close(x11->diag_main_fd);
     dialog_close(x11->diag_thread_fd);
     wrap_epoll_event_free(x11->epfd, x11->epev_diag_thread_fd);
     wrap_close(x11->diag_thread_fd, __FUNCTION__);
     wrap_close(x11->diag_main_fd, __FUNCTION__);
-
     g_x11[sock_fd_ass] = NULL;
     wrap_free(x11, __LINE__);
     }

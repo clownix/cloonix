@@ -34,7 +34,7 @@ dnf --releasever=9 --installroot=${TMPZIP} -y install dnf
 rm -f ${TMPZIP}/etc/resolv.conf
 cp -f /etc/resolv.conf ${TMPZIP}/etc
 #-----------------------------------------------------------------------#
-list_pkt="openssh-client bash-completion vim net-tools monit"
+list_pkt="openssh-client bash-completion vim net-tools"
 for d in dev sys proc; do mount --bind /$d ${TMPZIP}/$d; done
 echo dnf --releasever=9 clean packages
 chroot ${TMPZIP} dnf --releasever=9 clean packages

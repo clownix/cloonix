@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -26,7 +26,7 @@ void layout_add_lan(char *name, int llid);
 void layout_del_vm(char *name);
 void layout_del_sat(char *name);
 void layout_del_lan(char *name);
-int layout_node_solve(double x, double y);
+int layout_node_solve(char *name, double x, double y);
 int layout_a2b_solve(double x, double y);
 /*---------------------------------------------------------------------------*/
 

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -124,6 +124,7 @@ static gboolean glib_cb (GIOChannel   *source,
       gtl->fail_count++;
       if (gtl->fail_count >= 5)
         {
+        KERR("ERROR glib RX KILL ALL");
         pid_clone_kill_all();
         exit(-1);
         }

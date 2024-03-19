@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -39,7 +39,7 @@ static int selectioned_resolve(t_bank_item *bitem)
     case bank_type_eth:
       if (selectioned_lan)
         {
-        if ((!selectioned_lan->name) || (!strlen(selectioned_lan->name)))
+        if (!strlen(selectioned_lan->name))
           KOUT(" ");
         if (bitem->att_node->bank_type == bank_type_sat)
           {
@@ -62,7 +62,7 @@ static int selectioned_resolve(t_bank_item *bitem)
     case bank_type_sat:
       if (selectioned_lan)
         {
-        if ((!selectioned_lan->name) || (!strlen(selectioned_lan->name)))
+        if (!strlen(selectioned_lan->name))
           KOUT(" ");
         if (selectioned_lan->pbi.endp_type != endp_type_a2b)
           {

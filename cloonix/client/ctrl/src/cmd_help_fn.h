@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -100,6 +100,9 @@ void help_cnf_c2c(char *line);
 /*---------------------------------------------------------------------------*/
 int cmd_cnf_nat(int argc, char **argv);
 void help_cnf_nat(char *line);
+/*---------------------------------------------------------------------------*/
+int cmd_cnf_lan(int argc, char **argv);
+void help_cnf_lan(char *line);
 /*---------------------------------------------------------------------------*/
 
 

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -250,7 +250,6 @@ int low_write_raw(int fd_dst, t_msg *msg, int all)
 /****************************************************************************/
 void low_write_open(int s, int type, t_outflow outflow)
 {
-  int pipe_fd[2];
   if ((s < 0) || (s >= MAX_FD_NUM))
     XOUT("%d", s);
   if (g_lw[s])

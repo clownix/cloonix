@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -336,6 +336,8 @@ void recv_color_item(int llid, int tid, char *name, int color)
 {KOUT(" ");}
 /*--------------------------------------------------------------------------*/
 
+void recv_lan_cnf(int llid, int tid, char *name, char *cmd)
+{KOUT(" ");}
 void recv_a2b_cnf(int llid, int tid, char *name, char *cmd)
 {KOUT(" ");}
 void recv_c2c_cnf(int llid, int tid, char *name, char *cmd)

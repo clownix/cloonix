@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -34,6 +34,7 @@ void action_add_snf_lan(char *bin, char *db, char *respb,
 void action_del_snf_lan(char *bin, char *db, char *respb,
                         char *name, int num, char *vhost, char *lan);
 
+void action_add_lan_rstp(char *bin, char *db, char *respb, char *lan);
 void action_add_lan(char *bin, char *db, char *respb, char *lan);
 
 void action_del_lan(char *bin, char *db, char *respb, char *lan);

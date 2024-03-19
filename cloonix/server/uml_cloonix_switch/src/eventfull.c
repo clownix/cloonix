@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -209,7 +209,7 @@ static void refresh_ram_cpu_vm(int nb, t_vm *head_vm)
 /*****************************************************************************/
 static void timeout_collect_eventfull(void *data)
 {
-  static int i, count = 0;
+  static int i, mn_count = 0 , count = 0;
   int nb, llid, tid, nb_vm, nb_cnt;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
   t_eventfull_subs *cur = head_eventfull_subs;
@@ -221,6 +221,12 @@ static void timeout_collect_eventfull(void *data)
   (t_eventfull_endp *) clownix_malloc(tot_evt * sizeof(t_eventfull_endp), 13);
   memset(eventfull_endp, 0, tot_evt * sizeof(t_eventfull_endp));
 
+  mn_count++;
+  if (mn_count == 600)
+    {
+    cfg_hysteresis_send_topo_info();
+    mn_count = 0;
+    }
   count++;
   if (count == 10)
     {

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -40,6 +40,7 @@ typedef struct t_tx
   int thread_tx_on;
   int thread_waiting;
   int thread_abort;
+  int thread_terminated;
   int count;
   pthread_t thread_tx;
   t_lw_el *current_el;
@@ -58,7 +59,7 @@ static int try_send_el_successfull(t_lw_el *el)
     {
     if (errno != EINTR && errno != EAGAIN)
       {
-      XERR("%s", strerror(errno));
+      XERR("ERROR %s", strerror(errno));
       result = -1;
       }
     }
@@ -115,7 +116,7 @@ static int transmit_circ_tx(int sock_fd)
       if (tx->count > 50000)
         {
         tx->thread_tx_on = 0;
-        XERR("%d %d", tx->current_el->offst, tx->current_el->payload);
+        XERR("ERROR %d %d", tx->current_el->offst, tx->current_el->payload);
         result = -1;
         }
       else
@@ -138,7 +139,7 @@ static int transmit_circ_tx(int sock_fd)
 /****************************************************************************/
 static void cli_warn(int sig)
 {
-  XERR("%d", sig);
+  XERR("ERROR SIGNAL SIGPIPE %d", sig);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -147,7 +148,7 @@ static void *thread_tx(void *arg)
 {
   t_tx *tx = (t_tx *) arg;
   if (!tx)
-    XOUT(" ");
+    XOUT("ERROR FATAL");
   thread_spy_add(tx->dst_fd, -1, -1, thread_type_tx);
   if (signal(SIGPIPE, cli_warn) == SIG_ERR)
     XERR("%s", strerror(errno));
@@ -156,16 +157,18 @@ static void *thread_tx(void *arg)
     usleep(10000);
 
   if (tx->thread_abort)
+    {
     tx->thread_tx_on = 0;
+    }
 
   while (tx->thread_tx_on)
     {
-    usleep(10000);
+    usleep(5000);
     while(circ_tx_used_slot_nb(tx->circ_ctx))
       {
       if (transmit_circ_tx(tx->dst_fd))
         {
-        XERR(" ");
+        XERR("ERROR TRANSMIT CIRCLE dst_fd: %d", tx->dst_fd);
         tx->thread_tx_on = 0;
         break;
         }
@@ -173,7 +176,8 @@ static void *thread_tx(void *arg)
     }
 
   thread_spy_del(tx->dst_fd, thread_type_tx);
-  pthread_exit(NULL);
+
+  tx->thread_terminated = 1;
 
   return NULL;
 }
@@ -250,6 +254,7 @@ void thread_tx_open(int dst_fd)
   tx->thread_waiting = 1;
   tx->thread_abort = 1;
   tx->thread_tx_on = 1;
+  tx->thread_terminated = 0;
   g_tx[dst_fd] = tx;
   if (pthread_create(&tx->thread_tx, NULL, thread_tx, (void *) tx) != 0)
     XOUT(" ");
@@ -261,7 +266,7 @@ void thread_tx_close(int dst_fd)
 { 
   t_tx *tx;
   if (dst_fd == -1)
-    XERR(" ");
+    XERR("ERROR ");
   else
     {
     if ((dst_fd < 0) || (dst_fd >= MAX_FD_NUM))
@@ -271,8 +276,10 @@ void thread_tx_close(int dst_fd)
       {
       tx->thread_waiting = 0;
       tx->thread_tx_on = 0;
-      if (pthread_join(tx->thread_tx, NULL))
-        XERR(" ");
+
+      while(tx->thread_terminated == 0)
+        usleep(10000);
+
       g_tx[dst_fd] = NULL;
       wrap_free(tx, __LINE__);
       }

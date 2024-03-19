@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -69,7 +69,6 @@ char *utils_get_ovs_nat_bin_dir(void);
 char *utils_get_ovs_a2b_bin_dir(void);
 char *utils_get_ovs_c2c_bin_dir(void);
 int util_get_max_tempo_fail(void);
-char *utils_get_cnt_dropbear(char *name);
 char *utils_get_crun_dir(void);
 int lio_system(char *argv[]);
 char *utils_get_log_dir(void);

@@ -7,8 +7,7 @@ OBJ_DIR=obj/
 EXE = cloonix-suid-power
 
 SRC = suid_power.c stub.c crun.c \
-      crun_utils.c tar_img.c podman.c \
-      net_phy.c podmanimages.c
+      crun_utils.c tar_img.c net_phy.c
 
 VPATH=./src
 

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -20,7 +20,7 @@ void pty_fork_msg_type_data_pty(int sock_fd, t_msg *msg);
 void pty_fork_msg_type_win_size(int sock_fd, int len, char *buf);
 int pty_fork_xauth_add_magic_cookie(int display_val, char *magic_cookie);
 int pty_fork_get_max_fd(int val);
-void pty_fork_fdisset(fd_set *readfds, fd_set *writefds);
+int pty_fork_fdisset(fd_set *readfds, fd_set *writefds);
 void pty_fork_fdset(fd_set *readfds, fd_set *writefds);
 void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
                          char *cmd, int display_val);

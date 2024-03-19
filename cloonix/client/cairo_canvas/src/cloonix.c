@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -378,7 +378,6 @@ void work_dir_resp(int tid, t_topo_clc *conf)
     {
     printf("\n\nCloon Version client:%s DIFFER FROM server:%s\n\n", 
            cloonix_conf_info_get_version(), conf->version);
-    exit(-1);
     }
   daemon(0,1);
   move_init();
@@ -500,8 +499,6 @@ int main(int argc, char *argv[])
   init_local_cloonix_bin_path(g_current_directory, argv[0]); 
   if(!getenv("HOME"))
     KOUT("No HOME env");
-  if(!getenv("USER"))
-    KOUT("No USER env");
   if(!getenv("DISPLAY"))
     KOUT("No DISPLAY env");
 

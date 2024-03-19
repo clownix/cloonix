@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -151,7 +151,7 @@ static t_loop *free_loop_elem(t_elem *elem)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int tarmount_create(char *bulk, char *image, int is_persistent)
+static int zipmount_create(char *bulk, char *image, int is_persistent)
 {
   int child_pid, wstatus, result = -1;
   char cmd[2*MAX_PATH_LEN];
@@ -184,10 +184,12 @@ static int tarmount_create(char *bulk, char *image, int is_persistent)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int tarmount_exists(char *bulk, char *image, int is_persistent)
+static int zipmount_exists(char *bulk, char *image,
+                           int is_persistent, int must_exist)
 {
   int child_pid, wstatus, result = 0;
   char cmd[2*MAX_PATH_LEN];
+  char fuse[MAX_PATH_LEN];
   char mnt[MAX_PATH_LEN];
   char resp[MAX_PATH_LEN];
   FILE *fp;
@@ -195,13 +197,19 @@ static int tarmount_exists(char *bulk, char *image, int is_persistent)
 
   memset(cmd, 0, 2*MAX_PATH_LEN);
   memset(mnt, 0, MAX_PATH_LEN);
+  memset(fuse, 0, MAX_PATH_LEN);
   snprintf(mnt, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
+  snprintf(fuse, MAX_PATH_LEN-1,
+           "\"cloonix-fuse-zip on %s/%s type fuse.cloonix-fuse-zip\"",
+           get_mnt_loop_dir(), image);
   snprintf(cmd, 2*MAX_PATH_LEN-1,
-  "%s | %s fuse.cloonix-fuse-zip | %s %s | %s '{print $3}'",
-  MOUNT_BIN, GREP_BIN, GREP_BIN, mnt, AWK_BIN);
+  "%s | %s %s | %s '{print $3}'", MOUNT_BIN, GREP_BIN, fuse, AWK_BIN);
   fp = cmd_lio_popen(cmd, &child_pid);
   if (fp == NULL)
+    {
+    log_write_req("PREVIOUS CMD KO 4");
     KERR("ERROR %s", cmd);
+    }
   else
     {
     if (fgets(resp, MAX_PATH_LEN-1, fp))
@@ -213,9 +221,21 @@ static int tarmount_exists(char *bulk, char *image, int is_persistent)
       if (ptr)
         *ptr = 0;
       if (strcmp(resp, mnt))
-        KERR("ERROR %s %s %s", bulk, image, resp);
+        {
+        log_write_req("PREVIOUS CMD KO 5");
+        KERR("ERROR %s %s %s %s", bulk, image, resp, mnt);
+        }
       else
+        {
         result = 1;
+        if (!must_exist)
+          KERR("ERROR %s %s", cmd, resp);
+        }
+      }
+    else
+      {
+      if (must_exist)
+        KERR("ERROR %s", cmd);
       }
     pclose(fp);
     if (force_waitpid(child_pid, &wstatus))
@@ -249,7 +269,10 @@ static void mount_del(char *bulk, char *image,
            MOUNT_BIN, GREP_BIN, cnt_dir, AWK_BIN);
   fp = cmd_lio_popen(cmd, &child_pid);
   if (fp == NULL)
+    {
+    log_write_req("PREVIOUS CMD KO 6");
     KERR("ERROR %s", cmd);
+    }
   else
     {
     if (fgets(resp, MAX_PATH_LEN-1, fp))
@@ -269,7 +292,10 @@ static void mount_del(char *bulk, char *image,
            MOUNT_BIN, GREP_BIN, GREP_BIN, get_mnt_loop_dir(), image, AWK_BIN);
   fp = cmd_lio_popen(cmd, &child_pid);
   if (fp == NULL)
+    {
+    log_write_req("PREVIOUS CMD KO 7");
     KERR("ERROR %s", cmd);
+    }
   else
     {
     if (fgets(resp, MAX_PATH_LEN-1, fp))
@@ -311,7 +337,7 @@ int tar_img_add(char *name, char *bulk, char *image,
                                    cur->is_persistent, is_persistent);
     else if (is_persistent)
       KERR("ERROR %s %s %s", name, bulk, image);
-    else if (!tarmount_exists(bulk, image, 0))
+    else if (!zipmount_exists(bulk, image, 0, 1))
       KERR("ERROR %s %s %s", name, bulk, image);
     else
       {
@@ -321,7 +347,7 @@ int tar_img_add(char *name, char *bulk, char *image,
     }
   else
     {
-    if (tarmount_create(bulk, image, is_persistent))
+    if (zipmount_create(bulk, image, is_persistent))
       KERR("ERROR %s %s %s", name, bulk, image);
     else
       {
@@ -354,10 +380,10 @@ int tar_img_del(char *name, char *bulk, char *image,
             loop->is_persistent, is_persistent);
     if (loop->head_elem == NULL)
       {
-      if (!tarmount_exists(bulk, image, is_persistent))
+      if (!zipmount_exists(bulk, image, is_persistent, 1))
         KERR("ERROR %s %s %s", name, bulk, image);
       mount_del(bulk, image, cnt_dir, 0, NULL);
-      if (tarmount_exists(bulk, image, is_persistent))
+      if (zipmount_exists(bulk, image, is_persistent, 0))
         KERR("ERROR %s %s %s", name, bulk, image);
 
       free_loop(loop);
@@ -385,7 +411,7 @@ char *tar_img_get(char *name, char *bulk, char *image)
     KERR("ERROR %s %s %s", name, bulk, image);
   else if (elem == NULL)
     KERR("ERROR %s %s %s", name, bulk, image);
-  else if (!tarmount_exists(bulk, image, cur->is_persistent))
+  else if (!zipmount_exists(bulk, image, cur->is_persistent, 1))
     KERR("ERROR %s %s %s", name, bulk, image);
   else
     result = mnt;

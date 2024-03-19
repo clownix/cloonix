@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -87,7 +87,6 @@ static int get_xauth_magic(char *display, char *err)
     if (!fgets(buf, MAX_TXT_LEN-1, fp))
       {
       snprintf(err, MAX_TXT_LEN-1, "%s, fgets", acmd);
-      XERR("ERROR %s", acmd);
       }
     else
       {
@@ -295,13 +294,8 @@ void x11_init_magic(void)
       XERR("ERROR MAGIC X11 %s", display);
       display = NULL;
       }
-    if (display == NULL)
+    if ((display == NULL) || (get_xauth_magic(display, err)))
       init_x11_magic();
-    else if (get_xauth_magic(display, err))
-      {
-      XERR("ERROR MAGIC X11 get_xauth_magic %s %s", display, err);
-      init_x11_magic();
-      }
     }
 }
 /*--------------------------------------------------------------------------*/

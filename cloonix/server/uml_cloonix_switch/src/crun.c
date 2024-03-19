@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -21,6 +21,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
+
 
 
 #include "io_clownix.h"
@@ -32,6 +34,7 @@
 #include "cfg_store.h"
 #include "utils_cmd_line_maker.h"
 
+
 /*****************************************************************************/
 void crun_sigdiag_resp(int llid, char *line)
 {
@@ -39,7 +42,9 @@ void crun_sigdiag_resp(int llid, char *line)
   t_cnt *cur;
   char name[MAX_NAME_LEN];
   char req[MAX_PATH_LEN];
+  char mountbear[2*MAX_PATH_LEN];
   memset(req, 0, MAX_PATH_LEN);
+  memset(mountbear, 0, 2*MAX_PATH_LEN);
   if (sscanf(line, 
   "cloonsuid_crun_create_net_resp_ok name=%s", name) == 1)
     {
@@ -101,14 +106,15 @@ void crun_sigdiag_resp(int llid, char *line)
       }
     }
   else if (sscanf(line,
-  "cloonsuid_crun_create_crun_start_resp_ok name=%s crun_pid=%d",
-  name, &crun_pid) == 2)
+  "cloonsuid_crun_create_crun_start_resp_ok name=%s crun_pid=%d mountbear=%s",
+  name, &crun_pid, mountbear) == 3)
     {
     cur = find_cnt(name);
     if (cur == NULL)
       KERR("ERROR %s", name);
     else
       {
+      strncpy(cur->mountbear, mountbear, MAX_PATH_LEN-1);
       cur->cnt_pid = crun_pid;
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       cnt_vhost_and_doors_begin(cur);
@@ -222,4 +228,11 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
   return result;
 }
 /*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void crun_init(void)
+{
+}
+/*--------------------------------------------------------------------------*/
+
 

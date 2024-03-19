@@ -2,7 +2,7 @@
 HERE=`pwd`
 CLOONIX_QEMU_BIN="/usr/libexec/cloonix/server/cloonix-qemu-system-x86_64"
 CLOONIX_QEMU_DIR="/usr/libexec/cloonix/server/qemu"
-CISCO_ISO=/media/perrier/Samsung_T5/archives/iso/c8000v-universalk9.17.12.01a.iso
+CISCO_ISO=/media/perrier/Samsung_T5/archives/iso/c8000v-universalk9.17.13.01a.iso
 
 CISCO_QCOW2=/var/lib/cloonix/bulk/c8000.qcow2
 

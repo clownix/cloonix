@@ -53,8 +53,6 @@ SRC = \
       dispatch_diag_msg.c \
       cnt.c \
       crun.c \
-      podman.c \
-      podman_images.c \
       base64.c \
       mactopo.c \
       server_stub.c

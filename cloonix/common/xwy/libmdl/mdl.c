@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -72,7 +72,7 @@ char *mdl_argv_linear(char **argv)
 FILE *mdl_argv_popen(char *argv[])
 {
   int exited_pid, timeout_pid, worker_pid, chld_state, pid, status=97;
-  int pdes[2];
+  int i, pdes[2];
   FILE *iop = NULL;
 
   if (pipe(pdes))
@@ -81,7 +81,7 @@ FILE *mdl_argv_popen(char *argv[])
     XOUT("ERROR");
   if (pid == 0)
     {
-    (void) close(pdes[0]);
+    close(pdes[0]);
     if (pdes[1] != STDOUT_FILENO)
       {
       (void)dup2(pdes[1], STDOUT_FILENO);
@@ -196,9 +196,9 @@ int mdl_parse_val(const char *str_val)
 void mdl_open(int s, int type, t_outflow outflow, t_inflow inflow)
 {
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("%d", s);
+    XOUT("ERROR %d", s);
   if (g_mdl[s])
-    XOUT("%d", s);
+    XOUT("ERROR MDL OPEN MDL EXISTS %d", s);
   g_mdl[s] = (t_mdl *) wrap_malloc(sizeof(t_mdl));
   memset(g_mdl[s], 0, sizeof(t_mdl));
   g_mdl[s]->write_seqnum = 0;
@@ -243,15 +243,22 @@ int  mdl_exists(int s)
 /**************************************************************************/
 void mdl_close(int s)
 {
+  int is_srv = 0;
   if ((s < 0) || (s >= MAX_FD_NUM))
     XOUT("%d", s);
   if (g_mdl[s])
     {
     if (g_mdl[s]->type != fd_type_cli)
+      is_srv = 1;
+    if (is_srv)
+      {
       low_write_close(s);
+      }
     wrap_free(g_mdl[s], __LINE__);
     g_mdl[s] = NULL;
     }
+  else
+    XERR("WARNING MDL DOES NOT EXIST %d", s);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -276,6 +283,7 @@ void mdl_set_header_vals(t_msg *msg, uint32_t randid, int type, int from,
     if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
       XOUT("%d %d %d", type, from, srv_idx);
     }
+
   msg->type = (((srv_idx << 24) & 0xFF000000) |
                ((cli_idx << 16) & 0x00FF0000) |
                ((from    << 8)  & 0x0000FF00) |
@@ -461,19 +469,19 @@ void mdl_read_data(void *ptr, int llid, int fd, int len, char *data,
 void mdl_heartbeat(void)
 {
   static int count=0;
-  static int tencount=0;
+  static int count_1000=0;
   count += 1;
+  count_1000 += 1;
   if (count == 10)
     {
     count = 0;
     thread_x11_heartbeat();
-    tencount += 1;
-    if (tencount == 10)
-      {
-      tencount = 0;
-      fd_spy_heartbeat();
-      thread_spy_heartbeat();
-      }
+    }
+  if (count_1000 == 1000)
+    {
+    count_1000 = 0;
+    fd_spy_heartbeat();
+    thread_spy_heartbeat();
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -486,5 +494,6 @@ int mdl_init(void)
   thread_tx_init();
   thread_x11_init();
   fd_spy_init();
+  cloonix_timer_init();
 }
 /*--------------------------------------------------------------------------*/

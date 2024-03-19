@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -37,12 +37,12 @@ static void sock_cloonix_action(void)
   len = wrap_read_cloon(g_sock_cloon, buf, MAX_TXT_LEN);
   if (len == 0)
     {
-    XOUT(" ");
+    XOUT("ERROR socket");
     }
   else if (len < 0)
     {
     if (errno != EINTR && errno != EAGAIN)
-      XOUT(" ");
+      XOUT("ERROR socket");
     }
   else 
     {
@@ -56,6 +56,7 @@ static void sock_cloonix_action(void)
       }
     else if (!strcmp(buf, CLOONIX_KIL_REQ))
       {
+      XOUT("CLOONIX_KIL_REQ");
       exit(0);
       }
     else

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -219,23 +219,23 @@ static void call_cloonix_interface_node_cnt_create(double x, double y)
     rest = i%4; 
     if (rest == 0)
       {
-      tx[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
-      ty[i] = (double) (-NODE_DIA * VAL_INTF_POS_NODE);
+      tx[i] = (double) (CNT_NODE_DIA * VAL_INTF_POS_NODE);
+      ty[i] = (double) (-CNT_NODE_DIA * VAL_INTF_POS_NODE);
       }
     if (rest == 1)
       {
-      tx[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
-      ty[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
+      tx[i] = (double) (CNT_NODE_DIA * VAL_INTF_POS_NODE);
+      ty[i] = (double) (CNT_NODE_DIA * VAL_INTF_POS_NODE);
       }
     if (rest == 2)
       {
-      tx[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
-      ty[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
+      tx[i] = (double) (CNT_NODE_DIA * VAL_INTF_POS_NODE);
+      ty[i] = (double) (CNT_NODE_DIA * VAL_INTF_POS_NODE);
       }
     if (rest == 3)
       {
-      tx[i] = (double) (-NODE_DIA * VAL_INTF_POS_NODE);
-      ty[i] = (double) (NODE_DIA * VAL_INTF_POS_NODE);
+      tx[i] = (double) (-CNT_NODE_DIA * VAL_INTF_POS_NODE);
+      ty[i] = (double) (CNT_NODE_DIA * VAL_INTF_POS_NODE);
       }
     }
   topo_get_matrix_inv_transform_point(&x0, &y0);

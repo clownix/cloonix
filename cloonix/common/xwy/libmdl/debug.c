@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -37,7 +37,7 @@
 /*****************************************************************************/
 char *debug_get_thread_type_txt(int type)
 {
-  char *result = "not_decoded";
+  char *result = "not_1_decoded";
   switch(type)
     {
     case thread_type_tx:
@@ -47,7 +47,7 @@ char *debug_get_thread_type_txt(int type)
     result = "thread_type_x11";
     break;
     default:
-      XERR("%d", type);
+      XERR("ERROR %s %d", __FUNCTION__, type);
     }
   return result;
 }
@@ -56,7 +56,7 @@ char *debug_get_thread_type_txt(int type)
 /*****************************************************************************/
 char *debug_get_fd_type_txt(int type)
 {
-  char *result = "not_decoded";
+  char *result = "not_2_decoded";
   switch(type)
     {
     case fd_type_fork_pty:
@@ -141,7 +141,7 @@ char *debug_get_fd_type_txt(int type)
     result = "listen_cloon";
     break;
     default:
-      XERR("%d", type);
+      XERR("ERROR %s %d", __FUNCTION__, type);
     }
   return result;
 }
@@ -248,7 +248,7 @@ int debug_get_ioctl_queue_len(int fd, int type, int *used)
 /*****************************************************************************/
 char *debug_get_evt_type_txt(int type)
 {
-  char *result = "not_decoded";
+  char *result = "not_3_decoded";
   switch(type)
     {
     case msg_type_randid:
@@ -259,12 +259,20 @@ char *debug_get_evt_type_txt(int type)
     result = "msg_type_randid_associated";
     break;
     
+    case msg_type_randid_associated_ack:
+    result = "msg_type_randid_associated_ack";
+    break;
+
     case msg_type_data_pty:
     result = "msg_type_data_pty";
     break;
     
     case msg_type_open_bash:
     result = "msg_type_open_bash";
+    break;
+    
+    case msg_type_open_crun:
+    result = "msg_type_open_crun";
     break;
     
     case msg_type_open_dae:
@@ -339,6 +347,8 @@ char *debug_get_evt_type_txt(int type)
     result = "msg_type_scp_data_end_ack";
     break;
 
+    default:
+      XERR("ERROR %s %d", __FUNCTION__, type);
     }
   return result;
 }

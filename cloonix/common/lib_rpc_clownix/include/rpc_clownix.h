@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -254,8 +254,6 @@ void send_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic);
 void recv_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic);
 void send_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic); 
 void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic);
-void send_slowperiodic_podman(int llid, int tid, int nb, t_slowperiodic *spic); 
-void recv_slowperiodic_podman(int llid, int tid, int nb, t_slowperiodic *spic);
 
 void send_list_pid_req(int llid, int tid);
 void recv_list_pid_req(int llid, int tid);
@@ -344,6 +342,8 @@ void send_nat_cnf(int llid, int tid, char *name, char *cmd);
 void recv_nat_cnf(int llid, int tid, char *name, char *cmd);
 void send_a2b_cnf(int llid, int tid, char *name, char *cmd);
 void recv_a2b_cnf(int llid, int tid, char *name, char *cmd);
+void send_lan_cnf(int llid, int tid, char *name, char *cmd);
+void recv_lan_cnf(int llid, int tid, char *name, char *cmd);
 /*---------------------------------------------------------------------------*/
 void send_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip, 
                   char *slave_cloon, uint32_t ip, uint16_t port,
@@ -380,4 +380,5 @@ void doors_io_basic_tx_set(t_llid_tx llid_tx);
 
 void send_color_item(int llid, int tid, char *name, int color);
 void recv_color_item(int llid, int tid, char *name, int color);
+
 /*---------------------------------------------------------------------------*/

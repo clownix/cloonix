@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -609,6 +609,27 @@ void bank_set_dtach_pid(char *name, int val)
     bitem->dtach_pid = val;
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int bank_get_crun_screen_pid(char *name)
+{
+  t_bank_item *bitem = look_for_cnt_with_id(name);
+  int result = 0;
+  if (bitem)
+    result = bitem->crun_screen_pid;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void bank_set_crun_screen_pid(char *name, int val)
+{
+  t_bank_item *bitem = look_for_cnt_with_id(name);
+  if (bitem)
+    bitem->crun_screen_pid = val;
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 int bank_get_spicy_gtk_pid(char *name)

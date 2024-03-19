@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -98,8 +98,6 @@ void timer_create_item_node_req(void *data)
            cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));
     if (!strcmp(cust_cnt->brandtype, "crun"))
       strncpy(cust_topo_cnt.image, cust_cnt->cru_image, MAX_PATH_LEN-1);
-    else if (!strcmp(cust_cnt->brandtype, "podman"))
-      strncpy(cust_topo_cnt.image, cust_cnt->pod_image, MAX_PATH_LEN-1);
     client_add_cnt(0, callback_end, &cust_topo_cnt);
     }
   clownix_free(pa, __FUNCTION__);

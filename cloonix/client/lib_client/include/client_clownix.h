@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -75,6 +75,7 @@ void client_add_snf(int tid, t_end_cb cb, char *name, int num, int on);
 void client_add_a2b(int tid, t_end_cb cb, char *name);
 
 void client_cnf_a2b(int tid, t_end_cb cb, char *name, char *cmd);
+void client_cnf_lan(int tid, t_end_cb cb, char *name, char *cmd);
 void client_cnf_c2c(int tid, t_end_cb cb, char *name, char *cmd);
 void client_cnf_nat(int tid, t_end_cb cb, char *name, char *cmd);
 
@@ -120,8 +121,7 @@ void client_req_pids(int tid, t_pid_cb cb);
 
 void client_req_eventfull(t_eventfull_cb cb);
 void client_req_slowperiodic(t_slowperiodic_cb cb_qcow2,
-                             t_slowperiodic_cb cb_img,
-                             t_slowperiodic_cb cb_podman);
+                             t_slowperiodic_cb cb_img);
 
 int cmd_ftopo_recv(char *topo_dir, t_progress_txt_cb pcb);
 

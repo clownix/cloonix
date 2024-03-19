@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -53,6 +53,7 @@ typedef struct t_conn_x11
 typedef struct t_display_x11
 {
   uint32_t randid;
+  int port;
   int sock_fd;
   int srv_idx;
   int srv_idx_acked;
@@ -336,7 +337,8 @@ static void begin_x11_listen_action(t_display_x11 *disp)
                        fd_type_x11_accept, 1, __FUNCTION__);
   if (x11_fd < 0)
     {
-    XERR("ERROR %s", strerror(errno));
+    if ((errno != EINTR) && (errno != EAGAIN))
+      XERR("ERROR %s", strerror(errno));
     }
   else if (!check_fd_is_unique(x11_fd))
     {
@@ -480,15 +482,16 @@ static int init_alloc_display(uint32_t randid, int sock_fd, int srv_idx)
     disp = find_empy(srv_idx);
     port = X11_OFFSET_PORT + srv_idx;
     if (!disp)
-      XERR("%d", srv_idx);
+      XERR("ERROR %d", srv_idx);
     else
       {
       fd = wrap_socket_listen_inet(INADDR_LOOPBACK, port,
                                    fd_type_x11_listen, __FUNCTION__);
       if (fd < 0)
-        XERR("%d %s", port, strerror(errno));
+        XERR("ERROR %d %s", port, strerror(errno));
       else
         {
+        disp->port = port;
         disp->randid = randid;
         disp->sock_fd = sock_fd;
         disp->x11_listen_fd = fd;
@@ -577,7 +580,10 @@ void x11_free_display(int srv_idx)
   if (disp)
     {
     if (disp->x11_listen_fd != -1)
+      {
       wrap_close(disp->x11_listen_fd, __FUNCTION__);
+      disp->x11_listen_fd = -1;
+      }
     for (i=1; i<MAX_IDX_X11; i++)
       {
       if (disp->conn[i])
@@ -618,7 +624,7 @@ void x11_fdset(fd_set *readfds, fd_set *writefds)
     next = cur->next;
     if (cur->x11_listen_fd < 0)
       {
-      XERR(" ");
+      XERR("ERROR %d", cur->srv_idx);
       x11_free_display(cur->srv_idx);
       }
     else
@@ -651,7 +657,7 @@ void x11_fdisset(fd_set *readfds, fd_set *writefds)
     { 
     next = cur->next;
     if (cur->x11_listen_fd < 0)
-      XERR(" ");
+      XERR("ERROR");
     else
       {
       sock_fd = cur->sock_fd;

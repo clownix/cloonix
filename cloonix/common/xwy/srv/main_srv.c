@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -70,7 +70,6 @@ typedef struct t_cli
 
 static t_cli *g_cli_head;
 static int g_nb_cli;
-static int g_is_tcp;
 static int g_listen_sock_fd;
 static struct timeval g_timeout;
 static struct timeval g_last_heartbeat_tv;
@@ -111,8 +110,12 @@ static void cli_free(t_cli *cli)
   if (cli->has_pty_fork) 
     {
     if (pty_fork_free_with_sock_fd(cli->sock_fd))
-      XERR("%d", cli->sock_fd);
+      XERR("ERROR %d", cli->sock_fd);
     }
+    if (cli->inhibited_associated == 0)
+      {
+      wrap_close(cli->sock_fd, __FUNCTION__);
+      }
   wrap_free(cli, __LINE__);
 }
 /*--------------------------------------------------------------------------*/
@@ -171,7 +174,7 @@ static int cli_associate(t_cli *cli, uint32_t randid,
   if (!cur)
     {
     XERR("%08X", randid);
-    DEBUG_EVT("ASSOCIATE PB %08X (%d-%d) %s", randid, __FUNCTION__,
+    DEBUG_EVT("ASSOCIATE ERROR %08X (%d-%d) %s", randid, __FUNCTION__,
                                               srv_idx, cli_idx);
     }
   else 
@@ -247,10 +250,14 @@ int get_cli_association(int sock_fd, int srv_idx, int cli_idx)
 static void listen_socket_action(void)
 {
   int sock_fd, opt=1;
-  sock_fd = wrap_accept(g_listen_sock_fd,fd_type_srv,g_is_tcp,__FUNCTION__); 
+  sock_fd = wrap_accept(g_listen_sock_fd,fd_type_srv,0,__FUNCTION__); 
   if (sock_fd >= 0)
     {
-    DEBUG_EVT("LISTEN ACCEPT fd_type_srv %d", sock_fd);
+    if (mdl_exists(sock_fd))
+      {
+      XERR("ERROR ERROR ERROR sock_fd %d exists in mdl", sock_fd);
+      return;
+      }
     mdl_open(sock_fd, fd_type_srv, wrap_write_srv, wrap_read_srv);
     cli_alloc(sock_fd);
     }
@@ -260,13 +267,11 @@ static void listen_socket_action(void)
 /****************************************************************************/
 static void set_inhibited_to_be_destroyed(t_cli *cli, int line)
 {
-//  if (line)
-//    XERR("LINE:%d %d %d %d", line, cli->sock_fd, cli->sock_fd, cli->srv_idx);
   if (cli->has_pty_fork)
     {
     cli->has_pty_fork = 0;
     if (pty_fork_free_with_sock_fd(cli->sock_fd))
-      XERR("%d", cli->sock_fd);
+      XERR("ERROR %d", cli->sock_fd);
     }
   cli->inhibited_to_be_destroyed = 1;
 }
@@ -315,11 +320,11 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
   mdl_get_header_vals(msg, &randid, &type, &from, &srv_idx, &cli_idx);
   DEBUG_DUMP_RXMSG(msg);
   if (randid == 0)
-      XERR(" ");
+    XERR("ERROR");
   else if (cli->randid != randid)
     {
     if (cli->randid != 0)
-      XERR("%08X %08X", cli->randid, randid);
+      XERR("ERROR %08X %08X", cli->randid, randid);
     else if (type == msg_type_randid)
       {
       cli->randid = randid; 
@@ -328,6 +333,7 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
       }
     else if (type == msg_type_randid_associated)
       {
+      DEBUG_EVT("MSG RANDID ASSOCIATED %08X %d", randid, sock_fd);
       thread_tx_abort(sock_fd);
       main_sock_fd = cli_associate(cli, randid, 
                                    sock_fd, srv_idx, cli_idx);
@@ -340,7 +346,7 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
         }
       }
     else 
-      XERR("%08X %d", randid, type);
+      XERR("ERROR %08X %d", randid, type);
     }
   else switch(type)
     {
@@ -351,9 +357,10 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
 
     case msg_type_open_bash:
     case msg_type_open_dae:
+    case msg_type_open_crun:
     case msg_type_open_cmd:
       if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-        XERR("%d", srv_idx);
+        XERR("ERROR %d", srv_idx);
       else
         {
         display_val = x11_alloc_display(randid, srv_idx);
@@ -361,9 +368,11 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
         if (type == msg_type_open_bash)
           pty_fork_bin_bash(action_bash, randid, sock_fd, NULL, display_val);
         else if (type == msg_type_open_cmd)
-          pty_fork_bin_bash(action_cmd, randid, sock_fd, msg->buf, display_val);
+          pty_fork_bin_bash(action_cmd,randid,sock_fd,msg->buf,display_val);
+        else if (type == msg_type_open_crun)
+          pty_fork_bin_bash(action_crun,randid,sock_fd,msg->buf,display_val);
         else
-          pty_fork_bin_bash(action_dae, randid, sock_fd, msg->buf, display_val);
+          pty_fork_bin_bash(action_dae,randid,sock_fd,msg->buf,display_val);
         cli->has_pty_fork = 1;
         wrap_free(msg, __LINE__); 
         }
@@ -461,15 +470,10 @@ static void prepare_fd_set(fd_set *readfds, fd_set *writefds)
   while(cur)
     {
     next = cur->next;
-    if ((cur->inhibited_associated) || (cur->inhibited_to_be_destroyed == 1))
-      {
+    if ((cur->inhibited_associated) || (cur->inhibited_to_be_destroyed))
       cli_free(cur);
-      }
     else
-      {
-      if (cur->inhibited_to_be_destroyed == 0)
-        FD_SET(cur->sock_fd, readfds);
-      }
+      FD_SET(cur->sock_fd, readfds);
     cur = next;
     }
   x11_fdset(readfds, writefds);
@@ -525,25 +529,17 @@ static void server_loop(void)
     {
     next = cur->next;
     thread_tx_purge_el(cur->sock_fd);
-    if (cur->inhibited_associated)
-      {
-      cli_free(cur);
-      }
-    else 
-      {
-      if (cur->inhibited_to_be_destroyed == 0)
-        {
-        if (FD_ISSET(cur->sock_fd, &readfds))
-          {
-          mdl_read_fd((void *)cur, cur->sock_fd, rx_msg_cb, rx_err_cb);
-          }
-        }
-     }
+    if (FD_ISSET(cur->sock_fd, &readfds))
+      mdl_read_fd((void *)cur, cur->sock_fd, rx_msg_cb, rx_err_cb);
     cur = next;
     }
-  pty_fork_fdisset(&readfds, &writefds);
-  cloonix_fdisset(&readfds);
-  x11_fdisset(&readfds, &writefds);
+  if (pty_fork_fdisset(&readfds, &writefds) == 0)
+    {
+    cloonix_fdisset(&readfds);
+    x11_fdisset(&readfds, &writefds);
+    }
+  else
+    XERR("WARNING CLOSED PTY");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -555,26 +551,6 @@ static void usage(char *name)
   printf("\n%s <unix_path_xwy_cli> <unix_path_cloon>", name);
   printf("\n\n");
   exit(1);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void get_listen_sock_fd(int argc, char **argv)
-{
-  int port;
-  port = mdl_parse_val(argv[1]);
-  if (port > 0)
-    {
-    g_is_tcp = 1;
-    g_listen_sock_fd = wrap_socket_listen_inet(INADDR_ANY, port,
-                       fd_type_listen_inet_srv, __FUNCTION__);
-    }
-  else
-    {
-    g_is_tcp = 0;
-    g_listen_sock_fd = wrap_socket_listen_unix(argv[1],
-                       fd_type_listen_unix_srv, __FUNCTION__);
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -612,7 +588,8 @@ int main(int argc, char **argv)
   low_write_init();
   dialog_init();
   x11_init_display();
-  get_listen_sock_fd(argc, argv);
+  g_listen_sock_fd = wrap_socket_listen_unix(argv[1],
+                     fd_type_listen_unix_srv, __FUNCTION__);
   pty_fork_init(argv[3]);
   cloonix_init(argv[2]);
   gettimeofday(&g_last_heartbeat_tv, NULL);
@@ -624,6 +601,7 @@ int main(int argc, char **argv)
     gettimeofday(&tv, NULL);
     if (heartbeat_10th_second(&tv))
       {
+      cloonix_timer_beat();
       mdl_heartbeat();
       }
     cloonix_beat(&tv);

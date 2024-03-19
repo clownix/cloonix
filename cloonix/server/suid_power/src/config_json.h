@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,6 +15,9 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+//https://github.com/opencontainers/runtime-spec/blob/main/config.md
+//https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md
+
 
 #define CONFIG_JSON_CAPA "\"CAP_CHOWN\",\n"\
 "                         \"CAP_DAC_OVERRIDE\",\n"\
@@ -71,8 +74,7 @@
 "                       %s\n"\
 "               ],\n"\
 "		\"env\": [\n"\
-"			\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n"\
-"			\"TERM=xterm\"\n"\
+"			\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"\n"\
 "                       %s\n"\
 "		],\n"\
 "		\"cwd\": \"/\",\n"\
@@ -203,7 +205,25 @@
 "	],\n"\
 "	\"linux\": {\n"\
 "		\"device\": [\n"\
-"			{\n"\
+"                       {\n"\
+"                              \"path\": \"/dev/kvm\",\n"\
+"                              \"type\": \"c\",\n"\
+"                              \"major\": 10,\n"\
+"                              \"minor\": 232,\n"\
+"                              \"fileMode\": 438,\n"\
+"                              \"uid\": 0,\n"\
+"                              \"gid\": 0\n"\
+"                       },\n"\
+"                       {\n"\
+"                              \"path\": \"/dev/vhost-net\",\n"\
+"                              \"type\": \"c\",\n"\
+"                              \"major\": 10,\n"\
+"                              \"minor\": 238,\n"\
+"                              \"fileMode\": 438,\n"\
+"                              \"uid\": 0,\n"\
+"                              \"gid\": 0\n"\
+"                       },\n"\
+"                       {\n"\
 "				\"path\": \"/dev/net/tun\",\n"\
 "				\"type\": \"c\",\n"\
 "				\"major\": 10,\n"\
@@ -214,9 +234,34 @@
 "			}\n"\
 "		],\n"\
 "		\"resources\": {\n"\
-"				\"allow\": true,\n"\
-"				\"access\": \"rwm\"\n"\
-"		},\n"\
+"                       \"devices\": [\n"\
+"                               {\n"\
+"                                      \"allow\": false,\n"\
+"                                      \"access\": \"rwm\"\n"\
+"                               },\n"\
+"                               {\n"\
+"                                      \"allow\": true,\n"\
+"                                      \"type\": \"c\",\n"\
+"                                      \"major\": 10,\n"\
+"                                      \"minor\": 232,\n"\
+"                                      \"access\": \"rw\"\n"\
+"                               },  \n"\
+"                               {\n"\
+"                                      \"allow\": true,\n"\
+"                                      \"type\": \"c\",\n"\
+"                                      \"major\": 10,\n"\
+"                                      \"minor\": 238,\n"\
+"                                      \"access\": \"rw\"\n"\
+"                               },\n"\
+"                               {\n"\
+"                                      \"allow\": true,\n"\
+"                                      \"type\": \"c\",\n"\
+"                                      \"major\": 10,\n"\
+"                                      \"minor\": 200,\n"\
+"                                      \"access\": \"rw\"\n"\
+"                               }\n"\
+"                       ]\n"\
+"               },\n"\
 "		\"namespaces\": [\n"\
 "			{\n"\
 "				\"type\": \"pid\"\n"\

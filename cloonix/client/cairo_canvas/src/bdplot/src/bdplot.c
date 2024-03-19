@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -99,7 +99,7 @@ void bdplot_newdata(char *name, int num, int date_ms, int tx, int rx)
     cur->tx += tx;
     cur->rx += rx;
     delta = (date_ms - cur->last_date_ms);
-    if (delta > 200)
+    if (delta > 1000)
       {
       date_s = (float)date_ms/1000;
       bd[1]  = (float) cur->tx;

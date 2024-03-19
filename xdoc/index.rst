@@ -12,12 +12,12 @@ This is the documentation for the cloonix open source hosted at
 
     * http://clownix.net
 
-Cloonix is a AGPLv3 set of C software elements having the purpose of gluing
-together several big names in open source softwares making a single coherent
-tool that helps in the creation of virtual networks.
+Cloonix is an AGPLv3 suite of C software components designed to seamlessly 
+integrate various well-known open-source software, creating a unified and 
+cohesive tool that facilitates the creation of virtual networks.
 
-The external big name software used are:**qemu-kvm**, **openvswitch**,
-**spice**, **crun**, **podman** and **wireshark**.
+The external software components include **qemu-kvm**, **openvswitch**,
+**spice**, **crun**, **wireshark** and **podman**.
 
 Its first goal is an easy usage of the emulated network linking virtual
 machines and containers. The network links are based on an openvswitch
@@ -107,7 +107,7 @@ Directories cloonix uses
 ========================
 
 */usr/libexec/cloonix/* for binaries, libraries and configuration files.
-*/var/lib/cloonix/bulk* for the cloonix storage of virtual files .qcow2 and .img.
+*/var/lib/cloonix/bulk* for the cloonix storage of virtual files .qcow2 and .zip.
 */var/lib/cloonix/<net-name>* for run-time storage of temporary files.
 
 You can grab a single file html of this doc to print it:
@@ -129,4 +129,5 @@ Content
      doc/clients.rst
      doc/items.rst
      doc/cisco.rst
+     doc/podman.rst
      doc/ovs.rst

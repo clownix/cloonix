@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -34,15 +34,12 @@
 #include <sys/ioctl.h>
 #include <sched.h>
 #include <sys/mount.h>
-
-
-
+#include <time.h>
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "crun.h"
 #include "crun_utils.h"
-#include "podman.h"
 #include "net_phy.h"
 
 /*--------------------------------------------------------------------------*/
@@ -54,6 +51,7 @@ static char g_root_path[MAX_PATH_LEN];
 static char g_root_work_kvm[MAX_PATH_LEN];
 static char g_bin_dir[MAX_PATH_LEN];
 static char g_mnt_loop_dir[MAX_PATH_LEN];
+static char g_netns_namespace[MAX_PATH_LEN];
 /*--------------------------------------------------------------------------*/
 enum {
   state_idle = 1,
@@ -73,6 +71,8 @@ typedef struct t_vmon
 } t_vmon;
 
 static t_vmon *g_head_vmon;
+
+
 
 /*****************************************************************************/
 char *get_bin_dir(void)
@@ -366,7 +366,6 @@ static void heartbeat (int delta)
     count_ticks_blkd = 0;
     automate_pid_monitor();
     crun_beat(g_llid);
-    podman_beat(g_llid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -378,8 +377,9 @@ static void req_kill_clean_all(void)
   char *root = g_root_path;
   int pid;
   t_vmon *next, *cur = g_head_vmon;
+  system("umount /tmp/sysfs_temp_sys2");
+  system("rmdir /tmp/sysfs_temp_sys2");
   crun_kill_all();
-  podman_kill_all();
   while(cur)
     {
     next = cur->next;
@@ -480,11 +480,6 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
     crun_recv_poldiag_msg(llid, tid, line);
     }
   else if (!strncmp(line,
-  "cloonsuid_podman", strlen("cloonsuid_podman")))
-    {
-    podman_recv_poldiag_msg(llid, tid, line);
-    }
-  else if (!strncmp(line,
   "cloonsuid_req_phy", strlen("cloonsuid_req_phy")))
     {
     net_phy = net_phy_get(&nb_phy);
@@ -519,9 +514,8 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ko");
     else
       {
-      if (unshare(CLONE_NEWNS) == -1)
-        KOUT("ERROR unshare");
-      mount(NULL, "/", NULL, MS_SLAVE | MS_REC, NULL);
+      system("mkdir /tmp/sysfs_temp_sys2");
+      system("mount -t sysfs --make-private /tmp/sysfs_temp_sys2");
       rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ok");
       }
     }
@@ -577,11 +571,6 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   "cloonsuid_crun", strlen("cloonsuid_crun")))
     {
     crun_recv_sigdiag_msg(llid, tid, line);
-    }
-  else if (!strncmp(line,
-  "cloonsuid_podman", strlen("cloonsuid_podman")))
-    {
-    podman_recv_sigdiag_msg(llid, tid, line);
     }
   else
     KERR("ERROR %s %s", g_network_name, line);
@@ -652,6 +641,8 @@ void run_dir_create(void)
 /****************************************************************************/
 int main (int argc, char *argv[])
 {
+  unsigned seed;
+  struct timespec ts;
   char ctrl_path[MAX_PATH_LEN];
   char *root;
   g_head_vmon = NULL;
@@ -661,9 +652,16 @@ int main (int argc, char *argv[])
     run_dir_create();
   else
     {
+    umask(0000);
+    read(open("/dev/urandom", O_RDONLY), &seed, sizeof(seed));
+    if (clock_gettime(CLOCK_MONOTONIC, &ts))
+      KOUT(" ");
+    seed += ts.tv_nsec;
+    srand(seed);
     if (argc != 5)
       KOUT(" ");
     msg_mngt_init("suid_power", IO_MAX_BUF_LEN);
+    memset(g_netns_namespace, 0, MAX_PATH_LEN);
     memset(g_network_name, 0, MAX_NAME_LEN);
     memset(ctrl_path, 0, MAX_PATH_LEN);
     memset(g_root_path, 0, MAX_PATH_LEN);
@@ -672,6 +670,8 @@ int main (int argc, char *argv[])
     memset(g_mnt_loop_dir, 0, MAX_PATH_LEN);
   
     strncpy(g_network_name, argv[1], MAX_NAME_LEN-1);
+    snprintf(g_netns_namespace, MAX_PATH_LEN-1, "%s%s_%s",
+             PATH_NAMESPACE, BASE_NAMESPACE, argv[1]);
     strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
     strncpy(g_bin_dir, argv[3], MAX_PATH_LEN-1);
     snprintf(g_mnt_loop_dir, MAX_PATH_LEN-1,"%s/%s", argv[2], MNT_DIR);
@@ -685,7 +685,6 @@ int main (int argc, char *argv[])
     msg_mngt_heartbeat_init(heartbeat);
     string_server_unix(ctrl_path, connect_from_ctrl_client, "ctrl");
     daemon(0,0);
-    podman_init();
     net_phy_init();
     seteuid(getuid());
     cloonix_set_pid(getpid());

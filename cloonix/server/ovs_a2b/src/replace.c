@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -331,7 +331,6 @@ static void packet_rx(int len, uint8_t *buf,
   uint8_t *smac = &(buf[6]);
   uint8_t *dmac = &(buf[0]);
   uint8_t *ipv4;
-  uint8_t *icmp;
   uint8_t *udp;
   uint8_t *tcp;
   uint32_t sip;
@@ -371,7 +370,6 @@ static void packet_rx(int len, uint8_t *buf,
         }
       sip = (ipv4[12]<<24)+(ipv4[13]<<16)+(ipv4[14]<<8)+ipv4[15];
       dip = (ipv4[16]<<24)+(ipv4[17]<<16)+(ipv4[18]<<8)+ipv4[19];
-      icmp = &(ipv4[IPV4_HEADER_LEN]);
       icmp_input(dest, targ_ip, new_ip, smac, dmac, ipv4,
                  sip, dip, len, buf);
       }

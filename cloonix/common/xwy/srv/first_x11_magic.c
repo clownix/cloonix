@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -35,7 +35,7 @@ static int read_with_wait(int x11_fd, char *buf, int len_to_get)
     count += 1;
     if (count == 5)
       break;
-    usleep(1000);
+    usleep(10000);
     len = wrap_read_x11_rd_x11(x11_fd, buf, len_to_get);
     if (len == 0)
       {

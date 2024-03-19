@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -94,6 +94,23 @@ int ovs_cmd_del_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,
   if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
     {
     KERR("ERROR OVSCMD: SNF DEL %s", vhost);
+    result = -1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int ovs_cmd_add_lan_rstp(char *ovs_bin, char *ovs_dir, char *lan)
+{
+  int result = 0;
+  char cmd[MAX_ARG_LEN];
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- set Bridge %s%s rstp_enable=true",
+           OVS_BRIDGE, lan);
+  if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
+    {
+    KERR("ERROR OVSCMD: ADD LAN %s", lan);
     result = -1;
     }
   return result;

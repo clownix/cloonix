@@ -651,9 +651,7 @@ static char *read_whole_file(char *file_name)
   len = get_file_len(file_name);
   if (len == -1)
     KERR("ERROR not found %s", file_name);
-  else if (len < 3)
-    KERR("ERROR size too small: %d  %s", len, file_name);
-  else
+  else if (len > 3)
     { 
     fd = open(file_name, O_RDONLY);
     if (fd < 0)
@@ -739,7 +737,8 @@ static void execchild(struct ChanSess *chansess)
     addnewvar("PATH", pth); 
     addnewvar("USER", "root");
     addnewvar("HOME", "/root");
-    addnewvar("TERM", "xterm");
+    addnewvar("TERMINFO", "/usr/libexec/cloonix/common/share/terminfo");
+    addnewvar("TERM", "rxvt-unicode");
     if (chansess->cloonix_name)
       addnewvar("PROMPT_COMMAND", chansess->cloonix_name);
     if (chansess->cloonix_display)
@@ -753,7 +752,8 @@ static void execchild(struct ChanSess *chansess)
     {
     unsetenv("PATH");
     addnewvar("PATH", pth); 
-    addnewvar("TERM", "xterm");
+    addnewvar("TERMINFO", "/usr/libexec/cloonix/common/share/terminfo");
+    addnewvar("TERM", "rxvt-unicode");
     if (chansess->cloonix_display)
       addnewvar("DISPLAY", chansess->cloonix_display);
     }
@@ -775,7 +775,7 @@ static void execchild(struct ChanSess *chansess)
     addnewvar("SHELL", "/bin/sh");
     usershell = m_strdup("/bin/sh");
     }
-  addnewvar("XAUTHORITY", "/root/.Cloonauthority_root");
+  addnewvar("XAUTHORITY", "/root/.Cloonauthority");
 
   run_shell_command(chansess->cmd, ses.maxfd, usershell, login);
 }

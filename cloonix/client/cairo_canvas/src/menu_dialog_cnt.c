@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -56,16 +56,8 @@ static void img_get(GtkWidget *check, gpointer data)
 {
   char *name = (char *) data;
   t_custom_cnt *cust = &g_custom_cnt;
-  if (!strcmp(cust->brandtype, "crun"))
-    {
-    memset(cust->cru_image, 0, MAX_NAME_LEN);
-    strncpy(cust->cru_image, name, MAX_NAME_LEN-1);
-    }
-  else if (!strcmp(cust->brandtype, "podman"))
-    {
-    memset(cust->pod_image, 0, MAX_NAME_LEN);
-    strncpy(cust->pod_image, name, MAX_NAME_LEN-1);
-    }
+  memset(cust->cru_image, 0, MAX_NAME_LEN);
+  strncpy(cust->cru_image, name, MAX_NAME_LEN-1);
   gtk_entry_set_text(GTK_ENTRY(g_entry_image), name);
 }
 /*--------------------------------------------------------------------------*/
@@ -111,19 +103,8 @@ static void setup_list_choices(void)
 {
   GtkWidget *menu = NULL;
   t_custom_cnt *cust = &g_custom_cnt;
-
-  if (!strcmp(cust->brandtype, "crun"))
-    {
-    gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->cru_image);
-    menu = get_bul(g_nb_bulcru, g_bulcru, cust->cru_image);
-    }
-  else if (!strcmp(cust->brandtype, "podman"))
-    {
-    gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->pod_image);
-    menu = get_bul(g_nb_bulpod, g_bulpod, cust->pod_image);
-    }
-  else
-    KOUT("ERROR %s", cust->brandtype);
+  gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->cru_image);
+  menu = get_bul(g_nb_bulcru, g_bulcru, cust->cru_image);
   if (menu)
     {
     gtk_menu_button_set_popup ((GtkMenuButton *)g_image_menu, menu);
@@ -283,46 +264,12 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void crun_podman_cb(GtkWidget *check, gpointer data)
+static void crun_cb(GtkWidget *check, gpointer data)
 {
-  int brand = (int) ((unsigned long) data);
   t_custom_cnt *cust = &g_custom_cnt;
   if (!check)
     KOUT(" ");
-  if (brand == brand_crun)
-    strcpy(cust->brandtype, "crun");
-  else if (brand == brand_podman)
-    strcpy(cust->brandtype, "podman");
-  else
-    KOUT("ERROR %d", brand);
   setup_list_choices();
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static GtkWidget *crun_podman(void)
-{
-  GtkWidget *result, *rad1, *rad2;
-  GSList *group = NULL;
-  t_custom_cnt *cust = &g_custom_cnt;
-  result = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  rad1 = gtk_radio_button_new_with_label(group, "crun");
-  group = gtk_radio_button_get_group(GTK_RADIO_BUTTON(rad1));
-  rad2 = gtk_radio_button_new_with_label(group, "podman");
-  g_signal_connect(G_OBJECT(rad1),"clicked",
-            (GCallback)crun_podman_cb, (gpointer) brand_crun);
-  g_signal_connect(G_OBJECT(rad2),"clicked",
-            (GCallback)crun_podman_cb, (gpointer) brand_podman);
-  if (!strcmp(cust->brandtype, "crun"))
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad1),TRUE);
-  else if (!strcmp(cust->brandtype, "podman"))
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad2),TRUE);
-  else
-    KOUT("%s", cust->brandtype);
-  gtk_box_pack_start(GTK_BOX(result), rad1, FALSE, FALSE, 0);
-  gtk_box_pack_start(GTK_BOX(result), rad2, FALSE, FALSE, 0);
-  gtk_widget_show_all(result);
-  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -331,7 +278,7 @@ static void custom_vm_dialog(t_custom_cnt *cust)
 {
   int i, j, k, response, line_nb = 0, found=0;
   GSList *group = NULL;
-  GtkWidget *entry_name, *grid, *parent, *is_persistent, *brand;
+  GtkWidget *entry_name, *grid, *parent, *is_persistent;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
   char image[MAX_NAME_LEN];
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
@@ -342,31 +289,14 @@ static void custom_vm_dialog(t_custom_cnt *cust)
   g_image_menu = gtk_menu_button_new();
   g_entry_image = gtk_entry_new();
   memset(image, 0, MAX_NAME_LEN);
-  if (!strcmp(cust->brandtype, "crun"))
+  strncpy(image, cust->cru_image, MAX_NAME_LEN);
+  for (i=0; i<g_nb_bulcru; i++)
     {
-    strncpy(image, cust->cru_image, MAX_NAME_LEN);
-    for (i=0; i<g_nb_bulcru; i++)
-      {
-      if (!strcmp(cust->cru_image, g_bulcru[i].name))
-        found = 1;
-      }
-    if ((found == 0) && (g_nb_bulcru >= 1))
-      strncpy(cust->cru_image, g_bulcru[0].name, MAX_NAME_LEN-1);
+    if (!strcmp(cust->cru_image, g_bulcru[i].name))
+      found = 1;
     }
-  else if (!strcmp(cust->brandtype, "podman"))
-    {
-    strncpy(image, cust->pod_image, MAX_NAME_LEN);
-    for (i=0; i<g_nb_bulpod; i++)
-      {
-      if (!strcmp(cust->pod_image, g_bulpod[i].name))
-        found = 1;
-      }
-    if ((found == 0) && (g_nb_bulpod >= 1))
-      strncpy(cust->pod_image, g_bulpod[0].name, MAX_NAME_LEN-1);
-    }
-  else
-    KOUT("ERROR %s", cust->brandtype);
-
+  if ((found == 0) && (g_nb_bulcru >= 1))
+    strncpy(cust->cru_image, g_bulcru[0].name, MAX_NAME_LEN-1);
   grid = gtk_grid_new();
   gtk_grid_insert_column(GTK_GRID(grid), 0);
   gtk_grid_insert_column(GTK_GRID(grid), 1);
@@ -389,10 +319,8 @@ static void custom_vm_dialog(t_custom_cnt *cust)
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), TRUE);
   else
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), FALSE);
-  brand = crun_podman();
   g_signal_connect(is_persistent,"toggled",G_CALLBACK(is_persistent_toggle),NULL);
   append_grid(grid, is_persistent, "remanence:", line_nb++);
-  append_grid(grid, brand, "container:", line_nb++);
 
   for (i=0; i<ETH_LINE_MAX; i++)
     {
@@ -449,7 +377,7 @@ void get_custom_cnt(t_custom_cnt **cust_vm)
   if (!strcmp(g_custom_cnt.name, "Cnt"))
     {
     g_custom_cnt.current_number += 1;
-    sprintf(cust.name, "%s%d", g_custom_cnt.name, g_custom_cnt.current_number);
+    sprintf(cust.name, "Cnt%d", g_custom_cnt.current_number);
     }
   else
     sprintf(cust.name, "%s", g_custom_cnt.name);
@@ -472,7 +400,6 @@ void menu_dialog_cnt_init(void)
   strcpy(g_custom_cnt.name, "Cnt");
   strcpy(g_custom_cnt.startup_env, "STARTUP_ENV=myenv");
   strcpy(g_custom_cnt.cru_image,   "bookworm.zip");
-  strcpy(g_custom_cnt.pod_image,   "localhost/bookworm");
   g_custom_cnt.nb_tot_eth = 3;
   for (i=0; i<g_custom_cnt.nb_tot_eth; i++)
     g_custom_cnt.eth_table[i].endp_type = endp_type_eths;

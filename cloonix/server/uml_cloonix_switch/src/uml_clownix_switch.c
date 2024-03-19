@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -67,8 +67,8 @@
 #include "ovs_c2c.h"
 #include "suid_power.h"
 #include "cnt.h"
-#include "podman.h"
 #include "mactopo.h"
+#include "crun.h"
 
 
 static t_topo_clc g_clc;
@@ -224,7 +224,7 @@ static void mk_and_tst_work_path(void)
   my_mkdir(cfg_get_bulk(), 0);
   mk_cnt_dir();
   mk_endp_dir();
-  mk_dtach_dir();
+  mk_dtach_screen_dir();
   mk_ovs_db_dir();
   sprintf(path1, "%s/cloonix_lock",  cfg_get_root_work());
   check_for_another_instance(path1, 0);
@@ -320,6 +320,7 @@ static void launching(void)
     KOUT("BADCONF");
     }
   ovs_init();
+  crun_init();
   ovs_snf_init();
   ovs_nat_init();
   ovs_tap_init();
@@ -505,7 +506,6 @@ int main (int argc, char *argv[])
   qga_dialog_init();
   suid_power_init();
   cnt_init();
-  podman_init();
   date_us = cloonix_get_usec();
   srand((int) (date_us & 0xFFFF));
   layout_topo_init();

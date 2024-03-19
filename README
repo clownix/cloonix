@@ -1,73 +1,92 @@
 ==============================================================================
+GENERAL:
+--------
 
 Cloonix is an AGPLv3 software that constitute a tool to create networks of
-kvm virtual machines or crun, and podman containers.
+kvm virtual machines or crun containers.
 
 The network connecting the virtual machines and containers is created through
 the use of the openvswitch software running inside a net namespace so that
-your host is not polluted with bridges and "ip addr" on your host shows clean
-results.
+your host is not polluted with bridges. That way, "ip link" on your host
+shows clean results. Do "ip netns" to see cloonix namespaces. If you wish
+to see the cloonix bridges for nemo, do:
+"sudo ip netns exec <namespace_name> ip link".
 
-The openvswitch commands are simplified by cloonix which provides a very
-simple user interface to connect virtual machines and containers through
-virtual lans.
+The cloonix user interface to connect virtual machines and containers is
+a simplification of the openvswitch commands. It provides easy use of 
+virtual lans to build a network.
 
-Cloonix provides root access pseudo-ssh and pseudo-scp (ssh and scp equivalent)
-for every virtual machines or containers without use of any ip interface
-inside the virtual machines or container.
+Cloonix also provides root access ssh and scp equivalent for every virtual
+machines or containers without use of any ip interface inside the virtual
+machines or container.
 
 Cloonix provides a graphical interactive canvas showing the topology for
-your network.
+your network, it is some kind of hypervisor for virtualisation.
 
 Building of the binaries is done on a debian bookworm and all the necessary
 files and libraries are collected and put into an autonomous bundle, this
 makes the bundle self-contained. No added files or packages are necessary.
 
-See clownix.net for a documentation (which is usually not up to date).
-http://clownix.net/doc_stored/build-34-00/html/index.html doc.
+See clownix.net for a documentation.
+http://clownix.net/doc_stored/build-35-00/html/index.html doc.
 
-NOTE: qemu-guest-agent sometimes called qemu-ga has to be installed
-      inside the kvm guests virtual machines to have the pseudo-ssh and
-      pseudo-scp.
+NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
+      guests virtual machines to have the pseudo-ssh and pseudo-scp.
 -----------------------------------------------------------------------------
+
+==============================================================================
 DOWNLOADS:
+----------
 
-http://clownix.net/downloads/cloonix-34
+http://clownix.net/downloads/cloonix-35
 
 -----------------------------------------------------------------------------
-INSTALL BINARY AND LIBRARIES ON YOUR HOST
 
-wget http://clownix.net/downloads/cloonix-34/cloonix-bundle-34-00.tar.gz
-tar xvf cloonix-bundle-34-00.tar.gz
-cd cloonix-bundle-34-00
+==============================================================================
+INSTALLATION:
+------------
+
+wget http://clownix.net/downloads/cloonix-35/cloonix-bundle-35-00.tar.gz
+tar xvf cloonix-bundle-35-00.tar.gz
+cd cloonix-bundle-35-00
 sudo ./install_cloonix
 
------------------------------------------------------------------------------
-TO UNINSTALL:
+==============================================================================
+UNINSTALLATION:
+---------------
 
 rm -f /usr/bin/cloonix_*
 rm -rf /usr/libexec/cloonix
 rm -rf /var/lib/cloonix
 
 -----------------------------------------------------------------------------
-GET A WORKING QCOW AND PUT IT IN BULK TO TEST KVM:
+
+==============================================================================
+LOADING A QCOW INTO BULK FOR KVM USE:
+-------------------------------------
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-34/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-35/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
-GET A WORKING ZIP AND PUT IT IN BULK TO TEST CRUN:
+
+==============================================================================
+LOADING A ZIP INTO BULK FOR CRUN USE:
+-------------------------------------
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-34/bulk/busybox.zip
+wget http://clownix.net/downloads/cloonix-35/bulk/busybox.zip
 
 -----------------------------------------------------------------------------
-LAUNCH TEST PINGS:
 
-cd cloonix-bundle-34-00
+==============================================================================
+LAUNCH PING SCRIPT:
+-------------------
+
+cd cloonix-bundle-35-00
 
 ./ping_kvm.sh
 
@@ -78,6 +97,45 @@ a right-click on the blue machine gives a spice desktop.
 ./ping_cnt.sh
 
 On the gui, a double-click on the blue machine gives a shell,
-a double-click on the green interface gives a wireshark spy.
-==============================================================================
+a double-click on the green interface gives a wireshark spy,
+a right-click on the container gives one remote console.
 
+-----------------------------------------------------------------------------
+
+==============================================================================
+CLOONIX INSIDE PODMAN:
+----------------------
+
+For the cloonix to be able to use /dev/kvm, /dev/vhost-net and /dev/net/tun,
+some commands must be done as root, here is the way to check that your user
+can read/write those devices and the way to authorise their use:
+
+getfacl /dev/kvm
+getfacl /dev/vhost-net
+getfacl /dev/net/tun
+
+sudo setfacl -R -m u:${USER}:rw /dev/kvm
+sudo setfacl -R -m u:${USER}:rw /dev/vhost-net
+sudo setfacl -R -m u:${USER}:rw /dev/net/tun
+
+Then download and install podman:
+
+wget http://clownix.net/downloads/cloonix-35/bulk/cnt_cloonix.tar
+podman load --input cnt_cloonix.tar
+
+Then try the podman, note that the directory /var/lib/cloonix/bulk
+of your host is made visible inside the podman and must contain
+some qcow2 and zip file-systems:
+
+ID_IMAGE=$(podman images |grep cnt_cloonix | awk "{print \$3}")
+podman run -it --privileged \
+           -e DISPLAY=:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
+           -v /var/lib/cloonix/bulk:/var/lib/cloonix/bulk \
+           -v /lib/modules:/lib/modules $ID_IMAGE /bin/bash
+
+Then try cloonix from within the podman:
+
+cloonix_net nemo
+cloonix_gui nemo
+
+-----------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -678,6 +678,15 @@ void msg_lan_add_name(char *lan)
   if (fmt_tx_add_lan(tid, lan))
     KERR("ERROR %s", lan);
 }
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void msg_lan_add_rstp(char *lan) 
+{ 
+  int tid = utils_get_next_tid();
+  if (fmt_tx_add_lan_rstp(tid, lan))
+    KERR("ERROR %s", lan);
+} 
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/

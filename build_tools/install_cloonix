@@ -43,6 +43,7 @@ for i in  cloonix_cli \
           cloonix_ice \
           cloonix_ocp \
           cloonix_osh \
+          cloonix_rsh \
           cloonix_ovs \
           cloonix_scp \
           cloonix_ssh \
@@ -50,6 +51,7 @@ for i in  cloonix_cli \
           cloonix_dsh \
           cloonix_wsk ; do
   cp -vf /tmp/client/usr_bin/${i} /usr/bin
+  cp -vf /tmp/client/usr_bin/${i} /usr/libexec/cloonix/common
 done
 #----------------------------------------------------------
 if [ -d /usr/share/polkit-1/actions ]; then
@@ -70,6 +72,7 @@ chmod 755 /usr/libexec/cloonix/server/*
 cp -vf /tmp/server/usr_bin/cloonix_net /usr/bin
 #----------------------------------------------------------
 for i in dumpcap \
+         cloonix-crun \
          cloonix-ovs-drv \
          cloonix-ovs-snf \
          cloonix-ovs-nat \

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -135,7 +135,7 @@ char *lio_linear(char *argv[])
 /*****************************************************************************/
 static FILE *lio_popen(char *argv[], int *child_pid)
 {
-  int exited_pid, timeout_pid, worker_pid, chld_state, pid, status;
+  int exited_pid, timeout_pid, worker_pid, wstatus, pid, status;
   int pdes[2];
   FILE *iop = NULL;
   if (pipe(pdes))
@@ -164,10 +164,16 @@ static FILE *lio_popen(char *argv[], int *child_pid)
       KERR("WARNING TIMEOUT SLOW CMD 1 %s", lio_linear(argv));
       exit(1);
       }
-    exited_pid = wait(&chld_state);
+    exited_pid = wait(&wstatus);
     if (exited_pid == worker_pid)
       {
-      status = 0;
+      status = -1;
+      if (WIFEXITED(wstatus))
+        {
+        status = WEXITSTATUS(wstatus);
+        }
+      else
+        KERR("WARNING CMD %s", lio_linear(argv));
       kill(timeout_pid, SIGKILL);
       }
     else
@@ -203,6 +209,7 @@ FILE *cmd_lio_popen(char *cmd, int *child_pid)
     KOUT("ERROR");
   if (strlen(cmd) >= MAX_CMD_POPEN)
     KOUT("ERROR %lu", strlen(cmd));
+  log_write_req(cmd);
   strncpy(cpcmd, cmd, MAX_CMD_POPEN - 1);
   strcat(cpcmd, " 2>&1");
   argv[0] = BASH_BIN;
@@ -210,7 +217,6 @@ FILE *cmd_lio_popen(char *cmd, int *child_pid)
   argv[2] = cpcmd;
   argv[3] = NULL;
   iop = lio_popen(argv, child_pid);
-  log_write_req(cmd);
   return iop;
 }
 /*---------------------------------------------------------------------------*/
@@ -224,10 +230,11 @@ int execute_cmd(char *cmd)
     KERR("ERROR %s", cmd);
   else
     {
-    log_write_req(cmd);
     if (force_waitpid(child_pid, &wstatus))
       KERR("ERROR");
     result = wstatus;    
+    if (result)
+      log_write_req("PREVIOUS CMD KO 1");
     pclose(fp);
     }
   return result;
@@ -242,7 +249,6 @@ static int write_whole_file(char *file_name, char *buf, int len)
   char cmd[MAX_PATH_LEN];
   if (!access(file_name, F_OK))
     {
-    KERR("ERROR %s already exists", file_name);
     unlink(file_name);
     memset(cmd, 0, MAX_PATH_LEN);
     snprintf(cmd, MAX_PATH_LEN-1, "unlink %s", file_name);
@@ -306,7 +312,7 @@ static void format_startup_env(char *startup_env, char *env)
 
 /****************************************************************************/
 static char *get_config_json(char *rootfs, char *nspace,
-                             char *cloonix_dropbear, char *mounttmp,
+                             char *mountbear, char *mounttmp,
                              int is_persistent,  char *startup_env,
                              char *name)
 {
@@ -316,7 +322,7 @@ static char *get_config_json(char *rootfs, char *nspace,
   char log_json[MAX_PATH_LEN];
   memset(log_json, 0, MAX_PATH_LEN);
   snprintf(log_json, MAX_PATH_LEN-1, "%s/%s", g_var_crun_json, name); 
-  starter = "\"/mnt/cloonix_config_fs/crun_init_starter.sh\"\n";
+  starter = "\"/mnt/cloonix_config_fs/init_cloonix_startup_script.sh\"\n";
   format_startup_env(startup_env, env);
   buf = (char *) malloc(len);
   memset(buf, 0, len);
@@ -324,7 +330,7 @@ static char *get_config_json(char *rootfs, char *nspace,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, rootfs, 
-                                    cloonix_dropbear, mounttmp, nspace); 
+                                    mountbear, mounttmp, nspace); 
   write_whole_file(log_json, buf, strlen(buf));
   return buf;
 }
@@ -374,59 +380,40 @@ static int my_mkdir_if_not_exists(char *dst_dir)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int check_mount_does_not_exist(char *path)
-{
-  int result = 0;
-  char cmd[2*MAX_PATH_LEN];
-  memset(cmd, 0, 2*MAX_PATH_LEN);
-  snprintf(cmd,2*MAX_PATH_LEN-1,"%s | %s %s",MOUNT_BIN,GREP_BIN,path);
-  if (execute_cmd(cmd))
-    {
-    KERR("ERROR %s", cmd);
-    result = -1;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
- 
-/****************************************************************************/
-int dirs_agent_create_mnt_tmp(char *cnt_dir, char *name)
+static int dirs_agent_create_mnt_tmp(char *mountbear, char *mounttmp)
 {
   int result = -1;
   char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s/tmp", cnt_dir, name);
+  snprintf(path, MAX_PATH_LEN-1, "%s", mounttmp);
   if (my_mkdir(path))
     KERR("ERROR %s", path);
   else
     {
     chmod(path, 0777);
     memset(path, 0, MAX_PATH_LEN);
-    snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt", cnt_dir, name);
+    snprintf(path, MAX_PATH_LEN-1, "%s", mountbear);
     if (my_mkdir(path))
       KERR("ERROR %s", path);
     else
       {
       chmod(path, 0777);
       memset(path, 0, MAX_PATH_LEN);
-      snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/mountbear",
-               cnt_dir, name);
+      snprintf(path, MAX_PATH_LEN-1, "%s/mountbear", mountbear);
       if (my_mkdir(path))
         KERR("ERROR %s", path);
       else
         {
         chmod(path, 0777);
         memset(path, 0, MAX_PATH_LEN);
-        snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs",
-                 cnt_dir, name);
+        snprintf(path, MAX_PATH_LEN-1, "%s/cloonix_config_fs", mountbear);
         if (my_mkdir(path))
           KERR("ERROR %s", path);
         else
           {
           chmod(path, 0777);
           memset(path, 0, MAX_PATH_LEN);
-          snprintf(path, MAX_PATH_LEN-1,
-                   "%s/%s/mnt/cloonix_config_fs/lib", cnt_dir, name);
+          snprintf(path,MAX_PATH_LEN-1,"%s/cloonix_config_fs/lib",mountbear);
           if (my_mkdir(path))
             KERR("ERROR %s", path);
           else
@@ -443,7 +430,8 @@ int dirs_agent_create_mnt_tmp(char *cnt_dir, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int create_all_dirs(char *image, char *cnt_dir, char *name)
+static int create_all_dirs(char *mountbear, char *mounttmp, char *image,
+                           char *cnt_dir, char *name)
 {
   int result = -1;
   char path[MAX_PATH_LEN];
@@ -471,7 +459,7 @@ static int create_all_dirs(char *image, char *cnt_dir, char *name)
           KERR("ERROR %s", path);
         else
           {
-          result = dirs_agent_create_mnt_tmp(cnt_dir, name);
+          result = dirs_agent_create_mnt_tmp(mountbear, mounttmp);
           if (result == 0)
             {
             result = -1;
@@ -500,48 +488,47 @@ static int create_all_dirs(char *image, char *cnt_dir, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void dirs_agent_copy_starter(char *cnt_dir, char *name, char *agent_dir,
-                             char *startup_env)
+static void dirs_agent_copy_starter(char *mountbear, char *agent_dir,
+                             char *startup_env, int nb_eth)
 {
   char path[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
+  char line[MAX_NAME_LEN];
   char *etc_path="/usr/libexec/cloonix/common/etc";
   char *iso="/usr/libexec/cloonix/server/insider_agents/insider_agent_x86_64.iso";
   memset(path, 0, MAX_PATH_LEN);
   memset(cmd, 0, 2*MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs", cnt_dir, name);
+  snprintf(path, MAX_PATH_LEN-1, "%s/cloonix_config_fs", mountbear);
   snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -osirrox on -indev %s -extract / %s",
            OSIRROX_BIN, iso, path); 
   if (execute_cmd(cmd))
     KERR("ERROR %s", cmd);
-  memset(cmd, 0, 2*MAX_PATH_LEN);
-  snprintf(cmd, 2*MAX_PATH_LEN-1,
-           "cp -f %s/crun_init_user.sh %s/%s/mnt/cloonix_config_fs",
-           etc_path, cnt_dir, name);
-  if (execute_cmd(cmd))
-    KERR("ERROR %s", cmd);
-  memset(cmd, 0, 2*MAX_PATH_LEN);
-  snprintf(cmd, 2*MAX_PATH_LEN-1,
-           "cp -f %s/podman_init_user.sh %s/%s/mnt/cloonix_config_fs",
-           etc_path, cnt_dir, name);
-  if (execute_cmd(cmd))
-    KERR("ERROR %s", cmd);
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s/mnt/cloonix_config_fs/startup_env",
-           cnt_dir, name);
+  snprintf(path, MAX_PATH_LEN-1, "%s/cloonix_config_fs/startup_env", mountbear);
   write_whole_file(path, startup_env, strlen(startup_env));
+  if (nb_eth)
+    {
+    memset(path, 0, MAX_PATH_LEN);
+    snprintf(path, MAX_PATH_LEN-1,
+             "%s/cloonix_config_fs/startup_nb_eth", mountbear);
+    memset(line, 0, MAX_NAME_LEN);
+    snprintf(line, MAX_NAME_LEN-1, "%d", nb_eth);
+    write_whole_file(path, line, strlen(line));
+    }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int read_crun_create_pid(char *name)
+static int read_crun_create_pid(char *name, int should_not_exist)
 {
   FILE *fp;
   char *ptr = g_var_crun_log;
   int child_pid, wstatus, count= 0, create_pid = 0;
   char cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
-  int nb_tries = 3;
+  int nb_tries = 5;
+  if (should_not_exist)
+    nb_tries = 1;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
   "%s --log=%s --root=/var/lib/cloonix/%s/crun "
@@ -549,14 +536,17 @@ static int read_crun_create_pid(char *name)
   CRUN_BIN, ptr, get_net_name(), name, GREP_BIN, AWK_BIN);
   while(create_pid == 0)
     {
-    usleep(10000);
     count += 1;
     if (count > nb_tries)
       break;
+    usleep(100000);
     memset(line, 0, MAX_PATH_LEN);
     fp = cmd_lio_popen(cmd, &child_pid);
     if (fp == NULL)
+      {
+      log_write_req("PREVIOUS CMD KO 2");
       KERR("ERROR %s", cmd);
+      }
     else
       {
       if(fgets(line, MAX_PATH_LEN-1, fp))
@@ -566,6 +556,8 @@ static int read_crun_create_pid(char *name)
           *ptr = 0;
         create_pid = atoi(line);
         }
+      else if (should_not_exist == 0)
+        log_write_req("PREVIOUS CMD KO 3");
       pclose(fp);
       if (force_waitpid(child_pid, &wstatus))
         KERR("ERROR");
@@ -648,25 +640,19 @@ int crun_utils_create_overlay(char *path, char *lower, int is_persistent)
 {
   int result = -1;
   char cmd[2*MAX_PATH_LEN];
-
-  if (check_mount_does_not_exist(path))
-    KERR("%s", path);
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  if (is_persistent)
+    {
+    result = 0;
+    }
   else
     {
-    memset(cmd, 0, 2*MAX_PATH_LEN);
-    if (is_persistent)
-      {
-      result = 0;
-      }
-    else
-      {
-      snprintf(cmd, 2*MAX_PATH_LEN-1,
-      "%s -o lowerdir=%s -o upperdir=%s/%s -o workdir=%s/%s %s/%s",
-      FUSE_OVERLAY_FS_BIN, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
-      if (execute_cmd(cmd))
-        KERR("%s", cmd);
-      result = 0;
-      }
+    snprintf(cmd, 2*MAX_PATH_LEN-1,
+    "%s -t overlay overlay -olowerdir=%s,upperdir=%s/%s,workdir=%s/%s %s/%s",
+    MOUNT_BIN, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
+    if (execute_cmd(cmd))
+      KERR("%s", cmd);
+    result = 0;
     }
   return result;
 }
@@ -686,28 +672,32 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name)
   len += sprintf(cmd+len, " %s", name); 
   if (execute_cmd(cmd))
     KERR("ERROR %s", cmd);
-  pid = read_crun_create_pid(name);
+  pid = read_crun_create_pid(name, 0);
   if (pid == 0)
-    KOUT("ERROR DID NOT GET CREATE PID FOR %s", name);
+    KERR("ERROR DID NOT GET CREATE PID FOR %s", name);
   return pid;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int crun_utils_create_config_json(char *path, char *rootfs, char *nspace,
-                                 char *cloonix_dropbear, char *mounttmp,
+                                 char *mountbear, char *mounttmp,
                                  int is_persistent, char *startup_env,
                                  char *name)
 {
   int len, result;
   char json_path[MAX_PATH_LEN];
-  char *buf = get_config_json(rootfs, nspace, cloonix_dropbear,
+  char tmp_json_path[MAX_PATH_LEN];
+  char *buf = get_config_json(rootfs, nspace, mountbear,
                               mounttmp, is_persistent,
                               startup_env, name);
   memset(json_path, 0, MAX_PATH_LEN);
   snprintf(json_path, MAX_PATH_LEN-1, "%s/config.json", path); 
   len = strlen(buf);
   result = write_whole_file(json_path, buf, len);
+  memset(tmp_json_path, 0, MAX_PATH_LEN);
+  sprintf(tmp_json_path, "/tmp/config.json.%s", name); 
+  write_whole_file(tmp_json_path, buf, len); 
   free(buf);
   if (access(json_path, F_OK))
     KERR("ERROR %s", json_path);
@@ -783,7 +773,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
 {
   int result = -1;
   char cmd[MAX_PATH_LEN];
-  int pid = read_crun_create_pid(name);
+  int pid = read_crun_create_pid(name, 1);
   char *ptr = g_var_crun_log;
   if (pid)
     kill(pid, 9);
@@ -814,55 +804,18 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int crun_utils_podman_veth(char *name, int pid, int vm_id,
-                           int nb_eth, t_eth_mac *eth_mac)
-{
-  int i, result = -1;
-  char path[MAX_PATH_LEN];
-  char nspace[MAX_PATH_LEN];
-  char *ns=nspace;
-  char cmd[MAX_PATH_LEN];
-
-  memset(path, 0, MAX_PATH_LEN);
-  memset(nspace, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "/proc/%d/ns/net", pid);
-  if (access(path, F_OK))
-    KERR("ERROR %s not found bad pid", path);
-  else
-    {
-    snprintf(nspace, MAX_PATH_LEN-1, "clons%s", name);
-    for (i=0; i<strlen(nspace); i++)
-      nspace[i] = tolower(nspace[i]);
-    check_netns_and_clean(name, nspace, vm_id, nb_eth);
-    snprintf(cmd, MAX_PATH_LEN-1,
-    "%s netns attach %s %d", IP_BIN, ns, pid); 
-    if (execute_cmd(cmd))
-      KERR("ERROR %s", cmd);
-    else
-      {
-      result = crun_utils_create_veth(vm_id, nspace, nb_eth, eth_mac);
-      memset(cmd, 0, MAX_PATH_LEN);
-      snprintf(cmd, MAX_PATH_LEN-1, "%s netns delete %s", IP_BIN, ns);
-      if (execute_cmd(cmd))
-        KERR("ERROR %s", cmd);
-      }
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int crun_utils_create_net(char *image, char *name, char *cnt_dir,
-                          char *nspace, int cloonix_rank, int vm_id,
+int crun_utils_create_net(char *mountbear, char *mounttmp, char *image,
+                          char *name, char *cnt_dir, char *nspace,
+                          int cloonix_rank, int vm_id,
                           int nb_eth, t_eth_mac *eth_mac,
                           char *agent_dir, char *startup_env)
 {
-  int result = create_all_dirs(image, cnt_dir, name);
+  int result = create_all_dirs(mountbear, mounttmp, image, cnt_dir, name);
   if (result)
     KERR("ERROR %s %s %s", cnt_dir, name, nspace);
   else
     {
-    dirs_agent_copy_starter(cnt_dir, name, agent_dir, startup_env);
+    dirs_agent_copy_starter(mountbear, agent_dir, startup_env, nb_eth);
     if (nspace_create(name, nspace, cloonix_rank, vm_id, nb_eth, eth_mac))
       {
       KERR("ERROR %s %s %s", cnt_dir, name, nspace);
@@ -926,7 +879,7 @@ int crun_utils_delete_crun_stop(char *name, int crun_pid)
     result = kill(crun_pid, 9);
   else
     {
-    pid = read_crun_create_pid(name);
+    pid = read_crun_create_pid(name, 0);
     if (pid > 0)
       result = kill(pid, 9);
     }
@@ -976,8 +929,6 @@ char *utils_get_suid_power_bin_path(void)
 /****************************************************************************/
 void crun_utils_init(char *log)
 {
-  if (access(FUSE_OVERLAY_FS_BIN, X_OK))
-    KERR("ERROR %s", FUSE_OVERLAY_FS_BIN);
   if (access(FUSEZIP_BIN, X_OK))
     KERR("ERROR %s", FUSEZIP_BIN);
   if (access(CRUN_BIN, X_OK))

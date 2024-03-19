@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -84,7 +84,6 @@ enum
   bnd_slowperiodic_sub,
   bnd_slowperiodic_qcow2,
   bnd_slowperiodic_img,
-  bnd_slowperiodic_podman,
   bnd_sub_evt_stats_endp,
   bnd_evt_stats_endp,
   bnd_sub_evt_stats_sysinfo,
@@ -96,6 +95,7 @@ enum
   bnd_tap_add,
   bnd_a2b_add,
   bnd_a2b_cnf,
+  bnd_lan_cnf,
   bnd_xyx_cnf,
   bnd_nat_cnf,
 
@@ -1847,22 +1847,6 @@ void send_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_slowperiodic_podman(int llid, int tid, int nb, t_slowperiodic *spic)
-{
-  int i, len = 0;
-  len += sprintf(sndbuf+len, SLOWPERIODIC_PODMAN_O, tid, nb);
-  for (i=0; i<nb; i++)
-    {
-    if (strlen(spic[i].name) == 0)
-      KOUT("ERROR %d", i);
-    len += sprintf(sndbuf+len, SLOWPERIODIC_SPIC, spic[i].name);
-    }
-  len += sprintf(sndbuf+len, SLOWPERIODIC_PODMAN_C);
-  my_msg_mngt_tx(llid, len, sndbuf);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static void helper_slowperiodic(char *msg, int nb, t_slowperiodic *spic)
 {
   char *ptr = msg;
@@ -2031,6 +2015,23 @@ void send_a2b_cnf(int llid, int tid, char *name, char *cmd)
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
+  
+/*****************************************************************************/
+void send_lan_cnf(int llid, int tid, char *name, char *cmd)
+{
+  int len = 0;
+  if (name[0] == 0)
+    KOUT(" ");
+  if (strlen(name) >= MAX_NAME_LEN)
+    KOUT(" ");
+  if (cmd[0] == 0)
+    KOUT(" ");
+  if (strlen(cmd) >= MAX_PRINT_LEN)
+    KOUT(" ");
+  len = sprintf(sndbuf, LAN_CNF, tid, name, cmd);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void send_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip, 
@@ -2141,7 +2142,6 @@ void send_color_item(int llid, int tid, char *name, int color)
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static void startup_env_get(char *msg_in, t_topo_cnt *cnt)
@@ -2524,17 +2524,6 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       clownix_free(slowperiodic, __FUNCTION__);
       break;
 
-    case bnd_slowperiodic_podman:
-      if (sscanf(msg, SLOWPERIODIC_PODMAN_O, &tid, &nb) != 2)
-        KOUT("%s", msg);
-      len = nb * sizeof(t_slowperiodic);
-      slowperiodic = (t_slowperiodic *)clownix_malloc(len, 23);
-      memset(slowperiodic, 0, len);
-      helper_slowperiodic(msg, nb, slowperiodic);
-      recv_slowperiodic_podman(llid, tid, nb, slowperiodic);
-      clownix_free(slowperiodic, __FUNCTION__);
-      break;
-
     case bnd_c2c_add:
       if (sscanf(msg, C2C_ADD, &tid, name, &ludp_ip,
                                network, &ip, &dport,
@@ -2637,6 +2626,11 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_a2b_cnf(llid, tid, name, line);
       break;
 
+   case bnd_lan_cnf:
+      if (sscanf(msg, LAN_CNF, &tid, name, info) != 3)
+        KOUT("%s", msg);
+      recv_lan_cnf(llid, tid, name, info);
+      break;
 
 
     default:
@@ -2768,7 +2762,6 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(SLOWPERIODIC_SUB, bound_list[bnd_slowperiodic_sub]);
   extract_boundary(SLOWPERIODIC_QCOW2_O, bound_list[bnd_slowperiodic_qcow2]);
   extract_boundary(SLOWPERIODIC_IMG_O, bound_list[bnd_slowperiodic_img]);
-  extract_boundary(SLOWPERIODIC_PODMAN_O, bound_list[bnd_slowperiodic_podman]);
   extract_boundary(SUB_EVT_STATS_ENDP, bound_list[bnd_sub_evt_stats_endp]);
   extract_boundary(EVT_STATS_ENDP_O, bound_list[bnd_evt_stats_endp]);
   extract_boundary(SUB_EVT_STATS_SYSINFO,bound_list[bnd_sub_evt_stats_sysinfo]);
@@ -2794,6 +2787,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
 
   extract_boundary(A2B_ADD, bound_list[bnd_a2b_add]);
   extract_boundary(A2B_CNF, bound_list[bnd_a2b_cnf]);
+  extract_boundary(LAN_CNF, bound_list[bnd_lan_cnf]);
   extract_boundary(C2C_CNF, bound_list[bnd_xyx_cnf]);
   extract_boundary(NAT_CNF, bound_list[bnd_nat_cnf]);
 }

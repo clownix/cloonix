@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -117,6 +117,7 @@ typedef struct t_bank_item
   int  button_1_double_click;
   int  spicy_gtk_pid;
   int  dtach_pid;
+  int  crun_screen_pid;
   int  wireshark_pid;
   long long abs_beat_eua_timeout;
   int ref_eua_timeout;
@@ -208,6 +209,8 @@ void refresh_all_connected_groups(void);
 /*--------------------------------------------------------------------------*/
 int bank_get_dtach_pid(char *name);
 void bank_set_dtach_pid(char *name, int val);
+int bank_get_crun_screen_pid(char *name);
+void bank_set_crun_screen_pid(char *name, int val);
 int bank_get_spicy_gtk_pid(char *name);
 void bank_set_spicy_gtk_pid(char *name, int val);
 int bank_get_wireshark_pid(char *name);

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -24,6 +24,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "doorways_sock.h"
@@ -1042,21 +1044,25 @@ void node_ctx_menu(t_bank_item *bitem)
 /****************************************************************************/
 void cnt_ctx_menu(t_bank_item *bitem)
 {
-  GtkWidget *item_info, *item_delete, *menu = gtk_menu_new();
+  GtkWidget *item_rsh, *item_info, *item_delete, *menu = gtk_menu_new();
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
   if (bitem->bank_type != bank_type_cnt)
     KOUT("%s", bitem->name);
 
+  item_rsh = gtk_menu_item_new_with_label("Remote console");
   item_info = gtk_menu_item_new_with_label("Info");
   item_delete = gtk_menu_item_new_with_label("Delete");
 
+  g_signal_connect(G_OBJECT(item_rsh), "activate",
+                   G_CALLBACK(crun_item_rsh), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_info), "activate",
                    G_CALLBACK(cnt_item_info), (gpointer) pm);
   g_signal_connect(G_OBJECT(item_delete), "activate",
                    G_CALLBACK(cnt_item_delete), (gpointer) pm);
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_rsh);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
   gtk_widget_show_all(menu);

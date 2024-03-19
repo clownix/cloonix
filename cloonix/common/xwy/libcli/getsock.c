@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -139,6 +139,19 @@ int get_input_params_cloon(int argc, char **argv, int *action,
     if (argc > 1)
       {
       *action = action_cmd;
+      *cmd = make_cmd_msg(argc-1, &(argv[1]));
+      }
+    else
+      {
+      printf("\n\nMissing arg command\n\n");
+      result = -1;
+      }
+    }
+  else if (!strcmp(argv[0], "-crun"))
+    {
+    if (argc > 1)
+      {
+      *action = action_crun;
       *cmd = make_cmd_msg(argc-1, &(argv[1]));
       }
     else

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -74,6 +74,8 @@ int main(int argc, char **argv)
 
   if (action == action_cmd)
     printf("\n-cmd %s\n", cmd);
+  else if (action == action_crun)
+    printf("\n-crun %s\n", cmd);
   else if (action == action_dae)
     printf("\n-dae %s\n", cmd);
   else if (action == action_get)

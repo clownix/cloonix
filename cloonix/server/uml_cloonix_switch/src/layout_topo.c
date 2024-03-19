@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -57,6 +57,8 @@ static t_layout_sub *g_head_layout_sub;
 /*---------------------------------------------------------------------------*/
 static int g_node_x_coord[MAX_POLAR_COORD];
 static int g_node_y_coord[MAX_POLAR_COORD];
+static int g_cnt_x_coord[MAX_POLAR_COORD];
+static int g_cnt_y_coord[MAX_POLAR_COORD];
 static int g_a2b_x_coord[MAX_POLAR_COORD];
 static int g_a2b_y_coord[MAX_POLAR_COORD];
 
@@ -132,9 +134,14 @@ static void layout_kill_all_graphs(void)
 
 /****************************************************************************/
 static void make_default_layout_node(t_layout_node *layout, 
-                              char *name, int nb_eth)
+                              char *name, int nb_eth, int is_vm)
 {
   int i, rest;
+  int dia;
+  if (is_vm)
+    dia = NODE_DIA;
+  else
+    dia = CNT_NODE_DIA;
   memset(layout, 0, sizeof(t_layout_node));
   strncpy(layout->name, name, MAX_NAME_LEN-1);
   layout->nb_eth = nb_eth;
@@ -144,13 +151,13 @@ static void make_default_layout_node(t_layout_node *layout,
     {
     rest = i%4;
     if (rest == 0)
-      layout->eth[i].y = NODE_DIA * VAL_INTF_POS_NODE;
+      layout->eth[i].y = dia * VAL_INTF_POS_NODE;
     if (rest == 1)
-      layout->eth[i].x = NODE_DIA * VAL_INTF_POS_NODE;
+      layout->eth[i].x = dia * VAL_INTF_POS_NODE;
     if (rest == 2)
-      layout->eth[i].y = -NODE_DIA * VAL_INTF_POS_NODE;
+      layout->eth[i].y = -dia * VAL_INTF_POS_NODE;
     if (rest == 3)
-      layout->eth[i].x = -NODE_DIA * VAL_INTF_POS_NODE;
+      layout->eth[i].x = -dia * VAL_INTF_POS_NODE;
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -679,12 +686,11 @@ static void layout_modif_eth(int llid, int tid, char *name, int num,
 {
   char info[MAX_PRINT_LEN];
   double real_val1, real_val2;
-  t_vm *vm;
+  int nb_eth;
   t_layout_node layout;
   t_layout_node_xml *cur;
   cur = find_node_xml(name);
-  vm = cfg_get_vm(name);
-  if (vm)
+  if ((cnt_name_exists(name, &nb_eth)) || cfg_get_vm(name))
     {
     if (!cur)
       KERR("%s", name);
@@ -710,8 +716,16 @@ static void layout_modif_eth(int llid, int tid, char *name, int num,
           }
         else
           {
-          real_val1 = (double) g_node_x_coord[val1];
-          real_val2 = (double) g_node_y_coord[val1];
+          if (cfg_get_vm(name))
+            {
+            real_val1 = (double) g_node_x_coord[val1];
+            real_val2 = (double) g_node_y_coord[val1];
+            }
+          else
+            {
+            real_val1 = (double) g_cnt_x_coord[val1];
+            real_val2 = (double) g_cnt_y_coord[val1];
+            }
           layout.eth[num].x = real_val1;
           layout.eth[num].y = real_val2;
           recv_layout_node(0, 0, &layout);
@@ -725,6 +739,7 @@ static void layout_modif_eth(int llid, int tid, char *name, int num,
     }
   else
     {
+    KERR("WARNING %s", name);
     sprintf(info, "KO");
     send_status_ko(llid, tid, info);
     }
@@ -1053,9 +1068,9 @@ void layout_add_vm(char *name, int llid)
   else
     {
     if (vm)
-      make_default_layout_node(&layout, name, vm->kvm.nb_tot_eth); 
+      make_default_layout_node(&layout, name, vm->kvm.nb_tot_eth, 1); 
     else
-      make_default_layout_node(&layout, name, nb_eth); 
+      make_default_layout_node(&layout, name, nb_eth, 0); 
     add_layout_node(&layout);
     if (!(g_head_layout_sub) ||
          ((g_head_layout_sub) && (g_head_layout_sub->llid != llid)))
@@ -1156,17 +1171,28 @@ void layout_del_lan(char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int layout_node_solve(double x, double y)
+int layout_node_solve(char *name, double x, double y)
 {
   int i, ix, iy;
   ix = (int) x;
   iy = (int) y;
   for (i=0; i<MAX_POLAR_COORD; i++)
     {
-    if ((ix >= g_node_x_coord[i]-1) && (ix <= g_node_x_coord[i]+1) &&
-        (iy >= g_node_y_coord[i]-1) && (iy <= g_node_y_coord[i]+1))
+    if (cfg_get_vm(name))
       {
-      break;
+      if ((ix >= g_node_x_coord[i]-1) && (ix <= g_node_x_coord[i]+1) &&
+          (iy >= g_node_y_coord[i]-1) && (iy <= g_node_y_coord[i]+1))
+        {
+        break;
+        }
+      }
+    else
+      {
+      if ((ix >= g_cnt_x_coord[i]-1) && (ix <= g_cnt_x_coord[i]+1) &&
+          (iy >= g_cnt_y_coord[i]-1) && (iy <= g_cnt_y_coord[i]+1))
+        {
+        break;
+        }
       }
     }
   return i;
@@ -1206,6 +1232,8 @@ void layout_topo_init(void)
     idx = idx/100;
     g_node_x_coord[i] =  (NODE_DIA * VAL_INTF_POS_NODE * (sin(idx)));
     g_node_y_coord[i] = -(NODE_DIA * VAL_INTF_POS_NODE * (cos(idx)));
+    g_cnt_x_coord[i] =  (CNT_NODE_DIA * VAL_INTF_POS_NODE * (sin(idx)));
+    g_cnt_y_coord[i] = -(CNT_NODE_DIA * VAL_INTF_POS_NODE * (cos(idx)));
     g_a2b_x_coord[i] =  (A2B_DIA * VAL_INTF_POS_A2B * (sin(idx)));
     g_a2b_y_coord[i] = -(A2B_DIA * VAL_INTF_POS_A2B * (cos(idx)));
     }

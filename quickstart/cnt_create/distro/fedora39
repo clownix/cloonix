@@ -69,7 +69,7 @@ dnf --releasever=${releasever} --nogpgcheck --installroot=${TMPZIP} -y install d
 rm -f ${TMPZIP}/etc/resolv.conf
 cp -f /etc/resolv.conf ${TMPZIP}
 #-----------------------------------------------------------------------#
-list_pkt="openssh-client bash-completion vim net-tools monit"
+list_pkt="openssh-client bash-completion vim net-tools"
 for d in dev sys proc; do mount --bind /$d ${TMPZIP}/$d; done
 echo dnf clean packages
 chroot ${TMPZIP} dnf --releasever=${releasever} --nogpgcheck clean packages

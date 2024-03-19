@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,12 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-enum
-{
-  brand_crun=7,
-  brand_podman,
-};
-
 typedef struct t_custom_cnt
 {
   char brandtype[MAX_NAME_LEN];
@@ -28,7 +22,6 @@ typedef struct t_custom_cnt
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
   char cru_image[MAX_NAME_LEN];
-  char pod_image[MAX_NAME_LEN];
   char startup_env[MAX_PATH_LEN];
   int current_number;
   int is_persistent;

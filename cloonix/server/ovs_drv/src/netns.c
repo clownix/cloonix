@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -106,6 +106,11 @@ static void process_msg_from_parent(char *line, char *respb)
 
 "ovs_add_lan lan=%s", name) == 1)
     action_add_lan(bin, db, respb, name);
+
+  else if (sscanf(line,
+
+"ovs_add_lan_rstp lan=%s", name) == 1)
+    action_add_lan_rstp(bin, db, respb, name);
 
   else if (sscanf(line,
 

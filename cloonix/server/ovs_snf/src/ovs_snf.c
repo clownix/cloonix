@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -242,6 +242,7 @@ int main (int argc, char *argv[])
     KOUT(" ");
   if (setns(fd, CLONE_NEWNET) != 0)
     KOUT(" ");
+  close(fd);
   if (tun_tap_open(snf))
     KOUT("Problem tap %s\n", snf);
   if (!access(g_ctrl_path, F_OK))

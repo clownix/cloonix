@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -51,30 +51,6 @@ void help_add_cru(char *line)
   printf("This will give 3 eth that are not spyable\n");
   printf("\n%s name eth=s bookworm.zip --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
   printf("This will give 1 eth spyable and will start the container with\n");
-  printf("MYENV=myenv and CLOONIX=great env variables.\n");
-  printf("\n\n\n");
-}
-/*-------------------------------------------------------------------------*/
-
-/***************************************************************************/
-void help_add_pod(char *line)
-{
-  printf("\n\n\n %s <name> eth=<eth_description> <image> [options]\n",
-  line);
-  printf("\n\timage is an existing podman image.");
-  printf("\n\teth_description example:");
-  printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
-  printf("\n\tMax eth: %d", MAX_ETH_VM);
-  printf("\n\t[options]");
-  printf("\n\t       --startup_env=\"<env_name=env_val env2_name=env2_val...>\"");
-  printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
-  printf("\n\nexample:\n\n");
-  printf("\n%s cnt1 eth=sss podman_image\n", line);
-  printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s cnt1 eth=vv podman_image\n", line);
-  printf("This will give a container with 2 eth that are not spyable\n");
-  printf("\n%s cnt1 eth=s podman_image --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
-  printf("This will give 2 eth that are spyable and will start the container with\n");
   printf("MYENV=myenv and CLOONIX=great env variables.\n");
   printf("\n\n\n");
 }
@@ -265,13 +241,6 @@ static int cmd_add_cnt(char *type, int argc, char **argv)
 int cmd_add_cru(int argc, char **argv)
 {
   return cmd_add_cnt("crun", argc, argv);
-}
-/*-------------------------------------------------------------------------*/
-
-/***************************************************************************/
-int cmd_add_pod(int argc, char **argv)
-{
-  return cmd_add_cnt("podman", argc, argv);
 }
 /*-------------------------------------------------------------------------*/
 

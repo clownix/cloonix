@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int fmt_tx_add_lan_rstp(int tid, char *lan);
 int fmt_tx_add_lan(int tid, char *lan);
 int fmt_tx_del_lan(int tid, char *lan);
 int fmt_tx_add_tap(int tid, char *name, char *vhost, char *mac);

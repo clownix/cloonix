@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -60,11 +60,11 @@ enum {
   type_pid_spicy_gtk,
   type_pid_wireshark,
   type_pid_dtach,
+  type_pid_crun_screen,
 };
 typedef struct t_pid_wait
 {
   int type;
-  int pid;
   char name[MAX_NAME_LEN];
   char **argv;
 } t_pid_wait;
@@ -178,33 +178,34 @@ static void release_pid_wait(t_pid_wait *pid_wait)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void death_pid_wait_launch(void *data, int status, char *name)
+static void death_pid_wait_launch(void *data, int status, char *name, int pid)
 {
   t_pid_wait *pid_wait = (t_pid_wait *) data;
-  int pid;
+  int stored_pid;
   switch (pid_wait->type)
     {
-
     case type_pid_spicy_gtk:
-      pid = bank_get_spicy_gtk_pid(pid_wait->name);
-      if (pid == pid_wait->pid)
-        bank_set_spicy_gtk_pid(pid_wait->name, 0);
+      stored_pid = bank_get_spicy_gtk_pid(name);
+      if (stored_pid == pid)
+        bank_set_spicy_gtk_pid(name, 0);
       break;
-
     case type_pid_wireshark:
-      pid = bank_get_wireshark_pid(pid_wait->name);
-      if (pid == pid_wait->pid)
-        bank_set_wireshark_pid(pid_wait->name, 0);
+      stored_pid = bank_get_wireshark_pid(name);
+      if (stored_pid == pid)
+        bank_set_wireshark_pid(name, 0);
       break;
-
     case type_pid_dtach:
-      pid = bank_get_dtach_pid(pid_wait->name);
-      if (pid == pid_wait->pid)
-        bank_set_dtach_pid(pid_wait->name, 0);
+      stored_pid = bank_get_dtach_pid(name);
+      if (stored_pid == pid)
+        bank_set_dtach_pid(name, 0);
       break;
-
+    case type_pid_crun_screen:
+      stored_pid = bank_get_crun_screen_pid(name);
+      if (stored_pid == pid)
+        bank_set_crun_screen_pid(name, 0);
+      break;
     default:
-      KOUT("%d", pid_wait->type);
+      KOUT(" ");
     }
   release_pid_wait(pid_wait);
 }
@@ -221,6 +222,7 @@ static char *alloc_argv(char *str)
 }
 /*--------------------------------------------------------------------------*/
 
+
 /****************************************************************************/
 static void launch_new_pid(t_pid_wait *pid_wait)
 {
@@ -228,37 +230,44 @@ static void launch_new_pid(t_pid_wait *pid_wait)
   switch (pid_wait->type)
     {
     case type_pid_spicy_gtk:
+      pid = bank_get_spicy_gtk_pid(pid_wait->name);
+      if (pid)
+        KERR("ERROR PID STORED %s pid:%d", pid_wait->name, pid);
       pid = pid_clone_launch(start_launch, death_pid_wait_launch, NULL,
                              (void *)(pid_wait->argv), (void *) pid_wait,
                              NULL, pid_wait->name, -1, 0);
       bank_set_spicy_gtk_pid(pid_wait->name, pid);
       break;
     case type_pid_wireshark:
+      pid = bank_get_wireshark_pid(pid_wait->name);
+      if (pid)
+        KERR("ERROR PID STORED %s pid:%d", pid_wait->name, pid);
       pid = pid_clone_launch(start_launch, death_pid_wait_launch, NULL,
                              (void *)(pid_wait->argv), (void *) pid_wait,
                              NULL, pid_wait->name, -1, 0);
       bank_set_wireshark_pid(pid_wait->name, pid);
       break;
     case type_pid_dtach:
+      pid = bank_get_dtach_pid(pid_wait->name);
+      if (pid)
+        KERR("ERROR PID STORED %s pid:%d", pid_wait->name, pid);
       pid = pid_clone_launch(start_launch, death_pid_wait_launch, NULL,
                              (void *)(pid_wait->argv), (void *) pid_wait,
                              NULL, pid_wait->name, -1, 0);
       bank_set_dtach_pid(pid_wait->name, pid);
       break;
+    case type_pid_crun_screen:
+      pid = bank_get_crun_screen_pid(pid_wait->name);
+      if (pid)
+        KERR("ERROR PID STORED %s pid:%d", pid_wait->name, pid);
+      pid = pid_clone_launch(start_launch, death_pid_wait_launch, NULL,
+                             (void *)(pid_wait->argv), (void *) pid_wait,
+                             NULL, pid_wait->name, -1, 0);
+      bank_set_crun_screen_pid(pid_wait->name, pid);
+      break;
+
     default:
       KOUT(" ");
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void wireshark_kill(char *name)
-{
-  int pid;
-  pid = bank_get_wireshark_pid(name);
-  if (pid)
-    {
-    pid_clone_kill_single(pid);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -272,12 +281,19 @@ static void launch_pid_wait(int type, char *nm, char **argv)
     {
     case type_pid_spicy_gtk:
       pid = bank_get_spicy_gtk_pid(nm);
+      bank_set_spicy_gtk_pid(nm, 0);
       break;
     case type_pid_wireshark:
       pid = bank_get_wireshark_pid(nm);
+      bank_set_wireshark_pid(nm, 0);
       break;
     case type_pid_dtach:
       pid = bank_get_dtach_pid(nm);
+      bank_set_dtach_pid(nm, 0);
+      break;
+    case type_pid_crun_screen:
+      pid = bank_get_crun_screen_pid(nm);
+      bank_set_crun_screen_pid(nm, 0);
       break;
     default:
       KOUT(" ");
@@ -287,7 +303,6 @@ static void launch_pid_wait(int type, char *nm, char **argv)
   pid_wait = (t_pid_wait *) clownix_malloc(sizeof(t_pid_wait), 8);
   memset(pid_wait, 0, sizeof(t_pid_wait));
   pid_wait->type = type;
-  pid_wait->pid = pid;
   strncpy(pid_wait->name, nm, MAX_NAME_LEN-1);
   pid_wait->argv = (char **)clownix_malloc(20 * sizeof(char *), 13);
   memset(pid_wait->argv, 0, 20 * sizeof(char *));
@@ -440,6 +455,42 @@ void node_dtach_console(GtkWidget *mn, t_item_ident *pm)
   char **argv = get_argv_local_xwy(nm);
   if (check_before_start_launch(argv))
     launch_pid_wait(type_pid_dtach, nm, argv);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static char **get_argv_crun_screen_console(char *name)
+{
+  static char cmd[2*MAX_PATH_LEN];
+  static char nm[MAX_NAME_LEN];
+  static char title[MAX_PATH_LEN];
+  static char nemo[MAX_NAME_LEN];
+  static char *argv[]={"/usr/libexec/cloonix/client/cloonix-urxvt",
+                       "-T", title, "-e",
+                       "/usr/libexec/cloonix/client/cloonix-xwycli", 
+                       "/usr/libexec/cloonix/common/etc/cloonix.cfg",
+                       nemo, "-crun", cmd, NULL};
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  memset(nm, 0, MAX_NAME_LEN);
+  memset(title, 0, MAX_PATH_LEN);
+  memset(nemo, 0, MAX_NAME_LEN);
+  strncpy(nm, name, MAX_NAME_LEN-1);
+  snprintf(nemo, MAX_NAME_LEN-1, "%s", local_get_cloonix_name());
+  snprintf(title, MAX_PATH_LEN-1, "%s/%s", nemo, nm);
+  snprintf(cmd, 2*MAX_PATH_LEN-1, "/usr/libexec/cloonix/server/cloonix-crun "
+                         "--log=/var/lib/cloonix/%s/log/debug_crun.log "
+                         "--root=/var/lib/cloonix/%s/crun/ exec %s /bin/bash",
+                         nemo, nemo, nm);
+  return (argv);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void crun_item_rsh(GtkWidget *mn, t_item_ident *pm)
+{
+
+  char **argv = get_argv_crun_screen_console(pm->name);
+  launch_pid_wait(type_pid_crun_screen, pm->name, argv);
 }
 /*--------------------------------------------------------------------------*/
 

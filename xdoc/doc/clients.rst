@@ -14,6 +14,7 @@ to control the cloonix server, here is a full list the clients:
   * *cloonix_ssh*  Pseudo-ssh for vm/container using qemu_guest_agent.
   * *cloonix_scp*  Pseudo-scp for vm/container using qemu_guest_agent.
   * *cloonix_osh*  Pseudo-ssh for vm without qemu_guest_agent (for cisco c8000).
+  * *cloonix_rsh*  Console for crun to use if cloonix_ssh fails.
   * *cloonix_ocp*  Pseudo-ssh for vm without qemu_guest_agent (for cisco c8000).
   * *cloonix_ice*  Spice desktop command line launcher.
   * *cloonix_ovs*  Ovs command line for the embedded openvswitch.
@@ -130,6 +131,12 @@ qemu-guest-agent.service to have this service on qemu kvm.
 
 The color blue arrives when the cloonix-agent is operational and that
 color indicates that the cloonix_ssh will work.
+
+
+For crun container, if cloonix_ssh fails, you can try the following::
+
+    cloonix_rsh <net_name> <vm_name>
+
 
 
 cloonix_scp

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -932,13 +932,13 @@ static void on_item_paint_cnt(CrItem *item, cairo_t *c)
   if (!bitem)
     KOUT(" ");
   cairo_new_path(c);
-  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
+  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_NODE_DIA/2, 0, 2*M_PI);
   if (bitem->pbi.pbi_cnt->cnt_evt_ping_ok)
     cairo_set_source_rgba (c, 0.50, 0.50, 1.0, 1.0);
   else
     cairo_set_source_rgba (c, 0.50, 0.30, 0.30, 1.0);
   cairo_fill(c);
-  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
+  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_NODE_DIA/2, 0, 2*M_PI);
   if (bitem->pbi.grabbed)
     cairo_set_source_rgba (c, white.r, white.g, white.b, 1.0);
   else
@@ -1178,7 +1178,7 @@ static CrItem *on_item_test(CrItem *item, cairo_t *c, double x, double y)
     else if (bitem->bank_type == bank_type_node) 
       cairo_arc (c, x0, y0, NODE_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_cnt) 
-      cairo_arc (c, x0, y0, CNT_DIA/2, 0, 2*M_PI);
+      cairo_arc (c, x0, y0, CNT_NODE_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_sat)
       {
       if ((bitem->pbi.endp_type == endp_type_nats) ||
@@ -1235,7 +1235,7 @@ static gboolean on_item_calcb(CrItem *item, cairo_t *c,
     else if (bitem->bank_type == bank_type_node)
       cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, NODE_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_cnt)
-      cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
+      cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_NODE_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_sat)
       {
       if ((bitem->pbi.endp_type == endp_type_nats) ||

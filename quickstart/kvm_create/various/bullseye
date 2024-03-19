@@ -4,7 +4,7 @@ DISTRO=bullseye
 DEFVIM=/tmp/wkmntloops/usr/share/vim/vim82/defaults.vim
 ROOTFS=/root/${DISTRO}
 DEBIAN_REPO="http://deb.debian.org/debian"
-#DEBIAN_REPO="http://127.0.0.1/debian/bullseye"
+DEBIAN_REPO="http://127.0.0.1/debian/bullseye"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {

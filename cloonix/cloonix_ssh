@@ -7,7 +7,11 @@ fi
 NSH="/usr/libexec/cloonix/client/cloonix-hide-dirs"
 cloonix_name=$1
 vm_name=$2
+if [ 2 -eq ${#} ]; then
+${NSH} "ssh" ${cloonix_name} ${vm_name}
+else
 shift 2
-${NSH} "ssh" ${cloonix_name} ${vm_name} "$@"
+${NSH} "ssh" ${cloonix_name} ${vm_name} "$*"
+fi
 
 

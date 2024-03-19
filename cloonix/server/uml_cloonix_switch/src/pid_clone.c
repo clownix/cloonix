@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -421,19 +421,13 @@ static void child_death_catcher_signal(int n)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void pid_clone_check_and_kill(int pid)
-{
-  if (pid_find_ident(pid))
-    kill(pid, SIGTERM);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void pid_clone_kill_single(int pid)
 {
   int ident = pid_find_ident(pid);
   if (ident)
     kill(pid, SIGTERM);
+  else
+    KERR("WARNING BAD KILL %d", pid);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -444,7 +438,7 @@ void pid_clone_kill_all(void)
   int i;
   for (i=1; i <= current_max_pid; i++)
     if (clone_ctx[i].used == i)
-      pid_clone_check_and_kill(clone_ctx[i].pid);
+      pid_clone_kill_single(clone_ctx[i].pid);
 }
 /*---------------------------------------------------------------------------*/
 

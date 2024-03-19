@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -57,6 +57,7 @@
 #include "ovs_phy.h"
 #include "ovs_c2c.h"
 #include "msg.h"
+#include "crun.h"
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
 int inside_cloon(char **name);
@@ -2046,6 +2047,28 @@ void recv_a2b_cnf(int llid, int tid, char *name, char *cmd)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_lan_cnf(int llid, int tid, char *name, char *cmd)
+{
+  event_print("Rx Req cnf lan %s %s", name, cmd);
+  if (!lan_get_with_name(name))
+    {
+    send_status_ko(llid, tid, "error lan not found");
+    KERR("ERROR %s %s ", name, cmd);
+    }
+  else if (strcmp(cmd, "rstp"))
+    {
+    send_status_ko(llid, tid, "error cmd");
+    KERR("ERROR %s %s ", name, cmd);
+    }
+  else
+    {
+    msg_lan_add_rstp(name);
+    send_status_ok(llid, tid, "ok");
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_c2c_peer_create(int llid, int tid, char *name,
                           int is_ack, char *dist, char *loc)
 {
@@ -2129,8 +2152,6 @@ void recv_color_item(int llid, int tid, char *name, int color)
 }
 /*--------------------------------------------------------------------------*/
 
-
-
 /*****************************************************************************/
 void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
 {
@@ -2153,8 +2174,7 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     KERR("ERROR %s %s", locnet, cnt->name);
     send_status_ko(llid, tid, err);
     }
-  else if ((strcmp(cnt->brandtype, "crun")) &&
-           (strcmp(cnt->brandtype, "podman")))
+  else if (strcmp(cnt->brandtype, "crun"))
     {
     snprintf(err, MAX_PATH_LEN-1, "%s %s bad brandtype:%s",
              locnet, cnt->name, cnt->brandtype);

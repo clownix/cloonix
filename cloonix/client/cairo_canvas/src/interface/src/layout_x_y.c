@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -140,10 +140,15 @@ void set_node_layout_x_y(char *name,
 void get_node_layout_x_y(char *name,
                          double *x, double *y, int *hidden_on_graph,
                          double *tx, double *ty,
-                         int32_t *thidden_on_graph)
+                         int32_t *thidden_on_graph, int is_vm)
 {
-  int rest, i;
+  int rest, i, dia;
   t_node_layout *cur = head_node_layout;
+
+  if (is_vm)
+    dia = NODE_DIA;
+  else
+    dia = CNT_NODE_DIA;
   while (cur && strcmp(cur->name, name))
     cur = cur->next;
   if (cur)
@@ -169,13 +174,13 @@ void get_node_layout_x_y(char *name,
       thidden_on_graph[i] = 0;
       rest = i%4;
       if (rest == 0)
-        ty[i] = NODE_DIA * VAL_INTF_POS_NODE;
+        ty[i] = dia * VAL_INTF_POS_NODE;
       if (rest == 1)
-        tx[i] = NODE_DIA * VAL_INTF_POS_NODE;
+        tx[i] = dia * VAL_INTF_POS_NODE;
       if (rest == 2)
-        ty[i] = -NODE_DIA * VAL_INTF_POS_NODE;
+        ty[i] = -dia * VAL_INTF_POS_NODE;
       if (rest == 3)
-        tx[i] = -NODE_DIA * VAL_INTF_POS_NODE;
+        tx[i] = -dia * VAL_INTF_POS_NODE;
       }
     }
 }

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -78,11 +78,28 @@ static t_crun *find_crun(char *name)
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+static char *random_str(void)
+{
+  static char str[8];
+  int num, i;
+  for (i=0; i<7; i++)
+    {
+    num = rand();
+    num %= 26;
+    str[i] = 'A'+ num;
+    }
+  str[7] = 0;
+  return str;
+}
+/*---------------------------------------------------------------------------*/
+
 /****************************************************************************/
 static void alloc_crun(char *name, char *bulk, char *image, int nb_eth,
                             char *nspace, int cloonix_rank,
                             int vm_id, char *cnt_dir, char *agent_dir)
 {
+  char *rnd = random_str();
   t_crun *cur = (t_crun *) malloc(sizeof(t_crun));
   memset(cur, 0, sizeof(t_crun));
   strncpy(cur->name, name, MAX_NAME_LEN-1);
@@ -93,8 +110,8 @@ static void alloc_crun(char *name, char *bulk, char *image, int nb_eth,
   strncpy(cur->nspace, nspace, MAX_NAME_LEN-1);
   snprintf(cur->nspace_path, MAX_PATH_LEN-1, "%s%s", PATH_NAMESPACE, nspace);
   snprintf(cur->rootfs_path, MAX_PATH_LEN-1,"%s/%s/%s",cnt_dir,name,ROOTFS);
-  snprintf(cur->mountbear, MAX_PATH_LEN-1,"%s/%s/mnt", cnt_dir, name);
-  snprintf(cur->mounttmp, MAX_PATH_LEN-1,"%s/%s/tmp", cnt_dir, name);
+  snprintf(cur->mountbear, MAX_PATH_LEN-1,"%s/%s/mnt%s", cnt_dir, name, rnd);
+  snprintf(cur->mounttmp, MAX_PATH_LEN-1,"%s/%s/tmp%s", cnt_dir, name, rnd);
   cur->nb_eth = nb_eth;
   cur->cloonix_rank = cloonix_rank;
   cur->vm_id = vm_id; 
@@ -274,10 +291,11 @@ static void create_net_eth(char *line, char *resp, char *name,
         }
       else
         {
-        if (crun_utils_create_net(cur->image, name, cur->cnt_dir,
-                                 cur->nspace, cur->cloonix_rank, cur->vm_id,
-                                 cur->nb_eth, cur->eth_mac, cur->agent_dir,
-                                 startup_env))
+        if (crun_utils_create_net(cur->mountbear, cur->mounttmp, cur->image,
+                                  name, cur->cnt_dir, cur->nspace,
+                                  cur->cloonix_rank, cur->vm_id,
+                                  cur->nb_eth, cur->eth_mac,
+                                  cur->agent_dir, startup_env))
           {
           KERR("ERROR %s", name);
           snprintf(resp, MAX_PATH_LEN-1,
@@ -316,7 +334,8 @@ static void create_config_json(char *line, char *resp,
     if (is_persistent)
       {
       memset(cur->rootfs_path, 0, MAX_PATH_LEN);
-      snprintf(cur->rootfs_path, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
+      snprintf(cur->rootfs_path, MAX_PATH_LEN-1, "%s/%s",
+               get_mnt_loop_dir(), image);
       cur->is_persistent = is_persistent;
       }
     cnt_dir = cur->cnt_dir;
@@ -446,8 +465,8 @@ static void create_crun_start(char *line, char *resp, char *name)
     else
       {
       snprintf(resp, MAX_PATH_LEN-1,
-      "cloonsuid_crun_create_crun_start_resp_ok name=%s crun_pid=%d",
-      name, cur->crun_pid);
+      "cloonsuid_crun_create_crun_start_resp_ok name=%s crun_pid=%d mountbear=%s",
+      name, cur->crun_pid, cur->mountbear);
       }
     crun_utils_delete_net_nspace(cur->nspace);
     }

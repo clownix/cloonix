@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -32,6 +32,7 @@ void node_del_val_save(char *name);
 void node_dtach_console(GtkWidget *mn, t_item_ident *pm);
 void node_qemu_spice(GtkWidget *mn, t_item_ident *pm);
 GtkWidget *canvas_cursors(void);
+void crun_item_rsh(GtkWidget *mn, t_item_ident *pm);
 void topo_delete(GtkWidget *mn);
 void start_wireshark(char *name, int num);
 

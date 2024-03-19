@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -114,9 +114,8 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define MAX_TRAF_ENDPOINT 4
 
 #define MAX_POLAR_COORD 314
-#define CNT_DIA 55
-#define CNT_NODE_DIA 65
 #define NODE_DIA 75
+#define CNT_NODE_DIA 62
 #define A2B_DIA 30 
 #define VAL_INTF_POS_NODE 0.5 
 #define VAL_INTF_POS_A2B 0.7 
@@ -212,7 +211,6 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define WIRESHARK_BIN "/usr/libexec/cloonix/server/cloonix-wireshark"
 #define CRUN_BIN "/usr/libexec/cloonix/server/cloonix-crun"
 #define IP_BIN "/usr/libexec/cloonix/server/ip"
-#define FUSE_OVERLAY_FS_BIN "/usr/libexec/cloonix/server/cloonix-fuse-overlayfs"
 #define FUSEZIP_BIN "/usr/libexec/cloonix/server/cloonix-fuse-zip"
 #define MOUNT_BIN "/usr/libexec/cloonix/server/cloonix-mount"
 #define UMOUNT_BIN "/usr/libexec/cloonix/server/cloonix-umount"
@@ -224,8 +222,6 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define OVS_VSWITCHD_BIN "/usr/libexec/cloonix/server/cloonix-ovs-vswitchd"
 #define OVSDB_TOOL_BIN   "/usr/libexec/cloonix/server/cloonix-ovsdb-tool"
 #define OSIRROX_BIN "/usr/libexec/cloonix/server/cloonix-osirrox"
-
-#define PODMAN_BIN "/usr/bin/podman"
 
 #define BASE_NAMESPACE "cloonix"
 #define PATH_NAMESPACE "/run/netns/"

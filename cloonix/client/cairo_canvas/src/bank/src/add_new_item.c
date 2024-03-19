@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -456,7 +456,7 @@ static void write_cnt_name(t_bank_item *bitem)
   x0 = bitem->pbi.x0;
   y0 = bitem->pbi.y0;
   dy = -10;
-  dx = -CNT_DIA/2 + 12;
+  dx = -CNT_NODE_DIA/2 + 12;
   topo_cr_item_text(bitem, x0 + dx, y0 + dy, bitem->name);
 }
 /*--------------------------------------------------------------------------*/

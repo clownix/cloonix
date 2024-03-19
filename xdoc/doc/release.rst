@@ -5,6 +5,23 @@
 Software Release Information
 ============================
 
+v35-00
+======
+
+In this version, efforts have been targeted into the run of cloonix
+in a podman container that is not run as root.
+Cloonix containers can be used to create test networks in the podman
+with no admin rights. For the KVM machines, you need to give rights
+to the user to use /dev/kvm /dev/vhost-net and /dev/net/tun.
+
+The startup of the zip containers launched by crun has changed:
+/usr/bin/cloonix_startup_script.sh is launched at container startup
+if this file exists.
+
+Cloonix does not run podman containers anymore, it is easy to produce a
+crun zip from a podman, it was too complex to mix different brands.
+
+
 v34-00
 ======
 

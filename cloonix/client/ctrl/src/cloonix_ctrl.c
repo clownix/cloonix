@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -29,8 +29,6 @@
 #include "file_read_write.h"
 #include "cloonix_conf_info.h"
 /*---------------------------------------------------------------------------*/
-#define MIDDLE_SCREEN 32
-#define END_SCREEN 64
 #define MAX_CMD_LEN 400
 #define MAX_FIELD_LEN 100
 
@@ -98,7 +96,6 @@ struct cmd_struct level_add_cmd[] = {
 {"lan", "Add lan (emulated cable)", NULL, cmd_add_vl2sat, help_add_vl2sat},
 {"kvm", "Add kvm (virtualized machine)", NULL,cmd_add_vm_kvm,help_add_vm_kvm},
 {"cru", "Add container crun",  NULL, cmd_add_cru, help_add_cru},
-{"pod", "Add container podman",  NULL, cmd_add_pod, help_add_pod},
 {"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_tap},
 {"phy", "Add phy (real host network interface)",  NULL, cmd_add_phy, help_add_phy},
 {"nat", "Add nat (access host ip)",NULL, cmd_add_nat, help_add_nat},
@@ -135,6 +132,7 @@ struct cmd_struct level_kvm_cmd[] = {
 struct cmd_struct level_cnf_cmd[] = {
 {"kvm",  "Kvm config",    level_kvm_cmd, NULL, NULL},
 {"cnt",  "Container config",    level_cnt_cmd, NULL, NULL},
+{"lan",  "lan config", NULL, cmd_cnf_lan, help_cnf_lan},
 {"nat",  "nat config", NULL, cmd_cnf_nat, help_cnf_nat},
 {"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
 {"c2c",  "c2c config", NULL, cmd_cnf_c2c, help_cnf_c2c},

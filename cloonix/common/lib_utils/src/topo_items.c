@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -42,7 +42,7 @@ static int topo_vlg_diff(t_lan_group *vlg, t_lan_group *ref)
 /*****************************************************************************/
 int topo_compare(t_topo_info *topo, t_topo_info *ref)
 {
-  int i, j;
+  int i;
   if (topo->nb_cnt  != ref->nb_cnt)
     return 1;
   if (topo->nb_kvm  != ref->nb_kvm)
@@ -73,37 +73,6 @@ int topo_compare(t_topo_info *topo, t_topo_info *ref)
       {
       if (memcmp(&(topo->cnt[i]), &(ref->cnt[i]), sizeof(t_topo_cnt)))
         {
-        KERR("%s %s", topo->cnt[i].name, ref->cnt[i].name);
-        KERR("%s %s", topo->cnt[i].image, ref->cnt[i].image);
-        KERR("%s %s", topo->cnt[i].startup_env, ref->cnt[i].startup_env);
-        KERR("%d %d", topo->cnt[i].nb_tot_eth, ref->cnt[i].nb_tot_eth);
-for(j=0; j<topo->cnt[i].nb_tot_eth; j++)
-{
-        KERR("%d %d %s", topo->cnt[i].eth_table[j].endp_type,
-                         topo->cnt[i].eth_table[j].randmac,
-                         topo->cnt[i].eth_table[j].vhost_ifname);
-
-KERR("%hhu %hhu %hhu %hhu %hhu %hhu", 
-topo->cnt[i].eth_table[j].mac_addr[0],
-topo->cnt[i].eth_table[j].mac_addr[1],
-topo->cnt[i].eth_table[j].mac_addr[2],
-topo->cnt[i].eth_table[j].mac_addr[3],
-topo->cnt[i].eth_table[j].mac_addr[4],
-topo->cnt[i].eth_table[j].mac_addr[5]);
-
-KERR("%hhu %hhu %hhu %hhu %hhu %hhu", 
-ref->cnt[i].eth_table[j].mac_addr[0],
-ref->cnt[i].eth_table[j].mac_addr[1],
-ref->cnt[i].eth_table[j].mac_addr[2],
-ref->cnt[i].eth_table[j].mac_addr[3],
-ref->cnt[i].eth_table[j].mac_addr[4],
-ref->cnt[i].eth_table[j].mac_addr[5]);
-
-        KERR("%d %d %s", ref->cnt[i].eth_table[j].endp_type,
-                         ref->cnt[i].eth_table[j].randmac,
-                         ref->cnt[i].eth_table[j].vhost_ifname);
-
-}
         return (1000+i);
         }
       }

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -67,6 +67,7 @@ int msg_send_del_lan_endp(int ovsreq, char *name, int num,
 
 
 void msg_lan_add_name(char *name);
+void msg_lan_add_rstp(char *name);
 void msg_lan_del_name(char *name);
 
 int msg_ovsreq_get_qty(void);

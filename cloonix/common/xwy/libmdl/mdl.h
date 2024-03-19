@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -70,6 +70,7 @@ enum
   action_dae,
   action_get,
   action_put,
+  action_crun,
 };
 
 enum
@@ -122,6 +123,7 @@ enum
   msg_type_data_pty,
   msg_type_open_bash,
   msg_type_open_cmd,
+  msg_type_open_crun,
   msg_type_open_dae,
   msg_type_win_size,
   msg_type_data_cli_pty,
@@ -189,4 +191,10 @@ char *mdl_argv_linear(char **argv);
 FILE *mdl_argv_popen(char *argv[]);
 
 void mdl_heartbeat(void);
+
+typedef void (*t_xtimeout)(void *data);
+void cloonix_timeout_add(int nb_beats, t_xtimeout cb, void *data);
+void cloonix_timer_beat(void);
+void cloonix_timer_init(void);
+
 

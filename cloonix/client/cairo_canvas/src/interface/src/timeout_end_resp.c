@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -42,7 +42,7 @@ static void create_node_resp(t_topo_kvm *kvm)
   int32_t thidden_on_graph[MAX_ETH_VM];
 
   get_node_layout_x_y(kvm->name, &x, &y, &hidden_on_graph, 
-                      tx, ty, thidden_on_graph);
+                      tx, ty, thidden_on_graph, 1);
 
   bank_node_create(kvm->name, kvm->linux_kernel, kvm->rootfs_used, 
                    kvm->rootfs_backing,  kvm->install_cdrom,
@@ -63,7 +63,7 @@ static void create_cnt_resp(t_topo_cnt *cnt)
   int32_t thidden_on_graph[MAX_ETH_VM];
 
   get_node_layout_x_y(cnt->name, &x, &y, &hidden_on_graph,
-                      tx, ty, thidden_on_graph);
+                      tx, ty, thidden_on_graph, 0);
 
   bank_cnt_create(cnt->brandtype, cnt->name, cnt->image, cnt->vm_id, 
                   cnt->ping_ok, cnt->nb_tot_eth, cnt->eth_table,

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -232,7 +232,7 @@ static void doorways_end(int llid)
 {
   int cli_idx = get_doors_cli_idx(llid);
   if (cli_idx == -1)
-    XERR("%d", llid);
+    XERR("WARNING %d", llid);
   else
     {
     xcli_killed_x11(cli_idx);
@@ -245,8 +245,7 @@ static void doorways_end(int llid)
 static void doorways_rx(int llid,int tid,int type,int val,int len,char *buf)
 {
   int cli_idx;
-  if ((type == doors_type_xwy_main_traf) ||
-      (type == doors_type_xwy_x11_flow))
+  if ((type == doors_type_xwy_main_traf) || (type == doors_type_xwy_x11_flow))
     {
     if (val == doors_val_link_ko)
       XOUT("%d %d %s %d", type, val, buf, len);
@@ -265,7 +264,7 @@ static void doorways_rx(int llid,int tid,int type,int val,int len,char *buf)
       XOUT("%d", val);
     }
   else
-    XOUT("%d", type);
+    XOUT("ERROR type:%d", type);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -306,7 +305,7 @@ void xdoors_connect_init(uint32_t ip, int port, char *passwd,
   g_cmd = cmd;
   g_src = src;
   g_dst = dst;
-  clownix_timeout_add(100, timout_connect, NULL, NULL, NULL);
+  cloonix_timeout_add(100, timout_connect, NULL);
   msg_mngt_heartbeat_init(heartbeat);
   memset(g_passwd, 0, MSG_DIGEST_LEN);
   strncpy(g_passwd, passwd, MSG_DIGEST_LEN-1);

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -18,7 +18,7 @@
 void sched_inc_queue_stored(int id, uint64_t len);
 void sched_dec_queue_stored(int id, uint64_t len);
 void sched_mngt(int id, uint64_t current_usec, uint64_t delta_usec);
-int sched_can_enqueue(int id, uint64_t len);
+int sched_can_enqueue(int id, uint64_t len, uint8_t *buf);
 void sched_cnf(int dir, char *type, int val);
 void sched_init(void);
 /*--------------------------------------------------------------------------*/

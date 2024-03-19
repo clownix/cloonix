@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -76,10 +76,10 @@ int fd_spy_add(int fd, int fd_type, int line)
   char *type;
 
   if (fd < 0)
-    XOUT("%d wrap line:%d", fd, line);
+    XOUT("ERROR %d wrap line:%d", fd, line);
 
   if (fd >= MAX_FD_NUM)
-    XERR("Too big fd:%d max:%d wrap line:%d", fd, MAX_FD_NUM, line);
+    XERR("WARNING Too big fd:%d max:%d wrap line:%d", fd, MAX_FD_NUM, line);
   else
     {
     result = 0;
@@ -87,7 +87,7 @@ int fd_spy_add(int fd, int fd_type, int line)
     if (fd_spy)
       {
       type = debug_get_fd_type_txt(fd_spy->type);
-      XERR("FD EXISTS %d %s", fd, type);
+      XERR("WARNING FD EXISTS %d %s", fd, type);
       }
     else
       {
@@ -113,7 +113,7 @@ void fd_spy_modify(int fd, int fd_type)
   fd_spy = g_fd_spy[fd];
   if (!fd_spy)
     {
-    XERR("FD DOES NOT EXIST %d", fd);
+    XERR("WARNING FD DOES NOT EXIST %d", fd);
     }
   else
     {
@@ -150,7 +150,7 @@ void fd_spy_heartbeat(void)
   t_fd_spy *fd_spy;
   char *type;
   int i;
-  debug_evt("FD_SPY BEGIN");
+  debug_evt("FD_SPY BEGIN -------------------");
   for (i=0; i<MAX_FD_NUM; i++)
     {
     fd_spy = g_fd_spy[i];
@@ -160,7 +160,7 @@ void fd_spy_heartbeat(void)
       debug_evt("FD_SPY %d %s", fd_spy->fd, type);
       }
     }
-  debug_evt("FD_SPY END");
+  debug_evt("FD_SPY END --------------------");
 #endif
 }
 /*---------------------------------------------------------------------------*/

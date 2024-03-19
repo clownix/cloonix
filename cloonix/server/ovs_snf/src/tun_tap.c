@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -51,6 +51,35 @@ typedef struct t_mac_src
 
 static t_mac_src *g_head_mac_tx;
 static t_mac_src *g_head_mac_rx;
+
+/*****************************************************************************/
+/*
+static void dump_macs(void)
+{
+  t_mac_src *cur;
+  uint8_t *mac;
+  KERR("%s TX", g_tap_name);
+  cur = g_head_mac_tx;
+  while(cur)
+    {
+    mac = cur->mac;
+    KERR("%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX",
+          mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    cur = cur->next;
+    }
+  KERR("%s RX", g_tap_name);
+  cur = g_head_mac_rx;
+  while(cur)
+    {
+    mac = cur->mac;
+    KERR("%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX",
+          mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    cur = cur->next;
+    }
+  KERR("%s END", g_tap_name);
+}
+*/
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static t_mac_src *find_mac(int tx, uint8_t *mac)
@@ -231,6 +260,7 @@ void tun_tap_add_mac(int tx, char *mac_spyed_on)
       cur->next = g_head_mac_rx;
       g_head_mac_rx = cur;
       }
+//    dump_macs();
     }
 }
 /*---------------------------------------------------------------------------*/

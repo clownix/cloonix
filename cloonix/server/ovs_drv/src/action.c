@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -119,6 +119,21 @@ void action_add_lan(char *bin, char *db, char *respb, char *lan)
   else
     {
     snprintf(respb, MAX_PATH_LEN-1, "OK ovs_add_lan lan=%s", lan);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void action_add_lan_rstp(char *bin, char *db, char *respb, char *lan)
+{
+  if (ovs_cmd_add_lan_rstp(bin, db, lan))
+    {
+    snprintf(respb, MAX_PATH_LEN-1, "KO ovs_add_lan_rstp lan=%s", lan);
+    KERR("%s", respb);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1, "OK ovs_add_lan_rstp lan=%s", lan);
     }
 }
 /*---------------------------------------------------------------------------*/

@@ -2,10 +2,9 @@
 set -e
 
 LIST="fedora39 \
-      centos9  \
       jammy    \
       bookworm \
-      opensuse155"
+      trixie"
 
 sudo echo "sudoer rights given"
 mkdir -p /var/lib/cloonix/bulk

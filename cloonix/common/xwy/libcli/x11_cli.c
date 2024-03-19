@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -66,7 +66,6 @@ void xcli_killed_x11(int cli_idx)
     if (in_zero == 0)
       { 
       in_zero = 1;
-      XERR("%d", cli_idx);
       for (i=1; i<MAX_IDX_X11; i++)
         {
         if (g_conn[i])
@@ -77,7 +76,7 @@ void xcli_killed_x11(int cli_idx)
     }
   else if (!conn)
     {
-    XERR("%d", cli_idx);
+    XERR("WARNING %d", cli_idx);
     }
   else
     {
@@ -284,7 +283,7 @@ int x11_fd_epollin_epollout_action(uint32_t evts, int fd)
           result += 1;
           if (read_from_x11(conn, fd))
             {
-            XERR("%d", i);
+            XERR("WARNING %d", i);
             xcli_killed_x11(i);
             }
           }
@@ -293,7 +292,7 @@ int x11_fd_epollin_epollout_action(uint32_t evts, int fd)
           result += 1;
           if (x11_tx_ready(fd))
             {
-            XERR("%d", i);
+            XERR("WARNING %d", i);
             xcli_killed_x11(i);
             }
           }

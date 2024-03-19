@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -296,6 +296,7 @@ static int ovs_cmd_add_aphy(char *ovs_bin, char *ovs_dir, char *name,
                             char *vhost, char *mac)
 {
   int result;
+
   if (change_mac_address(ovs_dir, name, mac))
     KERR("ERROR %s %s %s", name, vhost, mac);
   else if (put_in_namespace(ovs_dir, name))
@@ -339,6 +340,7 @@ static int ovs_cmd_add_mphy(char *ovs_bin, char *ovs_dir, char *name,
   int result = 0;
   char *argv[NB_ARG];
   char macvlan[MAX_NAME_LEN];
+
   tmpnum += 1;
   if (tmpnum == 100)
     tmpnum = 1;
@@ -1034,7 +1036,7 @@ static void cloonix_part_init(char **argv)
            BASE_NAMESPACE, get_net_name());
 }
 /*---------------------------------------------------------------------------*/
-
+ 
 /*****************************************************************************/
 int main (int argc, char *iargv[])
 {
@@ -1080,17 +1082,6 @@ int main (int argc, char *iargv[])
   argv[2] = "add";
   argv[3] = get_ns();
   call_ovs_popen(g_ovs_dir, argv, 0, __FUNCTION__, 2);
-  memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
-  argv[1] = "-netns";
-  argv[2] = get_ns();
-  argv[3] = "link";
-  argv[4] = "set";
-  argv[5] = "lo";
-  argv[6] = "up";
-  call_ovs_popen(g_ovs_dir, argv, 0, __FUNCTION__, 3);
-  sync();
-  sleep(1);
   g_netns_pid = netns_open(g_net_name, &fd_rx_from_netns, &g_fd_tx_to_netns,
                            g_ovs_bin, g_ovs_dir);
   llid = msg_watch_fd(fd_rx_from_netns, rx_netns_cb, rx_netns_err, "ovs");

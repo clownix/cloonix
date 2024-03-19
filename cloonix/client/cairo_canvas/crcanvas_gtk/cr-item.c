@@ -177,24 +177,6 @@ invalidated(CrItem *item, int mask,
                 x2 = MAX(MAX(MAX(ax1, ax2), bx1), bx2);
                 y2 = MAX(MAX(MAX(ay1, ay2), by1), by2);
 
-#if 0
-                /* For now device extents are exactly as specified, but maybe it
-                 * would be better to ignore the scale but pay attention to the
-                 * rotation.  The code below figures out a new set of bounds
-                 * for a rectangle that is rotated by angle assuming the anchor
-                 * point does not change. */
-                angle = atan2(matrix.yx, matrix.yy);
-
-                x1 = - h * sin(angle);
-                x2 = w * cos(angle);
-                y1 = w * sin(angle);
-                y2 = h * cos(angle);
-
-                device->x1 = (x1 < 0 ? x1 : 0) + (x2 < 0 ? x2 : 0);
-                device->y1 = (y1 < 0 ? y1 : 0) + (y2 < 0 ? y2 : 0);
-                device->x2 = (x1 > 0 ? x1 : 0) + (x2 > 0 ? x2 : 0);
-                device->y2 = (y1 > 0 ? y1 : 0) + (y2 > 0 ? y2 : 0);
-#endif
 
         }
 
@@ -473,19 +455,6 @@ invoke_test(CrItem *item, cairo_t *ct, double x, double y)
         return found;
 }
 
-void set_event_coords(GdkEvent *event, double x, double y)
-{
-        if (event->type == GDK_ENTER_NOTIFY || event->type ==
-                        GDK_LEAVE_NOTIFY) {
-                event->crossing.x = x;
-                event->crossing.y = y;
-        }
-        else {
-                event->motion.x = x;
-                event->motion.y = y;
-        }
-}
-
 static gboolean
 item_event(CrItem *item, GdkEvent *event, cairo_matrix_t *matrix, 
                 CrItem *pick_item)
@@ -501,29 +470,30 @@ item_event(CrItem *item, GdkEvent *event, cairo_matrix_t *matrix,
 }
 
 static gboolean
-invoke_event(CrItem *item, GdkEvent *event, cairo_matrix_t *matrix,
-                CrItem *pick_item)
+invoke_event(CrItem *item, GdkEvent *event, cairo_matrix_t *matrix, CrItem *pick_item)
 {
-        GdkEvent event_copy;
-        cairo_matrix_t matrix_copy;
-        double x, y;
-
-        /* The structs are copied because they will be modified.*/
-        event_copy = *event;
-        matrix_copy = *matrix;
-
-        /* The event chain is started up in device coordinates with this
-         * one-time call.  It is converted to item coordinates here.
-         * As the 'event' signal gets propagated up the item tree item
-         * transformation components are removed. */
-        if (gdk_event_get_coords(&event_copy, &x, &y)) {
-                cairo_matrix_invert(&matrix_copy);
-                cairo_matrix_transform_point( &matrix_copy, &x, &y);
-                cairo_matrix_invert(&matrix_copy);
-                set_event_coords(&event_copy, x, y);
-        }
-
-        return item_event(item, &event_copy, &matrix_copy, pick_item);
+  GdkEvent event_copy;
+  cairo_matrix_t matrix_copy = *matrix;
+  double x, y;
+  if (gdk_event_get_coords(event, &x, &y))
+    {
+    cairo_matrix_invert(&matrix_copy);
+    cairo_matrix_transform_point( &matrix_copy, &x, &y);
+    cairo_matrix_invert(&matrix_copy);
+    event_copy = *event;
+    if ((gdk_event_get_event_type(event) == GDK_ENTER_NOTIFY) ||
+        (gdk_event_get_event_type(event) == GDK_LEAVE_NOTIFY))
+      {
+      event_copy.crossing.x = x;
+      event_copy.crossing.y = y;
+      }
+    else
+      {
+      event_copy.motion.x = x;
+      event_copy.motion.y = y;
+      }
+    }
+  return item_event(item, &event_copy, &matrix_copy, pick_item);
 }
 
 /**
@@ -543,22 +513,7 @@ invoke_event(CrItem *item, GdkEvent *event, cairo_matrix_t *matrix,
 static gboolean
 event(CrItem *item, GdkEvent *event, cairo_matrix_t *matrix, CrItem *pick_item)
 {
-        double x, y;
-
-
-        if (item->matrix) {
-
-                /* this removes the effect of this local item so the proper
-                 * coordinates can be propagated up the item tree.*/
-                if (gdk_event_get_coords(event, &x, &y)) {
-                        cairo_matrix_transform_point(item->matrix, &x, &y);
-                        set_event_coords(event, x, y);
-                }
-                inverse_matrix(item);
-                cairo_matrix_multiply(matrix, item->matrix_i, matrix);
-        }
-
-        return FALSE;
+  return FALSE;
 }
 
 static inline gboolean

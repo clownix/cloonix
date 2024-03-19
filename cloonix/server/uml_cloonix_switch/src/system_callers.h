@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -17,7 +17,7 @@
 /*****************************************************************************/
 void mk_cnt_dir(void);
 void mk_endp_dir(void);
-void mk_dtach_dir(void);
+void mk_dtach_screen_dir(void);
 int unlink_sub_dir_files(char *dir, char *err);
 int unlink_sub_dir_files_except_dir(char *dir, char *err);
 

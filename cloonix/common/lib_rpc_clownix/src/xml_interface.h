@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -62,7 +62,11 @@
                          "  <cmd>  %s </cmd>\n"\
                          "</nat_cnf>"
 
-
+#define LAN_CNF          "<lan_cnf>"\
+                         "  <tid>  %d </tid>\n"\
+                         "  <name> %s </name>\n"\
+                         "  <cmd>  %s </cmd>\n"\
+                         "</lan_cnf>"
 
 /*---------------------------------------------------------------------------*/
 #define C2C_MAC_O        "<c2c_mac>\n"\
@@ -221,12 +225,6 @@
                               "  nb:%d \n"
 
 #define SLOWPERIODIC_IMG_C    "</slowperiodic_img>"
-/*---------------------------------------------------------------------------*/
-#define SLOWPERIODIC_PODMAN_O "<slowperiodic_podman>\n"\
-                              "  <tid> %d </tid>\n"\
-                              "  nb:%d \n"
-
-#define SLOWPERIODIC_PODMAN_C "</slowperiodic_podman>"
 /*---------------------------------------------------------------------------*/
 #define SLOWPERIODIC_SPIC  "<slowperiodic_spic>\n"\
                            "  name:%s \n"\

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -25,6 +25,7 @@ int ovs_cmd_add_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost);
 int ovs_cmd_del_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost);
 
 int ovs_cmd_add_lan(char *ovs_bin, char *ovs_dir, char *lan);
+int ovs_cmd_add_lan_rstp(char *ovs_bin, char *ovs_dir, char *lan);
 int ovs_cmd_del_lan(char *ovs_bin, char *ovs_dir, char *lan);
 
 /*---------------------------------------------------------------------------*/

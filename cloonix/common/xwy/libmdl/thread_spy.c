@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -113,7 +113,7 @@ void thread_spy_heartbeat(void)
   t_thread_spy *spy;
   char *type;
   int i;
-  debug_evt("THREAD_SPY BEGIN");
+  debug_evt("THREAD_SPY BEGIN -------------------");
   for (i=0; i<MAX_FD_NUM; i++)
     {
     spy = g_thread_spy_tx[i];
@@ -130,7 +130,7 @@ void thread_spy_heartbeat(void)
                  spy->fd, spy->fd_bis, spy->epfd, type);
       }
     }
-  debug_evt("THREAD_SPY END");
+  debug_evt("THREAD_SPY END ---------------------");
 #endif
 }
 /*---------------------------------------------------------------------------*/

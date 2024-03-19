@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -142,7 +142,7 @@ int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
   if (type != sfd->type) 
     XOUT("%d %d", type, sfd->type);
   if (val == doors_val_init_link)
-    clownix_timeout_add(1, time_doorways_rx, (void *) ul_llid, NULL, NULL);
+    cloonix_timeout_add(1, time_doorways_rx, (void *) ul_llid);
   else if (val == doors_val_xwy)
     simu_tx_send(llid, len, buf);
   else
@@ -203,7 +203,7 @@ void msg_mngt_loop(void)
     gettimeofday(&tv, NULL);
     if (heartbeat_10th_second(&tv))
       {
-      clownix_timer_beat();
+      cloonix_timer_beat();
       g_heartbeat(100);
       }
     }
@@ -277,7 +277,7 @@ int doorways_sock_client_inet_start(uint32_t ip, int port, t_fd_event conn_rx)
     XOUT("Cannot connect to: %s  port:%d", mdl_int_to_ip_string(ip), port);
   ul_fd = (unsigned long) fd;
   g_conn_rx = conn_rx; 
-  clownix_timeout_add(1, time_connect, (void *) ul_fd, NULL, NULL);
+  cloonix_timeout_add(1, time_connect, (void *) ul_fd);
   return (fd + 30);
 }
 /*---------------------------------------------------------------------------*/

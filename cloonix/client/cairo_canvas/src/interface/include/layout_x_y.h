@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -23,7 +23,7 @@ void set_node_layout_x_y(char *name,
 void get_node_layout_x_y(char *name, 
                          double *x, double *y, int *hidden_on_graph, 
                          double *tx, double *ty,
-                         int32_t *thidden_on_graph);
+                         int32_t *thidden_on_graph, int is_vm);
 /*---------------------------------------------------------------------------*/
 void set_gene_layout_x_y(int bank_type, char *name,
                          double x, double y, 

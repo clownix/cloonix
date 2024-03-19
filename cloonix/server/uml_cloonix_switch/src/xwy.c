@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -99,7 +99,7 @@ static int start_xwy(void *data)
 static void fatal_xwy_err(int llid)
 {
   if (llid != g_xwy_llid)
-    KOUT("%d %d", llid, g_xwy_llid);
+    KOUT("ERROR %d %d", llid, g_xwy_llid);
   if (!g_xwy_llid)
     KOUT(" ");
   llid_trace_free(g_xwy_llid, 0, __FUNCTION__);
@@ -113,7 +113,7 @@ static void fatal_xwy_err(int llid)
 static void xwy_err_cb (int llid, int err, int from)
 {
   if (g_xwy_kill_req ==0)
-    KERR("%d %d", err, from);
+    KERR("ERROR %d %d", err, from);
   fatal_xwy_err(llid);
 }
 /*---------------------------------------------------------------------------*/
@@ -127,7 +127,7 @@ static int xwy_rx_cb(int llid, int fd)
   len = util_read(buf, 2*MAX_PATH_LEN, fd);
   if (len < 0)
     {
-    KERR("%d", errno);
+    KERR("ERROR %d", errno);
     fatal_xwy_err(llid);
     }
   else
@@ -185,7 +185,7 @@ static void timer_monitor_xwy_pid(void *data)
       g_xwy_llid = 0;
       g_xwy_pid = 0;
       set_state(xwy_state_init);
-      KERR("%s", g_xwy_params.unix_control_sock);
+      KERR("ERROR %s", g_xwy_params.unix_control_sock);
       }
     }
   else if ((g_xwy_state == xwy_state_connected) ||
@@ -200,7 +200,7 @@ static void timer_monitor_xwy_pid(void *data)
     {
     count += 1;
     if (count == 5)
-      KERR(" ");
+      KERR("WARNING PID REQ");
     }
   else
     KOUT("%d", g_xwy_state);

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -271,11 +271,11 @@ void mk_endp_dir(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void mk_dtach_dir(void)
+void mk_dtach_screen_dir(void)
 {
   char err[2*MAX_PATH_LEN];
   if (unlink_sub_dir_files(utils_get_dtach_sock_dir(), err))
-    KERR("%s", err);
+    KERR("ERROR %s", err);
   my_mkdir(utils_get_dtach_sock_dir(), 0);
 }
 /*--------------------------------------------------------------------------*/

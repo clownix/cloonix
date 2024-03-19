@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -70,7 +70,6 @@ void *wrap_malloc(size_t size)
 /*****************************************************************************/
 void wrap_free(void *ptr, int line)
 {
-//  free(ptr);
   char *tmp;
   int i, j, size, idx;
   if (ptr)
@@ -184,7 +183,7 @@ static ssize_t write_wrwait(int s, const void *buf, long unsigned int len)
         len_done = 0;
       }
     if (len_done == 0)
-      usleep(5000);
+      usleep(10000);
     else
       offst += len_done;
     } while(offst != len);
@@ -393,6 +392,7 @@ int wrap_accept(int fd_listen, int fd_type, int is_tcp, const char *fct)
     wrap_sockoptset(fd, __FUNCTION__, fct);
     if (fd_spy_add(fd, fd_type, __LINE__))
       {
+      XERR("ERROR ACCEPT %s", fct);
       close(fd);
       fd = -1;
       }
@@ -469,28 +469,31 @@ void wrap_pty_make_controlling_tty(int ttyfd, char *name)
   int fd;
   fd = open("/dev/tty", O_RDWR | O_NOCTTY);
   if (fd >= 0)
-     {
-     (void) ioctl(fd, TIOCNOTTY, NULL);
-     close(fd);
-      }
-  fd = open("/dev/tty", O_RDWR | O_NOCTTY);
-  if (fd >= 0)
     {
-    XERR("Failed to disconnect from controlling tty.");
+    (void) ioctl(fd, TIOCNOTTY, NULL);
     close(fd);
+    fd = open("/dev/tty", O_RDWR | O_NOCTTY);
+    if (fd >= 0)
+      {
+      XERR("Failed to disconnect from controlling tty.");
+      close(fd);
+      }
+    else
+      {
+      if (ioctl(ttyfd, TIOCSCTTY, NULL) < 0)
+        XERR("ioctl(TIOCSCTTY): %.100s", strerror(errno));
+      fd = open(name, O_RDWR);
+      if (fd < 0)
+        XERR("%.100s: %.100s", name, strerror(errno));
+      else
+        close(fd);
+      fd = open("/dev/tty", O_WRONLY);
+      if (fd < 0)
+        XERR("could not set controlling tty: %.100s", strerror(errno));
+      else
+        close(fd);
+      }
     }
-  if (ioctl(ttyfd, TIOCSCTTY, NULL) < 0)
-    XERR("ioctl(TIOCSCTTY): %.100s", strerror(errno));
-  fd = open(name, O_RDWR);
-  if (fd < 0)
-    XERR("%.100s: %.100s", name, strerror(errno));
-  else
-    close(fd);
-  fd = open("/dev/tty", O_WRONLY);
-  if (fd < 0)
-    XERR("could not set controlling tty: %.100s", strerror(errno));
-  else
-   close(fd);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -531,8 +534,8 @@ int wrap_openpty(int *amaster, int *aslave, char *name, int fd_type)
 /****************************************************************************/
 int wrap_close(int fd, const char *fct)
 {
-  int result, srv_idx, cli_idx;
-  int fd_type = fd_spy_get_type(fd, &srv_idx, &cli_idx);
+  int fd_type, result, srv_idx, cli_idx;
+  fd_type = fd_spy_get_type(fd, &srv_idx, &cli_idx);
   result = close(fd);
   if (result == 0)
     {
@@ -541,13 +544,10 @@ int wrap_close(int fd, const char *fct)
            fd, fd_type, srv_idx, cli_idx, fct);
     fd_spy_del(fd);
     }
-  else
+  else if (fd_type > 0)
     {
-    if (fd_type > 0)
-      XERR("Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
-            fd, fd_type, srv_idx, cli_idx, fct);
-    XERR("close error fd:%d  %s %s srv_idx:%d cli_idx:%d",
-          fd, strerror(errno), fct, srv_idx, cli_idx);
+    XERR("ERROR Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
+         fd, fd_type, srv_idx, cli_idx, fct);
     }
   return result;
 }
@@ -572,7 +572,7 @@ int wrap_socket_listen_inet(unsigned long ip, int port,
     XOUT(" ");
   if (bind(s, (struct sockaddr*)&isock, sizeof(isock)) < 0)
     XOUT("bind error: %s", strerror(errno));
-  if (listen(s, 5) < 0)
+  if (listen(s, 15) < 0)
     XOUT("listen error: %s", strerror(errno));
   if (fd_spy_add(s, fd_type, __LINE__))
     {
@@ -612,7 +612,7 @@ int wrap_socket_listen_unix(char *path, int fd_type, const char *fct)
   strcpy(sockun.sun_path, path);
   if (bind(s, (struct sockaddr*)&sockun, sizeof(sockun)) < 0)
     XOUT("bind error: %s", strerror(errno));
-  if (listen(s, 5) < 0)
+  if (listen(s, 15) < 0)
     XOUT("listen error: %s", strerror(errno));
   if (chmod(path, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH))
     {

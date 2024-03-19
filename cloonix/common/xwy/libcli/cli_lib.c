@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2023 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -118,7 +118,9 @@ static void send_msg_type_open_pty(int action, uint32_t randid,
     {
     if (strlen(cmd) > MAX_MSG_LEN - 1)
       XOUT("%d", strlen(cmd));
-    if (action == action_cmd)
+    if (action == action_crun)
+      type = msg_type_open_crun;
+    else if (action == action_cmd)
       type = msg_type_open_cmd;
     else
       type = msg_type_open_dae;
@@ -211,7 +213,14 @@ static void rx_bash_err_cb (void *ptr, int llid, int fd, char *err)
 {
   (void) ptr;
   (void) fd;
-  XOUT("%s", err);
+  XOUT("ERROR %s", err);
+  exit(0);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void timout_end_connect(void *data)
+{
   exit(0);
 }
 /*--------------------------------------------------------------------------*/
@@ -237,8 +246,7 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
     case msg_type_end_cli_pty:
       low_write_fd(1);
       send_msg_type_end_ack(g_randid);
-      usleep(20000);
-      exit(msg->buf[0]);
+      cloonix_timeout_add(50, timout_end_connect, NULL);
       break;
 
     case msg_type_x11_init:
@@ -248,6 +256,7 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
       send_msg_type_open_pty(g_action, g_randid, srv_idx, g_bash_cmd);
       if ((g_action == action_bash) || 
           (g_action == action_dae)  ||
+          (g_action == action_crun)  ||
           (g_action == action_cmd))
         send_msg_type_win_size(g_randid);
       else
@@ -384,6 +393,7 @@ void xcli_fct_before_epoll(int epfd)
     }
   if ((g_action == action_bash) ||
       (g_action == action_dae)  ||
+      (g_action == action_crun)  ||
       (g_action == action_cmd))
     {
     if (g_action != action_dae)
@@ -420,6 +430,7 @@ void xcli_x11_doors_rx(int cli_idx, int len, char *buf)
 void xcli_traf_doors_rx(int llid, int len, char *buf)
 {
   if ((g_action == action_bash) ||
+      (g_action == action_crun)  ||
       (g_action == action_dae)  ||
       (g_action == action_cmd))
     mdl_read_data(NULL, llid, 0, len, buf, rx_bash_msg_cb, rx_bash_err_cb);
@@ -435,6 +446,7 @@ int xcli_fct_after_epoll(int nb, struct epoll_event *events)
   uint32_t evts; 
 
   if ((g_action == action_bash) ||
+      (g_action == action_crun)  ||
       (g_action == action_dae)  ||
       (g_action == action_cmd))
     {
@@ -498,6 +510,7 @@ void xcli_init(int epfd, int llid, int tid, int type,
   send_msg_type_randid(g_randid);
   if ((action == action_bash) ||
       (action == action_dae)  ||
+      (action == action_crun)  ||
       (action == action_cmd))
     {
     send_msg_type_x11_init(g_randid, get_x11_magic());
