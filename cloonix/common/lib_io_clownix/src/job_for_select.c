@@ -200,8 +200,10 @@ int job_for_select_request(void *hand, t_fct_job cb, void *data)
       jfs->glob_jobs[idx].data = data;
       cidx = (short) (idx & 0xFFFF);
       if (write(jfs->fd_request, &cidx, sizeof(cidx)) != sizeof(cidx))
-        KERR("%d", errno);
+        KERR("ERROR %d", errno);
       }
+    else
+      KERR("ERROR ALLOC");
     }
   return result;
 }

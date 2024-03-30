@@ -64,6 +64,8 @@ typedef struct t_snf
   int byte_tx;
   int byte_rx;
   t_fct_cb callback_process_up;
+  int cli_llid;
+  int cli_tid;
   struct t_snf *prev;
   struct t_snf *next;
 } t_snf;
@@ -349,7 +351,10 @@ void ovs_snf_poldiag_resp(int llid, int tid, char *line)
 void ovs_snf_sigdiag_resp(int llid, int tid, char *line)
 {
   char tap[MAX_NAME_LEN];
+  char name[MAX_NAME_LEN];
+  int num, status;
   t_snf *cur;
+  
   if (sscanf(line,
   "cloonsnf_suidroot_ko %s", tap) == 1)
     {
@@ -369,6 +374,22 @@ void ovs_snf_sigdiag_resp(int llid, int tid, char *line)
       {
       cur->suid_root_done = 1;
       cur->count = 0;
+      }
+    }
+  else if (sscanf(line,
+    "cloonsnf_sync_wireshark_resp %s %d %d", name, &num, &status))
+    {
+    cur = find_snf_with_name_num(name, num);
+    if (cur->cli_llid == 0)
+      KERR("ERROR snf: %s %s", g_cloonix_net, line);
+    else
+      {
+      if (!msg_exist_channel(cur->llid))
+        KERR("ERROR snf: %s %s", g_cloonix_net, line);
+      else
+        send_sync_wireshark_resp(cur->cli_llid,cur->cli_tid,name,num,status);
+      cur->cli_llid = 0;
+      cur->cli_tid = 0;
       }
     }
   else
@@ -595,6 +616,36 @@ int ovs_snf_send_del_snf_lan(char *name, int num, char *vhost, char *lan)
       result = msg_send_del_snf_lan(name, num, vhost, lan);
     }
   return (result);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void ovs_snf_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
+{
+  char msg[MAX_PATH_LEN];
+  t_snf *cur = find_snf_with_name_num(name, num);
+  if (cur)
+    {
+    if (cur->cli_llid)
+      {
+      KERR("WARNING ALREADY IN REQ %s %d", name, num);
+      send_sync_wireshark_resp(llid, tid, name, num, 1);
+      }
+    else
+      {
+      cur->cli_llid = llid;
+      cur->cli_tid = tid;
+      snprintf(msg, MAX_PATH_LEN-1,
+      "cloonsnf_sync_wireshark_req %s %d %d", name, num, cmd);
+      rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+      hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+      }
+    }
+  else
+    {
+    KERR("ERROR NOT FOUND REQ %s %d", name, num);
+    send_sync_wireshark_resp(llid, tid, name, num, 1);
+    }
 }
 /*--------------------------------------------------------------------------*/
 

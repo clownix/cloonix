@@ -54,7 +54,6 @@ enum {
   xwy_state_init = 8,
   xwy_state_conn_req,
   xwy_state_connected,
-  xwy_state_pid_req,
   xwy_state_pid_ok,
 };
 
@@ -62,6 +61,7 @@ static t_xwy_params g_xwy_params;
 static int g_xwy_kill_req;
 static int g_xwy_state;
 static int g_xwy_pid;
+static int g_xwy_doors_connect;
 static int g_xwy_last_pid;
 static int g_xwy_llid;
 
@@ -73,7 +73,6 @@ static void set_state(int xwy_state)
   if ((xwy_state == xwy_state_init)      ||
       (xwy_state == xwy_state_conn_req)  ||
       (xwy_state == xwy_state_connected) ||
-      (xwy_state == xwy_state_pid_req)   ||
       (xwy_state == xwy_state_pid_ok))
     g_xwy_state = xwy_state;
   else
@@ -105,6 +104,7 @@ static void fatal_xwy_err(int llid)
   llid_trace_free(g_xwy_llid, 0, __FUNCTION__);
   g_xwy_llid = 0;
   g_xwy_pid = 0;
+  g_xwy_doors_connect = 0;
   set_state(xwy_state_init);
 }
 /*---------------------------------------------------------------------------*/
@@ -136,11 +136,7 @@ static int xwy_rx_cb(int llid, int fd)
       {
       if (pid <= 0)
         KERR("%d", pid);
-      if (g_xwy_pid == 0)
-        {
-        xwy_request_doors_connect();
-        }
-      else if (g_xwy_pid != pid)
+      if ((g_xwy_pid) && (g_xwy_pid != pid))
         KERR("pid changed: %d %d", g_xwy_pid, pid);
       set_state(xwy_state_pid_ok);
       g_xwy_pid = pid;
@@ -150,6 +146,17 @@ static int xwy_rx_cb(int llid, int fd)
       KERR("%d %s", len, buf);
     }
   return len;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void reset_starting(void)
+{
+  llid_trace_free(g_xwy_llid, 0, __FUNCTION__);
+  g_xwy_llid = 0;
+  g_xwy_pid = 0;
+  g_xwy_doors_connect = 0;
+  set_state(xwy_state_init);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -170,41 +177,63 @@ static void timer_monitor_xwy_pid(void *data)
     }
   else if (g_xwy_state == xwy_state_conn_req)
     {
-    if (!util_nonblock_client_socket_unix(g_xwy_params.unix_control_sock, &fd))
+    if (util_nonblock_client_socket_unix(g_xwy_params.unix_control_sock, &fd))
       {
-      if (fd <= 0)
-        KOUT(" ");
-      g_xwy_llid = msg_watch_fd(fd, xwy_rx_cb, xwy_err_cb, "cloon");
-      if (g_xwy_llid == 0)
-        KOUT(" ");
-      llid_trace_alloc(g_xwy_llid,"CLOON",0,0, type_llid_trace_unix_xwy);
-      set_state(xwy_state_connected);
+      reset_starting();
+      KERR("ERROR %s", g_xwy_params.unix_control_sock);
       }
     else
       {
-      g_xwy_llid = 0;
-      g_xwy_pid = 0;
-      set_state(xwy_state_init);
-      KERR("ERROR %s", g_xwy_params.unix_control_sock);
+      if (fd < 0)
+        KOUT("ERROR");
+      g_xwy_llid = msg_watch_fd(fd, xwy_rx_cb, xwy_err_cb, "cloon");
+      if (g_xwy_llid == 0)
+        KOUT("ERROR");
+      llid_trace_alloc(g_xwy_llid,"CLOON",0,0, type_llid_trace_unix_xwy);
+      set_state(xwy_state_connected);
       }
     }
-  else if ((g_xwy_state == xwy_state_connected) ||
-           (g_xwy_state == xwy_state_pid_ok))
+  else if (g_xwy_state == xwy_state_connected)
     {
-    watch_tx(g_xwy_llid, strlen(CLOONIX_PID_REQ) + 1, CLOONIX_PID_REQ);
-    set_state(xwy_state_pid_req);
-    if (g_xwy_state == xwy_state_pid_ok)
-      count = 0;
+    if (!msg_exist_channel(g_xwy_llid))
+      {
+      reset_starting();
+      KERR("ERROR %s", g_xwy_params.unix_control_sock);
+      }
+    else
+      {
+      watch_tx(g_xwy_llid, strlen(CLOONIX_PID_REQ) + 1, CLOONIX_PID_REQ);
+      count += 1;
+      if (count > 5)
+        KERR("WARNING XWY PID REQ %d", count);
+      }
     }
-  else if (g_xwy_state == xwy_state_pid_req)
+ else if (g_xwy_state == xwy_state_pid_ok)
     {
-    count += 1;
-    if (count == 5)
-      KERR("WARNING PID REQ");
+    if (!msg_exist_channel(g_xwy_llid))
+      {
+      reset_starting();
+      KERR("ERROR %s", g_xwy_params.unix_control_sock);
+      }
+    else
+      {
+      count = 0;
+      watch_tx(g_xwy_llid, strlen(CLOONIX_PID_REQ) + 1, CLOONIX_PID_REQ);
+      if (g_xwy_doors_connect == 0)
+        g_xwy_doors_connect = 1;
+      else if (g_xwy_doors_connect == 1)
+        {
+        g_xwy_doors_connect = 2;
+        xwy_request_doors_connect();
+        }
+      }
     }
   else
     KOUT("%d", g_xwy_state);
-  clownix_timeout_add(500, timer_monitor_xwy_pid, NULL, NULL, NULL);
+  if (g_xwy_state == xwy_state_pid_ok)
+    clownix_timeout_add(200, timer_monitor_xwy_pid, NULL, NULL, NULL);
+  else
+    clownix_timeout_add(10, timer_monitor_xwy_pid, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -235,10 +264,21 @@ void xwy_request_doors_connect(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int init_xwy_done(void)
+{
+  int result = 0;
+  if (g_xwy_doors_connect == 2)
+    result = 1;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void init_xwy(char *cloonix_net_name)
 {
   g_xwy_kill_req = 0;
   g_xwy_pid = 0;
+  g_xwy_doors_connect = 0;
   g_xwy_last_pid = 0;
   g_xwy_llid = 0;
   set_state(xwy_state_init);
@@ -253,7 +293,7 @@ void init_xwy(char *cloonix_net_name)
   snprintf(g_xwy_params.unix_control_sock, MAX_PATH_LEN, "%s/%s", 
                                    cfg_get_root_work(), XWY_CONTROL_SOCK);
   g_xwy_params.unix_control_sock[MAX_PATH_LEN-1] = 0;
-  clownix_timeout_add(500, timer_monitor_xwy_pid, NULL, NULL, NULL);
+  clownix_timeout_add(10, timer_monitor_xwy_pid, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

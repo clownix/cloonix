@@ -141,7 +141,7 @@ static void make_default_layout_node(t_layout_node *layout,
   if (is_vm)
     dia = NODE_DIA;
   else
-    dia = CNT_NODE_DIA;
+    dia = CNT_DIA;
   memset(layout, 0, sizeof(t_layout_node));
   strncpy(layout->name, name, MAX_NAME_LEN-1);
   layout->nb_eth = nb_eth;
@@ -1232,8 +1232,8 @@ void layout_topo_init(void)
     idx = idx/100;
     g_node_x_coord[i] =  (NODE_DIA * VAL_INTF_POS_NODE * (sin(idx)));
     g_node_y_coord[i] = -(NODE_DIA * VAL_INTF_POS_NODE * (cos(idx)));
-    g_cnt_x_coord[i] =  (CNT_NODE_DIA * VAL_INTF_POS_NODE * (sin(idx)));
-    g_cnt_y_coord[i] = -(CNT_NODE_DIA * VAL_INTF_POS_NODE * (cos(idx)));
+    g_cnt_x_coord[i] =  (CNT_DIA * VAL_INTF_POS_NODE * (sin(idx)));
+    g_cnt_y_coord[i] = -(CNT_DIA * VAL_INTF_POS_NODE * (cos(idx)));
     g_a2b_x_coord[i] =  (A2B_DIA * VAL_INTF_POS_A2B * (sin(idx)));
     g_a2b_y_coord[i] = -(A2B_DIA * VAL_INTF_POS_A2B * (cos(idx)));
     }

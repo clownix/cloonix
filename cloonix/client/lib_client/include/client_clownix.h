@@ -23,6 +23,7 @@ typedef void (*t_evt_stats_sysinfo_cb)(int tid, char *name,
                                        char *df, int status);
 
 typedef void (*t_list_commands_cb)(int tid, int qty, t_list_commands *list);
+typedef void (*t_sync_wireshark_cb)(int tid, char *name, int num, int status);
 typedef void (*t_progress_txt_cb)(int status, int last, char *txt);
 typedef void (*t_end_cb)(int tid, int status, char *err);
 typedef void (*t_get_path_cb)(int tid, t_topo_clc *conf);
@@ -114,6 +115,7 @@ char *to_ascii_topo_stats(t_topo_info *topo);
 
 
 
+void client_sync_wireshark(int tid, char *name, int num, int cmd, t_sync_wireshark_cb cb);
 void client_list_commands(int tid,  t_list_commands_cb cb);
 void client_lay_commands(int tid,  t_list_commands_cb cb);
 void client_sav_list_commands(int tid, t_list_commands_cb cb, char *dirpath);

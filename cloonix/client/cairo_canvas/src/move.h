@@ -20,8 +20,6 @@ void move_manager_translate(t_bank_item *bitem, double x1, double y1);
 void move_manager_rotate(t_bank_item *bitem, double x1, double y1);
 void move_manager_single_step(void);
 void move_init(void);
-void move_single_step (t_bank_item *bitem);
-void move_single_step_eth (t_bank_item *bitem);
 void move_bitem_eth (t_bank_item *bitem, double acc_x, double acc_y);
 void modif_position_generic(t_bank_item *bitem, double xi, double yi);
 void modif_position_layout(t_bank_item *bitem, double xi, double yi);

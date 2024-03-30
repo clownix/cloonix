@@ -421,16 +421,20 @@ static void child_death_catcher_signal(int n)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void pid_clone_kill_single(int pid)
+int pid_clone_kill_single(int pid)
 {
   int ident = pid_find_ident(pid);
+  int result = -1;
   if (ident)
-    kill(pid, SIGTERM);
+    {
+    kill(pid, SIGKILL);
+    result = 0;
+    }
   else
     KERR("WARNING BAD KILL %d", pid);
+  return result;
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 void pid_clone_kill_all(void)

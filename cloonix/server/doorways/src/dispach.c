@@ -31,7 +31,6 @@
 
 char *get_switch_path(void);
 
-
 typedef struct t_flow_ctrl
 {
   int ident_flow_timeout;
@@ -435,10 +434,11 @@ static void dispach_door_rx_spice(int dido_llid, int val, int len, char *buf)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
+static int dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
                                 int len, char *buf)
 {
   int inside_llid;
+  int result = 0;
   t_transfert *ilt, *olt;
   if (val == doors_val_init_link)
     {
@@ -447,14 +447,14 @@ static void dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
       KOUT("%d %d type:%d beat:%d", olt->dido_llid, olt->inside_llid,
                                     olt->type, olt->beat_count);
     inside_llid = llid_xwy_ctrl();
-    ilt = get_inside_transfert(inside_llid);
-    if (ilt)
-      KOUT("%d %d type:%d beat:%d", ilt->dido_llid, ilt->inside_llid,
-                                    ilt->type, ilt->beat_count);
-    if (!inside_llid)
-      doorways_tx(dido_llid, 0, type, doors_val_link_ko, 3, "KO");
+    if (inside_llid == 0)
+      result = 1;
     else
       {
+      ilt = get_inside_transfert(inside_llid);
+      if (ilt)
+        KOUT("%d %d type:%d beat:%d", ilt->dido_llid, ilt->inside_llid,
+                                      ilt->type, ilt->beat_count);
       doorways_tx(dido_llid,inside_llid,type,doors_val_link_ok,3,"OK");
       alloc_transfert(dido_llid, inside_llid, type);
       }
@@ -487,6 +487,7 @@ static void dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
     }
   else
     KOUT("%d", val);
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -560,7 +561,11 @@ void dispach_door_rx(int dido_llid, int tid, int type, int val,
 
     case doors_type_xwy_main_traf:
     case doors_type_xwy_x11_flow:
-      dispach_door_rx_xwy(type, dido_llid, tid, val, len, buf);
+      if (dispach_door_rx_xwy(type, dido_llid, tid, val, len, buf))
+        {
+        doorways_tx(dido_llid, 0, type, doors_val_link_ko, 3, "KO");
+        KERR("ERROR X11 %d %d %s", val, len, buf);
+        }
       break;
 
     default:

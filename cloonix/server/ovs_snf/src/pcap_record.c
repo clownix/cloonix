@@ -59,49 +59,16 @@ typedef struct pcaprec_hdr_s
   uint32_t orig_len;
 } pcaprec_hdr_s; 
 
-/*****************************************************************************/
-static void timer_pcap_record_start_phase1(void *data)
-{
-  if (mkfifo(g_pcap_file, 0666) == -1)
-    {
-    KERR("ERROR %s", strerror(errno));
-    g_working_ok = 0;
-    }
-  else
-    {
-    inotify_trigger_init(g_pcap_file);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void pcap_record_start_phase1(void)
-{
-  clownix_timeout_add(50, timer_pcap_record_start_phase1, NULL, NULL, NULL);
-}
-/*--------------------------------------------------------------------------*/
 
 
 /*****************************************************************************/
-void pcap_record_unlink(void)
-{
-  if (g_fd != -1)
-    close(g_fd);
-  unlink(g_pcap_file);
-  g_fd = -1;
-  g_working_ok = 0;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void pcap_record_close_and_reinit(void)
+void pcap_record_close(void)
 {
   if (g_fd != -1)
     close(g_fd);
   g_fd = -1;
   g_working_ok = 0;
   unlink(g_pcap_file);
-  pcap_record_start_phase1();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -124,6 +91,7 @@ void pcap_record_rx_packet(uint64_t usec, int len, uint8_t *buf)
       {
       KERR("ERROR SNIFFER: %d %d %s", ln, hlen, strerror(errno));
       g_working_ok = 0;
+      unlink(g_pcap_file);
       }
     else
       {
@@ -131,6 +99,7 @@ void pcap_record_rx_packet(uint64_t usec, int len, uint8_t *buf)
         {
         KERR("ERROR SNIFFER: %s", strerror(errno));
         g_working_ok = 0;
+        unlink(g_pcap_file);
         }
       }
     }
@@ -166,12 +135,29 @@ void pcap_record_start_phase2(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void timer_pcap_record_prepare(void *data)
+{
+  if (access(g_pcap_file, F_OK))
+    {
+    if (mkfifo(g_pcap_file, 0666) == -1)
+      {
+      KERR("ERROR mkfifo %s %s", g_pcap_file, strerror(errno));
+      g_working_ok = 0;
+      unlink(g_pcap_file);
+      }
+    else
+      inotify_trigger_init(g_pcap_file);
+    }
+  clownix_timeout_add(20, timer_pcap_record_prepare, NULL, NULL, NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void pcap_record_init(char *pcap_record)
 {
   memset(g_pcap_file, 0, MAX_PATH_LEN);
   strncpy(g_pcap_file, pcap_record, MAX_PATH_LEN-1); 
   g_fd = -1;
-  unlink(g_pcap_file);
-  pcap_record_start_phase1();
+  clownix_timeout_add(20, timer_pcap_record_prepare, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/

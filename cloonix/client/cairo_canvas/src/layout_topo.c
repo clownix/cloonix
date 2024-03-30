@@ -718,8 +718,8 @@ void layout_topo_init(void)
     {
     idx = (double) (2*i);
     idx = idx/100;
-    g_x_cnt_coord[i] =  (CNT_NODE_DIA * VAL_INTF_POS_NODE * (sin(idx)));
-    g_y_cnt_coord[i] = -(CNT_NODE_DIA * VAL_INTF_POS_NODE * (cos(idx)));
+    g_x_cnt_coord[i] =  (CNT_DIA * VAL_INTF_POS_NODE * (sin(idx)));
+    g_y_cnt_coord[i] = -(CNT_DIA * VAL_INTF_POS_NODE * (cos(idx)));
     g_x_node_coord[i] =  (NODE_DIA * VAL_INTF_POS_NODE * (sin(idx)));
     g_y_node_coord[i] = -(NODE_DIA * VAL_INTF_POS_NODE * (cos(idx)));
     g_x_a2b_coord[i] =  (A2B_DIA * VAL_INTF_POS_A2B * (sin(idx)));

@@ -559,6 +559,20 @@
 
 #define EVT_STATS_SYSINFOC "</evt_stats_sysinfo>\n"
 /*---------------------------------------------------------------------------*/
+#define SYNC_WIRESHARK_REQ "<sync_wireshark_req>\n"\
+                           "  <tid> %d </tid>\n"\
+                           "  <name> %s </name>\n"\
+                           "  <num> %d </num>\n"\
+                           "  <cmd> %d </cmd>\n"\
+                           "</sync_wireshark_req>\n"
+
+#define SYNC_WIRESHARK_RESP "<sync_wireshark_resp>\n"\
+                            "  <tid> %d </tid>\n"\
+                            "  <name> %s </name>\n"\
+                            "  <num> %d </num>\n"\
+                            "  <status> %d </status>\n"\
+                            "</sync_wireshark_resp>\n"
+/*---------------------------------------------------------------------------*/
 
 
 

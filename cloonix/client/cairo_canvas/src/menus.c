@@ -726,7 +726,8 @@ void wireshark_launch(int vm_id, char *name, int num)
   bcnt = look_for_cnt_with_id(name);
   if ((bitem) || (bnode) || (bcnt))
     {
-    start_wireshark(name, num);
+    if (start_wireshark(name, num))
+      KERR("ERROR: wireshark for %s %d", name, num);
     }
   else
     KERR("ERROR: wireshark for %s %d", name, num);

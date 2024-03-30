@@ -115,7 +115,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 
 #define MAX_POLAR_COORD 314
 #define NODE_DIA 75
-#define CNT_NODE_DIA 62
+#define CNT_DIA 62
 #define A2B_DIA 30 
 #define VAL_INTF_POS_NODE 0.5 
 #define VAL_INTF_POS_A2B 0.7 

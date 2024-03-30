@@ -233,5 +233,9 @@ void recv_evt_stats_sysinfo(int llid, int tid, char *network, char *name,
 }
 /*---------------------------------------------------------------------------*/
 
+void recv_sync_wireshark_resp(int llid,int tid,char *name,int num,int status)
+{KOUT(" ");}
+/*---------------------------------------------------------------------------*/
+
 
 

@@ -32,11 +32,18 @@
 #include "pid_clone.h"
 
 
+static GIOChannel* g_clone_io_channel;
+static guint g_clone_tag;
+static int g_clone_fd_request;
+static int g_clone_fd_ack;
+
 
 typedef gboolean (*t_glib_to_llid_cb)  (GIOChannel   *source,
                                         GIOCondition  condition,
                                         gpointer data);
 struct t_glib_to_llid_list;
+
+void pid_clone_harvest_death(void);
 
 /*--------------------------------------------------------------------------*/
 typedef struct t_glib_to_llid
@@ -214,6 +221,50 @@ int glib_connect_llid(int llid, int fd, t_doorways_rx cb, char *passwd)
   gtl->g_io_channel = g_io_channel_unix_new(gtl->fd);
   glib_prepare_rx_tx(gtl->llid);
   return gtl->llid;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+static gboolean glib_clone_cb (GIOChannel   *source,
+                               GIOCondition  condition,
+                               gpointer data)
+{
+  int rx_len;
+  char buf[10];
+  if (source != g_clone_io_channel)
+    {
+    KERR("ERROR glib");
+    return FALSE;
+    }
+  if (condition & G_IO_IN)
+    {
+    rx_len = read (g_clone_fd_ack, buf, 10);
+    if (rx_len < 0)
+      {
+      if ((errno != EAGAIN) && (errno != EINTR))
+        KERR("ERROR %d", errno);
+      }
+    else if (rx_len == 0)
+      KERR("ERROR CLOSE");
+    else
+      pid_clone_harvest_death();
+    }
+  else
+    KOUT("ERROR %X\n", condition);
+  g_source_remove (g_clone_tag);
+  g_clone_tag = g_io_add_watch(g_clone_io_channel,G_IO_IN,glib_clone_cb,NULL);
+  return FALSE;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void glib_pid_clone_init(int fd_request, int fd_ack)
+{
+  g_clone_fd_request = fd_request;
+  g_clone_fd_ack = fd_ack;
+  g_clone_io_channel = g_io_channel_unix_new(g_clone_fd_ack);
+  g_clone_tag = g_io_add_watch(g_clone_io_channel, G_IO_IN, glib_clone_cb, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

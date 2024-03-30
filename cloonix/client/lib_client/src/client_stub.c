@@ -356,6 +356,8 @@ void recv_nat_add(int llid, int tid, char *name)
 void recv_phy_add(int llid, int tid, char *name, int type)
 {KOUT(" ");}
 
+void recv_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
+{KOUT(" ");}
 /*--------------------------------------------------------------------------*/
 
 

@@ -105,6 +105,13 @@ void to_cloonix_switch_create_sat(char *name, int endp_type,
     memcpy(&(pa->c2c_req_info), c2c_req_info, sizeof(t_c2c_req_info));
   pa->x = x;
   pa->y = y;
+  if (endp_type == endp_type_a2b)
+    {
+    pa->xa = (double) (-A2B_DIA * VAL_INTF_POS_NODE);
+    pa->ya = (double) (A2B_DIA * VAL_INTF_POS_NODE);
+    pa->xb = (double) (A2B_DIA * VAL_INTF_POS_NODE);
+    pa->yb = (double) (A2B_DIA * VAL_INTF_POS_NODE);
+    }
   clownix_timeout_add(1, timer_create_item_req, (void *)pa, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/

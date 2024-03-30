@@ -853,7 +853,7 @@ static void action_bvm_connect_backdoor(t_backdoor_vm *bvm)
 static void timer_bvm_connect_backdoor(void *data)
 { 
   t_backdoor_vm *bvm = (t_backdoor_vm *) data;
-  if ((!bvm) || (!bvm->name))
+  if (!bvm)
     KOUT(" ");
   bvm->connect_abs_beat_timer = 0;
   bvm->connect_ref_timer = 0;

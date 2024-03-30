@@ -104,7 +104,7 @@ int llid_xwy_ctrl(void)
       KERR("COULD NOT CONNECT %s", g_xwy_path);
     }
   else
-    KERR("COULD NOT CONNECT NO PATH");
+    KERR("DOOR XWY CONNECT PATH NOT READY");
   return llid;
 }
 /*---------------------------------------------------------------------------*/

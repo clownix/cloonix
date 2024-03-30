@@ -37,6 +37,7 @@
 #include "pcap_record.h"
 #include "eventfull.h"
 #include "tun_tap.h"
+#include "inotify_trigger.h"
 
 
 
@@ -100,6 +101,7 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 /****************************************************************************/
 void rpct_recv_kil_req(int llid, int tid)
 {
+
   unlink(g_ctrl_path);
   unlink(g_snf_path);
   exit(0);
@@ -118,6 +120,8 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   char resp[MAX_PATH_LEN];
   char mac[MAX_NAME_LEN];
+  char name[MAX_NAME_LEN];
+  int num, status, cmd;
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
     KERR("%s %d %d", g_net_name, llid, g_llid);
@@ -158,6 +162,37 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     {
     tun_tap_purge_mac();
     }
+  else if (sscanf(line,
+  "cloonsnf_sync_wireshark_req %s %d %d", name, &num, &cmd) == 3) 
+    {
+    if (cmd)
+      {
+KERR("VIPTODO WIRESHARK CMD RESET %d", inotify_get_state());
+      status = 2;
+      close_pcap_record();
+      snprintf(resp, MAX_PATH_LEN-1,
+               "cloonsnf_sync_wireshark_resp %s %d %d",
+               name, num, status);
+      rpct_send_sigdiag_msg(llid, tid, resp);
+      } 
+    else
+      {
+      if ((!access(g_ctrl_path, F_OK)) && (!inotify_get_state()))
+        {
+KERR("VIPTODO WIRESHARK OOOOOO %d", inotify_get_state());
+        status = 0;
+        }
+      else
+        {
+        KERR("WARNING WIRESHARK SPY NOT READY %d", inotify_get_state());
+        status = 1;
+        }
+      snprintf(resp, MAX_PATH_LEN-1,
+               "cloonsnf_sync_wireshark_resp %s %d %d",
+               name, num, status);
+      rpct_send_sigdiag_msg(llid, tid, resp);
+      }
+    }
   else
     KERR("ERROR %s %s", g_net_name, line);
 }
@@ -194,7 +229,7 @@ static void fct_timeout_self_destruct(void *data)
 {
   if (g_watchdog_ok == 0)
     {
-    KERR("XYX DPDK SELF DESTRUCT WATCHDOG %s %s", g_net_name, g_snf_name);
+    KERR("XYX SELF DESTRUCT WATCHDOG %s %s", g_net_name, g_snf_name);
     KOUT("EXIT");
     }
   g_watchdog_ok = 0;
@@ -235,8 +270,6 @@ int main (int argc, char *argv[])
 
   msg_mngt_init("snf", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
-  pcap_record_init(g_snf_path);
-  eventfull_init(g_snf_name);
   fd = open(g_netns_namespace, O_RDONLY|O_CLOEXEC);
   if (fd < 0) 
     KOUT(" ");
@@ -257,6 +290,8 @@ int main (int argc, char *argv[])
     }
   string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");
   daemon(0,0);
+  eventfull_init(g_snf_name);
+  pcap_record_init(g_snf_path);
   seteuid(getuid());
   cloonix_set_pid(getpid());
   clownix_timeout_add(1500, fct_timeout_self_destruct, NULL, NULL, NULL);

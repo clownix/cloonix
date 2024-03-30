@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int init_xwy_done(void);
 int xwy_pid(void);
 void xwy_request_doors_connect(void);
 void kill_xwy(void);

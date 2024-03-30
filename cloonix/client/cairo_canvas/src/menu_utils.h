@@ -34,7 +34,7 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm);
 GtkWidget *canvas_cursors(void);
 void crun_item_rsh(GtkWidget *mn, t_item_ident *pm);
 void topo_delete(GtkWidget *mn);
-void start_wireshark(char *name, int num);
+int start_wireshark(char *name, int num);
 
 
 

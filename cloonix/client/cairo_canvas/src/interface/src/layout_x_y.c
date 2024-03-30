@@ -148,7 +148,7 @@ void get_node_layout_x_y(char *name,
   if (is_vm)
     dia = NODE_DIA;
   else
-    dia = CNT_NODE_DIA;
+    dia = CNT_DIA;
   while (cur && strcmp(cur->name, name))
     cur = cur->next;
   if (cur)
@@ -211,6 +211,7 @@ void set_gene_layout_x_y(int bank_type, char *name,
     vtl->next->prev = vtl;
   vtl->prev = NULL;
   head_gene_layout = vtl;
+KERR("VIPTODO %d %s %lf %lf   %lf %lf %lf %lf", bank_type, name, x,y,xa,ya,xb,yb);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -222,13 +223,21 @@ void get_gene_layout_x_y(int bank_type, char *name,
                          int *hidden_on_graph)
 {
   t_gene_layout *cur = head_gene_layout;
-  while (cur && 
-        (!((bank_type == cur->bank_type) && (!strcmp(cur->name, name)))))
+  while (cur)
+    {
+    if ((bank_type == cur->bank_type) && (!strcmp(cur->name, name)))
+      break;
     cur = cur->next;
+    }
   if (!cur)
     {
+    KERR("WARNING %d %s NOT FOUND", bank_type, name);
     *x = START_POS;
     *y = START_POS;
+    *xa = 0;
+    *ya = 0;
+    *xb = 0;
+    *yb = 0;
     *hidden_on_graph = 0;
     topo_get_matrix_inv_transform_point(x, y);
     }
@@ -242,6 +251,7 @@ void get_gene_layout_x_y(int bank_type, char *name,
     *yb = cur->yb;
     *hidden_on_graph = cur->hidden_on_graph;
     unset_gene_layout(bank_type, name);
+KERR("VIPTODO %d %s %lf %lf   %lf %lf %lf %lf", bank_type, name, *x,*y,*xa,*ya,*xb,*yb);
     }
 }
 /*--------------------------------------------------------------------------*/

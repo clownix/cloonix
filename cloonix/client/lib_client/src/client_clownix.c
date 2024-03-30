@@ -31,6 +31,7 @@
 
 static int g_llid;
 static int g_connect_llid;
+static t_sync_wireshark_cb clownix_sync_wireshark_cb;
 static t_list_commands_cb clownix_list_commands_cb;
 static t_pid_cb   clownix_pid_cb;
 static t_print_cb clownix_print_cb;
@@ -161,6 +162,18 @@ void recv_list_pid_resp(int llid, int tid, int qty, t_pid_lst *pid)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+void recv_sync_wireshark_resp(int llid, int tid, char *name, int num, int status)
+{
+  if (!msg_exist_channel(llid))
+    KOUT(" ");
+  if (clownix_sync_wireshark_cb)
+    clownix_sync_wireshark_cb(tid, name, num, status);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(llid);
+#endif 
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void recv_list_commands_resp(int llid, int tid, int qty, t_list_commands *list)
@@ -348,6 +361,20 @@ void client_req_pids(int tid, t_pid_cb cb)
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif  
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void client_sync_wireshark(int tid, char *name, int num, int cmd,
+                           t_sync_wireshark_cb cb)
+{
+  if (!g_llid)
+    KOUT(" ");
+  clownix_sync_wireshark_cb = cb;
+  send_sync_wireshark_req(g_llid, tid, name, num, cmd);
+#ifdef WITH_GLIB  
+  glib_prepare_rx_tx(g_llid);
+#endif 
 }
 /*---------------------------------------------------------------------------*/
 

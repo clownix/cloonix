@@ -29,7 +29,7 @@ int clone_popen(char *exe, char *argv[]);
 char *pid_get_clone_internal_com(void);
 
 void pid_clone_kill_all(void);
-void pid_clone_kill_single(int pid);
+int pid_clone_kill_single(int pid);
 
 void kerr_running_pids(void);
 

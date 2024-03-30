@@ -46,9 +46,9 @@ http://clownix.net/downloads/cloonix-35
 INSTALLATION:
 ------------
 
-wget http://clownix.net/downloads/cloonix-35/cloonix-bundle-35-00.tar.gz
-tar xvf cloonix-bundle-35-00.tar.gz
-cd cloonix-bundle-35-00
+wget http://clownix.net/downloads/cloonix-35/cloonix-bundle-35-01.tar.gz
+tar xvf cloonix-bundle-35-01.tar.gz
+cd cloonix-bundle-35-01
 sudo ./install_cloonix
 
 ==============================================================================
@@ -86,7 +86,7 @@ wget http://clownix.net/downloads/cloonix-35/bulk/busybox.zip
 LAUNCH PING SCRIPT:
 -------------------
 
-cd cloonix-bundle-35-00
+cd cloonix-bundle-35-01
 
 ./ping_kvm.sh
 
@@ -137,5 +137,34 @@ Then try cloonix from within the podman:
 
 cloonix_net nemo
 cloonix_gui nemo
-
 -----------------------------------------------------------------------------
+
+==============================================================================
+FRR DEMO INSIDE CLOONIX INSIDE PODMAN:
+--------------------------------------
+
+Build the podman with the help of:
+cloonix-35-01/quickstart/cnt_create/custom/frr/doitall
+
+Or download and install podman cnt_frr_cloonix:
+
+wget http://clownix.net/downloads/cloonix-35/bulk/cnt_frr_cloonix.tar
+podman load --input cnt_frr_cloonix.tar
+
+ID_IMAGE=$(podman images |grep cnt_frr_cloonix | awk "{print \$3}")
+podman run -it --privileged \
+           -e DISPLAY=:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
+           -v /lib/modules:/lib/modules $ID_IMAGE /bin/bash
+
+Then try the frr demo from within the podman:
+
+cd /root
+./spider_demo.sh
+
+Then double-click on one of the peripheral sodxx and do:
+traceroute sodyy
+
+FRR Ospf has played its routing role and the path is found.
+-----------------------------------------------------------------------------
+
+

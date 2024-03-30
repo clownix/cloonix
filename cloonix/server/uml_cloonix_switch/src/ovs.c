@@ -44,6 +44,7 @@
 #include "stats_counters.h"
 #include "kvm.h"
 #include "msg.h"
+#include "xwy.h"
 
 enum{
   msg_type_diag = 1,
@@ -678,7 +679,8 @@ int get_daemon_done(void)
   t_ovs *cur = g_head_ovs;
   if (cur)
     {
-    result = cur->daemon_done;
+    if ((cur->daemon_done) && init_xwy_done())
+      result = 1;
     } 
   return result;
 }

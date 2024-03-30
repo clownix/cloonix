@@ -267,6 +267,11 @@ void recv_list_commands_req(int llid, int tid, int is_layout);
 void send_list_commands_resp(int llid, int tid, int qty, t_list_commands *list);
 void recv_list_commands_resp(int llid, int tid, int qty, t_list_commands *list);
 
+void send_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd);
+void recv_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd);
+void send_sync_wireshark_resp(int llid,int tid,char *name,int num,int status);
+void recv_sync_wireshark_resp(int llid,int tid,char *name,int num,int status);
+
 void send_kill_uml_clownix(int llid, int tid);
 void recv_kill_uml_clownix(int llid, int tid);
 

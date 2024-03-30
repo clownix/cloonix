@@ -74,6 +74,7 @@ typedef struct t_params_bank_item
   int blink_tx;
   double position_x, position_y;
   double force_x, force_y;
+  double force_eth_x, force_eth_y;
   double velocity_x, velocity_y;
   double mass;
 } t_params_bank_item;
@@ -109,6 +110,14 @@ typedef struct t_list_bank_item
   struct t_list_bank_item *next;
   } t_list_bank_item;
 /*--------------------------------------------------------------------------*/
+typedef struct t_pid_wireshark
+  {
+  int pid;
+  int num;
+  struct t_pid_wireshark *prev;
+  struct t_pid_wireshark *next;
+  } t_pid_wireshark;
+/*--------------------------------------------------------------------------*/
 typedef struct t_bank_item
 {
   int  bank_type;
@@ -118,7 +127,7 @@ typedef struct t_bank_item
   int  spicy_gtk_pid;
   int  dtach_pid;
   int  crun_screen_pid;
-  int  wireshark_pid;
+  t_pid_wireshark *head_pid_wireshark;
   long long abs_beat_eua_timeout;
   int ref_eua_timeout;
   char tag[TOPO_MAX_NAME_LEN+1];
@@ -213,8 +222,8 @@ int bank_get_crun_screen_pid(char *name);
 void bank_set_crun_screen_pid(char *name, int val);
 int bank_get_spicy_gtk_pid(char *name);
 void bank_set_spicy_gtk_pid(char *name, int val);
-int bank_get_wireshark_pid(char *name);
-void bank_set_wireshark_pid(char *name, int val);
+int bank_get_wireshark_pid(char *name, int num);
+void bank_set_wireshark_pid(char *name, int num, int val);
 /*--------------------------------------------------------------------------*/
 
 

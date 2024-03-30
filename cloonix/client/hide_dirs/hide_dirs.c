@@ -231,16 +231,6 @@ static void set_env_global_cloonix(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void set_env_ice_global_cloonix(void)
-{
-  setenv("GST_PLUGIN_SYSTEM_PATH",
-  "/usr/libexec/cloonix/common/lib/gstreamer-1.0", 1);
-  setenv("GST_PLUGIN_SCANNER",
-  "/usr/libexec/cloonix/common/gst-plugin-scanner", 1);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 /*
 # The following private id_rsa corresponds to the id_rsa.pub that
 # is used in file step1_make_preconf_iso.sh for the cisco making.
@@ -584,10 +574,13 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     new_argv[2] = argv[2];
     new_argv[3] = "-dae";
     new_argv[4] = "/usr/libexec/cloonix/server/cloonix-wireshark";
-    new_argv[5] = "-o capture.no_interface_load:TRUE -o gui.ask_unsaved:FALSE";
-    new_argv[6] = "-k";
-    new_argv[7] = "-i";
-    new_argv[8] = sock;
+    new_argv[5] = "-o";
+    new_argv[6] = "capture.no_interface_load:TRUE";
+    new_argv[7] = "-o";
+    new_argv[8] = "gui.ask_unsaved:FALSE";
+    new_argv[9] = "-k";
+    new_argv[10] = "-i";
+    new_argv[11] = sock;
     }
 /*CLOONIX_OVS-----------------------*/
   else if (!strcmp("ovs", argv[1]))
@@ -650,7 +643,6 @@ int main(int argc, char *argv[])
     {
     init_log_cmd(argv[2]);
     }
-
   if (strcmp("ice", argv[1]))
     {
     assert(unshare(CLONE_NEWNS | CLONE_NEWUSER) == 0);
@@ -663,68 +655,26 @@ int main(int argc, char *argv[])
   if (initialise_new_argv(argc, argv, new_argv, ip, port, passwd))
     KOUT("ERROR10 PARAM %s", argv[1]);
 /*--------------------------------------------------------------------------*/
-/*CLOONIX_ICE-----------------------*/
-  if (!strcmp("ice", argv[1]))
-    {
-    pid = fork();
-    if (pid < 0)
-      KOUT("ERROR9 PARAM %s", argv[1]);
-    else if (pid == 0)
-      {
-      set_env_ice_global_cloonix();
-      log_ascii_cmd(new_argv);
-      execv(new_argv[0], new_argv);
-      }
-    }
+  set_env_global_cloonix();
+  log_ascii_cmd(new_argv);
 /*--------------------------------------------------------------------------*/
-/*CLOONIX_WSK-----------------------*/
-  else if (!strcmp("wsk", argv[1]))
+  if ((!strcmp("ice", argv[1])) ||
+      (!strcmp("wsk", argv[1])) ||
+      (!strcmp("rsh", argv[1])))
     {
     pid = fork();
     if (pid < 0)
       KOUT("ERROR10 PARAM %s", argv[1]);
     else if (pid == 0)
-      {
-      set_env_global_cloonix();
-      if (!strcmp("gui", argv[1]))
-        {
-        fd = open("/dev/null", O_WRONLY);
-        if (fd < 0)
-          KOUT("ERROR11 PARAM %s", argv[1]);
-        if (dup2(fd,STDOUT_FILENO) < 0)
-          KOUT("ERROR11 PARAM %s", argv[1]);
-        if (dup2(fd,STDERR_FILENO) < 0)
-          KOUT("ERROR11 PARAM %s", argv[1]);
-        }
-      log_ascii_cmd(new_argv);
       execv(new_argv[0], new_argv);
-      }
     }
-/*--------------------------------------------------------------------------*/
-/*CLOONIX_RSH-----------------------*/
-  else if (!strcmp("rsh", argv[1]))
-    {
- pid = fork();
-  if (pid < 0)
-    KOUT("ERROR11 PARAM %s", argv[1]);
-  if (pid == 0)
-    {
-    set_env_global_cloonix();
-    log_ascii_cmd(new_argv);
-    execv(new_argv[0], new_argv);
-    }
-    }
-/*--------------------------------------------------------------------------*/
-/*CLOONIX NOT WSK NOT ICE NOT RSH -----------------------*/
-/*--------------------------------------------------------------------------*/
   else
     {
     if ((!strcmp("osh", argv[1])) ||
         (!strcmp("ocp", argv[1])) ||
         (!strcmp("lsh", argv[1])))
       create_cloonix_private_id_rsa();
-    set_env_global_cloonix();
-    log_ascii_cmd(new_argv);
     execv(new_argv[0], new_argv);
     }
+/*--------------------------------------------------------------------------*/
 }

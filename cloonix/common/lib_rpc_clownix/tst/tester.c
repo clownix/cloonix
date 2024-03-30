@@ -111,6 +111,9 @@ static int count_lan_cnf = 0;
 static int count_c2c_cnf = 0;
 static int count_nat_cnf = 0;
 
+static int count_sync_wireshark_req = 0;
+static int count_sync_wireshark_resp= 0;
+
 /*****************************************************************************/
 static void print_all_count(void)
 {
@@ -186,6 +189,9 @@ static void print_all_count(void)
   printf("%d\n", count_lan_cnf);
   printf("%d\n", count_c2c_cnf);
   printf("%d\n", count_nat_cnf);
+
+  printf("%d\n", count_sync_wireshark_req);
+  printf("%d\n", count_sync_wireshark_resp);
 
   printf("END COUNT\n");
 }
@@ -1398,6 +1404,70 @@ void recv_evt_stats_sysinfo(int llid, int itid, char *inetwork, char *iname,
 }
 /*---------------------------------------------------------------------------*/
 
+
+/*****************************************************************************/
+void recv_sync_wireshark_req(int llid, int itid, char *iname, int inum, int icmd)
+{
+  static char name[MAX_NAME_LEN];
+  static int tid;
+  static int num;
+  static int cmd;
+  if (i_am_client)
+    {
+    if (count_sync_wireshark_req)
+      {
+      if (strcmp(iname, name))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (inum != num)
+        KOUT(" ");
+      if (icmd != cmd)
+        KOUT(" ");
+      }
+    tid = rand();
+    num = rand();
+    cmd = rand();
+    random_choice_str(name, MAX_NAME_LEN);
+    send_sync_wireshark_req(llid, tid, name, num, cmd);
+    }
+  else
+    send_sync_wireshark_req(llid, itid, iname, inum, icmd);
+  count_sync_wireshark_req++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_sync_wireshark_resp(int llid,int itid,char *iname,int inum, int istatus)
+{
+  static char name[MAX_NAME_LEN];
+  static int tid;
+  static int num;
+  static int status;
+  if (i_am_client)
+    {
+    if (count_sync_wireshark_resp)
+      {
+      if (strcmp(iname, name))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      if (inum != num)
+        KOUT(" ");
+      if (istatus != status)
+        KOUT(" ");
+      }
+    tid = rand();
+    num = rand();
+    status = rand();
+    random_choice_str(name, MAX_NAME_LEN);
+    send_sync_wireshark_resp(llid, tid, name, num, status);
+    }
+  else
+    send_sync_wireshark_resp(llid, itid, iname, inum, istatus);
+  count_sync_wireshark_resp++;
+}
+/*---------------------------------------------------------------------------*/
 
 
 
@@ -2857,6 +2927,9 @@ static void send_first_burst(int llid)
   recv_lan_cnf(llid, 0, NULL, NULL);
   recv_c2c_cnf(llid, 0, NULL, NULL);
   recv_nat_cnf(llid, 0, NULL, NULL);
+
+  recv_sync_wireshark_req(llid, 0, NULL, 0, 0);
+  recv_sync_wireshark_resp(llid, 0, NULL, 0, 0);
 }
 /*---------------------------------------------------------------------------*/
 

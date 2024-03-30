@@ -451,6 +451,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
           i++;
           }
         }
+      execv(argv[0], argv);
       }
     else
       {
@@ -499,8 +500,8 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
         }
       else
         XOUT("ERROR %d", action);
+      execv(argv[0], argv);
       }
-    execv(argv[0], argv);
     }
   else
     {

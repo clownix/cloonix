@@ -110,7 +110,8 @@ static void dialog_wake(int sock_fd, int srv_idx, int cli_idx, char *buf)
 static void terminate_thread(t_x11 *x11, int line, int fd)
 {
 //  if (line)
-//    XERR("LINE:%d (%d-%d) fd:%d", line, x11->srv_idx, x11->cli_idx, fd);
+//    XERR("TERMINATE THREAD LINE:%d (%d-%d) fd:%d",
+//          line, x11->srv_idx, x11->cli_idx, fd);
   x11->thread_on = 0;
   wrap_nonnonblock(x11->diag_thread_fd);
   dialog_send_killed(x11->diag_thread_fd, x11->sock_fd_ass,
@@ -252,13 +253,14 @@ static int read_from_x11(t_x11 *x11)
 /*****************************************************************************/
 static void *thread_x11(void *arg)
 {
-  int i, fd, result, fd_ass;
+  int i, fd, result, fd_ass, x11_fd;
   uint32_t evts;
   struct epoll_event events[MAX_EPOLL_EVENTS];
   t_x11 *x11 = (t_x11 *) arg;
   if (!x11)
     XOUT(" ");
   fd_ass = x11->sock_fd_ass;
+  x11_fd = x11->x11_fd;
   thread_spy_add(x11->sock_fd_ass, x11->x11_fd, x11->epfd, thread_type_x11);
   x11->epev_x11_fd = wrap_epoll_event_alloc(x11->epfd, x11->x11_fd, 4);
   x11->epev_soc_fd = wrap_epoll_event_alloc(x11->epfd, x11->sock_fd_ass, 5);
@@ -429,6 +431,8 @@ void thread_x11_start(int sock_fd_ass)
     XOUT("%d", sock_fd_ass);
   if (!(g_x11[sock_fd_ass]))
     XOUT("%d", sock_fd_ass);
+  if (g_x11[sock_fd_ass]->sock_fd_ass != sock_fd_ass)
+    XOUT("%d %d", sock_fd_ass, g_x11[sock_fd_ass]->sock_fd_ass);
   x11 = g_x11[sock_fd_ass];
   x11->thread_waiting = 0;
 }
@@ -458,6 +462,8 @@ void thread_x11_close(int sock_fd_ass)
     g_x11[sock_fd_ass] = NULL;
     wrap_free(x11, __LINE__);
     }
+  else
+    XERR("WARNING %s %d", __FUNCTION__, sock_fd_ass);
   wrap_mutex_unlock();
 }
 /*---------------------------------------------------------------------------*/

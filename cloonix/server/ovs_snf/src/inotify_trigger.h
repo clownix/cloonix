@@ -15,6 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void close_pcap_record(void);
+int inotify_get_state(void);
 void inotify_trigger_end(void);
 void inotify_trigger_init(char *path_file);
 /*---------------------------------------------------------------------------*/

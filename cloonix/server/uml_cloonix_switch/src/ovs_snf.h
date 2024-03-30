@@ -36,4 +36,5 @@ void ovs_snf_resp_msg_add_lan(int is_ko, char *vhost, char *name, int num, char 
 void ovs_snf_resp_msg_del_lan(int is_ko, char *vhost, char *name, int num, char *lan);
 void ovs_snf_resp_msg_vhost_up(int is_ko, char *vhost, char *name, int num);
 void ovs_snf_init(void);
+void ovs_snf_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd);
 /*--------------------------------------------------------------------------*/

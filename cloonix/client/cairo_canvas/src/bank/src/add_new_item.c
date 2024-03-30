@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <signal.h>
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "bank.h"
@@ -89,21 +90,23 @@ static void get_object_mass(t_bank_item *bitem)
 {
   switch(bitem->bank_type)
     {
+    case bank_type_lan:
+      bitem->pbi.mass = (double) 70;
+    break;
     case bank_type_node:
-      bitem->pbi.mass = (double) 200;
+      bitem->pbi.mass = (double) 100;
     break;
     case bank_type_cnt:
-      bitem->pbi.mass = (double) 120;
-    break;
-    case bank_type_eth:
-    case bank_type_lan:
-      bitem->pbi.mass = (double) 10;
+      bitem->pbi.mass = (double) 100;
     break;
     case bank_type_sat:
-      bitem->pbi.mass = (double) 80;
+      bitem->pbi.mass = (double) 100;
+    break;
+    case bank_type_eth:
+      bitem->pbi.mass = (double) 10;
     break;
     default:
-      bitem->pbi.mass = (double) 10;
+      bitem->pbi.mass = (double) 100;
     break;
     }
 }
@@ -274,6 +277,7 @@ static void attached_obj_associations_delete(t_bank_item *bitem)
 /****************************************************************************/
 static void attached_associations_delete(t_bank_item *bitem)
 {
+  t_pid_wireshark *next, *cur = bitem->head_pid_wireshark;
   switch (bitem->bank_type)
     {
     case bank_type_edge:
@@ -282,9 +286,24 @@ static void attached_associations_delete(t_bank_item *bitem)
 
     case bank_type_node:
     case bank_type_cnt:
+      if (bitem->spicy_gtk_pid)
+        kill(bitem->spicy_gtk_pid, SIGKILL);
+      if (bitem->dtach_pid)
+        kill(bitem->dtach_pid, SIGKILL);
+      if (bitem->crun_screen_pid)
+        kill(bitem->crun_screen_pid, SIGKILL);
     case bank_type_sat:
     case bank_type_eth:
     case bank_type_lan:
+
+      while(cur)
+        {
+        next = cur->next;
+        kill(cur->pid, SIGKILL);
+        bank_set_wireshark_pid(bitem->name, cur->num, 0);
+        cur = next;
+        }
+
       attached_obj_associations_delete(bitem);
       break;
 
@@ -456,7 +475,7 @@ static void write_cnt_name(t_bank_item *bitem)
   x0 = bitem->pbi.x0;
   y0 = bitem->pbi.y0;
   dy = -10;
-  dx = -CNT_NODE_DIA/2 + 12;
+  dx = -CNT_DIA/2 + 12;
   topo_cr_item_text(bitem, x0 + dx, y0 + dy, bitem->name);
 }
 /*--------------------------------------------------------------------------*/

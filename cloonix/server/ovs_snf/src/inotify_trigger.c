@@ -28,6 +28,21 @@
 #include "inotify_trigger.h"
 
 static int g_wd, g_fdnotify, g_llid;
+static int g_state;
+
+
+/****************************************************************************/
+void close_pcap_record(void)
+{
+KERR("VIPTODO INOTIFY DELETE ALL");
+  msg_delete_channel(g_llid);
+  inotify_rm_watch(g_fdnotify, g_wd);
+  close(g_wd);
+  close(g_fdnotify);
+  pcap_record_close();
+  g_state = 0;
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int rx_inot(int llid, int fd)
@@ -36,12 +51,12 @@ static int rx_inot(int llid, int fd)
   struct inotify_event *event = NULL;
   int len;
   if (fd != g_fdnotify)
-    KERR("%d %d", fd, g_fdnotify);
+    KERR("ERROR %d %d", fd, g_fdnotify);
   if (llid != g_llid)
-    KERR("%d %d", llid, g_llid);
+    KERR("ERROR %d %d", llid, g_llid);
   len = read(fd, buffer, sizeof(buffer));
   if (len < 0)
-    KERR("%s", strerror(errno));
+    KERR("ERROR %s", strerror(errno));
   else
     {
     event = (struct inotify_event *) buffer;
@@ -49,21 +64,33 @@ static int rx_inot(int llid, int fd)
       {
       if (event->mask & IN_OPEN)
         {
-        pcap_record_start_phase2();
+KERR("VIPTODO INOTIFY IN_OPEN %d", g_state);
+        if (g_state == 0)
+          {
+          pcap_record_start_phase2();
+          g_state = 1;
+          }
+        else if (g_state == 1)
+          {
+          g_state = 2;
+          }
+        else
+          {
+          KERR("ERROR INOTIFY IN_OPEN");
+          close_pcap_record();
+          }
         }
       else if (event->mask & IN_CLOSE)
         {
-        msg_delete_channel(llid);
-        inotify_rm_watch(g_fdnotify, g_wd); 
-        close(g_wd);
-        close(g_fdnotify);
-        pcap_record_close_and_reinit();
+KERR("VIPTODO INOTIFY IN_CLOSE %d", g_state);
+        close_pcap_record();
         }
       else if (event->mask & IN_IGNORED)
         {
+KERR("VIPTODO INOTIFY IN_IGNORE");
         }
       else
-        KERR("Unknown Mask 0x%.8x\n", event->mask);
+        KERR("ERROR INOTIFY Unknown Mask 0x%.8x\n", event->mask);
       len -= sizeof(*event) + event->len;
       if (len > 0)
         event = ((void *) event) + sizeof(event) + event->len;
@@ -78,8 +105,8 @@ static int rx_inot(int llid, int fd)
 /****************************************************************************/
 static void err_inot(int llid, int err, int from)
 {
-  inotify_trigger_end();
   KERR("ERROR %d", llid);
+  inotify_trigger_end();
 }
 /*-------------------------------------------------------------------------*/
 
@@ -97,13 +124,22 @@ void inotify_trigger_end(void)
   g_llid = -1;
   g_wd = -1;
   g_fdnotify = -1;
-  pcap_record_close_and_reinit();
+  pcap_record_close();
+  g_state = 0;
+}
+/*-------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int inotify_get_state(void)
+{
+  return g_state;
 }
 /*-------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void inotify_trigger_init(char *path_file)
 {
+  g_state = 0;
   g_fdnotify = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   if (g_fdnotify == -1)
     {

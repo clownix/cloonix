@@ -99,6 +99,9 @@ enum
   bnd_xyx_cnf,
   bnd_nat_cnf,
 
+  bnd_sync_wireshark_req,
+  bnd_sync_wireshark_resp,
+
   bnd_max,
   };
 static char bound_list[bnd_max][MAX_CLOWNIX_BOUND_LEN];
@@ -598,6 +601,24 @@ void send_work_dir_resp(int llid, int tid, t_topo_clc *icf)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+void send_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
+{ 
+  int len = 0;
+  len = sprintf(sndbuf, SYNC_WIRESHARK_REQ, tid, name, num, cmd);
+  my_msg_mngt_tx(llid, len, sndbuf);
+} 
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void send_sync_wireshark_resp(int llid,int tid,char *name,int num,int status)
+{
+  int len = 0;
+  len = sprintf(sndbuf, SYNC_WIRESHARK_RESP, tid, name, num, status);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
+  
 /*****************************************************************************/
 void send_event_topo_sub(int llid, int tid)
 {
@@ -2175,7 +2196,7 @@ static void startup_env_get(char *msg_in, t_topo_cnt *cnt)
 static void dispatcher(int llid, int bnd_evt, char *msg)
 {
   int len, nb, flags_hop, num, is_layout;
-  int vmcmd, param, status, sub;
+  int cmd, vmcmd, param, status, sub;
   int type, qty, tid, val; 
   uint32_t ip, dudp_ip, ludp_ip;
   uint16_t lport, dport;
@@ -2606,30 +2627,42 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_c2c_cnf(llid, tid, name, info);
       break;
 
-   case bnd_nat_cnf:
-      if (sscanf(msg, NAT_CNF, &tid, name, info) != 3)
-        KOUT("%s", msg);
-      recv_nat_cnf(llid, tid, name, info);
+    case bnd_nat_cnf:
+       if (sscanf(msg, NAT_CNF, &tid, name, info) != 3)
+         KOUT("%s", msg);
+       recv_nat_cnf(llid, tid, name, info);
+       break;
+
+    case bnd_a2b_cnf:
+       if (sscanf(msg, A2B_CNF_BIS, &tid, name) != 2)
+         KOUT("%s", msg);
+       line = strstr(msg, "<cmd>");
+       if (!line)
+         KOUT("%s", msg);
+       line += strlen("<cmd>");
+       ptr = strstr(line, "</cmd>");
+       if (!ptr)
+         KOUT("%s", msg);
+       *ptr = 0;
+       recv_a2b_cnf(llid, tid, name, line);
+       break;
+
+    case bnd_lan_cnf:
+       if (sscanf(msg, LAN_CNF, &tid, name, info) != 3)
+         KOUT("%s", msg);
+       recv_lan_cnf(llid, tid, name, info);
+       break;
+
+    case bnd_sync_wireshark_req:
+      if (sscanf(msg, SYNC_WIRESHARK_REQ, &tid, name, &num, &cmd) != 4)
+         KOUT("%s", msg);
+      recv_sync_wireshark_req(llid, tid, name, num, cmd);
       break;
 
-   case bnd_a2b_cnf:
-      if (sscanf(msg, A2B_CNF_BIS, &tid, name) != 2)
-        KOUT("%s", msg);
-      line = strstr(msg, "<cmd>");
-      if (!line)
-        KOUT("%s", msg);
-      line += strlen("<cmd>");
-      ptr = strstr(line, "</cmd>");
-      if (!ptr)
-        KOUT("%s", msg);
-      *ptr = 0;
-      recv_a2b_cnf(llid, tid, name, line);
-      break;
-
-   case bnd_lan_cnf:
-      if (sscanf(msg, LAN_CNF, &tid, name, info) != 3)
-        KOUT("%s", msg);
-      recv_lan_cnf(llid, tid, name, info);
+    case bnd_sync_wireshark_resp:
+      if (sscanf(msg, SYNC_WIRESHARK_RESP, &tid, name, &num, &status) != 4)
+         KOUT("%s", msg);
+      recv_sync_wireshark_resp(llid, tid, name, num, status);
       break;
 
 
@@ -2790,6 +2823,9 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(LAN_CNF, bound_list[bnd_lan_cnf]);
   extract_boundary(C2C_CNF, bound_list[bnd_xyx_cnf]);
   extract_boundary(NAT_CNF, bound_list[bnd_nat_cnf]);
+
+  extract_boundary(SYNC_WIRESHARK_REQ, bound_list[bnd_sync_wireshark_req]);
+  extract_boundary(SYNC_WIRESHARK_RESP, bound_list[bnd_sync_wireshark_resp]);
 }
 /*---------------------------------------------------------------------------*/
 

@@ -207,7 +207,11 @@ static void action_self_destruction(void *data)
       else
         {
         suid_power_kill();
-        pid_clone_kill_single(doorways_get_distant_pid());
+        if (pid_clone_kill_single(doorways_get_distant_pid()))
+          {
+          KERR("ERROR CLONE KILL %d", doorways_get_distant_pid());
+          kill(doorways_get_distant_pid(), SIGKILL);
+          }
         event_print("Self-destruction triggered");
         clownix_timeout_add(20, last_action_self_destruction, (void *)llid_tid, 
                             NULL, NULL);

@@ -68,7 +68,7 @@ t_layout_node *make_layout_node(t_bank_item *cur)
     x = eth->bitem->pbi.position_x - cur->pbi.position_x;
     y = eth->bitem->pbi.position_y - cur->pbi.position_y;
     if (cur->pbi.endp_type == endp_type_a2b)
-      layout_round_a2b_eth_coords(&x, &y);
+      KERR("WARNING %d %d", i, eth->bitem->num);
     else
       {
       if (cur->bank_type == bank_type_cnt)

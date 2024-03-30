@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
+
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "bank.h" 
@@ -381,8 +383,8 @@ void bank_del_item(t_bank_item *bitem, int eorig)
     KOUT(" ");
   if (is_not_an_edge(bitem))
     bij_free_tag(bitem->tag); 
-//TODO
   unchain_from_head(bitem);
+  clownix_free(bitem->pbi.pbi_cnt, __FUNCTION__);
   clownix_free(bitem->pbi.pbi_node, __FUNCTION__);
   clownix_free(bitem->pbi.pbi_sat, __FUNCTION__);
   clownix_free(bitem, __FUNCTION__);
@@ -643,12 +645,82 @@ int bank_get_spicy_gtk_pid(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int bank_get_wireshark_pid(char *name)
+static int get_wireshark_pid(t_bank_item *bitem, int num)
 {
-  t_bank_item *bitem = look_for_sat_with_id(name);
   int result = 0;
-  if (bitem)
-    result = bitem->wireshark_pid;
+  t_pid_wireshark *cur = bitem->head_pid_wireshark;
+  while(cur)
+    {
+    if (cur->num == num)
+      break;
+    cur = cur->next;
+    }
+  if (cur)
+    result = cur->pid;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void set_wireshark_pid(t_bank_item *bitem, int num, int pid)
+{
+  t_pid_wireshark *cur = bitem->head_pid_wireshark;
+  while(cur)
+    {
+    if (cur->num == num)
+      break;
+    cur = cur->next;
+    }
+  if (cur)
+    {
+    if (pid != 0)
+      {
+      KERR("ERROR PID WIRESHARK EXISTS: %s %d pid:%d",
+            bitem->name, num, cur->pid);
+      }
+    else
+      {
+      if (cur->prev)
+        cur->prev->next = cur->next;
+      if (cur->next)
+        cur->next->prev = cur->prev;
+      if (bitem->head_pid_wireshark == cur)
+        bitem->head_pid_wireshark = cur->next;
+      free(cur);
+      }
+    }
+  else
+    {
+    if (pid == 0)
+      KERR("WARNING PID WIRESHARK DOES NOT EXISTS: %s %d", bitem->name, num);
+    else
+      { 
+      cur = (t_pid_wireshark *) malloc(sizeof(t_pid_wireshark));
+      memset(cur, 0, sizeof(t_pid_wireshark));
+      if (bitem->head_pid_wireshark)
+        bitem->head_pid_wireshark->prev = cur;
+      cur->next = bitem->head_pid_wireshark;
+      bitem->head_pid_wireshark = cur;
+      cur->num = num;
+      cur->pid = pid;
+      }
+    }
+}   
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int bank_get_wireshark_pid(char *name, int num)
+{
+  t_bank_item *bitem1 = look_for_node_with_id(name);
+  t_bank_item *bitem2 = look_for_cnt_with_id(name);
+  t_bank_item *bitem3 = look_for_sat_with_id(name);
+  int result = 0;
+  if (bitem1)
+    result = get_wireshark_pid(bitem1, num);
+  else if (bitem2)
+    result = get_wireshark_pid(bitem2, num);
+  else if (bitem3)
+    result = get_wireshark_pid(bitem3, num);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -663,14 +735,21 @@ void bank_set_spicy_gtk_pid(char *name, int val)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void bank_set_wireshark_pid(char *name, int val)
+void bank_set_wireshark_pid(char *name, int num, int val)
 {
-  t_bank_item *bitem = look_for_sat_with_id(name);
-  if (bitem)
-    bitem->wireshark_pid = val;
+  t_bank_item *bitem1 = look_for_node_with_id(name);
+  t_bank_item *bitem2 = look_for_cnt_with_id(name);
+  t_bank_item *bitem3 = look_for_sat_with_id(name);
+  if (bitem1)
+    set_wireshark_pid(bitem1, num, val);
+  else if (bitem2)
+    set_wireshark_pid(bitem2, num, val);
+  else if (bitem3)
+    set_wireshark_pid(bitem3, num, val);
+  else
+    KERR("ERROR PID WIRESHARK %s %d %d", name, num, val);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void init_bank_item(void)

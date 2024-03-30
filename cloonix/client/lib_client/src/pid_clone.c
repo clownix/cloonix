@@ -16,6 +16,7 @@
 /*                                                                           */
 /*****************************************************************************/
 #define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -49,7 +50,6 @@
 #define END_FORK_PID   "END_FORK_PID:"
 #define SENDER_PID     "SENDER_PID:"
 
-
 #define MAX_FORK_IDENT 500
 #define MAX_DEAD_PIDS_CIRCLE 50
 #define PROCESS_STACK 500*1024
@@ -57,6 +57,9 @@
 void cloonix_lock_fd_close(void);
 void blkd_sub_clean_all(void);
 void blkd_data_clean_all(void);
+
+
+void glib_pid_clone_init(int fd_request, int fd_ack);
 
 
 typedef struct t_clone_ctx
@@ -78,7 +81,7 @@ typedef struct t_clone_ctx
 
 void uml_clownix_switch_error_cb(void *ptr, int llid, int err, int from);
 static int pid_dead_clone(int pid, int status);
-static void pid_clone_harvest_death(void);
+void pid_clone_harvest_death(void);
 
 
 static void send_to_pid_mngt(int llid, char *str);
@@ -89,14 +92,7 @@ static t_clone_ctx clone_ctx[MAX_FORK_IDENT];
 extern int g_i_am_a_clone;
 extern int g_i_am_a_clone_no_kerr;
 
-typedef struct t_jfs_tab
-{
-  int pid;
-  int status;
-} t_jfs_tab;
-
-static void *g_jfs;
-
+static int g_fd_request;
 
 /*---------------------------------------------------------------------------*/
 
@@ -312,7 +308,7 @@ static int pid_dead_clone(int pid, int status)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void pid_clone_harvest_death(void)
+void pid_clone_harvest_death(void)
 {
   int res, pid=0, status=0;
   siginfo_t infop;
@@ -332,29 +328,27 @@ static void pid_clone_harvest_death(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void fct_job_for_select(int ref_id, void *data)
-{
-  if (ref_id != 0xCAB)
-    KOUT(" ");
-  pid_clone_harvest_death();
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static void child_death_catcher_signal(int n)
 {
-  job_for_select_request(g_jfs, fct_job_for_select, NULL);
+  short cidx = (short) (0x01 & 0xFFFF);
+  if (write(g_fd_request, &cidx, sizeof(cidx)) != sizeof(cidx))
+    KERR("ERROR %d", errno);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void pid_clone_kill_single(int pid)
+int pid_clone_kill_single(int pid)
 {
   int ident = pid_find_ident(pid);
+  int result = -1;
   if (ident)
+    {
     kill(pid, SIGKILL);
+    result = 0;
+    }
   else
     KERR("WARNING BAD KILL %d", pid);
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -471,14 +465,18 @@ static void send_to_pid_mngt(int llid, char *str)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 void pid_clone_init(void)
 {
+  int fds[2];
   signal(SIGCHLD, child_death_catcher_signal);
   memset(clone_ctx, 0, MAX_FORK_IDENT * sizeof(t_clone_ctx));
   current_max_pid = 0;
   nb_running_pids = 0;
+ if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds))
+    KOUT(" ");
+  glib_pid_clone_init(fds[1], fds[0]);
+  g_fd_request = fds[1]; 
   clownix_timeout_add(500, timer_clones_check, NULL, NULL, NULL); 
 }
 /*---------------------------------------------------------------------------*/

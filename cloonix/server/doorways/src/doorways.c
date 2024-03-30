@@ -287,6 +287,8 @@ static char *get_name(char *root_work)
   char big_name[MAX_PATH_LEN];
   char *ptr;
   memset(name, 0, MAX_NAME_LEN);
+  memset(big_name, 0, MAX_PATH_LEN);
+  strncpy(big_name, root_work, MAX_PATH_LEN-1); 
   ptr = strrchr(big_name, '/');
   if (!ptr)
     snprintf(name, MAX_NAME_LEN-1, "%s", "doorways");

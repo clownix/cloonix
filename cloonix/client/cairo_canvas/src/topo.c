@@ -250,8 +250,8 @@ void modif_position_eth(t_bank_item *bitem, double xi, double yi)
       {
       if (bitem->att_node->bank_type == bank_type_cnt)
         {
-        tx = (vx * (CNT_NODE_DIA*VAL_INTF_POS_NODE))/dist;
-        ty = (vy * (CNT_NODE_DIA*VAL_INTF_POS_NODE))/dist;
+        tx = (vx * (CNT_DIA*VAL_INTF_POS_NODE))/dist;
+        ty = (vy * (CNT_DIA*VAL_INTF_POS_NODE))/dist;
         }
       else
         {
@@ -932,13 +932,13 @@ static void on_item_paint_cnt(CrItem *item, cairo_t *c)
   if (!bitem)
     KOUT(" ");
   cairo_new_path(c);
-  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_NODE_DIA/2, 0, 2*M_PI);
+  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
   if (bitem->pbi.pbi_cnt->cnt_evt_ping_ok)
     cairo_set_source_rgba (c, 0.50, 0.50, 1.0, 1.0);
   else
     cairo_set_source_rgba (c, 0.50, 0.30, 0.30, 1.0);
   cairo_fill(c);
-  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_NODE_DIA/2, 0, 2*M_PI);
+  cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
   if (bitem->pbi.grabbed)
     cairo_set_source_rgba (c, white.r, white.g, white.b, 1.0);
   else
@@ -1178,7 +1178,7 @@ static CrItem *on_item_test(CrItem *item, cairo_t *c, double x, double y)
     else if (bitem->bank_type == bank_type_node) 
       cairo_arc (c, x0, y0, NODE_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_cnt) 
-      cairo_arc (c, x0, y0, CNT_NODE_DIA/2, 0, 2*M_PI);
+      cairo_arc (c, x0, y0, CNT_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_sat)
       {
       if ((bitem->pbi.endp_type == endp_type_nats) ||
@@ -1235,7 +1235,7 @@ static gboolean on_item_calcb(CrItem *item, cairo_t *c,
     else if (bitem->bank_type == bank_type_node)
       cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, NODE_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_cnt)
-      cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_NODE_DIA/2, 0, 2*M_PI);
+      cairo_arc (c, bitem->pbi.x0, bitem->pbi.y0, CNT_DIA/2, 0, 2*M_PI);
     else if (bitem->bank_type == bank_type_sat)
       {
       if ((bitem->pbi.endp_type == endp_type_nats) ||
@@ -1363,7 +1363,7 @@ GtkWidget *topo_canvas(void)
   glob_panner = cr_panner_new(glob_canvas, NULL);
   cr_canvas_center_scale(CR_CANVAS(gtkwidget_canvas), WIDTH/2, HEIGH/2, WIDTH/3, HEIGH/3);
   cr_canvas_set_repaint_mode(glob_canvas, TRUE);
-  cr_canvas_set_min_scale_factor (glob_canvas,0.2,0.2);
+  cr_canvas_set_min_scale_factor (glob_canvas,0.03,0.03);
   cr_canvas_set_max_scale_factor (glob_canvas,5,5);
   return vbox;
 }
