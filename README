@@ -1,4 +1,6 @@
 ==============================================================================
+NEW: Use of broadway to have a web gui, very fresh code, could be faulty:)
+==============================================================================
 GENERAL:
 --------
 
@@ -28,7 +30,7 @@ files and libraries are collected and put into an autonomous bundle, this
 makes the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-35-00/html/index.html doc.
+http://clownix.net/doc_stored/build-36-00/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp.
@@ -38,7 +40,7 @@ NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
 DOWNLOADS:
 ----------
 
-http://clownix.net/downloads/cloonix-35
+http://clownix.net/downloads/cloonix-36
 
 -----------------------------------------------------------------------------
 
@@ -46,9 +48,9 @@ http://clownix.net/downloads/cloonix-35
 INSTALLATION:
 ------------
 
-wget http://clownix.net/downloads/cloonix-35/cloonix-bundle-35-01.tar.gz
-tar xvf cloonix-bundle-35-01.tar.gz
-cd cloonix-bundle-35-01
+wget http://clownix.net/downloads/cloonix-36/cloonix-bundle-36-00.tar.gz
+tar xvf cloonix-bundle-36-00.tar.gz
+cd cloonix-bundle-36-00
 sudo ./install_cloonix
 
 ==============================================================================
@@ -67,7 +69,7 @@ LOADING A QCOW INTO BULK FOR KVM USE:
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-35/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-36/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
@@ -78,7 +80,7 @@ LOADING A ZIP INTO BULK FOR CRUN USE:
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-35/bulk/busybox.zip
+wget http://clownix.net/downloads/cloonix-36/bulk/busybox.zip
 
 -----------------------------------------------------------------------------
 
@@ -86,7 +88,7 @@ wget http://clownix.net/downloads/cloonix-35/bulk/busybox.zip
 LAUNCH PING SCRIPT:
 -------------------
 
-cd cloonix-bundle-35-01
+cd cloonix-bundle-36-00
 
 ./ping_kvm.sh
 
@@ -120,7 +122,7 @@ sudo setfacl -R -m u:${USER}:rw /dev/net/tun
 
 Then download and install podman:
 
-wget http://clownix.net/downloads/cloonix-35/bulk/cnt_cloonix.tar
+wget http://clownix.net/downloads/cloonix-36/bulk/cnt_cloonix.tar
 podman load --input cnt_cloonix.tar
 
 Then try the podman, note that the directory /var/lib/cloonix/bulk
@@ -129,7 +131,7 @@ some qcow2 and zip file-systems:
 
 ID_IMAGE=$(podman images |grep cnt_cloonix | awk "{print \$3}")
 podman run -it --privileged \
-           -e DISPLAY=:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
+           -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix \
            -v /var/lib/cloonix/bulk:/var/lib/cloonix/bulk \
            -v /lib/modules:/lib/modules $ID_IMAGE /bin/bash
 
@@ -144,16 +146,16 @@ FRR DEMO INSIDE CLOONIX INSIDE PODMAN:
 --------------------------------------
 
 Build the podman with the help of:
-cloonix-35-01/quickstart/cnt_create/custom/frr/doitall
+cloonix-36-00/quickstart/cnt_create/custom/frr/doitall
 
 Or download and install podman cnt_frr_cloonix:
 
-wget http://clownix.net/downloads/cloonix-35/bulk/cnt_frr_cloonix.tar
+wget http://clownix.net/downloads/cloonix-36/bulk/cnt_frr_cloonix.tar
 podman load --input cnt_frr_cloonix.tar
 
 ID_IMAGE=$(podman images |grep cnt_frr_cloonix | awk "{print \$3}")
 podman run -it --privileged \
-           -e DISPLAY=:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
+           -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix \
            -v /lib/modules:/lib/modules $ID_IMAGE /bin/bash
 
 Then try the frr demo from within the podman:
@@ -165,6 +167,15 @@ Then double-click on one of the peripheral sodxx and do:
 traceroute sodyy
 
 FRR Ospf has played its routing role and the path is found.
+-----------------------------------------------------------------------------
+
+==============================================================================
+BROADWAYD
+-----------------------------------------------------------------------------
+This server is launched automaticaly on the port named broadway_port in the
+file "/usr/libexec/cloonix/common/etc/cloonix.cfg".
+
+Your browser can have access to the gui with "http://<ip>:<broadway_port>".
 -----------------------------------------------------------------------------
 
 

@@ -5,6 +5,24 @@
 Software Release Information
 ============================
 
+v36-00
+======
+
+Sunday 14th of April, end of my one week holidays, late, must deliver
+cloonix as it is now. Very fresh version... Some problems to solve...
+
+This version uses the broadwayd daemon to transmit the gtk3 gui
+to your web browser.
+
+The config file at **/usr/libexec/cloonix/common/etc/cloonix.cfg**
+has a field added to give the broadway_port to put in your browser.
+
+To test, launch the nemo: **cloonix_net nemo** and put in your browser:
+**http://127.0.0.1:54521** because the broadway_port for nemo is 54521.
+
+Big thanks to broadwayd, the daemon associated to gdb that permits
+gtk3 to be accessible in a web browser!
+
 v35-00
 ======
 

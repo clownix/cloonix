@@ -103,7 +103,10 @@ int lio_system(char *argv[])
     lio_clean_all_llid();
     worker_pid = fork();
     if (worker_pid == 0)
+      {
       execv(argv[0], argv);
+      KOUT("ERROR execv");
+      }
     timeout_pid = fork();
     if (timeout_pid == 0)
       {
@@ -309,6 +312,41 @@ char *utils_get_a2b_dir(void)
   return path;
 }
 /*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_run_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, RUN_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_runbroadway_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%sbroadway", root, RUN_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_runbroadway_config_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%sbroadway/.config", root, RUN_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+
 
 /*****************************************************************************/
 char *utils_get_qmp_path(int vm_id)
@@ -702,7 +740,9 @@ void utils_send_creation_info(char *name, char **argv)
 int utils_execv(void *ptr)
 {
   char **argv = (char **) ptr;
-  return (execv(argv[0], argv));
+  execv(argv[0], argv);
+  KOUT("ERROR execv");
+  return -1;
 }
 /*---------------------------------------------------------------------------*/
 

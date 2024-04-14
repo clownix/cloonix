@@ -23,12 +23,16 @@ case "$pretty_name" in
 esac
 mkdir -p ${COMMON}/lib64
 mkdir -p ${COMMON}/lib
+mkdir -p ${COMMON}/lib/gconv
 mkdir -p ${COMMON}/etc
 mkdir -p ${COMMON}/localedir
+mkdir -p ${COMMON}/share
+mkdir -p ${COMMON}/share/dconf
 mkdir -p ${COMMON}/share/locale
 mkdir -p ${COMMON}/share/i18n/charmaps
 mkdir -p ${COMMON}/share/i18n/locales
 mkdir -p ${COMMON}/share/X11/locale
+mkdir -p ${COMMON}/share/glib-2.0/schemas
 #----------------------------------------------------------
 FROM_HERE=`pwd`
 tar --directory=/tmp -xf ${TARGZ_STORE}/patchelf_*.tar.gz
@@ -43,15 +47,25 @@ cat > ${COMMON}/etc/fonts/fonts.conf << EOF
 <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
 <fontconfig>
     <dir>/usr/libexec/cloonix/common/share</dir>
+    <cachedir>/var/lib/cloonix/cache/fontconfig</cachedir>
+    <cachedir prefix="xdg">fontconfig</cachedir>
 </fontconfig>
 EOF
 cat > ${COMMON}/etc/locale.gen << EOF
 en_US.UTF-8 UTF-8
 EOF
 cat > ${COMMON}/etc/locale.conf << EOF
-LANG=en_US.UTF-8
+LANG=C
 EOF
 #----------------------------------------------------------
+cp -f /usr/lib/x86_64-linux-gnu/libsecret-1.so.0 ${COMMON}/lib
+cp -f /usr/lib/x86_64-linux-gnu/libvte-2.91.so.0 ${COMMON}/lib
+cp -f /usr/lib/x86_64-linux-gnu/libibus-1.0.so.5 ${COMMON}/lib 
+cp -f /usr/bin/tilix ${COMMON}/cloonix-tilix
+cp -f /usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache ${COMMON}/lib/gconv
+cp -f ${TARGZ_STORE}/dconf/user ${COMMON}/share/dconf
+#----------------------------------------------------------
+cp -f /bin/bash ${COMMON}
 cp -f /usr/bin/strace ${COMMON}
 cp -f /usr/bin/xauth ${COMMON}/cloonix-xauth
 cp -f /bin/busybox ${COMMON}
@@ -72,7 +86,7 @@ for i in cat cp echo env grep id ifconfig ip \
 done
 cd $FROM_HERE
 for i in icons mime themes fonts gtk-3.0 \
-         gstreamer-1.0 ; do
+         gstreamer-1.0 tilix gvfs ; do
    cp -Lrf /usr/share/${i} ${COMMON}/share
 done
 mkdir -p ${COMMON}/share/terminfo 
@@ -89,18 +103,25 @@ cp -f /usr/share/i18n/charmaps/UTF-8.gz ${COMMON}/share/i18n/charmaps
 for i in en_US en_GB i18n i18n_ctype iso14651_t1 translit_* ; do
   cp -f /usr/share/i18n/locales/${i} ${COMMON}/share/i18n/locales
 done
-cp -Lrf /usr/share/i18n/locales/iso14651_t1_common ${COMMON}/share/i18n/locales
+cp -Lrf /usr/share/i18n/locales/iso14651_t1_common  ${COMMON}/share/i18n/locales
+cp -f /usr/share/glib-2.0/schemas/gschemas.compiled ${COMMON}/share/glib-2.0/schemas
 cd ${COMMON}/share/i18n/charmaps
 gunzip UTF-8.gz
 cd $FROM_HERE
 #----------------------------------------------------------
-tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark/built_objects/share_wireshark.tar.gz
-mv ${COMMON}/share/share_wireshark ${COMMON}/share/wireshark
+tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_gtk/built_objects/share_wireshark_gtk.tar.gz
+tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_qt/built_objects/share_wireshark_qt.tar.gz
+mv ${COMMON}/share/share_wireshark_gtk ${COMMON}/share/wireshark
+cp -rf ${COMMON}/share/share_wireshark_qt/* ${COMMON}/share/wireshark
+rm -rf ${COMMON}/share/share_wireshark_qt
+#----------------------------------------------------------
+#  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_qt/built_objects/share_wireshark_qt.tar.gz
+#  mv ${COMMON}/share/share_wireshark_qt ${COMMON}/share/wireshark
 #----------------------------------------------------------
 cp -f /lib64/ld-linux-x86-64.so.2 ${COMMON}/lib64
 cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
 #----------------------------------------------------------
-for i in qt6 gdk-pixbuf-2.0 gtk-3.0 gstreamer-1.0 ; do
+for i in gdk-pixbuf-2.0 gtk-3.0 gio gvfs gstreamer-1.0 qt6 ; do
   cp -rf /usr/lib/x86_64-linux-gnu/${i} ${COMMON}/lib
 done
 cp /usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders ${COMMON}

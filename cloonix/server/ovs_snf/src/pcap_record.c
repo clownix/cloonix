@@ -60,6 +60,7 @@ typedef struct pcaprec_hdr_s
 } pcaprec_hdr_s; 
 
 
+void close_pcap_record(void);
 
 /*****************************************************************************/
 void pcap_record_close(void)
@@ -90,16 +91,14 @@ void pcap_record_rx_packet(uint64_t usec, int len, uint8_t *buf)
     if (ln != hlen)
       {
       KERR("ERROR SNIFFER: %d %d %s", ln, hlen, strerror(errno));
-      g_working_ok = 0;
-      unlink(g_pcap_file);
+      close_pcap_record();
       }
     else
       {
       if (write(g_fd, (void *) buf, len) != len)
         {
         KERR("ERROR SNIFFER: %s", strerror(errno));
-        g_working_ok = 0;
-        unlink(g_pcap_file);
+        close_pcap_record();
         }
       }
     }
@@ -142,8 +141,7 @@ static void timer_pcap_record_prepare(void *data)
     if (mkfifo(g_pcap_file, 0666) == -1)
       {
       KERR("ERROR mkfifo %s %s", g_pcap_file, strerror(errno));
-      g_working_ok = 0;
-      unlink(g_pcap_file);
+      close_pcap_record();
       }
     else
       inotify_trigger_init(g_pcap_file);

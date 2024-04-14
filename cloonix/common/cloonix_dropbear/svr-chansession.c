@@ -196,6 +196,7 @@ static void run_shell_command(char *cmd, unsigned int maxfd,
   for (i = 3; i <= maxfd; i++)
     m_close(i);
   execv(usershell, argv);
+  KOUT("ERROR execv");
 }
 /*---------------------------------------------------------------------------*/
 

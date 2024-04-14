@@ -1,13 +1,14 @@
 ##################################################
-CLOONIX_VERSION=35-01
+CLOONIX_VERSION=36-00
 #-------------------------------------------------
 
 ##################################################
 CLOONIX_NET: nemo {
   cloonix_ip       127.0.0.1
   cloonix_port     45211
+  broadway_port    54521
   cloonix_passwd   nemoclown
-  c2c_udp_ip       1.1.1.27
+  c2c_udp_ip       127.0.0.1
 }
 #-------------------------------------------------
 
@@ -15,6 +16,7 @@ CLOONIX_NET: nemo {
 CLOONIX_NET: mito {
   cloonix_ip       127.0.0.1
   cloonix_port     45212
+  broadway_port    54522
   cloonix_passwd   mitoclown
   c2c_udp_ip       127.0.0.1
 }
@@ -24,6 +26,7 @@ CLOONIX_NET: mito {
 CLOONIX_NET: fido {
   cloonix_ip       172.16.0.87
   cloonix_port     45213
+  broadway_port    54523
   cloonix_passwd   fidoclown
   c2c_udp_ip     172.16.0.87
 }
@@ -33,6 +36,7 @@ CLOONIX_NET: fido {
 CLOONIX_NET: vip11 {
   cloonix_ip       1.1.1.11
   cloonix_port     45214
+  broadway_port    54524
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.11
 }
@@ -42,6 +46,7 @@ CLOONIX_NET: vip11 {
 CLOONIX_NET: vip12 {
   cloonix_ip       1.1.1.12
   cloonix_port     45214
+  broadway_port    54525
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.12
 }
@@ -51,6 +56,7 @@ CLOONIX_NET: vip12 {
 CLOONIX_NET: vip13 {
   cloonix_ip       1.1.1.13
   cloonix_port     45214
+  broadway_port    54526
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.13
 }
@@ -61,6 +67,7 @@ CLOONIX_NET: vip13 {
 CLOONIX_NET: vip14 {
   cloonix_ip       1.1.1.14
   cloonix_port     45214
+  broadway_port    54527
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.14
 }
@@ -71,6 +78,7 @@ CLOONIX_NET: vip14 {
 CLOONIX_NET: vip15 {
   cloonix_ip       1.1.1.15
   cloonix_port     45214
+  broadway_port    54528
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.15
 }
@@ -81,6 +89,7 @@ CLOONIX_NET: vip15 {
 CLOONIX_NET: vip16 {
   cloonix_ip       1.1.1.16
   cloonix_port     45214
+  broadway_port    54529
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.16
 }
@@ -91,6 +100,7 @@ CLOONIX_NET: vip16 {
 CLOONIX_NET: vip17 {
   cloonix_ip       1.1.1.17
   cloonix_port     45214
+  broadway_port    54530
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.17
 }
@@ -100,6 +110,7 @@ CLOONIX_NET: vip17 {
 CLOONIX_NET: vip18 {
   cloonix_ip       1.1.1.18
   cloonix_port     45214
+  broadway_port    54531
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.18
 }
@@ -109,6 +120,7 @@ CLOONIX_NET: vip18 {
 CLOONIX_NET: vip19 {
   cloonix_ip       1.1.1.19
   cloonix_port     45214
+  broadway_port    54532
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.19
 }
@@ -118,6 +130,7 @@ CLOONIX_NET: vip19 {
 CLOONIX_NET: vip20 {
   cloonix_ip       1.1.1.20
   cloonix_port     45214
+  broadway_port    54533
   cloonix_passwd   pipoclown
   c2c_udp_ip     1.1.1.20
 }
@@ -127,6 +140,7 @@ CLOONIX_NET: vip20 {
 CLOONIX_NET: cucu {
   cloonix_ip       10.7.7.1
   cloonix_port     45217
+  broadway_port    54534
   cloonix_passwd   cucuclown
   c2c_udp_ip       10.7.7.1
 }
@@ -136,6 +150,7 @@ CLOONIX_NET: cucu {
 CLOONIX_NET: lolo {
   cloonix_ip       10.7.7.2
   cloonix_port     45218
+  broadway_port    54535
   cloonix_passwd   loloclown
   c2c_udp_ip       10.7.7.2
 }

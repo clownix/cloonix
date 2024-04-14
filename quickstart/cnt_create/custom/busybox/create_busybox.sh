@@ -7,7 +7,7 @@ VMNAME=buz
 QCOW2=create_busybox.qcow2
 DISTRO=bookworm
 REPO="http://deb.debian.org/debian"
-REPO="http://172.17.0.2/debian/${DISTRO}"
+#REPO="http://172.17.0.2/debian/${DISTRO}"
 #######################################################################
 set +e
 if [ ! -e /var/lib/cloonix/bulk/${DISTRO}.qcow2 ]; then

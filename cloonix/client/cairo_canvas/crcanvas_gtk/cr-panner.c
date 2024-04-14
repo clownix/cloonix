@@ -1,31 +1,9 @@
 /* cr-panner.c 
  * Copyright (C) 2006 Robert Gibbs <bgibbs@users.sourceforge.net> 
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
  */
 #include "cr-marshal.h"
 #include "cr-panner.h"
 
-/**
- * SECTION:cr-panner
- * @title: CrPanner
- * @short_description: A object for setting up panning on a #CrCanvas widget.
- *
- * 
- */
 
 static GObjectClass *parent_class = NULL;
 
@@ -59,13 +37,7 @@ pan(CrPanner *panner, double dx, double dy)
 
                 cr_canvas_get_center(panner->canvas, &x1, &y1);
                 cr_canvas_center_on(panner->canvas, x1 - dx, y1 - dy);
-                // this line will make it more or less efficient depending on
-                // what is on the screen
                 cr_canvas_queue_repaint(panner->canvas);
-                /* can also do it this way:
-                cr_canvas_get_scroll_offsets(panner->canvas, &x1, &y1);
-                cr_canvas_scroll_to(panner->canvas, x1 - dx, y1 - dy);
-                */
         }
 }
 
@@ -110,7 +82,6 @@ on_event(CrItem *item, GdkEvent *event, CrMatrix *matrix,
 
         state = FALSE;
 
-        /* button can implicitly activate the panner */
         if (event->type == GDK_BUTTON_PRESS) {
                 if (!(panner->flags & CR_PANNER_ACTIVE))
                        {
@@ -356,8 +327,8 @@ cr_panner_get_type(void)
         static GType type = 0;
         static const GTypeInfo info = {
                 sizeof(CrPannerClass),
-                NULL, /*base_init*/
-                NULL, /*base_finalize*/
+                NULL,
+                NULL,
                 (GClassInitFunc) cr_panner_class_init,
                 (GClassFinalizeFunc) NULL,
                 NULL,
@@ -373,20 +344,6 @@ cr_panner_get_type(void)
         return type;
 }
 
-/**
- * cr_panner_new:
- * @canvas: The canvas device that this panner will be used with.
- * @first_arg_name: A list of object argument name/value pairs, NULL-terminated,
- * used to configure the item.
- * @varargs:
- *
- * A factory method to create a new CrPanner and connect it to a canvas in one
- * step.
- *
- * Returns: The newly created CrPanner object.  Unlike with the constructors for
- * CrItem implementations, you own the returned reference.  You should call 
- * g_object_unref when you are finished with this object.
- */
 CrPanner *
 cr_panner_new(CrCanvas *canvas, const gchar *first_arg_name, ...)
 {

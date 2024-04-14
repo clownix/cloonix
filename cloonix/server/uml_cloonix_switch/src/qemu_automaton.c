@@ -217,7 +217,7 @@ static int local_cmd_system (char *cmd, char *par1, char *par2, char *par3,
     argv[6] = par6;
     argv[7] = NULL;
     execv(cmd, argv);
-    exit (127);
+    KOUT("ERROR execv");
     }
   memset(msg_dad, 0, MAX_NAME_LEN);
   snprintf(msg_dad, MAX_NAME_LEN - 1, "pid=start:%d", pid);

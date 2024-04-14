@@ -164,7 +164,7 @@ static int zipmount_create(char *bulk, char *image, int is_persistent)
     memset(cmd, 0, 2*MAX_PATH_LEN);
     snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s/%s  %s/%s",
     FUSEZIP_BIN, bulk, image, get_mnt_loop_dir(), image);
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       KERR("ERROR %s", cmd);
     else
       result = 0;
@@ -174,7 +174,7 @@ static int zipmount_create(char *bulk, char *image, int is_persistent)
     memset(cmd, 0, 2*MAX_PATH_LEN);
     snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -r %s/%s  %s/%s",
     FUSEZIP_BIN, bulk, image, get_mnt_loop_dir(), image);
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       KERR("ERROR %s", cmd);
     else
       result = 0;
@@ -279,7 +279,7 @@ static void mount_del(char *bulk, char *image,
       {
       memset(cmd, 0, 2*MAX_PATH_LEN);
       snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", UMOUNT_BIN, resp);
-      if (execute_cmd(cmd))
+      if (execute_cmd(cmd, 1))
         KERR("ERROR %s", cmd);
       }
     pclose(fp);
@@ -302,7 +302,7 @@ static void mount_del(char *bulk, char *image,
       {
       memset(cmd, 0, 2*MAX_PATH_LEN);
       snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", UMOUNT_BIN, resp);
-      if (execute_cmd(cmd))
+      if (execute_cmd(cmd, 1))
         KERR("ERROR %s", cmd);
       pmnt = (char *) malloc(MAX_PATH_LEN);
       memset(pmnt, 0, MAX_PATH_LEN);

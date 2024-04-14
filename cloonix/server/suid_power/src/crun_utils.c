@@ -222,7 +222,7 @@ FILE *cmd_lio_popen(char *cmd, int *child_pid)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int execute_cmd(char *cmd)
+int execute_cmd(char *cmd, int do_log)
 {
   int child_pid, wstatus, result = -1;
   FILE *fp = cmd_lio_popen(cmd, &child_pid);
@@ -234,7 +234,10 @@ int execute_cmd(char *cmd)
       KERR("ERROR");
     result = wstatus;    
     if (result)
-      log_write_req("PREVIOUS CMD KO 1");
+      {
+      if (do_log)
+        log_write_req("PREVIOUS CMD KO 1");
+      }
     pclose(fp);
     }
   return result;
@@ -501,7 +504,7 @@ static void dirs_agent_copy_starter(char *mountbear, char *agent_dir,
   snprintf(path, MAX_PATH_LEN-1, "%s/cloonix_config_fs", mountbear);
   snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -osirrox on -indev %s -extract / %s",
            OSIRROX_BIN, iso, path); 
-  if (execute_cmd(cmd))
+  if (execute_cmd(cmd, 1))
     KERR("ERROR %s", cmd);
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1, "%s/cloonix_config_fs/startup_env", mountbear);
@@ -576,12 +579,12 @@ static void check_netns_and_clean(char *name, char *nspace,
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s >/dev/null",
            IP_BIN, nspace);
-  execute_cmd(cmd);
+  execute_cmd(cmd, 0);
   for (i=0; i<nb_eth; i++)
     {
     snprintf(cmd, MAX_PATH_LEN-1, "%s link del name %s%d_%d",
              IP_BIN, OVS_BRIDGE_PORT, vm_id, i);
-    execute_cmd(cmd);
+    execute_cmd(cmd, 0);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -650,7 +653,7 @@ int crun_utils_create_overlay(char *path, char *lower, int is_persistent)
     snprintf(cmd, 2*MAX_PATH_LEN-1,
     "%s -t overlay overlay -olowerdir=%s,upperdir=%s/%s,workdir=%s/%s %s/%s",
     MOUNT_BIN, lower, path, UPPER, path, WORKDIR, path, ROOTFS);
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       KERR("%s", cmd);
     result = 0;
     }
@@ -670,7 +673,7 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name)
   len += sprintf(cmd+len, " create"); 
   len += sprintf(cmd+len, " --config=%s/%s/config.json", cnt_dir, name);
   len += sprintf(cmd+len, " %s", name); 
-  if (execute_cmd(cmd))
+  if (execute_cmd(cmd, 1))
     KERR("ERROR %s", cmd);
   pid = read_crun_create_pid(name, 0);
   if (pid == 0)
@@ -720,7 +723,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
     "address %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
     IP_BIN, OVS_BRIDGE_PORT, vm_id, i, vm_id, i,
     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       {
       KERR("%s", cmd);
       result = -1;
@@ -728,7 +731,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
       }
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s link set itp%d%d netns %s", IP_BIN, vm_id, i, nspace);
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -737,7 +740,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s link set %s%d_%d netns %s_%s",
     IP_BIN, OVS_BRIDGE_PORT, vm_id, i, BASE_NAMESPACE, get_net_name());
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -746,7 +749,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s netns exec %s %s link set itp%d%d name eth%d",
     IP_BIN, nspace, IP_BIN, vm_id, i, i);
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -755,7 +758,7 @@ static int crun_utils_create_veth(int vm_id, char *nspace,
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s netns exec %s %s link set eth%d up",
     IP_BIN, nspace, IP_BIN, i);
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -781,11 +784,11 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
   snprintf(cmd, MAX_PATH_LEN-1, 
            "%s --log=%s --root=/var/lib/cloonix/%s/crun delete %s",
            CRUN_BIN, ptr, get_net_name(), name);
-  execute_cmd(cmd);
+  execute_cmd(cmd, 0);
   check_netns_and_clean(name, nspace, vm_id, nb_eth);
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns add %s", IP_BIN, nspace);
-  if (execute_cmd(cmd))
+  if (execute_cmd(cmd, 1))
     KERR("ERROR %s", cmd);
   else
     {
@@ -793,7 +796,7 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
     result = crun_utils_create_veth(vm_id, nspace, nb_eth, eth_mac);
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s netns exec %s %s link set lo up", IP_BIN, nspace, IP_BIN);
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -833,7 +836,7 @@ int crun_utils_delete_net_nspace(char *nspace)
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s", IP_BIN, nspace);
-  if (execute_cmd(cmd))
+  if (execute_cmd(cmd, 1))
     {
     KERR("ERROR %s", cmd);
     result = -1;
@@ -854,7 +857,7 @@ int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
     memset(cmd, 0, MAX_PATH_LEN);
     snprintf(cmd, MAX_PATH_LEN-1, "%s %s/%s/%s",
              UMOUNT_BIN, cnt_dir, name, ROOTFS);
-    if (execute_cmd(cmd))
+    if (execute_cmd(cmd, 1))
       {
       KERR("ERROR %s", cmd);
       result = -1;
@@ -887,7 +890,7 @@ int crun_utils_delete_crun_stop(char *name, int crun_pid)
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s --log=%s --root=/var/lib/cloonix/%s/crun delete %s",
            CRUN_BIN, ptr, get_net_name(), name);
-  if (execute_cmd(cmd))
+  if (execute_cmd(cmd, 1))
     {
     KERR("ERROR %s", cmd);
     result = -1;
@@ -908,7 +911,7 @@ int crun_utils_create_crun_start(char *name)
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s --log=%s --root=/var/lib/cloonix/%s/crun start %s",
            CRUN_BIN, ptr, get_net_name(), name);
-  if (execute_cmd(cmd))
+  if (execute_cmd(cmd, 1))
     {
     KERR("ERROR %s", cmd);
     result = -1;

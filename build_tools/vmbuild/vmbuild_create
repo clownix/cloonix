@@ -6,8 +6,15 @@ NAME=dev
 QCOW2=debian_builder.qcow2
 BULK="/var/lib/cloonix/bulk"
 REPO="http://172.17.0.2/debian/bookworm"
-#----------------------------------------------------------------------
-cloonix_net ${NET}
+#######################################################################
+is_started=$(cloonix_cli $NET pid |grep cloonix_server)
+if [ "x$is_started" == "x" ]; then
+  printf "\nServer Not started, launching:"
+  printf "\ncloonix_net $NET:\n"
+  cloonix_net $NET
+else
+  cloonix_cli $NET rma
+fi
 #----------------------------------------------------------------------
 echo cp -f ${BULK}/${DISTRO}.qcow2 ${BULK}/${QCOW2}
 cp -f ${BULK}/${DISTRO}.qcow2 ${BULK}/${QCOW2}
@@ -66,10 +73,10 @@ cloonix_ssh ${NET} ${NAME} "apt-get -y install \
                       libsbc-dev liblua5.2-dev libnl-cli-3-dev \
                       libparse-yapp-perl libsnappy-dev libzstd-dev \
                       libspandsp-dev libxml2-dev libminizip-dev \
-                      perl xsltproc ccache doxygen \
-                      ncurses-base strace"
+                      perl xsltproc ccache doxygen bison \
+                      ncurses-base strace tilix libsecret-1-0 \
+                      gvfs-libs libibus-1.0-5"
 
-# libgtk-4-dev
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"
 cloonix_ssh ${NET} ${NAME} "poweroff"

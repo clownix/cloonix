@@ -1046,7 +1046,7 @@ void ovs_c2c_add_lan(int llid, int tid, char *name, char *lan)
     }
   else if (strlen(cur->lan_attached))
     {
-    KERR("ERROR %s %s", name, cur->lan_attached);
+    KERR("WARNING LAN ALREADY ATTACHED %s %s", name, cur->lan_attached);
     send_status_ko(llid, tid, "Lan exists");
     }
   else if (strlen(cur->lan_added))
@@ -1066,7 +1066,7 @@ void ovs_c2c_add_lan(int llid, int tid, char *name, char *lan)
     }
   else if (cur->topo.tcp_connection_peered != 1)
     {
-    KERR("ERROR %s", name);
+    KERR("WARNING C2C TCP NOT PEERED %s", name);
     send_status_ko(llid, tid, "Not ready tcp_connection_peered");
     }
   else

@@ -135,6 +135,11 @@ static int g_coherency_ref_timer;
 static int g_inhib_new_clients;
 
 /*****************************************************************************/
+static int g_killing_cloonix;
+int get_killing_cloonix(void)
+{
+  return g_killing_cloonix;
+}
 
 /*****************************************************************************/
 static int get_inhib_new_clients(void)
@@ -1469,10 +1474,11 @@ static void timer_del_all(void *data)
   t_ovs_c2c *c2c, *nc2c;
   t_ovs_tap *tap, *ntap;
   t_ovs_phy *phy, *nphy;
+  t_vm *vm;
   int nb_vm, nb_cnt, nb_zombies, nb_nat, nb_a2b, nb_c2c, nb_tap, nb_phy;
-  int found = 0;
+  int i, found = 0;
   t_timer_del *td = (t_timer_del *) data;;
-  cfg_get_first_vm(&nb_vm);
+  vm = cfg_get_first_vm(&nb_vm);
   nb_cnt = suid_power_delete_cnt_all();
   nb_zombies = cfg_zombie_qty();
   tap = ovs_tap_get_first(&nb_tap);
@@ -1481,6 +1487,11 @@ static void timer_del_all(void *data)
   a2b = ovs_a2b_get_first(&nb_a2b);
   c2c = ovs_c2c_get_first(&nb_c2c);
 
+  for (i=0; i<nb_vm; i++)
+    {
+    poweroff_vm(0, 0, vm);
+    vm = vm->next;
+    }
   while(tap)
     {
     ntap = tap->next;
@@ -1553,6 +1564,7 @@ void recv_kill_uml_clownix(int llid, int tid)
   td->llid = llid;
   td->tid = tid;
   td->kill_cloon = 1;
+  g_killing_cloonix = 1;
   clownix_timeout_add(100, timer_del_all, (void *) td, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -2217,6 +2229,7 @@ void recv_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
 /*****************************************************************************/
 void recv_init(void)
 {
+  g_killing_cloonix = 0;
   glob_coherency = 0;
   glob_coherency_fail_count = 0;
   g_head_coherency = NULL;

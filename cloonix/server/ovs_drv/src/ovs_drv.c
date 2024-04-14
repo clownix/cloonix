@@ -722,9 +722,15 @@ static int rx_netns_cb(int llid, int fd)
       if (sscanf(line, "ovs_resp_ovs_ok pid=%d", &pid) == 1)
         g_ovs_pid = pid;
       if (!strcmp(line, "ovs_resp_ovsdb_ko"))
+        {
+        KERR("ERROR OUT OF OVS %s", line);
         common_end_of_all_destroy();
+        }
       if (!strcmp(line, "ovs_resp_ovs_ko"))
+        {
+        KERR("ERROR OUT OF OVS %s", line);
         common_end_of_all_destroy();
+        }
       log_write_resp(tid, line);
       rpct_send_sigdiag_msg(g_cloonix_llid, tid, line);
       }

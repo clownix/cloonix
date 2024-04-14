@@ -384,21 +384,24 @@ static int pid_dead_clone(int pid, int status)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void pid_clone_harvest_death(void)
+void pid_clone_harvest_death(void)
 {
-  int res, pid=0, status=0;
+  int i, res, status=0;
+  int options = WNOHANG | WEXITED | WSTOPPED | WCONTINUED;
   siginfo_t infop;
-  memset(&infop, 0, sizeof(siginfo_t));
-  res = waitid(P_ALL, 0, &infop, WNOHANG | WEXITED | WSTOPPED | WCONTINUED); 
-  if (res==0)
+  for (i=1; i <= current_max_pid; i++)
     {
-    pid = infop.si_pid;
-    status = infop.si_status;
-    }
-  if (pid > 0)
-    {
-    if (!pid_dead_clone(pid, status))
-      KERR(" ");
+    if (clone_ctx[i].used == i)
+      {
+      memset(&infop, 0, sizeof(siginfo_t));
+      res = waitid(P_PID, clone_ctx[i].pid, &infop, options);
+      if ((res==0) && (clone_ctx[i].pid == infop.si_pid))
+        {
+        status = infop.si_status;
+        if (!pid_dead_clone(clone_ctx[i].pid, status))
+          KERR("ERROR");
+        }
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -425,11 +428,9 @@ int pid_clone_kill_single(int pid)
 {
   int ident = pid_find_ident(pid);
   int result = -1;
+  kill(pid, SIGKILL);
   if (ident)
-    {
-    kill(pid, SIGKILL);
     result = 0;
-    }
   else
     KERR("WARNING BAD KILL %d", pid);
   return result;
@@ -630,6 +631,7 @@ static int popenRWE(int *rp, char *exe, char *argv[])
     close(1);
     dup(out[1]);
     execvp(exe, (char**)argv);
+    KOUT("ERROR execvp");
     }
   return pid;
 }

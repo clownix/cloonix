@@ -79,11 +79,19 @@ static guint main_timeout;
 static char g_current_directory[MAX_PATH_LEN];
 static char g_doors_client_addr[MAX_PATH_LEN];
 static char g_cloonix_root_tree[MAX_PATH_LEN];
-static char g_dtach_work_path[MAX_PATH_LEN];
 static char g_distant_snf_dir[MAX_PATH_LEN];
 static char g_password[MSG_DIGEST_LEN];
 static t_cloonix_conf_info *g_cloonix_conf_info;
 
+static int g_is_broadway;
+
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int get_is_broadway(void)
+{
+  return g_is_broadway;
+}
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -119,7 +127,7 @@ static int file_exists_exec(char *path)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *local_get_cloonix_name(void)
+char *get_net_name(void)
 {
   return (g_clc.network);
 }
@@ -141,13 +149,6 @@ char *get_doors_client_addr(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static const char *get_dtach_work_path(void)
-{
-  return (g_dtach_work_path);
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 char *get_local_cloonix_tree(void)
 {
   return g_cloonix_root_tree;
@@ -155,28 +156,18 @@ char *get_local_cloonix_tree(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *get_distant_cloonix_tree(void)
-{
-  return g_clc.bin_dir;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 char **get_argv_local_xwy(char *name)
 {
-  static char bin_path[MAX_PATH_LEN];
   static char config[MAX_PATH_LEN];
   static char cmd[MAX_PATH_LEN];
   static char path[MAX_PATH_LEN];
   static char nm[MAX_NAME_LEN];
   static char title[MAX_PATH_LEN];
   static char nemo[MAX_NAME_LEN];
-  char *locbintree = get_local_cloonix_tree();
-  char *dstbintree = get_distant_cloonix_tree();
-  static char *argv[]={"/usr/libexec/cloonix/client/cloonix-urxvt",
-                       "-T", title, "-e", bin_path, config, nemo,
-                       "-cmd", cmd, "-a", path, NULL}; 
-  memset(bin_path, 0, MAX_PATH_LEN);
+  static char *argv[]={URXVT_BIN, "-T", title, "-e", XWYCLI_BIN, config,
+                       nemo, "-cmd", cmd, "-a", path, NULL}; 
+  static char *argvtilix[]={TILIX_BIN,"-t",title,"-e",cmd,"-a",path,NULL};
+  char **ptr_argv;
   memset(config, 0, MAX_PATH_LEN);
   memset(cmd, 0, MAX_PATH_LEN);
   memset(path, 0, MAX_PATH_LEN);
@@ -184,13 +175,16 @@ char **get_argv_local_xwy(char *name)
   memset(title, 0, MAX_PATH_LEN);
   memset(nemo, 0, MAX_NAME_LEN);
   strncpy(nm, name, MAX_NAME_LEN-1);
-  snprintf(nemo, MAX_NAME_LEN-1, "%s", local_get_cloonix_name()); 
+  snprintf(nemo, MAX_NAME_LEN-1, "%s", get_net_name()); 
   snprintf(title, MAX_PATH_LEN-1, "%s/%s", nemo, nm); 
-  snprintf(bin_path, MAX_PATH_LEN-1, "%s/client/cloonix-xwycli", locbintree);
   snprintf(config, MAX_PATH_LEN-1, "/usr/libexec/cloonix/common/etc/cloonix.cfg");
-  snprintf(cmd, MAX_PATH_LEN-1, "%s/server/cloonix-dtach", dstbintree);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s", get_dtach_work_path(), nm);
-  return (argv);
+  snprintf(cmd, MAX_PATH_LEN-1, "/usr/libexec/cloonix/server/cloonix-dtach");
+  snprintf(path, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/%s/%s", nemo, DTACH_SOCK, nm);
+  if (!get_is_broadway())
+    ptr_argv = argv;
+  else
+    ptr_argv = argvtilix;
+  return (ptr_argv);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -368,7 +362,6 @@ char *get_distant_snf_dir(void)
 void work_dir_resp(int tid, t_topo_clc *conf)
 {
   char title[2*MAX_NAME_LEN];
-  char tmp_dtach_work_path[2*MAX_PATH_LEN];
   char tmp_distant_snf_dir[2*MAX_PATH_LEN];
   GtkWidget *window, *vbox;
   GtkWidget *scrolled;
@@ -379,22 +372,19 @@ void work_dir_resp(int tid, t_topo_clc *conf)
     printf("\n\nCloon Version client:%s DIFFER FROM server:%s\n\n", 
            cloonix_conf_info_get_version(), conf->version);
     }
-  daemon(0,1);
+
+  if (!get_is_broadway())
+    daemon(0,1);
+
   move_init();
   popup_init();
   memcpy(&g_clc, conf, sizeof(t_topo_clc));
-
-  snprintf(tmp_dtach_work_path, 2*MAX_PATH_LEN, "/var/lib/cloonix/%s/%s",
-                                g_clc.network, DTACH_SOCK);
-  tmp_dtach_work_path[MAX_PATH_LEN-1] = 0;
-  strcpy(g_dtach_work_path, tmp_dtach_work_path); 
 
   snprintf(tmp_distant_snf_dir, 2*MAX_PATH_LEN, "/var/lib/cloonix/%s/%s",
            g_clc.network, SNF_DIR);
   tmp_distant_snf_dir[MAX_PATH_LEN-1] = 0;
   strcpy(g_distant_snf_dir, tmp_distant_snf_dir);
 
-//  if (gtk_init_check(&g_argc, &g_argv) == FALSE)
   if (gtk_init_check(NULL, NULL) == FALSE)
     KOUT("Error in gtk_init_check function");
 
@@ -404,6 +394,9 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_accept_focus(GTK_WINDOW(window), FALSE);
 
+  if (get_is_broadway())
+    gtk_window_fullscreen (GTK_WINDOW(window));
+
 
   menu_init();
   g_main_window = window;
@@ -412,9 +405,9 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 		      (GCallback) destroy_handler, NULL);
   if (g_i_am_in_cloon)
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", 
-             g_i_am_in_cloonix_name, local_get_cloonix_name());
+             g_i_am_in_cloonix_name, get_net_name());
   else
-    snprintf(title, MAX_NAME_LEN, "%s", local_get_cloonix_name());
+    snprintf(title, MAX_NAME_LEN, "%s", get_net_name());
   title[MAX_NAME_LEN-1] = 0;
   gtk_window_set_title (GTK_WINDOW (window), title);
   gtk_window_set_default_size (GTK_WINDOW (window), WIDTH, HEIGH);
@@ -426,7 +419,8 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   gtk_container_add (GTK_CONTAINER (window), scrolled);
   gtk_widget_show_all(window);
   main_timer_activation();
-  send_layout_event_sub(get_clownix_main_llid(), 0, 1);
+  if (!get_is_broadway())
+    send_layout_event_sub(get_clownix_main_llid(), 0, 1);
   glib_prepare_rx_tx(get_clownix_main_llid());
   interface_topo_subscribe();
 }
@@ -497,10 +491,14 @@ int main(int argc, char *argv[])
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
   init_local_cloonix_bin_path(g_current_directory, argv[0]); 
-  if(!getenv("HOME"))
-    KOUT("No HOME env");
-  if(!getenv("DISPLAY"))
-    KOUT("No DISPLAY env");
+  if((getenv("GDK_BACKEND")) && (!strcmp(getenv("GDK_BACKEND"), "broadway")))
+    g_is_broadway = 1;
+  else
+    {
+    g_is_broadway = 0;
+    if (!getenv("DISPLAY"))
+      KERR("ERROR NO DISPLAY FOR A SOFTWARE GUI");
+    }
 
   memset(g_doors_client_addr, 0, MAX_PATH_LEN);
   strncpy(g_doors_client_addr, g_cloonix_conf_info->doors, MAX_PATH_LEN-1);
@@ -512,7 +510,10 @@ int main(int argc, char *argv[])
   client_get_path(0, work_dir_resp);
   printf("CONNECTED\n");
   layout_topo_init();
-  request_move_stop_go(1);
+  if (get_is_broadway())
+    request_move_stop_go(0);
+  else
+    request_move_stop_go(1);
   bdplot_init();
   clownix_timeout_add(10, timeout_periodic_work, NULL, NULL, NULL);
   gtk_main();

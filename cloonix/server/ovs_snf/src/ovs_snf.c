@@ -88,11 +88,11 @@ static void heartbeat (int delta)
 void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   if (llid != g_llid)
-    KERR("%s %s %d %d", g_net_name, name, llid, g_llid);
+    KERR("ERROR %s %s %d %d", g_net_name, name, llid, g_llid);
   if (tid != type_hop_snf)
-    KERR("%s %s %d %d", g_net_name, name, llid, g_llid);
+    KERR("ERROR %s %s %d %d", g_net_name, name, llid, g_llid);
   if (strcmp(g_snf_name, name))
-    KERR("%s %s %s %d %d", g_net_name, name, g_snf_name, llid, g_llid);
+    KERR("ERROR %s %s %s %d %d", g_net_name, name, g_snf_name, llid, g_llid);
   rpct_send_pid_resp(llid, tid, name, num, cloonix_get_pid(), getpid());
   g_watchdog_ok = 1;
 }
@@ -111,7 +111,7 @@ void rpct_recv_kil_req(int llid, int tid)
 /****************************************************************************/
 void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 {
-  KERR("%s", line);
+  KERR("ERROR %s", line);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -124,9 +124,9 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   int num, status, cmd;
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
-    KERR("%s %d %d", g_net_name, llid, g_llid);
+    KERR("ERROR %s %d %d", g_net_name, llid, g_llid);
   if (tid != type_hop_snf)
-    KERR("%s %d %d", g_net_name, tid, type_hop_snf);
+    KERR("ERROR %s %d %d", g_net_name, tid, type_hop_snf);
   DOUT(FLAG_HOP_SIGDIAG, "SNF %s", line);
   if (!strncmp(line,
   "cloonsnf_suidroot", strlen("cloonsnf_suidroot")))
@@ -167,7 +167,6 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     {
     if (cmd)
       {
-KERR("VIPTODO WIRESHARK CMD RESET %d", inotify_get_state());
       status = 2;
       close_pcap_record();
       snprintf(resp, MAX_PATH_LEN-1,
@@ -179,7 +178,6 @@ KERR("VIPTODO WIRESHARK CMD RESET %d", inotify_get_state());
       {
       if ((!access(g_ctrl_path, F_OK)) && (!inotify_get_state()))
         {
-KERR("VIPTODO WIRESHARK OOOOOO %d", inotify_get_state());
         status = 0;
         }
       else
@@ -229,7 +227,7 @@ static void fct_timeout_self_destruct(void *data)
 {
   if (g_watchdog_ok == 0)
     {
-    KERR("XYX SELF DESTRUCT WATCHDOG %s %s", g_net_name, g_snf_name);
+    KERR("ERROR XYX SELF DESTRUCT WATCHDOG %s %s", g_net_name, g_snf_name);
     KOUT("EXIT");
     }
   g_watchdog_ok = 0;

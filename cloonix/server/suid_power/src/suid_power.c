@@ -42,6 +42,7 @@
 #include "crun_utils.h"
 #include "net_phy.h"
 
+
 /*--------------------------------------------------------------------------*/
 static int  g_cloonix_rank;
 static int  g_llid;
@@ -71,7 +72,6 @@ typedef struct t_vmon
 } t_vmon;
 
 static t_vmon *g_head_vmon;
-
 
 
 /*****************************************************************************/
@@ -340,7 +340,7 @@ static void automate_pid_monitor(void)
         rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, resp);
         cur->state = state_lost_pid;
         if (cur->pid > 0)
-          kill(cur->pid, SIGTERM);
+          kill(cur->pid, SIGKILL);
         }
       else if (pid != cur->pid)
         KERR("%d %d", pid, cur->pid);
@@ -387,7 +387,7 @@ static void req_kill_clean_all(void)
 
     if (pid > 0)
       {
-      kill(cur->pid, SIGTERM);
+      kill(cur->pid, SIGKILL);
       free_vmon(cur);
       }
     cur = next;
@@ -434,7 +434,7 @@ static void qemu_launch(char *name, int vm_id, int argc,
     *ptr = ' ';
     ptr = strchr(ptr, '"');
     } 
-  result = execute_cmd(ptr_start+1);
+  result = execute_cmd(ptr_start+1, 1);
   if (result)
     {
     snprintf(resp, MAX_PATH_LEN-1,
@@ -547,7 +547,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       KERR("Not found: vm_id = %d", vm_id);
     else if (cur->pid > 0)
       {
-      if (kill(cur->pid, SIGTERM))
+      if (kill(cur->pid, SIGKILL))
         KERR("ERROR Bad kill %d", vm_id);
       else
         {
@@ -564,7 +564,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     {
     if (pid <= 0)
       KERR("ERROR BECAUSE BAD pid %d", pid);
-    else if (!kill(pid, SIGTERM))
+    else if (!kill(pid, SIGKILL))
       KERR("ERROR BECAUSE GOOD KILL %d", pid);
     }
   else if (!strncmp(line,
@@ -580,8 +580,8 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 /****************************************************************************/
 static void err_ctrl_cb (int llid, int err, int from)
 {
+  KERR("ERROR SUIDPOWER RECEIVED DISCONNECT %d %d", err, from);
   req_kill_clean_all();
-  KERR("SUIDPOWER RECEIVED DISCONNECT %d %d", err, from);
   exit(0);
 }
 /*--------------------------------------------------------------------------*/
@@ -606,12 +606,22 @@ static void connect_from_ctrl_client(int llid, int llid_new)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void fct_timeout_self_destruct(void *data)
+static void timer_heartbeat(void *data)
 {
-  if (g_watchdog_ok == 0)
-    KOUT("SUID_POWER SELF DESTRUCT");
-  g_watchdog_ok = 0;
-  clownix_timeout_add(1500, fct_timeout_self_destruct, NULL, NULL, NULL);
+  static int count = 0;
+  count += 1;
+  if (g_watchdog_ok == 1)
+    count = 1;
+  if (count == 8)
+    {
+    count = 0;
+    if (g_watchdog_ok == 0)
+      {
+      KERR("ERROR WATCHDOG SUID_POWER SELF DESTRUCT");
+      req_kill_clean_all();
+      }
+    g_watchdog_ok = 0;
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -649,48 +659,47 @@ int main (int argc, char *argv[])
   g_llid = 0;
   g_watchdog_ok = 0;
   if (argc == 1)
-    run_dir_create();
-  else
     {
-    umask(0000);
-    read(open("/dev/urandom", O_RDONLY), &seed, sizeof(seed));
-    if (clock_gettime(CLOCK_MONOTONIC, &ts))
-      KOUT(" ");
-    seed += ts.tv_nsec;
-    srand(seed);
-    if (argc != 5)
-      KOUT(" ");
-    msg_mngt_init("suid_power", IO_MAX_BUF_LEN);
-    memset(g_netns_namespace, 0, MAX_PATH_LEN);
-    memset(g_network_name, 0, MAX_NAME_LEN);
-    memset(ctrl_path, 0, MAX_PATH_LEN);
-    memset(g_root_path, 0, MAX_PATH_LEN);
-    memset(g_root_work_kvm, 0, MAX_PATH_LEN);
-    memset(g_bin_dir, 0, MAX_PATH_LEN);
-    memset(g_mnt_loop_dir, 0, MAX_PATH_LEN);
-  
-    strncpy(g_network_name, argv[1], MAX_NAME_LEN-1);
-    snprintf(g_netns_namespace, MAX_PATH_LEN-1, "%s%s_%s",
-             PATH_NAMESPACE, BASE_NAMESPACE, argv[1]);
-    strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
-    strncpy(g_bin_dir, argv[3], MAX_PATH_LEN-1);
-    snprintf(g_mnt_loop_dir, MAX_PATH_LEN-1,"%s/%s", argv[2], MNT_DIR);
-    if (sscanf(argv[4], "%d", &g_cloonix_rank) != 1)
-      KOUT("ERROR %s", argv[4]);
-    root = g_root_path;
-    crun_init(root);
-    snprintf(g_root_work_kvm,MAX_PATH_LEN-1,"%s/%s", root, CLOONIX_VM_WORKDIR);
-    snprintf(ctrl_path,MAX_PATH_LEN-1,"%s/%s", root, SUID_POWER_SOCK_DIR);
-    unlink(ctrl_path);
-    msg_mngt_heartbeat_init(heartbeat);
-    string_server_unix(ctrl_path, connect_from_ctrl_client, "ctrl");
-    daemon(0,0);
-    net_phy_init();
-    seteuid(getuid());
-    cloonix_set_pid(getpid());
-    clownix_timeout_add(1000, fct_timeout_self_destruct, NULL, NULL, NULL);
-    msg_mngt_loop();
+    run_dir_create();
+    return 0;
     }
+  umask(0000);
+  read(open("/dev/urandom", O_RDONLY), &seed, sizeof(seed));
+  if (clock_gettime(CLOCK_MONOTONIC, &ts))
+    KOUT(" ");
+  seed += ts.tv_nsec;
+  srand(seed);
+  if (argc != 5)
+    KOUT(" ");
+  msg_mngt_init("suid_power", IO_MAX_BUF_LEN);
+  memset(g_netns_namespace, 0, MAX_PATH_LEN);
+  memset(g_network_name, 0, MAX_NAME_LEN);
+  memset(ctrl_path, 0, MAX_PATH_LEN);
+  memset(g_root_path, 0, MAX_PATH_LEN);
+  memset(g_root_work_kvm, 0, MAX_PATH_LEN);
+  memset(g_bin_dir, 0, MAX_PATH_LEN);
+  memset(g_mnt_loop_dir, 0, MAX_PATH_LEN);
+  strncpy(g_network_name, argv[1], MAX_NAME_LEN-1);
+  snprintf(g_netns_namespace, MAX_PATH_LEN-1, "%s%s_%s",
+           PATH_NAMESPACE, BASE_NAMESPACE, argv[1]);
+  strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
+  strncpy(g_bin_dir, argv[3], MAX_PATH_LEN-1);
+  snprintf(g_mnt_loop_dir, MAX_PATH_LEN-1,"%s/%s", argv[2], MNT_DIR);
+  if (sscanf(argv[4], "%d", &g_cloonix_rank) != 1)
+    KOUT("ERROR %s", argv[4]);
+  root = g_root_path;
+  crun_init(root);
+  snprintf(g_root_work_kvm,MAX_PATH_LEN-1,"%s/%s", root, CLOONIX_VM_WORKDIR);
+  snprintf(ctrl_path,MAX_PATH_LEN-1,"%s/%s", root, SUID_POWER_SOCK_DIR);
+  unlink(ctrl_path);
+  msg_mngt_heartbeat_init(heartbeat);
+  string_server_unix(ctrl_path, connect_from_ctrl_client, "ctrl");
+  daemon(0,0);
+  net_phy_init();
+  seteuid(getuid());
+  cloonix_set_pid(getpid());
+  clownix_timeout_add(200, timer_heartbeat, NULL, NULL, NULL);
+  msg_mngt_loop();
   return 0;
 }
 /*--------------------------------------------------------------------------*/

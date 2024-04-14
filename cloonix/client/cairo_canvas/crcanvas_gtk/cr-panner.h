@@ -1,20 +1,5 @@
 /* cr-panner.h 
  * Copyright (C) 2006 Robert Gibbs <bgibbs@users.sourceforge.net> 
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
  */
 #ifndef _CR_PANNER_H_
 #define _CR_PANNER_H_
@@ -61,29 +46,8 @@ struct _CrPanner
 struct _CrPannerClass
 {
         GObjectClass parent_class;
-        /**
-         * CrPanner::pan:
-         * @panner:
-         * @dx: Device units moved in the X direction.
-         * @dy: Device units moved in the Y direction.
-         *
-         * This signal is emitted each time the canvas is panned.
-         */
         void (*pan)(CrPanner *, double dx, double dy);
-        /**
-         * CrPanner::activate:
-         * @panner:
-         *
-         * This signal is emitted whenever the panner is first activated.
-         */
         void (*activate)(CrPanner *panner);
-        /**
-         * CrPanner::deactivate:
-         * @panner:
-         *
-         * This signal is emitted whenever the panner is deactivated. 
-         * It can be used to get to a callback from a panning selection.
-         */
         void (*deactivate)(CrPanner *);
 };
 
@@ -103,4 +67,4 @@ enum {
 
 G_END_DECLS
 
-#endif /* _CR_PANNER_H_ */
+#endif

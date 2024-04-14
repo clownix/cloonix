@@ -83,6 +83,12 @@ for i in dumpcap \
   chmod u+s /usr/libexec/cloonix/server/${i}
 done
 #----------------------------------------------------------
+mkdir -p /var/lib/cloonix/cache/fontconfig
+mkdir -p /var/lib/cloonix/bulk
+chmod 777 /var/lib/cloonix/cache
+chmod 777 /var/lib/cloonix/cache/fontconfig
+chmod 777 /var/lib/cloonix/bulk
+#----------------------------------------------------------
 rm -rf /tmp/common
 rm -rf /tmp/client
 rm -rf /tmp/server

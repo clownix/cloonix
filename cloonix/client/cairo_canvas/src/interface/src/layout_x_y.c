@@ -211,7 +211,6 @@ void set_gene_layout_x_y(int bank_type, char *name,
     vtl->next->prev = vtl;
   vtl->prev = NULL;
   head_gene_layout = vtl;
-KERR("VIPTODO %d %s %lf %lf   %lf %lf %lf %lf", bank_type, name, x,y,xa,ya,xb,yb);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -251,7 +250,6 @@ void get_gene_layout_x_y(int bank_type, char *name,
     *yb = cur->yb;
     *hidden_on_graph = cur->hidden_on_graph;
     unset_gene_layout(bank_type, name);
-KERR("VIPTODO %d %s %lf %lf   %lf %lf %lf %lf", bank_type, name, *x,*y,*xa,*ya,*xb,*yb);
     }
 }
 /*--------------------------------------------------------------------------*/

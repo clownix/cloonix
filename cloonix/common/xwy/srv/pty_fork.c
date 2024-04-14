@@ -35,11 +35,11 @@
 #include "mdl.h"
 #include "low_write.h"
 #include "wrap.h"
+#include "glob_common.h"
 
+void hide_real_machine(void);
 
-#define MAX_NAME_LEN 100
 #define MAX_ARGC 100
-#define MAX_PATH_LEN 500
 
 typedef struct t_pty_cli
 {
@@ -57,11 +57,11 @@ static t_pty_cli *g_pty_cli_head;
 static int g_sig_write_fd;
 static int g_sig_read_fd;
 static int g_listen_sock_cloon;
-static char g_home[MAX_TXT_LEN];
 static char g_user[MAX_TXT_LEN];
 static char g_xauthority[MAX_TXT_LEN];
 static char g_net_name[MAX_TXT_LEN];
 static struct timeval g_last_cloonix_tv;
+
 
 
 /****************************************************************************/
@@ -192,25 +192,9 @@ static void clean_xauthority(char *xauthority_file, char *end_file)
 /****************************************************************************/
 static void init_all_env(char *net_name)
 {
-  char *home = getenv("HOME");
-  char *user = getenv("USER");
-  memset(g_home, 0, MAX_TXT_LEN);
   memset(g_xauthority, 0, MAX_TXT_LEN);
-  memset(g_user, 0, MAX_TXT_LEN);
-  if (user)
-    strncpy(g_user, user, MAX_TXT_LEN-1);
-  if (!home)
-    {
-    XERR("ERROR TOLOOKAT");
-    snprintf(g_home, MAX_TXT_LEN-1, "%s", "/root");
-    sprintf(g_xauthority, "/root/.Cloonauthority"); 
-    }
-  else
-    {
-    snprintf(g_home, MAX_TXT_LEN-1, "%s", home);
-    snprintf(g_xauthority, MAX_TXT_LEN-1, 
-             "/var/lib/cloonix/%s/Cloonauthority", net_name); 
-    }
+  snprintf(g_xauthority, MAX_TXT_LEN-1, 
+           "/var/lib/cloonix/%s/Cloonauthority", net_name); 
   unlink(g_xauthority);
   clean_xauthority(g_xauthority, "-c");
   clean_xauthority(g_xauthority, "-l");
@@ -221,62 +205,19 @@ static void init_all_env(char *net_name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void set_env_global_cloonix(void)
+static void create_env_display(int display_val, char *ttyname)
 {
+  char home_dir[MAX_PATH_LEN];
+  char disp_str[MAX_TXT_LEN];
   setenv("PATH",  "/usr/libexec/cloonix/common:"
                   "/usr/libexec/cloonix/client:"
                   "/usr/libexec/cloonix/server", 1);
-  setenv("FONTCONFIG_FILE",
-  "/usr/libexec/cloonix/common/etc/fonts/fonts.conf", 1);
-  setenv("XDG_CONFIG_HOME",
-  "/usr/libexec/cloonix/common/share", 1);
-  setenv("XDG_DATA_HOME",
-  "/usr/libexec/cloonix/common/share", 1);
-  setenv("XDG_DATA_DIRS",
-  "/usr/libexec/cloonix/common/share", 1);
-  setenv("GTK_DATA_PREFIX",
-  "/usr/libexec/cloonix/common/share", 1);
-  setenv("GTK_EXE_PREFIX",
-  "/usr/libexec/cloonix/common", 1);
-  setenv("QT_PLUGIN_PATH",
-  "/usr/libexec/cloonix/common/lib/qt6/plugins", 1);
-  setenv("GTK_IM_MODULE_FILE",
-  "/usr/libexec/cloonix/common/lib/gtk-3.0/3.0.0/immodules.cache", 1);
-  setenv("GDK_PIXBUF_MODULE_FILE",
-  "/usr/libexec/cloonix/common/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache", 1);
-  setenv("GST_PLUGIN_SYSTEM_PATH",
-  "/usr/libexec/cloonix/common/lib/gstreamer-1.0", 1);
-  setenv("GST_PLUGIN_SCANNER",
-  "/usr/libexec/cloonix/common/gst-plugin-scanner", 1);
-  setenv("NO_AT_BRIDGE", "1", 1);
-  setenv("PULSE_CLIENTCONFIG",
-  "/usr/libexec/cloonix/common/etc/pulse/client.conf", 1);
-  setenv("LIBGL_ALWAYS_INDIRECT", "1", 1);
-  setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1);
-  setenv("LIBGL_DRI3_DISABLE", "1", 1);
-  setenv("QT_X11_NO_MITSHM", "1", 1);
-  setenv("QT_XCB_NO_MITSHM", "1", 1);
-  setenv("XAUTHORITY", g_xauthority, 1);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void create_env_base(void)
-{
-  char *path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
-  setenv("PATH", path, 1);
-  setenv("HOME", g_home, 1);
+  setenv("LC_ALL", "C", 1);
+  setenv("LANG", "C", 1);
   setenv("XAUTHORITY", g_xauthority, 1);
   setenv("SHELL", "/bin/bash", 1);
   setenv("TERMINFO", "/usr/libexec/cloonix/common/share/terminfo", 1);
   setenv("TERM", "rxvt-unicode", 1);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void create_env_display(int display_val, char *ttyname)
-{
-  char disp_str[MAX_TXT_LEN];
   memset(disp_str, 0, MAX_TXT_LEN);
   if (display_val > 0)
     {
@@ -286,7 +227,20 @@ static void create_env_display(int display_val, char *ttyname)
       setenv("SSH_TTY", ttyname, 1);
     }
   else
-    XERR("Problem setting DISPLAY");
+    XERR("ERROR Problem setting DISPLAY");
+  memset(home_dir, 0, MAX_PATH_LEN);
+  snprintf(home_dir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/run", g_net_name);
+  setenv("HOME", home_dir, 1);
+  setenv("XDG_RUNTIME_DIR", home_dir, 1);
+  setenv("XDG_CACHE_HOME", home_dir, 1);
+  setenv("XDG_DATA_HOME", home_dir, 1);
+  memset(home_dir, 0, MAX_PATH_LEN);
+  snprintf(home_dir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/run/.config", g_net_name);
+  setenv("XDG_CONFIG_HOME", home_dir, 1);
+  setenv("QT_PLUGIN_PATH", "/usr/libexec/cloonix/common/lib/qt6/plugins", 1);
+  setenv("NO_AT_BRIDGE", "1", 1);
+  setenv("QT_X11_NO_MITSHM", "1", 1);
+  setenv("QT_XCB_NO_MITSHM", "1", 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -321,12 +275,11 @@ static void create_argv_from_cmd(char *cmd, char **argv)
       }
     else
       {
-      len = strcspn(ptr[i], " \t"); 
+      len = strcspn(ptr[i], " \t\n"); 
       cmd_ptr = ptr[i] + len;
       *cmd_ptr = 0;
       cmd_ptr += 1;
       }
-    len = strcspn(ptr[i], " \t"); 
     argv[i] = ptr[i];
     nb = i;
     }
@@ -371,17 +324,26 @@ static int get_process_pid(char *cmdpath, char *sock)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void kill_previous_process(char *pwire, char *pdump, char *sock)
+static void kill_previous_wireshark_process(char *sock)
 {
-  int pid_wireshark, pid_dumpcap = 0;
-  pid_dumpcap = get_process_pid(pdump, sock);
-  pid_wireshark = get_process_pid(pwire, sock);
-  if (pid_dumpcap && pid_wireshark)
+  int pid_wireshark_qt, pid_wireshark_gtk, pid_dumpcap;
+  pid_dumpcap       = get_process_pid(WIRESHARK_DUMPCAP, sock);
+  pid_wireshark_qt  = get_process_pid(WIRESHARK_BIN_QT,  sock);
+  pid_wireshark_gtk = get_process_pid(WIRESHARK_BIN_GTK, sock);
+  if (pid_wireshark_qt)
+    {
+    kill(pid_wireshark_qt, SIGKILL);
+    XERR("WARNING KILL WIRESHARK_QT %d", pid_wireshark_qt);
+    }
+  if (pid_wireshark_gtk)
+    {
+    kill(pid_wireshark_gtk, SIGKILL);
+    XERR("WARNING KILL WIRESHARK_GTK %d", pid_wireshark_gtk);
+    }
+  if (pid_dumpcap)
     {
     kill(pid_dumpcap, SIGKILL);
-    kill(pid_wireshark, SIGKILL);
-    XERR("KILL WIRESHARK %d", pid_wireshark);
-    usleep(100000);
+    XERR("WARNING KILL WIRESHARK_DUMPCAP %d", pid_dumpcap);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -392,21 +354,17 @@ static void sigusr1_child_handler(int dummy)
   XERR("WARNING  Parent died, child now exiting\n");    
   exit(0);                                  
 }                            
-
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
                          char *cmd, int display_val)
 {
-  char *pwireshark = "/usr/libexec/cloonix/server/cloonix-wireshark";
-  char *pdumpcap = "/usr/libexec/cloonix/server/dumpcap";
-  char *pvarlib = "/var/lib/cloonix/";
   char ttyname[MAX_TXT_LEN], *argv[MAX_ARGC];
   int i, pty_fd=-1, ttyfd, pid;
   char *ptr, *ptre;
   memset(argv, 0, MAX_ARGC * sizeof(char *));
   memset(ttyname, 0, MAX_TXT_LEN);
-  clearenv();
   if (action != action_dae)
     {
     if (wrap_openpty(&pty_fd, &ttyfd, ttyname, fd_type_fork_pty))
@@ -418,14 +376,17 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       }
     wrap_pty_make_controlling_tty(ttyfd, ttyname);
     }
-  create_env_base(); 
-  create_env_display(display_val, ttyname); 
 
   pid = fork();
   if (pid < 0)
     XOUT("%s", strerror(errno));
   if (pid == 0)
     {
+    hide_real_machine();
+    clearenv();
+
+    create_env_display(display_val, ttyname); 
+
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_DFL);
     if (signal(SIGUSR1, sigusr1_child_handler) == SIG_ERR)          
@@ -439,19 +400,21 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       {
       for (i=0; i<MAX_FD_NUM; i++)
         close(i);
-      set_env_global_cloonix();
       create_argv_from_cmd(cmd, argv);
-      if (!strcmp(argv[0], pwireshark))
+      if (!strcmp(argv[0], WIRESHARK_BIN_QT))
         {
         i = 0;
         while(argv[i])
           {
-          if (!strncmp(argv[i], pvarlib, strlen(pvarlib)))
-            kill_previous_process(pwireshark, pdumpcap, argv[i]);
+          if (!strncmp(argv[i],"/var/lib/cloonix",strlen("/var/lib/cloonix")))
+            kill_previous_wireshark_process(argv[i]);
           i++;
           }
+        execv(argv[0], argv);
+        XOUT("ERROR execv");
         }
-      execv(argv[0], argv);
+      else
+        XERR("ERROR CMD %s", cmd);                  
       }
     else
       {
@@ -501,6 +464,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       else
         XOUT("ERROR %d", action);
       execv(argv[0], argv);
+      XOUT("ERROR execv");
       }
     }
   else

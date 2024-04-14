@@ -41,6 +41,7 @@
 #include "doorways_mngt.h"
 #include "doors_rpc.h"
 #include "suid_power.h"
+#include "broadway.h"
 
 #define MAX_CALLBACK_END 50
 
@@ -144,6 +145,11 @@ void last_action_self_destruction(void *data)
   t_llid_tid *llid_tid = (t_llid_tid *) data;
   char path[MAX_PATH_LEN];
   char err[MAX_PRINT_LEN];
+  if (doorways_get_distant_pid())
+    {
+    if (pid_clone_kill_single(doorways_get_distant_pid()))
+      KERR("ERROR DOOR CLONE KILL %d", doorways_get_distant_pid());
+    }
   llid_free_all_llid();
   sprintf(path, "%s/cloonix_lock", cfg_get_root_work());
   unlink(path);
@@ -164,6 +170,12 @@ void last_action_self_destruction(void *data)
   if (unlink_sub_dir_files_except_dir(utils_get_nat_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_a2b_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_runbroadway_config_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_runbroadway_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_run_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(cfg_get_work(), err))
     event_print("DELETE PROBLEM: %s\n", err);
@@ -207,11 +219,6 @@ static void action_self_destruction(void *data)
       else
         {
         suid_power_kill();
-        if (pid_clone_kill_single(doorways_get_distant_pid()))
-          {
-          KERR("ERROR CLONE KILL %d", doorways_get_distant_pid());
-          kill(doorways_get_distant_pid(), SIGKILL);
-          }
         event_print("Self-destruction triggered");
         clownix_timeout_add(20, last_action_self_destruction, (void *)llid_tid, 
                             NULL, NULL);
@@ -233,6 +240,7 @@ void auto_self_destruction(int llid, int tid)
 {
   t_llid_tid *llid_tid = (t_llid_tid *) clownix_malloc(sizeof(t_llid_tid), 11);
   glob_req_self_destruction = 1;
+  broadway_exit();
   llid_tid->llid = llid;
   llid_tid->tid = tid;
   clownix_timeout_add(10, action_self_destruction, (void *)llid_tid, 

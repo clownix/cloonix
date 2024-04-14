@@ -58,6 +58,7 @@ void cloonix_lock_fd_close(void);
 void blkd_sub_clean_all(void);
 void blkd_data_clean_all(void);
 
+char *get_net_name(void);
 
 void glib_pid_clone_init(int fd_request, int fd_ack);
 
@@ -310,19 +311,22 @@ static int pid_dead_clone(int pid, int status)
 /*****************************************************************************/
 void pid_clone_harvest_death(void)
 {
-  int res, pid=0, status=0;
+  int i, res, status=0;
+  int options = WNOHANG | WEXITED | WSTOPPED | WCONTINUED;
   siginfo_t infop;
-  memset(&infop, 0, sizeof(siginfo_t));
-  res = waitid(P_ALL, 0, &infop, WNOHANG | WEXITED | WSTOPPED | WCONTINUED); 
-  if (res==0)
+  for (i=1; i <= current_max_pid; i++)
     {
-    pid = infop.si_pid;
-    status = infop.si_status;
-    }
-  if (pid > 0)
-    {
-    if (!pid_dead_clone(pid, status))
-      KERR(" ");
+    if (clone_ctx[i].used == i)
+      {
+      memset(&infop, 0, sizeof(siginfo_t));
+      res = waitid(P_PID, clone_ctx[i].pid, &infop, options);
+      if ((res==0) && (clone_ctx[i].pid == infop.si_pid))
+        {
+        status = infop.si_status;
+        if (!pid_dead_clone(clone_ctx[i].pid, status))
+          KERR("ERROR");
+        }
+      }
     }
 }
 /*---------------------------------------------------------------------------*/

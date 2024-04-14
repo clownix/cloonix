@@ -34,14 +34,14 @@ char *get_distant_cloonix_tree(void);
 void work_dir_resp(int tid, t_topo_clc *conf);
 char *get_spice_vm_path(int vm_id);
 
+int get_is_broadway(void);
 
 char *get_cmd_path(void);
 int inside_cloon(char **name);
 
 char **get_argv_local_xwy(char *name);
 
-void cloonix_get_xvt(char *xvt);
-char *local_get_cloonix_name(void);
+char *get_net_name(void);
 char *get_password(void);
 char *get_doors_client_addr(void);
 /*****************************************************************************/

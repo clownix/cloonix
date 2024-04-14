@@ -262,6 +262,7 @@ static int start_launch(void *ptr)
 {
   char **argv = (char **) ptr;
   execv(argv[0], argv);
+  KOUT("ERROR execv");
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -274,13 +275,21 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
   static char name[MAX_NAME_LEN];
   static char addr[MAX_NAME_LEN];
   static char passwd[MAX_NAME_LEN];
-  static char *argv[] = {"/usr/libexec/cloonix/client/cloonix-urxvt",
-                         "-T", title, "-e",
+
+  static char *argvtilix[] = {TILIX_BIN, "-t", title, "-e",
                          "/usr/libexec/cloonix/client/cloonix-dropbear-ssh",
                          addr, passwd, name, NULL};
-  static char *argvnatplug[] = {"/usr/libexec/cloonix/client/cloonix-urxvt",
-                                "-T", title, "-e", "/usr/bin/cloonix_osh",
-                                net, name, NULL};
+
+  static char *argv[] = {URXVT_BIN, "-T", title, "-e",
+                         "/usr/libexec/cloonix/client/cloonix-dropbear-ssh",
+                         addr, passwd, name, NULL};
+
+  static char *argvnatplug[] = {URXVT_BIN, "-T", title, "-e",
+                                "/usr/bin/cloonix_osh", net, name, NULL};
+
+  static char *natplugtilix[] = {TILIX_BIN, "-t", title, "-e",
+                                "/usr/bin/cloonix_osh", net, name, NULL};
+
   memset(title, 0, 2*MAX_NAME_LEN+1);
   memset(name, 0, MAX_NAME_LEN);
   strncpy(name, name_vm, MAX_NAME_LEN);
@@ -288,24 +297,46 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
     {
     memset(net, 0, MAX_NAME_LEN);
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", net, name);
-    strncpy(net, local_get_cloonix_name(), MAX_NAME_LEN);
-    if (check_before_start_launch(argvnatplug))
+    strncpy(net, get_net_name(), MAX_NAME_LEN);
+    if (!get_is_broadway())
       {
-      pid_clone_launch(start_launch, NULL, NULL, (void *)(argvnatplug),
-                       NULL, NULL, name_vm, -1, 0);
+      if (check_before_start_launch(argvnatplug))
+        {
+        pid_clone_launch(start_launch, NULL, NULL, (void *)(argvnatplug),
+                         NULL, NULL, name_vm, -1, 0);
+        }
+      }
+    else
+      {
+      if (check_before_start_launch(natplugtilix))
+        {
+        pid_clone_launch(start_launch, NULL, NULL, (void *)(natplugtilix),
+                         NULL, NULL, name_vm, -1, 0);
+        }
       }
     }
   else
     {
     memset(addr, 0, MAX_NAME_LEN);
     memset(passwd, 0, MAX_NAME_LEN);
-    snprintf(title, 2*MAX_NAME_LEN, "%s/%s", local_get_cloonix_name(), name);
+    snprintf(title, 2*MAX_NAME_LEN, "%s/%s", get_net_name(), name);
     strncpy(addr, get_doors_client_addr(), MAX_NAME_LEN);
     strncpy(passwd, get_password(), MAX_NAME_LEN);
-    if (check_before_start_launch(argv))
+    if (!get_is_broadway())
       {
-      pid_clone_launch(start_launch, NULL, NULL, (void *)(argv),
-                       NULL, NULL, name_vm, -1, 0);
+      if (check_before_start_launch(argv))
+        {
+        pid_clone_launch(start_launch, NULL, NULL, (void *)(argv),
+                         NULL, NULL, name_vm, -1, 0);
+        }
+      }
+    else
+      {
+      if (check_before_start_launch(argvtilix))
+        {
+        pid_clone_launch(start_launch, NULL, NULL, (void *)(argvtilix),
+                         NULL, NULL, name_vm, -1, 0);
+        }
       }
     }
 }

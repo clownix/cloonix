@@ -69,6 +69,7 @@
 #include "cnt.h"
 #include "mactopo.h"
 #include "crun.h"
+#include "broadway.h"
 
 
 static t_topo_clc g_clc;
@@ -77,11 +78,27 @@ static int g_i_am_in_cloon;
 static char g_i_am_in_cloonix_name[MAX_NAME_LEN];
 
 
-static int g_cloonix_lock_fd = 0;
+static int g_uml_cloonix_started;
+static int g_cloonix_lock_fd;
 static int g_machine_is_kvm_able;
 static char g_config_path[MAX_PATH_LEN];
 static int g_conf_rank;
 
+static char g_ascii_broadway_port[MAX_NAME_LEN];
+
+/*****************************************************************************/
+char *get_ascii_broadway_port(void)
+{
+  return g_ascii_broadway_port;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int get_uml_cloonix_started(void)
+{
+  return g_uml_cloonix_started;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int get_conf_rank(void)
@@ -286,6 +303,7 @@ static void timer_openvswitch_ok(void *data)
     {
     printf("\n    UML_CLOONIX_SWITCH NOW RUNNING\n\n");
     daemon(0,0);
+    g_uml_cloonix_started = 1;
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -331,6 +349,7 @@ static void launching(void)
   sprintf(clownlock, "%s/cloonix_lock", cfg_get_root_work());
   check_for_another_instance(clownlock, 1);
   init_xwy(cfg_get_cloonix_name());
+  broadway_init();
   clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -358,6 +377,7 @@ static t_topo_clc *get_parsed_config(char *name)
     conf->network[MAX_NAME_LEN-1] = 0;
     conf->server_port = cloonix_conf->port; 
     strcpy(conf->bin_dir, "/usr/libexec/cloonix");
+    snprintf(g_ascii_broadway_port, MAX_NAME_LEN-1, "%d", cloonix_conf->broadway_port);
     g_cloonix_conf_info = cloonix_conf;
     }
   return conf;
@@ -446,15 +466,17 @@ int main (int argc, char *argv[])
   struct timespec ts;
   int llid;
 
+  g_uml_cloonix_started = 0;;
+  g_cloonix_lock_fd = 0;
   umask(0000);
   if (clock_gettime(CLOCK_MONOTONIC, &ts))
     KOUT(" ");
   g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
 
+  memset(g_ascii_broadway_port, 0, MAX_NAME_LEN);
   job_for_select_init();
   utils_init();
   recv_init();
-  g_cloonix_lock_fd = 0;
   g_machine_is_kvm_able = test_machine_is_kvm_able();
   if (argc != 3)
     usage(argv[0]);

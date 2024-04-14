@@ -552,7 +552,12 @@ void move_manager_single_step(void)
           (cur->bank_type != bank_type_lan)) 
         {
         if (cur->bank_type == bank_type_sat)
-          spring_force_sat(cur);
+          {
+          if (cur->pbi.endp_type == endp_type_a2b)
+            spring_force_item(cur);
+          else
+            spring_force_sat(cur);
+          }
         else
           spring_force_item(cur);
         }

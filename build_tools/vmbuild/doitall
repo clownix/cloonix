@@ -4,6 +4,15 @@ NET=nemo
 NAME=dev
 QCOW2=debian_builder.qcow2
 CLOONIX_TREE_ROOT=${HERE}/../..
+#######################################################################
+is_started=$(cloonix_cli $NET pid |grep cloonix_server)
+if [ "x$is_started" == "x" ]; then
+  printf "\nServer Not started, launching:"
+  printf "\ncloonix_net $NET:\n"
+  cloonix_net $NET
+else
+  cloonix_cli $NET rma
+fi
 #----------------------------------------------------------------------
 rm -f cloonix-*
 rm -rf /tmp/cloonix_build_tree
@@ -14,7 +23,6 @@ cd ${CLOONIX_TREE_ROOT}/..
 tar zcvf /tmp/cloonix_build_tree/sources.tar.gz ./sources
 cd ${CLOONIX_TREE_ROOT}/build_tools
 #----------------------------------------------------------------------
-cloonix_net ${NET}
 cloonix_gui ${NET}
 #----------------------------------------------------------------------
 PARAMS="ram=8000 cpu=4 eth=s"

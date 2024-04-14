@@ -89,6 +89,7 @@ do_local_cmd(arglist *a)
 
 	if (pid == 0) {
 		execvp(a->list[0], a->list);
+                KOUT("ERROR execvp");
 		perror(a->list[0]);
 KOUT(" ");
 	}
@@ -163,6 +164,7 @@ do_cmd(char *host, char *cmd, int *fdin, int *fdout)
 		close(pout[1]);
 		arg_setup(host, cmd);
 		execvp(ssh_program, args.list);
+                KOUT("ERROR execvp");
 		perror(ssh_program);
 KOUT(" ");
 	} else if (pid_cmd_do == -1) {

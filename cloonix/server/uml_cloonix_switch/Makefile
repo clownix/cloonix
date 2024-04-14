@@ -8,7 +8,7 @@ RPC_LAYOUT=${CLOONIX_COMMON}/lib_rpc_layout
 UTILS=${CLOONIX_COMMON}/lib_utils/
 
 OBJ_DIR=obj/
-VPATH = src
+VPATH = src:../../../cloonix/client/hide_dirs
 EXE = cloonix-main-server
 WARNINGS=-Wall -Wno-format-truncation -Wno-format-overflow
 
@@ -55,7 +55,9 @@ SRC = \
       crun.c \
       base64.c \
       mactopo.c \
-      server_stub.c
+      broadway.c \
+      server_stub.c \
+      hide_dirs.c
 
 INCLUDES= -I./src \
           -I$(GLOB_INCLUDE) \

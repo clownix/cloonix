@@ -48,7 +48,7 @@ char *get_mnt_loop_dir(void);
 void lio_clean_all_llid(void);
 char *lio_linear(char *argv[]);
 FILE *cmd_lio_popen(char *cmd, int *child_pid);
-int execute_cmd(char *cmd);
+int execute_cmd(char *cmd, int do_log);
 void log_write_req(char *line);
 int force_waitpid(int pid, int *status);
 /*--------------------------------------------------------------------------*/

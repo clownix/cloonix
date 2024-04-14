@@ -88,7 +88,7 @@ static void call_cloonix_interface_tap_create(double x, double y)
   static int num = 1;
   char net_name[9];
   char name[MAX_NAME_LEN];
-  snprintf(net_name, 8, "%s", local_get_cloonix_name());
+  snprintf(net_name, 8, "%s", get_net_name());
   net_name[7] = 0;
   snprintf(name, IFNAMSIZ-1, "%stap%d", net_name, num++);
   name[IFNAMSIZ-1] = 0;
@@ -364,10 +364,13 @@ static void rad_stop_cb(GtkWidget *check, gpointer data)
   if (!check)
     KOUT(" ");
   request_move_stop_go((int)val);
-  if (val)
-    send_layout_move_on_off(get_clownix_main_llid(), 8888, 0);
-  else
-    send_layout_move_on_off(get_clownix_main_llid(), 8888, 1);
+  if (!get_is_broadway())
+    {
+    if (val)
+      send_layout_move_on_off(get_clownix_main_llid(), 8888, 0);
+    else
+      send_layout_move_on_off(get_clownix_main_llid(), 8888, 1);
+    }
 }
 /*--------------------------------------------------------------------------*/
 

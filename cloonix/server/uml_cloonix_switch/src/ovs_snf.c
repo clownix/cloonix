@@ -66,6 +66,7 @@ typedef struct t_snf
   t_fct_cb callback_process_up;
   int cli_llid;
   int cli_tid;
+  int cli_llid_count;
   struct t_snf *prev;
   struct t_snf *next;
 } t_snf;
@@ -243,6 +244,17 @@ static void timer_heartbeat(void *data)
         cur->closed_count -= 1;
         if (cur->closed_count == 0)
           free_snf(cur);
+        }
+      if (cur->cli_llid)
+        {
+        cur->cli_llid_count += 1;
+        if (cur->cli_llid_count == 50)
+          {
+          KERR("ERROR %s %s %s", cur->name, cur->socket, cur->tap);
+          cur->cli_llid = 0;
+          cur->cli_tid = 0;
+          cur->cli_llid_count = 0;
+          }
         }
       }
     cur = next;
@@ -626,19 +638,27 @@ void ovs_snf_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
   t_snf *cur = find_snf_with_name_num(name, num);
   if (cur)
     {
-    if (cur->cli_llid)
+    if (cur->pid != 0)
       {
-      KERR("WARNING ALREADY IN REQ %s %d", name, num);
-      send_sync_wireshark_resp(llid, tid, name, num, 1);
+      if (cur->cli_llid)
+        {
+        KERR("WARNING ALREADY IN REQ %s %d", name, num);
+        send_sync_wireshark_resp(llid, tid, name, num, 1);
+        }
+      else
+        {
+        cur->cli_llid = llid;
+        cur->cli_tid = tid;
+        snprintf(msg, MAX_PATH_LEN-1,
+        "cloonsnf_sync_wireshark_req %s %d %d", name, num, cmd);
+        rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+        hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+        }
       }
     else
       {
-      cur->cli_llid = llid;
-      cur->cli_tid = tid;
-      snprintf(msg, MAX_PATH_LEN-1,
-      "cloonsnf_sync_wireshark_req %s %d %d", name, num, cmd);
-      rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
-      hop_event_hook(cur->llid, FLAG_HOP_SIGDIAG, msg);
+      KERR("ERROR NOT READY REQ %s %d", name, num);
+      send_sync_wireshark_resp(llid, tid, name, num, 1);
       }
     }
   else

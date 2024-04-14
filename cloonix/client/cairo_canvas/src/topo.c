@@ -88,7 +88,8 @@ static void update_layout_center_scale(const char *from)
   ch = (int) dch;
   if (layout_get_ready_for_send())
     {
-    send_layout_center_scale(get_clownix_main_llid(), 8888, cx, cy, cw, ch);
+    if (!get_is_broadway())
+      send_layout_center_scale(get_clownix_main_llid(), 8888, cx, cy, cw, ch);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -353,7 +354,7 @@ static void process_mouse_double_click(t_bank_item *bitem)
             KOUT("%s %d", bitem->name, bitem->num);
           }
         else
-          KERR("%s %d", bitem->name, bitem->num);
+          KERR("ERROR %s %d", bitem->name, bitem->num);
         }
 
       if (endp_type == endp_type_eths)
@@ -535,41 +536,53 @@ static void print_event_item(GdkEventType type, char *from)
     break;
     case GDK_ENTER_NOTIFY:
       //printf("%s %d GDK_ENTER_NOTIFY\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_ENTER_NOTIFY\n", from, type);
     break;
     case GDK_LEAVE_NOTIFY:
       //printf("%s %d GDK_LEAVE_NOTIFY\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_LEAVE_NOTIFY\n", from, type);
     break;
     case GDK_BUTTON_PRESS:
       //printf("%s %d GDK_BUTTON_PRESS\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_BUTTON_PRESS\n", from, type);
     break;
     case GDK_BUTTON_RELEASE:
       //printf("%s %d GDK_BUTTON_RELEASE\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_BUTTON_RELEASE\n", from, type);
     break;
     case GDK_2BUTTON_PRESS:
       //printf("%s %d GDK_2BUTTON_PRESS\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_2BUTTON_PRESS\n", from, type);
     break;
     case GDK_FOCUS_CHANGE:
       //printf("%s %d GDK_FOCUS_CHANGE\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_FOCUS_CHANGE\n", from, type);
     break;
     case GDK_KEY_PRESS:
       //printf("%s %d GDK_KEY_PRESS\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_KEY_PRESS\n", from, type);
     break;
     case GDK_KEY_RELEASE:
       //printf("%s %d GDK_KEY_RELEASE\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_KEY_RELEASE\n", from, type);
     break;
     case GDK_GRAB_BROKEN:
       //printf("%s %d GDK_GRAB_BROKEN\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_GRAB_BROKEN\n", from, type);
     break;
     case GDK_VISIBILITY_NOTIFY:
       //printf("%s %d GDK_VISIBILITY_NOTIFY\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_VISIBILITY_NOTIFY\n", from, type);
     break;
     case GDK_MAP:
       //printf("%s %d GDK_MAP\n", from, type);
+      //KERR("KEYEVENT %s %d GDK_MAP\n", from, type);
     break;
     case GDK_3BUTTON_PRESS:
+      //KERR("KEYEVENT %s %d GDK_3BUTTON_PRESS\n", from, type);
     break;
     default:
-      KERR("%s MUSTADD %d", from, type);
+      KERR("ERROR %s MUSTADD %d", from, type);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -640,13 +653,16 @@ static gboolean on_item_event(CrItem *item, GdkEvent *event,
       else if (event->button.button == 3)
         {
         printf("UNHANDLED 3 GDK_BUTTON_RELEASE\n");
+        KERR("WARNING UNHANDLED 3 GDK_BUTTON_RELEASE");
         }
       break;
     case GDK_KEY_PRESS:
     case GDK_KEY_RELEASE:
-    break;
+        KERR("WARNING UNHANDLED GDK_KEY_PRESS %d", event->type);
+      break;
     default:
       printf("UNHANDLED: %d\n", event->type);
+      KERR("WARNING UNHANDLED %d", event->type);
       break;
     }
   return result;
@@ -906,7 +922,7 @@ static void on_item_paint_node(CrItem *item, cairo_t *c)
         }
       else
         {
-        KERR("%d", bitem->pbi.flag);
+        KERR("WARNING %d", bitem->pbi.flag);
         cairo_set_source_rgba (c, 0.60, 0.20, 0.20, 1.0);
         }
       }
@@ -1297,8 +1313,6 @@ static gboolean on_canvas_event(GtkWidget* widget,
     }
   if (event->type == GDK_LEAVE_NOTIFY)
     {
-    cr_glob_focus_out(widget, (GdkEventFocus *)event);
-    result = TRUE;
     }
   return result;
 }
@@ -1315,11 +1329,7 @@ static gboolean topo_configure_event (GtkWidget       *widget,
     KOUT(" ");
   set_main_window_coords(event->x, event->y, event->width, event->height);
   if (layout_get_ready_for_send())
-    {
-    send_layout_width_height(get_clownix_main_llid(), 8888, 
-                             event->width, event->height);
     update_layout_center_scale(__FUNCTION__);
-    }
   return FALSE;
 }
 /*--------------------------------------------------------------------------*/

@@ -1,4 +1,5 @@
 #!/bin/bash
 
-gcc -o cloonix-hide-dirs hide_dirs.c
+make clean
+make
 

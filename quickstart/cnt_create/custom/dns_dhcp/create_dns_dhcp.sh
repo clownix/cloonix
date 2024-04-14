@@ -8,8 +8,8 @@ VMNAME=ams
 DIST=bookworm
 QCOW2=dns_dhcp.qcow2
 BIN_STORE="${HERE}/bin_store"
-REPO="http://1.1.1.1/debian/${DIST}"
-REPO="http://172.17.0.2/debian/${DIST}"
+REPO="http://deb.debian.org/debian"
+#REPO="http://172.17.0.2/debian/${DIST}"
 #######################################################################
 set +e
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)

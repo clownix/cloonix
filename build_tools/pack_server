@@ -74,18 +74,26 @@ rm -rf ${SERVER}/dtach
 cp -f ${SERVER}/crun/crun/crun ${SERVER}/cloonix-crun
 rm -rf ${SERVER}/crun
 #----------------------------------------------------------
-cp -f ${TARGZ_STORE}/shark/built_objects/wireshark ${SERVER}/cloonix-wireshark
-cp -f ${TARGZ_STORE}/shark/built_objects/dumpcap ${SERVER}
+cp -f ${TARGZ_STORE}/shark_qt/built_objects/dumpcap ${SERVER}
+cp -f ${TARGZ_STORE}/shark_qt/built_objects/wireshark ${SERVER}/cloonix-wireshark-qt
+cp -f ${TARGZ_STORE}/shark_gtk/built_objects/wireshark-gtk ${SERVER}/cloonix-wireshark-gtk
+rm -rf /tmp/lib_wireshark
+tar --directory=/tmp -xf ${TARGZ_STORE}/shark_gtk/built_objects/lib_wireshark.tar.gz
+cp -n /tmp/lib_wireshark/lib/x86_64-linux-gnu/* ${COMMON}/lib || true
 #----------------------------------------------------------
-cp -f /usr/bin/fuse-zip ${SERVER}//cloonix-fuse-zip
-cp -f /sbin/ip      ${SERVER}/ip
-cp -f /bin/mount    ${SERVER}/cloonix-mount
-cp -f /bin/umount   ${SERVER}/cloonix-umount 
-cp -f /bin/mknod    ${SERVER}/cloonix-mknod 
-cp -f /bin/chmod    ${SERVER}/cloonix-chmod
-cp -f /usr/bin/awk  ${SERVER}/cloonix-awk 
-cp -f /bin/grep     ${SERVER}/cloonix-grep
-cp -f /usr/bin/osirrox ${SERVER}/cloonix-osirrox
+#  cp -f ${TARGZ_STORE}/shark_qt/built_objects/wireshark ${SERVER}/cloonix-wireshark-qt
+#  cp -f ${TARGZ_STORE}/shark_qt/built_objects/dumpcap ${SERVER}
+#----------------------------------------------------------
+cp -f /usr/bin/broadwayd ${SERVER}/cloonix-broadwayd
+cp -f /usr/bin/fuse-zip  ${SERVER}/cloonix-fuse-zip
+cp -f /sbin/ip           ${SERVER}/ip
+cp -f /bin/mount         ${SERVER}/cloonix-mount
+cp -f /bin/umount        ${SERVER}/cloonix-umount 
+cp -f /bin/mknod         ${SERVER}/cloonix-mknod 
+cp -f /bin/chmod         ${SERVER}/cloonix-chmod
+cp -f /usr/bin/awk       ${SERVER}/cloonix-awk 
+cp -f /bin/grep          ${SERVER}/cloonix-grep
+cp -f /usr/bin/osirrox  ${SERVER}/cloonix-osirrox
 #----------------------------------------------------------
 LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
 RPATH_LIB="/usr/libexec/cloonix/common/lib"

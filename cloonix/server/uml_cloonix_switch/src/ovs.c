@@ -152,18 +152,6 @@ static void set_destroy_requested(t_ovs *cur, int val)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_ovs *ovs_alloc(char *name)
-{
-  t_ovs *cur;
-  cur = (t_ovs *) clownix_malloc(sizeof(t_ovs), 9);
-  memset(cur, 0, sizeof(t_ovs));
-  strncpy(cur->name, name, MAX_NAME_LEN-1);
-  g_head_ovs = cur;
-  return cur;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static t_ovs *_ovs_find_with_llid(int llid)
 {
   t_ovs *cur = g_head_ovs;
@@ -180,30 +168,6 @@ static t_ovs *ovs_find(void)
 {
   t_ovs *cur = g_head_ovs;
   return (cur);
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void ovs_free(char *name)
-{
-  t_ovs *cur = g_head_ovs;
-  if (cur)
-    {
-    if (cur->ovsdb_pid > 0)
-      {
-      if (!kill(cur->ovsdb_pid, SIGKILL))
-        KERR("ERROR: ovsdb was alive");
-      }
-    if (cur->ovs_pid > 0)
-      {
-      if (!kill(cur->ovs_pid, SIGKILL))
-        KERR("ERROR: ovs was alive");
-      }
-    g_head_ovs = NULL;
-    clownix_free(cur, __FUNCTION__);
-    }
-  else
-    KERR("Free bad");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -253,6 +217,7 @@ static int ovs_birth(void *data)
   t_arg_ovsx *arg_ovsx = (t_arg_ovsx *) data;
   char **argv = make_argv(arg_ovsx);
   execv(arg_ovsx->bin_path, argv);
+  KOUT("ERROR execv");
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -295,7 +260,6 @@ static void check_on_destroy_requested(t_ovs *cur)
         KERR("ERROR: ovs was alive");
       }
     unlink(sock);
-    ovs_free(cur->name);
     }
 } 
 /*--------------------------------------------------------------------------*/
@@ -346,14 +310,15 @@ static int create_ovs_drv_process(char *name)
 /****************************************************************************/
 static void ovs_start_openvswitch_if_not_done(void)
 {
-  t_ovs *cur = g_head_ovs;
-  if (cur == NULL)
+  if (g_head_ovs == NULL)
     {
     event_print("Start OpenVSwitch");
-    cur = ovs_alloc("ovsdb");
-    cur->watchdog_protect = 1;
-    cur->clone_start_pid = create_ovs_drv_process("ovsdb");
-    cur->clone_start_pid_just_done = 1;
+    g_head_ovs = (t_ovs *) clownix_malloc(sizeof(t_ovs), 9);
+    memset(g_head_ovs, 0, sizeof(t_ovs));
+    strncpy(g_head_ovs->name, "ovsdb", MAX_NAME_LEN-1);
+    g_head_ovs->watchdog_protect = 1;
+    g_head_ovs->clone_start_pid = create_ovs_drv_process("ovsdb");
+    g_head_ovs->clone_start_pid_just_done = 1;
     }
 }
 /*--------------------------------------------------------------------------*/

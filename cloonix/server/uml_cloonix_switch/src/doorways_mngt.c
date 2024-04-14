@@ -53,6 +53,8 @@
 
 void timer_utils_finish_vm_init(int vm_id, int val);
 
+int get_killing_cloonix(void);
+
 
 static void doorways_start(void);
 static int g_killed;
@@ -108,7 +110,7 @@ static void recv_sysinfo_vals(char *name, char *line)
                        &totalswap, &freeswap, &procs, &totalhigh, &freehigh,
                        &mem_unit))
     {
-    KERR("%s %s", name, line);
+    KERR("ERROR %s %s", name, line);
     used_mem = 0;
     }
   else
@@ -130,7 +132,7 @@ void doors_recv_event(int llid, int tid, char *name, char *line)
   int nb_eth, cnt_exists = cnt_name_exists(name, &nb_eth);
   if ((!vm) && (!cnt_exists))
     {
-    KERR("FROM DOORS NOT FOUND: %s %s", name, line);
+    KERR("ERROR FROM DOORS NOT FOUND: %s %s", name, line);
     doors_send_del_vm(get_doorways_llid(), 0, name);
     }
   else
@@ -177,7 +179,7 @@ void doors_recv_event(int llid, int tid, char *name, char *line)
         qga_event_backdoor(name, backdoor_evt_ping_ko);
       }
     else
-      KOUT("%s", line);
+      KOUT("ERROR %s", line);
     } 
 }
 /*---------------------------------------------------------------------------*/
@@ -195,11 +197,13 @@ void doorways_err_cb (int llid)
   if (llid == g_doorways_llid)
     {
     g_doorways_llid = 0;
-    if (!get_glob_req_self_destruction())
-      {
-      KERR("Ctrl access to cloonix-doorways broken, re-launching\n");
-      doorways_start();
-      }
+    g_doorways_pid = 0;
+    if (get_glob_req_self_destruction())
+      return;
+    if (get_killing_cloonix())
+      return;
+    KERR("ERROR Ctrl access to cloonix-doorways broken, re-launching\n");
+    doorways_start();
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -215,9 +219,9 @@ static void monitoring_doorways(void *data)
   if (g_nb_pid_resp_warning > 4) 
     {
     event_print("DOORWAY CONTACT LOSS");
-    KERR("TRY KILLING DOORWAYS");
+    KERR("ERROR TRY KILLING DOORWAYS");
     if (!kill(old_nb_pid_resp, SIGKILL))
-      KERR("NO SUCCESS KILLING DOORWAYS");
+      KERR("ERROR NO SUCCESS KILLING DOORWAYS");
     }
   g_abs_beat_timer = 0;
   g_ref_timer = 0;
@@ -232,10 +236,9 @@ static void monitoring_doorways(void *data)
 void doors_pid_resp(int llid, char *name, int pid)
 {
   if (strcmp(name, "doors"))
-    KERR("%s", name); 
+    KERR("ERROR %s", name); 
   if (g_doorways_pid != pid)
     {
-    event_print("DOORWAYS PID CHANGE: %d to %d", g_doorways_pid, pid);
     if (g_this_is_not_first_start)
       {
       KERR("WARNING DOORWAYS PID CHANGE: %d to %d", g_doorways_pid, pid);
@@ -256,7 +259,7 @@ void doors_pid_resp(int llid, char *name, int pid)
 static void timer_doorways_protect(void *data)
 {
   if (!g_killed)
-    KERR(" ");
+    KERR("ERROR ");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -272,7 +275,7 @@ static void timer_doorways_connect(void *data)
     {
     g_doorways_llid = llid;
     if (hop_event_alloc(llid, type_hop_doors, "doors", 0))
-      KERR(" ");
+      KERR("ERROR");
     llid_trace_alloc(llid, "DOORWAYS", 0,0,type_llid_trace_doorways);
     rpct_send_pid_req(llid, type_hop_doors, "doors", 0);
     if (g_abs_beat_timer)
@@ -289,7 +292,7 @@ static void timer_doorways_connect(void *data)
       clownix_timeout_add(50, timer_doorways_connect, data, NULL, NULL);
     else
       {
-      KERR("doorswaitgivingup");
+      KERR("ERROR doorswaitgivingup");
       last_action_self_destruction(NULL);
       }
     }
@@ -323,17 +326,18 @@ static void doorways_start()
       (!strlen(g_root_work))    ||
       (!strlen(g_server_port))  || 
       (!strlen(g_password)))
-    KOUT(" ");
-  if (!get_glob_req_self_destruction())
-    {
-    g_killed = 0;
-    pid_clone_launch(utils_execv, killed, NULL, (void *) argv,
-                     NULL, NULL, "doorways", -1, 1);
-    clownix_timeout_add(500, timer_doorways_protect, NULL, NULL, NULL); 
-    clownix_timeout_add(50, timer_doorways_connect, 
-                        (void *) ctrl_doors_sock, NULL, NULL);
-    dump_doors_creation_info("doors", argv);
-    }
+    KOUT("ERROR");
+  if (get_glob_req_self_destruction())
+      return;
+  if (get_killing_cloonix())
+      return;
+  g_killed = 0;
+  pid_clone_launch(utils_execv, killed, NULL, (void *) argv,
+                   NULL, NULL, "doorways", -1, 1);
+  clownix_timeout_add(500, timer_doorways_protect, NULL, NULL, NULL); 
+  clownix_timeout_add(50, timer_doorways_connect, 
+                      (void *) ctrl_doors_sock, NULL, NULL);
+  dump_doors_creation_info("doors", argv);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -379,7 +383,6 @@ void doorways_init(char *root_work, int server_port, char *password)
   memset(g_root_work, 0, MAX_PATH_LEN);
   memset(g_server_port, 0, MAX_NAME_LEN);
   memset(g_password, 0, MSG_DIGEST_LEN);
-  g_this_is_not_first_start = 0;
   g_nb_pid_resp = 0;
   g_nb_pid_resp_warning = 0;
   g_this_is_not_first_start = 0;

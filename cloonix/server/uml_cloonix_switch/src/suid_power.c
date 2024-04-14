@@ -42,8 +42,6 @@
 #include "cnt.h"
 #include "crun.h"
 
-static long long g_abs_beat_timer;
-static int g_ref_timer;
 static int g_nb_pid_resp;
 static int g_nb_pid_resp_warning;
 static int g_llid;
@@ -68,9 +66,9 @@ static int g_nb_brgs;
 static t_topo_bridges g_brgs[MAX_OVS_BRIDGES];
 
 int get_glob_req_self_destruction(void);
-static int g_no_more_timeout;
 
 int get_conf_rank(void);
+int get_killing_cloonix(void);
 
 static int g_destroy_req;
 
@@ -180,10 +178,14 @@ static void timer_monitoring(void *data)
 {
   static int old_nb_pid_resp;
   static int count = 0;
+
   if (get_glob_req_self_destruction())
+    {
+    if ((g_llid) && (msg_exist_channel(g_llid)))
+      rpct_send_pid_req(g_llid, type_hop_suid_power, "suid_power", 0);
     return;
-  if (g_no_more_timeout == 1)
-    return;
+    }
+
   cnt_timer_beat(g_llid);
   count += 1;
   if (count == 10)
@@ -197,12 +199,6 @@ static void timer_monitoring(void *data)
     g_nb_pid_resp_warning = 0;
   if (g_nb_pid_resp_warning > 100)
     {
-    if (g_abs_beat_timer)
-      {
-      clownix_timeout_del(g_abs_beat_timer, g_ref_timer, __FILE__, __LINE__);
-      g_abs_beat_timer = 0;
-      g_ref_timer = 0;
-      }
     KERR("ERROR RESTARTING SUID_POWER %d", g_llid);
     llid_trace_free(g_llid, 0, __FUNCTION__);
     hop_event_free(g_llid);
@@ -216,13 +212,11 @@ static void timer_monitoring(void *data)
     {
     if (g_nb_pid_resp_warning == 100)
       KERR("WARNING MONITOR %d", g_nb_pid_resp_warning);
-    g_abs_beat_timer = 0;
-    g_ref_timer = 0;
-    clownix_timeout_add(100, timer_monitoring, NULL,
-                       &(g_abs_beat_timer), &(g_ref_timer));
-    rpct_send_pid_req(g_llid, type_hop_suid_power, "suid_power", 0);
+    if ((g_llid) && (msg_exist_channel(g_llid)))
+      rpct_send_pid_req(g_llid, type_hop_suid_power, "suid_power", 0);
     old_nb_pid_resp = g_nb_pid_resp;
     }
+  clownix_timeout_add(100, timer_monitoring, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -233,8 +227,6 @@ static void timer_connect(void *data)
   int llid;
   char *ctrl = (char *) data;
   if (get_glob_req_self_destruction())
-    return;
-  if (g_no_more_timeout == 1)
     return;
   llid = string_client_unix(ctrl, uml_clownix_switch_error_cb,
                                   uml_clownix_switch_rx_cb, "suid_power");
@@ -247,10 +239,7 @@ static void timer_connect(void *data)
     if (hop_event_alloc(llid, type_hop_suid_power, "suid_power", 0))
       KERR("ERROR  ");
     rpct_send_pid_req(llid, type_hop_suid_power, "suid_power", 0);
-    if (g_abs_beat_timer)
-      clownix_timeout_del(g_abs_beat_timer, g_ref_timer, __FILE__, __LINE__);
-    clownix_timeout_add(100, timer_monitoring, NULL,
-                        &(g_abs_beat_timer), &(g_ref_timer));
+    clownix_timeout_add(100, timer_monitoring, NULL, NULL, NULL);
     }
   else
     {
@@ -275,6 +264,8 @@ static void suid_power_start(void)
   char *argv[6];
 
   if (get_glob_req_self_destruction())
+    return;
+  if (get_killing_cloonix())
     return;
 
   argv[0] = g_bin_suid;
@@ -527,6 +518,8 @@ void suid_power_kill_pid(int pid)
     hop_event_hook(g_llid, FLAG_HOP_SIGDIAG, req);
     rpct_send_sigdiag_msg(g_llid, type_hop_suid_power, req);
     }
+  else
+    KERR("ERROR suid_power_kill_pid");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -572,7 +565,6 @@ void suid_power_llid_closed(int llid, int from_clone, const char* fct)
     {
     if (g_destroy_req == 0)
       KOUT("ERROR UNEXPECTED SUID_POWER DISCONNECTION");
-    g_no_more_timeout = 1;
     g_llid = 0;
     }
 }
@@ -640,15 +632,12 @@ void suid_power_init(void)
   g_destroy_req = 0;
   g_suid_power_pid = 0;
   g_suid_power_last_pid = 0;
-  g_abs_beat_timer = 0;
-  g_ref_timer = 0;
   g_nb_pid_resp = 0;
   g_nb_pid_resp_warning = 0;
   g_llid = 0;
   g_first_ever_start = 0;
   g_suid_power_root_resp_ok = 0;
   g_nb_phy = 0;
-  g_no_more_timeout = 0;
   sprintf(g_conf_rank, "%d", get_conf_rank());
   memset(g_topo_info_phy, 0, MAX_PHY * sizeof(t_topo_info_phy));
   memset(g_root_path, 0, MAX_PATH_LEN);

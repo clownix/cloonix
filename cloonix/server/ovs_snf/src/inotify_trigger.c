@@ -34,11 +34,24 @@ static int g_state;
 /****************************************************************************/
 void close_pcap_record(void)
 {
-KERR("VIPTODO INOTIFY DELETE ALL");
-  msg_delete_channel(g_llid);
-  inotify_rm_watch(g_fdnotify, g_wd);
-  close(g_wd);
-  close(g_fdnotify);
+  if (g_llid)
+    {
+    if (msg_exist_channel(g_llid))
+      msg_delete_channel(g_llid);
+    g_llid = 0;
+    }
+  if ((g_fdnotify != -1) && (g_wd != -1))
+    inotify_rm_watch(g_fdnotify, g_wd); 
+  if (g_wd != -1)
+    {
+    close(g_wd);
+    g_wd = -1;
+    }
+  if (g_fdnotify != -1)
+    {
+    close(g_fdnotify); 
+    g_fdnotify = -1;
+    }
   pcap_record_close();
   g_state = 0;
 }
@@ -64,7 +77,6 @@ static int rx_inot(int llid, int fd)
       {
       if (event->mask & IN_OPEN)
         {
-KERR("VIPTODO INOTIFY IN_OPEN %d", g_state);
         if (g_state == 0)
           {
           pcap_record_start_phase2();
@@ -77,17 +89,15 @@ KERR("VIPTODO INOTIFY IN_OPEN %d", g_state);
         else
           {
           KERR("ERROR INOTIFY IN_OPEN");
-          close_pcap_record();
           }
         }
       else if (event->mask & IN_CLOSE)
         {
-KERR("VIPTODO INOTIFY IN_CLOSE %d", g_state);
         close_pcap_record();
         }
       else if (event->mask & IN_IGNORED)
         {
-KERR("VIPTODO INOTIFY IN_IGNORE");
+        KERR("WARNING INOTIFY IN_IGNORE");
         }
       else
         KERR("ERROR INOTIFY Unknown Mask 0x%.8x\n", event->mask);

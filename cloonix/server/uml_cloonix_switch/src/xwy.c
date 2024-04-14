@@ -41,6 +41,9 @@
 #define CLOONIX_PID_REQ "Your_Pid?"
 #define CLOONIX_PID_RESP "My_Pid:%d"
 
+int get_killing_cloonix(void);
+int get_glob_req_self_destruction(void);
+
 
 typedef struct t_xwy_params
 {
@@ -90,6 +93,7 @@ static int start_xwy(void *data)
                   dp->cloonix_net_name,
                   NULL};
   execv(dp->bin, argv);
+  KOUT("ERROR execv");
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -169,6 +173,10 @@ static void timer_monitor_xwy_pid(void *data)
     {
     if (g_xwy_kill_req == 0)
       {
+      if (get_glob_req_self_destruction())
+        return;
+      if (get_killing_cloonix())
+        return;
       pid_clone_launch(start_xwy, NULL, NULL,
                       (void *) (&g_xwy_params),
                       NULL, NULL, "xwy", -1, 1);

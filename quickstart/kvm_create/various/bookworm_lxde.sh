@@ -54,7 +54,8 @@ cloonix_ssh ${NET} ${VMNAME} "apt-get -o Dpkg::Options::=--force-confdef \
                          --allow-unauthenticated --assume-yes install \
                          rxvt-unicode openssh-client openssh-server \
                          binutils rsyslog lxde spice-vdagent podman \
-                         pamixer alsa-utils alsa-tools pipewire-pulse"
+                         pamixer alsa-utils alsa-tools pipewire-pulse \
+                         podman"
 #-----------------------------------------------------------------------#
 cloonix_ssh ${NET} ${VMNAME} "apt-get -o Dpkg::Options::=--force-confdef \
                            -o Acquire::Check-Valid-Until=false \

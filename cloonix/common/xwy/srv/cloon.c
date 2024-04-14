@@ -56,7 +56,6 @@ static void sock_cloonix_action(void)
       }
     else if (!strcmp(buf, CLOONIX_KIL_REQ))
       {
-      XOUT("CLOONIX_KIL_REQ");
       exit(0);
       }
     else
