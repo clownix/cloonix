@@ -6,10 +6,10 @@ NET=nemo
 VMNAME=buz
 QCOW2="cnt_frr_cloonix.qcow2"
 REPO="http://deb.debian.org/debian"
-#REPO="http://172.17.0.2/debian/bookworm"
+REPO="http://172.17.0.2/debian/bookworm"
 BOOKWORM="/var/lib/cloonix/bulk/bookworm.qcow2"
 BUNDLE_PATH="/home/perrier"
-BUNDLE="cloonix-bundle-36-00"
+BUNDLE="cloonix-bundle-36-01"
 #######################################################################
 if [ ! -e ${BOOKWORM} ]; then
   echo NOT FOUND: ${BOOKWORM}

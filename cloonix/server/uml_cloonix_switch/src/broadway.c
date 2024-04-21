@@ -33,6 +33,7 @@ void hide_real_machine(void);
 int get_glob_req_self_destruction(void);
 char *get_ascii_broadway_port(void);
 int get_uml_cloonix_started(void);
+int g_broadwayd_on;
 
 /*--------------------------------------------------------------------------*/
 static char g_net_name[MAX_NAME_LEN];
@@ -47,20 +48,23 @@ static char *g_display;
 /****************************************************************************/
 static void set_all_env(void)
 {
-  char home_dir[MAX_PATH_LEN];
+  char run_dir[MAX_PATH_LEN];
   setenv("GDK_BACKEND", "broadway", 1);
   setenv("BROADWAY_DISPLAY", ":0", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
-  memset(home_dir, 0, MAX_PATH_LEN);
-  snprintf(home_dir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/runbroadway", g_net_name);
-  setenv("HOME", home_dir, 1);
-  setenv("XDG_RUNTIME_DIR", home_dir, 1);
-  setenv("XDG_CACHE_HOME", home_dir, 1);
-  setenv("XDG_DATA_HOME", home_dir, 1);
-  memset(home_dir, 0, MAX_PATH_LEN);
-  snprintf(home_dir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/runbroadway/.config", g_net_name);
-  setenv("XDG_CONFIG_HOME", home_dir, 1);
+
+  memset(run_dir, 0, MAX_PATH_LEN);
+  snprintf(run_dir, MAX_PATH_LEN-1,
+  "/var/lib/cloonix/%s/runbroadway", g_net_name);
+  setenv("XDG_RUNTIME_DIR", run_dir, 1);
+  setenv("XDG_CACHE_HOME", run_dir, 1);
+  setenv("XDG_DATA_HOME", run_dir, 1);
+
+  memset(run_dir, 0, MAX_PATH_LEN);
+  snprintf(run_dir, MAX_PATH_LEN-1,
+  "/var/lib/cloonix/%s/runbroadway/.config", g_net_name);
+  setenv("XDG_CONFIG_HOME", run_dir, 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -166,6 +170,11 @@ static void timer_broadway_heartbeat(void *data)
 {
   int pid, status;
 
+  if (g_broadwayd_on == 0)
+    {
+    clownix_timeout_add(300, timer_broadway_heartbeat, NULL, NULL, NULL);
+    return;
+    }
   if (get_glob_req_self_destruction())
     return;
   if (!get_uml_cloonix_started())
@@ -245,11 +254,21 @@ void broadway_exit(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void broadway_on_off(int on)
+{
+  g_broadwayd_on = on;
+  if (g_broadwayd_on == 0)
+    broadway_exit();
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void broadway_init(void)
 {
   char *net = cfg_get_cloonix_name();
   memset(g_net_name, 0, MAX_NAME_LEN);
   strncpy(g_net_name, net, MAX_NAME_LEN-1);
+  g_broadwayd_on = 0;
   g_ascii_port = get_ascii_broadway_port();
   g_argv_broadwayd[0] = BROADWAYD_BIN;
   g_argv_broadwayd[1] = "-p";

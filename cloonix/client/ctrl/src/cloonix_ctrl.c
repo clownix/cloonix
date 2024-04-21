@@ -137,6 +137,7 @@ struct cmd_struct level_cnf_cmd[] = {
 {"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
 {"c2c",  "c2c config", NULL, cmd_cnf_c2c, help_cnf_c2c},
 {"lay",  "Layout modifications on canvas", level_layout_cmd, NULL, NULL},
+{"web", "broadway on",  NULL, cmd_broadway_on_off, help_broadway_on_off},
 {"help",  "",                     level_cnf_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/

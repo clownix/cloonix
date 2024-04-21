@@ -42,23 +42,25 @@ static FILE *g_log_cmd;
 static int g_is_broadway;
 
 /****************************************************************************/
-static void set_env_global_cloonix(char *net_name)
+static void set_env_global_cloonix(char *net)
 {
-  char home_dir[MAX_PATH_LEN];
+  char rdir[MAX_PATH_LEN];
   setenv("PATH",  "/usr/libexec/cloonix/common:"
                   "/usr/libexec/cloonix/client:"
                   "/usr/libexec/cloonix/server", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
-  memset(home_dir, 0, MAX_PATH_LEN);
-  snprintf(home_dir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/run", net_name);
-  setenv("HOME", home_dir, 1);
-  setenv("XDG_RUNTIME_DIR", home_dir, 1);
-  setenv("XDG_CACHE_HOME", home_dir, 1);
-  setenv("XDG_DATA_HOME", home_dir, 1);
-  memset(home_dir, 0, MAX_PATH_LEN);
-  snprintf(home_dir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/run/.config", net_name);
-  setenv("XDG_CONFIG_HOME", home_dir, 1);
+  memset(rdir, 0, MAX_PATH_LEN);
+  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run", net);
+  setenv("XDG_RUNTIME_DIR", rdir, 1);
+  setenv("XDG_CACHE_HOME", rdir, 1);
+  setenv("XDG_DATA_HOME", rdir, 1);
+  memset(rdir, 0, MAX_PATH_LEN);
+  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run/.config", net);
+  setenv("XDG_CONFIG_HOME", rdir, 1);
+  memset(rdir, 0, MAX_PATH_LEN);
+  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run/.Xauthority", net);
+  setenv("XAUTHORITY", rdir, 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -466,23 +468,27 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /****************************************************************************/
 int main(int argc, char *argv[])
 {
+  char *g_home = getenv("HOME");
   char *g_display = getenv("DISPLAY");
+  char *g_user = getenv("USER");
   char passwd[MAX_NAME_LEN];
   char ip[MAX_NAME_LEN];
   int  port, pid;
   char *cfg="/usr/libexec/cloonix/common/etc/cloonix.cfg";
   char *new_argv[MAX_NARGS+10];
-
   if((getenv("GDK_BACKEND")) && (!strcmp(getenv("GDK_BACKEND"), "broadway")))
     g_is_broadway = 1;
   else
     g_is_broadway = 0;
-
   g_log_cmd = NULL;
   memset(new_argv, 0, (MAX_NARGS+10)*sizeof(char *));
   clearenv();
+  if (g_home)
+    setenv("HOME", g_home, 1);
   if (g_display)
     setenv("DISPLAY", g_display, 1);
+  if (g_user)
+    setenv("USER", g_user, 1);
   if (argc < 3)
     {
     if ((strcmp("lsh", argv[1])) &&
@@ -497,7 +503,16 @@ int main(int argc, char *argv[])
     init_log_cmd(argv[2]);
     set_env_global_cloonix(argv[2]);
     }
-  if (strcmp("ice", argv[1]))
+
+  if (!strcmp("ice", argv[1]))
+    {
+    // To have real usb in virtual, must have root power
+    }
+  else if (!strcmp("scp", argv[1]))
+    {
+    // To have scp from anywhere, must not hide host
+    }
+  else
     {
     hide_real_machine();
     }

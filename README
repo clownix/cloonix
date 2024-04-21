@@ -30,7 +30,7 @@ files and libraries are collected and put into an autonomous bundle, this
 makes the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-36-00/html/index.html doc.
+http://clownix.net/doc_stored/build-36-01/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp.
@@ -48,9 +48,9 @@ http://clownix.net/downloads/cloonix-36
 INSTALLATION:
 ------------
 
-wget http://clownix.net/downloads/cloonix-36/cloonix-bundle-36-00.tar.gz
-tar xvf cloonix-bundle-36-00.tar.gz
-cd cloonix-bundle-36-00
+wget http://clownix.net/downloads/cloonix-36/cloonix-bundle-36-01.tar.gz
+tar xvf cloonix-bundle-36-01.tar.gz
+cd cloonix-bundle-36-01
 sudo ./install_cloonix
 
 ==============================================================================
@@ -88,7 +88,7 @@ wget http://clownix.net/downloads/cloonix-36/bulk/busybox.zip
 LAUNCH PING SCRIPT:
 -------------------
 
-cd cloonix-bundle-36-00
+cd cloonix-bundle-36-01
 
 ./ping_kvm.sh
 
@@ -146,7 +146,7 @@ FRR DEMO INSIDE CLOONIX INSIDE PODMAN:
 --------------------------------------
 
 Build the podman with the help of:
-cloonix-36-00/quickstart/cnt_create/custom/frr/doitall
+cloonix-36-01/quickstart/cnt_create/custom/frr/doitall
 
 Or download and install podman cnt_frr_cloonix:
 
@@ -174,6 +174,9 @@ BROADWAYD
 -----------------------------------------------------------------------------
 This server is launched automaticaly on the port named broadway_port in the
 file "/usr/libexec/cloonix/common/etc/cloonix.cfg".
+
+Command to get the broadway: "cloonix_cli nemo cnf web on"
+The server is not on if not requested.
 
 Your browser can have access to the gui with "http://<ip>:<broadway_port>".
 -----------------------------------------------------------------------------

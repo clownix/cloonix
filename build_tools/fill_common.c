@@ -61,8 +61,10 @@ static void alloc_lib_all(char *name, char *path)
 /****************************************************************************/
 static void create_libs_paragraph(FILE *col, char *common, char *name_lib)
 {
-  fprintf(col, "if [ -d %s/lib/%s ]; then\n", common, name_lib);
-  fprintf(col, "  for i in `find %s/lib/%s -type f` ; do\n",common,name_lib);
+  fprintf(col, "if [ -d %s/lib/x86_64-linux-gnu/%s ]; then\n",
+          common, name_lib);
+  fprintf(col, "  for i in `find %s/lib/x86_64-linux-gnu/%s -type f` ; do\n",
+          common, name_lib);
   fprintf(col, "    ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
   fprintf(col, "  done\n");
   fprintf(col, "fi\n");
@@ -92,13 +94,14 @@ static int create_libs_txt(char *path, char *common)
     fprintf(col, "  ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
     fprintf(col, "done\n");
 
+    create_libs_paragraph(col, common, "qt6");
     create_libs_paragraph(col, common, "gdk-pixbuf-2.0");
     create_libs_paragraph(col, common, "gtk-3.0");
     create_libs_paragraph(col, common, "gio");
     create_libs_paragraph(col, common, "gvfs");
-    create_libs_paragraph(col, common, "qt6");
+    create_libs_paragraph(col, common, "gconv");
+    create_libs_paragraph(col, common, "gstreamer1.0");
     create_libs_paragraph(col, common, "gstreamer-1.0");
-    create_libs_paragraph(col, common, "pulseaudio");
 
 
     fprintf(col, "echo " " >> %s\n", g_dumps);
@@ -122,7 +125,10 @@ static void copy_lib_all(char *target, FILE *debug2)
   while(cur)
     {
     memset(cmd, 0, 2*MAX_PATH_LEN);
-    snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s %s", cur->path, target);
+    if (strstr(cur->path, "lib/x86_64-linux-gnu"))
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s %s/x86_64-linux-gnu", cur->path, target);
+    else
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s %s", cur->path, target);
     if (system(cmd))
       fprintf(debug2, "ERROR: %s\n", cmd);
     else

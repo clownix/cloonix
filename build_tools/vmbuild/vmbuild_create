@@ -51,11 +51,16 @@ cloonix_ssh ${NET} ${NAME} "apt-get -y install \
                       libssl-dev libusb-1.0-0-dev patch libglib2.0-dev \
                       libpixman-1-dev python3 python3-six sudo xauth \
                       python3-pyparsing python3-venv libjpeg-dev \
-                      pulseaudio libpulse-dev libgstreamer1.0-dev \
+                      libgstreamer1.0-dev \
+                      gstreamer1.0-plugins-good \
+                      gstreamer1.0-plugins-bad \
                       libgstreamer-plugins-base1.0-dev \
                       libgstreamer-plugins-bad1.0-dev \
                       gstreamer1.0-plugins-bad-apps \
                       gstreamer1.0-plugins-base-apps \
+                      gstreamer1.0-libav \
+                      gstreamer1.0-plugins-ugly \
+                      gstreamer1.0-tools \
                       liblz4-dev libpcap-dev libsasl2-dev \
                       libnuma-dev libepoxy-dev xorriso \
                       libgtk-3-dev libjson-glib-dev libacl1-dev \

@@ -99,6 +99,7 @@ static int count_c2c_peer_conf = 0;
 static int count_c2c_peer_ping = 0;
 
 static int count_color_item = 0;
+static int count_broadway_on_off = 0;
 
 static int count_nat_add = 0;
 static int count_phy_add = 0;
@@ -180,6 +181,7 @@ static void print_all_count(void)
   printf("%d\n", count_c2c_peer_ping);
 
   printf("%d\n", count_color_item);
+  printf("%d\n", count_broadway_on_off);
 
   printf("%d\n", count_tap_add);
   printf("%d\n", count_cnt_add);
@@ -2851,6 +2853,29 @@ void recv_color_item(int llid, int itid, char *iname, int icolor)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_broadway_on_off(int llid, int itid, int ion)
+{
+  static int tid, on;
+  if (i_am_client)
+    {
+    if (count_broadway_on_off)
+      {
+      if (itid != tid)
+        KOUT(" ");
+      if (ion != on)
+        KOUT(" ");
+      }
+    tid = rand();
+    on = rand();
+    send_broadway_on_off(llid, tid, on);
+    }
+  else
+    send_broadway_on_off(llid, itid, ion);
+  count_broadway_on_off++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 /* FUNCTION: send_first_burst                                              */
 /*---------------------------------------------------------------------------*/
 static void send_first_burst(int llid)
@@ -2916,6 +2941,7 @@ static void send_first_burst(int llid)
   recv_c2c_peer_ping(llid, 0, NULL, 0);
 
   recv_color_item(llid, 0, NULL, 0);
+  recv_broadway_on_off(llid, 0, 0);
 
   recv_nat_add(llid, 0, NULL);
   recv_phy_add(llid, 0, NULL, 0);

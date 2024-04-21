@@ -14,20 +14,18 @@ VERSION=${VERSION#*=}
 COMMON="${CLOONIX_TREE_ROOT}/build_tools/common"
 #----------------------------------------------------------
 LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-RPATH_LIB="/usr/libexec/cloonix/common/lib"
+RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
 for i in `find ${COMMON} -maxdepth 1 -type f` ; do
-  ${PATCHELF} --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
 for i in `find ${COMMON}/lib -maxdepth 1 -type f` ; do
-  ${PATCHELF} --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
-for i in gdk-pixbuf-2.0 gstreamer-1.0 qt6 ; do 
-  for j in `find ${COMMON}/lib/${i} -type f` ; do
-    ${PATCHELF} --set-rpath ${RPATH_LIB} ${j} 2>/dev/null
-    ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
-  done
+for i in `find ${COMMON}/lib/x86_64-linux-gnu -maxdepth 1 -type f` ; do
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
 #----------------------------------------------------------
 cd ${CLOONIX_TREE_ROOT}/build_tools

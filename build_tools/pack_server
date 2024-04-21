@@ -81,9 +81,6 @@ rm -rf /tmp/lib_wireshark
 tar --directory=/tmp -xf ${TARGZ_STORE}/shark_gtk/built_objects/lib_wireshark.tar.gz
 cp -n /tmp/lib_wireshark/lib/x86_64-linux-gnu/* ${COMMON}/lib || true
 #----------------------------------------------------------
-#  cp -f ${TARGZ_STORE}/shark_qt/built_objects/wireshark ${SERVER}/cloonix-wireshark-qt
-#  cp -f ${TARGZ_STORE}/shark_qt/built_objects/dumpcap ${SERVER}
-#----------------------------------------------------------
 cp -f /usr/bin/broadwayd ${SERVER}/cloonix-broadwayd
 cp -f /usr/bin/fuse-zip  ${SERVER}/cloonix-fuse-zip
 cp -f /sbin/ip           ${SERVER}/ip
@@ -96,9 +93,9 @@ cp -f /bin/grep          ${SERVER}/cloonix-grep
 cp -f /usr/bin/osirrox  ${SERVER}/cloonix-osirrox
 #----------------------------------------------------------
 LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-RPATH_LIB="/usr/libexec/cloonix/common/lib"
+RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
 for i in `find ${SERVER} -maxdepth 1 -type f` ; do
-  ${PATCHELF} --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --force-rpath  --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
 #----------------------------------------------------------

@@ -485,6 +485,27 @@ int cmd_qreboot_vm(int argc, char **argv)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int cmd_broadway_on_off(int argc, char **argv)
+{
+  int num = -1, result = -1;
+  if (argc == 1)
+    {
+    if (!strcmp(argv[0], "on"))
+      num = 1;
+    else if (!strcmp(argv[0], "off")) 
+      num = 0;
+    if ((num == 0) || (num == 1))
+      {
+      result = 0;
+      init_connection_to_uml_cloonix_switch();
+      client_broadway_on_off(0, callback_end, num);
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int cmd_color_kvm(int argc, char **argv)
 {
   int num, result = -1;

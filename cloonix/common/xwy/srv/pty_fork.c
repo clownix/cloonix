@@ -194,7 +194,7 @@ static void init_all_env(char *net_name)
 {
   memset(g_xauthority, 0, MAX_TXT_LEN);
   snprintf(g_xauthority, MAX_TXT_LEN-1, 
-           "/var/lib/cloonix/%s/Cloonauthority", net_name); 
+           "/var/lib/cloonix/%s/run/.Xauthority", net_name); 
   unlink(g_xauthority);
   clean_xauthority(g_xauthority, "-c");
   clean_xauthority(g_xauthority, "-l");
@@ -207,8 +207,9 @@ static void init_all_env(char *net_name)
 /****************************************************************************/
 static void create_env_display(int display_val, char *ttyname)
 {
-  char home_dir[MAX_PATH_LEN];
+  char rdir[MAX_PATH_LEN];
   char disp_str[MAX_TXT_LEN];
+  char *net = g_net_name;
   setenv("PATH",  "/usr/libexec/cloonix/common:"
                   "/usr/libexec/cloonix/client:"
                   "/usr/libexec/cloonix/server", 1);
@@ -228,19 +229,18 @@ static void create_env_display(int display_val, char *ttyname)
     }
   else
     XERR("ERROR Problem setting DISPLAY");
-  memset(home_dir, 0, MAX_PATH_LEN);
-  snprintf(home_dir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/run", g_net_name);
-  setenv("HOME", home_dir, 1);
-  setenv("XDG_RUNTIME_DIR", home_dir, 1);
-  setenv("XDG_CACHE_HOME", home_dir, 1);
-  setenv("XDG_DATA_HOME", home_dir, 1);
-  memset(home_dir, 0, MAX_PATH_LEN);
-  snprintf(home_dir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/run/.config", g_net_name);
-  setenv("XDG_CONFIG_HOME", home_dir, 1);
-  setenv("QT_PLUGIN_PATH", "/usr/libexec/cloonix/common/lib/qt6/plugins", 1);
+  memset(rdir, 0, MAX_PATH_LEN);
+  snprintf(rdir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/run", net);
+  setenv("XDG_RUNTIME_DIR", rdir, 1);
+  setenv("XDG_CACHE_HOME", rdir, 1);
+  setenv("XDG_DATA_HOME", rdir, 1);
+  memset(rdir, 0, MAX_PATH_LEN);
+  snprintf(rdir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/run/.config", net);
+  setenv("XDG_CONFIG_HOME", rdir, 1);
   setenv("NO_AT_BRIDGE", "1", 1);
   setenv("QT_X11_NO_MITSHM", "1", 1);
   setenv("QT_XCB_NO_MITSHM", "1", 1);
+  setenv("QT_PLUGIN_PATH", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/qt6/plugins", 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -382,7 +382,6 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
     XOUT("%s", strerror(errno));
   if (pid == 0)
     {
-    hide_real_machine();
     clearenv();
 
     create_env_display(display_val, ttyname); 
@@ -398,6 +397,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       XOUT("setsid: %s", strerror(errno));
     if (action == action_dae)
       {
+      hide_real_machine();
       for (i=0; i<MAX_FD_NUM; i++)
         close(i);
       create_argv_from_cmd(cmd, argv);

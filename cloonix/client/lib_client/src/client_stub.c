@@ -334,6 +334,8 @@ void recv_c2c_peer_ping(int llid, int tid, char *c2c_name, int status)
 {KOUT(" ");}
 void recv_color_item(int llid, int tid, char *name, int color)
 {KOUT(" ");}
+void recv_broadway_on_off(int llid, int tid, int color)
+{KOUT(" ");}
 /*--------------------------------------------------------------------------*/
 
 void recv_lan_cnf(int llid, int tid, char *name, char *cmd)

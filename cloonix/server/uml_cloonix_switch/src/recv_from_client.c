@@ -58,6 +58,8 @@
 #include "ovs_c2c.h"
 #include "msg.h"
 #include "crun.h"
+#include "broadway.h"
+
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
 int inside_cloon(char **name);
@@ -150,6 +152,14 @@ static int get_inhib_new_clients(void)
     event_print("Server being killed, no new client");
     }
   return g_inhib_new_clients;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_broadway_on_off(int llid, int tid, int on)
+{
+  broadway_on_off(on);
+  send_status_ok(llid, tid, "broadway");
 }
 /*---------------------------------------------------------------------------*/
 

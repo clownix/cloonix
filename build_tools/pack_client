@@ -64,9 +64,9 @@ cp -f ${CLIENT}/openssh/cloonix-u2i-ssh ${CLIENT}
 rm -rf ${CLIENT}/openssh
 #----------------------------------------------------------
 LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-RPATH_LIB="/usr/libexec/cloonix/common/lib"
+RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
 for i in `find ${CLIENT} -maxdepth 1 -type f` ; do
-  ${PATCHELF} --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
 #----------------------------------------------------------

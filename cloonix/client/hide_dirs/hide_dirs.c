@@ -127,6 +127,10 @@ static void setup_mounts(void)
   char *curdir = get_current_dir_name();
   assert(curdir);
   assert(mount("none", "/", NULL, MS_REC | MS_SLAVE, NULL) == 0);
+  hide_dir_if_necessary("/root");
+  hide_dir_if_necessary("/boot");
+  hide_dir_if_necessary("/media");
+  hide_dir_if_necessary("/mnt");
   hide_dir_if_necessary("/etc");
   hide_dir_if_necessary("/bin");
   hide_dir_if_necessary("/sbin");
@@ -137,9 +141,11 @@ static void setup_mounts(void)
   mkdir("/var/lib/cloonix", 0777);
   mkdir("/var/lib/cloonix/cache", 0777);
   mkdir("/var/lib/cloonix/cache/libexec", 0777);
+
   assert(mount("/usr/libexec/cloonix",
                "/var/lib/cloonix/cache/libexec",
                NULL, MS_BIND, NULL) == 0);
+
   hide_dir_if_necessary("/usr");
 
   mkdir("/usr/bin", 0777);
@@ -149,52 +155,25 @@ static void setup_mounts(void)
   mkdir("/usr/libexec", 0777);
   mkdir("/usr/libexec/cloonix", 0777);
   mkdir("/usr/lib", 0777);
-  mkdir("/usr/lib/locale", 0777);
-  mkdir("/usr/lib/x86_64-linux-gnu", 0777);
-  mkdir("/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0", 0777);
-  mkdir("/usr/lib/x86_64-linux-gnu/gtk-3.0", 0777);
-  mkdir("/usr/lib/x86_64-linux-gnu/gio", 0777);
-  mkdir("/usr/lib/x86_64-linux-gnu/gvfs", 0777);
-  mkdir("/usr/lib/x86_64-linux-gnu/gconv", 0777);
-  mkdir("/usr/lib/x86_64-linux-gnu/qt6", 0777);
+  mkdir("/usr/lib64", 0777);
 
   assert(mount("/var/lib/cloonix/cache/libexec",
                "/usr/libexec/cloonix", NULL, MS_BIND, NULL) == 0);
+
+  assert(mount("/var/lib/cloonix/cache/libexec/common/lib", "/usr/lib",
+               NULL, MS_BIND, NULL) == 0);
+
+  assert(mount("/var/lib/cloonix/cache/libexec/common/lib64", "/lib64",
+               NULL, MS_BIND, NULL) == 0);
+
   assert(mount("/var/lib/cloonix/cache/libexec/common/share",
                "/usr/share", NULL, MS_BIND, NULL) == 0);
+
   assert(mount("/var/lib/cloonix/cache/libexec/common/etc",
                "/etc", NULL, MS_BIND, NULL) == 0);
+
   assert(mount("/var/lib/cloonix/cache/libexec/common",
                "/usr/bin", NULL, MS_BIND, NULL) == 0);
-
-  assert(mount("/usr/libexec/cloonix/common/lib/gdk-pixbuf-2.0",
-               "/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0",
-               NULL, MS_BIND, NULL) == 0);
-
-  assert(mount("/usr/libexec/cloonix/common/lib/gtk-3.0",
-               "/usr/lib/x86_64-linux-gnu/gtk-3.0",
-               NULL, MS_BIND, NULL) == 0);
-
-  assert(mount("/usr/libexec/cloonix/common/lib/gio",
-               "/usr/lib/x86_64-linux-gnu/gio",
-               NULL, MS_BIND, NULL) == 0);
-
-  assert(mount("/usr/libexec/cloonix/common/lib/gvfs",
-               "/usr/lib/x86_64-linux-gnu/gvfs",
-               NULL, MS_BIND, NULL) == 0);
-
-  assert(mount("/usr/libexec/cloonix/common/lib/gconv",
-               "/usr/lib/x86_64-linux-gnu/gconv",
-               NULL, MS_BIND, NULL) == 0);
-
-  assert(mount("/usr/libexec/cloonix/common/lib/qt6",
-               "/usr/lib/x86_64-linux-gnu/qt6",
-               NULL, MS_BIND, NULL) == 0);
-
-  assert(mount("/usr/libexec/cloonix/common/share/i18n", "/usr/share/i18n",
-               NULL, MS_BIND, NULL) == 0);
-  assert(mount("/usr/libexec/cloonix/common/localedir", "/usr/lib/locale",
-               NULL, MS_BIND, NULL) == 0);
 
   chdir("/");
   chdir(curdir);

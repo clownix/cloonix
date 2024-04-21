@@ -22,10 +22,9 @@ case "$pretty_name" in
   ;;
 esac
 mkdir -p ${COMMON}/lib64
-mkdir -p ${COMMON}/lib
-mkdir -p ${COMMON}/lib/gconv
+mkdir -p ${COMMON}/lib/x86_64-linux-gnu
+mkdir -p ${COMMON}/lib/locale
 mkdir -p ${COMMON}/etc
-mkdir -p ${COMMON}/localedir
 mkdir -p ${COMMON}/share
 mkdir -p ${COMMON}/share/dconf
 mkdir -p ${COMMON}/share/locale
@@ -57,14 +56,20 @@ EOF
 cat > ${COMMON}/etc/locale.conf << EOF
 LANG=C
 EOF
+cat > ${COMMON}/etc/hosts << EOF
+127.0.0.1   localhost
+EOF
+cat > ${COMMON}/etc/group << EOF
+audio:x:29:pulse
+EOF
 #----------------------------------------------------------
-cp -f /usr/lib/x86_64-linux-gnu/libsecret-1.so.0 ${COMMON}/lib
-cp -f /usr/lib/x86_64-linux-gnu/libvte-2.91.so.0 ${COMMON}/lib
-cp -f /usr/lib/x86_64-linux-gnu/libibus-1.0.so.5 ${COMMON}/lib 
+cp -f /usr/lib/x86_64-linux-gnu/libsecret-1.so.0 ${COMMON}/lib/x86_64-linux-gnu
+cp -f /usr/lib/x86_64-linux-gnu/libvte-2.91.so.0 ${COMMON}/lib/x86_64-linux-gnu
+cp -f /usr/lib/x86_64-linux-gnu/libibus-1.0.so.5 ${COMMON}/lib/x86_64-linux-gnu
 cp -f /usr/bin/tilix ${COMMON}/cloonix-tilix
-cp -f /usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache ${COMMON}/lib/gconv
 cp -f ${TARGZ_STORE}/dconf/user ${COMMON}/share/dconf
 #----------------------------------------------------------
+cp -f /usr/bin/ldd ${COMMON}
 cp -f /bin/bash ${COMMON}
 cp -f /usr/bin/strace ${COMMON}
 cp -f /usr/bin/xauth ${COMMON}/cloonix-xauth
@@ -73,7 +78,7 @@ cp -f /usr/bin/locale ${COMMON}
 cp -f /usr/bin/localedef ${COMMON}
 cp -f /usr/bin/localectl ${COMMON}
 cp -f /usr/sbin/locale-gen ${COMMON}
-cp -Lrf /usr/lib/locale/* ${COMMON}/localedir
+cp -Lrf /usr/lib/locale/* ${COMMON}/lib/locale
 cd ${COMMON}
 sed -i s"%/bin/sh%/usr/libexec/cloonix/common/sh%" locale-gen
 sed -i s"%localedef%/usr/libexec/cloonix/common/localedef%" locale-gen
@@ -86,7 +91,7 @@ for i in cat cp echo env grep id ifconfig ip \
 done
 cd $FROM_HERE
 for i in icons mime themes fonts gtk-3.0 \
-         gstreamer-1.0 tilix gvfs ; do
+         gstreamer-1.0 tilix gvfs alsa ; do
    cp -Lrf /usr/share/${i} ${COMMON}/share
 done
 mkdir -p ${COMMON}/share/terminfo 
@@ -98,7 +103,6 @@ done
 cp -Lrf /usr/share/X11/locale/en_US.UTF-8 ${COMMON}/share/X11/locale
 cp -Lrf /usr/share/X11/locale/C ${COMMON}/share/X11/locale
 cp -Lrf /usr/share/X11/locale/locale.dir ${COMMON}/share/X11/locale
-cp -Lrf /usr/lib/locale/* ${COMMON}/share/locale
 cp -f /usr/share/i18n/charmaps/UTF-8.gz ${COMMON}/share/i18n/charmaps
 for i in en_US en_GB i18n i18n_ctype iso14651_t1 translit_* ; do
   cp -f /usr/share/i18n/locales/${i} ${COMMON}/share/i18n/locales
@@ -115,15 +119,15 @@ mv ${COMMON}/share/share_wireshark_gtk ${COMMON}/share/wireshark
 cp -rf ${COMMON}/share/share_wireshark_qt/* ${COMMON}/share/wireshark
 rm -rf ${COMMON}/share/share_wireshark_qt
 #----------------------------------------------------------
-#  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_qt/built_objects/share_wireshark_qt.tar.gz
-#  mv ${COMMON}/share/share_wireshark_qt ${COMMON}/share/wireshark
-#----------------------------------------------------------
 cp -f /lib64/ld-linux-x86-64.so.2 ${COMMON}/lib64
 cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
 #----------------------------------------------------------
-for i in gdk-pixbuf-2.0 gtk-3.0 gio gvfs gstreamer-1.0 qt6 ; do
-  cp -rf /usr/lib/x86_64-linux-gnu/${i} ${COMMON}/lib
+SRCD="/usr/lib/x86_64-linux-gnu"
+DSTD="${COMMON}/lib/x86_64-linux-gnu"
+for i in gstreamer1.0 gstreamer-1.0 \
+         gdk-pixbuf-2.0 gtk-3.0 gio gvfs qt6 ; do
+  cp -rf ${SRCD}/${i} ${DSTD}
 done
-cp /usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders ${COMMON}
-cp /usr/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner ${COMMON}
+mkdir -p ${DSTD}/gconv
+cp -f ${SRCD}/gconv/gconv-modules.cache ${DSTD}/gconv
 #----------------------------------------------------------

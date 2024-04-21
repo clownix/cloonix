@@ -130,6 +130,11 @@
                          "  <color> %d </color>\n"\
                          "</color_item>"
 
+#define BROADWAY_ON_OFF  "<broadway_on_off>"\
+                         "  <tid> %d </tid>\n"\
+                         "  <on> %d </on>\n"\
+                         "</broadway_on_off>"
+
 
 /*---------------------------------------------------------------------------*/
 #define HOP_GET_LIST_NAME    "<hop_get_list_name>\n"\

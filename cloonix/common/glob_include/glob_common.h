@@ -205,7 +205,6 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define OVS_BRIDGE_PORT "_k_"
 #define OVS_BRIDGE   "_b_"
 
-#define XAUTH_BIN "/usr/libexec/cloonix/common/cloonix-xauth"
 #define BASH_BIN "/usr/libexec/cloonix/common/sh"
 #define XWYCLI_BIN "/usr/libexec/cloonix/client/cloonix-xwycli"
 #define URXVT_BIN "/usr/libexec/cloonix/client/cloonix-urxvt"

@@ -24,6 +24,7 @@ char *utils_get_a2b_dir(void);
 char *utils_get_runbroadway_config_dir(void);
 char *utils_get_runbroadway_dir(void);
 char *utils_get_run_dir(void);
+char *utils_get_run_config_dir(void);
 char *utils_get_snf_pcap_dir(void);
 
 void utils_send_status_ko(int *llid, int *tid, char *err);

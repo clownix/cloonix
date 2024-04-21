@@ -386,4 +386,7 @@ void doors_io_basic_tx_set(t_llid_tx llid_tx);
 void send_color_item(int llid, int tid, char *name, int color);
 void recv_color_item(int llid, int tid, char *name, int color);
 
+void send_broadway_on_off(int llid, int tid, int on);
+void recv_broadway_on_off(int llid, int tid, int on);
+
 /*---------------------------------------------------------------------------*/

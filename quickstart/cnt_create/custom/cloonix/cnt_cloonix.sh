@@ -9,7 +9,7 @@ REPO="http://deb.debian.org/debian"
 REPO="http://172.17.0.2/debian/bookworm"
 BOOKWORM="/var/lib/cloonix/bulk/bookworm.qcow2"
 BUNDLE_PATH="/home/perrier"
-BUNDLE="cloonix-bundle-35-00"
+BUNDLE="cloonix-bundle-36-01"
 #######################################################################
 set +e
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)

@@ -776,7 +776,7 @@ static void execchild(struct ChanSess *chansess)
     addnewvar("SHELL", "/bin/sh");
     usershell = m_strdup("/bin/sh");
     }
-  addnewvar("XAUTHORITY", "/root/.Cloonauthority");
+  addnewvar("XAUTHORITY", "/root/.Xauthority");
 
   run_shell_command(chansess->cmd, ses.maxfd, usershell, login);
 }
