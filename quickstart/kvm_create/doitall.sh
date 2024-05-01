@@ -1,10 +1,9 @@
 #!/bin/bash
 set -e
 
-LIST="fedora39 \
-      jammy    \
-      bookworm \
-      trixie"
+LIST="fedora40 \
+      noble \
+      bookworm"
 
 sudo echo "sudoer rights given"
 mkdir -p /var/lib/cloonix/bulk

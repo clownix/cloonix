@@ -1,6 +1,6 @@
 diff -Naur spice-gtk/meson.build tainted_spice/meson.build
 --- spice-gtk/meson.build	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/meson.build	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/meson.build	2024-04-27 18:14:37.093474046 +0200
 @@ -5,7 +5,8 @@
           version : run_command('build-aux/git-version-gen', '@0@/.tarball-version'.format(meson.project_source_root()), check : true).stdout().strip(),
           license : 'LGPLv2.1',
@@ -65,7 +65,7 @@ diff -Naur spice-gtk/meson.build tainted_spice/meson.build
  subdir('po')
 diff -Naur spice-gtk/src/channel-main.c tainted_spice/src/channel-main.c
 --- spice-gtk/src/channel-main.c	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/src/channel-main.c	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/channel-main.c	2024-04-27 18:14:37.093474046 +0200
 @@ -2799,6 +2799,9 @@
  {
      SpiceMainChannelPrivate *c;
@@ -87,7 +87,7 @@ diff -Naur spice-gtk/src/channel-main.c tainted_spice/src/channel-main.c
      g_return_if_fail(id >= -1);
 diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 --- spice-gtk/src/cloon.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloon.c	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/cloon.c	2024-04-27 18:14:37.093474046 +0200
 @@ -0,0 +1,609 @@
 +#include <unistd.h>
 +#include <stdlib.h>
@@ -700,7 +700,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +
 diff -Naur spice-gtk/src/cloon.h tainted_spice/src/cloon.h
 --- spice-gtk/src/cloon.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloon.h	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/cloon.h	2024-04-27 18:14:37.093474046 +0200
 @@ -0,0 +1,22 @@
 +
 +
@@ -726,7 +726,7 @@ diff -Naur spice-gtk/src/cloon.h tainted_spice/src/cloon.h
 +
 diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 --- spice-gtk/src/hmac_cipher.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.c	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/hmac_cipher.c	2024-04-27 18:14:37.093474046 +0200
 @@ -0,0 +1,144 @@
 +/*****************************************************************************/
 +/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
@@ -874,7 +874,7 @@ diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 +
 diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 --- spice-gtk/src/hmac_cipher.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.h	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/hmac_cipher.h	2024-04-27 18:14:37.093474046 +0200
 @@ -0,0 +1,28 @@
 +/*****************************************************************************/
 +/*    Copyright (C)  2006-2022    Cloon,    <clownix@clownix.net>          */
@@ -906,7 +906,7 @@ diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 +
 diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
 --- spice-gtk/src/meson.build	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/src/meson.build	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/meson.build	2024-04-27 18:14:37.093474046 +0200
 @@ -130,6 +130,8 @@
    'spice-client.c',
    'spice-option.c',
@@ -936,7 +936,7 @@ diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
                                   link_args : [spice_gtk_version_script],
 diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
 --- spice-gtk/src/spice-channel.c	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/src/spice-channel.c	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/spice-channel.c	2024-04-27 18:14:37.097474063 +0200
 @@ -48,6 +48,11 @@
  
  G_STATIC_ASSERT(sizeof(SpiceChannelClass) == sizeof(GObjectClass) + 19 * sizeof(gpointer));
@@ -1012,7 +1012,7 @@ diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
      if (c->conn == NULL) {
 diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
 --- spice-gtk/src/spice-session.c	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/src/spice-session.c	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/spice-session.c	2024-04-27 18:14:37.097474063 +0200
 @@ -20,9 +20,8 @@
  #include <gio/gnetworking.h>
  #include <gio/gio.h>
@@ -1416,7 +1416,7 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
      g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-priv.h
 --- spice-gtk/src/spice-session-priv.h	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/src/spice-session-priv.h	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/spice-session-priv.h	2024-04-27 18:14:37.097474063 +0200
 @@ -59,6 +59,8 @@
  void spice_session_get_pubkey(SpiceSession *session, guint8 **pubkey, guint *size);
  guint spice_session_get_verify(SpiceSession *session);
@@ -1428,7 +1428,7 @@ diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-pr
  const gchar* spice_session_get_cert_subject(SpiceSession *session);
 diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
 --- spice-gtk/src/spice-widget.c	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/src/spice-widget.c	2024-04-12 23:56:01.970815812 +0200
++++ tainted_spice/src/spice-widget.c	2024-04-27 18:16:22.097927860 +0200
 @@ -56,6 +56,10 @@
  #include "vncdisplaykeymap.h"
  #include "spice-grabsequence-priv.h"
@@ -1478,15 +1478,7 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
          update_mouse_grab(display);
          break;
      case PROP_RESIZE_GUEST:
-@@ -519,13 +534,15 @@
-                   event->implicit, event->keyboard);
-     DISPLAY_DEBUG(self, "%s (SpiceDisplay::GdkWindow %p, event->grab_window: %p)",
-                   __FUNCTION__, window, event->grab_window);
-+//KERR("VIPTODO GRAB BROKEN");
-     if (window == event->grab_window) {
-+//KERR("VIPTODO GRAB BROKEN grab_window");
-         /* ignore grab-broken event moving the grab to GtkEventBox::window
-          * (from GtkEventBox::event_window) as we initially called
+@@ -525,7 +540,7 @@
           * gdk_pointer_grab() on GtkEventBox::window, see
           * https://bugzilla.gnome.org/show_bug.cgi?id=769635
           */
@@ -1495,7 +1487,7 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
      }
  
      if (event->keyboard) {
-@@ -538,7 +555,7 @@
+@@ -538,7 +553,7 @@
         breaking someone else code. */
      try_mouse_ungrab(self);
  
@@ -1504,7 +1496,7 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
  }
  
  static void file_transfer_callback(GObject *source_object,
-@@ -600,12 +617,17 @@
+@@ -600,12 +615,16 @@
      gtk_drag_finish(drag_context, TRUE, FALSE, time);
  }
  
@@ -1512,7 +1504,6 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
 +static int grab_notify(SpiceDisplay *display, gboolean was_grabbed)
  {
      DISPLAY_DEBUG(display, "grab notify %d", was_grabbed);
-+//KERR("VIPTODO GRAB NOTIFY");
  
      if (was_grabbed == FALSE)
 +{
@@ -1523,7 +1514,7 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
  }
  
  #ifdef HAVE_EGL
-@@ -655,6 +677,7 @@
+@@ -655,6 +674,7 @@
  #endif
  }
  
@@ -1531,7 +1522,7 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
  static void spice_display_init(SpiceDisplay *display)
  {
      GtkWidget *widget = GTK_WIDGET(display);
-@@ -700,6 +723,7 @@
+@@ -700,6 +720,7 @@
      g_signal_connect(display, "grab-broken-event", G_CALLBACK(grab_broken), NULL);
      g_signal_connect(display, "grab-notify", G_CALLBACK(grab_notify), NULL);
  
@@ -1539,7 +1530,7 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
      gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, &targets, 1, GDK_ACTION_COPY);
      g_signal_connect(display, "drag-data-received",
                       G_CALLBACK(drag_data_received_callback), NULL);
-@@ -1203,6 +1227,9 @@
+@@ -1203,6 +1224,9 @@
      if (!d->keyboard_have_focus)
          return;
  
@@ -1549,7 +1540,7 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
      if (!d->mouse_grab_enable)
          return;
      if (d->mouse_mode != SPICE_MOUSE_MODE_SERVER)
-@@ -1355,12 +1382,15 @@
+@@ -1355,12 +1379,15 @@
  {
      SpiceDisplayPrivate *d = display->priv;
  
@@ -1571,7 +1562,7 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
  }
  
  static void recalc_geometry(GtkWidget *widget)
-@@ -1511,7 +1541,9 @@
+@@ -1511,7 +1538,9 @@
  
      if (d->mark == 0 || d->canvas.data == NULL ||
          d->area.width == 0 || d->area.height == 0)
@@ -1581,136 +1572,62 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
  
      spice_cairo_draw_event(display, cr);
      update_mouse_pointer(display);
-@@ -1547,7 +1579,10 @@
+@@ -1547,7 +1576,9 @@
      SpiceDisplayPrivate *d = display->priv;
  
      if (d->key_delayed_scancode == 0)
 +{
-+//KERR("VIPTODO key_press_delayed 1");
          return FALSE;
 +}
  
      spice_inputs_channel_key_press(d->inputs, d->key_delayed_scancode);
      d->key_delayed_scancode = 0;
-@@ -1557,6 +1592,7 @@
-         d->key_delayed_id = 0;
-     }
- 
-+//KERR("VIPTODO key_press_delayed 2");
-     return FALSE;
- }
- 
-@@ -1576,6 +1612,7 @@
-         spice_inputs_channel_key_release(inputs, 0x21d);
-         spice_inputs_channel_key_release(inputs, 0x45);
-     }
-+//KERR("VIPTODO send_pause 1");
-     return true;
- }
- 
-@@ -1660,7 +1697,10 @@
+@@ -1660,7 +1691,9 @@
      int i;
  
      if (!d->grabseq->nkeysyms)
 +      {
-+//KERR("VIPTODO check_for_grab_key 1");
          return FALSE;
 +      }
  
      if (type == check_type) {
          /* Record the new key */
-@@ -1671,19 +1711,25 @@
+@@ -1671,7 +1704,9 @@
          /* Return if any key is missing */
          for (i = 0 ; i < d->grabseq->nkeysyms ; i++)
              if (d->activeseq[i] == FALSE)
 +               {
-+//KERR("VIPTODO check_for_grab_key 2");
                  return FALSE;
 +                }
  
          /* resets the whole grab sequence on success */
          memset(d->activeseq, 0, sizeof(gboolean) * d->grabseq->nkeysyms);
-+//KERR("VIPTODO check_for_grab_key 3");
-         return TRUE;
-     } else if (type == reset_type) {
-         /* reset key event type resets the whole grab sequence */
-         memset(d->activeseq, 0, sizeof(gboolean) * d->grabseq->nkeysyms);
-         d->seq_pressed = FALSE;
-+//KERR("VIPTODO check_for_grab_key 4");
-         return FALSE;
-     } else
-         g_warn_if_reached();
- 
-+//KERR("VIPTODO check_for_grab_key 5");
-     return FALSE;
- }
- 
-@@ -1735,12 +1781,16 @@
+@@ -1735,7 +1770,9 @@
  
      /* on windows, we ought to ignore the reserved key event? */
      if (!native_scancode && key->hardware_keycode == 0xff)
 +      {
-+//KERR("VIPTODO key_event 1");
          return false;
 +      }
  
      if (!d->keyboard_grab_active) {
          if (key->hardware_keycode == VK_LWIN ||
-             key->hardware_keycode == VK_RWIN ||
-             key->hardware_keycode == VK_APPS)
-+//KERR("VIPTODO key_event 2");
-             return false;
-     }
- 
-@@ -1772,9 +1822,13 @@
+@@ -1772,7 +1809,9 @@
      }
  
      if (!d->inputs)
 +       {
-+//KERR("VIPTODO key_event 3");
          return true;
 +       }
  
      if (key->keyval == GDK_KEY_Pause) {
-+//KERR("VIPTODO key_event 4");
          return send_pause(display, key->type);
-     }
-     if (!scancode)
-@@ -1888,6 +1942,7 @@
-         break;
-     }
- 
-+//KERR("VIPTODO key_event 5");
-     return true;
- }
- 
-@@ -1905,9 +1960,11 @@
-         g_free(keys);
-     } else {
-         g_warning("could not lookup keyval %u, please report a bug", keyval);
-+//KERR("VIPTODO get_scancode_from_keyval 1");
-         return 0;
-     }
- 
-+//KERR("VIPTODO get_scancode_from_keyval 2");
-     return vnc_display_keymap_gdk2xtkbd(d->keycode_map, d->keycode_maplen, keycode);
- }
- 
-@@ -1955,6 +2012,7 @@
-     try_keyboard_grab(display);
-     update_display(display);
- 
-+//KERR("VIPTODO enter_event 1");
-     return true;
- }
- 
-@@ -1966,13 +2024,17 @@
+@@ -1966,13 +2005,15 @@
      DISPLAY_DEBUG(display, "%s", __FUNCTION__);
  
      if (d->mouse_grab_active)
 -        return true;
 +        {
-+//KERR("VIPTODO leave_event 1");
 +        return false;
 +        }
  
@@ -1719,32 +1636,22 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
      try_keyboard_ungrab(display);
  
 -    return true;
-+//KERR("VIPTODO leave_event 2");
 +    return false;
  }
  
  static gboolean focus_in_event(GtkWidget *widget, GdkEventFocus *focus G_GNUC_UNUSED)
-@@ -1987,8 +2049,10 @@
+@@ -1987,8 +2028,9 @@
       * (this happens when doing an ungrab from the leave_event callback).
       */
      if (d->keyboard_have_focus)
 +      {
-+//KERR("VIPTODO focus_in_event 1");
          return true;
 -
 +      }
      release_keys(display);
  #ifdef G_OS_WIN32
      /* Reset the IME context of the focused window.
-@@ -2009,6 +2073,7 @@
-     if (gtk_widget_get_realized(widget))
-         update_display(display);
- 
-+//KERR("VIPTODO focus_in_event 2");
-     return true;
- }
- 
-@@ -2023,15 +2088,20 @@
+@@ -2023,11 +2065,14 @@
       * Ignore focus out after a keyboard grab
       * (this happens when doing the grab from the enter_event callback).
       */
@@ -1758,123 +1665,61 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
 +//    SpiceDisplayPrivate *d = display->priv;
 +//    if (d->keyboard_grab_active)
 +//      {
-+//KERR("VIPTODO focus_out_event 1");
 +//        return true;
 +//      }
 +//#endif
  
      release_keys(display);
      update_keyboard_focus(display, false);
- 
-+//KERR("VIPTODO focus_out_event 2");
-     return true;
- }
- 
-@@ -2134,9 +2204,15 @@
+@@ -2134,9 +2179,13 @@
      int x, y;
  
      if (!d->inputs)
 +       {
-+//KERR("VIPTODO motion_event 1");
          return true;
 +       }
      if (d->disable_inputs)
 +       {
-+//KERR("VIPTODO motion_event 2");
          return true;
 +       }
  
      d->seq_pressed = FALSE;
  
-@@ -2195,9 +2271,15 @@
+@@ -2195,9 +2244,13 @@
      DISPLAY_DEBUG(display, "%s", __FUNCTION__);
  
      if (!d->inputs)
 +       {
-+//KERR("VIPTODO scroll_event 1");
          return true;
 +       }
      if (d->disable_inputs)
 +       {
-+//KERR("VIPTODO scroll_event 2");
          return true;
 +       }
  
      switch (scroll->direction) {
      case GDK_SCROLL_UP:
-@@ -2222,6 +2304,7 @@
-         DISPLAY_DEBUG(display, "unsupported scroll direction");
-     }
- 
-+//KERR("VIPTODO scroll_event 3");
-     return true;
- }
- 
-@@ -2236,13 +2319,17 @@
+@@ -2236,7 +2289,9 @@
                    button->button, button->state);
  
      if (d->disable_inputs)
 +      {
-+//KERR("VIPTODO button_event 1");
          return true;
 +      }
  
      transform_input(display, button->x, button->y, &x, &y);
      if ((x < 0 || x >= d->area.width ||
-          y < 0 || y >= d->area.height) &&
-         d->mouse_mode == SPICE_MOUSE_MODE_CLIENT) {
-         /* rule out clicks in outside region */
-+//KERR("VIPTODO button_event 2");
-         return true;
-     }
- 
-@@ -2250,6 +2337,7 @@
-     if (d->mouse_mode == SPICE_MOUSE_MODE_SERVER) {
-         if (!d->mouse_grab_active) {
-             try_mouse_grab(display);
-+//KERR("VIPTODO button_event 3");
-             return true;
-         }
-     } else {
-@@ -2265,11 +2353,15 @@
-            FIXME: should be multiple widget grab, but how?
-            or should know the position of the other widgets?
-         */
-+//KERR("VIPTODO button_event 4");
-         ungrab_pointer(display);
+@@ -2269,7 +2324,9 @@
      }
  
      if (!d->inputs)
 +      {
-+//KERR("VIPTODO button_event 5");
          return true;
 +      }
  
      switch (button->type) {
      case GDK_BUTTON_PRESS:
-@@ -2279,6 +2371,7 @@
-         /* Save the mouse button mask to couple it with Wayland movement */
-         d->mouse_button_mask = button_mask_gdk_to_spice(button->state);
-         d->mouse_button_mask |= button_gdk_to_spice_mask(button->button);
-+//KERR("VIPTODO button_event 6");
-         break;
-     case GDK_BUTTON_RELEASE:
-         spice_inputs_channel_button_release(d->inputs,
-@@ -2287,10 +2380,13 @@
-         /* Save the mouse button mask to couple it with Wayland movement */
-         d->mouse_button_mask = button_mask_gdk_to_spice(button->state);
-         d->mouse_button_mask ^= button_gdk_to_spice_mask(button->button);
-+//KERR("VIPTODO button_event 7");
-         break;
-     default:
-+//KERR("VIPTODO button_event 8");
-         break;
-     }
-+//KERR("VIPTODO button_event 9");
-     return true;
- }
- 
-@@ -2444,13 +2540,14 @@
+@@ -2444,13 +2501,14 @@
                                G_PARAM_CONSTRUCT |
                                G_PARAM_STATIC_STRINGS));
  
@@ -1892,7 +1737,7 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
                                G_PARAM_STATIC_STRINGS));
 diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
 --- spice-gtk/src/spice-widget-egl.c	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/src/spice-widget-egl.c	2024-04-12 23:56:01.974815837 +0200
++++ tainted_spice/src/spice-widget-egl.c	2024-04-27 18:14:37.097474063 +0200
 @@ -226,7 +226,7 @@
  #endif
  
@@ -1954,7 +1799,7 @@ diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
                                         attrs);
 diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
 --- spice-gtk/src/usb-acl-helper.c	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/src/usb-acl-helper.c	2024-04-12 23:56:01.974815837 +0200
++++ tainted_spice/src/usb-acl-helper.c	2024-04-27 18:14:37.097474063 +0200
 @@ -24,6 +24,9 @@
  #include <stdio.h>
  #include <string.h>
@@ -1974,7 +1819,7 @@ diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
 -        acl_helper = ACL_HELPER_PATH"/spice-client-glib-usb-acl-helper";
 +//    const gchar *acl_helper = g_getenv("SPICE_USB_ACL_BINARY");
 +//    if (acl_helper == NULL)
-+    const gchar *acl_helper = "/usr/libexec/cloonix/client/cloonix-spice-client-glib-usb-acl-helper";
++    const gchar *acl_helper = SPICE_USB_ACL_HELPER_BIN;
      gchar *argv[] = { (char*)acl_helper, NULL };
      gint in, out;
      gchar buf[128];
@@ -1988,7 +1833,7 @@ diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
      }
 diff -Naur spice-gtk/subprojects/spice-common/meson.build tainted_spice/subprojects/spice-common/meson.build
 --- spice-gtk/subprojects/spice-common/meson.build	2024-04-12 23:36:16.000000000 +0200
-+++ tainted_spice/subprojects/spice-common/meson.build	2024-04-12 23:56:01.974815837 +0200
++++ tainted_spice/subprojects/spice-common/meson.build	2024-04-27 18:14:37.097474063 +0200
 @@ -169,10 +169,10 @@
  #
  subdir('python_modules')
@@ -2006,7 +1851,7 @@ diff -Naur spice-gtk/subprojects/spice-common/meson.build tainted_spice/subproje
  # write config.h
 diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
 --- spice-gtk/tools/spice-cmdline.c	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/tools/spice-cmdline.c	2024-04-12 23:56:01.974815837 +0200
++++ tainted_spice/tools/spice-cmdline.c	2024-04-27 18:14:37.097474063 +0200
 @@ -27,9 +27,25 @@
  static char *tls_port;
  static char *password;
@@ -2047,7 +1892,7 @@ diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
      if (host)
 diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
 --- spice-gtk/tools/spicy.c	2024-04-12 23:36:08.000000000 +0200
-+++ tainted_spice/tools/spicy.c	2024-04-12 23:56:01.974815837 +0200
++++ tainted_spice/tools/spicy.c	2024-04-27 18:16:44.058023086 +0200
 @@ -35,6 +35,10 @@
  #include "spicy-connect.h"
  #include <gst/gst.h>
@@ -2100,16 +1945,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  }
  
  static void menu_cb_about(GtkAction *action, void *data)
-@@ -540,6 +547,8 @@
- {
-     SpiceWindow *win = data;
- 
-+//KERR("VIPTODO mouse_grab_cb grabbed %d", grabbed);
-+
-     win->mouse_grabbed = grabbed;
-     update_status(win->conn);
- }
-@@ -549,22 +558,10 @@
+@@ -549,22 +556,9 @@
      SpiceWindow *win = data;
      GtkSettings *settings = gtk_widget_get_settings (widget);
  
@@ -2129,14 +1965,13 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
 -                     "gtk-enable-mnemonics", win->enable_mnemonics_save,
 -                     NULL);
 -    }
-+//KERR("VIPTODO keyboard_grab_cb              FALSE");
 +    g_object_set(settings, "gtk-enable-accels", FALSE,
 +                           "gtk-enable-mnemonics", FALSE,
 +                           NULL);
  }
  
  static void menu_cb_resize_to(GtkAction *action G_GNUC_UNUSED,
-@@ -627,66 +624,6 @@
+@@ -627,66 +621,6 @@
      gtk_widget_destroy(dialog);
  }
  
@@ -2203,7 +2038,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  /* ------------------------------------------------------------------ */
  
  static const GtkActionEntry entries[] = {
-@@ -724,12 +661,13 @@
+@@ -724,12 +658,13 @@
          .stock_id    = "_Connect",
          .label       = "_Connect ...",
          .callback    = G_CALLBACK(menu_cb_connect),
@@ -2218,7 +2053,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
      },{
  
          /* Edit menu */
-@@ -737,13 +675,13 @@
+@@ -737,13 +672,13 @@
          .stock_id    = "edit-copy",
          .label       = "_Copy to guest",
          .callback    = G_CALLBACK(menu_cb_copy),
@@ -2234,7 +2069,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
      },{
  
          /* View menu */
-@@ -751,7 +689,7 @@
+@@ -751,7 +686,7 @@
          .stock_id    = "view-fullscreen",
          .label       = "_Fullscreen",
          .callback    = G_CALLBACK(menu_cb_fullscreen),
@@ -2243,7 +2078,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
      },{
          .name        = "ResizeTo",
          .label       = "_Resize to",
-@@ -762,12 +700,12 @@
+@@ -762,12 +697,12 @@
  	.name        = "InsertSmartcard",
  	.label       = "_Insert Smartcard",
  	.callback    = G_CALLBACK(menu_cb_insert_smartcard),
@@ -2258,7 +2093,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
      },{
  #endif
  
-@@ -775,14 +713,14 @@
+@@ -775,14 +710,14 @@
          .name        = "SelectUsbDevices",
          .label       = "_Select USB Devices for redirection",
          .callback    = G_CALLBACK(menu_cb_select_usb_devices),
@@ -2275,7 +2110,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  
      },{
          /* Help menu */
-@@ -790,6 +728,7 @@
+@@ -790,6 +725,7 @@
          .stock_id    = "help-about",
          .label       = "_About ...",
          .callback    = G_CALLBACK(menu_cb_about),
@@ -2283,26 +2118,24 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
      }
  };
  
-@@ -1076,6 +1015,18 @@
+@@ -1076,6 +1012,16 @@
      win->conn = conn;
      win->display_channel = channel;
  
 +
 +    if((getenv("GDK_BACKEND")) && (!strcmp(getenv("GDK_BACKEND"), "broadway")))
 +      {
-+//KERR("VIPTODO SPICY IS BROADWAY");
 +      g_is_broadway = 1;
 +      }
 +    else
 +      {
-+//KERR("VIPTODO SPICY IS NOT BROADWAY");
 +      g_is_broadway = 0;
 +      }
 +
      /* toplevel */
      win->toplevel = gtk_window_new(GTK_WINDOW_TOPLEVEL);
      if (spicy_title == NULL) {
-@@ -1084,6 +1035,9 @@
+@@ -1084,6 +1030,9 @@
          snprintf(title, sizeof(title), "%s", spicy_title);
      }
  
@@ -2312,7 +2145,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
      gtk_window_set_title(GTK_WINDOW(win->toplevel), title);
      g_signal_connect(G_OBJECT(win->toplevel), "window-state-event",
                       G_CALLBACK(window_state_cb), win);
-@@ -1150,12 +1104,10 @@
+@@ -1150,12 +1099,10 @@
      spice_display_set_grab_keys(SPICE_DISPLAY(win->spice), seq);
      spice_grab_sequence_free(seq);
  
@@ -2329,7 +2162,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  
      /* status line */
      win->statusbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 1);
-@@ -1181,8 +1133,9 @@
+@@ -1181,8 +1128,9 @@
      vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 1);
      gtk_container_set_border_width(GTK_CONTAINER(vbox), 0);
      gtk_container_add(GTK_CONTAINER(win->toplevel), vbox);
@@ -2341,7 +2174,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
      gtk_box_pack_start(GTK_BOX(vbox), win->spice, TRUE, TRUE, 0);
      gtk_box_pack_end(GTK_BOX(vbox), win->statusbar, FALSE, TRUE, 0);
  
-@@ -1191,7 +1144,6 @@
+@@ -1191,7 +1139,6 @@
          gtk_window_fullscreen(GTK_WINDOW(win->toplevel));
  
      gtk_widget_show_all(vbox);
@@ -2349,7 +2182,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  
      /* init toggle actions */
      for (i = 0; i < G_N_ELEMENTS(spice_display_properties); i++) {
-@@ -1272,29 +1224,29 @@
+@@ -1272,29 +1219,29 @@
  
  static void recent_add(SpiceSession *session)
  {
@@ -2402,7 +2235,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  }
  
  static void main_channel_event(SpiceChannel *channel, SpiceChannelEvent event,
-@@ -1307,7 +1259,7 @@
+@@ -1307,7 +1254,7 @@
  
      switch (event) {
      case SPICE_CHANNEL_OPENED:
@@ -2411,7 +2244,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
          recent_add(conn->session);
          break;
      case SPICE_CHANNEL_SWITCHING:
-@@ -1315,7 +1267,7 @@
+@@ -1315,7 +1262,7 @@
          break;
      case SPICE_CHANNEL_CLOSED:
          /* this event is only sent if the channel was succesfully opened before */
@@ -2420,7 +2253,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
          connection_disconnect(conn);
          break;
      case SPICE_CHANNEL_ERROR_IO:
-@@ -2011,23 +1963,6 @@
+@@ -2011,23 +1958,6 @@
      GError *error = NULL;
      GOptionContext *context;
      spice_connection *conn;
@@ -2444,7 +2277,7 @@ diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
  
      /* parse opts */
      gtk_init(&argc, &argv);
-@@ -2056,40 +1991,12 @@
+@@ -2056,40 +1986,12 @@
      spice_set_session_option(conn->session);
      spice_cmdline_session_setup(conn->session);
  

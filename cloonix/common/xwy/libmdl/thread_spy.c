@@ -23,6 +23,7 @@
 #include "mdl.h"
 #include "debug.h"
 #include "wrap.h"
+#include "glob_common.h"
 
 /*****************************************************************************/
 typedef struct t_thread_spy
@@ -52,7 +53,7 @@ void thread_spy_add(int fd, int fd_bis, int epfd, int fd_type)
     if (g_thread_spy_tx[fd])
       {
       type = debug_get_thread_type_txt(fd_type);
-      XERR("THREAD EXISTS %d %s", fd, type);
+      KERR("THREAD EXISTS %d %s", fd, type);
       }
     else
       g_thread_spy_tx[fd] = spy;
@@ -62,7 +63,7 @@ void thread_spy_add(int fd, int fd_bis, int epfd, int fd_type)
     if (g_thread_spy_x11[fd])
       {
       type = debug_get_thread_type_txt(fd_type);
-      XERR("THREAD EXISTS %d %s", fd, type);
+      KERR("THREAD EXISTS %d %s", fd, type);
       }
     else
       g_thread_spy_x11[fd] = spy;
@@ -70,7 +71,7 @@ void thread_spy_add(int fd, int fd_bis, int epfd, int fd_type)
   else
     {
     type = debug_get_thread_type_txt(fd_type);
-    XERR("Wrong type %d %s", fd, type);
+    KERR("Wrong type %d %s", fd, type);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -83,7 +84,7 @@ void thread_spy_del(int fd, int fd_type)
     {
     spy = g_thread_spy_tx[fd];;
     if (!spy)
-      XERR("THREAD DOES NOT EXIST %d", fd);
+      KERR("THREAD DOES NOT EXIST %d", fd);
     else
       {
       g_thread_spy_tx[fd] = NULL;
@@ -94,7 +95,7 @@ void thread_spy_del(int fd, int fd_type)
     {
     spy = g_thread_spy_x11[fd];;
     if (!spy)
-      XERR("THREAD DOES NOT EXIST %d", fd);
+      KERR("THREAD DOES NOT EXIST %d", fd);
     else
       {
       g_thread_spy_x11[fd] = NULL;
@@ -102,7 +103,7 @@ void thread_spy_del(int fd, int fd_type)
       }
     }
   else
-    XERR("Wrong type %d %s", fd, fd_type);
+    KERR("Wrong type %d %s", fd, fd_type);
 }
 /*---------------------------------------------------------------------------*/
 

@@ -246,7 +246,7 @@ diff -Naur openssh-8.6p1/scp.c tainted_openssh/scp.c
  	extern int optind;
  
 +       char *u2i_ssh_path = get_cloonix_u2i_ssh_path(argv[0]);
-+struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/common/sh"};
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/server/cloonix-bash"};
 +
 +
 +       ssh_program = u2i_ssh_path;
@@ -687,7 +687,7 @@ diff -Naur openssh-8.6p1/ssh.c tainted_openssh/ssh.c
  	size_t n, len;
  	u_int j;
  	struct ssh_conn_info *cinfo = NULL;
-+struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/common/sh"};
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/server/cloonix-bash"};
 +
  
  	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */

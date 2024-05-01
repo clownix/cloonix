@@ -274,7 +274,6 @@ void mk_endp_dir(void)
   my_mkdir(utils_get_run_config_dir(), 1);
   my_mkdir(utils_get_runbroadway_config_dir(), 1);
 
-  //VIPTODO config of tilix
   memset(cmd, 0, 2*MAX_PATH_LEN);
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1, "%s/dconf", utils_get_runbroadway_config_dir());
@@ -285,7 +284,6 @@ void mk_endp_dir(void)
            path, utils_get_runbroadway_config_dir()); 
   system(cmd);
 
-  //VIPTODO config of wireshark_gtk color
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1, "%s/wireshark", utils_get_runbroadway_config_dir());
   my_mkdir(path, 1);
@@ -296,7 +294,6 @@ void mk_endp_dir(void)
            path, utils_get_runbroadway_config_dir()); 
   system(cmd);
 
-  //VIPTODO config of wireshark_qt color
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1, "%s/wireshark", utils_get_run_config_dir());
   my_mkdir(path, 1);

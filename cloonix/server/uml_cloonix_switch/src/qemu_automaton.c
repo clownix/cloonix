@@ -453,7 +453,7 @@ static char **create_qemu_argv(t_vm *vm)
 
   snprintf(namespace, MAX_PATH_LEN-1, "%s_%s",
            BASE_NAMESPACE, cfg_get_cloonix_name());
-  snprintf(qemu_bin, MAX_PATH_LEN-1, "%s/server/cloonix-qemu-system-x86_64",
+  snprintf(qemu_bin, MAX_PATH_LEN-1, "%s/server/cloonix-qemu-system",
            cfg_get_bin_dir());
   snprintf(qemu_data, MAX_PATH_LEN-1, "%s/server/qemu", cfg_get_bin_dir());
   create_linux_cmd_kvm(vm, qemu_cmd);

@@ -65,14 +65,14 @@ static void sock_fd_read(int type, int llid, int fd)
   len = read(fd, g_buf, MAX_SIMU_RX_LEN);
   if (len == 0)
     {
-    XERR("read len is 0");
+    KERR("read len is 0");
     g_doorways_end(llid);
     }
   else if (len < 0)
     {
     if ((errno != EAGAIN) && (errno != EINTR))
       {
-      XERR("read error %s", strerror(errno));
+      KERR("read error %s", strerror(errno));
       g_doorways_end(llid);
       }
     }
@@ -134,19 +134,19 @@ int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
   int sock_fd;
   unsigned long ul_llid = (unsigned long) llid;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    XOUT("%d", llid); 
+    KOUT("%d", llid); 
   sfd = &(g_simu_fd[llid]);
   sock_fd = sfd->sock_fd;
   if (sock_fd == -1)
-    XOUT("%d", llid); 
+    KOUT("%d", llid); 
   if (type != sfd->type) 
-    XOUT("%d %d", type, sfd->type);
+    KOUT("%d %d", type, sfd->type);
   if (val == doors_val_init_link)
     cloonix_timeout_add(1, time_doorways_rx, (void *) ul_llid);
   else if (val == doors_val_xwy)
     simu_tx_send(llid, len, buf);
   else
-    XOUT("%d", val);
+    KOUT("%d", val);
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -170,7 +170,7 @@ void msg_mngt_loop(void)
         sfd->sock_fd_epev->events = EPOLLIN | EPOLLRDHUP;
         simu_tx_fdset(0 + i);
         if (epoll_ctl(g_epfd, EPOLL_CTL_MOD, sfd->sock_fd, sfd->sock_fd_epev))
-          XOUT(" ");
+          KOUT(" ");
         }
       }
     if (g_fct_before_epoll)
@@ -180,7 +180,7 @@ void msg_mngt_loop(void)
     if (result < 0)
       {
       if (errno != EINTR)
-        XOUT("%s\n ", strerror(errno));
+        KOUT("%s\n ", strerror(errno));
       }
     if (g_fct_after_epoll)
       g_fct_after_epoll(result, events);
@@ -215,7 +215,7 @@ void doorways_sock_client_inet_delete(int llid)
 {
   t_simu_fd *sfd;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    XOUT("%d", llid);
+    KOUT("%d", llid);
   sfd = &(g_simu_fd[llid]);
   if (sfd->sock_fd != -1)
     {
@@ -250,7 +250,7 @@ int doorways_sock_client_inet_end(int type,int llid,int sock_fd,char *passwd,
   simu_tx_open(llid-20, sfd->sock_fd, sfd->sock_fd_epev);
   ul_llid = (unsigned long) llid;
   if (g_tmp_type)
-    XOUT("%d", g_tmp_type);
+    KOUT("%d", g_tmp_type);
   g_tmp_type = type;
   return (llid-20);
 }
@@ -274,7 +274,7 @@ int doorways_sock_client_inet_start(uint32_t ip, int port, t_fd_event conn_rx)
   unsigned long ul_fd;
   fd = wrap_socket_connect_inet(ip, port, fd_type_cli, "connect");
   if (fd == -1)
-    XOUT("Cannot connect to: %s  port:%d", mdl_int_to_ip_string(ip), port);
+    KOUT("Cannot connect to: %s  port:%d", mdl_int_to_ip_string(ip), port);
   ul_fd = (unsigned long) fd;
   g_conn_rx = conn_rx; 
   cloonix_timeout_add(1, time_connect, (void *) ul_fd);

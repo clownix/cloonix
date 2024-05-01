@@ -104,7 +104,7 @@ static void xdoors_rx(int llid, int tid, int type, int cli_idx,
   else if (type == doors_type_xwy_main_traf)
     xcli_traf_doors_rx(llid, len, buf);
   else
-    XOUT("%d", type);
+    KOUT("%d", type);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -113,7 +113,7 @@ static void alloc_start_xdoors(int connect_llid, int cli_idx)
 {
   t_xdoors *ds = wrap_malloc(sizeof(t_xdoors));
   if ((connect_llid < 1) || (connect_llid >= CLOWNIX_MAX_CHANNELS))
-    XOUT("%d", connect_llid);
+    KOUT("%d", connect_llid);
   memset(ds, 0, sizeof(t_xdoors));
   ds->connect_llid = connect_llid;
   ds->cli_idx = cli_idx;
@@ -132,10 +132,10 @@ static int get_type_start_xdoors(int connect_llid)
 {
   t_xdoors *ds;
   if ((connect_llid < 1) || (connect_llid >= CLOWNIX_MAX_CHANNELS))
-    XOUT("%d", connect_llid);
+    KOUT("%d", connect_llid);
   ds = g_xdoors[connect_llid];
   if (!ds)
-    XOUT("%d", connect_llid);
+    KOUT("%d", connect_llid);
   return (ds->type);
 }
 /*--------------------------------------------------------------------------*/
@@ -145,17 +145,17 @@ static void alloc_middle_xdoors(int connect_llid, int doors_llid, int type)
 {
   t_xdoors *ds, *nds;
   if ((connect_llid < 1) || (connect_llid >= CLOWNIX_MAX_CHANNELS))
-    XOUT("%d", connect_llid);
+    KOUT("%d", connect_llid);
   ds = g_xdoors[connect_llid];
   if (!ds)
-    XOUT("%d", connect_llid);
+    KOUT("%d", connect_llid);
   if (ds->type != type)
-    XOUT("%d %d %d", connect_llid, ds->type, type);
+    KOUT("%d %d %d", connect_llid, ds->type, type);
   if ((ds->tid != -1) || (ds->doors_llid != -1))
-    XOUT("%d", connect_llid);
+    KOUT("%d", connect_llid);
   ds->doors_llid = doors_llid;
   if (g_xdoors[doors_llid])
-    XOUT("%d %d", connect_llid, doors_llid);
+    KOUT("%d %d", connect_llid, doors_llid);
   nds = (t_xdoors *) wrap_malloc(sizeof(t_xdoors));
   memcpy(nds, ds, sizeof(t_xdoors));
   g_xdoors[doors_llid] = nds;
@@ -168,21 +168,21 @@ static int check_doors_link(int is_first, int llid, int tid, int type)
   int result = -1;
   t_xdoors *ds;
   if ((llid < 1) || (llid >= CLOWNIX_MAX_CHANNELS))
-    XOUT("%d", llid);
+    KOUT("%d", llid);
   ds = g_xdoors[llid];
   if (!ds)
-    XOUT("%d", llid);
+    KOUT("%d", llid);
   if (ds->type == -1)
-    XOUT("%d %d %d", llid, ds->tid, ds->type);
+    KOUT("%d %d %d", llid, ds->tid, ds->type);
   if ((is_first) && (ds->tid != -1))
-    XOUT("%d %d %d", llid, ds->tid, ds->type);
+    KOUT("%d %d %d", llid, ds->tid, ds->type);
   if ((ds) && (ds->doors_llid == llid) && (ds->type == type))
     {
     ds->tid = tid;
     result = ds->cli_idx;
     }
   if (result == -1)
-    XOUT(" ");
+    KOUT(" ");
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -193,7 +193,7 @@ static int get_doors_cli_idx(int llid)
   int result = -1;
   t_xdoors *ds;
   if ((llid < 1) || (llid >= CLOWNIX_MAX_CHANNELS))
-    XOUT("%d", llid);
+    KOUT("%d", llid);
   ds = g_xdoors[llid];
   if (ds)
     result = ds->cli_idx;
@@ -211,7 +211,7 @@ static void free_doors_cli_idx(int llid)
   llid_connect = ds->connect_llid;
   llid_doors = ds->doors_llid;
   if (llid_doors != llid)
-    XOUT("%d %d %d", llid_doors, llid_connect, llid);
+    KOUT("%d %d %d", llid_doors, llid_connect, llid);
   wrap_free(g_xdoors[llid_doors], __LINE__);
   wrap_free(g_xdoors[llid_connect], __LINE__);
   g_xdoors[llid_doors] = NULL;
@@ -223,7 +223,7 @@ static void free_doors_cli_idx(int llid)
 static void timout_connect(void *data)
 {
   if (g_inhib_timeout == 0)
-    XOUT("\nTIMEOUT trying to reach\n\n");
+    KOUT("\nTIMEOUT trying to reach\n\n");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -232,7 +232,7 @@ static void doorways_end(int llid)
 {
   int cli_idx = get_doors_cli_idx(llid);
   if (cli_idx == -1)
-    XERR("WARNING %d", llid);
+    KERR("WARNING %d", llid);
   else
     {
     xcli_killed_x11(cli_idx);
@@ -248,7 +248,7 @@ static void doorways_rx(int llid,int tid,int type,int val,int len,char *buf)
   if ((type == doors_type_xwy_main_traf) || (type == doors_type_xwy_x11_flow))
     {
     if (val == doors_val_link_ko)
-      XOUT("%d %d %s %d", type, val, buf, len);
+      KOUT("%d %d %s %d", type, val, buf, len);
     else if ((val == doors_val_link_ok) && (tid > 0))
       {
       cli_idx = check_doors_link(1, llid, tid, type);
@@ -261,10 +261,10 @@ static void doorways_rx(int llid,int tid,int type,int val,int len,char *buf)
       xdoors_rx(llid, tid, type, cli_idx, len, buf);
       }
     else
-      XOUT("%d", val);
+      KOUT("%d", val);
     }
   else
-    XOUT("ERROR type:%d", type);
+    KOUT("ERROR type:%d", type);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -275,7 +275,7 @@ static int cb_conn(int llid, int fd)
   doors_llid = doorways_sock_client_inet_end(type, llid, fd, g_passwd,
                                              doorways_end, doorways_rx);
   if (doors_llid <= 0)
-    XOUT("%d", doors_llid);
+    KOUT("%d", doors_llid);
   alloc_middle_xdoors(llid, doors_llid, type);
   doorways_tx(doors_llid, 0, type, doors_val_init_link, 3, "OK");
   return 0;
@@ -288,7 +288,7 @@ void xdoors_connect(int cli_idx)
   int llid;
   llid = doorways_sock_client_inet_start(g_doors_ip, g_doors_port, cb_conn);
   if (!llid)
-    XOUT(" ");
+    KOUT(" ");
   alloc_start_xdoors(llid, cli_idx);
 }
 /*--------------------------------------------------------------------------*/
@@ -311,7 +311,7 @@ void xdoors_connect_init(uint32_t ip, int port, char *passwd,
   strncpy(g_passwd, passwd, MSG_DIGEST_LEN-1);
   llid = doorways_sock_client_inet_start(ip, port, cb_conn);
   if (!llid)
-    XOUT(" ");
+    KOUT(" ");
   alloc_start_xdoors(llid, 0);
 }
 /*--------------------------------------------------------------------------*/

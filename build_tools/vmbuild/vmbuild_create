@@ -1,9 +1,20 @@
 #!/bin/bash
+#----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+  else
+    echo param must be i386, if no param, then is amd64
+    exit
+  fi
+else
+  ARCH="amd64"
+fi
+#----------------------------------------------------------------------#
 HERE=`pwd`
 DISTRO=bookworm
 NET=nemo
 NAME=dev
-QCOW2=debian_builder.qcow2
 BULK="/var/lib/cloonix/bulk"
 REPO="http://172.17.0.2/debian/bookworm"
 #######################################################################
@@ -16,8 +27,9 @@ else
   cloonix_cli $NET rma
 fi
 #----------------------------------------------------------------------
-echo cp -f ${BULK}/${DISTRO}.qcow2 ${BULK}/${QCOW2}
-cp -f ${BULK}/${DISTRO}.qcow2 ${BULK}/${QCOW2}
+QCOW2=debian_builder_${ARCH}.qcow2
+echo cp -f ${BULK}/${DISTRO}_${ARCH}.qcow2 ${BULK}/${QCOW2}
+cp -f ${BULK}/${DISTRO}_${ARCH}.qcow2 ${BULK}/${QCOW2}
 #----------------------------------------------------------------------
 sync
 #----------------------------------------------------------------------
@@ -25,7 +37,11 @@ cloonix_gui ${NET}
 cloonix_cli ${NET} add nat nat
 #----------------------------------------------------------------------
 PARAMS="ram=8000 cpu=4 eth=s"
-cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --persistent
+if [ "${ARCH}" = "i386" ]; then
+  cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --persistent --i386
+else
+  cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --persistent
+fi
 #----------------------------------------------------------------------
 sleep 3
 cloonix_cli ${NET} add lan ${NAME} 0 lan1
@@ -64,7 +80,7 @@ cloonix_ssh ${NET} ${NAME} "apt-get -y install \
                       liblz4-dev libpcap-dev libsasl2-dev \
                       libnuma-dev libepoxy-dev xorriso \
                       libgtk-3-dev libjson-glib-dev libacl1-dev \
-                      libpolkit-gobject-1-dev busybox-static \
+                      libpolkit-gobject-1-dev \
                       libyajl-dev make git libsystemd-dev \
                       libprotobuf-c-dev libcap-dev libseccomp-dev \
                       libgcrypt20-dev go-md2man locales libffi-dev \
@@ -80,7 +96,7 @@ cloonix_ssh ${NET} ${NAME} "apt-get -y install \
                       libspandsp-dev libxml2-dev libminizip-dev \
                       perl xsltproc ccache doxygen bison \
                       ncurses-base strace tilix libsecret-1-0 \
-                      gvfs-libs libibus-1.0-5"
+                      gvfs-libs libibus-1.0-5 gcc-11-multilib gdb"
 
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"

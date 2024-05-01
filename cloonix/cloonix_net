@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
-CLOONIX_CONFIG="/usr/libexec/cloonix/common/etc/cloonix.cfg"
-if [ ! -f $CLOONIX_CONFIG ]; then
-  echo "ERROR: $CLOONIX_CONFIG not found"
+CLOONIX_CFG="/usr/libexec/cloonix/common/etc/cloonix.cfg"
+if [ ! -f $CLOONIX_CFG ]; then
+  echo "ERROR: $CLOONIX_CFG not found"
   exit 1
 fi
 SWITCH_BIN="/usr/libexec/cloonix/server/cloonix-main-server"
@@ -10,13 +10,13 @@ if [ ! -x $SWITCH_BIN ]; then
   echo "ERROR: $SWITCH_BIN not found"
   exit 1
 fi
-LIST=$(cat $CLOONIX_CONFIG |grep CLOONIX_NET: | awk '{print $2}')
+LIST=$(cat $CLOONIX_CFG |grep CLOONIX_NET: | awk '{print $2}')
 if [ 1 -gt ${#} ]; then
   echo  cloonix_name needed as parameter.
   echo $LIST
   exit 1
 fi
 cloonix_name=$1
-${SWITCH_BIN} $CLOONIX_CONFIG $cloonix_name
+${SWITCH_BIN} $CLOONIX_CFG $cloonix_name
 ##############################################################################
 

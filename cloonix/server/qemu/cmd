@@ -1,6 +1,23 @@
 #!/bin/bash
 set -e
 HERE=`pwd`
+#----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+  else
+    if [ "$1" = "amd64" ]; then
+      ARCH="amd64"
+    else
+      echo ERROR $0 param must be i386, or amd64
+      exit
+    fi
+  fi
+else
+  ARCH="amd64"
+fi
+#----------------------------------------------------------------------#
+
 ./allclean
 ./patched_create
 
@@ -16,23 +33,28 @@ export LDFLAGS="-L${HERE}/../spice_lib_server"
 
 cd ${HERE}/tainted_qemu/
 
- CONFIGURATION_OPTS="--prefix=/usr/local
-                     --target-list=x86_64-softmmu
-                     --python=/usr/bin/python3
-                     --enable-kvm
-                     --enable-spice
-                     --enable-spice-protocol
-                     --enable-usb-redir
-                     --enable-gtk
-                     --enable-vhost-user
-                     --enable-vhost-net
-                     --enable-vhost-kernel
-                     --enable-tools
-                     --enable-pixman
-                     --enable-linux-io-uring
-                     --enable-linux-aio
-                     --enable-gio
-                     --without-default-features"
+CONFIGURATION_OPTS="--prefix=/usr/local
+                    --python=/usr/bin/python3
+                    --enable-kvm
+                    --enable-spice
+                    --enable-spice-protocol
+                    --enable-usb-redir
+                    --enable-gtk
+                    --enable-vhost-user
+                    --enable-vhost-net
+                    --enable-vhost-kernel
+                    --enable-tools
+                    --enable-pixman
+                    --enable-linux-io-uring
+                    --enable-linux-aio
+                    --enable-gio
+                    --without-default-features"
+
+if [ "${ARCH}" = "i386" ]; then
+  CONFIGURATION_OPTS="${CONFIGURATION_OPTS} --target-list=i386-softmmu"
+else
+  CONFIGURATION_OPTS="${CONFIGURATION_OPTS} --target-list=x86_64-softmmu"
+fi
 
 
 export CFLAGS="-mtune=generic -fno-stack-protector  -g"
@@ -45,7 +67,11 @@ make -j 6
 
 echo MOVING QEMU RESULT BIN
 
-mv build/qemu-system-x86_64   ${HERE}/cloonix-qemu-system-x86_64
+if [ "${ARCH}" = "i386" ]; then
+  mv build/qemu-system-i386   ${HERE}/cloonix-qemu-system
+else
+  mv build/qemu-system-x86_64   ${HERE}/cloonix-qemu-system
+fi
 mv build/qemu-img             ${HERE}/cloonix-qemu-img
 cp pc-bios/bios-256k.bin      ${HERE}
 cp pc-bios/efi-virtio.rom     ${HERE}

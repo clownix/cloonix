@@ -29,6 +29,7 @@
 #include "debug.h"
 #include "thread_tx.h"
 #include "dialog_thread.h"
+#include "glob_common.h"
 
 
 /*****************************************************************************/
@@ -59,7 +60,7 @@ static int low_write_first_el(t_lw *lw)
       {
       if (errno != EINTR && errno != EAGAIN)
         {
-        XERR("%d %s", lw->fd_dst, strerror(errno));
+        KERR("%d %s", lw->fd_dst, strerror(errno));
         result = -2;
         }
       else
@@ -67,7 +68,7 @@ static int low_write_first_el(t_lw *lw)
       }
     else if (len == 0)
       {
-      XERR("%d", lw->fd_dst);
+      KERR("%d", lw->fd_dst);
       result = -2;
       }
     else
@@ -90,14 +91,14 @@ static void chain_el(t_lw *lw, t_lw_el *el)
   if (lw->first)
     {
     if (!lw->last)
-      XOUT(" ");
+      KOUT(" ");
     lw->last->next = el;
     lw->last = el;
     }
   else
     {
     if (lw->last)
-      XOUT(" ");
+      KOUT(" ");
     lw->first = el;
     lw->last = el;
     }
@@ -149,14 +150,14 @@ int low_write_fd(int s)
   int result, used;
   t_lw *lw;
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("%d", s);
+    KOUT("%d", s);
   lw = g_lw[s];
   if (!lw)
-    XOUT(" ");
+    KOUT(" ");
   if (lw->fd_dst != s)
-    XOUT(" ");
+    KOUT(" ");
   if ((lw->type == fd_type_srv) || (lw->type == fd_type_cli)) 
-    XOUT("%d", lw->type);
+    KOUT("%d", lw->type);
   while(1)
     {
     DEBUG_IOCTL_TX_QUEUE(s, lw->type, used);
@@ -180,14 +181,14 @@ int low_write_not_empty(int s)
   int used, result = 0;
   t_lw *lw;
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("%d", s);
+    KOUT("%d", s);
   lw = g_lw[s];
   if (!lw)
-    XOUT(" ");
+    KOUT(" ");
   if (lw->fd_dst != s)
-    XOUT(" ");
+    KOUT(" ");
   if ((lw->type == fd_type_srv) || (lw->type == fd_type_cli)) 
-    XOUT("%d", lw->type);
+    KOUT("%d", lw->type);
   if (lw->first)
     result = 1;
   return result;
@@ -202,19 +203,19 @@ int low_write_raw(int fd_dst, t_msg *msg, int all)
   t_lw *lw;
   t_lw_el *el;
   if ((fd_dst < 0) || (fd_dst >= MAX_FD_NUM))
-    XOUT("%d", fd_dst);
+    KOUT("%d", fd_dst);
   if (!msg)
-    XOUT(" ");
+    KOUT(" ");
   lw = g_lw[fd_dst];
   if (!lw)
     {
-    XERR("%d", fd_dst);
+    KERR("%d", fd_dst);
     result = -1;
     }
   else
     {
     if (lw->fd_dst != fd_dst)
-      XOUT("%d %d", lw->fd_dst, fd_dst);
+      KOUT("%d %d", lw->fd_dst, fd_dst);
     if (all)
       {
       payload = msg->len + g_msg_header_len;
@@ -251,13 +252,13 @@ int low_write_raw(int fd_dst, t_msg *msg, int all)
 void low_write_open(int s, int type, t_outflow outflow)
 {
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("%d", s);
+    KOUT("%d", s);
   if (g_lw[s])
-    XOUT(" ");
+    KOUT(" ");
   if ((type <= fd_type_min) || (type >= fd_type_max)) 
-    XOUT("%d", type);
+    KOUT("%d", type);
   if (type == fd_type_cli)
-    XOUT("%d", type);
+    KOUT("%d", type);
   g_lw[s] = (t_lw *) wrap_malloc(sizeof(t_lw));
   memset(g_lw[s], 0, sizeof(t_lw));
   g_lw[s]->fd_dst = s;
@@ -273,16 +274,16 @@ void low_write_modify(int s, int type)
 {
   t_lw *lw;
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("%d", s);
+    KOUT("%d", s);
   lw = g_lw[s];
   if (!lw)
-    XOUT(" ");
+    KOUT(" ");
   if (lw->fd_dst != s)
-    XOUT(" ");
+    KOUT(" ");
   if (lw->type != fd_type_srv)
-    XOUT("%d", lw->type);
+    KOUT("%d", lw->type);
   if (type != fd_type_srv_ass)
-    XOUT("%d", lw->type);
+    KOUT("%d", lw->type);
   lw->type = type;
 }
 /*--------------------------------------------------------------------------*/
@@ -292,14 +293,14 @@ void low_write_close(int s)
 {
   t_lw *lw;
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("%d", s);
+    KOUT("%d", s);
   lw = g_lw[s];
   if (!lw)
-    XOUT(" ");
+    KOUT(" ");
   if (lw->fd_dst != s)
-    XOUT(" ");
+    KOUT(" ");
   if (lw->type == fd_type_cli)
-    XOUT("%d", lw->type);
+    KOUT("%d", lw->type);
   if ((lw->type == fd_type_srv) || 
       (lw->type == fd_type_srv_ass)) 
     thread_tx_close(s);
@@ -308,10 +309,10 @@ void low_write_close(int s)
     if (low_write_not_empty(s))
       {
       if (low_write_fd(s))
-        XERR(" ");
+        KERR(" ");
       if (low_write_not_empty(s))
         {
-        XERR("CLOSE ON NOT EMPTY WITH LOSS %d", s);
+        KERR("CLOSE ON NOT EMPTY WITH LOSS %d", s);
         DEBUG_EVT("CLOSE ON NOT EMPTY WITH LOSS %d", s);
         }
       }

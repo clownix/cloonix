@@ -650,9 +650,7 @@ static char *read_whole_file(char *file_name)
   char *buf = NULL;
   int len, fd, readlen;
   len = get_file_len(file_name);
-  if (len == -1)
-    KERR("ERROR not found %s", file_name);
-  else if (len > 3)
+  if (len > 3)
     { 
     fd = open(file_name, O_RDONLY);
     if (fd < 0)

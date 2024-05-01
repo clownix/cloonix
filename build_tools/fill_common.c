@@ -68,6 +68,13 @@ static void create_libs_paragraph(FILE *col, char *common, char *name_lib)
   fprintf(col, "    ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
   fprintf(col, "  done\n");
   fprintf(col, "fi\n");
+  fprintf(col, "if [ -d %s/lib/i386-linux-gnu/%s ]; then\n",
+          common, name_lib);
+  fprintf(col, "  for i in `find %s/lib/i386-linux-gnu/%s -type f` ; do\n",
+          common, name_lib);
+  fprintf(col, "    ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
+  fprintf(col, "  done\n");
+  fprintf(col, "fi\n");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -127,6 +134,8 @@ static void copy_lib_all(char *target, FILE *debug2)
     memset(cmd, 0, 2*MAX_PATH_LEN);
     if (strstr(cur->path, "lib/x86_64-linux-gnu"))
       snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s %s/x86_64-linux-gnu", cur->path, target);
+    else if (strstr(cur->path, "lib/i386-linux-gnu"))
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s %s/i386-linux-gnu", cur->path, target);
     else
       snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s %s", cur->path, target);
     if (system(cmd))

@@ -7,8 +7,32 @@ if [ $UID != 0 ]; then
   exit -1
 fi
 
+if [ ${#} = 1 ]; then
+  case "$1" in
+    "i386")
+      ARCH="i386"
+      NAME=busybox_i386
+    ;;
+    "amd64")
+      ARCH="amd64"
+      NAME=busybox
+    ;;
+    *)
+    printf "\n\tERROR: $0 param must be i386, or amd64"
+    exit
+    ;;
+  esac
+else
+  echo ERROR $0 param must be i386, or amd64
+  exit
+fi
+
+
+
+
 LIST="/usr/bin/iperf3 \
       /usr/sbin/rsyslogd \
+      /usr/bin/file \
       /bin/busybox \
       /usr/bin/ldd \
       /usr/bin/tail \
@@ -28,42 +52,52 @@ for i in ${LIST}; do
   fi
 done
 
-rm -rf /root/busybox
-mkdir -p /root/busybox
+rm -rf /root/${NAME}
+mkdir -p /root/${NAME}
 
-for i in "bin" "lib64" "root" "etc" "run" "tmp" \
-         "var/log" "usr/bin" \
-         "usr/lib/x86_64-linux-gnu/rsyslog" \
-         "var/spool/rsyslog" ; do
-  mkdir -v -p /root/busybox/${i}
+for i in "bin" "root" "etc" "run" "tmp" "lib" \
+         "var/log" "usr/bin" "var/spool/rsyslog" ; do
+  mkdir -v -p /root/${NAME}/${i}
 done
 
 for i in ${LIST}; do
-  cp -v ${i} /root/busybox/bin
+  cp -v ${i} /root/${NAME}/bin
 done
 
-cp /lib64/ld-linux-x86-64.so.2 /root/busybox/lib64
+if [ ${ARCH} = "i386" ]; then
+  mkdir -v -p /root/${NAME}/usr/lib/i386-linux-gnu/rsyslog
+  cp /lib/ld-linux.so.2 /root/${NAME}/lib
+  cp /usr/lib/i386-linux-gnu/rsyslog/lmnet.so    /root/${NAME}/usr/lib/i386-linux-gnu/rsyslog
+  cp /usr/lib/i386-linux-gnu/rsyslog/imklog.so   /root/${NAME}/usr/lib/i386-linux-gnu/rsyslog
+  cp /usr/lib/i386-linux-gnu/rsyslog/imuxsock.so /root/${NAME}/usr/lib/i386-linux-gnu/rsyslog
+else
+  mkdir -v -p /root/${NAME}/lib64
+  mkdir -v -p /root/${NAME}/usr/lib/x86_64-linux-gnu/rsyslog
+  cp /lib64/ld-linux-x86-64.so.2 /root/${NAME}/lib64
+  cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    /root/${NAME}/usr/lib/x86_64-linux-gnu/rsyslog
+  cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   /root/${NAME}/usr/lib/x86_64-linux-gnu/rsyslog
+  cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so /root/${NAME}/usr/lib/x86_64-linux-gnu/rsyslog
+fi
 
+mkdir -v -p /root/${NAME}/usr/share/misc
+cp -v /usr/lib/file/magic.mgc /root/${NAME}/usr/share/misc
 sync
 
-${HERE}/cplibdep /root/busybox/bin /root/busybox
-
-cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    /root/busybox/usr/lib/x86_64-linux-gnu/rsyslog
-cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   /root/busybox/usr/lib/x86_64-linux-gnu/rsyslog
-cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so /root/busybox/usr/lib/x86_64-linux-gnu/rsyslog
+${HERE}/cplibdep /root/${NAME}/bin /root/${NAME}
 
 
-cat > /root/busybox/etc/passwd << "EOF"
+
+cat > /root/${NAME}/etc/passwd << "EOF"
 root:x:0:0:root:/root:/bin/bash
 EOF
-chmod 644 /root/busybox/etc/passwd
+chmod 644 /root/${NAME}/etc/passwd
 
-cat > /root/busybox/etc/group << "EOF"
+cat > /root/${NAME}/etc/group << "EOF"
 root:x:0:
 EOF
-chmod 644 /root/busybox/etc/group
+chmod 644 /root/${NAME}/etc/group
 
-cat > /root/busybox/etc/rsyslog.conf << "EOF"
+cat > /root/${NAME}/etc/rsyslog.conf << "EOF"
 module(load="imuxsock") # provides support for local system logging
 module(load="imklog")   # provides kernel logging support
 $ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
@@ -84,7 +118,7 @@ user.*                          -/var/log/user.log
 EOF
 
 
-cd /root/busybox/bin
+cd /root/${NAME}/bin
 for i in "[" "[[" "acpid" "adjtimex" "ar" "arp" "arping" "ash" "awk" \
          "basename" "blockdev" "brctl" "bunzip2" "bzcat" "bzip2" "cal" \
          "cat" "chgrp" "chmod" "chown" "chroot" "chvt" "clear" "cmp" \
@@ -115,14 +149,14 @@ for i in "[" "[[" "acpid" "adjtimex" "ar" "arp" "arping" "ash" "awk" \
   ln -s busybox $i
 done
 
-cat > /root/busybox/usr/bin/cloonix_startup_script.sh << "EOF"
+cat > /root/${NAME}/usr/bin/cloonix_startup_script.sh << "EOF"
 #!/bin/bash
 /bin/rsyslogd
 EOF
-chmod +x /root/busybox/usr/bin/cloonix_startup_script.sh
+chmod +x /root/${NAME}/usr/bin/cloonix_startup_script.sh
 
-cd /root/busybox
+cd /root/${NAME}
 
-zip -yr ../busybox.zip .
+zip -yr ../${NAME}.zip .
 
 

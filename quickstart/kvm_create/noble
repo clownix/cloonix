@@ -1,9 +1,9 @@
 #!/bin/bash
 HERE=`pwd`
 #----------------------------------------------------------------------#
-# Ubuntu 23.04
-DISTRO=lunar
-ROOTFS=/root/${DISTRO}
+# Ubuntu 24.04
+DISTRO=noble
+ROOTFS=/var/lib/cloonix/bulk/${DISTRO}
 UBUNTU_REPO="http://fr.archive.ubuntu.com/ubuntu"
 #----------------------------------------------------------------------#
 fct_check_uid()

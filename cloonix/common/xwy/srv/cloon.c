@@ -24,6 +24,7 @@
 
 #include "mdl.h"
 #include "wrap.h"
+#include "glob_common.h"
 
 static int g_listen_sock_cloon;
 static int g_sock_cloon;
@@ -37,12 +38,12 @@ static void sock_cloonix_action(void)
   len = wrap_read_cloon(g_sock_cloon, buf, MAX_TXT_LEN);
   if (len == 0)
     {
-    XOUT("ERROR socket");
+    KOUT("ERROR socket");
     }
   else if (len < 0)
     {
     if (errno != EINTR && errno != EAGAIN)
-      XOUT("ERROR socket");
+      KOUT("ERROR socket");
     }
   else 
     {
@@ -51,7 +52,7 @@ static void sock_cloonix_action(void)
       snprintf(buf, MAX_TXT_LEN, CLOONIX_PID_RESP, getpid());
       len = wrap_write_cloon(g_sock_cloon, buf, strlen(buf) + 1);
       if (len != strlen(buf) + 1)
-        XOUT("%s %d %d %s", strerror(errno), len, strlen(buf) + 1, buf );
+        KOUT("%s %d %d %s", strerror(errno), len, strlen(buf) + 1, buf );
       gettimeofday(&g_last_cloonix_tv, NULL);
       }
     else if (!strcmp(buf, CLOONIX_KIL_REQ))
@@ -59,7 +60,7 @@ static void sock_cloonix_action(void)
       exit(0);
       }
     else
-      XERR("%d %s", len, buf);
+      KERR("%d %s", len, buf);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -75,14 +76,14 @@ static int server_loop_wait_cloon(void)
   cltimeout.tv_usec = 0;
   count += 1;
   if (count > 10)
-    XOUT("Waiting too long for cloon connect");
+    KOUT("Waiting too long for cloon connect");
   FD_ZERO(&readfds);
   FD_SET(g_listen_sock_cloon, &readfds);
   ret = select(g_listen_sock_cloon + 1, &readfds, NULL, NULL, &cltimeout);
   if (ret < 0)
     {
     if (errno != EINTR && errno != EAGAIN)
-      XOUT("%s", strerror(errno));
+      KOUT("%s", strerror(errno));
     }
   else if (ret == 0)
     {
@@ -98,7 +99,7 @@ static int server_loop_wait_cloon(void)
       wrap_close(g_listen_sock_cloon, __FUNCTION__);
       g_listen_sock_cloon = -1;
       if (g_sock_cloon < 0)
-        XOUT("accept4 %s", strerror(errno));
+        KOUT("accept4 %s", strerror(errno));
       gettimeofday(&g_last_cloonix_tv, NULL);
       result = 0;
       }
@@ -142,7 +143,7 @@ void cloonix_beat(struct timeval *tv)
   if (g_sock_cloon != -1)
     {
     if ((tv->tv_sec - g_last_cloonix_tv.tv_sec) > 40)
-      XOUT("ERROR TIMEOUT");
+      KOUT("ERROR TIMEOUT");
     }
 }
 /*--------------------------------------------------------------------------*/

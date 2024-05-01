@@ -22,6 +22,7 @@
 
 #include "mdl.h"
 #include "wrap.h"
+#include "glob_common.h"
 
 /*****************************************************************************/
 #define MAX_TIMEOUT_BEATS 0x3FFF
@@ -86,7 +87,7 @@ static int unplug_elem(t_timeout_elem **head, t_timeout_elem *elem)
     *head = elem->next;
   plugged_elem--;
   if (plugged_elem < 0)
-    XOUT(" ");
+    KOUT(" ");
   wrap_free(elem, __LINE__);
   return result;
 }
@@ -116,7 +117,7 @@ void cloonix_timeout_add(int nb_beats, t_xtimeout cb, void *data)
   int ref1;
   if ((nb_beats < MIN_TIMEOUT_BEATS) || 
       (nb_beats >= MAX_TIMEOUT_BEATS))
-    XOUT("%d", nb_beats);
+    KOUT("%d", nb_beats);
   abs = current_beat + nb_beats;
   ref1 = (int) (abs % MAX_TIMEOUT_BEATS);
   plug_elem(&(grape[ref1]), cb, data);

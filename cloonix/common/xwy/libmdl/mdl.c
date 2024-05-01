@@ -33,6 +33,7 @@
 #include "thread_x11.h"
 #include "fd_spy.h"
 #include "thread_spy.h"
+#include "glob_common.h"
 
 #define MAX_QUEUE_MDL_RX 5*MAX_MSG_LEN
 
@@ -59,7 +60,7 @@ char *mdl_argv_linear(char **argv)
     strcat(result, argv[i]);
     if (strlen(result) >= 2*MAX_TXT_LEN)
       {
-      XERR("NOT POSSIBLE");
+      KERR("NOT POSSIBLE");
       break;
       }
     strcat(result, " ");
@@ -76,9 +77,9 @@ FILE *mdl_argv_popen(char *argv[])
   FILE *iop = NULL;
 
   if (pipe(pdes))
-    XOUT("ERROR");
+    KOUT("ERROR");
   if ((pid = fork()) < 0)
-    XOUT("ERROR");
+    KOUT("ERROR");
   if (pid == 0)
     {
     close(pdes[0]);
@@ -91,13 +92,13 @@ FILE *mdl_argv_popen(char *argv[])
     if (worker_pid == 0)
       {
       execv(argv[0], argv);
-      XOUT("ERROR FORK error %s", strerror(errno));
+      KOUT("ERROR FORK error %s", strerror(errno));
       }
     timeout_pid = fork();
     if (timeout_pid == 0)
       {
       sleep(5);
-      XERR("WARNING TIMEOUT SLOW CMD 1 %s", mdl_argv_linear(argv));
+      KERR("WARNING TIMEOUT SLOW CMD 1 %s", mdl_argv_linear(argv));
       exit(1);
       }
     exited_pid = wait(&chld_state);
@@ -106,7 +107,7 @@ FILE *mdl_argv_popen(char *argv[])
       if (WIFEXITED(chld_state))
         status = WEXITSTATUS(chld_state);
       if (WIFSIGNALED(chld_state))
-        XERR("WARNING Child exited via signal %d\n", WTERMSIG(chld_state));
+        KERR("WARNING Child exited via signal %d\n", WTERMSIG(chld_state));
       kill(timeout_pid, SIGKILL);
       }
     else
@@ -115,7 +116,7 @@ FILE *mdl_argv_popen(char *argv[])
       }
     wait(NULL);
     if (status)
-      XERR("WARNING STATUS %s", mdl_argv_linear(argv));
+      KERR("WARNING STATUS %s", mdl_argv_linear(argv));
     exit(status);
     }
   wait(NULL);
@@ -196,9 +197,9 @@ int mdl_parse_val(const char *str_val)
 void mdl_open(int s, int type, t_outflow outflow, t_inflow inflow)
 {
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("ERROR %d", s);
+    KOUT("ERROR %d", s);
   if (g_mdl[s])
-    XOUT("ERROR MDL OPEN MDL EXISTS %d", s);
+    KOUT("ERROR MDL OPEN MDL EXISTS %d", s);
   g_mdl[s] = (t_mdl *) wrap_malloc(sizeof(t_mdl));
   memset(g_mdl[s], 0, sizeof(t_mdl));
   g_mdl[s]->write_seqnum = 0;
@@ -216,7 +217,7 @@ void mdl_open(int s, int type, t_outflow outflow, t_inflow inflow)
 void mdl_modify(int s, int type)
 {
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("%d", s);
+    KOUT("%d", s);
   if (g_mdl[s])
     {
     DEBUG_EVT("MDL_MODIFY %s fd:%d", debug_get_fd_type_txt(type), s);
@@ -231,7 +232,7 @@ int  mdl_exists(int s)
 {
   int result = 0;
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("%d", s);
+    KOUT("%d", s);
   if (g_mdl[s])
     {
     result = 1;
@@ -245,7 +246,7 @@ void mdl_close(int s)
 {
   int is_srv = 0;
   if ((s < 0) || (s >= MAX_FD_NUM))
-    XOUT("%d", s);
+    KOUT("%d", s);
   if (g_mdl[s])
     {
     if (g_mdl[s]->type != fd_type_cli)
@@ -258,7 +259,7 @@ void mdl_close(int s)
     g_mdl[s] = NULL;
     }
   else
-    XERR("WARNING MDL DOES NOT EXIST %d", s);
+    KERR("WARNING MDL DOES NOT EXIST %d", s);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -281,7 +282,7 @@ void mdl_set_header_vals(t_msg *msg, uint32_t randid, int type, int from,
   if (srv_idx > 0)
     {
     if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-      XOUT("%d %d %d", type, from, srv_idx);
+      KOUT("%d %d %d", type, from, srv_idx);
     }
 
   msg->type = (((srv_idx << 24) & 0xFF000000) |
@@ -311,13 +312,13 @@ int mdl_queue_write_msg(int fd_dst, t_msg *msg)
   int type, from, srv_idx, cli_idx;
   t_mdl *mdl = g_mdl[fd_dst];
   if (!mdl)
-    XOUT("%d NOT OPEN", fd_dst);
+    KOUT("%d NOT OPEN", fd_dst);
   mdl_prepare_header_msg(mdl->write_seqnum, msg);
   mdl->write_seqnum++;
   if (low_write_raw(fd_dst, msg, 1))
     {
     mdl_get_header_vals(msg, &randid, &type, &from, &srv_idx, &cli_idx);
-    XERR("%d %d %d %d %d %s",type,from,srv_idx,cli_idx,msg->len,msg->buf); 
+    KERR("%d %d %d %d %d %s",type,from,srv_idx,cli_idx,msg->len,msg->buf); 
     result = -1;
     }
   return result;
@@ -346,18 +347,18 @@ static void do_cb(t_mdl *mdl, void *ptr, int llid, int fd,
         (rxoffst >= msg->len + g_msg_header_len))
     {
     if (msg->cafe != 0xCAFEDECA)
-      XERR("header id is %lX", msg->cafe);
+      KERR("header id is %lX", msg->cafe);
     seqnum = (msg->seqnum_checksum >> 16) & 0xFFFF;
     if (seqnum != mdl->read_seqnum)
-      XERR("header seqnum %d %d", seqnum&0xFFFF, 
+      KERR("header seqnum %d %d", seqnum&0xFFFF, 
                                   mdl->read_seqnum&0xFFFF);
     mdl->read_seqnum++;
     checksum = (msg->seqnum_checksum) & 0xFFFF;
     sumcheck = mdl_sum_calc(msg->len , msg->buf);
     if (checksum != sumcheck)
-      XERR("header checksum %04X %04X", checksum&0xFFFF, sumcheck&0xFFFF); 
+      KERR("header checksum %04X %04X", checksum&0xFFFF, sumcheck&0xFFFF); 
     if ((msg->len < 0) || (msg->len > MAX_MSG_LEN))
-      XERR("header len: %ld", msg->len); 
+      KERR("header len: %ld", msg->len); 
     rx_cb_msg = alloc_and_copy(msg->len + g_msg_header_len, msg);
     rx_cb(ptr, llid, fd, rx_cb_msg);
     done = msg->len + g_msg_header_len;
@@ -382,7 +383,7 @@ static t_mdl *read_fd_checks(void *ptr, int llid, int fd, t_rx_err_cb err_cb)
 {
   t_mdl *mdl;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    XOUT("%d", fd);
+    KOUT("%d", fd);
   mdl = g_mdl[fd];
   if (!mdl)
     err_cb(ptr, llid, fd, "Context mdl not found");
@@ -391,7 +392,7 @@ static t_mdl *read_fd_checks(void *ptr, int llid, int fd, t_rx_err_cb err_cb)
     if (MAX_QUEUE_MDL_RX - mdl->rxoffst <= 0)
       {
       mdl = NULL;
-      XERR("%d %d", MAX_QUEUE_MDL_RX, mdl->rxoffst);
+      KERR("%d %d", MAX_QUEUE_MDL_RX, mdl->rxoffst);
       err_cb(ptr, llid, fd, "Not enough space for fd read");
       }
     }
@@ -409,7 +410,7 @@ static t_mdl *read_data_checks(void *ptr, int llid, int fd,
     if (MAX_QUEUE_MDL_RX - mdl->rxoffst - len <= 0)
       {
       mdl = NULL;
-      XERR("%d %d %d", MAX_QUEUE_MDL_RX, mdl->rxoffst, len);
+      KERR("%d %d %d", MAX_QUEUE_MDL_RX, mdl->rxoffst, len);
       err_cb(ptr, llid, fd, "Not enough space for data read");
       }
     }
@@ -439,7 +440,7 @@ void mdl_read_fd(void *ptr, int fd, t_rx_msg_cb rx_cb, t_rx_err_cb err_cb)
         snprintf(err, MAX_TXT_LEN-1, "read error: %s", strerror(errno));
         err[MAX_TXT_LEN-1] = 0;
         err_cb(ptr, 0, fd, err);
-        XERR("%s", err);
+        KERR("%s", err);
         }
       }
     else

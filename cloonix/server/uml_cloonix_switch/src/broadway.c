@@ -85,8 +85,7 @@ static void clean_all_llid(void)
 static void delayed_gui(void *data)
 {
   char *argv_gui[] = {"/usr/libexec/cloonix/client/cloonix-gui",
-                      "/usr/libexec/cloonix/common/etc/cloonix.cfg",
-                      g_net_name, NULL};
+                      CLOONIX_CFG, g_net_name, NULL};
   if (g_gui_pid != 0)
     {
     KERR("ERROR GUI pid exists: %d", g_gui_pid);
@@ -137,9 +136,9 @@ static int get_broadwayd_pid(void)
   char cmd[MAX_PATH_LEN];
   char cmd2[MAX_PATH_LEN];
   int pid, result = 0;
-  fp = popen("/usr/libexec/cloonix/common/ps", "r");
+  fp = popen(PS_BIN, "r");
   if (fp == NULL)
-    KERR("ERROR /usr/libexec/cloonix/common/ps");
+    KERR("ERROR %s", PS_BIN);
   else
     {
     memset(line, 0, MAX_PATH_LEN);

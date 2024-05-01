@@ -1,6 +1,6 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
-DISTRO=jammy
+DISTRO=noble
 ROOTFS=/var/lib/cloonix/bulk/${DISTRO}.zip
 REPO="http://fr.archive.ubuntu.com/ubuntu"
 TMPZIP=/tmp/wkmntzip

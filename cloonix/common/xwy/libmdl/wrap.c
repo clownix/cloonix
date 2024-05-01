@@ -39,6 +39,7 @@
 #include "wrap.h"
 #include "debug.h"
 #include "fd_spy.h"
+#include "glob_common.h"
 
 static pthread_mutex_t g_mutex;
 #define PROTECT_ZONE 20
@@ -50,7 +51,7 @@ void *wrap_malloc(size_t size)
   char *tmp;
   tmp = (char *) malloc(size + 3*PROTECT_ZONE + 4);
   if (!tmp)
-    XOUT("%d", size);
+    KOUT("%d", size);
   tmp[PROTECT_ZONE + 0] = ((size & 0xFF000000) >> 24) & 0xFF;   
   tmp[PROTECT_ZONE + 1] = ((size & 0x00FF0000) >> 16) & 0xFF;   
   tmp[PROTECT_ZONE + 2] = ((size & 0x0000FF00) >> 8) & 0xFF;   
@@ -85,26 +86,26 @@ void wrap_free(void *ptr, int line)
       idx = i;
       if ((tmp[idx] & 0xFF) != 0xAA)
         {
-        XERR("%d", line);
+        KERR("%d", line);
         for (j=0; j < 8; j++)
-          XERR("%d %X", idx+j, tmp[idx+j]&0xFF);
-        XOUT("%d %d %X", size, idx, tmp[idx]&0xFF);
+          KERR("%d %X", idx+j, tmp[idx+j]&0xFF);
+        KOUT("%d %d %X", size, idx, tmp[idx]&0xFF);
         }
       idx = PROTECT_ZONE + 4 + i;
       if ((tmp[idx] & 0xFF) != 0xAA)
         {
-        XERR("%d", line);
+        KERR("%d", line);
         for (j=0; j < 8; j++)
-          XERR("%d %X", idx+j, tmp[idx+j]&0xFF);
-        XOUT("%d %d %X", size, idx, tmp[idx]&0xFF);
+          KERR("%d %X", idx+j, tmp[idx+j]&0xFF);
+        KOUT("%d %d %X", size, idx, tmp[idx]&0xFF);
         }
       idx = 2*PROTECT_ZONE + 4 + size + i;
       if ((tmp[idx] & 0xFF) != 0xAA)
         {
-        XERR("%d", line);
+        KERR("%d", line);
         for (j=0; j < 8; j++)
-          XERR("%d %X", idx+j, tmp[idx+j]&0xFF);
-        XOUT("%d %d %X", size, idx, tmp[idx]&0xFF);
+          KERR("%d %X", idx+j, tmp[idx+j]&0xFF);
+        KOUT("%d %d %X", size, idx, tmp[idx]&0xFF);
         }
       }
 
@@ -175,7 +176,7 @@ static ssize_t write_wrwait(int s, const void *buf, long unsigned int len)
       {
       if (errno != EINTR && errno != EAGAIN)
         {
-        XERR("%d %s", s, strerror(errno));
+        KERR("%d %s", s, strerror(errno));
         wlen = -1;
         break;
         }
@@ -251,7 +252,7 @@ ssize_t wrap_write_cloon(int s, const void *buf, long unsigned int len)
 /****************************************************************************/
 ssize_t wrap_write_kout(int s, const void *buf, long unsigned int len)
 {
-  XOUT("%d", s);
+  KOUT("%d", s);
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -350,7 +351,7 @@ ssize_t wrap_read_cloon(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_kout(int s, void *buf, size_t len)
 {
-  XOUT("%d %s %d", s, (char *)buf, len);
+  KOUT("%d %s %d", s, (char *)buf, len);
   return 0;
 }
 /*--------------------------------------------------------------------------*/
@@ -364,15 +365,15 @@ static void wrap_sockoptset(int fd, const char *fct1, const char *fct2)
   linger.l_onoff = 0;
   linger.l_linger = 0;
   if (setsockopt(fd,SOL_SOCKET,SO_LINGER,(char *)&linger,sizeof linger)<0)
-    XOUT(" ");
+    KOUT(" ");
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1)
-    XOUT("setsockopt SO_REUSEADDR fd %d: %s", fd, strerror(errno));
+    KOUT("setsockopt SO_REUSEADDR fd %d: %s", fd, strerror(errno));
   wrap_nonblock(fd);
   fcntl(fd, F_SETFD, FD_CLOEXEC);
   if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &optval, &optlen) == -1)
-    XOUT("getsockopt: %s", strerror(errno));
+    KOUT("getsockopt: %s", strerror(errno));
   if (optval != 0)
-    XOUT("getsockopt: SO_ERROR %d", optval);
+    KOUT("getsockopt: SO_ERROR %d", optval);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -387,12 +388,12 @@ int wrap_accept(int fd_listen, int fd_type, int is_tcp, const char *fct)
     if (is_tcp)
       {
       if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0)
-        XOUT(" ");
+        KOUT(" ");
       }
     wrap_sockoptset(fd, __FUNCTION__, fct);
     if (fd_spy_add(fd, fd_type, __LINE__))
       {
-      XERR("ERROR ACCEPT %s", fct);
+      KERR("ERROR ACCEPT %s", fct);
       close(fd);
       fd = -1;
       }
@@ -410,7 +411,7 @@ int wrap_socketpair(int sockfd[2], int fd_type, const char *fct)
     if((fd_spy_add(sockfd[0], fd_type, __LINE__)) ||
        (fd_spy_add(sockfd[1], fd_type, __LINE__)))
       {
-      XERR("socket fd too big %s", fct);
+      KERR("socket fd too big %s", fct);
       close(sockfd[0]);
       close(sockfd[1]);
       sockfd[0] = -1;
@@ -427,7 +428,7 @@ int wrap_socketpair(int sockfd[2], int fd_type, const char *fct)
       }
     }
   else
-    XOUT("socketpair error: %s %s", strerror(errno), fct);
+    KOUT("socketpair error: %s %s", strerror(errno), fct);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -441,7 +442,7 @@ int wrap_pipe(int pipefd[2], int fd_type, const char *fct)
     if((fd_spy_add(pipefd[0], fd_type, __LINE__)) ||
        (fd_spy_add(pipefd[1], fd_type, __LINE__)))
       {
-      XERR("pipe too big %s", fct);
+      KERR("pipe too big %s", fct);
       close(pipefd[0]);
       close(pipefd[1]);
       pipefd[0] = -1;
@@ -458,7 +459,7 @@ int wrap_pipe(int pipefd[2], int fd_type, const char *fct)
       }
     }
   else
-    XOUT("pipe error: %s %s", strerror(errno), fct);
+    KOUT("pipe error: %s %s", strerror(errno), fct);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -475,21 +476,21 @@ void wrap_pty_make_controlling_tty(int ttyfd, char *name)
     fd = open("/dev/tty", O_RDWR | O_NOCTTY);
     if (fd >= 0)
       {
-      XERR("Failed to disconnect from controlling tty.");
+      KERR("Failed to disconnect from controlling tty.");
       close(fd);
       }
     else
       {
       if (ioctl(ttyfd, TIOCSCTTY, NULL) < 0)
-        XERR("ioctl(TIOCSCTTY): %.100s", strerror(errno));
+        KERR("ioctl(TIOCSCTTY): %.100s", strerror(errno));
       fd = open(name, O_RDWR);
       if (fd < 0)
-        XERR("%.100s: %.100s", name, strerror(errno));
+        KERR("%.100s: %.100s", name, strerror(errno));
       else
         close(fd);
       fd = open("/dev/tty", O_WRONLY);
       if (fd < 0)
-        XERR("could not set controlling tty: %.100s", strerror(errno));
+        KERR("could not set controlling tty: %.100s", strerror(errno));
       else
         close(fd);
       }
@@ -504,13 +505,13 @@ int wrap_openpty(int *amaster, int *aslave, char *name, int fd_type)
   char *nm;
   result = openpty(amaster, aslave, name, NULL, NULL);
   if (result == -1)
-    XERR("openpty error: %s", strerror(errno));
+    KERR("openpty error: %s", strerror(errno));
   else if (result == 0)
     {
     nm = ttyname(*aslave);
     if (!nm)
       {
-      XERR("openpty returns device for which ttyname fails.");
+      KERR("openpty returns device for which ttyname fails.");
       close(*amaster);
       close(*aslave);
       *amaster = -1;
@@ -522,9 +523,9 @@ int wrap_openpty(int *amaster, int *aslave, char *name, int fd_type)
       memset(name, 0, MAX_TXT_LEN);
       strncpy(name, nm, MAX_TXT_LEN-1);
       if (fd_spy_add(*amaster, fd_type, __LINE__))
-        XOUT(" ");
+        KOUT(" ");
       if (fd_spy_add(*aslave, fd_type, __LINE__))
-        XOUT(" ");
+        KOUT(" ");
       } 
     } 
   return result;
@@ -540,13 +541,13 @@ int wrap_close(int fd, const char *fct)
   if (result == 0)
     {
     if (fd_type < 0)
-      XERR("Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
+      KERR("Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
            fd, fd_type, srv_idx, cli_idx, fct);
     fd_spy_del(fd);
     }
   else if (fd_type > 0)
     {
-    XERR("ERROR Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
+    KERR("ERROR Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
          fd, fd_type, srv_idx, cli_idx, fct);
     }
   return result;
@@ -562,21 +563,21 @@ int wrap_socket_listen_inet(unsigned long ip, int port,
   memset(&isock, 0, sizeof(isock));
   s = socket(AF_INET, SOCK_STREAM, 0);
   if (s < 0)
-    XOUT("%s", strerror(errno));
+    KOUT("%s", strerror(errno));
   isock.sin_family = AF_INET;
   isock.sin_addr.s_addr = htonl(ip);
   isock.sin_port = htons(port);
   if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-    XOUT(" ");
+    KOUT(" ");
   if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0)
-    XOUT(" ");
+    KOUT(" ");
   if (bind(s, (struct sockaddr*)&isock, sizeof(isock)) < 0)
-    XOUT("bind error: %s", strerror(errno));
+    KOUT("bind error: %s", strerror(errno));
   if (listen(s, 15) < 0)
-    XOUT("listen error: %s", strerror(errno));
+    KOUT("listen error: %s", strerror(errno));
   if (fd_spy_add(s, fd_type, __LINE__))
     {
-    XERR("too big %s", fct);
+    KERR("too big %s", fct);
     close(s);
     s = -1;
     }
@@ -594,7 +595,7 @@ int wrap_chmod_666(char *path)
 {
   int result = chmod(path, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
   if (result)
-    XERR("chmod fail %s", path);
+    KERR("chmod fail %s", path);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -607,22 +608,22 @@ int wrap_socket_listen_unix(char *path, int fd_type, const char *fct)
   unlink(path);
   s = socket(PF_UNIX, SOCK_STREAM, 0);
   if (s < 0)
-    XOUT("%s", strerror(errno));
+    KOUT("%s", strerror(errno));
   sockun.sun_family = AF_UNIX;
   strcpy(sockun.sun_path, path);
   if (bind(s, (struct sockaddr*)&sockun, sizeof(sockun)) < 0)
-    XOUT("bind error: %s", strerror(errno));
+    KOUT("bind error: %s", strerror(errno));
   if (listen(s, 15) < 0)
-    XOUT("listen error: %s", strerror(errno));
+    KOUT("listen error: %s", strerror(errno));
   if (chmod(path, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH))
     {
-    XERR("chmod fail %s", fct);
+    KERR("chmod fail %s", fct);
     close(s);
     s = -1;
     }
   else if (fd_spy_add(s, fd_type, __LINE__))
     {
-    XERR("too big %s", fct);
+    KERR("too big %s", fct);
     close(s);
     s = -1;
     }
@@ -645,18 +646,18 @@ int wrap_socket_connect_inet(unsigned long ip, int port,
   memset(&sockin, 0, sizeof(sockin));
   s = socket (AF_INET,SOCK_STREAM,0);
   if (s < 0)
-    XOUT(" ");
+    KOUT(" ");
   sockin.sin_family = AF_INET;
   sockin.sin_port = htons(port);
   sockin.sin_addr.s_addr = htonl(ip);
   if (connect(s, (struct sockaddr*)&sockin, sizeof(sockin)) == 0)
     {
     if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0)
-      XOUT(" ");
+      KOUT(" ");
     wrap_sockoptset(s, __FUNCTION__, fct);
     if (fd_spy_add(s, fd_type, __LINE__))
       {
-      XERR("too big %s", fct);
+      KERR("too big %s", fct);
       close(s);
       }
     else
@@ -665,7 +666,7 @@ int wrap_socket_connect_inet(unsigned long ip, int port,
       }
     }
   else
-    XERR("Error connect %s\n", strerror(errno), fct);
+    KERR("Error connect %s\n", strerror(errno), fct);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -680,7 +681,7 @@ int wrap_socket_connect_unix(char *path, int fd_type, const char *fct)
   memset(&sockun, 0, sizeof(sockun));
   s = socket(PF_UNIX, SOCK_STREAM, 0);
   if (s < 0)
-    XOUT(" ");
+    KOUT(" ");
   sockun.sun_family = AF_UNIX;
   strcpy(sockun.sun_path, path);
   if (connect(s, (struct sockaddr*)&sockun, sizeof(sockun)) == 0)
@@ -688,7 +689,7 @@ int wrap_socket_connect_unix(char *path, int fd_type, const char *fct)
     wrap_sockoptset(s, __FUNCTION__, fct);
     if (fd_spy_add(s, fd_type, __LINE__))
       {
-      XERR("too big %s", fct);
+      KERR("too big %s", fct);
       close(s);
       }
     else
@@ -697,7 +698,7 @@ int wrap_socket_connect_unix(char *path, int fd_type, const char *fct)
       }
     }
   else
-    XERR("Error connect unix %s %s %s", strerror(errno), path, fct);
+    KERR("Error connect unix %s %s %s", strerror(errno), path, fct);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -707,10 +708,10 @@ int wrap_epoll_create(int fd_type, const char *fct)
 {
   int result = epoll_create1(EPOLL_CLOEXEC);
   if (result < 0)
-    XOUT(" ");
+    KOUT(" ");
   if (fd_spy_add(result, fd_type, __LINE__))
     {
-    XERR("too big %s", fct);
+    KERR("too big %s", fct);
     close(result);
     result = -1;
     }
@@ -729,7 +730,7 @@ struct epoll_event *wrap_epoll_event_alloc(int epfd, int fd, int id)
   epev->events = 0;
   epev->data.fd = fd;
   if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, epev))
-    XOUT("%d", id);
+    KOUT("%d", id);
   return(epev);
 }
 /*--------------------------------------------------------------------------*/
@@ -749,9 +750,9 @@ void wrap_nonblock(int fd)
   int flags;
   flags = fcntl(fd, F_GETFL);
   if (flags < 0)
-    XOUT(" ");
+    KOUT(" ");
   if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)
-    XOUT(" ");
+    KOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -761,7 +762,7 @@ void wrap_nonnonblock(int fd)
   int flags = fcntl(fd, F_GETFL, 0);
   flags &= ~O_NONBLOCK;
   if (fcntl(fd, F_SETFL, flags) == -1)
-    XOUT(" ");
+    KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/
 
@@ -772,17 +773,17 @@ void wrap_mkdir(char *dst_dir)
   if (mkdir(dst_dir, 0700))
     {
     if (errno != EEXIST)
-      XOUT("%s, %s", dst_dir, strerror(errno));
+      KOUT("%s, %s", dst_dir, strerror(errno));
     else
       {
       if (stat(dst_dir, &stat_file))
-        XOUT("%s, %s", dst_dir, strerror(errno));
+        KOUT("%s, %s", dst_dir, strerror(errno));
       if (!S_ISDIR(stat_file.st_mode))
         {
-        XERR("%s", dst_dir);
+        KERR("%s", dst_dir);
         unlink(dst_dir);
         if (mkdir(dst_dir, 0700))
-          XOUT("%s, %s", dst_dir, strerror(errno));
+          KOUT("%s, %s", dst_dir, strerror(errno));
         }
       }
     }
@@ -796,7 +797,7 @@ int wrap_touch(char *path)
   int result = -1;
   fp = fopen(path, "a");
   if (fp == NULL)
-    XERR("%s", path);
+    KERR("%s", path);
   else
     {
     fclose(fp);

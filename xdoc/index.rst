@@ -124,6 +124,7 @@ Content
   
      doc/release.rst
      doc/system.rst
+     doc/installation.rst
      doc/building.rst
      doc/configure.rst
      doc/clients.rst

@@ -1,4 +1,21 @@
 #!/bin/bash
+#----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+  else
+    if [ "$1" = "amd64" ]; then
+      ARCH="amd64"
+    else
+      echo ERROR $0 param must be i386 or amd64
+      exit
+    fi
+  fi
+else
+  echo ERROR $0 param must be i386 or amd64
+  exit
+fi
+#----------------------------------------------------------------------#
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -61,7 +78,7 @@ rm -rf ${SERVER}/ovs_nat
 cp -f ${SERVER}/ovs_snf/cloonix-ovs-snf ${SERVER}
 rm -rf ${SERVER}/ovs_snf
 #----------------------------------------------------------
-mv ${SERVER}/qemu/cloonix-qemu-system-x86_64 ${SERVER}
+mv ${SERVER}/qemu/cloonix-qemu-system ${SERVER}
 mv ${SERVER}/qemu/cloonix-qemu-img ${SERVER}
 for i in cmd allclean qemu_bin tainted_qemu \
          cloonix_patch mkpatch patched_create ; do
@@ -74,26 +91,39 @@ rm -rf ${SERVER}/dtach
 cp -f ${SERVER}/crun/crun/crun ${SERVER}/cloonix-crun
 rm -rf ${SERVER}/crun
 #----------------------------------------------------------
-cp -f ${TARGZ_STORE}/shark_qt/built_objects/dumpcap ${SERVER}
-cp -f ${TARGZ_STORE}/shark_qt/built_objects/wireshark ${SERVER}/cloonix-wireshark-qt
-cp -f ${TARGZ_STORE}/shark_gtk/built_objects/wireshark-gtk ${SERVER}/cloonix-wireshark-gtk
-rm -rf /tmp/lib_wireshark
-tar --directory=/tmp -xf ${TARGZ_STORE}/shark_gtk/built_objects/lib_wireshark.tar.gz
-cp -n /tmp/lib_wireshark/lib/x86_64-linux-gnu/* ${COMMON}/lib || true
+if [ "${ARCH}" = "i386" ]; then
+  cp -f ${TARGZ_STORE}/shark_qt/built_objects_i386/dumpcap ${SERVER}
+  cp -f ${TARGZ_STORE}/shark_qt/built_objects_i386/wireshark ${SERVER}/cloonix-wireshark-qt
+else
+  cp -f ${TARGZ_STORE}/shark_qt/built_objects_amd64/dumpcap ${SERVER}
+  cp -f ${TARGZ_STORE}/shark_qt/built_objects_amd64/wireshark ${SERVER}/cloonix-wireshark-qt
+  cp -f ${TARGZ_STORE}/shark_gtk/built_objects/wireshark-gtk ${SERVER}/cloonix-wireshark-gtk
+  rm -rf /tmp/lib_wireshark
+  tar --directory=/tmp -xf ${TARGZ_STORE}/shark_gtk/built_objects/lib_wireshark.tar.gz
+  cp -n /tmp/lib_wireshark/lib/x86_64-linux-gnu/* ${COMMON}/lib || true
+fi
 #----------------------------------------------------------
-cp -f /usr/bin/broadwayd ${SERVER}/cloonix-broadwayd
-cp -f /usr/bin/fuse-zip  ${SERVER}/cloonix-fuse-zip
+cp -f /usr/bin/xauth     ${SERVER}/xauth
 cp -f /sbin/ip           ${SERVER}/ip
+cp -f /bin/bash          ${SERVER}/cloonix-bash
 cp -f /bin/mount         ${SERVER}/cloonix-mount
 cp -f /bin/umount        ${SERVER}/cloonix-umount 
 cp -f /bin/mknod         ${SERVER}/cloonix-mknod 
 cp -f /bin/chmod         ${SERVER}/cloonix-chmod
-cp -f /usr/bin/awk       ${SERVER}/cloonix-awk 
 cp -f /bin/grep          ${SERVER}/cloonix-grep
-cp -f /usr/bin/osirrox  ${SERVER}/cloonix-osirrox
+cp -f /usr/bin/ps        ${SERVER}/cloonix-ps
+cp -f /usr/bin/awk       ${SERVER}/cloonix-awk 
+cp -f /usr/bin/osirrox   ${SERVER}/cloonix-osirrox
+cp -f /usr/bin/broadwayd ${SERVER}/cloonix-broadwayd
+cp -f /usr/bin/fuse-zip  ${SERVER}/cloonix-fuse-zip
 #----------------------------------------------------------
-LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
+if [ "${ARCH}" = "i386" ]; then
+  LDLINUX="/usr/libexec/cloonix/common/lib32/ld-linux.so.2"
+  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/i386-linux-gnu"
+else
+  LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
+fi
 for i in `find ${SERVER} -maxdepth 1 -type f` ; do
   ${PATCHELF} --force-rpath  --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null

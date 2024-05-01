@@ -66,6 +66,7 @@ make clean
 cd $LIB_CLOWNIX
 make clean
 
+cp ${HERE}/init_starter/* ${CDROM}
 ${XORRISO} -o ${TARGET}/${ISO_NAME} ${CDROM}
 rm -rf ${CDROM}
 

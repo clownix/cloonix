@@ -24,6 +24,7 @@
 
 #include "mdl.h"
 #include "wrap.h"
+#include "glob_common.h"
 
 
 /*****************************************************************************/
@@ -76,13 +77,13 @@ static int write_first_el(t_x11_tx *pr)
       {
       if (errno != EINTR && errno != EAGAIN)
         {
-        XERR("%d %s", pr->fd, strerror(errno));
+        KERR("%d %s", pr->fd, strerror(errno));
         result = -2;
         }
       }
     else if (len == 0)
       {
-      XERR("WRITE CLOSED DIALOG %d", pr->fd);
+      KERR("WRITE CLOSED DIALOG %d", pr->fd);
       result = -2;
       }
     else
@@ -116,14 +117,14 @@ static void chain_el(t_x11_tx *pr, t_x11_tx_el *el)
   if (pr->first)
     {
     if (!pr->last)
-      XOUT(" ");
+      KOUT(" ");
     pr->last->next = el;
     pr->last = el;
     }
   else
     {
     if (pr->last)
-      XOUT(" ");
+      KOUT(" ");
     pr->first = el;
     pr->last = el;
     }
@@ -145,9 +146,9 @@ int x11_tx_add_queue(int fd, int len, char *buf)
 {
   int result = -1;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    XOUT("DIALOG FD OUT OF RANGE %d", fd);
+    KOUT("DIALOG FD OUT OF RANGE %d", fd);
   if (!g_x11_tx[fd])
-    XERR("DIALOG FD DOES NOT EXISTS %d", fd);
+    KERR("DIALOG FD DOES NOT EXISTS %d", fd);
   else 
     {
     tx_add_queue(g_x11_tx[fd], len, buf);
@@ -162,9 +163,9 @@ int x11_tx_queue_non_empty(int fd)
 {
   int result = 0;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    XOUT("DIALOG FD OUT OF RANGE %d", fd);
+    KOUT("DIALOG FD OUT OF RANGE %d", fd);
   if (!g_x11_tx[fd])
-    XERR("DIALOG FD DOES NOT EXISTS %d", fd);
+    KERR("DIALOG FD DOES NOT EXISTS %d", fd);
   else if (g_x11_tx[fd]->first)
     result = 1;
   return result;
@@ -177,12 +178,12 @@ int x11_tx_ready(int fd)
   int result, used;
   t_x11_tx *pr;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    XOUT("DIALOG FD OUT OF RANGE %d", fd);
+    KOUT("DIALOG FD OUT OF RANGE %d", fd);
   pr = g_x11_tx[fd];
   if (!pr)
-    XOUT("DIALOG FD DOES NOT EXIST %d", fd);
+    KOUT("DIALOG FD DOES NOT EXIST %d", fd);
   if (pr->fd != fd)
-    XOUT("DIALOG FD INCOHERENT %d %d", pr->fd, fd);
+    KOUT("DIALOG FD INCOHERENT %d %d", pr->fd, fd);
   while(1)
     {
     result = write_first_el(pr);
@@ -204,9 +205,9 @@ int x11_tx_open(int fd)
   int result = -1;
   t_x11_tx *pr;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    XOUT("DIALOG FD OUT OF RANGE %d", fd);
+    KOUT("DIALOG FD OUT OF RANGE %d", fd);
   if (g_x11_tx[fd])
-    XERR("DIALOG FD EXISTS %d", fd);
+    KERR("DIALOG FD EXISTS %d", fd);
   else
     {
     pr = (t_x11_tx *) wrap_malloc(sizeof(t_x11_tx));
@@ -224,17 +225,17 @@ void x11_tx_close(int fd)
 {
   t_x11_tx *pr;
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    XOUT("DIALOG FD OUT OF RANGE %d", fd);
+    KOUT("DIALOG FD OUT OF RANGE %d", fd);
   if (!g_x11_tx[fd])
-    XERR("DIALOG FD DOES NOT EXISTS %d", fd);
+    KERR("DIALOG FD DOES NOT EXISTS %d", fd);
   else
     {
     pr = g_x11_tx[fd];
     g_x11_tx[fd] = NULL;
     if (pr->fd != fd)
-      XOUT("DIALOG FD INCOHERENT %d %d", pr->fd, fd);
+      KOUT("DIALOG FD INCOHERENT %d %d", pr->fd, fd);
 //    if (pr->first)
-//      XERR("CLOSE PURGE LEFT DATA %d  %d el", fd, pr->nb_els);
+//      KERR("CLOSE PURGE LEFT DATA %d  %d el", fd, pr->nb_els);
     while(pr->first)
       free_first_el(pr);
     wrap_free(pr, __LINE__);

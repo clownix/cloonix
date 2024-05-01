@@ -4,12 +4,12 @@ HERE=`pwd`
 #----------------------------------------------------------------------#
 NET=nemo
 VMNAME=buz
-QCOW2="cnt_cloonix.qcow2"
+QCOW2="podman_cloonix.qcow2"
 REPO="http://deb.debian.org/debian"
 REPO="http://172.17.0.2/debian/bookworm"
 BOOKWORM="/var/lib/cloonix/bulk/bookworm.qcow2"
 BUNDLE_PATH="/home/perrier"
-BUNDLE="cloonix-bundle-36-01"
+BUNDLE="cloonix-bundle-37-00-amd64"
 #######################################################################
 set +e
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -66,7 +66,7 @@ cloonix_ssh ${NET} ${VMNAME} "cd ${BUNDLE}; ./install_cloonix"
 cloonix_ssh ${NET} ${VMNAME} "rm -rf ${BUNDLE}"
 cloonix_ssh ${NET} ${VMNAME} "cd /root/build_zip; gcc -o cplibdep lddlist.c"
 cloonix_ssh ${NET} ${VMNAME} "cd /root/build_zip; ./create_zip.sh"
-cloonix_scp ${NET} ${VMNAME}:/root/cnt_cloonix.zip /var/lib/cloonix/bulk
+cloonix_scp ${NET} ${VMNAME}:/root/podman_cloonix.zip /var/lib/cloonix/bulk
 #-----------------------------------------------------------------------#
 cloonix_ssh ${NET} ${VMNAME} "sed -i s\"/#PermitRootLogin prohibit-password/PermitRootLogin yes/\" /etc/ssh/sshd_config"
 cloonix_ssh ${NET} ${VMNAME} "sed -i s\"/#StrictModes yes/StrictModes no/\" /etc/ssh/sshd_config"

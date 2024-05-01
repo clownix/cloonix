@@ -21,30 +21,11 @@
 
 #define MAX_X11_MSG_LEN 100000
 
-#define XAUTH_BIN "/usr/libexec/cloonix/common/cloonix-xauth"
 
 #include <string.h>
 #include <syslog.h>
 #include <libgen.h>
 #include <stdint.h>
-
-int debug_get_trunc_usec(void);
-
-
-#define XERR(format, a...)                                     \
- do {                                                          \
-    syslog(LOG_ERR | LOG_USER, "%010d WARN %s line:%d " format "\n", \
-    debug_get_trunc_usec(), basename(__FILE__), __LINE__, ## a);   \
-    } while (0)
-
-#define XOUT(format, a...)                                     \
- do {                                                          \
-    syslog(LOG_ERR | LOG_USER, "%010d KILL %s line:%d " format "\n", \
-    debug_get_trunc_usec(),  basename(__FILE__), __LINE__, ## a);   \
-    printf("KILL %s line:%d " format "\r\n", \
-           basename(__FILE__), __LINE__, ## a);            \
-    exit(-1);                                                  \
-    } while (0)
 
 #define MAX_EPOLL_EVENTS 10
 

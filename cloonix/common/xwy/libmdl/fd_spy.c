@@ -23,6 +23,7 @@
 #include "mdl.h"
 #include "debug.h"
 #include "wrap.h"
+#include "glob_common.h"
 
 /*****************************************************************************/
 typedef struct t_fd_spy
@@ -76,10 +77,10 @@ int fd_spy_add(int fd, int fd_type, int line)
   char *type;
 
   if (fd < 0)
-    XOUT("ERROR %d wrap line:%d", fd, line);
+    KOUT("ERROR %d wrap line:%d", fd, line);
 
   if (fd >= MAX_FD_NUM)
-    XERR("WARNING Too big fd:%d max:%d wrap line:%d", fd, MAX_FD_NUM, line);
+    KERR("WARNING Too big fd:%d max:%d wrap line:%d", fd, MAX_FD_NUM, line);
   else
     {
     result = 0;
@@ -87,7 +88,7 @@ int fd_spy_add(int fd, int fd_type, int line)
     if (fd_spy)
       {
       type = debug_get_fd_type_txt(fd_spy->type);
-      XERR("WARNING FD EXISTS %d %s", fd, type);
+      KERR("WARNING FD EXISTS %d %s", fd, type);
       }
     else
       {
@@ -108,12 +109,12 @@ void fd_spy_modify(int fd, int fd_type)
   t_fd_spy *fd_spy;
 
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    XOUT("%d", fd);
+    KOUT("%d", fd);
 
   fd_spy = g_fd_spy[fd];
   if (!fd_spy)
     {
-    XERR("WARNING FD DOES NOT EXIST %d", fd);
+    KERR("WARNING FD DOES NOT EXIST %d", fd);
     }
   else
     {
@@ -128,12 +129,12 @@ void fd_spy_del(int fd)
   t_fd_spy *fd_spy;
 
   if ((fd < 0) || (fd >= MAX_FD_NUM))
-    XOUT("%d", fd);
+    KOUT("%d", fd);
 
   fd_spy = g_fd_spy[fd];
   if (!fd_spy)
     {
-    XERR("FD DOES NOT EXIST %d", fd);
+    KERR("FD DOES NOT EXIST %d", fd);
     }
   else
     {

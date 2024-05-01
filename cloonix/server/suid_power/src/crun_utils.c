@@ -491,33 +491,78 @@ static int create_all_dirs(char *mountbear, char *mounttmp, char *image,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void dirs_agent_copy_starter(char *mountbear, char *agent_dir,
-                             char *startup_env, int nb_eth)
+static char *get_insider_agent(void)
 {
+  struct stat sb;
+  char *result = NULL;
+
+  if (lstat("/usr/libexec/cloonix/common/lib64", &sb) != 0)
+    {
+    if (lstat("/usr/libexec/cloonix/common/lib32", &sb) != 0)
+      {
+      KERR("ERROR NOT 32 NOR 64 BITS");
+      }
+    else
+      {
+      if (lstat(AGENT_ISO_I386, &sb) == 0)
+        {
+        result = AGENT_ISO_I386;
+        }
+      else
+        KERR("ERROR %s NOT FOUND", AGENT_ISO_I386);
+      }
+    }
+  else
+    {
+    if (lstat(AGENT_ISO_AMD64, &sb) == 0)
+      {
+      result = AGENT_ISO_AMD64;
+      }
+    else
+      KERR("ERROR %s NOT FOUND", AGENT_ISO_AMD64);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int dirs_agent_copy_starter(char *mountbear, char *agent_dir,
+                                   char *startup_env, int nb_eth)
+{
+  int result = -1;
   char path[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
   char line[MAX_NAME_LEN];
   char *etc_path="/usr/libexec/cloonix/common/etc";
-  char *iso="/usr/libexec/cloonix/server/insider_agents/insider_agent_x86_64.iso";
-  memset(path, 0, MAX_PATH_LEN);
-  memset(cmd, 0, 2*MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/cloonix_config_fs", mountbear);
-  snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -osirrox on -indev %s -extract / %s",
-           OSIRROX_BIN, iso, path); 
-  if (execute_cmd(cmd, 1))
-    KERR("ERROR %s", cmd);
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/cloonix_config_fs/startup_env", mountbear);
-  write_whole_file(path, startup_env, strlen(startup_env));
-  if (nb_eth)
+  char *iso = get_insider_agent();
+  if (iso)
     {
     memset(path, 0, MAX_PATH_LEN);
-    snprintf(path, MAX_PATH_LEN-1,
-             "%s/cloonix_config_fs/startup_nb_eth", mountbear);
-    memset(line, 0, MAX_NAME_LEN);
-    snprintf(line, MAX_NAME_LEN-1, "%d", nb_eth);
-    write_whole_file(path, line, strlen(line));
+    memset(cmd, 0, 2*MAX_PATH_LEN);
+    snprintf(path, MAX_PATH_LEN-1, "%s/cloonix_config_fs", mountbear);
+    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -osirrox on -indev %s -extract / %s",
+             OSIRROX_BIN, iso, path); 
+    if (execute_cmd(cmd, 1))
+      KERR("ERROR %s", cmd);
+    else
+      {
+      result = 0;
+      memset(path, 0, MAX_PATH_LEN);
+      snprintf(path, MAX_PATH_LEN-1,
+               "%s/cloonix_config_fs/startup_env", mountbear);
+      write_whole_file(path, startup_env, strlen(startup_env));
+      if (nb_eth)
+        {
+        memset(path, 0, MAX_PATH_LEN);
+        snprintf(path, MAX_PATH_LEN-1,
+                 "%s/cloonix_config_fs/startup_nb_eth", mountbear);
+        memset(line, 0, MAX_NAME_LEN);
+        snprintf(line, MAX_NAME_LEN-1, "%d", nb_eth);
+        write_whole_file(path, line, strlen(line));
+        }
+      }
     }
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -818,8 +863,12 @@ int crun_utils_create_net(char *mountbear, char *mounttmp, char *image,
     KERR("ERROR %s %s %s", cnt_dir, name, nspace);
   else
     {
-    dirs_agent_copy_starter(mountbear, agent_dir, startup_env, nb_eth);
-    if (nspace_create(name, nspace, cloonix_rank, vm_id, nb_eth, eth_mac))
+    if (dirs_agent_copy_starter(mountbear, agent_dir, startup_env, nb_eth))
+      {
+      KERR("ERROR %s %s %s", cnt_dir, name, nspace);
+      result = -1;
+      }
+    else if (nspace_create(name,nspace,cloonix_rank,vm_id,nb_eth,eth_mac))
       {
       KERR("ERROR %s %s %s", cnt_dir, name, nspace);
       result = -1;

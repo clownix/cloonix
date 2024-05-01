@@ -30,12 +30,11 @@ cp -vf ${HERE}/spice_client/tainted_spice/data/org.spice-space.lowlevelusbaccess
 if [ -d  ${TARGET}/usr/local/lib/x86_64-linux-gnu ]; then
   cp -vf ${TARGET}/usr/local/lib/x86_64-linux-gnu/libcloonix-spice* ${TARGET}
 else
-  if [ -d  ${TARGET}/usr/local/lib64 ]; then
-    cp -vf ${TARGET}/usr/local/lib64/libcloonix-spice* ${TARGET}
+  if [ -d  ${TARGET}/usr/local/lib/i386-linux-gnu ]; then
+    cp -vf ${TARGET}/usr/local/lib/i386-linux-gnu/libcloonix-spice* ${TARGET}
   else
     echo ERROR MISSING:
     echo ${TARGET}/lib/x86_64-linux-gnu
-    echo ${TARGET}/lib64
     exit 1
   fi
 fi

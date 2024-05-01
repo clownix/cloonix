@@ -1,6 +1,6 @@
 #!/bin/bash
 HERE=`pwd`
-CLOONIX_QEMU_BIN="/usr/libexec/cloonix/server/cloonix-qemu-system-x86_64"
+CLOONIX_QEMU_BIN="/usr/libexec/cloonix/server/cloonix-qemu-system"
 CLOONIX_QEMU_BIN_DIR="/usr/libexec/cloonix/server/qemu"
 TARGET=/tmp/cisco_initial_configuration
 CISCO_PRECONFIG_ISO=${TARGET}/iosxe_config.iso

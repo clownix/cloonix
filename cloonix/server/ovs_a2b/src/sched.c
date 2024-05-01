@@ -56,18 +56,18 @@ static uint64_t g_byt_stored[2];
 
 
 /*****************************************************************************/
-//static int packet_rx_is_dscp_44(uint64_t len, uint8_t *buf)
-//{
-//  int result = 0;
-//
-//  if ((len > ETHERNET_HEADER_LEN + IPV4_HEADER_LEN) &&
-//      ((buf[12] == 0x08) && (buf[13] == 0x00)) &&
-//      (buf[15] == 0x44))
-//    {
-//    result = 1;
-//    }
-//  return result;
-//}
+//  static int packet_rx_is_dscp_44(uint64_t len, uint8_t *buf)
+//  {
+//    int result = 0;
+//  
+//    if ((len > ETHERNET_HEADER_LEN + IPV4_HEADER_LEN) &&
+//        ((buf[12] == 0x08) && (buf[13] == 0x00)) &&
+//        (buf[15] == 0x44))
+//      {
+//      result = 1;
+//      }
+//    return result;
+//  }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/

@@ -42,6 +42,7 @@
 #include "dialog_thread.h"
 #include "pty_fork.h"
 #include "cloon.h"
+#include "glob_common.h"
 
 #define MAX_FD_IDENT 100
 #define MAX_FD_SIMULTANEOUS_ASSOSS 15
@@ -110,7 +111,7 @@ static void cli_free(t_cli *cli)
   if (cli->has_pty_fork) 
     {
     if (pty_fork_free_with_sock_fd(cli->sock_fd))
-      XERR("ERROR %d", cli->sock_fd);
+      KERR("ERROR %d", cli->sock_fd);
     }
     if (cli->inhibited_associated == 0)
       {
@@ -173,7 +174,7 @@ static int cli_associate(t_cli *cli, uint32_t randid,
     }
   if (!cur)
     {
-    XERR("%08X", randid);
+    KERR("%08X", randid);
     DEBUG_EVT("ASSOCIATE ERROR %08X (%d-%d) %s", randid, __FUNCTION__,
                                               srv_idx, cli_idx);
     }
@@ -184,7 +185,7 @@ static int cli_associate(t_cli *cli, uint32_t randid,
       {
       DEBUG_EVT("NO ASSOCIATE SPACE FOR %08X %d  (%d-%d)",  randid,
                                          sock_fd_ass, srv_idx, cli_idx);
-      XERR("NO ASSOCIATE SPACE FOR %08X %d  (%d-%d)",  randid,
+      KERR("NO ASSOCIATE SPACE FOR %08X %d  (%d-%d)",  randid,
                                          sock_fd_ass, srv_idx, cli_idx);
       }
     else
@@ -217,7 +218,7 @@ int get_cli_association(int sock_fd, int srv_idx, int cli_idx)
     }
   if (!cur)
     {
-    XERR("ASSOCIATE  PB %d (%d-%d)", sock_fd, srv_idx, cli_idx);
+    KERR("ASSOCIATE  PB %d (%d-%d)", sock_fd, srv_idx, cli_idx);
     DEBUG_EVT("ASSOCIATE PB %d (%d-%d) %s",sock_fd, srv_idx,
                                            cli_idx, __FUNCTION__);
     }
@@ -228,7 +229,7 @@ int get_cli_association(int sock_fd, int srv_idx, int cli_idx)
       {
       DEBUG_EVT("NO ASSOCIATE FOUND FOR %d (%d-%d)", sock_fd,
                                                      srv_idx, cli_idx);
-      XERR("NO ASSOCIATE FOUND FOR %d (%d-%d)", sock_fd,
+      KERR("NO ASSOCIATE FOUND FOR %d (%d-%d)", sock_fd,
                                                 srv_idx, cli_idx);
       }
     else
@@ -255,7 +256,7 @@ static void listen_socket_action(void)
     {
     if (mdl_exists(sock_fd))
       {
-      XERR("ERROR ERROR ERROR sock_fd %d exists in mdl", sock_fd);
+      KERR("ERROR ERROR ERROR sock_fd %d exists in mdl", sock_fd);
       return;
       }
     mdl_open(sock_fd, fd_type_srv, wrap_write_srv, wrap_read_srv);
@@ -271,7 +272,7 @@ static void set_inhibited_to_be_destroyed(t_cli *cli, int line)
     {
     cli->has_pty_fork = 0;
     if (pty_fork_free_with_sock_fd(cli->sock_fd))
-      XERR("ERROR %d", cli->sock_fd);
+      KERR("ERROR %d", cli->sock_fd);
     }
   cli->inhibited_to_be_destroyed = 1;
 }
@@ -320,11 +321,11 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
   mdl_get_header_vals(msg, &randid, &type, &from, &srv_idx, &cli_idx);
   DEBUG_DUMP_RXMSG(msg);
   if (randid == 0)
-    XERR("ERROR");
+    KERR("ERROR");
   else if (cli->randid != randid)
     {
     if (cli->randid != 0)
-      XERR("ERROR %08X %08X", cli->randid, randid);
+      KERR("ERROR %08X %08X", cli->randid, randid);
     else if (type == msg_type_randid)
       {
       cli->randid = randid; 
@@ -346,7 +347,7 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
         }
       }
     else 
-      XERR("ERROR %08X %d", randid, type);
+      KERR("ERROR %08X %d", randid, type);
     }
   else switch(type)
     {
@@ -360,7 +361,7 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
     case msg_type_open_crun:
     case msg_type_open_cmd:
       if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-        XERR("ERROR %d", srv_idx);
+        KERR("ERROR %d", srv_idx);
       else
         {
         display_val = x11_alloc_display(randid, srv_idx);
@@ -434,7 +435,7 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
     
 
     default :
-      XOUT("%ld", type);
+      KOUT("%ld", type);
 
       }
 }
@@ -502,7 +503,7 @@ static void server_loop(void)
           cur->scp_begin = 0;
           cur->scp_fd = -1;
           if (ret == -1)
-            XERR("Error scp");
+            KERR("Error scp");
           }
         }
       }
@@ -515,7 +516,7 @@ static void server_loop(void)
   if (ret < 0)
     {
     if (errno != EINTR && errno != EAGAIN)
-      XOUT("%s", strerror(errno));
+      KOUT("%s", strerror(errno));
     }
   if (ret == 0)
     {
@@ -539,7 +540,7 @@ static void server_loop(void)
     x11_fdisset(&readfds, &writefds);
     }
   else
-    XERR("WARNING CLOSED PTY");
+    KERR("WARNING CLOSED PTY");
 }
 /*--------------------------------------------------------------------------*/
 

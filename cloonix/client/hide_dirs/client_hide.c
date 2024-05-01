@@ -307,16 +307,16 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_LSH-----------------------*/
   if (!strcmp("lsh", argv[1]))
     {
-    new_argv[0] = "/usr/libexec/cloonix/common/sh";
+    new_argv[0] = "/usr/libexec/cloonix/client/bash";
     }
 /*CLOONIX_DSH-----------------------*/
   else if (!strcmp("dsh", argv[1]))
     {
     new_argv[0] = XWYCLI_BIN;
-    new_argv[1] = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
+    new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     new_argv[3] = "-cmd";
-    new_argv[4] = "/usr/libexec/cloonix/common/sh";
+    new_argv[4] = "/usr/libexec/cloonix/client/bash";
     }
 /*CLOONIX_CLI-----------------------*/
   else if (!strcmp("cli", argv[1]))
@@ -324,12 +324,12 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if (argc < 4)
       {
       new_argv[0] = "/usr/libexec/cloonix/client/cloonix-ctrl";
-      new_argv[1] = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
+      new_argv[1] = CLOONIX_CFG;
       }
     else
       {
       new_argv[0] = "/usr/libexec/cloonix/client/cloonix-ctrl";
-      new_argv[1] = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
+      new_argv[1] = CLOONIX_CFG;
       new_argv[2] = argv[2];
       new_argv[3] = argv[3];
       for (i=0; i<MAX_NARGS; i++)
@@ -343,7 +343,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
   else if (!strcmp("gui", argv[1]))
     {
     new_argv[0] = "/usr/libexec/cloonix/client/cloonix-gui";
-    new_argv[1] = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
+    new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     }
 /*CLOONIX_SCP-----------------------*/
@@ -389,7 +389,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     new_argv[2] = title;
     new_argv[3] = "-e";
     new_argv[4] = XWYCLI_BIN;
-    new_argv[5] = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
+    new_argv[5] = CLOONIX_CFG;
     new_argv[6] = argv[2];
     new_argv[7] = "-crun";
     new_argv[8] = param;
@@ -418,10 +418,10 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     snprintf(sock, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/snf/%s_%s", argv[2], argv[3], argv[4]);
     new_argv[0] = XWYCLI_BIN;
-    new_argv[1] = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
+    new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     new_argv[3] = "-dae";
-    new_argv[4] = WIRESHARK_BIN_QT;
+    new_argv[4] = WIRESHARK_QT_BIN;
     new_argv[5] = "-o";
     new_argv[6] = "capture.no_interface_load:TRUE";
     new_argv[7] = "-o";
@@ -435,7 +435,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     snprintf(sock, MAX_PATH_LEN-1, "--db=unix:/var/lib/cloonix/%s/ovsdb_server.sock", argv[2]);
     new_argv[0] = XWYCLI_BIN;
-    new_argv[1] = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
+    new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     new_argv[3] = "-cmd";
     new_argv[4] = "/usr/libexec/cloonix/server/cloonix-ovs-vsctl";
@@ -474,7 +474,7 @@ int main(int argc, char *argv[])
   char passwd[MAX_NAME_LEN];
   char ip[MAX_NAME_LEN];
   int  port, pid;
-  char *cfg="/usr/libexec/cloonix/common/etc/cloonix.cfg";
+  char *cfg = CLOONIX_CFG;
   char *new_argv[MAX_NARGS+10];
   if((getenv("GDK_BACKEND")) && (!strcmp(getenv("GDK_BACKEND"), "broadway")))
     g_is_broadway = 1;

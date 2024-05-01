@@ -71,8 +71,7 @@ chmod 755 /usr/libexec/cloonix/server/*
 #----------------------------------------------------------
 cp -vf /tmp/server/usr_bin/cloonix_net /usr/bin
 #----------------------------------------------------------
-for i in dumpcap \
-         cloonix-crun \
+for i in cloonix-crun \
          cloonix-ovs-drv \
          cloonix-ovs-snf \
          cloonix-ovs-nat \
@@ -82,6 +81,10 @@ for i in dumpcap \
          cloonix-suid-power ; do
   chmod u+s /usr/libexec/cloonix/server/${i}
 done
+#----------------------------------------------------------
+if [ -e /usr/libexec/cloonix/server/dumpcap ]; then
+  chmod u+s /usr/libexec/cloonix/server/dumpcap
+fi
 #----------------------------------------------------------
 mkdir -p /var/lib/cloonix/cache/fontconfig
 mkdir -p /var/lib/cloonix/bulk

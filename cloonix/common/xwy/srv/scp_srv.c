@@ -28,6 +28,7 @@
 #include "wrap.h"
 #include "debug.h"
 #include "fd_spy.h"
+#include "glob_common.h"
 
 /*****************************************************************************/
 static int scp_rx_open_snd(char *src, char *complete_dst, char *resp)
@@ -88,10 +89,10 @@ static void scp_cli_snd(int *fd, char *src, char *complete_dst, char *resp)
       {
       resp[0] = 'K';
       resp[1] = 'O';
-      XERR("%s %s", complete_dst, strerror(errno));
+      KERR("%s %s", complete_dst, strerror(errno));
       }
     else if (fd_spy_add(*fd, fd_type_scp, __LINE__))
-      XERR("%s", complete_dst);
+      KERR("%s", complete_dst);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -106,10 +107,10 @@ static void scp_cli_rcv(int *fd, char *src, char *complete_dst, char *resp)
       {
       resp[0] = 'K';
       resp[1] = 'O';
-      XERR("%s %s", src, strerror(errno));
+      KERR("%s %s", src, strerror(errno));
       }
     else if (fd_spy_add(*fd, fd_type_scp, __LINE__))
-      XERR("%s", complete_dst);
+      KERR("%s", complete_dst);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -147,7 +148,7 @@ static int send_scp_data(uint32_t randid, int scp_fd, int sock_fd)
   msg = (t_msg *) wrap_malloc(len);
   len = wrap_read_scp(scp_fd, msg->buf, MAX_MSG_LEN);
   if (len < 0)
-    XERR("%s", strerror(errno));
+    KERR("%s", strerror(errno));
   else
     {
     if (len == MAX_MSG_LEN)
@@ -169,7 +170,7 @@ int recv_scp_data_end(uint32_t randid, int scp_fd, int sock_fd)
   int len = MAX_MSG_LEN+g_msg_header_len, result;
   t_msg *msg = (t_msg *) wrap_malloc(len);
   if (scp_fd == -1)
-    XERR(" ");
+    KERR(" ");
   wrap_close(scp_fd, __FUNCTION__);
   scp_fd = -1;
   mdl_set_header_vals(msg, randid, msg_type_scp_data_end_ack,
@@ -185,12 +186,12 @@ int recv_scp_data(int scp_fd, t_msg *msg)
 {
   int len, result = -1;
   if (scp_fd == -1)
-    XERR(" ");
+    KERR(" ");
   else
     {
     len = wrap_write_scp(scp_fd, msg->buf, msg->len);
     if ((len < 0) || (len != msg->len))
-      XERR("%d %ld %s", len, msg->len, strerror(errno));
+      KERR("%d %ld %s", len, msg->len, strerror(errno));
     else
       result = 0;
     }
@@ -209,7 +210,7 @@ int recv_scp_open(uint32_t randid, int type, int sock_fd,
   strcpy(resp, "KO FATAL ERROR\r\n");
   if (sscanf(buf, "%s %s", src, complete_dst) != 2)
     {
-    XERR("%s",  buf);
+    KERR("%s",  buf);
     result = send_resp_cli(randid, msg_type_scp_ready_to_rcv, sock_fd, resp);
     }
   else
@@ -226,7 +227,7 @@ int recv_scp_open(uint32_t randid, int type, int sock_fd,
       }
     else
       {
-      XERR("ERROR %d", type);
+      KERR("ERROR %d", type);
       }
     }
   return result;

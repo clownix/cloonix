@@ -1,8 +1,21 @@
 #!/bin/bash
+#----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+    QCOW2="debian_builder_i386.qcow2"
+  else
+    echo param must be i386, if no param, then is amd64
+    exit
+  fi
+else
+  QCOW2="debian_builder_amd64.qcow2"
+  ARCH="amd64"
+fi
+#----------------------------------------------------------------------#
 HERE=`pwd`
 NET=nemo
 NAME=dev
-QCOW2=debian_builder.qcow2
 CLOONIX_TREE_ROOT=${HERE}/../..
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -19,14 +32,18 @@ rm -rf /tmp/cloonix_build_tree
 mkdir -p /tmp/cloonix_build_tree
 cd ${CLOONIX_TREE_ROOT}
 ./allclean
-cd ${CLOONIX_TREE_ROOT}/..
-tar zcvf /tmp/cloonix_build_tree/sources.tar.gz ./sources
+tar zcvf /tmp/cloonix_build_tree/sources.tar.gz .
 cd ${CLOONIX_TREE_ROOT}/build_tools
 #----------------------------------------------------------------------
 cloonix_gui ${NET}
 #----------------------------------------------------------------------
 PARAMS="ram=8000 cpu=4 eth=s"
-cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2}
+if [ "${ARCH}" = "i386" ]; then
+  cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --i386
+else
+  cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2}
+fi
+
 #----------------------------------------------------------------------
 sleep 3
 #----------------------------------------------------------------------
@@ -36,10 +53,11 @@ while ! cloonix_ssh ${NET} ${NAME} "echo" 2>/dev/null; do
   sleep 5
 done
 #----------------------------------------------------------------------
-cloonix_scp ${NET} /tmp/cloonix_build_tree/sources.tar.gz ${NAME}:/root
+cloonix_ssh ${NET} ${NAME} "mkdir -p /root/sources"
+cloonix_scp ${NET} /tmp/cloonix_build_tree/sources.tar.gz ${NAME}:/root/sources
 cloonix_ssh ${NET} ${NAME} "mkdir -p /var/lib/cloonix/bulk"
-cloonix_ssh ${NET} ${NAME} "tar xvf sources.tar.gz"
-cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall"
+cloonix_ssh ${NET} ${NAME} "cd /root/sources ; tar xvf sources.tar.gz ; rm sources.tar.gz"
+cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall ${ARCH}"
 #----------------------------------------------------------------------
 cloonix_scp ${NET} -r ${NAME}:/root/sources/build_tools/cloonix-bundle-* ${CLOONIX_TREE_ROOT}/build_tools
 #----------------------------------------------------------------------

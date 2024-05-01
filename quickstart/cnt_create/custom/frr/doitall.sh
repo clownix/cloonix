@@ -2,10 +2,12 @@
 ./create_frr_zip.sh
 ./create_frr_cloonix.sh
 cd ../../
-./podman_transform.sh cnt_frr_cloonix.zip 
+./podman_transform.sh podman_frr_cloonix.zip 
 
 exit
-ID_IMAGE=$(podman images |grep cnt_frr_cloonix | awk "{print \$3}")
+
+
+ID_IMAGE=$(podman images |grep podman_frr_cloonix | awk "{print \$3}")
 podman run -it --privileged \
            -e DISPLAY=:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
            -v /lib/modules:/lib/modules $ID_IMAGE /bin/bash

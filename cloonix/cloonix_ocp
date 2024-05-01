@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 NSH="/usr/libexec/cloonix/client/cloonix-hide-dirs"
-CLOONIX_CONFIG="/usr/libexec/cloonix/common/etc/cloonix.cfg"
+CLOONIX_CFG="/usr/libexec/cloonix/common/etc/cloonix.cfg"
 
 cloonix_name=$1
 

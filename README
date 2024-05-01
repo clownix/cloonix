@@ -30,7 +30,7 @@ files and libraries are collected and put into an autonomous bundle, this
 makes the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-36-01/html/index.html doc.
+http://clownix.net/doc_stored/build-36-02/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp.
@@ -48,9 +48,9 @@ http://clownix.net/downloads/cloonix-36
 INSTALLATION:
 ------------
 
-wget http://clownix.net/downloads/cloonix-36/cloonix-bundle-36-01.tar.gz
-tar xvf cloonix-bundle-36-01.tar.gz
-cd cloonix-bundle-36-01
+wget http://clownix.net/downloads/cloonix-36/cloonix-bundle-36-02-amd64.tar.gz
+tar xvf cloonix-bundle-36-02-amd64.tar.gz
+cd cloonix-bundle-36-02-amd64
 sudo ./install_cloonix
 
 ==============================================================================
@@ -88,20 +88,19 @@ wget http://clownix.net/downloads/cloonix-36/bulk/busybox.zip
 LAUNCH PING SCRIPT:
 -------------------
 
-cd cloonix-bundle-36-01
+cd cloonix-bundle-36-02-amd64
 
-./ping_kvm.sh
+./ping_demo.sh
 
-On the gui, a double-click on the blue machine gives a shell,
+On the gui, a double-click on the biggest blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy,
 a right-click on the blue machine gives a spice desktop.
 
-./ping_cnt.sh
-
-On the gui, a double-click on the blue machine gives a shell,
+On the gui, a double-click on the smallest blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy,
 a right-click on the container gives one remote console.
 
+NOTE: No wireshark for the moment in the i386 version of cloonix bundle.
 -----------------------------------------------------------------------------
 
 ==============================================================================
@@ -122,14 +121,14 @@ sudo setfacl -R -m u:${USER}:rw /dev/net/tun
 
 Then download and install podman:
 
-wget http://clownix.net/downloads/cloonix-36/bulk/cnt_cloonix.tar
-podman load --input cnt_cloonix.tar
+wget http://clownix.net/downloads/cloonix-36/bulk/podman_cloonix.tar
+podman load --input podman_cloonix.tar
 
 Then try the podman, note that the directory /var/lib/cloonix/bulk
 of your host is made visible inside the podman and must contain
 some qcow2 and zip file-systems:
 
-ID_IMAGE=$(podman images |grep cnt_cloonix | awk "{print \$3}")
+ID_IMAGE=$(podman images |grep podman_cloonix | awk "{print \$3}")
 podman run -it --privileged \
            -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix \
            -v /var/lib/cloonix/bulk:/var/lib/cloonix/bulk \
@@ -148,12 +147,12 @@ FRR DEMO INSIDE CLOONIX INSIDE PODMAN:
 Build the podman with the help of:
 cloonix-36-01/quickstart/cnt_create/custom/frr/doitall
 
-Or download and install podman cnt_frr_cloonix:
+Or download and install podman podman_frr_cloonix:
 
-wget http://clownix.net/downloads/cloonix-36/bulk/cnt_frr_cloonix.tar
-podman load --input cnt_frr_cloonix.tar
+wget http://clownix.net/downloads/cloonix-36/bulk/podman_frr_cloonix.tar
+podman load --input podman_frr_cloonix.tar
 
-ID_IMAGE=$(podman images |grep cnt_frr_cloonix | awk "{print \$3}")
+ID_IMAGE=$(podman images |grep podman_frr_cloonix | awk "{print \$3}")
 podman run -it --privileged \
            -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix \
            -v /lib/modules:/lib/modules $ID_IMAGE /bin/bash

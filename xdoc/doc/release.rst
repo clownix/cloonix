@@ -5,6 +5,61 @@
 Software Release Information
 ============================
 
+v37-00
+======
+
+1 May 2024, the compilation to get the cloonix bundle was only 64bits,
+now there are 2 cloonix bundle, one for the 64 bits and one for the 32 bits.
+Go to the end of **Instructions for building** to get the procedure
+that creates the bundles.
+
+Products for this version are:
+
+Sources::
+
+  cloonix-37-00.tar.gz
+
+Associated open-sources from external providers necessary for the building 
+of this version::
+
+  targz_store.tar.gz
+
+Binaries::
+
+  cloonix-bundle-37-00-amd64.tar.gz
+  cloonix-bundle-37-00-i386.tar.gz
+
+Virtual machines for kvm in cloonix::
+
+  fedora40.qcow2
+  noble.qcow2
+  bookworm.qcow2
+
+Containers from distributions for crun in cloonix::
+
+  fedora40.zip
+  noble.zip
+  bookworm.zip
+
+Containers from personnal customisation for crun in cloonix::
+
+  busybox.zip
+  ovswitch.zip
+  
+Podman to test cloonix and frr::
+
+  podman_cloonix.tar
+  podman_frr_cloonix.tar
+
+
+v36-01
+======
+
+Sunday 21 April, the broadway takes cpu and I do not use it, it is now
+disabled by default, you have to do "cloonix_cli nemo cnf web on" to
+have broadway server.
+
+
 v36-00
 ======
 

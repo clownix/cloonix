@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-releasever=39
+releasever=40
 basearch=x86_64
 DISTRO=fedora${releasever}
 ROOTFS=/var/lib/cloonix/bulk/${DISTRO}

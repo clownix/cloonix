@@ -35,39 +35,39 @@ for i in ${LIST}; do
   fi
 done
 
-rm -rf /root/cnt_frr_cloonix
+rm -rf /root/podman_frr_cloonix
 for i in "bin" "lib64" "root" "etc" "run" "tmp" \
          "/dev/net" "usr/bin" "var/log" \
          "var/spool/rsyslog" "var/lib/cloonix/bulk" \
          "usr/libexec" \
          "usr/lib/x86_64-linux-gnu/rsyslog"; do
-  mkdir -p /root/cnt_frr_cloonix/${i}
+  mkdir -p /root/podman_frr_cloonix/${i}
 done
 
 for i in ${LIST}; do
-  cp ${i} /root/cnt_frr_cloonix/bin
+  cp ${i} /root/podman_frr_cloonix/bin
 done
 
-cp /lib64/ld-linux-x86-64.so.2 /root/cnt_frr_cloonix/lib64
+cp /lib64/ld-linux-x86-64.so.2 /root/podman_frr_cloonix/lib64
 
-${HERE}/cplibdep /root/cnt_frr_cloonix/bin /root/cnt_frr_cloonix
+${HERE}/cplibdep /root/podman_frr_cloonix/bin /root/podman_frr_cloonix
 
-cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    /root/cnt_frr_cloonix/usr/lib/x86_64-linux-gnu/rsyslog
-cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   /root/cnt_frr_cloonix/usr/lib/x86_64-linux-gnu/rsyslog
-cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so /root/cnt_frr_cloonix/usr/lib/x86_64-linux-gnu/rsyslog
+cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    /root/podman_frr_cloonix/usr/lib/x86_64-linux-gnu/rsyslog
+cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   /root/podman_frr_cloonix/usr/lib/x86_64-linux-gnu/rsyslog
+cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so /root/podman_frr_cloonix/usr/lib/x86_64-linux-gnu/rsyslog
 
 
-cat > /root/cnt_frr_cloonix/etc/passwd << "EOF"
+cat > /root/podman_frr_cloonix/etc/passwd << "EOF"
 root:x:0:0:root:/root:/bin/bash
 EOF
-chmod 644 /root/cnt_frr_cloonix/etc/passwd
+chmod 644 /root/podman_frr_cloonix/etc/passwd
 
-cat > /root/cnt_frr_cloonix/etc/group << "EOF"
+cat > /root/podman_frr_cloonix/etc/group << "EOF"
 root:x:0:
 EOF
-chmod 644 /root/cnt_frr_cloonix/etc/group
+chmod 644 /root/podman_frr_cloonix/etc/group
 
-cat > /root/cnt_frr_cloonix/etc/rsyslog.conf << "EOF"
+cat > /root/podman_frr_cloonix/etc/rsyslog.conf << "EOF"
 module(load="imuxsock") # provides support for local system logging
 module(load="imklog")   # provides kernel logging support
 $ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
@@ -88,7 +88,7 @@ user.*                          -/var/log/user.log
 EOF
 
 
-cd /root/cnt_frr_cloonix/bin
+cd /root/podman_frr_cloonix/bin
 for i in "[" "[[" "acpid" "adjtimex" "ar" "arp" "arping" "ash" "awk" \
          "basename" "blockdev" "brctl" "bunzip2" "bzcat" "bzip2" "cal" \
          "cat" "chgrp" "chmod" "chown" "chroot" "chvt" "clear" "cmp" \
@@ -124,14 +124,14 @@ BUNDLE=$(ls cloonix-bundle*)
 tar xvf ${BUNDLE}
 rm -vf ${BUNDLE} 
 BUNDLE=${BUNDLE%%.*}
-mv /root/${BUNDLE} /root/cnt_frr_cloonix
-chroot /root/cnt_frr_cloonix /bin/sh -c "cd ${BUNDLE}; ./install_cloonix"
-rm -rf /root/cnt_frr_cloonix/${BUNDLE} 
+mv /root/${BUNDLE} /root/podman_frr_cloonix
+chroot /root/podman_frr_cloonix /bin/sh -c "cd ${BUNDLE}; ./install_cloonix"
+rm -rf /root/podman_frr_cloonix/${BUNDLE} 
 
-mv /root/frr.zip /root/cnt_frr_cloonix/var/lib/cloonix/bulk
-mv /root/spider_demo.sh /root/cnt_frr_cloonix/root
+mv /root/frr.zip /root/podman_frr_cloonix/var/lib/cloonix/bulk
+mv /root/spider_demo.sh /root/podman_frr_cloonix/root
 
-cat > /root/cnt_frr_cloonix/usr/bin/cloonix_startup_script.sh << "EOF"
+cat > /root/podman_frr_cloonix/usr/bin/cloonix_startup_script.sh << "EOF"
 #!/bin/bash
 /bin/rsyslogd
 mknod /dev/kvm c 10 232
@@ -139,9 +139,9 @@ mknod /dev/vhost-net c 10 238
 mkdir /dev/net
 mknod /dev/net/tun c 10 200
 EOF
-chmod +x /root/cnt_frr_cloonix/usr/bin/cloonix_startup_script.sh
+chmod +x /root/podman_frr_cloonix/usr/bin/cloonix_startup_script.sh
 
-cd /root/cnt_frr_cloonix
-zip -yr ../cnt_frr_cloonix.zip .
+cd /root/podman_frr_cloonix
+zip -yr ../podman_frr_cloonix.zip .
 
 

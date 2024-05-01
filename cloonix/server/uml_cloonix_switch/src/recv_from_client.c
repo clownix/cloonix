@@ -891,7 +891,7 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
   memset(bz_image, 0, MAX_PATH_LEN);
   memset(qemu_kvm_exe, 0, MAX_PATH_LEN);
   snprintf(qemu_kvm_exe, MAX_PATH_LEN-1,
-           "%s/server/cloonix-qemu-system-x86_64", cfg_get_bin_dir());
+           "%s/server/cloonix-qemu-system", cfg_get_bin_dir());
   if (test_dev_kvm(info))
     result = -1;
   else if (!file_exists(qemu_kvm_exe, F_OK))

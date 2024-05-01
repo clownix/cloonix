@@ -76,6 +76,7 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
     cd ${SERVER}/${i}
     ./allclean
   done
+  rm -f ${SERVER}/insider_agents/insider_agent_i386.iso
   rm -f ${SERVER}/insider_agents/insider_agent_x86_64.iso
   rm -rf ${SERVER}/insider_agents/cdrom
 #----------------------------------------------------------

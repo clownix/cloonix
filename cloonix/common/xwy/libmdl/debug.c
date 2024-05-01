@@ -33,6 +33,7 @@
 #include "debug.h"
 #include "fd_spy.h"
 #include "wrap.h"
+#include "glob_common.h"
 
 /*****************************************************************************/
 char *debug_get_thread_type_txt(int type)
@@ -47,7 +48,7 @@ char *debug_get_thread_type_txt(int type)
     result = "thread_type_x11";
     break;
     default:
-      XERR("ERROR %s %d", __FUNCTION__, type);
+      KERR("ERROR %s %d", __FUNCTION__, type);
     }
   return result;
 }
@@ -141,7 +142,7 @@ char *debug_get_fd_type_txt(int type)
     result = "listen_cloon";
     break;
     default:
-      XERR("ERROR %s %d", __FUNCTION__, type);
+      KERR("ERROR %s %d", __FUNCTION__, type);
     }
   return result;
 }
@@ -154,7 +155,7 @@ int debug_get_trunc_usec(void)
   long long date;
   int result;
   if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC_RAW, &ts))
-    XOUT(" ");
+    KOUT(" ");
   date = (long long) (ts.tv_sec);
   date *= 1000000;
   date += ((long long) ts.tv_nsec) / 1000;
@@ -348,7 +349,7 @@ char *debug_get_evt_type_txt(int type)
     break;
 
     default:
-      XERR("ERROR %s %d", __FUNCTION__, type);
+      KERR("ERROR %s %d", __FUNCTION__, type);
     }
   return result;
 }
@@ -459,7 +460,7 @@ void debug_init(int is_srv)
   g_debug_logfile = fopen(log_file, "w");
   wrap_chmod_666(log_file);
   if (g_debug_logfile == NULL)
-    XOUT(" ");
+    KOUT(" ");
 }
 /*--------------------------------------------------------------------------*/
 

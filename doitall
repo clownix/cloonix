@@ -1,6 +1,22 @@
 #!/bin/bash
 set -e
-
+#----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+  else
+    if [ "$1" = "amd64" ]; then
+      ARCH="amd64"
+    else
+      echo ERROR $0 param must be i386, or amd64
+      exit 
+    fi
+  fi
+else
+  echo ERROR $0 param must be i386, or amd64
+  exit 
+fi 
+#----------------------------------------------------------------------#
 export CLOONIX_TREE_ROOT=`pwd`
 if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo NOT FOUND:
@@ -11,8 +27,8 @@ VERSION=$(cat ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION
 VERSION=${VERSION#*=}
 ./allclean
 ./build_tools/build_client
-./build_tools/build_server
-./build_tools/pack_common_before
-./build_tools/pack_client
-./build_tools/pack_server
-./build_tools/pack_common_after
+./build_tools/build_server ${ARCH}
+./build_tools/pack_common_before ${ARCH}
+./build_tools/pack_client ${ARCH}
+./build_tools/pack_server ${ARCH}
+./build_tools/pack_common_after ${ARCH}

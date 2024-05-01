@@ -1,4 +1,4 @@
-#!/usr/libexec/cloonix/common/sh
+#!/usr/libexec/cloonix/client/bash
 set -e
 NSH="/usr/libexec/cloonix/client/cloonix-hide-dirs"
 if [ 2 -gt ${#} ]; then

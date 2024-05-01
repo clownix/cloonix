@@ -138,6 +138,7 @@ static void setup_mounts(void)
   hide_dir_if_necessary("/libx32");
   hide_dir_if_necessary("/lib32");
   hide_dir_if_necessary("/lib64");
+
   mkdir("/var/lib/cloonix", 0777);
   mkdir("/var/lib/cloonix/cache", 0777);
   mkdir("/var/lib/cloonix/cache/libexec", 0777);
@@ -155,15 +156,11 @@ static void setup_mounts(void)
   mkdir("/usr/libexec", 0777);
   mkdir("/usr/libexec/cloonix", 0777);
   mkdir("/usr/lib", 0777);
-  mkdir("/usr/lib64", 0777);
 
   assert(mount("/var/lib/cloonix/cache/libexec",
                "/usr/libexec/cloonix", NULL, MS_BIND, NULL) == 0);
 
   assert(mount("/var/lib/cloonix/cache/libexec/common/lib", "/usr/lib",
-               NULL, MS_BIND, NULL) == 0);
-
-  assert(mount("/var/lib/cloonix/cache/libexec/common/lib64", "/lib64",
                NULL, MS_BIND, NULL) == 0);
 
   assert(mount("/var/lib/cloonix/cache/libexec/common/share",

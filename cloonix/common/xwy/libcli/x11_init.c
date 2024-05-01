@@ -32,6 +32,7 @@
 #include "wrap.h"
 #include "debug.h"
 #include "getsock.h"
+#include "glob_common.h"
 
 static char g_x11_path[MAX_TXT_LEN];
 static int  g_x11_port;
@@ -40,6 +41,7 @@ static int  g_x11_srv_idx;
 static int g_epfd;
 static char g_magic_cookie[2*MAGIC_COOKIE_LEN+1];
 
+#define XAUTH_BIN "/usr/libexec/cloonix/client/xauth"
 
 /*****************************************************************************/
 static void init_x11_magic(void)
@@ -52,7 +54,7 @@ static void init_x11_magic(void)
     {
     ln = snprintf(&(g_magic_cookie[i]), 2, "%x", (rand() & 0xF));
     if (ln != 1)
-      XOUT("%d", ln);
+      KOUT("%d", ln);
     }
   g_magic_cookie[2*MAGIC_COOKIE_LEN] = 0;
 }
@@ -80,7 +82,7 @@ static int get_xauth_magic(char *display, char *err)
   if (fp == NULL)
     {
     snprintf(err, MAX_TXT_LEN-1, "%s, popen", acmd);
-    XERR("ERROR %s", acmd);
+    KERR("ERROR %s", acmd);
     }
   else
     {
@@ -93,7 +95,7 @@ static int get_xauth_magic(char *display, char *err)
       if (!strlen(buf))
         {
         snprintf(err, MAX_TXT_LEN-1, "%s, strlen", acmd);
-        XERR("ERROR %s", acmd);
+        KERR("ERROR %s", acmd);
         }
       else
         {
@@ -101,7 +103,7 @@ static int get_xauth_magic(char *display, char *err)
         if (!ptr)
           {
           snprintf(err, MAX_TXT_LEN-1, "%s, MIT-MAGIC", buf);
-          XERR("ERROR %s  %s", acmd, buf);
+          KERR("ERROR %s  %s", acmd, buf);
           }
         else
           {
@@ -110,7 +112,7 @@ static int get_xauth_magic(char *display, char *err)
           if (strlen(ptr) < 1)
             {
             snprintf(err, MAX_TXT_LEN-1, "%s, MIT-MAGIC strlen1", buf);
-            XERR("ERROR %s  %s", acmd, buf);
+            KERR("ERROR %s  %s", acmd, buf);
             }
           else
             {
@@ -123,7 +125,7 @@ static int get_xauth_magic(char *display, char *err)
             if (strlen(ptr) < 1)
               {
               snprintf(err, MAX_TXT_LEN-1, "%s, MIT-MAGIC strlen2", buf);
-              XERR("ERROR %s  %s", acmd, buf);
+              KERR("ERROR %s  %s", acmd, buf);
               }
             else
               {
@@ -138,7 +140,7 @@ static int get_xauth_magic(char *display, char *err)
     if (pclose(fp))
       {
       snprintf(err, MAX_TXT_LEN-1, "%s, pclose", acmd);
-      XERR("ERROR %s", acmd);
+      KERR("ERROR %s", acmd);
       }
     }
   return result;
@@ -153,7 +155,7 @@ static int x11_init_unix(char *display, int num)
   snprintf(g_x11_path, MAX_TXT_LEN-1, UNIX_X11_SOCKET_PREFIX, num);
   if (access(g_x11_path, F_OK))
     {
-    XERR("X11 socket not found: %s", g_x11_path);
+    KERR("X11 socket not found: %s", g_x11_path);
     memset(g_x11_path, 0, MAX_TXT_LEN);
     }
   else
@@ -176,7 +178,7 @@ static int x11_init_inet(char *display, int num)
                                     fd_type_x11_connect_tst, __FUNCTION__);
   if (tmp_fd < 0)
     {
-    XERR("X11 port not working: %d", g_x11_port);
+    KERR("X11 port not working: %d", g_x11_port);
     g_x11_port = 0;
     }
   else
@@ -232,7 +234,7 @@ void x11_init_resp(int srv_idx, t_msg *msg)
     {
     if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
       {
-      XOUT("%d", srv_idx);
+      KOUT("%d", srv_idx);
       }
     else
       {
@@ -242,7 +244,7 @@ void x11_init_resp(int srv_idx, t_msg *msg)
     }
   else
     {
-    XOUT("%s", msg->buf);
+    KOUT("%s", msg->buf);
     }
   wrap_free(msg, __LINE__);
 }
@@ -259,7 +261,7 @@ void x11_init_magic(void)
   memset(g_x11_path, 0, MAX_TXT_LEN);
   if (!display)
     {
-    XERR("ERROR MAGIC X11 no DISPLAY");
+    KERR("ERROR MAGIC X11 no DISPLAY");
     init_x11_magic();
     }
   else
@@ -269,7 +271,7 @@ void x11_init_magic(void)
       {
       if (x11_init_unix(display, val))
         {
-        XERR("ERROR MAGIC X11 %s", display);
+        KERR("ERROR MAGIC X11 %s", display);
         display = NULL;
         }
       }
@@ -277,7 +279,7 @@ void x11_init_magic(void)
       {
       if (x11_init_inet(display, val))
         {
-        XERR("ERROR MAGIC X11 %s", display);
+        KERR("ERROR MAGIC X11 %s", display);
         display = NULL;
         }
       }
@@ -285,13 +287,13 @@ void x11_init_magic(void)
       {
       if (x11_init_inet(display, val))
         {
-        XERR("ERROR MAGIC X11 %s", display);
+        KERR("ERROR MAGIC X11 %s", display);
         display = NULL;
         }
       }
     else
       {
-      XERR("ERROR MAGIC X11 %s", display);
+      KERR("ERROR MAGIC X11 %s", display);
       display = NULL;
       }
     if ((display == NULL) || (get_xauth_magic(display, err)))

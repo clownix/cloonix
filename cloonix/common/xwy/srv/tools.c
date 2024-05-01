@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include "mdl.h"
+#include "glob_common.h"
 
 /*****************************************************************************/
 int tools_port_already_in_use(int port)
@@ -34,7 +35,7 @@ int tools_port_already_in_use(int port)
   struct sockaddr_in serv_addr;
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0)
-    XOUT("%s", strerror(errno));
+    KOUT("%s", strerror(errno));
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -43,10 +44,10 @@ int tools_port_already_in_use(int port)
     {
     result = 1;
     if (errno != EADDRINUSE)
-      XERR("%s", strerror(errno));
+      KERR("%s", strerror(errno));
     }
   if (close (sockfd) < 0 )
-    XOUT("%s", strerror(errno));
+    KOUT("%s", strerror(errno));
   return result;
 }
 /*---------------------------------------------------------------------------*/

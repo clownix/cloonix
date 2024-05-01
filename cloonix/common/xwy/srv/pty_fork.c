@@ -62,6 +62,7 @@ static char g_xauthority[MAX_TXT_LEN];
 static char g_net_name[MAX_TXT_LEN];
 static struct timeval g_last_cloonix_tv;
 
+#define XAUTH_BIN "/usr/libexec/cloonix/server/xauth"
 
 
 /****************************************************************************/
@@ -84,7 +85,7 @@ static void pty_cli_alloc(int pty_fd, int pid, int sock_fd, uint32_t randid)
   int i;
   t_pty_cli *cli = find_with_sock_fd(sock_fd);
   if (cli)
-    XERR("ERROR  pty_fd:%d pid:%d sock_fd:%d", pty_fd, pid, sock_fd);
+    KERR("ERROR  pty_fd:%d pid:%d sock_fd:%d", pty_fd, pid, sock_fd);
   else
     {
     cli = (t_pty_cli *) wrap_malloc(sizeof(t_pty_cli));
@@ -125,7 +126,7 @@ static int send_msg_type_end(uint32_t randid, int sock_fd, char status)
   int len = MAX_MSG_LEN+g_msg_header_len, result;
   t_msg *msg;
   if (sock_fd == -1)
-    XERR(" ");
+    KERR(" ");
   else
     {
     msg = (t_msg *) wrap_malloc(len);
@@ -163,13 +164,13 @@ static int xauth_add_magic_cookie(int display_val, char *magic_cookie)
   acmd = mdl_argv_linear(argv);
   fp = mdl_argv_popen(argv);
   if (fp == NULL)
-    XERR("ERROR %s", acmd);
+    KERR("ERROR %s", acmd);
   else
     {
     if (fgets(buf, MAX_TXT_LEN-1, fp))
-      XERR("ERROR %s %s", acmd, buf);
+      KERR("ERROR %s %s", acmd, buf);
     if (pclose(fp))
-      XERR("ERROR %s", acmd);
+      KERR("ERROR %s", acmd);
     else
       result = 0;
     }
@@ -185,7 +186,7 @@ static void clean_xauthority(char *xauthority_file, char *end_file)
   strcat(xauth_locks, end_file);
   unlink(xauth_locks);
   if (wrap_file_exists(xauth_locks))
-    XOUT("ERROR XAUTHORITY file lock  %s", xauth_locks);
+    KOUT("ERROR XAUTHORITY file lock  %s", xauth_locks);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -200,7 +201,7 @@ static void init_all_env(char *net_name)
   clean_xauthority(g_xauthority, "-l");
   clean_xauthority(g_xauthority, "-n");
   if (wrap_touch(g_xauthority))
-    XOUT("ERROR XAUTHORITY file %s", g_xauthority);
+    KOUT("ERROR XAUTHORITY file %s", g_xauthority);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -210,6 +211,8 @@ static void create_env_display(int display_val, char *ttyname)
   char rdir[MAX_PATH_LEN];
   char disp_str[MAX_TXT_LEN];
   char *net = g_net_name;
+  char *px86_64="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/qt6/plugins";
+  char *pi386="/usr/libexec/cloonix/common/lib/i386-linux-gnu/qt6/plugins";
   setenv("PATH",  "/usr/libexec/cloonix/common:"
                   "/usr/libexec/cloonix/client:"
                   "/usr/libexec/cloonix/server", 1);
@@ -228,7 +231,7 @@ static void create_env_display(int display_val, char *ttyname)
       setenv("SSH_TTY", ttyname, 1);
     }
   else
-    XERR("ERROR Problem setting DISPLAY");
+    KERR("ERROR Problem setting DISPLAY");
   memset(rdir, 0, MAX_PATH_LEN);
   snprintf(rdir, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/run", net);
   setenv("XDG_RUNTIME_DIR", rdir, 1);
@@ -240,7 +243,16 @@ static void create_env_display(int display_val, char *ttyname)
   setenv("NO_AT_BRIDGE", "1", 1);
   setenv("QT_X11_NO_MITSHM", "1", 1);
   setenv("QT_XCB_NO_MITSHM", "1", 1);
-  setenv("QT_PLUGIN_PATH", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/qt6/plugins", 1);
+  if (wrap_file_exists(pi386))
+    {
+    setenv("QT_PLUGIN_PATH", pi386, 1);
+    KERR("VIPTODO QT_PLUGIN_PATH %s", pi386);
+    }
+  else if (wrap_file_exists(px86_64))
+    {
+    setenv("QT_PLUGIN_PATH", px86_64, 1);
+    KERR("VIPTODO QT_PLUGIN_PATH %s", px86_64);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -266,7 +278,7 @@ static void create_argv_from_cmd(char *cmd, char **argv)
       cmd_ptr = strchr(ptr[i]+1, '"');
       if (!cmd_ptr)
         {
-        XERR("%s", cmd);
+        KERR("%s", cmd);
         break;
         }
       ptr[i] += 1;
@@ -294,9 +306,9 @@ static int get_process_pid(char *cmdpath, char *sock)
   char name[MAX_NAME_LEN];
   char cmd[MAX_PATH_LEN];
   int pid, result = 0;
-  fp = popen("/usr/libexec/cloonix/common/ps", "r");
+  fp = popen(PS_BIN, "r");
   if (fp == NULL)
-    XERR("ERROR /usr/libexec/cloonix/common/ps");
+    KERR("ERROR %s", PS_BIN);
   else
     {
     memset(line, 0, MAX_PATH_LEN);
@@ -327,23 +339,23 @@ static int get_process_pid(char *cmdpath, char *sock)
 static void kill_previous_wireshark_process(char *sock)
 {
   int pid_wireshark_qt, pid_wireshark_gtk, pid_dumpcap;
-  pid_dumpcap       = get_process_pid(WIRESHARK_DUMPCAP, sock);
-  pid_wireshark_qt  = get_process_pid(WIRESHARK_BIN_QT,  sock);
-  pid_wireshark_gtk = get_process_pid(WIRESHARK_BIN_GTK, sock);
+  pid_dumpcap       = get_process_pid(WIRESHARK_DUMPCAP_BIN, sock);
+  pid_wireshark_qt  = get_process_pid(WIRESHARK_QT_BIN,  sock);
+  pid_wireshark_gtk = get_process_pid(WIRESHARK_GTK_BIN, sock);
   if (pid_wireshark_qt)
     {
     kill(pid_wireshark_qt, SIGKILL);
-    XERR("WARNING KILL WIRESHARK_QT %d", pid_wireshark_qt);
+    KERR("WARNING KILL WIRESHARK_QT %d", pid_wireshark_qt);
     }
   if (pid_wireshark_gtk)
     {
     kill(pid_wireshark_gtk, SIGKILL);
-    XERR("WARNING KILL WIRESHARK_GTK %d", pid_wireshark_gtk);
+    KERR("WARNING KILL WIRESHARK_GTK %d", pid_wireshark_gtk);
     }
   if (pid_dumpcap)
     {
     kill(pid_dumpcap, SIGKILL);
-    XERR("WARNING KILL WIRESHARK_DUMPCAP %d", pid_dumpcap);
+    KERR("WARNING KILL WIRESHARK_DUMPCAP_BIN %d", pid_dumpcap);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -351,7 +363,7 @@ static void kill_previous_wireshark_process(char *sock)
 /****************************************************************************/
 static void sigusr1_child_handler(int dummy)                           
 {                                          
-  XERR("WARNING  Parent died, child now exiting\n");    
+  KERR("WARNING  Parent died, child now exiting\n");    
   exit(0);                                  
 }                            
 /*--------------------------------------------------------------------------*/
@@ -368,10 +380,10 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
   if (action != action_dae)
     {
     if (wrap_openpty(&pty_fd, &ttyfd, ttyname, fd_type_fork_pty))
-      XOUT(" ");
+      KOUT(" ");
     if (mdl_exists(pty_fd))
       {
-      XERR("ERROR pty_fd %d exists in mdl", pty_fd);
+      KERR("ERROR pty_fd %d exists in mdl", pty_fd);
       return;
       }
     wrap_pty_make_controlling_tty(ttyfd, ttyname);
@@ -379,7 +391,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
 
   pid = fork();
   if (pid < 0)
-    XOUT("%s", strerror(errno));
+    KOUT("%s", strerror(errno));
   if (pid == 0)
     {
     clearenv();
@@ -389,19 +401,19 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_DFL);
     if (signal(SIGUSR1, sigusr1_child_handler) == SIG_ERR)          
-       XERR("ERROR signal failed");                  
+       KERR("ERROR signal failed");                  
     if (prctl(PR_SET_PDEATHSIG, SIGUSR1) < 0)              
-       XERR("ERROR prctl failed");                  
+       KERR("ERROR prctl failed");                  
     prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0);
     if (setsid() < 0)
-      XOUT("setsid: %s", strerror(errno));
+      KOUT("setsid: %s", strerror(errno));
     if (action == action_dae)
       {
       hide_real_machine();
       for (i=0; i<MAX_FD_NUM; i++)
         close(i);
       create_argv_from_cmd(cmd, argv);
-      if (!strcmp(argv[0], WIRESHARK_BIN_QT))
+      if (!strcmp(argv[0], WIRESHARK_QT_BIN))
         {
         i = 0;
         while(argv[i])
@@ -411,10 +423,10 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
           i++;
           }
         execv(argv[0], argv);
-        XOUT("ERROR execv");
+        KOUT("ERROR execv");
         }
       else
-        XERR("ERROR CMD %s", cmd);                  
+        KERR("ERROR CMD %s", cmd);                  
       }
     else
       {
@@ -422,11 +434,11 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       close(1);
       close(2);
       if (dup2(ttyfd, 0) < 0)
-        XERR("dup2 stdin: %s", strerror(errno));
+        KERR("dup2 stdin: %s", strerror(errno));
       if (dup2(ttyfd, 1) < 0)
-        XERR("dup2 stdout: %s", strerror(errno));
+        KERR("dup2 stdout: %s", strerror(errno));
       if (dup2(ttyfd, 2) < 0)
-        XERR("dup2 stderr: %s", strerror(errno));
+        KERR("dup2 stderr: %s", strerror(errno));
       wrap_nonnonblock(0);
       wrap_nonnonblock(1);
       wrap_nonnonblock(2);
@@ -439,14 +451,14 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
         }
       else if (action == action_crun)
         {
-        argv[0] = "/usr/libexec/cloonix/common/sh";
+        argv[0] = "/usr/libexec/cloonix/server/cloonix-bash";
         argv[1] = "-c";
         if (cmd[0] == '"')
           {
           ptr = cmd+1;
           ptre = strchr(ptr, '"');
           if (!ptre)
-            XERR("ERROR action_crun %s", cmd);
+            KERR("ERROR action_crun %s", cmd);
           else
             {
             *ptre = 0;
@@ -462,9 +474,9 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
         create_argv_from_cmd(cmd, argv);
         }
       else
-        XOUT("ERROR %d", action);
+        KOUT("ERROR %d", action);
       execv(argv[0], argv);
-      XOUT("ERROR execv");
+      KOUT("ERROR execv %s", argv[0]);
       }
     }
   else
@@ -493,10 +505,10 @@ static int cli_pty_fd_action(t_pty_cli *cli)
     if ((errno == EINTR) || (errno == EAGAIN))
       result = 0;
     else
-      XERR("ERROR cli_pty_fd_action pty_fd:%d %s",cli->pty_fd,strerror(errno));
+      KERR("ERROR cli_pty_fd_action pty_fd:%d %s",cli->pty_fd,strerror(errno));
     }
   else if (len == 0)
-    XERR("ERROR ZERO cli_pty_fd_action pty_fd:%d", cli->pty_fd);
+    KERR("ERROR ZERO cli_pty_fd_action pty_fd:%d", cli->pty_fd);
   else
     {
     mdl_set_header_vals(msg, cli->randid, msg_type_data_cli_pty,
@@ -504,12 +516,12 @@ static int cli_pty_fd_action(t_pty_cli *cli)
     msg->len = len;
     result = mdl_queue_write_msg(cli->sock_fd, msg);
     if (result)
-      XERR("ERROR cli_pty_fd_action mdl_queue_write_msg sock_fd:%d pty_fd:%d",
+      KERR("ERROR cli_pty_fd_action mdl_queue_write_msg sock_fd:%d pty_fd:%d",
             cli->sock_fd, cli->pty_fd); 
     }
   if (result)
     {
-    XERR("ERROR cli_pty_fd_action pty_fd:%d", cli->pty_fd); 
+    KERR("ERROR cli_pty_fd_action pty_fd:%d", cli->pty_fd); 
     wrap_close(cli->pty_fd, __FUNCTION__);
     mdl_close(cli->pty_fd);
     cli->pty_fd = -1;
@@ -550,7 +562,7 @@ static void sig_evt_action(int sig_read_fd)
   char buf[1], exstat;
   len = wrap_read_sig(sig_read_fd, buf, 1);
   if ((len != 1) || (buf[0] != 's'))
-    XOUT("ERROR %d %s", len, buf);
+    KOUT("ERROR %d %s", len, buf);
   else
     child_death_detection();
 }
@@ -564,7 +576,7 @@ static void child_exit(int sig)
   buf[0] = 's';
   len = write(g_sig_write_fd, buf, 1);
   if (len != 1)
-    XOUT("%d %s", len, strerror(errno));
+    KOUT("%d %s", len, strerror(errno));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -618,7 +630,7 @@ int pty_fork_fdisset(fd_set *readfds, fd_set *writefds)
         if (FD_ISSET(cur->pty_fd, writefds))
           {
           if (low_write_fd(cur->pty_fd))
-            XERR("ERROR %d", cur->pty_fd);
+            KERR("ERROR %d", cur->pty_fd);
           }
         }
       }
@@ -661,7 +673,7 @@ void pty_fork_msg_type_win_size(int sock_fd, int len, char *buf)
   if (cli)
     {
     if (len > 16)
-      XOUT("%d", len);
+      KOUT("%d", len);
     if (cli->pty_fd != -1)
       {
       memcpy(win_size_buf, buf, 16);
@@ -707,10 +719,10 @@ void pty_fork_init(char *cloonix_net_name)
   memset(g_net_name, 0, MAX_TXT_LEN);
   strncpy(g_net_name, cloonix_net_name, MAX_TXT_LEN-1);
   if (signal(SIGCHLD, child_exit) == SIG_ERR)
-    XERR("ERROR %s", strerror(errno));
+    KERR("ERROR %s", strerror(errno));
   init_all_env(cloonix_net_name);
   if (wrap_pipe(pipe_fd, fd_type_pipe_sig, __FUNCTION__) < 0)
-    XOUT(" ");
+    KOUT(" ");
   g_sig_write_fd = pipe_fd[1];
   g_sig_read_fd = pipe_fd[0];
 }

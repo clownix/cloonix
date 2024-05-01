@@ -540,9 +540,9 @@ static int get_process_pid(char *cmdpath, char *sock)
   char name[MAX_NAME_LEN];
   char cmd[MAX_PATH_LEN];
   int pid, result = 0;
-  fp = popen("/usr/libexec/cloonix/common/ps", "r");
+  fp = popen("/usr/libexec/cloonix/client/ps", "r");
   if (fp == NULL)
-    KERR("ERROR /usr/libexec/cloonix/common/ps");
+    KERR("ERROR %s", "/usr/libexec/cloonix/client/ps");
   else
     {
     memset(line, 0, MAX_PATH_LEN);
@@ -573,9 +573,9 @@ static int get_process_pid(char *cmdpath, char *sock)
 static void kill_previous_wireshark_process(char *sock)
 { 
   int pid_wireshark_qt, pid_wireshark_gtk, pid_dumpcap;
-  pid_dumpcap       = get_process_pid(WIRESHARK_DUMPCAP, sock);
-  pid_wireshark_qt  = get_process_pid(WIRESHARK_BIN_QT,  sock);
-  pid_wireshark_gtk = get_process_pid(WIRESHARK_BIN_GTK, sock);
+  pid_dumpcap       = get_process_pid(WIRESHARK_DUMPCAP_BIN, sock);
+  pid_wireshark_qt  = get_process_pid(WIRESHARK_QT_BIN,  sock);
+  pid_wireshark_gtk = get_process_pid(WIRESHARK_GTK_BIN, sock);
   if (pid_wireshark_qt)
     {
     kill(pid_wireshark_qt, SIGKILL);
@@ -598,7 +598,7 @@ int start_wireshark(char *vm_name, int num)
   int result = -1;
   char *argv[15];
   char *xwycli = XWYCLI_BIN;
-  char *cnf = "/usr/libexec/cloonix/common/etc/cloonix.cfg";
+  char *cnf = CLOONIX_CFG;
   char *net = get_net_name();
   char snf[2*MAX_PATH_LEN];
   if (find_pid_wait(vm_name, num))
@@ -613,7 +613,7 @@ int start_wireshark(char *vm_name, int num)
     if (get_is_broadway())
       {
       kill_previous_wireshark_process(snf);
-      argv[0] = WIRESHARK_BIN_GTK;
+      argv[0] = WIRESHARK_GTK_BIN;
       argv[1] = "-o";
       argv[2] = "capture.no_interface_load:TRUE";
       argv[3] = "-o";
@@ -629,7 +629,7 @@ int start_wireshark(char *vm_name, int num)
       argv[1] = cnf;
       argv[2] = net;
       argv[3] = "-dae";
-      argv[4] = WIRESHARK_BIN_QT;
+      argv[4] = WIRESHARK_QT_BIN;
       argv[5] = "-o";
       argv[6] = "capture.no_interface_load:TRUE";
       argv[7] = "-o";
@@ -710,8 +710,7 @@ static char **get_argv_crun_screen_console(char *name)
   static char nemo[MAX_NAME_LEN];
 
   static char *argv[]={URXVT_BIN, "-T", title, "-e", XWYCLI_BIN,
-                       "/usr/libexec/cloonix/common/etc/cloonix.cfg",
-                       nemo, "-crun", cmd, NULL};
+                       CLOONIX_CFG, nemo, "-crun", cmd, NULL};
 
   static char *argvtilix[]={TILIX_BIN, "-t", title, "-e", cmd, NULL};
 

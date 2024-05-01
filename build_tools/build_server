@@ -1,5 +1,21 @@
 #!/bin/bash
 set -e
+#----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+  else
+    if [ "$1" = "amd64" ]; then
+      ARCH="amd64"
+    else
+      echo ERROR $0 param must be i386, or amd64
+      exit
+    fi
+  fi
+else
+  ARCH="amd64"
+fi
+#----------------------------------------------------------------------#
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -49,7 +65,6 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
   for i in  crun \
             dtach \
             spice_lib_server \
-            qemu \
             xwy \
             ovs \
             doorways \
@@ -68,7 +83,12 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
     cd ${SERVER}/${i}
     ./cmd
   done
+  echo DOING:
+  echo ${SERVER}/qemu
+  cd ${SERVER}/qemu
+  ./cmd ${ARCH}
   cd ${SERVER}/create_insider_agents_iso
   ./cmd_mk_iso_x86_64
+  ./cmd_mk_iso_i386
 #----------------------------------------------------------
 

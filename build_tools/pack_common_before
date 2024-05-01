@@ -1,4 +1,21 @@
 #!/bin/bash
+#----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+  else
+    if [ "$1" = "amd64" ]; then
+      ARCH="amd64"
+    else
+      echo ERROR $0 param must be i386 or amd64
+      exit
+    fi
+  fi
+else
+  echo ERROR $0 param must be i386, or amd64
+  exit
+fi
+#----------------------------------------------------------------------#
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -21,8 +38,15 @@ case "$pretty_name" in
   exit
   ;;
 esac
-mkdir -p ${COMMON}/lib64
-mkdir -p ${COMMON}/lib/x86_64-linux-gnu
+
+if [ "${ARCH}" = "i386" ]; then
+  mkdir -p ${COMMON}/lib32
+  mkdir -p ${COMMON}/lib/i386-linux-gnu
+else
+  mkdir -p ${COMMON}/lib64
+  mkdir -p ${COMMON}/lib/x86_64-linux-gnu
+fi
+
 mkdir -p ${COMMON}/lib/locale
 mkdir -p ${COMMON}/etc
 mkdir -p ${COMMON}/share
@@ -63,32 +87,19 @@ cat > ${COMMON}/etc/group << EOF
 audio:x:29:pulse
 EOF
 #----------------------------------------------------------
-cp -f /usr/lib/x86_64-linux-gnu/libsecret-1.so.0 ${COMMON}/lib/x86_64-linux-gnu
-cp -f /usr/lib/x86_64-linux-gnu/libvte-2.91.so.0 ${COMMON}/lib/x86_64-linux-gnu
-cp -f /usr/lib/x86_64-linux-gnu/libibus-1.0.so.5 ${COMMON}/lib/x86_64-linux-gnu
-cp -f /usr/bin/tilix ${COMMON}/cloonix-tilix
+if [ "${ARCH}" = "i386" ]; then
+  cp -f /usr/lib/i386-linux-gnu/libsecret-1.so.0 ${COMMON}/lib/i386-linux-gnu
+  cp -f /usr/lib/i386-linux-gnu/libvte-2.91.so.0 ${COMMON}/lib/i386-linux-gnu
+  cp -f /usr/lib/i386-linux-gnu/libibus-1.0.so.5 ${COMMON}/lib/i386-linux-gnu
+else
+  cp -f /usr/lib/x86_64-linux-gnu/libsecret-1.so.0 ${COMMON}/lib/x86_64-linux-gnu
+  cp -f /usr/lib/x86_64-linux-gnu/libvte-2.91.so.0 ${COMMON}/lib/x86_64-linux-gnu
+  cp -f /usr/lib/x86_64-linux-gnu/libibus-1.0.so.5 ${COMMON}/lib/x86_64-linux-gnu
+fi
 cp -f ${TARGZ_STORE}/dconf/user ${COMMON}/share/dconf
 #----------------------------------------------------------
-cp -f /usr/bin/ldd ${COMMON}
-cp -f /bin/bash ${COMMON}
-cp -f /usr/bin/strace ${COMMON}
-cp -f /usr/bin/xauth ${COMMON}/cloonix-xauth
-cp -f /bin/busybox ${COMMON}
-cp -f /usr/bin/locale ${COMMON}
-cp -f /usr/bin/localedef ${COMMON}
-cp -f /usr/bin/localectl ${COMMON}
-cp -f /usr/sbin/locale-gen ${COMMON}
 cp -Lrf /usr/lib/locale/* ${COMMON}/lib/locale
-cd ${COMMON}
-sed -i s"%/bin/sh%/usr/libexec/cloonix/common/sh%" locale-gen
-sed -i s"%localedef%/usr/libexec/cloonix/common/localedef%" locale-gen
-sed -i s'%LOCALEGEN=\(.*\)%LOCALEGEN=/usr/libexec/cloonix/common/etc/locale.gen%' locale-gen
 #----------------------------------------------------------
-for i in cat cp echo env grep id ifconfig ip \
-         iproute kill ls mv ps rm sh su chmod \
-         chown awk; do 
-  ln -s busybox ${i}
-done
 cd $FROM_HERE
 for i in icons mime themes fonts gtk-3.0 \
          gstreamer-1.0 tilix gvfs alsa ; do
@@ -113,17 +124,31 @@ cd ${COMMON}/share/i18n/charmaps
 gunzip UTF-8.gz
 cd $FROM_HERE
 #----------------------------------------------------------
-tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_gtk/built_objects/share_wireshark_gtk.tar.gz
-tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_qt/built_objects/share_wireshark_qt.tar.gz
-mv ${COMMON}/share/share_wireshark_gtk ${COMMON}/share/wireshark
-cp -rf ${COMMON}/share/share_wireshark_qt/* ${COMMON}/share/wireshark
-rm -rf ${COMMON}/share/share_wireshark_qt
+if [ "${ARCH}" = "i386" ]; then
+  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_qt/built_objects_i386/share_wireshark_qt.tar.gz
+  mv ${COMMON}/share/share_wireshark_qt ${COMMON}/share/wireshark
+else
+  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_qt/built_objects_amd64/share_wireshark_qt.tar.gz
+  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_gtk/built_objects/share_wireshark_gtk.tar.gz
+  mv ${COMMON}/share/share_wireshark_gtk ${COMMON}/share/wireshark
+  cp -rf ${COMMON}/share/share_wireshark_qt/* ${COMMON}/share/wireshark
+  rm -rf ${COMMON}/share/share_wireshark_qt
+fi
 #----------------------------------------------------------
-cp -f /lib64/ld-linux-x86-64.so.2 ${COMMON}/lib64
+if [ "${ARCH}" = "i386" ]; then
+  cp -f /lib/ld-linux.so.2 ${COMMON}/lib32
+else
+  cp -f /lib64/ld-linux-x86-64.so.2 ${COMMON}/lib64
+fi
 cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
 #----------------------------------------------------------
-SRCD="/usr/lib/x86_64-linux-gnu"
-DSTD="${COMMON}/lib/x86_64-linux-gnu"
+if [ "${ARCH}" = "i386" ]; then
+  SRCD="/usr/lib/i386-linux-gnu"
+  DSTD="${COMMON}/lib/i386-linux-gnu"
+else
+  SRCD="/usr/lib/x86_64-linux-gnu"
+  DSTD="${COMMON}/lib/x86_64-linux-gnu"
+fi
 for i in gstreamer1.0 gstreamer-1.0 \
          gdk-pixbuf-2.0 gtk-3.0 gio gvfs qt6 ; do
   cp -rf ${SRCD}/${i} ${DSTD}

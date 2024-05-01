@@ -4,7 +4,7 @@ DISTRO=bookworm
 ROOTFS=/var/lib/cloonix/bulk/${DISTRO}
 DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
 REPO="http://deb.debian.org/debian"
-#REPO="http://127.0.0.1/debian/bookworm"
+REPO="http://127.0.0.1/debian/bookworm"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {

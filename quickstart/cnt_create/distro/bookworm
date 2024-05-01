@@ -1,9 +1,26 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+  else
+    echo param must be i386, if no param, then is amd64
+    exit
+  fi
+else
+  ARCH="amd64"
+fi
+#----------------------------------------------------------------------#
+
+#----------------------------------------------------------------------#
 DISTRO=bookworm
-ROOTFS=/var/lib/cloonix/bulk/${DISTRO}.zip
+if [ "${ARCH}" = "i386" ]; then
+  ROOTFS=/var/lib/cloonix/bulk/${DISTRO}_i386.zip
+else
+  ROOTFS=/var/lib/cloonix/bulk/${DISTRO}.zip
+fi
 REPO="http://deb.debian.org/debian"
-#REPO="http://127.0.0.1/debian/bookworm"
+REPO="http://127.0.0.1/debian/bookworm"
 TMPZIP=/tmp/wkmntzip
 #----------------------------------------------------------------------#
 if [ $UID != 0 ]; then
@@ -22,7 +39,7 @@ mkdir -p ${TMPZIP}
 list_pkt="openssh-client,bash-completion,vim,net-tools,x11-apps"
 debootstrap --no-check-certificate \
             --no-check-gpg \
-            --arch amd64 \
+            --arch ${ARCH} \
             --include=$list_pkt \
             ${DISTRO} \
             ${TMPZIP} ${REPO}

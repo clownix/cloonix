@@ -1,11 +1,9 @@
 #!/bin/bash
 set -e
 
-LIST="fedora39 \
-      centos9  \
-      jammy    \
-      bookworm \
-      trixie"
+LIST="fedora40 \
+      noble    \
+      bookworm"
 
 mkdir -p /var/lib/cloonix/bulk
 

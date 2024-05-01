@@ -177,7 +177,7 @@ char **get_argv_local_xwy(char *name)
   strncpy(nm, name, MAX_NAME_LEN-1);
   snprintf(nemo, MAX_NAME_LEN-1, "%s", get_net_name()); 
   snprintf(title, MAX_PATH_LEN-1, "%s/%s", nemo, nm); 
-  snprintf(config, MAX_PATH_LEN-1, "/usr/libexec/cloonix/common/etc/cloonix.cfg");
+  snprintf(config, MAX_PATH_LEN-1, CLOONIX_CFG);
   snprintf(cmd, MAX_PATH_LEN-1, "/usr/libexec/cloonix/server/cloonix-dtach");
   snprintf(path, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/%s/%s", nemo, DTACH_SOCK, nm);
   if (!get_is_broadway())

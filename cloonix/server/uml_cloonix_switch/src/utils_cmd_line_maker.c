@@ -701,11 +701,13 @@ char *utils_get_cdrom_path_name(t_vm *vm)
 {
   int is_i386 = vm->kvm.vm_config_flags & VM_CONFIG_FLAG_I386;
   if (is_i386)
-    return("/usr/libexec/cloonix/server/insider_agents/insider_agent_i386.iso");
+    return(AGENT_ISO_I386);
   else
-    return("/usr/libexec/cloonix/server/insider_agents/insider_agent_x86_64.iso");
+    return(AGENT_ISO_AMD64);
 }
 /*---------------------------------------------------------------------------*/
+
+
 
 /*****************************************************************************/
 void utils_format_gene(char *start, char *err, char *name, char **argv)

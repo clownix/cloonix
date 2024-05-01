@@ -1,4 +1,21 @@
 #!/bin/bash
+#----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+  else
+    if [ "$1" = "amd64" ]; then
+      ARCH="amd64"
+    else
+      echo ERROR $0 param must be i386 or amd64
+      exit
+    fi
+  fi
+else
+  echo ERROR $0 param must be i386 or amd64
+  exit
+fi
+#----------------------------------------------------------------------#
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -63,8 +80,31 @@ cp -f ${CLIENT}/openssh/cloonix-u2i-scp ${CLIENT}
 cp -f ${CLIENT}/openssh/cloonix-u2i-ssh ${CLIENT}
 rm -rf ${CLIENT}/openssh
 #----------------------------------------------------------
-LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
+cp -f /usr/bin/tilix ${CLIENT}/cloonix-tilix
+cp -f /bin/bash ${CLIENT}
+#----------------------------------------------------------
+for i in "awk" "cat" "chmod" "chown" "cp" "echo" "ps" \
+         "env" "grep" "id" "kill" "ldd" "strace" \
+         "locale" "localedef" "localectl" "xauth" ; do
+  cp -f /usr/bin/${i} ${CLIENT}
+done
+#----------------------------------------------------------
+for i in "ip" "ifconfig" "locale-gen" ; do
+  cp -f /usr/sbin/${i} ${CLIENT}
+done
+#----------------------------------------------------------
+cd ${CLIENT}
+sed -i s"%/bin/sh%/usr/libexec/cloonix/client/bash%" locale-gen
+sed -i s"%localedef%/usr/libexec/cloonix/client/localedef%" locale-gen
+sed -i s'%LOCALEGEN=\(.*\)%LOCALEGEN=/usr/libexec/cloonix/common/etc/locale.gen%' locale-gen
+#----------------------------------------------------------
+if [ "${ARCH}" = "i386" ]; then
+  LDLINUX="/usr/libexec/cloonix/common/lib32/ld-linux.so.2"
+  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/i386-linux-gnu"
+else
+  LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
+fi
 for i in `find ${CLIENT} -maxdepth 1 -type f` ; do
   ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
