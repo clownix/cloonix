@@ -264,22 +264,10 @@ static char *alloc_argv(char *str)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void timer2_after_launch(void *data)
-{
-  gtk_widget_grab_focus(get_main_window());
-  gtk_widget_grab_focus(get_gtkwidget_canvas());
-//  gtk_window_set_accept_focus(GTK_WINDOW(get_main_window()), FALSE);
-  KERR("VIPTODO 2 gtk_widget_grab_focus iiiiiiiiiiii");
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void timer_after_launch(void *data)
 {
   gtk_widget_grab_focus(get_main_window());
   gtk_widget_grab_focus(get_gtkwidget_canvas());
-  KERR("VIPTODO 1 gtk_widget_grab_focus iiiiiiiiiiii");
-//  clownix_timeout_add(50, timer2_after_launch, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
