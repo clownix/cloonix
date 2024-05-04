@@ -40,6 +40,7 @@
 #include "menus.h"
 #include "xml_utils.h"
 #include "layout_x_y.h"
+#include "topo.h"
 
 
 int get_cloonix_rank(void);
@@ -47,6 +48,7 @@ char *get_distant_snf_dir(void);
 char *get_doors_client_addr(void);
 
 GtkWidget *get_main_window(void);
+
 
 void put_top_left_icon(GtkWidget *mainwin);
 
@@ -262,6 +264,26 @@ static char *alloc_argv(char *str)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timer2_after_launch(void *data)
+{
+  gtk_widget_grab_focus(get_main_window());
+  gtk_widget_grab_focus(get_gtkwidget_canvas());
+//  gtk_window_set_accept_focus(GTK_WINDOW(get_main_window()), FALSE);
+  KERR("VIPTODO 2 gtk_widget_grab_focus iiiiiiiiiiii");
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void timer_after_launch(void *data)
+{
+  gtk_widget_grab_focus(get_main_window());
+  gtk_widget_grab_focus(get_gtkwidget_canvas());
+  KERR("VIPTODO 1 gtk_widget_grab_focus iiiiiiiiiiii");
+//  clownix_timeout_add(50, timer2_after_launch, NULL, NULL, NULL);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void launch_new_pid(t_pid_wait *pid_wait)
 {
   int pid;
@@ -306,6 +328,7 @@ static void launch_new_pid(t_pid_wait *pid_wait)
     default:
       KOUT("ERROR %d", pid_wait->type);
     }
+  clownix_timeout_add(40, timer_after_launch, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

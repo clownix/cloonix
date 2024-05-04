@@ -299,68 +299,6 @@ static void create_argv_from_cmd(char *cmd, char **argv)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int get_process_pid(char *cmdpath, char *sock)
-{
-  FILE *fp;
-  char line[MAX_PATH_LEN];
-  char name[MAX_NAME_LEN];
-  char cmd[MAX_PATH_LEN];
-  int pid, result = 0;
-  fp = popen(PS_BIN, "r");
-  if (fp == NULL)
-    KERR("ERROR %s", PS_BIN);
-  else
-    {
-    memset(line, 0, MAX_PATH_LEN);
-    while (fgets(line, MAX_PATH_LEN-1, fp))
-      {
-      if (strstr(line, sock))
-        {
-        if (strstr(line, cmdpath))
-          {
-          if (sscanf(line, "%d %s %400c", &pid, name, cmd))
-            {
-            if (!strncmp(cmd, cmdpath, strlen(cmdpath)))
-              {
-              result = pid;
-              break;
-              }
-            }
-          }
-        }
-      }
-    pclose(fp);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void kill_previous_wireshark_process(char *sock)
-{
-  int pid_wireshark_qt, pid_wireshark_gtk, pid_dumpcap;
-  pid_dumpcap       = get_process_pid(WIRESHARK_DUMPCAP_BIN, sock);
-  pid_wireshark_qt  = get_process_pid(WIRESHARK_QT_BIN,  sock);
-  pid_wireshark_gtk = get_process_pid(WIRESHARK_GTK_BIN, sock);
-  if (pid_wireshark_qt)
-    {
-    kill(pid_wireshark_qt, SIGKILL);
-    KERR("WARNING KILL WIRESHARK_QT %d", pid_wireshark_qt);
-    }
-  if (pid_wireshark_gtk)
-    {
-    kill(pid_wireshark_gtk, SIGKILL);
-    KERR("WARNING KILL WIRESHARK_GTK %d", pid_wireshark_gtk);
-    }
-  if (pid_dumpcap)
-    {
-    kill(pid_dumpcap, SIGKILL);
-    KERR("WARNING KILL WIRESHARK_DUMPCAP_BIN %d", pid_dumpcap);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void sigusr1_child_handler(int dummy)                           
 {                                          
   KERR("WARNING  Parent died, child now exiting\n");    
@@ -415,13 +353,6 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       create_argv_from_cmd(cmd, argv);
       if (!strcmp(argv[0], WIRESHARK_QT_BIN))
         {
-        i = 0;
-        while(argv[i])
-          {
-          if (!strncmp(argv[i],"/var/lib/cloonix",strlen("/var/lib/cloonix")))
-            kill_previous_wireshark_process(argv[i]);
-          i++;
-          }
         execv(argv[0], argv);
         KOUT("ERROR execv");
         }

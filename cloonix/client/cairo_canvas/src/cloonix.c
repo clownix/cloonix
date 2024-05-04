@@ -363,8 +363,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 {
   char title[2*MAX_NAME_LEN];
   char tmp_distant_snf_dir[2*MAX_PATH_LEN];
-  GtkWidget *window, *vbox;
-  GtkWidget *scrolled;
+  GtkWidget *vbox, *scrolled;
   GError *pixerror;
   eth_choice = 0;
   if (strcmp(conf->version, cloonix_conf_info_get_version()))
@@ -391,17 +390,15 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   if (gdk_pixbuf_init_modules("/usr/libexec/cloonix/common/share", &pixerror))
     KERR("ERROR gdk_pixbuf_init_modules");
 
-  window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_accept_focus(GTK_WINDOW(window), FALSE);
+  g_main_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_accept_focus(GTK_WINDOW(g_main_window), FALSE);
 
   if (get_is_broadway())
-    gtk_window_fullscreen (GTK_WINDOW(window));
-
+    gtk_window_fullscreen(GTK_WINDOW(g_main_window));
 
   menu_init();
-  g_main_window = window;
   init_set_main_window_coords();
-  g_signal_connect (G_OBJECT (window), "destroy",
+  g_signal_connect(G_OBJECT(g_main_window), "destroy",
 		      (GCallback) destroy_handler, NULL);
   if (g_i_am_in_cloon)
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", 
@@ -409,15 +406,15 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   else
     snprintf(title, MAX_NAME_LEN, "%s", get_net_name());
   title[MAX_NAME_LEN-1] = 0;
-  gtk_window_set_title (GTK_WINDOW (window), title);
-  gtk_window_set_default_size (GTK_WINDOW (window), WIDTH, HEIGH);
-  put_top_left_icon(window);
-  topo_set_signals(window);
+  gtk_window_set_title(GTK_WINDOW(g_main_window), title);
+  gtk_window_set_default_size(GTK_WINDOW(g_main_window), WIDTH, HEIGH);
+  put_top_left_icon(g_main_window);
+  topo_set_signals(g_main_window);
   scrolled = gtk_scrolled_window_new(NULL, NULL);
   vbox   = topo_canvas();
   gtk_container_add (GTK_CONTAINER(scrolled), vbox);
-  gtk_container_add (GTK_CONTAINER (window), scrolled);
-  gtk_widget_show_all(window);
+  gtk_container_add (GTK_CONTAINER (g_main_window), scrolled);
+  gtk_widget_show_all(g_main_window);
   main_timer_activation();
   if (!get_is_broadway())
     send_layout_event_sub(get_clownix_main_llid(), 0, 1);
@@ -451,11 +448,8 @@ static void init_local_cloonix_bin_path(char *curdir, char *callbin)
     KOUT("%s", path);
   *ptr = 0;
 
-  strncpy(g_cloonix_root_tree, path, MAX_PATH_LEN-1);
-  snprintf(path,2*MAX_PATH_LEN,"%s/client/cloonix-gui",g_cloonix_root_tree);
   path[MAX_PATH_LEN-1] = 0;
-  if (access(path, X_OK))
-    KOUT("%s", path);
+  strncpy(g_cloonix_root_tree, path, MAX_PATH_LEN-1);
 }
 /*--------------------------------------------------------------------------*/
 

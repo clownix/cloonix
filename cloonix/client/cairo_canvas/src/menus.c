@@ -99,7 +99,6 @@ static void display_info(char *title, char *text)
 }
 /*--------------------------------------------------------------------------*/
 
-extern GtkWidget *gtkwidget_canvas;
 
 /****************************************************************************/
 static void menu_hidden(GtkWidget *mn, t_item_ident *pm)

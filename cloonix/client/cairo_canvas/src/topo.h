@@ -20,5 +20,6 @@ void topo_get_save_params(int *on, int *width, int *height,
 void topo_set_window_resize(int width, int height);
 void topo_set_center_scale(int x, int y, int w, int h);
 void topo_zoom_in_out_canvas(int in, int val);
+GtkWidget *get_gtkwidget_canvas(void);
 /*--------------------------------------------------------------------------*/
 

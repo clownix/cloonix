@@ -36,6 +36,7 @@ static int g_timeout_flipflop_freeze;
 static int g_one_eventfull_has_arrived;
 static int glob_eventfull_has_arrived;
 /*--------------------------------------------------------------------------*/
+GtkWidget *get_main_window(void);
 
 typedef struct t_ping_evt
 {
@@ -206,6 +207,15 @@ void timeout_periodic_work(void *data)
 /*****************************************************************************/
 gboolean refresh_request_timeout (gpointer data)
 {
+  static int focus_done = 0;
+  GtkWidget *main_win;
+  focus_done += 1;
+  if (focus_done == 10)
+    {
+    main_win = get_main_window();
+    gtk_window_set_accept_focus(GTK_WINDOW(main_win), TRUE);
+    focus_done = 11;
+    }
   popup_timeout();
   clownix_timer_beat();
   if (g_one_eventfull_has_arrived)

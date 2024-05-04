@@ -279,7 +279,7 @@ static GtkWidget *hidden_visible_check_button(t_bank_item *bi, int is_eth)
     }
   else
     {
-    snprintf(label, MAX_PATH_LEN, bi->name);
+    snprintf(label, MAX_PATH_LEN, "%s", bi->name);
     label[MAX_PATH_LEN-1] = 0;
     }
   check = gtk_check_button_new_with_label(label);

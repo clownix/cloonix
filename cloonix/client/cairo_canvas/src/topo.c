@@ -65,6 +65,12 @@ GtkWidget *gtkwidget_canvas;
 GtkWidget *get_main_window(void);
 static CrPanner *glob_panner;
 
+/****************************************************************************/
+GtkWidget *get_gtkwidget_canvas(void)
+{
+  return gtkwidget_canvas;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void sat_lozange(cairo_t *c, double x0, double y0, double d0)

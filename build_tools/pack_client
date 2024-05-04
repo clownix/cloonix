@@ -84,7 +84,7 @@ cp -f /usr/bin/tilix ${CLIENT}/cloonix-tilix
 cp -f /bin/bash ${CLIENT}
 #----------------------------------------------------------
 for i in "awk" "cat" "chmod" "chown" "cp" "echo" "ps" \
-         "env" "grep" "id" "kill" "ldd" "strace" \
+         "env" "grep" "id" "kill" "ldd" "strace" "ls" \
          "locale" "localedef" "localectl" "xauth" ; do
   cp -f /usr/bin/${i} ${CLIENT}
 done
