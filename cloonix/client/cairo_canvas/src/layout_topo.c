@@ -672,8 +672,7 @@ static void timer_synchro(void *data)
 void layout_send_layout_node(t_layout_node *layout)
 {
   add_layout_node(layout);
-  if (!get_is_broadway())
-    send_layout_node(get_clownix_main_llid(), 8888, layout);
+  send_layout_node(get_clownix_main_llid(), 8888, layout);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -681,8 +680,7 @@ void layout_send_layout_node(t_layout_node *layout)
 void layout_send_layout_lan(t_layout_lan *layout)
 {
   add_layout_lan(layout);
-  if (!get_is_broadway())
-    send_layout_lan(get_clownix_main_llid(), 8888, layout);
+  send_layout_lan(get_clownix_main_llid(), 8888, layout);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -690,8 +688,7 @@ void layout_send_layout_lan(t_layout_lan *layout)
 void layout_send_layout_sat(t_layout_sat *layout)
 {
   add_layout_sat(layout);
-  if (!get_is_broadway())
-    send_layout_sat(get_clownix_main_llid(), 8888, layout);
+  send_layout_sat(get_clownix_main_llid(), 8888, layout);
 }
 /*---------------------------------------------------------------------------*/
 

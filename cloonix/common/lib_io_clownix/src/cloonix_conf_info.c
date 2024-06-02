@@ -40,7 +40,7 @@ static char g_cloonix_tree[MAX_PATH_LEN];
 
 /*****************************************************************************/
 static void alloc_record(char *name, char *ip, uint32_t ipnum, int port, 
-                         int broadway_port, char *passwd, uint32_t udp_ip)
+                         int novnc_port, char *passwd, uint32_t udp_ip)
 {
   if (g_cloonix_nb == MAX_CLOONIX_SERVERS - 1)
     KOUT("%d", g_cloonix_nb);
@@ -48,7 +48,7 @@ static void alloc_record(char *name, char *ip, uint32_t ipnum, int port,
   snprintf(g_name2info[g_cloonix_nb].doors,MAX_NAME_LEN-1,"%s:%d",ip,port);
   g_name2info[g_cloonix_nb].ip = ipnum;
   g_name2info[g_cloonix_nb].port = port;
-  g_name2info[g_cloonix_nb].broadway_port = broadway_port;
+  g_name2info[g_cloonix_nb].novnc_port = novnc_port;
   strncpy(g_name2info[g_cloonix_nb].passwd, passwd, MSG_DIGEST_LEN-1);
   g_name2info[g_cloonix_nb].c2c_udp_ip = udp_ip;
   g_cloonix_nb += 1;
@@ -129,7 +129,7 @@ static int extract_info(char *buf)
   char ip[MAX_NAME_LEN];
   char c2c_udp_ip[MAX_NAME_LEN];
   char passwd[MSG_DIGEST_LEN];
-  int  broadway_port, port, result = -1;
+  int  novnc_port, port, result = -1;
   uint32_t ipnum, udp_ip;
   memset(g_cloonix_tree, 0, MAX_PATH_LEN);
   strncpy(g_cloonix_tree, "/usr/libexec/cloonix", MAX_PATH_LEN);
@@ -149,8 +149,8 @@ static int extract_info(char *buf)
         *ptr_end = 0;
         if (sscanf(ptr_start, 
           "CLOONIX_NET: %s { cloonix_ip %s cloonix_port %d "
-          "broadway_port %d cloonix_passwd %s c2c_udp_ip %s",
-          name, ip, &port, &broadway_port, passwd, c2c_udp_ip) != 6)
+          "novnc_port %d cloonix_passwd %s c2c_udp_ip %s",
+          name, ip, &port, &novnc_port, passwd, c2c_udp_ip) != 6)
           KOUT("%s", ptr_start);
         ptr_start = ptr_end + 1;
         if (ip_string_to_int(&ipnum, ip))
@@ -159,9 +159,9 @@ static int extract_info(char *buf)
           KOUT("Bad c2c_udp_ip in:\n%s", ptr_start);
         if ((port < 1) || (port > 0xFFFF))
           KOUT("Bad port in:\n%s", ptr_start);
-        if ((broadway_port < 1) || (broadway_port > 0xFFFF))
-          KOUT("Bad broadway_port in:\n%s", ptr_start);
-        alloc_record(name, ip, ipnum, port, broadway_port, passwd, udp_ip);
+        if ((novnc_port < 1) || (novnc_port > 0xFFFF))
+          KOUT("Bad novnc_port in:\n%s", ptr_start);
+        alloc_record(name, ip, ipnum, port, novnc_port, passwd, udp_ip);
         sprintf(g_all_names + strlen(g_all_names), "%s, ", name);
         result = 0;
         }

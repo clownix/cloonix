@@ -36,12 +36,12 @@
 #include "utils_cmd_line_maker.h"
 #include "qmp.h"
 #include "xwy.h"
+#include "novnc.h"
 #include "ovs.h"
 #include "llid_trace.h"
 #include "doorways_mngt.h"
 #include "doors_rpc.h"
 #include "suid_power.h"
-#include "broadway.h"
 
 #define MAX_CALLBACK_END 50
 
@@ -171,10 +171,6 @@ void last_action_self_destruction(void *data)
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_a2b_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_runbroadway_config_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_runbroadway_dir(), err))
-    event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_run_config_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_run_dir(), err))
@@ -242,7 +238,7 @@ void auto_self_destruction(int llid, int tid)
 {
   t_llid_tid *llid_tid = (t_llid_tid *) clownix_malloc(sizeof(t_llid_tid), 11);
   glob_req_self_destruction = 1;
-  broadway_exit();
+  end_novnc(1);
   llid_tid->llid = llid;
   llid_tid->tid = tid;
   clownix_timeout_add(10, action_self_destruction, (void *)llid_tid, 

@@ -444,7 +444,7 @@ void mdl_read_fd(void *ptr, int fd, t_rx_msg_cb rx_cb, t_rx_err_cb err_cb)
         }
       }
     else
-     {
+      {
       mdl->rxoffst += len;
       do_cb(mdl, ptr, 0, fd, rx_cb, err_cb);
       }

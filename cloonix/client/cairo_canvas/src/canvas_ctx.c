@@ -364,13 +364,10 @@ static void rad_stop_cb(GtkWidget *check, gpointer data)
   if (!check)
     KOUT(" ");
   request_move_stop_go((int)val);
-  if (!get_is_broadway())
-    {
-    if (val)
-      send_layout_move_on_off(get_clownix_main_llid(), 8888, 0);
-    else
-      send_layout_move_on_off(get_clownix_main_llid(), 8888, 1);
-    }
+  if (val)
+    send_layout_move_on_off(get_clownix_main_llid(), 8888, 0);
+  else
+    send_layout_move_on_off(get_clownix_main_llid(), 8888, 1);
 }
 /*--------------------------------------------------------------------------*/
 

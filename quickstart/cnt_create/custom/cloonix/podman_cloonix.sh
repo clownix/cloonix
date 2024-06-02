@@ -6,10 +6,9 @@ NET=nemo
 VMNAME=buz
 QCOW2="podman_cloonix.qcow2"
 REPO="http://deb.debian.org/debian"
-REPO="http://172.17.0.2/debian/bookworm"
-BOOKWORM="/var/lib/cloonix/bulk/bookworm.qcow2"
+BOOKWORM="/var/lib/cloonix/bulk/trixie_amd64.qcow2"
 BUNDLE_PATH="/home/perrier"
-BUNDLE="cloonix-bundle-37-00-amd64"
+BUNDLE="cloonix-bundle-38-00-amd64"
 #######################################################################
 set +e
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -34,7 +33,7 @@ while ! cloonix_ssh ${NET} ${VMNAME} "echo"; do
 done
 #-----------------------------------------------------------------------#
 cloonix_ssh ${NET} ${VMNAME} "cat > /etc/apt/sources.list << EOF
-deb [ trusted=yes allow-insecure=yes ] ${REPO} bookworm main contrib non-free non-free-firmware
+deb [ trusted=yes allow-insecure=yes ] ${REPO} trixie main contrib non-free non-free-firmware
 EOF"
 #-----------------------------------------------------------------------#
 cloonix_cli ${NET} add nat nat
@@ -72,18 +71,20 @@ cloonix_ssh ${NET} ${VMNAME} "sed -i s\"/#PermitRootLogin prohibit-password/Perm
 cloonix_ssh ${NET} ${VMNAME} "sed -i s\"/#StrictModes yes/StrictModes no/\" /etc/ssh/sshd_config"
 cloonix_ssh ${NET} ${VMNAME} "sed -i s\"/#IgnoreUserKnownHosts no/IgnoreUserKnownHosts yes/\" /etc/ssh/sshd_config"
 cloonix_ssh ${NET} ${VMNAME} "systemctl enable rsyslog"
-cloonix_ssh ${NET} ${VMNAME} "systemctl enable sshd"
+cloonix_ssh ${NET} ${VMNAME} "systemctl enable ssh"
 #-----------------------------------------------------------------------#
 sleep 5
 cloonix_ssh ${NET} ${VMNAME} "sync"
 sleep 1
 cloonix_ssh ${NET} ${VMNAME} "sync"
 sleep 1
+set +e
 cloonix_ssh ${NET} ${VMNAME} "poweroff"
 sleep 5
-set +e
 cloonix_cli ${NET} kil
 sleep 1
+cd ../..
+./podman_transform.sh podman_cloonix.zip
 echo END ################################################"
 #-----------------------------------------------------------------------#
 

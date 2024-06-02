@@ -1,0 +1,4 @@
+#!/bin/bash
+HERE=`pwd`
+make clean
+rm -f ${HERE}/cloonix-wm2

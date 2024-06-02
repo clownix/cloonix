@@ -66,6 +66,7 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
             dtach \
             spice_lib_server \
             xwy \
+            wm2 \
             ovs \
             doorways \
             suid_power \

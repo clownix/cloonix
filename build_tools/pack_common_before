@@ -54,8 +54,94 @@ mkdir -p ${COMMON}/share/dconf
 mkdir -p ${COMMON}/share/locale
 mkdir -p ${COMMON}/share/i18n/charmaps
 mkdir -p ${COMMON}/share/i18n/locales
-mkdir -p ${COMMON}/share/X11/locale
 mkdir -p ${COMMON}/share/glib-2.0/schemas
+mkdir -p ${COMMON}/share/X11/locale
+mkdir -p ${COMMON}/lib/python3/dist-packages
+mkdir -p ${COMMON}/lib/python3.11
+
+#  cp /usr/lib/python3/dist-packages/distutils-precedence.pth ${COMMON}/lib/python3/dist-packages
+for i in "websockify" \
+         "websockify-0.10.0.egg-info" \
+         "_distutils_hack" \
+         "__pycache__" ; do
+  cp -r /usr/lib/python3/dist-packages/${i} ${COMMON}/lib/python3/dist-packages
+done
+
+
+for i in "lib2to3" \
+         "lib-dynload" \
+         "encodings" \
+         "re" \
+         "collections" \
+         "importlib" \
+         "urllib" \
+         "xml" \
+         "email" \
+         "logging" \
+         "http" \
+         "html" \
+         "multiprocessing" ; do
+  cp -r /usr/lib/python3.11/${i} ${COMMON}/lib/python3.11
+done
+
+
+for i in "enum.py" \
+         "types.py" \
+         "operator.py" \
+         "functools.py" \
+         "keyword.py" \
+         "reprlib.py" \
+         "copyreg.py" \
+         "zipfile.py" \
+         "warnings.py" \
+         "contextlib.py" \
+         "threading.py" \
+         "_weakrefset.py" \
+         "shutil.py" \
+         "fnmatch.py" \
+         "struct.py" \
+         "pathlib.py" \
+         "ipaddress.py" \
+         "pkgutil.py" \
+         "weakref.py" \
+         "typing.py" \
+         "platform.py" \
+         "plistlib.py" \
+         "datetime.py" \
+         "string.py" \
+         "base64.py" \
+         "quopri.py" \
+         "random.py" \
+         "bisect.py" \
+         "socket.py" \
+         "selectors.py" \
+         "calendar.py" \
+         "locale.py" \
+         "tempfile.py" \
+         "textwrap.py" \
+         "inspect.py" \
+         "ast.py" \
+         "dis.py" \
+         "opcode.py" \
+         "linecache.py" \
+         "tokenize.py" \
+         "token.py" \
+         "subprocess.py" \
+         "signal.py" \
+         "csv.py" \
+         "ssl.py" \
+         "hashlib.py" \
+         "optparse.py" \
+         "traceback.py" \
+         "socketserver.py" \
+         "copy.py" \
+         "mimetypes.py" \
+         "pickle.py" \
+         "_compat_pickle.py" \
+         "stringprep.py" \
+         "codecs.py" ; do
+  cp /usr/lib/python3.11/${i} ${COMMON}/lib/python3.11
+done
 #----------------------------------------------------------
 FROM_HERE=`pwd`
 tar --directory=/tmp -xf ${TARGZ_STORE}/patchelf_*.tar.gz
@@ -87,33 +173,30 @@ cat > ${COMMON}/etc/group << EOF
 audio:x:29:pulse
 EOF
 #----------------------------------------------------------
-if [ "${ARCH}" = "i386" ]; then
-  cp -f /usr/lib/i386-linux-gnu/libsecret-1.so.0 ${COMMON}/lib/i386-linux-gnu
-  cp -f /usr/lib/i386-linux-gnu/libvte-2.91.so.0 ${COMMON}/lib/i386-linux-gnu
-  cp -f /usr/lib/i386-linux-gnu/libibus-1.0.so.5 ${COMMON}/lib/i386-linux-gnu
-else
-  cp -f /usr/lib/x86_64-linux-gnu/libsecret-1.so.0 ${COMMON}/lib/x86_64-linux-gnu
-  cp -f /usr/lib/x86_64-linux-gnu/libvte-2.91.so.0 ${COMMON}/lib/x86_64-linux-gnu
-  cp -f /usr/lib/x86_64-linux-gnu/libibus-1.0.so.5 ${COMMON}/lib/x86_64-linux-gnu
-fi
 cp -f ${TARGZ_STORE}/dconf/user ${COMMON}/share/dconf
 #----------------------------------------------------------
 cp -Lrf /usr/lib/locale/* ${COMMON}/lib/locale
 #----------------------------------------------------------
 cd $FROM_HERE
-for i in icons mime themes fonts gtk-3.0 \
-         gstreamer-1.0 tilix gvfs alsa ; do
+for i in "icons" "mime" "themes" "fonts" "gtk-3.0" \
+         "gstreamer-1.0" "alsa" "novnc" ; do
    cp -Lrf /usr/share/${i} ${COMMON}/share
 done
-mkdir -p ${COMMON}/share/terminfo 
-cp -Lrf /lib/terminfo/x ${COMMON}/share/terminfo
-cp -Lrf /lib/terminfo/r ${COMMON}/share/terminfo
-for i in en_GB en locale.alias ; do
+for i in "en_GB" "en" "locale.alias" ; do
   cp -Lrf /usr/share/locale/${i} ${COMMON}/share/locale
 done
+
+#cp -Lrf /usr/share/X11 ${COMMON}/share
+#cp -Lrf /etc/X11 ${COMMON}/etc
+
+
 cp -Lrf /usr/share/X11/locale/en_US.UTF-8 ${COMMON}/share/X11/locale
 cp -Lrf /usr/share/X11/locale/C ${COMMON}/share/X11/locale
 cp -Lrf /usr/share/X11/locale/locale.dir ${COMMON}/share/X11/locale
+cp -Lrf /usr/share/X11/xkb ${COMMON}/share/X11
+cp -f /usr/share/X11/rgb.txt ${COMMON}/share/X11
+
+
 cp -f /usr/share/i18n/charmaps/UTF-8.gz ${COMMON}/share/i18n/charmaps
 for i in en_US en_GB i18n i18n_ctype iso14651_t1 translit_* ; do
   cp -f /usr/share/i18n/locales/${i} ${COMMON}/share/i18n/locales
@@ -125,15 +208,11 @@ gunzip UTF-8.gz
 cd $FROM_HERE
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
-  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_qt/built_objects_i386/share_wireshark_qt.tar.gz
-  mv ${COMMON}/share/share_wireshark_qt ${COMMON}/share/wireshark
+  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark/built_objects_i386/share_wireshark.tar.gz
 else
-  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_qt/built_objects_amd64/share_wireshark_qt.tar.gz
-  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark_gtk/built_objects/share_wireshark_gtk.tar.gz
-  mv ${COMMON}/share/share_wireshark_gtk ${COMMON}/share/wireshark
-  cp -rf ${COMMON}/share/share_wireshark_qt/* ${COMMON}/share/wireshark
-  rm -rf ${COMMON}/share/share_wireshark_qt
+  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark/built_objects_amd64/share_wireshark.tar.gz
 fi
+mv ${COMMON}/share/share_wireshark ${COMMON}/share/wireshark
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
   cp -f /lib/ld-linux.so.2 ${COMMON}/lib32
@@ -149,8 +228,9 @@ else
   SRCD="/usr/lib/x86_64-linux-gnu"
   DSTD="${COMMON}/lib/x86_64-linux-gnu"
 fi
-for i in gstreamer1.0 gstreamer-1.0 \
-         gdk-pixbuf-2.0 gtk-3.0 gio gvfs qt6 ; do
+for i in "gstreamer1.0" "gstreamer-1.0" \
+         "gdk-pixbuf-2.0" "gtk-3.0" "gio" \
+         "qt6" "pipewire-0.3" ; do
   cp -rf ${SRCD}/${i} ${DSTD}
 done
 mkdir -p ${DSTD}/gconv

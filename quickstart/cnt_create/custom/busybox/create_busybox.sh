@@ -17,9 +17,8 @@ HERE=`pwd`
 #----------------------------------------------------------------------#
 NET=nemo
 VMNAME=buz
-DISTRO=bookworm
+DISTRO=trixie
 REPO="http://deb.debian.org/debian"
-REPO="http://172.17.0.2/debian/${DISTRO}"
 #######################################################################
 set +e
 if [ ! -e /var/lib/cloonix/bulk/${DISTRO}_${ARCH}.qcow2 ]; then

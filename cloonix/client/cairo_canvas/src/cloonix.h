@@ -34,8 +34,6 @@ char *get_distant_cloonix_tree(void);
 void work_dir_resp(int tid, t_topo_clc *conf);
 char *get_spice_vm_path(int vm_id);
 
-int get_is_broadway(void);
-
 char *get_cmd_path(void);
 int inside_cloon(char **name);
 

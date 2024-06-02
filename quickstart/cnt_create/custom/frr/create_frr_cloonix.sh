@@ -6,10 +6,9 @@ NET=nemo
 VMNAME=buz
 QCOW2="podman_frr_cloonix.qcow2"
 REPO="http://deb.debian.org/debian"
-REPO="http://172.17.0.2/debian/bookworm"
-BOOKWORM="/var/lib/cloonix/bulk/bookworm.qcow2"
+BOOKWORM="/var/lib/cloonix/bulk/trixie_amd64.qcow2"
 BUNDLE_PATH="/home/perrier"
-BUNDLE="cloonix-bundle-37-00-amd64"
+BUNDLE="cloonix-bundle-38-00-amd64"
 #######################################################################
 if [ ! -e ${BOOKWORM} ]; then
   echo NOT FOUND: ${BOOKWORM}
@@ -43,7 +42,7 @@ while ! cloonix_ssh ${NET} ${VMNAME} "echo"; do
 done
 #-----------------------------------------------------------------------#
 cloonix_ssh ${NET} ${VMNAME} "cat > /etc/apt/sources.list << EOF
-deb [ trusted=yes allow-insecure=yes ] ${REPO} bookworm main contrib non-free non-free-firmware
+deb [ trusted=yes allow-insecure=yes ] ${REPO} trixie main contrib non-free non-free-firmware
 EOF"
 #-----------------------------------------------------------------------#
 cloonix_cli ${NET} add nat nat

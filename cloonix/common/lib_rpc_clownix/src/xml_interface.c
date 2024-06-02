@@ -44,7 +44,7 @@ enum
   bnd_c2c_peer_ping,
 
   bnd_color_item,
-  bnd_broadway_on_off,
+  bnd_novnc_on_off,
 
   bnd_hop_get_list,
   bnd_hop_list,
@@ -2166,10 +2166,10 @@ void send_color_item(int llid, int tid, char *name, int color)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void send_broadway_on_off(int llid, int tid, int on)
+void send_novnc_on_off(int llid, int tid, int on)
 {
   int len = 0;
-  len = sprintf(sndbuf, BROADWAY_ON_OFF, tid, on);
+  len = sprintf(sndbuf, NOVNC_ON_OFF, tid, on);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -2596,10 +2596,10 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       recv_color_item(llid, tid, name, num);
       break;
 
-    case bnd_broadway_on_off:
-      if (sscanf(msg, BROADWAY_ON_OFF, &tid, &num) != 2)
+    case bnd_novnc_on_off:
+      if (sscanf(msg, NOVNC_ON_OFF, &tid, &num) != 2)
         KOUT("%s", msg);
-      recv_broadway_on_off(llid, tid, num);
+      recv_novnc_on_off(llid, tid, num);
       break;
 
     case bnd_tap_add:
@@ -2829,7 +2829,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(C2C_PING, bound_list[bnd_c2c_peer_ping]);
 
   extract_boundary(COLOR_ITEM, bound_list[bnd_color_item]);
-  extract_boundary(BROADWAY_ON_OFF, bound_list[bnd_broadway_on_off]);
+  extract_boundary(NOVNC_ON_OFF, bound_list[bnd_novnc_on_off]);
 
   extract_boundary(NAT_ADD, bound_list[bnd_nat_add]);
   extract_boundary(PHY_ADD, bound_list[bnd_phy_add]);

@@ -54,6 +54,7 @@
 #include "doorways_mngt.h"
 #include "doorways_sock.h"
 #include "xwy.h"
+#include "novnc.h"
 #include "hop_event.h"
 #include "cloonix_conf_info.h"
 #include "qmp_dialog.h"
@@ -69,7 +70,6 @@
 #include "cnt.h"
 #include "mactopo.h"
 #include "crun.h"
-#include "broadway.h"
 
 
 static t_topo_clc g_clc;
@@ -84,12 +84,12 @@ static int g_machine_is_kvm_able;
 static char g_config_path[MAX_PATH_LEN];
 static int g_conf_rank;
 
-static char g_ascii_broadway_port[MAX_NAME_LEN];
+static char g_ascii_novnc_port[MAX_NAME_LEN];
 
 /*****************************************************************************/
-char *get_ascii_broadway_port(void)
+char *get_ascii_novnc_port(void)
 {
-  return g_ascii_broadway_port;
+  return g_ascii_novnc_port;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -349,7 +349,7 @@ static void launching(void)
   sprintf(clownlock, "%s/cloonix_lock", cfg_get_root_work());
   check_for_another_instance(clownlock, 1);
   init_xwy(cfg_get_cloonix_name());
-  broadway_init();
+  init_novnc(cfg_get_cloonix_name(),get_conf_rank(),get_ascii_novnc_port());
   clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -377,7 +377,7 @@ static t_topo_clc *get_parsed_config(char *name)
     conf->network[MAX_NAME_LEN-1] = 0;
     conf->server_port = cloonix_conf->port; 
     strcpy(conf->bin_dir, "/usr/libexec/cloonix");
-    snprintf(g_ascii_broadway_port, MAX_NAME_LEN-1, "%d", cloonix_conf->broadway_port);
+    snprintf(g_ascii_novnc_port, MAX_NAME_LEN-1, "%d", cloonix_conf->novnc_port);
     g_cloonix_conf_info = cloonix_conf;
     }
   return conf;
@@ -473,7 +473,7 @@ int main (int argc, char *argv[])
     KOUT(" ");
   g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
 
-  memset(g_ascii_broadway_port, 0, MAX_NAME_LEN);
+  memset(g_ascii_novnc_port, 0, MAX_NAME_LEN);
   job_for_select_init();
   utils_init();
   recv_init();

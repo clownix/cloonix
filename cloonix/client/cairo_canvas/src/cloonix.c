@@ -82,16 +82,6 @@ static char g_cloonix_root_tree[MAX_PATH_LEN];
 static char g_distant_snf_dir[MAX_PATH_LEN];
 static char g_password[MSG_DIGEST_LEN];
 static t_cloonix_conf_info *g_cloonix_conf_info;
-
-static int g_is_broadway;
-
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int get_is_broadway(void)
-{
-  return g_is_broadway;
-}
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -166,7 +156,6 @@ char **get_argv_local_xwy(char *name)
   static char nemo[MAX_NAME_LEN];
   static char *argv[]={URXVT_BIN, "-T", title, "-e", XWYCLI_BIN, config,
                        nemo, "-cmd", cmd, "-a", path, NULL}; 
-  static char *argvtilix[]={TILIX_BIN,"-t",title,"-e",cmd,"-a",path,NULL};
   char **ptr_argv;
   memset(config, 0, MAX_PATH_LEN);
   memset(cmd, 0, MAX_PATH_LEN);
@@ -180,10 +169,7 @@ char **get_argv_local_xwy(char *name)
   snprintf(config, MAX_PATH_LEN-1, CLOONIX_CFG);
   snprintf(cmd, MAX_PATH_LEN-1, "/usr/libexec/cloonix/server/cloonix-dtach");
   snprintf(path, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/%s/%s", nemo, DTACH_SOCK, nm);
-  if (!get_is_broadway())
-    ptr_argv = argv;
-  else
-    ptr_argv = argvtilix;
+  ptr_argv = argv;
   return (ptr_argv);
 }
 /*--------------------------------------------------------------------------*/
@@ -372,8 +358,8 @@ void work_dir_resp(int tid, t_topo_clc *conf)
            cloonix_conf_info_get_version(), conf->version);
     }
 
-  if (!get_is_broadway())
-    daemon(0,1);
+
+  daemon(0,1);
 
   move_init();
   popup_init();
@@ -384,17 +370,11 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   tmp_distant_snf_dir[MAX_PATH_LEN-1] = 0;
   strcpy(g_distant_snf_dir, tmp_distant_snf_dir);
 
-  if (gtk_init_check(NULL, NULL) == FALSE)
-    KOUT("Error in gtk_init_check function");
-
   if (gdk_pixbuf_init_modules("/usr/libexec/cloonix/common/share", &pixerror))
     KERR("ERROR gdk_pixbuf_init_modules");
 
   g_main_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_accept_focus(GTK_WINDOW(g_main_window), FALSE);
-
-  if (get_is_broadway())
-    gtk_window_fullscreen(GTK_WINDOW(g_main_window));
 
   menu_init();
   init_set_main_window_coords();
@@ -416,8 +396,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
   gtk_container_add (GTK_CONTAINER (g_main_window), scrolled);
   gtk_widget_show_all(g_main_window);
   main_timer_activation();
-  if (!get_is_broadway())
-    send_layout_event_sub(get_clownix_main_llid(), 0, 1);
+  send_layout_event_sub(get_clownix_main_llid(), 0, 1);
   glib_prepare_rx_tx(get_clownix_main_llid());
   interface_topo_subscribe();
 }
@@ -473,6 +452,9 @@ int main(int argc, char *argv[])
     printf("\n\n%s\n\n", cloonix_conf_info_get_names());
     exit(1);
     }
+  signal(SIGPIPE,SIG_IGN);
+  if (gtk_init_check(NULL, NULL) == FALSE)
+    KOUT("Error in gtk_init_check first function");
   g_cloonix_conf_info = cloonix_cnf_info_get(argv[2], &g_cloonix_rank);
   if (!g_cloonix_conf_info)
     {
@@ -485,15 +467,8 @@ int main(int argc, char *argv[])
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
   init_local_cloonix_bin_path(g_current_directory, argv[0]); 
-  if((getenv("GDK_BACKEND")) && (!strcmp(getenv("GDK_BACKEND"), "broadway")))
-    g_is_broadway = 1;
-  else
-    {
-    g_is_broadway = 0;
-    if (!getenv("DISPLAY"))
-      KERR("ERROR NO DISPLAY FOR A SOFTWARE GUI");
-    }
-
+  if (!getenv("DISPLAY"))
+    KERR("ERROR NO DISPLAY FOR A SOFTWARE GUI");
   memset(g_doors_client_addr, 0, MAX_PATH_LEN);
   strncpy(g_doors_client_addr, g_cloonix_conf_info->doors, MAX_PATH_LEN-1);
   printf("CONNECT TO UNIX SERVER: %s\n", g_doors_client_addr);
@@ -504,10 +479,7 @@ int main(int argc, char *argv[])
   client_get_path(0, work_dir_resp);
   printf("CONNECTED\n");
   layout_topo_init();
-  if (get_is_broadway())
-    request_move_stop_go(0);
-  else
-    request_move_stop_go(1);
+  request_move_stop_go(1);
   bdplot_init();
   clownix_timeout_add(10, timeout_periodic_work, NULL, NULL, NULL);
   gtk_main();

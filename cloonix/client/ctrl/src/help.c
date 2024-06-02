@@ -62,11 +62,11 @@ void help_color_kvm(char *line)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void help_broadway_on_off(char *line)
+void help_novnc_on_off(char *line)
 {
   printf("\n\n\n%s  on\n", line);
   printf("\n\n\n%s  off\n", line);
-  printf("\nBroadway for web access\n\n\n");
+  printf("\nNovnc for web access\n\n\n");
 }
 /*---------------------------------------------------------------------------*/
 

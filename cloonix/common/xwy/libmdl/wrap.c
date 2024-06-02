@@ -730,7 +730,7 @@ struct epoll_event *wrap_epoll_event_alloc(int epfd, int fd, int id)
   epev->events = 0;
   epev->data.fd = fd;
   if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, epev))
-    KOUT("%d", id);
+    KOUT("ERROR %d %s", id, strerror(errno));
   return(epev);
 }
 /*--------------------------------------------------------------------------*/
@@ -750,9 +750,9 @@ void wrap_nonblock(int fd)
   int flags;
   flags = fcntl(fd, F_GETFL);
   if (flags < 0)
-    KOUT(" ");
+    KOUT("ERROR %s", strerror(errno));
   if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)
-    KOUT(" ");
+    KOUT("ERROR %s", strerror(errno));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -762,7 +762,7 @@ void wrap_nonnonblock(int fd)
   int flags = fcntl(fd, F_GETFL, 0);
   flags &= ~O_NONBLOCK;
   if (fcntl(fd, F_SETFL, flags) == -1)
-    KOUT(" ");
+    KOUT("ERROR %s", strerror(errno));
 }
 /*---------------------------------------------------------------------------*/
 

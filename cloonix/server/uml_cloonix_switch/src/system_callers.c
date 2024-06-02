@@ -264,7 +264,6 @@ void mk_endp_dir(void)
   char path[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
   my_mkdir(utils_get_run_dir(), 1);
-  my_mkdir(utils_get_runbroadway_dir(), 1);
   my_mkdir(utils_get_crun_dir(), 1);
   my_mkdir(utils_get_log_dir(), 1);
   my_mkdir(utils_get_snf_pcap_dir(), 1);
@@ -272,28 +271,7 @@ void mk_endp_dir(void)
   my_mkdir(utils_get_nat_dir(), 1);
   my_mkdir(utils_get_a2b_dir(), 1);
   my_mkdir(utils_get_run_config_dir(), 1);
-  my_mkdir(utils_get_runbroadway_config_dir(), 1);
-
   memset(cmd, 0, 2*MAX_PATH_LEN);
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/dconf", utils_get_runbroadway_config_dir());
-  my_mkdir(path, 1);
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "/usr/libexec/cloonix/common/share/dconf");
-  snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s/user %s/dconf",
-           path, utils_get_runbroadway_config_dir()); 
-  system(cmd);
-
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s/wireshark", utils_get_runbroadway_config_dir());
-  my_mkdir(path, 1);
-  memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,
-  "/usr/libexec/cloonix/common/share/wireshark/profiles/Classic");
-  snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s/colorfilters %s/wireshark",
-           path, utils_get_runbroadway_config_dir()); 
-  system(cmd);
-
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1, "%s/wireshark", utils_get_run_config_dir());
   my_mkdir(path, 1);

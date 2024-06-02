@@ -13,10 +13,12 @@ fi
 #----------------------------------------------------------------------#
 HERE=`pwd`
 DISTRO=bookworm
+DISTRO=trixie
 NET=nemo
 NAME=dev
 BULK="/var/lib/cloonix/bulk"
 REPO="http://172.17.0.2/debian/bookworm"
+REPO="http://deb.debian.org/debian"
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
 if [ "x$is_started" == "x" ]; then
@@ -74,7 +76,6 @@ cloonix_ssh ${NET} ${NAME} "apt-get -y install \
                       libgstreamer-plugins-bad1.0-dev \
                       gstreamer1.0-plugins-bad-apps \
                       gstreamer1.0-plugins-base-apps \
-                      gstreamer1.0-libav \
                       gstreamer1.0-plugins-ugly \
                       gstreamer1.0-tools \
                       liblz4-dev libpcap-dev libsasl2-dev \
@@ -94,9 +95,17 @@ cloonix_ssh ${NET} ${NAME} "apt-get -y install \
                       libsbc-dev liblua5.2-dev libnl-cli-3-dev \
                       libparse-yapp-perl libsnappy-dev libzstd-dev \
                       libspandsp-dev libxml2-dev libminizip-dev \
-                      perl xsltproc ccache doxygen bison \
-                      ncurses-base strace tilix libsecret-1-0 \
-                      gvfs-libs libibus-1.0-5 gcc-11-multilib gdb"
+                      perl xsltproc ccache doxygen bison gdb \
+                      ncurses-base strace gcc-11-multilib \
+                      x11vnc python3-websockify novnc \
+                      x11-xserver-utils libxmu-dev \
+                      x11-xkb-utils x11proto-dev \
+                      libxshmfence-dev libbsd-dev libxkbfile-dev \
+                      libxfont-dev libxcvt-dev libdecor-0-dev \
+                      libei-dev liboeffis-dev libaudit-dev \
+                      mesa-common-dev libpipewire-0.3-dev \
+                      libpipewire-0.3-modules \
+                      pipewire-pulse"
 
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"

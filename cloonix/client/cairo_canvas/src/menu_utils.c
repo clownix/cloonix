@@ -544,6 +544,7 @@ static void start_qemu_spice(char *name, int vm_id)
 
 
 /****************************************************************************/
+/*
 static int get_process_pid(char *cmdpath, char *sock)
 {
   FILE *fp;
@@ -578,29 +579,27 @@ static int get_process_pid(char *cmdpath, char *sock)
     }
   return result;
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+/*
 static void kill_previous_wireshark_process(char *sock)
 { 
-  int pid_wireshark_qt, pid_wireshark_gtk, pid_dumpcap;
-  pid_dumpcap       = get_process_pid(WIRESHARK_DUMPCAP_BIN, sock);
-  pid_wireshark_qt  = get_process_pid(WIRESHARK_QT_BIN,  sock);
-  pid_wireshark_gtk = get_process_pid(WIRESHARK_GTK_BIN, sock);
-  if (pid_wireshark_qt)
+  int pid_wireshark, pid_dumpcap;
+  pid_dumpcap       = get_process_pid(DUMPCAP_BIN, sock);
+  pid_wireshark  = get_process_pid(WIRESHARK_BIN,  sock);
+  if (pid_wireshark)
     {
-    kill(pid_wireshark_qt, SIGKILL);
-    KERR("WARNING KILL WIRESHARK_QT %d", pid_wireshark_qt);
-    }
-  if (pid_wireshark_gtk)
-    {
-    kill(pid_wireshark_gtk, SIGKILL);
+    kill(pid_wireshark, SIGKILL);
+    KERR("WARNING KILL WIRESHARK %d", pid_wireshark);
     }
   if (pid_dumpcap)
     {
     kill(pid_dumpcap, SIGKILL);
     }
 }     
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -620,37 +619,19 @@ int start_wireshark(char *vm_name, int num)
     memset(snf, 0, 2*MAX_PATH_LEN);
     snprintf(snf, 2*MAX_PATH_LEN, "/var/lib/cloonix/%s/snf/%s_%d",
              get_net_name(), vm_name, num);
-
-    if (get_is_broadway())
-      {
-      kill_previous_wireshark_process(snf);
-      argv[0] = WIRESHARK_GTK_BIN;
-      argv[1] = "-o";
-      argv[2] = "capture.no_interface_load:TRUE";
-      argv[3] = "-o";
-      argv[4] = "gui.ask_unsaved:FALSE";
-      argv[5] = "-k";
-      argv[6] = "-i";
-      argv[7] = snf;
-      argv[8] = NULL;
-      }
-    else
-      {
-      argv[0] = xwycli;
-      argv[1] = cnf;
-      argv[2] = net;
-      argv[3] = "-dae";
-      argv[4] = WIRESHARK_QT_BIN;
-      argv[5] = "-o";
-      argv[6] = "capture.no_interface_load:TRUE";
-      argv[7] = "-o";
-      argv[8] = "gui.ask_unsaved:FALSE";
-      argv[9] = "-k";
-      argv[10] = "-i";
-      argv[11] = snf;
-      argv[12] = NULL;
-      }
-
+    argv[0] = xwycli;
+    argv[1] = cnf;
+    argv[2] = net;
+    argv[3] = "-dae";
+    argv[4] = WIRESHARK_BIN;
+    argv[5] = "-o";
+    argv[6] = "capture.no_interface_load:TRUE";
+    argv[7] = "-o";
+    argv[8] = "gui.ask_unsaved:FALSE";
+    argv[9] = "-k";
+    argv[10] = "-i";
+    argv[11] = snf;
+    argv[12] = NULL;
     if (check_before_start_launch(argv))
       {
       launch_pid_wait(type_pid_wireshark, vm_name, num, argv);
@@ -719,14 +700,9 @@ static char **get_argv_crun_screen_console(char *name)
   static char nm[MAX_NAME_LEN];
   static char title[MAX_PATH_LEN];
   static char nemo[MAX_NAME_LEN];
-
   static char *argv[]={URXVT_BIN, "-T", title, "-e", XWYCLI_BIN,
                        CLOONIX_CFG, nemo, "-crun", cmd, NULL};
-
-  static char *argvtilix[]={TILIX_BIN, "-t", title, "-e", cmd, NULL};
-
   char **ptr_argv;
-
   memset(cmd, 0, 2*MAX_PATH_LEN);
   memset(nm, 0, MAX_NAME_LEN);
   memset(title, 0, MAX_PATH_LEN);
@@ -739,10 +715,7 @@ static char **get_argv_crun_screen_console(char *name)
            "--log=/var/lib/cloonix/%s/log/debug_crun.log "
            "--root=/var/lib/cloonix/%s/crun/ exec %s /bin/bash",
            nemo, nemo, nm);
-  if (!get_is_broadway())
-    ptr_argv = argv;
-  else
-    ptr_argv = argvtilix;
+  ptr_argv = argv;
   return (ptr_argv);
 }
 /*--------------------------------------------------------------------------*/

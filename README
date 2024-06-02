@@ -1,5 +1,5 @@
 ==============================================================================
-NEW: Use of broadway to have a web gui, very fresh code, could be faulty:)
+NEW: Use of novnc to have a web gui
 ==============================================================================
 GENERAL:
 --------
@@ -169,15 +169,13 @@ FRR Ospf has played its routing role and the path is found.
 -----------------------------------------------------------------------------
 
 ==============================================================================
-BROADWAYD
------------------------------------------------------------------------------
-This server is launched automaticaly on the port named broadway_port in the
-file "/usr/libexec/cloonix/common/etc/cloonix.cfg".
+DISTANT WEB GUI:
+----------------
 
-Command to get the broadway: "cloonix_cli nemo cnf web on"
-The server is not on if not requested.
-
-Your browser can have access to the gui with "http://<ip>:<broadway_port>".
+See in /usr/libexec/cloonix/common/etc/cloonix.cfg, the novnc_port gives
+the port to use from a web browser.
 -----------------------------------------------------------------------------
 
 
+/usr/bin/xkbcomp
+cp -r /usr/libexec/cloonix/common/share/X11/xkb/ /usr/share/X11

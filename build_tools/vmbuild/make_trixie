@@ -13,10 +13,14 @@ else
   LINUX="linux-image-amd64"
 fi
 #----------------------------------------------------------------------#
-DISTRO=bookworm
+#DISTRO=bookworm
+#DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
+#----------------------------------------------------------------------#
+DISTRO=trixie
+DEFVIM=/tmp/wkmntloops/usr/share/vim/vim91/defaults.vim
 ROOTFS=/var/lib/cloonix/bulk/${DISTRO}_${ARCH}
-DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
 REPO="http://127.0.0.1/debian/bookworm"
+REPO="http://deb.debian.org/debian"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {

@@ -276,18 +276,11 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
   static char addr[MAX_NAME_LEN];
   static char passwd[MAX_NAME_LEN];
 
-  static char *argvtilix[] = {TILIX_BIN, "-t", title, "-e",
-                         "/usr/libexec/cloonix/client/cloonix-dropbear-ssh",
-                         addr, passwd, name, NULL};
-
   static char *argv[] = {URXVT_BIN, "-T", title, "-e",
                          "/usr/libexec/cloonix/client/cloonix-dropbear-ssh",
                          addr, passwd, name, NULL};
 
   static char *argvnatplug[] = {URXVT_BIN, "-T", title, "-e",
-                                "/usr/bin/cloonix_osh", net, name, NULL};
-
-  static char *natplugtilix[] = {TILIX_BIN, "-t", title, "-e",
                                 "/usr/bin/cloonix_osh", net, name, NULL};
 
   memset(title, 0, 2*MAX_NAME_LEN+1);
@@ -298,21 +291,10 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
     memset(net, 0, MAX_NAME_LEN);
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", net, name);
     strncpy(net, get_net_name(), MAX_NAME_LEN);
-    if (!get_is_broadway())
+    if (check_before_start_launch(argvnatplug))
       {
-      if (check_before_start_launch(argvnatplug))
-        {
-        pid_clone_launch(start_launch, NULL, NULL, (void *)(argvnatplug),
-                         NULL, NULL, name_vm, -1, 0);
-        }
-      }
-    else
-      {
-      if (check_before_start_launch(natplugtilix))
-        {
-        pid_clone_launch(start_launch, NULL, NULL, (void *)(natplugtilix),
-                         NULL, NULL, name_vm, -1, 0);
-        }
+      pid_clone_launch(start_launch, NULL, NULL, (void *)(argvnatplug),
+                       NULL, NULL, name_vm, -1, 0);
       }
     }
   else
@@ -322,21 +304,10 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
     snprintf(title, 2*MAX_NAME_LEN, "%s/%s", get_net_name(), name);
     strncpy(addr, get_doors_client_addr(), MAX_NAME_LEN);
     strncpy(passwd, get_password(), MAX_NAME_LEN);
-    if (!get_is_broadway())
+    if (check_before_start_launch(argv))
       {
-      if (check_before_start_launch(argv))
-        {
-        pid_clone_launch(start_launch, NULL, NULL, (void *)(argv),
-                         NULL, NULL, name_vm, -1, 0);
-        }
-      }
-    else
-      {
-      if (check_before_start_launch(argvtilix))
-        {
-        pid_clone_launch(start_launch, NULL, NULL, (void *)(argvtilix),
-                         NULL, NULL, name_vm, -1, 0);
-        }
+      pid_clone_launch(start_launch, NULL, NULL, (void *)(argv),
+                       NULL, NULL, name_vm, -1, 0);
       }
     }
 }

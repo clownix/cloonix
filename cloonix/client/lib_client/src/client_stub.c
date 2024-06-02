@@ -334,7 +334,7 @@ void recv_c2c_peer_ping(int llid, int tid, char *c2c_name, int status)
 {KOUT(" ");}
 void recv_color_item(int llid, int tid, char *name, int color)
 {KOUT(" ");}
-void recv_broadway_on_off(int llid, int tid, int color)
+void recv_novnc_on_off(int llid, int tid, int color)
 {KOUT(" ");}
 /*--------------------------------------------------------------------------*/
 

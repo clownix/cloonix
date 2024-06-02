@@ -25,7 +25,7 @@ typedef struct t_cloonix_conf_info
   int  connect_llid;
   uint32_t  ip;
   int  port;
-  int  broadway_port;
+  int  novnc_port;
   char passwd[MSG_DIGEST_LEN];
   uint32_t c2c_udp_ip;
 } t_cloonix_conf_info;

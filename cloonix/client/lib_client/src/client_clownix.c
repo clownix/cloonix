@@ -512,13 +512,13 @@ void client_color_kvm(int tid, t_end_cb cb, char *name, int color)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_broadway_on_off(int tid, t_end_cb cb, int on)
+void client_novnc_on_off(int tid, t_end_cb cb, int on)
 {
   int new_tid;
   if (!g_llid)
     KOUT(" ");
   new_tid = set_response_callback(cb, tid);
-  send_broadway_on_off(g_llid, new_tid, on); 
+  send_novnc_on_off(g_llid, new_tid, on); 
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif

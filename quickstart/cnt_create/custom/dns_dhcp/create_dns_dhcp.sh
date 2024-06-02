@@ -5,11 +5,10 @@ HERE=`pwd`
 NET=nemo
 #----------------------------------------------------------------------#
 VMNAME=ams
-DIST=bookworm
+DIST=trixie
 QCOW2=dns_dhcp.qcow2
 BIN_STORE="${HERE}/bin_store"
 REPO="http://deb.debian.org/debian"
-#REPO="http://172.17.0.2/debian/${DIST}"
 #######################################################################
 set +e
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -21,7 +20,7 @@ fi
 cloonix_net ${NET}
 sleep 2
 set -e
-cp -vf /var/lib/cloonix/bulk/${DIST}.qcow2 /var/lib/cloonix/bulk/${QCOW2}
+cp -vf /var/lib/cloonix/bulk/${DIST}_amd64.qcow2 /var/lib/cloonix/bulk/${QCOW2}
 sync
 sleep 1
 sync

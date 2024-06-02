@@ -5,13 +5,12 @@ HERE=`pwd`
 NET=nemo
 ROOTNM=frr
 QCOW2=create_frr.qcow2
-DISTRO=bookworm
+DISTRO=trixie
 REPO="http://deb.debian.org/debian"
-REPO="http://172.17.0.2/debian/${DISTRO}"
 #######################################################################
 set +e
-if [ ! -e /var/lib/cloonix/bulk/${DISTRO}.qcow2 ]; then
-  echo ${DISTRO}.qcow2 does not exist!
+if [ ! -e /var/lib/cloonix/bulk/${DISTRO}_amd64.qcow2 ]; then
+  echo ${DISTRO}_amd64.qcow2 does not exist!
   exit 1
 fi
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -23,7 +22,7 @@ fi
 cloonix_net ${NET}
 sleep 2
 set -e
-cp -vf /var/lib/cloonix/bulk/${DISTRO}.qcow2 /var/lib/cloonix/bulk/${QCOW2}
+cp -vf /var/lib/cloonix/bulk/${DISTRO}_amd64.qcow2 /var/lib/cloonix/bulk/${QCOW2}
 sync
 sleep 1
 sync

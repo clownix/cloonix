@@ -65,7 +65,7 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
 
 void client_sav_vm(int tid, t_end_cb cb, char *nm, char *new_dir_path);
 void client_reboot_vm(int tid, t_end_cb cb, char *nm);
-void client_broadway_on_off(int tid, t_end_cb cb, int on);
+void client_novnc_on_off(int tid, t_end_cb cb, int on);
 void client_color_kvm(int tid, t_end_cb cb, char *name, int num);
 void client_color_cnt(int tid, t_end_cb cb, char *name, int num);
 

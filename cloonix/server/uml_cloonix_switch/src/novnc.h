@@ -15,9 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void broadway_on_off(int on);
-void broadway_init(void);
-void broadway_exit(void);
+void end_novnc(int terminate);
+void init_novnc(char *net_name, int rank, char *ascii_port);
 /*--------------------------------------------------------------------------*/
 
 

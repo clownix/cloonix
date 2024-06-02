@@ -130,10 +130,10 @@
                          "  <color> %d </color>\n"\
                          "</color_item>"
 
-#define BROADWAY_ON_OFF  "<broadway_on_off>"\
+#define NOVNC_ON_OFF  "<novnc_on_off>"\
                          "  <tid> %d </tid>\n"\
                          "  <on> %d </on>\n"\
-                         "</broadway_on_off>"
+                         "</novnc_on_off>"
 
 
 /*---------------------------------------------------------------------------*/

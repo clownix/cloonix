@@ -355,12 +355,12 @@ static void timer_ovs_beat(void *data)
         {
         cur->llid = connect_ovs_try(cur);
         cur->connect_try_count += 1;
-        if (cur->connect_try_count == 16)
+        if (cur->connect_try_count == 20)
           {
           KERR("OVS %s NOT LISTENING destroy_request", cur->name);
           set_destroy_requested(cur, 1);
           }
-        clownix_timeout_add(1, timer_ovs_beat, NULL, NULL, NULL);
+        clownix_timeout_add(10, timer_ovs_beat, NULL, NULL, NULL);
         }
       else if (cur->pid == 0)
         {
@@ -389,7 +389,7 @@ static void timer_ovs_beat(void *data)
           KERR("ERROR OVSDB %s NOT RESPONDING", cur->name);
           set_destroy_requested(cur, 1);
           }
-        clownix_timeout_add(3, timer_ovs_beat, NULL, NULL, NULL);
+        clownix_timeout_add(10, timer_ovs_beat, NULL, NULL, NULL);
         }
       else if (cur->open_ovs == 0)
         {

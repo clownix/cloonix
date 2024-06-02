@@ -156,7 +156,8 @@ static int xwy_rx_cb(int llid, int fd)
 /*****************************************************************************/
 static void reset_starting(void)
 {
-  llid_trace_free(g_xwy_llid, 0, __FUNCTION__);
+  if (g_xwy_llid)
+    llid_trace_free(g_xwy_llid, 0, __FUNCTION__);
   g_xwy_llid = 0;
   g_xwy_pid = 0;
   g_xwy_doors_connect = 0;
@@ -240,6 +241,8 @@ static void timer_monitor_xwy_pid(void *data)
     KOUT("%d", g_xwy_state);
   if (g_xwy_state == xwy_state_pid_ok)
     clownix_timeout_add(200, timer_monitor_xwy_pid, NULL, NULL, NULL);
+  else if (g_xwy_state == xwy_state_conn_req)
+    clownix_timeout_add(100, timer_monitor_xwy_pid, NULL, NULL, NULL);
   else
     clownix_timeout_add(10, timer_monitor_xwy_pid, NULL, NULL, NULL);
 }

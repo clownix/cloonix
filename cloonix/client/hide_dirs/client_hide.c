@@ -39,17 +39,43 @@
 void hide_real_machine(void);
 
 static FILE *g_log_cmd;
-static int g_is_broadway;
+static char *g_home;
+static char *g_display;
+static char *g_user;
+
+
+/*****************************************************************************/
+int file_exists(char *path)
+{
+  int err, result = 0;
+  err = access(path, F_OK);
+  if (!err)
+    result = 1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 static void set_env_global_cloonix(char *net)
 {
   char rdir[MAX_PATH_LEN];
+  char *px86_64="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/qt6/plugins";
+  char *pi386="/usr/libexec/cloonix/common/lib/i386-linux-gnu/qt6/plugins";
+  clearenv();
+  if (g_home)
+    setenv("HOME", g_home, 1);
+  if (g_display)
+    setenv("DISPLAY", g_display, 1);
+  if (g_user)
+    setenv("USER", g_user, 1);
   setenv("PATH",  "/usr/libexec/cloonix/common:"
                   "/usr/libexec/cloonix/client:"
                   "/usr/libexec/cloonix/server", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
+  setenv("SHELL", "/usr/libexec/cloonix/client/bash", 1);
+  setenv("TERM", "rxvt-unicode", 1);
   memset(rdir, 0, MAX_PATH_LEN);
   snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run", net);
   setenv("XDG_RUNTIME_DIR", rdir, 1);
@@ -61,6 +87,21 @@ static void set_env_global_cloonix(char *net)
   memset(rdir, 0, MAX_PATH_LEN);
   snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run/.Xauthority", net);
   setenv("XAUTHORITY", rdir, 1);
+  setenv("NO_AT_BRIDGE", "1", 1);
+  setenv("QT_X11_NO_MITSHM", "1", 1);
+  setenv("QT_XCB_NO_MITSHM", "1", 1);
+  if (file_exists(pi386))
+    {
+    setenv("QT_PLUGIN_PATH", pi386, 1);
+    setenv("PIPEWIRE_MODULE_DIR", "/usr/libexec/cloonix/common/lib/i386-linux-gnu/pipewire-0.3", 1);
+    }
+  else if (file_exists(px86_64))
+    {
+    setenv("QT_PLUGIN_PATH", px86_64, 1);
+    setenv("PIPEWIRE_MODULE_DIR", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/pipewire-0.3", 1);
+    }
+  setenv("GST_PLUGIN_SCANNER", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner", 1);
+  setenv("GST_PLUGIN_PATH", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/gstreamer-1.0", 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -117,7 +158,7 @@ static void create_cloonix_private_id_rsa(void)
 /****************************************************************************/
 static int get_ip_pass_port(FILE *fh, char *ip, char *pass, int *port)
 {
-  int broadway_port, result = -1;
+  int novnc_port, result = -1;
   char line[100];
 
   if (!fgets(line, 100, fh))
@@ -132,7 +173,7 @@ static int get_ip_pass_port(FILE *fh, char *ip, char *pass, int *port)
 
   else if (!fgets(line, 100, fh))
     printf("ERROR5 get_ip_pass_port\n"); 
-  else if (sscanf(line, "  broadway_port %d", &broadway_port) != 1)
+  else if (sscanf(line, "  novnc_port %d", &novnc_port) != 1)
     printf("ERROR6 get_ip_pass_port %s\n", line); 
 
   else if (!fgets(line, 100, fh))
@@ -421,7 +462,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     new_argv[3] = "-dae";
-    new_argv[4] = WIRESHARK_QT_BIN;
+    new_argv[4] = WIRESHARK_BIN;
     new_argv[5] = "-o";
     new_argv[6] = "capture.no_interface_load:TRUE";
     new_argv[7] = "-o";
@@ -468,28 +509,19 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /****************************************************************************/
 int main(int argc, char *argv[])
 {
-  char *g_home = getenv("HOME");
-  char *g_display = getenv("DISPLAY");
-  char *g_user = getenv("USER");
   char passwd[MAX_NAME_LEN];
   char ip[MAX_NAME_LEN];
   int  port, pid;
   char *cfg = CLOONIX_CFG;
   char *new_argv[MAX_NARGS+10];
-  if((getenv("GDK_BACKEND")) && (!strcmp(getenv("GDK_BACKEND"), "broadway")))
-    g_is_broadway = 1;
-  else
-    g_is_broadway = 0;
+  g_home = getenv("HOME");
+  g_display = getenv("DISPLAY");
+  g_user = getenv("USER");
   g_log_cmd = NULL;
   memset(new_argv, 0, (MAX_NARGS+10)*sizeof(char *));
-  clearenv();
-  if (g_home)
-    setenv("HOME", g_home, 1);
-  if (g_display)
-    setenv("DISPLAY", g_display, 1);
-  if (g_user)
-    setenv("USER", g_user, 1);
-  if (argc < 3)
+  if (argc < 2)
+    KOUT("ERROR1 PARAMS");
+  else if (argc < 3)
     {
     if ((strcmp("lsh", argv[1])) &&
         (strcmp("cli", argv[1])))
@@ -501,9 +533,12 @@ int main(int argc, char *argv[])
   else
     {
     init_log_cmd(argv[2]);
-    set_env_global_cloonix(argv[2]);
+    if (strcmp("ice", argv[1]))
+      {
+      // For spice, no change in env.
+      set_env_global_cloonix(argv[2]);
+      }
     }
-
   if (!strcmp("ice", argv[1]))
     {
     // To have real usb in virtual, must have root power

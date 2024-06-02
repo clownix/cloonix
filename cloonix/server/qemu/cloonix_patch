@@ -1,6 +1,6 @@
 diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
---- qemu_vip/include/qemu/error-report.h	2024-04-12 17:01:04.000000000 +0200
-+++ tainted_qemu/include/qemu/error-report.h	2024-04-12 23:57:44.399453279 +0200
+--- qemu_vip/include/qemu/error-report.h	2024-05-14 17:24:04.000000000 +0200
++++ tainted_qemu/include/qemu/error-report.h	2024-05-15 09:16:30.179737442 +0200
 @@ -13,6 +13,26 @@
  #ifndef QEMU_ERROR_REPORT_H
  #define QEMU_ERROR_REPORT_H
@@ -38,9 +38,9 @@ diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-
  
  bool error_report_once_cond(bool *printed, const char *fmt, ...)
 diff -Naur qemu_vip/meson.build tainted_qemu/meson.build
---- qemu_vip/meson.build	2024-04-12 17:01:04.000000000 +0200
-+++ tainted_qemu/meson.build	2024-04-12 23:57:44.399453279 +0200
-@@ -1184,7 +1184,7 @@
+--- qemu_vip/meson.build	2024-05-14 17:24:04.000000000 +0200
++++ tainted_qemu/meson.build	2024-05-15 09:16:30.179737442 +0200
+@@ -1170,7 +1170,7 @@
               .require(pixman.found(),
                        error_message: 'cannot enable SPICE if pixman is not available') \
               .allowed()
@@ -49,7 +49,7 @@ diff -Naur qemu_vip/meson.build tainted_qemu/meson.build
                       required: get_option('spice'),
                       method: 'pkg-config')
  endif
-@@ -1890,7 +1890,7 @@
+@@ -1904,7 +1904,7 @@
  endif
  usbredir = not_found
  if not get_option('usb_redir').auto() or have_system
@@ -59,9 +59,9 @@ diff -Naur qemu_vip/meson.build tainted_qemu/meson.build
  endif
  libusb = not_found
 diff -Naur qemu_vip/util/error-report.c tainted_qemu/util/error-report.c
---- qemu_vip/util/error-report.c	2024-04-12 17:01:04.000000000 +0200
-+++ tainted_qemu/util/error-report.c	2024-04-12 23:57:44.399453279 +0200
-@@ -268,14 +268,6 @@
+--- qemu_vip/util/error-report.c	2024-05-14 17:24:04.000000000 +0200
++++ tainted_qemu/util/error-report.c	2024-05-15 09:16:30.183737449 +0200
+@@ -258,14 +258,6 @@
   * Prepend the current location and append a newline.
   * It's wrong to call this in a QMP monitor.  Use error_setg() there.
   */
@@ -76,7 +76,7 @@ diff -Naur qemu_vip/util/error-report.c tainted_qemu/util/error-report.c
  
  /*
   * Print a warning message to current monitor if we have one, else to stderr.
-@@ -283,14 +275,6 @@
+@@ -273,14 +265,6 @@
   * single phrase, with no newline or trailing punctuation.
   * Prepend the current location and append a newline.
   */

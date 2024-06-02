@@ -38,7 +38,7 @@ mkdir -p /root/${ROOTNM}
 
 for i in "bin" "lib64" "root" "etc" "tmp" "var/log" "usr/bin" \
          "usr/lib/x86_64-linux-gnu/rsyslog" "var/spool/rsyslog" \
-         "lib/security" "/etc/pam.d" ; do
+         "lib/security" "/etc/pam.d" "var/lib" ; do
   mkdir -v -p /root/${ROOTNM}/${i}
 done
 

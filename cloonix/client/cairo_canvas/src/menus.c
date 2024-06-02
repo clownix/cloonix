@@ -997,8 +997,7 @@ void node_ctx_menu(t_bank_item *bitem)
     desktop = gtk_menu_item_new_with_label("Spice");
   save_whole = gtk_menu_item_new_with_label("Save");
   qreboot_vm = gtk_menu_item_new_with_label("Reboot");
-  if (!get_is_broadway())
-    dtach_console = gtk_menu_item_new_with_label("Console");
+  dtach_console = gtk_menu_item_new_with_label("Console");
   item_info = gtk_menu_item_new_with_label("Info");
   item_color = gtk_menu_item_new_with_label("Color");
   item_hidden = gtk_menu_item_new_with_label("Hidden/Visible");
@@ -1013,16 +1012,14 @@ void node_ctx_menu(t_bank_item *bitem)
                    G_CALLBACK(hidden_visible_node), (gpointer) pm);
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
-  if (!get_is_broadway())
-    g_signal_connect(G_OBJECT(dtach_console), "activate",
-                     G_CALLBACK(node_dtach_console), (gpointer) pm);
+  g_signal_connect(G_OBJECT(dtach_console), "activate",
+                   G_CALLBACK(node_dtach_console), (gpointer) pm);
   if (desktop)
     g_signal_connect(G_OBJECT(desktop), "activate",
                      G_CALLBACK(node_qemu_spice), (gpointer) pm);
   if (desktop)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), desktop);
-  if (!get_is_broadway())
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), dtach_console);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), dtach_console);
 
   g_signal_connect(G_OBJECT(save_whole), "activate",
                    G_CALLBACK(node_sav_whole), (gpointer) pm);
@@ -1053,14 +1050,12 @@ void cnt_ctx_menu(t_bank_item *bitem)
   if (bitem->bank_type != bank_type_cnt)
     KOUT("%s", bitem->name);
 
-  if (!get_is_broadway())
-    item_rsh = gtk_menu_item_new_with_label("Remote console");
+  item_rsh = gtk_menu_item_new_with_label("Remote console");
   item_info = gtk_menu_item_new_with_label("Info");
   item_delete = gtk_menu_item_new_with_label("Delete");
 
-  if (!get_is_broadway())
-    g_signal_connect(G_OBJECT(item_rsh), "activate",
-                     G_CALLBACK(crun_item_rsh), (gpointer) pm);
+  g_signal_connect(G_OBJECT(item_rsh), "activate",
+                   G_CALLBACK(crun_item_rsh), (gpointer) pm);
 
   g_signal_connect(G_OBJECT(item_info), "activate",
                    G_CALLBACK(cnt_item_info), (gpointer) pm);
@@ -1069,8 +1064,7 @@ void cnt_ctx_menu(t_bank_item *bitem)
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
 
-  if (!get_is_broadway())
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_rsh);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_rsh);
 
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);

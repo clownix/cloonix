@@ -736,7 +736,6 @@ static void execchild(struct ChanSess *chansess)
     addnewvar("PATH", pth); 
     addnewvar("USER", "root");
     addnewvar("HOME", "/root");
-    addnewvar("TERMINFO", "/usr/libexec/cloonix/common/share/terminfo");
     addnewvar("TERM", "rxvt-unicode");
     if (chansess->cloonix_name)
       addnewvar("PROMPT_COMMAND", chansess->cloonix_name);
@@ -751,7 +750,6 @@ static void execchild(struct ChanSess *chansess)
     {
     unsetenv("PATH");
     addnewvar("PATH", pth); 
-    addnewvar("TERMINFO", "/usr/libexec/cloonix/common/share/terminfo");
     addnewvar("TERM", "rxvt-unicode");
     if (chansess->cloonix_display)
       addnewvar("DISPLAY", chansess->cloonix_display);

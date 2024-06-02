@@ -94,8 +94,7 @@ static void update_layout_center_scale(const char *from)
   ch = (int) dch;
   if (layout_get_ready_for_send())
     {
-    if (!get_is_broadway())
-      send_layout_center_scale(get_clownix_main_llid(), 8888, cx, cy, cw, ch);
+    send_layout_center_scale(get_clownix_main_llid(), 8888, cx, cy, cw, ch);
     }
 }
 /*--------------------------------------------------------------------------*/

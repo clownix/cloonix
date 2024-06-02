@@ -3,9 +3,11 @@
 if [ ${#} = 1 ]; then
   if [ "$1" = "i386" ]; then
     ARCH="i386"
+    ARCHX="i386"
   else
     if [ "$1" = "amd64" ]; then
       ARCH="amd64"
+      ARCHX="x86_64"
     else
       echo ERROR $0 param must be i386 or amd64
       exit
@@ -45,17 +47,20 @@ for i in `find ${COMMON}/lib -maxdepth 1 -type f` ; do
   ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
-if [ "${ARCH}" = "i386" ]; then
-  for i in `find ${COMMON}/lib/i386-linux-gnu -maxdepth 1 -type f` ; do
+
+for i in `find ${COMMON}/lib/${ARCHX}-linux-gnu -maxdepth 1 -type f` ; do
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
+done
+
+for j in "qt6" "gdk-pixbuf-2.0" "gtk-3.0" "gio" "gconv" "gstreamer1.0" \
+         "gstreamer1.0/gstreamer-1.0" "gstreamer-1.0" ; do
+  for i in `find ${COMMON}/lib/${ARCHX}-linux-gnu/${j} -maxdepth 1 -type f` ; do
     ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
     ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
   done
-else
-  for i in `find ${COMMON}/lib/x86_64-linux-gnu -maxdepth 1 -type f` ; do
-    ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
-    ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
-  done
-fi
+done
+
 #----------------------------------------------------------
 cd ${CLOONIX_TREE_ROOT}/build_tools
 rm -f patchelf_bin

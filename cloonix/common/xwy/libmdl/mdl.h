@@ -140,7 +140,7 @@ typedef void (*t_rx_msg_cb)(void *ptr, int llid, int fd, t_msg *msg);
 typedef void (*t_rx_err_cb)(void *ptr, int llid, int fd, char *err);
 
 
-static const int g_msg_header_len = (5*sizeof(long));
+static const int g_msg_header_len = (5*sizeof(uint32_t));
 
 uint16_t mdl_sum_calc(int len, uint8_t *buff);
 int  mdl_parse_val(const char *str_val);

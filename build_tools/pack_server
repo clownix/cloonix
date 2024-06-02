@@ -42,6 +42,9 @@ cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_net ${SERVER}/usr_bin
 cp ${SERVER}/xwy/cloonix-xwy-srv ${SERVER}
 rm -rf ${SERVER}/xwy
 #----------------------------------------------------------
+cp ${SERVER}/wm2/cloonix-novnc-wm2 ${SERVER}
+rm -rf ${SERVER}/wm2
+#----------------------------------------------------------
 cp -f ${SERVER}/suid_power/cloonix-suid-power ${SERVER}
 cp -f ${SERVER}/doorways/cloonix-doorways ${SERVER}
 cp -f ${SERVER}/suid_power/cloonix-suid-power ${SERVER}
@@ -92,30 +95,39 @@ cp -f ${SERVER}/crun/crun/crun ${SERVER}/cloonix-crun
 rm -rf ${SERVER}/crun
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
-  cp -f ${TARGZ_STORE}/shark_qt/built_objects_i386/dumpcap ${SERVER}
-  cp -f ${TARGZ_STORE}/shark_qt/built_objects_i386/wireshark ${SERVER}/cloonix-wireshark-qt
+  cp -f ${TARGZ_STORE}/shark/built_objects_i386/dumpcap ${SERVER}
+  cp -f ${TARGZ_STORE}/shark/built_objects_i386/wireshark ${SERVER}/cloonix-wireshark
+  cp -f ${TARGZ_STORE}/xorg/built_objects_i386/Xvfb ${SERVER}/cloonix-novnc-Xvfb
+  cp -f ${TARGZ_STORE}/iproute2/built_objects_i386/ip ${SERVER}
 else
-  cp -f ${TARGZ_STORE}/shark_qt/built_objects_amd64/dumpcap ${SERVER}
-  cp -f ${TARGZ_STORE}/shark_qt/built_objects_amd64/wireshark ${SERVER}/cloonix-wireshark-qt
-  cp -f ${TARGZ_STORE}/shark_gtk/built_objects/wireshark-gtk ${SERVER}/cloonix-wireshark-gtk
-  rm -rf /tmp/lib_wireshark
-  tar --directory=/tmp -xf ${TARGZ_STORE}/shark_gtk/built_objects/lib_wireshark.tar.gz
-  cp -n /tmp/lib_wireshark/lib/x86_64-linux-gnu/* ${COMMON}/lib || true
+  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/dumpcap ${SERVER}
+  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/wireshark ${SERVER}/cloonix-wireshark
+  cp -f ${TARGZ_STORE}/xorg/built_objects_amd64/Xvfb ${SERVER}/cloonix-novnc-Xvfb
+  cp -f ${TARGZ_STORE}/iproute2/built_objects_amd64/ip ${SERVER}
 fi
 #----------------------------------------------------------
+cp -d /usr/bin/python3* ${SERVER}
 cp -f /usr/bin/xauth     ${SERVER}/xauth
-cp -f /sbin/ip           ${SERVER}/ip
+cp -f /usr/bin/xkbcomp   ${SERVER}/xkbcomp
 cp -f /bin/bash          ${SERVER}/cloonix-bash
 cp -f /bin/mount         ${SERVER}/cloonix-mount
 cp -f /bin/umount        ${SERVER}/cloonix-umount 
 cp -f /bin/mknod         ${SERVER}/cloonix-mknod 
 cp -f /bin/chmod         ${SERVER}/cloonix-chmod
 cp -f /bin/grep          ${SERVER}/cloonix-grep
-cp -f /usr/bin/ps        ${SERVER}/cloonix-ps
-cp -f /usr/bin/awk       ${SERVER}/cloonix-awk 
-cp -f /usr/bin/osirrox   ${SERVER}/cloonix-osirrox
-cp -f /usr/bin/broadwayd ${SERVER}/cloonix-broadwayd
-cp -f /usr/bin/fuse-zip  ${SERVER}/cloonix-fuse-zip
+
+for i in "ps" "awk" "osirrox" "fuse-zip"
+do
+  cp -f /usr/bin/${i}  ${SERVER}/cloonix-${i}
+done
+
+for i in "websockify" "x11vnc" "xsetroot"
+do
+  cp -f /usr/bin/${i}  ${SERVER}/cloonix-novnc-${i}
+done
+sed -i s"%#! /usr/bin/python3%#! /usr/libexec/cloonix/server/python3%" ${SERVER}/cloonix-novnc-websockify
+#----------------------------------------------------------
+openssl req -x509 -nodes -newkey rsa:3072 -keyout novnc.pem -subj "/CN=cloonix.net" -out ${SERVER}/novnc.pem -days 3650
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
   LDLINUX="/usr/libexec/cloonix/common/lib32/ld-linux.so.2"

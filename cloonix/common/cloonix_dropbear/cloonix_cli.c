@@ -415,7 +415,7 @@ void cb_doors_rx(int llid, int tid, int type, int val, int len, char *buf)
           memset(g_cloonix_name_prompt, 0, 2*MAX_CHARBUF_SIZE);
           snprintf(g_cloonix_name_prompt, 2*MAX_CHARBUF_SIZE-1,
                    "PS1=\"%s# \"", g_cloonix_name); 
-          snprintf(g_cloonix_display, MAX_CHARBUF_SIZE-1, "unix:%d.0", 
+          snprintf(g_cloonix_display, MAX_CHARBUF_SIZE-1, ":%d", 
                    display + IDX_X11_DISPLAY_ADD);
           cli_session(-1, -1); 
           }

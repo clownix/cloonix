@@ -119,6 +119,9 @@ for i in "[" "[[" "acpid" "adjtimex" "ar" "arp" "arping" "ash" "awk" \
   ln -s busybox $i
 done
 
+cd /root/podman_cloonix/var
+ln -s ../run run
+
 cd /root
 BUNDLE=$(ls cloonix-bundle*)
 tar xvf ${BUNDLE}

@@ -331,7 +331,7 @@ void suid_power_poldiag_resp(int llid, int tid, char *line)
 {
   char name[MAX_NAME_LEN];
   char phy_mac[MAX_NAME_LEN];
-  int i, prev_nb_phy, nb_phy;
+  int i, j, prev_nb_phy, nb_phy;
   char *ptr;
   t_topo_info_phy *phy;
 
@@ -351,23 +351,31 @@ void suid_power_poldiag_resp(int llid, int tid, char *line)
     if (nb_phy > MAX_PHY)
       KOUT("%d %d", nb_phy, MAX_PHY);
     prev_nb_phy = g_nb_phy;
-    g_nb_phy = nb_phy;
     phy = (t_topo_info_phy *) malloc(prev_nb_phy * sizeof(t_topo_info_phy));
     memcpy(phy, g_topo_info_phy, prev_nb_phy * sizeof(t_topo_info_phy));
     memset(g_topo_info_phy, 0, prev_nb_phy * sizeof(t_topo_info_phy));
     ptr = line;
+    j = 0;
     for (i=0; i<nb_phy; i++)
       {
       ptr = strstr(ptr, "phy_name:");
       if (!ptr)
-        KOUT("%s", line);
+        {
+        KERR("%s", line);
+        break;
+        }
       if (sscanf(ptr, "phy_name:%s phy_mac:%s", name, phy_mac) != 2)
-        KOUT("%s", line);
-      strncpy(g_topo_info_phy[i].name,   name, MAX_NAME_LEN-1);
-      strncpy(g_topo_info_phy[i].phy_mac, phy_mac, MAX_NAME_LEN-1);
+        KERR("%s", line);
+      else
+        {
+        strncpy(g_topo_info_phy[j].name,   name, MAX_NAME_LEN-1);
+        strncpy(g_topo_info_phy[j].phy_mac, phy_mac, MAX_NAME_LEN-1);
+        j += 1;
+        }
       ptr += strlen("phy_name:");
       }
-    if ((prev_nb_phy != nb_phy) ||
+    g_nb_phy = j;
+    if ((prev_nb_phy != g_nb_phy) ||
         (memcmp(phy, g_topo_info_phy, prev_nb_phy * sizeof(t_topo_info_phy))))
       {
       cfg_hysteresis_send_topo_info();

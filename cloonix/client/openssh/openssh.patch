@@ -1,6 +1,6 @@
 diff -Naur openssh-8.6p1/clientloop.c tainted_openssh/clientloop.c
 --- openssh-8.6p1/clientloop.c	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/clientloop.c	2023-05-30 14:50:14.208969407 +0200
++++ tainted_openssh/clientloop.c	2024-05-24 22:30:00.912344093 +0200
 @@ -625,11 +625,8 @@
  			 * Received EOF.  The remote host has closed the
  			 * connection.
@@ -29,9 +29,20 @@ diff -Naur openssh-8.6p1/clientloop.c tainted_openssh/clientloop.c
  	channel_free_all(ssh);
  
  	if (have_pty)
+diff -Naur openssh-8.6p1/configure tainted_openssh/configure
+--- openssh-8.6p1/configure	2021-04-16 05:56:50.000000000 +0200
++++ tainted_openssh/configure	2024-05-24 22:30:17.536108721 +0200
+@@ -13444,6 +13444,7 @@
+ 			101*)   ;; # 1.1.x
+ 			200*)   ;; # LibreSSL
+ 			300*)   ;; # OpenSSL development branch.
++			302*)   ;; # VIP OpenSSL development branch.
+ 		        *)
+ 				as_fn_error $? "Unknown/unsupported OpenSSL version (\"$ssl_library_ver\")" "$LINENO" 5
+ 		                ;;
 diff -Naur openssh-8.6p1/kex.c tainted_openssh/kex.c
 --- openssh-8.6p1/kex.c	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/kex.c	2023-05-30 14:50:14.208969407 +0200
++++ tainted_openssh/kex.c	2024-05-24 22:30:00.912344093 +0200
 @@ -1169,7 +1169,7 @@
   * Returns on 0 success or a ssherr.h code on failure.
   */
@@ -73,7 +84,7 @@ diff -Naur openssh-8.6p1/kex.c tainted_openssh/kex.c
  		error_fr(r, "sshbuf_consume_end");
 diff -Naur openssh-8.6p1/kex.h tainted_openssh/kex.h
 --- openssh-8.6p1/kex.h	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/kex.h	2023-05-30 14:50:14.208969407 +0200
++++ tainted_openssh/kex.h	2024-05-24 22:30:00.912344093 +0200
 @@ -176,7 +176,7 @@
  char	*kex_names_cat(const char *, const char *);
  int	 kex_assemble_names(char **, const char *, const char *);
@@ -85,7 +96,7 @@ diff -Naur openssh-8.6p1/kex.h tainted_openssh/kex.h
  int	 kex_ready(struct ssh *, char *[PROPOSAL_MAX]);
 diff -Naur openssh-8.6p1/Makefile.in tainted_openssh/Makefile.in
 --- openssh-8.6p1/Makefile.in	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/Makefile.in	2023-05-30 14:50:14.208969407 +0200
++++ tainted_openssh/Makefile.in	2024-05-24 22:30:00.912344093 +0200
 @@ -45,7 +45,7 @@
  LD=@LD@
  CFLAGS=@CFLAGS@
@@ -115,7 +126,7 @@ diff -Naur openssh-8.6p1/Makefile.in tainted_openssh/Makefile.in
  	ssh-xmss.o \
 diff -Naur openssh-8.6p1/misc.c tainted_openssh/misc.c
 --- openssh-8.6p1/misc.c	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/misc.c	2023-05-30 14:50:14.212969419 +0200
++++ tainted_openssh/misc.c	2024-05-24 22:30:00.912344093 +0200
 @@ -723,23 +723,16 @@
  char *
  colon(char *cp)
@@ -159,7 +170,7 @@ diff -Naur openssh-8.6p1/misc.c tainted_openssh/misc.c
  	path = strchr(filename, '/');
 diff -Naur openssh-8.6p1/packet.c tainted_openssh/packet.c
 --- openssh-8.6p1/packet.c	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/packet.c	2023-05-30 14:50:14.212969419 +0200
++++ tainted_openssh/packet.c	2024-05-24 22:30:00.912344093 +0200
 @@ -1846,6 +1846,11 @@
  
  	sshpkt_fmt_connection_id(ssh, remote_id, sizeof(remote_id));
@@ -174,7 +185,7 @@ diff -Naur openssh-8.6p1/packet.c tainted_openssh/packet.c
  		ssh_packet_clear_keys(ssh);
 diff -Naur openssh-8.6p1/scp.c tainted_openssh/scp.c
 --- openssh-8.6p1/scp.c	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/scp.c	2023-05-30 14:54:02.281761476 +0200
++++ tainted_openssh/scp.c	2024-05-24 22:30:00.912344093 +0200
 @@ -122,11 +122,15 @@
  #include "misc.h"
  #include "progressmeter.h"
@@ -615,7 +626,7 @@ diff -Naur openssh-8.6p1/scp.c tainted_openssh/scp.c
  void
 diff -Naur openssh-8.6p1/ssh.c tainted_openssh/ssh.c
 --- openssh-8.6p1/ssh.c	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/ssh.c	2023-05-30 14:50:14.212969419 +0200
++++ tainted_openssh/ssh.c	2024-05-24 22:30:00.912344093 +0200
 @@ -113,6 +113,8 @@
  #include "ssh-pkcs11.h"
  #endif
@@ -809,7 +820,7 @@ diff -Naur openssh-8.6p1/ssh.c tainted_openssh/ssh.c
  		verbose("Authenticated to %s ([%s]:%d).", host,
 diff -Naur openssh-8.6p1/sshconnect.c tainted_openssh/sshconnect.c
 --- openssh-8.6p1/sshconnect.c	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/sshconnect.c	2023-05-30 14:50:14.212969419 +0200
++++ tainted_openssh/sshconnect.c	2024-05-24 22:30:00.912344093 +0200
 @@ -49,6 +49,12 @@
  # include <ifaddrs.h>
  #endif
@@ -914,7 +925,7 @@ diff -Naur openssh-8.6p1/sshconnect.c tainted_openssh/sshconnect.c
  	/* Put the connection into non-blocking mode. */
 diff -Naur openssh-8.6p1/sshconnect.h tainted_openssh/sshconnect.h
 --- openssh-8.6p1/sshconnect.h	2021-04-16 05:55:25.000000000 +0200
-+++ tainted_openssh/sshconnect.h	2023-05-30 14:50:14.212969419 +0200
++++ tainted_openssh/sshconnect.h	2024-05-24 22:30:00.912344093 +0200
 @@ -63,14 +63,14 @@
  	"r", conn_info->remuser, \
  	"u", conn_info->locuser

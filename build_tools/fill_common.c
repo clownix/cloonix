@@ -105,9 +105,9 @@ static int create_libs_txt(char *path, char *common)
     create_libs_paragraph(col, common, "gdk-pixbuf-2.0");
     create_libs_paragraph(col, common, "gtk-3.0");
     create_libs_paragraph(col, common, "gio");
-    create_libs_paragraph(col, common, "gvfs");
     create_libs_paragraph(col, common, "gconv");
     create_libs_paragraph(col, common, "gstreamer1.0");
+    create_libs_paragraph(col, common, "gstreamer1.0/gstreamer-1.0");
     create_libs_paragraph(col, common, "gstreamer-1.0");
 
 

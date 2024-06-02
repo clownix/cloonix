@@ -21,8 +21,6 @@ char *utils_get_mnt_dir(void);
 char *utils_get_c2c_dir(void);
 char *utils_get_nat_dir(void);
 char *utils_get_a2b_dir(void);
-char *utils_get_runbroadway_config_dir(void);
-char *utils_get_runbroadway_dir(void);
 char *utils_get_run_dir(void);
 char *utils_get_run_config_dir(void);
 char *utils_get_snf_pcap_dir(void);

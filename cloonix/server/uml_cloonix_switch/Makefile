@@ -34,6 +34,7 @@ SRC = \
       qmp.c \
       qga_dialog.c \
       xwy.c \
+      novnc.c \
       kvm.c \
       ovs.c \
       ovs_snf.c \
@@ -55,7 +56,6 @@ SRC = \
       crun.c \
       base64.c \
       mactopo.c \
-      broadway.c \
       server_stub.c \
       hide_dirs.c
 

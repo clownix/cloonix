@@ -219,8 +219,7 @@ static void create_env_display(int display_val, char *ttyname)
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
   setenv("XAUTHORITY", g_xauthority, 1);
-  setenv("SHELL", "/bin/bash", 1);
-  setenv("TERMINFO", "/usr/libexec/cloonix/common/share/terminfo", 1);
+  setenv("SHELL", "/usr/libexec/cloonix/server/cloonix-bash", 1);
   setenv("TERM", "rxvt-unicode", 1);
   memset(disp_str, 0, MAX_TXT_LEN);
   if (display_val > 0)
@@ -246,13 +245,15 @@ static void create_env_display(int display_val, char *ttyname)
   if (wrap_file_exists(pi386))
     {
     setenv("QT_PLUGIN_PATH", pi386, 1);
-    KERR("VIPTODO QT_PLUGIN_PATH %s", pi386);
+    setenv("PIPEWIRE_MODULE_DIR", "/usr/libexec/cloonix/common/lib/i386-linux-gnu/pipewire-0.3", 1);
     }
   else if (wrap_file_exists(px86_64))
     {
     setenv("QT_PLUGIN_PATH", px86_64, 1);
-    KERR("VIPTODO QT_PLUGIN_PATH %s", px86_64);
+    setenv("PIPEWIRE_MODULE_DIR", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/pipewire-0.3", 1);
     }
+  setenv("GST_PLUGIN_SCANNER", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner", 1);
+  setenv("GST_PLUGIN_PATH", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/gstreamer-1.0", 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -351,7 +352,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       for (i=0; i<MAX_FD_NUM; i++)
         close(i);
       create_argv_from_cmd(cmd, argv);
-      if (!strcmp(argv[0], WIRESHARK_QT_BIN))
+      if (!strcmp(argv[0], WIRESHARK_BIN))
         {
         execv(argv[0], argv);
         KOUT("ERROR execv");
@@ -377,30 +378,32 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
         close(i);
       if (action == action_bash)
         {
-        argv[0] = "/bin/bash";
+        argv[0] = "/usr/libexec/cloonix/server/cloonix-bash";
         argv[1] = NULL;
         }
-      else if (action == action_crun)
-        {
-        argv[0] = "/usr/libexec/cloonix/server/cloonix-bash";
-        argv[1] = "-c";
-        if (cmd[0] == '"')
-          {
-          ptr = cmd+1;
-          ptre = strchr(ptr, '"');
-          if (!ptre)
-            KERR("ERROR action_crun %s", cmd);
-          else
-            {
-            *ptre = 0;
-            argv[2] = ptr;
-            }
-          }
-        else
-          argv[2] = cmd;
-        argv[3] = NULL;
-        }
-      else  if (action == action_cmd)
+     else if (action == action_crun)
+       {
+//       argv[0] = "/usr/libexec/cloonix/server/cloonix-bash";
+//       argv[1] = "-c";
+       if (cmd[0] == '"')
+         {
+         ptr = cmd+1;
+         ptre = strchr(ptr, '"');
+         if (!ptre)
+           KERR("ERROR action_crun %s", cmd);
+         else
+//           {
+           *ptre = 0;
+//           argv[2] = ptr;
+//           }
+         }
+       else
+         ptr = cmd;
+//         argv[2] = cmd;
+//       argv[3] = NULL;
+       create_argv_from_cmd(ptr, argv);
+       }
+     else  if (action == action_cmd)
         {
         create_argv_from_cmd(cmd, argv);
         }

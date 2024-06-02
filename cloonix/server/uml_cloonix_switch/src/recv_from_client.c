@@ -58,7 +58,6 @@
 #include "ovs_c2c.h"
 #include "msg.h"
 #include "crun.h"
-#include "broadway.h"
 
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
@@ -156,10 +155,9 @@ static int get_inhib_new_clients(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_broadway_on_off(int llid, int tid, int on)
+void recv_novnc_on_off(int llid, int tid, int on)
 {
-  broadway_on_off(on);
-  send_status_ok(llid, tid, "broadway");
+  send_status_ko(llid, tid, "Not implemented anymore");
 }
 /*---------------------------------------------------------------------------*/
 
