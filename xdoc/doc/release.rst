@@ -5,6 +5,24 @@
 Software Release Information
 ============================
 
+
+v38-00
+======
+
+Broadway web server has been erased, in its place Xvfb, wm2, x11vnc and websockify
+are used to transmit the gui for cloonix to the web.
+For nemo the http link for the browser is::
+
+   http://127.0.0.1:54521/vnc_lite.html
+
+Note that the 54521 port can be changed in::
+
+  /usr/libexec/cloonix/common/etc/cloonix.cfg
+
+Principle: Xvfb creates a virtual framebuffer on a defined DISPLAY, this display can be seen through its X11 socket at /tmp/.X11-unix/. Then on this display, wm2 is a windows manager, it is the simplest existing one. When the wm2 representation gets to be visible in your browser, click on the main mouse button, and choose the only choice which is cloonix.
+x11vnx carries the equivalent of a desktop to the vnc server anw finaly websockify puts this desktop inside a web browser.
+
+
 v37-00
 ======
 

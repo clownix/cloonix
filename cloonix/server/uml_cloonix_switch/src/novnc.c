@@ -135,9 +135,6 @@ static int Xvfb(void *data)
 {
   char *argv[] = {BIN_XVFB, g_display, "-nolisten", "tcp", "-noreset",
                                        "-dpms", "-br", "-ac", NULL};
-  close(0);
-  close(1);
-  close(2);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
   return 0;
@@ -151,9 +148,6 @@ static int x11vnc(void *data)
                            "-noxdamage", "-cursor", "arrow", "-remap", "DEAD",
                            "-ncache", "10", "-display", g_display, NULL};
 
-  close(0);
-  close(1);
-  close(2);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
   return 0;
@@ -164,9 +158,6 @@ static int x11vnc(void *data)
 static int wm2(void *data)
 {
   char *argv[]={BIN_WM2, g_display, NULL};
-  close(0);
-  close(1);
-  close(2);
   setenv("DISPLAY", g_display, 1);
   setenv("CLOONIX_NET", g_net_name, 1);
   execv(argv[0], argv);
@@ -179,9 +170,6 @@ static int wm2(void *data)
 static int xsetroot(void *data)
 {
   char *argv[] = {BIN_XSETROOT, "-display", g_display, "-solid", "grey", NULL};
-  close(0);
-  close(1);
-  close(2);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
   return 0;
@@ -194,9 +182,6 @@ static int websockify(void *data)
   char addr_port[MAX_NAME_LEN];
   char *argv[]={BIN_WEBSOCKIFY, "--run-once",  WEB, CERT,
                 g_ascii_port, addr_port, NULL};
-  close(0);
-  close(1);
-  close(2);
   setenv("PYTHONHOME", PYTHONHOME, 1);
   memset (addr_port, 0, MAX_NAME_LEN);
   snprintf(addr_port, MAX_NAME_LEN-1, "localhost:%d", g_port1);

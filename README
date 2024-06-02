@@ -1,5 +1,26 @@
 ==============================================================================
 NEW: Use of novnc to have a web gui
+v38-00
+======
+
+Broadway web server has been erased, in its place Xvfb, wm2, x11vnc and websockify
+are used to transmit the gui for cloonix to the web.
+For nemo the http link for the browser is::
+
+   http://<ip_of_server>:54521/vnc_lite.html
+
+Note that the 54521 port can be changed in::
+
+  /usr/libexec/cloonix/common/etc/cloonix.cfg
+
+Principle: Xvfb creates a virtual framebuffer on a defined DISPLAY,
+this display can be seen through its X11 socket at /tmp/.X11-unix/.
+Then on this display, wm2 is a windows manager, it is the simplest existing one.
+When the wm2 representation gets to be visible in your browser,
+click on the main mouse button, and choose the only choice which is "cloonix".
+x11vnx carries the equivalent of a desktop to the vnc server and
+finaly websockify puts this desktop inside a web browser.
+
 ==============================================================================
 GENERAL:
 --------
@@ -30,7 +51,7 @@ files and libraries are collected and put into an autonomous bundle, this
 makes the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-36-02/html/index.html doc.
+http://clownix.net/doc_stored/build-38-00/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp.
@@ -40,7 +61,7 @@ NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
 DOWNLOADS:
 ----------
 
-http://clownix.net/downloads/cloonix-36
+http://clownix.net/downloads/cloonix-38
 
 -----------------------------------------------------------------------------
 
@@ -48,9 +69,9 @@ http://clownix.net/downloads/cloonix-36
 INSTALLATION:
 ------------
 
-wget http://clownix.net/downloads/cloonix-36/cloonix-bundle-36-02-amd64.tar.gz
-tar xvf cloonix-bundle-36-02-amd64.tar.gz
-cd cloonix-bundle-36-02-amd64
+wget http://clownix.net/downloads/cloonix-38/cloonix-bundle-38-00-amd64.tar.gz
+tar xvf cloonix-bundle-38-00-amd64.tar.gz
+cd cloonix-bundle-38-00-amd64
 sudo ./install_cloonix
 
 ==============================================================================
@@ -69,7 +90,7 @@ LOADING A QCOW INTO BULK FOR KVM USE:
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-36/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-38/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
 -----------------------------------------------------------------------------
@@ -80,7 +101,7 @@ LOADING A ZIP INTO BULK FOR CRUN USE:
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-36/bulk/busybox.zip
+wget http://clownix.net/downloads/cloonix-38/bulk/busybox.zip
 
 -----------------------------------------------------------------------------
 
@@ -88,7 +109,7 @@ wget http://clownix.net/downloads/cloonix-36/bulk/busybox.zip
 LAUNCH PING SCRIPT:
 -------------------
 
-cd cloonix-bundle-36-02-amd64
+cd cloonix-bundle-38-00-amd64
 
 ./ping_demo.sh
 
@@ -121,7 +142,8 @@ sudo setfacl -R -m u:${USER}:rw /dev/net/tun
 
 Then download and install podman:
 
-wget http://clownix.net/downloads/cloonix-36/bulk/podman_cloonix.tar
+wget http://clownix.net/downloads/cloonix-38/bulk/podman_cloonix.tar.gz
+gunzip podman_cloonix.tar.gz
 podman load --input podman_cloonix.tar
 
 Then try the podman, note that the directory /var/lib/cloonix/bulk
@@ -145,11 +167,12 @@ FRR DEMO INSIDE CLOONIX INSIDE PODMAN:
 --------------------------------------
 
 Build the podman with the help of:
-cloonix-36-01/quickstart/cnt_create/custom/frr/doitall
+cloonix-38-00/quickstart/cnt_create/custom/frr/doitall
 
 Or download and install podman podman_frr_cloonix:
 
-wget http://clownix.net/downloads/cloonix-36/bulk/podman_frr_cloonix.tar
+wget http://clownix.net/downloads/cloonix-38/bulk/podman_frr_cloonix.tar.gz
+gunzip podman_frr_cloonix.tar.gz
 podman load --input podman_frr_cloonix.tar
 
 ID_IMAGE=$(podman images |grep podman_frr_cloonix | awk "{print \$3}")
@@ -176,6 +199,3 @@ See in /usr/libexec/cloonix/common/etc/cloonix.cfg, the novnc_port gives
 the port to use from a web browser.
 -----------------------------------------------------------------------------
 
-
-/usr/bin/xkbcomp
-cp -r /usr/libexec/cloonix/common/share/X11/xkb/ /usr/share/X11
