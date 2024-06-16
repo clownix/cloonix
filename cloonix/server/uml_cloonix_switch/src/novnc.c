@@ -144,9 +144,10 @@ static int Xvfb(void *data)
 /*****************************************************************************/
 static int x11vnc(void *data)
 {
-  char *argv[]={BIN_X11VNC,"-N", "-nopw", "-localhost", "-shared", "-noshm",
-                           "-noxdamage", "-cursor", "arrow", "-remap", "DEAD",
-                           "-ncache", "10", "-display", g_display, NULL};
+  char *argv[]={BIN_X11VNC, "-quiet", "-N", "-nopw", "-localhost", "-shared",
+                            "-noshm", "-noxdamage", "-cursor", "arrow",
+                            "-remap", "DEAD", "-ncache", "10", "-dpms",
+                            "-display", g_display, NULL};
 
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
@@ -180,8 +181,8 @@ static int xsetroot(void *data)
 static int websockify(void *data)
 {
   char addr_port[MAX_NAME_LEN];
-  char *argv[]={BIN_WEBSOCKIFY, "--run-once",  WEB, CERT,
-                g_ascii_port, addr_port, NULL};
+  char *argv[]={BIN_WEBSOCKIFY, "--run-once",
+                WEB, CERT, g_ascii_port, addr_port, NULL};
   setenv("PYTHONHOME", PYTHONHOME, 1);
   memset (addr_port, 0, MAX_NAME_LEN);
   snprintf(addr_port, MAX_NAME_LEN-1, "localhost:%d", g_port1);
@@ -371,7 +372,7 @@ static void kill_before_start(void)
   memset (addr_port, 0, MAX_NAME_LEN);
   memset (lock_file, 0, MAX_NAME_LEN);
   snprintf(addr_port, MAX_NAME_LEN-1, "localhost:%d", g_port1);
-  snprintf(lock_file, MAX_NAME_LEN-1, "/tmp/.X%d-lock", (333 + g_rank));
+  snprintf(lock_file, MAX_NAME_LEN-1, "/tmp/.X%d-lock", (NOVNC_DISPLAY + g_rank));
   pid = get_pid_num(BIN_XVFB, g_display);
   if (pid)
     {
@@ -424,10 +425,10 @@ void init_novnc(char *net_name, int rank, char *ascii_port)
   strncpy(g_net_name, net_name, MAX_NAME_LEN-1);
   strncpy(g_ascii_port, ascii_port, MAX_NAME_LEN-1);
   g_rank = rank;
-  snprintf(g_display, MAX_NAME_LEN-1, ":%d", (333 + g_rank));
+  snprintf(g_display, MAX_NAME_LEN-1, ":%d", (NOVNC_DISPLAY + g_rank));
   kill_before_start();
-  g_port1 = 5900+333+g_rank;
-  g_port2 = 5900+333+g_rank+1;
+  g_port1 = 5900 + NOVNC_DISPLAY + g_rank;
+  g_port2 = 5900 + NOVNC_DISPLAY + g_rank+1;
   g_Xvfb=pid_clone_launch(Xvfb,kXvfb,NULL,NULL,NULL,NULL,"vnc",-1,1);
   clownix_timeout_add(100, timer_wm2, NULL, NULL, NULL);
   clownix_timeout_add(500, timer_monitor, NULL, NULL, NULL);

@@ -18,6 +18,110 @@
 //https://github.com/opencontainers/runtime-spec/blob/main/config.md
 //https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md
 
+#define CONFIG_JSON_MOUNT_ITEM "\n"\
+"               {\n"\
+"                       \"destination\": \"%s\",\n"\
+"                       \"type\": \"none\",\n"\
+"                       \"source\": \"%s\",\n"\
+"                       \"options\": [\"rbind\",\"rw\"]\n"\
+"               },\n"\
+
+#define CONFIG_JSON_MOUNT "\n"\
+"                \n %s %s %s %s \n"\
+"               {\n"\
+"                       \"destination\": \"/mnt\",\n"\
+"                       \"type\": \"none\",\n"\
+"                       \"source\": \"%s\",\n"\
+"                       \"options\": [\"rbind\",\"rw\"]\n"\
+"               },\n"\
+"               {\n"\
+"                       \"destination\": \"/tmp\",\n"\
+"                       \"type\": \"none\",\n"\
+"                       \"source\": \"%s\",\n"\
+"                       \"options\": [\"rbind\",\"rw\"]\n"\
+"               },\n"\
+"               {\n"\
+"                       \"destination\": \"/lib/modules\",\n"\
+"                       \"type\": \"none\",\n"\
+"                       \"source\": \"/lib/modules\",\n"\
+"                       \"options\": [\"rbind\",\"ro\"]\n"\
+"               },\n"\
+"               {\n"\
+"                       \"destination\": \"/proc\",\n"\
+"                       \"type\": \"proc\",\n"\
+"                       \"source\": \"proc\"\n"\
+"               },\n"\
+"               {\n"\
+"                       \"destination\": \"/dev\",\n"\
+"                       \"type\": \"tmpfs\",\n"\
+"                       \"source\": \"tmpfs\",\n"\
+"                       \"options\": [\n"\
+"                               \"nosuid\",\n"\
+"                               \"strictatime\",\n"\
+"                               \"mode=755\",\n"\
+"                               \"size=65536k\"\n"\
+"                       ]\n"\
+"               },\n"\
+"               {\n"\
+"                       \"destination\": \"/dev/pts\",\n"\
+"                       \"type\": \"devpts\",\n"\
+"                       \"source\": \"devpts\",\n"\
+"                       \"options\": [\n"\
+"                               \"nosuid\",\n"\
+"                               \"noexec\",\n"\
+"                               \"newinstance\",\n"\
+"                               \"ptmxmode=0666\",\n"\
+"                               \"mode=0620\",\n"\
+"                               \"gid=5\"\n"\
+"                       ]\n"\
+"               },\n"\
+"               {\n"\
+"                       \"destination\": \"/dev/shm\",\n"\
+"                       \"type\": \"tmpfs\",\n"\
+"                       \"source\": \"shm\",\n"\
+"                       \"options\": [\n"\
+"                               \"nosuid\",\n"\
+"                               \"noexec\",\n"\
+"                               \"nodev\",\n"\
+"                               \"mode=1777\",\n"\
+"                               \"size=65536k\"\n"\
+"                       ]\n"\
+"               },\n"\
+"               {\n"\
+"                       \"destination\": \"/dev/mqueue\",\n"\
+"                       \"type\": \"mqueue\",\n"\
+"                       \"source\": \"mqueue\",\n"\
+"                       \"options\": [\n"\
+"                               \"nosuid\",\n"\
+"                               \"noexec\",\n"\
+"                               \"nodev\"\n"\
+"                       ]\n"\
+"               },\n"\
+"               {\n"\
+"                       \"destination\": \"/sys\",\n"\
+"                       \"type\": \"sysfs\",\n"\
+"                       \"source\": \"sysfs\",\n"\
+"                       \"options\": [\n"\
+"                               \"nosuid\",\n"\
+"                               \"noexec\",\n"\
+"                               \"nodev\",\n"\
+"                               \"ro\"\n"\
+"                       ]\n"\
+"               },\n"\
+"               {\n"\
+"                       \"destination\": \"/sys/fs/cgroup\",\n"\
+"                       \"type\": \"cgroup\",\n"\
+"                       \"source\": \"cgroup\",\n"\
+"                       \"options\": [\n"\
+"                               \"nosuid\",\n"\
+"                               \"noexec\",\n"\
+"                               \"nodev\",\n"\
+"                               \"relatime\",\n"\
+"                               \"ro\"\n"\
+"                       ]\n"\
+"               }\n"
+
+
 
 #define CONFIG_JSON_CAPA "\"CAP_CHOWN\",\n"\
 "                         \"CAP_DAC_OVERRIDE\",\n"\
@@ -109,100 +213,7 @@
 "		\"readonly\": \"false\"\n"\
 "	},\n"\
 "	\"hostname\": \"crun\",\n"\
-"	\"mounts\": [\n"\
-"               {\n"\
-"                       \"destination\": \"/mnt\",\n"\
-"                       \"type\": \"none\",\n"\
-"                       \"source\": \"%s\",\n"\
-"                       \"options\": [\"rbind\",\"rw\"]\n"\
-"               },\n"\
-"               {\n"\
-"                       \"destination\": \"/tmp\",\n"\
-"                       \"type\": \"none\",\n"\
-"                       \"source\": \"%s\",\n"\
-"                       \"options\": [\"rbind\",\"rw\"]\n"\
-"               },\n"\
-"               {\n"\
-"                       \"destination\": \"/lib/modules\",\n"\
-"                       \"type\": \"none\",\n"\
-"                       \"source\": \"/lib/modules\",\n"\
-"                       \"options\": [\"rbind\",\"ro\"]\n"\
-"               },\n"\
-"		{\n"\
-"			\"destination\": \"/proc\",\n"\
-"			\"type\": \"proc\",\n"\
-"			\"source\": \"proc\"\n"\
-"		},\n"\
-"		{\n"\
-"			\"destination\": \"/dev\",\n"\
-"			\"type\": \"tmpfs\",\n"\
-"			\"source\": \"tmpfs\",\n"\
-"			\"options\": [\n"\
-"				\"nosuid\",\n"\
-"				\"strictatime\",\n"\
-"				\"mode=755\",\n"\
-"				\"size=65536k\"\n"\
-"			]\n"\
-"		},\n"\
-"		{\n"\
-"			\"destination\": \"/dev/pts\",\n"\
-"			\"type\": \"devpts\",\n"\
-"			\"source\": \"devpts\",\n"\
-"			\"options\": [\n"\
-"				\"nosuid\",\n"\
-"				\"noexec\",\n"\
-"				\"newinstance\",\n"\
-"				\"ptmxmode=0666\",\n"\
-"				\"mode=0620\",\n"\
-"				\"gid=5\"\n"\
-"			]\n"\
-"		},\n"\
-"		{\n"\
-"			\"destination\": \"/dev/shm\",\n"\
-"			\"type\": \"tmpfs\",\n"\
-"			\"source\": \"shm\",\n"\
-"			\"options\": [\n"\
-"				\"nosuid\",\n"\
-"				\"noexec\",\n"\
-"				\"nodev\",\n"\
-"				\"mode=1777\",\n"\
-"				\"size=65536k\"\n"\
-"			]\n"\
-"		},\n"\
-"		{\n"\
-"			\"destination\": \"/dev/mqueue\",\n"\
-"			\"type\": \"mqueue\",\n"\
-"			\"source\": \"mqueue\",\n"\
-"			\"options\": [\n"\
-"				\"nosuid\",\n"\
-"				\"noexec\",\n"\
-"				\"nodev\"\n"\
-"			]\n"\
-"		},\n"\
-"		{\n"\
-"			\"destination\": \"/sys\",\n"\
-"			\"type\": \"sysfs\",\n"\
-"			\"source\": \"sysfs\",\n"\
-"			\"options\": [\n"\
-"				\"nosuid\",\n"\
-"				\"noexec\",\n"\
-"				\"nodev\",\n"\
-"				\"ro\"\n"\
-"			]\n"\
-"		},\n"\
-"		{\n"\
-"			\"destination\": \"/sys/fs/cgroup\",\n"\
-"			\"type\": \"cgroup\",\n"\
-"			\"source\": \"cgroup\",\n"\
-"			\"options\": [\n"\
-"				\"nosuid\",\n"\
-"				\"noexec\",\n"\
-"				\"nodev\",\n"\
-"				\"relatime\",\n"\
-"				\"ro\"\n"\
-"			]\n"\
-"		}\n"\
-"	],\n"\
+"	\"mounts\": [ %s ],\n"\
 "	\"linux\": {\n"\
 "		\"device\": [\n"\
 "                       {\n"\

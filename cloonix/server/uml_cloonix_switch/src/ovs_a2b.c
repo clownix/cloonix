@@ -320,7 +320,7 @@ void ovs_a2b_pid_resp(int llid, char *name, int pid)
     cur->watchdog_count = 0;
     if ((cur->pid == 0) && (cur->suid_root_done == 1))
       {
-      layout_add_sat(name, cur->cli_llid);
+      layout_add_sat(name, cur->cli_llid, 1);
       cur->pid = pid;
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       cfg_hysteresis_send_topo_info();

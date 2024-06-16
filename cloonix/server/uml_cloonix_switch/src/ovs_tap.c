@@ -188,7 +188,7 @@ void ovs_tap_resp_msg_tap(int is_ko, int is_add, char *name)
     else
       {
       if (is_add)
-        layout_add_sat(name, cur->llid);
+        layout_add_sat(name, cur->llid, 0);
       else
         layout_del_sat(name);
       utils_send_status_ok(&(cur->llid), &(cur->tid));

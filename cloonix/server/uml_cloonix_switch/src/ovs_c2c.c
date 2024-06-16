@@ -659,7 +659,7 @@ void ovs_c2c_pid_resp(int llid, char *name, int pid)
     {
     if ((cur->pid == 0) && (cur->suid_root_done == 1))
       {
-      layout_add_sat(name, 0);
+      layout_add_sat(name, 0, 0);
       cur->pid = pid;
       memset(msg, 0, MAX_PATH_LEN);
       snprintf(msg, MAX_PATH_LEN-1, "c2c_get_udp_port %s", name);

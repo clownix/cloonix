@@ -42,6 +42,7 @@ void help_add_cru(char *line)
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
   printf("\n\t       --persistent");
+  printf("\n\t       --vmount=\"<dir_host:dir_cnt dir_host:dir_cnt...>\"");
   printf("\n\t       --startup_env=\"<env_name=env_val env2_name=env2_val...>\"");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\nexample:\n\n");
@@ -50,6 +51,7 @@ void help_add_cru(char *line)
   printf("\n%s name eth=vvv bookworm.zip\n", line);
   printf("This will give 3 eth that are not spyable\n");
   printf("\n%s name eth=s bookworm.zip --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
+  printf("\n%s name eth=s bookworm.zip --vmount=\"/opt:/opt /tmp/share:/share\"\n", line);
   printf("This will give 1 eth spyable and will start the container with\n");
   printf("MYENV=myenv and CLOONIX=great env variables.\n");
   printf("\n\n\n");
@@ -128,6 +130,12 @@ static int local_add_cnt(char *type, char *name, int nb_tot_eth,
       ptr = argv[i] + strlen("--startup_env=");
       if (strlen(ptr))
         strncpy(cnt.startup_env, ptr, MAX_PATH_LEN-1);
+      }
+    else if (!strncmp(argv[i], "--vmount=", strlen("--vmount=")))
+      {
+      ptr = argv[i] + strlen("--vmount=");
+      if (strlen(ptr))
+        strncpy(cnt.vmount, ptr, 4*MAX_PATH_LEN-1);
       }
     else
       {

@@ -219,6 +219,8 @@ void recv_layout_sat(int llid, int itid, t_layout_sat *ilayout_sat)
         KOUT(" ");
       if (layout_sat.hidden_on_graph != ilayout_sat->hidden_on_graph)
         KOUT(" ");
+      if (layout_sat.is_a2b != ilayout_sat->is_a2b)
+        KOUT(" ");
       if (double_diff(layout_sat.xa, ilayout_sat->xa))
         KOUT(" ");
       if (double_diff(layout_sat.ya, ilayout_sat->ya))
@@ -237,6 +239,7 @@ void recv_layout_sat(int llid, int itid, t_layout_sat *ilayout_sat)
     layout_sat.ya      =randouble();
     layout_sat.xb      =randouble();
     layout_sat.yb      =randouble();
+    layout_sat.is_a2b     =rand();
     layout_sat.hidden_on_graph      =rand();
     send_layout_sat(llid, tid, &layout_sat);
     }

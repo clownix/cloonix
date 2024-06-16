@@ -5,10 +5,11 @@ HERE=`pwd`
 NET=nemo
 #----------------------------------------------------------------------#
 VMNAME=ams
-DIST=trixie
+DIST=bookworm
 QCOW2=openvswitch.qcow2
 BIN_STORE="${HERE}/bin_store"
 REPO="http://deb.debian.org/debian"
+REPO="http://172.17.0.2/debian/bookworm"
 #######################################################################
 set +e
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)

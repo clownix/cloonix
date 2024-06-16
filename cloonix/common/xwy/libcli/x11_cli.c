@@ -145,6 +145,8 @@ static void create_conn_and_ack(int srv_idx, int cli_idx, int x11_fd)
   conn->llid_ass      = 0;
   epfd = xcli_get_main_epfd();
   conn->x11_fd_epev = wrap_epoll_event_alloc(epfd, x11_fd, 3);
+  if (conn->x11_fd_epev == NULL)
+    KOUT(" ");
   fd_spy_set_info(conn->x11_fd, srv_idx, cli_idx); 
   g_conn[cli_idx] = conn;
 }

@@ -477,6 +477,14 @@ int xcli_fct_after_epoll(int nb, struct epoll_event *events)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int is_valid_fd(int fd)
+{
+  return fcntl(fd, F_GETFL) != -1 || errno != EBADF;
+}
+/*---------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 void xcli_init(int epfd, int llid, int tid, int type,
                t_sock_fd_tx soc_tx, t_sock_fd_ass_open sock_fd_ass_open,
                t_sock_fd_ass_close sock_fd_ass_close, int action,
@@ -485,6 +493,11 @@ void xcli_init(int epfd, int llid, int tid, int type,
   struct timeval tv;
   int win_chg_fd;
 
+  if (!is_valid_fd(0))
+    KERR("ERROR 0 is NOT VALID");
+
+  if (!is_valid_fd(epfd))
+    KERR("ERROR %d is NOT VALID", epfd);
   g_zero_fd_epev = NULL;
   g_win_chg_fd_epev = NULL;
   g_llid = llid;
@@ -499,7 +512,12 @@ void xcli_init(int epfd, int llid, int tid, int type,
   g_main_epfd = epfd;
   mdl_init();
   low_write_init();
-  g_zero_fd_epev = wrap_epoll_event_alloc(epfd, 0, 1);
+  if (action != action_dae)
+    {
+    g_zero_fd_epev = wrap_epoll_event_alloc(epfd, 0, 1);
+    if (g_zero_fd_epev == NULL)
+      KOUT(" ");
+    }
   gettimeofday(&tv, NULL);
   srand((int)tv.tv_usec);
   g_randid = (uint32_t) rand();
@@ -524,6 +542,8 @@ void xcli_init(int epfd, int llid, int tid, int type,
       if (setup_win_pipe(&win_chg_fd))
         KOUT(" ");
       g_win_chg_fd_epev = wrap_epoll_event_alloc(epfd, win_chg_fd, 2);
+      if (g_win_chg_fd_epev == NULL)
+        KOUT(" ");
       }
     }
   else if (action == action_get)

@@ -264,7 +264,11 @@ static void *thread_x11(void *arg)
   x11_fd = x11->x11_fd;
   thread_spy_add(x11->sock_fd_ass, x11->x11_fd, x11->epfd, thread_type_x11);
   x11->epev_x11_fd = wrap_epoll_event_alloc(x11->epfd, x11->x11_fd, 4);
+  if (x11->epev_x11_fd == NULL)
+    KOUT(" ");
   x11->epev_soc_fd = wrap_epoll_event_alloc(x11->epfd, x11->sock_fd_ass, 5);
+  if (x11->epev_soc_fd == NULL)
+    KOUT(" ");
   mdl_open(x11->sock_fd_ass, fd_type_x11, wrap_write_x11_soc, wrap_read_kout);
   mdl_open(x11->x11_fd, fd_type_x11, wrap_write_x11_x11, wrap_read_kout);
   while(x11->thread_waiting)
@@ -406,6 +410,8 @@ int thread_x11_open(uint32_t randid, int server_side, int sock_fd_ass,
 
   x11->epev_diag_thread_fd = wrap_epoll_event_alloc(x11->epfd,
                                                     x11->diag_thread_fd, 6);
+  if (x11->epev_diag_thread_fd == NULL)
+    KOUT(" ");
   dialog_open(x11->diag_thread_fd, wrap_write_dialog_thread,
                                     wrap_read_dialog_thread);
   dialog_open(x11->diag_main_fd, wrap_write_dialog_thread,

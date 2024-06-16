@@ -207,7 +207,7 @@ void WindowManager::menu(XButtonEvent *e)
 	switch (event.type) {
 
 	default:
-	    fprintf(stderr, "wm2: unknown event type %d\n", event.type);
+//	    fprintf(stderr, "wm2: unknown event type %d\n", event.type);
 	    break;
 
 	case ButtonPress:
@@ -386,7 +386,7 @@ void Client::move(XButtonEvent *e)
 	switch (event.type) {
 
 	default:
-	    fprintf(stderr, "wm2: unknown event type %d\n", event.type);
+//	    fprintf(stderr, "wm2: unknown event type %d\n", event.type);
 	    break;
 
 	case Expose:
@@ -514,7 +514,7 @@ void Client::resize(XButtonEvent *e, Boolean horizontal, Boolean vertical)
 	switch (event.type) {
 
 	default:
-	    fprintf(stderr, "wm2: unknown event type %d\n", event.type);
+//	    fprintf(stderr, "wm2: unknown event type %d\n", event.type);
 	    break;
 
 	case Expose:
@@ -674,115 +674,110 @@ void Border::eventButton(XButtonEvent *e)
 
 	switch (event.type) {
 
-case KeyPress:
-fprintf(stderr, "wm2: VIPTODO KeyPress: \n");
-break;
-case KeyRelease:
-fprintf(stderr, "wm2: VIPTODO KeyRelease: \n");
-break;
-case EnterNotify:
-fprintf(stderr, "wm2: VIPTODO EnterNotify: \n");
-break;
-case LeaveNotify:
-fprintf(stderr, "wm2: VIPTODO LeaveNotify: \n");
-break;
-case FocusIn:
-fprintf(stderr, "wm2: VIPTODO FocusIn: \n");
-break;
-case FocusOut:
-fprintf(stderr, "wm2: VIPTODO FocusOut: \n");
-break;
-case KeymapNotify:
-fprintf(stderr, "wm2: VIPTODO KeymapNotify: \n");
-break;
-case GraphicsExpose:
-fprintf(stderr, "wm2: VIPTODO GraphicsExpose: \n");
-break;
-case NoExpose:
-fprintf(stderr, "wm2: VIPTODO NoExpose: \n");
-break;
-case VisibilityNotify:
-fprintf(stderr, "wm2: VIPTODO VisibilityNotify: \n");
-break;
-case CreateNotify:
-fprintf(stderr, "wm2: VIPTODO CreateNotify: \n");
-break;
-case DestroyNotify:
-fprintf(stderr, "wm2: VIPTODO DestroyNotify: \n");
-break;
-case UnmapNotify:
-fprintf(stderr, "wm2: VIPTODO UnmapNotify: \n");
-break;
-case MapNotify:
-fprintf(stderr, "wm2: VIPTODO MapNotify: \n");
-break;
-case MapRequest:
-fprintf(stderr, "wm2: VIPTODO MapRequest: \n");
-break;
-case ReparentNotify:
-fprintf(stderr, "wm2: VIPTODO ReparentNotify: \n");
-break;
-case ConfigureNotify:
-fprintf(stderr, "wm2: VIPTODO ConfigureNotify: \n");
-break;
-case ConfigureRequest:
-fprintf(stderr, "wm2: VIPTODO ConfigureRequest: \n");
-break;
-case GravityNotify:
-fprintf(stderr, "wm2: VIPTODO GravityNotify: \n");
-break;
-case ResizeRequest:
-fprintf(stderr, "wm2: VIPTODO ResizeRequest: \n");
-break;
-case CirculateNotify:
-fprintf(stderr, "wm2: VIPTODO CirculateNotify: \n");
-break;
-case CirculateRequest:
-fprintf(stderr, "wm2: VIPTODO CirculateRequest: \n");
-break;
-case PropertyNotify:
-fprintf(stderr, "wm2: VIPTODO PropertyNotify: \n");
-break;
-case SelectionClear:
-fprintf(stderr, "wm2: VIPTODO SelectionClear: \n");
-break;
-case SelectionRequest:
-fprintf(stderr, "wm2: VIPTODO SelectionRequest: \n");
-break;
-case SelectionNotify:
-fprintf(stderr, "wm2: VIPTODO SelectionNotify: \n");
-break;
-case ColormapNotify:
-fprintf(stderr, "wm2: VIPTODO ColormapNotify: \n");
-break;
-case ClientMessage:
-fprintf(stderr, "wm2: VIPTODO ClientMessage: \n");
-break;
-case MappingNotify:
-fprintf(stderr, "wm2: VIPTODO MappingNotify: \n");
-break;
-case GenericEvent:
-fprintf(stderr, "wm2: VIPTODO GenericEvent: \n");
-break;
-
-
+// case KeyPress:
+// fprintf(stderr, "wm2: KeyPress: \n");
+// break;
+// case KeyRelease:
+// fprintf(stderr, "wm2: KeyRelease: \n");
+// break;
+// case EnterNotify:
+// fprintf(stderr, "wm2: EnterNotify: \n");
+// break;
+// case LeaveNotify:
+// fprintf(stderr, "wm2: LeaveNotify: \n");
+// break;
+// case FocusIn:
+// fprintf(stderr, "wm2: FocusIn: \n");
+// break;
+// case FocusOut:
+// fprintf(stderr, "wm2: FocusOut: \n");
+// break;
+// case KeymapNotify:
+// fprintf(stderr, "wm2: KeymapNotify: \n");
+// break;
+// case GraphicsExpose:
+// fprintf(stderr, "wm2: GraphicsExpose: \n");
+// break;
+// case NoExpose:
+// fprintf(stderr, "wm2: NoExpose: \n");
+// break;
+// case VisibilityNotify:
+// fprintf(stderr, "wm2: VisibilityNotify: \n");
+// break;
+// case CreateNotify:
+// fprintf(stderr, "wm2: CreateNotify: \n");
+// break;
+// case DestroyNotify:
+// fprintf(stderr, "wm2: DestroyNotify: \n");
+// break;
+// case UnmapNotify:
+// fprintf(stderr, "wm2: UnmapNotify: \n");
+// break;
+// case MapNotify:
+// fprintf(stderr, "wm2: MapNotify: \n");
+// break;
+// case MapRequest:
+// fprintf(stderr, "wm2: MapRequest: \n");
+// break;
+// case ReparentNotify:
+// fprintf(stderr, "wm2: ReparentNotify: \n");
+// break;
+// case ConfigureNotify:
+// fprintf(stderr, "wm2: ConfigureNotify: \n");
+// break;
+// case ConfigureRequest:
+// fprintf(stderr, "wm2: ConfigureRequest: \n");
+// break;
+// case GravityNotify:
+// fprintf(stderr, "wm2: GravityNotify: \n");
+// break;
+// case ResizeRequest:
+// fprintf(stderr, "wm2: ResizeRequest: \n");
+// break;
+// case CirculateNotify:
+// fprintf(stderr, "wm2: CirculateNotify: \n");
+// break;
+// case CirculateRequest:
+// fprintf(stderr, "wm2: CirculateRequest: \n");
+// break;
+// case PropertyNotify:
+// fprintf(stderr, "wm2: PropertyNotify: \n");
+// break;
+// case SelectionClear:
+// fprintf(stderr, "wm2: SelectionClear: \n");
+// break;
+// case SelectionRequest:
+// fprintf(stderr, "wm2: SelectionRequest: \n");
+// break;
+// case SelectionNotify:
+// fprintf(stderr, "wm2: SelectionNotify: \n");
+// break;
+// case ColormapNotify:
+// fprintf(stderr, "wm2: ColormapNotify: \n");
+// break;
+// case ClientMessage:
+// fprintf(stderr, "wm2: ClientMessage: \n");
+// break;
+// case MappingNotify:
+// fprintf(stderr, "wm2: MappingNotify: \n");
+// break;
+// case GenericEvent:
+// fprintf(stderr, "wm2: GenericEvent: \n");
+// break;
 
 	default:
-	    fprintf(stderr, "wm2: unknown event type %d\n", event.type);
+//	    fprintf(stderr, "wm2: unknown event type %d\n", event.type);
 	    break;
 
 	case Expose:
-fprintf(stderr, "wm2: VIPTODO Expose\n");
 	    windowManager()->eventExposure(&event.xexpose);
 	    break;
 
 	case ButtonPress:
-fprintf(stderr, "wm2: VIPTODO ButtonPress\n");
 	    done = True;
 	    break;
 
 	case ButtonRelease:
-fprintf(stderr, "wm2: VIPTODO ButtonRelease\n");
 	    if (!nobuttons(&event.xbutton)) {
 		action = 0;
 	    }
@@ -794,7 +789,6 @@ fprintf(stderr, "wm2: VIPTODO ButtonRelease\n");
 	    break;
 
 	case MotionNotify:
-fprintf(stderr, "wm2: VIPTODO MotionNotify\n");
 	    x = event.xmotion.x;
 	    y = event.xmotion.y;
 	    if (x < 0 || y < 0 || x >= buttonSize || y >= buttonSize) {
@@ -805,7 +799,6 @@ fprintf(stderr, "wm2: VIPTODO MotionNotify\n");
 	    break;
 	}
     }
-fprintf(stderr, "wm2: VIPTODO     END\n");
     XClearWindow(display(), m_button);
     windowManager()->installCursor(WindowManager::NormalCursor);
     if (action == 2) m_client->kill();

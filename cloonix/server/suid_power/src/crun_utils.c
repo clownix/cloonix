@@ -39,6 +39,7 @@
 #define MAX_ARGS_POPEN 100
 #define MAX_CMD_POPEN 5000
 
+#define MAX_VMOUNT 4
 
 char *get_net_name(void);
 char *get_bin_dir(void);
@@ -314,27 +315,107 @@ static void format_startup_env(char *startup_env, char *env)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void extract_vmount(char *vmount,
+                           char vmountunit[MAX_VMOUNT][MAX_PATH_LEN])
+{
+  char *ptrs = vmount;
+  char *ptre;
+  int i = 0;
+  memset(vmountunit, 0, MAX_VMOUNT * MAX_PATH_LEN);
+  while (strlen(ptrs))
+    {
+    ptre = strchr(ptrs, ' ');
+    if (ptre)
+      *ptre = 0;
+    strncpy(vmountunit[i], ptrs, MAX_PATH_LEN);
+    i += 1;
+    if ((i == MAX_VMOUNT) || (ptre == NULL))
+      break;
+    ptrs = ptre + 1;
+    }
+} 
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static char *format_buf_mount(char *mountbear, char *mounttmp, char *vmount)
+{
+  int i;
+  char *buf_mount, *ptrs, *ptre;
+  char vmountunit[MAX_VMOUNT][MAX_PATH_LEN];
+  char vmountjson[MAX_VMOUNT][4*MAX_PATH_LEN];
+  int len_mount = strlen(CONFIG_JSON_MOUNT) +
+                  4*strlen(CONFIG_JSON_MOUNT_ITEM) + 10*MAX_PATH_LEN; 
+  extract_vmount(vmount, vmountunit);
+  for (i=0; i<MAX_VMOUNT; i++) 
+    strcpy(vmountjson[i], " ");
+  for (i=0; i<MAX_VMOUNT; i++) 
+    {
+    ptrs = vmountunit[i];
+    if (!strlen(ptrs))
+      {
+      break;
+      }
+    else
+      {
+      ptre = strchr(vmountunit[i], ':');
+      if (!ptre)
+        {
+        KERR("WARNING PARAM VMOUNT %d %s", i, vmountunit[i]);
+        break;
+        }
+      else
+        {
+        *ptre = 0;
+        ptre += 1;
+        if (!strlen(ptre))
+          {
+          KERR("WARNING PARAM VMOUNT %d %s", i, vmountunit[i]);
+          break;
+          }
+        else
+          {
+          snprintf(vmountjson[i], 4*MAX_PATH_LEN - 1,
+                   CONFIG_JSON_MOUNT_ITEM, ptre, ptrs);
+          }
+        }
+      }
+    }
+  buf_mount = (char *) malloc(len_mount);
+  memset(buf_mount, 0, len_mount);
+  snprintf(buf_mount, len_mount-1,  CONFIG_JSON_MOUNT,
+           vmountjson[0], vmountjson[1], vmountjson[2], vmountjson[3],
+           mountbear, mounttmp);
+  return buf_mount;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static char *get_config_json(char *rootfs, char *nspace,
                              char *mountbear, char *mounttmp,
                              int is_persistent,  char *startup_env,
-                             char *name)
+                             char *vmount, char *name)
 {
   char *buf;
-  int len = strlen(CONFIG_JSON)+(5*strlen(CONFIG_JSON_CAPA))+3*MAX_PATH_LEN;
+  char *buf_mount;
+  int len = strlen(CONFIG_JSON) + strlen(CONFIG_JSON_MOUNT) +
+            (5*strlen(CONFIG_JSON_CAPA)) + strlen(CONFIG_JSON_MOUNT) +
+            (4*strlen(CONFIG_JSON_MOUNT_ITEM)) + 10*MAX_PATH_LEN;
   char env[MAX_PATH_LEN+MAX_NAME_LEN], *starter;
   char log_json[MAX_PATH_LEN];
   memset(log_json, 0, MAX_PATH_LEN);
   snprintf(log_json, MAX_PATH_LEN-1, "%s/%s", g_var_crun_json, name); 
   starter = "\"/mnt/cloonix_config_fs/init_cloonix_startup_script.sh\"\n";
   format_startup_env(startup_env, env);
+  buf_mount = format_buf_mount(mountbear, mounttmp, vmount);
   buf = (char *) malloc(len);
   memset(buf, 0, len);
   snprintf(buf, len-1, CONFIG_JSON, starter, env,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
-                                    CONFIG_JSON_CAPA, rootfs, 
-                                    mountbear, mounttmp, nspace); 
+                                    CONFIG_JSON_CAPA, rootfs, buf_mount, 
+                                    nspace); 
   write_whole_file(log_json, buf, strlen(buf));
+  free(buf_mount);
   return buf;
 }
 /*--------------------------------------------------------------------------*/
@@ -526,8 +607,7 @@ static char *get_insider_agent(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int dirs_agent_copy_starter(char *mountbear, char *agent_dir,
-                                   char *startup_env, int nb_eth)
+static int dirs_agent_copy_starter(char *mountbear, char *agent_dir)
 {
   int result = -1;
   char path[MAX_PATH_LEN];
@@ -545,22 +625,7 @@ static int dirs_agent_copy_starter(char *mountbear, char *agent_dir,
     if (execute_cmd(cmd, 1))
       KERR("ERROR %s", cmd);
     else
-      {
       result = 0;
-      memset(path, 0, MAX_PATH_LEN);
-      snprintf(path, MAX_PATH_LEN-1,
-               "%s/cloonix_config_fs/startup_env", mountbear);
-      write_whole_file(path, startup_env, strlen(startup_env));
-      if (nb_eth)
-        {
-        memset(path, 0, MAX_PATH_LEN);
-        snprintf(path, MAX_PATH_LEN-1,
-                 "%s/cloonix_config_fs/startup_nb_eth", mountbear);
-        memset(line, 0, MAX_NAME_LEN);
-        snprintf(line, MAX_NAME_LEN-1, "%d", nb_eth);
-        write_whole_file(path, line, strlen(line));
-        }
-      }
     }
   return result;
 }
@@ -726,19 +791,39 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name)
   return pid;
 }
 /*--------------------------------------------------------------------------*/
+   
+/****************************************************************************/
+void crun_utils_startup_env(char *mountbear, char *startup_env, int nb_eth)
+{     
+  char path[MAX_PATH_LEN];
+  char line[MAX_NAME_LEN];
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path,MAX_PATH_LEN-1,
+           "%s/cloonix_config_fs/startup_env",
+           mountbear);
+  write_whole_file(path, startup_env, strlen(startup_env));
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path,MAX_PATH_LEN-1,
+           "%s/cloonix_config_fs/startup_nb_eth",
+           mountbear);
+  memset(line, 0, MAX_NAME_LEN);
+  snprintf(line, MAX_NAME_LEN-1, "%d", nb_eth);
+  write_whole_file(path, line, strlen(line));
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int crun_utils_create_config_json(char *path, char *rootfs, char *nspace,
                                  char *mountbear, char *mounttmp,
                                  int is_persistent, char *startup_env,
-                                 char *name)
+                                 char *vmount, char *name)
 {
   int len, result;
   char json_path[MAX_PATH_LEN];
   char tmp_json_path[MAX_PATH_LEN];
   char *buf = get_config_json(rootfs, nspace, mountbear,
                               mounttmp, is_persistent,
-                              startup_env, name);
+                              startup_env, vmount, name);
   memset(json_path, 0, MAX_PATH_LEN);
   snprintf(json_path, MAX_PATH_LEN-1, "%s/config.json", path); 
   len = strlen(buf);
@@ -854,16 +939,15 @@ static int nspace_create(char *name, char *nspace, int cloonix_rank,
 /****************************************************************************/
 int crun_utils_create_net(char *mountbear, char *mounttmp, char *image,
                           char *name, char *cnt_dir, char *nspace,
-                          int cloonix_rank, int vm_id,
-                          int nb_eth, t_eth_mac *eth_mac,
-                          char *agent_dir, char *startup_env)
+                          int cloonix_rank, int vm_id, int nb_eth,
+                          t_eth_mac *eth_mac, char *agent_dir)
 {
   int result = create_all_dirs(mountbear, mounttmp, image, cnt_dir, name);
   if (result)
     KERR("ERROR %s %s %s", cnt_dir, name, nspace);
   else
     {
-    if (dirs_agent_copy_starter(mountbear, agent_dir, startup_env, nb_eth))
+    if (dirs_agent_copy_starter(mountbear, agent_dir))
       {
       KERR("ERROR %s %s %s", cnt_dir, name, nspace);
       result = -1;

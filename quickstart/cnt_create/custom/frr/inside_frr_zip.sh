@@ -36,9 +36,9 @@ done
 rm -rf /root/${ROOTNM}
 mkdir -p /root/${ROOTNM}
 
-for i in "bin" "lib64" "root" "etc" "tmp" "var/log" "usr/bin" \
+for i in "bin" "lib64" "lib" "root" "etc" "tmp" "var/log" "usr/bin" \
          "usr/lib/x86_64-linux-gnu/rsyslog" "var/spool/rsyslog" \
-         "lib/security" "/etc/pam.d" "var/lib" ; do
+         "lib/security" "etc/pam.d" "var/lib" "usr/lib/security" ; do
   mkdir -v -p /root/${ROOTNM}/${i}
 done
 
@@ -64,7 +64,7 @@ cp -Lrf /usr/lib/x86_64-linux-gnu/frr /root/${ROOTNM}/usr/lib/x86_64-linux-gnu/
 
 #PAM
 #cp -f /usr/lib/x86_64-linux-gnu/libpam.so.0 /root/${ROOTNM}/usr/lib/x86_64-linux-gnu
-cp -f /usr/lib/x86_64-linux-gnu/security/pam_permit.so /root/${ROOTNM}/lib/security
+cp -f /usr/lib/x86_64-linux-gnu/security/pam_permit.so /root/${ROOTNM}/usr/lib/security
 #cp -Lrf /usr/lib/x86_64-linux-gnu/security /root/${ROOTNM}/usr/lib/x86_64-linux-gnu
 
 

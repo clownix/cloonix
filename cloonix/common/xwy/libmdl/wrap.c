@@ -723,6 +723,7 @@ int wrap_epoll_create(int fd_type, const char *fct)
 /****************************************************************************/
 struct epoll_event *wrap_epoll_event_alloc(int epfd, int fd, int id)
 {
+  struct epoll_event *result = NULL;
   struct epoll_event *epev;
   int len = sizeof(struct epoll_event);
   epev = (struct epoll_event *) wrap_malloc(len);
@@ -730,8 +731,10 @@ struct epoll_event *wrap_epoll_event_alloc(int epfd, int fd, int id)
   epev->events = 0;
   epev->data.fd = fd;
   if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, epev))
-    KOUT("ERROR %d %s", id, strerror(errno));
-  return(epev);
+    KERR("ERROR %d %d %s", id, errno, strerror(errno));
+  else
+    result = epev;
+  return(result);
 }
 /*--------------------------------------------------------------------------*/
 

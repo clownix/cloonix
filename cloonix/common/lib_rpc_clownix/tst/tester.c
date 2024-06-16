@@ -324,6 +324,11 @@ static int topo_cnt_diff(t_topo_cnt *icnt, t_topo_cnt *cnt)
     KERR("%s %s", cnt->startup_env, icnt->startup_env);
     result = -1;
     }
+  else   if (strcmp(cnt->vmount, icnt->vmount))
+    {
+    KERR("%s %s", cnt->vmount, icnt->vmount);
+    result = -1;
+    }
 
   else
     {
@@ -485,6 +490,7 @@ static void random_cnt(t_topo_cnt *cnt)
   random_choice_str(cnt->name, MAX_NAME_LEN);
   random_choice_str(cnt->image, MAX_PATH_LEN);
   random_choice_str(cnt->startup_env, MAX_PATH_LEN);
+  random_choice_str(cnt->vmount, 4*MAX_PATH_LEN);
   cnt->nb_tot_eth = my_rand(MAX_ETH_VM);
   cnt->ping_ok = my_rand(20);
   cnt->vm_id = my_rand(120);
@@ -2973,7 +2979,7 @@ static void usage(char *name)
 /*****************************************************************************/
 static void err_cb (int llid, int err, int from)
 {
-  printf("ERROR %d  %d %d\n", llid, err, from);
+  printf("ERROR CB %d  %d %d\n", llid, err, from);
   KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/

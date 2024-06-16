@@ -1,4 +1,11 @@
 
+/******************************************************************/
+/* Copyright (c) 1996-7 Chris Cannam.  Not a release */
+/*      Parts derived from 9wm Copyright (c) 1994-96 David Hogan */
+/*      xvertext routines Copyright (c) 1992 Alan Richardson */
+/*      Copying and redistribution encouraged */
+/******************************************************************/
+
 #include "Manager.h"
 #include "Client.h"
 #include <string.h>
@@ -27,12 +34,6 @@ implementPList(ClientList, Client);
 WindowManager::WindowManager() :
     m_menuGC(0), m_menuWindow(0), m_menuFont(0), m_focusChanging(False)
 {
-    fprintf(stderr, "\nwm2: Copyright (c) 1996-7 Chris Cannam."
-	    "  Not a release\n"
-	    "     Parts derived from 9wm Copyright (c) 1994-96 David Hogan\n"
-	    "     %s\n     Copying and redistribution encouraged.  "
-	    "No warranty.\n\n", XV_COPYRIGHT);
-
     if (CONFIG_AUTO_RAISE) {
 	if (CONFIG_CLICK_TO_FOCUS) {
 	    fatal("can't have auto-raise-with-delay with click-to-focus");
@@ -45,7 +46,7 @@ WindowManager::WindowManager() :
     } else {
 	if (CONFIG_CLICK_TO_FOCUS) {
 	    if (CONFIG_RAISE_ON_FOCUS) {
-		fprintf(stderr, "     Click to focus.  ");
+//		fprintf(stderr, "     Click to focus.  ");
 	    } else {
 		fatal("can't have click-to-focus without raise-on-focus");
 	    }
@@ -61,16 +62,16 @@ WindowManager::WindowManager() :
     if (CONFIG_EVERYTHING_ON_ROOT_MENU) {
 	fprintf(stderr, "All clients on menu.\n");
     } else {
-	fprintf(stderr, "Hidden clients only on menu.\n");
+//	fprintf(stderr, "Hidden clients only on menu.\n");
     }
 
     if (CONFIG_PROD_SHAPE) {
 	fprintf(stderr, "     Shape prodding on.  ");
     } else {
-	fprintf(stderr, "     Shape prodding off.  ");
+//	fprintf(stderr, "     Shape prodding off.  ");
     }
 
-    fprintf(stderr, "\n     (To reconfigure, simply edit and recompile.)\n\n");
+//    fprintf(stderr, "\n     (To reconfigure, simply edit and recompile.)\n\n");
 
     m_display = XOpenDisplay(NULL);
     if (!m_display) fatal("can't open display");
@@ -197,7 +198,7 @@ int WindowManager::errorHandler(Display *d, XErrorEvent *e)
     if (request[0] == '\0') sprintf(request, "<request-code-%d>",
 				    e->request_code);
 
-    fprintf(stderr, "wm2: %s (0x%lx): %s\n", request, e->resourceid, msg);
+// X_GetWindowAttributes BadWindow    fprintf(stderr, "wm2: %s (0x%lx): %s\n", request, e->resourceid, msg);
 
     if (m_initialising) {
 	fprintf(stderr, "wm2: failure during initialisation, abandoning\n");

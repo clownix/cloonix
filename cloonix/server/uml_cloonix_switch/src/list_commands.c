@@ -536,23 +536,26 @@ static int build_layout_sat(int offset, t_list_commands *hlist,
         result += 1;
         }
       }
-    if (can_increment_index(result))
+    if (sat->is_a2b)
       {
-      list = &(hlist[result]);
-      sprintf(list->cmd, "cloonix_cli %s cnf lay abs_xy_eth %s 0 %d",
-                          cfg_get_cloonix_name(), sat->name, 
-                          layout_a2b_solve(sat->xa, sat->ya));
-      result += 1;
+      if (can_increment_index(result))
+        {
+        list = &(hlist[result]);
+        sprintf(list->cmd, "cloonix_cli %s cnf lay abs_xy_eth %s 0 %d",
+                            cfg_get_cloonix_name(), sat->name, 
+                            layout_a2b_solve(sat->xa, sat->ya));
+        result += 1;
+        }
+      if (can_increment_index(result))
+        {
+        list = &(hlist[result]);
+        sprintf(list->cmd, "cloonix_cli %s cnf lay abs_xy_eth %s 1 %d",
+                            cfg_get_cloonix_name(), sat->name, 
+                            layout_a2b_solve(sat->xb, sat->yb));
+        result += 1;
+        }
       }
-    if (can_increment_index(result))
-      {
-      list = &(hlist[result]);
-      sprintf(list->cmd, "cloonix_cli %s cnf lay abs_xy_eth %s 1 %d",
-                          cfg_get_cloonix_name(), sat->name, 
-                          layout_a2b_solve(sat->xb, sat->yb));
-      result += 1;
-      }
-   }
+    }
   return result;
 }
 /*---------------------------------------------------------------------------*/

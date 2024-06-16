@@ -53,6 +53,7 @@ typedef struct t_layout_sat
   double ya;
   double xb;
   double yb;
+  int is_a2b;
   int hidden_on_graph;
 } t_layout_sat;
 /*--------------------------------------------------------------------------*/

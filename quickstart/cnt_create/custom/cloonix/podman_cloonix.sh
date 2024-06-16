@@ -8,7 +8,7 @@ QCOW2="podman_cloonix.qcow2"
 REPO="http://deb.debian.org/debian"
 BOOKWORM="/var/lib/cloonix/bulk/trixie_amd64.qcow2"
 BUNDLE_PATH="/home/perrier"
-BUNDLE="cloonix-bundle-38-00-amd64"
+BUNDLE="cloonix-bundle-39-00-amd64"
 #######################################################################
 set +e
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)

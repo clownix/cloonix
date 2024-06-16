@@ -4,12 +4,12 @@ mkdir build
 cp -f conf.py index.rst Makefile build
 cp -rf doc png build
 cd build 
-sed -i s"/__LAST__/38-00/"g conf.py
-sed -i s"/__LAST__/38-00/"g doc/configure.rst
-sed -i s"/__LAST__/38-00/"g doc/building.rst
-sed -i s"/__LAST_BASE__/38/"g doc/building.rst
-sed -i s"/__LAST__/38-00/"g doc/installation.rst
-sed -i s"/__LAST_BASE__/38/"g doc/installation.rst
+sed -i s"/__LAST__/39-00/"g conf.py
+sed -i s"/__LAST__/39-00/"g doc/configure.rst
+sed -i s"/__LAST__/39-00/"g doc/building.rst
+sed -i s"/__LAST_BASE__/39/"g doc/building.rst
+sed -i s"/__LAST__/39-00/"g doc/installation.rst
+sed -i s"/__LAST_BASE__/39/"g doc/installation.rst
 make clean
 make html
 make singlehtml

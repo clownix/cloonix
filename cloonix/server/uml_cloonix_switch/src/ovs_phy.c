@@ -311,7 +311,7 @@ void ovs_phy_resp_msg_phy(int is_ko, int is_add,
       else
         {
         if (is_add)
-          layout_add_sat(vhost, cur->llid);
+          layout_add_sat(vhost, cur->llid, 0);
         else
           layout_del_sat(vhost);
         utils_send_status_ok(&(cur->llid), &(cur->tid));

@@ -21,7 +21,7 @@ void get_layout_main_params(int *go, int *width, int *height,
                             int *cx, int *cy, int *cw, int *ch);
 t_layout_xml *get_layout_xml_chain(void);
 void layout_add_vm(char *name, int llid);
-void layout_add_sat(char *name, int llid);
+void layout_add_sat(char *name, int llid, int is_a2b);
 void layout_add_lan(char *name, int llid);
 void layout_del_vm(char *name);
 void layout_del_sat(char *name);

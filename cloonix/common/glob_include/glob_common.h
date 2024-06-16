@@ -179,6 +179,8 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define LOG_DIR "log"
 
 
+#define NOVNC_DISPLAY 733
+
 #define MAX_STATS_ITEMS 30
 
 #define MAX_LAN           (0x5FFF + 2)
@@ -333,6 +335,7 @@ typedef struct t_topo_cnt
   t_eth_table eth_table[MAX_ETH_VM];
   char image[MAX_PATH_LEN];
   char startup_env[MAX_PATH_LEN];
+  char vmount[4*MAX_PATH_LEN];
 } t_topo_cnt;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_c2c

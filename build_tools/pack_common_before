@@ -66,7 +66,7 @@ for i in "websockify" \
          "__pycache__" ; do
   cp -r /usr/lib/python3/dist-packages/${i} ${COMMON}/lib/python3/dist-packages
 done
-
+sed -i s"/warnings.warn/#warnings.warn/" ${COMMON}/lib/python3/dist-packages/websockify/websocket.py
 
 for i in "lib2to3" \
          "lib-dynload" \
@@ -86,7 +86,9 @@ done
 
 
 for i in "enum.py" \
+         "queue.py" \
          "types.py" \
+         "heapq.py" \
          "operator.py" \
          "functools.py" \
          "keyword.py" \
@@ -233,6 +235,10 @@ for i in "gstreamer1.0" "gstreamer-1.0" \
          "qt6" "pipewire-0.3" ; do
   cp -rf ${SRCD}/${i} ${DSTD}
 done
+
+rm -rf ${DSTD}/qt6/plugins/*
+cp -rf ${SRCD}/qt6/plugins/platforms ${DSTD}/qt6/plugins
+
 mkdir -p ${DSTD}/gconv
 cp -f ${SRCD}/gconv/gconv-modules.cache ${DSTD}/gconv
 #----------------------------------------------------------

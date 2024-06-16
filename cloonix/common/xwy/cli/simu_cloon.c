@@ -247,6 +247,8 @@ int doorways_sock_client_inet_end(int type,int llid,int sock_fd,char *passwd,
   sfd->sock_fd = sock_fd-20;
   sfd->type = type;
   sfd->sock_fd_epev = wrap_epoll_event_alloc(g_epfd, sfd->sock_fd, 7);
+  if (sfd->sock_fd_epev == NULL)
+    KOUT(" ");
   simu_tx_open(llid-20, sfd->sock_fd, sfd->sock_fd_epev);
   ul_llid = (unsigned long) llid;
   if (g_tmp_type)

@@ -18,7 +18,7 @@ sleep 2
 #----------------------------------------------------------------------
 cloonix_gui $NET
 cloonix_cli $NET add kvm kvm1 ${PARAMS} bookworm.qcow2 &
-cloonix_cli $NET add cru cnt1 eth=s bookworm.zip &
+cloonix_cli $NET add cru cnt1 eth=s busybox.zip &
 cloonix_cli $NET add lan kvm1 0 lan1
 cloonix_cli $NET add lan cnt1 0 lan1
 #----------------------------------------------------------------------

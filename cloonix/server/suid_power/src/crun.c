@@ -271,8 +271,8 @@ static void create_net(char *line, char *resp, char *name, char *bulk,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_net_eth(char *line, char *resp, char *name,
-                           int num, char *mac, char *startup_env) 
+static void create_net_eth(char *line, char *resp,
+                           char *name, int num, char *mac) 
 {
   t_crun *cur;
   cur = find_crun(name);
@@ -293,9 +293,8 @@ static void create_net_eth(char *line, char *resp, char *name,
         {
         if (crun_utils_create_net(cur->mountbear, cur->mounttmp, cur->image,
                                   name, cur->cnt_dir, cur->nspace,
-                                  cur->cloonix_rank, cur->vm_id,
-                                  cur->nb_eth, cur->eth_mac,
-                                  cur->agent_dir, startup_env))
+                                  cur->cloonix_rank, cur->vm_id, cur->nb_eth,
+                                  cur->eth_mac, cur->agent_dir))
           {
           KERR("ERROR %s", name);
           snprintf(resp, MAX_PATH_LEN-1,
@@ -315,7 +314,7 @@ static void create_net_eth(char *line, char *resp, char *name,
 /****************************************************************************/
 static void create_config_json(char *line, char *resp,
                                char *name, int is_persistent,
-                               char *startup_env)
+                               char *startup_env, char *vmount)
 {
   t_crun *cur;
   char path[MAX_PATH_LEN];
@@ -345,7 +344,7 @@ static void create_config_json(char *line, char *resp,
     if (crun_utils_create_config_json(path, cur->rootfs_path,
                                       cur->nspace_path, cur->mountbear,
                                       cur->mounttmp, is_persistent,
-                                      startup_env, cur->name))
+                                      startup_env, vmount, cur->name))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -354,6 +353,7 @@ static void create_config_json(char *line, char *resp,
       }
     else
       {
+      crun_utils_startup_env(cur->mountbear, startup_env, cur->nb_eth);
       snprintf(resp, MAX_PATH_LEN-1,
                "cloonsuid_crun_create_config_json_resp_ok name=%s",
                name);
@@ -505,6 +505,38 @@ static void delete_crun(char *line, char *resp, char *nm)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void extract_env_vmount(char *line, char *startup_env, char *vmount)
+{
+  int len, lenv;
+  char  *ptr1, *ptr2, *ptrv1, *ptrv2;
+  memset(startup_env, 0, MAX_PATH_LEN);
+  memset(vmount, 0, 4*MAX_PATH_LEN);
+  ptr1 = strstr(line, "<startup_env_keyid>");
+  if(!ptr1)
+    KOUT("%s", line);
+  ptr2 = strstr(line, "</startup_env_keyid>");
+  if(!ptr2)
+    KOUT("%s", line);
+  len = strlen("<startup_env_keyid>");
+  if (strlen(ptr1) - len >= MAX_PATH_LEN)
+    KOUT("%s", line);
+  ptrv1 = strstr(line, "<startup_vmount>");
+  if(!ptrv1)
+    KOUT("%s", line);
+  ptrv2 = strstr(line, "</startup_vmount>");
+  if(!ptrv2)
+    KOUT("%s", line);
+  lenv = strlen("<startup_vmount>");
+  if (strlen(ptrv1) - lenv >= 4*MAX_PATH_LEN)
+    KOUT("%s", line);
+  *ptr2 = 0;
+  *ptrv2 = 0;
+  strncpy(startup_env, ptr1+len, MAX_PATH_LEN-1);
+  strncpy(vmount, ptrv1+lenv, MAX_PATH_LEN-1);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void crun_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   t_crun *cur;
@@ -514,9 +546,10 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
   char resp[MAX_PATH_LEN];
   char cnt_dir[MAX_PATH_LEN];
   char agent_dir[MAX_PATH_LEN];
-  char mac[6], *ptr, *ptr1, *ptr2;
-  int len, num, nb_eth, cloonix_rank, vm_id, is_persistent;
+  char mac[6], *ptr;
+  int  num, nb_eth, cloonix_rank, vm_id, is_persistent;
   char startup_env[MAX_PATH_LEN];
+  char vmount[4*MAX_PATH_LEN];
 
   cloonix_rank = get_cloonix_rank();
   memset(resp, 0, MAX_PATH_LEN);
@@ -544,37 +577,14 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
   "mac=0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx",
   name, &num, &(mac[0]),&(mac[1]),&(mac[2]),&(mac[3]),&(mac[4]),&(mac[5])))
     {
-    memset(startup_env, 0, MAX_PATH_LEN);
-    ptr1 = strstr(line, "<startup_env_keyid>");
-    if(!ptr1)
-      KOUT("%s", line);
-    ptr2 = strstr(line, "</startup_env_keyid>");
-    if(!ptr2)
-      KOUT("%s", line);
-    *ptr2 = 0;
-    len = strlen("<startup_env_keyid>");
-    if (strlen(ptr1) - len >= MAX_PATH_LEN)
-      KOUT("%s", line);
-    strncpy(startup_env, ptr1+len, MAX_PATH_LEN-1);
-    create_net_eth(line, resp, name, num, mac, startup_env);
+    create_net_eth(line, resp, name, num, mac);
     }
   else if (sscanf(line,
   "cloonsuid_crun_create_config_json name=%s is_persistent=%d",
   name, &is_persistent) == 2)
     {
-    memset(startup_env, 0, MAX_PATH_LEN);
-    ptr1 = strstr(line, "<startup_env_keyid>");
-    if(!ptr1)
-      KOUT("%s", line);
-    ptr2 = strstr(line, "</startup_env_keyid>");
-    if(!ptr2)
-      KOUT("%s", line);
-    *ptr2 = 0;
-    len = strlen("<startup_env_keyid>");
-    if (strlen(ptr1) - len >= MAX_PATH_LEN)
-      KOUT("%s", line);
-    strncpy(startup_env, ptr1+len, MAX_PATH_LEN-1);
-    create_config_json(line, resp, name, is_persistent, startup_env);
+    extract_env_vmount(line, startup_env, vmount);
+    create_config_json(line, resp, name, is_persistent, startup_env, vmount);
     }
   else if (sscanf(line,
   "cloonsuid_crun_create_tar_img name=%s is_persistent=%d",

@@ -722,7 +722,7 @@ static int topo_cnt_format(char *buf, t_topo_cnt *cnt)
                                     cnt->eth_table[i].vhost_ifname,
                                     cnt->eth_table[i].mac_addr);
 
-  len += sprintf(buf+len, EVENT_TOPO_CNT_C, cnt->startup_env);
+  len += sprintf(buf+len, EVENT_TOPO_CNT_C, cnt->startup_env, cnt->vmount);
   return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -1433,10 +1433,11 @@ static void helper_fill_topo_cnt(char *msg_in, t_topo_cnt *cnt)
                                     &(cnt->nb_tot_eth)) != 8)
     KOUT("%s", msg);
   get_eth_table(msg, cnt->nb_tot_eth, cnt->eth_table);
+
   ptr1 = strstr(msg, "<startup_env_keyid>");
   if(!ptr1)
     KOUT("%s", msg);
-  ptr2 = strstr(msg, "</startup_env_keyid>");
+  ptr2 = strstr(ptr1, "</startup_env_keyid>");
   if(!ptr2)
     KOUT("%s", msg);
   *ptr2 = 0;
@@ -1444,6 +1445,19 @@ static void helper_fill_topo_cnt(char *msg_in, t_topo_cnt *cnt)
   if (strlen(ptr1) - len >= MAX_PATH_LEN)
     KOUT("%s", msg);
   strncpy(cnt->startup_env, ptr1+len, MAX_PATH_LEN-1); 
+  ptr2 += 1;
+  ptr1 = strstr(ptr2, "<vmount_keyid>");
+  if(!ptr1)
+    KOUT("%s", msg);
+  ptr2 = strstr(ptr1, "</vmount_keyid>");
+  if(!ptr2)
+    KOUT("%s", msg);
+  *ptr2 = 0;
+  len = strlen("<vmount_keyid>");
+  if (strlen(ptr1) - len >= 4*MAX_PATH_LEN)
+    KOUT("%s", msg);
+  strncpy(cnt->vmount, ptr1+len, 4*MAX_PATH_LEN-1);
+
   if ((strlen(cnt->name) == 0) ||
       (strlen(cnt->image) == 0)) 
     KOUT("%s", msg);
@@ -1969,11 +1983,14 @@ void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     KOUT(" ");
   if (strlen(cnt->startup_env) >= MAX_PATH_LEN)
     KOUT(" ");
+  if (strlen(cnt->vmount) >= 4*MAX_PATH_LEN)
+    KOUT(" ");
   len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->brandtype, cnt->name,
                 cnt->is_persistent, cnt->vm_id, cnt->color, cnt->ping_ok,
                 cnt->nb_tot_eth);
   len += make_eth_table(sndbuf+len, cnt->nb_tot_eth, cnt->eth_table);
-  len += sprintf(sndbuf+len, ADD_CNT_C, cnt->startup_env, cnt->image);
+  len += sprintf(sndbuf+len, ADD_CNT_C, cnt->startup_env,
+                 cnt->vmount, cnt->image);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -2198,6 +2215,34 @@ static void startup_env_get(char *msg_in, t_topo_cnt *cnt)
   if (strlen(ptr1) - len >= MAX_PATH_LEN)
     KOUT("%s", msg);
   strncpy(cnt->startup_env, ptr1+len, MAX_PATH_LEN-1);
+  free(msg);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void vmount_get(char *msg_in, t_topo_cnt *cnt)
+{
+  char *ptr, *ptr1, *ptr2;
+  int len = strlen(msg_in);
+  char *msg = (char *) malloc(len+1);
+  memcpy(msg, msg_in, len);
+  msg[len] = 0;
+  ptr = strstr(msg, "<image> ");
+  if (!ptr)
+    KOUT("%s", msg);
+  if (sscanf(ptr, "<image> %s </image>", cnt->image) != 1)
+    KOUT("%s", ptr);
+  ptr1 = strstr(msg, "<vmount_keyid>");
+  if(!ptr1)
+    KOUT("%s", msg);
+  ptr2 = strstr(ptr1, "</vmount_keyid>");
+  if(!ptr2)
+    KOUT("%s", msg);
+  *ptr2 = 0;
+  len = strlen("<vmount_keyid>");
+  if (strlen(ptr1) - len >= 4*MAX_PATH_LEN)
+    KOUT("%s", msg);
+  strncpy(cnt->vmount, ptr1+len, 4*MAX_PATH_LEN-1);
   free(msg);
 }
 /*---------------------------------------------------------------------------*/
@@ -2616,6 +2661,7 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
         KOUT("%s", msg);
       get_eth_table(msg, cnt.nb_tot_eth, cnt.eth_table);
       startup_env_get(msg, &cnt);
+      vmount_get(msg, &cnt);
       recv_cnt_add(llid, tid, &cnt);
       break;
 

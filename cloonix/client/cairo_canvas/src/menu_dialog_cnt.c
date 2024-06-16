@@ -160,8 +160,10 @@ static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
 /****************************************************************************/
 static void update_cust(t_custom_cnt *cust,
                         GtkWidget *entry_name,
-                        GtkWidget *entry_startup_env)
+                        GtkWidget *entry_startup_env,
+                        GtkWidget *entry_vmount)
 {
+  int len;
   char *tmp;
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_name));
   memset(cust->name, 0, MAX_NAME_LEN);
@@ -169,6 +171,10 @@ static void update_cust(t_custom_cnt *cust,
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_startup_env));
   memset(cust->startup_env, 0, MAX_PATH_LEN);
   strncpy(cust->startup_env, tmp, MAX_PATH_LEN-1);
+  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_vmount));
+  len = strspn(tmp, " \r\n\t");
+  memset(cust->vmount, 0, MAX_PATH_LEN);
+  strncpy(cust->vmount, tmp+len, MAX_PATH_LEN-1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -274,7 +280,7 @@ static void custom_vm_dialog(t_custom_cnt *cust)
   int i, j, k, response, line_nb = 0, found=0;
   GSList *group = NULL;
   GtkWidget *entry_name, *entry_startup_env, *grid, *parent, *is_persistent;
-  GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
+  GtkWidget *entry_vmount, *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
   char image[MAX_NAME_LEN];
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
 
@@ -340,6 +346,10 @@ static void custom_vm_dialog(t_custom_cnt *cust)
   gtk_entry_set_text(GTK_ENTRY(entry_startup_env), cust->startup_env);
   append_grid(grid, entry_startup_env, "Setup Env:", line_nb++);
 
+  entry_vmount = gtk_entry_new();
+  gtk_entry_set_text(GTK_ENTRY(entry_vmount), cust->vmount);
+  append_grid(grid, entry_vmount, "Vmount:", line_nb++);
+
   gtk_entry_set_text(GTK_ENTRY(g_entry_image), image);
   append_grid(grid, g_entry_image, "Image:", line_nb++);
 
@@ -360,7 +370,7 @@ static void custom_vm_dialog(t_custom_cnt *cust)
     }
   else
     {
-    update_cust(cust, entry_name, entry_startup_env);
+    update_cust(cust, entry_name, entry_startup_env, entry_vmount);
     gtk_widget_destroy(g_custom_dialog);
     g_custom_dialog = NULL;
     }
@@ -398,6 +408,7 @@ void menu_dialog_cnt_init(void)
   strcpy(g_custom_cnt.brandtype, "crun");
   strcpy(g_custom_cnt.name, "Cnt");
   strcpy(g_custom_cnt.startup_env, "NODE_ID=1 CLOONIX=great");
+  strcpy(g_custom_cnt.vmount, " ");
   strcpy(g_custom_cnt.cru_image,   "bookworm.zip");
   g_custom_cnt.nb_tot_eth = 3;
   for (i=0; i<g_custom_cnt.nb_tot_eth; i++)

@@ -271,6 +271,7 @@
                          "  <nb_tot_eth> %d </nb_tot_eth>"
 
 #define ADD_CNT_C        "<startup_env_keyid>%s</startup_env_keyid>\n"\
+                         "<vmount_keyid>%s</vmount_keyid>\n"\
                          "<image> %s </image>\n"\
                          "</add_cnt>"
 /*---------------------------------------------------------------------------*/
@@ -453,6 +454,7 @@
                               "  nb_tot_eth: %d "
 
 #define EVENT_TOPO_CNT_C      "<startup_env_keyid>%s</startup_env_keyid>\n"\
+                              "<vmount_keyid>%s</vmount_keyid>\n"\
                               "</cnt>\n"
                         
 #define EVENT_TOPO_C2C        "<c2c>\n"\

@@ -25,6 +25,7 @@ typedef struct t_eth_mac
   char mac[8];
 } t_eth_mac;
 
+void crun_utils_startup_env(char *mountbear, char *startup_env, int nb_eth);
 void crun_beat(int llid);
 int crun_utils_unlink_sub_dir_files(char *dir);
 int crun_utils_delete_crun_stop(char *name, int crun_pid);
@@ -33,16 +34,15 @@ int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
 int crun_utils_delete_net_nspace(char *nspace);
 int crun_utils_create_net(char *mountbear, char *mounttmp, char *image,
                           char *name, char *cnt_dir, char *nspace,
-                          int cloonix_rank, int vm_id,
-                          int nb_eth, t_eth_mac *eth_mac,
-                          char *agent_dir, char *startup_env);
+                          int cloonix_rank, int vm_id, int nb_eth,
+                          t_eth_mac *eth_mac, char *agent_dir);
 int crun_utils_create_crun_create(char *cnt_dir, char *name);
 int crun_utils_create_crun_start(char *name);
 int crun_utils_create_overlay(char *path, char *image, int is_persistent);
 int crun_utils_create_config_json(char *path, char *rootfs, char *nspace,
                                   char *cloonix_dropbear, char *mounttmp,
                                   int is_persistent, char *startup_env,
-                                  char *name);
+                                  char *vmount, char *name);
 void crun_utils_init(char *var_root);
 char *get_mnt_loop_dir(void);
 void lio_clean_all_llid(void);

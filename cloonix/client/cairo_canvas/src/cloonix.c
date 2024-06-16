@@ -347,8 +347,10 @@ char *get_distant_snf_dir(void)
 /****************************************************************************/
 void work_dir_resp(int tid, t_topo_clc *conf)
 {
+  int disp, novnc = 0;
   char title[2*MAX_NAME_LEN];
   char tmp_distant_snf_dir[2*MAX_PATH_LEN];
+  char *display;
   GtkWidget *vbox, *scrolled;
   GError *pixerror;
   eth_choice = 0;
@@ -358,6 +360,14 @@ void work_dir_resp(int tid, t_topo_clc *conf)
            cloonix_conf_info_get_version(), conf->version);
     }
 
+  display = getenv("DISPLAY");
+  if (sscanf(display, ":%d", &disp) == 1)
+    {
+    if (disp >= NOVNC_DISPLAY)
+      {
+      novnc = 1;
+      }
+    }
 
   daemon(0,1);
 

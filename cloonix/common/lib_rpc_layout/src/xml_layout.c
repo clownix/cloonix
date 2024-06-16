@@ -245,6 +245,7 @@ void send_layout_sat(int llid, int tid, t_layout_sat *layout_sat)
                                            xe, xd, ye, yd,
                                            xae, xad, yae, yad,
                                            xbe, xbd, ybe, ybd,
+                                           layout_sat->is_a2b,
                                            layout_sat->hidden_on_graph);
     my_msg_mngt_tx(llid, len, g_sndbuf);
     }
@@ -391,7 +392,8 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
                                         &xe, &xd, &ye, &yd,
                                         &xea, &xda, &yea, &yda,
                                         &xeb, &xdb, &yeb, &ydb,
-                                        &(layout_sat.hidden_on_graph)) != 15) 
+                                        &(layout_sat.is_a2b),
+                                        &(layout_sat.hidden_on_graph)) != 16) 
         KOUT("%s", msg);
       int2double(xe, xd, &(layout_sat.x));
       int2double(ye, yd, &(layout_sat.y));
