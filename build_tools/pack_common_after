@@ -62,7 +62,7 @@ for j in "qt6" "gdk-pixbuf-2.0" "gdk-pixbuf-2.0/2.10.0/loaders" \
     ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
   done
 done
-for i in `find ${COMMON}/lib/python3.11/lib-dynload -maxdepth 1 -type f` ; do
+for i in `find ${COMMON}/lib/python3.12/lib-dynload -maxdepth 1 -type f` ; do
   ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
@@ -71,17 +71,15 @@ touch ${COMMON}/lib/${ARCHX}-linux-gnu/libpthread.so.0
 cd ${CLOONIX_TREE_ROOT}/build_tools
 rm -f patchelf_bin
 tar zcf common.tar.gz common
-tar zcf client.tar.gz client
 tar zcf server.tar.gz server
 rm -rf common
-rm -rf client
 rm -rf server
 mkdir -p cloonix-bundle-${VERSION}
 cp -f install_cloonix    cloonix-bundle-${VERSION}
 mv common.tar.gz cloonix-bundle-${VERSION}
-mv client.tar.gz cloonix-bundle-${VERSION}
 mv server.tar.gz cloonix-bundle-${VERSION}
 cp -f ${CLOONIX_TREE_ROOT}/README cloonix-bundle-${VERSION}
-cp -f ${CLOONIX_TREE_ROOT}/quickstart/ping_demo.sh cloonix-bundle-${VERSION}
+#----------------------------------------------------------
+echo DONE pack_common_after
 #----------------------------------------------------------
 

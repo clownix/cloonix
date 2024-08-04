@@ -1,96 +1,71 @@
 ==============================================================================
-v39-00
+                               v40-00
 ==============================================================================
-GENERAL:
---------
-
+                               GENERAL
+==============================================================================
 Cloonix is an AGPLv3 software that constitute a tool to create networks of
-kvm virtual machines or crun containers.
+kvm virtual machines or crun containers. It provides a graphical interactive
+canvas showing the topology for your network, cloonix is a virtualisation
+hypervisor.
 
 The network connecting the virtual machines and containers is created through
 the use of the openvswitch software running inside a net namespace so that
-your host is not polluted with bridges. That way, "ip link" on your host
-shows clean results. Do "ip netns" to see cloonix namespaces. If you wish
-to see the cloonix bridges for nemo, do:
+your host is isolated from cloonix. That way, "ip link" on your host
+shows clean results. Do "ip netns" to see cloonix namespaces.
+If you wish to see the cloonix bridges, do:
 "sudo ip netns exec <namespace_name> ip link".
 
-The cloonix user interface to connect virtual machines and containers is
-a simplification of the openvswitch commands. It provides easy use of 
-virtual lans to build a network.
-
-Cloonix also provides root access ssh and scp equivalent for every virtual
-machines or containers without use of any ip interface inside the virtual
-machines or container.
-
-Cloonix provides a graphical interactive canvas showing the topology for
-your network, it is some kind of hypervisor for virtualisation.
-
-Building of the binaries is done on a debian bookworm and all the necessary
-files and libraries are collected and put into an autonomous bundle, this
-makes the bundle self-contained. No added files or packages are necessary.
+Building of the binaries is done on a debian trixie, all the necessary files
+and libraries are collected and put into an autonomous bundle, this makes
+the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-39-00/html/index.html doc.
+http://clownix.net/doc_stored/build-40-00/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
-      guests virtual machines to have the pseudo-ssh and pseudo-scp.
------------------------------------------------------------------------------
+      guests virtual machines to have the pseudo-ssh and pseudo-scp cloonix api.
+------------------------------------------------------------------------------
 
 ==============================================================================
-DOWNLOADS:
-----------
-
-http://clownix.net/downloads/cloonix-39
-
------------------------------------------------------------------------------
-
+                          INSTALLATION AND USE 
 ==============================================================================
-INSTALLATION:
-------------
 
-wget http://clownix.net/downloads/cloonix-39/cloonix-bundle-39-00-amd64.tar.gz
-tar xvf cloonix-bundle-39-00-amd64.tar.gz
-cd cloonix-bundle-39-00-amd64
+        ======================================
+        1) Download software and installation:
+        ======================================
+
+wget http://clownix.net/downloads/cloonix-40/cloonix-bundle-40-00-amd64.tar.gz
+tar xvf cloonix-bundle-40-00-amd64.tar.gz
+cd cloonix-bundle-40-00-amd64
 sudo ./install_cloonix
 
-==============================================================================
-UNINSTALLATION:
----------------
+(To uninstall:   rm -f /usr/bin/cloonix_*
+                 rm -rf /usr/libexec/cloonix
+                 rm -rf /var/lib/cloonix)
 
-rm -f /usr/bin/cloonix_*
-rm -rf /usr/libexec/cloonix
-rm -rf /var/lib/cloonix
 
------------------------------------------------------------------------------
-
-==============================================================================
-LOADING A QCOW INTO BULK FOR KVM USE:
--------------------------------------
+        ==========================================
+        2) Download virtual machine and container:
+        ==========================================
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-39/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-40/bulk/openwrt.qcow2.gz
 gunzip bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-40/bulk/zipbasic.zip
 
------------------------------------------------------------------------------
 
-==============================================================================
-LOADING A ZIP INTO BULK FOR CRUN USE:
--------------------------------------
+        =============================
+        3) Download demo script file:
+        =============================
 
-mkdir -p /var/lib/cloonix/bulk
-cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-39/bulk/busybox.zip
+cd ${HOME}
+wget http://clownix.net/downloads/cloonix-40/demo/ping_demo.sh
 
------------------------------------------------------------------------------
 
-==============================================================================
-LAUNCH PING SCRIPT:
--------------------
-
-cd cloonix-bundle-39-00-amd64
-
-./ping_demo.sh
+        ===============
+        4) Use cloonix:
+        ===============
 
 On the gui, a double-click on the biggest blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy,
@@ -100,83 +75,67 @@ On the gui, a double-click on the smallest blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy,
 a right-click on the container gives one remote console.
 
-NOTE: No wireshark for the moment in the i386 version of cloonix bundle.
+==============================================================================
+
+
+==============================================================================
+                     ROOTLESS SELF EXTRACTING CLOONIX
+==============================================================================
+To test cloonix without ever having the root password for your host machine,
+you have to use the self_extracting_cloonix.sh.
+
+This script creates the self_extracting_rootfs_dir directory which countains
+a root file-system equiped with the cloonix software, the openwrt qcow2
+virtual machine, the zipbasic container, the frr container, demo scripts
+for the cloonix run and a self-contained crun executable.
+
+        1) Download:
+        ============
+wget http://clownix.net/downloads/cloonix-40/self_extracting_cloonix.sh
+
+        2) Extract:
+        ===========
+./self_extracting_cloonix.sh
+
+        3) Change directory:
+        ====================
+cd self_extracting_rootfs_dir
+
+        4) Enter the cloonix container:
+        ===============================
+./crun_container_startup.sh
+
+        5) Launch demo:
+        ===============
+./ping_demo.sh
+
+
+NOTE FOR KVM USE
+================:
+     For the cloonix to be able to use the openwrt qcow2, devices /dev/kvm,
+     /dev/vhost-net and /dev/net/tun, must have read/write access. For this
+     some commands must be done as root to provide read/write access:
+
+             sudo setfacl -m u:${USER}:rw /dev/kvm
+             sudo setfacl -m u:${USER}:rw /dev/vhost-net
+             sudo setfacl -m u:${USER}:rw /dev/net/tun
+     or:
+             sudo chmod 666 /dev/kvm
+             sudo chmod 666 /dev/vhost-net
+             sudo chmod 666 /dev/net/tun
+
 -----------------------------------------------------------------------------
 
 ==============================================================================
-CLOONIX INSIDE PODMAN:
-----------------------
-
-For the cloonix to be able to use /dev/kvm, /dev/vhost-net and /dev/net/tun,
-some commands must be done as root, here is the way to check that your user
-can read/write those devices and the way to authorise their use:
-
-getfacl /dev/kvm
-getfacl /dev/vhost-net
-getfacl /dev/net/tun
-
-sudo setfacl -R -m u:${USER}:rw /dev/kvm
-sudo setfacl -R -m u:${USER}:rw /dev/vhost-net
-sudo setfacl -R -m u:${USER}:rw /dev/net/tun
-
-Then download and install podman:
-
-wget http://clownix.net/downloads/cloonix-39/bulk/podman_cloonix.tar.gz
-gunzip podman_cloonix.tar.gz
-podman load --input podman_cloonix.tar
-
-Then try the podman, note that the directory /var/lib/cloonix/bulk
-of your host is made visible inside the podman and must contain
-some qcow2 and zip file-systems:
-
-ID_IMAGE=$(podman images |grep podman_cloonix | awk "{print \$3}")
-podman run -it --privileged \
-           -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix \
-           -v /var/lib/cloonix/bulk:/var/lib/cloonix/bulk \
-           -v /lib/modules:/lib/modules $ID_IMAGE /bin/bash
-
-Then try cloonix from within the podman:
-
-cloonix_net nemo
-cloonix_gui nemo
------------------------------------------------------------------------------
-
+                            DISTANT WEB GUI:
 ==============================================================================
-FRR DEMO INSIDE CLOONIX INSIDE PODMAN:
---------------------------------------
+Default value for the web gui is off, to set it on:
 
-Build the podman with the help of:
-cloonix-39-00/quickstart/cnt_create/custom/frr/doitall
+cloonix_cli nemo cnf web on
 
-Or download and install podman podman_frr_cloonix:
-
-wget http://clownix.net/downloads/cloonix-39/bulk/podman_frr_cloonix.tar.gz
-gunzip podman_frr_cloonix.tar.gz
-podman load --input podman_frr_cloonix.tar
-
-ID_IMAGE=$(podman images |grep podman_frr_cloonix | awk "{print \$3}")
-podman run -it --privileged \
-           -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix \
-           -v /lib/modules:/lib/modules $ID_IMAGE /bin/bash
-
-Then try the frr demo from within the podman:
-
-cd /root
-./spider_demo.sh
-
-Then double-click on one of the peripheral sodxx and do:
-traceroute sodyy
-
-FRR Ospf has played its routing role and the path is found.
------------------------------------------------------------------------------
-
-==============================================================================
-DISTANT WEB GUI:
-----------------
-
-Principle: Xvfb creates a virtual framebuffer on a defined DISPLAY,
+Xvfb creates a virtual framebuffer on a defined DISPLAY,
 this display can be seen through its X11 socket at /tmp/.X11-unix/.
-Then on this display, wm2 is a windows manager, it is the simplest existing one.
+Then on this display, wm2 is launched, it is a very small windows manager.
 When the wm2 representation gets to be visible in your browser,
 click on the main mouse button, and choose the only choice which is "cloonix".
 x11vnx carries the equivalent of a desktop to the vnc server and

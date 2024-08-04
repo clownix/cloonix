@@ -35,7 +35,6 @@ static t_cloonix_conf_info g_name2info[MAX_CLOONIX_SERVERS];
 static char g_all_names[MAX_CLOONIX_SERVERS * MAX_NAME_LEN];
 static int g_cloonix_nb;
 static char g_cloonix_version[MAX_NAME_LEN];
-static char g_cloonix_tree[MAX_PATH_LEN];
 
 
 /*****************************************************************************/
@@ -131,8 +130,6 @@ static int extract_info(char *buf)
   char passwd[MSG_DIGEST_LEN];
   int  novnc_port, port, result = -1;
   uint32_t ipnum, udp_ip;
-  memset(g_cloonix_tree, 0, MAX_PATH_LEN);
-  strncpy(g_cloonix_tree, "/usr/libexec/cloonix", MAX_PATH_LEN);
   if (find_entry(buf, "CLOONIX_VERSION=", g_cloonix_version, MAX_NAME_LEN)) 
     KERR(" ");
   else
@@ -214,7 +211,7 @@ char *cloonix_conf_info_get_version(void)
 /*****************************************************************************/
 char *cloonix_conf_info_get_tree(void)
 {
-  return g_cloonix_tree;
+  return("/usr/libexec/cloonix");
 }
 /*--------------------------------------------------------------------------*/
 

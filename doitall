@@ -29,6 +29,5 @@ VERSION=${VERSION#*=}
 ./build_tools/build_client
 ./build_tools/build_server ${ARCH}
 ./build_tools/pack_common_before ${ARCH}
-./build_tools/pack_client ${ARCH}
 ./build_tools/pack_server ${ARCH}
 ./build_tools/pack_common_after ${ARCH}

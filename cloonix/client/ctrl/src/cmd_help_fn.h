@@ -106,6 +106,8 @@ void help_cnf_nat(char *line);
 int cmd_cnf_lan(int argc, char **argv);
 void help_cnf_lan(char *line);
 /*---------------------------------------------------------------------------*/
+int cmd_cnf_fix(int argc, char **argv);
+/*---------------------------------------------------------------------------*/
 
 
 

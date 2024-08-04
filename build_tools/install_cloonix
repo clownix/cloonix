@@ -6,7 +6,6 @@ if [ $UID != 0 ]; then
 fi
 #----------------------------------------------------------
 for i in common.tar.gz \
-         client.tar.gz \
          server.tar.gz ; do
   if [ ! -e ${i} ]; then
     echo NOT FOUND:
@@ -19,24 +18,17 @@ rm -rf /usr/libexec/cloonix
 rm -f  /usr/bin/cloonix_*
 #----------------------------------------------------------
 rm -rf /tmp/common
-rm -rf /tmp/client
 rm -rf /tmp/server
 #----------------------------------------------------------
-tar --directory=/tmp -xf common.tar.gz
-tar --directory=/tmp -xf client.tar.gz
-tar --directory=/tmp -xf server.tar.gz
+tar --directory=/tmp --no-same-owner -xf common.tar.gz
+tar --directory=/tmp --no-same-owner -xf server.tar.gz
 #----------------------------------------------------------
 mkdir -p /usr/libexec/cloonix/common
 cp -rf /tmp/common/* /usr/libexec/cloonix/common
+rm -rf /usr/libexec/cloonix/common/usr_bin
+rm -rf /usr/libexec/cloonix/common/polkit-1
 chown -R root:root /usr/libexec/cloonix/common
 chmod 755 /usr/libexec/cloonix/common/*
-#----------------------------------------------------------
-mkdir -p /usr/libexec/cloonix/client
-cp -rf /tmp/client/* /usr/libexec/cloonix/client
-rm -rf /usr/libexec/cloonix/client/usr_bin
-rm -rf /usr/libexec/cloonix/client/polkit-1
-chown -R root:root /usr/libexec/cloonix/client
-chmod 755 /usr/libexec/cloonix/client/*
 #----------------------------------------------------------
 for i in  cloonix_cli \
           cloonix_gui \
@@ -50,18 +42,18 @@ for i in  cloonix_cli \
           cloonix_lsh \
           cloonix_dsh \
           cloonix_wsk ; do
-  cp -vf /tmp/client/usr_bin/${i} /usr/bin
-  cp -vf /tmp/client/usr_bin/${i} /usr/libexec/cloonix/common
+  cp -vf /tmp/common/usr_bin/${i} /usr/bin
+  cp -vf /tmp/common/usr_bin/${i} /usr/libexec/cloonix/common
 done
 #----------------------------------------------------------
 if [ -d /usr/share/polkit-1/actions ]; then
   dstusb="/usr/share/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
-  srcusb="/tmp/client/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
+  srcusb="/tmp/common/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
   if [ ! -e ${dstusb} ]; then
     cp -f ${srcusb} ${dstusb}
   fi
 fi
-chmod u+s /usr/libexec/cloonix/client/cloonix-spice-client-glib-usb-acl-helper
+chmod u+s /usr/libexec/cloonix/common/cloonix-spice-client-glib-usb-acl-helper
 #----------------------------------------------------------
 mkdir -p /usr/libexec/cloonix/server
 cp -rf /tmp/server/* /usr/libexec/cloonix/server
@@ -72,6 +64,7 @@ chmod 755 /usr/libexec/cloonix/server/*
 cp -vf /tmp/server/usr_bin/cloonix_net /usr/bin
 #----------------------------------------------------------
 for i in cloonix-crun \
+         cloonix-fuse-archive \
          cloonix-ovs-drv \
          cloonix-ovs-snf \
          cloonix-ovs-nat \
@@ -93,6 +86,5 @@ chmod 777 /var/lib/cloonix/cache/fontconfig
 chmod 777 /var/lib/cloonix/bulk
 #----------------------------------------------------------
 rm -rf /tmp/common
-rm -rf /tmp/client
 rm -rf /tmp/server
 #----------------------------------------------------------

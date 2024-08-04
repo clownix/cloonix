@@ -41,8 +41,6 @@ static int  g_x11_srv_idx;
 static int g_epfd;
 static char g_magic_cookie[2*MAGIC_COOKIE_LEN+1];
 
-#define XAUTH_BIN "/usr/libexec/cloonix/client/xauth"
-
 /*****************************************************************************/
 static void init_x11_magic(void)
 {

@@ -223,12 +223,6 @@ void help_cnf_a2b(char *line)
   printf("\nrate : kilo-octets per second throughput.\n");
   printf("\nsilentms : millisecondes of silence giving bursty throughput.\n");
   printf("\n\n%s a2b1 \"dir=0 cmd=delay val=1000\"\n", line);
-  printf("\n\n%s <name> \"dir=<0 or 1> replace_ipdst x.x.x.x with x.x.x.x\"\n",
-         line);
-  printf("\n\n%s <name> \"dir=<0 or 1> unreplace_ipdst\"\n", line);
-  printf("\n\n%s <name> \"dir=<0 or 1> replace_ipsrc x.x.x.x with x.x.x.x\"\n",
-         line);
-  printf("\n\n%s <name> \"dir=<0 or 1> unreplace_ipsrc\"\n", line);
   printf("\n\n");
 }
 /*---------------------------------------------------------------------------*/

@@ -57,6 +57,7 @@ void interface_topo_subscribe(void);
 void timeout_periodic_work(void *data);
 
 
+static int g_novnc;
 static int g_argc;
 static char *g_argv[10];
 /*--------------------------------------------------------------------------*/
@@ -78,7 +79,6 @@ static gint main_win_x, main_win_y, main_win_width, main_win_height;
 static guint main_timeout;
 static char g_current_directory[MAX_PATH_LEN];
 static char g_doors_client_addr[MAX_PATH_LEN];
-static char g_cloonix_root_tree[MAX_PATH_LEN];
 static char g_distant_snf_dir[MAX_PATH_LEN];
 static char g_password[MSG_DIGEST_LEN];
 static t_cloonix_conf_info *g_cloonix_conf_info;
@@ -139,13 +139,6 @@ char *get_doors_client_addr(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *get_local_cloonix_tree(void)
-{
-  return g_cloonix_root_tree;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 char **get_argv_local_xwy(char *name)
 {
   static char config[MAX_PATH_LEN];
@@ -197,7 +190,7 @@ char *get_path_to_qemu_spice(void)
 {
   char *result = NULL;
   static char path[MAX_PATH_LEN];
-  sprintf(path,"%s/client/cloonix-spicy", get_local_cloonix_tree());
+  sprintf(path,"/usr/libexec/cloonix/common/cloonix-spicy");
   if (file_exists_exec(path))
     result = path;
   return result;
@@ -209,9 +202,7 @@ char *get_path_to_nemo_icon(void)
 {
   char *result = NULL;
   static char path[MAX_PATH_LEN];
-  sprintf(path, 
-          "%s/client/lib_client/include/clownix64.png", 
-          get_local_cloonix_tree());
+  sprintf(path,"/usr/libexec/cloonix/common/etc/clownix64.png"); 
   if (is_file_readable(path))
     result = path;
   return result;
@@ -347,7 +338,7 @@ char *get_distant_snf_dir(void)
 /****************************************************************************/
 void work_dir_resp(int tid, t_topo_clc *conf)
 {
-  int disp, novnc = 0;
+  int disp;
   char title[2*MAX_NAME_LEN];
   char tmp_distant_snf_dir[2*MAX_PATH_LEN];
   char *display;
@@ -361,15 +352,21 @@ void work_dir_resp(int tid, t_topo_clc *conf)
     }
 
   display = getenv("DISPLAY");
-  if (sscanf(display, ":%d", &disp) == 1)
+  if (display)
     {
-    if (disp >= NOVNC_DISPLAY)
+    if (sscanf(display, ":%d", &disp) != 1)
+      KERR("WARNING DISPLAY %s", display); 
+    else
       {
-      novnc = 1;
+      if (disp >= NOVNC_DISPLAY)
+        {
+        g_novnc = 1;
+        KERR("WARNING NOVNC DISPLAY %s", display); 
+        }
       }
     }
 
-  daemon(0,1);
+  daemon(0,0);
 
   move_init();
   popup_init();
@@ -413,40 +410,11 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void init_local_cloonix_bin_path(char *curdir, char *callbin)
-{
-  char path[2*MAX_PATH_LEN];
-  char *ptr;
-  memset(g_cloonix_root_tree, 0, MAX_PATH_LEN);
-  memset(path, 0, MAX_PATH_LEN);
-
-  if (callbin[0] == '/')
-    snprintf(path, MAX_PATH_LEN, "%s", callbin);
-  else if ((callbin[0] == '.') && (callbin[1] == '/'))
-    snprintf(path, MAX_PATH_LEN, "%s/%s", curdir, &(callbin[2]));
-  else
-    KOUT("%s", callbin);
-
-  ptr = strrchr(path, '/');
-  if (!ptr)
-    KOUT("%s", path);
-  *ptr = 0;
-
-  ptr = strrchr(path, '/');
-  if (!ptr)
-    KOUT("%s", path);
-  *ptr = 0;
-
-  path[MAX_PATH_LEN-1] = 0;
-  strncpy(g_cloonix_root_tree, path, MAX_PATH_LEN-1);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int main(int argc, char *argv[])
 {
+  g_novnc = 0;
   g_argc = 2;
-  g_argv[0] = "/usr/libexec/cloonix/client/cloonix-gui";
+  g_argv[0] = "/usr/libexec/cloonix/common/cloonix-gui";
   g_argv[1] = "--no-xshm";
   g_argv[2] = NULL;
   g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
@@ -462,6 +430,9 @@ int main(int argc, char *argv[])
     printf("\n\n%s\n\n", cloonix_conf_info_get_names());
     exit(1);
     }
+  if (!getenv("DISPLAY"))
+    KERR("ERROR NO DISPLAY FOR A SOFTWARE GUI");
+
   signal(SIGPIPE,SIG_IGN);
   if (gtk_init_check(NULL, NULL) == FALSE)
     KOUT("Error in gtk_init_check first function");
@@ -476,9 +447,7 @@ int main(int argc, char *argv[])
   memset(g_current_directory, 0, MAX_PATH_LEN);
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
-  init_local_cloonix_bin_path(g_current_directory, argv[0]); 
-  if (!getenv("DISPLAY"))
-    KERR("ERROR NO DISPLAY FOR A SOFTWARE GUI");
+
   memset(g_doors_client_addr, 0, MAX_PATH_LEN);
   strncpy(g_doors_client_addr, g_cloonix_conf_info->doors, MAX_PATH_LEN-1);
   printf("CONNECT TO UNIX SERVER: %s\n", g_doors_client_addr);

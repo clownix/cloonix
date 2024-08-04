@@ -14,7 +14,6 @@ the *install_cloonix* script installs files in the folowing locations::
 
   /usr/libexec/cloonix/etc/cloonix.cfg                       config
   /usr/libexec/cloonix/common                                binaries
-  /usr/libexec/cloonix/client                                binaries
   /usr/libexec/cloonix/server                                binaries
   /usr/bin/cloonix_net                                       server script
   /usr/bin/cloonix_(cli,gui,ice,ssh,scp,wsk,ovs,osh,ocp)     client scripts

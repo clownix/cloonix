@@ -15,7 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void end_novnc(int terminate);
+int start_novnc(void);
+int end_novnc(int terminate);
 void init_novnc(char *net_name, int rank, char *ascii_port);
 /*--------------------------------------------------------------------------*/
 

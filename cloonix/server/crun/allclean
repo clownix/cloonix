@@ -2,6 +2,7 @@
 HERE=`pwd`
 
 rm -rf ${HERE}/crun
+rm -rf ${HERE}/crun_tainted
 
 
 

@@ -167,8 +167,8 @@ void make_default_layout_lan(t_layout_lan *layout, char *name)
 {
   memset(layout, 0, sizeof(t_layout_lan));
   strncpy(layout->name, name, MAX_NAME_LEN-1);
-  layout->x = 20;
-  layout->y = 20;
+  layout->x = 100;
+  layout->y = 100;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -295,6 +295,8 @@ static void add_layout_lan(t_layout_lan *lan)
     xml = (t_layout_lan_xml *) clownix_malloc(sizeof(t_layout_lan_xml), 8);
     memset(xml, 0, sizeof(t_layout_lan_xml));
     memcpy(&(xml->lan), lan, sizeof(t_layout_lan));
+    xml->lan.x = lan->x;
+    xml->lan.y = lan->y;
     insert_lan_xml(xml);
     }
 }

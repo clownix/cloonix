@@ -36,18 +36,19 @@
 #include "tar_img.h"
 
 int get_cloonix_rank(void);
+char *get_net_name(void);
 
 /****************************************************************************/
 typedef struct t_crun
 {
   char name[MAX_NAME_LEN];
-  char nspace[MAX_NAME_LEN];
+  char nspacecrun[MAX_PATH_LEN];
   char bulk[MAX_PATH_LEN];
   char image[MAX_NAME_LEN];
   char cnt_dir[MAX_PATH_LEN];
   char agent_dir[MAX_PATH_LEN];
   char rootfs_path[MAX_PATH_LEN];
-  char nspace_path[MAX_PATH_LEN];
+  char nspacecrun_path[2*MAX_PATH_LEN];
   char mountbear[MAX_PATH_LEN];
   char mounttmp[MAX_PATH_LEN];
   int nb_eth;
@@ -96,7 +97,7 @@ static char *random_str(void)
 
 /****************************************************************************/
 static void alloc_crun(char *name, char *bulk, char *image, int nb_eth,
-                            char *nspace, int cloonix_rank,
+                            char *nspacecrun, int cloonix_rank,
                             int vm_id, char *cnt_dir, char *agent_dir)
 {
   char *rnd = random_str();
@@ -107,8 +108,9 @@ static void alloc_crun(char *name, char *bulk, char *image, int nb_eth,
   strncpy(cur->image, image, MAX_NAME_LEN-1);
   strncpy(cur->cnt_dir, cnt_dir, MAX_PATH_LEN-1);
   strncpy(cur->agent_dir, agent_dir, MAX_PATH_LEN-1);
-  strncpy(cur->nspace, nspace, MAX_NAME_LEN-1);
-  snprintf(cur->nspace_path, MAX_PATH_LEN-1, "%s%s", PATH_NAMESPACE, nspace);
+  strncpy(cur->nspacecrun, nspacecrun, MAX_PATH_LEN-1);
+  snprintf(cur->nspacecrun_path, 2*MAX_PATH_LEN-1, "%s%s",
+           PATH_NAMESPACE, nspacecrun);
   snprintf(cur->rootfs_path, MAX_PATH_LEN-1,"%s/%s/%s",cnt_dir,name,ROOTFS);
   snprintf(cur->mountbear, MAX_PATH_LEN-1,"%s/%s/mnt%s", cnt_dir, name, rnd);
   snprintf(cur->mounttmp, MAX_PATH_LEN-1,"%s/%s/tmp%s", cnt_dir, name, rnd);
@@ -245,7 +247,7 @@ static void create_net(char *line, char *resp, char *name, char *bulk,
                        char *image, int nb_eth, int cloonix_rank,
                        int vm_id, char *cnt_dir, char *agent_dir)
 {
-  char nspace[MAX_NAME_LEN];
+  char nspacecrun[MAX_PATH_LEN];
   char bulk_image[MAX_PATH_LEN];
   t_crun *cur = find_crun(name);
   memset(resp, 0, MAX_PATH_LEN);
@@ -253,8 +255,8 @@ static void create_net(char *line, char *resp, char *name, char *bulk,
   snprintf(bulk_image, MAX_PATH_LEN-1, "%s/%s", bulk, image); 
   snprintf(resp, MAX_PATH_LEN-1,
            "cloonsuid_crun_create_net_resp_ko name=%s", name);
-  snprintf(nspace, MAX_NAME_LEN-1, "%s_%d_%d",
-           BASE_NAMESPACE, cloonix_rank, vm_id);
+  snprintf(nspacecrun, MAX_PATH_LEN-1, "%s_%s_%s_%d_%d",
+           BASE_NAMESPACE, get_net_name(), name, cloonix_rank, vm_id);
   if (cur != NULL)
     KERR("ERROR %s", name);
   else if (access(bulk_image, F_OK))
@@ -263,7 +265,7 @@ static void create_net(char *line, char *resp, char *name, char *bulk,
     KERR("ERROR %s too big nb_eth:%d", name, nb_eth);
   else
     {
-    alloc_crun(name, bulk, image, nb_eth, nspace,
+    alloc_crun(name, bulk, image, nb_eth, nspacecrun,
                     cloonix_rank, vm_id, cnt_dir, agent_dir);
     memset(resp, 0, MAX_PATH_LEN);
     }
@@ -275,6 +277,7 @@ static void create_net_eth(char *line, char *resp,
                            char *name, int num, char *mac) 
 {
   t_crun *cur;
+  char tmpfs_umount_cmd[MAX_PATH_LEN];
   cur = find_crun(name);
   if (cur == NULL)
     KERR("ERROR %s", name);
@@ -291,14 +294,22 @@ static void create_net_eth(char *line, char *resp,
         }
       else
         {
+        memset(tmpfs_umount_cmd, 0, MAX_PATH_LEN);
         if (crun_utils_create_net(cur->mountbear, cur->mounttmp, cur->image,
-                                  name, cur->cnt_dir, cur->nspace,
+                                  name, cur->cnt_dir, cur->nspacecrun,
                                   cur->cloonix_rank, cur->vm_id, cur->nb_eth,
-                                  cur->eth_mac, cur->agent_dir))
+                                  cur->eth_mac, cur->agent_dir,
+                                  tmpfs_umount_cmd))
           {
           KERR("ERROR %s", name);
           snprintf(resp, MAX_PATH_LEN-1,
           "cloonsuid_crun_create_net_resp_ko name=%s", name);
+          if (strlen(tmpfs_umount_cmd))
+            {
+            KERR("WARNING %s", tmpfs_umount_cmd);
+            if (execute_cmd(tmpfs_umount_cmd, 1))
+              KERR("ERROR %s", tmpfs_umount_cmd);
+            }
           }
         else
           {
@@ -342,7 +353,7 @@ static void create_config_json(char *line, char *resp,
     snprintf(path, MAX_PATH_LEN-1, "%s/%s", cnt_dir, cur->name);
 
     if (crun_utils_create_config_json(path, cur->rootfs_path,
-                                      cur->nspace_path, cur->mountbear,
+                                      cur->nspacecrun_path, cur->mountbear,
                                       cur->mounttmp, is_persistent,
                                       startup_env, vmount, cur->name))
       {
@@ -468,7 +479,7 @@ static void create_crun_start(char *line, char *resp, char *name)
       "cloonsuid_crun_create_crun_start_resp_ok name=%s crun_pid=%d mountbear=%s",
       name, cur->crun_pid, cur->mountbear);
       }
-    crun_utils_delete_net_nspace(cur->nspace);
+    crun_utils_delete_net_nspace(cur->nspacecrun);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -615,7 +626,7 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
     if (cur != NULL)
       {
       KERR("ERROR MUST ERASE %s, %s", name, line);
-      crun_utils_delete_net_nspace(cur->nspace);
+      crun_utils_delete_net_nspace(cur->nspacecrun);
       urgent_destroy_crun(cur);
       }
     }

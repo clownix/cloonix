@@ -1,0 +1,51 @@
+diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
+--- crun/src/libcrun/error.c	2024-06-30 12:09:13.000000000 +0200
++++ crun_tainted/src/libcrun/error.c	2024-07-29 11:56:51.406486633 +0200
+@@ -45,6 +45,16 @@
+ static bool log_also_to_stderr;
+ static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
+ 
++/*-------------------------------------------------------------------------*/
++//VIPTODO
++#include <syslog.h>
++#define KERR(format, a...)                                    \
++ do {                                                         \
++    syslog(LOG_ERR | LOG_USER, "KERR line:%d " format "\n\n", \
++    __LINE__, ## a);                                \
++    } while (0)
++/*-------------------------------------------------------------------------*/
++
+ int
+ libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
+ {
+diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
+--- crun/src/libcrun/linux.c	2024-06-30 12:09:13.000000000 +0200
++++ crun_tainted/src/libcrun/linux.c	2024-07-29 12:00:05.562492938 +0200
+@@ -105,6 +105,16 @@
+ #  define FSCONFIG_CMD_CREATE 6
+ #endif
+ 
++/*-------------------------------------------------------------------------*/
++//VIPTODO
++#include <syslog.h>
++#define KERR(format, a...)                                    \
++ do {                                                         \
++    syslog(LOG_ERR | LOG_USER, "KERR line:%d " format "\n\n", \
++    __LINE__, ## a);                                \
++    } while (0)
++/*-------------------------------------------------------------------------*/
++
+ struct remount_s
+ {
+   struct remount_s *next;
+@@ -1580,6 +1590,10 @@
+                                   { "/dev/tty", "c", 5, 0, 0666, 0, 0 },
+                                   { "/dev/random", "c", 1, 8, 0666, 0, 0 },
+                                   { "/dev/urandom", "c", 1, 9, 0666, 0, 0 },
++                                  { "/dev/fuse", "c", 10, 229, 0666, 0, 0 },
++                                  { "/dev/kvm", "c", 10, 232, 0666, 0, 0 },
++                                  { "/dev/vhost-net", "c", 10, 238, 0666, 0, 0 },
++                                  { "/dev/net/tun", "c", 10, 200, 0666, 0, 0 },
+                                   {} };
+ 
+ /* Check if the specified path is a direct child of /dev.  If it is

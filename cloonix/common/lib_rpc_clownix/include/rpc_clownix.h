@@ -227,6 +227,9 @@ void send_status_ko(int llid, int tid, char *reason);
 void recv_status_ko(int llid, int tid, char *reason);
 
 /*---------------------------------------------------------------------------*/
+void send_fix_display(int llid, int tid, char *line);
+void recv_fix_display(int llid, int tid, char *line);
+/*---------------------------------------------------------------------------*/
 void send_cnt_add(int llid, int tid, t_topo_cnt *cnt);
 void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt);
 /*---------------------------------------------------------------------------*/

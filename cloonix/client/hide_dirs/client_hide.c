@@ -42,6 +42,7 @@ static FILE *g_log_cmd;
 static char *g_home;
 static char *g_display;
 static char *g_user;
+static char *g_xauthority;
 
 
 /*****************************************************************************/
@@ -55,6 +56,71 @@ int file_exists(char *path)
 }
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+static int get_xauth_magic(char *display, char *line_display)
+{
+  int result = -1;
+  char *end;
+  FILE *fp;
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+           "%s list | /usr/libexec/cloonix/common/grep %s",
+           XAUTH_BIN, display);
+  fp = popen(cmd, "r");
+  if (fp == NULL)
+    KERR("ERROR %s errno:%d", cmd, errno);
+  else
+    {
+    if (!fgets(line_display, MAX_PATH_LEN-1, fp))
+      KERR("ERROR %s", cmd);
+    else if (!strlen(line_display))
+      KERR("ERROR %s", cmd);
+    else if (!strstr(line_display, "MIT-MAGIC-COOKIE-1"))
+      KERR("ERROR %s %s", cmd, line_display);
+    else
+      {
+      end = strchr(line_display, '\r');
+      if (end)
+        *end = 0;
+      end = strchr(line_display, '\n');
+      if (end)
+        *end = 0;
+      if (strlen(line_display) < 1)
+        KERR("ERROR %s %s", cmd, line_display);
+      else
+        result = 0;
+      if (pclose(fp))
+        KERR("ERROR %s %s", cmd, line_display);
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void fill_distant_xauthority(char *net)
+{
+  char line_display[MAX_PATH_LEN];
+  char cmd[2*MAX_PATH_LEN];
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  memset(line_display, 0, MAX_PATH_LEN);
+  if (get_xauth_magic(g_display, line_display))
+    KERR("WARNING XAUTH FIX %s", g_display);
+  else
+    {
+    if (!strlen(line_display))
+      KERR("WARNING XAUTH FIX NOGO %s", g_display);
+    else
+      {
+      snprintf(cmd, 2*MAX_PATH_LEN-1, 
+      "/usr/libexec/cloonix/common/cloonix-ctrl %s %s cnf fix \"%s\"",
+      CLOONIX_CFG, net, line_display);
+      system(cmd);
+      }
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void set_env_global_cloonix(char *net)
@@ -69,13 +135,14 @@ static void set_env_global_cloonix(char *net)
     setenv("DISPLAY", g_display, 1);
   if (g_user)
     setenv("USER", g_user, 1);
-  setenv("PATH",  "/usr/libexec/cloonix/common:"
-                  "/usr/libexec/cloonix/client:"
-                  "/usr/libexec/cloonix/server", 1);
+  if (g_xauthority)
+    setenv("XAUTHORITY", g_xauthority, 1);
+
+  setenv("PATH",  "/usr/libexec/cloonix/common:/usr/libexec/cloonix/server", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
-  setenv("SHELL", "/usr/libexec/cloonix/client/bash", 1);
-  setenv("TERM", "rxvt-unicode", 1);
+  setenv("SHELL", "/usr/libexec/cloonix/common/bash", 1);
+  setenv("TERM", "rxvt", 1);
   memset(rdir, 0, MAX_PATH_LEN);
   snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run", net);
   setenv("XDG_RUNTIME_DIR", rdir, 1);
@@ -84,9 +151,12 @@ static void set_env_global_cloonix(char *net)
   memset(rdir, 0, MAX_PATH_LEN);
   snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run/.config", net);
   setenv("XDG_CONFIG_HOME", rdir, 1);
+
   memset(rdir, 0, MAX_PATH_LEN);
-  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run/.Xauthority", net);
+//  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run/.Xauthority", net);
+  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/cache/.Xauthority");
   setenv("XAUTHORITY", rdir, 1);
+
   setenv("NO_AT_BRIDGE", "1", 1);
   setenv("QT_X11_NO_MITSHM", "1", 1);
   setenv("QT_XCB_NO_MITSHM", "1", 1);
@@ -258,7 +328,7 @@ static void process_ocp(int argc, char **argv, char **new_argv,
   snprintf(ocp_param, MAX_PATH_LEN-1,
            "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
            ip, port, passwd, argv[3], argv[4]);
-  new_argv[0] = "/usr/libexec/cloonix/client/cloonix-u2i-scp";
+  new_argv[0] = "/usr/libexec/cloonix/common/cloonix-u2i-scp";
   new_argv[1] = sock;
   new_argv[2] = "-i";
   new_argv[3] = "/usr/tmp/cloonix_private_id_rsa";
@@ -318,7 +388,7 @@ static void process_osh(int argc, char **argv, char **new_argv,
   snprintf(ocp_param, MAX_PATH_LEN-1,
           "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
           ip, port, passwd, argv[3], argv[4]);
-  new_argv[0] = "/usr/libexec/cloonix/client/cloonix-u2i-ssh";
+  new_argv[0] = "/usr/libexec/cloonix/common/cloonix-u2i-ssh";
   new_argv[1] = sock;
   new_argv[2] = "-i";
   new_argv[3] = "/usr/tmp/cloonix_private_id_rsa";
@@ -348,7 +418,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_LSH-----------------------*/
   if (!strcmp("lsh", argv[1]))
     {
-    new_argv[0] = "/usr/libexec/cloonix/client/bash";
+    new_argv[0] = "/usr/libexec/cloonix/common/bash";
     }
 /*CLOONIX_DSH-----------------------*/
   else if (!strcmp("dsh", argv[1]))
@@ -357,19 +427,19 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     new_argv[3] = "-cmd";
-    new_argv[4] = "/usr/libexec/cloonix/client/bash";
+    new_argv[4] = "/usr/libexec/cloonix/common/bash";
     }
 /*CLOONIX_CLI-----------------------*/
   else if (!strcmp("cli", argv[1]))
     {
     if (argc < 4)
       {
-      new_argv[0] = "/usr/libexec/cloonix/client/cloonix-ctrl";
+      new_argv[0] = "/usr/libexec/cloonix/common/cloonix-ctrl";
       new_argv[1] = CLOONIX_CFG;
       }
     else
       {
-      new_argv[0] = "/usr/libexec/cloonix/client/cloonix-ctrl";
+      new_argv[0] = "/usr/libexec/cloonix/common/cloonix-ctrl";
       new_argv[1] = CLOONIX_CFG;
       new_argv[2] = argv[2];
       new_argv[3] = argv[3];
@@ -383,7 +453,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_GUI-----------------------*/
   else if (!strcmp("gui", argv[1]))
     {
-    new_argv[0] = "/usr/libexec/cloonix/client/cloonix-gui";
+    new_argv[0] = "/usr/libexec/cloonix/common/cloonix-gui";
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     }
@@ -393,7 +463,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if (argc < 5)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     snprintf(ipport, MAX_NAME_LEN-1,  "%s:%d", ip, port);
-    new_argv[0] = "/usr/libexec/cloonix/client/cloonix-dropbear-scp";
+    new_argv[0] = "/usr/libexec/cloonix/common/cloonix-dropbear-scp";
     new_argv[1] = ipport;
     new_argv[2] = passwd;
     for (i=0; i<MAX_NARGS; i++)
@@ -408,7 +478,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if ((argc != 4) && (argc != 5))
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
-    new_argv[0] = "/usr/libexec/cloonix/client/cloonix-dropbear-ssh";
+    new_argv[0] = "/usr/libexec/cloonix/common/cloonix-dropbear-ssh";
     new_argv[1] = ipport;
     new_argv[2] = passwd;
     new_argv[3] = argv[3];
@@ -423,7 +493,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     snprintf(title, MAX_NAME_LEN-1, "%s/%s", argv[2], argv[3]);
     snprintf(param, 399, "/usr/libexec/cloonix/server/cloonix-crun "
                          "--log=/var/lib/cloonix/%s/log/debug_crun.log "
-                         "--root=/var/lib/cloonix/%s/crun/ exec %s /bin/bash",
+                         "--root=/var/lib/cloonix/%s/crun/ exec %s /bin/sh",
                          argv[2], argv[2], argv[3]);
     new_argv[0] = URXVT_BIN;
     new_argv[1] = "-T";
@@ -443,7 +513,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     snprintf(title, MAX_NAME_LEN-1, "--title=%s/%s", argv[2], argv[3]);
     snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
     snprintf(sock, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/vm/vm%s/spice_sock", argv[2], argv[4]);
-    new_argv[0] = "/usr/libexec/cloonix/client/cloonix-spicy";
+    new_argv[0] = "/usr/libexec/cloonix/common/cloonix-spicy";
     new_argv[1] = title;
     new_argv[2] = "-d";
     new_argv[3] = ipport;
@@ -514,6 +584,7 @@ int main(int argc, char *argv[])
   int  port, pid;
   char *cfg = CLOONIX_CFG;
   char *new_argv[MAX_NARGS+10];
+  g_xauthority = getenv("XAUTHORITY");
   g_home = getenv("HOME");
   g_display = getenv("DISPLAY");
   g_user = getenv("USER");
@@ -536,6 +607,8 @@ int main(int argc, char *argv[])
     if (strcmp("ice", argv[1]))
       {
       // For spice, no change in env.
+      if (!strcmp("gui", argv[1]))
+        fill_distant_xauthority(argv[2]);
       set_env_global_cloonix(argv[2]);
       }
     }
@@ -577,7 +650,7 @@ int main(int argc, char *argv[])
         (!strcmp("lsh", argv[1])))
       create_cloonix_private_id_rsa();
     execv(new_argv[0], new_argv);
-    KOUT("ERROR execv");
+    KOUT("ERROR execv %s not good", new_argv[0]);
     }
 /*--------------------------------------------------------------------------*/
 }

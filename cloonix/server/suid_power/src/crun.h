@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#define TMPFS "tmpfs"
 #define UPPER "upper"
 #define WORKDIR "workdir"
 #define ROOTFS "rootfs"

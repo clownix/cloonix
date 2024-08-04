@@ -63,7 +63,9 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
   echo
 #----------------------------------------------------------
   for i in  crun \
+            fuse-archive \
             dtach \
+            script_pty \
             spice_lib_server \
             xwy \
             wm2 \

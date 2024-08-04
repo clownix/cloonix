@@ -37,7 +37,7 @@
 #include "wrap.h"
 #include "glob_common.h"
 
-void hide_real_machine(void);
+void hide_real_machine_serv(void);
 
 #define MAX_ARGC 100
 
@@ -61,8 +61,6 @@ static char g_user[MAX_TXT_LEN];
 static char g_xauthority[MAX_TXT_LEN];
 static char g_net_name[MAX_TXT_LEN];
 static struct timeval g_last_cloonix_tv;
-
-#define XAUTH_BIN "/usr/libexec/cloonix/server/xauth"
 
 
 /****************************************************************************/
@@ -191,21 +189,6 @@ static void clean_xauthority(char *xauthority_file, char *end_file)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void init_all_env(char *net_name)
-{
-  memset(g_xauthority, 0, MAX_TXT_LEN);
-  snprintf(g_xauthority, MAX_TXT_LEN-1, 
-           "/var/lib/cloonix/%s/run/.Xauthority", net_name); 
-  unlink(g_xauthority);
-  clean_xauthority(g_xauthority, "-c");
-  clean_xauthority(g_xauthority, "-l");
-  clean_xauthority(g_xauthority, "-n");
-  if (wrap_touch(g_xauthority))
-    KOUT("ERROR XAUTHORITY file %s", g_xauthority);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void create_env_display(int display_val, char *ttyname)
 {
   char rdir[MAX_PATH_LEN];
@@ -213,14 +196,12 @@ static void create_env_display(int display_val, char *ttyname)
   char *net = g_net_name;
   char *px86_64="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/qt6/plugins";
   char *pi386="/usr/libexec/cloonix/common/lib/i386-linux-gnu/qt6/plugins";
-  setenv("PATH",  "/usr/libexec/cloonix/common:"
-                  "/usr/libexec/cloonix/client:"
-                  "/usr/libexec/cloonix/server", 1);
+  setenv("PATH",  "/usr/libexec/cloonix/common:/usr/libexec/cloonix/server", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
   setenv("XAUTHORITY", g_xauthority, 1);
   setenv("SHELL", "/usr/libexec/cloonix/server/cloonix-bash", 1);
-  setenv("TERM", "rxvt-unicode", 1);
+  setenv("TERM", "rxvt", 1);
   memset(disp_str, 0, MAX_TXT_LEN);
   if (display_val > 0)
     {
@@ -311,11 +292,28 @@ static void sigusr1_child_handler(int dummy)
 void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
                          char *cmd, int display_val)
 {
+//  int infds[2];
+//  int outfds[2];
+//  int errfds[2];
+//  const int FDIN = 0;
+//  const int FDOUT = 1;
+
   char ttyname[MAX_TXT_LEN], *argv[MAX_ARGC];
-  int i, pty_fd=-1, ttyfd, pid;
+  int i, pty_fd=-1, ttyfd=-1, pid;
   char *ptr, *ptre;
+
+//  if (pipe(infds) != 0)
+//    KOUT("ERROR");
+//  if (pipe(outfds) != 0)
+//    KOUT("ERROR");
+//  if (pipe(errfds) != 0)
+//    KOUT("ERROR");
+
   memset(argv, 0, MAX_ARGC * sizeof(char *));
   memset(ttyname, 0, MAX_TXT_LEN);
+
+KERR("VIPTODO pty_fork_bin_bash %d %d %s", action, display_val, cmd);
+
   if (action != action_dae)
     {
     if (wrap_openpty(&pty_fd, &ttyfd, ttyname, fd_type_fork_pty))
@@ -333,10 +331,11 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
     KOUT("%s", strerror(errno));
   if (pid == 0)
     {
+    prctl(PR_SET_PDEATHSIG, SIGKILL);
+
+
     clearenv();
-
     create_env_display(display_val, ttyname); 
-
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_DFL);
     if (signal(SIGUSR1, sigusr1_child_handler) == SIG_ERR)          
@@ -346,21 +345,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
     prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0);
     if (setsid() < 0)
       KOUT("setsid: %s", strerror(errno));
-    if (action == action_dae)
-      {
-      hide_real_machine();
-      for (i=0; i<MAX_FD_NUM; i++)
-        close(i);
-      create_argv_from_cmd(cmd, argv);
-      if (!strcmp(argv[0], WIRESHARK_BIN))
-        {
-        execv(argv[0], argv);
-        KOUT("ERROR execv");
-        }
-      else
-        KERR("ERROR CMD %s", cmd);                  
-      }
-    else
+    if (action != action_dae)
       {
       close(0);
       close(1);
@@ -374,50 +359,44 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       wrap_nonnonblock(0);
       wrap_nonnonblock(1);
       wrap_nonnonblock(2);
-      for (i=3; i<MAX_FD_NUM; i++)
-        close(i);
-      if (action == action_bash)
-        {
-        argv[0] = "/usr/libexec/cloonix/server/cloonix-bash";
-        argv[1] = NULL;
-        }
-     else if (action == action_crun)
-       {
-//       argv[0] = "/usr/libexec/cloonix/server/cloonix-bash";
-//       argv[1] = "-c";
-       if (cmd[0] == '"')
-         {
-         ptr = cmd+1;
-         ptre = strchr(ptr, '"');
-         if (!ptre)
-           KERR("ERROR action_crun %s", cmd);
-         else
-//           {
-           *ptre = 0;
-//           argv[2] = ptr;
-//           }
-         }
-       else
-         ptr = cmd;
-//         argv[2] = cmd;
-//       argv[3] = NULL;
-       create_argv_from_cmd(ptr, argv);
-       }
-     else  if (action == action_cmd)
-        {
-        create_argv_from_cmd(cmd, argv);
-        }
-      else
-        KOUT("ERROR %d", action);
-      execv(argv[0], argv);
-      KOUT("ERROR execv %s", argv[0]);
       }
+    for (i=3; i<MAX_FD_NUM; i++)
+      close(i);
+    if (action == action_bash)
+      {
+      argv[0] = "/usr/libexec/cloonix/server/cloonix-bash";
+      argv[1] = NULL;
+      }
+   else if (action == action_crun)
+     {
+     if (cmd[0] == '"')
+       {
+       ptr = cmd+1;
+       ptre = strchr(ptr, '"');
+       if (!ptre)
+         KERR("ERROR action_crun %s", cmd);
+       else
+         *ptre = 0;
+       }
+     else
+       ptr = cmd;
+     create_argv_from_cmd(ptr, argv);
+     }
+   else  if ((action == action_cmd) || (action == action_dae))
+      {
+      hide_real_machine_serv();
+      create_argv_from_cmd(cmd, argv);
+      }
+    else
+      KOUT("ERROR %d", action);
+    execv(argv[0], argv);
+    KOUT("ERROR execv %s", argv[0]);
     }
   else
     {
-    pty_cli_alloc(pty_fd, pid, sock_fd, randid);
     if (action != action_dae)
       {
+      pty_cli_alloc(pty_fd, pid, sock_fd, randid);
       wrap_close(ttyfd, __FUNCTION__);
       mdl_open(pty_fd, fd_type_pty, wrap_write_pty, wrap_read_kout);
       wrap_nonblock(pty_fd);
@@ -654,7 +633,8 @@ void pty_fork_init(char *cloonix_net_name)
   strncpy(g_net_name, cloonix_net_name, MAX_TXT_LEN-1);
   if (signal(SIGCHLD, child_exit) == SIG_ERR)
     KERR("ERROR %s", strerror(errno));
-  init_all_env(cloonix_net_name);
+  memset(g_xauthority, 0, MAX_TXT_LEN);
+  snprintf(g_xauthority, MAX_TXT_LEN-1, "/var/lib/cloonix/cache/.Xauthority"); 
   if (wrap_pipe(pipe_fd, fd_type_pipe_sig, __FUNCTION__) < 0)
     KOUT(" ");
   g_sig_write_fd = pipe_fd[1];

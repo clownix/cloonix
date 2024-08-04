@@ -1,0 +1,9 @@
+#!/bin/bash
+HERE=`pwd`
+CRUN=${HERE}
+TARGZ=../../../targz_store
+./allclean
+tar xvf ${TARGZ}/fuse-archive_*.tar.gz
+cd ${HERE}/fuse-archive
+make
+mv out/fuse-archive .

@@ -516,7 +516,7 @@ int check_before_start_launch(char **argv)
 /****************************************************************************/
 static void start_qemu_spice(char *name, int vm_id)
 {
-  char *spicy = "/usr/libexec/cloonix/client/cloonix-spicy";
+  char *spicy = "/usr/libexec/cloonix/common/cloonix-spicy";
   char title[MAX_PATH_LEN];
   char net[MAX_NAME_LEN];
   char sock[2*MAX_PATH_LEN];
@@ -552,9 +552,9 @@ static int get_process_pid(char *cmdpath, char *sock)
   char name[MAX_NAME_LEN];
   char cmd[MAX_PATH_LEN];
   int pid, result = 0;
-  fp = popen("/usr/libexec/cloonix/client/ps", "r");
+  fp = popen("/usr/libexec/cloonix/common/ps", "r");
   if (fp == NULL)
-    KERR("ERROR %s", "/usr/libexec/cloonix/client/ps");
+    KERR("ERROR %s", "/usr/libexec/cloonix/common/ps");
   else
     {
     memset(line, 0, MAX_PATH_LEN);
@@ -649,7 +649,6 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
   t_qemu_spice_item *it;
   char info[MAX_PRINT_LEN];
   char *path = get_path_to_qemu_spice();
-  char *bintree = get_local_cloonix_tree();
   int vm_id;
   if (path)
     {
@@ -676,8 +675,8 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
     }
   else
     {
-    KERR("ERROR Missing: %s/client/cloonix-spicy", bintree);
-    sprintf(info, "Missing: %s/client/cloonix-spicy", bintree); 
+    KERR("ERROR Missing: /usr/libexec/cloonix/common/cloonix-spicy");
+    sprintf(info, "Missing: /usr/libexec/cloonix/common/cloonix-spicy"); 
     insert_next_warning(info, 1);
     }
 }
@@ -713,7 +712,7 @@ static char **get_argv_crun_screen_console(char *name)
   snprintf(cmd, 2*MAX_PATH_LEN-1,
            "/usr/libexec/cloonix/server/cloonix-crun "
            "--log=/var/lib/cloonix/%s/log/debug_crun.log "
-           "--root=/var/lib/cloonix/%s/crun/ exec %s /bin/bash",
+           "--root=/var/lib/cloonix/%s/crun/ exec %s /bin/sh",
            nemo, nemo, nm);
   ptr_argv = argv;
   return (ptr_argv);

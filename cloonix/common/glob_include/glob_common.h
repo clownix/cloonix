@@ -38,6 +38,9 @@ int cloonix_get_pid(void);
 
 #define MAX_PATH_LEN 300
 
+#define MAX_VMOUNT 8
+#define MAX_SIZE_VMOUNT (MAX_VMOUNT*MAX_PATH_LEN)
+
 #define KERR(format, a...)                               \
  do {                                                    \
     syslog(LOG_ERR | LOG_USER, "KERR: %s"                 \
@@ -211,11 +214,12 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define AGENT_ISO_AMD64 "/usr/libexec/cloonix/server/insider_agents/insider_agent_x86_64.iso"
 
 
-#define SPICE_USB_ACL_HELPER_BIN "/usr/libexec/cloonix/client/cloonix-spice-client-glib-usb-acl-helper"
+#define SPICE_USB_ACL_HELPER_BIN "/usr/libexec/cloonix/common/cloonix-spice-client-glib-usb-acl-helper"
 
-#define BASH_BIN "/usr/libexec/cloonix/client/bash"
-#define XWYCLI_BIN "/usr/libexec/cloonix/client/cloonix-xwycli"
-#define URXVT_BIN "/usr/libexec/cloonix/client/cloonix-urxvt"
+#define XAUTH_BIN "/usr/libexec/cloonix/common/xauth"
+#define BASH_BIN "/usr/libexec/cloonix/common/bash"
+#define XWYCLI_BIN "/usr/libexec/cloonix/common/cloonix-xwycli"
+#define URXVT_BIN "/usr/libexec/cloonix/common/cloonix-urxvt"
 #define WIRESHARK_BIN "/usr/libexec/cloonix/server/cloonix-wireshark"
 #define DUMPCAP_BIN "/usr/libexec/cloonix/server/dumpcap"
 #define CRUN_BIN "/usr/libexec/cloonix/server/cloonix-crun"
@@ -236,7 +240,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define CLOONIX_CFG "/usr/libexec/cloonix/common/etc/cloonix.cfg"
 
 #define BASE_NAMESPACE "cloonix"
-#define PATH_NAMESPACE "/run/netns/"
+#define PATH_NAMESPACE "/var/run/netns/"
 
 enum{
   doors_type_min = 100,
@@ -335,7 +339,7 @@ typedef struct t_topo_cnt
   t_eth_table eth_table[MAX_ETH_VM];
   char image[MAX_PATH_LEN];
   char startup_env[MAX_PATH_LEN];
-  char vmount[4*MAX_PATH_LEN];
+  char vmount[MAX_SIZE_VMOUNT];
 } t_topo_cnt;
 /*---------------------------------------------------------------------------*/
 typedef struct t_topo_c2c

@@ -44,7 +44,7 @@ The connection to the server is a tcp stream protected by password.
 All cloonix clients are named **cloonix_xxx** xxx can be one of the
 following: cli, gui, ice, ssh, scp, wsk, ovs, osh, ocp.
 The */usr/bin/cloonix_xxx* are bash scripts that call binaries and libraries
-located in */usr/libexec/cloonix/common* and */usr/libexec/cloonix/client*.
+located in */usr/libexec/cloonix/common*.
 
 The main one **cloonix_gui** displays the topologie on a canvas also giving
 a possible interaction between the user and items on the canvas to send

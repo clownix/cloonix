@@ -3,10 +3,17 @@ set -e
 HERE=`pwd`
 TARGZ=${HERE}/targz_store
 WORK=${HERE}/work_targz_store
-
 rm -rf ${WORK}
 mkdir -vp ${WORK}
-
+#-----------------------------------------------------
+cd ${WORK}
+git clone --depth=1 https://github.com/google/fuse-archive.git
+cd ${WORK}/fuse-archive
+COMMIT=$(git log --pretty=format:"%H")
+cd ${WORK}
+tar zcvf fuse-archive_${COMMIT}.tar.gz fuse-archive
+rm -rf fuse-archive
+mv fuse-archive_${COMMIT}.tar.gz ${TARGZ}
 #-----------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://github.com/NixOS/patchelf.git

@@ -1,0 +1,13 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=../../../targz_store
+
+cd ${TARGZ}
+CRUN=$(ls crun_*)
+CRUN=${CRUN%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${CRUN}.tar.gz
+diff -Naur crun crun_tainted > ${HERE}/tmp_crun.patch
+
+

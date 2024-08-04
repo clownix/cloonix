@@ -1,10 +1,8 @@
 #!/bin/bash
 HERE=`pwd`
-CRUN=${HERE}
-TARGZ=../../../targz_store
 ./allclean
-tar xvf ${TARGZ}/crun_*.tar.gz
-cd ${HERE}/crun
+./patched_create
+cd ${HERE}/crun_tainted
 ./autogen.sh
-./configure
+./configure --without-shared --disable-shared --enable-static --disable-caps --disable-dl --disable-seccomp --disable-systemd --disable-bpf --disable-lua-path-guessing --enable-embedded-yajl
 make

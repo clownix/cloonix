@@ -1,0 +1,181 @@
+{
+"ociVersion": "1.0.2",
+  "process": {
+    "terminal": "false",
+    "user": {
+        "uid": 0,
+        "gid": 0
+    },
+    "args": ["__STARTER__"],
+    "env": [
+        "PATH=/usr/sbin:/usr/bin:/sbin:/bin",
+        "DISPLAY=__DISPLAY__",
+        "HOME=root"
+    ],
+    "cwd": "/root",
+    "capabilities": {
+        "bounding": __CAPA__,
+        "effective": __CAPA__,
+        "inheritable": __CAPA__,
+        "permitted": __CAPA__,
+        "ambient": __CAPA__
+    },
+    "rlimits": [{
+        "type": "RLIMIT_NOFILE",
+        "hard": 1024,
+        "soft": 1024
+    }],
+    "noNewPrivileges": true
+  },
+  "root": {
+    "path": "__ROOTFS__",
+    "readonly": "false"
+  },
+  "hostname": "crun",
+  "mounts": [{
+    "destination": "/tmp",
+    "type": "none",
+    "source": "/tmp",
+    "options": ["rbind","rw"]
+    },{
+    "destination": "/var/lib/cloonix/bulk",
+    "type": "none",
+    "source": "__BULK__",
+    "options": ["rbind","rw"]
+    },{
+    "destination": "/dev",
+    "type": "tmpfs",
+    "source": "tmpfs",
+    "options": ["nosuid","strictatime","mode=755","size=65536k"]
+    },{
+    "destination": "/dev/pts",
+    "type": "devpts",
+    "source": "devpts",
+    "options": ["nosuid","noexec","newinstance","ptmxmode=0666","mode=0620"]
+    },{
+    "destination": "/dev/net",
+    "type": "tmpfs",
+    "source": "tmpfs",
+    "options": ["nosuid","strictatime","mode=755","size=65536k"]
+    },{
+    "destination": "/sys",
+    "type": "sysfs",
+    "source": "sysfs",
+    "options": ["nosuid","noexec","nodev","ro"]
+    },{
+    "destination": "/sys/fs/cgroup",
+    "type": "cgroup",
+    "source": "cgroup",
+    "options": ["nosuid","noexec","nodev","relatime","ro"]
+    },{
+    "destination": "/proc",
+    "type": "proc",
+    "source": "proc"
+    },{  
+    "destination": "/lib/modules",
+    "type": "none",
+    "source": "/lib/modules",
+    "options": ["rbind","ro"]
+    } 
+  ],
+  "linux": {
+    "device": [{
+        "path": "/dev/fuse",
+        "type": "c",
+        "major": 10,
+        "minor": 229,
+        "fileMode": 438,
+        "uid": 0,
+        "gid": 0
+        },{
+        "path": "/dev/kvm",
+        "type": "c",
+        "major": 10,
+        "minor": 232,
+        "fileMode": 438,
+        "uid": 0,
+        "gid": 0 
+        },{
+        "path": "/dev/vhost-net",
+        "type": "c",
+        "major": 10,
+        "minor": 238,
+        "fileMode": 438,
+        "uid": 0,
+        "gid": 0
+        },
+        {
+        "path": "/dev/net/tun",
+        "type": "c",
+        "major": 10,
+        "minor": 200,
+        "fileMode": 438,
+        "uid": 0,
+        "gid": 0
+        }
+    ],
+    "resources": {
+        "devices": [{
+            "allow": false,
+            "access": "rwm"
+            },{
+            "allow": true,
+            "type": "c",
+            "major": 10,
+            "minor": 229,
+            "access": "rw"
+            },{
+            "allow": true,
+            "type": "c",
+            "major": 10,
+            "minor": 232,
+            "access": "rw"
+            },{
+            "allow": true,
+            "type": "c",
+            "major": 10,
+            "minor": 238,
+            "access": "rw"
+            },{
+            "allow": true,
+            "type": "c",
+            "major": 10,
+            "minor": 200,
+            "access": "rw"
+            }
+        ]
+    },
+    "namespaces": [
+        {"type": "pid"},
+        {"type": "network"},
+        {"type": "ipc"},
+        {"type": "uts"},
+        {"type": "cgroup"},
+        {"type": "mount"}
+    ],
+    "maskedPaths": [
+        "/proc/acpi",
+        "/proc/asound",
+        "/proc/kcore",
+        "/proc/keys",
+        "/proc/latency_stats",
+        "/proc/timer_list",
+        "/proc/timer_stats",
+        "/proc/sched_debug",
+        "/sys/firmware",
+        "/proc/scsi"
+    ],
+    "sysctl": {
+        "net.ipv4.ip_forward": "1",
+        "net.ipv4.conf.all.log_martians": "1",
+        "net.ipv6.conf.all.disable_ipv6": "1",
+        "net.ipv6.conf.default.disable_ipv6": "1"
+    },
+    "readonlyPaths": [
+        "/proc/bus",
+        "/proc/fs",
+        "/proc/irq",
+        "/proc/sysrq-trigger"
+    ]
+  }
+}

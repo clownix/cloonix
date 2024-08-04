@@ -11,16 +11,12 @@ COMMON=${CLOONIX_TREE_ROOT}/cloonix/common
 CLIENT=${CLOONIX_TREE_ROOT}/cloonix/client
 SERVER=${CLOONIX_TREE_ROOT}/cloonix/server
 
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_client
+rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_server
 rm -rf ${CLOONIX_TREE_ROOT}/build_tools/common
 rm -f  ${CLOONIX_TREE_ROOT}/build_tools/common.tar.gz
-
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/client
-rm -f  ${CLOONIX_TREE_ROOT}/build_tools/client.tar.gz
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_client
-
 rm -rf ${CLOONIX_TREE_ROOT}/build_tools/server
 rm -f  ${CLOONIX_TREE_ROOT}/build_tools/server.tar.gz
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_server
 #----------------------------------------------------------
 rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
 #----------------------------------------------------------
@@ -62,6 +58,7 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
     make clean
   done 
   rm -f ${SERVER}/dtach/cloonix-dtach
+  rm -f ${SERVER}/script_pty/cloonix-scriptpty
 #----------------------------------------------------------
   for i in ovs \
            ovs_drv \
@@ -73,6 +70,7 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
            xwy \
            wm2 \
            crun \
+           fuse-archive \
            spice_lib_server ; do
     cd ${SERVER}/${i}
     ./allclean

@@ -82,9 +82,9 @@ static void create_libs_paragraph(FILE *col, char *common, char *name_lib)
 static void create_libs_python(FILE *col, char *common)
 {
   fprintf(col,
-  "if [ -d %s/lib/python3.11/lib-dynload ]; then\n", common);
+  "if [ -d %s/lib/python3.12/lib-dynload ]; then\n", common);
   fprintf(col,
-  "  for i in `find %s/lib/python3.11/lib-dynload -type f` ; do\n", common);
+  "  for i in `find %s/lib/python3.12/lib-dynload -type f` ; do\n", common);
   fprintf(col, "    ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
   fprintf(col, "  done\n");
   fprintf(col, "fi\n");

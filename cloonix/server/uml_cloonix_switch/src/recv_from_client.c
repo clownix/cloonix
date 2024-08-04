@@ -58,6 +58,7 @@
 #include "ovs_c2c.h"
 #include "msg.h"
 #include "crun.h"
+#include "novnc.h"
 
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
@@ -157,7 +158,20 @@ static int get_inhib_new_clients(void)
 /*****************************************************************************/
 void recv_novnc_on_off(int llid, int tid, int on)
 {
-  send_status_ko(llid, tid, "Not implemented anymore");
+  if (on)
+    {
+    if (start_novnc() == 0)
+      send_status_ok(llid, tid, "novnc_on");
+    else
+      send_status_ko(llid, tid, "Error novnc_on");
+    }
+  else
+    {
+    if (end_novnc(1) == 0)
+      send_status_ok(llid, tid, "novnc_off");
+    else
+      send_status_ko(llid, tid, "Error novnc_off");
+    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -788,10 +802,9 @@ static int get_dev_kvm_major_minor(int *major, int *minor, char *info)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int inside_cloonix_test_dev_kvm(char *err)
+static void inside_cloonix_test_dev_kvm(char *err)
 {
   int major, minor;
-  int result = -1;
   char min[MAX_NAME_LEN];
   char *argv[10];
   memset(argv, 0, 10*sizeof(char *));
@@ -809,7 +822,6 @@ static int inside_cloonix_test_dev_kvm(char *err)
       argv[5] = NULL; 
       if (!lio_system(argv))
         {
-        result = 0;
         argv[0] = CHMOD_BIN;
         argv[1] = "666"; 
         argv[2] = "/dev/kvm"; 
@@ -829,6 +841,38 @@ static int inside_cloonix_test_dev_kvm(char *err)
       KERR("ERROR %s", err);
       }
     }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int module_access_is_ko(char *dev_file, char *info)
+{
+  int result = -1;
+  int fd;
+  if (access( dev_file, F_OK))
+    {
+    sprintf(info, "%s not found see kvm module in doc", dev_file);
+    KERR("ERROR %s", info);
+    }
+  else if (!i_have_read_write_access("/dev/kvm"))
+    {
+    sprintf(info, "%s not writable see kvm module in doc", dev_file);
+    KERR("ERROR %s", info);
+    }
+  else
+    {
+    fd = open(dev_file, O_RDWR);
+    if (fd < 0)
+      {
+      sprintf(info, "%s not openable see kvm module in doc", dev_file);
+      KERR("ERROR %s", info);
+      }
+    else
+      {
+      result = 0;
+      close(fd);
+      }
+    }
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -837,42 +881,34 @@ static int inside_cloonix_test_dev_kvm(char *err)
 static int test_dev_kvm(char *info)
 {
   int result = -1;
-  int fd;
   if (test_machine_is_kvm_able())
     {
-    result = 0;
-    if (access("/dev/kvm", F_OK))
+    if (g_in_cloon)
+      inside_cloonix_test_dev_kvm(info);
+    if (module_access_is_ko("/dev/kvm", info))
       {
-      if (g_in_cloon)
-        result = inside_cloonix_test_dev_kvm(info);
-      else
-        {
-        sprintf(info, "/dev/kvm not found see \"KVM module\" "
-                      "in \"Depends\" chapter of doc");
-        result = -1;
-        }
-      }
-    else if (!i_have_read_write_access("/dev/kvm"))
-      {
-      sprintf(info, "/dev/kvm not writable see \"KVM module\" "
-                    "in \"Depends\" chapter of doc");
-      result = -1;
+      KERR("ERROR KO /dev/kvm, Maybe: chmod 0666 /dev/kvm");
+      KERR("OR: sudo setfacl -m u:${USER}:rw /dev/kvm");
       }
     else
       {
-      fd = open("/dev/kvm", O_RDWR);
-      if (fd < 0)
+      result = 0;
+      if (module_access_is_ko("/dev/vhost-net", info))
         {
-        sprintf(info, "/dev/kvm not openable  \n");
-        result = -1;
+        KERR("WARNING /dev/vhost-net, Maybe: chmod 0666 /dev/vhost-net");
+        KERR("OR: sudo setfacl -m u:${USER}:rw /dev/vhost-net");
         }
-      close(fd);
+      else if (module_access_is_ko("/dev/net/tun", info))
+        {
+        KERR("WARNING /dev/net/tun, Maybe: chmod 0666 /dev/net/tun");
+        KERR("OR: sudo setfacl -m u:${USER}:rw /dev/net/tun");
+        }
       }
-
     }
   else
     {
     sprintf(info, "No hardware virtualisation! kvm needs it!\n");
+    KERR("ERROR KO hardware virtualisation");
     }
   return result;
 }
@@ -2231,6 +2267,18 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
 void recv_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
 {
   ovs_snf_sync_wireshark_req(llid, tid, name, num, cmd);
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_fix_display(int llid, int tid, char *line)
+{
+  char cmd[MAX_PRINT_LEN];
+  memset(cmd, 0, MAX_PRINT_LEN);
+  sprintf(cmd, "%s -f /var/lib/cloonix/cache/.Xauthority %s", XAUTH_BIN, line);
+  system(cmd);
+  send_status_ok(llid, tid, "ok");
+KERR("TODOTRACE  %s", cmd);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -532,13 +532,14 @@ void xcli_init(int epfd, int llid, int tid, int type,
       (action == action_crun)  ||
       (action == action_cmd))
     {
-    send_msg_type_x11_init(g_randid, get_x11_magic());
     if (action == action_dae)
       {
-//      daemon(0, 0);
+      daemon(0, 0);
+      send_msg_type_x11_init(g_randid, get_x11_magic());
       }
     else
       {
+      send_msg_type_x11_init(g_randid, get_x11_magic());
       if (setup_win_pipe(&win_chg_fd))
         KOUT(" ");
       g_win_chg_fd_epev = wrap_epoll_event_alloc(epfd, win_chg_fd, 2);

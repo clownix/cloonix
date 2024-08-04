@@ -23,7 +23,7 @@ typedef struct t_custom_cnt
   t_eth_table eth_table[MAX_ETH_VM];
   char cru_image[MAX_NAME_LEN];
   char startup_env[MAX_PATH_LEN];
-  char vmount[4*MAX_PATH_LEN];
+  char vmount[MAX_SIZE_VMOUNT];
   int current_number;
   int is_persistent;
 } t_custom_cnt;

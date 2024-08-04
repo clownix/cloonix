@@ -10,7 +10,6 @@
 #include "session.h"
 #include "io_clownix.h"
 
-static char g_cloonix_tree[MAX_PATH_LEN];
 static char g_current_directory[MAX_PATH_LEN];
 
 int cloonix_connect_remote(char *cloonix_doors, 
@@ -31,43 +30,13 @@ char *main_cloonix_tree_dir(void)
 
 
 /****************************************************************************/
-static void init_local_cloonix_bin_path(char *curdir, char *callbin)
-{
-  char path[2*MAX_PATH_LEN];
-  char *ptr;
-  memset(g_cloonix_tree, 0, MAX_PATH_LEN);
-  memset(path, 0, 2*MAX_PATH_LEN);
-  if (callbin[0] == '/')
-    snprintf(path, 2*MAX_PATH_LEN-1, "%s", callbin);
-  else
-    snprintf(path, 2*MAX_PATH_LEN-1, "%s/%s", curdir, callbin);
-
-  ptr = strrchr(path, '/');
-  if (!ptr)
-    KOUT("%s", path);
-  *ptr = 0;
-  ptr = strrchr(path, '/');
-  if (!ptr)
-    KOUT("%s", path);
-  *ptr = 0;
-
-  strncpy(g_cloonix_tree, path, MAX_PATH_LEN-1);
-  snprintf(path, 2*MAX_PATH_LEN-1, "%s/client/cloonix-dropbear-ssh", 
-            g_cloonix_tree);
-  path[MAX_PATH_LEN-1] = 0;
-  if (access(path, X_OK))
-    KOUT("%s", path);
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
 int main(int argc, char ** argv)
 {
   memset(g_current_directory, 0, MAX_PATH_LEN);
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
-  init_local_cloonix_bin_path(g_current_directory, argv[0]);
+  if (access("/usr/libexec/cloonix/common/cloonix-dropbear-ssh", X_OK))
+    KOUT("/usr/libexec/cloonix/common/cloonix-dropbear-ssh");
   cli_getopts(argc, argv);
   if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
     KOUT("signal() error");

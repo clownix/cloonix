@@ -86,6 +86,18 @@ void callback_end(int tid, int status, char *err)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void callback_end_fix(int tid, int status, char *err)
+{
+  if (tid)
+    KOUT("ERROR callback_end_fix");
+  if (!status)
+    exit (0);
+  else
+    KOUT("ERROR callback_end_fix %s", err);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void callback_list_commands(int tid, int qty, t_list_commands *list)
 {
   int i;
@@ -680,6 +692,22 @@ int cmd_cnf_lan(int argc, char **argv)
   else
     KERR("ERROR NB PARAMS %d", argc);
   return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int cmd_cnf_fix(int argc, char **argv)
+{ 
+  int result = -1;
+  if (argc == 1)
+    {
+    result = 0;
+    init_connection_to_uml_cloonix_switch();
+    client_fix_display(0, callback_end_fix, argv[0]);
+    }
+  else 
+    KERR("ERROR NB PARAMS %d cmd_cnf_fix", argc);
+  return result; 
 }
 /*---------------------------------------------------------------------------*/
 

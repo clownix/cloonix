@@ -1,5 +1,5 @@
 #!/bin/bash
 set -e
-NSH="/usr/libexec/cloonix/client/cloonix-hide-dirs"
+NSH="/usr/libexec/cloonix/common/cloonix-hide-dirs"
 ${NSH} "lsh" ${cloonix_name}
 

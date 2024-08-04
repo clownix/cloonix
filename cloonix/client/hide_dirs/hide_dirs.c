@@ -102,21 +102,36 @@ static void become_orig(uid_t orig_uid, gid_t orig_gid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int dir_is_link(const char *input)
+{ 
+  struct stat sb;
+  int result = 0;
+  if (lstat(input, &sb) == 0) 
+    {
+    if ((sb.st_mode & S_IFMT) == S_IFLNK)
+      result = 1;
+    }
+  return result;
+} 
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 static void hide_dir_if_necessary(const char *input)
 { 
   struct stat sb;
   if (lstat(input, &sb) == 0)
     {
-    if ((sb.st_mode & S_IFMT) == S_IFLNK)
+    if (!dir_is_link(input))
       {
+      if ((sb.st_mode & S_IFMT) == S_IFDIR)
+        {
+        if (mount("tmpfs", input, "tmpfs", 0, NULL))
+          KOUT("ERROR %s %s", __FUNCTION__, input);
+        }
+      else
+        KERR("ERROR %s %s", __FUNCTION__, input);
       }
-    else if ((sb.st_mode & S_IFMT) == S_IFDIR)
-      {
-      if (mount("tmpfs", input, "tmpfs", 0, NULL))
-        KOUT("ERROR %s %s", __FUNCTION__, input);
-      }
-    else
-      KERR("ERROR %s %s", __FUNCTION__, input);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -150,17 +165,21 @@ static void setup_mounts(void)
   hide_dir_if_necessary("/usr");
 
   mkdir("/usr/bin", 0777);
-  mkdir("/usr/tmp", 0777);
   mkdir("/usr/share", 0777);
   mkdir("/usr/share/i18n", 0777);
   mkdir("/usr/libexec", 0777);
   mkdir("/usr/libexec/cloonix", 0777);
   mkdir("/usr/lib", 0777);
+  mkdir("/usr/lib64", 0777);
+  mkdir("/usr/tmp", 0777);
 
   assert(mount("/var/lib/cloonix/cache/libexec",
                "/usr/libexec/cloonix", NULL, MS_BIND, NULL) == 0);
 
   assert(mount("/var/lib/cloonix/cache/libexec/common/lib", "/usr/lib",
+               NULL, MS_BIND, NULL) == 0);
+
+  assert(mount("/var/lib/cloonix/cache/libexec/common/lib64", "/usr/lib64",
                NULL, MS_BIND, NULL) == 0);
 
   assert(mount("/var/lib/cloonix/cache/libexec/common/share",
@@ -172,6 +191,10 @@ static void setup_mounts(void)
   assert(mount("/var/lib/cloonix/cache/libexec/common",
                "/usr/bin", NULL, MS_BIND, NULL) == 0);
 
+  if (!dir_is_link("/bin"))
+    assert(mount("/var/lib/cloonix/cache/libexec/common",
+                 "/bin", NULL, MS_BIND, NULL) == 0);
+
   chdir("/");
   chdir(curdir);
   free(curdir);
@@ -180,6 +203,19 @@ static void setup_mounts(void)
 
 /****************************************************************************/
 void hide_real_machine(void)
+{
+  uid_t my_uid = getuid();;
+  gid_t my_gid = getgid();;
+  assert(unshare(CLONE_NEWNS | CLONE_NEWUSER) == 0);
+  become_uid0(my_uid, my_gid);
+  setup_mounts();
+  assert(unshare(CLONE_NEWUSER) == 0);
+  become_orig(my_uid, my_gid);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void hide_real_machine_serv(void)
 {
   uid_t my_uid = getuid();;
   gid_t my_gid = getgid();;

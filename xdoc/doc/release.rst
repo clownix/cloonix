@@ -5,11 +5,29 @@
 Software Release Information
 ============================
 
+v40-00
+======
+
+Creation of the self-extracting cloonix to test as an user without any root privilege.
+To test cloonix without ever having the root password for your host machine,
+you have to use the self_extracting_cloonix.sh.
+
+This script creates the self_extracting_rootfs_dir directory which countains
+a root file-system equiped with the cloonix software, the openwrt qcow2
+virtual machine, the zipbasic container, the frr container, demo scripts
+for the cloonix run and a self-contained crun executable::
+
+    wget http://clownix.net/downloads/cloonix-40/self_extracting_cloonix.sh
+    ./self_extracting_cloonix.sh
+    cd self_extracting_rootfs_dir
+    ./crun_container_startup.sh
+    ./ping_demo.sh
+
+
 v39-00
 ======
 
 Update and debug...
-
 
 v38-00
 ======

@@ -1,6 +1,6 @@
 diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
---- qemu_vip/include/qemu/error-report.h	2024-06-13 16:51:58.000000000 +0200
-+++ tainted_qemu/include/qemu/error-report.h	2024-06-15 08:20:56.162544764 +0200
+--- qemu_vip/include/qemu/error-report.h	2024-08-02 23:26:26.000000000 +0200
++++ tainted_qemu/include/qemu/error-report.h	2024-08-03 09:00:33.064040170 +0200
 @@ -13,6 +13,26 @@
  #ifndef QEMU_ERROR_REPORT_H
  #define QEMU_ERROR_REPORT_H
@@ -38,9 +38,9 @@ diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-
  
  bool error_report_once_cond(bool *printed, const char *fmt, ...)
 diff -Naur qemu_vip/meson.build tainted_qemu/meson.build
---- qemu_vip/meson.build	2024-06-13 16:51:58.000000000 +0200
-+++ tainted_qemu/meson.build	2024-06-15 08:20:56.162544764 +0200
-@@ -1181,7 +1181,7 @@
+--- qemu_vip/meson.build	2024-08-02 23:26:26.000000000 +0200
++++ tainted_qemu/meson.build	2024-08-03 09:00:33.064040170 +0200
+@@ -1207,7 +1207,7 @@
               .require(pixman.found(),
                        error_message: 'cannot enable SPICE if pixman is not available') \
               .allowed()
@@ -49,7 +49,7 @@ diff -Naur qemu_vip/meson.build tainted_qemu/meson.build
                       required: get_option('spice'),
                       method: 'pkg-config')
  endif
-@@ -1913,7 +1913,7 @@
+@@ -1956,7 +1956,7 @@
  endif
  usbredir = not_found
  if not get_option('usb_redir').auto() or have_system
@@ -59,8 +59,8 @@ diff -Naur qemu_vip/meson.build tainted_qemu/meson.build
  endif
  libusb = not_found
 diff -Naur qemu_vip/util/error-report.c tainted_qemu/util/error-report.c
---- qemu_vip/util/error-report.c	2024-06-13 16:51:58.000000000 +0200
-+++ tainted_qemu/util/error-report.c	2024-06-15 08:20:56.162544764 +0200
+--- qemu_vip/util/error-report.c	2024-08-02 23:26:26.000000000 +0200
++++ tainted_qemu/util/error-report.c	2024-08-03 09:00:33.068040199 +0200
 @@ -258,14 +258,6 @@
   * Prepend the current location and append a newline.
   * It's wrong to call this in a QMP monitor.  Use error_setg() there.

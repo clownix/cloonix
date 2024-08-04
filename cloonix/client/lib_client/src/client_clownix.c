@@ -723,6 +723,20 @@ void client_del_sat(int tid, t_end_cb cb, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void client_fix_display(int tid, t_end_cb cb, char *line)
+{
+  int new_tid;
+  if (!g_llid)
+    KOUT(" ");
+  new_tid = set_response_callback(cb, tid);
+  send_fix_display(g_llid, new_tid, line);
+#ifdef WITH_GLIB
+  glib_prepare_rx_tx(g_llid);
+#endif
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void client_add_lan_endp(int tid, t_end_cb cb, char *name, int num, char *lan) 
 {
   int new_tid;

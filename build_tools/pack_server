@@ -91,8 +91,14 @@ done
 cp -f ${SERVER}/dtach/cloonix-dtach ${SERVER}
 rm -rf ${SERVER}/dtach
 #----------------------------------------------------------
-cp -f ${SERVER}/crun/crun/crun ${SERVER}/cloonix-crun
-rm -rf ${SERVER}/crun
+cp -f ${SERVER}/script_pty/cloonix-scriptpty ${SERVER}
+rm -rf ${SERVER}/script_pty
+#----------------------------------------------------------
+cp -f ${SERVER}/crun/crun_tainted/crun ${SERVER}/cloonix-crun
+rm -rf ${SERVER}/crun_tainted
+#----------------------------------------------------------
+cp -f ${SERVER}/fuse-archive/fuse-archive/fuse-archive ${SERVER}/cloonix-fuse-archive
+rm -rf ${SERVER}/fuse-archive
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
   cp -f ${TARGZ_STORE}/shark/built_objects_i386/dumpcap ${SERVER}
@@ -121,11 +127,19 @@ do
   cp -f /usr/bin/${i}  ${SERVER}/cloonix-${i}
 done
 
-for i in "websockify" "x11vnc" "xsetroot"
+for i in "x11vnc" "xsetroot"
 do
   cp -f /usr/bin/${i}  ${SERVER}/cloonix-novnc-${i}
 done
-sed -i s"%#! /usr/bin/python3%#! /usr/libexec/cloonix/server/python3%" ${SERVER}/cloonix-novnc-websockify
+
+#NOVNC----------------------------------------------------------
+cp -f /root/.local/share/pipx/venvs/websockify/bin/websockify ${SERVER}/cloonix-novnc-websockify
+sed -i s'%#!%#!/usr/libexec/cloonix/server/python3%' ${SERVER}/cloonix-novnc-websockify
+sed -i s'%/root\(.*\)%%' ${SERVER}/cloonix-novnc-websockify
+#----------------------------------------------------------
+
+
+
 #----------------------------------------------------------
 openssl req -x509 -nodes -newkey rsa:3072 -keyout novnc.pem -subj "/CN=cloonix.net" -out ${SERVER}/novnc.pem -days 3650
 #----------------------------------------------------------
@@ -143,7 +157,10 @@ done
 #----------------------------------------------------------
 cd ${CLOONIX_TREE_ROOT}/build_tools
 gcc -o copy_libs fill_common.c
+./copy_libs ${COMMON} client
 ./copy_libs ${SERVER} server
 rm ./copy_libs
 rm -rf ${TMPBUILD}
+#----------------------------------------------------------
+echo DONE pack_server
 #----------------------------------------------------------

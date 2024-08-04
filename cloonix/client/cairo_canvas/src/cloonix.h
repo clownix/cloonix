@@ -27,7 +27,6 @@ void refresh_eth_button_label(void);
 void mouse_3rd_button_eth(void);
 char *get_current_directory(void);
 char *get_path_to_qemu_spice(void);
-char *get_local_cloonix_tree(void);
 char *get_distant_cloonix_tree(void);
 
 

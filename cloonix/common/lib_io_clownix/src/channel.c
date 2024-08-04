@@ -858,7 +858,7 @@ KERR("ERROR");
     else
       pb = heartbeat_mngt(1);
 if (g_new_second_arrival_count > PERSEC_COUNTER_INSANE)
-KERR("ERROR");
+KERR("ERROR %d %d", slipery_select, counter_select_speed);
     slipery_select++;
     counter_select_speed++;
 

@@ -38,6 +38,7 @@
 static int i_am_client = 0;
 static int count_status_ok;
 static int count_status_ko;
+static int count_fix_display;
 static int count_work_dir_req=0;
 static int count_work_dir_resp=0;
 static int count_add_vm=0;
@@ -122,6 +123,7 @@ static void print_all_count(void)
   printf("START COUNT\n");
   printf("%d\n", count_status_ok);
   printf("%d\n", count_status_ko);
+  printf("%d\n", count_fix_display);
   printf("%d\n", count_add_vm);
   printf("%d\n", count_del_name);
   printf("%d\n", count_add_lan_endp);
@@ -490,7 +492,7 @@ static void random_cnt(t_topo_cnt *cnt)
   random_choice_str(cnt->name, MAX_NAME_LEN);
   random_choice_str(cnt->image, MAX_PATH_LEN);
   random_choice_str(cnt->startup_env, MAX_PATH_LEN);
-  random_choice_str(cnt->vmount, 4*MAX_PATH_LEN);
+  random_choice_str(cnt->vmount, MAX_SIZE_VMOUNT);
   cnt->nb_tot_eth = my_rand(MAX_ETH_VM);
   cnt->ping_ok = my_rand(20);
   cnt->vm_id = my_rand(120);
@@ -1524,6 +1526,30 @@ void recv_status_ko(int llid, int itid, char *ireason)
   else
     send_status_ko(llid, itid, ireason);
   count_status_ko++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void recv_fix_display(int llid, int itid, char *iline)
+{
+  static int tid;
+  static char line[MAX_PRINT_LEN];
+  if (i_am_client)
+    {
+    if (count_fix_display)
+      {
+      if (strcmp(iline, line))
+        KOUT(" ");
+      if (itid != tid)
+        KOUT(" ");
+      }
+    tid = rand();
+    random_choice_str(line, MAX_PRINT_LEN);
+    send_fix_display(llid, tid, line);
+    }
+  else
+    send_fix_display(llid, itid, iline);
+  count_fix_display++;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -2888,6 +2914,7 @@ static void send_first_burst(int llid)
 {
   recv_status_ok(llid, 0, 0);
   recv_status_ko(llid, 0, 0);
+  recv_fix_display(llid, 0, 0);
   recv_add_vm(llid, 0,NULL);
   recv_del_name(llid, 0, NULL);
   recv_kill_uml_clownix(llid,0);

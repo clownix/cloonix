@@ -60,6 +60,17 @@ Automatic insert at startup::
     KERNEL=="kvm", NAME="%k", GROUP="kvm", MODE="0666"
     EOF 
 
+Sometimes, in case of containers, the following works on the host::
+
+    sudo setfacl -m u:${USER}:rw /dev/kvm
+    sudo setfacl -m u:${USER}:rw /dev/vhost-net
+    sudo setfacl -m u:${USER}:rw /dev/net/tun
+
+In case of problems, the following should work::
+
+    sudo chmod 0666 /dev/kvm
+    sudo chmod 0666 /dev/vhost-net
+    sudo chmod 0666 /dev/net/tun
 
 Nested guests customisation
 ===========================

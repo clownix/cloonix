@@ -54,6 +54,7 @@ enum
 
   bnd_status_ok,
   bnd_status_ko,
+  bnd_fix_display,
   bnd_add_vm,
   bnd_sav_vm,
   bnd_del_name,
@@ -1036,6 +1037,16 @@ void send_status_ko(int llid, int tid, char *reason)
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
+  
+/*****************************************************************************/
+void send_fix_display(int llid, int tid, char *line)
+{ 
+  int len = 0;
+  char *buf = string_to_xml(line);
+  len = sprintf(sndbuf, FIX_DISPLAY, tid, buf);
+  my_msg_mngt_tx(llid, len, sndbuf);
+} 
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void get_one_eth_table(char *buf, int *endp_type, int *randmac,
@@ -1454,9 +1465,9 @@ static void helper_fill_topo_cnt(char *msg_in, t_topo_cnt *cnt)
     KOUT("%s", msg);
   *ptr2 = 0;
   len = strlen("<vmount_keyid>");
-  if (strlen(ptr1) - len >= 4*MAX_PATH_LEN)
+  if (strlen(ptr1) - len >= MAX_SIZE_VMOUNT)
     KOUT("%s", msg);
-  strncpy(cnt->vmount, ptr1+len, 4*MAX_PATH_LEN-1);
+  strncpy(cnt->vmount, ptr1+len, MAX_SIZE_VMOUNT-1);
 
   if ((strlen(cnt->name) == 0) ||
       (strlen(cnt->image) == 0)) 
@@ -1983,7 +1994,7 @@ void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     KOUT(" ");
   if (strlen(cnt->startup_env) >= MAX_PATH_LEN)
     KOUT(" ");
-  if (strlen(cnt->vmount) >= 4*MAX_PATH_LEN)
+  if (strlen(cnt->vmount) >= MAX_SIZE_VMOUNT)
     KOUT(" ");
   len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->brandtype, cnt->name,
                 cnt->is_persistent, cnt->vm_id, cnt->color, cnt->ping_ok,
@@ -2240,9 +2251,9 @@ static void vmount_get(char *msg_in, t_topo_cnt *cnt)
     KOUT("%s", msg);
   *ptr2 = 0;
   len = strlen("<vmount_keyid>");
-  if (strlen(ptr1) - len >= 4*MAX_PATH_LEN)
+  if (strlen(ptr1) - len >= MAX_SIZE_VMOUNT)
     KOUT("%s", msg);
-  strncpy(cnt->vmount, ptr1+len, 4*MAX_PATH_LEN-1);
+  strncpy(cnt->vmount, ptr1+len, MAX_SIZE_VMOUNT-1);
   free(msg);
 }
 /*---------------------------------------------------------------------------*/
@@ -2446,6 +2457,13 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
         KOUT("%s", msg);
       recv_status_ko(llid, tid, xml_to_string(info));
       break;
+
+    case bnd_fix_display:
+      if (sscanf(msg, FIX_DISPLAY, &tid, info) != 2)
+        KOUT("%s", msg);
+      recv_fix_display(llid, tid, xml_to_string(info));
+      break;
+
 
     case bnd_add_vm:
       memset(&ikvm, 0, sizeof(t_topo_kvm));
@@ -2824,6 +2842,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   memset (bound_list, 0, bnd_max * MAX_CLOWNIX_BOUND_LEN);
   extract_boundary(STATUS_OK,      bound_list[bnd_status_ok]);
   extract_boundary(STATUS_KO,      bound_list[bnd_status_ko]);
+  extract_boundary(FIX_DISPLAY,    bound_list[bnd_fix_display]);
   extract_boundary(ADD_CNT_O,      bound_list[bnd_cnt_add]);
   extract_boundary(ADD_KVM_O,      bound_list[bnd_add_vm]);
   extract_boundary(SAV_VM,         bound_list[bnd_sav_vm]);

@@ -173,8 +173,8 @@ static void update_cust(t_custom_cnt *cust,
   strncpy(cust->startup_env, tmp, MAX_PATH_LEN-1);
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_vmount));
   len = strspn(tmp, " \r\n\t");
-  memset(cust->vmount, 0, MAX_PATH_LEN);
-  strncpy(cust->vmount, tmp+len, MAX_PATH_LEN-1);
+  memset(cust->vmount, 0, MAX_SIZE_VMOUNT);
+  strncpy(cust->vmount, tmp+len, MAX_SIZE_VMOUNT-1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -409,7 +409,7 @@ void menu_dialog_cnt_init(void)
   strcpy(g_custom_cnt.name, "Cnt");
   strcpy(g_custom_cnt.startup_env, "NODE_ID=1 CLOONIX=great");
   strcpy(g_custom_cnt.vmount, " ");
-  strcpy(g_custom_cnt.cru_image,   "bookworm.zip");
+  strcpy(g_custom_cnt.cru_image,   "zipbasic.zip");
   g_custom_cnt.nb_tot_eth = 3;
   for (i=0; i<g_custom_cnt.nb_tot_eth; i++)
     g_custom_cnt.eth_table[i].endp_type = endp_type_eths;

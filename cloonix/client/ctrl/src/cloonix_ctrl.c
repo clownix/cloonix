@@ -37,7 +37,6 @@ static int g_inhibited;
 static char g_cloonix_server_sock[MAX_PATH_LEN];
 static char g_cloonix_password[MSG_DIGEST_LEN];
 static char g_current_directory[MAX_PATH_LEN];
-static char g_cloonix_root_tree[MAX_PATH_LEN];
 
 
 
@@ -137,7 +136,8 @@ struct cmd_struct level_cnf_cmd[] = {
 {"a2b",  "a2b config", NULL, cmd_cnf_a2b, help_cnf_a2b},
 {"c2c",  "c2c config", NULL, cmd_cnf_c2c, help_cnf_c2c},
 {"lay",  "Layout modifications on canvas", level_layout_cmd, NULL, NULL},
-{"web", "novnc on",  NULL, cmd_novnc_on_off, help_novnc_on_off},
+{"web",  "novnc on",  NULL, cmd_novnc_on_off, help_novnc_on_off},
+{"fix",  "set xauthority to distant", NULL, cmd_cnf_fix, NULL},
 {"help",  "",                     level_cnf_cmd, NULL, NULL},
 };
 /*---------------------------------------------------------------------------*/
@@ -466,37 +466,6 @@ static int callback_connect(int llid, int fd)
 }
 /*---------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static char *init_local_cloonix_bin_path(char *curdir, char *callbin)
-{
-  char path[2*MAX_PATH_LEN];
-  char *ptr;
-  memset(g_cloonix_root_tree, 0, MAX_PATH_LEN);
-  memset(path, 0, 2*MAX_PATH_LEN);
-  if (callbin[0] == '/')
-    snprintf(path, 2*MAX_PATH_LEN, "%s", callbin);
-  else if ((callbin[0] == '.') && (callbin[1] == '/'))
-    snprintf(path, 2*MAX_PATH_LEN, "%s/%s", curdir, &(callbin[2]));
-  else
-    KOUT("%s", callbin);
-
-  ptr = strrchr(path, '/');
-  if (!ptr)
-    KOUT("%s", path);
-  *ptr = 0;
-  ptr = strrchr(path, '/');
-  if (!ptr)
-    KOUT("%s", path);
-  *ptr = 0;
-  strncpy(g_cloonix_root_tree, path, MAX_PATH_LEN-1);
-  snprintf(path, 2*MAX_PATH_LEN-1,
-           "%s/client/cloonix-ctrl", g_cloonix_root_tree);
-  if (access(path, X_OK))
-    KOUT("%s", path);
-  return g_cloonix_root_tree;
-}
-/*--------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 int main (int argc, char *argv[])
 {
@@ -510,7 +479,6 @@ int main (int argc, char *argv[])
   memset(g_current_directory, 0, MAX_PATH_LEN);
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
-  init_local_cloonix_bin_path(g_current_directory, argv[0]);
   if (argc < 3)
     {
     doorways_sock_init();

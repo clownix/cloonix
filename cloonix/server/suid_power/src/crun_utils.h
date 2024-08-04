@@ -35,7 +35,8 @@ int crun_utils_delete_net_nspace(char *nspace);
 int crun_utils_create_net(char *mountbear, char *mounttmp, char *image,
                           char *name, char *cnt_dir, char *nspace,
                           int cloonix_rank, int vm_id, int nb_eth,
-                          t_eth_mac *eth_mac, char *agent_dir);
+                          t_eth_mac *eth_mac, char *agent_dir,
+                          char *tmpfs_umount_cmd);
 int crun_utils_create_crun_create(char *cnt_dir, char *name);
 int crun_utils_create_crun_start(char *name);
 int crun_utils_create_overlay(char *path, char *image, int is_persistent);

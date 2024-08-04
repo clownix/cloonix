@@ -4,7 +4,7 @@ if [ 1 -gt ${#} ]; then
   echo  cloonix_name needed as parameter.
   exit 1
 fi
-NSH="/usr/libexec/cloonix/client/cloonix-hide-dirs"
+NSH="/usr/libexec/cloonix/common/cloonix-hide-dirs"
 cloonix_name=$1
 shift 1
 ${NSH} "ovs" ${cloonix_name} "$@"

@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+sudo ./openwrt.sh
+
 LIST="fedora40 \
       noble \
       bookworm"
@@ -14,7 +16,7 @@ for i in ${LIST}; do
     echo already exists
   else
     echo BEGIN ${i} 
-    sudo ./${i}
+    sudo ./${i}.sh
     echo END ${i}  
   fi
 done

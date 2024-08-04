@@ -55,6 +55,7 @@ static int x11vnc(void *data);
 static void timer_wm2(void *data);
 static int g_end_novnc_currently_on;
 static int g_terminate;
+static int g_start;
 
 
 /****************************************************************************/
@@ -317,30 +318,6 @@ static void timer_restart_novnc(void *data)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void end_novnc(int terminate)
-{
-  g_terminate = terminate;
-  if (g_end_novnc_currently_on == 0)
-    {
-    g_end_novnc_currently_on = 1; 
-    if (g_websockify)
-      kill(g_websockify, SIGKILL);
-    g_websockify = 0;
-    if (g_x11vnc)
-      kill(g_x11vnc, SIGKILL);
-    g_x11vnc = 0;
-    if (g_wm2)
-      kill(g_wm2, SIGKILL);
-    g_wm2 = 0;
-    if (g_Xvfb)
-      kill(g_Xvfb, SIGKILL);
-    g_Xvfb = 0;
-    clownix_timeout_add(10, timer_restart_novnc, NULL, NULL, NULL);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 static void timer_monitor(void *data)
 {
   char addr_port[MAX_NAME_LEN];
@@ -372,7 +349,7 @@ static void kill_before_start(void)
   memset (addr_port, 0, MAX_NAME_LEN);
   memset (lock_file, 0, MAX_NAME_LEN);
   snprintf(addr_port, MAX_NAME_LEN-1, "localhost:%d", g_port1);
-  snprintf(lock_file, MAX_NAME_LEN-1, "/tmp/.X%d-lock", (NOVNC_DISPLAY + g_rank));
+  snprintf(lock_file, MAX_NAME_LEN-1, "/tmp/.X%d-lock",(NOVNC_DISPLAY+g_rank));
   pid = get_pid_num(BIN_XVFB, g_display);
   if (pid)
     {
@@ -403,22 +380,81 @@ static void kill_before_start(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int end_novnc(int terminate)
+{
+  int result = -1;
+  g_start = 0;
+  if (!g_terminate)
+    {
+    if (g_end_novnc_currently_on)
+      KERR("ERROR END NOVNC %d", g_end_novnc_currently_on);
+    else
+      {
+      result = 0;
+      g_start = 0;
+      g_terminate = terminate;
+      g_end_novnc_currently_on = 1; 
+      if (g_websockify)
+        kill(g_websockify, SIGKILL);
+      g_websockify = 0;
+      if (g_x11vnc)
+        kill(g_x11vnc, SIGKILL);
+      g_x11vnc = 0;
+      if (g_wm2)
+        kill(g_wm2, SIGKILL);
+      g_wm2 = 0;
+      if (g_Xvfb)
+        kill(g_Xvfb, SIGKILL);
+      g_Xvfb = 0;
+      clownix_timeout_add(10, timer_restart_novnc, NULL, NULL, NULL);
+      }
+    }
+  return result;
+}   
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int start_novnc(void)
+{
+  int result = -1;
+  if ((g_start != 1) && (g_terminate != 0))
+    {
+    if (!file_exists(BIN_XVFB, X_OK))
+      KERR("\"%s\" not found or not executable\n", BIN_XVFB);
+    else if (!file_exists(BIN_WM2, X_OK))
+      KERR("\"%s\" not found or not executable\n", BIN_WM2);
+    else if (!file_exists(BIN_X11VNC, X_OK))
+      KERR("\"%s\" not found or not executable\n", BIN_X11VNC);
+    else if (!file_exists(BIN_WEBSOCKIFY, X_OK))
+      KERR("\"%s\" not found or not executable\n", BIN_WEBSOCKIFY);
+    else
+      {
+      result = 0;
+      g_start = 1;
+      g_end_novnc_currently_on = 1;
+      g_terminate = 0;
+      kill_before_start();
+      g_Xvfb=pid_clone_launch(Xvfb,kXvfb,NULL,NULL,NULL,NULL,"vnc",-1,1);
+      clownix_timeout_add(100, timer_wm2, NULL, NULL, NULL);
+      clownix_timeout_add(500, timer_monitor, NULL, NULL, NULL);
+      }
+    }
+  else
+    KERR("ERROR START NOVNC %d %d", g_start, g_terminate);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void init_novnc(char *net_name, int rank, char *ascii_port)
 {
-  g_end_novnc_currently_on = 1;
-  g_terminate = 0;
+  g_start = 0;
+  g_terminate = 1;
+  g_end_novnc_currently_on = 0;
   g_websockify = 0;
   g_x11vnc = 0;
   g_wm2 = 0;
   g_Xvfb = 0;
-  if (!file_exists(BIN_XVFB, X_OK))
-    KOUT("\"%s\" not found or not executable\n", BIN_XVFB);
-  if (!file_exists(BIN_WM2, X_OK))
-    KOUT("\"%s\" not found or not executable\n", BIN_WM2);
-  if (!file_exists(BIN_X11VNC, X_OK))
-    KOUT("\"%s\" not found or not executable\n", BIN_X11VNC);
-  if (!file_exists(BIN_WEBSOCKIFY, X_OK))
-    KOUT("\"%s\" not found or not executable\n", BIN_WEBSOCKIFY);
   memset (g_net_name, 0, MAX_NAME_LEN);
   memset (g_display, 0, MAX_NAME_LEN);
   memset (g_ascii_port, 0, MAX_NAME_LEN);
@@ -426,12 +462,8 @@ void init_novnc(char *net_name, int rank, char *ascii_port)
   strncpy(g_ascii_port, ascii_port, MAX_NAME_LEN-1);
   g_rank = rank;
   snprintf(g_display, MAX_NAME_LEN-1, ":%d", (NOVNC_DISPLAY + g_rank));
-  kill_before_start();
   g_port1 = 5900 + NOVNC_DISPLAY + g_rank;
   g_port2 = 5900 + NOVNC_DISPLAY + g_rank+1;
-  g_Xvfb=pid_clone_launch(Xvfb,kXvfb,NULL,NULL,NULL,NULL,"vnc",-1,1);
-  clownix_timeout_add(100, timer_wm2, NULL, NULL, NULL);
-  clownix_timeout_add(500, timer_monitor, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -115,6 +115,8 @@ char *to_ascii_sys(t_sys_info *sys);
 char *to_ascii_topo_stats(t_topo_info *topo);
 
 
+void client_fix_display(int tid, t_end_cb cb, char *line);
+
 
 void client_sync_wireshark(int tid, char *name, int num, int cmd, t_sync_wireshark_cb cb);
 void client_list_commands(int tid,  t_list_commands_cb cb);

@@ -277,7 +277,7 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
   static char passwd[MAX_NAME_LEN];
 
   static char *argv[] = {URXVT_BIN, "-T", title, "-e",
-                         "/usr/libexec/cloonix/client/cloonix-dropbear-ssh",
+                         "/usr/libexec/cloonix/common/cloonix-dropbear-ssh",
                          addr, passwd, name, NULL};
 
   static char *argvnatplug[] = {URXVT_BIN, "-T", title, "-e",

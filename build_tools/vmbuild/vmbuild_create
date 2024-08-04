@@ -63,6 +63,8 @@ EOF"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "apt-get --assume-yes update"
 
+
+
 cloonix_ssh ${NET} ${NAME} "apt-get -y install \
                       tar build-essential g++ cmake \
                       pkg-config intltool libtool meson ninja-build \
@@ -87,25 +89,29 @@ cloonix_ssh ${NET} ${NAME} "apt-get -y install \
                       libgcrypt20-dev go-md2man locales libffi-dev \
                       libfdt-dev libfuse-dev libarchive-dev libaio-dev \
                       liburing-dev fuse-zip libasound2-dev libc-ares-dev \
-                      libpcre2-dev flex libgcrypt-dev libspeexdsp-dev \
+                      libpcre2-dev flex libgcrypt20-dev libspeexdsp-dev \
                       qt6-base-dev qt6-multimedia-dev qt6-tools-dev \
                       qt6-tools-dev-tools qt6-l10n-tools \
-                      libqt6core5compat6-dev freeglut3-dev libvulkan-dev \
+                      qt6-5compat-dev freeglut3-dev libvulkan-dev \
                       libxkbcommon-dev libnl-3-dev libkrb5-dev libsmi2-dev \
                       libsbc-dev liblua5.2-dev libnl-cli-3-dev \
                       libparse-yapp-perl libsnappy-dev libzstd-dev \
                       libspandsp-dev libxml2-dev libminizip-dev \
                       perl xsltproc ccache doxygen bison gdb \
                       ncurses-base strace gcc-11-multilib \
-                      x11vnc python3-websockify novnc \
+                      x11vnc \
                       x11-xserver-utils libxmu-dev \
                       x11-xkb-utils x11proto-dev \
                       libxshmfence-dev libbsd-dev libxkbfile-dev \
                       libxfont-dev libxcvt-dev libdecor-0-dev \
                       libei-dev liboeffis-dev libaudit-dev \
                       mesa-common-dev libpipewire-0.3-dev \
-                      libpipewire-0.3-modules \
-                      pipewire-pulse"
+                      libpipewire-0.3-modules util-linux \
+                      pipewire-pulse pipx unzip zip"
+
+#libzip-dev
+
+cloonix_ssh ${NET} ${NAME} "pipx install websockify"
 
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"

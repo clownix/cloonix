@@ -25,8 +25,10 @@ if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
   exit 1
 fi
-TARGZ_STORE=${CLOONIX_TREE_ROOT}/targz_store
+TARGZ_STORE="${CLOONIX_TREE_ROOT}/targz_store"
 COMMON="${CLOONIX_TREE_ROOT}/build_tools/common"
+PATCHELF="/tmp/patchelf/src/patchelf"
+TMPBUILD="${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_client"
 pretty_name=$(cat /etc/os-release |grep PRETTY_NAME)
 pretty_name=${pretty_name#*\"}
 pretty_name=${pretty_name%% *}
@@ -57,19 +59,21 @@ mkdir -p ${COMMON}/share/i18n/locales
 mkdir -p ${COMMON}/share/glib-2.0/schemas
 mkdir -p ${COMMON}/share/X11/locale
 mkdir -p ${COMMON}/lib/python3/dist-packages
-mkdir -p ${COMMON}/lib/python3.11
+mkdir -p ${COMMON}/lib/python3.12
 
-#  cp /usr/lib/python3/dist-packages/distutils-precedence.pth ${COMMON}/lib/python3/dist-packages
-for i in "websockify" \
-         "websockify-0.10.0.egg-info" \
-         "_distutils_hack" \
+cp -rf ${TMPBUILD}/cloonix/client/* ${COMMON}
+
+#NOVNC----------------------------------------------------------
+for i in "_distutils_hack" \
          "__pycache__" ; do
   cp -r /usr/lib/python3/dist-packages/${i} ${COMMON}/lib/python3/dist-packages
 done
-sed -i s"/warnings.warn/#warnings.warn/" ${COMMON}/lib/python3/dist-packages/websockify/websocket.py
 
-for i in "lib2to3" \
-         "lib-dynload" \
+cp -rf /root/.local/share/pipx/venvs/websockify/lib/python3.12/site-packages/websockify ${COMMON}/lib/python3.12
+# cp -rf /root/.local/share/pipx/venvs/novnc/lib/python3.12/site-packages/novnc ${COMMON}/lib/python3.12
+tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/novnc.tar.gz
+
+for i in "lib-dynload" \
          "encodings" \
          "re" \
          "collections" \
@@ -81,7 +85,7 @@ for i in "lib2to3" \
          "http" \
          "html" \
          "multiprocessing" ; do
-  cp -r /usr/lib/python3.11/${i} ${COMMON}/lib/python3.11
+  cp -r /usr/lib/python3.12/${i} ${COMMON}/lib/python3.12
 done
 
 
@@ -94,7 +98,6 @@ for i in "enum.py" \
          "keyword.py" \
          "reprlib.py" \
          "copyreg.py" \
-         "zipfile.py" \
          "warnings.py" \
          "contextlib.py" \
          "threading.py" \
@@ -142,7 +145,7 @@ for i in "enum.py" \
          "_compat_pickle.py" \
          "stringprep.py" \
          "codecs.py" ; do
-  cp /usr/lib/python3.11/${i} ${COMMON}/lib/python3.11
+  cp /usr/lib/python3.12/${i} ${COMMON}/lib/python3.12
 done
 #----------------------------------------------------------
 FROM_HERE=`pwd`
@@ -181,15 +184,13 @@ cp -Lrf /usr/lib/locale/* ${COMMON}/lib/locale
 #----------------------------------------------------------
 cd $FROM_HERE
 for i in "icons" "mime" "themes" "fonts" "gtk-3.0" \
-         "gstreamer-1.0" "alsa" "novnc" ; do
+         "gstreamer-1.0" "alsa" ; do
    cp -Lrf /usr/share/${i} ${COMMON}/share
 done
+
 for i in "en_GB" "en" "locale.alias" ; do
   cp -Lrf /usr/share/locale/${i} ${COMMON}/share/locale
 done
-
-#cp -Lrf /usr/share/X11 ${COMMON}/share
-#cp -Lrf /etc/X11 ${COMMON}/etc
 
 
 cp -Lrf /usr/share/X11/locale/en_US.UTF-8 ${COMMON}/share/X11/locale
@@ -206,7 +207,7 @@ done
 cp -Lrf /usr/share/i18n/locales/iso14651_t1_common  ${COMMON}/share/i18n/locales
 cp -f /usr/share/glib-2.0/schemas/gschemas.compiled ${COMMON}/share/glib-2.0/schemas
 cd ${COMMON}/share/i18n/charmaps
-gunzip UTF-8.gz
+gunzip -f UTF-8.gz
 cd $FROM_HERE
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
@@ -241,4 +242,90 @@ cp -rf ${SRCD}/qt6/plugins/platforms ${DSTD}/qt6/plugins
 
 mkdir -p ${DSTD}/gconv
 cp -f ${SRCD}/gconv/gconv-modules.cache ${DSTD}/gconv
+#----------------------------------------------------------
+cp -f /bin/bash ${COMMON}
+#----------------------------------------------------------
+for i in "awk" "cat" "chmod" "chown" "cp" "echo" "ps" \
+         "env" "grep" "id" "kill" "ldd" "strace" "ls" \
+         "locale" "localedef" "localectl" "xauth" \
+         "xeyes" "xclock" "diff" "unzip" "unshare" ; do
+  cp -f /usr/bin/${i} ${COMMON}
+done
+cd ${COMMON}
+ln -s bash sh
+cd $FROM_HERE
+
+sed -i s"%/bin/bash%/usr/libexec/cloonix/common/bash%" ${COMMON}/ldd
+#----------------------------------------------------------
+for i in "ifconfig" "locale-gen" ; do
+  cp -f /usr/sbin/${i} ${COMMON}
+done
+#----------------------------------------------------------
+cd ${COMMON}
+sed -i s"%/bin/sh%/usr/libexec/cloonix/common/bash%" locale-gen
+sed -i s"%localedef%/usr/libexec/cloonix/common/localedef%" locale-gen
+sed -i s'%LOCALEGEN=\(.*\)%LOCALEGEN=/usr/libexec/cloonix/common/etc/locale.gen%' locale-gen
+#----------------------------------------------------------
+mkdir -p ${COMMON}/usr_bin
+for i in  cloonix_cli \
+          cloonix_gui \
+          cloonix_ice \
+          cloonix_ocp \
+          cloonix_osh \
+          cloonix_rsh \
+          cloonix_ovs \
+          cloonix_scp \
+          cloonix_ssh \
+          cloonix_lsh \
+          cloonix_dsh \
+          cloonix_wsk ; do
+  cp -f ${CLOONIX_TREE_ROOT}/cloonix/${i} ${COMMON}/usr_bin
+done
+#----------------------------------------------------------
+rm -rf ${COMMON}/lib_client
+rm -rf ${COMMON}/spice_lib_client
+#----------------------------------------------------------
+cp -f  ${COMMON}/hide_dirs/cloonix-hide-dirs ${COMMON}
+rm -rf ${COMMON}/hide_dirs
+#----------------------------------------------------------
+cp -f  ${COMMON}/agent_dropbear/cloonix-dropbear-scp ${COMMON}
+cp -f  ${COMMON}/agent_dropbear/cloonix-dropbear-ssh ${COMMON}
+rm -rf ${COMMON}/agent_dropbear
+#----------------------------------------------------------
+cp -f ${COMMON}/spice/cloonix-spice-client-glib-usb-acl-helper ${COMMON}
+cp -rf ${COMMON}/spice/polkit-1 ${COMMON}
+cp -f ${COMMON}/spice/cloonix-spicy ${COMMON}
+rm -rf ${COMMON}/spice
+#----------------------------------------------------------
+cp -f ${COMMON}/cairo_canvas/cloonix-gui ${COMMON}
+rm -rf ${COMMON}/cairo_canvas
+#----------------------------------------------------------
+cp -f ${COMMON}/xwycli/cloonix-xwycli ${COMMON}
+rm -rf ${COMMON}/xwycli
+#----------------------------------------------------------
+cp -f ${COMMON}/rxvt/urxvt ${COMMON}/cloonix-urxvt
+rm -rf ${COMMON}/rxvt
+#----------------------------------------------------------
+cp -f ${COMMON}/ctrl/cloonix-ctrl ${COMMON}
+rm -rf ${COMMON}/ctrl
+#----------------------------------------------------------
+cp -f ${COMMON}/openssh/cloonix-u2i-scp ${COMMON}
+cp -f ${COMMON}/openssh/cloonix-u2i-ssh ${COMMON}
+rm -rf ${COMMON}/openssh
+#----------------------------------------------------------
+cp -f ${PATCHELF} ${COMMON}/cloonix-patchelf
+#----------------------------------------------------------
+if [ "${ARCH}" = "i386" ]; then
+  LDLINUX="/usr/libexec/cloonix/common/lib32/ld-linux.so.2"
+  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/i386-linux-gnu"
+else
+  LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
+fi
+for i in `find ${COMMON} -maxdepth 1 -type f` ; do
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
+done
+#----------------------------------------------------------
+echo DONE pack_common_before
 #----------------------------------------------------------
