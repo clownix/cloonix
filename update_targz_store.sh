@@ -1,10 +1,36 @@
 #!/bin/bash
-set -e
+set -xe
 HERE=`pwd`
 TARGZ=${HERE}/targz_store
 WORK=${HERE}/work_targz_store
 rm -rf ${WORK}
 mkdir -vp ${WORK}
+#-----------------------------------------------------
+
+#-----------------------------------------------------
+for i in "websockify-js" "noVNC"; do
+  cd ${WORK}
+  git clone --depth=1 https://github.com/novnc/${i}.git
+  cd ${WORK}/${i}
+  COMMIT=$(git log --pretty=format:"%H")
+  cd ${WORK}
+  tar zcvf ${i}_${COMMIT}.tar.gz ${i}
+  rm -rf ${i}
+  mv ${i}_${COMMIT}.tar.gz ${TARGZ}
+done
+#-----------------------------------------------------
+
+#-----------------------------------------------------
+cd ${WORK}
+git clone --depth=1 https://github.com/nginx/nginx.git
+cd ${WORK}/nginx
+COMMIT=$(git log --pretty=format:"%H")
+cd ${WORK}
+tar zcvf nginx_${COMMIT}.tar.gz nginx
+rm -rf nginx
+mv nginx_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
+
 #-----------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://github.com/google/fuse-archive.git
@@ -14,6 +40,8 @@ cd ${WORK}
 tar zcvf fuse-archive_${COMMIT}.tar.gz fuse-archive
 rm -rf fuse-archive
 mv fuse-archive_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
+
 #-----------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://github.com/NixOS/patchelf.git
@@ -25,6 +53,8 @@ cd ${WORK}
 tar zcvf patchelf_${COMMIT}.tar.gz patchelf 
 rm -rf patchelf
 mv patchelf_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
+
 #-----------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://github.com/containers/crun.git

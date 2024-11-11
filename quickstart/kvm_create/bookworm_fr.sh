@@ -84,7 +84,7 @@ EOF
 #-----------------------------------------------------------------------#
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ grub-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
-KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
+KERN="rw noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
 printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" \
         >> /tmp/wkmntloops/etc/default/grub
 chroot /tmp/wkmntloops/ update-grub
@@ -139,6 +139,7 @@ for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive locales
 chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive console-setup
 chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive keyboard-configuration
+rm -f /tmp/wkmntloops/root/debconf_selection
 sync /dev/loop0
 umount /tmp/wkmntloops/{dev,proc,sys}
 #-----------------------------------------------------------------------#

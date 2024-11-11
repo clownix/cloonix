@@ -15,9 +15,35 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+
+
+#define CONFIG_NGINX "\n"\
+"worker_processes 1;\n"\
+"daemon off;\n"\
+"events {}\n"\
+"http {\n"\
+"    root /usr/libexec/cloonix/common/share/noVNC;\n"\
+"    upstream vnc_proxy {\n"\
+"        server 127.0.0.1:%s;\n"\
+"    }\n"\
+"    server {\n"\
+"        listen %s;\n"\
+"        location / {\n"\
+"            index vnc_lite.html;\n"\
+"            try_files $uri /vnc_lite.html;\n"\
+"            proxy_http_version 1.1;\n"\
+"            proxy_pass http://vnc_proxy/;\n"\
+"            proxy_set_header Upgrade $http_upgrade;\n"\
+"            proxy_set_header Connection \"upgrade\";\n"\
+"            proxy_read_timeout 61s;\n"\
+"            proxy_buffering off;\n"\
+"        }\n"\
+"    }\n"\
+"}\n"
+
 int start_novnc(void);
 int end_novnc(int terminate);
-void init_novnc(char *net_name, int rank, char *ascii_port);
+void init_novnc(char *net_name, int rank, int port);
 /*--------------------------------------------------------------------------*/
 
 

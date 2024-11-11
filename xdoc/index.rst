@@ -17,7 +17,7 @@ integrate various well-known open-source software, creating a unified and
 cohesive tool that facilitates the creation of virtual networks.
 
 The external software components include **qemu-kvm**, **openvswitch**,
-**spice**, **crun**, **wireshark** and **podman**.
+**spice**, **crun** and **wireshark**.
 
 Its first goal is an easy usage of the emulated network linking virtual
 machines and containers. The network links are based on an openvswitch
@@ -62,14 +62,13 @@ User view for cloonix
 
 As a user, the cloonix software is a set of manageable plugable **items**,
 each having a simple graphical representation in the **cloonix_gui** canvas.
-Items are plugged together by connection **lines** created by the user.
+Items are plugged together by connection lines created by the user.
 Those lines emulate ethernet wires.
 
 The **items** can be divided into two categories: those that include
-**endpoints**, an endpoint being the terminal point of one single **line**
-and the **crossroads** (the only crossroad item is the **lan**) which can
-support any number of lines to any number of endpoints.
-Those crossroads emulate ethernet hubs, those are realy ovs bridges.
+**endpoints**, an endpoint being the terminal point of one single line
+and the **lan** which can support any number of lines to any number of
+endpoints. Those lans emulate ethernet hubs, those are realy ovs bridges.
 
 An item that is in the **endpoints** categorie contains either a single
 endpoint for example in the case of a **tap** item or, contains multiple
@@ -77,12 +76,13 @@ endpoints for example in the case of a virtual machine **kvm** within which
 there are several ethernet interfaces, in that case, each of those interfaces
 is one endpoint.
 
-The user creates lines, crossroads and endpoints, he can in this fashion make a
+The user creates lines, lans and endpoints, he can in this fashion make a
 network of virtual machines and visualize the resulting topology on the canvas.
 
 From the user view, the most important item in cloonix is the machine
 representation, it is implemented either through a **kvm** virtual machine
-or a **cnt** (crun or podman) container.
+or a **cnt**, a crun container.
+
 The representation of a machine is a big circle that has satellite smaller
 circles with numbers in them. The small circles are the endpoints, they are
 graphical representations of the ethernet interfaces for the machine.
@@ -96,15 +96,17 @@ the line between endpoint and lan.
 A double-click on a blue virtual machine kvm or container cnt creates a root
 shell in a urxvt screen.
 
-A double-click on a virtual machine interface (small circle bordering the vm)
+A double-click on a green interface (small circle bordering the kvm or cnt)
 opens a **wireshark** spy that displays the packets running through this interface.
+Note that the wireshark can only visualize or save a .pcap file, it is not
+the complete version of wireshark.
 
-A right-click when above the **kvm** virtual machine permits launching a
-**spice** graphical desktops.
+A right-click when above the **kvm** virtual machine launches a **spice**
+graphical desktops.
 
 
-Directories cloonix uses
-========================
+Directories in which cloonix is installed
+=========================================
 
 */usr/libexec/cloonix/* for binaries, libraries and configuration files.
 */var/lib/cloonix/bulk* for the cloonix storage of virtual files .qcow2 and .zip.

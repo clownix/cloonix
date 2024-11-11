@@ -2,7 +2,6 @@
 #-----------------------------------------------------------------------------
 EXTRACT=`pwd`
 ROOTFS="${EXTRACT}/rootfs"
-BULK="${EXTRACT}/bulk"
 CONFIG="${EXTRACT}/config/config.json"
 TEMPLATE="${EXTRACT}/config/config.json.template"
 CRUN="${EXTRACT}/bin/cloonix-crun"
@@ -40,39 +39,30 @@ ${PATCHELF} --set-interpreter ${LIBCDIR}/ld-linux-x86-64.so.2 ${PTYS}
 #-----------------------------------------------------------------------------
 XAUTH_LINE=$(${XAUTH} list |grep unix${DISPLAY})
 XAUTH_CODE=${XAUTH_LINE##*MIT-MAGIC-COOKIE-1 }
-cp -f ./demos/* ${ROOTFS}/root
 #---------------------------------------------------------------------------
-cat > ${ROOTFS}/usr/bin/init_starter_crun << EOF
-#!/bin/bash
-export TERM=tmux-direct
+cat > ${ROOTFS}/usr/libexec/cloonix/server/init_starter_crun << EOF
+#!/usr/libexec/cloonix/common/bash
+export TERM=linux
 export XAUTHORITY="/var/lib/cloonix/cache/.Xauthority"
-PTYS="/usr/libexec/cloonix/server/cloonix-scriptpty"
-\${PTYS} rsyslogd
-\${PTYS} "localedef -i en_US -f UTF-8 en_US.UTF-8"
-\${PTYS} "touch /var/lib/cloonix/cache/.Xauthority"
-\${PTYS} "xauth add crun/unix:0 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}"
-\${PTYS} /bin/bash
+
+/usr/libexec/cloonix/common/ln -s /usr/libexec/cloonix/common/share /usr/share
+/usr/libexec/cloonix/common/ln -s /usr/libexec/cloonix/common/lib /usr/lib
+/usr/libexec/cloonix/common/ln -s /usr/libexec/cloonix/common /usr/bin
+/usr/libexec/cloonix/common/ln -s /usr/libexec/cloonix/common/etc /etc
+
+/usr/libexec/cloonix/server/cloonix-scriptpty rsyslogd
+/usr/libexec/cloonix/server/cloonix-scriptpty "localedef -i en_US -f UTF-8 en_US.UTF-8"
+/usr/libexec/cloonix/server/cloonix-scriptpty "touch /var/lib/cloonix/cache/.Xauthority"
+/usr/libexec/cloonix/server/cloonix-scriptpty "xauth add crun/unix:0 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}"
+/usr/libexec/cloonix/server/cloonix-scriptpty bash
 EOF
-chmod +x ${ROOTFS}/usr/bin/init_starter_crun
+chmod +x ${ROOTFS}/usr/libexec/cloonix/server/init_starter_crun
 #---------------------------------------------------------------------------
-LINE=$(${GREP} $USER /etc/passwd | ${GREP} $UID)
-cat >> ${ROOTFS}/etc/passwd << EOF
-${LINE}
-nobody:x:65534:65534:nobody:${HOME}:/bin/bash
-EOF
-#---------------------------------------------------------------------------
-LINE=$(${GREP} $USER /etc/group | ${GREP} $UID)
-cat >> ${ROOTFS}/etc/group << EOF
-${LINE}
-nogroup:x:65534:
-EOF
-#-----------------------------------------------------------------------------
-sed s"%__STARTER__%init_starter_crun%" ${TEMPLATE} > ${CONFIG}
+cp -f ${TEMPLATE} ${CONFIG}
 sed -i s"%__DISPLAY__%${DISPLAY}%" ${CONFIG}
 sed -i s"%__ROOTFS__%${ROOTFS}%" ${CONFIG}
 sed -i s"%__CAPA__%${CAPA}%"   ${CONFIG}
 sed -i s"%__UID__%${UID}%"   ${CONFIG}
-sed -i s"%__BULK__%${BULK}%" ${CONFIG}
 #-----------------------------------------------------------------------------
 mkdir -p ${EXTRACT}/log
 #-----------------------------------------------------------------------------

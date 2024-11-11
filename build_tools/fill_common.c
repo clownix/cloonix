@@ -79,20 +79,6 @@ static void create_libs_paragraph(FILE *col, char *common, char *name_lib)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_libs_python(FILE *col, char *common)
-{
-  fprintf(col,
-  "if [ -d %s/lib/python3.12/lib-dynload ]; then\n", common);
-  fprintf(col,
-  "  for i in `find %s/lib/python3.12/lib-dynload -type f` ; do\n", common);
-  fprintf(col, "    ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
-  fprintf(col, "  done\n");
-  fprintf(col, "fi\n");
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
 static int create_libs_txt(char *path, char *common)
 {
   FILE *col;
@@ -116,8 +102,6 @@ static int create_libs_txt(char *path, char *common)
     fprintf(col, "done\n");
 
     create_libs_paragraph(col, common, "pipewire-0.3");
-    create_libs_paragraph(col, common, "qt6");
-    create_libs_paragraph(col, common, "qt6/platforms");
     create_libs_paragraph(col, common, "gdk-pixbuf-2.0");
     create_libs_paragraph(col, common, "gdk-pixbuf-2.0/2.10.0/loaders");
     create_libs_paragraph(col, common, "gtk-3.0");
@@ -129,7 +113,6 @@ static int create_libs_txt(char *path, char *common)
     create_libs_paragraph(col, common, "gstreamer1.0");
     create_libs_paragraph(col, common, "gstreamer1.0/gstreamer-1.0");
     create_libs_paragraph(col, common, "gstreamer-1.0");
-    create_libs_python(col, common);
 
     fprintf(col, "echo " " >> %s\n", g_dumps);
     fclose(col);

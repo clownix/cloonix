@@ -736,7 +736,7 @@ static void execchild(struct ChanSess *chansess)
     addnewvar("PATH", pth); 
     addnewvar("USER", "root");
     addnewvar("HOME", "/root");
-    addnewvar("TERM", "rxvt");
+    addnewvar("TERM", "xterm");
     if (chansess->cloonix_name)
       addnewvar("PROMPT_COMMAND", chansess->cloonix_name);
     if (chansess->cloonix_display)
@@ -750,7 +750,7 @@ static void execchild(struct ChanSess *chansess)
     {
     unsetenv("PATH");
     addnewvar("PATH", pth); 
-    addnewvar("TERM", "rxvt");
+    addnewvar("TERM", "xterm");
     if (chansess->cloonix_display)
       addnewvar("DISPLAY", chansess->cloonix_display);
     }

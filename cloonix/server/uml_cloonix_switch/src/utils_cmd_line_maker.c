@@ -248,6 +248,40 @@ char *utils_get_crun_dir(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+char *utils_get_nginx_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, NGINX_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_nginx_conf_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s/conf", root, NGINX_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_nginx_logs_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s/logs", root, NGINX_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
 char *utils_get_log_dir(void)
 {
   static char path[MAX_PATH_LEN];

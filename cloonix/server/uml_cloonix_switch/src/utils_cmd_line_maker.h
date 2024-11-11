@@ -72,6 +72,9 @@ char *utils_get_ovs_a2b_bin_dir(void);
 char *utils_get_ovs_c2c_bin_dir(void);
 int util_get_max_tempo_fail(void);
 char *utils_get_crun_dir(void);
+char *utils_get_nginx_dir(void);
+char *utils_get_nginx_conf_dir(void);
+char *utils_get_nginx_logs_dir(void);
 int lio_system(char *argv[]);
 char *utils_get_log_dir(void);
 /****************************************************************************/

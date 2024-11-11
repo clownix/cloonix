@@ -37,7 +37,7 @@
 
 #define HEARTBEAT_DEFAULT_TIMEOUT 10
 #define MAX_EPOLL_EVENTS_PER_RUN 50
-#define PERSEC_COUNTER_INSANE 150000
+#define PERSEC_COUNTER_INSANE 3000000
 
 
 static unsigned long g_new_second_arrival_count;

@@ -5,6 +5,22 @@
 Software Release Information
 ============================
 
+v41-00
+======
+
+One of the goals for this version was to get the cloonix binaries lighter while
+keeping the same functions.
+There is probably a lot of work to be done to take out useless binaries or
+libraries to get cloonix slimmer, but as for a human, the first fat is the
+easiest to lose:)
+
+The self-extracting binary has only the zipfrr.zip in bulk to make it lighter.
+ 
+Wireshark now can only save the .pcap file, to study the exchanges you have to
+save the file and open it with a complete wireshark.
+
+
+
 v40-00
 ======
 

@@ -1,0 +1,8 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=../../../targz_store
+BIN=${HERE}/bin
+./allclean
+mkdir -p ${BIN}
+tar xvf ${TARGZ}/websockify-js_*.tar.gz
+cp ${HERE}/websockify-js/websockify/websockify.js ${BIN}/cloonix-novnc-websockify-js

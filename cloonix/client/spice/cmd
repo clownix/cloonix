@@ -24,6 +24,7 @@ cd build
 ninja -v install
 
 cp -vf ${TARGET}/usr/local/bin/spicy ${HERE}/cloonix-spicy
+strip ${HERE}/cloonix-spicy
 cp -vf ${TARGET}/usr/local/libexec/spice-client-glib-usb-acl-helper ${HERE}/cloonix-spice-client-glib-usb-acl-helper
 mkdir -p ${HERE}/polkit-1/actions
 cp -vf ${HERE}/spice_client/tainted_spice/data/org.spice-space.lowlevelusbaccess.policy ${HERE}/polkit-1/actions

@@ -53,18 +53,12 @@ for i in `find ${COMMON}/lib/${ARCHX}-linux-gnu -maxdepth 1 -type f` ; do
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
 
-for j in "qt6" "gdk-pixbuf-2.0" "gdk-pixbuf-2.0/2.10.0/loaders" \
-         "gtk-3.0" "gtk-3.0/3.0.0/immodules" "gtk-3.0/3.0.0/printbackends" \
-         "gio" "gio/modules" "gconv" "gstreamer-1.0" "gstreamer1.0" \
-         "gstreamer1.0/gstreamer-1.0" "pipewire-0.3" "qt6/plugins/platforms" ; do
+for j in "gconv" "gstreamer-1.0" "gstreamer1.0" \
+         "gstreamer1.0/gstreamer-1.0" "pipewire-0.3" ; do
   for i in `find ${COMMON}/lib/${ARCHX}-linux-gnu/${j} -maxdepth 1 -type f` ; do
     ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
     ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
   done
-done
-for i in `find ${COMMON}/lib/python3.12/lib-dynload -maxdepth 1 -type f` ; do
-  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
-  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
 touch ${COMMON}/lib/${ARCHX}-linux-gnu/libpthread.so.0
 #----------------------------------------------------------

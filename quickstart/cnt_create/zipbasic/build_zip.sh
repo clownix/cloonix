@@ -18,7 +18,7 @@ LIST_USBIN="/usr/sbin/rsyslogd /usr/sbin/arping /usr/sbin/chroot \
             /usr/sbin/arp /usr/sbin/locale-gen /usr/sbin/iptables-nft \
             /usr/sbin/nologin /usr/sbin/groupadd /usr/sbin/groupdel \
             /usr/sbin/groupmod /usr/sbin/useradd /usr/sbin/userdel \
-            /usr/sbin/usermod" 
+            /usr/sbin/usermod /usr/sbin/ldconfig" 
 #----------------------------------------------------------------------------#
 LIST_UBIN="/usr/bin/iperf3 /usr/bin/strace /usr/sbin/arping /usr/bin/mawk \
            /usr/bin/vim.basic /usr/bin/[ /usr/bin/arch /usr/bin/basename \
@@ -37,7 +37,7 @@ LIST_UBIN="/usr/bin/iperf3 /usr/bin/strace /usr/sbin/arping /usr/bin/mawk \
            /usr/bin/xeyes /usr/bin/locale /usr/bin/localedef /usr/bin/curl \
            /usr/bin/localectl /usr/bin/xauth /usr/bin/curl /usr/bin/tcpdump \
            /usr/bin/tracepath /usr/bin/wget /usr/bin/script /usr/bin/lsns \
-           /usr/bin/nsenter /usr/bin/unshare /usr/bin/passwd /usr/bin/tmux \
+           /usr/bin/nsenter /usr/bin/unshare /usr/bin/passwd \
            /usr/bin/setfacl /usr/bin/getfacl /usr/bin/logger \
            /usr/bin/mtracebis /usr/bin/vtysh"
 #----------------------------------------------------------------------------#
@@ -55,7 +55,8 @@ for i in "bin" "sbin" "root" "etc" "run" "tmp" "lib" "home" "lib64" \
      "usr/share/misc" "usr/lib/x86_64-linux-gnu/rsyslog" "usr/share/locale" \
      "lib/x86_64-linux-gnu" "usr/share/i18n/charmaps" "usr/share/X11/locale" \
      "usr/share/bash-completion" "usr/share/bash-completion/completions" \
-     "/usr/share/i18n/locales" "usr/lib/locale" "usr/lib/security" ; do 
+     "/usr/share/i18n/locales" "usr/lib/locale" "usr/lib/security" \
+     "etc/default" ; do 
   mkdir -v -p ${ROOTFS}/${i}
 done
 #----------------------------------------------------------------------------#
@@ -74,26 +75,29 @@ done
 #----------------------------------------------------------------------------#
 cp -f /usr/share/i18n/charmaps/UTF-8.gz ${ROOTFS}/usr/share/i18n/charmaps
 for i in "en_GB" "en_US" "fr_FR" "i18n" "i18n_ctype" \
-         "iso14651_t1" "iso14651_t1_common" "translit_neutral" \
-         "translit_combining" "translit_circle" "translit_cjk_compat" \
-         "translit_compat" "translit_font" "translit_fraction" \
-         "translit_narrow" "translit_small" "translit_wide" ; do
+         "iso14651_t1" "iso14651_t1_common" ; do
   cp -f /usr/share/i18n/locales/${i} ${ROOTFS}/usr/share/i18n/locales
 done
+cp -f /usr/share/i18n/locales/translit_* ${ROOTFS}/usr/share/i18n/locales
 cp -Lrf /usr/share/X11/locale/en_US.UTF-8 ${ROOTFS}/usr/share/X11/locale
 cp -Lrf /usr/share/X11/locale/iso8859-1 ${ROOTFS}/usr/share/X11/locale
 cp -Lrf /usr/share/X11/locale/C ${ROOTFS}/usr/share/X11/locale
 cp -Lrf /usr/share/X11/locale/locale.dir ${ROOTFS}/usr/share/X11/locale
 cp -Lrf /usr/share/X11/xkb ${ROOTFS}/usr/share/X11
 cp -f /usr/share/X11/rgb.txt ${ROOTFS}/usr/share/X11
-cp -Lr /usr/share/terminfo ${ROOTFS}/usr/share
-cp -Lr /usr/share/vim ${ROOTFS}/usr/share
+cp -Lrf /usr/share/terminfo ${ROOTFS}/usr/share
+cp -Lrf /usr/share/vim ${ROOTFS}/usr/share
 cp /lib64/ld-linux-x86-64.so.2 ${ROOTFS}/lib64
 cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    ${ROOTFS}/usr/lib/x86_64-linux-gnu/rsyslog
 cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   ${ROOTFS}/usr/lib/x86_64-linux-gnu/rsyslog
 cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so ${ROOTFS}/usr/lib/x86_64-linux-gnu/rsyslog
 cp -v /usr/lib/file/magic.mgc ${ROOTFS}/usr/share/misc
 cp -f /etc/bash_completion ${ROOTFS}/etc
+cp -Lrf /usr/lib/locale ${ROOTFS}/usr/lib
+cp -f /etc/locale.conf ${ROOTFS}/etc
+cp -f /etc/locale.gen ${ROOTFS}/etc
+cp -f /etc/default/locale ${ROOTFS}/etc/default
+/usr/local/share/i18n/locales
 cp -f /usr/share/bash-completion/bash_completion ${ROOTFS}/usr/share/bash-completion
 for i in "arp" "arping" "chmod" "chown" "curl" "file" \
          "find" "hostname" "id" "ip" "iperf3" "iptables" \
@@ -113,6 +117,9 @@ ln -s bash sh
 cd ${ROOTFS}/usr/sbin
 ln -s iptables-nft iptables
 cd ${HERE}
+cat > ${ROOTFS}/etc/hosts << "EOF"
+127.0.0.1	localhost
+EOF
 cat > ${ROOTFS}/etc/passwd << "EOF"
 root:x:0:0:root:/root:/bin/bash
 EOF
@@ -144,7 +151,14 @@ done
 cp -Lrf /usr/lib/frr ${ROOTFS}/usr/lib
 cp -Lrf /usr/lib/x86_64-linux-gnu/frr ${ROOTFS}/usr/lib/x86_64-linux-gnu/
 cp -r /lib/x86_64-linux-gnu/security ${ROOTFS}/lib/x86_64-linux-gnu
+cp -f /lib/x86_64-linux-gnu/security/pam_deny.so ${ROOTFS}/usr/lib/security
+cp -f /lib/x86_64-linux-gnu/security/pam_unix.so ${ROOTFS}/usr/lib/security
+cp -f /lib/x86_64-linux-gnu/security/pam_mask.so ${ROOTFS}/usr/lib/security
 cp -f /lib/x86_64-linux-gnu/security/pam_permit.so ${ROOTFS}/usr/lib/security
+cp -f /usr/lib/x86_64-linux-gnu/libnss_dns.so.2 ${ROOTFS}/usr/lib/x86_64-linux-gnu/
+cp -f /usr/lib/x86_64-linux-gnu/libcap.so.2 ${ROOTFS}/usr/lib/x86_64-linux-gnu/
+
+cp /etc/debian_version  ${ROOTFS}/etc
 
 for i in "/etc/security" \
          "/etc/pam.d" \

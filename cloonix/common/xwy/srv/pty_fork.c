@@ -201,7 +201,7 @@ static void create_env_display(int display_val, char *ttyname)
   setenv("LANG", "C", 1);
   setenv("XAUTHORITY", g_xauthority, 1);
   setenv("SHELL", "/usr/libexec/cloonix/server/cloonix-bash", 1);
-  setenv("TERM", "rxvt", 1);
+  setenv("TERM", "xterm", 1);
   memset(disp_str, 0, MAX_TXT_LEN);
   if (display_val > 0)
     {
@@ -311,8 +311,6 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
 
   memset(argv, 0, MAX_ARGC * sizeof(char *));
   memset(ttyname, 0, MAX_TXT_LEN);
-
-KERR("VIPTODO pty_fork_bin_bash %d %d %s", action, display_val, cmd);
 
   if (action != action_dae)
     {

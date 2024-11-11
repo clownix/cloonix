@@ -142,10 +142,6 @@ static void setup_mounts(void)
   char *curdir = get_current_dir_name();
   assert(curdir);
   assert(mount("none", "/", NULL, MS_REC | MS_SLAVE, NULL) == 0);
-  hide_dir_if_necessary("/root");
-  hide_dir_if_necessary("/boot");
-  hide_dir_if_necessary("/media");
-  hide_dir_if_necessary("/mnt");
   hide_dir_if_necessary("/etc");
   hide_dir_if_necessary("/bin");
   hide_dir_if_necessary("/sbin");

@@ -45,11 +45,15 @@ enum {
 /*-------------------------------------------------------------------------*/
 #define KOUT(format, a...)                                    \
  do {                                                         \
+    fprintf(stderr, "KOUT line:%d " format "\n\n",            \
+    __LINE__, ## a);                                          \
     syslog(LOG_ERR | LOG_USER, "KOUT line:%d " format "\n\n", \
     __LINE__, ## a); exit(-1);                                \
     } while (0)
 #define KERR(format, a...)                                    \
  do {                                                         \
+    fprintf(stderr, "KOUT line:%d " format "\n\n",            \
+    __LINE__, ## a);                                          \
     syslog(LOG_ERR | LOG_USER, "KERR line:%d " format "\n\n", \
     __LINE__, ## a);                                \
     } while (0)
@@ -313,8 +317,9 @@ static void handle_signal(struct ul_pty *pty, int fd)
           }
         break;
       case SIGWINCH:
-        ioctl(STDIN_FILENO, TIOCGWINSZ, (char *)&pty->win);
-        ioctl(pty->slave, TIOCSWINSZ, (char *)&pty->win);
+//        ioctl(STDIN_FILENO, TIOCGWINSZ, (char *)&pty->win);
+//        ioctl(pty->slave, TIOCSWINSZ, (char *)&pty->win);
+        KERR("SIGWINCH RX TELL WHAT TO DO ???");
         break;
       case SIGTERM:
       case SIGINT:
@@ -376,10 +381,11 @@ void ul_pty_setup(struct ul_pty *pty)
 {
   struct termios attrs;
   sigset_t ourset;
+  memset(&attrs, 0, sizeof(struct termios));
   assert(pty->sigfd == -1);
   sigprocmask(0, NULL, &pty->orgsig);
   if (tcgetattr(STDIN_FILENO, &pty->stdin_attrs) != 0)
-    KOUT("ERROR");
+    KERR("ERROR tcgetattr");
   attrs = pty->stdin_attrs;
   if (pty->slave_echo)
     attrs.c_lflag |= ECHO;
@@ -561,8 +567,8 @@ int main(int argc, char **argv)
   struct script_control ctl;
   struct ul_pty_callbacks *cb;
   int ch, format = 0, caught_signal = 0, rc = 0, echo = 1;
-  if (access("/bin/sh", X_OK))
-    KOUT("ERROR failed to execute /bin/sh");
+  if (access("/usr/libexec/cloonix/common/bash", X_OK))
+    KOUT("ERROR failed to execute /usr/libexec/cloonix/common/bash");
   if (argc != 2)
     KOUT("ERROR failed argc = %d", argc);
   ctl.pty = calloc(1, sizeof(*ctl.pty));
@@ -584,7 +590,7 @@ int main(int argc, char **argv)
     {
     ul_pty_init_slave(ctl.pty);
     signal(SIGTERM, SIG_DFL);
-    execl("/bin/sh", "sh", "-c", argv[1], (char *)NULL);
+    execl("/usr/libexec/cloonix/common/bash", "sh", "-c", argv[1], (char *)NULL);
     KOUT("ERROR failed to execute %s", "/bin/sh");
     }
   ctl.pty->child = ctl.child;

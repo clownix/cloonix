@@ -4,7 +4,7 @@ DISTRO=bookworm
 ROOTFS=/var/lib/cloonix/bulk/${DISTRO}
 DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
 REPO="http://deb.debian.org/debian"
-#REPO="http://127.0.0.1/debian/bookworm"
+REPO="http://127.0.0.1/debian/bookworm"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -79,7 +79,7 @@ debootstrap --no-check-certificate \
 #-----------------------------------------------------------------------#
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ grub-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
-KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
+KERN="rw noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
 printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" \
         >> /tmp/wkmntloops/etc/default/grub
 chroot /tmp/wkmntloops/ update-grub

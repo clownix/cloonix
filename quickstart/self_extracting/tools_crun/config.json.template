@@ -6,9 +6,9 @@
         "uid": 0,
         "gid": 0
     },
-    "args": ["__STARTER__"],
+    "args": ["/usr/libexec/cloonix/server/init_starter_crun"],
     "env": [
-        "PATH=/usr/sbin:/usr/bin:/sbin:/bin",
+        "PATH=/usr/bin:/usr/libexec/cloonix/common/:/usr/libexec/cloonix/server",
         "DISPLAY=__DISPLAY__",
         "HOME=root"
     ],
@@ -36,11 +36,6 @@
     "destination": "/tmp",
     "type": "none",
     "source": "/tmp",
-    "options": ["rbind","rw"]
-    },{
-    "destination": "/var/lib/cloonix/bulk",
-    "type": "none",
-    "source": "__BULK__",
     "options": ["rbind","rw"]
     },{
     "destination": "/dev",

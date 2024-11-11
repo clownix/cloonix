@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+PURE_CRUN="no"
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -21,19 +22,19 @@ mkdir -p ${TMPBUILD}/targz_store
 cp -rf ${CLOONIX_TREE_ROOT}/targz_store/* ${TMPBUILD}/targz_store
 cp -r ${CLOONIX_TREE_ROOT}/cloonix ${TMPBUILD}
 #----------------------------------------------------------
-for i in cloonix_osh \
-         cloonix_rsh \
-         cloonix_ocp \
-         cloonix_cli \
-         cloonix_gui \
-         cloonix_net \
-         cloonix_scp \
-         cloonix_ice \
-         cloonix_ssh \
-         cloonix_wsk \
-         cloonix_dsh \
-         cloonix_lsh \
-         cloonix_ovs; do 
+for i in "cloonix_osh" \
+         "cloonix_rsh" \
+         "cloonix_ocp" \
+         "cloonix_cli" \
+         "cloonix_gui" \
+         "cloonix_net" \
+         "cloonix_scp" \
+         "cloonix_ice" \
+         "cloonix_ssh" \
+         "cloonix_wsk" \
+         "cloonix_dsh" \
+         "cloonix_lsh" \
+         "cloonix_ovs" ; do 
   mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
 done
 #----------------------------------------------------------
@@ -41,11 +42,11 @@ done
   echo BUILDING COMMON
   echo
 #----------------------------------------------------------
-  for i in lib_io_clownix \
-           lib_rpc_clownix \
-           lib_utils \
-           lib_rpc_doors \
-           lib_rpc_layout ; do
+  for i in "lib_io_clownix" \
+           "lib_rpc_clownix" \
+           "lib_utils" \
+           "lib_rpc_doors" \
+           "lib_rpc_layout" ; do
 
     cd ${COMMON}/${i}
     echo
@@ -60,21 +61,19 @@ done
   echo BUILDING CLIENT
   echo
 #----------------------------------------------------------
-  for i in  hide_dirs \
-            spice_lib_client \
-            agent_dropbear \
-            lib_client \
-            ctrl \
-            xwycli \
-            rxvt \
-            cairo_canvas/crcanvas_gtk \
-            cairo_canvas/src/bank \
-            cairo_canvas/src/interface \
-            cairo_canvas/src/subsets \
-            cairo_canvas/src/bdplot \
-            cairo_canvas \
-            spice \
-            openssh; do
+  for i in  "hide_dirs" \
+            "agent_dropbear" \
+            "lib_client" \
+            "ctrl" \
+            "xwycli" \
+            "rxvt" \
+            "cairo_canvas/crcanvas_gtk" \
+            "cairo_canvas/src/bank" \
+            "cairo_canvas/src/interface" \
+            "cairo_canvas/src/subsets" \
+            "cairo_canvas/src/bdplot" \
+            "cairo_canvas" \
+            "openssh" ; do
 
     echo
     echo DOING:
@@ -84,5 +83,13 @@ done
     cd ${CLIENT}/${i}
     ./cmd
   done
+
+  if [ "${PURE_CRUN}" = "no" ]; then
+    for i in  "spice_lib_client" "spice" ; do
+      echo DOING:
+      cd ${CLIENT}/${i}
+      ./cmd
+    done
+  fi
 #----------------------------------------------------------
 

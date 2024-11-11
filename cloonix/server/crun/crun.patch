@@ -1,8 +1,8 @@
 diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
---- crun/src/libcrun/error.c	2024-06-30 12:09:13.000000000 +0200
-+++ crun_tainted/src/libcrun/error.c	2024-07-29 11:56:51.406486633 +0200
-@@ -45,6 +45,16 @@
- static bool log_also_to_stderr;
+--- crun/src/libcrun/error.c	2024-09-22 08:50:56.000000000 +0200
++++ crun_tainted/src/libcrun/error.c	2024-09-22 09:43:23.477488925 +0200
+@@ -44,6 +44,16 @@
+ static int log_format;
  static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
  
 +/*-------------------------------------------------------------------------*/
@@ -19,8 +19,8 @@ diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
  libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
  {
 diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
---- crun/src/libcrun/linux.c	2024-06-30 12:09:13.000000000 +0200
-+++ crun_tainted/src/libcrun/linux.c	2024-07-29 12:00:05.562492938 +0200
+--- crun/src/libcrun/linux.c	2024-09-22 08:50:56.000000000 +0200
++++ crun_tainted/src/libcrun/linux.c	2024-09-22 09:43:23.477488925 +0200
 @@ -105,6 +105,16 @@
  #  define FSCONFIG_CMD_CREATE 6
  #endif

@@ -1,4 +1,5 @@
 #!/bin/bash
+PURE_CRUN="no"
 #----------------------------------------------------------------------#
 if [ ${#} = 1 ]; then
   if [ "$1" = "i386" ]; then
@@ -49,104 +50,16 @@ else
   mkdir -p ${COMMON}/lib/x86_64-linux-gnu
 fi
 
-mkdir -p ${COMMON}/lib/locale
-mkdir -p ${COMMON}/etc
-mkdir -p ${COMMON}/share
-mkdir -p ${COMMON}/share/dconf
-mkdir -p ${COMMON}/share/locale
-mkdir -p ${COMMON}/share/i18n/charmaps
-mkdir -p ${COMMON}/share/i18n/locales
-mkdir -p ${COMMON}/share/glib-2.0/schemas
-mkdir -p ${COMMON}/share/X11/locale
-mkdir -p ${COMMON}/lib/python3/dist-packages
-mkdir -p ${COMMON}/lib/python3.12
+for i in "lib/locale" "etc" "share/fonts/truetype" \
+         "share/terminfo" "share/mime" "share/misc" \
+         "share/dconf" "share/locale" "share/i18n/charmaps" \
+         "share/i18n/locales" "share/glib-2.0/schemas" \
+         "share/X11/locale" ; do
+  mkdir -p ${COMMON}/${i}
+done
 
 cp -rf ${TMPBUILD}/cloonix/client/* ${COMMON}
 
-#NOVNC----------------------------------------------------------
-for i in "_distutils_hack" \
-         "__pycache__" ; do
-  cp -r /usr/lib/python3/dist-packages/${i} ${COMMON}/lib/python3/dist-packages
-done
-
-cp -rf /root/.local/share/pipx/venvs/websockify/lib/python3.12/site-packages/websockify ${COMMON}/lib/python3.12
-# cp -rf /root/.local/share/pipx/venvs/novnc/lib/python3.12/site-packages/novnc ${COMMON}/lib/python3.12
-tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/novnc.tar.gz
-
-for i in "lib-dynload" \
-         "encodings" \
-         "re" \
-         "collections" \
-         "importlib" \
-         "urllib" \
-         "xml" \
-         "email" \
-         "logging" \
-         "http" \
-         "html" \
-         "multiprocessing" ; do
-  cp -r /usr/lib/python3.12/${i} ${COMMON}/lib/python3.12
-done
-
-
-for i in "enum.py" \
-         "queue.py" \
-         "types.py" \
-         "heapq.py" \
-         "operator.py" \
-         "functools.py" \
-         "keyword.py" \
-         "reprlib.py" \
-         "copyreg.py" \
-         "warnings.py" \
-         "contextlib.py" \
-         "threading.py" \
-         "_weakrefset.py" \
-         "shutil.py" \
-         "fnmatch.py" \
-         "struct.py" \
-         "pathlib.py" \
-         "ipaddress.py" \
-         "pkgutil.py" \
-         "weakref.py" \
-         "typing.py" \
-         "platform.py" \
-         "plistlib.py" \
-         "datetime.py" \
-         "string.py" \
-         "base64.py" \
-         "quopri.py" \
-         "random.py" \
-         "bisect.py" \
-         "socket.py" \
-         "selectors.py" \
-         "calendar.py" \
-         "locale.py" \
-         "tempfile.py" \
-         "textwrap.py" \
-         "inspect.py" \
-         "ast.py" \
-         "dis.py" \
-         "opcode.py" \
-         "linecache.py" \
-         "tokenize.py" \
-         "token.py" \
-         "subprocess.py" \
-         "signal.py" \
-         "csv.py" \
-         "ssl.py" \
-         "hashlib.py" \
-         "optparse.py" \
-         "traceback.py" \
-         "socketserver.py" \
-         "copy.py" \
-         "mimetypes.py" \
-         "pickle.py" \
-         "_compat_pickle.py" \
-         "stringprep.py" \
-         "codecs.py" ; do
-  cp /usr/lib/python3.12/${i} ${COMMON}/lib/python3.12
-done
 #----------------------------------------------------------
 FROM_HERE=`pwd`
 tar --directory=/tmp -xf ${TARGZ_STORE}/patchelf_*.tar.gz
@@ -155,6 +68,27 @@ make
 cd $FROM_HERE
 #----------------------------------------------------------
 cp -Lrf /etc/fonts ${COMMON}/etc
+
+cat > ${COMMON}/etc/passwd << "EOF"
+root:x:0:0:root:/root:/bin/bash
+EOF
+cat > ${COMMON}/etc/group << "EOF"
+root:x:0:
+audio:x:29:pulse
+EOF
+cat > ${COMMON}/etc/rsyslog.conf << "EOF"
+module(load="imuxsock") # provides support for local system logging
+$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+$FileOwner root
+$FileGroup root
+$FileCreateMode 0640
+$DirCreateMode 0755
+$Umask 0022
+$WorkDirectory /var/spool/rsyslog
+*.*;auth,authpriv.none          -/var/log/syslog
+auth,authpriv.*                 /var/log/auth.log
+cron.*                          -/var/log/cron.log
+EOF
 rm -f ${COMMON}/etc/fonts/fonts.conf
 cat > ${COMMON}/etc/fonts/fonts.conf << EOF
 <?xml version="1.0"?>
@@ -174,48 +108,49 @@ EOF
 cat > ${COMMON}/etc/hosts << EOF
 127.0.0.1   localhost
 EOF
-cat > ${COMMON}/etc/group << EOF
-audio:x:29:pulse
-EOF
 #----------------------------------------------------------
-cp -f ${TARGZ_STORE}/dconf/user ${COMMON}/share/dconf
+cp -v /usr/lib/file/magic.mgc ${COMMON}/share/misc
 #----------------------------------------------------------
 cp -Lrf /usr/lib/locale/* ${COMMON}/lib/locale
 #----------------------------------------------------------
+cp -Lrf /usr/share/terminfo/l ${COMMON}/share/terminfo
+cp -Lrf /usr/share/terminfo/x ${COMMON}/share/terminfo
+cp -Lrf /usr/share/fonts/truetype/dejavu ${COMMON}/share/fonts/truetype
+cp -Lrf /usr/share/fontconfig ${COMMON}/share
+#----------------------------------------------------------
+cp -Lrf /usr/share/X11/locale/en_US.UTF-8 ${COMMON}/share/X11/locale
+cp -Lrf /usr/share/X11/locale/C ${COMMON}/share/X11/locale
+cp -Lrf /usr/share/X11/locale/locale.dir ${COMMON}/share/X11/locale
+cp -Lrf /usr/share/X11/xkb ${COMMON}/share/X11
+cp -f   /usr/share/X11/rgb.txt ${COMMON}/share/X11
+#----------------------------------------------------------
+mkdir -p ${COMMON}/lib/x86_64-linux-gnu/rsyslog
+cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    ${COMMON}/lib/x86_64-linux-gnu/rsyslog
+cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   ${COMMON}/lib/x86_64-linux-gnu/rsyslog
+cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so ${COMMON}/lib/x86_64-linux-gnu/rsyslog
+#----------------------------------------------------------
+cp -rn ${TARGZ_STORE}/shark/built_objects_amd64/lib/* ${COMMON}/lib/x86_64-linux-gnu
+#----------------------------------------------------------
 cd $FROM_HERE
-for i in "icons" "mime" "themes" "fonts" "gtk-3.0" \
-         "gstreamer-1.0" "alsa" ; do
-   cp -Lrf /usr/share/${i} ${COMMON}/share
-done
+
+cp -Lrf /usr/share/themes ${COMMON}/share
+cp -f /usr/share/mime/mime.cache ${COMMON}/share/mime
 
 for i in "en_GB" "en" "locale.alias" ; do
   cp -Lrf /usr/share/locale/${i} ${COMMON}/share/locale
 done
 
-
-cp -Lrf /usr/share/X11/locale/en_US.UTF-8 ${COMMON}/share/X11/locale
-cp -Lrf /usr/share/X11/locale/C ${COMMON}/share/X11/locale
-cp -Lrf /usr/share/X11/locale/locale.dir ${COMMON}/share/X11/locale
-cp -Lrf /usr/share/X11/xkb ${COMMON}/share/X11
-cp -f /usr/share/X11/rgb.txt ${COMMON}/share/X11
-
-
 cp -f /usr/share/i18n/charmaps/UTF-8.gz ${COMMON}/share/i18n/charmaps
-for i in en_US en_GB i18n i18n_ctype iso14651_t1 translit_* ; do
+for i in en_US en_GB i18n i18n_ctype iso14651_t1 iso14651_t1_common \
+         translit_* ; do
   cp -f /usr/share/i18n/locales/${i} ${COMMON}/share/i18n/locales
 done
-cp -Lrf /usr/share/i18n/locales/iso14651_t1_common  ${COMMON}/share/i18n/locales
 cp -f /usr/share/glib-2.0/schemas/gschemas.compiled ${COMMON}/share/glib-2.0/schemas
 cd ${COMMON}/share/i18n/charmaps
 gunzip -f UTF-8.gz
 cd $FROM_HERE
 #----------------------------------------------------------
-if [ "${ARCH}" = "i386" ]; then
-  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark/built_objects_i386/share_wireshark.tar.gz
-else
-  tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/shark/built_objects_amd64/share_wireshark.tar.gz
-fi
-mv ${COMMON}/share/share_wireshark ${COMMON}/share/wireshark
+tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/noVNC_*.tar.gz
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
   cp -f /lib/ld-linux.so.2 ${COMMON}/lib32
@@ -224,33 +159,16 @@ else
 fi
 cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
 #----------------------------------------------------------
-if [ "${ARCH}" = "i386" ]; then
-  SRCD="/usr/lib/i386-linux-gnu"
-  DSTD="${COMMON}/lib/i386-linux-gnu"
-else
-  SRCD="/usr/lib/x86_64-linux-gnu"
-  DSTD="${COMMON}/lib/x86_64-linux-gnu"
-fi
-for i in "gstreamer1.0" "gstreamer-1.0" \
-         "gdk-pixbuf-2.0" "gtk-3.0" "gio" \
-         "qt6" "pipewire-0.3" ; do
-  cp -rf ${SRCD}/${i} ${DSTD}
-done
-
-rm -rf ${DSTD}/qt6/plugins/*
-cp -rf ${SRCD}/qt6/plugins/platforms ${DSTD}/qt6/plugins
-
-mkdir -p ${DSTD}/gconv
-cp -f ${SRCD}/gconv/gconv-modules.cache ${DSTD}/gconv
-#----------------------------------------------------------
 cp -f /bin/bash ${COMMON}
 #----------------------------------------------------------
 for i in "awk" "cat" "chmod" "chown" "cp" "echo" "ps" \
          "env" "grep" "id" "kill" "ldd" "strace" "ls" \
-         "locale" "localedef" "localectl" "xauth" \
-         "xeyes" "xclock" "diff" "unzip" "unshare" ; do
+         "locale" "localedef" "localectl" "xauth" "ln" \
+         "xeyes" "xclock" "diff" "unzip" "unshare" \
+         "touch" "vim" "sleep" "find" "grep" "file" ; do
   cp -f /usr/bin/${i} ${COMMON}
 done
+cp -f /usr/sbin/rsyslogd ${COMMON}
 cd ${COMMON}
 ln -s bash sh
 cd $FROM_HERE
@@ -267,23 +185,61 @@ sed -i s"%localedef%/usr/libexec/cloonix/common/localedef%" locale-gen
 sed -i s'%LOCALEGEN=\(.*\)%LOCALEGEN=/usr/libexec/cloonix/common/etc/locale.gen%' locale-gen
 #----------------------------------------------------------
 mkdir -p ${COMMON}/usr_bin
-for i in  cloonix_cli \
-          cloonix_gui \
-          cloonix_ice \
-          cloonix_ocp \
-          cloonix_osh \
-          cloonix_rsh \
-          cloonix_ovs \
-          cloonix_scp \
-          cloonix_ssh \
-          cloonix_lsh \
-          cloonix_dsh \
-          cloonix_wsk ; do
+for i in  "cloonix_cli" \
+          "cloonix_gui" \
+          "cloonix_ocp" \
+          "cloonix_osh" \
+          "cloonix_rsh" \
+          "cloonix_ovs" \
+          "cloonix_scp" \
+          "cloonix_ssh" \
+          "cloonix_lsh" \
+          "cloonix_dsh" \
+          "cloonix_wsk" ; do
   cp -f ${CLOONIX_TREE_ROOT}/cloonix/${i} ${COMMON}/usr_bin
 done
+
+#----------------------------------------------------------
+if [ "${PURE_CRUN}" = "no" ]; then
+#----------------------------------------------------------
+
+   cp -Lrf /usr/share/gstreamer-1.0 ${COMMON}/share
+  if [ "${ARCH}" = "i386" ]; then
+    SRCD="/usr/lib/i386-linux-gnu"
+    DSTD="${COMMON}/lib/i386-linux-gnu"
+  else
+    SRCD="/usr/lib/x86_64-linux-gnu"
+    DSTD="${COMMON}/lib/x86_64-linux-gnu"
+  fi
+  for i in "gstreamer1.0" "pipewire-0.3" ; do
+    cp -rf ${SRCD}/${i} ${DSTD}
+  done
+  
+  mkdir -p ${DSTD}/gstreamer-1.0
+  for i in "libgstpulseaudio.so" \
+           "libgstautodetect.so" \
+           "libgstaudioresample.so" \
+           "libgstaudioconvert.so" \
+           "libgstcoreelements.so" \
+           "libgstapp.so" ; do
+    cp -rf ${SRCD}/gstreamer-1.0/${i} ${DSTD}/gstreamer-1.0
+  done
+  mkdir -p ${DSTD}/gconv
+  cp -f ${SRCD}/gconv/gconv-modules.cache ${DSTD}/gconv
+
+
+  cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_ice ${COMMON}/usr_bin
+  rm -rf ${COMMON}/spice_lib_client
+  cp -f ${COMMON}/spice/cloonix-spice-client-glib-usb-acl-helper ${COMMON}
+  cp -rf ${COMMON}/spice/polkit-1 ${COMMON}
+  cp -f ${COMMON}/spice/cloonix-spicy ${COMMON}
+  rm -rf ${COMMON}/spice
+
+#----------------------------------------------------------
+fi #PURE_CRUN
+#----------------------------------------------------------
 #----------------------------------------------------------
 rm -rf ${COMMON}/lib_client
-rm -rf ${COMMON}/spice_lib_client
 #----------------------------------------------------------
 cp -f  ${COMMON}/hide_dirs/cloonix-hide-dirs ${COMMON}
 rm -rf ${COMMON}/hide_dirs
@@ -291,11 +247,6 @@ rm -rf ${COMMON}/hide_dirs
 cp -f  ${COMMON}/agent_dropbear/cloonix-dropbear-scp ${COMMON}
 cp -f  ${COMMON}/agent_dropbear/cloonix-dropbear-ssh ${COMMON}
 rm -rf ${COMMON}/agent_dropbear
-#----------------------------------------------------------
-cp -f ${COMMON}/spice/cloonix-spice-client-glib-usb-acl-helper ${COMMON}
-cp -rf ${COMMON}/spice/polkit-1 ${COMMON}
-cp -f ${COMMON}/spice/cloonix-spicy ${COMMON}
-rm -rf ${COMMON}/spice
 #----------------------------------------------------------
 cp -f ${COMMON}/cairo_canvas/cloonix-gui ${COMMON}
 rm -rf ${COMMON}/cairo_canvas
@@ -314,6 +265,7 @@ cp -f ${COMMON}/openssh/cloonix-u2i-ssh ${COMMON}
 rm -rf ${COMMON}/openssh
 #----------------------------------------------------------
 cp -f ${PATCHELF} ${COMMON}/cloonix-patchelf
+strip ${COMMON}/cloonix-patchelf
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
   LDLINUX="/usr/libexec/cloonix/common/lib32/ld-linux.so.2"

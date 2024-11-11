@@ -1,6 +1,6 @@
 diff -Naur spice-gtk/meson.build tainted_spice/meson.build
---- spice-gtk/meson.build	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/meson.build	2024-05-20 11:39:05.611713925 +0200
+--- spice-gtk/meson.build	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/meson.build	2024-11-11 21:37:18.763365380 +0100
 @@ -5,7 +5,8 @@
           version : run_command('build-aux/git-version-gen', '@0@/.tarball-version'.format(meson.project_source_root()), check : true).stdout().strip(),
           license : 'LGPLv2.1',
@@ -64,8 +64,8 @@ diff -Naur spice-gtk/meson.build tainted_spice/meson.build
  subdir('man')
  subdir('po')
 diff -Naur spice-gtk/src/channel-main.c tainted_spice/src/channel-main.c
---- spice-gtk/src/channel-main.c	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/src/channel-main.c	2024-05-20 11:39:05.611713925 +0200
+--- spice-gtk/src/channel-main.c	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/src/channel-main.c	2024-11-11 21:37:18.763365380 +0100
 @@ -2799,6 +2799,9 @@
  {
      SpiceMainChannelPrivate *c;
@@ -87,7 +87,7 @@ diff -Naur spice-gtk/src/channel-main.c tainted_spice/src/channel-main.c
      g_return_if_fail(id >= -1);
 diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 --- spice-gtk/src/cloon.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloon.c	2024-05-20 11:39:05.611713925 +0200
++++ tainted_spice/src/cloon.c	2024-11-11 21:39:18.655831013 +0100
 @@ -0,0 +1,609 @@
 +#include <unistd.h>
 +#include <stdlib.h>
@@ -213,7 +213,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +  if (sock != fd_sock)
 +    KOUT("%d %d", sock, fd_sock);
 +  if (g_sock_ctx[sock])
-+    KOUT(" ");
++    KERR("ERROR ???? %d ", sock);
 +  g_sock_ctx[sock] = (t_sock_ctx *) malloc(sizeof(t_sock_ctx));
 +  memset(g_sock_ctx[sock], 0, sizeof(t_sock_ctx));
 +  g_sock_ctx[sock]->gsock = gsock;
@@ -700,7 +700,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +
 diff -Naur spice-gtk/src/cloon.h tainted_spice/src/cloon.h
 --- spice-gtk/src/cloon.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/cloon.h	2024-05-20 11:39:05.611713925 +0200
++++ tainted_spice/src/cloon.h	2024-11-11 21:37:18.767365396 +0100
 @@ -0,0 +1,22 @@
 +
 +
@@ -726,7 +726,7 @@ diff -Naur spice-gtk/src/cloon.h tainted_spice/src/cloon.h
 +
 diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 --- spice-gtk/src/hmac_cipher.c	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.c	2024-05-20 11:39:05.611713925 +0200
++++ tainted_spice/src/hmac_cipher.c	2024-11-11 21:37:18.767365396 +0100
 @@ -0,0 +1,144 @@
 +/*****************************************************************************/
 +/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
@@ -874,7 +874,7 @@ diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 +
 diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 --- spice-gtk/src/hmac_cipher.h	1970-01-01 01:00:00.000000000 +0100
-+++ tainted_spice/src/hmac_cipher.h	2024-05-20 11:39:05.611713925 +0200
++++ tainted_spice/src/hmac_cipher.h	2024-11-11 21:37:18.767365396 +0100
 @@ -0,0 +1,28 @@
 +/*****************************************************************************/
 +/*    Copyright (C)  2006-2022    Cloon,    <clownix@clownix.net>          */
@@ -905,8 +905,8 @@ diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 +
 +
 diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
---- spice-gtk/src/meson.build	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/src/meson.build	2024-05-20 11:39:05.611713925 +0200
+--- spice-gtk/src/meson.build	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/src/meson.build	2024-11-11 21:37:18.767365396 +0100
 @@ -130,6 +130,8 @@
    'spice-client.c',
    'spice-option.c',
@@ -935,8 +935,8 @@ diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
                                   install : true,
                                   link_args : [spice_gtk_version_script],
 diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
---- spice-gtk/src/spice-channel.c	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/src/spice-channel.c	2024-05-20 11:39:05.611713925 +0200
+--- spice-gtk/src/spice-channel.c	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/src/spice-channel.c	2024-11-11 21:37:18.767365396 +0100
 @@ -48,6 +48,11 @@
  
  G_STATIC_ASSERT(sizeof(SpiceChannelClass) == sizeof(GObjectClass) + 19 * sizeof(gpointer));
@@ -989,7 +989,7 @@ diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
      CHANNEL_DEBUG(channel, "channel destroy");
      spice_channel_disconnect(channel, SPICE_CHANNEL_NONE);
      g_object_unref(channel);
-@@ -2592,20 +2599,17 @@
+@@ -2593,20 +2600,17 @@
              c->event = SPICE_CHANNEL_ERROR_CONNECT;
              goto cleanup;
          }
@@ -1011,8 +1011,8 @@ diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
      c->conn = spice_session_channel_open_host(c->session, channel, &c->tls, &c->error);
      if (c->conn == NULL) {
 diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
---- spice-gtk/src/spice-session.c	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/src/spice-session.c	2024-05-20 11:39:05.611713925 +0200
+--- spice-gtk/src/spice-session.c	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/src/spice-session.c	2024-11-11 21:37:18.767365396 +0100
 @@ -20,9 +20,8 @@
  #include <gio/gnetworking.h>
  #include <gio/gio.h>
@@ -1415,8 +1415,8 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
  {
      g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-priv.h
---- spice-gtk/src/spice-session-priv.h	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/src/spice-session-priv.h	2024-05-20 11:39:05.611713925 +0200
+--- spice-gtk/src/spice-session-priv.h	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/src/spice-session-priv.h	2024-11-11 21:37:18.767365396 +0100
 @@ -59,6 +59,8 @@
  void spice_session_get_pubkey(SpiceSession *session, guint8 **pubkey, guint *size);
  guint spice_session_get_verify(SpiceSession *session);
@@ -1427,8 +1427,8 @@ diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-pr
  const gchar* spice_session_get_host(SpiceSession *session);
  const gchar* spice_session_get_cert_subject(SpiceSession *session);
 diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
---- spice-gtk/src/spice-widget.c	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/src/spice-widget.c	2024-05-20 11:40:41.987710522 +0200
+--- spice-gtk/src/spice-widget.c	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/src/spice-widget.c	2024-11-11 21:37:18.767365396 +0100
 @@ -56,6 +56,8 @@
  #include "vncdisplaykeymap.h"
  #include "spice-grabsequence-priv.h"
@@ -1683,8 +1683,8 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
                                G_PARAM_CONSTRUCT |
                                G_PARAM_STATIC_STRINGS));
 diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
---- spice-gtk/src/spice-widget-egl.c	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/src/spice-widget-egl.c	2024-05-20 11:39:05.611713925 +0200
+--- spice-gtk/src/spice-widget-egl.c	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/src/spice-widget-egl.c	2024-11-11 21:37:18.767365396 +0100
 @@ -226,7 +226,7 @@
  #endif
  
@@ -1745,8 +1745,8 @@ diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
                                         (EGLClientBuffer)NULL,
                                         attrs);
 diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
---- spice-gtk/src/usb-acl-helper.c	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/src/usb-acl-helper.c	2024-05-20 11:39:05.611713925 +0200
+--- spice-gtk/src/usb-acl-helper.c	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/src/usb-acl-helper.c	2024-11-11 21:37:18.767365396 +0100
 @@ -24,6 +24,9 @@
  #include <stdio.h>
  #include <string.h>
@@ -1779,8 +1779,8 @@ diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
          goto done;
      }
 diff -Naur spice-gtk/subprojects/spice-common/meson.build tainted_spice/subprojects/spice-common/meson.build
---- spice-gtk/subprojects/spice-common/meson.build	2024-05-18 11:12:52.000000000 +0200
-+++ tainted_spice/subprojects/spice-common/meson.build	2024-05-20 11:39:05.619713924 +0200
+--- spice-gtk/subprojects/spice-common/meson.build	2024-11-10 19:48:26.000000000 +0100
++++ tainted_spice/subprojects/spice-common/meson.build	2024-11-11 21:37:18.767365396 +0100
 @@ -169,10 +169,10 @@
  #
  subdir('python_modules')
@@ -1797,8 +1797,8 @@ diff -Naur spice-gtk/subprojects/spice-common/meson.build tainted_spice/subproje
  #
  # write config.h
 diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
---- spice-gtk/tools/spice-cmdline.c	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/tools/spice-cmdline.c	2024-05-20 11:39:05.619713924 +0200
+--- spice-gtk/tools/spice-cmdline.c	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/tools/spice-cmdline.c	2024-11-11 21:37:18.767365396 +0100
 @@ -27,9 +27,25 @@
  static char *tls_port;
  static char *password;
@@ -1838,8 +1838,8 @@ diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
          g_object_set(session, "uri", uri, NULL);
      if (host)
 diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
---- spice-gtk/tools/spicy.c	2024-05-18 11:12:48.000000000 +0200
-+++ tainted_spice/tools/spicy.c	2024-05-20 11:39:05.619713924 +0200
+--- spice-gtk/tools/spicy.c	2024-11-10 19:48:22.000000000 +0100
++++ tainted_spice/tools/spicy.c	2024-11-11 21:37:18.767365396 +0100
 @@ -35,6 +35,8 @@
  #include "spicy-connect.h"
  #include <gst/gst.h>

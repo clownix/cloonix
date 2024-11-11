@@ -1,0 +1,6 @@
+#!/bin/bash
+HERE=`pwd`
+BIN=${HERE}/bin
+rm -rf ${BIN}
+rm -rf ${HERE}/nginx
+

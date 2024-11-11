@@ -3,7 +3,7 @@ set -e
 
 sudo ./openwrt.sh
 
-LIST="fedora40 \
+LIST="fedora41 \
       noble \
       bookworm"
 

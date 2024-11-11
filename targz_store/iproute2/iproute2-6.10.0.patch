@@ -1,0 +1,37 @@
+diff -Naur iproute2-6.10.0/lib/namespace.c iproute2-6.10.0_new/lib/namespace.c
+--- iproute2-6.10.0/lib/namespace.c	2024-07-17 04:38:17.000000000 +0200
++++ iproute2-6.10.0_new/lib/namespace.c	2024-09-22 09:37:17.917362301 +0200
+@@ -8,6 +8,7 @@
+ #include <dirent.h>
+ #include <limits.h>
+ #include <linux/net_namespace.h>
++#include <sys/stat.h>
+ 
+ #include "utils.h"
+ #include "namespace.h"
+@@ -80,6 +81,9 @@
+ 
+ 	/* Mount a version of /sys that describes the network namespace */
+ 
++mkdir("/tmp/cloonixsysfs", 0755);
++mount("/sys", "/tmp/cloonixsysfs", "none", MS_BIND, NULL);
++
+ 	if (umount2("/sys", MNT_DETACH) < 0) {
+ 		/* If this fails, perhaps there wasn't a sysfs instance mounted. Good. */
+ 		if (statvfs("/sys", &fsstat) == 0) {
+@@ -91,8 +95,15 @@
+ 	}
+ 	if (mount(name, "/sys", "sysfs", mountflags, NULL) < 0) {
+ 		fprintf(stderr, "mount of /sys failed: %s\n",strerror(errno));
++
++umount("/tmp/cloonixsysfs");
++unlink("/tmp/cloonixsysfs");
++
+ 		return -1;
+ 	}
++umount("/tmp/cloonixsysfs");
++unlink("/tmp/cloonixsysfs");
++
+ 
+ 	/* Setup bind mounts for config files in /etc */
+ 	bind_etc(name);

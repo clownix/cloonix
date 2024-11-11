@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+PURE_CRUN="no"
 #----------------------------------------------------------------------#
 if [ ${#} = 1 ]; then
   if [ "$1" = "i386" ]; then
@@ -43,11 +44,11 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
   echo BUILDING COMMON
   echo
 #----------------------------------------------------------
-  for i in lib_io_clownix \
-           lib_rpc_clownix \
-           lib_utils \
-           lib_rpc_doors \
-           lib_rpc_layout ; do
+  for i in "lib_io_clownix" \
+           "lib_rpc_clownix" \
+           "lib_utils" \
+           "lib_rpc_doors" \
+           "lib_rpc_layout" ; do
 
     cd ${COMMON}/${i}
     echo
@@ -62,22 +63,23 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
   echo BUILDING SERVER
   echo
 #----------------------------------------------------------
-  for i in  crun \
-            fuse-archive \
-            dtach \
-            script_pty \
-            spice_lib_server \
-            xwy \
-            wm2 \
-            ovs \
-            doorways \
-            suid_power \
-            uml_cloonix_switch \
-            ovs_drv \
-            ovs_snf \
-            ovs_nat \
-            ovs_a2b \
-            ovs_c2c ; do
+  for i in  "crun" \
+            "fuse-archive" \
+            "dtach" \
+            "script_pty" \
+            "xwy" \
+            "wm2" \
+            "ovs" \
+            "nginx" \
+            "websockify-js" \
+            "doorways" \
+            "suid_power" \
+            "uml_cloonix_switch" \
+            "ovs_drv" \
+            "ovs_snf" \
+            "ovs_nat" \
+            "ovs_a2b" \
+            "ovs_c2c" ; do
     echo
     echo DOING:
     echo ${SERVER}/${i}
@@ -86,10 +88,17 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
     cd ${SERVER}/${i}
     ./cmd
   done
+  if [ "${PURE_CRUN}" = "no" ]; then
+    for i in  "spice_lib_server" \
+              "qemu" ; do
+      echo DOING:
+      echo ${SERVER}/${i}
+      cd ${SERVER}/${i}
+      ./cmd ${ARCH}
+    done
+  fi
   echo DOING:
-  echo ${SERVER}/qemu
-  cd ${SERVER}/qemu
-  ./cmd ${ARCH}
+  echo ${SERVER}/create_insider_agents_iso
   cd ${SERVER}/create_insider_agents_iso
   ./cmd_mk_iso_x86_64
   ./cmd_mk_iso_i386

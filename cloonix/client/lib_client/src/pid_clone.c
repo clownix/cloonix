@@ -415,7 +415,8 @@ int pid_clone_launch(t_fct_to_launch fct, t_launched_death death,
   int pid;
   void* stack;
   t_clone_ctx *ctx;
-  int flags = SIGCHLD;
+  int flags = (SIGCHLD | CLONE_PARENT);
+
   stack = clownix_malloc(PROCESS_STACK, 17);
   if ( stack == 0 )
     KOUT(" ");

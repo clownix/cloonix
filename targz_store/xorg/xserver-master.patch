@@ -1,0 +1,26 @@
+diff -Naur xserver-master/meson_options.txt xserver-master_new/meson_options.txt
+--- xserver-master/meson_options.txt	2024-09-13 17:47:01.000000000 +0200
++++ xserver-master_new/meson_options.txt	2024-09-22 09:08:04.344323668 +0200
+@@ -36,7 +36,7 @@
+ option('ipv6', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto')
+ option('input_thread', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto')
+ 
+-option('xkb_dir', type: 'string')
++option('xkb_dir', type: 'string', value: '/usr/libexec/cloonix/common/share/X11/xkb')
+ option('xkb_output_dir', type: 'string')
+ option('xkb_bin_dir', type: 'string')
+ option('xkb_default_rules', type: 'string', value: 'evdev')
+diff -Naur xserver-master/xkb/ddxLoad.c xserver-master_new/xkb/ddxLoad.c
+--- xserver-master/xkb/ddxLoad.c	2024-09-13 17:47:01.000000000 +0200
++++ xserver-master_new/xkb/ddxLoad.c	2024-09-22 09:08:04.344323668 +0200
+@@ -153,9 +153,8 @@
+     }
+ 
+     if (asprintf(&buf,
+-                 "\"%s%sxkbcomp\" -w %d %s -xkm \"%s\" "
++                 "\"/usr/libexec/cloonix/server/xkbcomp\" -w %d %s -xkm \"%s\" "
+                  "-em1 %s -emp %s -eml %s \"%s%s.xkm\"",
+-                 xkbbindir, xkbbindirsep,
+                  ((xkbDebugFlags < 2) ? 1 :
+                   ((xkbDebugFlags > 10) ? 10 : (int) xkbDebugFlags)),
+                  xkbbasedirflag ? xkbbasedirflag : "", xkmfile,

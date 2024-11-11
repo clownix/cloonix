@@ -544,7 +544,6 @@ static void start_qemu_spice(char *name, int vm_id)
 
 
 /****************************************************************************/
-/*
 static int get_process_pid(char *cmdpath, char *sock)
 {
   FILE *fp;
@@ -579,11 +578,9 @@ static int get_process_pid(char *cmdpath, char *sock)
     }
   return result;
 }
-*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-/*
 static void kill_previous_wireshark_process(char *sock)
 { 
   int pid_wireshark, pid_dumpcap;
@@ -599,7 +596,6 @@ static void kill_previous_wireshark_process(char *sock)
     kill(pid_dumpcap, SIGKILL);
     }
 }     
-*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -611,27 +607,28 @@ int start_wireshark(char *vm_name, int num)
   char *cnf = CLOONIX_CFG;
   char *net = get_net_name();
   char snf[2*MAX_PATH_LEN];
+  char title[MAX_PATH_LEN];
   if (find_pid_wait(vm_name, num))
     KERR("WARNING %s %d", vm_name, num);
   else
     {
     memset(argv, 0, 15*sizeof(char *));
     memset(snf, 0, 2*MAX_PATH_LEN);
-    snprintf(snf, 2*MAX_PATH_LEN, "/var/lib/cloonix/%s/snf/%s_%d",
+    memset(title, 0, MAX_PATH_LEN);
+    snprintf(snf, 2*MAX_PATH_LEN-1, "/var/lib/cloonix/%s/snf/%s_%d",
              get_net_name(), vm_name, num);
+    snprintf(title,MAX_PATH_LEN-1,"%s,%s,eth%d",get_net_name(),vm_name,num);
     argv[0] = xwycli;
     argv[1] = cnf;
     argv[2] = net;
     argv[3] = "-dae";
     argv[4] = WIRESHARK_BIN;
-    argv[5] = "-o";
-    argv[6] = "capture.no_interface_load:TRUE";
-    argv[7] = "-o";
-    argv[8] = "gui.ask_unsaved:FALSE";
-    argv[9] = "-k";
-    argv[10] = "-i";
-    argv[11] = snf;
-    argv[12] = NULL;
+    argv[5] = "-i";
+    argv[6] = snf;
+    argv[7] = "-t";
+    argv[8] = title;
+    argv[9] = NULL;
+    kill_previous_wireshark_process(snf);
     if (check_before_start_launch(argv))
       {
       launch_pid_wait(type_pid_wireshark, vm_name, num, argv);
@@ -712,8 +709,8 @@ static char **get_argv_crun_screen_console(char *name)
   snprintf(cmd, 2*MAX_PATH_LEN-1,
            "/usr/libexec/cloonix/server/cloonix-crun "
            "--log=/var/lib/cloonix/%s/log/debug_crun.log "
-           "--root=/var/lib/cloonix/%s/crun/ exec %s /bin/sh",
-           nemo, nemo, nm);
+           "--root=/var/lib/cloonix/%s/%s/ exec %s /bin/sh",
+           nemo, nemo, CRUN_DIR, nm);
   ptr_argv = argv;
   return (ptr_argv);
 }

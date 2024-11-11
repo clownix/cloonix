@@ -172,6 +172,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define SUID_POWER_SOCK_DIR "suid_power"
 
 #define CRUN_DIR "crun"
+#define NGINX_DIR "nginx"
 #define RUN_DIR "run"
 #define SNF_DIR "snf"
 #define NAT_DIR "nat"
@@ -223,6 +224,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define WIRESHARK_BIN "/usr/libexec/cloonix/server/cloonix-wireshark"
 #define DUMPCAP_BIN "/usr/libexec/cloonix/server/dumpcap"
 #define CRUN_BIN "/usr/libexec/cloonix/server/cloonix-crun"
+#define PTY_BIN "/usr/libexec/cloonix/server/cloonix-scriptpty"
 #define IP_BIN "/usr/libexec/cloonix/server/ip"
 #define FUSEZIP_BIN "/usr/libexec/cloonix/server/cloonix-fuse-zip"
 #define MOUNT_BIN "/usr/libexec/cloonix/server/cloonix-mount"

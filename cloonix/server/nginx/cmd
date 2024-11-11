@@ -1,0 +1,39 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=../../../targz_store
+BIN=${HERE}/bin
+./allclean
+mkdir -p ${BIN}
+tar xvf ${TARGZ}/nginx_*.tar.gz
+cd ${HERE}/nginx
+sed -i s'/"nginx: "/"cloonix-novnc-nginx: "/' ./src/os/unix/ngx_setproctitle.c
+./auto/configure --prefix=/var/lib/cloonix/cache/nginx
+make
+cp ${HERE}/nginx/objs/nginx ${BIN}/cloonix-novnc-nginx
+
+mkdir -p /var/lib/cloonix/cache/nginx/logs
+mkdir -p /var/lib/cloonix/cache/nginx/conf
+cp ${HERE}/nginx/objs/nginx /var/lib/cloonix/cache/nginx/cloonix-novnc-nginx
+cat > /var/lib/cloonix/cache/nginx/conf/nginx.conf << "EOF"
+error_log  /var/lib/cloonix/cache/nginx/logs/error.log debug;
+events {}
+http {
+    root  /home/perrier/noVNC;
+    upstream vnc_proxy {
+        server 127.0.0.1:6080;
+    }
+    server {
+        listen 8080; # consider using 443, see below
+        location / {
+            index vnc_lite.html;
+            try_files $uri /vnc_lite.html;
+            proxy_http_version 1.1;
+            proxy_pass http://vnc_proxy/;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_read_timeout 61s;
+            proxy_buffering off;
+        }
+    }
+}
+EOF

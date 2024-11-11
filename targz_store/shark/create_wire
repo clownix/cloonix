@@ -1,0 +1,135 @@
+#!/bin/bash
+HERE=`pwd`
+NET=mito
+#----------------------------------------------------------------------#
+ARCH="amd64"
+QCOW2="wire_qt_debian_amd64.qcow2"
+WIRELIB="/usr/libexec/cloonix/common/wireshark/lib"
+TARGLIB="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
+WIREBIN="/usr/libexec/cloonix/server/cloonix-wireshark"
+DUMPBIN="/usr/libexec/cloonix/server/cloonix-dumpcap"
+PATCHELF="/root/patchelf/src/patchelf"
+RPATH=${TARGLIB}
+LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+#----------------------------------------------------------------------
+rm -rf ${HERE}/built_objects_${ARCH}
+mkdir -p ${HERE}/built_objects_${ARCH}
+#----------------------------------------------------------------------
+BULK="/var/lib/cloonix/bulk"
+if [ ! -e ${BULK}/${QCOW2} ]; then
+  echo
+  echo Missing:
+  echo ${BULK}/${QCOW2}
+  echo
+  exit 1
+fi
+#----------------------------------------------------------------------
+is_started=$(cloonix_cli ${NET} pid |grep cloonix_server)
+if [ "x$is_started" == "x" ]; then
+  printf "\nServer Not started, launching:"
+  printf "\ncloonix_net ${NET}:\n"
+  cloonix_net ${NET}
+  echo waiting 2 sec
+  sleep 2
+else
+  cloonix_cli ${NET} rma
+  echo waiting 10 sec
+  sleep 10
+fi
+#----------------------------------------------------------------------
+cloonix_gui ${NET}
+#----------------------------------------------------------------------
+cloonix_cli ${NET} add kvm wire ram=8000 cpu=8 eth=s ${QCOW2} --persistent 
+#----------------------------------------------------------------------
+sleep 3
+#----------------------------------------------------------------------
+set +e
+while ! cloonix_ssh ${NET} wire "echo" 2>/dev/null; do
+  echo wire not ready, waiting 5 sec
+  sleep 5
+done
+#----------------------------------------------------------------------
+
+cloonix_scp ${NET} ${HERE}/../patchelf_*.tar.gz wire:/root
+cloonix_ssh ${NET} wire "tar -xf /root/patchelf_*.tar.gz"
+cloonix_ssh ${NET} wire "cd /root/patchelf; ./configure; make"
+
+cloonix_scp ${NET} ${HERE}/get_all_wire_libs.c wire:/root
+cloonix_ssh ${NET} wire "rm -f /root/copy_libs"
+cloonix_ssh ${NET} wire "gcc -o copy_libs get_all_wire_libs.c"
+
+tar zcvf tainted_wireshark.tar.gz tainted_wireshark
+cloonix_scp ${NET} ${HERE}/tainted_wireshark.tar.gz wire:/root 
+rm -f tainted_wireshark.tar.gz
+cloonix_ssh ${NET} wire "rm -rf /root/tainted_wireshark"
+cloonix_ssh ${NET} wire "tar xvf tainted_wireshark.tar.gz"
+
+cloonix_ssh ${NET} wire "rm -rf /root/shark"
+cloonix_ssh ${NET} wire "mkdir /root/shark"
+cloonix_ssh ${NET} wire "mkdir -p ${WIRELIB}/qt6/plugins"
+cloonix_ssh ${NET} wire "cp -rf /usr/lib/x86_64-linux-gnu/qt6/plugins/platforms ${WIRELIB}/qt6/plugins"
+#----------------------------------------------------------------------
+
+cloonix_ssh ${NET} wire "cd tainted_wireshark; cmake -S /root/tainted_wireshark -B /root/shark"
+cloonix_ssh ${NET} wire "cd tainted_wireshark; cmake --build /root/shark -j 4"
+cloonix_ssh ${NET} wire "cd tainted_wireshark; cmake --install /root/shark"
+
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} wire "strip /root/shark/run/dumpcap"
+cloonix_ssh ${NET} wire "strip /root/shark/run/wireshark"
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} wire "cp /root/shark/run/dumpcap ${DUMPBIN}"
+cloonix_ssh ${NET} wire "cp /root/shark/run/wireshark ${WIREBIN}"
+
+cloonix_ssh ${NET} wire "/root/copy_libs"
+
+export LIST=""
+while read -r line
+do
+  line=${line//$'\r'/}
+  line=${line//$'\n'/}
+  export LIST="$LIST $line"
+done < <(cloonix_ssh ${NET} wire "find ${WIRELIB} -maxdepth 1 -type f")
+
+for i in ${LIST} ; do
+  echo doing ":${i}:"
+  cloonix_ssh ${NET} wire "${PATCHELF} --force-rpath --set-rpath ${RPATH} ${i}"
+done
+
+export LIST=""
+while read -r line
+do
+  line=${line//$'\r'/}
+  line=${line//$'\n'/}
+  export LIST="$LIST $line"
+done < <(cloonix_ssh ${NET} wire "find ${WIRELIB}/qt6/plugins/platforms -maxdepth 1 -type f")
+
+for i in ${LIST} ; do
+  echo doing ":${i}:"
+  cloonix_ssh ${NET} wire "${PATCHELF} --force-rpath --set-rpath ${RPATH} ${i}"
+done
+
+cloonix_ssh ${NET} wire "cp -rf ${WIRELIB}/* ${TARGLIB}"
+
+
+for i in ${WIREBIN} ${DUMPBIN}; do
+  cloonix_ssh ${NET} wire "${PATCHELF} --force-rpath --set-rpath ${RPATH} ${i}"
+  cloonix_ssh ${NET} wire "${PATCHELF} --set-interpreter ${LDLINUX} ${i}"
+done
+
+#----------------------------------------------------------------------
+cloonix_scp ${NET} wire:/usr/libexec/cloonix/server/cloonix-wireshark ${HERE}/built_objects_${ARCH}
+cloonix_scp ${NET} wire:/usr/libexec/cloonix/server/cloonix-dumpcap ${HERE}/built_objects_${ARCH}
+cloonix_scp ${NET} -r wire:${WIRELIB} ${HERE}/built_objects_${ARCH}
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} wire "sync"
+sleep 2
+cloonix_ssh ${NET} wire "sync"
+cloonix_ssh ${NET} wire "poweroff"
+cloonix_cli ${NET} kil
+#----------------------------------------------------------------------
+
+
+
+
+

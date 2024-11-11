@@ -19,4 +19,6 @@ fi
 if [ -x /usr/bin/cloonix_startup_script.sh ]; then
   /usr/bin/cloonix_startup_script.sh
 fi
-sleep infinity
+while [ 1 ]; do
+  sleep 54321
+done

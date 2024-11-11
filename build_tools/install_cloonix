@@ -1,4 +1,5 @@
 #!/bin/bash
+PURE_CRUN="no"
 #----------------------------------------------------------
 if [ $UID != 0 ]; then
   printf "\n\tERROR: root privileges needed.\n\n"
@@ -16,75 +17,69 @@ done
 #----------------------------------------------------------
 rm -rf /usr/libexec/cloonix
 rm -f  /usr/bin/cloonix_*
+rm -rf /tmp/cloonix_install_tmp
+mkdir -p /tmp/cloonix_install_tmp
 #----------------------------------------------------------
-rm -rf /tmp/common
-rm -rf /tmp/server
-#----------------------------------------------------------
-tar --directory=/tmp --no-same-owner -xf common.tar.gz
-tar --directory=/tmp --no-same-owner -xf server.tar.gz
+tar --directory=/tmp/cloonix_install_tmp --no-same-owner -xf common.tar.gz
+tar --directory=/tmp/cloonix_install_tmp --no-same-owner -xf server.tar.gz
 #----------------------------------------------------------
 mkdir -p /usr/libexec/cloonix/common
-cp -rf /tmp/common/* /usr/libexec/cloonix/common
+cp -rf /tmp/cloonix_install_tmp/common/* /usr/libexec/cloonix/common
 rm -rf /usr/libexec/cloonix/common/usr_bin
-rm -rf /usr/libexec/cloonix/common/polkit-1
 chown -R root:root /usr/libexec/cloonix/common
 chmod 755 /usr/libexec/cloonix/common/*
 #----------------------------------------------------------
-for i in  cloonix_cli \
-          cloonix_gui \
-          cloonix_ice \
-          cloonix_ocp \
-          cloonix_osh \
-          cloonix_rsh \
-          cloonix_ovs \
-          cloonix_scp \
-          cloonix_ssh \
-          cloonix_lsh \
-          cloonix_dsh \
-          cloonix_wsk ; do
-  cp -vf /tmp/common/usr_bin/${i} /usr/bin
-  cp -vf /tmp/common/usr_bin/${i} /usr/libexec/cloonix/common
+for i in  "cloonix_cli" \
+          "cloonix_gui" \
+          "cloonix_ocp" \
+          "cloonix_osh" \
+          "cloonix_rsh" \
+          "cloonix_ovs" \
+          "cloonix_scp" \
+          "cloonix_ssh" \
+          "cloonix_lsh" \
+          "cloonix_dsh" \
+          "cloonix_wsk" ; do
+  cp -vf /tmp/cloonix_install_tmp/common/usr_bin/${i} /usr/bin
+  cp -vf /tmp/cloonix_install_tmp/common/usr_bin/${i} /usr/libexec/cloonix/common
 done
 #----------------------------------------------------------
-if [ -d /usr/share/polkit-1/actions ]; then
-  dstusb="/usr/share/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
-  srcusb="/tmp/common/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
-  if [ ! -e ${dstusb} ]; then
-    cp -f ${srcusb} ${dstusb}
+if [ "${PURE_CRUN}" = "no" ]; then
+  cp -vf /tmp/cloonix_install_tmp/common/usr_bin/cloonix_ice /usr/bin
+  cp -vf /tmp/cloonix_install_tmp/common/usr_bin/cloonix_ice /usr/libexec/cloonix/common
+  if [ -d /usr/share/polkit-1/actions ]; then
+    dstusb="/usr/share/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
+    srcusb="/tmp/cloonix_install_tmp/common/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
+    if [ ! -e ${dstusb} ]; then
+      cp -f ${srcusb} ${dstusb}
+    fi
   fi
+  chmod u+s /usr/libexec/cloonix/common/cloonix-spice-client-glib-usb-acl-helper
 fi
-chmod u+s /usr/libexec/cloonix/common/cloonix-spice-client-glib-usb-acl-helper
 #----------------------------------------------------------
 mkdir -p /usr/libexec/cloonix/server
-cp -rf /tmp/server/* /usr/libexec/cloonix/server
+cp -rf /tmp/cloonix_install_tmp/server/* /usr/libexec/cloonix/server
 rm -rf /usr/libexec/cloonix/server/usr_bin
 chown -R root:root /usr/libexec/cloonix/server
 chmod 755 /usr/libexec/cloonix/server/*
 #----------------------------------------------------------
-cp -vf /tmp/server/usr_bin/cloonix_net /usr/bin
+cp -vf /tmp/cloonix_install_tmp/server/usr_bin/cloonix_net /usr/bin
 #----------------------------------------------------------
-for i in cloonix-crun \
-         cloonix-fuse-archive \
-         cloonix-ovs-drv \
-         cloonix-ovs-snf \
-         cloonix-ovs-nat \
-         cloonix-ovs-a2b \
-         cloonix-ovs-c2c \
-         cloonix-ovs-vsctl \
-         cloonix-suid-power ; do
+for i in "cloonix-crun" \
+         "cloonix-fuse-archive" \
+         "cloonix-ovs-drv" \
+         "cloonix-ovs-snf" \
+         "cloonix-ovs-nat" \
+         "cloonix-ovs-a2b" \
+         "cloonix-ovs-c2c" \
+         "cloonix-ovs-vsctl" \
+         "cloonix-suid-power" ; do
   chmod u+s /usr/libexec/cloonix/server/${i}
 done
-#----------------------------------------------------------
-if [ -e /usr/libexec/cloonix/server/dumpcap ]; then
-  chmod u+s /usr/libexec/cloonix/server/dumpcap
-fi
 #----------------------------------------------------------
 mkdir -p /var/lib/cloonix/cache/fontconfig
 mkdir -p /var/lib/cloonix/bulk
 chmod 777 /var/lib/cloonix/cache
 chmod 777 /var/lib/cloonix/cache/fontconfig
 chmod 777 /var/lib/cloonix/bulk
-#----------------------------------------------------------
-rm -rf /tmp/common
-rm -rf /tmp/server
 #----------------------------------------------------------

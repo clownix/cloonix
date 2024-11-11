@@ -1,0 +1,55 @@
+#!/bin/bash
+HERE=`pwd`
+#----------------------------------------------------------------------#
+if [ ${#} = 1 ]; then
+  if [ "$1" = "i386" ]; then
+    ARCH="i386"
+    XORG="xorg_debian_i386.qcow2"
+  else
+    echo param must be i386, if no param, then is amd64
+    exit
+  fi
+else
+  ARCH="amd64"
+  XORG="xorg_debian_amd64.qcow2"
+fi
+#----------------------------------------------------------------------
+is_started=$(cloonix_cli nemo pid |grep cloonix_server)
+if [ "x$is_started" == "x" ]; then
+  printf "\nServer Not started, launching:"
+  printf "\ncloonix_net nemo:\n"
+  cloonix_net nemo
+  echo waiting 2 sec
+  sleep 2
+else
+  cloonix_cli nemo rma
+  echo waiting 10 sec
+  sleep 10
+fi
+#----------------------------------------------------------------------
+cloonix_gui nemo
+#----------------------------------------------------------------------
+if [ ${ARCH} = "i386" ]; then
+  cloonix_cli nemo add kvm xorg ram=8000 cpu=4 eth=s ${XORG} --i386
+else
+  cloonix_cli nemo add kvm xorg ram=8000 cpu=4 eth=s ${XORG}
+fi
+#----------------------------------------------------------------------
+sleep 3
+#----------------------------------------------------------------------
+set +e
+while ! cloonix_ssh nemo xorg "echo" 2>/dev/null; do
+  echo xorg not ready, waiting 5 sec
+  sleep 5
+done
+#----------------------------------------------------------------------
+rm -rf ${HERE}/built_objects_${ARCH}
+mkdir -p ${HERE}/built_objects_${ARCH}
+cloonix_ssh nemo xorg "strip /root/xserver-master/build/hw/vfb/Xvfb"
+cloonix_scp nemo xorg:/root/xserver-master/build/hw/vfb/Xvfb ${HERE}/built_objects_${ARCH}
+#----------------------------------------------------------------------
+
+
+
+
+

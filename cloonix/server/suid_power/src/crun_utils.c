@@ -689,9 +689,8 @@ static int read_crun_create_pid(char *name, int should_not_exist)
     nb_tries = 1;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "%s --log=%s --root=/var/lib/cloonix/%s/crun "
-  "state %s | %s \"\\\"pid\\\"\" | %s '{ print $2 }'",
-  CRUN_BIN, ptr, get_net_name(), name, GREP_BIN, AWK_BIN);
+  "%s --log=%s --root=/var/lib/cloonix/%s/%s state %s | %s \"\\\"pid\\\"\" | %s '{ print $2 }'",
+  CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name, GREP_BIN, AWK_BIN);
   while(create_pid == 0)
     {
     count += 1;
@@ -825,7 +824,8 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name)
   len += sprintf(cmd+len, "%s", CRUN_BIN); 
   len += sprintf(cmd+len, " --cgroup-manager=disabled"); 
   len += sprintf(cmd+len, " --log=%s", g_var_crun_log); 
-  len += sprintf(cmd+len, " --root=/var/lib/cloonix/%s/crun",get_net_name()); 
+  len += sprintf(cmd+len, " --root=/var/lib/cloonix/%s/%s",
+                 get_net_name(), CRUN_DIR); 
   len += sprintf(cmd+len, " create"); 
   len += sprintf(cmd+len, " --config=%s/%s/config.json", cnt_dir, name);
   len += sprintf(cmd+len, " %s", name); 
@@ -958,8 +958,8 @@ static int nspace_create(char *name, char *nspacecrun, int cloonix_rank,
     kill(pid, 9);
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, 
-           "%s --log=%s --root=/var/lib/cloonix/%s/crun delete %s",
-           CRUN_BIN, ptr, get_net_name(), name);
+           "%s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
+           CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
   execute_cmd(cmd, 0);
   check_netns_and_clean(name, nspacecrun, vm_id, nb_eth);
   memset(cmd, 0, MAX_PATH_LEN);
@@ -1078,8 +1078,8 @@ int crun_utils_delete_crun_stop(char *name, int crun_pid)
     }
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-           "%s --log=%s --root=/var/lib/cloonix/%s/crun delete %s",
-           CRUN_BIN, ptr, get_net_name(), name);
+           "%s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
+           CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1))
     {
     KERR("ERROR %s", cmd);
@@ -1099,8 +1099,8 @@ int crun_utils_create_crun_start(char *name)
   memset(cmd, 0, MAX_PATH_LEN);
   memset(line, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-           "%s --cgroup-manager=disabled --log=%s --root=/var/lib/cloonix/%s/crun start %s",
-           CRUN_BIN, ptr, get_net_name(), name);
+  "%s --cgroup-manager=disabled --log=%s --root=/var/lib/cloonix/%s/%s start %s",
+  CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1))
     {
     KERR("ERROR %s", cmd);

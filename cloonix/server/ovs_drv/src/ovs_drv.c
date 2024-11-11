@@ -1074,7 +1074,7 @@ int main (int argc, char *iargv[])
   init_environ(net, g_ovs_bin, g_ovs_dir);
   signal(SIGINT, cmd_interrupt);
   cloonix_part_init(ctl_argv);
-  clownix_timeout_add(2000, timeout_heartbeat_start, NULL, NULL, NULL);
+  clownix_timeout_add(6000, timeout_heartbeat_start, NULL, NULL, NULL);
   daemon(0,0);
   memset(argv, 0, NB_ARG * sizeof(char *));
   argv[0] = IP_BIN;

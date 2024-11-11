@@ -61,6 +61,8 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
   rm -f ${SERVER}/script_pty/cloonix-scriptpty
 #----------------------------------------------------------
   for i in ovs \
+           nginx \
+           websockify-js \
            ovs_drv \
            ovs_snf \
            ovs_nat \

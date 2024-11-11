@@ -72,7 +72,9 @@ if [ "${ARCH}" = "i386" ]; then
 else
   mv build/qemu-system-x86_64   ${HERE}/cloonix-qemu-system
 fi
+strip ${HERE}/cloonix-qemu-system
 mv build/qemu-img             ${HERE}/cloonix-qemu-img
+strip ${HERE}/cloonix-qemu-img
 cp pc-bios/bios-256k.bin      ${HERE}
 cp pc-bios/efi-virtio.rom     ${HERE}
 cp pc-bios/efi-e1000.rom      ${HERE}

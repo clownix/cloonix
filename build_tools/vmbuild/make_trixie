@@ -13,14 +13,10 @@ else
   LINUX="linux-image-amd64"
 fi
 #----------------------------------------------------------------------#
-#DISTRO=bookworm
-#DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
-#REPO="http://127.0.0.1/debian/bookworm"
-#----------------------------------------------------------------------#
 DISTRO=trixie
 DEFVIM=/tmp/wkmntloops/usr/share/vim/vim91/defaults.vim
 ROOTFS=/var/lib/cloonix/bulk/${DISTRO}_${ARCH}
-REPO="http://deb.debian.org/debian"
+REPO="http://127.0.0.1/debian/${DISTRO}"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -84,7 +80,7 @@ fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
 list_pkt="${LINUX},grub2,openssh-client,vim,"
 list_pkt+="bash-completion,net-tools,file,qemu-guest-agent,"
-list_pkt+="locales,x11-apps"
+list_pkt+="locales,x11-apps,strace"
 
 debootstrap --no-check-certificate \
 	    --no-check-gpg \

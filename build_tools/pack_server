@@ -1,4 +1,5 @@
 #!/bin/bash
+PURE_CRUN="no"
 #----------------------------------------------------------------------#
 if [ ${#} = 1 ]; then
   if [ "$1" = "i386" ]; then
@@ -32,7 +33,6 @@ SERVER="${CLOONIX_TREE_ROOT}/build_tools/server"
 COMMON="${CLOONIX_TREE_ROOT}/build_tools/common"
 mkdir -p ${SERVER}
 cp -rf ${TMPBUILD}/cloonix/server/* ${SERVER}
-rm -rf ${SERVER}/spice_lib_server
 rm -rf ${SERVER}/iso_agent_dropbear
 rm -rf ${SERVER}/create_insider_agents_iso
 #----------------------------------------------------------
@@ -66,6 +66,12 @@ for i in cloonix-ovsdb-server \
 done
 rm -rf ${SERVER}/ovs
 #----------------------------------------------------------
+cp -f ${SERVER}/nginx/bin/cloonix-novnc-nginx ${SERVER}
+rm -rf ${SERVER}/nginx
+#----------------------------------------------------------
+cp -f ${SERVER}/websockify-js/bin/cloonix-novnc-websockify-js ${SERVER}
+rm -rf ${SERVER}/websockify-js
+#----------------------------------------------------------
 cp -f ${SERVER}/ovs_c2c/cloonix-ovs-c2c ${SERVER}
 rm -rf ${SERVER}/ovs_c2c
 #----------------------------------------------------------
@@ -81,12 +87,15 @@ rm -rf ${SERVER}/ovs_nat
 cp -f ${SERVER}/ovs_snf/cloonix-ovs-snf ${SERVER}
 rm -rf ${SERVER}/ovs_snf
 #----------------------------------------------------------
-mv ${SERVER}/qemu/cloonix-qemu-system ${SERVER}
-mv ${SERVER}/qemu/cloonix-qemu-img ${SERVER}
-for i in cmd allclean qemu_bin tainted_qemu \
-         cloonix_patch mkpatch patched_create ; do
-  rm -rf ${SERVER}/qemu/${i}
-done
+if [ "${PURE_CRUN}" = "no" ]; then
+  rm -rf ${SERVER}/spice_lib_server
+  mv ${SERVER}/qemu/cloonix-qemu-system ${SERVER}
+  mv ${SERVER}/qemu/cloonix-qemu-img ${SERVER}
+  for i in cmd allclean qemu_bin tainted_qemu \
+           cloonix_patch mkpatch patched_create ; do
+    rm -rf ${SERVER}/qemu/${i}
+  done
+fi
 #----------------------------------------------------------
 cp -f ${SERVER}/dtach/cloonix-dtach ${SERVER}
 rm -rf ${SERVER}/dtach
@@ -95,24 +104,21 @@ cp -f ${SERVER}/script_pty/cloonix-scriptpty ${SERVER}
 rm -rf ${SERVER}/script_pty
 #----------------------------------------------------------
 cp -f ${SERVER}/crun/crun_tainted/crun ${SERVER}/cloonix-crun
-rm -rf ${SERVER}/crun_tainted
+rm -rf ${SERVER}/crun
 #----------------------------------------------------------
 cp -f ${SERVER}/fuse-archive/fuse-archive/fuse-archive ${SERVER}/cloonix-fuse-archive
 rm -rf ${SERVER}/fuse-archive
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
-  cp -f ${TARGZ_STORE}/shark/built_objects_i386/dumpcap ${SERVER}
-  cp -f ${TARGZ_STORE}/shark/built_objects_i386/wireshark ${SERVER}/cloonix-wireshark
-  cp -f ${TARGZ_STORE}/xorg/built_objects_i386/Xvfb ${SERVER}/cloonix-novnc-Xvfb
-  cp -f ${TARGZ_STORE}/iproute2/built_objects_i386/ip ${SERVER}
+  echo NOT MAINTAINED!!!!!!!!!!!!!
+  exit -1
 else
-  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/dumpcap ${SERVER}
-  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/wireshark ${SERVER}/cloonix-wireshark
   cp -f ${TARGZ_STORE}/xorg/built_objects_amd64/Xvfb ${SERVER}/cloonix-novnc-Xvfb
   cp -f ${TARGZ_STORE}/iproute2/built_objects_amd64/ip ${SERVER}
+  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/cloonix-wireshark ${SERVER}
+  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/cloonix-dumpcap ${SERVER}
 fi
 #----------------------------------------------------------
-cp -d /usr/bin/python3* ${SERVER}
 cp -f /usr/bin/xauth     ${SERVER}/xauth
 cp -f /usr/bin/xkbcomp   ${SERVER}/xkbcomp
 cp -f /bin/bash          ${SERVER}/cloonix-bash
@@ -131,14 +137,6 @@ for i in "x11vnc" "xsetroot"
 do
   cp -f /usr/bin/${i}  ${SERVER}/cloonix-novnc-${i}
 done
-
-#NOVNC----------------------------------------------------------
-cp -f /root/.local/share/pipx/venvs/websockify/bin/websockify ${SERVER}/cloonix-novnc-websockify
-sed -i s'%#!%#!/usr/libexec/cloonix/server/python3%' ${SERVER}/cloonix-novnc-websockify
-sed -i s'%/root\(.*\)%%' ${SERVER}/cloonix-novnc-websockify
-#----------------------------------------------------------
-
-
 
 #----------------------------------------------------------
 openssl req -x509 -nodes -newkey rsa:3072 -keyout novnc.pem -subj "/CN=cloonix.net" -out ${SERVER}/novnc.pem -days 3650

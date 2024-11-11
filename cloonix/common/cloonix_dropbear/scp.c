@@ -333,7 +333,7 @@ ssh_program = g_path_to_scp_ssh;
 	remin = remout = -1;
 	pid_cmd_do = -1;
 	/* Command to be executed on remote system using "ssh". */
-	(void) snprintf(cmd, sizeof cmd, "scp%s%s%s%s",
+	(void) snprintf(cmd, sizeof cmd, "/mnt/cloonix_config_fs/cloonix-scp%s%s%s%s",
 	    verbose_mode ? " -v" : "",
 	    iamrecursive ? " -r" : "", pflag ? " -p" : "",
 	    targetshouldbedirectory ? " -d" : "");

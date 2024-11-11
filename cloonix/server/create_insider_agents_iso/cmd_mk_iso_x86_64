@@ -2,6 +2,11 @@
 HERE=`pwd`
 set -e
 
+TARGZ_STORE=${HERE}/../../../targz_store
+tar --directory=/tmp -xf ${TARGZ_STORE}/patchelf_*.tar.gz
+cd /tmp/patchelf
+make
+
 TARGET="${HERE}/../insider_agents"
 ISO_NAME="insider_agent_x86_64.iso"
 XORRISO="/usr/bin/xorrisofs"
@@ -51,14 +56,25 @@ export LDFLAGS="-Wl,-rpath -Wl,${LIB_DST}"
 export LDFLAGS="${LDFLAGS} -Wl,--dynamic-linker -Wl,${LIB_DST}/${LIBD_NAME}"
 make clean
 make dropbear
+make scp
 
 cp dropbear ${CDROM}/cloonix-dropbear-sshd
+cp /usr/bin/scp ${CDROM}/cloonix-scp
+LDLINUX="${LIB_DST}/ld-linux-x86-64.so.2"
+RPATH_LIB="${LIB_DST}"
+PATCHELF="/tmp/patchelf/src/patchelf"
+${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CDROM}/cloonix-scp 2>/dev/null
+${PATCHELF} --set-interpreter ${LDLINUX}  ${CDROM}/cloonix-scp 2>/dev/null
+
+
 cp -vf $LIBC ${CDROM}/lib
 cp -vf $LIBD ${CDROM}/lib
 
 cd ${HERE}/cloonix_agent
 make clean
 make
+
+gcc ${LDFLAGS}  -o ${CDROM}/cloonix-scriptpty ${HERE}/../../server/script_pty/scriptpty.c
 
 cp cloonix-agent ${CDROM}
 make clean

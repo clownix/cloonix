@@ -126,8 +126,6 @@ static void fill_distant_xauthority(char *net)
 static void set_env_global_cloonix(char *net)
 {
   char rdir[MAX_PATH_LEN];
-  char *px86_64="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/qt6/plugins";
-  char *pi386="/usr/libexec/cloonix/common/lib/i386-linux-gnu/qt6/plugins";
   clearenv();
   if (g_home)
     setenv("HOME", g_home, 1);
@@ -137,41 +135,14 @@ static void set_env_global_cloonix(char *net)
     setenv("USER", g_user, 1);
   if (g_xauthority)
     setenv("XAUTHORITY", g_xauthority, 1);
-
   setenv("PATH",  "/usr/libexec/cloonix/common:/usr/libexec/cloonix/server", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
   setenv("SHELL", "/usr/libexec/cloonix/common/bash", 1);
-  setenv("TERM", "rxvt", 1);
+  setenv("TERM", "xterm", 1);
   memset(rdir, 0, MAX_PATH_LEN);
-  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run", net);
-  setenv("XDG_RUNTIME_DIR", rdir, 1);
-  setenv("XDG_CACHE_HOME", rdir, 1);
-  setenv("XDG_DATA_HOME", rdir, 1);
-  memset(rdir, 0, MAX_PATH_LEN);
-  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run/.config", net);
-  setenv("XDG_CONFIG_HOME", rdir, 1);
-
-  memset(rdir, 0, MAX_PATH_LEN);
-//  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/%s/run/.Xauthority", net);
   snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/cache/.Xauthority");
   setenv("XAUTHORITY", rdir, 1);
-
-  setenv("NO_AT_BRIDGE", "1", 1);
-  setenv("QT_X11_NO_MITSHM", "1", 1);
-  setenv("QT_XCB_NO_MITSHM", "1", 1);
-  if (file_exists(pi386))
-    {
-    setenv("QT_PLUGIN_PATH", pi386, 1);
-    setenv("PIPEWIRE_MODULE_DIR", "/usr/libexec/cloonix/common/lib/i386-linux-gnu/pipewire-0.3", 1);
-    }
-  else if (file_exists(px86_64))
-    {
-    setenv("QT_PLUGIN_PATH", px86_64, 1);
-    setenv("PIPEWIRE_MODULE_DIR", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/pipewire-0.3", 1);
-    }
-  setenv("GST_PLUGIN_SCANNER", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner", 1);
-  setenv("GST_PLUGIN_PATH", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/gstreamer-1.0", 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -493,8 +464,8 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     snprintf(title, MAX_NAME_LEN-1, "%s/%s", argv[2], argv[3]);
     snprintf(param, 399, "/usr/libexec/cloonix/server/cloonix-crun "
                          "--log=/var/lib/cloonix/%s/log/debug_crun.log "
-                         "--root=/var/lib/cloonix/%s/crun/ exec %s /bin/sh",
-                         argv[2], argv[2], argv[3]);
+                         "--root=/var/lib/cloonix/%s/%s/ exec %s /bin/sh",
+                         argv[2], argv[2], CRUN_DIR, argv[3]);
     new_argv[0] = URXVT_BIN;
     new_argv[1] = "-T";
     new_argv[2] = title;
@@ -527,19 +498,18 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     if (argc != 5)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
-    snprintf(sock, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/snf/%s_%s", argv[2], argv[3], argv[4]);
+    snprintf(sock, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/snf/%s_%s",
+             argv[2], argv[3], argv[4]);
+    snprintf(title, MAX_PATH_LEN-1, "%s,%s,eth%d", argv[2],  argv[3], argv[4]);
     new_argv[0] = XWYCLI_BIN;
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     new_argv[3] = "-dae";
     new_argv[4] = WIRESHARK_BIN;
-    new_argv[5] = "-o";
-    new_argv[6] = "capture.no_interface_load:TRUE";
-    new_argv[7] = "-o";
-    new_argv[8] = "gui.ask_unsaved:FALSE";
-    new_argv[9] = "-k";
-    new_argv[10] = "-i";
-    new_argv[11] = sock;
+    new_argv[5] = "-i";
+    new_argv[6] = sock;
+    new_argv[7] = "-t";
+    new_argv[8] = title;
     }
 /*CLOONIX_OVS-----------------------*/
   else if (!strcmp("ovs", argv[1]))
@@ -604,25 +574,14 @@ int main(int argc, char *argv[])
   else
     {
     init_log_cmd(argv[2]);
-    if (strcmp("ice", argv[1]))
+    if (!strcmp("gui", argv[1]))
       {
-      // For spice, no change in env.
-      if (!strcmp("gui", argv[1]))
-        fill_distant_xauthority(argv[2]);
+      fill_distant_xauthority(argv[2]);
+      }
+    else if (strcmp("ice", argv[1]))
+      {
       set_env_global_cloonix(argv[2]);
       }
-    }
-  if (!strcmp("ice", argv[1]))
-    {
-    // To have real usb in virtual, must have root power
-    }
-  else if (!strcmp("scp", argv[1]))
-    {
-    // To have scp from anywhere, must not hide host
-    }
-  else
-    {
-    hide_real_machine();
     }
 /*--------------------------------------------------------------------------*/
   if (initialise_new_argv(argc, argv, new_argv, ip, port, passwd))

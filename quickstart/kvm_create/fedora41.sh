@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-releasever=40
+releasever=41
 basearch=x86_64
 DISTRO=fedora${releasever}
 ROOTFS=/var/lib/cloonix/bulk/${DISTRO}
@@ -138,7 +138,7 @@ echo dnf -y install
 chroot /tmp/wkmntloops/ dnf --releasever=${releasever} --nogpgcheck -y install $list_pkt
 chroot /tmp/wkmntloops/ grub2-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
 
-KERN="noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
+KERN="rw noquiet console=ttyS0 console=tty1 earlyprintk=serial net.ifnames=0"
 printf "\nGRUB_CMDLINE_LINUX_DEFAULT=\"%s\"\n" "$KERN" \
         > /tmp/wkmntloops/etc/default/grub
 

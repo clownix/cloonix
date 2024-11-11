@@ -12,13 +12,11 @@ else
 fi
 #----------------------------------------------------------------------#
 HERE=`pwd`
-DISTRO=bookworm
 DISTRO=trixie
 NET=nemo
 NAME=dev
 BULK="/var/lib/cloonix/bulk"
-REPO="http://172.17.0.2/debian/bookworm"
-REPO="http://deb.debian.org/debian"
+REPO="http://172.17.0.2/debian/${DISTRO}"
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
 if [ "x$is_started" == "x" ]; then
@@ -55,39 +53,36 @@ while ! cloonix_ssh ${NET} ${NAME} "echo" 2>/dev/null; do
   sleep 5
 done
 #----------------------------------------------------------------------
-cloonix_ssh ${NET} ${NAME} "dhclient eth0"
+cloonix_ssh ${NET} ${NAME} "dhcpcd eth0"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "cat > /etc/apt/sources.list << EOF
 deb ${REPO} ${DISTRO} main contrib non-free non-free-firmware
 EOF"
 #----------------------------------------------------------------------
-cloonix_ssh ${NET} ${NAME} "apt-get --assume-yes update"
-
-
-
-cloonix_ssh ${NET} ${NAME} "apt-get -y install \
-                      tar build-essential g++ cmake \
+cloonix_ssh ${NET} ${NAME} "DEBIAN_FRONTEND=noninteractive \
+                        DEBCONF_NONINTERACTIVE_SEEN=true \
+                        apt-get -o Dpkg::Options::=--force-confdef \
+                        -o Acquire::Check-Valid-Until=false \
+                        --allow-unauthenticated --assume-yes update"
+#----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
+                         -o Acquire::Check-Valid-Until=false \
+                         --allow-unauthenticated --assume-yes install \
+                      tar build-essential g++ cmake autoconf \
                       pkg-config intltool libtool meson ninja-build \
                       libssl-dev libusb-1.0-0-dev patch libglib2.0-dev \
                       libpixman-1-dev python3 python3-six sudo xauth \
                       python3-pyparsing python3-venv libjpeg-dev \
-                      libgstreamer1.0-dev \
-                      gstreamer1.0-plugins-good \
-                      gstreamer1.0-plugins-bad \
-                      libgstreamer-plugins-base1.0-dev \
-                      libgstreamer-plugins-bad1.0-dev \
-                      gstreamer1.0-plugins-bad-apps \
-                      gstreamer1.0-plugins-base-apps \
-                      gstreamer1.0-plugins-ugly \
-                      gstreamer1.0-tools \
-                      liblz4-dev libpcap-dev libsasl2-dev \
-                      libnuma-dev libepoxy-dev xorriso \
-                      libgtk-3-dev libjson-glib-dev libacl1-dev \
-                      libpolkit-gobject-1-dev \
-                      libyajl-dev make git libsystemd-dev \
-                      libprotobuf-c-dev libcap-dev libseccomp-dev \
-                      libgcrypt20-dev go-md2man locales libffi-dev \
-                      libfdt-dev libfuse-dev libarchive-dev libaio-dev \
+                      libgstreamer1.0-dev zlib1g-dev gstreamer1.0-plugins-good \
+                      gstreamer1.0-plugins-bad libgstreamer-plugins-base1.0-dev \
+                      libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-bad-apps \
+                      gstreamer1.0-plugins-base-apps gstreamer1.0-plugins-ugly \
+                      gstreamer1.0-tools liblz4-dev libpcap-dev libsasl2-dev \
+                      libnuma-dev libepoxy-dev xorriso libgtk-3-dev \
+                      libjson-glib-dev libacl1-dev libpolkit-gobject-1-dev \
+                      libyajl-dev make git libsystemd-dev libprotobuf-c-dev \
+                      libcap-dev libseccomp-dev libgcrypt20-dev go-md2man locales \
+                      libffi-dev libfdt-dev libfuse-dev libarchive-dev libaio-dev \
                       liburing-dev fuse-zip libasound2-dev libc-ares-dev \
                       libpcre2-dev flex libgcrypt20-dev libspeexdsp-dev \
                       qt6-base-dev qt6-multimedia-dev qt6-tools-dev \
@@ -98,20 +93,14 @@ cloonix_ssh ${NET} ${NAME} "apt-get -y install \
                       libparse-yapp-perl libsnappy-dev libzstd-dev \
                       libspandsp-dev libxml2-dev libminizip-dev \
                       perl xsltproc ccache doxygen bison gdb \
-                      ncurses-base strace gcc-11-multilib \
-                      x11vnc \
-                      x11-xserver-utils libxmu-dev \
-                      x11-xkb-utils x11proto-dev \
+                      ncurses-base strace gcc-11-multilib x11vnc \
+                      x11-xserver-utils libxmu-dev x11-xkb-utils x11proto-dev \
                       libxshmfence-dev libbsd-dev libxkbfile-dev \
                       libxfont-dev libxcvt-dev libdecor-0-dev \
                       libei-dev liboeffis-dev libaudit-dev \
                       mesa-common-dev libpipewire-0.3-dev \
-                      libpipewire-0.3-modules util-linux \
-                      pipewire-pulse pipx unzip zip"
-
-#libzip-dev
-
-cloonix_ssh ${NET} ${NAME} "pipx install websockify"
+                      libpipewire-0.3-modules util-linux rsyslog \
+                      pipewire-pulse unzip zip curl wget libboost-dev"
 
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"
