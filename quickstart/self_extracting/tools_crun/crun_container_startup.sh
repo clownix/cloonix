@@ -6,9 +6,8 @@ CONFIG="${EXTRACT}/config/config.json"
 TEMPLATE="${EXTRACT}/config/config.json.template"
 CRUN="${EXTRACT}/bin/cloonix-crun"
 PTYS="${EXTRACT}/bin/cloonix-scriptpty"
-XAUTH="${ROOTFS}/usr/libexec/cloonix/common/xauth"
+XAUTH="${EXTRACT}/bin/xauth"
 GREP="${ROOTFS}/usr/libexec/cloonix/common/grep"
-PATCHELF="${ROOTFS}/usr/libexec/cloonix/common/cloonix-patchelf"
 LIBCDIR="./bin"
 #-----------------------------------------------------------------------------
 CAPA="[\"CAP_CHOWN\",\"CAP_DAC_OVERRIDE\",\"CAP_DAC_READ_SEARCH\",\
@@ -23,7 +22,7 @@ CAPA="[\"CAP_CHOWN\",\"CAP_DAC_OVERRIDE\",\"CAP_DAC_READ_SEARCH\",\
 \"CAP_WAKE_ALARM\",\"CAP_BLOCK_SUSPEND\",\"CAP_AUDIT_READ\",\"CAP_PERFMON\",\
 \"CAP_BPF\",\"CAP_CHECKPOINT_RESTORE\"]"
 #-----------------------------------------------------------------------------
-for i in ${CRUN} ${PTYS} ${XAUTH} ${GREP} ${PATCHELF} ; do
+for i in ${CRUN} ${PTYS} ${XAUTH} ${GREP} ; do
   if [ ! -x ${i} ]; then 
     echo NOT FOUND:
     echo ${i}
@@ -31,11 +30,6 @@ for i in ${CRUN} ${PTYS} ${XAUTH} ${GREP} ${PATCHELF} ; do
     exit
   fi
 done
-#-----------------------------------------------------------------------------
-${PATCHELF} --force-rpath --set-rpath ${LIBCDIR} ${CRUN}
-${PATCHELF} --force-rpath --set-rpath ${LIBCDIR} ${PTYS}
-${PATCHELF} --set-interpreter ${LIBCDIR}/ld-linux-x86-64.so.2 ${CRUN}
-${PATCHELF} --set-interpreter ${LIBCDIR}/ld-linux-x86-64.so.2 ${PTYS}
 #-----------------------------------------------------------------------------
 XAUTH_LINE=$(${XAUTH} list |grep unix${DISPLAY})
 XAUTH_CODE=${XAUTH_LINE##*MIT-MAGIC-COOKIE-1 }
@@ -66,7 +60,7 @@ sed -i s"%__UID__%${UID}%"   ${CONFIG}
 #-----------------------------------------------------------------------------
 mkdir -p ${EXTRACT}/log
 #-----------------------------------------------------------------------------
-${PTYS} "${CRUN} --rootless=100000 --log=${EXTRACT}/log/crun.log --root=${ROOTFS}/tmp run -f ${CONFIG} nemo"
+${PTYS} "${CRUN} --cgroup-manager=disabled --rootless=100000 --log=${EXTRACT}/log/crun.log --root=${ROOTFS}/tmp run -f ${CONFIG} nemo"
 #-----------------------------------------------------------------------------
 echo END SCRIPT
 #-----------------------------------------------------------------------------

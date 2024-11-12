@@ -382,7 +382,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
      }
    else  if ((action == action_cmd) || (action == action_dae))
       {
-      hide_real_machine_serv();
+//      hide_real_machine_serv();
       create_argv_from_cmd(cmd, argv);
       }
     else

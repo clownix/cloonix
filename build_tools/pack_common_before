@@ -161,10 +161,10 @@ cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
 #----------------------------------------------------------
 cp -f /bin/bash ${COMMON}
 #----------------------------------------------------------
-for i in "awk" "cat" "chmod" "chown" "cp" "echo" "ps" \
+for i in "awk" "cat" "chmod" "chown" "cp" "echo" "ps" "mkdir" \
          "env" "grep" "id" "kill" "ldd" "strace" "ls" \
          "locale" "localedef" "localectl" "xauth" "ln" \
-         "xeyes" "xclock" "diff" "unzip" "unshare" \
+         "xeyes" "xclock" "diff" "unzip" "unshare" "tail" \
          "touch" "vim" "sleep" "find" "grep" "file" ; do
   cp -f /usr/bin/${i} ${COMMON}
 done

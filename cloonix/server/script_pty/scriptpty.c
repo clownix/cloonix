@@ -567,8 +567,17 @@ int main(int argc, char **argv)
   struct script_control ctl;
   struct ul_pty_callbacks *cb;
   int ch, format = 0, caught_signal = 0, rc = 0, echo = 1;
-  if (access("/usr/libexec/cloonix/common/bash", X_OK))
-    KOUT("ERROR failed to execute /usr/libexec/cloonix/common/bash");
+  char local_path[PATH_MAX];
+  char *current_dir_name = getcwd(local_path, PATH_MAX);
+  char path_to_bash[PATH_MAX];
+
+  snprintf(path_to_bash, PATH_MAX-1, "/usr/libexec/cloonix/common/bash");
+  if (access( path_to_bash, X_OK))
+    {
+    snprintf(path_to_bash, PATH_MAX-1, "%s/bin/bash", current_dir_name);
+    if (access( path_to_bash, X_OK))
+      KOUT("ERROR scriptpty.c failed to find /usr/libexec/cloonix/common/bash or %s", path_to_bash);
+    }
   if (argc != 2)
     KOUT("ERROR failed argc = %d", argc);
   ctl.pty = calloc(1, sizeof(*ctl.pty));
@@ -590,7 +599,7 @@ int main(int argc, char **argv)
     {
     ul_pty_init_slave(ctl.pty);
     signal(SIGTERM, SIG_DFL);
-    execl("/usr/libexec/cloonix/common/bash", "sh", "-c", argv[1], (char *)NULL);
+    execl(path_to_bash, "sh", "-c", argv[1], (char *)NULL);
     KOUT("ERROR failed to execute %s", "/bin/sh");
     }
   ctl.pty->child = ctl.child;

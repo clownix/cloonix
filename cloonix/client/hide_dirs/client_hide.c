@@ -577,6 +577,7 @@ int main(int argc, char *argv[])
     if (!strcmp("gui", argv[1]))
       {
       fill_distant_xauthority(argv[2]);
+      setenv("NO_AT_BRIDGE", "1", 1);
       }
     else if (strcmp("ice", argv[1]))
       {
