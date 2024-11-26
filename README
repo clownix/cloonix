@@ -1,5 +1,5 @@
 ==============================================================================
-                               v41-00
+                               v42-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -20,7 +20,7 @@ and libraries are collected and put into an autonomous bundle, this makes
 the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-41-00/html/index.html doc.
+http://clownix.net/doc_stored/build-42-00/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp cloonix api.
@@ -34,9 +34,9 @@ NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
         1) Download software and installation:
         ======================================
 
-wget http://clownix.net/downloads/cloonix-41/cloonix-bundle-41-00-amd64.tar.gz
-tar xvf cloonix-bundle-41-00-amd64.tar.gz
-cd cloonix-bundle-41-00-amd64
+wget http://clownix.net/downloads/cloonix-42/cloonix-bundle-42-00-amd64.tar.gz
+tar xvf cloonix-bundle-42-00-amd64.tar.gz
+cd cloonix-bundle-42-00-amd64
 sudo ./install_cloonix
 
 (To uninstall:   rm -f /usr/bin/cloonix_*
@@ -50,9 +50,9 @@ sudo ./install_cloonix
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-41/bulk/openwrt.qcow2.gz
+wget http://clownix.net/downloads/cloonix-42/bulk/openwrt.qcow2.gz
 gunzip bookworm.qcow2.gz
-wget http://clownix.net/downloads/cloonix-41/bulk/zipbasic.zip
+wget http://clownix.net/downloads/cloonix-42/bulk/zipbasic.zip
 
 
         =============================
@@ -60,7 +60,7 @@ wget http://clownix.net/downloads/cloonix-41/bulk/zipbasic.zip
         =============================
 
 cd ${HOME}
-wget http://clownix.net/downloads/cloonix-41/demos/ping_demo.sh
+wget http://clownix.net/downloads/cloonix-42/demos/ping_demo.sh
 
 
         ===============
@@ -91,7 +91,7 @@ for the cloonix run and a self-contained crun executable.
 
         1) Download:
         ============
-wget http://clownix.net/downloads/cloonix-41/self_extracting_cloonix.sh
+wget http://clownix.net/downloads/cloonix-42/self_extracting_cloonix.sh
 
         2) Extract:
         ===========
