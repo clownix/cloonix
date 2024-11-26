@@ -280,6 +280,17 @@ char *utils_get_nginx_logs_dir(void)
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+char *utils_get_nginx_client_body_temp_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *root = cfg_get_root_work();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s/client_body_temp", root, NGINX_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
 
 /*****************************************************************************/
 char *utils_get_log_dir(void)
@@ -806,7 +817,7 @@ int util_get_max_tempo_fail(void)
   (void) vm;
   (void) cnt;
   nb = nb_vm + nb_cnt/3;
-  return (nb*200 + 5000); 
+  return (nb*250 + 10000); 
 }
 /*---------------------------------------------------------------------------*/
 

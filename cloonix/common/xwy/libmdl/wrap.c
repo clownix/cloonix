@@ -236,6 +236,8 @@ ssize_t wrap_write_x11_soc(int s, const void *buf, long unsigned int len)
 ssize_t wrap_write_dialog_thread(int s, const void *buf, long unsigned int len)
 {
   ssize_t wlen = write(s, buf, len);
+  if (wlen <=0 )
+    KERR("ERROR %d", len);
   return wlen;
 }
 /*--------------------------------------------------------------------------*/
@@ -335,6 +337,8 @@ ssize_t wrap_read_sig(int s, void *buf, size_t len)
 ssize_t wrap_read_dialog_thread(int s, void *buf, size_t len)
 {
   ssize_t rlen = read(s, buf, len);
+  if (rlen <=0 )
+    KERR("ERROR %d", len);
   return rlen;
 }
 /*--------------------------------------------------------------------------*/

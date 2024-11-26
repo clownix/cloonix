@@ -160,7 +160,6 @@ int low_write_fd(int s)
     KOUT("%d", lw->type);
   while(1)
     {
-    DEBUG_IOCTL_TX_QUEUE(s, lw->type, used);
     result = low_write_first_el(lw);
     if (result == 0)
       free_first_el(lw);

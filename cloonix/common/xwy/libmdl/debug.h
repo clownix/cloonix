@@ -15,8 +15,9 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-// #define DEBUG
 
+
+//        #define DEBUG
 
 
 int debug_get_trunc_usec(void);
@@ -26,13 +27,12 @@ char *debug_get_thread_type_txt(int type);
 
 #ifdef DEBUG
 
-#define DEBUG_LOG_FILE_SRV "/tmp/xwy_log_srv"
-#define DEBUG_LOG_FILE_CLI "/tmp/xwy_log_cli"
+#define DEBUG_LOG_FILE_SRV "/tmp/cloonix_xwy_log_srv"
+#define DEBUG_LOG_FILE_CLI "/tmp/cloonix_xwy_log_cli"
 
 
 char *debug_get_evt_type_txt(int type);
 char *debug_pty_txt(t_msg *msg);
-int debug_get_ioctl_queue_len(int fd, int type, int *used);
 void debug_dump_enqueue(int fd_dst, t_msg *msg, int all, int th);
 void debug_dump_enqueue_levels(int fd_dst, int slots, int bytes); 
 void debug_wrap_read_write(int is_read, int fd, int len, 
@@ -54,14 +54,10 @@ void debug_init(int is_srv);
       debug_evt(format, ## a);             \
     } while (0)
 
-#define DEBUG_IOCTL_TX_QUEUE(fd,type,used)      \
-   do {                                         \
-      debug_get_ioctl_queue_len(fd,type,&used); \
-    } while (0)
-
 #define DEBUG_WRAP_READ_WRITE(is_read, fd, len, from, buf) \
    do {                                                    \
-      debug_wrap_read_write(is_read, fd, len, from, buf);  \
+      if (len <= 0)                                        \
+        debug_wrap_read_write(is_read, fd, len, from, buf);\
     } while (0)
 
 #define DEBUG_DUMP_ENQUEUE(fd_dst, msg, all, th) \
@@ -89,7 +85,6 @@ void debug_init(int is_srv);
 
 #define DEBUG_INIT(is_srv)
 #define DEBUG_EVT(format, a...)
-#define DEBUG_IOCTL_TX_QUEUE(fd,type,used)
 #define DEBUG_WRAP_READ_WRITE(is_read, fd, len, from, buf) 
 #define DEBUG_DUMP_ENQUEUE(fd_dst, msg, all, th)
 #define DEBUG_DUMP_ENQUEUE_LEVELS(fd_dst, slots, bytes)

@@ -16,10 +16,16 @@ Cloonix is an AGPLv3 suite of C software components designed to seamlessly
 integrate various well-known open-source software, creating a unified and 
 cohesive tool that facilitates the creation of virtual networks.
 
-The external software components include **qemu-kvm**, **openvswitch**,
-**spice**, **crun** and **wireshark**.
+The most important external software components include **qemu-kvm**,
+**openvswitch**, **spice**, **crun** and **wireshark**.
 
-Its first goal is an easy usage of the emulated network linking virtual
+For the transfer of the gui to a web browser, other software used are:
+**nginx**, **noVNC**, **websockify-js**, **xorg**.
+
+For the self-extracting component of cloonix, makeself.sh is used.
+
+
+Cloonix's first goal is an easy usage of the emulated network linking virtual
 machines and containers. The network links are based on an openvswitch
 instance running inside a private net namespace.
 
@@ -37,8 +43,8 @@ as parameter, the network name being one of the predefined names found in
 */usr/libexec/cloonix/common/etc/cloonix.cfg*.
 The */usr/bin/cloonix_net* is a bash script that calls binaries and libraries
 located in */usr/libexec/cloonix/common* and */usr/libexec/cloonix/server*.
-The main process of the server listens to clients and obeys their commands,
-it also sends back the topology description.
+The main process **cloonix-main-server** of the server listens to clients and
+obeys their commands, it also sends back the topology description.
 The connection to the server is a tcp stream protected by password.
 
 All cloonix clients are named **cloonix_xxx** xxx can be one of the
@@ -60,57 +66,78 @@ The storage directory for the virtual machines is located at:
 User view for cloonix
 =====================
 
-As a user, the cloonix software is a set of manageable plugable **items**,
+As a user, the cloonix software is a set of manageable plugable items,
 each having a simple graphical representation in the **cloonix_gui** canvas.
-Items are plugged together by connection lines created by the user.
-Those lines emulate ethernet wires.
+An item owns one or more **ports** which are endpoints of the network.
 
-The **items** can be divided into two categories: those that include
-**endpoints**, an endpoint being the terminal point of one single line
-and the **lan** which can support any number of lines to any number of
-endpoints. Those lans emulate ethernet hubs, those are realy ovs bridges.
+Each port of an item can have one (and one only) connection represented
+with a line to a crossroad between **ports**.
+The crossroad is called **lan** within cloonix, this naming is not good
+since it is really a bridge : Each packet coming from a **port**
+goes to all the other ports connected by lines to the crossroad **lan**.
 
-An item that is in the **endpoints** categorie contains either a single
-endpoint for example in the case of a **tap** item or, contains multiple
-endpoints for example in the case of a virtual machine **kvm** within which
-there are several ethernet interfaces, in that case, each of those interfaces
-is one endpoint.
+The real world equivalent of a **port** is an hardware interface, for the
+line between the **port** and the **lan**, the hardware equivalent is an
+ethernet cable and the hardware equivalent of the **lan** is a switch or
+a hub, that connects the layer 2 ethernet of the **ports**.
+The **lan** in cloonix is implemented with an openvswitch bridge.
 
-The user creates lines, lans and endpoints, he can in this fashion make a
-network of virtual machines and visualize the resulting topology on the canvas.
+Here is the list of items, connectable to each-other through a **lan** ::
 
-From the user view, the most important item in cloonix is the machine
-representation, it is implemented either through a **kvm** virtual machine
-or a **cnt**, a crun container.
+  **kvm**: Qemu-kvm driven virtual machine (several **ports**).
+  **cnt**: Crun driven container (several **ports**).
+  **nat**: This nats the packets to reach the outside ethernet. 
+  **tap**: This is a tap interface giving cloonix an interface in the host.
+  **c2c**: This connects one cloonix net to another cloonix net.
+  **a2b**: This can act on packet transit, drops, shaping or delay.
+  **phy**: This item is to insert one of the host's physical interface in cloonix.
 
-The representation of a machine is a big circle that has satellite smaller
-circles with numbers in them. The small circles are the endpoints, they are
-graphical representations of the ethernet interfaces for the machine.
+
+The user creates items, lans and lines between them, he can in this fashion
+make a network of virtual machines. On the canvas he can visualize the
+resulting topology.
+
+The representation of a machine is a big circle for KVM, smaller for CNT,
+both have satellites on the periphery that are smaller circles with numbers.
+
+The small circles are the ports, they are green when spyable with wireshark
+and light blue when not spyable. They represent the ethernet interfaces.
 
 To describe the user interaction with the canvas items of cloonix_gui,
 therafter are 4 examples of gui interaction:
 
-A double-click on a lan followed by a simple-click on an endpoint creates
-the line between endpoint and lan.
+A double-click on a lan followed by a simple-click on an port creates
+the line between port and lan.
 
-A double-click on a blue virtual machine kvm or container cnt creates a root
-shell in a urxvt screen.
+A double-click on a blue virtual machine kvm or container cnt creates a
+graphical xterm root shell.
 
-A double-click on a green interface (small circle bordering the kvm or cnt)
+A double-click on a green port (small circle bordering the kvm or cnt)
 opens a **wireshark** spy that displays the packets running through this interface.
 Note that the wireshark can only visualize or save a .pcap file, it is not
 the complete version of wireshark.
 
 A right-click when above the **kvm** virtual machine launches a **spice**
-graphical desktops.
+graphical desktops. No desktop for crun containers.
 
 
-Directories in which cloonix is installed
-=========================================
+Directories in which cloonix is installed for classic use
+=========================================================
 
 */usr/libexec/cloonix/* for binaries, libraries and configuration files.
 */var/lib/cloonix/bulk* for the cloonix storage of virtual files .qcow2 and .zip.
 */var/lib/cloonix/<net-name>* for run-time storage of temporary files.
+
+
+Directory in which cloonix is installed in the self_extracting case
+===================================================================
+
+In this case, after the call to **self_extracting_cloonix.sh**, a new
+directory is present in the current directory, called
+**self_extracting_rootfs_dir**. For this installation you do not need the
+root privileges.
+
+
 
 You can grab a single file html of this doc to print it:
 
@@ -132,5 +159,5 @@ Content
      doc/clients.rst
      doc/items.rst
      doc/cisco.rst
-     doc/podman.rst
      doc/ovs.rst
+     doc/extracting.rst

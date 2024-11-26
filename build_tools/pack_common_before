@@ -54,7 +54,8 @@ for i in "lib/locale" "etc" "share/fonts/truetype" \
          "share/terminfo" "share/mime" "share/misc" \
          "share/dconf" "share/locale" "share/i18n/charmaps" \
          "share/i18n/locales" "share/glib-2.0/schemas" \
-         "share/X11/locale" ; do
+         "share/X11/locale" "lib/x86_64-linux-gnu/rsyslog" \
+         "/usr/share/vim/vim91" ; do
   mkdir -p ${COMMON}/${i}
 done
 
@@ -110,6 +111,8 @@ cat > ${COMMON}/etc/hosts << EOF
 EOF
 #----------------------------------------------------------
 cp -v /usr/lib/file/magic.mgc ${COMMON}/share/misc
+cp -v /usr/share/vim/vim91/defaults.vim ${COMMON}/share/vim/vim91
+sed -i "s/'mouse'/'totomouse'/" ${COMMON}/share/vim/vim91/defaults.vim
 #----------------------------------------------------------
 cp -Lrf /usr/lib/locale/* ${COMMON}/lib/locale
 #----------------------------------------------------------
@@ -117,6 +120,14 @@ cp -Lrf /usr/share/terminfo/l ${COMMON}/share/terminfo
 cp -Lrf /usr/share/terminfo/x ${COMMON}/share/terminfo
 cp -Lrf /usr/share/fonts/truetype/dejavu ${COMMON}/share/fonts/truetype
 cp -Lrf /usr/share/fontconfig ${COMMON}/share
+cp -Lrf /usr/share/nodejs ${COMMON}/share
+cp -Lrf /usr/share/node_modules ${COMMON}/share
+cp -Lrf /usr/lib/x86_64-linux-gnu/nodejs ${COMMON}/lib/x86_64-linux-gnu
+#----------------------------------------------------------
+#  cp -Lrf /usr/lib/python3.12 ${COMMON}/lib
+#  cp -Lrf /usr/share/gdb ${COMMON}/share
+#  cp /usr/bin/python3 ${COMMON}/python
+#  cp /usr/bin/gdb ${COMMON}
 #----------------------------------------------------------
 cp -Lrf /usr/share/X11/locale/en_US.UTF-8 ${COMMON}/share/X11/locale
 cp -Lrf /usr/share/X11/locale/C ${COMMON}/share/X11/locale
@@ -124,7 +135,6 @@ cp -Lrf /usr/share/X11/locale/locale.dir ${COMMON}/share/X11/locale
 cp -Lrf /usr/share/X11/xkb ${COMMON}/share/X11
 cp -f   /usr/share/X11/rgb.txt ${COMMON}/share/X11
 #----------------------------------------------------------
-mkdir -p ${COMMON}/lib/x86_64-linux-gnu/rsyslog
 cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    ${COMMON}/lib/x86_64-linux-gnu/rsyslog
 cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   ${COMMON}/lib/x86_64-linux-gnu/rsyslog
 cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so ${COMMON}/lib/x86_64-linux-gnu/rsyslog
@@ -162,13 +172,16 @@ cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
 cp -f /bin/bash ${COMMON}
 #----------------------------------------------------------
 for i in "awk" "cat" "chmod" "chown" "cp" "echo" "ps" "mkdir" \
-         "env" "grep" "id" "kill" "ldd" "strace" "ls" \
-         "locale" "localedef" "localectl" "xauth" "ln" \
-         "xeyes" "xclock" "diff" "unzip" "unshare" "tail" \
-         "touch" "vim" "sleep" "find" "grep" "file" ; do
+         "env" "grep" "id" "kill" "ldd" "strace" "ls" "netstat" \
+         "locale" "localedef" "localectl" "xauth" "ln" "mv" "rm" \
+         "xeyes" "xclock" "diff" "unzip" "unshare" "tail" "which" \
+         "touch" "vim" "sleep" "find" "grep" "file" "false" \
+         "node" "watch" ; do
   cp -f /usr/bin/${i} ${COMMON}
 done
-cp -f /usr/sbin/rsyslogd ${COMMON}
+for i in "useradd" "rsyslogd" ; do
+  cp -f /usr/sbin/${i} ${COMMON}
+done
 cd ${COMMON}
 ln -s bash sh
 cd $FROM_HERE
@@ -189,11 +202,11 @@ for i in  "cloonix_cli" \
           "cloonix_gui" \
           "cloonix_ocp" \
           "cloonix_osh" \
-          "cloonix_rsh" \
+          "cloonix_shk" \
+          "cloonix_shc" \
           "cloonix_ovs" \
           "cloonix_scp" \
           "cloonix_ssh" \
-          "cloonix_lsh" \
           "cloonix_dsh" \
           "cloonix_wsk" ; do
   cp -f ${CLOONIX_TREE_ROOT}/cloonix/${i} ${COMMON}/usr_bin
@@ -266,18 +279,6 @@ rm -rf ${COMMON}/openssh
 #----------------------------------------------------------
 cp -f ${PATCHELF} ${COMMON}/cloonix-patchelf
 strip ${COMMON}/cloonix-patchelf
-#----------------------------------------------------------
-if [ "${ARCH}" = "i386" ]; then
-  LDLINUX="/usr/libexec/cloonix/common/lib32/ld-linux.so.2"
-  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/i386-linux-gnu"
-else
-  LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
-fi
-for i in `find ${COMMON} -maxdepth 1 -type f` ; do
-  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
-  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
-done
 #----------------------------------------------------------
 echo DONE pack_common_before
 #----------------------------------------------------------

@@ -107,7 +107,7 @@ int main (int argc, char *argv[])
     }
   DEBUG_INIT(0);
   init_local_cloonix_bin_path(argv[0]);
-  doorways_sock_init();
+  doorways_sock_init(1);
   msg_mngt_init("ctrl", IO_MAX_BUF_LEN);
   cloonix_conf_info_get_all(&nb_cloon, &cloonix_conf);
   for (i=0; i<nb_cloon; i++)

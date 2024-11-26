@@ -5,13 +5,15 @@ PATCHELF="/usr/libexec/cloonix/common/cloonix-patchelf"
 UNZIP="/usr/libexec/cloonix/common/unzip"
 CRUN="/usr/libexec/cloonix/server/cloonix-crun"
 PTYS="/usr/libexec/cloonix/server/cloonix-scriptpty"
+PROXY="/usr/libexec/cloonix/server/cloonix-proxy-crun-access"
 LD="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
 XAUTH="/usr/libexec/cloonix/common/xauth"
 BASH="/usr/libexec/cloonix/common/bash"
 COMMON_LIBS="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
 #-----------------------------------------------------------------------------
 TEMPLATE="${HERE}/tools_crun/config.json.template"
-CRUN_STARTUP="${HERE}/tools_crun/crun_container_startup.sh"
+STARTUP="${HERE}/tools_crun/crun_container_startup.sh"
+INIT_CNT="${HERE}/tools_crun/cloonix-init-starter-crun"
 README="${HERE}/tools_crun/readme.sh"
 MAKESELF="${HERE}/makeself/makeself.sh"
 #-----------------------------------------------------------------------------
@@ -37,8 +39,9 @@ LISTSO="libtinfo.so.6 \
 ZIPFRR="/var/lib/cloonix/bulk/zipfrr.zip"
 RESULT="${HOME}/self_extracting_cloonix.sh"
 #-----------------------------------------------------------------------------
-for i in ${ZIPBASIC} ${ZIPFRR} ${UNZIP} ${CRUN} ${PTYS} ${LD} \
-         ${TEMPLATE} ${CRUN_STARTUP} ${README} ${MAKESELF} ; do
+for i in ${ZIPBASIC} ${ZIPFRR} ${UNZIP} ${CRUN} ${PTYS} ${PROXY} ${LD} \
+         ${TEMPLATE} ${STARTUP} ${INIT_CNT} ${README} \
+         ${MAKESELF} ; do
   if [ ! -e ${i} ]; then 
     echo ${i} missing 
     exit 1
@@ -83,21 +86,26 @@ mkdir -p ${BIN}
 for i in ${LISTSO}; do
   cp -f ${COMMON_LIBS}/${i} ${BIN} 
 done
-for i in ${LD} ${CRUN} ${PTYS} ${XAUTH} ${BASH} ; do
+for i in ${LD} ${CRUN} ${PTYS} ${PROXY} ${XAUTH} ${BASH} ; do
   cp -f ${i} ${BIN}
 done
 #-----------------------------------------------------------------------------
 cp -f ${TEMPLATE} ${CONFIG}
-cp -f ${CRUN_STARTUP} ${EXTRACT}
-cp -f ${README} ${EXTRACT}
+cp -f ${INIT_CNT} ${CONFIG}
+cp -f ${README}   ${CONFIG}
+cp -f ${STARTUP}  ${EXTRACT}
 #-----------------------------------------------------------------------------
-for i in "cloonix-crun" "cloonix-scriptpty" "xauth" "bash" ; do
+for i in "cloonix-crun" \
+         "cloonix-scriptpty" \
+         "cloonix-proxy-crun-access" \
+         "xauth" \
+         "bash" ; do
   ${PATCHELF} --force-rpath --set-rpath ./bin ${BIN}/${i}
   ${PATCHELF} --set-interpreter ./bin/ld-linux-x86-64.so.2 ${BIN}/${i}
 done
 #---------------------------------------------------------------------------
 OPTIONS="--nooverwrite --notemp --nomd5 --nocrc --tar-quietly --quiet"
-${MAKESELF} ${OPTIONS} ${EXTRACT} ${RESULT} "Cloonix" ./readme.sh 
+${MAKESELF} ${OPTIONS} ${EXTRACT} ${RESULT} "Cloonix" ./config/readme.sh 
 #-----------------------------------------------------------------------------
 rm -rf ${EXTRACT}
 #-----------------------------------------------------------------------------

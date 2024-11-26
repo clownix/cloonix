@@ -103,6 +103,9 @@ rm -rf ${SERVER}/dtach
 cp -f ${SERVER}/script_pty/cloonix-scriptpty ${SERVER}
 rm -rf ${SERVER}/script_pty
 #----------------------------------------------------------
+cp -f ${SERVER}/proxy_crun/cloonix-proxy-crun-access ${SERVER}
+rm -rf ${SERVER}/proxy_crun
+#----------------------------------------------------------
 cp -f ${SERVER}/crun/crun_tainted/crun ${SERVER}/cloonix-crun
 rm -rf ${SERVER}/crun
 #----------------------------------------------------------

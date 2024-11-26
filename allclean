@@ -52,6 +52,7 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
   done
 #----------------------------------------------------------
   for i in  doorways \
+            proxy_crun \
             suid_power \
             uml_cloonix_switch ; do
     cd ${SERVER}/${i}
@@ -59,6 +60,7 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
   done 
   rm -f ${SERVER}/dtach/cloonix-dtach
   rm -f ${SERVER}/script_pty/cloonix-scriptpty
+  rm -f ${SERVER}/proxy_crun/cloonix-proxy-crun-access
 #----------------------------------------------------------
   for i in ovs \
            nginx \

@@ -110,9 +110,9 @@ static void dialog_wake(int sock_fd, int srv_idx, int cli_idx, char *buf)
 /*****************************************************************************/
 static void terminate_thread(t_x11 *x11, int line, int fd)
 {
-//  if (line)
-//    KERR("TERMINATE THREAD LINE:%d (%d-%d) fd:%d",
-//          line, x11->srv_idx, x11->cli_idx, fd);
+  if (line)
+    KERR("TERMINATE THREAD LINE:%d (%d-%d) fd:%d",
+          line, x11->srv_idx, x11->cli_idx, fd);
   x11->thread_on = 0;
   wrap_nonnonblock(x11->diag_thread_fd);
   dialog_send_killed(x11->diag_thread_fd, x11->sock_fd_ass,
@@ -199,13 +199,13 @@ static int read_from_sock(t_x11 *x11)
   len = wrap_read_x11_rd_soc(x11->sock_fd_ass, msg->buf, MAX_X11_MSG_LEN);
   if (len == 0)
     {
-    KERR(" ");
+    KERR("ERROR");
     wrap_free(msg, __LINE__);
     }
   else if (len < 0)
     {
     if (errno != EINTR && errno != EAGAIN)
-      KERR("%s", strerror(errno));
+      KERR("ERROR %s", strerror(errno));
     else
       result = 0;
     wrap_free(msg, __LINE__);
@@ -237,8 +237,13 @@ static int read_from_x11(t_x11 *x11)
     }
   else if (len < 0)
     {
-    KERR("%s", strerror(errno));
-    terminate_thread(x11, 0, x11->x11_fd);
+    if (errno != EINTR && errno != EAGAIN)
+      {
+      KERR("ERROR %s", strerror(errno));
+      terminate_thread(x11, 0, x11->x11_fd);
+      }
+    else
+      result = 0;
     wrap_free(msg, __LINE__);
     }
   else

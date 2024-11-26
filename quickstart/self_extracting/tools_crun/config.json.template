@@ -6,7 +6,7 @@
         "uid": 0,
         "gid": 0
     },
-    "args": ["/usr/libexec/cloonix/server/init_starter_crun"],
+    "args": ["/usr/libexec/cloonix/server/cloonix-init-starter-crun"],
     "env": [
         "PATH=/usr/bin:/usr/libexec/cloonix/common/:/usr/libexec/cloonix/server",
         "DISPLAY=__DISPLAY__",
@@ -34,8 +34,18 @@
   "hostname": "crun",
   "mounts": [{
     "destination": "/tmp",
+    "type": "tmpfs",
+    "source": "tmpfs",
+    "options": ["nodev","rw"]
+    },{
+    "destination": "/tmp/cloonix_proxy",
     "type": "none",
-    "source": "/tmp",
+    "source": "__PROXYSHARE__",
+    "options": ["rbind","rw"]
+    },{
+    "destination": "/tmp/.X11-unix",
+    "type": "none",
+    "source": "/tmp/.X11-unix",
     "options": ["rbind","rw"]
     },{
     "destination": "/dev",
@@ -52,6 +62,11 @@
     "type": "tmpfs",
     "source": "tmpfs",
     "options": ["nosuid","strictatime","mode=755","size=65536k"]
+    },{
+    "destination": "/dev/shm",
+    "type": "tmpfs",
+    "source": "shm",
+    "options": ["nosuid","noexec","nodev","mode=1777","size=65536k"]
     },{
     "destination": "/sys",
     "type": "sysfs",

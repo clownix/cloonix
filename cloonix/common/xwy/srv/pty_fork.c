@@ -36,6 +36,7 @@
 #include "low_write.h"
 #include "wrap.h"
 #include "glob_common.h"
+#include "thread_tx.h"
 
 void hide_real_machine_serv(void);
 
@@ -241,10 +242,23 @@ static void create_env_display(int display_val, char *ttyname)
 /****************************************************************************/
 static void create_argv_from_cmd(char *cmd, char **argv)
 {
-  int len, i, nb;
-  char *cmd_ptr, *ptr[MAX_ARGC];
+  static char comp_cmd[MAX_MSG_LEN + MAX_PATH_LEN];
+  memset(comp_cmd, 0, MAX_MSG_LEN + MAX_PATH_LEN);
+  snprintf(comp_cmd, MAX_MSG_LEN + MAX_PATH_LEN -1,
+           "%s ; /usr/libexec/cloonix/common/sleep 1", cmd);
+  argv[0] = "/usr/libexec/cloonix/server/cloonix-bash";
+  argv[1] = "-c";
+  argv[2] = comp_cmd;
+  argv[3] = NULL;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void create_argv_from_crun(char *cmd, char **argv)
+{
+  int len, nb, i;
+  char *cmd_ptr=cmd, *ptr[MAX_ARGC];
   memset(ptr, 0, MAX_ARGC * sizeof(char *));
-  cmd_ptr = cmd;
   for (i=0; i<MAX_ARGC-1; i++)
     {
     if (strlen(cmd_ptr) == 0)
@@ -292,26 +306,11 @@ static void sigusr1_child_handler(int dummy)
 void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
                          char *cmd, int display_val)
 {
-//  int infds[2];
-//  int outfds[2];
-//  int errfds[2];
-//  const int FDIN = 0;
-//  const int FDOUT = 1;
-
   char ttyname[MAX_TXT_LEN], *argv[MAX_ARGC];
   int i, pty_fd=-1, ttyfd=-1, pid;
   char *ptr, *ptre;
-
-//  if (pipe(infds) != 0)
-//    KOUT("ERROR");
-//  if (pipe(outfds) != 0)
-//    KOUT("ERROR");
-//  if (pipe(errfds) != 0)
-//    KOUT("ERROR");
-
   memset(argv, 0, MAX_ARGC * sizeof(char *));
   memset(ttyname, 0, MAX_TXT_LEN);
-
   if (action != action_dae)
     {
     if (wrap_openpty(&pty_fd, &ttyfd, ttyname, fd_type_fork_pty))
@@ -323,23 +322,17 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       }
     wrap_pty_make_controlling_tty(ttyfd, ttyname);
     }
-
   pid = fork();
   if (pid < 0)
     KOUT("%s", strerror(errno));
   if (pid == 0)
     {
-    prctl(PR_SET_PDEATHSIG, SIGKILL);
-
-
     clearenv();
     create_env_display(display_val, ttyname); 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_DFL);
     if (signal(SIGUSR1, sigusr1_child_handler) == SIG_ERR)          
        KERR("ERROR signal failed");                  
-    if (prctl(PR_SET_PDEATHSIG, SIGUSR1) < 0)              
-       KERR("ERROR prctl failed");                  
     prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0);
     if (setsid() < 0)
       KOUT("setsid: %s", strerror(errno));
@@ -365,24 +358,24 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       argv[0] = "/usr/libexec/cloonix/server/cloonix-bash";
       argv[1] = NULL;
       }
-   else if (action == action_crun)
-     {
-     if (cmd[0] == '"')
-       {
-       ptr = cmd+1;
-       ptre = strchr(ptr, '"');
-       if (!ptre)
-         KERR("ERROR action_crun %s", cmd);
-       else
-         *ptre = 0;
-       }
-     else
-       ptr = cmd;
-     create_argv_from_cmd(ptr, argv);
-     }
-   else  if ((action == action_cmd) || (action == action_dae))
+    else if (action == action_crun)
       {
-//      hide_real_machine_serv();
+      if (cmd[0] == '"')
+        {
+        ptr = cmd+1;
+        ptre = strchr(ptr, '"');
+        if (!ptre)
+          KERR("ERROR action_crun %s", cmd);
+        else
+          *ptre = 0;
+        }
+      else
+        ptr = cmd;
+      create_argv_from_crun(ptr, argv);
+      }
+    else  if ((action == action_cmd) || (action == action_dae))
+      {
+      hide_real_machine_serv();
       create_argv_from_cmd(cmd, argv);
       }
     else
@@ -392,7 +385,9 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
     }
   else
     {
-    if (action != action_dae)
+    if (action == action_dae)
+      pty_cli_alloc(-1, pid, sock_fd, randid);
+    else
       {
       pty_cli_alloc(pty_fd, pid, sock_fd, randid);
       wrap_close(ttyfd, __FUNCTION__);
@@ -446,21 +441,32 @@ static void child_death_detection(void)
 {
   int status, pid;
   char exstat;
-  t_pty_cli *cur = g_pty_cli_head;
+  t_pty_cli *next, *cur = g_pty_cli_head;
   if ((pid = waitpid(-1, &status, WNOHANG)) > 0)
     {
     while(cur)
       {
+      next = cur->next;
       if (cur->pid == pid)
         {
         if (WIFEXITED(status))
           exstat = WEXITSTATUS(status);
         else
           exstat = 1;
-        send_msg_type_end(cur->randid, cur->sock_fd, exstat);
+        if (cur->pty_fd == -1)
+          {
+          if (thread_tx_get_stored_bytes(cur->sock_fd) != 0)
+            KERR("ERROR sock_fd not flushed");
+          close(cur->sock_fd);
+          pty_cli_free(cur);
+          }
+        else
+          {
+          send_msg_type_end(cur->randid, cur->sock_fd, exstat);
+          }
         break;
         } 
-      cur = cur->next;
+      cur = next;
       }
     }
 }

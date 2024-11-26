@@ -125,7 +125,6 @@ static void timer_clones_check(void *data)
       {
       if (!check_pid_exists(clone_ctx[i].pid))
         {
-        KERR(" %d %s ", clone_ctx[i].pid, clone_ctx[i].vm_name);
         if (!pid_dead_clone(clone_ctx[i].pid, -1))
           KOUT(" ");
         } 

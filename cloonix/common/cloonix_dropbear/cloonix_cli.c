@@ -591,7 +591,7 @@ int cloonix_connect_remote(char *cloonix_doors,
   g_current_read_buf_offset = 0;
   g_current_write_buf_offset = 0;
   g_current_rx_buf_len = 0;
-  doorways_sock_init();
+  doorways_sock_init(0);
   msg_mngt_init("dropbear", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
   if (!test_param(cloonix_doors, &ip, &port))

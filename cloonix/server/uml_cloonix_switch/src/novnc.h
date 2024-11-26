@@ -18,6 +18,7 @@
 
 
 #define CONFIG_NGINX "\n"\
+"user www;\n"\
 "worker_processes 1;\n"\
 "daemon off;\n"\
 "events {}\n"\
@@ -28,6 +29,7 @@
 "    }\n"\
 "    server {\n"\
 "        listen %s;\n"\
+"        listen unix:%s/proxy_%s_nginx.sock;\n"\
 "        location / {\n"\
 "            index vnc_lite.html;\n"\
 "            try_files $uri /vnc_lite.html;\n"\

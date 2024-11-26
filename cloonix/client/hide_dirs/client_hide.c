@@ -44,6 +44,60 @@ static char *g_display;
 static char *g_user;
 static char *g_xauthority;
 
+/****************************************************************************/
+static int get_process_pid(char *cmdpath, char *sock)
+{
+  FILE *fp;
+  char line[MAX_PATH_LEN];
+  char name[MAX_NAME_LEN];
+  char cmd[MAX_PATH_LEN];
+  int pid, result = 0;
+  fp = popen("/usr/libexec/cloonix/common/ps axo pid,args", "r");
+  if (fp == NULL)
+    KERR("ERROR %s %s", cmdpath, sock);
+  else
+    {
+    memset(line, 0, MAX_PATH_LEN);
+    while (fgets(line, MAX_PATH_LEN-1, fp))
+      {
+      if (strstr(line, sock))
+        {
+        if (strstr(line, cmdpath))
+          {
+          if (sscanf(line, "%d %s %400c", &pid, name, cmd))
+            {
+            result = pid;
+            break;
+            }
+          }
+        }
+      }
+    pclose(fp);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+static void kill_previous_wireshark_process(char *sock)
+{
+  int pid_wireshark, pid_dumpcap;
+  pid_dumpcap   = get_process_pid(DUMPCAP_BIN, sock);
+  pid_wireshark = get_process_pid(WIRESHARK_BIN,  sock);
+  if (pid_wireshark)
+    {
+    kill(pid_wireshark, SIGKILL);
+    KERR("WARNING KILL WIRESHARK %d", pid_wireshark);
+    }
+  if (pid_dumpcap)
+    {
+    kill(pid_dumpcap, SIGKILL);
+    }
+  if (pid_wireshark || pid_dumpcap)
+    sleep(2);
+}
+/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int file_exists(char *path)
@@ -378,13 +432,13 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 {
   static char ipport[MAX_NAME_LEN];
   static char title[MAX_NAME_LEN];
-  static char sock[MAX_PATH_LEN];
+  static char sock[2*MAX_PATH_LEN];
   static char param[2*MAX_PATH_LEN];
   int i, result = 0;
 
   memset(ipport, 0, MAX_NAME_LEN);
   memset(title, 0, MAX_NAME_LEN);
-  memset(sock, 0, MAX_PATH_LEN);
+  memset(sock, 0, 2*MAX_PATH_LEN);
   memset(param, 0, 2*MAX_PATH_LEN);
 /*CLOONIX_LSH-----------------------*/
   if (!strcmp("lsh", argv[1]))
@@ -456,8 +510,32 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if (argc == 5)
       new_argv[4] = argv[4];
     }
-/*CLOONIX_RSH-----------------------*/
-  else if (!strcmp("rsh", argv[1]))
+
+
+/*CLOONIX_SHK-----------------------*/
+  else if (!strcmp("shk", argv[1]))
+    {
+    if (argc != 4)
+      KOUT("ERROR5 PARAM NUMBER %d", argc);
+    snprintf(title, MAX_NAME_LEN-1, "%s/%s", argv[2], argv[3]);
+    snprintf(param, 399, "/var/lib/cloonix/%s/%s/%s",
+                         argv[2], DTACH_SOCK, argv[3]);
+    new_argv[0]  = URXVT_BIN;
+    new_argv[1]  = "-T";
+    new_argv[2]  = title;
+    new_argv[3]  = "-e";
+    new_argv[4]  = XWYCLI_BIN;
+    new_argv[5]  = CLOONIX_CFG;
+    new_argv[6]  = argv[2];
+    new_argv[7]  = "-cmd";
+    new_argv[8]  = "/usr/libexec/cloonix/server/cloonix-dtach";
+    new_argv[9]  = "-a";
+    new_argv[10] = param;
+    }
+
+
+/*CLOONIX_SHC-----------------------*/
+  else if (!strcmp("shc", argv[1]))
     {
     if (argc != 4)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
@@ -476,6 +554,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     new_argv[7] = "-crun";
     new_argv[8] = param;
     }
+
 /*CLOONIX_ICE-----------------------*/
   else if (!strcmp("ice", argv[1]))
     {
@@ -483,7 +562,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     snprintf(title, MAX_NAME_LEN-1, "--title=%s/%s", argv[2], argv[3]);
     snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
-    snprintf(sock, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/vm/vm%s/spice_sock", argv[2], argv[4]);
+    snprintf(sock, 2*MAX_PATH_LEN-1, "/var/lib/cloonix/%s/vm/vm%s/spice_sock", argv[2], argv[4]);
     new_argv[0] = "/usr/libexec/cloonix/common/cloonix-spicy";
     new_argv[1] = title;
     new_argv[2] = "-d";
@@ -498,9 +577,10 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     if (argc != 5)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
-    snprintf(sock, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/snf/%s_%s",
+    snprintf(sock, 2*MAX_PATH_LEN-1, "/var/lib/cloonix/%s/snf/%s_%s",
              argv[2], argv[3], argv[4]);
-    snprintf(title, MAX_PATH_LEN-1, "%s,%s,eth%d", argv[2],  argv[3], argv[4]);
+    snprintf(title, MAX_PATH_LEN-1, "%s,%s,eth%s", argv[2],  argv[3], argv[4]);
+    kill_previous_wireshark_process(sock);
     new_argv[0] = XWYCLI_BIN;
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
@@ -514,7 +594,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_OVS-----------------------*/
   else if (!strcmp("ovs", argv[1]))
     {
-    snprintf(sock, MAX_PATH_LEN-1, "--db=unix:/var/lib/cloonix/%s/ovsdb_server.sock", argv[2]);
+    snprintf(sock, 2*MAX_PATH_LEN-1, "--db=unix:/var/lib/cloonix/%s/ovsdb_server.sock", argv[2]);
     new_argv[0] = XWYCLI_BIN;
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
@@ -592,7 +672,8 @@ int main(int argc, char *argv[])
 /*--------------------------------------------------------------------------*/
   if ((!strcmp("ice", argv[1])) ||
       (!strcmp("wsk", argv[1])) ||
-      (!strcmp("rsh", argv[1])))
+      (!strcmp("shc", argv[1])) ||
+      (!strcmp("shk", argv[1])))
     {
     pid = fork();
     if (pid < 0)

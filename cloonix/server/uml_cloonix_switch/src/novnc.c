@@ -34,13 +34,14 @@
 #include "file_read_write.h"
 #include "utils_cmd_line_maker.h"
 
-#define PYTHONHOME     "/usr/libexec/cloonix/common"
 #define BIN_XVFB       "/usr/libexec/cloonix/server/cloonix-novnc-Xvfb"
 #define BIN_XSETROOT   "/usr/libexec/cloonix/server/cloonix-novnc-xsetroot"
 #define BIN_WM2        "/usr/libexec/cloonix/server/cloonix-novnc-wm2"
 #define BIN_X11VNC     "/usr/libexec/cloonix/server/cloonix-novnc-x11vnc"
-#define BIN_WEBSOCKIFY "/usr/libexec/cloonix/server/cloonix-novnc-websockify-js"
 #define BIN_NGINX      "/usr/libexec/cloonix/server/cloonix-novnc-nginx"
+
+#define BIN_WEBSOCKIFY "/usr/libexec/cloonix/server/cloonix-novnc-websockify-js"
+#define NODE_PATH      "/usr/share/nodejs:/usr/share/nodejs/node_modules"
 #define WEB            "--web=/usr/libexec/cloonix/common/share/noVNC/"
 
 static int g_pid_Xvfb;
@@ -64,6 +65,28 @@ static void timer_wm2(void *data);
 static int g_end_novnc_currently_on;
 static int g_terminate;
 static int g_start;
+
+/*****************************************************************************/
+static void debug_print_cmd(char **argv)
+{
+  int i, len = 0;
+  char info[MAX_PRINT_LEN];
+  char logfile[MAX_PATH_LEN];
+  FILE *fp_log;
+  memset(info, 0, MAX_PRINT_LEN);
+  memset(logfile, 0, MAX_PATH_LEN);
+  snprintf(logfile, MAX_PATH_LEN-1, "%s/novnc_cmd.log", utils_get_log_dir());
+  fp_log = fopen(logfile, "a+");
+  if (fp_log)
+    {
+    for (i=0; argv[i]; i++)
+      len += sprintf(info+len, "%s ", argv[i]);
+    fprintf(fp_log, "%s\n", info);
+    fflush(fp_log);
+    fclose(fp_log);
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int check_free_tcp_port(int port)
@@ -148,7 +171,8 @@ static void setup_nginx_conf(char *websockify_port, char *nginx_port)
   len = strlen(CONFIG_NGINX) + MAX_PATH_LEN + MAX_PATH_LEN;
   data_conf = (char *) malloc(len);
   memset(data_conf, 0, len);
-  snprintf(data_conf, len-1, CONFIG_NGINX, websockify_port, nginx_port);
+  snprintf(data_conf, len-1, CONFIG_NGINX, websockify_port, nginx_port,
+           PROXYSHARE, g_net_name);
   if (write_whole_file(path, data_conf, strlen(data_conf), err))
     KERR("ERROR %s", err);
 }
@@ -164,10 +188,10 @@ static int get_nginx_master_pid_num(void)
   int pid, result = 0;
   memset(pattern, 0, MAX_PATH_LEN);
   snprintf(pattern, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/nginx", g_net_name);
-  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo  pid,args", PS_BIN);
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
   fp = popen(ps_cmd, "r");
   if (fp == NULL)
-    KERR("ERROR %s", PS_BIN);
+    KERR("ERROR %s %d", ps_cmd, errno);
   else 
     {
     memset(line, 0, MAX_PATH_LEN);
@@ -196,10 +220,10 @@ static int get_nginx_worker_pid_num(int master_pid)
   char ps_cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
   int ppid, pid, result = 0;
-  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo  ppid,pid,args", PS_BIN);
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo ppid,pid,args", PS_BIN);
   fp = popen(ps_cmd, "r");
   if (fp == NULL)
-    KERR("ERROR %s", PS_BIN);
+    KERR("ERROR %s %d", ps_cmd, errno);
   else
     {
     memset(line, 0, MAX_PATH_LEN);
@@ -227,10 +251,10 @@ static int get_pid_num(char *binstring, char *display)
   char ps_cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
   int pid, result = 0;
-  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo  pid,args", PS_BIN);
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
   fp = popen(ps_cmd, "r");
   if (fp == NULL)
-    KERR("ERROR %s", PS_BIN);
+    KERR("ERROR %s %d", ps_cmd, errno);
   else
     {
     memset(line, 0, MAX_PATH_LEN);
@@ -262,11 +286,12 @@ static int get_pid_num(char *binstring, char *display)
 /*****************************************************************************/
 static void restart_all_upon_problem(void)
 {
-  if (g_terminate == 0)
-    {
-    if (g_end_novnc_currently_on == 0)
-      end_novnc(0);
-    }
+
+  if (g_terminate)
+    return;
+
+  if (g_end_novnc_currently_on == 0)
+    end_novnc(0);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -335,6 +360,11 @@ static int Xvfb(void *data)
 {
   char *argv[] = {BIN_XVFB, g_display, "-nolisten", "tcp", "-noreset",
                                        "-dpms", "-br", "-ac", NULL};
+
+  if (g_terminate)
+    return 0;
+
+  debug_print_cmd(argv);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
   return 0;
@@ -351,6 +381,10 @@ static int x11vnc(void *data)
                             "-remap", "DEAD", "-ncache", "10", "-dpms",
                             "-display", g_display, NULL};
 
+  if (g_terminate)
+    return 0;
+
+  debug_print_cmd(argv);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
   return 0;
@@ -361,8 +395,13 @@ static int x11vnc(void *data)
 static int wm2(void *data)
 {
   char *argv[]={BIN_WM2, g_display, NULL};
+
+  if (g_terminate)
+    return 0;
+
   setenv("DISPLAY", g_display, 1);
   setenv("CLOONIX_NET", g_net_name, 1);
+  debug_print_cmd(argv);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
   return 0;
@@ -373,6 +412,11 @@ static int wm2(void *data)
 static int xsetroot(void *data)
 {
   char *argv[] = {BIN_XSETROOT, "-display", g_display, "-solid", "grey", NULL};
+
+  if (g_terminate)
+    return 0;
+
+  debug_print_cmd(argv);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
   return 0;
@@ -387,6 +431,11 @@ static int websockify(void *data)
   char websockify_ascii_port[MAX_NAME_LEN];
   char nginx_ascii_port[MAX_NAME_LEN];
   char *argv[]={BIN_WEBSOCKIFY,WEB,websockify_ascii_port,addr_display,NULL};
+
+  if (g_terminate)
+    return 0;
+    
+  setenv("NODE_PATH", NODE_PATH, 1);
   if (g_port_display == 0)
     KOUT("ERROR");
   memset(addr_display, 0, MAX_NAME_LEN);
@@ -397,6 +446,7 @@ static int websockify(void *data)
   memset(nginx_ascii_port, 0, MAX_NAME_LEN);
   snprintf(nginx_ascii_port, MAX_NAME_LEN-1, "%d", g_port_nginx);
   setup_nginx_conf(websockify_ascii_port, nginx_ascii_port); 
+  debug_print_cmd(argv);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
   return 0;
@@ -408,8 +458,13 @@ static int nginx_ok(void *data)
 {
   char path[MAX_PATH_LEN];
   char *argv[]={BIN_NGINX, "-p", path, NULL};
+
+  if (g_terminate)
+    return 0;
+
   memset (path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN, "%s", utils_get_nginx_dir());
+  debug_print_cmd(argv);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
   return 0;
@@ -419,6 +474,10 @@ static int nginx_ok(void *data)
 /*****************************************************************************/
 static void timer_end_last(void *data)
 {
+
+  if (g_terminate)
+    return;
+
   g_pid_nginx_master = get_nginx_master_pid_num();
   if (g_pid_nginx_master)
     {
@@ -439,7 +498,6 @@ static void timer_end_last(void *data)
     KERR("WARNING FAIL NGINX MASTER");
     clownix_timeout_add(100, timer_end_last, NULL, NULL, NULL);
     }
-
 }
 /*--------------------------------------------------------------------------*/
 
@@ -448,6 +506,10 @@ static void timer_nginx(void *data)
 {
   int pid;
   char addr_port[MAX_NAME_LEN];
+
+  if (g_terminate)
+    return;
+
   if (g_port_display == 0)
     KOUT("ERROR");
   memset (addr_port, 0, MAX_NAME_LEN);
@@ -490,7 +552,12 @@ static void timer_nginx(void *data)
 /*****************************************************************************/
 static void timer_websockify(void *data)
 {
-  int pid = get_pid_num(BIN_X11VNC, g_display);
+  int pid;
+
+  if (g_terminate)
+    return;
+
+  pid = get_pid_num(BIN_X11VNC, g_display);
   if (g_terminate == 0)
     {
     if (pid)
@@ -518,25 +585,27 @@ static void timer_websockify(void *data)
 /*****************************************************************************/
 static void timer_x11vnc(void *data)
 {
-  if (g_terminate == 0)
-    {
-    g_pid_x11vnc=pid_clone_launch(x11vnc, kx11vnc, NULL, NULL,
-                                  NULL, NULL, "vnc", -1, 1);
-    g_count_websockify_timer = 0;
-    clownix_timeout_add(10, timer_websockify, NULL, NULL, NULL);
-    }
+
+  if (g_terminate)
+    return;
+
+  g_pid_x11vnc=pid_clone_launch(x11vnc, kx11vnc, NULL, NULL,
+                                NULL, NULL, "vnc", -1, 1);
+  g_count_websockify_timer = 0;
+  clownix_timeout_add(10, timer_websockify, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void timer_wm2(void *data)
 {
-  if (g_terminate == 0)
-    {
-    pid_clone_launch(xsetroot,NULL,NULL,NULL,NULL,NULL,"vnc",-1,1);
-    g_pid_wm2=pid_clone_launch(wm2,kwm2,NULL,NULL,NULL,NULL,"vnc",-1,1);
-    clownix_timeout_add(10, timer_x11vnc, NULL, NULL, NULL);
-    }
+
+  if (g_terminate)
+    return;
+
+  pid_clone_launch(xsetroot,NULL,NULL,NULL,NULL,NULL,"vnc",-1,1);
+  g_pid_wm2=pid_clone_launch(wm2,kwm2,NULL,NULL,NULL,NULL,"vnc",-1,1);
+  clownix_timeout_add(10, timer_x11vnc, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -546,6 +615,10 @@ static int check_before_start(void)
   char lock_file[MAX_NAME_LEN];
   char addr_port[MAX_NAME_LEN];
   int pid, pid2, nostart = 0;
+
+  if (g_terminate)
+    return 0;
+
   if (g_port_display == 0)
     KOUT("ERROR");
   memset (lock_file, 0, MAX_NAME_LEN);
@@ -602,18 +675,24 @@ static int check_before_start(void)
 /*****************************************************************************/
 static void timer_Xvfb(void *data)
 {
-  if (g_terminate == 0)
-    {
-    g_pid_Xvfb=pid_clone_launch(Xvfb,kXvfb,NULL,NULL,NULL,NULL,"vnc",-1,1);
-    clownix_timeout_add(10, timer_wm2, NULL, NULL, NULL);
-    }
+
+  if (g_terminate)
+    return;
+
+  g_pid_Xvfb=pid_clone_launch(Xvfb,kXvfb,NULL,NULL,NULL,NULL,"vnc",-1,1);
+  clownix_timeout_add(10, timer_wm2, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void timer_restart_novnc(void *data)
 {
-  int nostart = check_before_start();
+  int nostart;
+
+  if (g_terminate)
+    return;
+
+  nostart = check_before_start();
   if (nostart == 0)
     {
     if (g_terminate == 0)
@@ -631,6 +710,10 @@ static void timer_monitor(void *data)
 {
   char addr_port[MAX_NAME_LEN];
   int pid;
+
+  if (g_terminate)
+    return;
+
   if (g_port_display == 0)
     KOUT("ERROR");
   memset (addr_port, 0, MAX_NAME_LEN);
@@ -658,44 +741,43 @@ static void timer_monitor(void *data)
 int end_novnc(int terminate)
 {
   int result = -1;
+
+  if (g_terminate)
+    return result;
+
+  if (g_end_novnc_currently_on)
+    KERR("ERROR END NOVNC %d", g_end_novnc_currently_on);
+  else
+    result = 0;
+
   g_start = 0;
-  if (!g_terminate)
+  g_terminate = terminate;
+  g_end_novnc_currently_on = 1; 
+  if (g_pid_nginx_master)
+    kill(g_pid_nginx_master, SIGKILL);
+  g_pid_nginx_master = 0;
+  if (g_pid_nginx_worker)
+    kill(g_pid_nginx_worker, SIGKILL);
+  g_pid_nginx_worker = 0;
+  if (g_pid_websockify)
+    kill(g_pid_websockify, SIGKILL);
+  g_pid_websockify = 0;
+  if (g_pid_x11vnc)
+    kill(g_pid_x11vnc, SIGKILL);
+  g_pid_x11vnc = 0;
+  if (g_pid_wm2)
+    kill(g_pid_wm2, SIGKILL);
+  g_pid_wm2 = 0;
+  if (g_pid_Xvfb)
+    kill(g_pid_Xvfb, SIGKILL);
+  g_pid_Xvfb = 0;
+  if (terminate)
     {
-    if (g_end_novnc_currently_on)
-      KERR("ERROR END NOVNC %d", g_end_novnc_currently_on);
-    else
-      {
-      result = 0;
-      g_start = 0;
-      g_terminate = terminate;
-      g_end_novnc_currently_on = 1; 
-      if (g_pid_nginx_master)
-        kill(g_pid_nginx_master, SIGKILL);
-      g_pid_nginx_master = 0;
-      if (g_pid_nginx_worker)
-        kill(g_pid_nginx_worker, SIGKILL);
-      g_pid_nginx_worker = 0;
-      if (g_pid_websockify)
-        kill(g_pid_websockify, SIGKILL);
-      g_pid_websockify = 0;
-      if (g_pid_x11vnc)
-        kill(g_pid_x11vnc, SIGKILL);
-      g_pid_x11vnc = 0;
-      if (g_pid_wm2)
-        kill(g_pid_wm2, SIGKILL);
-      g_pid_wm2 = 0;
-      if (g_pid_Xvfb)
-        kill(g_pid_Xvfb, SIGKILL);
-      g_pid_Xvfb = 0;
-      if (terminate)
-        {
-        memset (g_display, 0, MAX_NAME_LEN);
-        g_port_display = 0;
-        }
-      else
-        clownix_timeout_add(10, timer_restart_novnc, NULL, NULL, NULL);
-      }
+    memset (g_display, 0, MAX_NAME_LEN);
+    g_port_display = 0;
     }
+  else
+    clownix_timeout_add(10, timer_restart_novnc, NULL, NULL, NULL);
   return result;
 }   
 /*--------------------------------------------------------------------------*/
@@ -717,7 +799,8 @@ int start_novnc(void)
     else if (!file_exists(BIN_NGINX, X_OK))
       KERR("\"%s\" not found or not executable\n", BIN_NGINX);
     else if (g_port_display)
-      KERR("ERROR CANNOT START, port g_port_display %d initialized", g_port_display);
+      KERR("ERROR CANNOT START, port g_port_display %d initialized",
+            g_port_display);
     else
       {
       result = 0;

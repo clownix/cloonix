@@ -481,7 +481,7 @@ int main (int argc, char *argv[])
     KOUT(" ");
   if (argc < 3)
     {
-    doorways_sock_init();
+    doorways_sock_init(0);
     msg_mngt_init("ctrl", IO_MAX_BUF_LEN);
     cloonix_conf_info_get_all(&g_nb_cloonix_servers, &g_cloonix_conf_info);
     client_topo_tst_sub(stub_topo);

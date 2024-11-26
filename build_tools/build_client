@@ -23,7 +23,8 @@ cp -rf ${CLOONIX_TREE_ROOT}/targz_store/* ${TMPBUILD}/targz_store
 cp -r ${CLOONIX_TREE_ROOT}/cloonix ${TMPBUILD}
 #----------------------------------------------------------
 for i in "cloonix_osh" \
-         "cloonix_rsh" \
+         "cloonix_shk" \
+         "cloonix_shc" \
          "cloonix_ocp" \
          "cloonix_cli" \
          "cloonix_gui" \
@@ -33,7 +34,6 @@ for i in "cloonix_osh" \
          "cloonix_ssh" \
          "cloonix_wsk" \
          "cloonix_dsh" \
-         "cloonix_lsh" \
          "cloonix_ovs" ; do 
   mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
 done

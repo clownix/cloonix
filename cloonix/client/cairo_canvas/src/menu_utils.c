@@ -324,6 +324,7 @@ static void launch_new_pid(t_pid_wait *pid_wait)
 static void timer_launch(void *data)
 {
   t_pid_wait *pid_wait = (t_pid_wait *) data;
+  int pid;
   switch (pid_wait->type)
     {
 
@@ -335,7 +336,6 @@ static void timer_launch(void *data)
           KERR("ERROR SPICY %s", pid_wait->name);
         else
           {
-          KERR("WARNING SPICY %s", pid_wait->name);
           clownix_timeout_add(TIMR,timer_launch,(void *)pid_wait,NULL,NULL);
           }
         }
@@ -344,15 +344,14 @@ static void timer_launch(void *data)
       break;
 
     case type_pid_wireshark:
-      if (bank_get_wireshark_pid(pid_wait->name, pid_wait->num))
+      pid = bank_get_wireshark_pid(pid_wait->name, pid_wait->num);
+      if (pid)
         {
         pid_wait->count += 1;
         if (pid_wait->count > TIMR_REPEAT)
           KERR("ERROR WIRESHARK %s %d", pid_wait->name, pid_wait->num);
         else
           {
-          KERR("WARNING PID WIRESHARK %s %d %d",
-               pid_wait->name, pid_wait->num, pid_wait->count);
           clownix_timeout_add(TIMR,timer_launch,(void *)pid_wait,NULL,NULL);
           }
         }
@@ -396,7 +395,6 @@ static void timer_launch(void *data)
           KERR("ERROR DTACH %s", pid_wait->name);
         else
           {
-          KERR("WARNING DTACH %s", pid_wait->name);
           clownix_timeout_add(TIMR,timer_launch,(void *)pid_wait,NULL,NULL);
           }
         }
@@ -412,7 +410,6 @@ static void timer_launch(void *data)
             KERR("ERROR CRUN %s", pid_wait->name);
           else
             {
-            KERR("WARNING CRUN %s", pid_wait->name);
             clownix_timeout_add(TIMR,timer_launch,(void *)pid_wait,NULL,NULL);
             }
           }
@@ -551,9 +548,9 @@ static int get_process_pid(char *cmdpath, char *sock)
   char name[MAX_NAME_LEN];
   char cmd[MAX_PATH_LEN];
   int pid, result = 0;
-  fp = popen("/usr/libexec/cloonix/common/ps", "r");
+  fp = popen("/usr/libexec/cloonix/common/ps axo pid,args", "r");
   if (fp == NULL)
-    KERR("ERROR %s", "/usr/libexec/cloonix/common/ps");
+    KERR("ERROR %s %s", cmdpath, sock);
   else
     {
     memset(line, 0, MAX_PATH_LEN);
@@ -565,11 +562,8 @@ static int get_process_pid(char *cmdpath, char *sock)
           {
           if (sscanf(line, "%d %s %400c", &pid, name, cmd))
             {
-            if (!strncmp(cmd, cmdpath, strlen(cmdpath)))
-              {
-              result = pid;
-              break;
-              }
+            result = pid;
+            break;
             }
           }
         }
@@ -584,12 +578,11 @@ static int get_process_pid(char *cmdpath, char *sock)
 static void kill_previous_wireshark_process(char *sock)
 { 
   int pid_wireshark, pid_dumpcap;
-  pid_dumpcap       = get_process_pid(DUMPCAP_BIN, sock);
-  pid_wireshark  = get_process_pid(WIRESHARK_BIN,  sock);
+  pid_dumpcap   = get_process_pid(DUMPCAP_BIN, sock);
+  pid_wireshark = get_process_pid(WIRESHARK_BIN,  sock);
   if (pid_wireshark)
     {
     kill(pid_wireshark, SIGKILL);
-    KERR("WARNING KILL WIRESHARK %d", pid_wireshark);
     }
   if (pid_dumpcap)
     {
@@ -683,7 +676,7 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
 void node_dtach_console(GtkWidget *mn, t_item_ident *pm)
 {
   char *nm = pm->name;
-  char **argv = get_argv_local_xwy(nm);
+  char **argv = get_argv_local_shk(nm);
   if (check_before_start_launch(argv))
     launch_pid_wait(type_pid_dtach, nm, 0, argv);
 }

@@ -547,9 +547,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       KERR("Not found: vm_id = %d", vm_id);
     else if (cur->pid > 0)
       {
-      if (kill(cur->pid, SIGKILL))
-        KERR("ERROR Bad kill %d", vm_id);
-      else
+      if (!kill(cur->pid, SIGKILL))
         {
         memset(resp, 0, MAX_PATH_LEN);
         snprintf(resp, MAX_PATH_LEN-1,

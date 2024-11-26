@@ -266,6 +266,7 @@ void mk_endp_dir(void)
   my_mkdir(utils_get_nginx_dir(), 1);
   my_mkdir(utils_get_nginx_conf_dir(), 1);
   my_mkdir(utils_get_nginx_logs_dir(), 1);
+  my_mkdir(utils_get_nginx_client_body_temp_dir(), 1);
   my_mkdir(utils_get_log_dir(), 1);
   my_mkdir(utils_get_snf_pcap_dir(), 1);
   my_mkdir(utils_get_c2c_dir(), 1);

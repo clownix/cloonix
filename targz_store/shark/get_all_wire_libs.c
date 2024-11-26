@@ -27,9 +27,9 @@
 #define MAX_PATH_LEN 300
 #define MAX_NAME_LEN 100
 
-#define LIBDIR "/usr/libexec/cloonix/common/wireshark/lib"
-#define DUMPCAP "/usr/libexec/cloonix/server/cloonix-dumpcap"
-#define WIRESHARK "/usr/libexec/cloonix/server/cloonix-wireshark"
+#define LIBDIR "/root/lib"
+#define DUMPCAP "/root/cloonix-dumpcap"
+#define WIRESHARK "/root/cloonix-wireshark"
 
 static char g_collect1[MAX_PATH_LEN];
 static char g_dumps1[MAX_PATH_LEN];

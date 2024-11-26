@@ -5,6 +5,29 @@
 Software Release Information
 ============================
 
+v42-00
+======
+
+Note: you can now do Ctrl-C in a kvm console without breaking the qemu.
+
+The self-extracting installation has now a proxy software running in the host
+main namespace that transmits 2 tcp ports from host to within the running crun.
+cloonix-proxy-crun-access is the name for this proxy, it is launched upon the
+call to crun_container_startup.sh. 
+
+This gives access from distant machines to the cloonix commands gui and also
+to the web interface.
+
+Note that for the nemo network given in the example in self_extracting_cloonix.sh,
+in your browser you can hit http://<ip>:54521 and if you get the grey panel,
+click on mouse and choose cloonix to get the usual gui but inside the web.
+Note that the above works only if ports 45211 and 54521 (nemo ports) are free.
+/var/log/syslog will show the error if the ports are used.
+
+This self-extracting version does not need the root privileges nor any libraries.
+The self-extracting does not support udp proxy and because of that, c2c cannot
+work.
+
 v41-00
 ======
 

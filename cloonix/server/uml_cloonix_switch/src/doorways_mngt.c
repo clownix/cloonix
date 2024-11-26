@@ -73,6 +73,7 @@ static char g_bin_doorways[MAX_PATH_LEN];
 static char g_root_work[MAX_PATH_LEN];
 static char g_server_port[MAX_NAME_LEN];
 static char g_password[MSG_DIGEST_LEN];
+static char g_net_name[MAX_NAME_LEN];
 
 
 /****************************************************************************/
@@ -316,6 +317,7 @@ static void doorways_start()
 {
   static char *argv[] ={
                        g_bin_doorways,
+                       g_net_name,
                        g_root_work,
                        g_server_port,
                        g_password,
@@ -323,6 +325,7 @@ static void doorways_start()
                        };
   char *ctrl_doors_sock = cfg_get_ctrl_doors_sock();
   if ((!strlen(g_bin_doorways)) ||
+      (!strlen(g_net_name))     ||
       (!strlen(g_root_work))    ||
       (!strlen(g_server_port))  || 
       (!strlen(g_password)))
@@ -377,11 +380,12 @@ void kill_doors(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void doorways_init(char *root_work, int server_port, char *password)
+void doorways_init(char *net, char *root_work, int server_port, char *password)
 {
   memset(g_bin_doorways, 0, MAX_PATH_LEN);
   memset(g_root_work, 0, MAX_PATH_LEN);
   memset(g_server_port, 0, MAX_NAME_LEN);
+  memset(g_net_name, 0, MAX_NAME_LEN);
   memset(g_password, 0, MSG_DIGEST_LEN);
   g_nb_pid_resp = 0;
   g_nb_pid_resp_warning = 0;
@@ -392,7 +396,8 @@ void doorways_init(char *root_work, int server_port, char *password)
   g_ref_timer = 0;
   sprintf(g_bin_doorways, "%s/server/cloonix-doorways", cfg_get_bin_dir());
   strncpy(g_root_work, root_work, MAX_PATH_LEN-1);
-  snprintf(g_server_port, MAX_PATH_LEN-1, "%d", server_port);
+  snprintf(g_server_port, MAX_NAME_LEN-1, "%d", server_port);
+  snprintf(g_net_name, MAX_NAME_LEN-1, net);
   strncpy(g_password, password, MSG_DIGEST_LEN-1);
   doors_xml_init();
 }

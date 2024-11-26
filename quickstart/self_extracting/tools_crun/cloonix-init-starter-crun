@@ -1,0 +1,38 @@
+#!/usr/libexec/cloonix/common/bash
+
+export TERM=linux
+export XAUTHORITY="/var/lib/cloonix/cache/.Xauthority"
+COMMON="/usr/libexec/cloonix/common"
+SCRIPTPTY="/usr/libexec/cloonix/server/cloonix-scriptpty"
+if [ ! -e "/usr/share" ]; then
+  ${COMMON}/ln -s ${COMMON}/share /usr/share
+fi
+if [ ! -e "/usr/lib" ]; then
+  ${COMMON}/ln -s ${COMMON}/lib /usr/lib
+fi
+if [ ! -e "/usr/bin" ]; then
+  ${COMMON}/ln -s ${COMMON} /usr/bin
+fi
+if [ ! -e "/etc" ]; then
+  ${COMMON}/ln -s ${COMMON}/etc /etc
+fi
+if [ ! -e "/lib64" ]; then
+  ${COMMON}/ln -s ${COMMON}/lib64 /lib64
+fi
+if [ ! -e "/bin/sh" ]; then
+  ${COMMON}/ln -s /bin/bash /bin/sh
+fi
+if [ ! -e "/usr/bin/vi" ]; then
+  ${COMMON}/ln -s /usr/bin/vim /usr/bin/vi
+fi
+${COMMON}/chown -R root:root / 2>/dev/null
+if [ $(${COMMON}/grep -c www /etc/passwd) = 0 ]; then
+  ${COMMON}/useradd --user-group --no-create-home --shell /usr/bin/false --system www
+fi
+${SCRIPTPTY} rsyslogd
+${SCRIPTPTY} "localedef -i en_US -f UTF-8 en_US.UTF-8"
+${SCRIPTPTY} "touch /var/lib/cloonix/cache/.Xauthority"
+${SCRIPTPTY} "xauth add crun/unix:0 MIT-MAGIC-COOKIE-1 __XAUTH_CODE__"
+${SCRIPTPTY} bash
+#----------------------------------------------------------------------------
+

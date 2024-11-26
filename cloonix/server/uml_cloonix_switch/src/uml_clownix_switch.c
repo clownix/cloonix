@@ -70,6 +70,7 @@
 #include "cnt.h"
 #include "mactopo.h"
 #include "crun.h"
+#include "util_sock.h"
 
 
 static t_topo_clc g_clc;
@@ -300,17 +301,94 @@ static void timer_openvswitch_ok(void *data)
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static char *get_process_one_cmd(void)
+{ 
+  char *file_name = "/proc/1/cmdline";
+  static char buf[MAX_PATH_LEN];
+  FILE *fd = fopen(file_name, "r");
+  char *result = NULL;
+  if (fd == NULL)
+    KERR("WARNING: Cannot open %s", file_name);
+  else
+    {
+    memset(buf, 0, MAX_PATH_LEN);
+    if (!fgets(buf, MAX_PATH_LEN-1, fd))
+      KERR("WARNING: Cannot read %s", file_name);
+    else
+      result = buf;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int proxy_config_required(void)
+{
+  char unix_sig[MAX_PATH_LEN];
+  char *process_init_name = get_process_one_cmd();
+  int fd, result = 0;
+  if (process_init_name == NULL)
+    KERR("ERROR");
+  else if (strstr(process_init_name, CRUN_STARTER))
+    {
+    memset(unix_sig, 0, MAX_PATH_LEN);
+    snprintf(unix_sig, MAX_PATH_LEN-1,  "%s/proxy_sig.sock", PROXYSHARE);
+    if (util_client_socket_unix(unix_sig, &fd))
+      KERR("ERROR");
+    else
+      {
+      close(fd);
+      result = 1;
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int transmit_proxy_config(char *net, int pmain, int pweb)
+{
+  char unix_sig[MAX_PATH_LEN];
+  char buf[MAX_PATH_LEN];
+  char *process_init_name = get_process_one_cmd();
+  int fd, len, result = 0;
+  if (process_init_name == NULL)
+    KERR("ERROR IMPOSSIBLE %s %d %d", net, pmain, pweb);
+  else if (strstr(process_init_name, CRUN_STARTER))
+    {
+    memset(unix_sig, 0, MAX_PATH_LEN);
+    snprintf(unix_sig, MAX_PATH_LEN-1,  "%s/proxy_sig.sock", PROXYSHARE);
+    if (util_client_socket_unix(unix_sig, &fd))
+      KERR("ERROR IMPOSSIBLE %s %d %d", net, pmain, pweb);
+    else
+      {
+      memset(buf, 0, MAX_PATH_LEN); 
+      snprintf(buf, MAX_PATH_LEN-1, "Config: %s %d %d", net, pmain, pweb);
+      len = write(fd, buf, strlen(buf)+1);
+      if (len != strlen(buf)+1)
+        KERR("ERROR %d %d  %s %d %d",len,(int)strlen(buf),net,pmain,pweb);
+      else
+        result = 1; 
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static void launching(void)
 {
   char clownlock[MAX_PATH_LEN];
   char *dtach = utils_get_dtach_bin_path();
   char *net = cfg_get_cloonix_name();
+  int proxy_on;
   if (!file_exists(dtach, X_OK))
     {
     printf("\"%s\" not found or not executable\n", dtach);
     KOUT("\"%s\" not found or not executable\n", dtach);
     }
+  proxy_on = proxy_config_required();
   set_cloonix_name(cfg_get_cloonix_name());
   printf("\n\n");
   printf("     Version:      %s\n",cfg_get_version());
@@ -320,6 +398,10 @@ static void launching(void)
   printf("     Work Zone:    %s\n",cfg_get_root_work());
   printf("     Bulk Path:    %s\n",cfg_get_bulk());
   printf("     Doors Port:   %d\n",cfg_get_server_port());
+  if (proxy_on)
+    printf("     Web Port:     %d (Activated)\n", g_novnc_port);
+  else
+    printf("     Web Port:     %d (Not Activated)\n", g_novnc_port);
   printf("\n\n\n");
   if ((strlen(cfg_get_cloonix_name()) == 0) || 
       (strlen(cfg_get_bin_dir()) == 0)      || 
@@ -342,6 +424,14 @@ static void launching(void)
   check_for_another_instance(clownlock, 1);
   init_xwy(cfg_get_cloonix_name());
   init_novnc(cfg_get_cloonix_name(), get_conf_rank(), g_novnc_port);
+  if (proxy_on)
+    {
+    if (transmit_proxy_config(net, cfg_get_server_port(), g_novnc_port))
+      {
+      if (start_novnc())
+        KERR("ERROR start_novnc");
+      }
+    }
   clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -494,9 +584,9 @@ int main (int argc, char *argv[])
     printf("Port: %d is in use!!\n", conf->server_port);
     KOUT("Port: %d is in use!!", conf->server_port);
     }
-  doorways_sock_init();
-  doorways_init(cfg_get_root_work(), cfg_get_server_port(), 
-                g_cloonix_conf_info->passwd);
+  doorways_sock_init(0);
+  doorways_init(cfg_get_cloonix_name(), cfg_get_root_work(),
+                cfg_get_server_port(), g_cloonix_conf_info->passwd);
   eventfull_init();
   slowperiodic_init();
   if (!file_exists(get_doorways_bin(), X_OK))

@@ -236,8 +236,6 @@ char *channel_get_little_name(int llid)
 }
 /*---------------------------------------------------------------------------*/
 
-
-
 /*****************************************************************************/
 int get_fd_with_llid(int llid)
 {
@@ -700,7 +698,6 @@ static void waked_count_update(int nb, struct epoll_event *events)
     }
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)

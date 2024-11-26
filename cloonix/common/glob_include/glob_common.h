@@ -211,11 +211,15 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define OVS_BRIDGE_PORT "_k_"
 #define OVS_BRIDGE   "_b_"
 
+#define CRUN_STARTER "/usr/libexec/cloonix"
+
 #define AGENT_ISO_I386 "/usr/libexec/cloonix/server/insider_agents/insider_agent_i386.iso"
 #define AGENT_ISO_AMD64 "/usr/libexec/cloonix/server/insider_agents/insider_agent_x86_64.iso"
 
 
 #define SPICE_USB_ACL_HELPER_BIN "/usr/libexec/cloonix/common/cloonix-spice-client-glib-usb-acl-helper"
+
+#define PROXYSHARE "/tmp/cloonix_proxy"
 
 #define XAUTH_BIN "/usr/libexec/cloonix/common/xauth"
 #define BASH_BIN "/usr/libexec/cloonix/common/bash"

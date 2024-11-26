@@ -336,7 +336,7 @@ static void first_read_process(int len, char *buf)
     if (input_extract_init(g_first_read))
       local_exit(1);
     change_state(state_waiting_connection);
-    doorways_sock_init();
+    doorways_sock_init(0);
     cloonix_connect_remote(g_cloonix_doors);
     }
 }

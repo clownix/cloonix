@@ -53,7 +53,7 @@ static void usage(char *name)
   printf("\n%s <ip> <port> -get <distant-file> <local-dir>", name);
   printf("\n%s <ip> <port> -put <local-file> <distant-dir>", name);
   printf("\n");
-  printf("\n -dae daemonizes the command, -cmd has a controlling term");
+  printf("\n -cmd has a controlling term");
   printf("\n\n");
   exit(1);
 }
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
   else if (action == action_put)
     printf("\n-put %s %s\n", src, dst);
 
-  doorways_sock_init();
+  doorways_sock_init(0);
 
   xdoors_connect_init(ip, port, "password", action, cmd, src, dst);
 

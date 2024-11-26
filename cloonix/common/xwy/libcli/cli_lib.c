@@ -534,7 +534,7 @@ void xcli_init(int epfd, int llid, int tid, int type,
     {
     if (action == action_dae)
       {
-      daemon(0, 0);
+//      daemon(0, 0);
       send_msg_type_x11_init(g_randid, get_x11_magic());
       }
     else

@@ -25,7 +25,6 @@
 #define AGENT_SYSINFO_DF "agent_sysinfo_df"
 #define CLOONIX_UP_VPORT_AND_RUNNING "cloonix_up_vport_and_running"
 #define CLOONIX_DOWN_AND_NOT_RUNNING "cloonix_down_and_not_running"
-#define STOP_DOORS_LISTENING "stop_doors_listening"
 #define XWY_CONNECT "xwy_connect %s"
 /*---------------------------------------------------------------------------*/
 void doors_send_info(int llid, int tid, char *type, char *info);

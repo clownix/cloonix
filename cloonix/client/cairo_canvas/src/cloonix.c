@@ -139,7 +139,7 @@ char *get_doors_client_addr(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char **get_argv_local_xwy(char *name)
+char **get_argv_local_shk(char *name)
 {
   static char config[MAX_PATH_LEN];
   static char cmd[MAX_PATH_LEN];

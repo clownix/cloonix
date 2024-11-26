@@ -67,6 +67,7 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
             "fuse-archive" \
             "dtach" \
             "script_pty" \
+            "proxy_crun" \
             "xwy" \
             "wm2" \
             "ovs" \

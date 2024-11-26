@@ -28,9 +28,9 @@ typedef void (*t_doorways_llid)(int llid);
 typedef void (*t_doorways_rx)(int llid, int tid, int type, int val, 
                               int len, char *buf);
 /*--------------------------------------------------------------------------*/
-int doorways_sock_server_inet(int ip, int port, char *passwd,
-                              t_doorways_llid cb_llid,
-                              t_doorways_end cb_end, t_doorways_rx cb_rx_fct);
+void doorways_sock_server(char *net_name, int port, char *passwd,
+                          t_doorways_llid cb_llid, t_doorways_end cb_end,
+                          t_doorways_rx cb_rx_fct);
 /*--------------------------------------------------------------------------*/
 int doorways_tx_or_rx_still_in_queue(int llid);
 /*--------------------------------------------------------------------------*/
@@ -56,7 +56,7 @@ void doorways_sock_address_detect(char *doors_client_addr,
 /*---------------------------------------------------------------------------*/
 void doorways_clean_llid(int llid);
 /*---------------------------------------------------------------------------*/
-void doorways_sock_init(void);
+void doorways_sock_init(int to_exit);
 /*---------------------------------------------------------------------------*/
 
 

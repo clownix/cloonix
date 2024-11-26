@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int  thread_tx_get_stored_bytes(int fd_dst);
 void thread_tx_start(int dst_fd);
 void thread_tx_abort(int dst_fd);
 int  thread_tx_levels_above_thresholds(int dst_fd);

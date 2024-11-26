@@ -33,11 +33,11 @@ for i in  "cloonix_cli" \
           "cloonix_gui" \
           "cloonix_ocp" \
           "cloonix_osh" \
-          "cloonix_rsh" \
+          "cloonix_shk" \
+          "cloonix_shc" \
           "cloonix_ovs" \
           "cloonix_scp" \
           "cloonix_ssh" \
-          "cloonix_lsh" \
           "cloonix_dsh" \
           "cloonix_wsk" ; do
   cp -vf /tmp/cloonix_install_tmp/common/usr_bin/${i} /usr/bin

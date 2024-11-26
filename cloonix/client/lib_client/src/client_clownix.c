@@ -1078,7 +1078,7 @@ void client_init(char *name, char *path, char *password)
   clownix_get_path_cb = NULL;
   doors_io_basic_xml_init(doorways_client_tx);
   doors_io_layout_xml_init(doorways_client_tx);
-  doorways_sock_init();
+  doorways_sock_init(0);
   msg_mngt_init(name, IO_MAX_BUF_LEN);
   rpct_redirect_string_tx(ptr_doorways_client_tx);
 #ifdef WITH_GLIB

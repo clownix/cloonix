@@ -11,7 +11,10 @@ How the building is done.
 
 Cloonix recompiles most of the open-sources it uses and sometimes patches
 them for adjustments.
-Libraries are put into a separate zone only for cloonix use.
+Binaries and libraries are put into a separate zone only for cloonix use ::
+
+    /usr/libexec/cloonix/
+
 This allows the use of customized libs with no impact on the official host
 machine.
 
@@ -27,8 +30,9 @@ Sources associated to cloonix
 =============================
 
 The external open sources used in cloonix for qemu, ovs, spice ...
-are updated using the following links:
+are updated using the following links for the main software:
 
+  * https://github.com/wireshark/wireshark.git
   * https://github.com/openvswitch/ovs.git
   * https://git.qemu.org/git/qemu.git
   * https://gitlab.freedesktop.org/spice/spice-gtk.git
@@ -37,8 +41,16 @@ are updated using the following links:
   * https://gitlab.freedesktop.org/spice/usbredir.git
   * https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-8.6p1.tar.gz
   * https://github.com/containers/crun.git
-  * https://github.com/wireshark/wireshark.git
+  * https://github.com/google/fuse-archive.git
+  * https://github.com/NixOS/patchelf.git
 
+
+For the function that creates the web interface, other open sources are used:
+
+  * https://gitlab.freedesktop.org/xorg/xserver.git
+  * https://github.com/novnc/websockify-js
+  * https://github.com/novnc/noVNC
+  * https://github.com/nginx/nginx.git
 
 Get the cloonix sources
 =======================
@@ -59,11 +71,11 @@ Howto create the bundle
 To build the cloonix binaries, you have to have a debian repository, mine is
 local at 127.0.0.1, then go to cloonix-__LAST__/build_tools/vmbuild and do::
 
-    sudo ./make_bookworm
+    sudo ./make_trixie
 
 These commands should create in bulk the qcow of debian virtual machines::
 
-    /var/lib/cloonix/bulk/bookworm_amd64.qcow2
+    /var/lib/cloonix/bulk/trixie_amd64.qcow2
 
 Then you have to build the virtual machines debian_builder_amd64.qcow2
 the bundle will be created from inside these::
@@ -83,4 +95,4 @@ This creates in build_tools the directory::
 
     ./build_tools/cloonix-bundle-__LAST__-amd64
 
-For the i386, the same applies adding i386 at the end of commands.
+For the i386, it is not availlable now.

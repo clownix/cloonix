@@ -40,9 +40,9 @@
 #include "pid_clone.h"
 /*--------------------------------------------------------------------------*/
 static int  g_doorways_llid;
+static char g_net_name[MAX_NAME_LEN];
 static char g_root_work[MAX_PATH_LEN];
 static char g_password[MSG_DIGEST_LEN];
-static int g_llid_doors_listen;
 static int g_server_inet_port;
 /*--------------------------------------------------------------------------*/
 
@@ -124,11 +124,6 @@ void doors_recv_command(int llid, int tid, char *name, char *cmd)
     llid_xwy_connect_info(addr);
   else if (!strcmp(cmd, HALT_REQUEST))
     llid_backdoor_tx_halt_to_agent(name);
-  else if (!strcmp(cmd, STOP_DOORS_LISTENING))
-    {
-    if (msg_exist_channel(g_llid_doors_listen))
-      msg_delete_channel(g_llid_doors_listen);
-    }
   else
     KERR("%s  %s", name, cmd);
 }
@@ -162,7 +157,6 @@ void rpct_recv_hop_unsub(int llid, int tid)
   rpct_hop_print_del_sub(llid);
 }
 /*---------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 void doors_recv_add_vm(int llid,int tid,char *name, char *way2agent)
@@ -202,16 +196,11 @@ static void rx_ctrl_cb (int llid, int len, char *buf)
 static void end_of_init(char *passwd)
 {
   static int done = 0;
-  int llid;
-
   if (!done)
     {
-    llid = doorways_sock_server_inet(0, g_server_inet_port, passwd,
-                                     dispach_door_llid, dispach_door_end,
-                                     dispach_door_rx);
-    if (!llid)
-      KOUT(" ");
-    g_llid_doors_listen = llid;
+    doorways_sock_server(g_net_name, g_server_inet_port, passwd,
+                         dispach_door_llid, dispach_door_end,
+                         dispach_door_rx);
     llid_backdoor_init();
     llid_xwy_init();
     done = 1;
@@ -249,7 +238,6 @@ static int tst_port_is_not_used(int port)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static int tst_port(char *str_port, int *port)
 {
@@ -279,7 +267,6 @@ static void fct_timeout_after_birth_self_destruct(void *data)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 static char *get_name(char *root_work)
 {
@@ -308,20 +295,21 @@ int main (int argc, char *argv[])
   umask(0000);
   doors_xml_init();
   x11_init();
-  msg_mngt_init(get_name(argv[1]), IO_MAX_BUF_LEN);
+  msg_mngt_init(get_name(argv[2]), IO_MAX_BUF_LEN);
   dispach_init();
   pid_clone_init();
   g_doorways_llid = 0;
-  g_llid_doors_listen = 0;
-  if (argc != 4)
+  if (argc != 5)
     KOUT(" ");
+  memset(g_net_name, 0, MAX_NAME_LEN);
   memset(g_root_work, 0, MAX_PATH_LEN);
-  strncpy(g_root_work, argv[1], MAX_PATH_LEN);
-  if (tst_port(argv[2], &g_server_inet_port))
-    KOUT(" ");
   memset(g_password, 0, MSG_DIGEST_LEN);
-  strncpy(g_password, argv[3], MSG_DIGEST_LEN-1);
-  doorways_sock_init();
+  strncpy(g_net_name, argv[1], MAX_PATH_LEN);
+  strncpy(g_root_work, argv[2], MAX_PATH_LEN);
+  if (tst_port(argv[3], &g_server_inet_port))
+    KOUT(" ");
+  strncpy(g_password, argv[4], MSG_DIGEST_LEN-1);
+  doorways_sock_init(0);
   ctrl_path = get_ctrl_doors();
   unlink(ctrl_path);
   msg_mngt_heartbeat_init(heartbeat);

@@ -229,24 +229,6 @@ void debug_dump_enqueue_levels(int fd_dst, int slots, int bytes)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int debug_get_ioctl_queue_len(int fd, int type, int *used)
-{
-  int result = 0;
-  if (!ioctl(fd, SIOCOUTQ, used))
-    {
-    if (*used > 1000)
-      {
-      result = 1;
-      debug_evt("LOAD  %s used:%d", debug_get_fd_type_txt(type), *used);
-      }
-    }
-  else
-     debug_evt("LOAD  %s SIOCOUTQ ioctl error", debug_get_fd_type_txt(type));
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 char *debug_get_evt_type_txt(int type)
 {
   char *result = "not_3_decoded";

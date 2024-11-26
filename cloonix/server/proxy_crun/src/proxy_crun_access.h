@@ -15,37 +15,28 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#define MAX_NAME_LEN 64
+#define MAX_PATH_LEN 300
+#define MAX_SIGBUF_LEN 1024
 
-#define WIDTH 300
-#define HEIGH 200
+#define KERR(format, a...)                               \
+ do {                                                    \
+    syslog(LOG_ERR | LOG_USER, "KERR: %s"                 \
+    " line:%d " format "\n",   \
+    (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
+     __LINE__, ## a);                                    \
+    } while (0)
 
-
-void set_buttons_colors_red(void);
-void set_buttons_colors_green(void);
-void set_main_window_coords(int x, int y, int width, int heigh);
-void refresh_eth_button_label(void);
-void mouse_3rd_button_eth(void);
-char *get_current_directory(void);
-char *get_path_to_qemu_spice(void);
-char *get_distant_cloonix_tree(void);
-
-
-void work_dir_resp(int tid, t_topo_clc *conf);
-char *get_spice_vm_path(int vm_id);
-
-char *get_cmd_path(void);
-int inside_cloon(char **name);
-
-char **get_argv_local_shk(char *name);
-
-char *get_net_name(void);
-char *get_password(void);
-char *get_doors_client_addr(void);
-/*****************************************************************************/
-
-
-
-
-
-
-
+#define KOUT(format, a...)                               \
+ do {                                                    \
+    syslog(LOG_ERR | LOG_USER, "KERR KILL %s"            \
+    " line:%d   " format "\n\n",  \
+    (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
+     __LINE__, ## a);                                    \
+    exit(-1);                                            \
+    } while (0)
+/*--------------------------------------------------------------------------*/
+void accept_incoming_connect(int sock, char *unix_path);
+void ever_select_loop(int sock_sig);
+char *get_proxyshare(void);
+/*--------------------------------------------------------------------------*/

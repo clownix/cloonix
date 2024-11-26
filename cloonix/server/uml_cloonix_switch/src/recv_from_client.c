@@ -2278,7 +2278,6 @@ void recv_fix_display(int llid, int tid, char *line)
   sprintf(cmd, "%s -f /var/lib/cloonix/cache/.Xauthority %s", XAUTH_BIN, line);
   system(cmd);
   send_status_ok(llid, tid, "ok");
-KERR("TODOTRACE  %s", cmd);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -3,9 +3,11 @@
 EXTRACT=`pwd`
 ROOTFS="${EXTRACT}/rootfs"
 CONFIG="${EXTRACT}/config/config.json"
+INIT_CNT="${EXTRACT}/config/cloonix-init-starter-crun"
 TEMPLATE="${EXTRACT}/config/config.json.template"
 CRUN="${EXTRACT}/bin/cloonix-crun"
 PTYS="${EXTRACT}/bin/cloonix-scriptpty"
+PROXY="${EXTRACT}/bin/cloonix-proxy-crun-access"
 XAUTH="${EXTRACT}/bin/xauth"
 GREP="${ROOTFS}/usr/libexec/cloonix/common/grep"
 LIBCDIR="./bin"
@@ -22,7 +24,7 @@ CAPA="[\"CAP_CHOWN\",\"CAP_DAC_OVERRIDE\",\"CAP_DAC_READ_SEARCH\",\
 \"CAP_WAKE_ALARM\",\"CAP_BLOCK_SUSPEND\",\"CAP_AUDIT_READ\",\"CAP_PERFMON\",\
 \"CAP_BPF\",\"CAP_CHECKPOINT_RESTORE\"]"
 #-----------------------------------------------------------------------------
-for i in ${CRUN} ${PTYS} ${XAUTH} ${GREP} ; do
+for i in ${CRUN} ${PTYS} ${PROXY} ${XAUTH} ${GREP} ; do
   if [ ! -x ${i} ]; then 
     echo NOT FOUND:
     echo ${i}
@@ -34,25 +36,13 @@ done
 XAUTH_LINE=$(${XAUTH} list |grep unix${DISPLAY})
 XAUTH_CODE=${XAUTH_LINE##*MIT-MAGIC-COOKIE-1 }
 #---------------------------------------------------------------------------
-cat > ${ROOTFS}/usr/libexec/cloonix/server/init_starter_crun << EOF
-#!/usr/libexec/cloonix/common/bash
-export TERM=linux
-export XAUTHORITY="/var/lib/cloonix/cache/.Xauthority"
-
-/usr/libexec/cloonix/common/ln -s /usr/libexec/cloonix/common/share /usr/share
-/usr/libexec/cloonix/common/ln -s /usr/libexec/cloonix/common/lib /usr/lib
-/usr/libexec/cloonix/common/ln -s /usr/libexec/cloonix/common /usr/bin
-/usr/libexec/cloonix/common/ln -s /usr/libexec/cloonix/common/etc /etc
-
-/usr/libexec/cloonix/server/cloonix-scriptpty rsyslogd
-/usr/libexec/cloonix/server/cloonix-scriptpty "localedef -i en_US -f UTF-8 en_US.UTF-8"
-/usr/libexec/cloonix/server/cloonix-scriptpty "touch /var/lib/cloonix/cache/.Xauthority"
-/usr/libexec/cloonix/server/cloonix-scriptpty "xauth add crun/unix:0 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}"
-/usr/libexec/cloonix/server/cloonix-scriptpty bash
-EOF
-chmod +x ${ROOTFS}/usr/libexec/cloonix/server/init_starter_crun
+cp -f ${INIT_CNT} ${ROOTFS}/usr/libexec/cloonix/server
+sed -i s"/__XAUTH_CODE__/${XAUTH_CODE}/" ${ROOTFS}/usr/libexec/cloonix/server/cloonix-init-starter-crun
 #---------------------------------------------------------------------------
+PROXYSHARE="/tmp/cloonix_proxy_${RANDOM}"
+mkdir -p ${PROXYSHARE}
 cp -f ${TEMPLATE} ${CONFIG}
+sed -i s"%__PROXYSHARE__%${PROXYSHARE}%" ${CONFIG}
 sed -i s"%__DISPLAY__%${DISPLAY}%" ${CONFIG}
 sed -i s"%__ROOTFS__%${ROOTFS}%" ${CONFIG}
 sed -i s"%__CAPA__%${CAPA}%"   ${CONFIG}
@@ -60,7 +50,11 @@ sed -i s"%__UID__%${UID}%"   ${CONFIG}
 #-----------------------------------------------------------------------------
 mkdir -p ${EXTRACT}/log
 #-----------------------------------------------------------------------------
+pkill -f cloonix-proxy-crun-access
+echo ${PROXY} ${PROXYSHARE}
+${PROXY} ${PROXYSHARE}
 ${PTYS} "${CRUN} --cgroup-manager=disabled --rootless=100000 --log=${EXTRACT}/log/crun.log --root=${ROOTFS}/tmp run -f ${CONFIG} nemo"
 #-----------------------------------------------------------------------------
+rm -rf ${PROXYSHARE}
 echo END SCRIPT
 #-----------------------------------------------------------------------------

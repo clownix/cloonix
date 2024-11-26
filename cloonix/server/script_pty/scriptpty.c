@@ -52,7 +52,7 @@ enum {
     } while (0)
 #define KERR(format, a...)                                    \
  do {                                                         \
-    fprintf(stderr, "KOUT line:%d " format "\n\n",            \
+    fprintf(stderr, "line:%d " format "\n\n",            \
     __LINE__, ## a);                                          \
     syslog(LOG_ERR | LOG_USER, "KERR line:%d " format "\n\n", \
     __LINE__, ## a);                                \

@@ -289,7 +289,8 @@ static void derived_file_creation_request(t_vm *vm)
 #define QEMU_OPTS_BASE \
    " -m %d"\
    " -name %s"\
-   " -serial stdio"\
+   " -chardev stdio,id=s1,signal=off"\
+   " -serial none -device isa-serial,chardev=s1"\
    " -nodefaults"\
    " -rtc base=utc,driftfix=slew"\
    " -global kvm-pit.lost_tick_policy=delay"\

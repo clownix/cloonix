@@ -169,6 +169,8 @@ void last_action_self_destruction(void *data)
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_nginx_logs_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_nginx_client_body_temp_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files(utils_get_nginx_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_c2c_dir(), err))

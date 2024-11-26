@@ -224,6 +224,24 @@ int thread_tx_get_levels(int fd_dst, int *used_slot_nb, int *stored_bytes)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int thread_tx_get_stored_bytes(int fd_dst)
+{
+  int result = 0;
+  t_tx *tx;
+  if ((fd_dst < 0) || (fd_dst >= MAX_FD_NUM))
+    KOUT("%d", fd_dst);
+  if (!(g_tx[fd_dst]))
+    KERR("%d", fd_dst);
+  else
+    {
+    tx = g_tx[fd_dst];
+    result = circ_tx_stored_bytes_nb(tx->circ_ctx);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int thread_tx_levels_above_thresholds(int fd_dst)
 {
   int used_slot_nb, stored_bytes, result;

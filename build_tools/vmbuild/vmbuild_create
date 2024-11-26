@@ -100,7 +100,8 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                       libei-dev liboeffis-dev libaudit-dev \
                       mesa-common-dev libpipewire-0.3-dev \
                       libpipewire-0.3-modules util-linux rsyslog \
-                      pipewire-pulse unzip zip curl wget libboost-dev"
+                      pipewire-pulse unzip zip curl wget libboost-dev \
+                      nodejs node-mime-types node-mime node-optimist node-ws"
 
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"
