@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -74,6 +74,7 @@ static int g_nb_cli;
 static int g_listen_sock_fd;
 static struct timeval g_timeout;
 static struct timeval g_last_heartbeat_tv;
+
 
 /****************************************************************************/
 static void cli_alloc(int fd)
@@ -466,6 +467,8 @@ static void prepare_fd_set(fd_set *readfds, fd_set *writefds)
   int ret;
   FD_ZERO(readfds);
   FD_ZERO(writefds);
+  if (!mdl_fd_is_valid(g_listen_sock_fd))
+    KOUT("ERROR FD");
   FD_SET(g_listen_sock_fd, readfds);
   cur = g_cli_head;
   while(cur)
@@ -473,6 +476,11 @@ static void prepare_fd_set(fd_set *readfds, fd_set *writefds)
     next = cur->next;
     if ((cur->inhibited_associated) || (cur->inhibited_to_be_destroyed))
       cli_free(cur);
+    else if (!mdl_fd_is_valid(cur->sock_fd))
+      {
+      KERR("ERROR FD sock_fd");
+      cli_free(cur);
+      }
     else
       FD_SET(cur->sock_fd, readfds);
     cur = next;
@@ -516,31 +524,34 @@ static void server_loop(void)
   if (ret < 0)
     {
     if (errno != EINTR && errno != EAGAIN)
-      KOUT("%s", strerror(errno));
-    }
-  if (ret == 0)
-    {
-    g_timeout.tv_sec = 0;
-    g_timeout.tv_usec = 10000;
-    }
-  if (FD_ISSET(g_listen_sock_fd, &readfds))
-    listen_socket_action();
-  cur = g_cli_head;
-  while(cur)
-    {
-    next = cur->next;
-    thread_tx_purge_el(cur->sock_fd);
-    if (FD_ISSET(cur->sock_fd, &readfds))
-      mdl_read_fd((void *)cur, cur->sock_fd, rx_msg_cb, rx_err_cb);
-    cur = next;
-    }
-  if (pty_fork_fdisset(&readfds, &writefds) == 0)
-    {
-    cloonix_fdisset(&readfds);
-    x11_fdisset(&readfds, &writefds);
+      KERR("ERROR %s", strerror(errno));
     }
   else
-    KERR("WARNING CLOSED PTY");
+    {
+    if (ret == 0)
+      {
+      g_timeout.tv_sec = 0;
+      g_timeout.tv_usec = 10000;
+      }
+    if (FD_ISSET(g_listen_sock_fd, &readfds))
+      listen_socket_action();
+    cur = g_cli_head;
+    while(cur)
+      {
+      next = cur->next;
+      thread_tx_purge_el(cur->sock_fd);
+      if (FD_ISSET(cur->sock_fd, &readfds))
+        mdl_read_fd((void *)cur, cur->sock_fd, rx_msg_cb, rx_err_cb);
+      cur = next;
+      }
+    if (pty_fork_fdisset(&readfds, &writefds) == 0)
+      {
+      cloonix_fdisset(&readfds);
+      x11_fdisset(&readfds, &writefds);
+      }
+    else
+      KERR("WARNING CLOSED PTY");
+    }
 }
 /*--------------------------------------------------------------------------*/
 

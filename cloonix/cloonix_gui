@@ -5,6 +5,11 @@ if [ 1 -gt ${#} ]; then
   exit 1
 fi
 
+#  if [ $(egrep -c cloonix-init /proc/1/cmdline) -gt 0 ]; then 
+#    export DISPLAY=:713
+#    export XAUTHORITY=/tmp/cloonix_proxy/Xauthority
+#  fi
+
 if [ -z $DISPLAY ] ; then
   echo DISPLAY NOT SET gui will not work
   exit 1

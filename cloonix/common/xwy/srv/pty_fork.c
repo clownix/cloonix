@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -513,14 +513,19 @@ void pty_fork_fdset(fd_set *readfds, fd_set *writefds)
     {
     if (cur->pty_fd != -1)
       {
-      ret = low_write_levels_above_thresholds(cur->sock_fd);
-      if (ret == 0)
+      if (!mdl_fd_is_valid(cur->pty_fd))
+        KERR("ERROR pty_fd");
+      else
         {
-        FD_SET(cur->pty_fd, readfds);
-        }
-      if (low_write_not_empty(cur->pty_fd))
-        {
-        FD_SET(cur->pty_fd, writefds);
+        ret = low_write_levels_above_thresholds(cur->sock_fd);
+        if (ret == 0)
+          {
+          FD_SET(cur->pty_fd, readfds);
+          }
+        if (low_write_not_empty(cur->pty_fd))
+          {
+          FD_SET(cur->pty_fd, writefds);
+          }
         }
       }
     cur = cur->next;

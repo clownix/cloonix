@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -762,11 +762,9 @@ static int automate_rx_qga_msg(t_qrec *cur, char *msg)
       if (cur->request_reboot_done == 0)
         {
         cur->request_reboot_done = 1;
-        KERR("ERROR UNRECOV NOT REBOOTING %s %s", cur->name, msg);
         cur->file_status = 2;
-//        qmp_request_qemu_reboot(cur->name);
-//        qemu_ga_fail(cur->name);
-//        result = -1;
+        if (!strstr(msg, "exited\":"))
+          KERR("ERROR UNRECOV NOT REBOOTING %s %s", cur->name, msg);
         }
       else
         KERR("ERROR TWO RELOADING %s %s", cur->name, msg);

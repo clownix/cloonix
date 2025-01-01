@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -41,6 +41,34 @@
 #include "ifdev.h"
 
 
+/*****************************************************************************/
+int ovs_cmd_system_promisc(char *ovs_bin, char *ovs_dir, char *vhost)
+{
+  int result = -1;
+  char bvhost[MAX_NAME_LEN];
+  char cmd[MAX_ARG_LEN];
+  memset(bvhost, 0, MAX_NAME_LEN);
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(bvhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, vhost);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- add-br %s", bvhost);
+  if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
+    KERR("ERROR OVSCMD SYSTEM PROMISC ADD LAN %s", bvhost);
+  else if (ifdev_set_intf_flags_iff_up_promisc(vhost))
+    KERR("ERROR OVSCMD SYSTEM PROMISC SET PROMISC UP %s", vhost);
+  else if (ifdev_set_intf_flags_iff_up_promisc(bvhost))
+    KERR("ERROR OVSCMD SYSTEM PROMISC SET PROMISC UP %s", bvhost);
+  else
+    {
+    memset(cmd, 0, MAX_ARG_LEN);
+    snprintf(cmd, MAX_ARG_LEN-1, "-- add-port %s %s", bvhost, vhost);
+    if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
+      KERR("ERROR OVSCMD SYSTEM PROMISC ADD PORT %s %s", bvhost, vhost);
+    else
+    result = 0;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int ovs_cmd_vhost_up(char *ovs_bin, char *ovs_dir,
@@ -58,17 +86,23 @@ int ovs_cmd_add_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
+  char bvhost[MAX_NAME_LEN];
+  memset(bvhost, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(bvhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, lan);
+
+  if (ifdev_set_intf_flags_iff_up_down(vhost, 1))
+    KERR("ERROR OVSCMD: SNF PART3 %s", vhost);
 
   snprintf(cmd, MAX_ARG_LEN-1,
-  "-- add-port %s%s s%s "
+  "-- add-port %s s%s "
   "-- --id=@m create mirror name=mir%s "
-  "-- add bridge %s%s mirrors @m "
+  "-- add bridge %s mirrors @m "
   "-- --id=@%s get port %s "
   "-- set mirror mir%s select_src_port=@%s select_dst_port=@%s "
   "-- --id=@s%s get port s%s -- set mirror mir%s output-port=@s%s",
-                OVS_BRIDGE, lan, vhost, vhost,
-                OVS_BRIDGE, lan, vhost, vhost,
+                bvhost, vhost, vhost,
+                bvhost, vhost, vhost,
                 vhost, vhost, vhost, 
                 vhost, vhost, vhost, vhost); 
   if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
@@ -86,14 +120,17 @@ int ovs_cmd_del_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
+  char bvhost[MAX_NAME_LEN];
+  memset(bvhost, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(bvhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, lan);
   snprintf(cmd, MAX_ARG_LEN-1,
-           "-- --id=@m get Mirror mir%s -- remove Bridge %s%s mirrors @m "
-           "-- del-port %s%s s%s",
-           vhost, OVS_BRIDGE, lan, OVS_BRIDGE, lan, vhost);
+           "-- --id=@m get Mirror mir%s -- remove Bridge %s mirrors @m "
+           "-- del-port %s s%s",
+           vhost, bvhost, bvhost, vhost);
   if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
     {
-    KERR("ERROR OVSCMD: SNF DEL %s", vhost);
+    KERR("ERROR OVSCMD: SNF DEL %s %s", vhost, bvhost);
     result = -1;
     }
   return result;
@@ -105,9 +142,11 @@ int ovs_cmd_add_lan_rstp(char *ovs_bin, char *ovs_dir, char *lan)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
+  char bvhost[MAX_NAME_LEN];
+  memset(bvhost, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- set Bridge %s%s rstp_enable=true",
-           OVS_BRIDGE, lan);
+  snprintf(bvhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, lan);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- set Bridge %s rstp_enable=true", bvhost);
   if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
     {
     KERR("ERROR OVSCMD: ADD LAN %s", lan);
@@ -122,8 +161,11 @@ int ovs_cmd_add_lan(char *ovs_bin, char *ovs_dir, char *lan)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
+  char vhost[MAX_NAME_LEN];
+  memset(vhost, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- add-br %s%s", OVS_BRIDGE, lan);
+  snprintf(vhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, lan);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- add-br %s", vhost);
   if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
     {
     KERR("ERROR OVSCMD: ADD LAN %s", lan);
@@ -138,8 +180,11 @@ int ovs_cmd_del_lan(char *ovs_bin, char *ovs_dir, char *lan)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN]; 
+  char bvhost[MAX_NAME_LEN];
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- del-br %s%s", OVS_BRIDGE, lan);
+  memset(bvhost, 0, MAX_NAME_LEN);
+  snprintf(bvhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, lan);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-br %s", bvhost);
   if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
     {
     KERR("ERROR OVSCMD: DEL LAN %s", lan);
@@ -154,11 +199,18 @@ int ovs_cmd_add_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
+  char bvhost[MAX_NAME_LEN];
+  memset(bvhost, 0, MAX_NAME_LEN);
+  snprintf(bvhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, lan);
+if (ifdev_set_intf_flags_iff_up_down(vhost, 1))
+    KERR("ERROR OVSCMD: SNF PART3 %s", vhost);
+if (ifdev_set_intf_flags_iff_up_down(bvhost, 1))
+    KERR("ERROR OVSCMD: SNF PART4 %s", bvhost);
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- add-port %s%s %s", OVS_BRIDGE, lan, vhost);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- add-port %s %s", bvhost, vhost);
   if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
     {
-    KERR("ERROR OVSCMD: ADD LAN ETH %s %s", lan, vhost);
+    KERR("ERROR OVSCMD: ADD LAN ETH %s %s %s", lan, vhost, bvhost);
     result = -1;
     }
   return result;
@@ -170,8 +222,11 @@ int ovs_cmd_del_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost)
 {
   int result = 0;
   char cmd[MAX_ARG_LEN];
+  char bvhost[MAX_NAME_LEN];
+  memset(bvhost, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port %s%s %s", OVS_BRIDGE, lan, vhost);
+  snprintf(bvhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, lan);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- del-port %s %s", bvhost, vhost);
   ovs_vsctl_quiet(ovs_bin, ovs_dir, cmd);
   return result;
 }

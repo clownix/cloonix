@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -200,7 +200,7 @@ static void end_of_init(char *passwd)
     {
     doorways_sock_server(g_net_name, g_server_inet_port, passwd,
                          dispach_door_llid, dispach_door_end,
-                         dispach_door_rx);
+                         doorways_rx_bufraw);
     llid_backdoor_init();
     llid_xwy_init();
     done = 1;

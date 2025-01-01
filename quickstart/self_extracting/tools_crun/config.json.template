@@ -6,20 +6,15 @@
         "uid": 0,
         "gid": 0
     },
-    "args": ["/usr/libexec/cloonix/server/cloonix-init-starter-crun"],
+    "args": ["/usr/libexec/cloonix/server/cloonix-init-__IDENT__"],
     "env": [
         "PATH=/usr/bin:/usr/libexec/cloonix/common/:/usr/libexec/cloonix/server",
-        "DISPLAY=__DISPLAY__",
+        "DISPLAY=:713",
+        "XAUTHORITY=/tmp/cloonix_proxy/Xauthority",
+        "XDG_RUNTIME_DIR=/tmp/cloonix_proxy",
         "HOME=root"
     ],
     "cwd": "/root",
-    "capabilities": {
-        "bounding": __CAPA__,
-        "effective": __CAPA__,
-        "inheritable": __CAPA__,
-        "permitted": __CAPA__,
-        "ambient": __CAPA__
-    },
     "rlimits": [{
         "type": "RLIMIT_NOFILE",
         "hard": 1024,
@@ -36,16 +31,11 @@
     "destination": "/tmp",
     "type": "tmpfs",
     "source": "tmpfs",
-    "options": ["nodev","rw"]
+    "options": ["nodev","rw","mode=2755"]
     },{
     "destination": "/tmp/cloonix_proxy",
     "type": "none",
     "source": "__PROXYSHARE__",
-    "options": ["rbind","rw"]
-    },{
-    "destination": "/tmp/.X11-unix",
-    "type": "none",
-    "source": "/tmp/.X11-unix",
     "options": ["rbind","rw"]
     },{
     "destination": "/dev",

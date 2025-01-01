@@ -1,6 +1,6 @@
 diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
---- crun/src/libcrun/error.c	2024-11-10 19:35:41.000000000 +0100
-+++ crun_tainted/src/libcrun/error.c	2024-11-26 10:25:24.333710458 +0100
+--- crun/src/libcrun/error.c	2024-12-28 21:43:48.000000000 +0100
++++ crun_tainted/src/libcrun/error.c	2024-12-28 22:21:44.646026100 +0100
 @@ -44,6 +44,15 @@
  static int log_format;
  static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
@@ -18,8 +18,8 @@ diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
  libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
  {
 diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
---- crun/src/libcrun/linux.c	2024-11-10 19:35:41.000000000 +0100
-+++ crun_tainted/src/libcrun/linux.c	2024-11-26 10:25:35.581749420 +0100
+--- crun/src/libcrun/linux.c	2024-12-28 21:43:48.000000000 +0100
++++ crun_tainted/src/libcrun/linux.c	2024-12-28 22:21:44.646026100 +0100
 @@ -105,6 +105,15 @@
  #  define FSCONFIG_CMD_CREATE 6
  #endif
@@ -36,7 +36,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
  struct remount_s
  {
    struct remount_s *next;
-@@ -1580,6 +1589,10 @@
+@@ -1549,6 +1558,10 @@
                                    { "/dev/tty", "c", 5, 0, 0666, 0, 0 },
                                    { "/dev/random", "c", 1, 8, 0666, 0, 0 },
                                    { "/dev/urandom", "c", 1, 9, 0666, 0, 0 },

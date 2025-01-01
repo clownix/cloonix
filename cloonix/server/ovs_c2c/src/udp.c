@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -25,9 +25,12 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/un.h>
+
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
+#include "util_sock.h"
 #include "rxtx.h"
 #include "udp.h"
 
@@ -38,7 +41,10 @@
 #define MHID 4 
 #define MAXUDPLEN (MHID+MHLN+MHNB+PLEN+PHEAD)
 
+static char g_proxy_unix_dgram_rx[MAX_PATH_LEN];
+static char g_proxy_unix_dgram_tx[MAX_PATH_LEN];
 
+static int g_llid_is_proxy;
 static struct sockaddr_in g_loc_addr;
 static struct sockaddr_in g_dist_addr;
 static int g_llid;
@@ -56,6 +62,59 @@ char *get_net_name(void);
 static t_udp_burst g_udp_burst_rx[MAX_PKT_BURST];
 static t_udp_burst g_udp_burst_tx[MAX_PKT_BURST];
 
+ 
+/****************************************************************************/
+static int transmit_unix_dgram_tx(char *dgram_tx, int len, char *data)
+{   
+  struct sockaddr_un name;
+  struct sockaddr *pname = (struct sockaddr *)&name;
+  int len_tx, len_un = sizeof(struct sockaddr_un);
+  int sock, result=0;  
+  if (len >= MAX_DGRAM_LEN)
+    KOUT("ERROR SOCK_DGRAM LEN %d %s", len, dgram_tx);
+  memset(&name, 0, sizeof(struct sockaddr_un));
+  sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+  if (sock < 0)
+    KOUT("ERROR SOCK_DGRAM %s", dgram_tx);
+  name.sun_family = AF_UNIX;
+  strncpy(name.sun_path, dgram_tx, 107);
+
+  len_tx = sendto(sock, data, len, 0, pname, len_un);
+  while ((len_tx == -1) && (errno == EAGAIN))
+    {
+    usleep(1000);
+    len_tx = sendto(sock, data, len, 0, pname, len_un);
+    }
+  if (len_tx != len)
+    {
+    KERR("ERROR %d %d %d %s", len_tx, len, errno, dgram_tx);
+    result = -1;
+    }
+  close(sock);
+  return result;
+}     
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int transmit_udp_dgram_tx(int len, char *tx)
+{
+  int len_tx, result=0;  
+  uint32_t ln = sizeof(struct sockaddr_in);
+  len_tx = sendto(g_fd, tx, len, 0,(const struct sockaddr *)&g_dist_addr,ln);
+  while ((len_tx == -1) && (errno == EAGAIN))
+    {
+    usleep(1000);
+    len_tx = sendto(g_fd, tx, len, 0,(const struct sockaddr *)&g_dist_addr,ln);
+    }
+  if (len_tx != len)
+    {
+    KERR("%d %d %d", len_tx, len, errno);
+    result = -1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static void nonblock(int fd)
 {
@@ -71,12 +130,15 @@ static void nonblock(int fd)
 /***************************************************************************/
 void udp_tx_sig(int len, uint8_t *buf)
 {
-  uint32_t ln = sizeof(struct sockaddr_in);
-  int len_tx;
-  len_tx = sendto(g_fd,buf,len,0,(const struct sockaddr *)&g_dist_addr,ln);
-  if (len_tx != len)
+  if (g_llid_is_proxy)
     {
-    KERR("%d %d %d", len_tx, len, errno);
+    if (transmit_unix_dgram_tx(g_proxy_unix_dgram_tx, len, (char *) buf))
+      KERR("ERROR %d %s", len, buf);
+    }
+  else
+    {
+    if (transmit_udp_dgram_tx(len,  (char *) buf))
+      KERR("ERROR %d %s", len, buf);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -109,18 +171,16 @@ static uint8_t *udp_tx_traf_add_elem(int len, uint8_t *data, uint8_t *buf)
 /***************************************************************************/
 static int udp_tx_traf_send(int len, uint8_t *tx)
 {
-  uint32_t ln = sizeof(struct sockaddr_in);
-  int len_tx, result = 0;
-  len_tx = sendto(g_fd,tx,len,0,(const struct sockaddr *)&g_dist_addr,ln);
-  while ((len_tx == -1) && (errno == EAGAIN))
+  int result = 0;
+  if (g_llid_is_proxy)
     {
-    usleep(1000);
-    len_tx = sendto(g_fd,tx,len,0,(const struct sockaddr *)&g_dist_addr,ln);
+    if (transmit_unix_dgram_tx(g_proxy_unix_dgram_tx, len,  (char *) tx))
+      KERR("ERROR %d", len);
     }
-  if (len_tx != len) 
+  else
     {
-    KERR("%d %d %d", len_tx, len, errno);
-    result = -1;
+    if (transmit_udp_dgram_tx(len, (char *) tx))
+      KERR("ERROR %d", len);
     }
   return result;
 }
@@ -133,12 +193,14 @@ int udp_read_bulk(int *nb_packets, uint8_t **start)
   int result = read(g_fd, g_rx, MAXUDPLEN);
   if (result == 0)
     {
+    KERR("ERROR udp_read_bulk");
     result = -1;
     }
   else if (result < 0)
     {
     if ((errno != EAGAIN) && (errno != EINTR))
       {
+      KERR("ERROR udp_read_bulk %d", errno);
       result = -1;
       }
     else
@@ -218,15 +280,23 @@ static void err_cb(int llid, int err, int from)
     udp_close();
     KERR("ERROR ");
     }
+  if (g_llid_is_proxy)
+    {
+    unlink(g_proxy_unix_dgram_rx);
+    unlink(g_proxy_unix_dgram_tx);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
 /***************************************************************************/
 void udp_fill_dist_addr(uint32_t ip, uint16_t udp_port)
 {
-  g_dist_addr.sin_family = AF_INET;
-  g_dist_addr.sin_addr.s_addr = htonl(ip);
-  g_dist_addr.sin_port = htons(udp_port);
+  if (!g_llid_is_proxy)
+    {
+    g_dist_addr.sin_family = AF_INET;
+    g_dist_addr.sin_addr.s_addr = htonl(ip);
+    g_dist_addr.sin_port = htons(udp_port);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -382,13 +452,12 @@ t_udp_burst *get_udp_burst_tx(void)
 /***************************************************************************/
 static int udp_init_bind_loc_addr(uint16_t *udp_port)
 {
-  int i, fd, result = -1, max_try=1000;
+  int result = -1;
+  int i, fd, max_try=1000;
   uint16_t port;
   uint32_t len = sizeof(struct sockaddr_in);
   if ((fd = socket(AF_INET, SOCK_DGRAM, 0))< 0)
     KOUT("%d", errno);
-  memset(&g_loc_addr,  0, len);
-  memset(&g_dist_addr, 0, len);
   g_loc_addr.sin_family = AF_INET;
   g_loc_addr.sin_addr.s_addr = INADDR_ANY;
   for(i=0; i<max_try; i++)
@@ -397,30 +466,69 @@ static int udp_init_bind_loc_addr(uint16_t *udp_port)
     g_loc_addr.sin_port = htons(port);
     if (bind(fd, (const struct sockaddr *)&g_loc_addr, len) == 0)
       {
-      nonblock(fd);
       result = 0;
+      nonblock(fd);
       *udp_port = port;
       g_fd = fd;
+      g_llid = msg_watch_fd(fd, rx_cb, err_cb, "udpd2d");
       break;
       }
     }
-  if (result)
-    KERR("No port udp found");
-  else
-    g_llid = msg_watch_fd(fd, rx_cb, err_cb, "udpd2d");
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int udp_init(void)
+int udp_init(uint16_t *udp_port)
 {
-  int result = -1;
-  uint16_t udp_port;
+  int fd, result = -1;
+  memset(&g_loc_addr,  0, sizeof(struct sockaddr_in));
+  memset(&g_dist_addr, 0, sizeof(struct sockaddr_in));
+  g_llid_is_proxy = 0;
   g_traffic_mngt = 0;
   g_fd = -1;
-  if (udp_init_bind_loc_addr(&udp_port) == 0)
-    result = udp_port;
+  if (*udp_port == 0)
+    {
+    if (udp_init_bind_loc_addr(udp_port))
+      KERR("ERROR No port udp found");
+    else
+      result = 0;
+    }
+  else
+    {
+    memset(g_proxy_unix_dgram_rx, 0, MAX_PATH_LEN-1);
+    memset(g_proxy_unix_dgram_tx, 0, MAX_PATH_LEN-1);
+    snprintf(g_proxy_unix_dgram_tx, MAX_PATH_LEN-1,
+             "%s/proxy_dgram_%hu_tx.sock", PROXYSHARE, *udp_port);
+    snprintf(g_proxy_unix_dgram_rx, MAX_PATH_LEN-1,
+             "%s/proxy_dgram_%hu_rx.sock", PROXYSHARE, *udp_port);
+    if (strlen(g_proxy_unix_dgram_tx) >= 108)
+      KOUT("ERROR PATH LEN %lu", strlen(g_proxy_unix_dgram_tx));
+    if (strlen(g_proxy_unix_dgram_rx) >= 108)
+      KOUT("ERROR PATH LEN %lu", strlen(g_proxy_unix_dgram_rx));
+    fd = util_socket_unix_dgram(g_proxy_unix_dgram_rx);
+    if (fd < 0)
+      {
+      KERR("ERROR %s", g_proxy_unix_dgram_rx);
+      *udp_port = 0;
+      }
+    else
+      {
+      g_llid = msg_watch_fd(fd, rx_cb, err_cb, "udpd2d");
+      if (g_llid == 0)
+        {
+        KERR("ERROR %s", g_proxy_unix_dgram_rx);
+        *udp_port = 0;
+        close(fd);
+        }
+      else
+        {
+        g_fd = fd;
+        g_llid_is_proxy = 1;
+        result = 0;
+        }
+      }
+    }
   return result;
 }
 /*--------------------------------------------------------------------------*/

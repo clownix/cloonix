@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -163,23 +163,24 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     }
 
   else if (sscanf(line,
-  "c2c_get_udp_port %s", g_c2c_name) == 1)
+  "c2c_get_free_udp_port %s proxycrun %hu", g_c2c_name, &g_udp_port) == 2)
     {
-    g_udp_port = udp_init();
-    if (g_udp_port == -1)
+    if (udp_init(&g_udp_port))
       {
       snprintf(resp, MAX_PATH_LEN-1,
-      "c2c_get_udp_port_ko %s", g_c2c_name);
+      "c2c_get_free_udp_port_ko %s", g_c2c_name);
+      KERR("ERROR %s", line);
       }
     else
       {
       snprintf(resp, MAX_PATH_LEN-1,
-      "c2c_get_udp_port_ok %s udp_port=%hu", g_c2c_name, g_udp_port);
+      "c2c_get_free_udp_port_ok %s udp_port=%hu", g_c2c_name, g_udp_port);
       }
     rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (sscanf(line,
-  "c2c_set_dist_udp_ip_port %s %x %hu", g_c2c_name, &dist_ip, &dist_port)==3)
+  "c2c_set_dist_udp_ip_port proxycrun=no %s %x %hu",
+  g_c2c_name, &dist_ip, &dist_port)==3)
     {
     udp_fill_dist_addr(dist_ip, dist_port);
     snprintf(resp, MAX_PATH_LEN-1,

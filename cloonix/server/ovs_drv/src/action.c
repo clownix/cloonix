@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -50,6 +50,22 @@ static int check_uid(void)
     result = 0;
   seteuid(prev_uid);
   return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void action_system_promisc(char *bin, char *db, char *respb, char *vhost)
+{
+  if (ovs_cmd_system_promisc(bin, db, vhost))
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "KO ovs_system_promisc vhost=%s", vhost);
+    }
+  else
+    {
+    snprintf(respb, MAX_PATH_LEN-1,
+             "OK ovs_system_promisc vhost=%s", vhost);
+    }
 }
 /*---------------------------------------------------------------------------*/
 

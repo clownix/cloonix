@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -805,7 +805,9 @@ int crun_utils_create_overlay(char *path, char *lower, int is_persistent)
   else
     {
     snprintf(cmd, 2*MAX_PATH_LEN-1,
-    "%s -t overlay overlay -olowerdir=%s,upperdir=%s/%s/%s,workdir=%s/%s/%s %s/%s",
+    "%s -t overlay overlay "
+    "-o index=off,xino=off,redirect_dir=nofollow,metacopy=off,uuid=off "
+    "-o lowerdir=%s,upperdir=%s/%s/%s,workdir=%s/%s/%s %s/%s",
     MOUNT_BIN, lower, path, TMPFS, UPPER, path, TMPFS, WORKDIR, path, ROOTFS);
     if (execute_cmd(cmd, 1))
       KERR("%s", cmd);

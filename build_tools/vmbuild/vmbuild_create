@@ -13,7 +13,7 @@ fi
 #----------------------------------------------------------------------#
 HERE=`pwd`
 DISTRO=trixie
-NET=nemo
+NET=mito
 NAME=dev
 BULK="/var/lib/cloonix/bulk"
 REPO="http://172.17.0.2/debian/${DISTRO}"
@@ -93,7 +93,7 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                       libparse-yapp-perl libsnappy-dev libzstd-dev \
                       libspandsp-dev libxml2-dev libminizip-dev \
                       perl xsltproc ccache doxygen bison gdb \
-                      ncurses-base strace gcc-11-multilib x11vnc \
+                      ncurses-base strace gcc-12-multilib x11vnc \
                       x11-xserver-utils libxmu-dev x11-xkb-utils x11proto-dev \
                       libxshmfence-dev libbsd-dev libxkbfile-dev \
                       libxfont-dev libxcvt-dev libdecor-0-dev \
@@ -101,9 +101,11 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                       mesa-common-dev libpipewire-0.3-dev \
                       libpipewire-0.3-modules util-linux rsyslog \
                       pipewire-pulse unzip zip curl wget libboost-dev \
-                      nodejs node-mime-types node-mime node-optimist node-ws"
+                      nodejs node-mime-types node-mime node-optimist \
+                      node-ws acl libevent-dev"
 
 #----------------------------------------------------------------------
+cloonix_ssh ${NET} ${NAME} "sync"
 cloonix_ssh ${NET} ${NAME} "sync"
 cloonix_ssh ${NET} ${NAME} "poweroff"
 #----------------------------------------------------------------------

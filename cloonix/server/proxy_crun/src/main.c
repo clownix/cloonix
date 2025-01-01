@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -31,96 +31,191 @@
 #include <sys/select.h>
 #include <fcntl.h>
 #include <linux/tcp.h>
-#include "proxy_crun_access.h"
 
-static char PROXYSHARE[MAX_NAME_LEN];
-static char g_unix_sig[MAX_PATH_LEN];
+#include "io_clownix.h"
+#include "rpc_clownix.h"
+#include "doorways_sock.h"
+#include "proxy_crun.h"
+#include "util_sock.h"
+#include "c2c_peer.h"
+
+
+static char g_proxyshare[MAX_NAME_LEN];
+static char g_unix_sig_stream[MAX_PATH_LEN];
+static int g_llid_sig;
+
 
 /****************************************************************************/
-int util_socket_listen_unix(char *pname)
+static void heartbeat (int delta)
 {
-  int ret, fd, len;
-  struct sockaddr_un serv;
-
-  if (strlen(pname) >= 108)
-    KOUT("%d", (int)(strlen(pname)));
-  unlink (pname);
-  fd = socket (AF_UNIX, SOCK_STREAM, 0);
-  if (fd < 0)
-    KOUT("%d %d\n", fd, errno);
-  memset (&serv, 0, sizeof (struct sockaddr_un));
-  serv.sun_family = AF_UNIX;
-  strncpy (serv.sun_path, pname, strlen(pname));
-  len = sizeof (serv.sun_family) + strlen (serv.sun_path);
-  ret = bind (fd, (struct sockaddr *) &serv, len);
-  if (ret != 0)
-    KOUT("ERROR bind failure %s %d\n", pname, errno);
-  ret = listen (fd, 50);
-  if (ret != 0)
-    KOUT("ERROR listen failure\n");
-  return fd;
+  static int count = 0;
+  count += 1;
+  if (count == 100)
+    {
+    count = 0;
+    sig_process_heartbeat();
+    }
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-int util_socket_listen_inet(uint16_t port)
+/****************************************************************************/
+static int i_have_read_write_access(char *path)
 {
-  struct sockaddr s_addr;
-  int fd;
-  int optval=1;
-  int nodelay = 1;
-
-  memset(&s_addr, 0, sizeof(s_addr));
-  s_addr.sa_family = AF_INET;
-  ((struct sockaddr_in*)&s_addr)->sin_addr.s_addr = htonl(INADDR_ANY);
-  ((struct sockaddr_in*)&s_addr)->sin_port = htons( port );
-
-  fd = socket( s_addr.sa_family, SOCK_STREAM, 0 );
-  if ( fd <= 0 )
-    KOUT("%d", errno);
-  if (setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&optval,sizeof(optval))<0)
-    KOUT(" ");
-  if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void*) &nodelay, sizeof(int)))
-    KOUT(" ");
-
-  if ( bind(fd, &s_addr,sizeof(struct sockaddr_in) ) < 0 )
-    {
-    close(fd);
-    fd = -1;
-    }
-  else
-    {
-    if ( listen(fd, 50) < 0 )
+  return ( ! access(path, R_OK|W_OK) );
+}
+/*--------------------------------------------------------------------------*/
+ 
+/*****************************************************************************/
+static int test_machine_is_kvm_able(void)
+{
+  int found = 0;
+  FILE *fhd;
+  char *result = NULL;
+  fhd = fopen("/proc/cpuinfo", "r");
+  if (fhd)
+    { 
+    result = (char *) malloc(500);
+    while(!found)
       {
+      if (fgets(result, 500, fhd) != NULL)
+        {
+        if (!strncmp(result, "flags", strlen("flags")))
+          found = 1;
+        }
+      else 
+        KOUT(" ");
+      }
+    fclose(fhd);
+    }
+  if (!found)
+    KOUT(" ");
+  found = 0;
+  if ((strstr(result, "vmx")) || (strstr(result, "svm")))
+    found = 1;
+  free(result);
+  return found;
+}
+/*---------------------------------------------------------------------------*/
+  
+/*****************************************************************************/
+static int module_access_is_ko(char *dev_file)
+{
+  int result = -1;
+  int fd;
+  if (access( dev_file, F_OK))
+    printf("\nWARNING %s not found kvm unusable\n", dev_file);
+  else if (!i_have_read_write_access(dev_file))
+    printf("\nWARNING %s not writable kvm unusable\n", dev_file);
+  else 
+    {
+    fd = open(dev_file, O_RDWR);
+    if (fd >= 0)
+      {
+      result = 0;
       close(fd);
-      fd = -1;
       }
     }
-  return(fd);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void test_dev_kvm(void)
+{
+  if (test_machine_is_kvm_able())
+    {
+    if (module_access_is_ko("/dev/kvm"))
+      {
+      printf("\nHint: sudo chmod 0666 /dev/kvm\n");
+      printf("OR: sudo setfacl -m u:${USER}:rw /dev/kvm\n\n");
+      }
+    if (module_access_is_ko("/dev/vhost-net"))
+      {
+      printf("\nHint: sudo chmod 0666 /dev/vhost-net\n");
+      printf("OR: sudo setfacl -m u:${USER}:rw /dev/vhost-net\n\n");
+      }
+    if (module_access_is_ko("/dev/net/tun"))
+      {
+      printf("\nHint: sudo chmod 0666 /dev/net/tun\n");
+      printf("OR: sudo setfacl -m u:${USER}:rw /dev/net/tun\n\n");
+      }
+    }
+  else
+    printf("\nWARNING NO hardware virtualisation kvm unusable\n\n");
 }
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 char *get_proxyshare(void)
 {
-  return PROXYSHARE;
+  return g_proxyshare;
 }
 /*---------------------------------------------------------------------------*/
+   
+/****************************************************************************/
+static void stub_tx(int llid, int len, char *buf)
+{   
+  KOUT("ERROR %s", buf);
+}     
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void err_proxy_sig_cb (int llid, int err, int from)
+{ 
+  KOUT("ERROR SIG %d %d %d %d", g_llid_sig, llid, err, from);
+} 
+/*--------------------------------------------------------------------------*/
+  
+/****************************************************************************/
+static void rx_proxy_sig_cb (int llid, int len, char *buf)
+{ 
+  sig_process_rx(g_proxyshare, buf);
+} 
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void connect_from_sig_client(int llid, int llid_new)
+{
+KERR("PROXY CONNECTED %d %d", llid, llid_new);
+  msg_mngt_set_callbacks (llid_new, err_proxy_sig_cb, rx_proxy_sig_cb);
+  g_llid_sig = llid_new;
+} 
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int get_llid_sig(void)
+{
+  return g_llid_sig;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int main(int argc, char **argv)
 {
-  int sock_sig;
   if (argc != 2)
-    KOUT("NB ARGC %d", argc);
-  memset(PROXYSHARE, 0, MAX_NAME_LEN);
-  memset(g_unix_sig, 0, MAX_PATH_LEN);
-  strncpy(PROXYSHARE, argv[1], MAX_NAME_LEN-1);
-  snprintf(g_unix_sig, MAX_PATH_LEN-1,  "%s/proxy_sig.sock", PROXYSHARE);
-  sock_sig = util_socket_listen_unix(g_unix_sig);
-  signal(SIGCHLD,  SIG_IGN);
+    {
+    printf("\nBAD NUMBER OF ARGS proxyshare directory must be given\n\n");
+    exit(-1);
+    }
+  umask(0000);
+  test_dev_kvm();
+  g_llid_sig = 0;
+  c2c_peer_init();
+  doorways_sock_init(0);
+  msg_mngt_init("proxy", IO_MAX_BUF_LEN);
+  msg_mngt_heartbeat_init(heartbeat);
+  doors_io_basic_xml_init(stub_tx);
+  memset(g_proxyshare, 0, MAX_NAME_LEN);
+  memset(g_unix_sig_stream, 0, MAX_PATH_LEN);
+  strncpy(g_proxyshare, argv[1], MAX_NAME_LEN-1);
+  snprintf(g_unix_sig_stream, MAX_PATH_LEN-1,
+           "%s/proxy_sig_stream.sock", g_proxyshare);
+  proxy_sig_server(g_unix_sig_stream, connect_from_sig_client);
+  X_init(g_proxyshare);  
+//  tmux_init();
+
   daemon(0,0);
-  ever_select_loop(sock_sig);
+  msg_mngt_loop();
   return 0; 
 }
 /*--------------------------------------------------------------------------*/

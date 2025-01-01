@@ -64,7 +64,7 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
   echo
 #----------------------------------------------------------
   for i in  "crun" \
-            "fuse-archive" \
+            "tmux" \
             "dtach" \
             "script_pty" \
             "proxy_crun" \

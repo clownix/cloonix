@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -183,6 +183,8 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define LOG_DIR "log"
 
 
+#define MAX_DGRAM_LEN 2048
+
 #define NOVNC_DISPLAY 733
 
 #define MAX_STATS_ITEMS 30
@@ -274,6 +276,7 @@ enum{
 
 enum{
   doors_val_min = 200,
+  doors_val_c2c,
   doors_val_none,
   doors_val_xwy,
   doors_val_sig,

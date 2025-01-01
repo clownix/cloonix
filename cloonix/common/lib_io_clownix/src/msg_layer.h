@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -31,6 +31,7 @@ typedef struct t_data_channel
   t_data_chunk *last_tx;
   t_data_chunk *rx_bound_start;
   char *boundary;
+  uint32_t total_length;
   int i_bound_start;
   int llid;
   int fd;
@@ -46,6 +47,10 @@ typedef struct t_data_channel
 typedef enum
 {
   rx_type_watch = 421,
+  rx_type_proxy_traf_tcp_start,
+  rx_type_proxy_traf_unix_start,
+  rx_type_proxy_sig_start,
+  rx_type_proxy_sig_header_ok,
   rx_type_listen,
   rx_type_ascii_start,
   rx_type_open_bound_found,

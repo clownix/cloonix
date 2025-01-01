@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -178,4 +178,5 @@ void cloonix_timeout_add(int nb_beats, t_xtimeout cb, void *data);
 void cloonix_timer_beat(void);
 void cloonix_timer_init(void);
 
+int mdl_fd_is_valid(int fd);
 

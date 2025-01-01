@@ -91,6 +91,7 @@ cp /lib64/ld-linux-x86-64.so.2 ${ROOTFS}/lib64
 cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    ${ROOTFS}/usr/lib/x86_64-linux-gnu/rsyslog
 cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   ${ROOTFS}/usr/lib/x86_64-linux-gnu/rsyslog
 cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so ${ROOTFS}/usr/lib/x86_64-linux-gnu/rsyslog
+cp /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 ${ROOTFS}/usr/lib/x86_64-linux-gnu
 cp -v /usr/lib/file/magic.mgc ${ROOTFS}/usr/share/misc
 cp -f /etc/bash_completion ${ROOTFS}/etc
 cp -Lrf /usr/lib/locale ${ROOTFS}/usr/lib

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -551,6 +551,7 @@ void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
     KOUT(" ");
   if ((!strlen(name)) || !(strlen(slave_cloon)))
     KOUT(" ");
+  rpct_redirect_string_tx(doors_tx_switch_val_c2c);
   new_tid = set_response_callback(cb, tid);
   send_c2c_add(g_llid, new_tid, name, local_udp_ip,
                slave_cloon, ip, port,
@@ -558,6 +559,7 @@ void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif
+  rpct_redirect_string_tx(doors_tx_switch_val_none);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -935,12 +937,16 @@ void client_sys_unsub(void)
 /****************************************************************************/
 static void doorways_client_tx(int llid, int len, char *buf)
 {
-  doorways_tx(llid, 0, doors_type_switch, doors_val_none, len, buf);
+  if (doorways_tx_bufraw(llid, 0, doors_type_switch,
+                         doors_val_none, len, buf))
+    KERR("WARNING %s", buf);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void rx_cb(int llid, int tid, int type, int val, int len, char *buf)
+static void doorways_rx_bufraw(int llid, int tid,
+                               int len_bufraw, char *doors_bufraw,
+                               int type, int val, int len, char *buf)
 {
   if (type == doors_type_switch)
     {
@@ -977,14 +983,14 @@ int callback_connect_glib(int llid, int fd)
   g_connect_llid = 0;
   if (g_llid == 0)
     {
-    g_llid = glib_connect_llid(llid, fd, rx_cb, g_password);
+    g_llid = glib_connect_llid(llid, fd, doorways_rx_bufraw, g_password);
     if (!g_llid)
       {
       printf("Cannot connect to %s\n", g_doors_path);
       KOUT("%s", g_doors_path);
       }
-    if (doorways_tx(g_llid, 0, doors_type_switch,
-                    doors_val_init_link, strlen("OK") , "OK"))
+    if (doorways_sig_bufraw(g_llid, llid, doors_type_switch,
+                            doors_val_init_link, "OK"))
       {
       printf("Cannot transmit to %s\n", g_doors_path);
       KOUT("%s", g_doors_path);
@@ -1013,14 +1019,15 @@ static int callback_connect(int llid, int fd)
   if (g_llid == 0)
     {
     g_llid = doorways_sock_client_inet_end(doors_type_switch, llid, fd,
-                                           g_password, err_cb, rx_cb);
+                                           g_password, err_cb,
+                                           doorways_rx_bufraw);
     if (!g_llid)
       {
       printf("Cannot connect to %s\n", g_doors_path);
       KOUT("%s", g_doors_path);
       }
-    if (doorways_tx(g_llid, 0, doors_type_switch,
-                    doors_val_init_link, strlen("OK") , "OK"))
+    if (doorways_sig_bufraw(g_llid, llid, doors_type_switch,
+                            doors_val_init_link, "OK"))
       {
       printf("Cannot transmit to %s\n", g_doors_path);
       KOUT("%s", g_doors_path);
@@ -1080,7 +1087,7 @@ void client_init(char *name, char *path, char *password)
   doors_io_layout_xml_init(doorways_client_tx);
   doorways_sock_init(0);
   msg_mngt_init(name, IO_MAX_BUF_LEN);
-  rpct_redirect_string_tx(ptr_doorways_client_tx);
+  rpct_redirect_string_tx(doors_tx_switch_val_none);
 #ifdef WITH_GLIB
   glib_client_init();
   llid = doorways_sock_client_inet_start(ip, port, callback_connect_glib);

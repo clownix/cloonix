@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -34,6 +34,22 @@
 #include "msg.h"
 #include "fmt_diag.h"
 #include "kvm.h"
+
+
+/****************************************************************************/
+int fmt_tx_system_promisc(int tid)
+{
+  int result;
+  char vhost[MAX_NAME_LEN];
+  char cmd[MAX_PATH_LEN];
+  memset(vhost, 0, MAX_NAME_LEN);
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(vhost, MAX_NAME_LEN-1, "%s-system", cfg_get_cloonix_name()); 
+  snprintf(cmd, MAX_PATH_LEN-1, "ovs_system_promisc vhost=%s", vhost);
+  result = ovs_try_send_sigdiag_msg(tid, cmd);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 int  fmt_tx_vhost_up(int tid, char *name, int num, char *vhost)
@@ -299,7 +315,12 @@ void fmt_rx_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   "KO ovs_del_lan_endp name=%s num=%d vhost=%s lan=%s",
     name, &num, vhost, lan) == 4)
     msg_ack_lan_endp(tid, 1, 0, name, num, vhost, lan);
-
+  else if (sscanf(line,
+  "OK ovs_system_promisc vhost=%s", vhost) == 1)
+    msg_ack_system_promisc(tid, 0, vhost);
+  else if (sscanf(line,
+  "KO ovs_system_promisc vhost=%s", vhost) == 1)
+    msg_ack_system_promisc(tid, 1, vhost);
   else
     KERR("ERROR: %s", line);
 }

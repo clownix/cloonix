@@ -85,6 +85,7 @@ list_pkt+="locales,x11-apps,strace"
 debootstrap --no-check-certificate \
 	    --no-check-gpg \
             --arch ${ARCH} \
+            --exclude=usr-is-merged \
             --include=$list_pkt \
             ${DISTRO} \
             /tmp/wkmntloops ${REPO}

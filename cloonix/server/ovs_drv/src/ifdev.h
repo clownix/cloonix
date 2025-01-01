@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -17,6 +17,7 @@
 /*****************************************************************************/
 int ifdev_get_intf_hwaddr(char *intf, char *mac);
 int ifdev_set_intf_flags_iff_up_down(char *intf, int up);
+int ifdev_set_intf_flags_iff_up_promisc(char *intf);
 void ifdev_disable_offloading(char *intf);
 /*---------------------------------------------------------------------------*/
 

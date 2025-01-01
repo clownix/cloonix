@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -32,9 +32,11 @@ void dispatch_set_init_done_with_inside_llid(int inside_llid);
 char *get_g_buf(void);
 void dispach_err_switch (int llid, int err);
 void dispach_rx_switch(int llid, int len, char *buf);
-void dispach_door_llid(int llid);
+void dispach_door_llid(int listen_llid, int llid);
 void dispach_door_end(int llid);
-void dispach_door_rx(int llid, int tid, int type, int val,int len,char *buf);
+void doorways_rx_bufraw(int llid, int tid,
+                        int len_bufraw, char *doors_bufraw,
+                        int type, int val, int len, char *buf);
 int  dispach_send_to_traf_client(int llid, int val, int len, char *buf);
 int dispach_send_to_openssh_client(int dido_llid, int val, int len, char *buf);
 void in_err_gene(int inside_llid, int err, int from);

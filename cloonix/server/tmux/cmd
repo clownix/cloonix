@@ -1,0 +1,28 @@
+#!/bin/bash
+
+HERE=`pwd`
+TARGZ=../../../targz_store
+
+cd ${TARGZ}
+TMUX=$(ls tmux_*)
+TMUX=${TMUX%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${TMUX}.tar.gz
+
+cd tmux
+
+./configure --disable-fuzzing \
+            --disable-dependency-tracking \
+            --disable-utempter \
+            --disable-utf8proc \
+            --disable-systemd \
+            --disable-cgroups \
+            --disable-sixel \
+            --disable-jemalloc
+
+make
+
+cd ${HERE}
+
+strip ${HERE}/tmux/tmux

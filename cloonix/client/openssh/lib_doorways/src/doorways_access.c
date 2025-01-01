@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -98,7 +98,8 @@ static void tx_doorways(int len, char *buf)
     fprintf(stderr, "ERROR TX, llid dead\n%d\n", len);
     local_exit(1);
     }
-  if (doorways_tx(g_door_llid,0,doors_type_openssh,doors_val_none,len,buf))
+  if (doorways_tx_bufraw(g_door_llid, 0, doors_type_openssh,
+                         doors_val_none, len, buf))
     {
     fprintf(stderr, "ERROR TX, bad tx:\n%d\n", len);
     local_exit(1);
@@ -145,8 +146,9 @@ static void send_first_read_residual_data(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void cb_doors_rx(int llid, int tid, int type, int val, 
-                        int len, char *buf)
+static void doorways_rx_bufraw(int llid, int tid,
+                               int len_bufraw, char *doors_bufraw,
+                               int type, int val, int len, char *buf)
 {
   char nat_name[MAX_NAME_LEN];
   char *nat_msg = g_address_in_vm;
@@ -158,8 +160,8 @@ static void cb_doors_rx(int llid, int tid, int type, int val,
       {
       if (sscanf(buf,"OPENSSH_DOORWAYS_RESP nat=%s", nat_name) == 1)
         {
-        if (doorways_tx(g_door_llid, 0, doors_type_openssh,
-                        doors_val_none, strlen(nat_msg)+1, nat_msg))
+        if (doorways_tx_bufraw(g_door_llid, 0, doors_type_openssh,
+                               doors_val_none, strlen(nat_msg)+1, nat_msg))
           {
           local_exit(1);
           }
@@ -210,7 +212,8 @@ static int callback_connect(int llid, int fd)
     {
     g_door_llid = doorways_sock_client_inet_end(doors_type_openssh, llid, fd,
                                                 g_cloonix_passwd,
-                                                cb_doors_end, cb_doors_rx);
+                                                cb_doors_end,
+                                                doorways_rx_bufraw);
     if (!g_door_llid)
       {
       local_exit(1);
@@ -222,8 +225,8 @@ static int callback_connect(int llid, int fd)
     memset(buf, 0, 2*MAX_NAME_LEN);
     snprintf(buf, 2*MAX_NAME_LEN - 1, "OPENSSH_DOORWAYS_REQ nat=%s",
              g_cloonix_nat);
-    if (doorways_tx(g_door_llid, 0, doors_type_openssh,
-                    doors_val_init_link, strlen(buf)+1, buf))
+    if (doorways_tx_bufraw(g_door_llid, 0, doors_type_openssh,
+                           doors_val_init_link, strlen(buf)+1, buf))
       {
       local_exit(1);
       }

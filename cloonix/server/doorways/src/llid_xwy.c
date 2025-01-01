@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -45,7 +45,7 @@ static int xwy_rx_cb(int llid, int fd)
   ilt = dispach_get_inside_transfert(llid);
   if (!ilt)
     {
-    KERR("%d", llid);
+    KERR("WARNING %d", llid);
     if (msg_exist_channel(llid))
       msg_delete_channel(llid);
     }
@@ -58,27 +58,33 @@ static int xwy_rx_cb(int llid, int fd)
       KERR(" ");
     else if (len < 0)
       {
-      doorways_tx(ilt->dido_llid, 0, ilt->type, doors_val_link_ko, 3, "KO");
+      if (doorways_sig_bufraw(ilt->dido_llid, llid, ilt->type,
+                              doors_val_link_ko, "KO"))
+        KERR("WARNING %d", llid);
       dispach_free_transfert(ilt->dido_llid, ilt->inside_llid);
-KERR("free_transfert %d %d", ilt->dido_llid, ilt->inside_llid);
+      KERR("WARNING free_transfert %d %d", ilt->dido_llid, ilt->inside_llid);
       }
     else
       {
       if (msg_exist_channel(ilt->dido_llid))
         {
-        if (doorways_tx(ilt->dido_llid, ilt->inside_llid, ilt->type,
-                        doors_val_xwy, len, g_buf))
+        if (doorways_tx_bufraw(ilt->dido_llid, ilt->inside_llid, ilt->type,
+                               doors_val_xwy, len, g_buf))
           {
-          doorways_tx(ilt->dido_llid, 0, ilt->type, doors_val_link_ko, 3, "KO");
+          KERR("WARNING %s", g_buf);
+          if (doorways_sig_bufraw(ilt->dido_llid, llid, ilt->type,
+                                  doors_val_link_ko, "KO"))
+            KERR("WARNING %d", llid);
           dispach_free_transfert(ilt->dido_llid, ilt->inside_llid);
-KERR("free_transfert %d %d", ilt->dido_llid, ilt->inside_llid);
           }
         }
       else
         {
-        doorways_tx(ilt->dido_llid, 0, ilt->type, doors_val_link_ko, 3, "KO");
+        if (doorways_sig_bufraw(ilt->dido_llid, llid, ilt->type,
+                                doors_val_link_ko, "KO"))
+          KERR("WARNING %d", llid);
         dispach_free_transfert(ilt->dido_llid, ilt->inside_llid);
-KERR("free_transfert %d %d", ilt->dido_llid, ilt->inside_llid);
+        KERR("WARNING free_transfert %d %d",ilt->dido_llid,ilt->inside_llid);
         }
       }
     }

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -99,8 +99,10 @@ static void send_ctrl_x11_close_to_client( t_x11_ctx *cur)
   char buf[MAX_DOOR_CTRL_LEN];
   memset(buf, 0, MAX_DOOR_CTRL_LEN);
   snprintf(buf, MAX_DOOR_CTRL_LEN-1, DOOR_X11_OPENKO);
-  doorways_tx(cur->dido_llid, cur->dido_llid, doors_type_dbssh_x11_ctrl, 
-                  cur->sub_dido_idx, strlen(buf) + 1, buf);
+  if (doorways_tx_bufraw(cur->dido_llid, cur->dido_llid,
+                         doors_type_dbssh_x11_ctrl, 
+                         cur->sub_dido_idx, strlen(buf) + 1, buf))
+    KERR("WARNING %s", buf);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -112,9 +114,10 @@ static void send_ctrl_x11_open_to_client(t_x11_ctx *cur)
   memset(buf, 0, MAX_DOOR_CTRL_LEN);
   port = llid_traf_get_display_port(cur->dido_llid);
   snprintf(buf,MAX_DOOR_CTRL_LEN-1,DOOR_X11_OPEN,cur->display_sock_x11,port);
-  if (doorways_tx(cur->dido_llid, cur->dido_llid, doors_type_dbssh_x11_ctrl,
-                  cur->sub_dido_idx, strlen(buf) + 1, buf))
-    KERR("%d %d", cur->dido_llid, cur->sub_dido_idx);
+  if (doorways_tx_bufraw(cur->dido_llid, cur->dido_llid,
+                         doors_type_dbssh_x11_ctrl,
+                         cur->sub_dido_idx, strlen(buf) + 1, buf))
+    KERR("WARNING %d %d", cur->dido_llid, cur->sub_dido_idx);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -220,9 +223,10 @@ void x11_write(int dido_llid, int sub_dido_idx, int len, char *buf)
     KERR("%d %d", dido_llid, sub_dido_idx);
   else
     {
-    if (doorways_tx(dido_llid, dido_llid, doors_type_dbssh_x11_traf,
-                    sub_dido_idx, len, buf))
-      KERR("%d %d %d", dido_llid, sub_dido_idx, len);
+    if (doorways_tx_bufraw(dido_llid, dido_llid,
+                           doors_type_dbssh_x11_traf,
+                           sub_dido_idx, len, buf))
+      KERR("WARNING %d %d %d", dido_llid, sub_dido_idx, len);
     }
 }
 /*--------------------------------------------------------------------------*/

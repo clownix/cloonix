@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -70,6 +70,7 @@ enum
   type_llid_trace_endp_ovsdb,
   type_llid_trace_jfs,
   type_llid_trace_unix_xwy,
+  type_llid_trace_unix_proxy,
   type_llid_trace_unix_qmp,
   type_llid_trace_endp_suid,
   type_llid_max,

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,6 +15,10 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+
+#define PROXY_HEADER_LEN 4
+#define MAX_TOT_LEN_PROXY 2000
+
 void chain_delete(t_data_chunk **start, t_data_chunk **last);
 int make_a_buf_copy(t_data_chunk *first, int bound_start_offset,
                            char **buf_copy);

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -44,9 +44,9 @@
 
 static int g_to_exit;
 
-typedef struct t_rx_pktbuf
+typedef struct t_rx_pktdoors
 {
-  char buf[MAX_DOORWAYS_BUF_LEN];
+  char doors_bufraw[MAX_DOORWAYS_BUF_LEN];
   int  offset;
   int  idx_hmac;
   int  tid;
@@ -55,16 +55,17 @@ typedef struct t_rx_pktbuf
   int  val;
   int  nb_pkt_rx;
   char *payload;
-} t_rx_pktbuf;
+} t_rx_pktdoors;
 
 
 /****************************************************************************/
 typedef struct t_llid
 {
   int  llid;
+  int  register_listen_llid;
   int  fd;
   char fct[MAX_NAME_LEN];
-  t_rx_pktbuf rx_pktbuf;
+  t_rx_pktdoors rx_pktdoors;
   int  doors_type;
   int  nb_pkt_tx;
   char passwd[MSG_DIGEST_LEN];
@@ -506,13 +507,13 @@ static int tx_cb(int llid, int fd)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rx_pktbuf_fill(int *len, char  *buf, t_rx_pktbuf *rx_pktbuf)
+static int rx_pktdoors_fill(int *len, char  *buf, t_rx_pktdoors *rx_pktdoors)
 {
   int headsize = doorways_header_size();
   int result, len_chosen, len_desired, len_avail = *len;
-  if (rx_pktbuf->offset < headsize)
+  if (rx_pktdoors->offset < headsize)
     {
-    len_desired = headsize - rx_pktbuf->offset;
+    len_desired = headsize - rx_pktdoors->offset;
     if (len_avail >= len_desired)
       {
       len_chosen = len_desired;
@@ -526,9 +527,9 @@ static int rx_pktbuf_fill(int *len, char  *buf, t_rx_pktbuf *rx_pktbuf)
     }
   else
     {
-    if (rx_pktbuf->paylen <= 0)
+    if (rx_pktdoors->paylen <= 0)
       KOUT(" ");
-    len_desired = headsize + rx_pktbuf->paylen - rx_pktbuf->offset;
+    len_desired = headsize + rx_pktdoors->paylen - rx_pktdoors->offset;
     if (len_avail >= len_desired)
       {
       len_chosen = len_desired;
@@ -540,81 +541,83 @@ static int rx_pktbuf_fill(int *len, char  *buf, t_rx_pktbuf *rx_pktbuf)
       result = 2;
       }
     }
-  if (len_chosen + rx_pktbuf->offset > MAX_DOORWAYS_BUF_LEN)
-    KOUT("%d %d", len_chosen, rx_pktbuf->offset);
-  memcpy(rx_pktbuf->buf+rx_pktbuf->offset, buf, len_chosen);
-  rx_pktbuf->offset += len_chosen;
+  if (len_chosen + rx_pktdoors->offset > MAX_DOORWAYS_BUF_LEN)
+    KOUT("%d %d", len_chosen, rx_pktdoors->offset);
+  memcpy(rx_pktdoors->doors_bufraw+rx_pktdoors->offset, buf, len_chosen);
+  rx_pktdoors->offset += len_chosen;
   *len -= len_chosen;
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rx_pktbuf_get_paylen(t_rx_pktbuf *rx_pktbuf)
+static int rx_pktdoors_get_paylen(t_rx_pktdoors *rx_pktdoors)
 {
   int nb_pkt, result = 0;
-  rx_pktbuf->idx_hmac = sock_header_get_info(rx_pktbuf->buf, 
-                                             &(rx_pktbuf->tid),
-                                             &(rx_pktbuf->paylen),
-                                             &(rx_pktbuf->head_doors_type),
-                                             &(rx_pktbuf->val), 
+  rx_pktdoors->idx_hmac = sock_header_get_info(rx_pktdoors->doors_bufraw, 
+                                             &(rx_pktdoors->tid),
+                                             &(rx_pktdoors->paylen),
+                                             &(rx_pktdoors->head_doors_type),
+                                             &(rx_pktdoors->val), 
                                              &(nb_pkt),
-                                             &(rx_pktbuf->payload));
-  if (rx_pktbuf->idx_hmac == -1)
+                                             &(rx_pktdoors->payload));
+  if (rx_pktdoors->idx_hmac == -1)
     {
     result = -1;
-    rx_pktbuf->offset = 0;
-    rx_pktbuf->paylen = 0;
-    rx_pktbuf->payload = NULL;
-    rx_pktbuf->tid = 0;
-    rx_pktbuf->head_doors_type = 0;
-    rx_pktbuf->val = 0;
+    rx_pktdoors->offset = 0;
+    rx_pktdoors->paylen = 0;
+    rx_pktdoors->payload = NULL;
+    rx_pktdoors->tid = 0;
+    rx_pktdoors->head_doors_type = 0;
+    rx_pktdoors->val = 0;
     }
   else
     {
-    if ((nb_pkt-1) != rx_pktbuf->nb_pkt_rx)
+    if ((nb_pkt-1) != rx_pktdoors->nb_pkt_rx)
       {
-      KERR("%d %d", nb_pkt, rx_pktbuf->nb_pkt_rx);
+      KERR("%d %d", nb_pkt, rx_pktdoors->nb_pkt_rx);
       result = -1;
       }
     if (nb_pkt == 0xFFFF)
-      rx_pktbuf->nb_pkt_rx = 0;
+      rx_pktdoors->nb_pkt_rx = 0;
     else
-      rx_pktbuf->nb_pkt_rx = nb_pkt;
+      rx_pktdoors->nb_pkt_rx = nb_pkt;
     }
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int rx_pktbuf_process(t_llid *lid, t_rx_pktbuf *rx_pktbuf)
+static int rx_pktdoors_process(t_llid *lid, t_rx_pktdoors *rx_pktdoors)
 {
+  int headsize = doorways_header_size();
   int result = 0;
   if (!lid->cb_rx)
     KOUT(" ");
-  if (rx_pktbuf->idx_hmac != 14)
-    KOUT("%d", rx_pktbuf->idx_hmac);
-  if (!rx_pktbuf->payload)
+  if (rx_pktdoors->idx_hmac != 14)
+    KOUT("%d", rx_pktdoors->idx_hmac);
+  if (!rx_pktdoors->payload)
     KOUT(" ");
   cipher_change_key(lid->passwd);
-  if (check_hmac_password(rx_pktbuf->idx_hmac, rx_pktbuf->buf,
-                          rx_pktbuf->paylen, rx_pktbuf->payload))
+  if (check_hmac_password(rx_pktdoors->idx_hmac, rx_pktdoors->doors_bufraw,
+                          rx_pktdoors->paylen, rx_pktdoors->payload))
     {
     KERR("BAD PASSWORD");
     result = -1;
     }
   else
     {
-    lid->cb_rx(lid->llid, rx_pktbuf->tid, 
-               rx_pktbuf->head_doors_type, rx_pktbuf->val,
-               rx_pktbuf->paylen, rx_pktbuf->payload);
+    lid->cb_rx(lid->llid, rx_pktdoors->tid,
+               headsize + rx_pktdoors->paylen, rx_pktdoors->doors_bufraw, 
+               rx_pktdoors->head_doors_type, rx_pktdoors->val,
+               rx_pktdoors->paylen, rx_pktdoors->payload);
     }
-  rx_pktbuf->offset = 0;
-  rx_pktbuf->paylen = 0;
-  rx_pktbuf->payload = NULL;
-  rx_pktbuf->tid = 0;
-  rx_pktbuf->head_doors_type = 0;
-  rx_pktbuf->val = 0;
+  rx_pktdoors->offset = 0;
+  rx_pktdoors->paylen = 0;
+  rx_pktdoors->payload = NULL;
+  rx_pktdoors->tid = 0;
+  rx_pktdoors->head_doors_type = 0;
+  rx_pktdoors->val = 0;
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -627,10 +630,10 @@ static int rx_doorways(t_llid *lid, int len, char *buf)
   while (len_left_to_do)
     {
     len_done = len - len_left_to_do;
-    res = rx_pktbuf_fill(&len_left_to_do, buf + len_done, &(lid->rx_pktbuf));
+    res = rx_pktdoors_fill(&len_left_to_do, buf + len_done, &(lid->rx_pktdoors));
     if (res == 1)
       {
-      if (rx_pktbuf_get_paylen(&(lid->rx_pktbuf)))
+      if (rx_pktdoors_get_paylen(&(lid->rx_pktdoors)))
         {
         result = -1;
         break;
@@ -641,7 +644,7 @@ static int rx_doorways(t_llid *lid, int len, char *buf)
       }
     else if (res == 3)
       {
-      if(rx_pktbuf_process(lid, &(lid->rx_pktbuf)))
+      if(rx_pktdoors_process(lid, &(lid->rx_pktdoors)))
         {
         result = -1;
         break;
@@ -658,7 +661,7 @@ static int rx_doorways(t_llid *lid, int len, char *buf)
 static int rx_cb(int llid, int fd)
 {
   int result = -1;
-  static char buf[MAX_DOORWAYS_BUF_LEN];
+  char buf[MAX_DOORWAYS_BUF_LEN];
   t_llid *lid = g_llid_data[llid];
   if (!lid)
     KERR(" ");
@@ -712,7 +715,7 @@ static int server_new_connect_from_client(int id, int fd)
       strncpy(lid->passwd, listen_lid->passwd, MSG_DIGEST_LEN-1);
       if (!listen_lid->cb_llid)
         KOUT(" ");
-      listen_lid->cb_llid(llid);
+      listen_lid->cb_llid(listen_lid->register_listen_llid, llid);
       }
     }
   return 0;
@@ -727,23 +730,42 @@ int doorways_header_size(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void register_listen_fd(int fd, char *passwd, t_doorways_llid cb_llid,
+static int register_listen_fd(int fd, char *passwd, t_doorways_llid cb_llid,
                               t_doorways_end cb_end, t_doorways_rx cb_rx)
 {
   int llid;
-  char *fct = __FUNCTION__;
+  const char *fct = __FUNCTION__;
   t_llid *listen_lid;
   llid = channel_create(fd, kind_simple_watch, "doorway_serv",
                         server_new_connect_from_client, NULL, err_listen_cb);
   if (!llid)
     KOUT("ERROR");
-  listen_lid = alloc_llid(doors_type_listen_server, llid, fd, fct);
+  listen_lid = alloc_llid(doors_type_listen_server, llid, fd, (char *) fct);
+  listen_lid->register_listen_llid = llid;
   listen_lid->cb_llid = cb_llid;
   listen_lid->cb_end = cb_end;
   listen_lid->cb_rx = cb_rx;
   strncpy(listen_lid->passwd, passwd, MSG_DIGEST_LEN-1);
+  return llid;
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int doorways_sock_server_proxy(char *net_name, char *unix_path, char *passwd,
+                               t_doorways_llid cb_llid, t_doorways_end cb_end,
+                               t_doorways_rx cb_rx)
+{
+  int listen_fd, listen_llid = 0;
+  if (g_init_done != 777)
+    KOUT(" ");
+  listen_fd = util_socket_listen_unix(unix_path);
+  if (listen_fd < 0)
+    KERR("ERROR");
+  else
+    listen_llid = register_listen_fd(listen_fd,passwd,cb_llid,cb_end,cb_rx);
+  return listen_llid;
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void doorways_sock_server(char *net_name, int port, char *passwd, 
@@ -763,7 +785,7 @@ void doorways_sock_server(char *net_name, int port, char *passwd,
   if (start_unix)
     {
     memset(unix_path, 0, MAX_PATH_LEN);
-    snprintf(unix_path, MAX_PATH_LEN-1, "%s/proxy_%s_main.sock",
+    snprintf(unix_path, MAX_PATH_LEN-1, "%s/proxy_%s_pmain.sock",
                                         PROXYSHARE, net_name);
     listen_fd = util_socket_listen_unix(unix_path);
     if (listen_fd < 0)
@@ -799,6 +821,9 @@ int doorways_sock_client_inet_start(uint32_t ip, int port, t_fd_event conn_rx)
   int fd, llid = 0;
   if (g_init_done != 777)
     KOUT(" ");
+
+// lib_io_proxy_is_on
+
   fd = util_nonblock_client_socket_inet(ip, port);
   if (fd != -1)
     {
@@ -978,7 +1003,7 @@ int doorways_tx_or_rx_still_in_queue(int llid)
     result = 1;
   else if (lid)
     {
-    if ((lid->rx_pktbuf.offset) || (lid->rx_pktbuf.paylen))
+    if ((lid->rx_pktdoors.offset) || (lid->rx_pktdoors.paylen))
       result = 1;
     }
   return (result);
@@ -986,7 +1011,7 @@ int doorways_tx_or_rx_still_in_queue(int llid)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
+int doorways_tx_bufraw(int llid,int tid,int type,int val,int len,char *buf)
 {
   int cidx, fd, result = -1;
   t_llid *lid;
@@ -1002,6 +1027,10 @@ int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
 
   if (!llid) 
     KOUT(" ");
+
+  if (!msg_exist_channel(llid))
+    return result;
+
   fd = get_fd_with_llid(llid);
   if (fd == -1)
     KOUT(" ");
@@ -1050,10 +1079,25 @@ int doorways_tx(int llid, int tid, int type, int val, int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void ptr_doorways_client_tx(int llid, int len, char *buf)
+int doorways_sig_bufraw(int llid, int tid, int type, int val, char *buf)
 {
-  if (msg_exist_channel(llid))
-    doorways_tx(llid, 0, doors_type_switch, doors_val_none, len, buf);
+return doorways_tx_bufraw(llid, tid, type, val, strlen(buf)+1, buf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void doors_tx_switch_val_none(int llid, int len, char *buf)
+{
+  if (doorways_tx_bufraw(llid,0,doors_type_switch,doors_val_none,len,buf))
+    KERR("WARNING %s", buf);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void doors_tx_switch_val_c2c(int llid, int len, char *buf)
+{
+  if (doorways_tx_bufraw(llid,0,doors_type_switch,doors_val_c2c,len,buf))
+    KERR("WARNING %s", buf);
 }
 /*---------------------------------------------------------------------------*/
 

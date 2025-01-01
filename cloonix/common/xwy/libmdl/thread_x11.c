@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -301,7 +301,7 @@ static void *thread_x11(void *arg)
       evts = events[i].events;
 
       if (evts & EPOLLRDHUP)
-        terminate_thread(x11, __LINE__, fd);
+        terminate_thread(x11, 0, fd);
       else if (evts & EPOLLHUP)
         terminate_thread(x11, __LINE__, fd);
       else if (evts & EPOLLERR)

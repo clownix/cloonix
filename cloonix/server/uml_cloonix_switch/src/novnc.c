@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -375,15 +375,17 @@ static int Xvfb(void *data)
 static int x11vnc(void *data)
 {
   char *argv[]={BIN_X11VNC, "-N", "-nopw", "-localhost", "-shared", 
-                    "-repeat", "-forever",
-                    "-verbose", "-logfile", "/var/lib/cloonix/cache/x11vnc.log",
-                          "-noshm", "-noxdamage", "-cursor", "arrow",
-                            "-remap", "DEAD", "-ncache", "10", "-dpms",
-                            "-display", g_display, NULL};
+                            "-repeat", "-forever", "-verbose", "-logfile",
+                            "/var/lib/cloonix/cache/x11vnc.log", "-noshm",
+                            "-noxdamage", "-cursor", "arrow", "-remap",
+                            "DEAD", "-ncache", "10", "-dpms", "-display",
+                            g_display, NULL};
 
   if (g_terminate)
     return 0;
 
+  unsetenv("WAYLAND_DISPLAY");
+  setenv("XDG_SESSION_TYPE", "x11", 1);
   debug_print_cmd(argv);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);

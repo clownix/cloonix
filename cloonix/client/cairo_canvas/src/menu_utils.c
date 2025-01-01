@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -376,6 +376,14 @@ static void timer_launch(void *data)
             {
             KERR("ERROR SYNC WIRESHARK %s %d %d",
                  pid_wait->name, pid_wait->num, pid_wait->count);
+            if (pid_wait->prev)
+              pid_wait->prev->next = pid_wait->next;
+            if (pid_wait->next)
+              pid_wait->next->prev = pid_wait->prev;
+            if (pid_wait == g_head_wireshark_pid_wait)
+              g_head_wireshark_pid_wait = pid_wait->next;
+            pid_wait->prev = NULL;
+            pid_wait->next = NULL;
             release_pid_wait(pid_wait);
             }
           else

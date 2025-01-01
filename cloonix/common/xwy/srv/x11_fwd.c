@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -628,6 +628,11 @@ void x11_fdset(fd_set *readfds, fd_set *writefds)
       KERR("ERROR %d", cur->srv_idx);
       x11_free_display(cur->srv_idx);
       }
+    else if (!mdl_fd_is_valid(cur->x11_listen_fd))
+      {
+      KERR("ERROR x11_listen_f");
+      x11_free_display(cur->srv_idx);
+      }
     else
       {
       FD_SET(cur->x11_listen_fd, readfds);
@@ -636,9 +641,14 @@ void x11_fdset(fd_set *readfds, fd_set *writefds)
         conn = cur->conn[j];
         if ((conn) && (conn->threads_on) && (conn->sock_fd_ass != -1))
           {
-          FD_SET(conn->diag_main_fd, readfds);
-          if (dialog_tx_queue_non_empty(conn->diag_main_fd))
-            FD_SET(conn->diag_main_fd, writefds);
+          if (!mdl_fd_is_valid(conn->diag_main_fd))
+            KERR("ERROR diag_main_fd");
+          else
+            {
+            FD_SET(conn->diag_main_fd, readfds);
+            if (dialog_tx_queue_non_empty(conn->diag_main_fd))
+              FD_SET(conn->diag_main_fd, writefds);
+            }
           }
         }
       }

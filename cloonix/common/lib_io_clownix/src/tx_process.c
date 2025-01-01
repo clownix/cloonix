@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -71,9 +71,13 @@ int tx_try_send_chunk(t_data_channel *dchan, int cidx, int *correct_send,
       {
       first_elem_delete(&(dchan->tx), &(dchan->last_tx));
       if (dchan->tx)
+        {
         result = 1;
+        }
       else
+        {
         result = 0;
+        }
       }
     else
       {
@@ -87,7 +91,7 @@ int tx_try_send_chunk(t_data_channel *dchan, int cidx, int *correct_send,
     }
   else if (len < 0)
     {
-    KERR("%d", errno);
+    KERR("ERROR %d", errno);
     dchan->tot_txq_size = 0;
     chain_delete(&(dchan->tx), &(dchan->last_tx));
     if (!err_cb)

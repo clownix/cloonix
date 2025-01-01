@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -188,8 +188,6 @@ static char *look_for_boundary(char *msg, int len, char *pat)
 }
 /*---------------------------------------------------------------------------*/
 
-
-
 /*****************************************************************************/
 static t_data_chunk *detect_xml_start_in_chunk(t_data_chunk *first)
 {
@@ -220,10 +218,6 @@ static t_data_chunk *detect_xml_start_in_chunk(t_data_chunk *first)
 }
 /*---------------------------------------------------------------------------*/
 
-
-
-
-
 /*****************************************************************************/
 static int is_good_first_letter_xml(char c)
 {
@@ -236,6 +230,7 @@ static int is_good_first_letter_xml(char c)
   return result;
 }
 /*---------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static int is_good_next_letter_xml(char c)
 {
@@ -247,8 +242,6 @@ static int is_good_next_letter_xml(char c)
   return result;
 }
 /*---------------------------------------------------------------------------*/
-
-
 
 /*****************************************************************************/
 static char *get_xml_start_boundary_from_chunk(t_data_chunk *first, 
@@ -364,8 +357,96 @@ static char *get_xml_start_boundary_from_chunk(t_data_chunk *first,
 /*---------------------------------------------------------------------------*/
            
 /*****************************************************************************/
-/*                 chunks_state_rx_type_ascii_start                          */
+static int chunks_rx_proxy_sig_header(t_data_channel *dchan)
+{
+  uint32_t total_len = 0;
+  int result = 0;
+  if ((dchan->rx) && (dchan->rx->len >= PROXY_HEADER_LEN))
+    {
+    total_len += (uint32_t) (dchan->rx->chunk[0] << 24) & 0xFF000000;
+    total_len += (uint32_t) (dchan->rx->chunk[1] << 16) & 0x00FF0000;
+    total_len += (uint32_t) (dchan->rx->chunk[2] << 8)  & 0x0000FF00;
+    total_len += (uint32_t) (dchan->rx->chunk[3] & 0xFF);
+    if (total_len > MAX_TOT_LEN_PROXY)
+      KOUT("ERROR TOO LONG %u %hhu %hhu %hhu %hhu", total_len,
+            dchan->rx->chunk[0], dchan->rx->chunk[1],
+            dchan->rx->chunk[2], dchan->rx->chunk[3]);
+    dchan->total_length = total_len;
+    result = 1;
+    }
+  return result;
+}
 /*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int chunks_rx_proxy_sig_all_received(t_data_channel *dchan,
+                                        char **found, int *found_len)
+{
+  int tot_len, len_what_is_left, result = 0;
+  char *end_msg,  *tot_rx, *what_is_left;
+  tot_len = make_a_buf_copy(dchan->rx, PROXY_HEADER_LEN, &tot_rx);
+  if (tot_len >= dchan->total_length)
+    {
+    chain_del(&(dchan->rx), NULL);
+    *found = tot_rx;
+    *found_len = dchan->total_length;
+    len_what_is_left = tot_len - *found_len;
+    end_msg = tot_rx + dchan->total_length;
+    if (len_what_is_left)
+      {
+      what_is_left = (char *) clownix_malloc(len_what_is_left+1, IOCMLC);
+      what_is_left[len_what_is_left] = 0;
+      memcpy(what_is_left, end_msg, len_what_is_left);
+      chain_append(&(dchan->rx), len_what_is_left, what_is_left);
+      }
+    result = 1;
+    }
+  else
+    clownix_free(tot_rx, __FUNCTION__);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void proxy_sig_rx_to_process(t_data_channel *dchan)
+{
+  int found_len;
+  char *found;
+  if (dchan->decoding_state == rx_type_proxy_sig_start)
+    {
+    if (chunks_rx_proxy_sig_header(dchan))
+      dchan->decoding_state = rx_type_proxy_sig_header_ok;
+    }
+  while(dchan->decoding_state == rx_type_proxy_sig_header_ok)
+    {
+    if (chunks_rx_proxy_sig_all_received(dchan, &found, &found_len))
+      {
+      dchan->rx_callback(dchan->llid, found_len, found);
+      clownix_free(found, __FUNCTION__);
+      dchan->decoding_state = rx_type_proxy_sig_start;
+      if ((dchan->llid) && (dchan->rx))
+        {
+        if (chunks_rx_proxy_sig_header(dchan))
+          dchan->decoding_state = rx_type_proxy_sig_header_ok;
+        }
+      else
+        break;
+      }
+    else if (dchan->decoding_state == rx_type_proxy_sig_start)
+      {
+      if (chunks_rx_proxy_sig_header(dchan))
+        {
+        KERR("WARNING2: THIS IS A RARE OCCURENCE");
+        dchan->decoding_state = rx_type_proxy_sig_header_ok;
+        }
+      }
+    else
+      break;
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void chunks_state_rx_type_ascii_start(t_data_channel *dchan)
 {
   t_data_chunk *chunk_of_start;
@@ -476,7 +557,6 @@ static void string_rx_to_process(t_data_channel *dchan)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 void chunk_chain_delete(t_data_channel *dchan)
 {
@@ -492,8 +572,12 @@ void chunk_chain_delete(t_data_channel *dchan)
       KOUT(" ");
     free_boundary(dchan);
     }
-  else if ((dchan->decoding_state == rx_type_watch)             ||
-           (dchan->decoding_state == rx_type_listen)            ||
+  else if ((dchan->decoding_state == rx_type_watch)                 ||
+           (dchan->decoding_state == rx_type_proxy_traf_tcp_start)  ||
+           (dchan->decoding_state == rx_type_proxy_traf_unix_start) ||
+           (dchan->decoding_state == rx_type_proxy_sig_start)       ||
+           (dchan->decoding_state == rx_type_proxy_sig_header_ok)   ||
+           (dchan->decoding_state == rx_type_listen)                ||
            (dchan->decoding_state == rx_type_doorways)) 
     {
     }
@@ -508,9 +592,21 @@ void new_rx_to_process(t_data_channel *dchan, int len, char *new_rx)
   chain_append(&dchan->rx, len, new_rx);
   if ((dchan->decoding_state == rx_type_ascii_start)||
       (dchan->decoding_state == rx_type_open_bound_found))
+    {
     string_rx_to_process(dchan);
+    }
+  else if ((dchan->decoding_state == rx_type_proxy_sig_start) ||
+           (dchan->decoding_state == rx_type_proxy_sig_header_ok))
+    {
+    proxy_sig_rx_to_process(dchan);
+    }
+  else if ((dchan->decoding_state == rx_type_proxy_traf_unix_start) ||
+           (dchan->decoding_state == rx_type_proxy_traf_tcp_start))
+    {
+    KERR("ERROR %d", dchan->decoding_state);
+    }
   else
-    KOUT("%d", dchan->decoding_state);
+    KOUT("ERROR %d", dchan->decoding_state);
 }
 /*---------------------------------------------------------------------------*/
 

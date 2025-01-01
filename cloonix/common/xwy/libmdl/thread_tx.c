@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -138,10 +138,10 @@ static int transmit_circ_tx(int sock_fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void cli_warn(int sig)
-{
-  KERR("ERROR SIGNAL SIGPIPE %d", sig);
-}
+//static void cli_warn(int sig)
+//{
+//  KERR("ERROR SIGNAL SIGPIPE %d", sig);
+//}
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -151,8 +151,10 @@ static void *thread_tx(void *arg)
   if (!tx)
     KOUT("ERROR FATAL");
   thread_spy_add(tx->dst_fd, -1, -1, thread_type_tx);
-  if (signal(SIGPIPE, cli_warn) == SIG_ERR)
-    KERR("%s", strerror(errno));
+//  if (signal(SIGPIPE, cli_warn) == SIG_ERR)
+//    KERR("%s", strerror(errno));
+  signal(SIGPIPE, SIG_IGN);
+
 
   while(tx->thread_waiting)
     usleep(10000);

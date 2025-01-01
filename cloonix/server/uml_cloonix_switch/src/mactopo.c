@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -436,9 +436,6 @@ void mactopo_del_req(int item_type, char *name, int num, char *lan)
 /*****************************************************************************/
 void mactopo_snf_del(char *name, int num, char *lan, int llid)
 {
-  t_item_mactopo *cur = find_cur(name, num);
-  if (cur)
-    KERR("ERROR %s %d %s", name, num, lan);
 }
 /*---------------------------------------------------------------------------*/
 

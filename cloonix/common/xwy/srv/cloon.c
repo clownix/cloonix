@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -112,7 +112,12 @@ static int server_loop_wait_cloon(void)
 void cloonix_fdset(fd_set *readfds)
 {
   if (g_sock_cloon != -1)
-    FD_SET(g_sock_cloon, readfds);
+    {
+    if (!mdl_fd_is_valid(g_sock_cloon))
+      KERR("ERROR g_sock_cloon");
+    else
+      FD_SET(g_sock_cloon, readfds);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -142,7 +147,7 @@ void cloonix_beat(struct timeval *tv)
 {
   if (g_sock_cloon != -1)
     {
-    if ((tv->tv_sec - g_last_cloonix_tv.tv_sec) > 40)
+    if ((tv->tv_sec - g_last_cloonix_tv.tv_sec) > 100)
       KOUT("ERROR TIMEOUT");
     }
 }

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -118,13 +118,10 @@ static void my_msg_mngt_tx(int llid, int len, char *buf)
     KOUT("%d %d", len, MAX_SIZE_BIGGEST_MSG);
   if (len > MAX_SIZE_BIGGEST_MSG/2)
     KERR("WARNING LEN MSG %d %d", len, MAX_SIZE_BIGGEST_MSG);
-  if (msg_exist_channel(llid))
-    {
-    if (!g_llid_tx)
-      KOUT(" ");
-    buf[len] = 0;
-    g_llid_tx(llid, len + 1, buf);
-    }
+  if (!g_llid_tx)
+    KOUT(" ");
+  buf[len] = 0;
+  g_llid_tx(llid, len + 1, buf);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -625,6 +622,7 @@ void send_sync_wireshark_resp(int llid,int tid,char *name,int num,int status)
 void send_event_topo_sub(int llid, int tid)
 {
   int len = 0;
+  if (sndbuf == NULL) {KERR("WARNING"); return;}
   len = sprintf(sndbuf, EVENT_TOPO_SUB, tid);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
@@ -634,6 +632,7 @@ void send_event_topo_sub(int llid, int tid)
 void send_event_topo_unsub(int llid, int tid)
 {
   int len = 0;
+  if (sndbuf == NULL) {KERR("WARNING"); return;}
   len = sprintf(sndbuf, EVENT_TOPO_UNSUB, tid);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
@@ -643,6 +642,7 @@ void send_event_topo_unsub(int llid, int tid)
 void send_topo_small_event_sub(int llid, int tid)
 {
   int len = 0;
+  if (sndbuf == NULL) {KERR("WARNING"); return;}
   len = sprintf(sndbuf, TOPO_SMALL_EVENT_SUB, tid);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
@@ -652,6 +652,7 @@ void send_topo_small_event_sub(int llid, int tid)
 void send_topo_small_event_unsub(int llid, int tid)
 {
   int len = 0;
+  if (sndbuf == NULL) {KERR("WARNING"); return;}
   len = sprintf(sndbuf, TOPO_SMALL_EVENT_UNSUB, tid);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
@@ -664,6 +665,7 @@ void send_topo_small_event(int llid, int tid, char *name,
   int len = 0;
   char parm1[MAX_PATH_LEN];
   char parm2[MAX_PATH_LEN];
+  if (sndbuf == NULL) {KERR("WARNING"); return;}
   if (name[0] == 0)
     KOUT(" "); 
   memset(parm1, 0, MAX_PATH_LEN);
@@ -2203,6 +2205,29 @@ void send_novnc_on_off(int llid, int tid, int on)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void local_topo_free_topo(t_topo_info *topo)
+{
+  int i;
+  if (topo)
+    {
+    for (i=0; i<topo->nb_endp; i++)
+      clownix_free(topo->endp[i].lan.lan, __FUNCTION__);
+    clownix_free(topo->cnt, __FUNCTION__);
+    clownix_free(topo->kvm, __FUNCTION__);
+    clownix_free(topo->c2c, __FUNCTION__);
+    clownix_free(topo->tap, __FUNCTION__);
+    clownix_free(topo->a2b, __FUNCTION__);
+    clownix_free(topo->nat, __FUNCTION__);
+    clownix_free(topo->phy, __FUNCTION__);
+    clownix_free(topo->info_phy, __FUNCTION__);
+    clownix_free(topo->bridges, __FUNCTION__);
+    clownix_free(topo->endp, __FUNCTION__);
+    clownix_free(topo, __FUNCTION__);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void startup_env_get(char *msg_in, t_topo_cnt *cnt)
 {
   char *ptr, *ptr1, *ptr2;
@@ -2403,7 +2428,7 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
     case bnd_event_topo:
       topo = helper_event_topo(msg, &tid);
       recv_event_topo(llid, tid, topo);
-      topo_free_topo(topo);
+      local_topo_free_topo(topo);
       break;
 
     case bnd_topo_small_event_sub:
@@ -2788,6 +2813,9 @@ char *llid_trace_lib(int type)
       break;
     case type_llid_trace_unix_xwy:
       result = "unix xwy control";
+      break;
+    case type_llid_trace_unix_proxy:
+      result = "unix udp proxy";
       break;
     case type_llid_trace_doorways:
       result = "doorways";

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -24,9 +24,14 @@
 int doorways_header_size(void);
 /*--------------------------------------------------------------------------*/
 typedef void (*t_doorways_end)(int llid);
-typedef void (*t_doorways_llid)(int llid);
-typedef void (*t_doorways_rx)(int llid, int tid, int type, int val, 
-                              int len, char *buf);
+typedef void (*t_doorways_llid)(int listen_llid, int llid);
+typedef void (*t_doorways_rx)(int llid, int tid,
+                              int len_bufraw, char *doors_bufraw,
+                              int type, int val, int len, char *buf);
+/*--------------------------------------------------------------------------*/
+int doorways_sock_server_proxy(char *net_name, char *unix_path, char *passwd,
+                               t_doorways_llid cb_llid, t_doorways_end cb_end,
+                               t_doorways_rx cb_rx);
 /*--------------------------------------------------------------------------*/
 void doorways_sock_server(char *net_name, int port, char *passwd,
                           t_doorways_llid cb_llid, t_doorways_end cb_end,
@@ -34,7 +39,9 @@ void doorways_sock_server(char *net_name, int port, char *passwd,
 /*--------------------------------------------------------------------------*/
 int doorways_tx_or_rx_still_in_queue(int llid);
 /*--------------------------------------------------------------------------*/
-int doorways_tx(int llid, int tid, int type, int val, int len, char *buf);
+int doorways_tx_bufraw(int llid,int tid,int type,int val,int len,char *buf);
+/*---------------------------------------------------------------------------*/
+int doorways_sig_bufraw(int llid, int tid, int type, int val, char *buf);
 /*---------------------------------------------------------------------------*/
 int doorways_sock_client_inet_start(uint32_t ip, int port, t_fd_event conn_rx);
 /*---------------------------------------------------------------------------*/

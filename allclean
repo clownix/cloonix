@@ -28,6 +28,13 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
     ./allclean
   done
 #----------------------------------------------------------
+  for i in proxy_sig \
+           proxy_traf_tcp \
+           proxy_traf_unix; do
+    cd ${COMMON}/tester_lib/${i}
+    make clean
+  done
+#----------------------------------------------------------
   for i in  lib_client \
             ctrl \
             xwycli \
@@ -54,7 +61,8 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
   for i in  doorways \
             proxy_crun \
             suid_power \
-            uml_cloonix_switch ; do
+            uml_cloonix_switch \
+            create_insider_agents_iso/cloonix_agent ; do
     cd ${SERVER}/${i}
     make clean
   done 
@@ -63,6 +71,7 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
   rm -f ${SERVER}/proxy_crun/cloonix-proxy-crun-access
 #----------------------------------------------------------
   for i in ovs \
+           proxy_crun \
            nginx \
            websockify-js \
            ovs_drv \
@@ -74,7 +83,7 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
            xwy \
            wm2 \
            crun \
-           fuse-archive \
+           tmux \
            spice_lib_server ; do
     cd ${SERVER}/${i}
     ./allclean

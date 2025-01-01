@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -95,8 +95,8 @@ int chain_get_prev_len(t_data_chunk *start, int bound_start_offset)
 {
   int len = 0;
   t_data_chunk *cur = start;
-  if (cur->len <= bound_start_offset)
-    KOUT(" ");
+  if (cur->len < bound_start_offset)
+    KOUT("ERROR %d %d", cur->len, bound_start_offset);
   while (cur)
     {
     len += cur->len;
@@ -139,19 +139,23 @@ int make_a_buf_copy(t_data_chunk *first, int bound_start_offset,
                            char **buf_copy)
 {
   char *tot_rx = NULL;
-  int tot_len = chain_get_prev_len(first, bound_start_offset);
-  if (tot_len)
+  int tot_len = 0;
+  if (first)
     {
-    tot_rx = (char *)clownix_malloc(tot_len+1, IOCMLC);
-    tot_rx[tot_len] = 0;
-    chain_copy(first, bound_start_offset, tot_rx, tot_len);
+    tot_len = chain_get_prev_len(first, bound_start_offset);
+    if (tot_len)
+      {
+      tot_rx = (char *)clownix_malloc(tot_len+1, IOCMLC);
+      tot_rx[tot_len] = 0;
+      chain_copy(first, bound_start_offset, tot_rx, tot_len);
+      }
+    *buf_copy = tot_rx;
     }
-  *buf_copy = tot_rx;
+  else
+    *buf_copy = NULL;
   return (tot_len);
 }
 /*---------------------------------------------------------------------------*/
-
-
 
 /*****************************************************************************/
 void first_elem_delete(t_data_chunk **start, t_data_chunk **last)

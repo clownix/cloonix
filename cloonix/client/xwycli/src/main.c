@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -118,7 +118,8 @@ int main (int argc, char *argv[])
              sizeof(t_cloonix_conf_info));
       g_cloonix_conf_info.doors_llid = 0;
       cnf = &g_cloonix_conf_info;
-      xdoors_connect_init(cnf->ip,cnf->port,cnf->passwd,action,cmd,src,dst);
+      xdoors_connect_init(cnf->name, cnf->ip, cnf->port,
+                          cnf->passwd, action, cmd, src, dst);
       break;
       }
     }

@@ -1,0 +1,10 @@
+#!/bin/bash
+HERE=`pwd`
+for i in "lib_io_clownix" \
+         "lib_rpc_clownix" \
+         "lib_rpc_layout" \
+         "lib_utils" \
+         "../client/lib_client" ; do
+  cd ${HERE}/${i}
+  make
+done

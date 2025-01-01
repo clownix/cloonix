@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -113,6 +113,7 @@ static int create_libs_txt(char *path, char *common)
     create_libs_paragraph(col, common, "gstreamer1.0");
     create_libs_paragraph(col, common, "gstreamer1.0/gstreamer-1.0");
     create_libs_paragraph(col, common, "gstreamer-1.0");
+    create_libs_paragraph(col, common, "qt6/plugins/platforms");
 
     fprintf(col, "echo " " >> %s\n", g_dumps);
     fclose(col);

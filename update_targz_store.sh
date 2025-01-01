@@ -33,17 +33,6 @@ mv nginx_${COMMIT}.tar.gz ${TARGZ}
 
 #-----------------------------------------------------
 cd ${WORK}
-git clone --depth=1 https://github.com/google/fuse-archive.git
-cd ${WORK}/fuse-archive
-COMMIT=$(git log --pretty=format:"%H")
-cd ${WORK}
-tar zcvf fuse-archive_${COMMIT}.tar.gz fuse-archive
-rm -rf fuse-archive
-mv fuse-archive_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------
-
-#-----------------------------------------------------
-cd ${WORK}
 git clone --depth=1 https://github.com/NixOS/patchelf.git
 cd ${WORK}/patchelf
 COMMIT=$(git log --pretty=format:"%H")
@@ -66,6 +55,18 @@ cd ${WORK}
 tar zcvf crun_${COMMIT}.tar.gz crun
 rm -rf crun
 mv crun_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------
+
+#-----------------------------------------------------
+cd ${WORK}
+git clone --depth=1 https://github.com/tmux/tmux.git
+cd ${WORK}/tmux
+COMMIT=$(git log --pretty=format:"%H")
+sh autogen.sh
+cd ${WORK}
+tar zcvf tmux_${COMMIT}.tar.gz tmux
+rm -rf tmux
+mv tmux_${COMMIT}.tar.gz ${TARGZ}
 #-----------------------------------------------------
 
 #-----------------------------------------------------

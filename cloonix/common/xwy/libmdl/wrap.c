@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -115,9 +115,88 @@ void wrap_free(void *ptr, int line)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int dead_write(int s, const void *buf, long unsigned int len)
+{
+  int count = 0, txlen, len_sent=0;
+  int result;
+  while (len_sent != len)
+    {
+    txlen = write (s, buf + len_sent, len - len_sent);
+    if (txlen < 0)
+      {
+      if ((errno != EINTR) && (errno != EWOULDBLOCK) && (errno != EAGAIN))
+        {
+        KERR("ERROR DEADWAIT %lu %d", len, errno);
+        result = -1;
+        break;
+        }
+      else
+        {
+        count++;
+        if (!(count%10))
+          KERR("DEADWAIT %d", count);
+        if (count == 200)
+          {
+          KERR("ERROR DEADWAIT %lu %d", len, errno);
+          break;
+          }
+        usleep(1000);
+        }
+      }
+    else if (txlen == 0)
+      {
+      usleep(1000);
+      count++;
+      if (!(count%4))
+        KERR("DEADWAIT %d", count);
+      if (count == 20)
+        {
+        KERR("ERROR DEADWAIT %lu %d", len, errno);
+        result = -1;
+        break;
+        }
+      }
+    else
+      {
+      len_sent += txlen;
+      result = len_sent;
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int dead_read(int s, void *buf, size_t len)
+{
+  int count = 0, rxlen;
+  rxlen = read(s, buf, len);
+  while (rxlen == -1)
+    {
+    if ((errno != EINTR) && (errno != EWOULDBLOCK) && (errno != EAGAIN))
+      {
+      KERR("ERROR DEADWAIT %u %d", len, errno);
+      break;
+      }
+    else
+      {
+      count++;
+      if (count > 3)
+        break;
+      usleep(1000);
+      rxlen = read(s, buf, len);
+      }
+    }
+  return rxlen;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 ssize_t wrap_write_pty(int s, const void *buf, long unsigned int len)
 {
-  ssize_t wlen = write(s, buf, len);
+  ssize_t wlen = dead_write(s, buf, len);
+  if (wlen <=0)
+    KERR("ERROR DEADWRITE %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(0, s, wlen, fd_type_pty, buf);
   return wlen;
 }
@@ -126,7 +205,9 @@ ssize_t wrap_write_pty(int s, const void *buf, long unsigned int len)
 /****************************************************************************/
 ssize_t wrap_write_scp(int s, const void *buf, long unsigned int len)
 {
-  ssize_t wlen = write(s, buf, len);
+  ssize_t wlen = dead_write(s, buf, len);
+  if (wlen <=0)
+    KERR("ERROR DEADWRITE %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(0, s, wlen, fd_type_scp, buf);
   return wlen;
 }
@@ -136,7 +217,9 @@ ssize_t wrap_write_scp(int s, const void *buf, long unsigned int len)
 ssize_t wrap_write_srv(int s, const void *buf, long unsigned int len)
 {
   ssize_t wlen;
-  wlen = write(s, buf, len);
+  wlen = dead_write(s, buf, len);
+  if (wlen <=0)
+    KERR("ERROR DEADWRITE %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(0, s, wlen, fd_type_srv, buf);
   return wlen;
 }
@@ -146,7 +229,9 @@ ssize_t wrap_write_srv(int s, const void *buf, long unsigned int len)
 ssize_t wrap_write_cli(int s, const void *buf, long unsigned int len)
 {
   ssize_t wlen;
-  wlen = write(s, buf, len);
+  wlen = dead_write(s, buf, len);
+  if (wlen <=0)
+    KERR("ERROR DEADWRITE %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(0, s, wlen, fd_type_cli, buf);
   return wlen;
 }
@@ -155,7 +240,9 @@ ssize_t wrap_write_cli(int s, const void *buf, long unsigned int len)
 /****************************************************************************/
 ssize_t wrap_write_one(int s, const void *buf, long unsigned int len)
 {
-  ssize_t wlen = write(s, buf, len);
+  ssize_t wlen = dead_write(s, buf, len);
+  if (wlen <=0)
+    KERR("ERROR DEADWRITE %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(0, s, wlen, fd_type_one, buf);
   return wlen;
 }
@@ -166,32 +253,21 @@ static ssize_t write_wrwait(int s, const void *buf, long unsigned int len)
 {
   ssize_t wlen=0;
   int len_done, offst=0;
-
   if (len == 0)
     return 0; 
   do
     {
-    len_done = write(s, buf+offst, len-offst);
-    if (len_done < 0)
+    len_done = dead_write(s, buf+offst, len-offst);
+    if (len_done <=0)
       {
-      if (errno != EINTR && errno != EAGAIN)
-        {
-        KERR("%d %s", s, strerror(errno));
-        wlen = -1;
-        break;
-        }
-      else
-        len_done = 0;
+      KERR("ERROR DEADWRITE %s", __FUNCTION__); 
+      break;
       }
-    if (len_done == 0)
-      usleep(10000);
     else
       offst += len_done;
     } while(offst != len);
-
   if (wlen == 0)
     wlen = offst;
-
   return wlen;
 }
 /*--------------------------------------------------------------------------*/
@@ -217,7 +293,9 @@ ssize_t wrap_write_x11_wrwait_soc(int s, const void *buf, long unsigned int len)
 /****************************************************************************/
 ssize_t wrap_write_x11_x11(int s, const void *buf, long unsigned int len)
 {
-  ssize_t wlen = write(s, buf, len);
+  ssize_t wlen = dead_write(s, buf, len);
+  if (wlen <=0)
+    KERR("ERROR DEADWRITE %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(0, s, wlen, fd_type_x11_wr_x11, buf);
   return wlen;
 }
@@ -226,7 +304,9 @@ ssize_t wrap_write_x11_x11(int s, const void *buf, long unsigned int len)
 /****************************************************************************/
 ssize_t wrap_write_x11_soc(int s, const void *buf, long unsigned int len)
 {
-  ssize_t wlen = write(s, buf, len);
+  ssize_t wlen = dead_write(s, buf, len);
+  if (wlen <=0)
+    KERR("ERROR DEADWRITE %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(0, s, wlen, fd_type_x11_wr_soc, buf);
   return wlen;
 }
@@ -235,9 +315,9 @@ ssize_t wrap_write_x11_soc(int s, const void *buf, long unsigned int len)
 /****************************************************************************/
 ssize_t wrap_write_dialog_thread(int s, const void *buf, long unsigned int len)
 {
-  ssize_t wlen = write(s, buf, len);
-  if (wlen <=0 )
-    KERR("ERROR %d", len);
+  ssize_t wlen = dead_write(s, buf, len);
+  if (wlen <=0)
+    KERR("ERROR DEADWRITE %s", __FUNCTION__); 
   return wlen;
 }
 /*--------------------------------------------------------------------------*/
@@ -245,7 +325,9 @@ ssize_t wrap_write_dialog_thread(int s, const void *buf, long unsigned int len)
 /****************************************************************************/
 ssize_t wrap_write_cloon(int s, const void *buf, long unsigned int len)
 {
-  ssize_t wlen = write(s, buf, len);
+  ssize_t wlen = dead_write(s, buf, len);
+  if (wlen <=0)
+    KERR("ERROR DEADWRITE %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(0, s, wlen, fd_type_cloon, buf);
   return wlen;
 }
@@ -259,11 +341,12 @@ ssize_t wrap_write_kout(int s, const void *buf, long unsigned int len)
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 ssize_t wrap_read_cli(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
+  ssize_t rlen = dead_read(s, buf, len);
+  if (rlen <=0)
+    KERR("ERROR DEADREAD %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_cli, buf);
   return rlen;
 }
@@ -272,7 +355,7 @@ ssize_t wrap_read_cli(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_srv(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
+  ssize_t rlen = dead_read(s, buf, len);
   DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_srv, buf);
   return rlen;
 }
@@ -281,7 +364,9 @@ ssize_t wrap_read_srv(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_x11_rd_x11(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
+  ssize_t rlen = dead_read(s, buf, len);
+  if (rlen <=0)
+    KERR("ERROR DEADREAD %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_x11_rd_x11, buf);
   return rlen;
 }
@@ -290,17 +375,20 @@ ssize_t wrap_read_x11_rd_x11(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_x11_rd_soc(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
+  ssize_t rlen = dead_read(s, buf, len);
+  if (rlen <=0)
+    KERR("ERROR DEADREAD %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_x11_rd_soc, buf);
   return rlen;
 }
 /*--------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 ssize_t wrap_read_pty(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
+  ssize_t rlen = dead_read(s, buf, len);
+  if (rlen <=0)
+    KERR("ERROR DEADREAD %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_pty, buf);
   return rlen;
 }
@@ -309,7 +397,9 @@ ssize_t wrap_read_pty(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_scp(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
+  ssize_t rlen = dead_read(s, buf, len);
+  if (rlen <=0)
+    KERR("ERROR DEADREAD %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_scp, buf);
   return rlen;
 }
@@ -318,7 +408,9 @@ ssize_t wrap_read_scp(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_zero(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
+  ssize_t rlen = dead_read(s, buf, len);
+  if (rlen <=0)
+    KERR("ERROR DEADREAD %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_zero, buf);
   return rlen;
 }
@@ -327,7 +419,9 @@ ssize_t wrap_read_zero(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_sig(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
+  ssize_t rlen = dead_read(s, buf, len);
+  if (rlen <=0)
+    KERR("ERROR DEADREAD %s", __FUNCTION__); 
   DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_sig, buf);
   return rlen;
 }
@@ -336,9 +430,7 @@ ssize_t wrap_read_sig(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_dialog_thread(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
-  if (rlen <=0 )
-    KERR("ERROR %d", len);
+  ssize_t rlen = dead_read(s, buf, len);
   return rlen;
 }
 /*--------------------------------------------------------------------------*/
@@ -346,7 +438,7 @@ ssize_t wrap_read_dialog_thread(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_cloon(int s, void *buf, size_t len)
 {
-  ssize_t rlen = read(s, buf, len);
+  ssize_t rlen = dead_read(s, buf, len);
   DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_cloon, buf);
   return rlen;
 }

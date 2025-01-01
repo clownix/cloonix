@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -32,5 +32,5 @@ int  udp_tx_traf(int len, uint8_t *buf);
 int  udp_rx_traf(int len, uint8_t *buf);
 int udp_tx_burst(int nb, t_udp_burst *burst);
 t_udp_burst *get_udp_burst_tx(void);
-int  udp_init(void);
+int udp_init(uint16_t *udp_port);
 /*--------------------------------------------------------------------------*/

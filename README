@@ -1,5 +1,5 @@
 ==============================================================================
-                               v42-00
+                               v43-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -12,36 +12,34 @@ The network connecting the virtual machines and containers is created through
 the use of the openvswitch software running inside a net namespace so that
 your host is isolated from cloonix. That way, "ip link" on your host
 shows clean results. Do "ip netns" to see cloonix namespaces.
-If you wish to see the cloonix bridges, do:
-"sudo ip netns exec <namespace_name> ip link".
 
 Building of the binaries is done on a debian trixie, all the necessary files
 and libraries are collected and put into an autonomous bundle, this makes
 the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-42-00/html/index.html doc.
+http://clownix.net/doc_stored/build-43-00/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp cloonix api.
 ------------------------------------------------------------------------------
 
 ==============================================================================
-                          INSTALLATION AND USE 
+              HOST INSTALLATION AND USE WITH ADMIN PERMISSIONS 
 ==============================================================================
 
         ======================================
         1) Download software and installation:
         ======================================
 
-wget http://clownix.net/downloads/cloonix-42/cloonix-bundle-42-00-amd64.tar.gz
-tar xvf cloonix-bundle-42-00-amd64.tar.gz
-cd cloonix-bundle-42-00-amd64
+wget http://clownix.net/downloads/cloonix-43/cloonix-bundle-43-00-amd64.tar.gz
+tar xvf cloonix-bundle-43-00-amd64.tar.gz
+cd cloonix-bundle-43-00-amd64
 sudo ./install_cloonix
 
-(To uninstall:   rm -f /usr/bin/cloonix_*
-                 rm -rf /usr/libexec/cloonix
-                 rm -rf /var/lib/cloonix)
+(To uninstall:   sudo rm -f /usr/bin/cloonix_*
+                 sudo rm -rf /usr/libexec/cloonix
+                 sudo rm -rf /var/lib/cloonix)
 
 
         ==========================================
@@ -50,9 +48,11 @@ sudo ./install_cloonix
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
-wget http://clownix.net/downloads/cloonix-42/bulk/openwrt.qcow2.gz
+
+wget http://clownix.net/downloads/cloonix-43/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
-wget http://clownix.net/downloads/cloonix-42/bulk/zipbasic.zip
+
+wget http://clownix.net/downloads/cloonix-43/bulk/zipfrr.zip
 
 
         =============================
@@ -60,7 +60,7 @@ wget http://clownix.net/downloads/cloonix-42/bulk/zipbasic.zip
         =============================
 
 cd ${HOME}
-wget http://clownix.net/downloads/cloonix-42/demos/ping_demo.sh
+wget http://clownix.net/downloads/cloonix-43/demos/ping_demo.sh
 
 
         ===============
@@ -70,49 +70,50 @@ wget http://clownix.net/downloads/cloonix-42/demos/ping_demo.sh
 On the gui, a double-click on the biggest blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy,
 a right-click on the blue machine gives a spice desktop.
+The big blue machine is based on qcow2 file driven by qemu/kvm.
 
 On the gui, a double-click on the smallest blue machine gives a shell,
 a double-click on the green interface gives a wireshark spy,
 a right-click on the container gives one remote console.
+The smaller blue machine is a container based on zip files driven by crun. 
 
 ==============================================================================
 
 
 ==============================================================================
-                     ROOTLESS SELF EXTRACTING CLOONIX
+                ROOTLESS SELF EXTRACTING CLOONIX FOR QUICK DEMO
 ==============================================================================
 To test cloonix without ever having the root password for your host machine,
-you have to use the self_extracting_cloonix.sh.
+you have to use the extract_nemo.sh.
 
-This script creates the self_extracting_rootfs_dir directory which countains
-a root file-system equiped with the cloonix software, the openwrt qcow2
-virtual machine, the zipbasic container, the frr container, demo scripts
-for the cloonix run and a self-contained crun executable.
+This script creates the extractnemo directory which countains a root
+file-system equiped with the cloonix software, the frr container, and 
+ping and frr demo scripts.
 
         1) Download:
         ============
-wget http://clownix.net/downloads/cloonix-42/self_extracting_cloonix.sh
+wget http://clownix.net/downloads/cloonix-43/extract_nemo.sh
 
-        2) Extract:
-        ===========
-./self_extracting_cloonix.sh
+        2) Extract based on the makeself.sh utility:
+        ============================================
+./extract_nemo.sh
 
-        3) Change directory:
-        ====================
-cd self_extracting_rootfs_dir
+        3) The nemo_cmd script is now present, call the gui canvas:
+        ===========================================================
+./nemo_cmd gui
 
-        4) Enter the cloonix container:
-        ===============================
-./crun_container_startup.sh
+        4) Call the ping demo and Ctrl-C to stop the pings:
+        ===================================================
+./nemo_cmd ping
 
-        5) Launch demo:
+        5) Kill all:
         ===============
-./ping_demo.sh
+./nemo_cmd kil 
 
 
 NOTE FOR KVM USE
 ================:
-     For the cloonix to be able to use the openwrt qcow2, devices /dev/kvm,
+     For the cloonix to be able to use the qcow2 files, devices /dev/kvm,
      /dev/vhost-net and /dev/net/tun, must have read/write access. For this
      some commands must be done as root to provide read/write access:
 

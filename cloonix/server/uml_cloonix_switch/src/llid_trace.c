@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -115,6 +115,9 @@ static char *llid_trace_translate_type(int type_llid_trace)
       break;
     case type_llid_trace_unix_xwy:
       result = "trace_unix_xwy";
+      break;
+    case type_llid_trace_unix_proxy:
+      result = "trace_unix_udp_proxy";
       break;
     }
   return result;

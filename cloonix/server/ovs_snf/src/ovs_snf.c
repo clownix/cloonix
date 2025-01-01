@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -231,7 +231,7 @@ static void fct_timeout_self_destruct(void *data)
     KOUT("EXIT");
     }
   g_watchdog_ok = 0;
-  clownix_timeout_add(500, fct_timeout_self_destruct, NULL, NULL, NULL);
+  clownix_timeout_add(1500, fct_timeout_self_destruct, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -292,7 +292,7 @@ int main (int argc, char *argv[])
   pcap_record_init(g_snf_path);
   seteuid(getuid());
   cloonix_set_pid(getpid());
-  clownix_timeout_add(1500, fct_timeout_self_destruct, NULL, NULL, NULL);
+  clownix_timeout_add(2000, fct_timeout_self_destruct, NULL, NULL, NULL);
   msg_mngt_loop();
   return 0;
 }

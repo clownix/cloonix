@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -86,6 +86,10 @@ static void process_msg_from_parent(char *line, char *respb)
 
 "ovs_req_ovs"))
     action_req_ovs_switch(bin, db, g_net_name, respb);
+
+  else if (sscanf(line,
+"ovs_system_promisc vhost=%s", vhost) == 1)
+    action_system_promisc(bin, db, respb, vhost);
 
   else if (sscanf(line,
 

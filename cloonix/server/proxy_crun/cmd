@@ -1,7 +1,15 @@
 #!/bin/bash
 HERE=`pwd`
+
+cd ${HERE}/../../common/lib_io_clownix
 make clean
 make
 
+cd ${HERE}/../../common/lib_rpc_clownix
+make clean
+make
 
+cd ${HERE}
+make clean
+make
 

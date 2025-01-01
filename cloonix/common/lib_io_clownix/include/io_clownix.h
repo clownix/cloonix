@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -126,13 +126,25 @@ void watch_tx(int llid, int len, char *tx);
 int  string_client_unix(char *pname, t_fd_error err_cb, 
                         t_msg_rx_cb rx_cb, char *little_name);
 
-int  string_client_inet(__u32 ip, __u16 port, 
+int  string_client_inet(uint32_t ip, uint16_t port, 
                         t_fd_error err_cb, 
                          t_msg_rx_cb rx_cb, char *little_name);
+
+void proxy_traf_tcp_tx(int llid, int len, char *str_tx);
+int  proxy_traf_tcp_client(uint32_t ip, uint16_t port,
+                           t_fd_error err_cb, t_msg_rx_cb rx_cb);
+int  proxy_traf_tcp_server(uint16_t port, t_fd_connect connect_cb); 
+
+void proxy_traf_unix_tx(int llid, int len, char *str_tx);
+int  proxy_traf_unix_client(char *pname, t_fd_error err_cb, t_msg_rx_cb rx_cb);
+int  proxy_traf_unix_server(char *pname, t_fd_connect connect_cb); 
+
+void proxy_sig_tx(int llid, int len, char *str_tx);
+int  proxy_sig_client(char *pname, t_fd_error err_cb, t_msg_rx_cb rx_cb);
+int  proxy_sig_server(char *pname, t_fd_connect connect_cb); 
+
 int string_server_unix(char *pname,t_fd_connect connect_cb,char *little_name); 
-int  string_server_inet(__u16 port,t_fd_connect connect_cb,char *little_name);
-int string_server_unix(char *pname,t_fd_connect connect_cb,char *little_name);
-int  string_server_inet (__u16 port,t_fd_connect connect_cb,char *little_name);
+int string_server_inet(uint16_t port,t_fd_connect connect_cb,char *little_name);
 void msg_mngt_set_callbacks (int llid, t_fd_error err_cb, 
                              t_msg_rx_cb rx_cb);
 int msg_watch_no_erase_fd(int fd, t_fd_event rx_data,
@@ -164,7 +176,10 @@ void nonnonblock_fd(int fd);
 
 unsigned long channel_get_tx_queue_len(int llid);
 
-void ptr_doorways_client_tx(int llid, int len, char *buf);
+void doors_tx_switch_val_none(int llid, int len, char *buf);
+void doors_tx_switch_val_c2c(int llid, int len, char *buf);
+
+int lib_io_proxy_is_on(char *name);
 
 int msg_mngt_get_tx_queue_len(int llid);
 

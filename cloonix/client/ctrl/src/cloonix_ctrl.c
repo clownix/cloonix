@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -387,7 +387,9 @@ static void stub_err_cb (int llid)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void stub_rx_cb(int llid,int tid,int type,int val,int len,char *buf)
+static void doorways_rx_bufraw(int llid, int tid,
+                               int len_bufraw, char *doors_bufraw,
+                               int type, int val, int len, char *buf)
 {
   if (type == doors_type_switch)
     {
@@ -416,25 +418,15 @@ static void stub_rx_cb(int llid,int tid,int type,int val,int len,char *buf)
 /*****************************************************************************/
 static void stub_topo(int tid, t_topo_info *topo)
 {
-  int i;
-  for (i=0; i<g_nb_cloonix_servers; i++)
+  if (g_cloonix_conf_info[tid].doors_llid == g_current_llid)
     {
-    if (g_cloonix_conf_info[i].doors_llid == g_current_llid)
-      {
-      if (strcmp(topo->clc.network,  g_cloonix_conf_info[i].name)) 
-        KERR("%s %s", topo->clc.network, g_cloonix_conf_info[i].name);
-      print_reacheability(i, "reachable");
-      }
+    if (strcmp(topo->clc.network,  g_cloonix_conf_info[tid].name)) 
+      KERR("ERROR %s %s", topo->clc.network, g_cloonix_conf_info[tid].name);
+    print_reacheability(tid, "reachable");
+    g_cloonix_conf_info[tid].doors_llid = 0;
     }
 }
 /*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void stub_doorways_tx(int llid, int len, char *buf)
-{
-  doorways_tx(llid, 0, doors_type_switch, doors_val_none, len, buf);
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static int callback_connect(int llid, int fd)
@@ -448,13 +440,14 @@ static int callback_connect(int llid, int fd)
         {
         doors_llid = doorways_sock_client_inet_end(doors_type_switch, llid, fd,
                                           g_cloonix_conf_info[i].passwd,
-                                          stub_err_cb, stub_rx_cb);
+                                          stub_err_cb, doorways_rx_bufraw);
         if (doors_llid)
           {
           g_cloonix_conf_info[i].doors_llid = doors_llid;
-          doorways_tx(doors_llid, 0, doors_type_switch,
-                      doors_val_init_link, strlen("OK") , "OK");
-          send_event_topo_sub(doors_llid, 0);
+          if (doorways_sig_bufraw(doors_llid, llid, doors_type_switch,
+                                  doors_val_init_link, "OK"))
+            KERR("WARNING");
+          send_event_topo_sub(doors_llid, i);
           }
         break;
         }
@@ -466,10 +459,24 @@ static int callback_connect(int llid, int fd)
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void locale_doorways_client_tx(int llid, int len, char *buf)
+{
+  if (doorways_tx_bufraw(llid, 0, doors_type_switch,
+                         doors_val_none, len, buf))
+    KERR("WARNING %s", buf);
+}
+/*---------------------------------------------------------------------------*/
+
+   
 /*****************************************************************************/
 int main (int argc, char *argv[])
 {
-  int i, rank, result;
+  int i, rank, result, proxy_is_on;
+  char tmpnet[MAX_NAME_LEN];
+  uint32_t inet_addr, ip;
+  ip_string_to_int(&inet_addr, "127.0.0.1");
+  proxy_is_on = lib_io_proxy_is_on(tmpnet);
   if (argc < 2)
     KOUT("%d", argc);
   g_inhibited = 0;
@@ -485,17 +492,21 @@ int main (int argc, char *argv[])
     msg_mngt_init("ctrl", IO_MAX_BUF_LEN);
     cloonix_conf_info_get_all(&g_nb_cloonix_servers, &g_cloonix_conf_info);
     client_topo_tst_sub(stub_topo);
-    doors_io_basic_xml_init(stub_doorways_tx);
     printf("\nVersion:%s\n\n", cloonix_conf_info_get_version());
     for (i=0; i<g_nb_cloonix_servers; i++)
       {
+      doors_io_basic_xml_init(locale_doorways_client_tx);
       g_cloonix_conf_info[i].doors_llid = 0;
+      if (proxy_is_on && (!strcmp(tmpnet, g_cloonix_conf_info[i].name)))
+        ip = inet_addr;
+      else
+        ip = g_cloonix_conf_info[i].ip;
       g_cloonix_conf_info[i].connect_llid = 
-      doorways_sock_client_inet_start(g_cloonix_conf_info[i].ip,
+      doorways_sock_client_inet_start(ip,
                                       g_cloonix_conf_info[i].port,
                                       callback_connect);
       }
-    clownix_timeout_add(500, timout_connect, NULL, NULL, NULL);
+    clownix_timeout_add(400, timout_connect, NULL, NULL, NULL);
     client_loop();
     }
   else
@@ -508,7 +519,15 @@ int main (int argc, char *argv[])
       exit(1);
       }
     memset(g_cloonix_server_sock, 0, MAX_PATH_LEN);
-    strncpy(g_cloonix_server_sock, g_cloonix_conf_info->doors, MAX_PATH_LEN);
+    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
+      {
+      snprintf(g_cloonix_server_sock, MAX_NAME_LEN-1,
+               "127.0.0.1:%d", g_cloonix_conf_info->port);
+      }
+    else
+      {
+      strncpy(g_cloonix_server_sock, g_cloonix_conf_info->doors, MAX_PATH_LEN);
+      }
     memset(g_cloonix_password, 0, MSG_DIGEST_LEN);
     strncpy(g_cloonix_password, g_cloonix_conf_info->passwd, MSG_DIGEST_LEN);
     result = handle_command(level_main_cmd, 3, argc, &argv[0]);

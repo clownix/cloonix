@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -433,6 +433,8 @@ void channel_rx_local_flow_ctrl(int llid, int stop)
     else
       g_channel[cidx].red_to_stop_reading = 0;
     }
+  else
+    KERR("WARNING %d %d", llid, stop);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -554,6 +556,13 @@ static void apply_epoll_ctl(int llid, int cidx, uint32_t evt)
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static int check_fd_is_valid(int fd)
+{
+  return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
+}
+/*--------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static void prepare_rx_tx_events(void)
 {
@@ -564,36 +573,43 @@ static void prepare_rx_tx_events(void)
     fd = g_channel[cidx].fd;
     if ((fd != -1) && (g_channel[cidx].kind != kind_glib_managed))
       {
-      evt = 0;
       llid = get_llid(cidx);
       if (!llid)
         KOUT("%d %d %d", cidx, fd, g_channel[cidx].kind);
       if ((fd + 1) != cidx)
         KOUT(" %d %d ", fd, cidx);
-      if (g_channel[cidx].kind == kind_simple_watch_connect)
-        evt |= EPOLLOUT;
+      if (!check_fd_is_valid(fd))
+        {
+        KERR("ERROR FD %d %d", fd, g_channel[cidx].kind);
+        g_channel[cidx].err_cb(llid, errno, 514);
+        channel_delete(llid);
+        }
       else
         {
-        if (channel_get_tx_queue_len(get_llid(cidx)))
+        evt = 0;
+        if (g_channel[cidx].kind == kind_simple_watch_connect)
+          evt |= EPOLLOUT;
+        else
           {
-          if (!g_channel[cidx].red_to_stop_reading)
-            evt |= EPOLLIN;
-          else
-            KERR(" ");
-          if (!g_channel[cidx].red_to_stop_writing)
-            evt |= EPOLLOUT;
-          else
-            KERR(" ");
+          if (channel_get_tx_queue_len(get_llid(cidx)))
+            {
+            if (!g_channel[cidx].red_to_stop_reading)
+              evt |= EPOLLIN;
+            else
+              KERR(" ");
+            if (!g_channel[cidx].red_to_stop_writing)
+              evt |= EPOLLOUT;
+            else
+              KERR(" ");
+            }
+          else 
+            {
+            if (!g_channel[cidx].red_to_stop_reading)
+              evt |= EPOLLIN;
+            }
           }
-        else 
-          {
-          if (!g_channel[cidx].red_to_stop_reading)
-            evt |= EPOLLIN;
-          else
-            KERR(" ");
-          }
+        apply_epoll_ctl(llid, cidx, evt);
         }
-      apply_epoll_ctl(llid, cidx, evt);
       }
     }
 }
@@ -644,8 +660,8 @@ int channel_create(int fd, int kind, char *little_name,
     fd_check(fd, __LINE__, little_name);
     if (epoll_ctl(g_epfd, EPOLL_CTL_ADD, fd, &(g_channel[cidx].epev)))
       {
+      KERR("ERROR epoll_ctl %s %d", little_name, errno);
       release_llid_cidx(llid, cidx);
-      KERR(" %s %d", little_name, errno);
       llid = 0;
       }
     else
@@ -723,7 +739,7 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
         else
           {
           KERR("%d %d %d", cidx, events[k].data.fd, g_channel[cidx].kind);
-          g_channel[cidx].err_cb(llid, errno, 511);
+          g_channel[cidx].err_cb(llid, errno, 515);
           channel_delete(llid);
           }
         *pb = 0;
@@ -736,9 +752,15 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
       KOUT("%d %d %d", cidx, g_channel[cidx].fd, g_channel[cidx].kind);
     evt = events[k].events;
 
-    if ((evt & EPOLLHUP) || (evt & EPOLLERR))
+    if (evt & EPOLLHUP)
       {
-      g_channel[cidx].err_cb(llid, errno, 511);
+      g_channel[cidx].err_cb(llid, errno, 5111);
+      channel_delete(llid);
+      result = 0;
+      }
+    else if (evt & EPOLLERR)
+      {
+      g_channel[cidx].err_cb(llid, errno, 5112);
       channel_delete(llid);
       result = 0;
       }

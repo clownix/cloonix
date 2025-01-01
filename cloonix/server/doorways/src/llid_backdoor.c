@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -57,7 +57,7 @@ typedef struct t_llid_traf
 
 typedef struct t_rx_pktbuf
 {
-  char buf[MAX_A2D_LEN];
+  char rawbuf[MAX_A2D_LEN];
   int  offset;
   int  paylen;
   int  dido_llid;
@@ -482,7 +482,7 @@ static int rx_pktbuf_fill(int *len, char  *buf, t_rx_pktbuf *rx_pktbuf)
     }
   if (len_chosen + rx_pktbuf->offset > MAX_A2D_LEN)
     KOUT("%d %d", len_chosen, rx_pktbuf->offset);
-  memcpy(rx_pktbuf->buf+rx_pktbuf->offset, buf, len_chosen);
+  memcpy(rx_pktbuf->rawbuf+rx_pktbuf->offset, buf, len_chosen);
   rx_pktbuf->offset += len_chosen;
   *len -= len_chosen;
   return result;
@@ -493,7 +493,7 @@ static int rx_pktbuf_fill(int *len, char  *buf, t_rx_pktbuf *rx_pktbuf)
 static int rx_pktbuf_get_paylen(t_backdoor_vm *bvm, t_rx_pktbuf *rx_pktbuf)
 {
   int result = 0;
-  if (sock_header_get_info(rx_pktbuf->buf, 
+  if (sock_header_get_info(rx_pktbuf->rawbuf, 
                            &(rx_pktbuf->dido_llid), &(rx_pktbuf->paylen),
                            &(rx_pktbuf->type), &(rx_pktbuf->val),
                            &(rx_pktbuf->payload)))

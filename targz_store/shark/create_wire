@@ -4,9 +4,6 @@ NET=mito
 #----------------------------------------------------------------------#
 ARCH="amd64"
 QCOW2="debian_builder_amd64.qcow2"
-WIRELIB="/root/lib"
-WIREBIN="/root/cloonix-wireshark"
-DUMPBIN="/root/cloonix-dumpcap"
 #----------------------------------------------------------------------
 rm -rf ${HERE}/built_objects_${ARCH}
 mkdir -p ${HERE}/built_objects_${ARCH}
@@ -45,20 +42,11 @@ while ! cloonix_ssh ${NET} wire "echo" 2>/dev/null; do
   sleep 5
 done
 #----------------------------------------------------------------------
-cloonix_scp ${NET} ${HERE}/get_all_wire_libs.c wire:/root
-cloonix_ssh ${NET} wire "rm -f /root/copy_libs"
-cloonix_ssh ${NET} wire "gcc -o copy_libs get_all_wire_libs.c"
-#----------------------------------------------------------------------
-tar zcvf tainted_wireshark.tar.gz tainted_wireshark
 cloonix_scp ${NET} ${HERE}/tainted_wireshark.tar.gz wire:/root 
-rm -f tainted_wireshark.tar.gz
-cloonix_ssh ${NET} wire "rm -rf /root/tainted_wireshark"
 cloonix_ssh ${NET} wire "tar xvf tainted_wireshark.tar.gz"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} wire "rm -rf /root/shark"
 cloonix_ssh ${NET} wire "mkdir /root/shark"
-cloonix_ssh ${NET} wire "mkdir -p ${WIRELIB}/qt6/plugins"
-cloonix_ssh ${NET} wire "cp -rf /usr/lib/x86_64-linux-gnu/qt6/plugins/platforms ${WIRELIB}/qt6/plugins"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} wire "cd tainted_wireshark; cmake -S /root/tainted_wireshark -B /root/shark"
 cloonix_ssh ${NET} wire "cd tainted_wireshark; cmake --build /root/shark -j 4"
@@ -67,13 +55,8 @@ cloonix_ssh ${NET} wire "cd tainted_wireshark; cmake --install /root/shark"
 cloonix_ssh ${NET} wire "strip /root/shark/run/dumpcap"
 cloonix_ssh ${NET} wire "strip /root/shark/run/wireshark"
 #----------------------------------------------------------------------
-cloonix_ssh ${NET} wire "cp /root/shark/run/dumpcap ${DUMPBIN}"
-cloonix_ssh ${NET} wire "cp /root/shark/run/wireshark ${WIREBIN}"
-cloonix_ssh ${NET} wire "/root/copy_libs"
-#----------------------------------------------------------------------
-cloonix_scp ${NET} wire:${DUMPBIN} ${HERE}/built_objects_${ARCH}
-cloonix_scp ${NET} wire:${WIREBIN} ${HERE}/built_objects_${ARCH}
-cloonix_scp ${NET} -r wire:${WIRELIB} ${HERE}/built_objects_${ARCH}
+cloonix_scp ${NET} wire:/root/shark/run/dumpcap   ${HERE}/built_objects_${ARCH}
+cloonix_scp ${NET} wire:/root/shark/run/wireshark ${HERE}/built_objects_${ARCH}
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} wire "sync"
 sleep 2

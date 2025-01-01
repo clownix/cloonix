@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -41,8 +41,8 @@
 #include "doorways_sock.h"
 
 
-#define MAX_TOT_LEN_QSIG 10000000
-#define MAX_TOT_LEN_QDAT 1000000000
+#define MAX_TOT_LEN_QSIG 2000000000
+#define MAX_TOT_LEN_QDAT 5000000000
 /*---------------------------------------------------------------------------*/
 static t_data_channel dchan[CLOWNIX_MAX_CHANNELS];
 static char *first_rx_buf;
@@ -59,6 +59,71 @@ static int g_fd_not_to_close_set = 0;
 
 void doorways_linker_helper(void);
 void cloonix_conf_linker_helper(void);
+
+
+/****************************************************************************/
+static int get_pid_num_and_name(char *name)
+{
+  FILE *fp;
+  char ps_cmd[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+  char tmp_name[MAX_PATH_LEN];
+  int pid, result = 0;
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
+  fp = popen(ps_cmd, "r");
+  if (fp == NULL)
+    KERR("ERROR %s %d", ps_cmd, errno);
+  else
+    {
+    memset(line, 0, MAX_PATH_LEN);
+    while (fgets(line, MAX_PATH_LEN-1, fp))
+      {
+      if (sscanf(line,
+         "%d /usr/libexec/cloonix/server/cloonix-main-server "
+         "/usr/libexec/cloonix/common/etc/cloonix.cfg %s",
+         &pid, tmp_name) == 2) 
+       {
+       result = pid;
+       strncpy(name, tmp_name, MAX_NAME_LEN-1);
+       break;
+       }
+      }
+    pclose(fp);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+int lib_io_proxy_is_on(char *name)
+{
+  int pid, result = 0;
+  char *file_name = "/proc/1/cmdline";
+  char buf[MAX_PATH_LEN];
+  FILE *fd = fopen(file_name, "r");
+  if (fd == NULL)
+    KERR("WARNING: Cannot open %s", file_name);
+  else
+    {
+    memset(buf, 0, MAX_PATH_LEN);
+    if (!fgets(buf, MAX_PATH_LEN-1, fd))
+      KERR("WARNING: Cannot read %s", file_name);
+    else if (strstr(buf, CRUN_STARTER))
+      {
+      result = 1;
+      if (name)
+        {
+        memset(name, 0, MAX_NAME_LEN);
+        pid = get_pid_num_and_name(name);
+        if (pid == 0)
+          KERR("WARNING NO CLOONIX SERVER RUNNING");
+        }
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 
 
@@ -212,7 +277,6 @@ void clownix_free(void *ptr, const char *caller_ident)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
 static void timer_differed_clownix_free(void *data)
 {
@@ -344,19 +408,27 @@ static int rx_dchan_cb(int llid, int fd)
   if (len < 0)
     {
     clownix_free(first_rx_buf, __FUNCTION__);
-    err_dchan_cb(llid, errno, 2);
+    err_dchan_cb(llid, errno, 1132);
     correct_recv = 0;
     }
   else
     {
     correct_recv = len;
     first_rx_buf[len] = 0;
-    new_rx_to_process(&(dchan[cidx]), len, first_rx_buf);
+    if ((dchan[cidx].decoding_state == rx_type_proxy_traf_unix_start) ||
+        (dchan[cidx].decoding_state == rx_type_proxy_traf_tcp_start))
+      {
+      dchan[cidx].rx_callback(llid, len, first_rx_buf);
+      clownix_free(first_rx_buf, __FUNCTION__);
+      }
+    else
+      {
+      new_rx_to_process(&(dchan[cidx]), len, first_rx_buf);
+      }
     }
   return correct_recv;
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 int tx_dchan_cb(int llid, int fd)
@@ -381,8 +453,6 @@ int tx_dchan_cb(int llid, int fd)
   return total_correct_send;
 }
 /*---------------------------------------------------------------------------*/
-
-
 
 /*****************************************************************************/
 static int server_has_new_connect_from_client(int id, int fd) 
@@ -496,6 +566,310 @@ int msg_watch_no_erase_fd(int fd, t_fd_event rx_data,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void proxy_traf_tx(int llid, int len, char *str_tx, int is_unix)
+{     
+  char *ntx;
+  int cidx;
+  if ((len<=0) || (len > MAX_TOT_LEN_QSIG))
+    KOUT("ERROR %d", len);
+  cidx = channel_check_llid(llid, __FUNCTION__);
+  if (dchan[cidx].llid != llid)
+    KOUT("ERROR %d %d %d", cidx, dchan[cidx].llid, llid);
+  if (is_unix)
+    {
+    if ((dchan[cidx].decoding_state != rx_type_proxy_traf_unix_start) &&
+        (dchan[cidx].decoding_state != rx_type_doorways))
+      KOUT("ERROR %d", dchan[cidx].decoding_state);
+    }
+  else
+    {
+    if (dchan[cidx].decoding_state != rx_type_proxy_traf_tcp_start)
+      KOUT("ERROR %d", dchan[cidx].decoding_state);
+    }
+  if (dchan[cidx].tot_txq_size > (2 * MAX_TOT_LEN_QSIG))
+    KOUT("ERROR %d %lu", len, dchan[cidx].tot_txq_size);
+  else
+    {
+    dchan[cidx].tot_txq_size += len;
+    if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
+      peak_queue_len[cidx] = dchan[cidx].tot_txq_size; 
+    ntx = (char *)clownix_malloc(len, IOCMLC);
+    memcpy (ntx, str_tx, len);
+    chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+  
+/*****************************************************************************/
+void proxy_traf_unix_tx(int llid, int len, char *str_tx)
+{
+  proxy_traf_tx(llid, len, str_tx, 1);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void proxy_traf_tcp_tx(int llid, int len, char *str_tx)
+{
+  proxy_traf_tx(llid, len, str_tx, 0);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void proxy_sig_tx(int llid, int len, char *str_tx)
+{
+  char *ntx;
+  int cidx;
+  if ((len<=0) || (len > MAX_TOT_LEN_PROXY))
+    KOUT("ERROR %d", len);
+  cidx = channel_check_llid(llid, __FUNCTION__);
+  if (dchan[cidx].llid != llid)
+    KOUT("ERROR %d %d %d", cidx, dchan[cidx].llid, llid);
+  if ((dchan[cidx].decoding_state != rx_type_proxy_sig_start) &&
+      (dchan[cidx].decoding_state != rx_type_proxy_sig_header_ok))
+    KOUT("ERROR %d", dchan[cidx].decoding_state);
+  if (dchan[cidx].tot_txq_size >  MAX_TOT_LEN_QSIG)
+    KOUT("ERROR %d %lu", len, dchan[cidx].tot_txq_size);
+  else
+    {
+    dchan[cidx].tot_txq_size += len + PROXY_HEADER_LEN;
+    if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
+      peak_queue_len[cidx] = dchan[cidx].tot_txq_size;
+    ntx = (char *)clownix_malloc(len + PROXY_HEADER_LEN, IOCMLC);
+    memcpy (ntx + PROXY_HEADER_LEN, str_tx, len);
+    ntx[0] = ((len >> 24) & 0xff);
+    ntx[1] = ((len >> 16) & 0xff);
+    ntx[2] = ((len >> 8) & 0xff);
+    ntx[3] = (len & 0xff);
+    chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx),
+                    len + PROXY_HEADER_LEN, ntx);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void proxy_traf_server_connect_from_client(int id, int fd, int is_unix)
+{
+  int fd_new, llid, cidx, serv_cidx;
+  serv_cidx = channel_check_llid(id, __FUNCTION__);
+  util_fd_accept(fd, &fd_new, __FUNCTION__);
+  if (fd_new >= 0)
+    {
+    llid = channel_create(fd_new, kind_server, "proxy", rx_dchan_cb,
+                          tx_dchan_cb, err_dchan_cb);
+    if (!llid)
+      KOUT(" ");
+    channel_rx_local_flow_ctrl(llid, 1);
+    cidx = channel_check_llid(llid, __FUNCTION__);
+    if (!dchan[serv_cidx].server_connect_callback)
+      KOUT(" ");
+    memset(&dchan[cidx], 0, sizeof(t_data_channel));
+    if (is_unix)
+      dchan[cidx].decoding_state = rx_type_proxy_traf_unix_start;
+    else
+      dchan[cidx].decoding_state = rx_type_proxy_traf_tcp_start;
+    dchan[cidx].llid = llid;
+    dchan[cidx].fd = fd_new;
+    dchan[serv_cidx].server_connect_callback(id, llid);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int proxy_traf_unix_server_connect_from_client(int id, int fd)
+{
+  proxy_traf_server_connect_from_client(id, fd, 1);
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int proxy_traf_tcp_server_connect_from_client(int id, int fd)
+{ 
+  proxy_traf_server_connect_from_client(id, fd, 0);
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int proxy_sig_server_connect_from_client(int id, int fd)
+{   
+  int fd_new, llid, cidx, serv_cidx;
+  serv_cidx = channel_check_llid(id, __FUNCTION__);
+  util_fd_accept(fd, &fd_new, __FUNCTION__);
+  if (fd_new >= 0)
+    {
+    llid = channel_create(fd_new, kind_server, "proxy", rx_dchan_cb,
+                          tx_dchan_cb, err_dchan_cb);
+    if (!llid)
+      KOUT(" ");
+    cidx = channel_check_llid(llid, __FUNCTION__);
+    if (!dchan[serv_cidx].server_connect_callback)
+      KOUT(" ");
+    memset(&dchan[cidx], 0, sizeof(t_data_channel));
+    dchan[cidx].decoding_state = rx_type_proxy_sig_start;
+    dchan[cidx].llid = llid;
+    dchan[cidx].fd = fd_new;
+    dchan[serv_cidx].server_connect_callback(id, llid);
+    }
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int proxy_traf_client(char *pname, uint32_t ip, uint16_t port,
+                             t_fd_error err_cb, t_msg_rx_cb rx_cb, int is_unix)
+{
+  int res, fd, llid=0, cidx;
+  if (is_unix)
+    res = util_proxy_client_socket_unix(pname, &fd);
+  else
+    res = util_client_socket_inet(ip, port, &fd);
+  if (!res)
+    {
+    if (!err_cb)
+      KOUT(" ");
+    if (!rx_cb)
+      KOUT(" ");
+    llid = channel_create(fd, kind_client, "proxy", rx_dchan_cb,
+                          tx_dchan_cb, err_dchan_cb);
+    if (!llid)
+      KOUT(" ");
+    cidx = channel_check_llid(llid, __FUNCTION__);
+    memset(&dchan[cidx], 0, sizeof(t_data_channel));
+    if (is_unix)
+      dchan[cidx].decoding_state = rx_type_proxy_traf_unix_start;
+    else
+      dchan[cidx].decoding_state = rx_type_proxy_traf_tcp_start;
+    dchan[cidx].llid = llid;
+    dchan[cidx].fd = fd;
+    dchan[cidx].error_callback = err_cb;
+    dchan[cidx].rx_callback = rx_cb;
+    }
+  return (llid);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int proxy_traf_unix_client(char *pname, t_fd_error err_cb, t_msg_rx_cb rx_cb)
+{
+  return proxy_traf_client(pname, 0, 0, err_cb, rx_cb, 1);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int proxy_traf_tcp_client(uint32_t ip, uint16_t port,
+                          t_fd_error err_cb, t_msg_rx_cb rx_cb)
+{
+  return proxy_traf_client(NULL, ip, port, err_cb, rx_cb, 0);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int proxy_sig_client(char *pname, t_fd_error err_cb, t_msg_rx_cb rx_cb)
+{ 
+  int fd, llid=0, cidx;
+  if (!util_client_socket_unix(pname, &fd))
+    {
+    if (!err_cb)
+      KOUT(" ");
+    if (!rx_cb)
+      KOUT(" ");
+    llid = channel_create(fd, kind_client, "proxy", rx_dchan_cb,
+                          tx_dchan_cb, err_dchan_cb);
+    if (!llid)
+      KOUT(" ");
+    cidx = channel_check_llid(llid, __FUNCTION__);
+    memset(&dchan[cidx], 0, sizeof(t_data_channel));
+    dchan[cidx].decoding_state = rx_type_proxy_sig_start;
+    dchan[cidx].llid = llid;
+    dchan[cidx].fd = fd;
+    dchan[cidx].error_callback = err_cb;
+    dchan[cidx].rx_callback = rx_cb;
+    }
+  return (llid);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int proxy_traf_server(char *pname, uint16_t port,
+                             t_fd_connect connect_cb, int is_unix)
+{
+  int llid=0, cidx, listen_fd;
+  if (is_unix)
+    listen_fd = util_socket_listen_unix(pname);
+  else
+    listen_fd = util_socket_listen_inet(port);
+  if (listen_fd < 0)
+    {
+    if (pname)
+      KERR("ERROR %d %d %s", listen_fd, errno, pname);
+    else
+      KERR("ERROR %d %d %hu", listen_fd, errno, port);
+    }
+  else
+    {
+    if (is_unix)
+      {
+      llid = channel_create(listen_fd, kind_simple_watch, "proxy",
+                            proxy_traf_unix_server_connect_from_client,
+                            NULL, default_err_kill);
+      }
+    else
+      {
+      llid = channel_create(listen_fd, kind_simple_watch, "proxy",
+                            proxy_traf_tcp_server_connect_from_client,
+                            NULL, default_err_kill);
+      }
+    if (!llid)
+      KOUT(" ");
+    cidx = channel_check_llid(llid, __FUNCTION__);
+    memset(&dchan[cidx], 0, sizeof(t_data_channel));
+    dchan[cidx].decoding_state = rx_type_listen;
+    dchan[cidx].server_connect_callback = connect_cb;
+    }
+  return llid;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int proxy_traf_unix_server(char *pname, t_fd_connect connect_cb)
+{
+  return proxy_traf_server(pname, 0, connect_cb, 1);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int proxy_traf_tcp_server(uint16_t port, t_fd_connect connect_cb)
+{
+  return proxy_traf_server(NULL, port, connect_cb, 0);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int proxy_sig_server(char *pname, t_fd_connect connect_cb)
+{
+  int llid=0, cidx, listen_fd;
+  listen_fd = util_socket_listen_unix(pname);
+  if (listen_fd < 0)
+    KERR("ERROR %d %d", listen_fd, errno);
+  else
+    {
+    llid = channel_create(listen_fd, kind_simple_watch, "proxy",
+                          proxy_sig_server_connect_from_client,
+                          NULL, default_err_kill);
+    if (!llid)
+      KOUT(" ");
+    cidx = channel_check_llid(llid, __FUNCTION__);
+    memset(&dchan[cidx], 0, sizeof(t_data_channel));
+    dchan[cidx].decoding_state = rx_type_listen;
+    dchan[cidx].server_connect_callback = connect_cb;
+    }
+  return llid;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int string_server_unix(char *pname, t_fd_connect connect_cb,
                         char *little_name)
 {
@@ -518,7 +892,7 @@ int string_server_unix(char *pname, t_fd_connect connect_cb,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int string_server_inet(__u16 port, t_fd_connect connect_cb, char *little_name)
+int string_server_inet(uint16_t port, t_fd_connect connect_cb, char *little_name)
 {
   int llid = 0, cidx, listen_fd;
   listen_fd = util_socket_listen_inet(port);
@@ -567,7 +941,7 @@ int  string_client_unix(char *pname, t_fd_error err_cb,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int string_client_inet(__u32 ip, __u16 port, 
+int string_client_inet(uint32_t ip, uint16_t port, 
                        t_fd_error err_cb, t_msg_rx_cb rx_cb, 
                        char *little_name)
 {

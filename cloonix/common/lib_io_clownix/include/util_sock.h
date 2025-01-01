@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -16,14 +16,16 @@
 /*                                                                           */
 /*****************************************************************************/
 int util_read (char *ptr, int max, int fd);
+int util_proxy_client_socket_unix(char *pname, int *fd);
 int util_client_socket_unix(char *pname, int *fd);
-int util_client_socket_inet(__u32 ip, __u16 port, int *fd);
+int util_client_socket_inet(uint32_t ip, uint16_t port, int *fd);
+int util_socket_unix_dgram(char *pname);
 int util_socket_listen_unix(char *pname);
-int util_socket_listen_inet( __u16 port );
+int util_socket_listen_inet( uint16_t port );
 void util_fd_accept(int fd_listen, int *fd, const char *fct);
 void util_free_fd(int fd);
 int util_nonblock_client_socket_unix(char *pname, int *fd);
-int util_nonblock_client_socket_inet(__u32 ip, __u16 port);
+int util_nonblock_client_socket_inet(uint32_t ip, uint16_t port);
 /*---------------------------------------------------------------------------*/
 
 

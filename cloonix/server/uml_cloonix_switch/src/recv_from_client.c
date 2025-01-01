@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -845,29 +845,18 @@ static void inside_cloonix_test_dev_kvm(char *err)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int module_access_is_ko(char *dev_file, char *info)
+static int module_access_is_ko(char *dev_file)
 {
   int result = -1;
   int fd;
   if (access( dev_file, F_OK))
-    {
-    sprintf(info, "%s not found see kvm module in doc", dev_file);
-    KERR("ERROR %s", info);
-    }
-  else if (!i_have_read_write_access("/dev/kvm"))
-    {
-    sprintf(info, "%s not writable see kvm module in doc", dev_file);
-    KERR("ERROR %s", info);
-    }
+    KERR("ERROR %s not found", dev_file);
+  else if (!i_have_read_write_access(dev_file))
+    KERR("ERROR %s not writable", dev_file);
   else
     {
     fd = open(dev_file, O_RDWR);
-    if (fd < 0)
-      {
-      sprintf(info, "%s not openable see kvm module in doc", dev_file);
-      KERR("ERROR %s", info);
-      }
-    else
+    if (fd >= 0)
       {
       result = 0;
       close(fd);
@@ -885,25 +874,13 @@ static int test_dev_kvm(char *info)
     {
     if (g_in_cloon)
       inside_cloonix_test_dev_kvm(info);
-    if (module_access_is_ko("/dev/kvm", info))
+    if (module_access_is_ko("/dev/kvm"))
       {
       KERR("ERROR KO /dev/kvm, Maybe: chmod 0666 /dev/kvm");
       KERR("OR: sudo setfacl -m u:${USER}:rw /dev/kvm");
       }
     else
-      {
       result = 0;
-      if (module_access_is_ko("/dev/vhost-net", info))
-        {
-        KERR("WARNING /dev/vhost-net, Maybe: chmod 0666 /dev/vhost-net");
-        KERR("OR: sudo setfacl -m u:${USER}:rw /dev/vhost-net");
-        }
-      else if (module_access_is_ko("/dev/net/tun", info))
-        {
-        KERR("WARNING /dev/net/tun, Maybe: chmod 0666 /dev/net/tun");
-        KERR("OR: sudo setfacl -m u:${USER}:rw /dev/net/tun");
-        }
-      }
     }
   else
     {

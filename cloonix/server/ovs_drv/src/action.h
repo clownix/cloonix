@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -24,6 +24,8 @@ void action_add_lan_endp(char *bin, char *db, char *respb,
 
 void action_del_lan_endp(char *bin, char *db, char *respb,
                          char *lan, char *name, int num, char *vhost);
+
+void action_system_promisc(char *bin, char *db, char *respb,  char *vhost);
 
 void action_vhost_up(char *bin, char *db, char *respb,
                      char *name, int num, char *vhost);

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -412,6 +412,8 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 /****************************************************************************/
 int main(int argc, char *argv[])
 {
+  int proxy_is_on;
+  char tmpnet[MAX_NAME_LEN];
   g_novnc = 0;
   g_argc = 2;
   g_argv[0] = "/usr/libexec/cloonix/common/cloonix-gui";
@@ -449,7 +451,16 @@ int main(int argc, char *argv[])
     KOUT(" ");
 
   memset(g_doors_client_addr, 0, MAX_PATH_LEN);
-  strncpy(g_doors_client_addr, g_cloonix_conf_info->doors, MAX_PATH_LEN-1);
+  proxy_is_on = lib_io_proxy_is_on(tmpnet);
+  if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
+    {
+    snprintf(g_doors_client_addr, MAX_NAME_LEN-1,
+             "127.0.0.1:%d", g_cloonix_conf_info->port);
+    }
+  else
+    {
+    strncpy(g_doors_client_addr, g_cloonix_conf_info->doors, MAX_PATH_LEN-1);
+    }
   printf("CONNECT TO UNIX SERVER: %s\n", g_doors_client_addr);
   memset(g_password, 0, MSG_DIGEST_LEN);
   strncpy(g_password, g_cloonix_conf_info->passwd, MSG_DIGEST_LEN-1);

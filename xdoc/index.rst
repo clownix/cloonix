@@ -22,7 +22,8 @@ The most important external software components include **qemu-kvm**,
 For the transfer of the gui to a web browser, other software used are:
 **nginx**, **noVNC**, **websockify-js**, **xorg**.
 
-For the self-extracting component of cloonix, makeself.sh is used.
+For the self-extracting component of cloonix, (file extract_nemo.sh)
+makeself.sh is used and good old tmux also.
 
 
 Cloonix's first goal is an easy usage of the emulated network linking virtual
@@ -132,10 +133,10 @@ Directories in which cloonix is installed for classic use
 Directory in which cloonix is installed in the self_extracting case
 ===================================================================
 
-In this case, after the call to **self_extracting_cloonix.sh**, a new
+In this case, after the call to **extract_nemo.sh**, a new
 directory is present in the current directory, called
-**self_extracting_rootfs_dir**. For this installation you do not need the
-root privileges.
+**extractnemo**. For this installation you do not need the
+root or admin privileges.
 
 
 

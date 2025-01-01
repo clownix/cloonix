@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -102,6 +102,32 @@ int ifdev_get_intf_hwaddr(char *intf, char *mac)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int ifdev_set_intf_flags_iff_up_promisc(char *intf)
+{
+  int result = -1, s, io;
+  struct ifreq ifr;
+  int flags;
+  if (!get_intf_flags_iff(intf, &flags))
+    {
+    s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    if (s == -1)
+      KOUT(" ");
+    memset(&ifr, 0, sizeof(struct ifreq));
+    memcpy(ifr.ifr_name, intf, IFNAMSIZ);
+    ifr.ifr_name[IFNAMSIZ-1] = 0;
+    flags = flags | IFF_PROMISC | IFF_UP;
+    io = ioctl (s, SIOCSIFFLAGS, &ifr);
+    if(!io)
+      result = 0;
+    else
+      KERR("ERROR %s", strerror(errno));
+    close(s);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int ifdev_set_intf_flags_iff_up_down(char *intf, int up)
 {
   int result = -1, s, io;
@@ -116,7 +142,7 @@ int ifdev_set_intf_flags_iff_up_down(char *intf, int up)
     memcpy(ifr.ifr_name, intf, IFNAMSIZ);
     ifr.ifr_name[IFNAMSIZ-1] = 0;
     if (up)
-      ifr.ifr_flags = flags | IFF_UP;
+      ifr.ifr_flags = flags | IFF_UP ;
     else
       ifr.ifr_flags = flags & ~IFF_UP;
     io = ioctl (s, SIOCSIFFLAGS, &ifr);

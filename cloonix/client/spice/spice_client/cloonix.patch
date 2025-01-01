@@ -107,7 +107,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +#include "hmac_cipher.h"
 +
 +
-+typedef struct t_rx_pktbuf
++typedef struct t_rx_spicbuf
 +{
 +  char buf[MAX_DOORWAYS_BUF_LEN];
 +  int  offset;
@@ -120,7 +120,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +  int  val;
 +  int  nb_pkt_rx;
 +  char *payload;
-+} t_rx_pktbuf;
++} t_rx_spicbuf;
 +
 +
 +
@@ -129,7 +129,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +  GSocket *gsock;
 +  int sock;
 +  int nb_tx_pkt;
-+  t_rx_pktbuf rx_pktbuf;
++  t_rx_spicbuf rx_spicbuf;
 +} t_sock_ctx;
 +
 +static t_sock_ctx *g_sock_ctx[MAX_FD_NUMBER_CTX];
@@ -219,7 +219,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +  g_sock_ctx[sock]->gsock = gsock;
 +  g_sock_ctx[sock]->sock = sock;
 +  g_sock_ctx[sock]->nb_tx_pkt = 1;
-+  g_sock_ctx[sock]->rx_pktbuf.nb_pkt_rx = 1;
++  g_sock_ctx[sock]->rx_spicbuf.nb_pkt_rx = 1;
 +}
 +/*--------------------------------------------------------------------------*/
 +
@@ -421,39 +421,39 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +/*---------------------------------------------------------------------------*/
 +
 +/****************************************************************************/
-+static int rx_pktbuf_fill(t_sock_ctx *ctx, t_rx_pktbuf *rx_pktbuf, 
++static int rx_spicbuf_fill(t_sock_ctx *ctx, t_rx_spicbuf *rx_spicbuf, 
 +                          GError **error)
 +{
 +  int headsize = DOORWAYS_HEADER_SIZE;
 +  int result, len_desired, len_avail;
-+  if (rx_pktbuf->offset < headsize)
++  if (rx_spicbuf->offset < headsize)
 +    {
-+    if (rx_pktbuf->paylen != 0)
++    if (rx_spicbuf->paylen != 0)
 +      KOUT(" ");
-+    if (rx_pktbuf->payload)
++    if (rx_spicbuf->payload)
 +      KOUT(" ");
-+    len_desired = headsize - rx_pktbuf->offset;
++    len_desired = headsize - rx_spicbuf->offset;
 +    result = 1;
 +    }
 +  else
 +    {
-+    if (rx_pktbuf->paylen <= 0)
++    if (rx_spicbuf->paylen <= 0)
 +      KOUT(" ");
-+    if (!rx_pktbuf->payload)
++    if (!rx_spicbuf->payload)
 +      KOUT(" ");
-+    len_desired = headsize + rx_pktbuf->paylen - rx_pktbuf->offset;
-+    if (len_desired > rx_pktbuf->size_req)
-+      len_desired = rx_pktbuf->size_req;
++    len_desired = headsize + rx_spicbuf->paylen - rx_spicbuf->offset;
++    if (len_desired > rx_spicbuf->size_req)
++      len_desired = rx_spicbuf->size_req;
 +    result = 3;
 +    }
-+  if (len_desired + rx_pktbuf->offset > MAX_DOORWAYS_BUF_LEN)
-+    KOUT("%d %d", len_desired, rx_pktbuf->offset);
++  if (len_desired + rx_spicbuf->offset > MAX_DOORWAYS_BUF_LEN)
++    KOUT("%d %d", len_desired, rx_spicbuf->offset);
 +  len_avail = g_socket_receive(ctx->gsock, 
-+                               rx_pktbuf->buf + rx_pktbuf->offset, 
++                               rx_spicbuf->buf + rx_spicbuf->offset, 
 +                               len_desired, NULL, error);
 +  if (len_avail > 0)
 +    {
-+    rx_pktbuf->offset += len_avail;
++    rx_spicbuf->offset += len_avail;
 +    if ((result == 1) && (len_desired != len_avail))
 +      result = 2; 
 +    if ((result == 3) && (len_avail > 0))
@@ -466,84 +466,84 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +/*--------------------------------------------------------------------------*/
 +
 +/****************************************************************************/
-+static int rx_pktbuf_get_paylen(t_rx_pktbuf *rx_pktbuf)
++static int rx_spicbuf_get_paylen(t_rx_spicbuf *rx_spicbuf)
 +{
 +  int nb_pkt, result = 0;
-+  rx_pktbuf->idx_hmac = sock_header_get_info(rx_pktbuf->buf,
-+                                             &(rx_pktbuf->dido_llid),
-+                                             &(rx_pktbuf->paylen),
-+                                             &(rx_pktbuf->type),
-+                                             &(rx_pktbuf->val),
++  rx_spicbuf->idx_hmac = sock_header_get_info(rx_spicbuf->buf,
++                                             &(rx_spicbuf->dido_llid),
++                                             &(rx_spicbuf->paylen),
++                                             &(rx_spicbuf->type),
++                                             &(rx_spicbuf->val),
 +                                             &(nb_pkt),
-+                                             &(rx_pktbuf->payload));
-+  if (rx_pktbuf->idx_hmac == -1)
++                                             &(rx_spicbuf->payload));
++  if (rx_spicbuf->idx_hmac == -1)
 +    {
 +    KOUT(" ");
 +    result = -1;
-+    rx_pktbuf->offset = 0;
-+    rx_pktbuf->paylen = 0;
-+    rx_pktbuf->payload = NULL;
-+    rx_pktbuf->dido_llid = 0;
-+    rx_pktbuf->type = 0;
-+    rx_pktbuf->val = 0;
++    rx_spicbuf->offset = 0;
++    rx_spicbuf->paylen = 0;
++    rx_spicbuf->payload = NULL;
++    rx_spicbuf->dido_llid = 0;
++    rx_spicbuf->type = 0;
++    rx_spicbuf->val = 0;
 +    }
 +  else
 +    {
-+    if ((nb_pkt-1) != rx_pktbuf->nb_pkt_rx)
++    if ((nb_pkt-1) != rx_spicbuf->nb_pkt_rx)
 +      {
-+      KERR("ERROR %d %d", nb_pkt, rx_pktbuf->nb_pkt_rx);
++      KERR("ERROR %d %d", nb_pkt, rx_spicbuf->nb_pkt_rx);
 +      result = -1;
 +      }
 +    if (nb_pkt == 0xFFFF)
-+      rx_pktbuf->nb_pkt_rx = 0;
++      rx_spicbuf->nb_pkt_rx = 0;
 +    else
-+      rx_pktbuf->nb_pkt_rx = nb_pkt;
++      rx_spicbuf->nb_pkt_rx = nb_pkt;
 +    }
 +  return result;
 +}
 +/*--------------------------------------------------------------------------*/
 +
 +/****************************************************************************/
-+static int rx_doorways(t_sock_ctx *ctx, t_rx_pktbuf *rx_pktbuf, GError **error)
++static int rx_doorways(t_sock_ctx *ctx, t_rx_spicbuf *rx_spicbuf, GError **error)
 +{
 +  int res;
 +  int headsize = DOORWAYS_HEADER_SIZE;
 +
-+  if ((rx_pktbuf->paylen > 0) && 
-+      (rx_pktbuf->offset == rx_pktbuf->paylen + headsize) &&
-+      (rx_pktbuf->paylen_given < rx_pktbuf->paylen)) 
++  if ((rx_spicbuf->paylen > 0) && 
++      (rx_spicbuf->offset == rx_spicbuf->paylen + headsize) &&
++      (rx_spicbuf->paylen_given < rx_spicbuf->paylen)) 
 +    {
 +    res = 5;
 +    }
 +  else
 +    {
-+    res = rx_pktbuf_fill(ctx, rx_pktbuf, error);
++    res = rx_spicbuf_fill(ctx, rx_spicbuf, error);
 +    if (res == 1)
 +      {
-+      rx_pktbuf_get_paylen(rx_pktbuf);
-+      res = rx_pktbuf_fill(ctx, rx_pktbuf, error);
++      rx_spicbuf_get_paylen(rx_spicbuf);
++      res = rx_spicbuf_fill(ctx, rx_spicbuf, error);
 +      }
 +    }
 +
 +  if (res == 5)
 +    {
-+    if (!rx_pktbuf->payload)
++    if (!rx_spicbuf->payload)
 +      KOUT(" ");
-+    if (rx_pktbuf->paylen <= 0)
++    if (rx_spicbuf->paylen <= 0)
 +      KOUT(" ");
-+    if (rx_pktbuf->idx_hmac != 14)
-+      KOUT("%d", rx_pktbuf->idx_hmac);
-+    if (rx_pktbuf->type != doors_type_spice)
-+      KOUT("%d %d", rx_pktbuf->type, doors_type_spice);
-+    if (rx_pktbuf->val != doors_val_none)
-+      KOUT("%d %d", rx_pktbuf->val, doors_val_none);
-+    if (rx_pktbuf->offset == rx_pktbuf->paylen + headsize)
++    if (rx_spicbuf->idx_hmac != 14)
++      KOUT("%d", rx_spicbuf->idx_hmac);
++    if (rx_spicbuf->type != doors_type_spice)
++      KOUT("%d %d", rx_spicbuf->type, doors_type_spice);
++    if (rx_spicbuf->val != doors_val_none)
++      KOUT("%d %d", rx_spicbuf->val, doors_val_none);
++    if (rx_spicbuf->offset == rx_spicbuf->paylen + headsize)
 +      {
-+      if (check_hmac_password(rx_pktbuf->idx_hmac, rx_pktbuf->buf,
-+                            rx_pktbuf->paylen, rx_pktbuf->payload))
-+        KOUT("BAD PASSWORD: %d %d %d", rx_pktbuf->paylen, 
-+                                       rx_pktbuf->offset, 
-+                                       rx_pktbuf->paylen_given);
++      if (check_hmac_password(rx_spicbuf->idx_hmac, rx_spicbuf->buf,
++                            rx_spicbuf->paylen, rx_spicbuf->payload))
++        KOUT("BAD PASSWORD: %d %d %d", rx_spicbuf->paylen, 
++                                       rx_spicbuf->offset, 
++                                       rx_spicbuf->paylen_given);
 +      }
 +    }
 +  return res;
@@ -638,16 +638,16 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +  int headsize = DOORWAYS_HEADER_SIZE;
 +  int fd_sock, result, len_to_give, left_to_give;
 +  t_sock_ctx *ctx;
-+  t_rx_pktbuf *rx_pktbuf;
++  t_rx_spicbuf *rx_spicbuf;
 +  fd_sock = g_socket_get_fd(socket);
 +  ctx = get_sock_ctx(fd_sock);
 +  if (!ctx)
 +    KOUT(" ");
 +  if (socket != ctx->gsock)
 +    KOUT(" ");
-+  rx_pktbuf = &(ctx->rx_pktbuf);
-+  rx_pktbuf->size_req = size;
-+  result = rx_doorways(ctx, rx_pktbuf, error);
++  rx_spicbuf = &(ctx->rx_spicbuf);
++  rx_spicbuf->size_req = size;
++  result = rx_doorways(ctx, rx_spicbuf, error);
 +  if (result == 2)
 +    {
 +    result = -1;
@@ -656,11 +656,11 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +  else if (result != -1)
 +    { 
 +    if (result != 5)
-+      KERR("ERROR %d %d %d %d", result, rx_pktbuf->paylen,
-+                                rx_pktbuf->offset, rx_pktbuf->paylen_given);
++      KERR("ERROR %d %d %d %d", result, rx_spicbuf->paylen,
++                                rx_spicbuf->offset, rx_spicbuf->paylen_given);
 +    else
 +      {
-+      left_to_give = rx_pktbuf->offset - headsize - rx_pktbuf->paylen_given; 
++      left_to_give = rx_spicbuf->offset - headsize - rx_spicbuf->paylen_given; 
 +      if (left_to_give < 0) 
 +        KOUT("%d", left_to_give);
 +      if (size < left_to_give)
@@ -672,22 +672,22 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +        {
 +        result = -1;
 +        g_set_error (error, G_IO_ERROR,G_IO_ERROR_WOULD_BLOCK,"fd would block");
-+        KERR("ERROR %d %d %d", rx_pktbuf->paylen, rx_pktbuf->offset, 
-+                         rx_pktbuf->paylen_given);
++        KERR("ERROR %d %d %d", rx_spicbuf->paylen, rx_spicbuf->offset, 
++                         rx_spicbuf->paylen_given);
 +        }
 +      else
 +        {
-+        memcpy(buffer, rx_pktbuf->payload + rx_pktbuf->paylen_given, len_to_give);
-+        rx_pktbuf->paylen_given += len_to_give;
-+        if (rx_pktbuf->paylen_given == rx_pktbuf->paylen)
++        memcpy(buffer, rx_spicbuf->payload + rx_spicbuf->paylen_given, len_to_give);
++        rx_spicbuf->paylen_given += len_to_give;
++        if (rx_spicbuf->paylen_given == rx_spicbuf->paylen)
 +          {
-+          rx_pktbuf->offset = 0;
-+          rx_pktbuf->paylen = 0;
-+          rx_pktbuf->paylen_given = 0;
-+          rx_pktbuf->payload = NULL;
-+          rx_pktbuf->dido_llid = 0;
-+          rx_pktbuf->type = 0;
-+          rx_pktbuf->val = 0;
++          rx_spicbuf->offset = 0;
++          rx_spicbuf->paylen = 0;
++          rx_spicbuf->paylen_given = 0;
++          rx_spicbuf->payload = NULL;
++          rx_spicbuf->dido_llid = 0;
++          rx_spicbuf->type = 0;
++          rx_spicbuf->val = 0;
 +          }
 +        }
 +      }

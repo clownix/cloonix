@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -27,6 +27,9 @@
 #include <time.h>
 #include <pwd.h>
 #include <dirent.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
 
 
 #include "io_clownix.h"
@@ -71,6 +74,7 @@
 #include "mactopo.h"
 #include "crun.h"
 #include "util_sock.h"
+#include "proxycrun.h"
 
 
 static t_topo_clc g_clc;
@@ -85,6 +89,14 @@ static int g_machine_is_kvm_able;
 static char g_config_path[MAX_PATH_LEN];
 static int g_conf_rank;
 static int g_novnc_port;
+static int g_proxy_is_on;
+
+/*****************************************************************************/
+int get_proxy_is_on(void)
+{
+  return g_proxy_is_on;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int get_uml_cloonix_started(void)
@@ -286,6 +298,17 @@ static void connect_from_client_unix(int llid, int llid_new)
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void timer_novnc_ok(void *data)
+{
+  char *net = cfg_get_cloonix_name();
+  if (proxycrun_transmit_config(net, cfg_get_server_port(),
+                                g_novnc_port, g_cloonix_conf_info->passwd))
+    KERR("proxycrun_transmit_config OK");
+  else
+    KERR("ERROR proxycrun_transmit_config");
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void timer_openvswitch_ok(void *data)
@@ -295,86 +318,17 @@ static void timer_openvswitch_ok(void *data)
   else
     {
     printf("\n    UML_CLOONIX_SWITCH NOW RUNNING\n\n");
+    if (get_proxy_is_on())
+      {
+      if (start_novnc())
+        KERR("ERROR start_novnc");
+      clownix_timeout_add(500, timer_novnc_ok, NULL, NULL, NULL);
+      }
     daemon(0,0);
     g_uml_cloonix_started = 1;
     }
 }
 /*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static char *get_process_one_cmd(void)
-{ 
-  char *file_name = "/proc/1/cmdline";
-  static char buf[MAX_PATH_LEN];
-  FILE *fd = fopen(file_name, "r");
-  char *result = NULL;
-  if (fd == NULL)
-    KERR("WARNING: Cannot open %s", file_name);
-  else
-    {
-    memset(buf, 0, MAX_PATH_LEN);
-    if (!fgets(buf, MAX_PATH_LEN-1, fd))
-      KERR("WARNING: Cannot read %s", file_name);
-    else
-      result = buf;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static int proxy_config_required(void)
-{
-  char unix_sig[MAX_PATH_LEN];
-  char *process_init_name = get_process_one_cmd();
-  int fd, result = 0;
-  if (process_init_name == NULL)
-    KERR("ERROR");
-  else if (strstr(process_init_name, CRUN_STARTER))
-    {
-    memset(unix_sig, 0, MAX_PATH_LEN);
-    snprintf(unix_sig, MAX_PATH_LEN-1,  "%s/proxy_sig.sock", PROXYSHARE);
-    if (util_client_socket_unix(unix_sig, &fd))
-      KERR("ERROR");
-    else
-      {
-      close(fd);
-      result = 1;
-      }
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static int transmit_proxy_config(char *net, int pmain, int pweb)
-{
-  char unix_sig[MAX_PATH_LEN];
-  char buf[MAX_PATH_LEN];
-  char *process_init_name = get_process_one_cmd();
-  int fd, len, result = 0;
-  if (process_init_name == NULL)
-    KERR("ERROR IMPOSSIBLE %s %d %d", net, pmain, pweb);
-  else if (strstr(process_init_name, CRUN_STARTER))
-    {
-    memset(unix_sig, 0, MAX_PATH_LEN);
-    snprintf(unix_sig, MAX_PATH_LEN-1,  "%s/proxy_sig.sock", PROXYSHARE);
-    if (util_client_socket_unix(unix_sig, &fd))
-      KERR("ERROR IMPOSSIBLE %s %d %d", net, pmain, pweb);
-    else
-      {
-      memset(buf, 0, MAX_PATH_LEN); 
-      snprintf(buf, MAX_PATH_LEN-1, "Config: %s %d %d", net, pmain, pweb);
-      len = write(fd, buf, strlen(buf)+1);
-      if (len != strlen(buf)+1)
-        KERR("ERROR %d %d  %s %d %d",len,(int)strlen(buf),net,pmain,pweb);
-      else
-        result = 1; 
-      }
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void launching(void)
@@ -382,13 +336,12 @@ static void launching(void)
   char clownlock[MAX_PATH_LEN];
   char *dtach = utils_get_dtach_bin_path();
   char *net = cfg_get_cloonix_name();
-  int proxy_on;
   if (!file_exists(dtach, X_OK))
     {
     printf("\"%s\" not found or not executable\n", dtach);
     KOUT("\"%s\" not found or not executable\n", dtach);
     }
-  proxy_on = proxy_config_required();
+  g_proxy_is_on = lib_io_proxy_is_on(NULL);
   set_cloonix_name(cfg_get_cloonix_name());
   printf("\n\n");
   printf("     Version:      %s\n",cfg_get_version());
@@ -398,7 +351,7 @@ static void launching(void)
   printf("     Work Zone:    %s\n",cfg_get_root_work());
   printf("     Bulk Path:    %s\n",cfg_get_bulk());
   printf("     Doors Port:   %d\n",cfg_get_server_port());
-  if (proxy_on)
+  if (g_proxy_is_on)
     printf("     Web Port:     %d (Activated)\n", g_novnc_port);
   else
     printf("     Web Port:     %d (Not Activated)\n", g_novnc_port);
@@ -424,14 +377,6 @@ static void launching(void)
   check_for_another_instance(clownlock, 1);
   init_xwy(cfg_get_cloonix_name());
   init_novnc(cfg_get_cloonix_name(), get_conf_rank(), g_novnc_port);
-  if (proxy_on)
-    {
-    if (transmit_proxy_config(net, cfg_get_server_port(), g_novnc_port))
-      {
-      if (start_novnc())
-        KERR("ERROR start_novnc");
-      }
-    }
   clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -547,7 +492,6 @@ int main (int argc, char *argv[])
   t_topo_clc *conf;
   struct timespec ts;
   int llid;
-
   g_uml_cloonix_started = 0;;
   g_cloonix_lock_fd = 0;
   umask(0000);
@@ -556,6 +500,7 @@ int main (int argc, char *argv[])
   g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
 
   g_novnc_port = 0;
+  proxycrun_init();
   job_for_select_init();
   utils_init();
   recv_init();

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -76,7 +76,8 @@ static void sock_fd_ass_close(int llid)
 /****************************************************************************/
 static void sock_fd_tx(int llid, int tid, int type, int len, char *buf)
 {
-  doorways_tx(llid, tid, type, doors_val_xwy, len, buf);
+  if (doorways_tx_bufraw(llid, tid, type, doors_val_xwy, len, buf))
+    KERR("WARNING %s", buf);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -242,7 +243,9 @@ static void doorways_end(int llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void doorways_rx(int llid,int tid,int type,int val,int len,char *buf)
+static void doorways_rx_bufraw(int llid, int tid,
+                               int len_bufraw, char *doors_bufraw,
+                               int type, int val, int len, char *buf)
 {
   int cli_idx;
   if ((type == doors_type_xwy_main_traf) || (type == doors_type_xwy_x11_flow))
@@ -273,11 +276,13 @@ static int cb_conn(int llid, int fd)
 {
   int doors_llid, type = get_type_start_xdoors(llid);
   doors_llid = doorways_sock_client_inet_end(type, llid, fd, g_passwd,
-                                             doorways_end, doorways_rx);
+                                             doorways_end,
+                                             doorways_rx_bufraw);
   if (doors_llid <= 0)
     KOUT("%d", doors_llid);
   alloc_middle_xdoors(llid, doors_llid, type);
-  doorways_tx(doors_llid, 0, type, doors_val_init_link, 3, "OK");
+  if (doorways_sig_bufraw(doors_llid, llid, type, doors_val_init_link, "OK"))
+    KERR("WARNING");
   return 0;
 }
 /*---------------------------------------------------------------------------*/
@@ -294,11 +299,18 @@ void xdoors_connect(int cli_idx)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void xdoors_connect_init(uint32_t ip, int port, char *passwd,
+void xdoors_connect_init(char *net, uint32_t ip, int port, char *passwd,
                          int action, char *cmd, char *src, char *dst)
 {
-  int llid;
-  g_doors_ip  = ip;
+  int llid, proxy_is_on;
+  char tmpnet[MAX_NAME_LEN];
+  uint32_t inet_addr;
+  ip_string_to_int(&inet_addr, "127.0.0.1");
+  proxy_is_on = lib_io_proxy_is_on(tmpnet);
+  if (proxy_is_on && (!strcmp(tmpnet, net)))
+    g_doors_ip = inet_addr;
+  else
+    g_doors_ip = ip;
   g_doors_port= port;
   g_inhib_timeout = 0;
   g_action = action;
@@ -309,7 +321,7 @@ void xdoors_connect_init(uint32_t ip, int port, char *passwd,
   msg_mngt_heartbeat_init(heartbeat);
   memset(g_passwd, 0, MSG_DIGEST_LEN);
   strncpy(g_passwd, passwd, MSG_DIGEST_LEN-1);
-  llid = doorways_sock_client_inet_start(ip, port, cb_conn);
+  llid = doorways_sock_client_inet_start(g_doors_ip, port, cb_conn);
   if (!llid)
     KOUT(" ");
   alloc_start_xdoors(llid, 0);

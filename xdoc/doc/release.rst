@@ -5,6 +5,28 @@
 Software Release Information
 ============================
 
+v43-00
+======
+
+Version done between the 24/12/2024 and 01/01/2025, sadly no time to finish
+the goals: for the self extract version the nat component of cloonix
+has not been implemented.
+For this workload, the main objective has been on the "cloonix-proxy-<net-name>"
+process (for the extract_nemo.sh self-extracting executable found on
+the clownix.net website, the process is named cloonix-proxy-nemo.
+
+Work done by this new proxy, bridge between host and crun isolated file-system:
+
+ * X11 forwarding from /tmp/.X11-unix/X713 inside the crun to /tmp/.X11-unix/Xdisplay
+ * Wayland forwarding from /tmp/cloonix_proxy/wayland-0 to $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY
+ * Cloonix main access port (45211 for nemo) see the cloonix_port in cloonix.cfg
+ * Cloonix web access port (54521 for nemo) see the novnc_port in cloonix.cfg
+ * Not much tested, c2c udp connections between cloonix nets
+ * And finaly not done the nat to host communication, will be done if I get time.
+
+Sorry for lack of added doc but it is midnight and delivery is not finished!
+
+
 v42-00
 ======
 

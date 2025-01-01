@@ -380,7 +380,9 @@ static void cb_doors_rx_nominal(int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void cb_doors_rx(int llid, int tid, int type, int val, int len, char *buf)
+void doorways_rx_bufraw(int llid, int tid,
+                        int len_bufraw, char *doors_bufraw,
+                        int type, int val, int len, char *buf)
 {
   int display, dido_llid, sub_dido_idx;
   char ok[100];
@@ -548,7 +550,8 @@ static int callback_connect(int llid, int fd)
     {
     g_door_llid = doorways_sock_client_inet_end(doors_type_dbssh, llid, fd, 
                                                 g_password, 
-                                                cb_doors_end, cb_doors_rx);
+                                                cb_doors_end,
+                                                doorways_rx_bufraw);
     if (!g_door_llid)
       {
       printf("\nConnect not possible: %s\n\n", g_cloonix_doors);
@@ -558,8 +561,8 @@ static int callback_connect(int llid, int fd)
     snprintf(buf, MAX_PATH_LEN, 
              "DBSSH_CLI_DOORS_REQ name=%s cookie=no_cookies", g_vm_name);
   
-    if (doorways_tx(g_door_llid, 0, doors_type_dbssh, 
-                    doors_val_init_link, strlen(buf)+1, buf))
+    if (doorways_tx_bufraw(g_door_llid, 0, doors_type_dbssh, 
+                           doors_val_init_link, strlen(buf)+1, buf))
       {
       printf("ERROR INIT SEQ:\n%d, %s\n\n", (int) strlen(buf), buf);
       wrapper_exit(1, (char *)__FILE__, __LINE__);
@@ -647,8 +650,8 @@ size_t cloonix_write(int fd, const void *ibuf, size_t count)
           chosen_len = len_max;
         else
           chosen_len = len_to_do;
-        if (doorways_tx(g_door_llid, 0, doors_type_dbssh, 
-                        doors_val_none, chosen_len, buf+len_done))
+        if (doorways_tx_bufraw(g_door_llid, 0, doors_type_dbssh, 
+                               doors_val_none, chosen_len, buf+len_done))
           {
           KERR("%d %d %d %d", len_to_do, chosen_len, len_max, errno);
           break;
@@ -697,18 +700,20 @@ void cloonix_session_loop(void)
 /****************************************************************************/
 void send_traf_x11_to_doors(int dido_llid,int sub_dido_idx,int len,char *buf)
 {
-  if (doorways_tx(g_door_llid, dido_llid, doors_type_dbssh_x11_traf, 
-                  sub_dido_idx, len, buf))
-    KERR("%d %d %d %d", g_door_llid, dido_llid, sub_dido_idx, len);
+  if (doorways_tx_bufraw(g_door_llid, dido_llid,
+                         doors_type_dbssh_x11_traf, 
+                         sub_dido_idx, len, buf))
+    KERR("WARNING %d %d %d %d", g_door_llid, dido_llid, sub_dido_idx, len);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void send_ctrl_x11_to_doors(int dido_llid,int sub_dido_idx,int len,char *buf)
 {
-  if (doorways_tx(g_door_llid, dido_llid, doors_type_dbssh_x11_ctrl,
-                  sub_dido_idx, len, buf))
-    KERR("%d %d %d %d", g_door_llid, dido_llid, sub_dido_idx, len);
+  if (doorways_tx_bufraw(g_door_llid, dido_llid,
+                         doors_type_dbssh_x11_ctrl,
+                         sub_dido_idx, len, buf))
+    KERR("WARNING %d %d %d %d", g_door_llid, dido_llid, sub_dido_idx, len);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -1,9 +1,10 @@
 #!/usr/libexec/cloonix/common/bash
 
 export TERM=linux
-export XAUTHORITY="/var/lib/cloonix/cache/.Xauthority"
 COMMON="/usr/libexec/cloonix/common"
-SCRIPTPTY="/usr/libexec/cloonix/server/cloonix-scriptpty"
+TMUX="/usr/libexec/cloonix/server/cloonix-tmux-__IDENT__"
+TMUX_SOCK="/tmp/cloonix_proxy/tmux_back"
+SLEEP="/usr/libexec/cloonix/common/sleep"
 if [ ! -e "/usr/share" ]; then
   ${COMMON}/ln -s ${COMMON}/share /usr/share
 fi
@@ -29,10 +30,36 @@ ${COMMON}/chown -R root:root / 2>/dev/null
 if [ $(${COMMON}/grep -c www /etc/passwd) = 0 ]; then
   ${COMMON}/useradd --user-group --no-create-home --shell /usr/bin/false --system www
 fi
-${SCRIPTPTY} rsyslogd
-${SCRIPTPTY} "localedef -i en_US -f UTF-8 en_US.UTF-8"
-${SCRIPTPTY} "touch /var/lib/cloonix/cache/.Xauthority"
-${SCRIPTPTY} "xauth add crun/unix:0 MIT-MAGIC-COOKIE-1 __XAUTH_CODE__"
-${SCRIPTPTY} bash
+rsyslogd
+localedef -i en_US -f UTF-8 en_US.UTF-8
+mkdir -p /tmp/.X11-unix
+ln -s /tmp/cloonix_proxy/X11-unix/X713 /tmp/.X11-unix/X713
+XAUTH_LINE=$(xauth list |grep unix__DISPLAY__)
+if [ $(echo $XAUTH_LINE | egrep -c MIT-MAGIC-COOKIE-1) = 1 ]; then
+  XAUTH_CODE=${XAUTH_LINE##*MIT-MAGIC-COOKIE-1 }
+  xauth add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
+fi
+${TMUX} -S ${TMUX_SOCK} kill-server
+unlink ${TMUX_SOCK}
+${TMUX} -S ${TMUX_SOCK} new-session -d -s __IDENT__
+
+for i in "DISPLAY" "XAUTHORITY" "XDG_SESSION_TYPE" \
+         "XDG_RUNTIME_DIR" "HOME" "PATH" ; do
+  ${TMUX} -S ${TMUX_SOCK} set-option -g update-environment "${i}"
+done
+
+cloonix_net __IDENT__
+while [ $(ps axo pid,args | grep -v grep | egrep -c /usr/libexec/cloonix/server/cloonix-main-server) -gt 0 ]; do
+  ${SLEEP} 5
+  if [ $(ps axo pid,args | grep -v grep | egrep -c ${TMUX}) -eq 0 ]; then
+    ${TMUX} -S ${TMUX_SOCK} kill-server
+    unlink ${TMUX_SOCK}
+    ${TMUX} -S ${TMUX_SOCK} new-session -d -s __IDENT__
+    for i in "DISPLAY" "XAUTHORITY" "XDG_SESSION_TYPE" \
+             "XDG_RUNTIME_DIR" "HOME" "PATH" ; do
+      ${TMUX} -S ${TMUX_SOCK} set-option -g update-environment "${i}"
+    done
+  fi
+done
 #----------------------------------------------------------------------------
 

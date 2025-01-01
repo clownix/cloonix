@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -244,8 +244,8 @@ static void in_rx_switch(int inside_llid, int len, char *buf)
       KOUT(" ");
     if (msg_exist_channel(ilt->dido_llid))
       {
-      if (doorways_tx(ilt->dido_llid, 0, doors_type_switch,
-                      doors_val_none, len, buf))
+      if (doorways_tx_bufraw(ilt->dido_llid, 0, doors_type_switch,
+                             doors_val_none, len, buf))
         {
         KERR(" ");
         free_transfert(ilt->dido_llid, ilt->inside_llid);
@@ -290,8 +290,8 @@ static int in_rx_spice(int inside_llid, int fd)
         {
         if (msg_exist_channel(ilt->dido_llid))
           {
-          if (doorways_tx(ilt->dido_llid, 0, doors_type_spice,
-                          doors_val_none, len, g_buf))
+          if (doorways_tx_bufraw(ilt->dido_llid, 0, doors_type_spice,
+                                 doors_val_none, len, g_buf))
             {
             KERR(" ");
             free_transfert(ilt->dido_llid, ilt->inside_llid);
@@ -312,10 +312,10 @@ static int in_rx_spice(int inside_llid, int fd)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void dispach_door_llid(int dido_llid)
+void dispach_door_llid(int listen_llid, int dido_llid)
 {
   if ((dido_llid < 1) || (dido_llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("%d", dido_llid);
+    KOUT("ERROR %d %d", listen_llid, dido_llid);
 }
 /*--------------------------------------------------------------------------*/
     
@@ -349,19 +349,15 @@ static void dispach_door_rx_switch(int dido_llid, int val, int len, char *buf)
       KOUT("type:%d beat:%d", olt->type, olt->beat_count);
     inside_llid = string_client_unix(path, in_err_gene, in_rx_switch, "switch");
     if (!inside_llid)
-      {
-      KOUT(" ");
-      doorways_tx(dido_llid, 0, doors_type_switch,
-                  doors_val_link_ko, len, buf);
-      }
+      KOUT("ERROR ");
     else
       {
       alloc_transfert(dido_llid, inside_llid, doors_type_switch);
-      doorways_tx(dido_llid, 0, doors_type_switch,
-                  doors_val_link_ok, len, buf);
+      doorways_tx_bufraw(dido_llid, inside_llid, doors_type_switch,
+                         doors_val_link_ok, len, buf);
       }
     }
-  else if (val == doors_val_none)
+  else if ((val == doors_val_none) || (val == doors_val_c2c))
     {
     olt = get_dido_transfert(dido_llid);
     if (!olt)
@@ -390,24 +386,25 @@ static void dispach_door_rx_spice(int dido_llid, int val, int len, char *buf)
       KOUT("type:%d beat:%d", olt->type, olt->beat_count);
     if (util_nonblock_client_socket_unix(buf, &fd))
       {
-      KERR("%s", buf);
-      doorways_tx(dido_llid, 0, doors_type_spice,
-                  doors_val_link_ko, strlen("KO") + 1, "KO");
+      KERR("WARNING %d", len);
+      doorways_sig_bufraw(dido_llid, 0, doors_type_spice,
+                          doors_val_link_ko, "KO");
       }
     else
       {
       inside_llid = msg_watch_fd(fd, in_rx_spice, in_err_gene, "spice");
       if (!inside_llid)
         {
-        KERR(" ");
-        doorways_tx(dido_llid, 0, doors_type_spice,
-                    doors_val_link_ko, strlen("KO") + 1, "KO");
+        KERR("WARNING %s", buf);
+        doorways_sig_bufraw(dido_llid, 0, doors_type_spice,
+                            doors_val_link_ko, "KO");
         }
       else
         {
         alloc_transfert(dido_llid, inside_llid, doors_type_spice);
-        doorways_tx(dido_llid, 0, doors_type_spice,
-                    doors_val_link_ok,  strlen("OK") + 1, "OK");
+        if (doorways_sig_bufraw(dido_llid, inside_llid, doors_type_spice,
+                                doors_val_link_ok, "OK"))
+          KERR("WARNING %d", len);
         }
       }
     }
@@ -415,11 +412,11 @@ static void dispach_door_rx_spice(int dido_llid, int val, int len, char *buf)
     {
     olt = get_dido_transfert(dido_llid);
     if (!olt)
-      KERR(" ");
+      KERR("WARNING %d", len);
     else
       {
       if (dido_llid != olt->dido_llid)
-        KOUT(" ");
+        KOUT("ERROR %d", len);
       if (msg_exist_channel(olt->inside_llid))
         {
         watch_tx(olt->inside_llid, len, buf);
@@ -429,7 +426,7 @@ static void dispach_door_rx_spice(int dido_llid, int val, int len, char *buf)
       }
     }
   else
-    KERR("%d", val);
+    KERR("WARNING %d", val);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -444,8 +441,8 @@ static int dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
     {
     olt = get_dido_transfert(dido_llid);
     if (olt)
-      KOUT("%d %d type:%d beat:%d", olt->dido_llid, olt->inside_llid,
-                                    olt->type, olt->beat_count);
+      KOUT("ERROR %d %d type:%d beat:%d", olt->dido_llid, olt->inside_llid,
+                                          olt->type, olt->beat_count);
     inside_llid = llid_xwy_ctrl();
     if (inside_llid == 0)
       result = 1;
@@ -453,9 +450,11 @@ static int dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
       {
       ilt = get_inside_transfert(inside_llid);
       if (ilt)
-        KOUT("%d %d type:%d beat:%d", ilt->dido_llid, ilt->inside_llid,
-                                      ilt->type, ilt->beat_count);
-      doorways_tx(dido_llid,inside_llid,type,doors_val_link_ok,3,"OK");
+        KOUT("ERROR %d %d type:%d beat:%d", ilt->dido_llid, ilt->inside_llid,
+                                            ilt->type, ilt->beat_count);
+      if (doorways_sig_bufraw(dido_llid, inside_llid, type,
+                              doors_val_link_ok, "OK"))
+        KERR("WARNING %d %d  %p  %p", dido_llid, tid, ilt, olt);
       alloc_transfert(dido_llid, inside_llid, type);
       }
     }
@@ -465,8 +464,8 @@ static int dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
     olt = get_dido_transfert(dido_llid);
     if ((!ilt) || (!olt) || (ilt != olt))
       {
-      doorways_tx(dido_llid, 0, type,doors_val_link_ko, 3, "KO");
-      KERR("%d %d  %p  %p", dido_llid, tid, ilt, olt);
+      KERR("WARNING %d %d  %p  %p", dido_llid, tid, ilt, olt);
+      doorways_sig_bufraw(dido_llid, 0, type, doors_val_link_ko, "KO");
       }
     else
       {
@@ -480,13 +479,14 @@ static int dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
         }
       else
         {
-        doorways_tx(dido_llid, 0, type, doors_val_link_ko, 3, "KO");
+        KERR("WARNING %d %d  %p  %p", dido_llid, tid, ilt, olt);
+        doorways_sig_bufraw(dido_llid, 0, type, doors_val_link_ko, "KO");
         free_transfert(ilt->dido_llid, ilt->inside_llid);
         }
       }
     }
   else
-    KOUT("%d", val);
+    KOUT("ERROR %d", val);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -526,8 +526,9 @@ static void dispach_door_rx_dbssh(int dido_llid, int val, int len, char *buf)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void dispach_door_rx(int dido_llid, int tid, int type, int val, 
-                     int len, char *buf)
+void doorways_rx_bufraw(int dido_llid, int tid,
+                        int len_bufraw, char *doors_bufraw,
+                        int type, int val, int len, char *buf)
 { 
   if ((dido_llid < 1) || (dido_llid >= CLOWNIX_MAX_CHANNELS))
     KOUT("%d", dido_llid);
@@ -563,8 +564,8 @@ void dispach_door_rx(int dido_llid, int tid, int type, int val,
     case doors_type_xwy_x11_flow:
       if (dispach_door_rx_xwy(type, dido_llid, tid, val, len, buf))
         {
-        doorways_tx(dido_llid, 0, type, doors_val_link_ko, 3, "KO");
         KERR("ERROR X11 %d %d %s", val, len, buf);
+        doorways_sig_bufraw(dido_llid, 0, type, doors_val_link_ko, "KO");
         }
       break;
 
@@ -577,26 +578,18 @@ void dispach_door_rx(int dido_llid, int tid, int type, int val,
 /*****************************************************************************/
 int dispach_send_to_traf_client(int dido_llid, int val, int len, char *buf)
 {
-  int result = -1;
-  if (msg_exist_channel(dido_llid))
-    {
-    doorways_tx(dido_llid, 0, doors_type_dbssh, val, len, buf);
-    result = 0;
-    }
-  return result;
+  int res;
+  res = doorways_tx_bufraw(dido_llid, 0, doors_type_dbssh, val, len, buf);
+  return res;
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int dispach_send_to_openssh_client(int dido_llid, int val, int len, char *buf)
 {
-  int result = -1;
-  if (msg_exist_channel(dido_llid))
-    {
-    doorways_tx(dido_llid, 0, doors_type_openssh, val, len, buf);
-    result = 0;
-    }
-  return result;
+  int res;
+  res = doorways_tx_bufraw(dido_llid, 0, doors_type_openssh, val, len, buf);
+  return res;
 }
 /*--------------------------------------------------------------------------*/
 

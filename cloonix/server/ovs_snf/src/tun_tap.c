@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -179,6 +179,30 @@ static int get_intf_flags_iff(char *intf, int *flags)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static int set_intf_flags_iff_promisc(char *intf)
+{
+  int result = -1, s, io;
+  struct ifreq ifr;
+  int flags;
+  if (!get_intf_flags_iff(intf, &flags))
+    {
+    s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    if (s > 0)
+      {
+      memset(&ifr, 0, sizeof(struct ifreq));
+      strncpy(ifr.ifr_name, intf, IFNAMSIZ);
+      ifr.ifr_flags = flags | IFF_PROMISC;
+      io = ioctl (s, SIOCSIFFLAGS, &ifr);
+      if(!io)
+        result = 0;
+      close(s);
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static int set_intf_flags_iff_up_and_promisc(char *intf)
 {
   int result = -1, s, io;
@@ -202,6 +226,7 @@ static int set_intf_flags_iff_up_and_promisc(char *intf)
 }
 /*---------------------------------------------------------------------------*/
 
+
 /*****************************************************************************/
 static int open_tap(char *tap, char *err)
 {
@@ -211,21 +236,27 @@ static int open_tap(char *tap, char *err)
   uid_t owner = getuid();
   if ((fd = open("/dev/net/tun", O_RDWR)) < 0)
     sprintf(err, "\nError open \"/dev/net/tun\", %d\n", errno);
-  else if (!get_intf_flags_iff(tap, &flags))
-    sprintf(err, "\nError system already has %s\n\n", tap);
   else
     {
     memset(&ifr, 0, sizeof(ifr));
     ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
     strncpy(ifr.ifr_name, tap, sizeof(ifr.ifr_name) - 1);
-    if(ioctl(fd, TUNSETIFF, (void *) &ifr) < 0)
+    if (!get_intf_flags_iff(tap, &flags))
+      sprintf(err, "\nError system already has %s\n\n", tap);
+    else if(ioctl(fd, TUNSETIFF, (void *) &ifr) < 0)
       sprintf(err, "\nError ioctl TUNSETIFF \"%s\", %d", tap,  errno);
     else if(ioctl(fd, TUNSETOWNER, owner) < 0)
       sprintf(err, "\nError ioctl TUNSETOWNER \"%s\", %d", tap,  errno);
     else if(ioctl(fd, TUNSETGROUP, owner) < 0)
       sprintf(err, "\nError ioctl TUNSETGROUP \"%s\", %d", tap,  errno);
     else
+      {
+      if (set_intf_flags_iff_promisc(tap))
+        KERR("WARNING PROMISC %s", tap);
       result = fd;
+      }
+    if (result == -1)
+      close(fd);
     }
   return result;
 }

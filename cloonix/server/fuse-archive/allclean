@@ -1,9 +1,0 @@
-#!/bin/bash
-HERE=`pwd`
-
-rm -rf ${HERE}/fuse-archive
-
-
-
-
-

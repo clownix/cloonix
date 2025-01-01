@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -23,6 +23,8 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
+
 
 
 #include "mdl.h"
@@ -200,6 +202,7 @@ void mdl_open(int s, int type, t_outflow outflow, t_inflow inflow)
     KOUT("ERROR %d", s);
   if (g_mdl[s])
     KOUT("ERROR MDL OPEN MDL EXISTS %d", s);
+  wrap_nonblock(s);
   g_mdl[s] = (t_mdl *) wrap_malloc(sizeof(t_mdl));
   memset(g_mdl[s], 0, sizeof(t_mdl));
   g_mdl[s]->write_seqnum = 0;
@@ -486,6 +489,14 @@ void mdl_heartbeat(void)
     }
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int mdl_fd_is_valid(int fd)
+{
+  return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 int mdl_init(void)

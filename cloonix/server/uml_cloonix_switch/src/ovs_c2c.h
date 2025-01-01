@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -17,6 +17,7 @@
 /*****************************************************************************/
 typedef struct t_ovs_c2c
 {
+  int get_udp_port_done;
   int must_restart;
   char socket[MAX_PATH_LEN];
   char name[MAX_NAME_LEN];
@@ -27,7 +28,7 @@ typedef struct t_ovs_c2c
   int  del_snf_ethv_sent;
   int  free_c2c_req;
   int count;
-  int llid;
+  int ovs_llid;
   int pid;
   int c2c_id;
   int closed_count;
@@ -39,8 +40,9 @@ typedef struct t_ovs_c2c
 
   int ref_tid;
   int udp_connection_probed;
+  int pair_llid;
   int peer_llid;
-  int peer_llid_connect;
+  int peer_listen_llid;
   int peer_watchdog_count;
   int udp_dist_port_chosen;
   int udp_loc_port_chosen;
@@ -55,7 +57,6 @@ typedef struct t_ovs_c2c
   int received_del_lan_req;
   int nb_dist_mac;
   int state_up;
-  int state_down;
 
   int destroy_c2c_done;
 
@@ -93,8 +94,9 @@ void ovs_c2c_add_lan(int llid, int tid, char *name, char *lan);
 void ovs_c2c_del_lan(int llid, int tid, char *name, char *lan);
 t_topo_endp *ovs_c2c_translate_topo_endp(int *nb);
 
+t_ovs_c2c *ovs_c2c_find_with_pair_llid(int llid);
 t_ovs_c2c *ovs_c2c_find_with_peer_llid(int llid);
-t_ovs_c2c *ovs_c2c_find_with_peer_llid_connect(int llid);
+t_ovs_c2c *ovs_c2c_find_with_peer_listen_llid(int llid);
 
 void ovs_c2c_peer_conf(int llid, int tid, char *name, int peer_status,
                        char *dist,     char *loc,
@@ -109,7 +111,12 @@ void ovs_c2c_peer_add_ack(int llid, int tid, char *name,
                           char *dist, char *loc, int ack);
 
 int ovs_c2c_mac_mangle(char *name, uint8_t *mac);
+void ovs_c2c_proxy_dist_udp_ip_port_OK(char *name,
+                                       uint32_t ip, uint16_t udp_port);
 
+void ovs_c2c_proxy_dist_tcp_ip_port_OK(char *name,
+                                       uint32_t ip, uint16_t tcp_port);
 
+void ovs_c2c_transmit_get_free_udp_port(char *name, uint16_t udp_port);
 void ovs_c2c_init(void);
 /*--------------------------------------------------------------------------*/

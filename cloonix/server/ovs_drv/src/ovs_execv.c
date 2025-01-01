@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -233,7 +233,7 @@ static int launch_ovsdb_server(char *ovs_bin, char *ovs_dir)
            "--remote=db:Open_vSwitch,Open_vSwitch,manager_options");
   snprintf(g_arg[5], MAX_ARG_LEN-1,"--unixctl=%s/%s",
                                    ovs_dir, OVSDB_SERVER_CTL);
-  snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=err");
+  snprintf(g_arg[6], MAX_ARG_LEN-1, "--verbose=off");
   snprintf(g_arg[7], MAX_ARG_LEN-1, "--detach");
   for (i=0; i<8; i++)
     argv[i] = g_arg[i]; 
@@ -272,17 +272,17 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *ovs_dir)
     KOUT("MISSING %s", g_arg[0]);
   snprintf(g_arg[1],MAX_ARG_LEN-1, "unix:%s/%s", ovs_dir, OVSDB_SERVER_SOCK);
   snprintf(g_arg[2],MAX_ARG_LEN-1, "--pidfile=%s/%s",ovs_dir,OVS_VSWITCHD_PID);
-  snprintf(g_arg[3],MAX_ARG_LEN-1, "--log-file=%s/log/%s",
-           ovs_dir, DEBUG_LOG_VSWITCH);
+  snprintf(g_arg[3],MAX_ARG_LEN-1, "--log-file=%s/log/%s", ovs_dir, DEBUG_LOG_VSWITCH);
   snprintf(g_arg[4],MAX_ARG_LEN-1, "--unixctl=%s/%s",ovs_dir,OVS_VSWITCHD_CTL);
-  snprintf(g_arg[5],MAX_ARG_LEN-1, "--verbose=err");
+  snprintf(g_arg[5],MAX_ARG_LEN-1, "--verbose=off");
   snprintf(g_arg[6],MAX_ARG_LEN-1, "--detach");
   for (i=0; i<7; i++)
     argv[i] = g_arg[i]; 
   result = call_ovs_popen(ovs_dir, argv, 0, __FUNCTION__, 1);
   if (!result)
     {
-    appctl_debug_fix(ovs_bin, ovs_dir, "ANY:syslog:err");
+    appctl_debug_fix(ovs_bin, ovs_dir, "ANY:console:off");
+    appctl_debug_fix(ovs_bin, ovs_dir, "ANY:syslog:off");
     appctl_debug_fix(ovs_bin, ovs_dir, "ANY:file:info");
     }
   return result;

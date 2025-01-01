@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -15,13 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define MIN_SIMU_FD 0
-#define MAX_SIMU_FD CLOWNIX_MAX_CHANNELS
-void simu_tx_send(int llid, int len, char *buf);
-void simu_tx_fdset(int llid);
-void simu_tx_fdiset(int llid);
-int  simu_tx_open(int llid, int sock_fd, struct epoll_event *sock_fd_epev);
-void simu_tx_close(int llid);
-void simu_tx_init(void);
+int c2c_peer_dist_tcp_ip_port(char *name, uint32_t ip,
+                              uint16_t tcp_port, char *passwd);
+int c2c_peer_proxy_data_from_crun(char *name, int len, char *buf);
+void c2c_peer_init(void);
 /*--------------------------------------------------------------------------*/
-

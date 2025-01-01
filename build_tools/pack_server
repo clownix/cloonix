@@ -31,7 +31,7 @@ TMPBUILD=${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_server
 TARGZ_STORE=${CLOONIX_TREE_ROOT}/targz_store
 SERVER="${CLOONIX_TREE_ROOT}/build_tools/server"
 COMMON="${CLOONIX_TREE_ROOT}/build_tools/common"
-mkdir -p ${SERVER}
+mkdir -p ${SERVER}/proxy
 cp -rf ${TMPBUILD}/cloonix/server/* ${SERVER}
 rm -rf ${SERVER}/iso_agent_dropbear
 rm -rf ${SERVER}/create_insider_agents_iso
@@ -103,14 +103,14 @@ rm -rf ${SERVER}/dtach
 cp -f ${SERVER}/script_pty/cloonix-scriptpty ${SERVER}
 rm -rf ${SERVER}/script_pty
 #----------------------------------------------------------
-cp -f ${SERVER}/proxy_crun/cloonix-proxy-crun-access ${SERVER}
+cp -f ${SERVER}/proxy_crun/cloonix-proxy-crun-access ${SERVER}/proxy
 rm -rf ${SERVER}/proxy_crun
 #----------------------------------------------------------
 cp -f ${SERVER}/crun/crun_tainted/crun ${SERVER}/cloonix-crun
 rm -rf ${SERVER}/crun
 #----------------------------------------------------------
-cp -f ${SERVER}/fuse-archive/fuse-archive/fuse-archive ${SERVER}/cloonix-fuse-archive
-rm -rf ${SERVER}/fuse-archive
+cp -f ${SERVER}/tmux/tmux/tmux ${SERVER}/cloonix-tmux
+rm -rf ${SERVER}/tmux
 #----------------------------------------------------------
 if [ "${ARCH}" = "i386" ]; then
   echo NOT MAINTAINED!!!!!!!!!!!!!
@@ -118,8 +118,8 @@ if [ "${ARCH}" = "i386" ]; then
 else
   cp -f ${TARGZ_STORE}/xorg/built_objects_amd64/Xvfb ${SERVER}/cloonix-novnc-Xvfb
   cp -f ${TARGZ_STORE}/iproute2/built_objects_amd64/ip ${SERVER}
-  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/cloonix-wireshark ${SERVER}
-  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/cloonix-dumpcap ${SERVER}
+  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/wireshark ${SERVER}/cloonix-wireshark
+  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/dumpcap ${SERVER}/cloonix-dumpcap
 fi
 #----------------------------------------------------------
 cp -f /usr/bin/xauth     ${SERVER}/xauth

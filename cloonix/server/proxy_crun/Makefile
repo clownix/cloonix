@@ -1,15 +1,34 @@
+IO_CLOWNIX=../../common/lib_io_clownix
+RPC_CLOWNIX=../../common/lib_rpc_clownix
+GLOB_INCLUDE=../../common/glob_include
+
 OBJ_DIR=obj/
 EXE = cloonix-proxy-crun-access
-WARNINGS =-Wall -Wno-format-truncation -Wno-format-overflow
+WARNINGS = -g -Wall -Wno-format-truncation -Wno-format-overflow
 VPATH = src
-SRC = accept_incoming_connect.c \
-      ever_select_loop.c \
+SRC = stub.c \
+      c2c_peer.c \
+      udp_proxy.c \
+      sig_process.c \
+      xprocess.c \
+      set_config.c \
+      pweb_process.c \
       main.c
 
-INCLUDES = -I./src
-LIBS =
+INCLUDES = -I./src \
+           -I${IO_CLOWNIX}/include \
+           -I${RPC_CLOWNIX}/include \
+           -I${GLOB_INCLUDE}
+
+
+LIBS = -L${IO_CLOWNIX} -lio_clownix \
+       -L${RPC_CLOWNIX} -lrpc_clownix \
+       -lcrypto 
+
 CFLAGS = $(WARNINGS) $(INCLUDES)
+
 CC=gcc 
+
 all: $(shell mkdir -p ./obj) $(EXE)
 OBJ = $(SRC:.c=.o)
 OBJS = $(addprefix $(OBJ_DIR), $(OBJ))

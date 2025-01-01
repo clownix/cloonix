@@ -54,7 +54,8 @@ for i in `find ${COMMON}/lib/${ARCHX}-linux-gnu -maxdepth 1 -type f` ; do
 done
 
 for j in "gconv" "gstreamer-1.0" "gstreamer1.0" \
-         "gstreamer1.0/gstreamer-1.0" "pipewire-0.3" ; do
+         "gstreamer1.0/gstreamer-1.0" "pipewire-0.3" \
+         "qt6/plugins/platforms" ; do
   for i in `find ${COMMON}/lib/${ARCHX}-linux-gnu/${j} -maxdepth 1 -type f` ; do
     ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
     ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null

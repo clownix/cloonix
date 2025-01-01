@@ -57,6 +57,7 @@ SRC = \
       base64.c \
       mactopo.c \
       server_stub.c \
+      proxycrun.c \
       hide_dirs.c
 
 INCLUDES= -I./src \

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -17,5 +17,6 @@
 /*****************************************************************************/
 void uml_clownix_switch_error_cb(int llid, int err, int from);
 void uml_clownix_switch_rx_cb(int llid, int len, char *buf);
+int get_proxy_is_on(void);
 
 

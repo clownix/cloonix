@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/*    Copyright (C) 2006-2024 clownix@clownix.net License AGPL-3             */
+/*    Copyright (C) 2006-2025 clownix@clownix.net License AGPL-3             */
 /*                                                                           */
 /*  This program is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Affero General Public License as           */
@@ -36,13 +36,80 @@
 #define MAX_NARGS 40
 #define PROCESS_STACK 500*1024
 
-void hide_real_machine(void);
+void hide_real_machine_cli(void);
 
 static FILE *g_log_cmd;
 static char *g_home;
 static char *g_display;
 static char *g_user;
 static char *g_xauthority;
+
+
+
+
+
+/****************************************************************************/
+static int get_pid_num_and_name(char *name)
+{
+  FILE *fp;
+  char ps_cmd[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+  char tmp_name[MAX_PATH_LEN];
+  int pid, result = 0;
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
+  fp = popen(ps_cmd, "r");
+  if (fp == NULL)
+    KERR("ERROR %s %d", ps_cmd, errno);
+  else
+    {
+    memset(line, 0, MAX_PATH_LEN);
+    while (fgets(line, MAX_PATH_LEN-1, fp))
+      {
+      if (sscanf(line,
+         "%d /usr/libexec/cloonix/server/cloonix-main-server "
+         "/usr/libexec/cloonix/common/etc/cloonix.cfg %s",
+         &pid, tmp_name) == 2)
+       {
+       result = pid;
+       strncpy(name, tmp_name, MAX_NAME_LEN-1);
+       break;
+       }
+      }
+    pclose(fp);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int lib_io_proxy_is_on(char *name)
+{
+  int pid, result = 0;
+  char *file_name = "/proc/1/cmdline";
+  char buf[MAX_PATH_LEN];
+  FILE *fd = fopen(file_name, "r");
+  if (fd == NULL)
+    KERR("WARNING: Cannot open %s", file_name);
+  else
+    {
+    memset(buf, 0, MAX_PATH_LEN);
+    if (!fgets(buf, MAX_PATH_LEN-1, fd))
+      KERR("WARNING: Cannot read %s", file_name);
+    else if (strstr(buf, CRUN_STARTER))
+      {
+      result = 1;
+      if (name)
+        {
+        memset(name, 0, MAX_NAME_LEN);
+        pid = get_pid_num_and_name(name);
+        if (pid == 0)
+          KERR("WARNING NO CLOONIX SERVER RUNNING");
+        }
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int get_process_pid(char *cmdpath, char *sock)
@@ -434,7 +501,9 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
   static char title[MAX_NAME_LEN];
   static char sock[2*MAX_PATH_LEN];
   static char param[2*MAX_PATH_LEN];
-  int i, result = 0;
+  int proxy_is_on, i, result = 0;
+  char tmpnet[MAX_NAME_LEN];
+
 
   memset(ipport, 0, MAX_NAME_LEN);
   memset(title, 0, MAX_NAME_LEN);
@@ -487,7 +556,11 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     if (argc < 5)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
-    snprintf(ipport, MAX_NAME_LEN-1,  "%s:%d", ip, port);
+    proxy_is_on = lib_io_proxy_is_on(tmpnet);
+    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
+      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", "127.0.0.1", port);
+    else
+      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
     new_argv[0] = "/usr/libexec/cloonix/common/cloonix-dropbear-scp";
     new_argv[1] = ipport;
     new_argv[2] = passwd;
@@ -502,7 +575,11 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     if ((argc != 4) && (argc != 5))
       KOUT("ERROR5 PARAM NUMBER %d", argc);
-    snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
+    proxy_is_on = lib_io_proxy_is_on(tmpnet);
+    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
+      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", "127.0.0.1", port);
+    else
+      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
     new_argv[0] = "/usr/libexec/cloonix/common/cloonix-dropbear-ssh";
     new_argv[1] = ipport;
     new_argv[2] = passwd;
@@ -510,8 +587,6 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if (argc == 5)
       new_argv[4] = argv[4];
     }
-
-
 /*CLOONIX_SHK-----------------------*/
   else if (!strcmp("shk", argv[1]))
     {
@@ -560,8 +635,12 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     if (argc != 5)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
+    proxy_is_on = lib_io_proxy_is_on(tmpnet);
+    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
+      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", "127.0.0.1", port);
+    else
+      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
     snprintf(title, MAX_NAME_LEN-1, "--title=%s/%s", argv[2], argv[3]);
-    snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
     snprintf(sock, 2*MAX_PATH_LEN-1, "/var/lib/cloonix/%s/vm/vm%s/spice_sock", argv[2], argv[4]);
     new_argv[0] = "/usr/libexec/cloonix/common/cloonix-spicy";
     new_argv[1] = title;
@@ -610,12 +689,20 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_OCP-----------------------*/
   else if (!strcmp("ocp", argv[1]))
     {
-    process_ocp(argc, argv, new_argv, ip, port, passwd);
+    proxy_is_on = lib_io_proxy_is_on(tmpnet);
+    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
+      process_ocp(argc, argv, new_argv, "127.0.0.1", port, passwd);
+    else
+      process_ocp(argc, argv, new_argv, ip, port, passwd);
     }
 /*CLOONIX_OSH-----------------------*/
   else if (!strcmp("osh", argv[1]))
     {
-    process_osh(argc, argv, new_argv, ip, port, passwd);
+    proxy_is_on = lib_io_proxy_is_on(tmpnet);
+    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
+      process_osh(argc, argv, new_argv, "127.0.0.1", port, passwd);
+    else
+      process_osh(argc, argv, new_argv, ip, port, passwd);
     }
   else
     {
@@ -656,6 +743,7 @@ int main(int argc, char *argv[])
     init_log_cmd(argv[2]);
     if (!strcmp("gui", argv[1]))
       {
+      hide_real_machine_cli();
       fill_distant_xauthority(argv[2]);
       setenv("NO_AT_BRIDGE", "1", 1);
       }

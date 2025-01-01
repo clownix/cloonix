@@ -17,18 +17,18 @@ make -j 6
 cd ${HERE}
 
 for i in ovsdb-client ovsdb-server ovsdb-tool; do
-  cp -f ${HERE}/ovs/ovsdb/${i} ${OVS}/bin/cloonix-${i}
+  cp -vf ${HERE}/ovs/ovsdb/${i} ${OVS}/bin/cloonix-${i}
   strip ${OVS}/bin/cloonix-${i}
 done
 
 for i in ovs-appctl ovs-ofctl ovs-vsctl; do
-  cp -f ${HERE}/ovs/utilities/${i} ${OVS}/bin/cloonix-${i}
+  cp -vf ${HERE}/ovs/utilities/${i} ${OVS}/bin/cloonix-${i}
   strip ${OVS}/bin/cloonix-${i}
 done
 
-cp -f ${HERE}/ovs/vswitchd/ovs-vswitchd ${OVS}/bin/cloonix-ovs-vswitchd
+cp -vf ${HERE}/ovs/vswitchd/ovs-vswitchd ${OVS}/bin/cloonix-ovs-vswitchd
 strip ${OVS}/bin/cloonix-ovs-vswitchd
 
 mkdir -p ${OVS}/share/openvswitch
-cp -f ${HERE}/ovs/vswitchd/vswitch.ovsschema ${OVS}/cloonix-vswitch.ovsschema
+cp -vf ${HERE}/ovs/vswitchd/vswitch.ovsschema ${OVS}/cloonix-vswitch.ovsschema
 

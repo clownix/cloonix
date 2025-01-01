@@ -41,7 +41,6 @@ are updated using the following links for the main software:
   * https://gitlab.freedesktop.org/spice/usbredir.git
   * https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-8.6p1.tar.gz
   * https://github.com/containers/crun.git
-  * https://github.com/google/fuse-archive.git
   * https://github.com/NixOS/patchelf.git
 
 
