@@ -61,7 +61,7 @@ void recv_list_vm_eth_lan_req(int llid, int tid, char *name, int eth){KERR("WARN
 void recv_interface_list_req(int llid, int tid) {KERR("WARNING TOLOOKAT");}
 void recv_vmcmd(int llid, int tid, char *name, int cmd, int param) {KERR("WARNING TOLOOKAT");}
 void recv_del_name(int llid, int tid, char *name){KERR("WARNING TOLOOKAT");}
-void recv_fix_display(int llid, int tid, char *line){KERR("WARNING TOLOOKAT");}
+void recv_fix_display(int llid, int tid, char *disp, char *line){KERR("WARNING TOLOOKAT");}
 void recv_eventfull_sub(int llid, int tid) {KERR("WARNING TOLOOKAT");}
 void recv_slowperiodic_sub(int llid, int tid){KERR("WARNING TOLOOKAT");}
 void recv_event_print_sub(int llid, int tid, int on){KERR("WARNING TOLOOKAT");}

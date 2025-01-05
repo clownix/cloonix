@@ -171,21 +171,10 @@ static int dead_read(int s, void *buf, size_t len)
 {
   int count = 0, rxlen;
   rxlen = read(s, buf, len);
-  while (rxlen == -1)
+  if (rxlen == -1)
     {
     if ((errno != EINTR) && (errno != EWOULDBLOCK) && (errno != EAGAIN))
-      {
       KERR("ERROR DEADWAIT %u %d", len, errno);
-      break;
-      }
-    else
-      {
-      count++;
-      if (count > 3)
-        break;
-      usleep(1000);
-      rxlen = read(s, buf, len);
-      }
     }
   return rxlen;
 }

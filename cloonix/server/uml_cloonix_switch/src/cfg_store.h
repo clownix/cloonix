@@ -85,6 +85,7 @@ char *cfg_get_work(void);
 char *cfg_get_work_vm(int vm_id);
 char *cfg_get_root_work(void);
 char *cfg_get_bulk(void);
+char *cfg_get_bulk_host(void);
 char *cfg_get_bin_dir(void);
 
 void cfg_set_host_conf(t_topo_clc *config);

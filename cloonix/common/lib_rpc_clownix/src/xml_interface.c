@@ -1041,11 +1041,11 @@ void send_status_ko(int llid, int tid, char *reason)
 /*---------------------------------------------------------------------------*/
   
 /*****************************************************************************/
-void send_fix_display(int llid, int tid, char *line)
+void send_fix_display(int llid, int tid, char *disp, char *line)
 { 
   int len = 0;
   char *buf = string_to_xml(line);
-  len = sprintf(sndbuf, FIX_DISPLAY, tid, buf);
+  len = sprintf(sndbuf, FIX_DISPLAY, tid, disp, buf);
   my_msg_mngt_tx(llid, len, sndbuf);
 } 
 /*---------------------------------------------------------------------------*/
@@ -2484,9 +2484,9 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       break;
 
     case bnd_fix_display:
-      if (sscanf(msg, FIX_DISPLAY, &tid, info) != 2)
+      if (sscanf(msg, FIX_DISPLAY, &tid, param1, info) != 3)
         KOUT("%s", msg);
-      recv_fix_display(llid, tid, xml_to_string(info));
+      recv_fix_display(llid, tid, param1, xml_to_string(info));
       break;
 
 

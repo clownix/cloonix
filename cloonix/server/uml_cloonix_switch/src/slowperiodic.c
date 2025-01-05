@@ -60,6 +60,19 @@ static int ends_with_suffix(char *str, char *suffix)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static int is_duplicate(t_slowperiodic *slowperiodic, char *name, int max)
+{
+  int i, result = 0;
+  for (i=0; i<max; i++)
+    {
+    if (!strcmp(slowperiodic[i].name, name))
+      result = 1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static int get_bulk_files(t_slowperiodic **slowperiodic, char *suffix)
 {
   DIR *dirptr;
@@ -82,6 +95,32 @@ static int get_bulk_files(t_slowperiodic **slowperiodic, char *suffix)
           {
           strncpy((*slowperiodic)[nb].name, ent->d_name, MAX_NAME_LEN-1);
           nb += 1;
+          }
+        }
+      if (nb >= max)
+        break;
+      }
+    if (closedir(dirptr))
+      KOUT("%d", errno);
+    }
+  dirptr = opendir(cfg_get_bulk_host());
+  if (dirptr)
+    {
+    while ((ent = readdir(dirptr)) != NULL)
+      {
+      if (!strcmp(ent->d_name, "."))
+        continue;
+      if (!strcmp(ent->d_name, ".."))
+        continue;
+      if (ent->d_type == DT_REG)
+        {
+        if (ends_with_suffix(ent->d_name, suffix))
+          {
+          if (!is_duplicate(*slowperiodic, ent->d_name, nb))
+            {
+            strncpy((*slowperiodic)[nb].name, ent->d_name, MAX_NAME_LEN-1);
+            nb += 1;
+            }
           }
         }
       if (nb >= max)

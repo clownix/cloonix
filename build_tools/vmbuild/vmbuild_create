@@ -102,7 +102,7 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                       libpipewire-0.3-modules util-linux rsyslog \
                       pipewire-pulse unzip zip curl wget libboost-dev \
                       nodejs node-mime-types node-mime node-optimist \
-                      node-ws acl libevent-dev"
+                      node-ws acl libevent-dev xclip"
 
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"

@@ -114,7 +114,6 @@ static void alloc_X(int llid_front, int llid_back)
 static void err_cb (int llid, int err, int from)
 {
   t_X_llid *cur = find_X(llid);
-  KERR("ERROR X %d %d %d", llid, err, from);
   if (!cur)
     KERR("ERROR X %d %d %d", llid, err, from);
   else
@@ -141,24 +140,25 @@ static void rx_cb (int llid, int len, char *buf)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void connect_from_wayland_client(int llid, int llid_back)
-{ 
-  int llid_front;
-  llid_front = proxy_traf_unix_client(g_wayland_main, err_cb, rx_cb);
-  if (llid_front > 0)
-    {
-    msg_mngt_set_callbacks (llid_back, err_cb, rx_cb);
-    alloc_X(llid_front, llid_back);
-    channel_rx_local_flow_ctrl(llid_back, 0);
-    }
-  else
-    {
-    KERR("ERROR wayland");
-    if (msg_exist_channel(llid_back))
-      msg_delete_channel(llid_back);
-    }
-}
-/*--------------------------------------------------------------------------*/
+//VIPTODO
+//static void connect_from_wayland_client(int llid, int llid_back)
+//{ 
+//  int llid_front;
+//  llid_front = proxy_traf_unix_client(g_wayland_main, err_cb, rx_cb);
+//  if (llid_front > 0)
+//    {
+//    msg_mngt_set_callbacks (llid_back, err_cb, rx_cb);
+//    alloc_X(llid_front, llid_back);
+//    channel_rx_local_flow_ctrl(llid_back, 0);
+//    }
+//  else
+//    {
+//    KERR("ERROR wayland");
+//    if (msg_exist_channel(llid_back))
+//      msg_delete_channel(llid_back);
+//    }
+//}
+///*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void connect_from_x11_client(int llid, int llid_back)
@@ -198,9 +198,11 @@ void X_init(char *proxyshare)
     {
     KERR("WAYLAND_DISPLAY=%s", wayland_display);
     KERR("XDG_RUNTIME_DIR=%s", xdg_runtime_dir);
-    snprintf(g_wayland_slave, MAX_PATH_LEN-1, "%s/wayland-0", proxyshare);
-    snprintf(g_wayland_main, MAX_PATH_LEN-1, "%s/%s",
-             xdg_runtime_dir, wayland_display);
+    KERR("WAYLAND NOT SUPPORTED, X11 SHOULD WORK ANYHOW");
+    //VIPTODO
+    //snprintf(g_wayland_slave, MAX_PATH_LEN-1, "%s/wayland-0", proxyshare);
+    //snprintf(g_wayland_main, MAX_PATH_LEN-1, "%s/%s",
+    //         xdg_runtime_dir, wayland_display);
     }
   if (display)
     {
@@ -227,11 +229,12 @@ void X_init(char *proxyshare)
 
   if ((g_wayland_slave[0]==0) && (g_x11_slave[0]==0))
     KOUT("ERROR DISPLAY");
-  if (g_wayland_slave[0])
-    {
-    if (!proxy_traf_unix_server(g_wayland_slave, connect_from_wayland_client))
-      KOUT("ERROR %s", g_wayland_slave);
-    }
+  //VIPTODO
+  //if (g_wayland_slave[0])
+  //  {
+  //  if (!proxy_traf_unix_server(g_wayland_slave, connect_from_wayland_client))
+  //    KOUT("ERROR %s", g_wayland_slave);
+  //  }
   if (g_x11_slave[0])
     {
     if (!proxy_traf_unix_server(g_x11_slave, connect_from_x11_client))

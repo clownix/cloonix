@@ -1166,10 +1166,17 @@ void ovs_c2c_del(int llid, int tid, char *name)
     if (llid)
       send_status_ko(llid, tid, "Not ready");
     }
+  else if (cur->topo.local_is_master)
+    {
+    KERR("ERROR %s %s Slave, cannot be deleted", locnet, name);
+    if (llid)
+      send_status_ko(llid, tid, "Slave, cannot be deleted"); 
+    } 
   else
     {
     if (llid)
       send_status_ok(llid, tid, "OK");
+    cur->recv_delete_req_from_client = 1;
     carefull_destroy_c2c(cur->name);
     }
 }
@@ -1426,16 +1433,22 @@ void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status)
       }
     else if (peer_status == -1)
       {
-      KERR("ERROR %s %s", locnet, name);
-      if (strlen(cur->lan_attached))
-        strncpy(cur->must_restart_lan, cur->lan_attached, MAX_NAME_LEN-1);
-      else if (strlen(cur->lan_added))
-        strncpy(cur->must_restart_lan, cur->lan_added, MAX_NAME_LEN-1);
-      else if (strlen(cur->lan_waiting))
-        strncpy(cur->must_restart_lan, cur->lan_waiting, MAX_NAME_LEN-1);
-      carefull_destroy_c2c(cur->name);
-      if (cur->topo.local_is_master == 1)
-        cur->must_restart = 1;
+      if ((cur->topo.local_is_master == 1) &&
+          (cur->recv_delete_req_from_client))
+        KERR("WARNING %s %s peer is down, delete req", locnet, name);
+      else
+        {
+        KERR("ERROR %s %s", locnet, name);
+        if (strlen(cur->lan_attached))
+          strncpy(cur->must_restart_lan, cur->lan_attached, MAX_NAME_LEN-1);
+        else if (strlen(cur->lan_added))
+          strncpy(cur->must_restart_lan, cur->lan_added, MAX_NAME_LEN-1);
+        else if (strlen(cur->lan_waiting))
+          strncpy(cur->must_restart_lan, cur->lan_waiting, MAX_NAME_LEN-1);
+        carefull_destroy_c2c(cur->name);
+        if (cur->topo.local_is_master == 1)
+          cur->must_restart = 1;
+        }
       }
     else
       {

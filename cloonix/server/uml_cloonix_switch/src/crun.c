@@ -33,6 +33,8 @@
 #include "hop_event.h"
 #include "cfg_store.h"
 #include "utils_cmd_line_maker.h"
+#include "uml_clownix_switch.h"
+#include "file_read_write.h"
 
 
 /*****************************************************************************/
@@ -192,13 +194,31 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
   char *image;
   char *cnt_dir = utils_get_cnt_dir();
   unsigned char *mac;
+  char option1[MAX_PATH_LEN];
+  char option2[MAX_PATH_LEN];
+  char *bulk = cfg_get_bulk();
+
   image = cnt->image;
+  if (get_proxy_is_on())
+    {
+    memset(option1, 0, MAX_PATH_LEN);
+    memset(option2, 0, MAX_PATH_LEN);
+    snprintf(option1, MAX_PATH_LEN-1, "%s/%s", cfg_get_bulk(), image);
+    snprintf(option2, MAX_PATH_LEN-1, "%s/%s", cfg_get_bulk_host(), image);
+    if (!file_exists(option1, F_OK))
+      {
+      if (file_exists(option2, F_OK))
+        bulk = cfg_get_bulk_host();
+      else
+        KERR("ERROR %s and %s do not exist", option1, option2);
+      }
+    }
   memset(req, 0, 2*MAX_PATH_LEN);
   snprintf(req, 2*MAX_PATH_LEN-1, 
   "cloonsuid_crun_create_net name=%s "
   "bulk=%s image=%s nb=%d vm_id=%d cnt_dir=%s "
   "agent_dir=%s is_persistent=%d",
-  cnt->name, cfg_get_bulk(), image, cnt->nb_tot_eth,
+  cnt->name, bulk, image, cnt->nb_tot_eth,
   vm_id, cnt_dir, agent, cnt->is_persistent);
   if (send_sig_suid_power(llid, req))
     {

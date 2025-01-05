@@ -637,13 +637,18 @@ int pty_fork_free_with_sock_fd(int sock_fd)
 /****************************************************************************/
 void pty_fork_init(char *cloonix_net_name)
 {
+  char cmd[2 * MAX_PATH_LEN];
   int pipe_fd[2];
   memset(g_net_name, 0, MAX_TXT_LEN);
+  memset(g_xauthority, 0, MAX_TXT_LEN);
+  memset(cmd, 0, 2 * MAX_PATH_LEN);
   strncpy(g_net_name, cloonix_net_name, MAX_TXT_LEN-1);
   if (signal(SIGCHLD, child_exit) == SIG_ERR)
     KERR("ERROR %s", strerror(errno));
-  memset(g_xauthority, 0, MAX_TXT_LEN);
-  snprintf(g_xauthority, MAX_TXT_LEN-1, "/var/lib/cloonix/cache/.Xauthority"); 
+  snprintf(g_xauthority, MAX_TXT_LEN-1,
+           "/var/lib/cloonix/%s/.Xauthority", g_net_name); 
+  sprintf(cmd, "/usr/libexec/cloonix/common/touch %s", g_xauthority);
+  system(cmd);
   if (wrap_pipe(pipe_fd, fd_type_pipe_sig, __FUNCTION__) < 0)
     KOUT(" ");
   g_sig_write_fd = pipe_fd[1];

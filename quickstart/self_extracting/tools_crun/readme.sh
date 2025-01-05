@@ -9,6 +9,9 @@ TMUX="${EXTRACT}/bin/cloonix-tmux-__IDENT__"
 PROXY="${EXTRACT}/bin/cloonix-proxy-__IDENT__"
 CONFIG="${EXTRACT}/config/config.json"
 PROXYSHARE="/tmp/__IDENT___proxy_share"
+HOST_BULK="/var/lib/cloonix/bulk"
+#---------------------------------------------------------------------------
+cp -f ${EXTRACT}/config/tmux.conf ${ROOTFS}/root/.tmux.conf
 #---------------------------------------------------------------------------
 for i in "cloonix-crun-__IDENT__" \
          "cloonix-proxy-__IDENT__" \
@@ -35,18 +38,19 @@ mkdir -p ${EXTRACT}/log
 cp -f ${EXTRACT}/config/config.json.template ${CONFIG}
 cp -f ${XAUTHORITY} ${PROXYSHARE}/Xauthority
 #-----------------------------------------------------------------------------
-sed -i s"%__DISPLAY__%${DISPLAY}%"       ${INIT_CRUN}
+sed -i s"%__HOSTNAME__%${HOSTNAME}%"   ${INIT_CRUN}
+sed -i s"%__DISPLAY__%${DISPLAY}%"     ${INIT_CRUN}
 cp -f ${INIT_CRUN} ${ROOTFS}/usr/libexec/cloonix/server
+#-----------------------------------------------------------------------------
+if [ -r ${HOST_BULK} ]; then
+  sed -i s"%__HOST_BULK_PRESENT__%%" ${CONFIG}
+else
+  sed -i s"%__HOST_BULK_PRESENT__.*%%" ${CONFIG}
+fi
 #-----------------------------------------------------------------------------
 sed -i s"%__PROXYSHARE__%${PROXYSHARE}%" ${CONFIG}
 sed -i s"%__ROOTFS__%${ROOTFS}%"         ${CONFIG}
 sed -i s"%__UID__%${UID}%"               ${CONFIG}
-if [ -n "$WAYLAND_DISPLAY" ]; then
-  sed -i s"%\"DISPLAY=:713\"%\"XDG_SESSION_TYPE=wayland\",\n\"DISPLAY=:713\"%"  ${CONFIG}
-  sed -i s"%\"DISPLAY=:713\"%\"WAYLAND_DISPLAY=wayland-0\",\n\"DISPLAY=:713\"%" ${CONFIG}
-else
-  sed -i s"%\"DISPLAY=:713\"%\"XDG_SESSION_TYPE=x11\",\n\"DISPLAY=:713\"%"   ${CONFIG}
-fi
 #-----------------------------------------------------------------------------
 if [ ! -e /usr/bin/newgidmap ] || [ ! -e /usr/bin/newuidmap ]; then
   printf "\n\nMISSING uidmap package!!!!!!!!!!!!!!\n"
@@ -55,12 +59,17 @@ if [ ! -e /usr/bin/newgidmap ] || [ ! -e /usr/bin/newuidmap ]; then
   exit 1
 else
   ${PROXY} ${PROXYSHARE}
-  nohup ${CRUN} \
-         --cgroup-manager=disabled \
-         --rootless=100000 \
-         --log=${EXTRACT}/log/crun.log \
-         --root=${ROOTFS}/tmp \
-         run -f ${CONFIG} __IDENT__ > ${EXTRACT}/log/startup.log 2>&1 &
+    nohup ${CRUN} \
+           --log=${EXTRACT}/log/crun.log \
+           --root=${ROOTFS}/tmp \
+           run -f ${CONFIG} __IDENT__ > ${EXTRACT}/log/startup.log 2>&1 &
+
+#    nohup ${CRUN} \
+#           --cgroup-manager=disabled \
+#           --rootless=100000 \
+#           --log=${EXTRACT}/log/crun.log \
+#           --root=${ROOTFS}/tmp \
+#           run -f ${CONFIG} __IDENT__ > ${EXTRACT}/log/startup.log 2>&1 &
 fi
 #-----------------------------------------------------------------------------
 while [ ! -e "${PROXYSHARE}/tmux_back" ]; do 
@@ -109,8 +118,6 @@ EOF
 
 chmod +x ${EXTRACT}/../__IDENT___cmd
 
-printf "\n\tFor a shell in the crun container:\n"
-printf "./__IDENT___cmd sh\n"
 printf "\n\tFor the gui canvas:\n"
 printf "./__IDENT___cmd gui\n"
 printf "\n\tFor the ping demo:\n"
@@ -118,6 +125,10 @@ printf "./__IDENT___cmd ping\n"
 printf "\n\tFor the frr demo:\n"
 printf "./__IDENT___cmd frr\n"
 printf "\n\tFor the killing of all:\n"
-printf "./__IDENT___cmd kil\n\n"
-
-
+printf "./__IDENT___cmd kil\n"
+printf "\n\tFor a shell in the crun container:\n"
+printf "./__IDENT___cmd sh\n"
+printf "\n\t\tEnter mode to scroll the history buffer:\n"
+printf "\t\tCtrl-space Pg-up\n"
+printf "\n\t\tReturn to normal mode:\n"
+printf "\t\tq\n\n"

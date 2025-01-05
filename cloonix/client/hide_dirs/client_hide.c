@@ -177,76 +177,20 @@ int file_exists(char *path)
 }
 /*---------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-static int get_xauth_magic(char *display, char *line_display)
-{
-  int result = -1;
-  char *end;
-  FILE *fp;
-  char cmd[MAX_PATH_LEN];
-  memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1,
-           "%s list | /usr/libexec/cloonix/common/grep %s",
-           XAUTH_BIN, display);
-  fp = popen(cmd, "r");
-  if (fp == NULL)
-    KERR("ERROR %s errno:%d", cmd, errno);
-  else
-    {
-    if (!fgets(line_display, MAX_PATH_LEN-1, fp))
-      KERR("ERROR %s", cmd);
-    else if (!strlen(line_display))
-      KERR("ERROR %s", cmd);
-    else if (!strstr(line_display, "MIT-MAGIC-COOKIE-1"))
-      KERR("ERROR %s %s", cmd, line_display);
-    else
-      {
-      end = strchr(line_display, '\r');
-      if (end)
-        *end = 0;
-      end = strchr(line_display, '\n');
-      if (end)
-        *end = 0;
-      if (strlen(line_display) < 1)
-        KERR("ERROR %s %s", cmd, line_display);
-      else
-        result = 0;
-      if (pclose(fp))
-        KERR("ERROR %s %s", cmd, line_display);
-      }
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
 /****************************************************************************/
 static void fill_distant_xauthority(char *net)
 {
-  char line_display[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
   memset(cmd, 0, 2*MAX_PATH_LEN);
-  memset(line_display, 0, MAX_PATH_LEN);
-  if (get_xauth_magic(g_display, line_display))
-    KERR("WARNING XAUTH FIX %s", g_display);
-  else
-    {
-    if (!strlen(line_display))
-      KERR("WARNING XAUTH FIX NOGO %s", g_display);
-    else
-      {
-      snprintf(cmd, 2*MAX_PATH_LEN-1, 
-      "/usr/libexec/cloonix/common/cloonix-ctrl %s %s cnf fix \"%s\"",
-      CLOONIX_CFG, net, line_display);
-      system(cmd);
-      }
-    }
+  snprintf(cmd, 2*MAX_PATH_LEN-1, "/usr/libexec/cloonix/common/cloonix-ctrl "
+                                  "%s %s cnf fix", CLOONIX_CFG, net);
+  system(cmd);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void set_env_global_cloonix(char *net)
 {
-  char rdir[MAX_PATH_LEN];
   clearenv();
   if (g_home)
     setenv("HOME", g_home, 1);
@@ -261,9 +205,6 @@ static void set_env_global_cloonix(char *net)
   setenv("LANG", "C", 1);
   setenv("SHELL", "/usr/libexec/cloonix/common/bash", 1);
   setenv("TERM", "xterm", 1);
-  memset(rdir, 0, MAX_PATH_LEN);
-  snprintf(rdir,MAX_PATH_LEN-1,"/var/lib/cloonix/cache/.Xauthority");
-  setenv("XAUTHORITY", rdir, 1);
 }
 /*--------------------------------------------------------------------------*/
 

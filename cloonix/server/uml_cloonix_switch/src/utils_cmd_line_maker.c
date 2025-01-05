@@ -44,6 +44,7 @@
 #include "cnt.h"
 #include "ovs_nat.h"
 #include "qga_dialog.h"
+#include "uml_clownix_switch.h"
 
 
 static char *glob_ptr_uname_r;
@@ -553,11 +554,24 @@ char *utils_dir_conf_tmp(int vm_id)
 char *utils_get_root_fs(char *rootfs)
 {
   static char root_fs[MAX_PATH_LEN];
+  char host_root_fs[MAX_PATH_LEN];
   memset(root_fs, 0, MAX_PATH_LEN);
   if (rootfs[0] == '/')
     sprintf(root_fs, "%s", rootfs);
   else
+    {
     sprintf(root_fs, "%s/%s", cfg_get_bulk(), rootfs);
+    if (get_proxy_is_on())
+      {
+      sprintf(host_root_fs, "%s/%s", cfg_get_bulk_host(), rootfs);
+      if ((!file_exists(root_fs, F_OK)) &&
+          (file_exists(host_root_fs, F_OK)))
+        {
+        memset(root_fs, 0, MAX_PATH_LEN);
+        strncpy(root_fs, host_root_fs, MAX_PATH_LEN-1);
+        }
+      }
+    }
   return root_fs;
 }
 /*---------------------------------------------------------------------------*/
@@ -688,16 +702,6 @@ void utils_finish_vm_init(void *ul_vm_id)
     }
 }
 /*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-char *utils_get_kernel_path_name(char *gkernel)
-{
-  static char kernel[MAX_PATH_LEN];
-  memset(kernel, 0, MAX_PATH_LEN);
-  sprintf(kernel, "%s/%s", cfg_get_bulk(), gkernel);
-  return kernel;
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 char *utils_get_cow_path_name(int vm_id)

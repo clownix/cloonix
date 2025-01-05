@@ -59,6 +59,7 @@ static int g_count_nginx_timer2;
 static int g_port_display_start;
 static char g_net_name[MAX_NAME_LEN];
 static char g_display[MAX_NAME_LEN];
+static char g_x11vnc_log[MAX_PATH_LEN];
 
 static int x11vnc(void *data);
 static void timer_wm2(void *data);
@@ -376,10 +377,9 @@ static int x11vnc(void *data)
 {
   char *argv[]={BIN_X11VNC, "-N", "-nopw", "-localhost", "-shared", 
                             "-repeat", "-forever", "-verbose", "-logfile",
-                            "/var/lib/cloonix/cache/x11vnc.log", "-noshm",
-                            "-noxdamage", "-cursor", "arrow", "-remap",
-                            "DEAD", "-ncache", "10", "-dpms", "-display",
-                            g_display, NULL};
+                            g_x11vnc_log, "-noshm", "-noxdamage", "-cursor",
+                            "arrow", "-remap", "DEAD", "-ncache", "10",
+                            "-dpms", "-display", g_display, NULL};
 
   if (g_terminate)
     return 0;
@@ -487,7 +487,6 @@ static void timer_end_last(void *data)
     if (g_pid_nginx_worker)
       {
       g_end_novnc_currently_on = 0; 
-      KERR("WEB STARTUP OK");
       }
     else
       {
@@ -840,6 +839,9 @@ void init_novnc(char *net_name, int rank, int port)
   g_pid_nginx_worker = 0;
   memset (g_display, 0, MAX_NAME_LEN);
   memset (g_net_name, 0, MAX_NAME_LEN);
+  memset (g_x11vnc_log, 0, MAX_PATH_LEN);
+  snprintf(g_x11vnc_log, MAX_PATH_LEN-1,
+           "/var/lib/cloonix/%s/log/x11vnc.log", net_name);
   strncpy(g_net_name, net_name, MAX_NAME_LEN-1);
   g_port_nginx = port;
   g_rank = rank;

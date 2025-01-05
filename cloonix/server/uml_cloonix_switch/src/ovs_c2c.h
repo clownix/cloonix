@@ -67,7 +67,7 @@ typedef struct t_ovs_c2c
 
   int must_call_snf_started;
 
-
+  int recv_delete_req_from_client;
 
   struct t_ovs_c2c *prev;
   struct t_ovs_c2c *next;

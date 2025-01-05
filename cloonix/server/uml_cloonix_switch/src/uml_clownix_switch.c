@@ -302,10 +302,8 @@ static void connect_from_client_unix(int llid, int llid_new)
 static void timer_novnc_ok(void *data)
 {
   char *net = cfg_get_cloonix_name();
-  if (proxycrun_transmit_config(net, cfg_get_server_port(),
-                                g_novnc_port, g_cloonix_conf_info->passwd))
-    KERR("proxycrun_transmit_config OK");
-  else
+  if (!proxycrun_transmit_config(net, cfg_get_server_port(),
+       g_novnc_port, g_cloonix_conf_info->passwd))
     KERR("ERROR proxycrun_transmit_config");
 }
 /*---------------------------------------------------------------------------*/

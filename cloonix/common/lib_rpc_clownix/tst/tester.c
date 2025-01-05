@@ -1530,25 +1530,29 @@ void recv_status_ko(int llid, int itid, char *ireason)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_fix_display(int llid, int itid, char *iline)
+void recv_fix_display(int llid, int itid, char *idisp, char *iline)
 {
   static int tid;
   static char line[MAX_PRINT_LEN];
+  static char disp[MAX_PATH_LEN];
   if (i_am_client)
     {
     if (count_fix_display)
       {
+      if (strcmp(idisp, disp))
+        KOUT("ERROR %s %s", idisp, disp);
       if (strcmp(iline, line))
-        KOUT(" ");
+        KOUT("ERROR %s %s", iline, line);
       if (itid != tid)
-        KOUT(" ");
+        KOUT("ERROR %d %d", itid, tid);
       }
     tid = rand();
     random_choice_str(line, MAX_PRINT_LEN);
-    send_fix_display(llid, tid, line);
+    random_choice_str(disp, MAX_PATH_LEN);
+    send_fix_display(llid, tid, disp, line);
     }
   else
-    send_fix_display(llid, itid, iline);
+    send_fix_display(llid, itid, idisp, iline);
   count_fix_display++;
 }
 /*---------------------------------------------------------------------------*/
@@ -2914,7 +2918,7 @@ static void send_first_burst(int llid)
 {
   recv_status_ok(llid, 0, 0);
   recv_status_ko(llid, 0, 0);
-  recv_fix_display(llid, 0, 0);
+  recv_fix_display(llid, 0, NULL, NULL);
   recv_add_vm(llid, 0,NULL);
   recv_del_name(llid, 0, NULL);
   recv_kill_uml_clownix(llid,0);

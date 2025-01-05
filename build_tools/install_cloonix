@@ -18,6 +18,7 @@ done
 rm -rf /usr/libexec/cloonix
 rm -f  /usr/bin/cloonix_*
 rm -rf /tmp/cloonix_install_tmp
+rm -rf /var/lib/cloonix/cache
 mkdir -p /tmp/cloonix_install_tmp
 #----------------------------------------------------------
 tar --directory=/tmp/cloonix_install_tmp --no-same-owner -xf common.tar.gz

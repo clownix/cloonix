@@ -212,8 +212,6 @@ int main(int argc, char **argv)
            "%s/proxy_sig_stream.sock", g_proxyshare);
   proxy_sig_server(g_unix_sig_stream, connect_from_sig_client);
   X_init(g_proxyshare);  
-//  tmux_init();
-
   daemon(0,0);
   msg_mngt_loop();
   return 0; 

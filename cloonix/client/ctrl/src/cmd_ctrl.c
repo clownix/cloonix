@@ -699,14 +699,39 @@ int cmd_cnf_lan(int argc, char **argv)
 int cmd_cnf_fix(int argc, char **argv)
 { 
   int result = -1;
-  if (argc == 1)
+  char cmd[2 * MAX_PATH_LEN];
+  char *display = getenv("DISPLAY");
+  char *Xauthority = getenv("XAUTHORITY");
+  char *tmp = "/tmp/cmd_cnf_fix_Xauthority";
+  int len;
+  char *buf;
+  char err[MAX_PRINT_LEN];
+
+  if (!display)
+    KERR("ERROR NO DISPLAY ENV TO SEND cmd_cnf_fix");
+  else if (!Xauthority)
+    KERR("ERROR NO XAUTHORITY ENV TO GET AUTH TO SEND cmd_cnf_fix");
+  else
     {
-    result = 0;
-    init_connection_to_uml_cloonix_switch();
-    client_fix_display(0, callback_end_fix, argv[0]);
+    memset(cmd, 0, 2 * MAX_PATH_LEN);
+    snprintf(cmd, 2 * MAX_PATH_LEN - 1,
+    "/usr/libexec/cloonix/common/xauth nextract - %s > %s", display, tmp);
+    if (system(cmd))
+      KERR("ERROR %s", cmd);
+    else
+      {
+      init_connection_to_uml_cloonix_switch();
+      buf = read_whole_file(tmp, &len, err);
+      if (!buf)
+        KERR("ERROR %s", cmd);
+      else
+        {
+        result = 0;
+        client_fix_display(0, callback_end_fix, display, buf);
+        clownix_free(buf, __FUNCTION__);
+        }
+      }
     }
-  else 
-    KERR("ERROR NB PARAMS %d cmd_cnf_fix", argc);
   return result; 
 }
 /*---------------------------------------------------------------------------*/

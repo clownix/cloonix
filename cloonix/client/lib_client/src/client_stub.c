@@ -170,7 +170,7 @@ void recv_del_name(int llid, int tid, char *name)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_fix_display(int llid, int tid, char *line)
+void recv_fix_display(int llid, int tid, char *disp, char *line)
 {
   KOUT(" ");
 }

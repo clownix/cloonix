@@ -55,8 +55,8 @@ for i in "lib/locale" "etc" "share/fonts/truetype" \
          "share/dconf" "share/locale" "share/i18n/charmaps" \
          "share/i18n/locales" "share/glib-2.0/schemas" \
          "share/X11/locale" "lib/x86_64-linux-gnu/rsyslog" \
-         "share/vim/vim91/syntax" \
-         "lib/x86_64-linux-gnu/qt6/plugins" ; do
+         "share/vim" "lib/x86_64-linux-gnu/qt6/plugins" \
+         "lib/x86_64-linux-gnu/perl" ; do
   mkdir -p ${COMMON}/${i}
 done
 
@@ -73,10 +73,14 @@ cp -Lrf /etc/fonts ${COMMON}/etc
 
 cat > ${COMMON}/etc/passwd << "EOF"
 root:x:0:0:root:/root:/bin/bash
+www:!:999:999::/home/www:/usr/bin/false
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
 EOF
 cat > ${COMMON}/etc/group << "EOF"
 root:x:0:
 audio:x:29:pulse
+www:!:999:
+nogroup:x:65534:
 EOF
 cat > ${COMMON}/etc/rsyslog.conf << "EOF"
 module(load="imuxsock") # provides support for local system logging
@@ -112,9 +116,7 @@ cat > ${COMMON}/etc/hosts << EOF
 EOF
 #----------------------------------------------------------
 cp -v /usr/lib/file/magic.mgc ${COMMON}/share/misc
-cp -v /usr/share/vim/vim91/filetype.vim ${COMMON}/share/vim/vim91
-cp -v /usr/share/vim/vim91/syntax/syntax.vim ${COMMON}/share/vim/vim91/syntax/
-cp -v /usr/share/vim/vim91/defaults.vim ${COMMON}/share/vim/vim91
+cp -Lrf /usr/share/vim/vim91 ${COMMON}/share/vim
 sed -i "s/'mouse'/'totomouse'/" ${COMMON}/share/vim/vim91/defaults.vim
 #----------------------------------------------------------
 cp -Lrf /usr/lib/locale/* ${COMMON}/lib/locale
@@ -127,6 +129,11 @@ cp -Lrf /usr/share/fontconfig ${COMMON}/share
 cp -Lrf /usr/share/nodejs ${COMMON}/share
 cp -Lrf /usr/share/node_modules ${COMMON}/share
 cp -Lrf /usr/lib/x86_64-linux-gnu/nodejs ${COMMON}/lib/x86_64-linux-gnu
+cp -Lrf /usr/lib/x86_64-linux-gnu/perl5/5.40 ${COMMON}/lib/x86_64-linux-gnu/perl
+cp -Lrf /usr/lib/x86_64-linux-gnu/perl-base ${COMMON}/lib/x86_64-linux-gnu
+mkdir -p ${COMMON}/lib/x86_64-linux-gnu/perl-base/Debian
+cp -f   /usr/share/perl5/Debian/AdduserCommon.pm ${COMMON}/lib/x86_64-linux-gnu/perl-base/Debian
+cp -Lrf /usr/share/perl5 ${COMMON}/share
 #----------------------------------------------------------
 cp -Lrf /usr/lib/python3.12 ${COMMON}/lib
 cp -Lrf /usr/share/gdb ${COMMON}/share
@@ -180,10 +187,12 @@ for i in "su" "awk" "cat" "chmod" "chown" "cp" "echo" "ps" "mkdir" \
          "locale" "localedef" "localectl" "xauth" "ln" "mv" "rm" \
          "xeyes" "xclock" "diff" "unzip" "unshare" "tail" "which" \
          "touch" "vim" "sleep" "find" "grep" "file" "false" "id" \
-         "node" "watch" "chacl" "getfacl" "setfacl" "sed" ; do
+         "node" "watch" "chacl" "getfacl" "setfacl" "sed" "df" \
+         "du" "perl" "logger" "gpasswd" "passwd" "sync" "uname" ; do
   cp -f /usr/bin/${i} ${COMMON}
 done
-for i in "useradd" "rsyslogd" ; do
+for i in "useradd" "usermod" "groupadd" "groupdel" "groupmod" \
+         "addgroup" "adduser" "rsyslogd" "nologin" ; do
   cp -f /usr/sbin/${i} ${COMMON}
 done
 cd ${COMMON}

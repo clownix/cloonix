@@ -35,7 +35,6 @@ char *utils_dir_conf_tmp(int vm_id);
 char *utils_get_root_fs(char *rootfs);
 void utils_chk_my_dirs(t_vm *vm);
 void utils_finish_vm_init(void *ul_vm_id);
-char *utils_get_kernel_path_name(char *gkernel);
 char *utils_get_cow_path_name(int vm_id);
 void utils_send_creation_info(char *name, char **argv);
 int utils_execv(void *ptr);

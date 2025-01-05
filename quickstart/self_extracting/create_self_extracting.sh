@@ -39,6 +39,7 @@ LD="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
 BASH="/usr/libexec/cloonix/common/bash"
 COMMON_LIBS="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
 #-----------------------------------------------------------------------------
+TMUX_CONF_PATH="${HERE}/tools_crun/tmux.conf"
 INIT_CRUNORIG="cloonix-init-starter-crun"
 INIT_CRUNCUST="cloonix-init-${IDENT}"
 INIT_CRUN_PATH="${HERE}/tools_crun/${INIT_CRUNORIG}"
@@ -134,6 +135,7 @@ mv ${BIN}/${TMUXORIG} ${BIN}/${TMUXCUST}
 mv ${BIN}/${CRUNORIG} ${BIN}/${CRUNCUST}
 mv ${BIN}/${PROXYORIG} ${BIN}/${PROXYCUST}
 #-----------------------------------------------------------------------------
+cp -f ${TMUX_CONF_PATH} ${CONFIG}
 cp -f ${TEMPLATE_PATH}  ${CONFIG}
 cp -f ${INIT_CRUN_PATH} ${CONFIG}
 cp -f ${STARTUP_PATH}   ${CONFIG}

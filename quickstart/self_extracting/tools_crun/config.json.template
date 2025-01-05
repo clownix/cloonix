@@ -8,11 +8,13 @@
     },
     "args": ["/usr/libexec/cloonix/server/cloonix-init-__IDENT__"],
     "env": [
-        "PATH=/usr/bin:/usr/libexec/cloonix/common/:/usr/libexec/cloonix/server",
+        "PATH=/usr/sbin:/usr/bin:/sbin:/bin:/usr/bin:/usr/libexec/cloonix/common/:/usr/libexec/cloonix/server",
+        "XDG_SESSION_TYPE=x11",
+        "XDG_RUNTIME_DIR=/tmp/cloonix_proxy",
         "DISPLAY=:713",
         "XAUTHORITY=/tmp/cloonix_proxy/Xauthority",
-        "XDG_RUNTIME_DIR=/tmp/cloonix_proxy",
-        "HOME=root"
+        "HOME=/root",
+        "USER=root"
     ],
     "cwd": "/root",
     "rlimits": [{
@@ -33,6 +35,11 @@
     "source": "tmpfs",
     "options": ["nodev","rw","mode=2755"]
     },{
+__HOST_BULK_PRESENT__   "destination": "/var/lib/cloonix/bulk_host",
+__HOST_BULK_PRESENT__   "type": "none",
+__HOST_BULK_PRESENT__   "source": "/var/lib/cloonix/bulk",
+__HOST_BULK_PRESENT__   "options": ["rbind","rw"]
+__HOST_BULK_PRESENT__   },{
     "destination": "/tmp/cloonix_proxy",
     "type": "none",
     "source": "__PROXYSHARE__",

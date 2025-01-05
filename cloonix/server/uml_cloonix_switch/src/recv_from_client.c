@@ -2248,13 +2248,49 @@ void recv_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_fix_display(int llid, int tid, char *line)
+void recv_fix_display(int llid, int tid, char *disp, char *line)
 {
-  char cmd[MAX_PRINT_LEN];
-  memset(cmd, 0, MAX_PRINT_LEN);
-  sprintf(cmd, "%s -f /var/lib/cloonix/cache/.Xauthority %s", XAUTH_BIN, line);
-  system(cmd);
-  send_status_ok(llid, tid, "ok");
+  char *tmp_Xauthority = "/var/lib/cloonix/cache/tmp_Xauthority";
+  char wauth[MAX_PATH_LEN];
+  char cmd[2 * MAX_PATH_LEN];
+  char *net = cfg_get_cloonix_name();
+  char err[MAX_PRINT_LEN];
+
+  unlink(tmp_Xauthority);
+  memset(wauth, 0, MAX_PATH_LEN);
+  snprintf(wauth, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/.Xauthority", net);
+  if (write_whole_file(tmp_Xauthority, line, strlen(line), err))
+    {
+    KERR("ERROR %s %s", err, tmp_Xauthority);
+    send_status_ko(llid, tid, err);
+    }
+  else
+    {
+    memset(cmd, 0, 2 * MAX_PATH_LEN);
+    snprintf(cmd, 2 * MAX_PATH_LEN - 1, 
+             "/usr/libexec/cloonix/common/touch %s", wauth);
+    system(cmd);
+    memset(cmd, 0, 2 * MAX_PATH_LEN);
+    snprintf(cmd, 2 * MAX_PATH_LEN - 1, "%s -f %s nmerge %s",
+             XAUTH_BIN, wauth, tmp_Xauthority);
+    if (system(cmd))
+      {
+      KERR("ERROR %s", cmd);
+      send_status_ko(llid, tid, "cmd err");
+      }
+    else
+      {
+      if (chmod(wauth, 0700))
+        {
+        KERR("ERROR chmod %s", wauth);
+        send_status_ko(llid, tid, "err");
+        }
+      else
+        {
+        send_status_ok(llid, tid, "ok");
+        }
+      }
+    }
 }
 /*--------------------------------------------------------------------------*/
 

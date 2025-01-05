@@ -51,5 +51,4 @@ void sig_process_rx(char *proxyshare, char *sigbuf);
 int set_config(char *net, uint16_t pmain, uint16_t pweb, char *passwd);
 void X_init(char *proxyshare);  
 void pweb_init(char *net, uint16_t pweb);
-// void tmux_init(void);
 /*--------------------------------------------------------------------------*/

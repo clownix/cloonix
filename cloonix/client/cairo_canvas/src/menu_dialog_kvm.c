@@ -484,7 +484,7 @@ void menu_dialog_kvm_init(void)
     snprintf(g_custom_vm.name, MAX_NAME_LEN-3, "IN_%s_n", name);
   else
     strcpy(g_custom_vm.name, "Cloon");
-  strcpy(g_custom_vm.kvm_used_rootfs, "openwrt.qcow2");
+  strcpy(g_custom_vm.kvm_used_rootfs, "bookworm.qcow2");
   g_custom_vm.current_number = 0;
   g_custom_vm.is_persistent = 0;
   g_custom_vm.is_sda_disk = 0;

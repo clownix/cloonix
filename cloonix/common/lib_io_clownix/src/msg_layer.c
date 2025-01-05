@@ -41,8 +41,8 @@
 #include "doorways_sock.h"
 
 
-#define MAX_TOT_LEN_QSIG 2000000000
-#define MAX_TOT_LEN_QDAT 5000000000
+#define MAX_TOT_LEN_QSIG 500000000
+#define MAX_TOT_LEN_QDAT 1000000000
 /*---------------------------------------------------------------------------*/
 static t_data_channel dchan[CLOWNIX_MAX_CHANNELS];
 static char *first_rx_buf;
@@ -992,20 +992,23 @@ void string_tx(int llid, int len, char *str_tx)
   int cidx;
   if ((len<=0) || (len > MAX_TOT_LEN_QSIG))
     KOUT("%d", len);
-  cidx = channel_check_llid(llid, __FUNCTION__);
-  if (dchan[cidx].llid != llid)
-    KOUT("%d %d %d", cidx, dchan[cidx].llid, llid);
-  if ((dchan[cidx].decoding_state != rx_type_ascii_start) && 
-      (dchan[cidx].decoding_state != rx_type_open_bound_found)) 
-    KOUT(" ");
-  if (dchan[cidx].tot_txq_size < MAX_TOT_LEN_QSIG)
+  if (msg_exist_channel(llid))
     {
-    dchan[cidx].tot_txq_size += len;
-    if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
-      peak_queue_len[cidx] = dchan[cidx].tot_txq_size;
-    ntx = (char *)clownix_malloc(len, IOCMLC);
-    memcpy (ntx, str_tx, len);
-    chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
+    cidx = channel_check_llid(llid, __FUNCTION__);
+    if (dchan[cidx].llid != llid)
+      KOUT("%d %d %d", cidx, dchan[cidx].llid, llid);
+    if ((dchan[cidx].decoding_state != rx_type_ascii_start) && 
+        (dchan[cidx].decoding_state != rx_type_open_bound_found)) 
+      KOUT(" ");
+    if (dchan[cidx].tot_txq_size < MAX_TOT_LEN_QSIG)
+      {
+      dchan[cidx].tot_txq_size += len;
+      if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
+        peak_queue_len[cidx] = dchan[cidx].tot_txq_size;
+      ntx = (char *)clownix_malloc(len, IOCMLC);
+      memcpy (ntx, str_tx, len);
+      chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
