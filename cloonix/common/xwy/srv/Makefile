@@ -4,8 +4,8 @@ SOURCES = main_srv.c x11_fwd.c scp_srv.c tools.c cloon.c \
 VPATH= .:../../../client/hide_dirs/
 
 CFLAGS+=-mtune=generic -fno-stack-protector
-CFLAGS += -I../libmdl -I../../glob_include -g 
-LDFLAGS += -L../libmdl -lmdl -lutil -lpthread
+CFLAGS += -I../libmdl -I../../glob_include -g -rdynamic
+LDFLAGS += -g -rdynamic -L../libmdl -lmdl -lutil -lpthread
 
 OBJECTS := $(patsubst %.c,obj/%.o,$(SOURCES))
 

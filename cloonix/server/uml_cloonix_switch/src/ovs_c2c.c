@@ -121,7 +121,7 @@ void c2c_state_progress_up(t_ovs_c2c *cur, int state)
   nb_to_text(cur->state_up, olab);
   cur->state_up = state;
   nb_to_text(cur->state_up, nlab);
-  KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
+//  KERR("%s %s  %s ----> %s", locnet, cur->name, olab, nlab);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -149,7 +149,6 @@ static void free_c2c(t_ovs_c2c *cur)
   if (cur->ovs_llid)
     {
     llid_trace_free(cur->ovs_llid, 0, __FUNCTION__);
-    hop_event_free(cur->ovs_llid);
     }
   if (strlen(cur->lan_added))
     {
@@ -181,31 +180,6 @@ static void free_c2c(t_ovs_c2c *cur)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void c2c_set_dist_udp_ip_port(char *name, uint32_t ip, uint16_t port)
-{
-  char *locnet = cfg_get_cloonix_name();
-  char msg[MAX_PATH_LEN];
-  t_ovs_c2c *cur = find_c2c(name);
-  if (!cur)
-    KERR("%s %s", locnet, name);
-  else
-    {
-    memset(msg, 0, MAX_PATH_LEN);
-    snprintf(msg, MAX_PATH_LEN-1,
-             "c2c_set_dist_udp_ip_port proxycrun=no %s %x %hu",
-             name, ip, port);
-    if (!msg_exist_channel(cur->ovs_llid))
-      KERR("ERROR %s %s", locnet, cur->name);
-    else
-      {
-      rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
-      hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 static void init_get_udp_port(t_ovs_c2c *cur)
 {
@@ -214,10 +188,7 @@ static void init_get_udp_port(t_ovs_c2c *cur)
       (msg_exist_channel(cur->ovs_llid)))
     {
     cur->get_udp_port_done = 1;
-    if (get_proxy_is_on())
-      proxycrun_transmit_req_udp(cur->name);
-    else
-      ovs_c2c_transmit_get_free_udp_port(cur->name, 0);
+    proxycrun_transmit_req_udp(cur->name);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -225,10 +196,7 @@ static void init_get_udp_port(t_ovs_c2c *cur)
 /*****************************************************************************/
 static void init_dist_udp_ip_port(char *name, uint32_t ip, uint16_t port)
 {
-  if (get_proxy_is_on())
-    proxycrun_transmit_dist_udp_ip_port(name, ip, port);
-  else
-    c2c_set_dist_udp_ip_port(name, ip, port);
+  proxycrun_transmit_dist_udp_ip_port(name, ip, port);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -965,16 +933,17 @@ int ovs_c2c_get_all_pid(t_lst_pid **lst_pid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_c2c_llid_closed(int llid)
+void ovs_c2c_llid_closed(int llid, int from_clone)
 {
-  char *locnet = cfg_get_cloonix_name();
   t_ovs_c2c *cur = g_head_c2c;
-  KERR("WARNING ovs_c2c_llid_closed %s %d", locnet, llid);
-  while(cur)
+  if (!from_clone)
     {
-    if (cur->ovs_llid == llid)
-      cur->closed_count = 2;
-    cur = cur->next;
+    while(cur)
+      {
+      if (cur->ovs_llid == llid)
+        cur->closed_count = 2;
+      cur = cur->next;
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1166,11 +1135,18 @@ void ovs_c2c_del(int llid, int tid, char *name)
     if (llid)
       send_status_ko(llid, tid, "Not ready");
     }
-  else if (cur->topo.local_is_master)
+  else if (!cur->topo.local_is_master)
     {
-    KERR("ERROR %s %s Slave, cannot be deleted", locnet, name);
     if (llid)
+      {
+      KERR("ERROR %s %s Slave, cannot be deleted", locnet, name);
       send_status_ko(llid, tid, "Slave, cannot be deleted"); 
+      }
+    else if (tid == 7777)
+      {
+      cur->recv_delete_req_from_client = 1;
+      carefull_destroy_c2c(cur->name);
+      }
     } 
   else
     {
@@ -1224,7 +1200,6 @@ void ovs_c2c_add_lan(int llid, int tid, char *name, char *lan)
     }
   else if (cur->topo.tcp_connection_peered != 1)
     {
-    KERR("WARNING C2C TCP NOT PEERED %s %s", locnet, name);
     send_status_ko(llid, tid, "Not ready tcp_connection_peered");
     }
   else

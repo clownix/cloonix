@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void eventfull_llid_delete(int llid);
+void eventfull_llid_delete(int llid, int from_clone);
 void eventfull_init(void);
 /*---------------------------------------------------------------------------*/
 

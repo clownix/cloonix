@@ -16,7 +16,7 @@
 /*                                                                           */
 /*****************************************************************************/
 void stats_counters_sysinfo_vm_death(char *name);
-void stats_counters_sysinfo_llid_close(int llid);
+void stats_counters_sysinfo_llid_close(int llid, int from_clone);
 void stats_counters_sysinfo_update_df(char *name, char *payload);
 void stats_counters_sysinfo_update(char *name,
                                    unsigned long uptime,

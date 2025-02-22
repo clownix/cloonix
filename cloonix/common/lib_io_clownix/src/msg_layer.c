@@ -30,6 +30,8 @@
 #include <bits/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <execinfo.h>
+
 
 
 
@@ -60,6 +62,173 @@ static int g_fd_not_to_close_set = 0;
 void doorways_linker_helper(void);
 void cloonix_conf_linker_helper(void);
 
+/****************************************************************************/
+char *malloc_to_ascii_encode(int len, uint8_t *msg)
+{
+  uint8_t *byte = (uint8_t *) msg;
+  int size = len;
+  int len_str = 3 * len + 1;
+  char *ascii_msg, *ptr;
+  if (len > MAX_ICMP_RXTX_SIG_LEN)
+    KOUT("ERROR %d", len);
+  ascii_msg = (char *) malloc(len_str);
+  if (ascii_msg == NULL)
+    KOUT("ERROR %d", len);
+  memset(ascii_msg, 0, len_str);
+  ptr = ascii_msg;
+  while (size > 0)
+    {
+    size--;
+    sprintf(ptr, "%02hhx ", *byte);
+    byte++;
+    ptr += 3;
+    }
+  return ascii_msg;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+uint8_t *malloc_to_byte_encode(int len, char *msg)
+{
+  int len_str = strlen(msg);
+  int vlen = len_str / 3;
+  int size = vlen;
+  uint8_t *byte, *byte_msg, *result = NULL;
+  char *ptr;
+  if ((vlen * 3) != len_str) 
+    KERR("ERROR %d %d %s", len_str, vlen, msg);
+  else
+    {
+    if (vlen > MAX_ICMP_RXTX_SIG_LEN)
+      KOUT("ERROR %d", vlen);
+    byte_msg = (uint8_t *) malloc(vlen);
+    if (byte_msg == NULL)
+      KOUT("ERROR %d", len_str);
+    byte = byte_msg;
+    ptr = msg;
+    while (size > 0)
+      {
+      size--;
+      sscanf(ptr, "%02hhx ", byte);
+      byte++;
+      ptr += 3;
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void fct_seqtap_tx(int kind, uint8_t *tx, uint16_t seqtap,
+                   int len, uint8_t *buf)
+{
+  if (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN)
+    KOUT("ERROR SEND  %d", len);
+  tx[0] = 0xCA;
+  tx[1] = 0xFE;
+  if (kind == kind_seqtap_data)
+    {
+    tx[2] = 0xDE;
+    tx[3] = 0xCA;
+    }
+  else if (kind == kind_seqtap_sig_hello)
+    {
+    tx[2] = 0xBE;
+    tx[3] = 0xEF;
+    }
+  else if (kind == kind_seqtap_sig_ready)
+    {
+    tx[2] = 0xAA;
+    tx[3] = 0xBB;
+    }
+  else
+    KOUT("ERROR %d", kind);
+  tx[4] = (len & 0xFF00) >> 8;
+  tx[5] =  len & 0xFF;
+  tx[6] = (seqtap & 0xFF00) >> 8;
+  tx[7] =  seqtap & 0xFF;
+  if (buf)
+    memcpy(tx + HEADER_TAP_MSG, buf, len);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fct_seqtap_rx(int is_dgram, int tot_len, int fd, uint8_t *rx,
+                  uint16_t *seq, int *buf_len, uint8_t **buf)
+{
+  int result = kind_seqtap_error;
+  int rxlen, len, count = 0;
+  *buf = NULL;
+  *buf_len = 0;
+  *seq = 0;
+  if ((rx[0] != 0xCA) || (rx[1] != 0xFE))
+    KERR("ERROR %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+         rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
+  else
+    {
+    if ((rx[2] == 0xDE) && (rx[3] == 0xCA))
+      result = kind_seqtap_data;
+    else if ((rx[2] == 0xBE) && (rx[3] == 0xEF))
+      result = kind_seqtap_sig_hello;
+    else if ((rx[2] == 0xAA) && (rx[3] == 0xBB))
+      result = kind_seqtap_sig_ready;
+    else
+      KERR("ERROR %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+           rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
+    }
+  if (result != kind_seqtap_error)
+    {
+    len = ((rx[4] & 0xFF) << 8) + (rx[5] & 0xFF);
+    if (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN)
+      KERR("ERROR %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+           len, rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
+    else
+      {
+      *seq = ((rx[6] & 0xFF) << 8) + (rx[7] & 0xFF);
+      if (is_dgram == 0)
+        {
+        rxlen = read(fd, rx + HEADER_TAP_MSG, len);
+        while (rxlen == -1)
+          {
+          if ((errno!=EINTR) && (errno!=EWOULDBLOCK) && (errno!=EAGAIN))
+            {
+            KERR("ERROR %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+                 rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
+                 rx[4], rx[5], rx[6], rx[7]);
+            break;
+            } 
+          count += 1;
+          if (count >= 50)
+            {
+            KERR("ERROR %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+                 rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
+                 rx[4], rx[5], rx[6], rx[7]);
+            break;
+            }
+          usleep(100);
+          rxlen = read(fd, rx + HEADER_TAP_MSG, len);
+          }
+        }
+      else
+        {
+        rxlen = tot_len - HEADER_TAP_MSG;
+        }
+      if (rxlen != len)
+        {
+        KERR("ERROR %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+             rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
+             rx[4], rx[5], rx[6], rx[7]);
+        }
+      else
+        {
+        *buf = rx + HEADER_TAP_MSG;
+        *buf_len = len;
+        }
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int get_pid_num_and_name(char *name)
@@ -96,7 +265,7 @@ static int get_pid_num_and_name(char *name)
 
 
 /****************************************************************************/
-int lib_io_proxy_is_on(char *name)
+int lib_io_running_in_crun(char *name)
 {
   int pid, result = 0;
   char *file_name = "/proc/1/cmdline";
@@ -404,11 +573,18 @@ static int rx_dchan_cb(int llid, int fd)
   if (dchan[cidx].fd != fd)
     KOUT(" ");
   first_rx_buf = (char *)clownix_malloc(first_rx_buf_max+1, IOCMLC);
-  len = util_read (first_rx_buf, first_rx_buf_max, get_fd_with_cidx(cidx));
+/*
+  if (kind == kind_server_proxy_traf_inet) 
+    len = util_read_brakes_on(first_rx_buf, first_rx_buf_max, 
+                              get_fd_with_cidx(cidx), llid);
+  else
+*/
+  len = util_read(first_rx_buf, first_rx_buf_max, get_fd_with_cidx(cidx));
   if (len < 0)
     {
     clownix_free(first_rx_buf, __FUNCTION__);
-    err_dchan_cb(llid, errno, 1132);
+    if (errno != EOPNOTSUPP)
+      err_dchan_cb(llid, errno, 1132);
     correct_recv = 0;
     }
   else
@@ -541,31 +717,6 @@ int msg_watch_fd(int fd, t_fd_event rx_data,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int msg_watch_no_erase_fd(int fd, t_fd_event rx_data,
-                 t_fd_error err,  char *little_name)
-{
-  int llid, cidx;
-  if (fd < 0)
-    KOUT(" ");
-  if (!err)
-    KOUT(" ");
-  llid = channel_create(fd, kind_simple_watch_no_erase, little_name, rx_data,
-                        tx_dchan_cb, err_dchan_cb);
-  if (llid)
-    {
-    cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_watch;
-    dchan[cidx].rx_callback = default_rx_callback;
-    dchan[cidx].error_callback = err;
-    dchan[cidx].llid = llid;
-    dchan[cidx].fd = fd;
-    }
-  return (llid);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void proxy_traf_tx(int llid, int len, char *str_tx, int is_unix)
 {     
   char *ntx;
@@ -650,12 +801,16 @@ void proxy_sig_tx(int llid, int len, char *str_tx)
 /*****************************************************************************/
 static void proxy_traf_server_connect_from_client(int id, int fd, int is_unix)
 {
-  int fd_new, llid, cidx, serv_cidx;
+  int  kind, fd_new, llid, cidx, serv_cidx;
+  if (is_unix)
+    kind = kind_server_proxy_traf_unix;
+  else 
+    kind = kind_server_proxy_traf_inet;
   serv_cidx = channel_check_llid(id, __FUNCTION__);
   util_fd_accept(fd, &fd_new, __FUNCTION__);
   if (fd_new >= 0)
     {
-    llid = channel_create(fd_new, kind_server, "proxy", rx_dchan_cb,
+    llid = channel_create(fd_new, kind, "proxy", rx_dchan_cb,
                           tx_dchan_cb, err_dchan_cb);
     if (!llid)
       KOUT(" ");
@@ -699,7 +854,7 @@ static int proxy_sig_server_connect_from_client(int id, int fd)
   util_fd_accept(fd, &fd_new, __FUNCTION__);
   if (fd_new >= 0)
     {
-    llid = channel_create(fd_new, kind_server, "proxy", rx_dchan_cb,
+    llid = channel_create(fd_new, kind_server_proxy_sig, "proxy", rx_dchan_cb,
                           tx_dchan_cb, err_dchan_cb);
     if (!llid)
       KOUT(" ");
@@ -1101,7 +1256,6 @@ void string_tx_now(int llid, int len, char *str_tx)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 void msg_mngt_loop(void)
 {
@@ -1129,10 +1283,57 @@ int msg_mngt_get_epfd(void)
 }
 /*---------------------------------------------------------------------------*/
 
+
+/****************************************************************************/
+static void full_write(int fd, const char *buf, size_t len)
+{
+  ssize_t ret;
+  while (len > 0)
+    {
+    ret = write(fd, buf, len);
+    if ((ret == -1) && (errno != EINTR))
+      break;
+    buf += (size_t) ret;
+    len -= (size_t) ret;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+static void sigsegv_handler(int sig)
+{ 
+  char start[] = "BACKTRACE ------------\n";
+  char end[] = "addr2line -f -C -i -e <execfile> +0x<XXX>\n";
+  void *bt[1024];
+  int i, bt_size;
+  char **bt_syms;
+  int fd = open("/tmp/cloonix_sigsegv_backtrace",O_WRONLY|O_CREAT|O_TRUNC,0644);
+  size_t len;
+  bt_size = backtrace(bt, 1024);
+  bt_syms = backtrace_symbols(bt, bt_size);
+  full_write(fd, start, strlen(start));
+  for (i = 1; i < bt_size; i++)
+    {
+    len = strlen(bt_syms[i]);
+    full_write(fd, bt_syms[i], len);
+    full_write(fd, "\n", 1);
+    }
+  full_write(fd, end, strlen(end));
+  free(bt_syms);
+  close(fd);
+  exit(1);
+}
+/*--------------------------------------------------------------------------*/
+
+
 /*****************************************************************************/
 void msg_mngt_init (char *name, int max_len_per_read)
 {
   struct sigaction act;
+
+  signal(SIGSEGV, sigsegv_handler);
+
   cloonix_conf_linker_helper();
   doorways_linker_helper();
   memset (peak_queue_len, 0, MAX_SELECT_CHANNELS*sizeof(long long));

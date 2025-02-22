@@ -36,7 +36,7 @@ diff -Naur openssh-8.6p1/configure tainted_openssh/configure
  			101*)   ;; # 1.1.x
  			200*)   ;; # LibreSSL
  			300*)   ;; # OpenSSL development branch.
-+			303*)   ;; # VIP OpenSSL development branch.
++			304*)   ;; # VIP OpenSSL development branch.
  		        *)
  				as_fn_error $? "Unknown/unsupported OpenSSL version (\"$ssl_library_ver\")" "$LINENO" 5
  		                ;;

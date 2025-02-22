@@ -141,8 +141,6 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   char resp[MAX_PATH_LEN];
-  uint32_t dist_ip;
-  uint16_t dist_port;
   uint8_t mac[6];
 
   memset(resp, 0, MAX_PATH_LEN);
@@ -165,7 +163,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   else if (sscanf(line,
   "c2c_get_free_udp_port %s proxycrun %hu", g_c2c_name, &g_udp_port) == 2)
     {
-    if (udp_init(&g_udp_port))
+    if (udp_init(g_udp_port))
       {
       snprintf(resp, MAX_PATH_LEN-1,
       "c2c_get_free_udp_port_ko %s", g_c2c_name);
@@ -179,18 +177,9 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (sscanf(line,
-  "c2c_set_dist_udp_ip_port proxycrun=no %s %x %hu",
-  g_c2c_name, &dist_ip, &dist_port)==3)
-    {
-    udp_fill_dist_addr(dist_ip, dist_port);
-    snprintf(resp, MAX_PATH_LEN-1,
-    "c2c_set_dist_udp_ip_port_ok %s", g_c2c_name);
-    rpct_send_sigdiag_msg(llid, tid, resp);
-    }
-  else if (sscanf(line,
   "c2c_send_probe_udp %s", g_c2c_name) == 1)
     {
-    udp_tx_sig(strlen("probe")+1, (uint8_t *) "probe");
+    udp_tx_sig_send(strlen("probe")+1, (uint8_t *) "probe");
     }
   else if (sscanf(line,
   "c2c_enter_traffic_udp %s", g_c2c_name) == 1)
@@ -295,7 +284,7 @@ int main (int argc, char *argv[])
                              &fd_rx_from_tap, &fd_tx_to_tap);
 
   init_packet_arp_mangle();
-  msg_mngt_init("c2c", IO_MAX_BUF_LEN);
+  msg_mngt_init("c2c", TRAF_TAP_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
   rxtx_init(fd_rx_from_tap, fd_tx_to_tap);
   if (!access(g_ctrl_path, F_OK))

@@ -51,6 +51,7 @@ enum{
   msg_type_pid,
 };
 
+static void ovs_destroy_test(void);
 static int g_system_promisc;
 
 /****************************************************************************/
@@ -146,17 +147,10 @@ static int try_send_msg_ovs(t_ovs *cur, int msg_type, int tid, char *msg)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void set_destroy_requested(t_ovs *cur, int val)
-{
-  cur->destroy_requested = val;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static t_ovs *_ovs_find_with_llid(int llid)
 {
   t_ovs *cur = g_head_ovs;
-  if (cur && (cur->llid != llid))
+  if (llid && cur && (cur->llid != llid))
     {
     cur = NULL;
     }
@@ -206,7 +200,7 @@ static void ovs_watchdog(void *data)
     {
     KERR("ERROR OVS %s TIMEOUT %s %d %d %d", cur->name, mu->name,
                                    cur->llid, cur->pid, cur->periodic_count);
-    set_destroy_requested(cur, 1);
+    ovs_destroy();
     }
   clownix_free(data, __FUNCTION__);
 }
@@ -223,47 +217,6 @@ static int ovs_birth(void *data)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void send_last_msg_req_destroy(t_ovs *cur)
-{
-  try_send_msg_ovs(cur, msg_type_diag, 0, "ovs_req_destroy");
-  cur->last_msg_req_destroy_sent = 1;
-  cur->destroy_requested = 1;
-}
-
-/****************************************************************************/
-static void check_on_destroy_requested(t_ovs *cur)
-{
-  char *sock;
-  if (cur->destroy_requested > 2)
-    {
-    cur->destroy_requested -= 1;
-    }
-  else if (cur->destroy_requested == 2)
-    {
-    send_last_msg_req_destroy(cur);
-    cur->destroy_requested -= 1;
-    }
-  else if (cur->destroy_requested == 1)
-    { 
-    event_print("End OpenVSwitch %s", cur->name);
-    sock = utils_get_ovs_path(cur->name);
-    if (cur->llid)
-      llid_trace_free(cur->llid, 0, __FUNCTION__);
-    if (cur->ovsdb_pid > 0)
-      {
-      if (!kill(cur->ovsdb_pid, SIGKILL))
-        KERR("ERROR: ovsdb was alive");
-      }
-    if (cur->ovs_pid > 0)
-      {
-      if (!kill(cur->ovs_pid, SIGKILL))
-        KERR("ERROR: ovs was alive");
-      }
-    unlink(sock);
-    }
-} 
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int create_ovs_drv_process(char *name)
@@ -359,7 +312,7 @@ static void timer_ovs_beat(void *data)
         if (cur->connect_try_count == 20)
           {
           KERR("OVS %s NOT LISTENING destroy_request", cur->name);
-          set_destroy_requested(cur, 1);
+          ovs_destroy();
           }
         clownix_timeout_add(10, timer_ovs_beat, NULL, NULL, NULL);
         }
@@ -388,7 +341,7 @@ static void timer_ovs_beat(void *data)
         if (cur->open_ovsdb_wait > 250)
           {
           KERR("ERROR OVSDB %s NOT RESPONDING", cur->name);
-          set_destroy_requested(cur, 1);
+          ovs_destroy();
           }
         clownix_timeout_add(10, timer_ovs_beat, NULL, NULL, NULL);
         }
@@ -404,7 +357,7 @@ static void timer_ovs_beat(void *data)
         if (cur->open_ovs_wait > 70)
           {
           KERR("ERROR OVS %s NOT RESPONDING", cur->name);
-          set_destroy_requested(cur, 1);
+          ovs_destroy();
           }
         clownix_timeout_add(3, timer_ovs_beat, NULL, NULL, NULL);
         }
@@ -422,7 +375,7 @@ static void timer_ovs_beat(void *data)
           if (cur->unanswered_pid_req > 100)
             {
             KERR("ERROR OVS %s NOT RESPONDING", cur->name);
-            set_destroy_requested(cur, 1);
+            ovs_destroy();
             }
           }
         clownix_timeout_add(50, timer_ovs_beat, NULL, NULL, NULL);
@@ -430,7 +383,7 @@ static void timer_ovs_beat(void *data)
       }
     else
       clownix_timeout_add(50, timer_ovs_beat, NULL, NULL, NULL);
-    check_on_destroy_requested(cur);
+    ovs_destroy_test();
     cur->global_pid_req_watch += 1;
     if (cur->global_pid_req_watch > 1000)
       KOUT("ERROR OVS %s NOT GIVING PID", cur->name);
@@ -550,12 +503,12 @@ void ovs_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       {
       KERR("ERROR: cloonix_ovs is not suid root");
       KERR("sudo chmod u+s /usr/libexec/cloonix/server/cloonix-ovs-vswitchd");
-      set_destroy_requested(cur, 1);
+      ovs_destroy();
       }
     else if (!strcmp(line, "ovs_resp_ovsdb_ko"))
       {
       KERR("ERROR ovs_resp_ovsdb_ko");
-      set_destroy_requested(cur, 1);
+      ovs_destroy();
       }
     else if (!strncmp(line, "ovs_resp_ovsdb_ok", strlen("ovs_resp_ovsdb_ok")))
       {
@@ -565,7 +518,7 @@ void ovs_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     else if (!strcmp(line, "ovs_resp_ovs_ko"))
       {
       KERR("ERROR cloonix-ovs-vswitchd FAIL");
-      set_destroy_requested(cur, 1);
+      ovs_destroy();
       }
     else if (!strncmp(line, "ovs_resp_ovs_ok", strlen("ovs_resp_ovs_ok")))
       {
@@ -658,11 +611,82 @@ int get_daemon_done(void)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void ovs_destroy_test(void)
+{
+  char *sock;
+  t_ovs *cur = g_head_ovs;
+  if (!cur)
+    KERR("ERROR: NULL ovs");
+  else
+    {
+    if (cur->destroy_requested > 2)
+      {
+      cur->last_msg_req_destroy_sent = 1;
+      try_send_msg_ovs(cur, msg_type_diag, 0, "ovs_req_destroy");
+      cur->destroy_requested -= 1;
+      }
+    else if (cur->destroy_requested == 2)
+      {
+      if (cur->last_msg_req_destroy_sent != 1)
+        KERR("ERROR: %d", cur->last_msg_req_destroy_sent);
+      try_send_msg_ovs(cur, msg_type_diag, 0, "ovs_req_destroy");
+      cur->destroy_requested -= 1;
+      } 
+    else if (cur->destroy_requested == 1)
+      { 
+      if (cur->llid)
+        {
+        llid_trace_free(cur->llid, 0, __FUNCTION__);
+        cur->llid = 0;
+        }
+      if (cur->ovsdb_pid > 0)
+        {
+        if (!kill(cur->ovsdb_pid, SIGKILL))
+          KERR("ERROR: ovsdb was alive");
+        cur->ovsdb_pid = 0;
+        }
+      if (cur->ovs_pid > 0)
+        {
+        if (!kill(cur->ovs_pid, SIGKILL))
+          KERR("ERROR: ovs was alive");
+        cur->ovs_pid = 0;
+        }
+      sock = utils_get_ovs_path(cur->name);
+      if (!access(sock,F_OK))
+        unlink(sock);
+      }
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void ovs_destroy(void)
 {
   t_ovs *cur = g_head_ovs;
-  if (cur)
-    send_last_msg_req_destroy(cur);
+  if (!cur)
+    KERR("ERROR: NULL ovs");
+  else if ((!cur->last_msg_req_destroy_sent) && (!cur->destroy_requested))
+    {
+    if (cur->llid == 0)
+      {
+      KERR("ERROR: LINK TO OVS DEAD");
+      cur->destroy_requested = 1;
+      }
+    else
+      cur->destroy_requested = 3;
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void ovs_llid_closed(int llid, int from_clone)
+{
+  t_ovs *cur = g_head_ovs;
+  if ((!from_clone) && (cur) && (cur->llid == llid))
+    {
+    cur->llid = 0;
+    ovs_destroy();
+    }
 }
 /*---------------------------------------------------------------------------*/
 

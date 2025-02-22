@@ -43,54 +43,48 @@
 
 static char g_netns_namespace[MAX_NAME_LEN];
 static char g_tap_name[MAX_NAME_LEN];
-static uint8_t g_buf_rx[TOT_MSG_BUF_LEN];
-static uint8_t g_buf_tx[TOT_MSG_BUF_LEN];
-static uint8_t g_head_msg[HEADER_TAP_MSG];
+static uint8_t g_buf_rx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_buf_tx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
 static uint8_t g_mac_tap[6];
 static int g_fd_tx_to_parent;
 static int g_fd_rx_from_parent;
 
 /****************************************************************************/
-static void tx_tap(int fd)
+static void tx_tapif(int fd)
 {
-  int len, tx, rx;
-  len = read(g_fd_rx_from_parent, g_head_msg, HEADER_TAP_MSG);
-  if (len != HEADER_TAP_MSG)
-    KOUT("ERROR %d %d", len, errno);
-  else
-    {
-    if ((g_head_msg[0] != 0xCA) || (g_head_msg[1] != 0xFE)) 
-      KOUT("ERROR %d %d %hhx %hhx",len,errno,g_head_msg[0],g_head_msg[1]);
-    len = ((g_head_msg[2] & 0xFF) << 8) + (g_head_msg[3] & 0xFF);
-    if ((len == 0) || (len > MAX_TAP_BUF_LEN))
-      KOUT("ERROR %d %hhx %hhx", len, g_head_msg[2], g_head_msg[3]);
-    rx = read(g_fd_rx_from_parent, g_buf_rx, len);
-    if (len != rx)
-      KOUT("ERROR TAP %s %d %d %d", g_tap_name, len, rx, errno);
-    tx = write(fd, g_buf_rx, len);
-    if (tx != len)
-      KOUT("ERROR WRITE TAP %d %d %d", tx, len, errno);
-    }
+  static uint16_t seqtap=0;
+  uint16_t seq;
+  int len, buf_len, tx, result;
+  uint8_t *buf;
+  int fdrx = g_fd_rx_from_parent;
+  len = read(fdrx, g_buf_rx, MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN);
+  if (len <= 0)
+    KOUT("ERROR READ %d %d", len, errno);
+  result = fct_seqtap_rx(1, len, fdrx, g_buf_rx, &seq, &buf_len, &buf);
+  if (result != kind_seqtap_data)
+    KOUT("ERROR %d", result);
+  if (seq != ((seqtap+1)&0xFFFF)) 
+    KERR("WARNING %d %d", seq, seqtap);
+  seqtap = seq;
+  tx = write(fd, buf, buf_len);
+  if (tx != buf_len)
+    KOUT("ERROR WRITE TAP %d %d %d", tx, buf_len, errno);
 }
 /*-------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void rx_tap(int fd)
+static void rx_tapif(int fd)
 {
+  static uint16_t seqtap = 0;
   int len, tx;
-  len = read(fd, g_buf_tx + HEADER_TAP_MSG, MAX_TAP_BUF_LEN);
-  if (len <= 0)
-    KOUT("ERROR READ TAP %s %d %d", g_tap_name, len, errno);
-  else
-    {
-    g_buf_tx[0] = 0xCA;
-    g_buf_tx[1] = 0xFE;
-    g_buf_tx[2] = (len & 0xFF00) >> 8;
-    g_buf_tx[3] =  len & 0xFF;
-    tx = write(g_fd_tx_to_parent, g_buf_tx, len + HEADER_TAP_MSG);
-    if (tx != len + HEADER_TAP_MSG)
-      KOUT("ERROR WRITE %s %d %d %d", g_tap_name, tx, len, errno);
-    }
+  seqtap += 1;
+  len = read(fd, g_buf_tx + HEADER_TAP_MSG, MAX_TAP_BUF_LEN+END_FRAME_ADDED_CHECK_LEN);
+  if ((len <= 0) || (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+    KOUT("ERROR READ %d", len);
+  fct_seqtap_tx(kind_seqtap_data, g_buf_tx, seqtap, len, NULL);
+  tx = write(g_fd_tx_to_parent, g_buf_tx, len + HEADER_TAP_MSG);
+  if (tx != len + HEADER_TAP_MSG)
+    KOUT("ERROR WRITE %s %d %d %d", g_tap_name, tx, len, errno);
 }
 /*-------------------------------------------------------------------------*/
 
@@ -216,9 +210,9 @@ static void forked_process_tap(int fd_rx_from_parent)
     if (result < 0)
       KOUT("ERROR %s %s", g_netns_namespace, g_tap_name);
     if (FD_ISSET(fd, &infd))
-      rx_tap(fd);
+      rx_tapif(fd);
     if (FD_ISSET(fd_rx_from_parent, &infd))
-      tx_tap(fd);
+      tx_tapif(fd);
     }
 
 }

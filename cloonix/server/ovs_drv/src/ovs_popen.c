@@ -64,9 +64,7 @@ static void add_cmd_to_log(char *ovs_dir, char *argv[])
   char pth[MAX_ARG_LEN];
   snprintf(pth, MAX_ARG_LEN-1, "%s/log/%s", ovs_dir, DEBUG_LOG_OVS_CMD);
   fp_log = fopen(pth, "a+");
-  if (!fp_log) 
-    KERR("ERROR %s %s", strerror(errno), make_cmd_str(argv));
-  else
+  if (fp_log) 
     {
     fprintf(fp_log, "\n\n");
     fprintf(fp_log, "%s", make_cmd_str(argv));

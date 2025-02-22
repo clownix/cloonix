@@ -46,7 +46,7 @@ typedef struct t_ovs_a2b
 } t_ovs_a2b;
 
 t_ovs_a2b *ovs_a2b_get_first(int *nb_a2b);
-void ovs_a2b_llid_closed(int llid);
+void ovs_a2b_llid_closed(int llid, int from_clone);
 void ovs_a2b_pid_resp(int llid, char *name, int pid);
 int  ovs_a2b_get_all_pid(t_lst_pid **lst_pid);
 int  ovs_a2b_diag_llid(int llid);

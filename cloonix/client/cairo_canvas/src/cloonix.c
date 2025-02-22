@@ -412,7 +412,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 /****************************************************************************/
 int main(int argc, char *argv[])
 {
-  int proxy_is_on;
+  int running_in_crun;
   char tmpnet[MAX_NAME_LEN];
   g_novnc = 0;
   g_argc = 2;
@@ -451,11 +451,12 @@ int main(int argc, char *argv[])
     KOUT(" ");
 
   memset(g_doors_client_addr, 0, MAX_PATH_LEN);
-  proxy_is_on = lib_io_proxy_is_on(tmpnet);
-  if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
+  running_in_crun = lib_io_running_in_crun(tmpnet);
+  if (running_in_crun && (!strcmp(tmpnet, argv[2])))
     {
-    snprintf(g_doors_client_addr, MAX_NAME_LEN-1,
-             "127.0.0.1:%d", g_cloonix_conf_info->port);
+    snprintf(g_doors_client_addr, MAX_PATH_LEN-1,
+             "%s_%s/proxy_pmain.sock",
+             PROXYSHARE_IN, argv[2]);
     }
   else
     {

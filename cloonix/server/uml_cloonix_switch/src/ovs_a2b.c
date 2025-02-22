@@ -84,7 +84,6 @@ static void free_a2b(t_ovs_a2b *cur)
   if (cur->llid)
     {
     llid_trace_free(cur->llid, 0, __FUNCTION__);
-    hop_event_free(cur->llid);
     }
   if (cur->prev)
     cur->prev->next = cur->next;
@@ -473,16 +472,19 @@ int ovs_a2b_get_all_pid(t_lst_pid **lst_pid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_a2b_llid_closed(int llid)
+void ovs_a2b_llid_closed(int llid, int from_clone)
 {
   t_ovs_a2b *cur = g_head_a2b;
-  while(cur)
+  if (!from_clone)
     {
-    if (cur->llid == llid)
+    while(cur)
       {
-      cur->closed_count = 2;
+      if (cur->llid == llid)
+        {
+        cur->closed_count = 2;
+        }
+      cur = cur->next;
       }
-    cur = cur->next;
     }
 }
 /*--------------------------------------------------------------------------*/

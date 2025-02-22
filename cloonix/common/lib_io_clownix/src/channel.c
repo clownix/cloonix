@@ -35,7 +35,7 @@
 #include "epoll_hooks.h"
 #include "msg_layer.h"
 
-#define HEARTBEAT_DEFAULT_TIMEOUT 10
+#define HEARTBEAT_DEFAULT_TIMEOUT 5
 #define MAX_EPOLL_EVENTS_PER_RUN 50
 #define PERSEC_COUNTER_INSANE 3000000
 
@@ -50,6 +50,9 @@ static int g_epfd;
 static t_fct_before_epoll g_fct_before_epoll;
 static t_fct_after_epoll  g_fct_after_epoll;
 
+static int g_count_eintr;
+
+/*---------------------------------------------------------------------------*/
 /*---------------------------------------------------------------------------*/
 typedef struct t_io_channel
   {
@@ -57,8 +60,15 @@ typedef struct t_io_channel
   int waked_count_in;
   int waked_count_out;
   int waked_count_err;
+  int epollhup_count;
+  int zero_count_read_total;
+  int zero_count_read;
+  int zero_count_write_total;
+  int zero_count_write;
   int out_bytes;
   int in_bytes;
+  int must_reactivate_read;
+  int must_reactivate_write;
   int red_to_stop_reading;
   int red_to_stop_writing;
   t_fd_event rx_cb;
@@ -69,6 +79,7 @@ typedef struct t_io_channel
   struct epoll_event epev;
   } t_io_channel;
 /*---------------------------------------------------------------------------*/
+
 typedef struct t_llid_pool
   {
   int fifo_free_index[CLOWNIX_MAX_CHANNELS];
@@ -90,10 +101,18 @@ static int glob_heartbeat_ms_timeout;
 /*****************************************************************************/
 
 /*****************************************************************************/
+int channel_get_kind(int cidx)
+{
+  return (g_channel[cidx].kind);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void zero_channel(int idx)
 {
   memset(&(g_channel[idx]), 0, sizeof(t_io_channel));
   g_channel[idx].fd = -1;
+  g_channel[idx].epev.data.fd = -1;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -374,6 +393,8 @@ static void llid_pool_release(int llid)
   llid_pool.write_idx = (llid_pool.write_idx + 1) % CLOWNIX_MAX_CHANNELS;
   if (llid_pool.write_idx == 0)
     llid_pool.write_idx = 1;
+  if (!i_am_a_clone())
+    called_from_channel_free_llid(llid);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -422,6 +443,22 @@ struct timeval *channel_get_current_time(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+/*
+void channel_rx_slow_down(int llid)
+{
+  int cidx;
+  if (msg_exist_channel(llid))
+    {
+    cidx = get_cidx(llid);
+    g_channel[cidx].red_to_stop_reading = 1;
+    g_channel[cidx].must_reactivate = 1;
+    }
+}
+*/
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
 void channel_rx_local_flow_ctrl(int llid, int stop)
 {
   int cidx;
@@ -433,8 +470,6 @@ void channel_rx_local_flow_ctrl(int llid, int stop)
     else
       g_channel[cidx].red_to_stop_reading = 0;
     }
-  else
-    KERR("WARNING %d %d", llid, stop);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -471,9 +506,27 @@ static void new_second_arrival(void)
 /*****************************************************************************/
 int heartbeat_mngt(int type)
 {
+  static int even_for_10ms=0;
   static int heart_count=0;
   struct timeval cur;
-  int delta, result = 0;
+  int cidx, delta, result = 0;
+  for (cidx=1; cidx<=current_max_channels; cidx++)
+    {
+    if (g_channel[cidx].must_reactivate_write)
+      {
+      g_channel[cidx].red_to_stop_writing = 0;
+      g_channel[cidx].must_reactivate_write = 0;
+      }
+    if (g_channel[cidx].must_reactivate_read)
+      {
+      g_channel[cidx].red_to_stop_reading = 0;
+      g_channel[cidx].must_reactivate_read = 0;
+      }
+    }
+  even_for_10ms += 1;
+  if (even_for_10ms == 2)
+    {
+    even_for_10ms = 0;
   if (type == 1)
     heart_count++;
   my_gettimeofday(&cur);
@@ -499,6 +552,7 @@ int heartbeat_mngt(int type)
       {
       channel_beat(delta);
       }
+    }
     }
   return result;
 }
@@ -595,12 +649,8 @@ static void prepare_rx_tx_events(void)
             {
             if (!g_channel[cidx].red_to_stop_reading)
               evt |= EPOLLIN;
-            else
-              KERR(" ");
             if (!g_channel[cidx].red_to_stop_writing)
               evt |= EPOLLOUT;
-            else
-              KERR(" ");
             }
           else 
             {
@@ -631,8 +681,8 @@ void channel_delete(int llid)
     cidx = get_cidx(llid);
     fd = g_channel[cidx].fd;
     epoll_ctl(g_epfd, EPOLL_CTL_DEL, fd, NULL);
-    if ((g_channel[cidx].kind != kind_simple_watch_connect) &&
-        (g_channel[cidx].kind != kind_simple_watch_no_erase))
+    
+    if (g_channel[cidx].kind != kind_simple_watch_connect)
       util_free_fd(fd);
     release_llid_cidx(llid, cidx);
     }
@@ -644,8 +694,10 @@ int channel_create(int fd, int kind, char *little_name,
                    t_fd_event rx_cb, t_fd_event tx_cb, t_fd_error err_cb)
 {
   int llid = 0, cidx;
-  if (g_channel[fd].fd == fd)
-    KERR("fd exists");
+  if (fd < 0)
+    KERR("ERROR NEGATIVE fd");
+  else if (g_channel[fd].fd == fd)
+    KERR("ERROR fd exists");
   else
     {
     alloc_llid_cidx(&llid, &cidx, fd);
@@ -690,130 +742,150 @@ void channel_beat_set (t_heartbeat_cb beat)
 /*****************************************************************************/
 static void waked_count_update(int nb, struct epoll_event *events)
 {
-  int i, k;
+  int  k, cidx, llid;
   uint32_t evt;
   for(k=0; k<nb; k++)
     {
-    i = events[k].data.fd;
-    if (g_channel[i].fd == -1)
+    if (events[k].data.fd >= 0)
       {
-      continue;
-      }
-    if (!(get_llid(i)))
-      KOUT("%d %d %d", i, g_channel[i].fd, g_channel[i].kind);
-    evt = events[k].events;
-    if (evt)
-      {
-      if (evt & EPOLLIN)
-        g_channel[i].waked_count_in += 1;
-      if (evt & EPOLLOUT)
-        g_channel[i].waked_count_out += 1;
-      if ((evt & EPOLLHUP) || (evt & EPOLLERR))
-        g_channel[i].waked_count_err += 1;
+      cidx = events[k].data.fd + 1;
+      llid = get_llid(cidx);
+      if ((g_channel[cidx].fd != -1) && (llid > 0))
+        {
+        evt = events[k].events;
+        if (evt)
+          {
+          if (evt & EPOLLIN)
+            g_channel[cidx].waked_count_in += 1;
+          if (evt & EPOLLOUT)
+            g_channel[cidx].waked_count_out += 1;
+          if ((evt & EPOLLERR) || (evt & EPOLLHUP))
+            g_channel[cidx].waked_count_err += 1;
+          }
+        }
       }
     }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
+static int handle_io_on_fd(int nb, struct epoll_event *events)
 {
   int llid, cidx, len, k, result = -1;
   uint32_t evt;
-  *neg = 0;
+
   for(k=0; (!channel_modification_occurence) && (k<nb); k++)
     {
+    /*---------------------------------------------------------*/
+    if (events[k].data.fd == -1)
+      continue;
     cidx = events[k].data.fd + 1;
     llid = get_llid(cidx);
-
-    if (g_channel[cidx].fd == -1)
+    if ((g_channel[cidx].fd == -1) || (llid == 0))
+      continue;
+    /*---------------------------------------------------------*/
+    evt = events[k].events;
+    if (evt & EPOLLERR)
       {
-      *neg = 1;
-      if (*pb)
-        {
-        if (!llid)
-          {
-          KERR("%d %d %d", cidx, events[k].data.fd, g_channel[cidx].kind);
-          epoll_ctl(g_epfd, EPOLL_CTL_DEL, events[k].data.fd, NULL);
-          }
-        else
-          {
-          KERR("%d %d %d", cidx, events[k].data.fd, g_channel[cidx].kind);
-          g_channel[cidx].err_cb(llid, errno, 515);
-          channel_delete(llid);
-          }
-        *pb = 0;
-        }
-
+      g_channel[cidx].err_cb(llid, errno, 5312);
+      channel_delete(llid);
       continue;
       }
-
-    if (!llid)
-      KOUT("%d %d %d", cidx, g_channel[cidx].fd, g_channel[cidx].kind);
-    evt = events[k].events;
-
     if (evt & EPOLLHUP)
       {
-      g_channel[cidx].err_cb(llid, errno, 5111);
-      channel_delete(llid);
-      result = 0;
+      g_channel[cidx].epollhup_count += 1;
+      if (g_channel[cidx].epollhup_count > 200)
+        {
+        g_channel[cidx].err_cb(llid, errno, 5112);
+        channel_delete(llid);
+        }
+      continue;
       }
-    else if (evt & EPOLLERR)
-      {
-      g_channel[cidx].err_cb(llid, errno, 5112);
-      channel_delete(llid);
-      result = 0;
-      }
+    g_channel[cidx].epollhup_count = 0;
     }
-
   for(k=0; (!channel_modification_occurence) && (k<nb); k++) 
     {
-    cidx = events[k].data.fd + 1;
-    if (g_channel[cidx].fd == -1)
+    /*---------------------------------------------------------*/
+    if (events[k].data.fd == -1)
       continue;
+    cidx = events[k].data.fd + 1;
     llid = get_llid(cidx);
-    if (!llid)
-      KOUT("%d %d %d", cidx, g_channel[cidx].fd, g_channel[cidx].kind);
+    if ((g_channel[cidx].fd == -1) || (llid == 0))
+      continue;
+    /*---------------------------------------------------------*/
     evt = events[k].events;
-
-    if ((g_channel[cidx].kind == kind_simple_watch_connect) ||
-        (g_channel[cidx].kind == kind_simple_watch_no_erase)  ||
-        (g_channel[cidx].kind == kind_simple_watch)  ||
-        (g_channel[cidx].kind == kind_server) || 
+    if ((g_channel[cidx].kind == kind_simple_watch_connect)  ||
+        (g_channel[cidx].kind == kind_simple_watch)          ||
+        (g_channel[cidx].kind == kind_server)                || 
+        (g_channel[cidx].kind == kind_server_doors)          || 
+        (g_channel[cidx].kind == kind_server_proxy_traf_unix) || 
+        (g_channel[cidx].kind == kind_server_proxy_traf_inet) || 
+        (g_channel[cidx].kind == kind_server_proxy_sig)      || 
         (g_channel[cidx].kind == kind_client))
       {
       if (evt & EPOLLOUT)
         {
-        len =
-        g_channel[cidx].tx_cb(llid, g_channel[cidx].fd);
+        len = g_channel[cidx].tx_cb(llid, g_channel[cidx].fd);
         if (len < 0)
           {
-          g_channel[cidx].err_cb(llid, errno, 512);
-          channel_delete(llid);
+          if (g_channel[cidx].fd != -1)
+            {
+            g_channel[cidx].err_cb(llid, errno, 512);
+            channel_delete(llid);
+            }
           }
         else
           {
+          if (len == 0)
+            {
+            g_channel[cidx].zero_count_write += 1;
+            g_channel[cidx].zero_count_write_total += 1;
+            }
+          else  
+            {
+            g_channel[cidx].zero_count_write = 0;
+            g_channel[cidx].zero_count_write_total = 0;
+            }
+          if (g_channel[cidx].zero_count_write > 10)
+            {
+            g_channel[cidx].red_to_stop_writing = 1;
+            g_channel[cidx].must_reactivate_write = 1;
+            KERR("WARNING WRITE %d %d %d %d", llid, cidx, g_channel[cidx].fd,
+                                            g_channel[cidx].kind);
+            }
+          if (g_channel[cidx].zero_count_write_total > 5000)
+            {
+            KERR("ERROR WRITE %d %d %d %d", llid, cidx, g_channel[cidx].fd,
+                                            g_channel[cidx].kind);
+            g_channel[cidx].err_cb(llid, errno, 1532);
+            channel_delete(llid);
+            }
+
           g_channel[cidx].out_bytes += len;
           channel_total_send += len;
+          result = 0;
           }
-        result = 0;
         }
       }
     }
 
   for(k=0; (!channel_modification_occurence) && (k<nb); k++) 
     {
-    cidx = events[k].data.fd + 1;
-    if (g_channel[cidx].fd == -1)
+    /*---------------------------------------------------------*/
+    if (events[k].data.fd == -1)
       continue;
+    cidx = events[k].data.fd + 1;
     llid = get_llid(cidx);
-    if (!llid)
-      KOUT("%d %d %d", cidx, g_channel[cidx].fd, g_channel[cidx].kind);
+    if ((g_channel[cidx].fd == -1) || (llid == 0))
+      continue;
+    /*---------------------------------------------------------*/
     evt = events[k].events;
-
-    if ((g_channel[cidx].kind == kind_simple_watch_no_erase) ||
-        (g_channel[cidx].kind == kind_simple_watch) ||
-        (g_channel[cidx].kind == kind_server) || 
+    if ((g_channel[cidx].kind == kind_simple_watch)          ||
+        (g_channel[cidx].kind == kind_server)                || 
+        (g_channel[cidx].kind == kind_server_doors)          || 
+        (g_channel[cidx].kind == kind_server_proxy_traf_unix) || 
+        (g_channel[cidx].kind == kind_server_proxy_traf_inet) || 
+        (g_channel[cidx].kind == kind_server_proxy_sig)      || 
         (g_channel[cidx].kind == kind_client))
       {
       if (evt & EPOLLIN)
@@ -821,15 +893,43 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
         len = g_channel[cidx].rx_cb(llid, g_channel[cidx].fd);
         if (len < 0)
           {
-          g_channel[cidx].err_cb(llid, errno, 513);
-          channel_delete(llid);
+          if (g_channel[cidx].fd != -1)
+            {
+            g_channel[cidx].err_cb(llid, errno, 513);
+            channel_delete(llid);
+            }
           }
         else
           {
+          if (len == 0)
+            {
+            g_channel[cidx].zero_count_read += 1;
+            g_channel[cidx].zero_count_read_total += 1;
+            } 
+          else  
+            {
+            g_channel[cidx].zero_count_read = 0;
+            g_channel[cidx].zero_count_read_total = 0;
+            }
+          if (g_channel[cidx].zero_count_read > 10)
+            {
+            g_channel[cidx].zero_count_read = 0;
+            g_channel[cidx].red_to_stop_reading = 1;
+            g_channel[cidx].must_reactivate_read = 1;
+            }
+          if (g_channel[cidx].zero_count_read_total > 5000)
+            {
+            g_channel[cidx].zero_count_read_total = 0;
+            if (g_channel[cidx].kind == kind_server_proxy_traf_inet)
+              {
+              g_channel[cidx].err_cb(llid, errno, 1533);
+              channel_delete(llid);
+              }
+            }
           g_channel[cidx].in_bytes += len;
           channel_total_recv += len;
+          result = 0;
           }
-        result = 0;
         }
       }
     }
@@ -840,13 +940,13 @@ static int handle_io_on_fd(int nb,struct epoll_event *events,int *pb,int *neg)
 /*****************************************************************************/
 void channel_loop(int once)
 {
-  int neg, cidx, k, result, pb = 0;
+  int cidx, k, result, pb = 0;
   uint32_t evt;
   static struct epoll_event events[MAX_EPOLL_EVENTS_PER_RUN];
   my_gettimeofday(&last_heartbeat);
   for(;;)
     {
-    if ((current_max_channels<0) || 
+    if ((current_max_channels<=0) || 
         (current_max_channels >= MAX_SELECT_CHANNELS))
       KOUT(" %d  %d", current_max_channels, MAX_SELECT_CHANNELS); 
     g_new_second_arrival_count += 1;
@@ -863,10 +963,14 @@ if (g_new_second_arrival_count > PERSEC_COUNTER_INSANE)
 KERR("ERROR");
       if (errno == EINTR)
         {
+        g_count_eintr += 1;
+        if (g_count_eintr > 1000)
+          KOUT(" errno: %d\n ", errno);
         continue;
         }
       KOUT(" errno: %d\n ", errno);
       }
+    g_count_eintr = 0;
     if (result == 0)
       {
 if (g_new_second_arrival_count > PERSEC_COUNTER_INSANE)
@@ -880,11 +984,10 @@ if (g_new_second_arrival_count > PERSEC_COUNTER_INSANE)
 KERR("ERROR %d %d", slipery_select, counter_select_speed);
     slipery_select++;
     counter_select_speed++;
-
     waked_count_update(result, events);
 
     channel_modification_occurence = 0;
-    if ((!handle_io_on_fd(result, events, &pb, &neg) || neg))
+    if (!handle_io_on_fd(result, events))
       slipery_select = 0;
 
     if (g_fct_after_epoll)
@@ -893,7 +996,9 @@ KERR("ERROR %d %d", slipery_select, counter_select_speed);
         slipery_select = 0;
       }
 
-    if (pb || (slipery_select >= 10))
+    if (slipery_select >= 1000)
+        KERR( "WARNING slip:%d", slipery_select);
+    if (pb || (slipery_select >= 2000))
       {
       for(k=0; k<result; k++) 
         {
@@ -931,6 +1036,7 @@ int channel_get_epfd(void)
 void channel_init(void)
 {
   int i;
+  g_count_eintr = 0;
   g_new_second_arrival_count = 0;
   my_gettimeofday(&last_heartbeat);
   for (i=0; i<MAX_SELECT_CHANNELS; i++)

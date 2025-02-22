@@ -73,13 +73,11 @@ cp -Lrf /etc/fonts ${COMMON}/etc
 
 cat > ${COMMON}/etc/passwd << "EOF"
 root:x:0:0:root:/root:/bin/bash
-www:!:999:999::/home/www:/usr/bin/false
 nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
 EOF
 cat > ${COMMON}/etc/group << "EOF"
 root:x:0:
 audio:x:29:pulse
-www:!:999:
 nogroup:x:65534:
 EOF
 cat > ${COMMON}/etc/rsyslog.conf << "EOF"
@@ -135,7 +133,7 @@ mkdir -p ${COMMON}/lib/x86_64-linux-gnu/perl-base/Debian
 cp -f   /usr/share/perl5/Debian/AdduserCommon.pm ${COMMON}/lib/x86_64-linux-gnu/perl-base/Debian
 cp -Lrf /usr/share/perl5 ${COMMON}/share
 #----------------------------------------------------------
-cp -Lrf /usr/lib/python3.12 ${COMMON}/lib
+cp -Lrf /usr/lib/python3.13 ${COMMON}/lib
 cp -Lrf /usr/share/gdb ${COMMON}/share
 cp /usr/bin/python3 ${COMMON}/python
 cp /usr/bin/gdb ${COMMON}
@@ -188,7 +186,8 @@ for i in "su" "awk" "cat" "chmod" "chown" "cp" "echo" "ps" "mkdir" \
          "xeyes" "xclock" "diff" "unzip" "unshare" "tail" "which" \
          "touch" "vim" "sleep" "find" "grep" "file" "false" "id" \
          "node" "watch" "chacl" "getfacl" "setfacl" "sed" "df" \
-         "du" "perl" "logger" "gpasswd" "passwd" "sync" "uname" ; do
+         "du" "perl" "logger" "gpasswd" "passwd" "sync" "uname" \
+         "mount" "umount" ; do
   cp -f /usr/bin/${i} ${COMMON}
 done
 for i in "useradd" "usermod" "groupadd" "groupdel" "groupmod" \

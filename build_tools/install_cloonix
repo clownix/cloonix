@@ -67,9 +67,10 @@ chmod 755 /usr/libexec/cloonix/server/*
 cp -vf /tmp/cloonix_install_tmp/server/usr_bin/cloonix_net /usr/bin
 #----------------------------------------------------------
 for i in "cloonix-crun" \
+         "cloonix-proxymous" \
          "cloonix-ovs-drv" \
          "cloonix-ovs-snf" \
-         "cloonix-ovs-nat" \
+         "cloonix-ovs-nat-main" \
          "cloonix-ovs-a2b" \
          "cloonix-ovs-c2c" \
          "cloonix-ovs-vsctl" \
@@ -82,4 +83,5 @@ mkdir -p /var/lib/cloonix/bulk
 chmod 777 /var/lib/cloonix/cache
 chmod 777 /var/lib/cloonix/cache/fontconfig
 chmod 777 /var/lib/cloonix/bulk
+rm -rf /tmp/cloonix_install_tmp
 #----------------------------------------------------------

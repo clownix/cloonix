@@ -38,7 +38,8 @@ SRC = \
       kvm.c \
       ovs.c \
       ovs_snf.c \
-      ovs_nat.c \
+      ovs_nat_main.c \
+      proxymous.c \
       ovs_a2b.c \
       ovs_tap.c \
       ovs_phy.c \
@@ -77,7 +78,9 @@ LIBS = -L${IO_CLOWNIX} -lio_clownix \
 
 
 CFLAGS+=-mtune=generic -fno-stack-protector
-CFLAGS+= -g $(WARNINGS) $(INCLUDES)  
+CFLAGS+= -g -rdynamic $(WARNINGS) $(INCLUDES)  
+
+LDFLAGS+= -g -rdynamic
 
 CC=gcc 
 all: $(shell mkdir -p ./obj) $(EXE)

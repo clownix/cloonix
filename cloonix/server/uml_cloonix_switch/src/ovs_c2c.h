@@ -74,7 +74,7 @@ typedef struct t_ovs_c2c
 } t_ovs_c2c;
 
 t_ovs_c2c *ovs_c2c_get_first(int *nb_c2c);
-void ovs_c2c_llid_closed(int llid);
+void ovs_c2c_llid_closed(int llid, int from_clone);
 void ovs_c2c_pid_resp(int llid, char *name, int pid);
 int  ovs_c2c_get_all_pid(t_lst_pid **lst_pid);
 int  ovs_c2c_diag_llid(int llid);

@@ -249,14 +249,17 @@ void stats_counters_heartbeat(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void stats_counters_llid_close(int llid)
+void stats_counters_llid_close(int llid, int from_clone)
 {
   t_stats_sub *cur;
-  cur = find_stats_sub_with_llid(llid);
-  while (cur)
+  if (!from_clone)
     {
-    free_stats_sub(cur);
     cur = find_stats_sub_with_llid(llid);
+    while (cur)
+      {
+      free_stats_sub(cur);
+      cur = find_stats_sub_with_llid(llid);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

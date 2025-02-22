@@ -30,7 +30,7 @@
 #include "utils_cmd_line_maker.h"
 #include "uml_clownix_switch.h"
 #include "hop_event.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 #include "ovs_a2b.h"
 #include "ovs_tap.h"
 #include "ovs_phy.h"
@@ -448,17 +448,19 @@ int ovs_snf_get_all_pid(t_lst_pid **lst_pid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void ovs_snf_llid_closed(int llid)
+void ovs_snf_llid_closed(int llid, int from_clone)
 {
   t_snf *cur = g_head_snf;
-  while(cur)
+  if (!from_clone)
     {
-    if (llid && (cur->llid == llid))
+    while(cur)
       {
-      hop_event_free(cur->llid);
-      cur->closed_count = 2;
+      if (llid && (cur->llid == llid))
+        {
+        cur->closed_count = 2;
+        }
+      cur = cur->next;
       }
-    cur = cur->next;
     }
 }
 /*--------------------------------------------------------------------------*/

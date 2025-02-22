@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void slowperiodic_llid_delete(int llid);
+void slowperiodic_llid_delete(int llid, int from_clone);
 void slowperiodic_init(void);
 /*---------------------------------------------------------------------------*/
 

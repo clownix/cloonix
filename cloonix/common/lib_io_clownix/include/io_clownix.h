@@ -54,6 +54,18 @@ void set_fd_not_to_close(int fd);
 #define MAX_MALLOC_TYPES 30
 
 
+/****************************************************************************/
+enum {
+     kind_seqtap_data = 0,
+     kind_seqtap_sig_hello,
+     kind_seqtap_sig_ready,
+     kind_seqtap_error
+     };
+void fct_seqtap_tx(int kind, uint8_t *tx, uint16_t seqtap,
+                   int len, uint8_t *buf);
+int fct_seqtap_rx(int is_dgram, int tot_len, int fd, uint8_t *rx,
+                  uint16_t *seq, int *buf_len, uint8_t **buf);
+/*---------------------------------------------------------------------------*/
 
 
 int is_nonblock(int llid);
@@ -147,8 +159,6 @@ int string_server_unix(char *pname,t_fd_connect connect_cb,char *little_name);
 int string_server_inet(uint16_t port,t_fd_connect connect_cb,char *little_name);
 void msg_mngt_set_callbacks (int llid, t_fd_error err_cb, 
                              t_msg_rx_cb rx_cb);
-int msg_watch_no_erase_fd(int fd, t_fd_event rx_data,
-                 t_fd_error err, char *little_name);
 int msg_watch_fd(int fd, t_fd_event rx_data,
                  t_fd_error err, char *little_name);
 struct timeval *channel_get_current_time(void);
@@ -179,9 +189,13 @@ unsigned long channel_get_tx_queue_len(int llid);
 void doors_tx_switch_val_none(int llid, int len, char *buf);
 void doors_tx_switch_val_c2c(int llid, int len, char *buf);
 
-int lib_io_proxy_is_on(char *name);
+int lib_io_running_in_crun(char *name);
 
 int msg_mngt_get_tx_queue_len(int llid);
+
+char *malloc_to_ascii_encode(int len, uint8_t *msg);
+uint8_t *malloc_to_byte_encode(int len, char *msg);
+
 
 #endif /* _IO_CLOWNIX_H */
 

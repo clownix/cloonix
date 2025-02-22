@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void layout_llid_destroy(int llid);
+void layout_llid_destroy(int llid, int from_clone);
 void layout_topo_init(void);
 void get_layout_main_params(int *go, int *width, int *height,
                             int *cx, int *cy, int *cw, int *ch);

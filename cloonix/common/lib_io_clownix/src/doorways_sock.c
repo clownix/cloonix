@@ -82,27 +82,6 @@ static int g_max_tx_doorway_queue_len_reached;
 static int g_init_done;
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static char *get_process_one_cmd(void)
-{
-  char *file_name = "/proc/1/cmdline";
-  static char buf[MAX_PATH_LEN];
-  FILE *fd = fopen(file_name, "r");
-  char *result = NULL;
-  if (fd == NULL)
-    KERR("WARNING: Cannot open %s", file_name);
-  else
-    {
-    memset(buf, 0, MAX_PATH_LEN);
-    if (!fgets(buf, MAX_PATH_LEN-1, fd)) 
-      KERR("WARNING: Cannot read %s", file_name);
-    else
-      result = buf;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
 /*****************************************************************************/
 static void fct_10_sec_timeout(void *data)
 {
@@ -199,6 +178,7 @@ void doorways_sock_address_detect(char *doors_client_addr,
                                   uint32_t *ip, int *port)
 {
   char doors[MAX_PATH_LEN];
+  struct stat stat_file;
   if (strlen(doors_client_addr) >= MAX_PATH_LEN)
     KOUT("LENGTH Problem");
   memset(doors, 0, MAX_PATH_LEN);
@@ -208,12 +188,17 @@ void doorways_sock_address_detect(char *doors_client_addr,
   if (strchr(doors, ':'))
     {
     if (get_ip_and_port(doors, ip, port))
-      KOUT("%s bad ip:port address", doors);
+      KOUT("ERROR %s bad ip:port address", doors);
+    }
+  else if (!stat(doors_client_addr, &stat_file))
+    {
+    if (!S_ISSOCK(stat_file.st_mode))
+      KOUT("ERROR %s not unix socket address", doors);
     }
   else
-    KOUT("%s bad ip:port address", doors);
+    KOUT("ERROR %s bad ip:port or not found unix socket address", doors);
 }
-/*--------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void clean_llid(int llid)
@@ -235,14 +220,25 @@ static void clean_llid(int llid)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void called_from_channel_free_llid(int llid)
+{
+  t_llid *lid = g_llid_data[llid];
+  if (lid)
+    {
+    clean_llid(llid);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static t_llid *alloc_llid(int doors_type, int llid, int fd, char *fct)
 {
   int cidx;
   t_data_channel *dchan;
   if (!doors_type)
-    KOUT("%d    %s   %s", llid, g_llid_data[llid]->fct, fct);
+    KOUT("%d %s", llid, fct);
   if (g_llid_data[llid])
-    KOUT("%d    %s   %s", llid, g_llid_data[llid]->fct, fct);
+    KOUT("%d %s %s", llid, g_llid_data[llid]->fct, fct);
   g_llid_data[llid] = (t_llid *) clownix_malloc(sizeof(t_llid), 9);
   memset(g_llid_data[llid], 0, sizeof(t_llid));
   g_llid_data[llid]->doors_type = doors_type;
@@ -664,7 +660,7 @@ static int rx_cb(int llid, int fd)
   char buf[MAX_DOORWAYS_BUF_LEN];
   t_llid *lid = g_llid_data[llid];
   if (!lid)
-    KERR(" ");
+    KERR("ERROR llid %d %d", llid, fd);
   else
     {
     if (lid->fd != fd)
@@ -705,7 +701,7 @@ static int server_new_connect_from_client(int id, int fd)
     if (fd_new > 0)
       {
       little_name = channel_get_little_name(id);
-      llid = channel_create(fd_new, kind_server, little_name, rx_cb,
+      llid = channel_create(fd_new, kind_server_doors, little_name, rx_cb,
                             tx_cb, cli_err_cb);
       if (!llid)
         KOUT(" ");
@@ -772,30 +768,16 @@ void doorways_sock_server(char *net_name, int port, char *passwd,
                          t_doorways_llid cb_llid, t_doorways_end cb_end,
                          t_doorways_rx cb_rx)
 {
-  int listen_fd, start_unix = 0;
+  int listen_fd;
   char unix_path[MAX_PATH_LEN];
-  char *process_init_name;
   if (g_init_done != 777)
     KOUT(" ");
-  process_init_name = get_process_one_cmd();
-  if (process_init_name == NULL)
-    KERR("ERROR");
-  else if (strstr(process_init_name, CRUN_STARTER))
-    start_unix = 1;
-  if (start_unix)
-    {
-    memset(unix_path, 0, MAX_PATH_LEN);
-    snprintf(unix_path, MAX_PATH_LEN-1, "%s/proxy_%s_pmain.sock",
-                                        PROXYSHARE, net_name);
-    listen_fd = util_socket_listen_unix(unix_path);
-    if (listen_fd < 0)
-      KERR("ERROR");
-    else
-      register_listen_fd(listen_fd, passwd, cb_llid, cb_end, cb_rx);
-    }
-  listen_fd = util_socket_listen_inet(port);
+  memset(unix_path, 0, MAX_PATH_LEN);
+  snprintf(unix_path, MAX_PATH_LEN-1, "%s_%s/proxy_pmain.sock",
+                                      PROXYSHARE_IN, net_name);
+  listen_fd = util_socket_listen_unix(unix_path);
   if (listen_fd < 0)
-    KOUT("ERROR");
+    KERR("ERROR");
   else
     register_listen_fd(listen_fd, passwd, cb_llid, cb_end, cb_rx);
 }
@@ -816,21 +798,35 @@ static void doorways_connect_error(int llid, int err, int from)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int doorways_sock_client_unix_start(char *sock_path, t_fd_event conn_rx)
+{
+  int fd, llid = 0;
+  if (g_init_done != 777)
+    KOUT("ERROR");
+  if (!util_nonblock_client_socket_unix(sock_path, &fd))
+    {
+    llid = channel_create(fd, kind_simple_watch_connect, "connect_wait",
+                          conn_rx, conn_rx, doorways_connect_error);
+    if (!llid)
+      KOUT("ERROR");
+    }
+  return llid;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int doorways_sock_client_inet_start(uint32_t ip, int port, t_fd_event conn_rx)
 {
   int fd, llid = 0;
   if (g_init_done != 777)
-    KOUT(" ");
-
-// lib_io_proxy_is_on
-
+    KOUT("ERROR");
   fd = util_nonblock_client_socket_inet(ip, port);
   if (fd != -1)
     {
     llid = channel_create(fd, kind_simple_watch_connect, "connect_wait",
                           conn_rx, conn_rx, doorways_connect_error);
     if (!llid)
-      KOUT(" ");
+      KOUT("ERROR %X %d", ip, port);
     }
   return llid;
 }
@@ -855,7 +851,7 @@ int doorways_sock_client_inet_end(int type, int llid, int fd,
   unsigned int len = sizeof(err);
 
   if (!msg_exist_channel(llid))
-    KERR("%d %d", llid, fd);
+    KERR("ERROR %d %d", llid, fd);
   else
     {
     channel_delete(llid); 
@@ -866,7 +862,7 @@ int doorways_sock_client_inet_end(int type, int llid, int fd,
         result = channel_create(fd, kind_client, "doorways_cli", rx_cb,
                                 tx_cb, err_cb);
         if (!result)
-          KOUT(" ");
+          KOUT("ERROR");
         lid = alloc_llid(type, result, fd, (char *) __FUNCTION__);
         lid->cb_end = cb_end;
         lid->cb_rx = cb_rx;
@@ -874,12 +870,13 @@ int doorways_sock_client_inet_end(int type, int llid, int fd,
         }
       else
         {
+        KERR("ERROR %d %d", llid, fd);
         util_free_fd(fd);
         }
       }
     else
       {
-      KERR("%d %d", llid, fd);
+      KERR("ERROR %d %d", llid, fd);
       util_free_fd(fd);
       }
     }

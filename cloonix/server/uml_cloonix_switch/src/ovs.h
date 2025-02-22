@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void ovs_llid_closed(int llid, int from_clone);
 char *ovs_format_ethv(t_vm *vm, int eth, char *ifname);
 void ovs_destroy(void);
 int get_daemon_done(void);

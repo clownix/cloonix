@@ -5,8 +5,26 @@ TARGZ=${HERE}/targz_store
 WORK=${HERE}/work_targz_store
 rm -rf ${WORK}
 mkdir -vp ${WORK}
-#-----------------------------------------------------
-
+#  #-----------------------------------------------------
+#  cd ${WORK}
+#  git clone --depth=1 https://github.com/h2o/picotls
+#  cd ${WORK}/picotls
+#  git submodule init
+#  git submodule update
+#  COMMIT=$(git log --pretty=format:"%H")
+#  cd ${WORK}
+#  tar zcvf picotls_${COMMIT}.tar.gz picotls
+#  rm -rf picotls
+#  mv picotls_${COMMIT}.tar.gz ${TARGZ}
+#  #-----------------------------------------------------
+#  cd ${WORK}
+#  git clone --depth=1 https://github.com/private-octopus/picoquic.git
+#  cd ${WORK}/picoquic
+#  COMMIT=$(git log --pretty=format:"%H")
+#  cd ${WORK}
+#  tar zcvf picoquic_${COMMIT}.tar.gz picoquic
+#  rm -rf picoquic
+#  mv picoquic_${COMMIT}.tar.gz ${TARGZ}
 #-----------------------------------------------------
 for i in "websockify-js" "noVNC"; do
   cd ${WORK}

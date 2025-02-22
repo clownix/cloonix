@@ -199,7 +199,7 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
   char *bulk = cfg_get_bulk();
 
   image = cnt->image;
-  if (get_proxy_is_on())
+  if (get_running_in_crun())
     {
     memset(option1, 0, MAX_PATH_LEN);
     memset(option2, 0, MAX_PATH_LEN);

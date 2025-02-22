@@ -16,7 +16,7 @@
 /*                                                                           */
 /*****************************************************************************/
 int  hop_event_alloc(int llid, int type_hop, char *name, int eth);
-void hop_event_free(int llid);
+void hop_event_free(int llid, int from_clone);
 int hop_event_client_for_hop_exists(int llid_hop);
 t_hop_list *hop_get_name_list(int *nb);
 void hop_free_name_list(t_hop_list *list);

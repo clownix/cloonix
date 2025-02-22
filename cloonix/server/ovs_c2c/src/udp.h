@@ -15,22 +15,13 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#define MAX_UDP_PKT_SIZE 2000
-
-typedef struct t_udp_burst
-{
-  int len;
-  uint8_t buf[MAX_UDP_PKT_SIZE];
-} t_udp_burst;
-
-void udp_tx_sig(int len, uint8_t *buf);
+int  udp_tx_sig_send(int len, uint8_t *tx);
+int  udp_tx_traf_send(int len, uint8_t *tx);
 int  udp_get_traffic_mngt(void);
 void udp_enter_traffic_mngt(void);
 void udp_close(void);
 void udp_fill_dist_addr(uint32_t ip, uint16_t udp_port);
 int  udp_tx_traf(int len, uint8_t *buf);
 int  udp_rx_traf(int len, uint8_t *buf);
-int udp_tx_burst(int nb, t_udp_burst *burst);
-t_udp_burst *get_udp_burst_tx(void);
-int udp_init(uint16_t *udp_port);
+int udp_init(uint16_t udp_port);
 /*--------------------------------------------------------------------------*/

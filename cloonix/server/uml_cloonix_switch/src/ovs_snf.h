@@ -26,7 +26,7 @@ void ovs_dyn_snf_stop_process(char *tap);
 
 int ovs_snf_collect_snf(t_eventfull_endp *eventfull);
 int ovs_snf_get_qty(void);
-void ovs_snf_llid_closed(int llid);
+void ovs_snf_llid_closed(int llid, int from_clone);
 void ovs_snf_pid_resp(int llid, char *name, int pid);
 int  ovs_snf_get_all_pid(t_lst_pid **lst_pid);
 int  ovs_snf_diag_llid(int llid);

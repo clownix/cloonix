@@ -43,7 +43,7 @@
 #include "suid_power.h"
 #include "cnt.h"
 #include "kvm.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 #include "ovs_a2b.h"
 #include "ovs_c2c.h"
 #include "ovs_tap.h"
@@ -118,7 +118,7 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
     snprintf(use, MAX_NAME_LEN, "%s is used by container", name);
     result = 1;
     }
-  else if (ovs_nat_exists(name))
+  else if (ovs_nat_main_exists(name))
     {
     snprintf(use, MAX_NAME_LEN, "%s is used by nat", name);
     result = 1;
@@ -309,7 +309,7 @@ int cfg_unset_vm(t_vm *vm)
   extract_vm(&cfg, vm);
   clownix_free(vm, __FUNCTION__);
   llid_trace_vm_delete(id);
-  ovs_nat_vm_event();
+  ovs_nat_main_vm_event();
   return id;
 }
 /*---------------------------------------------------------------------------*/
@@ -608,7 +608,7 @@ static void fill_topo_kvm(t_topo_kvm *kvm, t_vm *vm)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void fill_topo_nat(t_topo_nat *topo_nat, t_ovs_nat *nat)
+static void fill_topo_nat(t_topo_nat *topo_nat, t_ovs_nat_main *nat)
 {
   memset(topo_nat, 0, sizeof(t_topo_nat));
   strncpy(topo_nat->name, nat->name, MAX_NAME_LEN);
@@ -761,14 +761,14 @@ t_topo_info *cfg_produce_topo_info(void)
   t_topo_info_phy *info_phy;
   t_topo_bridges *bridges;
   t_topo_endp *c2c_endp = ovs_c2c_translate_topo_endp(&nb_endp_c2c);
-  t_topo_endp *nat_endp = ovs_nat_translate_topo_endp(&nb_endp_nat);
+  t_topo_endp *nat_endp = ovs_nat_main_translate_topo_endp(&nb_endp_nat);
   t_topo_endp *a2b_endp = ovs_a2b_translate_topo_endp(&nb_endp_a2b);
   t_topo_endp *tap_endp = ovs_tap_translate_topo_endp(&nb_endp_tap);
   t_topo_endp *phy_endp = ovs_phy_translate_topo_endp(&nb_endp_phy);
   t_topo_endp *cnt_endp = cnt_translate_topo_endp(&nb_endp_cnt);
   t_topo_endp *kvm_endp = kvm_translate_topo_endp(&nb_endp_kvm);
   int nb_bridges = suid_power_get_topo_bridges(&bridges);
-  t_ovs_nat *nat = ovs_nat_get_first(&nb_nat);
+  t_ovs_nat_main *nat = ovs_nat_main_get_first(&nb_nat);
   t_ovs_a2b *a2b = ovs_a2b_get_first(&nb_a2b);
   t_ovs_c2c *c2c = ovs_c2c_get_first(&nb_c2c);
   t_ovs_tap *tap = ovs_tap_get_first(&nb_tap);

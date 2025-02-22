@@ -19,5 +19,5 @@ void stats_counters_update_endp_tx_rx(char *name, int num, unsigned int ms,
                                       int ptx, int btx, int prx, int brx);
 void stats_counters_heartbeat(void);
 void stats_counters_death(char *name, int num);
-void stats_counters_llid_close(int llid);
+void stats_counters_llid_close(int llid, int from_clone);
 void stats_counters_init(void);

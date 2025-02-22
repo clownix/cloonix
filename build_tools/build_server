@@ -67,7 +67,7 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
             "tmux" \
             "dtach" \
             "script_pty" \
-            "proxy_crun" \
+            "proxymous" \
             "xwy" \
             "wm2" \
             "ovs" \
@@ -78,7 +78,7 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
             "uml_cloonix_switch" \
             "ovs_drv" \
             "ovs_snf" \
-            "ovs_nat" \
+            "ovs_nat_main" \
             "ovs_a2b" \
             "ovs_c2c" ; do
     echo

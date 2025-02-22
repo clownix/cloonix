@@ -240,17 +240,36 @@ static int cloonix_connect_remote(char *cloonix_doors)
 {
   uint32_t ip;
   int port;
-  if (get_ip_port_from_path(cloonix_doors, &ip, &port) == -1)
+  struct stat stat_file;
+  if (!get_ip_port_from_path(cloonix_doors, &ip, &port) == -1)
     {
-    fprintf(stderr, "\nBad address %s\n\n", cloonix_doors);
-    local_exit(1);
+    g_door_llid = 0;
+    g_connect_llid = doorways_sock_client_inet_start(ip, port,
+                                                     callback_connect);
+    if (!g_connect_llid)
+      {
+      fprintf(stderr, "\nCannot1 reach doorways %s\n\n", cloonix_doors);
+      local_exit(1);
+      }
     }
-  g_door_llid = 0;
-  g_connect_llid = doorways_sock_client_inet_start(ip,port,callback_connect);
-  if (!g_connect_llid)
+  else
     {
-    fprintf(stderr, "\nCannot reach doorways %s\n\n", cloonix_doors);
-    local_exit(1);
+    if (stat(cloonix_doors, &stat_file))
+      {
+      fprintf(stderr, "\nCannot2 reach doorways %s\n\n", cloonix_doors);
+      local_exit(1);
+      }
+    else if (!S_ISSOCK(stat_file.st_mode))
+      {
+      fprintf(stderr, "\nCannot3 reach doorways %s\n\n", cloonix_doors);
+      local_exit(1);
+      }
+    else
+      {
+      g_door_llid = 0;
+      g_connect_llid = doorways_sock_client_unix_start(cloonix_doors,
+                                                       callback_connect);
+      }
     }
   return 0;
 }
@@ -260,8 +279,6 @@ static int cloonix_connect_remote(char *cloonix_doors)
 static int input_extract_init(char *inputs)
 {
   int result = -1;
-  uint32_t ip;
-  int port;
   char *ptr;
   memset(g_cloonix_passwd, 0, MSG_DIGEST_LEN+1);
   memset(g_cloonix_doors, 0, MAX_PATH_LEN);
@@ -299,19 +316,14 @@ static int input_extract_init(char *inputs)
             fprintf(stderr, "BAD INPUT3 %s", inputs);
           else
             {
-            if (get_ip_port_from_path(g_cloonix_doors, &ip, &port))
-              fprintf(stderr, "BAD INPUT4 %s", inputs);
+            ptr = strstr(g_address_in_vm, "cloonix_info_end");
+            if (!ptr)
+              fprintf(stderr, "BAD INPUT5 %s", inputs);
             else
               {
-              ptr = strstr(g_address_in_vm, "cloonix_info_end");
-              if (!ptr)
-                fprintf(stderr, "BAD INPUT5 %s", inputs);
-              else
-                {
-                ptr = ptr + strlen("cloonix_info_end");
-                *ptr = 0;
-                result = 0;
-                }
+              ptr = ptr + strlen("cloonix_info_end");
+              *ptr = 0;
+               result = 0;
               }
             }
           }

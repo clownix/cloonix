@@ -9,7 +9,7 @@ INCLUDES= -I./src \
           -I${GLOB_INCLUDE} 
 
 CFLAGS+=-mtune=generic -fno-stack-protector
-CFLAGS+=-fPIC -g $(WARNINGS) $(INCLUDES) -lrt 
+CFLAGS+=-fPIC -g -rdynamic $(WARNINGS) $(INCLUDES) -lrt 
 
 AR?=ar
 RANLIB?=ranlib

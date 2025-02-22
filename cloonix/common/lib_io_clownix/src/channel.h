@@ -19,12 +19,18 @@
 enum {
      kind_client = 0,
      kind_simple_watch_connect,
-     kind_simple_watch_no_erase,
      kind_simple_watch,
      kind_server,
+     kind_server_doors,
+     kind_server_proxy_traf_inet,
+     kind_server_proxy_traf_unix,
+     kind_server_proxy_sig,
      kind_glib_managed
      };
 
+/*---------------------------------------------------------------------------*/
+
+int channel_get_kind(int cidx);
 /*---------------------------------------------------------------------------*/
 int channel_create(int fd, int kind, char *little_name,
                    t_fd_event rx_cb,  t_fd_event tx_cb, t_fd_error err_cb);
@@ -46,6 +52,8 @@ int get_fd_with_cidx(int cidx);
 /*---------------------------------------------------------------------------*/
 int channel_get_epfd(void);
 void channel_heartbeat_ms_set (int heartbeat_ms);
+/*---------------------------------------------------------------------------*/
+void called_from_channel_free_llid(int llid);
 /*---------------------------------------------------------------------------*/
 
 

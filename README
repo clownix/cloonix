@@ -1,5 +1,5 @@
 ==============================================================================
-                               v43-00
+                               v44-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -18,7 +18,7 @@ and libraries are collected and put into an autonomous bundle, this makes
 the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-43-00/html/index.html doc.
+http://clownix.net/doc_stored/build-44-00/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp cloonix api.
@@ -32,9 +32,9 @@ NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
         1) Download software and installation:
         ======================================
 
-wget http://clownix.net/downloads/cloonix-43/cloonix-bundle-43-00-amd64.tar.gz
-tar xvf cloonix-bundle-43-00-amd64.tar.gz
-cd cloonix-bundle-43-00-amd64
+wget http://clownix.net/downloads/cloonix-44/cloonix-bundle-44-00-amd64.tar.gz
+tar xvf cloonix-bundle-44-00-amd64.tar.gz
+cd cloonix-bundle-44-00-amd64
 sudo ./install_cloonix
 
 (To uninstall:   sudo rm -f /usr/bin/cloonix_*
@@ -60,7 +60,7 @@ wget http://clownix.net/downloads/cloonix-43/bulk/zipfrr.zip
         =============================
 
 cd ${HOME}
-wget http://clownix.net/downloads/cloonix-43/demos/ping_demo.sh
+wget http://clownix.net/downloads/cloonix-44/demos/ping_demo.sh
 
 
         ===============
@@ -86,17 +86,17 @@ The smaller blue machine is a container based on zip files driven by crun.
 To test cloonix without ever having the root password for your host machine,
 you have to use the extract_nemo.sh.
 
-This script creates the extractnemo directory which countains a root
+This script creates the dir_self_extracted directory which countains a root
 file-system equiped with the cloonix software, the frr container, and 
 ping and frr demo scripts.
 
         1) Download:
         ============
-wget http://clownix.net/downloads/cloonix-43/extract_nemo.sh
+wget http://clownix.net/downloads/cloonix-44/cloonix_extractor.sh
 
         2) Extract based on the makeself.sh utility:
         ============================================
-./extract_nemo.sh
+./cloonix_extractor.sh
 
         3) The nemo_cmd script is now present, call the gui canvas:
         ===========================================================
@@ -130,7 +130,8 @@ NOTE FOR KVM USE
 ==============================================================================
                             DISTANT WEB GUI:
 ==============================================================================
-Default value for the web gui is off, to set it on:
+Default value for the web gui is off in the classical version of cloonix but
+it is on in the rootless version, to set it on:
 
 cloonix_cli nemo cnf web on
 

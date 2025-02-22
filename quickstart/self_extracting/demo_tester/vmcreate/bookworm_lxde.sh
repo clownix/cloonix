@@ -53,7 +53,7 @@ cloonix_ssh ${NET} ${VMNAME} "apt-get -o Dpkg::Options::=--force-confdef \
                          -o Acquire::Check-Valid-Until=false \
                          --allow-unauthenticated --assume-yes install \
                          rxvt-unicode openssh-client openssh-server \
-                         binutils rsyslog lxde spice-vdagent uidmap"
+                         binutils rsyslog lxde spice-vdagent"
 #-----------------------------------------------------------------------#
 cloonix_ssh ${NET} ${VMNAME} "apt-get --assume-yes remove xscreensaver"
 #-----------------------------------------------------------------------#

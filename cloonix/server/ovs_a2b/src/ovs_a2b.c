@@ -309,9 +309,14 @@ int main (int argc, char *argv[])
   g_netns_pid = tun_tap_open(g_netns_namespace, g_vhost1,
                              &fd_rx_from_tap1, &fd_tx_to_tap1);
 
-  msg_mngt_init("a2b", IO_MAX_BUF_LEN);
+  msg_mngt_init("a2b", TRAF_TAP_BUF_LEN);
   msg_mngt_heartbeat_ms_set(1);
   rxtx_init(fd_rx_from_tap0, fd_tx_to_tap0, fd_rx_from_tap1, fd_tx_to_tap1);
+  if ((strcmp(g_a2b_name, "swap1") == 0) ||
+      (strcmp(g_a2b_name, "swap2") == 0))
+    {
+    replace_init(g_a2b_name);
+    }
   if (!access(g_ctrl_path, F_OK))
     {
     KERR("ERROR %s exists ERASING", g_ctrl_path);

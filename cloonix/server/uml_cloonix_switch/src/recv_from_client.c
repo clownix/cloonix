@@ -51,7 +51,7 @@
 #include "list_commands.h"
 #include "cnt.h"
 #include "ovs_snf.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 #include "ovs_a2b.h"
 #include "ovs_tap.h"
 #include "ovs_phy.h"
@@ -59,6 +59,7 @@
 #include "msg.h"
 #include "crun.h"
 #include "novnc.h"
+#include "proxymous.h"
 
 
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
@@ -390,7 +391,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
   t_ovs_phy *phy_exists = ovs_phy_exists_vhost(name);
-  t_ovs_nat *nat_exists = ovs_nat_exists(name);
+  t_ovs_nat_main *nat_exists = ovs_nat_main_exists(name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   if (vm != NULL)
@@ -447,7 +448,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
   else if ((phy_exists) && (num == 0))
     ovs_phy_add_lan(llid, tid, name, lan);
   else if ((nat_exists) && (num == 0))
-    ovs_nat_add_lan(llid, tid, name, lan);
+    ovs_nat_main_add_lan(llid, tid, name, lan);
   else if ((a2b_exists) && ((num == 0) || (num == 1)))
     ovs_a2b_add_lan(llid, tid, name, num, lan);
   else if ((c2c_exists) && (num == 0))
@@ -503,7 +504,7 @@ static void timer_endp(void *data)
   int cnt_exists = cnt_info(te->name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(te->name);
   t_ovs_phy *phy_exists = ovs_phy_exists_vhost(te->name);
-  t_ovs_nat *nat_exists = ovs_nat_exists(te->name);
+  t_ovs_nat_main *nat_exists = ovs_nat_main_exists(te->name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(te->name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(te->name);
 
@@ -664,7 +665,7 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
   t_ovs_phy *phy_exists = ovs_phy_exists_vhost(name);
-  t_ovs_nat *nat_exists = ovs_nat_exists(name);
+  t_ovs_nat_main *nat_exists = ovs_nat_main_exists(name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   event_print("Rx Req del lan %s of %s %d", lan, name, num);
@@ -701,7 +702,7 @@ void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
   else if ((phy_exists) && (num == 0))
     ovs_phy_del_lan(llid, tid, name, lan);
   else if ((nat_exists) && (num == 0))
-    ovs_nat_del_lan(llid, tid, name, lan);
+    ovs_nat_main_del_lan(llid, tid, name, lan);
   else if ((a2b_exists) && ((num == 0) || (num == 1)))
     ovs_a2b_del_lan(llid, tid, name, num, lan);
   else if ((c2c_exists) && (num == 0))
@@ -1294,11 +1295,13 @@ void recv_list_commands_req(int llid, int tid, int is_layout)
 /*****************************************************************************/
 t_pid_lst *create_list_pid(int *nb)
 {
-  int i,j, nb_vm, nb_cnt, nb_snf, nb_nat, nb_a2b, nb_c2c, nb_sum, nb_ovs;
+  int i,j, nb_vm, nb_cnt, nb_snf, nb_a2b, nb_c2c, nb_sum, nb_ovs;
+  int nb_nat_main;
+  t_lst_pid *proxymous_pid = NULL;
   t_lst_pid *ovs_pid = NULL;
   t_lst_pid *cnt_pid = NULL;
   t_lst_pid *snf_pid = NULL;
-  t_lst_pid *nat_pid = NULL;
+  t_lst_pid *nat_main_pid = NULL;
   t_lst_pid *a2b_pid = NULL;
   t_lst_pid *c2c_pid = NULL;
   t_vm *vm = cfg_get_first_vm(&nb_vm);
@@ -1306,11 +1309,13 @@ t_pid_lst *create_list_pid(int *nb)
   nb_cnt = cnt_get_all_pid(&cnt_pid);
   nb_ovs = ovs_get_all_pid(&ovs_pid);
   nb_snf = ovs_snf_get_all_pid(&snf_pid);
-  nb_nat = ovs_nat_get_all_pid(&nat_pid);
+  nb_nat_main = ovs_nat_main_get_all_pid(&nat_main_pid);
   nb_a2b = ovs_a2b_get_all_pid(&a2b_pid);
   nb_c2c = ovs_c2c_get_all_pid(&c2c_pid);
-  nb_sum = nb_ovs + nb_vm + nb_cnt + nb_snf + nb_nat + nb_a2b + nb_c2c + 10;
+  nb_sum = nb_ovs + nb_vm + nb_cnt + nb_snf + nb_a2b + nb_c2c + 10;
+  nb_sum += nb_nat_main ;
   lst = (t_pid_lst *)clownix_malloc(nb_sum*sizeof(t_pid_lst),18);
+  proxymous_get_pid(&proxymous_pid);
   memset(lst, 0, nb_sum*sizeof(t_pid_lst));
   for (i=0, j=0; i<nb_vm; i++)
     {
@@ -1339,10 +1344,10 @@ t_pid_lst *create_list_pid(int *nb)
     j++;
     }
 
-  for (i=0 ; i<nb_nat; i++)
+  for (i=0 ; i<nb_nat_main; i++)
     {
-    strncpy(lst[j].name, nat_pid[i].name, MAX_NAME_LEN-1);
-    lst[j].pid = nat_pid[i].pid;
+    strncpy(lst[j].name, nat_main_pid[i].name, MAX_NAME_LEN-1);
+    lst[j].pid = nat_main_pid[i].pid;
     j++;
     }
 
@@ -1360,10 +1365,19 @@ t_pid_lst *create_list_pid(int *nb)
     j++;
     }
 
+  if (proxymous_pid)
+    {
+    strncpy(lst[j].name, proxymous_pid[0].name, MAX_NAME_LEN-1);
+    lst[j].pid = proxymous_pid[0].pid;
+    j++;
+    }
+
   clownix_free(cnt_pid, __FUNCTION__);
   clownix_free(ovs_pid, __FUNCTION__);
   clownix_free(snf_pid, __FUNCTION__);
-  clownix_free(nat_pid, __FUNCTION__);
+  clownix_free(nat_main_pid, __FUNCTION__);
+  if (proxymous_pid)
+    clownix_free(proxymous_pid, __FUNCTION__);
   clownix_free(a2b_pid, __FUNCTION__);
   clownix_free(c2c_pid, __FUNCTION__);
   strcpy(lst[j].name, "doors");
@@ -1402,7 +1416,6 @@ void recv_event_sys_sub(int llid, int tid)
   if (msg_exist_channel(llid))
     {
     event_subscribe(sub_evt_sys, llid, tid);
-    send_status_ok(llid, tid, "syssub");
     }
   else
     send_status_ko(llid, tid, "Abnormal!");
@@ -1490,7 +1503,7 @@ static void timer_del_all_end(void *data)
 /*****************************************************************************/
 static void timer_del_all(void *data)
 { 
-  t_ovs_nat *nat, *nnat;
+  t_ovs_nat_main *nat, *nnat;
   t_ovs_a2b *a2b, *na2b;
   t_ovs_c2c *c2c, *nc2c;
   t_ovs_tap *tap, *ntap;
@@ -1504,7 +1517,7 @@ static void timer_del_all(void *data)
   nb_zombies = cfg_zombie_qty();
   tap = ovs_tap_get_first(&nb_tap);
   phy = ovs_phy_get_first(&nb_phy);
-  nat = ovs_nat_get_first(&nb_nat);
+  nat = ovs_nat_main_get_first(&nb_nat);
   a2b = ovs_a2b_get_first(&nb_a2b);
   c2c = ovs_c2c_get_first(&nb_c2c);
 
@@ -1528,7 +1541,7 @@ static void timer_del_all(void *data)
   while(nat)
     {
     nnat = nat->next;
-    ovs_nat_del(0, 0, nat->name);
+    ovs_nat_main_del(0, 0, nat->name);
     nat = nnat;
     }
   while(a2b)
@@ -1540,7 +1553,7 @@ static void timer_del_all(void *data)
   while(c2c)
     {
     nc2c = c2c->next;
-    ovs_c2c_del(0, 0, c2c->name);
+    ovs_c2c_del(0, 7777, c2c->name);
     c2c = nc2c;
     }
   found = nb_vm+nb_cnt+nb_zombies+nb_tap+nb_phy+nb_nat+nb_a2b+nb_c2c;
@@ -1671,9 +1684,9 @@ void recv_del_name(int llid, int tid, char *name)
     {
     ovs_a2b_del(llid, tid, name);
     }
-  else if (ovs_nat_exists(name))
+  else if (ovs_nat_main_exists(name))
     {
-    ovs_nat_del(llid, tid, name);
+    ovs_nat_main_del(llid, tid, name);
     }
   else if (ovs_c2c_exists(name))
     {
@@ -1739,7 +1752,7 @@ void recv_nat_add(int llid, int tid, char *name)
     }
   else
     {
-    ovs_nat_add(llid, tid, name);
+    ovs_nat_main_add(llid, tid, name);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1802,7 +1815,7 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
   int nb_eth;
   t_ovs_tap *tap_exists = ovs_tap_exists(name);
   t_ovs_phy *phy_exists = ovs_phy_exists_vhost(name);
-  t_ovs_nat *nat_exists = ovs_nat_exists(name);
+  t_ovs_nat_main *nat_exists = ovs_nat_main_exists(name);
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   event_print("Rx Req add snf %s %d %d", name, num, val);
@@ -1818,7 +1831,7 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "bad num");
       }
-    else if (ovs_nat_dyn_snf(name, val))
+    else if (ovs_nat_main_dyn_snf(name, val))
       {
       KERR("ERROR %s %s", locnet, name);
       send_status_ko(llid, tid, "error");
@@ -2023,7 +2036,7 @@ void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
   t_vm *vm;
   char *ptr;
   event_print("Rx Req cnf nat %s %s", name, cmd);
-  if (!ovs_nat_exists(name))
+  if (!ovs_nat_main_exists(name))
     {
     send_status_ko(llid, tid, "error nat not found");
     KERR("ERROR %s %s ", name, cmd);
@@ -2049,7 +2062,7 @@ void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
         send_status_ko(llid, tid, "error nat vm not found");
         KERR("ERROR %s %s ", name, cmd);
         }
-      else  if (ovs_nat_whatip(llid, tid, name, ptr))
+      else  if (ovs_nat_main_whatip(llid, tid, name, ptr))
         {
         send_status_ko(llid, tid, "error nat cnf");
         KERR("ERROR %s %s ", name, cmd);

@@ -187,23 +187,26 @@ void recv_slowperiodic_sub(int llid, int tid)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void slowperiodic_llid_delete(int llid)
+void slowperiodic_llid_delete(int llid, int from_clone)
 {
   t_slowperiodic_subs *next, *cur = head_subs;
-  while(cur)
+  if (!from_clone)
     {
-    next = cur->next;
-    if (cur->llid == llid)
+    while(cur)
       {
-      if (cur->prev)
-        cur->prev->next = cur->next;
-      if (cur->next)
-        cur->next->prev = cur->prev;
-      if (cur == head_subs)
-        head_subs = cur->next;
-      clownix_free(cur, __FUNCTION__);
+      next = cur->next;
+      if (cur->llid == llid)
+        {
+        if (cur->prev)
+          cur->prev->next = cur->next;
+        if (cur->next)
+          cur->next->prev = cur->prev;
+        if (cur == head_subs)
+          head_subs = cur->next;
+        clownix_free(cur, __FUNCTION__);
+        }
+      cur = next;
       }
-    cur = next;
     }
 }
 /*---------------------------------------------------------------------------*/

@@ -42,7 +42,7 @@
 #include "doorways_mngt.h"
 #include "suid_power.h"
 #include "cnt.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 #include "qga_dialog.h"
 #include "uml_clownix_switch.h"
 
@@ -338,12 +338,23 @@ char *utils_get_c2c_dir(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_nat_dir(void)
+char *utils_get_nat_main_dir(void)
 {
   static char path[MAX_PATH_LEN];
   char *root = cfg_get_root_work();
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, NAT_DIR);
+  snprintf(path, MAX_PATH_LEN-1,"%s/%s", root, NAT_MAIN_DIR);
+  return path;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_nat_proxy_dir(void)
+{
+  static char path[MAX_PATH_LEN];
+  char *net = cfg_get_cloonix_name();
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1,"%s_%s/%s",PROXYSHARE_IN,net,NAT_PROXY_DIR);
   return path;
 }
 /*--------------------------------------------------------------------------*/
@@ -474,12 +485,22 @@ char *utils_get_ovs_snf_bin_dir(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-char *utils_get_ovs_nat_bin_dir(void)
+char *utils_get_ovs_nat_main_bin_dir(void)
 {
-  static char ovs_nat[MAX_PATH_LEN];
-  snprintf(ovs_nat, MAX_PATH_LEN-1,
-           "%s/server/cloonix-ovs-nat", cfg_get_bin_dir());
-  return ovs_nat;
+  static char ovs_nat_main[MAX_PATH_LEN];
+  snprintf(ovs_nat_main, MAX_PATH_LEN-1,
+           "%s/server/cloonix-ovs-nat-main", cfg_get_bin_dir());
+  return ovs_nat_main;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *utils_get_proxymous_bin(void)
+{
+  static char proxymous[MAX_PATH_LEN];
+  snprintf(proxymous, MAX_PATH_LEN-1,
+           "%s/server/cloonix-proxymous", cfg_get_bin_dir());
+  return proxymous;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -561,7 +582,7 @@ char *utils_get_root_fs(char *rootfs)
   else
     {
     sprintf(root_fs, "%s/%s", cfg_get_bulk(), rootfs);
-    if (get_proxy_is_on())
+    if (get_running_in_crun())
       {
       sprintf(host_root_fs, "%s/%s", cfg_get_bulk_host(), rootfs);
       if ((!file_exists(root_fs, F_OK)) &&
@@ -647,7 +668,7 @@ static void timer_cisco_add(void *data)
   if (!vm)
     KERR("ERROR %s", name);
   else
-    ovs_nat_cisco_add(vm->kvm.name);
+    ovs_nat_main_cisco_add(vm->kvm.name);
   free(data);
 }
 /*---------------------------------------------------------------------------*/
@@ -671,7 +692,7 @@ void free_wake_up_eths_and_vm_ok(t_vm *vm)
     strncpy(nm, vm->kvm.name, MAX_NAME_LEN);
     clownix_timeout_add(500, timer_cisco_add, (void *) nm, NULL, NULL);
     }
-  ovs_nat_vm_event();
+  ovs_nat_main_vm_event();
 }
 /*---------------------------------------------------------------------------*/
 

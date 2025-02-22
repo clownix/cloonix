@@ -82,7 +82,7 @@ static int get_pid_num_and_name(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int lib_io_proxy_is_on(char *name)
+int lib_io_running_in_crun(char *name)
 {
   int pid, result = 0;
   char *file_name = "/proc/1/cmdline";
@@ -351,6 +351,14 @@ static void process_ocp(int argc, char **argv, char **new_argv,
   static char sock[MAX_PATH_LEN];
   static char dist[MAX_PATH_LEN];
   char ocp_param[MAX_PATH_LEN];
+  char tmpnet[MAX_NAME_LEN];
+  int running_in_crun = lib_io_running_in_crun(tmpnet);
+  char ipl[MAX_NAME_LEN];
+  memset(ipl, 0, MAX_NAME_LEN);
+  if (running_in_crun && (!strcmp(tmpnet, argv[2])))
+    strncpy(ipl, "127.0.0.1", MAX_NAME_LEN);
+  else
+    strncpy(ipl, ip, MAX_NAME_LEN);
   memset(sock, 0, MAX_PATH_LEN);
   memset(dist, 0, MAX_PATH_LEN);
   memset(ocp_param, 0, MAX_PATH_LEN);
@@ -360,7 +368,7 @@ static void process_ocp(int argc, char **argv, char **new_argv,
   mkdir(sock, 0777);
   snprintf(ocp_param, MAX_PATH_LEN-1,
            "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
-           ip, port, passwd, argv[3], argv[4]);
+           ipl, port, passwd, argv[3], argv[4]);
   new_argv[0] = "/usr/libexec/cloonix/common/cloonix-u2i-scp";
   new_argv[1] = sock;
   new_argv[2] = "-i";
@@ -412,6 +420,14 @@ static void process_osh(int argc, char **argv, char **new_argv,
   static char sock[MAX_PATH_LEN];
   static char ocp_param[MAX_PATH_LEN];
   int i;
+  char tmpnet[MAX_NAME_LEN];
+  int running_in_crun = lib_io_running_in_crun(tmpnet);
+  char ipl[MAX_NAME_LEN];
+  memset(ipl, 0, MAX_NAME_LEN);
+  if (running_in_crun && (!strcmp(tmpnet, argv[2])))
+    strncpy(ipl, "127.0.0.1", MAX_NAME_LEN);
+  else
+    strncpy(ipl, ip, MAX_NAME_LEN);
   memset(sock, 0, MAX_PATH_LEN);
   memset(ocp_param, 0, MAX_PATH_LEN);
   if (argc < 5)
@@ -420,7 +436,7 @@ static void process_osh(int argc, char **argv, char **new_argv,
   mkdir(sock, 0777); 
   snprintf(ocp_param, MAX_PATH_LEN-1,
           "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
-          ip, port, passwd, argv[3], argv[4]);
+          ipl, port, passwd, argv[3], argv[4]);
   new_argv[0] = "/usr/libexec/cloonix/common/cloonix-u2i-ssh";
   new_argv[1] = sock;
   new_argv[2] = "-i";
@@ -434,19 +450,34 @@ static void process_osh(int argc, char **argv, char **new_argv,
 }
 /*--------------------------------------------------------------------------*/
 
+
+/****************************************************************************/
+static void fill_ipport(char *net, char *ip, int port, char *ipport)
+{
+  int running_in_crun;
+  char tmpnet[MAX_NAME_LEN];
+  char *pox = PROXYSHARE_IN;
+  memset(ipport, 0, MAX_PATH_LEN);
+  running_in_crun = lib_io_running_in_crun(tmpnet);
+  if (running_in_crun && (!strcmp(tmpnet, net)))
+    snprintf(ipport, MAX_PATH_LEN-1, "%s_%s/proxy_pmain.sock", pox, net);
+  else
+    snprintf(ipport, MAX_PATH_LEN-1, "%s:%d", ip, port);
+}
+/*--------------------------------------------------------------------------*/
+
+
 /****************************************************************************/
 static int initialise_new_argv(int argc, char **argv, char **new_argv,
                                char *ip, int port, char *passwd)
 {
-  static char ipport[MAX_NAME_LEN];
+  static char ipport[MAX_PATH_LEN];
   static char title[MAX_NAME_LEN];
   static char sock[2*MAX_PATH_LEN];
   static char param[2*MAX_PATH_LEN];
-  int proxy_is_on, i, result = 0;
-  char tmpnet[MAX_NAME_LEN];
+  int i, result = 0;
 
-
-  memset(ipport, 0, MAX_NAME_LEN);
+  memset(ipport, 0, MAX_PATH_LEN);
   memset(title, 0, MAX_NAME_LEN);
   memset(sock, 0, 2*MAX_PATH_LEN);
   memset(param, 0, 2*MAX_PATH_LEN);
@@ -497,11 +528,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     if (argc < 5)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
-    proxy_is_on = lib_io_proxy_is_on(tmpnet);
-    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
-      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", "127.0.0.1", port);
-    else
-      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
+    fill_ipport(argv[2], ip, port, ipport);
     new_argv[0] = "/usr/libexec/cloonix/common/cloonix-dropbear-scp";
     new_argv[1] = ipport;
     new_argv[2] = passwd;
@@ -516,11 +543,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     if ((argc != 4) && (argc != 5))
       KOUT("ERROR5 PARAM NUMBER %d", argc);
-    proxy_is_on = lib_io_proxy_is_on(tmpnet);
-    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
-      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", "127.0.0.1", port);
-    else
-      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
+    fill_ipport(argv[2], ip, port, ipport);
     new_argv[0] = "/usr/libexec/cloonix/common/cloonix-dropbear-ssh";
     new_argv[1] = ipport;
     new_argv[2] = passwd;
@@ -576,11 +599,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     if (argc != 5)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
-    proxy_is_on = lib_io_proxy_is_on(tmpnet);
-    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
-      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", "127.0.0.1", port);
-    else
-      snprintf(ipport, MAX_NAME_LEN-1, "%s:%d", ip, port);
+    fill_ipport(argv[2], ip, port, ipport);
     snprintf(title, MAX_NAME_LEN-1, "--title=%s/%s", argv[2], argv[3]);
     snprintf(sock, 2*MAX_PATH_LEN-1, "/var/lib/cloonix/%s/vm/vm%s/spice_sock", argv[2], argv[4]);
     new_argv[0] = "/usr/libexec/cloonix/common/cloonix-spicy";
@@ -630,25 +649,18 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_OCP-----------------------*/
   else if (!strcmp("ocp", argv[1]))
     {
-    proxy_is_on = lib_io_proxy_is_on(tmpnet);
-    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
-      process_ocp(argc, argv, new_argv, "127.0.0.1", port, passwd);
-    else
-      process_ocp(argc, argv, new_argv, ip, port, passwd);
+    process_ocp(argc, argv, new_argv, ip, port, passwd);
     }
 /*CLOONIX_OSH-----------------------*/
   else if (!strcmp("osh", argv[1]))
     {
-    proxy_is_on = lib_io_proxy_is_on(tmpnet);
-    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
-      process_osh(argc, argv, new_argv, "127.0.0.1", port, passwd);
-    else
-      process_osh(argc, argv, new_argv, ip, port, passwd);
+    process_osh(argc, argv, new_argv, ip, port, passwd);
     }
   else
     {
     printf("ERROR10 PARAM %s\n", argv[1]);
     result = -1;
+    KERR("ERROR10 PARAM %s\n", argv[1]);
     }
   return result;
 }

@@ -60,11 +60,19 @@ Automatic insert at startup::
     KERNEL=="kvm", NAME="%k", GROUP="kvm", MODE="0666"
     EOF 
 
-Sometimes, in case of containers, the following works on the host::
+Sometimes, in case of containers, the group kvm does not work to allow the use
+of the /dev/vhost-net by the container. If <USER> is the user that launches the
+crun container, then the following commands on the host can be used::
 
-    sudo setfacl -m u:${USER}:rw /dev/kvm
-    sudo setfacl -m u:${USER}:rw /dev/vhost-net
-    sudo setfacl -m u:${USER}:rw /dev/net/tun
+    sudo setfacl -m u:<USER>:rw /dev/kvm
+    sudo setfacl -m u:<USER>:rw /dev/vhost-net
+    sudo setfacl -m u:<USER>:rw /dev/net/tun
+
+For me::
+
+    sudo setfacl -m u:perrier:rw /dev/vhost-net
+
+Ther is a problem with the access to /dev/vhost-net even though I am in kvm group...
 
 In case of problems, the following should work::
 

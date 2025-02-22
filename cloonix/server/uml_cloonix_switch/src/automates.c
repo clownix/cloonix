@@ -42,6 +42,9 @@
 #include "doorways_mngt.h"
 #include "doors_rpc.h"
 #include "suid_power.h"
+#include "proxymous.h"
+#include "proxycrun.h"
+#include "ovs_nat_main.h"
 
 #define MAX_CALLBACK_END 50
 
@@ -111,7 +114,8 @@ void extremely_last_action(void *data)
     if (count_time > 3)
       {
       for (i=0; i<nb; i++)
-        KERR("process %s %d", lst[i].name, lst[i].pid);
+        if (lst[i].pid != 0)
+          KERR("process %s %d", lst[i].name, lst[i].pid);
       KERR("clone number %d", get_nb_running_pids());
       kerr_running_pids();
       pid_clone_kill_all();
@@ -135,6 +139,7 @@ void extremely_last_action(void *data)
     }
   else
     KOUT(" ");
+  llid_free_all_llid();
   clownix_timeout_add(30, extremely_last_action, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -150,7 +155,6 @@ void last_action_self_destruction(void *data)
     if (pid_clone_kill_single(doorways_get_distant_pid()))
       KERR("ERROR DOOR CLONE KILL %d", doorways_get_distant_pid());
     }
-  llid_free_all_llid();
   sprintf(path, "%s/cloonix_lock", cfg_get_root_work());
   unlink(path);
   sprintf(path, "%s", pid_get_clone_internal_com());
@@ -175,7 +179,9 @@ void last_action_self_destruction(void *data)
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_c2c_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
-  if (unlink_sub_dir_files_except_dir(utils_get_nat_dir(), err))
+  if (unlink_sub_dir_files_except_dir(utils_get_nat_main_dir(), err))
+    event_print("DELETE PROBLEM: %s\n", err);
+  if (unlink_sub_dir_files_except_dir(utils_get_nat_proxy_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
   if (unlink_sub_dir_files_except_dir(utils_get_a2b_dir(), err))
     event_print("DELETE PROBLEM: %s\n", err);
@@ -204,6 +210,7 @@ static void action_self_destruction(void *data)
     {
     kill_doors();
     kill_xwy();
+    ovs_nat_main_del_all();
     }
   if ((self_destruction_ok()) || (count > 500))
     {
@@ -225,6 +232,8 @@ static void action_self_destruction(void *data)
       else
         {
         suid_power_kill();
+        ovs_destroy();
+        kill_xwy();
         event_print("Self-destruction triggered");
         clownix_timeout_add(20, last_action_self_destruction, (void *)llid_tid, 
                             NULL, NULL);
@@ -247,6 +256,8 @@ void auto_self_destruction(int llid, int tid)
   t_llid_tid *llid_tid = (t_llid_tid *) clownix_malloc(sizeof(t_llid_tid), 11);
   glob_req_self_destruction = 1;
   end_novnc(1);
+  proxycrun_kill();
+  proxymous_kill();
   llid_tid->llid = llid;
   llid_tid->tid = tid;
   clownix_timeout_add(10, action_self_destruction, (void *)llid_tid, 

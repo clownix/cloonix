@@ -5,20 +5,47 @@
 Software Release Information
 ============================
 
+
+v44-00
+======
+
+Creation of a very important process: called "cloonix-proxymous-<net>".
+This was a big step that took 2 montths to finalize.
+The goal of this process is to concentrate all the flows that have to run
+in the main machine to transmit those flows to a crun-contenarised instance
+that runs all of the cloonix meccanisms.
+Icmp, udp, tcp, X11 flows come from the main namespace of the real running
+machine and are transmitted by this process into the crun instance through
+a shared space called "/tmp/<net>_proxymous_<user>" in the main machine and
+called "cloonix_proxymous_<net>" in the crun instance isolated from the
+main machine.
+It was not an easy task and probably still not perfect, but the rootless
+installation and rootless run must have this isolation process so as to
+be root inside the crun and still be inside the main namespace to access
+to all IP and graphic X11 display.
+Note that for the sound, if you have a "$XDG_RUNTIME_DIR/pulse" directory,
+it is shared by the crun process and the sound flow works through it.
+
+For the software to be the same in the self-extracting rootless
+cloonix-extractor.sh case and the usual classical /usr/libexec/cloonix/
+installation, the proxymous process exists in both run, rootless or classical.
+In the rootless case it is launched in the namespace before the crun that
+launches the rest of cloonix, in the classical case, it is launched by the
+main cloonix server.
+
 v43-00
 ======
 
 Version done between the 24/12/2024 and 01/01/2025, sadly no time to finish
 the goals: for the self extract version the nat component of cloonix
 has not been implemented.
-For this workload, the main objective has been on the "cloonix-proxy-<net-name>"
+For this workload, the main objective has been on the "cloonix-proxymous-<net-name>"
 process (for the extract_nemo.sh self-extracting executable found on
-the clownix.net website, the process is named cloonix-proxy-nemo.
+the clownix.net website, the process is named cloonix-proxymous-nemo.
 
 Work done by this new proxy, bridge between host and crun isolated file-system:
 
  * X11 forwarding from /tmp/.X11-unix/X713 inside the crun to /tmp/.X11-unix/Xdisplay
- * Wayland forwarding from /tmp/cloonix_proxy/wayland-0 to $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY
  * Cloonix main access port (45211 for nemo) see the cloonix_port in cloonix.cfg
  * Cloonix web access port (54521 for nemo) see the novnc_port in cloonix.cfg
  * Not much tested, c2c udp connections between cloonix nets
@@ -34,7 +61,7 @@ Note: you can now do Ctrl-C in a kvm console without breaking the qemu.
 
 The self-extracting installation has now a proxy software running in the host
 main namespace that transmits 2 tcp ports from host to within the running crun.
-cloonix-proxy-crun-access is the name for this proxy, it is launched upon the
+cloonix-proxymous is the name for this proxy, it is launched upon the
 call to crun_container_startup.sh. 
 
 This gives access from distant machines to the cloonix commands gui and also

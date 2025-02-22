@@ -3,7 +3,7 @@
 export TERM=linux
 COMMON="/usr/libexec/cloonix/common"
 TMUX="/usr/libexec/cloonix/server/cloonix-tmux-__IDENT__"
-TMUX_SOCK="/tmp/cloonix_proxy/tmux_back"
+TMUX_SOCK="__PROXYSHARE_IN_____IDENT__/tmux_back"
 SLEEP="/usr/libexec/cloonix/common/sleep"
 if [ ! -e "/usr/share" ]; then
   ${COMMON}/ln -s ${COMMON}/share /usr/share
@@ -27,19 +27,16 @@ if [ ! -e "/usr/bin/vi" ]; then
   ${COMMON}/ln -s /usr/bin/vim /usr/bin/vi
 fi
 ${COMMON}/chown -R root:root / 2>/dev/null
-#  if [ $(${COMMON}/grep -c www /etc/passwd) = 0 ]; then
-#    ${COMMON}/useradd --user-group --no-create-home --shell /usr/bin/false --system www
-#  fi
 rsyslogd
 localedef -i en_US -f UTF-8 en_US.UTF-8
 mkdir -p /tmp/.X11-unix
-ln -s /tmp/cloonix_proxy/X11-unix/X713 /tmp/.X11-unix/X713
-xauth nextract /tmp/xauth-extracted __HOSTNAME__/unix__DISPLAY__
-XAUTH_EXTRACT=$(cat /tmp/xauth-extracted)
-XAUTH_CODE=${XAUTH_EXTRACT##* }
+ln -s __PROXYSHARE_IN_____IDENT__/X11-unix/X713 /tmp/.X11-unix/X713
+
+XAUTH_CODE=$(cat __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority)
 xauth add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
+
 ${TMUX} -S ${TMUX_SOCK} kill-server
-unlink ${TMUX_SOCK}
+rm -f ${TMUX_SOCK}
 ${TMUX} -S ${TMUX_SOCK} new-session -d -s __IDENT__
 
 for i in "DISPLAY" "XAUTHORITY" "XDG_SESSION_TYPE" \
@@ -52,7 +49,7 @@ while [ $(ps axo pid,args | grep -v grep | egrep -c /usr/libexec/cloonix/server/
   ${SLEEP} 2
   if [ $(ps axo pid,args | grep -v grep | egrep -c ${TMUX}) -eq 0 ]; then
     ${TMUX} -S ${TMUX_SOCK} kill-server
-    unlink ${TMUX_SOCK}
+    rm -f ${TMUX_SOCK}
     ${TMUX} -S ${TMUX_SOCK} new-session -d -s __IDENT__
     for i in "DISPLAY" "XAUTHORITY" "XDG_SESSION_TYPE" \
              "XDG_RUNTIME_DIR" "HOME" "PATH" ; do

@@ -60,6 +60,7 @@ cloonix_ssh ${NET} ${NAME} "cd /root/sources ; tar xvf sources.tar.gz ; rm sourc
 cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall ${ARCH}"
 #----------------------------------------------------------------------
 cloonix_scp ${NET} -r ${NAME}:/root/sources/build_tools/cloonix-bundle-* ${CLOONIX_TREE_ROOT}/build_tools
+rm -rf /tmp/cloonix_build_tree
 #----------------------------------------------------------------------
 
 

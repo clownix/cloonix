@@ -32,7 +32,11 @@ LIBS = -L${RPC_DOORS} -lrpc_doors \
        -lssl -lcrypto -lrt -lm
 
 CFLAGS+=-mtune=generic -fno-stack-protector
-CFLAGS+= -g -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)
+CFLAGS+= -g -rdynamic -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)
+
+LDFLAGS+= -g -rdynamic
+
+
 CC=gcc
 
 all: $(shell mkdir -p ./obj) $(EXE)

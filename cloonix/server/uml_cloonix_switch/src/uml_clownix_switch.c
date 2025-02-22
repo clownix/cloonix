@@ -64,7 +64,7 @@
 #include "qga_dialog.h"
 #include "ovs.h"
 #include "ovs_snf.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 #include "ovs_tap.h"
 #include "ovs_phy.h"
 #include "ovs_a2b.h"
@@ -74,6 +74,7 @@
 #include "mactopo.h"
 #include "crun.h"
 #include "util_sock.h"
+#include "proxymous.h"
 #include "proxycrun.h"
 
 
@@ -89,12 +90,12 @@ static int g_machine_is_kvm_able;
 static char g_config_path[MAX_PATH_LEN];
 static int g_conf_rank;
 static int g_novnc_port;
-static int g_proxy_is_on;
+static int g_running_in_crun;
 
 /*****************************************************************************/
-int get_proxy_is_on(void)
+int get_running_in_crun(void)
 {
-  return g_proxy_is_on;
+  return g_running_in_crun;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -191,10 +192,12 @@ static void check_for_another_instance(char *clownlock, int keep_fd)
 /****************************************************************************/
 static void mk_and_tst_work_path(void)
 {
+  char proxymous_dir[MAX_PATH_LEN];
   char path1[MAX_PATH_LEN];
   char path2[MAX_PATH_LEN];
   char *ptr;
   char *argv[3];
+  char *net = cfg_get_cloonix_name();
   memset(argv, 0, 3*sizeof(char *)); 
   argv[0] = utils_get_suid_power_bin_path();
   argv[1] = NULL;
@@ -244,6 +247,9 @@ static void mk_and_tst_work_path(void)
     }
   my_mkdir(cfg_get_root_work(), 0);
   my_mkdir(cfg_get_bulk(), 0);
+  memset(proxymous_dir, 0, MAX_PATH_LEN);
+  snprintf(proxymous_dir, MAX_PATH_LEN-1, "%s_%s", PROXYSHARE_IN, net);
+  my_mkdir(proxymous_dir, 1);
   mk_cnt_dir();
   mk_endp_dir();
   mk_dtach_screen_dir();
@@ -252,7 +258,6 @@ static void mk_and_tst_work_path(void)
   check_for_another_instance(path1, 0);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 void uml_clownix_switch_error_cb(int llid, int err, int from)
@@ -299,28 +304,30 @@ static void connect_from_client_unix(int llid, int llid_new)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void timer_novnc_ok(void *data)
+static void timer_proxymous_init(void *data)
 {
-  char *net = cfg_get_cloonix_name();
-  if (!proxycrun_transmit_config(net, cfg_get_server_port(),
-       g_novnc_port, g_cloonix_conf_info->passwd))
-    KERR("ERROR proxycrun_transmit_config");
+  proxymous_init(g_novnc_port, g_cloonix_conf_info->passwd);
 }
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void timer_openvswitch_ok(void *data)
 {
-  if (!get_daemon_done())
+  if (!proxycrun_connect_proxy_ok())
+    {
     clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
+    }
+  else if (!get_daemon_done())
+    {
+    clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
+    }
   else
     {
     printf("\n    UML_CLOONIX_SWITCH NOW RUNNING\n\n");
-    if (get_proxy_is_on())
+    if (get_running_in_crun())
       {
       if (start_novnc())
         KERR("ERROR start_novnc");
-      clownix_timeout_add(500, timer_novnc_ok, NULL, NULL, NULL);
       }
     daemon(0,0);
     g_uml_cloonix_started = 1;
@@ -339,7 +346,7 @@ static void launching(void)
     printf("\"%s\" not found or not executable\n", dtach);
     KOUT("\"%s\" not found or not executable\n", dtach);
     }
-  g_proxy_is_on = lib_io_proxy_is_on(NULL);
+  g_running_in_crun = lib_io_running_in_crun(NULL);
   set_cloonix_name(cfg_get_cloonix_name());
   printf("\n\n");
   printf("     Version:      %s\n",cfg_get_version());
@@ -349,7 +356,7 @@ static void launching(void)
   printf("     Work Zone:    %s\n",cfg_get_root_work());
   printf("     Bulk Path:    %s\n",cfg_get_bulk());
   printf("     Doors Port:   %d\n",cfg_get_server_port());
-  if (g_proxy_is_on)
+  if (get_running_in_crun())
     printf("     Web Port:     %d (Activated)\n", g_novnc_port);
   else
     printf("     Web Port:     %d (Not Activated)\n", g_novnc_port);
@@ -365,7 +372,7 @@ static void launching(void)
   ovs_init();
   crun_init();
   ovs_snf_init();
-  ovs_nat_init();
+  ovs_nat_main_init();
   ovs_tap_init();
   ovs_phy_init();
   ovs_a2b_init();
@@ -375,6 +382,7 @@ static void launching(void)
   check_for_another_instance(clownlock, 1);
   init_xwy(cfg_get_cloonix_name());
   init_novnc(cfg_get_cloonix_name(), get_conf_rank(), g_novnc_port);
+  clownix_timeout_add(100, timer_proxymous_init, NULL, NULL, NULL);
   clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -498,7 +506,6 @@ int main (int argc, char *argv[])
   g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
 
   g_novnc_port = 0;
-  proxycrun_init();
   job_for_select_init();
   utils_init();
   recv_init();

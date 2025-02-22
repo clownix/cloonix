@@ -36,11 +36,11 @@
 #include "pcap_record.h"
 #include "eventfull.h"
 
-#define MAX_TAP_BUF_LEN 2000
+#define MAX_BUF_LEN 2000
 
 static char g_tap_name[MAX_NAME_LEN];
 static int g_llid;
-static uint8_t g_buf[MAX_TAP_BUF_LEN];
+static uint8_t g_buf[MAX_BUF_LEN];
 
 typedef struct t_mac_src
 {
@@ -127,7 +127,7 @@ static int rx_tap(int llid, int fd)
     set_tx = 1;
     cur = g_head_mac_tx; 
     }
-  len = read(fd, g_buf, MAX_TAP_BUF_LEN);
+  len = read(fd, g_buf, MAX_BUF_LEN);
   while(cur)
     {
     if (!memcmp(cur->mac, mac, 6))

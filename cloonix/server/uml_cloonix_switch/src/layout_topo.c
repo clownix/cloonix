@@ -28,7 +28,7 @@
 #include "lan_to_name.h"
 #include "llid_trace.h"
 #include "cnt.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 #include "ovs_c2c.h"
 #include "ovs_tap.h"
 #include "ovs_phy.h"
@@ -547,7 +547,7 @@ void recv_layout_sat(int llid, int tid, t_layout_sat *layout)
 {
   t_layout_sub *cur = g_head_layout_sub;
   t_layout_sat_xml *xml;
-  if ((!ovs_nat_exists(layout->name)) &&
+  if ((!ovs_nat_main_exists(layout->name)) &&
       (!ovs_c2c_exists(layout->name)) &&
       (!ovs_a2b_exists(layout->name)) &&
       (!ovs_tap_exists(layout->name)) &&
@@ -1050,11 +1050,15 @@ void recv_layout_save_params_resp(int llid, int tid, int on,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void layout_llid_destroy(int llid)
+void layout_llid_destroy(int llid, int from_clone)
 {
-  t_layout_sub *sub = get_layout_sub(llid);
-  if (sub)
-    free_layout_sub(sub);
+  t_layout_sub *sub;
+  if (!from_clone)
+    {
+    sub = get_layout_sub(llid);
+    if (sub)
+      free_layout_sub(sub);
+    }
 }
 /*---------------------------------------------------------------------------*/
 

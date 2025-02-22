@@ -91,7 +91,6 @@ int tx_try_send_chunk(t_data_channel *dchan, int cidx, int *correct_send,
     }
   else if (len < 0)
     {
-    KERR("ERROR %d", errno);
     dchan->tot_txq_size = 0;
     chain_delete(&(dchan->tx), &(dchan->last_tx));
     if (!err_cb)

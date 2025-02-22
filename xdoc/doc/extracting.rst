@@ -26,7 +26,7 @@ readme.sh: it is the script that is run at the end of extraction to give the com
 cloonix-init-starter-crun: process one of the crun container. 
 
 **crun_container_startup.sh**:
-this script is the start launched on the host, it will run the proxy cloonix-proxy-crun-access
+this script is the start launched on the host, it will run the proxy cloonix-proxymous
 on the host and run the crun container.
 
 **bin**:

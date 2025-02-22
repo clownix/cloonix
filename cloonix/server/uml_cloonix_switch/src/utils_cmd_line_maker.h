@@ -19,7 +19,8 @@ char *utils_get_cnt_dir(void);
 char *utils_get_mnt_dir(void);
 
 char *utils_get_c2c_dir(void);
-char *utils_get_nat_dir(void);
+char *utils_get_nat_main_dir(void);
+char *utils_get_nat_proxy_dir(void);
 char *utils_get_a2b_dir(void);
 char *utils_get_run_dir(void);
 char *utils_get_run_config_dir(void);
@@ -61,12 +62,13 @@ void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death);
 /*--------------------------------------------------------------------------*/
 void utils_format_gene(char *start, char *err, char *name, char **argv);
 /*--------------------------------------------------------------------------*/
+char *utils_get_proxymous_bin(void);
 char *utils_get_ovs_path(char *name);
 char *utils_get_ovs_dir(void);
 char *utils_get_ovs_bin_dir(void);
 char *utils_get_ovs_drv_bin_dir(void);
 char *utils_get_ovs_snf_bin_dir(void);
-char *utils_get_ovs_nat_bin_dir(void);
+char *utils_get_ovs_nat_main_bin_dir(void);
 char *utils_get_ovs_a2b_bin_dir(void);
 char *utils_get_ovs_c2c_bin_dir(void);
 int util_get_max_tempo_fail(void);

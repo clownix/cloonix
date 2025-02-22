@@ -623,12 +623,12 @@ int wrap_close(int fd, const char *fct)
   int fd_type, result, srv_idx, cli_idx;
   fd_type = fd_spy_get_type(fd, &srv_idx, &cli_idx);
   result = close(fd);
+  fd_spy_del(fd);
   if (result == 0)
     {
     if (fd_type < 0)
       KERR("Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
            fd, fd_type, srv_idx, cli_idx, fct);
-    fd_spy_del(fd);
     }
   else if (fd_type > 0)
     {

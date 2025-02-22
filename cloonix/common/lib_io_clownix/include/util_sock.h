@@ -15,6 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void channel_rx_slow_down(int llid);
+int util_read_brakes_on(char *ptr, int max, int fd, int llid);
 int util_read (char *ptr, int max, int fd);
 int util_proxy_client_socket_unix(char *pname, int *fd);
 int util_client_socket_unix(char *pname, int *fd);

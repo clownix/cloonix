@@ -48,6 +48,7 @@ static uint32_t g_doors_ip;
 static int g_doors_port;
 static int g_action;
 static char *g_cmd, *g_src, *g_dst;
+static char g_net[MAX_NAME_LEN];
 
 
 /****************************************************************************/
@@ -291,7 +292,16 @@ static int cb_conn(int llid, int fd)
 void xdoors_connect(int cli_idx)
 {
   int llid;
-  llid = doorways_sock_client_inet_start(g_doors_ip, g_doors_port, cb_conn);
+  char pathcrun[MAX_PATH_LEN];
+  if (g_doors_ip == 0)
+    {
+    memset(pathcrun, 0, MAX_PATH_LEN);
+    snprintf(pathcrun, MAX_PATH_LEN-1,
+             "%s_%s/proxy_pmain.sock", PROXYSHARE_IN, g_net);
+    llid = doorways_sock_client_unix_start(pathcrun, cb_conn);
+    }
+  else
+    llid = doorways_sock_client_inet_start(g_doors_ip, g_doors_port, cb_conn);
   if (!llid)
     KOUT(" ");
   alloc_start_xdoors(llid, cli_idx);
@@ -302,15 +312,23 @@ void xdoors_connect(int cli_idx)
 void xdoors_connect_init(char *net, uint32_t ip, int port, char *passwd,
                          int action, char *cmd, char *src, char *dst)
 {
-  int llid, proxy_is_on;
+  int llid, running_in_crun;
   char tmpnet[MAX_NAME_LEN];
-  uint32_t inet_addr;
-  ip_string_to_int(&inet_addr, "127.0.0.1");
-  proxy_is_on = lib_io_proxy_is_on(tmpnet);
-  if (proxy_is_on && (!strcmp(tmpnet, net)))
-    g_doors_ip = inet_addr;
+  char pathcrun[MAX_PATH_LEN];
+  running_in_crun = lib_io_running_in_crun(tmpnet);
+  if (running_in_crun && (!strcmp(tmpnet, net)))
+    {
+    snprintf(pathcrun, MAX_PATH_LEN-1,
+             "%s_%s/proxy_pmain.sock",
+             PROXYSHARE_IN, net);
+    g_doors_ip = 0;
+    }
   else
+    {
     g_doors_ip = ip;
+    }
+  memset(g_net, 0, MAX_NAME_LEN);
+  strncpy(g_net, net, MAX_NAME_LEN-1);
   g_doors_port= port;
   g_inhib_timeout = 0;
   g_action = action;
@@ -321,7 +339,10 @@ void xdoors_connect_init(char *net, uint32_t ip, int port, char *passwd,
   msg_mngt_heartbeat_init(heartbeat);
   memset(g_passwd, 0, MSG_DIGEST_LEN);
   strncpy(g_passwd, passwd, MSG_DIGEST_LEN-1);
-  llid = doorways_sock_client_inet_start(g_doors_ip, port, cb_conn);
+  if (g_doors_ip == 0)
+    llid = doorways_sock_client_unix_start(pathcrun, cb_conn);
+  else
+    llid = doorways_sock_client_inet_start(g_doors_ip, port, cb_conn);
   if (!llid)
     KOUT(" ");
   alloc_start_xdoors(llid, 0);

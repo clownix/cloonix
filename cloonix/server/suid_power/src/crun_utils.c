@@ -780,7 +780,6 @@ int crun_utils_unlink_sub_dir_files(char *dir)
       KOUT("%d", errno);
     if (rmdir(dir))
       {
-      KERR("ERROR Dir: %s could not be deleted\n", pth);
       result = -1;
       }
     else

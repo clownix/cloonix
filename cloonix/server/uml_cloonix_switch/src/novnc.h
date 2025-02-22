@@ -18,7 +18,7 @@
 
 
 #define CONFIG_NGINX "\n"\
-"user www;\n"\
+"user root;\n"\
 "worker_processes 1;\n"\
 "daemon off;\n"\
 "events {}\n"\

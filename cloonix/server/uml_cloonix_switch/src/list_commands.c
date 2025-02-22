@@ -36,7 +36,7 @@
 #include "ovs_a2b.h"
 #include "ovs_tap.h"
 #include "ovs_phy.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 
 
 
@@ -301,7 +301,7 @@ static int build_add_lan_phy_cmd(int offset, t_list_commands *hlist)
 static int build_add_lan_nat_cmd(int offset, t_list_commands *hlist)
 {
   int nb;
-  t_ovs_nat *cur = ovs_nat_get_first(&nb);
+  t_ovs_nat_main *cur = ovs_nat_main_get_first(&nb);
   int result = offset;
   t_list_commands *list;
   while(cur)
@@ -627,7 +627,7 @@ int produce_list_commands(t_list_commands *hlist, int is_layout)
   t_cnt *cnt = cnt_get_first_cnt(&nb_cnt);
   int go, width, height, cx, cy, cw, ch;
   t_layout_xml *layout_xml;
-  t_ovs_nat *nat = ovs_nat_get_first(&nb_nat);
+  t_ovs_nat_main *nat = ovs_nat_main_get_first(&nb_nat);
   t_ovs_a2b *a2b = ovs_a2b_get_first(&nb_a2b);
   t_ovs_c2c *c2c = ovs_c2c_get_first(&nb_c2c);
   t_ovs_tap *tap = ovs_tap_get_first(&nb_tap);

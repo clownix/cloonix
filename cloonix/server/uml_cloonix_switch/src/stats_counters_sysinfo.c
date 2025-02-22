@@ -234,14 +234,17 @@ void stats_counters_sysinfo_vm_death(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void stats_counters_sysinfo_llid_close(int llid)
+void stats_counters_sysinfo_llid_close(int llid, int from_clone)
 {
   t_sysinfo_sub *cur;
-  cur = find_sysinfo_sub_with_llid(llid);
-  while (cur)
+  if (!from_clone)
     {
-    free_sysinfo_sub(cur);
     cur = find_sysinfo_sub_with_llid(llid);
+    while (cur)
+      {
+      free_sysinfo_sub(cur);
+      cur = find_sysinfo_sub_with_llid(llid);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

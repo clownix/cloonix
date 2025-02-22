@@ -472,11 +472,11 @@ static void locale_doorways_client_tx(int llid, int len, char *buf)
 /*****************************************************************************/
 int main (int argc, char *argv[])
 {
-  int i, rank, result, proxy_is_on;
+  int i, rank, result, running_in_crun;
   char tmpnet[MAX_NAME_LEN];
-  uint32_t inet_addr, ip;
-  ip_string_to_int(&inet_addr, "127.0.0.1");
-  proxy_is_on = lib_io_proxy_is_on(tmpnet);
+  char pathcrun[MAX_PATH_LEN];
+  uint32_t ip;
+  running_in_crun = lib_io_running_in_crun(tmpnet);
   if (argc < 2)
     KOUT("%d", argc);
   g_inhibited = 0;
@@ -497,14 +497,21 @@ int main (int argc, char *argv[])
       {
       doors_io_basic_xml_init(locale_doorways_client_tx);
       g_cloonix_conf_info[i].doors_llid = 0;
-      if (proxy_is_on && (!strcmp(tmpnet, g_cloonix_conf_info[i].name)))
-        ip = inet_addr;
+      if (running_in_crun && (!strcmp(tmpnet, g_cloonix_conf_info[i].name)))
+        {
+        memset(pathcrun, 0, MAX_PATH_LEN);
+        snprintf(pathcrun, MAX_PATH_LEN-1,
+                 "%s_%s/proxy_pmain.sock", PROXYSHARE_IN, argv[2]);
+        doorways_sock_client_unix_start(pathcrun, callback_connect);
+        }
       else
+        {
         ip = g_cloonix_conf_info[i].ip;
-      g_cloonix_conf_info[i].connect_llid = 
-      doorways_sock_client_inet_start(ip,
-                                      g_cloonix_conf_info[i].port,
-                                      callback_connect);
+        g_cloonix_conf_info[i].connect_llid = 
+        doorways_sock_client_inet_start(ip,
+                                        g_cloonix_conf_info[i].port,
+                                        callback_connect);
+        }
       }
     clownix_timeout_add(400, timout_connect, NULL, NULL, NULL);
     client_loop();
@@ -519,10 +526,10 @@ int main (int argc, char *argv[])
       exit(1);
       }
     memset(g_cloonix_server_sock, 0, MAX_PATH_LEN);
-    if (proxy_is_on && (!strcmp(tmpnet, argv[2])))
+    if (running_in_crun && (!strcmp(tmpnet, argv[2])))
       {
-      snprintf(g_cloonix_server_sock, MAX_NAME_LEN-1,
-               "127.0.0.1:%d", g_cloonix_conf_info->port);
+      snprintf(g_cloonix_server_sock, MAX_PATH_LEN-1,
+               "%s_%s/proxy_pmain.sock", PROXYSHARE_IN, argv[2]);
       }
     else
       {

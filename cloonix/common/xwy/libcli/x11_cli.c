@@ -322,7 +322,11 @@ void x11_fd_epollin_epollout_setup(void)
         conn->x11_fd_epev->events |= EPOLLOUT;
       if (epoll_ctl(epfd, EPOLL_CTL_MOD, conn->x11_fd, 
                                          conn->x11_fd_epev))
-        KOUT(" ");
+        {
+        KERR("ERROR epoll_ctl %d %d", conn->x11_fd, errno);
+        if (epoll_ctl(epfd, EPOLL_CTL_ADD, conn->x11_fd, conn->x11_fd_epev))
+          KERR("ERROR %d %d", conn->x11_fd, errno);
+        }
       }
     }
 }

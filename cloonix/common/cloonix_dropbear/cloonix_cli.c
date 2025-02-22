@@ -512,13 +512,19 @@ static int tst_port(char *str_port, int *port)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int test_param(char *param, uint32_t *ip, int *port)
+static void test_param(char *param, uint32_t *ip, int *port)
 {
   char pm[MAX_PATH_LEN];
-  int result = 0;
   char *ptr_ip, *ptr_port;
+  struct stat stat_file;
+
+  *ip = 0;
+  *port = 0;
   if (strlen(param) >= MAX_PATH_LEN)
+    {
+    printf("\nparam LENGTH Problem %s\n\n", param);
     KOUT("param LENGTH Problem");
+    }
   else
     {
     memset(pm, 0, MAX_PATH_LEN);
@@ -527,18 +533,30 @@ static int test_param(char *param, uint32_t *ip, int *port)
     ptr_port = strchr(pm, ':');
     if (ptr_port)
       {
-      result = 1;
       *ptr_port = 0;
       ptr_port++;
       if (ip_string_to_int (ip, ptr_ip))
+        {
+        printf("\nIP param Problem %s\n\n", param);
         KOUT("IP param Problem %s", param);
+        }
       if (tst_port(ptr_port, port))
+        {
+        printf("\nPORT param Problem %s\n\n", param);
         KOUT("PORT param Problem %s", param);
+        }
       }
-    else
+    else if (stat(param, &stat_file))
+      {
+      printf("\nBad address 1 %s\n\n", param);
       KOUT("Bad address: %s", param);
+      }
+    else if (!S_ISSOCK(stat_file.st_mode))
+      {
+      printf("\nBad address 2 %s\n\n", param);
+      KOUT("Bad address: %s", param);
+      }
     }
-  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -597,14 +615,19 @@ int cloonix_connect_remote(char *cloonix_doors,
   doorways_sock_init(0);
   msg_mngt_init("dropbear", IO_MAX_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
-  if (!test_param(cloonix_doors, &ip, &port))
+  test_param(cloonix_doors, &ip, &port);
+  if (ip)
     {
-    printf("\nBad address %s\n\n", cloonix_doors);
-    wrapper_exit(1, (char *)__FILE__, __LINE__);
+    g_door_llid = 0;
+    g_connect_llid = doorways_sock_client_inet_start(ip, port, 
+                                                     callback_connect);
     }
-  g_door_llid = 0;
-  g_connect_llid = doorways_sock_client_inet_start(ip, port, 
-                                                   callback_connect);
+  else
+    {
+    g_door_llid = 0;
+    g_connect_llid = doorways_sock_client_unix_start(cloonix_doors,
+                                                     callback_connect);
+    }
   if (!g_connect_llid)
     {
     printf("\nCannot reach doorways %s\n\n", cloonix_doors);

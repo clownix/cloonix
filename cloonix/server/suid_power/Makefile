@@ -22,7 +22,10 @@ LIBS = -L${IO_CLOWNIX} -lio_clownix \
        -lcrypto
 
 CFLAGS+=-mtune=generic -fno-stack-protector -Wno-format-truncation
-CFLAGS+=-Wno-unused-variable -g -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)
+CFLAGS+=-Wno-unused-variable -g -rdynamic -DIS_DOORWAYS $(WARNINGS) $(INCLUDES)
+
+LDFLAGS+= -g -rdynamic
+
 CC=gcc
 
 all: $(shell mkdir -p ./obj) $(EXE)

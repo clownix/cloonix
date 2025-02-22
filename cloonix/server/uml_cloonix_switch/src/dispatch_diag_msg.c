@@ -31,7 +31,7 @@
 #include "hop_event.h"
 #include "ovs.h"
 #include "ovs_snf.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 #include "ovs_c2c.h"
 #include "ovs_a2b.h"
 
@@ -52,10 +52,10 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
     hop_event_hook(llid, FLAG_HOP_POLDIAG, line);
     ovs_snf_poldiag_resp(llid, tid, line);
     }
-  else if (ovs_nat_diag_llid(llid))
+  else if (ovs_nat_main_diag_llid(llid))
     {
     hop_event_hook(llid, FLAG_HOP_POLDIAG, line);
-    ovs_nat_poldiag_resp(llid, tid, line);
+    ovs_nat_main_poldiag_resp(llid, tid, line);
     }
   else if (ovs_c2c_diag_llid(llid))
     {
@@ -90,10 +90,10 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
     ovs_snf_sigdiag_resp(llid, tid, line);
     }
-  else if (ovs_nat_diag_llid(llid))
+  else if (ovs_nat_main_diag_llid(llid))
     {
     hop_event_hook(llid, FLAG_HOP_SIGDIAG, line);
-    ovs_nat_sigdiag_resp(llid, tid, line);
+    ovs_nat_main_sigdiag_resp(llid, tid, line);
     }
   else if (ovs_c2c_diag_llid(llid))
     {

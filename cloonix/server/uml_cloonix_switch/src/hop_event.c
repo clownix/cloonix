@@ -29,10 +29,11 @@
 #include "doorways_mngt.h"
 #include "ovs.h"
 #include "ovs_snf.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 #include "ovs_a2b.h"
 #include "ovs_c2c.h"
 #include "suid_power.h"
+#include "proxymous.h"
 
 
 /*---------------------------------------------------------------------------*/
@@ -393,14 +394,16 @@ int hop_event_alloc(int llid, int type_hop, char *name, int num)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void hop_event_free(int llid)
+void hop_event_free(int llid, int from_clone)
 {
-  t_hop_record *hop = get_hop_with_llid(llid);
-  if (hop)
+  t_hop_record *hop;
+  if (!from_clone)
     {
-    free_hop(hop);
+    hop = get_hop_with_llid(llid);
+    if (hop)
+      free_hop(hop);
+    hop_evt_client_free(llid);
     }
-  hop_evt_client_free(llid);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -468,8 +471,10 @@ void rpct_recv_pid_resp(int llid, int tid, char *name, int num,
     doors_pid_resp(llid, name, pid);
   else if (tid == type_hop_snf)
     ovs_snf_pid_resp(llid, name, pid);
-  else if (tid == type_hop_nat)
-    ovs_nat_pid_resp(llid, name, pid);
+  else if (tid == type_hop_nat_main)
+    ovs_nat_main_pid_resp(llid, name, pid);
+  else if (tid == type_hop_proxymous)
+    proxymous_pid_resp(llid, name, pid);
   else if (tid == type_hop_a2b)
     ovs_a2b_pid_resp(llid, name, pid);
   else if (tid == type_hop_c2c)

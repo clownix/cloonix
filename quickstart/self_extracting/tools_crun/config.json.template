@@ -2,17 +2,22 @@
 "ociVersion": "1.0.2",
   "process": {
     "terminal": "false",
+
     "user": {
-        "uid": 0,
-        "gid": 0
+      "uid": 0,
+      "gid": 0,
+      "additionalGids": [
+        5,
+        __KVM_GID__
+      ]
     },
     "args": ["/usr/libexec/cloonix/server/cloonix-init-__IDENT__"],
     "env": [
         "PATH=/usr/sbin:/usr/bin:/sbin:/bin:/usr/bin:/usr/libexec/cloonix/common/:/usr/libexec/cloonix/server",
         "XDG_SESSION_TYPE=x11",
-        "XDG_RUNTIME_DIR=/tmp/cloonix_proxy",
+        "XDG_RUNTIME_DIR=__PROXYSHARE_IN_____IDENT__",
         "DISPLAY=:713",
-        "XAUTHORITY=/tmp/cloonix_proxy/Xauthority",
+        "XAUTHORITY=__PROXYSHARE_IN_____IDENT__/Xauthority",
         "HOME=/root",
         "USER=root"
     ],
@@ -40,9 +45,14 @@ __HOST_BULK_PRESENT__   "type": "none",
 __HOST_BULK_PRESENT__   "source": "/var/lib/cloonix/bulk",
 __HOST_BULK_PRESENT__   "options": ["rbind","rw"]
 __HOST_BULK_PRESENT__   },{
-    "destination": "/tmp/cloonix_proxy",
+    "destination": "__PROXYSHARE_IN_____IDENT__",
     "type": "none",
-    "source": "__PROXYSHARE__",
+    "source": "__PROXYSHARE_OUT__",
+    "options": ["rbind","rw"]
+    },{
+   "destination": "__PROXYSHARE_IN_____IDENT__/pulse",
+    "type": "none",
+    "source": "__XDG_RUNTIME_DIR__/pulse",
     "options": ["rbind","rw"]
     },{
     "destination": "/dev",
@@ -53,7 +63,7 @@ __HOST_BULK_PRESENT__   },{
     "destination": "/dev/pts",
     "type": "devpts",
     "source": "devpts",
-    "options": ["nosuid","noexec","newinstance","ptmxmode=0666","mode=0620"]
+    "options": ["nosuid","noexec","newinstance","ptmxmode=0000","mode=0620"]
     },{
     "destination": "/dev/net",
     "type": "tmpfs",
@@ -101,7 +111,7 @@ __HOST_BULK_PRESENT__   },{
         "minor": 232,
         "fileMode": 438,
         "uid": 0,
-        "gid": 0 
+        "gid": 115 
         },{
         "path": "/dev/vhost-net",
         "type": "c",
@@ -109,7 +119,7 @@ __HOST_BULK_PRESENT__   },{
         "minor": 238,
         "fileMode": 438,
         "uid": 0,
-        "gid": 0
+        "gid": 115
         },
         {
         "path": "/dev/net/tun",
@@ -121,6 +131,27 @@ __HOST_BULK_PRESENT__   },{
         "gid": 0
         }
     ],
+
+
+        "uidMappings": [ 
+            {
+                "containerID": 0,
+                "hostID": __USER_UID__,
+                "size": 1
+            }
+        ],
+        "gidMappings": [
+            {
+                "containerID": 0,
+                "hostID": __USER_GID__,
+                "size": 1
+            }
+        ],
+
+
+
+
+
     "resources": {
         "devices": [{
             "allow": false,
@@ -157,6 +188,7 @@ __HOST_BULK_PRESENT__   },{
         {"type": "network"},
         {"type": "ipc"},
         {"type": "uts"},
+        {"type": "user"},
         {"type": "cgroup"},
         {"type": "mount"}
     ],

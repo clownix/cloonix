@@ -65,7 +65,6 @@ static int g_xwy_kill_req;
 static int g_xwy_state;
 static int g_xwy_pid;
 static int g_xwy_doors_connect;
-static int g_xwy_last_pid;
 static int g_xwy_llid;
 
 int get_doorways_llid(void);
@@ -105,7 +104,8 @@ static void fatal_xwy_err(int llid)
     KOUT("ERROR %d %d", llid, g_xwy_llid);
   if (!g_xwy_llid)
     KOUT(" ");
-  llid_trace_free(g_xwy_llid, 0, __FUNCTION__);
+  if ((g_xwy_llid) && (msg_exist_channel(g_xwy_llid)))
+    llid_trace_free(g_xwy_llid, 0, __FUNCTION__);
   g_xwy_llid = 0;
   g_xwy_pid = 0;
   g_xwy_doors_connect = 0;
@@ -131,7 +131,6 @@ static int xwy_rx_cb(int llid, int fd)
   len = util_read(buf, 2*MAX_PATH_LEN, fd);
   if (len < 0)
     {
-    KERR("ERROR %d", errno);
     fatal_xwy_err(llid);
     }
   else
@@ -144,7 +143,6 @@ static int xwy_rx_cb(int llid, int fd)
         KERR("pid changed: %d %d", g_xwy_pid, pid);
       set_state(xwy_state_pid_ok);
       g_xwy_pid = pid;
-      g_xwy_last_pid = pid;
       }
     else
       KERR("%d %s", len, buf);
@@ -156,7 +154,7 @@ static int xwy_rx_cb(int llid, int fd)
 /*****************************************************************************/
 static void reset_starting(void)
 {
-  if (g_xwy_llid)
+  if ((g_xwy_llid) && (msg_exist_channel(g_xwy_llid)))
     llid_trace_free(g_xwy_llid, 0, __FUNCTION__);
   g_xwy_llid = 0;
   g_xwy_pid = 0;
@@ -259,7 +257,7 @@ void kill_xwy(void)
 /*****************************************************************************/
 int xwy_pid(void)
 {
-  return g_xwy_last_pid;
+  return g_xwy_pid;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -285,12 +283,28 @@ int init_xwy_done(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void xwy_close_llid(int llid, int from_clone)
+{
+  if ((!from_clone) && (llid == g_xwy_llid))
+    {
+    if ((g_xwy_llid) && (msg_exist_channel(g_xwy_llid)))
+      msg_delete_channel(g_xwy_llid);
+    if (g_xwy_pid)
+      kill(g_xwy_pid, SIGKILL);
+    g_xwy_llid = 0;
+    g_xwy_pid = 0;
+    g_xwy_doors_connect = 0;
+    set_state(xwy_state_init);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void init_xwy(char *cloonix_net_name)
 {
   g_xwy_kill_req = 0;
   g_xwy_pid = 0;
   g_xwy_doors_connect = 0;
-  g_xwy_last_pid = 0;
   g_xwy_llid = 0;
   set_state(xwy_state_init);
   memset(&g_xwy_params, 0, sizeof(t_xwy_params));

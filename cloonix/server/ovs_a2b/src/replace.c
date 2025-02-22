@@ -195,29 +195,24 @@ static void udp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
     {
     swap_ip_dst(ipv4, new_ip, buf_len, buf);
     utils_fill_udp_csum(ipv4, len);
-/*
     KERR("UDP LEN: %d swap dst %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
           buf_len, 
           ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
           ((dip >> 8)  & 0xFF), (dip & 0xFF),
           ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
           ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
-*/
     }
   else if ((!dest) && (sip == targ_ip))
     {
     swap_ip_src(ipv4, new_ip, buf_len, buf);
     utils_fill_udp_csum(ipv4, len);
-/*
     KERR("UDP LEN: %d swap src %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
           buf_len, 
           ((sip >> 24) & 0xFF), ((sip >> 16) & 0xFF),
           ((sip >> 8)  & 0xFF), (sip & 0xFF),
           ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
           ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
-*/
     }
-/*
   else
     KERR("UDPP NO SWAP dest=%d targ=%hhu.%hhu.%hhu.%hhu "
          " sip=%hhu.%hhu.%hhu.%hhu dip=%hhu.%hhu.%hhu.%hhu",
@@ -228,7 +223,6 @@ static void udp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
           ((sip >> 8)  & 0xFF), (sip & 0xFF),
           ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
           ((dip >> 8)  & 0xFF), (dip & 0xFF));
-*/
 }
 /*---------------------------------------------------------------------------*/
 
@@ -243,29 +237,24 @@ static void tcp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
     {
     swap_ip_dst(ipv4, new_ip, buf_len, buf);
     utils_tcp_checksum(buf_len, buf, tcp_hdr_len);
-/*
     KERR("TCP %d swap dst %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
           buf_len,
           ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
           ((dip >> 8)  & 0xFF), (dip & 0xFF),
           ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
           ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
-*/
     }
   else if ((!dest) && (sip == targ_ip))
     {
     swap_ip_src(ipv4, new_ip, buf_len, buf);
     utils_tcp_checksum(buf_len, buf, tcp_hdr_len);
-/*
     KERR("TCP %d swap src %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
           buf_len,
           ((sip >> 24) & 0xFF), ((sip >> 16) & 0xFF),
           ((sip >> 8)  & 0xFF), (sip & 0xFF),
           ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
           ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
-*/
     }
-/*
   else
     KERR("TCP NO SWAP dest=%d targ=%hhu.%hhu.%hhu.%hhu "
          " sip=%hhu.%hhu.%hhu.%hhu dip=%hhu.%hhu.%hhu.%hhu",
@@ -276,7 +265,6 @@ static void tcp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
           ((sip >> 8)  & 0xFF), (sip & 0xFF),
           ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
           ((dip >> 8)  & 0xFF), (dip & 0xFF));
-*/
 }
 /*---------------------------------------------------------------------------*/
 
@@ -289,26 +277,21 @@ static void icmp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
   if ((dest) && (dip == targ_ip))
     {
     swap_ip_dst(ipv4, new_ip, buf_len, buf);
-/*
     KERR("ICMP swap dst %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
           ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
           ((dip >> 8)  & 0xFF), (dip & 0xFF),
           ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
           ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
-*/
     }
   else if ((!dest) && (sip == targ_ip))
     {
     swap_ip_src(ipv4, new_ip, buf_len, buf);
-/*
     KERR("ICMP swap src %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
           ((sip >> 24) & 0xFF), ((sip >> 16) & 0xFF),
           ((sip >> 8)  & 0xFF), (sip & 0xFF),
           ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
           ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
-*/
     }
-/*
   else
     KERR("ICMP NO SWAP dest=%d targ=%hhu.%hhu.%hhu.%hhu "
          " sip=%hhu.%hhu.%hhu.%hhu dip=%hhu.%hhu.%hhu.%hhu",
@@ -319,10 +302,8 @@ static void icmp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
           ((sip >> 8)  & 0xFF), (sip & 0xFF),
           ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
           ((dip >> 8)  & 0xFF), (dip & 0xFF));
-*/
 }
 /*---------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static void packet_rx(int len, uint8_t *buf,
@@ -501,8 +482,58 @@ void replace_packet(int dir, t_pkt *pbuf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void replace_init(void)
+void replace_init(char *name)
 {
+  uint32_t src_targ_ip0;
+  uint32_t src_with_ip0;
+  uint32_t dst_targ_ip0;
+  uint32_t dst_with_ip0;
+  uint32_t src_targ_ip1;
+  uint32_t src_with_ip1;
+  uint32_t dst_targ_ip1;
+  uint32_t dst_with_ip1;
+
   memset(g_swap, 0, 2*(sizeof(t_swap)));
+  g_swap[0].dst_must_swap_ip = 1;
+  g_swap[0].src_must_swap_ip = 1;
+  g_swap[1].dst_must_swap_ip = 1;
+  g_swap[1].src_must_swap_ip = 1;
+
+  if (strcmp(name, "swap1") == 0)
+    {
+    KERR("CONFIG swap1");
+    ip_string_to_int(&src_targ_ip0, "10.0.11.1");
+    ip_string_to_int(&dst_targ_ip0, "10.0.11.21");
+    ip_string_to_int(&src_with_ip0, "198.168.101.160");
+    ip_string_to_int(&dst_with_ip0, "198.168.102.160");
+    ip_string_to_int(&dst_targ_ip1, "198.168.101.160");
+    ip_string_to_int(&dst_with_ip1, "10.0.11.1");
+    ip_string_to_int(&src_targ_ip1, "198.168.102.160");
+    ip_string_to_int(&src_with_ip1, "10.0.11.21");
+    }
+  else if (strcmp(name, "swap2") == 0)
+    {
+    KERR("CONFIG swap2");
+    ip_string_to_int(&src_targ_ip0, "10.0.11.21");
+    ip_string_to_int(&dst_targ_ip0, "10.0.11.1");
+    ip_string_to_int(&src_with_ip0, "198.168.102.160");
+    ip_string_to_int(&dst_with_ip0, "198.168.101.160");
+    ip_string_to_int(&dst_targ_ip1, "198.168.102.160");
+    ip_string_to_int(&dst_with_ip1, "10.0.11.21");
+    ip_string_to_int(&src_targ_ip1, "198.168.101.160");
+    ip_string_to_int(&src_with_ip1, "10.0.11.1");
+    }
+  else
+    KERR("ERROR %s", name);
+
+  g_swap[0].dst_targ_ip = dst_targ_ip0;
+  g_swap[0].dst_with_ip = dst_with_ip0;
+  g_swap[0].src_targ_ip = src_targ_ip0;
+  g_swap[0].src_with_ip = src_with_ip0;
+
+  g_swap[1].dst_targ_ip = dst_targ_ip1;
+  g_swap[1].dst_with_ip = dst_with_ip1;
+  g_swap[1].src_targ_ip = src_targ_ip1;
+  g_swap[1].src_with_ip = src_with_ip1;
 }
 /*--------------------------------------------------------------------------*/

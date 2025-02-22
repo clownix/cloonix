@@ -39,7 +39,7 @@
 #include "ovs_snf.h"
 #include "ovs_tap.h"
 #include "ovs_phy.h"
-#include "ovs_nat.h"
+#include "ovs_nat_main.h"
 #include "ovs_a2b.h"
 #include "ovs_c2c.h"
 #include "lan_to_name.h"
@@ -353,7 +353,7 @@ static void transmit_add_ack(int tid, t_ovsreq *cur, int is_ko)
   else if (cur->type == ovsreq_add_phy_lan)
     ovs_phy_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_add_nat_lan)
-    ovs_nat_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
+    ovs_nat_main_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_add_a2b_lan)
     ovs_a2b_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_add_c2c_lan)
@@ -377,7 +377,7 @@ static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
   else if (cur->type == ovsreq_del_phy_lan)
     ovs_phy_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_del_nat_lan)
-    ovs_nat_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
+    ovs_nat_main_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_del_a2b_lan)
     ovs_a2b_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else if (cur->type == ovsreq_del_c2c_lan)
@@ -655,14 +655,14 @@ static void timer_msg_beat(void *data)
        case ovsreq_add_nat_lan:
           KERR("ERROR TIMEOUT %d %s %s %s", cur->tid, cur->vhost,
                                             cur->name, cur->lan);
-          ovs_nat_resp_add_lan(1, cur->name, 0, cur->vhost, cur->lan);
+          ovs_nat_main_resp_add_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_nat_lan:
           KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
                                             cur->name, cur->num);
-          ovs_nat_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
+          ovs_nat_main_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 

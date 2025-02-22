@@ -986,13 +986,13 @@ int callback_connect_glib(int llid, int fd)
     g_llid = glib_connect_llid(llid, fd, doorways_rx_bufraw, g_password);
     if (!g_llid)
       {
-      printf("Cannot connect to %s\n", g_doors_path);
+      printf("Cannot3 connect to %s\n", g_doors_path);
       KOUT("%s", g_doors_path);
       }
     if (doorways_sig_bufraw(g_llid, llid, doors_type_switch,
                             doors_val_init_link, "OK"))
       {
-      printf("Cannot transmit to %s\n", g_doors_path);
+      printf("Cannot4 transmit to %s\n", g_doors_path);
       KOUT("%s", g_doors_path);
       }
     }
@@ -1023,14 +1023,14 @@ static int callback_connect(int llid, int fd)
                                            doorways_rx_bufraw);
     if (!g_llid)
       {
-      printf("Cannot connect to %s\n", g_doors_path);
-      KOUT("%s", g_doors_path);
+      printf("Cannot1 connect to %s\n", g_doors_path);
+      KOUT("ERROR %s", g_doors_path);
       }
     if (doorways_sig_bufraw(g_llid, llid, doors_type_switch,
                             doors_val_init_link, "OK"))
       {
-      printf("Cannot transmit to %s\n", g_doors_path);
-      KOUT("%s", g_doors_path);
+      printf("Cannot2 transmit to %s\n", g_doors_path);
+      KOUT("ERROR %s", g_doors_path);
       }
     }
   else
@@ -1090,13 +1090,19 @@ void client_init(char *name, char *path, char *password)
   rpct_redirect_string_tx(doors_tx_switch_val_none);
 #ifdef WITH_GLIB
   glib_client_init();
-  llid = doorways_sock_client_inet_start(ip, port, callback_connect_glib);
+  if (ip == 0)
+    llid = doorways_sock_client_unix_start(path, callback_connect_glib);
+  else
+    llid = doorways_sock_client_inet_start(ip, port, callback_connect_glib);
 #else
-  llid = doorways_sock_client_inet_start(ip, port, callback_connect);
+  if (ip == 0)
+    llid = doorways_sock_client_unix_start(path, callback_connect);
+  else
+    llid = doorways_sock_client_inet_start(ip, port, callback_connect);
 #endif
   if (llid == 0)
     {
-    printf("\n\nCannot connect to %s\n\n", path);
+    printf("\n\nClient init: Cannot connect to %s\n\n", path);
     exit(-1);
     }
   g_connect_llid = llid;

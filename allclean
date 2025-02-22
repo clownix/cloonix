@@ -59,7 +59,7 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
   done
 #----------------------------------------------------------
   for i in  doorways \
-            proxy_crun \
+            proxymous \
             suid_power \
             uml_cloonix_switch \
             create_insider_agents_iso/cloonix_agent ; do
@@ -68,15 +68,15 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
   done 
   rm -f ${SERVER}/dtach/cloonix-dtach
   rm -f ${SERVER}/script_pty/cloonix-scriptpty
-  rm -f ${SERVER}/proxy_crun/cloonix-proxy-crun-access
+  rm -f ${SERVER}/cloonix-proxymous
 #----------------------------------------------------------
   for i in ovs \
-           proxy_crun \
+           proxymous \
            nginx \
            websockify-js \
            ovs_drv \
            ovs_snf \
-           ovs_nat \
+           ovs_nat_main \
            ovs_c2c \
            ovs_a2b \
            qemu \

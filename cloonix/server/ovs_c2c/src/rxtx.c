@@ -28,9 +28,8 @@
 #include "packet_arp_mangle.h"
 
 
-static uint8_t g_buf_tx[TOT_MSG_BUF_LEN];
-static uint8_t g_buf_rx[TOT_MSG_BUF_LEN];
-static uint8_t g_head_msg[HEADER_TAP_MSG];
+static uint8_t g_buf_tx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_buf_rx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
 static int g_fd_rx_from_tap;
 static int g_fd_tx_to_tap;
 static int g_mac_mangle;
@@ -45,16 +44,15 @@ int get_fd_tx_to_tap(void)
 /****************************************************************************/
 void rxtx_tx_enqueue(int len, uint8_t *buf)
 {
+  static uint16_t seqtap = 0;
   int tx;
   int udp2tap = 1;
-
-  g_buf_tx[0] = 0xCA;
-  g_buf_tx[1] = 0xFE;
-  g_buf_tx[2] = (len & 0xFF00) >> 8;
-  g_buf_tx[3] =  len & 0xFF;
+  seqtap += 1;
   if (g_mac_mangle)
     packet_arp_mangle(udp2tap, len, buf);
-  memcpy(g_buf_tx + HEADER_TAP_MSG, buf, len);  
+  if ((len <= 0) || (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+    KOUT("ERROR SEND  %d", len);
+  fct_seqtap_tx(kind_seqtap_data, g_buf_tx, seqtap, len, buf);
   tx = write(g_fd_tx_to_tap, g_buf_tx, len + HEADER_TAP_MSG);
   if (tx != len + HEADER_TAP_MSG)
     KOUT("ERROR WRITE TAP %d %d %d", tx, len, errno);
@@ -62,44 +60,33 @@ void rxtx_tx_enqueue(int len, uint8_t *buf)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void rxtx_packet_rx(int len, uint8_t *buf)
+static int rx_cb(int llid, int fd)
 {
-  t_udp_burst *burst;
+  static uint16_t seqtap=0;
   int udp2tap = 0;
+  uint16_t seq;
+  int len, buf_len, result;
+  uint8_t *buf;
   int green_light = udp_get_traffic_mngt();
+  len = read(fd, g_buf_rx, HEADER_TAP_MSG);
+  if (len <= 0)
+    KOUT("ERROR READ %d %d", len, errno);
+  result = fct_seqtap_rx(0, 0, fd, g_buf_rx, &seq, &buf_len, &buf);
+  if (result != kind_seqtap_data)
+    KOUT("ERROR %d", result);
+  if (seq != ((seqtap+1)&0xFFFF))
+    KERR("WARNING %d %d", seq, seqtap);
+  seqtap = seq;
   if (green_light)
     {
     if (g_mac_mangle)
-      packet_arp_mangle(udp2tap, len, buf);
-    burst = get_udp_burst_tx();
-    memcpy(burst[0].buf, buf, len);
-    burst[0].len = len;
-    if (udp_tx_burst(1, burst))
-      KERR("ERROR %d", len);
+      packet_arp_mangle(udp2tap, buf_len, buf);
+    if (udp_tx_traf_send(buf_len, buf))
+      KERR("ERROR %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+           buf_len, g_buf_rx[0], g_buf_rx[1], g_buf_rx[2], g_buf_rx[3],
+           g_buf_rx[4], g_buf_rx[5], g_buf_rx[6], g_buf_rx[7]);
     }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static int rx_cb(int llid, int fd)
-{
-  int len, rx;
-  len = read(fd, g_head_msg, HEADER_TAP_MSG);
-  if (len != HEADER_TAP_MSG)
-    KOUT("ERROR %d %d", len, errno);
-  else
-    {
-    if ((g_head_msg[0] != 0xCA) || (g_head_msg[1] != 0xFE))
-      KOUT("ERROR %d %d %hhx %hhx", len, errno, g_head_msg[0], g_head_msg[1]);
-    len = ((g_head_msg[2] & 0xFF) << 8) + (g_head_msg[3] & 0xFF);
-    if ((len == 0) || (len > MAX_TAP_BUF_LEN))
-      KOUT("ERROR %d %hhx %hhx", len, g_head_msg[2], g_head_msg[3]);
-    rx = read(fd, g_buf_rx, len);
-    if (len != rx)
-      KOUT("ERROR %d %d %d", len, rx, errno);
-    rxtx_packet_rx(len, g_buf_rx);
-    }
-  return (len+4);
+  return 0;
 }
 /*--------------------------------------------------------------------------*/
 

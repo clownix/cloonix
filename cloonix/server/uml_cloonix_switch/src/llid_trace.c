@@ -36,6 +36,12 @@
 #include "stats_counters_sysinfo.h"
 #include "suid_power.h"
 #include "ovs_snf.h"
+#include "ovs_c2c.h"
+#include "ovs_a2b.h"
+#include "ovs_nat_main.h"
+#include "proxymous.h"
+#include "ovs.h"
+#include "xwy.h"
 /*---------------------------------------------------------------------------*/
 typedef struct t_event_to_llid
 {
@@ -381,16 +387,25 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
   if ((llid <1) || (llid >= CLOWNIX_MAX_CHANNELS))
     KOUT("%s %d", fct, llid);
 
-  suid_power_llid_closed(llid, from_clone, fct);
-  hop_event_free(llid);
-  eventfull_llid_delete(llid);
-  slowperiodic_llid_delete(llid);
-  layout_llid_destroy(llid);
-  stats_counters_llid_close(llid);
-  stats_counters_sysinfo_llid_close(llid);
-  ovs_snf_llid_closed(llid);
+  xwy_close_llid(llid, from_clone);
+  ovs_llid_closed(llid, from_clone);
+  proxymous_llid_closed(llid, from_clone);
+  ovs_c2c_llid_closed(llid, from_clone);
+  ovs_nat_main_llid_closed(llid, from_clone);
+  ovs_a2b_llid_closed(llid, from_clone);
+
+  suid_power_llid_closed(llid, from_clone);
+  hop_event_free(llid, from_clone);
+  eventfull_llid_delete(llid, from_clone);
+  slowperiodic_llid_delete(llid, from_clone);
+  layout_llid_destroy(llid, from_clone);
+  stats_counters_llid_close(llid, from_clone);
+  stats_counters_sysinfo_llid_close(llid, from_clone);
+  ovs_snf_llid_closed(llid, from_clone);
 
   cur = llid_trace_data[llid];
+  if ((!from_clone) && (!cur))
+    KERR("WARNING UNKNOWN LLID TRACE FREE %d %s", llid, fct);
   if (cur)
     {
     trace_fd_extract(cur->type);
@@ -411,6 +426,21 @@ void llid_trace_free(int llid, int from_clone, const char* fct)
 
     llid_trace_data[llid] = NULL;
     clownix_free(cur, __FUNCTION__);
+    }
+  else
+    KERR("WARNING LLID NOT KNOWN %d %s", llid, fct);
+
+  if (!from_clone)
+    {
+    for (i=0; i<CLOWNIX_MAX_CHANNELS; i++)
+      {
+      if (msg_exist_channel(i))
+        {
+        cur = llid_trace_data[i];
+        if (!cur)
+          KERR("WARNING LLID NOT KNOWN %d", i);
+        }
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -449,8 +479,6 @@ int llid_get_count_beat(int llid)
   return result; 
 }
 /*---------------------------------------------------------------------------*/
-
-
 
 /*****************************************************************************/
 void llid_free_all_llid(void)

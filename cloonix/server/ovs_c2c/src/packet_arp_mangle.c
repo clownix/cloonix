@@ -21,6 +21,8 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <arpa/inet.h>
+
 
 #include "io_clownix.h"
 
@@ -39,6 +41,7 @@ enum
   proto_arp_req,
   proto_arp_resp,
   proto_ip,
+  proto_ipv6,
 };
 
 typedef struct t_association
@@ -51,6 +54,7 @@ typedef struct t_association
 
 
 static t_association *head_association;
+
 
 /*****************************************************************************/
 static uint8_t *get_wif_hwaddr(void)
@@ -207,18 +211,36 @@ static void put_arp_target_mac(uint8_t *mac, uint8_t *data)
 /*****************************************************************************/
 static int get_proto(int len, uint8_t *data)
 {
-  int result = proto_none;
+//  int i;
+  int result;
   if ((data[12] == 0x08) && (data[13] == 0x00))
+    {
     result = proto_ip;
-  if ((data[12] == 0x08) && (data[13] == 0x06))
+    }
+  else if ((data[12] == 0x08) && (data[13] == 0x06))
     {
     if (data[21] == 0x01)
       result = proto_arp_req;
     if (data[21] == 0x02)
       result = proto_arp_resp;
     }
-//  if (result == proto_none)
-//    KERR("%02X %02X %02X", data[12], data[13], data[21]);
+  else if ((data[12] == 0x86) && (data[13] == 0xdd))
+    {
+    result = proto_ipv6;
+    }
+  else
+    {
+    result = proto_none;
+/*
+    for (i=0; i<5; i++)
+      KERR("%02hX %02hX %02hX %02hX %02hX %02hX %02hX %02hX "
+           "%02hX %02hX %02hX %02hX %02hX %02hX %02hX %02hX",
+           data[0+(16*i)], data[1+(16*i)], data[2+(16*i)], data[3+(16*i)],
+           data[4+(16*i)], data[5+(16*i)], data[6+(16*i)], data[7+(16*i)],
+           data[8+(16*i)], data[9+(16*i)], data[10+(16*i)], data[11+(16*i)],
+           data[12+(16*i)], data[13+(16*i)], data[14+(16*i)], data[15+(16*i)]);
+*/
+    }
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -283,16 +305,16 @@ static uint8_t *get_association(int ip)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int tst_ip_input(int len, uint8_t *data, int *real_len)
+static int tst_ip_input(int len, uint8_t *data)
 {
   int result = -1;
   int ip_len = ((data[2] << 8) & 0xFF00) + (data[3] & 0xFF);
-  *real_len = 0;
   if ((len > IP_HEADER) && (data[0] == 0x45))
     {
-    if (ip_len <= len)
+    if ((ip_len <= len) ||
+        (ip_len == len + MAC_HEADER) ||
+        (ip_len == len + MAC_HEADER - END_FRAME_ADDED_CHECK_LEN))
       {
-      *real_len = ip_len;
       if (!in_cksum((u_short *) data, IP_HEADER))
         {
         if (((data[6] & (~0x40)) == 0) && (data[7] == 0))
@@ -304,10 +326,10 @@ static int tst_ip_input(int len, uint8_t *data, int *real_len)
         KERR("BAD!!!! IP checksum\n");
       }
     else
-      KERR("BAD!!!! IP len:%d real rx:%d\n", ip_len, len);
+      KERR("BAD IP LENGTH !!!! IP len:%d real rx:%d\n", ip_len, len);
     }
   else
-    KERR("BAD!!!! IP 0x45\n");
+    KERR("BAD!!!! IP 0x45 %d %0hX\n", len, data[0]);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -315,7 +337,7 @@ static int tst_ip_input(int len, uint8_t *data, int *real_len)
 /*****************************************************************************/
 void packet_arp_mangle(int udp2tap, int len, uint8_t *data)
 {
-  int proto, real_len;
+  int proto;
   int private_net_ip;
   uint8_t *private_net_mac;
   if (!data)
@@ -334,9 +356,9 @@ void packet_arp_mangle(int udp2tap, int len, uint8_t *data)
         {
         get_arp_sender_ip(data, &private_net_ip);
         associate_privates(private_net_ip, get_arp_sender_mac(data));
-        KERR("ARPTX IP-MAC ASSOCIATION: %s %s", 
+/*        KERR("ARPTX IP-MAC ASSOCIATION: %s %s", 
                     get_ip_string(private_net_ip), 
-                    get_mac_string(get_arp_sender_mac(data)));
+                    get_mac_string(get_arp_sender_mac(data))); */
         if (src_mac_is_unicast(data))
           put_src_mac(get_wif_hwaddr(), data);
         put_arp_sender_mac(get_wif_hwaddr(), data);
@@ -347,8 +369,8 @@ void packet_arp_mangle(int udp2tap, int len, uint8_t *data)
         private_net_mac = get_association(private_net_ip);
         if (private_net_mac)
           {
-          KERR("RXGETARP: %s %s", get_ip_string(private_net_ip), 
-                                         get_mac_string(private_net_mac));
+/*          KERR("RXGETARP: %s %s", get_ip_string(private_net_ip), 
+                                  get_mac_string(private_net_mac)); */
           if (dst_mac_is_unicast(data))
             put_dst_mac(private_net_mac, data);
           put_arp_target_mac(private_net_mac, data);
@@ -356,9 +378,7 @@ void packet_arp_mangle(int udp2tap, int len, uint8_t *data)
         }
       break;
     case proto_ip:
-      if (tst_ip_input(len-MAC_HEADER, data+MAC_HEADER, &real_len))
-        KERR("BAD IP PACKET");
-      else
+      if (!tst_ip_input(len-MAC_HEADER, data+MAC_HEADER))
         {
         private_net_ip = 0;
         if (!udp2tap)
@@ -401,8 +421,10 @@ void packet_arp_mangle(int udp2tap, int len, uint8_t *data)
           }
         }
       break;
+    case proto_ipv6:
+      break;
     case proto_none:
-      KERR("NOT SUPPORTED PROTO");
+/*      KERR("NOT SUPPORTED PROTO %hhx %hhx", data[12], data[13]); */
       break;
     default:
       KOUT("%d", proto);

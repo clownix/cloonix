@@ -99,6 +99,20 @@ typedef int  (*t_fd_event)(int llid, int fd);
 typedef void (*t_fd_connect)(int llid, int llid_new);
 
 
+#define PROXYMARKUP_START "proxymarkup_crun_data_start:"
+#define PROXYMARKUP_END ":proxymarkup_crun_data_end"
+
+#define TRAF_TAP_BUF_LEN 1400
+#define MAX_TAP_BUF_LEN 1514
+#define HEADER_TAP_MSG 8
+#define END_FRAME_ADDED_CHECK_LEN 4
+#define MAX_DGRAM_LEN 2048
+
+
+
+#define MAX_ICMP_RXTX_LEN 1514
+#define MAX_ICMP_RXTX_SIG_LEN 4000
+
 #define NAT_IP_CISCO  "172.17.0.1"
 #define NAT_IP_GW     "172.17.0.2"
 #define NAT_IP_DNS    "172.17.0.3"
@@ -175,7 +189,9 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define NGINX_DIR "nginx"
 #define RUN_DIR "run"
 #define SNF_DIR "snf"
-#define NAT_DIR "nat"
+#define NAT_MAIN_DIR  "nat_m"
+#define NAT_PROXY_DIR "nat_p"
+#define PROXYMOUS "proxymous"
 #define A2B_DIR "a2b"
 #define C2C_DIR "c2c"
 #define CNT_DIR "cnt"
@@ -183,7 +199,6 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define LOG_DIR "log"
 
 
-#define MAX_DGRAM_LEN 2048
 
 #define NOVNC_DISPLAY 733
 
@@ -221,7 +236,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 
 #define SPICE_USB_ACL_HELPER_BIN "/usr/libexec/cloonix/common/cloonix-spice-client-glib-usb-acl-helper"
 
-#define PROXYSHARE "/tmp/cloonix_proxy"
+#define PROXYSHARE_IN "/tmp/cloonix_proxymous"
 
 #define XAUTH_BIN "/usr/libexec/cloonix/common/xauth"
 #define BASH_BIN "/usr/libexec/cloonix/common/bash"

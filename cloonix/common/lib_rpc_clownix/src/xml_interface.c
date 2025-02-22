@@ -2820,6 +2820,15 @@ char *llid_trace_lib(int type)
     case type_llid_trace_doorways:
       result = "doorways";
       break;
+    case type_llid_trace_proxymous:
+      result = "proxymous";
+      break;
+    case type_llid_trace_unix_qmp:
+      result = "unix_qmp";
+      break;
+    case type_llid_trace_endp_suid:
+      result = "suid";
+      break;
     default:
       KOUT("Error llid type %d", type);
       break;

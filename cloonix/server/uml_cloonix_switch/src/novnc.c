@@ -165,6 +165,7 @@ static void setup_nginx_conf(char *websockify_port, char *nginx_port)
 { 
   char err[MAX_PRINT_LEN];
   char path[MAX_PATH_LEN];
+  char proxymous_dir[MAX_PATH_LEN];
   char *data_conf;
   int len;
   snprintf(path, MAX_PATH_LEN, "%s/nginx.conf", utils_get_nginx_conf_dir());
@@ -172,8 +173,10 @@ static void setup_nginx_conf(char *websockify_port, char *nginx_port)
   len = strlen(CONFIG_NGINX) + MAX_PATH_LEN + MAX_PATH_LEN;
   data_conf = (char *) malloc(len);
   memset(data_conf, 0, len);
+  memset(proxymous_dir, 0, MAX_PATH_LEN);
+  snprintf(proxymous_dir, MAX_PATH_LEN-1, "%s_%s", PROXYSHARE_IN, g_net_name);
   snprintf(data_conf, len-1, CONFIG_NGINX, websockify_port, nginx_port,
-           PROXYSHARE, g_net_name);
+           proxymous_dir, g_net_name);
   if (write_whole_file(path, data_conf, strlen(data_conf), err))
     KERR("ERROR %s", err);
 }

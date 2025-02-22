@@ -17,5 +17,5 @@
 /*****************************************************************************/
 void replace_cnf(int dir, char *type, unsigned char t[4], unsigned char s[4]);
 void replace_packet(int dir, t_pkt *pbuf);
-void replace_init(void);
+void replace_init(char *name);
 /*--------------------------------------------------------------------------*/

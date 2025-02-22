@@ -48,7 +48,6 @@ static int g_llid;
 static int g_first_ever_start;
 static int g_suid_power_root_resp_ok;
 static int g_suid_power_pid;
-static int g_suid_power_last_pid;
 static char g_sock_path[MAX_PATH_LEN];
 static char g_bin_suid[MAX_PATH_LEN];
 static char g_bin_dir[MAX_PATH_LEN];
@@ -201,7 +200,6 @@ static void timer_monitoring(void *data)
     {
     KERR("ERROR RESTARTING SUID_POWER %d", g_llid);
     llid_trace_free(g_llid, 0, __FUNCTION__);
-    hop_event_free(g_llid);
     g_llid = 0; 
     g_nb_pid_resp_warning = 0;
     event_print("SUID_POWER CONTACT LOSS");
@@ -299,7 +297,6 @@ void suid_power_pid_resp(int llid, int tid, char *name, int pid)
     }
   g_nb_pid_resp++;
   g_suid_power_pid = pid;
-  g_suid_power_last_pid = pid;
   if (g_first_ever_start == 0)
     {
     g_first_ever_start = 1;
@@ -562,18 +559,21 @@ void suid_power_ifdown_phy(char *phy)
 /****************************************************************************/
 int suid_power_pid(void)
 {
-  return (g_suid_power_last_pid);
+  return (g_suid_power_pid);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void suid_power_llid_closed(int llid, int from_clone, const char* fct)
+void suid_power_llid_closed(int llid, int from_clone)
 {
   if ((!from_clone) && (llid == g_llid))
     {
     if (g_destroy_req == 0)
-      KOUT("ERROR UNEXPECTED SUID_POWER DISCONNECTION");
+      KERR("ERROR UNEXPECTED SUID_POWER DISCONNECTION %d", llid);
     g_llid = 0;
+    if (g_suid_power_pid)
+      kill(g_suid_power_pid, SIGKILL);
+    g_suid_power_pid = 0;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -639,7 +639,6 @@ void suid_power_init(void)
   memset(g_tab_pid, 0, MAX_VM * sizeof(int));
   g_destroy_req = 0;
   g_suid_power_pid = 0;
-  g_suid_power_last_pid = 0;
   g_nb_pid_resp = 0;
   g_nb_pid_resp_warning = 0;
   g_llid = 0;

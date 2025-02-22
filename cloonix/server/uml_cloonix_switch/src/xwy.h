@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void xwy_close_llid(int llid, int from_clone);
 int init_xwy_done(void);
 int xwy_pid(void);
 void xwy_request_doors_connect(void);

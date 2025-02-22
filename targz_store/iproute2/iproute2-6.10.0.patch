@@ -1,6 +1,6 @@
-diff -Naur iproute2-6.10.0/lib/namespace.c iproute2-6.10.0_new/lib/namespace.c
---- iproute2-6.10.0/lib/namespace.c	2024-07-17 04:38:17.000000000 +0200
-+++ iproute2-6.10.0_new/lib/namespace.c	2024-09-22 09:37:17.917362301 +0200
+diff -Naur iproute2-6.11.0/lib/namespace.c new_iproute2-6.11.0/lib/namespace.c
+--- iproute2-6.11.0/lib/namespace.c	2024-09-15 21:42:26.000000000 +0200
++++ new_iproute2-6.11.0/lib/namespace.c	2025-02-12 17:12:31.944390853 +0100
 @@ -8,6 +8,7 @@
  #include <dirent.h>
  #include <limits.h>
@@ -25,12 +25,12 @@ diff -Naur iproute2-6.10.0/lib/namespace.c iproute2-6.10.0_new/lib/namespace.c
  		fprintf(stderr, "mount of /sys failed: %s\n",strerror(errno));
 +
 +umount("/tmp/cloonixsysfs");
-+unlink("/tmp/cloonixsysfs");
++rmdir("/tmp/cloonixsysfs");
 +
  		return -1;
  	}
 +umount("/tmp/cloonixsysfs");
-+unlink("/tmp/cloonixsysfs");
++rmdir("/tmp/cloonixsysfs");
 +
  
  	/* Setup bind mounts for config files in /etc */
