@@ -96,6 +96,7 @@
                          "  <port> %hu </port>\n"\
                          "  <passwd> %s </passwd>\n"\
                          "  <udp_ip> %x </udp_ip>\n"\
+                         "  <c2c_udp_port_low> %hu </c2c_udp_port_low>\n"\
                          "</c2c_add>"
 
 #define C2C_CREATE       "<c2c_create>"\

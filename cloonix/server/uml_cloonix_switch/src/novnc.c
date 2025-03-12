@@ -52,7 +52,6 @@ static int g_pid_nginx_master;
 static int g_pid_nginx_worker;
 static int g_rank;
 static int g_port_display;
-static int g_port_nginx;
 static int g_count_websockify_timer;
 static int g_count_nginx_timer1;
 static int g_count_nginx_timer2;
@@ -161,11 +160,10 @@ static int get_free_tcp_port(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void setup_nginx_conf(char *websockify_port, char *nginx_port)
+static void setup_nginx_conf(char *websockify_port, char *proxymous_sock)
 { 
   char err[MAX_PRINT_LEN];
   char path[MAX_PATH_LEN];
-  char proxymous_dir[MAX_PATH_LEN];
   char *data_conf;
   int len;
   snprintf(path, MAX_PATH_LEN, "%s/nginx.conf", utils_get_nginx_conf_dir());
@@ -173,10 +171,7 @@ static void setup_nginx_conf(char *websockify_port, char *nginx_port)
   len = strlen(CONFIG_NGINX) + MAX_PATH_LEN + MAX_PATH_LEN;
   data_conf = (char *) malloc(len);
   memset(data_conf, 0, len);
-  memset(proxymous_dir, 0, MAX_PATH_LEN);
-  snprintf(proxymous_dir, MAX_PATH_LEN-1, "%s_%s", PROXYSHARE_IN, g_net_name);
-  snprintf(data_conf, len-1, CONFIG_NGINX, websockify_port, nginx_port,
-           proxymous_dir, g_net_name);
+  snprintf(data_conf, len-1, CONFIG_NGINX, websockify_port, proxymous_sock);
   if (write_whole_file(path, data_conf, strlen(data_conf), err))
     KERR("ERROR %s", err);
 }
@@ -353,7 +348,7 @@ static void nginx_ko(void *unused_data, int status, char *name)
       kill(pid2, SIGKILL);
       }
     }
-  KERR("ERROR nginx END");
+  KERR("ERROR nginx TERMINATION KO");
   g_pid_nginx_master = 0;
   g_pid_nginx_worker = 0;
 }
@@ -432,9 +427,9 @@ static int xsetroot(void *data)
 static int websockify(void *data)
 {
   int websockify_port;
+  char proxymous_sock[MAX_PATH_LEN];
   char addr_display[MAX_NAME_LEN];
   char websockify_ascii_port[MAX_NAME_LEN];
-  char nginx_ascii_port[MAX_NAME_LEN];
   char *argv[]={BIN_WEBSOCKIFY,WEB,websockify_ascii_port,addr_display,NULL};
 
   if (g_terminate)
@@ -448,9 +443,11 @@ static int websockify(void *data)
   websockify_port = get_free_tcp_port();
   memset(websockify_ascii_port, 0, MAX_NAME_LEN);
   snprintf(websockify_ascii_port, MAX_NAME_LEN-1, "%d", websockify_port);
-  memset(nginx_ascii_port, 0, MAX_NAME_LEN);
-  snprintf(nginx_ascii_port, MAX_NAME_LEN-1, "%d", g_port_nginx);
-  setup_nginx_conf(websockify_ascii_port, nginx_ascii_port); 
+  memset(proxymous_sock, 0, MAX_PATH_LEN);
+  snprintf(proxymous_sock, MAX_PATH_LEN-1,
+           "%s_%s/proxy_pweb.sock", PROXYSHARE_IN, g_net_name);
+  unlink(proxymous_sock);
+  setup_nginx_conf(websockify_ascii_port, proxymous_sock); 
   debug_print_cmd(argv);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
@@ -523,21 +520,8 @@ static void timer_nginx(void *data)
     {
     if (pid)
       {
-      if (!check_free_tcp_port(g_port_nginx))
-        {
-        pid_clone_launch(nginx_ok, nginx_ko, NULL,NULL,NULL,NULL,"vnc",-1,1);
-        clownix_timeout_add(10, timer_end_last, NULL, NULL, NULL);
-        }
-      else
-        {
-        g_count_nginx_timer1 += 1;
-        clownix_timeout_add(500, timer_nginx, NULL, NULL, NULL);
-        if (g_count_nginx_timer1 > 5)
-          {
-          KERR("WARNING PORT NGINX %d OCCUPIED", g_port_nginx);
-          g_count_nginx_timer1 = 0;
-          }
-        }
+      pid_clone_launch(nginx_ok, nginx_ko, NULL,NULL,NULL,NULL,"vnc",-1,1);
+      clownix_timeout_add(10, timer_end_last, NULL, NULL, NULL);
       }
     else
       {
@@ -750,7 +734,7 @@ int end_novnc(int terminate)
     return result;
 
   if (g_end_novnc_currently_on)
-    KERR("ERROR END NOVNC %d", g_end_novnc_currently_on);
+    KERR("ERROR END NOVNC (IS ON) %d", g_end_novnc_currently_on);
   else
     result = 0;
 
@@ -829,7 +813,7 @@ int start_novnc(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void init_novnc(char *net_name, int rank, int port)
+void init_novnc(char *net_name, int rank)
 {
   g_start = 0;
   g_terminate = 1;
@@ -846,7 +830,6 @@ void init_novnc(char *net_name, int rank, int port)
   snprintf(g_x11vnc_log, MAX_PATH_LEN-1,
            "/var/lib/cloonix/%s/log/x11vnc.log", net_name);
   strncpy(g_net_name, net_name, MAX_NAME_LEN-1);
-  g_port_nginx = port;
   g_rank = rank;
   g_port_display_start = 5900 + NOVNC_DISPLAY + g_rank;
   g_port_display = 0;

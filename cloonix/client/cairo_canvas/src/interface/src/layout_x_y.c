@@ -230,7 +230,6 @@ void get_gene_layout_x_y(int bank_type, char *name,
     }
   if (!cur)
     {
-    KERR("WARNING %d %s NOT FOUND", bank_type, name);
     *x = START_POS;
     *y = START_POS;
     *xa = 0;

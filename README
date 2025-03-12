@@ -1,5 +1,5 @@
 ==============================================================================
-                               v44-00
+                               v45-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -11,30 +11,50 @@ hypervisor.
 The network connecting the virtual machines and containers is created through
 the use of the openvswitch software running inside a net namespace so that
 your host is isolated from cloonix. That way, "ip link" on your host
-shows clean results. Do "ip netns" to see cloonix namespaces.
+shows clean results. Type "ip netns" to see cloonix namespaces.
 
 Building of the binaries is done on a debian trixie, all the necessary files
 and libraries are collected and put into an autonomous bundle, this makes
 the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-44-00/html/index.html doc.
+http://clownix.net/doc_stored/build-45-00/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp cloonix api.
+      For Fedora, in /etc/sysconfig/selinux, I set SELINUX=disabled to have
+      a qemu-guest-agent that can create and launch a script as root.
+      For ubuntu, "unshare: Operation not permitted" problem,
+      echo "kernel.unprivileged_userns_clone=1" >> /etc/sysctl.conf
+      echo "kernel.apparmor_restrict_unprivileged_userns=0" >> /etc/sysctl.conf
+      sysctl -p.
+      It is sad that root privilege seems to be necessary in those 2 cases.
+
+There are 2 cloonix products:
+
+The classical way for installation copies binary files to /usr/libexec/cloonix
+directory of your host, puts bash scripts user handles in /usr/bin/cloonix_xxx
+and uses /var/lib/cloonix as work zone.
+With this choice, root privileges are necessary for installation and
+as there are cloonix actions that are related to namespaces or networks,
+some binaries must have the suid permissions to run with higher privileges.
+
+A more recent and innovative way to use cloonix is based on a crun container.
+It is not installed in the usual way, it is a self-extracting shell script,
+it never needs any privileges either at install or at run.
+This is very secure way to test cloonix as a normal user.
 ------------------------------------------------------------------------------
 
 ==============================================================================
-              HOST INSTALLATION AND USE WITH ADMIN PERMISSIONS 
+              HOST CLASSICAL INSTALLATION (NEEDS ADMIN PERMISSIONS) 
 ==============================================================================
 
-        ======================================
-        1) Download software and installation:
-        ======================================
+1) Download software and installation:
+--------------------------------------
 
-wget http://clownix.net/downloads/cloonix-44/cloonix-bundle-44-00-amd64.tar.gz
-tar xvf cloonix-bundle-44-00-amd64.tar.gz
-cd cloonix-bundle-44-00-amd64
+wget http://clownix.net/downloads/cloonix-45/cloonix-bundle-45-00-amd64.tar.gz
+tar xvf cloonix-bundle-45-00-amd64.tar.gz
+cd cloonix-bundle-45-00-amd64
 sudo ./install_cloonix
 
 (To uninstall:   sudo rm -f /usr/bin/cloonix_*
@@ -42,80 +62,80 @@ sudo ./install_cloonix
                  sudo rm -rf /var/lib/cloonix)
 
 
-        ==========================================
-        2) Download virtual machine and container:
-        ==========================================
+2) Download virtual machine and container:
+------------------------------------------
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
 
-wget http://clownix.net/downloads/cloonix-43/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-45/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
-wget http://clownix.net/downloads/cloonix-43/bulk/zipfrr.zip
+wget http://clownix.net/downloads/cloonix-45/bulk/zipfrr.zip
 
 
-        =============================
-        3) Download demo script file:
-        =============================
+3) Download demo script file:
+-----------------------------
 
 cd ${HOME}
-wget http://clownix.net/downloads/cloonix-44/demos/ping_demo.sh
+wget http://clownix.net/downloads/cloonix-45/demos/ping_demo.sh
 
 
-        ===============
-        4) Use cloonix:
-        ===============
+4) Use cloonix:
+---------------
 
-On the gui, a double-click on the biggest blue machine gives a shell,
-a double-click on the green interface gives a wireshark spy,
-a right-click on the blue machine gives a spice desktop.
-The big blue machine is based on qcow2 file driven by qemu/kvm.
+On the canvas gui, a double-click on a blue machine gives a shell,
+a double-click on the green interface (small peripheral circle) gives a wireshark spy,
+a right-click on the blue machine can give a spice desktop for a kvm based on qemu.
 
-On the gui, a double-click on the smallest blue machine gives a shell,
-a double-click on the green interface gives a wireshark spy,
-a right-click on the container gives one remote console.
-The smaller blue machine is a container based on zip files driven by crun. 
+The crun container are smaller, based on a zip root file-system, the same action
+to get a shell: a double-click in the blue zone gives a shell,
+a right-click on the container can give a remote console.
 
 ==============================================================================
 
 
 ==============================================================================
-                ROOTLESS SELF EXTRACTING CLOONIX FOR QUICK DEMO
+                ROOTLESS SELF EXTRACTING CLOONIX
 ==============================================================================
 To test cloonix without ever having the root password for your host machine,
-you have to use the extract_nemo.sh.
+you have to use the cloonix_extractor.sh script.
 
-This script creates the dir_self_extracted directory which countains a root
-file-system equiped with the cloonix software, the frr container, and 
-ping and frr demo scripts.
+This script is based on makeself.sh open source, it creates a directory
+called dir_self_extracted associated to a handle executable script file
+called nemocmd by default.
 
-        1) Download:
-        ============
-wget http://clownix.net/downloads/cloonix-44/cloonix_extractor.sh
+1) Download:
+------------
+wget http://clownix.net/downloads/cloonix-45/cloonix_extractor.sh
 
-        2) Extract based on the makeself.sh utility:
-        ============================================
+2) Extract the bundle:
+----------------------
 ./cloonix_extractor.sh
 
-        3) The nemo_cmd script is now present, call the gui canvas:
-        ===========================================================
-./nemo_cmd gui
+3) The nemocmd script is now present, first start it:
+-----------------------------------------------------
+./nemocmd start
 
-        4) Call the ping demo and Ctrl-C to stop the pings:
-        ===================================================
-./nemo_cmd ping
+4) Call the gui to see the demo canvas, a X11 display:
+------------------------------------------------------
+./nemocmd canvas
 
-        5) Kill all:
-        ===============
-./nemo_cmd kil 
+5) Call the frr demo with more than 50 crun containers:
+-------------------------------------------------------
+./nemocmd demo_frr
+
+6) Kill all:
+------------
+./nemo_cmd stop 
 
 
-NOTE FOR KVM USE
-================:
-     For the cloonix to be able to use the qcow2 files, devices /dev/kvm,
-     /dev/vhost-net and /dev/net/tun, must have read/write access. For this
-     some commands must be done as root to provide read/write access:
+NOTE FOR KVM USE AS A SIMPLE USER
+=================================
+For the cloonix to be able to use the qcow2 files, devices /dev/kvm,
+/dev/vhost-net and /dev/net/tun, must have read/write access. For this
+some commands must be done as root to provide read/write access that
+are privileges:
 
              sudo setfacl -m u:${USER}:rw /dev/kvm
              sudo setfacl -m u:${USER}:rw /dev/vhost-net
@@ -130,10 +150,13 @@ NOTE FOR KVM USE
 ==============================================================================
                             DISTANT WEB GUI:
 ==============================================================================
-Default value for the web gui is off in the classical version of cloonix but
-it is on in the rootless version, to set it on:
+Default value for the web gui is off, to set it on:
 
+In classical:
 cloonix_cli nemo cnf web on
+
+In extractor:
+./nemocmd web_on
 
 Xvfb creates a virtual framebuffer on a defined DISPLAY,
 this display can be seen through its X11 socket at /tmp/.X11-unix/.

@@ -1,0 +1,10 @@
+#!/bin/bash
+HERE=`pwd`
+./allclean
+./patched_create
+cd ${HERE}/xserver
+meson setup --wipe build
+cd ${HERE}/xserver/build
+ninja
+strip hw/vfb/Xvfb
+mv hw/vfb/Xvfb ${HERE}

@@ -28,8 +28,7 @@
 "        server 127.0.0.1:%s;\n"\
 "    }\n"\
 "    server {\n"\
-"        listen %s;\n"\
-"        listen unix:%s/proxy_%s_pweb.sock;\n"\
+"        listen unix:%s;\n"\
 "        location / {\n"\
 "            index vnc_lite.html;\n"\
 "            try_files $uri /vnc_lite.html;\n"\
@@ -45,7 +44,7 @@
 
 int start_novnc(void);
 int end_novnc(int terminate);
-void init_novnc(char *net_name, int rank, int port);
+void init_novnc(char *net_name, int rank);
 /*--------------------------------------------------------------------------*/
 
 

@@ -358,11 +358,11 @@ void recv_lan_cnf(int llid, int tid, char *name, char *cmd);
 /*---------------------------------------------------------------------------*/
 void send_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip, 
                   char *slave_cloon, uint32_t ip, uint16_t port,
-                  char *passwd, uint32_t udp_ip);
+                  char *passwd, uint32_t udp_ip, uint16_t c2c_udp_port_low);
 
 void recv_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip, 
                   char *slave_cloon, uint32_t ip, uint16_t port,
-                  char *passwd, uint32_t udp_ip);
+                  char *passwd, uint32_t udp_ip, uint16_t c2c_udp_port_low);
 
 void send_snf_add(int llid, int tid, char *name, int num, int val);
 

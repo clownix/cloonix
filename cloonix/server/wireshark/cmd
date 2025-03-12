@@ -1,0 +1,15 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=../../../targz_store
+./allclean
+tar xvf ${TARGZ}/tainted_wireshark.tar.gz
+#mkdir -p ${HERE}/tainted_shark/installed
+mkdir -p ${HERE}/tainted_shark
+cd ${HERE}/tainted_wireshark
+#cmake -DCMAKE_INSTALL_PREFIX:PATH=${HERE}/tainted_shark/installed -S ${HERE}/tainted_wireshark -B ${HERE}/tainted_shark
+cmake -S ${HERE}/tainted_wireshark -B ${HERE}/tainted_shark
+cmake --build ${HERE}/tainted_shark -j 4
+#cmake --install ${HERE}/tainted_shark
+mv ${HERE}/tainted_shark/run/* ${HERE}
+strip ${HERE}/dumpcap
+strip ${HERE}/wireshark

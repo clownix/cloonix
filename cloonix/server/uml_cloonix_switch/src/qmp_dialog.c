@@ -277,7 +277,6 @@ static int qmp_rx_cb(int llid, int fd)
     len = util_read(buf, max, fd);
     if (len < 0)
       {
-      KERR("ERROR %s", qrec->name);
       qrec_free(qrec, 1);
       }
     else

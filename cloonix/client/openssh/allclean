@@ -9,4 +9,5 @@ make clean
 cd ${HERE}
 rm -f cloonix-u2i-ssh
 rm -f cloonix-u2i-scp
-rm -rf tainted_openssh
+rm -rf tainted_openssh-portable
+rm -rf openssh-portable

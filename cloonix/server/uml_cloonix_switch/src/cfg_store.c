@@ -131,7 +131,7 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
   else if (ovs_c2c_exists(name))
     {
     snprintf(use, MAX_NAME_LEN, "%s is used by c2c", name);
-    result = 1;
+    result = 2;
     }
   else if (ovs_tap_exists(name))
     {

@@ -126,7 +126,7 @@ void timer_create_item_req(void *data)
         client_add_c2c(0, callback_end, pa->name, c2c->loc_udp_ip,
                        c2c->dist_cloon, c2c->dist_tcp_ip,
                        c2c->dist_tcp_port, c2c->dist_passwd,
-                       c2c->dist_udp_ip);
+                       c2c->dist_udp_ip, c2c->c2c_udp_port_low);
         }
       else if (pa->endp_type == endp_type_a2b)
         client_add_a2b(0, callback_end, pa->name);

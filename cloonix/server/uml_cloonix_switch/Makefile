@@ -15,6 +15,7 @@ WARNINGS=-Wall -Wno-format-truncation -Wno-format-overflow
 SRC = \
       uml_clownix_switch.c \
       recv_from_client.c \
+      recv_add_lan.c \
       heartbeat.c \
       machine_create.c \
       utils_cmd_line_maker.c \
@@ -59,6 +60,7 @@ SRC = \
       mactopo.c \
       server_stub.c \
       proxycrun.c \
+      c2c_chainlan.c \
       hide_dirs.c
 
 INCLUDES= -I./src \

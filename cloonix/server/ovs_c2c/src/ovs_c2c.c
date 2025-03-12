@@ -40,8 +40,19 @@
 #include "packet_arp_mangle.h"
 
 
+typedef struct t_timer_data
+{
+  uint8_t wait_for_probe_idx;
+  char dist_ip[MAX_NAME_LEN]; 
+  uint16_t dist_port;
+} t_timer_data;
+
+#define MAX_WAIT_FOR_PROBE 255
+static uint8_t g_wait_for_probe;
+static uint8_t g_wait_for_probe_idx[MAX_WAIT_FOR_PROBE];
 
 /*--------------------------------------------------------------------------*/
+static int  g_is_master;
 static int  g_netns_pid;
 static int  g_llid;
 static int  g_watchdog_ok;
@@ -53,6 +64,13 @@ static char g_root_path[MAX_PATH_LEN];
 static char g_ctrl_path[MAX_PATH_LEN];
 static char g_c2c_path[MAX_PATH_LEN];
 static uint16_t g_udp_port;
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int get_is_master(void)
+{
+  return (g_is_master);
+}
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -113,10 +131,11 @@ void rpct_recv_kil_req(int llid, int tid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void reply_probe_udp(void)
+void reply_probe_udp(uint8_t probe_idx)
 {
   char resp[MAX_PATH_LEN];
-  snprintf(resp, MAX_PATH_LEN-1,"c2c_receive_probe_udp %s",g_c2c_name);
+  snprintf(resp, MAX_PATH_LEN-1,"c2c_receive_probe_udp %s %hhu",
+           g_c2c_name, probe_idx);
   rpct_send_sigdiag_msg(g_llid, type_hop_c2c, resp);
 }
 /*--------------------------------------------------------------------------*/
@@ -138,10 +157,44 @@ void rpct_recv_poldiag_msg(int llid, int tid, char *line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timeout_udp_probe(void *data)
+{
+  t_timer_data *timer_data = (t_timer_data *)data;
+  uint8_t wait_for_probe_idx = timer_data->wait_for_probe_idx;
+  if (g_wait_for_probe_idx[wait_for_probe_idx])
+    {
+    KERR("WARNING: udp_probe sent to %s %hu idx %hhu did not echo",
+         timer_data->dist_ip, timer_data->dist_port, wait_for_probe_idx);
+    }
+  free(timer_data);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static uint8_t arm_timeout_udp_probe(char *dist_ip, uint16_t dist_port)
+{
+  t_timer_data *timer_data = (t_timer_data *) malloc(sizeof(t_timer_data));
+  memset(timer_data, 0, sizeof(t_timer_data));
+  g_wait_for_probe += 1;
+  if (g_wait_for_probe == 0)
+    g_wait_for_probe = 1;
+  timer_data->wait_for_probe_idx = g_wait_for_probe;
+  strncpy(timer_data->dist_ip, dist_ip, MAX_NAME_LEN-1);
+  timer_data->dist_port = dist_port;
+  clownix_timeout_add(300,timeout_udp_probe,(void *)timer_data,NULL,NULL);
+  return g_wait_for_probe;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
 {
   char resp[MAX_PATH_LEN];
   uint8_t mac[6];
+  char dist_ip[MAX_NAME_LEN]; 
+  uint16_t dist_port;
+  char label[MAX_NAME_LEN];
+  uint8_t probe_idx;
 
   memset(resp, 0, MAX_PATH_LEN);
   if (llid != g_llid)
@@ -177,19 +230,28 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     rpct_send_sigdiag_msg(llid, tid, resp);
     }
   else if (sscanf(line,
-  "c2c_send_probe_udp %s", g_c2c_name) == 1)
+  "c2c_send_probe_udp %s ip %s port %hu probe_idx %hhu",
+    g_c2c_name, dist_ip, &dist_port, &probe_idx) == 4) 
     {
-    udp_tx_sig_send(strlen("probe")+1, (uint8_t *) "probe");
+    if (probe_idx == 0)
+      probe_idx = arm_timeout_udp_probe(dist_ip, dist_port);
+    if (probe_idx == 0)
+      KOUT("ERROR"); 
+    memset(label, 0, MAX_NAME_LEN);
+    snprintf(label, MAX_NAME_LEN-1, "cloonix_udp_probe %hhu", probe_idx);
+    udp_tx_sig_send(strlen(label)+1, (uint8_t *) label);
     }
   else if (sscanf(line,
-  "c2c_enter_traffic_udp %s", g_c2c_name) == 1)
+  "c2c_enter_traffic_udp %s probe_idx %hhu", g_c2c_name, &probe_idx) == 2)
     {
+    if (get_is_master())
+      g_wait_for_probe_idx[probe_idx] = 0;
     udp_enter_traffic_mngt();
     reply_enter_traffic_udp();
     }
   else if (sscanf(line,
   "c2c_mac_mangle %s %hhX:%hhX:%hhX:%hhX:%hhX:%hhX", g_c2c_name,
-  &(mac[0]), &(mac[1]), &(mac[2]), &(mac[3]), &(mac[4]), &(mac[5])) == 7)
+    &(mac[0]), &(mac[1]), &(mac[2]), &(mac[3]), &(mac[4]), &(mac[5])) == 7)
     {
     KERR("INFO: %s %s", g_net_name, line);
     rxtx_mac_mangle(mac);
@@ -235,7 +297,7 @@ static void fct_timeout_self_destruct(void *data)
     KOUT("EXIT");
     }
   g_watchdog_ok = 0;
-  clownix_timeout_add(600, fct_timeout_self_destruct, NULL, NULL, NULL);
+  clownix_timeout_add(2000, fct_timeout_self_destruct, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -254,16 +316,26 @@ char *get_net_name(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+char *get_c2c_name(void)
+{
+  return (g_c2c_name);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int main (int argc, char *argv[])
 {
   char *root = g_root_path;
   char *c2c = g_c2c_name;
-  int fd_rx_from_tap, fd_tx_to_tap;
-  if (argc != 5)
+  int i, fd_rx_from_tap, fd_tx_to_tap;
+  if (argc != 6)
     KOUT("ERROR %d", argc);
   umask(0000);
   g_llid = 0;
   g_watchdog_ok = 0;
+  g_wait_for_probe = 0;
+  for (i=0; i<MAX_WAIT_FOR_PROBE; i++)
+    g_wait_for_probe_idx[i] = 0;
   memset(g_net_name, 0, MAX_NAME_LEN);
   memset(g_netns_namespace, 0, MAX_PATH_LEN);
   memset(g_root_path, 0, MAX_PATH_LEN);
@@ -275,6 +347,12 @@ int main (int argc, char *argv[])
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
   strncpy(g_c2c_name,  argv[3], MAX_NAME_LEN-1);
   strncpy(g_vhost,  argv[4], MAX_NAME_LEN-1);
+  if (!strcmp(argv[5], "master"))
+    g_is_master = 1;
+  else if (!strcmp(argv[5], "slave"))
+    g_is_master = 0;
+  else
+    KOUT("ERROR %s", argv[5]);
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s/c%s", root, C2C_DIR, c2c);
   snprintf(g_c2c_path, MAX_PATH_LEN-1,"%s/%s/%s", root, C2C_DIR, c2c);
   snprintf(g_netns_namespace, MAX_PATH_LEN-1, "%s%s_%s",
@@ -288,15 +366,9 @@ int main (int argc, char *argv[])
   msg_mngt_heartbeat_init(heartbeat);
   rxtx_init(fd_rx_from_tap, fd_tx_to_tap);
   if (!access(g_ctrl_path, F_OK))
-    {
-    KERR("ERROR %s exists ERASING", g_ctrl_path);
     unlink(g_ctrl_path);
-    }
   if (!access(g_c2c_path, F_OK))
-    {
-    KERR("ERROR %s exists ERASING", g_c2c_path);
     unlink(g_c2c_path);
-    }
   string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");
   daemon(0,0);
   seteuid(getuid());

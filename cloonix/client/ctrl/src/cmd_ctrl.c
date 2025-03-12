@@ -825,7 +825,8 @@ int cmd_add_c2c(int argc, char **argv)
       local_cnf = get_own_cloonix_conf_info();
       client_add_c2c(0, callback_end, c2c_name, local_cnf->c2c_udp_ip,
                      slave_cloon, cnf->ip, (cnf->port & 0xFFFF),
-                     cnf->passwd, cnf->c2c_udp_ip);
+                     cnf->passwd, cnf->c2c_udp_ip,
+                     local_cnf->c2c_udp_port_low);
       }
     }
   return result;

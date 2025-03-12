@@ -24,6 +24,7 @@ typedef struct t_c2c_req_info
   uint32_t dist_tcp_ip;
   uint16_t dist_tcp_port;
   uint32_t dist_udp_ip;
+  uint16_t c2c_udp_port_low;
 } t_c2c_req_info;
 
 void to_cloonix_switch_create_node(int is_cnt, double x, double y,

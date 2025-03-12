@@ -77,9 +77,26 @@ static int receive_from_dropbear(int fd, char **msgrx)
 {
   static char rx[MAX_A2D_LEN];
   int  headsize = sock_header_get_size();
-  int len, count = MAX_A2D_LEN - headsize - 1;
+  int nb_repeat, len, count = MAX_A2D_LEN - headsize - 1;
   *msgrx = rx;
+  nb_repeat = 0;
   len = read(fd, rx, count);
+  while (len == -1)
+    {
+    nb_repeat += 1;
+    if ((errno != EINTR) && (errno != EAGAIN))
+      {
+      KERR("ERROR errno %d", errno);
+      break;
+      }
+    if (nb_repeat > 10)
+      {
+      KERR("ERROR REPEAT");
+      break;
+      }
+    usleep(1000);
+    len = read(fd, rx, count);
+    }
   return len;
 }
 /*--------------------------------------------------------------------------*/
@@ -151,12 +168,10 @@ static void alloc_ctx(int display_sock_x11, int dido_llid, int fd,
   dctx->fd_listen_x11 = add_listen_x11(dctx->display_sock_x11);
   g_ctx[dido_llid] = dctx;
   g_fd_to_ctx[fd] = dctx;
-
   if (g_head_ctx)
     g_head_ctx->prev = dctx;
   dctx->next = g_head_ctx;
   g_head_ctx = dctx;
-
   g_dropbear_ctx_num += 1;
 }
 /*--------------------------------------------------------------------------*/
@@ -176,7 +191,6 @@ static void free_ctx(int dido_llid)
   char *g_buf = get_g_buf();
   char *buf = g_buf + headsize;
   memset(g_buf, 0, headsize);
-
   if (dctx)
     {
     memcpy(buf, LABREAK, strlen(LABREAK) + 1);
@@ -197,7 +211,6 @@ static void free_ctx(int dido_llid)
       dctx->prev->next = dctx->next;
     if (dctx == g_head_ctx)
       g_head_ctx = dctx->next;
-
     free(dctx);
     g_dropbear_ctx_num -= 1;
     if (g_dropbear_ctx_num < 0)
@@ -238,9 +251,13 @@ void action_events(fd_set *infd)
         KOUT("%p %p", tst_dctx, dctx);
       len = receive_from_dropbear(dctx->fd, &rx);
       if (len > 0)
+        {
         action_rx_dropbear(dctx, len, rx);
+        }
       else
         {
+        if (len != 0)
+          KERR("ERROR NEG READ DIDO LLID ACTION %d", dctx->dido_llid);
         free_ctx(dctx->dido_llid);
         }
       }
@@ -521,7 +538,7 @@ static void helper_rx_virtio_noctx(int dido_llid, int type, int val, char *rx)
     }
   else if ((type == header_type_x11_ctrl) && (val == header_val_x11_open_serv))
     {
-    KERR("%s", rx);
+    KERR("ERROR %d %s", dido_llid, rx);
     }
   else if ((type==header_type_ctrl_agent) && (val==header_val_ack))
     {
@@ -545,51 +562,30 @@ void action_rx_virtio(int dido_llid, int len, int type, int val, char *rx)
       if (type == header_type_traffic)
         {
         if (val == header_val_none)
-          {
           send_to_dropbear(dctx->fd, rx, len);
-          }  
         else
-          KERR("%d %d", type, val);
+          KERR("ERROR %d %d", type, val);
         }
       else if (type == header_type_ctrl_agent)
         {
-        switch (val)
-          {
-          case header_val_del_dido_llid:
-            if (!strcmp(rx, LABREAK))
-              {
-              free_ctx(dido_llid);
-              }
-            break;
-          default:
-            KERR("%d %d", type, val);
-            break;
-          }
+        if (val == header_val_del_dido_llid)
+          free_ctx(dido_llid);
+        else
+          KERR("ERROR %d %d", type, val);
         }
       else if (type == header_type_ctrl)
         {
-        switch (val)
-          {
-          default:
-            KERR("%d %d", type, val);
-            break;
-          }
+        KERR("ERROR %d %d", type, val);
         }
       else if (type == header_type_x11_ctrl)
         {
-        switch (val)
-          {
-          case header_val_x11_open_serv:
-            x11_rx_ack_open_x11(dido_llid, rx);
-            break;
-          default:
-            KERR("%d", val);
-            break;
-          }
+        if (val == header_val_x11_open_serv)
+          x11_rx_ack_open_x11(dido_llid, rx);
+        else
+          KERR("ERROR %d", val);
         }
-    
       else
-        KERR("%d %d", type, val);
+        KERR("ERROR %d %d", type, val);
       }
     }
 }

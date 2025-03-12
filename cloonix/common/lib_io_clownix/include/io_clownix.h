@@ -56,7 +56,7 @@ void set_fd_not_to_close(int fd);
 
 /****************************************************************************/
 enum {
-     kind_seqtap_data = 0,
+     kind_seqtap_data = 5,
      kind_seqtap_sig_hello,
      kind_seqtap_sig_ready,
      kind_seqtap_error

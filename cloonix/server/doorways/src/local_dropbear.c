@@ -91,10 +91,10 @@ static t_sub_dido_x11 *sub_dido_x11_get(t_local_dropbear *ld, int sub_dido_idx)
 {
   t_sub_dido_x11 *result;
   if ((sub_dido_idx < 1) || (sub_dido_idx >= MAX_IDX_X11))
-    KOUT("%d", sub_dido_idx);
+    KOUT("ERROR %d", sub_dido_idx);
   result = &(ld->sub_dido_x11[sub_dido_idx]);
   if (result->sub_dido_idx != sub_dido_idx)
-    KERR("%d %d", result->sub_dido_idx, sub_dido_idx);
+    KERR("ERROR %d %d", result->sub_dido_idx, sub_dido_idx);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -104,13 +104,13 @@ static t_sub_dido_x11 *find_with_llid_traf_x11(int llid)
 {
   t_sub_dido_x11 *cur;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("%d", llid);
+    KOUT("ERROR %d", llid);
   cur = g_local_x11_llid[llid];
   if (!cur)
-    KERR("%d", llid);
+    KERR("ERROR %d", llid);
   else if (llid != cur->llid_traf_x11)
     {
-    KERR("%d %d", llid, cur->llid_traf_x11);
+    KERR("ERROR %d %d", llid, cur->llid_traf_x11);
     cur = NULL;
     }
   return cur;
@@ -122,17 +122,17 @@ static t_local_dropbear *find_with_local_llid(int llid, int is_listen_x11)
 {
   t_local_dropbear *cur;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("%d", llid);
+    KOUT("ERROR %d", llid);
   cur = g_local_llid[llid];
   if (!cur)
-    KERR("%d", llid);
+    KERR("ERROR %d", llid);
   else
     {
     if (is_listen_x11)
       {
       if (llid != cur->llid_display_sock_x11)
         {
-        KERR("%d %d", llid, cur->llid_display_sock_x11);
+        KERR("ERROR %d %d", llid, cur->llid_display_sock_x11);
         cur = NULL;
         }
       }
@@ -140,7 +140,7 @@ static t_local_dropbear *find_with_local_llid(int llid, int is_listen_x11)
       {
       if (llid != cur->local_llid)
         {
-        KERR("%d %d", llid, cur->local_llid);
+        KERR("ERROR %d %d", llid, cur->local_llid);
         cur = NULL;
         }
       }
@@ -154,13 +154,13 @@ static t_local_dropbear *find_with_idx_display_sock_x11(int idx)
 {
   t_local_dropbear *cur;
   if ((idx <= 0) || (idx >= MAX_IDX_X11))
-    KOUT("%d", idx);
+    KOUT("ERROR %d", idx);
   cur = g_idx_display_sock_x11[idx];
   if (!cur)
-    KERR("%d", idx);
+    KERR("ERROR %d", idx);
   else if (idx != cur->idx_display_sock_x11)
     {
-    KERR("%d %d", idx, cur->idx_display_sock_x11);
+    KERR("ERROR %d %d", idx, cur->idx_display_sock_x11);
     cur = NULL;
     }
   return cur;
@@ -172,13 +172,13 @@ static t_local_dropbear *find_with_dido_llid_fast(int llid)
 {
   t_local_dropbear *cur;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("%d", llid);
+    KOUT("ERROR %d", llid);
   cur = g_dido_llid[llid];
   if (!cur)
-    KERR("%d", llid);
+    KERR("ERROR %d", llid);
   else if (llid != cur->dido_llid)
     {
-    KERR("%d %d", llid, cur->dido_llid);
+    KERR("ERROR %d %d", llid, cur->dido_llid);
     cur = NULL;
     }
   return cur;
@@ -190,7 +190,7 @@ static t_local_dropbear *find_with_dido_llid_by_scan(int llid)
 {
   t_local_dropbear *cur = g_local_dropbear;
   if ((llid <= 0) || (llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("%d", llid);
+    KOUT("ERROR %d", llid);
   while (cur)
     {
     if (llid == cur->dido_llid)
@@ -315,7 +315,7 @@ static int listen_x11_begin(t_local_dropbear *ld)
   if (ld->fd_display_sock_x11 < 0)
     {
     DOUT(FLAG_HOP_DOORS, "BAD LISTEN START");
-    KERR(" ");
+    KERR("ERROR  ");
     pool_release_sub_dido_idx(ld, ld->idx_display_sock_x11);
     ld->idx_display_sock_x11 = 0;
     }
@@ -328,13 +328,13 @@ static int listen_x11_begin(t_local_dropbear *ld)
     if (!ld->llid_display_sock_x11)
       {
       DOUT(FLAG_HOP_DOORS, "BAD LISTEN START");
-      KERR(" ");
+      KERR("ERROR  ");
       }
     else
       {
       DOUT(FLAG_HOP_DOORS, "LISTEN START %d", ld->idx_display_sock_x11);
       if (g_local_llid[ld->llid_display_sock_x11])
-        KOUT("%d", ld->llid_display_sock_x11);
+        KOUT("ERROR %d", ld->llid_display_sock_x11);
       g_local_llid[ld->llid_display_sock_x11] = ld;
       g_idx_display_sock_x11[ld->idx_display_sock_x11] = ld;;
       result = 0;
@@ -353,13 +353,13 @@ static void traf_x11_end(t_sub_dido_x11 *cur)
     {
     ld = find_with_dido_llid_by_scan(cur->dido_llid);
     if (!ld)
-      KOUT(" ");
+      KOUT("ERROR  ");
     DOUT(FLAG_HOP_DOORS, 
                "TRAF END display_sock_x11:%d sub_dido_idx:%d",
                ld->idx_display_sock_x11, cur->sub_dido_idx);
     memset(buf, 0, MAX_A2D_LEN); 
     snprintf(buf, MAX_A2D_LEN-1, LAX11OPENKO, cur->sub_dido_idx);
-    x11_open_close(0, ld->dido_llid, buf);
+    x11_doors_open_close(0, ld->dido_llid, buf);
     if (msg_exist_channel(cur->llid_traf_x11))
       msg_delete_channel(cur->llid_traf_x11);
     g_local_x11_llid[cur->llid_traf_x11] = NULL;
@@ -367,7 +367,7 @@ static void traf_x11_end(t_sub_dido_x11 *cur)
     memset(cur, 0, sizeof(t_sub_dido_x11));
     }
   else
-    KERR(" ");
+    KERR("ERROR  ");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -386,17 +386,17 @@ static void listen_x11_end(t_local_dropbear *ld)
     remove_listen_x11(ld->idx_display_sock_x11, ld->llid_display_sock_x11);
     pool_release_display_sock_x11(ld->idx_display_sock_x11);
     if (g_local_llid[ld->llid_display_sock_x11] != ld)
-      KERR("%d", ld->llid_display_sock_x11);
+      KERR("ERROR %d", ld->llid_display_sock_x11);
     g_local_llid[ld->llid_display_sock_x11] = NULL;
     if (g_idx_display_sock_x11[ld->idx_display_sock_x11] != ld)
-      KERR("%d %d", ld->llid_display_sock_x11, ld->idx_display_sock_x11);
+      KERR("ERROR %d %d", ld->llid_display_sock_x11, ld->idx_display_sock_x11);
     g_idx_display_sock_x11[ld->idx_display_sock_x11] = NULL;
     ld->idx_display_sock_x11 = 0;
     ld->llid_display_sock_x11 = 0;
     ld->fd_display_sock_x11 = 0;
     }
   else
-    KERR(" ");
+    KERR("ERROR  ");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -418,18 +418,18 @@ void local_dropbear_receive_x11_from_client(int idx_display_sock_x11,
           watch_tx(cur->llid_traf_x11, len, buf);
         else
           {
-          KERR(" ");
+          KERR("ERROR  ");
           traf_x11_end(cur);
           }
         }
       else
-        KERR(" ");
+        KERR("ERROR  ");
       }
     else
-      KERR("%d %d", cur->sub_dido_idx, sub_dido_idx);
+      KERR("ERROR %d %d", cur->sub_dido_idx, sub_dido_idx);
     }
   else
-    KERR(" ");
+    KERR("ERROR  ");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -437,7 +437,7 @@ void local_dropbear_receive_x11_from_client(int idx_display_sock_x11,
 /****************************************************************************/
 static void listen_x11_err(void *ptr, int llid, int err, int from)
 {
-  KOUT(" ");
+  KOUT("ERROR  ");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -458,7 +458,7 @@ static void x11_err_cb(void *ptr, int llid, int err, int from)
   t_sub_dido_x11 *cur = find_with_llid_traf_x11(llid);
   if (!cur)
     {
-    KERR("%d %d", err, from);
+    KERR("ERROR %d %d", err, from);
     if (msg_exist_channel(llid))
       msg_delete_channel(llid);
     }
@@ -477,25 +477,25 @@ static int x11_rx_cb(void *ptr, int llid, int fd)
   char *buf = get_gbuf();
   if (!cur)
     {
-    KERR(" ");
+    KERR("ERROR  ");
     if (msg_exist_channel(llid))
       msg_delete_channel(llid);
     }
   else
     {
     if (cur->fd_traf_x11 != fd)
-      KOUT("%d %d", cur->fd_traf_x11, fd);
+      KOUT("ERROR %d %d", cur->fd_traf_x11, fd);
     len = read (fd, buf, MAX_A2D_LEN);
     if (len == 0)
       {
-      KERR(" ");
+      KERR("ERROR  ");
       traf_x11_end(cur);
       }
     else if (len < 0)
       {
       if ((errno != EAGAIN) && (errno != EINTR))
         {
-        KERR(" ");
+        KERR("ERROR  ");
         traf_x11_end(cur);
         }
       }
@@ -515,12 +515,12 @@ void local_dropbear_x11_open_to_agent(int dido_llid, int sub_dido_idx)
   t_local_dropbear *ld = find_with_dido_llid_by_scan(dido_llid);
   t_sub_dido_x11 *cur;
   if (!ld)
-    KERR(" ");
+    KERR("ERROR  ");
   else
     {
     cur = sub_dido_x11_get(ld, sub_dido_idx);
     if (!cur)
-      KERR(" ");
+      KERR("ERROR  ");
     else
       {
       if ((cur->sub_dido_idx) && (cur->llid_traf_x11 == 0)) 
@@ -529,7 +529,7 @@ void local_dropbear_x11_open_to_agent(int dido_llid, int sub_dido_idx)
                                           x11_rx_cb, x11_err_cb, "x11local");
         if (!cur->llid_traf_x11)
           {
-          KERR(" ");
+          KERR("ERROR  ");
           traf_x11_end(cur);
           }
         else
@@ -537,7 +537,7 @@ void local_dropbear_x11_open_to_agent(int dido_llid, int sub_dido_idx)
         }
       else
         {
-        KERR("%d %d", cur->sub_dido_idx, cur->llid_traf_x11);
+        KERR("ERROR %d %d", cur->sub_dido_idx, cur->llid_traf_x11);
         traf_x11_end(cur);
         }
       }
@@ -555,14 +555,14 @@ static int listen_x11_evt(void *ptr, int llid, int fd_x11_listen)
     {
     if (!pool_can_alloc_sub_dido_idx(ld))
       {
-      KERR("%d", ld->idx_display_sock_x11);
+      KERR("ERROR %d", ld->idx_display_sock_x11);
       }
     else
       {
       fd = sock_fd_accept(fd_x11_listen);
       if (fd <= 0)
         {
-        KERR("%d", errno);
+        KERR("ERROR %d", errno);
         listen_x11_end(ld);
         }
       else
@@ -573,7 +573,7 @@ static int listen_x11_evt(void *ptr, int llid, int fd_x11_listen)
         ld->sub_dido_x11[idx].fd_traf_x11 = fd; 
         memset(buf, 0, MAX_A2D_LEN);
         snprintf(buf,MAX_A2D_LEN-1,LAX11OPEN,idx,ld->idx_display_sock_x11);
-        x11_open_close(0, ld->dido_llid, buf);
+        x11_doors_open_close(0, ld->dido_llid, buf);
         DOUT(FLAG_HOP_DOORS, "TRAF START display_sock_x11:%d sub_dido_idx:%d",
              ld->idx_display_sock_x11);
         }
@@ -589,15 +589,15 @@ static int alloc_local_ctx(t_local_dropbear *ld, int dido_llid,
 {
   int result = 0;
   if (ld->dido_llid != dido_llid)
-    KOUT(" ");
+    KOUT("ERROR  ");
   if ((ld->fd) || (ld->local_llid))
-    KOUT(" ");
+    KOUT("ERROR  ");
   if (g_dido_llid[dido_llid])
-    KOUT(" ");
+    KOUT("ERROR  ");
   if (g_local_llid[local_llid])
-    KOUT(" ");
+    KOUT("ERROR  ");
   if ((!fd) || (!local_llid))
-    KOUT(" ");
+    KOUT("ERROR  ");
   g_dido_llid[dido_llid] = ld;
   g_local_llid[local_llid] = ld;
   ld->fd = fd;
@@ -612,16 +612,16 @@ static void free_local_ctx(t_local_dropbear *ld)
 {
   if (!ld->local_llid)
     {
-    KERR(" ");
+    KERR("ERROR  ");
     if (g_dido_llid[ld->dido_llid])
-      KOUT(" ");
+      KOUT("ERROR  ");
     }
   else
     {
     if ((!g_dido_llid[ld->dido_llid]) || (!g_local_llid[ld->local_llid]))
-      KOUT(" ");
+      KOUT("ERROR  ");
     if (g_dido_llid[ld->dido_llid] != g_local_llid[ld->local_llid])
-      KOUT(" ");
+      KOUT("ERROR  ");
     listen_x11_end(ld);
     g_dido_llid[ld->dido_llid] = NULL;
     g_local_llid[ld->local_llid] = NULL;
@@ -636,7 +636,7 @@ static void local_err_cb (void *ptr, int local_llid, int err, int from)
   t_local_dropbear *ld = find_with_local_llid(local_llid, 0);
   if (!ld)
     {
-    KERR(" %d %d", err, from);
+    KERR("ERROR  %d %d", err, from);
     if (msg_exist_channel(local_llid))
       msg_delete_channel(local_llid);
     }
@@ -655,25 +655,25 @@ static int local_rx_cb(void *ptr, int local_llid, int fd)
   t_local_dropbear *ld = find_with_local_llid(local_llid, 0);
   if (!ld)
     {
-    KERR(" ");
+    KERR("ERROR");
     if (msg_exist_channel(local_llid))
       msg_delete_channel(local_llid);
     }
   else
     {
     if (ld->fd != fd)
-      KOUT("%d %d", ld->fd, fd);
+      KOUT("ERROR %d %d", ld->fd, fd);
     len = read (fd, buf, MAX_A2D_LEN);
     if (len == 0)
       {
-      KERR(" ");
+      KERR("ERROR %d", ld->dido_llid);
       llid_traf_delete(ld->dido_llid);
       }
     else if (len < 0)
       {
       if ((errno != EAGAIN) && (errno != EINTR))
         {
-        KERR(" ");
+        KERR("ERROR %d", ld->dido_llid);
         llid_traf_delete(ld->dido_llid);
         }
       }
@@ -692,14 +692,14 @@ void local_dropbear_receive_from_client(int dido_llid, int len, char *buf)
 {
   t_local_dropbear *ld = find_with_dido_llid_fast(dido_llid);
   if (!ld)
-    KERR(" ");
+    KERR("ERROR  ");
   else
     {
     if (msg_exist_channel(ld->local_llid))
       watch_tx(ld->local_llid, len, buf);
     else
       {
-      KERR(" ");
+      KERR("ERROR %d", ld->dido_llid);
       llid_traf_delete(ld->dido_llid);
       }
     }
@@ -713,17 +713,17 @@ int local_dropbear_init_dido(int dido_llid)
   char *bearsock = get_local_dropbear_sock();
   int fd, local_llid;
   if (!cur)
-    KERR(" ");
+    KERR("ERROR  ");
   else
     {
     fd = sock_nonblock_client_unix(bearsock);
     if (fd <= 0)
-      KERR("%d %d", fd, errno);
+      KERR("ERROR %d %d", fd, errno);
     else
       {
       local_llid = msg_watch_fd(fd, local_rx_cb, local_err_cb, "local");
       if (alloc_local_ctx(cur, dido_llid, local_llid, fd))
-        KERR(" ");
+        KERR("ERROR  ");
       send_resp_ok_to_traf_client(dido_llid, cur->idx_display_sock_x11);
       }
     }
@@ -736,7 +736,7 @@ void local_dropbear_add_llid(int dido_llid)
 {
   t_local_dropbear *ld = find_with_dido_llid_by_scan(dido_llid);
   if (ld)
-    KERR("%d", dido_llid);
+    KERR("ERROR %d", dido_llid);
   else
     {
     ld = (t_local_dropbear *) clownix_malloc(sizeof(t_local_dropbear), 9);
@@ -755,7 +755,7 @@ void local_dropbear_del_llid(int dido_llid)
 {
   t_local_dropbear *ld = find_with_dido_llid_by_scan(dido_llid);
   if (!ld)
-    KOUT("%d", dido_llid);
+    KOUT("ERROR %d", dido_llid);
   free_local_ctx(ld);
   if (ld->prev)
     ld->prev->next = ld->next;

@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int mactopo_test_exists(char *name, int num);
 int mactopo_add_req(int item_type, char *name, int num, char *lan,
                     char *vhost, unsigned char *mac_addr, char *err);
 void mactopo_snf_add(char *name, int num, char *lan, int llid);

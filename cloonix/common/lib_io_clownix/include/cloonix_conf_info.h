@@ -28,6 +28,7 @@ typedef struct t_cloonix_conf_info
   int  novnc_port;
   char passwd[MSG_DIGEST_LEN];
   uint32_t c2c_udp_ip;
+  int c2c_udp_port_low;
 } t_cloonix_conf_info;
 /*--------------------------------------------------------------------------*/
 

@@ -40,6 +40,7 @@
 #include "nat_udp.h"
 #include "util_sock.h" 
 #include "nat_utils.h"
+#include "proxy_crun.h"
 
 char *get_net_name(void);
 static t_llid_udp *g_head_llid_udp;
@@ -143,9 +144,10 @@ static void udp_free(t_ctx_nat *ctx, t_llid_udp *cur_llid)
 {
   t_udp_flow *cur;
   char prefx[MAX_PATH_LEN];
-  char *net = get_net_name();
+  char *proxydir = get_proxyshare();
+
   memset(prefx, 0, MAX_PATH_LEN);
-  snprintf(prefx, MAX_PATH_LEN-1, "%s_%s/dgram", PROXYSHARE_IN, net);
+  snprintf(prefx, MAX_PATH_LEN-1, "%s/dgram", proxydir);
   if ((!ctx) || (!cur_llid))
     KOUT("ERROR %p %p", ctx, cur_llid);
   cur = cur_llid->item;
@@ -434,9 +436,10 @@ int nat_udp_dgram_proxy_req(t_ctx_nat *ctx, char *dgram_rx, char *dgram_tx,
 {
   int llidrx, llidtx, fdrx, fdtx, result = 0;
   char prefx[MAX_PATH_LEN];
-  char *net = get_net_name();
+  char *proxydir = get_proxyshare();
+
   memset(prefx, 0, MAX_PATH_LEN);
-  snprintf(prefx, MAX_PATH_LEN-1, "%s_%s/dgram", PROXYSHARE_IN, net);
+  snprintf(prefx, MAX_PATH_LEN-1, "%s/dgram", proxydir);
   if (!ctx)
     KOUT("ERROR");
   if (strncmp(dgram_rx, prefx, strlen(prefx)))

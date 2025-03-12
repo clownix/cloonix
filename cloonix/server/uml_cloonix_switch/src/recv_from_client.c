@@ -60,14 +60,17 @@
 #include "crun.h"
 #include "novnc.h"
 #include "proxymous.h"
+#include "cloonix_conf_info.h"
 
 
+t_cloonix_conf_info *get_cloonix_conf_info(void);
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
 int inside_cloon(char **name);
 extern int clownix_server_fork_llid;
 static int g_in_cloon;
 static char *g_cloonix_vm_name;
 
+int get_uml_cloonix_started(void);
 
 /*****************************************************************************/
 typedef struct t_timer_kvm_delete
@@ -95,17 +98,6 @@ typedef struct t_timer_zombie
   t_topo_kvm kvm;
 } t_timer_zombie;
 /*---------------------------------------------------------------------------*/
-typedef struct t_coherency_delay
-{
-  int llid;
-  int tid;
-  char name[MAX_NAME_LEN];
-  int  num;
-  char lan[MAX_NAME_LEN];
-  struct t_coherency_delay *prev;
-  struct t_coherency_delay *next;
-} t_coherency_delay;
-/*---------------------------------------------------------------------------*/
 typedef struct t_add_vm_cow_look
 {
   char msg[MAX_PATH_LEN];
@@ -115,26 +107,6 @@ typedef struct t_add_vm_cow_look
   t_topo_kvm kvm;
 } t_add_vm_cow_look;
 /*---------------------------------------------------------------------------*/
-typedef struct t_timer_endp
-{
-  int  timer_lan_ko_resp;
-  int  llid;
-  int  tid;
-  char name[MAX_NAME_LEN];
-  int  num;
-  char lan[MAX_NAME_LEN];
-  int  count;
-  struct t_timer_endp *prev;
-  struct t_timer_endp *next;
-} t_timer_endp;
-/*--------------------------------------------------------------------------*/
-
-static t_timer_endp *g_head_timer;
-static int glob_coherency;
-static int glob_coherency_fail_count;
-static t_coherency_delay *g_head_coherency;
-static long long g_coherency_abs_beat_timer;
-static int g_coherency_ref_timer;
 static int g_inhib_new_clients;
 
 /*****************************************************************************/
@@ -145,7 +117,7 @@ int get_killing_cloonix(void)
 }
 
 /*****************************************************************************/
-static int get_inhib_new_clients(void)
+int get_inhib_new_clients(void)
 {
   if (g_inhib_new_clients)
     {
@@ -159,6 +131,13 @@ static int get_inhib_new_clients(void)
 /*****************************************************************************/
 void recv_novnc_on_off(int llid, int tid, int on)
 {
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (on)
     {
     if (start_novnc() == 0)
@@ -173,76 +152,6 @@ void recv_novnc_on_off(int llid, int tid, int on)
     else
       send_status_ko(llid, tid, "Error novnc_off");
     }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_coherency_unlock(void)
-{
-  glob_coherency -= 1;
-  if (glob_coherency < 0)
-    KOUT(" ");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_coherency_lock(void)
-{
-  glob_coherency += 1;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int recv_coherency_locked(void)
-{
-  if (glob_coherency > 0)
-    glob_coherency_fail_count += 1;
-  else
-    glob_coherency_fail_count = 0;
-  if  ((glob_coherency_fail_count > 0) && 
-       (glob_coherency_fail_count % 300 == 0))
-    KERR("ERROR LOCK TOO LONG %d", glob_coherency_fail_count);
-  return glob_coherency;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static t_coherency_delay *coherency_add_chain(int llid, int tid, 
-                                              char *name, int num, 
-                                              char *lan)
-{
-  t_coherency_delay *cur, *elem;
-  elem = (t_coherency_delay *) clownix_malloc(sizeof(t_coherency_delay), 16);
-  memset(elem, 0, sizeof(t_coherency_delay));
-  elem->llid = llid;
-  elem->tid = tid;
-  elem->num = num;
-  strcpy(elem->name, name);
-  strcpy(elem->lan, lan);
-  if (g_head_coherency)
-    {
-    cur = g_head_coherency;
-    while (cur && cur->next)
-      cur = cur->next;
-    cur->next = elem;
-    elem->prev = cur;
-    }
-  else
-    g_head_coherency = elem;
-  return g_head_coherency;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void coherency_del_chain(t_coherency_delay *cd)
-{
-  if (cd->prev)
-    cd->prev->next = cd->next;
-  if (cd->next)
-    cd->next->prev = cd->prev;
-  if (cd == g_head_coherency)
-    g_head_coherency = cd->next;
-  clownix_free(cd, __FUNCTION__);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -350,6 +259,13 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
 {
   t_vm *vm = cfg_get_vm(name);
   char err[MAX_PATH_LEN];
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   switch(cmd)
     {
     case vmcmd_reboot_with_qemu:
@@ -381,256 +297,16 @@ void recv_vmcmd(int llid, int tid, char *name, int cmd, int param)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
-{
-  char info[MAX_PATH_LEN];
-  t_vm *vm = cfg_get_vm(name);
-  t_eth_table *eth_tab = NULL;
-  int nb_eth;
-  int endp_kvm = kvm_exists(name, num);
-  int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
-  t_ovs_tap *tap_exists = ovs_tap_exists(name);
-  t_ovs_phy *phy_exists = ovs_phy_exists_vhost(name);
-  t_ovs_nat_main *nat_exists = ovs_nat_main_exists(name);
-  t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
-  t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
-  if (vm != NULL)
-    eth_tab = vm->kvm.eth_table;
-
-  if (get_inhib_new_clients())
-    {
-    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
-    KERR("ERROR %s %d %s", name, num, lan);
-    }
-  else if (cfg_name_is_in_use(1, lan, info))
-    {
-    send_status_ko(llid, tid, info);
-    KERR("ERROR %s %d %s", name, num, lan);
-    }
-  else if (cnt_exists)
-    {
-    if (nb_eth <= num)
-      {
-      send_status_ko(llid, tid, "eth does not exist");
-      KERR("ERROR %s %d %s", name, num, lan);
-      }
-    else
-      {
-      if (cnt_add_lan(llid, tid, name, num, lan, info))
-        {
-        send_status_ko(llid, tid, info);
-        KERR("ERROR %s", info);
-        }
-      }
-    }
-  else if ((endp_kvm == endp_type_eths) ||
-           (endp_kvm == endp_type_ethv))
-    {
-    if ((vm == NULL) ||
-        ((eth_tab[num].endp_type != endp_type_eths) && 
-         (eth_tab[num].endp_type != endp_type_ethv)) ||
-        (num >= vm->kvm.nb_tot_eth))
-      {
-      send_status_ko(llid, tid, "failure");
-      KERR("ERROR %s %d %s", name, num, lan);
-      }
-    else
-      {
-      if (kvm_add_lan(llid, tid, name, num, lan, endp_kvm, eth_tab))
-        {
-        send_status_ko(llid, tid, "failure");
-        KERR("ERROR %s %d %s", name, num, lan);
-        }
-      }
-    }
-  else if ((tap_exists) && (num == 0))
-    ovs_tap_add_lan(llid, tid, name, lan);
-  else if ((phy_exists) && (num == 0))
-    ovs_phy_add_lan(llid, tid, name, lan);
-  else if ((nat_exists) && (num == 0))
-    ovs_nat_main_add_lan(llid, tid, name, lan);
-  else if ((a2b_exists) && ((num == 0) || (num == 1)))
-    ovs_a2b_add_lan(llid, tid, name, num, lan);
-  else if ((c2c_exists) && (num == 0))
-    ovs_c2c_add_lan(llid, tid, name, lan);
-  else
-    {
-    snprintf(info, MAX_PATH_LEN, "%s %d not found", name, num);
-    send_status_ko(llid, tid, info);
-    KERR("ERROR %s %d %s", name, num, lan);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static t_timer_endp *timer_find(char *name, int num)
-{
-  t_timer_endp *cur = NULL;
-  if (name[0])
-    {
-    cur = g_head_timer;
-    while(cur)
-      {
-      if ((!strcmp(cur->name, name)) && (cur->num == num))
-        break;
-      cur = cur->next;
-      }
-    }
-  return cur;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void timer_free(t_timer_endp *timer)
-{
-  if (timer->prev)
-    timer->prev->next = timer->next;
-  if (timer->next)
-    timer->next->prev = timer->prev;
-  if (timer == g_head_timer)
-    g_head_timer = timer->next;
-  clownix_free(timer, __FUNCTION__);
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void timer_endp(void *data)
-{
-  t_timer_endp *te = (t_timer_endp *) data;
-  char err[MAX_PATH_LEN];
-  int endp_kvm = kvm_exists(te->name, te->num);
-  int nb_eth;
-  t_eth_table *eth_tab;
-  int cnt_exists = cnt_info(te->name, &nb_eth, &eth_tab);
-  t_ovs_tap *tap_exists = ovs_tap_exists(te->name);
-  t_ovs_phy *phy_exists = ovs_phy_exists_vhost(te->name);
-  t_ovs_nat_main *nat_exists = ovs_nat_main_exists(te->name);
-  t_ovs_a2b *a2b_exists = ovs_a2b_exists(te->name);
-  t_ovs_c2c *c2c_exists = ovs_c2c_exists(te->name);
-
-  if (endp_kvm || cnt_exists || tap_exists || phy_exists ||
-      nat_exists || a2b_exists || c2c_exists) 
-    {
-    local_add_lan(te->llid, te->tid, te->name, te->num, te->lan);
-    timer_free(te);
-    }
-  else
-    {
-    te->count++;
-    if (te->count >= 100)
-      {
-      sprintf(err, "ERROR ENDP: %s %d %s",te->name, te->num, te->lan);
-      KERR("ERROR DELAY ADD LAN END %s", err);
-      send_status_ko(te->llid, te->tid, err);
-      timer_free(te);
-      }
-    else
-      {
-      clownix_timeout_add(20, timer_endp, (void *) te, NULL, NULL);
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void timer_endp_init(int llid, int tid, char *name, int num, char *lan)
-{
-  t_timer_endp *te = timer_find(name, num);
-  if (te)
-    {
-    send_status_ko(llid, tid, "endpoint already waiting");
-    KERR("ERROR %s %d %s", name, num, lan);
-    }
-  else
-    {
-    te = (t_timer_endp *)clownix_malloc(sizeof(t_timer_endp), 4);
-    memset(te, 0, sizeof(t_timer_endp));
-    strncpy(te->name, name, MAX_NAME_LEN-1);
-    strncpy(te->lan, lan, MAX_NAME_LEN-1);
-    te->num = num;
-    te->llid = llid;
-    te->tid = tid;
-    if (g_head_timer)
-      g_head_timer->prev = te;
-    te->next = g_head_timer;
-    g_head_timer = te;
-    clownix_timeout_add(20, timer_endp, (void *) te, NULL, NULL);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void delayed_coherency_cmd_timeout(void *data)
-{
-  t_coherency_delay *next, *cur = (t_coherency_delay *) data;
-  g_coherency_abs_beat_timer = 0;
-  g_coherency_ref_timer = 0;
-  if (recv_coherency_locked())
-    clownix_timeout_add(20, delayed_coherency_cmd_timeout, data,
-                        &g_coherency_abs_beat_timer, &g_coherency_ref_timer);
-  else
-    {
-    while (cur)
-      {
-      next = cur->next;
-      if (cfg_is_a_zombie(cur->name))
-        {
-        clownix_timeout_add(20, delayed_coherency_cmd_timeout, data,
-                            &g_coherency_abs_beat_timer,
-                            &g_coherency_ref_timer);
-        KERR("WAIT %s", cur->name);
-        }
-      else
-        {
-        timer_endp_init(cur->llid, cur->tid, cur->name, cur->num, cur->lan);
-        coherency_del_chain(cur);
-        }
-      cur = next;
-      }
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_add_lan_endp(int llid, int tid, char *name, int num, char *lan)
-{
-  char info[MAX_PATH_LEN];
-  event_print("Rx Req add lan %s in %s %d", lan, name, num);
-  if (get_inhib_new_clients())
-    {
-    send_status_ko(llid, tid, "AUTODESTRUCT_ON");
-    KERR("ERROR AUTODESTRUCT_ON");
-    }
-  else if (cfg_name_is_in_use(1, lan, info))
-    {
-    send_status_ko(llid, tid, info);
-    KERR("ERROR %s", info);
-    }
-  else 
-    {
-    if ((recv_coherency_locked()) || cfg_is_a_zombie(name))
-      {
-      g_head_coherency = coherency_add_chain(llid, tid, name, num, lan);
-      if (!g_coherency_abs_beat_timer)
-        {
-        clownix_timeout_add(20, delayed_coherency_cmd_timeout,
-                            (void *) g_head_coherency,
-                            &g_coherency_abs_beat_timer,
-                            &g_coherency_ref_timer);
-        }
-      }  
-    else
-      {
-      timer_endp_init(llid, tid, name, num, lan);
-      }
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void recv_evt_print_sub(int llid, int tid)
 {
   event_print("Rx Req subscribing to print for client: %d", llid);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (msg_exist_channel(llid))
     {
     event_subscribe(sub_evt_print, llid, tid);
@@ -652,66 +328,6 @@ void recv_event_topo_sub(int llid, int tid)
     }
   else
     send_status_ko(llid, tid, "Abnormal!");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void recv_del_lan_endp(int llid, int tid, char *name, int num, char *lan)
-{
-  char info[MAX_PATH_LEN];
-  int endp_kvm = kvm_exists(name, num);
-  t_eth_table *eth_tab = NULL;
-  int nb_eth;
-  int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
-  t_ovs_tap *tap_exists = ovs_tap_exists(name);
-  t_ovs_phy *phy_exists = ovs_phy_exists_vhost(name);
-  t_ovs_nat_main *nat_exists = ovs_nat_main_exists(name);
-  t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
-  t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
-  event_print("Rx Req del lan %s of %s %d", lan, name, num);
-
-  if (cnt_name_exists(name, &nb_eth))
-    {
-    if (!cnt_exists)
-      {
-      send_status_ko(llid, tid, "eth operation ongoing");
-      KERR("ERROR %s %d %s", name, num, lan);
-      }
-    else if (nb_eth <= num)
-      {
-      send_status_ko(llid, tid, "eth does not exist");
-      KERR("ERROR %s %d %s", name, num, lan);
-      }
-    else
-      {
-      if (cnt_del_lan(llid, tid, name, num, lan, info))
-        {
-        send_status_ko(llid, tid, info);
-        KERR("ERROR %s", info);
-        }
-      }
-    }
-  else if ((endp_kvm == endp_type_eths) ||
-           (endp_kvm == endp_type_ethv))
-    {
-    if (kvm_del_lan(llid, tid, name, num, lan, endp_kvm))
-      send_status_ko(llid, tid, "failure");
-    }
-  else if ((tap_exists) && (num == 0))
-    ovs_tap_del_lan(llid, tid, name, lan);
-  else if ((phy_exists) && (num == 0))
-    ovs_phy_del_lan(llid, tid, name, lan);
-  else if ((nat_exists) && (num == 0))
-    ovs_nat_main_del_lan(llid, tid, name, lan);
-  else if ((a2b_exists) && ((num == 0) || (num == 1)))
-    ovs_a2b_del_lan(llid, tid, name, num, lan);
-  else if ((c2c_exists) && (num == 0))
-    ovs_c2c_del_lan(llid, tid, name, lan);
-  else
-    {
-    sprintf(info, "Del lan %s %d %s fail", name, num, lan);
-    send_status_ko(llid, tid, info);
-    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1259,6 +875,13 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
   t_vm   *vm = cfg_get_vm(kvm->name);
   t_timer_zombie *tz;
   char err[MAX_PATH_LEN];
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (vm)
     {
     sprintf(err, "Machine: \"%s\" already exists", kvm->name);
@@ -1402,8 +1025,20 @@ t_pid_lst *create_list_pid(int *nb)
 void recv_list_pid_req(int llid, int tid)
 {
   int nb;
-  t_pid_lst *lst = create_list_pid(&nb);
+  t_pid_lst *lst;
   event_print("Rx Req list pid");
+  if (get_uml_cloonix_started())
+    {
+    lst = create_list_pid(&nb);
+    }
+  else
+    {
+    nb = 1;
+    lst = (t_pid_lst *)clownix_malloc(sizeof(t_pid_lst),18);
+    memset(lst, 0, sizeof(t_pid_lst));
+    strcpy(lst[0].name, "server_not_ready");
+    lst[0].pid = 0;
+    }
   send_list_pid_resp(llid, tid, nb, lst);
   clownix_free(lst, __FUNCTION__);
 }
@@ -1413,6 +1048,13 @@ void recv_list_pid_req(int llid, int tid)
 void recv_event_sys_sub(int llid, int tid)
 {
   event_print("Rx Req subscribing to system counters for client: %d", llid);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (msg_exist_channel(llid))
     {
     event_subscribe(sub_evt_sys, llid, tid);
@@ -1426,6 +1068,13 @@ void recv_event_sys_sub(int llid, int tid)
 void recv_event_sys_unsub(int llid, int tid)
 {
   event_print("Rx Req unsubscribing from system for client: %d", llid);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (msg_exist_channel(llid))
     {
     event_unsubscribe(sub_evt_sys, llid);
@@ -1440,6 +1089,13 @@ void recv_event_sys_unsub(int llid, int tid)
 void recv_event_topo_unsub(int llid, int tid)
 {
   event_print("Rx Req unsubscribing from topo modif for client: %d", llid);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (msg_exist_channel(llid))
     {
     event_unsubscribe(sub_evt_topo, llid);
@@ -1454,6 +1110,13 @@ void recv_event_topo_unsub(int llid, int tid)
 void recv_evt_print_unsub(int llid, int tid)
 {
   event_print("Rx Req unsubscribing from print for client: %d", llid);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (msg_exist_channel(llid))
     {
     event_unsubscribe(sub_evt_print, llid);
@@ -1492,7 +1155,6 @@ static void timer_del_all_end(void *data)
   else
     {
     g_inhib_new_clients = 0;
-    glob_coherency = 0;
     send_status_ok(td->llid, td->tid, "delall");
     cfg_hysteresis_send_topo_info();
     clownix_free(td, __FUNCTION__);
@@ -1609,6 +1271,13 @@ void recv_topo_small_event_sub(int llid, int tid)
   int i, nb;
   t_vm *cur;
   event_print("Req subscribing to Machine poll event for client: %d", llid);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (msg_exist_channel(llid))
     {
     event_subscribe(topo_small_event, llid, tid);
@@ -1647,6 +1316,13 @@ void recv_topo_small_event_sub(int llid, int tid)
 void recv_topo_small_event_unsub(int llid, int tid)
 {
   event_print("Req unsubscribing from Machine poll event for client: %d", llid);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (msg_exist_channel(llid))
     {
     event_unsubscribe(topo_small_event, llid);
@@ -1663,6 +1339,13 @@ void recv_del_name(int llid, int tid, char *name)
   int nb_eth;
   event_print("Rx Req del %s", name);
   t_vm *vm = cfg_get_vm(name);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (vm)
     {
     event_print("Rx Req del machine %s", name);
@@ -1715,6 +1398,13 @@ void recv_sav_vm(int llid, int tid, char *name, char *path)
 {
   t_vm   *vm = cfg_get_vm(name);
   char *dir_path = mydirname(path);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (!vm)
     {
     send_status_ko(llid, tid, "error MACHINE NOT FOUND");
@@ -1740,6 +1430,13 @@ void recv_nat_add(int llid, int tid, char *name)
   char *locnet = cfg_get_cloonix_name();
   char err[MAX_PATH_LEN];
   event_print("Rx Req add nat %s", name);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (get_inhib_new_clients())
     {
     KERR("ERROR %s %s", locnet, name);
@@ -1763,6 +1460,13 @@ void recv_a2b_add(int llid, int tid, char *name)
   char *locnet = cfg_get_cloonix_name();
   char err[MAX_PATH_LEN];
   event_print("Rx Req add a2b %s", name);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (get_inhib_new_clients())
     {
     KERR("ERROR %s %s", locnet, name);
@@ -1783,11 +1487,20 @@ void recv_a2b_add(int llid, int tid, char *name)
 /*****************************************************************************/
 void recv_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                   char *dist, uint32_t dist_ip, uint16_t dist_port,
-                  char *dist_passwd, uint32_t dist_udp_ip)
+                  char *dist_passwd, uint32_t dist_udp_ip,
+                  uint16_t c2c_udp_port_low)
 {
   char *locnet = cfg_get_cloonix_name();
+  t_cloonix_conf_info *conf = get_cloonix_conf_info();
   char err[MAX_PATH_LEN];
   event_print("Rx Req add c2c %s", name);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (get_inhib_new_clients())
     {
     KERR("ERROR %s %s", locnet, name);
@@ -1800,8 +1513,11 @@ void recv_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
     }
   else
     {
+    if (conf->c2c_udp_port_low != c2c_udp_port_low)
+      KERR("ERROR %hu %hu", conf->c2c_udp_port_low, c2c_udp_port_low);
     ovs_c2c_add(llid, tid, name, loc_udp_ip,
-                dist, dist_ip, dist_port, dist_passwd, dist_udp_ip); 
+                dist, dist_ip, dist_port, dist_passwd,
+                dist_udp_ip, c2c_udp_port_low); 
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1819,6 +1535,13 @@ void recv_snf_add(int llid, int tid, char *name, int num, int val)
   t_ovs_a2b *a2b_exists = ovs_a2b_exists(name);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
   event_print("Rx Req add snf %s %d %d", name, num, val);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (get_inhib_new_clients())
     {
     KERR("ERROR %s %s", locnet, name);
@@ -1959,6 +1682,13 @@ void recv_phy_add(int llid, int tid, char *name, int type)
   char *locnet = cfg_get_cloonix_name();
   char err[MAX_PATH_LEN];
   event_print("Rx Req add phy %s", name);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (get_inhib_new_clients())
     {
     KERR("ERROR %s %s", locnet, name);
@@ -1987,6 +1717,13 @@ void recv_tap_add(int llid, int tid, char *name)
   char *locnet = cfg_get_cloonix_name();
   char err[MAX_PATH_LEN];
   event_print("Rx Req add tap %s", name);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (get_inhib_new_clients())
     {
     KERR("ERROR %s %s", locnet, name);
@@ -2008,6 +1745,13 @@ void recv_tap_add(int llid, int tid, char *name)
 void recv_c2c_cnf(int llid, int tid, char *name, char *cmd)
 {
   uint8_t mac[6];
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (strncmp("mac_mangle=", cmd, strlen("mac_mangle=")))
     {
     send_status_ko(llid, tid, cmd);
@@ -2036,6 +1780,13 @@ void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
   t_vm *vm;
   char *ptr;
   event_print("Rx Req cnf nat %s %s", name, cmd);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (!ovs_nat_main_exists(name))
     {
     send_status_ko(llid, tid, "error nat not found");
@@ -2076,6 +1827,13 @@ void recv_nat_cnf(int llid, int tid, char *name, char *cmd)
 void recv_a2b_cnf(int llid, int tid, char *name, char *cmd)
 {
   event_print("Rx Req cnf a2b %s %s", name, cmd);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (!ovs_a2b_exists(name))
     {
     send_status_ko(llid, tid, "error a2b not found");
@@ -2096,6 +1854,13 @@ void recv_a2b_cnf(int llid, int tid, char *name, char *cmd)
 void recv_lan_cnf(int llid, int tid, char *name, char *cmd)
 {
   event_print("Rx Req cnf lan %s %s", name, cmd);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if (!lan_get_with_name(name))
     {
     send_status_ko(llid, tid, "error lan not found");
@@ -2119,21 +1884,23 @@ void recv_c2c_peer_create(int llid, int tid, char *name,
                           int is_ack, char *dist, char *loc)
 {
   char *locnet = cfg_get_cloonix_name();
+  t_cloonix_conf_info *conf = get_cloonix_conf_info();
   char err[MAX_PATH_LEN];
   t_ovs_c2c *c2c;
+  int res;
   if (is_ack == 0)
     {
     if (get_inhib_new_clients())
       {
       KERR("ERROR %s %s %s %s", locnet, name, dist, loc);
       }
-    else if (cfg_name_is_in_use(0, name, err))
+    else 
       {
-      KERR("ERROR %s %s %s %s %s", locnet, name, dist, loc, err);
-      }
-    else
-      {
-      ovs_c2c_peer_add(llid, tid, name, dist, loc);
+      res = cfg_name_is_in_use(0, name, err);
+      if (res == 0)
+        ovs_c2c_peer_add(llid, tid, name, dist, loc, conf->c2c_udp_port_low);
+      else if (res != 2)  
+        KERR("ERROR %s %s %s %s %s", locnet, name, dist, loc, err);
       }
     }
   else
@@ -2157,14 +1924,13 @@ void recv_c2c_peer_conf(int llid, int tid, char *name,
 {
   ovs_c2c_peer_conf(llid, tid, name, status, dist, loc, dist_udp_ip,
                     loc_udp_ip, dist_udp_port, loc_udp_port);
-
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_c2c_peer_ping(int llid, int tid, char *name, int status)
+void recv_c2c_peer_ping(int llid, int tid, char *name, int status_peer_ping)
 {
-  ovs_c2c_peer_ping(llid, tid, name, status);
+  ovs_c2c_peer_ping(llid, tid, name, status_peer_ping);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -2177,6 +1943,13 @@ void recv_color_item(int llid, int tid, char *name, int color)
   int nb_eth;
   int cnt_exists = cnt_info(name, &nb_eth, &eth_tab);
   event_print("Rx Req color %d for  %s", color, name);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
   if ((!cnt_exists) && (!vm))
     {
     sprintf( info, "Machine %s does not exist", name);
@@ -2209,6 +1982,13 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
               "image:%s startup_env:%s",
               cnt->name, cnt->brandtype, cnt->is_persistent,
               cnt->image, cnt->startup_env);
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    return;
+    }
+
 
   if (get_inhib_new_clients())
     {
@@ -2268,7 +2048,6 @@ void recv_fix_display(int llid, int tid, char *disp, char *line)
   char cmd[2 * MAX_PATH_LEN];
   char *net = cfg_get_cloonix_name();
   char err[MAX_PRINT_LEN];
-
   unlink(tmp_Xauthority);
   memset(wauth, 0, MAX_PATH_LEN);
   snprintf(wauth, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/.Xauthority", net);
@@ -2311,11 +2090,6 @@ void recv_fix_display(int llid, int tid, char *disp, char *line)
 void recv_init(void)
 {
   g_killing_cloonix = 0;
-  glob_coherency = 0;
-  glob_coherency_fail_count = 0;
-  g_head_coherency = NULL;
-  g_coherency_abs_beat_timer = 0;
-  g_coherency_ref_timer = 0;
   g_in_cloon = inside_cloon(&g_cloonix_vm_name);
   g_inhib_new_clients = 0;
 }

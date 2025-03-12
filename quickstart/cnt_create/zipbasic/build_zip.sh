@@ -52,10 +52,10 @@ rm -rf ${ROOTFS}
 mkdir -p ${ROOTFS}
 for i in "bin" "sbin" "root" "etc" "run" "tmp" "lib" "home" "lib64" \
      "var/run" "var/log" "usr/bin" "usr/sbin" "var/spool/rsyslog" \
-     "usr/share/misc" "usr/lib/x86_64-linux-gnu/rsyslog" "usr/share/locale" \
-     "lib/x86_64-linux-gnu" "usr/share/i18n/charmaps" "usr/share/X11/locale" \
+     "usr/share/misc" "usr/lib/x86_64-linux-gnu/rsyslog" \
+     "usr/share/locale" "lib/x86_64-linux-gnu" "usr/share/X11/locale" \
      "usr/share/bash-completion" "usr/share/bash-completion/completions" \
-     "/usr/share/i18n/locales" "usr/lib/locale" "usr/lib/security" \
+     "usr/lib/locale" "usr/lib/security" \
      "etc/default" ; do 
   mkdir -v -p ${ROOTFS}/${i}
 done
@@ -73,12 +73,6 @@ for i in ${LIST_USBIN}; do
   cp -v ${i} ${ROOTFS}/usr/sbin
 done
 #----------------------------------------------------------------------------#
-cp -f /usr/share/i18n/charmaps/UTF-8.gz ${ROOTFS}/usr/share/i18n/charmaps
-for i in "en_GB" "en_US" "fr_FR" "i18n" "i18n_ctype" \
-         "iso14651_t1" "iso14651_t1_common" ; do
-  cp -f /usr/share/i18n/locales/${i} ${ROOTFS}/usr/share/i18n/locales
-done
-cp -f /usr/share/i18n/locales/translit_* ${ROOTFS}/usr/share/i18n/locales
 cp -Lrf /usr/share/X11/locale/en_US.UTF-8 ${ROOTFS}/usr/share/X11/locale
 cp -Lrf /usr/share/X11/locale/iso8859-1 ${ROOTFS}/usr/share/X11/locale
 cp -Lrf /usr/share/X11/locale/C ${ROOTFS}/usr/share/X11/locale
@@ -92,13 +86,15 @@ cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    ${ROOTFS}/usr/lib/x86_64-linux-
 cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   ${ROOTFS}/usr/lib/x86_64-linux-gnu/rsyslog
 cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so ${ROOTFS}/usr/lib/x86_64-linux-gnu/rsyslog
 cp /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 ${ROOTFS}/usr/lib/x86_64-linux-gnu
+
+cp /usr/lib/x86_64-linux-gnu/libyang.so.3  ${ROOTFS}/usr/lib/x86_64-linux-gnu
+
 cp -v /usr/lib/file/magic.mgc ${ROOTFS}/usr/share/misc
 cp -f /etc/bash_completion ${ROOTFS}/etc
 cp -Lrf /usr/lib/locale ${ROOTFS}/usr/lib
 cp -f /etc/locale.conf ${ROOTFS}/etc
 cp -f /etc/locale.gen ${ROOTFS}/etc
 cp -f /etc/default/locale ${ROOTFS}/etc/default
-/usr/local/share/i18n/locales
 cp -f /usr/share/bash-completion/bash_completion ${ROOTFS}/usr/share/bash-completion
 for i in "arp" "arping" "chmod" "chown" "curl" "file" \
          "find" "hostname" "id" "ip" "iperf3" "iptables" \
@@ -154,7 +150,6 @@ cp -Lrf /usr/lib/x86_64-linux-gnu/frr ${ROOTFS}/usr/lib/x86_64-linux-gnu/
 cp -r /lib/x86_64-linux-gnu/security ${ROOTFS}/lib/x86_64-linux-gnu
 cp -f /lib/x86_64-linux-gnu/security/pam_deny.so ${ROOTFS}/usr/lib/security
 cp -f /lib/x86_64-linux-gnu/security/pam_unix.so ${ROOTFS}/usr/lib/security
-cp -f /lib/x86_64-linux-gnu/security/pam_mask.so ${ROOTFS}/usr/lib/security
 cp -f /lib/x86_64-linux-gnu/security/pam_permit.so ${ROOTFS}/usr/lib/security
 cp -f /usr/lib/x86_64-linux-gnu/libnss_dns.so.2 ${ROOTFS}/usr/lib/x86_64-linux-gnu/
 cp -f /usr/lib/x86_64-linux-gnu/libcap.so.2 ${ROOTFS}/usr/lib/x86_64-linux-gnu/

@@ -103,7 +103,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define PROXYMARKUP_END ":proxymarkup_crun_data_end"
 
 #define TRAF_TAP_BUF_LEN 1400
-#define MAX_TAP_BUF_LEN 1514
+#define MAX_TAP_BUF_LEN 1510
 #define HEADER_TAP_MSG 8
 #define END_FRAME_ADDED_CHECK_LEN 4
 #define MAX_DGRAM_LEN 2048
@@ -371,7 +371,7 @@ typedef struct t_topo_c2c
   char name[MAX_NAME_LEN];
   int endp_type;
   char dist_cloon[MAX_NAME_LEN];
-  char lan[MAX_NAME_LEN];
+  char attlan[MAX_NAME_LEN];
   int local_is_master;
   uint32_t dist_tcp_ip;
   uint16_t dist_tcp_port;

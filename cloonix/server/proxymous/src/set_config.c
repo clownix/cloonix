@@ -453,7 +453,7 @@ int set_config(char *net, uint16_t pmain, uint16_t pweb, char *passwd)
   snprintf(g_pdoors_unix, MAX_PATH_LEN-1, "%s/proxy_pdoors.sock", pox);
   snprintf(g_pmain_unix, MAX_PATH_LEN-1, "%s/proxy_pmain.sock", pox);
   if (!proxy_traf_tcp_server(pmain, connect_from_pmain_tcp_client))
-    KERR("ERROR cannot listen to port %hu", pmain);
+    KERR("ERROR PROXYMOUS (FATAL?) cannot listen to pmain port %hu", pmain);
   else
     {
     g_listen_dido_llid = doorways_sock_server_proxy(g_net, g_pdoors_unix,

@@ -542,7 +542,7 @@ void client_color_cnt(int tid, t_end_cb cb, char *name, int color)
 /*****************************************************************************/
 void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip, 
                     char *slave_cloon, uint32_t ip, uint16_t port,
-                    char *passwd, uint32_t udp_ip)
+                    char *passwd, uint32_t udp_ip, uint16_t c2c_udp_port_low)
 {
   int new_tid;
   if (!g_llid)
@@ -555,7 +555,7 @@ void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
   new_tid = set_response_callback(cb, tid);
   send_c2c_add(g_llid, new_tid, name, local_udp_ip,
                slave_cloon, ip, port,
-               passwd, udp_ip);
+               passwd, udp_ip, c2c_udp_port_low);
 #ifdef WITH_GLIB
   glib_prepare_rx_tx(g_llid);
 #endif

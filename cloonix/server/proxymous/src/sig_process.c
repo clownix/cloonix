@@ -43,6 +43,7 @@
 #include "nat_main.h"
 
 static int g_heartbeat_count;
+void write_start_status_file(int is_ready);
 
 /***************************************************************************/
 void sig_process_heartbeat(void)
@@ -73,7 +74,8 @@ void sig_process_proxy_peer_data_to_crun(char *name, int len, char *buf)
   name, len, PROXYMARKUP_START, buf, PROXYMARKUP_END);
   if (!msg_exist_channel(llid_sig))
     KERR("ERROR llid %d", llid_sig);
-  proxy_sig_tx(llid_sig, strlen(sbuf)+1, sbuf);
+  else
+    proxy_sig_tx(llid_sig, strlen(sbuf)+1, sbuf);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -88,7 +90,8 @@ void sig_process_tx_proxy_callback_connect(char *name, int pair_llid)
   "transcrun_proxy_callback_connect %s %d", name, pair_llid);
   if (!msg_exist_channel(llid_sig))
     KERR("ERROR llid %d", llid_sig);
-  proxy_sig_tx(llid_sig, strlen(buf)+1, buf);
+  else
+    proxy_sig_tx(llid_sig, strlen(buf)+1, buf);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -103,7 +106,26 @@ static void dist_udp_ip_port_ok(char *name, uint32_t ip, uint16_t udp_port)
   "transcrun_dist_udp_ip_port_OK %s %x %hu", name, ip, udp_port);
   if (!msg_exist_channel(llid_sig))
     KERR("ERROR llid %d", llid_sig);
-  proxy_sig_tx(llid_sig, strlen(buf)+1, buf);
+  else
+    proxy_sig_tx(llid_sig, strlen(buf)+1, buf);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void transcrun_proxy_data_from_crun_status(char *name, int status)
+{
+  char buf[MAX_PATH_LEN];
+  int max = MAX_PATH_LEN-1;
+  int llid_sig = get_llid_sig();
+  memset(buf, 0, MAX_PATH_LEN);
+  if (status)
+    snprintf(buf, max, "transcrun_proxy_data_from_crun_ko %s", name);
+  else
+    snprintf(buf, max, "transcrun_proxy_data_from_crun_ok %s", name);
+  if (!msg_exist_channel(llid_sig))
+    KERR("ERROR llid %d", llid_sig);
+  else
+    proxy_sig_tx(llid_sig, strlen(buf)+1, buf);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -119,9 +141,14 @@ void sig_process_rx(char *proxyshare, char *buf)
   char sbuf[MAX_PATH_LEN];
   int len, max = MAX_PATH_LEN-1;
   int llid_sig = get_llid_sig();
+  int16_t c2c_udp_port_low;
 
+  if (!strcmp(buf, "transcrun_write_start_status_file_ready"))
+    {
+    write_start_status_file(1);
+    }
 /*--------------------------------------------------------------------------*/
-  if (!strcmp(buf, "transcrun_proxy_heartbeat_resp"))
+  else if (!strcmp(buf, "transcrun_proxy_heartbeat_resp"))
     {
     g_heartbeat_count = 0;
     }
@@ -160,32 +187,44 @@ void sig_process_rx(char *proxyshare, char *buf)
     ptrs = strstr(buf, PROXYMARKUP_START);
     ptre = strstr(buf, PROXYMARKUP_END);
     if ((!ptrs) || (!ptre))
+      {
       KERR("ERROR %s", buf);
+      transcrun_proxy_data_from_crun_status(name, -1);
+      }
     else
       {
       ptrs = ptrs + strlen(PROXYMARKUP_START);
       ptre[0] = 0;
       if (strlen(ptrs) +1 != len)
+        {
         KERR("ERROR %s %lu %d", buf, strlen(ptrs), len);
+        transcrun_proxy_data_from_crun_status(name, -1);
+        }
       else
         {
         if (c2c_peer_proxy_data_from_crun(name, len, ptrs))
+          { 
           KERR("ERROR %s", buf);
+          transcrun_proxy_data_from_crun_status(name, -1);
+          }
+        else 
+          transcrun_proxy_data_from_crun_status(name, 0);
         }
       }
     }
 /*--------------------------------------------------------------------------*/
   else if (sscanf(buf,
-  "transcrun_req_udp %s", name) == 1)
+  "transcrun_req_udp %s %hu", name, &c2c_udp_port_low) == 2)
     {
     memset(sbuf, 0, MAX_PATH_LEN);
-    if (udp_proxy_init(proxyshare, &udp_port))
+    if (udp_proxy_init(proxyshare, &udp_port, c2c_udp_port_low))
       snprintf(sbuf,max,"transcrun_req_udp_KO %s", name);
     else
       snprintf(sbuf,max,"transcrun_req_udp_OK %s %hu", name, udp_port);
     if (!msg_exist_channel(llid_sig))
       KERR("ERROR llid %d", llid_sig);
-    proxy_sig_tx(llid_sig, strlen(sbuf)+1, sbuf);
+    else
+      proxy_sig_tx(llid_sig, strlen(sbuf)+1, sbuf);
     }
   else if (sscanf(buf,
   "transcrun_dist_udp_ip_port %s %x %hu", name, &ip, &udp_port) == 3)

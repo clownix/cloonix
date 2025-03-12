@@ -289,43 +289,39 @@ static void derived_file_creation_request(t_vm *vm)
 #define QEMU_OPTS_BASE \
    " -m %d"\
    " -name %s"\
-   " -chardev stdio,id=s1,signal=off"\
-   " -serial none -device isa-serial,chardev=s1"\
    " -nodefaults"\
-   " -rtc base=utc,driftfix=slew"\
-   " -global kvm-pit.lost_tick_policy=delay"\
-   " -machine hpet=off -boot strict=on"
+   " -chardev stdio,id=char0,signal=off" \
+   " -serial  chardev:char0"\
+   " -boot    strict=on"
 
 #define QEMU_OPTS_QMP \
    " -chardev socket,id=qmp1,path=%s,server=on,wait=off"\
    " -mon chardev=qmp1,mode=control"
 
 #define QEMU_OPTS_CLOON \
-   " -device virtio-serial-pci"\
-   " -device virtio-mouse-pci"\
-   " -device virtio-keyboard-pci"\
+   " -device  virtio-serial-pci"\
    " -chardev socket,path=%s,server=on,wait=off,id=cloon0"\
-   " -device virtserialport,chardev=cloon0,name=net.cloon.0"\
+   " -device  virtserialport,chardev=cloon0,name=net.cloon.0"\
    " -chardev socket,path=%s,server=on,wait=off,id=qga0" \
-   " -device virtserialport,chardev=qga0,name=org.qemu.guest_agent.0" \
-   " -chardev spicevmc,id=spice0,name=vdagent" \
-   " -device virtserialport,chardev=spice0,name=com.redhat.spice.0"\
-   " -device virtio-balloon-pci,id=balloon0"\
-   " -object rng-random,filename=/dev/urandom,id=rng0"\
-   " -device virtio-rng-pci,rng=rng0"
+   " -device  virtserialport,chardev=qga0,name=org.qemu.guest_agent.0"\
+   " -chardev spicevmc,id=spice0,name=vdagent"\
+   " -device  virtserialport,chardev=spice0,name=com.redhat.spice.0"\
+   " -device  virtio-balloon-pci,id=balloon0"\
+   " -object  rng-random,filename=/dev/urandom,id=rng0"\
+   " -device  virtio-rng-pci,rng=rng0"
 
 #define QEMU_SPICE \
-   " -device virtio-vga"\
+   " -device   virtio-vga"\
    " -audiodev driver=spice,id=hda0"\
-   " -device intel-hda,id=hda0"\
-   " -device hda-duplex,bus=hda0.0,audiodev=hda0"\
-   " -device qemu-xhci"\
-   " -device usb-tablet"\
-   " -chardev spicevmc,id=charredir0,name=usbredir"\
-   " -device usb-redir,chardev=charredir0"\
-   " -chardev spicevmc,id=charredir1,name=usbredir"\
-   " -device usb-redir,chardev=charredir1"\
-   " -spice unix=on,addr=%s,disable-ticketing=on"
+   " -device   intel-hda,id=hda0"\
+   " -device   hda-duplex,bus=hda0.0,audiodev=hda0"\
+   " -device   qemu-xhci"\
+   " -device   usb-tablet"\
+   " -chardev  spicevmc,id=charredir0,name=usbredir"\
+   " -device   usb-redir,chardev=charredir0"\
+   " -chardev  spicevmc,id=charredir1,name=usbredir"\
+   " -device   usb-redir,chardev=charredir1"\
+   " -spice    unix=on,addr=%s,disable-ticketing=on"
 
 
 /*--------------------------------------------------------------------------*/

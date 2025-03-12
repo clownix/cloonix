@@ -41,6 +41,7 @@
 #include "layout_topo.h"
 #include "mactopo.h"
 #include "proxycrun.h"
+#include "c2c_chainlan.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -53,6 +54,19 @@ int get_glob_req_self_destruction(void);
 
 
 /****************************************************************************/
+static void ovs_llid_to_tap_process_broken(t_ovs_c2c *cur)
+{
+  if (cur->closed_llid_received == 0)
+    {
+    cur->closed_llid_received = 1;
+    cur->ovs_llid = 0;
+    cur->closed_count = 2;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 static void nb_to_text(int state, char *resp)
 {
   memset(resp, 0, MAX_NAME_LEN);
@@ -60,6 +74,10 @@ static void nb_to_text(int state, char *resp)
     {
     case state_idle:
       strncpy(resp, "state_idle", MAX_NAME_LEN-1);
+      break;
+
+    case state_master_c2c_start_done:
+      strncpy(resp, "state_master_c2c_start_done", MAX_NAME_LEN-1);
       break;
 
     case state_master_up_initialised:
@@ -80,6 +98,10 @@ static void nb_to_text(int state, char *resp)
 
     case state_master_udp_peer_conf_received:
       strncpy(resp, "state_master_udp_peer_conf_received", MAX_NAME_LEN-1);
+      break;
+
+    case state_udp_connection_tx_configured:
+      strncpy(resp, "state_udp_connection_tx_configured", MAX_NAME_LEN-1);
       break;
 
     case state_master_up_process_running:
@@ -115,7 +137,7 @@ static void nb_to_text(int state, char *resp)
 /****************************************************************************/
 void c2c_state_progress_up(t_ovs_c2c *cur, int state)
 {
-  char *locnet = cfg_get_cloonix_name();
+//  char *locnet = cfg_get_cloonix_name();
   char olab[MAX_NAME_LEN];
   char nlab[MAX_NAME_LEN];
   nb_to_text(cur->state_up, olab);
@@ -149,12 +171,7 @@ static void free_c2c(t_ovs_c2c *cur)
   if (cur->ovs_llid)
     {
     llid_trace_free(cur->ovs_llid, 0, __FUNCTION__);
-    }
-  if (strlen(cur->lan_added))
-    {
-    KERR("ERROR %s %s %s", locnet, cur->name, cur->lan_added);
-    mactopo_del_req(item_c2c, cur->name, 0, cur->lan_added);
-    lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
+    cur->ovs_llid = 0;
     }
   if (cur->prev)
     cur->prev->next = cur->next;
@@ -168,13 +185,15 @@ static void free_c2c(t_ovs_c2c *cur)
     KERR("WARNING RESTARTING %s %s", locnet, cur->name);
     ovs_c2c_add(0,0, cur->name, cur->topo.loc_udp_ip, cur->topo.dist_cloon,
                 cur->topo.dist_tcp_ip, cur->topo.dist_tcp_port,
-                cur->dist_passwd, cur->topo.dist_udp_ip);
+                cur->dist_passwd, cur->topo.dist_udp_ip,
+                cur->c2c_udp_port_low);
     ncur = find_c2c(cur->name);
     if (!ncur)
       KERR("ERROR %s %s", locnet, cur->name);
-    else if (strlen(cur->must_restart_lan))
-      strncpy(ncur->lan_waiting, cur->must_restart_lan, MAX_NAME_LEN-1);
     }
+  c2c_chainlan_partial_del(cur);
+  if ((cur->topo.local_is_master == 1) && (cur->must_restart == 0))
+    c2c_chainlan_del(cur);
   free(cur);
   cfg_hysteresis_send_topo_info();
 }
@@ -188,7 +207,7 @@ static void init_get_udp_port(t_ovs_c2c *cur)
       (msg_exist_channel(cur->ovs_llid)))
     {
     cur->get_udp_port_done = 1;
-    proxycrun_transmit_req_udp(cur->name);
+    proxycrun_transmit_req_udp(cur->name, cur->c2c_udp_port_low);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -199,7 +218,6 @@ static void init_dist_udp_ip_port(char *name, uint32_t ip, uint16_t port)
   proxycrun_transmit_dist_udp_ip_port(name, ip, port);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /*****************************************************************************/
 static t_ovs_c2c *alloc_c2c_base(char *name, char *dist_name)
@@ -238,6 +256,7 @@ static t_ovs_c2c *alloc_c2c_base(char *name, char *dist_name)
   cur->next = g_head_c2c;
   g_head_c2c = cur;
   g_nb_c2c += 1;
+  c2c_chainlan_add(cur);
   return cur;
 }
 /*--------------------------------------------------------------------------*/
@@ -246,7 +265,7 @@ static t_ovs_c2c *alloc_c2c_base(char *name, char *dist_name)
 static void alloc_c2c_master(char *name, char *dist_name,
                              uint32_t loc_udp_ip, uint32_t dist_ip,
                              uint16_t dist_port, char *dist_passwd,
-                             uint32_t dist_udp_ip)
+                             uint32_t dist_udp_ip, uint16_t c2c_udp_port_low)
 {
   char *locnet = cfg_get_cloonix_name();
   uint32_t localhost;
@@ -258,7 +277,7 @@ static void alloc_c2c_master(char *name, char *dist_name,
   cur->topo.dist_tcp_port = dist_port;
   cur->topo.loc_udp_ip = loc_udp_ip;
   cur->topo.dist_udp_ip = dist_udp_ip;
-  cfg_hysteresis_send_topo_info();
+  cur->c2c_udp_port_low = c2c_udp_port_low;
   ip_string_to_int(&localhost, "127.0.0.1");
   if ((dist_ip != localhost) && (loc_udp_ip == localhost))
     {
@@ -269,27 +288,15 @@ static void alloc_c2c_master(char *name, char *dist_name,
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static t_ovs_c2c *alloc_c2c_peer(int llid, int tid, char *name, char *dist_name)
+static t_ovs_c2c *alloc_c2c_peer(int llid, int tid, char *name,
+                                 char *dist_name, uint16_t c2c_udp_port_low)
 {
   t_ovs_c2c *cur = alloc_c2c_base(name, dist_name);
+  cur->c2c_udp_port_low = (int) c2c_udp_port_low;
   init_get_udp_port(cur);
   cur->peer_llid = llid;
   cur->ref_tid = tid;
-  cfg_hysteresis_send_topo_info();
   return cur;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void destroy_c2c(t_ovs_c2c *cur)
-{
-  if (cur->destroy_c2c_done == 0)
-    {
-    cur->destroy_c2c_done = 1;
-    wrap_send_c2c_peer_ping(cur, -1);
-    if ((cur->ovs_llid) && msg_exist_channel(cur->ovs_llid))
-      rpct_send_kil_req(cur->ovs_llid, type_hop_c2c);
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -298,7 +305,6 @@ static void carefull_free_c2c(char *name)
 {
   char *locnet = cfg_get_cloonix_name();
   t_ovs_c2c *cur = find_c2c(name);
-  int val = 0;
   if (!cur)
     KOUT("ERROR %s %s", locnet, name);
   if ((cur->destroy_c2c_req != 0) ||
@@ -306,68 +312,30 @@ static void carefull_free_c2c(char *name)
     KERR("ERROR %s %s %d %d", locnet, name, cur->destroy_c2c_req,
                               cur->free_c2c_req);
   else
-    {
-    if (strlen(cur->lan_added))
-      {
-      if (!strlen(cur->lan_attached))
-        KERR("ERROR %s %s %s", locnet, name, cur->lan_added);
-      mactopo_del_req(item_c2c, cur->name, 0, cur->lan_added);
-      val = lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
-      memset(cur->lan_added, 0, MAX_NAME_LEN);
-      if (val == 2*MAX_LAN)
-        free_c2c(cur);
-      else
-        {
-        if (!strlen(cur->lan_attached))
-          KERR("ERROR %s %s %s", locnet, name, cur->lan_added);
-        else
-          msg_send_del_lan_endp(ovsreq_del_c2c_lan, name, 0,
-                                cur->vhost, cur->lan_attached);
-        cur->free_c2c_req = 1;
-        }
-      }
-    else
-      free_c2c(cur);
-    }
+    free_c2c(cur);
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void carefull_destroy_c2c(char *name)
+void carefull_destroy_c2c(t_ovs_c2c *cur)
 {
   char *locnet = cfg_get_cloonix_name();
-  t_ovs_c2c *cur = find_c2c(name);
-  int val = 0;
-  if (!cur)
-    KOUT("ERROR %s %s", locnet, name);
   if ((cur->destroy_c2c_req != 0) ||
       (cur->free_c2c_req != 0))
-    KERR("ERROR %s %s %d %d", locnet, name, cur->destroy_c2c_req,
+    KERR("ERROR %s %s %d %d", locnet, cur->name,
+                              cur->destroy_c2c_req,
                               cur->free_c2c_req);
-  else
-    {    
-    if (strlen(cur->lan_added))
-      {
-      if (!strlen(cur->lan_attached))
-        KERR("ERROR %s %s %s", locnet, name, cur->lan_added);
-      mactopo_del_req(item_c2c, cur->name, 0, cur->lan_added);
-      val = lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
-      memset(cur->lan_added, 0, MAX_NAME_LEN);
-      if (val == 2*MAX_LAN)
-        destroy_c2c(cur);
-      else
-        {
-        if (!strlen(cur->lan_attached))
-          KERR("ERROR %s %s %s", locnet, name, cur->lan_added);
-        else
-          msg_send_del_lan_endp(ovsreq_del_c2c_lan, name, 0,
-                                cur->vhost, cur->lan_attached);
-        cur->destroy_c2c_req = 1;
-        }
-      }
-    else
-      destroy_c2c(cur);
+  else if (cur->destroy_c2c_done == 0)
+    {
+    cur->destroy_c2c_done = 1;
+
+    wrap_send_c2c_peer_ping(cur, status_peer_ping_error);
+    if ((cur->ovs_llid) && msg_exist_channel(cur->ovs_llid))
+      rpct_send_kil_req(cur->ovs_llid, type_hop_c2c);
     }
+  if ((!cur->recv_delete_req_from_client) &&
+      (cur->topo.local_is_master == 1))
+    cur->must_restart = 1;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -378,7 +346,7 @@ static void process_demonized(void *unused_data, int status, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void c2c_start(char *name, char *vhost)
+static void c2c_start(char *name, char *vhost, char *type)
 {
   static char *argv[7];
   argv[0] = g_bin_c2c;
@@ -386,7 +354,8 @@ static void c2c_start(char *name, char *vhost)
   argv[2] = g_root_path;
   argv[3] = name;
   argv[4] = vhost;
-  argv[5] = NULL;
+  argv[5] = type;
+  argv[6] = NULL;
   pid_clone_launch(utils_execv, process_demonized, NULL,
                    (void *) argv, NULL, NULL, name, -1, 1);
 }
@@ -449,10 +418,7 @@ static void send_c2c_suidroot_attempt(t_ovs_c2c *cur)
       }
     else
       {
-      if (!msg_exist_channel(cur->ovs_llid))
-        KERR("ERROR %s %s %s", locnet, cur->socket, cur->name);
-      else
-        rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
+      rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
       hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
       }
     }
@@ -462,21 +428,12 @@ static void send_c2c_suidroot_attempt(t_ovs_c2c *cur)
 /****************************************************************************/
 static void count_management_and_pid_req(t_ovs_c2c *cur)
 {
-  char *locnet = cfg_get_cloonix_name();
   cur->count += 1;
   if (cur->count == 2)
     {
-    rpct_send_pid_req(cur->ovs_llid, type_hop_c2c, cur->name, 0);
+    if ((cur->ovs_llid) && (msg_exist_channel(cur->ovs_llid)))
+      rpct_send_pid_req(cur->ovs_llid, type_hop_c2c, cur->name, 0);
     cur->count = 0;
-    }
-  if (cur->closed_count > 0)
-    { 
-    cur->closed_count -= 1;
-    if (cur->closed_count == 0)
-      {
-      KERR("WARNING FREE %s %s", locnet, cur->name);
-      free_c2c(cur);
-      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -484,135 +441,263 @@ static void count_management_and_pid_req(t_ovs_c2c *cur)
 /****************************************************************************/
 static void timer_heartbeat(void *data)
 {
+  char returned_attlan[MAX_NAME_LEN];
   char *locnet = cfg_get_cloonix_name();
+  char label[MAX_NAME_LEN];
+  char *name;
+  int must_go_fast = 0;
   t_ovs_c2c *next, *cur = g_head_c2c;
-  char err[MAX_PATH_LEN];
   if (get_glob_req_self_destruction())
     return;
+
   while(cur)
     {
     next = cur->next;
+    nb_to_text(cur->state_up, label);
+    name = cur->name;
+
+    if (cur->closed_count > 0)
+      { 
+      cur->closed_count -= 1;
+      if (cur->closed_count == 0)
+        {
+        KERR("WARNING FREE %s %s", locnet, cur->name);
+        carefull_destroy_c2c(cur);
+        }
+      }
+
+    if ((cur->topo.udp_connection_peered == 1) &&
+        (cur->topo.local_is_master == 1))
+      {
+      cur->probe_watchdog_count += 1;
+      if (cur->probe_watchdog_count > 5)
+        {
+        KERR("ERROR PROBE %s %s", locnet, cur->name);
+        carefull_destroy_c2c(cur);
+        }
+      }
+    if ((cur->state_up == state_master_up_process_running) ||
+        (cur->state_up == state_slave_up_process_running))
+      {
+      cur->peer_watchdog_count += 1;
+      if (cur->peer_watchdog_count > 5)
+        {
+        KERR("ERROR PEER %s %s", locnet, cur->name);
+        carefull_destroy_c2c(cur);
+        }
+      }
+
     if (cur->destroy_c2c_done)
+      {
       free_c2c(cur);
-    else if (cur->ovs_llid == 0)
+      }
+    else if ((cur->state_up == state_master_c2c_start_done) ||
+             (cur->state_up == state_slave_up_initialised))
+      {
+      if (cur->state_up == state_master_c2c_start_done)
+        {
+        c2c_state_progress_up(cur, state_master_up_initialised);
+        }
+      else if (cur->state_up == state_slave_up_initialised)
+        {
+        cur->topo.tcp_connection_peered = 1;
+        c2c_state_progress_up(cur, state_slave_connection_peered);
+        wrap_send_c2c_peer_create(cur, 1);
+        }
+      else
+        KOUT("ERROR %s %s %s", locnet, name, label);
+      cfg_hysteresis_send_topo_info();
+      }
+    else if ((cur->ovs_llid == 0) && (!cur->closed_llid_received))
       connect_ovs_c2c_attempt(cur);
     else if (cur->suid_root_done == 0)
       send_c2c_suidroot_attempt(cur);
     else if (!msg_exist_channel(cur->ovs_llid))
-      carefull_free_c2c(cur->name);
+      carefull_free_c2c(name);
     else
       {
-      if (cur->topo.tcp_connection_peered)
-        cur->peer_watchdog_count += 1;
-      if (cur->peer_watchdog_count >= 10)
+      count_management_and_pid_req(cur);
+      if (cur->topo.local_is_master == 1)
         {
-        KERR("ERROR WATCHDOG %s %s", locnet, cur->name);
-        if (strlen(cur->lan_attached))
-          strncpy(cur->must_restart_lan, cur->lan_attached, MAX_NAME_LEN-1);
-        else if (strlen(cur->lan_added))
-          strncpy(cur->must_restart_lan, cur->lan_added, MAX_NAME_LEN-1);
-        else if (strlen(cur->lan_waiting))
-          strncpy(cur->must_restart_lan, cur->lan_waiting, MAX_NAME_LEN-1);
-        carefull_destroy_c2c(cur->name);
-        if (cur->topo.local_is_master == 1)
-          cur->must_restart = 1;
+        if ((cur->peer_llid == 0) && (cur->pair_llid == 0))
+          wrap_try_connect_to_peer(cur);
+        else if (cur->topo.tcp_connection_peered == 0)
+          wrap_send_c2c_peer_create(cur, 0);
         }
+      if (cur->topo.udp_connection_peered == 1)
+        wrap_send_c2c_peer_ping(cur, status_peer_ping_two);
+      else if (cur->udp_loc_port_chosen == 1)
+        wrap_send_c2c_peer_ping(cur, status_peer_ping_one);
       else
+        wrap_send_c2c_peer_ping(cur, status_peer_ping_zero);
+      if ((cur->udp_loc_port_chosen == 1) &&
+          (cur->peer_conf_done == 0))
         {
-        count_management_and_pid_req(cur);
-        if (cur->topo.local_is_master == 1)
-          {
-          if ((cur->peer_llid == 0) && (cur->pair_llid == 0))
-            wrap_try_connect_to_peer(cur);
-          else if (cur->topo.tcp_connection_peered == 0)
-            wrap_send_c2c_peer_create(cur, 0);
-          else if (cur->topo.udp_connection_peered == 1)
-            wrap_send_c2c_peer_ping(cur, 2);
-          else if (cur->udp_loc_port_chosen == 1)
-            wrap_send_c2c_peer_ping(cur, 1);
-          else
-            wrap_send_c2c_peer_ping(cur, 0);
-          }
-        else
-          {
-          if (cur->topo.udp_connection_peered == 1)
-            wrap_send_c2c_peer_ping(cur, 2);
-          else if (cur->udp_loc_port_chosen == 1)
-            wrap_send_c2c_peer_ping(cur, 1);
-          else
-            wrap_send_c2c_peer_ping(cur, 0);
-          }
-        if ((cur->udp_loc_port_chosen == 1) &&
-            (cur->peer_conf_done == 0))
-          {
-          if (!wrap_send_c2c_peer_conf(cur, 0))
-            cur->peer_conf_done = 1;
-          }
-        if ((cur->topo.tcp_connection_peered == 1) &&
-            (cur->topo.udp_connection_peered == 1) &&
-            (strlen(cur->lan_waiting)))
-          {
-          lan_add_name(cur->lan_waiting, item_c2c, cur->name, 0);
-          if (mactopo_add_req(item_c2c, cur->name, 0, cur->lan_waiting,
-                              NULL, NULL, err))
-            {
-            KERR("ERROR %s %s %s %s",locnet,cur->name,cur->lan_waiting,err);
-            lan_del_name(cur->lan_waiting, item_c2c, cur->name, 0);
-            utils_send_status_ko(&cur->cli_llid, &cur->cli_tid, err);
-            }
-          else if (msg_send_add_lan_endp(ovsreq_add_c2c_lan, cur->name, 0,
-                                    cur->vhost, cur->lan_waiting))
-            {
-            KERR("ERROR %s %s %s", locnet, cur->name, cur->lan_waiting);
-            lan_del_name(cur->lan_waiting, item_c2c, cur->name, 0);
-            utils_send_status_ko(&cur->cli_llid, &cur->cli_tid, "msg_send ko");
-            }
-          else
-            {
-            strncpy(cur->lan_added, cur->lan_waiting, MAX_NAME_LEN-1);
-            strncpy(cur->topo.lan, cur->lan_waiting, MAX_NAME_LEN-1);
-            utils_send_status_ok(&cur->cli_llid, &cur->cli_tid);
-            cfg_hysteresis_send_topo_info();
-            }
-          memset(cur->lan_waiting, 0, MAX_NAME_LEN);
-          }
+        if (!wrap_send_c2c_peer_conf(cur, 0))
+          cur->peer_conf_done = 1;
         }
       }
+
+    if (c2c_chainlan_action_heartbeat(cur, returned_attlan))
+      {
+      if (strlen(returned_attlan))
+        strncpy(cur->topo.attlan, returned_attlan, MAX_NAME_LEN);
+      else
+        memset(cur->topo.attlan, 0, MAX_NAME_LEN);
+      cfg_hysteresis_send_topo_info();
+      }
+
+    if ((cur->state_up != state_master_up_process_running) &&
+        (cur->state_up != state_slave_up_process_running))
+      {
+      must_go_fast = 1;
+      switch(cur->state_up)
+        {
+      
+#define MAX_REPEAT1 10
+#define MAX_REPEAT2 15
+
+        case state_master_c2c_start_done:
+          cur->count_state_master_c2c_start_done += 1;
+          if (cur->count_state_master_c2c_start_done > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_master_c2c_start_done > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+        case state_master_up_initialised:
+          cur->count_state_master_up_initialised += 1;
+          if (cur->count_state_master_up_initialised > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_master_up_initialised > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+        case state_master_try_connect_to_peer:
+          cur->count_state_master_try_connect_to_peer += 1;
+          if (cur->count_state_master_try_connect_to_peer > MAX_REPEAT2)
+            {
+            KERR("WARNING CONNECT PEER  %s %s %s", locnet, name, label); 
+            cur->count_state_master_try_connect_to_peer = 0;
+            }
+        break;
+        case state_master_connection_peered:
+          cur->count_state_master_connection_peered += 1;
+          if (cur->count_state_master_connection_peered > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_master_connection_peered > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+        case state_master_udp_peer_conf_sent:
+          cur->count_state_master_udp_peer_conf_sent += 1;
+          if (cur->count_state_master_udp_peer_conf_sent > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_master_udp_peer_conf_sent > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+        case state_master_udp_peer_conf_received:
+          cur->count_state_master_udp_peer_conf_received += 1;
+          if (cur->count_state_master_udp_peer_conf_received > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_master_udp_peer_conf_received > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+
+        case state_udp_connection_tx_configured:
+          cur->count_state_udp_connection_tx_configured += 1;
+          if (cur->count_state_udp_connection_tx_configured > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_udp_connection_tx_configured > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+
+        case state_slave_up_initialised:
+          cur->count_state_slave_up_initialised += 1;
+          if (cur->count_state_slave_up_initialised > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_slave_up_initialised > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+        case state_slave_connection_peered:
+          cur->count_state_slave_connection_peered += 1;
+          if (cur->count_state_slave_connection_peered > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_slave_connection_peered > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+        case state_slave_udp_peer_conf_sent:
+          cur->count_state_slave_udp_peer_conf_sent += 1;
+          if (cur->count_state_slave_udp_peer_conf_sent > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_slave_udp_peer_conf_sent > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+        case state_slave_udp_peer_conf_received:
+          cur->count_state_slave_udp_peer_conf_received += 1;
+          if (cur->count_state_slave_udp_peer_conf_received > MAX_REPEAT1)
+            KERR("WARNING %s %s %s", locnet, name, label); 
+          if (cur->count_state_slave_udp_peer_conf_received > MAX_REPEAT2)
+            carefull_destroy_c2c(cur);
+        break;
+
+        default:
+          KOUT("ERROR %d", cur->state_up); 
+        }
+      }
+
+
     cur = next;
     }
-  clownix_timeout_add(100, timer_heartbeat, NULL, NULL, NULL);
+  if (must_go_fast)
+    clownix_timeout_add(50, timer_heartbeat, NULL, NULL, NULL);
+  else
+    clownix_timeout_add(150, timer_heartbeat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void c2c_receive_probe_udp(char *name)
+static void c2c_receive_probe_udp(char *name, uint8_t probe_idx)
 {
   char *locnet = cfg_get_cloonix_name();
   t_ovs_c2c *cur = find_c2c(name);
   char msg[MAX_PATH_LEN];
+  char dist_udp_ip_string[MAX_NAME_LEN];
   if (!cur)
-    KERR("ERROR %s %s", locnet, name);
+    KERR("ERROR %s %s %hhu", locnet, name, probe_idx);
   else
     {
+    cur->probe_watchdog_count = 0;
     if (cur->topo.local_is_master == 0)
       {
+      int_to_ip_string (cur->topo.dist_udp_ip, dist_udp_ip_string);
       memset(msg, 0, MAX_PATH_LEN);
-      snprintf(msg, MAX_PATH_LEN-1, "c2c_send_probe_udp %s", name);
+      snprintf(msg, MAX_PATH_LEN-1,
+               "c2c_send_probe_udp %s ip %s port %hu probe_idx %hhu",
+               name, dist_udp_ip_string, cur->topo.dist_udp_port, probe_idx);
       if (!msg_exist_channel(cur->ovs_llid))
-        KERR("ERROR %s %s", locnet, cur->name);
+        {
+        KERR("ERROR %s %s %hhu", locnet, cur->name, probe_idx);
+        ovs_llid_to_tap_process_broken(cur);
+        }
       else
+        {
         rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
-      hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+        hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+        }
       }
     else
       {
       memset(msg, 0, MAX_PATH_LEN);
-      snprintf(msg, MAX_PATH_LEN-1, "c2c_enter_traffic_udp %s", name);
+      snprintf(msg, MAX_PATH_LEN-1,
+               "c2c_enter_traffic_udp %s probe_idx %hhu", name, probe_idx);
       if (!msg_exist_channel(cur->ovs_llid))
-        KERR("ERROR %s %s", locnet, cur->name);
+        {
+        KERR("ERROR %s %s %hhu", locnet, cur->name, probe_idx);
+        ovs_llid_to_tap_process_broken(cur);
+        }
       else
+        {
         rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
-      hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+        hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+        }
       }
     }
 }
@@ -628,6 +713,7 @@ static void c2c_dist_udp_ip_port_done(char *name)
   else
     {
     cur->udp_connection_tx_configured = 1;
+    c2c_state_progress_up(cur, state_udp_connection_tx_configured);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -649,30 +735,9 @@ static void free_udp_port_done(char *name, uint16_t port, int peer_status)
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-static void snf_started(char *name, int num, char *vhost)
-{
-  char *locnet = cfg_get_cloonix_name();
-  t_ovs_c2c *cur = find_c2c(name);
-
-  if (cur == NULL)
-    KERR("ERROR %s %s %d", locnet, name, num);
-  else
-    {
-    if (strlen(cur->lan_attached))
-      {
-      ovs_snf_send_add_snf_lan(name, num, cur->vhost, cur->lan_attached);
-      }
-    else
-      {
-      cur->must_call_snf_started = 1;
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
 /****************************************************************************/
-void ovs_c2c_peer_add(int llid, int tid, char *name, char *dist, char *loc)
+void ovs_c2c_peer_add(int llid, int tid, char *name, char *dist,
+                      char *loc, uint16_t c2c_udp_port_low)
 {
   char *locnet = cfg_get_cloonix_name();
   t_ovs_c2c *cur = find_c2c(name);
@@ -682,12 +747,9 @@ void ovs_c2c_peer_add(int llid, int tid, char *name, char *dist, char *loc)
     KERR("ERROR %s %s %s %s", locnet, name, dist, loc);
   else
     {
-    cur = alloc_c2c_peer(llid, tid, name, dist);
+    cur = alloc_c2c_peer(llid, tid, name, dist, c2c_udp_port_low);
+    c2c_start(name, cur->vhost, "slave");
     c2c_state_progress_up(cur, state_slave_up_initialised);
-    c2c_start(name, cur->vhost);
-    cur->topo.tcp_connection_peered = 1;
-    c2c_state_progress_up(cur, state_slave_connection_peered);
-    wrap_send_c2c_peer_create(cur, 1);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -794,7 +856,7 @@ void ovs_c2c_proxy_dist_udp_ip_port_OK(char *name,
   t_ovs_c2c *cur = find_c2c(name);
   cur = find_c2c(name);
   if (!cur)
-    KERR("ERROR c2c: %s", locnet);
+    KERR("ERROR c2c: %s %s", locnet, name);
   else
     c2c_dist_udp_ip_port_done(name);
 }
@@ -819,6 +881,7 @@ void ovs_c2c_sigdiag_resp(int llid, int tid, char *line)
   char name[MAX_NAME_LEN];
   uint16_t udp_port;
   t_ovs_c2c *cur;
+  uint8_t probe_idx;
   if (sscanf(line,
   "c2c_suidroot_ko %s", name) == 1)
     {
@@ -868,13 +931,13 @@ void ovs_c2c_sigdiag_resp(int llid, int tid, char *line)
       c2c_dist_udp_ip_port_done(name);
     }
   else if (sscanf(line,
-  "c2c_receive_probe_udp %s", name) == 1)
+  "c2c_receive_probe_udp %s %hhu", name, &probe_idx) == 2)
     {
     cur = find_c2c(name);
     if (!cur)
-      KERR("ERROR c2c: %s %s", locnet, line);
+      KERR("ERROR c2c: %s %s %hhu", locnet, line, probe_idx);
     else
-      c2c_receive_probe_udp(name);
+      c2c_receive_probe_udp(name, probe_idx);
     }
   else if (sscanf(line,
   "c2c_enter_traffic_udp_ack %s", name) == 1)
@@ -883,17 +946,13 @@ void ovs_c2c_sigdiag_resp(int llid, int tid, char *line)
     if (!cur)
       KERR("ERROR c2c: %s %s", locnet, line);
     else
-      {
       cur->topo.udp_connection_peered = 1;
-      cfg_hysteresis_send_topo_info();
-      }
     }
 
   else
     KERR("ERROR c2c: %s %s", locnet, line);
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 int ovs_c2c_get_all_pid(t_lst_pid **lst_pid)
@@ -941,89 +1000,12 @@ void ovs_c2c_llid_closed(int llid, int from_clone)
     while(cur)
       {
       if (cur->ovs_llid == llid)
-        cur->closed_count = 2;
+        ovs_llid_to_tap_process_broken(cur);
       cur = cur->next;
       }
     }
 }
 /*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void ovs_c2c_resp_add_lan(int is_ko, char *name, int num,
-                         char *vhost, char *lan)
-{
-  char *locnet = cfg_get_cloonix_name();
-  t_ovs_c2c *cur = find_c2c(name);
-  if (!cur)
-    {
-    mactopo_add_resp(0, name, num, lan);
-    KERR("ERROR %s %d %s", locnet, is_ko, name); 
-    }
-  else
-    {
-    if (strlen(cur->lan_attached))
-      KERR("ERROR: %s %s %s", locnet, name, cur->lan_attached);
-    memset(cur->lan_waiting, 0, MAX_NAME_LEN);
-    memset(cur->lan_attached, 0, MAX_NAME_LEN);
-    memset(cur->topo.lan, 0, MAX_NAME_LEN);
-    if (is_ko)
-      {
-      mactopo_add_resp(0, name, num, lan);
-      KERR("ERROR %s %d %s", locnet, is_ko, name);
-      }
-    else
-      {
-      mactopo_add_resp(item_c2c, name, num, lan);
-      strncpy(cur->lan_attached, lan, MAX_NAME_LEN);
-      strncpy(cur->topo.lan, lan, MAX_NAME_LEN);
-      if (cur->must_call_snf_started)
-        {
-        snf_started(name, num, vhost);
-        cur->must_call_snf_started = 0;
-        }
-      }
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void ovs_c2c_resp_del_lan(int is_ko, char *name, int num,
-                          char *vhost, char *lan)
-{
-  char *locnet = cfg_get_cloonix_name();
-  t_ovs_c2c *cur = find_c2c(name);
-  if (!cur)
-    {
-    mactopo_del_resp(0, name, num, lan);
-    KERR("ERROR %s %d %s", locnet, is_ko, name);
-    }
-  else if (cur->destroy_c2c_req == 1)
-    {
-    mactopo_del_resp(item_c2c, name, num, lan);
-    memset(cur->lan_attached, 0, MAX_NAME_LEN);
-    memset(cur->lan_waiting, 0, MAX_NAME_LEN);
-    memset(cur->topo.lan, 0, MAX_NAME_LEN);
-    destroy_c2c(cur);
-    cur->destroy_c2c_req = 0;
-    }
-  else if (cur->free_c2c_req == 1)
-    {
-    mactopo_del_resp(item_c2c, name, num, lan);
-    free_c2c(cur);
-    }
-  else
-    {
-    mactopo_del_resp(item_c2c, name, num, lan);
-    memset(cur->lan_attached, 0, MAX_NAME_LEN);
-    memset(cur->lan_waiting, 0, MAX_NAME_LEN);
-    memset(cur->topo.lan, 0, MAX_NAME_LEN);
-    if (is_ko)
-      KERR("ERROR %s %d %s", locnet, is_ko, name);
-    }
-  cfg_hysteresis_send_topo_info();
-}
-/*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 t_ovs_c2c *ovs_c2c_exists(char *name)
@@ -1050,7 +1032,7 @@ t_topo_endp *ovs_c2c_translate_topo_endp(int *nb)
   cur = g_head_c2c;
   while(cur)
     {
-    if (strlen(cur->topo.lan))
+    if (strlen(cur->topo.attlan))
       count += 1;
     cur = cur->next;
     }
@@ -1059,7 +1041,7 @@ t_topo_endp *ovs_c2c_translate_topo_endp(int *nb)
   cur = g_head_c2c;
   while(cur)
     {
-    if (strlen(cur->topo.lan))
+    if (strlen(cur->topo.attlan))
       {
       len = sizeof(t_lan_group_item);
       endp[nb_endp].lan.lan = (t_lan_group_item *)clownix_malloc(len, 2);
@@ -1067,7 +1049,7 @@ t_topo_endp *ovs_c2c_translate_topo_endp(int *nb)
       strncpy(endp[nb_endp].name, cur->name, MAX_NAME_LEN-1);
       endp[nb_endp].num = 0;
       endp[nb_endp].type = cur->topo.endp_type;
-      strncpy(endp[nb_endp].lan.lan[0].lan, cur->topo.lan, MAX_NAME_LEN-1);
+      strncpy(endp[nb_endp].lan.lan[0].lan, cur->topo.attlan, MAX_NAME_LEN-1);
       endp[nb_endp].lan.nb_lan = 1;
       nb_endp += 1;
       }
@@ -1081,7 +1063,8 @@ t_topo_endp *ovs_c2c_translate_topo_endp(int *nb)
 /****************************************************************************/
 void ovs_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                  char *dist_name, uint32_t dist_ip, uint16_t dist_port,
-                 char *dist_passwd, uint32_t dist_udp_ip)
+                 char *dist_passwd, uint32_t dist_udp_ip,
+                 uint16_t c2c_udp_port_low)
 {
   char *locnet = cfg_get_cloonix_name();
   t_ovs_c2c *cur = find_c2c(name);
@@ -1100,14 +1083,14 @@ void ovs_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
   else
     {
     alloc_c2c_master(name, dist_name, loc_udp_ip, dist_ip, dist_port,
-                     dist_passwd, dist_udp_ip);
+                     dist_passwd, dist_udp_ip, c2c_udp_port_low);
     cur = find_c2c(name);
     if (!cur)
       KOUT(" ");
     if (llid)
       send_status_ok(llid, tid, "OK");
-    c2c_start(name, cur->vhost);
-    c2c_state_progress_up(cur, state_master_up_initialised);
+    c2c_start(name, cur->vhost, "master");
+    c2c_state_progress_up(cur, state_master_c2c_start_done);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1145,7 +1128,7 @@ void ovs_c2c_del(int llid, int tid, char *name)
     else if (tid == 7777)
       {
       cur->recv_delete_req_from_client = 1;
-      carefull_destroy_c2c(cur->name);
+      carefull_destroy_c2c(cur);
       }
     } 
   else
@@ -1153,107 +1136,7 @@ void ovs_c2c_del(int llid, int tid, char *name)
     if (llid)
       send_status_ok(llid, tid, "OK");
     cur->recv_delete_req_from_client = 1;
-    carefull_destroy_c2c(cur->name);
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void ovs_c2c_add_lan(int llid, int tid, char *name, char *lan)
-{
-  char *locnet = cfg_get_cloonix_name();
-  t_ovs_c2c *cur = find_c2c(name);
-  if (!cur)
-    {
-    KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, "Does not exist");
-    }
-  else if (cur->destroy_c2c_req)
-    {
-    KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, "Not ready");
-    }
-  else if (cur->free_c2c_req)
-    {
-    KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, "Not ready");
-    }
-  else if (strlen(cur->lan_attached))
-    {
-    KERR("WARNING LAN ATTACHED %s %s %s", locnet, name, cur->lan_attached);
-    send_status_ko(llid, tid, "Lan exists");
-    }
-  else if (strlen(cur->lan_added))
-    {
-    KERR("ERROR %s %s %s", locnet, name, cur->lan_added);
-    send_status_ko(llid, tid, "Lan added exists");
-    }
-  else if (strlen(cur->lan_waiting))
-    {
-    KERR("ERROR %s %s %s", locnet, name, cur->lan_waiting);
-    send_status_ko(llid, tid, "Lan waiting exists");
-    }
-  else if (cur->cli_llid || cur->cli_tid)
-    {
-    KERR("ERROR %s %s %s", locnet, name, cur->lan_waiting);
-    send_status_ko(llid, tid, "Probleme past req");
-    }
-  else if (cur->topo.tcp_connection_peered != 1)
-    {
-    send_status_ko(llid, tid, "Not ready tcp_connection_peered");
-    }
-  else
-    {
-    strncpy(cur->lan_waiting, lan, MAX_NAME_LEN-1);
-    cur->cli_llid = llid;
-    cur->cli_tid = tid;
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void ovs_c2c_del_lan(int llid, int tid, char *name, char *lan)
-{
-  char *locnet = cfg_get_cloonix_name();
-  t_ovs_c2c *cur = find_c2c(name);
-  int val = 0;
-  if (!cur)
-    {
-    KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, "Does not exist");
-    }
-  else if (cur->destroy_c2c_req)
-    {
-    KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, "Not ready");
-    }
-  else if (cur->free_c2c_req)
-    {
-    KERR("ERROR %s %s", locnet, name);
-    send_status_ko(llid, tid, "Not ready");
-    }
-  else
-    {
-    if (!strlen(cur->lan_added))
-      KERR("ERROR: %s %s %s", locnet, name, lan);
-    else
-      {
-      mactopo_del_req(item_c2c, cur->name, 0, cur->lan_added);
-      val = lan_del_name(cur->lan_added, item_c2c, cur->name, 0);
-      memset(cur->lan_added, 0, MAX_NAME_LEN);
-      }
-    if (val == 2*MAX_LAN)
-      {
-      memset(cur->lan_attached, 0, MAX_NAME_LEN);
-      memset(cur->lan_waiting, 0, MAX_NAME_LEN);
-      memset(cur->topo.lan, 0, MAX_NAME_LEN);
-      cfg_hysteresis_send_topo_info();
-      send_status_ok(llid, tid, "OK");
-      }
-    else if (msg_send_del_lan_endp(ovsreq_del_c2c_lan,name,0,cur->vhost,lan))
-      send_status_ko(llid, tid, "ERROR");
-    else
-      send_status_ok(llid, tid, "OK");
+    carefull_destroy_c2c(cur);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1326,6 +1209,37 @@ void ovs_c2c_peer_conf(int llid, int tid, char *name, int peer_status,
     else
       c2c_state_progress_up(cur, state_master_udp_peer_conf_received);
     cur->udp_dist_port_chosen = 1;
+    cfg_hysteresis_send_topo_info();
+    }
+}
+/*--------------------------------------------------------------------------*/
+    
+/****************************************************************************/
+static void c2c_send_probe_udp(char *name)
+{     
+  char *locnet = cfg_get_cloonix_name();
+  char msg[MAX_PATH_LEN];
+  t_ovs_c2c *cur = find_c2c(name);
+  char dist_udp_ip_string[MAX_NAME_LEN];
+  if (!cur)
+    KERR("ERROR %s %s", locnet, name);
+  else
+    {
+    int_to_ip_string (cur->topo.dist_udp_ip, dist_udp_ip_string);
+    memset(msg, 0, MAX_PATH_LEN);
+    snprintf(msg, MAX_PATH_LEN-1,
+             "c2c_send_probe_udp %s ip %s port %hu probe_idx 0",
+             name, dist_udp_ip_string, cur->topo.dist_udp_port);
+    if (!msg_exist_channel(cur->ovs_llid))
+      {
+      KERR("ERROR %s %s", locnet, cur->name);
+      carefull_destroy_c2c(cur);
+      }
+    else
+      {
+      rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
+      hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1338,6 +1252,9 @@ static void master_and_slave_ping_process(t_ovs_c2c *cur, int peer_status)
   char *name = cur->name;
   uint32_t ip = cur->topo.dist_udp_ip;
   uint16_t port = cur->topo.dist_udp_port;
+  char label[MAX_NAME_LEN];
+
+  nb_to_text(cur->state_up, label);
   cur->peer_watchdog_count = 0;
   if ((cur->udp_connection_tx_configured == 0) &&
       (peer_status > 0) &&
@@ -1345,7 +1262,7 @@ static void master_and_slave_ping_process(t_ovs_c2c *cur, int peer_status)
       (cur->udp_dist_port_chosen == 1))
     {
     if ((ip == 0) || (port == 0))
-      KERR("ERROR %s %s", locnet, cur->name);
+      KERR("ERROR %s %s %s", locnet, cur->name, label);
     else
       init_dist_udp_ip_port(name, ip, port);
     }
@@ -1354,42 +1271,47 @@ static void master_and_slave_ping_process(t_ovs_c2c *cur, int peer_status)
            (peer_status > 1))
     {
     memset(msg, 0, MAX_PATH_LEN);
-    snprintf(msg, MAX_PATH_LEN-1, "c2c_enter_traffic_udp %s", cur->name);
+    snprintf(msg, MAX_PATH_LEN-1,
+             "c2c_enter_traffic_udp %s probe_idx 0", cur->name);
     if (!msg_exist_channel(cur->ovs_llid))
-      KERR("ERROR %s %s", locnet, cur->name);
+      {
+      KERR("ERROR %s %s %s", locnet, cur->name, label);
+      carefull_destroy_c2c(cur);
+      }
     else
+      {
       rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
-    hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+      hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+      }
     }
   else if ((cur->topo.udp_connection_peered == 1) &&
            (peer_status > 1))
     {
-    if (cur->state_up == state_master_up_initialised)
-      c2c_state_progress_up(cur, state_master_up_process_running);
-    else if (cur->state_up == state_slave_connection_peered)
-      c2c_state_progress_up(cur, state_slave_up_process_running);
-    cfg_hysteresis_send_topo_info();
+    if ((cur->state_up != state_master_up_process_running) &&
+        (cur->state_up != state_slave_up_process_running))
+      {
+      if ((cur->state_up == state_master_udp_peer_conf_received) ||
+          (cur->state_up == state_udp_connection_tx_configured))
+        c2c_state_progress_up(cur, state_master_up_process_running);
+      else if (cur->state_up == state_slave_udp_peer_conf_sent)
+        c2c_state_progress_up(cur, state_slave_up_process_running);
+      else if (cur->state_up == state_master_udp_peer_conf_sent)
+        { }
+      else
+        KERR("ERROR %s %s %s", locnet, cur->name, label);
+      cfg_hysteresis_send_topo_info();
+      }
     }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void c2c_send_probe_udp(char *name)
-{
-  char *locnet = cfg_get_cloonix_name();
-  char msg[MAX_PATH_LEN];
-  t_ovs_c2c *cur = find_c2c(name);
-  if (!cur)
-    KERR("ERROR %s %s", locnet, name);
-  else
+  if (cur->udp_connection_tx_configured)
+    c2c_send_probe_udp(cur->name);
+  if (cur->topo.local_is_master == 0)
     {
-    memset(msg, 0, MAX_PATH_LEN);
-    snprintf(msg, MAX_PATH_LEN-1, "c2c_send_probe_udp %s", name);
-    if (!msg_exist_channel(cur->ovs_llid))
-      KERR("ERROR %s %s", locnet, cur->name);
+    if (cur->topo.udp_connection_peered == 1)
+      wrap_send_c2c_peer_ping(cur, status_peer_ping_two);
+    else if (cur->udp_loc_port_chosen == 1)
+      wrap_send_c2c_peer_ping(cur, status_peer_ping_one);
     else
-      rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
-    hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+      wrap_send_c2c_peer_ping(cur, status_peer_ping_zero);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1404,7 +1326,7 @@ void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status)
     if (tid != cur->ref_tid)
       {
       KERR("ERROR %s %s %d %d", locnet, name, tid, cur->ref_tid);
-      carefull_destroy_c2c(cur->name);
+      carefull_destroy_c2c(cur);
       }
     else if (peer_status == -1)
       {
@@ -1414,43 +1336,12 @@ void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status)
       else
         {
         KERR("ERROR %s %s", locnet, name);
-        if (strlen(cur->lan_attached))
-          strncpy(cur->must_restart_lan, cur->lan_attached, MAX_NAME_LEN-1);
-        else if (strlen(cur->lan_added))
-          strncpy(cur->must_restart_lan, cur->lan_added, MAX_NAME_LEN-1);
-        else if (strlen(cur->lan_waiting))
-          strncpy(cur->must_restart_lan, cur->lan_waiting, MAX_NAME_LEN-1);
-        carefull_destroy_c2c(cur->name);
-        if (cur->topo.local_is_master == 1)
-          cur->must_restart = 1;
+        carefull_destroy_c2c(cur);
         }
       }
     else
       {
       master_and_slave_ping_process(cur, peer_status);
-      if (cur->topo.local_is_master == 1)
-        {
-        if ((cur->udp_connection_tx_configured) &&
-            (cur->topo.udp_connection_peered == 0))
-          {
-          cur->udp_probe_qty_sent += 1;
-          if (cur->udp_probe_qty_sent > 45)
-            {
-            KERR("WARNING UDP PROBE FAIL %s %s", locnet, cur->name);
-            cur->udp_probe_qty_sent = 1;
-            }
-          c2c_send_probe_udp(cur->name);
-          }
-        }
-      else
-        { 
-        if (cur->topo.udp_connection_peered == 1)
-          wrap_send_c2c_peer_ping(cur, 2);
-        else if (cur->udp_loc_port_chosen == 1)
-          wrap_send_c2c_peer_ping(cur, 1);
-        else
-          wrap_send_c2c_peer_ping(cur, 0);
-        }
       }
     }
 }
@@ -1459,6 +1350,7 @@ void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status)
 /****************************************************************************/
 int ovs_c2c_mac_mangle(char *name, uint8_t *mac)
 {
+  return c2c_chainlan_store_cmd(name, cmd_mac_mangle, mac);
   char *locnet = cfg_get_cloonix_name();
   char msg[MAX_PATH_LEN];
   t_ovs_c2c *cur = find_c2c(name);
@@ -1472,10 +1364,15 @@ int ovs_c2c_mac_mangle(char *name, uint8_t *mac)
     "c2c_mac_mangle %s %hhX:%hhX:%hhX:%hhX:%hhX:%hhX", cur->name,
                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     if (!msg_exist_channel(cur->ovs_llid))
+      {
       KERR("ERROR %s %s", locnet, cur->name);
+      carefull_destroy_c2c(cur);
+      }
     else
+      {
       rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
-    hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+      hop_event_hook(cur->ovs_llid, FLAG_HOP_SIGDIAG, msg);
+      }
     result = 0;
     }
   return result;
@@ -1500,7 +1397,8 @@ int  ovs_c2c_dyn_snf(char *name, int val)
       cur->del_snf_ethv_sent = 0;
       cur->topo.endp_type = endp_type_c2cs;
       ovs_dyn_snf_start_process(name, 0, item_type_c2c,
-                                cur->vhost, snf_started);
+                                cur->vhost, c2c_chainlan_snf_started);
+      c2c_chainlan_update_endp_type(name, endp_type_c2cs);
       result = 0;
       }
     }
@@ -1517,13 +1415,14 @@ int  ovs_c2c_dyn_snf(char *name, int val)
       if (cur->del_snf_ethv_sent == 0)
         {
         cur->del_snf_ethv_sent = 1;
-        if (strlen(cur->lan_added))
+        if (strlen(cur->topo.attlan))
           {
-          if (ovs_snf_send_del_snf_lan(name, 0, cur->vhost, cur->lan_added))
-            KERR("ERROR DEL KVMETH %s %s %s", locnet, name, cur->lan_added);
+          if (ovs_snf_send_del_snf_lan(name, 0, cur->vhost, cur->topo.attlan))
+            KERR("ERROR DEL KVMETH %s %s %s", locnet, name, cur->topo.attlan);
           }
         ovs_dyn_snf_stop_process(tap);
         }
+      c2c_chainlan_update_endp_type(name, endp_type_c2cv);
       result = 0;
       }
     }
@@ -1538,6 +1437,7 @@ void ovs_c2c_init(void)
   char *net = cfg_get_cloonix_name();
   char *bin_c2c = utils_get_ovs_c2c_bin_dir();
 
+  c2c_chainlan_init();
   g_nb_c2c = 0;
   g_head_c2c = NULL;
   memset(g_cloonix_net, 0, MAX_NAME_LEN);

@@ -213,35 +213,31 @@ void machine_end(void)
 uint32_t machine_dhcp(uint8_t *mac)
 {
   t_arp_ip *cur = find_arp_ip(mac);
-  t_machine *vm = find_machine(mac);
-  uint32_t result;
+  uint32_t result = 0;
   int offset;
-  if (vm)
-    { 
-    if (cur)
-      result = cur->ip;
-    else
+  if (cur)
+    result = cur->ip;
+  else
+    {
+    cur = (t_arp_ip *) utils_malloc(sizeof(t_arp_ip));
+    if (cur == NULL)
       {
-      cur = (t_arp_ip *) utils_malloc(sizeof(t_arp_ip));
-      if (cur == NULL)
-        {
-        KERR("ERROR %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", 
-             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-        result = 0;
-        }
-      else
-        { 
-        offset = get_next_offset();
-        result = g_gw_ip;
-        result += offset + 8;
-        memset(cur, 0, sizeof(t_arp_ip));
-        memcpy(cur->mac, mac, 6);
-        cur->ip = result;
-        if (g_head_arp_ip)
-          g_head_arp_ip->prev = cur;
-        cur->next = g_head_arp_ip;
-        g_head_arp_ip = cur;
-        }
+      KERR("ERROR %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", 
+           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      result = 0;
+      }
+    else
+      { 
+      offset = get_next_offset();
+      result = g_gw_ip;
+      result += offset + 8;
+      memset(cur, 0, sizeof(t_arp_ip));
+      memcpy(cur->mac, mac, 6);
+      cur->ip = result;
+      if (g_head_arp_ip)
+        g_head_arp_ip->prev = cur;
+      cur->next = g_head_arp_ip;
+      g_head_arp_ip = cur;
       }
     }
   return result;

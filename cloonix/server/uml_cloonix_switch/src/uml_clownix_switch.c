@@ -92,6 +92,14 @@ static int g_conf_rank;
 static int g_novnc_port;
 static int g_running_in_crun;
 
+
+/*****************************************************************************/
+t_cloonix_conf_info *get_cloonix_conf_info(void)
+{
+  return g_cloonix_conf_info;
+}
+/*---------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 int get_running_in_crun(void)
 {
@@ -324,13 +332,9 @@ static void timer_openvswitch_ok(void *data)
   else
     {
     printf("\n    UML_CLOONIX_SWITCH NOW RUNNING\n\n");
-    if (get_running_in_crun())
-      {
-      if (start_novnc())
-        KERR("ERROR start_novnc");
-      }
     daemon(0,0);
     g_uml_cloonix_started = 1;
+    proxycrun_transmit_write_start_status_file_ready();
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -356,10 +360,7 @@ static void launching(void)
   printf("     Work Zone:    %s\n",cfg_get_root_work());
   printf("     Bulk Path:    %s\n",cfg_get_bulk());
   printf("     Doors Port:   %d\n",cfg_get_server_port());
-  if (get_running_in_crun())
-    printf("     Web Port:     %d (Activated)\n", g_novnc_port);
-  else
-    printf("     Web Port:     %d (Not Activated)\n", g_novnc_port);
+  printf("     Web Port:     %d (Not Activated)\n", g_novnc_port);
   printf("\n\n\n");
   if ((strlen(cfg_get_cloonix_name()) == 0) || 
       (strlen(cfg_get_bin_dir()) == 0)      || 
@@ -381,7 +382,7 @@ static void launching(void)
   sprintf(clownlock, "%s/cloonix_lock", cfg_get_root_work());
   check_for_another_instance(clownlock, 1);
   init_xwy(cfg_get_cloonix_name());
-  init_novnc(cfg_get_cloonix_name(), get_conf_rank(), g_novnc_port);
+  init_novnc(cfg_get_cloonix_name(), get_conf_rank());
   clownix_timeout_add(100, timer_proxymous_init, NULL, NULL, NULL);
   clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
 }

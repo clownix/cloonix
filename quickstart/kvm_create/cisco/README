@@ -1,7 +1,6 @@
 Howto use a cisco with cloonix.
 First google "c8000v-universalk9.17.13.01a.iso"
 If you can download c8000v-universalk9.17.13.01a.iso then you are good to go...
-Last time I got it from: https://cios.dhitechnical.com/c8000v/17.13.01a/
 Change the line CISCO_ISO= in file step2_make_qcow2.sh.
 
 

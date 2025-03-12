@@ -50,7 +50,8 @@ static int g_server_inet_port;
 char *get_u2i_nat_path_with_name(char *nat)
 {
   static char path[2*MAX_PATH_LEN];
-  snprintf(path, 2*MAX_PATH_LEN, "%s/nat/%s_0_u2i", g_root_work, nat);
+  snprintf(path, 2*MAX_PATH_LEN, "%s/%s/%s_0_u2i",
+           g_root_work, NAT_MAIN_DIR, nat);
   path[MAX_PATH_LEN-1] = 0;
   return path;
 }
@@ -294,7 +295,7 @@ int main (int argc, char *argv[])
   char *ctrl_path;
   umask(0000);
   doors_xml_init();
-  x11_init();
+  x11_doors_init();
   msg_mngt_init(get_name(argv[2]), IO_MAX_BUF_LEN);
   dispach_init();
   pid_clone_init();
@@ -304,7 +305,7 @@ int main (int argc, char *argv[])
   memset(g_net_name, 0, MAX_NAME_LEN);
   memset(g_root_work, 0, MAX_PATH_LEN);
   memset(g_password, 0, MSG_DIGEST_LEN);
-  strncpy(g_net_name, argv[1], MAX_PATH_LEN);
+  strncpy(g_net_name, argv[1], MAX_NAME_LEN);
   strncpy(g_root_work, argv[2], MAX_PATH_LEN);
   if (tst_port(argv[3], &g_server_inet_port))
     KOUT(" ");

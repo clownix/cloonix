@@ -27,7 +27,7 @@ void recv_c2c_peer_ping(int llid, int tid, char *name, int status)
 {KERR("WARNING TOLOOKAT");}
 void recv_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                   char *dist, uint32_t dist_ip, uint16_t dist_port,
-                  char *dist_passwd, uint32_t dist_udp_ip)
+                  char *dist_passwd, uint32_t dist_udp_ip, uint16_t c2c_udp_port_low)
 {KERR("WARNING TOLOOKAT");}
 void recv_c2c_peer_create(int llid, int tid, char *name,
                           int is_ack, char *dist, char *loc)

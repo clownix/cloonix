@@ -331,13 +331,13 @@ static int build_add_lan_c2c_cmd(int offset, t_list_commands *hlist)
   t_list_commands *list;
   while(cur)
     {
-    if (strlen(cur->topo.lan))
+    if (strlen(cur->topo.attlan))
       {
       if (can_increment_index(result))
         {
         list = &(hlist[result]);
         sprintf(list->cmd, "cloonix_cli %s add lan %s 0 %s",
-        cfg_get_cloonix_name(), cur->name, cur->topo.lan);
+        cfg_get_cloonix_name(), cur->name, cur->topo.attlan);
         result += 1;
         }
       } 

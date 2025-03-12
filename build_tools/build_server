@@ -63,7 +63,10 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
   echo BUILDING SERVER
   echo
 #----------------------------------------------------------
-  for i in  "crun" \
+  for i in  "xorg" \
+            "wireshark" \
+            "iproute2" \
+            "crun" \
             "tmux" \
             "dtach" \
             "script_pty" \

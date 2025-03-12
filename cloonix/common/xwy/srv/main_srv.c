@@ -111,13 +111,10 @@ static void cli_free(t_cli *cli)
   mdl_close(cli->sock_fd);
   if (cli->has_pty_fork) 
     {
-    if (pty_fork_free_with_sock_fd(cli->sock_fd))
-      KERR("ERROR %d", cli->sock_fd);
+    pty_fork_free_with_sock_fd(cli->sock_fd);
     }
-    if (cli->inhibited_associated == 0)
-      {
-      wrap_close(cli->sock_fd, __FUNCTION__);
-      }
+  if (cli->inhibited_associated == 0)
+    wrap_close(cli->sock_fd, __FUNCTION__);
   wrap_free(cli, __LINE__);
 }
 /*--------------------------------------------------------------------------*/
@@ -477,10 +474,7 @@ static void prepare_fd_set(fd_set *readfds, fd_set *writefds)
     if ((cur->inhibited_associated) || (cur->inhibited_to_be_destroyed))
       cli_free(cur);
     else if (!mdl_fd_is_valid(cur->sock_fd))
-      {
-      KERR("ERROR FD sock_fd");
       cli_free(cur);
-      }
     else
       FD_SET(cur->sock_fd, readfds);
     cur = next;

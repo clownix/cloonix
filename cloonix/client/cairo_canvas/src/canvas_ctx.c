@@ -143,6 +143,7 @@ static void call_cloonix_interface_c2c_create(double x, double y)
     strncpy(c2c_req_info.dist_cloon, c2c->dist_cloon, MAX_NAME_LEN-1);
     strncpy(c2c_req_info.dist_passwd, cnf->passwd, MSG_DIGEST_LEN-1);
     c2c_req_info.loc_udp_ip = local_cnf->c2c_udp_ip; 
+    c2c_req_info.c2c_udp_port_low = local_cnf->c2c_udp_port_low;
     c2c_req_info.dist_tcp_ip = cnf->ip;
     c2c_req_info.dist_tcp_port = (uint16_t) (cnf->port & 0xFFFF);
     c2c_req_info.dist_udp_ip = cnf->c2c_udp_ip;;

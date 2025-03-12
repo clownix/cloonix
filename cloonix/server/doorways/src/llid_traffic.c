@@ -60,7 +60,7 @@ typedef struct t_llid_traf
   int  auto_must_send_resp;
   int  auto_state;
   int  auto_timer_ref;
-  int  zero_queue_series;
+//  int  zero_queue_series;
   long long auto_timer_abs;
   char *xauth_cookie_format;
   int display_port; 
@@ -136,7 +136,7 @@ static void fill_200_char_resp(char *buf, char *start,
            start, name, display_sock_x11, empyness);
   buf[199] = 0;
   if (strlen(buf) != 199)
-    KOUT("%d ", (int) strlen(buf));
+    KOUT("ERROR %d ", (int) strlen(buf));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -161,7 +161,7 @@ void send_to_traf_client(int dido_llid, int val, int len, char *buf)
 {
   if (dispach_send_to_traf_client(dido_llid, val, len, buf))
     {
-    KERR("%d %d %d", dido_llid, len, val);
+    KERR("ERROR %d %d %d", dido_llid, len, val);
     traf_shutdown(dido_llid, __LINE__);
     }
   else
@@ -186,9 +186,18 @@ static void clean_auto_timer(t_llid_traf *lt)
 /****************************************************************************/
 static void timer_close_dido_llid(void *data)
 {
+  t_llid_traf *lt;
   unsigned long ul_llid = (unsigned long) data;
   int dido_llid = (int)ul_llid;
   doorways_clean_llid(dido_llid);
+  lt = llid_traf_get(dido_llid);
+  if (lt == NULL)
+    KERR("ERROR %d", dido_llid);
+  else
+    {
+    g_llid_traf[dido_llid] = NULL;
+    clownix_free(lt, __FUNCTION__);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -207,10 +216,9 @@ static void traf_shutdown(int dido_llid, int line)
   int  headsize = sock_header_get_size();
   if (lt)
     {
-    g_llid_traf[dido_llid] = NULL;
     differed_dido_llid_end(lt->dido_llid);
     if (lt->backdoor_llid)
-      x11_close(lt->backdoor_llid, lt->dido_llid);
+      x11_doors_close(lt->backdoor_llid, lt->dido_llid);
     if (lt->is_associated)
       {
       if (lt->backdoor_llid)
@@ -230,46 +238,12 @@ static void traf_shutdown(int dido_llid, int line)
       send_to_traf_client(lt->dido_llid, doors_val_link_ko,
                           strlen(lt->auto_resp) + 1, lt->auto_resp);
       }
-    clownix_free(lt, __FUNCTION__);
     }
+  else
+    KERR("ERROR NO RECORD %d %d", dido_llid, line);
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void timer_traf_shutdown(void *data)
-{ 
-  unsigned long ul_llid = (unsigned long) data;
-  int dido_llid = (int)ul_llid;
-  t_llid_traf *lt = llid_traf_get(dido_llid);
-  if (lt)
-    {
-    if (lt->zero_queue_series < 6)
-      {
-      if (doorways_tx_or_rx_still_in_queue(dido_llid))
-        lt->zero_queue_series = 0;
-      else
-        lt->zero_queue_series += 1;
-      clownix_timeout_add(2, timer_traf_shutdown, data, NULL, NULL);
-      }
-    else
-      {
-      if (doorways_tx_or_rx_still_in_queue(dido_llid))
-        {
-        lt->zero_queue_series = 0;
-        clownix_timeout_add(2, timer_traf_shutdown, data, NULL, NULL);
-        }
-      else
-        traf_shutdown(dido_llid, __LINE__);
-      }
-    }
-  else
-    {
-    KERR(" ");
-    traf_shutdown(dido_llid, __LINE__);
-    }
-} 
-/*--------------------------------------------------------------------------*/
-    
 /****************************************************************************/
 static void timer_auto(void *data)
 {
@@ -281,6 +255,8 @@ static void timer_auto(void *data)
     lt->auto_timer_ref = 0;
     traf_shutdown(lt->dido_llid, __LINE__);
     }
+  else
+    KERR("ERROR NO RECORD %d", (int) ul_llid);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -301,11 +277,11 @@ static void llid_traf_alloc(int dido_llid)
 {
   t_llid_traf *cur;
   if (dido_llid <= 0)
-    KOUT(" ");
+    KOUT("ERROR  ");
   if (dido_llid >= CLOWNIX_MAX_CHANNELS)
-    KOUT(" ");
+    KOUT("ERROR  ");
   if (llid_traf_get(dido_llid))
-    KOUT(" ");
+    KOUT("ERROR  ");
   cur = (t_llid_traf *) clownix_malloc(sizeof(t_llid_traf), 9);
   memset(cur, 0, sizeof(t_llid_traf));
   g_llid_traf[dido_llid] = cur; 
@@ -429,7 +405,7 @@ void llid_traf_tx_to_client(char *name, int dido_llid,
   if (lt)
     {
     if (strcmp(lt->name, name))
-      KOUT("%s %s", lt->name, name);
+      KOUT("ERROR %s %s", lt->name, name);
     if ((lt->auto_state == auto_state_complete_link_ok) &&
        (type == header_type_traffic) && (val == header_val_none))
       {
@@ -445,23 +421,26 @@ void llid_traf_tx_to_client(char *name, int dido_llid,
             send_resp_ok_to_traf_client(lt->dido_llid, display_sock_x11); 
           else
             {
-            KERR("%s", buf);
+            KERR("ERROR %s", buf);
             traf_shutdown(dido_llid, __LINE__);
             }
           }
         else
-          KOUT("%d %d", type, val);
+          KOUT("ERROR %d %d", type, val);
         }
       if (val == header_val_del_dido_llid)
         {
-        if (strcmp(buf, LABREAK))
-          KERR("%s", buf);
-        timer_traf_shutdown((void *)((unsigned long) dido_llid));
+        if (doorways_tx_or_rx_still_in_queue(dido_llid))
+          KERR("WARNING %d", dido_llid);
+        else  
+          traf_shutdown(dido_llid, __LINE__);
         }
       }
     else
-      KERR("%d", lt->auto_state);
+      KERR("ERROR %d", lt->auto_state);
     }
+  else
+    KERR("ERROR NO RECORD %d %d %d", dido_llid, type, val);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -497,9 +476,9 @@ void llid_traf_rx_from_client(int dido_llid, int len, char *buf)
     llid_traf_alloc(dido_llid);
     lt = llid_traf_get(dido_llid);
     if (!lt)
-      KOUT(" ");
+      KOUT("ERROR  ");
     if (len > len_max)
-      KOUT("%d %d", len, len_max);
+      KOUT("ERROR %d %d", len, len_max);
     if (start_link2agent_auto(lt, len, buf))
       {
       traf_shutdown(lt->dido_llid, __LINE__);
@@ -523,13 +502,13 @@ void llid_traf_rx_from_client(int dido_llid, int len, char *buf)
                          header_val_none, g_buf);
         }
       else
-        KOUT(" ");
+        KOUT("ERROR  ");
       len_done += chosen_len;
       len_to_do -= chosen_len;
       }
     }
   else
-    KOUT(" ");
+    KOUT("ERROR  ");
 }
 /*--------------------------------------------------------------------------*/
 

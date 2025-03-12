@@ -106,21 +106,21 @@ rm -rf ${SERVER}/script_pty
 cp -f ${SERVER}/proxymous/cloonix-proxymous ${SERVER}
 rm -rf ${SERVER}/proxymous
 #----------------------------------------------------------
+cp -f ${SERVER}/iproute2/ip ${SERVER}
+rm -rf ${SERVER}/iproute2
+#----------------------------------------------------------
 cp -f ${SERVER}/crun/crun_tainted/crun ${SERVER}/cloonix-crun
 rm -rf ${SERVER}/crun
+#----------------------------------------------------------
+cp -f ${SERVER}/xorg/Xvfb ${SERVER}/cloonix-novnc-Xvfb
+rm -rf ${SERVER}/xorg
 #----------------------------------------------------------
 cp -f ${SERVER}/tmux/tmux/tmux ${SERVER}/cloonix-tmux
 rm -rf ${SERVER}/tmux
 #----------------------------------------------------------
-if [ "${ARCH}" = "i386" ]; then
-  echo NOT MAINTAINED!!!!!!!!!!!!!
-  exit -1
-else
-  cp -f ${TARGZ_STORE}/xorg/built_objects_amd64/Xvfb ${SERVER}/cloonix-novnc-Xvfb
-  cp -f ${TARGZ_STORE}/iproute2/built_objects_amd64/ip ${SERVER}
-  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/wireshark ${SERVER}/cloonix-wireshark
-  cp -f ${TARGZ_STORE}/shark/built_objects_amd64/dumpcap ${SERVER}/cloonix-dumpcap
-fi
+cp -f ${SERVER}/wireshark/wireshark ${SERVER}/cloonix-wireshark
+cp -f ${SERVER}/wireshark/dumpcap ${SERVER}/cloonix-dumpcap
+rm -rf ${SERVER}/wireshark
 #----------------------------------------------------------
 cp -f /usr/bin/xauth     ${SERVER}/xauth
 cp -f /usr/bin/xkbcomp   ${SERVER}/xkbcomp

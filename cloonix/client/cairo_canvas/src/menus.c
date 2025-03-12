@@ -218,7 +218,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   t_bank_item *bitem;
   static char title[MAX_PATH_LEN];
   static char text[MAX_TEXT];
-  int is_i386, is_persistent, is_backed, is_inside_cloon, is_natplug;
+  int is_persistent, is_backed, is_inside_cloon, is_natplug;
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
   int is_full_virt, has_no_reboot, has_added_disk, with_pxe, len = 0;
   bitem = look_for_node_with_id(pm->name);
@@ -232,7 +232,6 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     text[MAX_TEXT-1] = 0;
     vm_config_flags = bitem->pbi.pbi_node->node_vm_config_flags;
     is_persistent = vm_config_flags & VM_CONFIG_FLAG_PERSISTENT;
-    is_i386 = vm_config_flags & VM_CONFIG_FLAG_I386;
     is_full_virt  = vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT;
     is_backed   = vm_config_flags & VM_FLAG_DERIVED_BACKING;
     is_inside_cloon = vm_config_flags & VM_FLAG_IS_INSIDE_CLOON;
@@ -243,8 +242,6 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     has_added_disk = vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK;
     is_natplug = vm_config_flags & VM_CONFIG_FLAG_NATPLUG;
 
-    if (is_i386)
-      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tI386");
     if (is_natplug)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tNATPLUG");
     if (is_persistent)

@@ -57,7 +57,7 @@ cloonix_ssh nemo vm "DEBIAN_FRONTEND=noninteractive \
                      openssh-client openssh-server daemonize psmisc \
                      ncurses-term gzip x11-apps xauth bash-completion \
                      curl iputils-tracepath iptables tcpdump wget bsdutils \
-                     util-linux passwd acl frr"
+                     util-linux passwd acl frr libyang3"
 #----------------------------------------------------------------------------#
 cloonix_scp nemo ./ldd_list_cp.c vm:~ 
 cloonix_ssh nemo vm "gcc -o ldd_list_cp ldd_list_cp.c"

@@ -62,7 +62,6 @@ static int xwy_rx_cb(int llid, int fd)
                               doors_val_link_ko, "KO"))
         KERR("WARNING %d", llid);
       dispach_free_transfert(ilt->dido_llid, ilt->inside_llid);
-      KERR("WARNING free_transfert %d %d", ilt->dido_llid, ilt->inside_llid);
       }
     else
       {

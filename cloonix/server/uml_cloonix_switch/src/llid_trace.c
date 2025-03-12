@@ -193,7 +193,6 @@ static t_event_to_llid *get_event_to_llid(int llid, int event)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /*****************************************************************************/
 void llid_set_event2llid(int llid, int event, int tid)
 {

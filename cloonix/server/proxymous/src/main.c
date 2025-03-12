@@ -44,7 +44,6 @@ static char g_net_name[MAX_NAME_LEN];
 static char g_ctrl_path[MAX_PATH_LEN];
 static char g_unix_sig_stream[MAX_PATH_LEN];
 static char g_proxyshare_dir[MAX_PATH_LEN];
-static char g_proxyshare_in_dir[MAX_PATH_LEN];
 static int g_llid_ctrl;
 static int g_llid_sig;
 static int g_watchdog_ok;
@@ -59,6 +58,24 @@ char *get_net_name(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void write_start_status_file(int is_ready)
+{
+  char path[MAX_PATH_LEN];
+  FILE *fp;
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path,MAX_PATH_LEN-1,"%s/proxymous_start_status",g_proxyshare_dir);
+  fp = fopen(path, "w");
+  if (!fp)
+    KOUT("ERROR WRITING %s", path);
+  if (is_ready)
+    fprintf(fp, "cloonix_main_server_ready");
+  else
+    fprintf(fp, "cloonix_main_server_not_ready");
+  fclose(fp);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void fct_timeout_self_destruct(void *data)
 {
   if (g_watchdog_ok == 0)
@@ -68,7 +85,6 @@ static void fct_timeout_self_destruct(void *data)
     }
 }
 /*--------------------------------------------------------------------------*/
-
 
 /****************************************************************************/
 static int check_and_set_uid(void)
@@ -253,13 +269,6 @@ static void connect_from_ctrl_client(int llid, int llid_new)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *get_proxymous_root_path(void)
-{
-  return g_proxyshare_dir;
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
 char *get_proxyshare(void)
 {
   return g_proxyshare_dir;
@@ -297,6 +306,8 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 /****************************************************************************/
 int main(int argc, char **argv)
 {
+  char proxyshare_in_dir[MAX_PATH_LEN];
+
   if (argc != 3)
     {
     printf("\nBAD ARG proxymous_root_path must be given\n\n");
@@ -318,10 +329,10 @@ int main(int argc, char **argv)
   memset(g_net_name, 0, MAX_NAME_LEN);
   memset(g_ctrl_path, 0, MAX_PATH_LEN);
   memset(g_proxyshare_dir, 0, MAX_PATH_LEN);
-  memset(g_proxyshare_in_dir, 0, MAX_PATH_LEN);
+  memset(proxyshare_in_dir, 0, MAX_PATH_LEN);
   strncpy(g_proxyshare_dir, argv[1], MAX_PATH_LEN-1);
   strncpy(g_net_name, argv[2], MAX_NAME_LEN-1);
-  snprintf(g_proxyshare_in_dir, MAX_PATH_LEN-1,"%s_%s",
+  snprintf(proxyshare_in_dir, MAX_PATH_LEN-1,"%s_%s",
            PROXYSHARE_IN, g_net_name );
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s",
            g_proxyshare_dir, PROXYMOUS);
@@ -336,11 +347,14 @@ int main(int argc, char **argv)
            "%s/proxymous_sig_stream.sock", g_proxyshare_dir);
   proxy_sig_server(g_unix_sig_stream, connect_from_sig_client);
 
-  if (strcmp(g_proxyshare_dir, g_proxyshare_in_dir))
+  if (strcmp(g_proxyshare_dir, proxyshare_in_dir))
     {
     KERR("INFO: PROXYMOUS WITH X11");
     X_init(g_proxyshare_dir);  
     }
+
+  write_start_status_file(0);
+
   daemon(0,0);
   clownix_timeout_add(3000, fct_timeout_self_destruct, NULL, NULL, NULL);
   msg_mngt_loop();

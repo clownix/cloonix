@@ -59,6 +59,5 @@ while [ $(ps axo pid,args | grep -v grep | egrep -c /usr/libexec/cloonix/server/
 done
 #----------------------------------------------------------------------------
 ${TMUX} -S ${TMUX_SOCK} kill-server
-${SLEEP} 2
 #----------------------------------------------------------------------------
 

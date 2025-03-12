@@ -603,7 +603,7 @@ int get_daemon_done(void)
   t_ovs *cur = g_head_ovs;
   if (cur)
     {
-    if ((cur->daemon_done) && init_xwy_done())
+    if ((cur->daemon_done) && init_xwy_done() && (cur->ovs_pid_ready == 1))
       result = 1;
     } 
   return result;

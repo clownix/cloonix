@@ -208,7 +208,7 @@ void recv_hop_get_name_list_doors(int llid, int tid)
 }
 void recv_c2c_add(int llid, int tid, char *name, uint32_t local_udp_ip,
                   char *net, uint32_t ip, uint16_t port,
-                  char *passwd, uint32_t udp_ip)
+                  char *passwd, uint32_t udp_ip, uint16_t c2c_udp_port_low)
 {
   KOUT(" ");
 }

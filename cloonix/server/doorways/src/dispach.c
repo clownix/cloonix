@@ -150,9 +150,11 @@ static void alloc_transfert(int dido_llid, int inside_llid, int type)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void free_transfert(int dido_llid, int inside_llid)
+static void free_transfert(int dido_llid, int inside_llid, int show, int line)
 {
   t_transfert *olt, *ilt;
+  if ((show) && ((dido_llid == 0) || (inside_llid == 0)))
+    KERR("WARNING %d %d %d", dido_llid, inside_llid, line);
   olt = g_dido_llid[dido_llid];
   ilt = g_inside_llid[inside_llid];
   g_dido_llid[dido_llid] = NULL;
@@ -168,10 +170,7 @@ static void free_transfert(int dido_llid, int inside_llid)
     KOUT(" ");
   if (olt->dido_llid != dido_llid)
     KOUT(" ");
-  if (olt->type == doors_type_dbssh)
-    llid_traf_delete(dido_llid);
-  else
-    doorways_clean_llid(dido_llid);
+  doorways_clean_llid(dido_llid);
   if (msg_exist_channel(inside_llid))
     msg_delete_channel(inside_llid);
   if (olt->prev)
@@ -187,7 +186,7 @@ static void free_transfert(int dido_llid, int inside_llid)
 /*****************************************************************************/
 void dispach_free_transfert(int dido_llid, int inside_llid)
 {
-  free_transfert(dido_llid, inside_llid);
+  free_transfert(dido_llid, inside_llid, 1, __LINE__);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -222,7 +221,7 @@ void in_err_gene(int inside_llid, int err, int from)
     if (inside_llid != ilt->inside_llid)
       KOUT(" ");
     dido_llid = ilt->dido_llid;
-    free_transfert(dido_llid, inside_llid);
+    free_transfert(dido_llid, inside_llid, 1,  __LINE__);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -247,13 +246,13 @@ static void in_rx_switch(int inside_llid, int len, char *buf)
       if (doorways_tx_bufraw(ilt->dido_llid, 0, doors_type_switch,
                              doors_val_none, len, buf))
         {
-        KERR(" ");
-        free_transfert(ilt->dido_llid, ilt->inside_llid);
+        KERR("ERROR");
+        free_transfert(ilt->dido_llid, ilt->inside_llid, 1, __LINE__);
         }
 
       }
     else
-      free_transfert(ilt->dido_llid, ilt->inside_llid);
+      free_transfert(ilt->dido_llid, ilt->inside_llid, 1, __LINE__);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -283,7 +282,7 @@ static int in_rx_spice(int inside_llid, int fd)
       len = read (fd, g_buf, MAX_DOORWAYS_BUF_LEN);
       if (len <= 0) 
         {
-        free_transfert(ilt->dido_llid, ilt->inside_llid);
+        free_transfert(ilt->dido_llid, ilt->inside_llid, 1, __LINE__);
         len = 0;
         }
       else
@@ -294,14 +293,14 @@ static int in_rx_spice(int inside_llid, int fd)
                                  doors_val_none, len, g_buf))
             {
             KERR(" ");
-            free_transfert(ilt->dido_llid, ilt->inside_llid);
+            free_transfert(ilt->dido_llid, ilt->inside_llid, 1, __LINE__);
             len = 0;
             }
           flow_ctrl_activation_done(ilt);
           }
         else
           {
-          free_transfert(ilt->dido_llid, ilt->inside_llid);
+          free_transfert(ilt->dido_llid, ilt->inside_llid, 1, __LINE__);
           len = 0;
           }
         }
@@ -330,7 +329,7 @@ void dispach_door_end(int dido_llid)
     if (dido_llid != olt->dido_llid)
       KOUT(" ");
     inside_llid = olt->inside_llid;
-    free_transfert(dido_llid, inside_llid);
+    free_transfert(dido_llid, inside_llid, 0, __LINE__);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -422,7 +421,7 @@ static void dispach_door_rx_spice(int dido_llid, int val, int len, char *buf)
         watch_tx(olt->inside_llid, len, buf);
         }
       else
-        free_transfert(olt->dido_llid, olt->inside_llid);
+        free_transfert(olt->dido_llid, olt->inside_llid, 1, __LINE__);
       }
     }
   else
@@ -481,7 +480,7 @@ static int dispach_door_rx_xwy(int type, int dido_llid, int tid, int val,
         {
         KERR("WARNING %d %d  %p  %p", dido_llid, tid, ilt, olt);
         doorways_sig_bufraw(dido_llid, 0, type, doors_val_link_ko, "KO");
-        free_transfert(ilt->dido_llid, ilt->inside_llid);
+        free_transfert(ilt->dido_llid, ilt->inside_llid, 1, __LINE__);
         }
       }
     }
@@ -507,7 +506,7 @@ static void dispach_door_rx_openssh(int dido_llid, int val, int len, char *buf)
   else
     {
     if (!msg_exist_channel(olt->inside_llid))
-      free_transfert(olt->dido_llid, olt->inside_llid);
+      free_transfert(olt->dido_llid, olt->inside_llid, 1, __LINE__);
     else
       openssh_tx_to_nat(olt->inside_llid, len, buf);
     }

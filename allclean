@@ -83,6 +83,9 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
            xwy \
            wm2 \
            crun \
+           iproute2 \
+           xorg \
+           wireshark \
            tmux \
            spice_lib_server ; do
     cd ${SERVER}/${i}

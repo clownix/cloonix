@@ -41,15 +41,15 @@
 #define QGA_PING "{\"execute\":\"guest-ping\"}"
 #define QGA_SYNC "{\"execute\":\"guest-sync\", \"arguments\":{\"id\":%d}}"
 
-#define QGA_OPEN_FILE "{\"execute\":\"guest-file-open\", \"arguments\":{\"path\":\"/cloonix_launcher\",\"mode\":\"w+\"}}"
+#define QGA_OPEN_FILE "{\"execute\":\"guest-file-open\", \"arguments\":{\"path\":\"/agent_cloonix_launcher\",\"mode\":\"w+\"}}"
 
 #define QGA_WRITE_FILE "{\"execute\":\"guest-file-write\", \"arguments\":{\"handle\":%d,\"buf-b64\":\"%s\"}}"
 
 #define QGA_CLOSE_FILE "{\"execute\":\"guest-file-close\", \"arguments\":{\"handle\":%d}}"
 
-#define QGA_EXEC_CHMOD "{\"execute\": \"guest-exec\", \"arguments\": { \"path\": \"chmod\", \"arg\": [\"+x\", \"/cloonix_launcher\"],  \"capture-output\": true }}"
+#define QGA_EXEC_CHMOD "{\"execute\": \"guest-exec\", \"arguments\": { \"path\": \"chmod\", \"arg\": [\"+x\", \"/agent_cloonix_launcher\"],  \"capture-output\": true }}"
 
-#define QGA_EXEC_FILE "{\"execute\": \"guest-exec\", \"arguments\": { \"path\": \"/cloonix_launcher\", \"capture-output\": true }}"
+#define QGA_EXEC_FILE "{\"execute\": \"guest-exec\", \"arguments\": { \"path\": \"/agent_cloonix_launcher\", \"capture-output\": true }}"
 
 #define QGA_EXEC_STATUS_FILE "{\"execute\": \"guest-exec-status\", \"arguments\": {\"pid\": %d}}"
 

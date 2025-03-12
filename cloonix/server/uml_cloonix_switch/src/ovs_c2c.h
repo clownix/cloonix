@@ -32,6 +32,7 @@ typedef struct t_ovs_c2c
   int pid;
   int c2c_id;
   int closed_count;
+  int closed_llid_received;
   int suid_root_done;
   int peer_conf_done;
   t_topo_c2c topo;
@@ -44,12 +45,10 @@ typedef struct t_ovs_c2c
   int peer_llid;
   int peer_listen_llid;
   int peer_watchdog_count;
+  int probe_watchdog_count;
   int udp_dist_port_chosen;
   int udp_loc_port_chosen;
-  int udp_probe_qty_sent;
   int udp_connection_tx_configured;
-  int cli_llid;
-  int cli_tid;
   int waiting_ack_add_lan;
   int waiting_ack_del_lan;
   int process_waiting_error;
@@ -57,17 +56,23 @@ typedef struct t_ovs_c2c
   int received_del_lan_req;
   int nb_dist_mac;
   int state_up;
+  int c2c_udp_port_low;
 
   int destroy_c2c_done;
 
-  char lan_added[MAX_NAME_LEN];
-  char lan_waiting[MAX_NAME_LEN];
-  char lan_attached[MAX_NAME_LEN];
-  char must_restart_lan[MAX_NAME_LEN];
-
-  int must_call_snf_started;
-
   int recv_delete_req_from_client;
+
+  int count_state_master_c2c_start_done;
+  int count_state_master_up_initialised;
+  int count_state_master_try_connect_to_peer;
+  int count_state_master_connection_peered;
+  int count_state_master_udp_peer_conf_sent;
+  int count_state_master_udp_peer_conf_received;
+  int count_state_udp_connection_tx_configured;
+  int count_state_slave_up_initialised;
+  int count_state_slave_connection_peered;
+  int count_state_slave_udp_peer_conf_sent;
+  int count_state_slave_udp_peer_conf_received;
 
   struct t_ovs_c2c *prev;
   struct t_ovs_c2c *next;
@@ -80,18 +85,15 @@ int  ovs_c2c_get_all_pid(t_lst_pid **lst_pid);
 int  ovs_c2c_diag_llid(int llid);
 void ovs_c2c_sigdiag_resp(int llid, int tid, char *line);
 void ovs_c2c_poldiag_resp(int llid, int tid, char *line);
-void ovs_c2c_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan);
-void ovs_c2c_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan);
 t_ovs_c2c *ovs_c2c_exists(char *name);
 int  ovs_c2c_dyn_snf(char *name, int val);
 
 void ovs_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
                  char *dist, uint32_t dist_ip, uint16_t dist_port,
-                 char *dist_passwd, uint32_t dist_udp_ip);
+                 char *dist_passwd, uint32_t dist_udp_ip,
+                 uint16_t c2c_udp_port_low);
 
 void ovs_c2c_del(int llid, int tid, char *name);
-void ovs_c2c_add_lan(int llid, int tid, char *name, char *lan);
-void ovs_c2c_del_lan(int llid, int tid, char *name, char *lan);
 t_topo_endp *ovs_c2c_translate_topo_endp(int *nb);
 
 t_ovs_c2c *ovs_c2c_find_with_pair_llid(int llid);
@@ -104,7 +106,8 @@ void ovs_c2c_peer_conf(int llid, int tid, char *name, int peer_status,
                        uint16_t dist_udp_port, uint16_t loc_udp_port);
 
 void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status);
-void ovs_c2c_peer_add(int llid, int tid, char *name, char *dist, char *loc);
+void ovs_c2c_peer_add(int llid, int tid, char *name, char *dist,
+                      char *loc, uint16_t c2c_udp_port_low);
 
 t_ovs_c2c *find_c2c(char *name);
 void ovs_c2c_peer_add_ack(int llid, int tid, char *name,
@@ -118,5 +121,6 @@ void ovs_c2c_proxy_dist_tcp_ip_port_OK(char *name,
                                        uint32_t ip, uint16_t tcp_port);
 
 void ovs_c2c_transmit_get_free_udp_port(char *name, uint16_t udp_port);
+void carefull_destroy_c2c(t_ovs_c2c *cur);
 void ovs_c2c_init(void);
 /*--------------------------------------------------------------------------*/

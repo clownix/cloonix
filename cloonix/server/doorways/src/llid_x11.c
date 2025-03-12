@@ -54,7 +54,7 @@ static t_x11_ctx *get_head_ctx_with_dido_llid(int dido_llid)
 {
   t_x11_ctx *result;
   if ((dido_llid <= 0) || (dido_llid >= CLOWNIX_MAX_CHANNELS))
-    KOUT("%d", dido_llid);
+    KOUT("ERROR %d", dido_llid);
   result = dido_llid_2_ctx[dido_llid];
   return result;
 }
@@ -65,7 +65,7 @@ static t_x11_ctx *get_ctx_with_sub_dido_idx(int dido_llid, int sub_dido_idx)
 {
   t_x11_ctx *cur = get_head_ctx_with_dido_llid(dido_llid);
   if ((sub_dido_idx < 1) || (sub_dido_idx > MAX_IDX_X11))
-    KOUT("%d %d", sub_dido_idx, MAX_IDX_X11);
+    KOUT("ERROR %d %d", sub_dido_idx, MAX_IDX_X11);
   while (cur && (cur->sub_dido_idx != sub_dido_idx))
     cur = cur->next;
   return cur;
@@ -78,7 +78,7 @@ static t_x11_ctx *alloc_ctx(int backdoor_llid, int dido_llid,
 {
   t_x11_ctx *cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
   if (cur)
-    KOUT("%d %d %d", backdoor_llid, dido_llid, sub_dido_idx);
+    KOUT("ERROR %d %d %d", backdoor_llid, dido_llid, sub_dido_idx);
   cur = (t_x11_ctx *) clownix_malloc(sizeof(t_x11_ctx), 10);
   memset(cur, 0, sizeof(t_x11_ctx));
   cur->backdoor_llid = backdoor_llid;
@@ -127,7 +127,7 @@ static void free_ctx(int dido_llid, int sub_dido_idx)
   t_x11_ctx *cur;
   cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
   if (!cur)
-    KERR(" ");
+    KERR("ERROR %d %d", dido_llid, sub_dido_idx);
   else
     {
     if (msg_exist_channel(cur->backdoor_llid))
@@ -152,16 +152,16 @@ static void x11_tx_to_agent(t_x11_ctx *ctx, int len, char  *buf)
   int headsize = sock_header_get_size();
   char *start_header = buf - headsize;
   if (len > MAX_A2D_LEN - headsize)
-    KOUT("%d", len);
+    KOUT("ERROR %d", len);
   if (sock_header_get_size() > doorways_header_size())
-    KOUT("%d %d", sock_header_get_size(), doorways_header_size());
+    KOUT("ERROR %d %d", sock_header_get_size(), doorways_header_size());
   sock_header_set_info(start_header, ctx->dido_llid, len, header_type_x11, 
                        ctx->sub_dido_idx, &payload);
   if (payload != buf)
-    KOUT("%p %p", payload, buf);
+    KOUT("ERROR %p %p", payload, buf);
   if (!msg_exist_channel(ctx->backdoor_llid))
     {
-    KERR(" ");
+    KERR("ERROR");
     free_ctx(ctx->dido_llid, ctx->sub_dido_idx);
     }
   else
@@ -172,7 +172,7 @@ static void x11_tx_to_agent(t_x11_ctx *ctx, int len, char  *buf)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void x11_open_close (int backdoor_llid, int dido_llid, char *rx_payload)
+void x11_doors_open_close (int backdoor_llid, int dido_llid, char *rx_payload)
 {
   t_x11_ctx *cur;
   int sub_dido_idx, display_sock_x11;
@@ -181,7 +181,7 @@ void x11_open_close (int backdoor_llid, int dido_llid, char *rx_payload)
     {
     cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
     if (cur)
-      KERR("%d %d", backdoor_llid, dido_llid);
+      KERR("ERROR %d %d", backdoor_llid, dido_llid);
     else
       {
       cur = alloc_ctx(backdoor_llid, dido_llid, sub_dido_idx, display_sock_x11);
@@ -193,21 +193,23 @@ void x11_open_close (int backdoor_llid, int dido_llid, char *rx_payload)
     cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
     if (cur)
       free_ctx(dido_llid, sub_dido_idx);
+    else
+      KERR("WARNING %d %d %s", backdoor_llid, dido_llid, rx_payload); 
     }
   else
-    KERR("%d %d %s", backdoor_llid, dido_llid, rx_payload); 
+    KERR("ERROR %d %d %s", backdoor_llid, dido_llid, rx_payload); 
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void x11_close(int backdoor_llid, int dido_llid)
+void x11_doors_close(int backdoor_llid, int dido_llid)
 {
   t_x11_ctx *next, *cur = get_head_ctx_with_dido_llid(dido_llid);
   DOUT(FLAG_HOP_DOORS, "%s %d", __FUNCTION__, dido_llid);
   while (cur)
     {
     if (cur->backdoor_llid != backdoor_llid)
-      KOUT("%d %d", cur->backdoor_llid, backdoor_llid);
+      KOUT("ERROR %d %d", cur->backdoor_llid, backdoor_llid);
     next = cur->next;
     free_ctx(cur->dido_llid, cur->sub_dido_idx);
     cur = next;
@@ -216,11 +218,11 @@ void x11_close(int backdoor_llid, int dido_llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void x11_write(int dido_llid, int sub_dido_idx, int len, char *buf)
+void x11_doors_write(int dido_llid, int sub_dido_idx, int len, char *buf)
 {
   t_x11_ctx *cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
   if (!cur)
-    KERR("%d %d", dido_llid, sub_dido_idx);
+    KERR("ERROR %d %d", dido_llid, sub_dido_idx);
   else
     {
     if (doorways_tx_bufraw(dido_llid, dido_llid,
@@ -252,7 +254,7 @@ void receive_traf_x11_from_client(int dido_llid, int sub_dido_idx,
       if (cur->backdoor_llid)
         x11_tx_to_agent(cur, chosen_len, buf+len_done);
       else
-        KOUT(" ");
+        KOUT("ERROR  ");
       len_done += chosen_len;
       len_to_do -= chosen_len;
       }
@@ -278,20 +280,21 @@ void receive_ctrl_x11_from_client(int dido_llid, int sub_dido_idx,
                                            dido_llid, sub_dido_idx);
         }
       else
-        KOUT(" ");
+        KOUT("ERROR  ");
       }
     else if (!strcmp(buf, DOOR_X11_OPENKO))
       {
+      KERR("WARNING DOOR_X11_OPENKO: %d %d", dido_llid, sub_dido_idx);
       free_ctx(dido_llid, sub_dido_idx);
       }
     else
-      KERR("%d %d %d %s", dido_llid, sub_dido_idx, len, buf);
+      KERR("ERROR %d %d %d %s", dido_llid, sub_dido_idx, len, buf);
     }
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void x11_init(void)
+void x11_doors_init(void)
 {
   memset(dido_llid_2_ctx, 0, CLOWNIX_MAX_CHANNELS * sizeof(t_x11_ctx *));
 }

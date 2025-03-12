@@ -241,7 +241,8 @@ static int cloonix_connect_remote(char *cloonix_doors)
   uint32_t ip;
   int port;
   struct stat stat_file;
-  if (!get_ip_port_from_path(cloonix_doors, &ip, &port) == -1)
+
+  if (!get_ip_port_from_path(cloonix_doors, &ip, &port))
     {
     g_door_llid = 0;
     g_connect_llid = doorways_sock_client_inet_start(ip, port,
@@ -370,14 +371,13 @@ static int rx_cli_cb(int llid, int fd)
   int len = read(fd, g_buf, MAX_CLI_RX);
   if (len == 0)
     {
-    fprintf(stderr, "Client bad read 0 len %d", errno);
     local_exit(1);
     }
   else if (len < 0)
     {
     if ((errno != EINTR) && (errno != EWOULDBLOCK) && (errno != EAGAIN))
       {
-      fprintf(stderr, "Client bad read %d", errno);
+      fprintf(stderr, "Clientread %d %s %d", errno, __FILE__, __LINE__);
       local_exit(1);
       }
     }

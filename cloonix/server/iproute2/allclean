@@ -1,0 +1,10 @@
+#!/bin/bash
+HERE=`pwd`
+
+rm -f ${HERE}/ip
+rm -rf ${HERE}/iproute2-6.13.0
+
+
+
+
+

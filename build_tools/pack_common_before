@@ -187,7 +187,8 @@ for i in "su" "awk" "cat" "chmod" "chown" "cp" "echo" "ps" "mkdir" \
          "touch" "vim" "sleep" "find" "grep" "file" "false" "id" \
          "node" "watch" "chacl" "getfacl" "setfacl" "sed" "df" \
          "du" "perl" "logger" "gpasswd" "passwd" "sync" "uname" \
-         "mount" "umount" ; do
+         "mount" "umount" "more" "less" "dircolors" "truncate" \
+         "lsof" ; do
   cp -f /usr/bin/${i} ${COMMON}
 done
 for i in "useradd" "usermod" "groupadd" "groupdel" "groupmod" \
@@ -220,6 +221,7 @@ for i in  "cloonix_cli" \
           "cloonix_scp" \
           "cloonix_ssh" \
           "cloonix_dsh" \
+          "cloonix_lsh" \
           "cloonix_wsk" ; do
   cp -f ${CLOONIX_TREE_ROOT}/cloonix/${i} ${COMMON}/usr_bin
 done

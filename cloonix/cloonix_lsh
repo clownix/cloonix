@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+if [ 1 -ne ${#} ]; then
+  echo  cloonix_name needed as parameter.
+  exit 1
+fi
+NSH="/usr/libexec/cloonix/common/cloonix-hide-dirs"
+cloonix_name=$1
+${NSH} "lsh" ${cloonix_name}
+
+

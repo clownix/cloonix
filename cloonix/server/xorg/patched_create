@@ -1,0 +1,12 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=${HERE}/../../../targz_store
+cd ${TARGZ}
+XSERVER=$(ls xserver_*)
+XSERVER=${XSERVER%%.*}
+cd ${HERE}
+tar xvf ${TARGZ}/${XSERVER}.tar.gz
+cd xserver
+patch -p1 < ${HERE}/xserver-master.patch
+
+

@@ -449,6 +449,16 @@ void mactopo_del_resp(int item_type, char *name, int num, char *lan)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+int mactopo_test_exists(char *name, int num)
+{
+  int result = 0;
+  if (find_cur(name, num))
+    result = 1;
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 int mactopo_add_req(int item_type, char *name, int num, char *lan,
                     char *vhost, unsigned char *mac_addr, char *err)
 {

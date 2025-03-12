@@ -22,9 +22,11 @@ The most important external software components include **qemu-kvm**,
 For the transfer of the gui to a web browser, other software used are:
 **nginx**, **noVNC**, **websockify-js**, **xorg**.
 
-For the self-extracting component of cloonix, (file extract_nemo.sh)
-makeself.sh is used and good old tmux also.
-
+For the self-extracting rootless install and run version component of
+cloonix named **cloonix_extractor.sh** in the download zone,
+**makeself.sh** is used for packaging and **tmux** creates a link for
+commands and shell from the host to the crun based container in which
+cloonix runs.
 
 Cloonix's first goal is an easy usage of the emulated network linking virtual
 machines and containers. The network links are based on an openvswitch
@@ -32,7 +34,7 @@ instance running inside a private net namespace.
 
 The items of the emulated network are handled either with a command line
 interface or with the help of a graphical canvas upon which software elements
-are represented through schematic visual items.
+are represented through visual items.
 
 Developper view for cloonix
 ===========================
@@ -71,31 +73,32 @@ As a user, the cloonix software is a set of manageable plugable items,
 each having a simple graphical representation in the **cloonix_gui** canvas.
 An item owns one or more **ports** which are endpoints of the network.
 
-Each port of an item can have one (and one only) connection represented
+Each port of an item can have one (one only) connection represented
 with a line to a crossroad between **ports**.
 The crossroad is called **lan** within cloonix, this naming is not good
-since it is really a bridge : Each packet coming from a **port**
-goes to all the other ports connected by lines to the crossroad **lan**.
+since it is really a bridge (also called switch) : Each packet coming from
+a **port** goes to all the other ports connected by lines to the
+crossroad **lan**.
 
 The real world equivalent of a **port** is an hardware interface, for the
 line between the **port** and the **lan**, the hardware equivalent is an
-ethernet cable and the hardware equivalent of the **lan** is a switch or
-a hub, that connects the layer 2 ethernet of the **ports**.
+ethernet cable and the hardware equivalent of the **lan** is a switch
+that connects the layer 2 ethernet of the **ports**.
 The **lan** in cloonix is implemented with an openvswitch bridge.
 
 Here is the list of items, connectable to each-other through a **lan** ::
 
-  **kvm**: Qemu-kvm driven virtual machine (several **ports**).
-  **cnt**: Crun driven container (several **ports**).
+  **kvm**: Qemu-kvm driven virtual machine (carries several ports).
+  **cnt**: Crun driven container (carries several ports).
   **nat**: This nats the packets to reach the outside ethernet. 
   **tap**: This is a tap interface giving cloonix an interface in the host.
   **c2c**: This connects one cloonix net to another cloonix net.
   **a2b**: This can act on packet transit, drops, shaping or delay.
-  **phy**: This item is to insert one of the host's physical interface in cloonix.
+  **phy**: This item represents the host's physical interfaces in cloonix.
 
 
-The user creates items, lans and lines between them, he can in this fashion
-make a network of virtual machines. On the canvas he can visualize the
+The user creates items, lans and lines between them, he can create
+a network of virtual machines. On the canvas he can visualize the
 resulting topology.
 
 The representation of a machine is a big circle for KVM, smaller for CNT,
@@ -133,10 +136,10 @@ Directories in which cloonix is installed for classic use
 Directory in which cloonix is installed in the self_extracting case
 ===================================================================
 
-In this case, after the call to **extract_nemo.sh**, a new
+In this case, after the call to **cloonix_extractor.sh**, a new
 directory is present in the current directory, called
-**extractnemo**. For this installation you do not need the
-root or admin privileges.
+**dir_self_extracted**. For this installation or to run this version
+of cloonix, you do not need the root or admin privileges.
 
 
 
@@ -161,4 +164,4 @@ Content
      doc/items.rst
      doc/cisco.rst
      doc/ovs.rst
-     doc/extracting.rst
+     doc/cloonix_extractor.rst

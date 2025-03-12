@@ -40,6 +40,7 @@ for i in  "cloonix_cli" \
           "cloonix_scp" \
           "cloonix_ssh" \
           "cloonix_dsh" \
+          "cloonix_lsh" \
           "cloonix_wsk" ; do
   cp -vf /tmp/cloonix_install_tmp/common/usr_bin/${i} /usr/bin
   cp -vf /tmp/cloonix_install_tmp/common/usr_bin/${i} /usr/libexec/cloonix/common

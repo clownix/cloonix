@@ -39,7 +39,8 @@ static char g_cloonix_version[MAX_NAME_LEN];
 
 /*****************************************************************************/
 static void alloc_record(char *name, char *ip, uint32_t ipnum, int port, 
-                         int novnc_port, char *passwd, uint32_t udp_ip)
+                         int novnc_port, char *passwd, uint32_t udp_ip,
+                         int c2c_udp_port_low)
 {
   if (g_cloonix_nb == MAX_CLOONIX_SERVERS - 1)
     KOUT("%d", g_cloonix_nb);
@@ -50,6 +51,7 @@ static void alloc_record(char *name, char *ip, uint32_t ipnum, int port,
   g_name2info[g_cloonix_nb].novnc_port = novnc_port;
   strncpy(g_name2info[g_cloonix_nb].passwd, passwd, MSG_DIGEST_LEN-1);
   g_name2info[g_cloonix_nb].c2c_udp_ip = udp_ip;
+  g_name2info[g_cloonix_nb].c2c_udp_port_low = c2c_udp_port_low;
   g_cloonix_nb += 1;
 }
 /*--------------------------------------------------------------------------*/
@@ -128,7 +130,7 @@ static int extract_info(char *buf)
   char ip[MAX_NAME_LEN];
   char c2c_udp_ip[MAX_NAME_LEN];
   char passwd[MSG_DIGEST_LEN];
-  int  novnc_port, port, result = -1;
+  int  c2c_udp_port_low, novnc_port, port, result = -1;
   uint32_t ipnum, udp_ip;
   if (find_entry(buf, "CLOONIX_VERSION=", g_cloonix_version, MAX_NAME_LEN)) 
     KERR(" ");
@@ -145,9 +147,11 @@ static int extract_info(char *buf)
           KOUT("%s", ptr_start);
         *ptr_end = 0;
         if (sscanf(ptr_start, 
-          "CLOONIX_NET: %s { cloonix_ip %s cloonix_port %d "
-          "novnc_port %d cloonix_passwd %s c2c_udp_ip %s",
-          name, ip, &port, &novnc_port, passwd, c2c_udp_ip) != 6)
+                   "CLOONIX_NET: %s { cloonix_ip %s cloonix_port %d "
+                   "novnc_port %d cloonix_passwd %s c2c_udp_ip %s "
+                   "c2c_udp_port_low %d",
+                   name, ip, &port, &novnc_port, passwd,
+                   c2c_udp_ip, &c2c_udp_port_low) != 7)
           KOUT("%s", ptr_start);
         ptr_start = ptr_end + 1;
         if (ip_string_to_int(&ipnum, ip))
@@ -158,7 +162,10 @@ static int extract_info(char *buf)
           KOUT("Bad port in:\n%s", ptr_start);
         if ((novnc_port < 1) || (novnc_port > 0xFFFF))
           KOUT("Bad novnc_port in:\n%s", ptr_start);
-        alloc_record(name, ip, ipnum, port, novnc_port, passwd, udp_ip);
+        if ((c2c_udp_port_low < 1) || (c2c_udp_port_low > 0xFFFF))
+          KOUT("Bad c2c_udp_port_low in:\n%s", ptr_start);
+        alloc_record(name, ip, ipnum, port, novnc_port, passwd,
+                     udp_ip, c2c_udp_port_low);
         sprintf(g_all_names + strlen(g_all_names), "%s, ", name);
         result = 0;
         }

@@ -104,7 +104,6 @@ typedef struct t_ctx_nat
   struct t_ctx_nat *next;
 } t_ctx_nat;
 /*--------------------------------------------------------------------------*/
-char *get_proxymous_root_path(void);
 char *get_net_name(void);
 t_ctx_nat *get_ctx_nat(char *nat);
 int  nat_main_request(char *name, int on);

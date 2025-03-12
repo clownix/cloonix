@@ -6,11 +6,31 @@ Software Release Information
 ============================
 
 
+v45-00
+======
+
+Some debug of the c2c link, based on tcp signaling between 2 cloonix
+networks and udp to carry traffic.
+Debug and tests before a communication to linuxfr.com.
+The cisco part was not working anymore due to proxymous dev, it is repaired. 
+
+The ultimate goal was to create a software not needing the root password,
+for the moment it may not be a total success because the SELINUX of fedora41
+prevents the qemu-guest-agent to work for cloonix, this work is a creation
+of the seed script that launches the cloonix-agent necessary for cloonix_scp
+and cloonix_ssh.
+And for the ubuntu24 the error: "unshare: Operation not permitted" occured
+and to avoid it /etc/sysctl.conf has to have the 2 following lines:
+"kernel.unprivileged_userns_clone=1"
+"kernel.apparmor_restrict_unprivileged_userns=0"
+
+
+
 v44-00
 ======
 
 Creation of a very important process: called "cloonix-proxymous-<net>".
-This was a big step that took 2 montths to finalize.
+This was a big step that took 2 months to finalize.
 The goal of this process is to concentrate all the flows that have to run
 in the main machine to transmit those flows to a crun-contenarised instance
 that runs all of the cloonix meccanisms.

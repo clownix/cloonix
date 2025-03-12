@@ -60,6 +60,8 @@ static void tx_tapif(int fd)
   uint8_t *buf;
   int fdrx = g_fd_rx_from_parent;
   len = read(fdrx, g_buf_rx, HEADER_TAP_MSG);
+  if (len == 0)
+    exit(0);
   if (len <= 0)
     KOUT("ERROR READ %d %d", len, errno);
   result = fct_seqtap_rx(0, 0, fdrx, g_buf_rx, &seq, &buf_len, &buf);

@@ -81,10 +81,7 @@ static int rx_cb(int llid, int fd)
     {
     if (g_mac_mangle)
       packet_arp_mangle(udp2tap, buf_len, buf);
-    if (udp_tx_traf_send(buf_len, buf))
-      KERR("ERROR %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
-           buf_len, g_buf_rx[0], g_buf_rx[1], g_buf_rx[2], g_buf_rx[3],
-           g_buf_rx[4], g_buf_rx[5], g_buf_rx[6], g_buf_rx[7]);
+    udp_tx_traf_send(buf_len, buf);
     }
   return 0;
 }

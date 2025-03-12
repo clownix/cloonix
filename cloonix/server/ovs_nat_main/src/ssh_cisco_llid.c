@@ -232,7 +232,9 @@ static int listen_event(int llid, int fd)
   if (traffic_llid == 0)
     KERR("ERROR CONNECT FOR CISCO SSH PROBLEM");
   else
+    {
     alloc_ssh_cisco(traffic_llid);
+    }
   return 0;
 }
 /*---------------------------------------------------------------------------*/

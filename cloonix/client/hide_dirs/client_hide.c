@@ -44,8 +44,7 @@ static char *g_display;
 static char *g_user;
 static char *g_xauthority;
 
-
-
+static char *g_id_rsa_cisco;
 
 
 /****************************************************************************/
@@ -182,8 +181,9 @@ static void fill_distant_xauthority(char *net)
 {
   char cmd[2*MAX_PATH_LEN];
   memset(cmd, 0, 2*MAX_PATH_LEN);
-  snprintf(cmd, 2*MAX_PATH_LEN-1, "/usr/libexec/cloonix/common/cloonix-ctrl "
-                                  "%s %s cnf fix", CLOONIX_CFG, net);
+  snprintf(cmd, 2*MAX_PATH_LEN-1,
+           "/usr/libexec/cloonix/common/cloonix-ctrl %s %s cnf fix",
+           CLOONIX_CFG, net);
   system(cmd);
 }
 /*--------------------------------------------------------------------------*/
@@ -200,7 +200,7 @@ static void set_env_global_cloonix(char *net)
     setenv("USER", g_user, 1);
   if (g_xauthority)
     setenv("XAUTHORITY", g_xauthority, 1);
-  setenv("PATH",  "/usr/libexec/cloonix/common:/usr/libexec/cloonix/server", 1);
+  setenv("PATH", "/usr/libexec/cloonix/common:/usr/libexec/cloonix/server", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
   setenv("SHELL", "/usr/libexec/cloonix/common/bash", 1);
@@ -214,7 +214,7 @@ static void set_env_global_cloonix(char *net)
 # is used in file step1_make_preconf_iso.sh for the cisco making.
 */
 /****************************************************************************/
-static void create_cloonix_private_id_rsa(void)
+static void create_cloonix_private_id_rsa_cisco(void)
 {
   size_t len, wlen;
   FILE *fh;
@@ -246,15 +246,18 @@ static void create_cloonix_private_id_rsa(void)
   "Ku+HluGo0TDABJUv1JBpVDeHBNprX3mHgud4fxKvoeG4eBfrjW5QsqIL34mrzT2b\n"
   "Tf6PmCDYsKOA79p2IYNG0aRiVMyTjb0JaDi/QJY65WR6Q5uoyCae\n"
   "-----END RSA PRIVATE KEY-----";
-  len = strlen(rsa);
-  fh = fopen("/usr/tmp/cloonix_private_id_rsa", "w");
-  if (fh == NULL)
-    KOUT("ERROR1 create_cloonix_private_id_rsa");
-  wlen = fwrite(rsa, 1, len, fh);
-  if (wlen != len)
-    KOUT("ERROR2 create_cloonix_private_id_rsa");
-  fclose(fh);
-  chmod("/usr/tmp/cloonix_private_id_rsa", 0400);
+  if (access(g_id_rsa_cisco, F_OK))
+    {
+    len = strlen(rsa);
+    fh = fopen(g_id_rsa_cisco, "w");
+    if (fh == NULL)
+      KOUT("ERROR1 %s", g_id_rsa_cisco);
+    wlen = fwrite(rsa, 1, len, fh);
+    if (wlen != len)
+      KOUT("ERROR2 %s", g_id_rsa_cisco);
+    fclose(fh);
+    chmod(g_id_rsa_cisco, 0400);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -364,7 +367,8 @@ static void process_ocp(int argc, char **argv, char **new_argv,
   memset(ocp_param, 0, MAX_PATH_LEN);
   if (argc != 9)
     KOUT("ERROR81 PARAM NUMBER");
-  snprintf(sock, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/nat", argv[2]);
+  snprintf(sock, MAX_PATH_LEN-1, 
+           "/var/lib/cloonix/%s/%s", argv[2], NAT_MAIN_DIR);
   mkdir(sock, 0777);
   snprintf(ocp_param, MAX_PATH_LEN-1,
            "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
@@ -372,7 +376,7 @@ static void process_ocp(int argc, char **argv, char **new_argv,
   new_argv[0] = "/usr/libexec/cloonix/common/cloonix-u2i-scp";
   new_argv[1] = sock;
   new_argv[2] = "-i";
-  new_argv[3] = "/usr/tmp/cloonix_private_id_rsa";
+  new_argv[3] = g_id_rsa_cisco;
   if (!strcmp(argv[7], "y"))
     {
     new_argv[4] = "-r";
@@ -432,7 +436,8 @@ static void process_osh(int argc, char **argv, char **new_argv,
   memset(ocp_param, 0, MAX_PATH_LEN);
   if (argc < 5)
     KOUT("ERROR91 PARAM NUMBER");
-  snprintf(sock, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/nat", argv[2]);
+  snprintf(sock, MAX_PATH_LEN-1,
+           "/var/lib/cloonix/%s/%s", argv[2], NAT_MAIN_DIR);
   mkdir(sock, 0777); 
   snprintf(ocp_param, MAX_PATH_LEN-1,
           "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
@@ -440,7 +445,7 @@ static void process_osh(int argc, char **argv, char **new_argv,
   new_argv[0] = "/usr/libexec/cloonix/common/cloonix-u2i-ssh";
   new_argv[1] = sock;
   new_argv[2] = "-i";
-  new_argv[3] = "/usr/tmp/cloonix_private_id_rsa";
+  new_argv[3] = g_id_rsa_cisco;
   new_argv[4] = ocp_param;
   for (i=0; i<20; i++)
     {
@@ -633,7 +638,8 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_OVS-----------------------*/
   else if (!strcmp("ovs", argv[1]))
     {
-    snprintf(sock, 2*MAX_PATH_LEN-1, "--db=unix:/var/lib/cloonix/%s/ovsdb_server.sock", argv[2]);
+    snprintf(sock, 2*MAX_PATH_LEN-1,
+             "--db=unix:/var/lib/cloonix/%s/ovsdb_server.sock", argv[2]);
     new_argv[0] = XWYCLI_BIN;
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
@@ -674,6 +680,7 @@ int main(int argc, char *argv[])
   int  port, pid;
   char *cfg = CLOONIX_CFG;
   char *new_argv[MAX_NARGS+10];
+  g_id_rsa_cisco = "/tmp/cloonix_private_id_rsa_cisco";
   g_xauthority = getenv("XAUTHORITY");
   g_home = getenv("HOME");
   g_display = getenv("DISPLAY");
@@ -730,7 +737,7 @@ int main(int argc, char *argv[])
     if ((!strcmp("osh", argv[1])) ||
         (!strcmp("ocp", argv[1])) ||
         (!strcmp("lsh", argv[1])))
-      create_cloonix_private_id_rsa();
+      create_cloonix_private_id_rsa_cisco();
     execv(new_argv[0], new_argv);
     KOUT("ERROR execv %s not good", new_argv[0]);
     }

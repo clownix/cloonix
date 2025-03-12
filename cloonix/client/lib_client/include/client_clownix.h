@@ -71,7 +71,7 @@ void client_color_cnt(int tid, t_end_cb cb, char *name, int num);
 
 void client_add_c2c(int tid, t_end_cb cb, char *name, uint32_t local_udp_ip,
                     char *slave_cloon, uint32_t ip, uint16_t port,
-                    char *passwd, uint32_t udp_ip);
+                    char *passwd, uint32_t udp_ip, uint16_t c2c_udp_port_low);
 
 void client_add_snf(int tid, t_end_cb cb, char *name, int num, int on);
 void client_add_a2b(int tid, t_end_cb cb, char *name);

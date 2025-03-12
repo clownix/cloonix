@@ -24,12 +24,12 @@ for i in "run/frr" "var/run/frr" "var/tmp/frr" ; do
 done
 
 cat >> ${ROOTFS}/etc/passwd << "EOF"
-frr:x:100:109:Frr routing suite,,,:/nonexistent:/bin/nologin
+frr:x:0:0:Frr routing suite,,,:/nonexistent:/bin/nologin
 EOF
 
 cat >> ${ROOTFS}/etc/group << "EOF"
-frrvty:x:108:frr
-frr:x:109:
+frrvty:x:0:frr
+frr:x:0:
 EOF
 
 cat > ${ROOTFS}/etc/pam.d/frr << "EOF"

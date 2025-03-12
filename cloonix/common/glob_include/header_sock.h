@@ -42,7 +42,7 @@
 
 
 enum{
-  header_type_traffic = 0,
+  header_type_traffic = 999,
   header_type_x11_ctrl,
   header_type_x11,
   header_type_ctrl,
@@ -52,7 +52,7 @@ enum{
 };
 
 enum{
-  header_val_none = 0,
+  header_val_none = 777,
   header_val_add_dido_llid,
   header_val_del_dido_llid,
   header_val_ping,

@@ -24,7 +24,7 @@ char *get_proxyshare(void);
 
 void udp_proxy_dist_udp_ip_port(uint32_t ip, uint16_t udp_port);
 void udp_proxy_end(void);
-int udp_proxy_init(char *proxyshare, uint16_t *udp_port);
+int udp_proxy_init(char *proxyshare, uint16_t *udp_port, uint16_t c2c_udp_port_low);
 void sig_process_rx(char *proxyshare, char *sigbuf);
 int set_config(char *net, uint16_t pmain, uint16_t pweb, char *passwd);
 void X_init(char *proxyshare);  

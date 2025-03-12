@@ -102,72 +102,107 @@ else
   fi
 fi
 #-----------------------------------------------------------------------------
-${PROXY} ${PROXYSHARE_OUT} ${IDENT}
-  nohup ${CRUN} \
-         --cgroup-manager=disabled \
-         --log=${EXTRACT}/log/crun.log \
-         --root=${ROOTFS}/tmp \
-         run -f ${CONFIG}/config.json ${IDENT} \
-          > ${EXTRACT}/log/startup.log 2>&1 &
-#-----------------------------------------------------------------------------
-count_loop=0
-while [ ! -e "${PROXYSHARE_OUT}/tmux_back" ]; do 
-  count_loop=$((count_loop+1))
-  if [ $count_loop -gt 10 ]; then
-    echo Fail ${PROXYSHARE_OUT}/tmux_back waiting
-    break
-  fi
-  sleep 1
-done
-sleep 1
-#-----------------------------------------------------------------------------
 cat > ${EXTRACT}/../${IDENT}cmd << EOF
 #!/bin/bash
 
 if [ \${#} -ne 1 ]; then
   echo cmd param needed:
-  echo sh gui ping frr kil
+  echo start stop shell canvas web_on web_off demo_ping demo_frr
   exit 
 fi
 cmd=\$1
+
+IDENT="${IDENT}"
+PROXYSHARE_OUT="${PROXYSHARE_OUT}"
+EXTRACT="${EXTRACT}"
+PROXY="\${EXTRACT}/bin/cloonix-proxymous-\${IDENT}"
+CRUN="\${EXTRACT}/bin/cloonix-crun-\${IDENT}"
+TMUX="\${EXTRACT}/bin/cloonix-tmux-\${IDENT}"
+
+#-----------------------------------------------------------------------------
 case \$cmd in
 
-  sh)
-    ${TMUX} -S ${PROXYSHARE_OUT}/tmux_back new
+  start)
+    exists=\$(ps axo args | grep  \${PROXY} | grep -v grep)
+    if [ ! -z "\$exists" ]; then
+      echo Error, process already exists:
+      echo "\$exists"
+      exit 1
+    fi
+    #------------------------------------------------------------------------
+    \${PROXY} \${PROXYSHARE_OUT} \${IDENT}
+    nohup \${CRUN} \\
+          --cgroup-manager=disabled \\
+          --log=\${EXTRACT}/log/crun.log \\
+          --root=\${EXTRACT}/rootfs/tmp \\
+          run -f \${EXTRACT}/config//config.json \${IDENT} \\
+          > \${EXTRACT}/log/startup.log 2>&1 &
+    #------------------------------------------------------------------------
+    count_loop=0
+    while [ ! -e "\${PROXYSHARE_OUT}/proxymous_start_status" ]; do
+      sleep 1
+    done
+    while [ -z "\$(grep cloonix_main_server_ready \${PROXYSHARE_OUT}/proxymous_start_status)" ]; do
+      count_loop=\$((count_loop+1))
+      if [ \$count_loop -gt 15 ]; then
+        echo Fail waiting for server
+        exit 1
+      fi
+      cat \${PROXYSHARE_OUT}/proxymous_start_status 
+      echo \$count_loop
+      sleep 3
+    done
+    echo server started and ready
+    #------------------------------------------------------------------------
   ;;
-  gui)
-    ${TMUX} -S ${PROXYSHARE_OUT}/tmux_back new 'cloonix_gui ${IDENT}'
+
+  stop)
+    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "cloonix_cli \${IDENT} kil; sleep 1"
   ;;
-  ping)
-    ${TMUX} -S ${PROXYSHARE_OUT}/tmux_back new '/root/ping_demo.sh'
+
+  web_on)
+    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "cloonix_cli \${IDENT} cnf web on; sleep 1"
   ;;
-  frr)
-    ${TMUX} -S ${PROXYSHARE_OUT}/tmux_back new '/root/spider_frr.sh'
+
+  web_off)
+    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "cloonix_cli \${IDENT} cnf web off; sleep 1"
   ;;
-  kil)
-    ${TMUX} -S ${PROXYSHARE_OUT}/tmux_back new 'cloonix_cli ${IDENT} kil'
+
+  shell)
+    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new
   ;;
+
+  canvas)
+    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "cloonix_gui \${IDENT}; sleep 1"
+  ;;
+
+  demo_ping)
+    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "/root/ping_demo.sh; sleep 1"
+  ;;
+
+  demo_frr)
+    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "/root/spider_frr.sh; sleep 1"
+  ;;
+
   *)
-  echo wrong cmd param:
-  echo sh gui ping frr kil
-  exit 
+  echo wrong cmd
   ;;
 esac
 EOF
-
+#-----------------------------------------------------------------------------
+chown -R ${USER}:${USER} ${EXTRACT}
+chmod -R u-s ${EXTRACT}
+chmod -R g-s ${EXTRACT}
+chmod -R o-s ${EXTRACT}
+#-----------------------------------------------------------------------------
 chmod +x ${EXTRACT}/../${IDENT}cmd
-
-printf "\n\tFor the gui canvas:\n"
-printf "./${IDENT}cmd gui\n"
-printf "\n\tFor the ping demo:\n"
-printf "./${IDENT}cmd ping\n"
-printf "\n\tFor the frr demo:\n"
-printf "./${IDENT}cmd frr\n"
-printf "\n\tFor the killing of all:\n"
-printf "./${IDENT}cmd kil\n"
-printf "\n\tFor a shell in the crun container:\n"
-printf "./${IDENT}cmd sh\n"
-printf "\n\tWhile in tmux shell, to scroll the history:\n"
-printf "\tCtrl-space Pg-up\n"
-printf "\n\tThen to return to normal mode:\n"
-printf "\tq\n\n"
+printf "\n\tCHOICE:\n"
+printf "./${IDENT}cmd start\n"
+printf "./${IDENT}cmd stop\n"
+printf "./${IDENT}cmd shell\n"
+printf "./${IDENT}cmd canvas\n"
+printf "./${IDENT}cmd demo_ping\n"
+printf "./${IDENT}cmd demo_frr\n"
+printf "./${IDENT}cmd web_on\n"
+printf "./${IDENT}cmd web_off\n"
+#-----------------------------------------------------------------------------

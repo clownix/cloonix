@@ -179,17 +179,6 @@ static void has_no_qemu_ga_toggle(GtkToggleButton *togglebutton, gpointer user_d
 
  
 /****************************************************************************/
-static void is_i386_toggle(GtkToggleButton *togglebutton, gpointer user_data)
-{   
-  if (gtk_toggle_button_get_active(togglebutton))
-    g_custom_vm.is_i386 = 1;
-  else
-    g_custom_vm.is_i386 = 0;
-}       
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
 static void has_natplug_toggle(GtkToggleButton *togglebutton, gpointer user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton))
@@ -237,7 +226,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
   GSList *group = NULL;
   GtkWidget *entry_name, *entry_ram, *entry_cpu=NULL; 
   GtkWidget *grid, *parent, *is_persistent;
-  GtkWidget *is_i386, *has_no_qemu_ga, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
+  GtkWidget *has_no_qemu_ga, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
 
@@ -275,14 +264,6 @@ static void custom_vm_dialog(t_custom_vm *cust)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(is_persistent), FALSE);
   g_signal_connect(is_persistent,"toggled",G_CALLBACK(is_persistent_toggle),NULL);
 
-
-  is_i386 = gtk_check_button_new_with_label("i386");
-  if (g_custom_vm.is_i386)
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(is_i386), TRUE);
-  else
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(is_i386), FALSE);
-  g_signal_connect(is_i386,"toggled", G_CALLBACK(is_i386_toggle),NULL);
-  append_grid(grid, is_i386, "Arch is 32 bits", line_nb++);
 
   has_no_qemu_ga = gtk_check_button_new_with_label("no_qemu_ga");
   if (g_custom_vm.no_qemu_ga) 
@@ -419,14 +400,7 @@ int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug)
   if (cust_vm->is_full_virt)
     vm_config_flags |= VM_CONFIG_FLAG_FULL_VIRT;
 
-  if (cust_vm->is_i386)
-    {
-    vm_config_flags |= VM_CONFIG_FLAG_I386;
-    }
-  else
-    {
-    vm_config_flags &= ~VM_CONFIG_FLAG_I386;
-    }
+  vm_config_flags &= ~VM_CONFIG_FLAG_I386;
 
   if (cust_vm->is_persistent)
     {
@@ -492,8 +466,8 @@ void menu_dialog_kvm_init(void)
   g_custom_vm.no_qemu_ga = 0;
   g_custom_vm.natplug_flag = 0;
   g_custom_vm.natplug = 0;
-  g_custom_vm.cpu = 2;
-  g_custom_vm.mem = 2000;
+  g_custom_vm.cpu = 4;
+  g_custom_vm.mem = 4000;
   g_custom_vm.nb_tot_eth = 3;
   for (i=0; i<g_custom_vm.nb_tot_eth; i++)
     g_custom_vm.eth_tab[i].endp_type = endp_type_eths;

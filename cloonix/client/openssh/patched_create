@@ -1,14 +1,16 @@
 #!/bin/bash
 HERE=`pwd`
 TARGZ=${HERE}/../../../targz_store
-OPENSSH=openssh-8.6p1
-rm -rf $OPENSSH
-if [ -e tainted_openssh ]; then
-  echo remove tainted_openssh directory and start again
+cd ${TARGZ}
+OPENSSH=$(ls openssh-portable_*)
+OPENSSH=${OPENSSH%%.*}
+cd ${HERE}
+if [ -e tainted_openssh-portable ]; then
+  echo remove tainted_openssh-portable directory and start again
   exit 1
 fi
 tar xvf ${TARGZ}/${OPENSSH}.tar.gz
-mv ${OPENSSH} tainted_openssh
-cd tainted_openssh
+mv openssh-portable tainted_openssh-portable
+cd tainted_openssh-portable
 patch -f -p1 < ../openssh.patch
 

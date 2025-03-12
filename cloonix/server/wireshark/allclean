@@ -1,0 +1,15 @@
+#!/bin/bash
+HERE=`pwd`
+rm -rf ${HERE}/tainted_wireshark
+rm -rf ${HERE}/tainted_shark
+rm -f ${HERE}/wireshark
+rm -f ${HERE}/dumpcap
+
+for i in "libsummary.a" "libwireshark.a" "libwritecap.a" \
+         "libwsutil_static.a" "libcapchild.a" "libui.a" \
+         "libwiretap.a" "libwsutil.a"; do
+  rm -f ${HERE}/${i}
+done
+
+
+

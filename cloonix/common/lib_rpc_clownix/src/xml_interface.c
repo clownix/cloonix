@@ -773,10 +773,10 @@ static int topo_c2c_format(char *buf, t_topo_c2c *c2c)
   if (!strlen(c2c->dist_cloon) || (strlen(c2c->dist_cloon) >= MAX_NAME_LEN))
      KOUT(" ");
   memset(lan, 0, MAX_NAME_LEN);
-  if (strlen(c2c->lan) == 0)
+  if (strlen(c2c->attlan) == 0)
     strncpy(lan, "name_to_erase_upon_extract", MAX_NAME_LEN-1); 
   else
-    strncpy(lan, c2c->lan, MAX_NAME_LEN-1); 
+    strncpy(lan, c2c->attlan, MAX_NAME_LEN-1); 
   len = sprintf(buf, EVENT_TOPO_C2C, c2c->name,
                                      c2c->endp_type,
                                      c2c->dist_cloon,
@@ -1510,7 +1510,7 @@ static void helper_fill_topo_c2c(char *msg, t_topo_c2c *c2c)
   if (sscanf(msg, EVENT_TOPO_C2C, c2c->name,
                                   &(c2c->endp_type),
                                   c2c->dist_cloon,
-                                  c2c->lan,
+                                  c2c->attlan,
                                   &(c2c->local_is_master),
                                   &(c2c->dist_tcp_ip),
                                   &(c2c->dist_tcp_port),
@@ -1521,8 +1521,8 @@ static void helper_fill_topo_c2c(char *msg, t_topo_c2c *c2c)
                                   &(c2c->tcp_connection_peered),
                                   &(c2c->udp_connection_peered)) != 13)
     KOUT("%s", msg);
-  if (!strcmp(c2c->lan, "name_to_erase_upon_extract"))
-    memset(c2c->lan, 0, MAX_NAME_LEN);
+  if (!strcmp(c2c->attlan, "name_to_erase_upon_extract"))
+    memset(c2c->attlan, 0, MAX_NAME_LEN);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -2088,7 +2088,7 @@ void send_lan_cnf(int llid, int tid, char *name, char *cmd)
 /*****************************************************************************/
 void send_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip, 
                   char *dcloon, uint32_t ip, uint16_t port,
-                  char *passwd, uint32_t udp_ip)
+                  char *passwd, uint32_t udp_ip, uint16_t c2c_udp_port_low)
 {
   int len = 0;
   if (c2c_name[0] == 0)
@@ -2104,7 +2104,7 @@ void send_c2c_add(int llid, int tid, char *c2c_name, uint32_t local_udp_ip,
   if (strlen(passwd) >= MSG_DIGEST_LEN)
     KOUT(" ");
   len = sprintf(sndbuf, C2C_ADD, tid, c2c_name, local_udp_ip, 
-                dcloon, ip, port, passwd, udp_ip);
+                dcloon, ip, port, passwd, udp_ip, c2c_udp_port_low);
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
@@ -2290,7 +2290,7 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
   int cmd, vmcmd, param, status, sub;
   int type, qty, tid, val; 
   uint32_t ip, dudp_ip, ludp_ip;
-  uint16_t lport, dport;
+  uint16_t lport, dport, c2c_udp_port_low;
   t_topo_clc  icf;
   t_topo_clc  cf;
   t_eventfull_endp *eventfull_endp;
@@ -2646,10 +2646,10 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
     case bnd_c2c_add:
       if (sscanf(msg, C2C_ADD, &tid, name, &ludp_ip,
                                network, &ip, &dport,
-                               param1, &dudp_ip) != 8)
+                               param1, &dudp_ip, &c2c_udp_port_low) != 9)
         KOUT("%s", msg);
       recv_c2c_add(llid, tid, name, ludp_ip, network, ip,
-                   dport, param1, dudp_ip);
+                   dport, param1, dudp_ip, c2c_udp_port_low);
       break;
 
     case bnd_snf_add:

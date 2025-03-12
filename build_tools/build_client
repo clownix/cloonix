@@ -34,6 +34,7 @@ for i in "cloonix_osh" \
          "cloonix_ssh" \
          "cloonix_wsk" \
          "cloonix_dsh" \
+         "cloonix_lsh" \
          "cloonix_ovs" ; do 
   mv ${TMPBUILD}/cloonix/${i} ${TMPBUILD}
 done

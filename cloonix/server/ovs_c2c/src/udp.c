@@ -41,9 +41,10 @@ static int g_fd_proxymous;
 static uint8_t g_rx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
 static uint8_t g_tx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
 static int g_traffic_mngt;
-void reply_probe_udp(void);
+void reply_probe_udp(uint8_t probe_idx);
 
 char *get_net_name(void);
+char *get_c2c_name(void);
  
 /****************************************************************************/
 static int transmit_unix_dgram_tx(char *dgram_tx, int len, char *data)
@@ -52,12 +53,14 @@ static int transmit_unix_dgram_tx(char *dgram_tx, int len, char *data)
   struct sockaddr *pname = (struct sockaddr *)&name;
   int len_tx, len_un = sizeof(struct sockaddr_un);
   int sock, result=0;  
+  char *net = get_net_name();
+  char *c2c = get_c2c_name();
   if (len >= MAX_DGRAM_LEN)
-    KOUT("ERROR SOCK_DGRAM LEN %d %s", len, dgram_tx);
+    KOUT("ERROR SOCK_DGRAM LEN %s %s %d %s", net, c2c, len, dgram_tx);
   memset(&name, 0, sizeof(struct sockaddr_un));
   sock = socket(AF_UNIX, SOCK_DGRAM, 0);
   if (sock < 0)
-    KOUT("ERROR SOCK_DGRAM %s", dgram_tx);
+    KOUT("ERROR SOCK_DGRAM %s %s %s", net, c2c, dgram_tx);
   name.sun_family = AF_UNIX;
   strncpy(name.sun_path, dgram_tx, 107);
 
@@ -69,7 +72,7 @@ static int transmit_unix_dgram_tx(char *dgram_tx, int len, char *data)
     }
   if (len_tx != len)
     {
-    KERR("ERROR %d %d %d %s", len_tx, len, errno, dgram_tx);
+    KERR("ERROR  %s %s %d %d %d %s", net, c2c, len_tx, len, errno, dgram_tx);
     result = -1;
     }
   close(sock);
@@ -81,21 +84,23 @@ static int transmit_unix_dgram_tx(char *dgram_tx, int len, char *data)
 int udp_tx_sig_send(int len, uint8_t *tx)
 {
   int result = 0;
+  char *net = get_net_name();
+  char *c2c = get_c2c_name();
   if ((len <= 0) || (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
-    KOUT("ERROR SEND  %d", len);
+    KOUT("ERROR SEND %s %s  %d", net, c2c, len);
   fct_seqtap_tx(kind_seqtap_sig_hello, g_tx, 0, len, tx);
   if (g_llid_proxymous)
     {
     if (transmit_unix_dgram_tx(g_proxy_unix_dgram_tx, 
                                len+HEADER_TAP_MSG, (char *)g_tx))
       {
-      KERR("ERROR %d", len);
+      KERR("ERROR %s %s %d", net, c2c,  len);
       result = -1;
       } 
     }
   else
     {
-    KERR("ERROR %d", len);
+    KERR("ERROR %s %s  %d", net, c2c, len);
     result = -1;
     }
   return result;
@@ -108,22 +113,21 @@ int udp_tx_traf_send(int len, uint8_t *buf)
 {
   static uint16_t seqtap=0;
   int result = 0;
+  char *net = get_net_name();
+  char *c2c = get_c2c_name();
   seqtap += 1;
   if ((len <= 0) || (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
-    KOUT("ERROR SEND  %d", len);
+    KOUT("ERROR SEND %s %s  %d", net, c2c, len);
   fct_seqtap_tx(kind_seqtap_data, g_tx, seqtap, len, buf);
   if (g_llid_proxymous)
     {
     if (transmit_unix_dgram_tx(g_proxy_unix_dgram_tx,
                                len+HEADER_TAP_MSG,  (char *) g_tx))
-      {
-      KERR("ERROR %d", len);
       result = -1;
-      } 
     }
   else
     {
-    KERR("ERROR %d", len);
+    KERR("ERROR %s %s %d", net, c2c, len);
     result = -1;
     }
   return result;
@@ -133,7 +137,9 @@ int udp_tx_traf_send(int len, uint8_t *buf)
 /****************************************************************************/
 static void err_cb(int llid, int err, int from)
 {
-  KERR("ERROR UDP %d %d", err, from);
+  char *net = get_net_name();
+  char *c2c = get_c2c_name();
+  KERR("ERROR UDP  %s %s %d %d", net, c2c,  err, from);
   udp_close();
 }
 /*--------------------------------------------------------------------------*/
@@ -171,28 +177,33 @@ static int rx_dgram_cb(int llid, int fd)
 {
   static uint16_t seqtap=0;
   uint16_t seq;
-  int len, buf_len, result;
+  int len, buf_len, result, max_len;
   uint8_t *buf;
-  len = read(fd, g_rx, MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN);
+  char *net = get_net_name();
+  char *c2c = get_c2c_name();
+  uint8_t probe_idx;
+  max_len = MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN;
+  len = read(fd, g_rx, max_len);
   if (len <= 0)
-    KOUT("ERROR READ %d %d", len, errno);
-  if (g_traffic_mngt == 0)
+    KOUT("ERROR READ %s %s %d %d", net, c2c, len, errno);
+  result = fct_seqtap_rx(1, len, fd, g_rx, &seq, &buf_len, &buf);
+  if (result == kind_seqtap_sig_hello)
     {
-    result = fct_seqtap_rx(1, len, fd, g_rx, &seq, &buf_len, &buf);
-    if (result != kind_seqtap_sig_hello)
-      KOUT("ERROR %d", result);
-    reply_probe_udp();
+    if (sscanf((char *)buf, "cloonix_udp_probe %hhu", &probe_idx) != 1)
+      KOUT("ERROR %s %s PB: %s", net, c2c, buf);
+    reply_probe_udp(probe_idx);
     }
-  else
+  else if (result == kind_seqtap_data)
     {
-    result = fct_seqtap_rx(1, len, fd, g_rx, &seq, &buf_len, &buf);
-    if (result != kind_seqtap_data)
-      KOUT("ERROR %d", result);
+    if (g_traffic_mngt == 0)
+      KERR("WARNING %s %s", net, c2c);
     if (seq != ((seqtap+1)&0xFFFF)) 
-      KERR("WARNING %d %d", seq, seqtap);
+      KERR("WARNING %s %s  %d %d", net, c2c, seq, seqtap);
     seqtap = seq;
     rxtx_tx_enqueue(buf_len, buf);
     }
+  else
+    KOUT("ERROR %s %s  %d", net, c2c, result);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -202,6 +213,7 @@ int udp_init(uint16_t udp_port)
 {
   int fd, result = -1;
   char *net = get_net_name();
+  char *c2c = get_c2c_name();
   g_llid_proxymous = 0;
   g_fd_proxymous = -1;
   g_traffic_mngt = 0;
@@ -217,15 +229,17 @@ int udp_init(uint16_t udp_port)
     KOUT("ERROR PATH LEN %lu", strlen(g_proxy_unix_dgram_tx));
   if (strlen(g_proxy_unix_dgram_rx) >= 108)
     KOUT("ERROR PATH LEN %lu", strlen(g_proxy_unix_dgram_rx));
+  if (!access(g_proxy_unix_dgram_rx, F_OK))
+    unlink(g_proxy_unix_dgram_rx);
   fd = util_socket_unix_dgram(g_proxy_unix_dgram_rx);
   if (fd < 0)
-    KERR("ERROR %s", g_proxy_unix_dgram_rx);
+    KERR("ERROR %s %s %s", net, c2c, g_proxy_unix_dgram_rx);
   else
     {
     g_llid_proxymous = msg_watch_fd(fd, rx_dgram_cb, err_cb, "udpd2d");
     if (g_llid_proxymous == 0)
       {
-      KERR("ERROR %s", g_proxy_unix_dgram_rx);
+      KERR("ERROR %s %s %s", net, c2c, g_proxy_unix_dgram_rx);
       close(fd);
       }
     else

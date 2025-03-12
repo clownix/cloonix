@@ -64,6 +64,21 @@ static void peer_doorways_client_tx(int llid, int len, char *buf)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void peer_doorways_client_tx_status(char *name, int status)
+{
+  char *locnet = cfg_get_cloonix_name();
+  t_ovs_c2c *cur = find_c2c(name);
+  if (!cur)
+    KERR("ERROR %s %s %d", locnet, name, status);
+  else
+    {
+    if (status)
+      carefull_destroy_c2c(cur);
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void wrap_proxy_callback_connect(char *name, int pair_llid)
 {
   char *locnet = cfg_get_cloonix_name();
@@ -131,16 +146,15 @@ void wrap_try_connect_to_peer(t_ovs_c2c *cur)
 /****************************************************************************/
 static int pair_peer(int local_is_master, int pair_llid, int peer_llid)
 {
-  char *locnet = cfg_get_cloonix_name();
   int llid = 0;
   if (local_is_master && pair_llid)
+    {
     llid = pair_llid;
+    }
   else if ((!local_is_master) && peer_llid && (msg_exist_channel(peer_llid)))
+    {
     llid = peer_llid;
-  else
-    KERR("ERROR %s master:%d pair_llid:%d peer_llid,:%d %d",
-         locnet, local_is_master, pair_llid, peer_llid,
-         msg_exist_channel(peer_llid));
+    }
   return llid;
 }
 /*--------------------------------------------------------------------------*/
@@ -202,21 +216,30 @@ int wrap_send_c2c_peer_conf(t_ovs_c2c *cur, int is_ack)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void wrap_send_c2c_peer_ping(t_ovs_c2c *cur, int status)
+void wrap_send_c2c_peer_ping(t_ovs_c2c *cur, int status_peer_ping)
 {
+  char *locnet = cfg_get_cloonix_name();
   int llid;
   llid = pair_peer(cur->topo.local_is_master, cur->pair_llid, cur->peer_llid);
-  if (llid)
+  if (!llid)
+    {
+    if (status_peer_ping != status_peer_ping_zero) 
+      {
+      KERR("ERROR %s %s", locnet, cur->name);
+      carefull_destroy_c2c(cur);
+      }
+    }
+  else
     {
     if (cur->topo.local_is_master)
       {
       doors_io_basic_tx_set(peer_doorways_client_tx);
-      send_c2c_peer_ping(llid, cur->ref_tid, cur->name, status);
+      send_c2c_peer_ping(llid, cur->ref_tid, cur->name, status_peer_ping);
       doors_io_basic_tx_set(string_tx);
       }
     else
       {
-      send_c2c_peer_ping(llid, cur->ref_tid, cur->name, status);
+      send_c2c_peer_ping(llid, cur->ref_tid, cur->name, status_peer_ping);
       }
     }
 }

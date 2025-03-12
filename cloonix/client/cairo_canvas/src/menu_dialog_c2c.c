@@ -135,7 +135,7 @@ void menu_choice_c2c_params(void)
 /****************************************************************************/
 void menu_dialog_c2c_init(void)
 {
-  strcpy(g_custom_c2c.name, "c2c_to_mito");
-  strcpy(g_custom_c2c.dist_cloon, "mito");
+  strcpy(g_custom_c2c.name, "c2c_to_N3");
+  strcpy(g_custom_c2c.dist_cloon, "N3");
 }
 /*--------------------------------------------------------------------------*/

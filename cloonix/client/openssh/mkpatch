@@ -1,12 +1,14 @@
 #!/bin/bash
 HERE=`pwd`
 TARGZ=${HERE}/../../../targz_store
-OPENSSH=openssh-8.6p1
-rm -rf ${OPENSSH}
-if [ ! -e tainted_openssh ]; then
-  echo tainted_openssh directory must exist 
+cd ${TARGZ}
+OPENSSH=$(ls openssh-portable_*)
+OPENSSH=${OPENSSH%%.*}
+cd ${HERE}
+if [ ! -e tainted_openssh-portable ]; then
+  echo tainted_openssh-portable directory must exist 
   exit 1
 fi
 tar xvf ${TARGZ}/${OPENSSH}.tar.gz
-diff -Naur ${OPENSSH} tainted_openssh > tmp_openssh_patch
-rm -rf ${OPENSSH}
+diff -Naur openssh-portable tainted_openssh-portable > tmp_openssh_patch
+rm -rf openssh-portable

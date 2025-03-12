@@ -1,6 +1,6 @@
-diff -Naur xserver-master/meson_options.txt xserver-master_new/meson_options.txt
---- xserver-master/meson_options.txt	2024-09-13 17:47:01.000000000 +0200
-+++ xserver-master_new/meson_options.txt	2024-09-22 09:08:04.344323668 +0200
+diff -Naur xserver/meson_options.txt new_xserver/meson_options.txt
+--- xserver/meson_options.txt	2025-03-07 21:44:05.000000000 +0100
++++ new_xserver/meson_options.txt	2025-03-07 22:35:00.938735278 +0100
 @@ -36,7 +36,7 @@
  option('ipv6', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto')
  option('input_thread', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto')
@@ -10,10 +10,10 @@ diff -Naur xserver-master/meson_options.txt xserver-master_new/meson_options.txt
  option('xkb_output_dir', type: 'string')
  option('xkb_bin_dir', type: 'string')
  option('xkb_default_rules', type: 'string', value: 'evdev')
-diff -Naur xserver-master/xkb/ddxLoad.c xserver-master_new/xkb/ddxLoad.c
---- xserver-master/xkb/ddxLoad.c	2024-09-13 17:47:01.000000000 +0200
-+++ xserver-master_new/xkb/ddxLoad.c	2024-09-22 09:08:04.344323668 +0200
-@@ -153,9 +153,8 @@
+diff -Naur xserver/xkb/ddxLoad.c new_xserver/xkb/ddxLoad.c
+--- xserver/xkb/ddxLoad.c	2025-03-07 21:44:05.000000000 +0100
++++ new_xserver/xkb/ddxLoad.c	2025-03-07 22:35:00.938735278 +0100
+@@ -154,9 +154,8 @@
      }
  
      if (asprintf(&buf,

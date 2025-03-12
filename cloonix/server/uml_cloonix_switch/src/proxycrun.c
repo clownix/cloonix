@@ -136,11 +136,28 @@ static void proxy_sig_rx_cb(int llid, int len, char *buf)
     else if (sscanf(buf,
     "transcrun_proxy_peer_data_to_crun %s %d", name, &inlen) == 2)
       proxy_peer_data_to_crun(name, inlen, buf);
+    else if (sscanf(buf,
+    "transcrun_proxy_data_from_crun_ko %s", name) == 1)
+      peer_doorways_client_tx_status(name, -1);
+    else if (sscanf(buf,
+    "transcrun_proxy_data_from_crun_ok %s", name) == 1)
+      peer_doorways_client_tx_status(name, 0);
     else
       KERR("ERROR %s", buf);
     }
 }
 /*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void proxycrun_transmit_write_start_status_file_ready(void)
+{
+  char *sbuf="transcrun_write_start_status_file_ready";
+  if (!msg_exist_channel(g_llid_proxy_sig))
+    KERR("ERROR llid %d", g_llid_proxy_sig);
+  else
+    proxy_sig_tx(g_llid_proxy_sig, strlen(sbuf)+1, sbuf);
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void proxycrun_transmit_proxy_data(char *name, int len, char *buf)
@@ -188,11 +205,12 @@ void proxycrun_transmit_dist_udp_ip_port(char *name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void proxycrun_transmit_req_udp(char *name)
+void proxycrun_transmit_req_udp(char *name, int c2c_udp_port_low)
 {
   char buf[MAX_PATH_LEN];
+  uint16_t port = (uint16_t) c2c_udp_port_low;
   memset(buf, 0, MAX_PATH_LEN); 
-  snprintf(buf, MAX_PATH_LEN-1, "transcrun_req_udp %s", name);
+  snprintf(buf, MAX_PATH_LEN-1, "transcrun_req_udp %s %hu", name, port);
   if (!msg_exist_channel(g_llid_proxy_sig))
     KERR("ERROR llid %d", g_llid_proxy_sig);
   else

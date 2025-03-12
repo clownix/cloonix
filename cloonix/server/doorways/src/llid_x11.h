@@ -21,10 +21,10 @@ void receive_traf_x11_from_client(int dido_llid, int sub_dido_idx,
 void receive_ctrl_x11_from_client(int dido_llid, int doors_val,
                                   int len, char *buf);
 
-void x11_open_close (int backdoor_llid, int dido_llid, char *rx_payload);
-void x11_write(int dido_llid, int sub_dido_idx, int len, char *buf);
-void x11_close(int backdoor_llid, int dido_llid);
-void x11_init(void);
+void x11_doors_open_close (int backdoor_llid, int dido_llid, char *rx_payload);
+void x11_doors_write(int dido_llid, int sub_dido_idx, int len, char *buf);
+void x11_doors_close(int backdoor_llid, int dido_llid);
+void x11_doors_init(void);
 /*--------------------------------------------------------------------------*/
 
 

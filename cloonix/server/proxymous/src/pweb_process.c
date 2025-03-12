@@ -173,8 +173,8 @@ void pweb_init(char *net, uint16_t pweb)
   char *pox = get_proxyshare();
   g_head_peer_llid = NULL;
   memset(g_pweb_unix, 0, MAX_PATH_LEN);
-  snprintf(g_pweb_unix, MAX_PATH_LEN-1, "%s_%s/proxy_pweb.sock", pox, net);
+  snprintf(g_pweb_unix, MAX_PATH_LEN-1, "%s/proxy_pweb.sock", pox);
   if (!proxy_traf_tcp_server(pweb, connect_from_pweb_tcp_client))
-    KOUT("ERROR %hu", pweb);
+    KERR("ERROR PROXYMOUS cannot listen to pweb port %hu", pweb);
 }
 /*--------------------------------------------------------------------------*/

@@ -1,7 +1,6 @@
 #!/bin/bash
 #-----------------------------------------------------------------------------
 HERE=`pwd`
-set -x
 #-----------------------------------------------------------------------------
 PATCHELF="/usr/libexec/cloonix/common/cloonix-patchelf"
 XAUTH="/usr/libexec/cloonix/server/xauth"
@@ -85,8 +84,6 @@ cp -f ${ZIPFRR} ${VAR_CLOONIX}/bulk
 cp -f ${HERE}/tools_crun/ping_demo.sh ${EXTRACT}/rootfs/root
 cp -f ${HERE}/tools_crun/spider_frr.sh ${EXTRACT}/rootfs/root
 #-----------------------------------------------------------------------------
-chown -R ${USER}:${USER} ${EXTRACT}/rootfs
-#-----------------------------------------------------------------------------
 mkdir -p ${CONFIG}
 mkdir -p ${BIN}
 #---------------------------------------------------------------------------
@@ -108,6 +105,8 @@ ${PATCHELF} --force-rpath --set-rpath ./bin                      ${BIN}/cloonix-
 ${PATCHELF} --set-interpreter         ./bin/ld-linux-x86-64.so.2 ${BIN}/cloonix-patchelf
 ${PATCHELF} --add-needed              ./bin/libm.so.6            ${BIN}/cloonix-patchelf
 #---------------------------------------------------------------------------
+mkdir -p ${EXTRACT}/rootfs/var/run/netns
+#-----------------------------------------------------------------------------
 OPTIONS="--nooverwrite --notemp --nomd5 --nocrc --tar-quietly --quiet"
 ${MAKESELF} ${OPTIONS} ${EXTRACT} ${RESULT} "cloonix" ./config/readme.sh
 #-----------------------------------------------------------------------------

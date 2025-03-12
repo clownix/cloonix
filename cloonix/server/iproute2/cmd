@@ -1,0 +1,11 @@
+#!/bin/bash
+HERE=`pwd`
+NAME="iproute2-6.13.0"
+TARGZ=${HERE}/../../../targz_store
+tar xvf ${TARGZ}/${NAME}.tar.gz
+cd ${NAME}
+patch -p1 < ${HERE}/iproute2.patch
+./configure
+make
+cd ${HERE}
+cp -f ${HERE}/${NAME}/ip/ip ${HERE}

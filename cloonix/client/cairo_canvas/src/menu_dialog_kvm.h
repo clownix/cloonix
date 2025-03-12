@@ -22,7 +22,6 @@ typedef struct t_custom_vm
   int  type;
   int  is_full_virt;
   int  is_persistent;
-  int  is_i386;
   int  is_sda_disk;
   int  no_qemu_ga;
   int  natplug_flag;

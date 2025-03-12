@@ -42,12 +42,14 @@ static uint16_t g_distant_udp_port;
 static int g_udp_sock, g_unix_sock;
 static int g_udp_llid, g_unix_llid;
 static int g_udp_forward_ok;
+static char g_distant_ip_string[MAX_NAME_LEN];
 
 
 /***************************************************************************/
-static int udp_init_pick_a_free_udp_port(uint16_t *udp_port, int *udp_sock)
+static int udp_init_pick_a_free_udp_port(uint16_t *udp_port, int *udp_sock,
+                                         uint16_t c2c_udp_port_low)
 {
-  int i, fd, result = -1, max_try=1000;
+  int i, fd, result = -1, max_try=100;
   uint16_t port;
   uint32_t len = sizeof(struct sockaddr_in);
   *udp_port = -1;
@@ -58,7 +60,7 @@ static int udp_init_pick_a_free_udp_port(uint16_t *udp_port, int *udp_sock)
   g_loc_addr.sin_addr.s_addr = INADDR_ANY;
   for(i=0; i<max_try; i++)
     {
-    port = 51001 + (rand()%4000);
+    port = c2c_udp_port_low + i;
     g_loc_addr.sin_port = htons(port);
     if (bind(fd, (const struct sockaddr *)&g_loc_addr, len) == 0)
       {
@@ -201,6 +203,7 @@ void udp_proxy_end(void)
   g_distant_udp_port = 0;
   g_udp_sock = -1;
   g_unix_sock = -1;
+  unlink(g_unix_dgram_rx);
   unlink(g_unix_dgram_tx);
   memset(g_unix_dgram_rx, 0, MAX_PATH_LEN);
   memset(g_unix_dgram_tx, 0, MAX_PATH_LEN);
@@ -213,6 +216,7 @@ void udp_proxy_dist_udp_ip_port(uint32_t ip, uint16_t udp_port)
 {
   g_distant_ip = ip;
   g_distant_udp_port = udp_port;
+  int_to_ip_string (g_distant_ip, g_distant_ip_string);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -224,7 +228,8 @@ int udp_proxy_forward_ok(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int udp_proxy_init(char *proxyshare, uint16_t *udp_port)
+int udp_proxy_init(char *proxyshare, uint16_t *udp_port,
+                   uint16_t c2c_udp_port_low)
 {
   int sock, result = -1;
   g_distant_ip = 0;
@@ -236,7 +241,7 @@ int udp_proxy_init(char *proxyshare, uint16_t *udp_port)
   g_udp_forward_ok = 0;
   memset(g_unix_dgram_rx, 0, MAX_PATH_LEN);
   memset(g_unix_dgram_tx, 0, MAX_PATH_LEN);
-  if (!udp_init_pick_a_free_udp_port(udp_port, &sock))
+  if (!udp_init_pick_a_free_udp_port(udp_port, &sock, c2c_udp_port_low))
     {
     printf("\nFREE UDP PORT FOUND %hu\n\n", *udp_port);
     snprintf(g_unix_dgram_tx, MAX_PATH_LEN-1,

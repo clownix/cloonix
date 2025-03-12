@@ -375,7 +375,9 @@ void ssh_cisco_nat_connect(int llid, char *vm, uint32_t dip, uint16_t dport)
     if (arp)
       KERR("ERROR %X %hu", dip, dport);
     else
+      {
       alloc_arp(dip, dport, llid, vm);
+      }
     } 
 }
 /*--------------------------------------------------------------------------*/

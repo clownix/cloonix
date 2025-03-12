@@ -550,7 +550,7 @@ static void random_c2c(t_topo_c2c *c2c)
 {
   random_choice_str(c2c->name, MAX_NAME_LEN);
   random_choice_str(c2c->dist_cloon, MAX_NAME_LEN);
-  random_choice_str(c2c->lan, MAX_NAME_LEN);
+  random_choice_str(c2c->attlan, MAX_NAME_LEN);
   c2c->local_is_master = rand();
   c2c->dist_tcp_ip = rand();
   c2c->dist_tcp_port = rand();
@@ -2662,14 +2662,14 @@ void recv_lan_cnf(int llid, int itid, char *iname, char *icmd)
 /*****************************************************************************/
 void recv_c2c_add(int llid, int itid, char *ic2c_name, uint32_t ilocal_udp_ip,
                   char *islave_cloon, uint32_t iip, uint16_t iport,
-                  char *ipasswd, uint32_t iudp_ip)
+                  char *ipasswd, uint32_t iudp_ip, uint16_t ic2c_udp_port_low)
 {
   static char c2c_name[MAX_NAME_LEN];
   static char slave_cloon[MAX_NAME_LEN];
   static char passwd[MSG_DIGEST_LEN];
   static int tid;
   static uint32_t ip, local_udp_ip, udp_ip;
-  static uint16_t port;
+  static uint16_t port, c2c_udp_port_low;
   if (i_am_client)
     {
     if (count_c2c_add)
@@ -2690,21 +2690,26 @@ void recv_c2c_add(int llid, int itid, char *ic2c_name, uint32_t ilocal_udp_ip,
         KOUT(" ");
       if (iport != port)
         KOUT(" ");
+      if (ic2c_udp_port_low != c2c_udp_port_low)
+        KOUT(" ");
       }
     tid = rand();
     ip = rand();
     local_udp_ip = rand();
     udp_ip = rand();
     port = rand() & 0xFFFF;
+    c2c_udp_port_low = rand() & 0xFFFF;
     random_choice_str(passwd, MSG_DIGEST_LEN);
     random_choice_str(c2c_name, MAX_NAME_LEN);
     random_choice_str(slave_cloon, MAX_NAME_LEN);
     send_c2c_add(llid, tid, c2c_name, local_udp_ip,
-                 slave_cloon, ip, port, passwd, udp_ip);
+                 slave_cloon, ip, port, passwd,
+                 udp_ip, c2c_udp_port_low);
     }
   else
     send_c2c_add(llid, itid, ic2c_name, ilocal_udp_ip,
-                 islave_cloon, iip, iport, ipasswd, iudp_ip);
+                 islave_cloon, iip, iport, ipasswd,
+                 iudp_ip, ic2c_udp_port_low);
   count_c2c_add++;
 }
 /*---------------------------------------------------------------------------*/
@@ -2972,7 +2977,7 @@ static void send_first_burst(int llid)
 
   recv_snf_add(llid, 0,  NULL, 0, 0);
 
-  recv_c2c_add(llid, 0,  NULL, 0, NULL, 0, 0, NULL, 0);
+  recv_c2c_add(llid, 0,  NULL, 0, NULL, 0, 0, NULL, 0, 0);
   recv_c2c_peer_create(llid, 0, NULL, 0, NULL, NULL);
   recv_c2c_peer_conf(llid, 0, NULL, 0, NULL, NULL, 0,0,0,0);
   recv_c2c_peer_ping(llid, 0, NULL, 0);
