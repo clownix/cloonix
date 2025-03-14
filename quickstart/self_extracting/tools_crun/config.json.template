@@ -5,11 +5,7 @@
 
     "user": {
       "uid": 0,
-      "gid": 0,
-      "additionalGids": [
-        5,
-        __KVM_GID__
-      ]
+      "gid": 0
     },
     "args": ["/usr/libexec/cloonix/server/cloonix-init-__IDENT__"],
     "env": [
@@ -50,11 +46,11 @@ __HOST_BULK_PRESENT__   },{
     "source": "__PROXYSHARE_OUT__",
     "options": ["rbind","rw"]
     },{
-   "destination": "__PROXYSHARE_IN_____IDENT__/pulse",
-    "type": "none",
-    "source": "__XDG_RUNTIME_DIR__/pulse",
-    "options": ["rbind","rw"]
-    },{
+__HOST_PULSE_PRESENT__   "destination": "__PROXYSHARE_IN_____IDENT__/pulse",
+__HOST_PULSE_PRESENT__    "type": "none",
+__HOST_PULSE_PRESENT__    "source": "__XDG_RUNTIME_DIR__/pulse",
+__HOST_PULSE_PRESENT__    "options": ["rbind","rw"]
+__HOST_PULSE_PRESENT__    },{
     "destination": "/dev",
     "type": "tmpfs",
     "source": "tmpfs",

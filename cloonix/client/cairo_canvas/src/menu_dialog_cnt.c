@@ -409,7 +409,7 @@ void menu_dialog_cnt_init(void)
   strcpy(g_custom_cnt.name, "Cnt");
   strcpy(g_custom_cnt.startup_env, "NODE_ID=1 CLOONIX=great");
   strcpy(g_custom_cnt.vmount, " ");
-  strcpy(g_custom_cnt.cru_image,   "zipbasic.zip");
+  strcpy(g_custom_cnt.cru_image,   "zipfrr.zip");
   g_custom_cnt.nb_tot_eth = 3;
   for (i=0; i<g_custom_cnt.nb_tot_eth; i++)
     g_custom_cnt.eth_table[i].endp_type = endp_type_eths;

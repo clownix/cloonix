@@ -30,7 +30,6 @@ SERVER="${ROOTFS}/usr/libexec/cloonix/server"
 PATCHELF="${EXTRACT}/bin/cloonix-patchelf"
 XAUTH="${EXTRACT}/bin/xauth"
 HOST_BULK="/var/lib/cloonix/bulk"
-KVM_GID=$(cat /etc/group |grep ^kvm | awk -F : "{print \$3}")
 USER_UID=$(cat /etc/passwd |grep ^${USER} | awk -F : "{print \$3}")
 USER_GID=$(cat /etc/passwd |grep ^${USER} | awk -F : "{print \$4}")
 PROXYSHARE_IN="/tmp/cloonix_proxymous"
@@ -52,6 +51,14 @@ if [ -r ${HOST_BULK} ]; then
 else
   sed -i s"%__HOST_BULK_PRESENT__.*%%"   ${CONFIG}/config.json
 fi
+#-----------------------------------------------------------------------------
+if [ ! -z ${XDG_RUNTIME_DIR} ] && [ -d ${XDG_RUNTIME_DIR} ] && [ -e ${XDG_RUNTIME_DIR}/pulse ]; then
+  sed -i s"%__HOST_PULSE_PRESENT__%%"                 ${CONFIG}/config.json
+  sed -i s"%__XDG_RUNTIME_DIR__%${XDG_RUNTIME_DIR}%"  ${CONFIG}/config.json
+else
+  sed -i s"%__HOST_PULSE_PRESENT__.*%%"               ${CONFIG}/config.json
+fi
+#-----------------------------------------------------------------------------
 sed -i s"%__IDENT__%${IDENT}%"                     ${SERVER}/cloonix-init-${IDENT}
 sed -i s"%__PROXYSHARE_IN__%${PROXYSHARE_IN}%"     ${SERVER}/cloonix-init-${IDENT}
 sed -i s"%__IDENT__%${IDENT}%"                     ${CONFIG}/config.json
@@ -59,10 +66,8 @@ sed -i s"%__PROXYSHARE_IN__%${PROXYSHARE_IN}%"     ${CONFIG}/config.json
 sed -i s"%__PROXYSHARE_OUT__%${PROXYSHARE_OUT}%"   ${CONFIG}/config.json
 sed -i s"%__ROOTFS__%${ROOTFS}%"                   ${CONFIG}/config.json
 sed -i s"%__UID__%${UID}%"                         ${CONFIG}/config.json
-sed -i s"%__KVM_GID__%${KVM_GID}%"                 ${CONFIG}/config.json
 sed -i s"%__USER_UID__%${USER_UID}%"               ${CONFIG}/config.json
 sed -i s"%__USER_GID__%${USER_GID}%"               ${CONFIG}/config.json
-sed -i s"%__XDG_RUNTIME_DIR__%${XDG_RUNTIME_DIR}%" ${CONFIG}/config.json
 sed -i s"%__IDENT__%${IDENT}%"                     ${CONFIG}/readme.sh
 sed -i s"%__IDENT__%${IDENT}%"                     ${ROOTFS}/root/ping_demo.sh
 sed -i s"%__IDENT__%${IDENT}%"                     ${ROOTFS}/root/spider_frr.sh

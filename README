@@ -1,5 +1,5 @@
 ==============================================================================
-                               v45-00
+                               v45-01
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -24,6 +24,9 @@ NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp cloonix api.
       For Fedora, in /etc/sysconfig/selinux, I set SELINUX=disabled to have
       a qemu-guest-agent that can create and launch a script as root.
+      For centos, same for selinux, but also in /etc/sysconfig/qemu-ga, the
+      env FILTER_RPC_ARGS must have:"guest-file-open,guest-file-close,
+      guest-file-read,guest-file-write,guest-exec-status,guest-exec"
       For ubuntu, "unshare: Operation not permitted" problem,
       echo "kernel.unprivileged_userns_clone=1" >> /etc/sysctl.conf
       echo "kernel.apparmor_restrict_unprivileged_userns=0" >> /etc/sysctl.conf
@@ -52,9 +55,9 @@ This is very secure way to test cloonix as a normal user.
 1) Download software and installation:
 --------------------------------------
 
-wget http://clownix.net/downloads/cloonix-45/cloonix-bundle-45-00-amd64.tar.gz
-tar xvf cloonix-bundle-45-00-amd64.tar.gz
-cd cloonix-bundle-45-00-amd64
+wget http://clownix.net/downloads/cloonix-45/cloonix-bundle-45-01-amd64.tar.gz
+tar xvf cloonix-bundle-45-01-amd64.tar.gz
+cd cloonix-bundle-45-01-amd64
 sudo ./install_cloonix
 
 (To uninstall:   sudo rm -f /usr/bin/cloonix_*

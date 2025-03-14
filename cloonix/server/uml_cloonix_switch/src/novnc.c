@@ -66,6 +66,10 @@ static int g_end_novnc_currently_on;
 static int g_terminate;
 static int g_start;
 
+int get_running_in_crun(void);
+void hide_real_machine_serv(void);
+
+
 /*****************************************************************************/
 static void debug_print_cmd(char **argv)
 {
@@ -435,6 +439,8 @@ static int websockify(void *data)
   if (g_terminate)
     return 0;
     
+  if (!get_running_in_crun())
+    hide_real_machine_serv();
   setenv("NODE_PATH", NODE_PATH, 1);
   if (g_port_display == 0)
     KOUT("ERROR");
@@ -458,13 +464,11 @@ static int websockify(void *data)
 /*****************************************************************************/
 static int nginx_ok(void *data)
 {
-  char path[MAX_PATH_LEN];
+  char path[MAX_PATH_LEN+1];
   char *argv[]={BIN_NGINX, "-p", path, NULL};
-
   if (g_terminate)
     return 0;
-
-  memset (path, 0, MAX_PATH_LEN);
+  memset (path, 0, MAX_PATH_LEN+1);
   snprintf(path, MAX_PATH_LEN, "%s", utils_get_nginx_dir());
   debug_print_cmd(argv);
   execv(argv[0], argv);

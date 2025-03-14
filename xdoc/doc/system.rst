@@ -158,4 +158,15 @@ with the following commands::
   sudo nsenter --mount=/proc/14022/ns/mnt
   ls /var/lib/cloonix/nemo/mnt/busybox.zip
 
+qemu-guest-agent
+================
+
+The launch in the kvm machines of the cloonix agent uses the qemu-guest-agent
+also named qemu-ga.
+For both fedora and centos, the selinux linux prevents the work of qemu-ga
+set SELINUX=disabled in /etc/sysconfig/selinux.
+For centos, in /etc/sysconfig/qemu-ga, in FILTER_RPC_ARGS I had to add:
+guest-file-open,guest-file-close,guest-file-read,guest-file-write,
+guest-exec-status,guest-exe.
+
 
