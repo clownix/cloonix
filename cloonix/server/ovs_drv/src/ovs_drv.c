@@ -612,7 +612,7 @@ static void common_end_of_all_destroy(void)
   argv[2] = "del";
   argv[3] = get_ns();
   call_ovs_popen(db, argv, 0, __FUNCTION__, 1);
-  if (!access(db, F_OK))
+  if (!access(db, R_OK))
     {
     if ((!strncmp(var_dir, g_ovs_dir, strlen(var_dir))) &&
         (strstr(db, g_net_name)))
@@ -799,7 +799,7 @@ static int is_directory_writable(char *path)
 static int file_exists(char *path)
 {
   int err, result = 0;
-  err = access(path, F_OK);
+  err = access(path, R_OK);
   if (!err)
     result = 1;
   return result;

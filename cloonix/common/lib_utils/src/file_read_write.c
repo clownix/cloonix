@@ -70,7 +70,7 @@ int i_am_inside_cloon(char *name)
   char err[MAX_PATH_LEN];
   char *buf;
   memset(name, 0, MAX_NAME_LEN);
-  result = file_exists(get_cloonix_config_path_name(), F_OK);
+  result = file_exists(get_cloonix_config_path_name(), R_OK);
   if (result)
     {
     buf = read_whole_file(get_cloonix_config_path_name(), &len, err);
@@ -245,7 +245,7 @@ int write_whole_file(char *file_name, char *buf, int len, char *err)
   int result = -1;
   int fd, writelen;
   err[0] = 0;
-  if (access(file_name, F_OK))
+  if (access(file_name, R_OK))
     {
     fd = open(file_name, O_CREAT|O_WRONLY, 00666);
     if (fd > 0)

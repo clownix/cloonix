@@ -1,22 +1,6 @@
 #!/bin/bash
 PURE_CRUN="no"
 #----------------------------------------------------------------------#
-if [ ${#} = 1 ]; then
-  if [ "$1" = "i386" ]; then
-    ARCH="i386"
-  else
-    if [ "$1" = "amd64" ]; then
-      ARCH="amd64"
-    else
-      echo ERROR $0 param must be i386 or amd64
-      exit
-    fi
-  fi
-else
-  echo ERROR $0 param must be i386 or amd64
-  exit
-fi
-#----------------------------------------------------------------------#
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -115,9 +99,6 @@ rm -rf ${SERVER}/crun
 cp -f ${SERVER}/xorg/Xvfb ${SERVER}/cloonix-novnc-Xvfb
 rm -rf ${SERVER}/xorg
 #----------------------------------------------------------
-cp -f ${SERVER}/tmux/tmux/tmux ${SERVER}/cloonix-tmux
-rm -rf ${SERVER}/tmux
-#----------------------------------------------------------
 cp -f ${SERVER}/wireshark/wireshark ${SERVER}/cloonix-wireshark
 cp -f ${SERVER}/wireshark/dumpcap ${SERVER}/cloonix-dumpcap
 rm -rf ${SERVER}/wireshark
@@ -144,13 +125,8 @@ done
 #----------------------------------------------------------
 openssl req -x509 -nodes -newkey rsa:3072 -keyout novnc.pem -subj "/CN=cloonix.net" -out ${SERVER}/novnc.pem -days 3650
 #----------------------------------------------------------
-if [ "${ARCH}" = "i386" ]; then
-  LDLINUX="/usr/libexec/cloonix/common/lib32/ld-linux.so.2"
-  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/i386-linux-gnu"
-else
-  LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
-fi
+LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
 for i in `find ${SERVER} -maxdepth 1 -type f` ; do
   ${PATCHELF} --force-rpath  --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null

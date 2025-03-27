@@ -169,24 +169,12 @@ static void kill_previous_wireshark_process(char *sock)
 int file_exists(char *path)
 {
   int err, result = 0;
-  err = access(path, F_OK);
+  err = access(path, R_OK);
   if (!err)
     result = 1;
   return result;
 }
 /*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void fill_distant_xauthority(char *net)
-{
-  char cmd[2*MAX_PATH_LEN];
-  memset(cmd, 0, 2*MAX_PATH_LEN);
-  snprintf(cmd, 2*MAX_PATH_LEN-1,
-           "/usr/libexec/cloonix/common/cloonix-ctrl %s %s cnf fix",
-           CLOONIX_CFG, net);
-  system(cmd);
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void set_env_global_cloonix(char *net)
@@ -246,7 +234,7 @@ static void create_cloonix_private_id_rsa_cisco(void)
   "Ku+HluGo0TDABJUv1JBpVDeHBNprX3mHgud4fxKvoeG4eBfrjW5QsqIL34mrzT2b\n"
   "Tf6PmCDYsKOA79p2IYNG0aRiVMyTjb0JaDi/QJY65WR6Q5uoyCae\n"
   "-----END RSA PRIVATE KEY-----";
-  if (access(g_id_rsa_cisco, F_OK))
+  if (access(g_id_rsa_cisco, R_OK))
     {
     len = strlen(rsa);
     fh = fopen(g_id_rsa_cisco, "w");
@@ -643,7 +631,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     new_argv[0] = XWYCLI_BIN;
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
-    new_argv[3] = "-cmd";
+    new_argv[3] = "-ovs";
     new_argv[4] = "/usr/libexec/cloonix/server/cloonix-ovs-vsctl";
     new_argv[5] = sock;
     for (i=0; i<10; i++)
@@ -704,7 +692,6 @@ int main(int argc, char *argv[])
     if (!strcmp("gui", argv[1]))
       {
       hide_real_machine_cli();
-      fill_distant_xauthority(argv[2]);
       setenv("NO_AT_BRIDGE", "1", 1);
       }
     else if (strcmp("ice", argv[1]))

@@ -142,13 +142,13 @@ static int get_info_from_buf(int len, char *ibuf, char *remote_user,
 static int rx_cb(int llid, int fd)
 {
   int data_len, result = 0;
-  uint8_t data[MAX_TAP_BUF_LEN];
+  uint8_t data[TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
   char user[MAX_NAME_LEN];
   char vm[MAX_NAME_LEN];
   uint32_t ip;
   uint16_t port;
   t_ssh_cisco *cur = find_ssh_cisco(llid);
-  data_len = read(fd, data, MAX_TAP_BUF_LEN - g_offset);
+  data_len = read(fd, data, TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN - g_offset);
   if (!cur)
     {
     if (msg_exist_channel(llid))
@@ -189,7 +189,11 @@ static int rx_cb(int llid, int fd)
       }
     else
       {
-      ssh_cisco_nat_rx_from_llid(llid, data_len, data);
+      if ((data_len == 0) ||
+          (data_len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+        KERR("ERROR LEN %d", data_len);
+      else
+        ssh_cisco_nat_rx_from_llid(llid, data_len, data);
       }
     result = data_len;
     }

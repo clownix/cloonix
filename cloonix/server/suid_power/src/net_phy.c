@@ -71,7 +71,7 @@ static void get_list_elem_phy(void)
   t_elem_phy *cur;
 
   free_list_elem_phy();
-  if (access(sysclassnet, F_OK))
+  if (access(sysclassnet, R_OK))
     KERR("ERROR %s", sysclassnet);
   else
     {

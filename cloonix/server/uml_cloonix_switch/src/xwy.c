@@ -50,7 +50,8 @@ typedef struct t_xwy_params
   char bin[MAX_PATH_LEN];
   char unix_traffic_sock[MAX_PATH_LEN];
   char unix_control_sock[MAX_PATH_LEN];
-  char cloonix_net_name[MAX_NAME_LEN];
+  char net_name[MAX_NAME_LEN];
+  char net_rank[MAX_NAME_LEN];
 } t_xwy_params;
 
 enum {
@@ -87,9 +88,8 @@ static int start_xwy(void *data)
 {
   t_xwy_params *dp = (t_xwy_params *) data;
   char *argv[] = {dp->bin, 
-                  dp->unix_traffic_sock,
-                  dp->unix_control_sock,
-                  dp->cloonix_net_name,
+                  dp->net_name,
+                  dp->net_rank,
                   NULL};
   execv(dp->bin, argv);
   KOUT("ERROR execv");
@@ -300,7 +300,7 @@ void xwy_close_llid(int llid, int from_clone)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void init_xwy(char *cloonix_net_name)
+void init_xwy(char *net_name, int net_rank)
 {
   g_xwy_kill_req = 0;
   g_xwy_pid = 0;
@@ -308,16 +308,14 @@ void init_xwy(char *cloonix_net_name)
   g_xwy_llid = 0;
   set_state(xwy_state_init);
   memset(&g_xwy_params, 0, sizeof(t_xwy_params));
-  snprintf(g_xwy_params.cloonix_net_name, MAX_NAME_LEN, cloonix_net_name);
-  snprintf(g_xwy_params.bin, MAX_PATH_LEN, "%s/server/cloonix-xwy-srv", 
-                                            cfg_get_bin_dir());
-  g_xwy_params.bin[MAX_PATH_LEN-1] = 0;
-  snprintf(g_xwy_params.unix_traffic_sock, MAX_PATH_LEN, "%s/%s", 
-                                   cfg_get_root_work(), XWY_TRAFFIC_SOCK);
-  g_xwy_params.unix_traffic_sock[MAX_PATH_LEN-1] = 0;
-  snprintf(g_xwy_params.unix_control_sock, MAX_PATH_LEN, "%s/%s", 
-                                   cfg_get_root_work(), XWY_CONTROL_SOCK);
-  g_xwy_params.unix_control_sock[MAX_PATH_LEN-1] = 0;
+  snprintf(g_xwy_params.net_rank, MAX_NAME_LEN-1, "%d", net_rank);
+  snprintf(g_xwy_params.net_name, MAX_NAME_LEN-1, "%s", net_name);
+  snprintf(g_xwy_params.bin, MAX_PATH_LEN-1,
+           "%s/server/cloonix-xwy-srv", cfg_get_bin_dir());
+  snprintf(g_xwy_params.unix_traffic_sock, MAX_PATH_LEN,
+           "%s/%s", cfg_get_root_work(), XWY_TRAFFIC_SOCK);
+  snprintf(g_xwy_params.unix_control_sock, MAX_PATH_LEN,
+           "%s/%s", cfg_get_root_work(), XWY_CONTROL_SOCK);
   clownix_timeout_add(10, timer_monitor_xwy_pid, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/

@@ -234,7 +234,7 @@ static void mk_and_tst_work_path(void)
     KOUT("%s", cfg_get_root_work());
     }
   *ptr = 0;
-  if (!file_exists(path2, F_OK))
+  if (!file_exists(path2, R_OK))
     {
     if (!strlen(path1))
       {
@@ -381,7 +381,7 @@ static void launching(void)
   doorways_first_start();
   sprintf(clownlock, "%s/cloonix_lock", cfg_get_root_work());
   check_for_another_instance(clownlock, 1);
-  init_xwy(cfg_get_cloonix_name());
+  init_xwy(cfg_get_cloonix_name(), get_conf_rank());
   init_novnc(cfg_get_cloonix_name(), get_conf_rank());
   clownix_timeout_add(100, timer_proxymous_init, NULL, NULL, NULL);
   clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
@@ -550,7 +550,7 @@ int main (int argc, char *argv[])
   check_for_work_dir_inexistance();
   mk_and_tst_work_path();
   pid_clone_init();
-  my_mkdir(cfg_get_work(), 0);
+  my_mkdir(cfg_get_work(), 1);
   init_heartbeat();
   stats_counters_init();
   stats_counters_sysinfo_init();

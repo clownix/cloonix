@@ -44,8 +44,8 @@
 
 static char g_netns_namespace[MAX_NAME_LEN];
 static char g_tap_name[MAX_NAME_LEN];
-static uint8_t g_buf_rx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
-static uint8_t g_buf_tx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_buf_rx[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_buf_tx[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
 static uint8_t g_mac_tap[6];
 static int g_fd_tx_to_parent;
 static int g_fd_rx_from_parent;
@@ -83,8 +83,8 @@ static void rx_tapif(int fd)
   static uint16_t seqtap = 0;
   int len, tx;
   seqtap += 1;
-  len = read(fd, g_buf_tx + HEADER_TAP_MSG, MAX_TAP_BUF_LEN+END_FRAME_ADDED_CHECK_LEN);
-  if ((len <= 0) || (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+  len = read(fd, g_buf_tx + HEADER_TAP_MSG, TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN);
+  if ((len <= 0) || (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
     KOUT("ERROR READ %d", len);
   fct_seqtap_tx(kind_seqtap_data, g_buf_tx, seqtap, len, NULL);
   tx = write(g_fd_tx_to_parent, g_buf_tx, len + HEADER_TAP_MSG);

@@ -45,7 +45,7 @@ typedef struct t_conn_x11
 {
   int cli_idx; 
   int x11_fd; 
-  int sock_fd_ass;
+  int sock_ass_fd;
   int threads_on; 
   int diag_main_fd;
   t_msg *first_x11_msg;
@@ -54,7 +54,6 @@ typedef struct t_conn_x11
 typedef struct t_display_x11
 {
   uint32_t randid;
-  int port;
   int sock_fd;
   int srv_idx;
   int srv_idx_acked;
@@ -76,6 +75,13 @@ static t_display_x11 *g_display_head;
 
 static void disconnect_cli_idx(t_display_x11 *disp, int cli_idx);
 
+/****************************************************************************/
+int display_add_rank(int net_rank, int srv_idx)
+{
+  int result = 1000*net_rank + srv_idx;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void print_peer_info_tx(int srv, int cli, int ptx, long long tx)
@@ -258,7 +264,7 @@ static int alloc_pool_idx(t_display_x11 *disp)
     memset(disp->conn[idx], 0, sizeof(t_conn_x11));
     conn = disp->conn[idx];
     conn->cli_idx = idx;
-    conn->sock_fd_ass = -1;
+    conn->sock_ass_fd = -1;
     conn->diag_main_fd =-1;
     conn->x11_fd = -1;
     }
@@ -316,10 +322,10 @@ static void disconnect_cli_idx(t_display_x11 *disp, int cli_idx)
   t_conn_x11 *conn = disp->conn[cli_idx];
   if (!conn)
     KOUT("%d %d", disp->sock_fd, cli_idx);
-  if (conn->sock_fd_ass == -1)
+  if (conn->sock_ass_fd == -1)
     KERR("%d %d", disp->sock_fd, cli_idx);
   else
-    thread_x11_close(conn->sock_fd_ass);
+    thread_x11_close(conn->sock_ass_fd);
   if (conn->x11_fd != -1)
     wrap_close (conn->x11_fd, __FUNCTION__);
   if (conn->first_x11_msg)
@@ -335,7 +341,7 @@ static void begin_x11_listen_action(t_display_x11 *disp)
   t_msg *first_x11_msg;
 
   x11_fd = wrap_accept(disp->x11_listen_fd,
-                       fd_type_x11_accept, 1, __FUNCTION__);
+                       fd_type_x11_accept, __FUNCTION__);
   if (x11_fd < 0)
     {
     if ((errno != EINTR) && (errno != EAGAIN))
@@ -361,14 +367,13 @@ static void begin_x11_listen_action(t_display_x11 *disp)
                                        disp->magic_cookie);
       if (first_x11_msg == NULL)
         {
-        KERR("ERROR Failed first read idx");
         wrap_close (x11_fd, __FUNCTION__);
         }
       else
         {
         disp->conn[cli_idx]->first_x11_msg = first_x11_msg;
         disp->conn[cli_idx]->x11_fd = x11_fd;
-        disp->conn[cli_idx]->sock_fd_ass = -1;
+        disp->conn[cli_idx]->sock_ass_fd = -1;
         if (send_msg_type_x11_connect(disp->randid, disp->sock_fd,
                                       disp->srv_idx, cli_idx))
           {
@@ -383,15 +388,15 @@ static void begin_x11_listen_action(t_display_x11 *disp)
 
 /****************************************************************************/
 static void terminate_x11(int p_fd[2], 
-                          int sock_fd_ass, int epfd,
+                          int sock_ass_fd, int epfd,
                           t_display_x11 *disp, int cli_idx)
 {
   if (p_fd[0] != -1)    
     wrap_close(p_fd[0], __FUNCTION__);
   if (p_fd[1] != -1)    
     wrap_close(p_fd[1], __FUNCTION__);
-  if (sock_fd_ass != -1)
-    wrap_close(sock_fd_ass, __FUNCTION__);
+  if (sock_ass_fd != -1)
+    wrap_close(sock_ass_fd, __FUNCTION__);
   if (epfd != -1)
     wrap_close(epfd, __FUNCTION__);
   disconnect_cli_idx(disp, cli_idx);
@@ -405,7 +410,7 @@ static void helper_spy_set_info(t_display_x11 *disp, t_conn_x11 *conn)
   int cli_idx = conn->cli_idx;
   fd_spy_set_info(disp->sock_fd,             srv_idx, cli_idx);
   fd_spy_set_info(conn->x11_fd,              srv_idx, cli_idx);
-  fd_spy_set_info(conn->sock_fd_ass,         srv_idx, cli_idx);
+  fd_spy_set_info(conn->sock_ass_fd,         srv_idx, cli_idx);
   fd_spy_set_info(conn->diag_main_fd,    srv_idx, cli_idx);
 }
 /*--------------------------------------------------------------------------*/
@@ -415,33 +420,35 @@ static void end_x11_listen_action(t_display_x11 *disp,
                                   t_conn_x11 *conn, int cli_idx)
 {
   int p_fd[2];
-  int sock_fd_ass, epfd;
+  int sock_ass_fd, epfd;
   p_fd[0] = -1;
   p_fd[1] = -1;
-  sock_fd_ass = get_cli_association(disp->sock_fd, disp->srv_idx, cli_idx);
+  sock_ass_fd = get_cli_association(disp->sock_fd, disp->srv_idx, cli_idx);
   epfd = wrap_epoll_create(fd_type_x11_epoll, __FUNCTION__);
-  if ((epfd == -1) || (sock_fd_ass == -1) ||
+  if ((epfd == -1) || (sock_ass_fd == -1) ||
       (wrap_socketpair(p_fd, fd_type_dialog_thread, __FUNCTION__)  == -1))
     {
-    KERR(" ");
-    terminate_x11(p_fd, sock_fd_ass, epfd, disp, cli_idx);
+    KERR("ERROR sock_fd:%d sock_ass_fd:%d x11_fd:%d",
+         disp->sock_fd, sock_ass_fd, conn->x11_fd);
+    terminate_x11(p_fd, sock_ass_fd, epfd, disp, cli_idx);
     }
-  else if (thread_x11_open(disp->randid, 1, sock_fd_ass, conn->x11_fd,
+  else if (thread_x11_open(disp->randid, 1, sock_ass_fd, conn->x11_fd,
                            disp->srv_idx, cli_idx, epfd, p_fd[1],  p_fd[0],
                            conn->first_x11_msg))
     {
-    KERR(" ");
-    terminate_x11( p_fd, sock_fd_ass, epfd, disp, cli_idx);
+    KERR("ERROR sock_fd:%d sock_ass_fd:%d x11_fd:%d",
+         disp->sock_fd, sock_ass_fd, conn->x11_fd);
+    terminate_x11( p_fd, sock_ass_fd, epfd, disp, cli_idx);
     }
   else
     {
     conn->first_x11_msg = NULL;
-    DEBUG_DUMP_THREAD(sock_fd_ass, conn->x11_fd, disp->srv_idx, cli_idx);
+    DEBUG_DUMP_THREAD(sock_ass_fd, conn->x11_fd, disp->srv_idx, cli_idx);
     conn->threads_on = 1;
-    conn->sock_fd_ass = sock_fd_ass;
+    conn->sock_ass_fd = sock_ass_fd;
     conn->diag_main_fd = p_fd[0];
     helper_spy_set_info(disp, conn);
-    thread_x11_start(sock_fd_ass);
+    thread_x11_start(sock_ass_fd);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -469,30 +476,28 @@ void x11_connect_ack(int srv_idx, int cli_idx, char *txt)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int init_alloc_display(uint32_t randid, int sock_fd, int srv_idx)
+static int init_alloc_display(uint32_t randid, int sock_fd, int srv_idx, char *x11_path)
 {
-  int fd, port, result = -1;
+  int fd, result = -1;
   t_display_x11 *disp;
   if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
     KOUT("%d %d", sock_fd, srv_idx);
   disp = find_disp(srv_idx);
   if (disp)
-    KERR("%d", srv_idx);
+    KERR("ERROR %d", srv_idx);
   else
     {
     disp = find_empy(srv_idx);
-    port = X11_OFFSET_PORT + srv_idx;
     if (!disp)
       KERR("ERROR %d", srv_idx);
     else
       {
-      fd = wrap_socket_listen_inet(INADDR_LOOPBACK, port,
+      fd = wrap_socket_listen_unix(x11_path,
                                    fd_type_x11_listen, __FUNCTION__);
       if (fd < 0)
-        KERR("ERROR %d %s", port, strerror(errno));
+        KERR("ERROR %s %s", x11_path, strerror(errno));
       else
         {
-        disp->port = port;
         disp->randid = randid;
         disp->sock_fd = sock_fd;
         disp->x11_listen_fd = fd;
@@ -505,12 +510,31 @@ static int init_alloc_display(uint32_t randid, int sock_fd, int srv_idx)
 }
 /*--------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+static int unix_connect_ok(char *path)
+{
+  int err, result = 0;
+  err = access(path, R_OK);
+  if (!err)
+    {
+    result = wrap_socket_connect_unix_connect_ok(path);
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+
 /****************************************************************************/
-int x11_init_cli_msg(uint32_t randid, int sock_fd, char *magic_cookie)
+int  x11_init_cli_msg(uint32_t randid, int sock_fd,
+                      char *magic_cookie, int net_rank, char *x11_path)
 {
   int srv_idx, result = 0;
+  int display_srv_idx;
   srv_idx = SRV_IDX_MIN;
-  while (tools_port_already_in_use(X11_OFFSET_PORT + srv_idx))
+  display_srv_idx = display_add_rank(net_rank, srv_idx);
+  memset(x11_path, 0, MAX_TXT_LEN);
+  snprintf(x11_path, MAX_TXT_LEN-1, UNIX_X11_SOCKET_PREFIX, display_srv_idx);
+  while (unix_connect_ok(x11_path))
     {
     srv_idx += 1;
     if (srv_idx > SRV_IDX_MAX)
@@ -520,22 +544,25 @@ int x11_init_cli_msg(uint32_t randid, int sock_fd, char *magic_cookie)
       result = -1;
       break;
       }
+    display_srv_idx = display_add_rank(net_rank, srv_idx);
+    memset(x11_path, 0, MAX_TXT_LEN);
+    snprintf(x11_path, MAX_TXT_LEN-1, UNIX_X11_SOCKET_PREFIX, display_srv_idx);
     }
   if (result == 0)
     {
-    if (init_alloc_display(randid, sock_fd, srv_idx))
+    if (init_alloc_display(randid, sock_fd, srv_idx, x11_path))
       {
-      KERR("%d", srv_idx);
+      KERR("ERROR %d", srv_idx);
       if (send_msg_type_x11_init(randid, sock_fd, 0, "KO"))
         result = -1;
       }
     else
       {
       if (strlen(magic_cookie) != 2*MAGIC_COOKIE_LEN)
-        KOUT("%s", magic_cookie);
+        KOUT("ERROR %s", magic_cookie);
       else if (pty_fork_xauth_add_magic_cookie(srv_idx, magic_cookie))
         {
-        KERR("%s", magic_cookie);
+        KERR("ERROR %s", magic_cookie);
         if (send_msg_type_x11_init(randid, sock_fd, 0, "KO"))
           result = -1;
         }
@@ -543,7 +570,10 @@ int x11_init_cli_msg(uint32_t randid, int sock_fd, char *magic_cookie)
         {
         strcpy(g_display[srv_idx-SRV_IDX_MIN]->magic_cookie, magic_cookie);
         if (send_msg_type_x11_init(randid, sock_fd, srv_idx, "OK"))
+          {
+          KERR("ERROR");
           result = -1;
+          }
         }
       }
     }
@@ -554,13 +584,13 @@ int x11_init_cli_msg(uint32_t randid, int sock_fd, char *magic_cookie)
 /****************************************************************************/
 int x11_alloc_display(uint32_t randid, int srv_idx)
 {
-  int fd, port, result = 0;
+  int fd, result = 0;
   t_display_x11 *disp;
   if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
-    KOUT("%d", srv_idx);
+    KOUT("ERROR %d", srv_idx);
   disp = find_disp(srv_idx);
   if (!disp)
-    KERR("%d", srv_idx);
+    KERR("ERROR %d", srv_idx);
   else
     {
     disp->srv_idx_acked = 1;
@@ -639,7 +669,7 @@ void x11_fdset(fd_set *readfds, fd_set *writefds)
       for (j=1; j<MAX_IDX_X11; j++)
         {
         conn = cur->conn[j];
-        if ((conn) && (conn->threads_on) && (conn->sock_fd_ass != -1))
+        if ((conn) && (conn->threads_on) && (conn->sock_ass_fd != -1))
           {
           if (!mdl_fd_is_valid(conn->diag_main_fd))
             KERR("ERROR diag_main_fd");
@@ -679,7 +709,7 @@ void x11_fdisset(fd_set *readfds, fd_set *writefds)
       for (j=1; j<MAX_IDX_X11; j++)
         {
         conn = g_display[srv_idx-SRV_IDX_MIN]->conn[j];
-        if ((conn) && (conn->threads_on) && (conn->sock_fd_ass != -1)) 
+        if ((conn) && (conn->threads_on) && (conn->sock_ass_fd != -1)) 
           {
           if (FD_ISSET(conn->diag_main_fd, readfds))
             {
@@ -744,11 +774,9 @@ void x11_info_flow(uint32_t randid, int sock_fd, int srv_idx, int cli_idx,
     KOUT("%d", srv_idx);
   disp = g_display[srv_idx-SRV_IDX_MIN];
   if (!disp)
-    KERR("%d %d %d", sock_fd, srv_idx, cli_idx);
+    KERR("ERROR %d %d %d", sock_fd, srv_idx, cli_idx);
   else if (disp->conn[cli_idx])
-    {
     conn = disp->conn[cli_idx];
-    }
 }
 /*--------------------------------------------------------------------------*/
 

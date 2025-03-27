@@ -19,9 +19,9 @@ Ovs port naming convention
 ==========================
 
 All endpoint items are ports as viewed by openvswitch, the first part of the
-naming convention is that kvm virtual machine, cru, doc and pod containers,
-tap, nat, a2b and c2c all have a unique number obj_id given at creation in
-cloonix. Number given by cfg_alloc_obj_id() function in the code.
+naming convention is that kvm virtual machine, crun containers, tap, nat,
+a2b and c2c all have a unique number obj_id given at creation in cloonix.
+Number given by cfg_alloc_obj_id() function in the code.
 
 For an interface of a vm or container, the number of the interface is appended
 to this identifier and to simplify, for tap, nat or c2c, a zero is appended.

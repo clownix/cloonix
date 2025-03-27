@@ -50,7 +50,7 @@ static void free_head_backup(t_flagseq *flseq)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void tcp_qstore_enqueue_backup(t_flagseq *flseq, t_qstore *cur)
+static void tcp_qstore_backup(t_flagseq *flseq, t_qstore *cur)
 {
   if (flseq->head_qstore_backup == NULL)
     {
@@ -90,7 +90,7 @@ uint8_t *tcp_qstore_get_backup(t_flagseq *flseq, int rank,
     }
   if (cur)
     {
-    alloc_len = flseq->offset + cur->data_len + flseq->post_chk;
+    alloc_len = flseq->offset + cur->data_len + END_FRAME_ADDED_CHECK_LEN;
     data = (uint8_t *) utils_malloc(alloc_len);
     memcpy(data + flseq->offset, cur->data, cur->data_len);
     *data_len = cur->data_len;
@@ -116,7 +116,7 @@ uint8_t *tcp_qstore_dequeue(t_flagseq *flseq, int *data_len, int local_seq)
     }
   else
     {
-    alloc_len = flseq->offset + cur->data_len + flseq->post_chk;
+    alloc_len = flseq->offset + cur->data_len + END_FRAME_ADDED_CHECK_LEN;
     data = (uint8_t *) utils_malloc(alloc_len);
     memcpy(data + flseq->offset, cur->data, cur->data_len);
     *data_len = cur->data_len; 
@@ -144,7 +144,7 @@ uint8_t *tcp_qstore_dequeue(t_flagseq *flseq, int *data_len, int local_seq)
     flseq->nb_qstore_backup += 1;
     cur->next = NULL;
     cur->local_seq = local_seq;
-    tcp_qstore_enqueue_backup(flseq, cur);
+    tcp_qstore_backup(flseq, cur);
     }
   return data;
 }
@@ -157,7 +157,6 @@ void tcp_qstore_enqueue(t_flagseq *flseq, int data_len, uint8_t *data)
   int llid_prxy = get_llid_prxy();
   uint64_t delta;
   char sig_buf[2*MAX_PATH_LEN];
-
   if (cur == NULL)
     KOUT("ERROR MALLOC");
   flseq->total_enqueue += (unsigned long long) data_len;
@@ -265,7 +264,6 @@ void tcp_qstore_init(t_flagseq *flseq)
   flseq->offset = ETHERNET_HEADER_LEN +
                   IPV4_HEADER_LEN +
                   TCP_HEADER_LEN;
-  flseq->post_chk = END_FRAME_ADDED_CHECK_LEN;
 }
 /*--------------------------------------------------------------------------*/
 

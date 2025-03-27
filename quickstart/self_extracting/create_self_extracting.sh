@@ -2,16 +2,14 @@
 #-----------------------------------------------------------------------------
 HERE=`pwd`
 #-----------------------------------------------------------------------------
+RESULT="${HOME}/cloonix-extractor-45-01.sh"
 PATCHELF="/usr/libexec/cloonix/common/cloonix-patchelf"
-XAUTH="/usr/libexec/cloonix/server/xauth"
-TMUX="/usr/libexec/cloonix/server/cloonix-tmux"
 CRUN="/usr/libexec/cloonix/server/cloonix-crun"
 PROXY="/usr/libexec/cloonix/server/cloonix-proxymous"
+XAUTH="/usr/libexec/cloonix/server/xauth"
 LD="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-BASH="/usr/libexec/cloonix/common/bash"
 COMMON_LIBS="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
 #-----------------------------------------------------------------------------
-TMUX_CONF="${HERE}/tools_crun/tmux.conf"
 INIT_CRUN="${HERE}/tools_crun/cloonix-init-starter-crun"
 TEMPLATE="${HERE}/tools_crun/config.json.template"
 STARTUP="${HERE}/tools_crun/readme.sh"
@@ -24,28 +22,22 @@ CONFIG="${EXTRACT}/config"
 BIN="${EXTRACT}/bin"
 ROOT="${EXTRACT}/rootfs/root"
 #-----------------------------------------------------------------------------
-LISTSO="libcrypto.so.3 \
+LISTSO="libxcb.so.1 \
+        libcrypto.so.3 \
         libz.so.1 \
         libzstd.so.1 \
-        libtinfo.so.6 \
-        libstdc++.so.6 \
-        libgcc_s.so.1 \
-        libc.so.6 \
-        libm.so.6 \
         libX11.so.6 \
         libXau.so.6 \
         libXext.so.6 \
         libXmuu.so.1 \
-        libxcb.so.1 \
         libXdmcp.so.6 \
-        libbsd.so.0 \
-        libmd.so.0 \
-        libevent_core-2.1.so.7 \
-        libresolv.so.2"
+        libm.so.6 \
+        libstdc++.so.6 \
+        libgcc_s.so.1 \
+        libc.so.6"
 ZIPFRR="/var/lib/cloonix/bulk/zipfrr.zip"
-RESULT="${HOME}/cloonix_extractor.sh"
 #-----------------------------------------------------------------------------
-for i in ${ZIPBASIC} ${ZIPFRR} ${CRUN} ${LD} ${XAUTH} ${TMUX} ${PROXY} \
+for i in ${ZIPBASIC} ${ZIPFRR} ${CRUN} ${LD} ${PROXY} ${XAUTH} \
          ${TEMPLATE} ${INIT_CRUN} ${STARTUP} ${MAKESELF} ; do
   if [ ! -e ${i} ]; then 
     echo ${i} missing 
@@ -91,12 +83,10 @@ for i in ${LISTSO}; do
   cp -f ${COMMON_LIBS}/${i} ${BIN} 
 done
 #---------------------------------------------------------------------------
-for i in ${LD} ${CRUN} ${PROXY} ${BASH} ${XAUTH} \
-         ${TMUX} ${PATCHELF} ; do
+for i in ${LD} ${CRUN} ${PROXY} ${PATCHELF} ${XAUTH} ; do
   cp -f ${i} ${BIN}
 done
 #-----------------------------------------------------------------------------
-cp -f ${TMUX_CONF} ${CONFIG}
 cp -f ${TEMPLATE}  ${CONFIG}
 cp -f ${INIT_CRUN} ${CONFIG}
 cp -f ${STARTUP}   ${CONFIG}

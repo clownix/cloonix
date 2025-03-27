@@ -215,7 +215,11 @@ static void traf_rx_cb (int llid, int len, char *buf)
   else
     {
     cur->inactivity_count = 0;
-    tcp_flagseq_to_tap(cur->flagseq, len, (uint8_t *) buf);
+    if ((len == 0) ||
+        (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+      KERR("ERROR LEN %d", len);
+    else
+      tcp_flagseq_to_tap(cur->flagseq, len, (uint8_t *) buf);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -317,7 +321,9 @@ void tcp_connect_resp(int is_ko, uint32_t sip, uint32_t dip,
         destroy_tcp_flow(cur);
         }
       else
+        {
         memset(cur->tcp, 0, TCP_HEADER_LEN);
+        }
       }
     }
 }
@@ -373,7 +379,16 @@ void tcp_input(uint8_t *smac, uint8_t *dmac,
                                tcp, data_len, data);
       }
     else
-      KERR("ERROR %X %X %hu %hu len:%d",sip, dip, sport, dport, data_len);
+      {
+      if (data_len)
+        KERR("ERROR %X %X %hu %hu len:%d %hhu",
+             sip, dip, sport, dport, data_len, tcp_flags);
+      else
+        {
+        KERR("WARNING %X %X %hu %hu len:%d %hhu",
+             sip, dip, sport, dport, data_len, tcp_flags);
+        }
+      }
     }
 }
 /*--------------------------------------------------------------------------*/

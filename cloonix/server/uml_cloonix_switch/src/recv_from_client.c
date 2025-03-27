@@ -396,7 +396,7 @@ static int get_dev_kvm_major_minor(int *major, int *minor, char *info)
   int result = -1;
   char err[MAX_PATH_LEN];
   char *buf;
-  if (file_exists(SYS_KVM_DEV, F_OK))
+  if (file_exists(SYS_KVM_DEV, R_OK))
     {
     buf = read_sys_file(SYS_KVM_DEV, err);
     if (buf)
@@ -466,7 +466,7 @@ static int module_access_is_ko(char *dev_file)
 {
   int result = -1;
   int fd;
-  if (access( dev_file, F_OK))
+  if (access( dev_file, R_OK))
     KERR("ERROR %s not found", dev_file);
   else if (!i_have_read_write_access(dev_file))
     KERR("ERROR %s not writable", dev_file);
@@ -522,17 +522,17 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
            "%s/server/cloonix-qemu-system", cfg_get_bin_dir());
   if (test_dev_kvm(info))
     result = -1;
-  else if (!file_exists(qemu_kvm_exe, F_OK))
+  else if (!file_exists(qemu_kvm_exe, R_OK))
     {
     sprintf(info, "File: \"%s\" not found\n", qemu_kvm_exe);
     result = -1;
     }
-  else if (strlen(bz_image) && (!file_exists(bz_image, F_OK)))
+  else if (strlen(bz_image) && (!file_exists(bz_image, R_OK)))
     {
     sprintf(info, "File: \"%s\" not found\n", bz_image);
     result = -1;
     }
-  else if (!file_exists(rootfs, F_OK))
+  else if (!file_exists(rootfs, R_OK))
     {
     sprintf(info, "File: \"%s\" not found \n", rootfs);
     result = -1;
@@ -546,7 +546,7 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
   else if (kvm->vm_config_flags & VM_CONFIG_FLAG_I386)
     {
     iso = "/usr/libexec/cloonix/server/insider_agents/insider_agent_i386.iso";
-    if (!file_exists(iso, F_OK))
+    if (!file_exists(iso, R_OK))
       {
       sprintf(info, "Missing insider_agent_i386.iso "
                     "call cmd_mk_iso_i386 in cloonix dev to create it.\n");
@@ -569,7 +569,7 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info, int nb_eth)
     kvm->mem =  128;
   if (kvm->vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM)
     {
-    if (!file_exists(kvm->install_cdrom, F_OK))
+    if (!file_exists(kvm->install_cdrom, R_OK))
       {
       sprintf(info, "File: \"%s\" not found\n", kvm->install_cdrom);
       result = -1;
@@ -577,7 +577,7 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info, int nb_eth)
     }
   if (kvm->vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM)
     {
-    if (!file_exists(kvm->added_cdrom, F_OK))
+    if (!file_exists(kvm->added_cdrom, R_OK))
       {
       sprintf(info, "File: \"%s\" not found\n", kvm->added_cdrom);
       result = -1;
@@ -585,7 +585,7 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info, int nb_eth)
     }
   if (kvm->vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK)
     {
-    if (!file_exists(kvm->added_disk, F_OK))
+    if (!file_exists(kvm->added_disk, R_OK))
       {
       sprintf(info, "File: \"%s\" not found\n", kvm->added_disk);
       result = -1;
@@ -596,7 +596,7 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info, int nb_eth)
     memset(rootfs, 0, 2*MAX_PATH_LEN);
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
       {
-      if (file_exists(kvm->rootfs_input, F_OK))
+      if (file_exists(kvm->rootfs_input, R_OK))
         {
         strncpy(rootfs, kvm->rootfs_input, MAX_PATH_LEN-1);
         strncpy(kvm->rootfs_used, rootfs, MAX_PATH_LEN-1);
@@ -612,7 +612,7 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info, int nb_eth)
     else
       {
       kvm->vm_config_flags |= VM_FLAG_DERIVED_BACKING;
-      if (file_exists(kvm->rootfs_input, F_OK))
+      if (file_exists(kvm->rootfs_input, R_OK))
         {
         snprintf(kvm->rootfs_backing, MAX_PATH_LEN, 
                  "%s", kvm->rootfs_input);
@@ -1409,7 +1409,7 @@ void recv_sav_vm(int llid, int tid, char *name, char *path)
     {
     send_status_ko(llid, tid, "error MACHINE NOT FOUND");
     }
-  else if (file_exists(path, F_OK))
+  else if (file_exists(path, R_OK))
     {
     send_status_ko(llid, tid, "error FILE ALREADY EXISTS");
     }

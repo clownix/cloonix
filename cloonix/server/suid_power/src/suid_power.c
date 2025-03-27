@@ -687,7 +687,7 @@ int main (int argc, char *argv[])
     KOUT("ERROR %s", argv[4]);
   root = g_root_path;
   crun_init(root);
-  snprintf(g_root_work_kvm,MAX_PATH_LEN-1,"%s/%s", root, CLOONIX_VM_WORKDIR);
+  snprintf(g_root_work_kvm, MAX_PATH_LEN-1, "%s/%s", root, VM_WORKDIR);
   snprintf(ctrl_path,MAX_PATH_LEN-1,"%s/%s", root, SUID_POWER_SOCK_DIR);
   unlink(ctrl_path);
   msg_mngt_heartbeat_init(heartbeat);

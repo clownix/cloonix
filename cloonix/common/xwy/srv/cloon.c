@@ -94,7 +94,7 @@ static int server_loop_wait_cloon(void)
     {
     if (FD_ISSET(g_listen_sock_cloon, &readfds))
       {
-      g_sock_cloon = wrap_accept(g_listen_sock_cloon, fd_type_cloon, 0,
+      g_sock_cloon = wrap_accept(g_listen_sock_cloon, fd_type_cloon,
                                     __FUNCTION__);
       wrap_close(g_listen_sock_cloon, __FUNCTION__);
       g_listen_sock_cloon = -1;

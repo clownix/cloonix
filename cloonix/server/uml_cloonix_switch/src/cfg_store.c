@@ -534,9 +534,9 @@ char *cfg_get_work(void)
 {
   static char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
-  strncpy(path,cfg_get_root_work(),MAX_PATH_LEN-1-strlen(CLOONIX_VM_WORKDIR));
+  strncpy(path, cfg_get_root_work(), MAX_PATH_LEN - 1 - strlen(VM_WORKDIR));
   strcat(path, "/");
-  strcat(path, CLOONIX_VM_WORKDIR);
+  strcat(path, VM_WORKDIR);
   return(path);
 }
 /*---------------------------------------------------------------------------*/

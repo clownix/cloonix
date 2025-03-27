@@ -34,8 +34,8 @@
 #include "tcp_flagseq.h"
 #include "ssh_cisco_nat.h"
 
-static uint8_t g_buf_tx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
-static uint8_t g_buf_rx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_buf_rx[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_buf_tx[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
 static int g_fd_rx_from_tap;
 static int g_fd_tx_to_tap;
 static int g_llid_rxtx;
@@ -61,7 +61,7 @@ void rxtx_tx_enqueue(int len, uint8_t *buf)
   if (spy)
     KERR("%s", spy);
 */
-  if ((len == 0) || (len > MAX_TAP_BUF_LEN+END_FRAME_ADDED_CHECK_LEN))
+  if ((len == 0) || (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
     KERR("ERROR LEN rxtx_tx_enqueue %d", len);
   fct_seqtap_tx(kind_seqtap_data, g_buf_tx, seqtap, len, buf);
   tx = write(g_fd_tx_to_tap, g_buf_tx, len + HEADER_TAP_MSG);

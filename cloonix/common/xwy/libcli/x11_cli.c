@@ -186,13 +186,6 @@ static void x11_connect(int srv_idx, int cli_idx)
     check_fd_unique(x11_fd);
     sub_x11_conn(srv_idx, cli_idx, x11_fd);
     }
-  else if (get_x11_port())
-    {
-    mdl_ip_string_to_int(&inet_addr, "127.0.0.1"); 
-    x11_fd = wrap_socket_connect_inet(inet_addr, get_x11_port(),
-                                      fd_type_x11_connect, __FUNCTION__);
-    sub_x11_conn(srv_idx, cli_idx, x11_fd);
-    }
   else
     {
     KERR("ERROR No display unix path");

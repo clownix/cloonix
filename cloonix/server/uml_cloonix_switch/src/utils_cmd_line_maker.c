@@ -585,8 +585,8 @@ char *utils_get_root_fs(char *rootfs)
     if (get_running_in_crun())
       {
       sprintf(host_root_fs, "%s/%s", cfg_get_bulk_host(), rootfs);
-      if ((!file_exists(root_fs, F_OK)) &&
-          (file_exists(host_root_fs, F_OK)))
+      if ((!file_exists(root_fs, R_OK)) &&
+          (file_exists(host_root_fs, R_OK)))
         {
         memset(root_fs, 0, MAX_PATH_LEN);
         strncpy(root_fs, host_root_fs, MAX_PATH_LEN-1);
@@ -606,12 +606,12 @@ void utils_chk_my_dirs(t_vm *vm)
     KOUT(" ");
   vm_id = vm->kvm.vm_id;
   sprintf(path, "%s", cfg_get_work_vm(vm_id)); 
-  if (!file_exists(path, F_OK))
+  if (!file_exists(path, R_OK))
     KOUT(" ");
-  if (!file_exists(utils_dir_conf_tmp(vm_id), F_OK))
+  if (!file_exists(utils_dir_conf_tmp(vm_id), R_OK))
     KOUT(" ");
   sprintf(path,"%s/%s", cfg_get_work_vm(vm_id),  DIR_UMID);
-  if (!file_exists(path, F_OK))
+  if (!file_exists(path, R_OK))
     KOUT(" ");
 }
 /*---------------------------------------------------------------------------*/

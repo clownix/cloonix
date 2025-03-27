@@ -176,7 +176,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       } 
     else
       {
-      if ((!access(g_ctrl_path, F_OK)) && (!inotify_get_state()))
+      if ((!access(g_ctrl_path, R_OK)) && (!inotify_get_state()))
         {
         status = 0;
         }
@@ -276,12 +276,12 @@ int main (int argc, char *argv[])
   close(fd);
   if (tun_tap_open(snf))
     KOUT("Problem tap %s\n", snf);
-  if (!access(g_ctrl_path, F_OK))
+  if (!access(g_ctrl_path, R_OK))
     {
     KERR("ERROR %s exists ERASING", g_ctrl_path);
     unlink(g_ctrl_path);
     }
-  if (!access(g_snf_path, F_OK))
+  if (!access(g_snf_path, R_OK))
     {
     KERR("ERROR %s exists ERASING", g_snf_path);
     unlink(g_snf_path);

@@ -50,7 +50,7 @@ static char *get_cloonix_config_path(void)
 static int in_cloonix_file_exists(void)
 {
   int err, result = 0;
-  err = access(get_cloonix_config_path(), F_OK);
+  err = access(get_cloonix_config_path(), R_OK);
   if (!err)
     result = 1;
   return result;
@@ -354,7 +354,7 @@ static int get_x11_path(int port, int idx_x11, char *x11_path)
       if (sscanf(display, ":%d", &val) == 1)
         {
         snprintf(x11_path,MAX_PATH_LEN-1,"%s%d",UNIX_X11_SOCKET_PREFIX,val);
-        if (access(x11_path, F_OK))
+        if (access(x11_path, R_OK))
           {
           KERR("X11 socket not found: %s", x11_path);
           memset(x11_path, 0, MAX_PATH_LEN);

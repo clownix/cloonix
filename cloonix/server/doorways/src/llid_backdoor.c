@@ -910,8 +910,9 @@ void llid_backdoor_del_traf(char *name, int llid_backdoor, int dido_llid)
       {
       cur = bvm_traf_find_llid(bvm, dido_llid);
       if (!cur)
-        KOUT("ERROR");
-      bvm_traf_del_llid(bvm, cur);
+        KERR("ERROR");
+      else
+        bvm_traf_del_llid(bvm, cur);
       }
     }
   else

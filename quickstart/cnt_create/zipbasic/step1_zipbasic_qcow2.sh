@@ -1,7 +1,7 @@
 #!/bin/bash
 #----------------------------------------------------------------------------#
 DISTRO="trixie"
-FROM="trixie_amd64.qcow2"
+FROM="trixie.qcow2"
 REPO="http://172.17.0.2/debian/${DISTRO}"
 #REPO="http://deb.debian.org/debian"
 QCOW2="zipbasic.qcow2"

@@ -216,12 +216,12 @@ static int bootp_format_reply(int len, uint8_t *src_mac, uint32_t *addr,
 void dhcp_input(uint8_t *src_mac, uint8_t *dst_mac, int len, uint8_t *data)
 {
   struct bootp_t *bp = (struct bootp_t *)data;
-  uint8_t resp[MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
+  uint8_t resp[TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
   uint32_t addr;
   int resp_len;
   struct bootp_t *rbp;
   uint8_t our_mac_gw[6];
-  memset(resp, 0, MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN);
+  memset(resp, 0, TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN);
   rbp = (struct bootp_t *) &(resp[g_offset]);
   if (bp->bp_op == BOOTP_REQUEST)
     {
@@ -234,7 +234,11 @@ void dhcp_input(uint8_t *src_mac, uint8_t *dst_mac, int len, uint8_t *data)
                             utils_get_gw_ip(), 0xFFFFFFFF,
                             BOOTP_SERVER, BOOTP_CLIENT);
       resp_len += g_offset; 
-      rxtx_tx_enqueue(resp_len, resp);
+      if ((resp_len == 0) ||
+          (resp_len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+        KERR("ERROR LEN  %d", len);
+      else
+        rxtx_tx_enqueue(resp_len, resp);
       }
     }
 }
@@ -295,7 +299,11 @@ void dhcp_arp_management(int len, uint8_t *buf)
       memcpy(arp_sip, tmp_tip, 4);
       memcpy(arp_tha, arp_sha, 6);
       memcpy(arp_sha, mac, 6);
-      rxtx_tx_enqueue(len, buf);
+      if ((len == 0) ||
+          (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+        KERR("ERROR LEN  %d", len);
+      else
+        rxtx_tx_enqueue(len, buf);
       }
     }
 }

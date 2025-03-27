@@ -119,7 +119,7 @@ int util_read (char *ptr, int max, int fd)
   rx_len = read (fd, ptr, max);
   if (rx_len < 0)
     {
-    if ((errno == EAGAIN) || (errno ==EINTR))
+    if ((errno == EAGAIN) || (errno == EINTR) || (errno == EINPROGRESS))
       rx_len = 0;
     }
   else if (rx_len == 0)

@@ -2,22 +2,6 @@
 set -e
 HERE=`pwd`
 #----------------------------------------------------------------------#
-if [ ${#} = 1 ]; then
-  if [ "$1" = "i386" ]; then
-    ARCH="i386"
-  else
-    if [ "$1" = "amd64" ]; then
-      ARCH="amd64"
-    else
-      echo ERROR $0 param must be i386, or amd64
-      exit
-    fi
-  fi
-else
-  ARCH="amd64"
-fi
-#----------------------------------------------------------------------#
-
 ./allclean
 ./patched_create
 
@@ -50,12 +34,7 @@ CONFIGURATION_OPTS="--prefix=/usr/local
                     --enable-gio
                     --without-default-features"
 
-if [ "${ARCH}" = "i386" ]; then
-  CONFIGURATION_OPTS="${CONFIGURATION_OPTS} --target-list=i386-softmmu"
-else
-  CONFIGURATION_OPTS="${CONFIGURATION_OPTS} --target-list=x86_64-softmmu"
-fi
-
+CONFIGURATION_OPTS="${CONFIGURATION_OPTS} --target-list=x86_64-softmmu"
 
 export CFLAGS="-mtune=generic -fno-stack-protector  -g"
 export LDFLAGS="-L${HERE}/../spice_lib_server -lstdc++ "
@@ -67,11 +46,7 @@ make -j 6
 
 echo MOVING QEMU RESULT BIN
 
-if [ "${ARCH}" = "i386" ]; then
-  mv build/qemu-system-i386   ${HERE}/cloonix-qemu-system
-else
-  mv build/qemu-system-x86_64   ${HERE}/cloonix-qemu-system
-fi
+mv build/qemu-system-x86_64   ${HERE}/cloonix-qemu-system
 strip ${HERE}/cloonix-qemu-system
 mv build/qemu-img             ${HERE}/cloonix-qemu-img
 strip ${HERE}/cloonix-qemu-img

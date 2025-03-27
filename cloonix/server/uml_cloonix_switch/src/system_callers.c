@@ -283,7 +283,7 @@ void mk_dtach_screen_dir(void)
   char err[2*MAX_PATH_LEN];
   if (unlink_sub_dir_files(utils_get_dtach_sock_dir(), err))
     KERR("ERROR %s", err);
-  my_mkdir(utils_get_dtach_sock_dir(), 0);
+  my_mkdir(utils_get_dtach_sock_dir(), 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -294,7 +294,7 @@ void mk_ovs_db_dir(void)
   DIR *dirptr;
   struct dirent *ent;
   char *ovsdb_dir = utils_get_ovs_dir();
-  if (!access(ovsdb_dir, F_OK))
+  if (!access(ovsdb_dir, R_OK))
     {
     dirptr = opendir(ovsdb_dir);
     if (dirptr)

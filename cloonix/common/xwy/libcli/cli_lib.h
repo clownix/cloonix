@@ -39,7 +39,7 @@ int xcli_fct_after_epoll(int nb, struct epoll_event *events);
 void xcli_init(int epfd, int llid, int tid, int type,
                t_sock_fd_tx soc_tx, t_sock_fd_ass_open sock_fd_ass_open,
                t_sock_fd_ass_close sock_fd_ass_close, int action,
-               char *src, char *dst, char *cmd);
+               char *src, char *dst, char *cmd, char *net);
 void xcli_killed_x11(int cli_idx);
 
 /*--------------------------------------------------------------------------*/

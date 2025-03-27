@@ -147,6 +147,32 @@ int get_input_params_cloon(int argc, char **argv, int *action,
       result = -1;
       }
     }
+  else if (!strcmp(argv[0], "-ovs"))
+    {
+    if (argc > 1)
+      {
+      *action = action_ovs;
+      *cmd = make_cmd_msg(argc-1, &(argv[1]));
+      }
+    else
+      {
+      printf("\n\nMissing arg command\n\n");
+      result = -1;
+      }
+    }
+  else if (!strcmp(argv[0], "-slf"))
+    {
+    if (argc > 1)
+      {
+      *action = action_slf;
+      *cmd = make_cmd_msg(argc-1, &(argv[1]));
+      }
+    else
+      {
+      printf("\n\nMissing arg command\n\n");
+      result = -1;
+      }
+    }
   else if (!strcmp(argv[0], "-crun"))
     {
     if (argc > 1)

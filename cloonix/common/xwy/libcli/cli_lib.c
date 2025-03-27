@@ -123,6 +123,10 @@ static void send_msg_type_open_pty(int action, uint32_t randid,
       type = msg_type_open_crun;
     else if (action == action_cmd)
       type = msg_type_open_cmd;
+    else if (action == action_ovs)
+      type = msg_type_open_ovs;
+    else if (action == action_slf)
+      type = msg_type_open_slf;
     else
       type = msg_type_open_dae;
     mdl_set_header_vals(msg, randid, type, fd_type_cli, srv_idx, 0);
@@ -257,7 +261,9 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
       send_msg_type_open_pty(g_action, g_randid, srv_idx, g_bash_cmd);
       if ((g_action == action_bash) || 
           (g_action == action_dae)  ||
-          (g_action == action_crun)  ||
+          (g_action == action_crun) ||
+          (g_action == action_ovs)  ||
+          (g_action == action_slf)  ||
           (g_action == action_cmd))
         send_msg_type_win_size(g_randid);
       else
@@ -394,7 +400,9 @@ void xcli_fct_before_epoll(int epfd)
     }
   if ((g_action == action_bash) ||
       (g_action == action_dae)  ||
-      (g_action == action_crun)  ||
+      (g_action == action_crun) ||
+      (g_action == action_ovs)  ||
+      (g_action == action_slf)  ||
       (g_action == action_cmd))
     {
     if (g_action != action_dae)
@@ -431,8 +439,10 @@ void xcli_x11_doors_rx(int cli_idx, int len, char *buf)
 void xcli_traf_doors_rx(int llid, int len, char *buf)
 {
   if ((g_action == action_bash) ||
-      (g_action == action_crun)  ||
+      (g_action == action_crun) ||
       (g_action == action_dae)  ||
+      (g_action == action_ovs)  ||
+      (g_action == action_slf)  ||
       (g_action == action_cmd))
     mdl_read_data(NULL, llid, 0, len, buf, rx_bash_msg_cb, rx_bash_err_cb);
   else
@@ -447,8 +457,10 @@ int xcli_fct_after_epoll(int nb, struct epoll_event *events)
   uint32_t evts; 
 
   if ((g_action == action_bash) ||
-      (g_action == action_crun)  ||
+      (g_action == action_crun) ||
       (g_action == action_dae)  ||
+      (g_action == action_ovs)  ||
+      (g_action == action_slf)  ||
       (g_action == action_cmd))
     {
     for(i=0; i<nb; i++)
@@ -488,7 +500,7 @@ static int is_valid_fd(int fd)
 void xcli_init(int epfd, int llid, int tid, int type,
                t_sock_fd_tx soc_tx, t_sock_fd_ass_open sock_fd_ass_open,
                t_sock_fd_ass_close sock_fd_ass_close, int action,
-               char *src, char *dst, char *cmd)
+               char *src, char *dst, char *cmd, char *net)
 {
   struct timeval tv;
   int win_chg_fd;
@@ -522,14 +534,16 @@ void xcli_init(int epfd, int llid, int tid, int type,
   srand((int)tv.tv_usec);
   g_randid = (uint32_t) rand();
   x11_cli_init(sock_fd_ass_close);
-  x11_init_magic();
+  x11_init_magic(net);
   x11_tx_init();
   mdl_open(0, fd_type_cli, NULL, NULL);
   mdl_open(1, fd_type_one, wrap_write_one, wrap_read_kout);
   send_msg_type_randid(g_randid);
   if ((action == action_bash) ||
       (action == action_dae)  ||
-      (action == action_crun)  ||
+      (action == action_crun) ||
+      (action == action_ovs)  ||
+      (action == action_slf)  ||
       (action == action_cmd))
     {
     if (action == action_dae)

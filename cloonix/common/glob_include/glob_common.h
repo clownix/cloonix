@@ -102,14 +102,15 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define PROXYMARKUP_START "proxymarkup_crun_data_start:"
 #define PROXYMARKUP_END ":proxymarkup_crun_data_end"
 
-#define TRAF_TAP_BUF_LEN 1400
-#define MAX_TAP_BUF_LEN 1510
+
+
 #define HEADER_TAP_MSG 8
+#define TRAF_TAP_BUF_LEN 1510
+#define TRAF_TAP_MINUS_TCP 1448
 #define END_FRAME_ADDED_CHECK_LEN 4
+
+
 #define MAX_DGRAM_LEN 2048
-
-
-
 #define MAX_ICMP_RXTX_LEN 1514
 #define MAX_ICMP_RXTX_SIG_LEN 4000
 
@@ -172,7 +173,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define VM_FLAG_CLOONIX_AGENT_PING_OK  0x80000
 
 #define DIR_UMID "umid"
-#define CLOONIX_VM_WORKDIR "vm"
+#define VM_WORKDIR "vm"
 
 #define MSG_DIGEST_LEN 32
 
@@ -181,6 +182,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define DOORS_CTRL_SOCK "doors_ctrl_sock"
 #define SPICE_SOCK "spice_sock"
 #define CLOONIX_SWITCH "cloonix_switch"
+#define XWY_X11_SOCK "xwy_x11"
 #define XWY_TRAFFIC_SOCK "xwy_traf"
 #define XWY_CONTROL_SOCK "xwy_ctrl"
 #define SUID_POWER_SOCK_DIR "suid_power"

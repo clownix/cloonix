@@ -57,7 +57,7 @@
 #define QGA_SCRIPT_LAUNCH \
                 "#!/bin/sh\n"\
                 "mkdir -p /mnt/cloonix_config_fs\n"\
-                "mount /dev/sr0 /mnt/cloonix_config_fs\n"\
+                "mount -t iso9660 /dev/sr0 /mnt/cloonix_config_fs\n"\
                 "mount -o remount,exec /dev/sr0\n"\
                 "/mnt/cloonix_config_fs/cloonix-agent\n"\
                 "/mnt/cloonix_config_fs/cloonix-dropbear-sshd\n"

@@ -365,9 +365,9 @@ int main (int argc, char *argv[])
   msg_mngt_init("c2c", TRAF_TAP_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
   rxtx_init(fd_rx_from_tap, fd_tx_to_tap);
-  if (!access(g_ctrl_path, F_OK))
+  if (!access(g_ctrl_path, R_OK))
     unlink(g_ctrl_path);
-  if (!access(g_c2c_path, F_OK))
+  if (!access(g_c2c_path, R_OK))
     unlink(g_c2c_path);
   string_server_unix(g_ctrl_path, connect_from_ctrl_client, "ctrl");
   daemon(0,0);

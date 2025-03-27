@@ -28,7 +28,7 @@ mkdir -p /usr/libexec/cloonix/common
 cp -rf /tmp/cloonix_install_tmp/common/* /usr/libexec/cloonix/common
 rm -rf /usr/libexec/cloonix/common/usr_bin
 chown -R root:root /usr/libexec/cloonix/common
-chmod 755 /usr/libexec/cloonix/common/*
+chmod -R 755 /usr/libexec/cloonix/common/*
 #----------------------------------------------------------
 for i in  "cloonix_cli" \
           "cloonix_gui" \
@@ -44,11 +44,13 @@ for i in  "cloonix_cli" \
           "cloonix_wsk" ; do
   cp -vf /tmp/cloonix_install_tmp/common/usr_bin/${i} /usr/bin
   cp -vf /tmp/cloonix_install_tmp/common/usr_bin/${i} /usr/libexec/cloonix/common
+  chmod 755 /usr/bin/${i}
 done
 #----------------------------------------------------------
 if [ "${PURE_CRUN}" = "no" ]; then
   cp -vf /tmp/cloonix_install_tmp/common/usr_bin/cloonix_ice /usr/bin
   cp -vf /tmp/cloonix_install_tmp/common/usr_bin/cloonix_ice /usr/libexec/cloonix/common
+  chmod 755 /usr/bin/cloonix_ice
   if [ -d /usr/share/polkit-1/actions ]; then
     dstusb="/usr/share/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
     srcusb="/tmp/cloonix_install_tmp/common/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
@@ -63,9 +65,17 @@ mkdir -p /usr/libexec/cloonix/server
 cp -rf /tmp/cloonix_install_tmp/server/* /usr/libexec/cloonix/server
 rm -rf /usr/libexec/cloonix/server/usr_bin
 chown -R root:root /usr/libexec/cloonix/server
-chmod 755 /usr/libexec/cloonix/server/*
 #----------------------------------------------------------
 cp -vf /tmp/cloonix_install_tmp/server/usr_bin/cloonix_net /usr/bin
+chmod 755 /usr/bin/cloonix_net
+#----------------------------------------------------------
+chmod 755 /usr/libexec/cloonix
+chmod 755 /usr/libexec/cloonix/common
+chmod 755 /usr/libexec/cloonix/server
+chmod 755 /usr/libexec/cloonix/common/*
+chmod 755 /usr/libexec/cloonix/server/*
+chmod 755 /usr/libexec/cloonix/server/qemu/*
+chmod 755 /usr/libexec/cloonix/server/ovsschema/*
 #----------------------------------------------------------
 for i in "cloonix-crun" \
          "cloonix-proxymous" \

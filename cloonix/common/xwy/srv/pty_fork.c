@@ -39,6 +39,7 @@
 #include "thread_tx.h"
 
 void hide_real_machine_serv(void);
+int display_add_rank(int net_rank, int srv_idx);
 
 #define MAX_ARGC 100
 
@@ -51,10 +52,8 @@ typedef struct t_pty_cli
   struct t_pty_cli *prev;
   struct t_pty_cli *next;
 }t_pty_cli;
-
 static t_pty_cli *g_pty_cli_head;
-
-
+static int g_net_rank;
 static int g_sig_write_fd;
 static int g_sig_read_fd;
 static int g_listen_sock_cloon;
@@ -65,7 +64,7 @@ static struct timeval g_last_cloonix_tv;
 
 
 /****************************************************************************/
-static t_pty_cli *find_with_sock_fd(int sock_fd)
+static t_pty_cli *find_with_fd(int sock_fd)
 {
   t_pty_cli *cur = g_pty_cli_head;
   while(cur)
@@ -82,7 +81,7 @@ static t_pty_cli *find_with_sock_fd(int sock_fd)
 static void pty_cli_alloc(int pty_fd, int pid, int sock_fd, uint32_t randid)
 {
   int i;
-  t_pty_cli *cli = find_with_sock_fd(sock_fd);
+  t_pty_cli *cli = find_with_fd(sock_fd);
   if (cli)
     KERR("ERROR  pty_fd:%d pid:%d sock_fd:%d", pty_fd, pid, sock_fd);
   else
@@ -190,24 +189,29 @@ static void clean_xauthority(char *xauthority_file, char *end_file)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_env_display(int display_val, char *ttyname)
+static void create_env_display(int net_rank, int display_val, char *ttyname)
 {
   char rdir[MAX_PATH_LEN];
-  char disp_str[MAX_TXT_LEN];
+  char disp_xwy[MAX_TXT_LEN];
+  char disp_X11[MAX_TXT_LEN];
   char *net = g_net_name;
   char *px86_64="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/qt6/plugins";
-  char *pi386="/usr/libexec/cloonix/common/lib/i386-linux-gnu/qt6/plugins";
+  int display_val_rank;
+  memset(disp_xwy, 0, MAX_TXT_LEN);
+  memset(disp_X11, 0, MAX_TXT_LEN);
   setenv("PATH",  "/usr/libexec/cloonix/common:/usr/libexec/cloonix/server", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
   setenv("XAUTHORITY", g_xauthority, 1);
   setenv("SHELL", "/usr/libexec/cloonix/server/cloonix-bash", 1);
   setenv("TERM", "xterm", 1);
-  memset(disp_str, 0, MAX_TXT_LEN);
   if (display_val > 0)
     {
-    snprintf(disp_str, MAX_TXT_LEN-1, "127.0.0.1:%d.0", display_val);
-    setenv("DISPLAY", disp_str, 1);
+    display_val_rank = display_add_rank(net_rank, display_val);
+    snprintf(disp_xwy, MAX_TXT_LEN-1, "%s_%d", XWY_X11_SOCK, display_val);
+    snprintf(disp_X11, MAX_TXT_LEN-1, ":%d", display_val_rank);
+    setenv("XWY_DISPLAY", disp_xwy, 1);
+    setenv("DISPLAY", disp_X11, 1);
     if (strlen(ttyname))
       setenv("SSH_TTY", ttyname, 1);
     }
@@ -224,12 +228,7 @@ static void create_env_display(int display_val, char *ttyname)
   setenv("NO_AT_BRIDGE", "1", 1);
   setenv("QT_X11_NO_MITSHM", "1", 1);
   setenv("QT_XCB_NO_MITSHM", "1", 1);
-  if (wrap_file_exists(pi386))
-    {
-    setenv("QT_PLUGIN_PATH", pi386, 1);
-    setenv("PIPEWIRE_MODULE_DIR", "/usr/libexec/cloonix/common/lib/i386-linux-gnu/pipewire-0.3", 1);
-    }
-  else if (wrap_file_exists(px86_64))
+  if (wrap_file_exists(px86_64))
     {
     setenv("QT_PLUGIN_PATH", px86_64, 1);
     setenv("PIPEWIRE_MODULE_DIR", "/usr/libexec/cloonix/common/lib/x86_64-linux-gnu/pipewire-0.3", 1);
@@ -304,7 +303,7 @@ static void sigusr1_child_handler(int dummy)
 
 /****************************************************************************/
 void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
-                         char *cmd, int display_val)
+                         char *cmd, int net_rank, int display_val)
 {
   char ttyname[MAX_TXT_LEN], *argv[MAX_ARGC];
   int i, pty_fd=-1, ttyfd=-1, pid;
@@ -328,7 +327,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
   if (pid == 0)
     {
     clearenv();
-    create_env_display(display_val, ttyname); 
+    create_env_display(net_rank, display_val, ttyname); 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_DFL);
     if (signal(SIGUSR1, sigusr1_child_handler) == SIG_ERR)          
@@ -373,9 +372,13 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
         ptr = cmd;
       create_argv_from_crun(ptr, argv);
       }
-    else  if ((action == action_cmd) || (action == action_dae))
+    else  if ((action == action_cmd) ||
+              (action == action_dae) ||
+              (action == action_ovs) ||
+              (action == action_slf))
       {
-      hide_real_machine_serv();
+      if ((action == action_cmd) || (action == action_dae))
+        hide_real_machine_serv();
       create_argv_from_cmd(cmd, argv);
       }
     else
@@ -411,10 +414,10 @@ static int cli_pty_fd_action(t_pty_cli *cli)
     if ((errno == EINTR) || (errno == EAGAIN))
       result = 0;
     else
-      KERR("ERROR cli_pty_fd_action pty_fd:%d %s",cli->pty_fd,strerror(errno));
+      KERR("ERROR %d %d %d", cli->sock_fd, cli->pty_fd, errno); 
     }
   else if (len == 0)
-    KERR("ERROR ZERO cli_pty_fd_action pty_fd:%d", cli->pty_fd);
+    KERR("ERROR %d %d", cli->sock_fd, cli->pty_fd); 
   else
     {
     mdl_set_header_vals(msg, cli->randid, msg_type_data_cli_pty,
@@ -422,12 +425,10 @@ static int cli_pty_fd_action(t_pty_cli *cli)
     msg->len = len;
     result = mdl_queue_write_msg(cli->sock_fd, msg);
     if (result)
-      KERR("ERROR cli_pty_fd_action mdl_queue_write_msg sock_fd:%d pty_fd:%d",
-            cli->sock_fd, cli->pty_fd); 
+      KERR("ERROR %d %d", cli->sock_fd, cli->pty_fd); 
     }
   if (result)
     {
-    KERR("ERROR cli_pty_fd_action pty_fd:%d", cli->pty_fd); 
     wrap_close(cli->pty_fd, __FUNCTION__);
     mdl_close(cli->pty_fd);
     cli->pty_fd = -1;
@@ -500,7 +501,8 @@ static void child_exit(int sig)
 /****************************************************************************/
 int pty_fork_xauth_add_magic_cookie(int display_val, char *magic_cookie)
 {
-  return xauth_add_magic_cookie(display_val, magic_cookie);
+  int display_val_rank = display_add_rank(g_net_rank, display_val);
+  return xauth_add_magic_cookie(display_val_rank, magic_cookie);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -591,7 +593,7 @@ int pty_fork_get_max_fd(int val)
 void pty_fork_msg_type_win_size(int sock_fd, int len, char *buf)
 {
   char win_size_buf[16];
-  t_pty_cli *cli = find_with_sock_fd(sock_fd);
+  t_pty_cli *cli = find_with_fd(sock_fd);
   if (cli)
     {
     if (len > 16)
@@ -609,7 +611,7 @@ void pty_fork_msg_type_win_size(int sock_fd, int len, char *buf)
 /****************************************************************************/
 void pty_fork_msg_type_data_pty(int sock_fd, t_msg *msg)
 {
-  t_pty_cli *cli = find_with_sock_fd(sock_fd);
+  t_pty_cli *cli = find_with_fd(sock_fd);
   if (cli)
     {
     if (cli->pty_fd != -1)
@@ -621,10 +623,10 @@ void pty_fork_msg_type_data_pty(int sock_fd, t_msg *msg)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int pty_fork_free_with_sock_fd(int sock_fd)
+int pty_fork_free_with_fd(int sock_fd)
 {
   int result = -1;
-  t_pty_cli *cli = find_with_sock_fd(sock_fd);
+  t_pty_cli *cli = find_with_fd(sock_fd);
   if (cli)
     {
     result = 0;
@@ -635,14 +637,15 @@ int pty_fork_free_with_sock_fd(int sock_fd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void pty_fork_init(char *cloonix_net_name)
+void pty_fork_init(char *net_name, int net_rank)
 {
   char cmd[2 * MAX_PATH_LEN];
   int pipe_fd[2];
   memset(g_net_name, 0, MAX_TXT_LEN);
   memset(g_xauthority, 0, MAX_TXT_LEN);
   memset(cmd, 0, 2 * MAX_PATH_LEN);
-  strncpy(g_net_name, cloonix_net_name, MAX_TXT_LEN-1);
+  strncpy(g_net_name, net_name, MAX_TXT_LEN-1);
+  g_net_rank = net_rank;
   if (signal(SIGCHLD, child_exit) == SIG_ERR)
     KERR("ERROR %s", strerror(errno));
   snprintf(g_xauthority, MAX_TXT_LEN-1,

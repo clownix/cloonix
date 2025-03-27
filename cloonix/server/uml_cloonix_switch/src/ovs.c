@@ -198,8 +198,8 @@ static void ovs_watchdog(void *data)
               (!cur->pid) || 
               (!cur->periodic_count)))
     {
-    KERR("ERROR OVS %s TIMEOUT %s %d %d %d", cur->name, mu->name,
-                                   cur->llid, cur->pid, cur->periodic_count);
+    KERR("ERROR OVS %s TIMEOUT %s %d %d %d",
+         cur->name, mu->name, cur->llid, cur->pid, cur->periodic_count);
     ovs_destroy();
     }
   clownix_free(data, __FUNCTION__);
@@ -238,7 +238,7 @@ static int create_ovs_drv_process(char *name)
   strncpy(arg_ovsx->sock, sock, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->ovsx_bin, ovsx_bin, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->db_dir, ovs_db_dir, MAX_PATH_LEN-1);
-  if (file_exists(sock, F_OK))
+  if (file_exists(sock, R_OK))
     unlink(sock);
   if (!file_exists(bin_path, X_OK))
     KERR("ERROR %s Does not exist or not exec", bin_path);
@@ -256,7 +256,7 @@ static int create_ovs_drv_process(char *name)
   strncpy(arg_ovsx->sock, sock, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->ovsx_bin, ovsx_bin, MAX_PATH_LEN-1);
   strncpy(arg_ovsx->db_dir, ovs_db_dir, MAX_PATH_LEN-1);
-  clownix_timeout_add(2000, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
+  clownix_timeout_add(4000, ovs_watchdog, (void *) arg_ovsx, NULL, NULL);
   return pid;
 }
 /*--------------------------------------------------------------------------*/
@@ -652,7 +652,7 @@ static void ovs_destroy_test(void)
         cur->ovs_pid = 0;
         }
       sock = utils_get_ovs_path(cur->name);
-      if (!access(sock,F_OK))
+      if (!access(sock,R_OK))
         unlink(sock);
       }
     }

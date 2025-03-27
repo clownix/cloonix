@@ -57,7 +57,6 @@ static uint32_t g_our_dns_ip;
 static uint32_t g_host_dns_ip;
 static uint32_t g_host_local_ip;
 static uint32_t g_offset;
-static uint32_t g_post_chk;
 static t_udp_flow *g_head_udp_flow;
 /*--------------------------------------------------------------------------*/
 char *get_nat_name(void);
@@ -113,10 +112,11 @@ static int rx_proxy_cb(int llid, int fd)
 {
   socklen_t slen;
   int data_len;
-  uint8_t buf[MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
+  uint8_t buf[ TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
   uint8_t *data;
   t_udp_flow *cur;
-  int max_ln = MAX_TAP_BUF_LEN - g_offset;
+  int max_ln = TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN;
+  max_ln -= g_offset;
   slen = 0;
   data = &(buf[g_offset]);
   data_len = recvfrom(fd, data, max_ln, 0, NULL, &slen);
@@ -131,7 +131,7 @@ static int rx_proxy_cb(int llid, int fd)
       {
       utils_fill_udp_packet(buf, data_len, cur->dmac, cur->smac,
                             cur->dip, cur->sip, cur->dport, cur->sport);
-      rxtx_tx_enqueue(g_offset + data_len + g_post_chk, buf);
+      rxtx_tx_enqueue(g_offset + data_len, buf);
       }
     }
   return data_len;
@@ -498,6 +498,5 @@ void udp_init(void)
   g_offset = ETHERNET_HEADER_LEN +
              IPV4_HEADER_LEN     +
              UDP_HEADER_LEN; 
-  g_post_chk = END_FRAME_ADDED_CHECK_LEN;
 }
 /*--------------------------------------------------------------------------*/

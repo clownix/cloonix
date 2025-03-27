@@ -89,7 +89,7 @@ static void xdoors_ok(int llid, int tid, int type, int cli_idx)
     {
     xcli_init(msg_mngt_get_epfd(), llid, tid, type, sock_fd_tx,
               sock_fd_ass_open, sock_fd_ass_close,
-              g_action, g_src, g_dst, g_cmd);
+              g_action, g_src, g_dst, g_cmd, g_net);
     channel_add_epoll_hooks(xcli_fct_before_epoll, xcli_fct_after_epoll);
     }
   else

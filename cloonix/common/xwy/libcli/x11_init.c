@@ -33,6 +33,7 @@
 #include "debug.h"
 #include "getsock.h"
 #include "glob_common.h"
+#include "util_sock.h"
 
 static char g_x11_path[MAX_TXT_LEN];
 static int  g_x11_port;
@@ -148,16 +149,17 @@ static int get_xauth_magic(char *display, char *err)
 /****************************************************************************/
 static int x11_init_unix(char *display, int num)
 {
-  int val, result = -1;
+  int fd, val, result = -1;
   char err[MAX_TXT_LEN];
   snprintf(g_x11_path, MAX_TXT_LEN-1, UNIX_X11_SOCKET_PREFIX, num);
-  if (access(g_x11_path, F_OK))
+  if (wrap_util_proxy_client_socket_unix(g_x11_path, &fd))
     {
-    KERR("X11 socket not found: %s", g_x11_path);
+    KERR("X11 SOCKET NOT FOUND: %s", g_x11_path);
     memset(g_x11_path, 0, MAX_TXT_LEN);
     }
   else
     {
+    close(fd);
     result = 0;
     }
   return result;

@@ -43,7 +43,7 @@ static int tx_write(char *msg, int len, int fd)
   tx_len = write(fd, (unsigned char *) msg, len);
   if (tx_len < 0)
     {
-    if ((errno == EAGAIN) || (errno == EINTR))
+    if ((errno == EAGAIN) || (errno == EINTR) || (errno == EINPROGRESS))
       tx_len = 0;
     }
   return tx_len;

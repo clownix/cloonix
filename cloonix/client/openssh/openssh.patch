@@ -1,6 +1,6 @@
 diff -Naur openssh-portable/kex.c tainted_openssh-portable/kex.c
---- openssh-portable/kex.c	2025-03-07 19:52:26.000000000 +0100
-+++ tainted_openssh-portable/kex.c	2025-03-09 19:57:17.921815074 +0100
+--- openssh-portable/kex.c	2025-03-24 11:25:17.000000000 +0100
++++ tainted_openssh-portable/kex.c	2025-03-24 11:48:12.785977567 +0100
 @@ -1232,7 +1232,7 @@
   * Returns on 0 success or a ssherr.h code on failure.
   */
@@ -40,8 +40,8 @@ diff -Naur openssh-portable/kex.c tainted_openssh-portable/kex.c
  		oerrno = errno;
  		error_fr(r, "sshbuf_consume_end");
 diff -Naur openssh-portable/kex.h tainted_openssh-portable/kex.h
---- openssh-portable/kex.h	2025-03-07 19:52:26.000000000 +0100
-+++ tainted_openssh-portable/kex.h	2025-03-09 19:57:17.921815074 +0100
+--- openssh-portable/kex.h	2025-03-24 11:25:17.000000000 +0100
++++ tainted_openssh-portable/kex.h	2025-03-24 11:48:12.785977567 +0100
 @@ -198,7 +198,8 @@
      const char *, const char *, const char *, const char *, const char *);
  void	 kex_proposal_free_entries(char *prop[PROPOSAL_MAX]);
@@ -53,8 +53,8 @@ diff -Naur openssh-portable/kex.h tainted_openssh-portable/kex.h
  struct kex *kex_new(void);
  int	 kex_ready(struct ssh *, char *[PROPOSAL_MAX]);
 diff -Naur openssh-portable/Makefile.in tainted_openssh-portable/Makefile.in
---- openssh-portable/Makefile.in	2025-03-07 19:52:26.000000000 +0100
-+++ tainted_openssh-portable/Makefile.in	2025-03-09 19:57:17.925815099 +0100
+--- openssh-portable/Makefile.in	2025-03-24 11:25:17.000000000 +0100
++++ tainted_openssh-portable/Makefile.in	2025-03-24 11:48:12.785977567 +0100
 @@ -50,7 +50,7 @@
  LD=@LD@
  CFLAGS=@CFLAGS@
@@ -83,8 +83,8 @@ diff -Naur openssh-portable/Makefile.in tainted_openssh-portable/Makefile.in
  XMSS_OBJS=\
  	ssh-xmss.o \
 diff -Naur openssh-portable/misc.c tainted_openssh-portable/misc.c
---- openssh-portable/misc.c	2025-03-07 19:52:26.000000000 +0100
-+++ tainted_openssh-portable/misc.c	2025-03-09 19:57:17.925815099 +0100
+--- openssh-portable/misc.c	2025-03-24 11:25:17.000000000 +0100
++++ tainted_openssh-portable/misc.c	2025-03-24 11:48:12.785977567 +0100
 @@ -508,20 +508,8 @@
  
  	copy->pw_name = xstrdup(pw->pw_name);
@@ -168,8 +168,8 @@ diff -Naur openssh-portable/misc.c tainted_openssh-portable/misc.c
  	/* Make sure directory has a trailing '/' */
  	slash = (len = strlen(pw->pw_dir)) == 0 || pw->pw_dir[len - 1] != '/';
 diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
---- openssh-portable/scp.c	2025-03-07 19:52:26.000000000 +0100
-+++ tainted_openssh-portable/scp.c	2025-03-09 19:57:43.469975014 +0100
+--- openssh-portable/scp.c	2025-03-24 11:25:17.000000000 +0100
++++ tainted_openssh-portable/scp.c	2025-03-24 11:53:25.697363308 +0100
 @@ -134,6 +134,7 @@
  #include "progressmeter.h"
  #include "utf8.h"
@@ -398,7 +398,7 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
  /* Appends a string to an array; returns 0 on success, -1 on alloc failure */
  static int
  append(char *cp, char ***ap, size_t *np)
-@@ -1014,302 +1002,79 @@
+@@ -1014,301 +1002,76 @@
  	return ret;
  }
  
@@ -459,9 +459,10 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
 +  free(thost);
  }
  
--void
+ void
 -toremote(int argc, char **argv, enum scp_mode_e mode, char *sftp_direct)
--{
++tolocal(int argc, char **argv)
+ {
 -	char *suser = NULL, *host = NULL, *src = NULL;
 -	char *bp, *tuser, *thost, *targ;
 -	int sport = -1, tport = -1;
@@ -489,7 +490,7 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
 -			goto out;
 -		}
 -	}
- 
+-
 -	/* Parse source files */
 -	for (i = 0; i < argc - 1; i++) {
 -		free(suser);
@@ -510,7 +511,7 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
 -		}
 -		if (host && throughlocal) {	/* extended remote to remote */
 -			if (mode == MODE_SFTP) {
--				if (remin == -1) {
+-				if (remin == -1 || conn == NULL) {
 -					/* Connect to dest now */
 -					conn = do_sftp_connect(thost, tuser,
 -					    tport, sftp_direct,
@@ -654,12 +655,36 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
 -	free(suser);
 -	free(host);
 -	free(src);
--}
++  char *bp, *host = NULL, *src = NULL, *suser = NULL;
++  int i;
++  for (i = 0; i < argc - 1; i++)
++    {
++    if (!(src = colon(argv[i])))
++      {
++      fprintf(stderr, "LOCAL TO LOCAL NOT IMPLEMENTED\n");
++      exit(255);
++      }
++    *src++ = 0;
++    if (*src == 0)
++      src = ".";
++    host = argv[i];
++    suser = NULL;
++    xasprintf(&bp, "%s -f %s%s", cmd, *src == '-' ? "-- " : "", src);
++    if (do_cmd1(ssh_program, host, suser, -1, bp, &remin, &remout) < 0)
++      { 
++      fprintf(stderr, "do_cmd error TOLOOK\n");
++      exit(255);
++      } 
++    free(bp);
++    sink(1, argv + argc - 1, src);
++    (void) close(remin);
++    remin = remout = -1;
++    }
+ }
  
- void
+-void
 -tolocal(int argc, char **argv, enum scp_mode_e mode, char *sftp_direct)
-+tolocal(int argc, char **argv)
- {
+-{
 -	char *bp, *host = NULL, *src = NULL, *suser = NULL;
 -	arglist alist;
 -	struct sftp_conn *conn = NULL;
@@ -734,40 +759,13 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
 -	free(suser);
 -	free(host);
 -	free(src);
-+  char *bp, *host = NULL, *src = NULL, *suser = NULL;
-+  int i;
-+  for (i = 0; i < argc - 1; i++)
-+    {
-+    if (!(src = colon(argv[i])))
-+      {
-+      fprintf(stderr, "LOCAL TO LOCAL NOT IMPLEMENTED\n");
-+      exit(255);
-+      }
-+    *src++ = 0;
-+    if (*src == 0)
-+      src = ".";
-+    host = argv[i];
-+    suser = NULL;
-+    xasprintf(&bp, "%s -f %s%s", cmd, *src == '-' ? "-- " : "", src);
-+    if (do_cmd1(ssh_program, host, suser, -1, bp, &remin, &remout) < 0)
-+      { 
-+      fprintf(stderr, "do_cmd error TOLOOK\n");
-+      exit(255);
-+      } 
-+    free(bp);
-+    sink(1, argv + argc - 1, src);
-+    (void) close(remin);
-+    remin = remout = -1;
-+    }
- }
+-}
  
-+
  /* Prepare remote path, handling ~ by assuming cwd is the homedir */
  static char *
- prepare_remote_path(struct sftp_conn *conn, const char *path)
 diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
---- openssh-portable/ssh.c	2025-03-07 19:52:26.000000000 +0100
-+++ tainted_openssh-portable/ssh.c	2025-03-09 19:57:17.925815099 +0100
+--- openssh-portable/ssh.c	2025-03-24 11:25:17.000000000 +0100
++++ tainted_openssh-portable/ssh.c	2025-03-24 11:48:12.789977720 +0100
 @@ -114,6 +114,9 @@
  #include "ssh-pkcs11.h"
  #endif
@@ -1001,8 +999,8 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
  	/* We no longer need the private host keys.  Clear them now. */
  	if (sensitive_data.nkeys != 0) {
 diff -Naur openssh-portable/sshconnect.c tainted_openssh-portable/sshconnect.c
---- openssh-portable/sshconnect.c	2025-03-07 19:52:26.000000000 +0100
-+++ tainted_openssh-portable/sshconnect.c	2025-03-09 19:57:17.925815099 +0100
+--- openssh-portable/sshconnect.c	2025-03-24 11:25:17.000000000 +0100
++++ tainted_openssh-portable/sshconnect.c	2025-03-24 11:48:12.789977720 +0100
 @@ -48,6 +48,13 @@
  #ifdef HAVE_IFADDRS_H
  # include <ifaddrs.h>
@@ -1114,8 +1112,8 @@ diff -Naur openssh-portable/sshconnect.c tainted_openssh-portable/sshconnect.c
  
  	/* Put the connection into non-blocking mode. */
 diff -Naur openssh-portable/sshconnect.h tainted_openssh-portable/sshconnect.h
---- openssh-portable/sshconnect.h	2025-03-07 19:52:26.000000000 +0100
-+++ tainted_openssh-portable/sshconnect.h	2025-03-09 19:57:17.925815099 +0100
+--- openssh-portable/sshconnect.h	2025-03-24 11:25:17.000000000 +0100
++++ tainted_openssh-portable/sshconnect.h	2025-03-24 11:48:12.789977720 +0100
 @@ -71,14 +71,14 @@
  	"C", conn_info->conn_hash_hex, \
  	"r", conn_info->remuser

@@ -170,6 +170,12 @@ root
 root
 EOF
 #-----------------------------------------------------------------------#
+chroot /tmp/wkmntloops/ adduser user
+chroot /tmp/wkmntloops/ passwd user <<EOF
+user
+user
+EOF
+#-----------------------------------------------------------------------#
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#
 qemu-img convert -O qcow2 $ROOTFS ${ROOTFS}.qcow2

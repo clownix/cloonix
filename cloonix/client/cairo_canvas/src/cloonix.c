@@ -359,30 +359,21 @@ void work_dir_resp(int tid, t_topo_clc *conf)
     else
       {
       if (disp >= NOVNC_DISPLAY)
-        {
         g_novnc = 1;
-        KERR("WARNING NOVNC DISPLAY %s", display); 
-        }
       }
     }
-
   daemon(0,0);
-
   move_init();
   popup_init();
   memcpy(&g_clc, conf, sizeof(t_topo_clc));
-
   snprintf(tmp_distant_snf_dir, 2*MAX_PATH_LEN, "/var/lib/cloonix/%s/%s",
            g_clc.network, SNF_DIR);
   tmp_distant_snf_dir[MAX_PATH_LEN-1] = 0;
   strcpy(g_distant_snf_dir, tmp_distant_snf_dir);
-
   if (gdk_pixbuf_init_modules("/usr/libexec/cloonix/common/share", &pixerror))
     KERR("ERROR gdk_pixbuf_init_modules");
-
   g_main_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_accept_focus(GTK_WINDOW(g_main_window), FALSE);
-
   menu_init();
   init_set_main_window_coords();
   g_signal_connect(G_OBJECT(g_main_window), "destroy",

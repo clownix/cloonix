@@ -1,21 +1,8 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
-if [ ${#} = 1 ]; then
-  if [ "$1" = "i386" ]; then
-    ARCH="i386"
-    LINUX="linux-image-686"
-  else
-    echo param must be i386, if no param, then is amd64
-    exit
-  fi  
-else
-  ARCH="amd64"
-  LINUX="linux-image-amd64"
-fi
-#----------------------------------------------------------------------#
-DISTRO=trixie
-DEFVIM=/tmp/wkmntloops/usr/share/vim/vim91/defaults.vim
-ROOTFS=/var/lib/cloonix/bulk/${DISTRO}_${ARCH}
+DISTRO="trixie"
+DEFVIM="/tmp/wkmntloops/usr/share/vim/vim91/defaults.vim"
+ROOTFS="/var/lib/cloonix/bulk/${DISTRO}"
 REPO="http://127.0.0.1/debian/${DISTRO}"
 #----------------------------------------------------------------------#
 fct_check_uid()
@@ -78,13 +65,13 @@ fct_check_losetup
 set -e
 fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
-list_pkt="${LINUX},grub2,openssh-client,vim,"
+list_pkt="linux-image-amd64,grub2,openssh-client,vim,"
 list_pkt+="bash-completion,net-tools,file,qemu-guest-agent,"
 list_pkt+="locales,x11-apps,strace"
 
 debootstrap --no-check-certificate \
 	    --no-check-gpg \
-            --arch ${ARCH} \
+            --arch amd64 \
             --exclude=usr-is-merged \
             --include=$list_pkt \
             ${DISTRO} \

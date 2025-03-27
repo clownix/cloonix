@@ -455,17 +455,17 @@ int main (int argc, char *argv[])
   msg_mngt_init("nat", TRAF_TAP_BUF_LEN);
   msg_mngt_heartbeat_init(heartbeat);
   rxtx_init(fd_rx_from_tap, fd_tx_to_tap);
-  if (!access(g_ctrl_path, F_OK))
+  if (!access(g_ctrl_path, R_OK))
     {
     KERR("ERROR %s exists ERASING", g_ctrl_path);
     unlink(g_ctrl_path);
     }
-  if (!access(g_nat_path, F_OK))
+  if (!access(g_nat_path, R_OK))
     {
     KERR("ERROR %s exists ERASING", g_nat_path);
     unlink(g_nat_path);
     }
-  if (!access(g_cisco_path, F_OK))
+  if (!access(g_cisco_path, R_OK))
     {
     KERR("ERROR %s exists ERASING", g_cisco_path);
     unlink(g_cisco_path);

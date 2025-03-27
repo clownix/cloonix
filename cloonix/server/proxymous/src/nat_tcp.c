@@ -163,40 +163,53 @@ static t_tcp_flow *find_cnx_with_params(t_ctx_nat *ctx,
 }
 /*--------------------------------------------------------------------------*/
 
+
+    
 /****************************************************************************/
-static void tcp_ctx_err(t_tcp_flow *cur)
-{
+static void no_timeout_tcp_ctx_err(t_tcp_flow *cur)
+{       
   int llid_prxy;
   t_llid_tcp *cur_llid = g_head_llid_tcp;
   char sig_buf[2*MAX_PATH_LEN];
+  while(cur_llid)
+    {
+    if (cur_llid->item == cur)
+      break;
+    cur_llid = cur_llid->next;
+    }
+  if (cur_llid)
+    { 
+    llid_prxy = cur->ctx->llid_sig;
+    if ((llid_prxy == 0) || (!msg_exist_channel(llid_prxy)))
+      KERR("ERROR %s", cur->ctx->nat);
+    else
+      {
+      memset(sig_buf, 0, 2*MAX_PATH_LEN);
+      snprintf(sig_buf, 2*MAX_PATH_LEN-1,
+      "nat_proxy_tcp_fatal_error %s sip:%X dip:%X sport:%hu dport:%hu",
+      cur->ctx->nat, cur->sip, cur->dip, cur->sport, cur->dport);
+      rpct_send_sigdiag_msg(llid_prxy, 0, sig_buf);
+      }
+    tcp_free(cur->ctx, cur_llid);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void timeout_tcp_ctx_err(void *data)
+{
+  t_tcp_flow *cur = (t_tcp_flow *) data;
+  no_timeout_tcp_ctx_err(cur);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void tcp_ctx_err(t_tcp_flow *cur)
+{
   if (!cur)
     KERR("ERROR");
   else 
-    { 
-    while(cur_llid)
-      {
-      if (cur_llid->item == cur)
-        break;
-      cur_llid = cur_llid->next;
-      }
-    if (!cur_llid)
-      KERR("ERROR");
-    else
-      {
-      llid_prxy = cur->ctx->llid_sig;
-      if ((llid_prxy == 0) || (!msg_exist_channel(llid_prxy)))
-        KERR("ERROR %s", cur->ctx->nat);
-      else
-        {
-        memset(sig_buf, 0, 2*MAX_PATH_LEN);
-        snprintf(sig_buf, 2*MAX_PATH_LEN-1,
-        "nat_proxy_tcp_fatal_error %s sip:%X dip:%X sport:%hu dport:%hu",
-        cur->ctx->nat, cur->sip, cur->dip, cur->sport, cur->dport);
-        rpct_send_sigdiag_msg(llid_prxy, 0, sig_buf);
-        }
-      tcp_free(cur->ctx, cur_llid);
-      }
-    }
+    clownix_timeout_add(100, timeout_tcp_ctx_err, (void *) cur, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -253,28 +266,31 @@ static void tcp_connect_resp(char *nat, uint32_t sip, uint32_t dip,
     {
     cur = find_cnx_with_params(ctx, sip, dip, sport, dport);
     if ((!cur) || (!cur->ctx))
-      KOUT("ERROR");
-    llid_prxy = ctx->llid_sig;
-    memset(sig_buf, 0, 2*MAX_PATH_LEN);
-    if ((llid_prxy == 0) || (!msg_exist_channel(llid_prxy)))
-      KERR("ERROR %s %X %X %hu %hu", nat, sip, dip, sport, dport);
-    else if (!cur)
-      {
-      KERR("ERROR %X %X %hu %hu", sip, dip, sport, dport);
-      snprintf(sig_buf, 2*MAX_PATH_LEN-1,
-      "nat_proxy_tcp_resp_ko %s sip:%X dip:%X sport:%hu dport:%hu",
-      nat, sip, dip, sport, dport);
-      rpct_send_sigdiag_msg(llid_prxy, 0, sig_buf);
-      }
-    else if (find_inet_llid(llid_inet))
       KERR("ERROR %s %X %X %hu %hu", nat, sip, dip, sport, dport);
     else
       {
-      cur->llid_inet = llid_inet;
-      snprintf(sig_buf, 2*MAX_PATH_LEN-1,
-      "nat_proxy_tcp_resp_ok %s sip:%X dip:%X sport:%hu dport:%hu",
-      nat, sip, dip, sport, dport);
-      rpct_send_sigdiag_msg(llid_prxy, 0, sig_buf);
+      llid_prxy = ctx->llid_sig;
+      memset(sig_buf, 0, 2*MAX_PATH_LEN);
+      if ((llid_prxy == 0) || (!msg_exist_channel(llid_prxy)))
+        KERR("ERROR %s %X %X %hu %hu", nat, sip, dip, sport, dport);
+      else if (!cur)
+        {
+        KERR("ERROR %X %X %hu %hu", sip, dip, sport, dport);
+        snprintf(sig_buf, 2*MAX_PATH_LEN-1,
+        "nat_proxy_tcp_resp_ko %s sip:%X dip:%X sport:%hu dport:%hu",
+        nat, sip, dip, sport, dport);
+        rpct_send_sigdiag_msg(llid_prxy, 0, sig_buf);
+        }
+      else if (find_inet_llid(llid_inet))
+        KERR("ERROR %s %X %X %hu %hu", nat, sip, dip, sport, dport);
+      else
+        {
+        cur->llid_inet = llid_inet;
+        snprintf(sig_buf, 2*MAX_PATH_LEN-1,
+        "nat_proxy_tcp_resp_ok %s sip:%X dip:%X sport:%hu dport:%hu",
+        nat, sip, dip, sport, dport);
+        rpct_send_sigdiag_msg(llid_prxy, 0, sig_buf);
+        }
       }
     }
 }
@@ -319,6 +335,7 @@ static void unix_err_cb (int llid, int err, int from)
       tcp_ctx_err(cur);
       }
     }
+  msg_delete_channel(llid);
 }   
 /*--------------------------------------------------------------------------*/
     
@@ -328,6 +345,8 @@ static void unix_rx_cb (int llid, int len, char *buf)
   int i, nb_pkts, left_over, result;
   t_llid_tcp *cur_llid = find_unix_llid(llid);
   t_tcp_flow *cur;
+  int max_len = HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN;
+
   if (!cur_llid)
     {
     KERR("ERROR %d %d", llid, len);
@@ -354,12 +373,12 @@ static void unix_rx_cb (int llid, int len, char *buf)
     else
       {
       cur->inactivity_count = 0;
-      nb_pkts = len / MAX_TAP_BUF_LEN;
-      left_over = len % MAX_TAP_BUF_LEN;
+      nb_pkts = len / max_len;
+      left_over = len % max_len;
       for (i=0; i<nb_pkts; i++)
-        watch_tx(cur->llid_inet, MAX_TAP_BUF_LEN, buf+(i*MAX_TAP_BUF_LEN));
+        watch_tx(cur->llid_inet, max_len, buf+(i*max_len));
       if (left_over)
-        watch_tx(cur->llid_inet, left_over, buf+(nb_pkts*MAX_TAP_BUF_LEN));
+        watch_tx(cur->llid_inet, left_over, buf+(nb_pkts*max_len));
       
       result = msg_mngt_get_tx_queue_len(cur->llid_inet);
       if (result > 50000)
@@ -375,8 +394,10 @@ static int inet_rx_cb(int llid, int fd)
   t_llid_tcp *cur_llid = find_inet_llid(llid);
   t_tcp_flow *cur;
   int data_len, result = 0;
-  char data[MAX_TAP_BUF_LEN];
-  data_len = read(fd, data, MAX_TAP_BUF_LEN - g_offset);
+  char data[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
+  int max_len = HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN;
+
+  data_len = read(fd, data, max_len - g_offset);
 
   if (!cur_llid)
     {
@@ -402,7 +423,7 @@ static int inet_rx_cb(int llid, int fd)
       }
     else if (data_len < 0)
       {
-      if ((errno != EAGAIN) && (errno != EINTR))
+      if ((errno != EAGAIN) && (errno != EINTR) && (errno != EINPROGRESS))
         {
         KERR("ERROR INET %d %s", errno, cur->stream);
         tcp_ctx_err(cur);
@@ -411,7 +432,7 @@ static int inet_rx_cb(int llid, int fd)
     else if (!msg_exist_channel(cur->llid_unix))
       {
       KERR("ERROR INET TO UNIX %s", cur->stream);
-      tcp_ctx_err(cur);
+      no_timeout_tcp_ctx_err(cur);
       }
     else
       {

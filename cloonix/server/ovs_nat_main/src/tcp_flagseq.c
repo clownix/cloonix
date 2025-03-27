@@ -35,7 +35,11 @@
 static void tcp_llid_transmit(int llid, int len, uint8_t *data)
 {
   if (msg_exist_channel(llid))
+    {
     proxy_traf_unix_tx(llid, len, (char *) data);
+    }
+  else
+    KERR("ERROR: %d", len);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -59,10 +63,10 @@ static void flagseq_llid_transmit(t_flagseq *cur, int llid,
     tcp_llid_transmit(llid, data_len, data);
 }
 /*--------------------------------------------------------------------------*/
-
+ 
 /****************************************************************************/
-static void update_flagseq_tcp_hdr(t_flagseq *cur, uint8_t *tcp, int data_len)
-{
+static void first_flagseq_tcp_hdr(t_flagseq *cur, uint8_t *tcp, int data_len)
+{ 
   uint32_t seq;
   uint8_t  flags;
   uint32_t seq_to_add = data_len;
@@ -73,10 +77,27 @@ static void update_flagseq_tcp_hdr(t_flagseq *cur, uint8_t *tcp, int data_len)
     seq_to_add += 1;
   cur->prev_distant_seq = cur->distant_seq;
   cur->distant_seq = (seq + seq_to_add);
+}
+/*--------------------------------------------------------------------------*/
 
-  //if (cur->prev_distant_seq != cur->distant_seq)
-  //  KERR("NEWDISTANTSEQ: %u %d", cur->distant_seq, data_len);
-
+/****************************************************************************/
+static int update_flagseq_tcp_hdr(t_flagseq *cur, uint8_t *tcp, int data_len,
+                                  uint8_t flags, uint32_t seq)
+{
+  uint32_t seq_to_add = data_len;
+  int result = -1;
+  if (seq <= cur->distant_seq+1)
+    {
+    memcpy(cur->tcp, tcp, TCP_HEADER_LEN);
+    if ((flags & RTE_TCP_SYN_FLAG) || (flags & RTE_TCP_FIN_FLAG))
+      seq_to_add += 1;
+    cur->prev_distant_seq = cur->distant_seq;
+    cur->distant_seq = (seq + seq_to_add);
+    result = 0;
+    }
+  else
+    KERR("NEWDISTANTSEQ: %u %u %u %d", seq, cur->distant_seq, cur->prev_distant_seq, data_len);
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -84,7 +105,8 @@ static void update_flagseq_tcp_hdr(t_flagseq *cur, uint8_t *tcp, int data_len)
 static void transmit_flags_back(t_flagseq *cur, uint8_t flags)
 {
   int32_t recv_ack = 0;
-  uint8_t buf[MAX_TAP_BUF_LEN];
+  int len;
+  uint8_t buf[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
   if (flags & RTE_TCP_ACK_FLAG)
     recv_ack = cur->distant_seq;  
   utils_fill_tcp_packet(buf, 0, cur->dmac, cur->smac, cur->dip, cur->sip, 
@@ -92,16 +114,22 @@ static void transmit_flags_back(t_flagseq *cur, uint8_t flags)
                         recv_ack, flags, 50000);
   if ((flags & RTE_TCP_SYN_FLAG) || (flags & RTE_TCP_FIN_FLAG))
     cur->local_seq += 1;
-  rxtx_tx_enqueue(cur->offset+cur->post_chk, buf);
+  len = cur->offset;
+  if ((len == 0) ||
+      (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+    KERR("ERROR LEN  %d", len);
+  else
+    rxtx_tx_enqueue(len, buf);
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void try_qstore_dequeue_backup_and_xmit(t_flagseq *cur)
 {
+  static unsigned long long total = 0;
   uint8_t tcp_flags, *buf;
   uint32_t local_seq = 0;
-  int i, data_len;
+  int len, i, data_len;
   
   for (i=0; i< 100; i++)
     {
@@ -112,7 +140,14 @@ static void try_qstore_dequeue_backup_and_xmit(t_flagseq *cur)
     utils_fill_tcp_packet(buf, data_len, cur->dmac, cur->smac,
                           cur->dip, cur->sip, cur->dport, cur->sport,
                           local_seq, cur->distant_seq, tcp_flags, 50000);
-    rxtx_tx_enqueue(cur->offset+cur->post_chk+data_len, buf);
+    total += data_len;
+    KERR("FROM_BACKUP_PROX: %llu  %d",  total, data_len);
+    len = cur->offset + data_len;
+    if ((len == 0) ||
+        (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+      KERR("ERROR LEN  %d", len);
+    else
+      rxtx_tx_enqueue(len, buf);
     if (cur->must_ack)
       cur->must_ack = 0;
     }
@@ -124,7 +159,7 @@ static void try_qstore_dequeue_and_xmit(t_flagseq *cur)
 {
   uint16_t distant_rx_win;
   uint8_t tcp_flags, *buf;
-  int data_len;
+  int len, data_len;
   distant_rx_win = (cur->tcp[14]<<8) + cur->tcp[15];
 
   if (((cur->local_seq - cur->ack_local_seq + 5000) < distant_rx_win) ||
@@ -143,7 +178,12 @@ static void try_qstore_dequeue_and_xmit(t_flagseq *cur)
         cur->local_seq += data_len;
         if (cur->must_ack)
           cur->must_ack = 0;
-        rxtx_tx_enqueue(cur->offset+cur->post_chk+data_len, buf);
+        len = cur->offset + data_len;
+        if ((len == 0) ||
+            (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+          KERR("ERROR LEN  %d", len);
+        else
+          rxtx_tx_enqueue(len, buf);
         utils_free(buf);
         if ((cur->local_seq - cur->ack_local_seq + 5000) > distant_rx_win)
           {
@@ -311,7 +351,11 @@ void tcp_flagseq_to_tap(t_flagseq *cur, int data_len, uint8_t *data)
       {
       tcp_qstore_enqueue(cur, data_len, data);
       }
+    else
+      KERR("ERROR %d", data_len);
     }
+  else
+    KERR("ERROR %d", data_len);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -333,7 +377,7 @@ void tcp_flagseq_to_llid_data(t_flagseq *cur, int llid, uint8_t *tcp,
     }
   else if (cur->open_ok == 0)
     {
-    update_flagseq_tcp_hdr(cur, tcp, 0);
+    first_flagseq_tcp_hdr(cur, tcp, 0);
     if (cur->is_ssh_cisco == 0)
       syn_syn_ack_ack_done_open_upon_ack(cur, tcp);
     else
@@ -341,8 +385,12 @@ void tcp_flagseq_to_llid_data(t_flagseq *cur, int llid, uint8_t *tcp,
     }
   else if (cur->fin_req == 1)
     {
-    update_flagseq_tcp_hdr(cur, tcp, 0);
-    fin_fin_ack_done_close_upon_ack(cur, tcp);
+    if (!update_flagseq_tcp_hdr(cur, tcp, 0, flags, new_distant_seq))
+      fin_fin_ack_done_close_upon_ack(cur, tcp);
+    else
+      KERR("TOOLOOK %X %X %hu %hu %u %u %d", cur->sip, cur->dip,
+                       cur->sport, cur->dport, cur->distant_seq,
+                       new_distant_seq, data_len);
     }
   else
     {
@@ -352,44 +400,38 @@ void tcp_flagseq_to_llid_data(t_flagseq *cur, int llid, uint8_t *tcp,
       cur->ack_local_seq = recv_ack;
       tcp_qstore_flush_backup_seq(cur, cur->ack_local_seq);
       }
-    if (cur->distant_seq == new_distant_seq)
+    if ((cur->distant_seq == new_distant_seq) ||
+        (cur->distant_seq == new_distant_seq+1) || 
+        ((cur->distant_seq+1 == new_distant_seq) &&
+         (cur->distant_seq == cur->prev_distant_seq)))
       {
-      update_flagseq_tcp_hdr(cur, tcp, data_len);
-      if ((flags & RTE_TCP_FIN_FLAG) && (flags & RTE_TCP_ACK_FLAG))
+      if (!update_flagseq_tcp_hdr(cur, tcp, data_len, flags, new_distant_seq))
         {
-        reception_of_first_fin_ack(cur, new_distant_seq);
+        if ((flags & RTE_TCP_FIN_FLAG) && (flags & RTE_TCP_ACK_FLAG))
+          reception_of_first_fin_ack(cur, new_distant_seq);
+        else if (data_len)
+          flagseq_llid_transmit(cur, llid, data_len, data);
         }
-      else if (data_len)
+      else
         {
-        flagseq_llid_transmit(cur, llid, data_len, data);
-        cur->must_ack = 1;
+        KERR("TOOLOOK %X %X %hu %hu %u %u %d", cur->sip, cur->dip,
+             cur->sport, cur->dport, cur->distant_seq,
+             new_distant_seq, data_len);
         }
       }
-    else if ((new_distant_seq+1) == cur->distant_seq)
+    else if (new_distant_seq < cur->distant_seq)
       {
-      KERR("TOOLOOK %X %X %hu %hu %X %X %d", cur->sip, cur->dip,
-                       cur->sport, cur->dport, cur->distant_seq,
-                       new_distant_seq, data_len);
-
-      update_flagseq_tcp_hdr(cur, tcp, data_len);
-      if ((flags & RTE_TCP_FIN_FLAG) && (flags & RTE_TCP_ACK_FLAG))
-        {
-        reception_of_first_fin_ack(cur, new_distant_seq);
-        }
-      else if (data_len)
-        {
-        flagseq_llid_transmit(cur, llid, data_len, data);
-        cur->must_ack = 1;
-        }
-
+      KERR("TOOLOOK %X %X %hu %hu %u %u %d", cur->sip, cur->dip,
+           cur->sport, cur->dport, cur->distant_seq,
+           new_distant_seq, data_len);
       }
     else
       {
-      KERR("ERROR DROP %X %X %hu %hu %X %X %d", cur->sip, cur->dip,
-                               cur->sport, cur->dport, cur->distant_seq,
-                               new_distant_seq, data_len);
-      transmit_flags_back(cur, RTE_TCP_ACK_FLAG);
+      KERR("ERROR DROP %X %X %hu %hu %u %u %d", cur->sip, cur->dip,
+           cur->sport, cur->dport, cur->distant_seq,
+           new_distant_seq, data_len);
       }
+    cur->must_ack = 1;
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -466,7 +508,7 @@ t_flagseq *tcp_flagseq_begin(uint32_t sip,   uint32_t dip,
             cur->sport, cur->dport, tcp[13]);
     else
       {
-      update_flagseq_tcp_hdr(cur, tcp, 0);
+      first_flagseq_tcp_hdr(cur, tcp, 0);
       transmit_flags_back(cur, RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG);
       }
     }

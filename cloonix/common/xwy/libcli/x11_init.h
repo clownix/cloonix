@@ -18,9 +18,8 @@
 int get_srv_idx(void);
 char *get_x11_magic(void);
 char *get_x11_path(void);
-int  get_x11_port(void);
 int  get_x11_ok(void);
 void x11_init_resp(int srv_idx, t_msg *msg);
-void x11_init_magic(void);
+void x11_init_magic(char *net);
 /*--------------------------------------------------------------------------*/
 

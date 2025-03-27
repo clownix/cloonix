@@ -405,7 +405,7 @@ static int tx_write(char *msg, int len, int fd)
   tx_len = write(fd, (unsigned char *) msg, len);
   if (tx_len < 0)
     {
-    if ((errno == EAGAIN) || (errno == EINTR))
+    if ((errno == EAGAIN) || (errno == EINTR) || (errno == EINPROGRESS))
       tx_len = 0;
     }
   return tx_len;
@@ -471,31 +471,36 @@ static int tx_cb(int llid, int fd)
   t_data_channel *dchan;
   t_llid *lid = g_llid_data[llid];
   if (!lid)
-    KERR(" ");
+    KERR("ERROR");
   else
     {
     if (lid->fd != fd)
       KOUT("%d %d", lid->fd, fd);
     cidx = channel_check_llid(llid, __FUNCTION__);
-    dchan = get_dchan(cidx);
-    if (dchan->llid !=  llid)
-      KOUT("%d %d %d %d %d", cidx, llid,  fd, dchan->llid, dchan->fd);
-    if (dchan->fd !=  fd)
-      KOUT(" ");
-    if (channel_get_tx_queue_len(llid))
+    if (cidx == 0)
+      KERR("ERROR");
+    else
       {
-      if (!dchan->tx)
+      dchan = get_dchan(cidx);
+      if (dchan->llid !=  llid)
+        KOUT("%d %d %d %d %d", cidx, llid,  fd, dchan->llid, dchan->fd);
+      if (dchan->fd !=  fd)
         KOUT(" ");
-      do
+      if (channel_get_tx_queue_len(llid))
         {
-        if (max_tx_sock_queue_len_reached(llid, cidx, fd))
-          result = 0;
-        else
+        if (!dchan->tx)
+          KOUT(" ");
+        do
           {
-          result = doors_tx_send_chunk(dchan, cidx, &correct_send, tx_err_cb);
-          total_correct_send += correct_send;
-          }
-        } while (result == 1);
+          if (max_tx_sock_queue_len_reached(llid, cidx, fd))
+            result = 0;
+          else
+            {
+            result = doors_tx_send_chunk(dchan, cidx, &correct_send, tx_err_cb);
+            total_correct_send += correct_send;
+            }
+          } while (result == 1);
+        }
       }
     }
   return total_correct_send;
@@ -995,13 +1000,18 @@ int doorways_tx_or_rx_still_in_queue(int llid)
   t_data_channel *dchan;
   int cidx = channel_check_llid(llid, __FUNCTION__);
   t_llid *lid = g_llid_data[llid];
-  dchan = get_dchan(cidx);
-  if (dchan->tot_txq_size)
-    result = 1;
-  else if (lid)
+  if (cidx == 0)
+    KERR("ERROR");
+  else
     {
-    if ((lid->rx_pktdoors.offset) || (lid->rx_pktdoors.paylen))
+    dchan = get_dchan(cidx);
+    if (dchan->tot_txq_size)
       result = 1;
+    else if (lid)
+      {
+      if ((lid->rx_pktdoors.offset) || (lid->rx_pktdoors.paylen))
+        result = 1;
+      }
     }
   return (result);
 }
@@ -1015,29 +1025,25 @@ int doorways_tx_bufraw(int llid,int tid,int type,int val,int len,char *buf)
   t_data_channel *dchan;
 
   if (g_init_done != 777)
-    KOUT(" ");
+    KOUT("ERROR");
   if ((len<0) || (len > 10*MAX_DOORWAYS_BUF_LEN))
-    KOUT("%d", len);
+    KOUT("ERROR %d", len);
   if (len == 0)
     return 0;
-
-
   if (!llid) 
-    KOUT(" ");
-
+    KOUT("ERROR");
   if (!msg_exist_channel(llid))
     return result;
-
   fd = get_fd_with_llid(llid);
   if (fd == -1)
-    KOUT(" ");
+    KOUT("ERROR");
   else
     {
     lid = g_llid_data[llid];
     if (lid)
       {
       if (llid != lid->llid)
-        KOUT("%d %d", llid, lid->llid);
+        KOUT("ERROR %d %d", llid, lid->llid);
       if (lid->doors_type != doors_type_server) 
         {
         if (lid->doors_type != type)
@@ -1046,28 +1052,34 @@ int doorways_tx_bufraw(int llid,int tid,int type,int val,int len,char *buf)
             {
             if ((type != doors_type_dbssh_x11_ctrl) &&
                 (type != doors_type_dbssh_x11_traf))
-              KERR("%d %d", lid->doors_type, type);
+              KERR("ERROR %d %d", lid->doors_type, type);
             }
           else
-             KERR("%d %d", lid->doors_type, type);
+             KERR("ERROR %d %d", lid->doors_type, type);
           }
         }
       cidx = channel_check_llid(llid, __FUNCTION__);
-      dchan = get_dchan(cidx);
-      if (dchan->llid != lid->llid)
-        KOUT(" ");
-      if (dchan->tot_txq_size >  MAX_TOT_LEN_WARNING_DOORWAYS_Q)
-        {
-        g_max_tx_doorway_queue_len_reached += 1;
-        }
-      if (dchan->tot_txq_size <  MAX_TOT_LEN_DOORWAYS_Q)
-        {
-        doorways_tx_split(lid, cidx, dchan, tid, type, val, len, buf);
-        result = 0;
-        }
+      if (cidx == 0)
+        KERR("ERROR %d %d", lid->doors_type, type);
       else
         {
-        KERR("%d %d", (int) dchan->tot_txq_size, MAX_TOT_LEN_DOORWAYS_Q);
+        dchan = get_dchan(cidx);
+        if (dchan->llid != lid->llid)
+          KOUT("ERROR");
+        if (dchan->tot_txq_size >  MAX_TOT_LEN_WARNING_DOORWAYS_Q)
+          {
+          g_max_tx_doorway_queue_len_reached += 1;
+          }
+        if (dchan->tot_txq_size <  MAX_TOT_LEN_DOORWAYS_Q)
+          {
+          doorways_tx_split(lid, cidx, dchan, tid, type, val, len, buf);
+          result = 0;
+          }
+        else
+          {
+          KERR("ERROR %d %d", (int) dchan->tot_txq_size,
+                              MAX_TOT_LEN_DOORWAYS_Q);
+          }
         }
       }
     }

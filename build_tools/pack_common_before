@@ -1,22 +1,6 @@
 #!/bin/bash
 PURE_CRUN="no"
 #----------------------------------------------------------------------#
-if [ ${#} = 1 ]; then
-  if [ "$1" = "i386" ]; then
-    ARCH="i386"
-  else
-    if [ "$1" = "amd64" ]; then
-      ARCH="amd64"
-    else
-      echo ERROR $0 param must be i386 or amd64
-      exit
-    fi
-  fi
-else
-  echo ERROR $0 param must be i386, or amd64
-  exit
-fi
-#----------------------------------------------------------------------#
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -42,13 +26,8 @@ case "$pretty_name" in
   ;;
 esac
 
-if [ "${ARCH}" = "i386" ]; then
-  mkdir -p ${COMMON}/lib32
-  mkdir -p ${COMMON}/lib/i386-linux-gnu
-else
-  mkdir -p ${COMMON}/lib64
-  mkdir -p ${COMMON}/lib/x86_64-linux-gnu
-fi
+mkdir -p ${COMMON}/lib64
+mkdir -p ${COMMON}/lib/x86_64-linux-gnu
 
 for i in "lib/locale" "etc" "share/fonts/truetype" \
          "share/terminfo" "share/mime" "share/misc" \
@@ -150,6 +129,8 @@ cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so ${COMMON}/lib/x86_64-linux-gnu/
 #----------------------------------------------------------
 cp -rn /usr/lib/x86_64-linux-gnu/qt6/plugins/platforms ${COMMON}/lib/x86_64-linux-gnu/qt6/plugins
 #----------------------------------------------------------
+cp -Lrf /usr/lib/x86_64-linux-gnu/gtk-3.0 ${COMMON}/lib/x86_64-linux-gnu/
+#----------------------------------------------------------
 cd $FROM_HERE
 
 cp -Lrf /usr/share/themes ${COMMON}/share
@@ -171,11 +152,7 @@ cd $FROM_HERE
 #----------------------------------------------------------
 tar --directory=${COMMON}/share -xf ${TARGZ_STORE}/noVNC_*.tar.gz
 #----------------------------------------------------------
-if [ "${ARCH}" = "i386" ]; then
-  cp -f /lib/ld-linux.so.2 ${COMMON}/lib32
-else
-  cp -f /lib64/ld-linux-x86-64.so.2 ${COMMON}/lib64
-fi
+cp -f /lib64/ld-linux-x86-64.so.2 ${COMMON}/lib64
 cp -f ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ${COMMON}/etc/cloonix.cfg
 #----------------------------------------------------------
 cp -f /bin/bash ${COMMON}
@@ -230,14 +207,9 @@ done
 if [ "${PURE_CRUN}" = "no" ]; then
 #----------------------------------------------------------
 
-   cp -Lrf /usr/share/gstreamer-1.0 ${COMMON}/share
-  if [ "${ARCH}" = "i386" ]; then
-    SRCD="/usr/lib/i386-linux-gnu"
-    DSTD="${COMMON}/lib/i386-linux-gnu"
-  else
-    SRCD="/usr/lib/x86_64-linux-gnu"
-    DSTD="${COMMON}/lib/x86_64-linux-gnu"
-  fi
+  cp -Lrf /usr/share/gstreamer-1.0 ${COMMON}/share
+  SRCD="/usr/lib/x86_64-linux-gnu"
+  DSTD="${COMMON}/lib/x86_64-linux-gnu"
   for i in "gstreamer1.0" "pipewire-0.3" ; do
     cp -rf ${SRCD}/${i} ${DSTD}
   done

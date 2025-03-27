@@ -23,7 +23,7 @@ Endpoint items
 ==============
 
 * **kvm** guest virtual machine launched through qemu-kvm.
-* **cnt** guest container (crun or podman).
+* **cnt** guest container crun.
 * **nat** used to reach the internet dhcp, routing and dns server.
 * **tap** used to reach a vhost tap of the host machine.
 * **c2c** used to reach another cloonix server through udp messages.
@@ -35,8 +35,7 @@ cnt
 ---
 This is a running instance of a container, in the case of crun, it is mainly
 a running process inside a private file-system with a private namespace ip
-stack. For the podman cases, the podman software is used for the running of
-the containers but cloonix manages their interfaces endpoints.
+stack.
 
 
 kvm

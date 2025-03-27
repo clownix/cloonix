@@ -1,5 +1,5 @@
 ==============================================================================
-                               v45-01
+                               v46-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -18,12 +18,13 @@ and libraries are collected and put into an autonomous bundle, this makes
 the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-45-00/html/index.html doc.
+http://clownix.net/doc_stored/build-46-00/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp cloonix api.
       For Fedora, in /etc/sysconfig/selinux, I set SELINUX=disabled to have
       a qemu-guest-agent that can create and launch a script as root.
+      Beware of the firewalld.service in Fedora, it can block ip.
       For centos, same for selinux, but also in /etc/sysconfig/qemu-ga, the
       env FILTER_RPC_ARGS must have:"guest-file-open,guest-file-close,
       guest-file-read,guest-file-write,guest-exec-status,guest-exec"
@@ -32,6 +33,7 @@ NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       echo "kernel.apparmor_restrict_unprivileged_userns=0" >> /etc/sysctl.conf
       sysctl -p.
       It is sad that root privilege seems to be necessary in those 2 cases.
+
 
 There are 2 cloonix products:
 
@@ -55,9 +57,9 @@ This is very secure way to test cloonix as a normal user.
 1) Download software and installation:
 --------------------------------------
 
-wget http://clownix.net/downloads/cloonix-45/cloonix-bundle-45-01-amd64.tar.gz
-tar xvf cloonix-bundle-45-01-amd64.tar.gz
-cd cloonix-bundle-45-01-amd64
+wget http://clownix.net/downloads/cloonix-46/cloonix-bundle-46-00.tar.gz
+tar xvf cloonix-bundle-46-00.tar.gz
+cd cloonix-bundle-46-00
 sudo ./install_cloonix
 
 (To uninstall:   sudo rm -f /usr/bin/cloonix_*
@@ -71,17 +73,17 @@ sudo ./install_cloonix
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
 
-wget http://clownix.net/downloads/cloonix-45/bulk/bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-46/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
-wget http://clownix.net/downloads/cloonix-45/bulk/zipfrr.zip
+wget http://clownix.net/downloads/cloonix-46/bulk/zipfrr.zip
 
 
 3) Download demo script file:
 -----------------------------
 
 cd ${HOME}
-wget http://clownix.net/downloads/cloonix-45/demos/ping_demo.sh
+wget http://clownix.net/downloads/cloonix-46/demos/ping_demo.sh
 
 
 4) Use cloonix:
@@ -102,7 +104,7 @@ a right-click on the container can give a remote console.
                 ROOTLESS SELF EXTRACTING CLOONIX
 ==============================================================================
 To test cloonix without ever having the root password for your host machine,
-you have to use the cloonix_extractor.sh script.
+you have to use the cloonix-extractor-46-00.sh script.
 
 This script is based on makeself.sh open source, it creates a directory
 called dir_self_extracted associated to a handle executable script file
@@ -110,11 +112,11 @@ called nemocmd by default.
 
 1) Download:
 ------------
-wget http://clownix.net/downloads/cloonix-45/cloonix_extractor.sh
+wget http://clownix.net/downloads/cloonix-46/cloonix-extractor-46-00.sh
 
 2) Extract the bundle:
 ----------------------
-./cloonix_extractor.sh
+./cloonix-extractor-46-00.sh
 
 3) The nemocmd script is now present, first start it:
 -----------------------------------------------------

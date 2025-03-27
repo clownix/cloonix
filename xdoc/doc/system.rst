@@ -119,23 +119,6 @@ Commands to have nested KVM in intel automaticaly from start of machine::
 Note that for grub2, it is: grub2-mkconfig --output=/boot/grub2/grub.cfg
 
 
-
-Podman and Crun startup
-=======================
-
-If you want to customize the startup of the containers, you can create
-the following files::
-
-  /usr/bin/cloonix_startup_script.sh
-
-Podman
-=======
-
-Your system must have Podman to be able to use podman containers.
-The container image creation must be done outside of cloonix, cloonix can
-only launch existing podman images.
-
-
 Crun console
 ============
 

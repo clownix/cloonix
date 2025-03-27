@@ -1,23 +1,5 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
-if [ ${#} = 1 ]; then
-  if [ "$1" = "i386" ]; then
-    ARCH="i386"
-    ARCHX="i386"
-  else
-    if [ "$1" = "amd64" ]; then
-      ARCH="amd64"
-      ARCHX="x86_64"
-    else
-      echo ERROR $0 param must be i386 or amd64
-      exit
-    fi
-  fi
-else
-  echo ERROR $0 param must be i386 or amd64
-  exit
-fi
-#----------------------------------------------------------------------#
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -29,16 +11,11 @@ if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
 fi
 PATCHELF=/tmp/patchelf/src/patchelf
 VERSION=$(cat ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION)
-VERSION=${VERSION#*=}-${ARCH}
+VERSION=${VERSION#*=}
 COMMON="${CLOONIX_TREE_ROOT}/build_tools/common"
 #----------------------------------------------------------
-if [ "${ARCH}" = "i386" ]; then
-  LDLINUX="/usr/libexec/cloonix/common/lib32/ld-linux.so.2"
-  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/i386-linux-gnu"
-else
-  LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-  RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
-fi
+LDLINUX="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/usr/libexec/cloonix/common/lib:/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
 for i in `find ${COMMON} -maxdepth 1 -type f` ; do
   ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
@@ -48,7 +25,7 @@ for i in `find ${COMMON}/lib -maxdepth 1 -type f` ; do
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
 
-for i in `find ${COMMON}/lib/${ARCHX}-linux-gnu -maxdepth 1 -type f` ; do
+for i in `find ${COMMON}/lib/x86_64-linux-gnu -maxdepth 1 -type f` ; do
   ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
   ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
 done
@@ -56,12 +33,12 @@ done
 for j in "gconv" "gstreamer-1.0" "gstreamer1.0" \
          "gstreamer1.0/gstreamer-1.0" "pipewire-0.3" \
          "qt6/plugins/platforms" ; do
-  for i in `find ${COMMON}/lib/${ARCHX}-linux-gnu/${j} -maxdepth 1 -type f` ; do
+  for i in `find ${COMMON}/lib/x86_64-linux-gnu/${j} -maxdepth 1 -type f` ; do
     ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
     ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
   done
 done
-touch ${COMMON}/lib/${ARCHX}-linux-gnu/libpthread.so.0
+touch ${COMMON}/lib/x86_64-linux-gnu/libpthread.so.0
 #----------------------------------------------------------
 cd ${CLOONIX_TREE_ROOT}/build_tools
 rm -f patchelf_bin

@@ -309,20 +309,23 @@ int msg_exist_channel(int llid)
 /*****************************************************************************/
 int channel_check_llid(int llid, const char *fct)
 {
-  int cidx;
+  int cidx = 0;
   if (llid <= 0) 
     KOUT("%s %d",fct, llid);
   if (llid >= CLOWNIX_MAX_CHANNELS)
     KOUT("%s",fct);
   cidx = get_cidx (llid);
   if (cidx <= 0) 
-    KOUT("%s",fct);
-  if (cidx > current_max_channels)
-    KOUT("%s",fct);
-  if (get_llid(cidx) != llid)
-    KOUT("%s",fct);
-  if (g_channel[cidx].fd == -1)
-    KOUT("%s",fct);
+    KERR("%s",fct);
+  else
+    {
+    if (cidx > current_max_channels)
+      KOUT("%s",fct);
+    if (get_llid(cidx) != llid)
+      KOUT("%s",fct);
+    if (g_channel[cidx].fd == -1)
+      KOUT("%s",fct);
+    }
   return (cidx);
 }
 /*---------------------------------------------------------------------------*/
@@ -575,7 +578,9 @@ static void fd_check(int fd, int line, char *little_name)
 unsigned long channel_get_tx_queue_len(int llid)
 {
   int cidx = channel_check_llid(llid, __FUNCTION__);
-  int result = get_tot_txq_size(cidx);
+  int result = 0;
+  if (cidx != 0) 
+    result = get_tot_txq_size(cidx);
   return result;
 }
 /*---------------------------------------------------------------------------*/

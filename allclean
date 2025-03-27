@@ -6,6 +6,9 @@ if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
   exit 1
 fi
+
+
+rm -rf ${CLOONIX_TREE_ROOT}/xdoc/build/
 #----------------------------------------------------------
 COMMON=${CLOONIX_TREE_ROOT}/cloonix/common
 CLIENT=${CLOONIX_TREE_ROOT}/cloonix/client
@@ -86,7 +89,6 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
            iproute2 \
            xorg \
            wireshark \
-           tmux \
            spice_lib_server ; do
     cd ${SERVER}/${i}
     ./allclean

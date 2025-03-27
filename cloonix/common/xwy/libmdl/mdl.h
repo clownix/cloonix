@@ -18,6 +18,8 @@
 #define MAX_MSG_LEN  1000000
 #define MAX_FD_NUM 500
 #define MAX_TXT_LEN 300
+#define XWY_X11_SOCK "xwy_x11"
+
 
 #define MAX_X11_MSG_LEN 100000
 
@@ -48,6 +50,8 @@ enum
 {
   action_bash = 0,
   action_cmd,
+  action_ovs,
+  action_slf,
   action_dae,
   action_get,
   action_put,
@@ -104,6 +108,8 @@ enum
   msg_type_data_pty,
   msg_type_open_bash,
   msg_type_open_cmd,
+  msg_type_open_ovs,
+  msg_type_open_slf,
   msg_type_open_crun,
   msg_type_open_dae,
   msg_type_win_size,

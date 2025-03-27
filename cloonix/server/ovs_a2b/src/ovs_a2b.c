@@ -317,12 +317,12 @@ int main (int argc, char *argv[])
     {
     replace_init(g_a2b_name);
     }
-  if (!access(g_ctrl_path, F_OK))
+  if (!access(g_ctrl_path, R_OK))
     {
     KERR("ERROR %s exists ERASING", g_ctrl_path);
     unlink(g_ctrl_path);
     }
-  if (!access(g_a2b_path, F_OK))
+  if (!access(g_a2b_path, R_OK))
     {
     KERR("ERROR %s exists ERASING", g_a2b_path);
     unlink(g_a2b_path);

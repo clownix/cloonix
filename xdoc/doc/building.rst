@@ -19,8 +19,7 @@ This allows the use of customized libs with no impact on the official host
 machine.
 
 The host machine can have qemu, openvswitch and spice installed, cloonix will
-use its own version of these softwares. None of the host's binary are called
-except for podman.
+use its own version of these softwares.
 
 Wireshark and crun are not required in the host, those software are embedded
 in the bundle delivered with cloonix binaries.
@@ -74,9 +73,9 @@ local at 127.0.0.1, then go to cloonix-__LAST__/build_tools/vmbuild and do::
 
 These commands should create in bulk the qcow of debian virtual machines::
 
-    /var/lib/cloonix/bulk/trixie_amd64.qcow2
+    /var/lib/cloonix/bulk/trixie.qcow2
 
-Then you have to build the virtual machines debian_builder_amd64.qcow2
+Then you have to build the virtual machines debian_builder.qcow2
 the bundle will be created from inside these::
 
     ./vmbuild_create
@@ -92,6 +91,6 @@ And last you have the compilation virtual machines ready in bulk and do::
 
 This creates in build_tools the directory::
 
-    ./build_tools/cloonix-bundle-__LAST__-amd64
+    ./build_tools/cloonix-bundle-__LAST__
 
 For the i386, it is not availlable now.

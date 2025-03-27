@@ -532,34 +532,27 @@ extern int putenv(char *);	/* not POSIX */
 
 void WindowManager::spawn()
 {
-    // strange code thieved from 9wm to avoid leaving zombies
-    char *cloonix_net = getenv("CLOONIX_NET");
-    char *displayName = DisplayString(m_display);
-
-    if (fork() == 0) {
-	if (fork() == 0) {
-
-	    close(ConnectionNumber(m_display));
-
-	    // if you don't have putenv, miss out this next
-	    // conditional and its contents
-
-	    if (displayName && (displayName[0] != '\0')) {
-
-		char *pstring = (char *)malloc(strlen(displayName) + 10);
-		sprintf(pstring, "DISPLAY=%s", displayName);
-		putenv(pstring);
-	    }
-          if (cloonix_net)
-	      execlp("cloonix_gui", "cloonix_gui", cloonix_net, (char *)0);
-          else
-	      execlp("xterm", "xterm", "-ut", (char *)0);
-	    perror("wm2: exec failed");
-	    exit(1);
-	}
-	exit(0);
+  char *cloonix_net = getenv("CLOONIX_NET");
+  char *display = getenv("DISPLAY");
+  char *pstring;
+  if (fork() == 0) 
+    {
+    if (fork() == 0)
+      {
+      close(ConnectionNumber(m_display));
+      pstring = (char *)malloc(strlen(display) + 10);
+      sprintf(pstring, "DISPLAY=%s", display);
+      putenv(pstring);
+      if (cloonix_net)
+        execlp("cloonix_gui", "cloonix_gui", cloonix_net, (char *)0);
+      else
+        execlp("xterm", "xterm", "-ut", (char *)0);
+      perror("wm2: exec failed");
+      exit(1);
+      }
+    exit(0);
     }
-    wait((int *) 0);
+  wait((int *) 0);
 }
 
 

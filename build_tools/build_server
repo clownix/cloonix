@@ -2,21 +2,6 @@
 set -e
 PURE_CRUN="no"
 #----------------------------------------------------------------------#
-if [ ${#} = 1 ]; then
-  if [ "$1" = "i386" ]; then
-    ARCH="i386"
-  else
-    if [ "$1" = "amd64" ]; then
-      ARCH="amd64"
-    else
-      echo ERROR $0 param must be i386, or amd64
-      exit
-    fi
-  fi
-else
-  ARCH="amd64"
-fi
-#----------------------------------------------------------------------#
 if [ ! -n "${CLOONIX_TREE_ROOT}" ]; then
   echo PLEASE DEFINE CLOONIX_TREE_ROOT
   exit 1
@@ -67,7 +52,6 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
             "wireshark" \
             "iproute2" \
             "crun" \
-            "tmux" \
             "dtach" \
             "script_pty" \
             "proxymous" \
@@ -98,7 +82,7 @@ mv ${TMPBUILD}/cloonix/cloonix_net ${TMPBUILD}
       echo DOING:
       echo ${SERVER}/${i}
       cd ${SERVER}/${i}
-      ./cmd ${ARCH}
+      ./cmd
     done
   fi
   echo DOING:

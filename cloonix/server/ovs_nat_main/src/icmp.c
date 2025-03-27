@@ -158,7 +158,12 @@ void icmp_resp(uint32_t ipdst, uint16_t ident, uint16_t seq, int is_ko)
       ((struct icmphdr *) data)->checksum = 0;
       chksum = icmp_chksum((uint16_t *) data, cur->len_icmp - headip_len);
       ((struct icmphdr *) data)->checksum = chksum;
-      rxtx_tx_enqueue(cur->len_icmp, cur->buf_icmp);
+
+      if ((cur->len_icmp == 0) ||
+          (cur->len_icmp > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+        KERR("ERROR LEN  %d", cur->len_icmp);
+      else
+        rxtx_tx_enqueue(cur->len_icmp, cur->buf_icmp);
       }
     icmp_free(cur);
     }
@@ -179,48 +184,58 @@ void icmp_input(int len, uint8_t *buf)
   int llid_prxy = get_llid_prxy();
   char sig_buf[MAX_ICMP_RXTX_SIG_LEN];
   uint8_t *buf_icmp;
-  icmp_cksum  = (icmp[2]<<8) + icmp[3];
-  icmp_ident  = (icmp[4]<<8) + icmp[5];
-  icmp_seq_nb = (icmp[6]<<8) + icmp[7];
-  memcpy(tmp_mac, &(buf[0]), 6);
-  memcpy(&(buf[0]), &(buf[6]), 6);
-  memcpy(&(buf[6]), tmp_mac, 6);
-  memcpy(tmp_ip, &(ipv4[12]), 4);
-  memcpy(&(ipv4[12]), &(ipv4[16]), 4);
-  memcpy(&(ipv4[16]), tmp_ip, 4);
-  icmp[0] = ICMP_ECHOREPLY;
-  cksum = ~icmp_cksum & 0xffff;
-  cksum += ~htons(ICMP_ECHO << 8) & 0xffff;
-  cksum += htons(ICMP_ECHOREPLY << 8);
-  cksum = (cksum & 0xffff) + (cksum >> 16);
-  cksum = (cksum & 0xffff) + (cksum >> 16);
-  icmp_h->checksum = ~cksum;
-  src_ip_addr = (ipv4[12]<<24)+(ipv4[13]<<16)+(ipv4[14]<<8)+ipv4[15];
-  if ((g_our_cisco_ip == src_ip_addr) ||
-      (g_our_gw_ip    == src_ip_addr) ||
-      (g_our_dns_ip   == src_ip_addr))
-    {
-    rxtx_tx_enqueue(len, buf);
-    }
-  else if (!msg_exist_channel(llid_prxy))
-    {
-    KERR("ERROR");
-    }
+  if (icmp[0] != ICMP_ECHO)
+    KERR("ERROR ICMP TYPE: %d NOT MANAGED", icmp[0]);
   else
     {
-    cur = icmp_find(src_ip_addr, icmp_ident, icmp_seq_nb);
-    if (cur)
-      KERR("ERROR, %hhu.%hhu.%hhu.%hhu",ipv4[12],ipv4[13],ipv4[14],ipv4[15]);
+    icmp_cksum  = (icmp[2]<<8) + icmp[3];
+    icmp_ident  = (icmp[4]<<8) + icmp[5];
+    icmp_seq_nb = (icmp[6]<<8) + icmp[7];
+    memcpy(tmp_mac, &(buf[0]), 6);
+    memcpy(&(buf[0]), &(buf[6]), 6);
+    memcpy(&(buf[6]), tmp_mac, 6);
+    memcpy(tmp_ip, &(ipv4[12]), 4);
+    memcpy(&(ipv4[12]), &(ipv4[16]), 4);
+    memcpy(&(ipv4[16]), tmp_ip, 4);
+    icmp[0] = ICMP_ECHOREPLY;
+    cksum = ~icmp_cksum & 0xffff;
+    cksum += ~htons(ICMP_ECHO << 8) & 0xffff;
+    cksum += htons(ICMP_ECHOREPLY << 8);
+    cksum = (cksum & 0xffff) + (cksum >> 16);
+    cksum = (cksum & 0xffff) + (cksum >> 16);
+    icmp_h->checksum = ~cksum;
+    src_ip_addr = (ipv4[12]<<24)+(ipv4[13]<<16)+(ipv4[14]<<8)+ipv4[15];
+    if ((g_our_cisco_ip == src_ip_addr) ||
+        (g_our_gw_ip    == src_ip_addr) ||
+        (g_our_dns_ip   == src_ip_addr))
+      {
+      if ((len == 0) ||
+          (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+        KERR("ERROR LEN  %d", len);
+      else
+        rxtx_tx_enqueue(len, buf);
+      }
+    else if (!msg_exist_channel(llid_prxy))
+      {
+      KERR("ERROR");
+      }
     else
       {
-      memset(sig_buf, 0, MAX_ICMP_RXTX_SIG_LEN);
-      snprintf(sig_buf, MAX_ICMP_RXTX_SIG_LEN-1,
-      "nat_proxy_icmp_req %s ipdst:%X ident:%hu seq:%hu",
-      get_nat_name(), src_ip_addr, icmp_ident, icmp_seq_nb);
-      rpct_send_sigdiag_msg(llid_prxy, 0, sig_buf);
-      buf_icmp = (uint8_t *) utils_malloc(len);
-      memcpy(buf_icmp, buf, len);
-      icmp_alloc(src_ip_addr, icmp_ident, icmp_seq_nb, len, buf_icmp);
+      cur = icmp_find(src_ip_addr, icmp_ident, icmp_seq_nb);
+      if (cur)
+        KERR("ERROR, %hhu.%hhu.%hhu.%hhu",
+             ipv4[12], ipv4[13], ipv4[14], ipv4[15]);
+      else
+        {
+        memset(sig_buf, 0, MAX_ICMP_RXTX_SIG_LEN);
+        snprintf(sig_buf, MAX_ICMP_RXTX_SIG_LEN-1,
+        "nat_proxy_icmp_req %s ipdst:%X ident:%hu seq:%hu",
+        get_nat_name(), src_ip_addr, icmp_ident, icmp_seq_nb);
+        rpct_send_sigdiag_msg(llid_prxy, 0, sig_buf);
+        buf_icmp = (uint8_t *) utils_malloc(len);
+        memcpy(buf_icmp, buf, len);
+        icmp_alloc(src_ip_addr, icmp_ident, icmp_seq_nb, len, buf_icmp);
+        }
       }
     }
 }

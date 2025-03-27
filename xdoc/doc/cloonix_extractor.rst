@@ -42,15 +42,6 @@ this container with ::
 
   ./nemocmd shell
 
-The shell you get is based on tmux, while in tmux shell, to get into the
-mode that permits scrolling history ::
-
-  Ctrl-space Pg-up
-  
-Then to get back to normal mode ::
-
-  q
-
 In this shell, you can do commands like "ps -ef" to see all the processes
 running for cloonix.
 

@@ -149,7 +149,7 @@ void ignore_recv_response() {
 int file_exists(char *path)
 {
   int err, result = 0;
-  err = access(path, F_OK);
+  err = access(path, R_OK);
   if (!err)
     result = 1;
   return result;

@@ -205,9 +205,9 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
     memset(option2, 0, MAX_PATH_LEN);
     snprintf(option1, MAX_PATH_LEN-1, "%s/%s", cfg_get_bulk(), image);
     snprintf(option2, MAX_PATH_LEN-1, "%s/%s", cfg_get_bulk_host(), image);
-    if (!file_exists(option1, F_OK))
+    if (!file_exists(option1, R_OK))
       {
-      if (file_exists(option2, F_OK))
+      if (file_exists(option2, R_OK))
         bulk = cfg_get_bulk_host();
       else
         KERR("ERROR %s and %s do not exist", option1, option2);

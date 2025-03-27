@@ -2,8 +2,6 @@
 
 export TERM=linux
 COMMON="/usr/libexec/cloonix/common"
-TMUX="/usr/libexec/cloonix/server/cloonix-tmux-__IDENT__"
-TMUX_SOCK="__PROXYSHARE_IN_____IDENT__/tmux_back"
 SLEEP="/usr/libexec/cloonix/common/sleep"
 if [ ! -e "/usr/share" ]; then
   ${COMMON}/ln -s ${COMMON}/share /usr/share
@@ -35,29 +33,9 @@ ln -s __PROXYSHARE_IN_____IDENT__/X11-unix/X713 /tmp/.X11-unix/X713
 XAUTH_CODE=$(cat __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority)
 xauth add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
 
-${TMUX} -S ${TMUX_SOCK} kill-server
-rm -f ${TMUX_SOCK}
-${TMUX} -S ${TMUX_SOCK} new-session -d -s __IDENT__
-
-for i in "DISPLAY" "XAUTHORITY" "XDG_SESSION_TYPE" \
-         "XDG_RUNTIME_DIR" "HOME" "PATH" ; do
-  ${TMUX} -S ${TMUX_SOCK} set-option -g update-environment "${i}"
-done
-
 cloonix_net __IDENT__
 while [ $(ps axo pid,args | grep -v grep | egrep -c /usr/libexec/cloonix/server/cloonix-main-server) -gt 0 ]; do
   ${SLEEP} 2
-  if [ $(ps axo pid,args | grep -v grep | egrep -c ${TMUX}) -eq 0 ]; then
-    ${TMUX} -S ${TMUX_SOCK} kill-server
-    rm -f ${TMUX_SOCK}
-    ${TMUX} -S ${TMUX_SOCK} new-session -d -s __IDENT__
-    for i in "DISPLAY" "XAUTHORITY" "XDG_SESSION_TYPE" \
-             "XDG_RUNTIME_DIR" "HOME" "PATH" ; do
-      ${TMUX} -S ${TMUX_SOCK} set-option -g update-environment "${i}"
-    done
-  fi
 done
-#----------------------------------------------------------------------------
-${TMUX} -S ${TMUX_SOCK} kill-server
 #----------------------------------------------------------------------------
 

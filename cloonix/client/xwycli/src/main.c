@@ -67,8 +67,6 @@ static char *init_local_cloonix_bin_path(char *callbin)
     KOUT("%s", path);
   *ptr = 0;
   strncpy(cloonix_root_tree, path, MAX_PATH_LEN-1);
-  if (strcmp(cloonix_root_tree, "/usr/libexec/cloonix"))
-    KOUT("ERROR %s", cloonix_root_tree);
   if (access(XWYCLI_BIN, X_OK))
     KOUT("ERROR %s", path);
   return cloonix_root_tree;

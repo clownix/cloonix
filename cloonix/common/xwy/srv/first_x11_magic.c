@@ -40,7 +40,6 @@ static int read_with_wait(int x11_fd, char *buf, int len_to_get)
     len = wrap_read_x11_rd_x11(x11_fd, buf, len_to_get);
     if (len == 0)
       {
-      KERR("%d  X11 READ 0", x11_fd);
       break;
       }
     else if (len < 0)

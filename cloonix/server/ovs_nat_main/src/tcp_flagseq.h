@@ -39,7 +39,6 @@ typedef struct t_flagseq
   int      is_ssh_cisco;
   int      is_ssh_cisco_first;
   uint32_t offset;
-  uint32_t post_chk;
   uint32_t local_seq;
   uint32_t prev_distant_seq;
   uint32_t distant_seq;

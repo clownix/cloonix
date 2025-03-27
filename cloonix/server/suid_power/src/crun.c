@@ -259,7 +259,7 @@ static void create_net(char *line, char *resp, char *name, char *bulk,
            BASE_NAMESPACE, get_net_name(), name, cloonix_rank, vm_id);
   if (cur != NULL)
     KERR("ERROR %s", name);
-  else if (access(bulk_image, F_OK))
+  else if (access(bulk_image, R_OK))
     KERR("ERROR %s %s", name, bulk_image);
   else if (nb_eth >= MAX_ETH_VM)
     KERR("ERROR %s too big nb_eth:%d", name, nb_eth);

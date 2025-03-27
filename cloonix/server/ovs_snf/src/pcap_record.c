@@ -136,7 +136,7 @@ void pcap_record_start_phase2(void)
 /*****************************************************************************/
 static void timer_pcap_record_prepare(void *data)
 {
-  if (access(g_pcap_file, F_OK))
+  if (access(g_pcap_file, R_OK))
     {
     if (mkfifo(g_pcap_file, 0666) == -1)
       {

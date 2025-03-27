@@ -277,7 +277,11 @@ void ssh_cisco_nat_rx_from_llid(int llid, int data_len, uint8_t *data)
     cur->inactivity_count = 0;
     if (cur->flagseq)
       {
-      tcp_flagseq_to_tap(cur->flagseq, data_len, data);
+      if ((data_len == 0) ||
+          (data_len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+        KERR("ERROR LEN %d", data_len);
+      else
+        tcp_flagseq_to_tap(cur->flagseq, data_len, data);
       }
     else
       KERR("ERROR %d %d", llid, data_len);

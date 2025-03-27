@@ -5,6 +5,7 @@ TARGZ=${HERE}/targz_store
 WORK=${HERE}/work_targz_store
 rm -rf ${WORK}
 mkdir -vp ${WORK}
+mkdir -p ${TARGZ}
 #-----------------------------------------------------------------------------
 cd ${WORK}
 git clone --depth=1  https://gitlab.freedesktop.org/xorg/xserver
@@ -67,16 +68,6 @@ cd ${WORK}
 tar zcvf crun_${COMMIT}.tar.gz crun
 rm -rf crun
 mv crun_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------------------------------
-cd ${WORK}
-git clone --depth=1 https://github.com/tmux/tmux.git
-cd ${WORK}/tmux
-COMMIT=$(git log --pretty=format:"%H")
-sh autogen.sh
-cd ${WORK}
-tar zcvf tmux_${COMMIT}.tar.gz tmux
-rm -rf tmux
-mv tmux_${COMMIT}.tar.gz ${TARGZ}
 #-----------------------------------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://git.qemu.org/git/qemu.git

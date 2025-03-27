@@ -1,21 +1,10 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
-if [ ${#} = 1 ]; then
-  if [ "$1" = "i386" ]; then
-    ARCH="i386"
-    QCOW2="debian_builder_i386.qcow2"
-  else
-    echo param must be i386, if no param, then is amd64
-    exit
-  fi
-else
-  QCOW2="debian_builder_amd64.qcow2"
-  ARCH="amd64"
-fi
-#----------------------------------------------------------------------#
 HERE=`pwd`
-NET=mito
-NAME=dev
+NET="mito"
+DISTRO="trixie"
+QCOW2="${DISTRO}_builder.qcow2"
+NAME="dev"
 CLOONIX_TREE_ROOT=${HERE}/../..
 #######################################################################
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
@@ -38,11 +27,7 @@ cd ${CLOONIX_TREE_ROOT}/build_tools
 cloonix_gui ${NET}
 #----------------------------------------------------------------------
 PARAMS="ram=8000 cpu=4 eth=s"
-if [ "${ARCH}" = "i386" ]; then
-  cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --i386
-else
-  cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2}
-fi
+cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2}
 
 #----------------------------------------------------------------------
 sleep 3
@@ -57,7 +42,7 @@ cloonix_ssh ${NET} ${NAME} "mkdir -p /root/sources"
 cloonix_scp ${NET} /tmp/cloonix_build_tree/sources.tar.gz ${NAME}:/root/sources
 cloonix_ssh ${NET} ${NAME} "mkdir -p /var/lib/cloonix/bulk"
 cloonix_ssh ${NET} ${NAME} "cd /root/sources ; tar xvf sources.tar.gz ; rm sources.tar.gz"
-cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall ${ARCH}"
+cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall"
 #----------------------------------------------------------------------
 cloonix_scp ${NET} -r ${NAME}:/root/sources/build_tools/cloonix-bundle-* ${CLOONIX_TREE_ROOT}/build_tools
 rm -rf /tmp/cloonix_build_tree

@@ -265,6 +265,14 @@ char *debug_get_evt_type_txt(int type)
     case msg_type_open_cmd:
     result = "msg_type_open_cmd";
     break;
+
+    case msg_type_open_ovs:
+    result = "msg_type_open_ovs";
+    break;
+
+    case msg_type_open_slf:
+    result = "msg_type_open_slf";
+    break;
     
     case msg_type_win_size:
     result = "msg_type_win_size";

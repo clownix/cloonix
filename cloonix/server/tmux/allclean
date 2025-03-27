@@ -1,5 +1,0 @@
-#!/bin/bash
-HERE=`pwd`
-rm -rf ${HERE}/tmux
-
-

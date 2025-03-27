@@ -386,8 +386,9 @@ static int x11vnc(void *data)
   if (g_terminate)
     return 0;
 
-  unsetenv("WAYLAND_DISPLAY");
+  clearenv();
   setenv("XDG_SESSION_TYPE", "x11", 1);
+  setenv("DISPLAY", g_display, 1);
   debug_print_cmd(argv);
   execv(argv[0], argv);
   KOUT("ERROR execv %s", argv[0]);
@@ -403,6 +404,8 @@ static int wm2(void *data)
   if (g_terminate)
     return 0;
 
+  clearenv();
+  setenv("XDG_SESSION_TYPE", "x11", 1);
   setenv("DISPLAY", g_display, 1);
   setenv("CLOONIX_NET", g_net_name, 1);
   debug_print_cmd(argv);

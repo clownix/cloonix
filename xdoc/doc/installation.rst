@@ -9,7 +9,7 @@ Instructions for installation
 Installation of binaries
 ========================
 
-The cloonix installed binaries are provided by cloonix-bundle-<version>-amd64,
+The cloonix installed binaries are provided by cloonix-bundle-<version>,
 the *install_cloonix* script installs files in the folowing locations::
 
   /usr/libexec/cloonix/etc/cloonix.cfg                       config
@@ -26,9 +26,9 @@ directory depends on the name of the launched cloonix net::
 
 Here under is the complete list of commands for the binary installation::
   
-  wget http://clownix.net/downloads/cloonix-__LAST_BASE__/cloonix-bundle-__LAST__-amd64.tar.gz
-  tar xvf cloonix-bundle-__LAST__-amd64.tar.gz
-  cd cloonix-bundle-__LAST__-amd64
+  wget http://clownix.net/downloads/cloonix-__LAST_BASE__/cloonix-bundle-__LAST__.tar.gz
+  tar xvf cloonix-bundle-__LAST__.tar.gz
+  cd cloonix-bundle-__LAST__
   sudo ./install_cloonix
 
 
@@ -75,7 +75,7 @@ Running the test scripts
 
 In the cloonix-bundle, scripts are added for an easy test::
 
-  cd cloonix-bundle-__LAST__-amd64
+  cd cloonix-bundle-__LAST__
 
   ./ping_demo.sh
 

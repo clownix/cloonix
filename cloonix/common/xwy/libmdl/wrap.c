@@ -26,13 +26,20 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <pty.h>
 #include <pthread.h>
 #include <dirent.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <asm/types.h>
+#include <signal.h>
+#include <sys/ioctl.h>
+#include <linux/sockios.h>
+#include <stddef.h>
+
+
 
 
 #include "mdl.h"
@@ -353,11 +360,8 @@ ssize_t wrap_read_srv(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_x11_rd_x11(int s, void *buf, size_t len)
 {
-  ssize_t rlen = dead_read(s, buf, len);
-  if (rlen <=0)
-    KERR("ERROR DEADREAD %s", __FUNCTION__); 
-  DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_x11_rd_x11, buf);
-  return rlen;
+  int rxlen = read(s, buf, len);
+  return rxlen;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -375,11 +379,9 @@ ssize_t wrap_read_x11_rd_soc(int s, void *buf, size_t len)
 /****************************************************************************/
 ssize_t wrap_read_pty(int s, void *buf, size_t len)
 {
-  ssize_t rlen = dead_read(s, buf, len);
-  if (rlen <=0)
-    KERR("ERROR DEADREAD %s", __FUNCTION__); 
-  DEBUG_WRAP_READ_WRITE(1, s, rlen, fd_type_pty, buf);
-  return rlen;
+  int count = 0, rxlen;
+  rxlen = read(s, buf, len);
+  return rxlen;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -463,18 +465,13 @@ static void wrap_sockoptset(int fd, const char *fct1, const char *fct2)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int wrap_accept(int fd_listen, int fd_type, int is_tcp, const char *fct)
+int wrap_accept(int fd_listen, int fd_type, const char *fct)
 {
   int fd, opt=1;
 
   fd = accept4(fd_listen, NULL, NULL, SOCK_CLOEXEC|SOCK_NONBLOCK);
   if (fd >= 0)
     {
-    if (is_tcp)
-      {
-      if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0)
-        KOUT(" ");
-      }
     wrap_sockoptset(fd, __FUNCTION__, fct);
     if (fd_spy_add(fd, fd_type, __LINE__))
       {
@@ -620,58 +617,28 @@ int wrap_openpty(int *amaster, int *aslave, char *name, int fd_type)
 /****************************************************************************/
 int wrap_close(int fd, const char *fct)
 {
-  int fd_type, result, srv_idx, cli_idx;
-  fd_type = fd_spy_get_type(fd, &srv_idx, &cli_idx);
-  result = close(fd);
-  fd_spy_del(fd);
-  if (result == 0)
-    {
-    if (fd_type < 0)
-      KERR("Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
-           fd, fd_type, srv_idx, cli_idx, fct);
-    }
-  else if (fd_type > 0)
-    {
-    KERR("ERROR Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
-         fd, fd_type, srv_idx, cli_idx, fct);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int wrap_socket_listen_inet(unsigned long ip, int port,
-                            int fd_type, const char *fct)
-{
-  int s, opt=1;
-  struct sockaddr_in isock;
-  memset(&isock, 0, sizeof(isock));
-  s = socket(AF_INET, SOCK_STREAM, 0);
-  if (s < 0)
-    KOUT("%s", strerror(errno));
-  isock.sin_family = AF_INET;
-  isock.sin_addr.s_addr = htonl(ip);
-  isock.sin_port = htons(port);
-  if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-    KOUT(" ");
-  if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0)
-    KOUT(" ");
-  if (bind(s, (struct sockaddr*)&isock, sizeof(isock)) < 0)
-    KOUT("bind error: %s", strerror(errno));
-  if (listen(s, 15) < 0)
-    KOUT("listen error: %s", strerror(errno));
-  if (fd_spy_add(s, fd_type, __LINE__))
-    {
-    KERR("too big %s", fct);
-    close(s);
-    s = -1;
-    }
+  int fd_type, srv_idx, cli_idx;
+  int result = -1;
+  if (fd < 0)
+    KERR("FD NEG %s", fct);
   else
     {
-    wrap_nonblock(s);
-    fcntl(s, F_SETFD, FD_CLOEXEC);
+    fd_type = fd_spy_get_type(fd, &srv_idx, &cli_idx);
+    result = close(fd);
+    fd_spy_del(fd);
+    if (result == 0)
+      {
+      if (fd_type < 0)
+        KERR("Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
+             fd, fd_type, srv_idx, cli_idx, fct);
+      }
+    else if ((fd_type > 0) && (fd_type != fd_type_srv))
+      {
+      KERR("ERROR Wrong: %d  %d srv_idx:%d cli_idx:%d  %s", 
+           fd, fd_type, srv_idx, cli_idx, fct);
+      }
     }
-  return s;
+  return result;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -681,6 +648,40 @@ int wrap_chmod_666(char *path)
   int result = chmod(path, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
   if (result)
     KERR("chmod fail %s", path);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int wrap_socket_connect_inet(unsigned long ip, int port,
+                             int fd_type, const char *fct)
+{
+  int s, opt = 1, result = -1;
+  struct sockaddr_in sockin;
+  memset(&sockin, 0, sizeof(sockin));
+  s = socket (AF_INET,SOCK_STREAM,0);
+  if (s < 0)
+    KOUT(" ");
+  sockin.sin_family = AF_INET;
+  sockin.sin_port = htons(port);
+  sockin.sin_addr.s_addr = htonl(ip);
+  if (connect(s, (struct sockaddr*)&sockin, sizeof(sockin)) == 0)
+    {
+    if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0)
+      KOUT(" ");
+    wrap_sockoptset(s, __FUNCTION__, fct);
+    if (fd_spy_add(s, fd_type, __LINE__))
+      {
+      KERR("too big %s", fct);
+      close(s);
+      }
+    else
+      {
+      result = s;
+      }
+    }
+  else
+    KERR("Error connect %s\n", strerror(errno), fct);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -722,39 +723,104 @@ int wrap_socket_listen_unix(char *path, int fd_type, const char *fct)
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-int wrap_socket_connect_inet(unsigned long ip, int port,
-                             int fd_type, const char *fct)
+   
+/*****************************************************************************/
+static void tempo_connect(int no_use)
+{   
+  KERR("SIGNAL TIMEOUT UNIX SOCKET\n");
+}  
+/*---------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+static int wrap_util_client_abstract_socket_unix(char *pname, int *fd)
 {
-  int s, opt = 1, result = -1;
-  struct sockaddr_in sockin;
-  memset(&sockin, 0, sizeof(sockin));
-  s = socket (AF_INET,SOCK_STREAM,0);
-  if (s < 0)
-    KOUT(" ");
-  sockin.sin_family = AF_INET;
-  sockin.sin_port = htons(port);
-  sockin.sin_addr.s_addr = htonl(ip);
-  if (connect(s, (struct sockaddr*)&sockin, sizeof(sockin)) == 0)
+  int len,  sock, result = -1;
+  struct sockaddr_un addr;
+  struct sigaction act;
+  struct sigaction oldact;
+  signal(SIGPIPE, SIG_IGN);
+  if ((!pname) || (strlen(pname) == 0))
     {
-    if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0)
-      KOUT(" ");
-    wrap_sockoptset(s, __FUNCTION__, fct);
-    if (fd_spy_add(s, fd_type, __LINE__))
-      {
-      KERR("too big %s", fct);
-      close(s);
-      }
-    else
-      {
-      result = s;
-      }
+    KERR("ERROR");
+    return -1;
+    }
+  sock = socket (AF_UNIX,SOCK_STREAM,0);
+  if (sock <= 0)
+    KOUT("ERROR");
+  memset (&addr, 0, sizeof (struct sockaddr_un));
+  addr.sun_family = AF_UNIX;
+  addr.sun_path[0] = 0;
+  strcpy(&(addr.sun_path[1]), pname);
+  len = strlen(pname) + 1;
+  memset(&act, 0, sizeof(act));
+  sigfillset(&act.sa_mask);
+  act.sa_flags = 0;
+  act.sa_handler = tempo_connect;
+  sigaction(SIGALRM, &act, &oldact);
+  alarm(1);
+  result = connect(sock,(struct sockaddr *) &addr,
+                   offsetof(struct sockaddr_un, sun_path) + len);
+  sigaction(SIGALRM, &oldact, NULL);
+  alarm(0);
+  if (result != 0)
+    {
+    close(sock);
+    KERR("NO SERVER LISTENING TO ABSTRACT %s\n", pname);
     }
   else
-    KERR("Error connect %s\n", strerror(errno), fct);
+    {
+    *fd = sock;
+    KERR("ABSTRACT OPEN OK %s\n", pname);
+    }
   return result;
 }
-/*--------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int wrap_util_proxy_client_socket_unix(char *pname, int *fd)
+{
+  int len,  sock, result = -1;
+  struct sockaddr_un addr;
+  struct sigaction act;
+  struct sigaction oldact;
+  signal(SIGPIPE, SIG_IGN);
+  if ((!pname) || (strlen(pname) == 0))
+    {
+    KERR("ERROR");
+    return -1;
+    }
+  sock = socket (AF_UNIX,SOCK_STREAM,0);
+  if (sock <= 0)
+    KOUT(" ");
+  memset (&addr, 0, sizeof (struct sockaddr_un));
+  addr.sun_family = AF_UNIX;
+  strcpy(addr.sun_path, pname);
+  len = sizeof(struct sockaddr_un);
+  memset(&act, 0, sizeof(act));
+  sigfillset(&act.sa_mask);
+  act.sa_flags = 0;
+  act.sa_handler = tempo_connect;
+  sigaction(SIGALRM, &act, &oldact);
+  alarm(1);
+  result = connect(sock,(struct sockaddr *) &addr, len);
+  sigaction(SIGALRM, &oldact, NULL);
+  alarm(0);
+  if (result != 0)
+    {
+    close(sock);
+    printf("NO SERVER LISTENING TO %s\n", pname);
+    KERR("NO SERVER LISTENING TO %s\n", pname);
+    }
+  else
+    {
+    *fd = sock;
+    }
+  if (result)
+    result = wrap_util_client_abstract_socket_unix(pname, fd);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 
 
@@ -762,19 +828,16 @@ int wrap_socket_connect_inet(unsigned long ip, int port,
 int wrap_socket_connect_unix(char *path, int fd_type, const char *fct)
 {
   int s, result = -1;
-  struct sockaddr_un sockun;
-  memset(&sockun, 0, sizeof(sockun));
-  s = socket(PF_UNIX, SOCK_STREAM, 0);
-  if (s < 0)
-    KOUT(" ");
-  sockun.sun_family = AF_UNIX;
-  strcpy(sockun.sun_path, path);
-  if (connect(s, (struct sockaddr*)&sockun, sizeof(sockun)) == 0)
+  if (wrap_util_proxy_client_socket_unix(path, &s))
+    {
+    KERR("ERROR UNIX SOCKET %s %s", path, fct);
+    }
+  else
     {
     wrap_sockoptset(s, __FUNCTION__, fct);
     if (fd_spy_add(s, fd_type, __LINE__))
       {
-      KERR("too big %s", fct);
+      KERR("TOO BIG %s", fct);
       close(s);
       }
     else
@@ -782,8 +845,24 @@ int wrap_socket_connect_unix(char *path, int fd_type, const char *fct)
       result = s;
       }
     }
-  else
-    KERR("Error connect unix %s %s %s", strerror(errno), path, fct);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int wrap_socket_connect_unix_connect_ok(char *path)
+{
+  int s, result = 0;
+  struct sockaddr_un sockun;
+  memset(&sockun, 0, sizeof(sockun));
+  s = socket(PF_UNIX, SOCK_STREAM, 0);
+  if (s < 0)
+    KOUT("ERROR socket");
+  sockun.sun_family = AF_UNIX;
+  strcpy(sockun.sun_path, path);
+  if (connect(s, (struct sockaddr*)&sockun, sizeof(sockun)) == 0)
+    result = 1;
+  close(s);
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -899,7 +978,7 @@ int wrap_touch(char *path)
 int wrap_file_exists(char *path)
 {
   int err, result = 0;
-  err = access(path, F_OK);
+  err = access(path, R_OK);
   if (!err)
     result = 1;
   return result;

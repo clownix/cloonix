@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int pty_fork_free_with_sock_fd(int sock_fd);
+int pty_fork_free_with_fd(int sock_fd);
 void pty_fork_msg_type_data_pty(int sock_fd, t_msg *msg);
 void pty_fork_msg_type_win_size(int sock_fd, int len, char *buf);
 int pty_fork_xauth_add_magic_cookie(int display_val, char *magic_cookie);
@@ -23,6 +23,6 @@ int pty_fork_get_max_fd(int val);
 int pty_fork_fdisset(fd_set *readfds, fd_set *writefds);
 void pty_fork_fdset(fd_set *readfds, fd_set *writefds);
 void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
-                         char *cmd, int display_val);
-void pty_fork_init(char *cloonix_net_name);
+                         char *cmd, int net_rank, int display_val);
+void pty_fork_init(char *net_name, int net_rank);
 /*--------------------------------------------------------------------------*/

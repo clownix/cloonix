@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #-----------------------------------------------------------------------------
 EXTRACT=`pwd`
 ROOTFS="${EXTRACT}/rootfs"
@@ -35,16 +35,12 @@ USER_GID=$(cat /etc/passwd |grep ^${USER} | awk -F : "{print \$4}")
 PROXYSHARE_IN="/tmp/cloonix_proxymous"
 PROXYSHARE_OUT="/tmp/${IDENT}_proxymous_${USER}"
 PROXY="${BIN}/cloonix-proxymous-${IDENT}"
-TMUX="${BIN}/cloonix-tmux-${IDENT}"
 CRUN="${BIN}/cloonix-crun-${IDENT}"
 #-----------------------------------------------------------------------------
 mv ${CONFIG}/cloonix-init-starter-crun   ${SERVER}/cloonix-init-${IDENT}
 mv ${CONFIG}/config.json.template        ${CONFIG}/config.json
-mv ${CONFIG}/tmux.conf                   ${ROOTFS}/root/.tmux.conf
-mv ${BIN}/cloonix-tmux                   ${BIN}/cloonix-tmux-${IDENT}
 mv ${BIN}/cloonix-crun                   ${BIN}/cloonix-crun-${IDENT}
 mv ${BIN}/cloonix-proxymous              ${BIN}/cloonix-proxymous-${IDENT}
-mv ${SERVER}/cloonix-tmux                ${SERVER}/cloonix-tmux-${IDENT} 
 #-----------------------------------------------------------------------------
 if [ -r ${HOST_BULK} ]; then
   sed -i s"%__HOST_BULK_PRESENT__%%"     ${CONFIG}/config.json
@@ -74,9 +70,7 @@ sed -i s"%__IDENT__%${IDENT}%"                     ${ROOTFS}/root/spider_frr.sh
 #-----------------------------------------------------------------------------
 for i in "cloonix-crun-${IDENT}" \
          "cloonix-proxymous-${IDENT}" \
-         "cloonix-tmux-${IDENT}" \
-         "bash" \
-         "xauth" ; do
+         "xauth"; do
   ${PATCHELF} --force-rpath --set-rpath ${BIN} ${BIN}/${i}
   ${PATCHELF} --set-interpreter ${BIN}/ld-linux-x86-64.so.2 ${BIN}/${i}
 done
@@ -85,9 +79,9 @@ ${PATCHELF} --add-needed ${BIN}/libz.so.1      ${BIN}/cloonix-proxymous-${IDENT}
 ${PATCHELF} --add-needed ${BIN}/libcrypto.so.3 ${BIN}/cloonix-proxymous-${IDENT}
 ${PATCHELF} --add-needed ${BIN}/libxcb.so.1    ${BIN}/xauth
 ${PATCHELF} --add-needed ${BIN}/libXdmcp.so.6  ${BIN}/xauth
+
 #---------------------------------------------------------------------------
 pkill -f cloonix-proxymous-${IDENT} 1>/dev/null 2>&1
-${TMUX} -S ${PROXYSHARE_OUT}/tmux_back kill-server 1>/dev/null 2>&1
 rm -rf ${PROXYSHARE_OUT} 1>/dev/null 2>&1
 rm -f /tmp/xauth-${USER}-extracted
 #---------------------------------------------------------------------------
@@ -104,11 +98,12 @@ else
     XAUTH_EXTRACT=$(cat /tmp/xauth-${USER}-extracted)
     XAUTH_CODE=${XAUTH_EXTRACT##* }
     echo "${XAUTH_CODE}">${PROXYSHARE_OUT}/xauth-code-Xauthority
+    echo Xauthority code: $XAUTH_CODE
   fi
-fi
+fi  
 #-----------------------------------------------------------------------------
 cat > ${EXTRACT}/../${IDENT}cmd << EOF
-#!/bin/bash
+#!/bin/sh
 
 if [ \${#} -ne 1 ]; then
   echo cmd param needed:
@@ -116,13 +111,13 @@ if [ \${#} -ne 1 ]; then
   exit 
 fi
 cmd=\$1
-
+export LC_ALL=C.UTF-8
 IDENT="${IDENT}"
 PROXYSHARE_OUT="${PROXYSHARE_OUT}"
 EXTRACT="${EXTRACT}"
 PROXY="\${EXTRACT}/bin/cloonix-proxymous-\${IDENT}"
 CRUN="\${EXTRACT}/bin/cloonix-crun-\${IDENT}"
-TMUX="\${EXTRACT}/bin/cloonix-tmux-\${IDENT}"
+CRUNROOT="\${EXTRACT}/rootfs/tmp"
 
 #-----------------------------------------------------------------------------
 case \$cmd in
@@ -161,32 +156,33 @@ case \$cmd in
     #------------------------------------------------------------------------
   ;;
 
+
   stop)
-    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "cloonix_cli \${IDENT} kil; sleep 1"
+    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} kil
   ;;
 
   web_on)
-    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "cloonix_cli \${IDENT} cnf web on; sleep 1"
+    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} cnf web on
   ;;
 
   web_off)
-    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "cloonix_cli \${IDENT} cnf web off; sleep 1"
+    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} cnf web off
   ;;
 
   shell)
-    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new
+    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} sh 
   ;;
 
   canvas)
-    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "cloonix_gui \${IDENT}; sleep 1"
+    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} cloonix_gui \${IDENT}
   ;;
 
   demo_ping)
-    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "/root/ping_demo.sh; sleep 1"
+    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} /root/ping_demo.sh
   ;;
 
   demo_frr)
-    \${TMUX} -S \${PROXYSHARE_OUT}/tmux_back new "/root/spider_frr.sh; sleep 1"
+    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} /root/spider_frr.sh
   ;;
 
   *)

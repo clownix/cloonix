@@ -35,8 +35,8 @@
 
 
 static uint64_t g_prev_usec;
-static uint8_t g_buf_tx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
-static uint8_t g_buf_rx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_buf_rx[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_buf_tx[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
 static int g_fd_rx_from_tap0;
 static int g_fd_tx_to_tap0;
 static int g_fd_rx_from_tap1;
@@ -63,7 +63,7 @@ static void packet_tx(int id, int len, uint8_t *buf)
   static uint16_t seqtap = 0;
   int tx;
   seqtap += 1;
-  if ((len <= 0) || (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+  if ((len <= 0) || (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
     KOUT("ERROR TX %d", len);
   fct_seqtap_tx(kind_seqtap_data, g_buf_tx, seqtap, len, buf);
   if (id == 0)

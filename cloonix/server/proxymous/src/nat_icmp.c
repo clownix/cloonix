@@ -228,9 +228,7 @@ static int rx_cb(int llid, int fd)
       icmp_type  = icmp[0];
       ident = ((icmp[4]<<8) & 0xFF00) + ((icmp[5] & 0xFF));
       seq = ((icmp[6]<<8) & 0xFF00) + ((icmp[7] & 0xFF));
-      if (icmp_type != ICMP_ECHOREPLY)
-        KERR("ERROR %d", icmp_type);
-      else
+      if (icmp_type == ICMP_ECHOREPLY)
         {
         if (cur->ipdst != ipdst)
           KERR("ERROR  %X %hd %hd", ipdst, ident, seq);
@@ -244,6 +242,11 @@ static int rx_cb(int llid, int fd)
           icmp_free(cur->ctx, cur_llid);
           }
         }
+      else if (icmp_type == ICMP_ECHO)
+        {
+        }
+      else
+        KERR("WARNING ICMP TYPE %d RX", icmp_type);
       }
     }
   return rc;

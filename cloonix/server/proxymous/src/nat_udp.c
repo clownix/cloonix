@@ -267,15 +267,16 @@ static int rx_proxytx_cb(int llid, int fd)
 {
   socklen_t slen;
   int data_len, tx;
-  uint8_t buf[MAX_TAP_BUF_LEN];
+  uint8_t buf[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
   uint8_t *data;
   t_llid_udp *cur_llid;
   t_udp_flow *cur;
   struct sockaddr_in addr;
   int ln=sizeof (struct sockaddr_in);
+  int max_len = HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN;
   slen = 0;
   data = &(buf[g_offset]);
-  data_len = recvfrom(fd, data, MAX_TAP_BUF_LEN - g_offset, 0, NULL, &slen);
+  data_len = recvfrom(fd, data, max_len - g_offset, 0, NULL, &slen);
   if (data_len <= 0)
     KERR("ERROR %d %d", data_len, errno);
   else
@@ -311,13 +312,14 @@ static int rx_proxyrx_cb(int llid, int fd)
 {
   socklen_t slen;
   int data_len;
-  uint8_t buf[MAX_TAP_BUF_LEN];
+  uint8_t buf[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
   uint8_t *data;
   t_llid_udp *cur_llid;
   t_udp_flow *cur;
+  int max_len = HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN;
   slen = 0;
   data = &(buf[g_offset]);
-  data_len = recvfrom(fd, data, MAX_TAP_BUF_LEN - g_offset, 0, NULL, &slen);
+  data_len = recvfrom(fd, data, max_len - g_offset, 0, NULL, &slen);
   if (data_len <= 0)
     KERR("ERROR %d %d", data_len, errno);
   else

@@ -509,7 +509,7 @@ static void timer_launch_end(void *data)
         KERR(" ");
       else
         {
-        if (!file_exists(utils_get_dtach_sock_path(name), F_OK))
+        if (!file_exists(utils_get_dtach_sock_path(name), R_OK))
           {
           sprintf(err, "ERROR QEMU UNEXPECTED STOP %s do \n"
                        "sudo cat /var/log/user.log | grep qemu\n", name);

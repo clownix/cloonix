@@ -1,20 +1,10 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
-if [ ${#} = 1 ]; then
-  if [ "$1" = "i386" ]; then
-    ARCH="i386"
-  else
-    echo param must be i386, if no param, then is amd64
-    exit
-  fi
-else
-  ARCH="amd64"
-fi
-#----------------------------------------------------------------------#
 HERE=`pwd`
-DISTRO=trixie
-NET=mito
-NAME=dev
+DISTRO="trixie"
+QCOW2="${DISTRO}_builder.qcow2"
+NET="mito"
+NAME="dev"
 BULK="/var/lib/cloonix/bulk"
 REPO="http://172.17.0.2/debian/${DISTRO}"
 #######################################################################
@@ -27,9 +17,8 @@ else
   cloonix_cli $NET rma
 fi
 #----------------------------------------------------------------------
-QCOW2=debian_builder_${ARCH}.qcow2
-echo cp -f ${BULK}/${DISTRO}_${ARCH}.qcow2 ${BULK}/${QCOW2}
-cp -f ${BULK}/${DISTRO}_${ARCH}.qcow2 ${BULK}/${QCOW2}
+echo cp -f ${BULK}/${DISTRO}.qcow2 ${BULK}/${QCOW2}
+cp -f ${BULK}/${DISTRO}.qcow2 ${BULK}/${QCOW2}
 #----------------------------------------------------------------------
 sync
 #----------------------------------------------------------------------
@@ -37,11 +26,7 @@ cloonix_gui ${NET}
 cloonix_cli ${NET} add nat nat
 #----------------------------------------------------------------------
 PARAMS="ram=8000 cpu=4 eth=s"
-if [ "${ARCH}" = "i386" ]; then
-  cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --persistent --i386
-else
-  cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --persistent
-fi
+cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --persistent
 #----------------------------------------------------------------------
 sleep 3
 cloonix_cli ${NET} add lan ${NAME} 0 lan1
@@ -102,7 +87,8 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                 libpipewire-0.3-modules util-linux rsyslog \
                 pipewire-pulse unzip zip curl wget libboost-dev \
                 nodejs node-mime-types node-mime node-optimist \
-                node-ws acl libevent-dev xclip lsof"
+                node-ws acl libevent-dev xclip lsof \
+                libcanberra-gtk3-module kde-config-gtk-style"
 
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"

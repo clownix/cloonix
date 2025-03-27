@@ -164,7 +164,7 @@ static int module_access_is_ko(char *dev_file)
 {
   int result = -1;
   int fd;
-  if (access( dev_file, F_OK))
+  if (access( dev_file, R_OK))
     printf("\nWARNING %s not found kvm needs it to be rw\n", dev_file);
   else if (!i_have_read_write_access(dev_file))
     printf("\nWARNING %s not writable kvm needs it to be rw\n", dev_file);
@@ -336,7 +336,7 @@ int main(int argc, char **argv)
            PROXYSHARE_IN, g_net_name );
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s",
            g_proxyshare_dir, PROXYMOUS);
-  if (!access(g_ctrl_path, F_OK))
+  if (!access(g_ctrl_path, R_OK))
     {
     KERR("ERROR %s exists ERASING", g_ctrl_path);
     unlink(g_ctrl_path);

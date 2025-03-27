@@ -97,7 +97,7 @@ static char *get_cloonix_config_path(void)
 static int in_cloonix_file_exists(void)
 {
   int err, result = 0;
-  err = access(get_cloonix_config_path(), F_OK);
+  err = access(get_cloonix_config_path(), R_OK);
   if (!err)
     result = 1;
   return result;

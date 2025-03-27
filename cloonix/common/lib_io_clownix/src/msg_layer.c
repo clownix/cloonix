@@ -122,7 +122,7 @@ uint8_t *malloc_to_byte_encode(int len, char *msg)
 void fct_seqtap_tx(int kind, uint8_t *tx, uint16_t seqtap,
                    int len, uint8_t *buf)
 {
-  if (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN)
+  if (len > HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN)
     KOUT("ERROR SEND  %d", len);
   tx[0] = 0xCA;
   tx[1] = 0xFE;
@@ -179,7 +179,7 @@ int fct_seqtap_rx(int is_dgram, int tot_len, int fd, uint8_t *rx,
   if (result != kind_seqtap_error)
     {
     len = ((rx[4] & 0xFF) << 8) + (rx[5] & 0xFF);
-    if (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN)
+    if (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN)
       KERR("ERROR %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
            len, rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
     else
@@ -190,7 +190,10 @@ int fct_seqtap_rx(int is_dgram, int tot_len, int fd, uint8_t *rx,
         rxlen = read(fd, rx + HEADER_TAP_MSG, len);
         while (rxlen == -1)
           {
-          if ((errno!=EINTR) && (errno!=EWOULDBLOCK) && (errno!=EAGAIN))
+          if ((errno!=EINTR) &&
+              (errno!=EWOULDBLOCK) &&
+              (errno!=EINPROGRESS) &&
+              (errno!=EAGAIN))
             {
             KERR("ERROR %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
                  rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
@@ -526,8 +529,13 @@ unsigned long msg_get_tx_peak_queue_len(int llid)
   if (msg_exist_channel(llid))
     {
     cidx = channel_check_llid(llid, __FUNCTION__);
-    result = peak_queue_len[cidx];
-    peak_queue_len[cidx] = 0;
+    if (cidx == 0)
+      KERR("ERROR");
+    else
+      {
+      result = peak_queue_len[cidx];
+      peak_queue_len[cidx] = 0;
+      }
     }
   return result;
 }
@@ -536,14 +544,14 @@ unsigned long msg_get_tx_peak_queue_len(int llid)
 /*****************************************************************************/
 static void default_err_kill(int llid, int err, int from)
 {
-  KOUT("%d %d %d\n", llid, err, from);
+  KOUT("ERROR %d %d %d\n", llid, err, from);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void default_rx_callback(int llid, int len, char *str_rx) 
 {
-  KOUT("%d %d", llid, len);
+  KOUT("ERROR %d %d", llid, len);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -554,51 +562,89 @@ void err_dchan_cb(int llid, int err, int from)
   if (msg_exist_channel(llid))
     {
     cidx = channel_check_llid(llid, __FUNCTION__);
-    if (!dchan[cidx].rx_callback)
-      KOUT("%d %d\n", err, from);
-    if (!dchan[cidx].error_callback)
-      KOUT("%d %d\n", err, from);
-    dchan[cidx].error_callback(llid, err, from);
+    if (cidx == 0)
+      KERR("ERROR");
+    else
+      {
+      if (!dchan[cidx].rx_callback)
+        KOUT("%d %d\n", err, from);
+      if (!dchan[cidx].error_callback)
+        KOUT("%d %d\n", err, from);
+      dchan[cidx].error_callback(llid, err, from);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int rx_dchan_cb(int llid, int fd)
+static int rx_dchan_traf_cb(int llid, int fd)
 {
-  int len, cidx, correct_recv;
+  int len, cidx, correct_recv = 0;
   cidx = channel_check_llid(llid, __FUNCTION__);
-  if (!llid || (dchan[cidx].llid != llid))
-    KOUT(" ");
-  if (dchan[cidx].fd != fd)
-    KOUT(" ");
-  first_rx_buf = (char *)clownix_malloc(first_rx_buf_max+1, IOCMLC);
-/*
-  if (kind == kind_server_proxy_traf_inet) 
-    len = util_read_brakes_on(first_rx_buf, first_rx_buf_max, 
-                              get_fd_with_cidx(cidx), llid);
-  else
-*/
-  len = util_read(first_rx_buf, first_rx_buf_max, get_fd_with_cidx(cidx));
-  if (len < 0)
-    {
-    clownix_free(first_rx_buf, __FUNCTION__);
-    if (errno != EOPNOTSUPP)
-      err_dchan_cb(llid, errno, 1132);
-    correct_recv = 0;
-    }
+  if (cidx == 0)
+    KERR("ERROR");
   else
     {
-    correct_recv = len;
-    first_rx_buf[len] = 0;
-    if ((dchan[cidx].decoding_state == rx_type_proxy_traf_unix_start) ||
-        (dchan[cidx].decoding_state == rx_type_proxy_traf_tcp_start))
+    if (!llid || (dchan[cidx].llid != llid))
+      KOUT("ERROR");
+    if (dchan[cidx].fd != fd)
+      KOUT("ERROR");
+    first_rx_buf = (char *)clownix_malloc(TRAF_TAP_MINUS_TCP, IOCMLC);
+    len = util_read(first_rx_buf,TRAF_TAP_MINUS_TCP,get_fd_with_cidx(cidx));
+    if (len < 0)
       {
-      dchan[cidx].rx_callback(llid, len, first_rx_buf);
       clownix_free(first_rx_buf, __FUNCTION__);
+      if (errno != EOPNOTSUPP)
+        err_dchan_cb(llid, errno, 1132);
+      correct_recv = 0;
       }
     else
       {
+      correct_recv = len;
+      first_rx_buf[len] = 0;
+      if ((dchan[cidx].decoding_state == rx_type_proxy_traf_unix_start) ||
+          (dchan[cidx].decoding_state == rx_type_proxy_traf_tcp_start))
+        {
+        dchan[cidx].rx_callback(llid, len, first_rx_buf);
+        clownix_free(first_rx_buf, __FUNCTION__);
+        }
+      else
+        KOUT("ERROR");
+      }
+    }
+  return correct_recv;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int rx_dchan_cb(int llid, int fd)
+{                         
+  int len, cidx, correct_recv = 0;
+  cidx = channel_check_llid(llid, __FUNCTION__);
+  if (cidx == 0)
+    KERR("ERROR");
+  else
+    {
+    if (!llid || (dchan[cidx].llid != llid))
+      KOUT("ERROR");
+    if (dchan[cidx].fd != fd)
+      KOUT("ERROR");
+    first_rx_buf = (char *)clownix_malloc(first_rx_buf_max+1, IOCMLC);
+    len = util_read(first_rx_buf, first_rx_buf_max, get_fd_with_cidx(cidx));
+    if (len < 0)
+      {
+      clownix_free(first_rx_buf, __FUNCTION__);
+      if (errno != EOPNOTSUPP)
+        err_dchan_cb(llid, errno, 1132);
+      correct_recv = 0;
+      }
+    else
+      { 
+      correct_recv = len;
+      first_rx_buf[len] = 0;
+      if ((dchan[cidx].decoding_state == rx_type_proxy_traf_unix_start) ||
+          (dchan[cidx].decoding_state == rx_type_proxy_traf_tcp_start))
+        KOUT("ERROR");
       new_rx_to_process(&(dchan[cidx]), len, first_rx_buf);
       }
     }
@@ -611,20 +657,25 @@ int tx_dchan_cb(int llid, int fd)
 {
   int cidx, result, correct_send, total_correct_send = 0;
   cidx = channel_check_llid(llid, __FUNCTION__);
-  if (dchan[cidx].llid !=  llid)
-    KOUT(" ");
-  if (dchan[cidx].fd !=  fd)
-    KOUT(" ");
-  if (channel_get_tx_queue_len(llid))
+  if (cidx == 0)
+    KERR("ERROR");
+  else
     {
-    if (!dchan[cidx].tx)
-      KOUT(" ");
-    do
+    if (dchan[cidx].llid !=  llid)
+      KOUT("ERROR");
+    if (dchan[cidx].fd !=  fd)
+      KOUT("ERROR");
+    if (channel_get_tx_queue_len(llid))
       {
-      result = tx_try_send_chunk(&(dchan[cidx]), cidx, &correct_send, 
-               err_dchan_cb);
-      total_correct_send += correct_send;
-      } while (result == 1);
+      if (!dchan[cidx].tx)
+        KOUT("ERROR");
+      do
+        {
+        result = tx_try_send_chunk(&(dchan[cidx]), cidx,
+                                   &correct_send, err_dchan_cb);
+        total_correct_send += correct_send;
+        } while (result == 1);
+      }
     }
   return total_correct_send;
 }
@@ -636,22 +687,32 @@ static int server_has_new_connect_from_client(int id, int fd)
   int fd_new, llid, cidx, serv_cidx;
   char *little_name;
   serv_cidx = channel_check_llid(id, __FUNCTION__);
-  util_fd_accept(fd, &fd_new, __FUNCTION__);
-  if (fd_new >= 0)
+  if (serv_cidx == 0)
+    KERR("ERROR");
+  else
     {
-    little_name = channel_get_little_name(id);
-    llid = channel_create(fd_new, kind_server, little_name, rx_dchan_cb, 
-                          tx_dchan_cb, err_dchan_cb);
-    if (!llid)
-      KOUT(" ");
-    cidx = channel_check_llid(llid, __FUNCTION__);
-    if (!dchan[serv_cidx].server_connect_callback)
-      KOUT(" ");
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_ascii_start;
-    dchan[cidx].llid = llid;
-    dchan[cidx].fd = fd_new;
-    dchan[serv_cidx].server_connect_callback(id, llid);
+    util_fd_accept(fd, &fd_new, __FUNCTION__);
+    if (fd_new >= 0)
+      {
+      little_name = channel_get_little_name(id);
+      llid = channel_create(fd_new, kind_server, little_name, rx_dchan_cb, 
+                            tx_dchan_cb, err_dchan_cb);
+      if (!llid)
+        KOUT("ERROR");
+      cidx = channel_check_llid(llid, __FUNCTION__);
+      if (cidx == 0)
+        KERR("ERROR");
+      else
+        {
+        if (!dchan[serv_cidx].server_connect_callback)
+          KOUT("ERROR");
+        memset(&dchan[cidx], 0, sizeof(t_data_channel));
+        dchan[cidx].decoding_state = rx_type_ascii_start;
+        dchan[cidx].llid = llid;
+        dchan[cidx].fd = fd_new;
+        dchan[serv_cidx].server_connect_callback(id, llid);
+        }
+      }
     }
   return 0;
 }
@@ -662,10 +723,15 @@ void msg_delete_channel(int llid)
 {
   int cidx;
   cidx = channel_check_llid(llid, __FUNCTION__);
-  channel_delete(llid);
-  chain_delete(&(dchan[cidx].tx), &(dchan[cidx].last_tx));
-  chunk_chain_delete(&(dchan[cidx]));
-  memset(&(dchan[cidx]), 0, sizeof(t_data_channel));
+  if (cidx == 0)
+    KERR("ERROR");
+  else
+    {
+    channel_delete(llid);
+    chain_delete(&(dchan[cidx].tx), &(dchan[cidx].last_tx));
+    chunk_chain_delete(&(dchan[cidx]));
+    memset(&(dchan[cidx]), 0, sizeof(t_data_channel));
+    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -697,20 +763,28 @@ int msg_watch_fd(int fd, t_fd_event rx_data,
 {
   int llid, cidx;
   if (fd < 0)
-    KOUT(" ");
+    KOUT("ERROR");
   if (!err)
-    KOUT(" ");
+    KOUT("ERROR");
   llid = channel_create(fd, kind_simple_watch, little_name, rx_data, 
                         tx_dchan_cb, err_dchan_cb);
   if (llid)
     {
     cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_watch;
-    dchan[cidx].rx_callback = default_rx_callback;
-    dchan[cidx].error_callback = err;
-    dchan[cidx].llid = llid;
-    dchan[cidx].fd = fd;
+    if (cidx == 0)
+      {
+      KERR("ERROR");
+      llid = 0;
+      }
+    else
+      {
+      memset(&dchan[cidx], 0, sizeof(t_data_channel));
+      dchan[cidx].decoding_state = rx_type_watch;
+      dchan[cidx].rx_callback = default_rx_callback;
+      dchan[cidx].error_callback = err;
+      dchan[cidx].llid = llid;
+      dchan[cidx].fd = fd;
+      }
     }
   return (llid);
 }
@@ -724,29 +798,34 @@ void proxy_traf_tx(int llid, int len, char *str_tx, int is_unix)
   if ((len<=0) || (len > MAX_TOT_LEN_QSIG))
     KOUT("ERROR %d", len);
   cidx = channel_check_llid(llid, __FUNCTION__);
-  if (dchan[cidx].llid != llid)
-    KOUT("ERROR %d %d %d", cidx, dchan[cidx].llid, llid);
-  if (is_unix)
-    {
-    if ((dchan[cidx].decoding_state != rx_type_proxy_traf_unix_start) &&
-        (dchan[cidx].decoding_state != rx_type_doorways))
-      KOUT("ERROR %d", dchan[cidx].decoding_state);
-    }
+  if (cidx == 0)
+    KERR("ERROR");
   else
     {
-    if (dchan[cidx].decoding_state != rx_type_proxy_traf_tcp_start)
-      KOUT("ERROR %d", dchan[cidx].decoding_state);
-    }
-  if (dchan[cidx].tot_txq_size > (2 * MAX_TOT_LEN_QSIG))
-    KOUT("ERROR %d %lu", len, dchan[cidx].tot_txq_size);
-  else
-    {
-    dchan[cidx].tot_txq_size += len;
-    if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
-      peak_queue_len[cidx] = dchan[cidx].tot_txq_size; 
-    ntx = (char *)clownix_malloc(len, IOCMLC);
-    memcpy (ntx, str_tx, len);
-    chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
+    if (dchan[cidx].llid != llid)
+      KOUT("ERROR %d %d %d", cidx, dchan[cidx].llid, llid);
+    if (is_unix)
+      {
+      if ((dchan[cidx].decoding_state != rx_type_proxy_traf_unix_start) &&
+          (dchan[cidx].decoding_state != rx_type_doorways))
+        KOUT("ERROR %d", dchan[cidx].decoding_state);
+      }
+    else
+      {
+      if (dchan[cidx].decoding_state != rx_type_proxy_traf_tcp_start)
+        KOUT("ERROR %d", dchan[cidx].decoding_state);
+      }
+    if (dchan[cidx].tot_txq_size > (2 * MAX_TOT_LEN_QSIG))
+      KOUT("ERROR %d %lu", len, dchan[cidx].tot_txq_size);
+    else
+      {
+      dchan[cidx].tot_txq_size += len;
+      if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
+        peak_queue_len[cidx] = dchan[cidx].tot_txq_size; 
+      ntx = (char *)clownix_malloc(len, IOCMLC);
+      memcpy (ntx, str_tx, len);
+      chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -774,26 +853,31 @@ void proxy_sig_tx(int llid, int len, char *str_tx)
   if ((len<=0) || (len > MAX_TOT_LEN_PROXY))
     KOUT("ERROR %d", len);
   cidx = channel_check_llid(llid, __FUNCTION__);
-  if (dchan[cidx].llid != llid)
-    KOUT("ERROR %d %d %d", cidx, dchan[cidx].llid, llid);
-  if ((dchan[cidx].decoding_state != rx_type_proxy_sig_start) &&
-      (dchan[cidx].decoding_state != rx_type_proxy_sig_header_ok))
-    KOUT("ERROR %d", dchan[cidx].decoding_state);
-  if (dchan[cidx].tot_txq_size >  MAX_TOT_LEN_QSIG)
-    KOUT("ERROR %d %lu", len, dchan[cidx].tot_txq_size);
+  if (cidx == 0)
+    KERR("ERROR");
   else
     {
-    dchan[cidx].tot_txq_size += len + PROXY_HEADER_LEN;
-    if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
-      peak_queue_len[cidx] = dchan[cidx].tot_txq_size;
-    ntx = (char *)clownix_malloc(len + PROXY_HEADER_LEN, IOCMLC);
-    memcpy (ntx + PROXY_HEADER_LEN, str_tx, len);
-    ntx[0] = ((len >> 24) & 0xff);
-    ntx[1] = ((len >> 16) & 0xff);
-    ntx[2] = ((len >> 8) & 0xff);
-    ntx[3] = (len & 0xff);
-    chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx),
-                    len + PROXY_HEADER_LEN, ntx);
+    if (dchan[cidx].llid != llid)
+      KOUT("ERROR %d %d %d", cidx, dchan[cidx].llid, llid);
+    if ((dchan[cidx].decoding_state != rx_type_proxy_sig_start) &&
+        (dchan[cidx].decoding_state != rx_type_proxy_sig_header_ok))
+      KOUT("ERROR %d", dchan[cidx].decoding_state);
+    if (dchan[cidx].tot_txq_size >  MAX_TOT_LEN_QSIG)
+      KOUT("ERROR %d %lu", len, dchan[cidx].tot_txq_size);
+    else
+      {
+      dchan[cidx].tot_txq_size += len + PROXY_HEADER_LEN;
+      if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
+        peak_queue_len[cidx] = dchan[cidx].tot_txq_size;
+      ntx = (char *)clownix_malloc(len + PROXY_HEADER_LEN, IOCMLC);
+      memcpy (ntx + PROXY_HEADER_LEN, str_tx, len);
+      ntx[0] = ((len >> 24) & 0xff);
+      ntx[1] = ((len >> 16) & 0xff);
+      ntx[2] = ((len >> 8) & 0xff);
+      ntx[3] = (len & 0xff);
+      chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx),
+                      len + PROXY_HEADER_LEN, ntx);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -807,25 +891,38 @@ static void proxy_traf_server_connect_from_client(int id, int fd, int is_unix)
   else 
     kind = kind_server_proxy_traf_inet;
   serv_cidx = channel_check_llid(id, __FUNCTION__);
-  util_fd_accept(fd, &fd_new, __FUNCTION__);
-  if (fd_new >= 0)
+  if (serv_cidx == 0)
+    KERR("ERROR");
+  else
     {
-    llid = channel_create(fd_new, kind, "proxy", rx_dchan_cb,
-                          tx_dchan_cb, err_dchan_cb);
-    if (!llid)
-      KOUT(" ");
-    channel_rx_local_flow_ctrl(llid, 1);
-    cidx = channel_check_llid(llid, __FUNCTION__);
-    if (!dchan[serv_cidx].server_connect_callback)
-      KOUT(" ");
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    if (is_unix)
-      dchan[cidx].decoding_state = rx_type_proxy_traf_unix_start;
-    else
-      dchan[cidx].decoding_state = rx_type_proxy_traf_tcp_start;
-    dchan[cidx].llid = llid;
-    dchan[cidx].fd = fd_new;
-    dchan[serv_cidx].server_connect_callback(id, llid);
+    util_fd_accept(fd, &fd_new, __FUNCTION__);
+    if (fd_new >= 0)
+      {
+      llid = channel_create(fd_new, kind, "proxy", rx_dchan_traf_cb,
+                            tx_dchan_cb, err_dchan_cb);
+      if (!llid)
+        KOUT("ERROR");
+      cidx = channel_check_llid(llid, __FUNCTION__);
+      if (cidx == 0)
+        {
+        KERR("ERROR");
+        llid = 0;
+        }
+      else
+        {
+        channel_rx_local_flow_ctrl(llid, 1);
+        if (!dchan[serv_cidx].server_connect_callback)
+          KOUT(" ");
+        memset(&dchan[cidx], 0, sizeof(t_data_channel));
+        if (is_unix)
+          dchan[cidx].decoding_state = rx_type_proxy_traf_unix_start;
+        else
+          dchan[cidx].decoding_state = rx_type_proxy_traf_tcp_start;
+        dchan[cidx].llid = llid;
+        dchan[cidx].fd = fd_new;
+        dchan[serv_cidx].server_connect_callback(id, llid);
+        }
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -851,21 +948,34 @@ static int proxy_sig_server_connect_from_client(int id, int fd)
 {   
   int fd_new, llid, cidx, serv_cidx;
   serv_cidx = channel_check_llid(id, __FUNCTION__);
-  util_fd_accept(fd, &fd_new, __FUNCTION__);
-  if (fd_new >= 0)
+  if (serv_cidx == 0)
+    KERR("ERROR");
+  else
     {
-    llid = channel_create(fd_new, kind_server_proxy_sig, "proxy", rx_dchan_cb,
-                          tx_dchan_cb, err_dchan_cb);
-    if (!llid)
-      KOUT(" ");
-    cidx = channel_check_llid(llid, __FUNCTION__);
-    if (!dchan[serv_cidx].server_connect_callback)
-      KOUT(" ");
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_proxy_sig_start;
-    dchan[cidx].llid = llid;
-    dchan[cidx].fd = fd_new;
-    dchan[serv_cidx].server_connect_callback(id, llid);
+    util_fd_accept(fd, &fd_new, __FUNCTION__);
+    if (fd_new >= 0)
+      {
+      llid = channel_create(fd_new, kind_server_proxy_sig, "proxy", rx_dchan_cb,
+                            tx_dchan_cb, err_dchan_cb);
+      if (!llid)
+        KOUT("ERROR");
+      cidx = channel_check_llid(llid, __FUNCTION__);
+      if (cidx == 0)
+        {
+        KERR("ERROR");
+        llid = 0;
+        }
+      else
+        {
+        if (!dchan[serv_cidx].server_connect_callback)
+          KOUT(" ");
+        memset(&dchan[cidx], 0, sizeof(t_data_channel));
+        dchan[cidx].decoding_state = rx_type_proxy_sig_start;
+        dchan[cidx].llid = llid;
+        dchan[cidx].fd = fd_new;
+        dchan[serv_cidx].server_connect_callback(id, llid);
+        }
+      }
     }
   return 0;
 }
@@ -883,23 +993,31 @@ static int proxy_traf_client(char *pname, uint32_t ip, uint16_t port,
   if (!res)
     {
     if (!err_cb)
-      KOUT(" ");
+      KOUT("ERROR");
     if (!rx_cb)
-      KOUT(" ");
-    llid = channel_create(fd, kind_client, "proxy", rx_dchan_cb,
+      KOUT("ERROR");
+    llid = channel_create(fd, kind_client, "proxy", rx_dchan_traf_cb,
                           tx_dchan_cb, err_dchan_cb);
     if (!llid)
       KOUT(" ");
     cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    if (is_unix)
-      dchan[cidx].decoding_state = rx_type_proxy_traf_unix_start;
+    if (cidx == 0)
+      {
+      KERR("ERROR");
+      llid = 0;
+      }
     else
-      dchan[cidx].decoding_state = rx_type_proxy_traf_tcp_start;
-    dchan[cidx].llid = llid;
-    dchan[cidx].fd = fd;
-    dchan[cidx].error_callback = err_cb;
-    dchan[cidx].rx_callback = rx_cb;
+      {
+      memset(&dchan[cidx], 0, sizeof(t_data_channel));
+      if (is_unix)
+        dchan[cidx].decoding_state = rx_type_proxy_traf_unix_start;
+      else
+        dchan[cidx].decoding_state = rx_type_proxy_traf_tcp_start;
+      dchan[cidx].llid = llid;
+      dchan[cidx].fd = fd;
+      dchan[cidx].error_callback = err_cb;
+      dchan[cidx].rx_callback = rx_cb;
+      }
     }
   return (llid);
 }
@@ -935,12 +1053,20 @@ int proxy_sig_client(char *pname, t_fd_error err_cb, t_msg_rx_cb rx_cb)
     if (!llid)
       KOUT(" ");
     cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_proxy_sig_start;
-    dchan[cidx].llid = llid;
-    dchan[cidx].fd = fd;
-    dchan[cidx].error_callback = err_cb;
-    dchan[cidx].rx_callback = rx_cb;
+    if (cidx == 0)
+      {
+      KERR("ERROR");
+      llid = 0;
+      }
+    else
+      {
+      memset(&dchan[cidx], 0, sizeof(t_data_channel));
+      dchan[cidx].decoding_state = rx_type_proxy_sig_start;
+      dchan[cidx].llid = llid;
+      dchan[cidx].fd = fd;
+      dchan[cidx].error_callback = err_cb;
+      dchan[cidx].rx_callback = rx_cb;
+      }
     }
   return (llid);
 }
@@ -977,11 +1103,19 @@ static int proxy_traf_server(char *pname, uint16_t port,
                             NULL, default_err_kill);
       }
     if (!llid)
-      KOUT(" ");
+      KOUT("ERROR");
     cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_listen;
-    dchan[cidx].server_connect_callback = connect_cb;
+    if (cidx == 0)
+      {
+      KERR("ERROR");
+      llid = 0;
+      }
+    else
+      {
+      memset(&dchan[cidx], 0, sizeof(t_data_channel));
+      dchan[cidx].decoding_state = rx_type_listen;
+      dchan[cidx].server_connect_callback = connect_cb;
+      }
     }
   return llid;
 }
@@ -1016,9 +1150,17 @@ int proxy_sig_server(char *pname, t_fd_connect connect_cb)
     if (!llid)
       KOUT(" ");
     cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_listen;
-    dchan[cidx].server_connect_callback = connect_cb;
+    if (cidx == 0)
+      {
+      KERR("ERROR");
+      llid = 0;
+      }
+    else
+      {
+      memset(&dchan[cidx], 0, sizeof(t_data_channel));
+      dchan[cidx].decoding_state = rx_type_listen;
+      dchan[cidx].server_connect_callback = connect_cb;
+      }
     }
   return llid;
 }
@@ -1038,9 +1180,17 @@ int string_server_unix(char *pname, t_fd_connect connect_cb,
     if (!llid)
       KOUT(" ");
     cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_ascii_start;
-    dchan[cidx].server_connect_callback = connect_cb;
+    if (cidx == 0)
+      {
+      KERR("ERROR");
+      llid = 0;
+      }
+    else
+      {
+      memset(&dchan[cidx], 0, sizeof(t_data_channel));
+      dchan[cidx].decoding_state = rx_type_ascii_start;
+      dchan[cidx].server_connect_callback = connect_cb;
+      }
     }
   return llid;
 }
@@ -1059,10 +1209,18 @@ int string_server_inet(uint16_t port, t_fd_connect connect_cb, char *little_name
     if (!llid)
       KOUT(" ");
     cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_listen;
-    dchan[cidx].is_tcp = 1;
-    dchan[cidx].server_connect_callback = connect_cb;
+    if (cidx == 0)
+      {
+      KERR("ERROR");
+      llid = 0;
+      }
+    else
+      {
+      memset(&dchan[cidx], 0, sizeof(t_data_channel));
+      dchan[cidx].decoding_state = rx_type_listen;
+      dchan[cidx].is_tcp = 1;
+      dchan[cidx].server_connect_callback = connect_cb;
+      }
     }
   return llid;
 }
@@ -1084,12 +1242,20 @@ int  string_client_unix(char *pname, t_fd_error err_cb,
     if (!llid)
       KOUT(" ");
     cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_ascii_start;
-    dchan[cidx].llid = llid;
-    dchan[cidx].fd = fd;
-    dchan[cidx].error_callback = err_cb;
-    dchan[cidx].rx_callback = rx_cb;
+    if (cidx == 0)
+      {
+      KERR("ERROR");
+      llid = 0;
+      }
+    else
+      {
+      memset(&dchan[cidx], 0, sizeof(t_data_channel));
+      dchan[cidx].decoding_state = rx_type_ascii_start;
+      dchan[cidx].llid = llid;
+      dchan[cidx].fd = fd;
+      dchan[cidx].error_callback = err_cb;
+      dchan[cidx].rx_callback = rx_cb;
+      }
     }
   return (llid);
 }
@@ -1111,12 +1277,20 @@ int string_client_inet(uint32_t ip, uint16_t port,
     if (!rx_cb)
       KOUT(" ");
     cidx = channel_check_llid(llid, __FUNCTION__);
-    memset(&dchan[cidx], 0, sizeof(t_data_channel));
-    dchan[cidx].decoding_state = rx_type_ascii_start;
-    dchan[cidx].llid = llid;
-    dchan[cidx].fd = fd;
-    dchan[cidx].error_callback = err_cb;
-    dchan[cidx].rx_callback = rx_cb;
+    if (cidx == 0)
+      {
+      KERR("ERROR");
+      llid = 0;
+      }
+    else
+      {
+      memset(&dchan[cidx], 0, sizeof(t_data_channel));
+      dchan[cidx].decoding_state = rx_type_ascii_start;
+      dchan[cidx].llid = llid;
+      dchan[cidx].fd = fd;
+      dchan[cidx].error_callback = err_cb;
+      dchan[cidx].rx_callback = rx_cb;
+      }
     }
   return (llid);
 }
@@ -1128,14 +1302,19 @@ void  msg_mngt_set_callbacks (int llid, t_fd_error err_cb,
 {
   int cidx;
   cidx = channel_check_llid(llid, __FUNCTION__);
-  if (dchan[cidx].llid !=  llid)
-    KOUT(" ");
-  if (!err_cb)
-    KOUT(" ");
-  if (!rx_cb)
-    KOUT(" ");
-  dchan[cidx].error_callback = err_cb;
-  dchan[cidx].rx_callback = rx_cb;
+  if (cidx == 0)
+    KERR("ERROR");
+  else
+    {
+    if (dchan[cidx].llid !=  llid)
+      KOUT(" ");
+    if (!err_cb)
+      KOUT(" ");
+    if (!rx_cb)
+      KOUT(" ");
+    dchan[cidx].error_callback = err_cb;
+    dchan[cidx].rx_callback = rx_cb;
+    }
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1150,19 +1329,24 @@ void string_tx(int llid, int len, char *str_tx)
   if (msg_exist_channel(llid))
     {
     cidx = channel_check_llid(llid, __FUNCTION__);
-    if (dchan[cidx].llid != llid)
-      KOUT("%d %d %d", cidx, dchan[cidx].llid, llid);
-    if ((dchan[cidx].decoding_state != rx_type_ascii_start) && 
-        (dchan[cidx].decoding_state != rx_type_open_bound_found)) 
-      KOUT(" ");
-    if (dchan[cidx].tot_txq_size < MAX_TOT_LEN_QSIG)
+    if (cidx == 0)
+      KERR("ERROR");
+    else
       {
-      dchan[cidx].tot_txq_size += len;
-      if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
-        peak_queue_len[cidx] = dchan[cidx].tot_txq_size;
-      ntx = (char *)clownix_malloc(len, IOCMLC);
-      memcpy (ntx, str_tx, len);
-      chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
+      if (dchan[cidx].llid != llid)
+        KOUT("%d %d %d", cidx, dchan[cidx].llid, llid);
+      if ((dchan[cidx].decoding_state != rx_type_ascii_start) && 
+          (dchan[cidx].decoding_state != rx_type_open_bound_found)) 
+        KOUT(" ");
+      if (dchan[cidx].tot_txq_size < MAX_TOT_LEN_QSIG)
+        {
+        dchan[cidx].tot_txq_size += len;
+        if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
+          peak_queue_len[cidx] = dchan[cidx].tot_txq_size;
+        ntx = (char *)clownix_malloc(len, IOCMLC);
+        memcpy (ntx, str_tx, len);
+        chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
+        }
       }
     }
 }
@@ -1185,21 +1369,26 @@ void watch_tx(int llid, int len, char *str_tx)
     if ((len<0) || (len > MAX_TOT_LEN_QDAT))
       KOUT("%d", len);
     cidx = channel_check_llid(llid, __FUNCTION__);
-    if (dchan[cidx].llid != llid)
-      KOUT(" ");
-    if (dchan[cidx].decoding_state != rx_type_watch)
-      KOUT(" ");
-    if (dchan[cidx].tot_txq_size < MAX_TOT_LEN_QDAT)
-      {
-      dchan[cidx].tot_txq_size += len;
-      if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
-        peak_queue_len[cidx] = dchan[cidx].tot_txq_size;
-      ntx = (char *)clownix_malloc(len, IOCMLC);
-      memcpy (ntx, str_tx, len);
-      chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
-      }
+    if (cidx == 0)
+      KERR("ERROR");
     else
-      KERR("%d %d", (int)dchan[cidx].tot_txq_size, MAX_TOT_LEN_QDAT);
+      {
+      if (dchan[cidx].llid != llid)
+        KOUT(" ");
+      if (dchan[cidx].decoding_state != rx_type_watch)
+        KOUT(" ");
+      if (dchan[cidx].tot_txq_size < MAX_TOT_LEN_QDAT)
+        {
+        dchan[cidx].tot_txq_size += len;
+        if (peak_queue_len[cidx] < dchan[cidx].tot_txq_size)
+          peak_queue_len[cidx] = dchan[cidx].tot_txq_size;
+        ntx = (char *)clownix_malloc(len, IOCMLC);
+        memcpy (ntx, str_tx, len);
+        chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
+        }
+      else
+        KERR("%d %d", (int)dchan[cidx].tot_txq_size, MAX_TOT_LEN_QDAT);
+      }
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -1207,12 +1396,17 @@ void watch_tx(int llid, int len, char *str_tx)
 /*****************************************************************************/
 int is_nonblock(int llid)
 {
-  int flags, fd;
+  int flags = 0, fd;
   int cidx = channel_check_llid(llid, __FUNCTION__);
-  fd = get_fd_with_cidx(cidx);
-  flags = fcntl(fd, F_GETFL, 0);
-  if (flags < 0)
-    KOUT(" ");
+  if (cidx == 0)
+    KERR("ERROR");
+  else
+    {
+    fd = get_fd_with_cidx(cidx);
+    flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0)
+      KOUT("ERROR");
+    }
   return (flags & O_NONBLOCK);
 }
 /*---------------------------------------------------------------------------*/
@@ -1222,36 +1416,41 @@ void string_tx_now(int llid, int len, char *str_tx)
 {
   int fd, cidx, txlen, len_sent = 0, count = 0;
   cidx = channel_check_llid(llid, __FUNCTION__);
-  if (dchan[cidx].llid != llid)
-    KOUT(" ");
-  if ((dchan[cidx].decoding_state != rx_type_ascii_start) && 
-      (dchan[cidx].decoding_state != rx_type_open_bound_found))
-    KOUT(" ");
-  fd = get_fd_with_cidx(cidx);
-  nonnonblock_fd(fd);
-  while (len_sent != len)
-    {   
-    txlen = write (fd, str_tx + len_sent, len - len_sent);
-    if (txlen < 0)
-      {
-      err_dchan_cb(llid, errno, 131);
-      msg_delete_channel(llid);
-      KERR("%d %d %d", errno, txlen, len - len_sent);
-      break;
-      }
-    else if (txlen == 0)
-      {
-      count++;
-      if (count == 1000)
+  if (cidx == 0)
+    KERR("ERROR");
+  else
+    {
+    if (dchan[cidx].llid != llid)
+      KOUT(" ");
+    if ((dchan[cidx].decoding_state != rx_type_ascii_start) && 
+        (dchan[cidx].decoding_state != rx_type_open_bound_found))
+      KOUT(" ");
+    fd = get_fd_with_cidx(cidx);
+    nonnonblock_fd(fd);
+    while (len_sent != len)
+      {   
+      txlen = write (fd, str_tx + len_sent, len - len_sent);
+      if (txlen < 0)
         {
         err_dchan_cb(llid, errno, 131);
         msg_delete_channel(llid);
         KERR("%d %d %d", errno, txlen, len - len_sent);
         break;
         }
+      else if (txlen == 0)
+        {
+        count++;
+        if (count == 1000)
+          {
+          err_dchan_cb(llid, errno, 131);
+          msg_delete_channel(llid);
+          KERR("%d %d %d", errno, txlen, len - len_sent);
+          break;
+          }
+        }
+      fsync(fd);
+      len_sent += txlen;
       }
-    fsync(fd);
-    len_sent += txlen;
     }
 }
 /*---------------------------------------------------------------------------*/

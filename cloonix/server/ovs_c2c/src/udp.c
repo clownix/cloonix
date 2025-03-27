@@ -38,8 +38,8 @@ static char g_proxy_unix_dgram_rx[MAX_PATH_LEN];
 static char g_proxy_unix_dgram_tx[MAX_PATH_LEN];
 static int g_llid_proxymous;
 static int g_fd_proxymous;
-static uint8_t g_rx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
-static uint8_t g_tx[MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_rx[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
+static uint8_t g_tx[HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN];
 static int g_traffic_mngt;
 void reply_probe_udp(uint8_t probe_idx);
 
@@ -86,7 +86,7 @@ int udp_tx_sig_send(int len, uint8_t *tx)
   int result = 0;
   char *net = get_net_name();
   char *c2c = get_c2c_name();
-  if ((len <= 0) || (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+  if ((len <= 0) || (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
     KOUT("ERROR SEND %s %s  %d", net, c2c, len);
   fct_seqtap_tx(kind_seqtap_sig_hello, g_tx, 0, len, tx);
   if (g_llid_proxymous)
@@ -116,7 +116,7 @@ int udp_tx_traf_send(int len, uint8_t *buf)
   char *net = get_net_name();
   char *c2c = get_c2c_name();
   seqtap += 1;
-  if ((len <= 0) || (len > MAX_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
+  if ((len <= 0) || (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
     KOUT("ERROR SEND %s %s  %d", net, c2c, len);
   fct_seqtap_tx(kind_seqtap_data, g_tx, seqtap, len, buf);
   if (g_llid_proxymous)
@@ -182,7 +182,7 @@ static int rx_dgram_cb(int llid, int fd)
   char *net = get_net_name();
   char *c2c = get_c2c_name();
   uint8_t probe_idx;
-  max_len = MAX_TAP_BUF_LEN+HEADER_TAP_MSG+END_FRAME_ADDED_CHECK_LEN;
+  max_len = HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN;
   len = read(fd, g_rx, max_len);
   if (len <= 0)
     KOUT("ERROR READ %s %s %d %d", net, c2c, len, errno);
@@ -229,7 +229,7 @@ int udp_init(uint16_t udp_port)
     KOUT("ERROR PATH LEN %lu", strlen(g_proxy_unix_dgram_tx));
   if (strlen(g_proxy_unix_dgram_rx) >= 108)
     KOUT("ERROR PATH LEN %lu", strlen(g_proxy_unix_dgram_rx));
-  if (!access(g_proxy_unix_dgram_rx, F_OK))
+  if (!access(g_proxy_unix_dgram_rx, R_OK))
     unlink(g_proxy_unix_dgram_rx);
   fd = util_socket_unix_dgram(g_proxy_unix_dgram_rx);
   if (fd < 0)

@@ -190,7 +190,7 @@ int nat_main_request(char *nat, int on)
       memset(nat_prxy_path, 0, MAX_PATH_LEN);
       snprintf(nat_prxy_path, MAX_PATH_LEN-1,"%s/%s/%s",
                get_proxyshare(), NAT_PROXY_DIR, nat);
-      if (!access(nat_prxy_path, F_OK))
+      if (!access(nat_prxy_path, R_OK))
         {
         KERR("WARNING %s exists ERASING", nat_prxy_path);
         unlink(nat_prxy_path);

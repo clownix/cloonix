@@ -15,6 +15,11 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int wrap_util_proxy_client_socket_unix(char *pname, int *fd);
+int wrap_socket_connect_unix_connect_ok(char *path);
+int wrap_socket_connect_inet(unsigned long ip, int port,
+                             int fd_type, const char *fct);
+
 void *wrap_malloc(size_t size);
 void wrap_free(void *ptr, int line);
 ssize_t wrap_write_one(int s, const void *buf, long unsigned int len);
@@ -41,13 +46,9 @@ ssize_t wrap_read_dialog_thread(int s, void *buf, size_t len);
 ssize_t wrap_read_cloon(int s, void *buf, size_t len);
 ssize_t wrap_read_kout(int s, void *buf, size_t len);
 /*--------------------------------------------------------------------------*/
-int wrap_accept(int fd_listen, int fd_type, int is_tcp, const char *fct);
+int wrap_accept(int fd_listen, int fd_type, const char *fct);
 int wrap_close(int fd, const char *fct);
-int wrap_socket_listen_inet(unsigned long ip, int port,
-                            int fd_type, const char *fct);
 int wrap_socket_listen_unix(char *path, int fd_type, const char *fct);
-int wrap_socket_connect_inet(unsigned long ip, int port,
-                             int fd_type, const char *fct);
 int wrap_socket_connect_unix(char *path, int fd_type, const char *fct);
 int wrap_epoll_create(int fd_type, const char *fct);
 struct epoll_event *wrap_epoll_event_alloc(int epfd, int fd, int id);

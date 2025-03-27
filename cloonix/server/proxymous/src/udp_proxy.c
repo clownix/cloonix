@@ -112,7 +112,7 @@ static int from_crun_rx_cb(int llid, int fd)
     }
   else if (len < 0)
     {
-    if ((errno != EAGAIN) && (errno != EINTR))
+    if ((errno != EAGAIN) && (errno != EINTR) && (errno != EINPROGRESS))
       {
       KERR("ERROR");
       udp_proxy_end();
@@ -160,7 +160,7 @@ static int from_udp_rx_cb(int llid, int fd)
     }
   else if (len < 0)
     {
-    if ((errno != EAGAIN) && (errno != EINTR))
+    if ((errno != EAGAIN) && (errno != EINTR) && (errno != EINPROGRESS))
       {
       KERR("ERROR");
       udp_proxy_end();

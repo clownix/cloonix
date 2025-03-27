@@ -16,7 +16,8 @@
 /*                                                                           */
 /*****************************************************************************/
 void x11_connect_ack(int srv_idx, int cli_idx, char *txt);
-int  x11_init_cli_msg(uint32_t randid, int sock_fd, char *magic_cookie);
+int  x11_init_cli_msg(uint32_t randid, int sock_fd,
+                      char *magic_cookie, int net_rank, char *x11_path);
 int  x11_alloc_display(uint32_t randid, int srv_idx);
 void x11_free_display(int srv_idx);
 void x11_init_display(void);

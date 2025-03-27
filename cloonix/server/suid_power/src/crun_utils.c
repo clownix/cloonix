@@ -249,7 +249,7 @@ static int write_whole_file(char *file_name, char *buf, int len)
   int result = -1;
   int fd, writelen;
   char cmd[MAX_PATH_LEN];
-  if (!access(file_name, F_OK))
+  if (!access(file_name, R_OK))
     {
     unlink(file_name);
     memset(cmd, 0, MAX_PATH_LEN);
@@ -879,7 +879,7 @@ int crun_utils_create_config_json(char *path, char *rootfs, char *nspacecrun,
   sprintf(tmp_json_path, "/tmp/config.json.%s", name); 
   write_whole_file(tmp_json_path, buf, len); 
   free(buf);
-  if (access(json_path, F_OK))
+  if (access(json_path, R_OK))
     KERR("ERROR %s", json_path);
   return result;
 }

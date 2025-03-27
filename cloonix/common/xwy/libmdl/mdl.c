@@ -117,8 +117,6 @@ FILE *mdl_argv_popen(char *argv[])
       kill(worker_pid, SIGKILL);
       }
     wait(NULL);
-    if (status)
-      KERR("WARNING STATUS %s", mdl_argv_linear(argv));
     exit(status);
     }
   wait(NULL);
