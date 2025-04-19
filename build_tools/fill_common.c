@@ -27,6 +27,8 @@
 #define MAX_PATH_LEN 300
 #define MAX_NAME_LEN 100
 
+static char g_rootfs[MAX_PATH_LEN];
+static char g_rootfs_lib[MAX_PATH_LEN];
 static char g_collect[MAX_PATH_LEN];
 static char g_names[MAX_PATH_LEN];
 static char g_paths[MAX_PATH_LEN];
@@ -68,18 +70,11 @@ static void create_libs_paragraph(FILE *col, char *common, char *name_lib)
   fprintf(col, "    ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
   fprintf(col, "  done\n");
   fprintf(col, "fi\n");
-  fprintf(col, "if [ -d %s/lib/i386-linux-gnu/%s ]; then\n",
-          common, name_lib);
-  fprintf(col, "  for i in `find %s/lib/i386-linux-gnu/%s -type f` ; do\n",
-          common, name_lib);
-  fprintf(col, "    ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
-  fprintf(col, "  done\n");
-  fprintf(col, "fi\n");
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int create_libs_txt(char *path, char *common)
+static int create_libs_txt(void)
 {
   FILE *col;
   int result = -1;
@@ -93,27 +88,23 @@ static int create_libs_txt(char *path, char *common)
 
     fprintf(col, "echo " " > %s\n", g_dumps);
 
-    fprintf(col, "for i in `find %s -maxdepth 1 -type f` ; do\n", path);
+    fprintf(col, "for i in `find %s -maxdepth 1 -type f` ; do\n", g_rootfs);
     fprintf(col, "  ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
     fprintf(col, "done\n");
 
-    fprintf(col, "for i in `find %s -maxdepth 1 -type f` ; do\n", common);
-    fprintf(col, "  ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
-    fprintf(col, "done\n");
-
-    create_libs_paragraph(col, common, "pipewire-0.3");
-    create_libs_paragraph(col, common, "gdk-pixbuf-2.0");
-    create_libs_paragraph(col, common, "gdk-pixbuf-2.0/2.10.0/loaders");
-    create_libs_paragraph(col, common, "gtk-3.0");
-    create_libs_paragraph(col, common, "gtk-3.0/3.0.0/immodules");
-    create_libs_paragraph(col, common, "gtk-3.0/3.0.0/printbackends");
-    create_libs_paragraph(col, common, "gio");
-    create_libs_paragraph(col, common, "gio/modules");
-    create_libs_paragraph(col, common, "gconv");
-    create_libs_paragraph(col, common, "gstreamer1.0");
-    create_libs_paragraph(col, common, "gstreamer1.0/gstreamer-1.0");
-    create_libs_paragraph(col, common, "gstreamer-1.0");
-    create_libs_paragraph(col, common, "qt6/plugins/platforms");
+    create_libs_paragraph(col, g_rootfs, "pipewire-0.3");
+    create_libs_paragraph(col, g_rootfs, "gdk-pixbuf-2.0");
+    create_libs_paragraph(col, g_rootfs, "gdk-pixbuf-2.0/2.10.0/loaders");
+    create_libs_paragraph(col, g_rootfs, "gtk-3.0");
+    create_libs_paragraph(col, g_rootfs, "gtk-3.0/3.0.0/immodules");
+    create_libs_paragraph(col, g_rootfs, "gtk-3.0/3.0.0/printbackends");
+    create_libs_paragraph(col, g_rootfs, "gio");
+    create_libs_paragraph(col, g_rootfs, "gio/modules");
+    create_libs_paragraph(col, g_rootfs, "gconv");
+    create_libs_paragraph(col, g_rootfs, "gstreamer1.0");
+    create_libs_paragraph(col, g_rootfs, "gstreamer1.0/gstreamer-1.0");
+    create_libs_paragraph(col, g_rootfs, "gstreamer-1.0");
+    create_libs_paragraph(col, g_rootfs, "qt6/plugins/platforms");
 
     fprintf(col, "echo " " >> %s\n", g_dumps);
     fclose(col);
@@ -137,9 +128,8 @@ static void copy_lib_all(char *target, FILE *debug2)
     {
     memset(cmd, 0, 2*MAX_PATH_LEN);
     if (strstr(cur->path, "lib/x86_64-linux-gnu"))
-      snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s %s/x86_64-linux-gnu", cur->path, target);
-    else if (strstr(cur->path, "lib/i386-linux-gnu"))
-      snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s %s/i386-linux-gnu", cur->path, target);
+      snprintf(cmd, 2*MAX_PATH_LEN-1,
+               "cp -f %s %s/x86_64-linux-gnu", cur->path, target);
     else
       snprintf(cmd, 2*MAX_PATH_LEN-1, "cp -f %s %s", cur->path, target);
     if (system(cmd))
@@ -226,34 +216,30 @@ static int file_exists(char *path)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int init_g_path(char *path, char *type, char *common, char *common_lib)
+static int init_globals(char *path)
 {
   int result = -1;
-  char *ptr;
-  memset(common, 0, MAX_PATH_LEN);
-  strncpy(common, path, MAX_PATH_LEN-1);
-  ptr = strrchr(common, '/'); 
-  if (!ptr)
-    printf("ERROR PATH: %s", path);
+  memset(g_rootfs, 0, MAX_PATH_LEN);
+  memset(g_rootfs_lib, 0, MAX_PATH_LEN);
+  memset(g_collect, 0, MAX_PATH_LEN);
+  memset(g_names, 0, MAX_PATH_LEN);
+  memset(g_paths, 0, MAX_PATH_LEN);
+  memset(g_dumps, 0, MAX_PATH_LEN);
+  strncpy(g_rootfs, path, MAX_PATH_LEN-1);
+  strncpy(g_rootfs_lib, path, MAX_PATH_LEN-1);
+  strcat(g_rootfs_lib, "/lib");
+  snprintf(g_collect, MAX_PATH_LEN-1, "/tmp/ext_collect_rootfs.sh");
+  snprintf(g_names, MAX_PATH_LEN-1, "/tmp/ext_names_rootfs.txt");
+  snprintf(g_paths, MAX_PATH_LEN-1, "/tmp/ext_paths_rootfs.txt");
+  snprintf(g_dumps, MAX_PATH_LEN-1, "/tmp/ext_dumps_rootfs.txt");
+  unlink(g_collect);
+  unlink(g_names);
+  unlink(g_paths);
+  unlink(g_dumps);
+  if (access(g_rootfs_lib, W_OK))
+    printf("ERROR LIB PATH: %s %s", path, g_rootfs_lib);
   else
-    {
-    *ptr = 0;
-    strcat(common, "/common");
-    strncpy(common_lib, common, MAX_PATH_LEN-1);
-    strcat(common_lib, "/lib");
-    snprintf(g_collect, MAX_PATH_LEN-1, "/tmp/ext_collect_%s.sh", type);
-    snprintf(g_names, MAX_PATH_LEN-1, "/tmp/ext_names_%s.txt", type);
-    snprintf(g_paths, MAX_PATH_LEN-1, "/tmp/ext_paths_%s.txt", type);
-    snprintf(g_dumps, MAX_PATH_LEN-1, "/tmp/ext_dumps_%s.txt", type);
-    unlink(g_collect);
-    unlink(g_names);
-    unlink(g_paths);
-    unlink(g_dumps);
-    if (access(common_lib, W_OK))
-      printf("ERROR LIB PATH: %s %s", path, common_lib);
-    else
-      result = 0;
-    }
+    result = 0;
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -263,23 +249,19 @@ int main(int argc, char *argv[])
 {
   FILE *dmp, *debug1, *debug2;
   char cmd[MAX_PATH_LEN];
-  char *path;
-  char common[MAX_PATH_LEN];
-  char common_lib[MAX_PATH_LEN];
    
   g_head_lib_all = NULL;
-  if (argc != 3)
-    printf("Input path not given error\n");
+  if (argc != 2)
+    printf("ERROR Input path not given error\n");
   else if (access(argv[1], W_OK))
-    printf("1File: %s error\n", argv[1]);
-  else if (!init_g_path(argv[1], argv[2], common, common_lib))
+    printf("ERROR %s\n", argv[1]);
+  else if (!init_globals(argv[1]))
     {
-    path = argv[1];
-    if (!create_libs_txt(path, common))
+    if (!create_libs_txt())
       {
       dmp = fopen(g_dumps, "r");
       if (!dmp)
-        printf("3File: %s error\n", g_dumps);
+        printf("ERROR %s\n", g_dumps);
       else
         {
         debug1 = fopen(g_names, "w+");
@@ -287,9 +269,9 @@ int main(int argc, char *argv[])
         fclose(dmp);
         fclose(debug1);
         debug2 = fopen(g_paths, "w+");
-        copy_lib_all(common_lib, debug2);
+        copy_lib_all(g_rootfs_lib, debug2);
         fclose(debug2);
-        snprintf(cmd, MAX_PATH_LEN, "chmod -R 755 %s", common_lib); 
+        snprintf(cmd, MAX_PATH_LEN, "chmod -R 755 %s", g_rootfs_lib); 
         system(cmd);
         }
       }

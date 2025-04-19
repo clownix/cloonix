@@ -31,17 +31,6 @@
 
 #define MAX_EPOLL_EVENTS 10
 
-#define MAX_IDX_X11 10
-#define X11_OFFSET_PORT 6000
-#define SRV_IDX_MIN 50
-#define SRV_IDX_MAX 250
-
-#define MAGIC_COOKIE "MIT-MAGIC-COOKIE-1"
-#define MAGIC_COOKIE_LEN 16
-
-#define UNIX_X11_SOCKET_PREFIX "/tmp/.X11-unix/X%d"
-#define UNIX_X11_DPYNAME "unix:%d.0"
-
 #define CLOONIX_KIL_REQ "KillYou"
 #define CLOONIX_PID_REQ "Your_Pid?"
 #define CLOONIX_PID_RESP "My_Pid:%d"

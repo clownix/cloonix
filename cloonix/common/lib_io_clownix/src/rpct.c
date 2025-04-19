@@ -23,7 +23,7 @@
 #include <sys/types.h>
 #include <stdarg.h>
 #include <sys/syscall.h>
-#include <bits/time.h>
+#include <time.h>
 
 
 #include "glob_common.h"

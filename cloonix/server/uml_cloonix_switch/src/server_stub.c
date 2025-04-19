@@ -190,6 +190,13 @@ void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_slowperiodic_cvm(int llid, int tid, int nb, t_slowperiodic *spic)
+{
+  KOUT(" ");
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_event_print_sub(int llid, int tid, int on)
 {
   KOUT(" ");

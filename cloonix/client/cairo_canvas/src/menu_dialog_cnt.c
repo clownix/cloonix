@@ -37,11 +37,12 @@ GtkWidget *get_main_window(void);
 static t_custom_cnt g_custom_cnt;
 static GtkWidget *g_custom_dialog, *g_entry_image;
 static GtkWidget *g_image_menu;
+static GtkWidget *g_brandtype_label;
 void menu_choice_cnt(void);
-static t_slowperiodic g_bulcru[MAX_BULK_FILES];
-static int g_nb_bulcru;
-static t_slowperiodic g_bulpod[MAX_BULK_FILES];
-static int g_nb_bulpod;
+static t_slowperiodic g_bulzip[MAX_BULK_FILES];
+static int g_nb_bulzip;
+static t_slowperiodic g_bulcvm[MAX_BULK_FILES];
+static int g_nb_bulcvm;
 
 
 typedef struct t_cb_endp_type
@@ -51,15 +52,32 @@ typedef struct t_cb_endp_type
   GtkWidget **rad;
 } t_cb_endp_type;
 
+
+
 /****************************************************************************/
 static void img_get(GtkWidget *check, gpointer data)
 {
   char *name = (char *) data;
   t_custom_cnt *cust = &g_custom_cnt;
-  memset(cust->cru_image, 0, MAX_NAME_LEN);
-  strncpy(cust->cru_image, name, MAX_NAME_LEN-1);
+  memset(cust->zip_image, 0, MAX_NAME_LEN);
+  strncpy(cust->zip_image, name, MAX_NAME_LEN-1);
   gtk_entry_set_text(GTK_ENTRY(g_entry_image), name);
 }
+/*--------------------------------------------------------------------------*/
+ 
+/****************************************************************************/
+static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln,
+                        GtkWidget *input_label)
+{   
+  GtkWidget *label;
+  if (input_label != NULL)
+    label = input_label;
+  else
+    label = gtk_label_new(lab);
+  gtk_grid_insert_row(GTK_GRID(grid), ln);
+  gtk_grid_attach(GTK_GRID(grid), label, 0, ln, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), entry, 1, ln, 1, 1);
+} 
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -97,14 +115,14 @@ static GtkWidget *get_bul(int nb_bul, t_slowperiodic *bul, char *image)
   return menu;
 }
 /*--------------------------------------------------------------------------*/
-
+  
 /*****************************************************************************/
-static void setup_list_choices(void)
+static void setup_list_choices_zip(void)
 {
   GtkWidget *menu = NULL;
   t_custom_cnt *cust = &g_custom_cnt;
-  gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->cru_image);
-  menu = get_bul(g_nb_bulcru, g_bulcru, cust->cru_image);
+  gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->zip_image);
+  menu = get_bul(g_nb_bulzip, g_bulzip, cust->zip_image);
   if (menu)
     {
     gtk_menu_button_set_popup ((GtkMenuButton *)g_image_menu, menu);
@@ -114,24 +132,61 @@ static void setup_list_choices(void)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void set_bulcru(int nb, t_slowperiodic *slowperiodic)
+static void setup_list_choices_cvm(void)
 {
-  if (nb<0 || nb >= MAX_BULK_FILES)
-    KOUT("%d", nb);
-  g_nb_bulcru = nb;
-  memset(g_bulcru, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  memcpy(g_bulcru, slowperiodic, g_nb_bulcru * sizeof(t_slowperiodic));
+  GtkWidget *menu = NULL;
+  t_custom_cnt *cust = &g_custom_cnt;
+  gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->cvm_image);
+  menu = get_bul(g_nb_bulcvm, g_bulcvm, cust->cvm_image);
+  if (menu)
+    {
+    gtk_menu_button_set_popup ((GtkMenuButton *)g_image_menu, menu);
+    gtk_widget_show_all(menu);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void brandtype_cb(GtkWidget *check, gpointer user_data)
+{
+  unsigned long uli = (unsigned long) user_data;
+  if (uli == 0)
+    {
+    strncpy(g_custom_cnt.brandtype, "brandzip", MAX_NAME_LEN);
+    gtk_entry_set_text(GTK_ENTRY(g_entry_image), g_custom_cnt.zip_image);
+    setup_list_choices_zip();
+    }
+  else if(uli == 1)
+    {
+    strncpy(g_custom_cnt.brandtype, "brandcvm", MAX_NAME_LEN);
+    gtk_entry_set_text(GTK_ENTRY(g_entry_image), g_custom_cnt.cvm_image);
+    setup_list_choices_cvm();
+    }
+  else
+    KOUT("ERROR %lu", uli);
+  gtk_label_set_text(GTK_LABEL(g_brandtype_label), g_custom_cnt.brandtype);
 }
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void set_bulpod(int nb, t_slowperiodic *slowperiodic)
+void set_bulzip(int nb, t_slowperiodic *slowperiodic)
 {
   if (nb<0 || nb >= MAX_BULK_FILES)
     KOUT("%d", nb);
-  g_nb_bulpod = nb;
-  memset(g_bulpod, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  memcpy(g_bulpod, slowperiodic, g_nb_bulpod * sizeof(t_slowperiodic));
+  g_nb_bulzip = nb;
+  memset(g_bulzip, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  memcpy(g_bulzip, slowperiodic, g_nb_bulzip * sizeof(t_slowperiodic));
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void set_bulcvm(int nb, t_slowperiodic *slowperiodic)
+{
+  if (nb<0 || nb >= MAX_BULK_FILES)
+    KOUT("%d", nb);
+  g_nb_bulcvm = nb;
+  memset(g_bulcvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  memcpy(g_bulcvm, slowperiodic, g_nb_bulcvm * sizeof(t_slowperiodic));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -143,17 +198,6 @@ static void is_persistent_toggle (GtkToggleButton *togglebutton,
     g_custom_cnt.is_persistent = 1;
   else
     g_custom_cnt.is_persistent = 0;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln)
-{
-  GtkWidget *lb;
-  gtk_grid_insert_row(GTK_GRID(grid), ln);
-  lb = gtk_label_new(lab);
-  gtk_grid_attach(GTK_GRID(grid), lb, 0, ln, 1, 1);
-  gtk_grid_attach(GTK_GRID(grid), entry, 1, ln, 1, 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -177,7 +221,7 @@ static void update_cust(t_custom_cnt *cust,
   strncpy(cust->vmount, tmp+len, MAX_SIZE_VMOUNT-1);
 }
 /*--------------------------------------------------------------------------*/
-
+ 
 /****************************************************************************/
 static void free_endp_type(GtkWidget *check, gpointer user_data)
 {
@@ -268,20 +312,29 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
                        (GCallback) endp_type_cb,
                        (gpointer) cb_endp_type[i]);
     }
-  append_grid(grid, hbox, title, (*line_nb)++);
+  append_grid(grid, hbox, title, (*line_nb)++, NULL);
   g_signal_connect (G_OBJECT (hbox), "destroy",
                     (GCallback) free_endp_type, cb_endp_type);
 }
 /*--------------------------------------------------------------------------*/
 
+
+
+
+
 /****************************************************************************/
 static void custom_vm_dialog(t_custom_cnt *cust)
 {
   int i, j, k, response, line_nb = 0, found=0;
+  unsigned long uli;
   GSList *group = NULL;
-  GtkWidget *entry_name, *entry_startup_env, *grid, *parent, *is_persistent;
+  GSList *brandgroup = NULL;
+  GtkWidget *entry_name, *entry_startup_env, *grid, *parent;
+  GtkWidget *is_persistent;
   GtkWidget *entry_vmount, *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
-  char image[MAX_NAME_LEN];
+  GtkWidget *brandtype[BRANDTYPE_NB_MAX];
+  GtkWidget *hbox_brandtype;
+  char *brandlib[BRANDTYPE_NB_MAX] = {"brandzip", "brandcvm"};
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
 
   if (g_custom_dialog)
@@ -289,39 +342,68 @@ static void custom_vm_dialog(t_custom_cnt *cust)
   
   g_image_menu = gtk_menu_button_new();
   g_entry_image = gtk_entry_new();
-  memset(image, 0, MAX_NAME_LEN);
-  strncpy(image, cust->cru_image, MAX_NAME_LEN);
-  for (i=0; i<g_nb_bulcru; i++)
+
+  if (!strcmp(cust->brandtype, "brandzip"))
     {
-    if (!strcmp(cust->cru_image, g_bulcru[i].name))
-      found = 1;
+    for (i=0; i<g_nb_bulzip; i++)
+      {
+      if (!strcmp(cust->zip_image, g_bulzip[i].name))
+        found = 1;
+      }
+    if ((found == 0) && (g_nb_bulzip >= 1))
+      strncpy(cust->zip_image, g_bulzip[0].name, MAX_NAME_LEN-1);
     }
-  if ((found == 0) && (g_nb_bulcru >= 1))
-    strncpy(cust->cru_image, g_bulcru[0].name, MAX_NAME_LEN-1);
+  else if (!strcmp(cust->brandtype, "brandcvm"))
+    {
+    for (i=0; i<g_nb_bulcvm; i++)
+      {
+      if (!strcmp(cust->cvm_image, g_bulcvm[i].name))
+        found = 1;
+      }
+    if ((found == 0) && (g_nb_bulcvm >= 1))
+      strncpy(cust->cvm_image, g_bulcvm[0].name, MAX_NAME_LEN-1);
+    }
+  else
+    KOUT("ERROR %s", cust->brandtype);
+
   grid = gtk_grid_new();
   gtk_grid_insert_column(GTK_GRID(grid), 0);
   gtk_grid_insert_column(GTK_GRID(grid), 1);
   parent = get_main_window();
   g_custom_dialog = gtk_dialog_new_with_buttons ("Custom your vm",
-                                                  GTK_WINDOW (parent),
-                                                  GTK_DIALOG_MODAL,
-                                         "OK", GTK_RESPONSE_ACCEPT,
-                                                  NULL);
+                             GTK_WINDOW (parent), GTK_DIALOG_MODAL,
+                             "OK", GTK_RESPONSE_ACCEPT, NULL);
   gtk_window_set_default_size(GTK_WINDOW(g_custom_dialog), 300, 20);
 
   entry_name = gtk_entry_new();
   gtk_entry_set_text(GTK_ENTRY(entry_name), cust->name);
-  append_grid(grid, entry_name, "Name:", line_nb++);
+  append_grid(grid, entry_name, "Name:", line_nb++, NULL);
 
+  hbox_brandtype = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+  for (i=0; i<BRANDTYPE_NB_MAX; i++)
+    {
+    brandtype[i] = gtk_radio_button_new_with_label(brandgroup, brandlib[i]);
+    brandgroup = gtk_radio_button_get_group(GTK_RADIO_BUTTON(brandtype[i]));
+    if (!strcmp(cust->brandtype, brandlib[i]))
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(brandtype[i]),TRUE);
+    }
+  for (uli=0; uli<BRANDTYPE_NB_MAX; uli++)
+    {
+    gtk_box_pack_start(GTK_BOX(hbox_brandtype), brandtype[uli],TRUE,TRUE,10);
+    g_signal_connect(G_OBJECT(brandtype[uli]), "clicked",
+                     G_CALLBACK(brandtype_cb), (gpointer) uli); 
+    }
+  append_grid(grid, hbox_brandtype, "brandtype", line_nb++, NULL);
 
   is_persistent = gtk_check_button_new_with_label("persistent_rootfs");
-
   if (cust->is_persistent)
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), TRUE);
   else
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), FALSE);
   g_signal_connect(is_persistent,"toggled",G_CALLBACK(is_persistent_toggle),NULL);
-  append_grid(grid, is_persistent, "remanence:", line_nb++);
+  append_grid(grid, is_persistent, "remanence:", line_nb++, NULL);
+
+
 
   for (i=0; i<ETH_LINE_MAX; i++)
     {
@@ -344,18 +426,26 @@ static void custom_vm_dialog(t_custom_cnt *cust)
 
   entry_startup_env = gtk_entry_new();
   gtk_entry_set_text(GTK_ENTRY(entry_startup_env), cust->startup_env);
-  append_grid(grid, entry_startup_env, "Setup Env:", line_nb++);
+  append_grid(grid, entry_startup_env, "Setup Env:", line_nb++, NULL);
 
   entry_vmount = gtk_entry_new();
   gtk_entry_set_text(GTK_ENTRY(entry_vmount), cust->vmount);
-  append_grid(grid, entry_vmount, "Vmount:", line_nb++);
+  append_grid(grid, entry_vmount, "Vmount:", line_nb++, NULL);
 
-  gtk_entry_set_text(GTK_ENTRY(g_entry_image), image);
-  append_grid(grid, g_entry_image, "Image:", line_nb++);
-
-  append_grid(grid, g_image_menu, "Choice:", line_nb++);
-  
-  setup_list_choices();
+  if (!strcmp(cust->brandtype, "brandzip"))
+    {
+    gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->zip_image);
+    append_grid(grid, g_entry_image, "none", line_nb++, g_brandtype_label);
+    append_grid(grid, g_image_menu, "Choice:", line_nb++, NULL);
+    setup_list_choices_zip();
+    }
+  else
+    {
+    gtk_entry_set_text(GTK_ENTRY(g_entry_image), cust->cvm_image);
+    append_grid(grid, g_entry_image, "none", line_nb++, g_brandtype_label);
+    append_grid(grid, g_image_menu, "Choice:", line_nb++, NULL);
+    setup_list_choices_cvm();
+    }
 
   gtk_box_pack_start(
         GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(g_custom_dialog))),
@@ -404,12 +494,14 @@ void menu_choice_cnt(void)
 void menu_dialog_cnt_init(void)
 {
   int i;
+  g_brandtype_label = gtk_label_new("brandzip:");
   memset(&g_custom_cnt, 0, sizeof(t_custom_cnt)); 
-  strcpy(g_custom_cnt.brandtype, "crun");
+  strcpy(g_custom_cnt.brandtype, "brandzip");
   strcpy(g_custom_cnt.name, "Cnt");
   strcpy(g_custom_cnt.startup_env, "NODE_ID=1 CLOONIX=great");
   strcpy(g_custom_cnt.vmount, " ");
-  strcpy(g_custom_cnt.cru_image,   "zipfrr.zip");
+  strcpy(g_custom_cnt.zip_image, "zipfrr.zip");
+  strcpy(g_custom_cnt.cvm_image, "cvm_rootfs");
   g_custom_cnt.nb_tot_eth = 3;
   for (i=0; i<g_custom_cnt.nb_tot_eth; i++)
     g_custom_cnt.eth_table[i].endp_type = endp_type_eths;

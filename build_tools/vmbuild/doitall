@@ -7,6 +7,7 @@ QCOW2="${DISTRO}_builder.qcow2"
 NAME="dev"
 CLOONIX_TREE_ROOT=${HERE}/../..
 #######################################################################
+set +e
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
 if [ "x$is_started" == "x" ]; then
   printf "\nServer Not started, launching:"
@@ -15,8 +16,8 @@ if [ "x$is_started" == "x" ]; then
 else
   cloonix_cli $NET rma
 fi
+set -e
 #----------------------------------------------------------------------
-rm -f cloonix-*
 rm -rf /tmp/cloonix_build_tree
 mkdir -p /tmp/cloonix_build_tree
 cd ${CLOONIX_TREE_ROOT}
@@ -40,12 +41,12 @@ done
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "mkdir -p /root/sources"
 cloonix_scp ${NET} /tmp/cloonix_build_tree/sources.tar.gz ${NAME}:/root/sources
+rm -rf /tmp/cloonix_build_tree
 cloonix_ssh ${NET} ${NAME} "mkdir -p /var/lib/cloonix/bulk"
 cloonix_ssh ${NET} ${NAME} "cd /root/sources ; tar xvf sources.tar.gz ; rm sources.tar.gz"
 cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall"
 #----------------------------------------------------------------------
-cloonix_scp ${NET} -r ${NAME}:/root/sources/build_tools/cloonix-bundle-* ${CLOONIX_TREE_ROOT}/build_tools
-rm -rf /tmp/cloonix_build_tree
+cloonix_scp ${NET} -r ${NAME}:/root/cloonix-bundle*.tar.gz ${HOME}
 #----------------------------------------------------------------------
 
 

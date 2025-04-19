@@ -26,7 +26,7 @@
 #include "rpc_clownix.h"
 #include "rxtx.h"
 
-#include "dhcp.h"
+#include "ldhcp.h"
 #include "utils.h"
 #include "ssh_cisco_nat.h"
 #include "machine.h"

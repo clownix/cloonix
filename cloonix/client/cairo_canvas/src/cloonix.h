@@ -34,7 +34,6 @@ void work_dir_resp(int tid, t_topo_clc *conf);
 char *get_spice_vm_path(int vm_id);
 
 char *get_cmd_path(void);
-int inside_cloon(char **name);
 
 char **get_argv_local_shk(char *name);
 

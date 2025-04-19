@@ -10,6 +10,8 @@
 #include "session.h"
 #include "io_clownix.h"
 
+void x11_init(void);
+
 static char g_current_directory[MAX_PATH_LEN];
 
 int cloonix_connect_remote(char *cloonix_doors, 
@@ -32,11 +34,12 @@ char *main_cloonix_tree_dir(void)
 /****************************************************************************/
 int main(int argc, char ** argv)
 {
+  x11_init();
   memset(g_current_directory, 0, MAX_PATH_LEN);
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
-  if (access("/usr/libexec/cloonix/common/cloonix-dropbear-ssh", X_OK))
-    KOUT("/usr/libexec/cloonix/common/cloonix-dropbear-ssh");
+  if (access("/usr/libexec/cloonix/cloonfs/cloonix-dropbear-ssh", X_OK))
+    KOUT("/usr/libexec/cloonix/cloonfs/cloonix-dropbear-ssh");
   cli_getopts(argc, argv);
   if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
     KOUT("signal() error");

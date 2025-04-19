@@ -16,11 +16,7 @@
 /*                                                                           */
 /*****************************************************************************/
 #define MAX_A2D_LEN 50000
-
-#define IDX_X11_DISPLAY_ADD 142
-#define MAX_IDX_X11 20
 #define MAX_RPC_MSG_LEN 50000
-
 #define DBSSH_SERV_DOORS_REQ "DBSSH_SERV_DOORS_REQ in_idx_x11=%d cookie=%s"
 #define DBSSH_SERV_DOORS_RESP "DBSSH_SERV_DOORS_RESP display_sock_x11=%d"
 #define LABREAK "link_agent_break"
@@ -32,7 +28,6 @@
 #define LAX11OPENKO  "link_agent_x11_open_ko sub_dido_idx=%d"
 #define LASTATS "link_agent_stats_req"
 #define LASTATSDF "link_agent_stats_df_req"
-
 
 #define SYSINFOFORMAT "uptime:%lu load1:%lu load5:%lu load15:%lu "\
                       "totalram:%lu freeram:%lu cachedram:%lu "\

@@ -65,12 +65,13 @@
 
 t_cloonix_conf_info *get_cloonix_conf_info(void);
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
-int inside_cloon(char **name);
+int inside_cloonix(char **name);
 extern int clownix_server_fork_llid;
-static int g_in_cloon;
+static int g_inside_cloonix;
 static char *g_cloonix_vm_name;
 
 int get_uml_cloonix_started(void);
+void shadown_lan_del_all(void);
 
 /*****************************************************************************/
 typedef struct t_timer_kvm_delete
@@ -489,7 +490,7 @@ static int test_dev_kvm(char *info)
   int result = -1;
   if (test_machine_is_kvm_able())
     {
-    if (g_in_cloon)
+    if (g_inside_cloonix)
       inside_cloonix_test_dev_kvm(info);
     if (module_access_is_ko("/dev/kvm"))
       {
@@ -515,11 +516,10 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
   int result = 0;
   char bz_image[MAX_PATH_LEN];
   char qemu_kvm_exe[MAX_PATH_LEN];
-  char *iso;
   memset(bz_image, 0, MAX_PATH_LEN);
   memset(qemu_kvm_exe, 0, MAX_PATH_LEN);
   snprintf(qemu_kvm_exe, MAX_PATH_LEN-1,
-           "%s/server/cloonix-qemu-system", cfg_get_bin_dir());
+           "%s/cloonfs/cloonix-qemu-system", cfg_get_bin_dir());
   if (test_dev_kvm(info))
     result = -1;
   else if (!file_exists(qemu_kvm_exe, R_OK))
@@ -545,14 +545,9 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
     }
   else if (kvm->vm_config_flags & VM_CONFIG_FLAG_I386)
     {
-    iso = "/usr/libexec/cloonix/server/insider_agents/insider_agent_i386.iso";
-    if (!file_exists(iso, R_OK))
-      {
-      sprintf(info, "Missing insider_agent_i386.iso "
-                    "call cmd_mk_iso_i386 in cloonix dev to create it.\n");
-      KERR("ERROR %s", info);
-      result = -1;
-      }
+    KERR("ERROR NOT MANAGED I386");
+    sprintf(info, "ERROR NOT MANAGED I386\n");
+    result = -1;
     }
   return result;
 }
@@ -702,7 +697,7 @@ static void cow_look_clone_death(void *data, int status, char *name)
 static int cow_look_clone(void *data)
 {
   t_add_vm_cow_look *add_vm = (t_add_vm_cow_look *) data;
-  char *cmd = "/usr/libexec/cloonix/server/cloonix-qemu-img";
+  char *cmd = "/usr/libexec/cloonix/cloonfs/cloonix-qemu-img";
   char rootfs[MAX_PATH_LEN];
   char *argv[] = { cmd, "info", rootfs, NULL, };
   memset(rootfs, 0, MAX_PATH_LEN);
@@ -799,7 +794,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
       {
       if (!memcmp(kvm->eth_table[i].mac_addr, mac, 6))
         { 
-        if (g_in_cloon)
+        if (g_inside_cloonix)
           {
           kvm->vm_config_flags |= VM_FLAG_IS_INSIDE_CLOON;
           kvm->eth_table[i].mac_addr[0] = 0x72;
@@ -1182,6 +1177,8 @@ static void timer_del_all(void *data)
   nat = ovs_nat_main_get_first(&nb_nat);
   a2b = ovs_a2b_get_first(&nb_a2b);
   c2c = ovs_c2c_get_first(&nb_c2c);
+
+  shadown_lan_del_all();
 
   for (i=0; i<nb_vm; i++)
     {
@@ -2000,7 +1997,8 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     KERR("ERROR %s %s", locnet, cnt->name);
     send_status_ko(llid, tid, err);
     }
-  else if (strcmp(cnt->brandtype, "crun"))
+  else if ((strcmp(cnt->brandtype, "brandzip")) &&
+           (strcmp(cnt->brandtype, "brandcvm")))
     {
     snprintf(err, MAX_PATH_LEN-1, "%s %s bad brandtype:%s",
              locnet, cnt->name, cnt->brandtype);
@@ -2060,7 +2058,7 @@ void recv_fix_display(int llid, int tid, char *disp, char *line)
     {
     memset(cmd, 0, 2 * MAX_PATH_LEN);
     snprintf(cmd, 2 * MAX_PATH_LEN - 1, 
-             "/usr/libexec/cloonix/common/touch %s", wauth);
+             "/usr/libexec/cloonix/cloonfs/touch %s", wauth);
     system(cmd);
     memset(cmd, 0, 2 * MAX_PATH_LEN);
     snprintf(cmd, 2 * MAX_PATH_LEN - 1, "%s -f %s nmerge %s",
@@ -2090,7 +2088,7 @@ void recv_fix_display(int llid, int tid, char *disp, char *line)
 void recv_init(void)
 {
   g_killing_cloonix = 0;
-  g_in_cloon = inside_cloon(&g_cloonix_vm_name);
+  g_inside_cloonix = inside_cloonix(&g_cloonix_vm_name);
   g_inhib_new_clients = 0;
 }
 /*---------------------------------------------------------------------------*/

@@ -172,23 +172,23 @@ static void setup_mounts(void)
   assert(mount("/var/lib/cloonix/cache/libexec",
                "/usr/libexec/cloonix", NULL, MS_BIND, NULL) == 0);
 
-  assert(mount("/var/lib/cloonix/cache/libexec/common/lib", "/usr/lib",
+  assert(mount("/var/lib/cloonix/cache/libexec/cloonfs/lib", "/usr/lib",
                NULL, MS_BIND, NULL) == 0);
 
-  assert(mount("/var/lib/cloonix/cache/libexec/common/lib64", "/usr/lib64",
+  assert(mount("/var/lib/cloonix/cache/libexec/cloonfs/lib64", "/usr/lib64",
                NULL, MS_BIND, NULL) == 0);
 
-  assert(mount("/var/lib/cloonix/cache/libexec/common/share",
+  assert(mount("/var/lib/cloonix/cache/libexec/cloonfs/share",
                "/usr/share", NULL, MS_BIND, NULL) == 0);
 
-  assert(mount("/var/lib/cloonix/cache/libexec/common/etc",
+  assert(mount("/var/lib/cloonix/cache/libexec/cloonfs/etc",
                "/etc", NULL, MS_BIND, NULL) == 0);
 
-  assert(mount("/var/lib/cloonix/cache/libexec/common",
+  assert(mount("/var/lib/cloonix/cache/libexec/cloonfs",
                "/usr/bin", NULL, MS_BIND, NULL) == 0);
 
   if (!dir_is_link("/bin"))
-    assert(mount("/var/lib/cloonix/cache/libexec/common",
+    assert(mount("/var/lib/cloonix/cache/libexec/cloonfs",
                  "/bin", NULL, MS_BIND, NULL) == 0);
 
   chdir("/");

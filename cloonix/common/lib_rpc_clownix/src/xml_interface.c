@@ -86,6 +86,7 @@ enum
   bnd_slowperiodic_sub,
   bnd_slowperiodic_qcow2,
   bnd_slowperiodic_img,
+  bnd_slowperiodic_cvm,
   bnd_sub_evt_stats_endp,
   bnd_evt_stats_endp,
   bnd_sub_evt_stats_sysinfo,
@@ -1894,6 +1895,22 @@ void send_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic)
   my_msg_mngt_tx(llid, len, sndbuf);
 }
 /*---------------------------------------------------------------------------*/
+  
+/*****************************************************************************/
+void send_slowperiodic_cvm(int llid, int tid, int nb, t_slowperiodic *spic)
+{
+  int i, len = 0;
+  len += sprintf(sndbuf+len, SLOWPERIODIC_CVM_O, tid, nb);
+  for (i=0; i<nb; i++)
+    {
+    if (strlen(spic[i].name) == 0)
+      KOUT("ERROR %d", i);
+    len += sprintf(sndbuf+len, SLOWPERIODIC_SPIC, spic[i].name);
+    }
+  len += sprintf(sndbuf+len, SLOWPERIODIC_CVM_C);
+  my_msg_mngt_tx(llid, len, sndbuf);
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void helper_slowperiodic(char *msg, int nb, t_slowperiodic *spic)
@@ -2643,6 +2660,17 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       clownix_free(slowperiodic, __FUNCTION__);
       break;
 
+    case bnd_slowperiodic_cvm: 
+      if (sscanf(msg, SLOWPERIODIC_CVM_O, &tid, &nb) != 2)
+        KOUT("%s", msg);
+      len = nb * sizeof(t_slowperiodic);
+      slowperiodic = (t_slowperiodic *)clownix_malloc(len, 23);
+      memset(slowperiodic, 0, len);
+      helper_slowperiodic(msg, nb, slowperiodic);
+      recv_slowperiodic_cvm(llid, tid, nb, slowperiodic);
+      clownix_free(slowperiodic, __FUNCTION__);
+      break;
+
     case bnd_c2c_add:
       if (sscanf(msg, C2C_ADD, &tid, name, &ludp_ip,
                                network, &ip, &dport,
@@ -2913,6 +2941,7 @@ void doors_io_basic_xml_init(t_llid_tx llid_tx)
   extract_boundary(SLOWPERIODIC_SUB, bound_list[bnd_slowperiodic_sub]);
   extract_boundary(SLOWPERIODIC_QCOW2_O, bound_list[bnd_slowperiodic_qcow2]);
   extract_boundary(SLOWPERIODIC_IMG_O, bound_list[bnd_slowperiodic_img]);
+  extract_boundary(SLOWPERIODIC_CVM_O, bound_list[bnd_slowperiodic_cvm]);
   extract_boundary(SUB_EVT_STATS_ENDP, bound_list[bnd_sub_evt_stats_endp]);
   extract_boundary(EVT_STATS_ENDP_O, bound_list[bnd_evt_stats_endp]);
   extract_boundary(SUB_EVT_STATS_SYSINFO,bound_list[bnd_sub_evt_stats_sysinfo]);

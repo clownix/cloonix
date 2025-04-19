@@ -30,7 +30,7 @@
 #include "menu_dialog_kvm.h"
 
 #define ETH_TYPE_MAX 3
-#define ETH_LINE_MAX 7
+#define ETH_LINE_MAX 12
 
 
 GtkWidget *get_bulkvm(void);
@@ -452,12 +452,8 @@ void menu_choice_kvm(void)
 void menu_dialog_kvm_init(void)
 {
   int i;
-  char *name;
   memset(&g_custom_vm, 0, sizeof(t_custom_vm)); 
-  if (inside_cloon(&name))
-    snprintf(g_custom_vm.name, MAX_NAME_LEN-3, "IN_%s_n", name);
-  else
-    strcpy(g_custom_vm.name, "Cloon");
+  strcpy(g_custom_vm.name, "Cloon");
   strcpy(g_custom_vm.kvm_used_rootfs, "bookworm.qcow2");
   g_custom_vm.current_number = 0;
   g_custom_vm.is_persistent = 0;

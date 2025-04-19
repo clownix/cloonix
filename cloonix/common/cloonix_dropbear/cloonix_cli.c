@@ -418,7 +418,7 @@ void doorways_rx_bufraw(int llid, int tid,
           snprintf(g_cloonix_name_prompt, 2*MAX_CHARBUF_SIZE-1,
                    "PS1=\"%s# \"", g_cloonix_name); 
           snprintf(g_cloonix_display, MAX_CHARBUF_SIZE-1, ":%d", 
-                   display + IDX_X11_DISPLAY_ADD);
+                   display + X11_DISPLAY_OFFSET);
           cli_session(-1, -1); 
           }
         }

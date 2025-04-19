@@ -1,0 +1,53 @@
+#!/bin/bash
+#----------------------------------------------------------------------------#
+HERE=`pwd`
+NET="mito"
+NAME="build"
+QCOW2="alpine_builder.qcow2"
+PARAMS="ram=8000 cpu=4 eth=s"
+TREEROOT=${HERE}/../..
+#----------------------------------------------------------------------------#
+is_started=$(cloonix_cli $NET pid |grep cloonix_server)
+if [ "x$is_started" == "x" ]; then
+  printf "\nServer Not started, launching:"
+  printf "\ncloonix_net $NET:\n"
+  cloonix_net $NET
+else
+  cloonix_cli $NET rma
+fi
+cloonix_gui ${NET}
+#----------------------------------------------------------------------------#
+cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2}
+cloonix_cli ${NET} add nat nat
+cloonix_cli ${NET} add lan ${NAME} 0 lan1
+cloonix_cli ${NET} add lan nat 0 lan1
+#----------------------------------------------------------------------------#
+rm -f cloonix-*
+rm -rf /tmp/cloonix_build_tree
+mkdir -p /tmp/cloonix_build_tree
+cd ${TREEROOT}
+./allclean
+tar zcvf /tmp/cloonix_build_tree/sources.tar.gz .
+cd ${TREEROOT}/build_tools
+#----------------------------------------------------------------------------#
+set +e
+while ! cloonix_ssh ${NET} ${NAME} "echo" 2>/dev/null; do
+  echo ${NAME} not ready, waiting 3 sec
+  sleep 3
+done
+#----------------------------------------------------------------------------#
+cloonix_ssh ${NET} ${NAME} "dhcpcd eth0"
+#----------------------------------------------------------------------------#
+cloonix_ssh ${NET} ${NAME} "mkdir -p /root/sources"
+cloonix_ssh ${NET} ${NAME} "mkdir -p /var/lib/cloonix/bulk"
+cloonix_scp ${NET} /tmp/cloonix_build_tree/sources.tar.gz ${NAME}:/root/sources
+cloonix_ssh ${NET} ${NAME} "cd /root/sources ; tar xvf sources.tar.gz ; rm sources.tar.gz"
+cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall"
+#----------------------------------------------------------------------------#
+exit
+#----------------------------------------------------------------------------#
+cloonix_scp ${NET} -r ${NAME}:/root/sources/build_tools/cloonix-bundle-* ${TREEROOT}/build_tools
+rm -rf /tmp/cloonix_build_tree
+#----------------------------------------------------------------------
+
+

@@ -70,6 +70,7 @@ static int count_eventfull=0;
 static int count_eventfull_sub=0;
 static int count_slowperiodic_qcow2=0;
 static int count_slowperiodic_img=0;
+static int count_slowperiodic_cvm=0;
 static int count_slowperiodic_sub=0;
 
 static int count_evt_stats_endp_sub=0;
@@ -154,6 +155,7 @@ static void print_all_count(void)
   printf("%d\n", count_slowperiodic_sub);
   printf("%d\n", count_slowperiodic_qcow2);
   printf("%d\n", count_slowperiodic_img);
+  printf("%d\n", count_slowperiodic_cvm);
   printf("%d\n", count_sav_vm);
 
   printf("%d\n", count_evt_stats_endp_sub);
@@ -2423,6 +2425,36 @@ void recv_slowperiodic_img(int llid, int itid, int inb, t_slowperiodic *ispic)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+void recv_slowperiodic_cvm(int llid, int itid, int inb, t_slowperiodic *ispic)
+{
+  int i;
+  static int nb, tid;
+  static t_slowperiodic spic[MAX_TEST_TUX];
+  if (i_am_client)
+    {
+    if (count_slowperiodic_cvm)
+      {
+      if (itid != tid)
+        KOUT(" ");
+      if (inb != nb)
+        KOUT(" ");
+      if (memcmp(spic, ispic, nb * sizeof(t_slowperiodic)))
+        KOUT(" ");
+      }
+    tid = rand();
+    nb = rand() % MAX_TEST_TUX;
+    memset(spic, 0, MAX_TEST_TUX * sizeof(t_slowperiodic));
+    for (i=0; i<nb; i++)
+      random_choice_str(spic[i].name, MAX_NAME_LEN);
+    send_slowperiodic_cvm(llid, tid, nb, spic);
+    }
+  else
+    send_slowperiodic_cvm(llid, itid, inb, ispic);
+  count_slowperiodic_cvm++;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 void recv_nat_add(int llid, int itid, char *iname)
 {
   static char name[MAX_NAME_LEN];
@@ -2954,6 +2986,7 @@ static void send_first_burst(int llid)
   recv_slowperiodic_sub(llid, 0);
   recv_slowperiodic_qcow2(llid, 0, 0, NULL);
   recv_slowperiodic_img(llid, 0, 0, NULL);
+  recv_slowperiodic_cvm(llid, 0, 0, NULL);
   recv_sav_vm(llid, 0, NULL, NULL);
   recv_evt_stats_endp_sub(llid, 0, NULL, 0, 0);
   recv_evt_stats_endp(llid, 0, NULL, NULL, 0, NULL, 0);

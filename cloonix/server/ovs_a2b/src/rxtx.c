@@ -19,7 +19,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
-#include <linux/icmp.h>
 #include <time.h>
 #include <sys/time.h>
 

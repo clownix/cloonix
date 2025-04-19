@@ -1,5 +1,5 @@
 ==============================================================================
-                               v46-00
+                               v47-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -18,7 +18,7 @@ and libraries are collected and put into an autonomous bundle, this makes
 the bundle self-contained. No added files or packages are necessary.
 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-46-00/html/index.html doc.
+http://clownix.net/doc_stored/build-47-00/html/index.html doc.
 
 NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
       guests virtual machines to have the pseudo-ssh and pseudo-scp cloonix api.
@@ -57,10 +57,10 @@ This is very secure way to test cloonix as a normal user.
 1) Download software and installation:
 --------------------------------------
 
-wget http://clownix.net/downloads/cloonix-46/cloonix-bundle-46-00.tar.gz
-tar xvf cloonix-bundle-46-00.tar.gz
-cd cloonix-bundle-46-00
-sudo ./install_cloonix
+wget http://clownix.net/downloads/cloonix-47/cloonix-bundle-47-00.tar.gz
+tar xvf cloonix-bundle-47-00.tar.gz
+cd cloonix-bundle-47-00
+sudo ./install_cloonfs
 
 (To uninstall:   sudo rm -f /usr/bin/cloonix_*
                  sudo rm -rf /usr/libexec/cloonix
@@ -77,6 +77,12 @@ wget http://clownix.net/downloads/cloonix-46/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
 wget http://clownix.net/downloads/cloonix-46/bulk/zipfrr.zip
+
+For the new cvm, a container running like a real VM with desktop:
+wget http://clownix.net/downloads/cloonix-47/bulk/cvm_rootfs.tar.gz
+sudo tar xvf cvm_rootfs.tar.gz
+(note: for the moment untar as root, this will change)
+(the best is to wait for v48-00 to test this new cvm.)
 
 
 3) Download demo script file:

@@ -5,6 +5,20 @@
 Software Release Information
 ============================
 
+
+v47-00
+======
+
+Creation of a different brandtype of container, the only on was zip, now
+there is the cvm brandtype thait is a root file system directory in bulk
+that has the file "<bulk>/<rootfs_dir>/sbin/init" within the root fs.
+The goal of this new container brand is to create a container that has
+the equivalent of a desktop, launched with "Xephyr".
+The code for this is fresh, the v48 will be safer...
+For this delivery, the rootless self-extracting version has not been
+updated, it will be back in v48-00.
+
+
 v46-00
 ======
 

@@ -32,7 +32,7 @@ void callback_end(int tid, int status, char *err);
 
 
 /***************************************************************************/
-void help_add_cru(char *line)
+void help_add_zip(char *line)
 {
   printf("\n\n\n %s <name> eth=<eth_description> <image> [options]\n",
   line);
@@ -46,17 +46,28 @@ void help_add_cru(char *line)
   printf("\n\t       --startup_env=\"<env_name=env_val env2_name=env2_val...>\"");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\nexample:\n\n");
-  printf("\n%s name eth=sss bookworm.zip\n", line);
+  printf("\n%s name eth=sss zipfrr.zip\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s name eth=vvv bookworm.zip\n", line);
+  printf("\n%s name eth=vvv zipfrr.zip\n", line);
   printf("This will give 3 eth that are not spyable\n");
-  printf("\n%s name eth=s bookworm.zip --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
-  printf("\n%s name eth=s bookworm.zip --vmount=\"/opt:/opt /tmp/share:/share\"\n", line);
+  printf("\n%s name eth=s zipfrr.zip --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
+  printf("\n%s name eth=s zipfrr.zip --vmount=\"/opt:/opt /tmp/share:/share\"\n", line);
   printf("This will give 1 eth spyable and will start the container with\n");
   printf("MYENV=myenv and CLOONIX=great env variables.\n");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
+
+
+/***************************************************************************/
+void help_add_cvm(char *line)
+{
+  printf("\n\n\n %s <name> eth=<eth_description> <path-to-rootfs-dir>\n",
+  line);
+  printf("\n\n\n");
+}
+/*-------------------------------------------------------------------------*/
+
 
 /***************************************************************************/
 static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
@@ -246,9 +257,16 @@ static int cmd_add_cnt(char *type, int argc, char **argv)
 /*-------------------------------------------------------------------------*/
 
 /***************************************************************************/
-int cmd_add_cru(int argc, char **argv)
+int cmd_add_zip(int argc, char **argv)
 {
-  return cmd_add_cnt("crun", argc, argv);
+  return cmd_add_cnt("brandzip", argc, argv);
+}
+/*-------------------------------------------------------------------------*/
+
+/***************************************************************************/
+int cmd_add_cvm(int argc, char **argv)
+{
+  return cmd_add_cnt("brandcvm", argc, argv);
 }
 /*-------------------------------------------------------------------------*/
 

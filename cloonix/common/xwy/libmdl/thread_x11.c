@@ -165,7 +165,9 @@ static void epev_diag_thread_fd_set(t_x11 *x11)
 static void write_to_soc(t_x11 *x11, t_msg *msg)
 {
   if (low_write_raw(x11->sock_fd_ass, msg, 0))
+    {
     terminate_thread(x11, __LINE__, x11->sock_fd_ass);
+    }
   else
     {
     x11->ptx += 1;

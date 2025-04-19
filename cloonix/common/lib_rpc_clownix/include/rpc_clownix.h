@@ -260,6 +260,8 @@ void send_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic);
 void recv_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic);
 void send_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic); 
 void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic);
+void send_slowperiodic_cvm(int llid, int tid, int nb, t_slowperiodic *spic); 
+void recv_slowperiodic_cvm(int llid, int tid, int nb, t_slowperiodic *spic);
 
 void send_list_pid_req(int llid, int tid);
 void recv_list_pid_req(int llid, int tid);

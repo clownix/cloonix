@@ -84,7 +84,7 @@ void xcli_send_msg_type_x11_connect_ack(int cli_idx, char *txt)
   int len = MAX_MSG_LEN+g_msg_header_len;
   t_msg *msg = (t_msg *) wrap_malloc(len);
   int srv_idx = x11_cli_get_srv_idx(cli_idx);
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d %d", srv_idx, cli_idx);
   mdl_set_header_vals(msg, g_randid, msg_type_x11_connect_ack,
                       fd_type_cli, srv_idx, cli_idx);
@@ -255,7 +255,7 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
       break;
 
     case msg_type_x11_init:
-      if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+      if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
         KOUT("%d %s", srv_idx, msg->buf);
       x11_init_resp(srv_idx, msg);
       send_msg_type_open_pty(g_action, g_randid, srv_idx, g_bash_cmd);
@@ -265,7 +265,9 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
           (g_action == action_ovs)  ||
           (g_action == action_slf)  ||
           (g_action == action_cmd))
+        {
         send_msg_type_win_size(g_randid);
+        }
       else
         KOUT("%d", g_action);
       break;
@@ -273,7 +275,7 @@ static void rx_bash_msg_cb(void *ptr, int llid, int fd, t_msg *msg)
     case msg_type_x11_info_flow:
     case msg_type_x11_connect:
     case msg_type_randid_associated_ack:
-      if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+      if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
         KOUT("%d %d", srv_idx, cli_idx);
       rx_x11_msg_cb(randid, llid, type, srv_idx, cli_idx, msg);
       break;

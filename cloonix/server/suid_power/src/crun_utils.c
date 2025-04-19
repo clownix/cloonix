@@ -335,7 +335,8 @@ static void extract_vmount(char *vmount,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char *format_buf_mount(char *mountbear, char *mounttmp, char *vmount)
+static char *format_buf_mount(char *mountbear, char *mounttmp,
+                              char *vmount, char *brandtype)
 {
   int i;
   char *buf_mount, *ptrs, *ptre;
@@ -383,10 +384,20 @@ static char *format_buf_mount(char *mountbear, char *mounttmp, char *vmount)
     }
   buf_mount = (char *) malloc(len_mount);
   memset(buf_mount, 0, len_mount);
-  snprintf(buf_mount, len_mount-1,  CONFIG_JSON_MOUNT,
+  if (!strcmp(brandtype, "brandcvm"))
+    {
+    snprintf(buf_mount, len_mount-1,  CONFIG_JSON_MOUNT,
            vmountjson[0], vmountjson[1], vmountjson[2], vmountjson[3],
            vmountjson[4], vmountjson[5], vmountjson[6], vmountjson[7],
-           mountbear, mounttmp);
+           mountbear, mounttmp, CONFIG_JSON_MOUNT_SYS_CGROUP_RW);
+    }
+  else
+    {
+    snprintf(buf_mount, len_mount-1,  CONFIG_JSON_MOUNT,
+           vmountjson[0], vmountjson[1], vmountjson[2], vmountjson[3],
+           vmountjson[4], vmountjson[5], vmountjson[6], vmountjson[7],
+           mountbear, mounttmp, CONFIG_JSON_MOUNT_SYS_CGROUP_RO);
+    }
   return buf_mount;
 }
 /*--------------------------------------------------------------------------*/
@@ -394,8 +405,8 @@ static char *format_buf_mount(char *mountbear, char *mounttmp, char *vmount)
 /****************************************************************************/
 static char *get_config_json(char *rootfs, char *nspacecrun,
                              char *mountbear, char *mounttmp,
-                             int is_persistent,  char *startup_env,
-                             char *vmount, char *name)
+                             int is_persistent,  char *brandtype,
+                             char *startup_env, char *vmount, char *name)
 {
   char *buf;
   char *buf_mount;
@@ -406,9 +417,17 @@ static char *get_config_json(char *rootfs, char *nspacecrun,
   char log_json[MAX_PATH_LEN];
   memset(log_json, 0, MAX_PATH_LEN);
   snprintf(log_json, MAX_PATH_LEN-1, "%s/%s", g_var_crun_json, name); 
-  starter = "\"/mnt/cloonix_config_fs/init_cloonix_startup_script.sh\"\n";
+  if (strcmp(brandtype, "brandcvm"))
+    starter = "\"/mnt/cloonix_config_fs/init_cloonix_startup_script.sh\"\n";
+  else
+    starter = "\"/sbin/init\"";
   format_startup_env(startup_env, env);
-  buf_mount = format_buf_mount(mountbear, mounttmp, vmount);
+
+KERR("mountbear:%s mounttmp:%s vmount:%s brandtype:%s rootfs:%s nspacecrun:%s name:%s",
+mountbear, mounttmp, vmount, brandtype, rootfs, nspacecrun, name);
+
+
+  buf_mount = format_buf_mount(mountbear, mounttmp, vmount, brandtype);
   buf = (char *) malloc(len);
   memset(buf, 0, len);
   snprintf(buf, len-1, CONFIG_JSON, starter, env,
@@ -575,7 +594,8 @@ static int dirscnt(char *mountbear, char *mounttmp, char *tmpfs,
 /****************************************************************************/
 static int create_all_dirs(char *mountbear, char *mounttmp, char *image,
                            char *cnt_dir, char *name,
-                           char *tmpfs_umount_cmd)
+                           char *tmpfs_umount_cmd,
+                           char *brandtype, int is_persistent)
 
 {
   int result = -1;
@@ -592,6 +612,12 @@ static int create_all_dirs(char *mountbear, char *mounttmp, char *image,
     if (my_mkdir(path))
       KERR("ERROR %s", path);
     else
+      result = 0;
+    }
+  if (result == 0)
+    {
+    if ((!strcmp(brandtype, "brandzip")) ||
+        ((!strcmp(brandtype, "brandcvm")) && (is_persistent == 0)))
       {
       memset(path, 0, MAX_PATH_LEN);
       snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s/", cnt_dir, name, TMPFS);
@@ -602,18 +628,23 @@ static int create_all_dirs(char *mountbear, char *mounttmp, char *image,
       else 
         {
         snprintf(tmpfs_umount_cmd, MAX_PATH_LEN-1, "%s %s", UMOUNT_BIN, path);
-        if (dirscnt_upper(path))
-          KERR("ERROR %s", path);
-        else if (dirscnt(mountbear, mounttmp, path, cnt_dir, name))
-          KERR("ERROR %s", path);
-        else
-          result = 0;
+        result = 0;
         }
       }
+    else
+      result = 0;
+    }
+  if (result == 0)
+    {
+    if (dirscnt_upper(path))
+      KERR("ERROR %s", path);
+    else if (dirscnt(mountbear, mounttmp, path, cnt_dir, name))
+      KERR("ERROR %s", path);
+    else
+      result = 0;
     }
   return result;
 }
- 
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -622,31 +653,15 @@ static char *get_insider_agent(void)
   struct stat sb;
   char *result = NULL;
 
-  if (lstat("/usr/libexec/cloonix/common/lib64", &sb) != 0)
-    {
-    if (lstat("/usr/libexec/cloonix/common/lib32", &sb) != 0)
-      {
-      KERR("ERROR NOT 32 NOR 64 BITS");
-      }
-    else
-      {
-      if (lstat(AGENT_ISO_I386, &sb) == 0)
-        {
-        result = AGENT_ISO_I386;
-        }
-      else
-        KERR("ERROR %s NOT FOUND", AGENT_ISO_I386);
-      }
-    }
-  else
+  if (lstat("/usr/libexec/cloonix/cloonfs/lib64", &sb) == 0)
     {
     if (lstat(AGENT_ISO_AMD64, &sb) == 0)
-      {
       result = AGENT_ISO_AMD64;
-      }
     else
       KERR("ERROR %s NOT FOUND", AGENT_ISO_AMD64);
     }
+  else
+    KERR("ERROR /usr/libexec/cloonix/cloonfs/lib64 NOT FOUND");
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -658,7 +673,7 @@ static int dirs_agent_copy_starter(char *mountbear, char *agent_dir)
   char path[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
   char line[MAX_NAME_LEN];
-  char *etc_path="/usr/libexec/cloonix/common/etc";
+  char *etc_path="/usr/libexec/cloonix/cloonfs/etc";
   char *iso = get_insider_agent();
   if (iso)
     {
@@ -792,7 +807,8 @@ int crun_utils_unlink_sub_dir_files(char *dir)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int crun_utils_create_overlay(char *path, char *lower, int is_persistent)
+int crun_utils_create_overlay(char *path, char *lower,
+                              int is_persistent, char *brandtype)
 {
   int result = -1;
   char cmd[2*MAX_PATH_LEN];
@@ -862,14 +878,14 @@ void crun_utils_startup_env(char *mountbear, char *startup_env, int nb_eth)
 /****************************************************************************/
 int crun_utils_create_config_json(char *path, char *rootfs, char *nspacecrun,
                                  char *mountbear, char *mounttmp,
-                                 int is_persistent, char *startup_env,
-                                 char *vmount, char *name)
+                                 int is_persistent, char *brandtype,
+                                 char *startup_env, char *vmount, char *name)
 {
   int len, result;
   char json_path[MAX_PATH_LEN];
   char tmp_json_path[MAX_PATH_LEN];
   char *buf = get_config_json(rootfs, nspacecrun, mountbear,
-                              mounttmp, is_persistent,
+                              mounttmp, is_persistent, brandtype,
                               startup_env, vmount, name);
   memset(json_path, 0, MAX_PATH_LEN);
   snprintf(json_path, MAX_PATH_LEN-1, "%s/config.json", path); 
@@ -984,14 +1000,15 @@ static int nspace_create(char *name, char *nspacecrun, int cloonix_rank,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int crun_utils_create_net(char *mountbear, char *mounttmp, char *image,
-                          char *name, char *cnt_dir, char *nspacecrun,
-                          int cloonix_rank, int vm_id, int nb_eth,
-                          t_eth_mac *eth_mac, char *agent_dir,
-                          char *tmpfs_umount_cmd)
+int crun_utils_create_net(char *brandtype, int is_persistent, char *mountbear,
+                          char *mounttmp, char *image, char *name,
+                          char *cnt_dir, char *nspacecrun, int cloonix_rank,
+                          int vm_id, int nb_eth, t_eth_mac *eth_mac,
+                          char *agent_dir, char *tmpfs_umount_cmd)
 {
-  int result = create_all_dirs(mountbear, mounttmp, image, cnt_dir,
-                               name, tmpfs_umount_cmd);
+  int result;
+  result = create_all_dirs(mountbear, mounttmp, image, cnt_dir, name,
+                           tmpfs_umount_cmd, brandtype, is_persistent);
   if (result)
     KERR("ERROR %s %s %s", cnt_dir, name, nspacecrun);
   else
@@ -1030,7 +1047,7 @@ int crun_utils_delete_net_nspace(char *nspacecrun)
 
 /****************************************************************************/
 int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
-                             char *image, int is_persistent)
+                             char *image, int is_persistent, char *brandtype)
 {
   int result = 0;
   char cmd[MAX_PATH_LEN];
@@ -1054,7 +1071,7 @@ int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
       result = -1;
       }
     }
-  if (tar_img_del(name, bulk, image, cnt_dir, is_persistent))
+  if (tar_img_del(name, bulk, image, cnt_dir, is_persistent, brandtype))
     {
     KERR("ERROR %s", name);
     result = -1;
@@ -1064,29 +1081,36 @@ int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int crun_utils_delete_crun_stop(char *name, int crun_pid)
+void crun_utils_delete_crun_stop(char *name, int crun_pid)
 {
-  int pid, result = -1;
+  int pid, res;
   char cmd[MAX_PATH_LEN];
   char *ptr = g_var_crun_log;
-  if (crun_pid > 0)
-    result = kill(crun_pid, 9);
-  else
-    {
-    pid = read_crun_create_pid(name, 0);
-    if (pid > 0)
-      result = kill(pid, 9);
-    }
+
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+           "%s --log=%s --root=/var/lib/cloonix/%s/%s stop %s",
+           CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
+  if (execute_cmd(cmd, 1))
+    KERR("ERROR %s", cmd);
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
            CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1))
-    {
     KERR("ERROR %s", cmd);
-    result = -1;
+  if (crun_pid > 0)
+    {
+    res = kill(crun_pid, 9);
     }
-  return result;
+  else
+    {
+    pid = read_crun_create_pid(name, 0);
+    if (pid > 0)
+      {
+      res = kill(pid, 9);
+      }
+    }
 }
 /*--------------------------------------------------------------------------*/
 

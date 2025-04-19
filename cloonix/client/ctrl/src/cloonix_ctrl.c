@@ -94,7 +94,8 @@ struct cmd_struct level_layout_cmd[] = {
 struct cmd_struct level_add_cmd[] = {
 {"lan", "Add lan (emulated cable)", NULL, cmd_add_vl2sat, help_add_vl2sat},
 {"kvm", "Add kvm (virtualized machine)", NULL,cmd_add_vm_kvm,help_add_vm_kvm},
-{"cru", "Add container crun",  NULL, cmd_add_cru, help_add_cru},
+{"zip", "Add container crun brandzip",  NULL, cmd_add_zip, help_add_zip},
+{"cvm", "Add container crun brandcvm",  NULL, cmd_add_cvm, help_add_cvm},
 {"tap", "Add tap (host network interface)",  NULL, cmd_add_tap, help_add_tap},
 {"phy", "Add phy (real host network interface)",  NULL, cmd_add_phy, help_add_phy},
 {"nat", "Add nat (access host ip)",NULL, cmd_add_nat, help_add_nat},

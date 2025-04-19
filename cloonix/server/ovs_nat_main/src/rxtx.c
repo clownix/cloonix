@@ -19,17 +19,16 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
-#include <linux/icmp.h>
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "tun_tap.h"
 #include "utils.h"
 #include "rxtx.h"
-#include "tcp.h"
-#include "udp.h"
-#include "icmp.h"
-#include "dhcp.h"
+#include "ltcp.h"
+#include "ludp.h"
+#include "licmp.h"
+#include "ldhcp.h"
 #include "machine.h"
 #include "tcp_flagseq.h"
 #include "ssh_cisco_nat.h"

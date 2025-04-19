@@ -19,6 +19,57 @@
 //https://github.com/opencontainers/runtime-spec/blob/main/config.md
 //https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md
 
+#define CONFIG_JSON_MOUNT_SYS_CGROUP_RO "\n"\
+"{\n"\
+"  \"destination\": \"/sys\",\n"\
+"  \"type\": \"sysfs\",\n"\
+"  \"source\": \"sysfs\",\n"\
+"  \"options\": [\n"\
+"          \"nosuid\",\n"\
+"          \"noexec\",\n"\
+"          \"nodev\",\n"\
+"          \"ro\"\n"\
+"  ]\n"\
+"},\n"\
+"{\n"\
+"  \"destination\": \"/sys/fs/cgroup\",\n"\
+"  \"type\": \"cgroup\",\n"\
+"  \"source\": \"cgroup\",\n"\
+"  \"options\": [\n"\
+"          \"nosuid\",\n"\
+"          \"noexec\",\n"\
+"          \"nodev\",\n"\
+"          \"relatime\",\n"\
+"          \"ro\"\n"\
+"  ]\n"\
+"}\n"
+
+#define CONFIG_JSON_MOUNT_SYS_CGROUP_RW "\n"\
+"{\n"\
+"  \"destination\": \"/sys\",\n"\
+"  \"type\": \"sysfs\",\n"\
+"  \"source\": \"sysfs\",\n"\
+"  \"options\": [\n"\
+"          \"nosuid\",\n"\
+"          \"noexec\",\n"\
+"          \"nodev\",\n"\
+"          \"rw\"\n"\
+"  ]\n"\
+"},\n"\
+"{\n"\
+"  \"destination\": \"/sys/fs/cgroup\",\n"\
+"  \"type\": \"cgroup\",\n"\
+"  \"source\": \"cgroup\",\n"\
+"  \"options\": [\n"\
+"          \"nosuid\",\n"\
+"          \"noexec\",\n"\
+"          \"nodev\",\n"\
+"          \"relatime\",\n"\
+"          \"rw\"\n"\
+"  ]\n"\
+"}\n"
+
+
 #define CONFIG_JSON_MOUNT_ITEM "\n"\
 "{\n"\
 "  \"destination\": \"%s\",\n"\
@@ -31,12 +82,6 @@
 " \n %s %s %s %s %s %s %s %s\n"\
 "{\n"\
 "  \"destination\": \"/mnt\",\n"\
-"  \"type\": \"none\",\n"\
-"  \"source\": \"%s\",\n"\
-"  \"options\": [\"rbind\",\"rw\"]\n"\
-"},\n"\
-"{\n"\
-"  \"destination\": \"/tmp\",\n"\
 "  \"type\": \"none\",\n"\
 "  \"source\": \"%s\",\n"\
 "  \"options\": [\"rbind\",\"rw\"]\n"\
@@ -75,18 +120,6 @@
 "  ]\n"\
 "},\n"\
 "{\n"\
-"  \"destination\": \"/dev/pts\",\n"\
-"  \"type\": \"devpts\",\n"\
-"  \"source\": \"devpts\",\n"\
-"  \"options\": [\n"\
-"          \"nosuid\",\n"\
-"          \"noexec\",\n"\
-"          \"newinstance\",\n"\
-"          \"ptmxmode=0666\",\n"\
-"          \"mode=0620\"\n"\
-"  ]\n"\
-"},\n"\
-"{\n"\
 "  \"destination\": \"/dev/shm\",\n"\
 "  \"type\": \"tmpfs\",\n"\
 "  \"source\": \"shm\",\n"\
@@ -96,6 +129,18 @@
 "          \"nodev\",\n"\
 "          \"mode=1777\",\n"\
 "          \"size=65536k\"\n"\
+"  ]\n"\
+"},\n"\
+"{\n"\
+"  \"destination\": \"/dev/pts\",\n"\
+"  \"type\": \"devpts\",\n"\
+"  \"source\": \"devpts\",\n"\
+"  \"options\": [\n"\
+"          \"nosuid\",\n"\
+"          \"noexec\",\n"\
+"          \"newinstance\",\n"\
+"          \"ptmxmode=0666\",\n"\
+"          \"mode=0620\"\n"\
 "  ]\n"\
 "},\n"\
 "{\n"\
@@ -109,28 +154,11 @@
 "  ]\n"\
 "},\n"\
 "{\n"\
-"  \"destination\": \"/sys\",\n"\
-"  \"type\": \"sysfs\",\n"\
-"  \"source\": \"sysfs\",\n"\
-"  \"options\": [\n"\
-"          \"nosuid\",\n"\
-"          \"noexec\",\n"\
-"          \"nodev\",\n"\
-"          \"ro\"\n"\
-"  ]\n"\
-"},\n"\
-"{\n"\
-"  \"destination\": \"/sys/fs/cgroup\",\n"\
-"  \"type\": \"cgroup\",\n"\
-"  \"source\": \"cgroup\",\n"\
-"  \"options\": [\n"\
-"          \"nosuid\",\n"\
-"          \"noexec\",\n"\
-"          \"nodev\",\n"\
-"          \"relatime\",\n"\
-"          \"ro\"\n"\
-"  ]\n"\
-"}\n"
+"  \"destination\": \"/tmp\",\n"\
+"  \"type\": \"none\",\n"\
+"  \"source\": \"%s\",\n"\
+"  \"options\": [\"rbind\",\"mode=777\",\"rw\"]\n"\
+"},\n%s\n"
 
 
 
@@ -158,6 +186,7 @@
 "        },\n"\
 "        \"args\": [%s],\n"\
 "        \"env\": [\n"\
+"        \"TERM=xterm\",\n"\
 "        \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"\n"\
 "        %s\n"\
 "        ],\n"\

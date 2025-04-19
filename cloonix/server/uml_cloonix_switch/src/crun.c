@@ -56,10 +56,11 @@ void crun_sigdiag_resp(int llid, char *line)
     else
       {
       snprintf(req, 5*MAX_PATH_LEN-1, 
-               "cloonsuid_crun_create_config_json name=%s is_persistent=%d "
+               "cloonsuid_crun_create_config_json name=%s "
+               "is_persistent=%d brandtype=%s "
                "<startup_env_keyid>%s</startup_env_keyid> "
                "<startup_vmount>%s</startup_vmount>\n",
-               name, cur->cnt.is_persistent,
+               name, cur->cnt.is_persistent, cur->cnt.brandtype,
                cur->cnt.startup_env, cur->cnt.vmount);
       if (send_sig_suid_power(llid, req))
         KERR("ERROR %d %s", llid, name);
@@ -74,8 +75,9 @@ void crun_sigdiag_resp(int llid, char *line)
     else
       {
       snprintf(req, 5*MAX_PATH_LEN-1,
-               "cloonsuid_crun_create_tar_img name=%s is_persistent=%d",
-               name, cur->cnt.is_persistent);
+               "cloonsuid_crun_create_tar_img name=%s "
+               "is_persistent=%d brandtype=%s",
+               name, cur->cnt.is_persistent, cur->cnt.brandtype);
       if (send_sig_suid_power(llid, req))
         KERR("ERROR %d %s", llid, name);
       }
@@ -89,8 +91,9 @@ void crun_sigdiag_resp(int llid, char *line)
     else
       {
       snprintf(req, 5*MAX_PATH_LEN-1,
-               "cloonsuid_crun_create_overlay name=%s is_persistent=%d",
-               name, cur->cnt.is_persistent);
+               "cloonsuid_crun_create_overlay name=%s "
+               "is_persistent=%d brandtype=%s",
+               name, cur->cnt.is_persistent, cur->cnt.brandtype);
       if (send_sig_suid_power(llid, req))
         KERR("ERROR %d %s", llid, name);
       }
@@ -151,6 +154,8 @@ void crun_sigdiag_resp(int llid, char *line)
     }
   else if ((sscanf(line,
   "cloonsuid_crun_create_net_resp_ko name=%s", name) == 1) ||
+           (sscanf(line,
+  "cloonsuid_crun_create_tar_img_resp_ko name=%s", name) == 1) ||
            (sscanf(line,
   "cloonsuid_crun_create_overlay_resp_ko name=%s", name) == 1) ||
            (sscanf(line,
@@ -217,9 +222,9 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
   snprintf(req, 2*MAX_PATH_LEN-1, 
   "cloonsuid_crun_create_net name=%s "
   "bulk=%s image=%s nb=%d vm_id=%d cnt_dir=%s "
-  "agent_dir=%s is_persistent=%d",
+  "agent_dir=%s is_persistent=%d brandtype=%s",
   cnt->name, bulk, image, cnt->nb_tot_eth,
-  vm_id, cnt_dir, agent, cnt->is_persistent);
+  vm_id, cnt_dir, agent, cnt->is_persistent, cnt->brandtype);
   if (send_sig_suid_power(llid, req))
     {
     KERR("ERROR %s Bad command create_net to suid_power", cnt->name);

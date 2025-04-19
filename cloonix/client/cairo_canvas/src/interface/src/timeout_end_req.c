@@ -98,8 +98,12 @@ void timer_create_item_node_req(void *data)
     cust_topo_cnt.nb_tot_eth = cust_cnt->nb_tot_eth;
     memcpy(cust_topo_cnt.eth_table, cust_cnt->eth_table,
            cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));
-    if (!strcmp(cust_cnt->brandtype, "crun"))
-      strncpy(cust_topo_cnt.image, cust_cnt->cru_image, MAX_PATH_LEN-1);
+    if (!strcmp(cust_cnt->brandtype, "brandzip"))
+      strncpy(cust_topo_cnt.image, cust_cnt->zip_image, MAX_PATH_LEN-1);
+    else if (!strcmp(cust_cnt->brandtype, "brandcvm"))
+      strncpy(cust_topo_cnt.image, cust_cnt->cvm_image, MAX_PATH_LEN-1);
+    else
+      KERR("ERROR %s", cust_cnt->brandtype);
     client_add_cnt(0, callback_end, &cust_topo_cnt);
     }
   clownix_free(pa, __FUNCTION__);

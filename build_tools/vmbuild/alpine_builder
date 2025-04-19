@@ -1,0 +1,62 @@
+#!/bin/bash
+#----------------------------------------------------------------------------#
+HERE=`pwd`
+NET="mito"
+NAME="build"
+BULK="/var/lib/cloonix/bulk/"
+FROM="alpine_base.qcow2"
+QCOW2="alpine_builder.qcow2"
+PARAMS="ram=8000 cpu=4 eth=s"
+#----------------------------------------------------------------------------#
+is_started=$(cloonix_cli $NET pid |grep cloonix_server)
+if [ "x$is_started" == "x" ]; then
+  printf "\nServer Not started, launching:"
+  printf "\ncloonix_net $NET:\n"
+  cloonix_net $NET
+else
+  cloonix_cli $NET rma
+fi
+#----------------------------------------------------------------------------#
+cp -f ${BULK}/${FROM} ${BULK}/${QCOW2}
+#----------------------------------------------------------------------------#
+cloonix_gui ${NET}
+cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --persistent
+cloonix_cli ${NET} add nat nat
+cloonix_cli ${NET} add lan ${NAME} 0 lan1
+cloonix_cli ${NET} add lan nat 0 lan1
+#----------------------------------------------------------------------------#
+set +e
+while ! cloonix_ssh ${NET} ${NAME} "echo" 2>/dev/null; do
+  echo ${NAME} not ready, waiting 3 sec
+  sleep 3
+done
+set -e
+#----------------------------------------------------------------------------#
+cloonix_ssh ${NET} ${NAME} "dhcpcd eth0"
+#----------------------------------------------------------------------------#
+LIST=""
+LIST="${LIST} build-base bash vim pkgconfig linux-headers openssl-dev"
+LIST="${LIST} ninja-build meson glib-dev gtk+3.0-dev libusb-dev cmake"
+LIST="${LIST} py3-six json-glib-dev gstreamer-dev gst-plugins-base-dev"
+LIST="${LIST} polkit-dev acl-dev acl-static opus-dev usbutils phodav-dev"
+LIST="${LIST} libcap-dev libcap-ng-dev libva-dev perl libcap-setcap"
+LIST="${LIST} libxkbfile-dev libxfont2-dev libxcvt-dev eudev-dev"
+LIST="${LIST} qt6-qtbase-dev qt6-qttools-dev qt6-qt5compat-dev"
+LIST="${LIST} libpcap-dev gperf argp-standalone libxt-dev libxmu-dev"
+LIST="${LIST} libsm-dev libice-dev lz4-dev libaio-dev liburing-dev"
+LIST="${LIST} openssh xorriso"
+
+
+apkcmd="apk --allow-untrusted --no-cache --update add"
+for i in ${LIST}; do
+  echo DOING: ${i}
+  cloonix_ssh ${NET} ${NAME} "${apkcmd} ${i}"
+done
+#----------------------------------------------------------------------------#
+cloonix_ssh ${NET} ${NAME} "sync"
+cloonix_ssh ${NET} ${NAME} "poweroff"
+cloonix_cli ${NET} kil
+#----------------------------------------------------------------------------#
+
+
+

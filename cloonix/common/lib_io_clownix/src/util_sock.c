@@ -254,7 +254,7 @@ int util_client_abstract_socket_unix(char *pname, int *fd)
   if (result != 0)
     {
     close(sock);
-    KERR("NO SERVER LISTENING TO ABSTRACT %s\n", pname);
+    KERR("1NO SERVER LISTENING TO ABSTRACT %s\n", pname);
     }
   else
     {
@@ -314,8 +314,8 @@ int util_client_socket_unix(char *pname, int *fd)
   if (result != 0)
     {
     close(sock);
-    printf("NO SERVER LISTENING TO %s\n", pname);
-    KERR("ERROR NO SERVER LISTENING TO %s", pname);
+    printf("2NO SERVER LISTENING TO %s\n", pname);
+    KERR("ERROR 2NO SERVER LISTENING TO %s", pname);
     }
   else
     {
@@ -358,8 +358,6 @@ int util_proxy_client_socket_unix(char *pname, int *fd)
   if (result != 0)
     {
     close(sock);
-    printf("NO SERVER LISTENING TO %s\n", pname);
-    KERR("NO SERVER LISTENING TO %s\n", pname);
     }
   else
     {
@@ -367,7 +365,14 @@ int util_proxy_client_socket_unix(char *pname, int *fd)
     nonblock(*fd);
     }
   if (result)
+    {
     result = util_client_abstract_socket_unix(pname, fd);
+    }
+  if (result != 0)
+    {
+    printf("3NO SERVER LISTENING TO %s\n", pname);
+    KERR("3NO SERVER LISTENING TO %s\n", pname);
+    }
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -409,7 +414,7 @@ int util_client_socket_inet(uint32_t ip, uint16_t port, int *fd)
   else
     {
     close(sock);
-    printf("NO SERVER LISTENING TO %d\n", port);
+    printf("4NO SERVER LISTENING TO %d\n", port);
     result = -1;
     }
   return result;

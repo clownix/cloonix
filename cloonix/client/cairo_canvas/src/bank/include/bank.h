@@ -40,7 +40,7 @@ typedef struct t_pbi_node
 typedef struct t_pbi_cnt
 {
   int  cnt_evt_ping_ok;
-  char type[MAX_NAME_LEN];
+  char brandtype[MAX_NAME_LEN];
   char image[MAX_PATH_LEN];
   int  cnt_vm_id;
   int  nb_tot_eth;
@@ -126,6 +126,8 @@ typedef struct t_bank_item
   int  button_1_double_click;
   int  spicy_gtk_pid;
   int  dtach_pid;
+  int  xephyr_frame_pid;
+  int  xephyr_session_pid;
   int  crun_screen_pid;
   t_pid_wireshark *head_pid_wireshark;
   long long abs_beat_eua_timeout;
@@ -224,6 +226,10 @@ int bank_get_spicy_gtk_pid(char *name);
 void bank_set_spicy_gtk_pid(char *name, int val);
 int bank_get_wireshark_pid(char *name, int num);
 void bank_set_wireshark_pid(char *name, int num, int val);
+void bank_set_xephyr_frame_pid(char *name, int val);
+int bank_get_xephyr_frame_pid(char *name);
+void bank_set_xephyr_session_pid(char *name, int val);
+int bank_get_xephyr_session_pid(char *name);
 /*--------------------------------------------------------------------------*/
 
 

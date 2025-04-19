@@ -88,7 +88,8 @@ Then hit *cloonix_cli nemo add* to have the next possible choices::
     |-------------------------------------------------------------------------|
     |    lan             : Add lan (emulated cable)                           |
     |    kvm             : Add kvm (virtualized machine)                      |
-    |    cru             : Add container crun                                 |
+    |    zip             : Add container crun zip format                      |
+    |    cvm             : Add container crun cvm format                      |
     |    tap             : Add tap (host network interface)                   |
     |    phy             : Add phy (real host network interface)              |
     |    nat             : Add nat (access host ip)                           |

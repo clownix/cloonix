@@ -37,7 +37,7 @@ for i in ${LIST}; do
   num=$((num+1))
   cloonix_scp $NET ${HOME}/${BUNDLE}.tar.gz ${i}:/root
   cloonix_ssh $NET ${i} "tar xvf ${BUNDLE}.tar.gz"
-  cloonix_ssh $NET ${i} "cd /root/${BUNDLE}; ./install_cloonix"
+  cloonix_ssh $NET ${i} "cd /root/${BUNDLE}; ./install_cloonfs"
   cloonix_ssh $NET ${i} "mkdir -p /var/lib/cloonix/bulk"
   cloonix_scp $NET ${BULK}/zipfrr.zip ${i}:/${BULK}
   cloonix_scp $NET ${BULK}/bookworm.qcow2 ${i}:/${BULK}

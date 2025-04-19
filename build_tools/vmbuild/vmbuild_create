@@ -82,13 +82,18 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                 x11-xserver-utils libxmu-dev x11-xkb-utils x11proto-dev \
                 libxshmfence-dev libbsd-dev libxkbfile-dev \
                 libxfont-dev libxcvt-dev libdecor-0-dev \
-                libei-dev liboeffis-dev libaudit-dev \
+                libaudit-dev \
                 mesa-common-dev libpipewire-0.3-dev \
                 libpipewire-0.3-modules util-linux rsyslog \
                 pipewire-pulse unzip zip curl wget libboost-dev \
                 nodejs node-mime-types node-mime node-optimist \
                 node-ws acl libevent-dev xclip lsof \
-                libcanberra-gtk3-module kde-config-gtk-style"
+                libcanberra-gtk3-module kde-config-gtk-style \
+                 libxcb-shape0-dev libxcb-render-util0-dev \
+                   libxcb-util-dev libxcb-image0-dev \
+                libxcb-icccm4-dev libxcb-keysyms1-dev \
+                libxcb-randr0-dev libxcb-xkb-dev libxcb-glx0-dev \
+                libxcb-xv0-dev"
 
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"

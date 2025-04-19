@@ -30,15 +30,17 @@
 #include <sys/ioctl.h>
 #include <linux/sockios.h>
 #include <sys/time.h>
+
+#include "glob_common.h"
 #include "sock.h"
 #include "commun.h"
 #include "nonblock.h"
 
-static int pool_fifo_free_index[MAX_IDX_X11];
+static int pool_fifo_free_index[X11_DISPLAY_IDX_MAX];
 static int pool_read_idx;
 static int pool_write_idx;
 
-static int pool_x11_fifo_free_index[MAX_IDX_X11];
+static int pool_x11_fifo_free_index[X11_DISPLAY_IDX_MAX];
 static int pool_x11_read_idx;
 static int pool_x11_write_idx;
 
@@ -57,29 +59,39 @@ typedef struct t_fd_x11_ctx
 } t_fd_x11_ctx;
 
 
-static t_fd_x11_ctx g_fd_x11_ctx[MAX_IDX_X11+1];
+static t_fd_x11_ctx g_fd_x11_ctx[X11_DISPLAY_IDX_MAX+1];
 static t_fd_x11_ctx *g_head_fd_x11_ctx;
 
 /*****************************************************************************/
 static void pool_init(void)
 {
   int i;
-  for(i = 0; i < MAX_IDX_X11; i++)
+  for(i = 0; i < X11_DISPLAY_IDX_MAX; i++)
     pool_fifo_free_index[i] = i+1;
   pool_read_idx = 0;
-  pool_write_idx =  MAX_IDX_X11 - 1;
+  pool_write_idx =  X11_DISPLAY_IDX_MAX - 1;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static int pool_alloc(void)
 {
-  int idx = 0;
+  int count, idx = 0;
   if(pool_read_idx != pool_write_idx)
     {
     idx = pool_fifo_free_index[pool_read_idx];
-    pool_read_idx = (pool_read_idx + 1)%MAX_IDX_X11;
+    pool_read_idx = (pool_read_idx + 1) % X11_DISPLAY_IDX_MAX;
     }
+  if (pool_write_idx > pool_read_idx)
+    count = pool_write_idx - pool_read_idx;
+  else
+    count = X11_DISPLAY_IDX_MAX + pool_write_idx - pool_read_idx;
+  if (count == X11_DISPLAY_IDX_MAX/2)
+    KERR("pool_alloc WARNING 1 INCREASE X11_DISPLAY_IDX_MAX");
+  if (count ==  X11_DISPLAY_IDX_MAX / 3)
+    KERR("pool_alloc WARNING 2 INCREASE X11_DISPLAY_IDX_MAX");
+  if (count ==  X11_DISPLAY_IDX_MAX / 4)
+    KERR("pool_alloc WARNING 3 INCREASE X11_DISPLAY_IDX_MAX");
   return idx;
 }
 /*---------------------------------------------------------------------------*/
@@ -88,7 +100,7 @@ static int pool_alloc(void)
 static void pool_release(int idx)
 {
   pool_fifo_free_index[pool_write_idx] =  idx;
-  pool_write_idx=(pool_write_idx + 1)%MAX_IDX_X11;
+  pool_write_idx=(pool_write_idx + 1)%X11_DISPLAY_IDX_MAX;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -96,22 +108,32 @@ static void pool_release(int idx)
 static void x11_pool_init(void)
 {
   int i;
-  for(i = 0; i < MAX_IDX_X11; i++)
+  for(i = 0; i < X11_DISPLAY_IDX_MAX; i++)
     pool_x11_fifo_free_index[i] = i+1;
   pool_x11_read_idx = 0;
-  pool_x11_write_idx =  MAX_IDX_X11 - 1;
+  pool_x11_write_idx =  X11_DISPLAY_IDX_MAX - 1;
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int x11_pool_alloc(void)
 {
-  int idx = 0;
+  int count, idx = 0;
   if(pool_x11_read_idx != pool_x11_write_idx)
     {
     idx = pool_x11_fifo_free_index[pool_x11_read_idx];
-    pool_x11_read_idx = (pool_x11_read_idx + 1)%MAX_IDX_X11;
+    pool_x11_read_idx = (pool_x11_read_idx + 1)%X11_DISPLAY_IDX_MAX;
     }
+  if (pool_x11_write_idx > pool_x11_read_idx)
+    count = pool_x11_write_idx - pool_x11_read_idx;
+  else
+    count = X11_DISPLAY_IDX_MAX+pool_x11_write_idx - pool_x11_read_idx;
+  if (count == X11_DISPLAY_IDX_MAX/2)
+    KERR("WARNING 1 INCREASE X11_DISPLAY_IDX_MAX");
+  if (count ==  X11_DISPLAY_IDX_MAX / 3)
+    KERR("WARNING 2 INCREASE X11_DISPLAY_IDX_MAX");
+  if (count ==  X11_DISPLAY_IDX_MAX / 4)
+    KERR("WARNING 3 INCREASE X11_DISPLAY_IDX_MAX");
   return idx;
 }
 /*---------------------------------------------------------------------------*/
@@ -120,7 +142,7 @@ int x11_pool_alloc(void)
 void x11_pool_release(int idx)
 {
   pool_x11_fifo_free_index[pool_x11_write_idx] =  idx;
-  pool_x11_write_idx=(pool_x11_write_idx + 1)%MAX_IDX_X11;
+  pool_x11_write_idx=(pool_x11_write_idx + 1)%X11_DISPLAY_IDX_MAX;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -134,7 +156,7 @@ static void send_close_x11_to_doors(int sub_dido_idx)
   memset(g_buf, 0, headsize);
   ctx = &(g_fd_x11_ctx[sub_dido_idx]);
   if (ctx->sub_dido_idx != sub_dido_idx)
-    KOUT("%d %d", ctx->sub_dido_idx, sub_dido_idx);
+    KOUT("ERROR %d %d", ctx->sub_dido_idx, sub_dido_idx);
   snprintf(buf, MAX_A2D_LEN-1, LAX11OPENKO, sub_dido_idx);
   send_to_virtio(ctx->dido_llid, strlen(buf) + 1, header_type_x11_ctrl,
                  header_val_x11_open_serv, g_buf);
@@ -232,19 +254,19 @@ static void x11_read_evt(int fd)
   int err, val, sub_dido_idx, len = 1, first_loop = 1;
   sub_dido_idx = get_idx_with_fd(fd);
   if (!sub_dido_idx)
-    KERR(" ");
+    KERR("ERROR %dd", fd);
   else
     {
     ctx = &(g_fd_x11_ctx[sub_dido_idx]);
     if (ctx->sub_dido_idx != sub_dido_idx)
-      KOUT("%d %d", ctx->sub_dido_idx, sub_dido_idx);
+      KOUT("ERROR %d %d", ctx->sub_dido_idx, sub_dido_idx);
     if (ctx->fd != fd)
-      KOUT("%d %d", ctx->fd, fd);
+      KOUT("ERROR %d %d", ctx->fd, fd);
     err = ioctl(fd, SIOCINQ, &val);
     if ((err != 0) || (val<0))
       {
       val = 0;
-      KERR("%d", errno);
+      KERR("ERROR %d", errno);
       free_fd_ctx(sub_dido_idx);
       }
     else
@@ -260,7 +282,7 @@ static void x11_read_evt(int fd)
         len = 0;
         if ((errno != EAGAIN) && (errno != EINTR))
           {
-          KERR("%d", errno);
+          KERR("ERROR %d", errno);
           free_fd_ctx(sub_dido_idx);
           }
         }
@@ -284,14 +306,14 @@ void x11_event_listen(int dido_llid, int display_sock_x11, int fd_x11_listen)
   memset(g_buf, 0, headsize);
   fd = sock_fd_accept(fd_x11_listen);
   if (fd <= 0)
-    KERR("%d", errno);
+    KERR("ERROR %d %d %d %d", dido_llid, display_sock_x11, fd_x11_listen, errno);
   else
     {
     sub_dido_idx = alloc_x11_fd(dido_llid, fd, display_sock_x11);
     if (!sub_dido_idx)
       {
       close(fd);
-      KERR(" ");
+      KERR("ERROR %d %d %d", dido_llid, display_sock_x11, fd_x11_listen);
       }
     else
       {
@@ -340,16 +362,16 @@ void x11_rx_ack_open_x11(int dido_llid, char *rx)
   int sub_dido_idx;
   if (sscanf(rx, LAX11OPENOK, &sub_dido_idx) == 1)
     {
-    if ((sub_dido_idx < 1) || (sub_dido_idx > MAX_IDX_X11))
-      KERR("%d", sub_dido_idx);
+    if ((sub_dido_idx < 1) || (sub_dido_idx > X11_DISPLAY_IDX_MAX))
+      KERR("ERROR %d", sub_dido_idx);
     else if (g_fd_x11_ctx[sub_dido_idx].fd <= 0)
-      KERR("%d", sub_dido_idx);
+      KERR("ERROR %d", sub_dido_idx);
     else 
       {
       if (!g_fd_x11_ctx[sub_dido_idx].dido_llid)
-        KOUT(" ");
+        KOUT("ERROR");
       if (g_fd_x11_ctx[sub_dido_idx].dido_llid != dido_llid)
-        KOUT("%d %d ", g_fd_x11_ctx[sub_dido_idx].dido_llid, dido_llid);
+        KOUT("ERROR %d %d ", g_fd_x11_ctx[sub_dido_idx].dido_llid, dido_llid);
       g_fd_x11_ctx[sub_dido_idx].ready = 1;
       }
     }
@@ -358,14 +380,14 @@ void x11_rx_ack_open_x11(int dido_llid, char *rx)
     free_fd_ctx(sub_dido_idx);
     }
   else 
-    KERR(" ");
+    KERR("ERROR");
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void x11_init(void)
 {
-  memset(g_fd_x11_ctx, 0, (MAX_IDX_X11+1) * sizeof(t_fd_x11_ctx));
+  memset(g_fd_x11_ctx, 0, (X11_DISPLAY_IDX_MAX+1) * sizeof(t_fd_x11_ctx));
   pool_init();
   x11_pool_init();
 }

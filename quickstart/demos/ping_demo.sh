@@ -5,8 +5,8 @@ cloonix_net nemo
 #----------------------------------------------------------------------
 cloonix_gui nemo
 #----------------------------------------------------------------------
-cloonix_cli nemo add cru cnt1 eth=s zipfrr.zip
-cloonix_cli nemo add cru cnt2 eth=s zipfrr.zip
+cloonix_cli nemo add zip cnt1 eth=s zipfrr.zip
+cloonix_cli nemo add zip cnt2 eth=s zipfrr.zip
 cloonix_cli nemo add lan cnt1 0 lan1
 cloonix_cli nemo add lan cnt2 0 lan1
 #----------------------------------------------------------------------

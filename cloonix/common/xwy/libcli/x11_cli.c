@@ -52,7 +52,7 @@ typedef struct t_conn_cli_x11
   struct epoll_event *x11_fd_epev;
 } t_conn_cli_x11;
 
-static t_conn_cli_x11 *g_conn[MAX_IDX_X11];
+static t_conn_cli_x11 *g_conn[X11_DISPLAY_IDX_MAX];
 
 static t_sock_fd_ass_close g_sock_fd_ass_close;
 
@@ -67,7 +67,7 @@ void xcli_killed_x11(int cli_idx)
     if (in_zero == 0)
       { 
       in_zero = 1;
-      for (i=1; i<MAX_IDX_X11; i++)
+      for (i=1; i<X11_DISPLAY_IDX_MAX; i++)
         {
         if (g_conn[i])
           xcli_killed_x11(i);
@@ -95,7 +95,7 @@ void xcli_killed_x11(int cli_idx)
 static void check_fd_unique(int x11_fd)
 {
   int i;
-  for (i=1; i<MAX_IDX_X11; i++)
+  for (i=1; i<X11_DISPLAY_IDX_MAX; i++)
     {
     if (g_conn[i])
       {
@@ -131,7 +131,7 @@ static void create_conn_and_ack(int srv_idx, int cli_idx, int x11_fd)
   int epfd, len = sizeof(t_conn_cli_x11);
   t_conn_cli_x11 *conn;
 
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d %d", srv_idx, cli_idx);
   if (g_conn[cli_idx])
     KOUT("%d %d", srv_idx, cli_idx);
@@ -175,9 +175,9 @@ static void x11_connect(int srv_idx, int cli_idx)
   unsigned long inet_addr;
   int x11_fd = -1;
 
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d %d", srv_idx, cli_idx);
-  if ((cli_idx <= 0) || (cli_idx >= MAX_IDX_X11))
+  if ((cli_idx <= 0) || (cli_idx >= X11_DISPLAY_IDX_MAX))
     KOUT("%d %d", srv_idx, cli_idx);
   if (strlen(get_x11_path()))
     {
@@ -267,7 +267,7 @@ int x11_fd_epollin_epollout_action(uint32_t evts, int fd)
   int i, result = 0;
   t_conn_cli_x11 *conn;
   int epfd = xcli_get_main_epfd();
-  for (i=1; i<MAX_IDX_X11; i++)
+  for (i=1; i<X11_DISPLAY_IDX_MAX; i++)
     {
     conn = g_conn[i];
     if (conn)
@@ -305,7 +305,7 @@ void x11_fd_epollin_epollout_setup(void)
   int i;
   t_conn_cli_x11 *conn;
   int epfd = xcli_get_main_epfd();
-  for (i=1; i<MAX_IDX_X11; i++)
+  for (i=1; i<X11_DISPLAY_IDX_MAX; i++)
     {
     conn = g_conn[i];
     if (conn)
@@ -362,6 +362,6 @@ void rx_x11_msg_cb(uint32_t randid, int llid, int type,
 void x11_cli_init(t_sock_fd_ass_close sock_fd_ass_close)
 {
   g_sock_fd_ass_close = sock_fd_ass_close;
-  memset(g_conn, 0, MAX_IDX_X11 * sizeof(t_conn_cli_x11 *));
+  memset(g_conn, 0, X11_DISPLAY_IDX_MAX * sizeof(t_conn_cli_x11 *));
 }
 /*--------------------------------------------------------------------------*/

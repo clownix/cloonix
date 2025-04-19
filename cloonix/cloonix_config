@@ -37,22 +37,22 @@ CLOONIX_NET: fido {
 
 ##################################################
 CLOONIX_NET: N3 {
-  cloonix_ip       10.0.0.102
+  cloonix_ip       10.0.0.103
   cloonix_port     34567
   novnc_port    54321
   cloonix_passwd   pipoclown
-  c2c_udp_ip     10.0.0.102
+  c2c_udp_ip     10.0.0.103
   c2c_udp_port_low 54713
 }
 #-------------------------------------------------
 
 ##################################################
 CLOONIX_NET: N4 {
-  cloonix_ip       10.0.0.101
+  cloonix_ip       10.0.0.104
   cloonix_port     34567
   novnc_port    54321
   cloonix_passwd   pipoclown
-  c2c_udp_ip     10.0.0.101
+  c2c_udp_ip     10.0.0.104
   c2c_udp_port_low 55713
 }
 #-------------------------------------------------

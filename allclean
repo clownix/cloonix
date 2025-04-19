@@ -1,27 +1,21 @@
 #!/bin/bash
 
-export CLOONIX_TREE_ROOT=`pwd`
-if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
+export SRC_TREE_ROOT=`pwd`
+if [ ! -e ${SRC_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo NOT FOUND:
-  echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
+  echo ${SRC_TREE_ROOT}/cloonix/cloonix_config
   exit 1
 fi
 
-
-rm -rf ${CLOONIX_TREE_ROOT}/xdoc/build/
 #----------------------------------------------------------
-COMMON=${CLOONIX_TREE_ROOT}/cloonix/common
-CLIENT=${CLOONIX_TREE_ROOT}/cloonix/client
-SERVER=${CLOONIX_TREE_ROOT}/cloonix/server
-
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_client
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/tmpbuild_server
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/common
-rm -f  ${CLOONIX_TREE_ROOT}/build_tools/common.tar.gz
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/server
-rm -f  ${CLOONIX_TREE_ROOT}/build_tools/server.tar.gz
+BUNDLE="${HOME}/cloonix_bundle"
+rm -rf ${BUNDLE}
 #----------------------------------------------------------
-rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
+rm -rf ${SRC_TREE_ROOT}/xdoc/build/
+#----------------------------------------------------------
+COMMON=${SRC_TREE_ROOT}/cloonix/common
+CLIENT=${SRC_TREE_ROOT}/cloonix/client
+SERVER=${SRC_TREE_ROOT}/cloonix/server
 #----------------------------------------------------------
   for i in lib_rpc_clownix \
            lib_rpc_doors \
@@ -70,7 +64,6 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
     make clean
   done 
   rm -f ${SERVER}/dtach/cloonix-dtach
-  rm -f ${SERVER}/script_pty/cloonix-scriptpty
   rm -f ${SERVER}/cloonix-proxymous
 #----------------------------------------------------------
   for i in ovs \
@@ -93,7 +86,6 @@ rm -rf ${CLOONIX_TREE_ROOT}/build_tools/cloonix-bundle-*
     cd ${SERVER}/${i}
     ./allclean
   done
-  rm -f ${SERVER}/insider_agents/insider_agent_i386.iso
   rm -f ${SERVER}/insider_agents/insider_agent_x86_64.iso
   rm -rf ${SERVER}/insider_agents/cdrom
 #----------------------------------------------------------

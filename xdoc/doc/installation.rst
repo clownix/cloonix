@@ -10,7 +10,7 @@ Installation of binaries
 ========================
 
 The cloonix installed binaries are provided by cloonix-bundle-<version>,
-the *install_cloonix* script installs files in the folowing locations::
+the *install_cloonfs* script installs files in the folowing locations::
 
   /usr/libexec/cloonix/etc/cloonix.cfg                       config
   /usr/libexec/cloonix/common                                binaries
@@ -29,7 +29,7 @@ Here under is the complete list of commands for the binary installation::
   wget http://clownix.net/downloads/cloonix-__LAST_BASE__/cloonix-bundle-__LAST__.tar.gz
   tar xvf cloonix-bundle-__LAST__.tar.gz
   cd cloonix-bundle-__LAST__
-  sudo ./install_cloonix
+  sudo ./install_cloonfs
 
 
 Guest download

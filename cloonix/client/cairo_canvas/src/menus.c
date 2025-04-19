@@ -218,7 +218,7 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
   t_bank_item *bitem;
   static char title[MAX_PATH_LEN];
   static char text[MAX_TEXT];
-  int is_persistent, is_backed, is_inside_cloon, is_natplug;
+  int is_persistent, is_backed, is_natplug;
   int vm_config_flags, has_install_cdrom, has_added_cdrom;
   int is_full_virt, has_no_reboot, has_added_disk, with_pxe, len = 0;
   bitem = look_for_node_with_id(pm->name);
@@ -234,7 +234,6 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
     is_persistent = vm_config_flags & VM_CONFIG_FLAG_PERSISTENT;
     is_full_virt  = vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT;
     is_backed   = vm_config_flags & VM_FLAG_DERIVED_BACKING;
-    is_inside_cloon = vm_config_flags & VM_FLAG_IS_INSIDE_CLOON;
     has_install_cdrom = vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM;
     has_no_reboot = vm_config_flags & VM_CONFIG_FLAG_NO_REBOOT;
     with_pxe = vm_config_flags & VM_CONFIG_FLAG_WITH_PXE;
@@ -264,8 +263,6 @@ static void node_item_info(GtkWidget *mn, t_item_ident *pm)
       len += snprintf(text + len, MAX_TEXT-len-1, "\nRootfs: %s", 
                      bitem->pbi.pbi_node->node_rootfs_sod);
       }
-    if (is_inside_cloon)
-      len += snprintf(text + len, MAX_TEXT-len-1, "\n\t\tIS INSIDE CLOON");
     if (has_install_cdrom)
       len += snprintf(text + len, MAX_TEXT-len-1, "\n INSTALL_CDROM: %s",
                      bitem->pbi.pbi_node->install_cdrom);
@@ -721,10 +718,7 @@ void wireshark_launch(int vm_id, char *name, int num)
   bnode = look_for_node_with_id(name);
   bcnt = look_for_cnt_with_id(name);
   if ((bitem) || (bnode) || (bcnt))
-    {
-    if (start_wireshark(name, num))
-      KERR("ERROR: wireshark for %s %d", name, num);
-    }
+    start_wireshark(name, num);
   else
     KERR("ERROR: wireshark for %s %d", name, num);
 }
@@ -1041,15 +1035,22 @@ void node_ctx_menu(t_bank_item *bitem)
 /****************************************************************************/
 void cnt_ctx_menu(t_bank_item *bitem)
 {
-  GtkWidget *item_rsh, *item_info, *item_delete, *menu = gtk_menu_new();
+  GtkWidget *item_rsh, *item_info, *item_delete, *item_xephyr;
+  GtkWidget *menu = gtk_menu_new();
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
   if (bitem->bank_type != bank_type_cnt)
     KOUT("%s", bitem->name);
 
-  item_rsh = gtk_menu_item_new_with_label("Remote console");
-  item_info = gtk_menu_item_new_with_label("Info");
-  item_delete = gtk_menu_item_new_with_label("Delete");
+  if (!strcmp(bitem->pbi.pbi_cnt->brandtype, "brandcvm"))
+    item_xephyr = gtk_menu_item_new_with_label("xephyr");
+  item_rsh = gtk_menu_item_new_with_label("remote console");
+  item_info = gtk_menu_item_new_with_label("info");
+  item_delete = gtk_menu_item_new_with_label("delete");
+
+  if (!strcmp(bitem->pbi.pbi_cnt->brandtype, "brandcvm"))
+    g_signal_connect(G_OBJECT(item_xephyr), "activate",
+                     G_CALLBACK(crun_item_xephyr), (gpointer) pm);
 
   g_signal_connect(G_OBJECT(item_rsh), "activate",
                    G_CALLBACK(crun_item_rsh), (gpointer) pm);
@@ -1061,6 +1062,8 @@ void cnt_ctx_menu(t_bank_item *bitem)
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
 
+  if (!strcmp(bitem->pbi.pbi_cnt->brandtype, "brandcvm"))
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_xephyr);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_rsh);
 
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);

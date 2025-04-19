@@ -15,6 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#define ICMP_ECHOREPLY          0       /* Echo Reply                   */
+#define ICMP_ECHO               8       /* Echo Request                 */
 int get_llid_rxtx(void);
 void rxtx_tx_enqueue(int len, uint8_t *buf);
 void rxtx_init(int fd_rx_from_tap, int fd_tx_to_tap);

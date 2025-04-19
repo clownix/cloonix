@@ -15,6 +15,14 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+
+/*---------------------------------------------------------------------------*/
+#ifndef GLOB_COMMON_H
+#define GLOB_COMMON_H
+/*---------------------------------------------------------------------------*/
+
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -98,9 +106,24 @@ typedef void (*t_fd_error)(int llid, int err, int from);
 typedef int  (*t_fd_event)(int llid, int fd);
 typedef void (*t_fd_connect)(int llid, int llid_new);
 
+#define BRANDTYPE_NB_MAX 2
 
 #define PROXYMARKUP_START "proxymarkup_crun_data_start:"
 #define PROXYMARKUP_END ":proxymarkup_crun_data_end"
+
+#define MAGIC_COOKIE "MIT-MAGIC-COOKIE-1"
+#define MAGIC_COOKIE_LEN 16
+#define X11_DISPLAY_NAME "unix:%d.0"
+#define X11_DISPLAY_DIR "/tmp/.X11-unix"
+#define X11_DISPLAY_PREFIX "/tmp/.X11-unix/X%d"
+#define X11_DISPLAY_OFFSET 142
+#define X11_DISPLAY_OFFSET_PORT 6000
+#define X11_DISPLAY_IDX_MAX 100
+#define X11_DISPLAY_XWY_MIN 50
+#define X11_DISPLAY_XWY_MAX 100
+#define X11_DISPLAY_XWY_RANK_OFFSET 1000
+#define X11_DISPLAY_OFFSET_XEPHYR 243
+#define X11_DISPLAY_IDX_XEPHYR_MAX 20
 
 
 
@@ -232,37 +255,37 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 
 #define CRUN_STARTER "/usr/libexec/cloonix"
 
-#define AGENT_ISO_I386 "/usr/libexec/cloonix/server/insider_agents/insider_agent_i386.iso"
-#define AGENT_ISO_AMD64 "/usr/libexec/cloonix/server/insider_agents/insider_agent_x86_64.iso"
 
+#define AGENT_ISO_AMD64 "/usr/libexec/cloonix/cloonfs/insider_agents/insider_agent_x86_64.iso"
 
-#define SPICE_USB_ACL_HELPER_BIN "/usr/libexec/cloonix/common/cloonix-spice-client-glib-usb-acl-helper"
+#define SPICE_USB_ACL_HELPER_BIN "/usr/libexec/cloonix/cloonfs/cloonix-spice-client-glib-usb-acl-helper"
 
 #define PROXYSHARE_IN "/tmp/cloonix_proxymous"
 
-#define XAUTH_BIN "/usr/libexec/cloonix/common/xauth"
-#define BASH_BIN "/usr/libexec/cloonix/common/bash"
-#define XWYCLI_BIN "/usr/libexec/cloonix/common/cloonix-xwycli"
-#define URXVT_BIN "/usr/libexec/cloonix/common/cloonix-urxvt"
-#define WIRESHARK_BIN "/usr/libexec/cloonix/server/cloonix-wireshark"
-#define DUMPCAP_BIN "/usr/libexec/cloonix/server/dumpcap"
-#define CRUN_BIN "/usr/libexec/cloonix/server/cloonix-crun"
-#define PTY_BIN "/usr/libexec/cloonix/server/cloonix-scriptpty"
-#define IP_BIN "/usr/libexec/cloonix/server/ip"
-#define FUSEZIP_BIN "/usr/libexec/cloonix/server/cloonix-fuse-zip"
-#define MOUNT_BIN "/usr/libexec/cloonix/server/cloonix-mount"
-#define UMOUNT_BIN "/usr/libexec/cloonix/server/cloonix-umount"
-#define GREP_BIN "/usr/libexec/cloonix/server/cloonix-grep"
-#define PS_BIN "/usr/libexec/cloonix/server/cloonix-ps"
-#define AWK_BIN "/usr/libexec/cloonix/server/cloonix-awk"
-#define MKNOD_BIN "/usr/libexec/cloonix/server/cloonix-mknod"
-#define CHMOD_BIN "/usr/libexec/cloonix/server/cloonix-chmod"
-#define OVSDB_SERVER_BIN "/usr/libexec/cloonix/server/cloonix-ovsdb-server"
-#define OVS_VSWITCHD_BIN "/usr/libexec/cloonix/server/cloonix-ovs-vswitchd"
-#define OVSDB_TOOL_BIN   "/usr/libexec/cloonix/server/cloonix-ovsdb-tool"
-#define OSIRROX_BIN "/usr/libexec/cloonix/server/cloonix-osirrox"
+#define LXSESSION "/usr/bin/cloonix_lxsession.sh"
+#define XEPHYR_BIN "/usr/libexec/cloonix/cloonfs/cloonix-novnc-xephyr"
+#define XAUTH_BIN "/usr/libexec/cloonix/cloonfs/xauth"
+#define BASH_BIN "/usr/libexec/cloonix/cloonfs/bash"
+#define XWYCLI_BIN "/usr/libexec/cloonix/cloonfs/cloonix-xwycli"
+#define URXVT_BIN "/usr/libexec/cloonix/cloonfs/cloonix-urxvt"
+#define WIRESHARK_BIN "/usr/libexec/cloonix/cloonfs/cloonix-wireshark"
+#define DUMPCAP_BIN "/usr/libexec/cloonix/cloonfs/dumpcap"
+#define CRUN_BIN "/usr/libexec/cloonix/cloonfs/cloonix-crun"
+#define IP_BIN "/usr/libexec/cloonix/cloonfs/ip"
+#define FUSEZIP_BIN "/usr/libexec/cloonix/cloonfs/cloonix-fuse-zip"
+#define MOUNT_BIN "/usr/libexec/cloonix/cloonfs/cloonix-mount"
+#define UMOUNT_BIN "/usr/libexec/cloonix/cloonfs/cloonix-umount"
+#define GREP_BIN "/usr/libexec/cloonix/cloonfs/cloonix-grep"
+#define PS_BIN "/usr/libexec/cloonix/cloonfs/cloonix-ps"
+#define AWK_BIN "/usr/libexec/cloonix/cloonfs/cloonix-awk"
+#define MKNOD_BIN "/usr/libexec/cloonix/cloonfs/cloonix-mknod"
+#define CHMOD_BIN "/usr/libexec/cloonix/cloonfs/cloonix-chmod"
+#define OVSDB_SERVER_BIN "/usr/libexec/cloonix/cloonfs/cloonix-ovsdb-server"
+#define OVS_VSWITCHD_BIN "/usr/libexec/cloonix/cloonfs/cloonix-ovs-vswitchd"
+#define OVSDB_TOOL_BIN   "/usr/libexec/cloonix/cloonfs/cloonix-ovsdb-tool"
+#define OSIRROX_BIN "/usr/libexec/cloonix/cloonfs/cloonix-osirrox"
 
-#define CLOONIX_CFG "/usr/libexec/cloonix/common/etc/cloonix.cfg"
+#define CLOONIX_CFG "/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
 
 #define BASE_NAMESPACE "cloonix"
 #define PATH_NAMESPACE "/var/run/netns/"
@@ -571,11 +594,13 @@ typedef void (*t_rpct_tx)(int llid, int len, char *buf);
 int  rpct_decoder(int llid, int len, char *str_rx);
 void rpct_redirect_string_tx(t_rpct_tx rpc_tx);
 void rpct_init(t_rpct_tx rpc_tx);
-/****************************************************************************/
+/*---------------------------------------------------------------------------*/
 #define DEBUG_LOG_DIALOG  "debug_dialog.log"
 #define DEBUG_LOG_OVS_CMD "debug_ovs_cmd.log"
 #define DEBUG_LOG_VSWITCH "debug_vswitch.log"
 #define DEBUG_LOG_SUID    "debug_suid_power.log"
 #define DEBUG_LOG_CRUN    "debug_crun.log"
 #define DEBUG_LOG_JSON    "debug_crun_json"
-/****************************************************************************/
+/*---------------------------------------------------------------------------*/
+#endif
+/*---------------------------------------------------------------------------*/

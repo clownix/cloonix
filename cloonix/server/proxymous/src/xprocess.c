@@ -195,7 +195,7 @@ void X_init(char *proxyshare)
       if (sscanf(display, ":%d", &val) == 1)
         {
         snprintf(g_x11_slave, MAX_PATH_LEN-1, "%s/X11-unix/X713", proxyshare);
-        snprintf(g_x11_main, MAX_PATH_LEN-1, "/tmp/.X11-unix/X%d", val);
+        snprintf(g_x11_main, MAX_PATH_LEN-1, X11_DISPLAY_PREFIX, val);
         }
       else
         KERR("ERROR :%s:", display);

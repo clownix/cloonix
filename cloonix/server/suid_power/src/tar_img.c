@@ -37,7 +37,8 @@ struct t_elem;
 /****************************************************************************/
 typedef struct t_loop
 {
-  char pth[MAX_PATH_LEN];
+  char bulktarget[MAX_PATH_LEN];
+  char brandtype[MAX_NAME_LEN];
   int is_persistent;
   struct t_elem *head_elem;
   struct t_loop *prev;
@@ -58,12 +59,13 @@ static t_loop *g_head_loop;
 
 
 /****************************************************************************/
-static t_loop *find_loop(char *pth)
+static t_loop *find_bulk_target(char *bulktarget, char *brandtype)
 {
   t_loop *cur = g_head_loop;
   while(cur)
     {
-    if (!strcmp(cur->pth, pth))
+    if ((!strcmp(cur->bulktarget, bulktarget)) &&
+        (!strcmp(cur->brandtype, brandtype)))
       break;
     cur = cur->next;
     }
@@ -94,11 +96,12 @@ static t_elem *find_elem(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static t_loop *alloc_loop(char *pth, int is_persistent)
+static t_loop *alloc_loop(char *bulktarget, int is_persistent, char *brandtype)
 {
   t_loop *cur = (t_loop *) malloc(sizeof(t_loop));
   memset(cur, 0, sizeof(t_loop));
-  strncpy(cur->pth, pth, MAX_PATH_LEN-1);
+  strncpy(cur->bulktarget, bulktarget, MAX_PATH_LEN-1);
+  strncpy(cur->brandtype, brandtype, MAX_NAME_LEN-1);
   cur->is_persistent = is_persistent;
   cur->next = g_head_loop;
   if (g_head_loop)
@@ -246,15 +249,6 @@ static int zipmount_exists(char *bulk, char *image,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void timeout_del_path(void *data)
-{
-  char *pmnt = (char *)data;
-  rmdir(pmnt);
-  free(data);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void mount_del(char *bulk, char *image,
                       char *cnt_dir, int is_persistent, char *loop)
 {
@@ -307,7 +301,7 @@ static void mount_del(char *bulk, char *image,
       pmnt = (char *) malloc(MAX_PATH_LEN);
       memset(pmnt, 0, MAX_PATH_LEN);
       snprintf(pmnt, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
-      clownix_timeout_add(100, timeout_del_path, (void *)pmnt, NULL, NULL);
+      rmdir(pmnt);
       }
     pclose(fp);
     if (force_waitpid(child_pid, &wstatus))
@@ -318,15 +312,15 @@ static void mount_del(char *bulk, char *image,
 
 /****************************************************************************/
 int tar_img_add(char *name, char *bulk, char *image,
-                 char *cnt_dir, int is_persistent)
+                char *cnt_dir, int is_persistent, char *brandtype)
 {
   int result = -1;
-  char pth[MAX_PATH_LEN];
+  char bulktarget[MAX_PATH_LEN];
   t_loop *cur;
   t_elem *elem;
-  memset(pth, 0, MAX_PATH_LEN);
-  snprintf(pth, MAX_PATH_LEN-1, "%s/%s", bulk, image);
-  cur = find_loop(pth); 
+  memset(bulktarget, 0, MAX_PATH_LEN);
+  snprintf(bulktarget, MAX_PATH_LEN-1, "%s/%s", bulk, image);
+  cur = find_bulk_target(bulktarget, brandtype); 
   elem = find_elem(name);
   if (elem)
     KERR("ERROR %s %s %s", name, bulk, image);
@@ -337,32 +331,53 @@ int tar_img_add(char *name, char *bulk, char *image,
                                    cur->is_persistent, is_persistent);
     else if (is_persistent)
       KERR("ERROR %s %s %s", name, bulk, image);
-    else if (!zipmount_exists(bulk, image, 0, 1))
+    else if ((!strcmp(brandtype, "brandzip")) &&
+             (!zipmount_exists(bulk, image, 0, 1)))
       KERR("ERROR %s %s %s", name, bulk, image);
     else
       {
       alloc_loop_elem(cur, name);
       result = 0;
       }
+    }
+  else if (!strcmp(brandtype, "brandzip"))
+    {
+    if (zipmount_exists(bulk, image, is_persistent, 0))
+      {
+      KERR("ERROR %s %s %s", name, bulk, image);
+      mount_del(bulk, image, cnt_dir, is_persistent, NULL);
+      }
+    if (zipmount_exists(bulk, image, is_persistent, 0))
+      {
+      KERR("ERROR %s %s %s", name, bulk, image);
+      }
+    else
+      {
+      if (zipmount_create(bulk, image, is_persistent))
+        KERR("ERROR %s %s %s", name, bulk, image);
+      else
+        {
+        cur = alloc_loop(bulktarget, is_persistent, brandtype);
+        alloc_loop_elem(cur, name);
+        result = 0;
+        }
+      }
+    }
+  else if (!strcmp(brandtype, "brandcvm"))
+    {
+    cur = alloc_loop(bulktarget, is_persistent, brandtype);
+    alloc_loop_elem(cur, name);
+    result = 0;
     }
   else
-    {
-    if (zipmount_create(bulk, image, is_persistent))
-      KERR("ERROR %s %s %s", name, bulk, image);
-    else
-      {
-      cur = alloc_loop(pth, is_persistent);
-      alloc_loop_elem(cur, name);
-      result = 0;
-      }
-    }
+    KOUT("ERROR %s %s %s", name, bulk, image);
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int tar_img_del(char *name, char *bulk, char *image,
-                 char *cnt_dir, int is_persistent)
+int tar_img_del(char *name, char *bulk, char *image, char *cnt_dir,
+                int is_persistent, char *brandtype)
 {
   int count = 0, result = -1;
   t_loop *loop;
@@ -375,17 +390,26 @@ int tar_img_del(char *name, char *bulk, char *image,
     {
     result = 0;
     loop = free_loop_elem(elem);
+    if (loop == NULL)
+      KOUT("ERROR %s %s %s", name, bulk, image);
+    if (strcmp(loop->brandtype, brandtype))
+      KERR("ERROR %s %s %s", name, bulk, image);
+    if ((strcmp(loop->brandtype, "brandzip")) &&
+        (strcmp(loop->brandtype, "brandcvm")))
+      KERR("ERROR %s %s %s", name, bulk, image);
     if (loop->is_persistent != is_persistent)
       KERR("ERROR %s %s %s %d %d", name, bulk, image,
             loop->is_persistent, is_persistent);
     if (loop->head_elem == NULL)
       {
-      if (!zipmount_exists(bulk, image, is_persistent, 1))
-        KERR("ERROR %s %s %s", name, bulk, image);
-      mount_del(bulk, image, cnt_dir, 0, NULL);
-      if (zipmount_exists(bulk, image, is_persistent, 0))
-        KERR("ERROR %s %s %s", name, bulk, image);
-
+      if (!strcmp(loop->brandtype, "brandzip"))
+        {
+        if (!zipmount_exists(bulk, image, is_persistent, 1))
+          KERR("ERROR %s %s %s", name, bulk, image);
+        mount_del(bulk, image, cnt_dir, 0, NULL);
+        if (zipmount_exists(bulk, image, is_persistent, 0))
+          KERR("ERROR %s %s %s", name, bulk, image);
+        }
       free_loop(loop);
       }
     }
@@ -394,41 +418,61 @@ int tar_img_del(char *name, char *bulk, char *image,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-char *tar_img_get(char *name, char *bulk, char *image)
+char *tar_img_rootfs_get(char *name, char *bulk, char *image, char *brandtype)
 {
   static char mnt[MAX_PATH_LEN];
   char *result = NULL;
   t_loop *cur;
   t_elem *elem;
-  char pth[MAX_PATH_LEN];
+  char bulktarget[MAX_PATH_LEN];
+  memset(bulktarget, 0, MAX_PATH_LEN);
   memset(mnt, 0, MAX_PATH_LEN);
-  memset(pth, 0, MAX_PATH_LEN);
-  snprintf(mnt, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
-  snprintf(pth, MAX_PATH_LEN-1, "%s/%s", bulk, image);
-  cur = find_loop(pth); 
+  snprintf(bulktarget, MAX_PATH_LEN-1, "%s/%s", bulk, image);
+  cur = find_bulk_target(bulktarget, brandtype); 
   elem = find_elem(name);
   if (cur == NULL)
     KERR("ERROR %s %s %s", name, bulk, image);
+  else if (strcmp(cur->brandtype, brandtype))
+    KERR("ERROR %s %s %s", name, bulk, image);
   else if (elem == NULL)
     KERR("ERROR %s %s %s", name, bulk, image);
-  else if (!zipmount_exists(bulk, image, cur->is_persistent, 1))
-    KERR("ERROR %s %s %s", name, bulk, image);
-  else
+  else if (!strcmp(cur->brandtype, "brandzip"))
+    { 
+    snprintf(mnt, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
+    if (!zipmount_exists(bulk, image, cur->is_persistent, 1))
+      KERR("ERROR %s %s %s", name, bulk, image);
+    else
+      result = mnt;
+    }
+  else if (!strcmp(cur->brandtype, "brandcvm"))
+    { 
+    snprintf(mnt, MAX_PATH_LEN-1, "%s", bulktarget);
     result = mnt;
+    }
+  else
+    KERR("ERROR %s %s %s", name, bulk, image);
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int tar_img_check(char *bulk, char *image, int is_persistent)
+int tar_img_check(char *bulk, char *image, int is_persistent, char *brandtype)
 {
   int result = 0;
-  char pth[MAX_PATH_LEN];
+  char bulktarget[MAX_PATH_LEN];
+  char bulktarget_init[MAX_PATH_LEN];
   t_loop *cur;
-  memset(pth, 0, MAX_PATH_LEN);
-  snprintf(pth, MAX_PATH_LEN-1, "%s/%s", bulk, image);
-  cur = find_loop(pth);
-  if (cur)
+  memset(bulktarget, 0, MAX_PATH_LEN);
+  memset(bulktarget_init, 0, MAX_PATH_LEN);
+  snprintf(bulktarget, MAX_PATH_LEN-1, "%s/%s", bulk, image);
+  snprintf(bulktarget_init, MAX_PATH_LEN-1, "%s/%s/sbin/init", bulk, image);
+  cur = find_bulk_target(bulktarget, brandtype);
+  if (access(bulktarget, R_OK))
+    {
+    KERR("ERROR %s", bulktarget);
+    result = -1;
+    }
+  else if (cur)
     {
     if (cur->is_persistent != is_persistent)
       {
@@ -441,19 +485,49 @@ int tar_img_check(char *bulk, char *image, int is_persistent)
       result = -1;
       }
     }
+  if (result == 0)
+    {
+    if (!strcmp(brandtype, "brandzip"))
+      {
+      if (is_persistent)
+        {
+        if (access(bulktarget, W_OK))
+          {
+          KERR("ERROR %s", bulktarget);
+          result = -1;
+          }
+        }
+      }
+    else if (!strcmp(brandtype, "brandcvm"))
+      {
+      if (is_persistent)
+        {
+        if (access(bulktarget, W_OK))
+          {
+          KERR("ERROR %s", bulktarget);
+          result = -1;
+          }
+        }
+      else if (access(bulktarget_init, R_OK))
+        {
+        KERR("ERROR %s", bulktarget_init);
+        result = -1;
+        }
+      }
+    }
   return result;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int tar_img_exists(char *bulk, char *image)
+int tar_img_exists(char *bulk, char *image, char *brandtype)
 {
   int result = 0;
-  char pth[MAX_PATH_LEN];
+  char bulktarget[MAX_PATH_LEN];
   t_loop *cur;
-  memset(pth, 0, MAX_PATH_LEN);
-  snprintf(pth, MAX_PATH_LEN-1, "%s/%s", bulk, image);
-  cur = find_loop(pth);
+  memset(bulktarget, 0, MAX_PATH_LEN);
+  snprintf(bulktarget, MAX_PATH_LEN-1, "%s/%s", bulk, image);
+  cur = find_bulk_target(bulktarget, brandtype);
   if (cur)
     result = 1;
   return result;

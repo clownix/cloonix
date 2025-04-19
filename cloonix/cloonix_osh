@@ -1,7 +1,7 @@
-#!/usr/libexec/cloonix/common/bash
+#!/usr/libexec/cloonix/cloonfs/bash
 set -e
-NSH="/usr/libexec/cloonix/common/cloonix-hide-dirs"
-CLOONIX_CFG="/usr/libexec/cloonix/common/etc/cloonix.cfg"
+NSH="/usr/libexec/cloonix/cloonfs/cloonix-hide-dirs"
+CLOONIX_CFG="/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
 
 
 if [ 2 -gt ${#} ]; then

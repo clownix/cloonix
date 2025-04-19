@@ -69,6 +69,5 @@ int send_sig_suid_power(int llid, char *msg);
 int send_pol_suid_power(int llid, char *msg);
 void cnt_vhost_and_doors_begin(t_cnt *cnt);
 int cnt_free_cnt(char *name);
-int cnt_is_crun(char *name);
 void cnt_init(void);
 /*---------------------------------------------------------------------------*/

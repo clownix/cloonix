@@ -282,7 +282,7 @@ void mdl_set_header_vals(t_msg *msg, uint32_t randid, int type, int from,
 {
   if (srv_idx > 0)
     {
-    if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+    if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
       KOUT("%d %d %d", type, from, srv_idx);
     }
 

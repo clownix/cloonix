@@ -1029,18 +1029,28 @@ int doorways_tx_bufraw(int llid,int tid,int type,int val,int len,char *buf)
   if ((len<0) || (len > 10*MAX_DOORWAYS_BUF_LEN))
     KOUT("ERROR %d", len);
   if (len == 0)
+    {
+    KERR("WARNING ZERO LEN");
     return 0;
+    }
   if (!llid) 
     KOUT("ERROR");
   if (!msg_exist_channel(llid))
+    {
+    KERR("WARNING NO EXISTS %d", llid);
     return result;
+    }
   fd = get_fd_with_llid(llid);
   if (fd == -1)
     KOUT("ERROR");
   else
     {
     lid = g_llid_data[llid];
-    if (lid)
+    if (lid == NULL)
+      {
+      KERR("WARNING NO EXISTS DATA %d", llid);
+      }
+    else
       {
       if (llid != lid->llid)
         KOUT("ERROR %d %d", llid, lid->llid);
@@ -1068,6 +1078,7 @@ int doorways_tx_bufraw(int llid,int tid,int type,int val,int len,char *buf)
           KOUT("ERROR");
         if (dchan->tot_txq_size >  MAX_TOT_LEN_WARNING_DOORWAYS_Q)
           {
+          KERR("WARNING MAX_TOT_LEN_WARNING_DOORWAYS_Q");
           g_max_tx_doorway_queue_len_reached += 1;
           }
         if (dchan->tot_txq_size <  MAX_TOT_LEN_DOORWAYS_Q)

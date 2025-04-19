@@ -604,6 +604,28 @@ int bank_get_dtach_pid(char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+int bank_get_xephyr_frame_pid(char *name)
+{ 
+  t_bank_item *bitem = look_for_cnt_with_id(name);
+  int result = 0;
+  if (bitem) 
+    result = bitem->xephyr_frame_pid;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int bank_get_xephyr_session_pid(char *name)
+{ 
+  t_bank_item *bitem = look_for_cnt_with_id(name);
+  int result = 0;
+  if (bitem) 
+    result = bitem->xephyr_session_pid;
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void bank_set_dtach_pid(char *name, int val)
 {
   t_bank_item *bitem = look_for_node_with_id(name);
@@ -748,6 +770,28 @@ void bank_set_wireshark_pid(char *name, int num, int val)
     set_wireshark_pid(bitem3, num, val);
   else
     KERR("ERROR PID WIRESHARK %s %d %d", name, num, val);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void bank_set_xephyr_frame_pid(char *name, int val)
+{
+  t_bank_item *bitem = look_for_cnt_with_id(name);
+  if (bitem)
+    bitem->xephyr_frame_pid = val;
+  else 
+    KERR("ERROR PID XEPHYR %s %d", name, val);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void bank_set_xephyr_session_pid(char *name, int val)
+{ 
+  t_bank_item *bitem = look_for_cnt_with_id(name);
+  if (bitem)
+    bitem->xephyr_session_pid = val;
+  else 
+    KERR("ERROR PID XEPHYR %s %d", name, val);
 }
 /*--------------------------------------------------------------------------*/
 

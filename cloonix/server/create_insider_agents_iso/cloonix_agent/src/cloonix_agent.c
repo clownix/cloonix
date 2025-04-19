@@ -36,6 +36,7 @@
 
 
 
+#include "glob_common.h"
 #include "sock.h"
 #include "commun.h"
 #include "x11_channels.h"
@@ -410,7 +411,7 @@ int main(int argc, char *argv[])
     if (g_fd_virtio < 0)
       KOUT("Bad Virtio port %s", VIRTIOPORT);
     }
-  my_mkdir(UNIX_X11_SOCKET_DIR);
+  my_mkdir(X11_DISPLAY_DIR);
   purge();
   no_signal_pipe();
   nonblock_add_fd(g_fd_virtio);

@@ -809,8 +809,8 @@ int wrap_util_proxy_client_socket_unix(char *pname, int *fd)
   if (result != 0)
     {
     close(sock);
-    printf("NO SERVER LISTENING TO %s\n", pname);
-    KERR("NO SERVER LISTENING TO %s\n", pname);
+    printf("WRAP NO SERVER LISTENING TO %s\n", pname);
+    KERR("WRAP NO SERVER LISTENING TO %s\n", pname);
     }
   else
     {

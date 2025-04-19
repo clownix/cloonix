@@ -1,0 +1,309 @@
+#!/bin/bash
+#----------------------------------------------------------------------------#
+set -e
+FROM_HERE=`pwd`
+BUNDLE="/root/cloonix_bundle"
+ROOTFS="${BUNDLE}/cloonfs"
+PATCHELF="${ROOTFS}/cloonix-patchelf"
+TARGZ_STORE="${BUNDLE}/targz_store"
+#----------------------------------------------------------------------------#
+if [ ! -e ${BUNDLE}/cloonix/cloonix_config ]; then
+  echo NOT FOUND:
+  echo ${BUNDLE}/cloonix/cloonix_config
+  exit 1   
+fi  
+#----------------------------------------------------------------------------#
+pretty_name=$(cat /etc/os-release |grep PRETTY_NAME)
+pretty_name=${pretty_name#*\"}
+pretty_name=${pretty_name%% *}
+case "$pretty_name" in
+  "Debian")
+  ;;
+  "Alpine")
+  ;;
+  *)
+  printf "\n\tERROR: $pretty_name is not supported"
+  exit
+  ;;
+esac
+#----------------------------------------------------------------------------#
+printf "\n\nPACKING ${pretty_name} ${ROOTFS}\n\n"
+#----------------------------------------------------------------------------#
+for i in "lib64" "lib/x86_64-linux-gnu" \
+         "lib/locale" "etc" "share/fonts/truetype" \
+         "share/terminfo" "share/mime" "share/misc" \
+         "share/dconf" "share/locale" "share/i18n/charmaps" \
+         "share/i18n/locales" "share/glib-2.0/schemas" \
+         "share/X11/locale" "lib/x86_64-linux-gnu/rsyslog" \
+         "share/vim/vim91" "lib/x86_64-linux-gnu/qt6/plugins" \
+         "lib/x86_64-linux-gnu/gstreamer-1.0" \
+         "lib/x86_64-linux-gnu/gconv" \
+         "ovsschema" ; do
+  mkdir -p ${ROOTFS}/${i}
+done
+#----------------------------------------------------------------------------#
+
+cp -Lrf /etc/fonts ${ROOTFS}/etc
+
+cat > ${ROOTFS}/etc/passwd << "EOF"
+root:x:0:0:root:/root:/bin/bash
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+EOF
+cat > ${ROOTFS}/etc/group << "EOF"
+root:x:0:
+audio:x:29:pulse
+nogroup:x:65534:
+EOF
+cat > ${ROOTFS}/etc/rsyslog.conf << "EOF"
+module(load="imuxsock") # provides support for local system logging
+$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+$FileOwner root
+$FileGroup root
+$FileCreateMode 0640
+$DirCreateMode 0755
+$Umask 0022
+$WorkDirectory /var/spool/rsyslog
+*.*;auth,authpriv.none          -/var/log/syslog
+auth,authpriv.*                 /var/log/auth.log
+cron.*                          -/var/log/cron.log
+EOF
+rm -f ${ROOTFS}/etc/fonts/fonts.conf
+cat > ${ROOTFS}/etc/fonts/fonts.conf << EOF
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+    <dir>/usr/libexec/cloonix/cloonfs/share</dir>
+    <cachedir>/var/lib/cloonix/cache/fontconfig</cachedir>
+    <cachedir prefix="xdg">fontconfig</cachedir>
+</fontconfig>
+EOF
+cat > ${ROOTFS}/etc/locale.gen << EOF
+en_US.UTF-8 UTF-8
+EOF
+cat > ${ROOTFS}/etc/locale.conf << EOF
+LANG=C
+EOF
+cat > ${ROOTFS}/etc/hosts << EOF
+127.0.0.1   localhost
+EOF
+#----------------------------------------------------------------------------#
+cp -v /usr/lib/file/magic.mgc ${ROOTFS}/share/misc
+cp -v /usr/share/vim/vim91/defaults.vim ${ROOTFS}/share/vim/vim91
+sed -i "s/'mouse'/'totomouse'/" ${ROOTFS}/share/vim/vim91/defaults.vim
+cp -Lr /usr/lib/locale/* ${ROOTFS}/lib/locale
+cp -Lr /usr/share/terminfo/l ${ROOTFS}/share/terminfo
+cp -Lr /usr/share/terminfo/t ${ROOTFS}/share/terminfo
+cp -Lr /usr/share/terminfo/x ${ROOTFS}/share/terminfo
+cp -Lr /usr/share/fonts/truetype/dejavu ${ROOTFS}/share/fonts/truetype
+cp -Lr /usr/share/fontconfig ${ROOTFS}/share
+cp -Lr /usr/share/nodejs ${ROOTFS}/share
+cp -Lr /usr/share/node_modules ${ROOTFS}/share
+cp -Lr /usr/lib/x86_64-linux-gnu/nodejs ${ROOTFS}/lib/x86_64-linux-gnu
+#----------------------------------------------------------------------------#
+#  VIPTODO mkdir -p ${ROOTFS}/lib/x86_64-linux-gnu/perl
+#  VIPTODO mkdir -p ${ROOTFS}/lib/x86_64-linux-gnu/perl-base/Debian
+#  VIPTODO cp /usr/bin/perl ${ROOTFS}
+#  VIPTODO cp -Lr /usr/lib/x86_64-linux-gnu/perl5/5.40 ${ROOTFS}/lib/x86_64-linux-gnu/perl
+#  VIPTODO cp -Lr /usr/lib/x86_64-linux-gnu/perl-base ${ROOTFS}/lib/x86_64-linux-gnu
+#  VIPTODO cp /usr/share/perl5/Debian/AdduserCommon.pm ${ROOTFS}/lib/x86_64-linux-gnu/perl-base/Debian
+#  VIPTODO cp -Lr /usr/share/perl5 ${ROOTFS}/share
+#----------------------------------------------------------------------------#
+#  VIPTODO cp -Lr /usr/lib/python3.13 ${ROOTFS}/lib
+#  VIPTODO cp -Lr /usr/share/gdb ${ROOTFS}/share
+#  VIPTODO cp /usr/bin/python3 ${ROOTFS}/python
+#  VIPTODO cp /usr/bin/gdb ${ROOTFS}
+#----------------------------------------------------------------------------#
+cp -Lr /usr/share/X11/locale/en_US.UTF-8 ${ROOTFS}/share/X11/locale
+cp -Lr /usr/share/X11/locale/C ${ROOTFS}/share/X11/locale
+cp -Lr /usr/share/X11/locale/locale.dir ${ROOTFS}/share/X11/locale
+cp -Lr /usr/share/X11/xkb ${ROOTFS}/share/X11
+cp     /usr/share/X11/rgb.txt ${ROOTFS}/share/X11
+cp /usr/lib/x86_64-linux-gnu/rsyslog/lmnet.so    ${ROOTFS}/lib/x86_64-linux-gnu/rsyslog
+cp /usr/lib/x86_64-linux-gnu/rsyslog/imklog.so   ${ROOTFS}/lib/x86_64-linux-gnu/rsyslog
+cp /usr/lib/x86_64-linux-gnu/rsyslog/imuxsock.so ${ROOTFS}/lib/x86_64-linux-gnu/rsyslog
+cp -rn /usr/lib/x86_64-linux-gnu/qt6/plugins/platforms ${ROOTFS}/lib/x86_64-linux-gnu/qt6/plugins
+cp -Lr /usr/lib/x86_64-linux-gnu/gtk-3.0 ${ROOTFS}/lib/x86_64-linux-gnu/
+cp -Lr /usr/share/themes ${ROOTFS}/share
+cp     /usr/share/mime/mime.cache ${ROOTFS}/share/mime
+for i in "en_GB" "en" "locale.alias" ; do
+  cp -Lr /usr/share/locale/${i} ${ROOTFS}/share/locale
+done
+cp  /usr/share/i18n/charmaps/UTF-8.gz ${ROOTFS}/share/i18n/charmaps
+for i in en_US en_GB i18n i18n_ctype iso14651_t1 iso14651_t1_common \
+         translit_* ; do
+  cp  /usr/share/i18n/locales/${i} ${ROOTFS}/share/i18n/locales
+done
+cp  /usr/share/glib-2.0/schemas/gschemas.compiled ${ROOTFS}/share/glib-2.0/schemas
+cd ${ROOTFS}/share/i18n/charmaps
+gunzip -f UTF-8.gz
+cd $FROM_HERE
+tar --directory=${ROOTFS}/share -xf ${TARGZ_STORE}/noVNC_*.tar.gz
+cp  /lib64/ld-linux-x86-64.so.2 ${ROOTFS}/lib64
+cp  ${BUNDLE}/cloonix/cloonix_config ${ROOTFS}/etc/cloonix.cfg
+cp  /bin/bash ${ROOTFS}
+for i in "su" "awk" "cat" "chmod" "chown" "cp" "echo" "ps" "mkdir" \
+         "env" "grep" "egrep" "kill" "ldd" "strace" "ls" "netstat" \
+         "locale" "localedef" "localectl" "xauth" "ln" "mv" "rm" \
+         "xeyes" "xclock" "diff" "unzip" "unshare" "tail" "which" \
+         "touch" "vim" "sleep" "find" "grep" "file" "false" "id" \
+         "node" "watch" "chacl" "getfacl" "setfacl" "sed" "df" \
+         "du" "logger" "gpasswd" "passwd" "sync" "uname" \
+         "mount" "umount" "more" "less" "dircolors" "truncate" \
+         "lsof" ; do
+  cp /usr/bin/${i} ${ROOTFS}
+done
+for i in "useradd" "usermod" "groupadd" "groupdel" "groupmod" \
+         "addgroup" "adduser" "rsyslogd" "nologin" ; do
+  cp /usr/sbin/${i} ${ROOTFS}
+done
+for i in "ifconfig" "locale-gen" ; do
+  cp -f /usr/sbin/${i} ${ROOTFS}
+done
+cd ${ROOTFS}
+ln -s bash sh
+sed -i s"%/bin/bash%/usr/libexec/cloonix/cloonfs/bash%" ${ROOTFS}/ldd
+sed -i s"%/bin/sh%/usr/libexec/cloonix/cloonfs/bash%" locale-gen
+sed -i s"%localedef%/usr/libexec/cloonix/cloonfs/localedef%" locale-gen
+sed -i s'%LOCALEGEN=\(.*\)%LOCALEGEN=/usr/libexec/cloonix/cloonfs/etc/locale.gen%' locale-gen
+cd $FROM_HERE
+cp -Lr /usr/share/gstreamer-1.0 ${ROOTFS}/share
+SRCD="/usr/lib/x86_64-linux-gnu"
+DSTD="${ROOTFS}/lib/x86_64-linux-gnu"
+for i in "gstreamer1.0" "pipewire-0.3" ; do
+  cp -r ${SRCD}/${i} ${DSTD}
+done
+for i in "libgstpulseaudio.so" \
+         "libgstautodetect.so" \
+         "libgstaudioresample.so" \
+         "libgstaudioconvert.so" \
+         "libgstcoreelements.so" \
+         "libgstapp.so" ; do
+  cp -rf ${SRCD}/gstreamer-1.0/${i} ${DSTD}/gstreamer-1.0
+done
+cp -f ${SRCD}/gconv/gconv-modules.cache ${DSTD}/gconv
+#----------------------------------------------------------------------------#
+printf "\n\nPACKING CLIENT ${ROOTFS}\n\n"
+#----------------------------------------------------------------------------#
+for i in  "cloonix_net" \
+          "cloonix_cli" \
+          "cloonix_gui" \
+          "cloonix_ocp" \
+          "cloonix_osh" \
+          "cloonix_shk" \
+          "cloonix_shc" \
+          "cloonix_ovs" \
+          "cloonix_scp" \
+          "cloonix_ssh" \
+          "cloonix_dsh" \
+          "cloonix_lsh" \
+          "cloonix_ice" \
+          "cloonix_wsk" ; do
+  cp  ${BUNDLE}/cloonix/${i} ${ROOTFS}
+done
+cp -r ${BUNDLE}/cloonix/client/spice/polkit-1 ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/spice/cloonix-spice-client-glib-usb-acl-helper ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/spice/cloonix-spicy ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/hide_dirs/cloonix-hide-dirs ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/agent_dropbear/cloonix-dropbear-scp ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/agent_dropbear/cloonix-dropbear-ssh ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/cairo_canvas/cloonix-gui ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/xwycli/cloonix-xwycli ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/rxvt/urxvt ${ROOTFS}/cloonix-urxvt
+cp  ${BUNDLE}/cloonix/client/ctrl/cloonix-ctrl ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/openssh/cloonix-u2i-scp ${ROOTFS}
+cp  ${BUNDLE}/cloonix/client/openssh/cloonix-u2i-ssh ${ROOTFS}
+#----------------------------------------------------------------------------#
+printf "\n\nPACKING SERVER ${ROOTFS}\n\n"
+#----------------------------------------------------------------------------#
+cp ${BUNDLE}/cloonix/server/ovs/cloonix-vswitch.ovsschema ${ROOTFS}/ovsschema
+cp -r ${BUNDLE}/cloonix/server/qemu ${ROOTFS}
+rm -rf ${ROOTFS}/qemu/tainted_qemu
+cp -r ${BUNDLE}/cloonix/server/insider_agents ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/xwy/cloonix-xwy-srv ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/wm2/cloonix-novnc-wm2 ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/suid_power/cloonix-suid-power ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/doorways/cloonix-doorways ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/suid_power/cloonix-suid-power ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/uml_cloonix_switch/cloonix-main-server ${ROOTFS}
+for i in cloonix-ovsdb-server \
+         cloonix-ovs-vswitchd \
+         cloonix-ovsdb-tool \
+         cloonix-ovs-appctl \
+         cloonix-ovs-vsctl ; do
+  cp ${BUNDLE}/cloonix/server/ovs/bin/${i} ${ROOTFS}
+done
+cp ${BUNDLE}/cloonix/server/nginx/bin/cloonix-novnc-nginx ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/websockify-js/bin/cloonix-novnc-websockify-js ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/ovs_c2c/cloonix-ovs-c2c ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/ovs_a2b/cloonix-ovs-a2b ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/ovs_drv/cloonix-ovs-drv ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/ovs_nat_main/cloonix-ovs-nat-main ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/ovs_snf/cloonix-ovs-snf ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/qemu/cloonix-qemu-system ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/qemu/cloonix-qemu-img ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/dtach/cloonix-dtach ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/proxymous/cloonix-proxymous ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/iproute2/ip ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/crun/crun_tainted/crun ${ROOTFS}/cloonix-crun
+cp ${BUNDLE}/cloonix/server/xorg/Xvfb ${ROOTFS}/cloonix-novnc-Xvfb
+cp ${BUNDLE}/cloonix/server/xorg/Xephyr ${ROOTFS}/cloonix-novnc-xephyr
+cp ${BUNDLE}/cloonix/server/wireshark/wireshark ${ROOTFS}/cloonix-wireshark
+cp ${BUNDLE}/cloonix/server/wireshark/dumpcap ${ROOTFS}/cloonix-dumpcap
+for i in "xauth" "xkbcomp"; do
+  cp /usr/bin/${i} ${ROOTFS}
+done
+for i in "bash" "mount" "umount" "mknod" "chmod" "grep"; do
+  cp /bin/${i} ${ROOTFS}/cloonix-${i}
+done
+for i in "ps" "awk" "osirrox" "fuse-zip"; do
+  cp -f /usr/bin/${i}  ${ROOTFS}/cloonix-${i}
+done
+for i in "x11vnc" "xsetroot"; do
+  cp -f /usr/bin/${i}  ${ROOTFS}/cloonix-novnc-${i}
+done
+#----------------------------------------------------------------------------#
+printf "\n\nKEYGEN ${ROOTFS}\n\n"
+#----------------------------------------------------------------------------#
+openssl req -x509 -nodes -newkey rsa:3072 -keyout novnc.pem -subj \
+            "/CN=cloonix.net" -out ${ROOTFS}/novnc.pem -days 3650
+#----------------------------------------------------------------------------#
+printf "\n\nGET ALL LIBRARIES ${ROOTFS}\n\n"
+#----------------------------------------------------------------------------#
+cd ${BUNDLE}
+./copy_libs ${ROOTFS}
+#----------------------------------------------------------------------------#
+printf "\n\nPATCHELF ${ROOTFS}\n\n"
+#----------------------------------------------------------------------------#
+LDLINUX="/usr/libexec/cloonix/cloonfs/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/usr/libexec/cloonix/cloonfs/lib"
+RPATH_LIB="${RPATH_LIB}:/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu"
+set +e
+for i in `find ${ROOTFS} -maxdepth 1 -type f` ; do
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
+done
+echo PATCHELF ${ROOTFS} DONE OK
+for i in `find ${ROOTFS}/lib -maxdepth 1 -type f` ; do
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
+done
+echo PATCHELF ${ROOTFS}/lib DONE OK
+for i in `find ${ROOTFS}/lib/x86_64-linux-gnu -maxdepth 1 -type f` ; do
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
+done
+echo PATCHELF ${ROOTFS}/lib/x86_64-linux-gnu DONE OK
+for j in "gconv" "gstreamer-1.0" "gstreamer1.0" \
+         "gstreamer1.0/gstreamer-1.0" "pipewire-0.3" \
+         "qt6/plugins/platforms" ; do
+  for i in `find ${ROOTFS}/lib/x86_64-linux-gnu/${j} -maxdepth 1 -type f` ; do
+    ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+    ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
+  done
+done
+echo PATCHELF MISC DONE OK
+set -e
+touch ${ROOTFS}/lib/x86_64-linux-gnu/libpthread.so.0
+echo PACK DONE OK TO END
+#----------------------------------------------------------------------------#
+

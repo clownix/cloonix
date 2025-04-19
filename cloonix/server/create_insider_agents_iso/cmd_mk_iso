@@ -38,43 +38,47 @@ make dropbear
 LIBC=$(ldd dropbear | grep libc.so |awk '{print $3}')
 LIBD=$(ldd dropbear | grep ld-linux |awk '{print $1}')
 
-echo
+if [ -z ${LIBC} ]; then
+  LIBC=$(ldd dropbear | grep libc.musl-x86_64.so |awk '{print $3}')
+  LIBD=""
+fi
 echo
 echo $LIBC
-echo $LIBD
-LIBD_NAME=${LIBD##*/}
-echo $LIBD_NAME
 echo
-echo
-echo
-
 
 cd ${HERE}/../../common/cloonix_dropbear
 LIB_DST=/mnt/cloonix_config_fs/lib
 export CFLAGS=
 export LDFLAGS="-Wl,-rpath -Wl,${LIB_DST}"
-export LDFLAGS="${LDFLAGS} -Wl,--dynamic-linker -Wl,${LIB_DST}/${LIBD_NAME}"
+
+if [ ! -z ${LIBD} ]; then
+  LIBD_NAME=${LIBD##*/}
+  echo $LIBD_NAME
+  export LDFLAGS="${LDFLAGS} -Wl,--dynamic-linker -Wl,${LIB_DST}/${LIBD_NAME}"
+fi
+
 make clean
 make dropbear
 make scp
 
 cp dropbear ${CDROM}/cloonix-dropbear-sshd
 cp /usr/bin/scp ${CDROM}/cloonix-scp
-LDLINUX="${LIB_DST}/ld-linux-x86-64.so.2"
+
 RPATH_LIB="${LIB_DST}"
 PATCHELF="/tmp/patchelf/src/patchelf"
 ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CDROM}/cloonix-scp 2>/dev/null
-${PATCHELF} --set-interpreter ${LDLINUX}  ${CDROM}/cloonix-scp 2>/dev/null
 
+if [ ! -z ${LIBD} ]; then
+  LDLINUX="${LIB_DST}/ld-linux-x86-64.so.2"
+  ${PATCHELF} --set-interpreter ${LDLINUX}  ${CDROM}/cloonix-scp 2>/dev/null
+  cp -vf ${LIBD} ${CDROM}/lib
+fi
 
-cp -vf $LIBC ${CDROM}/lib
-cp -vf $LIBD ${CDROM}/lib
+cp -vf ${LIBC} ${CDROM}/lib
 
 cd ${HERE}/cloonix_agent
 make clean
 make
-
-gcc ${LDFLAGS}  -o ${CDROM}/cloonix-scriptpty ${HERE}/../../server/script_pty/scriptpty.c
 
 cp cloonix-agent ${CDROM}
 make clean

@@ -26,6 +26,7 @@
 #include <sys/un.h>
 
 
+#include "glob_common.h"
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "doors_rpc.h"
@@ -55,8 +56,8 @@ typedef struct t_local_dropbear
   int idx_display_sock_x11;
   int fd_display_sock_x11;
   int llid_display_sock_x11;
-  t_sub_dido_x11 sub_dido_x11[MAX_IDX_X11];
-  int pool_fifo_free_index[MAX_IDX_X11];
+  t_sub_dido_x11 sub_dido_x11[X11_DISPLAY_IDX_MAX];
+  int pool_fifo_free_index[X11_DISPLAY_IDX_MAX];
   int pool_read_idx;
   int pool_write_idx;
   struct t_local_dropbear *prev;
@@ -65,7 +66,7 @@ typedef struct t_local_dropbear
 
 
 
-static int pool_fifo_free_index[MAX_IDX_X11];
+static int pool_fifo_free_index[X11_DISPLAY_IDX_MAX];
 static int pool_read_idx;
 static int pool_write_idx;
 
@@ -73,7 +74,7 @@ static int pool_write_idx;
 
 static t_local_dropbear *g_local_dropbear;
 
-static t_local_dropbear *g_idx_display_sock_x11[MAX_IDX_X11];
+static t_local_dropbear *g_idx_display_sock_x11[X11_DISPLAY_IDX_MAX];
 static t_local_dropbear *g_dido_llid[CLOWNIX_MAX_CHANNELS];
 static t_local_dropbear *g_local_llid[CLOWNIX_MAX_CHANNELS];
 static t_sub_dido_x11 *g_local_x11_llid[CLOWNIX_MAX_CHANNELS];
@@ -90,7 +91,7 @@ static void listen_x11_err(void *ptr, int llid, int err, int from);
 static t_sub_dido_x11 *sub_dido_x11_get(t_local_dropbear *ld, int sub_dido_idx)
 {
   t_sub_dido_x11 *result;
-  if ((sub_dido_idx < 1) || (sub_dido_idx >= MAX_IDX_X11))
+  if ((sub_dido_idx < 1) || (sub_dido_idx >= X11_DISPLAY_IDX_MAX))
     KOUT("ERROR %d", sub_dido_idx);
   result = &(ld->sub_dido_x11[sub_dido_idx]);
   if (result->sub_dido_idx != sub_dido_idx)
@@ -153,7 +154,7 @@ static t_local_dropbear *find_with_local_llid(int llid, int is_listen_x11)
 static t_local_dropbear *find_with_idx_display_sock_x11(int idx)
 {
   t_local_dropbear *cur;
-  if ((idx <= 0) || (idx >= MAX_IDX_X11))
+  if ((idx <= 0) || (idx >= X11_DISPLAY_IDX_MAX))
     KOUT("ERROR %d", idx);
   cur = g_idx_display_sock_x11[idx];
   if (!cur)
@@ -207,10 +208,10 @@ static t_local_dropbear *find_with_dido_llid_by_scan(int llid)
 static void pool_init_display_sock_x11(void)
 {
   int i;
-  for(i = 0; i < MAX_IDX_X11; i++)
+  for(i = 0; i < X11_DISPLAY_IDX_MAX; i++)
     pool_fifo_free_index[i] = i+1;
   pool_read_idx = 0;
-  pool_write_idx =  MAX_IDX_X11 - 1;
+  pool_write_idx =  X11_DISPLAY_IDX_MAX - 1;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -221,7 +222,7 @@ static int pool_alloc_display_sock_x11(void)
   if(pool_read_idx != pool_write_idx)
     {
     idx = pool_fifo_free_index[pool_read_idx];
-    pool_read_idx = (pool_read_idx + 1)%MAX_IDX_X11;
+    pool_read_idx = (pool_read_idx + 1)%X11_DISPLAY_IDX_MAX;
     }
   return idx;
 }
@@ -231,7 +232,7 @@ static int pool_alloc_display_sock_x11(void)
 static void pool_release_display_sock_x11(int idx)
 {
   pool_fifo_free_index[pool_write_idx] =  idx;
-  pool_write_idx=(pool_write_idx + 1)%MAX_IDX_X11;
+  pool_write_idx=(pool_write_idx + 1)%X11_DISPLAY_IDX_MAX;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -240,10 +241,10 @@ static void pool_release_display_sock_x11(int idx)
 static void pool_init_sub_dido_idx(t_local_dropbear *ld)
 {
   int i;
-  for(i = 0; i < MAX_IDX_X11; i++)
+  for(i = 0; i < X11_DISPLAY_IDX_MAX; i++)
     ld->pool_fifo_free_index[i] = i+1;
   ld->pool_read_idx = 0;
-  ld->pool_write_idx =  MAX_IDX_X11 - 1;
+  ld->pool_write_idx =  X11_DISPLAY_IDX_MAX - 1;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -264,7 +265,7 @@ static int pool_alloc_sub_dido_idx(t_local_dropbear *ld)
   if(ld->pool_read_idx != ld->pool_write_idx)
     {
     idx = ld->pool_fifo_free_index[ld->pool_read_idx];
-    ld->pool_read_idx = (ld->pool_read_idx + 1)%MAX_IDX_X11;
+    ld->pool_read_idx = (ld->pool_read_idx + 1)%X11_DISPLAY_IDX_MAX;
     }
   return idx;
 }
@@ -274,7 +275,7 @@ static int pool_alloc_sub_dido_idx(t_local_dropbear *ld)
 static void pool_release_sub_dido_idx(t_local_dropbear *ld, int idx)
 {
   ld->pool_fifo_free_index[ld->pool_write_idx] =  idx;
-  ld->pool_write_idx=(ld->pool_write_idx + 1)%MAX_IDX_X11;
+  ld->pool_write_idx=(ld->pool_write_idx + 1)%X11_DISPLAY_IDX_MAX;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -284,8 +285,8 @@ static int add_listen_x11(int display_sock_x11)
   int fd_listen;
   char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s%d", UNIX_X11_SOCKET_PREFIX,
-                                 display_sock_x11 + IDX_X11_DISPLAY_ADD);
+  snprintf(path, MAX_PATH_LEN-1, X11_DISPLAY_PREFIX,
+           display_sock_x11 + X11_DISPLAY_OFFSET);
   fd_listen = util_socket_listen_unix(path);
   return fd_listen;
 }
@@ -296,8 +297,8 @@ static void remove_listen_x11(int display_sock_x11, int llid)
 {
   char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
-  snprintf(path, MAX_PATH_LEN-1, "%s%d", UNIX_X11_SOCKET_PREFIX,
-                                 display_sock_x11 + IDX_X11_DISPLAY_ADD);
+  snprintf(path, MAX_PATH_LEN-1, X11_DISPLAY_PREFIX,
+           display_sock_x11 + X11_DISPLAY_OFFSET);
   if (msg_exist_channel(llid))
     msg_delete_channel(llid);
   unlink(path);
@@ -378,7 +379,7 @@ static void listen_x11_end(t_local_dropbear *ld)
   if (ld->idx_display_sock_x11)
     {
     DOUT(FLAG_HOP_DOORS, "LISTEN END %d", ld->idx_display_sock_x11);
-    for (i=1; i<MAX_IDX_X11; i++)
+    for (i=1; i<X11_DISPLAY_IDX_MAX; i++)
       {
       if (ld->sub_dido_x11[i].sub_dido_idx == i)
         traf_x11_end(&(ld->sub_dido_x11[i]));

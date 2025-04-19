@@ -33,6 +33,7 @@
 
 
 
+#include "glob_common.h"
 #include "commun.h"
 #include "sock.h"
 #include "x11_channels.h"
@@ -125,11 +126,11 @@ static int add_listen_x11(int display_sock_x11)
   int fd_listen;
   char x11_path[MAX_ASCII_LEN];
   memset(x11_path, 0, MAX_ASCII_LEN);
-  snprintf(x11_path, MAX_ASCII_LEN-1, "%s%d",
-           UNIX_X11_SOCKET_PREFIX, display_sock_x11 + IDX_X11_DISPLAY_ADD);
+  snprintf(x11_path, MAX_ASCII_LEN-1, X11_DISPLAY_PREFIX,
+           display_sock_x11 + X11_DISPLAY_OFFSET);
   fd_listen = util_socket_listen_unix(x11_path);
   if (fd_listen <= 0)
-    KOUT(" %d %d", fd_listen, errno);
+    KOUT("ERROR %d %d", fd_listen, errno);
   return fd_listen;
 }
 /*--------------------------------------------------------------------------*/
@@ -141,8 +142,8 @@ static void remove_listen_x11(t_dropbear_ctx *dctx)
   if (dctx->fd_listen_x11 != -1)
     {
     memset(x11_path, 0, MAX_ASCII_LEN);
-    snprintf(x11_path, MAX_ASCII_LEN-1, "%s%d",
-             UNIX_X11_SOCKET_PREFIX, dctx->display_sock_x11);
+    snprintf(x11_path, MAX_ASCII_LEN-1, X11_DISPLAY_PREFIX,
+             dctx->display_sock_x11);
     close(dctx->fd_listen_x11);
     unlink(x11_path);
     }
@@ -155,9 +156,9 @@ static void alloc_ctx(int display_sock_x11, int dido_llid, int fd,
 {
   t_dropbear_ctx *dctx;
   if (g_fd_to_ctx[fd])
-    KOUT(" ");
-  if ((display_sock_x11 < 1) || (display_sock_x11 > MAX_IDX_X11))
-    KOUT("%d", display_sock_x11);
+    KOUT("ERROR ");
+  if ((display_sock_x11 < 1) || (display_sock_x11 > X11_DISPLAY_IDX_MAX))
+    KOUT("ERROR%d", display_sock_x11);
   dctx = (t_dropbear_ctx *) malloc(sizeof(t_dropbear_ctx));
   memset(dctx, 0, sizeof(t_dropbear_ctx));
   dctx->dido_llid = dido_llid;
@@ -199,7 +200,7 @@ static void free_ctx(int dido_llid)
     nonblock_del_fd(dctx->fd);
     close(dctx->fd);
     if (!g_fd_to_ctx[dctx->fd])
-      KOUT(" ");
+      KOUT("ERROR ");
     g_fd_to_ctx[dctx->fd] = NULL;
     g_ctx[dido_llid] = NULL;
     remove_listen_x11(dctx);
@@ -214,7 +215,7 @@ static void free_ctx(int dido_llid)
     free(dctx);
     g_dropbear_ctx_num -= 1;
     if (g_dropbear_ctx_num < 0)
-      KOUT(" ");
+      KOUT("ERROR ");
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -241,14 +242,18 @@ void action_events(fd_set *infd)
   while (dctx)
     {
     next = dctx->next;
-    if ((dctx->fd_listen_x11 != -1) && FD_ISSET(dctx->fd_listen_x11, infd))
+    if (dctx->fd_listen_x11 == -1)
+      KERR("ERROR %d %d", dctx->dido_llid, dctx->display_sock_x11);
+    else if (FD_ISSET(dctx->fd_listen_x11, infd))
+      {
       x11_event_listen(dctx->dido_llid, dctx->display_sock_x11, 
                        dctx->fd_listen_x11);
+      }
     if (FD_ISSET(dctx->fd, infd))
       {
       tst_dctx = g_fd_to_ctx[dctx->fd];
       if (tst_dctx != dctx)
-        KOUT("%p %p", tst_dctx, dctx);
+        KOUT("ERROR%p %p", tst_dctx, dctx);
       len = receive_from_dropbear(dctx->fd, &rx);
       if (len > 0)
         {
@@ -336,7 +341,7 @@ static void create_msg_df(char *msg, int max)
   FILE *fp;
   err = access(cmd, X_OK);
   if (err)
-    KERR("%s NOT FOUND", cmd);
+    KERR("ERROR %s NOT FOUND", cmd);
   else
     {
     fp = popen(cmd, "r");
@@ -367,7 +372,7 @@ static void send_back_sysinfo_df(char *rx)
                      header_val_sysinfo_df, g_buf);
     }
   else
-    KERR(" ");
+    KERR("ERROR");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -385,7 +390,7 @@ static void send_back_sysinfo(char *rx)
   if (!strcmp(rx, LASTATS))
     {
     if (sysinfo(&sys))
-      KERR("ERR SYSINFO %d", errno);
+      KERR("ERROR SYSINFO %d", errno);
     else
       { 
       buf[1023] = 0;
@@ -403,7 +408,7 @@ static void send_back_sysinfo(char *rx)
       }
     }
   else
-    KERR(" ");
+    KERR("ERROR");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -427,7 +432,7 @@ static void helper_rx_virtio_nodido_llid(int type, int val, char *rx)
           send_to_virtio(0, len, header_type_ctrl, header_val_ping, g_buf);
           }
         else
-          KERR("%s", rx);
+          KERR("ERROR %s", rx);
         break;
       case header_val_reboot:
         if (sscanf(rx, LABOOT, &val_id) == 1)
@@ -435,7 +440,7 @@ static void helper_rx_virtio_nodido_llid(int type, int val, char *rx)
           call_reboot();
           }
         else
-          KERR("%s", rx);
+          KERR("ERROR %s", rx);
         break;
       case header_val_halt:
         if (sscanf(rx, LAHALT, &val_id) == 1)
@@ -443,11 +448,11 @@ static void helper_rx_virtio_nodido_llid(int type, int val, char *rx)
           call_poweroff();
           }
         else
-          KERR("%s", rx);
+          KERR("ERROR %s", rx);
         break;
 
       default:
-        KERR("%d", val);
+        KERR("ERROR %d", val);
         break;
       }
     }
@@ -462,12 +467,12 @@ static void helper_rx_virtio_nodido_llid(int type, int val, char *rx)
         send_back_sysinfo_df(rx);
         break;
       default:
-        KERR("%d", val);
+        KERR("ERROR %d", val);
         break;
       }
     }
   else
-    KERR(" ");
+    KERR("ERROR");
 }
 /*--------------------------------------------------------------------------*/
 
@@ -496,25 +501,25 @@ static void helper_rx_virtio_noctx(int dido_llid, int type, int val, char *rx)
   if ((type == header_type_ctrl_agent) && (val == header_val_add_dido_llid))
     {
     if (g_dropbear_ctx_num >= MAX_SSH_NUM)
-      KERR(" ");
+      KERR("ERROR");
     else if (sscanf(rx, DBSSH_SERV_DOORS_REQ, &inside_cloonix_x11_display_idx,
                             xauth_cookie_format) != 2)
-      KERR("%s", rx);
+      KERR("ERROR %s", rx);
     else
       {
       ptr = strstr(rx, xauth_cookie_format);
       if (!ptr)
-        KOUT("%s", ptr);
+        KOUT("ERROR %s", ptr);
       memset(xauth_cookie_format, 0, MAX_ASCII_LEN);
       strncpy(xauth_cookie_format, ptr, MAX_ASCII_LEN-1);
       display_sock_x11=choose_x11_display_idx(inside_cloonix_x11_display_idx);
-      if ((display_sock_x11 >= 1) && (display_sock_x11 <= MAX_IDX_X11))
+      if ((display_sock_x11 >= 1) && (display_sock_x11 <= X11_DISPLAY_IDX_MAX))
         {
         fd = sock_client_unix(UNIX_DROPBEAR_SOCK);
         if (fd >= MAX_FD_NUM)
-          KOUT("%d", fd);
+          KOUT("ERROR %d", fd);
         else if (fd <= 0)
-          KERR("%d %d", fd, errno);
+          KERR("ERROR %d %d", fd, errno);
         else 
           {
           if (inside_cloonix_x11_display_idx)
@@ -530,7 +535,7 @@ static void helper_rx_virtio_noctx(int dido_llid, int type, int val, char *rx)
           }
         }
       else
-        KERR("%s %d", rx, display_sock_x11);
+        KERR("ERROR %s %d", rx, display_sock_x11);
       }
     }
   else if ((type==header_type_ctrl_agent) && (val==header_val_del_dido_llid))

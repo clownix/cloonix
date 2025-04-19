@@ -9,7 +9,7 @@ LDFLAGS += -g -rdynamic -L../libmdl -lmdl -lutil -lpthread
 
 OBJECTS := $(patsubst %.c,obj/%.o,$(SOURCES))
 
-all: cloonix-xwy-srv
+all: $(shell mkdir -p ./obj) cloonix-xwy-srv
 
 cloonix-xwy-srv: $(OBJECTS)
 	$(CC) $^ -o $@ $(LDFLAGS)

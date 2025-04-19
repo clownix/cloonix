@@ -3,7 +3,11 @@ HERE=`pwd`
 mkdir -p ${HERE}/install_libptytty
 tar xvf libptytty-2.0.tar.gz
 cd libptytty-2.0
-cmake -DCMAKE_INSTALL_PREFIX=${HERE}/install_libptytty -DBUILD_SHARED_LIBS=OFF .
+cmake -DCMAKE_INSTALL_PREFIX=${HERE}/install_libptytty \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DUTMP_SUPPORT=OFF \
+      -DLASTLOG_SUPPORT=OFF \
+      -DWTMP_SUPPORT=OFF .
 cmake --build .
 cmake --install .
 

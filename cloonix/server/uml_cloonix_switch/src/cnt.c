@@ -428,8 +428,9 @@ int cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
       {
       memset(agent_dir, 0, MAX_PATH_LEN);
       snprintf(agent_dir, MAX_PATH_LEN-1,
-               "%s/server/insider_agents", cfg_get_bin_dir());
-      if (!strcmp(cnt->brandtype, "crun"))
+               "%s/cloonfs/insider_agents", cfg_get_bin_dir());
+      if ((!strcmp(cnt->brandtype, "brandzip")) ||
+          (!strcmp(cnt->brandtype, "brandcvm")))
         {
         if (crun_create(llid, vm_id, cnt, agent_dir))
           {
@@ -540,7 +541,8 @@ static void timer_cnt_delete(void *data)
         if (cannot_be_deleted)
           KERR("ERROR DEL KVM ETH %s", cd->name);
         memset(req, 0, MAX_PATH_LEN);
-        if (!strcmp(cur->cnt.brandtype, "crun"))
+        if ((!strcmp(cur->cnt.brandtype, "brandzip")) ||
+            (!strcmp(cur->cnt.brandtype, "brandcvm")))
           snprintf(req,MAX_PATH_LEN-1,"cloonsuid_crun_delete name=%s", cd->name);
         else
           KOUT("ERROR TYPE %s", cur->cnt.brandtype);
@@ -628,7 +630,8 @@ static void error_timer_beat_action(int llid, t_cnt *cur)
 {
   char req[MAX_PATH_LEN];
   memset(req, 0, MAX_PATH_LEN);
-  if (!strcmp(cur->cnt.brandtype, "crun"))
+  if ((!strcmp(cur->cnt.brandtype, "brandzip")) ||
+      (!strcmp(cur->cnt.brandtype, "brandcvm")))
     snprintf(req, MAX_PATH_LEN-1, "cloonsuid_crun_ERROR name=%s", cur->cnt.name);
   else
     KOUT("ERROR TYPE %s", cur->cnt.brandtype);
@@ -636,20 +639,6 @@ static void error_timer_beat_action(int llid, t_cnt *cur)
     KERR("ERROR %d %s", llid, cur->cnt.name);
   utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), "TIMOUT");
   cnt_free_cnt(cur->cnt.name);
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-int cnt_is_crun(char *name)
-{
-  t_cnt *cur = find_cnt(name);
-  int result = 0;
-  if (cur)
-    {
-    if (!strcmp(cur->cnt.brandtype, "crun"))
-      result = 1;
-    }
-  return result;
 }
 /*---------------------------------------------------------------------------*/
 

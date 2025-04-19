@@ -140,6 +140,19 @@ static void shadown_lan_free(t_shadown_lan *cur)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void shadown_lan_del_all(void)
+{
+  t_shadown_lan *next, *cur = g_head_shadown_lan;
+  while (cur)
+    {
+    next = cur->next;
+    shadown_lan_free(cur);
+    cur = next;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static t_shadown_lan *shadown_lan_find(char *name, int num, char *lan)
 {
   t_shadown_lan *cur = g_head_shadown_lan;

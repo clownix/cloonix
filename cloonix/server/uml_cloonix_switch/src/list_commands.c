@@ -137,8 +137,10 @@ static int build_add_cnt_cmd(int offset, t_list_commands *hlist,
   if (can_increment_index(result))
     {
     eth_tab_to_str(eth_desc, cnt->nb_tot_eth, cnt->eth_table);
-    if (!strcmp(cnt->brandtype, "crun"))
-      strcpy(shortbrand, "cru");
+    if (!strcmp(cnt->brandtype, "brandzip"))
+      strcpy(shortbrand, "zip");
+    else if (!strcmp(cnt->brandtype, "brandcvm"))
+      strcpy(shortbrand, "cvm");
     else
       KOUT("ERROR %s", cnt->brandtype);
     len += sprintf(list->cmd + len, "cloonix_cli %s add %s %s eth=%s %s",

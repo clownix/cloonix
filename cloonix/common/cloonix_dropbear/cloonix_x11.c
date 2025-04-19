@@ -14,13 +14,12 @@
 
 
 
+#include "glob_common.h"
 #include "io_clownix.h"
 #include "doorways_sock.h"
 #include "util_sock.h"
 #include "cloonix_x11.h"
 #include "header_sock.h"
-
-#define UNIX_X11_SOCKET_PREFIX "/tmp/.X11-unix/X"
 
 
 typedef struct t_x11_ctx
@@ -43,17 +42,6 @@ static t_x11_ctx *dido_llid_2_ctx[CLOWNIX_MAX_CHANNELS];
 static char *get_cloonix_config_path(void)
 {
   return ("/mnt/cloonix_config_fs");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int in_cloonix_file_exists(void)
-{
-  int err, result = 0;
-  err = access(get_cloonix_config_path(), R_OK);
-  if (!err)
-    result = 1;
-  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -82,44 +70,11 @@ static void nonblock(int fd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static int test_file_is_socket(char *path)
-{
-  int result = -1;
-  struct stat stat_file;
-  if (!stat(path, &stat_file))
-    {
-    if (S_ISSOCK(stat_file.st_mode))
-      result = 0;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-
-/*****************************************************************************/
 static int sock_cli_unix(char *pname)
 {
-  int len,  sock, result = -1;
-  struct sockaddr_un addr;
-  if (strlen(pname))
-    {
-    if (!test_file_is_socket(pname))
-      {
-      sock = socket (AF_UNIX, SOCK_STREAM, 0);
-      if (sock <= 0)
-        KOUT(" ");
-      memset (&addr, 0, sizeof (struct sockaddr_un));
-      addr.sun_family = AF_UNIX;
-      strcpy(addr.sun_path, pname);
-      len = sizeof (struct sockaddr_un);
-      nonblock(sock);
-      fd_cloexec(sock);
-      if (connect(sock,(struct sockaddr *) &addr, len))
-        close(sock);
-      else
-        result = sock;
-      }
-    }
+  int fd, result = -1;
+  if (!util_proxy_client_socket_unix(pname, &fd))
+    result = fd;
   return result;
 }
 /*---------------------------------------------------------------------------*/
@@ -189,8 +144,8 @@ static t_x11_ctx *get_head_ctx_with_dido_llid(int dido_llid)
 static t_x11_ctx *get_ctx_with_sub_dido_idx(int dido_llid, int sub_dido_idx)
 {
   t_x11_ctx *cur = get_head_ctx_with_dido_llid(dido_llid);
-  if ((sub_dido_idx < 1) || (sub_dido_idx > MAX_IDX_X11))
-    KOUT("%d %d", sub_dido_idx, MAX_IDX_X11);
+  if ((sub_dido_idx < 1) || (sub_dido_idx > X11_DISPLAY_IDX_MAX))
+    KOUT("%d %d", sub_dido_idx, X11_DISPLAY_IDX_MAX);
   while (cur && (cur->sub_dido_idx != sub_dido_idx))
     cur = cur->next;
   return cur;
@@ -251,12 +206,12 @@ static void x11_err_cb (int x11_llid, int err, int from)
   (void) from;
   if (ctx)
     {
-    KERR("%d %d %d %d", ctx->dido_llid, ctx->sub_dido_idx, err, from);
+    KERR("ERROR %d %d %d %d", ctx->dido_llid, ctx->sub_dido_idx, err, from);
     free_ctx(x11_llid);
     }
   else
     {
-    KERR("%s %d %d", __FUNCTION__, err, from);
+    KERR("ERROR %s %d %d", __FUNCTION__, err, from);
     if (msg_exist_channel(x11_llid))
       msg_delete_channel(x11_llid);
     }
@@ -271,22 +226,25 @@ static int x11_rx_cb(int x11_llid, int x11_fd)
   int headsize = doorways_header_size();
   t_x11_ctx *cur;
   len = util_read (buf, MAX_A2D_LEN - headsize, x11_fd);
-  cur = get_ctx_with_x11_llid(x11_llid);
-  if (!cur)
-    KERR(" ");
-  else
+  if (len < 0)
     {
-    if (len < 0)
+    if ((errno != EINTR) && (errno != EAGAIN)) 
       {
-      KERR(" ");
+      KERR("ERROR payload_tx_x11:%d  %d errno:%d",
+           cur->sub_dido_idx, cur->payload_tx_x11, errno);
       free_ctx(x11_llid);
       }
+    }
+  else
+    {
+    cur = get_ctx_with_x11_llid(x11_llid);
+    if (!cur)
+      KERR("ERROR ");
     else
       {
       send_traf_x11_to_doors(cur->dido_llid, cur->sub_dido_idx, len, buf);
       result = len;
       cur->payload_tx_x11 += len;
-//      KERR("payload_tx_x11:%d  %d", cur->sub_dido_idx, cur->payload_tx_x11);
       }
     }
   return result;
@@ -300,7 +258,7 @@ static int local_x11_open(int dido_llid, int sub_dido_idx,
   int x11_fd, x11_llid, result = -1;
   t_x11_ctx *cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
   if (cur)
-    KERR("%d %d", dido_llid, sub_dido_idx);
+    KERR("ERROR %d %d", dido_llid, sub_dido_idx);
   else
     {
     if (is_inet)
@@ -316,7 +274,8 @@ static int local_x11_open(int dido_llid, int sub_dido_idx,
       result = 0;
       }
     else 
-      KERR("%d %d %d %d %s",dido_llid,sub_dido_idx,is_inet,port,x11_path);
+      KERR("ERROR %d %d %d %d %s",
+           dido_llid, sub_dido_idx, is_inet, port, x11_path);
     }
   return result;
 }
@@ -328,15 +287,31 @@ void receive_traf_x11_from_doors(int dido_llid, int sub_dido_idx,
 {
   t_x11_ctx *cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
   if (!cur)
-    KERR("%d %d", dido_llid, sub_dido_idx);
+    KERR("ERROR %d %d %d", dido_llid, sub_dido_idx, cur->payload_rx_x11);
   else
     {
     watch_tx(cur->x11_llid, len, buf);
     cur->payload_rx_x11 += len;
-//    KERR("payload_rx_x11:%d  %d", sub_dido_idx, cur->payload_rx_x11);
     }
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int x11_path_is_tst(char *x11_path)
+{
+  int fd, result = -1;
+  if (util_proxy_client_socket_unix(x11_path, &fd))
+    KERR("ERROR X11 SOCKET NOT FOUND: %s", x11_path);
+  else
+    {
+    close(fd);
+    result = 0;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+
 
 /****************************************************************************/
 static int get_x11_path(int port, int idx_x11, char *x11_path)
@@ -344,29 +319,22 @@ static int get_x11_path(int port, int idx_x11, char *x11_path)
   int val, is_inet = 0;
   char *display;
   memset(x11_path, 0, MAX_PATH_LEN);
-  if (!in_cloonix_file_exists())
-    {
-    if (port > 6000)
-      is_inet = 1;
-    else
-      {
-      display = getenv("DISPLAY");
-      if (sscanf(display, ":%d", &val) == 1)
-        {
-        snprintf(x11_path,MAX_PATH_LEN-1,"%s%d",UNIX_X11_SOCKET_PREFIX,val);
-        if (access(x11_path, R_OK))
-          {
-          KERR("X11 socket not found: %s", x11_path);
-          memset(x11_path, 0, MAX_PATH_LEN);
-          }
-        }
-      else
-        KERR("X11 display not good: %s", display);
-      }
-    }
+  if (port > 6000)
+    is_inet = 1;
   else
     {
-    snprintf(x11_path,MAX_PATH_LEN-1,"%s%d", UNIX_X11_SOCKET_PREFIX, idx_x11);
+    display = getenv("DISPLAY");
+    if (sscanf(display, ":%d", &val) == 1)
+      {
+      snprintf(x11_path, MAX_PATH_LEN-1, X11_DISPLAY_PREFIX, val);
+      if (x11_path_is_tst(x11_path))
+        {
+        KERR("ERROR X11 socket not found: %s", x11_path);
+        memset(x11_path, 0, MAX_PATH_LEN);
+        }
+      }
+    else
+      KERR("ERROR X11 display not good: %s", display);
     }
   return is_inet;
 }
@@ -385,16 +353,21 @@ void receive_ctrl_x11_from_doors(int dido_llid, int sub_dido_idx,
     if (!local_x11_open(dido_llid, sub_dido_idx, is_inet, port, x11_path))
       tx_x11_openokko_to_door(dido_llid, sub_dido_idx, DOOR_X11_OPENOK); 
     else
+      {
+      KERR("WARNING %d %d %d %s", dido_llid, sub_dido_idx, len, buf);
       tx_x11_openokko_to_door(dido_llid, sub_dido_idx, DOOR_X11_OPENKO); 
+      }
     }
   else if (!strcmp(buf, DOOR_X11_OPENKO))
     {
     cur = get_ctx_with_sub_dido_idx(dido_llid, sub_dido_idx);
     if (cur)
+      {
       free_ctx(cur->x11_llid);
+      }
     }
   else
-    KOUT("%d %d %d %s", dido_llid, sub_dido_idx, len, buf);
+    KOUT("ERROR %d %d %d %s", dido_llid, sub_dido_idx, len, buf);
 }
 /*--------------------------------------------------------------------------*/
 

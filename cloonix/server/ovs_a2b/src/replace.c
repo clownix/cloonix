@@ -20,7 +20,6 @@
 #include <stdint.h>
 #include <errno.h>
 #include <sys/queue.h>
-#include <linux/icmp.h>
 
 
 #include "io_clownix.h"

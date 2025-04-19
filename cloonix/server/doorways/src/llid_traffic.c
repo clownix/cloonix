@@ -23,7 +23,6 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <math.h>
-#include <execinfo.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -85,24 +84,6 @@ static void trace_read_write(char *act, int len, char *buf)
 }
 */
 /*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static char *get_cloonix_config_path(void)
-{
-  return ("/mnt/cloonix_config_fs/config");
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static int in_cloonix_file_exists(void)
-{
-  int err, result = 0;
-  err = access(get_cloonix_config_path(), R_OK);
-  if (!err)
-    result = 1;
-  return result;
-}
-/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void cookie_info_store(t_llid_traf *lt, char *cookie)
@@ -306,10 +287,6 @@ static int link_associate(t_llid_traf *lt, char *cookie,
 {
   int in_idx_x11;
   cookie_info_store(lt, cookie);
-  if (in_cloonix_file_exists())
-    in_idx_x11 = lt->display_port - 6000;
-  else
-    in_idx_x11 = 0;
   llid_traf_associate(lt, name, llid_backdoor, lt->dido_llid);
   lt->auto_state = auto_state_wait_agent_link;
   arm_auto_timer_with_resp(lt, "KO link_associate timeout", name, 3000);

@@ -22,7 +22,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/un.h>
-#include <linux/icmp.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 
@@ -31,6 +30,29 @@
 #include "nat_main.h"
 #include "nat_icmp.h"
 #include "nat_utils.h"
+
+
+#define ICMP_ECHOREPLY          0       /* Echo Reply                   */
+#define ICMP_ECHO               8       /* Echo Request                 */
+
+struct icmphdr {
+  __u8          type;
+  __u8          code;
+  __sum16       checksum;
+  union {
+        struct {
+                __be16  id;
+                __be16  sequence;
+        } echo;
+        __be32  gateway;
+        struct {
+                __be16  __unused;
+                __be16  mtu;
+        } frag;
+        __u8    reserved[4];
+  } un;
+};
+
 
 
 static t_llid_icmp *g_head_llid_icmp;

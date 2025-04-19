@@ -1,17 +1,57 @@
 #!/bin/bash
+#----------------------------------------------------------------------------#
 set -e
-#----------------------------------------------------------------------#
-export CLOONIX_TREE_ROOT=`pwd`
-if [ ! -e ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config ]; then
+export SRC_TREE_ROOT=`pwd`
+if [ ! -e ${SRC_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo NOT FOUND:
-  echo ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config
+  echo ${SRC_TREE_ROOT}/cloonix/cloonix_config
   exit 1
 fi
-VERSION=$(cat ${CLOONIX_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION)
+VERSION=$(cat ${SRC_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION)
 VERSION=${VERSION#*=}
+BUNDLE="${HOME}/cloonix_bundle"
+RESBUNDLE="${HOME}/cloonix-bundle-${VERSION}"
+ROOTFS="${BUNDLE}/cloonfs"
+TARGZ_STORE="${BUNDLE}/targz_store"
+#----------------------------------------------------------------------------#
+printf "\n\nCREATE BUNDLE VERSION ${VERSION}\n\n"
+#----------------------------------------------------------------------------#
 ./allclean
-./build_tools/build_client
-./build_tools/build_server
-./build_tools/pack_common_before
-./build_tools/pack_server
-./build_tools/pack_common_after
+#----------------------------------------------------------------------------#
+mkdir -p ${BUNDLE}
+mkdir -p ${RESBUNDLE}
+mkdir -p ${ROOTFS}
+mkdir -p ${TARGZ_STORE}
+#----------------------------------------------------------------------------#
+cp -r ${SRC_TREE_ROOT}/targz_store/* ${TARGZ_STORE}
+cp -r ${SRC_TREE_ROOT}/cloonix ${BUNDLE}
+cp  ${SRC_TREE_ROOT}/build_tools/install_cloonfs ${BUNDLE}
+cp  ${SRC_TREE_ROOT}/build_tools/fill_common.c ${BUNDLE}
+tar --directory=${BUNDLE} -xf ${TARGZ_STORE}/patchelf_*.tar.gz
+mv  ${BUNDLE}/patchelf ${BUNDLE}/src_patchelf
+#----------------------------------------------------------------------------#
+cd ${BUNDLE}
+gcc -o copy_libs fill_common.c
+rm ${BUNDLE}/fill_common.c
+#----------------------------------------------------------------------------#
+cd ${BUNDLE}/src_patchelf
+make
+mv ${BUNDLE}/src_patchelf/src/patchelf ${ROOTFS}/cloonix-patchelf
+rm -rf ${BUNDLE}/src_patchelf
+strip ${ROOTFS}/cloonix-patchelf
+cd ${SRC_TREE_ROOT}
+#----------------------------------------------------------------------------#
+printf "\n\nBUILDING BUNDLE VERSION ${VERSION}\n\n"
+./build_tools/build_cloonfs
+printf "\n\nBUILD DONE OK\n\n"
+#----------------------------------------------------------------------------#
+printf "\n\nPACKING BUNDLE VERSION ${VERSION}\n\n"
+./build_tools/pack_cloonfs
+printf "\n\nPACK DONE OK\n\n"
+#----------------------------------------------------------------------------#
+mv ${BUNDLE}/cloonfs ${RESBUNDLE}
+cp ${SRC_TREE_ROOT}/build_tools/install_cloonfs ${RESBUNDLE}
+cd ${HOME}
+tar zcvf cloonix-bundle-${VERSION}.tar.gz cloonix-bundle-${VERSION}
+#----------------------------------------------------------------------------#
+

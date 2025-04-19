@@ -80,8 +80,8 @@
 
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
-static int g_i_am_in_cloon;
-static char g_i_am_in_cloonix_name[MAX_NAME_LEN];
+static int g_i_am_inside_cloonix;
+static char g_i_am_inside_cloonix_name[MAX_NAME_LEN];
 
 
 static int g_uml_cloonix_started;
@@ -253,8 +253,8 @@ static void mk_and_tst_work_path(void)
     printf("%d Bad work dir in config: %s\n", __LINE__, cfg_get_root_work());
     KOUT("%s", cfg_get_root_work());
     }
-  my_mkdir(cfg_get_root_work(), 0);
-  my_mkdir(cfg_get_bulk(), 0);
+  my_mkdir(cfg_get_root_work(), 1);
+  my_mkdir(cfg_get_bulk(), 1);
   memset(proxymous_dir, 0, MAX_PATH_LEN);
   snprintf(proxymous_dir, MAX_PATH_LEN-1, "%s_%s", PROXYSHARE_IN, net);
   my_mkdir(proxymous_dir, 1);
@@ -469,10 +469,10 @@ static int tst_port_is_not_used(int port)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int inside_cloon(char **name)
+int inside_cloonix(char **name)
 {
-  *name = g_i_am_in_cloonix_name;
-  return g_i_am_in_cloon;
+  *name = g_i_am_inside_cloonix_name;
+  return g_i_am_inside_cloonix;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -504,7 +504,7 @@ int main (int argc, char *argv[])
   umask(0000);
   if (clock_gettime(CLOCK_MONOTONIC, &ts))
     KOUT(" ");
-  g_i_am_in_cloon = i_am_inside_cloon(g_i_am_in_cloonix_name);
+  g_i_am_inside_cloonix = i_am_inside_cloonix(g_i_am_inside_cloonix_name);
 
   g_novnc_port = 0;
   job_for_select_init();

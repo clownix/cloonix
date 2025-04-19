@@ -34,14 +34,12 @@ static int read_with_wait(int x11_fd, char *buf, int len_to_get)
   do
     {
     count += 1;
-    if (count == 5)
+    if (count == 10)
       break;
     usleep(10000);
     len = wrap_read_x11_rd_x11(x11_fd, buf, len_to_get);
     if (len == 0)
-      {
       break;
-      }
     else if (len < 0)
       {
       KERR("%d  %s", x11_fd, strerror(errno));

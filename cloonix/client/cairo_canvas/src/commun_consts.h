@@ -18,7 +18,7 @@
 #define MAX_TITLE 80
 #define MAX_TEXT MAX_TITLE*20
 #define C2C_DIA 30
-#define INTF_DIA (NODE_DIA/3)
+#define INTF_DIA ((NODE_DIA*10)/35)
 #define TAP_DIA 30
 #define MOVE_CURSOR_MAX 100.0
 #define NAT_RAD 14

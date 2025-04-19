@@ -338,7 +338,7 @@ static void timer_ovs_beat(void *data)
       else if (cur->open_ovsdb_ok == 0)
         {
         cur->open_ovsdb_wait += 1;
-        if (cur->open_ovsdb_wait > 250)
+        if (cur->open_ovsdb_wait > 400)
           {
           KERR("ERROR OVSDB %s NOT RESPONDING", cur->name);
           ovs_destroy();
@@ -502,7 +502,7 @@ void ovs_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     else if (!strcmp(line, "ovs_resp_suidroot_ko"))
       {
       KERR("ERROR: cloonix_ovs is not suid root");
-      KERR("sudo chmod u+s /usr/libexec/cloonix/server/cloonix-ovs-vswitchd");
+      KERR("sudo chmod u+s /usr/libexec/cloonix/cloonfs/cloonix-ovs-vswitchd");
       ovs_destroy();
       }
     else if (!strcmp(line, "ovs_resp_ovsdb_ko"))

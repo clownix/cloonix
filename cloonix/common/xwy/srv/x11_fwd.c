@@ -27,6 +27,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include "glob_common.h"
 #include "mdl.h"
 #include "x11_fwd.h"
 #include "low_write.h"
@@ -38,7 +39,6 @@
 #include "fd_spy.h"
 #include "pty_fork.h"
 #include "first_x11_magic.h"
-#include "glob_common.h"
 
 
 typedef struct t_conn_x11
@@ -59,10 +59,10 @@ typedef struct t_display_x11
   int srv_idx_acked;
   int x11_listen_fd;
   char magic_cookie[2*MAGIC_COOKIE_LEN+1];
-  int pool_fifo[MAX_IDX_X11-1];
+  int pool_fifo[X11_DISPLAY_IDX_MAX-1];
   int pool_read;
   int pool_write;
-  t_conn_x11 *conn[MAX_IDX_X11];
+  t_conn_x11 *conn[X11_DISPLAY_IDX_MAX];
   struct t_display_x11 *prev;
   struct t_display_x11 *next;
 } t_display_x11;
@@ -70,7 +70,7 @@ typedef struct t_display_x11
 
 int get_cli_association(int sock_fd, int srv_idx, int cli_idx);
 
-static t_display_x11 *g_display[SRV_IDX_MAX - SRV_IDX_MIN + 1];
+static t_display_x11 *g_display[X11_DISPLAY_XWY_MAX - X11_DISPLAY_XWY_MIN + 1];
 static t_display_x11 *g_display_head;
 
 static void disconnect_cli_idx(t_display_x11 *disp, int cli_idx);
@@ -78,7 +78,7 @@ static void disconnect_cli_idx(t_display_x11 *disp, int cli_idx);
 /****************************************************************************/
 int display_add_rank(int net_rank, int srv_idx)
 {
-  int result = 1000*net_rank + srv_idx;
+  int result = X11_DISPLAY_XWY_RANK_OFFSET * net_rank + srv_idx;
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -103,7 +103,7 @@ static int send_msg_type_x11_info_flow(uint32_t randid, int sock_fd,
 {
   int len = MAX_MSG_LEN+g_msg_header_len, result;
   t_msg *msg = (t_msg *) wrap_malloc(len);
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d", srv_idx);
   mdl_set_header_vals(msg, randid, msg_type_x11_info_flow,
                       fd_type_srv, srv_idx, cli_idx);
@@ -133,9 +133,9 @@ static void dialog_stats(int sock_fd, int srv_idx, int cli_idx,
                          int txpkts, long long txbytes,
                          int rxpkts, long long rxbytes, char *buf)
 {
-  t_display_x11 *disp = g_display[srv_idx-SRV_IDX_MIN];
+  t_display_x11 *disp = g_display[srv_idx-X11_DISPLAY_XWY_MIN];
   t_conn_x11 *conn;
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d", srv_idx);
   if (!disp)
     KERR("%d %d %d %s", sock_fd, srv_idx, cli_idx, buf);
@@ -153,9 +153,9 @@ static void dialog_stats(int sock_fd, int srv_idx, int cli_idx,
 /****************************************************************************/
 static void dialog_killed(int sock_fd, int srv_idx, int cli_idx, char *buf)
 {
-  t_display_x11 *disp = g_display[srv_idx-SRV_IDX_MIN];
+  t_display_x11 *disp = g_display[srv_idx-X11_DISPLAY_XWY_MIN];
   t_conn_x11 *conn;
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d", srv_idx);
   if (!disp)
     KERR("%d %d %d %s", sock_fd, srv_idx, cli_idx, buf);
@@ -184,7 +184,7 @@ static int check_fd_is_unique(int x11_fd)
 
   while(cur) 
     {
-    for (j=1; j<MAX_IDX_X11; j++)
+    for (j=1; j<X11_DISPLAY_IDX_MAX; j++)
       {
       if ((cur->conn[j]) && (cur->conn[j]->x11_fd == x11_fd))
         {
@@ -202,7 +202,7 @@ static int check_fd_is_unique(int x11_fd)
 static t_display_x11 *find_disp(int srv_idx)
 {
   t_display_x11 *cur = NULL;
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d", srv_idx);
   cur = g_display_head;
   while(cur)
@@ -211,8 +211,8 @@ static t_display_x11 *find_disp(int srv_idx)
       break;
     cur = cur->next;
     }
-  if (cur != g_display[srv_idx-SRV_IDX_MIN])
-    KOUT("%d %p %p", srv_idx, cur, g_display[srv_idx-SRV_IDX_MIN]);
+  if (cur != g_display[srv_idx-X11_DISPLAY_XWY_MIN])
+    KOUT("%d %p %p", srv_idx, cur, g_display[srv_idx-X11_DISPLAY_XWY_MIN]);
   return cur;
 }
 /*--------------------------------------------------------------------------*/
@@ -221,14 +221,14 @@ static t_display_x11 *find_disp(int srv_idx)
 static t_display_x11 *find_empy(int srv_idx)
 {
   t_display_x11 *cur = NULL;
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d", srv_idx);
-  if (g_display[srv_idx-SRV_IDX_MIN])
+  if (g_display[srv_idx-X11_DISPLAY_XWY_MIN])
     KOUT("%d", srv_idx);
   cur = (t_display_x11 *) wrap_malloc(sizeof(t_display_x11));
   memset(cur, 0, sizeof(t_display_x11));
   cur->srv_idx = srv_idx;
-  g_display[srv_idx-SRV_IDX_MIN] = cur;
+  g_display[srv_idx-X11_DISPLAY_XWY_MIN] = cur;
   cur->next = g_display_head;
   if (g_display_head)
     g_display_head->prev = cur;
@@ -241,11 +241,11 @@ static t_display_x11 *find_empy(int srv_idx)
 static void init_pool(t_display_x11 *disp)
 {
   int i;
-  for(i = 0; i < MAX_IDX_X11 - 1; i++)
+  for(i = 0; i < X11_DISPLAY_IDX_MAX - 1; i++)
     disp->pool_fifo[i] = i+1;
   disp->pool_read = 0;
-  disp->pool_write =  MAX_IDX_X11 - 2;
-  memset(disp->conn, 0, (sizeof(t_conn_x11 *)) * MAX_IDX_X11);
+  disp->pool_write =  X11_DISPLAY_IDX_MAX - 2;
+  memset(disp->conn, 0, (sizeof(t_conn_x11 *)) * X11_DISPLAY_IDX_MAX);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -257,7 +257,7 @@ static int alloc_pool_idx(t_display_x11 *disp)
   if(disp->pool_read != disp->pool_write)
     {
     idx = disp->pool_fifo[disp->pool_read];
-    disp->pool_read = (disp->pool_read + 1) % (MAX_IDX_X11 - 1);
+    disp->pool_read = (disp->pool_read + 1) % (X11_DISPLAY_IDX_MAX - 1);
     if (disp->conn[idx])
       KOUT(" ");
     disp->conn[idx] = (t_conn_x11 *)wrap_malloc(len);
@@ -280,7 +280,7 @@ static void free_pool_idx(t_display_x11 *disp, int idx)
   else
     {
     disp->pool_fifo[disp->pool_write] =  idx;
-    disp->pool_write = (disp->pool_write + 1) % (MAX_IDX_X11 - 1);
+    disp->pool_write = (disp->pool_write + 1) % (X11_DISPLAY_IDX_MAX - 1);
     wrap_free(disp->conn[idx], __LINE__);
     disp->conn[idx] = NULL;
     }
@@ -293,7 +293,7 @@ static int send_msg_type_x11_connect(uint32_t randid, int sock_fd,
 {
   int len = MAX_MSG_LEN+g_msg_header_len, result;
   t_msg *msg = (t_msg *) wrap_malloc(len);
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d", srv_idx);
   mdl_set_header_vals(msg, randid, msg_type_x11_connect,
                       fd_type_srv, srv_idx, cli_idx);
@@ -456,10 +456,10 @@ static void end_x11_listen_action(t_display_x11 *disp,
 /****************************************************************************/
 void x11_connect_ack(int srv_idx, int cli_idx, char *txt)
 {
-  t_display_x11 *disp = g_display[srv_idx-SRV_IDX_MIN];
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  t_display_x11 *disp = g_display[srv_idx-X11_DISPLAY_XWY_MIN];
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d", srv_idx);
-  else if ((cli_idx <= 0) || (cli_idx >= MAX_IDX_X11))
+  else if ((cli_idx <= 0) || (cli_idx >= X11_DISPLAY_IDX_MAX))
     KERR("%d", cli_idx);
   else if (!disp)
     KERR("%d %d", srv_idx, cli_idx);
@@ -480,7 +480,7 @@ static int init_alloc_display(uint32_t randid, int sock_fd, int srv_idx, char *x
 {
   int fd, result = -1;
   t_display_x11 *disp;
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d %d", sock_fd, srv_idx);
   disp = find_disp(srv_idx);
   if (disp)
@@ -530,23 +530,23 @@ int  x11_init_cli_msg(uint32_t randid, int sock_fd,
 {
   int srv_idx, result = 0;
   int display_srv_idx;
-  srv_idx = SRV_IDX_MIN;
+  srv_idx = X11_DISPLAY_XWY_MIN;
   display_srv_idx = display_add_rank(net_rank, srv_idx);
   memset(x11_path, 0, MAX_TXT_LEN);
-  snprintf(x11_path, MAX_TXT_LEN-1, UNIX_X11_SOCKET_PREFIX, display_srv_idx);
+  snprintf(x11_path, MAX_TXT_LEN-1, X11_DISPLAY_PREFIX, display_srv_idx);
   while (unix_connect_ok(x11_path))
     {
     srv_idx += 1;
-    if (srv_idx > SRV_IDX_MAX)
+    if (srv_idx > X11_DISPLAY_XWY_MAX)
       {
-      KERR("%d", srv_idx);
+      KERR("ERROR %s %d", x11_path, srv_idx);
       send_msg_type_x11_init(randid, sock_fd, 0, "KO");
       result = -1;
       break;
       }
     display_srv_idx = display_add_rank(net_rank, srv_idx);
     memset(x11_path, 0, MAX_TXT_LEN);
-    snprintf(x11_path, MAX_TXT_LEN-1, UNIX_X11_SOCKET_PREFIX, display_srv_idx);
+    snprintf(x11_path, MAX_TXT_LEN-1, X11_DISPLAY_PREFIX, display_srv_idx);
     }
   if (result == 0)
     {
@@ -568,7 +568,7 @@ int  x11_init_cli_msg(uint32_t randid, int sock_fd,
         }
       else
         {
-        strcpy(g_display[srv_idx-SRV_IDX_MIN]->magic_cookie, magic_cookie);
+        strcpy(g_display[srv_idx-X11_DISPLAY_XWY_MIN]->magic_cookie, magic_cookie);
         if (send_msg_type_x11_init(randid, sock_fd, srv_idx, "OK"))
           {
           KERR("ERROR");
@@ -586,7 +586,7 @@ int x11_alloc_display(uint32_t randid, int srv_idx)
 {
   int fd, result = 0;
   t_display_x11 *disp;
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("ERROR %d", srv_idx);
   disp = find_disp(srv_idx);
   if (!disp)
@@ -605,9 +605,9 @@ void x11_free_display(int srv_idx)
 {
   int i;
   t_display_x11 *disp;
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d", srv_idx);
-  disp = g_display[srv_idx-SRV_IDX_MIN];
+  disp = g_display[srv_idx-X11_DISPLAY_XWY_MIN];
   if (disp)
     {
     if (disp->x11_listen_fd != -1)
@@ -615,7 +615,7 @@ void x11_free_display(int srv_idx)
       wrap_close(disp->x11_listen_fd, __FUNCTION__);
       disp->x11_listen_fd = -1;
       }
-    for (i=1; i<MAX_IDX_X11; i++)
+    for (i=1; i<X11_DISPLAY_IDX_MAX; i++)
       {
       if (disp->conn[i])
         {
@@ -628,7 +628,7 @@ void x11_free_display(int srv_idx)
       disp->prev->next = disp->next;
     if (disp == g_display_head)
       g_display_head = disp->next;
-    g_display[srv_idx-SRV_IDX_MIN] = NULL;
+    g_display[srv_idx-X11_DISPLAY_XWY_MIN] = NULL;
     wrap_free(disp, __LINE__);
     }
 }
@@ -637,7 +637,7 @@ void x11_free_display(int srv_idx)
 /****************************************************************************/
 void x11_init_display(void)
 {
-  memset(g_display, 0, (SRV_IDX_MAX-SRV_IDX_MIN) * sizeof(t_display_x11 *));
+  memset(g_display, 0, (X11_DISPLAY_XWY_MAX-X11_DISPLAY_XWY_MIN) * sizeof(t_display_x11 *));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -666,7 +666,7 @@ void x11_fdset(fd_set *readfds, fd_set *writefds)
     else
       {
       FD_SET(cur->x11_listen_fd, readfds);
-      for (j=1; j<MAX_IDX_X11; j++)
+      for (j=1; j<X11_DISPLAY_IDX_MAX; j++)
         {
         conn = cur->conn[j];
         if ((conn) && (conn->threads_on) && (conn->sock_ass_fd != -1))
@@ -706,9 +706,9 @@ void x11_fdisset(fd_set *readfds, fd_set *writefds)
       if (FD_ISSET(cur->x11_listen_fd, readfds))
         begin_x11_listen_action(cur);
 
-      for (j=1; j<MAX_IDX_X11; j++)
+      for (j=1; j<X11_DISPLAY_IDX_MAX; j++)
         {
-        conn = g_display[srv_idx-SRV_IDX_MIN]->conn[j];
+        conn = g_display[srv_idx-X11_DISPLAY_XWY_MIN]->conn[j];
         if ((conn) && (conn->threads_on) && (conn->sock_ass_fd != -1)) 
           {
           if (FD_ISSET(conn->diag_main_fd, readfds))
@@ -749,7 +749,7 @@ int x11_get_max_fd(int max)
     {
     if (cur->x11_listen_fd > result)
       result = cur->x11_listen_fd;
-    for (j=1; j<MAX_IDX_X11; j++)
+    for (j=1; j<X11_DISPLAY_IDX_MAX; j++)
       {
       conn = cur->conn[j];
       if (conn)
@@ -770,9 +770,9 @@ void x11_info_flow(uint32_t randid, int sock_fd, int srv_idx, int cli_idx,
 {
   t_display_x11 *disp;
   t_conn_x11 *conn;
-  if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+  if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
     KOUT("%d", srv_idx);
-  disp = g_display[srv_idx-SRV_IDX_MIN];
+  disp = g_display[srv_idx-X11_DISPLAY_XWY_MIN];
   if (!disp)
     KERR("ERROR %d %d %d", sock_fd, srv_idx, cli_idx);
   else if (disp->conn[cli_idx])

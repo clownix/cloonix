@@ -48,7 +48,7 @@ LIBS = -lc \
        -lssl -lcrypto -lrt -lm -lc \
        -L${LIB_CLIENT}  -lglibclient
 
-SRCS     = popup.c topo.c menus.c cloonix.c move.c menu_utils.c \
+SRCS     = pidwait.c popup.c topo.c menus.c cloonix.c move.c menu_utils.c \
            main_timer_loop.c canvas_ctx.c eventfull_eth.c make_layout.c \
            menu_dialog_kvm.c menu_dialog_c2c.c layout_topo.c menu_dialog_cnt.c 
 

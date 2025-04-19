@@ -25,7 +25,7 @@ char *read_whole_file(char *file_name, int *len, char *err);
 int write_whole_file(char *file_name, char *buf, int len, char *err);
 int file_exists(char *path, int mode);
 char *get_cloonix_config_path(void);
-int i_am_inside_cloon(char *name);
+int i_am_inside_cloonix(char *name);
 void make_config_cloonix_vm_name(char *path, char *name);
 /*---------------------------------------------------------------------------*/
 

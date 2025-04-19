@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+#define _GNU_SOURCE
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,10 +28,12 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/syscall.h>
-#include <bits/time.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <execinfo.h>
+
+
+
 
 
 
@@ -251,8 +254,8 @@ static int get_pid_num_and_name(char *name)
     while (fgets(line, MAX_PATH_LEN-1, fp))
       {
       if (sscanf(line,
-         "%d /usr/libexec/cloonix/server/cloonix-main-server "
-         "/usr/libexec/cloonix/common/etc/cloonix.cfg %s",
+         "%d /usr/libexec/cloonix/cloonfs/cloonix-main-server "
+         "/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg %s",
          &pid, tmp_name) == 2) 
        {
        result = pid;
@@ -1482,8 +1485,8 @@ int msg_mngt_get_epfd(void)
 }
 /*---------------------------------------------------------------------------*/
 
-
 /****************************************************************************/
+#include <execinfo.h>
 static void full_write(int fd, const char *buf, size_t len)
 {
   ssize_t ret;
@@ -1496,10 +1499,6 @@ static void full_write(int fd, const char *buf, size_t len)
     len -= (size_t) ret;
     }
 }
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
 static void sigsegv_handler(int sig)
 { 
   char start[] = "BACKTRACE ------------\n";
@@ -1517,9 +1516,9 @@ static void sigsegv_handler(int sig)
     len = strlen(bt_syms[i]);
     full_write(fd, bt_syms[i], len);
     full_write(fd, "\n", 1);
+    syncfs(fd);
     }
   full_write(fd, end, strlen(end));
-  free(bt_syms);
   close(fd);
   exit(1);
 }

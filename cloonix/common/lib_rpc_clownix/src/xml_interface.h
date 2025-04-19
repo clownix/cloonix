@@ -238,6 +238,12 @@
 
 #define SLOWPERIODIC_IMG_C    "</slowperiodic_img>"
 /*---------------------------------------------------------------------------*/
+#define SLOWPERIODIC_CVM_O    "<slowperiodic_cvm>\n"\
+                              "  <tid> %d </tid>\n"\
+                              "  nb:%d \n"
+
+#define SLOWPERIODIC_CVM_C    "</slowperiodic_cvm>"
+/*---------------------------------------------------------------------------*/
 #define SLOWPERIODIC_SPIC  "<slowperiodic_spic>\n"\
                            "  name:%s \n"\
                            "</slowperiodic_spic>"

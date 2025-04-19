@@ -72,63 +72,113 @@ static int is_duplicate(t_slowperiodic *slowperiodic, char *name, int max)
 }
 /*---------------------------------------------------------------------------*/
 
+
 /****************************************************************************/
-static int get_bulk_files(t_slowperiodic **slowperiodic, char *suffix)
+static void helper_get_cvm(char *path,
+                           t_slowperiodic **slowperiodic,
+                           int *nb, int max)
 {
   DIR *dirptr;
   struct dirent *ent;
-  int max = (MAX_BULK_FILES-1), nb = 0, len = max * sizeof(t_slowperiodic);
-  *slowperiodic=(t_slowperiodic *)clownix_malloc(len, 5);
-  memset(*slowperiodic, 0, len);
-  dirptr = opendir(cfg_get_bulk());
-  if (dirptr)
+  char sbin_init[MAX_PATH_LEN];
+  dirptr = opendir(path);
+  if (dirptr != NULL)
     {
     while ((ent = readdir(dirptr)) != NULL)
       {
-      if (!strcmp(ent->d_name, "."))
-        continue;
-      if (!strcmp(ent->d_name, ".."))
-        continue;
-      if (ent->d_type == DT_REG)
+      if (strlen(ent->d_name) == 0)
         {
-        if (ends_with_suffix(ent->d_name, suffix))
-          {
-          strncpy((*slowperiodic)[nb].name, ent->d_name, MAX_NAME_LEN-1);
-          nb += 1;
-          }
+        KERR("ERROR %s", path);
+        continue;
         }
-      if (nb >= max)
-        break;
-      }
-    if (closedir(dirptr))
-      KOUT("%d", errno);
-    }
-  dirptr = opendir(cfg_get_bulk_host());
-  if (dirptr)
-    {
-    while ((ent = readdir(dirptr)) != NULL)
-      {
       if (!strcmp(ent->d_name, "."))
         continue;
       if (!strcmp(ent->d_name, ".."))
         continue;
-      if (ent->d_type == DT_REG)
+      if (ent->d_type == DT_DIR)
         {
-        if (ends_with_suffix(ent->d_name, suffix))
+        memset(sbin_init, 0, MAX_PATH_LEN);
+        snprintf(sbin_init, MAX_PATH_LEN-1,
+                 "%s/%s/sbin/init", path, ent->d_name);
+        if (!access(sbin_init, F_OK))
           {
-          if (!is_duplicate(*slowperiodic, ent->d_name, nb))
+          if (!is_duplicate(*slowperiodic, ent->d_name, *nb))
             {
-            strncpy((*slowperiodic)[nb].name, ent->d_name, MAX_NAME_LEN-1);
-            nb += 1;
+            strncpy((*slowperiodic)[*nb].name, ent->d_name, MAX_NAME_LEN-1);
+            *nb += 1;
             }
           }
         }
-      if (nb >= max)
+      if (*nb >= max)
         break;
       }
     if (closedir(dirptr))
       KOUT("%d", errno);
     }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int get_bulk_files_cvm(t_slowperiodic **slowperiodic)
+{ 
+  int max = (MAX_BULK_FILES-1), nb = 0, len = max * sizeof(t_slowperiodic);
+  *slowperiodic=(t_slowperiodic *)clownix_malloc(len, 5);
+  memset(*slowperiodic, 0, len);
+  helper_get_cvm(cfg_get_bulk(), slowperiodic, &nb, max);
+  helper_get_cvm(cfg_get_bulk_host(), slowperiodic, &nb, max);
+  return nb;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void helper_get(char *path,
+                       t_slowperiodic **slowperiodic,
+                       char *suffix, int *nb, int max)
+{
+  DIR *dirptr;
+  struct dirent *ent;
+  dirptr = opendir(path);
+  if (dirptr != NULL)
+    {
+    while ((ent = readdir(dirptr)) != NULL)
+      {
+      if (strlen(ent->d_name) == 0)
+        {
+        KERR("ERROR %s %s", path, suffix);
+        continue;
+        }
+      if (!strcmp(ent->d_name, "."))
+        continue;
+      if (!strcmp(ent->d_name, ".."))
+        continue;
+      if (ent->d_type == DT_REG)
+        {
+        if (ends_with_suffix(ent->d_name, suffix))
+          {
+          if (!is_duplicate(*slowperiodic, ent->d_name, *nb))
+            {
+            strncpy((*slowperiodic)[*nb].name, ent->d_name, MAX_NAME_LEN-1);
+            *nb += 1;
+            }
+          }
+        }
+      if (*nb >= max)
+        break;
+      }
+    if (closedir(dirptr))
+      KOUT("%d", errno);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int get_bulk_files(t_slowperiodic **slowperiodic, char *suffix)
+{
+  int max = (MAX_BULK_FILES-1), nb = 0, len = max * sizeof(t_slowperiodic);
+  *slowperiodic=(t_slowperiodic *)clownix_malloc(len, 5);
+  memset(*slowperiodic, 0, len);
+  helper_get(cfg_get_bulk(), slowperiodic, suffix, &nb, max);
+  helper_get(cfg_get_bulk_host(), slowperiodic, suffix, &nb, max);
   return nb;
 }
 /*--------------------------------------------------------------------------*/
@@ -136,12 +186,14 @@ static int get_bulk_files(t_slowperiodic **slowperiodic, char *suffix)
 /*****************************************************************************/
 static void action_send_slowperiodic(void)
 {
-  int llid, tid, nb_qcow2, nb_img;
+  int llid, tid, nb_qcow2, nb_img, nb_cvm;
   t_slowperiodic *slowperiodic_qcow2;
   t_slowperiodic *slowperiodic_img;
+  t_slowperiodic *slowperiodic_cvm;
   t_slowperiodic_subs *cur = head_subs;
   nb_qcow2 = get_bulk_files(&slowperiodic_qcow2, ".qcow2");
   nb_img = get_bulk_files(&slowperiodic_img, ".zip");
+  nb_cvm = get_bulk_files_cvm(&slowperiodic_cvm);
   while (cur)
     {
     llid = cur->llid;
@@ -152,6 +204,8 @@ static void action_send_slowperiodic(void)
         send_slowperiodic_qcow2(llid, tid, nb_qcow2, slowperiodic_qcow2);
       if (nb_img)
         send_slowperiodic_img(llid, tid, nb_img, slowperiodic_img);
+      if (nb_cvm)
+        send_slowperiodic_cvm(llid, tid, nb_cvm, slowperiodic_cvm);
       }
     else
       event_print ("SLOWPERIODIC ERROR!!!!!!");

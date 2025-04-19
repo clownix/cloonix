@@ -27,12 +27,12 @@
 #include <sys/epoll.h>
 #include <sys/time.h>
 
+#include "glob_common.h"
 #include "mdl.h"
 #include "low_write.h"
 #include "wrap.h"
 #include "debug.h"
 #include "getsock.h"
-#include "glob_common.h"
 #include "util_sock.h"
 
 static char g_x11_path[MAX_TXT_LEN];
@@ -151,7 +151,7 @@ static int x11_init_unix(char *display, int num)
 {
   int fd, val, result = -1;
   char err[MAX_TXT_LEN];
-  snprintf(g_x11_path, MAX_TXT_LEN-1, UNIX_X11_SOCKET_PREFIX, num);
+  snprintf(g_x11_path, MAX_TXT_LEN-1, X11_DISPLAY_PREFIX, num);
   if (wrap_util_proxy_client_socket_unix(g_x11_path, &fd))
     {
     KERR("X11 SOCKET NOT FOUND: %s", g_x11_path);
@@ -172,7 +172,7 @@ static int x11_init_inet(char *display, int num)
   unsigned long inet_addr;
   int tmp_fd, result = -1;
   char err[MAX_TXT_LEN];
-  g_x11_port = X11_OFFSET_PORT + num;
+  g_x11_port = X11_DISPLAY_OFFSET_PORT + num;
   mdl_ip_string_to_int(&inet_addr, "127.0.0.1"); 
   tmp_fd = wrap_socket_connect_inet(inet_addr, g_x11_port, 
                                     fd_type_x11_connect_tst, __FUNCTION__);
@@ -232,7 +232,7 @@ void x11_init_resp(int srv_idx, t_msg *msg)
   g_x11_srv_idx = 0;
   if (!strcmp(msg->buf, "OK"))
     {
-    if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+    if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
       {
       KOUT("%d", srv_idx);
       }

@@ -373,7 +373,7 @@ static void rx_msg_cb(void *ptr, int llid, int sock_fd, t_msg *msg)
     case msg_type_open_cmd:
     case msg_type_open_ovs:
     case msg_type_open_slf:
-      if ((srv_idx < SRV_IDX_MIN) || (srv_idx > SRV_IDX_MAX))
+      if ((srv_idx < X11_DISPLAY_XWY_MIN) || (srv_idx > X11_DISPLAY_XWY_MAX))
         KERR("ERROR %d", srv_idx);
       else
         {
@@ -616,6 +616,38 @@ static int heartbeat_10th_second(struct timeval *cur)
 }
 /*--------------------------------------------------------------------------*/
 
+
+/****************************************************************************/
+static int check_and_set_uid(void)
+{
+  int result = -1;
+  uid_t uid;
+  if ((getuid() == 0) && getgid() == 0)
+    {
+    result = 0;
+    }
+  else
+    {
+    seteuid(0);
+    setegid(0);
+    uid = geteuid();
+    if (uid == 0)
+      {
+      result = 0;
+      umask(0000);
+      if (setuid(0))
+        KOUT(" ");
+      if (setgid(0))
+        KOUT(" ");
+      }
+    else
+      KERR("ERROR uid %d", uid);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+
 /****************************************************************************/
 int main(int argc, char **argv)
 {
@@ -628,6 +660,8 @@ int main(int argc, char **argv)
 
   daemon(0,0);
   DEBUG_INIT(1);
+  if (check_and_set_uid())
+    KOUT("ERROR");
   g_nb_cli = 0;
   mdl_init();
   low_write_init();

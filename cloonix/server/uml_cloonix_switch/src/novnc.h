@@ -23,7 +23,7 @@
 "daemon off;\n"\
 "events {}\n"\
 "http {\n"\
-"    root /usr/libexec/cloonix/common/share/noVNC;\n"\
+"    root /usr/libexec/cloonix/cloonfs/share/noVNC;\n"\
 "    upstream vnc_proxy {\n"\
 "        server 127.0.0.1:%s;\n"\
 "    }\n"\

@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <linux/icmp.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 
@@ -29,6 +28,27 @@
 #include "rpc_clownix.h"
 #include "rxtx.h"
 #include "utils.h"
+
+
+
+struct icmphdr {
+  __u8          type;
+  __u8          code;
+  __sum16       checksum;
+  union {
+        struct {
+                __be16  id;
+                __be16  sequence;
+        } echo;
+        __be32  gateway;
+        struct {
+                __be16  __unused;
+                __be16  mtu;
+        } frag;
+        __u8    reserved[4];
+  } un;
+};
+
 
 typedef struct t_icmp
 { 

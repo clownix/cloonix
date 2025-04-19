@@ -286,6 +286,10 @@ static void attached_associations_delete(t_bank_item *bitem)
 
     case bank_type_node:
     case bank_type_cnt:
+      if (bitem->xephyr_frame_pid)
+        kill(bitem->xephyr_frame_pid, SIGKILL);
+      if (bitem->xephyr_session_pid)
+        kill(bitem->xephyr_session_pid, SIGKILL);
       if (bitem->spicy_gtk_pid)
         kill(bitem->spicy_gtk_pid, SIGKILL);
       if (bitem->dtach_pid)
@@ -301,6 +305,8 @@ static void attached_associations_delete(t_bank_item *bitem)
         next = cur->next;
         kill(cur->pid, SIGKILL);
         bank_set_wireshark_pid(bitem->name, cur->num, 0);
+        bank_set_xephyr_frame_pid(bitem->name, 0);
+        bank_set_xephyr_session_pid(bitem->name, 0);
         cur = next;
         }
 
@@ -766,7 +772,7 @@ int add_new_cnt(char *type, char *name, char *image, int vm_id,
                                       eorig_noedge);
     bitem->pbi.pbi_cnt = (t_pbi_cnt *) clownix_malloc(sizeof(t_pbi_cnt), 14);
     memset(bitem->pbi.pbi_cnt, 0, sizeof(t_pbi_cnt));
-    strncpy(bitem->pbi.pbi_cnt->type, type, MAX_NAME_LEN-1);
+    strncpy(bitem->pbi.pbi_cnt->brandtype, type, MAX_NAME_LEN-1);
     strncpy(bitem->pbi.pbi_cnt->image, image, MAX_PATH_LEN-1);
     bitem->pbi.pbi_cnt->cnt_evt_ping_ok = ping_ok;
     bitem->pbi.pbi_cnt->cnt_vm_id = vm_id;

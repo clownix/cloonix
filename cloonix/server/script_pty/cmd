@@ -1,7 +1,0 @@
-#!/bin/bash
-HERE=`pwd`
-
-gcc -o cloonix-scriptpty scriptpty.c 
-
-
-

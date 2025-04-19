@@ -42,7 +42,7 @@ char *get_cloonix_config_path(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static char *get_cloonix_config_path_name(void)
+static char *get_inside_cloonix_config_path_name(void)
 {
   return ("/mnt/cloonix_config_fs/cloonix_vm_name");
 }
@@ -64,16 +64,16 @@ void make_config_cloonix_vm_name(char *confpath, char *name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int i_am_inside_cloon(char *name)
+int i_am_inside_cloonix(char *name)
 {
   int result, len;
   char err[MAX_PATH_LEN];
   char *buf;
   memset(name, 0, MAX_NAME_LEN);
-  result = file_exists(get_cloonix_config_path_name(), R_OK);
+  result = file_exists(get_inside_cloonix_config_path_name(), R_OK);
   if (result)
     {
-    buf = read_whole_file(get_cloonix_config_path_name(), &len, err);
+    buf = read_whole_file(get_inside_cloonix_config_path_name(), &len, err);
     if (!buf)
       {
       KERR("%s", err);

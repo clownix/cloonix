@@ -394,7 +394,7 @@ void doorways_init(char *net, char *root_work, int server_port, char *password)
   g_doorways_llid = 0;
   g_abs_beat_timer = 0;
   g_ref_timer = 0;
-  sprintf(g_bin_doorways, "%s/server/cloonix-doorways", cfg_get_bin_dir());
+  sprintf(g_bin_doorways, "%s/cloonfs/cloonix-doorways", cfg_get_bin_dir());
   strncpy(g_root_work, root_work, MAX_PATH_LEN-1);
   snprintf(g_server_port, MAX_NAME_LEN-1, "%d", server_port);
   snprintf(g_net_name, MAX_NAME_LEN-1, net);

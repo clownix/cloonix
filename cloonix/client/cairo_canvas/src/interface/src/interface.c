@@ -277,7 +277,7 @@ void launch_xterm_double_click(char *name_vm, int vm_config_flags)
   static char passwd[MAX_NAME_LEN];
 
   static char *argv[] = {URXVT_BIN, "-T", title, "-e",
-                         "/usr/libexec/cloonix/common/cloonix-dropbear-ssh",
+                         "/usr/libexec/cloonix/cloonfs/cloonix-dropbear-ssh",
                          addr, passwd, name, NULL};
 
   static char *argvnatplug[] = {URXVT_BIN, "-T", title, "-e",
@@ -362,7 +362,14 @@ static void slowperiodic_qcow2_cb(int nb, t_slowperiodic *spic)
 /****************************************************************************/
 static void slowperiodic_img_cb(int nb, t_slowperiodic *spic)
 {
-  set_bulcru(nb, spic);
+  set_bulzip(nb, spic);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void slowperiodic_cvm_cb(int nb, t_slowperiodic *spic)
+{
+  set_bulcvm(nb, spic);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -427,7 +434,9 @@ void timer_topo_subscribe(void *data)
   client_topo_small_event_sub(0, topo_small_event_cb);
   layout_set_ready_for_send();
   client_req_eventfull(eventfull_cb);
-  client_req_slowperiodic(slowperiodic_qcow2_cb, slowperiodic_img_cb);
+  client_req_slowperiodic(slowperiodic_qcow2_cb,
+                          slowperiodic_img_cb,
+                          slowperiodic_cvm_cb);
 }
 /*--------------------------------------------------------------------------*/
 

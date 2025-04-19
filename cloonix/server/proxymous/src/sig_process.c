@@ -56,7 +56,9 @@ void sig_process_heartbeat(void)
       KOUT("ERROR");
     proxy_sig_tx(llid_sig, strlen(beat_req)+1, beat_req);
     if (g_heartbeat_count == 3)
-      KOUT("ERROR");
+      KERR("WARNING HEARTBEAT");
+    if (g_heartbeat_count == 6)
+      KOUT("ERROR HEARTBEAT");
     g_heartbeat_count += 1;
     }
 }

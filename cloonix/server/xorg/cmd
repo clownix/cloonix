@@ -7,4 +7,6 @@ meson setup --wipe build
 cd ${HERE}/xserver/build
 ninja
 strip hw/vfb/Xvfb
+strip hw/kdrive/ephyr/Xephyr
 mv hw/vfb/Xvfb ${HERE}
+mv hw/kdrive/ephyr/Xephyr ${HERE}

@@ -25,7 +25,7 @@
 #include "rpc_clownix.h"
 #include "rxtx.h"
 #include "utils.h"
-#include "tcp.h"
+#include "ltcp.h"
 #include "tcp_flagseq.h"
 #include "tcp_qstore.h"
 #include "ssh_cisco_nat.h"

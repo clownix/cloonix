@@ -64,8 +64,8 @@ static t_x11_ctx *get_head_ctx_with_dido_llid(int dido_llid)
 static t_x11_ctx *get_ctx_with_sub_dido_idx(int dido_llid, int sub_dido_idx)
 {
   t_x11_ctx *cur = get_head_ctx_with_dido_llid(dido_llid);
-  if ((sub_dido_idx < 1) || (sub_dido_idx > MAX_IDX_X11))
-    KOUT("ERROR %d %d", sub_dido_idx, MAX_IDX_X11);
+  if ((sub_dido_idx < 1) || (sub_dido_idx > X11_DISPLAY_IDX_MAX))
+    KOUT("ERROR %d %d", sub_dido_idx, X11_DISPLAY_IDX_MAX);
   while (cur && (cur->sub_dido_idx != sub_dido_idx))
     cur = cur->next;
   return cur;
@@ -133,7 +133,8 @@ static void free_ctx(int dido_llid, int sub_dido_idx)
     if (msg_exist_channel(cur->backdoor_llid))
       llid_backdoor_tx_x11_close_to_agent(cur->backdoor_llid, 
                                           cur->dido_llid, cur->sub_dido_idx);
-    send_ctrl_x11_close_to_client(cur);
+    if (msg_exist_channel(dido_llid))
+      send_ctrl_x11_close_to_client(cur);
     if (cur->prev)
       cur->prev->next = cur->next;
     if (cur->next)
@@ -194,7 +195,11 @@ void x11_doors_open_close (int backdoor_llid, int dido_llid, char *rx_payload)
     if (cur)
       free_ctx(dido_llid, sub_dido_idx);
     else
-      KERR("WARNING %d %d %s", backdoor_llid, dido_llid, rx_payload); 
+      {
+      if (msg_exist_channel(backdoor_llid))
+        llid_backdoor_tx_x11_close_to_agent(backdoor_llid,
+                                            dido_llid, sub_dido_idx);
+      }
     }
   else
     KERR("ERROR %d %d %s", backdoor_llid, dido_llid, rx_payload); 
@@ -225,10 +230,17 @@ void x11_doors_write(int dido_llid, int sub_dido_idx, int len, char *buf)
     KERR("ERROR %d %d", dido_llid, sub_dido_idx);
   else
     {
-    if (doorways_tx_bufraw(dido_llid, dido_llid,
-                           doors_type_dbssh_x11_traf,
-                           sub_dido_idx, len, buf))
+    if (!msg_exist_channel(dido_llid))
+      {
       KERR("WARNING %d %d %d", dido_llid, sub_dido_idx, len);
+      free_ctx(dido_llid, sub_dido_idx);
+      }
+    else if (doorways_tx_bufraw(dido_llid, dido_llid,
+                                doors_type_dbssh_x11_traf,
+                                sub_dido_idx, len, buf))
+      {
+      KERR("WARNING %d %d %d", dido_llid, sub_dido_idx, len);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -284,7 +296,6 @@ void receive_ctrl_x11_from_client(int dido_llid, int sub_dido_idx,
       }
     else if (!strcmp(buf, DOOR_X11_OPENKO))
       {
-      KERR("WARNING DOOR_X11_OPENKO: %d %d", dido_llid, sub_dido_idx);
       free_ctx(dido_llid, sub_dido_idx);
       }
     else

@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
-CLOONIX_CFG="/usr/libexec/cloonix/common/etc/cloonix.cfg"
+CLOONIX_CFG="/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
 if [ ! -f $CLOONIX_CFG ]; then
   echo "ERROR: $CLOONIX_CFG not found"
   exit 1
 fi
-SWITCH_BIN="/usr/libexec/cloonix/server/cloonix-main-server"
+SWITCH_BIN="/usr/libexec/cloonix/cloonfs/cloonix-main-server"
 if [ ! -x $SWITCH_BIN ]; then
   echo "ERROR: $SWITCH_BIN not found"
   exit 1

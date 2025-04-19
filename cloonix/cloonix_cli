@@ -1,6 +1,6 @@
-#!/usr/libexec/cloonix/common/bash
+#!/usr/libexec/cloonix/cloonfs/bash
 set -e
-NSH="/usr/libexec/cloonix/common/cloonix-hide-dirs"
+NSH="/usr/libexec/cloonix/cloonfs/cloonix-hide-dirs"
 if [ 2 -gt ${#} ]; then
   echo  cloonix_name and cmd needed as parameter.
   ${NSH} "cli"

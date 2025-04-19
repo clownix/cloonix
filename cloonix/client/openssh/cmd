@@ -9,8 +9,9 @@ make
 cd ${HERE}
 ./patched_create
 cd tainted_openssh-portable
-export CFLAGS="-mtune=generic -fno-stack-protector"
+export CFLAGS="-mtune=generic -fno-stack-protector -Wno-format-truncation -Wunused-but-set-variable -Wunused-function"
 ./configure
+sed -i s'/#define HAVE_SYS_CDEFS_H 1/#undef HAVE_SYS_CDEFS_H/' config.h
 make
 mv ssh cloonix-u2i-ssh
 mv scp cloonix-u2i-scp

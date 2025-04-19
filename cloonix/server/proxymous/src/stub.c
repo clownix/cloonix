@@ -101,6 +101,7 @@ void recv_work_dir_resp(int llid, int tid, t_topo_clc *conf){KERR("WARNING TOLOO
 void recv_eventfull(int llid, int tid, int nb_endp, t_eventfull_endp *endp){KERR("WARNING TOLOOKAT");}
 void recv_slowperiodic_qcow2(int llid, int tid, int nb, t_slowperiodic *spic){KERR("WARNING TOLOOKAT");}
 void recv_slowperiodic_img(int llid, int tid, int nb, t_slowperiodic *spic){KERR("WARNING TOLOOKAT");}
+void recv_slowperiodic_cvm(int llid, int tid, int nb, t_slowperiodic *spic){KERR("WARNING TOLOOKAT");}
 void recv_sync_wireshark_resp(int llid,int tid,char *name,int num,int status){KERR("WARNING TOLOOKAT");}
 void recv_event_sys(int llid, int tid, t_sys_info *info) {KERR("WARNING TOLOOKAT");}
 
