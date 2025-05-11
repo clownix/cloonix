@@ -18,7 +18,6 @@
 typedef struct t_custom_vm
 {
   char name[MAX_NAME_LEN];
-  char kvm_used_rootfs[MAX_PATH_LEN];
   int  type;
   int  is_full_virt;
   int  is_persistent;

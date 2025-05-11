@@ -68,9 +68,9 @@ static int rx_cb(int llid, int fd)
   uint8_t *buf;
   int green_light = udp_get_traffic_mngt();
   len = read(fd, g_buf_rx, HEADER_TAP_MSG);
-  if (len <= 0)
+  if (len != HEADER_TAP_MSG)
     KOUT("ERROR READ %d %d", len, errno);
-  result = fct_seqtap_rx(0, 0, fd, g_buf_rx, &seq, &buf_len, &buf);
+  result = fct_seqtap_rx(fd, g_buf_rx, &seq, &buf_len, &buf);
   if (result != kind_seqtap_data)
     KOUT("ERROR %d", result);
   if (seq != ((seqtap+1)&0xFFFF))

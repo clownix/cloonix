@@ -35,6 +35,9 @@
 #include "menu_dialog_kvm.h"
 #include "menu_dialog_cnt.h"
 
+char *get_brandtype_image(char *type);
+char *get_brandtype_type(void);
+
 static t_topo_info *topo_info = NULL;
 static int topo_count = 0;
 
@@ -73,24 +76,22 @@ void timer_create_item_node_req(void *data)
     get_custom_vm(&cust_vm);
     for (i=0; i<MAX_ETH_VM; i++)
       thidden_on_graph[i] = 0;
-    if (cust_vm->kvm_used_rootfs[0])
-      {
-      vm_config_flags = get_vm_config_flags(cust_vm, &natplug);
-      set_node_layout_x_y(cust_vm->name, pa->x, pa->y, 0, 
-                          pa->tx, pa->ty, thidden_on_graph);
-      client_add_vm(0, callback_end, cust_vm->name,
-                    cust_vm->nb_tot_eth, cust_vm->eth_tab,
-                    vm_config_flags, natplug, cust_vm->cpu, cust_vm->mem,
-                    NULL, cust_vm->kvm_used_rootfs, NULL, NULL, NULL);
-      }
-    else
-      insert_next_warning("rootfs is empty!", 1);
+    vm_config_flags = get_vm_config_flags(cust_vm, &natplug);
+    set_node_layout_x_y(cust_vm->name, pa->x, pa->y, 0, 
+                        pa->tx, pa->ty, thidden_on_graph);
+    client_add_vm(0, callback_end, cust_vm->name,
+                  cust_vm->nb_tot_eth, cust_vm->eth_tab,
+                  vm_config_flags, natplug, cust_vm->cpu, cust_vm->mem,
+                  NULL, get_brandtype_image(NULL), NULL, NULL, NULL);
     }
+  else if ((strcmp(get_brandtype_type(), "brandzip")) &&
+           (strcmp(get_brandtype_type(), "brandcvm")))
+    KERR("ERROR %s", get_brandtype_type());
   else
     {
     get_custom_cnt(&cust_cnt);
     memset(&cust_topo_cnt, 0, sizeof(t_topo_cnt));
-    strncpy(cust_topo_cnt.brandtype, cust_cnt->brandtype, MAX_NAME_LEN-1);
+    strncpy(cust_topo_cnt.brandtype, get_brandtype_type(), MAX_NAME_LEN-1);
     strncpy(cust_topo_cnt.name, cust_cnt->name, MAX_NAME_LEN-1);
     strncpy(cust_topo_cnt.startup_env, cust_cnt->startup_env, MAX_PATH_LEN-1);
     strncpy(cust_topo_cnt.vmount, cust_cnt->vmount, MAX_SIZE_VMOUNT-1);
@@ -98,12 +99,7 @@ void timer_create_item_node_req(void *data)
     cust_topo_cnt.nb_tot_eth = cust_cnt->nb_tot_eth;
     memcpy(cust_topo_cnt.eth_table, cust_cnt->eth_table,
            cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));
-    if (!strcmp(cust_cnt->brandtype, "brandzip"))
-      strncpy(cust_topo_cnt.image, cust_cnt->zip_image, MAX_PATH_LEN-1);
-    else if (!strcmp(cust_cnt->brandtype, "brandcvm"))
-      strncpy(cust_topo_cnt.image, cust_cnt->cvm_image, MAX_PATH_LEN-1);
-    else
-      KERR("ERROR %s", cust_cnt->brandtype);
+    strncpy(cust_topo_cnt.image, get_brandtype_image(NULL), MAX_PATH_LEN-1);
     client_add_cnt(0, callback_end, &cust_topo_cnt);
     }
   clownix_free(pa, __FUNCTION__);

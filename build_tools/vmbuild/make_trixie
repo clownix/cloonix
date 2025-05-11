@@ -127,6 +127,7 @@ for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive locales
 sync /dev/loop0
 umount /tmp/wkmntloops/{dev,proc,sys}
+rm -f /tmp/wkmntloops/root/debconf_selection
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#
 qemu-img convert -O qcow2 ${ROOTFS} ${ROOTFS}.qcow2

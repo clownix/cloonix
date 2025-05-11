@@ -31,6 +31,7 @@
 #include <sys/select.h>
 #include <fcntl.h>
 #include <linux/tcp.h>
+#include <dirent.h>
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
@@ -98,10 +99,12 @@ static int check_and_set_uid(void)
     {
     result = 0;
     if (setuid(0))
-      KOUT("ERROR setuid");
+      KERR("ERROR setuid");
     if (setgid(0))
-      KOUT("ERROR setgid");
+      KERR("ERROR setgid");
     }
+  else 
+    KERR("WARNING NOT SUID ROOT");
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -304,9 +307,35 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void check_and_create_tmp_dir(char *tmp_dir)
+{
+  DIR *dir;
+  int result;
+  dir = opendir(tmp_dir);
+  if (dir)
+    {
+    if (access(tmp_dir, W_OK))
+      KOUT("ERROR %s exists but is not writable", tmp_dir);
+    closedir(dir);
+    }
+  else if (errno == ENOENT)
+    {
+    result = mkdir(tmp_dir, 0777);
+    if (result)
+      KOUT("ERROR CANNOT MKDIR %s", tmp_dir);
+    if (access(tmp_dir, W_OK))
+      KOUT("ERROR %s", tmp_dir);
+    }
+  else
+    KOUT("ERROR %s opendir %d", tmp_dir, errno);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int main(int argc, char **argv)
 {
   char proxyshare_in_dir[MAX_PATH_LEN];
+  char x11_unix_dir[MAX_PATH_LEN];
 
   if (argc != 3)
     {
@@ -314,8 +343,7 @@ int main(int argc, char **argv)
     exit(-1);
     }
   umask(0000);
-  if (check_and_set_uid())
-    KERR("WARNING: %s DOES NOT HAVE PRIVILEDGES FOR ICMP", argv[0]);
+  check_and_set_uid();
   test_dev_kvm();
   g_llid_sig = 0;
   g_llid_ctrl = 0;
@@ -331,11 +359,14 @@ int main(int argc, char **argv)
   memset(g_proxyshare_dir, 0, MAX_PATH_LEN);
   memset(proxyshare_in_dir, 0, MAX_PATH_LEN);
   strncpy(g_proxyshare_dir, argv[1], MAX_PATH_LEN-1);
+  snprintf(x11_unix_dir, MAX_PATH_LEN-1,"%s/X11-unix", argv[1]);
   strncpy(g_net_name, argv[2], MAX_NAME_LEN-1);
   snprintf(proxyshare_in_dir, MAX_PATH_LEN-1,"%s_%s",
            PROXYSHARE_IN, g_net_name );
   snprintf(g_ctrl_path, MAX_PATH_LEN-1,"%s/%s",
            g_proxyshare_dir, PROXYMOUS);
+  check_and_create_tmp_dir(g_proxyshare_dir);
+  check_and_create_tmp_dir(x11_unix_dir);
   if (!access(g_ctrl_path, R_OK))
     {
     KERR("ERROR %s exists ERASING", g_ctrl_path);

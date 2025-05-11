@@ -51,6 +51,7 @@
 #include "cloonix_conf_info.h"
 #include "bdplot.h"
 #include "pidwait.h"
+#include "canvas_ctx.h"
 
 
 void interface_topo_subscribe(void);
@@ -502,6 +503,7 @@ int main(int argc, char *argv[])
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
 
+  canvas_ctx_init();
   memset(g_doors_client_addr, 0, MAX_PATH_LEN);
   running_in_crun = lib_io_running_in_crun(tmpnet);
   if (running_in_crun && (!strcmp(tmpnet, argv[2])))

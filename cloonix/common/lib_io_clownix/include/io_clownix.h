@@ -63,8 +63,8 @@ enum {
      };
 void fct_seqtap_tx(int kind, uint8_t *tx, uint16_t seqtap,
                    int len, uint8_t *buf);
-int fct_seqtap_rx(int is_dgram, int tot_len, int fd, uint8_t *rx,
-                  uint16_t *seq, int *buf_len, uint8_t **buf);
+int fct_seqtap_rx_udp(int len, int fd, uint8_t *rx, uint16_t *seq, int *buf_len, uint8_t **buf);
+int fct_seqtap_rx(int fd, uint8_t *rx, uint16_t *seq, int *buf_len, uint8_t **buf);
 /*---------------------------------------------------------------------------*/
 
 
@@ -82,6 +82,8 @@ int get_fd_with_llid(int llid);
 int get_in_bytes_with_cidx(int cidx);
 int get_out_bytes_with_cidx(int cidx);
 
+int channel_get_rx_local_flow_ctrl(int llid);
+int channel_get_tx_local_flow_ctrl(int llid);
 void channel_rx_local_flow_ctrl(int llid, int stop);
 void channel_tx_local_flow_ctrl(int llid, int stop);
 /*---------------------------------------------------------------------------*/

@@ -1,12 +1,10 @@
 #!/bin/bash
 #----------------------------------------------------------------------------#
 HERE=`pwd`
-NET="mito"
-NAME="build"
-BULK="/var/lib/cloonix/bulk/"
-FROM="alpine_base.qcow2"
-QCOW2="alpine_builder.qcow2"
-PARAMS="ram=8000 cpu=4 eth=s"
+NET="nemo"
+NAME="alpine"
+ALPINE3="/var/lib/cloonix/bulk/alpine3"
+ALPINE_BUILDER="/var/lib/cloonix/bulk/alpine_builder"
 #----------------------------------------------------------------------------#
 is_started=$(cloonix_cli $NET pid |grep cloonix_server)
 if [ "x$is_started" == "x" ]; then
@@ -14,13 +12,34 @@ if [ "x$is_started" == "x" ]; then
   printf "\ncloonix_net $NET:\n"
   cloonix_net $NET
 else
-  cloonix_cli $NET rma
+  echo cloonix $NET working! Please kill it with:
+  echo cloonix_cli $NET kil
+  exit 1
 fi
 #----------------------------------------------------------------------------#
-cp -f ${BULK}/${FROM} ${BULK}/${QCOW2}
-#----------------------------------------------------------------------------#
+if [ -e ${ALPINE_BUILDER} ]; then
+  echo ${ALPINE_BUILDER} already exists, erasing
+  unshare --user --fork --pid --mount --mount-proc \
+          --map-users=100000,0,10000 --map-groups=100000,0,10000 \
+          --setuid 0 --setgid 0 -- \
+          /bin/bash -c "\
+                       rm -rf ${ALPINE_BUILDER}"
+fi
+if [ -e ${ALPINE_BUILDER} ]; then
+  echo ERROR ${ALPINE_BUILDER} exists and cannot be erased
+  exit 1
+fi
+#----------------------------------------------------------------------#
+
+#----------------------------------------------------------------------#
+unshare --user --fork --pid --mount --mount-proc \
+        --map-users=100000,0,10000 --map-groups=100000,0,10000 \
+        --setuid 0 --setgid 0 -- \
+        /bin/bash -c "\
+                     cp -rf ${ALPINE3} ${ALPINE_BUILDER}"
+#----------------------------------------------------------------------#
 cloonix_gui ${NET}
-cloonix_cli ${NET} add kvm ${NAME} ${PARAMS} ${QCOW2} --persistent
+cloonix_cli ${NET} add cvm ${NAME} eth=s alpine_builder --persistent
 cloonix_cli ${NET} add nat nat
 cloonix_cli ${NET} add lan ${NAME} 0 lan1
 cloonix_cli ${NET} add lan nat 0 lan1
@@ -44,14 +63,28 @@ LIST="${LIST} libxkbfile-dev libxfont2-dev libxcvt-dev eudev-dev"
 LIST="${LIST} qt6-qtbase-dev qt6-qttools-dev qt6-qt5compat-dev"
 LIST="${LIST} libpcap-dev gperf argp-standalone libxt-dev libxmu-dev"
 LIST="${LIST} libsm-dev libice-dev lz4-dev libaio-dev liburing-dev"
-LIST="${LIST} openssh xorriso"
+LIST="${LIST} openssh xorriso xfce4 xfce4-terminal xfce4-session"
+LIST="${LIST} font-dejavu xeyes rsyslog dbus dbus-x11 strace"
+LIST="${LIST} gpg-agent pm-utils"
 
+#  while [ 1 ]; do
+#    cloonix_ssh ${NET} ${NAME} "rm -f main"
+#    cloonix_ssh ${NET} ${NAME} "wget http://172.17.0.2/alpine/main"
+#  done
 
 apkcmd="apk --allow-untrusted --no-cache --update add"
+
 for i in ${LIST}; do
   echo DOING: ${i}
   cloonix_ssh ${NET} ${NAME} "${apkcmd} ${i}"
 done
+
+LIST="syslog dbus"
+for i in ${LIST}; do
+  echo DOING: "rc-update add ${i}"
+  cloonix_ssh ${NET} ${NAME} "rc-update add ${i}"
+done
+
 #----------------------------------------------------------------------------#
 cloonix_ssh ${NET} ${NAME} "sync"
 cloonix_ssh ${NET} ${NAME} "poweroff"

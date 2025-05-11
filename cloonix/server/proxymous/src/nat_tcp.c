@@ -162,8 +162,6 @@ static t_tcp_flow *find_cnx_with_params(t_ctx_nat *ctx,
   return cur;
 }
 /*--------------------------------------------------------------------------*/
-
-
     
 /****************************************************************************/
 static void no_timeout_tcp_ctx_err(t_tcp_flow *cur)
@@ -209,7 +207,9 @@ static void tcp_ctx_err(t_tcp_flow *cur)
   if (!cur)
     KERR("ERROR");
   else 
-    clownix_timeout_add(100, timeout_tcp_ctx_err, (void *) cur, NULL, NULL);
+    {
+    clownix_timeout_add(500, timeout_tcp_ctx_err, (void *) cur, NULL, NULL);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -230,11 +230,19 @@ static void timeout_beat(void *data)
         {
         cur->delayed_count -= 1; 
         if (cur->delayed_count <= 0)
+          {
+          KERR("ERROR TIMEOUT TCP %s sip:%X dip:%X sport:%hu dport:%hu",
+               cur->ctx->nat, cur->sip, cur->dip, cur->sport, cur->dport);
           tcp_ctx_err(cur);
+          }
         }
       cur->inactivity_count += 1;
       if (cur->inactivity_count > 100000)
+        {
+        KERR("ERROR TIMEOUT TCP %s sip:%X dip:%X sport:%hu dport:%hu",
+             cur->ctx->nat, cur->sip, cur->dip, cur->sport, cur->dport);
         tcp_ctx_err(cur);
+        }
       }
     cur_llid = next_llid;
     }
@@ -243,12 +251,34 @@ static void timeout_beat(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void delayed_clean(t_tcp_flow *cur, int llid)
+/*
+static void empty_and_clean(void *data)
 {
-  channel_rx_local_flow_ctrl(llid, 1);
-  if (cur->delayed_count == 0)
-    cur->delayed_count = 1000;
+  t_tcp_flow *input_cur = (t_tcp_flow *) data;
+  t_llid_tcp *cur_llid = g_head_llid_tcp;
+  int result;
+
+  while(cur_llid)
+    {
+    if (cur_llid->item == input_cur)
+      break;
+    cur_llid = cur_llid->next;
+    }
+  if (!cur_llid)
+    KERR("ERROR");
+  else
+    {
+    if ((input_cur->llid_inet) &&
+        (msg_exist_channel(input_cur->llid_inet)))
+      msg_delete_channel(input_cur->llid_inet);
+    result = msg_mngt_get_tx_queue_len(input_cur->llid_unix);
+    if (result)
+      KERR("ERROR QUEUE %d %d", result, input_cur->llid_unix);
+    else
+      tcp_free(input_cur->ctx, cur_llid);
+    }
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -330,10 +360,7 @@ static void unix_err_cb (int llid, int err, int from)
     if (!cur)
       KERR("ERROR %d %d %d", llid, err, from);
     else
-      {
-      KERR("ERROR %d %d %s", err, from, cur->stream);
       tcp_ctx_err(cur);
-      }
     }
   msg_delete_channel(llid);
 }   
@@ -367,7 +394,6 @@ static void unix_rx_cb (int llid, int len, char *buf)
       }
     else if (!msg_exist_channel(cur->llid_inet))
       {
-      KERR("ERROR UNIX NO INET");
       tcp_ctx_err(cur);
       }
     else
@@ -376,13 +402,24 @@ static void unix_rx_cb (int llid, int len, char *buf)
       nb_pkts = len / max_len;
       left_over = len % max_len;
       for (i=0; i<nb_pkts; i++)
+        {
         watch_tx(cur->llid_inet, max_len, buf+(i*max_len));
+        }
       if (left_over)
+        {
         watch_tx(cur->llid_inet, left_over, buf+(nb_pkts*max_len));
-      
+        } 
       result = msg_mngt_get_tx_queue_len(cur->llid_inet);
       if (result > 50000)
         KERR("QUEUE TRANSMIT len:%d qlen:%d", len, result);
+      if (channel_get_rx_local_flow_ctrl(cur->llid_inet))
+        {
+        KERR("ERROR RED FLOW STOP RX %d", cur->llid_inet);
+        channel_rx_local_flow_ctrl(cur->llid_inet, 0);
+        }
+      if (channel_get_tx_local_flow_ctrl(cur->llid_inet))
+        KERR("ERROR RED FLOW STOP TX %d", cur->llid_inet);
+      cur->inet_tx_bytes += len;
       }
     }
 }   
@@ -419,7 +456,15 @@ static int inet_rx_cb(int llid, int fd)
       }
     else if (data_len == 0)
       {
-      delayed_clean(cur, llid);
+      if (cur->empty_and_clean_called == 0)
+        {
+        channel_rx_local_flow_ctrl(cur->llid_inet, 1);
+        cur->empty_and_clean_called = 1;
+        if ((cur->llid_inet) &&
+            (msg_exist_channel(cur->llid_inet)))
+          msg_delete_channel(cur->llid_inet);
+    //    clownix_timeout_add(20, empty_and_clean, (void *) cur, NULL, NULL);
+        }
       }
     else if (data_len < 0)
       {
@@ -436,6 +481,11 @@ static int inet_rx_cb(int llid, int fd)
       }
     else
       {
+      cur->inet_rx_bytes += data_len;
+      if (channel_get_rx_local_flow_ctrl(cur->llid_unix))
+        KERR("ERROR RED FLOW STOP RX %d", cur->llid_unix);
+      if (channel_get_tx_local_flow_ctrl(cur->llid_unix))
+        KERR("ERROR RED FLOW STOP TX %d", cur->llid_unix);
       cur->inactivity_count = 0;
       proxy_traf_unix_tx(cur->llid_unix, data_len, data);
       result = data_len;
@@ -518,7 +568,10 @@ static void timeout_connect(void *data)
       }
     else
       {
-      con->fd = open_connect_tcp_sock(con->dip, con->dport);
+      if (con->dip == g_our_gw_ip)
+        con->fd = open_connect_tcp_sock(g_host_local_ip, con->dport);
+      else
+        con->fd = open_connect_tcp_sock(con->dip, con->dport);
       if (con->fd < 0)
         {
         KERR("ERROR %X %X %hu %hu",con->sip,con->dip,con->sport,con->dport);

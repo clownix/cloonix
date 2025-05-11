@@ -147,9 +147,7 @@ void doors_recv_event(int llid, int tid, char *name, char *line)
       }
     else if (!strcmp(line, BACKDOOR_DISCONNECTED))
       {
-      if (vm == NULL)
-        KERR("ERROR %s", name);
-      else
+      if (vm)
         qga_event_backdoor(name, backdoor_evt_disconnected);
       }
     else if (!strncmp(line, AGENT_SYSINFO, strlen(AGENT_SYSINFO)))

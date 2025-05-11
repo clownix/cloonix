@@ -221,9 +221,7 @@ void action_req_ovsdb(char *bin, char *db, char *net, char *respb)
       }
     else
       {
-      sync();
-      usleep(10000);
-      sync();
+      usleep(100000);
       pid = ovs_execv_ovsdb_server(net, bin, db);
       if (pid <= 0)
         {
@@ -241,8 +239,7 @@ void action_req_ovsdb(char *bin, char *db, char *net, char *respb)
     KERR("ERROR DB SERVER");
     snprintf(respb, MAX_PATH_LEN-1, "ovs_resp_ovsdb_ko");
     }
-  sync();
-  usleep(1000);
+  usleep(10000);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -269,8 +266,7 @@ void action_req_ovs_switch(char *bin, char *db, char *net, char *respb)
     KERR("OVS LAUNCH ALREADY TRIED");
     snprintf(respb, MAX_PATH_LEN-1, "ovs_resp_ovs_ko");
     }
-  sync();
-  usleep(1000);
+  usleep(10000);
 }
 /*---------------------------------------------------------------------------*/
 

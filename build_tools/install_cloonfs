@@ -45,9 +45,7 @@ if [ -d /usr/share/polkit-1/actions ]; then
 fi
 chmod u+s /usr/libexec/cloonix/cloonfs/cloonix-spice-client-glib-usb-acl-helper
 #----------------------------------------------------------
-for i in "cloonix-crun" \
-         "cloonix-xwy-srv" \
-         "cloonix-proxymous" \
+for i in "cloonix-xwy-srv" \
          "cloonix-ovs-drv" \
          "cloonix-ovs-snf" \
          "cloonix-ovs-nat-main" \

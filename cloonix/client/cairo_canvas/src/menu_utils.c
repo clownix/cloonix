@@ -360,7 +360,7 @@ char **xephyr_get_lxsession_args(char *nm)
 /****************************************************************************/
 void crun_item_xephyr(GtkWidget *mn, t_item_ident *pm)
 {
-  char *argv[15];
+  char *argv[20];
   char *net = get_net_name();
   char title[MAX_PATH_LEN];
   memset(title, 0, MAX_PATH_LEN);
@@ -369,7 +369,7 @@ void crun_item_xephyr(GtkWidget *mn, t_item_ident *pm)
     KERR("ERROR %s", pm->name);
   else
     {
-    memset(argv, 0, 10*sizeof(char *));
+    memset(argv, 0, 20*sizeof(char *));
     argv[0] = XEPHYR_BIN;
     argv[1] = "to_be_defined";
     argv[2] = "-resizeable";
@@ -378,9 +378,15 @@ void crun_item_xephyr(GtkWidget *mn, t_item_ident *pm)
     argv[5] = "-ac";
     argv[6] = "-br";
     argv[7] = "-noreset";
-
-
-    argv[8] = NULL;
+    argv[8] = "-extension";
+    argv[9] = "DPMS";
+    argv[10] = "-extension";
+    argv[11] = "GLX";
+    argv[12] = "-extension";
+    argv[13] = "MIT-SHM";
+    argv[14] = "-extension";
+    argv[15] = "MIT-SCREEN-SAVER";
+    argv[16] = NULL;
     if (check_before_start_launch(argv))
       pidwait_alloc(type_pid_xephyr_frame, pm->name, 0, title, argv);
     }

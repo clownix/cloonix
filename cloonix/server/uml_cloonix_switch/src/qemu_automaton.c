@@ -331,15 +331,17 @@ static void create_linux_cmd_kvm(t_vm *vm, char *qemu_cmd)
 {
   int i, nb_cpu, len = 0;
   char cpu_type[MAX_NAME_LEN];
-  char *rootfs, *added_disk, *gname;
+  char *rootfs, *added_disk;
   char *spice_path, *cdrom;
   if (!vm)
     KOUT(" ");
   spice_path = utils_get_spice_path(vm->kvm.vm_id);
   nb_cpu = vm->kvm.cpu;
+/*
   if (inside_cloonix(&gname))
     strcpy(cpu_type, "kvm64");
   else
+*/
     strcpy(cpu_type, "host,-aes");
   len += sprintf(qemu_cmd+len, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
   for (i = 0; i < vm->kvm.nb_tot_eth; i++)

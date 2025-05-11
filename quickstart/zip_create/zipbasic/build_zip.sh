@@ -50,8 +50,8 @@ done
 #----------------------------------------------------------------------------#
 rm -rf ${ROOTFS}
 mkdir -p ${ROOTFS}
-for i in "bin" "sbin" "root" "etc" "run" "tmp" "lib" "home" "lib64" \
-     "var/run" "var/log" "usr/bin" "usr/sbin" "var/spool/rsyslog" \
+for i in "bin" "sbin" "root" "etc" "tmp" "lib" "home" "lib64" \
+     "var/log" "usr/bin" "usr/sbin" "var/spool/rsyslog" \
      "usr/share/misc" "usr/lib/x86_64-linux-gnu/rsyslog" \
      "usr/share/locale" "lib/x86_64-linux-gnu" "usr/share/X11/locale" \
      "usr/share/bash-completion" "usr/share/bash-completion/completions" \
@@ -180,6 +180,7 @@ EOF
 chmod +x ${ROOTFS}/usr/bin/cloonix_startup_script.sh
 #----------------------------------------------------------------------------#
 cd ${ROOTFS}
+#----------------------------------------------------------------------------#
 zip -yrq /root/zipbasic.zip .
 #----------------------------------------------------------------------------#
 

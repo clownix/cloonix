@@ -42,6 +42,7 @@ typedef struct t_tcp_flow
   int llid_listen;
   int destruction_count;
   int inactivity_count;
+  int data_transmitted_count;
   uint8_t tcp[TCP_HEADER_LEN];
   t_flagseq *flagseq;
   struct t_tcp_flow *prev;
@@ -162,8 +163,10 @@ static void free_tcp_flow(t_tcp_flow *cur, int line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void destroy_tcp_flow(t_tcp_flow *cur)
+static void destroy_tcp_flow(t_tcp_flow *cur, int line)
 {
+  if (line)
+    KERR("ERROR DESTROY  %d", line);
   if (cur->flagseq)
     tcp_flagseq_end(cur->flagseq);
   free_tcp_flow(cur, __LINE__);
@@ -178,6 +181,11 @@ static void timeout_beat(void *data)
     {
     next = cur->next;
 
+    if (channel_get_rx_local_flow_ctrl(cur->llid_traffic))
+      channel_rx_local_flow_ctrl(cur->llid_traffic, 0);
+    if (channel_get_tx_local_flow_ctrl(cur->llid_traffic))
+      KERR("ERROR RED FLOW STOP TX %d", cur->llid_traffic);
+
     if (cur->flagseq)
       tcp_flagseq_heartbeat(cur->flagseq);
 
@@ -186,7 +194,7 @@ static void timeout_beat(void *data)
       cur->destruction_count -= 1;
       if (cur->destruction_count == 0)
         {
-        destroy_tcp_flow(cur);
+        destroy_tcp_flow(cur, 0);
         }
       }
     cur->inactivity_count += 1;
@@ -194,7 +202,7 @@ static void timeout_beat(void *data)
       {
       KERR("CLEAN INACTIVITY %X %X %hu %hu", cur->sip, cur->dip,
                                              cur->sport, cur->dport);
-      destroy_tcp_flow(cur);
+      destroy_tcp_flow(cur, __LINE__);
       }
     cur = next;
     }
@@ -219,7 +227,9 @@ static void traf_rx_cb (int llid, int len, char *buf)
         (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
       KERR("ERROR LEN %d", len);
     else
+      {
       tcp_flagseq_to_tap(cur->flagseq, len, (uint8_t *) buf);
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -231,7 +241,9 @@ static void traf_err_cb (int llid, int err, int from)
   if (msg_exist_channel(llid))
     msg_delete_channel(llid);
   if (cur)
+    {
     cur->destruction_count = MAIN_DESTRUCTION_DECREMENTER;
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -289,9 +301,14 @@ void tcp_end_of_flow(uint32_t sip, uint32_t dip,
   else
     {
     if (fast == 2)
-      destroy_tcp_flow(cur);
+      {
+      KERR("WARNING END OF FLOW %X %X %hu %hu", sip, dip, sport, dport);
+      destroy_tcp_flow(cur, __LINE__);
+      }
     else if (fast == 1)
+      {
       cur->destruction_count = MAIN_DESTRUCTION_DECREMENTER;
+      }
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -305,11 +322,12 @@ void tcp_connect_resp(int is_ko, uint32_t sip, uint32_t dip,
     KERR("ERROR %X %X %hu %hu", sip, dip, sport, dport);
   else
     {
-    if ((!cur->llid_traffic) || (cur->flagseq))
+    if (cur->flagseq)
       KERR("ERROR %X %X %hu %hu", sip, dip, sport, dport);
     else if (is_ko)
       {
-      destroy_tcp_flow(cur);
+      KERR("ERROR %X %X %hu %hu", sip, dip, sport, dport);
+      destroy_tcp_flow(cur, __LINE__);
       }
     else
       {
@@ -318,7 +336,7 @@ void tcp_connect_resp(int is_ko, uint32_t sip, uint32_t dip,
       if (cur->flagseq == NULL)
         {
         KERR("ERROR %X %X %hu %hu", sip, dip, sport, dport);
-        destroy_tcp_flow(cur);
+        destroy_tcp_flow(cur, __LINE__);
         }
       else
         {
@@ -342,6 +360,17 @@ void tcp_input(uint8_t *smac, uint8_t *dmac,
   char stream[MAX_PATH_LEN];
   int llid_listen;
   char *net = get_net_name();
+
+  if ((cur) && (cur->flagseq) &&
+      ((cur->flagseq->flag_fin_ack_rx == 1) ||
+       (cur->flagseq->close_ok == 1)))
+    {
+    if (tcp_flags == RTE_TCP_SYN_FLAG)
+      {
+      destroy_tcp_flow(cur, __LINE__);
+      cur = NULL;
+      }
+    }
   if (!cur)
     {
     if (ssh_cisco_nat_input(smac, dmac, sip, dip, sport, dport,
@@ -364,8 +393,10 @@ void tcp_input(uint8_t *smac, uint8_t *dmac,
           if (llid_listen == 0)
             KERR("ERROR %X %X %hu %hu len:%d",sip,dip,sport,dport,data_len);
           else
+            {
             alloc_tcp_flow(llid_listen, stream, sip, dip,
                            sport, dport, smac, dmac, tcp);
+            }
           }
         }
       }
@@ -374,9 +405,27 @@ void tcp_input(uint8_t *smac, uint8_t *dmac,
     {
     if (cur->flagseq)
       {
-      cur->inactivity_count = 0;
-      tcp_flagseq_to_llid_data(cur->flagseq, cur->llid_traffic,
-                               tcp, data_len, data);
+      if (cur->flagseq->decrementer_transmit_syn_ack != 0)
+        {
+        if (tcp[13] == RTE_TCP_SYN_FLAG)
+          KERR("WARNING DROP DOUBLE SYN"); 
+        else
+          KERR("ERROR TO LOOK AT"); 
+        }
+      else
+        {
+        cur->inactivity_count = 0;
+        if (cur->data_transmitted_count == 0)
+        if (cur->flagseq->open_ok == 0)
+          {
+          if (data_len)
+            KERR("ERROR TO LOOK AT %X %X %hu %hu %d", cur->sip, cur->dip,
+                                                      cur->sport, cur->dport, data_len); 
+          }
+        tcp_flagseq_to_llid_data(cur->flagseq, cur->llid_traffic,
+                                 tcp, data_len, data);
+        cur->data_transmitted_count += 1;
+        }
       }
     else
       {
@@ -440,7 +489,16 @@ void tcp_fatal_error(uint32_t sip,uint32_t dip,uint16_t sport,uint16_t dport)
   t_tcp_flow *cur = find_tcp_flow(sip, dip, sport, dport);
   if (cur)
     {        
-    destroy_tcp_flow(cur);
+    if (cur->flagseq)
+      {
+      KERR("ERROR %X %X %hu %hu", sip, dip, sport, dport);
+      tcp_flagseq_llid_was_cutoff(cur->flagseq);
+      }
+    else
+      {
+      KERR("ERROR %X %X %hu %hu", sip, dip, sport, dport);
+      free_tcp_flow(cur, __LINE__);
+      }
     }        
 }
 /*--------------------------------------------------------------------------*/

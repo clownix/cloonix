@@ -107,7 +107,6 @@ static void call_poweroff(void)
 {
   system("echo \"SHUTDOWN IN 1 SEC by cloonix-agent\" | wall");
   g_halt_countdown = 2;
-  sync();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -116,7 +115,6 @@ static void call_reboot(void)
 {
   system("echo \"REBOOT IN 1 SEC by cloonix-agent\" | wall");
   g_reboot_countdown = 2;
-  sync();
 }
 /*--------------------------------------------------------------------------*/
 
@@ -604,7 +602,6 @@ void action_heartbeat(int cur_sec)
     g_reboot_countdown -= 1;
     if (g_reboot_countdown == 0)
       {
-      sync();
       reboot(LINUX_REBOOT_CMD_RESTART);
       }
     }
@@ -613,7 +610,6 @@ void action_heartbeat(int cur_sec)
     g_halt_countdown -= 1;
     if (g_halt_countdown == 0)
       {
-      sync();
       reboot(LINUX_REBOOT_CMD_POWER_OFF);
       }
     }

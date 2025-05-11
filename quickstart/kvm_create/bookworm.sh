@@ -1,7 +1,7 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
 DISTRO=bookworm
-ROOTFS=/var/lib/cloonix/bulk/${DISTRO}
+ROOTFS=/tmp/${DISTRO}
 DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
 REPO="http://deb.debian.org/debian"
 REPO="http://127.0.0.1/debian/bookworm"
@@ -129,7 +129,7 @@ sync /dev/loop0
 umount /tmp/wkmntloops/{dev,proc,sys}
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#
-qemu-img convert -O qcow2 ${ROOTFS} ${ROOTFS}.qcow2
+qemu-img convert -O qcow2 ${ROOTFS} /var/lib/cloonix/bulk/${DISTRO}.qcow2
 rm -f ${ROOTFS}
 #-----------------------------------------------------------------------#
 

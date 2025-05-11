@@ -28,7 +28,8 @@ typedef struct t_eth_mac
 void crun_utils_startup_env(char *mountbear, char *startup_env, int nb_eth);
 void crun_beat(int llid);
 int crun_utils_unlink_sub_dir_files(char *dir);
-void crun_utils_delete_crun_stop(char *name, int crun_pid);
+void crun_utils_delete_crun_stop(char *name, int pid);
+void crun_utils_delete_crun_delete(char *name);
 int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
                              char *image, int is_persistent, char *brandtype);
 int crun_utils_delete_net_nspace(char *nspace);

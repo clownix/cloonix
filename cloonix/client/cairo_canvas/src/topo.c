@@ -612,13 +612,12 @@ static gboolean on_item_event(CrItem *item, GdkEvent *event,
         fct_button_1_moved(bitem, 0);
         fct_button_1_double_click(bitem, 0);
         selectioned_mouse_button_1_press(bitem,event->button.x,event->button.y); 
-        result = TRUE;
         }
       else if (event->button.button == 3)
         {
         menu_caller(bitem);
-        result = TRUE;
         }
+      result = TRUE;
       break;
     case GDK_2BUTTON_PRESS:
       if (event->button.button == 1) 
@@ -1293,31 +1292,46 @@ static gboolean on_canvas_event(GtkWidget* widget,
     KOUT(" ");
   (void) data;
   print_event_item(event->type, "ON_CANVAS");
-  if (event->type == GDK_BUTTON_PRESS)
+  switch (event->type)
     {
-    if (!(get_currently_in_item_surface()))
-      {
-      if (event->button.button == 1)
-        {
-        result = TRUE;
-        }
-      else if (event->button.button == 3)
-        {
-        canvas_ctx_menu(event->button.x, event->button.y);
-        result = TRUE;
-        }
-      }
-    }
-  if (event->type == GDK_BUTTON_RELEASE)
-    {
-    if ((!(get_currently_in_item_surface())) && (event->button.button == 1))
-      {
-      update_layout_center_scale(__FUNCTION__);
-      result = TRUE;
-      }
-    }
-  if (event->type == GDK_LEAVE_NOTIFY)
-    {
+
+    case GDK_BUTTON_PRESS:
+    case GDK_2BUTTON_PRESS:
+
+        if (!(get_currently_in_item_surface()))
+          {
+          canvas_ctx_menu(event->button.x, event->button.y);
+          result = TRUE;
+          }
+
+      break;
+
+
+    case GDK_BUTTON_RELEASE:
+
+        if ((!(get_currently_in_item_surface())) && (event->button.button == 1))
+          {
+          update_layout_center_scale(__FUNCTION__);
+          result = TRUE;
+          }
+
+      break;
+
+    case GDK_3BUTTON_PRESS:
+      break;
+    case GDK_MOTION_NOTIFY:
+      break;
+    case GDK_ENTER_NOTIFY:
+      break;
+    case GDK_LEAVE_NOTIFY:
+      break;
+    case GDK_KEY_PRESS:
+      break;
+    case GDK_KEY_RELEASE:
+      break;
+    default:
+      printf("UNHANDLED CANVAS EVENT: %d\n", event->type);
+
     }
   return result;
 }

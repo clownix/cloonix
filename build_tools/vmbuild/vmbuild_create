@@ -95,6 +95,20 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                 libxcb-randr0-dev libxcb-xkb-dev libxcb-glx0-dev \
                 libxcb-xv0-dev"
 
+#libguestfs-tools"
+
+cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
+                         -o Acquire::Check-Valid-Until=false \
+                         --allow-unauthenticated --assume-yes install \
+                         lua5.3 lua-zlib-dev"
+
+cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
+                         -o Acquire::Check-Valid-Until=false \
+                         --allow-unauthenticated --assume-yes install \
+                         gperf libtirpc-dev libaugeas-dev libmagic-dev \
+                         libjansson-dev libhivex-dev libjson-c-dev \
+                         libguestfs-ocaml-dev libfindlib-ocaml-dev \
+                         libhivex-ocaml-dev libaugeas-ocaml-dev"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"
 cloonix_ssh ${NET} ${NAME} "sync"

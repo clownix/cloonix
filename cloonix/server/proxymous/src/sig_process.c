@@ -55,10 +55,12 @@ void sig_process_heartbeat(void)
     if (!msg_exist_channel(llid_sig))
       KOUT("ERROR");
     proxy_sig_tx(llid_sig, strlen(beat_req)+1, beat_req);
-    if (g_heartbeat_count == 3)
-      KERR("WARNING HEARTBEAT");
-    if (g_heartbeat_count == 6)
-      KOUT("ERROR HEARTBEAT");
+    if (g_heartbeat_count == 5)
+      KERR("WARNING LOW HEARTBEAT");
+    if (g_heartbeat_count == 10)
+      KERR("WARNING MIDDLE HEARTBEAT");
+    if (g_heartbeat_count == 20)
+      KOUT("ERROR HIGH HEARTBEAT");
     g_heartbeat_count += 1;
     }
 }

@@ -21,10 +21,12 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <stdint.h>
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
 
 
 #include "io_clownix.h"
@@ -462,17 +464,78 @@ int tar_img_check(char *bulk, char *image, int is_persistent, char *brandtype)
   char bulktarget[MAX_PATH_LEN];
   char bulktarget_init[MAX_PATH_LEN];
   t_loop *cur;
+  struct stat sb;
   memset(bulktarget, 0, MAX_PATH_LEN);
-  memset(bulktarget_init, 0, MAX_PATH_LEN);
   snprintf(bulktarget, MAX_PATH_LEN-1, "%s/%s", bulk, image);
-  snprintf(bulktarget_init, MAX_PATH_LEN-1, "%s/%s/sbin/init", bulk, image);
   cur = find_bulk_target(bulktarget, brandtype);
-  if (access(bulktarget, R_OK))
+  if (!strcmp(brandtype, "brandzip"))
     {
-    KERR("ERROR %s", bulktarget);
-    result = -1;
+    if (lstat(bulktarget, &sb) == -1)
+      {
+      KERR("ERROR %s", bulktarget);
+      result = -1;
+      }
+    else if ((sb.st_mode & S_IFMT) != S_IFREG)
+      {
+      KERR("ERROR %s %d", bulktarget, (sb.st_mode & S_IFMT));
+      result = -1;
+      }
+    else
+      {
+      if (is_persistent)
+        {
+        if (access(bulktarget, W_OK))
+          {
+          KERR("ERROR %s", bulktarget);
+          result = -1;
+          }
+        }
+      else
+        {
+        if (access(bulktarget, R_OK))
+          {
+          KERR("ERROR %s", bulktarget);
+          result = -1;
+          }
+        }
+      }
     }
-  else if (cur)
+  else if (!strcmp(brandtype, "brandcvm"))
+    {
+    memset(bulktarget_init, 0, MAX_PATH_LEN);
+    snprintf(bulktarget_init, MAX_PATH_LEN-1, "%s/%s/sbin/init", bulk, image);
+    if (lstat(bulktarget_init, &sb) == -1)
+      {
+      KERR("ERROR %s", bulktarget_init);
+      result = -1;
+      }
+    else if (((sb.st_mode & S_IFMT) != S_IFLNK) &&
+             ((sb.st_mode & S_IFMT) != S_IFREG))
+      {
+      KERR("ERROR %s %d", bulktarget_init, (sb.st_mode & S_IFMT));
+      result = -1;
+      }
+    else
+      {
+      if (is_persistent)
+        {
+        if (access(bulktarget, W_OK))
+          {
+          KERR("ERROR %s", bulktarget);
+          result = -1;
+          }
+        }
+      else
+        {
+        if (access(bulktarget, R_OK))
+          {
+          KERR("ERROR %s", bulktarget);
+          result = -1;
+          }
+        }
+      }
+    }
+  if ((result == 0) && (cur))
     {
     if (cur->is_persistent != is_persistent)
       {
@@ -483,36 +546,6 @@ int tar_img_check(char *bulk, char *image, int is_persistent, char *brandtype)
       {
       KERR("ERROR  %s %s", bulk, image);
       result = -1;
-      }
-    }
-  if (result == 0)
-    {
-    if (!strcmp(brandtype, "brandzip"))
-      {
-      if (is_persistent)
-        {
-        if (access(bulktarget, W_OK))
-          {
-          KERR("ERROR %s", bulktarget);
-          result = -1;
-          }
-        }
-      }
-    else if (!strcmp(brandtype, "brandcvm"))
-      {
-      if (is_persistent)
-        {
-        if (access(bulktarget, W_OK))
-          {
-          KERR("ERROR %s", bulktarget);
-          result = -1;
-          }
-        }
-      else if (access(bulktarget_init, R_OK))
-        {
-        KERR("ERROR %s", bulktarget_init);
-        result = -1;
-        }
       }
     }
   return result;

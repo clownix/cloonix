@@ -1,6 +1,6 @@
 diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
---- crun/src/libcrun/error.c	2025-04-19 07:27:58.000000000 +0200
-+++ crun_tainted/src/libcrun/error.c	2025-04-19 07:53:54.552210177 +0200
+--- crun/src/libcrun/error.c	2025-05-06 17:12:54.000000000 +0200
++++ crun_tainted/src/libcrun/error.c	2025-05-06 22:29:40.060466904 +0200
 @@ -44,6 +44,15 @@
  static int log_format;
  static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
@@ -18,8 +18,8 @@ diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
  libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
  {
 diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
---- crun/src/libcrun/linux.c	2025-04-19 07:27:58.000000000 +0200
-+++ crun_tainted/src/libcrun/linux.c	2025-04-19 07:53:54.552210177 +0200
+--- crun/src/libcrun/linux.c	2025-05-06 17:12:54.000000000 +0200
++++ crun_tainted/src/libcrun/linux.c	2025-05-06 22:29:40.060466904 +0200
 @@ -109,6 +109,15 @@
  #define ALL_PROPAGATIONS_NO_REC (MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE)
  #define ALL_PROPAGATIONS (MS_REC | ALL_PROPAGATIONS_NO_REC)
@@ -36,7 +36,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
  struct remount_s
  {
    struct remount_s *next;
-@@ -1538,6 +1547,10 @@
+@@ -1563,6 +1572,10 @@
                                    { "/dev/tty", "c", 5, 0, 0666, 0, 0 },
                                    { "/dev/random", "c", 1, 8, 0666, 0, 0 },
                                    { "/dev/urandom", "c", 1, 9, 0666, 0, 0 },

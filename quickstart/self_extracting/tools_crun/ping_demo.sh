@@ -3,8 +3,8 @@
 NET="__IDENT__"
 FRRZIP="zipfrr.zip"
 #----------------------------------------------------------------------
-cloonix_cli $NET add cru cnt1 eth=s $FRRZIP
-cloonix_cli $NET add cru cnt2 eth=s $FRRZIP
+cloonix_cli $NET add zip cnt1 eth=s $FRRZIP
+cloonix_cli $NET add zip cnt2 eth=s $FRRZIP
 cloonix_cli $NET add lan cnt1 0 lan1
 cloonix_cli $NET add lan cnt2 0 lan1
 #----------------------------------------------------------------------

@@ -21,6 +21,10 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
+#include <stdint.h>
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
+
 
 #include "io_clownix.h"
 #include "commun_daemon.h"
@@ -78,6 +82,7 @@ static void helper_get_cvm(char *path,
                            t_slowperiodic **slowperiodic,
                            int *nb, int max)
 {
+  struct stat sb;
   DIR *dirptr;
   struct dirent *ent;
   char sbin_init[MAX_PATH_LEN];
@@ -100,7 +105,12 @@ static void helper_get_cvm(char *path,
         memset(sbin_init, 0, MAX_PATH_LEN);
         snprintf(sbin_init, MAX_PATH_LEN-1,
                  "%s/%s/sbin/init", path, ent->d_name);
-        if (!access(sbin_init, F_OK))
+        if (lstat(sbin_init, &sb) == -1)
+          KERR("ERROR %s %d", sbin_init, *nb);
+        else if (((sb.st_mode & S_IFMT) != S_IFLNK) && 
+                 ((sb.st_mode & S_IFMT) != S_IFREG))
+          KERR("ERROR %s %d", sbin_init, (sb.st_mode & S_IFMT));
+        else
           {
           if (!is_duplicate(*slowperiodic, ent->d_name, *nb))
             {

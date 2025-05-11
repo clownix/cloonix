@@ -2,6 +2,9 @@
 #----------------------------------------------------------------------------#
 
 /usr/sbin/rsyslogd
+mkdir /run/frr
+chmod 777 /run/frr
+
 
 case ${NODE_ID} in
 

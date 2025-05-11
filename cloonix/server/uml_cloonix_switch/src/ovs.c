@@ -311,8 +311,7 @@ static void timer_ovs_beat(void *data)
         cur->connect_try_count += 1;
         if (cur->connect_try_count == 20)
           {
-          KERR("OVS %s NOT LISTENING destroy_request", cur->name);
-          ovs_destroy();
+          KOUT("OVS %s NOT LISTENING destroy_request", cur->name);
           }
         clownix_timeout_add(10, timer_ovs_beat, NULL, NULL, NULL);
         }
@@ -328,7 +327,6 @@ static void timer_ovs_beat(void *data)
         try_send_msg_ovs(cur, msg_type_diag, 0, "ovs_req_suidroot");
         clownix_timeout_add(1, timer_ovs_beat, NULL, NULL, NULL);
         }
-  
       else if (cur->open_ovsdb == 0)
         {
         cur->open_ovsdb = 1;
@@ -338,6 +336,8 @@ static void timer_ovs_beat(void *data)
       else if (cur->open_ovsdb_ok == 0)
         {
         cur->open_ovsdb_wait += 1;
+        if (cur->open_ovsdb_wait > 50)
+          KERR("WARNING OVSDB %s NOT RESPONDING", cur->name);
         if (cur->open_ovsdb_wait > 400)
           {
           KERR("ERROR OVSDB %s NOT RESPONDING", cur->name);
@@ -361,7 +361,6 @@ static void timer_ovs_beat(void *data)
           }
         clownix_timeout_add(3, timer_ovs_beat, NULL, NULL, NULL);
         }
-  
       else
         {
         cur->periodic_count += 1;
@@ -684,6 +683,7 @@ void ovs_llid_closed(int llid, int from_clone)
   t_ovs *cur = g_head_ovs;
   if ((!from_clone) && (cur) && (cur->llid == llid))
     {
+    KERR("ERROR: LINK TO OVS DEAD");
     cur->llid = 0;
     ovs_destroy();
     }

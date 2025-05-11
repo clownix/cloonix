@@ -38,12 +38,6 @@ typedef struct t_x11_ctx
 static t_x11_ctx *x11_llid_2_ctx[CLOWNIX_MAX_CHANNELS];
 static t_x11_ctx *dido_llid_2_ctx[CLOWNIX_MAX_CHANNELS];
 
-/*****************************************************************************/
-static char *get_cloonix_config_path(void)
-{
-  return ("/mnt/cloonix_config_fs");
-}
-/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static void fd_cloexec(int fd)
@@ -224,22 +218,20 @@ static int x11_rx_cb(int x11_llid, int x11_fd)
   int len, result = 0;
   static char buf[MAX_A2D_LEN];
   int headsize = doorways_header_size();
-  t_x11_ctx *cur;
-  len = util_read (buf, MAX_A2D_LEN - headsize, x11_fd);
-  if (len < 0)
-    {
-    if ((errno != EINTR) && (errno != EAGAIN)) 
-      {
-      KERR("ERROR payload_tx_x11:%d  %d errno:%d",
-           cur->sub_dido_idx, cur->payload_tx_x11, errno);
-      free_ctx(x11_llid);
-      }
-    }
+  t_x11_ctx *cur = get_ctx_with_x11_llid(x11_llid);
+  if (!cur)
+    KERR("ERROR %d %d", x11_llid, x11_fd);
   else
     {
-    cur = get_ctx_with_x11_llid(x11_llid);
-    if (!cur)
-      KERR("ERROR ");
+    len = util_read (buf, MAX_A2D_LEN - headsize, x11_fd);
+    if (len < 0)
+      {
+      if ((errno != EINTR) && (errno != EAGAIN)) 
+        {
+        KERR("ERROR payload_tx_x11: errno:%d", errno);
+        free_ctx(x11_llid);
+        }
+      }
     else
       {
       send_traf_x11_to_doors(cur->dido_llid, cur->sub_dido_idx, len, buf);

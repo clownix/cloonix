@@ -152,4 +152,15 @@ For centos, in /etc/sysconfig/qemu-ga, in FILTER_RPC_ARGS I had to add:
 guest-file-open,guest-file-close,guest-file-read,guest-file-write,
 guest-exec-status,guest-exe.
 
+     For Fedora, in /etc/sysconfig/selinux, I set SELINUX=disabled to have
+      a qemu-guest-agent that can create and launch a script as root.
+      Beware of the firewalld.service in Fedora, it can block ip.
+      For centos, disable selinux, and also in /etc/sysconfig/qemu-ga, the
+      env FILTER_RPC_ARGS must have:"guest-file-open,guest-file-close,
+      guest-file-read,guest-file-write,guest-exec-status,guest-exec"
+      For ubuntu, "unshare: Operation not permitted" problem,
+      echo "kernel.unprivileged_userns_clone=1" >> /etc/sysctl.conf
+      echo "kernel.apparmor_restrict_unprivileged_userns=0" >> /etc/sysctl.conf
+      sysctl -p.
+
 

@@ -53,6 +53,8 @@ typedef struct t_flagseq
   int      fin_ack_received;
   int      fin_ack_transmited;
   int      reset_decrementer;
+  int      decrementer_transmit_syn_ack;
+  int      flag_fin_ack_rx;
   struct t_qstore *head_qstore;
   struct t_qstore *tail_qstore;
   int   nb_qstore;

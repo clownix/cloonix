@@ -37,6 +37,7 @@
 #define PROCESS_STACK 500*1024
 
 void hide_real_machine_cli(void);
+int lib_running_in_crun(char *name);
 
 static FILE *g_log_cmd;
 static char *g_home;
@@ -46,69 +47,6 @@ static char *g_xauthority;
 
 static char *g_id_rsa_cisco;
 
-
-/****************************************************************************/
-static int get_pid_num_and_name(char *name)
-{
-  FILE *fp;
-  char ps_cmd[MAX_PATH_LEN];
-  char line[MAX_PATH_LEN];
-  char tmp_name[MAX_PATH_LEN];
-  int pid, result = 0;
-  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
-  fp = popen(ps_cmd, "r");
-  if (fp == NULL)
-    KERR("ERROR %s %d", ps_cmd, errno);
-  else
-    {
-    memset(line, 0, MAX_PATH_LEN);
-    while (fgets(line, MAX_PATH_LEN-1, fp))
-      {
-      if (sscanf(line,
-         "%d /usr/libexec/cloonix/cloonfs/cloonix-main-server "
-         "/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg %s",
-         &pid, tmp_name) == 2)
-       {
-       result = pid;
-       strncpy(name, tmp_name, MAX_NAME_LEN-1);
-       break;
-       }
-      }
-    pclose(fp);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int lib_io_running_in_crun(char *name)
-{
-  int pid, result = 0;
-  char *file_name = "/proc/1/cmdline";
-  char buf[MAX_PATH_LEN];
-  FILE *fd = fopen(file_name, "r");
-  if (fd == NULL)
-    KERR("WARNING: Cannot open %s", file_name);
-  else
-    {
-    memset(buf, 0, MAX_PATH_LEN);
-    if (!fgets(buf, MAX_PATH_LEN-1, fd))
-      KERR("WARNING: Cannot read %s", file_name);
-    else if (strstr(buf, CRUN_STARTER))
-      {
-      result = 1;
-      if (name)
-        {
-        memset(name, 0, MAX_NAME_LEN);
-        pid = get_pid_num_and_name(name);
-        if (pid == 0)
-          KERR("WARNING NO CLOONIX SERVER RUNNING");
-        }
-      }
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int get_process_pid(char *cmdpath, char *sock)
@@ -347,7 +285,7 @@ static void process_ocp(int argc, char **argv, char **new_argv,
   static char dist[MAX_PATH_LEN];
   char ocp_param[MAX_PATH_LEN];
   char tmpnet[MAX_NAME_LEN];
-  int running_in_crun = lib_io_running_in_crun(tmpnet);
+  int running_in_crun = lib_running_in_crun(tmpnet);
   char ipl[MAX_NAME_LEN];
   memset(ipl, 0, MAX_NAME_LEN);
   if (running_in_crun && (!strcmp(tmpnet, argv[2])))
@@ -417,7 +355,7 @@ static void process_osh(int argc, char **argv, char **new_argv,
   static char ocp_param[MAX_PATH_LEN];
   int i;
   char tmpnet[MAX_NAME_LEN];
-  int running_in_crun = lib_io_running_in_crun(tmpnet);
+  int running_in_crun = lib_running_in_crun(tmpnet);
   char ipl[MAX_NAME_LEN];
   memset(ipl, 0, MAX_NAME_LEN);
   if (running_in_crun && (!strcmp(tmpnet, argv[2])))
@@ -455,7 +393,7 @@ static void fill_ipport(char *net, char *ip, int port, char *ipport)
   char tmpnet[MAX_NAME_LEN];
   char *pox = PROXYSHARE_IN;
   memset(ipport, 0, MAX_PATH_LEN);
-  running_in_crun = lib_io_running_in_crun(tmpnet);
+  running_in_crun = lib_running_in_crun(tmpnet);
   if (running_in_crun && (!strcmp(tmpnet, net)))
     snprintf(ipport, MAX_PATH_LEN-1, "%s_%s/proxy_pmain.sock", pox, net);
   else

@@ -4,6 +4,11 @@ HERE=`pwd`
 ./patched_create
 cd ${HERE}/crun_tainted
 ./autogen.sh
-./configure --without-shared --disable-shared --enable-static --disable-caps --disable-dl --disable-seccomp --disable-systemd --disable-bpf --disable-lua-path-guessing --enable-embedded-yajl
+./configure --without-shared \
+            --disable-shared \
+            --enable-static \
+            --disable-systemd \
+            --disable-lua-path-guessing \
+            --enable-embedded-yajl
 make
 strip ${HERE}/crun_tainted/crun

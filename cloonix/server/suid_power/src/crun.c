@@ -59,6 +59,7 @@ typedef struct t_crun
   int crun_pid;
   int crun_pid_count;
   int is_persistent;
+  int delete_finalization_countdown;
   struct t_crun *prev;
   struct t_crun *next;
 } t_crun;
@@ -191,21 +192,16 @@ static void unlink_all_files(char *cnt_dir, char *name, char *image,
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void urgent_destroy_crun(t_crun *cur)
+static void delete_finalization(t_crun *cur)
 {
-  char cnt_dir[MAX_PATH_LEN];
-  char name[MAX_NAME_LEN];
-  memset(cnt_dir, 0, MAX_PATH_LEN);
-  memset(name, 0, MAX_NAME_LEN);
-  strncpy(cnt_dir, cur->cnt_dir, MAX_PATH_LEN-1); 
-  strncpy(name, cur->name, MAX_NAME_LEN-1); 
-  crun_utils_delete_crun_stop(name, cur->crun_pid);
-  crun_utils_delete_overlay(name, cnt_dir, cur->bulk, cur->image,
+  crun_utils_delete_crun_delete(cur->name);
+  crun_utils_delete_overlay(cur->name, cur->cnt_dir, cur->bulk, cur->image,
                             cur->is_persistent, cur->brandtype);
-  unlink_all_files(cnt_dir, name, cur->image, cur->bulk, cur->brandtype);
+  unlink_all_files(cur->cnt_dir, cur->name, cur->image,
+                   cur->bulk, cur->brandtype);
   free_crun(cur);
 }
-/*--------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void crun_beat(int llid)
@@ -215,6 +211,12 @@ void crun_beat(int llid)
   while (cur)
     {
     next = cur->next;
+    if (cur->delete_finalization_countdown)
+      {
+      cur->delete_finalization_countdown -= 1;
+      if (cur->delete_finalization_countdown == 0)
+        delete_finalization(cur);
+      }
     if (cur->crun_pid != 0)
       {
       cur->crun_pid_count += 1;
@@ -228,7 +230,8 @@ void crun_beat(int llid)
                    "cloonsuid_crun_killed name=%s crun_pid=%d",
                    cur->name, cur->crun_pid);
           rpct_send_sigdiag_msg(llid, type_hop_suid_power, resp);
-          urgent_destroy_crun(cur);
+          crun_utils_delete_crun_stop(cur->name, 0);
+          cur->delete_finalization_countdown = 3;
           }
         }
       }
@@ -499,31 +502,23 @@ static void create_crun_start(char *line, char *resp, char *name)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void delete_crun(char *line, char *resp, char *nm)
+static void delete_crun(char *line, char *resp, char *name)
 {
-  char cnt_dir[MAX_PATH_LEN];
-  char name[MAX_NAME_LEN];
   t_crun *cur;
-  cur = find_crun(nm);
+  cur = find_crun(name);
   if (cur == NULL)
     {
     KERR("ERROR %s", line);
     snprintf(resp, MAX_PATH_LEN-1,
-             "cloonsuid_crun_delete_resp_ko name=%s", nm);
+             "cloonsuid_crun_delete_resp_ko name=%s", name);
     }
   else
     {
-    memset(cnt_dir, 0, MAX_PATH_LEN);
-    memset(name, 0, MAX_NAME_LEN);
-    strncpy(cnt_dir, cur->cnt_dir, MAX_PATH_LEN-1); 
-    strncpy(name, cur->name, MAX_NAME_LEN-1); 
-    crun_utils_delete_crun_stop(nm, cur->crun_pid);
-    crun_utils_delete_overlay(cur->name, cur->cnt_dir, cur->bulk,
-                             cur->image, cur->is_persistent, cur->brandtype);
+    crun_utils_delete_crun_stop(name, cur->crun_pid);
+    cur->crun_pid = 0;
+    cur->delete_finalization_countdown = 10;
     snprintf(resp, MAX_PATH_LEN-1,
-             "cloonsuid_crun_delete_resp_ok name=%s", nm);
-    unlink_all_files(cnt_dir, name, cur->image, cur->bulk, cur->brandtype);
-    free_crun(cur);
+             "cloonsuid_crun_delete_resp_ok name=%s", name);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -643,7 +638,9 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
       {
       KERR("ERROR MUST ERASE %s, %s", name, line);
       crun_utils_delete_net_nspace(cur->nspacecrun);
-      urgent_destroy_crun(cur);
+      crun_utils_delete_crun_stop(cur->name, cur->crun_pid);
+      cur->crun_pid = 0;
+      cur->delete_finalization_countdown = 3;
       }
     }
   else

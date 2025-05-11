@@ -15,6 +15,8 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+int tcp_qstore_qty1(t_flagseq *flseq);
+int tcp_qstore_qty2(t_flagseq *flseq);
 int tcp_qstore_qty(t_flagseq *flseq);
 uint8_t *tcp_qstore_get_backup(t_flagseq *flseq, int rank,
                                int *data_len, uint32_t *local_seq);

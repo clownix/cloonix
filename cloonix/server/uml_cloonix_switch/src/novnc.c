@@ -442,8 +442,7 @@ static int websockify(void *data)
   if (g_terminate)
     return 0;
     
-  if (!get_running_in_crun())
-    hide_real_machine_serv();
+  hide_real_machine_serv();
   setenv("NODE_PATH", NODE_PATH, 1);
   if (g_port_display == 0)
     KOUT("ERROR");

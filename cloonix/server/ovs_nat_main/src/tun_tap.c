@@ -60,7 +60,7 @@ static void tx_tap(int fd)
   len = read(fdrx, g_buf_rx, HEADER_TAP_MSG);
   if (len != HEADER_TAP_MSG)
     KOUT("ERROR READ %d %d", len, errno);
-  result = fct_seqtap_rx(0, 0, fdrx, g_buf_rx, &seq, &buf_len, &buf);
+  result = fct_seqtap_rx(fdrx, g_buf_rx, &seq, &buf_len, &buf);
   if (result != kind_seqtap_data)
     KOUT("ERROR %d", result);
   if (seq != ((seqtap+1)&0xFFFF))
@@ -210,12 +210,11 @@ static void forked_process_tap(int fd_rx_from_parent)
     result = select(fd_max + 1, &infd, NULL, NULL, NULL);
     if (result < 0)
       KOUT("ERROR %s %s", g_netns_namespace, g_tap_name);
-    if (FD_ISSET(fd, &infd))
-      rx_tap(fd);
     if (FD_ISSET(fd_rx_from_parent, &infd))
       tx_tap(fd);
+    else if (FD_ISSET(fd, &infd))
+      rx_tap(fd);
     }
-
 }
 /*---------------------------------------------------------------------------*/
 
@@ -229,6 +228,13 @@ int tun_tap_open(char *net_namespace, char *name, int *fd_rx, int *fd_tx)
   memset(g_netns_namespace, 0, MAX_NAME_LEN);
   strncpy(g_tap_name, name, MAX_NAME_LEN-1);
   strncpy(g_netns_namespace, net_namespace, MAX_NAME_LEN-1);
+
+/*
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd1) == -1)
+    KOUT("ERROR %s %s", g_netns_namespace, g_tap_name);
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd2) == -1)
+    KOUT("ERROR %s %s", g_netns_namespace, g_tap_name);
+*/
 
   if (pipe(fd1) == -1)
     KOUT("ERROR %s %s", g_netns_namespace, g_tap_name);

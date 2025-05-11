@@ -17,12 +17,9 @@
 /*****************************************************************************/
 typedef struct t_custom_cnt
 {
-  char brandtype[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
-  char zip_image[MAX_NAME_LEN];
-  char cvm_image[MAX_NAME_LEN];
   char startup_env[MAX_PATH_LEN];
   char vmount[MAX_SIZE_VMOUNT];
   int current_number;

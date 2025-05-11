@@ -59,7 +59,9 @@ printf "\n\nBUILDING CLIENT\n\n"
 #----------------------------------------------------------------------------#
 printf "\n\nBUILDING SERVER\n\n"
 #----------------------------------------------------------------------------#
-  for i in  "xorg" \
+  for i in  "script_pty" \
+            "apk_tools" \
+            "xorg" \
             "wireshark" \
             "iproute2" \
             "crun" \

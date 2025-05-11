@@ -304,9 +304,9 @@ int main (int argc, char *argv[])
   snprintf(g_netns_namespace, MAX_PATH_LEN-1, "%s%s_%s",
            PATH_NAMESPACE, BASE_NAMESPACE, g_net_name);
 
-  g_netns_pid = tun_tap_open(g_netns_namespace, g_vhost0,
+  g_netns_pid = tun_tap_open(0, g_netns_namespace, g_vhost0,
                              &fd_rx_from_tap0, &fd_tx_to_tap0);
-  g_netns_pid = tun_tap_open(g_netns_namespace, g_vhost1,
+  g_netns_pid = tun_tap_open(1, g_netns_namespace, g_vhost1,
                              &fd_rx_from_tap1, &fd_tx_to_tap1);
 
   msg_mngt_init("a2b", TRAF_TAP_BUF_LEN);

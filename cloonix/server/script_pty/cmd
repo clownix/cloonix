@@ -1,0 +1,6 @@
+#!/bin/bash
+
+gcc -o cloonix-scriptpty scriptpty.c 
+
+
+

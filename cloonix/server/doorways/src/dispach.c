@@ -73,6 +73,7 @@ static void timeout_flow_ctrl(void *data)
     {
     if (tf->ident_flow_timeout == fc->ident_flow_timeout)
       {
+      KERR("WARNING flow_ctrl_activation %d", tf->inside_llid);
       channel_rx_local_flow_ctrl(tf->inside_llid, 0);
       }
     }
@@ -92,7 +93,7 @@ static int flow_ctrl_activation_done(t_transfert *tf)
     tf->ident_flow_timeout += 1;
     fc->ident_flow_timeout = tf->ident_flow_timeout;
     fc->dido_llid = tf->dido_llid;
-    channel_rx_local_flow_ctrl(tf->inside_llid, 0);
+    channel_rx_local_flow_ctrl(tf->inside_llid, 1);
     clownix_timeout_add(1, timeout_flow_ctrl, (void *)fc, NULL, NULL);
     result = 1;
     }

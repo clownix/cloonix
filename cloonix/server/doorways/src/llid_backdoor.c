@@ -575,7 +575,7 @@ static void rearm_timer_bvm_connect_backdoor(t_backdoor_vm *bvm)
   if (bvm->connect_count < 120)
     {
     clean_connect_timer(bvm);
-    clownix_timeout_add(30, timer_bvm_connect_backdoor, (void *) bvm,
+    clownix_timeout_add(100, timer_bvm_connect_backdoor, (void *) bvm,
                         &(bvm->connect_abs_beat_timer),
                         &(bvm->connect_ref_timer));
     }
@@ -820,8 +820,6 @@ static void plug_to_backdoor_llid(t_backdoor_vm *bvm)
       KOUT("ERROR");
     llid_setup(bvm, llid, fd);
     }
-  else
-    KERR("ERROR %s", bvm->backdoor);
 }
 /*--------------------------------------------------------------------------*/
 

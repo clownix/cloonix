@@ -141,7 +141,6 @@ static void try_qstore_dequeue_backup_and_xmit(t_flagseq *cur)
                           cur->dip, cur->sip, cur->dport, cur->sport,
                           local_seq, cur->distant_seq, tcp_flags, 50000);
     total += data_len;
-    KERR("FROM_BACKUP_PROX: %llu  %d",  total, data_len);
     len = cur->offset + data_len;
     if ((len == 0) ||
         (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
@@ -206,9 +205,14 @@ static void check_stall_of_ack(t_flagseq *cur)
     {
     if (cur->local_seq != cur->ack_local_seq)
       {
-      cur->ack_local_seq_count += 1;
-      if (cur->ack_local_seq_count > 500)
+      if (cur->ack_local_seq_count == 0)
         {
+        transmit_flags_back(cur, RTE_TCP_ACK_FLAG);
+        }
+      cur->ack_local_seq_count += 1;
+      if (cur->ack_local_seq_count > 100)
+        {
+        KERR("BACKUP DEQUEUE %d %d", tcp_qstore_qty1(cur), tcp_qstore_qty2(cur));
         cur->ack_local_seq_count = 0;
         try_qstore_dequeue_backup_and_xmit(cur);
         }
@@ -262,14 +266,22 @@ static void syn_syn_ack_ack_done_open_upon_ack(t_flagseq *cur, uint8_t *tcp)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void repeat_fin_ack_tx(t_flagseq *cur, uint8_t flags)
+static void repeat_fin_ack_tx(t_flagseq *cur)
 {
-  if (cur->fin_ack_transmited < 4)
+  if (cur->fin_ack_transmited == 0)
+    {
+    KERR("ERROR repeat_fin_ack_tx");
+    cur->fin_ack_transmited += 1;
+    transmit_flags_back(cur, RTE_TCP_ACK_FLAG | RTE_TCP_FIN_FLAG);
+    }
+  else if (cur->fin_ack_transmited < 4)
     {
     cur->fin_ack_transmited += 1;
     cur->local_seq -= 1;
     transmit_flags_back(cur, RTE_TCP_ACK_FLAG | RTE_TCP_FIN_FLAG);
     }
+  else
+    KERR("ERROR repeat_fin_ack_tx %d", cur->fin_ack_transmited);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -288,11 +300,11 @@ static void fin_fin_ack_done_close_upon_ack(t_flagseq *cur, uint8_t *tcp)
       cur->reset_decrementer = 0;
       cur->fin_ack_received = 1;
       transmit_flags_back(cur, RTE_TCP_ACK_FLAG);
-      flagseq_end_of_flow(cur, 1);
+      flagseq_end_of_flow(cur, 0);
       }
     else
       {
-      repeat_fin_ack_tx(cur, flags);
+      repeat_fin_ack_tx(cur);
       }
     }
   else
@@ -308,7 +320,7 @@ static void fin_fin_ack_done_close_upon_ack(t_flagseq *cur, uint8_t *tcp)
         }
       else
         {
-        repeat_fin_ack_tx(cur, flags);
+        repeat_fin_ack_tx(cur);
         }
       }
     else
@@ -327,9 +339,14 @@ static void reception_of_first_fin_ack(t_flagseq *cur,
   cur->fin_req = 1;
   cur->fin_ack_received = 1;
   cur->distant_seq = new_distant_seq;
-  flagseq_end_of_flow(cur, 0);
-  tcp_qstore_flush(cur);
-  transmit_flags_back(cur, RTE_TCP_ACK_FLAG | RTE_TCP_FIN_FLAG);
+  flagseq_end_of_flow(cur, 1);
+  if (cur->fin_ack_transmited != 0)
+    KERR("ERROR reception_of_first_fin_ack %d", cur->fin_ack_transmited);
+  else
+    {
+    cur->fin_ack_transmited += 1;
+    transmit_flags_back(cur, RTE_TCP_ACK_FLAG | RTE_TCP_FIN_FLAG);
+    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -368,6 +385,11 @@ void tcp_flagseq_to_llid_data(t_flagseq *cur, int llid, uint8_t *tcp,
   sent_seq =(tcp[4]<<24) + (tcp[5]<<16) + (tcp[6]<<8) + tcp[7]; 
   new_distant_seq = sent_seq;
 
+  if ((flags & RTE_TCP_FIN_FLAG))
+    {
+    cur->must_ack = 1;
+    cur->flag_fin_ack_rx = 1;
+    }
   if (flags & RTE_TCP_RST_FLAG)
     {
     cur->open_ok = 0;
@@ -408,9 +430,13 @@ void tcp_flagseq_to_llid_data(t_flagseq *cur, int llid, uint8_t *tcp,
       if (!update_flagseq_tcp_hdr(cur, tcp, data_len, flags, new_distant_seq))
         {
         if ((flags & RTE_TCP_FIN_FLAG) && (flags & RTE_TCP_ACK_FLAG))
+          {
           reception_of_first_fin_ack(cur, new_distant_seq);
+          }
         else if (data_len)
+          {
           flagseq_llid_transmit(cur, llid, data_len, data);
+          }
         }
       else
         {
@@ -439,6 +465,14 @@ void tcp_flagseq_to_llid_data(t_flagseq *cur, int llid, uint8_t *tcp,
 /****************************************************************************/
 void tcp_flagseq_heartbeat(t_flagseq *cur)
 {
+  if (cur->decrementer_transmit_syn_ack)
+    {
+    cur->decrementer_transmit_syn_ack -= 1;
+    if (cur->decrementer_transmit_syn_ack == 0)
+      {
+      transmit_flags_back(cur, RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG);
+      }
+    }
   if ((cur->open_ok == 1) && (cur->close_ok == 0))
     {
     if (cur->reset_decrementer)
@@ -455,9 +489,16 @@ void tcp_flagseq_heartbeat(t_flagseq *cur)
       {
       if (tcp_qstore_qty(cur) == 0)
         {
+        KERR("WARNING");
         cur->fin_req = 1;
         cur->reset_decrementer = RESET_DESTRUCTION_DECREMENTER;
-        transmit_flags_back(cur, RTE_TCP_ACK_FLAG | RTE_TCP_FIN_FLAG);
+        if (cur->fin_ack_transmited != 0)
+          KERR("ERROR %d", cur->fin_ack_transmited);
+        else
+          {
+          cur->fin_ack_transmited += 1;
+          transmit_flags_back(cur, RTE_TCP_ACK_FLAG | RTE_TCP_FIN_FLAG);
+          }
         }
       }
     if ((cur->fin_req == 0) && (cur->must_ack))
@@ -509,7 +550,7 @@ t_flagseq *tcp_flagseq_begin(uint32_t sip,   uint32_t dip,
     else
       {
       first_flagseq_tcp_hdr(cur, tcp, 0);
-      transmit_flags_back(cur, RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG);
+      cur->decrementer_transmit_syn_ack = 5;
       }
     }
   else

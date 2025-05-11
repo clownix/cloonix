@@ -26,8 +26,8 @@
 #include "tcp_flagseq.h"
 #include "tcp_qstore.h"
 
-#define TRIGGER_LEVEL_MIN 2000000
-#define TRIGGER_LEVEL_MAX 3000000
+#define TRIGGER_LEVEL_MIN 10000000
+#define TRIGGER_LEVEL_MAX 30000000
 
 char *get_nat_name(void);
 
@@ -205,6 +205,35 @@ void tcp_qstore_flush_backup_seq(t_flagseq *flseq, uint32_t local_seq)
     }
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int tcp_qstore_qty1(t_flagseq *flseq)
+{
+  int result = 0;
+  t_qstore *cur = flseq->head_qstore;
+  while (cur)
+    {
+    result += 1;
+    cur = cur->next;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int tcp_qstore_qty2(t_flagseq *flseq)
+{
+  int result = 0;
+  t_qstore *cur =  flseq->head_qstore_backup;
+  while (cur)
+    {
+    result += 1;
+    cur = cur->next;
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
 
 /****************************************************************************/
 int tcp_qstore_qty(t_flagseq *flseq)

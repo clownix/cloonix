@@ -1,0 +1,6 @@
+#!/bin/bash
+
+rm -f cloonix-scriptpty
+
+
+

@@ -35,7 +35,7 @@ for i in "lib64" "lib/x86_64-linux-gnu" \
          "share/dconf" "share/locale" "share/i18n/charmaps" \
          "share/i18n/locales" "share/glib-2.0/schemas" \
          "share/X11/locale" "lib/x86_64-linux-gnu/rsyslog" \
-         "share/vim/vim91" "lib/x86_64-linux-gnu/qt6/plugins" \
+         "share/vim/" "lib/x86_64-linux-gnu/qt6/plugins" \
          "lib/x86_64-linux-gnu/gstreamer-1.0" \
          "lib/x86_64-linux-gnu/gconv" \
          "ovsschema" ; do
@@ -88,7 +88,7 @@ cat > ${ROOTFS}/etc/hosts << EOF
 EOF
 #----------------------------------------------------------------------------#
 cp -v /usr/lib/file/magic.mgc ${ROOTFS}/share/misc
-cp -v /usr/share/vim/vim91/defaults.vim ${ROOTFS}/share/vim/vim91
+cp -Lr /usr/share/vim/vim91 ${ROOTFS}/share/vim
 sed -i "s/'mouse'/'totomouse'/" ${ROOTFS}/share/vim/vim91/defaults.vim
 cp -Lr /usr/lib/locale/* ${ROOTFS}/lib/locale
 cp -Lr /usr/share/terminfo/l ${ROOTFS}/share/terminfo
@@ -149,11 +149,12 @@ for i in "su" "awk" "cat" "chmod" "chown" "cp" "echo" "ps" "mkdir" \
          "node" "watch" "chacl" "getfacl" "setfacl" "sed" "df" \
          "du" "logger" "gpasswd" "passwd" "sync" "uname" \
          "mount" "umount" "more" "less" "dircolors" "truncate" \
-         "lsof" ; do
+         "lsof" "findmnt" "lsns" "nsenter" "mountpoint" ; do
   cp /usr/bin/${i} ${ROOTFS}
 done
 for i in "useradd" "usermod" "groupadd" "groupdel" "groupmod" \
-         "addgroup" "adduser" "rsyslogd" "nologin" ; do
+         "addgroup" "adduser" "rsyslogd" "nologin" "capsh" \
+         "getcap" "getpcaps" "setcap"; do
   cp /usr/sbin/${i} ${ROOTFS}
 done
 for i in "ifconfig" "locale-gen" ; do
@@ -215,6 +216,7 @@ cp  ${BUNDLE}/cloonix/client/openssh/cloonix-u2i-ssh ${ROOTFS}
 #----------------------------------------------------------------------------#
 printf "\n\nPACKING SERVER ${ROOTFS}\n\n"
 #----------------------------------------------------------------------------#
+cp ${BUNDLE}/cloonix/server/apk_tools/cloonix-apk-static ${ROOTFS}
 cp ${BUNDLE}/cloonix/server/ovs/cloonix-vswitch.ovsschema ${ROOTFS}/ovsschema
 cp -r ${BUNDLE}/cloonix/server/qemu ${ROOTFS}
 rm -rf ${ROOTFS}/qemu/tainted_qemu
@@ -244,6 +246,7 @@ cp ${BUNDLE}/cloonix/server/qemu/cloonix-qemu-img ${ROOTFS}
 cp ${BUNDLE}/cloonix/server/dtach/cloonix-dtach ${ROOTFS}
 cp ${BUNDLE}/cloonix/server/proxymous/cloonix-proxymous ${ROOTFS}
 cp ${BUNDLE}/cloonix/server/iproute2/ip ${ROOTFS}
+cp ${BUNDLE}/cloonix/server/script_pty/cloonix-scriptpty ${ROOTFS}
 cp ${BUNDLE}/cloonix/server/crun/crun_tainted/crun ${ROOTFS}/cloonix-crun
 cp ${BUNDLE}/cloonix/server/xorg/Xvfb ${ROOTFS}/cloonix-novnc-Xvfb
 cp ${BUNDLE}/cloonix/server/xorg/Xephyr ${ROOTFS}/cloonix-novnc-xephyr

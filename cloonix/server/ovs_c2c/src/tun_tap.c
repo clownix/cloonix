@@ -62,9 +62,9 @@ static void tx_tapif(int fd)
   len = read(fdrx, g_buf_rx, HEADER_TAP_MSG);
   if (len == 0)
     exit(0);
-  if (len <= 0)
+  if (len != HEADER_TAP_MSG)
     KOUT("ERROR READ %d %d", len, errno);
-  result = fct_seqtap_rx(0, 0, fdrx, g_buf_rx, &seq, &buf_len, &buf);
+  result = fct_seqtap_rx(fdrx, g_buf_rx, &seq, &buf_len, &buf);
   if (result != kind_seqtap_data)
     KOUT("ERROR %d", result);
   if (seq != ((seqtap+1)&0xFFFF)) 

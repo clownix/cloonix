@@ -204,7 +204,7 @@ static int rx_cb(int llid, int fd)
   len = read(fd, g_buf_rx, HEADER_TAP_MSG);
   if (len != HEADER_TAP_MSG)
     KOUT("ERROR READ %d %d", len, errno);
-  result = fct_seqtap_rx(0, 0, fd, g_buf_rx, &seq, &buf_len, &buf);
+  result = fct_seqtap_rx(fd, g_buf_rx, &seq, &buf_len, &buf);
   if (result != kind_seqtap_data)
     KOUT("ERROR %d", result);
   if (seq != ((seqtap+1)&0xFFFF)) 

@@ -156,11 +156,11 @@ void fct_seqtap_tx(int kind, uint8_t *tx, uint16_t seqtap,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int fct_seqtap_rx(int is_dgram, int tot_len, int fd, uint8_t *rx,
+int fct_seqtap_rx_udp(int tot_len, int fd, uint8_t *rx,
                   uint16_t *seq, int *buf_len, uint8_t **buf)
 {
   int result = kind_seqtap_error;
-  int rxlen, len, count = 0;
+  int rxlen, len;
   *buf = NULL;
   *buf_len = 0;
   *seq = 0;
@@ -188,10 +188,74 @@ int fct_seqtap_rx(int is_dgram, int tot_len, int fd, uint8_t *rx,
     else
       {
       *seq = ((rx[6] & 0xFF) << 8) + (rx[7] & 0xFF);
-      if (is_dgram == 0)
+      rxlen = tot_len - HEADER_TAP_MSG;
+      if (rxlen != len)
         {
-        rxlen = read(fd, rx + HEADER_TAP_MSG, len);
-        while (rxlen == -1)
+        KERR("ERROR %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+             rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
+             rx[4], rx[5], rx[6], rx[7]);
+        }
+      else
+        {
+        *buf = rx + HEADER_TAP_MSG;
+        *buf_len = len;
+        }
+      }
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+int fct_seqtap_rx(int fd, uint8_t *rx, uint16_t *seq,
+                  int *buf_len, uint8_t **buf)
+{
+  int result = kind_seqtap_error;
+  int tot_rxlen, rxlen, len, count = 0;
+  int rxerror = 0;
+  *buf = NULL;
+  *buf_len = 0;
+  *seq = 0;
+  if ((rx[0] != 0xCA) || (rx[1] != 0xFE))
+    KERR("ERROR %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+         rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
+  else
+    {
+    if ((rx[2] == 0xDE) && (rx[3] == 0xCA))
+      result = kind_seqtap_data;
+    else if ((rx[2] == 0xBE) && (rx[3] == 0xEF))
+      result = kind_seqtap_sig_hello;
+    else if ((rx[2] == 0xAA) && (rx[3] == 0xBB))
+      result = kind_seqtap_sig_ready;
+    else
+      KERR("ERROR %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+           rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
+    }
+  if (result != kind_seqtap_error)
+    {
+    len = ((rx[4] & 0xFF) << 8) + (rx[5] & 0xFF);
+    if (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN)
+      KERR("ERROR %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+           len, rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
+    else if (len <= 0)
+      KERR("ERROR %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+           len, rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
+    else
+      {
+      *seq = ((rx[6] & 0xFF) << 8) + (rx[7] & 0xFF);
+      tot_rxlen = 0;
+      while((rxerror == 0) && (tot_rxlen != len))
+        {
+        rxlen = read(fd, rx + HEADER_TAP_MSG + tot_rxlen, len - tot_rxlen);
+        if (rxlen == 0)
+          {
+          KERR("ERROR %d %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+               rxerror, rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
+               rx[4], rx[5], rx[6], rx[7]);
+          tot_rxlen = 0;
+          rxerror = 1;
+          }
+        while ((rxerror == 0) && (rxlen == -1))
           {
           if ((errno!=EINTR) &&
               (errno!=EWOULDBLOCK) &&
@@ -201,6 +265,7 @@ int fct_seqtap_rx(int is_dgram, int tot_len, int fd, uint8_t *rx,
             KERR("ERROR %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
                  rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
                  rx[4], rx[5], rx[6], rx[7]);
+            rxerror = 1;
             break;
             } 
           count += 1;
@@ -209,20 +274,25 @@ int fct_seqtap_rx(int is_dgram, int tot_len, int fd, uint8_t *rx,
             KERR("ERROR %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
                  rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
                  rx[4], rx[5], rx[6], rx[7]);
+            rxerror = 1;
             break;
             }
-          usleep(100);
-          rxlen = read(fd, rx + HEADER_TAP_MSG, len);
+          rxlen = read(fd, rx + HEADER_TAP_MSG + tot_rxlen, len - tot_rxlen);
+          if (rxlen == 0)
+            {
+            KERR("ERROR %d %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
+                 rxerror, rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
+                 rx[4], rx[5], rx[6], rx[7]);
+            tot_rxlen = 0;
+            rxerror = 1;
+            }
           }
+        tot_rxlen += rxlen;
         }
-      else
-        {
-        rxlen = tot_len - HEADER_TAP_MSG;
-        }
-      if (rxlen != len)
+      if (tot_rxlen != len)
         {
         KERR("ERROR %d %d %d %hhX %hhX %hhX %hhX %hhX %hhX %hhX %hhX",
-             rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
+             tot_rxlen, errno, len, rx[0], rx[1], rx[2], rx[3],
              rx[4], rx[5], rx[6], rx[7]);
         }
       else
@@ -1393,6 +1463,8 @@ void watch_tx(int llid, int len, char *str_tx)
         KERR("%d %d", (int)dchan[cidx].tot_txq_size, MAX_TOT_LEN_QDAT);
       }
     }
+  else
+    KERR("ERROR %d %d", llid, len);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1486,6 +1558,7 @@ int msg_mngt_get_epfd(void)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+/*
 #include <execinfo.h>
 static void full_write(int fd, const char *buf, size_t len)
 {
@@ -1522,6 +1595,7 @@ static void sigsegv_handler(int sig)
   close(fd);
   exit(1);
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 
@@ -1530,7 +1604,7 @@ void msg_mngt_init (char *name, int max_len_per_read)
 {
   struct sigaction act;
 
-  signal(SIGSEGV, sigsegv_handler);
+//  signal(SIGSEGV, sigsegv_handler);
 
   cloonix_conf_linker_helper();
   doorways_linker_helper();

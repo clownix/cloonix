@@ -106,7 +106,7 @@ typedef void (*t_fd_error)(int llid, int err, int from);
 typedef int  (*t_fd_event)(int llid, int fd);
 typedef void (*t_fd_connect)(int llid, int llid_new);
 
-#define BRANDTYPE_NB_MAX 2
+#define BRANDTYPE_NB_MAX 3
 
 #define PROXYMARKUP_START "proxymarkup_crun_data_start:"
 #define PROXYMARKUP_END ":proxymarkup_crun_data_end"

@@ -460,6 +460,31 @@ void channel_rx_slow_down(int llid)
 */
 /*---------------------------------------------------------------------------*/
 
+/*****************************************************************************/
+int channel_get_rx_local_flow_ctrl(int llid)
+{
+  int cidx, result = 0;
+  if (msg_exist_channel(llid))
+    {
+    cidx = get_cidx(llid);
+    result = g_channel[cidx].red_to_stop_reading;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+int channel_get_tx_local_flow_ctrl(int llid)
+{
+  int cidx, result = 0;
+  if (msg_exist_channel(llid))
+    {
+    cidx = get_cidx(llid);
+    result = g_channel[cidx].red_to_stop_writing;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void channel_rx_local_flow_ctrl(int llid, int stop)

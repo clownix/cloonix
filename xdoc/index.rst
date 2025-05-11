@@ -86,8 +86,7 @@ The **lan** in cloonix is implemented with an openvswitch bridge.
 
 Here is the list of items, connectable to each-other through a **lan** ::
 
-  **kvm**: Qemu-kvm driven virtual machine (carries several ports).
-  **cnt**: Crun driven container (carries several ports).
+  **xvm**: kvm driven virtual machine or zip container or cvm container.
   **nat**: This nats the packets to reach the outside ethernet. 
   **tap**: This is a tap interface giving cloonix an interface in the host.
   **c2c**: This connects one cloonix net to another cloonix net.

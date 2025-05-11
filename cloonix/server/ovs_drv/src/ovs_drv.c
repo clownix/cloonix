@@ -619,12 +619,10 @@ static void common_end_of_all_destroy(void)
       {
       if (unlink_sub_dir_files(db, 1))
         KERR("ERROR ERASE %s", db);
-      sync();
       }
     else
       KERR("ERROR %s", db);
     }
-  sync();
   exit(0);
 }
 /*---------------------------------------------------------------------------*/

@@ -10,7 +10,7 @@ fi
 #-----------------------------------------------------------------------------
 printf "\n\tChosen ident: $IDENT.\n"
 #-----------------------------------------------------------------------------
-CLOONIX_CFG="${ROOTFS}/usr/libexec/cloonix/common/etc/cloonix.cfg"
+CLOONIX_CFG="${ROOTFS}/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
 LIST=$(cat ${CLOONIX_CFG} |grep CLOONIX_NET: | awk '{print $2}')
 FOUND="no"
 for i in ${LIST} ; do
@@ -26,7 +26,7 @@ fi
 #-----------------------------------------------------------------------------
 BIN="${EXTRACT}/bin"
 CONFIG="${EXTRACT}/config"
-SERVER="${ROOTFS}/usr/libexec/cloonix/server"
+SERVER="${ROOTFS}/usr/libexec/cloonix/cloonfs"
 PATCHELF="${EXTRACT}/bin/cloonix-patchelf"
 XAUTH="${EXTRACT}/bin/xauth"
 HOST_BULK="/var/lib/cloonix/bulk"
@@ -61,7 +61,6 @@ sed -i s"%__IDENT__%${IDENT}%"                     ${CONFIG}/config.json
 sed -i s"%__PROXYSHARE_IN__%${PROXYSHARE_IN}%"     ${CONFIG}/config.json
 sed -i s"%__PROXYSHARE_OUT__%${PROXYSHARE_OUT}%"   ${CONFIG}/config.json
 sed -i s"%__ROOTFS__%${ROOTFS}%"                   ${CONFIG}/config.json
-sed -i s"%__UID__%${UID}%"                         ${CONFIG}/config.json
 sed -i s"%__USER_UID__%${USER_UID}%"               ${CONFIG}/config.json
 sed -i s"%__USER_GID__%${USER_GID}%"               ${CONFIG}/config.json
 sed -i s"%__IDENT__%${IDENT}%"                     ${CONFIG}/readme.sh
@@ -85,7 +84,6 @@ pkill -f cloonix-proxymous-${IDENT} 1>/dev/null 2>&1
 rm -rf ${PROXYSHARE_OUT} 1>/dev/null 2>&1
 rm -f /tmp/xauth-${USER}-extracted
 #---------------------------------------------------------------------------
-mkdir -p ${PROXYSHARE_OUT}/X11-unix
 mkdir -p ${EXTRACT}/log
 #-----------------------------------------------------------------------------
 if [ -z ${DISPLAY} ]; then
@@ -106,8 +104,15 @@ cat > ${EXTRACT}/../${IDENT}cmd << EOF
 #!/bin/sh
 
 if [ \${#} -ne 1 ]; then
-  echo cmd param needed:
-  echo start stop shell canvas web_on web_off demo_ping demo_frr
+  printf "\n\tCHOICE:\n"
+  printf "./${IDENT}cmd start\n"
+  printf "./${IDENT}cmd stop\n"
+  printf "./${IDENT}cmd shell\n"
+  printf "./${IDENT}cmd canvas\n"
+  printf "./${IDENT}cmd demo_ping\n"
+  printf "./${IDENT}cmd demo_frr\n"
+  printf "./${IDENT}cmd web_on\n"
+  printf "./${IDENT}cmd web_off\n"
   exit 
 fi
 cmd=\$1
@@ -141,11 +146,24 @@ case \$cmd in
     count_loop=0
     while [ ! -e "\${PROXYSHARE_OUT}/proxymous_start_status" ]; do
       sleep 1
+      count_loop=\$((count_loop+1))
+      if [ \$count_loop -gt 0 ]; then
+        echo Waiting for \${PROXY} launching, count \$count_loop.
+      fi
+      if [ \$count_loop -gt 3 ]; then
+        echo Fail launching:
+        echo \${PROXY} \${PROXYSHARE_OUT} \${IDENT}
+        exit 1
+      fi
     done
+    echo \${PROXY} launched and OK
     while [ -z "\$(grep cloonix_main_server_ready \${PROXYSHARE_OUT}/proxymous_start_status)" ]; do
       count_loop=\$((count_loop+1))
-      if [ \$count_loop -gt 15 ]; then
-        echo Fail waiting for server
+      if [ \$count_loop -gt 10 ]; then
+        echo Fail waiting for server look in file:
+        echo \${EXTRACT}/log/startup.log 
+        echo or in file:
+        echo \${EXTRACT}/rootfs/var/log/syslog 
         exit 1
       fi
       cat \${PROXYSHARE_OUT}/proxymous_start_status 
@@ -170,7 +188,7 @@ case \$cmd in
   ;;
 
   shell)
-    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} sh 
+    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} /usr/bin/cloonix-scriptpty /bin/bash 
   ;;
 
   canvas)

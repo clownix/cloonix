@@ -32,6 +32,16 @@
 #define ETH_TYPE_MAX 3
 #define ETH_LINE_MAX 12
 
+static void custom_vm_dialog_create(void);
+void cnt_distant_brandtype_cb(void);
+char *get_brandtype_image(char *type);
+char set_brandtype_image(char *type, char *image);
+char *get_brandtype_type(void);
+void global_brandtype_cb(GtkWidget *check, gpointer user_data);
+
+void menu_choice_cnt(void);
+
+static int g_custom_dialog_change;
 
 GtkWidget *get_bulkvm(void);
 GtkWidget *get_main_window(void);
@@ -40,7 +50,6 @@ static t_slowperiodic g_bulkvm[MAX_BULK_FILES];
 static t_slowperiodic g_bulkvm_photo[MAX_BULK_FILES];
 static int g_nb_bulkvm;
 static GtkWidget *g_custom_dialog, *g_entry_rootfs;
-void menu_choice_kvm(void);
 
 
 typedef struct t_cb_endp_type
@@ -150,12 +159,12 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
     {
     gtk_box_pack_start(GTK_BOX(hbox),rad[ETH_TYPE_MAX*rank+i],TRUE,TRUE,10);
     g_signal_connect(G_OBJECT(rad[ETH_TYPE_MAX*rank+i]),"clicked",
-                       (GCallback) endp_type_cb,
+                       G_CALLBACK(endp_type_cb),
                        (gpointer) cb_endp_type[i]);
     }
   append_grid(grid, hbox, title, (*line_nb)++);
   g_signal_connect (G_OBJECT (hbox), "destroy",
-                    (GCallback) free_endp_type, cb_endp_type);
+                    G_CALLBACK(free_endp_type), cb_endp_type);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -211,36 +220,68 @@ static void update_cust(t_custom_vm *cust, GtkWidget *entry_name,
   strncpy(cust->name, tmp, MAX_NAME_LEN-1);
 
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(g_entry_rootfs));
-  memset(cust->kvm_used_rootfs, 0, MAX_NAME_LEN);
-  strncpy(cust->kvm_used_rootfs, tmp, MAX_NAME_LEN-1);
+  set_brandtype_image("brandkvm", tmp);
 
   cust->cpu = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_cpu));
   cust->mem = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_ram));
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-static void custom_vm_dialog(t_custom_vm *cust)
+/*****************************************************************************/
+static void kvm_update_brandtype_image(void)
 {
-  int i, j, k, response, line_nb = 0, found=0;
+  int i, found;
+  found = 0;
+  memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  for (i=0; i<g_nb_bulkvm; i++)
+    {
+    if (!strcmp(get_brandtype_image("brandkvm"), g_bulkvm_photo[i].name))
+      found = 1;
+    }
+  if (found == 0)
+    {
+    if (g_nb_bulkvm >= 1)
+      set_brandtype_image("brandkvm", g_bulkvm_photo[0].name);
+    else 
+      set_brandtype_image("brandkvm", "bookworm.qcow2");
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void restart_custom_vm_dialog_create(void *data)
+{
+  if (!strcmp(get_brandtype_type(), "brandkvm"))
+    custom_vm_dialog_create();
+  else
+    menu_choice_cnt();
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+static void custom_vm_dialog_create(void)
+{
+  int i, j, k, response, line_nb = 0;
+  unsigned long uli;
   GSList *group = NULL;
+  GSList *brandgroup = NULL;
+  GtkWidget *brandtype[BRANDTYPE_NB_MAX];
   GtkWidget *entry_name, *entry_ram, *entry_cpu=NULL; 
   GtkWidget *grid, *parent, *is_persistent;
   GtkWidget *has_no_qemu_ga, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
+  GtkWidget *hbox_brandtype;
+  char *brandlib[BRANDTYPE_NB_MAX] = {"brandkvm", "brandzip", "brandcvm"};
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
 
-  if (g_custom_dialog)
+ if (g_custom_dialog)
+    { 
+    KERR("ERROR REQUEST MENU ON MENU ALIVE");
     return;
+    } 
 
-  memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  for (i=0; i<g_nb_bulkvm; i++)
-    {
-    if (!strcmp(cust->kvm_used_rootfs, g_bulkvm_photo[i].name))
-      found = 1;
-    }
-  if ((found == 0) && (g_nb_bulkvm >= 1))
-    strncpy(cust->kvm_used_rootfs, g_bulkvm_photo[0].name, MAX_NAME_LEN-1);
+  kvm_update_brandtype_image();
 
   grid = gtk_grid_new();
   gtk_grid_insert_column(GTK_GRID(grid), 0);
@@ -253,8 +294,26 @@ static void custom_vm_dialog(t_custom_vm *cust)
                                                   NULL);
   gtk_window_set_default_size(GTK_WINDOW(g_custom_dialog), 300, 20);
 
+  hbox_brandtype = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+  for (i=0; i<BRANDTYPE_NB_MAX; i++)
+    {
+    brandtype[i] = gtk_radio_button_new_with_label(brandgroup, brandlib[i]);
+    brandgroup = gtk_radio_button_get_group(GTK_RADIO_BUTTON(brandtype[i]));
+    if (!strcmp(get_brandtype_type(), brandlib[i]))
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(brandtype[i]),TRUE);
+    }
+  for (uli=0; uli<BRANDTYPE_NB_MAX; uli++)
+    {
+    gtk_box_pack_start(GTK_BOX(hbox_brandtype), brandtype[uli],TRUE,TRUE,10);
+    g_signal_connect(G_OBJECT(brandtype[uli]), "clicked",
+                     G_CALLBACK(global_brandtype_cb), (gpointer) uli);
+    }
+  append_grid(grid, hbox_brandtype, "brandtype", line_nb++);
+
+
+
   entry_name = gtk_entry_new();
-  gtk_entry_set_text(GTK_ENTRY(entry_name), cust->name);
+  gtk_entry_set_text(GTK_ENTRY(entry_name), g_custom_vm.name);
   append_grid(grid, entry_name, "Name:", line_nb++);
 
   is_persistent = gtk_check_button_new_with_label("persistent_rootfs");
@@ -285,11 +344,11 @@ static void custom_vm_dialog(t_custom_vm *cust)
 
   append_grid(grid, is_persistent, "remanence:", line_nb++);
   entry_cpu = gtk_spin_button_new_with_range(1, 32, 1);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_cpu), cust->cpu);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_cpu), g_custom_vm.cpu);
   append_grid(grid, entry_cpu, "Cpu:", line_nb++);
 
   entry_ram = gtk_spin_button_new_with_range(128, 50000, 16);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_ram), cust->mem);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_ram), g_custom_vm.mem);
   append_grid(grid, entry_ram, "Ram:", line_nb++);
 
 
@@ -301,7 +360,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
       k = i*ETH_TYPE_MAX + j;
       rad[k] = gtk_radio_button_new_with_label(group,lib[j]);
       group  = gtk_radio_button_get_group(GTK_RADIO_BUTTON(rad[k]));
-      if (cust->eth_tab[i].endp_type == j+endp_type_none)
+      if (g_custom_vm.eth_tab[i].endp_type == j+endp_type_none)
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rad[k]),TRUE);
       }
     }
@@ -313,7 +372,7 @@ static void custom_vm_dialog(t_custom_vm *cust)
   gtk_container_set_border_width(GTK_CONTAINER(grid), ETH_TYPE_MAX);
 
   g_entry_rootfs = gtk_entry_new();
-  gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), cust->kvm_used_rootfs);
+  gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), get_brandtype_image("brandkvm"));
   append_grid(grid, g_entry_rootfs, "Rootfs:", line_nb++);
 
   qcow2_rootfs = gtk_menu_button_new ();
@@ -332,14 +391,18 @@ static void custom_vm_dialog(t_custom_vm *cust)
   gtk_widget_show_all(g_custom_dialog);
   response = gtk_dialog_run(GTK_DIALOG(g_custom_dialog));
   
+
   if (response == GTK_RESPONSE_NONE)
     {
+    if (g_custom_dialog_change)
+      clownix_timeout_add(1,restart_custom_vm_dialog_create,NULL,NULL,NULL);
+    g_custom_dialog_change = 0;
+    gtk_widget_destroy(g_custom_dialog);
     g_custom_dialog = NULL;
-    menu_choice_kvm();
     }
   else
     {
-    update_cust(cust, entry_name, entry_cpu, entry_ram);
+    update_cust(&g_custom_vm, entry_name, entry_cpu, entry_ram);
     gtk_widget_destroy(g_custom_dialog);
     g_custom_dialog = NULL;
     }
@@ -354,7 +417,6 @@ GtkWidget *get_bulkvm(void)
   GSList *group = NULL;
   gpointer data;
   memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  t_custom_vm *cust = &g_custom_vm;
   if (g_nb_bulkvm > 0)
     {
     menu = gtk_menu_new();
@@ -368,8 +430,8 @@ GtkWidget *get_bulkvm(void)
         }
       gtk_menu_shell_append(GTK_MENU_SHELL(menu), el);
       data = (gpointer) g_bulkvm_photo[i].name;
-      g_signal_connect(G_OBJECT(el),"activate",(GCallback)qcow2_get,data);
-      if (!strcmp(cust->kvm_used_rootfs, g_bulkvm_photo[i].name))
+      g_signal_connect(G_OBJECT(el),"activate",G_CALLBACK(qcow2_get),data);
+      if (!strcmp(get_brandtype_image("brandkvm"), g_bulkvm_photo[i].name))
         {
         found = 1;
         gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el), TRUE);
@@ -377,7 +439,10 @@ GtkWidget *get_bulkvm(void)
       }
     if (found == 0)
       {
-      strncpy(cust->kvm_used_rootfs, g_bulkvm_photo[0].name, MAX_NAME_LEN-1);
+      if (g_nb_bulkvm >= 1)
+        set_brandtype_image("brandkvm", g_bulkvm_photo[0].name);
+      else 
+        set_brandtype_image("brandkvm", "bookworm.qcow2");
       gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el0), TRUE);
       }
     }
@@ -444,17 +509,44 @@ void set_bulkvm(int nb, t_slowperiodic *slowperiodic)
 /****************************************************************************/
 void menu_choice_kvm(void)
 {
-  custom_vm_dialog(&g_custom_vm);
+  custom_vm_dialog_create();
 }
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void kvm_distant_brandtype_cb(void)
+{   
+  if (!g_custom_dialog)
+    KERR("ERROR CHANGE BRANDTYPE");
+  else
+    {
+    g_custom_dialog_change = 1;
+    gtk_dialog_response(GTK_DIALOG(g_custom_dialog), GTK_RESPONSE_NONE);
+    }
+}     
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void kvm_brandtype_cb(void)
+{
+  kvm_update_brandtype_image();
+  if (!g_custom_dialog)
+    cnt_distant_brandtype_cb();
+  else
+    {
+    g_custom_dialog_change = 1;
+    gtk_dialog_response(GTK_DIALOG(g_custom_dialog), GTK_RESPONSE_NONE);
+    }
+}     
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 void menu_dialog_kvm_init(void)
 {
   int i;
+  g_custom_dialog_change = 0;
   memset(&g_custom_vm, 0, sizeof(t_custom_vm)); 
   strcpy(g_custom_vm.name, "Cloon");
-  strcpy(g_custom_vm.kvm_used_rootfs, "bookworm.qcow2");
   g_custom_vm.current_number = 0;
   g_custom_vm.is_persistent = 0;
   g_custom_vm.is_sda_disk = 0;

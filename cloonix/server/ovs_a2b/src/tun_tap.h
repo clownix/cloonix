@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int tun_tap_open(char *net_namespace, char *name, int *fd_rx, int *fd_tx);
+int tun_tap_open(int side, char *net_namespace, char *name, int *fd_rx, int *fd_tx);
 /*---------------------------------------------------------------------------*/
 
 

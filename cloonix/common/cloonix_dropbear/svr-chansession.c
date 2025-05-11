@@ -718,6 +718,7 @@ static void startup_env_addnewvar(char *startup_env)
 /*****************************************************************************/
 static void execchild(struct ChanSess *chansess)
 {
+  struct stat sb;
   char *usershell = NULL;
   char *login = NULL;
   char *pth="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
@@ -731,6 +732,7 @@ static void execchild(struct ChanSess *chansess)
   if (chansess->i_run_in_kvm)
     {
     clearenv();
+    addnewvar("NO_AT_BRIDGE", "1");
     if (startup_env)
       startup_env_addnewvar(startup_env);
     addnewvar("PATH", pth); 
@@ -774,7 +776,19 @@ static void execchild(struct ChanSess *chansess)
     }
   addnewvar("XAUTHORITY", "/root/.Xauthority");
 
-  run_shell_command(chansess->cmd, ses.maxfd, usershell, login);
+  if (lstat("/sys", &sb) == -1)
+    {
+    KERR("ERROR lstat /sys");
+    run_shell_command(chansess->cmd, ses.maxfd, usershell, NULL);
+    }
+  else if (sb.st_uid == 0)
+    {
+    run_shell_command(chansess->cmd, ses.maxfd, usershell, login);
+    }
+  else
+    {
+    run_shell_command(chansess->cmd, ses.maxfd, usershell, NULL);
+    }
 }
 /*---------------------------------------------------------------------------*/
 

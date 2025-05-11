@@ -80,6 +80,9 @@ typedef struct t_tcp_flow
   int llid_unix;
   int delayed_count;
   int inactivity_count;
+  int inet_rx_bytes;
+  int inet_tx_bytes;
+  int empty_and_clean_called;
   struct t_tcp_flow *prev;
   struct t_tcp_flow *next;
 } t_tcp_flow;

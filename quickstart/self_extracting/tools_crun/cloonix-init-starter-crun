@@ -1,8 +1,8 @@
-#!/usr/libexec/cloonix/common/bash
+#!/usr/libexec/cloonix/cloonfs/bash
 
 export TERM=linux
-COMMON="/usr/libexec/cloonix/common"
-SLEEP="/usr/libexec/cloonix/common/sleep"
+COMMON="/usr/libexec/cloonix/cloonfs"
+SLEEP="/usr/libexec/cloonix/cloonfs/sleep"
 if [ ! -e "/usr/share" ]; then
   ${COMMON}/ln -s ${COMMON}/share /usr/share
 fi
@@ -34,8 +34,8 @@ XAUTH_CODE=$(cat __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority)
 xauth add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
 
 cloonix_net __IDENT__
-while [ $(ps axo pid,args | grep -v grep | egrep -c /usr/libexec/cloonix/server/cloonix-main-server) -gt 0 ]; do
-  ${SLEEP} 2
+while [ $(ps axo pid,args | grep -v grep | grep __IDENT__ | egrep -c /usr/libexec/cloonix/cloonfs/cloonix-main-server) -gt 0 ]; do
+  ${SLEEP} 3
 done
 #----------------------------------------------------------------------------
 

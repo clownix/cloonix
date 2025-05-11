@@ -177,16 +177,17 @@ static int rx_dgram_cb(int llid, int fd)
 {
   static uint16_t seqtap=0;
   uint16_t seq;
-  int len, buf_len, result, max_len;
+  int len, buf_len, result;
   uint8_t *buf;
   char *net = get_net_name();
   char *c2c = get_c2c_name();
   uint8_t probe_idx;
-  max_len = HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN;
+  int max_len = HEADER_TAP_MSG + TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN;
+
   len = read(fd, g_rx, max_len);
   if (len <= 0)
     KOUT("ERROR READ %s %s %d %d", net, c2c, len, errno);
-  result = fct_seqtap_rx(1, len, fd, g_rx, &seq, &buf_len, &buf);
+  result = fct_seqtap_rx_udp(len, fd, g_rx, &seq, &buf_len, &buf);
   if (result == kind_seqtap_sig_hello)
     {
     if (sscanf((char *)buf, "cloonix_udp_probe %hhu", &probe_idx) != 1)

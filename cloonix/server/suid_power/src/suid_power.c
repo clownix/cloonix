@@ -377,8 +377,6 @@ static void req_kill_clean_all(void)
   char *root = g_root_path;
   int pid;
   t_vmon *next, *cur = g_head_vmon;
-  system("umount /tmp/sysfs_temp_sys2");
-  system("rmdir /tmp/sysfs_temp_sys2");
   crun_kill_all();
   while(cur)
     {
@@ -514,8 +512,6 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ko");
     else
       {
-      system("mkdir /tmp/sysfs_temp_sys2");
-      system("mount -t sysfs --make-private /tmp/sysfs_temp_sys2");
       rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ok");
       }
     }

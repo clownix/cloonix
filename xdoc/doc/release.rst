@@ -6,6 +6,12 @@ Software Release Information
 ============================
 
 
+v48-00
+======
+
+No update of doc, work on cvm, not yet completed.
+rootless self-extracting works again...
+
 v47-00
 ======
 

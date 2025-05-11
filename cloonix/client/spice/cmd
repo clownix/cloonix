@@ -16,8 +16,7 @@ export PKG_CONFIG_PATH=${TARGET}/pkgconfig
 export DESTDIR=${TARGET}
 export PATH=${TARGET}/bin:$PATH
 cd ${HERE}/spice_client/tainted_spice
-sed -i s/UNKNOWN/0.39/ ./build-aux/git-version-gen
-sed -i 99s"/false/true/" meson_options.txt
+sed -i s/UNKNOWN/0.43/ ./build-aux/git-version-gen
 
 meson setup -Dcoroutine=gthread build
 cd build

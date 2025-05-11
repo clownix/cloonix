@@ -384,20 +384,10 @@ static char *format_buf_mount(char *mountbear, char *mounttmp,
     }
   buf_mount = (char *) malloc(len_mount);
   memset(buf_mount, 0, len_mount);
-  if (!strcmp(brandtype, "brandcvm"))
-    {
-    snprintf(buf_mount, len_mount-1,  CONFIG_JSON_MOUNT,
-           vmountjson[0], vmountjson[1], vmountjson[2], vmountjson[3],
-           vmountjson[4], vmountjson[5], vmountjson[6], vmountjson[7],
-           mountbear, mounttmp, CONFIG_JSON_MOUNT_SYS_CGROUP_RW);
-    }
-  else
-    {
-    snprintf(buf_mount, len_mount-1,  CONFIG_JSON_MOUNT,
-           vmountjson[0], vmountjson[1], vmountjson[2], vmountjson[3],
-           vmountjson[4], vmountjson[5], vmountjson[6], vmountjson[7],
-           mountbear, mounttmp, CONFIG_JSON_MOUNT_SYS_CGROUP_RO);
-    }
+  snprintf(buf_mount, len_mount-1,  CONFIG_JSON_MOUNT,
+         vmountjson[0], vmountjson[1], vmountjson[2], vmountjson[3],
+         vmountjson[4], vmountjson[5], vmountjson[6], vmountjson[7],
+         mountbear, mounttmp);
   return buf_mount;
 }
 /*--------------------------------------------------------------------------*/
@@ -410,7 +400,7 @@ static char *get_config_json(char *rootfs, char *nspacecrun,
 {
   char *buf;
   char *buf_mount;
-  int len = strlen(CONFIG_JSON) + strlen(CONFIG_JSON_MOUNT) +
+  int len = strlen(CONFIG_MAIN_JSON) + strlen(CONFIG_JSON_MOUNT) +
             (5*strlen(CONFIG_JSON_CAPA)) + strlen(CONFIG_JSON_MOUNT) +
             (4*strlen(CONFIG_JSON_MOUNT_ITEM)) + 10*MAX_PATH_LEN;
   char env[MAX_PATH_LEN+MAX_NAME_LEN], *starter;
@@ -423,14 +413,10 @@ static char *get_config_json(char *rootfs, char *nspacecrun,
     starter = "\"/sbin/init\"";
   format_startup_env(startup_env, env);
 
-KERR("mountbear:%s mounttmp:%s vmount:%s brandtype:%s rootfs:%s nspacecrun:%s name:%s",
-mountbear, mounttmp, vmount, brandtype, rootfs, nspacecrun, name);
-
-
   buf_mount = format_buf_mount(mountbear, mounttmp, vmount, brandtype);
   buf = (char *) malloc(len);
   memset(buf, 0, len);
-  snprintf(buf, len-1, CONFIG_JSON, starter, env,
+  snprintf(buf, len-1, CONFIG_MAIN_JSON, starter, env,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, CONFIG_JSON_CAPA,
                                     CONFIG_JSON_CAPA, rootfs, buf_mount, 
@@ -610,7 +596,23 @@ static int create_all_dirs(char *mountbear, char *mounttmp, char *image,
     memset(path, 0, MAX_PATH_LEN);
     snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s/", cnt_dir, name, TMPFS);
     if (my_mkdir(path))
-      KERR("ERROR %s", path);
+      {
+      KERR("WARNING %s", path);
+      memset(cmd, 0, 2*MAX_PATH_LEN);
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s/%s/%s/",
+               UMOUNT_BIN, cnt_dir, name, TMPFS); 
+      if (execute_cmd(cmd, 1))
+        KERR("WARNING %s", cmd);
+      memset(cmd, 0, 2*MAX_PATH_LEN);
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s/%s/%s",
+               UMOUNT_BIN, cnt_dir, name, ROOTFS);
+      if (execute_cmd(cmd, 1))
+        KERR("WARNING %s", cmd);
+      if (my_mkdir(path))
+        KERR("ERROR %s", path);
+      else
+        result = 0;
+      }
     else
       result = 0;
     }
@@ -699,7 +701,7 @@ static int read_crun_create_pid(char *name, int should_not_exist)
   int child_pid, wstatus, count= 0, create_pid = 0;
   char cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
-  int nb_tries = 5;
+  int nb_tries = 15;
   if (should_not_exist)
     nb_tries = 1;
   memset(cmd, 0, MAX_PATH_LEN);
@@ -710,14 +712,18 @@ static int read_crun_create_pid(char *name, int should_not_exist)
     {
     count += 1;
     if (count > nb_tries)
+      {
+      if (should_not_exist == 0)
+        KERR("ERROR PID %s", name);
       break;
+      }
     usleep(100000);
     memset(line, 0, MAX_PATH_LEN);
     fp = cmd_lio_popen(cmd, &child_pid);
     if (fp == NULL)
       {
-      log_write_req("PREVIOUS CMD KO 2");
       KERR("ERROR %s", cmd);
+      log_write_req("PREVIOUS CMD KO 2");
       }
     else
       {
@@ -725,15 +731,63 @@ static int read_crun_create_pid(char *name, int should_not_exist)
         {
         ptr = strchr(line, ',');
         if (ptr)
+          {
           *ptr = 0;
-        create_pid = atoi(line);
+          create_pid = atoi(line);
+          }
+        else
+          KERR("ERROR PID %s %s", name, line);
         }
       else if (should_not_exist == 0)
+        {
+        KERR("ERROR PID %s", name);
         log_write_req("PREVIOUS CMD KO 3");
+        }
       pclose(fp);
       if (force_waitpid(child_pid, &wstatus))
         KERR("ERROR");
       }
+    }
+  return create_pid;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static int read_crun_create_pid_while_delete(char *name)
+{ 
+  FILE *fp;
+  char *ptr = g_var_crun_log;
+  int child_pid, wstatus, create_pid = 0;
+  char cmd[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+  "%s --log=%s --root=/var/lib/cloonix/%s/%s state %s | %s \"\\\"pid\\\"\" | %s '{ print $2 }'",
+  CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name, GREP_BIN, AWK_BIN);
+  memset(line, 0, MAX_PATH_LEN);
+  fp = cmd_lio_popen(cmd, &child_pid);
+  if (fp == NULL)
+    {
+    KERR("ERROR %s", cmd);
+    log_write_req("PREVIOUS CMD KO 2");
+    }
+  else
+    {
+    if(fgets(line, MAX_PATH_LEN-1, fp))
+      {
+      ptr = strchr(line, ',');
+      if (ptr)
+        {
+        *ptr = 0;
+        create_pid = atoi(line);
+        KERR("ERROR PID EXISTS %s %s", name, line);
+        }
+      else
+        KERR("ERROR LINE PID %s %s", name, line);
+      }
+    pclose(fp);
+    if (force_waitpid(child_pid, &wstatus))
+      KERR("ERROR");
     }
   return create_pid;
 }
@@ -795,6 +849,7 @@ int crun_utils_unlink_sub_dir_files(char *dir)
       KOUT("%d", errno);
     if (rmdir(dir))
       {
+      KERR("ERROR Dir: %s could not be deleted\n", dir);
       result = -1;
       }
     else
@@ -835,10 +890,11 @@ int crun_utils_create_overlay(char *path, char *lower,
 /****************************************************************************/
 int crun_utils_create_crun_create(char *cnt_dir, char *name)
 {
-  int pid, len = 0;
+  int pid = 0, len = 0;
   char cmd[4*MAX_PATH_LEN];
   memset(cmd, 0, 4*MAX_PATH_LEN);
   len += sprintf(cmd+len, "%s", CRUN_BIN); 
+  len += sprintf(cmd+len, " --debug"); 
   len += sprintf(cmd+len, " --cgroup-manager=disabled"); 
   len += sprintf(cmd+len, " --log=%s", g_var_crun_log); 
   len += sprintf(cmd+len, " --root=/var/lib/cloonix/%s/%s",
@@ -1081,38 +1137,44 @@ int crun_utils_delete_overlay(char *name, char *cnt_dir, char *bulk,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void crun_utils_delete_crun_stop(char *name, int crun_pid)
+void crun_utils_delete_crun_stop(char *name, int pid)
 {
-  int pid, res;
   char cmd[MAX_PATH_LEN];
   char *ptr = g_var_crun_log;
 
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-           "%s --log=%s --root=/var/lib/cloonix/%s/%s stop %s",
+           "%s --log=%s --root=/var/lib/cloonix/%s/%s kill %s",
            CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1))
     KERR("ERROR %s", cmd);
+  if (pid)
+    kill(pid, 9);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void crun_utils_delete_crun_delete(char *name)
+{
+  int pid;
+  char cmd[MAX_PATH_LEN];
+  char *ptr = g_var_crun_log;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
            CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1))
     KERR("ERROR %s", cmd);
-  if (crun_pid > 0)
+  pid = read_crun_create_pid_while_delete(name);
+  if (pid > 0)
     {
-    res = kill(crun_pid, 9);
-    }
-  else
-    {
-    pid = read_crun_create_pid(name, 0);
-    if (pid > 0)
-      {
-      res = kill(pid, 9);
-      }
+    KERR("ERROR PID EXISTS %s %d", name, pid);
+    kill(pid, 9);
     }
 }
 /*--------------------------------------------------------------------------*/
+
+
 
 /****************************************************************************/
 int crun_utils_create_crun_start(char *name)
@@ -1124,7 +1186,8 @@ int crun_utils_create_crun_start(char *name)
   memset(cmd, 0, MAX_PATH_LEN);
   memset(line, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "%s --cgroup-manager=disabled --log=%s --root=/var/lib/cloonix/%s/%s start %s",
+  "%s --cgroup-manager=disabled --debug --log=%s "
+  "--root=/var/lib/cloonix/%s/%s start %s",
   CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1))
     {

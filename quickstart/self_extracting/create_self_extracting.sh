@@ -2,13 +2,13 @@
 #-----------------------------------------------------------------------------
 HERE=`pwd`
 #-----------------------------------------------------------------------------
-RESULT="${HOME}/cloonix-extractor-46-00.sh"
-PATCHELF="/usr/libexec/cloonix/common/cloonix-patchelf"
-CRUN="/usr/libexec/cloonix/server/cloonix-crun"
-PROXY="/usr/libexec/cloonix/server/cloonix-proxymous"
-XAUTH="/usr/libexec/cloonix/server/xauth"
-LD="/usr/libexec/cloonix/common/lib64/ld-linux-x86-64.so.2"
-COMMON_LIBS="/usr/libexec/cloonix/common/lib/x86_64-linux-gnu"
+RESULT="${HOME}/cloonix-extractor-48-00.sh"
+PATCHELF="/usr/libexec/cloonix/cloonfs/cloonix-patchelf"
+CRUN="/usr/libexec/cloonix/cloonfs/cloonix-crun"
+PROXY="/usr/libexec/cloonix/cloonfs/cloonix-proxymous"
+XAUTH="/usr/libexec/cloonix/cloonfs/xauth"
+LD="/usr/libexec/cloonix/cloonfs/lib64/ld-linux-x86-64.so.2"
+COMMON_LIBS="/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu"
 #-----------------------------------------------------------------------------
 INIT_CRUN="${HERE}/tools_crun/cloonix-init-starter-crun"
 TEMPLATE="${HERE}/tools_crun/config.json.template"
@@ -36,6 +36,7 @@ LISTSO="libxcb.so.1 \
         libgcc_s.so.1 \
         libc.so.6"
 ZIPFRR="/var/lib/cloonix/bulk/zipfrr.zip"
+#  ALPINE="/var/lib/cloonix/bulk/alpine"
 #-----------------------------------------------------------------------------
 for i in ${ZIPBASIC} ${ZIPFRR} ${CRUN} ${LD} ${PROXY} ${XAUTH} \
          ${TEMPLATE} ${INIT_CRUN} ${STARTUP} ${MAKESELF} ; do
@@ -63,18 +64,21 @@ done
 mkdir -p ${CLOONIX}
 mkdir -p ${VAR_CLOONIX}/bulk
 mkdir -p ${VAR_CLOONIX}/cache
-for i in "run" "root" "bin" "usr" \
-         "var/run" "var/log" "/var/spool/rsyslog" ; do
+for i in "root" "bin" "usr" \
+         "var/log" "var/spool/rsyslog" ; do
   mkdir -p ${EXTRACT}/rootfs/${i}
 done
+cd ${EXTRACT}/rootfs
+ln -s /var/run run
+cd ${HERE}
 #-----------------------------------------------------------------------------
-cp -rf /usr/libexec/cloonix/server ${CLOONIX}
-cp -rf /usr/libexec/cloonix/common ${CLOONIX}
-cp -f /usr/bin/cloonix* ${CLOONIX}/common
-cp -f ${CLOONIX}/common/bash ${EXTRACT}/rootfs/bin
-cp -f ${ZIPFRR} ${VAR_CLOONIX}/bulk
+cp -rf /usr/libexec/cloonix/cloonfs ${CLOONIX}
+cp -f /usr/bin/cloonix* ${CLOONIX}/cloonfs
+cp -f ${CLOONIX}/cloonfs/bash ${EXTRACT}/rootfs/bin
 cp -f ${HERE}/tools_crun/ping_demo.sh ${EXTRACT}/rootfs/root
 cp -f ${HERE}/tools_crun/spider_frr.sh ${EXTRACT}/rootfs/root
+cp -f ${ZIPFRR} ${VAR_CLOONIX}/bulk
+#  cp -rf ${ALPINE} ${VAR_CLOONIX}/bulk
 #-----------------------------------------------------------------------------
 mkdir -p ${CONFIG}
 mkdir -p ${BIN}
@@ -95,8 +99,6 @@ ${PATCHELF} --force-rpath --set-rpath ./bin                      ${BIN}/cloonix-
 ${PATCHELF} --set-interpreter         ./bin/ld-linux-x86-64.so.2 ${BIN}/cloonix-patchelf
 ${PATCHELF} --add-needed              ./bin/libm.so.6            ${BIN}/cloonix-patchelf
 #---------------------------------------------------------------------------
-mkdir -p ${EXTRACT}/rootfs/var/run/netns
-#-----------------------------------------------------------------------------
 OPTIONS="--nooverwrite --notemp --nomd5 --nocrc --tar-quietly --quiet"
 ${MAKESELF} ${OPTIONS} ${EXTRACT} ${RESULT} "cloonix" ./config/readme.sh
 #-----------------------------------------------------------------------------

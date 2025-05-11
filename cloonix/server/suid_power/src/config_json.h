@@ -19,56 +19,6 @@
 //https://github.com/opencontainers/runtime-spec/blob/main/config.md
 //https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md
 
-#define CONFIG_JSON_MOUNT_SYS_CGROUP_RO "\n"\
-"{\n"\
-"  \"destination\": \"/sys\",\n"\
-"  \"type\": \"sysfs\",\n"\
-"  \"source\": \"sysfs\",\n"\
-"  \"options\": [\n"\
-"          \"nosuid\",\n"\
-"          \"noexec\",\n"\
-"          \"nodev\",\n"\
-"          \"ro\"\n"\
-"  ]\n"\
-"},\n"\
-"{\n"\
-"  \"destination\": \"/sys/fs/cgroup\",\n"\
-"  \"type\": \"cgroup\",\n"\
-"  \"source\": \"cgroup\",\n"\
-"  \"options\": [\n"\
-"          \"nosuid\",\n"\
-"          \"noexec\",\n"\
-"          \"nodev\",\n"\
-"          \"relatime\",\n"\
-"          \"ro\"\n"\
-"  ]\n"\
-"}\n"
-
-#define CONFIG_JSON_MOUNT_SYS_CGROUP_RW "\n"\
-"{\n"\
-"  \"destination\": \"/sys\",\n"\
-"  \"type\": \"sysfs\",\n"\
-"  \"source\": \"sysfs\",\n"\
-"  \"options\": [\n"\
-"          \"nosuid\",\n"\
-"          \"noexec\",\n"\
-"          \"nodev\",\n"\
-"          \"rw\"\n"\
-"  ]\n"\
-"},\n"\
-"{\n"\
-"  \"destination\": \"/sys/fs/cgroup\",\n"\
-"  \"type\": \"cgroup\",\n"\
-"  \"source\": \"cgroup\",\n"\
-"  \"options\": [\n"\
-"          \"nosuid\",\n"\
-"          \"noexec\",\n"\
-"          \"nodev\",\n"\
-"          \"relatime\",\n"\
-"          \"rw\"\n"\
-"  ]\n"\
-"}\n"
-
 
 #define CONFIG_JSON_MOUNT_ITEM "\n"\
 "{\n"\
@@ -87,15 +37,10 @@
 "  \"options\": [\"rbind\",\"rw\"]\n"\
 "},\n"\
 "{\n"\
-"  \"destination\": \"/lib/modules\",\n"\
-"  \"type\": \"none\",\n"\
-"  \"source\": \"/lib/modules\",\n"\
-"  \"options\": [\"rbind\",\"ro\"]\n"\
-"},\n"\
-"{\n"\
-"  \"destination\": \"/proc\",\n"\
-"  \"type\": \"proc\",\n"\
-"  \"source\": \"proc\"\n"\
+"  \"destination\": \"/run\",\n"\
+"  \"type\": \"tmpfs\",\n"\
+"  \"source\": \"tmpfs\",\n"\
+"  \"options\": [\"nosuid\",\"noexec\",\"nodev\"]\n"\
 "},\n"\
 "{\n"\
 "  \"destination\": \"/dev\",\n"\
@@ -147,18 +92,31 @@
 "  \"destination\": \"/dev/mqueue\",\n"\
 "  \"type\": \"mqueue\",\n"\
 "  \"source\": \"mqueue\",\n"\
-"  \"options\": [\n"\
-"          \"nosuid\",\n"\
-"          \"noexec\",\n"\
-"          \"nodev\"\n"\
-"  ]\n"\
+"  \"options\": [\"nosuid\",\"noexec\",\"nodev\"]\n"\
+"},\n"\
+"{\n"\
+"  \"destination\": \"/sys\",\n"\
+"  \"type\": \"sysfs\",\n"\
+"  \"source\": \"sysfs\",\n"\
+"  \"options\": [\"nosuid\",\"noexec\",\"nodev\"]\n"\
+"},\n"\
+"{\n"\
+"  \"destination\": \"/sys/fs/cgroup\",\n"\
+"  \"type\": \"cgroup2\",\n"\
+"  \"source\": \"cgroup2\",\n"\
+"  \"options\": [\"nosuid\",\"noexec\",\"nodev\"]\n"\
+"},\n"\
+"{\n"\
+"  \"destination\": \"/proc\",\n"\
+"  \"type\": \"proc\",\n"\
+"  \"source\": \"proc\"\n"\
 "},\n"\
 "{\n"\
 "  \"destination\": \"/tmp\",\n"\
 "  \"type\": \"none\",\n"\
 "  \"source\": \"%s\",\n"\
 "  \"options\": [\"rbind\",\"mode=777\",\"rw\"]\n"\
-"},\n%s\n"
+"}\n"
 
 
 
@@ -176,13 +134,14 @@
 "\"CAP_CHECKPOINT_RESTORE\"\n"
 
 
-#define CONFIG_JSON "  {\n"\
+#define CONFIG_MAIN_JSON "  {\n"\
 "\"ociVersion\": \"1.0.2\",\n"\
 "    \"process\": {\n"\
 "        \"terminal\": \"false\",\n"\
 "        \"user\": {\n"\
 "            \"uid\": 0,\n"\
-"            \"gid\": 0\n"\
+"            \"gid\": 0,\n"\
+"            \"umask\": 0\n"\
 "        },\n"\
 "        \"args\": [%s],\n"\
 "        \"env\": [\n"\
@@ -205,15 +164,38 @@
 "            \"soft\": 1024\n"\
 "            }\n"\
 "        ],\n"\
-"        \"noNewPrivileges\": false\n"\
+"        \"noNewPrivileges\": true\n"\
 "    },\n"\
 "    \"root\": {\n"\
 "        \"path\": \"%s\",\n"\
-"        \"readonly\": \"false\"\n"\
+"        \"readonly\": \"true\"\n"\
 "        },\n"\
 "    \"hostname\": \"crun\",\n"\
 "    \"mounts\": [ %s ],\n"\
 "    \"linux\": {\n"\
+"        \"namespaces\": [\n"\
+"            {\"type\": \"pid\"},\n"\
+"            {\"type\": \"network\",\"path\": \"%s\"},\n"\
+"            {\"type\": \"ipc\"},\n"\
+"            {\"type\": \"uts\"},\n"\
+"            {\"type\": \"cgroup\"},\n"\
+"            {\"type\": \"mount\"}\n"\
+"        ],\n"\
+"        \"rootfsPropagation\": \"private\",\n"\
+"        \"uidMappings\": [ \n"\
+"            { \n"\
+"                \"containerID\": 0, \n"\
+"                \"hostID\": 0, \n"\
+"                \"size\": 1 \n"\
+"            } \n"\
+"        ], \n"\
+"        \"gidMappings\": [ \n"\
+"            { \n"\
+"                \"containerID\": 0, \n"\
+"                \"hostID\": 0, \n"\
+"                \"size\": 1 \n"\
+"            } \n"\
+"        ], \n"\
 "        \"device\": [\n"\
 "            {\n"\
 "            \"path\": \"/dev/fuse\",\n"\
@@ -287,38 +269,6 @@
 "                \"access\": \"rw\"\n"\
 "                }\n"\
 "            ]\n"\
-"        },\n"\
-"        \"namespaces\": [\n"\
-"            {\"type\": \"pid\"},\n"\
-"            {\"type\": \"network\",\"path\": \"%s\"},\n"\
-"            {\"type\": \"ipc\"},\n"\
-"            {\"type\": \"uts\"},\n"\
-"            {\"type\": \"cgroup\"},\n"\
-"            {\"type\": \"mount\"}\n"\
-"        ],\n"\
-"        \"maskedPaths\": [\n"\
-"            \"/proc/acpi\",\n"\
-"            \"/proc/asound\",\n"\
-"            \"/proc/kcore\",\n"\
-"            \"/proc/keys\",\n"\
-"            \"/proc/latency_stats\",\n"\
-"            \"/proc/timer_list\",\n"\
-"            \"/proc/timer_stats\",\n"\
-"            \"/proc/sched_debug\",\n"\
-"            \"/sys/firmware\",\n"\
-"            \"/proc/scsi\"\n"\
-"        ],\n"\
-"        \"sysctl\": {\n"\
-"            \"net.ipv4.ip_forward\": \"1\",\n"\
-"            \"net.ipv4.conf.all.log_martians\": \"1\",\n"\
-"            \"net.ipv6.conf.all.disable_ipv6\": \"1\",\n"\
-"            \"net.ipv6.conf.default.disable_ipv6\": \"1\"\n"\
-"        },\n"\
-"        \"readonlyPaths\": [\n"\
-"            \"/proc/bus\",\n"\
-"            \"/proc/fs\",\n"\
-"            \"/proc/irq\",\n"\
-"            \"/proc/sysrq-trigger\"\n"\
-"        ]\n"\
 "        }\n"\
+"    }\n"\
 "}"

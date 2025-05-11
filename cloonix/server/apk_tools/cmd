@@ -1,0 +1,14 @@
+#!/bin/bash
+HERE=`pwd`
+./allclean
+TARGZ=../../../targz_store
+cd ${TARGZ}
+APK=$(ls apk-tools_*)
+APK=${APK%%.*}
+cd ${HERE}
+tar xvf ${TARGZ}/${APK}.tar.gz
+cd ${HERE}/apk-tools
+meson setup -Dc_link_args="-static" -Dprefer_static=true -Ddefault_library=static build
+ninja -C build src/apk
+mv build/src/apk ${HERE}/cloonix-apk-static
+

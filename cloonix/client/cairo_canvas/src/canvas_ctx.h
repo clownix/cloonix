@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void canvas_ctx_init(void);
 void update_topo_phy(int nb_phy, t_topo_info_phy *phy);
 void update_topo_bridges(int nb_bridges, t_topo_bridges *bridges);
 

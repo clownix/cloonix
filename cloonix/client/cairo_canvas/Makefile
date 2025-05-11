@@ -14,7 +14,7 @@ LIB_SUBSETS=./src/subsets
 LIB_BDPLOT=./src/bdplot
 
 EXE      = cloonix-gui
-WARNINGS=-Wall
+WARNINGS=-Wall -Wno-format-truncation
 VPATH=src:${LIB_CLIENT}:${LIB_INTF}/src
 
 INCLUDES= -I. $(shell pkg-config --cflags gtk+-3.0) \

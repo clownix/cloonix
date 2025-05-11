@@ -59,16 +59,23 @@ static uint64_t get_usec(void)
 /****************************************************************************/
 static void packet_tx(int id, int len, uint8_t *buf)
 {
-  static uint16_t seqtap = 0;
+  static uint16_t seqtap0 = 0;
+  static uint16_t seqtap1 = 0;
   int tx;
-  seqtap += 1;
   if ((len <= 0) || (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
     KOUT("ERROR TX %d", len);
-  fct_seqtap_tx(kind_seqtap_data, g_buf_tx, seqtap, len, buf);
   if (id == 0)
+    {
+    seqtap0 += 1;
+    fct_seqtap_tx(kind_seqtap_data, g_buf_tx, seqtap0, len, buf);
     tx = write(g_fd_tx_to_tap0, g_buf_tx, len + HEADER_TAP_MSG);
+    }
   else if (id == 1)
+    {
+    seqtap1 += 1;
+    fct_seqtap_tx(kind_seqtap_data, g_buf_tx, seqtap1, len, buf);
     tx = write(g_fd_tx_to_tap1, g_buf_tx, len + HEADER_TAP_MSG);
+    }
   else
     KOUT("ERROR %d", id);
   
@@ -145,7 +152,7 @@ static int rx_cb0(int llid, int fd)
   len = read(fd, g_buf_rx, HEADER_TAP_MSG);
   if (len != HEADER_TAP_MSG)
     KOUT("ERROR READ %d %d", len, errno);
-  result = fct_seqtap_rx(0, 0, fd, g_buf_rx, &seq, &buf_len, &buf);
+  result = fct_seqtap_rx(fd, g_buf_rx, &seq, &buf_len, &buf);
   if (result != kind_seqtap_data)
     KOUT("ERROR %d", result);
   if (seq != ((seqtap+1)&0xFFFF)) 
@@ -166,7 +173,7 @@ static int rx_cb1(int llid, int fd)
   len = read(fd, g_buf_rx, HEADER_TAP_MSG);
   if (len != HEADER_TAP_MSG)
     KOUT("ERROR READ %d %d", len, errno);
-  result = fct_seqtap_rx(0, 0, fd, g_buf_rx, &seq, &buf_len, &buf);
+  result = fct_seqtap_rx(fd, g_buf_rx, &seq, &buf_len, &buf);
   if (result != kind_seqtap_data)
     KOUT("ERROR %d", result);
   if (seq != ((seqtap+1)&0xFFFF)) 

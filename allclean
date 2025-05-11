@@ -66,7 +66,10 @@ SERVER=${SRC_TREE_ROOT}/cloonix/server
   rm -f ${SERVER}/dtach/cloonix-dtach
   rm -f ${SERVER}/cloonix-proxymous
 #----------------------------------------------------------
-  for i in ovs \
+  for i in apk_tools \
+           script_pty \
+           iproute2 \
+           ovs \
            proxymous \
            nginx \
            websockify-js \
@@ -79,7 +82,6 @@ SERVER=${SRC_TREE_ROOT}/cloonix/server
            xwy \
            wm2 \
            crun \
-           iproute2 \
            xorg \
            wireshark \
            spice_lib_server ; do

@@ -8,6 +8,37 @@ mkdir -vp ${WORK}
 mkdir -p ${TARGZ}
 #-----------------------------------------------------------------------------
 cd ${WORK}
+git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-gtk.git
+cd ${WORK}/spice-gtk
+COMMIT=$(git log --pretty=format:"%H")
+git submodule init
+git submodule update --recursive
+cd ${WORK}
+tar zcvf spice-gtk_${COMMIT}.tar.gz spice-gtk
+rm -rf spice-gtk
+mv spice-gtk_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------------------------------
+cd ${WORK}
+git clone --depth=1 https://github.com/containers/crun.git
+cd ${WORK}/crun
+COMMIT=$(git log --pretty=format:"%H")
+./autogen.sh
+./configure
+cd ${WORK}
+tar zcvf crun_${COMMIT}.tar.gz crun
+rm -rf crun
+mv crun_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------------------------------
+cd ${WORK}
+git clone --depth=1 https://github.com/alpinelinux/apk-tools.git
+cd ${WORK}/apk-tools
+COMMIT=$(git log --pretty=format:"%H")
+cd ${WORK}
+tar zcvf apk-tools_${COMMIT}.tar.gz apk-tools
+rm -rf apk-tools
+mv apk-tools_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------------------------------
+cd ${WORK}
 git clone --depth=1  https://gitlab.freedesktop.org/xorg/xserver
 cd ${WORK}/xserver
 COMMIT=$(git log --pretty=format:"%H")
@@ -59,17 +90,6 @@ rm -rf patchelf
 mv patchelf_${COMMIT}.tar.gz ${TARGZ}
 #-----------------------------------------------------------------------------
 cd ${WORK}
-git clone --depth=1 https://github.com/containers/crun.git
-cd ${WORK}/crun
-COMMIT=$(git log --pretty=format:"%H")
-./autogen.sh
-./configure
-cd ${WORK}
-tar zcvf crun_${COMMIT}.tar.gz crun
-rm -rf crun
-mv crun_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------------------------------
-cd ${WORK}
 git clone --depth=1 https://git.qemu.org/git/qemu.git
 cd ${WORK}/qemu
 COMMIT=$(git log --pretty=format:"%H")
@@ -96,17 +116,6 @@ cd ${WORK}
 tar zcvf ovs_${COMMIT}.tar.gz ovs
 rm -rf ovs
 mv ovs_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------------------------------
-cd ${WORK}
-git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-gtk.git
-cd ${WORK}/spice-gtk
-COMMIT=$(git log --pretty=format:"%H")
-git submodule init
-git submodule update --recursive
-cd ${WORK}
-tar zcvf spice-gtk_${COMMIT}.tar.gz spice-gtk
-rm -rf spice-gtk
-mv spice-gtk_${COMMIT}.tar.gz ${TARGZ}
 #-----------------------------------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-protocol.git
@@ -140,3 +149,4 @@ mv usbredir_${COMMIT}.tar.gz ${TARGZ}
 cd ${HERE}
 rmdir work_targz_store
 #-----------------------------------------------------------------------------
+#https://www.kernel.org/pub/linux/utils/net/iproute2/ for iproute2-6.14.0.tar.gz

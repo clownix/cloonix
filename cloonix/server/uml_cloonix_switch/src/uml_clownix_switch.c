@@ -319,6 +319,16 @@ static void timer_proxymous_init(void *data)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timer_everything_is_ready(void *data)
+{
+  printf("\n    UML_CLOONIX_SWITCH NOW RUNNING\n\n");
+  daemon(0,0);
+  g_uml_cloonix_started = 1;
+  proxycrun_transmit_write_start_status_file_ready();
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 static void timer_openvswitch_ok(void *data)
 {
   if (!proxycrun_connect_proxy_ok())
@@ -331,10 +341,7 @@ static void timer_openvswitch_ok(void *data)
     }
   else
     {
-    printf("\n    UML_CLOONIX_SWITCH NOW RUNNING\n\n");
-    daemon(0,0);
-    g_uml_cloonix_started = 1;
-    proxycrun_transmit_write_start_status_file_ready();
+    clownix_timeout_add(30, timer_everything_is_ready, NULL, NULL, NULL);
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -485,7 +492,11 @@ void check_for_work_dir_inexistance(void)
   if (stat(root_wk, &stat_path) == 0)
     {
     if (unlink_sub_dir_files(root_wk, err))
-      KERR("ERROR removing %s %s", root_wk, err);
+      {
+      printf( "FATAL ERROR!!!!\nPath: \"%s\" already exists\n"
+              "please remove it and restart \n\n", root_wk);
+      KOUT("ERROR removing %s %s", root_wk, err);
+      }
     else
       printf( "Path: \"%s\" already exists, removing it\n\n", root_wk);
     }

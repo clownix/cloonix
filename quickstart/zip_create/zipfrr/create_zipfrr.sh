@@ -18,10 +18,8 @@ echo QUIET UNZIP OF ${BULK}/${BASIC}
 unshare -rm unzip -q ${BULK}/${BASIC} 
 #----------------------------------------------------------------------------#
 
-for i in "run/frr" "var/run/frr" "var/tmp/frr" ; do
-  mkdir -v -p ${ROOTFS}/${i}
-  chmod 777 ${ROOTFS}/${i}
-done
+mkdir -v -p ${ROOTFS}/var/tmp/frr
+chmod 777 ${ROOTFS}/var/tmp/frr
 
 cat >> ${ROOTFS}/etc/passwd << "EOF"
 frr:x:0:0:Frr routing suite,,,:/nonexistent:/bin/nologin
