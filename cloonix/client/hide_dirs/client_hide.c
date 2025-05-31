@@ -514,10 +514,9 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if (argc != 4)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     snprintf(title, MAX_NAME_LEN-1, "%s/%s", argv[2], argv[3]);
-    snprintf(param, 399, "/usr/libexec/cloonix/cloonfs/cloonix-crun "
-                         "--log=/var/lib/cloonix/%s/log/debug_crun.log "
-                         "--root=/var/lib/cloonix/%s/%s/ exec %s /bin/sh",
-                         argv[2], argv[2], CRUN_DIR, argv[3]);
+    snprintf(param, 399, "%s --log=/var/lib/cloonix/%s/log/debug_crun.log "
+                         "--root=/var/lib/cloonix/%s/%s/ exec -ti %s /bin/sh",
+                         CRUN_BIN, argv[2], argv[2], CRUN_DIR, argv[3]);
     new_argv[0] = URXVT_BIN;
     new_argv[1] = "-T";
     new_argv[2] = title;

@@ -69,9 +69,9 @@ void write_start_status_file(int is_ready)
   if (!fp)
     KOUT("ERROR WRITING %s", path);
   if (is_ready)
-    fprintf(fp, "cloonix_main_server_ready");
+    fprintf(fp, "server_is_ready");
   else
-    fprintf(fp, "cloonix_main_server_not_ready");
+    fprintf(fp, "server_not_ready_please_wait");
   fclose(fp);
 }
 /*--------------------------------------------------------------------------*/
@@ -103,8 +103,6 @@ static int check_and_set_uid(void)
     if (setgid(0))
       KERR("ERROR setgid");
     }
-  else 
-    KERR("WARNING NOT SUID ROOT");
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -194,18 +192,6 @@ static void test_dev_kvm(void)
       printf("\n\tHint:\nsudo usermod -a -G kvm <user>\n");
       printf("\tOR:\nsudo chmod 0666 /dev/kvm\n");
       printf("\tOR:\nsudo setfacl -m u:<user>:rw /dev/kvm\n\n");
-      }
-    if (module_access_is_ko("/dev/vhost-net"))
-      {
-      printf("\n\tHint:\nsudo usermod -a -G kvm <user>\n");
-      printf("\tOR:\nsudo chmod 0666 /dev/vhost-net\n");
-      printf("\tOR:\nsudo setfacl -m u:${USER}:rw /dev/vhost-net\n\n");
-      }
-    if (module_access_is_ko("/dev/net/tun"))
-      {
-      printf("\n\tHint:\nsudo usermod -a -G kvm <user>\n");
-      printf("\tOR:\nsudo chmod 0666 /dev/net/tun\n");
-      printf("\tOR:\nsudo setfacl -m u:${USER}:rw /dev/net/tun\n\n");
       }
     }
   else

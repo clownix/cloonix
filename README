@@ -1,55 +1,54 @@
 ==============================================================================
-                               v48-00
+                               v49-00
 ==============================================================================
                                GENERAL
 ==============================================================================
-Cloonix is an AGPLv3 software that constitute a tool to create networks of
+Cloonix is an AGPLv3 software that constitutes a tool to create networks of
 kvm virtual machines or crun containers. It provides a graphical interactive
-canvas showing the topology for your network, cloonix is a virtualisation
-hypervisor.
+canvas showing the topology for your network, cloonix is a kind of
+virtualisation hypervisor.
 
 The network connecting the virtual machines and containers is created through
-the use of the openvswitch software running inside a net namespace so that
-your host is isolated from cloonix. That way, "ip link" on your host
-shows clean results. Type "ip netns" to see cloonix network namespace.
+the use of the openvswitch (ovs) software running inside a linux net namespace
+so that your host is isolated from cloonix network configuration.
+That way, "ip link" on your host is not messed up with openvswitch bridges
+and ports.
 
+2 supports are provided for installation: BUNDLE or EXTRACTOR
 Building of the binaries is done in a virtual debian trixie, all the necessary
-files and libraries are collected and put into an autonomous bundle, this
-makes the bundle self-contained. No added files or packages are necessary.
+files and libraries are collected and put either into a bundle or in a
+self-extracting script file.
+To install the bundle, you must have the root privileges but to install with
+the extractor, you only need a user on a linux machine, it is self-extracting.
 
+3 brandtypes of virtualizations run in cloonix: KVM, ZIP or CVM
+For language simplification, "virtualisation" is used both for the emulation
+of a complete guest machine, kernel and root file-system (KVM qemu using qcow2)
+and the containerisation using the host's kernel to run the root file-system.
+ZIP and CVM are run with crun, a C implementation of the Open Container Initiative.
+ZIP root fs is a zip file and CVM root fs is a directory, it becomes / in the
+container.
+
+ 
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-48-00/html/index.html doc.
+http://clownix.net/doc_stored/build-49-00/html/index.html doc.
 
-NOTE: qemu-guest-agent also called qemu-ga has to be installed inside the kvm
-      guests virtual machines.
-
-There are 2 cloonix products:
-
-The bundle way for installation based on cloonix-bundle-48-00.tar.gz,
-it copies binary files to /usr/libexec/cloonix directory of your host,
-puts bash scripts user handles in /usr/bin/cloonix_xxx and uses
-/var/lib/cloonix as work zone.
+==============================================================================
+                          BUNDLE INSTALLATION
+==============================================================================
+The bundle way for installation is based on cloonix-bundle-49-00.tar.gz,
+it copies binary files to /usr/libexec/cloonix/cloonfs directory of your host,
+puts bash scripts in /usr/bin/cloonix_xxx and uses /var/lib/cloonix as work zone.
 With this choice, root privileges are necessary for installation and
 as there are cloonix actions that are related to namespaces or networks,
-some binaries must have the suid permissions to run with higher privileges.
-
-The extractor way based on cloonix-extractor-48-00.sh is based on a crun
-container. It is a self-extracting shell script that never needs any
-privileges either at install or at run.
-This is a user land application, a simple and secure way to test cloonix
-if you are an unprivilege user on a linux machine.
-------------------------------------------------------------------------------
-
-==============================================================================
-              HOST CLASSICAL INSTALLATION (NEEDS ADMIN PERMISSIONS) 
-==============================================================================
+some binaries have the suid root permissions to run with higher privileges.
 
 1) Download software and installation:
 --------------------------------------
 
-wget http://clownix.net/downloads/cloonix-48/cloonix-bundle-48-00.tar.gz
-tar xvf cloonix-bundle-48-00.tar.gz
-cd cloonix-bundle-48-00
+wget http://clownix.net/downloads/cloonix-49/cloonix-bundle-49-00.tar.gz
+tar xvf cloonix-bundle-49-00.tar.gz
+cd cloonix-bundle-49-00
 sudo ./install_cloonfs
 
 (To uninstall:   sudo rm -f /usr/bin/cloonix_*
@@ -57,69 +56,53 @@ sudo ./install_cloonfs
                  sudo rm -rf /var/lib/cloonix)
 
 
-2) Download virtual machine and container:
+2) Download virtual machines and containers:
 ------------------------------------------
-
-Three brandtypes are managed: kvm that needs a ".qcow2" file,
-zip that needs a ".zip" file (not unzipped) and the cvm brandtype
-tha needs just a directory in which the rootfs resides.
 
 mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
 
-qcow2 (virtual machine):
-wget http://clownix.net/downloads/cloonix-48/bulk/bookworm.qcow2.gz
+qcow2 (virtual machine for qemu-kvm):
+wget http://clownix.net/downloads/cloonix-49/bulk/bookworm.qcow2.gz
 gunzip bookworm.qcow2.gz
 
-zip (container):
-wget http://clownix.net/downloads/cloonix-48/bulk/zipfrr.zip
+zip (container for crun):
+wget http://clownix.net/downloads/cloonix-49/bulk/zipfrr.zip
 
-cvm (container):
-wget http://clownix.net/downloads/cloonix-48/bulk/alpine.tar.gz
-tar xvf alpine.tar.gz
+cvm (container for crun):
+wget http://clownix.net/downloads/cloonix-49/bulk/bookworm0.tar.gz
+tar xvf bookworm0.tar.gz
 
 
 3) Download demo script file:
 -----------------------------
 
 cd ${HOME}
-wget http://clownix.net/downloads/cloonix-48/demos/ping_demo.sh
-
-
-4) Use cloonix:
----------------
-
-On the canvas gui, a double-click on a blue machine gives a shell,
-a double-click on the green interface (small peripheral circle) gives a
-wireshark spy, a right-click on the blue machine can give a spice desktop
-for a kvm based on qemu.
-
-The crun container are smaller, based on a zip or cvm root file-system, the
-same action to get a shell: a double-click in the blue zone gives a shell,
-a right-click on the container can give a remote console.
-And for the alpine cvm, a right-click on the xephyr should give the x11
-visual of a desktop.
+wget http://clownix.net/downloads/cloonix-49/demos/ping_demo.sh
 
 ==============================================================================
 
-
 ==============================================================================
-                ROOTLESS SELF EXTRACTING CLOONIX
+                          EXTRACTOR INSTALLATION
 ==============================================================================
-To test cloonix without ever having the root password for your host machine,
-you can try the cloonix-extractor-48-00.sh script.
-
+The extractor way based on cloonix-extractor-49-00.sh enters a user namespace
+with the help of the crun open source.
+It is a self-extracting shell script that never needs any privileges either
+at install or at run.
+This is a user land application, very usefull if you are an unprivilege user
+on a linux machine.
 This script is based on makeself.sh open source, it creates a directory
 called dir_self_extracted associated to a handle executable script file
 called nemocmd by default.
+------------------------------------------------------------------------------
 
 1) Download:
 ------------
-wget http://clownix.net/downloads/cloonix-48/cloonix-extractor-48-00.sh
+wget http://clownix.net/downloads/cloonix-49/cloonix-extractor-49-00.sh
 
 2) Extract the bundle:
 ----------------------
-./cloonix-extractor-48-00.sh
+./cloonix-extractor-49-00.sh
 
 3) The nemocmd script is now present, first start it:
 -----------------------------------------------------
@@ -141,19 +124,29 @@ wget http://clownix.net/downloads/cloonix-48/cloonix-extractor-48-00.sh
 NOTE FOR KVM USE AS A SIMPLE USER
 =================================
 For the cloonix to be able to use the qcow2 files, devices /dev/kvm,
-/dev/vhost-net and /dev/net/tun, must have read/write access. For this
-some commands must be done as root to provide read/write access that
-are privileges:
-
-             sudo setfacl -m u:${USER}:rw /dev/kvm
-             sudo setfacl -m u:${USER}:rw /dev/vhost-net
-             sudo setfacl -m u:${USER}:rw /dev/net/tun
-     or:
-             sudo chmod 666 /dev/kvm
-             sudo chmod 666 /dev/vhost-net
-             sudo chmod 666 /dev/net/tun
+/dev/vhost-net and /dev/net/tun, must have read/write access by the user
+launching the demonstration.
 
 -----------------------------------------------------------------------------
+
+
+==============================================================================
+                         NOTES FOR THE CANVAS GUI
+==============================================================================
+
+cloonix_gui nemo gives the canvas gui, on this canvas a double-click or a right
+click when above no object gives the canvas menu.
+
+A double-click on a blue machine gives a shell, a double-click on the green
+interface (small peripheral circle) gives a wireshark spy, a right-click on
+the blue machine gives a menu from which you can choose a spice desktop (only
+for kvm based virtuals).
+
+The crun containers zip or cvm are smaller, a double-click in the blue zone
+gives a shell, right-click on the container gives a menu from which you can
+pick a remote console.
+
+==============================================================================
 
 ==============================================================================
                             DISTANT WEB GUI:

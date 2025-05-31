@@ -7,7 +7,7 @@ LIBS=-lutil
 
 LIBDBCLIENT=-L${LIB_IO_CLOWNIX} -lio_clownix -lssl -lcrypto -lrt
 
-CFLAGS+=-mtune=generic -fno-stack-protector
+CFLAGS+=-mtune=generic -fno-stack-protector -Wno-format-truncation
 CFLAGS+=-I${LIB_IO_CLOWNIX}/include 
 CFLAGS+=-I${GLOB_INCLUDE} 
 CFLAGS+=-I../cloonix_agent/src 

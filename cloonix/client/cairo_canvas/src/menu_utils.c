@@ -320,10 +320,9 @@ static char **get_argv_crun_screen_console(char *name)
   snprintf(nemo, MAX_NAME_LEN-1, "%s", get_net_name());
   snprintf(title, MAX_PATH_LEN-1, "%s/%s", nemo, nm);
   snprintf(cmd, 2*MAX_PATH_LEN-1,
-           "/usr/libexec/cloonix/cloonfs/cloonix-crun "
-           "--log=/var/lib/cloonix/%s/log/debug_crun.log "
-           "--root=/var/lib/cloonix/%s/%s exec %s /bin/sh",
-           nemo, nemo, CRUN_DIR, nm);
+           "%s --log=/var/lib/cloonix/%s/log/debug_crun.log "
+           "--root=/var/lib/cloonix/%s/%s exec -ti %s /bin/sh",
+           CRUN_BIN, nemo, nemo, CRUN_DIR, nm);
   ptr_argv = argv;
   return (ptr_argv);
 }

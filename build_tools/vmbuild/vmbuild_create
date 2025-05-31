@@ -93,7 +93,7 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                    libxcb-util-dev libxcb-image0-dev \
                 libxcb-icccm4-dev libxcb-keysyms1-dev \
                 libxcb-randr0-dev libxcb-xkb-dev libxcb-glx0-dev \
-                libxcb-xv0-dev"
+                libxcb-xv0-dev patchelf"
 
 #libguestfs-tools"
 
@@ -108,7 +108,8 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                          gperf libtirpc-dev libaugeas-dev libmagic-dev \
                          libjansson-dev libhivex-dev libjson-c-dev \
                          libguestfs-ocaml-dev libfindlib-ocaml-dev \
-                         libhivex-ocaml-dev libaugeas-ocaml-dev"
+                         libhivex-ocaml-dev libaugeas-ocaml-dev \
+                         python3-jinja2 libbpf-dev libmnl-dev"
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"
 cloonix_ssh ${NET} ${NAME} "sync"

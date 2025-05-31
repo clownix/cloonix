@@ -540,51 +540,52 @@ static void print_event_item(GdkEventType type, char *from)
     case GDK_MOTION_NOTIFY:
     break;
     case GDK_ENTER_NOTIFY:
-      //printf("%s %d GDK_ENTER_NOTIFY\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_ENTER_NOTIFY\n", from, type);
+      printf("%s %d GDK_ENTER_NOTIFY\n", from, type);
+      KERR("KEYEVENT %s %d GDK_ENTER_NOTIFY\n", from, type);
     break;
     case GDK_LEAVE_NOTIFY:
-      //printf("%s %d GDK_LEAVE_NOTIFY\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_LEAVE_NOTIFY\n", from, type);
+      printf("%s %d GDK_LEAVE_NOTIFY\n", from, type);
+      KERR("KEYEVENT %s %d GDK_LEAVE_NOTIFY\n", from, type);
     break;
     case GDK_BUTTON_PRESS:
-      //printf("%s %d GDK_BUTTON_PRESS\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_BUTTON_PRESS\n", from, type);
+      printf("%s %d GDK_BUTTON_PRESS\n", from, type);
+      KERR("KEYEVENT %s %d GDK_BUTTON_PRESS\n", from, type);
     break;
     case GDK_BUTTON_RELEASE:
-      //printf("%s %d GDK_BUTTON_RELEASE\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_BUTTON_RELEASE\n", from, type);
+      printf("%s %d GDK_BUTTON_RELEASE\n", from, type);
+      KERR("KEYEVENT %s %d GDK_BUTTON_RELEASE\n", from, type);
     break;
     case GDK_2BUTTON_PRESS:
-      //printf("%s %d GDK_2BUTTON_PRESS\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_2BUTTON_PRESS\n", from, type);
+      printf("%s %d GDK_2BUTTON_PRESS\n", from, type);
+      KERR("KEYEVENT %s %d GDK_2BUTTON_PRESS\n", from, type);
     break;
     case GDK_FOCUS_CHANGE:
-      //printf("%s %d GDK_FOCUS_CHANGE\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_FOCUS_CHANGE\n", from, type);
+      printf("%s %d GDK_FOCUS_CHANGE\n", from, type);
+      KERR("KEYEVENT %s %d GDK_FOCUS_CHANGE\n", from, type);
     break;
     case GDK_KEY_PRESS:
-      //printf("%s %d GDK_KEY_PRESS\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_KEY_PRESS\n", from, type);
+      printf("%s %d GDK_KEY_PRESS\n", from, type);
+      KERR("KEYEVENT %s %d GDK_KEY_PRESS\n", from, type);
     break;
     case GDK_KEY_RELEASE:
-      //printf("%s %d GDK_KEY_RELEASE\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_KEY_RELEASE\n", from, type);
+      printf("%s %d GDK_KEY_RELEASE\n", from, type);
+      KERR("KEYEVENT %s %d GDK_KEY_RELEASE\n", from, type);
     break;
     case GDK_GRAB_BROKEN:
-      //printf("%s %d GDK_GRAB_BROKEN\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_GRAB_BROKEN\n", from, type);
+      printf("%s %d GDK_GRAB_BROKEN\n", from, type);
+      KERR("KEYEVENT %s %d GDK_GRAB_BROKEN\n", from, type);
+  gtk_widget_grab_focus(gtkwidget_canvas);
     break;
     case GDK_VISIBILITY_NOTIFY:
-      //printf("%s %d GDK_VISIBILITY_NOTIFY\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_VISIBILITY_NOTIFY\n", from, type);
+      printf("%s %d GDK_VISIBILITY_NOTIFY\n", from, type);
+      KERR("KEYEVENT %s %d GDK_VISIBILITY_NOTIFY\n", from, type);
     break;
     case GDK_MAP:
-      //printf("%s %d GDK_MAP\n", from, type);
-      //KERR("KEYEVENT %s %d GDK_MAP\n", from, type);
+      printf("%s %d GDK_MAP\n", from, type);
+      KERR("KEYEVENT %s %d GDK_MAP\n", from, type);
     break;
     case GDK_3BUTTON_PRESS:
-      //KERR("KEYEVENT %s %d GDK_3BUTTON_PRESS\n", from, type);
+      KERR("KEYEVENT %s %d GDK_3BUTTON_PRESS\n", from, type);
     break;
     default:
       KERR("ERROR %s MUSTADD %d", from, type);
@@ -616,8 +617,8 @@ static gboolean on_item_event(CrItem *item, GdkEvent *event,
       else if (event->button.button == 3)
         {
         menu_caller(bitem);
+        result = TRUE;
         }
-      result = TRUE;
       break;
     case GDK_2BUTTON_PRESS:
       if (event->button.button == 1) 
@@ -646,7 +647,8 @@ static gboolean on_item_event(CrItem *item, GdkEvent *event,
         result = TRUE;
       break;
     case GDK_BUTTON_RELEASE:
-      if (event->button.button == 1)
+      if ((event->button.button == 1) ||
+          (event->button.button == 3))
         {
         fct_button_1_pressed(bitem, 0);
         if (bitem->button_1_moved)
@@ -1296,25 +1298,32 @@ static gboolean on_canvas_event(GtkWidget* widget,
     {
 
     case GDK_BUTTON_PRESS:
+        if (!(get_currently_in_item_surface()))
+          {
+          if (event->button.button == 3)
+            {
+            canvas_ctx_menu(event->button.x, event->button.y);
+            result = TRUE;
+            }
+          }
+      break;
     case GDK_2BUTTON_PRESS:
 
         if (!(get_currently_in_item_surface()))
           {
           canvas_ctx_menu(event->button.x, event->button.y);
-          result = TRUE;
           }
-
       break;
 
 
     case GDK_BUTTON_RELEASE:
 
-        if ((!(get_currently_in_item_surface())) && (event->button.button == 1))
+        if ((!(get_currently_in_item_surface())) &&
+            ((event->button.button == 1) ||
+             (event->button.button == 3)))
           {
           update_layout_center_scale(__FUNCTION__);
-          result = TRUE;
           }
-
       break;
 
     case GDK_3BUTTON_PRESS:

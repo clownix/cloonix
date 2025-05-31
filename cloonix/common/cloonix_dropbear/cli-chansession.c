@@ -157,9 +157,98 @@ void cli_chansess_winchange(void)
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static char *local_read_whole_file(char *file_name, int *len)
+{ 
+  char *buf = NULL;
+  int fd, readlen;
+  struct stat statbuf;
+  if (stat(file_name, &statbuf) != 0)
+    KERR("Cannot get size of file %s\n", file_name);
+  else if (statbuf.st_size)
+    {
+    *len = statbuf.st_size;
+    fd = open(file_name, O_RDONLY);
+    if (fd == -1)
+      KERR("Cannot open file %s errno %d\n", file_name, errno);
+    else
+      {
+      buf = (char *) malloc((*len + 1) * sizeof(char));
+      memset(buf, 0, (*len + 1) * sizeof(char));
+      readlen = read(fd, buf, *len);
+      if (readlen != *len)
+        {
+        KERR("Length of file error for file %s %d\n", file_name, errno);
+        free(buf);
+        buf = NULL;
+        }
+      close (fd);
+      }
+    }
+  return buf;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/*****************************************************************************/
+static int my_rand(int max)
+{
+  unsigned int result = rand();
+  result %= max;
+  return (int) result;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int get_magic_cookie_with_display(char *magic)
+{
+  char *ptr, *buf, *tmpmc = "/tmp/cloonix_magic_cookie";
+  char randstr[5];
+  char tmp[MAX_PATH_LEN];
+  char cmd[MAX_PATH_LEN];
+  int i, nb, len, result = -1;
+  char *display = getenv("DISPLAY");
+  srand(time(NULL));
+
+  memset(randstr, 0, 5);
+  memset(tmp, 0, MAX_PATH_LEN);
+  memset(magic, 0, MAX_NAME_LEN);
+  memset(cmd, 0, MAX_PATH_LEN);
+  for (i=0; i<4; i++)
+    randstr[i] = 'A'+ my_rand(26);
+  snprintf(tmp, MAX_PATH_LEN-1, "%s_%s", tmpmc, randstr);
+  unlink(tmp);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s nextract %s %s", XAUTH_BIN, tmp, display);
+  if (system(cmd))
+    KERR("ERROR %s", cmd);
+  else
+    {
+    buf = local_read_whole_file(tmp, &len);
+    if (buf == NULL)
+      KERR("ERROR %s", tmp);
+    else
+      {
+      ptr = strrchr(buf, ' ');
+      if (ptr)
+        {
+        ptr += 1;
+        nb = strspn(ptr, "0123456789abcdefABCDEF");
+        ptr[nb] = 0;
+        strncpy(magic, ptr, MAX_NAME_LEN-1);
+        result = 0;
+        }
+      free(buf);
+      }
+    }
+  unlink(tmp);
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 static void send_chansess_pty_req(struct Channel *channel) 
 {
+  char magic[MAX_NAME_LEN];
   char *cloonix_name = get_cloonix_name_prompt();
   char *cloonix_display = get_cloonix_display();
   buf_putbyte(ses.writepayload, SSH_MSG_CHANNEL_REQUEST);
@@ -169,9 +258,13 @@ static void send_chansess_pty_req(struct Channel *channel)
   buf_putbyte(ses.writepayload, 0);
   if (!strcmp(ses.remoteident, LOCAL_IDENT))
     {
+
     buf_putstring(ses.writepayload, cloonix_name, strlen(cloonix_name));
     buf_putstring(ses.writepayload, cloonix_display, strlen(cloonix_display));
-    buf_putstring(ses.writepayload, "no_cookie_key", strlen("no_cookie_key")); 
+    if (get_magic_cookie_with_display(magic))
+      buf_putstring(ses.writepayload, "no_cookie_key", strlen("no_cookie_key")); 
+    else
+      buf_putstring(ses.writepayload, magic, strlen(magic)); 
     }
   put_winsize();
   buf_putint(ses.writepayload, 1); 

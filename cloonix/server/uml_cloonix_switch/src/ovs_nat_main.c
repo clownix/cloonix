@@ -48,8 +48,6 @@ static char g_bin_nat_main[MAX_PATH_LEN];
 static t_ovs_nat_main *g_head_nat;
 static int g_nb_nat;
 
-int get_glob_req_self_destruction(void);
-
 /****************************************************************************/
 static t_ovs_nat_main *find_nat(char *name)
 {
@@ -192,8 +190,6 @@ static void timer_heartbeat(void *data)
   t_ovs_nat_main *next, *cur = g_head_nat;
   int llid;
   char *msg = "nat_suidroot";
-  if (get_glob_req_self_destruction())
-    return;
   while(cur)
     {
     next = cur->next;

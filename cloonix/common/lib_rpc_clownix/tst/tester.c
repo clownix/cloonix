@@ -300,7 +300,12 @@ static int topo_cnt_diff(t_topo_cnt *icnt, t_topo_cnt *cnt)
     }
   else if (cnt->is_persistent != icnt->is_persistent)
     {
-    KERR("%d %d", cnt->vm_id, icnt->vm_id);
+    KERR("%d %d", cnt->is_persistent,  icnt->is_persistent);
+    result = -1;
+    }
+  else if (cnt->is_privileged != icnt->is_privileged)
+    {
+    KERR("%d %d", cnt->is_privileged, icnt->is_privileged);
     result = -1;
     }
   else if (cnt->ping_ok != icnt->ping_ok)
@@ -499,6 +504,7 @@ static void random_cnt(t_topo_cnt *cnt)
   cnt->ping_ok = my_rand(20);
   cnt->vm_id = my_rand(120);
   cnt->is_persistent = my_rand(120);
+  cnt->is_privileged = my_rand(120);
   for (k=0; k < cnt->nb_tot_eth; k++)
     {
     cnt->eth_table[k].endp_type = (rand() & 0x04) + 1;

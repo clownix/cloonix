@@ -33,11 +33,9 @@
 #define ETH_LINE_MAX 12
 
 static void custom_vm_dialog_create(void);
-void cnt_distant_brandtype_cb(void);
 char *get_brandtype_image(char *type);
 char set_brandtype_image(char *type, char *image);
 char *get_brandtype_type(void);
-void global_brandtype_cb(GtkWidget *check, gpointer user_data);
 
 void menu_choice_cnt(void);
 
@@ -243,7 +241,7 @@ static void kvm_update_brandtype_image(void)
     if (g_nb_bulkvm >= 1)
       set_brandtype_image("brandkvm", g_bulkvm_photo[0].name);
     else 
-      set_brandtype_image("brandkvm", "bookworm.qcow2");
+      set_brandtype_image("brandkvm", "no-kvm-found");
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -263,16 +261,11 @@ static void restart_custom_vm_dialog_create(void *data)
 static void custom_vm_dialog_create(void)
 {
   int i, j, k, response, line_nb = 0;
-  unsigned long uli;
   GSList *group = NULL;
-  GSList *brandgroup = NULL;
-  GtkWidget *brandtype[BRANDTYPE_NB_MAX];
   GtkWidget *entry_name, *entry_ram, *entry_cpu=NULL; 
   GtkWidget *grid, *parent, *is_persistent;
   GtkWidget *has_no_qemu_ga, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
-  GtkWidget *hbox_brandtype;
-  char *brandlib[BRANDTYPE_NB_MAX] = {"brandkvm", "brandzip", "brandcvm"};
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
 
  if (g_custom_dialog)
@@ -293,23 +286,6 @@ static void custom_vm_dialog_create(void)
                                          "OK", GTK_RESPONSE_ACCEPT,
                                                   NULL);
   gtk_window_set_default_size(GTK_WINDOW(g_custom_dialog), 300, 20);
-
-  hbox_brandtype = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  for (i=0; i<BRANDTYPE_NB_MAX; i++)
-    {
-    brandtype[i] = gtk_radio_button_new_with_label(brandgroup, brandlib[i]);
-    brandgroup = gtk_radio_button_get_group(GTK_RADIO_BUTTON(brandtype[i]));
-    if (!strcmp(get_brandtype_type(), brandlib[i]))
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(brandtype[i]),TRUE);
-    }
-  for (uli=0; uli<BRANDTYPE_NB_MAX; uli++)
-    {
-    gtk_box_pack_start(GTK_BOX(hbox_brandtype), brandtype[uli],TRUE,TRUE,10);
-    g_signal_connect(G_OBJECT(brandtype[uli]), "clicked",
-                     G_CALLBACK(global_brandtype_cb), (gpointer) uli);
-    }
-  append_grid(grid, hbox_brandtype, "brandtype", line_nb++);
-
 
 
   entry_name = gtk_entry_new();
@@ -514,29 +490,9 @@ void menu_choice_kvm(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void kvm_distant_brandtype_cb(void)
-{   
-  if (!g_custom_dialog)
-    KERR("ERROR CHANGE BRANDTYPE");
-  else
-    {
-    g_custom_dialog_change = 1;
-    gtk_dialog_response(GTK_DIALOG(g_custom_dialog), GTK_RESPONSE_NONE);
-    }
-}     
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void kvm_brandtype_cb(void)
 {
   kvm_update_brandtype_image();
-  if (!g_custom_dialog)
-    cnt_distant_brandtype_cb();
-  else
-    {
-    g_custom_dialog_change = 1;
-    gtk_dialog_response(GTK_DIALOG(g_custom_dialog), GTK_RESPONSE_NONE);
-    }
 }     
 /*--------------------------------------------------------------------------*/
 

@@ -1,6 +1,6 @@
 diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
---- crun/src/libcrun/error.c	2025-05-06 17:12:54.000000000 +0200
-+++ crun_tainted/src/libcrun/error.c	2025-05-06 22:29:40.060466904 +0200
+--- crun/src/libcrun/error.c	2025-05-30 08:02:09.000000000 +0200
++++ crun_tainted/src/libcrun/error.c	2025-05-30 08:24:03.637173154 +0200
 @@ -44,6 +44,15 @@
  static int log_format;
  static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
@@ -18,9 +18,9 @@ diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
  libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
  {
 diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
---- crun/src/libcrun/linux.c	2025-05-06 17:12:54.000000000 +0200
-+++ crun_tainted/src/libcrun/linux.c	2025-05-06 22:29:40.060466904 +0200
-@@ -109,6 +109,15 @@
+--- crun/src/libcrun/linux.c	2025-05-30 08:02:09.000000000 +0200
++++ crun_tainted/src/libcrun/linux.c	2025-05-30 08:24:03.637173154 +0200
+@@ -110,6 +110,15 @@
  #define ALL_PROPAGATIONS_NO_REC (MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE)
  #define ALL_PROPAGATIONS (MS_REC | ALL_PROPAGATIONS_NO_REC)
  
@@ -36,7 +36,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
  struct remount_s
  {
    struct remount_s *next;
-@@ -1563,6 +1572,10 @@
+@@ -1571,6 +1580,10 @@
                                    { "/dev/tty", "c", 5, 0, 0666, 0, 0 },
                                    { "/dev/random", "c", 1, 8, 0666, 0, 0 },
                                    { "/dev/urandom", "c", 1, 9, 0666, 0, 0 },
@@ -47,3 +47,15 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
                                    {} };
  
  /* Check if the specified path is a direct child of /dev.  If it is
+@@ -1971,9 +1984,9 @@
+   if (strcmp (destination, "/dev/pts") == 0)
+     {
+       if (container->host_uid == 0)
+-        *data = xstrdup ("newinstance,ptmxmode=0666,mode=620,gid=5");
++        *data = xstrdup ("newinstance,ptmxmode=0666,mode=666,gid=5");
+       else
+-        *data = xstrdup ("newinstance,ptmxmode=0666,mode=620");
++        *data = xstrdup ("newinstance,ptmxmode=0666,mode=666");
+       return MS_NOEXEC | MS_NOSUID;
+     }
+   if (strcmp (destination, "/sys") == 0)

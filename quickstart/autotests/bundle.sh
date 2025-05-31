@@ -3,8 +3,8 @@
 HERE=`pwd`
 NET="nemo"
 BULK="/var/lib/cloonix/bulk"
-BUNDLE="cloonix-bundle-45-01"
-LIST="bookworm_lxde bookworm_gnome fedora41_kde"
+BUNDLE="cloonix-bundle-49-00"
+LIST="bookworm_lxde bookworm_gnome fedora42_kde"
 #----------------------------------------------------------------------------#
 set +e
 is_started=$(cloonix_cli ${NET} pid |grep cloonix_server)
@@ -32,6 +32,9 @@ for i in ${LIST}; do
   done
 done
 #----------------------------------------------------------------------------
+cd ${BULK}
+tar zcvf bookworm.tar.gz bookworm
+#----------------------------------------------------------------------------
 num=1
 for i in ${LIST}; do
   num=$((num+1))
@@ -41,6 +44,10 @@ for i in ${LIST}; do
   cloonix_ssh $NET ${i} "mkdir -p /var/lib/cloonix/bulk"
   cloonix_scp $NET ${BULK}/zipfrr.zip ${i}:/${BULK}
   cloonix_scp $NET ${BULK}/bookworm.qcow2 ${i}:/${BULK}
+  cloonix_scp $NET ${BULK}/bookworm.tar.gz ${i}:/${BULK}
+  cloonix_ssh $NET ${i} "cd ${BULK}; tar xvf bookworm.tar.gz"
+  cloonix_ssh $NET ${i} "rm ${BULK}/bookworm.tar.gz"
+  cloonix_ssh $NET ${i} "chown -R user:user ${BULK}/bookworm"
   cloonix_ssh $NET ${i} "chmod 666 ${BULK}/bookworm.qcow2"
   cloonix_ssh $NET ${i} "systemctl stop NetworkManager.service 1>/dev/null 2>&1"
   cloonix_ssh $NET ${i} "ip addr add dev eth0 1.1.1.${num}/24"
@@ -48,4 +55,5 @@ for i in ${LIST}; do
   cloonix_scp $NET ${HERE}/mix_ping.sh ${i}:/home/user
   cloonix_ssh $NET ${i} "chown user:user /home/user/mix_ping.sh"
 done
+rm ${BULK}/bookworm.tar.gz
 

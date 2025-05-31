@@ -31,16 +31,28 @@
 #define CONFIG_JSON_MOUNT "\n"\
 " \n %s %s %s %s %s %s %s %s\n"\
 "{\n"\
-"  \"destination\": \"/mnt\",\n"\
+"  \"destination\": \"/cloonixmnt\",\n"\
 "  \"type\": \"none\",\n"\
 "  \"source\": \"%s\",\n"\
 "  \"options\": [\"rbind\",\"rw\"]\n"\
 "},\n"\
 "{\n"\
+"  \"destination\": \"/run/lock\",\n"\
+"  \"type\": \"tmpfs\",\n"\
+"  \"source\": \"tmpfs\",\n"\
+"  \"options\": [\"rw\",\"mode=777\"]\n"\
+"},\n"\
+"{\n"\
 "  \"destination\": \"/run\",\n"\
 "  \"type\": \"tmpfs\",\n"\
 "  \"source\": \"tmpfs\",\n"\
-"  \"options\": [\"nosuid\",\"noexec\",\"nodev\"]\n"\
+"  \"options\": [\"rw\",\"mode=777\"]\n"\
+"},\n"\
+"{\n"\
+"  \"destination\": \"/tmp\",\n"\
+"  \"type\": \"tmpfs\",\n"\
+"  \"source\": \"tmpfs\",\n"\
+"  \"options\": [\"rw\",\"mode=777\"]\n"\
 "},\n"\
 "{\n"\
 "  \"destination\": \"/dev\",\n"\
@@ -85,7 +97,7 @@
 "          \"noexec\",\n"\
 "          \"newinstance\",\n"\
 "          \"ptmxmode=0666\",\n"\
-"          \"mode=0620\"\n"\
+"          \"mode=0666\"\n"\
 "  ]\n"\
 "},\n"\
 "{\n"\
@@ -103,8 +115,8 @@
 "{\n"\
 "  \"destination\": \"/sys/fs/cgroup\",\n"\
 "  \"type\": \"cgroup2\",\n"\
-"  \"source\": \"cgroup2\",\n"\
-"  \"options\": [\"nosuid\",\"noexec\",\"nodev\"]\n"\
+"  \"source\": \"none\",\n"\
+"  \"options\": [\"rw\",\"nosuid\",\"nodev\",\"noexec\",\"relatime\",\"nsdelegate\"]\n"\
 "},\n"\
 "{\n"\
 "  \"destination\": \"/proc\",\n"\
@@ -112,7 +124,7 @@
 "  \"source\": \"proc\"\n"\
 "},\n"\
 "{\n"\
-"  \"destination\": \"/tmp\",\n"\
+"  \"destination\": \"/cloonixmnt/tmp\",\n"\
 "  \"type\": \"none\",\n"\
 "  \"source\": \"%s\",\n"\
 "  \"options\": [\"rbind\",\"mode=777\",\"rw\"]\n"\
@@ -134,13 +146,72 @@
 "\"CAP_CHECKPOINT_RESTORE\"\n"
 
 
-#define CONFIG_MAIN_JSON "  {\n"\
-"\"ociVersion\": \"1.0.2\",\n"\
+#define UID_GID_MAPPING "\"uidMappings\": [ \n"\
+"     { \n"\
+"         \"containerID\": %d, \n"\
+"         \"hostID\": %d, \n"\
+"         \"size\": %d \n"\
+"     }, \n"\
+"     { \n"\
+"         \"containerID\": %d, \n"\
+"         \"hostID\": %d, \n"\
+"         \"size\": %d \n"\
+"     } \n"\
+" ], \n"\
+" \"gidMappings\": [ \n"\
+"     { \n"\
+"         \"containerID\": %d, \n"\
+"         \"hostID\": %d, \n"\
+"         \"size\": %d \n"\
+"     }, \n"\
+"     { \n"\
+"         \"containerID\": %d, \n"\
+"         \"hostID\": %d, \n"\
+"         \"size\": %d \n"\
+"     } \n"\
+" ], \n"
+
+
+#define NAMESPACES_PRIVILEGED "\"namespaces\": [\n"\
+"            {\"type\": \"network\"},\n"\
+"            {\"type\": \"ipc\"},\n"\
+"            {\"type\": \"uts\"},\n"\
+"            {\"type\": \"pid\"},\n"\
+"            {\"type\": \"cgroup\"},\n"\
+"            {\"type\": \"mount\"}\n"\
+"        ],\n"
+
+#define NAMESPACES_NOT_PRIVILEGED "\"namespaces\": [\n"\
+"            {\"type\": \"network\"},\n"\
+"            {\"type\": \"ipc\"},\n"\
+"            {\"type\": \"uts\"},\n"\
+"            {\"type\": \"user\"},\n"\
+"            {\"type\": \"pid\"},\n"\
+"            {\"type\": \"cgroup\"},\n"\
+"            {\"type\": \"mount\"}\n"\
+"        ],\n"
+
+
+#define MEMORY_NOT_LIMITED "\"resources\": {\n"\
+"            \"memory\": {\n"\
+"                \"limit\": -1,\n"\
+"                \"reservation\": -1\n"\
+"            }, \n"\
+"            \"devices\": [\n"\
+"                {\n"\
+"                \"allow\": false,\n"\
+"                \"access\": \"rwm\"\n"\
+"                } \n"\
+"            ]\n"\
+"        },\n"
+
+
+#define CONFIG_MAIN_JSON "{\"ociVersion\": \"1.0.2\",\n"\
 "    \"process\": {\n"\
 "        \"terminal\": \"false\",\n"\
 "        \"user\": {\n"\
-"            \"uid\": 0,\n"\
-"            \"gid\": 0,\n"\
+"            \"uid\": %d,\n"\
+"            \"gid\": %d,\n"\
 "            \"umask\": 0\n"\
 "        },\n"\
 "        \"args\": [%s],\n"\
@@ -151,9 +222,9 @@
 "        ],\n"\
 "        \"cwd\": \"/\",\n"\
 "        \"capabilities\": {\n"\
+"            \"inheritable\": [%s],\n"\
 "            \"bounding\": [%s],\n"\
 "            \"effective\": [%s],\n"\
-"            \"inheritable\": [%s],\n"\
 "            \"permitted\": [%s],\n"\
 "            \"ambient\": [%s]\n"\
 "        },\n"\
@@ -171,104 +242,31 @@
 "        \"readonly\": \"true\"\n"\
 "        },\n"\
 "    \"hostname\": \"crun\",\n"\
-"    \"mounts\": [ %s ],\n"\
 "    \"linux\": {\n"\
-"        \"namespaces\": [\n"\
-"            {\"type\": \"pid\"},\n"\
-"            {\"type\": \"network\",\"path\": \"%s\"},\n"\
-"            {\"type\": \"ipc\"},\n"\
-"            {\"type\": \"uts\"},\n"\
-"            {\"type\": \"cgroup\"},\n"\
-"            {\"type\": \"mount\"}\n"\
-"        ],\n"\
+"        %s \n"\
 "        \"rootfsPropagation\": \"private\",\n"\
-"        \"uidMappings\": [ \n"\
-"            { \n"\
-"                \"containerID\": 0, \n"\
-"                \"hostID\": 0, \n"\
-"                \"size\": 1 \n"\
-"            } \n"\
-"        ], \n"\
-"        \"gidMappings\": [ \n"\
-"            { \n"\
-"                \"containerID\": 0, \n"\
-"                \"hostID\": 0, \n"\
-"                \"size\": 1 \n"\
-"            } \n"\
-"        ], \n"\
+"        %s    \n"\
 "        \"device\": [\n"\
-"            {\n"\
-"            \"path\": \"/dev/fuse\",\n"\
-"            \"type\": \"c\",\n"\
-"            \"major\": 10,\n"\
-"            \"minor\": 229,\n"\
-"            \"fileMode\": 438,\n"\
-"            \"uid\": 0,\n"\
-"            \"gid\": 0\n"\
-"            },\n"\
-"            {\n"\
-"            \"path\": \"/dev/kvm\",\n"\
-"            \"type\": \"c\",\n"\
-"            \"major\": 10,\n"\
-"            \"minor\": 232,\n"\
-"            \"fileMode\": 438,\n"\
-"            \"uid\": 0,\n"\
-"            \"gid\": 0\n"\
-"            },\n"\
-"            {\n"\
-"            \"path\": \"/dev/vhost-net\",\n"\
-"            \"type\": \"c\",\n"\
-"            \"major\": 10,\n"\
-"            \"minor\": 238,\n"\
-"            \"fileMode\": 438,\n"\
-"            \"uid\": 0,\n"\
-"            \"gid\": 0\n"\
-"            },\n"\
-"            {\n"\
-"            \"path\": \"/dev/net/tun\",\n"\
-"            \"type\": \"c\",\n"\
-"            \"major\": 10,\n"\
-"            \"minor\": 200,\n"\
-"            \"fileMode\": 438,\n"\
-"            \"uid\": 0,\n"\
-"            \"gid\": 0\n"\
-"            }\n"\
 "        ],\n"\
-"        \"resources\": {\n"\
-"            \"devices\": [\n"\
-"                {\n"\
-"                \"allow\": false,\n"\
-"                \"access\": \"rwm\"\n"\
-"                },\n"\
-"                {\n"\
-"                \"allow\": true,\n"\
-"                \"type\": \"c\",\n"\
-"                \"major\": 10,\n"\
-"                \"minor\": 229,\n"\
-"                \"access\": \"rw\"\n"\
-"                },\n"\
-"                {\n"\
-"                \"allow\": true,\n"\
-"                \"type\": \"c\",\n"\
-"                \"major\": 10,\n"\
-"                \"minor\": 232,\n"\
-"                \"access\": \"rw\"\n"\
-"                },\n"\
-"                {\n"\
-"                \"allow\": true,\n"\
-"                \"type\": \"c\",\n"\
-"                \"major\": 10,\n"\
-"                \"minor\": 238,\n"\
-"                \"access\": \"rw\"\n"\
-"                },\n"\
-"                {\n"\
-"                \"allow\": true,\n"\
-"                \"type\": \"c\",\n"\
-"                \"major\": 10,\n"\
-"                \"minor\": 200,\n"\
-"                \"access\": \"rw\"\n"\
-"                }\n"\
-"            ]\n"\
-"        }\n"\
-"    }\n"\
+"        %s\n"\
+"       \"maskedPaths\": [\n"\
+"           \"/proc/acpi\",\n"\
+"           \"/proc/asound\",\n"\
+"           \"/proc/kcore\",\n"\
+"           \"/proc/keys\",\n"\
+"           \"/proc/latency_stats\",\n"\
+"           \"/proc/timer_list\",\n"\
+"           \"/proc/timer_stats\",\n"\
+"           \"/proc/sched_debug\",\n"\
+"           \"/sys/firmware\",\n"\
+"           \"/proc/scsi\"\n"\
+"       ],\n"\
+"           \"readonlyPaths\": [\n"\
+"           \"/proc/bus\",\n"\
+"           \"/proc/fs\",\n"\
+"           \"/proc/irq\",\n"\
+"           \"/proc/sysrq-trigger\"\n"\
+"       ]\n"\
+"    },\n"\
+"    \"mounts\": [ %s ]\n"\
 "}"

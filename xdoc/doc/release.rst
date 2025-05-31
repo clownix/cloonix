@@ -5,6 +5,19 @@
 Software Release Information
 ============================
 
+v49-00
+======
+
+As usual, not enough time for descriptions, it will come eventualy:)
+The main goal was to get the cvm directory belonging to a user 
+(generally uid 1000) to keep this user for any new file.
+
+It is the complexity of the user namespace, in a container, a user that
+is not root must have a translated uid (generaly + 100000).
+
+This is why is very hard to keep a root file-system with the same uid
+for each file...
+
 
 v48-00
 ======

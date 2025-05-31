@@ -69,7 +69,7 @@ list_pkt="linux-image-amd64,grub2,openssh-client,vim,zstd,"
 list_pkt+="bash-completion,net-tools,file,qemu-guest-agent,"
 list_pkt+="locales,x11-apps,iperf3,openssh-client,htop,strace,"
 list_pkt+="console-data,console-setup,kbd,keyboard-configuration,"
-list_pkt+="sudo,tcpdump,lsof,pciutils,xtrace,strace,ltrace"
+list_pkt+="sudo,tcpdump,lsof,pciutils,xtrace,strace,ltrace,xauth"
 
 debootstrap --no-check-certificate \
 	    --no-check-gpg \

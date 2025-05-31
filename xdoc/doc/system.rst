@@ -54,10 +54,14 @@ If problems, a bug in the acl of this file exists you can try::
 
 Automatic insert at startup::
 
-    echo kvm_intel >> /etc/modules 
+    cat >> /etc/modules-load.d/modules.conf << EOF
+    kvm
+    vhost-net
+    EOF
 
     cat > /etc/udev/rules.d/65-kvm.rules << EOF
-    KERNEL=="kvm", NAME="%k", GROUP="kvm", MODE="0666"
+    KERNEL=="kvm", MODE="0666"
+    KERNEL=="vhost-net", MODE="0666"
     EOF 
 
 Sometimes, in case of containers, the group kvm does not work to allow the use
@@ -130,8 +134,17 @@ container running and launch a shell in the Cnt1 if it exists::
   sudo /usr/libexec/cloonix/server/cloonix-crun --root=/var/lib/cloonix/nemo/crun/ exec Cnt1 sh 
 
 
+
+
+
 Mounts and namespaces
 =====================
+
+The network seen by the ovs-switch software is private but you can get to
+see it with the following commands::
+
+  ps -ef |grep cloonix-ovs-vswitchd |grep nemo
+  sudo nsenter --target <pid> --net
 
 The file system seen by the crun is private but you can get to see it
 with the following commands::
@@ -139,7 +152,7 @@ with the following commands::
   ps aux | grep "cloonix-suid-power nemo" | grep -v grep | awk "{print \$2}"
   14022
   sudo nsenter --mount=/proc/14022/ns/mnt
-  ls /var/lib/cloonix/nemo/mnt/busybox.zip
+  ls /var/lib/cloonix/nemo/cloonixmnt/busybox.zip
 
 qemu-guest-agent
 ================

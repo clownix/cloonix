@@ -1,10 +1,10 @@
 #!/bin/bash
+HERE=`pwd`
 #----------------------------------------------------------------------#
-DISTRO=bookworm
-ROOTFS=/tmp/${DISTRO}
-DEFVIM=/tmp/wkmntloops/usr/share/vim/vim90/defaults.vim
-REPO="http://deb.debian.org/debian"
-REPO="http://127.0.0.1/debian/bookworm"
+# Ubuntu 25.04
+DISTRO=plucky
+ROOTFS=/var/lib/cloonix/bulk/${DISTRO}
+UBUNTU_REPO="http://fr.archive.ubuntu.com/ubuntu"
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -58,24 +58,43 @@ for i in qemu-img debootstrap blkid wget sgdisk partprobe; do
     exit -1
   fi
 done
+#qemu-img: qemu-utils
+#debootstrap: debootstrap
+#blkid: util-linux
+#sgdisk: gdisk
+#partprobe: parted
+
 if [ -e $ROOTFS ]; then
   echo $ROOTFS already exists
   exit 1
 fi
+
 fct_check_losetup
 set -e
 fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
-list_pkt="linux-image-amd64,grub2,openssh-client,vim,zstd,"
-list_pkt+="bash-completion,net-tools,file,qemu-guest-agent,"
-list_pkt+="locales,x11-apps,iperf3,xtrace,strace,xauth"
+if [ ! -e /usr/share/debootstrap/scripts/${DISTRO} ]; then
+  cd /usr/share/debootstrap/scripts
+  ln -s gutsy ${DISTRO}
+  cd $HERE
+fi
+#-----------------------------------------------------------------------#
 
-debootstrap --no-check-certificate \
-	    --no-check-gpg \
-            --arch amd64 \
+list_pkt="linux-generic,grub-pc,openssh-client,bash-completion,"
+list_pkt+="xauth,sudo,kbd,vim,net-tools,initramfs-tools,"
+list_pkt+="qemu-guest-agent"
+
+debootstrap --no-check-certificate --no-check-gpg --arch amd64 \
+            --components=kernel,multiverse,universe,main \
             --include=$list_pkt \
             ${DISTRO} \
-            /tmp/wkmntloops ${REPO}
+            /tmp/wkmntloops ${UBUNTU_REPO}
+#-----------------------------------------------------------------------#
+cat > /tmp/wkmntloops/etc/apt/sources.list << EOF
+deb ${UBUNTU_REPO} ${DISTRO} main universe
+deb ${UBUNTU_REPO} ${DISTRO}-security main universe 
+deb ${UBUNTU_REPO} ${DISTRO}-updates main universe 
+EOF
 #-----------------------------------------------------------------------#
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
 chroot /tmp/wkmntloops/ grub-install --no-floppy --modules=part_gpt --target=i386-pc /dev/loop0
@@ -87,10 +106,11 @@ echo "source /etc/bash_completion" >> /tmp/wkmntloops/root/.bashrc
 sync /dev/loop0
 umount /tmp/wkmntloops/{dev,proc,sys}
 #-----------------------------------------------------------------------#
-uuid=$(blkid | grep cloonix)
+uuid=$(blkid | grep loop0p2 | grep cloonix)
 uuid=${uuid#*UUID=\"}
 uuid=${uuid%%\"*}
 echo $uuid
+
 #-----------------------------------------------------------------------#
 cat > /tmp/wkmntloops/etc/fstab  << EOF
 UUID=$uuid  /            ext4     defaults                      0 0 
@@ -106,30 +126,9 @@ root
 root
 EOF
 #-----------------------------------------------------------------------#
-chroot /tmp/wkmntloops useradd --create-home --shell /bin/bash user 
-chroot /tmp/wkmntloops passwd user <<EOF
-user
-user
-EOF
-#-----------------------------------------------------------------------#
-sed -i s"/filetype plugin/\"filetype plugin/" $DEFVIM
-sed -i s"/set mouse/\"set mouse/" $DEFVIM
-#-----------------------------------------------------------------------#
-cat > /tmp/wkmntloops/root/debconf_selection << EOF
-locales locales_to_be_generated multiselect en_US.UTF-8 UTF-8
-locales locales/default_environment_locale select en_US.UTF-8
-EOF
-chroot /tmp/wkmntloops/ debconf-set-selections /root/debconf_selection
-rm -f /tmp/wkmntloops/etc/default/locale
-sed -i s"/# en_US.UTF-8/en_US.UTF-8/" /tmp/wkmntloops/etc/locale.gen
-export DEBCONF_NONINTERACTIVE_SEEN=true
-for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
-chroot /tmp/wkmntloops/ dpkg-reconfigure -f noninteractive locales
-sync /dev/loop0
-umount /tmp/wkmntloops/{dev,proc,sys}
 fct_umount_wkmntloops
 #-----------------------------------------------------------------------#
-qemu-img convert -O qcow2 ${ROOTFS} /var/lib/cloonix/bulk/${DISTRO}.qcow2
-rm -f ${ROOTFS}
+qemu-img convert -O qcow2 $ROOTFS ${ROOTFS}.qcow2
+rm -f $ROOTFS
 #-----------------------------------------------------------------------#
 

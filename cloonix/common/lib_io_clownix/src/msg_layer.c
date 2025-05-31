@@ -1115,7 +1115,9 @@ int proxy_traf_tcp_client(uint32_t ip, uint16_t port,
 int proxy_sig_client(char *pname, t_fd_error err_cb, t_msg_rx_cb rx_cb)
 { 
   int fd, llid=0, cidx;
-  if (!util_client_socket_unix(pname, &fd))
+  if (util_client_socket_unix(pname, &fd))
+    KERR("WARNING %s", pname);
+  else
     {
     if (!err_cb)
       KOUT(" ");
@@ -1464,7 +1466,7 @@ void watch_tx(int llid, int len, char *str_tx)
       }
     }
   else
-    KERR("ERROR %d %d", llid, len);
+    KERR("ERROR %d %d %s", llid, len, str_tx);
 }
 /*---------------------------------------------------------------------------*/
 

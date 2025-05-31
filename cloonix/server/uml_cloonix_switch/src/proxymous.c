@@ -186,12 +186,26 @@ void proxymous_llid_closed(int llid, int from_clone)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void timer_kill(void *data)
+{
+  if (g_pid)
+    kill(g_pid, SIGKILL);
+  g_started = 0;
+  g_pid = 0;
+  g_watchdog_count = 0;
+  g_llid = 0;
+  g_count = 0;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
 void proxymous_kill(void)
 {
   if ((g_llid) && (msg_exist_channel(g_llid)))
     rpct_send_kil_req(g_llid, 0);
   else
     KERR("ERROR SEND KILL PROXYMOUS");
+  clownix_timeout_add(5, timer_kill, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

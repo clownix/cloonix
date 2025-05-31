@@ -1,13 +1,14 @@
 #!/bin/bash
 set -e
-releasever=41
-basearch=x86_64
+set -x
+releasever=42
 DISTRO=fedora${releasever}
 ROOTFS=/var/lib/cloonix/bulk/${DISTRO}
-MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
-FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/${basearch}/os
-FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/${basearch}
-FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/${basearch}
+#MIRROR=http://distrib-coffee.ipsl.jussieu.fr/pub/linux/fedora/linux
+MIRROR=http://127.0.0.1/fedora
+FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/os
+FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/x86_64
+FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/x86_64
 #----------------------------------------------------------------------#
 fct_check_uid()
 {
@@ -91,7 +92,7 @@ mkdir -p /tmp/wkmntloops/etc/yum.repos.d
 
 cat > /tmp/wkmntloops/etc/yum.repos.d/fedora.repo << EOF
 [fedora]
-name=Fedora $releasever - $basearch
+name=Fedora $releasever
 baseurl=${FEDORA_MAIN}
 enabled=1
 gpgcheck=0
@@ -99,7 +100,7 @@ EOF
 
 cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates.repo << EOF
 [updates]
-name=Fedora $releasever - $basearch - Updates
+name=Fedora $releasever Updates
 baseurl=${FEDORA_MAIN_UPDATES}
 enabled=1
 gpgcheck=0
@@ -107,19 +108,22 @@ EOF
 
 cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates-modular.repo << EOF
 [fedora-modular-updates]
-name=Fedora Modular $releasever - $basearch - Updates
+name=Fedora Modular $releasever Updates
 baseurl=${FEDORA_MODULAR_UPDATES}
 enabled=1
 gpgcheck=0
 EOF
 
 
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install bash.$basearch
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install libcurl-minimal.$basearch
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl.$basearch
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl-libs.$basearch
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install rpm.$basearch
+mkdir -p /tmp/wkmntloops/{dev,proc,sys}
+for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install bash.x86_64
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install libcurl-minimal.x86_64
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl.x86_64
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl-libs.x86_64
+dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install rpm.x86_64
 dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install dnf
+umount /tmp/wkmntloops/{dev,proc,sys}
 
 #-----------------------------------------------------------------------#
 rm -f /tmp/wkmntloops/etc/resolv.conf
@@ -174,6 +178,34 @@ chroot /tmp/wkmntloops/ adduser user
 chroot /tmp/wkmntloops/ passwd user <<EOF
 user
 user
+EOF
+#-----------------------------------------------------------------------#
+MIRROR=http://172.17.0.2/fedora
+FEDORA_MAIN=${MIRROR}/releases/${releasever}/Everything/os
+FEDORA_MAIN_UPDATES=${MIRROR}/updates/${releasever}/Everything/x86_64
+FEDORA_MODULAR_UPDATES=${MIRROR}/updates/${releasever}/Modular/x86_64
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora.repo << EOF
+[fedora]
+name=Fedora $releasever
+baseurl=${FEDORA_MAIN}
+enabled=1
+gpgcheck=0
+EOF
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates.repo << EOF
+[updates]
+name=Fedora $releasever Updates
+baseurl=${FEDORA_MAIN_UPDATES}
+enabled=1
+gpgcheck=0
+EOF
+
+cat > /tmp/wkmntloops/etc/yum.repos.d/fedora-updates-modular.repo << EOF
+[fedora-modular-updates]
+name=Fedora Modular $releasever Updates
+baseurl=${FEDORA_MODULAR_UPDATES}
+enabled=1
+gpgcheck=0
 EOF
 #-----------------------------------------------------------------------#
 fct_umount_wkmntloops

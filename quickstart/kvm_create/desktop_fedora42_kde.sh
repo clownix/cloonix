@@ -3,8 +3,8 @@
 HERE=`pwd`
 NET="nemo"
 VMNAME="pod"
-QCOW2="desktop_fedora41_kde.qcow2"
-SRC="fedora41.qcow2"
+QCOW2="desktop_fedora42_kde.qcow2"
+SRC="fedora42.qcow2"
 BULK="/var/lib/cloonix/bulk"
 #----------------------------------------------------------------------------#
 set +e
@@ -36,8 +36,8 @@ cloonix_cli ${NET} add lan nat 0 lan_nat
 cloonix_cli ${NET} add lan ${VMNAME} 0 lan_nat
 cloonix_ssh ${NET} ${VMNAME} "dhclient eth0"
 #----------------------------------------------------------------------------#
-cloonix_ssh ${NET} ${VMNAME} "dnf install -y @kde-desktop"
-cloonix_ssh ${NET} ${VMNAME} "dnf install -y spice-vdagent"
+cloonix_ssh ${NET} ${VMNAME} "dnf5 install -y @kde-desktop"
+cloonix_ssh ${NET} ${VMNAME} "dnf5 install -y spice-vdagent"
 cloonix_ssh ${NET} ${VMNAME} "systemctl disable NetworkManager"
 cloonix_ssh ${NET} ${VMNAME} "systemctl disable bluetooth.service"
 cloonix_ssh ${NET} ${VMNAME} "systemctl disable remote-fs.target"

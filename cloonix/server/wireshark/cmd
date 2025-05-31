@@ -4,7 +4,6 @@ TARGZ=../../../targz_store
 ./allclean
 tar xvf ${TARGZ}/tainted_wireshark.tar.gz
 
-
 mkdir -p ${HERE}/tainted_shark
 cd ${HERE}/tainted_wireshark
 cmake -S ${HERE}/tainted_wireshark -B ${HERE}/tainted_shark

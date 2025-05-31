@@ -76,16 +76,51 @@ static int is_duplicate(t_slowperiodic *slowperiodic, char *name, int max)
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static int has_sbin_init(char *bulk, char *image)
+{
+  int result = 0;
+  struct stat sb;
+  char target_init1[MAX_PATH_LEN];
+  char target_init2[MAX_PATH_LEN];
+  char target_init3[MAX_PATH_LEN];
+  memset(target_init1, 0, MAX_PATH_LEN);
+  memset(target_init2, 0, MAX_PATH_LEN);
+  memset(target_init3, 0, MAX_PATH_LEN);
+  snprintf(target_init1, MAX_PATH_LEN-1,
+           "%s/%s/bin/cloonixsbininit", bulk, image);
+  snprintf(target_init2, MAX_PATH_LEN-1,
+           "%s/%s/sbin/init", bulk, image);
+  snprintf(target_init3, MAX_PATH_LEN-1,
+           "%s/%s/lib/systemd/systemd", bulk, image);
+  if (lstat(target_init1, &sb) == 0)
+    result = 1;
+  else if (lstat(target_init2, &sb) == 0)
+    result = 1;
+  else if (lstat(target_init3, &sb) == 0)
+    result = 1;
+  else
+    KERR("ERROR NO INIT %s", image);
+  if (result == 1)
+    {
+    if (((sb.st_mode & S_IFMT) != S_IFLNK) &&
+         ((sb.st_mode & S_IFMT) != S_IFREG))
+      {
+      KERR("ERROR BAD INIT %s", image);
+      result = 0;
+      }
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void helper_get_cvm(char *path,
                            t_slowperiodic **slowperiodic,
                            int *nb, int max)
 {
-  struct stat sb;
   DIR *dirptr;
   struct dirent *ent;
-  char sbin_init[MAX_PATH_LEN];
   dirptr = opendir(path);
   if (dirptr != NULL)
     {
@@ -102,15 +137,7 @@ static void helper_get_cvm(char *path,
         continue;
       if (ent->d_type == DT_DIR)
         {
-        memset(sbin_init, 0, MAX_PATH_LEN);
-        snprintf(sbin_init, MAX_PATH_LEN-1,
-                 "%s/%s/sbin/init", path, ent->d_name);
-        if (lstat(sbin_init, &sb) == -1)
-          KERR("ERROR %s %d", sbin_init, *nb);
-        else if (((sb.st_mode & S_IFMT) != S_IFLNK) && 
-                 ((sb.st_mode & S_IFMT) != S_IFREG))
-          KERR("ERROR %s %d", sbin_init, (sb.st_mode & S_IFMT));
-        else
+        if (has_sbin_init(path, ent->d_name))
           {
           if (!is_duplicate(*slowperiodic, ent->d_name, *nb))
             {

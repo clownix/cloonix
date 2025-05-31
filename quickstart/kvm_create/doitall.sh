@@ -6,10 +6,10 @@ mkdir -p /var/lib/cloonix/bulk
 
 LIST="openwrt \
       alpine \
-      fedora41 \
+      plucky.sh \
       noble \
+      fedora42 \
       bookworm \
-      bookworm_fr \
       desktop_bookworm_gnome \
       desktop_bookworm_lxde \
       desktop_fedora41_kde"

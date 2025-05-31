@@ -90,6 +90,8 @@ static int build_add_vm_cmd(int offset, t_list_commands *hlist,
     len += sprintf(list->cmd + len, " %s", kvm->rootfs_input);
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_PERSISTENT)
       len += sprintf(list->cmd + len, " --persistent");
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_PRIVILEGED)
+      len += sprintf(list->cmd + len, " --privileged");
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_FULL_VIRT)
       len += sprintf(list->cmd + len, " --fullvirt");
     if (kvm->vm_config_flags & VM_CONFIG_FLAG_NO_REBOOT)
@@ -147,6 +149,8 @@ static int build_add_cnt_cmd(int offset, t_list_commands *hlist,
             cfg_get_cloonix_name(), shortbrand, cnt->name, eth_desc, cnt->image);
     if (cnt->is_persistent)
       len += sprintf(list->cmd + len, " --persistent");
+    if (cnt->is_privileged)
+      len += sprintf(list->cmd + len, " --privileged");
     for (i=0; i < cnt->nb_tot_eth; i++)
       {
       if (cnt->eth_table[i].randmac == 0)

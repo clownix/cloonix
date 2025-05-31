@@ -62,8 +62,15 @@ void help_add_zip(char *line)
 /***************************************************************************/
 void help_add_cvm(char *line)
 {
-  printf("\n\n\n %s <name> eth=<eth_description> <path-to-rootfs-dir>\n",
+  printf("\n\n\n %s <name> eth=<eth_description> <directory>\n",
   line);
+  printf("\n\tdirectory contains the root filesystem.");
+  printf("\n\teth_description example:");
+  printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
+  printf("\n\tMax eth: %d", MAX_ETH_VM);
+  printf("\n\t[options]");
+  printf("\n\t       --persistent");
+  printf("\n\t       --privileged");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
@@ -116,7 +123,7 @@ static int local_add_cnt(char *type, char *name, int nb_tot_eth,
                          t_eth_table *eth_tab, char *image,
                          int argc, char **argv)
 {
-  int i, persistent = 0, result = 0;
+  int i, privileged = 0, persistent = 0, result = 0;
   t_topo_cnt cnt;
   char *ptr;
   memset(&cnt, 0, sizeof(t_topo_cnt));
@@ -135,6 +142,17 @@ static int local_add_cnt(char *type, char *name, int nb_tot_eth,
     else if (!strncmp(argv[i], "--persistent", strlen("--persistent")))
       {
       persistent = 1;
+      }
+    else if (!strncmp(argv[i], "--privileged", strlen("--privileged")))
+      {
+      if (!strcmp(type, "brandcvm"))
+        privileged = 1;
+      else
+        {
+        printf("\nERROR: --privileged is for cvm only\n\n");
+        result = -1;
+        break;
+        }
       }
     else if (!strncmp(argv[i], "--startup_env=", strlen("--startup_env=")))
       {
@@ -161,6 +179,7 @@ static int local_add_cnt(char *type, char *name, int nb_tot_eth,
     strncpy(cnt.brandtype, type, MAX_NAME_LEN-1);
     strncpy(cnt.name, name, MAX_NAME_LEN-1);
     cnt.is_persistent = persistent;
+    cnt.is_privileged = privileged;
     cnt.nb_tot_eth = nb_tot_eth;
     memcpy(cnt.eth_table, eth_tab, nb_tot_eth * sizeof(t_eth_table));
     strncpy(cnt.image, image, MAX_PATH_LEN-1);

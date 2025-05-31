@@ -38,6 +38,7 @@
 #include "xwy.h"
 #include "novnc.h"
 #include "ovs.h"
+#include "cnt.h"
 #include "llid_trace.h"
 #include "doorways_mngt.h"
 #include "doors_rpc.h"
@@ -200,42 +201,47 @@ void last_action_self_destruction(void *data)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+static void after_action_self_destruction(void *data)
+{
+  t_llid_tid *llid_tid = (t_llid_tid *) data;
+  kill_doors();
+  ovs_nat_main_del_all();
+  kill_xwy();
+  event_print("Self-destruction triggered");
+  clownix_timeout_add(20, last_action_self_destruction, (void *)llid_tid,
+                      NULL, NULL);
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
 static void action_self_destruction(void *data)
 {
   static int count = 0;
-  int nb;
+  int nb_kvm, nb_cnt;
   t_llid_tid *llid_tid = (t_llid_tid *) data;
+  t_lst_pid *lst_pid;
 
-  if (count == 0)
-    {
-    kill_doors();
-    kill_xwy();
-    ovs_nat_main_del_all();
-    }
   if ((self_destruction_ok()) || (count > 500))
     {
     if ((count < 300) && (ovs_still_present()))
       {
       count++;
-      clownix_timeout_add(20, action_self_destruction, (void *)llid_tid, 
+      clownix_timeout_add(50, action_self_destruction, (void *)llid_tid, 
                           NULL, NULL);
       }
     else
       {
-      cfg_get_first_vm(&nb);
-      if ((count < 300) && nb) 
+      cfg_get_first_vm(&nb_kvm);
+      nb_cnt = cnt_get_all_pid(&lst_pid);
+      if ((count < 300) && (nb_kvm+nb_cnt)) 
         {
         count++;
-        clownix_timeout_add(20, action_self_destruction, (void *)llid_tid, 
+        clownix_timeout_add(50, action_self_destruction, (void *)llid_tid, 
                             NULL, NULL);
         }
       else
         {
-        suid_power_kill();
-        ovs_destroy();
-        kill_xwy();
-        event_print("Self-destruction triggered");
-        clownix_timeout_add(20, last_action_self_destruction, (void *)llid_tid, 
+        clownix_timeout_add(200, after_action_self_destruction, (void *)llid_tid, 
                             NULL, NULL);
         }
       }
@@ -244,7 +250,7 @@ static void action_self_destruction(void *data)
     {
     event_print("%s %d", __FUNCTION__, get_lock_self_destruction_dir());
     count++;
-    clownix_timeout_add(10, action_self_destruction, (void *)llid_tid, 
+    clownix_timeout_add(50, action_self_destruction, (void *)llid_tid, 
                         NULL, NULL);
     }
 }

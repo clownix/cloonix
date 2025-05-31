@@ -29,10 +29,10 @@ if [ ! -z "${is_started}" ]; then
   exit 1
 fi
 #----------------------------------------------------------------------#
-unshare --user --fork --pid --mount --mount-proc \
-        --map-users=100000,0,10000 --map-groups=100000,0,10000 \
-        --setuid 0 --setgid 0 -- \
-        /bin/bash -c "cp -rf ${ALPINE0} ${ALPINE}"
+cp -rf ${ALPINE0} ${ALPINE}
+sync
+sleep 5
+sync
 #----------------------------------------------------------------------#
 cloonix_net ${NET}
 cloonix_gui ${NET}
@@ -46,12 +46,11 @@ while ! cloonix_ssh ${NET} ${NAME} "echo" 2>/dev/null; do
   echo ${NAME} not ready, waiting 3 sec
   sleep 3
 done
-set -e
 #----------------------------------------------------------------------------#
-cloonix_ssh ${NET} ${NAME} "dhcpcd eth0"
+cloonix_ssh ${NET} ${NAME} "ip addr add dev eth0 172.17.0.12/24"
 #----------------------------------------------------------------------------#
-LIST="xfce4 xfce4-terminal xfce4-session xeyes rsyslog dbus dbus-x11 strace"
-LIST="${LIST} bash vim font-dejavu"
+LIST="xfce4 xfce4-terminal xfce4-session xeyes rsyslog dbus dbus-x11"
+LIST="${LIST} bash vim font-dejavu strace"
 
 apkcmd="apk --allow-untrusted --no-cache --update add"
 

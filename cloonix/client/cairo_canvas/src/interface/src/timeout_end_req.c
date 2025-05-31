@@ -95,7 +95,16 @@ void timer_create_item_node_req(void *data)
     strncpy(cust_topo_cnt.name, cust_cnt->name, MAX_NAME_LEN-1);
     strncpy(cust_topo_cnt.startup_env, cust_cnt->startup_env, MAX_PATH_LEN-1);
     strncpy(cust_topo_cnt.vmount, cust_cnt->vmount, MAX_SIZE_VMOUNT-1);
-    cust_topo_cnt.is_persistent = cust_cnt->is_persistent;
+    if (!strcmp(get_brandtype_type(), "brandzip"))
+      {
+      cust_topo_cnt.is_persistent = cust_cnt->is_persistent_zip;
+      cust_topo_cnt.is_privileged = cust_cnt->is_privileged_zip;
+      }
+    else
+      {
+      cust_topo_cnt.is_persistent = cust_cnt->is_persistent_cvm;
+      cust_topo_cnt.is_privileged = cust_cnt->is_privileged_cvm;
+      }
     cust_topo_cnt.nb_tot_eth = cust_cnt->nb_tot_eth;
     memcpy(cust_topo_cnt.eth_table, cust_cnt->eth_table,
            cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));

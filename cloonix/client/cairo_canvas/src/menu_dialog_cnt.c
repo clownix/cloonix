@@ -34,12 +34,10 @@
 
 
 static void custom_vm_dialog_create(void);
-void kvm_distant_brandtype_cb(void);
 void menu_choice_kvm(void);
 char *get_brandtype_image(char *type);
 char set_brandtype_image(char *type, char *image);
 char *get_brandtype_type(void);
-void global_brandtype_cb(GtkWidget *check, gpointer user_data);
 
 GtkWidget *get_main_window(void);
 static t_custom_cnt g_custom_cnt;
@@ -50,8 +48,6 @@ static t_slowperiodic g_bulzip[MAX_BULK_FILES];
 static int g_nb_bulzip;
 static t_slowperiodic g_bulcvm[MAX_BULK_FILES];
 static int g_nb_bulcvm;
-
-static int g_custom_dialog_change;
 
 typedef struct t_cb_endp_type
 {
@@ -157,7 +153,7 @@ static void cnt_update_brandtype_image(void)
     if (g_nb_bulzip >= 1)
       set_brandtype_image("brandzip", g_bulzip[0].name);
     else
-      set_brandtype_image("brandzip", "zipfrr.zip");
+      set_brandtype_image("brandzip", "no-zip-found");
     }
   found = 0;
   for (i=0; i<g_nb_bulcvm; i++)
@@ -170,20 +166,7 @@ static void cnt_update_brandtype_image(void)
     if (g_nb_bulcvm >= 1)
       set_brandtype_image("brandcvm", g_bulcvm[0].name);
     else
-      set_brandtype_image("brandcvm", "alpine");
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void cnt_distant_brandtype_cb(void)
-{
-  if (!g_custom_dialog)
-    KERR("ERROR DISTANT CB");
-  else
-    {
-    g_custom_dialog_change = 1;
-    gtk_dialog_response(GTK_DIALOG(g_custom_dialog), GTK_RESPONSE_NONE);
+      set_brandtype_image("brandcvm", "no-cvm-found");
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -192,13 +175,6 @@ void cnt_distant_brandtype_cb(void)
 void cnt_brandtype_cb(void)
 {
   cnt_update_brandtype_image();
-  if (!g_custom_dialog)
-    kvm_distant_brandtype_cb();
-  else
-    {
-    g_custom_dialog_change = 1;
-    gtk_dialog_response(GTK_DIALOG(g_custom_dialog), GTK_RESPONSE_NONE);
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -225,15 +201,42 @@ void set_bulcvm(int nb, t_slowperiodic *slowperiodic)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void is_persistent_toggle (GtkToggleButton *togglebutton,
-                                  gpointer user_data)
+static void is_persistent_toggle_zip(GtkToggleButton *togglebutton,
+                                     gpointer user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton))
-    g_custom_cnt.is_persistent = 1;
+    g_custom_cnt.is_persistent_zip = 1;
   else
-    g_custom_cnt.is_persistent = 0;
+    g_custom_cnt.is_persistent_zip = 0;
 }
 /*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void is_persistent_toggle_cvm(GtkToggleButton *togglebutton,
+                                     gpointer user_data)
+{
+  if (gtk_toggle_button_get_active(togglebutton))
+    g_custom_cnt.is_persistent_cvm = 1;
+  else
+    g_custom_cnt.is_persistent_cvm = 0;
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
+/*
+static void is_privileged_toggle_cvm(GtkToggleButton *togglebutton,
+                                     gpointer user_data)
+{
+  if (gtk_toggle_button_get_active(togglebutton))
+    g_custom_cnt.is_privileged_cvm = 1;
+  else
+    g_custom_cnt.is_privileged_cvm = 0;
+}
+*/
+/*--------------------------------------------------------------------------*/
+
+
 
 /****************************************************************************/
 static void update_cust_brandzip(t_custom_cnt *cust,
@@ -363,28 +366,13 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void restart_custom_vm_dialog_create(void *data)
-{
-  if (!strcmp(get_brandtype_type(), "brandkvm"))
-    menu_choice_kvm();
-  else
-    custom_vm_dialog_create();
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void custom_vm_dialog_create(void)
 {
   int i, j, k, response, line_nb = 0;
-  unsigned long uli;
   GSList *group = NULL;
-  GSList *brandgroup = NULL;
   GtkWidget *entry_name, *entry_startup_env, *grid, *parent;
   GtkWidget *is_persistent, *image_menu, *image_sub;
   GtkWidget *entry_vmount, *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
-  GtkWidget *brandtype[BRANDTYPE_NB_MAX];
-  GtkWidget *hbox_brandtype;
-  char *brandlib[BRANDTYPE_NB_MAX] = {"brandkvm", "brandzip", "brandcvm"};
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
 
   if (g_custom_dialog)
@@ -407,38 +395,43 @@ static void custom_vm_dialog_create(void)
   gtk_window_set_default_size(GTK_WINDOW(g_custom_dialog), 300, 20);
 
 
-  hbox_brandtype = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  for (i=0; i<BRANDTYPE_NB_MAX; i++)
-    {
-    brandtype[i] = gtk_radio_button_new_with_label(brandgroup, brandlib[i]);
-    brandgroup = gtk_radio_button_get_group(GTK_RADIO_BUTTON(brandtype[i]));
-    if (!strcmp(get_brandtype_type(), brandlib[i]))
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(brandtype[i]),TRUE);
-    }
-  for (uli=0; uli<BRANDTYPE_NB_MAX; uli++)
-    {
-    gtk_box_pack_start(GTK_BOX(hbox_brandtype), brandtype[uli],TRUE,TRUE,10);
-    g_signal_connect(G_OBJECT(brandtype[uli]), "clicked",
-                     G_CALLBACK(global_brandtype_cb), (gpointer) uli);
-    }
-  append_grid(grid, hbox_brandtype, "brandtype", line_nb++, NULL);
-
-
-
-
   entry_name = gtk_entry_new();
   gtk_entry_set_text(GTK_ENTRY(entry_name), g_custom_cnt.name);
   append_grid(grid, entry_name, "Name:", line_nb++, NULL);
 
 
-  is_persistent = gtk_check_button_new_with_label("persistent_rootfs");
-  if (g_custom_cnt.is_persistent)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), TRUE);
+  if (!strcmp(get_brandtype_type(), "brandzip"))
+    {
+    is_persistent = gtk_check_button_new_with_label("persistent_zip");
+    if (g_custom_cnt.is_persistent_zip)
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), TRUE);
+    else
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), FALSE);
+    g_signal_connect(is_persistent, "toggled",
+                     G_CALLBACK(is_persistent_toggle_zip),NULL);
+    append_grid(grid, is_persistent, "remanence:", line_nb++, NULL);
+    }
   else
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), FALSE);
-  g_signal_connect(is_persistent,"toggled",G_CALLBACK(is_persistent_toggle),NULL);
-  append_grid(grid, is_persistent, "remanence:", line_nb++, NULL);
-
+    {
+    is_persistent = gtk_check_button_new_with_label("persistent_cvm");
+    if (g_custom_cnt.is_persistent_cvm)
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), TRUE);
+    else
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_persistent), FALSE);
+    g_signal_connect(is_persistent, "toggled",
+                     G_CALLBACK(is_persistent_toggle_cvm),NULL);
+    append_grid(grid, is_persistent, "remanence:", line_nb++, NULL);
+/*
+    is_privileged = gtk_check_button_new_with_label("privileged_cvm");
+    if (g_custom_cnt.is_privileged_cvm)
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_privileged), TRUE);
+    else
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(is_privileged), FALSE);
+    g_signal_connect(is_privileged, "toggled",
+                     G_CALLBACK(is_privileged_toggle_cvm),NULL);
+    append_grid(grid, is_privileged, "privileged:", line_nb++, NULL);
+*/
+    }
 
 
   for (i=0; i<ETH_LINE_MAX; i++)
@@ -489,9 +482,6 @@ static void custom_vm_dialog_create(void)
   
   if (response == GTK_RESPONSE_NONE)
     {
-    if (g_custom_dialog_change)
-      clownix_timeout_add(1,restart_custom_vm_dialog_create,NULL,NULL,NULL);
-    g_custom_dialog_change = 0;
     }
   else
     {
@@ -534,7 +524,6 @@ void menu_choice_cnt(void)
 void menu_dialog_cnt_init(void)
 {
   int i;
-  g_custom_dialog_change = 0;
   memset(&g_custom_cnt, 0, sizeof(t_custom_cnt)); 
   strcpy(g_custom_cnt.name, "Cnt");
   strcpy(g_custom_cnt.startup_env, "NODE_ID=1 CLOONIX=great");

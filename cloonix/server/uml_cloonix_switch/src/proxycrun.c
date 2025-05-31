@@ -242,7 +242,9 @@ int proxycrun_transmit_config(int pweb, char *passwd)
   char *net = cfg_get_cloonix_name();
   int pmain = cfg_get_server_port();
   llid = proxy_sig_client(g_proxy_sig_unix, proxy_sig_err_cb, proxy_sig_rx_cb);
-  if (llid)
+  if (llid == 0)
+    KERR("ERROR %s", g_proxy_sig_unix);
+  else
     {
     g_llid_proxy_sig = llid;
     llid_trace_alloc(g_llid_proxy_sig,"CLOON",0,0,type_llid_trace_unix_proxy);

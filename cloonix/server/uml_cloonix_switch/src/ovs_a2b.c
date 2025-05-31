@@ -48,8 +48,6 @@ static char g_bin_a2b[MAX_PATH_LEN];
 static t_ovs_a2b *g_head_a2b;
 static int g_nb_a2b;
 
-int get_glob_req_self_destruction(void);
-
 /****************************************************************************/
 static t_ovs_a2b *find_a2b(char *name)
 {
@@ -188,8 +186,6 @@ static void timer_heartbeat(void *data)
   t_ovs_a2b *next, *cur = g_head_a2b;
   int llid;
   char *msg = "a2b_suidroot";
-  if (get_glob_req_self_destruction())
-    return;
   while(cur)
     {
     next = cur->next;

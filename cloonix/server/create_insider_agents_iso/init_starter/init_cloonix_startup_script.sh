@@ -1,10 +1,8 @@
 #!/bin/sh
-export LD_LIBRARY_PATH="/mnt/cloonix_config_fs/lib"
-/mnt/cloonix_config_fs/cloonix-agent
-/mnt/cloonix_config_fs/cloonix-dropbear-sshd
-unset LD_LIBRARY_PATH
-if [ -e /mnt/cloonix_config_fs/startup_nb_eth ]; then
-  NB_ETH=$(cat /mnt/cloonix_config_fs/startup_nb_eth)
+/cloonixmnt/cnf_fs/cloonix-agent
+/cloonixmnt/cnf_fs/cloonix-dropbear-sshd
+if [ -e /cloonixmnt/cnf_fs/startup_nb_eth ]; then
+  NB_ETH=$(cat /cloonixmnt/cnf_fs/startup_nb_eth)
   NB_ETH=$((NB_ETH-1))
   for i in $(seq 0 $NB_ETH); do
     LIST="${LIST} eth$i"

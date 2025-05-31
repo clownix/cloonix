@@ -139,7 +139,7 @@ int machine_is_kvm_able(void)
 /****************************************************************************/
 static void usage(char *name)
 {
-  printf("\n\n%s /usr/libexec/cloonix/etc/cloonix.cfg nemo\n\n\n", name);
+  KERR("ERROR usage %s", name);
   exit(-1);
 }
 /*--------------------------------------------------------------------------*/
@@ -363,7 +363,7 @@ static void launching(void)
   printf("     Version:      %s\n",cfg_get_version());
   printf("     Name:         %s (rank:%d)\n", net, get_conf_rank());
   printf("     Config:       %s\n", g_config_path);
-  printf("     Binaries:     %s\n",cfg_get_bin_dir());
+  printf("     Binaries:     %s/cloonfs\n",cfg_get_bin_dir());
   printf("     Work Zone:    %s\n",cfg_get_root_work());
   printf("     Bulk Path:    %s\n",cfg_get_bulk());
   printf("     Doors Port:   %d\n",cfg_get_server_port());

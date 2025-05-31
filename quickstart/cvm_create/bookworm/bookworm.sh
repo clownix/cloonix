@@ -24,10 +24,10 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 #-----------------------------------------------------------------------#
-unshare --user --fork --pid --mount --mount-proc \
-        --map-users=100000,0,10000 --map-groups=100000,0,10000 \
-        --setuid 0 --setgid 0 -- \
-        /bin/bash -c "cp -rf ${BOOKWORM0} ${BOOKWORM}"
+cp -rf ${BOOKWORM0} ${BOOKWORM}
+sync
+sleep 5
+sync
 #----------------------------------------------------------------------#
 cloonix_net ${NET}
 cloonix_gui ${NET}
@@ -43,7 +43,7 @@ while ! cloonix_ssh ${NET} ${NAME} "echo" 2>/dev/null; do
 done
 set -e
 #----------------------------------------------------------------------------#
-cloonix_ssh ${NET} ${NAME} "dhcpcd eth0"
+cloonix_ssh ${NET} ${NAME} "ip addr add dev eth0 172.17.0.12/24"
 #----------------------------------------------------------------------------#
 cloonix_ssh ${NET} ${NAME} "DEBIAN_FRONTEND=noninteractive \
                       DEBCONF_NONINTERACTIVE_SEEN=true \

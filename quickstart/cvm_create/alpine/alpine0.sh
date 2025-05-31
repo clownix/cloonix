@@ -15,35 +15,25 @@ if [ $? -ne 0 ]; then
 fi
 #----------------------------------------------------------------------#
 fct_unshare_chroot() {
-  unshare --user --fork --pid --mount --mount-proc \
-          --map-users=100000,0,10000 --map-groups=100000,0,10000 \
-          --setuid 0 --setgid 0 --wd "${ALPINE0}" -- \
-          /bin/bash -c " \
-                   mount -t proc none proc ; \
-                   mount -o rw,bind /dev/zero dev/zero ; \
-                   mount -o rw,bind /dev/null dev/null ; \
-                   /sbin/chroot . /bin/sh -c '$1'"
+unshare --map-root-user --user --mount --wd "${ALPINE0}" \
+        -- /bin/bash -c \
+        "mount -o rw,bind /dev/zero dev/zero ; \
+         mount -o rw,bind /dev/null dev/null ; \
+         /sbin/chroot . /bin/sh -c '$1'"
 }
 #----------------------------------------------------------------------#
-unshare --user --fork --pid --mount --mount-proc \
-        --map-users=100000,0,10000 --map-groups=100000,0,10000 \
-        --setuid 0 --setgid 0 -- \
-        /bin/bash -c "\
-                      mkdir -p ${ALPINE0}/dev ;\
-                      mkdir -p ${ALPINE0}/proc"
+unshare --map-root-user --user \
+        -- /bin/bash -c \
+        "mkdir -p ${ALPINE0}/dev; mkdir -p ${ALPINE0}/proc"
 #----------------------------------------------------------------------#
-unshare --user --fork --pid --mount --mount-proc \
-        --map-users=100000,0,10000 --map-groups=100000,0,10000 \
-        --setuid 0 --setgid 0 --wd "${ALPINE0}" -- \
-        /bin/bash -c "\
-                      touch dev/zero ; \
-                      touch dev/null ; \
-                      mount -t proc none proc ; \
-                      mount -o rw,bind /dev/zero dev/zero ; \
-                      mount -o rw,bind /dev/null dev/null ; \
-                      ${APK_STATIC} -X http://127.0.0.1/alpine/main \
-                                    --allow-untrusted -p ${ALPINE0} \
-                                    --initdb add alpine-base"
+unshare --map-root-user --user --mount --wd "${ALPINE0}" \
+        -- /bin/bash -c \
+        "touch dev/zero; touch dev/null ; \
+         mount -o rw,bind /dev/zero dev/zero ; \
+         mount -o rw,bind /dev/null dev/null ; \
+         ${APK_STATIC} -X http://127.0.0.1/alpine/main \
+                       --allow-untrusted -p ${ALPINE0} \
+                       --initdb add alpine-base"
 #-----------------------------------------------------------------------#
 cmd="cat > /etc/apk/repositories <<EOF
 http://127.0.0.1/alpine/main
@@ -53,6 +43,7 @@ fct_unshare_chroot "${cmd}"
 #-----------------------------------------------------------------------#
 for i in "musl" \
          "musl-utils" \
+         "coreutils" \
          "musl-locales" \
          "util-linux" \
          "tzdata" \
@@ -62,7 +53,6 @@ for i in "musl" \
          "alpine-base" \
          "kbd" \
          "kbd-bkeymaps" \
-         "dhcpcd" \
          "file" \
          "stress-ng" \
          "strace" \
@@ -104,7 +94,7 @@ cmd='cat > /etc/init.d/cloonix_startup << EOF
 #!/sbin/openrc-run
 name="Cloonix Backdoor"
 description="Permits cloonix_ssh and cloonix_scp"
-command="/mnt/cloonix_config_fs/init_cloonix_startup_script.sh"
+command="/cloonixmnt/cnf_fs/init_cloonix_startup_script.sh"
 command_background=true
 pidfile="/run/cloonix_startup.pid"
 EOF'
@@ -113,8 +103,7 @@ cmd="chmod +x /etc/init.d/cloonix_startup"
 fct_unshare_chroot "${cmd}"
 cmd="/sbin/rc-update add cloonix_startup sysinit"
 fct_unshare_chroot "${cmd}"
-#-----------------------------------------------------------------------#
-cmd='echo "noipv4ll" >> /etc/dhcpcd.conf'
+cmd="chmod +r /bin/bbsuid"
 fct_unshare_chroot "${cmd}"
 #-----------------------------------------------------------------------#
 cmd="cat > /etc/apk/repositories << EOF
@@ -123,4 +112,19 @@ http://172.17.0.2/alpine/community
 EOF"
 fct_unshare_chroot "${cmd}"
 #-----------------------------------------------------------------------#
+cat > ${ALPINE0}/bin/cloonixsbininit << EOF
+exec &> /tmp/cloonixsbininit.log
+echo STARTING /sbin/init
+exec /sbin/init
+EOF
+chmod 755 ${ALPINE0}/bin/cloonixsbininit
+#-----------------------------------------------------------------------#
+rm -rf ${ALPINE0}/dev/*
+#-----------------------------------------------------------------------#
+for i in "dev" "proc" "sys"; do
+  chmod 755 ${ALPINE0}/${i}
+done
+chmod 777 ${ALPINE0}/root
+#-----------------------------------------------------------------------#
+
 

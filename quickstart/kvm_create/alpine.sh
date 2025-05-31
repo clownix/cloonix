@@ -2,7 +2,7 @@
 #----------------------------------------------------------------------#
 HERE=`pwd`
 DISTRO="alpine"
-STORE="/media/perrier/T7Shield/alpine"
+STORE="/media/perrier/T7Shield2/alpine"
 NAMEROOT="alpine-minirootfs-3.21.3-x86_64"
 ROOTFS="/var/lib/cloonix/bulk/${DISTRO}"
 #----------------------------------------------------------------------#
@@ -91,6 +91,7 @@ for i in "musl" \
          "openrc" \
          "alpine-base" \
          "kbd" \
+         "xauth" \
          "kbd-bkeymaps" \
          "dhcpcd"; do
   chroot /tmp/wkmntloops apk --allow-untrusted --no-cache --update add ${i}

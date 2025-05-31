@@ -78,8 +78,6 @@ static char g_bin_snf[MAX_PATH_LEN];
 static t_snf *g_head_snf;
 static int g_nb_snf;
 
-int get_glob_req_self_destruction(void);
-
 
 
 /****************************************************************************/
@@ -189,8 +187,6 @@ static void timer_heartbeat(void *data)
   t_snf *next, *cur = g_head_snf;
   int llid;
   char *msg = "cloonsnf_suidroot";
-  if (get_glob_req_self_destruction())
-    return;
   while(cur)
     {
     next = cur->next;
@@ -260,7 +256,7 @@ static void timer_heartbeat(void *data)
       }
     cur = next;
     }
-  clownix_timeout_add(20, timer_heartbeat, NULL, NULL, NULL);
+  clownix_timeout_add(50, timer_heartbeat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -673,6 +669,19 @@ void ovs_snf_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void ovs_snf_kill_all(void)
+{
+  t_snf *cur = g_head_snf;
+  while(cur)
+    {
+    rpct_send_kil_req(cur->llid, type_hop_snf);
+    cur = cur->next;
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 void ovs_snf_init(void)
 {
   char *root = cfg_get_root_work();
@@ -686,7 +695,7 @@ void ovs_snf_init(void)
   strncpy(g_cloonix_net, net, MAX_NAME_LEN-1);
   strncpy(g_root_path, root, MAX_PATH_LEN-1);
   strncpy(g_bin_snf, bin_snf, MAX_PATH_LEN-1);
-  clownix_timeout_add(100, timer_heartbeat, NULL, NULL, NULL);
+  clownix_timeout_add(300, timer_heartbeat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

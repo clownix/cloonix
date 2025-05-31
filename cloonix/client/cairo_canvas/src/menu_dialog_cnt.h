@@ -23,7 +23,10 @@ typedef struct t_custom_cnt
   char startup_env[MAX_PATH_LEN];
   char vmount[MAX_SIZE_VMOUNT];
   int current_number;
-  int is_persistent;
+  int is_persistent_zip;
+  int is_persistent_cvm;
+  int is_privileged_zip;
+  int is_privileged_cvm;
 } t_custom_cnt;
 
 void set_bulzip(int nb, t_slowperiodic *slowperiodic);

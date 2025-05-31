@@ -52,14 +52,25 @@ typedef struct t_crun
   char nspacecrun_path[2*MAX_PATH_LEN];
   char mountbear[MAX_PATH_LEN];
   char mounttmp[MAX_PATH_LEN];
+  char sbin_init[MAX_PATH_LEN];
+  char sh_starter[MAX_PATH_LEN];
+  int uid_image;
   int nb_eth;
   t_eth_mac eth_mac[MAX_ETH_VM];
   int cloonix_rank;
   int vm_id;
   int crun_pid;
+  int ovspid;
   int crun_pid_count;
   int is_persistent;
-  int delete_finalization_countdown;
+  int is_privileged;
+  int subuid_start;
+  int subuid_qty;
+  int subgid_start;
+  int subgid_qty;
+  int delete_first_finalization_countdown;
+  int delete_second_finalization_countdown;
+  int delete_third_finalization_countdown;
   struct t_crun *prev;
   struct t_crun *next;
 } t_crun;
@@ -98,10 +109,13 @@ static char *random_str(void)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void alloc_crun(char *name, char *bulk, char *image, int nb_eth,
-                            char *nspacecrun, int cloonix_rank,
-                            int vm_id, char *cnt_dir, char *agent_dir,
-                            int is_persistent, char *brandtype)
+static void alloc_crun(char *name, char *bulk, char *image, int uid_image,
+                       int nb_eth, char *nspacecrun, int cloonix_rank,
+                       int vm_id, char *cnt_dir, char *agent_dir,
+                       int is_persistent, int is_privileged,
+                       char *brandtype, char *sbin_init, char *sh_starter,
+                       int subuid_start, int subuid_qty,
+                       int subgid_start, int subgid_qty)
 {
   char *rnd = random_str();
   t_crun *cur = (t_crun *) malloc(sizeof(t_crun));
@@ -109,17 +123,24 @@ static void alloc_crun(char *name, char *bulk, char *image, int nb_eth,
   strncpy(cur->name, name, MAX_NAME_LEN-1);
   strncpy(cur->bulk, bulk, MAX_PATH_LEN-1);
   strncpy(cur->image, image, MAX_NAME_LEN-1);
+  strncpy(cur->sbin_init, sbin_init, MAX_PATH_LEN-1);
+  strncpy(cur->sh_starter, sh_starter, MAX_PATH_LEN-1);
+  cur->uid_image = uid_image;
   strncpy(cur->cnt_dir, cnt_dir, MAX_PATH_LEN-1);
   strncpy(cur->agent_dir, agent_dir, MAX_PATH_LEN-1);
   strncpy(cur->nspacecrun, nspacecrun, MAX_PATH_LEN-1);
   snprintf(cur->nspacecrun_path, 2*MAX_PATH_LEN-1, "%s%s",
            PATH_NAMESPACE, nspacecrun);
-  snprintf(cur->rootfs_path, MAX_PATH_LEN-1,"%s/%s/%s",cnt_dir,name,ROOTFS);
   snprintf(cur->mountbear, MAX_PATH_LEN-1,"%s/%s/mnt%s", cnt_dir, name, rnd);
   snprintf(cur->mounttmp, MAX_PATH_LEN-1,"%s/%s/tmp%s", cnt_dir, name, rnd);
   cur->nb_eth = nb_eth;
   cur->cloonix_rank = cloonix_rank;
   cur->is_persistent = is_persistent;
+  cur->is_privileged = is_privileged;
+  cur->subuid_start = subuid_start;
+  cur->subuid_qty = subuid_qty;
+  cur->subgid_start = subgid_start;
+  cur->subgid_qty = subgid_qty;
   strncpy(cur->brandtype, brandtype, MAX_NAME_LEN);
   cur->vm_id = vm_id; 
   if (g_head_crun)
@@ -177,30 +198,44 @@ static void unlink_sub_dir_files(char *dirname)
 }
 /*---------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-static void unlink_all_files(char *cnt_dir, char *name, char *image,
-                             char *bulk, char *brandtype)
-{
-  char pth[MAX_PATH_LEN];
-  memset(pth, 0, MAX_PATH_LEN);
-  snprintf(pth, MAX_PATH_LEN-1, "%s/%s", cnt_dir, name);
-  unlink_sub_dir_files(pth);
-  snprintf(pth, MAX_PATH_LEN-1, "%s/%s", get_mnt_loop_dir(), image);
-  if (!tar_img_exists(bulk, image, brandtype))
-    rmdir(pth);
+/****************************************************************************/
+static void delete_first_finalization(t_crun *cur)
+{   
+  char cmd[MAX_PATH_LEN];
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1,
+           "%s %s/tmp", UMOUNT_BIN, cur->mountbear);
+  execute_cmd(cmd, 0, 0);
+  crun_utils_delete_crun_delete(cur->name, cur->nspacecrun,
+                                cur->vm_id, cur->nb_eth,
+                                cur->uid_image, cur->is_privileged);
+  cur->delete_second_finalization_countdown = 1;
 }
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void delete_finalization(t_crun *cur)
+static void delete_second_finalization(t_crun *cur)
 {
-  crun_utils_delete_crun_delete(cur->name);
-  crun_utils_delete_overlay(cur->name, cur->cnt_dir, cur->bulk, cur->image,
-                            cur->is_persistent, cur->brandtype);
-  unlink_all_files(cur->cnt_dir, cur->name, cur->image,
-                   cur->bulk, cur->brandtype);
-  free_crun(cur);
+  if (cur->is_persistent == 0)
+    crun_utils_delete_overlay1(cur->name, cur->cnt_dir);
+  cur->delete_third_finalization_countdown = 1;
 }
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void delete_third_finalization(t_crun *cur)
+{ 
+  char pth[MAX_PATH_LEN];
+  if (cur->is_persistent == 0)
+    crun_utils_delete_overlay2(cur->name, cur->cnt_dir);
+  if (tar_img_del(cur->name, cur->bulk, cur->image, cur->cnt_dir,
+                  cur->is_persistent, cur->brandtype))
+    KERR("ERROR %s %s %s", cur->name, cur->image, cur->cnt_dir);
+  memset(pth, 0, MAX_PATH_LEN);
+  snprintf(pth, MAX_PATH_LEN-1, "%s/%s", cur->cnt_dir, cur->name);
+  unlink_sub_dir_files(pth);
+  free_crun(cur);
+} 
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -211,27 +246,41 @@ void crun_beat(int llid)
   while (cur)
     {
     next = cur->next;
-    if (cur->delete_finalization_countdown)
+    if (cur->delete_first_finalization_countdown)
       {
-      cur->delete_finalization_countdown -= 1;
-      if (cur->delete_finalization_countdown == 0)
-        delete_finalization(cur);
+      cur->delete_first_finalization_countdown -= 1;
+      if (cur->delete_first_finalization_countdown == 0)
+        delete_first_finalization(cur);
       }
-    if (cur->crun_pid != 0)
+    else if (cur->delete_second_finalization_countdown)
+      {
+      cur->delete_second_finalization_countdown -= 1;
+      if (cur->delete_second_finalization_countdown == 0)
+        delete_second_finalization(cur);
+      }
+    else if (cur->delete_third_finalization_countdown)
+      {
+      cur->delete_third_finalization_countdown -= 1;
+      if (cur->delete_third_finalization_countdown == 0)
+        delete_third_finalization(cur);
+      }
+    else if (cur->crun_pid != 0)
       {
       cur->crun_pid_count += 1;
       if (kill(cur->crun_pid, 0))
         {
-        if (cur->crun_pid_count > 100)
+        if (cur->crun_pid_count > 500)
           {
+          cur->crun_pid = 0;
           KERR("ERROR %d %s", cur->crun_pid, cur->name);
           memset(resp, 0, MAX_PATH_LEN);
           snprintf(resp, MAX_PATH_LEN-1,
                    "cloonsuid_crun_killed name=%s crun_pid=%d",
                    cur->name, cur->crun_pid);
           rpct_send_sigdiag_msg(llid, type_hop_suid_power, resp);
-          crun_utils_delete_crun_stop(cur->name, 0);
-          cur->delete_finalization_countdown = 3;
+          crun_utils_delete_crun_stop(cur->name, 0, cur->uid_image,
+                                      cur->is_privileged, cur->mountbear);
+          cur->delete_first_finalization_countdown = 3;
           }
         }
       }
@@ -248,10 +297,13 @@ void crun_recv_poldiag_msg(int llid, int tid, char *line)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void create_net(char *line, char *resp, char *name, char *bulk,
-                       char *image, int nb_eth, int cloonix_rank,
-                       int vm_id, char *cnt_dir, char *agent_dir,
-                       int is_persistent, char *brandtype)
+static void create_alloc(char *line, char *resp, char *name, char *bulk,
+                         char *image, int uid_image, int nb_eth,
+                         int cloonix_rank, int vm_id, char *cnt_dir,
+                         char *agent_dir, int is_persistent, int is_privileged,
+                         char *brandtype, char *sbin_init, char *sh_starter,
+                         int subuid_start, int subuid_qty,
+                         int subgid_start, int subgid_qty)
 {
   char nspacecrun[MAX_PATH_LEN];
   t_crun *cur = find_crun(name);
@@ -266,8 +318,10 @@ static void create_net(char *line, char *resp, char *name, char *bulk,
     KERR("ERROR %s too big nb_eth:%d", name, nb_eth);
   else
     {
-    alloc_crun(name, bulk, image, nb_eth, nspacecrun, cloonix_rank, vm_id,
-               cnt_dir, agent_dir, is_persistent, brandtype);
+    alloc_crun(name, bulk, image, uid_image, nb_eth, nspacecrun,
+               cloonix_rank, vm_id, cnt_dir, agent_dir, is_persistent,
+               is_privileged, brandtype, sbin_init, sh_starter,
+               subuid_start, subuid_qty, subgid_start, subgid_qty);
     memset(resp, 0, MAX_PATH_LEN);
     }
 }
@@ -278,7 +332,6 @@ static void create_net_eth(char *line, char *resp,
                            char *name, int num, char *mac) 
 {
   t_crun *cur;
-  char tmpfs_umount_cmd[MAX_PATH_LEN];
   cur = find_crun(name);
   if (cur != NULL)
     {
@@ -293,23 +346,16 @@ static void create_net_eth(char *line, char *resp,
         }
       else
         {
-        memset(tmpfs_umount_cmd, 0, MAX_PATH_LEN);
         if (crun_utils_create_net(cur->brandtype, cur->is_persistent,
-                                  cur->mountbear, cur->mounttmp, cur->image,
-                                  name, cur->cnt_dir, cur->nspacecrun,
-                                  cur->cloonix_rank, cur->vm_id, cur->nb_eth,
-                                  cur->eth_mac, cur->agent_dir,
-                                  tmpfs_umount_cmd))
+                                  cur->is_privileged, cur->mountbear,
+                                  cur->image, name, cur->cnt_dir,
+                                  cur->nspacecrun, cur->cloonix_rank,
+                                  cur->vm_id, cur->nb_eth, cur->eth_mac,
+                                  cur->agent_dir))
           {
           KERR("ERROR %s", name);
           snprintf(resp, MAX_PATH_LEN-1,
           "cloonsuid_crun_create_net_resp_ko name=%s", name);
-          if (strlen(tmpfs_umount_cmd))
-            {
-            KERR("WARNING %s", tmpfs_umount_cmd);
-            if (execute_cmd(tmpfs_umount_cmd, 1))
-              KERR("ERROR %s", tmpfs_umount_cmd);
-            }
           }
         else
           {
@@ -324,9 +370,11 @@ static void create_net_eth(char *line, char *resp,
 
 /****************************************************************************/
 static void create_config_json(char *line, char *resp, char *name,
-                               int is_persistent, char *brandtype,
-                               char *startup_env, char *vmount)
+                               int is_persistent, int is_privileged,
+                               char *brandtype, char *startup_env,
+                               char *vmount)
 {
+  int ovspid;
   t_crun *cur;
   char path[MAX_PATH_LEN];
   char *cnt_dir, *image;
@@ -340,6 +388,7 @@ static void create_config_json(char *line, char *resp, char *name,
     }
   else
     {
+    cnt_dir = cur->cnt_dir;
     if (cur->is_persistent != is_persistent)
       KOUT("ERROR %s %s %d", name, brandtype, is_persistent);
     if (strcmp(brandtype, cur->brandtype))
@@ -347,7 +396,6 @@ static void create_config_json(char *line, char *resp, char *name,
     image = cur->image;
     if (is_persistent)
       {
-      memset(cur->rootfs_path, 0, MAX_PATH_LEN);
       if (!strcmp(brandtype, "brandzip"))
         snprintf(cur->rootfs_path, MAX_PATH_LEN-1, "%s/%s",
                  get_mnt_loop_dir(), image);
@@ -357,26 +405,39 @@ static void create_config_json(char *line, char *resp, char *name,
       else
         KOUT("ERROR %s %s %d", name, brandtype, is_persistent);
       }
-    cnt_dir = cur->cnt_dir;
+    else
+      snprintf(cur->rootfs_path, MAX_PATH_LEN-1,"%s/%s/%s",
+               cnt_dir, name, ROOTFS);
     memset(path, 0, MAX_PATH_LEN);
     snprintf(path, MAX_PATH_LEN-1, "%s/%s", cnt_dir, cur->name);
 
-    if (crun_utils_create_config_json(path, cur->rootfs_path,
-                                      cur->nspacecrun_path, cur->mountbear,
-                                      cur->mounttmp, is_persistent, brandtype,
-                                      startup_env, vmount, cur->name))
+    ovspid = crun_utils_get_vswitchd_pid(get_net_name());
+    cur->ovspid = ovspid;
+    if (ovspid == 0)
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
-               "cloonsuid_crun_create_config_json_resp_ko name=%s",
-               name);
+               "cloonsuid_crun_create_config_json_resp_ko name=%s", name);
+      }
+    else if (crun_utils_create_config_json(path, cur->rootfs_path,
+                                      cur->nspacecrun_path, cur->mountbear,
+                                      cur->mounttmp, is_persistent,
+                                      is_privileged, brandtype, startup_env,
+                                      vmount, cur->name, ovspid,
+                                      cur->uid_image,
+                                      cur->sbin_init, cur->sh_starter,
+                                      cur->subuid_start, cur->subuid_qty,
+                                      cur->subgid_start, cur->subgid_qty))
+      {
+      KERR("ERROR %s", line);
+      snprintf(resp, MAX_PATH_LEN-1,
+               "cloonsuid_crun_create_config_json_resp_ko name=%s", name);
       }
     else
       {
       crun_utils_startup_env(cur->mountbear, startup_env, cur->nb_eth);
       snprintf(resp, MAX_PATH_LEN-1,
-               "cloonsuid_crun_create_config_json_resp_ok name=%s",
-               name);
+               "cloonsuid_crun_create_config_json_resp_ok name=%s", name);
       }
     }
 }
@@ -384,7 +445,8 @@ static void create_config_json(char *line, char *resp, char *name,
 
 /****************************************************************************/
 static void create_tar_img(char *line, char *resp, char *name,
-                           int is_persistent, char *brandtype)
+                           int is_persistent, int is_privileged,
+                           char *brandtype)
 {
   t_crun *cur;
   cur = find_crun(name);
@@ -396,8 +458,8 @@ static void create_tar_img(char *line, char *resp, char *name,
     }
   else
     {
-    if (tar_img_add(name, cur->bulk, cur->image, cur->cnt_dir,
-                    is_persistent, brandtype))
+    if (tar_img_add(name, cur->bulk, cur->image, cur->uid_image,
+                    cur->cnt_dir, is_persistent, brandtype))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -414,12 +476,11 @@ static void create_tar_img(char *line, char *resp, char *name,
 
 /****************************************************************************/
 static void create_overlay(char *line, char *resp, char *name,
-                           int is_persistent, char *brandtype)
+                           int is_persistent, int is_privileged,
+                           char *brandtype, char *bulk_rootfs)
 {
+  char mnt_tar_img[MAX_PATH_LEN];
   t_crun *cur;
-  char path[MAX_PATH_LEN];
-  char *cnt_dir;
-  char *tar_img;
   cur = find_crun(name);
   if (cur == NULL)
     {
@@ -435,8 +496,7 @@ static void create_overlay(char *line, char *resp, char *name,
     }
   else
     {
-    tar_img = tar_img_rootfs_get(name, cur->bulk, cur->image, brandtype);
-    if (tar_img == NULL)
+    if (tar_img_rootfs_get(name, cur->bulk, cur->image, brandtype, mnt_tar_img))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -444,11 +504,12 @@ static void create_overlay(char *line, char *resp, char *name,
       }
     else
       { 
-      cnt_dir = cur->cnt_dir;
-      memset(path, 0, MAX_PATH_LEN);
-      snprintf(path, MAX_PATH_LEN-1, "%s/%s", cnt_dir, cur->name);
-      if (crun_utils_create_overlay(path, tar_img,
-                                    is_persistent, brandtype))
+      if (crun_utils_create_overlay(cur->mountbear, cur->mounttmp,
+                                    cur->name, cur->cnt_dir, mnt_tar_img,
+                                    cur->image, cur->uid_image,
+                                    cur->agent_dir, bulk_rootfs,
+                                    is_persistent, is_privileged,
+                                    brandtype))
         {
         KERR("ERROR %s", line);
         snprintf(resp, MAX_PATH_LEN-1,
@@ -477,14 +538,34 @@ static void create_crun_start(char *line, char *resp, char *name)
     }
   else
     {
-    cur->crun_pid = crun_utils_create_crun_create(cur->cnt_dir, cur->name);
+    crun_utils_prepare_with_delete(name, cur->nspacecrun, cur->vm_id,
+                                   cur->nb_eth, cur->uid_image,
+                                   cur->is_privileged);
+    cur->crun_pid = crun_utils_create_crun_create(cur->cnt_dir, name,
+                                            cur->ovspid, cur->uid_image,
+                                            cur->is_privileged);
     if (cur->crun_pid == 0)
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
                "cloonsuid_crun_create_crun_start_resp_ko name=%s", name);
       }
-    else if (crun_utils_create_crun_start(name))
+    else if (crun_utils_user_nspacecrun_init(cur->nspacecrun,cur->crun_pid))
+      {
+      KERR("ERROR %s", line);
+      snprintf(resp, MAX_PATH_LEN-1,
+               "cloonsuid_crun_create_crun_start_resp_ko name=%s", name);
+      }
+    else if (crun_utils_user_eth_create(name, cur->nspacecrun,
+                                        cur->cloonix_rank, cur->vm_id,
+                                        cur->nb_eth, cur->eth_mac))
+      {
+      KERR("ERROR %s", line);
+      snprintf(resp, MAX_PATH_LEN-1,
+               "cloonsuid_crun_create_crun_start_resp_ko name=%s", name);
+      }
+    else if (crun_utils_create_crun_start(name, cur->ovspid, cur->uid_image,
+                                          cur->is_privileged))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -496,7 +577,6 @@ static void create_crun_start(char *line, char *resp, char *name)
       "cloonsuid_crun_create_crun_start_resp_ok name=%s crun_pid=%d mountbear=%s",
       name, cur->crun_pid, cur->mountbear);
       }
-    crun_utils_delete_net_nspace(cur->nspacecrun);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -514,9 +594,10 @@ static void delete_crun(char *line, char *resp, char *name)
     }
   else
     {
-    crun_utils_delete_crun_stop(name, cur->crun_pid);
+    crun_utils_delete_crun_stop(name, cur->crun_pid, cur->uid_image,
+                                cur->is_privileged, cur->mountbear);
     cur->crun_pid = 0;
-    cur->delete_finalization_countdown = 10;
+    cur->delete_first_finalization_countdown = 3;
     snprintf(resp, MAX_PATH_LEN-1,
              "cloonsuid_crun_delete_resp_ok name=%s", name);
     }
@@ -562,25 +643,33 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
   char name[MAX_NAME_LEN];
   char brandtype[MAX_NAME_LEN];
   char bulk[MAX_PATH_LEN];
+  char bulk_rootfs[MAX_PATH_LEN];
   char image[MAX_NAME_LEN];
   char resp[MAX_PATH_LEN];
   char cnt_dir[MAX_PATH_LEN];
   char agent_dir[MAX_PATH_LEN];
   char mac[6], *ptr;
-  int  num, nb_eth, cloonix_rank, vm_id, is_persistent;
+  int  uid_image, num, nb_eth, cloonix_rank, vm_id;
+  int  is_persistent, is_privileged;
   char startup_env[MAX_PATH_LEN];
+  char sbin_init[MAX_PATH_LEN];
+  char sh_starter[MAX_PATH_LEN];
   char vmount[4*MAX_PATH_LEN];
+  int subuid_start, subuid_qty, subgid_start, subgid_qty;
 
   cloonix_rank = get_cloonix_rank();
   memset(resp, 0, MAX_PATH_LEN);
   if (sscanf(line, 
   "cloonsuid_crun_create_net name=%s bulk=%s "
   "image=%s nb=%d vm_id=%d cnt_dir=%s agent_dir=%s "
-  "is_persistent=%d brandtype=%s",
+  "is_persistent=%d is_privileged=%d brandtype=%s",
   name, bulk, image, &nb_eth, &vm_id,
-  cnt_dir, agent_dir, &is_persistent, brandtype) == 9)
+  cnt_dir, agent_dir, &is_persistent, &is_privileged, brandtype) == 10)
     {
-    if (tar_img_check(bulk, image, is_persistent, brandtype))
+    if (tar_img_check(bulk, image, &uid_image, is_persistent,
+                      brandtype, sbin_init, sh_starter,
+                      &subuid_start, &subuid_qty,
+                      &subgid_start, &subgid_qty))
       {
       KERR("ERROR %s", line);
       snprintf(resp, MAX_PATH_LEN-1,
@@ -588,9 +677,19 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
       } 
     else
       {
-      create_net(line, resp, name, bulk, image, nb_eth,
-                 cloonix_rank, vm_id, cnt_dir, agent_dir,
-                 is_persistent, brandtype);
+      if (uid_image == 0)
+        {
+        if (is_privileged == 0)
+          {
+          KERR("WARNING: SETTING PRIVILEGED ON FOR %s", image);
+          is_privileged = 1;
+          }
+        }
+      create_alloc(line, resp, name, bulk, image, uid_image, nb_eth,
+                   cloonix_rank, vm_id, cnt_dir, agent_dir,
+                   is_persistent, is_privileged, brandtype, sbin_init,
+                   sh_starter, subuid_start, subuid_qty,
+                   subgid_start, subgid_qty);
       }
     }
   else if (sscanf(line,
@@ -598,27 +697,50 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
   "mac=0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx",
   name, &num, &(mac[0]),&(mac[1]),&(mac[2]),&(mac[3]),&(mac[4]),&(mac[5])))
     {
-    create_net_eth(line, resp, name, num, mac);
+    cur = find_crun(name);
+    if (cur == NULL)
+      KERR("ERROR %s, %s", name, line);
+    else
+      create_net_eth(line, resp, name, num, mac);
     }
   else if (sscanf(line,
-  "cloonsuid_crun_create_config_json name=%s is_persistent=%d brandtype=%s",
-  name, &is_persistent, brandtype) == 3)
+  "cloonsuid_crun_create_config_json name=%s", name) == 1)
     {
-    extract_env_vmount(line, startup_env, vmount);
-    create_config_json(line, resp, name, is_persistent,
-                       brandtype, startup_env, vmount);
+    cur = find_crun(name);
+    if (cur == NULL)
+      KERR("ERROR %s, %s", name, line);
+    else
+      {
+      extract_env_vmount(line, startup_env, vmount);
+      create_config_json(line, resp, name, cur->is_persistent,
+                         cur->is_privileged, cur->brandtype,
+                         startup_env, vmount);
+      }
     }
   else if (sscanf(line,
-  "cloonsuid_crun_create_tar_img name=%s is_persistent=%d brandtype=%s",
-  name, &is_persistent, brandtype) == 3)
+  "cloonsuid_crun_create_tar_img name=%s", name) == 1)
     {
-    create_tar_img(line, resp, name, is_persistent, brandtype);
+    cur = find_crun(name);
+    if (cur == NULL)
+      KERR("ERROR %s, %s", name, line);
+    else
+      {
+      create_tar_img(line, resp, name, cur->is_persistent,
+                     cur->is_privileged, cur->brandtype);
+      }
     }
   else if (sscanf(line,
-  "cloonsuid_crun_create_overlay name=%s is_persistent=%d brandtype=%s",
-  name, &is_persistent, brandtype) == 3)
+  "cloonsuid_crun_create_overlay name=%s", name) == 1)
     {
-    create_overlay(line, resp, name, is_persistent, brandtype);
+    cur = find_crun(name);
+    if (cur == NULL)
+      KERR("ERROR %s, %s", name, line);
+    else
+      { 
+      snprintf(bulk_rootfs, MAX_PATH_LEN-1, "%s/%s", cur->bulk, cur->image);
+      create_overlay(line, resp, name, cur->is_persistent, cur->is_privileged,
+                     cur->brandtype, bulk_rootfs);
+      }
     }
   else if (sscanf(line,
   "cloonsuid_crun_create_crun_start name=%s", name) == 1)
@@ -637,10 +759,10 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
     if (cur != NULL)
       {
       KERR("ERROR MUST ERASE %s, %s", name, line);
-      crun_utils_delete_net_nspace(cur->nspacecrun);
-      crun_utils_delete_crun_stop(cur->name, cur->crun_pid);
+      crun_utils_delete_crun_stop(cur->name, cur->crun_pid, cur->uid_image,
+                                  cur->is_privileged, cur->mountbear);
       cur->crun_pid = 0;
-      cur->delete_finalization_countdown = 3;
+      cur->delete_first_finalization_countdown = 3;
       }
     }
   else

@@ -356,7 +356,9 @@ static gboolean onpress(GtkWidget *widget,
   gp->mousex = event->x;
   gp->mousey = event->y; 
   if (event->type == GDK_BUTTON_PRESS  &&  event->button == 3) //RIGHT
+    {
     gp->manual = false;
+    }
   if (event->type == GDK_BUTTON_PRESS  &&  event->button == 1) //LEFT
     {
     gp->manual = true;

@@ -7,7 +7,7 @@ cd ${HERE}/crun_tainted
 ./configure --without-shared \
             --disable-shared \
             --enable-static \
-            --disable-systemd \
+            --enable-systemd \
             --disable-lua-path-guessing \
             --enable-embedded-yajl
 make

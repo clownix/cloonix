@@ -42,7 +42,6 @@ for i in "lib64" "lib/x86_64-linux-gnu" \
   mkdir -p ${ROOTFS}/${i}
 done
 #----------------------------------------------------------------------------#
-
 cp -Lrf /etc/fonts ${ROOTFS}/etc
 
 cat > ${ROOTFS}/etc/passwd << "EOF"

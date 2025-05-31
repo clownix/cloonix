@@ -1976,9 +1976,9 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
   int i, vm_id;
 
   event_print("Rx Req add cnt name:%s brandtype:%s is_persistent:%d "
-              "image:%s startup_env:%s",
+              "is_privileged:%d image:%s startup_env:%s",
               cnt->name, cnt->brandtype, cnt->is_persistent,
-              cnt->image, cnt->startup_env);
+              cnt->is_privileged, cnt->image, cnt->startup_env);
   if (!get_uml_cloonix_started())
     {
     send_status_ko(llid, tid, "SERVER NOT READY");
@@ -2039,30 +2039,21 @@ void recv_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void recv_fix_display(int llid, int tid, char *disp, char *line)
+void recv_fix_display(int llid, int tid, char *disp, char *buf)
 {
-  char *tmp_Xauthority = "/var/lib/cloonix/cache/tmp_Xauthority";
   char wauth[MAX_PATH_LEN];
   char cmd[2 * MAX_PATH_LEN];
   char *net = cfg_get_cloonix_name();
-  char err[MAX_PRINT_LEN];
-  unlink(tmp_Xauthority);
+
   memset(wauth, 0, MAX_PATH_LEN);
   snprintf(wauth, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/.Xauthority", net);
-  if (write_whole_file(tmp_Xauthority, line, strlen(line), err))
-    {
-    KERR("ERROR %s %s", err, tmp_Xauthority);
-    send_status_ko(llid, tid, err);
-    }
-  else
-    {
     memset(cmd, 0, 2 * MAX_PATH_LEN);
     snprintf(cmd, 2 * MAX_PATH_LEN - 1, 
              "/usr/libexec/cloonix/cloonfs/touch %s", wauth);
     system(cmd);
     memset(cmd, 0, 2 * MAX_PATH_LEN);
-    snprintf(cmd, 2 * MAX_PATH_LEN - 1, "%s -f %s nmerge %s",
-             XAUTH_BIN, wauth, tmp_Xauthority);
+    snprintf(cmd, 2 * MAX_PATH_LEN - 1,
+             "%s -f %s add %s MIT-MAGIC-COOKIE-1 %s", XAUTH_BIN, wauth, disp, buf); 
     if (system(cmd))
       {
       KERR("ERROR %s", cmd);
@@ -2070,17 +2061,16 @@ void recv_fix_display(int llid, int tid, char *disp, char *line)
       }
     else
       {
-      if (chmod(wauth, 0700))
+      if (chmod(wauth, 0777))
         {
         KERR("ERROR chmod %s", wauth);
         send_status_ko(llid, tid, "err");
         }
       else
         {
-        send_status_ok(llid, tid, "ok");
+        send_status_ok(llid, llid, "ok");
         }
       }
-    }
 }
 /*--------------------------------------------------------------------------*/
 

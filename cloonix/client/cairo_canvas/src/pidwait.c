@@ -582,11 +582,6 @@ static void death_launched(void *data, int status, char *name, int pid)
     KERR("ERROR %d %s %s", cur->type, name, cur->name);
   if (pid != cur->pid)
     KERR("ERROR %d %s %d %d", cur->type, name, pid, cur->pid);
-  if (status)
-    {
-    KERR("WARNING %s %s %d %s %s %s ...", cur->ascii_type, name, pid,
-         cur->argv[0], cur->argv[1], cur->argv[2]);
-    }
   if (cur->type == type_pid_xephyr_frame)
     {
     kill_previous_xephyr_session_process(cur->name);

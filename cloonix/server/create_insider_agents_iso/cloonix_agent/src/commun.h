@@ -36,7 +36,7 @@
 
 
 #define VIRTIOPORT "/dev/virtio-ports/net.cloon.0"
-#define UNIX_DROPBEAR_SOCK "/tmp/unix_cloonix_dropbear_sock"
+#define UNIX_DROPBEAR_SOCK "/cloonixmnt/tmp/unix_cloonix_dropbear_sock"
 
 void send_ack_to_virtio(int dido_llid, 
                         unsigned long long s2c, 

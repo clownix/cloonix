@@ -37,14 +37,14 @@
 /*****************************************************************************/
 char *get_cloonix_config_path(void)
 {
-  return ("/mnt/cloonix_config_fs");
+  return ("/cloonixmnt/cnf_fs");
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 static char *get_inside_cloonix_config_path_name(void)
 {
-  return ("/mnt/cloonix_config_fs/cloonix_vm_name");
+  return ("/cloonixmnt/cnf_fs/cloonix_vm_name");
 }
 /*---------------------------------------------------------------------------*/
 

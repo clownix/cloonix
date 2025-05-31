@@ -101,7 +101,6 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 /****************************************************************************/
 void rpct_recv_kil_req(int llid, int tid)
 {
-
   unlink(g_ctrl_path);
   unlink(g_snf_path);
   exit(0);

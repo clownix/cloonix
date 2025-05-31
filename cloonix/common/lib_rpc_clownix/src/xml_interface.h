@@ -278,6 +278,7 @@
                          "  <brandtype> %s </brandtype>\n"\
                          "  <name> %s </name>\n"\
                          "  <is_persistent> %d </is_persistent>\n"\
+                         "  <is_privileged> %d </is_privileged>\n"\
                          "  <vm_id> %d </vm_id>\n"\
                          "  <color> %d </color>\n"\
                          "  <ping_ok> %d </ping_ok>\n"\
@@ -460,6 +461,7 @@
                               "  brandtype: %s \n"\
                               "  name: %s \n"\
                               "  is_persistent: %d \n"\
+                              "  is_privileged: %d \n"\
                               "  vm_id: %d \n"\
                               "  color: %d \n"\
                               "  image: %s \n"\

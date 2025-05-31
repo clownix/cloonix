@@ -15,7 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-void suid_power_kill(void);
+void suid_power_self_kill(void);
 void suid_power_kill_pid(int pid);
 void suid_power_llid_closed(int llid, int from_clone);
 int suid_power_pid(void);

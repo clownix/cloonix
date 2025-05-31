@@ -493,11 +493,29 @@ static void get_termmodes(struct ChanSess *chansess)
 /*****************************************************************************/
 static int sessionpty(struct ChanSess * chansess)
 {
+  char *xauth="/cloonixmnt/cnf_fs/xauth";
   unsigned int len, result = DROPBEAR_FAILURE;;
   char namebuf[65];
+  char cmd[MAX_PATH_LEN];
   chansess->cloonix_name = buf_getstring(ses.payload, &len);
   chansess->cloonix_display = buf_getstring(ses.payload, &len);
   chansess->cloonix_xauth_cookie_key = buf_getstring(ses.payload, &len);
+  if ((strcmp(chansess->cloonix_xauth_cookie_key, "no_cookie_key")) &&
+      (chansess->cloonix_display))
+    {
+    memset(cmd, 0, MAX_PATH_LEN);
+    if (system("rm -f /root/.Xauthority-c"))
+      KERR("ERROR rm -f /root/.Xauthority-c");
+    if (system("rm -f /root/.Xauthority"))
+      KERR("ERROR rm -f /root/.Xauthority");
+    if (system("/cloonixmnt/cnf_fs/touch /root/.Xauthority"))
+      KERR("ERROR touch /root/.Xauthority");
+    snprintf(cmd, MAX_PATH_LEN-1,
+             "%s -i -f /root/.Xauthority add %s MIT-MAGIC-COOKIE-1 %s", xauth,
+             chansess->cloonix_display, chansess->cloonix_xauth_cookie_key);
+    if (system(cmd))
+      KERR("ERROR %s", cmd);
+    }
   if (chansess->master != -1)
     KOUT("Multiple pty requests");
   if (pty_allocate(&chansess->master, &chansess->slave, namebuf, 64) == 0)
@@ -722,7 +740,7 @@ static void execchild(struct ChanSess *chansess)
   char *usershell = NULL;
   char *login = NULL;
   char *pth="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
-  char *startup_env = read_whole_file("/mnt/cloonix_config_fs/startup_env");
+  char *startup_env = read_whole_file("/cloonixmnt/cnf_fs/startup_env");
 
   unsetnonblocking(STDOUT_FILENO);
   unsetnonblocking(STDIN_FILENO);
@@ -775,20 +793,7 @@ static void execchild(struct ChanSess *chansess)
     usershell = m_strdup("/bin/sh");
     }
   addnewvar("XAUTHORITY", "/root/.Xauthority");
-
-  if (lstat("/sys", &sb) == -1)
-    {
-    KERR("ERROR lstat /sys");
-    run_shell_command(chansess->cmd, ses.maxfd, usershell, NULL);
-    }
-  else if (sb.st_uid == 0)
-    {
-    run_shell_command(chansess->cmd, ses.maxfd, usershell, login);
-    }
-  else
-    {
-    run_shell_command(chansess->cmd, ses.maxfd, usershell, NULL);
-    }
+  run_shell_command(chansess->cmd, ses.maxfd, usershell, NULL);
 }
 /*---------------------------------------------------------------------------*/
 

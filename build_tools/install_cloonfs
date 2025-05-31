@@ -17,7 +17,7 @@ rm -f  /usr/bin/cloonix_*
 mkdir -p /usr/libexec/cloonix/cloonfs
 cp -rf cloonfs/* /usr/libexec/cloonix/cloonfs
 chown -R root:root /usr/libexec/cloonix/cloonfs
-chmod -R 755 /usr/libexec/cloonix/cloonfs/*
+chmod 755 -R /usr/libexec/cloonix
 #----------------------------------------------------------
 for i in  "cloonix_net" \
           "cloonix_cli" \
@@ -34,6 +34,7 @@ for i in  "cloonix_net" \
           "cloonix_ice" \
           "cloonix_wsk" ; do
   cp -vf /usr/libexec/cloonix/cloonfs/${i} /usr/bin
+  chmod 755 /usr/bin/${i}
 done
 #----------------------------------------------------------
 if [ -d /usr/share/polkit-1/actions ]; then

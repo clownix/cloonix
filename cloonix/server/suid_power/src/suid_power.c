@@ -432,7 +432,7 @@ static void qemu_launch(char *name, int vm_id, int argc,
     *ptr = ' ';
     ptr = strchr(ptr, '"');
     } 
-  result = execute_cmd(ptr_start+1, 1);
+  result = execute_cmd(ptr_start+1, 1, 0);
   if (result)
     {
     snprintf(resp, MAX_PATH_LEN-1,
@@ -678,7 +678,7 @@ int main (int argc, char *argv[])
            PATH_NAMESPACE, BASE_NAMESPACE, argv[1]);
   strncpy(g_root_path, argv[2], MAX_PATH_LEN-1);
   strncpy(g_bin_dir, argv[3], MAX_PATH_LEN-1);
-  snprintf(g_mnt_loop_dir, MAX_PATH_LEN-1,"%s/%s", argv[2], MNT_DIR);
+  snprintf(g_mnt_loop_dir, MAX_PATH_LEN-1,"%s/mnt", argv[2]);
   if (sscanf(argv[4], "%d", &g_cloonix_rank) != 1)
     KOUT("ERROR %s", argv[4]);
   root = g_root_path;

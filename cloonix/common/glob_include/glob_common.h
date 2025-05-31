@@ -106,7 +106,6 @@ typedef void (*t_fd_error)(int llid, int err, int from);
 typedef int  (*t_fd_event)(int llid, int fd);
 typedef void (*t_fd_connect)(int llid, int llid_new);
 
-#define BRANDTYPE_NB_MAX 3
 
 #define PROXYMARKUP_START "proxymarkup_crun_data_start:"
 #define PROXYMARKUP_END ":proxymarkup_crun_data_end"
@@ -180,7 +179,8 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 
 #define MAC_ADDR_LEN 6
 #define VM_CONFIG_FLAG_PERSISTENT      0x00001
-#define VM_CONFIG_FLAG_I386            0x00002
+#define VM_CONFIG_FLAG_PRIVILEGED      0x00002
+#define VM_CONFIG_FLAG_I386            0x00004
 #define VM_CONFIG_FLAG_FULL_VIRT       0x00008
 #define VM_CONFIG_FLAG_BALLOONING      0x00010
 #define VM_CONFIG_FLAG_INSTALL_CDROM   0x00020
@@ -245,8 +245,6 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define MAX_LIST_COMMANDS_LEN     256
 #define MAX_LIST_COMMANDS_QTY     5000
 
-#define ROOTFS_STATIC_PREFIX "rootfs_"
-#define NVRAM_STATIC_PREFIX "nvram_"
 
 #define MAX_PEER_MAC 50
                                                                                 
@@ -264,6 +262,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 
 #define LXSESSION "/usr/bin/cloonix_lxsession.sh"
 #define XEPHYR_BIN "/usr/libexec/cloonix/cloonfs/cloonix-novnc-xephyr"
+#define CHOWN_BIN "/usr/libexec/cloonix/cloonfs/chown"
 #define XAUTH_BIN "/usr/libexec/cloonix/cloonfs/xauth"
 #define BASH_BIN "/usr/libexec/cloonix/cloonfs/bash"
 #define XWYCLI_BIN "/usr/libexec/cloonix/cloonfs/cloonix-xwycli"
@@ -271,6 +270,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define WIRESHARK_BIN "/usr/libexec/cloonix/cloonfs/cloonix-wireshark"
 #define DUMPCAP_BIN "/usr/libexec/cloonix/cloonfs/dumpcap"
 #define CRUN_BIN "/usr/libexec/cloonix/cloonfs/cloonix-crun"
+#define NSENTER_BIN "/usr/libexec/cloonix/cloonfs/nsenter"
 #define IP_BIN "/usr/libexec/cloonix/cloonfs/ip"
 #define FUSEZIP_BIN "/usr/libexec/cloonix/cloonfs/cloonix-fuse-zip"
 #define MOUNT_BIN "/usr/libexec/cloonix/cloonfs/cloonix-mount"
@@ -381,6 +381,7 @@ typedef struct t_topo_cnt
   char brandtype[MAX_NAME_LEN];
   char name[MAX_NAME_LEN];
   int  is_persistent;
+  int  is_privileged;
   int  ping_ok;
   int  vm_id;
   int  color;

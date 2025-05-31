@@ -50,8 +50,6 @@ static char g_bin_c2c[MAX_PATH_LEN];
 static t_ovs_c2c *g_head_c2c;
 static int g_nb_c2c;
 
-int get_glob_req_self_destruction(void);
-
 
 /****************************************************************************/
 static void ovs_llid_to_tap_process_broken(t_ovs_c2c *cur)
@@ -447,8 +445,6 @@ static void timer_heartbeat(void *data)
   char *name;
   int must_go_fast = 0;
   t_ovs_c2c *next, *cur = g_head_c2c;
-  if (get_glob_req_self_destruction())
-    return;
 
   while(cur)
     {

@@ -369,7 +369,7 @@ static int is_a_crun(void)
 {
   struct stat sb;
   int result = 0;
-  if (lstat("/mnt/mountbear", &sb) != -1)
+  if (lstat("/cloonixmnt/mountbear", &sb) != -1)
     {
     if ((sb.st_mode & S_IFMT) == S_IFDIR)
       result = 1;
@@ -392,7 +392,7 @@ int main(int argc, char *argv[])
   g_time_count = 0;
   if (is_a_crun())
     {
-    fd_listen = util_socket_listen_unix("/mnt/mountbear/sock");
+    fd_listen = util_socket_listen_unix("/cloonixmnt/mountbear/sock");
     if (fd_listen < 0)
       KOUT("Bad crun socket");
     FD_ZERO(&infd);

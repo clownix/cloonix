@@ -2,7 +2,7 @@
 #-----------------------------------------------------------------------------
 HERE=`pwd`
 #-----------------------------------------------------------------------------
-RESULT="${HOME}/cloonix-extractor-48-00.sh"
+RESULT="${HOME}/cloonix-extractor-49-00.sh"
 PATCHELF="/usr/libexec/cloonix/cloonfs/cloonix-patchelf"
 CRUN="/usr/libexec/cloonix/cloonfs/cloonix-crun"
 PROXY="/usr/libexec/cloonix/cloonfs/cloonix-proxymous"

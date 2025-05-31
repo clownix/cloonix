@@ -40,7 +40,6 @@
 static t_ovs_tap *g_head_tap;
 static int g_nb_tap;
 
-int get_glob_req_self_destruction(void);
 
 /****************************************************************************/
 static t_ovs_tap *find_tap(char *name)

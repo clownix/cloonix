@@ -47,7 +47,7 @@ echo $LIBC
 echo
 
 cd ${HERE}/../../common/cloonix_dropbear
-LIB_DST=/mnt/cloonix_config_fs/lib
+LIB_DST=/cloonixmnt/cnf_fs/lib
 export CFLAGS=
 export LDFLAGS="-Wl,-rpath -Wl,${LIB_DST}"
 
@@ -63,18 +63,43 @@ make scp
 
 cp dropbear ${CDROM}/cloonix-dropbear-sshd
 cp /usr/bin/scp ${CDROM}/cloonix-scp
+for i in "touch" \
+         "xauth" ; do
+  cp /usr/bin/${i} ${CDROM}
+done
 
 RPATH_LIB="${LIB_DST}"
 PATCHELF="/tmp/patchelf/src/patchelf"
-${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CDROM}/cloonix-scp 2>/dev/null
 
 if [ ! -z ${LIBD} ]; then
   LDLINUX="${LIB_DST}/ld-linux-x86-64.so.2"
-  ${PATCHELF} --set-interpreter ${LDLINUX}  ${CDROM}/cloonix-scp 2>/dev/null
   cp -vf ${LIBD} ${CDROM}/lib
 fi
-
 cp -vf ${LIBC} ${CDROM}/lib
+
+for i in "libX11.so.6" \
+         "libXau.so.6" \
+         "libXext.so.6" \
+         "libXmuu.so.1" \
+         "libxcb.so.1" \
+         "libXdmcp.so.6"; do
+  cp /lib/x86_64-linux-gnu/${i} ${CDROM}/lib
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CDROM}/lib/${i} 2>/dev/null
+  if [ ! -z ${LIBD} ]; then
+    set +e
+    ${PATCHELF} --set-interpreter ${LDLINUX} ${CDROM}/lib/${i} 2>/dev/null
+    set -e
+  fi
+done
+
+for i in "touch" \
+         "xauth" \
+         "cloonix-scp" ; do
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CDROM}/${i} 2>/dev/null
+  if [ ! -z ${LIBD} ]; then
+    ${PATCHELF} --set-interpreter ${LDLINUX} ${CDROM}/${i} 2>/dev/null
+  fi
+done
 
 cd ${HERE}/cloonix_agent
 make clean

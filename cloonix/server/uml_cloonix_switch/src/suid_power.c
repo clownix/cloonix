@@ -623,10 +623,21 @@ int suid_power_delete_cnt_all(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void suid_power_kill(void)
+static void timer_kill(void *data)
+{
+  g_llid = 0;
+  if (g_suid_power_pid)
+    kill(g_suid_power_pid, SIGKILL);
+  g_suid_power_pid = 0;
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void suid_power_self_kill(void)
 {
   g_destroy_req = 1;
   rpct_send_kil_req(g_llid, 0);
+  clownix_timeout_add(50, timer_kill, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -283,7 +283,6 @@ int util_client_socket_unix(char *pname, int *fd)
     }
   if (stat(pname, &stat_file))
     {
-    KERR("ERROR %s", pname);
     return -1;
     }
   if (!S_ISSOCK(stat_file.st_mode))

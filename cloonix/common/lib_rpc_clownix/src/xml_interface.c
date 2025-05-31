@@ -714,6 +714,7 @@ static int topo_cnt_format(char *buf, t_topo_cnt *cnt)
 
   len = sprintf(buf, EVENT_TOPO_CNT_O, cnt->brandtype, cnt->name, 
                                        cnt->is_persistent,
+                                       cnt->is_privileged,
                                        cnt->vm_id,
                                        cnt->color,
                                        cnt->image,  
@@ -1440,11 +1441,12 @@ static void helper_fill_topo_cnt(char *msg_in, t_topo_cnt *cnt)
   msg[len] = 0;
   if (sscanf(msg, EVENT_TOPO_CNT_O, cnt->brandtype, cnt->name, 
                                     &(cnt->is_persistent),
+                                    &(cnt->is_privileged),
                                     &(cnt->vm_id),
                                     &(cnt->color),
                                     cnt->image,  
                                     &(cnt->ping_ok),
-                                    &(cnt->nb_tot_eth)) != 8)
+                                    &(cnt->nb_tot_eth)) != 9)
     KOUT("%s", msg);
   get_eth_table(msg, cnt->nb_tot_eth, cnt->eth_table);
 
@@ -2016,8 +2018,8 @@ void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
   if (strlen(cnt->vmount) >= MAX_SIZE_VMOUNT)
     KOUT(" ");
   len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->brandtype, cnt->name,
-                cnt->is_persistent, cnt->vm_id, cnt->color, cnt->ping_ok,
-                cnt->nb_tot_eth);
+                cnt->is_persistent, cnt->is_privileged, cnt->vm_id,
+                cnt->color, cnt->ping_ok, cnt->nb_tot_eth);
   len += make_eth_table(sndbuf+len, cnt->nb_tot_eth, cnt->eth_table);
   len += sprintf(sndbuf+len, ADD_CNT_C, cnt->startup_env,
                  cnt->vmount, cnt->image);
@@ -2727,8 +2729,9 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
     case bnd_cnt_add:
       memset(&cnt, 0, sizeof(t_topo_cnt));
       if (sscanf(msg, ADD_CNT_O, &tid, cnt.brandtype, cnt.name,
-                 &(cnt.is_persistent), &(cnt.vm_id), &(cnt.color),
-                 &(cnt.ping_ok), &(cnt.nb_tot_eth)) != 8)
+                 &(cnt.is_persistent), &(cnt.is_privileged),
+                 &(cnt.vm_id), &(cnt.color),
+                 &(cnt.ping_ok), &(cnt.nb_tot_eth)) != 9)
         KOUT("%s", msg);
       get_eth_table(msg, cnt.nb_tot_eth, cnt.eth_table);
       startup_env_get(msg, &cnt);
@@ -2870,10 +2873,17 @@ char *prop_flags_ascii_get(int prop_flags)
 {
   static char resp[500];
   memset(resp, 0, 500);
+
   if (prop_flags & VM_CONFIG_FLAG_PERSISTENT)
     strcat(resp, "persistent_write_rootfs ");
   else
     strcat(resp, "evanescent_write_rootfs ");
+
+  if (prop_flags & VM_CONFIG_FLAG_PRIVILEGED)
+    strcat(resp, "privileged ");
+  else
+    strcat(resp, "not privileged ");
+
   return resp;
 }
 /*---------------------------------------------------------------------------*/

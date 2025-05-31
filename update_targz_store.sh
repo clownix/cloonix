@@ -8,86 +8,86 @@ mkdir -vp ${WORK}
 mkdir -p ${TARGZ}
 #-----------------------------------------------------------------------------
 cd ${WORK}
-git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-gtk.git
-cd ${WORK}/spice-gtk
-COMMIT=$(git log --pretty=format:"%H")
-git submodule init
-git submodule update --recursive
-cd ${WORK}
-tar zcvf spice-gtk_${COMMIT}.tar.gz spice-gtk
-rm -rf spice-gtk
-mv spice-gtk_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------------------------------
-cd ${WORK}
-git clone --depth=1 https://github.com/containers/crun.git
-cd ${WORK}/crun
-COMMIT=$(git log --pretty=format:"%H")
-./autogen.sh
-./configure
-cd ${WORK}
-tar zcvf crun_${COMMIT}.tar.gz crun
-rm -rf crun
-mv crun_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------------------------------
-cd ${WORK}
-git clone --depth=1 https://github.com/alpinelinux/apk-tools.git
-cd ${WORK}/apk-tools
-COMMIT=$(git log --pretty=format:"%H")
-cd ${WORK}
-tar zcvf apk-tools_${COMMIT}.tar.gz apk-tools
-rm -rf apk-tools
-mv apk-tools_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------------------------------
-cd ${WORK}
-git clone --depth=1  https://gitlab.freedesktop.org/xorg/xserver
-cd ${WORK}/xserver
-COMMIT=$(git log --pretty=format:"%H")
-cd ${WORK}
-tar zcvf xserver_${COMMIT}.tar.gz xserver
-rm -rf xserver
-mv xserver_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------------------------------
-cd ${WORK}
-git clone --depth=1 https://github.com/openssh/openssh-portable.git
-cd ${WORK}/openssh-portable
-autoreconf
-./configure
-COMMIT=$(git log --pretty=format:"%H")
-cd ${WORK}
-tar zcvf openssh-portable_${COMMIT}.tar.gz openssh-portable
-rm -rf openssh-portable
-mv openssh-portable_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------------------------------
-for i in "websockify-js" "noVNC"; do
-  cd ${WORK}
-  git clone --depth=1 https://github.com/novnc/${i}.git
-  cd ${WORK}/${i}
-  COMMIT=$(git log --pretty=format:"%H")
-  cd ${WORK}
-  tar zcvf ${i}_${COMMIT}.tar.gz ${i}
-  rm -rf ${i}
-  mv ${i}_${COMMIT}.tar.gz ${TARGZ}
-done
-#-----------------------------------------------------------------------------
-cd ${WORK}
-git clone --depth=1 https://github.com/nginx/nginx.git
-cd ${WORK}/nginx
-COMMIT=$(git log --pretty=format:"%H")
-cd ${WORK}
-tar zcvf nginx_${COMMIT}.tar.gz nginx
-rm -rf nginx
-mv nginx_${COMMIT}.tar.gz ${TARGZ}
-#-----------------------------------------------------------------------------
-cd ${WORK}
-git clone --depth=1 https://github.com/NixOS/patchelf.git
-cd ${WORK}/patchelf
-COMMIT=$(git log --pretty=format:"%H")
-./bootstrap.sh
-./configure
-cd ${WORK}
-tar zcvf patchelf_${COMMIT}.tar.gz patchelf 
-rm -rf patchelf
-mv patchelf_${COMMIT}.tar.gz ${TARGZ}
+#  git clone --depth=1 https://github.com/containers/crun.git
+#  cd ${WORK}/crun
+#  COMMIT=$(git log --pretty=format:"%H")
+#  ./autogen.sh
+#  ./configure
+#  cd ${WORK}
+#  tar zcvf crun_${COMMIT}.tar.gz crun
+#  rm -rf crun
+#  mv crun_${COMMIT}.tar.gz ${TARGZ}
+#  #-----------------------------------------------------------------------------
+#  cd ${WORK}
+#  git clone --depth=1 https://gitlab.freedesktop.org/spice/spice-gtk.git
+#  cd ${WORK}/spice-gtk
+#  COMMIT=$(git log --pretty=format:"%H")
+#  git submodule init
+#  git submodule update --recursive
+#  cd ${WORK}
+#  tar zcvf spice-gtk_${COMMIT}.tar.gz spice-gtk
+#  rm -rf spice-gtk
+#  mv spice-gtk_${COMMIT}.tar.gz ${TARGZ}
+#  #-----------------------------------------------------------------------------
+#  cd ${WORK}
+#  git clone --depth=1 https://github.com/alpinelinux/apk-tools.git
+#  cd ${WORK}/apk-tools
+#  COMMIT=$(git log --pretty=format:"%H")
+#  cd ${WORK}
+#  tar zcvf apk-tools_${COMMIT}.tar.gz apk-tools
+#  rm -rf apk-tools
+#  mv apk-tools_${COMMIT}.tar.gz ${TARGZ}
+#  #-----------------------------------------------------------------------------
+#  cd ${WORK}
+#  git clone --depth=1  https://gitlab.freedesktop.org/xorg/xserver
+#  cd ${WORK}/xserver
+#  COMMIT=$(git log --pretty=format:"%H")
+#  cd ${WORK}
+#  tar zcvf xserver_${COMMIT}.tar.gz xserver
+#  rm -rf xserver
+#  mv xserver_${COMMIT}.tar.gz ${TARGZ}
+#  #-----------------------------------------------------------------------------
+#  cd ${WORK}
+#  git clone --depth=1 https://github.com/openssh/openssh-portable.git
+#  cd ${WORK}/openssh-portable
+#  autoreconf
+#  ./configure
+#  COMMIT=$(git log --pretty=format:"%H")
+#  cd ${WORK}
+#  tar zcvf openssh-portable_${COMMIT}.tar.gz openssh-portable
+#  rm -rf openssh-portable
+#  mv openssh-portable_${COMMIT}.tar.gz ${TARGZ}
+#  #-----------------------------------------------------------------------------
+#  for i in "websockify-js" "noVNC"; do
+#    cd ${WORK}
+#    git clone --depth=1 https://github.com/novnc/${i}.git
+#    cd ${WORK}/${i}
+#    COMMIT=$(git log --pretty=format:"%H")
+#    cd ${WORK}
+#    tar zcvf ${i}_${COMMIT}.tar.gz ${i}
+#    rm -rf ${i}
+#    mv ${i}_${COMMIT}.tar.gz ${TARGZ}
+#  done
+#  #-----------------------------------------------------------------------------
+#  cd ${WORK}
+#  git clone --depth=1 https://github.com/nginx/nginx.git
+#  cd ${WORK}/nginx
+#  COMMIT=$(git log --pretty=format:"%H")
+#  cd ${WORK}
+#  tar zcvf nginx_${COMMIT}.tar.gz nginx
+#  rm -rf nginx
+#  mv nginx_${COMMIT}.tar.gz ${TARGZ}
+#  #-----------------------------------------------------------------------------
+#  cd ${WORK}
+#  git clone --depth=1 https://github.com/NixOS/patchelf.git
+#  cd ${WORK}/patchelf
+#  COMMIT=$(git log --pretty=format:"%H")
+#  ./bootstrap.sh
+#  ./configure
+#  cd ${WORK}
+#  tar zcvf patchelf_${COMMIT}.tar.gz patchelf 
+#  rm -rf patchelf
+#  mv patchelf_${COMMIT}.tar.gz ${TARGZ}
 #-----------------------------------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://git.qemu.org/git/qemu.git
@@ -150,3 +150,7 @@ cd ${HERE}
 rmdir work_targz_store
 #-----------------------------------------------------------------------------
 #https://www.kernel.org/pub/linux/utils/net/iproute2/ for iproute2-6.14.0.tar.gz
+#git clone https://gitlab.freedesktop.org/xorg/app/xauth.git
+# xutils-dev:wq
+
+

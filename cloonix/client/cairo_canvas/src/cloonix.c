@@ -388,83 +388,6 @@ void work_dir_resp(int tid, t_topo_clc *conf)
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-void callback_end_fix(int tid, int status, char *err)
-{
-  if (tid)
-    KERR("ERROR callback_end_fix");
-  if (status)
-    KERR("ERROR callback_end_fix %s", err);
-}
-/*---------------------------------------------------------------------------*/
-
-/****************************************************************************/
-static char *local_read_whole_file(char *file_name, int *len)
-{
-  char *buf = NULL;
-  int fd, readlen;
-  struct stat statbuf;
-  if (stat(file_name, &statbuf) != 0)
-    KERR("Cannot get size of file %s\n", file_name);
-  else if (statbuf.st_size)
-    {
-    *len = statbuf.st_size;
-    fd = open(file_name, O_RDONLY);
-    if (fd == -1)
-      KERR("Cannot open file %s errno %d\n", file_name, errno);
-    else
-      {
-      buf = (char *) malloc((*len + 1) * sizeof(char));
-      memset(buf, 0, (*len + 1) * sizeof(char));
-      readlen = read(fd, buf, *len);
-      if (readlen != *len)
-        {
-        KERR("Length of file error for file %s %d\n", file_name, errno);
-        free(buf);
-        buf = NULL;
-        }
-      close (fd);
-      }
-    }
-  return buf;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void cnf_fix_xauthority(void)
-{
-  int len;
-  char cmd[2*MAX_PATH_LEN];
-  char *buf, *tmp = "/tmp/cloonix_fix_xauthority";
-  char *display = getenv("DISPLAY");
-  char *xauthority = getenv("XAUTHORITY");
-  if (!display)
-    KERR("ERROR NO DISPLAY FOR A SOFTWARE GUI");
-  else if (!xauthority)
-    KERR("ERROR NO XAUTHORITY FOR A SOFTWARE GUI");
-  else
-    {
-    memset(cmd, 0, 2 * MAX_PATH_LEN);
-    snprintf(cmd, 2 * MAX_PATH_LEN - 1,
-    "/usr/libexec/cloonix/cloonfs/xauth nextract - %s > %s", display, tmp);
-    if (system(cmd))
-      KERR("ERROR %s", cmd);
-    else
-      {
-      buf = local_read_whole_file(tmp, &len);
-      if (!buf)
-        KERR("ERROR %s", cmd);
-      else
-        {
-        client_fix_display(0, callback_end_fix, display, buf);
-        free(buf);
-        }
-      }
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-
 /****************************************************************************/
 int main(int argc, char *argv[])
 {
@@ -524,7 +447,6 @@ int main(int argc, char *argv[])
   client_get_path(0, work_dir_resp);
   printf("CONNECTED\n");
   layout_topo_init();
-  cnf_fix_xauthority();
   request_move_stop_go(1);
   bdplot_init();
   clownix_timeout_add(10, timeout_periodic_work, NULL, NULL, NULL);

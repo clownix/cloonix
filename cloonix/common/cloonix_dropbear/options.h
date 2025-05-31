@@ -2,7 +2,7 @@
 #define _OPTIONS_H_
 #define LOCAL_IDENT "SSH-2.0-dropbear_2015.67.cloon"
 #define PROGNAME "dropbear"
-#define UNIX_DROPBEAR_SOCK "/tmp/unix_cloonix_dropbear_sock"
+#define UNIX_DROPBEAR_SOCK "/cloonixmnt/tmp/unix_cloonix_dropbear_sock"
 #define PATH_DROPBEAR_PID "/var/run/dropbear.pid"
 
 #define MAX_DROPBEAR_PATH_LEN 300

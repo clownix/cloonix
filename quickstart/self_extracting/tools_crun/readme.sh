@@ -95,7 +95,6 @@ else
   else
     XAUTH_EXTRACT=$(cat /tmp/xauth-${USER}-extracted)
     XAUTH_CODE=${XAUTH_EXTRACT##* }
-    echo "${XAUTH_CODE}">${PROXYSHARE_OUT}/xauth-code-Xauthority
     echo Xauthority code: $XAUTH_CODE
   fi
 fi  
@@ -118,6 +117,7 @@ fi
 cmd=\$1
 export LC_ALL=C.UTF-8
 IDENT="${IDENT}"
+XAUTH_CODE=${XAUTH_CODE}
 PROXYSHARE_OUT="${PROXYSHARE_OUT}"
 EXTRACT="${EXTRACT}"
 PROXY="\${EXTRACT}/bin/cloonix-proxymous-\${IDENT}"
@@ -157,7 +157,9 @@ case \$cmd in
       fi
     done
     echo \${PROXY} launched and OK
-    while [ -z "\$(grep cloonix_main_server_ready \${PROXYSHARE_OUT}/proxymous_start_status)" ]; do
+    echo \${XAUTH_CODE} > \${PROXYSHARE_OUT}/xauth-code-Xauthority
+    cp \${XAUTHORITY} \${PROXYSHARE_OUT}/Xauthority
+    while [ -z "\$(grep server_is_ready \${PROXYSHARE_OUT}/proxymous_start_status)" ]; do
       count_loop=\$((count_loop+1))
       if [ \$count_loop -gt 10 ]; then
         echo Fail waiting for server look in file:
@@ -188,7 +190,7 @@ case \$cmd in
   ;;
 
   shell)
-    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} /usr/bin/cloonix-scriptpty /bin/bash 
+    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} /bin/bash 
   ;;
 
   canvas)
