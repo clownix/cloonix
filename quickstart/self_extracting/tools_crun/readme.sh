@@ -84,7 +84,7 @@ pkill -f cloonix-proxymous-${IDENT} 1>/dev/null 2>&1
 rm -rf ${PROXYSHARE_OUT} 1>/dev/null 2>&1
 rm -f /tmp/xauth-${USER}-extracted
 #---------------------------------------------------------------------------
-mkdir -p ${EXTRACT}/log
+mkdir -p ${EXTRACT}/worktmp
 #-----------------------------------------------------------------------------
 if [ -z ${DISPLAY} ]; then
   echo BEWARE: DISPLAY NOT INITIALIZED, GUI WILL FAIL
@@ -122,7 +122,7 @@ PROXYSHARE_OUT="${PROXYSHARE_OUT}"
 EXTRACT="${EXTRACT}"
 PROXY="\${EXTRACT}/bin/cloonix-proxymous-\${IDENT}"
 CRUN="\${EXTRACT}/bin/cloonix-crun-\${IDENT}"
-CRUNROOT="\${EXTRACT}/rootfs/tmp"
+CRUNROOT="\${EXTRACT}/worktmp"
 
 #-----------------------------------------------------------------------------
 case \$cmd in
@@ -136,12 +136,18 @@ case \$cmd in
     fi
     #------------------------------------------------------------------------
     \${PROXY} \${PROXYSHARE_OUT} \${IDENT}
-    nohup \${CRUN} \\
-          --cgroup-manager=disabled \\
-          --log=\${EXTRACT}/log/crun.log \\
-          --root=\${EXTRACT}/rootfs/tmp \\
-          run -f \${EXTRACT}/config//config.json \${IDENT} \\
-          > \${EXTRACT}/log/startup.log 2>&1 &
+    #------------------------------------------------------------------------
+    \${CRUN} --cgroup-manager=disabled \\
+             --root=\${EXTRACT}/worktmp \\
+             --debug \\
+             --log=\${EXTRACT}/worktmp/crun.log \\
+             create -f \${EXTRACT}/config/config.json \${IDENT}
+    #------------------------------------------------------------------------
+    \${CRUN} --cgroup-manager=disabled \\
+             --root=\${EXTRACT}/worktmp \\
+             --debug \\
+             --log=\${EXTRACT}/worktmp/crun.log \\
+             start \${IDENT}
     #------------------------------------------------------------------------
     count_loop=0
     while [ ! -e "\${PROXYSHARE_OUT}/proxymous_start_status" ]; do
@@ -162,10 +168,10 @@ case \$cmd in
     while [ -z "\$(grep server_is_ready \${PROXYSHARE_OUT}/proxymous_start_status)" ]; do
       count_loop=\$((count_loop+1))
       if [ \$count_loop -gt 10 ]; then
-        echo Fail waiting for server look in file:
-        echo \${EXTRACT}/log/startup.log 
-        echo or in file:
-        echo \${EXTRACT}/rootfs/var/log/syslog 
+        echo Fail waiting for server look at:
+        echo \${EXTRACT}/worktmp/crun.log
+        echo \${EXTRACT}/rootfs/var/log/syslog
+        echo journalctl -f
         exit 1
       fi
       cat \${PROXYSHARE_OUT}/proxymous_start_status 
@@ -175,7 +181,6 @@ case \$cmd in
     echo server started and ready
     #------------------------------------------------------------------------
   ;;
-
 
   stop)
     \${CRUN} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} kil

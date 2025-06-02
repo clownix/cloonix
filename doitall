@@ -36,8 +36,10 @@ rm ${BUNDLE}/fill_common.c
 #----------------------------------------------------------------------------#
 cd ${BUNDLE}/src_patchelf
 make
+cp -f ${BUNDLE}/src_patchelf/src/patchelf ${ROOTFS}/patchelf
 mv ${BUNDLE}/src_patchelf/src/patchelf ${ROOTFS}/cloonix-patchelf
 rm -rf ${BUNDLE}/src_patchelf
+strip ${ROOTFS}/patchelf
 strip ${ROOTFS}/cloonix-patchelf
 cd ${SRC_TREE_ROOT}
 #----------------------------------------------------------------------------#

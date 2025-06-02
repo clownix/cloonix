@@ -11,8 +11,8 @@ sudo rm -rf /var/lib/cloonix/bulk/bookworm
 
 cd ${HERE}/alpine
 ./alpine0.sh
-./alpine.sh
+#./alpine.sh
 
 cd ${HERE}/bookworm
 ./bookworm0.sh
-./bookworm.sh
+#./bookworm.sh

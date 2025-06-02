@@ -4,7 +4,7 @@ set -e
 FROM_HERE=`pwd`
 BUNDLE="/root/cloonix_bundle"
 ROOTFS="${BUNDLE}/cloonfs"
-PATCHELF="${ROOTFS}/cloonix-patchelf"
+PATCHELF="${ROOTFS}/patchelf"
 TARGZ_STORE="${BUNDLE}/targz_store"
 #----------------------------------------------------------------------------#
 if [ ! -e ${BUNDLE}/cloonix/cloonix_config ]; then

@@ -55,7 +55,7 @@ for i in "bin" "sbin" "root" "etc" "tmp" "lib" "home" "lib64" \
      "usr/share/misc" "usr/lib/x86_64-linux-gnu/rsyslog" \
      "usr/share/locale" "lib/x86_64-linux-gnu" "usr/share/X11/locale" \
      "usr/share/bash-completion" "usr/share/bash-completion/completions" \
-     "usr/lib/locale" "usr/lib/security" \
+     "usr/lib/locale" "usr/lib/security" "lib/modules" \
      "etc/default" ; do 
   mkdir -v -p ${ROOTFS}/${i}
 done

@@ -101,6 +101,7 @@ cd ${HERE}
 for i in "dev" "proc" "sys"; do
   chmod 755 ${BOOKWORM0}/${i}
 done
+mkdir -p ${ALPINE0}/lib/modules
 chmod 777 ${BOOKWORM0}/root
 #-----------------------------------------------------------------------#
 

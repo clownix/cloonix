@@ -965,11 +965,11 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name, int ovspid,
   char cmd[4*MAX_PATH_LEN];
   memset(cmd, 0, 4*MAX_PATH_LEN);
   len += sprintf(cmd+len, "%s", CRUN_BIN); 
-  len += sprintf(cmd+len, " --debug"); 
   if (is_privileged)
     len += sprintf(cmd+len, " --cgroup-manager=disabled"); 
   else
     len += sprintf(cmd+len, " --cgroup-manager=systemd"); 
+  len += sprintf(cmd+len, " --debug"); 
   len += sprintf(cmd+len, " --log=%s", g_var_crun_log); 
   len += sprintf(cmd+len, " --root=/var/lib/cloonix/%s/%s",
                  get_net_name(), CRUN_DIR); 

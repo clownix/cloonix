@@ -124,6 +124,7 @@ rm -rf ${ALPINE0}/dev/*
 for i in "dev" "proc" "sys"; do
   chmod 755 ${ALPINE0}/${i}
 done
+mkdir -p ${ALPINE0}/lib/modules
 chmod 777 ${ALPINE0}/root
 #-----------------------------------------------------------------------#
 

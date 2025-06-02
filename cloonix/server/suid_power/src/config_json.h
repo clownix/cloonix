@@ -31,6 +31,12 @@
 #define CONFIG_JSON_MOUNT "\n"\
 " \n %s %s %s %s %s %s %s %s\n"\
 "{\n"\
+"  \"destination\": \"/lib/modules\",\n"\
+"  \"type\": \"none\",\n"\
+"  \"source\": \"/lib/modules\",\n"\
+"  \"options\": [\"rbind\",\"ro\"]\n"\
+"},\n"\
+"{\n"\
 "  \"destination\": \"/cloonixmnt\",\n"\
 "  \"type\": \"none\",\n"\
 "  \"source\": \"%s\",\n"\

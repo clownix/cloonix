@@ -22,7 +22,10 @@ CONFIG="${EXTRACT}/config"
 BIN="${EXTRACT}/bin"
 ROOT="${EXTRACT}/rootfs/root"
 #-----------------------------------------------------------------------------
-LISTSO="libxcb.so.1 \
+LISTSO="libsystemd.so.0 \
+        libseccomp.so.2 \
+        libcap.so.2 \
+        libxcb.so.1 \
         libcrypto.so.3 \
         libz.so.1 \
         libzstd.so.1 \
