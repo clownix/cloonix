@@ -152,40 +152,7 @@ __HOST_PULSE_PRESENT__    },{
     } 
   ],
   "linux": {
-    "device": [{
-        "path": "/dev/fuse",
-        "type": "c",
-        "major": 10,
-        "minor": 229,
-        "fileMode": 438,
-        "uid": 0,
-        "gid": 0
-        },{
-        "path": "/dev/kvm",
-        "type": "c",
-        "major": 10,
-        "minor": 232,
-        "fileMode": 438,
-        "uid": 0,
-        "gid": 115 
-        },{
-        "path": "/dev/vhost-net",
-        "type": "c",
-        "major": 10,
-        "minor": 238,
-        "fileMode": 438,
-        "uid": 0,
-        "gid": 115
-        },
-        {
-        "path": "/dev/net/tun",
-        "type": "c",
-        "major": 10,
-        "minor": 200,
-        "fileMode": 438,
-        "uid": 0,
-        "gid": 0
-        }
+    "device": [
     ],
 
 "rootfsPropagation": "private",
@@ -210,30 +177,6 @@ __HOST_PULSE_PRESENT__    },{
         "devices": [{
             "allow": false,
             "access": "rwm"
-            },{
-            "allow": true,
-            "type": "c",
-            "major": 10,
-            "minor": 229,
-            "access": "rw"
-            },{
-            "allow": true,
-            "type": "c",
-            "major": 10,
-            "minor": 232,
-            "access": "rw"
-            },{
-            "allow": true,
-            "type": "c",
-            "major": 10,
-            "minor": 238,
-            "access": "rw"
-            },{
-            "allow": true,
-            "type": "c",
-            "major": 10,
-            "minor": 200,
-            "access": "rw"
             }
         ]
     },

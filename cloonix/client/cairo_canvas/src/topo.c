@@ -533,6 +533,7 @@ static void fct_button_1_double_click(t_bank_item *bitem, int hit)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+/*
 static void print_event_item(GdkEventType type, char *from)
 {
   switch (type)
@@ -591,6 +592,7 @@ static void print_event_item(GdkEventType type, char *from)
       KERR("ERROR %s MUSTADD %d", from, type);
     }
 }
+*/
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -603,7 +605,7 @@ static gboolean on_item_event(CrItem *item, GdkEvent *event,
     KOUT(" ");
   if (!pick_item)
     KOUT(" ");
-  print_event_item(event->type, "ON_ITEM");
+//  print_event_item(event->type, "ON_ITEM");
   switch (event->type)
     {
     case GDK_BUTTON_PRESS:
@@ -1293,7 +1295,7 @@ static gboolean on_canvas_event(GtkWidget* widget,
   if (widget != gtkwidget_canvas)
     KOUT(" ");
   (void) data;
-  print_event_item(event->type, "ON_CANVAS");
+//  print_event_item(event->type, "ON_CANVAS");
   switch (event->type)
     {
 

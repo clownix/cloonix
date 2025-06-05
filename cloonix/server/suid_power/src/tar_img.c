@@ -208,8 +208,6 @@ static int get_path_uid_image(char *bulktarget, int *uid_image,
     }
   if ((*uid_image) == 0)
     {
-    KERR("WARNING: NOT TESTED WITH ROOT FOR NOW!!!!!!!!!!!!!!");
-    KERR("BETTER TRY NOT ROOT WITH chown -R %s", bulktarget);
     }
   else
     {

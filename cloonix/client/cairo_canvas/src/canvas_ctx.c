@@ -829,7 +829,6 @@ static void timeout_right_click_inhib(void *data)
     KERR("ERROR %d", g_right_click_inhib);
   else
     g_right_click_inhib -= 1;
-KERR("OOOOOOOOOOOOOOOOOOOOO RIGHT %d", g_right_click_inhib);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -838,7 +837,6 @@ static void set_right_click_inhib(void)
 {
   clownix_timeout_add(45, timeout_right_click_inhib, NULL, NULL, NULL);
   g_right_click_inhib += 1;
-KERR("OOOOOOOOOOOOOOOOOOOOO RIGHT %d", g_right_click_inhib);
 }
 /*--------------------------------------------------------------------------*/
 
