@@ -88,7 +88,11 @@ static int create_libs_txt(void)
 
     fprintf(col, "echo " " > %s\n", g_dumps);
 
-    fprintf(col, "for i in `find %s -maxdepth 1 -type f` ; do\n", g_rootfs);
+    fprintf(col, "for i in `find %s/bin -maxdepth 1 -type f` ; do\n", g_rootfs);
+    fprintf(col, "  ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
+    fprintf(col, "done\n");
+
+    fprintf(col, "for i in `find %s/sbin -maxdepth 1 -type f` ; do\n", g_rootfs);
     fprintf(col, "  ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
     fprintf(col, "done\n");
 

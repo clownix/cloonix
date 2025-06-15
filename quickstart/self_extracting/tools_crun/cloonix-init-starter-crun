@@ -1,41 +1,50 @@
-#!/usr/libexec/cloonix/cloonfs/bash
+#!/usr/libexec/cloonix/cloonfs/bin/bash
 
 export TERM=linux
 COMMON="/usr/libexec/cloonix/cloonfs"
-SLEEP="/usr/libexec/cloonix/cloonfs/sleep"
-if [ ! -e "/usr/share" ]; then
-  ${COMMON}/ln -s ${COMMON}/share /usr/share
-fi
-if [ ! -e "/usr/lib" ]; then
-  ${COMMON}/ln -s ${COMMON}/lib /usr/lib
-fi
-if [ ! -e "/usr/bin" ]; then
-  ${COMMON}/ln -s ${COMMON} /usr/bin
-fi
-if [ ! -e "/etc" ]; then
-  ${COMMON}/ln -s ${COMMON}/etc /etc
-fi
-if [ ! -e "/lib64" ]; then
-  ${COMMON}/ln -s ${COMMON}/lib64 /lib64
-fi
-if [ ! -e "/bin/sh" ]; then
-  ${COMMON}/ln -s /bin/bash /bin/sh
-fi
-if [ ! -e "/usr/bin/vi" ]; then
-  ${COMMON}/ln -s /usr/bin/vim /usr/bin/vi
-fi
-${COMMON}/chown -R root:root / 2>/dev/null
-rsyslogd
-localedef -i en_US -f UTF-8 en_US.UTF-8
-mkdir -p /tmp/.X11-unix
-ln -s __PROXYSHARE_IN_____IDENT__/X11-unix/X713 /tmp/.X11-unix/X713
+SLEEP="/usr/libexec/cloonix/cloonfs/bin/sleep"
+MKDIR="/usr/libexec/cloonix/cloonfs/bin/mkdir"
+XAUTH="/usr/libexec/cloonix/cloonfs/bin/xauth"
+CAT="/usr/libexec/cloonix/cloonfs/bin/cat"
 
-XAUTH_CODE=$(cat __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority)
-xauth add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
+${CAT} > /root/.bashrc << "EOF"
+. /usr/share/bash-completion/bash_completion
+EOF
 
-cloonix_net __IDENT__
-while [ $(ps axo pid,args | grep -v grep | grep __IDENT__ | egrep -c /usr/libexec/cloonix/cloonfs/cloonix-main-server) -gt 0 ]; do
-  ${SLEEP} 3
+${MKDIR} -p /usr/lib
+for i in "systemd" "locale" "pam.d" "udev" "x86_64-linux-gnu" ; do
+  if [ ! -e /usr/lib/${i} ]; then
+    ${COMMON}/bin/ln -s ${COMMON}/lib/${i} /usr/lib/${i}
+  fi
 done
+
+if [ ! -e /etc ]; then
+  ${COMMON}/bin/ln -s ${COMMON}/etc /etc
+fi
+
+for i in "bin" "sbin" "lib64" "libexec" "share" ; do
+  if [ ! -e /usr/${i} ]; then
+    ${COMMON}/bin/ln -s ${COMMON}/${i} /usr/${i}
+  fi
+done
+
+for i in "bin" "sbin" "lib64" ; do
+  if [ ! -e /${i} ]; then
+    ${COMMON}/bin/ln -s /usr/${i} /${i}
+  fi
+done
+
+if [ ! -e "/bin/sh" ]; then
+  ${COMMON}/bin/ln -s /bin/bash /bin/sh
+fi
+
+${MKDIR} -p /tmp/.X11-unix
+if [ ! -e /tmp/.X11-unix/X713 ]; then
+  ${COMMON}/bin/ln -s __PROXYSHARE_IN_____IDENT__/X11-unix/X713 /tmp/.X11-unix/X713
+  XAUTH_CODE=$(${CAT} __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority)
+  ${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
+fi
+
+exec /usr/lib/systemd/systemd
 #----------------------------------------------------------------------------
 

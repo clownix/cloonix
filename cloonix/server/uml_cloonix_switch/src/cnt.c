@@ -270,7 +270,7 @@ void cnt_resp_del_lan(int is_ko, char *name, int num, char *vhost, char *lan)
   if (!cur)
     {
     mactopo_del_resp(0, name, num, lan);
-    KERR("ERROR RESP ADD LAN %d %s %s %d", is_ko, lan, name, num);
+    KERR("ERROR RESP DEL LAN %d %s %s %d", is_ko, lan, name, num);
     }
   else
     {
@@ -613,8 +613,11 @@ int cnt_delete_all(int llid)
   while (cur)
     {
     next = cur->next;
-    if (cur->count_delete > 5)
+    if (cur->count_delete > 50)
+      {
+      KERR("ERROR %s", cur->cnt.name);
       cnt_free_cnt(cur->cnt.name);
+      }
     else
       cnt_delete(llid, 0, 0, cur->cnt.name);
     cur->count_delete += 1;

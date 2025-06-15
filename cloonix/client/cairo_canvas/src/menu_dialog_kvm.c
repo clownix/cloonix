@@ -41,13 +41,10 @@ void menu_choice_cnt(void);
 
 static int g_custom_dialog_change;
 
-GtkWidget *get_bulkvm(void);
 GtkWidget *get_main_window(void);
 static t_custom_vm g_custom_vm;
-static t_slowperiodic g_bulkvm[MAX_BULK_FILES];
-static t_slowperiodic g_bulkvm_photo[MAX_BULK_FILES];
-static int g_nb_bulkvm;
-static GtkWidget *g_custom_dialog, *g_entry_rootfs;
+
+static GtkWidget *g_custom_dialog;
 
 
 typedef struct t_cb_endp_type
@@ -167,14 +164,6 @@ static void flags_eth_check_button(GtkWidget *grid, int *line_nb,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void qcow2_get(GtkWidget *check, gpointer data)
-{
-  char *name = (char *) data;
-  gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), name);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 static void has_no_qemu_ga_toggle(GtkToggleButton *togglebutton, gpointer user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton))
@@ -216,33 +205,8 @@ static void update_cust(t_custom_vm *cust, GtkWidget *entry_name,
     cust->current_number = 0;
   memset(cust->name, 0, MAX_NAME_LEN);
   strncpy(cust->name, tmp, MAX_NAME_LEN-1);
-
-  tmp = (char *) gtk_entry_get_text(GTK_ENTRY(g_entry_rootfs));
-  set_brandtype_image("brandkvm", tmp);
-
   cust->cpu = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_cpu));
   cust->mem = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_ram));
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void kvm_update_brandtype_image(void)
-{
-  int i, found;
-  found = 0;
-  memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  for (i=0; i<g_nb_bulkvm; i++)
-    {
-    if (!strcmp(get_brandtype_image("brandkvm"), g_bulkvm_photo[i].name))
-      found = 1;
-    }
-  if (found == 0)
-    {
-    if (g_nb_bulkvm >= 1)
-      set_brandtype_image("brandkvm", g_bulkvm_photo[0].name);
-    else 
-      set_brandtype_image("brandkvm", "no-kvm-found");
-    }
 }
 /*--------------------------------------------------------------------------*/
 
@@ -264,7 +228,7 @@ static void custom_vm_dialog_create(void)
   GSList *group = NULL;
   GtkWidget *entry_name, *entry_ram, *entry_cpu=NULL; 
   GtkWidget *grid, *parent, *is_persistent;
-  GtkWidget *has_no_qemu_ga, *has_natplug, *qcow2_rootfs, *bulkvm_menu;
+  GtkWidget *has_no_qemu_ga, *has_natplug;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
 
@@ -273,8 +237,6 @@ static void custom_vm_dialog_create(void)
     KERR("ERROR REQUEST MENU ON MENU ALIVE");
     return;
     } 
-
-  kvm_update_brandtype_image();
 
   grid = gtk_grid_new();
   gtk_grid_insert_column(GTK_GRID(grid), 0);
@@ -347,19 +309,6 @@ static void custom_vm_dialog_create(void)
 
   gtk_container_set_border_width(GTK_CONTAINER(grid), ETH_TYPE_MAX);
 
-  g_entry_rootfs = gtk_entry_new();
-  gtk_entry_set_text(GTK_ENTRY(g_entry_rootfs), get_brandtype_image("brandkvm"));
-  append_grid(grid, g_entry_rootfs, "Rootfs:", line_nb++);
-
-  qcow2_rootfs = gtk_menu_button_new ();
-  append_grid(grid, qcow2_rootfs, "Choice:", line_nb++);
-  if (g_nb_bulkvm > 0)
-    {
-    bulkvm_menu = get_bulkvm();
-    gtk_menu_button_set_popup ((GtkMenuButton *) qcow2_rootfs, bulkvm_menu);
-    gtk_widget_show_all(bulkvm_menu);
-    }
-
 
   gtk_box_pack_start(
         GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(g_custom_dialog))),
@@ -385,46 +334,6 @@ static void custom_vm_dialog_create(void)
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-GtkWidget *get_bulkvm(void)
-{
-  int i, found = 0;
-  GtkWidget *el0, *el, *menu = NULL;
-  GSList *group = NULL;
-  gpointer data;
-  memcpy(g_bulkvm_photo, g_bulkvm, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  if (g_nb_bulkvm > 0)
-    {
-    menu = gtk_menu_new();
-    for (i=0; i<g_nb_bulkvm; i++)
-      {
-      el = gtk_radio_menu_item_new_with_label(group, g_bulkvm_photo[i].name);
-      if (i == 0)
-        {
-        el0 = el;
-        group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(el));
-        }
-      gtk_menu_shell_append(GTK_MENU_SHELL(menu), el);
-      data = (gpointer) g_bulkvm_photo[i].name;
-      g_signal_connect(G_OBJECT(el),"activate",G_CALLBACK(qcow2_get),data);
-      if (!strcmp(get_brandtype_image("brandkvm"), g_bulkvm_photo[i].name))
-        {
-        found = 1;
-        gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el), TRUE);
-        }
-      }
-    if (found == 0)
-      {
-      if (g_nb_bulkvm >= 1)
-        set_brandtype_image("brandkvm", g_bulkvm_photo[0].name);
-      else 
-        set_brandtype_image("brandkvm", "bookworm.qcow2");
-      gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el0), TRUE);
-      }
-    }
-  return menu;
-}
-/*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug)
@@ -471,29 +380,11 @@ void get_custom_vm (t_custom_vm **cust_vm)
 }
 /*--------------------------------------------------------------------------*/
 
-/*****************************************************************************/
-void set_bulkvm(int nb, t_slowperiodic *slowperiodic)
-{
-  if (nb<0 || nb >= MAX_BULK_FILES)
-    KOUT("%d", nb);
-  g_nb_bulkvm = nb;
-  memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  memcpy(g_bulkvm, slowperiodic, g_nb_bulkvm * sizeof(t_slowperiodic));
-}
-/*--------------------------------------------------------------------------*/
-
 /****************************************************************************/
 void menu_choice_kvm(void)
 {
   custom_vm_dialog_create();
 }
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void kvm_brandtype_cb(void)
-{
-  kvm_update_brandtype_image();
-}     
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
@@ -516,8 +407,6 @@ void menu_dialog_kvm_init(void)
   for (i=0; i<g_custom_vm.nb_tot_eth; i++)
     g_custom_vm.eth_tab[i].endp_type = endp_type_eths;
   g_custom_dialog = NULL;
-  memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  g_nb_bulkvm = 0;
 }
 /*--------------------------------------------------------------------------*/
 

@@ -34,7 +34,6 @@ typedef struct t_custom_vm
 
 int get_vm_config_flags(t_custom_vm *cust_vm, int *natplug);
 void get_custom_vm (t_custom_vm **cust_vm);
-void set_bulkvm(int nb, t_slowperiodic *slowperiodic);
 void menu_choice_kvm(void);
 void menu_dialog_kvm_init(void);
 

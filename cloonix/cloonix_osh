@@ -1,6 +1,6 @@
-#!/usr/libexec/cloonix/cloonfs/bash
+#!/usr/libexec/cloonix/cloonfs/bin/bash
 set -e
-NSH="/usr/libexec/cloonix/cloonfs/cloonix-hide-dirs"
+NSH="/usr/libexec/cloonix/cloonfs/bin/cloonix-hide-dirs"
 CLOONIX_CFG="/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
 
 

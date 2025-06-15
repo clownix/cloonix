@@ -121,8 +121,8 @@
 "{\n"\
 "  \"destination\": \"/sys/fs/cgroup\",\n"\
 "  \"type\": \"cgroup2\",\n"\
-"  \"source\": \"none\",\n"\
-"  \"options\": [\"rw\",\"nosuid\",\"nodev\",\"noexec\",\"relatime\",\"nsdelegate\"]\n"\
+"  \"source\": \"cgroup2\",\n"\
+"  \"options\": [\"nosuid\",\"nodev\",\"noexec\"]\n"\
 "},\n"\
 "{\n"\
 "  \"destination\": \"/proc\",\n"\

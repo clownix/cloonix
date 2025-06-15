@@ -736,9 +736,7 @@ static void startup_env_addnewvar(char *startup_env)
 /*****************************************************************************/
 static void execchild(struct ChanSess *chansess)
 {
-  struct stat sb;
   char *usershell = NULL;
-  char *login = NULL;
   char *pth="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
   char *startup_env = read_whole_file("/cloonixmnt/cnf_fs/startup_env");
 
@@ -763,8 +761,6 @@ static void execchild(struct ChanSess *chansess)
       addnewvar("DISPLAY", chansess->cloonix_display);
     if (chdir("/root") < 0)
       KERR("Error changing directory");
-    if (!access("/bin/login", X_OK))
-      login = m_strdup("/bin/login -p -f root");
     }
   else
     {

@@ -52,13 +52,12 @@
 #include "cloonix_conf_info.h"
 #include "topo.h"
 
+static int g_inhib_timeout_recall_menu;
 static int g_right_click_inhib;
 
 #define BRANDTYPE_NB_MAX 3
 static void local_canvas_ctx_menu(void);
-
-void cnt_brandtype_cb(void);
-void kvm_brandtype_cb(void);
+static void update_brandtype_image(void);
 
 static double g_x_mouse, g_y_mouse;
 GtkWidget *get_main_window(void);
@@ -80,27 +79,40 @@ static char g_brandtype_image_zip[MAX_NAME_LEN];
 static char g_brandtype_image_cvm[MAX_NAME_LEN];
 static char g_brandtype_image_kvm[MAX_NAME_LEN];
 /*--------------------------------------------------------------------------*/
+static t_slowperiodic g_bulzip[MAX_BULK_FILES];
+static t_slowperiodic g_bulcvm[MAX_BULK_FILES];
+static t_slowperiodic g_bulkvm[MAX_BULK_FILES];
+static int g_nb_bulkvm;
+static int g_nb_bulzip;
+static int g_nb_bulcvm;
+
+
 
 /****************************************************************************/
-static void get_txt_for_vm_item(char *xvm, char *cnf)
+static void get_txt_for_zip_cvm_kvm(char *xvm)
 {
   memset(xvm, 0, MAX_NAME_LEN);
+  if (!strcmp(g_brandtype_type, "brandkvm"))
+    snprintf(xvm, MAX_NAME_LEN-1, "%s", g_brandtype_image_kvm);
+  else if (!strcmp(g_brandtype_type, "brandzip"))
+    snprintf(xvm, MAX_NAME_LEN-1, "%s", g_brandtype_image_zip);
+  else if (!strcmp(g_brandtype_type, "brandcvm"))
+    snprintf(xvm, MAX_NAME_LEN-1, "%s", g_brandtype_image_cvm);
+  else
+    KOUT("ERROR %s", g_brandtype_type);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void get_txt_for_cnf(char *cnf)
+{ 
   memset(cnf, 0, MAX_NAME_LEN);
   if (!strcmp(g_brandtype_type, "brandkvm"))
-    {
-    snprintf(xvm, MAX_NAME_LEN-1, "%s", g_brandtype_image_kvm);
     snprintf(cnf, MAX_NAME_LEN-1, "kvm config");
-    }
   else if (!strcmp(g_brandtype_type, "brandzip"))
-    {
-    snprintf(xvm, MAX_NAME_LEN-1, "%s", g_brandtype_image_zip);
     snprintf(cnf, MAX_NAME_LEN-1, "zip config");
-    }
   else if (!strcmp(g_brandtype_type, "brandcvm"))
-    {
-    snprintf(xvm, MAX_NAME_LEN-1, "%s", g_brandtype_image_cvm);
     snprintf(cnf, MAX_NAME_LEN-1, "cvm config");
-    }
   else
     KOUT("ERROR %s", g_brandtype_type);
 }
@@ -709,7 +721,7 @@ static void brandchoice_cb(GtkWidget *check, gpointer data)
         {
         memset(g_brandtype_type, 0, MAX_NAME_LEN);
         strncpy(g_brandtype_type, "brandkvm", MAX_NAME_LEN-1);
-        kvm_brandtype_cb();
+        update_brandtype_image();
         clownix_timeout_add(1, timeout_recall_menu, NULL, NULL, NULL);
         }
       }
@@ -719,7 +731,7 @@ static void brandchoice_cb(GtkWidget *check, gpointer data)
         {
         memset(g_brandtype_type, 0, MAX_NAME_LEN);
         strncpy(g_brandtype_type, "brandcvm", MAX_NAME_LEN-1);
-        cnt_brandtype_cb();
+        update_brandtype_image();
         clownix_timeout_add(1, timeout_recall_menu, NULL, NULL, NULL);
         }
       }
@@ -729,7 +741,7 @@ static void brandchoice_cb(GtkWidget *check, gpointer data)
         {
         memset(g_brandtype_type, 0, MAX_NAME_LEN);
         strncpy(g_brandtype_type, "brandzip", MAX_NAME_LEN-1);
-        cnt_brandtype_cb();
+        update_brandtype_image();
         clownix_timeout_add(1, timeout_recall_menu, NULL, NULL, NULL);
         }
       }
@@ -855,13 +867,162 @@ static gboolean onpress(GtkWidget *widget,
   return TRUE;
 } 
 /*--------------------------------------------------------------------------*/
+  
+/*****************************************************************************/
+void set_bulkvm(int nb, t_slowperiodic *slowperiodic)
+{   
+  if (nb<0 || nb >= MAX_BULK_FILES)
+    KOUT("%d", nb);
+  g_nb_bulkvm = nb;
+  memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  memcpy(g_bulkvm, slowperiodic, g_nb_bulkvm * sizeof(t_slowperiodic));
+}   
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void set_bulzip(int nb, t_slowperiodic *slowperiodic)
+{
+  if (nb<0 || nb >= MAX_BULK_FILES)
+    KOUT("%d", nb);
+  g_nb_bulzip = nb;
+  memset(g_bulzip, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  memcpy(g_bulzip, slowperiodic, g_nb_bulzip * sizeof(t_slowperiodic));
+}
+/*--------------------------------------------------------------------------*/
+  
+/*****************************************************************************/
+void set_bulcvm(int nb, t_slowperiodic *slowperiodic)
+{
+  if (nb<0 || nb >= MAX_BULK_FILES)
+    KOUT("%d", nb);     
+  g_nb_bulcvm = nb;
+  memset(g_bulcvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  memcpy(g_bulcvm, slowperiodic, g_nb_bulcvm * sizeof(t_slowperiodic));
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static void update_brandtype_image(void)
+{ 
+  int i, found;
+
+  found = 0;
+  for (i=0; i<g_nb_bulzip; i++)
+    {
+    if (!strcmp(get_brandtype_image("brandzip"), g_bulzip[i].name))
+      found = 1;
+    }
+  if (found == 0)
+    {
+    if (g_nb_bulzip >= 1)
+      set_brandtype_image("brandzip", g_bulzip[0].name);
+    else
+      set_brandtype_image("brandzip", "no-zip-found");
+    }
+
+  found = 0;
+  for (i=0; i<g_nb_bulcvm; i++)
+    {
+    if (!strcmp(get_brandtype_image("brandcvm"), g_bulcvm[i].name))
+      found = 1;
+    }
+  if (found == 0)
+    {
+    if (g_nb_bulcvm >= 1)
+      set_brandtype_image("brandcvm", g_bulcvm[0].name);
+    else
+      set_brandtype_image("brandcvm", "no-cvm-found");
+    }
+
+  found = 0;
+  for (i=0; i<g_nb_bulkvm; i++)
+    {
+    if (!strcmp(get_brandtype_image("brandkvm"), g_bulkvm[i].name))
+      found = 1;
+    }
+  if (found == 0)
+    {
+    if (g_nb_bulkvm >= 1)
+      set_brandtype_image("brandkvm", g_bulkvm[0].name);
+    else
+      set_brandtype_image("brandkvm", "no-kvm-found");
+    }
+}   
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void img_get(GtkWidget *check, gpointer data)
+{
+  char *name = (char *) data;
+  if (g_inhib_timeout_recall_menu == 0)
+    {
+    if (strcmp(name, get_brandtype_image(NULL)))
+      {
+      clownix_timeout_add(1, timeout_recall_menu, NULL, NULL, NULL);
+      }
+    }
+  set_brandtype_image(NULL, name);
+
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static GtkWidget *get_bulk_choice(int nb_bul, t_slowperiodic *bul, char *image)
+{
+  int i, found = 0;
+  GtkWidget *el0, *el, *menu = gtk_menu_new();
+  GSList *group = NULL;
+  gpointer data;
+  if (nb_bul > 0)
+    {
+    for (i=0; i<nb_bul; i++)
+      {
+      el = gtk_radio_menu_item_new_with_label(group, bul[i].name);
+      if (i == 0)
+        {
+        el0 = el;
+        group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(el));
+        }
+      gtk_menu_shell_append(GTK_MENU_SHELL(menu), el);
+      data = (gpointer) bul[i].name;
+      g_signal_connect(G_OBJECT(el),"activate",G_CALLBACK(img_get),data);
+      if (!strcmp(image, bul[i].name))
+        {
+        found = 1;
+        gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el), TRUE);
+        }
+      }
+    if (found == 0)
+      {
+      strncpy(image, bul[0].name, MAX_NAME_LEN-1);
+      gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el0), TRUE);
+      }
+    }
+  return menu;
+}
+/*--------------------------------------------------------------------------*/
+  
+/*****************************************************************************/
+static void setup_list_choices(GtkWidget *list)
+{
+  GtkWidget *menu = NULL;
+  if (!strcmp(get_brandtype_type(), "brandzip"))
+    menu = get_bulk_choice(g_nb_bulzip, g_bulzip, get_brandtype_image(NULL));
+  else if (!strcmp(get_brandtype_type(), "brandcvm"))
+    menu = get_bulk_choice(g_nb_bulcvm, g_bulcvm, get_brandtype_image(NULL));
+  else if (!strcmp(get_brandtype_type(), "brandkvm"))
+    menu = get_bulk_choice(g_nb_bulkvm, g_bulkvm, get_brandtype_image(NULL));
+  else
+    KOUT("ERROR %s", get_brandtype_type());
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(list), menu);
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void local_canvas_ctx_menu(void)
 {
   GSList *group = NULL;
   GtkWidget *menu = gtk_menu_new();
-  GtkWidget *zip_cvm_kvm = gtk_menu_item_new();
   GtkWidget *cnf = gtk_menu_item_new();
   GtkWidget *rad1;
   GtkWidget *rad2;
@@ -869,33 +1030,29 @@ static void local_canvas_ctx_menu(void)
   GtkWidget *separator1 = gtk_separator_menu_item_new();
   GtkWidget *separator2 = gtk_separator_menu_item_new();
   GtkWidget *separator3 = gtk_separator_menu_item_new();
-  GtkWidget *separator4 = gtk_separator_menu_item_new();
   GtkWidget *lan  = gtk_menu_item_new_with_label("lan");
   GtkWidget *nat  = gtk_menu_item_new_with_label("nat");
   GtkWidget *tap  = gtk_menu_item_new_with_label("tap");
   GtkWidget *c2c  = gtk_menu_item_new_with_label("c2c");
   GtkWidget *a2b  = gtk_menu_item_new_with_label("a2b");
   GtkWidget *other= gtk_menu_item_new_with_label("Other");
+  GtkWidget *list=  gtk_menu_item_new_with_label("List Other Choices");
+  GtkWidget *zip_cvm_kvm = gtk_menu_item_new();
   char xvm_item_txt[MAX_NAME_LEN];
   char xvm_config_item_txt[MAX_NAME_LEN];
-
+  update_brandtype_image();
   rad1 = gtk_radio_menu_item_new_with_label(group, "kvm");
   group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(rad1));
   rad2 = gtk_radio_menu_item_new_with_label(group, "cvm");
   rad3 = gtk_radio_menu_item_new_with_label(group, "zip");
-
-  kvm_brandtype_cb();
-  cnt_brandtype_cb();
-
-  get_txt_for_vm_item(xvm_item_txt, xvm_config_item_txt);
+  get_txt_for_zip_cvm_kvm(xvm_item_txt);
   gtk_menu_item_set_label(GTK_MENU_ITEM(zip_cvm_kvm), xvm_item_txt);
+  get_txt_for_cnf(xvm_config_item_txt);
   gtk_menu_item_set_label(GTK_MENU_ITEM(cnf), xvm_config_item_txt);
-
   g_signal_connect_swapped(G_OBJECT(zip_cvm_kvm), "activate",
                            G_CALLBACK(xvm_act), NULL);
   g_signal_connect_swapped(G_OBJECT(cnf), "activate",
                            G_CALLBACK(cnf_act), NULL);
-
   if (!strcmp(g_brandtype_type, "brandkvm"))
     gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(rad1), TRUE);
   else if (!strcmp(g_brandtype_type, "brandcvm"))
@@ -904,17 +1061,12 @@ static void local_canvas_ctx_menu(void)
     gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(rad3), TRUE);
   else
     KERR("ERROR %s", g_brandtype_type);
-
-
   g_signal_connect(G_OBJECT(rad1),"activate",
                    G_CALLBACK(brandchoice_cb), (gpointer) 1);
   g_signal_connect(G_OBJECT(rad2),"activate",
                    G_CALLBACK(brandchoice_cb), (gpointer) 2);
   g_signal_connect(G_OBJECT(rad3),"activate",
                    G_CALLBACK(brandchoice_cb), (gpointer) 3);
-
-
-
   g_signal_connect_swapped(G_OBJECT(lan), "activate",
                           G_CALLBACK(lan_act), NULL);
   g_signal_connect_swapped(G_OBJECT(tap), "activate",
@@ -925,8 +1077,15 @@ static void local_canvas_ctx_menu(void)
                           G_CALLBACK(a2b_act), NULL);
   g_signal_connect_swapped(G_OBJECT(nat), "activate",
                           G_CALLBACK(nat_act), NULL);
-
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), zip_cvm_kvm);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), list);
+  g_inhib_timeout_recall_menu = 1;
+  setup_list_choices(list);
+  g_inhib_timeout_recall_menu = 0;
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), cnf);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), rad1);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), rad2);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), rad3);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator1);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), lan);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator2);
@@ -935,16 +1094,11 @@ static void local_canvas_ctx_menu(void)
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), c2c);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), a2b);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator3);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), rad1);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), rad2);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), rad3);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), cnf);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator4);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), other);
   other_sub_menu(other);
   gtk_widget_show_all(menu);
   g_signal_connect(G_OBJECT(menu), "button-press-event",
-                                     G_CALLBACK(onpress), NULL);
+                   G_CALLBACK(onpress), NULL);
   set_right_click_inhib();
   gtk_menu_popup_at_widget(GTK_MENU(menu), get_gtkwidget_canvas(),
   GDK_GRAVITY_NORTH_WEST, GDK_GRAVITY_NORTH_WEST, NULL);
@@ -963,6 +1117,7 @@ void canvas_ctx_menu(gdouble x, gdouble y)
 /****************************************************************************/
 void canvas_ctx_init(void)
 {
+  g_inhib_timeout_recall_menu = 0;
   g_right_click_inhib = 0;
   memset(g_brandtype_type, 0, MAX_NAME_LEN);
   memset(g_brandtype_image_kvm, 0, MAX_NAME_LEN);
@@ -972,6 +1127,13 @@ void canvas_ctx_init(void)
   strncpy(g_brandtype_image_kvm, "bookworm.qcow2", MAX_NAME_LEN-1);
   strncpy(g_brandtype_image_zip, "zipfrr.zip", MAX_NAME_LEN-1);
   strncpy(g_brandtype_image_cvm, "bookworm0", MAX_NAME_LEN-1);
+  memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  memset(g_bulzip, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  memset(g_bulcvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
+  g_nb_bulkvm = 0;
+  g_nb_bulzip = 0;
+  g_nb_bulcvm = 0;
+
 }
 /*--------------------------------------------------------------------------*/
 

@@ -5,6 +5,15 @@
 Software Release Information
 ============================
 
+v50-00
+======
+
+The self-extracting user namespace container used to host cloonix in
+the rootless version is now started with systemd, it is a customized
+bebian trixie.
+No time for doc for this version, work in progress...
+
+
 v49-00
 ======
 

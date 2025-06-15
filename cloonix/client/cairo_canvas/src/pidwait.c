@@ -238,7 +238,7 @@ static int get_process_pid(char *cmdpath, char *sock)
   char name[MAX_NAME_LEN];
   char cmd[2*MAX_PATH_LEN];
   int pid, result = 0;
-  fp = popen("/usr/libexec/cloonix/cloonfs/ps axo pid,args", "r");
+  fp = popen("/usr/libexec/cloonix/cloonfs/bin/ps axo pid,args", "r");
   if (fp == NULL)
     KERR("ERROR %s %s", cmdpath, sock);
   else
@@ -311,10 +311,10 @@ static int kill_previous_xephyr_session_process(char *name)
   memset(ssh,    0, MAX_PATH_LEN);
   memset(addr,   0, MAX_NAME_LEN);
   strncpy(ssh,
-  "/usr/libexec/cloonix/cloonfs/cloonix-dropbear-ssh", MAX_PATH_LEN-1);
+  "/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh", MAX_PATH_LEN-1);
   strncpy(addr,  get_doors_client_addr(), MAX_PATH_LEN-1);
 
-  fp = popen("/usr/libexec/cloonix/cloonfs/ps axo pid,args", "r");
+  fp = popen("/usr/libexec/cloonix/cloonfs/bin/ps axo pid,args", "r");
   if (fp == NULL)
     KERR("ERROR %s", name);
   else 

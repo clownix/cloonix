@@ -56,7 +56,7 @@ static int get_process_pid(char *cmdpath, char *sock)
   char name[MAX_NAME_LEN];
   char cmd[MAX_PATH_LEN];
   int pid, result = 0;
-  fp = popen("/usr/libexec/cloonix/cloonfs/ps axo pid,args", "r");
+  fp = popen("/usr/libexec/cloonix/cloonfs/bin/ps axo pid,args", "r");
   if (fp == NULL)
     KERR("ERROR %s %s", cmdpath, sock);
   else
@@ -126,10 +126,10 @@ static void set_env_global_cloonix(char *net)
     setenv("USER", g_user, 1);
   if (g_xauthority)
     setenv("XAUTHORITY", g_xauthority, 1);
-  setenv("PATH", "/usr/libexec/cloonix/cloonfs", 1);
+  setenv("PATH", "/usr/libexec/cloonix/cloonfs/bin:/usr/libexec/cloonix/cloonfs/sbin", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
-  setenv("SHELL", "/usr/libexec/cloonix/cloonfs/bash", 1);
+  setenv("SHELL", "/usr/libexec/cloonix/cloonfs/bin/bash", 1);
   setenv("TERM", "xterm", 1);
   setenv("NO_AT_BRIDGE", "1", 1);
   setenv("WAYLAND_DISPLAY", "", 1);
@@ -303,7 +303,7 @@ static void process_ocp(int argc, char **argv, char **new_argv,
   snprintf(ocp_param, MAX_PATH_LEN-1,
            "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
            ipl, port, passwd, argv[3], argv[4]);
-  new_argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-u2i-scp";
+  new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-u2i-scp";
   new_argv[1] = sock;
   new_argv[2] = "-i";
   new_argv[3] = g_id_rsa_cisco;
@@ -372,7 +372,7 @@ static void process_osh(int argc, char **argv, char **new_argv,
   snprintf(ocp_param, MAX_PATH_LEN-1,
           "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
           ipl, port, passwd, argv[3], argv[4]);
-  new_argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-u2i-ssh";
+  new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-u2i-ssh";
   new_argv[1] = sock;
   new_argv[2] = "-i";
   new_argv[3] = g_id_rsa_cisco;
@@ -419,7 +419,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_LSH-----------------------*/
   if (!strcmp("lsh", argv[1]))
     {
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bash";
+    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/bash";
     }
 /*CLOONIX_DSH-----------------------*/
   else if (!strcmp("dsh", argv[1]))
@@ -428,19 +428,19 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     new_argv[3] = "-cmd";
-    new_argv[4] = "/usr/libexec/cloonix/cloonfs/bash";
+    new_argv[4] = "/usr/libexec/cloonix/cloonfs/bin/bash";
     }
 /*CLOONIX_CLI-----------------------*/
   else if (!strcmp("cli", argv[1]))
     {
     if (argc < 4)
       {
-      new_argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-ctrl";
+      new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ctrl";
       new_argv[1] = CLOONIX_CFG;
       }
     else
       {
-      new_argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-ctrl";
+      new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ctrl";
       new_argv[1] = CLOONIX_CFG;
       new_argv[2] = argv[2];
       new_argv[3] = argv[3];
@@ -454,7 +454,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_GUI-----------------------*/
   else if (!strcmp("gui", argv[1]))
     {
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-gui";
+    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-gui";
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     }
@@ -464,7 +464,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if (argc < 5)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     fill_ipport(argv[2], ip, port, ipport);
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-dropbear-scp";
+    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-scp";
     new_argv[1] = ipport;
     new_argv[2] = passwd;
     for (i=0; i<MAX_NARGS; i++)
@@ -479,7 +479,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if ((argc != 4) && (argc != 5))
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     fill_ipport(argv[2], ip, port, ipport);
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-dropbear-ssh";
+    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh";
     new_argv[1] = ipport;
     new_argv[2] = passwd;
     new_argv[3] = argv[3];
@@ -502,7 +502,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     new_argv[5]  = CLOONIX_CFG;
     new_argv[6]  = argv[2];
     new_argv[7]  = "-cmd";
-    new_argv[8]  = "/usr/libexec/cloonix/cloonfs/cloonix-dtach";
+    new_argv[8]  = "/usr/libexec/cloonix/cloonfs/bin/cloonix-dtach";
     new_argv[9]  = "-a";
     new_argv[10] = param;
     }
@@ -536,7 +536,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     fill_ipport(argv[2], ip, port, ipport);
     snprintf(title, MAX_NAME_LEN-1, "--title=%s/%s", argv[2], argv[3]);
     snprintf(sock, 2*MAX_PATH_LEN-1, "/var/lib/cloonix/%s/vm/vm%s/spice_sock", argv[2], argv[4]);
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-spicy";
+    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-spicy";
     new_argv[1] = title;
     new_argv[2] = "-d";
     new_argv[3] = ipport;
@@ -573,7 +573,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     new_argv[1] = CLOONIX_CFG;
     new_argv[2] = argv[2];
     new_argv[3] = "-ovs";
-    new_argv[4] = "/usr/libexec/cloonix/cloonfs/cloonix-ovs-vsctl";
+    new_argv[4] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-vsctl";
     new_argv[5] = sock;
     for (i=0; i<10; i++)
       {

@@ -587,12 +587,12 @@ int main(int argc, char **argv)
   char *current_dir_name = getcwd(local_path, PATH_MAX);
   char path_to_bash[PATH_MAX];
 
-  snprintf(path_to_bash, PATH_MAX-1, "/usr/libexec/cloonix/cloonfs/bash");
+  snprintf(path_to_bash, PATH_MAX-1, "/usr/libexec/cloonix/cloonfs/bin/bash");
   if (access( path_to_bash, X_OK))
     {
     snprintf(path_to_bash, PATH_MAX-1, "%s/bin/bash", current_dir_name);
     if (access( path_to_bash, X_OK))
-      KOUT("ERROR scriptpty.c failed to find /usr/libexec/cloonix/cloonfs/bash or %s", path_to_bash);
+      KOUT("ERROR scriptpty.c failed to find /usr/libexec/cloonix/cloonfs/bin/bash or %s", path_to_bash);
     }
   if (argc != 2)
     KOUT("ERROR failed argc = %d", argc);

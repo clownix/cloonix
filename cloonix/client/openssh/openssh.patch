@@ -146,7 +146,7 @@ diff -Naur openssh-portable/misc.c tainted_openssh-portable/misc.c
  	struct passwd *pw;
  	size_t len;
  	int ret = -1, r, slash;
-+struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/cloonix-bash"};
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash"};
 +pw = pwcopy(&my_pw);
  
  	*retp = NULL;
@@ -336,7 +336,7 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
 +int pid;
 +char *ptr;
 +char *u2i_ssh_path = get_cloonix_u2i_ssh_path(argv[0]);
-+struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/cloonix-bash"};
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash"};
 +pwd = &my_pw;
 +ssh_program = u2i_ssh_path;
 +memset(g_cloonix_path, 0, MAX_INFO_LEN);
@@ -869,7 +869,7 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
 +char cloonix_ip[MAX_NAME_LEN];
 +char *ptr;
 +int pid, cloonix_port;
-+struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/cloonix-bash"};
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash"};
 +pw = pwcopy(&my_pw);
 +memset(cloonix_path, 0, MAX_INFO_LEN);
 +if (!test_file_is_socket(av[1]))

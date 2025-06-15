@@ -29,8 +29,6 @@ typedef struct t_custom_cnt
   int is_privileged_cvm;
 } t_custom_cnt;
 
-void set_bulzip(int nb, t_slowperiodic *slowperiodic);
-void set_bulcvm(int nb, t_slowperiodic *slowperiodic);
 void get_custom_cnt(t_custom_cnt **cust_cnt);
 void menu_choice_cnt(void);
 void menu_dialog_cnt_init(void);

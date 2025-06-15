@@ -39,6 +39,9 @@
 #define MAX_ARGS_POPEN 100
 #define MAX_CMD_POPEN 5000
 
+#define CGROUP_SYS "--cgroup-manager=systemd"
+#define CGROUP_DIS "--cgroup-manager=disabled"
+
 char *get_net_name(void);
 char *get_bin_dir(void);
 
@@ -706,12 +709,17 @@ static int read_crun_create_pid(char *name, int should_not_exist,
   char cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
   int nb_tries = 15;
+  char *cgroupman;
+  if (is_privileged)
+    cgroupman = CGROUP_DIS;
+  else
+    cgroupman = CGROUP_SYS;
   if (should_not_exist)
     nb_tries = 1;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "%s --log=%s --root=/var/lib/cloonix/%s/%s state %s | %s \"\\\"pid\\\"\" | %s '{ print $2 }'",
-  CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name, GREP_BIN, AWK_BIN);
+  "%s %s --log=%s --root=/var/lib/cloonix/%s/%s state %s | %s \"\\\"pid\\\"\" | %s '{ print $2 }'",
+  CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name, GREP_BIN, AWK_BIN);
   while(create_pid == 0)
     {
     count += 1;
@@ -765,10 +773,15 @@ static int read_crun_create_pid_while_delete(char *name, int uid_image,
   int child_pid, wstatus, create_pid = 0;
   char cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
+  char *cgroupman;
+  if (is_privileged)
+    cgroupman = CGROUP_DIS;
+  else
+    cgroupman = CGROUP_SYS;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "%s --log=%s --root=/var/lib/cloonix/%s/%s state %s | %s \"\\\"pid\\\"\" | %s '{ print $2 }'",
-  CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name, GREP_BIN, AWK_BIN);
+  "%s %s --log=%s --root=/var/lib/cloonix/%s/%s state %s | %s \"\\\"pid\\\"\" | %s '{ print $2 }'",
+  CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name, GREP_BIN, AWK_BIN);
   memset(line, 0, MAX_PATH_LEN);
   fp = cmd_lio_popen(cmd, &child_pid, 0);
   if (fp == NULL)
@@ -925,7 +938,7 @@ int crun_utils_get_vswitchd_pid(char *name)
 {
   FILE *fp;
   int child_pid, wstatus, pid, result = 0;
-  char *ident1="usr/libexec/cloonix/cloonfs/cloonix-ovs-vswitchd";
+  char *ident1="usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-vswitchd";
   char ident2[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
   char line[2*MAX_PATH_LEN];
@@ -963,12 +976,13 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name, int ovspid,
 {
   int pid = 0, len = 0;
   char cmd[4*MAX_PATH_LEN];
-  memset(cmd, 0, 4*MAX_PATH_LEN);
-  len += sprintf(cmd+len, "%s", CRUN_BIN); 
+  char *cgroupman;
   if (is_privileged)
-    len += sprintf(cmd+len, " --cgroup-manager=disabled"); 
+    cgroupman = CGROUP_DIS;
   else
-    len += sprintf(cmd+len, " --cgroup-manager=systemd"); 
+    cgroupman = CGROUP_SYS;
+  memset(cmd, 0, 4*MAX_PATH_LEN);
+  len += sprintf(cmd+len, "%s %s", CRUN_BIN, cgroupman); 
   len += sprintf(cmd+len, " --debug"); 
   len += sprintf(cmd+len, " --log=%s", g_var_crun_log); 
   len += sprintf(cmd+len, " --root=/var/lib/cloonix/%s/%s",
@@ -1104,6 +1118,11 @@ void crun_utils_prepare_with_delete(char *name, char *nspacecrun,
   char cmd[MAX_PATH_LEN];
   int i, pid = read_crun_create_pid(name, 1, uid_image, is_privileged);
   char *ptr = g_var_crun_log;
+  char *cgroupman;
+  if (is_privileged)
+    cgroupman = CGROUP_DIS;
+  else
+    cgroupman = CGROUP_SYS;
   if (pid)
     {
     KERR("ERROR %s", name);
@@ -1111,8 +1130,8 @@ void crun_utils_prepare_with_delete(char *name, char *nspacecrun,
     }
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-           "%s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
-           CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
+           "%s %s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
+           CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name);
   execute_cmd(cmd, 0, 0);
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s >/dev/null",
@@ -1246,11 +1265,15 @@ void crun_utils_delete_crun_stop(char *name, int pid, int uid_image,
 {
   char cmd[MAX_PATH_LEN];
   char *ptr = g_var_crun_log;
-
+  char *cgroupman;
+  if (is_privileged)
+    cgroupman = CGROUP_DIS;
+  else
+    cgroupman = CGROUP_SYS;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-           "%s --log=%s --root=/var/lib/cloonix/%s/%s kill %s",
-           CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
+           "%s %s --log=%s --root=/var/lib/cloonix/%s/%s kill %s",
+           CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1, 0))
     KERR("ERROR %s", cmd);
   if (pid)
@@ -1269,10 +1292,15 @@ void crun_utils_delete_crun_delete(char *name, char *nspacecrun,
   int i, pid;
   char cmd[MAX_PATH_LEN];
   char *ptr = g_var_crun_log;
+  char *cgroupman;
+  if (is_privileged)
+    cgroupman = CGROUP_DIS;
+  else
+    cgroupman = CGROUP_SYS;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-           "%s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
-           CRUN_BIN, ptr, get_net_name(), CRUN_DIR, name);
+           "%s %s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
+           CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1, 0))
     KERR("ERROR %s", cmd);
   pid = read_crun_create_pid_while_delete(name, uid_image, is_privileged);
@@ -1303,19 +1331,20 @@ int crun_utils_create_crun_start(char *name, int ovspid, int uid_image,
   char cmd[MAX_PATH_LEN];
   char crun_dir[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
-  char *cgroup, *ptr = g_var_crun_log;
+  char *ptr = g_var_crun_log;
+  char *cgroupman;
+  if (is_privileged)
+    cgroupman = CGROUP_DIS;
+  else
+    cgroupman = CGROUP_SYS;
   memset(cmd, 0, MAX_PATH_LEN);
   memset(crun_dir, 0, MAX_PATH_LEN);
   memset(line, 0, MAX_PATH_LEN);
   snprintf(crun_dir, MAX_PATH_LEN-1,
   "/var/lib/cloonix/%s/%s", get_net_name(), CRUN_DIR);
-  if (is_privileged)
-    cgroup = "--cgroup-manager=disabled";
-  else
-    cgroup = "--cgroup-manager=systemd";
   snprintf(cmd, MAX_PATH_LEN-1,
   "%s -t %d --net -- %s %s --debug --log=%s --root=%s start %s",
-  NSENTER_BIN, ovspid, CRUN_BIN, cgroup, ptr, crun_dir, name);
+  NSENTER_BIN, ovspid, CRUN_BIN, cgroupman, ptr, crun_dir, name);
   if (execute_cmd(cmd, 1, 0))
     {
     KERR("ERROR %s", cmd);

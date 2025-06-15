@@ -13,7 +13,7 @@ Cloonix recompiles most of the open-sources it uses and sometimes patches
 them for adjustments.
 Binaries and libraries are put into a separate zone only for cloonix use ::
 
-    /usr/libexec/cloonix/
+    /usr/libexec/cloonix/cloonfs
 
 This allows the use of customized libs with no impact on the official host
 machine.
@@ -31,15 +31,15 @@ Sources associated to cloonix
 The external open sources used in cloonix for qemu, ovs, spice ...
 are updated using the following links for the main software:
 
-  * https://github.com/wireshark/wireshark.git
-  * https://github.com/openvswitch/ovs.git
+  * https://github.com/containers/crun.git
   * https://git.qemu.org/git/qemu.git
+  * https://github.com/openvswitch/ovs.git
+  * https://github.com/wireshark/wireshark.git
   * https://gitlab.freedesktop.org/spice/spice-gtk.git
   * https://gitlab.freedesktop.org/spice/spice-protocol.git
   * https://gitlab.freedesktop.org/spice/spice.git
   * https://gitlab.freedesktop.org/spice/usbredir.git
-  * https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-8.6p1.tar.gz
-  * https://github.com/containers/crun.git
+  * https://github.com/openssh/openssh-portable.git
   * https://github.com/NixOS/patchelf.git
 
 

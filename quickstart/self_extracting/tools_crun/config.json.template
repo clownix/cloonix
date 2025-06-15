@@ -181,13 +181,13 @@ __HOST_PULSE_PRESENT__    },{
         ]
     },
     "namespaces": [
+        {"type": "user"},
         {"type": "pid"},
         {"type": "network"},
         {"type": "ipc"},
         {"type": "uts"},
-        {"type": "user"},
-        {"type": "cgroup"},
-        {"type": "mount"}
+        {"type": "mount"},
+        {"type": "cgroup"}
     ]
   }
 }

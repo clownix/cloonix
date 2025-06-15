@@ -204,30 +204,41 @@ static int get_magic_cookie_with_display(char *magic)
 {
   char *ptr, *buf, *tmpmc = "/tmp/cloonix_magic_cookie";
   char randstr[5];
-  char tmp[MAX_PATH_LEN];
+  char tmp1[MAX_PATH_LEN];
+  char tmp2[MAX_PATH_LEN];
   char cmd[MAX_PATH_LEN];
   int i, nb, len, result = -1;
   char *display = getenv("DISPLAY");
   srand(time(NULL));
 
   memset(randstr, 0, 5);
-  memset(tmp, 0, MAX_PATH_LEN);
+  memset(tmp1, 0, MAX_PATH_LEN);
+  memset(tmp2, 0, MAX_PATH_LEN);
   memset(magic, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_PATH_LEN);
   for (i=0; i<4; i++)
     randstr[i] = 'A'+ my_rand(26);
-  snprintf(tmp, MAX_PATH_LEN-1, "%s_%s", tmpmc, randstr);
-  unlink(tmp);
-  snprintf(cmd, MAX_PATH_LEN-1, "%s nextract %s %s", XAUTH_BIN, tmp, display);
+  snprintf(tmp1, MAX_PATH_LEN-1, "%s_%s", tmpmc, randstr);
+  unlink(tmp1);
+  snprintf(tmp2, MAX_PATH_LEN-1, "%s_%s", tmpmc, randstr);
+  unlink(tmp2);
+
+/*
+/usr/libexec/cloonix/cloonfs/bin/xauth nextract /tmp/cloonix_toto :713
+
+*/
+  snprintf(cmd, MAX_PATH_LEN-1, "%s nextract %s %s", XAUTH_BIN, tmp2, display);
+KERR("OOOOOOOOOOOOOOOO %s", cmd);
   if (system(cmd))
     KERR("ERROR %s", cmd);
   else
     {
-    buf = local_read_whole_file(tmp, &len);
+    buf = local_read_whole_file(tmp2, &len);
     if (buf == NULL)
-      KERR("ERROR %s", tmp);
+      KERR("ERROR path=%s cmd=%s", tmp2, cmd);
     else
       {
+KERR("OOOOOOOOOOOOOOOO %s", buf);
       ptr = strrchr(buf, ' ');
       if (ptr)
         {
@@ -236,11 +247,13 @@ static int get_magic_cookie_with_display(char *magic)
         ptr[nb] = 0;
         strncpy(magic, ptr, MAX_NAME_LEN-1);
         result = 0;
+KERR("OOOOOOOOOOOOOOOO %s", ptr);
         }
       free(buf);
       }
     }
-  unlink(tmp);
+  unlink(tmp1);
+  unlink(tmp2);
   return result;
 }
 /*--------------------------------------------------------------------------*/

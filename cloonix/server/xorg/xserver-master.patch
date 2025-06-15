@@ -26,7 +26,7 @@ diff -Naur xserver/xkb/ddxLoad.c new_xserver/xkb/ddxLoad.c
  
      if (asprintf(&buf,
 -                 "\"%s%sxkbcomp\" -w %d %s -xkm \"%s\" "
-+                 "\"/usr/libexec/cloonix/cloonfs/xkbcomp\" -w %d %s -xkm \"%s\" "
++                 "\"/usr/libexec/cloonix/cloonfs/bin/xkbcomp\" -w %d %s -xkm \"%s\" "
                   "-em1 %s -emp %s -eml %s \"%s%s.xkm\"",
 -                 xkbbindir, xkbbindirsep,
                   ((xkbDebugFlags < 2) ? 1 :

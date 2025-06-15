@@ -151,7 +151,7 @@ char **get_argv_local_shk(char *name)
   snprintf(nemo, MAX_NAME_LEN-1, "%s", get_net_name()); 
   snprintf(title, MAX_PATH_LEN-1, "%s/%s", nemo, nm); 
   snprintf(config, MAX_PATH_LEN-1, CLOONIX_CFG);
-  snprintf(cmd, MAX_PATH_LEN-1, "/usr/libexec/cloonix/cloonfs/cloonix-dtach");
+  snprintf(cmd, MAX_PATH_LEN-1, "/usr/libexec/cloonix/cloonfs/bin/cloonix-dtach");
   snprintf(path, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/%s/%s", nemo, DTACH_SOCK, nm);
   ptr_argv = argv;
   return (ptr_argv);
@@ -181,7 +181,7 @@ char *get_path_to_qemu_spice(void)
 {
   char *result = NULL;
   static char path[MAX_PATH_LEN];
-  sprintf(path,"/usr/libexec/cloonix/cloonfs/cloonix-spicy");
+  sprintf(path,"/usr/libexec/cloonix/cloonfs/bin/cloonix-spicy");
   if (file_exists_exec(path))
     result = path;
   return result;
@@ -395,7 +395,7 @@ int main(int argc, char *argv[])
   char tmpnet[MAX_NAME_LEN];
   g_novnc = 0;
   g_argc = 2;
-  g_argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-gui";
+  g_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-gui";
   g_argv[1] = "--no-xshm";
   g_argv[2] = NULL;
   main_timeout = 0;

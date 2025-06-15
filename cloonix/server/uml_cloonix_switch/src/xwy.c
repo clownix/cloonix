@@ -311,7 +311,7 @@ void init_xwy(char *net_name, int net_rank)
   snprintf(g_xwy_params.net_rank, MAX_NAME_LEN-1, "%d", net_rank);
   snprintf(g_xwy_params.net_name, MAX_NAME_LEN-1, "%s", net_name);
   snprintf(g_xwy_params.bin, MAX_PATH_LEN-1,
-           "%s/cloonfs/cloonix-xwy-srv", cfg_get_bin_dir());
+           "%s/cloonfs/bin/cloonix-xwy-srv", cfg_get_bin_dir());
   snprintf(g_xwy_params.unix_traffic_sock, MAX_PATH_LEN,
            "%s/%s", cfg_get_root_work(), XWY_TRAFFIC_SOCK);
   snprintf(g_xwy_params.unix_control_sock, MAX_PATH_LEN,

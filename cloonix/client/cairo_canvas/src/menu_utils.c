@@ -178,7 +178,7 @@ int check_before_start_launch(char **argv)
 /****************************************************************************/
 static void start_qemu_spice(char *name, int vm_id)
 {
-  char *spicy = "/usr/libexec/cloonix/cloonfs/cloonix-spicy";
+  char *spicy = "/usr/libexec/cloonix/cloonfs/bin/cloonix-spicy";
   char title[MAX_PATH_LEN];
   char net[MAX_NAME_LEN];
   char sock[2*MAX_PATH_LEN];
@@ -278,8 +278,8 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
     }
   else
     {
-    KERR("ERROR Missing: /usr/libexec/cloonix/cloonfs/cloonix-spicy");
-    sprintf(info, "Missing: /usr/libexec/cloonix/cloonfs/cloonix-spicy"); 
+    KERR("ERROR Missing: /usr/libexec/cloonix/cloonfs/bin/cloonix-spicy");
+    sprintf(info, "Missing: /usr/libexec/cloonix/cloonfs/bin/cloonix-spicy"); 
     insert_next_warning(info, 1);
     }
 }
@@ -346,7 +346,7 @@ char **xephyr_get_lxsession_args(char *nm)
   memset(name,   0, MAX_NAME_LEN);
 
   strncpy(ssh,
-  "/usr/libexec/cloonix/cloonfs/cloonix-dropbear-ssh", MAX_PATH_LEN-1);
+  "/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh", MAX_PATH_LEN-1);
   strncpy(name, nm, MAX_NAME_LEN-1);
   strncpy(addr,  get_doors_client_addr(), MAX_NAME_LEN-1);
   strncpy(passwd, get_password(), MAX_NAME_LEN-1);

@@ -519,7 +519,7 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
   memset(bz_image, 0, MAX_PATH_LEN);
   memset(qemu_kvm_exe, 0, MAX_PATH_LEN);
   snprintf(qemu_kvm_exe, MAX_PATH_LEN-1,
-           "%s/cloonfs/cloonix-qemu-system", cfg_get_bin_dir());
+           "%s/cloonfs/bin/cloonix-qemu-system", cfg_get_bin_dir());
   if (test_dev_kvm(info))
     result = -1;
   else if (!file_exists(qemu_kvm_exe, R_OK))
@@ -697,7 +697,7 @@ static void cow_look_clone_death(void *data, int status, char *name)
 static int cow_look_clone(void *data)
 {
   t_add_vm_cow_look *add_vm = (t_add_vm_cow_look *) data;
-  char *cmd = "/usr/libexec/cloonix/cloonfs/cloonix-qemu-img";
+  char *cmd = "/usr/libexec/cloonix/cloonfs/bin/cloonix-qemu-img";
   char rootfs[MAX_PATH_LEN];
   char *argv[] = { cmd, "info", rootfs, NULL, };
   memset(rootfs, 0, MAX_PATH_LEN);
@@ -2049,7 +2049,7 @@ void recv_fix_display(int llid, int tid, char *disp, char *buf)
   snprintf(wauth, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/.Xauthority", net);
     memset(cmd, 0, 2 * MAX_PATH_LEN);
     snprintf(cmd, 2 * MAX_PATH_LEN - 1, 
-             "/usr/libexec/cloonix/cloonfs/touch %s", wauth);
+             "/usr/libexec/cloonix/cloonfs/bin/touch %s", wauth);
     system(cmd);
     memset(cmd, 0, 2 * MAX_PATH_LEN);
     snprintf(cmd, 2 * MAX_PATH_LEN - 1,

@@ -55,6 +55,7 @@ else
   sed -i s"%__HOST_PULSE_PRESENT__.*%%"               ${CONFIG}/config.json
 fi
 #-----------------------------------------------------------------------------
+sed -i s"%__IDENT__%${IDENT}%"                     ${SERVER}/etc/systemd/system/cloonix.service
 sed -i s"%__IDENT__%${IDENT}%"                     ${SERVER}/cloonix-init-${IDENT}
 sed -i s"%__PROXYSHARE_IN__%${PROXYSHARE_IN}%"     ${SERVER}/cloonix-init-${IDENT}
 sed -i s"%__IDENT__%${IDENT}%"                     ${CONFIG}/config.json
@@ -123,6 +124,7 @@ EXTRACT="${EXTRACT}"
 PROXY="\${EXTRACT}/bin/cloonix-proxymous-\${IDENT}"
 CRUN="\${EXTRACT}/bin/cloonix-crun-\${IDENT}"
 CRUNROOT="\${EXTRACT}/worktmp"
+CGROUPM="--cgroup-manager=systemd"
 
 #-----------------------------------------------------------------------------
 case \$cmd in
@@ -137,13 +139,13 @@ case \$cmd in
     #------------------------------------------------------------------------
     \${PROXY} \${PROXYSHARE_OUT} \${IDENT}
     #------------------------------------------------------------------------
-    \${CRUN} --cgroup-manager=disabled \\
+    \${CRUN} \${CGROUPM} \\
              --root=\${EXTRACT}/worktmp \\
              --debug \\
              --log=\${EXTRACT}/worktmp/crun.log \\
              create -f \${EXTRACT}/config/config.json \${IDENT}
     #------------------------------------------------------------------------
-    \${CRUN} --cgroup-manager=disabled \\
+    \${CRUN} \${CGROUPM} \\
              --root=\${EXTRACT}/worktmp \\
              --debug \\
              --log=\${EXTRACT}/worktmp/crun.log \\
@@ -167,7 +169,7 @@ case \$cmd in
     cp \${XAUTHORITY} \${PROXYSHARE_OUT}/Xauthority
     while [ -z "\$(grep server_is_ready \${PROXYSHARE_OUT}/proxymous_start_status)" ]; do
       count_loop=\$((count_loop+1))
-      if [ \$count_loop -gt 10 ]; then
+      if [ \$count_loop -gt 20 ]; then
         echo Fail waiting for server look at:
         echo \${EXTRACT}/worktmp/crun.log
         echo \${EXTRACT}/rootfs/var/log/syslog
@@ -183,31 +185,33 @@ case \$cmd in
   ;;
 
   stop)
-    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} kil
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} kill \${IDENT} 9
+    sleep 1
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} delete \${IDENT}
   ;;
 
   web_on)
-    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} cnf web on
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} cnf web on
   ;;
 
   web_off)
-    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} cnf web off
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} cnf web off
   ;;
 
   shell)
-    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} /bin/bash 
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec -ti \${IDENT} /bin/bash 
   ;;
 
   canvas)
-    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} cloonix_gui \${IDENT}
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} cloonix_gui \${IDENT}
   ;;
 
   demo_ping)
-    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} /root/ping_demo.sh
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/ping_demo.sh
   ;;
 
   demo_frr)
-    \${CRUN} --root=\${CRUNROOT} exec \${IDENT} /root/spider_frr.sh
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/spider_frr.sh
   ;;
 
   *)

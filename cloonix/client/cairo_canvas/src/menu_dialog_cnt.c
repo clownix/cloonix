@@ -43,11 +43,6 @@ GtkWidget *get_main_window(void);
 static t_custom_cnt g_custom_cnt;
 static GtkWidget *g_custom_dialog;
 static GtkWidget *g_brandtype_label;
-static GtkWidget *g_entry_image;
-static t_slowperiodic g_bulzip[MAX_BULK_FILES];
-static int g_nb_bulzip;
-static t_slowperiodic g_bulcvm[MAX_BULK_FILES];
-static int g_nb_bulcvm;
 
 typedef struct t_cb_endp_type
 {
@@ -71,135 +66,6 @@ static void append_grid(GtkWidget *grid, GtkWidget *entry, char *lab, int ln,
 } 
 /*--------------------------------------------------------------------------*/
       
-/****************************************************************************/
-static void img_get(GtkWidget *check, gpointer data)
-{       
-  char *name = (char *) data;
-  set_brandtype_image(NULL, name);
-  if (g_entry_image)
-    gtk_entry_set_text(GTK_ENTRY(g_entry_image), get_brandtype_image(NULL));
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static GtkWidget *get_bulk_choice(int nb_bul, t_slowperiodic *bul, char *image)
-{
-  int i, found = 0;
-  GtkWidget *el0, *el, *menu = gtk_menu_new();
-  GSList *group = NULL;
-  gpointer data;
-  if (nb_bul > 0)
-    {
-    for (i=0; i<nb_bul; i++)
-      {
-      el = gtk_radio_menu_item_new_with_label(group, bul[i].name);
-      if (i == 0)
-        {
-        el0 = el;
-        group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(el));
-        }
-      gtk_menu_shell_append(GTK_MENU_SHELL(menu), el);
-      data = (gpointer) bul[i].name;
-      g_signal_connect(G_OBJECT(el),"activate",G_CALLBACK(img_get),data);
-      if (!strcmp(image, bul[i].name))
-        {
-        found = 1;
-        gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el), TRUE);
-        }
-      }
-    if (found == 0)
-      {
-      strncpy(image, bul[0].name, MAX_NAME_LEN-1);
-      gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (el0), TRUE);
-      }
-    }
-  return menu;
-}
-/*--------------------------------------------------------------------------*/
-  
-/*****************************************************************************/
-static GtkWidget *setup_list_choices(void)
-{
-  GtkWidget *menu = NULL;
-  if (!strcmp(get_brandtype_type(), "brandzip"))
-    {
-    menu = get_bulk_choice(g_nb_bulzip, g_bulzip, get_brandtype_image(NULL));
-    }
-  else if (!strcmp(get_brandtype_type(), "brandcvm"))
-    {
-    menu = get_bulk_choice(g_nb_bulcvm, g_bulcvm, get_brandtype_image(NULL));
-    }
-  else if (!strcmp(get_brandtype_type(), "brandkvm"))
-    {
-    }
-  else
-    KOUT("ERROR %s", get_brandtype_type());
-  return menu;
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-static void cnt_update_brandtype_image(void)
-{
-  int i, found;
-  found = 0;
-  for (i=0; i<g_nb_bulzip; i++)
-    {
-    if (!strcmp(get_brandtype_image("brandzip"), g_bulzip[i].name))
-      found = 1;   
-    }
-  if (found == 0) 
-    {
-    if (g_nb_bulzip >= 1)
-      set_brandtype_image("brandzip", g_bulzip[0].name);
-    else
-      set_brandtype_image("brandzip", "no-zip-found");
-    }
-  found = 0;
-  for (i=0; i<g_nb_bulcvm; i++)
-    {
-    if (!strcmp(get_brandtype_image("brandcvm"), g_bulcvm[i].name))
-      found = 1;
-    }
-  if (found == 0)
-    {
-    if (g_nb_bulcvm >= 1)
-      set_brandtype_image("brandcvm", g_bulcvm[0].name);
-    else
-      set_brandtype_image("brandcvm", "no-cvm-found");
-    }
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void cnt_brandtype_cb(void)
-{
-  cnt_update_brandtype_image();
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void set_bulzip(int nb, t_slowperiodic *slowperiodic)
-{
-  if (nb<0 || nb >= MAX_BULK_FILES)
-    KOUT("%d", nb);
-  g_nb_bulzip = nb;
-  memset(g_bulzip, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  memcpy(g_bulzip, slowperiodic, g_nb_bulzip * sizeof(t_slowperiodic));
-}
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-void set_bulcvm(int nb, t_slowperiodic *slowperiodic)
-{
-  if (nb<0 || nb >= MAX_BULK_FILES)
-    KOUT("%d", nb);
-  g_nb_bulcvm = nb;
-  memset(g_bulcvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
-  memcpy(g_bulcvm, slowperiodic, g_nb_bulcvm * sizeof(t_slowperiodic));
-}
-/*--------------------------------------------------------------------------*/
-
 /****************************************************************************/
 static void is_persistent_toggle_zip(GtkToggleButton *togglebutton,
                                      gpointer user_data)
@@ -370,8 +236,7 @@ static void custom_vm_dialog_create(void)
 {
   int i, j, k, response, line_nb = 0;
   GSList *group = NULL;
-  GtkWidget *entry_name, *entry_startup_env, *grid, *parent;
-  GtkWidget *is_persistent, *image_menu, *image_sub;
+  GtkWidget *entry_name, *entry_startup_env, *grid, *parent, *is_persistent;
   GtkWidget *entry_vmount, *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
 
@@ -381,10 +246,6 @@ static void custom_vm_dialog_create(void)
     return;
     }
   
-  image_menu = gtk_menu_button_new();
-  g_entry_image = gtk_entry_new();
-  cnt_update_brandtype_image();
-
   grid = gtk_grid_new();
   gtk_grid_insert_column(GTK_GRID(grid), 0);
   gtk_grid_insert_column(GTK_GRID(grid), 1);
@@ -463,17 +324,8 @@ static void custom_vm_dialog_create(void)
     append_grid(grid, entry_vmount, "Vmount:", line_nb++, NULL);
     }
 
-  gtk_entry_set_text(GTK_ENTRY(g_entry_image), get_brandtype_image(NULL));
 
   g_brandtype_label = gtk_label_new(get_brandtype_type());
-  append_grid(grid, g_entry_image, "none", line_nb++, g_brandtype_label);
-  append_grid(grid, image_menu, "Choice:", line_nb++, NULL);
-  image_sub = setup_list_choices();
-  if (image_sub)
-    {
-    gtk_menu_button_set_popup(GTK_MENU_BUTTON(image_menu), image_sub);
-    gtk_widget_show_all(image_sub);
-    }
   gtk_box_pack_start(
         GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(g_custom_dialog))),
         grid, TRUE, TRUE, 0);
@@ -493,7 +345,6 @@ static void custom_vm_dialog_create(void)
     }
   gtk_widget_destroy(g_custom_dialog);
   g_custom_dialog = NULL;
-  g_entry_image = NULL;
 }
 /*--------------------------------------------------------------------------*/
 

@@ -4,7 +4,7 @@ if [ 1 -ne ${#} ]; then
   echo  cloonix_name needed as parameter.
   exit 1
 fi
-NSH="/usr/libexec/cloonix/cloonfs/cloonix-hide-dirs"
+NSH="/usr/libexec/cloonix/cloonfs/bin/cloonix-hide-dirs"
 cloonix_name=$1
 ${NSH} "lsh" ${cloonix_name}
 

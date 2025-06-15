@@ -241,7 +241,7 @@ static int local_cmd_system (char *cmd, char *par1, char *par2, char *par3,
 static int cprootfs_clone(void *data)
 {
   int result;
-  char *qimg = "/usr/libexec/cloonix/cloonfs/cloonix-qemu-img";
+  char *qimg = "/usr/libexec/cloonix/cloonfs/bin/cloonix-qemu-img";
   char parm[2*MAX_PATH_LEN];
   t_cprootfs_config *cprootfs = (t_cprootfs_config *) data;
   memset(parm, 0, 2*MAX_PATH_LEN);
@@ -452,9 +452,9 @@ static char **create_qemu_argv(t_vm *vm)
 
   snprintf(namespace, MAX_PATH_LEN-1, "%s_%s",
            BASE_NAMESPACE, cfg_get_cloonix_name());
-  snprintf(qemu_bin, MAX_PATH_LEN-1, "%s/cloonfs/cloonix-qemu-system",
+  snprintf(qemu_bin, MAX_PATH_LEN-1, "%s/cloonfs/bin/cloonix-qemu-system",
            cfg_get_bin_dir());
-  snprintf(qemu_data, MAX_PATH_LEN-1, "%s/cloonfs/qemu", cfg_get_bin_dir());
+  snprintf(qemu_data, MAX_PATH_LEN-1, "%s/cloonfs/bin/qemu", cfg_get_bin_dir());
   create_linux_cmd_kvm(vm, qemu_cmd);
 
   argv = (char **)clownix_malloc(200 * sizeof(char *), 13);

@@ -8,7 +8,11 @@ cd ${HERE}/crun_tainted
             --disable-shared \
             --enable-static \
             --enable-systemd \
-            --disable-lua-path-guessing \
+            --enable-seccomp \
+            --enable-caps \
+            --enable-bpf \
             --enable-embedded-yajl
 make
-strip ${HERE}/crun_tainted/crun
+# strip ${HERE}/crun_tainted/crun
+
+

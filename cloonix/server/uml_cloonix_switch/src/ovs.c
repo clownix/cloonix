@@ -504,7 +504,7 @@ void ovs_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     else if (!strcmp(line, "ovs_resp_suidroot_ko"))
       {
       KERR("ERROR: cloonix_ovs is not suid root");
-      KERR("sudo chmod u+s /usr/libexec/cloonix/cloonfs/cloonix-ovs-vswitchd");
+      KERR("sudo chmod u+s /usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-vswitchd");
       ovs_destroy();
       }
     else if (!strcmp(line, "ovs_resp_ovsdb_ko"))
@@ -683,6 +683,7 @@ static void ovs_destroy_test(void)
         } 
       else if (cur->destroy_requested == 1)
         { 
+KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO destroy_requested 1");
         if (cur->llid)
           {
           llid_trace_free(cur->llid, 0, __FUNCTION__);
@@ -721,11 +722,12 @@ void ovs_destroy(void)
     if (cur->llid == 0)
       {
       KERR("ERROR: LINK TO OVS DEAD");
-      cur->destroy_requested = 3;
+      cur->destroy_requested = 4;
       }
     else
       {
-      cur->destroy_requested = 4;
+ KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO ovs_destroy");
+      cur->destroy_requested = 100;
       }
     }
 }

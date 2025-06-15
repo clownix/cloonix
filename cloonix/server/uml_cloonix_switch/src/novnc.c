@@ -34,13 +34,13 @@
 #include "file_read_write.h"
 #include "utils_cmd_line_maker.h"
 
-#define BIN_XVFB       "/usr/libexec/cloonix/cloonfs/cloonix-novnc-Xvfb"
-#define BIN_XSETROOT   "/usr/libexec/cloonix/cloonfs/cloonix-novnc-xsetroot"
-#define BIN_WM2        "/usr/libexec/cloonix/cloonfs/cloonix-novnc-wm2"
-#define BIN_X11VNC     "/usr/libexec/cloonix/cloonfs/cloonix-novnc-x11vnc"
-#define BIN_NGINX      "/usr/libexec/cloonix/cloonfs/cloonix-novnc-nginx"
+#define BIN_XVFB       "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-Xvfb"
+#define BIN_XSETROOT   "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-xsetroot"
+#define BIN_WM2        "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-wm2"
+#define BIN_X11VNC     "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-x11vnc"
+#define BIN_NGINX      "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-nginx"
 
-#define BIN_WEBSOCKIFY "/usr/libexec/cloonix/cloonfs/cloonix-novnc-websockify-js"
+#define BIN_WEBSOCKIFY "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-websockify-js"
 #define NODE_PATH      "/usr/share/nodejs:/usr/share/nodejs/node_modules"
 #define WEB            "--web=/usr/libexec/cloonix/cloonfs/share/noVNC/"
 

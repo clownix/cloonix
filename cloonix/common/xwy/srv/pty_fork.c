@@ -199,11 +199,11 @@ static void create_env_display(int net_rank, int display_val, char *ttyname)
   int display_val_rank;
   memset(disp_xwy, 0, MAX_TXT_LEN);
   memset(disp_X11, 0, MAX_TXT_LEN);
-  setenv("PATH",  "/usr/libexec/cloonix/cloonfs", 1);
+  setenv("PATH",  "/usr/libexec/cloonix/cloonfs/bin:/usr/libexec/cloonix/cloonfs/sbin", 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
   setenv("XAUTHORITY", g_xauthority, 1);
-  setenv("SHELL", "/usr/libexec/cloonix/cloonfs/cloonix-bash", 1);
+  setenv("SHELL", "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash", 1);
   setenv("TERM", "xterm", 1);
   if (display_val > 0)
     {
@@ -244,8 +244,8 @@ static void create_argv_from_cmd(char *cmd, char **argv)
   static char comp_cmd[MAX_MSG_LEN + MAX_PATH_LEN];
   memset(comp_cmd, 0, MAX_MSG_LEN + MAX_PATH_LEN);
   snprintf(comp_cmd, MAX_MSG_LEN + MAX_PATH_LEN -1,
-           "%s ; /usr/libexec/cloonix/cloonfs/sleep 1", cmd);
-  argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-bash";
+           "%s ; /usr/libexec/cloonix/cloonfs/bin/sleep 1", cmd);
+  argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash";
   argv[1] = "-c";
   argv[2] = comp_cmd;
   argv[3] = NULL;
@@ -354,7 +354,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       close(i);
     if (action == action_bash)
       {
-      argv[0] = "/usr/libexec/cloonix/cloonfs/cloonix-bash";
+      argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash";
       argv[1] = NULL;
       }
     else if (action == action_crun)
@@ -650,7 +650,7 @@ void pty_fork_init(char *net_name, int net_rank)
     KERR("ERROR %s", strerror(errno));
   snprintf(g_xauthority, MAX_TXT_LEN-1,
            "/var/lib/cloonix/%s/.Xauthority", g_net_name); 
-  sprintf(cmd, "/usr/libexec/cloonix/cloonfs/touch %s", g_xauthority);
+  sprintf(cmd, "/usr/libexec/cloonix/cloonfs/bin/touch %s", g_xauthority);
   system(cmd);
   if (wrap_pipe(pipe_fd, fd_type_pipe_sig, __FUNCTION__) < 0)
     KOUT(" ");

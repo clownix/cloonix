@@ -38,8 +38,8 @@ int main(int argc, char ** argv)
   memset(g_current_directory, 0, MAX_PATH_LEN);
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
-  if (access("/usr/libexec/cloonix/cloonfs/cloonix-dropbear-ssh", X_OK))
-    KOUT("/usr/libexec/cloonix/cloonfs/cloonix-dropbear-ssh");
+  if (access("/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh", X_OK))
+    KOUT("/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh");
   cli_getopts(argc, argv);
   if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
     KOUT("signal() error");

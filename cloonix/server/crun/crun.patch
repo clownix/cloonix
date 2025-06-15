@@ -1,6 +1,35 @@
+diff -Naur crun/src/libcrun/cgroup-utils.c crun_tainted/src/libcrun/cgroup-utils.c
+--- crun/src/libcrun/cgroup-utils.c	2025-06-14 21:37:57.000000000 +0200
++++ crun_tainted/src/libcrun/cgroup-utils.c	2025-06-14 22:16:14.670858048 +0200
+@@ -39,6 +39,15 @@
+ #include <fcntl.h>
+ #include <libgen.h>
+ 
++/*-------------------------------------------------------------------------*/
++#include <syslog.h>
++#define KERR(format, a...)                                    \
++ do {                                                         \
++    syslog(LOG_ERR | LOG_USER, "KERR line:%d " format "\n\n", \
++    __LINE__, ## a);                                \
++    } while (0)
++/*-------------------------------------------------------------------------*/
++
+ struct symlink_s
+ {
+   const char *name;
+@@ -952,6 +961,9 @@
+ int
+ libcrun_move_process_to_cgroup (pid_t pid, pid_t init_pid, const char *path, bool create_if_missing, libcrun_error_t *err)
+ {
++KERR("TOLOOKAT libcrun_move_process_to_cgroup return 0");
++    return 0;
++
+   int cgroup_mode = libcrun_get_cgroup_mode (err);
+   if (UNLIKELY (cgroup_mode < 0))
+     return cgroup_mode;
 diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
---- crun/src/libcrun/error.c	2025-05-30 08:02:09.000000000 +0200
-+++ crun_tainted/src/libcrun/error.c	2025-06-05 15:57:36.800385550 +0200
+--- crun/src/libcrun/error.c	2025-06-14 21:37:57.000000000 +0200
++++ crun_tainted/src/libcrun/error.c	2025-06-14 22:16:14.670858048 +0200
 @@ -44,6 +44,15 @@
  static int log_format;
  static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
@@ -18,9 +47,9 @@ diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
  libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
  {
 diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
---- crun/src/libcrun/linux.c	2025-05-30 08:02:09.000000000 +0200
-+++ crun_tainted/src/libcrun/linux.c	2025-06-05 15:59:07.484387702 +0200
-@@ -110,6 +110,15 @@
+--- crun/src/libcrun/linux.c	2025-06-14 21:37:57.000000000 +0200
++++ crun_tainted/src/libcrun/linux.c	2025-06-14 22:16:14.670858048 +0200
+@@ -111,6 +111,15 @@
  #define ALL_PROPAGATIONS_NO_REC (MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE)
  #define ALL_PROPAGATIONS (MS_REC | ALL_PROPAGATIONS_NO_REC)
  
@@ -36,7 +65,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
  struct remount_s
  {
    struct remount_s *next;
-@@ -1565,12 +1574,25 @@
+@@ -1596,12 +1605,25 @@
    return crun_make_error (err, 0, "unknown cgroup mode `%d`", cgroup_mode);
  }
  
@@ -63,7 +92,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
                                    {} };
  
  /* Check if the specified path is a direct child of /dev.  If it is
-@@ -1789,12 +1811,33 @@
+@@ -1820,12 +1842,32 @@
          return ret;
      }
  
@@ -74,7 +103,6 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
 +    {
 +    if (access("/dev/fuse", F_OK))
 +      KERR("ERROR /dev/fuse not writable");
-+    KERR("INFO: KVM FOUND INCLUDING DEVICES /dev/kvm...");
 +    for (it = needed_devs_cloonix; it->path; it++)
 +      {
 +        /* make sure the parent directory exists only on the first iteration.  */
@@ -102,7 +130,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
      }
  
    for (i = 0; symlinks[i].target; i++)
-@@ -1971,9 +2014,9 @@
+@@ -2002,9 +2044,9 @@
    if (strcmp (destination, "/dev/pts") == 0)
      {
        if (container->host_uid == 0)

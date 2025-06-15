@@ -1,8 +1,9 @@
 #!/bin/bash
 #----------------------------------------------------------------------------#
 set -e
+WITH_KVM="__WITH_KVM__"
+#----------------------------------------------------------------------------#
 BUNDLE="${HOME}/cloonix_bundle"
-ROOTFS="${BUNDLE}/cloonfs"
 if [ ! -e ${BUNDLE}/cloonix/cloonix_config ]; then
   echo NOT FOUND:
   echo ${BUNDLE}/cloonix/cloonix_config
@@ -14,11 +15,11 @@ SERVER=${BUNDLE}/cloonix/server
 #----------------------------------------------------------------------------#
 printf "\n\nBUILDING COMMON\n\n"
 #----------------------------------------------------------------------------#
-  for i in "lib_io_clownix" \
-           "lib_rpc_clownix" \
-           "lib_utils" \
-           "lib_rpc_doors" \
-           "lib_rpc_layout" ; do
+for i in "lib_io_clownix" \
+         "lib_rpc_clownix" \
+         "lib_utils" \
+         "lib_rpc_doors" \
+         "lib_rpc_layout" ; do
 
     cd ${COMMON}/${i}
     echo
@@ -27,26 +28,17 @@ printf "\n\nBUILDING COMMON\n\n"
     echo
     echo
     ./cmd
-  done
+done
 #----------------------------------------------------------------------------#
 printf "\n\nBUILDING CLIENT\n\n"
 #----------------------------------------------------------------------------#
-  for i in  "hide_dirs" \
-            "agent_dropbear" \
-            "lib_client" \
-            "ctrl" \
-            "xwycli" \
-            "rxvt" \
-            "cairo_canvas/crcanvas_gtk" \
-            "cairo_canvas/src/bank" \
-            "cairo_canvas/src/interface" \
-            "cairo_canvas/src/subsets" \
-            "cairo_canvas/src/bdplot" \
-            "cairo_canvas" \
-            "openssh" \
-            "spice" \
-            "spice_lib_client"; do
-
+for i in  "hide_dirs" \
+          "agent_dropbear" \
+          "lib_client" \
+          "ctrl" \
+          "xwycli" \
+          "rxvt" \
+          "cairo_canvas" ; do
     echo
     echo DOING:
     echo ${CLIENT}/${i}
@@ -54,12 +46,11 @@ printf "\n\nBUILDING CLIENT\n\n"
     echo
     cd ${CLIENT}/${i}
     ./cmd
-  done
-
+done
 #----------------------------------------------------------------------------#
 printf "\n\nBUILDING SERVER\n\n"
 #----------------------------------------------------------------------------#
-  for i in "script_pty" \
+  for i in  "script_pty" \
             "apk_tools" \
             "xorg" \
             "wireshark" \
@@ -79,8 +70,31 @@ printf "\n\nBUILDING SERVER\n\n"
             "ovs_snf" \
             "ovs_nat_main" \
             "ovs_a2b" \
-            "ovs_c2c" \
-            "spice_lib_server" \
+            "ovs_c2c" ; do
+    echo
+    echo DOING:
+    echo ${SERVER}/${i}
+    echo
+    echo
+    cd ${SERVER}/${i}
+    ./cmd
+  done
+#----------------------------------------------------------------------------#
+if [ "${WITH_KVM}" = "yes" ]; then
+
+  for i in  "openssh" \
+            "spice" \
+            "spice_lib_client"; do
+      echo
+      echo DOING:
+      echo ${CLIENT}/${i}
+      echo
+      echo
+      cd ${CLIENT}/${i}
+      ./cmd
+  done
+
+  for i in  "spice_lib_server" \
             "qemu"; do
     echo
     echo DOING:
@@ -90,6 +104,9 @@ printf "\n\nBUILDING SERVER\n\n"
     cd ${SERVER}/${i}
     ./cmd
   done
+
+fi
+#----------------------------------------------------------------------------#
   echo DOING:
   echo ${SERVER}/create_insider_agents_iso
   cd ${SERVER}/create_insider_agents_iso

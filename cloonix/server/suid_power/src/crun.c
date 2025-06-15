@@ -681,7 +681,6 @@ void crun_recv_sigdiag_msg(int llid, int tid, char *line)
         {
         if (is_privileged == 0)
           {
-          KERR("WARNING: SETTING PRIVILEGED ON FOR %s", image);
           is_privileged = 1;
           }
         }

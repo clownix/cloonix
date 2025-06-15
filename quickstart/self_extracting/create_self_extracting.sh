@@ -2,11 +2,20 @@
 #-----------------------------------------------------------------------------
 HERE=`pwd`
 #-----------------------------------------------------------------------------
-RESULT="${HOME}/cloonix-extractor-49-00.sh"
-PATCHELF="/usr/libexec/cloonix/cloonfs/cloonix-patchelf"
-CRUN="/usr/libexec/cloonix/cloonfs/cloonix-crun"
-PROXY="/usr/libexec/cloonix/cloonfs/cloonix-proxymous"
-XAUTH="/usr/libexec/cloonix/cloonfs/xauth"
+CLOONIX_CFG="/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
+if [ ! -e ${CLOONIX_CFG} ]; then
+  echo NOT FOUND:
+  echo ${CLOONIX_CFG}
+  exit 1
+fi
+VERSION=$(cat ${CLOONIX_CFG} | grep CLOONIX_VERSION)
+VERSION=${VERSION#*=}
+#----------------------------------------------------------------------
+RESULT="${HOME}/cloonix-extractor-${VERSION}.sh"
+PATCHELF="/usr/libexec/cloonix/cloonfs/bin/cloonix-patchelf"
+CRUN="/usr/libexec/cloonix/cloonfs/bin/cloonix-crun"
+PROXY="/usr/libexec/cloonix/cloonfs/bin/cloonix-proxymous"
+XAUTH="/usr/libexec/cloonix/cloonfs/bin/xauth"
 LD="/usr/libexec/cloonix/cloonfs/lib64/ld-linux-x86-64.so.2"
 COMMON_LIBS="/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu"
 #-----------------------------------------------------------------------------
@@ -76,8 +85,7 @@ ln -s /var/run run
 cd ${HERE}
 #-----------------------------------------------------------------------------
 cp -rf /usr/libexec/cloonix/cloonfs ${CLOONIX}
-cp -f /usr/bin/cloonix* ${CLOONIX}/cloonfs
-cp -f ${CLOONIX}/cloonfs/bash ${EXTRACT}/rootfs/bin
+cp -f ${CLOONIX}/cloonfs/bin/bash ${EXTRACT}/rootfs/bin
 cp -f ${HERE}/tools_crun/ping_demo.sh ${EXTRACT}/rootfs/root
 cp -f ${HERE}/tools_crun/spider_frr.sh ${EXTRACT}/rootfs/root
 cp -f ${ZIPFRR} ${VAR_CLOONIX}/bulk

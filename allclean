@@ -66,8 +66,7 @@ SERVER=${SRC_TREE_ROOT}/cloonix/server
   rm -f ${SERVER}/dtach/cloonix-dtach
   rm -f ${SERVER}/cloonix-proxymous
 #----------------------------------------------------------
-  for i in systemd \
-           apk_tools \
+  for i in apk_tools \
            script_pty \
            iproute2 \
            ovs \

@@ -307,68 +307,37 @@ int fct_seqtap_rx(int fd, uint8_t *rx, uint16_t *seq,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int get_pid_num_and_name(char *name)
-{
-  FILE *fp;
-  char ps_cmd[MAX_PATH_LEN];
-  char line[MAX_PATH_LEN];
-  char tmp_name[MAX_PATH_LEN];
-  int pid, result = 0;
-  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
-  fp = popen(ps_cmd, "r");
-  if (fp == NULL)
-    KERR("ERROR %s %d", ps_cmd, errno);
-  else
-    {
-    memset(line, 0, MAX_PATH_LEN);
-    while (fgets(line, MAX_PATH_LEN-1, fp))
-      {
-      if (sscanf(line,
-         "%d /usr/libexec/cloonix/cloonfs/cloonix-main-server "
-         "/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg %s",
-         &pid, tmp_name) == 2) 
-       {
-       result = pid;
-       strncpy(name, tmp_name, MAX_NAME_LEN-1);
-       break;
-       }
-      }
-    pclose(fp);
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
 int lib_io_running_in_crun(char *name)
 {
-  int pid, result = 0;
-  char *file_name = "/proc/1/cmdline";
-  char buf[MAX_PATH_LEN];
-  FILE *fd = fopen(file_name, "r");
-  if (fd == NULL)
-    KERR("WARNING: Cannot open %s", file_name);
-  else
+  int result = 0;
+  char *file_name = "/etc/systemd/system/cloonix.service";
+  char line[MAX_PATH_LEN];
+  char *ptr, *ptr_start, *ptr_end;
+  FILE *fp = fopen(file_name, "r");
+  if (fp != NULL)
     {
-    memset(buf, 0, MAX_PATH_LEN);
-    if (!fgets(buf, MAX_PATH_LEN-1, fd))
-      KERR("WARNING: Cannot read %s", file_name);
-    else if (strstr(buf, CRUN_STARTER))
+    while(fgets(line, MAX_PATH_LEN-1, fp))
       {
-      result = 1;
-      if (name)
+      ptr = strstr(line, "ExecStart=/usr/bin/cloonix_net");
+      if (ptr)
         {
-        memset(name, 0, MAX_NAME_LEN);
-        pid = get_pid_num_and_name(name);
-        if (pid == 0)
-          KERR("WARNING NO CLOONIX SERVER RUNNING");
+        result = 1;
+        ptr_start = strchr(ptr, ' ');
+        if (!ptr_start)
+          KERR("ERROR %s", line);
+        else if (name)
+          {
+          ptr_start = ptr_start+1;
+          ptr_end = ptr_start + strcspn(ptr_start, " \r\n\t");
+          *ptr_end = 0;
+          memset(name, 0, MAX_NAME_LEN);
+          strncpy(name, ptr_start, MAX_NAME_LEN-1);
+          }
         }
       }
     }
   return result;
 }
-/*--------------------------------------------------------------------------*/
 
 
 

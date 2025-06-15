@@ -205,7 +205,7 @@ char *utils_get_suid_power_bin_path(void)
   static char path[MAX_PATH_LEN];
   memset(path, 0, MAX_PATH_LEN);
   snprintf(path, MAX_PATH_LEN-1,
-           "%s/cloonfs/cloonix-suid-power", cfg_get_bin_dir());
+           "%s/cloonfs/bin/cloonix-suid-power", cfg_get_bin_dir());
   return path;
 }
 /*---------------------------------------------------------------------------*/
@@ -432,7 +432,7 @@ char *utils_get_qbackdoor_path(int vm_id)
 char *utils_get_dtach_bin_path(void)
 {
   static char dtach[MAX_PATH_LEN];
-  sprintf(dtach, "%s/cloonfs/cloonix-dtach", cfg_get_bin_dir());
+  sprintf(dtach, "%s/cloonfs/bin/cloonix-dtach", cfg_get_bin_dir());
   return dtach;
 }
 /*---------------------------------------------------------------------------*/
@@ -459,7 +459,7 @@ char *utils_get_ovs_dir(void)
 char *utils_get_ovs_bin_dir(void)
 {
   static char ovs[MAX_PATH_LEN];
-  snprintf(ovs, MAX_PATH_LEN-1, "%s/cloonfs", cfg_get_bin_dir());
+  snprintf(ovs, MAX_PATH_LEN-1, "%s/cloonfs/bin", cfg_get_bin_dir());
   return ovs;
 }
 /*---------------------------------------------------------------------------*/
@@ -469,7 +469,7 @@ char *utils_get_ovs_drv_bin_dir(void)
 {
   static char ovs_drv[MAX_PATH_LEN];
   snprintf(ovs_drv, MAX_PATH_LEN-1, 
-           "%s/cloonfs/cloonix-ovs-drv", cfg_get_bin_dir());
+           "%s/cloonfs/bin/cloonix-ovs-drv", cfg_get_bin_dir());
   return ovs_drv;
 }
 /*---------------------------------------------------------------------------*/
@@ -479,7 +479,7 @@ char *utils_get_ovs_snf_bin_dir(void)
 {
   static char ovs_snf[MAX_PATH_LEN];
   snprintf(ovs_snf, MAX_PATH_LEN-1, 
-           "%s/cloonfs/cloonix-ovs-snf", cfg_get_bin_dir());
+           "%s/cloonfs/bin/cloonix-ovs-snf", cfg_get_bin_dir());
   return ovs_snf;
 }
 /*---------------------------------------------------------------------------*/
@@ -489,7 +489,7 @@ char *utils_get_ovs_nat_main_bin_dir(void)
 {
   static char ovs_nat_main[MAX_PATH_LEN];
   snprintf(ovs_nat_main, MAX_PATH_LEN-1,
-           "%s/cloonfs/cloonix-ovs-nat-main", cfg_get_bin_dir());
+           "%s/cloonfs/bin/cloonix-ovs-nat-main", cfg_get_bin_dir());
   return ovs_nat_main;
 }
 /*---------------------------------------------------------------------------*/
@@ -499,7 +499,7 @@ char *utils_get_proxymous_bin(void)
 {
   static char proxymous[MAX_PATH_LEN];
   snprintf(proxymous, MAX_PATH_LEN-1,
-           "%s/cloonfs/cloonix-proxymous", cfg_get_bin_dir());
+           "%s/cloonfs/bin/cloonix-proxymous", cfg_get_bin_dir());
   return proxymous;
 }
 /*---------------------------------------------------------------------------*/
@@ -509,7 +509,7 @@ char *utils_get_ovs_a2b_bin_dir(void)
 {
   static char ovs_a2b[MAX_PATH_LEN];
   snprintf(ovs_a2b, MAX_PATH_LEN-1,
-           "%s/cloonfs/cloonix-ovs-a2b", cfg_get_bin_dir());
+           "%s/cloonfs/bin/cloonix-ovs-a2b", cfg_get_bin_dir());
   return ovs_a2b;
 }
 /*---------------------------------------------------------------------------*/
@@ -519,7 +519,7 @@ char *utils_get_ovs_c2c_bin_dir(void)
 {
   static char ovs_c2c[MAX_PATH_LEN];
   snprintf(ovs_c2c, MAX_PATH_LEN-1,
-           "%s/cloonfs/cloonix-ovs-c2c", cfg_get_bin_dir());
+           "%s/cloonfs/bin/cloonix-ovs-c2c", cfg_get_bin_dir());
   return ovs_c2c;
 }
 /*---------------------------------------------------------------------------*/
