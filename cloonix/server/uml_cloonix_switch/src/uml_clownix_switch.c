@@ -503,6 +503,77 @@ void check_for_work_dir_inexistance(void)
 }
 /*---------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static int get_info_exists(char *binary, char *pattern)
+{
+  FILE *fp;
+  char ps_cmd[MAX_PATH_LEN];
+  char line[MAX_PATH_LEN];
+  int result = 0;
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
+  fp = popen(ps_cmd, "r");
+  if (fp == NULL)
+    KERR("ERROR %s %d", ps_cmd, errno);
+  else
+    {
+    memset(line, 0, MAX_PATH_LEN);
+    while (fgets(line, MAX_PATH_LEN-1, fp))
+      {
+      if ((strstr(line, binary)) &&
+          (strstr(line, pattern)))
+        {
+        result = 1;
+        break;
+        }
+      }
+    pclose(fp);
+    }
+  return result;
+}
+/*--------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+static int tst_binaries_with_cloonix_name(char *cloonix_name)
+{
+  char pattern1[MAX_PATH_LEN];
+  char *binary;
+  int result = 0;
+  memset(pattern1, 0, MAX_PATH_LEN);
+  snprintf(pattern1, MAX_PATH_LEN-1, "/var/lib/cloonix/%s", cloonix_name);
+  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-doorways"; 
+  if (get_info_exists(binary, pattern1))
+    {
+    KERR("ERROR ps exists %s %s", binary, pattern1); 
+    result = 1;
+    }
+  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-drv"; 
+  if (get_info_exists(binary, pattern1))
+    {
+    KERR("ERROR ps exists %s %s", binary, pattern1); 
+    result = 1;
+    }
+  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovsdb-server";
+  if (get_info_exists(binary, pattern1))
+    {
+    KERR("ERROR ps exists %s %s", binary, pattern1); 
+    result = 1;
+    }
+  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-vswitchd";
+  if (get_info_exists(binary, pattern1))
+    {
+    KERR("ERROR ps exists %s %s", binary, pattern1); 
+    result = 1;
+    }
+  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-suid-power";
+  if (get_info_exists(binary, pattern1))
+    {
+    KERR("ERROR ps exists %s %s", binary, pattern1); 
+    result = 1;
+    }
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 int main (int argc, char *argv[])
 {
@@ -545,6 +616,11 @@ int main (int argc, char *argv[])
     {
     printf("Port: %d is in use!!\n", conf->server_port);
     KOUT("Port: %d is in use!!", conf->server_port);
+    }
+  else if (tst_binaries_with_cloonix_name(cfg_get_cloonix_name()))
+    {
+    printf("A cloonix binary is running with %s!!\n", cfg_get_cloonix_name());
+    KOUT("A cloonix binary is running with %s!!!", cfg_get_cloonix_name());
     }
   doorways_sock_init(0);
   doorways_init(cfg_get_cloonix_name(), cfg_get_root_work(),

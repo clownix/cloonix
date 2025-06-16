@@ -683,7 +683,6 @@ static void ovs_destroy_test(void)
         } 
       else if (cur->destroy_requested == 1)
         { 
-KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO destroy_requested 1");
         if (cur->llid)
           {
           llid_trace_free(cur->llid, 0, __FUNCTION__);
@@ -726,8 +725,7 @@ void ovs_destroy(void)
       }
     else
       {
- KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO ovs_destroy");
-      cur->destroy_requested = 100;
+      cur->destroy_requested = 6;
       }
     }
 }

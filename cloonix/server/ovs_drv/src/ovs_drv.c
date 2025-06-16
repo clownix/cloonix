@@ -912,7 +912,6 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
   else if (!strcmp(line, 
 "ovs_req_destroy"))
     {
-KERR("OOOOOOOOOOOOOOOOOOOOOOOOOOO %s", line);
     common_end_of_all_destroy();
     }
   else if ((!strcmp(line, 

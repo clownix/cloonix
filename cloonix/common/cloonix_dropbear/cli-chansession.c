@@ -223,12 +223,7 @@ static int get_magic_cookie_with_display(char *magic)
   snprintf(tmp2, MAX_PATH_LEN-1, "%s_%s", tmpmc, randstr);
   unlink(tmp2);
 
-/*
-/usr/libexec/cloonix/cloonfs/bin/xauth nextract /tmp/cloonix_toto :713
-
-*/
   snprintf(cmd, MAX_PATH_LEN-1, "%s nextract %s %s", XAUTH_BIN, tmp2, display);
-KERR("OOOOOOOOOOOOOOOO %s", cmd);
   if (system(cmd))
     KERR("ERROR %s", cmd);
   else
@@ -238,7 +233,6 @@ KERR("OOOOOOOOOOOOOOOO %s", cmd);
       KERR("ERROR path=%s cmd=%s", tmp2, cmd);
     else
       {
-KERR("OOOOOOOOOOOOOOOO %s", buf);
       ptr = strrchr(buf, ' ');
       if (ptr)
         {
@@ -247,7 +241,6 @@ KERR("OOOOOOOOOOOOOOOO %s", buf);
         ptr[nb] = 0;
         strncpy(magic, ptr, MAX_NAME_LEN-1);
         result = 0;
-KERR("OOOOOOOOOOOOOOOO %s", ptr);
         }
       free(buf);
       }
