@@ -1,7 +1,8 @@
 OBJ_DIR=./obj/
 WARNINGS = -Wall  -Wno-format-truncation
 EXE = cloonix-hide-dirs
-SRC = client_hide.c hide_dirs.c
+SRC = client_hide.c hide_dirs.c pthexec.c
+VPATH=../../common/glob_include
 INCLUDES = -I../../common/glob_include 
 CFLAGS = -g $(WARNINGS) $(INCLUDES)
 all: $(shell mkdir -p ./obj) $(EXE)

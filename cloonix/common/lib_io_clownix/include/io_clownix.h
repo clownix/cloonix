@@ -191,8 +191,6 @@ unsigned long channel_get_tx_queue_len(int llid);
 void doors_tx_switch_val_none(int llid, int len, char *buf);
 void doors_tx_switch_val_c2c(int llid, int len, char *buf);
 
-int lib_io_running_in_crun(char *name);
-
 int msg_mngt_get_tx_queue_len(int llid);
 
 char *malloc_to_ascii_encode(int len, uint8_t *msg);

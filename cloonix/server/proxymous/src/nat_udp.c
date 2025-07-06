@@ -147,7 +147,7 @@ static void udp_free(t_ctx_nat *ctx, t_llid_udp *cur_llid)
   char *proxydir = get_proxyshare();
 
   memset(prefx, 0, MAX_PATH_LEN);
-  snprintf(prefx, MAX_PATH_LEN-1, "%s/dgram", proxydir);
+  snprintf(prefx, MAX_PATH_LEN-1, "%s/dgrm", proxydir);
   if ((!ctx) || (!cur_llid))
     KOUT("ERROR %p %p", ctx, cur_llid);
   cur = cur_llid->item;
@@ -422,8 +422,10 @@ static void timeout_beat(void *data)
     else
       {
       cur->inactivity_count += 1;
-      if (cur->inactivity_count > 5)
+      if (cur->inactivity_count > 30)
+        {
         udp_free(cur->ctx, cur_llid);
+        }
       }
     cur_llid = next_llid;
     }
@@ -432,22 +434,22 @@ static void timeout_beat(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int nat_udp_dgram_proxy_req(t_ctx_nat *ctx, char *dgram_rx, char *dgram_tx,
-                            uint32_t sip, uint32_t dip, uint32_t dest_ip,
-                            uint16_t sport, uint16_t dport)
+int nat_udp_dgram_proxy_req(t_ctx_nat *ctx, char *end_dgram_rx,
+                            char *end_dgram_tx, uint32_t sip, uint32_t dip,
+                            uint32_t dest_ip, uint16_t sport, uint16_t dport)
 {
   int llidrx, llidtx, fdrx, fdtx, result = 0;
-  char prefx[MAX_PATH_LEN];
   char *proxydir = get_proxyshare();
-
-  memset(prefx, 0, MAX_PATH_LEN);
-  snprintf(prefx, MAX_PATH_LEN-1, "%s/dgram", proxydir);
+  char dgram_rx[MAX_PATH_LEN];
+  char dgram_tx[MAX_PATH_LEN];
+  snprintf(dgram_rx, MAX_PATH_LEN-1, "%s/%s", proxydir, end_dgram_rx);
+  snprintf(dgram_tx, MAX_PATH_LEN-1, "%s/%s", proxydir, end_dgram_tx);
   if (!ctx)
     KOUT("ERROR");
-  if (strncmp(dgram_rx, prefx, strlen(prefx)))
-    KERR("ERROR %s", dgram_rx);
-  else if (strncmp(dgram_tx, prefx, strlen(prefx)))
-    KERR("ERROR %s", dgram_tx);
+  if (strncmp(end_dgram_rx, "dgrm", strlen("dgrm")))
+    KERR("ERROR %s %s", end_dgram_rx, end_dgram_tx);
+  else if (strncmp(end_dgram_tx, "dgrm", strlen("dgrm")))
+    KERR("ERROR %s %s", end_dgram_rx, end_dgram_tx);
   else
     {
     llidrx = open_inet_udp_sock(&fdrx);

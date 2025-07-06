@@ -745,7 +745,7 @@ char *utils_get_disks_path_name(int vm_id)
 /*****************************************************************************/
 char *utils_get_cdrom_path_name(t_vm *vm)
 {
-  return(AGENT_ISO_AMD64);
+  return(pthexec_agent_iso_amd64());
 }
 /*---------------------------------------------------------------------------*/
 

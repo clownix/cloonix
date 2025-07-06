@@ -72,7 +72,7 @@ static int get_xauth_magic(char *display, char *err)
   memset(argv, 0, 5*sizeof(char *));
   memset(err, 0, MAX_TXT_LEN);
   memset(buf, 0, MAX_TXT_LEN);
-  argv[0] = XAUTH_BIN;
+  argv[0] = pthexec_xauth_bin();
   argv[1] = "list";
   argv[2] = display;
   argv[3] = NULL;

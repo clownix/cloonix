@@ -1,8 +1,13 @@
-#!/usr/libexec/cloonix/cloonfs/bin/bash
+#!/bin/bash
 set -e
-NSH="/usr/libexec/cloonix/cloonfs/bin/cloonix-hide-dirs"
-CLOONIX_CFG="/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
 
+if [ -x "/cloonix/cloonfs/bin/cloonix-hide-dirs" ]; then
+  NSH="/cloonix/cloonfs/bin/cloonix-hide-dirs"
+  CLOONIX_CFG="/cloonix/cloonfs/etc/cloonix.cfg"
+else
+  NSH="/usr/libexec/cloonix/cloonfs/bin/cloonix-hide-dirs"
+  CLOONIX_CFG="/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
+fi
 
 if [ 2 -gt ${#} ]; then
   echo error input params

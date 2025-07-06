@@ -88,7 +88,7 @@ static int has_sbin_init(char *bulk, char *image)
   memset(target_init2, 0, MAX_PATH_LEN);
   memset(target_init3, 0, MAX_PATH_LEN);
   snprintf(target_init1, MAX_PATH_LEN-1,
-           "%s/%s/bin/cloonixsbininit", bulk, image);
+           "%s/%s/sbin/cloonixsbininit", bulk, image);
   snprintf(target_init2, MAX_PATH_LEN-1,
            "%s/%s/sbin/init", bulk, image);
   snprintf(target_init3, MAX_PATH_LEN-1,

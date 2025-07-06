@@ -61,6 +61,20 @@ static void alloc_lib_all(char *name, char *path)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void create_libs_other(FILE *col, char *common, char *name_lib)
+{
+  fprintf(col, "if [ -d %s/lib/%s ]; then\n",
+          common, name_lib);
+  fprintf(col, "  for i in `find %s/lib/%s -type f` ; do\n",
+          common, name_lib);
+  fprintf(col, "    ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
+  fprintf(col, "  done\n");
+  fprintf(col, "fi\n");
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 static void create_libs_paragraph(FILE *col, char *common, char *name_lib)
 {
   fprintf(col, "if [ -d %s/lib/x86_64-linux-gnu/%s ]; then\n",
@@ -96,6 +110,11 @@ static int create_libs_txt(void)
     fprintf(col, "  ldd -v ${i} >> %s 2>/dev/null\n", g_dumps);
     fprintf(col, "done\n");
 
+    create_libs_other(col, g_rootfs, "frr");
+    create_libs_other(col, g_rootfs, "rsyslog");
+    create_libs_other(col, g_rootfs, "systemd");
+    create_libs_paragraph(col, g_rootfs, "rsyslog");
+    create_libs_paragraph(col, g_rootfs, "systemd");
     create_libs_paragraph(col, g_rootfs, "pipewire-0.3");
     create_libs_paragraph(col, g_rootfs, "gdk-pixbuf-2.0");
     create_libs_paragraph(col, g_rootfs, "gdk-pixbuf-2.0/2.10.0/loaders");

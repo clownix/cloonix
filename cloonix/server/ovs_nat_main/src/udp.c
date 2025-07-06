@@ -214,17 +214,13 @@ static t_udp_flow *alloc_udp_flow(int proxy_fd, int proxy_llid,
 /****************************************************************************/
 static void free_udp_flow(t_udp_flow *cur)
 {
-  char prefx[MAX_PATH_LEN];
-  char *net = get_net_name();
-  memset(prefx, 0, MAX_PATH_LEN);
-  snprintf(prefx, MAX_PATH_LEN-1, "%s_%s/dgram", PROXYSHARE_IN, net);
   close(cur->fd);
   if (cur->llid > 0)
     {
     if (msg_exist_channel(cur->llid))
       msg_delete_channel(cur->llid);
     }
-  if (strncmp(cur->dgram_rx, prefx, strlen(prefx)))
+  if (strncmp(cur->dgram_rx, "dgrm_", strlen("dgrm_")))
     KERR("ERROR %s", cur->dgram_rx);
   else
     unlink(cur->dgram_rx);
@@ -328,12 +324,17 @@ void udp_input(uint8_t *smac, uint8_t *dmac,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int dgram_tx_unix(char *dgram_tx, int len, char *data)
+int dgram_tx_unix(char *end_dgram_tx, int len, char *data)
 {
   struct sockaddr_un name;
   struct sockaddr *pname = (struct sockaddr *)&name;
   int len_tx, len_un = sizeof(struct sockaddr_un);
   int sock, result=0;
+  char dgram_tx[MAX_PATH_LEN];
+  char *net = get_net_name();
+  memset(dgram_tx, 0, MAX_PATH_LEN);
+  snprintf(dgram_tx, MAX_PATH_LEN-1, "%s_%s/%s",
+           PROXYSHARE_IN, net, end_dgram_tx);
   if (len >= MAX_DGRAM_LEN)
     KOUT("ERROR SOCK_DGRAM LEN %d %s", len, dgram_tx);
   memset(&name, 0, sizeof(struct sockaddr_un));
@@ -342,7 +343,6 @@ int dgram_tx_unix(char *dgram_tx, int len, char *data)
     KOUT("ERROR SOCK_DGRAM %s", dgram_tx);
   name.sun_family = AF_UNIX;
   strncpy(name.sun_path, dgram_tx, 107);
-
   len_tx = sendto(sock, data, len, 0, pname, len_un);
   while ((len_tx == -1) && (errno == EAGAIN))
     {
@@ -366,7 +366,6 @@ static void flow_to_path(char *dgram_rx, char *dgram_tx,
 {
   char asc_sip[MAX_NAME_LEN];
   char asc_dip[MAX_NAME_LEN];
-  char *net = get_net_name();
   memset(asc_sip, 0, MAX_NAME_LEN);
   memset(asc_dip, 0, MAX_NAME_LEN);
   memset(dgram_rx, 0, MAX_PATH_LEN);
@@ -374,15 +373,11 @@ static void flow_to_path(char *dgram_rx, char *dgram_tx,
   int_to_ip_string(sip, asc_sip);
   int_to_ip_string(dip, asc_dip);
   snprintf(dgram_rx, MAX_PATH_LEN-1,
-           "%s_%s/dgram_%s_%hu_%s_%hu_rx.sock", PROXYSHARE_IN, net,
+           "dgrm_%s_%hu_%s_%hu_rx.sock",
            asc_sip, sport, asc_dip, dport);
   snprintf(dgram_tx, MAX_PATH_LEN-1,
-           "%s_%s/dgram_%s_%hu_%s_%hu_tx.sock", PROXYSHARE_IN, net,
+           "dgrm_%s_%hu_%s_%hu_tx.sock",
            asc_sip, sport, asc_dip, dport);
-  if (strlen(dgram_tx) >= 108)
-    KOUT("ERROR PATH LEN %lu %s", strlen(dgram_tx), dgram_tx);
-  if (strlen(dgram_rx) >= 108)
-    KOUT("ERROR PATH LEN %lu %s", strlen(dgram_rx), dgram_rx);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -396,10 +391,8 @@ static int udp_init_unix(int *proxy_fd, int *proxy_llid,
   int llid, fd, result = -1;
   char buf[4 * MAX_PATH_LEN];
   int llid_prxy = get_llid_prxy();
-  char prefx[MAX_PATH_LEN];
+  char all_dgram_rx[MAX_PATH_LEN];
   char *net = get_net_name();
-  memset(prefx, 0, MAX_PATH_LEN);
-  snprintf(prefx, MAX_PATH_LEN-1, "%s_%s/dgram", PROXYSHARE_IN, net);
   if (!msg_exist_channel(llid_prxy))
     {
     KERR("ERROR");
@@ -409,38 +402,34 @@ static int udp_init_unix(int *proxy_fd, int *proxy_llid,
     *proxy_fd = -1;
     *proxy_llid = 0;
     flow_to_path(dgram_rx, dgram_tx, sip, dip, sport, dport);
-    if (strncmp(dgram_rx, prefx, strlen(prefx)))
+    memset(all_dgram_rx, 0, MAX_PATH_LEN);
+    snprintf(all_dgram_rx, MAX_PATH_LEN-1, "%s_%s/%s",
+             PROXYSHARE_IN, net, dgram_rx);
+    fd = util_socket_unix_dgram(all_dgram_rx);
+    if (fd < 0)
+      {
       KERR("ERROR %s", dgram_rx);
-    else if (strncmp(dgram_tx, prefx, strlen(prefx)))
-      KERR("ERROR %s", dgram_tx);
+      }
     else
       {
-      fd = util_socket_unix_dgram(dgram_rx);
-      if (fd < 0)
+      llid = msg_watch_fd(fd, rx_proxy_cb, err_proxy_cb, "udpd2d");
+      if (llid == 0)
         {
         KERR("ERROR %s", dgram_rx);
+        close(fd);
         }
       else
         {
-        llid = msg_watch_fd(fd, rx_proxy_cb, err_proxy_cb, "udpd2d");
-        if (llid == 0)
-          {
-          KERR("ERROR %s", dgram_rx);
-          close(fd);
-          }
-        else
-          {
-          *proxy_llid = llid;
-          *proxy_fd = fd; 
-          memset(buf, 0, 4*MAX_PATH_LEN);
-          snprintf(buf, 4*MAX_PATH_LEN-1, "nat_proxy_udp_req %s "
-                                          "dgram_rx:%s dgram_tx:%s "
-                                          "sip:%X dip:%X dest:%X "
-                                          "sport:%hu dport:%hu",
-          get_nat_name(),dgram_rx,dgram_tx,sip,dip,dest_ip,sport,dport);
-          rpct_send_sigdiag_msg(llid_prxy, 0, buf);
-          result = 0;
-          }
+        *proxy_llid = llid;
+        *proxy_fd = fd; 
+        memset(buf, 0, 4*MAX_PATH_LEN);
+        snprintf(buf, 4*MAX_PATH_LEN-1, "nat_proxy_udp_req %s "
+                                        "dgrm_rx:%s dgrm_tx:%s "
+                                        "sip:%X dip:%X dest:%X "
+                                        "sport:%hu dport:%hu",
+        get_nat_name(),dgram_rx,dgram_tx,sip,dip,dest_ip,sport,dport);
+        rpct_send_sigdiag_msg(llid_prxy, 0, buf);
+        result = 0;
         }
       }
     }

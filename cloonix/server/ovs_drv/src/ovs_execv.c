@@ -221,7 +221,7 @@ static int launch_ovsdb_server(char *ovs_bin, char *ovs_dir)
     unlink(get_pidfile_ovs(ovs_dir));
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
   memset(argv, 0, NB_ARG * sizeof(char *));
-  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s", OVSDB_SERVER_BIN);
+  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s", pthexec_ovsdb_server_bin());
   if (!file_exists(g_arg[0]))
     KOUT("MISSING %s", g_arg[0]);
   snprintf(g_arg[1],MAX_ARG_LEN-1,"%s/%s", ovs_dir, g_ovsdb_server_conf);
@@ -267,7 +267,7 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *ovs_dir)
 
   memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char)); 
   memset(argv, 0, NB_ARG * sizeof(char *));
-  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s", OVS_VSWITCHD_BIN);
+  snprintf(g_arg[0],MAX_ARG_LEN-1, "%s", pthexec_ovs_vswitchd_bin());
   if (!file_exists(g_arg[0]))
     KOUT("MISSING %s", g_arg[0]);
   snprintf(g_arg[1],MAX_ARG_LEN-1, "unix:%s/%s", ovs_dir, OVSDB_SERVER_SOCK);
@@ -316,11 +316,11 @@ int create_ovsdb_server_conf(char *ovs_bin, char *ovs_dir)
     memset(g_arg, 0, NB_ARG * MAX_ARG_LEN * sizeof(char));
     snprintf(cmd, 3*MAX_PATH_LEN-1,
              "%s create %s/%s %s/ovsschema/%s 2>%s",
-             OVSDB_TOOL_BIN,
+             pthexec_ovsdb_tool_bin(),
              ovs_dir, g_ovsdb_server_conf,
              ovs_bin, SCHEMA_TEMPLATE,
              flog);
-    argv[0] = BASH_BIN;
+    argv[0] = pthexec_bash_bin();
     argv[1] = "-c";
     argv[2] = cmd;
     argv[3] = NULL;

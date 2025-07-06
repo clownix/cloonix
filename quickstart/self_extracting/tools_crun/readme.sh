@@ -1,16 +1,19 @@
 #!/bin/sh
 #-----------------------------------------------------------------------------
 EXTRACT=`pwd`
-ROOTFS="${EXTRACT}/rootfs"
 if [ $# = 1 ]; then
   IDENT=$1
 else
   IDENT="nemo"
 fi
+cd ${EXTRACT}/..
+HERE=`pwd`
+mv ${EXTRACT} ${HERE}/dir_${IDENT}_extracted 
+cd ${HERE}/dir_${IDENT}_extracted
+EXTRACT=`pwd`
+ROOTFS="${EXTRACT}/rootfs"
 #-----------------------------------------------------------------------------
-printf "\n\tChosen ident: $IDENT.\n"
-#-----------------------------------------------------------------------------
-CLOONIX_CFG="${ROOTFS}/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
+CLOONIX_CFG="${ROOTFS}/cloonix/cloonfs/etc/cloonix.cfg"
 LIST=$(cat ${CLOONIX_CFG} |grep CLOONIX_NET: | awk '{print $2}')
 FOUND="no"
 for i in ${LIST} ; do
@@ -26,7 +29,7 @@ fi
 #-----------------------------------------------------------------------------
 BIN="${EXTRACT}/bin"
 CONFIG="${EXTRACT}/config"
-SERVER="${ROOTFS}/usr/libexec/cloonix/cloonfs"
+CLOONFS="${ROOTFS}/cloonix/cloonfs"
 PATCHELF="${EXTRACT}/bin/cloonix-patchelf"
 XAUTH="${EXTRACT}/bin/xauth"
 HOST_BULK="/var/lib/cloonix/bulk"
@@ -37,7 +40,8 @@ PROXYSHARE_OUT="/tmp/${IDENT}_proxymous_${USER}"
 PROXY="${BIN}/cloonix-proxymous-${IDENT}"
 CRUN="${BIN}/cloonix-crun-${IDENT}"
 #-----------------------------------------------------------------------------
-mv ${CONFIG}/cloonix-init-starter-crun   ${SERVER}/cloonix-init-${IDENT}
+mv ${CONFIG}/cloonixsbininitshared       ${ROOTFS}/cloonix/cloonfs/sbin
+mv ${CONFIG}/cloonix-init-starter-crun   ${ROOTFS}/cloonix/cloonix-init-${IDENT}
 mv ${CONFIG}/config.json.template        ${CONFIG}/config.json
 mv ${BIN}/cloonix-crun                   ${BIN}/cloonix-crun-${IDENT}
 mv ${BIN}/cloonix-proxymous              ${BIN}/cloonix-proxymous-${IDENT}
@@ -55,9 +59,9 @@ else
   sed -i s"%__HOST_PULSE_PRESENT__.*%%"               ${CONFIG}/config.json
 fi
 #-----------------------------------------------------------------------------
-sed -i s"%__IDENT__%${IDENT}%"                     ${SERVER}/etc/systemd/system/cloonix.service
-sed -i s"%__IDENT__%${IDENT}%"                     ${SERVER}/cloonix-init-${IDENT}
-sed -i s"%__PROXYSHARE_IN__%${PROXYSHARE_IN}%"     ${SERVER}/cloonix-init-${IDENT}
+sed -i s"%__IDENT__%${IDENT}%"                     ${CLOONFS}/etc/systemd/system/cloonix_server.service
+sed -i s"%__IDENT__%${IDENT}%"                     ${ROOTFS}/cloonix/cloonix-init-${IDENT}
+sed -i s"%__PROXYSHARE_IN__%${PROXYSHARE_IN}%"     ${ROOTFS}/cloonix/cloonix-init-${IDENT}
 sed -i s"%__IDENT__%${IDENT}%"                     ${CONFIG}/config.json
 sed -i s"%__PROXYSHARE_IN__%${PROXYSHARE_IN}%"     ${CONFIG}/config.json
 sed -i s"%__PROXYSHARE_OUT__%${PROXYSHARE_OUT}%"   ${CONFIG}/config.json
@@ -65,8 +69,11 @@ sed -i s"%__ROOTFS__%${ROOTFS}%"                   ${CONFIG}/config.json
 sed -i s"%__USER_UID__%${USER_UID}%"               ${CONFIG}/config.json
 sed -i s"%__USER_GID__%${USER_GID}%"               ${CONFIG}/config.json
 sed -i s"%__IDENT__%${IDENT}%"                     ${CONFIG}/readme.sh
-sed -i s"%__IDENT__%${IDENT}%"                     ${ROOTFS}/root/ping_demo.sh
-sed -i s"%__IDENT__%${IDENT}%"                     ${ROOTFS}/root/spider_frr.sh
+for i in $(ls ${CONFIG}/demos); do
+  sed -i s"%__IDENT__%${IDENT}%" ${CONFIG}/demos/${i}/demo.sh
+done
+mkdir -p ${ROOTFS}/root
+mv ${CONFIG}/demos ${ROOTFS}/root
 #-----------------------------------------------------------------------------
 for i in "cloonix-crun-${IDENT}" \
          "cloonix-proxymous-${IDENT}" \
@@ -79,7 +86,10 @@ ${PATCHELF} --add-needed ${BIN}/libz.so.1      ${BIN}/cloonix-proxymous-${IDENT}
 ${PATCHELF} --add-needed ${BIN}/libcrypto.so.3 ${BIN}/cloonix-proxymous-${IDENT}
 ${PATCHELF} --add-needed ${BIN}/libxcb.so.1    ${BIN}/xauth
 ${PATCHELF} --add-needed ${BIN}/libXdmcp.so.6  ${BIN}/xauth
-
+#---------------------------------------------------------------------------
+if [ -e /etc/resolv.conf ]; then
+  cp -f /etc/resolv.conf ${CLOONFS}/etc 
+fi
 #---------------------------------------------------------------------------
 pkill -f cloonix-proxymous-${IDENT} 1>/dev/null 2>&1
 rm -rf ${PROXYSHARE_OUT} 1>/dev/null 2>&1
@@ -96,7 +106,6 @@ else
   else
     XAUTH_EXTRACT=$(cat /tmp/xauth-${USER}-extracted)
     XAUTH_CODE=${XAUTH_EXTRACT##* }
-    echo Xauthority code: $XAUTH_CODE
   fi
 fi  
 #-----------------------------------------------------------------------------
@@ -109,10 +118,11 @@ if [ \${#} -ne 1 ]; then
   printf "./${IDENT}cmd stop\n"
   printf "./${IDENT}cmd shell\n"
   printf "./${IDENT}cmd canvas\n"
-  printf "./${IDENT}cmd demo_ping\n"
-  printf "./${IDENT}cmd demo_frr\n"
   printf "./${IDENT}cmd web_on\n"
   printf "./${IDENT}cmd web_off\n"
+  printf "./${IDENT}cmd demoline\n"
+  printf "./${IDENT}cmd demosquare\n"
+  printf "./${IDENT}cmd demospider\n"
   exit 
 fi
 cmd=\$1
@@ -121,10 +131,12 @@ IDENT="${IDENT}"
 XAUTH_CODE=${XAUTH_CODE}
 PROXYSHARE_OUT="${PROXYSHARE_OUT}"
 EXTRACT="${EXTRACT}"
+
 PROXY="\${EXTRACT}/bin/cloonix-proxymous-\${IDENT}"
 CRUN="\${EXTRACT}/bin/cloonix-crun-\${IDENT}"
 CRUNROOT="\${EXTRACT}/worktmp"
-CGROUPM="--cgroup-manager=systemd"
+CGROUPM_ON="--cgroup-manager=systemd"
+CGROUPM="--cgroup-manager=disabled"
 
 #-----------------------------------------------------------------------------
 case \$cmd in
@@ -139,7 +151,7 @@ case \$cmd in
     #------------------------------------------------------------------------
     \${PROXY} \${PROXYSHARE_OUT} \${IDENT}
     #------------------------------------------------------------------------
-    \${CRUN} \${CGROUPM} \\
+    \${CRUN} \${CGROUPM_ON} \\
              --root=\${EXTRACT}/worktmp \\
              --debug \\
              --log=\${EXTRACT}/worktmp/crun.log \\
@@ -172,8 +184,8 @@ case \$cmd in
       if [ \$count_loop -gt 20 ]; then
         echo Fail waiting for server look at:
         echo \${EXTRACT}/worktmp/crun.log
-        echo \${EXTRACT}/rootfs/var/log/syslog
-        echo journalctl -f
+        echo \${EXTRACT}/rootfs/root/cloonix-init-starter-crun.log
+        echo \${EXTRACT}/rootfs/cloonix/cloonfs/var/log/syslog
         exit 1
       fi
       cat \${PROXYSHARE_OUT}/proxymous_start_status 
@@ -188,6 +200,7 @@ case \$cmd in
     \${CRUN} \${CGROUPM} --root=\${CRUNROOT} kill \${IDENT} 9
     sleep 1
     \${CRUN} \${CGROUPM} --root=\${CRUNROOT} delete \${IDENT}
+    rm -rf \${PROXYSHARE_OUT}
   ;;
 
   web_on)
@@ -206,12 +219,14 @@ case \$cmd in
     \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} cloonix_gui \${IDENT}
   ;;
 
-  demo_ping)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/ping_demo.sh
+  demoline)
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/line/demo.sh
   ;;
-
-  demo_frr)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/spider_frr.sh
+  demosquare)
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/square/demo.sh
+  ;;
+  demospider)
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/spider/demo.sh
   ;;
 
   *)
@@ -231,8 +246,9 @@ printf "./${IDENT}cmd start\n"
 printf "./${IDENT}cmd stop\n"
 printf "./${IDENT}cmd shell\n"
 printf "./${IDENT}cmd canvas\n"
-printf "./${IDENT}cmd demo_ping\n"
-printf "./${IDENT}cmd demo_frr\n"
 printf "./${IDENT}cmd web_on\n"
 printf "./${IDENT}cmd web_off\n"
+printf "./${IDENT}cmd demoline\n"
+printf "./${IDENT}cmd demosquare\n"
+printf "./${IDENT}cmd demospider\n"
 #-----------------------------------------------------------------------------

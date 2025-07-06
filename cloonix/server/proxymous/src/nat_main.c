@@ -277,7 +277,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
         }
       }
     else if (sscanf(line,
-    "nat_proxy_tcp_req %s stream:%s sip:%X dip:%X sport:%hu dport:%hu",
+    "nat_proxy_tcp_req %s strm:%s sip:%X dip:%X sport:%hu dport:%hu",
     nat, stream, &sip, &dip, &sport, &dport) == 6)
       {
       if (strcmp(nat, cur->nat))
@@ -285,13 +285,13 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       else if (nat_tcp_stream_proxy_req(cur, stream, sip, dip, sport, dport))
         {
         snprintf(buf, 2*MAX_PATH_LEN-1,
-        "nat_proxy_tcp_req_ko %s stream:%s sip:%X dip:%X sport:%hu dport:%hu",
+        "nat_proxy_tcp_req_ko %s strm:%s sip:%X dip:%X sport:%hu dport:%hu",
         nat, stream, sip, dip, sport, dport);
         }
       else
         {
         snprintf(buf, 2*MAX_PATH_LEN-1,
-        "nat_proxy_tcp_req_ok %s stream:%s sip:%X dip:%X sport:%hu dport:%hu",
+        "nat_proxy_tcp_req_ok %s strm:%s sip:%X dip:%X sport:%hu dport:%hu",
         nat, stream, sip, dip, sport, dport);
         }
       rpct_send_sigdiag_msg(llid, 0, buf);
@@ -315,7 +315,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
         nat_tcp_stop_go(cur, sip, dip, sport, dport, 0);
       }
     else if (sscanf(line,
-    "nat_proxy_udp_req %s dgram_rx:%s dgram_tx:%s "
+    "nat_proxy_udp_req %s dgrm_rx:%s dgrm_tx:%s "
     "sip:%X dip:%X dest:%X sport:%hu dport:%hu",
     nat, dgram_rx, dgram_tx, &sip, &dip, &ipdst, &sport, &dport) == 8)
       {
@@ -325,14 +325,14 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
                                   sip, dip, ipdst, sport, dport))
         {
         snprintf(buf, 2*MAX_PATH_LEN-1,
-                 "nat_proxy_udp_resp_ko %s dgram_rx:%s dgram_tx:%s "
+                 "nat_proxy_udp_resp_ko %s dgrm_rx:%s dgrm_tx:%s "
                  "sip:%X dip:%X dest:%X sport:%hu dport:%hu",
                  nat, dgram_rx, dgram_tx, sip, dip, ipdst, sport, dport);
         }
       else
         {
         snprintf(buf, 2*MAX_PATH_LEN-1,
-                 "nat_proxy_udp_resp_ok %s dgram_rx:%s dgram_tx:%s "
+                 "nat_proxy_udp_resp_ok %s dgrm_rx:%s dgrm_tx:%s "
                  "sip:%X dip:%X dest:%X sport:%hu dport:%hu",
                  nat, dgram_rx, dgram_tx, sip, dip, ipdst, sport, dport);
         }

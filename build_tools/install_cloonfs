@@ -1,7 +1,5 @@
 #!/bin/bash
 #----------------------------------------------------------
-WITH_KVM="__WITH_KVM__"
-#----------------------------------------------------------
 if [ $UID != 0 ]; then
   printf "\n\tERROR: root privileges needed.\n\n"
   exit 1
@@ -15,11 +13,13 @@ fi
 #----------------------------------------------------------
 rm -rf /usr/libexec/cloonix
 rm -f  /usr/bin/cloonix_*
+mkdir -p /usr/libexec/cloonix
 #----------------------------------------------------------
-mkdir -p /usr/libexec/cloonix/cloonfs
-cp -rf cloonfs/* /usr/libexec/cloonix/cloonfs
-chown -R root:root /usr/libexec/cloonix/cloonfs
-chmod 755 -R /usr/libexec/cloonix
+for i in "cloonfs" "startup_bin" "insider_agents"; do
+  cp -rf ${i} /usr/libexec/cloonix
+done
+#----------------------------------------------------------
+chown -R root:root /usr/libexec/cloonix
 #----------------------------------------------------------
 for i in  "cloonix_net" \
           "cloonix_cli" \
@@ -39,19 +39,7 @@ for i in  "cloonix_net" \
   chmod 755 /usr/bin/${i}
 done
 #----------------------------------------------------------
-if [ "${WITH_KVM}" = "yes" ]; then
-#  TODO  if [ -d /usr/share/polkit-1/actions ]; then
-#  TODO    dstusb="/usr/share/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
-#  TODO    srcusb="/usr/libexec/cloonix/cloonfs/bin/polkit-1/actions/org.spice-space.lowlevelusbaccess.policy"
-#  TODO    if [ ! -e ${dstusb} ]; then
-#  TODO      cp -f ${srcusb} ${dstusb}
-#  TODO    fi
-#  TODO  fi
-  chmod u+s /usr/libexec/cloonix/cloonfs/bin/cloonix-spice-client-glib-usb-acl-helper
-  mkdir -p /var/lib/cloonix/cache/fontconfig
-  chmod 777 /var/lib/cloonix/cache
-  chmod 777 /var/lib/cloonix/cache/fontconfig
-fi
+chmod u+s /usr/libexec/cloonix/cloonfs/bin/cloonix-spice-client-glib-usb-acl-helper
 #----------------------------------------------------------
 for i in "cloonix-xwy-srv" \
          "cloonix-ovs-drv" \
@@ -63,7 +51,4 @@ for i in "cloonix-xwy-srv" \
          "cloonix-suid-power" ; do
   chmod u+s /usr/libexec/cloonix/cloonfs/bin/${i}
 done
-#----------------------------------------------------------
-mkdir -p /var/lib/cloonix/bulk
-chmod 777 /var/lib/cloonix/bulk
 #----------------------------------------------------------

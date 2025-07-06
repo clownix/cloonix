@@ -95,7 +95,6 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                 libxcb-randr0-dev libxcb-xkb-dev libxcb-glx0-dev \
                 libxcb-xv0-dev patchelf"
 
-#libguestfs-tools"
 
 cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                          -o Acquire::Check-Valid-Until=false \
@@ -110,6 +109,17 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                          libguestfs-ocaml-dev libfindlib-ocaml-dev \
                          libhivex-ocaml-dev libaugeas-ocaml-dev \
                          python3-jinja2 libbpf-dev libmnl-dev"
+
+cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
+                         -o Acquire::Check-Valid-Until=false \
+                         --allow-unauthenticated --assume-yes install \
+   git autoconf automake libtool make libyang-dev \
+   libprotobuf-c-dev protobuf-c-compiler build-essential \
+   python3-dev python3-pytest python3-sphinx libjson-c-dev \
+   libelf-dev libreadline-dev cmake libcap-dev bison flex \
+   pkg-config texinfo gdb libgrpc-dev python3-grpc-tools"
+
+
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "sync"
 cloonix_ssh ${NET} ${NAME} "sync"

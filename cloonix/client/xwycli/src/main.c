@@ -67,7 +67,7 @@ static char *init_local_cloonix_bin_path(char *callbin)
     KOUT("%s", path);
   *ptr = 0;
   strncpy(cloonix_root_tree, path, MAX_PATH_LEN-1);
-  if (access(XWYCLI_BIN, X_OK))
+  if (access(pthexec_xwycli_bin(), X_OK))
     KOUT("ERROR %s", path);
   return cloonix_root_tree;
 }
@@ -104,6 +104,7 @@ int main (int argc, char *argv[])
       usage();
     }
   DEBUG_INIT(0);
+  pthexec_init();
   init_local_cloonix_bin_path(argv[0]);
   doorways_sock_init(1);
   msg_mngt_init("ctrl", IO_MAX_BUF_LEN);

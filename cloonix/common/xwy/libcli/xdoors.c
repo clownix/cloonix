@@ -315,7 +315,7 @@ void xdoors_connect_init(char *net, uint32_t ip, int port, char *passwd,
   int llid, running_in_crun;
   char tmpnet[MAX_NAME_LEN];
   char pathcrun[MAX_PATH_LEN];
-  running_in_crun = lib_io_running_in_crun(tmpnet);
+  running_in_crun = pthexec_running_in_crun(tmpnet);
   if (running_in_crun && (!strcmp(tmpnet, net)))
     {
     snprintf(pathcrun, MAX_PATH_LEN-1,

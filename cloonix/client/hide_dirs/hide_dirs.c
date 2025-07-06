@@ -198,45 +198,12 @@ static void setup_mounts(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int lib_running_in_crun(char *name)
-{
-  int result = 0;
-  char *file_name = "/etc/systemd/system/cloonix.service";
-  char line[MAX_PATH_LEN];
-  char *ptr, *ptr_start, *ptr_end;
-  FILE *fp = fopen(file_name, "r");
-  if (fp != NULL)
-    {
-    while(fgets(line, MAX_PATH_LEN-1, fp))
-      {
-      ptr = strstr(line, "ExecStart=/usr/bin/cloonix_net");
-      if (ptr)
-        {
-        result = 1;
-        ptr_start = strchr(ptr, ' ');
-        if (!ptr_start)
-          KERR("ERROR %s", line);
-        else if (name)
-          {
-          ptr_start = ptr_start+1;
-          ptr_end = ptr_start + strcspn(ptr_start, " \r\n\t");
-          *ptr_end = 0;
-          memset(name, 0, MAX_NAME_LEN);
-          strncpy(name, ptr_start, MAX_NAME_LEN-1); 
-          }
-        }
-      }
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void hide_real_machine_cli(void)
 {
   uid_t my_uid;
   gid_t my_gid;
-  if (!lib_running_in_crun(NULL))
+  pthexec_init();
+  if (!pthexec_running_in_crun(NULL))
     {  
     my_uid = getuid();;
     my_gid = getgid();;
@@ -254,7 +221,8 @@ void hide_real_machine_serv(void)
 {
   uid_t my_uid;
   gid_t my_gid;
-  if (!lib_running_in_crun(NULL))
+  pthexec_init();
+  if (!pthexec_running_in_crun(NULL))
     {
     my_uid = getuid();;
     my_gid = getgid();;

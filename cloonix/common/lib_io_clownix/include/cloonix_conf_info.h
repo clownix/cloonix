@@ -34,7 +34,6 @@ typedef struct t_cloonix_conf_info
 
 /*****************************************************************************/
 char *cloonix_conf_info_get_version(void);
-char *cloonix_conf_info_get_tree(void);
 char *cloonix_conf_info_get_names(void);
 t_cloonix_conf_info *cloonix_cnf_info_get(char *name, int *rank);
 void cloonix_conf_info_get_all(int *nb, t_cloonix_conf_info **tab);

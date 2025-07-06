@@ -266,13 +266,17 @@ static void connect_from_traf_client(int llid, int llid_new)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int tcpconn_start(char *stream,
+static int tcpconn_start(char *end_stream,
                          uint32_t sip, uint32_t dip,
                          uint16_t sport, uint16_t dport)
 {
   int llid, result = 0;
   char sig_buf[2*MAX_PATH_LEN];
   int llid_prxy = get_llid_prxy();
+  char stream[MAX_PATH_LEN];
+  char *net = get_net_name();
+  memset(stream, 0, MAX_PATH_LEN);
+  snprintf(stream, MAX_PATH_LEN-1, "%s_%s/%s", PROXYSHARE_IN, net, end_stream);
   llid = proxy_traf_unix_server(stream, connect_from_traf_client);
   if (llid == 0)
     {
@@ -282,8 +286,8 @@ static int tcpconn_start(char *stream,
     {
     memset(sig_buf, 0, 2*MAX_PATH_LEN);
     snprintf(sig_buf, 2*MAX_PATH_LEN-1, 
-    "nat_proxy_tcp_req %s stream:%s sip:%X dip:%X sport:%hu dport:%hu",
-    get_nat_name(), stream, sip, dip, sport, dport);
+    "nat_proxy_tcp_req %s strm:%s sip:%X dip:%X sport:%hu dport:%hu",
+    get_nat_name(), end_stream, sip, dip, sport, dport);
     rpct_send_sigdiag_msg(llid_prxy, 0, sig_buf);
     result = llid;
     }
@@ -359,7 +363,6 @@ void tcp_input(uint8_t *smac, uint8_t *dmac,
   char dip_ascii[MAX_NAME_LEN];
   char stream[MAX_PATH_LEN];
   int llid_listen;
-  char *net = get_net_name();
 
   if ((cur) && (cur->flagseq) &&
       ((cur->flagseq->flag_fin_ack_rx == 1) ||
@@ -387,8 +390,8 @@ void tcp_input(uint8_t *smac, uint8_t *dmac,
           int_to_ip_string (sip, sip_ascii);
           int_to_ip_string (dip, dip_ascii);
           memset(stream, 0, MAX_PATH_LEN-1);
-          snprintf(stream, MAX_PATH_LEN-1, "%s_%s/tcp_%s_%hu_%s_%hu.sock",
-                   PROXYSHARE_IN, net, sip_ascii, sport, dip_ascii, dport);
+          snprintf(stream, MAX_PATH_LEN-1, "strm_%s_%hu_%s_%hu.sock",
+                   sip_ascii, sport, dip_ascii, dport);
           llid_listen = tcpconn_start(stream, sip, dip, sport, dport);
           if (llid_listen == 0)
             KERR("ERROR %X %X %hu %hu len:%d",sip,dip,sport,dport,data_len);

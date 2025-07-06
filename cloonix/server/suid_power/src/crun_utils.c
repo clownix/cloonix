@@ -169,7 +169,7 @@ static FILE *lio_popen(char *argv[], int *child_pid, int uid)
     timeout_pid = fork();
     if (timeout_pid == 0)
       {
-      sleep(10);
+      sleep(6);
       KERR("WARNING TIMEOUT SLOW CMD 1 %s", lio_linear(argv));
       exit(1);
       }
@@ -221,7 +221,7 @@ FILE *cmd_lio_popen(char *cmd, int *child_pid, int uid)
   log_write_req(cmd);
   strncpy(cpcmd, cmd, MAX_CMD_POPEN - 1);
   strcat(cpcmd, " 2>&1");
-  argv[0] = BASH_BIN;
+  argv[0] = pthexec_bash_bin();
   argv[1] = "-c";
   argv[2] = cpcmd;
   argv[3] = NULL;
@@ -345,15 +345,36 @@ static void extract_vmount(char *vmount,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char *format_buf_mount(char *mountbear, char *mounttmp,
-                              char *vmount, char *brandtype)
+static int directory_exists(char *path)
+{
+  struct stat sb;
+  int result = 0;
+  if (lstat(path, &sb) == 0) 
+    {
+    if ((sb.st_mode & S_IFMT) == S_IFDIR)
+      result = 1;
+    }
+  return result; 
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static char *format_buf_mount(char *image, char *rootfs, char *mountbear,
+                              char *mounttmp, char *vmount, char *brandtype)
 {
   int i;
+  char *self_rootfs_var_etc;
+  char *libmod = " ";
   char *buf_mount, *ptrs, *ptre;
   char vmountunit[MAX_VMOUNT][MAX_PATH_LEN];
   char vmountjson[MAX_VMOUNT][4*MAX_PATH_LEN];
+  char path_libmod[MAX_PATH_LEN];
   int len_mount = strlen(CONFIG_JSON_MOUNT) +
            MAX_VMOUNT*(strlen(CONFIG_JSON_MOUNT_ITEM)+(2*MAX_PATH_LEN)); 
+  memset(path_libmod, 0, MAX_PATH_LEN);
+  snprintf(path_libmod, MAX_PATH_LEN-1, "%s/lib/modules", rootfs);
+  if (directory_exists(path_libmod))
+    libmod = CONFIG_JSON_LIBMOD;
   extract_vmount(vmount, vmountunit);
   for (i=0; i<MAX_VMOUNT; i++) 
     {
@@ -392,18 +413,22 @@ static char *format_buf_mount(char *mountbear, char *mounttmp,
         }
       }
     }
+  if (!strcmp(image, "self_rootfs"))
+    self_rootfs_var_etc = CONFIG_JSON_SELF_ROOTFS;
+  else
+    self_rootfs_var_etc = " ";
   buf_mount = (char *) malloc(len_mount);
   memset(buf_mount, 0, len_mount);
   snprintf(buf_mount, len_mount-1,  CONFIG_JSON_MOUNT,
          vmountjson[0], vmountjson[1], vmountjson[2], vmountjson[3],
          vmountjson[4], vmountjson[5], vmountjson[6], vmountjson[7],
-         mountbear, mounttmp);
+         libmod, mountbear, self_rootfs_var_etc, mounttmp);
   return buf_mount;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static char *get_config_json(char *rootfs, char *nspacecrun,
+static char *get_config_json(char *image, char *rootfs, char *nspacecrun,
                              char *mountbear, char *mounttmp,
                              int is_persistent, int is_privileged,
                              char *brandtype,
@@ -439,29 +464,11 @@ static char *get_config_json(char *rootfs, char *nspacecrun,
   memset(sbin_init_starter, 0, MAX_PATH_LEN);
   memset(log_json, 0, MAX_PATH_LEN);
   snprintf(log_json, MAX_PATH_LEN-1, "%s/%s", g_var_crun_json, name); 
-  if (!strcmp(brandtype, "brandzip"))
-    {
-    snprintf(sbin_init_starter, MAX_PATH_LEN-1,
-             "\"%s\", \"-c\", \"%s\"", sh_starter, sbin_init);
-    }
-  else if (!strcmp(brandtype, "brandcvm"))
-    {
-    if (!strcmp(sbin_init, "/lib/systemd/systemd"))
-      {
-      snprintf(sbin_init_starter, MAX_PATH_LEN-1,
-               "\"%s\"", sbin_init);
-      }
-    else
-      {
-      snprintf(sbin_init_starter, MAX_PATH_LEN-1,
-               "\"%s\", \"-c\", \"%s\"", sh_starter, sbin_init);
-      }
-    }
-  else
-    KERR("ERROR %s", brandtype);
-
+  snprintf(sbin_init_starter, MAX_PATH_LEN-1,
+           "\"%s\", \"-c\", \"%s\"", sh_starter, sbin_init);
   format_startup_env(startup_env, env);
-  buf_mount = format_buf_mount(mountbear, mounttmp, vmount, brandtype);
+  buf_mount = format_buf_mount(image, rootfs, mountbear, mounttmp,
+                               vmount, brandtype);
   buf = (char *) malloc(len);
   buf_uid_gid = (char *) malloc(len_uid_gid); 
   memset(buf, 0, len);
@@ -573,21 +580,7 @@ static int dirscnt_upper(char *tmpfs)
   if (my_mkdir(path))
     KERR("ERROR %s", path);
   else
-    {
-    memset(path, 0, MAX_PATH_LEN);
-    snprintf(path, MAX_PATH_LEN-1, "%s/%s/usr", tmpfs, UPPER);
-    if (my_mkdir(path))
-      KERR("ERROR %s", path);
-    else
-      {
-      memset(path, 0, MAX_PATH_LEN);
-      snprintf(path, MAX_PATH_LEN-1, "%s/%s/usr/bin", tmpfs, UPPER);
-      if (my_mkdir(path))
-        KERR("ERROR %s", path);
-      else
-        result = 0;
-      }
-    }
+    result = 0;
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -636,12 +629,12 @@ static int create_all_dirs(char *image, char *cnt_dir, char *name,
     KERR("WARNING %s", path);
     memset(cmd, 0, 2*MAX_PATH_LEN);
     snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s/%s/%s/",
-             UMOUNT_BIN, cnt_dir, name, TMPFS); 
+             pthexec_umount_bin(), cnt_dir, name, TMPFS); 
     if (execute_cmd(cmd, 1, 0))
       KERR("WARNING %s", cmd);
     memset(cmd, 0, 2*MAX_PATH_LEN);
     snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s/%s/%s",
-             UMOUNT_BIN, cnt_dir, name, ROOTFS);
+             pthexec_umount_bin(), cnt_dir, name, ROOTFS);
     if (execute_cmd(cmd, 1, 0))
       KERR("WARNING %s", cmd);
     if (my_mkdir(path))
@@ -661,15 +654,15 @@ static char *get_insider_agent(void)
   struct stat sb;
   char *result = NULL;
 
-  if (lstat("/usr/libexec/cloonix/cloonfs/lib64", &sb) == 0)
+  if (lstat(pthexec_cloonfs_lib64(), &sb) == 0)
     {
-    if (lstat(AGENT_ISO_AMD64, &sb) == 0)
-      result = AGENT_ISO_AMD64;
+    if (lstat(pthexec_agent_iso_amd64(), &sb) == 0)
+      result = pthexec_agent_iso_amd64();
     else
-      KERR("ERROR %s NOT FOUND", AGENT_ISO_AMD64);
+      KERR("ERROR %s NOT FOUND", pthexec_agent_iso_amd64());
     }
   else
-    KERR("ERROR /usr/libexec/cloonix/cloonfs/lib64 NOT FOUND");
+    KERR("ERROR %s NOT FOUND", pthexec_cloonfs_lib64());
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -681,7 +674,7 @@ static int dirs_agent_copy_starter(char *mountbear, char *agent_dir)
   char path[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
   char line[MAX_NAME_LEN];
-  char *etc_path="/usr/libexec/cloonix/cloonfs/etc";
+  char *etc_path = pthexec_cloonfs_etc();
   char *iso = get_insider_agent();
   if (iso)
     {
@@ -689,7 +682,7 @@ static int dirs_agent_copy_starter(char *mountbear, char *agent_dir)
     memset(cmd, 0, 2*MAX_PATH_LEN);
     snprintf(path, MAX_PATH_LEN-1, "%s/cnf_fs", mountbear);
     snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -osirrox on -indev %s -extract / %s",
-             OSIRROX_BIN, iso, path); 
+             pthexec_osirrox_bin(), iso, path); 
     if (execute_cmd(cmd, 1, 0))
       KERR("ERROR %s", cmd);
     else
@@ -710,16 +703,15 @@ static int read_crun_create_pid(char *name, int should_not_exist,
   char line[MAX_PATH_LEN];
   int nb_tries = 15;
   char *cgroupman;
-  if (is_privileged)
-    cgroupman = CGROUP_DIS;
-  else
-    cgroupman = CGROUP_SYS;
+  cgroupman = CGROUP_DIS;
   if (should_not_exist)
     nb_tries = 1;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "%s %s --log=%s --root=/var/lib/cloonix/%s/%s state %s | %s \"\\\"pid\\\"\" | %s '{ print $2 }'",
-  CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name, GREP_BIN, AWK_BIN);
+  "%s %s --log=%s --root=/var/lib/cloonix/%s/%s state %s | "
+  "%s \"\\\"pid\\\"\" | %s '{ print $2 }'",
+  pthexec_crun_bin(), cgroupman, ptr, get_net_name(), CRUN_DIR,
+  name, pthexec_grep_bin(), pthexec_awk_bin());
   while(create_pid == 0)
     {
     count += 1;
@@ -774,14 +766,13 @@ static int read_crun_create_pid_while_delete(char *name, int uid_image,
   char cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
   char *cgroupman;
-  if (is_privileged)
-    cgroupman = CGROUP_DIS;
-  else
-    cgroupman = CGROUP_SYS;
+  cgroupman = CGROUP_DIS;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-  "%s %s --log=%s --root=/var/lib/cloonix/%s/%s state %s | %s \"\\\"pid\\\"\" | %s '{ print $2 }'",
-  CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name, GREP_BIN, AWK_BIN);
+  "%s %s --log=%s --root=/var/lib/cloonix/%s/%s state %s | "
+  "%s \"\\\"pid\\\"\" | %s '{ print $2 }'",
+  pthexec_crun_bin(), cgroupman, ptr, get_net_name(), CRUN_DIR,
+  name, pthexec_grep_bin(), pthexec_awk_bin());
   memset(line, 0, MAX_PATH_LEN);
   fp = cmd_lio_popen(cmd, &child_pid, 0);
   if (fp == NULL)
@@ -885,11 +876,9 @@ int crun_utils_create_overlay(char *mountbear, char *mounttmp,
         {
         memset(cmd, 0, 2*MAX_PATH_LEN);
         snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -R %d:%d %s",
-                 CHOWN_BIN, uid_image, uid_image, bulk_rootfs);
-        if (execute_cmd(cmd, 1, 0))
-          KERR("ERROR %s", cmd);
-        else
-          result = 0;
+                 pthexec_chown_bin(), uid_image, uid_image, bulk_rootfs);
+        execute_cmd(cmd, 1, 0);
+        result = 0;
         }
       else
         KOUT("ERROR %s", brandtype);
@@ -898,29 +887,35 @@ int crun_utils_create_overlay(char *mountbear, char *mounttmp,
   else
     {
     memset(cmd, 0, 2*MAX_PATH_LEN);
-    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -t tmpfs tmpfs %s/%s/%s",
-             MOUNT_BIN, cnt_dir, name, TMPFS);
+    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -t tmpfs -o mode=06777 tmpfs %s/%s/%s",
+             pthexec_mount_bin(), cnt_dir, name, TMPFS);
     if (execute_cmd(cmd, 1, 0))
       KERR("ERROR %s", cmd);
     else
       {
       memset(path, 0, MAX_PATH_LEN);
       snprintf(path, MAX_PATH_LEN-1, "%s/%s/%s", cnt_dir, name, TMPFS);
-
-  if (dirscnt_upper(path))
-    KERR("ERROR %s %s %s", path, name, agent_dir);
-  else if (dirscnt(mountbear, mounttmp, path, cnt_dir, name))
-    KERR("ERROR %s %s %s", path, name, agent_dir);
-  else if (dirs_agent_copy_starter(mountbear, agent_dir))
-    KERR("ERROR %s %s %s", path, name, agent_dir);
-  else
+      if (dirscnt_upper(path))
+        KERR("ERROR %s %s %s", path, name, agent_dir);
+      else if (dirscnt(mountbear, mounttmp, path, cnt_dir, name))
+        KERR("ERROR %s %s %s", path, name, agent_dir);
+      else if (dirs_agent_copy_starter(mountbear, agent_dir))
+        KERR("ERROR %s %s %s", path, name, agent_dir);
+      else
         {
+        if (strcmp(image, "self_rootfs"))
+          {
+          memset(cmd, 0, 2*MAX_PATH_LEN);
+          snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -R %d:%d %s",
+                   pthexec_chown_bin(), uid_image, uid_image, lower);
+          execute_cmd(cmd, 1, 0);
+          }
         memset(cmd, 0, 2*MAX_PATH_LEN);
         snprintf(cmd, 2*MAX_PATH_LEN-1,
           "%s -t overlay overlay "
           "-o index=off,xino=off,redirect_dir=nofollow,metacopy=off,uuid=off "
           "-o lowerdir=%s,upperdir=%s/%s/%s/%s,workdir=%s/%s/%s/%s %s/%s/%s",
-          MOUNT_BIN, lower, cnt_dir, name, TMPFS, UPPER,
+          pthexec_mount_bin(), lower, cnt_dir, name, TMPFS, UPPER,
           cnt_dir, name, TMPFS, WORKDIR, cnt_dir, name, ROOTFS);
         if (execute_cmd(cmd, 1, 0))
           KERR("ERROR %s", cmd);
@@ -938,7 +933,7 @@ int crun_utils_get_vswitchd_pid(char *name)
 {
   FILE *fp;
   int child_pid, wstatus, pid, result = 0;
-  char *ident1="usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-vswitchd";
+  char *ident1 = pthexec_cloonfs_ovs_vswitchd();
   char ident2[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
   char line[2*MAX_PATH_LEN];
@@ -948,7 +943,7 @@ int crun_utils_get_vswitchd_pid(char *name)
   "unix:/var/lib/cloonix/%s/ovsdb_server.sock", name);
   snprintf(cmd, 2*MAX_PATH_LEN-1,
            "%s axo pid,args | grep %s | grep %s | grep -v grep",
-           PS_BIN, ident1, ident2);
+           pthexec_ps_bin(), ident1, ident2);
   fp = cmd_lio_popen(cmd, &child_pid, 0);
   if (fp == NULL)
     {
@@ -982,7 +977,7 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name, int ovspid,
   else
     cgroupman = CGROUP_SYS;
   memset(cmd, 0, 4*MAX_PATH_LEN);
-  len += sprintf(cmd+len, "%s %s", CRUN_BIN, cgroupman); 
+  len += sprintf(cmd+len, "%s %s", pthexec_crun_bin(), cgroupman); 
   len += sprintf(cmd+len, " --debug"); 
   len += sprintf(cmd+len, " --log=%s", g_var_crun_log); 
   len += sprintf(cmd+len, " --root=/var/lib/cloonix/%s/%s",
@@ -1016,7 +1011,8 @@ void crun_utils_startup_env(char *mountbear, char *startup_env, int nb_eth)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int crun_utils_create_config_json(char *path, char *rootfs, char *nspacecrun,
+int crun_utils_create_config_json(char *image, char *path, char *rootfs,
+                                 char *nspacecrun,
                                  char *mountbear, char *mounttmp,
                                  int is_persistent, int is_privileged,
                                  char *brandtype,
@@ -1029,7 +1025,7 @@ int crun_utils_create_config_json(char *path, char *rootfs, char *nspacecrun,
   int len, result;
   char json_path[MAX_PATH_LEN];
   char tmp_json_path[MAX_PATH_LEN];
-  char *buf = get_config_json(rootfs, nspacecrun, mountbear, mounttmp,
+  char *buf = get_config_json(image, rootfs, nspacecrun, mountbear, mounttmp,
                               is_persistent, is_privileged, brandtype,
                               startup_env, vmount, name, ovspid,
                               uid_image, sbin_init, sh_starter,
@@ -1062,7 +1058,7 @@ static int crun_utils_create_veth(int vm_id, char *nspacecrun,
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s link add name %s%d_%d type veth peer name itp%d%d "
     "address %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-    IP_BIN, OVS_BRIDGE_PORT, vm_id, i, vm_id, i,
+    pthexec_ip_bin(), OVS_BRIDGE_PORT, vm_id, i, vm_id, i,
     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     if (execute_cmd(cmd, 1, 0))
       {
@@ -1071,7 +1067,7 @@ static int crun_utils_create_veth(int vm_id, char *nspacecrun,
       break;
       }
     snprintf(cmd, MAX_PATH_LEN-1,
-    "%s link set itp%d%d netns %s", IP_BIN, vm_id, i, nspacecrun);
+    "%s link set itp%d%d netns %s", pthexec_ip_bin(), vm_id, i, nspacecrun);
     if (execute_cmd(cmd, 1, 0))
       {
       KERR("ERROR %s", cmd);
@@ -1080,7 +1076,8 @@ static int crun_utils_create_veth(int vm_id, char *nspacecrun,
       }
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s link set %s%d_%d netns %s_%s",
-    IP_BIN, OVS_BRIDGE_PORT, vm_id, i, BASE_NAMESPACE, get_net_name());
+    pthexec_ip_bin(), OVS_BRIDGE_PORT, vm_id, i,
+    BASE_NAMESPACE, get_net_name());
     if (execute_cmd(cmd, 1, 0))
       {
       KERR("ERROR %s", cmd);
@@ -1089,7 +1086,7 @@ static int crun_utils_create_veth(int vm_id, char *nspacecrun,
       }
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s netns exec %s %s link set itp%d%d name eth%d",
-    IP_BIN, nspacecrun, IP_BIN, vm_id, i, i);
+    pthexec_ip_bin(), nspacecrun, pthexec_ip_bin(), vm_id, i, i);
     if (execute_cmd(cmd, 1, 0))
       {
       KERR("ERROR %s", cmd);
@@ -1098,7 +1095,7 @@ static int crun_utils_create_veth(int vm_id, char *nspacecrun,
       }
     snprintf(cmd, MAX_PATH_LEN-1,
     "%s netns exec %s %s link set eth%d up",
-    IP_BIN, nspacecrun, IP_BIN, i);
+    pthexec_ip_bin(), nspacecrun, pthexec_ip_bin(), i);
     if (execute_cmd(cmd, 1, 0))
       {
       KERR("ERROR %s", cmd);
@@ -1119,10 +1116,7 @@ void crun_utils_prepare_with_delete(char *name, char *nspacecrun,
   int i, pid = read_crun_create_pid(name, 1, uid_image, is_privileged);
   char *ptr = g_var_crun_log;
   char *cgroupman;
-  if (is_privileged)
-    cgroupman = CGROUP_DIS;
-  else
-    cgroupman = CGROUP_SYS;
+  cgroupman = CGROUP_DIS;
   if (pid)
     {
     KERR("ERROR %s", name);
@@ -1131,17 +1125,17 @@ void crun_utils_prepare_with_delete(char *name, char *nspacecrun,
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s %s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
-           CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name);
+           pthexec_crun_bin(), cgroupman, ptr, get_net_name(), CRUN_DIR, name);
   execute_cmd(cmd, 0, 0);
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s >/dev/null",
-           IP_BIN, nspacecrun);
+           pthexec_ip_bin(), nspacecrun);
   execute_cmd(cmd, 0, 0);
   for (i=0; i<nb_eth; i++)
     {
     memset(cmd, 0, MAX_PATH_LEN);
     snprintf(cmd, MAX_PATH_LEN-1, "%s link del name %s%d_%d",
-             IP_BIN, OVS_BRIDGE_PORT, vm_id, i);
+             pthexec_ip_bin(), OVS_BRIDGE_PORT, vm_id, i);
     execute_cmd(cmd, 0, 0);
     }
 }
@@ -1153,7 +1147,7 @@ int crun_utils_user_nspacecrun_init(char *nspacecrun, int crun_pid)
   int result = 0;
   char cmd[MAX_PATH_LEN];
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns attach %s %d",
-           IP_BIN, nspacecrun, crun_pid);
+           pthexec_ip_bin(), nspacecrun, crun_pid);
   if (execute_cmd(cmd, 1, 0))
     {
     KERR("ERROR %s", cmd);
@@ -1177,7 +1171,7 @@ int crun_utils_user_eth_create(char *name, char *nspacecrun,
     memset(cmd, 0, MAX_PATH_LEN);
     snprintf(cmd, MAX_PATH_LEN-1,
              "%s netns exec %s %s link set lo up",
-             IP_BIN, nspacecrun, IP_BIN);
+             pthexec_ip_bin(), nspacecrun, pthexec_ip_bin());
     if (execute_cmd(cmd, 1, 0))
       {
       KERR("ERROR %s", cmd);
@@ -1218,7 +1212,7 @@ int crun_utils_delete_overlay1(char *name, char *cnt_dir)
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s %s/%s/%s",
-           UMOUNT_BIN, cnt_dir, name, ROOTFS);
+           pthexec_umount_bin(), cnt_dir, name, ROOTFS);
   if (execute_cmd(cmd, 1, 0))
     {
     KERR("ERROR %s", cmd);
@@ -1242,7 +1236,7 @@ int crun_utils_delete_overlay2(char *name, char *cnt_dir)
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s %s/%s/%s",
-           UMOUNT_BIN, cnt_dir, name, TMPFS);
+           pthexec_umount_bin(), cnt_dir, name, TMPFS);
   if (execute_cmd(cmd, 1, 0))
     {
     KERR("ERROR %s", cmd);
@@ -1266,20 +1260,17 @@ void crun_utils_delete_crun_stop(char *name, int pid, int uid_image,
   char cmd[MAX_PATH_LEN];
   char *ptr = g_var_crun_log;
   char *cgroupman;
-  if (is_privileged)
-    cgroupman = CGROUP_DIS;
-  else
-    cgroupman = CGROUP_SYS;
+  cgroupman = CGROUP_DIS;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s %s --log=%s --root=/var/lib/cloonix/%s/%s kill %s",
-           CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name);
+           pthexec_crun_bin(), cgroupman, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1, 0))
     KERR("ERROR %s", cmd);
   if (pid)
     kill(pid, 9);
   memset(cmd, 0, MAX_PATH_LEN);
-  snprintf(cmd, MAX_PATH_LEN-1, "%s %s/tmp", UMOUNT_BIN, mountbear);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s %s/tmp", pthexec_umount_bin(), mountbear);
   execute_cmd(cmd, 0, 0);
 }
 /*--------------------------------------------------------------------------*/
@@ -1293,14 +1284,11 @@ void crun_utils_delete_crun_delete(char *name, char *nspacecrun,
   char cmd[MAX_PATH_LEN];
   char *ptr = g_var_crun_log;
   char *cgroupman;
-  if (is_privileged)
-    cgroupman = CGROUP_DIS;
-  else
-    cgroupman = CGROUP_SYS;
+  cgroupman = CGROUP_DIS;
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s %s --log=%s --root=/var/lib/cloonix/%s/%s delete %s",
-           CRUN_BIN, cgroupman, ptr, get_net_name(), CRUN_DIR, name);
+           pthexec_crun_bin(), cgroupman, ptr, get_net_name(), CRUN_DIR, name);
   if (execute_cmd(cmd, 1, 0))
     KERR("ERROR %s", cmd);
   pid = read_crun_create_pid_while_delete(name, uid_image, is_privileged);
@@ -1311,13 +1299,13 @@ void crun_utils_delete_crun_delete(char *name, char *nspacecrun,
     }
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s >/dev/null",
-           IP_BIN, nspacecrun);
+           pthexec_ip_bin(), nspacecrun);
   execute_cmd(cmd, 1, 0);
   for (i=0; i<nb_eth; i++)
     {
     memset(cmd, 0, MAX_PATH_LEN);
     snprintf(cmd, MAX_PATH_LEN-1, "%s link del name %s%d_%d",
-             IP_BIN, OVS_BRIDGE_PORT, vm_id, i);
+             pthexec_ip_bin(), OVS_BRIDGE_PORT, vm_id, i);
     execute_cmd(cmd, 1, 0);
     }
 }
@@ -1333,10 +1321,7 @@ int crun_utils_create_crun_start(char *name, int ovspid, int uid_image,
   char line[MAX_PATH_LEN];
   char *ptr = g_var_crun_log;
   char *cgroupman;
-  if (is_privileged)
-    cgroupman = CGROUP_DIS;
-  else
-    cgroupman = CGROUP_SYS;
+  cgroupman = CGROUP_DIS;
   memset(cmd, 0, MAX_PATH_LEN);
   memset(crun_dir, 0, MAX_PATH_LEN);
   memset(line, 0, MAX_PATH_LEN);
@@ -1344,7 +1329,8 @@ int crun_utils_create_crun_start(char *name, int ovspid, int uid_image,
   "/var/lib/cloonix/%s/%s", get_net_name(), CRUN_DIR);
   snprintf(cmd, MAX_PATH_LEN-1,
   "%s -t %d --net -- %s %s --debug --log=%s --root=%s start %s",
-  NSENTER_BIN, ovspid, CRUN_BIN, cgroupman, ptr, crun_dir, name);
+  pthexec_nsenter_bin(), ovspid, pthexec_crun_bin(),
+  cgroupman, ptr, crun_dir, name);
   if (execute_cmd(cmd, 1, 0))
     {
     KERR("ERROR %s", cmd);
@@ -1366,20 +1352,20 @@ char *utils_get_suid_power_bin_path(void)
 /****************************************************************************/
 void crun_utils_init(char *log)
 {
-  if (access(FUSEZIP_BIN, X_OK))
-    KERR("ERROR %s", FUSEZIP_BIN);
-  if (access(CRUN_BIN, X_OK))
-    KERR("ERROR %s", CRUN_BIN);
-  if (access(IP_BIN, X_OK))
-    KERR("ERROR %s", IP_BIN);
-  if (access(MOUNT_BIN, X_OK))
-    KERR("ERROR %s", MOUNT_BIN);
-  if (access(UMOUNT_BIN, X_OK))
-    KERR("ERROR %s", UMOUNT_BIN);
-  if (access(MKNOD_BIN, X_OK))
-    KERR("ERROR %s", MKNOD_BIN);
-  if (access(CHMOD_BIN, X_OK))
-    KERR("ERROR %s", CHMOD_BIN);
+  if (access(pthexec_fusezip_bin(), X_OK))
+    KERR("ERROR %s", pthexec_fusezip_bin());
+  if (access(pthexec_crun_bin(), X_OK))
+    KERR("ERROR %s", pthexec_crun_bin());
+  if (access(pthexec_ip_bin(), X_OK))
+    KERR("ERROR %s", pthexec_ip_bin());
+  if (access(pthexec_mount_bin(), X_OK))
+    KERR("ERROR %s", pthexec_mount_bin());
+  if (access(pthexec_umount_bin(), X_OK))
+    KERR("ERROR %s", pthexec_umount_bin());
+  if (access(pthexec_mknod_bin(), X_OK))
+    KERR("ERROR %s", pthexec_mknod_bin());
+  if (access(pthexec_chmod_bin(), X_OK))
+    KERR("ERROR %s", pthexec_chmod_bin());
   memset(g_var_log, 0, MAX_PATH_LEN);
   memset(g_var_crun_log, 0, MAX_PATH_LEN);
   snprintf(g_var_log,MAX_PATH_LEN-1,"%s/log/%s",log,DEBUG_LOG_SUID);

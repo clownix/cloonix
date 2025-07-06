@@ -5,6 +5,21 @@
 Software Release Information
 ============================
 
+
+v51-00
+======
+
+Specialization of the self-extracting to frr open source.
+extractor now named frr-toy.
+Use of the cloonix root file-system to be also a container.
+With monts inside the crun cloonix container, self_rootfs can
+be used as a container in the self-extracting case.
+
+As usual no time for real doc update ...
+
+
+
+
 v50-00
 ======
 
@@ -94,7 +109,7 @@ Note that for the sound, if you have a "$XDG_RUNTIME_DIR/pulse" directory,
 it is shared by the crun process and the sound flow works through it.
 
 For the software to be the same in the self-extracting rootless
-cloonix-extractor.sh case and the usual classical /usr/libexec/cloonix/
+frr-toy.sh case and the usual classical /usr/libexec/cloonix/
 installation, the proxymous process exists in both run, rootless or classical.
 In the rootless case it is launched in the namespace before the crun that
 launches the rest of cloonix, in the classical case, it is launched by the

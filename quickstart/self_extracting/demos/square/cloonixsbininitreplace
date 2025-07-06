@@ -1,0 +1,57 @@
+#!/bin/bash
+
+#----------------------------------------------------------------------------
+LOGFILE="/tmp/cloonix_sbin_init_replace.log"
+exec &> ${LOGFILE}
+echo "START cloonixsbininitreplace"
+#----------------------------------------------------------------------------
+NUM=${NODE_ID#cnt}
+case ${NUM} in
+  "11" | "21" | "31" | "12" | "22" | "32" | "13" | "23" | "33")
+    X=${NUM:0:1}
+    Y=${NUM:1:1}
+    LAN0="$((X)).$((Y-1)).1"
+    LAN1="$((X)).$((Y)).0"
+    LAN2="$((X)).$((Y)).1"
+    LAN3="$((X-1)).$((Y)).0"
+    IP0="${LAN0}.${NUM}"
+    IP1="${LAN1}.${NUM}"
+    IP2="${LAN2}.${NUM}"
+    IP3="${LAN3}.${NUM}"
+    echo NODE_ID:${NODE_ID} NUM:${NUM} X:${X} Y:${Y} 
+    echo ${LAN0} ${LAN1} ${LAN2} ${LAN3}
+  ;;
+   *)
+    echo "STARTUP SQUARE FAILURE NODE_ID=$NODE_ID"
+    exit 1
+esac
+#----------------------------------------------------------------------------
+sed -i s"/__NUM__/${NUM}/" /etc/frr/frr.conf
+#----------------------------------------------------------------------
+chmod 640 /etc/frr/*.conf
+echo "CONFIGURATION FOR /etc/frr DONE"
+#----------------------------------------------------------------------
+
+ifconfig eth0 ${IP0}/24 up
+echo "network ${LAN0}.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+
+ifconfig eth1 ${IP1}/24 up
+echo "network ${LAN1}.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+
+ifconfig eth2 ${IP2}/24 up
+echo "network ${LAN2}.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+
+ifconfig eth3 ${IP3}/24 up
+echo "network ${LAN3}.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+echo "CONFIGURATION FOR NETWORK DONE"
+#----------------------------------------------------------------------
+
+echo "LAUNCHING FRR: /sbin/frrinit.sh start"
+
+/sbin/frrinit.sh start
+##############################################################################
+
+

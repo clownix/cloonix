@@ -1,6 +1,6 @@
 diff -Naur crun/src/libcrun/cgroup-utils.c crun_tainted/src/libcrun/cgroup-utils.c
---- crun/src/libcrun/cgroup-utils.c	2025-06-14 21:37:57.000000000 +0200
-+++ crun_tainted/src/libcrun/cgroup-utils.c	2025-06-14 22:16:14.670858048 +0200
+--- crun/src/libcrun/cgroup-utils.c	2025-07-05 18:56:21.000000000 +0200
++++ crun_tainted/src/libcrun/cgroup-utils.c	2025-07-05 20:25:34.323065239 +0200
 @@ -39,6 +39,15 @@
  #include <fcntl.h>
  #include <libgen.h>
@@ -21,15 +21,15 @@ diff -Naur crun/src/libcrun/cgroup-utils.c crun_tainted/src/libcrun/cgroup-utils
  int
  libcrun_move_process_to_cgroup (pid_t pid, pid_t init_pid, const char *path, bool create_if_missing, libcrun_error_t *err)
  {
-+KERR("TOLOOKAT libcrun_move_process_to_cgroup return 0");
++//  KERR("TOLOOKAT libcrun_move_process_to_cgroup return 0");
 +    return 0;
 +
    int cgroup_mode = libcrun_get_cgroup_mode (err);
    if (UNLIKELY (cgroup_mode < 0))
      return cgroup_mode;
 diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
---- crun/src/libcrun/error.c	2025-06-14 21:37:57.000000000 +0200
-+++ crun_tainted/src/libcrun/error.c	2025-06-14 22:16:14.670858048 +0200
+--- crun/src/libcrun/error.c	2025-07-05 18:56:21.000000000 +0200
++++ crun_tainted/src/libcrun/error.c	2025-07-05 20:25:34.323065239 +0200
 @@ -44,6 +44,15 @@
  static int log_format;
  static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
@@ -47,8 +47,8 @@ diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
  libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
  {
 diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
---- crun/src/libcrun/linux.c	2025-06-14 21:37:57.000000000 +0200
-+++ crun_tainted/src/libcrun/linux.c	2025-06-14 22:16:14.670858048 +0200
+--- crun/src/libcrun/linux.c	2025-07-05 18:56:21.000000000 +0200
++++ crun_tainted/src/libcrun/linux.c	2025-07-05 20:25:34.327065272 +0200
 @@ -111,6 +111,15 @@
  #define ALL_PROPAGATIONS_NO_REC (MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE)
  #define ALL_PROPAGATIONS (MS_REC | ALL_PROPAGATIONS_NO_REC)
@@ -65,7 +65,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
  struct remount_s
  {
    struct remount_s *next;
-@@ -1596,12 +1605,25 @@
+@@ -1597,12 +1606,25 @@
    return crun_make_error (err, 0, "unknown cgroup mode `%d`", cgroup_mode);
  }
  
@@ -92,7 +92,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
                                    {} };
  
  /* Check if the specified path is a direct child of /dev.  If it is
-@@ -1820,12 +1842,32 @@
+@@ -1821,12 +1843,32 @@
          return ret;
      }
  
@@ -130,7 +130,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
      }
  
    for (i = 0; symlinks[i].target; i++)
-@@ -2002,9 +2044,9 @@
+@@ -2003,9 +2045,9 @@
    if (strcmp (destination, "/dev/pts") == 0)
      {
        if (container->host_uid == 0)

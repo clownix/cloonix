@@ -23,7 +23,7 @@ For the transfer of the gui to a web browser, other software used are:
 **nginx**, **noVNC**, **websockify-js**, **xorg**.
 
 For the self-extracting rootless install and run version component of
-cloonix named **cloonix-extractor-__LAST__.sh** in the download zone,
+cloonix named **frr-toy-__LAST__.sh** in the download zone,
 **makeself.sh** is used for packaging.
 
 Cloonix's first goal is an easy usage of the emulated network linking virtual
@@ -136,7 +136,7 @@ Directories in which cloonix is installed for classic use
 Directory in which cloonix is installed in the self_extracting case
 ===================================================================
 
-In this case, after the call to **cloonix-extractor-__LAST__.sh**, a new
+In this case, after the call to **frr-toy-__LAST__.sh**, a new
 directory is present in the current directory, called
 **dir_self_extracted**. For this installation or to run this version
 of cloonix, you do not need the root or admin privileges.
@@ -164,4 +164,4 @@ Content
      doc/items.rst
      doc/cisco.rst
      doc/ovs.rst
-     doc/cloonix_extractor.rst
+     doc/frr_toy.rst

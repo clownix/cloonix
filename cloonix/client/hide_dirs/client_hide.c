@@ -37,13 +37,13 @@
 #define PROCESS_STACK 500*1024
 
 void hide_real_machine_cli(void);
-int lib_running_in_crun(char *name);
 
 static FILE *g_log_cmd;
 static char *g_home;
 static char *g_display;
 static char *g_user;
 static char *g_xauthority;
+static char *g_xdg_runtime_dir;
 
 static char *g_id_rsa_cisco;
 
@@ -56,7 +56,11 @@ static int get_process_pid(char *cmdpath, char *sock)
   char name[MAX_NAME_LEN];
   char cmd[MAX_PATH_LEN];
   int pid, result = 0;
-  fp = popen("/usr/libexec/cloonix/cloonfs/bin/ps axo pid,args", "r");
+  char cmdps[2*MAX_PATH_LEN];
+
+  memset(cmdps, 0, 2*MAX_PATH_LEN);
+  snprintf(cmdps, 2*MAX_PATH_LEN-1, "%s axo pid,args", pthexec_ps_bin());
+  fp = popen(cmdps, "r");
   if (fp == NULL)
     KERR("ERROR %s %s", cmdpath, sock);
   else
@@ -87,8 +91,8 @@ static int get_process_pid(char *cmdpath, char *sock)
 static void kill_previous_wireshark_process(char *sock)
 {
   int pid_wireshark, pid_dumpcap;
-  pid_dumpcap   = get_process_pid(DUMPCAP_BIN, sock);
-  pid_wireshark = get_process_pid(WIRESHARK_BIN,  sock);
+  pid_dumpcap   = get_process_pid(pthexec_dumpcap_bin(), sock);
+  pid_wireshark = get_process_pid(pthexec_wireshark_bin(),  sock);
   if (pid_wireshark)
     {
     kill(pid_wireshark, SIGKILL);
@@ -126,10 +130,12 @@ static void set_env_global_cloonix(char *net)
     setenv("USER", g_user, 1);
   if (g_xauthority)
     setenv("XAUTHORITY", g_xauthority, 1);
-  setenv("PATH", "/usr/libexec/cloonix/cloonfs/bin:/usr/libexec/cloonix/cloonfs/sbin", 1);
+  if (g_xdg_runtime_dir)
+    setenv("XDG_RUNTIME_DIR", g_xdg_runtime_dir, 1);
+  setenv("PATH", pthexec_cloonfs_path(), 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
-  setenv("SHELL", "/usr/libexec/cloonix/cloonfs/bin/bash", 1);
+  setenv("SHELL", pthexec_bash_bin(), 1);
   setenv("TERM", "xterm", 1);
   setenv("NO_AT_BRIDGE", "1", 1);
   setenv("WAYLAND_DISPLAY", "", 1);
@@ -285,7 +291,7 @@ static void process_ocp(int argc, char **argv, char **new_argv,
   static char dist[MAX_PATH_LEN];
   char ocp_param[MAX_PATH_LEN];
   char tmpnet[MAX_NAME_LEN];
-  int running_in_crun = lib_running_in_crun(tmpnet);
+  int running_in_crun = pthexec_running_in_crun(tmpnet);
   char ipl[MAX_NAME_LEN];
   memset(ipl, 0, MAX_NAME_LEN);
   if (running_in_crun && (!strcmp(tmpnet, argv[2])))
@@ -303,7 +309,7 @@ static void process_ocp(int argc, char **argv, char **new_argv,
   snprintf(ocp_param, MAX_PATH_LEN-1,
            "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
            ipl, port, passwd, argv[3], argv[4]);
-  new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-u2i-scp";
+  new_argv[0] = pthexec_u2i_scp_bin();
   new_argv[1] = sock;
   new_argv[2] = "-i";
   new_argv[3] = g_id_rsa_cisco;
@@ -355,7 +361,7 @@ static void process_osh(int argc, char **argv, char **new_argv,
   static char ocp_param[MAX_PATH_LEN];
   int i;
   char tmpnet[MAX_NAME_LEN];
-  int running_in_crun = lib_running_in_crun(tmpnet);
+  int running_in_crun = pthexec_running_in_crun(tmpnet);
   char ipl[MAX_NAME_LEN];
   memset(ipl, 0, MAX_NAME_LEN);
   if (running_in_crun && (!strcmp(tmpnet, argv[2])))
@@ -372,7 +378,7 @@ static void process_osh(int argc, char **argv, char **new_argv,
   snprintf(ocp_param, MAX_PATH_LEN-1,
           "%s=%d=%s=nat_%s@user=admin=ip=%s=port=22=cloonix_info_end",
           ipl, port, passwd, argv[3], argv[4]);
-  new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-u2i-ssh";
+  new_argv[0] = pthexec_u2i_ssh_bin();
   new_argv[1] = sock;
   new_argv[2] = "-i";
   new_argv[3] = g_id_rsa_cisco;
@@ -393,7 +399,7 @@ static void fill_ipport(char *net, char *ip, int port, char *ipport)
   char tmpnet[MAX_NAME_LEN];
   char *pox = PROXYSHARE_IN;
   memset(ipport, 0, MAX_PATH_LEN);
-  running_in_crun = lib_running_in_crun(tmpnet);
+  running_in_crun = pthexec_running_in_crun(tmpnet);
   if (running_in_crun && (!strcmp(tmpnet, net)))
     snprintf(ipport, MAX_PATH_LEN-1, "%s_%s/proxy_pmain.sock", pox, net);
   else
@@ -419,29 +425,29 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_LSH-----------------------*/
   if (!strcmp("lsh", argv[1]))
     {
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/bash";
+    new_argv[0] = pthexec_bash_bin();
     }
 /*CLOONIX_DSH-----------------------*/
   else if (!strcmp("dsh", argv[1]))
     {
-    new_argv[0] = XWYCLI_BIN;
-    new_argv[1] = CLOONIX_CFG;
+    new_argv[0] = pthexec_xwycli_bin();
+    new_argv[1] = pthexec_cloonix_cfg();
     new_argv[2] = argv[2];
     new_argv[3] = "-cmd";
-    new_argv[4] = "/usr/libexec/cloonix/cloonfs/bin/bash";
+    new_argv[4] = pthexec_bash_bin();
     }
 /*CLOONIX_CLI-----------------------*/
   else if (!strcmp("cli", argv[1]))
     {
     if (argc < 4)
       {
-      new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ctrl";
-      new_argv[1] = CLOONIX_CFG;
+      new_argv[0] = pthexec_ctrl_bin();
+      new_argv[1] = pthexec_cloonix_cfg();
       }
     else
       {
-      new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ctrl";
-      new_argv[1] = CLOONIX_CFG;
+      new_argv[0] = pthexec_ctrl_bin();
+      new_argv[1] = pthexec_cloonix_cfg();
       new_argv[2] = argv[2];
       new_argv[3] = argv[3];
       for (i=0; i<MAX_NARGS; i++)
@@ -454,8 +460,8 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
 /*CLOONIX_GUI-----------------------*/
   else if (!strcmp("gui", argv[1]))
     {
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-gui";
-    new_argv[1] = CLOONIX_CFG;
+    new_argv[0] = pthexec_gui_bin();
+    new_argv[1] = pthexec_cloonix_cfg();
     new_argv[2] = argv[2];
     }
 /*CLOONIX_SCP-----------------------*/
@@ -464,7 +470,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if (argc < 5)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     fill_ipport(argv[2], ip, port, ipport);
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-scp";
+    new_argv[0] = pthexec_dropbear_scp();
     new_argv[1] = ipport;
     new_argv[2] = passwd;
     for (i=0; i<MAX_NARGS; i++)
@@ -479,7 +485,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if ((argc != 4) && (argc != 5))
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     fill_ipport(argv[2], ip, port, ipport);
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh";
+    new_argv[0] = pthexec_dropbear_ssh();
     new_argv[1] = ipport;
     new_argv[2] = passwd;
     new_argv[3] = argv[3];
@@ -494,15 +500,15 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     snprintf(title, MAX_NAME_LEN-1, "%s/%s", argv[2], argv[3]);
     snprintf(param, 399, "/var/lib/cloonix/%s/%s/%s",
                          argv[2], DTACH_SOCK, argv[3]);
-    new_argv[0]  = URXVT_BIN;
+    new_argv[0]  = pthexec_urxvt_bin();
     new_argv[1]  = "-T";
     new_argv[2]  = title;
     new_argv[3]  = "-e";
-    new_argv[4]  = XWYCLI_BIN;
-    new_argv[5]  = CLOONIX_CFG;
+    new_argv[4]  = pthexec_xwycli_bin();
+    new_argv[5]  = pthexec_cloonix_cfg();
     new_argv[6]  = argv[2];
     new_argv[7]  = "-cmd";
-    new_argv[8]  = "/usr/libexec/cloonix/cloonfs/bin/cloonix-dtach";
+    new_argv[8]  = pthexec_dtach_bin();
     new_argv[9]  = "-a";
     new_argv[10] = param;
     }
@@ -514,15 +520,16 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     if (argc != 4)
       KOUT("ERROR5 PARAM NUMBER %d", argc);
     snprintf(title, MAX_NAME_LEN-1, "%s/%s", argv[2], argv[3]);
-    snprintf(param, 399, "%s --log=/var/lib/cloonix/%s/log/debug_crun.log "
-                         "--root=/var/lib/cloonix/%s/%s/ exec -ti %s /bin/sh",
-                         CRUN_BIN, argv[2], argv[2], CRUN_DIR, argv[3]);
-    new_argv[0] = URXVT_BIN;
+    snprintf(param, 399, "%s --cgroup-manager=disabled "
+                     "--log=/var/lib/cloonix/%s/log/debug_crun.log "
+                     "--root=/var/lib/cloonix/%s/%s/ exec -ti %s /bin/sh",
+                     pthexec_crun_bin(), argv[2], argv[2], CRUN_DIR, argv[3]);
+    new_argv[0] = pthexec_urxvt_bin();
     new_argv[1] = "-T";
     new_argv[2] = title;
     new_argv[3] = "-e";
-    new_argv[4] = XWYCLI_BIN;
-    new_argv[5] = CLOONIX_CFG;
+    new_argv[4] = pthexec_xwycli_bin();
+    new_argv[5] = pthexec_cloonix_cfg();
     new_argv[6] = argv[2];
     new_argv[7] = "-crun";
     new_argv[8] = param;
@@ -536,7 +543,7 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     fill_ipport(argv[2], ip, port, ipport);
     snprintf(title, MAX_NAME_LEN-1, "--title=%s/%s", argv[2], argv[3]);
     snprintf(sock, 2*MAX_PATH_LEN-1, "/var/lib/cloonix/%s/vm/vm%s/spice_sock", argv[2], argv[4]);
-    new_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-spicy";
+    new_argv[0] = pthexec_spicy_bin();
     new_argv[1] = title;
     new_argv[2] = "-d";
     new_argv[3] = ipport;
@@ -554,11 +561,11 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
              argv[2], argv[3], argv[4]);
     snprintf(title, MAX_PATH_LEN-1, "%s,%s,eth%s", argv[2],  argv[3], argv[4]);
     kill_previous_wireshark_process(sock);
-    new_argv[0] = XWYCLI_BIN;
-    new_argv[1] = CLOONIX_CFG;
+    new_argv[0] = pthexec_xwycli_bin();
+    new_argv[1] = pthexec_cloonix_cfg();
     new_argv[2] = argv[2];
     new_argv[3] = "-dae";
-    new_argv[4] = WIRESHARK_BIN;
+    new_argv[4] = pthexec_wireshark_bin();
     new_argv[5] = "-i";
     new_argv[6] = sock;
     new_argv[7] = "-t";
@@ -569,11 +576,11 @@ static int initialise_new_argv(int argc, char **argv, char **new_argv,
     {
     snprintf(sock, 2*MAX_PATH_LEN-1,
              "--db=unix:/var/lib/cloonix/%s/ovsdb_server.sock", argv[2]);
-    new_argv[0] = XWYCLI_BIN;
-    new_argv[1] = CLOONIX_CFG;
+    new_argv[0] = pthexec_xwycli_bin();
+    new_argv[1] = pthexec_cloonix_cfg();
     new_argv[2] = argv[2];
     new_argv[3] = "-ovs";
-    new_argv[4] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-vsctl";
+    new_argv[4] = pthexec_ovs_vsctl_bin();
     new_argv[5] = sock;
     for (i=0; i<10; i++)
       {
@@ -607,13 +614,16 @@ int main(int argc, char *argv[])
   char passwd[MAX_NAME_LEN];
   char ip[MAX_NAME_LEN];
   int  port, pid;
-  char *cfg = CLOONIX_CFG;
+  char *cfg;
   char *new_argv[MAX_NARGS+10];
+  pthexec_init();
+  cfg = pthexec_cloonix_cfg();
   g_id_rsa_cisco = "/tmp/cloonix_private_id_rsa_cisco";
   g_xauthority = getenv("XAUTHORITY");
   g_home = getenv("HOME");
   g_display = getenv("DISPLAY");
   g_user = getenv("USER");
+  g_xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
   g_log_cmd = NULL;
   memset(new_argv, 0, (MAX_NARGS+10)*sizeof(char *));
   if (argc < 2)

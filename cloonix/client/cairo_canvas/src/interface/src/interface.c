@@ -270,18 +270,17 @@ static int start_launch(void *ptr)
 /****************************************************************************/
 void launch_xterm_double_click(char *name_vm, int vm_config_flags)
 {
-  static char title[2*MAX_NAME_LEN+1];
-  static char net[MAX_NAME_LEN];
-  static char name[MAX_NAME_LEN];
-  static char addr[MAX_NAME_LEN];
-  static char passwd[MAX_NAME_LEN];
-
-  static char *argv[] = {URXVT_BIN, "-T", title, "-e",
-                         "/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh",
-                         addr, passwd, name, NULL};
-
-  static char *argvnatplug[] = {URXVT_BIN, "-T", title, "-e",
-                                "/usr/bin/cloonix_osh", net, name, NULL};
+  char title[2*MAX_NAME_LEN+1];
+  char net[MAX_NAME_LEN];
+  char name[MAX_NAME_LEN];
+  char addr[MAX_NAME_LEN];
+  char passwd[MAX_NAME_LEN];
+  char *urxvt = pthexec_urxvt_bin();
+  char *dropbear = pthexec_dropbear_ssh();
+  char *argv[] = {urxvt, "-T", title, "-e", dropbear,
+                  addr, passwd, name, NULL};
+  char *argvnatplug[] = {urxvt, "-T", title, "-e",
+                         "/usr/bin/cloonix_osh", net, name, NULL};
 
   memset(title, 0, 2*MAX_NAME_LEN+1);
   memset(name, 0, MAX_NAME_LEN);

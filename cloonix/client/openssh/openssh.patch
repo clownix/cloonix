@@ -1,6 +1,6 @@
 diff -Naur openssh-portable/kex.c tainted_openssh-portable/kex.c
---- openssh-portable/kex.c	2025-05-30 08:03:31.000000000 +0200
-+++ tainted_openssh-portable/kex.c	2025-05-30 08:48:36.948007101 +0200
+--- openssh-portable/kex.c	2025-07-05 18:57:08.000000000 +0200
++++ tainted_openssh-portable/kex.c	2025-07-05 20:27:38.168060103 +0200
 @@ -1232,7 +1232,7 @@
   * Returns on 0 success or a ssherr.h code on failure.
   */
@@ -40,8 +40,8 @@ diff -Naur openssh-portable/kex.c tainted_openssh-portable/kex.c
  		oerrno = errno;
  		error_fr(r, "sshbuf_consume_end");
 diff -Naur openssh-portable/kex.h tainted_openssh-portable/kex.h
---- openssh-portable/kex.h	2025-05-30 08:03:31.000000000 +0200
-+++ tainted_openssh-portable/kex.h	2025-05-30 08:48:36.948007101 +0200
+--- openssh-portable/kex.h	2025-07-05 18:57:08.000000000 +0200
++++ tainted_openssh-portable/kex.h	2025-07-05 20:27:38.168060103 +0200
 @@ -198,7 +198,8 @@
      const char *, const char *, const char *, const char *, const char *);
  void	 kex_proposal_free_entries(char *prop[PROPOSAL_MAX]);
@@ -53,8 +53,8 @@ diff -Naur openssh-portable/kex.h tainted_openssh-portable/kex.h
  struct kex *kex_new(void);
  int	 kex_ready(struct ssh *, char *[PROPOSAL_MAX]);
 diff -Naur openssh-portable/Makefile.in tainted_openssh-portable/Makefile.in
---- openssh-portable/Makefile.in	2025-05-30 08:03:30.000000000 +0200
-+++ tainted_openssh-portable/Makefile.in	2025-05-30 08:48:36.948007101 +0200
+--- openssh-portable/Makefile.in	2025-07-05 18:57:08.000000000 +0200
++++ tainted_openssh-portable/Makefile.in	2025-07-05 20:27:38.168060103 +0200
 @@ -50,7 +50,7 @@
  LD=@LD@
  CFLAGS=@CFLAGS@
@@ -83,8 +83,8 @@ diff -Naur openssh-portable/Makefile.in tainted_openssh-portable/Makefile.in
  XMSS_OBJS=\
  	ssh-xmss.o \
 diff -Naur openssh-portable/misc.c tainted_openssh-portable/misc.c
---- openssh-portable/misc.c	2025-05-30 08:03:31.000000000 +0200
-+++ tainted_openssh-portable/misc.c	2025-05-30 08:48:36.948007101 +0200
+--- openssh-portable/misc.c	2025-07-05 18:57:08.000000000 +0200
++++ tainted_openssh-portable/misc.c	2025-07-05 20:27:38.168060103 +0200
 @@ -508,20 +508,8 @@
  
  	copy->pw_name = xstrdup(pw->pw_name);
@@ -142,16 +142,26 @@ diff -Naur openssh-portable/misc.c tainted_openssh-portable/misc.c
  }
  
  /*
-@@ -1203,6 +1184,8 @@
- 	struct passwd *pw;
+@@ -1204,6 +1185,18 @@
  	size_t len;
  	int ret = -1, r, slash;
-+struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash"};
-+pw = pwcopy(&my_pw);
  
++if (!access("/cloonix/cloonfs/bin/bash", X_OK))
++{
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/cloonix/cloonfs/bin/bash"};
++pw = pwcopy(&my_pw);
++}
++else
++{
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/bin/bash"};;
++pw = pwcopy(&my_pw);
++}
++
++
  	*retp = NULL;
  	if (*filename != '~') {
-@@ -1231,15 +1214,6 @@
+ 		*retp = xstrdup(filename);
+@@ -1231,15 +1224,6 @@
  		}
  		/* else					~user */
  	}
@@ -168,8 +178,8 @@ diff -Naur openssh-portable/misc.c tainted_openssh-portable/misc.c
  	/* Make sure directory has a trailing '/' */
  	slash = (len = strlen(pw->pw_dir)) == 0 || pw->pw_dir[len - 1] != '/';
 diff -Naur openssh-portable/openbsd-compat/vis.c tainted_openssh-portable/openbsd-compat/vis.c
---- openssh-portable/openbsd-compat/vis.c	2025-05-30 08:03:31.000000000 +0200
-+++ tainted_openssh-portable/openbsd-compat/vis.c	2025-05-30 08:48:36.952007125 +0200
+--- openssh-portable/openbsd-compat/vis.c	2025-07-05 18:57:08.000000000 +0200
++++ tainted_openssh-portable/openbsd-compat/vis.c	2025-07-05 20:27:38.168060103 +0200
 @@ -226,7 +226,7 @@
  	serrno = errno;
  	*outp = realloc(buf, len + 1);
@@ -180,8 +190,8 @@ diff -Naur openssh-portable/openbsd-compat/vis.c tainted_openssh-portable/openbs
  	}
  	return (len);
 diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
---- openssh-portable/scp.c	2025-05-30 08:03:31.000000000 +0200
-+++ tainted_openssh-portable/scp.c	2025-05-30 08:49:44.176388093 +0200
+--- openssh-portable/scp.c	2025-07-05 18:57:08.000000000 +0200
++++ tainted_openssh-portable/scp.c	2025-07-05 20:27:38.172060133 +0200
 @@ -134,6 +134,7 @@
  #include "progressmeter.h"
  #include "utf8.h"
@@ -329,15 +339,25 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
  int
  main(int argc, char **argv)
  {
-@@ -479,6 +462,26 @@
+@@ -479,6 +462,36 @@
  	enum scp_mode_e mode = MODE_SFTP;
  	char *sftp_direct = NULL;
  	long long llv;
 +int pid;
 +char *ptr;
 +char *u2i_ssh_path = get_cloonix_u2i_ssh_path(argv[0]);
-+struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash"};
-+pwd = &my_pw;
++
++if (!access("/cloonix/cloonfs/bin/bash", X_OK))
++{
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/cloonix/cloonfs/bin/bash"};
++pwd = pwcopy(&my_pw);
++}
++else
++{
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/bin/bash"};;
++pwd = pwcopy(&my_pw);
++}
++
 +ssh_program = u2i_ssh_path;
 +memset(g_cloonix_path, 0, MAX_INFO_LEN);
 +ptr = argv[1];
@@ -356,7 +376,7 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
  
  	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
  	sanitise_stdfd();
-@@ -500,6 +503,7 @@
+@@ -500,6 +513,7 @@
  	memset(&remote_remote_args, '\0', sizeof(remote_remote_args));
  	args.list = remote_remote_args.list = NULL;
  	addargs(&args, "%s", ssh_program);
@@ -364,7 +384,7 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
  	addargs(&args, "-x");
  	addargs(&args, "-oPermitLocalCommand=no");
  	addargs(&args, "-oClearAllForwardings=yes");
-@@ -646,12 +650,8 @@
+@@ -646,12 +660,8 @@
  	/* Do this last because we want the user to be able to override it */
  	addargs(&args, "-oForwardAgent=no");
  
@@ -377,7 +397,7 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
  	if (!isatty(STDOUT_FILENO))
  		showprogress = 0;
  
-@@ -695,11 +695,11 @@
+@@ -695,11 +705,11 @@
  	(void) ssh_signal(SIGPIPE, lostconn);
  
  	if (colon(argv[argc - 1]))	/* Dest is remote host. */
@@ -391,7 +411,7 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
  	}
  	/*
  	 * Finally check the exit status of the ssh process, if one was forked
-@@ -751,18 +751,6 @@
+@@ -751,18 +761,6 @@
  	return (response());
  }
  
@@ -410,7 +430,7 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
  /* Appends a string to an array; returns 0 on success, -1 on alloc failure */
  static int
  append(char *cp, char ***ap, size_t *np)
-@@ -1015,304 +1003,78 @@
+@@ -1015,304 +1013,78 @@
  	return ret;
  }
  
@@ -780,8 +800,8 @@ diff -Naur openssh-portable/scp.c tainted_openssh-portable/scp.c
  static char *
  prepare_remote_path(struct sftp_conn *conn, const char *path)
 diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
---- openssh-portable/ssh.c	2025-05-30 08:03:31.000000000 +0200
-+++ tainted_openssh-portable/ssh.c	2025-05-30 08:48:36.952007125 +0200
+--- openssh-portable/ssh.c	2025-07-05 18:57:08.000000000 +0200
++++ tainted_openssh-portable/ssh.c	2025-07-05 20:27:38.172060133 +0200
 @@ -114,6 +114,9 @@
  #include "ssh-pkcs11.h"
  #endif
@@ -858,7 +878,7 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
  /* Prints a help message to the user.  This function never returns. */
  
  static void
-@@ -688,6 +750,41 @@
+@@ -702,6 +764,51 @@
  	struct utsname utsname;
  	struct ssh_conn_info *cinfo = NULL;
  
@@ -869,8 +889,18 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
 +char cloonix_ip[MAX_NAME_LEN];
 +char *ptr;
 +int pid, cloonix_port;
-+struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash"};
++
++if (!access("/cloonix/cloonfs/bin/bash", X_OK))
++{
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/cloonix/cloonfs/bin/bash"};
 +pw = pwcopy(&my_pw);
++}
++else
++{
++struct passwd my_pw = { "admin", "admin", 1000, 1000, NULL, "/home/admin", "/usr/libexec/cloonix/cloonfs/bin/bash"};;
++pw = pwcopy(&my_pw);
++}
++
 +memset(cloonix_path, 0, MAX_INFO_LEN);
 +if (!test_file_is_socket(av[1]))
 +  strncpy(cloonix_path, av[1], MAX_INFO_LEN-1);
@@ -900,7 +930,7 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
  	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
  	sanitise_stdfd();
  
-@@ -712,14 +809,6 @@
+@@ -726,14 +833,6 @@
  
  	seed_rng();
  
@@ -915,7 +945,7 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
  
  	/*
  	 * Set our umask to something reasonable, as some files are created
-@@ -1111,6 +1200,7 @@
+@@ -1125,6 +1224,7 @@
  		}
  	}
  
@@ -923,7 +953,7 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
  	if (optind > 1 && strcmp(av[optind - 1], "--") == 0)
  		opt_terminated = 1;
  
-@@ -1118,38 +1208,10 @@
+@@ -1132,38 +1232,10 @@
  	av += optind;
  
  	if (ac > 0 && !host) {
@@ -966,7 +996,7 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
  		if (ac > 1 && !opt_terminated) {
  			optind = optreset = 1;
  			goto again;
-@@ -1448,21 +1510,6 @@
+@@ -1462,21 +1534,6 @@
  	cinfo->jmphost = xstrdup(options.jump_host == NULL ?
  	    "" : options.jump_host);
  
@@ -988,7 +1018,7 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
  	/* Now User is expanded, store it and calculate hash. */
  	cinfo->remuser = xstrdup(options.user);
  	cinfo->conn_hash_hex = ssh_connection_hash(cinfo->thishost,
-@@ -1689,10 +1736,8 @@
+@@ -1703,10 +1760,8 @@
  		free(cp);
  	}
  
@@ -1001,7 +1031,7 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
  		exit(255);
  
  	if (addrs != NULL)
-@@ -1808,8 +1853,10 @@
+@@ -1820,8 +1875,10 @@
  	ssh_signal(SIGCHLD, main_sigchld_handler);
  
  	/* Log into the remote system.  Never returns if the login fails. */
@@ -1015,8 +1045,8 @@ diff -Naur openssh-portable/ssh.c tainted_openssh-portable/ssh.c
  	/* We no longer need the private host keys.  Clear them now. */
  	if (sensitive_data.nkeys != 0) {
 diff -Naur openssh-portable/sshconnect.c tainted_openssh-portable/sshconnect.c
---- openssh-portable/sshconnect.c	2025-05-30 08:03:31.000000000 +0200
-+++ tainted_openssh-portable/sshconnect.c	2025-05-30 08:48:36.952007125 +0200
+--- openssh-portable/sshconnect.c	2025-07-05 18:57:08.000000000 +0200
++++ tainted_openssh-portable/sshconnect.c	2025-07-05 20:27:38.172060133 +0200
 @@ -48,6 +48,13 @@
  #ifdef HAVE_IFADDRS_H
  # include <ifaddrs.h>
@@ -1128,8 +1158,8 @@ diff -Naur openssh-portable/sshconnect.c tainted_openssh-portable/sshconnect.c
  
  	/* Put the connection into non-blocking mode. */
 diff -Naur openssh-portable/sshconnect.h tainted_openssh-portable/sshconnect.h
---- openssh-portable/sshconnect.h	2025-05-30 08:03:31.000000000 +0200
-+++ tainted_openssh-portable/sshconnect.h	2025-05-30 08:48:36.952007125 +0200
+--- openssh-portable/sshconnect.h	2025-07-05 18:57:08.000000000 +0200
++++ tainted_openssh-portable/sshconnect.h	2025-07-05 20:27:38.172060133 +0200
 @@ -71,14 +71,14 @@
  	"C", conn_info->conn_hash_hex, \
  	"r", conn_info->remuser

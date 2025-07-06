@@ -1,0 +1,50 @@
+#!/bin/bash
+HERE=`pwd`
+set -e
+TARGZ=../../../targz_store
+cd ${TARGZ}
+FRR=$(ls frr_*)
+FRR=${FRR%%.*}
+cd ${HERE}
+tar xvf ${TARGZ}/${FRR}.tar.gz
+rm -rf /usr/local
+mkdir -p /usr/local/etc
+
+set +e
+addgroup --system --gid 92 frr
+addgroup --system --gid 85 frrvty
+adduser --system --ingroup frr --home /var/opt/frr/ --gecos "FRR suite" --shell /bin/false frr
+usermod -a -G frrvty frr
+set -e
+
+cd ${HERE}/frr
+./bootstrap.sh
+
+./configure \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --runstatedir=/run \
+    --enable-multipath=64 \
+    --enable-user=frr \
+    --enable-group=frr \
+    --enable-vty-group=frrvty \
+    --enable-configfile-mask=0644 \
+    --enable-logfile-mask=0644 \
+    --enable-fpm \
+    --with-pkg-git-version \
+    --with-pkg-extra-version=-MyOwnFRRVersion
+make
+make check
+make install
+ls -l /usr/local/etc
+mkdir -p /usr/local/etc/frr
+install -m 644 -o frr -g frr /dev/null /usr/local/etc/frr/frr.conf
+install -m 644 -o frr -g frr tools/etc/frr/daemons /usr/local/etc/frr/daemons
+install -m 644 -o frr -g frr tools/etc/frr/support_bundle_commands.conf /usr/local/etc/frr/support_bundle_commands.conf
+mv /usr/local ${HERE}/built_frr
+set +e
+for i in "lib/frr/modules" "lib/frr" "lib" "sbin" "bin"; do
+  cd ${HERE}/built_frr/${i}
+  strip *
+done
+

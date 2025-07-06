@@ -57,6 +57,7 @@ typedef struct t_callback_end
 } t_callback_end;
 
 
+char *get_proxymous_dir(void);
 t_pid_lst *create_list_pid(int *nb);
 
 static t_callback_end callback_end_tab[MAX_CALLBACK_END];
@@ -161,39 +162,95 @@ void last_action_self_destruction(void *data)
   sprintf(path, "%s", pid_get_clone_internal_com());
   unlink(path);
   if (unlink_sub_dir_files_except_dir(utils_get_ovs_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_dtach_sock_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_snf_pcap_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_log_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_crun_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_nginx_conf_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_nginx_logs_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_nginx_client_body_temp_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files(utils_get_nginx_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_c2c_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_nat_main_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_nat_proxy_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_a2b_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_run_config_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(utils_get_run_dir(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(cfg_get_work(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   if (unlink_sub_dir_files_except_dir(cfg_get_root_work(), err))
+    {
     event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
+  if (unlink_sub_dir_files_except_dir(get_proxymous_dir(), err))
+    {
+    event_print("DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    }
   clownix_timeout_add(20, extremely_last_action, NULL, NULL, NULL);
   if (llid_tid)
     send_status_ok(llid_tid->llid, llid_tid->tid, "selfdestruct");

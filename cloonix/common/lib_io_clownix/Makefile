@@ -1,6 +1,6 @@
 OBJ_DIR=obj/
 LIB = libio_clownix.a
-VPATH = ./src/
+VPATH = ./src/:../glob_include
 WARNINGS=-Wall
 
 GLOB_INCLUDE=../glob_include
@@ -15,7 +15,8 @@ AR?=ar
 RANLIB?=ranlib
 CC?=gcc
 
-SRC =  channel.c \
+SRC =  pthexec.c \
+       channel.c \
        rpct.c \
        util_sock.c \
        msg_layer.c \

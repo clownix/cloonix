@@ -432,7 +432,7 @@ static void inside_cloonix_test_dev_kvm(char *err)
     snprintf(min, MAX_NAME_LEN-1, "%d", minor);
     if (major == 10)
       {
-      argv[0] = MKNOD_BIN;
+      argv[0] = pthexec_mknod_bin();
       argv[1] = "/dev/kvm"; 
       argv[2] = "c"; 
       argv[3] = "10"; 
@@ -440,16 +440,16 @@ static void inside_cloonix_test_dev_kvm(char *err)
       argv[5] = NULL; 
       if (!lio_system(argv))
         {
-        argv[0] = CHMOD_BIN;
+        argv[0] = pthexec_chmod_bin();
         argv[1] = "666"; 
         argv[2] = "/dev/kvm"; 
         argv[3] = NULL; 
         if (!lio_system(argv))
-          KERR("ERROR %s 666 /dev/kvm", CHMOD_BIN);
+          KERR("ERROR %s 666 /dev/kvm", pthexec_chmod_bin());
         }
       else
         {
-        sprintf(err, "%s /dev/kvm c %d %d", MKNOD_BIN, major, minor);
+        sprintf(err, "%s /dev/kvm c %d %d", pthexec_mknod_bin(), major, minor);
         KERR("ERROR %s", err);
         }
       }
@@ -697,7 +697,7 @@ static void cow_look_clone_death(void *data, int status, char *name)
 static int cow_look_clone(void *data)
 {
   t_add_vm_cow_look *add_vm = (t_add_vm_cow_look *) data;
-  char *cmd = "/usr/libexec/cloonix/cloonfs/bin/cloonix-qemu-img";
+  char *cmd = pthexec_cloonfs_qemu_img();
   char rootfs[MAX_PATH_LEN];
   char *argv[] = { cmd, "info", rootfs, NULL, };
   memset(rootfs, 0, MAX_PATH_LEN);
@@ -2048,12 +2048,12 @@ void recv_fix_display(int llid, int tid, char *disp, char *buf)
   memset(wauth, 0, MAX_PATH_LEN);
   snprintf(wauth, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/.Xauthority", net);
     memset(cmd, 0, 2 * MAX_PATH_LEN);
-    snprintf(cmd, 2 * MAX_PATH_LEN - 1, 
-             "/usr/libexec/cloonix/cloonfs/bin/touch %s", wauth);
+    snprintf(cmd, 2 * MAX_PATH_LEN - 1, "%s %s", pthexec_touch_bin(), wauth); 
     system(cmd);
     memset(cmd, 0, 2 * MAX_PATH_LEN);
     snprintf(cmd, 2 * MAX_PATH_LEN - 1,
-             "%s -f %s add %s MIT-MAGIC-COOKIE-1 %s", XAUTH_BIN, wauth, disp, buf); 
+             "%s -f %s add %s MIT-MAGIC-COOKIE-1 %s",
+             pthexec_xauth_bin(), wauth, disp, buf); 
     if (system(cmd))
       {
       KERR("ERROR %s", cmd);

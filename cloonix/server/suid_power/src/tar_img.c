@@ -344,7 +344,7 @@ static int zipmount_create(char *bulk, char *image, int uid_image,
       {
       memset(cmd, 0, 2*MAX_PATH_LEN);
       snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -o uid=%d -o gid=%d %s/%s %s/%s",
-               FUSEZIP_BIN, uid_image, uid_image, bulk, image,
+               pthexec_fusezip_bin(), uid_image, uid_image, bulk, image,
                get_mnt_loop_dir(), image);
       if (execute_cmd(cmd, 1, uid_image))
         KERR("ERROR %s", cmd);
@@ -354,8 +354,9 @@ static int zipmount_create(char *bulk, char *image, int uid_image,
     else
       {
       memset(cmd, 0, 2*MAX_PATH_LEN);
-      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -r %s/%s  %s/%s",
-      FUSEZIP_BIN, bulk, image, get_mnt_loop_dir(), image);
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -o uid=%d -o gid=%d -r %s/%s  %s/%s",
+      pthexec_fusezip_bin(), uid_image, uid_image, bulk, image,
+      get_mnt_loop_dir(), image);
       if (execute_cmd(cmd, 1, 0))
         KERR("ERROR %s", cmd);
       else
@@ -386,7 +387,9 @@ static int zipmount_exists(char *bulk, char *image,
            "\"cloonix-fuse-zip on %s/%s type fuse.cloonix-fuse-zip\"",
            get_mnt_loop_dir(), image);
   snprintf(cmd, 2*MAX_PATH_LEN-1,
-  "%s | %s %s | %s '{print $3}'", MOUNT_BIN, GREP_BIN, fuse, AWK_BIN);
+  "%s | %s %s | %s '{print $3}'", pthexec_mount_bin(),
+                                  pthexec_grep_bin(),
+                                  fuse, pthexec_awk_bin());
   fp = cmd_lio_popen(cmd, &child_pid, 0);
   if (fp == NULL)
     {
@@ -438,7 +441,8 @@ static void mount_del_item(char *cnt_dir, char *name, char *ident)
   memset(cmd, 0, 2*MAX_PATH_LEN);
   snprintf(cmd, 2*MAX_PATH_LEN-1,
            "%s | %s %s/%s/%s | %s '{print $3}'",
-           MOUNT_BIN, GREP_BIN, cnt_dir, name, ident, AWK_BIN);
+           pthexec_mount_bin(), pthexec_grep_bin(),
+           cnt_dir, name, ident, pthexec_awk_bin());
   fp = cmd_lio_popen(cmd, &child_pid, 0);
   if (fp == NULL)
     {   
@@ -450,7 +454,7 @@ static void mount_del_item(char *cnt_dir, char *name, char *ident)
     if (fgets(resp, MAX_PATH_LEN-1, fp))
       {
       memset(cmd, 0, 2*MAX_PATH_LEN);
-      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", UMOUNT_BIN, resp);
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", pthexec_umount_bin(), resp);
       if (execute_cmd(cmd, 1, 0))
         KERR("ERROR %s", cmd);
       }
@@ -474,7 +478,9 @@ static void mount_del(char *bulk, char *image, char *cnt_dir, char *name)
   memset(cmd, 0, 2*MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s | %s fuse.cloonix-fuse-zip | %s %s/%s | %s '{print $3}'",
-           MOUNT_BIN, GREP_BIN, GREP_BIN, get_mnt_loop_dir(), image, AWK_BIN);
+           pthexec_mount_bin(), pthexec_grep_bin(),
+           pthexec_grep_bin(), get_mnt_loop_dir(),
+           image, pthexec_awk_bin());
   fp = cmd_lio_popen(cmd, &child_pid, 0);
   if (fp == NULL)
     {
@@ -486,7 +492,7 @@ static void mount_del(char *bulk, char *image, char *cnt_dir, char *name)
     if (fgets(resp, MAX_PATH_LEN-1, fp))
       {
       memset(cmd, 0, 2*MAX_PATH_LEN);
-      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", UMOUNT_BIN, resp);
+      snprintf(cmd, 2*MAX_PATH_LEN-1, "%s %s", pthexec_umount_bin(), resp);
       if (execute_cmd(cmd, 1, 0))
         KERR("ERROR %s", cmd);
       }
@@ -509,7 +515,9 @@ int tar_img_add(char *name, char *bulk, char *image, int uid_image,
   snprintf(bulktarget, MAX_PATH_LEN-1, "%s/%s", bulk, image);
   cur = find_bulk_target(bulktarget, brandtype); 
   elem = find_elem(name);
-  if (elem)
+  if ((!strcmp(image, "self_rootfs")) && (is_persistent))
+    KERR("ERROR %s %s %s", name, bulk, image);
+  else if (elem)
     KERR("ERROR %s %s %s", name, bulk, image);
   else if (cur)
     {
@@ -649,26 +657,6 @@ int tar_img_rootfs_get(char *name, char *bulk, char *image,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int target_exists(char *bulk, char *image, char *name)
-{
-  char target[MAX_PATH_LEN];
-  struct stat sb;
-  int result = 0;
-  memset(target, 0, MAX_PATH_LEN);
-  snprintf(target, MAX_PATH_LEN-1, "%s/%s/%s", bulk, image, name);
-  if (lstat(target, &sb) == 0)
-    {
-    if (((sb.st_mode & S_IFMT) != S_IFLNK) &&
-         ((sb.st_mode & S_IFMT) != S_IFREG))
-      KERR("ERROR SBIN INIT %s %d", target, (sb.st_mode & S_IFMT));
-    else
-      result = 1;
-    }
-  return result; 
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int tar_img_check(char *bulk, char *image, int *uid_image, 
                   int is_persistent, char *brandtype,
                   char *sbin_init, char *sh_starter,
@@ -693,7 +681,7 @@ int tar_img_check(char *bulk, char *image, int *uid_image,
   else if (!strcmp(brandtype, "brandzip"))
     {
     strcpy(sh_starter, "/bin/sh");
-    strcpy(sbin_init,"/cloonixmnt/cnf_fs/init_cloonix_startup_script.sh");
+    strcpy(sbin_init,"/cloonixmnt/cnf_fs/cloonixsbininit");
     if (lstat(bulktarget, &sb) == -1)
       {
       KERR("ERROR %s", bulktarget);
@@ -726,52 +714,22 @@ int tar_img_check(char *bulk, char *image, int *uid_image,
     }
   else if (!strcmp(brandtype, "brandcvm"))
     {
-    if (target_exists(bulk, image, "bin/cloonixsbininit"))
+    strcpy(sh_starter, "/bin/sh");
+    strcpy(sbin_init,"/cloonixmnt/cnf_fs/cloonixsbininit");
+    if (is_persistent)
       {
-      strcpy(sbin_init, "/bin/cloonixsbininit");
-      }
-    else if (target_exists(bulk, image, "sbin/init"))
-      {
-      strcpy(sbin_init, "/sbin/init");
-      }
-    else if (target_exists(bulk, image, "lib/systemd/systemd"))
-      {
-      strcpy(sbin_init, "/lib/systemd/systemd");
-      }
-    else
-      {
-      KERR("ERROR NO SBIN INIT");
-      result = -1;
-      }
-    if (result == 0)
-      {
-      if (target_exists(bulk, image, "bin/bash"))
-        strcpy(sh_starter, "/bin/bash");
-      else if (target_exists(bulk, image, "bin/sh"))
-        strcpy(sh_starter, "/bin/sh");
-      else
+      if (access(bulktarget, W_OK))
         {
-        KERR("ERROR NO STARTER SBIN INIT");
+        KERR("ERROR %s", bulktarget);
         result = -1;
         }
       }
-    if (result == 0)
+    else
       {
-      if (is_persistent)
+      if (access(bulktarget, R_OK))
         {
-        if (access(bulktarget, W_OK))
-          {
-          KERR("ERROR %s", bulktarget);
-          result = -1;
-          }
-        }
-      else
-        {
-        if (access(bulktarget, R_OK))
-          {
-          KERR("ERROR %s", bulktarget);
-          result = -1;
-          }
+        KERR("ERROR %s", bulktarget);
+        result = -1;
         }
       }
     }

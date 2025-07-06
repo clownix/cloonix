@@ -1,6 +1,7 @@
 #!/bin/bash
 #-----------------------------------------------------------------------------
 HERE=`pwd`
+set -e
 #-----------------------------------------------------------------------------
 CLOONIX_CFG="/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
 if [ ! -e ${CLOONIX_CFG} ]; then
@@ -8,10 +9,11 @@ if [ ! -e ${CLOONIX_CFG} ]; then
   echo ${CLOONIX_CFG}
   exit 1
 fi
-VERSION=$(cat ${CLOONIX_CFG} | grep CLOONIX_VERSION)
-VERSION=${VERSION#*=}
+VERSION_NUM=$(cat ${CLOONIX_CFG} | grep CLOONIX_VERSION)
+VERSION_NUM=${VERSION_NUM#*=}
+VERSION_NUM=${VERSION_NUM%-*}
 #----------------------------------------------------------------------
-RESULT="${HOME}/cloonix-extractor-${VERSION}.sh"
+RESULT="${HOME}/frr-toy-${VERSION_NUM}.sh"
 PATCHELF="/usr/libexec/cloonix/cloonfs/bin/cloonix-patchelf"
 CRUN="/usr/libexec/cloonix/cloonfs/bin/cloonix-crun"
 PROXY="/usr/libexec/cloonix/cloonfs/bin/cloonix-proxymous"
@@ -22,14 +24,14 @@ COMMON_LIBS="/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu"
 INIT_CRUN="${HERE}/tools_crun/cloonix-init-starter-crun"
 TEMPLATE="${HERE}/tools_crun/config.json.template"
 STARTUP="${HERE}/tools_crun/readme.sh"
+SBININITSHARED="${HERE}/tools_crun/cloonixsbininitshared"
 MAKESELF="${HERE}/makeself/makeself.sh"
+DEMOS="${HERE}/demos"
 #-----------------------------------------------------------------------------
 EXTRACT="/tmp/dir_self_extracted"
-CLOONIX="${EXTRACT}/rootfs/usr/libexec/cloonix"
-VAR_CLOONIX="${EXTRACT}/rootfs/var/lib/cloonix"
+CLOONIX="${EXTRACT}/rootfs/cloonix"
 CONFIG="${EXTRACT}/config"
 BIN="${EXTRACT}/bin"
-ROOT="${EXTRACT}/rootfs/root"
 #-----------------------------------------------------------------------------
 LISTSO="libsystemd.so.0 \
         libseccomp.so.2 \
@@ -47,10 +49,8 @@ LISTSO="libsystemd.so.0 \
         libstdc++.so.6 \
         libgcc_s.so.1 \
         libc.so.6"
-ZIPFRR="/var/lib/cloonix/bulk/zipfrr.zip"
-#  ALPINE="/var/lib/cloonix/bulk/alpine"
 #-----------------------------------------------------------------------------
-for i in ${ZIPBASIC} ${ZIPFRR} ${CRUN} ${LD} ${PROXY} ${XAUTH} \
+for i in ${ZIPBASIC} ${CRUN} ${LD} ${PROXY} ${XAUTH} ${SBININITSHARED} \
          ${TEMPLATE} ${INIT_CRUN} ${STARTUP} ${MAKESELF} ; do
   if [ ! -e ${i} ]; then 
     echo ${i} missing 
@@ -73,23 +73,16 @@ for i in ${EXTRACT} ${RESULT} ; do
   fi
 done
 #-----------------------------------------------------------------------------
-mkdir -p ${CLOONIX}
-mkdir -p ${VAR_CLOONIX}/bulk
-mkdir -p ${VAR_CLOONIX}/cache
-for i in "root" "bin" "usr" \
-         "var/log" "var/spool/rsyslog" ; do
-  mkdir -p ${EXTRACT}/rootfs/${i}
-done
-cd ${EXTRACT}/rootfs
-ln -s /var/run run
 cd ${HERE}
+mkdir -p ${CLOONIX}
 #-----------------------------------------------------------------------------
-cp -rf /usr/libexec/cloonix/cloonfs ${CLOONIX}
-cp -f ${CLOONIX}/cloonfs/bin/bash ${EXTRACT}/rootfs/bin
-cp -f ${HERE}/tools_crun/ping_demo.sh ${EXTRACT}/rootfs/root
-cp -f ${HERE}/tools_crun/spider_frr.sh ${EXTRACT}/rootfs/root
-cp -f ${ZIPFRR} ${VAR_CLOONIX}/bulk
-#  cp -rf ${ALPINE} ${VAR_CLOONIX}/bulk
+for i in "cloonfs" "insider_agents" "startup_bin"; do
+  unshare -rm cp -rf /usr/libexec/cloonix/${i} ${CLOONIX}
+done
+#-----------------------------------------------------------------------------
+SRC="/usr/libexec/cloonix/cloonfs/share"
+DST="/cloonix/cloonfs/share"
+sed -i s%${SRC}%${DST}% ${CLOONIX}/cloonfs/etc/fonts/fonts.conf
 #-----------------------------------------------------------------------------
 mkdir -p ${CONFIG}
 mkdir -p ${BIN}
@@ -102,13 +95,49 @@ for i in ${LD} ${CRUN} ${PROXY} ${PATCHELF} ${XAUTH} ; do
   cp -f ${i} ${BIN}
 done
 #-----------------------------------------------------------------------------
-cp -f ${TEMPLATE}  ${CONFIG}
-cp -f ${INIT_CRUN} ${CONFIG}
-cp -f ${STARTUP}   ${CONFIG}
+cp -f  ${TEMPLATE}  ${CONFIG}
+cp -f  ${INIT_CRUN} ${CONFIG}
+cp -f  ${STARTUP}   ${CONFIG}
+cp -f  ${SBININITSHARED} ${CONFIG}
+cp -rf ${DEMOS}     ${CONFIG}
 #-----------------------------------------------------------------------------
 ${PATCHELF} --force-rpath --set-rpath ./bin                      ${BIN}/cloonix-patchelf
 ${PATCHELF} --set-interpreter         ./bin/ld-linux-x86-64.so.2 ${BIN}/cloonix-patchelf
 ${PATCHELF} --add-needed              ./bin/libm.so.6            ${BIN}/cloonix-patchelf
+#---------------------------------------------------------------------------
+LDLINUX="/cloonix/cloonfs/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/cloonix/cloonfs/lib:/cloonix/cloonfs/lib/x86_64-linux-gnu"
+for i in $(ls ${CLOONIX}/startup_bin) ; do
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CLOONIX}/startup_bin/${i} 2>/dev/null
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${CLOONIX}/startup_bin/${i} 2>/dev/null
+done
+#---------------------------------------------------------------------------
+set +e
+LDLINUX="/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/lib:/lib/x86_64-linux-gnu"
+for j in "bin" \
+         "sbin" \
+         "lib" \
+         "lib/frr" \
+         "lib/frr/modules" \
+         "lib/systemd" \
+         "lib/x86_64-linux-gnu" \
+         "lib/x86_64-linux-gnu/rsyslog" \
+         "lib/x86_64-linux-gnu/systemd" \
+         "lib/x86_64-linux-gnu/qt6/plugins/platforms" \
+         "lib/x86_64-linux-gnu/gconv" \
+         "lib/x86_64-linux-gnu/gstreamer-1.0" \
+         "lib/x86_64-linux-gnu/gstreamer1.0" \
+         "lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0" \
+         "lib/x86_64-linux-gnu/pipewire-0.3" ; do
+
+  if [ -e ${CLOONIX}/cloonfs/${j} ]; then
+    for i in `find ${CLOONIX}/cloonfs/${j} -maxdepth 1 -type f` ; do
+      ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+      ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
+    done
+  fi
+done
 #---------------------------------------------------------------------------
 OPTIONS="--nooverwrite --notemp --nomd5 --nocrc --tar-quietly --quiet"
 ${MAKESELF} ${OPTIONS} ${EXTRACT} ${RESULT} "cloonix" ./config/readme.sh

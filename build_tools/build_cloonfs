@@ -1,7 +1,7 @@
 #!/bin/bash
 #----------------------------------------------------------------------------#
 set -e
-WITH_KVM="__WITH_KVM__"
+WITH_FRR="__WITH_FRR__"
 #----------------------------------------------------------------------------#
 BUNDLE="${HOME}/cloonix_bundle"
 if [ ! -e ${BUNDLE}/cloonix/cloonix_config ]; then
@@ -50,8 +50,16 @@ done
 #----------------------------------------------------------------------------#
 printf "\n\nBUILDING SERVER\n\n"
 #----------------------------------------------------------------------------#
-  for i in  "script_pty" \
-            "apk_tools" \
+  if [ "${WITH_FRR}" = "yes" ]; then
+    echo DOING:
+    echo ${SERVER}/frr
+    echo
+    echo
+    cd ${SERVER}/frr
+    ./cmd
+  fi
+
+  for i in  "apk_tools" \
             "xorg" \
             "wireshark" \
             "iproute2" \
@@ -80,8 +88,6 @@ printf "\n\nBUILDING SERVER\n\n"
     ./cmd
   done
 #----------------------------------------------------------------------------#
-if [ "${WITH_KVM}" = "yes" ]; then
-
   for i in  "openssh" \
             "spice" \
             "spice_lib_client"; do
@@ -105,7 +111,6 @@ if [ "${WITH_KVM}" = "yes" ]; then
     ./cmd
   done
 
-fi
 #----------------------------------------------------------------------------#
   echo DOING:
   echo ${SERVER}/create_insider_agents_iso

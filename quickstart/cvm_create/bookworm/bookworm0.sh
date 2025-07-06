@@ -45,55 +45,6 @@ deb [ trusted=yes allow-insecure=yes ] ${CVMREPO} ${DISTRO} main
 EOF"
 fct_unshare_chroot "${cmd}"
 #-----------------------------------------------------------------------#
-cmd='cat > /sbin/cloonix_agent.sh << "EOF"
-#!/bin/bash
-/cloonixmnt/cnf_fs/cloonix-agent
-/cloonixmnt/cnf_fs/cloonix-dropbear-sshd
-if [ -e /cloonixmnt/cnf_fs/startup_nb_eth ]; then
-  NB_ETH=$(cat /cloonixmnt/cnf_fs/startup_nb_eth)
-  NB_ETH=$((NB_ETH-1))
-  for i in $(seq 0 $NB_ETH); do
-    LIST="${LIST} eth$i"
-  done
-  for eth in $LIST; do
-    VAL=$(ip link show | grep ": ${eth}@")
-    while [  $(ip link show | egrep -c ": ${eth}") = 0 ]; do
-      sleep 1
-    done
-  done
-fi
-EOF'
-fct_unshare_chroot "${cmd}"
-#-----------------------------------------------------------------------#
-cmd='chmod +x /sbin/cloonix_agent.sh'
-fct_unshare_chroot "${cmd}"
-#-----------------------------------------------------------------------#
-cmd='cat > /etc/systemd/system/cloonix_agent.service << EOF
-[Unit]
-  After=rsyslog.service
-[Service]
-  TimeoutStartSec=infinity
-  Type=forking
-  RemainAfterExit=y
-  ExecStart=/sbin/cloonix_agent.sh
-[Install]
-  WantedBy=multi-user.target
-EOF'
-fct_unshare_chroot "${cmd}"
-#-----------------------------------------------------------------------#
-cmd='systemctl enable cloonix_agent'
-fct_unshare_chroot "${cmd}"
-#-----------------------------------------------------------------------#
-cat > ${BOOKWORM0}/bin/cloonixsbininit << EOF
-exec &> /tmp/cloonixsbininit.log
-echo STARTING
-cd /sbin
-ln -s /lib/systemd/systemd init
-exec /sbin/init 
-EOF
-#-----------------------------------------------------------------------#
-chmod 755 ${BOOKWORM0}/bin/cloonixsbininit
-#-----------------------------------------------------------------------#
 rm -f ${BOOKWORM0}/usr/bin/sh
 cd ${BOOKWORM0}/usr/bin
 ln -s /usr/bin/bash sh
@@ -101,7 +52,6 @@ cd ${HERE}
 for i in "dev" "proc" "sys"; do
   chmod 755 ${BOOKWORM0}/${i}
 done
-mkdir -p ${ALPINE0}/lib/modules
 chmod 777 ${BOOKWORM0}/root
 #-----------------------------------------------------------------------#
 

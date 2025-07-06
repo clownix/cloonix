@@ -1,7 +1,7 @@
 SOURCES = main_srv.c x11_fwd.c scp_srv.c tools.c cloon.c \
-          pty_fork.c first_x11_magic.c hide_dirs.c
+          pty_fork.c first_x11_magic.c hide_dirs.c pthexec.c
 
-VPATH= .:../../../client/hide_dirs/
+VPATH= .:../../../client/hide_dirs/:../../glob_include
 
 CFLAGS+=-mtune=generic -fno-stack-protector
 CFLAGS += -I../libmdl -I../../glob_include -g -rdynamic

@@ -223,7 +223,8 @@ static int get_magic_cookie_with_display(char *magic)
   snprintf(tmp2, MAX_PATH_LEN-1, "%s_%s", tmpmc, randstr);
   unlink(tmp2);
 
-  snprintf(cmd, MAX_PATH_LEN-1, "%s nextract %s %s", XAUTH_BIN, tmp2, display);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s nextract %s %s",
+           pthexec_xauth_bin(), tmp2, display);
   if (system(cmd))
     KERR("ERROR %s", cmd);
   else

@@ -34,12 +34,13 @@ char *main_cloonix_tree_dir(void)
 /****************************************************************************/
 int main(int argc, char ** argv)
 {
+  pthexec_init();
   x11_init();
   memset(g_current_directory, 0, MAX_PATH_LEN);
   if (!getcwd(g_current_directory, MAX_PATH_LEN-1))
     KOUT(" ");
-  if (access("/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh", X_OK))
-    KOUT("/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh");
+  if (access(pthexec_dropbear_ssh(), X_OK))
+    KOUT("ERROR NOT FOUND %s", pthexec_dropbear_ssh());
   cli_getopts(argc, argv);
   if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
     KOUT("signal() error");

@@ -26,16 +26,32 @@
 "  \"type\": \"none\",\n"\
 "  \"source\": \"%s\",\n"\
 "  \"options\": [\"rbind\",\"rw\"]\n"\
-"},\n"\
+"},\n"
 
-#define CONFIG_JSON_MOUNT "\n"\
-" \n %s %s %s %s %s %s %s %s\n"\
+#define CONFIG_JSON_LIBMOD "\n"\
 "{\n"\
 "  \"destination\": \"/lib/modules\",\n"\
 "  \"type\": \"none\",\n"\
 "  \"source\": \"/lib/modules\",\n"\
 "  \"options\": [\"rbind\",\"ro\"]\n"\
+"},\n"
+
+#define CONFIG_JSON_SELF_ROOTFS "\n"\
+"{\n"\
+"  \"destination\": \"/var\",\n"\
+"  \"type\": \"tmpfs\",\n"\
+"  \"source\": \"tmpfs\",\n"\
+"  \"options\": [\"rw\",\"mode=06777\"]\n"\
 "},\n"\
+"{\n"\
+"  \"destination\": \"/etc\",\n"\
+"  \"type\": \"tmpfs\",\n"\
+"  \"source\": \"tmpfs\",\n"\
+"  \"options\": [\"rw\",\"mode=06777\"]\n"\
+"},\n"
+
+#define CONFIG_JSON_MOUNT "\n"\
+" \n %s %s %s %s %s %s %s %s %s\n"\
 "{\n"\
 "  \"destination\": \"/cloonixmnt\",\n"\
 "  \"type\": \"none\",\n"\
@@ -54,6 +70,7 @@
 "  \"source\": \"tmpfs\",\n"\
 "  \"options\": [\"rw\",\"mode=777\"]\n"\
 "},\n"\
+"%s \n"\
 "{\n"\
 "  \"destination\": \"/tmp\",\n"\
 "  \"type\": \"tmpfs\",\n"\
@@ -67,8 +84,7 @@
 "  \"options\": [\n"\
 "          \"nosuid\",\n"\
 "          \"strictatime\",\n"\
-"          \"mode=755\",\n"\
-"          \"size=65536k\"\n"\
+"          \"mode=755\"\n"\
 "  ]\n"\
 "},\n"\
 "{\n"\
@@ -78,8 +94,7 @@
 "  \"options\": [\n"\
 "          \"nosuid\",\n"\
 "          \"strictatime\",\n"\
-"          \"mode=755\",\n"\
-"          \"size=65536k\"\n"\
+"          \"mode=755\"\n"\
 "  ]\n"\
 "},\n"\
 "{\n"\
@@ -90,8 +105,7 @@
 "          \"nosuid\",\n"\
 "          \"noexec\",\n"\
 "          \"nodev\",\n"\
-"          \"mode=1777\",\n"\
-"          \"size=65536k\"\n"\
+"          \"mode=1777\"\n"\
 "  ]\n"\
 "},\n"\
 "{\n"\
@@ -222,8 +236,9 @@
 "        },\n"\
 "        \"args\": [%s],\n"\
 "        \"env\": [\n"\
+"        \"HOME=root\",\n"\
 "        \"TERM=xterm\",\n"\
-"        \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"\n"\
+"        \"PATH=/usr/sbin:/usr/bin:/sbin:/bin\"\n"\
 "        %s\n"\
 "        ],\n"\
 "        \"cwd\": \"/\",\n"\
@@ -244,8 +259,7 @@
 "        \"noNewPrivileges\": true\n"\
 "    },\n"\
 "    \"root\": {\n"\
-"        \"path\": \"%s\",\n"\
-"        \"readonly\": \"true\"\n"\
+"        \"path\": \"%s\"\n"\
 "        },\n"\
 "    \"hostname\": \"crun\",\n"\
 "    \"linux\": {\n"\

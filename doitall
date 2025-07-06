@@ -7,13 +7,14 @@ if [ ! -e ${SRC_TREE_ROOT}/cloonix/cloonix_config ]; then
   echo ${SRC_TREE_ROOT}/cloonix/cloonix_config
   exit 1
 fi
-VERSION=$(cat ${SRC_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION)
-VERSION=${VERSION#*=}
+VERSION_NUM=$(cat ${SRC_TREE_ROOT}/cloonix/cloonix_config | grep CLOONIX_VERSION)
+VERSION_NUM=${VERSION_NUM#*=}
+VERSION_NUM=${VERSION_NUM%-*}
 BUNDLE="${HOME}/cloonix_bundle"
-RESBUNDLE="${HOME}/cloonix-bundle-${VERSION}"
+RESBUNDLE="${HOME}/cloonix-bundle-${VERSION_NUM}"
 TARGZ_STORE="${BUNDLE}/targz_store"
 #----------------------------------------------------------------------------#
-printf "\n\nCREATE BUNDLE VERSION ${VERSION}\n\n"
+printf "\n\nCREATE BUNDLE VERSION ${VERSION_NUM}\n\n"
 #----------------------------------------------------------------------------#
 ./allclean
 #----------------------------------------------------------------------------#
@@ -24,7 +25,7 @@ mkdir -p ${TARGZ_STORE}
 cp -r ${SRC_TREE_ROOT}/targz_store/* ${TARGZ_STORE}
 cp -r ${SRC_TREE_ROOT}/cloonix ${BUNDLE}
 cp  ${SRC_TREE_ROOT}/build_tools/install_cloonfs ${BUNDLE}
-cp  ${SRC_TREE_ROOT}/build_tools/fill_common.c ${BUNDLE}
+cp  ${SRC_TREE_ROOT}/build_tools/toolbox/fill_common.c ${BUNDLE}
 tar --directory=${BUNDLE} -xf ${TARGZ_STORE}/patchelf_*.tar.gz
 mv  ${BUNDLE}/patchelf ${BUNDLE}/src_patchelf
 #----------------------------------------------------------------------------#
@@ -41,17 +42,20 @@ strip ${BUNDLE}/cloonfs/bin/patchelf
 strip ${BUNDLE}/cloonfs/bin/cloonix-patchelf
 cd ${SRC_TREE_ROOT}
 #----------------------------------------------------------------------------#
-printf "\n\nBUILDING BUNDLE VERSION ${VERSION}\n\n"
+printf "\n\nBUILDING BUNDLE VERSION ${VERSION_NUM}\n\n"
 ./build_tools/build_cloonfs
 printf "\n\nBUILD DONE OK\n\n"
 #----------------------------------------------------------------------------#
-printf "\n\nPACKING BUNDLE VERSION ${VERSION}\n\n"
+printf "\n\nPACKING BUNDLE VERSION ${VERSION_NUM}\n\n"
+./build_tools/rootfs_complements.sh
 ./build_tools/pack_cloonfs
 printf "\n\nPACK DONE OK\n\n"
 #----------------------------------------------------------------------------#
 mv ${BUNDLE}/cloonfs ${RESBUNDLE}
+mv ${BUNDLE}/startup_bin ${RESBUNDLE}
+mv ${BUNDLE}/insider_agents ${RESBUNDLE}
 cp ${SRC_TREE_ROOT}/build_tools/install_cloonfs ${RESBUNDLE}
 cd ${HOME}
-tar zcvf cloonix-bundle-${VERSION}.tar.gz cloonix-bundle-${VERSION}
+tar zcvf cloonix-bundle-${VERSION_NUM}.tar.gz cloonix-bundle-${VERSION_NUM}
 #----------------------------------------------------------------------------#
 

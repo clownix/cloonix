@@ -428,7 +428,7 @@ int cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,
       {
       memset(agent_dir, 0, MAX_PATH_LEN);
       snprintf(agent_dir, MAX_PATH_LEN-1,
-               "%s/cloonfs/insider_agents", cfg_get_bin_dir());
+               "%s/insider_agents", cfg_get_bin_dir());
       if ((!strcmp(cnt->brandtype, "brandzip")) ||
           (!strcmp(cnt->brandtype, "brandcvm")))
         {

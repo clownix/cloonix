@@ -1,50 +1,83 @@
-#!/usr/libexec/cloonix/cloonfs/bin/bash
-
+#!/cloonix/startup_bin/bash
 export TERM=linux
-COMMON="/usr/libexec/cloonix/cloonfs"
-SLEEP="/usr/libexec/cloonix/cloonfs/bin/sleep"
-MKDIR="/usr/libexec/cloonix/cloonfs/bin/mkdir"
-XAUTH="/usr/libexec/cloonix/cloonfs/bin/xauth"
-CAT="/usr/libexec/cloonix/cloonfs/bin/cat"
+CLOONFS="/cloonix/cloonfs"
+STARTUP_BIN="/cloonix/startup_bin"
+SLEEP="${STARTUP_BIN}/sleep"
+MKDIR="${STARTUP_BIN}/mkdir"
+XAUTH="${STARTUP_BIN}/xauth"
+CAT="${STARTUP_BIN}/cat"
+LN="${STARTUP_BIN}/ln"
+MOUNT="${STARTUP_BIN}/mount"
+ECHO="${STARTUP_BIN}/echo"
+RM="${STARTUP_BIN}/rm"
+LOGFILE="/root/cloonix-init-starter-crun.log"
 
+exec &> ${LOGFILE}
+echo "START cloonix-init-starter-crun"
+#----------------------------------------------------------------------------
+set -e
+#----------------------------------------------------------------------------
+for i in "etc" "bin" "sbin" "lib" "lib64" "share" "var" ; do 
+  ${MKDIR} -p /${i}
+  ${MOUNT} --bind /cloonix/cloonfs/${i} /${i}
+  ${ECHO} "${MOUNT} --bind /cloonix/cloonfs/${i} /${i}"
+done
+#----------------------------------------------------------------------------
+${RM} -f /var/run
+${LN} -s /run /var/run
+${ECHO} "${LN} -s /run /var/run"
+if [ -d /root/bulk_host ]; then
+  ${RM} -f /var/lib/cloonix/bulk_host
+  ${LN} -s /root/bulk_host/ /var/lib/cloonix/bulk_host
+  ${ECHO} "${LN} -s /root/bulk_host/ /var/lib/cloonix/bulk_host"
+fi
+#----------------------------------------------------------------------------
+${MKDIR} -p /usr
+${ECHO} "${MKDIR} -p /usr"
+for i in "bin" "sbin" "lib" "lib64" "share" ; do
+  ${RM} -f /usr/${i}
+  ${LN} -s ../${i} /usr/${i}
+  ${ECHO} "${LN} -s ../${i} /usr/${i}"
+done
+#----------------------------------------------------------------------------
+${RM} -f /root/.bashrc
 ${CAT} > /root/.bashrc << "EOF"
 . /usr/share/bash-completion/bash_completion
 EOF
-
-${MKDIR} -p /usr/lib
-for i in "systemd" "locale" "pam.d" "udev" "x86_64-linux-gnu" ; do
-  if [ ! -e /usr/lib/${i} ]; then
-    ${COMMON}/bin/ln -s ${COMMON}/lib/${i} /usr/lib/${i}
-  fi
-done
-
-if [ ! -e /etc ]; then
-  ${COMMON}/bin/ln -s ${COMMON}/etc /etc
-fi
-
-for i in "bin" "sbin" "lib64" "libexec" "share" ; do
-  if [ ! -e /usr/${i} ]; then
-    ${COMMON}/bin/ln -s ${COMMON}/${i} /usr/${i}
-  fi
-done
-
-for i in "bin" "sbin" "lib64" ; do
-  if [ ! -e /${i} ]; then
-    ${COMMON}/bin/ln -s /usr/${i} /${i}
-  fi
-done
-
-if [ ! -e "/bin/sh" ]; then
-  ${COMMON}/bin/ln -s /bin/bash /bin/sh
-fi
-
+#----------------------------------------------------------------------------
 ${MKDIR} -p /tmp/.X11-unix
+${ECHO} "${MKDIR} -p /tmp/.X11-unix"
 if [ ! -e /tmp/.X11-unix/X713 ]; then
-  ${COMMON}/bin/ln -s __PROXYSHARE_IN_____IDENT__/X11-unix/X713 /tmp/.X11-unix/X713
+  ${LN} -s __PROXYSHARE_IN_____IDENT__/X11-unix/X713 /tmp/.X11-unix/X713
+  ${ECHO} "${LN} -s __PROXYSHARE_IN_____IDENT__/X11-unix/X713 /tmp/.X11-unix/X713"
   XAUTH_CODE=$(${CAT} __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority)
   ${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
+  ${ECHO} "${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}"
 fi
+#----------------------------------------------------------------------------
+${RM} -f /dev/log
+${LN} -s /run/systemd/journal/dev-log /dev/log
+${ECHO} "${LN} -s /run/systemd/journal/dev-log /dev/log"
+#----------------------------------------------------------------------------
+cd /etc/systemd/system/multi-user.target.wants
+${RM} -f cloonix_server.service
+${LN} -s /etc/systemd/system/cloonix_server.service cloonix_server.service
+${ECHO} "${LN} -s /etc/systemd/system/cloonix_server.service cloonix_server.service"
+#----------------------------------------------------------------------------
 
+#############################################################################
+DIRSRC="/cloonix/cloonfs"
+DIRDST="/var/lib/cloonix/bulk/self_rootfs"
+if [ ! -d ${DIRDST} ]; then
+  ${MKDIR} -p ${DIRDST}
+  ${ECHO} "${MKDIR} -p ${DIRDST}"
+fi
+${MOUNT} --bind -o ro  ${DIRSRC} ${DIRDST}
+${ECHO} "${MOUNT} --bind -o ro ${DIRSRC} ${DIRDST}"
+#############################################################################
+
+#----------------------------------------------------------------------------
+${ECHO} "exec /usr/lib/systemd/systemd"
 exec /usr/lib/systemd/systemd
 #----------------------------------------------------------------------------
 

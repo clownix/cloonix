@@ -715,7 +715,7 @@ int cmd_cnf_fix(int argc, char **argv)
     {
     memset(cmd, 0, 2 * MAX_PATH_LEN);
     snprintf(cmd, 2 * MAX_PATH_LEN - 1,
-    "/usr/libexec/cloonix/cloonfs/bin/xauth nextract - %s > %s", display, tmp);
+    "%s nextract - %s > %s", pthexec_xauth_bin(), display, tmp);
     if (system(cmd))
       KERR("ERROR %s", cmd);
     else

@@ -1,22 +1,24 @@
 #!/bin/bash
+set -e
 #----------------------------------------------------------------------------#
 NET="__IDENT__"
-FRRZIP="zipfrr.zip"
+#----------------------------------------------------------------------------#
+cp /root/demos/spider/cloonixsbininitreplace /sbin
 #----------------------------------------------------------------------------#
 LIST1="1 2 3 4 5"
 LIST2="1 2 3"
 LIST3="30 31 32 33 34 35 36 37 38 39 40 41 42 43 44"
 for i in ${LIST1}; do
-  cloonix_cli $NET add zip tod${i} eth=sv   $FRRZIP --startup_env="NODE_ID=tod${i}"
-  cloonix_cli $NET add zip nod${i} eth=sv   $FRRZIP --startup_env="NODE_ID=nod${i}"
-  cloonix_cli $NET add zip cod${i} eth=vvvv $FRRZIP --startup_env="NODE_ID=cod${i}"
+  cloonix_cli $NET add cvm tod${i} eth=vv   self_rootfs --startup_env="NODE_ID=tod${i}"
+  cloonix_cli $NET add cvm nod${i} eth=vv   self_rootfs --startup_env="NODE_ID=nod${i}"
+  cloonix_cli $NET add cvm cod${i} eth=vvvv self_rootfs --startup_env="NODE_ID=cod${i}"
   for j in ${LIST2}; do
-    cloonix_cli $NET add zip lod${i}${j} eth=sv $FRRZIP --startup_env="NODE_ID=lod${i}${j}"
-    cloonix_cli $NET add zip nod${i}${j} eth=vv $FRRZIP --startup_env="NODE_ID=nod${i}${j}"
+    cloonix_cli $NET add cvm lod${i}${j} eth=vv self_rootfs --startup_env="NODE_ID=lod${i}${j}"
+    cloonix_cli $NET add cvm nod${i}${j} eth=vv self_rootfs --startup_env="NODE_ID=nod${i}${j}"
   done
 done
 for i in ${LIST3}; do
-  cloonix_cli $NET add zip sod${i} eth=s $FRRZIP --startup_env="NODE_ID=sod${i}"
+  cloonix_cli $NET add cvm sod${i} eth=v self_rootfs --startup_env="NODE_ID=sod${i}"
 done
 #----------------------------------------------------------------------------#
 

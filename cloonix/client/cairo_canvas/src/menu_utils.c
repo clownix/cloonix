@@ -178,7 +178,7 @@ int check_before_start_launch(char **argv)
 /****************************************************************************/
 static void start_qemu_spice(char *name, int vm_id)
 {
-  char *spicy = "/usr/libexec/cloonix/cloonfs/bin/cloonix-spicy";
+  char *spicy = pthexec_spicy_bin();
   char title[MAX_PATH_LEN];
   char net[MAX_NAME_LEN];
   char sock[2*MAX_PATH_LEN];
@@ -214,8 +214,9 @@ static void start_qemu_spice(char *name, int vm_id)
 void start_wireshark(char *vm_name, int num)
 {
   char *argv[15];
-  char *xwycli = XWYCLI_BIN;
-  char *cnf = CLOONIX_CFG;
+  char *xwycli = pthexec_xwycli_bin();
+  char *wire = pthexec_wireshark_bin();
+  char *cnf = pthexec_cloonix_cfg();
   char *net = get_net_name();
   char snf[2*MAX_PATH_LEN];
   char title[MAX_PATH_LEN];
@@ -234,7 +235,7 @@ void start_wireshark(char *vm_name, int num)
     argv[1] = cnf;
     argv[2] = net;
     argv[3] = "-dae";
-    argv[4] = WIRESHARK_BIN;
+    argv[4] = wire;
     argv[5] = "-i";
     argv[6] = snf;
     argv[7] = "-t";
@@ -278,8 +279,8 @@ void node_qemu_spice(GtkWidget *mn, t_item_ident *pm)
     }
   else
     {
-    KERR("ERROR Missing: /usr/libexec/cloonix/cloonfs/bin/cloonix-spicy");
-    sprintf(info, "Missing: /usr/libexec/cloonix/cloonfs/bin/cloonix-spicy"); 
+    KERR("ERROR Missing: %s", pthexec_spicy_bin());
+    sprintf(info, "Missing: %s", pthexec_spicy_bin()); 
     insert_next_warning(info, 1);
     }
 }
@@ -309,20 +310,31 @@ static char **get_argv_crun_screen_console(char *name)
   static char nm[MAX_NAME_LEN];
   static char title[MAX_PATH_LEN];
   static char nemo[MAX_NAME_LEN];
-  static char *argv[]={URXVT_BIN, "-T", title, "-e", XWYCLI_BIN,
-                       CLOONIX_CFG, nemo, "-crun", cmd, NULL};
+  static char xwycli[MAX_PATH_LEN];
+  static char urxvt[MAX_PATH_LEN];
+  static char cfg[MAX_PATH_LEN];
+  static char *argv[]={urxvt, "-T", title, "-e", xwycli,
+                       cfg, nemo, "-crun", cmd, NULL};
   char **ptr_argv = NULL;
   memset(cmd, 0, 2*MAX_PATH_LEN);
   memset(nm, 0, MAX_NAME_LEN);
   memset(title, 0, MAX_PATH_LEN);
   memset(nemo, 0, MAX_NAME_LEN);
+  memset(xwycli, 0, MAX_PATH_LEN);
+  memset(urxvt, 0, MAX_PATH_LEN);
+  memset(cfg, 0, MAX_PATH_LEN);
+
+  strncpy(cfg, pthexec_cloonix_cfg(), MAX_PATH_LEN-1);
+  strncpy(xwycli, pthexec_xwycli_bin(), MAX_PATH_LEN-1);
+  strncpy(urxvt, pthexec_urxvt_bin(), MAX_PATH_LEN-1);
   strncpy(nm, name, MAX_NAME_LEN-1);
   snprintf(nemo, MAX_NAME_LEN-1, "%s", get_net_name());
   snprintf(title, MAX_PATH_LEN-1, "%s/%s", nemo, nm);
   snprintf(cmd, 2*MAX_PATH_LEN-1,
-           "%s --log=/var/lib/cloonix/%s/log/debug_crun.log "
+           "%s --cgroup-manager=disabled "
+           "--log=/var/lib/cloonix/%s/log/debug_crun.log "
            "--root=/var/lib/cloonix/%s/%s exec -ti %s /bin/sh",
-           CRUN_BIN, nemo, nemo, CRUN_DIR, nm);
+           pthexec_crun_bin(), nemo, nemo, CRUN_DIR, nm);
   ptr_argv = argv;
   return (ptr_argv);
 }
@@ -345,8 +357,7 @@ char **xephyr_get_lxsession_args(char *nm)
   memset(passwd, 0, MAX_NAME_LEN);
   memset(name,   0, MAX_NAME_LEN);
 
-  strncpy(ssh,
-  "/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh", MAX_PATH_LEN-1);
+  strncpy(ssh, pthexec_dropbear_ssh(), MAX_PATH_LEN-1);
   strncpy(name, nm, MAX_NAME_LEN-1);
   strncpy(addr,  get_doors_client_addr(), MAX_NAME_LEN-1);
   strncpy(passwd, get_password(), MAX_NAME_LEN-1);
@@ -369,7 +380,7 @@ void crun_item_xephyr(GtkWidget *mn, t_item_ident *pm)
   else
     {
     memset(argv, 0, 20*sizeof(char *));
-    argv[0] = XEPHYR_BIN;
+    argv[0] = pthexec_xephyr_bin();
     argv[1] = "to_be_defined";
     argv[2] = "-resizeable";
     argv[3] = "-title";

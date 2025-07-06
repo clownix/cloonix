@@ -1,7 +1,7 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
 ALPINE0="/var/lib/cloonix/bulk/alpine0"
-APK_STATIC="/usr/libexec/cloonix/cloonfs/cloonix-apk-static"
+APK_STATIC="/usr/libexec/cloonix/cloonfs/bin/cloonix-apk-static"
 #----------------------------------------------------------------------#
 if [ -e ${ALPINE0} ]; then
   echo ERROR ${ALPINE0} exists, please erase
@@ -90,19 +90,6 @@ root
 EOF"
 fct_unshare_chroot "${cmd}"
 #-----------------------------------------------------------------------#
-cmd='cat > /etc/init.d/cloonix_startup << EOF
-#!/sbin/openrc-run
-name="Cloonix Backdoor"
-description="Permits cloonix_ssh and cloonix_scp"
-command="/cloonixmnt/cnf_fs/init_cloonix_startup_script.sh"
-command_background=true
-pidfile="/run/cloonix_startup.pid"
-EOF'
-fct_unshare_chroot "${cmd}"
-cmd="chmod +x /etc/init.d/cloonix_startup"
-fct_unshare_chroot "${cmd}"
-cmd="/sbin/rc-update add cloonix_startup sysinit"
-fct_unshare_chroot "${cmd}"
 cmd="chmod +r /bin/bbsuid"
 fct_unshare_chroot "${cmd}"
 #-----------------------------------------------------------------------#
@@ -112,19 +99,11 @@ http://172.17.0.2/alpine/community
 EOF"
 fct_unshare_chroot "${cmd}"
 #-----------------------------------------------------------------------#
-cat > ${ALPINE0}/bin/cloonixsbininit << EOF
-exec &> /tmp/cloonixsbininit.log
-echo STARTING /sbin/init
-exec /sbin/init
-EOF
-chmod 755 ${ALPINE0}/bin/cloonixsbininit
-#-----------------------------------------------------------------------#
 rm -rf ${ALPINE0}/dev/*
 #-----------------------------------------------------------------------#
 for i in "dev" "proc" "sys"; do
   chmod 755 ${ALPINE0}/${i}
 done
-mkdir -p ${ALPINE0}/lib/modules
 chmod 777 ${ALPINE0}/root
 #-----------------------------------------------------------------------#
 

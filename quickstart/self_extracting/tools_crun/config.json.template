@@ -6,23 +6,18 @@
       "uid": 0,
       "gid": 0
     },
-    "args": ["/usr/libexec/cloonix/cloonfs/cloonix-init-__IDENT__"],
+    "args": ["/cloonix/cloonix-init-__IDENT__"],
     "env": [
-        "PATH=/usr/sbin:/usr/bin:/sbin:/bin:/usr/bin:/usr/libexec/cloonix/cloonfs/",
+        "PATH=/usr/sbin:/usr/bin:/sbin:/bin:/usr/bin",
         "XDG_SESSION_TYPE=x11",
         "XDG_RUNTIME_DIR=__PROXYSHARE_IN_____IDENT__",
         "DISPLAY=:713",
         "XAUTHORITY=__PROXYSHARE_IN_____IDENT__/Xauthority",
-        "TERM=linux",
+        "TERM=xterm",
         "HOME=/root",
         "USER=root"
     ],
     "cwd": "/root",
-    "rlimits": [{
-        "type": "RLIMIT_NOFILE",
-        "hard": 1024,
-        "soft": 1024
-    }],
    "capabilities": {
 
             "bounding":
@@ -71,8 +66,7 @@
 
   },
   "root": {
-    "path": "__ROOTFS__",
-    "readonly": "false"
+    "path": "__ROOTFS__"
   },
   "hostname": "crun",
   "mounts": [ {
@@ -81,17 +75,7 @@
     "source": "tmpfs",
     "options": ["nodev","rw","mode=2777"]
     },{
-    "destination": "/var/run",
-    "type": "tmpfs",
-    "source": "tmpfs",
-    "options": ["rshared","mode=2777"]
-    },{
-    "destination": "/var/run/netns",
-    "type": "tmpfs",
-    "source": "tmpfs",
-    "options": ["rshared","mode=2777"]
-    },{
-__HOST_BULK_PRESENT__   "destination": "/var/lib/cloonix/bulk_host",
+__HOST_BULK_PRESENT__   "destination": "/root/bulk_host",
 __HOST_BULK_PRESENT__   "type": "none",
 __HOST_BULK_PRESENT__   "source": "/var/lib/cloonix/bulk",
 __HOST_BULK_PRESENT__   "options": ["rbind","rw"]
@@ -109,27 +93,32 @@ __HOST_PULSE_PRESENT__    },{
     "destination": "/dev",
     "type": "tmpfs",
     "source": "tmpfs",
-    "options": ["nosuid","strictatime","mode=755","size=65536k"]
+    "options": ["nosuid","strictatime","mode=755"]
+    },{
+    "destination": "/dev/net",
+    "type": "tmpfs",
+    "source": "tmpfs",
+    "options": ["nosuid","strictatime","mode=755"]
     },{
     "destination": "/run",
     "type": "tmpfs",
     "source": "tmpfs",
     "options": ["nosuid","noexec","nodev"]
     },{
+    "destination": "/run/netns",
+    "type": "tmpfs",
+    "source": "tmpfs",
+    "options": ["rshared","mode=2777"]
+    },{
     "destination": "/dev/pts",
     "type": "devpts",
     "source": "devpts",
     "options": ["nosuid","noexec","newinstance","ptmxmode=0666","mode=0620"]
     },{
-    "destination": "/dev/net",
-    "type": "tmpfs",
-    "source": "tmpfs",
-    "options": ["nosuid","strictatime","mode=755","size=65536k"]
-    },{
     "destination": "/dev/shm",
     "type": "tmpfs",
     "source": "shm",
-    "options": ["nosuid","noexec","nodev","mode=1777","size=65536k"]
+    "options": ["nosuid","noexec","nodev","mode=1777"]
     },{
     "destination": "/sys",
     "type": "sysfs",
@@ -171,9 +160,11 @@ __HOST_PULSE_PRESENT__    },{
                 "size": 1
             }
         ],
-
-
     "resources": {
+        "memory": {
+            "limit": -1,
+            "reservation": -1
+            },
         "devices": [{
             "allow": false,
             "access": "rwm"

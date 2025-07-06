@@ -50,7 +50,6 @@ redistribute connected
 redistribute static
 EOF
 
-cp -f ${HERE}/cloonix_startup_script.sh ${ROOTFS}/usr/bin
 cp -f ${HERE}/hosts ${ROOTFS}/etc
 
 #----------------------------------------------------------------------------#

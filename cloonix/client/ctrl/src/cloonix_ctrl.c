@@ -477,7 +477,7 @@ int main (int argc, char *argv[])
   char tmpnet[MAX_NAME_LEN];
   char pathcrun[MAX_PATH_LEN];
   uint32_t ip;
-  running_in_crun = lib_io_running_in_crun(tmpnet);
+  running_in_crun = pthexec_running_in_crun(tmpnet);
   if (argc < 2)
     KOUT("%d", argc);
   g_inhibited = 0;

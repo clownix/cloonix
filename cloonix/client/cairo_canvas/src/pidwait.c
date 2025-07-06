@@ -236,9 +236,12 @@ static int get_process_pid(char *cmdpath, char *sock)
   FILE *fp;
   char line[2*MAX_PATH_LEN];
   char name[MAX_NAME_LEN];
-  char cmd[2*MAX_PATH_LEN];
+  char param[2*MAX_PATH_LEN];
   int pid, result = 0;
-  fp = popen("/usr/libexec/cloonix/cloonfs/bin/ps axo pid,args", "r");
+  char cmd[2*MAX_PATH_LEN];
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  snprintf(cmd, 2*MAX_PATH_LEN-1, "%s axo pid,args", pthexec_ps_bin());
+  fp = popen(cmd, "r");
   if (fp == NULL)
     KERR("ERROR %s %s", cmdpath, sock);
   else
@@ -250,7 +253,7 @@ static int get_process_pid(char *cmdpath, char *sock)
         {
         if (strstr(line, cmdpath))
           {
-          if (sscanf(line, "%d %s %400c", &pid, name, cmd))
+          if (sscanf(line, "%d %s %400c", &pid, name, param))
             {
             result = pid;
             break;
@@ -292,7 +295,7 @@ static int kill_previous_spicy_gtk_process(char *name)
 static int kill_previous_xephyr_frame_process(char *ident)
 {
   int pid;
-  pid = get_process_pid(XEPHYR_BIN, ident);
+  pid = get_process_pid(pthexec_xephyr_bin(), ident);
   if (pid)
     kill_previous_process(type_pid_xephyr_frame, ident, pid);
   return pid;
@@ -307,14 +310,16 @@ static int kill_previous_xephyr_session_process(char *name)
   int pid, result = 0;
   char ssh[MAX_PATH_LEN];
   char addr[MAX_PATH_LEN];
+  char cmd[2*MAX_PATH_LEN];
 
+  memset(cmd, 0, 2*MAX_PATH_LEN);
+  snprintf(cmd, 2*MAX_PATH_LEN-1, "%s axo pid,args", pthexec_ps_bin());
   memset(ssh,    0, MAX_PATH_LEN);
   memset(addr,   0, MAX_NAME_LEN);
-  strncpy(ssh,
-  "/usr/libexec/cloonix/cloonfs/bin/cloonix-dropbear-ssh", MAX_PATH_LEN-1);
+  strncpy(ssh, pthexec_dropbear_ssh(), MAX_PATH_LEN-1);
   strncpy(addr,  get_doors_client_addr(), MAX_PATH_LEN-1);
 
-  fp = popen("/usr/libexec/cloonix/cloonfs/bin/ps axo pid,args", "r");
+  fp = popen(cmd, "r");
   if (fp == NULL)
     KERR("ERROR %s", name);
   else 
@@ -362,8 +367,8 @@ static int kill_previous_crun_screen_process(char *name)
 static int kill_previous_wireshark_process(char *sock)
 {
   int result = 0;
-  int pid_wireshark = get_process_pid(WIRESHARK_BIN,  sock);
-  int pid_dumpcap = get_process_pid(DUMPCAP_BIN, sock);
+  int pid_wireshark = get_process_pid(pthexec_wireshark_bin(),  sock);
+  int pid_dumpcap = get_process_pid(pthexec_dumpcap_bin(), sock);
   if (pid_dumpcap)
     {
     kill_previous_process(type_pid_wireshark, sock, pid_dumpcap);
@@ -733,8 +738,8 @@ static void timer_monitor_waiting_transfer_to_active(void)
             from_waiting_to_active(cur);
           break;
         case type_pid_wireshark:
-          if ((get_process_pid(WIRESHARK_BIN, cur->ident)) ||
-              (get_process_pid(DUMPCAP_BIN, cur->ident)))
+          if ((get_process_pid(pthexec_wireshark_bin(), cur->ident)) ||
+              (get_process_pid(pthexec_dumpcap_bin(), cur->ident)))
             {
             cur->count_sync += 1;
             if (cur->count_sync > 3)

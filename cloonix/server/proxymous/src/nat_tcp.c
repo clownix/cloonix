@@ -53,6 +53,8 @@ static uint32_t g_our_gw_ip;
 static uint32_t g_host_local_ip;
 static uint32_t g_offset;
 
+char *get_proxyshare(void);
+
 /****************************************************************************/
 static void tcp_alloc(t_ctx_nat *ctx, int llid, char *stream, uint32_t sip,
                       uint32_t dip, uint16_t sport, uint16_t dport)
@@ -622,13 +624,17 @@ static void tcp_connect(char *nat, uint32_t sip, uint32_t dip,
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-int nat_tcp_stream_proxy_req(t_ctx_nat *ctx, char *stream,
+int nat_tcp_stream_proxy_req(t_ctx_nat *ctx, char *end_stream,
                              uint32_t sip, uint32_t dip,
                              uint16_t sport, uint16_t dport)
 {
   int llid, result = -1;
-  if ((!ctx) || (!stream) || (!strlen(stream)))
+  char *proxydir = get_proxyshare();
+  char stream[MAX_PATH_LEN];
+  if ((!ctx) || (!end_stream) || (!strlen(end_stream)))
     KOUT("ERROR");
+  memset(stream, 0, MAX_PATH_LEN);
+  snprintf(stream, MAX_PATH_LEN-1, "%s/%s", proxydir, end_stream);
   llid = proxy_traf_unix_client(stream, unix_err_cb, unix_rx_cb);
   if (llid == 0)
     KERR("ERROR %s", stream);

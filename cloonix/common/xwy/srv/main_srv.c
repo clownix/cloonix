@@ -659,6 +659,7 @@ int main(int argc, char **argv)
     KOUT("ERROR %d", argc);
 
   daemon(0,0);
+  pthexec_init();
   DEBUG_INIT(1);
   if (check_and_set_uid())
     KOUT("ERROR");

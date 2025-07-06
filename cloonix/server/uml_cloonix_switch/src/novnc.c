@@ -34,15 +34,7 @@
 #include "file_read_write.h"
 #include "utils_cmd_line_maker.h"
 
-#define BIN_XVFB       "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-Xvfb"
-#define BIN_XSETROOT   "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-xsetroot"
-#define BIN_WM2        "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-wm2"
-#define BIN_X11VNC     "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-x11vnc"
-#define BIN_NGINX      "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-nginx"
-
-#define BIN_WEBSOCKIFY "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-websockify-js"
 #define NODE_PATH      "/usr/share/nodejs:/usr/share/nodejs/node_modules"
-#define WEB            "--web=/usr/libexec/cloonix/cloonfs/share/noVNC/"
 
 static int g_pid_Xvfb;
 static int g_pid_wm2;
@@ -175,7 +167,8 @@ static void setup_nginx_conf(char *websockify_port, char *proxymous_sock)
   len = strlen(CONFIG_NGINX) + MAX_PATH_LEN + MAX_PATH_LEN;
   data_conf = (char *) malloc(len);
   memset(data_conf, 0, len);
-  snprintf(data_conf, len-1, CONFIG_NGINX, websockify_port, proxymous_sock);
+  snprintf(data_conf, len-1, CONFIG_NGINX, pthexec_cloonfs_share_novnc(),
+                                           websockify_port, proxymous_sock);
   if (write_whole_file(path, data_conf, strlen(data_conf), err))
     KERR("ERROR %s", err);
 }
@@ -191,7 +184,7 @@ static int get_nginx_master_pid_num(void)
   int pid, result = 0;
   memset(pattern, 0, MAX_PATH_LEN);
   snprintf(pattern, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/nginx", g_net_name);
-  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", pthexec_ps_bin());
   fp = popen(ps_cmd, "r");
   if (fp == NULL)
     KERR("ERROR %s %d", ps_cmd, errno);
@@ -223,7 +216,7 @@ static int get_nginx_worker_pid_num(int master_pid)
   char ps_cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
   int ppid, pid, result = 0;
-  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo ppid,pid,args", PS_BIN);
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo ppid,pid,args", pthexec_ps_bin());
   fp = popen(ps_cmd, "r");
   if (fp == NULL)
     KERR("ERROR %s %d", ps_cmd, errno);
@@ -254,7 +247,7 @@ static int get_pid_num(char *binstring, char *display)
   char ps_cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
   int pid, result = 0;
-  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", pthexec_ps_bin());
   fp = popen(ps_cmd, "r");
   if (fp == NULL)
     KERR("ERROR %s %d", ps_cmd, errno);
@@ -361,8 +354,9 @@ static void nginx_ko(void *unused_data, int status, char *name)
 /*****************************************************************************/
 static int Xvfb(void *data)
 {
-  char *argv[] = {BIN_XVFB, g_display, "-nolisten", "tcp", "-noreset",
-                                       "-dpms", "-br", "-ac", NULL};
+  char *xvfb = pthexec_bin_xvfb(); 
+  char *argv[] = {xvfb, g_display, "-nolisten", "tcp", "-noreset",
+                                   "-dpms", "-br", "-ac", NULL};
 
   if (g_terminate)
     return 0;
@@ -377,11 +371,12 @@ static int Xvfb(void *data)
 /*****************************************************************************/
 static int x11vnc(void *data)
 {
-  char *argv[]={BIN_X11VNC, "-N", "-nopw", "-localhost", "-shared", 
-                            "-repeat", "-forever", "-verbose", "-logfile",
-                            g_x11vnc_log, "-noshm", "-noxdamage", "-cursor",
-                            "arrow", "-remap", "DEAD", "-ncache", "10",
-                            "-dpms", "-display", g_display, NULL};
+  char *x11vnc = pthexec_bin_x11vnc();
+  char *argv[]={x11vnc, "-N", "-nopw", "-localhost", "-shared", 
+                        "-repeat", "-forever", "-verbose", "-logfile",
+                        g_x11vnc_log, "-noshm", "-noxdamage", "-cursor",
+                        "arrow", "-remap", "DEAD", "-ncache", "10",
+                        "-dpms", "-display", g_display, NULL};
 
   if (g_terminate)
     return 0;
@@ -399,7 +394,7 @@ static int x11vnc(void *data)
 /*****************************************************************************/
 static int wm2(void *data)
 {
-  char *argv[]={BIN_WM2, g_display, NULL};
+  char *argv[]={pthexec_bin_wm2(), g_display, NULL};
 
   if (g_terminate)
     return 0;
@@ -418,7 +413,8 @@ static int wm2(void *data)
 /*****************************************************************************/
 static int xsetroot(void *data)
 {
-  char *argv[] = {BIN_XSETROOT, "-display", g_display, "-solid", "grey", NULL};
+  char *sroot = pthexec_bin_xsetroot();
+  char *argv[] = {sroot, "-display", g_display, "-solid", "grey", NULL};
 
   if (g_terminate)
     return 0;
@@ -437,7 +433,9 @@ static int websockify(void *data)
   char proxymous_sock[MAX_PATH_LEN];
   char addr_display[MAX_NAME_LEN];
   char websockify_ascii_port[MAX_NAME_LEN];
-  char *argv[]={BIN_WEBSOCKIFY,WEB,websockify_ascii_port,addr_display,NULL};
+  char *websock = pthexec_bin_websockify();
+  char *web = pthexec_web();
+  char *argv[]={websock, web, websockify_ascii_port, addr_display, NULL};
 
   if (g_terminate)
     return 0;
@@ -467,7 +465,8 @@ static int websockify(void *data)
 static int nginx_ok(void *data)
 {
   char path[MAX_PATH_LEN+1];
-  char *argv[]={BIN_NGINX, "-p", path, NULL};
+  char *nginx = pthexec_bin_nginx();
+  char *argv[]={nginx, "-p", path, NULL};
   if (g_terminate)
     return 0;
   memset (path, 0, MAX_PATH_LEN+1);
@@ -521,7 +520,7 @@ static void timer_nginx(void *data)
     KOUT("ERROR");
   memset (addr_port, 0, MAX_NAME_LEN);
   snprintf(addr_port, MAX_NAME_LEN-1, "localhost:%d", g_port_display);
-  pid = get_pid_num(BIN_WEBSOCKIFY, addr_port);
+  pid = get_pid_num(pthexec_bin_websockify(), addr_port);
   if (g_terminate == 0)
     {
     if (pid)
@@ -551,7 +550,7 @@ static void timer_websockify(void *data)
   if (g_terminate)
     return;
 
-  pid = get_pid_num(BIN_X11VNC, g_display);
+  pid = get_pid_num(pthexec_bin_x11vnc(), g_display);
   if (g_terminate == 0)
     {
     if (pid)
@@ -619,28 +618,28 @@ static int check_before_start(void)
   snprintf(lock_file, MAX_NAME_LEN-1, "/tmp/.X%d-lock",(NOVNC_DISPLAY+g_rank));
   memset (addr_port, 0, MAX_NAME_LEN);
   snprintf(addr_port, MAX_NAME_LEN-1, "localhost:%d", g_port_display);
-  pid = get_pid_num(BIN_XVFB, g_display);
+  pid = get_pid_num(pthexec_bin_xvfb(), g_display);
   if (pid)
     {
     KERR("WARNING KILLING XVFB pid: %d", pid);
     kill(pid, SIGKILL);
     nostart = 1;
     }
-  pid = get_pid_num(BIN_WM2, g_display);
+  pid = get_pid_num(pthexec_bin_wm2(), g_display);
   if (pid)
     {
     KERR("WARNING KILLING WM2 pid: %d", pid);
     kill(pid, SIGKILL);
     nostart = 1;
     }
-  pid = get_pid_num(BIN_WEBSOCKIFY, addr_port);
+  pid = get_pid_num(pthexec_bin_websockify(), addr_port);
   if (pid)
     {
     KERR("WARNING KILLING WEBSOCKIFY pid: %d", pid);
     kill(pid, SIGKILL);
     nostart = 1;
     }
-  pid = get_pid_num(BIN_X11VNC, g_display);
+  pid = get_pid_num(pthexec_bin_x11vnc(), g_display);
   if (pid)
     {
     KERR("WARNING KILLING X11VNC pid: %d", pid);
@@ -712,16 +711,16 @@ static void timer_monitor(void *data)
     KOUT("ERROR");
   memset (addr_port, 0, MAX_NAME_LEN);
   snprintf(addr_port, MAX_NAME_LEN-1, "localhost:%d", g_port_display);
-  pid = get_pid_num(BIN_XVFB, g_display);
+  pid = get_pid_num(pthexec_bin_xvfb(), g_display);
   if (!pid)
     restart_all_upon_problem();
-  pid = get_pid_num(BIN_WM2, g_display);
+  pid = get_pid_num(pthexec_bin_wm2(), g_display);
   if (!pid)
     restart_all_upon_problem();
-  pid = get_pid_num(BIN_WEBSOCKIFY, addr_port);
+  pid = get_pid_num(pthexec_bin_websockify(), addr_port);
   if (!pid)
     restart_all_upon_problem();
-  pid = get_pid_num(BIN_X11VNC, g_display);
+  pid = get_pid_num(pthexec_bin_x11vnc(), g_display);
   if (!pid)
     restart_all_upon_problem();
   pid = get_nginx_master_pid_num();
@@ -782,16 +781,16 @@ int start_novnc(void)
   int result = -1;
   if ((g_start != 1) && (g_terminate != 0))
     {
-    if (!file_exists(BIN_XVFB, X_OK))
-      KERR("\"%s\" not found or not executable\n", BIN_XVFB);
-    else if (!file_exists(BIN_WM2, X_OK))
-      KERR("\"%s\" not found or not executable\n", BIN_WM2);
-    else if (!file_exists(BIN_X11VNC, X_OK))
-      KERR("\"%s\" not found or not executable\n", BIN_X11VNC);
-    else if (!file_exists(BIN_WEBSOCKIFY, X_OK))
-      KERR("\"%s\" not found or not executable\n", BIN_WEBSOCKIFY);
-    else if (!file_exists(BIN_NGINX, X_OK))
-      KERR("\"%s\" not found or not executable\n", BIN_NGINX);
+    if (!file_exists(pthexec_bin_xvfb(), X_OK))
+      KERR("\"%s\" not found or not executable\n", pthexec_bin_xvfb());
+    else if (!file_exists(pthexec_bin_wm2(), X_OK))
+      KERR("\"%s\" not found or not executable\n", pthexec_bin_wm2());
+    else if (!file_exists(pthexec_bin_x11vnc(), X_OK))
+      KERR("\"%s\" not found or not executable\n", pthexec_bin_x11vnc());
+    else if (!file_exists(pthexec_bin_websockify(), X_OK))
+      KERR("\"%s\" not found or not executable\n", pthexec_bin_websockify());
+    else if (!file_exists(pthexec_bin_nginx(), X_OK))
+      KERR("\"%s\" not found or not executable\n", pthexec_bin_nginx());
     else if (g_port_display)
       KERR("ERROR CANNOT START, port g_port_display %d initialized",
             g_port_display);

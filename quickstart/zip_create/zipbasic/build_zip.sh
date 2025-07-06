@@ -32,7 +32,7 @@ LIST_UBIN="/usr/bin/iperf3 /usr/bin/strace /usr/sbin/arping /usr/bin/mawk \
            /usr/bin/free /usr/bin/pgrep /usr/bin/pidwait /usr/bin/top \
            /usr/bin/uptime /usr/bin/vmstat /usr/bin/watch /usr/bin/pkill \
            /usr/bin/objdump /usr/bin/readelf /usr/bin/strings /usr/bin/which \
-           /usr/bin/file /usr/bin/lsof /usr/bin/ldd /usr/bin/ssh \
+           /usr/bin/lsof /usr/bin/ldd /usr/bin/ssh \
            /usr/bin/scp /usr/bin/daemonize /usr/bin/killall /usr/bin/pstree \
            /usr/bin/xeyes /usr/bin/locale /usr/bin/localedef /usr/bin/curl \
            /usr/bin/localectl /usr/bin/xauth /usr/bin/curl /usr/bin/tcpdump \
@@ -55,7 +55,7 @@ for i in "bin" "sbin" "root" "etc" "tmp" "lib" "home" "lib64" \
      "usr/share/misc" "usr/lib/x86_64-linux-gnu/rsyslog" \
      "usr/share/locale" "lib/x86_64-linux-gnu" "usr/share/X11/locale" \
      "usr/share/bash-completion" "usr/share/bash-completion/completions" \
-     "usr/lib/locale" "usr/lib/security" "lib/modules" \
+     "usr/lib/locale" "usr/lib/security" \
      "etc/default" ; do 
   mkdir -v -p ${ROOTFS}/${i}
 done
@@ -89,14 +89,13 @@ cp /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 ${ROOTFS}/usr/lib/x86_64-linux-gnu
 
 cp /usr/lib/x86_64-linux-gnu/libyang.so.3  ${ROOTFS}/usr/lib/x86_64-linux-gnu
 
-cp -v /usr/lib/file/magic.mgc ${ROOTFS}/usr/share/misc
 cp -f /etc/bash_completion ${ROOTFS}/etc
 cp -Lrf /usr/lib/locale ${ROOTFS}/usr/lib
 cp -f /etc/locale.conf ${ROOTFS}/etc
 cp -f /etc/locale.gen ${ROOTFS}/etc
 cp -f /etc/default/locale ${ROOTFS}/etc/default
 cp -f /usr/share/bash-completion/bash_completion ${ROOTFS}/usr/share/bash-completion
-for i in "arp" "arping" "chmod" "chown" "curl" "file" \
+for i in "arp" "arping" "chmod" "chown" "curl" \
          "find" "hostname" "id" "ip" "iperf3" "iptables" \
          "kill" "killall" "locale-gen" "lsof" "passwd" \
          "pgrep" "ping" "pwd" "route" "sh" "ssh" "strace" \
@@ -172,12 +171,6 @@ chroot ${ROOTFS} passwd root <<EOF
 root
 root
 EOF
-#----------------------------------------------------------------------------#
-cat > ${ROOTFS}/usr/bin/cloonix_startup_script.sh << "EOF"
-#!/bin/bash
-/usr/sbin/rsyslogd
-EOF
-chmod +x ${ROOTFS}/usr/bin/cloonix_startup_script.sh
 #----------------------------------------------------------------------------#
 cd ${ROOTFS}
 #----------------------------------------------------------------------------#

@@ -35,6 +35,8 @@
 #include <syslog.h>
 #include <string.h>
 
+#include "pthexec.h"
+
 
 uint64_t cloonix_get_msec(void);
 uint64_t cloonix_get_usec(void);
@@ -251,38 +253,10 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define OVS_BRIDGE_PORT "_k_"
 #define OVS_BRIDGE   "_b_"
 
-#define AGENT_ISO_AMD64 "/usr/libexec/cloonix/cloonfs/insider_agents/insider_agent_x86_64.iso"
-
-#define SPICE_USB_ACL_HELPER_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-spice-client-glib-usb-acl-helper"
 
 #define PROXYSHARE_IN "/tmp/cloonix_proxymous"
-
 #define LXSESSION "/usr/bin/cloonix_lxsession.sh"
-#define XEPHYR_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-novnc-xephyr"
-#define CHOWN_BIN "/usr/libexec/cloonix/cloonfs/bin/chown"
-#define XAUTH_BIN "/usr/libexec/cloonix/cloonfs/bin/xauth"
-#define BASH_BIN "/usr/libexec/cloonix/cloonfs/bin/bash"
-#define XWYCLI_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-xwycli"
-#define URXVT_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-urxvt"
-#define WIRESHARK_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-wireshark"
-#define DUMPCAP_BIN "/usr/libexec/cloonix/cloonfs/bin/dumpcap"
-#define CRUN_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-crun"
-#define NSENTER_BIN "/usr/libexec/cloonix/cloonfs/bin/nsenter"
-#define IP_BIN "/usr/libexec/cloonix/cloonfs/bin/ip"
-#define FUSEZIP_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-fuse-zip"
-#define MOUNT_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-mount"
-#define UMOUNT_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-umount"
-#define GREP_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-grep"
-#define PS_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-ps"
-#define AWK_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-awk"
-#define MKNOD_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-mknod"
-#define CHMOD_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-chmod"
-#define OVSDB_SERVER_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovsdb-server"
-#define OVS_VSWITCHD_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-vswitchd"
-#define OVSDB_TOOL_BIN   "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovsdb-tool"
-#define OSIRROX_BIN "/usr/libexec/cloonix/cloonfs/bin/cloonix-osirrox"
 
-#define CLOONIX_CFG "/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg"
 
 #define BASE_NAMESPACE "cloonix"
 #define PATH_NAMESPACE "/var/run/netns/"

@@ -1,0 +1,428 @@
+#!/bin/bash
+
+#----------------------------------------------------------------------------
+LOGFILE="/tmp/cloonix_sbin_init_replace.log"
+exec &> ${LOGFILE}
+echo "START cloonixsbininitreplace"
+#----------------------------------------------------------------------------
+NUM=${NODE_ID:3:2}
+echo "NODE_ID=${NODE_ID} NUM=${NUM}"
+
+echo "10.0.0.1  tod1" >> /etc/hosts
+echo "11.0.0.2  tod2" >> /etc/hosts
+echo "12.0.0.3  tod3" >> /etc/hosts
+echo "13.0.0.4  tod4" >> /etc/hosts
+echo "14.0.0.5  tod5" >> /etc/hosts
+echo "10.0.0.6  cod1" >> /etc/hosts
+echo "11.0.0.7  cod2" >> /etc/hosts
+echo "12.0.0.8  cod3" >> /etc/hosts
+echo "13.0.0.9  cod4" >> /etc/hosts
+echo "14.0.0.10 cod5" >> /etc/hosts
+echo "17.0.0.11 nod1" >> /etc/hosts
+echo "23.0.0.12 nod2" >> /etc/hosts
+echo "25.0.0.13 nod3" >> /etc/hosts
+echo "27.0.0.14 nod4" >> /etc/hosts
+echo "15.0.0.15 nod5" >> /etc/hosts
+echo "15.0.0.16 nod11" >> /etc/hosts
+echo "16.0.0.17 nod12" >> /etc/hosts
+echo "17.0.0.18 nod13" >> /etc/hosts
+echo "18.0.0.19 nod21" >> /etc/hosts
+echo "19.0.0.20 nod22" >> /etc/hosts
+echo "23.0.0.21 nod23" >> /etc/hosts
+echo "24.0.0.22 nod31" >> /etc/hosts
+echo "20.0.0.23 nod32" >> /etc/hosts
+echo "25.0.0.24 nod33" >> /etc/hosts
+echo "26.0.0.25 nod41" >> /etc/hosts
+echo "21.0.0.26 nod42" >> /etc/hosts
+echo "27.0.0.27 nod43" >> /etc/hosts
+echo "28.0.0.28 nod51" >> /etc/hosts
+echo "22.0.0.29 nod52" >> /etc/hosts
+echo "29.0.0.30 nod53" >> /etc/hosts
+echo "30.0.0.1  sod30" >> /etc/hosts
+echo "31.0.0.1  sod31" >> /etc/hosts
+echo "32.0.0.1  sod32" >> /etc/hosts
+echo "33.0.0.1  sod33" >> /etc/hosts
+echo "34.0.0.1  sod34" >> /etc/hosts
+echo "35.0.0.1  sod35" >> /etc/hosts
+echo "36.0.0.1  sod36" >> /etc/hosts
+echo "37.0.0.1  sod37" >> /etc/hosts
+echo "38.0.0.1  sod38" >> /etc/hosts
+echo "39.0.0.1  sod39" >> /etc/hosts
+echo "40.0.0.1  sod40" >> /etc/hosts
+echo "41.0.0.1  sod41" >> /etc/hosts
+echo "42.0.0.1  sod42" >> /etc/hosts
+echo "43.0.0.1  sod43" >> /etc/hosts
+echo "44.0.0.1  sod44" >> /etc/hosts
+
+case ${NODE_ID} in
+
+  "tod1")
+    NB=1
+    IP0=10
+    IP1=11
+    NUM=${NB}
+    ;;
+
+  "tod2")
+    NB=2
+    IP0=11
+    IP1=12
+    NUM=${NB}
+    ;;
+
+  "tod3")
+    NB=3
+    IP0=12
+    IP1=13
+    NUM=${NB}
+    ;;
+
+  "tod4")
+    NB=4
+    IP0=13
+    IP1=14
+    NUM=${NB}
+    ;;
+
+  "tod5")
+    NB=5
+    IP0=14
+    IP1=10
+    NUM=${NB}
+    ;;
+
+  "cod1")
+    NB=6
+    IP0=10
+    IP1=15
+    IP2=16
+    IP3=17
+    NUM=${NB}
+    ;;
+
+  "cod2")
+    NB=7
+    IP0=11
+    IP1=18
+    IP2=19
+    IP3=23
+    NUM=${NB}
+    ;;
+
+  "cod3")
+    NB=8
+    IP0=12
+    IP1=24
+    IP2=20
+    IP3=25
+    NUM=${NB}
+    ;;
+
+  "cod4")
+    NB=9
+    IP0=13
+    IP1=26
+    IP2=21
+    IP3=27
+    NUM=${NB}
+    ;;
+
+  "cod5")
+    NB=10
+    IP0=14
+    IP1=28
+    IP2=22
+    IP3=29
+    NUM=${NB}
+    ;;
+
+  "nod1")
+    NB=11
+    IP0=17
+    IP1=18
+    NUM=${NB}
+    ;;
+
+  "nod2")
+    NB=12
+    IP0=23
+    IP1=24
+    NUM=${NB}
+    ;;
+
+  "nod3")
+    NB=13
+    IP0=25
+    IP1=26
+    NUM=${NB}
+    ;;
+
+  "nod4")
+    NB=14
+    IP0=27
+    IP1=28
+    NUM=${NB}
+    ;;
+
+  "nod5")
+    NB=15
+    IP0=15
+    IP1=29
+    NUM=${NB}
+    ;;
+
+  "nod11")
+    NB=16
+    IP0=15
+    IP1=30
+    NUM=${NB}
+    ;;
+
+  "nod12")
+    NB=17
+    IP0=16
+    IP1=31
+    NUM=${NB}
+    ;;
+
+  "nod13")
+    NB=18
+    IP0=17
+    IP1=32
+    NUM=${NB}
+    ;;
+
+  "nod21")
+    NB=19
+    IP0=18
+    IP1=33
+    NUM=${NB}
+    ;;
+
+  "nod22")
+    NB=20
+    IP0=19
+    IP1=34
+    NUM=${NB}
+    ;;
+
+  "nod23")
+    NB=21
+    IP0=23
+    IP1=35
+    NUM=${NB}
+    ;;
+
+  "nod31")
+    NB=22
+    IP0=24
+    IP1=36
+    NUM=${NB}
+    ;;
+
+  "nod32")
+    NB=23
+    IP0=20
+    IP1=37
+    NUM=${NB}
+    ;;
+
+  "nod33")
+    NB=24
+    IP0=25
+    IP1=38
+    NUM=${NB}
+    ;;
+
+  "nod41")
+    NB=25
+    IP0=26
+    IP1=39
+    NUM=${NB}
+    ;;
+
+  "nod42")
+    NB=26
+    IP0=21
+    IP1=40
+    NUM=${NB}
+    ;;
+
+  "nod43")
+    NB=27
+    IP0=27
+    IP1=41
+    NUM=${NB}
+    ;;
+
+  "nod51")
+    NB=28
+    IP0=28
+    IP1=42
+    NUM=${NB}
+    ;;
+
+  "nod52")
+    NB=29
+    IP0=22
+    IP1=43
+    NUM=${NB}
+    ;;
+
+  "nod53")
+    NB=30
+    IP0=29
+    IP1=44
+    NUM=${NB}
+    ;;
+  "lod11")
+    NB=31
+    IP0=30
+    IP1=31
+    NUM=${NB}
+    ;;
+
+  "lod12")
+    NB=32
+    IP0=31
+    IP1=32
+    NUM=${NB}
+    ;;
+
+  "lod13")
+    NB=33
+    IP0=32
+    IP1=33
+    NUM=${NB}
+    ;;
+
+  "lod21")
+    NB=34
+    IP0=33
+    IP1=34
+    NUM=${NB}
+    ;;
+
+  "lod22")
+    NB=35
+    IP0=34
+    IP1=35
+    NUM=${NB}
+    ;;
+
+  "lod23")
+    NB=36
+    IP0=35
+    IP1=36
+    NUM=${NB}
+    ;;
+
+  "lod31")
+    NB=37
+    IP0=36
+    IP1=37
+    NUM=${NB}
+    ;;
+
+  "lod32")
+    NB=38
+    IP0=37
+    IP1=38
+    NUM=${NB}
+    ;;
+
+  "lod33")
+    NB=39
+    IP0=38
+    IP1=39
+    NUM=${NB}
+    ;;
+
+  "lod41")
+    NB=40
+    IP0=39
+    IP1=40
+    NUM=${NB}
+    ;;
+
+  "lod42")
+    NB=41
+    IP0=40
+    IP1=41
+    NUM=${NB}
+    ;;
+
+  "lod43")
+    NB=42
+    IP0=41
+    IP1=42
+    NUM=${NB}
+    ;;
+
+  "lod51")
+    NB=43
+    IP0=42
+    IP1=43
+    NUM=${NB}
+    ;;
+
+  "lod52")
+    NB=44
+    IP0=43
+    IP1=44
+    NUM=${NB}
+    ;;
+
+  "lod53")
+    NB=45
+    IP0=44
+    IP1=30
+    NUM=${NB}
+    ;;
+
+  "sod30"|"sod31"|"sod32"|"sod33"|"sod34"|"sod35"|"sod36"|"sod37"|"sod38"|"sod39")
+    NB=1
+    IP0=${NODE_ID#sod}
+    NUM=$((26+IP0))
+    ;;
+
+  "sod40"|"sod41"|"sod42"|"sod43"|"sod44")
+    NB=1
+    IP0=${NODE_ID#sod}
+    NUM=$((37+IP0))
+    ;;
+
+   *)
+    echo "STARTUP SPIDER FAILURE NODE_ID=$NODE_ID"
+    /bin/logger "STARTUP SPIDER FAILURE NODE_ID=$NODE_ID"
+    exit 1
+esac
+
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+sed -i s"/__NUM__/${NUM}/" /etc/frr/frr.conf
+
+if [ ! -z "$IP0" ]; then
+  ifconfig eth0 ${IP0}.0.0.${NB}/24 up
+  echo "network ${IP0}.0.0.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+fi
+
+if [ ! -z "$IP1" ]; then
+  ifconfig eth1 ${IP1}.0.0.${NB}/24 up
+  echo "network ${IP1}.0.0.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+fi
+
+if [ ! -z "$IP2" ]; then
+  ifconfig eth2 ${IP2}.0.0.${NB}/24 up
+  echo "network ${IP2}.0.0.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+fi
+
+if [ ! -z "$IP3" ]; then
+  ifconfig eth3 ${IP3}.0.0.${NB}/24 up
+  echo "network ${IP3}.0.0.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+fi
+
+/sbin/frrinit.sh start
+##############################################################################
+
+

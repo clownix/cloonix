@@ -67,7 +67,6 @@ SERVER=${SRC_TREE_ROOT}/cloonix/server
   rm -f ${SERVER}/cloonix-proxymous
 #----------------------------------------------------------
   for i in apk_tools \
-           script_pty \
            iproute2 \
            ovs \
            proxymous \
@@ -82,6 +81,7 @@ SERVER=${SRC_TREE_ROOT}/cloonix/server
            xwy \
            wm2 \
            crun \
+           frr \
            xorg \
            wireshark \
            spice_lib_server ; do

@@ -1,6 +1,6 @@
-diff -Naur xserver/meson_options.txt new_xserver/meson_options.txt
---- xserver/meson_options.txt	2025-03-24 11:25:15.000000000 +0100
-+++ new_xserver/meson_options.txt	2025-04-09 16:44:58.104459259 +0200
+diff -Naur xserver/meson_options.txt newxserver/meson_options.txt
+--- xserver/meson_options.txt	2025-06-14 21:38:40.000000000 +0200
++++ newxserver/meson_options.txt	2025-06-29 16:48:27.969300645 +0200
 @@ -1,6 +1,6 @@
  option('xorg', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto',
         description: 'Enable Xorg X Server')
@@ -9,26 +9,39 @@ diff -Naur xserver/meson_options.txt new_xserver/meson_options.txt
         description: 'Enable Xephyr nested X server')
  option('xwayland', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto',
         description: 'Enable Xwayland X server')
-@@ -36,7 +36,7 @@
- option('ipv6', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto')
- option('input_thread', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto')
- 
--option('xkb_dir', type: 'string')
-+option('xkb_dir', type: 'string', value: '/usr/libexec/cloonix/cloonfs/share/X11/xkb')
- option('xkb_output_dir', type: 'string')
- option('xkb_bin_dir', type: 'string')
- option('xkb_default_rules', type: 'string', value: 'evdev')
-diff -Naur xserver/xkb/ddxLoad.c new_xserver/xkb/ddxLoad.c
---- xserver/xkb/ddxLoad.c	2025-03-24 11:25:15.000000000 +0100
-+++ new_xserver/xkb/ddxLoad.c	2025-04-09 16:44:12.132458168 +0200
-@@ -154,9 +154,8 @@
+diff -Naur xserver/xkb/ddxLoad.c newxserver/xkb/ddxLoad.c
+--- xserver/xkb/ddxLoad.c	2025-06-14 21:38:40.000000000 +0200
++++ newxserver/xkb/ddxLoad.c	2025-06-29 16:46:24.000669303 +0200
+@@ -153,16 +153,30 @@
+         }
      }
  
++if (!access("/cloonix/cloonfs/bin/xkbcomp", X_OK))
++  {
      if (asprintf(&buf,
 -                 "\"%s%sxkbcomp\" -w %d %s -xkm \"%s\" "
-+                 "\"/usr/libexec/cloonix/cloonfs/bin/xkbcomp\" -w %d %s -xkm \"%s\" "
++                 "\"/cloonix/cloonfs/bin/xkbcomp\" -w %d %s -xkm \"%s\" "
                   "-em1 %s -emp %s -eml %s \"%s%s.xkm\"",
 -                 xkbbindir, xkbbindirsep,
                   ((xkbDebugFlags < 2) ? 1 :
                    ((xkbDebugFlags > 10) ? 10 : (int) xkbDebugFlags)),
                   xkbbasedirflag ? xkbbasedirflag : "", xkmfile,
+                  PRE_ERROR_MSG, ERROR_PREFIX, POST_ERROR_MSG1,
+                  xkm_output_dir, keymap) == -1)
+         buf = NULL;
++  }
++else
++  {
++    if (asprintf(&buf,
++                 "\"/usr/libexec/cloonix/cloonfs/bin/xkbcomp\" -w %d %s -xkm \"%s\" "
++                 "-em1 %s -emp %s -eml %s \"%s%s.xkm\"",
++                 ((xkbDebugFlags < 2) ? 1 :
++                  ((xkbDebugFlags > 10) ? 10 : (int) xkbDebugFlags)),
++                 xkbbasedirflag ? xkbbasedirflag : "", xkmfile,
++                 PRE_ERROR_MSG, ERROR_PREFIX, POST_ERROR_MSG1,
++                 xkm_output_dir, keymap) == -1)
++        buf = NULL;
++  }
+ 
+     free(xkbbasedirflag);
+ 

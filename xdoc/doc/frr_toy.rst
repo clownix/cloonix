@@ -2,13 +2,13 @@
    :align: right
 
 ==================
-Cloonix extractor
+Cloonix frr toy
 ==================
 
 With the tool called makeself.sh, the cloonix bundle is packed so that
 its installation is made easy, juste call the self-extracting script ::
 
-  ./cloonix_extractor.sh
+  ./frr-toy__LAST__.sh
 
 At the end of this installation, a new directory is created, named
 **dir_self_extracted** filled with all the necessary cloonix tools and

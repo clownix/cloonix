@@ -59,7 +59,7 @@ The cloonix source to compile is on github::
 
 You can get it also by download::
 
-    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/cloonix-__LAST__.tar.gz
+    wget http://clownix.net/downloads/cloonix-__LAST__/cloonix-__LAST__.tar.gz
     tar xvf cloonix-__LAST__.tar.gz
 
 
@@ -85,7 +85,7 @@ you need some external open sources that are in the targz_store.tar.gz provided.
 You must untar the targz_store.tar.gz in the cloonix-__LAST__ directory first.
 And last you have the compilation virtual machines ready in bulk and do::
 
-    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/targz_store.tar.gz
+    wget http://clownix.net/downloads/cloonix-__LAST__/targz_store.tar.gz
     tar xvf targz_store.tar.gz
     ./doitall
 

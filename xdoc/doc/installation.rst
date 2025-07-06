@@ -26,7 +26,7 @@ directory depends on the name of the launched cloonix net::
 
 Here under is the complete list of commands for the binary installation::
   
-  wget http://clownix.net/downloads/cloonix-__LAST_BASE__/cloonix-bundle-__LAST__.tar.gz
+  wget http://clownix.net/downloads/cloonix-__LAST__/cloonix-bundle-__LAST__.tar.gz
   tar xvf cloonix-bundle-__LAST__.tar.gz
   cd cloonix-bundle-__LAST__
   sudo ./install_cloonfs
@@ -45,12 +45,12 @@ Here under is the complete list of commands to populate the bulk with qcow2::
 
   mkdir -p /var/lib/cloonix/bulk
   cd /var/lib/cloonix/bulk
-  wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/bookworm.qcow2.gz
+  wget http://clownix.net/downloads/cloonix-__LAST__/bulk/bookworm.qcow2.gz
   gunzip bookworm.qcow2.gz
 
 For the crun use, commands to populate the bulk with zip file-systems::
 
-    wget http://clownix.net/downloads/cloonix-__LAST_BASE__/bulk/busybox.zip
+    wget http://clownix.net/downloads/cloonix-__LAST__/bulk/busybox.zip
 
 
 Howto erase cloonix from host

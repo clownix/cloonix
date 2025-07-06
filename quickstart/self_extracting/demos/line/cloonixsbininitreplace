@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#----------------------------------------------------------------------------
+LOGFILE="/tmp/cloonix_sbin_init_replace.log"
+exec &> ${LOGFILE}
+echo "START cloonixsbininitreplace"
+#----------------------------------------------------------------------------
+case ${NODE_ID} in
+  "cnt1")
+    NUM=1
+  ;;
+  "cnt2")
+    NUM=2
+  ;;
+  "cnt3")
+    NUM=3
+  ;;
+   *)
+    /bin/logger "STARTUP LINE FAILURE NODE_ID=$NODE_ID"
+    echo "STARTUP LINE FAILURE NODE_ID=$NODE_ID"
+    exit 1
+esac
+
+sed -i s"/__NUM__/${NUM}/" /etc/frr/frr.conf
+
+case ${NODE_ID} in
+
+  "cnt1")
+    ifconfig eth0 10.0.0.1/24 up
+    echo "network 10.0.0.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+  ;;
+  "cnt2")
+    ifconfig eth0 10.0.0.2/24 up
+    ifconfig eth1 11.0.0.2/24 up
+    echo "network 10.0.0.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+    echo "network 11.0.0.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+  ;;
+  "cnt3")
+    ifconfig eth0 11.0.0.1/24 up
+    echo "network 11.0.0.0/24 area 0.0.0.0" >> /etc/frr/frr.conf
+  ;;
+esac
+
+echo "${NODE_ID}"
+
+echo "Launching rsyslogd"
+
+rsyslogd
+
+echo "Launching /sbin/frrinit.sh start"
+echo 1 > /proc/sys/net/ipv4/ip_forward
+/sbin/frrinit.sh start
+##############################################################################
+
+

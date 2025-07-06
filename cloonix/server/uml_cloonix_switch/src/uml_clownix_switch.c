@@ -82,6 +82,7 @@ static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
 static int g_i_am_inside_cloonix;
 static char g_i_am_inside_cloonix_name[MAX_NAME_LEN];
+static char g_proxymous_dir[MAX_PATH_LEN];
 
 
 static int g_uml_cloonix_started;
@@ -92,6 +93,12 @@ static int g_conf_rank;
 static int g_novnc_port;
 static int g_running_in_crun;
 
+/*****************************************************************************/
+char *get_proxymous_dir(void)
+{
+  return g_proxymous_dir;
+}
+/*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 t_cloonix_conf_info *get_cloonix_conf_info(void)
@@ -200,7 +207,6 @@ static void check_for_another_instance(char *clownlock, int keep_fd)
 /****************************************************************************/
 static void mk_and_tst_work_path(void)
 {
-  char proxymous_dir[MAX_PATH_LEN];
   char path1[MAX_PATH_LEN];
   char path2[MAX_PATH_LEN];
   char *ptr;
@@ -255,9 +261,8 @@ static void mk_and_tst_work_path(void)
     }
   my_mkdir(cfg_get_root_work(), 1);
   my_mkdir(cfg_get_bulk(), 1);
-  memset(proxymous_dir, 0, MAX_PATH_LEN);
-  snprintf(proxymous_dir, MAX_PATH_LEN-1, "%s_%s", PROXYSHARE_IN, net);
-  my_mkdir(proxymous_dir, 1);
+  snprintf(g_proxymous_dir, MAX_PATH_LEN-1, "%s_%s", PROXYSHARE_IN, net);
+  my_mkdir(g_proxymous_dir, 1);
   mk_cnt_dir();
   mk_endp_dir();
   mk_dtach_screen_dir();
@@ -357,7 +362,7 @@ static void launching(void)
     printf("\"%s\" not found or not executable\n", dtach);
     KOUT("\"%s\" not found or not executable\n", dtach);
     }
-  g_running_in_crun = lib_io_running_in_crun(NULL);
+  g_running_in_crun = pthexec_running_in_crun(NULL);
   set_cloonix_name(cfg_get_cloonix_name());
   printf("\n\n");
   printf("     Version:      %s\n",cfg_get_version());
@@ -417,7 +422,7 @@ static t_topo_clc *get_parsed_config(char *name)
     snprintf(conf->network, MAX_NAME_LEN, "%s", cloonix_conf->name); 
     conf->network[MAX_NAME_LEN-1] = 0;
     conf->server_port = cloonix_conf->port; 
-    strcpy(conf->bin_dir, "/usr/libexec/cloonix");
+    strcpy(conf->bin_dir, pthexec_usr_libexec_cloonix());
     g_novnc_port = cloonix_conf->novnc_port;
     g_cloonix_conf_info = cloonix_conf;
     }
@@ -510,7 +515,7 @@ static int get_info_exists(char *binary, char *pattern)
   char ps_cmd[MAX_PATH_LEN];
   char line[MAX_PATH_LEN];
   int result = 0;
-  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", PS_BIN);
+  snprintf(ps_cmd, MAX_PATH_LEN-1, "%s axo pid,args", pthexec_ps_bin());
   fp = popen(ps_cmd, "r");
   if (fp == NULL)
     KERR("ERROR %s %d", ps_cmd, errno);
@@ -540,31 +545,31 @@ static int tst_binaries_with_cloonix_name(char *cloonix_name)
   int result = 0;
   memset(pattern1, 0, MAX_PATH_LEN);
   snprintf(pattern1, MAX_PATH_LEN-1, "/var/lib/cloonix/%s", cloonix_name);
-  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-doorways"; 
+  binary = pthexec_cloonfs_doorways(); 
   if (get_info_exists(binary, pattern1))
     {
     KERR("ERROR ps exists %s %s", binary, pattern1); 
     result = 1;
     }
-  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-drv"; 
+  binary = pthexec_cloonfs_ovs_drv(); 
   if (get_info_exists(binary, pattern1))
     {
     KERR("ERROR ps exists %s %s", binary, pattern1); 
     result = 1;
     }
-  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovsdb-server";
+  binary = pthexec_cloonfs_ovs_ovsbd();
   if (get_info_exists(binary, pattern1))
     {
     KERR("ERROR ps exists %s %s", binary, pattern1); 
     result = 1;
     }
-  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-ovs-vswitchd";
+  binary = pthexec_cloonfs_ovs_vswitchd();
   if (get_info_exists(binary, pattern1))
     {
     KERR("ERROR ps exists %s %s", binary, pattern1); 
     result = 1;
     }
-  binary = "/usr/libexec/cloonix/cloonfs/bin/cloonix-suid-power";
+  binary = pthexec_cloonfs_suid_power();
   if (get_info_exists(binary, pattern1))
     {
     KERR("ERROR ps exists %s %s", binary, pattern1); 
@@ -586,7 +591,9 @@ int main (int argc, char *argv[])
   umask(0000);
   if (clock_gettime(CLOCK_MONOTONIC, &ts))
     KOUT(" ");
+  pthexec_init();
   g_i_am_inside_cloonix = i_am_inside_cloonix(g_i_am_inside_cloonix_name);
+  memset(g_proxymous_dir, 0, MAX_PATH_LEN);
 
   g_novnc_port = 0;
   job_for_select_init();

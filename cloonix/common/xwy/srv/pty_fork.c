@@ -151,7 +151,7 @@ static int xauth_add_magic_cookie(int display_val, char *magic_cookie)
   memset(buf, 0, MAX_TXT_LEN);
   memset(dpyname, 0, MAX_TXT_LEN);
   snprintf(dpyname, MAX_TXT_LEN-1, X11_DISPLAY_NAME, display_val);
-  argv[0] = XAUTH_BIN;
+  argv[0] = pthexec_xauth_bin();
   argv[1] = "-f";
   argv[2] = xaf;
   argv[3] = "add";
@@ -195,15 +195,15 @@ static void create_env_display(int net_rank, int display_val, char *ttyname)
   char disp_xwy[MAX_TXT_LEN];
   char disp_X11[MAX_TXT_LEN];
   char *net = g_net_name;
-  char *px86_64="/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu/qt6/plugins";
+  char *px86_64 = pthexec_qt6_plugins();
   int display_val_rank;
   memset(disp_xwy, 0, MAX_TXT_LEN);
   memset(disp_X11, 0, MAX_TXT_LEN);
-  setenv("PATH",  "/usr/libexec/cloonix/cloonfs/bin:/usr/libexec/cloonix/cloonfs/sbin", 1);
+  setenv("PATH", pthexec_cloonfs_path(), 1);
   setenv("LC_ALL", "C", 1);
   setenv("LANG", "C", 1);
   setenv("XAUTHORITY", g_xauthority, 1);
-  setenv("SHELL", "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash", 1);
+  setenv("SHELL", pthexec_bash_bin(), 1);
   setenv("TERM", "xterm", 1);
   if (display_val > 0)
     {
@@ -231,10 +231,10 @@ static void create_env_display(int net_rank, int display_val, char *ttyname)
   if (wrap_file_exists(px86_64))
     {
     setenv("QT_PLUGIN_PATH", px86_64, 1);
-    setenv("PIPEWIRE_MODULE_DIR", "/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu/pipewire-0.3", 1);
+    setenv("PIPEWIRE_MODULE_DIR", pthexec_pipewire_module_dir(), 1);
     }
-  setenv("GST_PLUGIN_SCANNER", "/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner", 1);
-  setenv("GST_PLUGIN_PATH", "/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu/gstreamer-1.0", 1);
+  setenv("GST_PLUGIN_SCANNER", pthexec_gst_plugin_scanner(), 1);
+  setenv("GST_PLUGIN_PATH", pthexec_gst_plugin_path(), 1);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -243,9 +243,9 @@ static void create_argv_from_cmd(char *cmd, char **argv)
 {
   static char comp_cmd[MAX_MSG_LEN + MAX_PATH_LEN];
   memset(comp_cmd, 0, MAX_MSG_LEN + MAX_PATH_LEN);
-  snprintf(comp_cmd, MAX_MSG_LEN + MAX_PATH_LEN -1,
-           "%s ; /usr/libexec/cloonix/cloonfs/bin/sleep 1", cmd);
-  argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash";
+  snprintf(comp_cmd, MAX_MSG_LEN + MAX_PATH_LEN -1, "%s ; %s 1",
+           cmd, pthexec_sleep_bin());
+  argv[0] = pthexec_bash_bin();
   argv[1] = "-c";
   argv[2] = comp_cmd;
   argv[3] = NULL;
@@ -354,7 +354,7 @@ void pty_fork_bin_bash(int action, uint32_t randid, int sock_fd,
       close(i);
     if (action == action_bash)
       {
-      argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-bash";
+      argv[0] = pthexec_bash_bin();
       argv[1] = NULL;
       }
     else if (action == action_crun)
@@ -650,7 +650,7 @@ void pty_fork_init(char *net_name, int net_rank)
     KERR("ERROR %s", strerror(errno));
   snprintf(g_xauthority, MAX_TXT_LEN-1,
            "/var/lib/cloonix/%s/.Xauthority", g_net_name); 
-  sprintf(cmd, "/usr/libexec/cloonix/cloonfs/bin/touch %s", g_xauthority);
+  sprintf(cmd, "%s %s", pthexec_touch_bin(), g_xauthority);
   system(cmd);
   if (wrap_pipe(pipe_fd, fd_type_pipe_sig, __FUNCTION__) < 0)
     KOUT(" ");

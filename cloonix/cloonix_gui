@@ -10,7 +10,12 @@ if [ -z $DISPLAY ] ; then
   exit 1
 fi
 
-NSH="/usr/libexec/cloonix/cloonfs/bin/cloonix-hide-dirs"
+if [ -x "/cloonix/cloonfs/bin/cloonix-hide-dirs" ]; then
+  NSH="/cloonix/cloonfs/bin/cloonix-hide-dirs"
+else
+  NSH="/usr/libexec/cloonix/cloonfs/bin/cloonix-hide-dirs"
+fi
+
 cloonix_name=$1
 ${NSH} "gui" ${cloonix_name}
 

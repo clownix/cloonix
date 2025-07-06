@@ -87,7 +87,7 @@ static void change_mac_macvlan(char *ovs_dir, char *name, char *mac)
 {
   char *argv[NB_ARG];
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "-netns";
   argv[2] = get_ns();
   argv[3] = "link";
@@ -107,7 +107,7 @@ static int put_in_namespace(char *ovs_dir, char *name)
   char *argv[NB_ARG];
   int result;
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "link";
   argv[2] = "set";
   argv[3] = name;
@@ -124,7 +124,7 @@ static int set_dev_up_in_namespace(char *ovs_dir, char *name)
   char *argv[NB_ARG];
   int result;
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "-netns";
   argv[2] = get_ns();
   argv[3] = "link";
@@ -143,7 +143,7 @@ static int set_dev_down_in_namespace(char *ovs_dir, char *name)
   char *argv[NB_ARG];
   int result;
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "-netns";
   argv[2] = get_ns();
   argv[3] = "link";
@@ -162,7 +162,7 @@ static int set_dev_up_link(char *ovs_dir, char *name)
   char *argv[NB_ARG];
   int result;
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "link";
   argv[2] = "set";
   argv[3] = "dev";
@@ -179,7 +179,7 @@ static int change_name_within_namespace(char *ovs_dir, char *onm, char *nnm)
   char *argv[NB_ARG];
   int result;
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "-netns";
   argv[2] = get_ns();
   argv[3] = "link";
@@ -198,7 +198,7 @@ static int put_back_in_main_namespace(char *ovs_dir, char *name)
   char *argv[NB_ARG];
   int result;
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "-netns";
   argv[2] = get_ns();
   argv[3] = "link";
@@ -217,7 +217,7 @@ static int change_mac_address(char *ovs_dir, char *name, char *mac)
   char *argv[NB_ARG];
   int result;
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "link";
   argv[2] = "set";
   argv[3] = "dev";
@@ -236,7 +236,7 @@ static int ovs_cmd_add_tap(char *ovs_bin, char *ovs_dir, char *name,
   int result = 0;
   char *argv[NB_ARG];
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "link";
   argv[2] = "add";
   argv[3] = "name";
@@ -279,7 +279,7 @@ static int ovs_cmd_del_tap(char *ovs_bin, char *ovs_dir, char *name, char *vhost
   int result;
   char *argv[NB_ARG];
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "link";
   argv[2] = "del";
   argv[3] = "name";
@@ -347,7 +347,7 @@ static int ovs_cmd_add_mphy(char *ovs_bin, char *ovs_dir, char *name,
   memset(macvlan, 0, MAX_NAME_LEN);
   snprintf(macvlan, MAX_NAME_LEN-1, "mcvl%d", tmpnum);
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "link";
   argv[2] = "add";
   argv[3] = macvlan;
@@ -401,7 +401,7 @@ static int ovs_cmd_del_mphy(char *ovs_bin, char *ovs_dir,
   int result = 0;
   char *argv[NB_ARG];
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "-netns";
   argv[2] = get_ns();
   argv[3] = "link";
@@ -415,7 +415,7 @@ static int ovs_cmd_del_mphy(char *ovs_bin, char *ovs_dir,
   else
     {
     memset(argv, 0, NB_ARG * sizeof(char *));
-    argv[0] = IP_BIN;
+    argv[0] = pthexec_ip_bin();
     argv[1] = "-netns";
     argv[2] = get_ns();
     argv[3] = "link";
@@ -607,7 +607,7 @@ static void common_end_of_all_destroy(void)
   g_ovs_launched = 0;
   g_ovsdb_launched = 0;
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "netns";
   argv[2] = "del";
   argv[3] = get_ns();
@@ -1075,13 +1075,13 @@ int main (int argc, char *iargv[])
   clownix_timeout_add(6000, timeout_heartbeat_start, NULL, NULL, NULL);
   daemon(0,0);
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "netns";
   argv[2] = "del";
   argv[3] = get_ns();
   call_ovs_popen(g_ovs_dir, argv, 1, __FUNCTION__, 1);
   memset(argv, 0, NB_ARG * sizeof(char *));
-  argv[0] = IP_BIN;
+  argv[0] = pthexec_ip_bin();
   argv[1] = "netns";
   argv[2] = "add";
   argv[3] = get_ns();

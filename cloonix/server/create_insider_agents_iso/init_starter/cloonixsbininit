@@ -1,0 +1,54 @@
+#!/bin/sh
+#-----------------------------------------------------------------
+exec &> /tmp/cloonix_sbin_init.log
+echo "STARTING cloonixsbininit"
+#-----------------------------------------------------------------
+/cloonixmnt/cnf_fs/cloonix-agent
+echo "/cloonixmnt/cnf_fs/cloonix-agent"
+/cloonixmnt/cnf_fs/cloonix-dropbear-sshd
+echo "/cloonixmnt/cnf_fs/cloonix-dropbear-sshd"
+#-----------------------------------------------------------------
+if [ -e /cloonixmnt/cnf_fs/startup_nb_eth ]; then
+  NB_ETH=$(cat /cloonixmnt/cnf_fs/startup_nb_eth)
+  echo "cat /cloonixmnt/cnf_fs/startup_nb_eth = ${NB_ETH}"
+  NB_ETH=$((NB_ETH-1))
+  for i in $(seq 0 $NB_ETH); do
+    LIST="${LIST} eth$i"
+  done
+  for eth in $LIST; do
+    VAL=$(ip link show | grep ": ${eth}@")
+    while [  $(ip link show | egrep -c ": ${eth}") = 0 ]; do
+      sleep 1
+    done
+  done
+fi
+#-----------------------------------------------------------------
+echo $$ > /run/cloonix_startup.pid                 
+echo "startup pid $$"
+#-----------------------------------------------------------------
+if [ -x /sbin/cloonixsbininitshared ]; then
+  /sbin/cloonixsbininitshared
+  echo "/sbin/cloonixsbininitshared DONE"
+fi
+#-----------------------------------------------------------------
+if [ -x /sbin/cloonixsbininitreplace ]; then
+  /sbin/cloonixsbininitreplace
+  echo "/sbin/cloonixsbininitreplace ended"
+  echo "LAUNCHING sleep infinity"
+  sleep infinity
+fi
+#-----------------------------------------------------------------
+if [ -x /sbin/init ]; then
+  echo "/sbin/init will be launched"
+  exec /sbin/init
+fi
+#-----------------------------------------------------------------
+if [ -x /lib/systemd/systemd ]; then
+  echo "/lib/systemd/systemd will be launched"
+  exec /lib/systemd/systemd
+fi
+#-----------------------------------------------------------------
+echo "No start found sleep infinity"
+sleep infinity
+#-----------------------------------------------------------------
+

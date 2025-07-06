@@ -204,7 +204,7 @@ static void delete_first_finalization(t_crun *cur)
   char cmd[MAX_PATH_LEN];
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
-           "%s %s/tmp", UMOUNT_BIN, cur->mountbear);
+           "%s %s/tmp", pthexec_umount_bin(), cur->mountbear);
   execute_cmd(cmd, 0, 0);
   crun_utils_delete_crun_delete(cur->name, cur->nspacecrun,
                                 cur->vm_id, cur->nb_eth,
@@ -419,7 +419,7 @@ static void create_config_json(char *line, char *resp, char *name,
       snprintf(resp, MAX_PATH_LEN-1,
                "cloonsuid_crun_create_config_json_resp_ko name=%s", name);
       }
-    else if (crun_utils_create_config_json(path, cur->rootfs_path,
+    else if (crun_utils_create_config_json(cur->image, path, cur->rootfs_path,
                                       cur->nspacecrun_path, cur->mountbear,
                                       cur->mounttmp, is_persistent,
                                       is_privileged, brandtype, startup_env,

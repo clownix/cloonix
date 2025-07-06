@@ -1,6 +1,6 @@
 diff -Naur spice-gtk/meson.build tainted_spice/meson.build
---- spice-gtk/meson.build	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/meson.build	2025-06-14 20:35:51.828000000 +0000
+--- spice-gtk/meson.build	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/meson.build	2025-06-29 23:27:24.425137743 +0200
 @@ -5,7 +5,8 @@
           version : run_command('build-aux/git-version-gen', '@0@/.tarball-version'.format(meson.project_source_root()), check : true).stdout().strip(),
           license : 'LGPLv2.1',
@@ -64,8 +64,8 @@ diff -Naur spice-gtk/meson.build tainted_spice/meson.build
  subdir('man')
  subdir('po')
 diff -Naur spice-gtk/src/channel-display.c tainted_spice/src/channel-display.c
---- spice-gtk/src/channel-display.c	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/src/channel-display.c	2025-06-14 20:39:10.788000000 +0000
+--- spice-gtk/src/channel-display.c	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/src/channel-display.c	2025-06-29 23:27:24.429137762 +0200
 @@ -231,7 +231,7 @@
          break;
      }
@@ -107,8 +107,8 @@ diff -Naur spice-gtk/src/channel-display.c tainted_spice/src/channel-display.c
  /**
   * spice_display_channel_get_gl_scanout:
 diff -Naur spice-gtk/src/channel-main.c tainted_spice/src/channel-main.c
---- spice-gtk/src/channel-main.c	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/src/channel-main.c	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/channel-main.c	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/src/channel-main.c	2025-06-29 23:27:24.429137762 +0200
 @@ -2799,6 +2799,9 @@
  {
      SpiceMainChannelPrivate *c;
@@ -129,8 +129,8 @@ diff -Naur spice-gtk/src/channel-main.c tainted_spice/src/channel-main.c
      g_return_if_fail(SPICE_IS_MAIN_CHANNEL(channel));
      g_return_if_fail(id >= -1);
 diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
---- spice-gtk/src/cloon.c	1970-01-01 00:00:00.000000000 +0000
-+++ tainted_spice/src/cloon.c	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/cloon.c	1970-01-01 01:00:00.000000000 +0100
++++ tainted_spice/src/cloon.c	2025-06-29 23:27:24.429137762 +0200
 @@ -0,0 +1,609 @@
 +#include <unistd.h>
 +#include <stdlib.h>
@@ -742,8 +742,8 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +
 +
 diff -Naur spice-gtk/src/cloon.h tainted_spice/src/cloon.h
---- spice-gtk/src/cloon.h	1970-01-01 00:00:00.000000000 +0000
-+++ tainted_spice/src/cloon.h	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/cloon.h	1970-01-01 01:00:00.000000000 +0100
++++ tainted_spice/src/cloon.h	2025-06-29 23:27:24.429137762 +0200
 @@ -0,0 +1,22 @@
 +
 +
@@ -768,8 +768,8 @@ diff -Naur spice-gtk/src/cloon.h tainted_spice/src/cloon.h
 +/*--------------------------------------------------------------------------*/
 +
 diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
---- spice-gtk/src/hmac_cipher.c	1970-01-01 00:00:00.000000000 +0000
-+++ tainted_spice/src/hmac_cipher.c	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/hmac_cipher.c	1970-01-01 01:00:00.000000000 +0100
++++ tainted_spice/src/hmac_cipher.c	2025-06-29 23:27:24.429137762 +0200
 @@ -0,0 +1,144 @@
 +/*****************************************************************************/
 +/*    Copyright (C) 2006-2022 clownix@clownix.net License AGPL-3             */
@@ -916,8 +916,8 @@ diff -Naur spice-gtk/src/hmac_cipher.c tainted_spice/src/hmac_cipher.c
 +
 +
 diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
---- spice-gtk/src/hmac_cipher.h	1970-01-01 00:00:00.000000000 +0000
-+++ tainted_spice/src/hmac_cipher.h	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/hmac_cipher.h	1970-01-01 01:00:00.000000000 +0100
++++ tainted_spice/src/hmac_cipher.h	2025-06-29 23:27:24.429137762 +0200
 @@ -0,0 +1,28 @@
 +/*****************************************************************************/
 +/*    Copyright (C)  2006-2022    Cloon,    <clownix@clownix.net>          */
@@ -948,8 +948,8 @@ diff -Naur spice-gtk/src/hmac_cipher.h tainted_spice/src/hmac_cipher.h
 +
 +
 diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
---- spice-gtk/src/meson.build	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/src/meson.build	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/meson.build	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/src/meson.build	2025-06-29 23:27:24.429137762 +0200
 @@ -130,6 +130,8 @@
    'spice-client.c',
    'spice-option.c',
@@ -978,8 +978,8 @@ diff -Naur spice-gtk/src/meson.build tainted_spice/src/meson.build
                                   install : true,
                                   link_args : [spice_gtk_version_script],
 diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
---- spice-gtk/src/spice-channel.c	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/src/spice-channel.c	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/spice-channel.c	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/src/spice-channel.c	2025-06-29 23:27:24.429137762 +0200
 @@ -49,6 +49,11 @@
  
  G_STATIC_ASSERT(sizeof(SpiceChannelClass) == sizeof(GObjectClass) + 19 * sizeof(gpointer));
@@ -1053,21 +1053,9 @@ diff -Naur spice-gtk/src/spice-channel.c tainted_spice/src/spice-channel.c
  reconnect:
      c->conn = spice_session_channel_open_host(c->session, channel, &c->tls, &c->error);
      if (c->conn == NULL) {
-diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-priv.h
---- spice-gtk/src/spice-session-priv.h	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/src/spice-session-priv.h	2025-06-14 20:35:51.832000000 +0000
-@@ -59,6 +59,8 @@
- void spice_session_get_pubkey(SpiceSession *session, guint8 **pubkey, guint *size);
- guint spice_session_get_verify(SpiceSession *session);
- const gchar* spice_session_get_username(SpiceSession *session);
-+const gchar* spice_session_get_cloonix_doors(SpiceSession *session);
-+const gchar* spice_session_get_cloonix_spice(SpiceSession *session);
- const gchar* spice_session_get_password(SpiceSession *session);
- const gchar* spice_session_get_host(SpiceSession *session);
- const gchar* spice_session_get_cert_subject(SpiceSession *session);
 diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
---- spice-gtk/src/spice-session.c	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/src/spice-session.c	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/spice-session.c	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/src/spice-session.c	2025-06-29 23:27:24.429137762 +0200
 @@ -20,9 +20,10 @@
  #include <gio/gnetworking.h>
  #include <gio/gio.h>
@@ -1491,71 +1479,21 @@ diff -Naur spice-gtk/src/spice-session.c tainted_spice/src/spice-session.c
  const gchar* spice_session_get_host(SpiceSession *session)
  {
      g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
-diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
---- spice-gtk/src/spice-widget-egl.c	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/src/spice-widget-egl.c	2025-06-14 20:35:51.832000000 +0000
-@@ -226,7 +226,7 @@
- #endif
- 
-     d->egl.display = eglGetDisplay(dpy);
--    if (d->egl.display == EGL_NO_DISPLAY) {
-+    if (d->egl.display == 0) {
-         g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
-                             "failed to get EGL display");
-         return FALSE;
-@@ -264,7 +264,7 @@
- 
-     d->egl.ctx = eglCreateContext(d->egl.display,
-                                   d->egl.conf,
--                                  EGL_NO_CONTEXT,
-+                                  0,
-                                   ctx_att);
-     if (!d->egl.ctx) {
-         g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
-@@ -272,7 +272,7 @@
-         return FALSE;
-     }
- 
--    eglMakeCurrent(d->egl.display, EGL_NO_SURFACE, EGL_NO_SURFACE,
-+    eglMakeCurrent(d->egl.display, 0, 0,
-                    d->egl.ctx);
- 
- #ifdef GDK_WINDOWING_WAYLAND
-@@ -413,9 +413,9 @@
-         /* egl.surface && egl.ctx are only created on x11, see
-            spice_egl_init() */
- 
--        if (d->egl.surface != EGL_NO_SURFACE) {
-+        if (d->egl.surface != 0) {
-             eglDestroySurface(d->egl.display, d->egl.surface);
--            d->egl.surface = EGL_NO_SURFACE;
-+            d->egl.surface = 0;
-         }
- 
-         if (d->egl.ctx) {
-@@ -423,8 +423,8 @@
-             d->egl.ctx = 0;
-         }
- 
--        eglMakeCurrent(d->egl.display, EGL_NO_SURFACE, EGL_NO_SURFACE,
--                       EGL_NO_CONTEXT);
-+        eglMakeCurrent(d->egl.display, 0, 0,
-+                       0);
- 
-         /* do not call eglterminate() since egl may be used by
-          * somebody else code */
-@@ -706,7 +706,7 @@
-                   (int)(format >> 16) & 0xff, (int)format >> 24);
- 
-     d->egl.image = eglCreateImageKHR(d->egl.display,
--                                       EGL_NO_CONTEXT,
-+                                       0,
-                                        EGL_LINUX_DMA_BUF_EXT,
-                                        (EGLClientBuffer)NULL,
-                                        attrs);
+diff -Naur spice-gtk/src/spice-session-priv.h tainted_spice/src/spice-session-priv.h
+--- spice-gtk/src/spice-session-priv.h	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/src/spice-session-priv.h	2025-06-29 23:27:24.429137762 +0200
+@@ -59,6 +59,8 @@
+ void spice_session_get_pubkey(SpiceSession *session, guint8 **pubkey, guint *size);
+ guint spice_session_get_verify(SpiceSession *session);
+ const gchar* spice_session_get_username(SpiceSession *session);
++const gchar* spice_session_get_cloonix_doors(SpiceSession *session);
++const gchar* spice_session_get_cloonix_spice(SpiceSession *session);
+ const gchar* spice_session_get_password(SpiceSession *session);
+ const gchar* spice_session_get_host(SpiceSession *session);
+ const gchar* spice_session_get_cert_subject(SpiceSession *session);
 diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
---- spice-gtk/src/spice-widget.c	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/src/spice-widget.c	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/spice-widget.c	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/src/spice-widget.c	2025-06-29 23:27:24.429137762 +0200
 @@ -56,6 +56,8 @@
  #include "vncdisplaykeymap.h"
  #include "spice-grabsequence-priv.h"
@@ -1809,9 +1747,71 @@ diff -Naur spice-gtk/src/spice-widget.c tainted_spice/src/spice-widget.c
                                G_PARAM_READWRITE |
                                G_PARAM_CONSTRUCT |
                                G_PARAM_STATIC_STRINGS));
+diff -Naur spice-gtk/src/spice-widget-egl.c tainted_spice/src/spice-widget-egl.c
+--- spice-gtk/src/spice-widget-egl.c	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/src/spice-widget-egl.c	2025-06-29 23:27:24.429137762 +0200
+@@ -226,7 +226,7 @@
+ #endif
+ 
+     d->egl.display = eglGetDisplay(dpy);
+-    if (d->egl.display == EGL_NO_DISPLAY) {
++    if (d->egl.display == 0) {
+         g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
+                             "failed to get EGL display");
+         return FALSE;
+@@ -264,7 +264,7 @@
+ 
+     d->egl.ctx = eglCreateContext(d->egl.display,
+                                   d->egl.conf,
+-                                  EGL_NO_CONTEXT,
++                                  0,
+                                   ctx_att);
+     if (!d->egl.ctx) {
+         g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
+@@ -272,7 +272,7 @@
+         return FALSE;
+     }
+ 
+-    eglMakeCurrent(d->egl.display, EGL_NO_SURFACE, EGL_NO_SURFACE,
++    eglMakeCurrent(d->egl.display, 0, 0,
+                    d->egl.ctx);
+ 
+ #ifdef GDK_WINDOWING_WAYLAND
+@@ -413,9 +413,9 @@
+         /* egl.surface && egl.ctx are only created on x11, see
+            spice_egl_init() */
+ 
+-        if (d->egl.surface != EGL_NO_SURFACE) {
++        if (d->egl.surface != 0) {
+             eglDestroySurface(d->egl.display, d->egl.surface);
+-            d->egl.surface = EGL_NO_SURFACE;
++            d->egl.surface = 0;
+         }
+ 
+         if (d->egl.ctx) {
+@@ -423,8 +423,8 @@
+             d->egl.ctx = 0;
+         }
+ 
+-        eglMakeCurrent(d->egl.display, EGL_NO_SURFACE, EGL_NO_SURFACE,
+-                       EGL_NO_CONTEXT);
++        eglMakeCurrent(d->egl.display, 0, 0,
++                       0);
+ 
+         /* do not call eglterminate() since egl may be used by
+          * somebody else code */
+@@ -706,7 +706,7 @@
+                   (int)(format >> 16) & 0xff, (int)format >> 24);
+ 
+     d->egl.image = eglCreateImageKHR(d->egl.display,
+-                                       EGL_NO_CONTEXT,
++                                       0,
+                                        EGL_LINUX_DMA_BUF_EXT,
+                                        (EGLClientBuffer)NULL,
+                                        attrs);
 diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
---- spice-gtk/src/usb-acl-helper.c	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/src/usb-acl-helper.c	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/src/usb-acl-helper.c	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/src/usb-acl-helper.c	2025-06-29 23:28:11.417359903 +0200
 @@ -24,6 +24,9 @@
  #include <stdio.h>
  #include <string.h>
@@ -1822,7 +1822,7 @@ diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
  #include "usb-acl-helper.h"
  
  struct _SpiceUsbAclHelperPrivate {
-@@ -181,9 +184,9 @@
+@@ -181,13 +184,18 @@
      GIOStatus status;
      GPid helper_pid;
      gsize bytes_written;
@@ -1831,11 +1831,20 @@ diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
 -        acl_helper = ACL_HELPER_PATH"/spice-client-glib-usb-acl-helper";
 +//    const gchar *acl_helper = g_getenv("SPICE_USB_ACL_BINARY");
 +//    if (acl_helper == NULL)
-+    const gchar *acl_helper = SPICE_USB_ACL_HELPER_BIN;
++    gchar *acl_helper;
      gchar *argv[] = { (char*)acl_helper, NULL };
      gint in, out;
      gchar buf[128];
-@@ -217,6 +220,7 @@
+ 
++if (!access("/cloonix/cloonfs/bin/cloonix-spice-client-glib-usb-acl-helper", R_OK))
++acl_helper = "/cloonix/cloonfs/bin/cloonix-spice-client-glib-usb-acl-helper";
++else
++acl_helper = "/usr/libexec/cloonix/cloonfs/bin/cloonix-spice-client-glib-usb-acl-helper";
++
+     task = g_task_new(self, cancellable, callback, user_data);
+ 
+     if (priv->out_ch) {
+@@ -217,6 +225,7 @@
      g_io_channel_set_close_on_unref(priv->out_ch, TRUE);
      status = g_io_channel_set_flags(priv->out_ch, G_IO_FLAG_NONBLOCK, &err);
      if (status != G_IO_STATUS_NORMAL) {
@@ -1844,8 +1853,8 @@ diff -Naur spice-gtk/src/usb-acl-helper.c tainted_spice/src/usb-acl-helper.c
          goto done;
      }
 diff -Naur spice-gtk/subprojects/spice-common/meson.build tainted_spice/subprojects/spice-common/meson.build
---- spice-gtk/subprojects/spice-common/meson.build	2025-06-14 19:38:35.000000000 +0000
-+++ tainted_spice/subprojects/spice-common/meson.build	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/subprojects/spice-common/meson.build	2025-06-14 21:38:35.000000000 +0200
++++ tainted_spice/subprojects/spice-common/meson.build	2025-06-29 23:27:24.433137781 +0200
 @@ -169,10 +169,10 @@
  #
  subdir('python_modules')
@@ -1862,8 +1871,8 @@ diff -Naur spice-gtk/subprojects/spice-common/meson.build tainted_spice/subproje
  #
  # write config.h
 diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
---- spice-gtk/tools/spice-cmdline.c	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/tools/spice-cmdline.c	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/tools/spice-cmdline.c	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/tools/spice-cmdline.c	2025-06-29 23:27:24.433137781 +0200
 @@ -27,9 +27,25 @@
  static char *tls_port;
  static char *password;
@@ -1903,8 +1912,8 @@ diff -Naur spice-gtk/tools/spice-cmdline.c tainted_spice/tools/spice-cmdline.c
          g_object_set(session, "uri", uri, NULL);
      if (host)
 diff -Naur spice-gtk/tools/spicy.c tainted_spice/tools/spicy.c
---- spice-gtk/tools/spicy.c	2025-06-14 19:38:32.000000000 +0000
-+++ tainted_spice/tools/spicy.c	2025-06-14 20:35:51.832000000 +0000
+--- spice-gtk/tools/spicy.c	2025-06-14 21:38:32.000000000 +0200
++++ tainted_spice/tools/spicy.c	2025-06-29 23:27:24.433137781 +0200
 @@ -35,6 +35,8 @@
  #include "spicy-connect.h"
  #include <gst/gst.h>

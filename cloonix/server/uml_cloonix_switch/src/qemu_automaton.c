@@ -241,7 +241,7 @@ static int local_cmd_system (char *cmd, char *par1, char *par2, char *par3,
 static int cprootfs_clone(void *data)
 {
   int result;
-  char *qimg = "/usr/libexec/cloonix/cloonfs/bin/cloonix-qemu-img";
+  char *qimg = pthexec_cloonfs_qemu_img();
   char parm[2*MAX_PATH_LEN];
   t_cprootfs_config *cprootfs = (t_cprootfs_config *) data;
   memset(parm, 0, 2*MAX_PATH_LEN);
@@ -462,7 +462,7 @@ static char **create_qemu_argv(t_vm *vm)
   argv[i++] = alloc_argv(utils_get_dtach_bin_path());
   argv[i++] = alloc_argv("-n");
   argv[i++] = alloc_argv(utils_get_dtach_sock_path(vm->kvm.name));
-  argv[i++] = alloc_argv(IP_BIN);
+  argv[i++] = alloc_argv(pthexec_ip_bin());
   argv[i++] = alloc_argv("netns");
   argv[i++] = alloc_argv("exec");
   argv[i++] = alloc_argv(namespace);

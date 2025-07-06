@@ -223,7 +223,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       rpct_send_sigdiag_msg(g_llid, tid, resp);
       }
     else if (sscanf(line,
-    "nat_proxy_tcp_req_ko %s stream:%s sip:%X dip:%X sport:%hu dport:%hu",
+    "nat_proxy_tcp_req_ko %s strm:%s sip:%X dip:%X sport:%hu dport:%hu",
     name, stream, &sip, &dip, &sport, &dport) == 6)
       {
       if (strcmp(name, get_nat_name()))
@@ -231,7 +231,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       tcp_stream_proxy_resp(-1, stream, sip, dip, sport, dport);
       }
     else if (sscanf(line,
-    "nat_proxy_tcp_req_ok %s stream:%s sip:%X dip:%X sport:%hu dport:%hu",
+    "nat_proxy_tcp_req_ok %s strm:%s sip:%X dip:%X sport:%hu dport:%hu",
     name, stream, &sip, &dip, &sport, &dport) == 6)
       {
       if (strcmp(name, get_nat_name()))
@@ -263,7 +263,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       tcp_fatal_error(sip, dip, sport, dport);
       }
     else if (sscanf(line,
-    "nat_proxy_udp_resp_ko %s dgram_rx:%s dgram_tx:%s "
+    "nat_proxy_udp_resp_ko %s dgrm_rx:%s dgrm_tx:%s "
     "sip:%X dip:%X dest:%X sport:%hu dport:%hu",
     name, dgram_rx, dgram_tx, &sip, &dip, &ipdst, &sport, &dport) == 8)
       {
@@ -272,7 +272,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       udp_dgram_proxy_resp(-1,dgram_rx,dgram_tx,sip,dip,ipdst,sport,dport);
       }
     else if (sscanf(line,
-    "nat_proxy_udp_resp_ok %s dgram_rx:%s dgram_tx:%s "
+    "nat_proxy_udp_resp_ok %s dgrm_rx:%s dgrm_tx:%s "
     "sip:%X dip:%X dest:%X sport:%hu dport:%hu",
     name, dgram_rx, dgram_tx, &sip, &dip, &ipdst, &sport, &dport) == 8)
       {

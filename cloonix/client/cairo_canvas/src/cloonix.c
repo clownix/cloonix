@@ -138,7 +138,9 @@ char **get_argv_local_shk(char *name)
   static char nm[MAX_NAME_LEN];
   static char title[MAX_PATH_LEN];
   static char nemo[MAX_NAME_LEN];
-  static char *argv[]={URXVT_BIN, "-T", title, "-e", XWYCLI_BIN, config,
+  static char xwycli[MAX_PATH_LEN];
+  static char urxvt[MAX_PATH_LEN];
+  static char *argv[]={urxvt, "-T", title, "-e", xwycli, config,
                        nemo, "-cmd", cmd, "-a", path, NULL}; 
   char **ptr_argv;
   memset(config, 0, MAX_PATH_LEN);
@@ -147,12 +149,18 @@ char **get_argv_local_shk(char *name)
   memset(nm, 0, MAX_NAME_LEN);
   memset(title, 0, MAX_PATH_LEN);
   memset(nemo, 0, MAX_NAME_LEN);
+  memset(xwycli, 0, MAX_PATH_LEN);
+  memset(urxvt, 0, MAX_PATH_LEN);
+
   strncpy(nm, name, MAX_NAME_LEN-1);
   snprintf(nemo, MAX_NAME_LEN-1, "%s", get_net_name()); 
   snprintf(title, MAX_PATH_LEN-1, "%s/%s", nemo, nm); 
-  snprintf(config, MAX_PATH_LEN-1, CLOONIX_CFG);
-  snprintf(cmd, MAX_PATH_LEN-1, "/usr/libexec/cloonix/cloonfs/bin/cloonix-dtach");
+  snprintf(config, MAX_PATH_LEN-1, pthexec_cloonix_cfg());
+  snprintf(cmd, MAX_PATH_LEN-1, pthexec_dtach_bin());
   snprintf(path, MAX_PATH_LEN-1, "/var/lib/cloonix/%s/%s/%s", nemo, DTACH_SOCK, nm);
+  strncpy(xwycli, pthexec_xwycli_bin(), MAX_PATH_LEN-1);
+  strncpy(urxvt, pthexec_urxvt_bin(), MAX_PATH_LEN-1);
+
   ptr_argv = argv;
   return (ptr_argv);
 }
@@ -181,7 +189,7 @@ char *get_path_to_qemu_spice(void)
 {
   char *result = NULL;
   static char path[MAX_PATH_LEN];
-  sprintf(path,"/usr/libexec/cloonix/cloonfs/bin/cloonix-spicy");
+  sprintf(path, pthexec_spicy_bin());
   if (file_exists_exec(path))
     result = path;
   return result;
@@ -193,7 +201,7 @@ char *get_path_to_nemo_icon(void)
 {
   char *result = NULL;
   static char path[MAX_PATH_LEN];
-  sprintf(path,"/usr/libexec/cloonix/cloonfs/etc/clownix64.png"); 
+  sprintf(path, pthexec_png_clownix64()); 
   if (is_file_readable(path))
     result = path;
   return result;
@@ -362,7 +370,7 @@ void work_dir_resp(int tid, t_topo_clc *conf)
            g_clc.network, SNF_DIR);
   tmp_distant_snf_dir[MAX_PATH_LEN-1] = 0;
   strcpy(g_distant_snf_dir, tmp_distant_snf_dir);
-  if (gdk_pixbuf_init_modules("/usr/libexec/cloonix/cloonfs/share", &pixerror))
+  if (gdk_pixbuf_init_modules(pthexec_cloonfs_share(), &pixerror))
     KERR("ERROR gdk_pixbuf_init_modules");
   g_main_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_accept_focus(GTK_WINDOW(g_main_window), FALSE);
@@ -393,9 +401,13 @@ int main(int argc, char *argv[])
 {
   int running_in_crun;
   char tmpnet[MAX_NAME_LEN];
+  static char gui[MAX_PATH_LEN];
+  pthexec_init();
+  memset(gui, 0, MAX_PATH_LEN);
+  strncpy(gui, pthexec_gui_bin(), MAX_PATH_LEN-1);
   g_novnc = 0;
   g_argc = 2;
-  g_argv[0] = "/usr/libexec/cloonix/cloonfs/bin/cloonix-gui";
+  g_argv[0] = gui;
   g_argv[1] = "--no-xshm";
   g_argv[2] = NULL;
   main_timeout = 0;
@@ -428,7 +440,7 @@ int main(int argc, char *argv[])
 
   canvas_ctx_init();
   memset(g_doors_client_addr, 0, MAX_PATH_LEN);
-  running_in_crun = lib_io_running_in_crun(tmpnet);
+  running_in_crun = pthexec_running_in_crun(tmpnet);
   if (running_in_crun && (!strcmp(tmpnet, argv[2])))
     {
     snprintf(g_doors_client_addr, MAX_PATH_LEN-1,

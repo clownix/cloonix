@@ -306,41 +306,6 @@ int fct_seqtap_rx(int fd, uint8_t *rx, uint16_t *seq,
 }
 /*--------------------------------------------------------------------------*/
 
-/****************************************************************************/
-int lib_io_running_in_crun(char *name)
-{
-  int result = 0;
-  char *file_name = "/etc/systemd/system/cloonix.service";
-  char line[MAX_PATH_LEN];
-  char *ptr, *ptr_start, *ptr_end;
-  FILE *fp = fopen(file_name, "r");
-  if (fp != NULL)
-    {
-    while(fgets(line, MAX_PATH_LEN-1, fp))
-      {
-      ptr = strstr(line, "ExecStart=/usr/bin/cloonix_net");
-      if (ptr)
-        {
-        result = 1;
-        ptr_start = strchr(ptr, ' ');
-        if (!ptr_start)
-          KERR("ERROR %s", line);
-        else if (name)
-          {
-          ptr_start = ptr_start+1;
-          ptr_end = ptr_start + strcspn(ptr_start, " \r\n\t");
-          *ptr_end = 0;
-          memset(name, 0, MAX_NAME_LEN);
-          strncpy(name, ptr_start, MAX_NAME_LEN-1);
-          }
-        }
-      }
-    }
-  return result;
-}
-
-
-
 /*****************************************************************************/
 int get_tot_txq_size(int cidx)
 {
@@ -1577,6 +1542,7 @@ void msg_mngt_init (char *name, int max_len_per_read)
 
 //  signal(SIGSEGV, sigsegv_handler);
 
+  pthexec_init();
   cloonix_conf_linker_helper();
   doorways_linker_helper();
   memset (peak_queue_len, 0, MAX_SELECT_CHANNELS*sizeof(long long));

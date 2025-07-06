@@ -4,6 +4,16 @@ TARGZ=${HERE}/targz_store
 WORK=${HERE}/work_targz_store
 #-----------------------------------------------------------------------------
 mkdir -vp ${WORK}
+#-----------------------------------------------------------------------------
+cd ${WORK}
+git clone --depth=1 https://github.com/FRRouting/frr.git
+cd ${WORK}/frr
+COMMIT=$(git log --pretty=format:"%H")
+cd ${WORK}
+tar zcvf frr_${COMMIT}.tar.gz frr 
+rm -rf frr
+mv frr_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://github.com/containers/crun.git
 cd ${WORK}/crun
