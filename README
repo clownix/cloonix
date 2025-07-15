@@ -1,5 +1,5 @@
 ==============================================================================
-                               v51-00
+                               v52-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -31,12 +31,12 @@ ZIP and CVM are run with crun, a C implementation of the Open Container Initiati
 ZIP is a zip file and CVM is a directory, it becomes / in the container.
  
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-51-00/html/index.html doc.
+http://clownix.net/doc_stored/build-52-00/html/index.html doc.
 
 ==============================================================================
                           BUNDLE INSTALLATION
 ==============================================================================
-The bundle way for installation is based on cloonix-bundle-51-00.tar.gz,
+The bundle way for installation is based on cloonix-bundle-52-00.tar.gz,
 it copies binary files to /usr/libexec/cloonix/cloonfs directory of your host,
 puts bash scripts in /usr/bin/cloonix_xxx and uses /var/lib/cloonix as work zone.
 With this choice, root privileges are necessary for installation and
@@ -46,9 +46,9 @@ some binaries have the suid root permissions to run with higher privileges.
 1) Download software and installation:
 --------------------------------------
 
-wget http://clownix.net/downloads/cloonix-51/cloonix-bundle-51-00.tar.gz
-tar xvf cloonix-bundle-51-00.tar.gz
-cd cloonix-bundle-51-00
+wget http://clownix.net/downloads/cloonix-52/cloonix-bundle-52-00.tar.gz
+tar xvf cloonix-bundle-52-00.tar.gz
+cd cloonix-bundle-52-00
 sudo ./install_cloonfs
 
 (To uninstall:   sudo rm -f /usr/bin/cloonix_*
@@ -85,7 +85,7 @@ wget http://clownix.net/downloads/cloonix-51/demos/ping_demo.sh
 ==============================================================================
                           FRR-TOY INSTALLATION
 ==============================================================================
-The frr-toy-51.sh is a self-extracting script that needs no privileges either
+The frr-toy-52.sh is a self-extracting script that needs no privileges either
 at install or at run.
 This is a user land application, it only needs a linux dstribution to be run.
 This script is based on makeself.sh open source, it creates a directory
@@ -95,11 +95,11 @@ called nemocmd by default.
 
 1) Download:
 ------------
-wget http://clownix.net/downloads/cloonix-51/frr-toy-51.sh
+wget http://clownix.net/downloads/cloonix-52/frr-toy-52.sh
 
 2) Extract the directory:
 -------------------------
-./frr-toy-51.sh
+./frr-toy-52.sh
 
 3) The nemocmd script is now present, first start processes:
 ------------------------------------------------------------

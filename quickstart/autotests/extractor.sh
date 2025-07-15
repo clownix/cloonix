@@ -3,7 +3,7 @@
 HERE=`pwd`
 NET="nemo"
 BULK="/var/lib/cloonix/bulk"
-EXTRACTOR="frr-toy-51.sh"
+EXTRACTOR="frr-toy-52.sh"
 LIST="bookworm_lxde bookworm_gnome fedora42_kde"
 #----------------------------------------------------------------------------#
 set +e
