@@ -1,0 +1,11 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=../../../targz_store
+BIN=${HERE}/bin
+./allclean
+./patched_create
+mkdir -p ${BIN}
+cd ${HERE}/nginx_tainted
+./auto/configure --prefix=/var/lib/cloonix/cache/nginx
+make
+cp ${HERE}/nginx_tainted/objs/nginx ${BIN}/cloonix-novnc-nginx

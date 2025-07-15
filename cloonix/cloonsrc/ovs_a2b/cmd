@@ -1,0 +1,58 @@
+#!/bin/bash
+HERE=`pwd`
+IO_CLOWNIX=../lib_io_clownix
+GLOB_INCLUDE=../glob_include
+RPC_CLOWNIX=../lib_rpc_clownix/
+
+./allclean
+
+if [ ! -f ${IO_CLOWNIX}/libio_clownix.a ]; then
+  cd ${IO_CLOWNIX}
+  make
+fi
+if [ ! -f ${RPC_CLOWNIX}/librpc_clownix.a ]; then
+  cd ${RPC_CLOWNIX}
+  ./cmd
+fi
+
+cat > meson.build << EOF
+project('cloonix-ovs-a2b', 'c')
+
+cflags =  ['-mtune=generic']
+cflags += ['-fno-stack-protector']
+cflags += ['-Wno-format-overflow']
+cflags += ['-Wno-format-truncation']
+cflags += ['-g']
+cflags += ['-fPIC']
+cflags += ['-DALLOW_EXPERIMENTAL_API']
+
+incdir = include_directories('${IO_CLOWNIX}/include',
+                             '${RPC_CLOWNIX}/include',
+                             '${GLOB_INCLUDE}')
+
+crypto = dependency('libcrypto')
+cmplr = meson.get_compiler('c')
+io_clownix = cmplr.find_library('libio_clownix', dirs : '${HERE}/${IO_CLOWNIX}')
+
+sources = files('src/ovs_a2b.c',
+                'src/tun_tap.c',
+                'src/utils.c',
+                'src/rxtx.c',
+                'src/sched.c',
+                'src/circle.c',
+                'src/replace.c',
+                'src/stub.c')
+
+executable('cloonix-ovs-a2b', sources, include_directories : incdir,
+            dependencies : [io_clownix,crypto],
+            c_args: cflags,
+            install : true)
+
+EOF
+
+meson build
+cd build
+ninja
+DESTDIR=${HERE} ninja install
+cd ${HERE}
+cp -vf build/cloonix-ovs-a2b ${HERE}

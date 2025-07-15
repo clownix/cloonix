@@ -1,7 +1,6 @@
 #!/bin/bash
 #----------------------------------------------------------------------#
 HERE=`pwd`
-WITH_FRR="yes"
 #----------------------------------------------------------------------#
 NET="mito"
 DISTRO="trixie"
@@ -56,10 +55,6 @@ cloonix_scp ${NET} /tmp/cloonix_build_tree/sources.tar.gz ${NAME}:/root/sources
 rm -rf /tmp/cloonix_build_tree
 cloonix_ssh ${NET} ${NAME} "mkdir -p /var/lib/cloonix/bulk"
 cloonix_ssh ${NET} ${NAME} "cd /root/sources ; tar xvf sources.tar.gz ; rm sources.tar.gz"
-#----------------------------------------------------------------------
-for i in "build_cloonfs" "pack_cloonfs" ; do
-  cloonix_ssh ${NET} ${NAME} "sed -i s/__WITH_FRR__/${WITH_FRR}/ /root/sources/build_tools/${i}"
-done
 #----------------------------------------------------------------------
 cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall"
 cloonix_ssh ${NET} ${NAME} "cd /root/cloonix-bundle-${VERSION_NUM}; ./install_cloonfs"

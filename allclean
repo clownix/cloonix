@@ -13,22 +13,20 @@ rm -rf ${BUNDLE}
 #----------------------------------------------------------
 rm -rf ${SRC_TREE_ROOT}/xdoc/build/
 #----------------------------------------------------------
-COMMON=${SRC_TREE_ROOT}/cloonix/common
-CLIENT=${SRC_TREE_ROOT}/cloonix/client
-SERVER=${SRC_TREE_ROOT}/cloonix/server
+CLOONSRC=${SRC_TREE_ROOT}/cloonix/cloonsrc
 #----------------------------------------------------------
   for i in lib_rpc_clownix \
            lib_rpc_doors \
            lib_rpc_layout \
            lib_utils; do
-    cd ${COMMON}/${i}
+    cd ${CLOONSRC}/${i}
     ./allclean
   done
 #----------------------------------------------------------
   for i in proxy_sig \
            proxy_traf_tcp \
            proxy_traf_unix; do
-    cd ${COMMON}/tester_lib/${i}
+    cd ${CLOONSRC}/tester_lib/${i}
     make clean
   done
 #----------------------------------------------------------
@@ -41,7 +39,7 @@ SERVER=${SRC_TREE_ROOT}/cloonix/server
             cairo_canvas/src/subsets \
             cairo_canvas/src/bdplot \
             cairo_canvas ; do
-    cd ${CLIENT}/${i}
+    cd ${CLOONSRC}/${i}
     make clean
   done
 #----------------------------------------------------------
@@ -51,7 +49,7 @@ SERVER=${SRC_TREE_ROOT}/cloonix/server
            spice \
            spice_lib_client \
            agent_dropbear ; do
-    cd ${CLIENT}/${i}
+    cd ${CLOONSRC}/${i}
     ./allclean
   done
 #----------------------------------------------------------
@@ -60,11 +58,11 @@ SERVER=${SRC_TREE_ROOT}/cloonix/server
             suid_power \
             uml_cloonix_switch \
             create_insider_agents_iso/cloonix_agent ; do
-    cd ${SERVER}/${i}
+    cd ${CLOONSRC}/${i}
     make clean
   done 
-  rm -f ${SERVER}/dtach/cloonix-dtach
-  rm -f ${SERVER}/cloonix-proxymous
+  rm -f ${CLOONSRC}/dtach/cloonix-dtach
+  rm -f ${CLOONSRC}/cloonix-proxymous
 #----------------------------------------------------------
   for i in apk_tools \
            iproute2 \
@@ -85,9 +83,9 @@ SERVER=${SRC_TREE_ROOT}/cloonix/server
            xorg \
            wireshark \
            spice_lib_server ; do
-    cd ${SERVER}/${i}
+    cd ${CLOONSRC}/${i}
     ./allclean
   done
-  rm -f ${SERVER}/insider_agents/insider_agent_x86_64.iso
-  rm -rf ${SERVER}/insider_agents/cdrom
+  rm -f ${CLOONSRC}/insider_agents/insider_agent_x86_64.iso
+  rm -rf ${CLOONSRC}/insider_agents/cdrom
 #----------------------------------------------------------

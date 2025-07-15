@@ -1,0 +1,12 @@
+diff -Naur nginx/src/os/unix/ngx_setproctitle.c nginx_tainted/src/os/unix/ngx_setproctitle.c
+--- nginx/src/os/unix/ngx_setproctitle.c	2025-07-05 18:57:37.000000000 +0200
++++ nginx_tainted/src/os/unix/ngx_setproctitle.c	2025-07-11 19:42:12.508371010 +0200
+@@ -89,7 +89,7 @@
+ 
+     ngx_os_argv[1] = NULL;
+ 
+-    p = ngx_cpystrn((u_char *) ngx_os_argv[0], (u_char *) "nginx: ",
++    p = ngx_cpystrn((u_char *) ngx_os_argv[0], (u_char *) "cloonix-novnc-nginx: ",
+                     ngx_os_argv_last - ngx_os_argv[0]);
+ 
+     p = ngx_cpystrn(p, (u_char *) title, ngx_os_argv_last - (char *) p);

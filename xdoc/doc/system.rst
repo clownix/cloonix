@@ -130,8 +130,8 @@ The cloonix_ssh and cloonix_scp should work but in case of a bug, if you
 think that the container is running, the following commands list the crun
 container running and launch a shell in the Cnt1 if it exists::
 
-  sudo /usr/libexec/cloonix/server/cloonix-crun --root=/var/lib/cloonix/nemo/crun/ list
-  sudo /usr/libexec/cloonix/server/cloonix-crun --root=/var/lib/cloonix/nemo/crun/ exec Cnt1 sh 
+  sudo /usr/libexec/cloonix/cloonfs/cloonix-crun --root=/var/lib/cloonix/nemo/crun/ list
+  sudo /usr/libexec/cloonix/cloonfs/cloonix-crun --root=/var/lib/cloonix/nemo/crun/ exec Cnt1 sh 
 
 
 

@@ -47,8 +47,10 @@ printf "\n\nBUILDING BUNDLE VERSION ${VERSION_NUM}\n\n"
 printf "\n\nBUILD DONE OK\n\n"
 #----------------------------------------------------------------------------#
 printf "\n\nPACKING BUNDLE VERSION ${VERSION_NUM}\n\n"
-./build_tools/rootfs_complements.sh
+tar --directory=${BUNDLE}/cloonfs -xf ${TARGZ_STORE}/trixie_base_rootfs.tar.gz
+#----------------------------------------------------------------------
 ./build_tools/pack_cloonfs
+#----------------------------------------------------------------------
 printf "\n\nPACK DONE OK\n\n"
 #----------------------------------------------------------------------------#
 mv ${BUNDLE}/cloonfs ${RESBUNDLE}

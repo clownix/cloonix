@@ -1,0 +1,144 @@
+diff -Naur crun/src/libcrun/cgroup-utils.c crun_tainted/src/libcrun/cgroup-utils.c
+--- crun/src/libcrun/cgroup-utils.c	2025-07-12 20:33:48.000000000 +0200
++++ crun_tainted/src/libcrun/cgroup-utils.c	2025-07-12 21:38:50.800577000 +0200
+@@ -39,6 +39,15 @@
+ #include <fcntl.h>
+ #include <libgen.h>
+ 
++/*-------------------------------------------------------------------------*/
++#include <syslog.h>
++#define KERR(format, a...)                                    \
++ do {                                                         \
++    syslog(LOG_ERR | LOG_USER, "KERR line:%d " format "\n\n", \
++    __LINE__, ## a);                                \
++    } while (0)
++/*-------------------------------------------------------------------------*/
++
+ struct symlink_s
+ {
+   const char *name;
+@@ -952,6 +961,9 @@
+ int
+ libcrun_move_process_to_cgroup (pid_t pid, pid_t init_pid, const char *path, bool create_if_missing, libcrun_error_t *err)
+ {
++//  KERR("TOLOOKAT libcrun_move_process_to_cgroup return 0");
++    return 0;
++
+   int cgroup_mode = libcrun_get_cgroup_mode (err);
+   if (UNLIKELY (cgroup_mode < 0))
+     return cgroup_mode;
+diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
+--- crun/src/libcrun/error.c	2025-07-12 20:33:48.000000000 +0200
++++ crun_tainted/src/libcrun/error.c	2025-07-12 21:38:50.800577000 +0200
+@@ -44,6 +44,15 @@
+ static int log_format;
+ static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
+ 
++/*-------------------------------------------------------------------------*/
++#include <syslog.h>
++#define KERR(format, a...)                                    \
++ do {                                                         \
++    syslog(LOG_ERR | LOG_USER, "KERR line:%d " format "\n\n", \
++    __LINE__, ## a);                                \
++    } while (0)
++/*-------------------------------------------------------------------------*/
++
+ int
+ libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
+ {
+diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
+--- crun/src/libcrun/linux.c	2025-07-12 20:33:48.000000000 +0200
++++ crun_tainted/src/libcrun/linux.c	2025-07-12 21:38:50.800577000 +0200
+@@ -111,6 +111,15 @@
+ #define ALL_PROPAGATIONS_NO_REC (MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE)
+ #define ALL_PROPAGATIONS (MS_REC | ALL_PROPAGATIONS_NO_REC)
+ 
++/*-------------------------------------------------------------------------*/
++#include <syslog.h>
++#define KERR(format, a...)                                    \
++ do {                                                         \
++    syslog(LOG_ERR | LOG_USER, "KERR line:%d " format "\n\n", \
++    __LINE__, ## a);                                \
++    } while (0)
++/*-------------------------------------------------------------------------*/
++
+ struct remount_s
+ {
+   struct remount_s *next;
+@@ -1599,12 +1608,25 @@
+   return crun_make_error (err, 0, "unknown cgroup mode `%d`", cgroup_mode);
+ }
+ 
+-struct device_s needed_devs[] = { { "/dev/null", "c", 1, 3, 0666, 0, 0 },
++static struct device_s needed_devs[] = { { "/dev/null", "c", 1, 3, 0666, 0, 0 },
++                                  { "/dev/zero", "c", 1, 5, 0666, 0, 0 },
++                                  { "/dev/full", "c", 1, 7, 0666, 0, 0 },
++                                  { "/dev/tty", "c", 5, 0, 0666, 0, 0 },
++                                  { "/dev/random", "c", 1, 8, 0666, 0, 0 },
++                                  { "/dev/urandom", "c", 1, 9, 0666, 0, 0 },
++                                  { "/dev/fuse", "c", 10, 229, 0666, 0, 0 },
++                                  {} };
++
++static struct device_s needed_devs_cloonix[] = { { "/dev/null", "c", 1, 3, 0666, 0, 0 },
+                                   { "/dev/zero", "c", 1, 5, 0666, 0, 0 },
+                                   { "/dev/full", "c", 1, 7, 0666, 0, 0 },
+                                   { "/dev/tty", "c", 5, 0, 0666, 0, 0 },
+                                   { "/dev/random", "c", 1, 8, 0666, 0, 0 },
+                                   { "/dev/urandom", "c", 1, 9, 0666, 0, 0 },
++                                  { "/dev/fuse", "c", 10, 229, 0666, 0, 0 },
++                                  { "/dev/kvm", "c", 10, 232, 0666, 0, 0 },
++                                  { "/dev/vhost-net", "c", 10, 238, 0666, 0, 0 },
++                                  { "/dev/net/tun", "c", 10, 200, 0666, 0, 0 },
+                                   {} };
+ 
+ /* Check if the specified path is a direct child of /dev.  If it is
+@@ -1823,12 +1845,32 @@
+         return ret;
+     }
+ 
+-  for (it = needed_devs; it->path; it++)
++  if ((!access("/dev/kvm", F_OK)) &&
++      (!access("/dev/vhost-net", F_OK)) &&
++      (!access("/dev/net/tun", F_OK)))
++    {
++    if (access("/dev/fuse", F_OK))
++      KERR("ERROR /dev/fuse not writable");
++    for (it = needed_devs_cloonix; it->path; it++)
++      {
++        /* make sure the parent directory exists only on the first iteration.  */
++        ret = libcrun_create_dev (container, devfd, -1, it, binds, it == needed_devs_cloonix, err);
++        if (UNLIKELY (ret < 0))
++          return ret;
++      }
++    }
++  else
+     {
+-      /* make sure the parent directory exists only on the first iteration.  */
+-      ret = libcrun_create_dev (container, devfd, -1, it, binds, it == needed_devs, err);
+-      if (UNLIKELY (ret < 0))
+-        return ret;
++    if (access("/dev/fuse", F_OK))
++      KERR("ERROR /dev/fuse not writable");
++    KERR("INFO: KVM NOT FOUND NOT INCLUDING DEVICES /dev/kvm...");
++    for (it = needed_devs; it->path; it++)
++      {
++        /* make sure the parent directory exists only on the first iteration.  */
++        ret = libcrun_create_dev (container, devfd, -1, it, binds, it == needed_devs, err);
++        if (UNLIKELY (ret < 0))
++          return ret;
++      }
+     }
+ 
+   for (i = 0; symlinks[i].target; i++)
+@@ -2005,9 +2047,9 @@
+   if (strcmp (destination, "/dev/pts") == 0)
+     {
+       if (container->host_uid == 0)
+-        *data = xstrdup ("newinstance,ptmxmode=0666,mode=620,gid=5");
++        *data = xstrdup ("newinstance,ptmxmode=0666,mode=666,gid=5");
+       else
+-        *data = xstrdup ("newinstance,ptmxmode=0666,mode=620");
++        *data = xstrdup ("newinstance,ptmxmode=0666,mode=666");
+       return MS_NOEXEC | MS_NOSUID;
+     }
+   if (strcmp (destination, "/sys") == 0)

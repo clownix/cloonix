@@ -8,17 +8,24 @@ else
 fi
 cd ${EXTRACT}/..
 HERE=`pwd`
+if [ -e ${HERE}/dir_${IDENT}_extracted ]; then
+  echo ERROR: ${HERE}/dir_${IDENT}_extracted exists, must be erased.
+  echo erase both ${EXTRACT} and ${HERE}/dir_${IDENT}_extracted and try again.
+  exit 
+fi
 mv ${EXTRACT} ${HERE}/dir_${IDENT}_extracted 
 cd ${HERE}/dir_${IDENT}_extracted
 EXTRACT=`pwd`
 ROOTFS="${EXTRACT}/rootfs"
 #-----------------------------------------------------------------------------
 CLOONIX_CFG="${ROOTFS}/cloonix/cloonfs/etc/cloonix.cfg"
-LIST=$(cat ${CLOONIX_CFG} |grep CLOONIX_NET: | awk '{print $2}')
+LIST=$(cat ${CLOONIX_CFG} |grep "CLOONIX_NET:\|novnc_port" | awk '{print $2}')
 FOUND="no"
 for i in ${LIST} ; do
   if [ "${IDENT}" = "${i}" ]; then
     FOUND="yes"
+    WEB_PORT=${LIST##*${i}[[:space:]]}
+    WEB_PORT=${WEB_PORT%%[[:space:]]*}
     break
   fi
 done
@@ -61,6 +68,7 @@ fi
 #-----------------------------------------------------------------------------
 sed -i s"%__IDENT__%${IDENT}%"                     ${CLOONFS}/etc/systemd/system/cloonix_server.service
 sed -i s"%__IDENT__%${IDENT}%"                     ${ROOTFS}/cloonix/cloonix-init-${IDENT}
+sed -i s"%__USER__%${USER}%"                       ${ROOTFS}/cloonix/cloonix-init-${IDENT}
 sed -i s"%__PROXYSHARE_IN__%${PROXYSHARE_IN}%"     ${ROOTFS}/cloonix/cloonix-init-${IDENT}
 sed -i s"%__IDENT__%${IDENT}%"                     ${CONFIG}/config.json
 sed -i s"%__PROXYSHARE_IN__%${PROXYSHARE_IN}%"     ${CONFIG}/config.json
@@ -74,6 +82,7 @@ for i in $(ls ${CONFIG}/demos); do
 done
 mkdir -p ${ROOTFS}/root
 mv ${CONFIG}/demos ${ROOTFS}/root
+mv ${CLOONFS}/usr/lib/systemd/systemd ${CLOONFS}/usr/lib/systemd/systemd-${USER}-${IDENT}
 #-----------------------------------------------------------------------------
 for i in "cloonix-crun-${IDENT}" \
          "cloonix-proxymous-${IDENT}" \
@@ -98,7 +107,8 @@ rm -f /tmp/xauth-${USER}-extracted
 mkdir -p ${EXTRACT}/worktmp
 #-----------------------------------------------------------------------------
 if [ -z ${DISPLAY} ]; then
-  echo BEWARE: DISPLAY NOT INITIALIZED, GUI WILL FAIL
+  echo BEWARE: DISPLAY NOT INITIALIZED, GUI CANVAS WILL FAIL
+  XAUTH_CODE="NONE"
 else
   ${XAUTH} nextract /tmp/xauth-${USER}-extracted ${DISPLAY}
   if [ ! -e /tmp/xauth-${USER}-extracted ]; then
@@ -128,9 +138,11 @@ fi
 cmd=\$1
 export LC_ALL=C.UTF-8
 IDENT="${IDENT}"
+USER="${USER}"
 XAUTH_CODE=${XAUTH_CODE}
 PROXYSHARE_OUT="${PROXYSHARE_OUT}"
 EXTRACT="${EXTRACT}"
+WEB_PORT="${WEB_PORT}"
 
 PROXY="\${EXTRACT}/bin/cloonix-proxymous-\${IDENT}"
 CRUN="\${EXTRACT}/bin/cloonix-crun-\${IDENT}"
@@ -142,10 +154,21 @@ CGROUPM="--cgroup-manager=disabled"
 case \$cmd in
 
   start)
-    exists=\$(ps axo args | grep  \${PROXY} | grep -v grep)
+    exists=\$(ps -axo pid,args | grep  \${PROXY} | grep -v grep)
     if [ ! -z "\$exists" ]; then
       echo Error, process already exists:
       echo "\$exists"
+      exit 1
+    fi
+    exists=\$(ps -axo pid,args | grep systemd-\${USER}-\${IDENT} | grep -v grep)
+    if [ ! -z "\$exists" ]; then
+      echo Error, process already exists:
+      echo "\$exists"
+      exit 1
+    fi
+    if [ -e \${EXTRACT}/worktmp/\${IDENT} ]; then
+      echo Error, directory already exists:
+      echo \${EXTRACT}/worktmp/\${IDENT}
       exit 1
     fi
     #------------------------------------------------------------------------
@@ -177,11 +200,19 @@ case \$cmd in
       fi
     done
     echo \${PROXY} launched and OK
-    echo \${XAUTH_CODE} > \${PROXYSHARE_OUT}/xauth-code-Xauthority
-    cp \${XAUTHORITY} \${PROXYSHARE_OUT}/Xauthority
+    if [ "\${XAUTH_CODE}" = "NONE" ]; then 
+      echo NO XAUTH DEFINED
+    else
+      if [ ! -e \${XAUTHORITY} ]; then
+        echo NO XAUTHORITY DEFINED
+      else
+        echo \${XAUTH_CODE} > \${PROXYSHARE_OUT}/xauth-code-Xauthority
+        cp \${XAUTHORITY} \${PROXYSHARE_OUT}/Xauthority
+      fi
+    fi
     while [ -z "\$(grep server_is_ready \${PROXYSHARE_OUT}/proxymous_start_status)" ]; do
       count_loop=\$((count_loop+1))
-      if [ \$count_loop -gt 20 ]; then
+      if [ \$count_loop -gt 10 ]; then
         echo Fail waiting for server look at:
         echo \${EXTRACT}/worktmp/crun.log
         echo \${EXTRACT}/rootfs/root/cloonix-init-starter-crun.log
@@ -204,6 +235,7 @@ case \$cmd in
   ;;
 
   web_on)
+    echo Port for http in browser: \$WEB_PORT
     \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} cnf web on
   ;;
 
@@ -216,7 +248,11 @@ case \$cmd in
   ;;
 
   canvas)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} cloonix_gui \${IDENT}
+    if [ "\${XAUTH_CODE}" = "NONE" ]; then 
+      printf "NO DISPLAY, NO GUI CANVAS, USE WEB_ON AND BROWSER\n\n"
+    else
+      \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} cloonix_gui \${IDENT}
+    fi
   ;;
 
   demoline)

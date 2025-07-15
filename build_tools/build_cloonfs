@@ -1,7 +1,6 @@
 #!/bin/bash
 #----------------------------------------------------------------------------#
 set -e
-WITH_FRR="__WITH_FRR__"
 #----------------------------------------------------------------------------#
 BUNDLE="${HOME}/cloonix_bundle"
 if [ ! -e ${BUNDLE}/cloonix/cloonix_config ]; then
@@ -9,11 +8,9 @@ if [ ! -e ${BUNDLE}/cloonix/cloonix_config ]; then
   echo ${BUNDLE}/cloonix/cloonix_config
   exit 1
 fi
-COMMON=${BUNDLE}/cloonix/common
-CLIENT=${BUNDLE}/cloonix/client
-SERVER=${BUNDLE}/cloonix/server
+CLOONSRC=${BUNDLE}/cloonix/cloonsrc
 #----------------------------------------------------------------------------#
-printf "\n\nBUILDING COMMON\n\n"
+printf "\n\nBUILDING CLOONSRC\n\n"
 #----------------------------------------------------------------------------#
 for i in "lib_io_clownix" \
          "lib_rpc_clownix" \
@@ -21,16 +18,16 @@ for i in "lib_io_clownix" \
          "lib_rpc_doors" \
          "lib_rpc_layout" ; do
 
-    cd ${COMMON}/${i}
+    cd ${CLOONSRC}/${i}
     echo
     echo DOING:
-    echo ${COMMON}/${i}
+    echo ${CLOONSRC}/${i}
     echo
     echo
     ./cmd
 done
 #----------------------------------------------------------------------------#
-printf "\n\nBUILDING CLIENT\n\n"
+printf "\n\nBUILDING CLOONSRC\n\n"
 #----------------------------------------------------------------------------#
 for i in  "hide_dirs" \
           "agent_dropbear" \
@@ -41,23 +38,21 @@ for i in  "hide_dirs" \
           "cairo_canvas" ; do
     echo
     echo DOING:
-    echo ${CLIENT}/${i}
+    echo ${CLOONSRC}/${i}
     echo
     echo
-    cd ${CLIENT}/${i}
+    cd ${CLOONSRC}/${i}
     ./cmd
 done
 #----------------------------------------------------------------------------#
-printf "\n\nBUILDING SERVER\n\n"
+printf "\n\nBUILDING CLOONSRC\n\n"
 #----------------------------------------------------------------------------#
-  if [ "${WITH_FRR}" = "yes" ]; then
-    echo DOING:
-    echo ${SERVER}/frr
-    echo
-    echo
-    cd ${SERVER}/frr
-    ./cmd
-  fi
+  echo DOING:
+  echo ${CLOONSRC}/frr
+  echo
+  echo
+  cd ${CLOONSRC}/frr
+  ./cmd
 
   for i in  "apk_tools" \
             "xorg" \
@@ -81,10 +76,10 @@ printf "\n\nBUILDING SERVER\n\n"
             "ovs_c2c" ; do
     echo
     echo DOING:
-    echo ${SERVER}/${i}
+    echo ${CLOONSRC}/${i}
     echo
     echo
-    cd ${SERVER}/${i}
+    cd ${CLOONSRC}/${i}
     ./cmd
   done
 #----------------------------------------------------------------------------#
@@ -93,10 +88,10 @@ printf "\n\nBUILDING SERVER\n\n"
             "spice_lib_client"; do
       echo
       echo DOING:
-      echo ${CLIENT}/${i}
+      echo ${CLOONSRC}/${i}
       echo
       echo
-      cd ${CLIENT}/${i}
+      cd ${CLOONSRC}/${i}
       ./cmd
   done
 
@@ -104,17 +99,17 @@ printf "\n\nBUILDING SERVER\n\n"
             "qemu"; do
     echo
     echo DOING:
-    echo ${SERVER}/${i}
+    echo ${CLOONSRC}/${i}
     echo
     echo
-    cd ${SERVER}/${i}
+    cd ${CLOONSRC}/${i}
     ./cmd
   done
 
 #----------------------------------------------------------------------------#
   echo DOING:
-  echo ${SERVER}/create_insider_agents_iso
-  cd ${SERVER}/create_insider_agents_iso
+  echo ${CLOONSRC}/create_insider_agents_iso
+  cd ${CLOONSRC}/create_insider_agents_iso
   ./cmd_mk_iso
 #----------------------------------------------------------------------------#
 printf "\n\nBUILDING ALL OK\n\n"

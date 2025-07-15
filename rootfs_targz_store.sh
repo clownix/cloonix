@@ -1,10 +1,13 @@
 #!/bin/bash
 HERE=`pwd`
-TARGZ=${HERE}/targz_store
-WORK=${HERE}/work_targz_store
 DISTRO="trixie"
 REPO="http://127.0.0.1/debian/trixie"
 MMDEBSTRAP="/usr/bin/mmdebstrap"
+TARGZ="${HERE}/targz_store"
+WORK="${HERE}/work_targz_store"
+SRC_ROOTFS_NAME="trixie_base_rootfs"
+SRC_ROOTFS="${WORK}/${SRC_ROOTFS_NAME}"
+DST_ROOTFS="${SRC_ROOTFS}/target_rootfs"
 #----------------------------------------------------------------------
 if [ ! -x ${MMDEBSTRAP} ]; then
   echo ${MMDEBSTRAP} not installed
@@ -24,6 +27,16 @@ if [ -e ${WORK} ]; then
 fi
 mkdir -vp ${WORK}
 mkdir -p ${TARGZ}
+#----------------------------------------------------------------------#
+fct_unshare_chroot() {
+unshare --map-root-user --user --mount --wd "${SRC_ROOTFS}" \
+        -- /bin/bash -c \
+        "touch dev/zero; touch dev/null ; \
+         mount -o rw,bind /dev/zero dev/zero ; \
+         mount -o rw,bind /dev/null dev/null ; \
+         /sbin/chroot . /bin/sh -c '$1'"
+}
+#----------------------------------------------------------------------#
 cd ${WORK}
 set +e
 #----------------------------------------------------------------------
@@ -31,7 +44,13 @@ LIST="systemd,rsyslog,bash-completion,vim,xauth,locales,"
 LIST+="x11-xkb-utils,xorriso,procps,x11vnc,fuse-zip,"
 LIST+="x11-xserver-utils,libcap2-bin,net-tools,strace,"
 LIST+="iproute2,x11-apps,unzip,acl,less,lsof,iputils-ping,"
-LIST+="traceroute,iputils-tracepath"
+LIST+="iputils-tracepath,libglib-perl,xkb-data,iso-codes,"
+LIST+="nodejs,node-optimist,node-ws,node-mime-types,node-mime,"
+LIST+="libqt6gui6,libgtk-3-common,libgtk-3-0t64,"
+LIST+="shared-mime-info,gcc,libc6-dev,libgstreamer1.0-0,"
+LIST+="libpipewire-0.3-modules,gstreamer1.0-plugins-base,"
+LIST+="gstreamer1.0-plugins-good"
+
 unshare --map-root-user --user --map-auto --mount -- /bin/bash -c \
         "mount --rbind /proc proc ; \
          mount --rbind /sys sys ; \
@@ -39,36 +58,42 @@ unshare --map-root-user --user --map-auto --mount -- /bin/bash -c \
                       --variant=minbase \
                       --include=${LIST} \
                       ${DISTRO} \
-                      ${WORK}/trixie_base_rootfs ${REPO}"
+                      ${SRC_ROOTFS} ${REPO}"
 #----------------------------------------------------------------------
 set -e
-cd ${WORK}
-
+mkdir -p ${SRC_ROOTFS}/root
+cp -f ${HERE}/build_tools/toolbox/fill_common.c ${SRC_ROOTFS}/root
+fct_unshare_chroot "gcc -o /root/copy_libs /root/fill_common.c"
+fct_unshare_chroot "update-mime-database /usr/share/mime"
 #----------------------------------------------------------------------
-DIR_SRC="trixie_base_rootfs/etc/systemd"
-DIR_DST="base_rootfs/etc/systemd"
+DIR_SRC="${SRC_ROOTFS}/etc/systemd"
+DIR_DST="${DST_ROOTFS}/etc/systemd"
 mkdir -p ${DIR_DST}/system/multi-user.target.wants
 for i in "system.conf" "journald.conf"; do
   cp ${DIR_SRC}/${i} ${DIR_DST}
 done
+sed -i s"/#DefaultCPUAccounting=yes/DefaultCPUAccounting=no/" ${DIR_DST}/system.conf
+sed -i s"/#DefaultMemoryAccounting=yes/DefaultMemoryAccounting=no/" ${DIR_DST}/system.conf
+sed -i s"/#DefaultTasksAccounting=yes/DefaultTasksAccounting=no/" ${DIR_DST}/system.conf
+echo "DefaultControllers=" >> ${DIR_DST}/system.conf
 #----------------------------------------------------------------------
-DIR_SRC="trixie_base_rootfs/lib/x86_64-linux-gnu/systemd"
-DIR_DST="base_rootfs/lib/x86_64-linux-gnu/systemd"
+DIR_SRC="${SRC_ROOTFS}/lib/x86_64-linux-gnu/systemd"
+DIR_DST="${DST_ROOTFS}/lib/x86_64-linux-gnu/systemd"
 mkdir -p ${DIR_DST}
 for i in "libsystemd-shared-257.so" "libsystemd-core-257.so" ; do
   cp ${DIR_SRC}/${i} ${DIR_DST}
 done
 #----------------------------------------------------------------------
-DIR_SRC="trixie_base_rootfs/lib/systemd"
-DIR_DST="base_rootfs/lib/systemd"
+DIR_SRC="${SRC_ROOTFS}/lib/systemd"
+DIR_DST="${DST_ROOTFS}/lib/systemd"
 mkdir -p ${DIR_DST}/journald.conf.d
 for i in "systemd" "systemd-journald" "systemd-executor" ; do
   cp ${DIR_SRC}/${i} ${DIR_DST}
 done
 cp ${DIR_SRC}/journald.conf.d/syslog.conf ${DIR_DST}/journald.conf.d
 #----------------------------------------------------------------------
-DIR_SRC="trixie_base_rootfs/lib/systemd/system"
-DIR_DST="base_rootfs/lib/systemd/system"
+DIR_SRC="${SRC_ROOTFS}/lib/systemd/system"
+DIR_DST="${DST_ROOTFS}/lib/systemd/system"
 mkdir -p ${DIR_DST}/sockets.target.wants
 for i in "basic.target" "graphical.target" "multi-user.target" \
          "rsyslog.service" "sockets.target" "sysinit.target" \
@@ -78,8 +103,8 @@ for i in "basic.target" "graphical.target" "multi-user.target" \
   cp ${DIR_SRC}/${i} ${DIR_DST}
 done
 #----------------------------------------------------------------------
-DIR_SRC="trixie_base_rootfs/usr/lib/x86_64-linux-gnu/rsyslog"
-DIR_DST="base_rootfs/lib/x86_64-linux-gnu/rsyslog"
+DIR_SRC="${SRC_ROOTFS}/usr/lib/x86_64-linux-gnu/rsyslog"
+DIR_DST="${DST_ROOTFS}/lib/x86_64-linux-gnu/rsyslog"
 mkdir -p ${DIR_DST}
 for i in "lmnet.so" "imklog.so" "imuxsock.so" ; do
   cp ${DIR_SRC}/${i} ${DIR_DST}
@@ -87,20 +112,20 @@ done
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
-DIR_SRC="trixie_base_rootfs/usr/sbin"
-DIR_DST="base_rootfs/sbin"
+DIR_SRC="${SRC_ROOTFS}/usr/sbin"
+DIR_DST="${DST_ROOTFS}/sbin"
 mkdir -p ${DIR_DST}
 for i in "locale-gen" "sysctl" "rtacct" "capsh" "nologin" "usermod" \
          "start-stop-daemon" "groupadd" "agetty" "update-passwd" "mkfs"\
          "service" "useradd" "setcap" "rsyslogd" "userdel" "groupdel" \
          "chroot" "groupmod" "getcap" "losetup" "deluser" "adduser" \
          "mount.fuse3" "ip" "ifconfig" "arp" "route" "ipmaddr" \
-         "iptunnel" "traceroute" ; do
+         "iptunnel" ; do
   cp ${DIR_SRC}/${i} ${DIR_DST}
 done
 #----------------------------------------------------------------------
-DIR_SRC="trixie_base_rootfs/usr/bin"
-DIR_DST="base_rootfs/bin"
+DIR_SRC="${SRC_ROOTFS}/usr/bin"
+DIR_DST="${DST_ROOTFS}/bin"
 mkdir -p ${DIR_DST}
 cp -f 'trixie_base_rootfs/usr/bin/[' ${DIR_DST}
 cp -f ${DIR_SRC}/which.debianutils  ${DIR_DST}/which
@@ -132,11 +157,13 @@ for i in "mawk" "bash" "cat" "chmod" "chown" "clear" "cmp" "cp" \
   cp ${DIR_SRC}/${i} ${DIR_DST}
 done
 #----------------------------------------------------------------------
-mkdir -p base_rootfs/lib/locale
-cp -Lrf trixie_base_rootfs/usr/lib/locale/C.utf8 base_rootfs/lib/locale
+DIR_SRC="${SRC_ROOTFS}/usr/lib/locale"
+DIR_DST="${DST_ROOTFS}/lib/locale"
+mkdir -p ${DIR_DST}
+cp -Lrf ${DIR_SRC}/C.utf8 ${DIR_DST}
 #----------------------------------------------------------------------
-DIR_SRC="trixie_base_rootfs/usr/share/bash-completion/completions"
-DIR_DST="base_rootfs/share/bash-completion/completions"
+DIR_SRC="${SRC_ROOTFS}/usr/share/bash-completion/completions"
+DIR_DST="${DST_ROOTFS}/share/bash-completion/completions"
 mkdir -p ${DIR_DST}
 for i in "sysctl" "usermod" "lsof" "findmnt" "ps" "ss" "useradd" \
          "groupadd" "systemctl" "losetup" "groupdel" "mount" \
@@ -145,16 +172,17 @@ for i in "sysctl" "usermod" "lsof" "findmnt" "ps" "ss" "useradd" \
          "systemd-analyze" "lsns" "pidof" "pgrep" "pwd"; do
   cp ${DIR_SRC}/${i} ${DIR_DST}
 done
-DIR_SRC="trixie_base_rootfs/usr/share/bash-completion"
-DIR_DST="base_rootfs/share/bash-completion"
+DIR_SRC="${SRC_ROOTFS}/usr/share/bash-completion"
+DIR_DST="${DST_ROOTFS}/share/bash-completion"
 cp ${DIR_SRC}/bash_completion ${DIR_DST}
 #----------------------------------------------------------------------
-DIR_SRC="trixie_base_rootfs/usr/lib/x86_64-linux-gnu"
-DIR_DST="base_rootfs/lib64"
+DIR_SRC="${SRC_ROOTFS}/usr/lib/x86_64-linux-gnu"
+DIR_DST="${DST_ROOTFS}/lib64"
 mkdir -p ${DIR_DST}
 cp ${DIR_SRC}/ld-linux-x86-64.so.2 ${DIR_DST}
 #----------------------------------------------------------------------
-cat > base_rootfs/etc/rsyslog.conf << "EOF"
+DIR_DST="${DST_ROOTFS}/etc"
+cat > ${DIR_DST}/rsyslog.conf << "EOF"
 module(load="imuxsock") 
 $FileOwner root
 $FileGroup root
@@ -165,7 +193,8 @@ $WorkDirectory /var/spool/rsyslog
 *.*;auth,authpriv.none          -/var/log/syslog
 EOF
 #----------------------------------------------------------------------
-cat > base_rootfs/lib/systemd/system/rsyslog.service << "EOF"
+DIR_DST="${DST_ROOTFS}/lib/systemd/system"
+cat > ${DIR_DST}/rsyslog.service << "EOF"
 [Unit]
   Description=System Logging Service
   Requires=syslog.socket
@@ -182,7 +211,8 @@ cat > base_rootfs/lib/systemd/system/rsyslog.service << "EOF"
   Alias=syslog.service
 EOF
 #----------------------------------------------------------------------
-cat > base_rootfs/etc/systemd/system/cloonix_server.service << "EOF"
+DIR_DST="${DST_ROOTFS}/etc/systemd/system"
+cat > ${DIR_DST}/cloonix_server.service << "EOF"
 [Unit]
   Description=cloonix_server
   After=rsyslog
@@ -196,7 +226,8 @@ cat > base_rootfs/etc/systemd/system/cloonix_server.service << "EOF"
   WantedBy=multi-user.target
 EOF
 #-----------------------------------------------------------------------
-cat > base_rootfs/sbin/cloonix_agent.sh << "EOF"
+DIR_DST="${DST_ROOTFS}/sbin"
+cat > ${DIR_DST}/cloonix_agent.sh << "EOF"
 #!/bin/bash
 /cloonixmnt/cnf_fs/cloonix-agent
 /cloonixmnt/cnf_fs/cloonix-dropbear-sshd
@@ -215,9 +246,10 @@ if [ -e /cloonixmnt/cnf_fs/startup_nb_eth ]; then
 fi
 EOF
 #-----------------------------------------------------------------------
-chmod +x base_rootfs/sbin/cloonix_agent.sh
+chmod +x ${DIR_DST}/cloonix_agent.sh
 #-----------------------------------------------------------------------
-cat > base_rootfs/etc/systemd/system/cloonix_agent.service << EOF
+DIR_DST="${DST_ROOTFS}/etc/systemd/system"
+cat > ${DIR_DST}/cloonix_agent.service << EOF
 [Unit]
   Description=cloonix_agent
   After=rsyslog.service
@@ -233,30 +265,36 @@ cat > base_rootfs/etc/systemd/system/cloonix_agent.service << EOF
   WantedBy=multi-user.target
 EOF
 #-----------------------------------------------------------------------
-cat > base_rootfs/etc/passwd << "EOF"
+DIR_DST="${DST_ROOTFS}/etc"
+cat > ${DIR_DST}/passwd << "EOF"
 root:x:0:0:root:/root:/bin/bash
 nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
 EOF
 #----------------------------------------------------------------------
-cat > base_rootfs/etc/group << "EOF"
+DIR_DST="${DST_ROOTFS}/etc"
+cat > ${DIR_DST}/group << "EOF"
 root:x:0:
 audio:x:29:pulse
 nogroup:x:65534:
 EOF
 #----------------------------------------------------------------------
-cat > base_rootfs/etc/locale.gen << "EOF"
+DIR_DST="${DST_ROOTFS}/etc"
+cat > ${DIR_DST}/locale.gen << "EOF"
 en_US.UTF-8 UTF-8
 EOF
 #----------------------------------------------------------------------
-cat > base_rootfs/etc/locale.conf << "EOF"
+DIR_DST="${DST_ROOTFS}/etc"
+cat > ${DIR_DST}/locale.conf << "EOF"
 LANG=C
 EOF
 #----------------------------------------------------------------------
-cat > base_rootfs/etc/hosts << "EOF"
+DIR_DST="${DST_ROOTFS}/etc"
+cat > ${DIR_DST}/hosts << "EOF"
 127.0.0.1   localhost
 EOF
 #----------------------------------------------------------------------
-cd ${WORK}/base_rootfs/bin
+DIR_DST="${DST_ROOTFS}/bin"
+cd ${DIR_DST}
 ln -s bash sh
 ln -s mawk awk
 ln -s mawk nawk
@@ -264,30 +302,140 @@ ln -s vim.basic vi
 ln -s vim.basic vim
 ln -s vim.basic vimdiff
 #----------------------------------------------------------------------
-cd ${WORK}/base_rootfs/sbin
+DIR_DST="${DST_ROOTFS}/sbin"
+cd ${DIR_DST}
 ln -s mount.fuse3 mount.fuse
 ln -s adduser addgroup
 ln -s deluser delgroup
 #----------------------------------------------------------------------
-cd ${WORK}/base_rootfs/etc/systemd/system/multi-user.target.wants
+DIR_DST="${DST_ROOTFS}/etc/systemd/system/multi-user.target.wants"
+cd ${DIR_DST}
 ln -s /lib/systemd/system/rsyslog.service rsyslog.service
-cd ${WORK}/base_rootfs/etc/systemd/system
+#----------------------------------------------------------------------
+DIR_DST="${DST_ROOTFS}/etc/systemd/system"
+cd ${DIR_DST}
 ln -s /lib/systemd/system/graphical.target default.target
-cd ${WORK}/base_rootfs/lib/systemd/system/sockets.target.wants
+#----------------------------------------------------------------------
+DIR_DST="${DST_ROOTFS}/lib/systemd/system/sockets.target.wants"
+cd ${DIR_DST}
 ln -s /lib/systemd/system/systemd-journald.socket systemd-journald.socket
 #----------------------------------------------------------------------
-mkdir -p ${WORK}/base_rootfs/usr/local
-cd ${WORK}/base_rootfs/usr
+DIR_DST="${DST_ROOTFS}/usr"
+mkdir -p ${DIR_DST}
+cd ${DIR_DST}
 for i in "bin" "sbin" "lib" "lib64" "share" ; do
   ln -s ../${i} ${i}
 done
-cd ${WORK}/base_rootfs/usr/local
+mkdir -p ${DIR_DST}/local
+cd ${DIR_DST}/local
 for i in "bin" "sbin" "lib" ; do
   ln -s ../../${i} ${i}
 done
+cd ${WORK}
 #----------------------------------------------------------------------
-cd ${WORK}/base_rootfs
-unshare -rm tar zcvf ${TARGZ}/trixie_base_rootfs.tar.gz .
+DIR_DST="${DST_ROOTFS}/var"
+for i in "log" "spool/rsyslog" "lib/cloonix/cache" \
+         "lib/cloonix/bulk" "lib/cloonix/cache/fontconfig" ; do
+  mkdir -p ${DIR_DST}/${i}
+done
+#----------------------------------------------------------------------
+DIR_DST="${DST_ROOTFS}/share"
+for i in "fonts/truetype" "terminfo" "mime" "misc" "dconf" \
+         "locale" "i18n/charmaps" "i18n/locales" "X11/locale" \
+         "glib-2.0/schemas" "vim/vim91" ; do
+  mkdir -p ${DIR_DST}/${i}
+done
+#----------------------------------------------------------------------
+DIR_DST="${DST_ROOTFS}"
+for i in "dev/net" "lib/modules" "bin/ovsschema" \
+         "lib/x86_64-linux-gnu/qt6/plugins/platforms" \
+         "lib/x86_64-linux-gnu/gstreamer-1.0" \
+         "lib/x86_64-linux-gnu/gconv"; do
+  mkdir -p ${DIR_DST}/${i}
+done
+#----------------------------------------------------------------------
+DIR_DST="${DST_ROOTFS}/etc/fonts"
+mkdir -p ${DIR_DST}
+cat > ${DIR_DST}/fonts.conf << EOF
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+    <dir>/usr/libexec/cloonix/cloonfs/share</dir>
+    <cachedir>/var/lib/cloonix/cache/fontconfig</cachedir>
+    <cachedir prefix="xdg">fontconfig</cachedir>
+</fontconfig>
+EOF
+#----------------------------------------------------------------------
+DIR_DST="${DST_ROOTFS}/etc"
+touch ${DIR_DST}/adduser.conf
+#----------------------------------------------------------------------
+DIR_DST="${DST_ROOTFS}/share/vim/vim91"
+touch ${DIR_DST}/defaults.vim
+#----------------------------------------------------------------------
+DIR_SRC="${SRC_ROOTFS}/usr"
+DIR_DST="${DST_ROOTFS}"
+cp -Lrf ${DIR_SRC}/lib/x86_64-linux-gnu/perl-base ${DIR_DST}/lib/x86_64-linux-gnu
+cp -Lrf ${DIR_SRC}/lib/x86_64-linux-gnu/perl5 ${DIR_DST}/lib/x86_64-linux-gnu
+cp -Lrf ${DIR_SRC}/share/perl5  ${DIR_DST}/share
+cp -Lrf ${DIR_SRC}/lib/locale/* ${DIR_DST}/lib/locale
+cp -Lrf ${DIR_SRC}/share/terminfo/l ${DIR_DST}/share/terminfo
+cp -Lrf ${DIR_SRC}/share/terminfo/t ${DIR_DST}/share/terminfo
+cp -Lrf ${DIR_SRC}/share/terminfo/x ${DIR_DST}/share/terminfo
+cp -Lrf ${DIR_SRC}/share/fonts/truetype/dejavu ${DIR_DST}/share/fonts/truetype
+cp -Lrf ${DIR_SRC}/share/fontconfig ${DIR_DST}/share
+cp -Lrf ${DIR_SRC}/share/X11/locale/en_US.UTF-8 ${DIR_DST}/share/X11/locale
+cp -Lrf ${DIR_SRC}/share/X11/locale/C ${DIR_DST}/share/X11/locale
+cp -Lrf ${DIR_SRC}/share/X11/locale/locale.dir ${DIR_DST}/share/X11/locale
+cp -Lrf ${DIR_SRC}/share/X11/xkb ${DIR_DST}/share/X11
+cp  -f  ${DIR_SRC}/share/X11/rgb.txt ${DIR_DST}/share/X11
+#----------------------------------------------------------------------
+cp  -f  ${DIR_SRC}/bin/node ${DIR_DST}/bin
+cp -Lrf ${DIR_SRC}/lib/x86_64-linux-gnu/nodejs ${DIR_DST}/lib/x86_64-linux-gnu
+cp -Lrf ${DIR_SRC}/share/nodejs ${DIR_DST}/share
+cp -Lrf ${DIR_SRC}/share/node_modules ${DIR_DST}/share
+#----------------------------------------------------------------------
+cp -f   ${DIR_SRC}/lib/x86_64-linux-gnu/qt6/plugins/platforms/libqxcb.so ${DIR_DST}/lib/x86_64-linux-gnu/qt6/plugins/platforms
+cp -Lrf ${DIR_SRC}/lib/x86_64-linux-gnu/gtk-3.0 ${DIR_DST}/lib/x86_64-linux-gnu
+cp -Lrf ${DIR_SRC}/share/themes ${DIR_DST}/share
+cp -f   ${DIR_SRC}/share/glib-2.0/schemas/gschemas.compiled ${DIR_DST}/share/glib-2.0/schemas
+cp -f   ${DIR_SRC}/share/mime/mime.cache ${DIR_DST}/share/mime
+cp -f   ${DIR_SRC}/lib/x86_64-linux-gnu/gconv/gconv-modules.cache ${DIR_DST}/lib/x86_64-linux-gnu/gconv
+cp -Lrf ${DIR_SRC}/share/gstreamer-1.0 ${DIR_DST}/share
+cp -Lrf ${DIR_SRC}/lib/x86_64-linux-gnu/gstreamer1.0 ${DIR_DST}/lib/x86_64-linux-gnu 
+cp -Lrf ${DIR_SRC}/lib/x86_64-linux-gnu/pipewire-0.3 ${DIR_DST}/lib/x86_64-linux-gnu
+LONG_DIR_SRC="${DIR_SRC}/lib/x86_64-linux-gnu/gstreamer-1.0"
+LONG_DIR_DST="${DIR_DST}/lib/x86_64-linux-gnu/gstreamer-1.0"
+for i in "libgstpulseaudio.so" \
+         "libgstautodetect.so" \
+         "libgstaudioresample.so" \
+         "libgstaudioconvert.so" \
+         "libgstcoreelements.so" \
+         "libgstapp.so" ; do
+  cp -rf ${LONG_DIR_SRC}/${i} ${LONG_DIR_DST}
+done
+#----------------------------------------------------------------------
+for i in "en_GB" "en" "locale.alias" ; do
+  cp -Lrf ${DIR_SRC}/share/locale/${i} ${DIR_DST}/share/locale
+done
+cp -f ${DIR_SRC}/share/i18n/charmaps/UTF-8.gz ${DIR_DST}/share/i18n/charmaps
+for i in "en_US" "en_GB" "i18n" "i18n_ctype" "iso14651_t1" \
+         "iso14651_t1_common" "translit_*" ; do
+  cp -f ${DIR_SRC}/share/i18n/locales/${i} ${DIR_DST}/share/i18n/locales
+done
+cd ${DIR_DST}/share/i18n/charmaps
+gunzip -f UTF-8.gz
+cd ${WORK}
+#----------------------------------------------------------------------
+tar --directory=${DIR_DST}/share -xf ${TARGZ}/noVNC_*.tar.gz
+#----------------------------------------------------------------------
+openssl req -x509 -nodes -newkey rsa:3072 -keyout novnc.pem -subj \
+            "/CN=cloonix.net" -out ${DIR_DST}/bin/novnc.pem -days 3650
+rm -f novnc.pem
+#----------------------------------------------------------------------
+fct_unshare_chroot "/root/copy_libs /target_rootfs"
+#----------------------------------------------------------------------
+cd ${DST_ROOTFS}
+unshare -rm tar zcvf ${TARGZ}/${SRC_ROOTFS_NAME}.tar.gz .
 unshare --map-root-user --user --map-auto --mount -- /bin/bash -c "chown -R root:root ${WORK}"
 rm -rf ${WORK}
 #----------------------------------------------------------------------

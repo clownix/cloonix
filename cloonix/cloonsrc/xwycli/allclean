@@ -1,0 +1,10 @@
+#!/bin/bash
+HERE=`pwd`
+
+for i in lib_io_clownix xwy/libmdl xwy/libcli ; do
+  cd ${HERE}/../${i}/
+  make clean
+done
+
+cd ${HERE}
+make clean

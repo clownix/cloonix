@@ -2,6 +2,7 @@
 export TERM=linux
 CLOONFS="/cloonix/cloonfs"
 STARTUP_BIN="/cloonix/startup_bin"
+TOUCH="${STARTUP_BIN}/touch"
 SLEEP="${STARTUP_BIN}/sleep"
 MKDIR="${STARTUP_BIN}/mkdir"
 XAUTH="${STARTUP_BIN}/xauth"
@@ -50,9 +51,17 @@ ${ECHO} "${MKDIR} -p /tmp/.X11-unix"
 if [ ! -e /tmp/.X11-unix/X713 ]; then
   ${LN} -s __PROXYSHARE_IN_____IDENT__/X11-unix/X713 /tmp/.X11-unix/X713
   ${ECHO} "${LN} -s __PROXYSHARE_IN_____IDENT__/X11-unix/X713 /tmp/.X11-unix/X713"
-  XAUTH_CODE=$(${CAT} __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority)
-  ${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
-  ${ECHO} "${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}"
+  if [ -e __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority ]; then
+    if [ ! -e __PROXYSHARE_IN_____IDENT__/Xauthority ]; then
+      ${TOUCH} __PROXYSHARE_IN_____IDENT__/Xauthority
+      ${ECHO} "TOUCH NO __PROXYSHARE_IN_____IDENT__/Xauthority"
+    fi
+    XAUTH_CODE=$(${CAT} __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority)
+    ${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
+    ${ECHO} "${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}"
+  else
+    ${ECHO} "ERROR adding Xauthority, may cause gui problems"
+  fi
 fi
 #----------------------------------------------------------------------------
 ${RM} -f /dev/log
@@ -77,7 +86,7 @@ ${ECHO} "${MOUNT} --bind -o ro ${DIRSRC} ${DIRDST}"
 #############################################################################
 
 #----------------------------------------------------------------------------
-${ECHO} "exec /usr/lib/systemd/systemd"
-exec /usr/lib/systemd/systemd
+${ECHO} "exec /usr/lib/systemd/systemd-__USER__-__IDENT__"
+exec /usr/lib/systemd/systemd-__USER__-__IDENT__
 #----------------------------------------------------------------------------
 

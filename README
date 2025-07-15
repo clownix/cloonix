@@ -170,7 +170,7 @@ For nemo the http link for the browser is:
 
 Note that the 54521 port can be changed in:
 
-  /usr/libexec/cloonix/common/etc/cloonix.cfg
+  /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg
 
 -----------------------------------------------------------------------------
 

@@ -1,12 +1,11 @@
 #!/bin/bash
 #----------------------------------------------------------------------------#
-WITH_FRR="__WITH_FRR__"
-#----------------------------------------------------------------------------#
 set -e
 FROM_HERE=`pwd`
 BUNDLE="/root/cloonix_bundle"
 ROOTFS="${BUNDLE}/cloonfs"
 PATCHELF="${ROOTFS}/bin/patchelf"
+CLOONSRC="${BUNDLE}/cloonix/cloonsrc"
 #----------------------------------------------------------------------------#
 if [ ! -e ${BUNDLE}/cloonix/cloonix_config ]; then
   echo NOT FOUND:
@@ -34,69 +33,60 @@ for i in  "cloonix_net" \
   cp -f ${BUNDLE}/cloonix/${i} ${ROOTFS}/bin
 done
 #----------------------------------------------------------------------------#
-cp -f  ${BUNDLE}/cloonix/client/hide_dirs/cloonix-hide-dirs ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/client/agent_dropbear/cloonix-dropbear-scp ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/client/agent_dropbear/cloonix-dropbear-ssh ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/client/cairo_canvas/cloonix-gui ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/client/xwycli/cloonix-xwycli ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/client/rxvt/urxvt ${ROOTFS}/bin/cloonix-urxvt
-cp -f  ${BUNDLE}/cloonix/client/ctrl/cloonix-ctrl ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/dtach/cloonix-dtach ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/apk_tools/cloonix-apk-static ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/ovs/cloonix-vswitch.ovsschema ${ROOTFS}/bin/ovsschema
-cp -f -r ${BUNDLE}/cloonix/server/insider_agents ${BUNDLE}
-if [ "${WITH_FRR}" = "yes" ]; then
-  BUILD_FRR=${BUNDLE}/cloonix/server/frr/built_frr
-  mv ${BUILD_FRR}/etc/frr ${ROOTFS}/etc
-  mv ${BUILD_FRR}/bin/*  ${ROOTFS}/bin
-  mv ${BUILD_FRR}/sbin/*  ${ROOTFS}/sbin
-  mv ${BUILD_FRR}/lib/*  ${ROOTFS}/lib
-  mv ${BUILD_FRR}/share/yang  ${ROOTFS}/share
-  rm -rf ${BUILD_FRR}
-fi
-cp -f  ${BUNDLE}/cloonix/server/xwy/cloonix-xwy-srv ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/wm2/cloonix-novnc-wm2 ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/suid_power/cloonix-suid-power ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/doorways/cloonix-doorways ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/suid_power/cloonix-suid-power ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/uml_cloonix_switch/cloonix-main-server ${ROOTFS}/bin
-for i in cloonix-ovsdb-server \
-         cloonix-ovs-vswitchd \
-         cloonix-ovsdb-tool \
-         cloonix-ovs-appctl \
-         cloonix-ovs-vsctl ; do
-  cp -f ${BUNDLE}/cloonix/server/ovs/bin/${i} ${ROOTFS}/bin
-done
-cp -f  ${BUNDLE}/cloonix/server/nginx/bin/cloonix-novnc-nginx ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/websockify-js/bin/cloonix-novnc-websockify-js ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/ovs_c2c/cloonix-ovs-c2c ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/ovs_a2b/cloonix-ovs-a2b ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/ovs_drv/cloonix-ovs-drv ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/ovs_nat_main/cloonix-ovs-nat-main ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/ovs_snf/cloonix-ovs-snf ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/proxymous/cloonix-proxymous ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/iproute2/ip ${ROOTFS}/bin
-cp -f  ${BUNDLE}/cloonix/server/crun/crun_tainted/crun ${ROOTFS}/bin/cloonix-crun
-cp -f  ${BUNDLE}/cloonix/server/xorg/Xvfb ${ROOTFS}/bin/cloonix-novnc-Xvfb
-cp -f  ${BUNDLE}/cloonix/server/xorg/Xephyr ${ROOTFS}/bin/cloonix-novnc-xephyr
-cp -f  ${BUNDLE}/cloonix/server/wireshark/wireshark ${ROOTFS}/bin/cloonix-wireshark
-cp -f  ${BUNDLE}/cloonix/server/wireshark/dumpcap ${ROOTFS}/bin/cloonix-dumpcap
+mkdir -p ${ROOTFS}/bin/qemu
 #----------------------------------------------------------------------------#
 cp -f ${BUNDLE}/cloonix/cloonix_config ${ROOTFS}/etc/cloonix.cfg
 #----------------------------------------------------------------------------#
-cp -rf ${BUNDLE}/cloonix/client/spice/polkit-1 ${ROOTFS}/bin
-cp -f ${BUNDLE}/cloonix/client/spice/cloonix-spice-client-glib-usb-acl-helper ${ROOTFS}/bin
-cp -f ${BUNDLE}/cloonix/client/spice/cloonix-spicy ${ROOTFS}/bin
-cp -f ${BUNDLE}/cloonix/client/openssh/cloonix-u2i-scp ${ROOTFS}/bin
-cp -f ${BUNDLE}/cloonix/client/openssh/cloonix-u2i-ssh ${ROOTFS}/bin
-cp -rf ${BUNDLE}/cloonix/server/qemu ${ROOTFS}/bin
-rm -rf ${ROOTFS}/bin/qemu/tainted_qemu
-for i in "allclean" "cloonix-qemu-img" "cloonix-qemu-system" \
-         "cloonix_patch" "cmd" "mkpatch" "patched_create" ; do
-  rm -f ${ROOTFS}/bin/qemu/${i}
-done
-cp -f ${BUNDLE}/cloonix/server/qemu/cloonix-qemu-system ${ROOTFS}/bin
-cp -f ${BUNDLE}/cloonix/server/qemu/cloonix-qemu-img ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/hide_dirs/cloonix-hide-dirs ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/agent_dropbear/cloonix-dropbear-scp ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/agent_dropbear/cloonix-dropbear-ssh ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/cairo_canvas/cloonix-gui ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/xwycli/cloonix-xwycli ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/rxvt/urxvt ${ROOTFS}/bin/cloonix-urxvt
+cp -f  ${CLOONSRC}/ctrl/cloonix-ctrl ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/dtach/cloonix-dtach ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/apk_tools/cloonix-apk-static ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs/cloonix-vswitch.ovsschema ${ROOTFS}/bin/ovsschema
+cp -fr ${CLOONSRC}/insider_agents ${BUNDLE}
+cp -fr ${CLOONSRC}/frr/built_frr/etc/frr ${ROOTFS}/etc
+cp -fr ${CLOONSRC}/frr/built_frr/bin/*  ${ROOTFS}/bin
+cp -fr ${CLOONSRC}/frr/built_frr/sbin/*  ${ROOTFS}/sbin
+cp -fr ${CLOONSRC}/frr/built_frr/lib/*  ${ROOTFS}/lib
+cp -fr ${CLOONSRC}/frr/built_frr/share/yang  ${ROOTFS}/share
+rm -rf ${CLOONSRC}/frr/built_frr
+cp -f  ${CLOONSRC}/xwy/cloonix-xwy-srv ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/wm2/cloonix-novnc-wm2 ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/suid_power/cloonix-suid-power ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/doorways/cloonix-doorways ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/suid_power/cloonix-suid-power ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/uml_cloonix_switch/cloonix-main-server ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs/bin/cloonix-ovsdb-server ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs/bin/cloonix-ovs-vswitchd ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs/bin/cloonix-ovsdb-tool ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs/bin/cloonix-ovs-appctl ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs/bin/cloonix-ovs-vsctl ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/nginx/bin/cloonix-novnc-nginx ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/websockify-js/bin/cloonix-novnc-websockify-js ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs_c2c/cloonix-ovs-c2c ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs_a2b/cloonix-ovs-a2b ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs_drv/cloonix-ovs-drv ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs_nat_main/cloonix-ovs-nat-main ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/ovs_snf/cloonix-ovs-snf ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/proxymous/cloonix-proxymous ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/iproute2/ip ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/crun/crun_tainted/crun ${ROOTFS}/bin/cloonix-crun
+cp -f  ${CLOONSRC}/xorg/Xvfb ${ROOTFS}/bin/cloonix-novnc-Xvfb
+cp -f  ${CLOONSRC}/xorg/Xephyr ${ROOTFS}/bin/cloonix-novnc-xephyr
+cp -f  ${CLOONSRC}/wireshark/wireshark ${ROOTFS}/bin/cloonix-wireshark
+cp -f  ${CLOONSRC}/wireshark/dumpcap ${ROOTFS}/bin/cloonix-dumpcap
+cp -rf ${CLOONSRC}/spice/polkit-1 ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/spice/cloonix-spice-client-glib-usb-acl-helper ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/spice/cloonix-spicy ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/openssh/cloonix-u2i-scp ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/openssh/cloonix-u2i-ssh ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/qemu/cloonix-qemu-system ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/qemu/cloonix-qemu-img ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/qemu/pc-bios/* ${ROOTFS}/bin/qemu
 #----------------------------------------------------------------------------#
 printf "\n\nGET ALL LIBRARIES ${ROOTFS}\n\n"
 #----------------------------------------------------------------------------#
@@ -135,7 +125,7 @@ done
 #----------------------------------------------------------------------------#
 mkdir -p ${BUNDLE}/startup_bin
 for i in "bash" "sleep" "mkdir" "xauth" "cat" \
-         "ln" "mount" "echo" "rm" ; do
+         "ln" "mount" "echo" "rm" "touch" ; do
   cp -f ${ROOTFS}/bin/${i} ${BUNDLE}/startup_bin
 done     
 #----------------------------------------------------------------------------#

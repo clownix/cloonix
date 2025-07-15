@@ -1,0 +1,16 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=../../../targz_store
+
+cd ${TARGZ}
+NGINX=$(ls nginx_*)
+NGINX=${NGINX%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${NGINX}.tar.gz
+mv nginx nginx_tainted
+cd nginx_tainted
+
+patch -p1 < ${HERE}/nginx.patch
+
+
