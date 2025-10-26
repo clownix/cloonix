@@ -55,7 +55,6 @@ enum{
 
 t_pid_lst *create_list_pid(int *nb);
 static void ovs_destroy_test(void);
-static int g_system_promisc;
 
 /****************************************************************************/
 typedef struct t_ovs
@@ -477,11 +476,6 @@ void ovs_pid_resp(int llid, char *name, int toppid, int pid)
           cur->ovs_pid = toppid;
         if ((cur->ovs_pid > 0) && (cur->ovsdb_pid > 0))
           cur->ovs_pid_ready = 1;
-        if (g_system_promisc == 0)
-          {
-          g_system_promisc = 1;
-          msg_send_system_promisc();
-          }
         }
       }
     }
@@ -747,7 +741,6 @@ void ovs_llid_closed(int llid, int from_clone)
 void ovs_init(void)
 {
   g_head_ovs = NULL;
-  g_system_promisc = 0;
   clownix_timeout_add(5, timer_ovs_beat, NULL, NULL, NULL);
   clownix_timeout_add(1, timer_start_openvswitch, NULL, NULL, NULL);
   kvm_init();

@@ -17,6 +17,8 @@ export DESTDIR=${TARGET}
 export PATH=${TARGET}/bin:$PATH
 cd ${HERE}/spice_client/tainted_spice
 sed -i s/UNKNOWN/0.43/ ./build-aux/git-version-gen
+sed -i s'/(spice_channel_set_capability)/spice_channel_set_capability/' src/channel-display.c
+
 
 meson setup -Dcoroutine=gthread build
 cd build

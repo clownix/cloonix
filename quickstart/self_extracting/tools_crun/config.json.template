@@ -134,7 +134,7 @@ __HOST_PULSE_PRESENT__    },{
     "type": "proc",
     "source": "proc"
     },{  
-    "destination": "/lib/modules",
+    "destination": "/cloonix/cloonfs/lib/modules",
     "type": "none",
     "source": "/lib/modules",
     "options": ["rbind","ro"]

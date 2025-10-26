@@ -44,6 +44,7 @@ typedef struct t_elem_phy
   struct t_elem_phy *next;
 } t_elem_phy;
 
+
 static t_topo_info_phy g_topo_phy[MAX_PHY];
 static int g_nb_phy;
 static t_elem_phy *g_head_elem_phy;

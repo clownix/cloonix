@@ -58,7 +58,8 @@ SRC = \
       server_stub.c \
       proxycrun.c \
       c2c_chainlan.c \
-      hide_dirs.c
+      hide_dirs.c \
+      vwifi.c
 
 INCLUDES= -I./src \
           -I$(GLOB_INCLUDE) \

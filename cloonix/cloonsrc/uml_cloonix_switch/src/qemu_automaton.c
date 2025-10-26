@@ -72,6 +72,7 @@
                   " -device scsi-hd,drive=%s"
 
 
+int get_conf_rank(void);
 
 
 
@@ -290,7 +291,7 @@ static void derived_file_creation_request(t_vm *vm)
    " -m %d"\
    " -name %s"\
    " -nodefaults"\
-   " -chardev stdio,id=char0,signal=off" \
+   " -chardev stdio,id=char0,signal=off"\
    " -serial  chardev:char0"\
    " -boot    strict=on"
 
@@ -342,7 +343,7 @@ static void create_linux_cmd_kvm(t_vm *vm, char *qemu_cmd)
     strcpy(cpu_type, "kvm64");
   else
 */
-    strcpy(cpu_type, "host,-aes");
+  strcpy(cpu_type, "host,-aes");
   len += sprintf(qemu_cmd+len, QEMU_OPTS_BASE, vm->kvm.mem, vm->kvm.name);
   for (i = 0; i < vm->kvm.nb_tot_eth; i++)
     {

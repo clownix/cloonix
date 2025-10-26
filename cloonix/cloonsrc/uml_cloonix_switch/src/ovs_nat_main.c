@@ -442,7 +442,7 @@ void ovs_nat_main_resp_add_lan(int is_ko, char *name, int num,
   t_ovs_nat_main *cur = find_nat(name);
   if (!cur)
     {
-    mactopo_add_resp(0, name, num, lan);
+    mactopo_add_resp(0, item_nat, name, num, lan);
     KERR("ERROR %d %s", is_ko, name); 
     }
   else
@@ -452,13 +452,13 @@ void ovs_nat_main_resp_add_lan(int is_ko, char *name, int num,
     memset(cur->lan, 0, MAX_NAME_LEN);
     if (is_ko)
       {
-      mactopo_add_resp(0, name, num, lan);
+      mactopo_add_resp(0, item_nat, name, num, lan);
       KERR("ERROR %d %s", is_ko, name);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), name);
       }
     else
       {
-      mactopo_add_resp(item_nat, name, num, lan);
+      mactopo_add_resp(1, item_nat, name, num, lan);
       strncpy(cur->lan, lan, MAX_NAME_LEN);
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       cfg_hysteresis_send_topo_info();

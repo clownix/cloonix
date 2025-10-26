@@ -10,6 +10,8 @@ if [ ! -e ${BUNDLE}/cloonix/cloonix_config ]; then
 fi
 CLOONSRC=${BUNDLE}/cloonix/cloonsrc
 #----------------------------------------------------------------------------#
+echo "\n\nBUILDING CLOONSRC\n\n" > /tmp/buildlog.txt
+echo "\n\nBUILDING CLOONSRC\n\n" > /tmp/buildlog.err
 printf "\n\nBUILDING CLOONSRC\n\n"
 #----------------------------------------------------------------------------#
 for i in "lib_io_clownix" \
@@ -22,15 +24,17 @@ for i in "lib_io_clownix" \
     echo
     echo DOING:
     echo ${CLOONSRC}/${i}
+    echo ${CLOONSRC}/${i} >>/tmp/buildlog.txt
+    echo ${CLOONSRC}/${i} >>/tmp/buildlog.err
     echo
     echo
-    ./cmd
+    ./cmd 1>>/tmp/buildlog.txt 2>>/tmp/buildlog.err
 done
 #----------------------------------------------------------------------------#
 printf "\n\nBUILDING CLOONSRC\n\n"
 #----------------------------------------------------------------------------#
 for i in  "hide_dirs" \
-          "agent_dropbear" \
+          "cloonix_dropbear" \
           "lib_client" \
           "ctrl" \
           "xwycli" \
@@ -39,22 +43,28 @@ for i in  "hide_dirs" \
     echo
     echo DOING:
     echo ${CLOONSRC}/${i}
+    echo ${CLOONSRC}/${i} >>/tmp/buildlog.txt
+    echo ${CLOONSRC}/${i} >>/tmp/buildlog.err
     echo
     echo
     cd ${CLOONSRC}/${i}
-    ./cmd
+    ./cmd 1>>/tmp/buildlog.txt 2>>/tmp/buildlog.err
 done
 #----------------------------------------------------------------------------#
 printf "\n\nBUILDING CLOONSRC\n\n"
 #----------------------------------------------------------------------------#
   echo DOING:
   echo ${CLOONSRC}/frr
+  echo ${CLOONSRC}/frr >>/tmp/buildlog.txt
+  echo ${CLOONSRC}/frr >>/tmp/buildlog.err
   echo
   echo
   cd ${CLOONSRC}/frr
-  ./cmd
+  ./cmd 1>>/tmp/buildlog.txt 2>>/tmp/buildlog.err
 
-  for i in  "apk_tools" \
+  for i in  "vwifi" \
+            "erase_workdir" \
+            "apk_tools" \
             "xorg" \
             "wireshark" \
             "iproute2" \
@@ -65,7 +75,6 @@ printf "\n\nBUILDING CLOONSRC\n\n"
             "wm2" \
             "ovs" \
             "nginx" \
-            "websockify-js" \
             "doorways" \
             "suid_power" \
             "uml_cloonix_switch" \
@@ -77,10 +86,12 @@ printf "\n\nBUILDING CLOONSRC\n\n"
     echo
     echo DOING:
     echo ${CLOONSRC}/${i}
+    echo ${CLOONSRC}/${i} >>/tmp/buildlog.txt
+    echo ${CLOONSRC}/${i} >>/tmp/buildlog.err
     echo
     echo
     cd ${CLOONSRC}/${i}
-    ./cmd
+    ./cmd 1>>/tmp/buildlog.txt 2>>/tmp/buildlog.err
   done
 #----------------------------------------------------------------------------#
   for i in  "openssh" \
@@ -89,10 +100,12 @@ printf "\n\nBUILDING CLOONSRC\n\n"
       echo
       echo DOING:
       echo ${CLOONSRC}/${i}
+      echo ${CLOONSRC}/${i} >>/tmp/buildlog.txt
+      echo ${CLOONSRC}/${i} >>/tmp/buildlog.err
       echo
       echo
       cd ${CLOONSRC}/${i}
-      ./cmd
+      ./cmd 1>>/tmp/buildlog.txt 2>>/tmp/buildlog.err
   done
 
   for i in  "spice_lib_server" \
@@ -100,17 +113,23 @@ printf "\n\nBUILDING CLOONSRC\n\n"
     echo
     echo DOING:
     echo ${CLOONSRC}/${i}
+    echo ${CLOONSRC}/${i} >>/tmp/buildlog.txt
+    echo ${CLOONSRC}/${i} >>/tmp/buildlog.err
     echo
     echo
     cd ${CLOONSRC}/${i}
-    ./cmd
+    ./cmd 1>>/tmp/buildlog.txt 2>>/tmp/buildlog.err
   done
 
 #----------------------------------------------------------------------------#
   echo DOING:
   echo ${CLOONSRC}/create_insider_agents_iso
+  echo ${CLOONSRC}/create_insider_agents_iso >>/tmp/buildlog.txt
+  echo ${CLOONSRC}/create_insider_agents_iso >>/tmp/buildlog.err
   cd ${CLOONSRC}/create_insider_agents_iso
-  ./cmd_mk_iso
+  ./cmd_mk_iso 1>>/tmp/buildlog.txt 2>>/tmp/buildlog.err
 #----------------------------------------------------------------------------#
 printf "\n\nBUILDING ALL OK\n\n"
+printf "\n\nBUILDING ALL OK\n\n" >>/tmp/buildlog.txt
+printf "\n\nBUILDING ALL OK\n\n" >>/tmp/buildlog.err
 #----------------------------------------------------------------------------#

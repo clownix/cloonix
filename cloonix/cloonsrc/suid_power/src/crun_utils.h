@@ -29,13 +29,13 @@ int crun_utils_user_nspacecrun_init(char *nspacecrun, int crun_pid);
 void crun_utils_prepare_with_delete(char *name, char *nspacecrun,
                                     int vm_id, int nb_eth, int uid_image,
                                     int is_privileged);
-int crun_utils_user_eth_create(char *name, char *nspacecrun,
-                               int cloonix_rank, int vm_id, int nb_eth,
-                               t_eth_mac *eth_mac);
+int crun_utils_user_eth_create(char *name, char *nspacecrun, int cloonix_rank,
+                               int vm_id, int nb_eth, t_eth_mac *eth_mac);
+
 int crun_utils_get_vswitchd_pid(char *name);
-void crun_utils_startup_env(char *mountbear, char *startup_env, int nb_eth);
+void crun_utils_startup_env(char *mountbear, char *startup_env,
+                            int nb_vwif, char *mac_vwif, int nb_eth);
 void crun_beat(int llid);
-int crun_utils_unlink_sub_dir_files(char *dir);
 void crun_utils_delete_crun_stop(char *name, int pid, int uid_image,
                                  int is_privileged, char *mountbear);
 void crun_utils_delete_crun_delete(char *name, char *nspacecrun,
@@ -60,22 +60,6 @@ int crun_utils_create_overlay(char *mountbear, char *mounttmp,
                               char *image, int uid_image, char *agent_dir,
                               char *bulk_rootfs, int is_persistent,
                               int is_privileged, char *brandtype);
-int crun_utils_create_config_json(char *image, char *path, char *rootfs,
-                                  char *nspace, char *cloonix_dropbear,
-                                  char *mounttmp,
-                                  int is_persistent, int is_privileged,
-                                  char *brandtype, char *startup_env,
-                                  char *vmount, char *name, int ovspid,
-                                  int uid_image, char *sbin_init,
-                                  char *sh_starter,
-                                 int subuid_start, int subuid_qty,
-                                 int subgid_start, int subgid_qty);
-void crun_utils_init(char *var_root);
 char *get_mnt_loop_dir(void);
-void lio_clean_all_llid(void);
-char *lio_linear(char *argv[]);
-FILE *cmd_lio_popen(char *cmd, int *child_pid, int uid);
-int execute_cmd(char *cmd, int do_log, int uid);
-void log_write_req(char *line);
-int force_waitpid(int pid, int *status);
+int dirs_agent_create_mnt_tmp(char *mountbear, char *mounttmp);
 /*--------------------------------------------------------------------------*/

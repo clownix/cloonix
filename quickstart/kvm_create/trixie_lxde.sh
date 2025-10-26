@@ -21,7 +21,7 @@ fi
 cloonix_net ${NET}
 sleep 2
 set -e
-cp -vf /var/lib/cloonix/bulk/${DISTRO}_fr.qcow2 /var/lib/cloonix/bulk/${QCOW2}
+cp -vf /var/lib/cloonix/bulk/${DISTRO}.qcow2 /var/lib/cloonix/bulk/${QCOW2}
 sync
 sleep 1
 sync

@@ -675,7 +675,7 @@ static void prepare_rx_tx_events(void)
           evt |= EPOLLOUT;
         else
           {
-          if (channel_get_tx_queue_len(get_llid(cidx)))
+          if (get_tot_txq_size(cidx))
             {
             if (!g_channel[cidx].red_to_stop_reading)
               evt |= EPOLLIN;

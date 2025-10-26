@@ -1,5 +1,5 @@
 ==============================================================================
-                               v52-00
+                               v53-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -17,10 +17,10 @@ and ports.
 2 supports are provided for installation: BUNDLE or FRR-TOY
 Building of the binaries is done in a virtual debian trixie, all the
 necessary files and libraries are collected and put either into the bundle
-or in the self-extracting script frr-toy made to play with the frr open
+or in the self-extracting script cloonix-toy made to play with the frr open
 source routing suite.
 To install the bundle, you must have the root privileges but to install the
-frr-toy, you only need to be an unpriviledged a user on a linux machine,
+cloonix-toy, you only need to be an unpriviledged a user on a linux machine,
 it is self-extracting, simplifying its use.
 
 3 brandtypes of virtualizations run in cloonix: KVM, ZIP or CVM
@@ -31,12 +31,21 @@ ZIP and CVM are run with crun, a C implementation of the Open Container Initiati
 ZIP is a zip file and CVM is a directory, it becomes / in the container.
  
 See clownix.net for a documentation.
-http://clownix.net/doc_stored/build-52-00/html/index.html doc.
+http://clownix.net/doc_stored/build-53-00/html/index.html doc.
+
+==============================================================================
+LAST VERSION v53-00 NEWS:
+This is a first shot at embedding open source https://github.com/Raizo62/vwifi 
+into the cloonix blob, adding glue to have a seamless creation of wifi type
+interfaces wlan0, wireless interfaces based on the mac80211_hwsim module.
+About the wireless interfaces, there is for the moment a problem to connect
+a wifi of a kvm to a wifi of a container.
+==============================================================================
 
 ==============================================================================
                           BUNDLE INSTALLATION
 ==============================================================================
-The bundle way for installation is based on cloonix-bundle-52-00.tar.gz,
+The bundle way for installation is based on cloonix-bundle-53-00.tar.gz,
 it copies binary files to /usr/libexec/cloonix/cloonfs directory of your host,
 puts bash scripts in /usr/bin/cloonix_xxx and uses /var/lib/cloonix as work zone.
 With this choice, root privileges are necessary for installation and
@@ -46,9 +55,9 @@ some binaries have the suid root permissions to run with higher privileges.
 1) Download software and installation:
 --------------------------------------
 
-wget http://clownix.net/downloads/cloonix-52/cloonix-bundle-52-00.tar.gz
-tar xvf cloonix-bundle-52-00.tar.gz
-cd cloonix-bundle-52-00
+wget http://clownix.net/downloads/cloonix-53/cloonix-bundle-53-00.tar.gz
+tar xvf cloonix-bundle-53-00.tar.gz
+cd cloonix-bundle-53-00
 sudo ./install_cloonfs
 
 (To uninstall:   sudo rm -f /usr/bin/cloonix_*
@@ -63,30 +72,39 @@ mkdir -p /var/lib/cloonix/bulk
 cd /var/lib/cloonix/bulk
 
 qcow2 (virtual machine for qemu-kvm):
-wget http://clownix.net/downloads/cloonix-51/bulk/bookworm.qcow2.gz
-gunzip bookworm.qcow2.gz
+wget http://clownix.net/downloads/cloonix-53/bulk/trixie.qcow2.gz
+gunzip trixie.qcow2.gz
 
 zip (container for crun):
-wget http://clownix.net/downloads/cloonix-51/bulk/zipfrr.zip
+wget http://clownix.net/downloads/cloonix-53/bulk/trixie.zip
 
 cvm (container for crun):
-wget http://clownix.net/downloads/cloonix-51/bulk/bookworm0.tar.gz
-tar xvf bookworm0.tar.gz
+wget http://clownix.net/downloads/cloonix-53/bulk/trixie.tar.gz
+tar xvf trixie.tar.gz
 
 
-3) Download demo script file:
------------------------------
+3) Download demo script files for conventionnal eth networks:
+-------------------------------------------------------------
 
-cd ${HOME}
-wget http://clownix.net/downloads/cloonix-51/demos/ping_demo.sh
+wget http://clownix.net/downloads/cloonix-53/demos/eth_kvm.sh
+wget http://clownix.net/downloads/cloonix-53/demos/eth_zip.sh
+wget http://clownix.net/downloads/cloonix-53/demos/eth_cvm.sh
+
+4) Download demo script files for experimental wireless:
+--------------------------------------------------------
+
+wget http://clownix.net/downloads/cloonix-53/demos/eth_kvm.sh
+wget http://clownix.net/downloads/cloonix-53/demos/eth_zip.sh
+wget http://clownix.net/downloads/cloonix-53/demos/eth_cvm.sh
+
 
 ==============================================================================
 
 ==============================================================================
                           FRR-TOY INSTALLATION
 ==============================================================================
-The frr-toy-52.sh is a self-extracting script that needs no privileges either
-at install or at run.
+The cloonix-toy-53.sh is a self-extracting script that needs no privileges
+either at install or at run.
 This is a user land application, it only needs a linux dstribution to be run.
 This script is based on makeself.sh open source, it creates a directory
 called dir_self_extracted associated to a handle executable script file
@@ -95,11 +113,11 @@ called nemocmd by default.
 
 1) Download:
 ------------
-wget http://clownix.net/downloads/cloonix-52/frr-toy-52.sh
+wget http://clownix.net/downloads/cloonix-53/cloonix-toy-53.sh
 
 2) Extract the directory:
 -------------------------
-./frr-toy-52.sh
+./cloonix-toy-53.sh
 
 3) The nemocmd script is now present, first start processes:
 ------------------------------------------------------------
@@ -109,9 +127,9 @@ wget http://clownix.net/downloads/cloonix-52/frr-toy-52.sh
 ------------------------------------------------------
 ./nemocmd canvas
 
-5) Call the frr demoline:
+5) Call the frrline:
 -------------------------------------------------------
-./nemocmd demoline
+./nemocmd frrline
 
 6) Kill all:
 ------------
@@ -121,8 +139,8 @@ wget http://clownix.net/downloads/cloonix-52/frr-toy-52.sh
 NOTE FOR KVM USE AS A SIMPLE USER
 =================================
 For the cloonix to be able to use the qcow2 files, devices /dev/kvm,
-/dev/vhost-net and /dev/net/tun, must have read/write access by the user
-launching the demonstration.
+/dev/vhost-net, /dev/net/tun, vhost-vsock, vsock must have read/write
+access by the user launching the demonstration.
 
 -----------------------------------------------------------------------------
 

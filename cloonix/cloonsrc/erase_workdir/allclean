@@ -1,0 +1,4 @@
+#!/bin/bash
+
+rm -f cloonix-suid-erase-workdir
+

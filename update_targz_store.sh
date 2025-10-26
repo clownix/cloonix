@@ -6,6 +6,15 @@ WORK=${HERE}/work_targz_store
 mkdir -vp ${WORK}
 #-----------------------------------------------------------------------------
 cd ${WORK}
+git clone --depth=1 https://github.com/Raizo62/vwifi.git
+cd ${WORK}/vwifi
+COMMIT=$(git log --pretty=format:"%H")
+cd ${WORK}
+tar zcvf vwifi_${COMMIT}.tar.gz vwifi
+rm -rf vwifi
+mv vwifi_${COMMIT}.tar.gz ${TARGZ}
+#-----------------------------------------------------------------------------
+cd ${WORK}
 git clone --depth=1 https://github.com/FRRouting/frr.git
 cd ${WORK}/frr
 COMMIT=$(git log --pretty=format:"%H")
@@ -65,16 +74,14 @@ tar zcvf openssh-portable_${COMMIT}.tar.gz openssh-portable
 rm -rf openssh-portable
 mv openssh-portable_${COMMIT}.tar.gz ${TARGZ}
 #-----------------------------------------------------------------------------
-for i in "websockify-js" "noVNC"; do
-  cd ${WORK}
-  git clone --depth=1 https://github.com/novnc/${i}.git
-  cd ${WORK}/${i}
-  COMMIT=$(git log --pretty=format:"%H")
-  cd ${WORK}
-  tar zcvf ${i}_${COMMIT}.tar.gz ${i}
-  rm -rf ${i}
-  mv ${i}_${COMMIT}.tar.gz ${TARGZ}
-done
+cd ${WORK}
+git clone --depth=1 https://github.com/novnc/noVNC.git
+cd ${WORK}/noVNC
+COMMIT=$(git log --pretty=format:"%H")
+cd ${WORK}
+tar zcvf noVNC_${COMMIT}.tar.gz noVNC
+rm -rf noVNC
+mv noVNC_${COMMIT}.tar.gz ${TARGZ}
 #-----------------------------------------------------------------------------
 cd ${WORK}
 git clone --depth=1 https://github.com/nginx/nginx.git
@@ -156,8 +163,6 @@ mv usbredir_${COMMIT}.tar.gz ${TARGZ}
 cd ${HERE}
 rmdir work_targz_store
 #-----------------------------------------------------------------------------
-#https://www.kernel.org/pub/linux/utils/net/iproute2/ for iproute2-6.15.0.tar.gz
-#git clone https://gitlab.freedesktop.org/xorg/app/xauth.git
-# xutils-dev:wq
+#https://www.kernel.org/pub/linux/utils/net/iproute2/ for iproute2-6.17.0.tar.gz
 
 

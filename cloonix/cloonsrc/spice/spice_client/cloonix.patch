@@ -305,7 +305,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +
 +
 +/****************************************************************************/
-+static void sock_header_set_info(char *tx,
++static void local_header_set_info(char *tx,
 +                                 int llid, int len, int type, int val,
 +                                 int nb_pkt, char **ntx)
 +{
@@ -338,7 +338,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +
 +
 +/****************************************************************************/
-+static int sock_header_get_info(char *rx,
++static int local_header_get_info(char *rx,
 +                                 int *llid, int *len, int *type, int *val,
 +                                 int *nb_pkt, char **nrx)
 +{
@@ -396,7 +396,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +                            int *len, char **payload) 
 +{
 +  int idx_hmac, type, llid, val, pkt, result = -1;
-+  idx_hmac = sock_header_get_info(rx, &llid, len, &type, &val, &pkt, payload);
++  idx_hmac = local_header_get_info(rx, &llid, len, &type, &val, &pkt, payload);
 +  if (idx_hmac != -1)
 +    {
 +    if (type != doors_type_spice)
@@ -454,7 +454,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +{
 +  char *payload;
 +  int tot_len = len + DOORWAYS_HEADER_SIZE;
-+  sock_header_set_info(buf, 0, len, 
++  local_header_set_info(buf, 0, len, 
 +                       doors_type_spice, val,
 +                       nb_pkt_tx, &payload);
 +  if (payload != buf + DOORWAYS_HEADER_SIZE)
@@ -512,7 +512,7 @@ diff -Naur spice-gtk/src/cloon.c tainted_spice/src/cloon.c
 +static int rx_spicbuf_get_paylen(t_rx_spicbuf *rx_spicbuf)
 +{
 +  int nb_pkt, result = 0;
-+  rx_spicbuf->idx_hmac = sock_header_get_info(rx_spicbuf->buf,
++  rx_spicbuf->idx_hmac = local_header_get_info(rx_spicbuf->buf,
 +                                             &(rx_spicbuf->dido_llid),
 +                                             &(rx_spicbuf->paylen),
 +                                             &(rx_spicbuf->type),

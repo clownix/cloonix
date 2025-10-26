@@ -86,8 +86,7 @@ cloonix_ssh ${NET} ${NAME} "apt-get -o Dpkg::Options::=--force-confdef \
                 mesa-common-dev libpipewire-0.3-dev \
                 libpipewire-0.3-modules util-linux rsyslog \
                 pipewire-pulse unzip zip curl wget libboost-dev \
-                nodejs node-mime-types node-mime node-optimist \
-                node-ws acl libevent-dev xclip lsof \
+                acl libevent-dev xclip lsof \
                 libcanberra-gtk3-module kde-config-gtk-style \
                  libxcb-shape0-dev libxcb-render-util0-dev \
                    libxcb-util-dev libxcb-image0-dev \
@@ -120,7 +119,7 @@ cloonix_ssh ${NET} ${NAME} "DEBIAN_FRONTEND=noninteractive \
    python3-dev python3-pytest python3-sphinx libjson-c-dev \
    libelf-dev libreadline-dev cmake libcap-dev bison flex \
    pkg-config texinfo gdb libgrpc-dev python3-grpc-tools \
-   daemonize iperf3 iputils-tracepath tcpdump"
+   daemonize iperf3 iputils-tracepath tcpdump python3-websockify"
 
 
 #----------------------------------------------------------------------

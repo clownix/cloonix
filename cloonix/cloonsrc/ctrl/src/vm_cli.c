@@ -43,6 +43,7 @@ void help_add_vm_kvm(char *line)
   printf("\n\t\t  eth=sdd says eth0 eth1 and eth2 dpdk interfaces eth0 is spyable");
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
+  printf("\n\t       --vwifi=<nb> ");
   printf("\n\t       --no_qemu_ga ");
   printf("\n\t       --natplug=<num of eth for nat> ");
   printf("\n\t       --persistent ");
@@ -55,6 +56,8 @@ void help_add_vm_kvm(char *line)
   printf("\n\t       --fullvirt");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
   printf("\n\t       --balloon");
+  printf("\n\t eth=<eth_description> must be inexistant to have 0 eth.\n");
+  printf("\n\t for the vwifi option, nb will be the number of wlan interfaces.\n");
   printf("\n\t for the no_qemu_ga option, it must be set if you do not have the qemu_guest_agent int your guest.\n");
   printf("\n\t for the natplug= option, if set, the vm will have special cloonix_osh option.\n");
   printf("\n\t for the persistent option, if set, those writes are persistent after shutwown.\n\n");
@@ -71,8 +74,8 @@ void help_add_vm_kvm(char *line)
 /*-------------------------------------------------------------------------*/
 
 /***************************************************************************/
-static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
-                                     t_eth_table *eth_tab)
+static int fill_eth_params_from_argv(char *input,
+                                     int nb_tot_eth, t_eth_table *eth_tab)
 {
   int num, i, result = -1;
   char *ptr;
@@ -113,8 +116,8 @@ static int fill_eth_params_from_argv(char *input, int nb_tot_eth,
 /*-------------------------------------------------------------------------*/
 
 /***************************************************************************/
-static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
-                         t_eth_table *eth_tab, char *rootfs,
+static int local_add_kvm(char *name, int mem, int cpu,
+                         int nb_tot_eth, t_eth_table *eth_tab, char *rootfs,
                          int argc, char **argv)
 {
   int i, result = 0, prop_flags = 0;
@@ -124,7 +127,7 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
   char *added_disk=NULL;
   char *ptr;
   char *endptr;
-  int nat_plug = 0;
+  int nb_vwif = 0, nat_plug = 0;
 
   for (i=0; i<argc; i++)
     {
@@ -163,6 +166,16 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
       {
       prop_flags |= VM_CONFIG_FLAG_NO_QEMU_GA;
       }
+    else if (!strncmp(argv[i], "--vwifi=", strlen("--vwifi=")))
+      {
+      ptr = argv[i] + strlen("--vwifi=");
+      nb_vwif = (int) strtol(ptr, &endptr, 10);
+      if ((endptr[0] != 0) || (nb_vwif < 0) || (nb_vwif >= MAX_VWIF_VM))
+        {
+        printf("\nERROR vwifi: %d\n\n", nb_vwif);
+        nb_vwif = 0;
+        }
+      }
     else if (!strncmp(argv[i], "--natplug=", strlen("--natplug=")))
       {
       ptr = argv[i] + strlen("--natplug=");
@@ -194,9 +207,9 @@ static int local_add_kvm(char *name, int mem, int cpu, int nb_tot_eth,
   if (result == 0)
     {
     init_connection_to_uml_cloonix_switch();
-    client_add_vm(0, callback_end, name, nb_tot_eth, eth_tab, prop_flags,
-                  nat_plug, cpu, mem, img_linux, rootfs, install_cdrom,
-                  added_cdrom, added_disk);
+    client_add_vm(0, callback_end, name, nb_vwif, nb_tot_eth, eth_tab,
+                  prop_flags, nat_plug, cpu, mem, img_linux, rootfs,
+                  install_cdrom, added_cdrom, added_disk);
     }
   return result;
 }
@@ -210,7 +223,6 @@ static int check_eth_desc(char *eth_desc, char *err,
 {
   int i, dpdk=0, result = 0;
   int len, max = MAX_ETH_VM;
-  memset(eth_tab, 0, max * sizeof(t_eth_table)); 
   len = strlen(eth_desc);
   if (len >= max)
     {
@@ -254,35 +266,47 @@ static int check_eth_desc(char *eth_desc, char *err,
 /***************************************************************************/
 int cmd_add_vm_kvm(int argc, char **argv)
 {
-  int cpu, mem, nb_tot_eth, result = -1;
+  int cpu, mem, nb_tot_eth = -1, result = -1;
   char *rootfs, *name;
   char eth_string[MAX_PATH_LEN];
   char err[MAX_PATH_LEN];
   t_eth_table eth_tab[MAX_ETH_VM];
+  memset(eth_tab, 0, MAX_ETH_VM * sizeof(t_eth_table)); 
+
   if (argc < 4) 
     printf("\nNot enough parameters for add kvm\n");
-
   else if (sscanf(argv[1], "ram=%d", &mem) != 1)
     printf("\nBad ram= parameter %s\n", argv[1]);
   else if ((mem < 1) || (mem > 500000))
     printf("\nBad ram range, must be between 1 and 500000 (in mega)\n");
-
   else if (sscanf(argv[2], "cpu=%d", &cpu) != 1)
     printf("\nBad cpu= parameter %s\n", argv[2]);
   else if ((cpu < 1) || (cpu > 128))
     printf("\nBad cpu range, must be between 1 and 128\n");
-
-  else if (sscanf(argv[3], "eth=%s", eth_string) != 1)
-    printf("\nBad eth= parameter %s\n", argv[3]);
-  else if (check_eth_desc(eth_string, err, &nb_tot_eth, eth_tab))
-    printf("\nBad eth= parameter %s %s\n", argv[3], err);
-
   else
     {
-    name = argv[0];
-    rootfs = argv[4];
-    result = local_add_kvm(name, mem, cpu, nb_tot_eth,
-                           eth_tab, rootfs, argc-5, &(argv[5])); 
+    if (!strstr(argv[3], "eth="))
+      {
+      nb_tot_eth = 0;
+      name = argv[0];
+      rootfs = argv[3];
+      result = local_add_kvm(name, mem, cpu, nb_tot_eth,
+                             eth_tab, rootfs, argc-4, &(argv[4])); 
+      }
+    else
+      {
+      if (sscanf(argv[3], "eth=%s", eth_string) != 1)
+        printf("\nBad eth= parameter %s\n", argv[3]);
+      else if (check_eth_desc(eth_string, err, &nb_tot_eth, eth_tab))
+        printf("\nBad eth= parameter %s %s\n", argv[3], err);
+      else
+        {
+        name = argv[0];
+        rootfs = argv[4];
+        result = local_add_kvm(name, mem, cpu, nb_tot_eth,
+                               eth_tab, rootfs, argc-5, &(argv[5])); 
+        }
+      }
     }
   return result;
 }

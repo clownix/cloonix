@@ -30,7 +30,6 @@ enum {
      ovsreq_del_c2c_lan,
      ovsreq_add_a2b_lan,
      ovsreq_del_a2b_lan,
-     ovsreq_system_promisc,
      ovsreq_vhost_up,
      ovsreq_add_tap,
      ovsreq_del_tap,
@@ -51,13 +50,11 @@ void msg_ack_snf_ethv(int tid, int ko, int add, char *name, int num,
 void msg_ack_lan_endp(int tid, int ko, int add, char *name, int num,
                       char *vhost, char *lan);
 
-void msg_ack_system_promisc(int tid, int is_ko, char *vhost);
 /*--------------------------------------------------------------------------*/
 int msg_send_add_tap(char *name, char *vhost, char *mac);
 int msg_send_del_tap(char *name, char *vhost);
 int msg_send_add_phy(char *name, char *vhost, char *mac, int num_macvlan);
 int msg_send_del_phy(char *name, char *vhost, int type);
-int msg_send_system_promisc(void);
 int msg_send_vhost_up(char *name, int num, char *vhost);
 
 int msg_send_add_snf_lan(char *name, int num, char *vhost, char *lan);

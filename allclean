@@ -48,7 +48,7 @@ CLOONSRC=${SRC_TREE_ROOT}/cloonix/cloonsrc
            rxvt \
            spice \
            spice_lib_client \
-           agent_dropbear ; do
+           cloonix_dropbear ; do
     cd ${CLOONSRC}/${i}
     ./allclean
   done
@@ -64,12 +64,13 @@ CLOONSRC=${SRC_TREE_ROOT}/cloonix/cloonsrc
   rm -f ${CLOONSRC}/dtach/cloonix-dtach
   rm -f ${CLOONSRC}/cloonix-proxymous
 #----------------------------------------------------------
-  for i in apk_tools \
+  for i in vwifi \
+           erase_workdir \
+           apk_tools \
            iproute2 \
            ovs \
            proxymous \
            nginx \
-           websockify-js \
            ovs_drv \
            ovs_snf \
            ovs_nat_main \

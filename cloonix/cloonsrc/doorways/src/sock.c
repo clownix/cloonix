@@ -33,73 +33,7 @@
 #include "io_clownix.h"
 
 
-/****************************************************************************/
-int sock_header_get_size(void)
-{
-  return 16;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-void sock_header_set_info(char *tx, 
-                          int llid, int len, int type, int val,
-                          char **ntx)
-{
-  tx[0] = ((llid & 0xFF00) >> 8) & 0xFF;
-  tx[1] = llid & 0xFF;
-  tx[2] = ((len & 0xFF00) >> 8) & 0xFF;
-  tx[3] = len & 0xFF;
-  tx[4] = ((type & 0xFF00) >> 8) & 0xFF;
-  tx[5] = type & 0xFF;
-  tx[6] = ((val & 0xFF00) >> 8) & 0xFF;
-  tx[7] = val & 0xFF;
-  tx[8] = 0xDE;
-  tx[9] = 0xAD;
-  tx[10] = 0xCA;
-  tx[11] = 0xFE;
-  tx[12] = 0xDE;
-  tx[13] = 0xCA;
-  tx[14] = 0xBE;
-  tx[15] = 0xAF;
-  *ntx = &(tx[16]);
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
-int sock_header_get_info(char *rx, 
-                          int *llid, int *len, int *type, int *val,
-                          char **nrx)
-{
-  int result = -1;
-  *llid = ((rx[0] & 0xFF) << 8) + (rx[1] & 0xFF);
-  *len  = ((rx[2] & 0xFF) << 8) + (rx[3] & 0xFF);
-  *type = ((rx[4] & 0xFF) << 8) + (rx[5] & 0xFF);
-  *val  = ((rx[6] & 0xFF) << 8) + (rx[7] & 0xFF);
-  if (((rx[8] & 0xFF) == 0xDE) && 
-      ((rx[9] & 0xFF) == 0xAD) && 
-      ((rx[10] & 0xFF) == 0xCA) && 
-      ((rx[11] & 0xFF) == 0xFE) && 
-      ((rx[12] & 0xFF) == 0xDE) && 
-      ((rx[13] & 0xFF) == 0xCA) && 
-      ((rx[14] & 0xFF) == 0xBE) && 
-      ((rx[15] & 0xFF) == 0xAF))
-    {
-    result = 0;
-    }
-  else
-    {
-    *llid = 0;
-    *len  = 0;
-    *type = 0;
-    *val  = 0;
-    KERR("%02X %02X %02X %02X %02X %02X %02X %02X",
-         (rx[8] & 0xFF), (rx[9] & 0xFF), (rx[10] & 0xFF), (rx[11] & 0xFF),
-         (rx[12] & 0xFF), (rx[13] & 0xFF), (rx[14] & 0xFF), (rx[15] & 0xFF));
-    }
-  *nrx  = &(rx[16]);
-  return result;
-}
-/*--------------------------------------------------------------------------*/
+int sock_nonblock_client_unix(char *pname);
 
 
 

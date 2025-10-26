@@ -447,6 +447,11 @@ static int topo_kvm_diff(t_topo_kvm *ikvm, t_topo_kvm *kvm)
     KERR("%d %d", kvm->vm_config_param, ikvm->vm_config_param);
     result = -1;
     }
+  if (kvm->nb_tot_nb_vwif != ikvm->nb_tot_nb_vwif)
+    {
+    KERR("%d %d", kvm->nb_tot_nb_vwif, ikvm->nb_tot_nb_vwif);
+    result = -1;
+    }
   if (kvm->nb_tot_eth != ikvm->nb_tot_eth)
     {
     KERR("%d %d", kvm->nb_tot_eth, ikvm->nb_tot_eth);
@@ -500,6 +505,7 @@ static void random_cnt(t_topo_cnt *cnt)
   random_choice_str(cnt->image, MAX_PATH_LEN);
   random_choice_str(cnt->startup_env, MAX_PATH_LEN);
   random_choice_str(cnt->vmount, MAX_SIZE_VMOUNT);
+  cnt->nb_tot_nb_vwif = my_rand(MAX_ETH_VM);
   cnt->nb_tot_eth = my_rand(MAX_ETH_VM);
   cnt->ping_ok = my_rand(20);
   cnt->vm_id = my_rand(120);
@@ -541,6 +547,7 @@ static void random_kvm(t_topo_kvm *kvm)
   kvm->mem = rand();
   kvm->vm_config_flags = rand();
   kvm->vm_config_param = rand();
+  kvm->nb_tot_nb_vwif = my_rand(MAX_ETH_VM);
   kvm->nb_tot_eth = my_rand(MAX_ETH_VM);
   for (k=0; k < kvm->nb_tot_eth; k++)
     {

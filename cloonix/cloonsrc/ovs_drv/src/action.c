@@ -54,22 +54,6 @@ static int check_uid(void)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void action_system_promisc(char *bin, char *db, char *respb, char *vhost)
-{
-  if (ovs_cmd_system_promisc(bin, db, vhost))
-    {
-    snprintf(respb, MAX_PATH_LEN-1,
-             "KO ovs_system_promisc vhost=%s", vhost);
-    }
-  else
-    {
-    snprintf(respb, MAX_PATH_LEN-1,
-             "OK ovs_system_promisc vhost=%s", vhost);
-    }
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 void action_vhost_up(char *bin, char *db, char *respb,
                      char *name, int num, char *vhost)
 {

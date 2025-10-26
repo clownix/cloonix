@@ -213,10 +213,10 @@ void cnt_vhost_and_doors_begin(t_cnt *cnt)
   int i;
   char sock[MAX_PATH_LEN];
   memset(sock, 0, MAX_NAME_LEN);
+  name = cnt->cnt.name;
   for (i=0; i<cnt->cnt.nb_tot_eth; i++)
     {
     eth_name = cnt->cnt.eth_table[i].vhost_ifname;
-    name = cnt->cnt.name;
     if (msg_send_vhost_up(name, i, eth_name))
       KERR("ERROR KVMETH %s %d %s", name, i, eth_name);
     }
@@ -233,20 +233,20 @@ void cnt_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
   char *eth_name;
   if (cur == NULL)
     {
-    mactopo_add_resp(0, name, num, lan);
+    mactopo_add_resp(0, item_cnt, name, num, lan);
     KERR("ERROR RESP ADD LAN %d %s %s %d", is_ko, lan, name, num);
     }
   else
     {
     if (is_ko)
       {
-      mactopo_add_resp(0, name, num, lan);
+      mactopo_add_resp(0, item_cnt, name, num, lan);
       KERR("ERROR RESP ADD LAN %s %s %d", lan, name, num);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), "KO");
       }
     else
       {
-      mactopo_add_resp(item_cnt, name, num, lan);
+      mactopo_add_resp(1, item_cnt, name, num, lan);
       cur->att_lan[num].lan_attached_ok = 1; 
       utils_send_status_ok(&(cur->cli_llid), &(cur->cli_tid));
       if ((num < 0) || (num >= cur->cnt.nb_tot_eth))

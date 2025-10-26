@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
-CLOONIX_QEMU_BIN="/usr/libexec/cloonix/cloonfs/cloonix-qemu-system"
-CLOONIX_QEMU_BIN_DIR="/usr/libexec/cloonix/cloonfs/qemu"
+CLOONIX_QEMU_BIN="/usr/libexec/cloonix/cloonfs/bin/cloonix-qemu-system"
+CLOONIX_QEMU_BIN_DIR="/usr/libexec/cloonix/cloonfs/bin/qemu"
 TARGET=/tmp/cisco_initial_configuration
 CISCO_PRECONFIG_ISO=${TARGET}/iosxe_config.iso
 CISCO_QCOW2=/var/lib/cloonix/bulk/c8000.qcow2

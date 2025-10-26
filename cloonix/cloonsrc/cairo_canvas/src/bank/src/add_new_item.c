@@ -305,8 +305,8 @@ static void attached_associations_delete(t_bank_item *bitem)
         next = cur->next;
         kill(cur->pid, SIGKILL);
         bank_set_wireshark_pid(bitem->name, cur->num, 0);
-        bank_set_xephyr_frame_pid(bitem->name, 0);
-        bank_set_xephyr_session_pid(bitem->name, 0);
+//        bank_set_xephyr_frame_pid(bitem->name, 0);
+//        bank_set_xephyr_session_pid(bitem->name, 0);
         cur = next;
         }
 
@@ -712,7 +712,7 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
                  char *added_cdrom, char *added_disk,
                  double x, double y, int hidden_on_graph,
                  int color_choice, int vm_id, int vm_config_flags,
-                 int nb_tot_eth, t_eth_table *eth_tab)
+                 int nb_tot_nb_vwif, int nb_tot_eth, t_eth_table *eth_tab)
 {
   int result = 0;
   t_bank_item *bitem;
@@ -736,6 +736,7 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
     strncpy(bitem->pbi.pbi_node->added_disk, added_disk, MAX_PATH_LEN-1); 
     bitem->pbi.color_choice = color_choice;
     bitem->pbi.pbi_node->node_vm_id = vm_id;
+    bitem->pbi.pbi_node->nb_tot_nb_vwif = nb_tot_nb_vwif;
     bitem->pbi.pbi_node->nb_tot_eth = nb_tot_eth;
     memcpy(bitem->pbi.pbi_node->eth_tab, eth_tab,
            nb_tot_eth * sizeof(t_eth_table));
@@ -755,7 +756,8 @@ int add_new_node(char *name, char *kernel, char *rootfs_used,
 /****************************************************************************/
 int add_new_cnt(char *type, char *name, char *image, int vm_id,
                 double x, double y, int hidden_on_graph,
-                int ping_ok, int nb_tot_eth, t_eth_table *eth_tab)
+                int ping_ok, int nb_tot_nb_vwif, int nb_tot_eth,
+                t_eth_table *eth_tab)
 {
   int result = 0;
   t_bank_item *bitem;
@@ -776,6 +778,7 @@ int add_new_cnt(char *type, char *name, char *image, int vm_id,
     strncpy(bitem->pbi.pbi_cnt->image, image, MAX_PATH_LEN-1);
     bitem->pbi.pbi_cnt->cnt_evt_ping_ok = ping_ok;
     bitem->pbi.pbi_cnt->cnt_vm_id = vm_id;
+    bitem->pbi.pbi_cnt->nb_tot_nb_vwif = nb_tot_nb_vwif;
     bitem->pbi.pbi_cnt->nb_tot_eth = nb_tot_eth;
     memcpy(bitem->pbi.pbi_cnt->eth_tab, eth_tab,
            nb_tot_eth * sizeof(t_eth_table));

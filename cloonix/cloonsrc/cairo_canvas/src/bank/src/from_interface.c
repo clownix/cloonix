@@ -73,7 +73,7 @@ void bank_edge_create(char *name, int num, char *lan)
 /****************************************************************************/
 void bank_node_create(char *name, char *kernel, char *rootfs_used,
                       char *rootfs_backing, char *install_cdrom,
-                      char *added_cdrom, char *added_disk,
+                      char *added_cdrom, char *added_disk, int nb_tot_nb_vwif,
                       int nb_tot_eth, t_eth_table *eth_tab,  
                       int color_choice, int vm_id, int vm_config_flags,
                       double x, double y, int hidden_on_graph,
@@ -82,7 +82,7 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
   int i;
   add_new_node(name, kernel, rootfs_used, rootfs_backing, install_cdrom,
                added_cdrom, added_disk, x, y, hidden_on_graph, color_choice,
-               vm_id, vm_config_flags, nb_tot_eth, eth_tab);
+               vm_id, vm_config_flags, nb_tot_nb_vwif, nb_tot_eth, eth_tab);
 
   for (i=0; i < nb_tot_eth; i++)
     {
@@ -95,13 +95,14 @@ void bank_node_create(char *name, char *kernel, char *rootfs_used,
 
 /****************************************************************************/
 void bank_cnt_create(char *type, char *name, char *image, int vm_id,
-                     int ping_ok, int nb_tot_eth, t_eth_table *eth_tab,
+                     int ping_ok, int nb_tot_nb_vwif,  int nb_tot_eth,
+                     t_eth_table *eth_tab,
                      double x, double y, int hidden_on_graph,
                      double *tx, double *ty, int32_t *thidden)
 {
   int i;
   add_new_cnt(type, name, image, vm_id, x, y, hidden_on_graph,
-              ping_ok, nb_tot_eth, eth_tab);
+              ping_ok, nb_tot_nb_vwif, nb_tot_eth, eth_tab);
   for (i=0; i < nb_tot_eth; i++)
     {
     if ((eth_tab[i].endp_type == endp_type_eths) ||

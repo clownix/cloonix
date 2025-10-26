@@ -46,7 +46,6 @@ are updated using the following links for the main software:
 For the function that creates the web interface, other open sources are used:
 
   * https://gitlab.freedesktop.org/xorg/xserver.git
-  * https://github.com/novnc/websockify-js
   * https://github.com/novnc/noVNC
   * https://github.com/nginx/nginx.git
 

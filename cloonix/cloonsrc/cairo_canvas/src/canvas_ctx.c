@@ -1123,10 +1123,10 @@ void canvas_ctx_init(void)
   memset(g_brandtype_image_kvm, 0, MAX_NAME_LEN);
   memset(g_brandtype_image_zip, 0, MAX_NAME_LEN);
   memset(g_brandtype_image_cvm, 0, MAX_NAME_LEN);
-  strncpy(g_brandtype_type, "brandcvm", MAX_NAME_LEN-1);
-  strncpy(g_brandtype_image_kvm, "bookworm.qcow2", MAX_NAME_LEN-1);
-  strncpy(g_brandtype_image_zip, "zipfrr.zip", MAX_NAME_LEN-1);
-  strncpy(g_brandtype_image_cvm, "bookworm0", MAX_NAME_LEN-1);
+  strncpy(g_brandtype_type, "brandkvm", MAX_NAME_LEN-1);
+  strncpy(g_brandtype_image_kvm, "trixie.qcow2", MAX_NAME_LEN-1);
+  strncpy(g_brandtype_image_zip, "trixie.zip", MAX_NAME_LEN-1);
+  strncpy(g_brandtype_image_cvm, "trixie", MAX_NAME_LEN-1);
   memset(g_bulkvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   memset(g_bulzip, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));
   memset(g_bulcvm, 0, MAX_BULK_FILES * sizeof(t_slowperiodic));

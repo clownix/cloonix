@@ -57,8 +57,14 @@ if [ ! -e /tmp/.X11-unix/X713 ]; then
       ${ECHO} "TOUCH NO __PROXYSHARE_IN_____IDENT__/Xauthority"
     fi
     XAUTH_CODE=$(${CAT} __PROXYSHARE_IN_____IDENT__/xauth-code-Xauthority)
+    set +e
     ${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}
-    ${ECHO} "${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}"
+    if [ $? ]; then
+      ${ECHO} "ERROR ${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}"
+    else
+      ${ECHO} "${XAUTH} add unix:713 MIT-MAGIC-COOKIE-1 ${XAUTH_CODE}"
+    fi
+    set -e
   else
     ${ECHO} "ERROR adding Xauthority, may cause gui problems"
   fi

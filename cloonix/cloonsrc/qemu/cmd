@@ -24,7 +24,6 @@ CONFIGURATION_OPTS="--prefix=/usr/local
                     --enable-spice-protocol
                     --enable-usb-redir
                     --enable-gtk
-                    --enable-vhost-user
                     --enable-vhost-net
                     --enable-vhost-kernel
                     --enable-tools

@@ -30,7 +30,6 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "doors_rpc.h"
-#include "sock.h"
 #include "llid_traffic.h"
 #include "llid_x11.h"
 #include "llid_backdoor.h"
@@ -80,6 +79,7 @@ static t_local_dropbear *g_local_llid[CLOWNIX_MAX_CHANNELS];
 static t_sub_dido_x11 *g_local_x11_llid[CLOWNIX_MAX_CHANNELS];
 
 
+int sock_nonblock_client_unix(char *pname);
 int get_doorways_llid(void);
 char *get_local_dropbear_sock(void);
 void send_resp_ok_to_traf_client(int dido_llid, int idx_display_sock_x11); 
@@ -348,7 +348,7 @@ static int listen_x11_begin(t_local_dropbear *ld)
 /****************************************************************************/
 static void traf_x11_end(t_sub_dido_x11 *cur)
 {
-  char *buf = get_gbuf();
+  char buf[MAX_A2D_LEN];
   t_local_dropbear *ld;
   if (cur)
     {
@@ -358,7 +358,6 @@ static void traf_x11_end(t_sub_dido_x11 *cur)
     DOUT(FLAG_HOP_DOORS, 
                "TRAF END display_sock_x11:%d sub_dido_idx:%d",
                ld->idx_display_sock_x11, cur->sub_dido_idx);
-    memset(buf, 0, MAX_A2D_LEN); 
     snprintf(buf, MAX_A2D_LEN-1, LAX11OPENKO, cur->sub_dido_idx);
     x11_doors_open_close(0, ld->dido_llid, buf);
     if (msg_exist_channel(cur->llid_traf_x11))
@@ -475,7 +474,7 @@ static int x11_rx_cb(void *ptr, int llid, int fd)
 {
   int len, result = 0;
   t_sub_dido_x11 *cur = find_with_llid_traf_x11(llid);
-  char *buf = get_gbuf();
+  char buf[MAX_A2D_LEN];
   if (!cur)
     {
     KERR("ERROR  ");
@@ -550,7 +549,7 @@ void local_dropbear_x11_open_to_agent(int dido_llid, int sub_dido_idx)
 static int listen_x11_evt(void *ptr, int llid, int fd_x11_listen)
 {
   int idx, fd;
-  char *buf = get_gbuf();
+  char buf[MAX_A2D_LEN];
   t_local_dropbear *ld = find_with_local_llid(llid, 1);
   if (ld)
     {
@@ -572,7 +571,6 @@ static int listen_x11_evt(void *ptr, int llid, int fd_x11_listen)
         ld->sub_dido_x11[idx].dido_llid = ld->dido_llid;
         ld->sub_dido_x11[idx].sub_dido_idx = idx;
         ld->sub_dido_x11[idx].fd_traf_x11 = fd; 
-        memset(buf, 0, MAX_A2D_LEN);
         snprintf(buf,MAX_A2D_LEN-1,LAX11OPEN,idx,ld->idx_display_sock_x11);
         x11_doors_open_close(0, ld->dido_llid, buf);
         DOUT(FLAG_HOP_DOORS, "TRAF START display_sock_x11:%d sub_dido_idx:%d",
@@ -652,7 +650,7 @@ static void local_err_cb (void *ptr, int local_llid, int err, int from)
 static int local_rx_cb(void *ptr, int local_llid, int fd)
 {
   int len, result = 0;
-  char *buf = get_gbuf();
+  char buf[MAX_A2D_LEN];
   t_local_dropbear *ld = find_with_local_llid(local_llid, 0);
   if (!ld)
     {

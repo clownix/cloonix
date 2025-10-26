@@ -33,7 +33,6 @@
 #include "cfg_store.h"
 #include "event_subscriber.h"
 #include "commun_daemon.h"
-#include "header_sock.h"
 
 
 typedef struct t_sysinfo_sub

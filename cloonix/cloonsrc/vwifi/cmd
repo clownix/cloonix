@@ -1,0 +1,22 @@
+#!/bin/bash
+HERE=`pwd`
+./allclean
+TARGZ=../../../targz_store
+cd ${TARGZ}
+VWIFI=$(ls vwifi_*)
+VWIFI=${VWIFI%%.*}
+cd ${HERE}
+tar xvf ${TARGZ}/${VWIFI}.tar.gz
+cd ${HERE}/vwifi
+patch -p1 < ${HERE}/vwifi.patch
+mkdir build
+cd build
+#cmake -DENABLE_VHOST=OFF ..
+cmake -DENABLE_VHOST=OFF -DCMAKE_BUILD_TYPE=Debug ..
+make
+mv vwifi-add-interfaces ${HERE}/cloonix-vwifi-add-interfaces
+mv vwifi-client ${HERE}/cloonix-vwifi-client
+mv vwifi-ctrl ${HERE}/cloonix-vwifi-ctrl
+mv vwifi-spy ${HERE}/cloonix-vwifi-spy
+mv vwifi-server ${HERE}/cloonix-vwifi-server
+

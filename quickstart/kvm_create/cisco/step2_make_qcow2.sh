@@ -1,7 +1,7 @@
 #!/bin/bash
 HERE=`pwd`
 CLOONIX_QEMU_BIN="/usr/libexec/cloonix/cloonfs/bin/cloonix-qemu-system"
-CLOONIX_QEMU_DIR="/usr/libexec/cloonix/cloonfs/bin"
+CLOONIX_QEMU_DIR="/usr/libexec/cloonix/cloonfs/bin/qemu"
 CISCO_ISO="/media/perrier/T7Shield2/from_iso/c8000v-universalk9.17.13.01a.iso"
 CISCO_QCOW2="/var/lib/cloonix/bulk/c8000.qcow2"
 #------------------------------------------------------------------------

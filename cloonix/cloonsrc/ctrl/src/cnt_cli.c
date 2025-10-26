@@ -41,19 +41,22 @@ void help_add_zip(char *line)
   printf("\n\t\t  eth=svv says eth0 eth1 and eth2, eth0 is spyable");
   printf("\n\tMax eth: %d", MAX_ETH_VM);
   printf("\n\t[options]");
+  printf("\n\t       --vwifi=<nb> ");
   printf("\n\t       --persistent");
   printf("\n\t       --vmount=\"<dir_host:dir_cnt dir_host:dir_cnt...>\"");
   printf("\n\t       --startup_env=\"<env_name=env_val env2_name=env2_val...>\"");
   printf("\n\t       --mac_addr=eth%%d:%%02x:%%02x:%%02x:%%02x:%%02x:%%02x");
+  printf("\n\t for the vwifi option, nb will be the number of wlan interfaces.\n");
   printf("\n\nexample:\n\n");
-  printf("\n%s name eth=sss zipfrr.zip\n", line);
+  printf("\n%s name eth=sss trixie.zip\n", line);
   printf("This will give 3 eth that are wireshark spy compatible\n");
-  printf("\n%s name eth=vvv zipfrr.zip\n", line);
+  printf("\n%s name eth=vvv trixie.zip\n", line);
   printf("This will give 3 eth that are not spyable\n");
-  printf("\n%s name eth=s zipfrr.zip --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
-  printf("\n%s name eth=s zipfrr.zip --vmount=\"/opt:/opt /tmp/share:/share\"\n", line);
+  printf("\n%s name eth=s trixie.zip --startup_env=\"MYENV=myenv CLOONIX=great\"\n", line);
+  printf("\n%s name eth=s trixie.zip --vmount=\"/opt:/opt /tmp/share:/share\"\n", line);
   printf("This will give 1 eth spyable and will start the container with\n");
   printf("MYENV=myenv and CLOONIX=great env variables.\n");
+  printf("\n\t eth=<eth_description> must be inexistant to have 0 eth.\n");
   printf("\n\n\n");
 }
 /*-------------------------------------------------------------------------*/
@@ -123,14 +126,25 @@ static int local_add_cnt(char *type, char *name, int nb_tot_eth,
                          t_eth_table *eth_tab, char *image,
                          int argc, char **argv)
 {
-  int i, privileged = 0, persistent = 0, result = 0;
+  int i, privileged = 0, persistent = 0, result = 0, nb_vwif = 0;
   t_topo_cnt cnt;
   char *ptr;
+  char *endptr;
   memset(&cnt, 0, sizeof(t_topo_cnt));
 
   for (i=0; i<argc; i++)
     {
-    if (!strncmp(argv[i], "--mac_addr=eth", strlen("--mac_addr=eth")))
+    if (!strncmp(argv[i], "--vwifi=", strlen("--vwifi=")))
+      {
+      ptr = argv[i] + strlen("--vwifi=");
+      nb_vwif = (int) strtol(ptr, &endptr, 10);
+      if ((endptr[0] != 0) || (nb_vwif < 0) || (nb_vwif >= MAX_VWIF_VM))
+        {
+        printf("\nERROR vwifi: %d\n\n", nb_vwif);
+        nb_vwif = 0;
+        }
+      }
+    else if (!strncmp(argv[i], "--mac_addr=eth", strlen("--mac_addr=eth")))
       {
       if (fill_eth_params_from_argv(argv[i], nb_tot_eth, eth_tab))
         {
@@ -180,6 +194,7 @@ static int local_add_cnt(char *type, char *name, int nb_tot_eth,
     strncpy(cnt.name, name, MAX_NAME_LEN-1);
     cnt.is_persistent = persistent;
     cnt.is_privileged = privileged;
+    cnt.nb_tot_nb_vwif = nb_vwif;
     cnt.nb_tot_eth = nb_tot_eth;
     memcpy(cnt.eth_table, eth_tab, nb_tot_eth * sizeof(t_eth_table));
     strncpy(cnt.image, image, MAX_PATH_LEN-1);
@@ -241,20 +256,31 @@ static int check_eth_desc(char *eth_desc, char *err,
 /***************************************************************************/
 static int cmd_add_cnt(char *type, int argc, char **argv)
 {
-  int i, nb_eth, non_opt_argc, result = -1;
+  int i, non_opt_argc, nb_tot_eth = -1, result = -1;
   char *image, *name;
   char eth_string[MAX_PATH_LEN];
   char err[MAX_PATH_LEN];
   t_eth_table etht[MAX_ETH_VM];
-  if (argc < 3) 
+  memset(etht, 0, MAX_ETH_VM * sizeof(t_eth_table)); 
+  if (argc < 2) 
     printf("\nNot enough parameters for add cnt\n");
   else
     {
-    if (sscanf(argv[1], "eth=%s", eth_string) != 1)
-      printf("\nBad eth= parameter %s\n", argv[1]);
-    else if (check_eth_desc(eth_string, err, &nb_eth, etht))
-      printf("\nBad eth= parameter %s %s\n", argv[1], err);
+    if (!strstr(argv[1], "eth="))
+      nb_tot_eth = 0;
     else
+      {
+      if (argc < 3) 
+        printf("\nNot enough parameters for add cnt\n");
+      else if (sscanf(argv[1], "eth=%s", eth_string) != 1)
+        printf("\nBad eth= parameter %s\n", argv[1]);
+      else if (check_eth_desc(eth_string, err, &nb_tot_eth, etht))
+        {
+        printf("\nBad eth= parameter %s %s\n", argv[1], err);
+        nb_tot_eth = -1;
+        }
+      }
+    if (nb_tot_eth >= 0)
       {
       non_opt_argc = 0;
       for (i=0; i<argc; i++)
@@ -263,12 +289,24 @@ static int cmd_add_cnt(char *type, int argc, char **argv)
           non_opt_argc += 1;
         }
       name = argv[0];
-      image = argv[2];
-      if (non_opt_argc != 3)
-        printf("\nNot enough parameters for add cnt\n");
+      if (nb_tot_eth == 0)
+        {
+        image = argv[1];
+        if (non_opt_argc != 2)
+          printf("\nNot enough parameters for add cnt\n");
+        else
+          result = local_add_cnt(type, name, nb_tot_eth, etht, image,
+                                 argc-2, &(argv[2])); 
+        }
       else
-        result = local_add_cnt(type, name, nb_eth, etht, image,
-                               argc-3, &(argv[3])); 
+        {
+        image = argv[2];
+        if (non_opt_argc != 3)
+          printf("\nNot enough parameters for add cnt\n");
+        else
+          result = local_add_cnt(type, name, nb_tot_eth, etht, image,
+                                 argc-3, &(argv[3])); 
+        }
       }
     }
   return result;

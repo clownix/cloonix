@@ -1,0 +1,1929 @@
+diff -Naur vwifi/CMakeLists.txt vwifi_tainted/CMakeLists.txt
+--- vwifi/CMakeLists.txt	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/CMakeLists.txt	2025-10-25 09:41:43.687802075 +0200
+@@ -18,7 +18,7 @@
+ endif()
+ 
+ # Common flags (add more as needed based on Makefile MODE)
+-add_compile_options(-Wall -Wextra -pedantic)
++add_compile_options(-Wall -Wextra -pedantic -Wno-stringop-truncation -Wno-unused-parameter)
+ if(CMAKE_BUILD_TYPE STREQUAL "Release")
+     add_compile_options(-O3 -s)
+     # add_definitions(-DNDEBUG) # Uncomment if asserts should be disabled in release
+@@ -101,6 +101,9 @@
+ add_executable(vwifi-client src/vwifi-client.cc)
+ target_link_libraries(vwifi-client PRIVATE vwifi_common)
+ 
++add_executable(vwifi-spy src/vwifi-spy.cc)
++target_link_libraries(vwifi-spy PRIVATE vwifi_common)
++
+ add_executable(vwifi-ctrl src/vwifi-ctrl.cc)
+ target_link_libraries(vwifi-ctrl PRIVATE vwifi_common)
+ 
+diff -Naur vwifi/src/addinterfaces.cc vwifi_tainted/src/addinterfaces.cc
+--- vwifi/src/addinterfaces.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/addinterfaces.cc	2025-10-25 09:41:43.687802075 +0200
+@@ -12,6 +12,7 @@
+ #include <climits>
+ #include <stdio.h>
+ #include <unistd.h> // getuid
++#include <errno.h>
+ 
+ #include "addinterfaces.h"
+ #include "config_hwsim.h"
+@@ -123,6 +124,23 @@
+ 	RETURN(0);
+ }
+ 
++
++/****************************************************************************/
++static int nl_sock_listen_all_nsid(struct nl_sock *sock)
++{
++  int val = 1, result = -1;
++  int fd = nl_socket_get_fd(sock);
++  if (fd < 0)
++    fprintf(stderr, "ERROR netlink nl_socket_get_fd errno: %d", errno);
++  else if (setsockopt(fd, SOL_NETLINK,NETLINK_LISTEN_ALL_NSID,
++                      &val, sizeof val) < 0)
++    fprintf(stderr, "ERROR netlink listening to all errno: %d", errno);
++  else
++    result = 0;
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
+ int ManageRadios(const int nRadios, TByte* macPrefix)
+ {
+ 	std::unique_ptr<struct nl_sock, nl_sock_deleter> socket(nl_socket_alloc());
+@@ -136,6 +154,14 @@
+ 	{
+ 		RETURN_NL_ERROR("genl_connect", ret, 1);
+ 	}
++
++
++        if (nl_sock_listen_all_nsid(socket.get()))
++{
++          RETURN_ERROR("nl_socket_alloc", 1);
++}
++
++
+ 	const int netlinkFamily = genl_ctrl_resolve(socket.get(), KERNEL_HWSIM_FAMILY_NAME);
+ 	if (netlinkFamily < 0)
+ 	{
+diff -Naur vwifi/src/cctrlserver.cc vwifi_tainted/src/cctrlserver.cc
+--- vwifi/src/cctrlserver.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cctrlserver.cc	2025-10-25 09:41:43.687802075 +0200
+@@ -18,9 +18,9 @@
+ 	CloseAllClient();
+ }
+ 
+-bool CCTRLServer::_Listen(TDescriptor& master, TPort port)
++bool CCTRLServer::_Listen(TDescriptor& master, TPort port, char *unix_prefix_path)
+ {
+-	return CSocketServerFunctionITCP::_Listen(master, port);
++	return CSocketServerFunctionITCP::_Listen(master, port, unix_prefix_path);
+ }
+ 
+ TDescriptor CCTRLServer::_Accept(TDescriptor master, TCID& cid)
+diff -Naur vwifi/src/cctrlserver.h vwifi_tainted/src/cctrlserver.h
+--- vwifi/src/cctrlserver.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cctrlserver.h	2025-10-25 09:41:43.687802075 +0200
+@@ -13,7 +13,7 @@
+ 		CWifiServer* WifiServerSPY;
+ 		CSelect* Scheduler;
+ 
+-		bool _Listen(TDescriptor& master, TPort port) override;
++		bool _Listen(TDescriptor& master, TPort port, char *unix_prefix_path) override;
+ 		TDescriptor _Accept(TDescriptor master, TCID& cid) override;
+ 
+ 		using CSocketServer::Read;
+diff -Naur vwifi/src/ckernelwifi.cc vwifi_tainted/src/ckernelwifi.cc
+--- vwifi/src/ckernelwifi.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/ckernelwifi.cc	2025-10-25 09:41:43.687802075 +0200
+@@ -64,7 +64,8 @@
+ 		return 0;
+ 	}
+ 
+-	genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, m_family_id,	0, NLM_F_REQUEST, HWSIM_CMD_TX_INFO_FRAME, VERSION_NR);
++	if (genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, m_family_id,0, NLM_F_REQUEST, HWSIM_CMD_TX_INFO_FRAME, VERSION_NR) == NULL)
++	  std::cerr << "ERROR genlmsg_put" << std::endl ;
+ 
+ 	/* i have to ack the src the driver expects
+ 	 * so there are no mac address modifications here
+@@ -84,6 +85,9 @@
+ 
+ 	if (nl_send_auto(_netlink_socket, msg) < 0)
+ 	{
++#ifdef _DEBUG
++	        std::cout << "ERROR nl_send_auto" << std::endl ;
++#endif
+ 		nlmsg_free(msg);
+ 		return 0 ;
+ 	}
+@@ -236,10 +240,17 @@
+ 		return 0;
+ 	}
+ 
+-	genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, m_family_id,0, NLM_F_REQUEST, HWSIM_CMD_REGISTER, VERSION_NR);
++#ifdef _DEBUG
++	std::cout << "REQUEST NETLINK HWSIM_CMD_REGISTER" << std::endl ;
++#endif
++	if (genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, m_family_id,0, NLM_F_REQUEST, HWSIM_CMD_REGISTER, VERSION_NR) == NULL)
++	  std::cerr << "ERROR genlmsg_put" << std::endl ;
+ 
+ 	if (nl_send_auto(_netlink_socket, msg) < 0)
+ 	{
++#ifdef _DEBUG
++	        std::cout << "ERROR nl_send_auto" << std::endl ;
++#endif
+ 		nlmsg_free(msg);
+ 		return 0 ;
+ 	}
+@@ -250,10 +261,30 @@
+ 	return 1;
+ }
+ 
++
++
++/****************************************************************************/
++static int nl_sock_listen_all_nsid(struct nl_sock *sock)
++{
++  int val = 1, result = -1;
++  int fd = nl_socket_get_fd(sock);
++  if (fd < 0)
++    std::cerr << "ERROR netlink nl_socket_get_fd errno: " << errno << std::endl ;
++  else if (setsockopt(fd, SOL_NETLINK,NETLINK_LISTEN_ALL_NSID,
++                      &val, sizeof val) < 0)
++    std::cerr << "ERROR netlink listening to all nsid errno: " << errno << std::endl ;
++  else
++    result = 0;
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
++
+ int CKernelWifi::init_netlink_first(void)
+ {
+ 	int nlsockfd;
+ 	struct timeval tv;
++	using namespace  std::chrono_literals;
+ 
+ //	_cb = nl_cb_alloc(NL_CB_DEBUG);
+ 	_cb = nl_cb_alloc(NL_CB_CUSTOM);
+@@ -282,6 +313,17 @@
+ 		return 0 ;
+ 	}
+ 
++        if (nl_sock_listen_all_nsid(_netlink_socket))  {
++                std::cerr << "Failed to listen namespaces netlink" << std::endl ;
++		nl_close(_netlink_socket);
++		nl_socket_free(_netlink_socket);
++		nl_cb_put(_cb);
++                return 0;
++        }
++
++
++
++
+ 	m_family_id = genl_ctrl_resolve(_netlink_socket, KERNEL_HWSIM_FAMILY_NAME);
+ 
+ 	while (m_family_id  < 0 ) {
+@@ -297,16 +339,18 @@
+ 		std::cout << "Family "<<KERNEL_HWSIM_FAMILY_NAME<<" not registered" << std::endl ;
+ #endif
+ 
+-		using namespace  std::chrono_literals;
+ 		std::this_thread::sleep_for(1s);
+ 
+ 		m_family_id = genl_ctrl_resolve(_netlink_socket, KERNEL_HWSIM_FAMILY_NAME);
+ 	}
+ 
+-	nl_cb_set(_cb, NL_CB_MSG_IN, NL_CB_CUSTOM, &process_messages_cb, NULL);
++#ifdef _DEBUG
++	std::cout << "REQUEST TO NETLINK FOR CALLBACK1" << std::endl ;
++#endif
++
+ 	nlsockfd = nl_socket_get_fd(_netlink_socket);
+ 
+-	tv.tv_sec = 1;
++	tv.tv_sec = 2;
+ 	tv.tv_usec = 0;
+ 
+ 	if (setsockopt(nlsockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+@@ -314,8 +358,15 @@
+ 		nl_close(_netlink_socket);
+ 		nl_socket_free(_netlink_socket);
+ 		nl_cb_put(_cb);
+-		perror("setsockopt");
++	        std::cout << "ERROR setsockopt" << std::endl ;
+ 	}
++//VIP
++	if (nl_cb_set(_cb, NL_CB_MSG_IN, NL_CB_CUSTOM, &process_messages_cb, NULL) != 0){
++                nl_close(_netlink_socket);
++                nl_socket_free(_netlink_socket);
++                nl_cb_put(_cb);
++	        std::cout << "ERROR nl_cb_set" << std::endl ;
++        }
+ 
+ 	return 1;
+ }
+@@ -343,7 +394,7 @@
+ 	}
+ 
+ 	/* disable auto-ack from kernel to reduce load */
+-	nl_socket_disable_auto_ack(_netlink_socket);
++//VIP TODO	nl_socket_disable_auto_ack(_netlink_socket);
+ 
+ 	if(genl_connect(_netlink_socket) < 0){
+ 
+@@ -353,6 +404,14 @@
+ 
+ 		return 0 ;
+ 	}
++       if (nl_sock_listen_all_nsid(_netlink_socket))  {
++                std::cerr << "Failed to listen namespaces netlink" << std::endl ;
++                nl_close(_netlink_socket);
++                nl_socket_free(_netlink_socket);
++                nl_cb_put(_cb);
++                return 0;
++        }
++
+ 
+ 	m_family_id = genl_ctrl_resolve(_netlink_socket, KERNEL_HWSIM_FAMILY_NAME);
+ 
+@@ -366,6 +425,9 @@
+ 		}
+ 
+ 		catch (const intthread::thread_interrupted& interrupt) {
++#ifdef _DEBUG
++	std::cout << "DEAD CALLBACK" << std::endl ;
++#endif
+ 			dead();
+ 			break;
+ 		}
+@@ -384,6 +446,9 @@
+ 		m_family_id = genl_ctrl_resolve(_netlink_socket, KERNEL_HWSIM_FAMILY_NAME);
+ 	}
+ 
++#ifdef _DEBUG
++	std::cout << "REQUEST TO NETLINK FOR CALLBACK2" << std::endl ;
++#endif
+ 	nl_cb_set(_cb, NL_CB_MSG_IN, NL_CB_CUSTOM, &process_messages_cb, NULL);
+ 	nlsockfd = nl_socket_get_fd(_netlink_socket);
+ 
+@@ -417,7 +482,11 @@
+ 		return 0 ;
+ 	}
+ 
+-	genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, m_family_id, 0, NLM_F_REQUEST, HWSIM_CMD_FRAME, VERSION_NR);
++#ifdef _DEBUG
++	std::cout << "REQUEST NETLINK HWSIM_CMD_FRAME" << std::endl ;
++#endif
++	if (genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, m_family_id, 0, NLM_F_REQUEST, HWSIM_CMD_FRAME, VERSION_NR) == NULL)
++	  std::cerr << "ERROR genlmsg_put" << std::endl ;
+ 
+ 	if( nla_put(msg, HWSIM_ATTR_ADDR_RECEIVER, sizeof(struct ether_addr), dst) ||
+ 		nla_put(msg, HWSIM_ATTR_FRAME, data_len, data)	||
+@@ -444,6 +513,9 @@
+ 
+ 	if (nl_send_auto(_netlink_socket, msg) < 0)
+ 	{
++#ifdef _DEBUG
++	std::cout << "ERROR nl_send_auto" << std::endl ;
++#endif
+ 		nlmsg_free(msg);
+ 		return 0 ;
+ 	}
+@@ -463,8 +535,9 @@
+ 	if( Scheduler.Wait() == SCHEDULER_ERROR )
+ 		return ;
+ 
+-	if( ! Scheduler.NodeHasAction(0) )
++	if( ! Scheduler.NodeHasAction() )
+ 		return ;
++std::cerr << "AFTER  Scheduler.NodeHasAction" << std::endl;
+ 
+ 	TPower power;
+ 	if( _RecvSignal(&power, &Buffer) == SOCKET_ERROR )
+@@ -551,6 +624,15 @@
+ 	sock = nl_socket_alloc();
+ 	genl_connect(sock);
+ 
++
++        if (nl_sock_listen_all_nsid(sock))  {
++                std::cerr << "Failed to listen namespaces netlink" << std::endl ;
++                nl_close(sock);
++                nl_socket_free(sock);
++                return;
++        }
++
++
+ 	/* loop for waiting  incoming msg from hwsim driver*/
+ 	while (true) {
+ 
+@@ -726,6 +808,7 @@
+ 		nl_close(_netlink_socket);
+ 		nl_socket_free(_netlink_socket);
+ 		nl_cb_put(_cb);
++		std::cerr << "ERROR: send_register_msg" << std::endl;
+ 		return 0 ;
+ 	}
+ 
+@@ -746,6 +829,7 @@
+ 	if(! initialized()){
+ 
+ 		if (!init_first()){
++		std::cerr << "ERROR: init_first" << std::endl;
+ 
+ 			return 0;
+ 		}
+diff -Naur vwifi/src/ckernelwifi.h vwifi_tainted/src/ckernelwifi.h
+--- vwifi/src/ckernelwifi.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/ckernelwifi.h	2025-10-25 09:43:19.152499701 +0200
+@@ -263,7 +263,6 @@
+ 		};
+ 
+ 		int process_messages(struct nl_msg *msg) {
+-
+ 				// add exception to check null ptr
+ 				m_obj->process_messages(msg);
+ 				return 0 ;
+diff -Naur vwifi/src/cmonwirelessdevice.cc vwifi_tainted/src/cmonwirelessdevice.cc
+--- vwifi/src/cmonwirelessdevice.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cmonwirelessdevice.cc	2025-10-25 09:41:43.687802075 +0200
+@@ -107,12 +107,10 @@
+ 	fd_set rfds;
+ 	struct timeval tv;
+ 
+-
+ 	_outsideloopmutex.lock() ;
+ 		_outsideloop = false ;
+ 	_outsideloopmutex.unlock();
+ 
+-
+ 	while (started()) {
+ 
+ 		FD_ZERO(&rfds);
+@@ -124,24 +122,27 @@
+ 
+ 		int retval = select(FD_SETSIZE, &rfds, NULL, NULL, &tv);
+ 		if (retval == -1){
+-			perror("select in MonitorWirelessDevice main_loop function");
++			perror("ERROR select in MonitorWirelessDevice main_loop function");
+ 			stop();
+ 		}
+ 		else
+ 			if (retval){
+ 
+-#ifdef _DEBUG
+-				std::cout << __func__ <<  "process event received from AF_NETLINK socket" << std::endl ;
+-#endif
+ 				recv_inet_event();
+ 			}
+ 	}
+ 
++#ifdef _DEBUG
++	std::cout <<  "EXIT1 LOOP AF_NETLINK" << std::endl ;
++#endif
+ 
+ 	_outsideloopmutex.lock() ;
+ 		_outsideloop = true ;
+ 	_outsideloopmutex.unlock();
+ 
++#ifdef _DEBUG
++	std::cout <<  "EXIT2 LOOP AF_NETLINK" << std::endl ;
++#endif
+ 
+ 
+ 	return 0;
+@@ -302,8 +303,8 @@
+ 	}
+ 
+ #ifdef _DEBUG
+-	if (ifi->ifi_family == AF_UNSPEC)
+-		std::cout << "family:  AF_UNSPEC" << std::endl;
++//	if (ifi->ifi_family == AF_UNSPEC)
++//		std::cout << "family:  AF_UNSPEC" << std::endl;
+ 
+ 	if (ifi->ifi_family == AF_INET6)
+ 		std::cout << "family:  AF_INET6" << std::endl ;
+@@ -393,6 +394,22 @@
+ 
+ 
+ 
++/****************************************************************************/
++static int nl_sock_listen_all_nsid(struct nl_sock *sock)
++{
++  int val = 1, result = -1;
++  int fd = nl_socket_get_fd(sock);
++  if (fd < 0)
++    std::cerr << "ERROR netlink nl_socket_get_fd errno: " << errno << std::endl ;
++  else if (setsockopt(fd, SOL_NETLINK,NETLINK_LISTEN_ALL_NSID,
++                      &val, sizeof val) < 0)
++    std::cerr << "ERROR netlink listening to all nsid errno: " << errno << std::endl ;
++  else
++    result = 0;
++  return result;
++}
++/*--------------------------------------------------------------------------*/
++
+ 
+ /***********************************************************************************************/
+ /***************** handle communication with nl80211 module ***********************************/
+@@ -401,8 +418,6 @@
+ int MonitorWirelessDevice::nl80211_init(){
+ 
+ 
+-	std::cout << __func__ << std::endl ;
+-
+ 	/* init netlink socket with nl80211 module */
+ 	wifi.nls = nl_socket_alloc();
+ 
+@@ -423,6 +438,14 @@
+ 		return -ENOLINK;
+ 	}
+ 
++        if (nl_sock_listen_all_nsid(wifi.nls))  {
++                std::cerr << "Failed to listen namespaces netlink" << std::endl ;
++                nl_close(wifi.nls);
++                nl_socket_free(wifi.nls);
++                return -ENOLINK;
++        }
++
++ 
+ 	wifi.nl80211_id = genl_ctrl_resolve(wifi.nls, "nl80211");
+ 	if (wifi.nl80211_id < 0) {
+ 
+@@ -493,11 +516,12 @@
+ 
+ 
+ 	/* send get inerface  command to deriver */
+-	genlmsg_put(msg, 0, 0, wifi.nl80211_id, 0, flags , NL80211_CMD_GET_INTERFACE, 0);
++	genlmsg_put(msg, 0, 0, wifi.nl80211_id, 0, NLM_F_DUMP,  NL80211_CMD_GET_INTERFACE, 0);
++	//genlmsg_put(msg, 0, 0, wifi.nl80211_id, 0, flags , NL80211_CMD_GET_INTERFACE, 0);
+ 	//genlmsg_put(msg,NL_AUTO_PORT,NL_AUTO_SEQ,wifi.nl80211_id,0,flags, NL80211_CMD_GET_INTERFACE, 0);
+ 
+-	if (ifindex != 0)
+-		nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex);
++//	if (ifindex != 0)
++//		nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex);
+ 
+ 
+ 	if (nl_send_auto(wifi.nls, msg) < 0)
+@@ -506,11 +530,11 @@
+ 		return -1 ;
+ 	}
+ 
+-	if (ifindex != 0)
+-		nl_recvmsgs(wifi.nls, wifi.cb);
+-	else
++//	if (ifindex != 0)
++//		nl_recvmsgs(wifi.nls, wifi.cb);
++//	else
+ 		while(wifi.err > 0)
+-			nl_recvmsgs(wifi.nls, wifi.cb);
++		{	nl_recvmsgs(wifi.nls, wifi.cb);}
+ 
+ 	nlmsg_free(msg);
+ 
+@@ -589,6 +613,9 @@
+ 
+ int MonitorWirelessDevice::recv_winterface_extra_infos_cb(struct nl_msg *msg, [[maybe_unused]] void *arg){
+ 
++#ifdef _DEBUG
++	std::cout << "recv_winterface_extra_infos_cb"  << std::endl ;
++#endif
+ 	forward->recv_winterface_extra_infos(msg);
+ 	return 0 ;
+ }
+@@ -660,10 +687,6 @@
+ 
+ int MonitorWirelessDevice::handle_iee80211_com_finish(void *arg){
+ 
+-#ifdef _DEBUG
+-	std::cout << __func__ << std::endl ;
+-#endif
+-
+ 	int *ret = static_cast<int *>(arg);
+ 	*ret = 0;
+ 	return NL_SKIP;
+diff -Naur vwifi/src/config.h vwifi_tainted/src/config.h
+--- vwifi/src/config.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/config.h	2025-10-25 09:41:43.687802075 +0200
+@@ -18,6 +18,8 @@
+ 
+ const TPort DEFAULT_CTRL_PORT = DEFAULT_WIFI_CLIENT_PORT_VHOST+3;
+ 
++#define MAX_PATH_LEN 100
++
+ #define DEFAULT_ADDRESS_IP "127.0.0.1"
+ 
+ const int MAX_SIZE_NAME=12;
+diff -Naur vwifi/src/cselect.cc vwifi_tainted/src/cselect.cc
+--- vwifi/src/cselect.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cselect.cc	2025-10-25 09:41:43.687802075 +0200
+@@ -91,9 +91,12 @@
+ 	return FD_ISSET( descriptor , &Dup);
+ }
+ 
+-bool CSelect::NodeHasAction(TIndex index)
++bool CSelect::NodeHasAction(void)
+ {
+-	assert( index < ListNodes.size() );
+-
+-	return FD_ISSET( ListNodes[index] , &Dup);
++  long unsigned int i;
++  bool result = 0;
++  for (i=0; i<ListNodes.size(); i++) 
++    if (FD_ISSET(ListNodes[i],&Dup))
++      result = 1;
++  return result;
+ }
+diff -Naur vwifi/src/cselect.h vwifi_tainted/src/cselect.h
+--- vwifi/src/cselect.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cselect.h	2025-10-25 09:41:43.691802105 +0200
+@@ -39,7 +39,7 @@
+ 
+ 		bool DescriptorHasAction(TDescriptor descriptor);
+ 
+-		bool NodeHasAction(TIndex index);
++		bool NodeHasAction(void);
+ };
+ 
+ #endif
+diff -Naur vwifi/src/csocketclient.cc vwifi_tainted/src/csocketclient.cc
+--- vwifi/src/csocketclient.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketclient.cc	2025-10-25 09:41:43.691802105 +0200
+@@ -1,5 +1,6 @@
+ #include <iostream> // cout
+ #include <cstdio> //perror
++#include <cstring> 
+ 
+ #include <sys/ioctl.h> // ioctl
+ #include <fcntl.h> // open
+@@ -7,6 +8,10 @@
+ #include <arpa/inet.h> // INADDR_ANY
+ #include <unistd.h> // close
+ #include <assert.h> // assert
++#include <sys/time.h>
++#include <stdlib.h>
++#include <sys/un.h>
++
+ 
+ #include "csocketclient.h"
+ #include "tools.h"
+@@ -45,24 +50,64 @@
+ 
+ bool CSocketClient::Connect(struct sockaddr* server, size_t size_of_server)
+ {
+-	if( ! _Configure() )
+-	{
+-		cerr<<"Error : CSocketClient::Connect : Configure"<<endl;
+-		return false;
+-	}
+-
+-	if( ! connect(Master,server,size_of_server) )
+-	{
+-		IsConnected=true;
+-
+-		return true;
+-	}
+-
+-	perror("CSocketClient::Connect : connect");
+-	Close();
+-	sleep(2);
+-
+-	return false;
++  FILE *connect_cid;
++  char buf[2];
++  int mycid;
++  struct timeval last_tv;
++  int rand_id;
++  struct sockaddr_un *server_un = (struct sockaddr_un *) server;
++
++  if( ! _Configure() )
++    {
++    cerr<<"Error : CSocketClient::Connect : Configure " << server_un->sun_path <<endl;
++    return false;
++    }
++  if( ! connect(Master,server,size_of_server) )
++    {
++    IsConnected=true;
++    if (!strncmp(server_un->sun_path, "/cloonixmnt/tmp", strlen("/cloonixmnt/tmp")))
++      {
++      if (read(Master, buf, 2) != 2)
++        {
++        cerr<<"Error : CSocketClient::Connect : read_2 " << server_un->sun_path <<endl;
++        return SOCKET_ERROR;
++        }
++      mycid = ((buf[0] & 0xFF) << 8) + (buf[1] & 0xFF);
++      Cid_given = mycid;
++      printf("CLIENT CONNECT_CID %d\n", mycid);
++      connect_cid = fopen("/cloonixmnt/tmp/CONNECT_CID", "w");
++      if (connect_cid == NULL)
++        printf("ERROR WRITING CONNECT_CID %d\n", mycid);
++      else
++        {
++        fprintf(connect_cid, "CLIENT CONNECT_CID %d\n", mycid);
++        fclose(connect_cid);
++        }
++      }
++    else
++      {
++      gettimeofday(&last_tv, NULL);
++      srand((int) (last_tv.tv_usec & 0xFFFF));
++      rand_id = 0;
++      while (rand_id < 0x100)
++        rand_id = rand() & 0xF00;
++      buf[0] = ((rand_id & 0xFF00) >> 8) & 0xFF;
++      buf[1] = rand_id & 0xFF;
++      if (write(Master, buf , 2) != 2)
++        {
++        cerr<<"Error : CSocketClient::Connect : write_2 " << server_un->sun_path <<endl;
++        return SOCKET_ERROR;
++        }
++      mycid = ((buf[0] & 0xFF) << 8) + (buf[1] & 0xFF);
++      Cid_given = mycid;
++      printf("DIRECT CONNECT_CID %d\n", mycid);
++      }
++    return true;
++    }
++  perror("CSocketClient::Connect : connect");
++  Close();
++  sleep(2);
++  return false;
+ }
+ 
+ ssize_t CSocketClient::Send(const char* data, ssize_t sizeOfData)
+diff -Naur vwifi/src/csocketclient.h vwifi_tainted/src/csocketclient.h
+--- vwifi/src/csocketclient.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketclient.h	2025-10-25 09:41:43.691802105 +0200
+@@ -5,6 +5,8 @@
+ 
+ class CSocketClient : public CSocket
+ {
++
++
+ 		bool IsConnected;
+ 
+ 		bool StopTheReconnect;
+@@ -16,6 +18,7 @@
+ 		bool Connect(struct sockaddr* server, size_t size_of_server);
+ 
+ 	public :
++                int Cid_given;
+ 
+ 		CSocketClient();
+ 		virtual ~CSocketClient();
+diff -Naur vwifi/src/csocketclientitcp.cc vwifi_tainted/src/csocketclientitcp.cc
+--- vwifi/src/csocketclientitcp.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketclientitcp.cc	2025-10-25 09:41:43.691802105 +0200
+@@ -17,16 +17,17 @@
+ {
+ }
+ 
+-void CSocketClientITCP::Init(const char* IP, TPort port)
++void CSocketClientITCP::Init(const char* cloonix_unix_sock, TPort port)
+ {
+-	Server.sin_family = AF_INET;
+-	Server.sin_addr.s_addr = inet_addr(IP);
+-	Server.sin_port = htons(port);
++  memset(&Server, 0, sizeof (struct sockaddr_un));
++  Server.sun_family = AF_UNIX;
++  strncpy(Server.sun_path, cloonix_unix_sock, strlen(cloonix_unix_sock));
++  Len_add = sizeof (Server.sun_family) + strlen (Server.sun_path);
+ }
+ 
+ bool CSocketClientITCP::_Configure()
+ {
+-	Master = socket(AF_INET , SOCK_STREAM , 0);
++	Master = socket(AF_UNIX , SOCK_STREAM , 0);
+ 
+ 	if( Master == SOCKET_ERROR )
+ 	{
+@@ -39,15 +40,11 @@
+ 
+ bool CSocketClientITCP::_Connect()
+ {
+-	return Connect((struct sockaddr*) &Server, sizeof(Server));
++	return Connect((struct sockaddr*) &Server, Len_add);
+ }
+ 
+ int CSocketClientITCP::_GetID()
+ {
+-	struct sockaddr_in my_addr;
+ 
+-	socklen_t len = sizeof(my_addr);
+-	getsockname(Master, (struct sockaddr *) &my_addr, &len);
+-
+-	return hash_ipaddr(&my_addr) ;
++        return Cid_given;
+ }
+diff -Naur vwifi/src/csocketclientitcp.h vwifi_tainted/src/csocketclientitcp.h
+--- vwifi/src/csocketclientitcp.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketclientitcp.h	2025-10-25 09:41:43.691802105 +0200
+@@ -4,12 +4,16 @@
+ #include "csocketclient.h"
+ 
+ #include <netinet/ip.h> // struct sockaddr_in
++#include <sys/un.h>
++#include <netinet/in.h> 
+ 
+ class CSocketClientITCP : public CSocketClient
+ {
+ 	private :
+ 
+-		struct sockaddr_in Server;
++	//	struct sockaddr_in Server;
++		struct sockaddr_un Server;
++                int Len_add;
+ 
+ 	public :
+ 
+diff -Naur vwifi/src/csocketserver.cc vwifi_tainted/src/csocketserver.cc
+--- vwifi/src/csocketserver.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketserver.cc	2025-10-25 09:41:43.691802105 +0200
+@@ -13,7 +13,7 @@
+ 
+ CSocketServer::CSocketServer(CListInfo<CInfoSocket>* infoSockets) : CSocket()
+ {
+-	Init(0);
++	Init(0, NULL);
+ 
+ 	if( infoSockets == NULL )
+ 	{
+@@ -29,17 +29,17 @@
+ 	}
+ }
+ 
+-CSocketServer::CSocketServer( const CSocketServer & socketServer ) : CSocket(socketServer)
++CSocketServer::CSocketServer(CSocketServer & socketServer ) : CSocket(socketServer)
+ {
+ 	*this=socketServer;
+ }
+ 
+-CSocketServer& CSocketServer::operator=(const CSocketServer& socketServer)
++CSocketServer& CSocketServer::operator=(CSocketServer& socketServer)
+ {
+ 	if( this != &socketServer )
+ 	{
+ 		// protect against invalid self-assignment
+-		Init(socketServer.GetPort());
++		Init(socketServer.GetPort(), socketServer.GetPath());
+ 
+ 		ListInfoSelfManaged=socketServer.ListInfoSelfManaged;
+ 
+@@ -59,9 +59,12 @@
+ 	return *this;
+ }
+ 
+-void CSocketServer::Init(TPort port)
++void CSocketServer::Init(TPort port, char *unix_prefix_path)
+ {
+ 	Port=port;
++        memset(Unix_prefix_path, 0, MAX_PATH_LEN);
++        if (unix_prefix_path != NULL)
++            strncpy(Unix_prefix_path, unix_prefix_path, MAX_PATH_LEN-1);
+ }
+ 
+ TPort CSocketServer::GetPort() const
+@@ -69,6 +72,11 @@
+ 	return Port;
+ }
+ 
++char *CSocketServer::GetPath()
++{
++    return Unix_prefix_path;
++}
++
+ CSocketServer::~CSocketServer()
+ {
+ 	for (auto& infoSocket : *InfoSockets)
+@@ -81,7 +89,7 @@
+ 
+ bool CSocketServer::Listen()
+ {
+-	return _Listen(Master, Port);
++	return _Listen(Master, Port, Unix_prefix_path);
+ }
+ 
+ TDescriptor CSocketServer::Accept(TCID& cid)
+diff -Naur vwifi/src/csocketserverfunctionitcp.cc vwifi_tainted/src/csocketserverfunctionitcp.cc
+--- vwifi/src/csocketserverfunctionitcp.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketserverfunctionitcp.cc	2025-10-25 09:41:43.691802105 +0200
+@@ -4,19 +4,23 @@
+ #include <assert.h> // assert
+ 
+ #include <arpa/inet.h> // INADDR_ANY
++#include <sys/un.h>
++#include <netinet/in.h> 
++#include <unistd.h>
++
++
+ #include <sys/socket.h>
+ 
+ #include "csocket.h" // SOCKET_ERROR
+ #include "csocketserverfunctionitcp.h"
+ #include "tools.h"
++#include "config.h"
+ 
+ using namespace std;
+ 
+ bool CSocketServerFunctionITCP::Configure(TDescriptor& master)
+ {
+-	//create a master socket
+-
+-	master = socket(AF_INET , SOCK_STREAM , 0);
++	master = socket(AF_UNIX , SOCK_STREAM , 0);
+ 
+ 	if( master == SOCKET_ERROR )
+ 	{
+@@ -27,8 +31,22 @@
+ 	return true;
+ }
+ 
+-bool CSocketServerFunctionITCP::_Listen(TDescriptor& master, TPort port)
++bool CSocketServerFunctionITCP::_Listen(TDescriptor& master, TPort port, char *unix_prefix_path)
+ {
++
++char cli[MAX_PATH_LEN];
++char spy[MAX_PATH_LEN];
++char ctr[MAX_PATH_LEN];
++
++memset(cli, 0, MAX_PATH_LEN);
++memset(spy, 0, MAX_PATH_LEN);
++memset(ctr, 0, MAX_PATH_LEN);
++
++snprintf(cli, MAX_PATH_LEN-1, "%s/vwifi/unix_client", unix_prefix_path);
++snprintf(spy, MAX_PATH_LEN-1, "%s/vwifi/unix_ctrl", unix_prefix_path);
++snprintf(ctr, MAX_PATH_LEN-1, "%s/vwifi/unix_spy", unix_prefix_path);
++
++
+ 	if( ! Configure(master) )
+ 	{
+ 		cerr<<"Error : CSocketServerFunctionITCP::_Listen : Configure"<<endl;
+@@ -52,14 +70,30 @@
+ 	if (setsockopt (master, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+ 		perror("CSocketServerFunctionITCP::_Listen : setsockopt : SO_SNDTIMEO\n");
+ 
+-	//type of socket created
+-	struct sockaddr_in address;
+-	address.sin_family = AF_INET;
+-	address.sin_addr.s_addr = INADDR_ANY;
+-	address.sin_port = htons( port );
++struct sockaddr_un address;
++int len;
++memset (&address, 0, sizeof (struct sockaddr_un));
++address.sun_family = AF_UNIX;
++if (port == 8212)
++  {
++  unlink(cli);
++  strncpy (address.sun_path, cli, strlen(cli));
++  }
++else if (port == 8213)
++  {
++  unlink(spy);
++  strncpy (address.sun_path, spy, strlen(spy));
++  }
++else if (port == 8214)
++  {
++  unlink(ctr);
++  strncpy (address.sun_path, ctr, strlen(ctr));
++  }
++len = sizeof (address.sun_family) + strlen (address.sun_path);
++
+ 
+ 	//bind the socket
+-	if (bind(master, (struct sockaddr *)&address, sizeof(address))<0)
++	if (bind(master, (struct sockaddr *)&address, len)<0)
+ 	{
+ 		perror("CSocketServer::_Listen : bind");
+ 		return false;
+@@ -82,14 +116,22 @@
+ 
+ 	struct sockaddr_in address;
+ 	int addrlen = sizeof(address);
++        char buf[2];
++        int mycid;
+ 
+ 	if( (new_socket = accept(master, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0 )
+ 	{
+ 		perror("CSocketServerFunctionITCP::_Accept : accept");
+ 		return SOCKET_ERROR;
+ 	}
+-
+-	cid=hash_ipaddr(&address);
++        if (read(new_socket, buf, 2) != 2)
++	{
++		perror("CSocketServerFunctionITCP::_Accept : read 2 octets4");
++		return SOCKET_ERROR;
++	}
++        mycid = ((buf[0] & 0xFF) << 8) + (buf[1] & 0xFF);
++	cid = mycid;
++        printf("ACCEPT CID: %d\n", cid);
+ 
+ 	return new_socket;
+ }
+diff -Naur vwifi/src/csocketserverfunctionitcp.h vwifi_tainted/src/csocketserverfunctionitcp.h
+--- vwifi/src/csocketserverfunctionitcp.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketserverfunctionitcp.h	2025-10-25 09:41:43.691802105 +0200
+@@ -11,7 +11,7 @@
+ 
+ 	protected:
+ 
+-		bool _Listen(TDescriptor& master, TPort port);
++		bool _Listen(TDescriptor& master, TPort port, char *unix_prefix_path);
+ 
+ 		TDescriptor _Accept(TDescriptor master, TCID& cid);
+ 
+diff -Naur vwifi/src/csocketserverfunctionvtcp.cc vwifi_tainted/src/csocketserverfunctionvtcp.cc
+--- vwifi/src/csocketserverfunctionvtcp.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketserverfunctionvtcp.cc	2025-10-25 09:41:43.691802105 +0200
+@@ -28,7 +28,7 @@
+ 	return true;
+ }
+ 
+-bool CSocketServerFunctionVTCP::_Listen(TDescriptor& master, TPort port)
++bool CSocketServerFunctionVTCP::_Listen(TDescriptor& master, TPort port, char *unix_prefix_path)
+ {
+ 	if( ! Configure(master) )
+ 	{
+diff -Naur vwifi/src/csocketserverfunctionvtcp.h vwifi_tainted/src/csocketserverfunctionvtcp.h
+--- vwifi/src/csocketserverfunctionvtcp.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketserverfunctionvtcp.h	2025-10-25 09:41:43.691802105 +0200
+@@ -11,7 +11,7 @@
+ 
+ 	protected:
+ 
+-		bool _Listen(TDescriptor& master, TPort port);
++		bool _Listen(TDescriptor& master, TPort port, char *unix_prefix_path);
+ 
+ 		TDescriptor _Accept(TDescriptor master, TCID& cid);
+ 
+diff -Naur vwifi/src/csocketserver.h vwifi_tainted/src/csocketserver.h
+--- vwifi/src/csocketserver.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/csocketserver.h	2025-10-25 09:41:43.691802105 +0200
+@@ -5,12 +5,14 @@
+ #include "cinfosocket.h"
+ #include "clistinfo.h"
+ #include "types.h" // TIndex
++#include "config.h" 
+ 
+ class CSocketServer : public CSocket
+ {
+ 	protected :
+ 
+ 		TPort Port;
++               char Unix_prefix_path[MAX_PATH_LEN];
+ 
+ 		bool ListInfoSelfManaged;
+ 		CListInfo<CInfoSocket>* InfoSockets;
+@@ -24,13 +26,14 @@
+ 
+ 		CSocketServer(TSocket type, CListInfo<CInfoSocket>* infoSockets = NULL);
+ 
+-		CSocketServer( const CSocketServer & socketServer );
++		CSocketServer( CSocketServer & socketServer );
+ 
+ 		~CSocketServer();
+ 
+-		CSocketServer& operator=(const CSocketServer& socketServer);
++		CSocketServer& operator=(CSocketServer& socketServer);
+ 
+ 		TPort GetPort() const;
++		char *GetPath();
+ 
+ 		void DisableClient(TIndex index);
+ 
+@@ -44,7 +47,7 @@
+ 
+ 	// virtual :
+ 
+-		virtual bool _Listen(TDescriptor& master, TPort port) = 0;
++		virtual bool _Listen(TDescriptor& master, TPort port, char *unix_prefix_path) = 0;
+ 		virtual TDescriptor _Accept(TDescriptor master, TCID& cid) = 0;
+ 
+ 	public :
+@@ -55,7 +58,7 @@
+ 
+ 		bool IsEnable(TIndex index);
+ 
+-		void Init(TPort port);
++		void Init(TPort port, char *unix_prefix_path);
+ 
+ 		bool Listen();
+ };
+diff -Naur vwifi/src/cwifi.cc vwifi_tainted/src/cwifi.cc
+--- vwifi/src/cwifi.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cwifi.cc	2025-10-25 09:42:19.360062784 +0200
+@@ -64,34 +64,49 @@
+ 
+ ssize_t CWifi::SendSignalWithSocket(CSocket* socket, TDescriptor descriptor, TPower* power, const char* buffer, int sizeOfBuffer)
+ {
+-//	cout<<"send power : "<<power<<endl;
+ 	int val=socket->Send(descriptor, reinterpret_cast<const char*>(power), sizeof(TPower));
++        ssize_t ret;
+ 	if( val <= 0 )
++        {
++	        std::cout << "ERROR SendSignalWithSocket %d" << errno << std::endl;
+ 		return val;
++        }
+ 
+-//	std::cout<<"send big data of size : "<<sizeOfBuffer<<std::endl;
+-	return socket->Send(descriptor, buffer, sizeOfBuffer);
++        ret = socket->Send(descriptor, buffer, sizeOfBuffer);
++	std::cout << "SEND SIGNAL WITH SOCKET size: " << ret << std::endl;
++	return ret;
+ }
+ 
+ ssize_t CWifi::RecvSignalWithSocket(CSocket* socket, TDescriptor descriptor, TPower* power, CDynBuffer* buffer)
+ {
+ 	int valread;
++        ssize_t ret;
+ 
+-	// read the power
+ 	valread = socket->Read(descriptor, reinterpret_cast<char*>(power), sizeof(TPower));
+ 	if ( valread <= 0 )
++        {
++	         std::cout << "ERROR RecvSignalWithSocket %d" << errno <<  std::endl;
+ 		return valread;
++        }
+ 
+ 	// read the signal
+ 	// "nlmsg_len" (type "uint32_t") is the first attribut of the "struct nlmsghdr" in "libnl3/netlink/netlink-kernel.h"
+ 	ssize_t sizeRead = socket->ReadEqualSize(descriptor, buffer, 0, sizeof(struct nlmsghdr));
+ 	if( sizeRead == SOCKET_ERROR  )
++        {
++	         std::cout << "ERROR 1 RecvSignalWithSocket %d" << errno <<  std::endl;
+ 		return SOCKET_ERROR;
++        }
+ 
+ 	int sizeTotal=reinterpret_cast<struct nlmsghdr *>(buffer->GetBuffer())->nlmsg_len;
+ 
+ 	if( sizeTotal > MTU ) // to avoid that a error packet overfulls the memory
++        {
++	         std::cout << "ERROR 1 RecvSignalWithSocket %d" << errno <<  std::endl;
+ 		return SOCKET_ERROR;
++        }
++        ret = socket->ReadEqualSize(descriptor, buffer, sizeRead, sizeTotal);
++	std::cout << "RECV SIGNAL WITH SOCKET " << ret << std::endl;
+ 
+-	return socket->ReadEqualSize(descriptor, buffer, sizeRead, sizeTotal);
++	return ret;
+ }
+diff -Naur vwifi/src/cwifiserver.cc vwifi_tainted/src/cwifiserver.cc
+--- vwifi/src/cwifiserver.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cwifiserver.cc	2025-10-25 09:41:43.691802105 +0200
+@@ -31,7 +31,7 @@
+ 	InfoWifisDeconnected = infoWifisDeconnected;
+ }
+ 
+-CWifiServer::CWifiServer( const CWifiServer & wifiServer ) : CSocketServer(wifiServer), CWifi(wifiServer)
++CWifiServer::CWifiServer( CWifiServer & wifiServer ) : CSocketServer(wifiServer), CWifi(wifiServer)
+ {
+ 	*this=wifiServer;
+ }
+@@ -45,7 +45,7 @@
+ 	}
+ }
+ 
+-CWifiServer& CWifiServer::operator=(const CWifiServer& wifiServer)
++CWifiServer& CWifiServer::operator=(CWifiServer& wifiServer)
+ {
+ 	if( this != &wifiServer )
+ 	{
+@@ -82,7 +82,7 @@
+ {
+ 	MaxClientDeconnected=maxClientDeconnected;
+ 
+-	if( ! _Listen(Master, Port) )
++	if( ! _Listen(Master, Port, Unix_prefix_path) )
+ 		return false;
+ 
+ 	return true;
+diff -Naur vwifi/src/cwifiserver.h vwifi_tainted/src/cwifiserver.h
+--- vwifi/src/cwifiserver.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cwifiserver.h	2025-10-25 09:41:43.691802105 +0200
+@@ -28,11 +28,11 @@
+ 
+ 		CWifiServer(CListInfo<CInfoSocket>* infoSockets, CListInfo<CInfoWifi>* infoWifis, CListInfo<CInfoWifi>* infoWifisDeconnected);
+ 
+-		CWifiServer( const CWifiServer & wifiServer );
++		CWifiServer(  CWifiServer & wifiServer );
+ 
+ 		~CWifiServer();
+ 
+-		CWifiServer& operator=(const CWifiServer& wifiServer);
++		CWifiServer& operator=(CWifiServer& wifiServer);
+ 
+ 		bool Listen(TIndex maxClientDeconnected);
+ 
+diff -Naur vwifi/src/cwifiserveritcp.cc vwifi_tainted/src/cwifiserveritcp.cc
+--- vwifi/src/cwifiserveritcp.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cwifiserveritcp.cc	2025-10-25 09:41:43.691802105 +0200
+@@ -8,9 +8,9 @@
+ {
+ }
+ 
+-bool CWifiServerITCP::_Listen(TDescriptor& master, TPort port)
++bool CWifiServerITCP::_Listen(TDescriptor& master, TPort port, char *unix_prefix_path)
+ {
+-	return CSocketServerFunctionITCP::_Listen(master, port);
++	return CSocketServerFunctionITCP::_Listen(master, port, unix_prefix_path);
+ }
+ 
+ TDescriptor CWifiServerITCP::_Accept(TDescriptor master, TCID& cid)
+diff -Naur vwifi/src/cwifiserveritcp.h vwifi_tainted/src/cwifiserveritcp.h
+--- vwifi/src/cwifiserveritcp.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cwifiserveritcp.h	2025-10-25 09:41:43.691802105 +0200
+@@ -14,7 +14,7 @@
+ 
+ 	private:
+ 
+-		bool _Listen(TDescriptor& master, TPort port) override;
++		bool _Listen(TDescriptor& master, TPort port, char *unix_prefix_path) override;
+ 
+ 		TDescriptor _Accept(TDescriptor master, TCID& cid) override;
+ };
+diff -Naur vwifi/src/cwifiservervtcp.cc vwifi_tainted/src/cwifiservervtcp.cc
+--- vwifi/src/cwifiservervtcp.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cwifiservervtcp.cc	2025-10-25 09:41:43.691802105 +0200
+@@ -4,9 +4,9 @@
+ {
+ }
+ 
+-bool CWifiServerVTCP::_Listen(TDescriptor& master, TPort port)
++bool CWifiServerVTCP::_Listen(TDescriptor& master, TPort port, char *unix_prefix_path)
+ {
+-	return CSocketServerFunctionVTCP::_Listen(master, port);
++	return CSocketServerFunctionVTCP::_Listen(master, port, unix_prefix_path);
+ }
+ 
+ TDescriptor CWifiServerVTCP::_Accept(TDescriptor master, TCID& cid)
+diff -Naur vwifi/src/cwifiservervtcp.h vwifi_tainted/src/cwifiservervtcp.h
+--- vwifi/src/cwifiservervtcp.h	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/cwifiservervtcp.h	2025-10-25 09:41:43.695802134 +0200
+@@ -12,7 +12,7 @@
+ 
+ 	private :
+ 
+-		bool _Listen(TDescriptor& master, TPort port) override;
++		bool _Listen(TDescriptor& master, TPort port, char *unix_prefix_path) override;
+ 
+ 		TDescriptor _Accept(TDescriptor master, TCID& cid) override;
+ };
+diff -Naur vwifi/src/vwifi-client.cc vwifi_tainted/src/vwifi-client.cc
+--- vwifi/src/vwifi-client.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/vwifi-client.cc	2025-10-25 09:41:43.695802134 +0200
+@@ -4,6 +4,8 @@
+ #include <string.h> // strcmp
+ 
+ #include <memory>
++#include <stdarg.h>
++
+ 
+ #include "config.h" // DEFAULT_WIFI_CLIENT_PORT_VHOST / DEFAULT_WIFI_CLIENT_PORT_INET
+ #include "tools.h" // isInt
+@@ -28,196 +30,109 @@
+ enum STATE  _state = STOPPED ;
+ 
+ 
++static char g_cloonix_unix_sock[MAX_PATH_LEN];
++static char g_debug_logfile_path[MAX_PATH_LEN];
++static FILE *g_debug_logfile;
++static int g_debug_logfile_fd;
++
++/*****************************************************************************/
++void debug_log_write(const char * format, ...)
++{ 
++  va_list arguments;
++  va_start (arguments, format);
++  vdprintf(1, format, arguments);
++  va_end (arguments);
++}               
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
+ void signal_handler(int signal_num)
+ {
+-
+-	switch(signal_num)
+-	{
+-		case SIGINT :
+-		case SIGTERM :
+-		case SIGQUIT :
+-
+-			std::cout << signal_num << std::endl ;
+-			wifiClient->stop() ;
+-			_state = STOPPED ;
+-			break ;
+-
+-		case SIGTSTP:
+-
+-			std::cout << "This signal is ignored" << std::endl ;
+-			break ;
+-
+-
+-		default :
+-			std::cerr << "Signal not handled" << std::endl ;
+-
+-	}
+-
+-	std::cout << "OUT SWITCH" << std::endl ;
++  switch(signal_num)
++    {
++    case SIGINT :
++    case SIGTERM :
++    case SIGQUIT :
++      std::cout << signal_num << std::endl ;
++      wifiClient->stop() ;
++      _state = STOPPED ;
++      break ;
++    case SIGTSTP:
++      std::cout << "This signal is ignored" << std::endl ;
++      break ;
++    default :
++      std::cerr << "Signal not handled" << std::endl ;
++    }
++  std::cout << "OUT SWITCH" << std::endl ;
+ }
++/*--------------------------------------------------------------------------*/
+ 
+-void help()
++/*****************************************************************************/
++int main (int argc , char ** argv)
+ {
+-#ifdef ENABLE_VHOST
+-	std::cout<<"Usage: vwifi-client [-h] [-v] [-s] [IP_ADDR] [-p PORT] [-u] [-n NUMBER_INTERFACE] [-m MAC_PREFIX]"<<std::endl;
+-	std::cout<<"                    [--help] [--version] [--spy] [IP_ADDR] [--port PORT] [--use-port-in-hash] [--number NUMBER_INTERFACE] [--mac MAC_PREFIX]"<<std::endl;
+-	std::cout<<"         By default : client mode : TCP : IP_ADDR="<<DEFAULT_ADDRESS_IP <<" PORT="<< DEFAULT_WIFI_CLIENT_PORT_INET << std::endl;
+-	std::cout<<"                      client mode : VHOST : PORT="<< DEFAULT_WIFI_CLIENT_PORT_VHOST << std::endl;
+-	std::cout<<"                      spy mode (--spy) : IP_ADDR="<< DEFAULT_ADDRESS_IP <<" PORT="<< DEFAULT_WIFI_SPY_PORT << std::endl;
+-	std::cout<<"                      NUMBER_INTERFACE="<< DEFAULT_NUMBER_WLAN_INTERFACE <<" MAC_PREFIX="<< DEFAULT_MAC_PREFIX << std::endl;
+-#else
+-	std::cout<<"Usage: vwifi-client [-h] [-v] [-s] IP_ADDR [-p PORT] [-u] [-n NUMBER_INTERFACE] [-m MAC_PREFIX]"<<std::endl;
+-	std::cout<<"                    [--help] [--version] [--spy] IP_ADDR [--port PORT] [--use-port-in-hash] [--number NUMBER_INTERFACE] [--mac MAC_PREFIX]"<<std::endl;
+-	std::cout<<"         By default : client mode : TCP : IP_ADDR="<<DEFAULT_ADDRESS_IP <<" PORT="<< DEFAULT_WIFI_CLIENT_PORT_INET << std::endl;
+-	std::cout<<"                      spy mode (--spy) : IP_ADDR="<< DEFAULT_ADDRESS_IP <<" PORT="<< DEFAULT_WIFI_SPY_PORT << std::endl;
+-	std::cout<<"                      NUMBER_INTERFACE="<< DEFAULT_NUMBER_WLAN_INTERFACE <<" MAC_PREFIX="<< DEFAULT_MAC_PREFIX << std::endl;
+-#endif
+-}
+-
+-int main (int argc , char ** argv){
+-
+-	bool spy = false;
+-
+-	std::string ip_addr;
+-	TPort port_number = 0;
+-
+-	int number_interface=DEFAULT_NUMBER_WLAN_INTERFACE;
+-	TByte mac_prefix[ETH_ALEN]={};
+-	ParseAddress(DEFAULT_MAC_PREFIX, mac_prefix);
+-	if( strlen(DEFAULT_MAC_PREFIX) <= 8 )
+-	{ // if possible, randomize the 4th byte
+-		srand(time(NULL));
+-		mac_prefix[3]=rand()%100;
+-	}
+-
+-	int arg_idx = 1;
+-	while (arg_idx < argc)
+-	{
+-		if( ! strcmp("-v", argv[arg_idx]) || ! strcmp("--version", argv[arg_idx]) )
+-		{
+-			std::cout<<"Version : "<<VERSION<<std::endl;
+-			return 0;
+-		}
+-		if( ! strcmp("-h", argv[arg_idx]) || ! strcmp("--help", argv[arg_idx]) )
+-		{
+-			help();
+-			return 0;
+-		}
+-		if( ( ! strcmp("-p", argv[arg_idx]) || ! strcmp("--port", argv[arg_idx]) ) && (arg_idx + 1) < argc && isPositiveInt(argv[arg_idx+1]) )
+-		{
+-			port_number = std::stoi(argv[arg_idx+1]);
+-			arg_idx++;
+-		}
+-		else if( ! strcmp("-u", argv[arg_idx]) || ! strcmp("--use-port-in-hash", argv[arg_idx]) )
+-		{
+-			HashUsesPort=true;
+-		}
+-		else if( ! strcmp("-s", argv[arg_idx]) || ! strcmp("--spy", argv[arg_idx]) )
+-		{
+-			spy=true;
+-		}
+-		else if( ( ! strcmp("-n", argv[arg_idx]) || ! strcmp("--number", argv[arg_idx]) ) && (arg_idx + 1) < argc && isPositiveInt(argv[arg_idx+1]) )
+-		{
+-			number_interface = std::stoi(argv[arg_idx+1]);
+-			if (number_interface > 100)
+-			{
+-				std::cerr<<"Error : NUMBER > 100"<<std::endl;
+-				return 4;
+-			}
+-			arg_idx++;
+-		}
+-		else if( ( ! strcmp("-m", argv[arg_idx]) || ! strcmp("--mac", argv[arg_idx]) ) && (arg_idx + 1) < argc)
+-		{
+-			std::string string = std::string(argv[arg_idx+1]);
+-			if( string.size() > 17 )
+-			{
+-				std::cerr<<"Error : the MAC_PREFIX is too long"<<std::endl;
+-				return 5;
+-			}
+-			if( ! ParseAddress(string.c_str(), mac_prefix) )
+-				return 6;
+-			arg_idx++;
+-		}
+-		else
+-		{
+-			if( ip_addr.empty() )
+-				ip_addr = std::string(argv[arg_idx]);
+-			else
+-			{
+-				std::cerr<<"Error : problem with this parameter : "<< argv[arg_idx] <<std::endl;
+-				help();
+-				return 1;
+-			}
+-		}
+-
+-		arg_idx++;
+-	}
+-
+-	if( getuid() )
+-	{
+-		std::cerr<<"Error : This program must be run as root!!"<<std::endl;
+-		return 2;
+-	}
+-
+-	if( number_interface )
+-		if( ManageRadios(number_interface,mac_prefix) )
+-			return 7;
+-
+-	/* Handle signals */
+-	signal(SIGINT, signal_handler);
+-	signal(SIGTERM, signal_handler);
+-	signal(SIGQUIT, signal_handler);
+-	signal(SIGHUP, SIG_IGN);
+-	signal(SIGTSTP, signal_handler);
+-	//signal(SIGCONT, signal_handler);
+-
+-	if( spy )
+-	{ // mode TCP
+-
+-		if( ip_addr.empty() )
+-			ip_addr = std::string(DEFAULT_ADDRESS_IP);
+-
+-		if( ! port_number )
+-			port_number = DEFAULT_WIFI_SPY_PORT;
+-
+-		std::cout<<"Type : AF_INET"<<std::endl;
+-		wifiClient=new CWifiClient<CSocketClientITCP>;
+-		static_cast<CWifiClient<CSocketClientITCP>*>(wifiClient)->Init(ip_addr.c_str(), port_number);
+-	}
+-	else
+-	{
+-		if( ip_addr.empty() )
+-		{ // IP not set -> mode VHOST
+-#ifdef ENABLE_VHOST
+-			if( ! port_number )
+-				port_number = DEFAULT_WIFI_CLIENT_PORT_VHOST;
+-
+-			std::cout<<"Type : AF_VSOCK"<<std::endl;
+-			wifiClient=new CWifiClient<CSocketClientVTCP>;
+-			static_cast<CWifiClient<CSocketClientVTCP>*>(wifiClient)->Init(port_number);
+-#else
+-			std::cerr<<"Error : This program is not build with VHOST!!"<<std::endl;
+-			return 8;
+-#endif
+-		}
+-		else
+-		{ // mode TCP
+-			if( ! port_number )
+-				port_number = DEFAULT_WIFI_CLIENT_PORT_INET;
+-
+-			std::cout<<"Type : AF_INET"<<std::endl;
+-			wifiClient=new CWifiClient<CSocketClientITCP>;
+-			static_cast<CWifiClient<CSocketClientITCP>*>(wifiClient)->Init(ip_addr.c_str(), port_number);
+-		}
+-	}
+-
+-	if(!wifiClient->start())
+-		std::cout << "Starting process aborted" << std::endl ;
+-
+-
+-
+-	std::cout << "Good Bye (:-)" << std::endl ;
+-
+-	_exit(EXIT_SUCCESS);
+-
++  const char *sock_path = "/cloonixmnt/tmp/unix_vwifi_client"; 
++  const char *log_path = "/cloonixmnt/tmp/vwifi_output.log"; 
++  std::string ip_addr;
++  TPort port_number = 0;
++  TByte mac_prefix[ETH_ALEN]={};
++
++  ParseAddress(DEFAULT_MAC_PREFIX, mac_prefix);
++  if( strlen(DEFAULT_MAC_PREFIX) <= 8 )
++    {
++    srand(time(NULL));
++    mac_prefix[3]=rand()%100;
++    }
++  if( getuid() )
++    {
++    std::cerr<<"Error : This program must be run as root!!"<<std::endl;
++    return 2;
++    }
++  memset(g_cloonix_unix_sock, 0, MAX_PATH_LEN);
++  memset(g_debug_logfile_path, 0, MAX_PATH_LEN);
++  if (argc == 2)
++    {
++    snprintf(g_cloonix_unix_sock, MAX_PATH_LEN-1, "%s/vwifi/unix_client", argv[1]);
++    snprintf(g_debug_logfile_path, MAX_PATH_LEN-1, "%s/log/debug_vwifi_client.log", argv[1]);
++    std::cerr<<"TRY CONNECT TO LOCAL SERVER " << g_cloonix_unix_sock <<std::endl;
++    }
++  else
++    {
++    snprintf(g_cloonix_unix_sock, MAX_PATH_LEN-1, "%s", sock_path);
++    snprintf(g_debug_logfile_path, MAX_PATH_LEN-1, "%s", log_path);
++    std::cerr<<"TRY CONNECT TO DISTANT SERVER " << g_cloonix_unix_sock <<std::endl;
++    }
++  g_debug_logfile = fopen(g_debug_logfile_path, "a+");
++  if (g_debug_logfile == NULL)
++    {
++    std::cerr<<"ERROR PATH TO LOG "<< g_debug_logfile_path << errno << std::endl;
++    exit(-1);
++    }
++  g_debug_logfile_fd = fileno(g_debug_logfile);
++  if ((g_debug_logfile == NULL) || (g_debug_logfile_fd == -1))
++    {
++    std::cerr<<"ERROR PATH TO LOG "<< argv[2] << errno << std::endl;
++    exit(-1);
++    }
++  if ((dup2(g_debug_logfile_fd, STDOUT_FILENO) < 0) ||
++      (dup2(g_debug_logfile_fd, STDERR_FILENO) < 0))
++    {
++    std::cerr<<"ERROR DUP FD PATH TO LOG "<< argv[2] << errno << std::endl;
++    exit(-1);
++    }
++  debug_log_write("START OF LOG CONNECTING TO %s", g_cloonix_unix_sock);
++  signal(SIGINT, signal_handler);
++  signal(SIGTERM, signal_handler);
++  signal(SIGQUIT, signal_handler);
++  signal(SIGHUP, SIG_IGN);
++  signal(SIGTSTP, signal_handler);
++  port_number = DEFAULT_WIFI_CLIENT_PORT_INET;
++  ip_addr = std::string(g_cloonix_unix_sock);
++  std::cout<<"Type : AF_UNIX"<<std::endl;
++  wifiClient=new CWifiClient<CSocketClientITCP>;
++  static_cast<CWifiClient<CSocketClientITCP>*>(wifiClient)->Init(ip_addr.c_str(), port_number);
++  if(!wifiClient->start())
++  std::cout << "Starting process aborted" << std::endl ;
++  std::cout << "Good Bye (:-)" << std::endl ;
++  _exit(EXIT_SUCCESS);
+ }
++/*--------------------------------------------------------------------------*/
+diff -Naur vwifi/src/vwifi-ctrl.cc vwifi_tainted/src/vwifi-ctrl.cc
+--- vwifi/src/vwifi-ctrl.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/vwifi-ctrl.cc	2025-10-25 09:41:43.695802134 +0200
+@@ -2,6 +2,8 @@
+ 
+ #include <string.h> //strlen
+ 
++#include <stdarg.h>
++
+ #include "config.h"
+ #include "tools.h" // isInt isPositiveInt isIntOrFloat
+ #include "csocketclientitcp.h"
+@@ -11,11 +13,25 @@
+ 
+ using namespace std;
+ 
+-std::string IP_Ctrl = std::string(DEFAULT_ADDRESS_IP);
++const char *cloonix_unix_sock = "/cloonixmnt/tmp/unix_vwifi_ctrl";
++
++
++std::string IP_Ctrl = std::string(cloonix_unix_sock);
+ TPort Port_Ctrl = DEFAULT_CTRL_PORT;
+ 
+ char* NameOfProg;
+ 
++
++/*****************************************************************************/
++void debug_log_write(const char * format, ...)
++{
++  va_list arguments;
++  va_start (arguments, format);
++  vdprintf(1, format, arguments);
++  va_end (arguments);
++}
++/*--------------------------------------------------------------------------*/
++
+ void Help()
+ {
+ 	cout<<NameOfProg<<" [order]"<<endl;
+@@ -41,8 +57,6 @@
+ 	cout<<"	close"<<endl;
+ 	cout<<"		- Close all the connections with Wifi Clients"<<endl;
+ 	cout<<endl;
+-	cout<<" [-p PORT] or [--port PORT] : Set the port used by the vwifi-server (by default PORT="<< Port_Ctrl <<")"<<endl;
+-	cout<<" [-i IP] or [--ip IP] : Set the IP used by the vwifi-server (by default IP="<< IP_Ctrl <<")"<<endl;
+ 	cout<<" [-v] or [--version] : Display the version of "<<NameOfProg<<endl;
+ 	cout<<" [-h] or [--help] : this help"<<endl;
+ }
+@@ -749,16 +763,6 @@
+ 			Help();
+ 			return 1;
+ 		}
+-		if( ( ! strcmp("-p", argv[arg_idx]) || ! strcmp("--port", argv[arg_idx]) ) && (arg_idx + 1) < argc && isPositiveInt(argv[arg_idx+1]) )
+-		{
+-			Port_Ctrl = std::stoi(argv[arg_idx+1]);
+-			arg_idx++;
+-		}
+-		else if( ( ! strcmp("-i", argv[arg_idx]) || ! strcmp("--ip", argv[arg_idx]) ) && (arg_idx + 1) < argc)
+-		{
+-			IP_Ctrl = std::string(argv[arg_idx+1]);
+-			arg_idx++;
+-		}
+ 		else
+ 		{
+ 			param_cmd[nbr_param_cmd++]=argv[arg_idx];
+diff -Naur vwifi/src/vwifi-server.cc vwifi_tainted/src/vwifi-server.cc
+--- vwifi/src/vwifi-server.cc	2025-10-24 14:54:29.000000000 +0200
++++ vwifi_tainted/src/vwifi-server.cc	2025-10-25 09:41:43.695802134 +0200
+@@ -1,6 +1,9 @@
+ #include <iostream> // cout
+ 
+ #include <string.h> // strcmp
++#include <stdarg.h>
++#include <unistd.h>
++
+ 
+ #include "config.h"
+ #include "tools.h" // isPositiveInt
+@@ -12,6 +15,12 @@
+ #include "cselect.h"
+ #include "cdynbuffer.h"
+ 
++
++
++static char g_debug_logfile_path[MAX_PATH_LEN];
++static FILE *g_debug_logfile;
++static int g_debug_logfile_fd;
++
+ using namespace std;
+ 
+ CDynBuffer Buffer; // Buffer to stock received values
+@@ -24,6 +33,22 @@
+ 
+ CSelect Scheduler;
+ 
++
++                                        
++/*****************************************************************************/
++void debug_log_write(const char * format, ...)
++{
++  va_list arguments;
++  va_start (arguments, format);
++  vfprintf(g_debug_logfile, format, arguments);
++  fflush(g_debug_logfile);
++  va_end (arguments);
++}
++/*--------------------------------------------------------------------------*/
++
++
++
++
+ void RemoveClient(CWifiServer* srv, bool srvIsSpy, TIndex i, TDescriptor socket)
+ {
+ 	if( ! srvIsSpy )
+@@ -84,7 +109,11 @@
+ 	}
+ }
+ 
+-int vwifi_server()
++
++
++
++
++int vwifi_server(char *unix_prefix_path)
+ {
+ 	TDescriptor socket;
+ 
+@@ -92,20 +121,9 @@
+ 	CListInfo<CInfoWifi> infoWifis;
+ 	CListInfo<CInfoWifi> infoWifisDeconnected;
+ 
+-#ifdef ENABLE_VHOST
+-	CWifiServerVTCP wifiServerVTCP(&infoSockets,&infoWifis,&infoWifisDeconnected);
+-	cout<<"CLIENT VHOST : ";
+-	wifiServerVTCP.Init(Port_VHOST);
+-	if( ! wifiServerVTCP.Listen(WIFI_MAX_DECONNECTED_CLIENT) )
+-	{
+-		cerr<<"Error : wifiServerVTCP.Listen"<<endl;
+-		exit(EXIT_FAILURE);
+-	}
+-#endif
+-
+ 	CWifiServerITCP wifiServerITCP(&infoSockets,&infoWifis,&infoWifisDeconnected);
+ 	cout<<"CLIENT TCP : ";
+-	wifiServerITCP.Init(Port_TCP);
++	wifiServerITCP.Init(Port_TCP, unix_prefix_path);
+ 	if( ! wifiServerITCP.Listen(WIFI_MAX_DECONNECTED_CLIENT) )
+ 	{
+ 		cerr<<"Error : wifiServerITCP.Listen"<<endl;
+@@ -116,7 +134,7 @@
+ 
+ 	cout<<"SPY : ";
+ 	CWifiServerITCP wifiServerSPY;
+-	wifiServerSPY.Init(Port_Spy);
++	wifiServerSPY.Init(Port_Spy, unix_prefix_path);
+ 	if( ! wifiServerSPY.Listen(1) )
+ 	{
+ 		cerr<<"Error : wifiServerSPY.Listen"<<endl;
+@@ -124,12 +142,8 @@
+ 	}
+ 
+ 	cout<<"CTRL : ";
+-#ifdef ENABLE_VHOST
+-	CCTRLServer ctrlServer(&wifiServerVTCP, &wifiServerITCP, &wifiServerSPY,&Scheduler);
+-#else
+ 	CCTRLServer ctrlServer(NULL, &wifiServerITCP, &wifiServerSPY,&Scheduler);
+-#endif
+-	ctrlServer.Init(Port_Ctrl);
++	ctrlServer.Init(Port_Ctrl, unix_prefix_path);
+ 	if( ! ctrlServer.Listen() )
+ 	{
+ 		cerr<<"Error : ctrlServer.Listen"<<endl;
+@@ -145,14 +159,12 @@
+ 
+ 	cout<<"Scale : "<<Scale<<endl;
+ 
+-	//add master socket to set
+-#ifdef ENABLE_VHOST
+-	Scheduler.AddNode(wifiServerVTCP);
+-#endif
+ 	Scheduler.AddNode(wifiServerITCP);
+ 	Scheduler.AddNode(wifiServerSPY);
+ 	Scheduler.AddNode(ctrlServer);
+ 
++
++
+ 	while( true )
+ 	{
+ 		//wait for an activity on one of the sockets , timeout is NULL ,
+@@ -164,26 +176,6 @@
+ 		}
+ 		else {
+ 
+-			//If something happened on the master socket ,
+-			//then its an incoming connection
+-#ifdef ENABLE_VHOST
+-			if( Scheduler.DescriptorHasAction(wifiServerVTCP) )
+-			{
+-				socket = wifiServerVTCP.Accept();
+-				if ( socket == SOCKET_ERROR )
+-				{
+-					cerr<<"Error : wifiServerVTCP.Accept"<<endl;
+-					exit(EXIT_FAILURE);
+-				}
+-
+-				//add child sockets to set
+-				Scheduler.AddNode(socket);
+-
+-				//inform user of socket number - used in send and receive commands
+-				cout<<"New connection from Client VHost : "; wifiServer->ShowInfoWifi(wifiServer->GetNumberClient()-1) ; cout<<endl;
+-			}
+-#endif
+-
+ 			if( Scheduler.DescriptorHasAction(wifiServerITCP) )
+ 			{
+ 				socket = wifiServerITCP.Accept();
+@@ -231,79 +223,40 @@
+ 	return 0;
+ }
+ 
+-void help()
+-{
+-#ifdef ENABLE_VHOST
+-	cout<<"Usage: vwifi-server [-h] [-v] [-l] [-u] [-p PORT_VHOST] [-t PORT_TCP] [-s PORT_SPY] [-c PORT_CTRL]"<<endl;
+-	cout<<"                    [--help] [--version] [--lost-packets] [--use-port-in-hash] [--port-vhost PORT_VHOST] [--port-tcp PORT_TCP] [--port-spy PORT_SPY] [--port-ctrl PORT_CTRL]"<<endl;
+-	cout<<"         By default : PORT_VHOST="<< DEFAULT_WIFI_CLIENT_PORT_VHOST <<
+-								" PORT_TCP="  << DEFAULT_WIFI_CLIENT_PORT_INET <<
+-								" PORT_SPY="  << DEFAULT_WIFI_SPY_PORT <<
+-								" PORT_CTRL=" << DEFAULT_CTRL_PORT <<endl;
+-#else
+-	cout<<"Usage: vwifi-server [-h] [-v] [-l] [-u] [-t PORT_TCP] [-s PORT_SPY] [-c PORT_CTRL]"<<endl;
+-	cout<<"                    [--help] [--version] [--lost-packets] [--use-port-in-hash] [--port-tcp PORT_TCP] [--port-spy PORT_SPY] [--port-ctrl PORT_CTRL]"<<endl;
+-	cout<<"         By default : PORT_TCP="  << DEFAULT_WIFI_CLIENT_PORT_INET <<
+-								" PORT_SPY="  << DEFAULT_WIFI_SPY_PORT <<
+-								" PORT_CTRL=" << DEFAULT_CTRL_PORT <<endl;
+-#endif
+-}
+ 
+ 
+ int main(int argc, char** argv)
+ {
+-	int arg_idx = 1;
+-	while (arg_idx < argc)
+-	{
+-		if( ! strcmp("-v", argv[arg_idx]) || ! strcmp("--version", argv[arg_idx]) )
+-		{
+-			cout<<"Version : "<<VERSION<<endl;
+-			return 0;
+-		}
+-		if( ! strcmp("-h", argv[arg_idx]) || ! strcmp("--help", argv[arg_idx]) )
+-		{
+-			help();
+-			return 0;
+-		}
+-		if( ! strcmp("-l", argv[arg_idx]) || ! strcmp("--lost-packets", argv[arg_idx]) )
+-		{
+-			CanLostPackets=true;
+-		}
+-		else if( ! strcmp("-u", argv[arg_idx]) || ! strcmp("--use-port-in-hash", argv[arg_idx]) )
+-		{
+-			HashUsesPort=true;
+-		}
+-#ifdef ENABLE_VHOST
+-		else if( ( ! strcmp("-p", argv[arg_idx]) || ! strcmp("--port-vhost", argv[arg_idx]) ) && (arg_idx + 1) < argc && isPositiveInt(argv[arg_idx+1]) )
+-		{
+-			Port_VHOST = stoi(argv[arg_idx+1]);
+-			arg_idx++;
+-		}
+-#endif
+-		else if( ( ! strcmp("-t", argv[arg_idx]) || ! strcmp("--port-tcp", argv[arg_idx]) ) && (arg_idx + 1) < argc && isPositiveInt(argv[arg_idx+1]) )
+-		{
+-			Port_TCP = stoi(argv[arg_idx+1]);
+-			arg_idx++;
+-		}
+-		else if( ( ! strcmp("-s", argv[arg_idx]) || ! strcmp("--port-spy", argv[arg_idx]) ) && (arg_idx + 1) < argc && isPositiveInt(argv[arg_idx+1]) )
+-		{
+-			Port_Spy = stoi(argv[arg_idx+1]);
+-			arg_idx++;
+-		}
+-		else if( ( ! strcmp("-c", argv[arg_idx]) || ! strcmp("--port-ctrl", argv[arg_idx]) ) && (arg_idx + 1) < argc && isPositiveInt(argv[arg_idx+1]) )
+-		{
+-			Port_Ctrl = stoi(argv[arg_idx+1]);
+-			arg_idx++;
+-		}
+-		else
+-		{
+-			cerr<<"Error : problem with this parameter : "<< argv[arg_idx] <<endl;
+-			help();
+-			return 1;
+-		}
+-
+-		arg_idx++;
+-	}
+-
+-	return vwifi_server();
++  if (argc != 2)
++    {
++    cerr<<"ERROR PATH TO CLOONIX ROOT VAR REQUIRED"<<endl;
++    exit(-1);
++    }
++  else
++    {
++    memset(g_debug_logfile_path, 0, MAX_PATH_LEN);
++    snprintf(g_debug_logfile_path, MAX_PATH_LEN-1,
++             "%s/log/debug_vwifi_server.log", argv[1]);
++    g_debug_logfile = fopen(g_debug_logfile_path, "a+");
++    if (g_debug_logfile == NULL)
++      {
++      cerr<<"ERROR PATH TO LOG "<< argv[1] << errno << endl;
++      exit(-1);
++      }
++    g_debug_logfile_fd = fileno(g_debug_logfile);
++    if (g_debug_logfile_fd == -1)
++      {
++      cerr<<"ERROR PATH TO LOG "<< argv[1] << errno << endl;
++      exit(-1);
++      }
++    if ((dup2(g_debug_logfile_fd, STDOUT_FILENO) < 0) ||
++        (dup2(g_debug_logfile_fd, STDERR_FILENO) < 0))
++      {
++      cerr<<"ERROR DUP FD PATH TO LOG "<< argv[1] << errno << endl;
++      exit(-1);
++      }
++    debug_log_write("START OF LOG");
++    return vwifi_server(argv[1]);
++    }
++  return (-1);
+ }
+diff -Naur vwifi/src/vwifi-spy.cc vwifi_tainted/src/vwifi-spy.cc
+--- vwifi/src/vwifi-spy.cc	1970-01-01 01:00:00.000000000 +0100
++++ vwifi_tainted/src/vwifi-spy.cc	2025-10-25 09:41:43.695802134 +0200
+@@ -0,0 +1,114 @@
++#include <signal.h>
++#include <unistd.h>
++#include <iostream>
++#include <string.h> // strcmp
++
++#include <memory>
++#include <stdarg.h>
++
++
++#include "config.h" // DEFAULT_WIFI_CLIENT_PORT_VHOST / DEFAULT_WIFI_CLIENT_PORT_INET
++#include "tools.h" // isInt
++
++#include "cwificlient.h"
++#ifdef ENABLE_VHOST
++#include "csocketclientvtcp.h"
++#endif
++#include "csocketclientitcp.h"
++
++#include "addinterfaces.h"
++
++enum STATE {
++
++	STARTED=1,
++	STOPPED ,
++	SUSPENDED
++};
++
++CKernelWifi* wifiClient;
++
++enum STATE  _state = STOPPED ;
++
++
++static char g_cloonix_unix_sock[MAX_PATH_LEN];
++
++
++/*****************************************************************************/
++void debug_log_write(const char * format, ...)
++{
++  va_list arguments;
++  va_start (arguments, format);
++  vdprintf(1, format, arguments);
++  va_end (arguments);
++}
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++void signal_handler(int signal_num)
++{
++  switch(signal_num)
++    {
++    case SIGINT :
++    case SIGTERM :
++    case SIGQUIT :
++      std::cout << signal_num << std::endl ;
++      wifiClient->stop() ;
++      _state = STOPPED ;
++      break ;
++    case SIGTSTP:
++      std::cout << "This signal is ignored" << std::endl ;
++      break ;
++    default :
++      std::cerr << "Signal not handled" << std::endl ;
++    }
++  std::cout << "OUT SWITCH" << std::endl ;
++}
++/*--------------------------------------------------------------------------*/
++
++/*****************************************************************************/
++int main (int argc , char ** argv)
++{
++  const char *cloonix_unix_sock = "/cloonixmnt/tmp/unix_vwifi_spy";
++  std::string ip_addr;
++  TPort port_number = 0;
++  TByte mac_prefix[ETH_ALEN]={};
++
++  ParseAddress(DEFAULT_MAC_PREFIX, mac_prefix);
++  if( strlen(DEFAULT_MAC_PREFIX) <= 8 )
++    {
++    srand(time(NULL));
++    mac_prefix[3]=rand()%100;
++    }
++  if( getuid() )
++    {
++    std::cerr<<"Error : This program must be run as root!!"<<std::endl;
++    return 2;
++    }
++  memset(g_cloonix_unix_sock, 0, MAX_PATH_LEN);
++  if (argc == 2)
++    {
++    snprintf(g_cloonix_unix_sock, MAX_PATH_LEN-1, "%s/vwifi/unix_spy", argv[1]);
++    }
++  else
++    {
++    snprintf(g_cloonix_unix_sock, MAX_PATH_LEN-1, "%s", cloonix_unix_sock);
++    }
++
++  signal(SIGINT, signal_handler);
++  signal(SIGTERM, signal_handler);
++  signal(SIGQUIT, signal_handler);
++  signal(SIGHUP, SIG_IGN);
++  signal(SIGTSTP, signal_handler);
++  port_number = DEFAULT_WIFI_SPY_PORT;
++  ip_addr = std::string(cloonix_unix_sock);
++  std::cout<<"Type : AF_UNIX"<<std::endl;
++  wifiClient=new CWifiClient<CSocketClientITCP>;
++  static_cast<CWifiClient<CSocketClientITCP>*>(wifiClient)->Init(ip_addr.c_str(), port_number);
++  if(!wifiClient->start())
++  std::cout << "Starting process aborted" << std::endl ;
++  std::cout << "Good Bye (:-)" << std::endl ;
++  _exit(EXIT_SUCCESS);
++}
++/*--------------------------------------------------------------------------*/
++
++

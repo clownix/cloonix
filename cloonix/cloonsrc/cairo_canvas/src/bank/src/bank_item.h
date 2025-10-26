@@ -31,14 +31,15 @@ void selectioned_item_delete(t_bank_item *bitem);
 /*--------------------------------------------------------------------------*/
 int add_new_cnt(char *type, char *name, char *image, int vm_id, 
                 double x, double y, int hidden_on_graph,
-                int ping_ok, int nb_tot_eth, t_eth_table *eth_tab);
+                int ping_ok, int nb_tot_nb_vwif,
+                int nb_tot_eth, t_eth_table *eth_tab);
 /*--------------------------------------------------------------------------*/
 int add_new_node(char *name, char *kernel, char *rootfs_used,
                  char *rootfs_backing,  char *install_cdrom, 
                  char *added_cdrom, char *added_disk,
                  double x, double y, int hidden_on_graph, 
                  int color_choice, int vm_id, int vm_config_flags,
-                 int nb_tot_eth, t_eth_table *eth_tab);
+                 int nb_tot_nb_vwif, int nb_tot_eth, t_eth_table *eth_tab);
 
 int add_new_eth(char *name, int num,
                  double x, double y, int hidden_on_graph);

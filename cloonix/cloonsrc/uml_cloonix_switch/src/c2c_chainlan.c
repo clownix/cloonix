@@ -106,7 +106,7 @@ static void mac_mangle(t_chainlan *cur, int ovs_llid)
     {
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1,
-    "c2c_mac_mangle %s %hhX:%hhX:%hhX:%hhX:%hhX:%hhX", cur->name,
+    "c2c_mac_mangle %s %02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX", cur->name,
                   mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
     rpct_send_sigdiag_msg(ovs_llid, type_hop_c2c, msg);
     hop_event_hook(ovs_llid, FLAG_HOP_SIGDIAG, msg);
@@ -150,7 +150,7 @@ void c2c_chainlan_resp_add_lan(int is_ko, char *name, int num,
     KERR("ERROR %s %d %s %d %s %s", locnet, is_ko, name, num, vhost, lan);
   else
     cur->must_call_snf_started = 0;
-  mactopo_add_resp(item_c2c, name, num, lan);
+  mactopo_add_resp(1, item_c2c, name, num, lan);
   c2c_chainlan_snf_started(name, num, vhost);
   cfg_hysteresis_send_topo_info();
 }

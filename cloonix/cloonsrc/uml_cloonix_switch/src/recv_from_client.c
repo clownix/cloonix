@@ -63,6 +63,7 @@
 #include "cloonix_conf_info.h"
 
 
+void vwifi_end(void);
 t_cloonix_conf_info *get_cloonix_conf_info(void);
 static void recv_promiscious(int llid, int tid, char *name, int eth, int on);
 int inside_cloonix(char **name);
@@ -467,7 +468,7 @@ static int module_access_is_ko(char *dev_file)
 {
   int result = -1;
   int fd;
-  if (access( dev_file, R_OK))
+  if (access(dev_file, R_OK))
     KERR("ERROR %s not found", dev_file);
   else if (!i_have_read_write_access(dev_file))
     KERR("ERROR %s not writable", dev_file);
@@ -719,11 +720,48 @@ static int cow_look_clone(void *data)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
+static void setup_mac_addr_table(t_topo_kvm *kvm, int vm_id)
+{
+  int i, max;
+  char mac[6];
+  memset(mac, 0, 6);
+  if (kvm->nb_tot_eth == 0)
+    max = 1;
+  else
+    max = kvm->nb_tot_eth;
+  for (i=0; i < max; i++)
+    {
+    if (!memcmp(kvm->eth_table[i].mac_addr, mac, 6))
+      {
+      if (g_inside_cloonix)
+        {
+        kvm->vm_config_flags |= VM_FLAG_IS_INSIDE_CLOON;
+        kvm->eth_table[i].mac_addr[0] = 0x72;
+        }
+      else
+        {
+        kvm->eth_table[i].mac_addr[0] = 0x2;
+        }
+      kvm->eth_table[i].mac_addr[1] = 0xFF & rand();
+      kvm->eth_table[i].mac_addr[2] = 0xFF & rand();
+      kvm->eth_table[i].mac_addr[3] = 0xFF & rand();
+      kvm->eth_table[i].mac_addr[4] = vm_id%100;
+      kvm->eth_table[i].mac_addr[5] = i;
+      kvm->eth_table[i].randmac = 1;
+      }
+    memset(kvm->eth_table[i].vhost_ifname, 0, MAX_NAME_LEN);
+    snprintf(kvm->eth_table[i].vhost_ifname, (MAX_NAME_LEN-1),
+             "%s%d_%d", OVS_BRIDGE_PORT, vm_id, i);
+    }
+}
+/*--------------------------------------------------------------------------*/
+
+
+/****************************************************************************/
 static void delayed_add_vm(t_timer_zombie *tz)
 {
-  int i, vm_id, result = -1;
+  int vm_id, result = -1;
   int nb_eth = 0;
-  char mac[6];
   char info[MAX_PATH_LEN];
   char natplug_name[2*MAX_NAME_LEN];
   char lan_natplug_name[2*MAX_NAME_LEN];
@@ -735,7 +773,6 @@ static void delayed_add_vm(t_timer_zombie *tz)
   char *npn = natplug_name;
   char *lnpn = lan_natplug_name;
   info[0] = 0;
-  memset(mac, 0, 6);
   memset(natplug_name, 0, 2*MAX_NAME_LEN);
   memset(lan_natplug_name, 0, 2*MAX_NAME_LEN);
   snprintf(natplug_name, 2*MAX_NAME_LEN-1, "nat_%s", kvm->name);
@@ -790,30 +827,7 @@ static void delayed_add_vm(t_timer_zombie *tz)
     cfg_add_newborn(kvm->name);
     vm_id = cfg_alloc_obj_id();
     event_print("%s was allocated number %d", kvm->name, vm_id);
-    for (i=0; i < kvm->nb_tot_eth; i++)
-      {
-      if (!memcmp(kvm->eth_table[i].mac_addr, mac, 6))
-        { 
-        if (g_inside_cloonix)
-          {
-          kvm->vm_config_flags |= VM_FLAG_IS_INSIDE_CLOON;
-          kvm->eth_table[i].mac_addr[0] = 0x72;
-          }
-        else
-          {
-          kvm->eth_table[i].mac_addr[0] = 0x2;
-          }
-        kvm->eth_table[i].mac_addr[1] = 0xFF & rand();
-        kvm->eth_table[i].mac_addr[2] = 0xFF & rand();
-        kvm->eth_table[i].mac_addr[3] = 0xFF & rand();
-        kvm->eth_table[i].mac_addr[4] = vm_id%100;
-        kvm->eth_table[i].mac_addr[5] = i;
-        kvm->eth_table[i].randmac = 1;
-        }
-      memset(kvm->eth_table[i].vhost_ifname, 0, MAX_NAME_LEN);
-      snprintf(kvm->eth_table[i].vhost_ifname, (MAX_NAME_LEN-1),
-               "%s%d_%d", OVS_BRIDGE_PORT, vm_id, i);
-      }
+    setup_mac_addr_table(kvm, vm_id);
     result = test_topo_kvm(kvm, vm_id, info, nb_eth);
     if (result)
       {
@@ -1252,6 +1266,7 @@ void recv_kill_uml_clownix(int llid, int tid)
 { 
   t_timer_del *td;
   del_all_start();
+  vwifi_end();
   td = (t_timer_del *) clownix_malloc(sizeof(t_timer_del), 3);
   memset(td, 0, sizeof(t_timer_del));
   td->llid = llid;
@@ -1754,7 +1769,7 @@ void recv_c2c_cnf(int llid, int tid, char *name, char *cmd)
     send_status_ko(llid, tid, cmd);
     KERR("ERROR %s %s ", name, cmd);
     }
-  else if (sscanf(cmd, "mac_mangle=%hhX:%hhX:%hhX:%hhX:%hhX:%hhX",
+  else if (sscanf(cmd, "mac_mangle=%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX",
                   &(mac[0]), &(mac[1]), &(mac[2]),
                   &(mac[3]), &(mac[4]), &(mac[5])) != 6)
     {
@@ -1973,7 +1988,7 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
 {
   char *locnet = cfg_get_cloonix_name();
   char err[MAX_PATH_LEN];
-  int i, vm_id;
+  int i, vm_id, max;
 
   event_print("Rx Req add cnt name:%s brandtype:%s is_persistent:%d "
               "is_privileged:%d image:%s startup_env:%s",
@@ -2008,7 +2023,11 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
   else
     {
     vm_id = cfg_alloc_obj_id();
-    for (i=0; i < cnt->nb_tot_eth; i++)
+    if (cnt->nb_tot_eth == 0)
+      max = 1;
+    else
+      max = cnt->nb_tot_eth;
+    for (i=0; i < max; i++)
       {
       if (cnt->eth_table[i].mac_addr[0] == 0)
         {

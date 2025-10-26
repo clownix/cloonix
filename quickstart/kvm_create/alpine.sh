@@ -3,7 +3,7 @@
 HERE=`pwd`
 DISTRO="alpine"
 STORE="/media/perrier/T7Shield2/alpine"
-NAMEROOT="alpine-minirootfs-3.21.3-x86_64"
+NAMEROOT="alpine-minirootfs-3.22.2-x86_64"
 ROOTFS="/var/lib/cloonix/bulk/${DISTRO}"
 #----------------------------------------------------------------------#
 if [ $UID != 0 ]; then

@@ -40,14 +40,6 @@ typedef struct t_flow_ctrl
 static t_transfert *g_head_transfert;
 static t_transfert *g_dido_llid[CLOWNIX_MAX_CHANNELS];
 static t_transfert *g_inside_llid[CLOWNIX_MAX_CHANNELS];
-static char g_buf[MAX_DOORWAYS_BUF_LEN];
-/*--------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-char *get_g_buf(void)
-{
-  return g_buf;
-}
 /*--------------------------------------------------------------------------*/
 
 /*****************************************************************************/
@@ -263,6 +255,7 @@ static int in_rx_spice(int inside_llid, int fd)
 {
   t_transfert *ilt;
   int len = 0;
+  char buf[MAX_A2D_LEN];
   ilt = get_inside_transfert(inside_llid);
   if (!ilt)
     {
@@ -280,7 +273,7 @@ static int in_rx_spice(int inside_llid, int fd)
       }
     else
       {
-      len = read (fd, g_buf, MAX_DOORWAYS_BUF_LEN);
+      len = read (fd, buf, MAX_A2D_LEN);
       if (len <= 0) 
         {
         free_transfert(ilt->dido_llid, ilt->inside_llid, 1, __LINE__);
@@ -291,7 +284,7 @@ static int in_rx_spice(int inside_llid, int fd)
         if (msg_exist_channel(ilt->dido_llid))
           {
           if (doorways_tx_bufraw(ilt->dido_llid, 0, doors_type_spice,
-                                 doors_val_none, len, g_buf))
+                                 doors_val_none, len, buf))
             {
             KERR(" ");
             free_transfert(ilt->dido_llid, ilt->inside_llid, 1, __LINE__);

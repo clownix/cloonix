@@ -37,9 +37,11 @@ mkdir -p ${ROOTFS}/bin/qemu
 #----------------------------------------------------------------------------#
 cp -f ${BUNDLE}/cloonix/cloonix_config ${ROOTFS}/etc/cloonix.cfg
 #----------------------------------------------------------------------------#
+cp -f  ${CLOONSRC}/erase_workdir/cloonix-suid-erase-workdir ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/vwifi/cloonix-vwifi-* ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/hide_dirs/cloonix-hide-dirs ${ROOTFS}/bin
-cp -f  ${CLOONSRC}/agent_dropbear/cloonix-dropbear-scp ${ROOTFS}/bin
-cp -f  ${CLOONSRC}/agent_dropbear/cloonix-dropbear-ssh ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/cloonix_dropbear/cloonix-dropbear-scp ${ROOTFS}/bin
+cp -f  ${CLOONSRC}/cloonix_dropbear/cloonix-dropbear-ssh ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/cairo_canvas/cloonix-gui ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/xwycli/cloonix-xwycli ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/rxvt/urxvt ${ROOTFS}/bin/cloonix-urxvt
@@ -66,7 +68,6 @@ cp -f  ${CLOONSRC}/ovs/bin/cloonix-ovsdb-tool ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/ovs/bin/cloonix-ovs-appctl ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/ovs/bin/cloonix-ovs-vsctl ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/nginx/bin/cloonix-novnc-nginx ${ROOTFS}/bin
-cp -f  ${CLOONSRC}/websockify-js/bin/cloonix-novnc-websockify-js ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/ovs_c2c/cloonix-ovs-c2c ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/ovs_a2b/cloonix-ovs-a2b ${ROOTFS}/bin
 cp -f  ${CLOONSRC}/ovs_drv/cloonix-ovs-drv ${ROOTFS}/bin

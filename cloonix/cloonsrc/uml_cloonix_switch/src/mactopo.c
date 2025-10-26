@@ -40,7 +40,6 @@ typedef struct t_item_mactopo
   char vhost[MAX_NAME_LEN];
   char mac[MAX_NAME_LEN];
   int llid_snf;
-  int resp_ok;
   struct t_item_mactopo *prev;
   struct t_item_mactopo *next;
 } t_item_mactopo;
@@ -425,9 +424,6 @@ void mactopo_del_req(int item_type, char *name, int num, char *lan)
       KERR("ERROR %s %d %s %s", name, num, lan, cur->lan);
     if (cur->item_type != item_type)
       KERR("ERROR %s %d %d %d",name, num, cur->item_type, item_type);
-    if (cur->resp_ok == 0)
-      KERR("ERROR %s %d %s", name, num, lan);
-    cur->resp_ok = 0;
     free_cur(cur);
     }
 }
@@ -531,7 +527,7 @@ int mactopo_add_req(int item_type, char *name, int num, char *lan,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void mactopo_add_resp(int item_type, char *name, int num, char *lan)
+void mactopo_add_resp(int is_ok, int item_type, char *name, int num, char *lan)
 {
   t_item_mactopo *cur = find_cur(name, num);
   char *mac;
@@ -543,13 +539,12 @@ void mactopo_add_resp(int item_type, char *name, int num, char *lan)
       KERR("ERROR %s %d %s %s", name, num, lan, cur->lan);
     if (cur->item_type != item_type)
       KERR("ERROR %s %d %d %d",name, num, cur->item_type, item_type);
-    if (cur->resp_ok != 0)
+    if (is_ok == 0)
       KERR("ERROR %s %d %s", name, num, lan);
-    cur->resp_ok = 1;
-    if ((item_type == item_tap)  ||
-        (item_type == item_c2c)  ||
-        (item_type == item_nat)  ||
-        (item_type == item_phya))
+    else if ((item_type == item_tap)  ||
+             (item_type == item_c2c)  ||
+             (item_type == item_nat)  ||
+             (item_type == item_phya))
       {
       }
     else if (item_type == item_phym)
@@ -573,7 +568,7 @@ void mactopo_add_resp(int item_type, char *name, int num, char *lan)
       macvlan_change(cur, item_type, lan);
       }
     else
-      KOUT("ERROR %d", item_type);
+      KERR("ERROR NOT POSSIBLE %d", item_type);
     }
 }
 /*---------------------------------------------------------------------------*/

@@ -15,6 +15,7 @@ CDROM="${TARGET}/cdrom"
 rm -f ${TARGET}/${ISO_NAME}
 rm -rf ${CDROM}
 
+
 mkdir -p ${CDROM}/lib
 LIB_CLOWNIX=${HERE}/../lib_io_clownix
 
@@ -63,6 +64,10 @@ make scp
 
 cp dropbear ${CDROM}/cloonix-dropbear-sshd
 cp /usr/bin/scp ${CDROM}/cloonix-scp
+cp ${HERE}/../vwifi/cloonix-vwifi-client ${CDROM}
+cp ${HERE}/../vwifi/cloonix-vwifi-ctrl ${CDROM}
+cp ${HERE}/../vwifi/cloonix-vwifi-spy ${CDROM}
+cp ${HERE}/../vwifi/cloonix-vwifi-add-interfaces ${CDROM}
 for i in "touch" \
          "xauth" ; do
   cp /usr/bin/${i} ${CDROM}
@@ -82,7 +87,13 @@ for i in "libX11.so.6" \
          "libXext.so.6" \
          "libXmuu.so.1" \
          "libxcb.so.1" \
-         "libXdmcp.so.6"; do
+         "libXdmcp.so.6" \
+         "libnl-genl-3.so.200" \
+         "libnl-3.so.200" \
+         "libstdc++.so.6" \
+         "libm.so.6" \
+         "libgcc_s.so.1" \
+         ; do
   cp /lib/x86_64-linux-gnu/${i} ${CDROM}/lib
   ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CDROM}/lib/${i} 2>/dev/null
   if [ ! -z ${LIBD} ]; then
@@ -92,7 +103,11 @@ for i in "libX11.so.6" \
   fi
 done
 
-for i in "touch" \
+for i in "cloonix-vwifi-client" \
+         "cloonix-vwifi-ctrl" \
+         "cloonix-vwifi-spy" \
+         "cloonix-vwifi-add-interfaces" \
+         "touch" \
          "xauth" \
          "cloonix-scp" ; do
   ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CDROM}/${i} 2>/dev/null

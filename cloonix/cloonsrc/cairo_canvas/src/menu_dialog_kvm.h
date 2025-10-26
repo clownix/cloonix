@@ -28,6 +28,7 @@ typedef struct t_custom_vm
   int  current_number;
   int  cpu;
   int  mem;
+  int  nb_tot_nb_vwif;
   int  nb_tot_eth;
   t_eth_table eth_tab[MAX_ETH_VM];
 } t_custom_vm;

@@ -1404,6 +1404,40 @@ void watch_tx(int llid, int len, char *str_tx)
 }
 /*---------------------------------------------------------------------------*/
 
+
+
+/*****************************************************************************/
+int watch_tx_sync(int llid, int len, char *str_tx)
+{
+  int fd, cidx, txlen, result = -1;
+  
+  if ((msg_exist_channel(llid)) && len)
+    {
+    if ((len<0) || (len > MAX_TOT_LEN_QDAT))
+      KOUT("%d", len);
+    cidx = channel_check_llid(llid, __FUNCTION__);
+    if (cidx == 0)
+      KERR("ERROR");
+    else
+      {
+      if (dchan[cidx].llid != llid)
+        KOUT(" ");
+      if (dchan[cidx].decoding_state != rx_type_watch)
+        KOUT(" ");
+      fd = get_fd_with_cidx(cidx);
+      txlen = write(fd, str_tx, len);
+      if (txlen != len)
+        KERR("ERROR %d %d %d", errno, txlen, len);
+      else
+        result = txlen;
+      }
+    }
+  else
+    KERR("ERROR %d %d %s", llid, len, str_tx);
+  return result;
+}
+/*---------------------------------------------------------------------------*/
+
 /*****************************************************************************/
 int is_nonblock(int llid)
 {

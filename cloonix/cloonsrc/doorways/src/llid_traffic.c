@@ -33,7 +33,6 @@
 #include "rpc_clownix.h"
 #include "doors_rpc.h"
 #include "util_sock.h"
-#include "sock.h"
 #include "llid_traffic.h"
 #include "llid_x11.h"
 #include "llid_backdoor.h"
@@ -68,7 +67,6 @@ typedef struct t_llid_traf
 
 static t_llid_traf *g_llid_traf[CLOWNIX_MAX_CHANNELS];
 static void traf_shutdown(int dido_llid, int line);
-static char g_buf[MAX_A2D_LEN];
 /*--------------------------------------------------------------------------*/
 
 
@@ -105,8 +103,6 @@ static void cookie_info_store(t_llid_traf *lt, char *cookie)
 }
 /*--------------------------------------------------------------------------*/
 
-
-
 /****************************************************************************/
 static void fill_200_char_resp(char *buf, char *start, 
                                char *name, int display_sock_x11) 
@@ -118,14 +114,6 @@ static void fill_200_char_resp(char *buf, char *start,
   buf[199] = 0;
   if (strlen(buf) != 199)
     KOUT("ERROR %d ", (int) strlen(buf));
-}
-/*--------------------------------------------------------------------------*/
-
-
-/****************************************************************************/
-char *get_gbuf(void)
-{
-  return g_buf;
 }
 /*--------------------------------------------------------------------------*/
 
@@ -193,6 +181,7 @@ static void differed_dido_llid_end(int dido_llid)
 /****************************************************************************/
 static void traf_shutdown(int dido_llid, int line)
 {
+  char buf[MAX_A2D_LEN];
   t_llid_traf *lt = llid_traf_get(dido_llid);
   int  headsize = sock_header_get_size();
   if (lt)
@@ -204,12 +193,11 @@ static void traf_shutdown(int dido_llid, int line)
       {
       if (lt->backdoor_llid)
         {
-        memset(g_buf, 0, MAX_A2D_LEN);
-        strcpy(g_buf+headsize, LABREAK);
+        strcpy(buf+headsize, LABREAK);
         llid_backdoor_tx(lt->name, lt->backdoor_llid, lt->dido_llid, 
                          strlen(LABREAK) + 1, header_type_ctrl_agent, 
-                         header_val_del_dido_llid, g_buf);
-        DOUT(FLAG_HOP_DOORS, "BACKDOOR_TX: %d %s", dido_llid, g_buf+headsize);
+                         header_val_del_dido_llid, buf);
+        DOUT(FLAG_HOP_DOORS, "BACKDOOR_TX: %d %s", dido_llid, buf+headsize);
         }
       llid_backdoor_del_traf(lt->name, lt->backdoor_llid, dido_llid);
       }
@@ -282,22 +270,21 @@ static void llid_traf_associate(t_llid_traf *llid_traf, char *name,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int link_associate(t_llid_traf *lt, char *cookie, 
+static void link_associate(t_llid_traf *lt, char *cookie, 
                           char *name, int llid_backdoor)
 {
-  int in_idx_x11;
   cookie_info_store(lt, cookie);
   llid_traf_associate(lt, name, llid_backdoor, lt->dido_llid);
   lt->auto_state = auto_state_wait_agent_link;
   arm_auto_timer_with_resp(lt, "KO link_associate timeout", name, 3000);
-  return in_idx_x11;
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static int start_link2agent_auto(t_llid_traf *lt, int len, char *data)
 {
-  int res, llid_backdoor, in_idx_x11, rlen, result = -1;
+  char buf[MAX_A2D_LEN];
+  int res, llid_backdoor, rlen, result = -1;
   int  headsize = sock_header_get_size();
   char *name;
   char *ptrs, *ptre, *cookie;
@@ -335,15 +322,14 @@ static int start_link2agent_auto(t_llid_traf *lt, int len, char *data)
         {
         if (llid_backdoor_ping_status_is_ok(name))
           {
-          in_idx_x11 = link_associate(lt, cookie, name, llid_backdoor);
-          memset(g_buf, 0, MAX_A2D_LEN);
-          rlen = snprintf(g_buf+headsize,MAX_A2D_LEN-1, DBSSH_SERV_DOORS_REQ, 
-                          in_idx_x11, lt->xauth_cookie_format);
+          link_associate(lt, cookie, name, llid_backdoor);
+          rlen = snprintf(buf+headsize,MAX_A2D_LEN-1, DBSSH_SERV_DOORS_REQ, 
+                          0, lt->xauth_cookie_format);
           llid_backdoor_tx(lt->name, lt->backdoor_llid, lt->dido_llid, 
                            rlen + 1, header_type_ctrl_agent, 
-                           header_val_add_dido_llid, g_buf);
+                           header_val_add_dido_llid, buf);
           DOUT(FLAG_HOP_DOORS, "BACKDOOR_TX: %d %s",  
-                                     lt->dido_llid, g_buf+headsize);
+                                     lt->dido_llid, buf+headsize);
           result = 0;
           }
         else
@@ -440,49 +426,36 @@ void llid_traf_delete(int dido_llid)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void llid_traf_rx_from_client(int dido_llid, int len, char *buf)
+void llid_traf_rx_from_client(int dido_llid, int len, char *rx)
 {
+  char buf[MAX_A2D_LEN];
   int  headsize = sock_header_get_size();
   int len_max = MAX_A2D_LEN - headsize;
-  int len_done, len_to_do, chosen_len;
   t_llid_traf *lt;
+  if (len > len_max)
+    KOUT("ERROR %d %d", len, len_max);
   lt = llid_traf_get(dido_llid);
   if (!lt)
     {
-    DOUT(FLAG_HOP_DOORS, "CLIENT_RX: %d %s", dido_llid, buf);
+    DOUT(FLAG_HOP_DOORS, "CLIENT_RX: %d %s", dido_llid, rx);
     llid_traf_alloc(dido_llid);
     lt = llid_traf_get(dido_llid);
     if (!lt)
       KOUT("ERROR  ");
     if (len > len_max)
       KOUT("ERROR %d %d", len, len_max);
-    if (start_link2agent_auto(lt, len, buf))
+    if (start_link2agent_auto(lt, len, rx))
       {
       traf_shutdown(lt->dido_llid, __LINE__);
       }
     }
   else if (lt->is_associated)
     {
-    len_to_do = len;
-    len_done = 0;
-    while (len_to_do)
-      {
-      if (len_to_do >= len_max)
-        chosen_len = len_max;
-      else
-        chosen_len = len_to_do;
-      memcpy(g_buf+headsize, buf+len_done, chosen_len);
-      if (lt->backdoor_llid)
-        {
-        llid_backdoor_tx(lt->name, lt->backdoor_llid, lt->dido_llid, 
-                         chosen_len, header_type_traffic,
-                         header_val_none, g_buf);
-        }
-      else
-        KOUT("ERROR  ");
-      len_done += chosen_len;
-      len_to_do -= chosen_len;
-      }
+    memcpy(buf+headsize, rx, len);
+    if (lt->backdoor_llid == 0)
+      KOUT("ERROR");
+    llid_backdoor_tx(lt->name, lt->backdoor_llid, lt->dido_llid, 
+                     len, header_type_traffic, header_val_none, buf);
     }
   else
     KOUT("ERROR  ");

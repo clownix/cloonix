@@ -45,8 +45,6 @@ static int pool_x11_read_idx;
 static int pool_x11_write_idx;
 
 
-char *get_g_buf(void);
-
 typedef struct t_fd_x11_ctx
 {
   int sub_dido_idx;
@@ -149,17 +147,16 @@ void x11_pool_release(int idx)
 /****************************************************************************/
 static void send_close_x11_to_doors(int sub_dido_idx)
 {
-  t_fd_x11_ctx *ctx;
+  char buf[MAX_A2D_LEN];
   int headsize = sock_header_get_size();
-  char *g_buf = get_g_buf();
-  char *buf = g_buf + headsize;
-  memset(g_buf, 0, headsize);
+  char *payload = buf + headsize;
+  t_fd_x11_ctx *ctx;
   ctx = &(g_fd_x11_ctx[sub_dido_idx]);
   if (ctx->sub_dido_idx != sub_dido_idx)
     KOUT("ERROR %d %d", ctx->sub_dido_idx, sub_dido_idx);
-  snprintf(buf, MAX_A2D_LEN-1, LAX11OPENKO, sub_dido_idx);
-  send_to_virtio(ctx->dido_llid, strlen(buf) + 1, header_type_x11_ctrl,
-                 header_val_x11_open_serv, g_buf);
+  snprintf(payload, MAX_A2D_LEN-headsize-1, LAX11OPENKO, sub_dido_idx);
+  send_to_virtio(ctx->dido_llid, 0, 0, header_type_x11_ctrl,
+                 header_val_x11_open_serv,  strlen(payload) + 1, buf);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -247,10 +244,10 @@ void x11_write(int sub_dido_idx, int len, char *buf)
 /****************************************************************************/
 static void x11_read_evt(int fd)
 {
-  t_fd_x11_ctx *ctx;
+  char buf[MAX_A2D_LEN];
   int headsize = sock_header_get_size();
-  char *g_buf = get_g_buf();
-  char *buf = g_buf + headsize;
+  char *payload = buf + headsize;
+  t_fd_x11_ctx *ctx;
   int err, val, sub_dido_idx, len = 1, first_loop = 1;
   sub_dido_idx = get_idx_with_fd(fd);
   if (!sub_dido_idx)
@@ -271,8 +268,7 @@ static void x11_read_evt(int fd)
       }
     else
       {
-      memset(g_buf, 0, headsize);
-      len = read (fd, buf, MAX_A2D_LEN-headsize);
+      len = read (fd, payload, MAX_A2D_LEN-headsize);
       if ((len == 0) && (first_loop == 1))
         {
         free_fd_ctx(sub_dido_idx);
@@ -289,7 +285,8 @@ static void x11_read_evt(int fd)
       else if (len > 0)
         {
         first_loop = 0;
-        send_to_virtio(ctx->dido_llid,len,header_type_x11,sub_dido_idx,g_buf);
+        send_to_virtio(ctx->dido_llid, 0, 0, header_type_x11,
+                       sub_dido_idx, len, buf);
         }
       }
     }
@@ -299,11 +296,10 @@ static void x11_read_evt(int fd)
 /****************************************************************************/
 void x11_event_listen(int dido_llid, int display_sock_x11, int fd_x11_listen)
 {
-  int fd, sub_dido_idx;
+  char buf[MAX_A2D_LEN];
   int headsize = sock_header_get_size();
-  char *g_buf = get_g_buf();
-  char *buf = g_buf + headsize;
-  memset(g_buf, 0, headsize);
+  char *payload = buf + headsize;
+  int fd, sub_dido_idx;
   fd = sock_fd_accept(fd_x11_listen);
   if (fd <= 0)
     KERR("ERROR %d %d %d %d", dido_llid, display_sock_x11, fd_x11_listen, errno);
@@ -317,9 +313,10 @@ void x11_event_listen(int dido_llid, int display_sock_x11, int fd_x11_listen)
       }
     else
       {
-      snprintf(buf, MAX_A2D_LEN-1, LAX11OPEN, sub_dido_idx, display_sock_x11);
-      send_to_virtio(dido_llid, strlen(buf) + 1, header_type_x11_ctrl, 
-                     header_val_x11_open_serv, g_buf);
+      snprintf(payload, MAX_A2D_LEN-headsize-1, LAX11OPEN,
+               sub_dido_idx, display_sock_x11);
+      send_to_virtio(dido_llid, 0, 0, header_type_x11_ctrl, 
+                     header_val_x11_open_serv, strlen(payload) + 1, buf);
       }
     }
 }

@@ -39,8 +39,10 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "crun.h"
-#include "crun_utils.h"
 #include "net_phy.h"
+#include "crun_utils.h"
+#include "utils.h"
+#include "vwifi.h"
 
 
 /*--------------------------------------------------------------------------*/
@@ -377,6 +379,7 @@ static void req_kill_clean_all(void)
   char *root = g_root_path;
   int pid;
   t_vmon *next, *cur = g_head_vmon;
+
   crun_kill_all();
   while(cur)
     {
@@ -512,6 +515,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ko");
     else
       {
+      vwifi_after_suidroot_init();
       rpct_send_sigdiag_msg(llid, tid, "cloonsuid_resp_suidroot_ok");
       }
     }
@@ -690,6 +694,7 @@ int main (int argc, char *argv[])
   string_server_unix(ctrl_path, connect_from_ctrl_client, "ctrl");
   daemon(0,0);
   net_phy_init();
+  vwifi_init();
   seteuid(getuid());
   cloonix_set_pid(getpid());
   clownix_timeout_add(200, timer_heartbeat, NULL, NULL, NULL);

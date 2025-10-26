@@ -1,6 +1,6 @@
-diff -Naur xserver/meson_options.txt newxserver/meson_options.txt
---- xserver/meson_options.txt	2025-06-14 21:38:40.000000000 +0200
-+++ newxserver/meson_options.txt	2025-06-29 16:48:27.969300645 +0200
+diff -Naur xserver/meson_options.txt new_xserver/meson_options.txt
+--- xserver/meson_options.txt	2025-07-21 07:07:59.000000000 +0200
++++ new_xserver/meson_options.txt	2025-07-21 07:30:06.657929128 +0200
 @@ -1,6 +1,6 @@
  option('xorg', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto',
         description: 'Enable Xorg X Server')
@@ -9,10 +9,10 @@ diff -Naur xserver/meson_options.txt newxserver/meson_options.txt
         description: 'Enable Xephyr nested X server')
  option('xwayland', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto',
         description: 'Enable Xwayland X server')
-diff -Naur xserver/xkb/ddxLoad.c newxserver/xkb/ddxLoad.c
---- xserver/xkb/ddxLoad.c	2025-06-14 21:38:40.000000000 +0200
-+++ newxserver/xkb/ddxLoad.c	2025-06-29 16:46:24.000669303 +0200
-@@ -153,16 +153,30 @@
+diff -Naur xserver/xkb/ddxLoad.c new_xserver/xkb/ddxLoad.c
+--- xserver/xkb/ddxLoad.c	2025-07-21 07:07:59.000000000 +0200
++++ new_xserver/xkb/ddxLoad.c	2025-07-21 07:30:06.657929128 +0200
+@@ -150,16 +150,30 @@
          }
      }
  

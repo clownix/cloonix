@@ -20,10 +20,10 @@ The most important external software components include **openvswitch**,
 **crun**, **qemu-kvm**, **spice**, and **wireshark**.
 
 For the transfer of the gui to a web browser, other software used are:
-**nginx**, **noVNC**, **websockify-js**, **xorg**.
+**nginx**, **noVNC**, **xorg**.
 
 For the self-extracting rootless install and run version component of
-cloonix named **frr-toy-__LAST__.sh** in the download zone,
+cloonix named **cloonix-toy-__LAST__.sh** in the download zone,
 **makeself.sh** is used for packaging.
 
 Cloonix's first goal is an easy usage of the emulated network linking virtual
@@ -136,7 +136,7 @@ Directories in which cloonix is installed for classic use
 Directory in which cloonix is installed in the self_extracting case
 ===================================================================
 
-In this case, after the call to **frr-toy-__LAST__.sh**, a new
+In this case, after the call to **cloonix-toy-__LAST__.sh**, a new
 directory is present in the current directory, called
 **dir_self_extracted**. For this installation or to run this version
 of cloonix, you do not need the root or admin privileges.
@@ -164,4 +164,4 @@ Content
      doc/items.rst
      doc/cisco.rst
      doc/ovs.rst
-     doc/frr_toy.rst
+     doc/cloonix_toy.rst

@@ -13,7 +13,7 @@ VERSION_NUM=$(cat ${CLOONIX_CFG} | grep CLOONIX_VERSION)
 VERSION_NUM=${VERSION_NUM#*=}
 VERSION_NUM=${VERSION_NUM%-*}
 #----------------------------------------------------------------------
-RESULT="${HOME}/frr-toy-${VERSION_NUM}.sh"
+RESULT="${HOME}/cloonix-toy-${VERSION_NUM}.sh"
 PATCHELF="/usr/libexec/cloonix/cloonfs/bin/cloonix-patchelf"
 CRUN="/usr/libexec/cloonix/cloonfs/bin/cloonix-crun"
 PROXY="/usr/libexec/cloonix/cloonfs/bin/cloonix-proxymous"

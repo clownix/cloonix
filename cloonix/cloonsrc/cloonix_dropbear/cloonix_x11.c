@@ -19,7 +19,6 @@
 #include "doorways_sock.h"
 #include "util_sock.h"
 #include "cloonix_x11.h"
-#include "header_sock.h"
 
 
 typedef struct t_x11_ctx

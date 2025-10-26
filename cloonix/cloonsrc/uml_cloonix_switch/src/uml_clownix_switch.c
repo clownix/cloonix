@@ -77,6 +77,7 @@
 #include "proxymous.h"
 #include "proxycrun.h"
 
+void vwifi_init(void);
 
 static t_topo_clc g_clc;
 static t_cloonix_conf_info *g_cloonix_conf_info;
@@ -417,6 +418,7 @@ static void launching(void)
   check_for_another_instance(clownlock, 1);
   init_xwy(cfg_get_cloonix_name(), get_conf_rank());
   init_novnc(cfg_get_cloonix_name(), get_conf_rank());
+  vwifi_init();
   clownix_timeout_add(100, timer_proxymous_init, NULL, NULL, NULL);
   clownix_timeout_add(10, timer_openvswitch_ok, NULL, NULL, NULL);
 }
@@ -511,22 +513,29 @@ int inside_cloonix(char **name)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void check_for_work_dir_inexistance(void)
+int check_for_work_dir_inexistance(char *net_name)
 {
+  FILE *fp;
+  char line[MAX_PATH_LEN];
+  char cmd[MAX_PATH_LEN];
   struct stat stat_path;
-  char err[2*MAX_PATH_LEN];
-  char *root_wk = cfg_get_root_work();
-  if (stat(root_wk, &stat_path) == 0)
+  int result = 0;
+
+  memset(cmd, 0, MAX_PATH_LEN);
+  snprintf(cmd, MAX_PATH_LEN-1, "%s %s", pthexec_erase_workdir(), net_name);
+  fp = popen(cmd, "r");
+  if (fp == NULL)
+    KERR("ERROR %s %d", cmd, errno);
+  else
     {
-    if (unlink_sub_dir_files(root_wk, err))
-      {
-      printf( "FATAL ERROR!!!!\nPath: \"%s\" already exists\n"
-              "please remove it and restart \n\n", root_wk);
-      KOUT("ERROR removing %s %s", root_wk, err);
-      }
-    else
-      printf( "Path: \"%s\" already exists, removing it\n\n", root_wk);
+    memset(line, 0, MAX_PATH_LEN);
+    while (fgets(line, MAX_PATH_LEN-1, fp))
+      printf("\n%s", line);
+    pclose(fp);
     }
+  if (stat(cfg_get_root_work(), &stat_path) == 0)
+    result = -1;
+  return result;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -664,7 +673,11 @@ int main (int argc, char *argv[])
     KOUT("\n\nFile: \"%s\" not found or not executable\n\n", 
          get_doorways_bin());
     }
-  check_for_work_dir_inexistance();
+  if (check_for_work_dir_inexistance(cfg_get_cloonix_name()))
+    {
+    printf("\nERROR erasing workdir %s\n\n", cfg_get_root_work());
+    KOUT("ERROR erasing workdir %s", cfg_get_root_work());
+    }
   mk_and_tst_work_path();
   pid_clone_init();
   my_mkdir(cfg_get_work(), 1);

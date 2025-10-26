@@ -39,15 +39,19 @@ for i in  "cloonix_net" \
   chmod 755 /usr/bin/${i}
 done
 #----------------------------------------------------------
-chmod u+s /usr/libexec/cloonix/cloonfs/bin/cloonix-spice-client-glib-usb-acl-helper
+chmod -R 755 /usr/libexec/cloonix/
+mkdir -p /var/lib/cloonix/bulk
+chmod -R 777 /var/lib/cloonix
 #----------------------------------------------------------
-for i in "cloonix-xwy-srv" \
-         "cloonix-ovs-drv" \
-         "cloonix-ovs-snf" \
+for i in "cloonix-spice-client-glib-usb-acl-helper" \
+         "cloonix-suid-erase-workdir" \
          "cloonix-ovs-nat-main" \
+         "cloonix-ovs-vsctl" \
+         "cloonix-ovs-snf" \
+         "cloonix-ovs-drv" \
          "cloonix-ovs-a2b" \
          "cloonix-ovs-c2c" \
-         "cloonix-ovs-vsctl" \
+         "cloonix-xwy-srv" \
          "cloonix-suid-power" ; do
   chmod u+s /usr/libexec/cloonix/cloonfs/bin/${i}
 done

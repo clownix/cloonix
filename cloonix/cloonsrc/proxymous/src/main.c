@@ -209,7 +209,6 @@ static void stub_tx(int llid, int len, char *buf)
 /****************************************************************************/
 static void err_proxy_sig_cb (int llid, int err, int from)
 { 
-  KERR("ERROR SIGCRUN TO MASTER %d %d %d", llid, err, from);
   if (msg_exist_channel(llid))
     msg_delete_channel(llid);
 } 
@@ -233,7 +232,6 @@ static void connect_from_sig_client(int llid, int llid_new)
 /****************************************************************************/
 static void err_ctrl_cb (int llid, int err, int from)
 {
-  KERR("ERROR CTRL TO MASTER %d %d %d", llid, err, from);
   if (msg_exist_channel(llid))
     msg_delete_channel(llid);
 }
@@ -366,7 +364,6 @@ int main(int argc, char **argv)
 
   if (strcmp(g_proxyshare_dir, proxyshare_in_dir))
     {
-    KERR("INFO: PROXYMOUS WITH X11");
     X_init(g_proxyshare_dir);  
     }
 

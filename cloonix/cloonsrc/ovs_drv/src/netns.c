@@ -88,10 +88,6 @@ static void process_msg_from_parent(char *line, char *respb)
     action_req_ovs_switch(bin, db, g_net_name, respb);
 
   else if (sscanf(line,
-"ovs_system_promisc vhost=%s", vhost) == 1)
-    action_system_promisc(bin, db, respb, vhost);
-
-  else if (sscanf(line,
 
 "ovs_vhost_up name=%s num=%d vhost=%s", name, &num, vhost) == 3)
     action_vhost_up(bin, db, respb, name, num, vhost);

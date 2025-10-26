@@ -18,6 +18,7 @@
 typedef struct t_custom_cnt
 {
   char name[MAX_NAME_LEN];
+  int  nb_tot_nb_vwif;
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
   char startup_env[MAX_PATH_LEN];

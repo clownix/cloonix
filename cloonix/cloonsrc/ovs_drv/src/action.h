@@ -25,8 +25,6 @@ void action_add_lan_endp(char *bin, char *db, char *respb,
 void action_del_lan_endp(char *bin, char *db, char *respb,
                          char *lan, char *name, int num, char *vhost);
 
-void action_system_promisc(char *bin, char *db, char *respb,  char *vhost);
-
 void action_vhost_up(char *bin, char *db, char *respb,
                      char *name, int num, char *vhost);
 

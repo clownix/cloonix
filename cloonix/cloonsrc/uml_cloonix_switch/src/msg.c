@@ -193,21 +193,6 @@ int msg_send_del_lan_endp(int ovsreq_tag, char *name, int num,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-int msg_send_system_promisc(void)
-{ 
-  int result = -1, tid = utils_get_next_tid();
-  if (fmt_tx_system_promisc(tid))
-    KERR("ERROR");
-  else  
-    {
-    ovsreq_alloc(tid, ovsreq_system_promisc, "system", 0, "system", NULL);
-    result = 0;
-    }
-  return result;
-}
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 int msg_send_vhost_up(char *name, int num, char *vhost)
 { 
   int result = -1, tid = utils_get_next_tid();
@@ -391,19 +376,6 @@ static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void msg_ack_system_promisc(int tid, int is_ko, char *vhost)
-{
-  t_ovsreq *cur = ovsreq_find(tid);
-  if (cur)
-    {
-    if (is_ko)
-      KERR("ERROR system_promisc %s", vhost);
-    ovsreq_free(cur);
-    }
-} 
-/*--------------------------------------------------------------------------*/
-
-/****************************************************************************/
 void msg_ack_lan_endp(int tid, int is_ko, int is_add, char *name, int num,
                       char *vhost, char *lan)
 {
@@ -571,11 +543,6 @@ static void timer_msg_beat(void *data)
                                             cur->name, cur->num);
           cnt_resp_del_lan(1, cur->name, cur->num,
                            cur->vhost, cur->lan);
-          ovsreq_free(cur);
-        break;
-
-       case ovsreq_system_promisc:
-          KERR("ERROR TIMEOUT %d", cur->tid);
           ovsreq_free(cur);
         break;
 

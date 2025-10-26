@@ -40,7 +40,6 @@
 #include "doorways_mngt.h"
 #include "qmp.h"
 #include "hop_event.h"
-#include "header_sock.h"
 #include "stats_counters.h"
 #include "stats_counters_sysinfo.h"
 #include "xwy.h"

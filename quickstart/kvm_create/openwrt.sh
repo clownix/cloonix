@@ -2,11 +2,11 @@
 #-----------------------------------------------------------------------#
 HERE=`pwd`
 DISTRO="openwrt"
-OPENWRT="https://downloads.openwrt.org/releases/24.10.0/targets/x86/64"
+OPENWRT="https://downloads.openwrt.org/releases/24.10.4/targets/x86/64"
 ROOTFS=/root/${DISTRO}
 OFFSET=17301504
 OFFSET_BOOT=262144
-OPENWRT_IMG="openwrt-24.10.0-x86-64-generic-ext4-combined.img"
+OPENWRT_IMG="openwrt-24.10.4-x86-64-generic-ext4-combined.img"
 
 for i in qemu-img gunzip wget; do
   path_bin=$(which $i)

@@ -20,7 +20,6 @@
 #include "queue.h"
 #include "buffer.h"
 #include "epoll_hooks.h"
-#include "header_sock.h"
 
 #include "includes.h"
 #include "session.h"

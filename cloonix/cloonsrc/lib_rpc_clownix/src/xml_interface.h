@@ -257,6 +257,7 @@
                          "  <vm_config_param> %d </vm_config_param>\n"\
                          "  <mem> %d </mem>\n"\
                          "  <cpu> %d </cpu>\n"\
+                         "  <nb_tot_nb_vwif> %d </nb_tot_nb_vwif>\n"\
                          "  <nb_tot_eth> %d </nb_tot_eth>"
 
 #define VM_ETH_TABLE     "<eth_table>\n"\
@@ -282,6 +283,7 @@
                          "  <vm_id> %d </vm_id>\n"\
                          "  <color> %d </color>\n"\
                          "  <ping_ok> %d </ping_ok>\n"\
+                         "  <nb_tot_nb_vwif> %d </nb_tot_nb_vwif>\n"\
                          "  <nb_tot_eth> %d </nb_tot_eth>"
 
 #define ADD_CNT_C        "<startup_env_keyid>%s</startup_env_keyid>\n"\
@@ -452,7 +454,7 @@
                               "  rootfs_used: %s \n"\
                               "  rootfs_backing: %s \n"\
                               "  vm_config_flags: %d vm_config_param: %d \n"\
-                              "  mem: %d cpu: %d nb_tot_eth: %d "
+                              "  mem: %d cpu: %d nb_tot_nb_vwif: %d nb_tot_eth: %d "
 
 #define EVENT_TOPO_KVM_C      "</kvm>\n"
 
@@ -466,7 +468,7 @@
                               "  color: %d \n"\
                               "  image: %s \n"\
                               "  ping_ok: %d \n"\
-                              "  nb_tot_eth: %d "
+                              "  nb_tot_nb_vwif: %d nb_tot_eth: %d "
 
 #define EVENT_TOPO_CNT_C      "<startup_env_keyid>%s</startup_env_keyid>\n"\
                               "<vmount_keyid>%s</vmount_keyid>\n"\

@@ -15,20 +15,12 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#include "header_sock.h"
+#include "glob_common.h"
 
 int  sock_open_virtio_port(char *path);
 int  sock_client_unix(char *pname);
 int sock_fd_accept(int fd_listen);
 int util_socket_listen_unix(char *pname);
 
-
-int  sock_header_get_size(void);
-void sock_header_set_info(char *tx,
-                          int dido_llid, int len, int type, int val,
-                          char **ntx);
-int sock_header_get_info(char *rx,
-                          int *dido_llid, int *len, int *type, int *val,
-                          char **nrx);
 /*---------------------------------------------------------------------------*/
 

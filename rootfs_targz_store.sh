@@ -45,11 +45,12 @@ LIST+="x11-xkb-utils,xorriso,procps,x11vnc,fuse-zip,"
 LIST+="x11-xserver-utils,libcap2-bin,net-tools,strace,"
 LIST+="iproute2,x11-apps,unzip,acl,less,lsof,iputils-ping,"
 LIST+="iputils-tracepath,libglib-perl,xkb-data,iso-codes,"
-LIST+="nodejs,node-optimist,node-ws,node-mime-types,node-mime,"
 LIST+="libqt6gui6,libgtk-3-common,libgtk-3-0t64,"
 LIST+="shared-mime-info,gcc,libc6-dev,libgstreamer1.0-0,"
 LIST+="libpipewire-0.3-modules,gstreamer1.0-plugins-base,"
-LIST+="gstreamer1.0-plugins-good"
+LIST+="gstreamer1.0-plugins-good,kmod,"
+LIST+="hostapd,wpasupplicant,iw,tcpdump,"
+LIST+="python3,python3-websockify"
 
 unshare --map-root-user --user --map-auto --mount -- /bin/bash -c \
         "mount --rbind /proc proc ; \
@@ -119,16 +120,20 @@ for i in "locale-gen" "sysctl" "rtacct" "capsh" "nologin" "usermod" \
          "start-stop-daemon" "groupadd" "agetty" "update-passwd" "mkfs"\
          "service" "useradd" "setcap" "rsyslogd" "userdel" "groupdel" \
          "chroot" "groupmod" "getcap" "losetup" "deluser" "adduser" \
-         "mount.fuse3" "ip" "ifconfig" "arp" "route" "ipmaddr" \
-         "iptunnel" ; do
+         "mount.fuse3" "ip" "ifconfig" "arp" "route" "ipmaddr" "iptunnel" \
+         "lsmod" "modprobe" "insmod" "rmmod" "modinfo" "depmod" "hostapd" \
+         "hostapd_cli" "wpa_action" "wpa_cli" "wpa_supplicant" \
+         "iw" ; do
   cp ${DIR_SRC}/${i} ${DIR_DST}
 done
+
 #----------------------------------------------------------------------
 DIR_SRC="${SRC_ROOTFS}/usr/bin"
 DIR_DST="${DST_ROOTFS}/bin"
 mkdir -p ${DIR_DST}
 cp -f 'trixie_base_rootfs/usr/bin/[' ${DIR_DST}
 cp -f ${DIR_SRC}/which.debianutils  ${DIR_DST}/which
+cp -f ${DIR_SRC}/websockify ${DIR_DST}/cloonix-novnc-websockify
 cp -f ${DIR_SRC}/fuse-zip ${DIR_DST}/cloonix-fuse-zip
 cp -f ${DIR_SRC}/x11vnc ${DIR_DST}/cloonix-novnc-x11vnc
 cp -f ${DIR_SRC}/xsetroot ${DIR_DST}/cloonix-novnc-xsetroot
@@ -153,7 +158,7 @@ for i in "mawk" "bash" "cat" "chmod" "chown" "clear" "cmp" "cp" \
          "wc" "whatis" "whereis" "who" "whoami" "vim.basic" \
          "xargs" "xauth" "xcalc" "xclock" "xeyes" "xhost" \
          "xorriso" "xset" "yes" "zcat" "ping" "xkbcomp" "perl" \
-         "tracepath" ; do
+         "tracepath" "tcpdump" "websockify"; do
   cp ${DIR_SRC}/${i} ${DIR_DST}
 done
 #----------------------------------------------------------------------
@@ -366,9 +371,6 @@ cat > ${DIR_DST}/fonts.conf << EOF
 </fontconfig>
 EOF
 #----------------------------------------------------------------------
-DIR_DST="${DST_ROOTFS}/etc"
-touch ${DIR_DST}/adduser.conf
-#----------------------------------------------------------------------
 DIR_DST="${DST_ROOTFS}/share/vim/vim91"
 touch ${DIR_DST}/defaults.vim
 #----------------------------------------------------------------------
@@ -389,10 +391,8 @@ cp -Lrf ${DIR_SRC}/share/X11/locale/locale.dir ${DIR_DST}/share/X11/locale
 cp -Lrf ${DIR_SRC}/share/X11/xkb ${DIR_DST}/share/X11
 cp  -f  ${DIR_SRC}/share/X11/rgb.txt ${DIR_DST}/share/X11
 #----------------------------------------------------------------------
-cp  -f  ${DIR_SRC}/bin/node ${DIR_DST}/bin
-cp -Lrf ${DIR_SRC}/lib/x86_64-linux-gnu/nodejs ${DIR_DST}/lib/x86_64-linux-gnu
-cp -Lrf ${DIR_SRC}/share/nodejs ${DIR_DST}/share
-cp -Lrf ${DIR_SRC}/share/node_modules ${DIR_DST}/share
+cp -Lrf ${DIR_SRC}/bin/python3* ${DIR_DST}/bin
+cp -Lrf ${DIR_SRC}/lib/python3* ${DIR_DST}/lib
 #----------------------------------------------------------------------
 cp -f   ${DIR_SRC}/lib/x86_64-linux-gnu/qt6/plugins/platforms/libqxcb.so ${DIR_DST}/lib/x86_64-linux-gnu/qt6/plugins/platforms
 cp -Lrf ${DIR_SRC}/lib/x86_64-linux-gnu/gtk-3.0 ${DIR_DST}/lib/x86_64-linux-gnu

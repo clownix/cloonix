@@ -15,7 +15,11 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+char *pthexec_erase_workdir(void);
 char *pthexec_agent_iso_amd64(void);
+char *pthexec_lsmod_bin(void);
+char *pthexec_modprobe_bin(void);
+char *pthexec_iw_bin(void);
 char *pthexec_xephyr_bin(void);
 char *pthexec_xwycli_bin(void);
 char *pthexec_urxvt_bin(void);
@@ -49,6 +53,7 @@ char *pthexec_bin_x11vnc(void);
 char *pthexec_bin_nginx(void);
 char *pthexec_bin_websockify(void);
 char *pthexec_web(void);
+char *pthexec_cert(void);
 char *pthexec_dropbear_ssh(void);
 char *pthexec_dropbear_scp(void);
 char *pthexec_qt6_plugins(void);
@@ -75,6 +80,7 @@ char *pthexec_cloonfs_ovs_ovsbd(void);
 char *pthexec_cloonfs_qemu_img(void);
 char *pthexec_cloonfs_suid_power(void);
 char *pthexec_cloonfs_doorways(void);
+char *pthexec_cloonfs_vwifi_server(void);
 
 int pthexec_running_in_crun(char *name);
 

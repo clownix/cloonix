@@ -27,6 +27,7 @@ typedef struct t_pbi_node
   char added_cdrom[MAX_PATH_LEN];
   char added_disk[MAX_PATH_LEN];
   int  node_vm_id;
+  int  nb_tot_nb_vwif;
   int  nb_tot_eth;
   t_eth_table eth_tab[MAX_ETH_VM];
   int  node_vm_config_flags;
@@ -43,6 +44,7 @@ typedef struct t_pbi_cnt
   char brandtype[MAX_NAME_LEN];
   char image[MAX_PATH_LEN];
   int  cnt_vm_id;
+  int  nb_tot_nb_vwif;
   int  nb_tot_eth;
   t_eth_table eth_tab[MAX_ETH_VM];
 } t_pbi_cnt;
@@ -184,13 +186,14 @@ t_bank_item *look_for_sat_with_id(char *name);
 t_bank_item *look_for_eth_with_id(char *name, int num);
 /*--------------------------------------------------------------------------*/
 void bank_cnt_create(char *type, char *name, char *image, int vm_id,
-                     int ping_ok, int nb_tot_eth, t_eth_table *eth_tab,
+                     int ping_ok, int nb_tot_nb_vwif, int nb_tot_eth,
+                     t_eth_table *eth_tab,
                      double x, double y, int hidden_on_graph,
                      double *tx, double *ty, int32_t *thidden);
 /*--------------------------------------------------------------------------*/
 void bank_node_create(char *name, char *kernel, char *rootfs_used,
                       char *rootfs_backing, char *install_cdrom,
-                      char *added_cdrom, char *added_disk,
+                      char *added_cdrom, char *added_disk, int nb_tot_nb_vwif,
                       int nb_tot_eth, t_eth_table *eth_table, 
                       int color_choice, int vm_id, int vm_config_flags,
                       double x, double y, int hidden_on_graph,

@@ -5,18 +5,20 @@ OBJ_DIR=obj/
 EXE = cloonix-suid-power
 
 SRC = suid_power.c stub.c crun.c \
-      crun_utils.c tar_img.c net_phy.c
+      crun_utils.c tar_img.c net_phy.c \
+      vwifi.c utils.c nl_hwsim.c
 
 VPATH=./src
 
 WARNINGS=-Wall -Wstrict-prototypes -Wdeclaration-after-statement
 
 INCLUDES= -I./src \
+          -I/usr/include/libnl3 \
           -I$(GLOB_INCLUDE) \
           -I${IO_CLOWNIX}/include \
           -I${RPC_CLOWNIX}/include
 
-LIBS = -L${IO_CLOWNIX} -lio_clownix \
+LIBS = -L${IO_CLOWNIX} -lio_clownix -lnl-3 -lnl-genl-3 \
        -lcrypto
 
 CFLAGS+=-mtune=generic -fno-stack-protector -Wno-format-truncation

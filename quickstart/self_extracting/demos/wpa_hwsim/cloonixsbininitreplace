@@ -1,0 +1,60 @@
+#!/bin/bash
+
+#----------------------------------------------------------------------------
+LOGFILE="/tmp/cloonix_sbin_init_replace.log"
+exec &> ${LOGFILE}
+echo "START cloonixsbininitreplace"
+#----------------------------------------------------------------------------
+case ${NODE_ID} in
+#----------------------------------------------------------------------
+  "cnt1")
+    cat > /etc/hostapd.conf << EOF
+interface=wlan0
+driver=nl80211
+hw_mode=g
+channel=1
+ssid=mac80211_wpa
+wpa=2
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=CCMP
+wpa_passphrase=12345678
+EOF
+    hostapd -B /etc/hostapd.conf
+  ;;
+#----------------------------------------------------------------------
+  "cnt2" | "cnt3" )
+    mkdir -p /var/run/wpa_supplicant
+    cat > /etc/wpa_supplicant.conf << EOF
+ctrl_interface=/var/run/wpa_supplicant
+network={
+  ssid="mac80211_wpa"
+  psk="12345678"
+  key_mgmt=WPA-PSK
+  proto=WPA2
+  pairwise=CCMP
+  group=CCMP
+}
+EOF
+    wpa_supplicant -B -Dnl80211 -iwlan0 -c /etc/wpa_supplicant.conf
+  ;;
+esac
+#----------------------------------------------------------------------
+echo "${NODE_ID}"
+echo "Launching rsyslogd"
+rsyslogd
+#----------------------------------------------------------------------
+case ${NODE_ID} in
+  "cnt1")
+    ip addr add 10.0.0.1/8 dev wlan0
+  ;;
+  "cnt2")
+    ip addr add 10.0.0.2/8 dev wlan0
+    ping 10.0.0.3
+  ;;
+  "cnt3")
+    ip addr add 10.0.0.3/8 dev wlan0
+  ;;
+esac
+##############################################################################
+
+

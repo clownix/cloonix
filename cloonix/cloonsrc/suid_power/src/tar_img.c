@@ -32,7 +32,9 @@
 #include "io_clownix.h"
 #include "config_json.h"
 #include "crun.h"
+#include "net_phy.h"
 #include "crun_utils.h"
+#include "utils.h"
 
 
 struct t_elem;

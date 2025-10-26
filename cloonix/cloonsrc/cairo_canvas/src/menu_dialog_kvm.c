@@ -197,7 +197,8 @@ static void is_persistent_toggle (GtkToggleButton *togglebutton,
 
 /****************************************************************************/
 static void update_cust(t_custom_vm *cust, GtkWidget *entry_name, 
-                        GtkWidget *entry_cpu, GtkWidget *entry_ram)
+                        GtkWidget *entry_cpu, GtkWidget *entry_ram,
+                        GtkWidget *entry_wif)
 {
   char *tmp;
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_name));
@@ -207,6 +208,7 @@ static void update_cust(t_custom_vm *cust, GtkWidget *entry_name,
   strncpy(cust->name, tmp, MAX_NAME_LEN-1);
   cust->cpu = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_cpu));
   cust->mem = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_ram));
+  cust->nb_tot_nb_vwif = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_wif));
 }
 /*--------------------------------------------------------------------------*/
 
@@ -226,7 +228,7 @@ static void custom_vm_dialog_create(void)
 {
   int i, j, k, response, line_nb = 0;
   GSList *group = NULL;
-  GtkWidget *entry_name, *entry_ram, *entry_cpu=NULL; 
+  GtkWidget *entry_name, *entry_ram, *entry_cpu, *entry_wif;
   GtkWidget *grid, *parent, *is_persistent;
   GtkWidget *has_no_qemu_ga, *has_natplug;
   GtkWidget *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
@@ -281,6 +283,7 @@ static void custom_vm_dialog_create(void)
   append_grid(grid, has_natplug, "Nat on eth0:", line_nb++);
 
   append_grid(grid, is_persistent, "remanence:", line_nb++);
+
   entry_cpu = gtk_spin_button_new_with_range(1, 32, 1);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_cpu), g_custom_vm.cpu);
   append_grid(grid, entry_cpu, "Cpu:", line_nb++);
@@ -289,6 +292,9 @@ static void custom_vm_dialog_create(void)
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_ram), g_custom_vm.mem);
   append_grid(grid, entry_ram, "Ram:", line_nb++);
 
+  entry_wif = gtk_spin_button_new_with_range(0, 3, 1);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_wif), g_custom_vm.nb_tot_nb_vwif);
+  append_grid(grid, entry_wif, "Wifi:", line_nb++);
 
   for (i=0; i<ETH_LINE_MAX; i++)
     {
@@ -327,7 +333,7 @@ static void custom_vm_dialog_create(void)
     }
   else
     {
-    update_cust(&g_custom_vm, entry_name, entry_cpu, entry_ram);
+    update_cust(&g_custom_vm, entry_name, entry_cpu, entry_ram, entry_wif);
     gtk_widget_destroy(g_custom_dialog);
     g_custom_dialog = NULL;
     }
@@ -403,6 +409,7 @@ void menu_dialog_kvm_init(void)
   g_custom_vm.natplug = 0;
   g_custom_vm.cpu = 4;
   g_custom_vm.mem = 4000;
+  g_custom_vm.nb_tot_nb_vwif = 0;
   g_custom_vm.nb_tot_eth = 3;
   for (i=0; i<g_custom_vm.nb_tot_eth; i++)
     g_custom_vm.eth_tab[i].endp_type = endp_type_eths;

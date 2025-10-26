@@ -27,7 +27,6 @@
 #include "rpc_clownix.h"
 #include "doors_rpc.h"
 #include "util_sock.h"
-#include "sock.h"
 #include "llid_traffic.h"
 #include "llid_x11.h"
 #include "llid_backdoor.h"
@@ -156,8 +155,8 @@ static void x11_tx_to_agent(t_x11_ctx *ctx, int len, char  *buf)
     KOUT("ERROR %d", len);
   if (sock_header_get_size() > doorways_header_size())
     KOUT("ERROR %d %d", sock_header_get_size(), doorways_header_size());
-  sock_header_set_info(start_header, ctx->dido_llid, len, header_type_x11, 
-                       ctx->sub_dido_idx, &payload);
+  sock_header_set_info(start_header, ctx->dido_llid, 0, 0,
+                       header_type_x11, ctx->sub_dido_idx, len, &payload);
   if (payload != buf)
     KOUT("ERROR %p %p", payload, buf);
   if (!msg_exist_channel(ctx->backdoor_llid))

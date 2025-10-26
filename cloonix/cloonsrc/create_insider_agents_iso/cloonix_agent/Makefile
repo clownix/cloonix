@@ -6,9 +6,11 @@ SRC = action.c  \
       cloonix_agent.c \
       sock.c \
       x11_channels.c \
-      nonblock.c
+      nonblock.c \
+      vwifi.c \
+      pthexec.c
 
-VPATH=src
+VPATH=src:../../glob_include
 INCLUDES= -I./src -I../../glob_include
 LIBS = 
 CFLAGS+= -g $(WARNINGS) $(INCLUDES)

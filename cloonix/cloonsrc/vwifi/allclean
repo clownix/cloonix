@@ -1,0 +1,13 @@
+#!/bin/bash
+HERE=`pwd`
+
+rm -rf ${HERE}/vwifi_tainted
+rm -rf ${HERE}/vwifi
+rm -f ${HERE}/cloonix-vwifi-*
+rm -f ${HERE}/utils/modeview
+cd ${HERE}/utils
+make clean
+rm -f ${HERE}/utils/nl80211_info
+
+
+

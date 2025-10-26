@@ -42,35 +42,6 @@
 
 
 /*****************************************************************************/
-int ovs_cmd_system_promisc(char *ovs_bin, char *ovs_dir, char *vhost)
-{
-  int result = -1;
-  char bvhost[MAX_NAME_LEN];
-  char cmd[MAX_ARG_LEN];
-  memset(bvhost, 0, MAX_NAME_LEN);
-  memset(cmd, 0, MAX_ARG_LEN);
-  snprintf(bvhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, vhost);
-  snprintf(cmd, MAX_ARG_LEN-1, "-- add-br %s", bvhost);
-  if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
-    KERR("ERROR OVSCMD SYSTEM PROMISC ADD LAN %s", bvhost);
-  else if (ifdev_set_intf_flags_iff_up_promisc(vhost))
-    KERR("ERROR OVSCMD SYSTEM PROMISC SET PROMISC UP %s", vhost);
-  else if (ifdev_set_intf_flags_iff_up_promisc(bvhost))
-    KERR("ERROR OVSCMD SYSTEM PROMISC SET PROMISC UP %s", bvhost);
-  else
-    {
-    memset(cmd, 0, MAX_ARG_LEN);
-    snprintf(cmd, MAX_ARG_LEN-1, "-- add-port %s %s", bvhost, vhost);
-    if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
-      KERR("ERROR OVSCMD SYSTEM PROMISC ADD PORT %s %s", bvhost, vhost);
-    else
-    result = 0;
-    }
-  return result;
-}
-/*---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
 int ovs_cmd_vhost_up(char *ovs_bin, char *ovs_dir,
                      char *name, int num, char *vhost)
 {

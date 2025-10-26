@@ -38,25 +38,14 @@
 #include "sock.h"
 #include "x11_channels.h"
 #include "nonblock.h"
+#include "vwifi.h"
 
 
 #define MAX_FD_NUM 150
 #define CLOWNIX_MAX_CHANNELS 10000
 #define MAX_SSH_NUM 30
 
-
-char *get_g_buf(void);
-
-typedef struct t_dropbear_ctx
-{
-  int dido_llid;
-  int fd;
-  int is_allocated_x11_display_idx;
-  int display_sock_x11;
-  int fd_listen_x11;
-  struct t_dropbear_ctx *prev;
-  struct t_dropbear_ctx *next;
-} t_dropbear_ctx;
+void vwifi_start_ok(void);
 
 static t_dropbear_ctx *g_ctx[CLOWNIX_MAX_CHANNELS];
 static t_dropbear_ctx *g_fd_to_ctx[MAX_FD_NUM];
@@ -78,7 +67,7 @@ static int receive_from_dropbear(int fd, char **msgrx)
 {
   static char rx[MAX_A2D_LEN];
   int  headsize = sock_header_get_size();
-  int nb_repeat, len, count = MAX_A2D_LEN - headsize - 1;
+  int nb_repeat, len, count = MAX_A2D_LEN - headsize;
   *msgrx = rx;
   nb_repeat = 0;
   len = read(fd, rx, count);
@@ -185,16 +174,16 @@ static t_dropbear_ctx *get_ctx(int dido_llid)
 /****************************************************************************/
 static void free_ctx(int dido_llid)
 {
-  t_dropbear_ctx *dctx = get_ctx(dido_llid);
+  char buf[MAX_A2D_LEN];
   int headsize = sock_header_get_size();
-  char *g_buf = get_g_buf();
-  char *buf = g_buf + headsize;
-  memset(g_buf, 0, headsize);
+  char *payload = buf + headsize;
+  t_dropbear_ctx *dctx = get_ctx(dido_llid);
   if (dctx)
     {
-    memcpy(buf, LABREAK, strlen(LABREAK) + 1);
-    send_to_virtio(dido_llid, strlen(LABREAK) + 1, header_type_ctrl_agent,
-                   header_val_del_dido_llid, g_buf);
+    memcpy(payload, LABREAK, strlen(LABREAK) + 1);
+    send_to_virtio(dido_llid, 0, 0,
+                   header_type_ctrl_agent, header_val_del_dido_llid,
+                   strlen(LABREAK) + 1, buf);
     nonblock_del_fd(dctx->fd);
     close(dctx->fd);
     if (!g_fd_to_ctx[dctx->fd])
@@ -221,13 +210,12 @@ static void free_ctx(int dido_llid)
 /****************************************************************************/
 static void action_rx_dropbear(t_dropbear_ctx *dctx, int len, char *rx)
 {
+  char buf[MAX_A2D_LEN];
   int headsize = sock_header_get_size();
-  char *g_buf = get_g_buf();
-  char *buf = g_buf + headsize;
-  memset(g_buf, 0, headsize);
-  memcpy(buf, rx, len);
-  send_to_virtio(dctx->dido_llid, len, 
-                 header_type_traffic, header_val_none, g_buf);
+  char *payload = buf + headsize;
+  memcpy(payload, rx, len);
+  send_to_virtio(dctx->dido_llid, 0, 0, header_type_traffic,
+                 header_val_none, len, buf);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -358,16 +346,15 @@ static void create_msg_df(char *msg, int max)
 /****************************************************************************/
 static void send_back_sysinfo_df(char *rx)
 {
+  char buf[MAX_A2D_LEN];
   int headsize = sock_header_get_size();
-  char *g_buf = get_g_buf();
-  char *buf = g_buf + headsize;
-  memset(g_buf, 0, headsize);
+  char *payload = buf + headsize;
   if (!strcmp(rx, LASTATSDF))
     {
-    buf[MAX_RPC_MSG_LEN-1] = 0;
-    create_msg_df(buf, MAX_RPC_MSG_LEN);
-    send_to_virtio(0, strlen(buf) + 1, header_type_stats,
-                     header_val_sysinfo_df, g_buf);
+    payload[MAX_RPC_MSG_LEN-1] = 0;
+    create_msg_df(payload, MAX_RPC_MSG_LEN);
+    send_to_virtio(0, 0, 0, header_type_stats, header_val_sysinfo_df,
+                   strlen(payload) + 1, buf);
     }
   else
     KERR("ERROR");
@@ -377,13 +364,12 @@ static void send_back_sysinfo_df(char *rx)
 /****************************************************************************/
 static void send_back_sysinfo(char *rx)
 {
+  char buf[MAX_A2D_LEN];
+  int headsize = sock_header_get_size();
+  char *payload = buf + headsize;
   struct sysinfo sys;
   unsigned long long llcached_ram;
   unsigned long cached_ram;
-  int headsize = sock_header_get_size();
-  char *g_buf = get_g_buf();
-  char *buf = g_buf + headsize;
-  memset(g_buf, 0, headsize);
   
   if (!strcmp(rx, LASTATS))
     {
@@ -391,18 +377,17 @@ static void send_back_sysinfo(char *rx)
       KERR("ERROR SYSINFO %d", errno);
     else
       { 
-      buf[1023] = 0;
       llcached_ram = get_cached_ram();
       llcached_ram /= sys.mem_unit;
       cached_ram = (unsigned long) llcached_ram;
-      snprintf(buf, 1023, SYSINFOFORMAT,
+      snprintf(payload, MAX_A2D_LEN-headsize-1, SYSINFOFORMAT,
                (unsigned long) sys.uptime, sys.loads[0], sys.loads[1], 
                sys.loads[2], sys.totalram, sys.freeram, cached_ram,
                sys.sharedram, sys.bufferram, sys.totalswap, sys.freeswap,
                (unsigned long) sys.procs, sys.totalhigh, sys.freehigh,
                (unsigned long) sys.mem_unit);
-      send_to_virtio(0, strlen(buf) + 1, header_type_stats,
-                     header_val_sysinfo, g_buf);
+      send_to_virtio(0, 0, 0, header_type_stats, header_val_sysinfo,
+                     strlen(payload) + 1, buf);
       }
     }
   else
@@ -411,15 +396,60 @@ static void send_back_sysinfo(char *rx)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void helper_rx_virtio_nodido_llid(int type, int val, char *rx)
+static void helper_rx_virtio_vwifi(int type, int val,
+                                   int vwifi_base, int vwifi_cid,
+                                   int len, char *rx)
 {
+  if (type == header_type_vwifi_cli)
+    {
+    if (val == header_val_vwifi_trf_ok)
+      vwifi_virtio_traf_cli(vwifi_cid, rx, len);
+    else if (val == header_val_vwifi_syn_ok)
+      {
+      vwifi_virtio_syn_ok_cli(vwifi_cid);
+      }
+    else if (val == header_val_vwifi_syn_ko)
+      {
+      vwifi_virtio_syn_ko_cli(vwifi_cid);
+      }
+    else
+      KERR("ERROR %d", val);
+    }
+  else if (type == header_type_vwifi_spy)
+    {
+    if (val == header_val_vwifi_trf_ok)
+      vwifi_virtio_traf_spy(vwifi_cid, rx, len);
+    else if (val == header_val_vwifi_syn_ok)
+      vwifi_virtio_syn_ok_spy(vwifi_cid);
+    else if (val == header_val_vwifi_syn_ko)
+      vwifi_virtio_syn_ko_spy(vwifi_cid);
+    else
+      KERR("ERROR %d", val);
+    }
+  else if (type == header_type_vwifi_ctr)
+    {
+    if (val == header_val_vwifi_trf_ok)
+      vwifi_virtio_traf_ctr(vwifi_cid, rx, len);
+    else if (val == header_val_vwifi_syn_ok)
+      vwifi_virtio_syn_ok_ctr(vwifi_cid);
+    else if (val == header_val_vwifi_syn_ko)
+      vwifi_virtio_syn_ko_ctr(vwifi_cid);
+    else
+      KERR("ERROR %d", val);
+    }
+  else
+    KERR("ERROR %d %d", type, val);
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+static void helper_rx_virtio_nodido_llid(int type, int val, int len, char *rx)
+{
+  char buf[MAX_A2D_LEN];
+  int headsize = sock_header_get_size();
+  char *payload = buf + headsize;
   int val_id;
-  int len, headsize = sock_header_get_size();
-  char *g_buf = get_g_buf();
-  char *buf = g_buf + headsize;
-  memset(g_buf, 0, headsize);
-  len = strlen(rx) + 1;
-  memcpy(buf, rx, len);
+  memcpy(payload, rx, len);
   if (type == header_type_ctrl)
     {
     switch (val)
@@ -427,7 +457,9 @@ static void helper_rx_virtio_nodido_llid(int type, int val, char *rx)
       case header_val_ping:
         if (sscanf(rx, LAPING, &val_id) == 1)
           {
-          send_to_virtio(0, len, header_type_ctrl, header_val_ping, g_buf);
+          send_to_virtio(0, 0, 0, header_type_ctrl,
+                         header_val_ping, len, buf);
+          vwifi_start_ok();
           }
         else
           KERR("ERROR %s", rx);
@@ -470,7 +502,7 @@ static void helper_rx_virtio_nodido_llid(int type, int val, char *rx)
       }
     }
   else
-    KERR("ERROR");
+    KERR("ERROR %d %d", type, val);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -489,13 +521,13 @@ static int choose_x11_display_idx(int inside_cloonix_x11_display_idx)
 /****************************************************************************/
 static void helper_rx_virtio_noctx(int dido_llid, int type, int val, char *rx)
 {
+  char buf[MAX_A2D_LEN];
+  int headsize = sock_header_get_size();
+  char *payload = buf + headsize;
   int fd, inside_cloonix_x11_display_idx, display_sock_x11;
   int is_allocated_x11_display_idx;
   char xauth_cookie_format[MAX_ASCII_LEN];
-  int headsize = sock_header_get_size();
-  char *ptr, *g_buf = get_g_buf();
-  char *buf = g_buf + headsize;
-  memset(g_buf, 0, headsize);
+  char *ptr;
   if ((type == header_type_ctrl_agent) && (val == header_val_add_dido_llid))
     {
     if (g_dropbear_ctx_num >= MAX_SSH_NUM)
@@ -526,10 +558,9 @@ static void helper_rx_virtio_noctx(int dido_llid, int type, int val, char *rx)
             is_allocated_x11_display_idx = 1;
           alloc_ctx(display_sock_x11, dido_llid, fd, 
                     is_allocated_x11_display_idx);
-          memset(buf, 0, MAX_ASCII_LEN);
-          snprintf(buf,MAX_ASCII_LEN-1,DBSSH_SERV_DOORS_RESP,display_sock_x11); 
-          send_to_virtio(dido_llid, strlen(buf) + 1, header_type_ctrl_agent,
-                         header_val_add_dido_llid, g_buf);
+          snprintf(payload,MAX_ASCII_LEN-1,DBSSH_SERV_DOORS_RESP,display_sock_x11); 
+          send_to_virtio(dido_llid, 0, 0, header_type_ctrl_agent,
+                         header_val_add_dido_llid, strlen(payload) + 1, buf);
           }
         }
       else
@@ -550,11 +581,14 @@ static void helper_rx_virtio_noctx(int dido_llid, int type, int val, char *rx)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void action_rx_virtio(int dido_llid, int len, int type, int val, char *rx)
+void action_rx_virtio(int dido_llid, int vwifi_base, int vwifi_cid,
+                      int type, int val, int len, char *rx)
 {
   t_dropbear_ctx *dctx;
-  if (!dido_llid) 
-    helper_rx_virtio_nodido_llid(type, val, rx);
+  if (vwifi_cid)
+    helper_rx_virtio_vwifi(type, val, vwifi_base, vwifi_cid, len, rx);
+  else if (!dido_llid) 
+    helper_rx_virtio_nodido_llid(type, val, len, rx);
   else
     {
     dctx = get_ctx(dido_llid);

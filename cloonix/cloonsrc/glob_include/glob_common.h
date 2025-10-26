@@ -47,6 +47,10 @@ int cloonix_get_pid(void);
 #define MAX_NAME_LEN 64
 
 #define MAX_PATH_LEN 300
+#define MAX_A2D_LEN 50100
+#define MAX_RPC_MSG_LEN 50000
+#define MAX_DOORWAYS_BUF_LEN 50000
+#define MAX_DOOR_CTRL_LEN 1000
 
 #define MAX_VMOUNT 8
 #define MAX_SIZE_VMOUNT (MAX_VMOUNT*MAX_PATH_LEN)
@@ -151,6 +155,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define MAX_OVS_PORTS      MAX_VM
 #define MAX_PHY            32
 #define MAX_ETH_VM         32
+#define MAX_VWIF_VM       3
 #define MAX_COLOR         10
 
 #define MAX_TRAF_ENDPOINT 4
@@ -169,11 +174,8 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define FLAG_HOP_POLDIAG 0x0004
 #define FLAG_HOP_DOORS   0x0008
 
-#define MAX_DOORWAYS_BUF_LEN 1000000
-#define MAX_DOOR_CTRL_LEN 1000
 
 
-#define MAX_RPC_MSG_LEN 50000
 #define MAX_BULK_FILES 100
 
 #define MAX_CLOWNIX_BOUND_LEN      64
@@ -213,6 +215,7 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define SUID_POWER_SOCK_DIR "suid_power"
 
 #define CRUN_DIR "crun"
+#define VWIFI_DIR "vwifi"
 #define NGINX_DIR "nginx"
 #define RUN_DIR "run"
 #define SNF_DIR "snf"
@@ -225,6 +228,8 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define MNT_DIR "mnt"
 #define LOG_DIR "log"
 
+
+#define VWIFI_CID_MAX 100
 
 
 #define NOVNC_DISPLAY 733
@@ -333,6 +338,7 @@ typedef struct t_topo_kvm
   int  vm_config_param;
   int  cpu;
   int  mem;
+  int  nb_tot_nb_vwif;
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
   int  vm_id;
@@ -356,6 +362,7 @@ typedef struct t_topo_cnt
   int  ping_ok;
   int  vm_id;
   int  color;
+  int  nb_tot_nb_vwif;
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
   char image[MAX_PATH_LEN];
@@ -466,6 +473,84 @@ typedef struct t_topo_info
 /*---------------------------------------------------------------------------*/
 
 
+
+#define DBSSH_SERV_DOORS_REQ "DBSSH_SERV_DOORS_REQ in_idx_x11=%d cookie=%s"
+#define DBSSH_SERV_DOORS_RESP "DBSSH_SERV_DOORS_RESP display_sock_x11=%d"
+#define LABREAK "link_agent_break"
+#define LABOOT  "link_agent_reboot %d"
+#define LAHALT  "link_agent_halt %d"
+#define LAPING  "link_agent_ping %d"
+#define LAX11OPEN  "link_agent_x11_open sub_dido_idx=%d display_sock_x11=%d"
+#define LAX11OPENOK  "link_agent_x11_open_ok sub_dido_idx=%d"
+#define LAX11OPENKO  "link_agent_x11_open_ko sub_dido_idx=%d"
+#define LASTATS "link_agent_stats_req"
+#define LASTATSDF "link_agent_stats_df_req"
+#define LAVWIFISYN "link_agent_vwifi_syn"
+#define LAVWIFITRAF "link_agent_vwifi_traf"
+
+#define SYSINFOFORMAT "uptime:%lu load1:%lu load5:%lu load15:%lu "\
+                      "totalram:%lu freeram:%lu cachedram:%lu "\
+                      "sharedram:%lu bufferram:%lu "\
+                      "totalswap:%lu freeswap:%lu procs:%lu "\
+                      "totalhigh:%lu freehigh:%lu mem_unit:%lu"
+
+
+enum{
+  header_type_traffic = 999,
+  header_type_vwifi_cli,
+  header_type_vwifi_spy,
+  header_type_vwifi_ctr,
+  header_type_x11_ctrl,
+  header_type_x11,
+  header_type_ctrl,
+  header_type_ctrl_agent,
+  header_type_stats,
+
+};
+
+enum{
+  header_val_none = 777,
+  header_val_vwifi_syn_ok,
+  header_val_vwifi_syn_ko,
+  header_val_vwifi_trf_ok,
+  header_val_vwifi_trf_ko,
+  header_val_vwifi_bad_ko,
+  header_val_add_dido_llid,
+  header_val_del_dido_llid,
+  header_val_ping,
+  header_val_ack,
+  header_val_reboot,
+  header_val_halt,
+  header_val_x11_open_serv,
+  header_val_sysinfo,
+  header_val_sysinfo_df,
+
+};
+
+typedef struct t_rx_pktbuf
+{
+  char rawbuf[MAX_A2D_LEN];
+  int  offset;
+  int  paylen;
+  int  dido_llid;
+  int  vwifi_base;
+  int  vwifi_cid;
+  int  type;
+  int  val;
+  char *payload;
+} t_rx_pktbuf;
+
+
+
+/****************************************************************************/
+int sock_header_get_size(void);
+void sock_header_set_info(char *tx, int llid_dido,
+                          int vwifi_base, int vwifi_cid,
+                          int type, int val, int len, char **ntx);
+int sock_header_get_info(char *rx, int *llid_dido,
+                         int *vwifi_base, int *vwifi_cid,
+                         int *type, int *val, int *len, char **nrx);
+/*--------------------------------------------------------------------------*/
 
 
 enum

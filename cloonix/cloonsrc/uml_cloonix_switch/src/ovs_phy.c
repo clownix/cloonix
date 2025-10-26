@@ -175,44 +175,44 @@ void ovs_phy_resp_add_lan(int is_ko, char *name, int num,
   int item_phy_type;
   if (!cur)
     {
-    mactopo_add_resp(0, name, num, lan);
+    mactopo_add_resp(0, 0, name, num, lan);
     KERR("ERROR %s %d %s %s", name, num, vhost, lan);
     }
   else
     {
+    if ((cur->endp_type == endp_type_phyas) ||
+        (cur->endp_type == endp_type_phyav))
+      item_phy_type = item_phya;
+    else if ((cur->endp_type == endp_type_phyms) ||
+             (cur->endp_type == endp_type_phymv))
+      item_phy_type = item_phym;
+    else
+      KOUT("ERROR %s %s %d", name, lan, cur->endp_type);
     vcur = find_phy(name, num);
     if (!vcur)
       {
-      mactopo_add_resp(0, name, num, lan);
+      mactopo_add_resp(0, item_phy_type, name, num, lan);
       KERR("ERROR %d %s %d %s", is_ko, name, num, vhost);
       }
     else if (vcur != cur)
       {
-      mactopo_add_resp(0, name, num, lan);
+      mactopo_add_resp(0, item_phy_type, name, num, lan);
       KERR("ERROR %d %s %d %s", is_ko, name, num, vhost);
       }
     else
       {
-      if ((cur->endp_type == endp_type_phyas) ||
-          (cur->endp_type == endp_type_phyav))
-        item_phy_type = item_phya;
-      else if ((cur->endp_type == endp_type_phyms) ||
-               (cur->endp_type == endp_type_phymv))
-        item_phy_type = item_phym;
-      else
-        KOUT("ERROR %s %s %d", name, lan, cur->endp_type);
       if (strlen(cur->lan))
         KERR("ERROR %s %d %s %s", name, num, vhost, cur->lan);
       memset(cur->lan, 0, MAX_NAME_LEN);
       if (is_ko)
         {
-        mactopo_add_resp(0, name, num, lan);
+        mactopo_add_resp(0, item_phy_type, name, num, lan);
         KERR("ERROR %d %s %d %s %s", is_ko, name, num, vhost, lan);
         utils_send_status_ko(&(cur->llid), &(cur->tid), name);
         }
       else
         {
-        mactopo_add_resp(item_phy_type, name, num, lan);
+        mactopo_add_resp(1, item_phy_type, name, num, lan);
         if (cur->endp_type == endp_type_phyas)
           ovs_dyn_snf_start_process(vhost, 0, item_type_phy, vhost,
                                     snf_process_started);

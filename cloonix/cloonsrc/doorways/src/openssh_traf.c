@@ -21,9 +21,9 @@
 #include <string.h>
 #include "io_clownix.h"
 #include "dispach.h"
-#include "sock.h"
 
 char *get_u2i_nat_path_with_name(char *nat);
+int sock_nonblock_client_unix(char *pname);
 
 
 /****************************************************************************/
@@ -52,11 +52,11 @@ void openssh_tx_to_nat(int inside_llid, int len, char *buf)
 static int nat_rx_cb(int llid, int fd)
 {
   int len, init_done;
-  char *buf = get_g_buf();
+  char buf[MAX_A2D_LEN];
   int dido_llid = dispatch_get_dido_llid_with_inside_llid(llid, &init_done);
   if (dido_llid > 0)
     {
-    len = read (fd, buf, MAX_DOORWAYS_BUF_LEN);
+    len = read (fd, buf, MAX_A2D_LEN);
     if (len > 0)
       {
       if (init_done == 1)

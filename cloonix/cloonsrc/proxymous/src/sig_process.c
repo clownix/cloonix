@@ -53,7 +53,7 @@ void sig_process_heartbeat(void)
   if (llid_sig)
     {
     if (!msg_exist_channel(llid_sig))
-      KOUT("ERROR");
+      rpct_recv_kil_req(0, 0);
     proxy_sig_tx(llid_sig, strlen(beat_req)+1, beat_req);
     if (g_heartbeat_count == 5)
       KERR("WARNING LOW HEARTBEAT");

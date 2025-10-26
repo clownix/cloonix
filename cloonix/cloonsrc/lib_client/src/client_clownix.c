@@ -452,10 +452,11 @@ void client_req_slowperiodic(t_slowperiodic_cb cb_qcow2,
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
-                   t_eth_table *eth_tab, int vm_config_flags, int vm_cfg_param,
-                   int cpu_qty, int mem_qty, char *kernel, char *root_fs,
-                   char *install_cdrom, char *added_cdrom, char *added_disk)
+void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_nb_vwif,
+                   int nb_tot_eth, t_eth_table *eth_tab, int vm_config_flags,
+                   int vm_cfg_param, int cpu_qty, int mem_qty, char *kernel,
+                   char *root_fs, char *install_cdrom, char *added_cdrom,
+                   char *added_disk)
 {
   t_topo_kvm kvm;
   int new_tid;
@@ -470,6 +471,7 @@ void client_add_vm(int tid, t_end_cb cb, char *nm, int nb_tot_eth,
   kvm.vm_config_param = vm_cfg_param;
   kvm.cpu = cpu_qty;
   kvm.mem = mem_qty;
+  kvm.nb_tot_nb_vwif = nb_tot_nb_vwif;
   kvm.nb_tot_eth = nb_tot_eth;
   memcpy(kvm.eth_table, eth_tab, nb_tot_eth * sizeof(t_eth_table));
   if (kernel)

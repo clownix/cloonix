@@ -36,6 +36,8 @@
 #include "qmp.h"
 #include "file_read_write.h"
 
+int get_running_in_crun(void);
+
 #define MAX_QGA_MSG_LEN 3000
 
 #define QGA_PING "{\"execute\":\"guest-ping\"}"
@@ -53,6 +55,17 @@
 
 #define QGA_EXEC_STATUS_FILE "{\"execute\": \"guest-exec-status\", \"arguments\": {\"pid\": %d}}"
 
+
+    
+#define QGA_SCRIPT_LAUNCH_VWIFI \
+                "#!/bin/sh\n"\
+                "mkdir -p /cloonixmnt/cnf_fs\n"\
+                "mkdir -p /cloonixmnt/tmp\n"\
+                "mount -t iso9660 /dev/sr0 /cloonixmnt/cnf_fs\n"\
+                "mount -o remount,exec /dev/sr0\n"\
+                "/cloonixmnt/cnf_fs/cloonix-agent\n"\
+                "/cloonixmnt/cnf_fs/cloonix-dropbear-sshd \n"\
+                "/cloonixmnt/cnf_fs/cloonixvwifi_kvm.sh %d %02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX"
 
 #define QGA_SCRIPT_LAUNCH \
                 "#!/bin/sh\n"\
@@ -457,6 +470,32 @@ void qga_event_backdoor(char *name, int backdoor_evt)
 }
 /*--------------------------------------------------------------------------*/
 
+/****************************************************************************/
+static void create_qga_script(char *str_wif, char *name)
+{
+  t_vm *vm = cfg_get_vm(name);
+  int i, nb_tot_nb_vwif, nb_tot_eth;
+  char mac_vwif[6];;
+  if (!vm)
+    KERR("ERROR %s", name);
+  else
+    {
+    nb_tot_eth = vm->kvm.nb_tot_eth;
+    nb_tot_nb_vwif = vm->kvm.nb_tot_nb_vwif;
+    for (i=0; i<6; i++)
+      mac_vwif[i] = vm->kvm.eth_table[0].mac_addr[i];
+    mac_vwif[5] = (unsigned char) nb_tot_eth;
+    mac_vwif[3] += 1;
+    memset(str_wif, 0, MAX_QGA_MSG_LEN);
+    if (nb_tot_nb_vwif == 0)
+      snprintf(str_wif, MAX_QGA_MSG_LEN-1, QGA_SCRIPT_LAUNCH);
+    else
+      snprintf(str_wif, MAX_QGA_MSG_LEN-1, QGA_SCRIPT_LAUNCH_VWIFI,
+               nb_tot_nb_vwif, mac_vwif[0], mac_vwif[1], mac_vwif[2],
+               mac_vwif[3], mac_vwif[4], mac_vwif[5]);
+    }
+}
+/*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
 static void automate_tx_qga_msg(t_qrec *cur)
@@ -464,6 +503,7 @@ static void automate_tx_qga_msg(t_qrec *cur)
   char req[MAX_QGA_MSG_LEN];
   char out[MAX_QGA_MSG_LEN];
   char *content = out;
+  char str_wif[MAX_QGA_MSG_LEN];;
   int llid;
 
   if ((cur->ping_launch == 0) || (cur->ping_launch == 2))
@@ -547,7 +587,8 @@ static void automate_tx_qga_msg(t_qrec *cur)
   else if ((cur->file_open == 2) && (cur->file_write == 0))
     {
     memset(out, 0, MAX_QGA_MSG_LEN);
-    base64_encode(QGA_SCRIPT_LAUNCH, strlen(QGA_SCRIPT_LAUNCH), out);
+    create_qga_script(str_wif, cur->name);
+    base64_encode(str_wif, strlen(str_wif), out);
     snprintf(req, MAX_QGA_MSG_LEN-1, QGA_WRITE_FILE, cur->file_ref, content);
     watch_tx(cur->llid, strlen(req), req);
     cur->file_write = 1;

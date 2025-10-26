@@ -8,7 +8,7 @@ echo "/cloonixmnt/cnf_fs/cloonix-agent"
 /cloonixmnt/cnf_fs/cloonix-dropbear-sshd
 echo "/cloonixmnt/cnf_fs/cloonix-dropbear-sshd"
 #-----------------------------------------------------------------
-if [ -e /cloonixmnt/cnf_fs/startup_nb_eth ]; then
+if [ -e "/cloonixmnt/cnf_fs/startup_nb_eth" ]; then
   NB_ETH=$(cat /cloonixmnt/cnf_fs/startup_nb_eth)
   echo "cat /cloonixmnt/cnf_fs/startup_nb_eth = ${NB_ETH}"
   NB_ETH=$((NB_ETH-1))
@@ -21,6 +21,15 @@ if [ -e /cloonixmnt/cnf_fs/startup_nb_eth ]; then
       sleep 1
     done
   done
+fi
+#-----------------------------------------------------------------
+sleep 5
+#-----------------------------------------------------------------
+if [ -e "/cloonixmnt/cnf_fs/startup_nb_vwif" ]; then
+  NB_WIF=$(cat /cloonixmnt/cnf_fs/startup_nb_vwif)
+  if [ ${NB_WIF} -gt 0 ] ; then
+    /cloonixmnt/cnf_fs/cloonixvwifi_cnt.sh
+  fi
 fi
 #-----------------------------------------------------------------
 echo $$ > /run/cloonix_startup.pid                 

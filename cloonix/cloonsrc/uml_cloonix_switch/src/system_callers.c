@@ -263,6 +263,7 @@ void mk_endp_dir(void)
 {
   my_mkdir(utils_get_run_dir(), 1);
   my_mkdir(utils_get_crun_dir(), 1);
+  my_mkdir(utils_get_vwifi_dir(), 1);
   my_mkdir(utils_get_nginx_dir(), 1);
   my_mkdir(utils_get_nginx_conf_dir(), 1);
   my_mkdir(utils_get_nginx_logs_dir(), 1);

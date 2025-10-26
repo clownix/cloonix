@@ -145,8 +145,8 @@ static void make_default_layout_node(t_layout_node *layout,
   memset(layout, 0, sizeof(t_layout_node));
   strncpy(layout->name, name, MAX_NAME_LEN-1);
   layout->nb_eth = nb_eth;
-  layout->x = 100;
-  layout->y = 100;
+  layout->x = 50 + (rand() % 150);
+  layout->y = 20 + (rand() % 150);
   for (i=0; i<nb_eth; i++)
     {
     rest = i%4;
@@ -167,8 +167,8 @@ void make_default_layout_lan(t_layout_lan *layout, char *name)
 {
   memset(layout, 0, sizeof(t_layout_lan));
   strncpy(layout->name, name, MAX_NAME_LEN-1);
-  layout->x = 100;
-  layout->y = 100;
+  layout->x = 50 + (rand() % 150);
+  layout->y = 20 + (rand() % 150);
 }
 /*--------------------------------------------------------------------------*/
 

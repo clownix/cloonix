@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/select.h>
+#include "glob_common.h"
 #include "commun.h"
 
 #define MAX_FD 1000

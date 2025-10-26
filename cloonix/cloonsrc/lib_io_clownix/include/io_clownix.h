@@ -136,6 +136,7 @@ void msg_delete_channel(int llid);
 void string_tx(int llid, int len, char *tx);
 void string_tx_now(int llid, int len, char *tx);
 void watch_tx(int llid, int len, char *tx);
+int watch_tx_sync(int llid, int len, char *tx);
 
 int  string_client_unix(char *pname, t_fd_error err_cb, 
                         t_msg_rx_cb rx_cb, char *little_name);

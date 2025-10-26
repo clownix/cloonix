@@ -1,0 +1,4 @@
+#!/bin/bash
+
+gcc -o cloonix-suid-erase-workdir suid_erase_workdir.c
+

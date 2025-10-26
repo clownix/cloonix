@@ -285,9 +285,9 @@ static int check_hmac_password(int i, char *rx, int len, char *payload)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void sock_header_set_info(char *tx,
-                                 int llid, int len, int type, int val,
-                                 int nb_pkt, char **ntx)
+static void local_header_set_info(char *tx, int llid,
+                                  int len, int type, int val,
+                                  int nb_pkt, char **ntx)
 {
   int idx_hmac, i = 0;
 
@@ -317,9 +317,8 @@ static void sock_header_set_info(char *tx,
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static int sock_header_get_info(char *rx,
-                                 int *llid, int *len, int *type, int *val,
-                                 int *nb_pkt, char **nrx)
+static int local_header_get_info(char *rx, int *llid, int *len, int *type,
+                                 int *val, int *nb_pkt, char **nrx)
 {
   int idx_hmac, i = 0, result=0;
   if ((rx[i++] & 0xFF) != 0xCA)
@@ -555,13 +554,13 @@ static int rx_pktdoors_fill(int *len, char  *buf, t_rx_pktdoors *rx_pktdoors)
 static int rx_pktdoors_get_paylen(t_rx_pktdoors *rx_pktdoors)
 {
   int nb_pkt, result = 0;
-  rx_pktdoors->idx_hmac = sock_header_get_info(rx_pktdoors->doors_bufraw, 
-                                             &(rx_pktdoors->tid),
-                                             &(rx_pktdoors->paylen),
-                                             &(rx_pktdoors->head_doors_type),
-                                             &(rx_pktdoors->val), 
-                                             &(nb_pkt),
-                                             &(rx_pktdoors->payload));
+  rx_pktdoors->idx_hmac = local_header_get_info(rx_pktdoors->doors_bufraw, 
+                                                &(rx_pktdoors->tid),
+                                                &(rx_pktdoors->paylen),
+                                                &(rx_pktdoors->head_doors_type),
+                                                &(rx_pktdoors->val), 
+                                                &(nb_pkt),
+                                                &(rx_pktdoors->payload));
   if (rx_pktdoors->idx_hmac == -1)
     {
     result = -1;
@@ -943,7 +942,7 @@ static void doorways_tx_append(t_llid *lid, int cidx, t_data_channel *dchan,
   else
     lid->nb_pkt_tx += 1; 
   cipher_change_key(lid->passwd);
-  sock_header_set_info(buf, tid, len, type, val, lid->nb_pkt_tx, &payload);
+  local_header_set_info(buf,tid,len,type,val,lid->nb_pkt_tx,&payload);
   if (payload != buf + headsize)
     KOUT("%p %p", payload, buf);
   dchan->tot_txq_size += tot_len;

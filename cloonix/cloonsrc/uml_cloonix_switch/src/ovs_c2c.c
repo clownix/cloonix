@@ -1357,7 +1357,7 @@ int ovs_c2c_mac_mangle(char *name, uint8_t *mac)
     {
     memset(msg, 0, MAX_PATH_LEN);
     snprintf(msg, MAX_PATH_LEN-1,
-    "c2c_mac_mangle %s %hhX:%hhX:%hhX:%hhX:%hhX:%hhX", cur->name,
+    "c2c_mac_mangle %s %02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX", cur->name,
                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     if (!msg_exist_channel(cur->ovs_llid))
       {

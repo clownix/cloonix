@@ -280,20 +280,20 @@ void kvm_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
   t_ethv_cnx *cur = ethv_find(name, num);
   if (!cur)
     {
-    mactopo_add_resp(0, name, num, lan);
+    mactopo_add_resp(0, item_kvm, name, num, lan);
     KERR("ERROR ADD LAN %s %d %s %d", name, num, lan, is_ko);
     }
   else
     {
     if (is_ko)
       {
-      mactopo_add_resp(0, name, num, lan);
+      mactopo_add_resp(0, item_kvm, name, num, lan);
       KERR("ERROR RESP ADD LAN %s %s %d", lan, name, num);
       utils_send_status_ko(&(cur->llid), &(cur->tid), "KO");
       }
     else
       {
-      mactopo_add_resp(item_kvm, name, num, lan);
+      mactopo_add_resp(1, item_kvm, name, num, lan);
       cur->attached_lan_ok = 1;
       utils_send_status_ok(&(cur->llid), &(cur->tid));
       if ((cur->endp_type == endp_type_eths) &&

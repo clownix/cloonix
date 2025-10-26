@@ -57,6 +57,7 @@ static int g_cloonix_fd;
 static int g_netns_pid;
 static int g_ovsdb_pid;
 static int g_ovs_pid;
+static int g_count_missed_pid_req;
 static char g_name[MAX_NAME_LEN];
 static char g_path[MAX_PATH_LEN];
 static int g_fd_tx_to_netns;
@@ -825,6 +826,13 @@ static void timeout_heartbeat(void *data)
       KOUT("ERROR HEARTBEAT ovs %d ovsdb %d", g_ovs_pid, g_ovsdb_pid);
       }
     }
+  g_count_missed_pid_req += 1;
+  if (g_count_missed_pid_req > 30)
+    {
+    KERR("ERROR HEARTBEAT ovs %d ovsdb %d", g_ovs_pid, g_ovsdb_pid);
+    common_end_of_all_destroy();
+    KOUT("ERROR HEARTBEAT ovs %d ovsdb %d", g_ovs_pid, g_ovsdb_pid);
+    }
   clownix_timeout_add(50, timeout_heartbeat, NULL, NULL, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -882,6 +890,7 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
     rpct_send_pid_resp(llid, tid, name, num, 0, getpid());
   else
     rpct_send_pid_resp(llid, tid, name, num, g_ovs_pid, g_ovsdb_pid);
+  g_count_missed_pid_req = 0;
 }
 /*---------------------------------------------------------------------------*/
 
@@ -1054,6 +1063,7 @@ int main (int argc, char *iargv[])
   g_ovsdb_pid = 0;
   g_ovs_launched = 0;
   g_ovs_pid = 0;
+  g_count_missed_pid_req = 0;
   seteuid(0);
   setegid(0);
   umask(0000);

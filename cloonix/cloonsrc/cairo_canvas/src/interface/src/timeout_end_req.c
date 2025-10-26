@@ -79,7 +79,7 @@ void timer_create_item_node_req(void *data)
     vm_config_flags = get_vm_config_flags(cust_vm, &natplug);
     set_node_layout_x_y(cust_vm->name, pa->x, pa->y, 0, 
                         pa->tx, pa->ty, thidden_on_graph);
-    client_add_vm(0, callback_end, cust_vm->name,
+    client_add_vm(0, callback_end, cust_vm->name, cust_vm->nb_tot_nb_vwif,
                   cust_vm->nb_tot_eth, cust_vm->eth_tab,
                   vm_config_flags, natplug, cust_vm->cpu, cust_vm->mem,
                   NULL, get_brandtype_image(NULL), NULL, NULL, NULL);
@@ -105,6 +105,7 @@ void timer_create_item_node_req(void *data)
       cust_topo_cnt.is_persistent = cust_cnt->is_persistent_cvm;
       cust_topo_cnt.is_privileged = cust_cnt->is_privileged_cvm;
       }
+    cust_topo_cnt.nb_tot_nb_vwif = cust_cnt->nb_tot_nb_vwif;
     cust_topo_cnt.nb_tot_eth = cust_cnt->nb_tot_eth;
     memcpy(cust_topo_cnt.eth_table, cust_cnt->eth_table,
            cust_topo_cnt.nb_tot_eth*sizeof(t_eth_table));

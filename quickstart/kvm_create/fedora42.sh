@@ -117,11 +117,6 @@ EOF
 
 mkdir -p /tmp/wkmntloops/{dev,proc,sys}
 for d in dev sys proc; do mount --bind /$d /tmp/wkmntloops/$d; done
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install bash.x86_64
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install libcurl-minimal.x86_64
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl.x86_64
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install openssl-libs.x86_64
-dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install rpm.x86_64
 dnf --releasever=${releasever} --nogpgcheck --installroot=/tmp/wkmntloops -y install dnf
 umount /tmp/wkmntloops/{dev,proc,sys}
 

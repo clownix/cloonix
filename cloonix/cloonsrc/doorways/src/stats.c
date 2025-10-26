@@ -26,7 +26,6 @@
 #include "io_clownix.h"
 #include "rpc_clownix.h"
 #include "doors_rpc.h"
-#include "sock.h"
 #include "llid_traffic.h"
 #include "llid_x11.h"
 #include "llid_backdoor.h"
@@ -151,12 +150,11 @@ void stats_from_agent_process(char *name, int header_val,
 /****************************************************************************/
 void stats_heartbeat(int count)
 {
-  char *buf = get_gbuf();
+  char buf[MAX_A2D_LEN];
   int  headsize = sock_header_get_size();
   char *name;
   void *cur, *next;
   int backdoor_llid;
-  memset(buf, 0, MAX_A2D_LEN);
   strcpy(buf+headsize, LASTATS);
   next = llid_backdoor_get_first(&name, &backdoor_llid); 
   while (next)

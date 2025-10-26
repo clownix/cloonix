@@ -15,41 +15,41 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-#include <syslog.h>
-#undef KERR
-#define KERR(format, a...)                              \
- do {                                                   \
-    syslog(LOG_ERR, "%s %s line:%d   " format, \
-    __FILE__,__FUNCTION__,__LINE__, ## a);              \
-    } while (0)
-
-#undef KOUT
-#define KOUT(format, a...)                               \
- do {                                                    \
-    syslog(LOG_ERR, "%s %s line:%d   " format, \
-    __FILE__,__FUNCTION__,__LINE__, ## a);               \
-    exit(-1);                                            \
-    } while (0)
-/*--------------------------------------------------------------------------*/
-
 #define MAX_ASCII_LEN 200
-
-
 #define VIRTIOPORT "/dev/virtio-ports/net.cloon.0"
 #define UNIX_DROPBEAR_SOCK "/cloonixmnt/tmp/unix_cloonix_dropbear_sock"
+#define UNIX_VWIFI_CLI "/cloonixmnt/tmp/unix_vwifi_client"
+#define UNIX_VWIFI_SPY "/cloonixmnt/tmp/unix_vwifi_spy"
+#define UNIX_VWIFI_CTR "/cloonixmnt/tmp/unix_vwifi_ctrl"
+
+typedef struct t_dropbear_ctx
+{
+  int dido_llid;
+  int fd;
+  int is_allocated_x11_display_idx;
+  int display_sock_x11;
+  int fd_listen_x11;
+  struct t_dropbear_ctx *prev;
+  struct t_dropbear_ctx *next;
+} t_dropbear_ctx;
+
 
 void send_ack_to_virtio(int dido_llid, 
                         unsigned long long s2c, 
                         unsigned long long c2s);
-void send_to_virtio(int dido_llid, int len, int type, int val, char *msg);
+void send_to_virtio(int dido_llid, int vwifi_base, int vwifi_cid,
+                    int type, int val, int len, char *msg);
 
-void action_rx_virtio(int dido_llid, int len, int type, int val, char *rx);
+void action_rx_virtio(int dido_llid, int vwifi_base, int vwifi_cid,
+                      int type, int val, int len, char *rx);
 void action_heartbeat(int cur_sec);
 void action_init(void);
 
 void action_prepare_fd_set(fd_set *infd, fd_set *outfd);
 void action_events(fd_set *infd);
 int  action_get_biggest_fd(void);
+
+/*---------------------------------------------------------------------------*/
 
 
 

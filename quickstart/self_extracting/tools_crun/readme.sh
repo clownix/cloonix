@@ -130,9 +130,10 @@ if [ \${#} -ne 1 ]; then
   printf "./${IDENT}cmd canvas\n"
   printf "./${IDENT}cmd web_on\n"
   printf "./${IDENT}cmd web_off\n"
-  printf "./${IDENT}cmd demoline\n"
-  printf "./${IDENT}cmd demosquare\n"
-  printf "./${IDENT}cmd demospider\n"
+  printf "./${IDENT}cmd wpa_hwsim\n"
+  printf "./${IDENT}cmd frrline\n"
+  printf "./${IDENT}cmd frrsquare\n"
+  printf "./${IDENT}cmd frrspider\n"
   exit 
 fi
 cmd=\$1
@@ -255,14 +256,18 @@ case \$cmd in
     fi
   ;;
 
-  demoline)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/line/demo.sh
+  wpa_hwsim)
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/wpa_hwsim/demo.sh
   ;;
-  demosquare)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/square/demo.sh
+
+  frrline)
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/frrline/demo.sh
   ;;
-  demospider)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/spider/demo.sh
+  frrsquare)
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/frrsquare/demo.sh
+  ;;
+  frrspider)
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/frrspider/demo.sh
   ;;
 
   *)
@@ -284,7 +289,8 @@ printf "./${IDENT}cmd shell\n"
 printf "./${IDENT}cmd canvas\n"
 printf "./${IDENT}cmd web_on\n"
 printf "./${IDENT}cmd web_off\n"
-printf "./${IDENT}cmd demoline\n"
-printf "./${IDENT}cmd demosquare\n"
-printf "./${IDENT}cmd demospider\n"
+printf "./${IDENT}cmd wpa_hwsim\n"
+printf "./${IDENT}cmd frrline\n"
+printf "./${IDENT}cmd frrquare\n"
+printf "./${IDENT}cmd frrspider\n"
 #-----------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 diff -Naur crun/src/libcrun/cgroup-utils.c crun_tainted/src/libcrun/cgroup-utils.c
---- crun/src/libcrun/cgroup-utils.c	2025-07-12 20:33:48.000000000 +0200
-+++ crun_tainted/src/libcrun/cgroup-utils.c	2025-07-12 21:38:50.800577000 +0200
+--- crun/src/libcrun/cgroup-utils.c	2025-10-02 10:16:55.000000000 +0200
++++ crun_tainted/src/libcrun/cgroup-utils.c	2025-10-02 10:46:30.651922332 +0200
 @@ -39,6 +39,15 @@
  #include <fcntl.h>
  #include <libgen.h>
@@ -28,8 +28,8 @@ diff -Naur crun/src/libcrun/cgroup-utils.c crun_tainted/src/libcrun/cgroup-utils
    if (UNLIKELY (cgroup_mode < 0))
      return cgroup_mode;
 diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
---- crun/src/libcrun/error.c	2025-07-12 20:33:48.000000000 +0200
-+++ crun_tainted/src/libcrun/error.c	2025-07-12 21:38:50.800577000 +0200
+--- crun/src/libcrun/error.c	2025-10-02 10:16:55.000000000 +0200
++++ crun_tainted/src/libcrun/error.c	2025-10-02 10:46:30.651922332 +0200
 @@ -44,6 +44,15 @@
  static int log_format;
  static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
@@ -47,9 +47,9 @@ diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
  libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
  {
 diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
---- crun/src/libcrun/linux.c	2025-07-12 20:33:48.000000000 +0200
-+++ crun_tainted/src/libcrun/linux.c	2025-07-12 21:38:50.800577000 +0200
-@@ -111,6 +111,15 @@
+--- crun/src/libcrun/linux.c	2025-10-02 10:16:55.000000000 +0200
++++ crun_tainted/src/libcrun/linux.c	2025-10-02 10:46:30.651922332 +0200
+@@ -112,6 +112,15 @@
  #define ALL_PROPAGATIONS_NO_REC (MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE)
  #define ALL_PROPAGATIONS (MS_REC | ALL_PROPAGATIONS_NO_REC)
  
@@ -65,7 +65,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
  struct remount_s
  {
    struct remount_s *next;
-@@ -1599,12 +1608,25 @@
+@@ -1697,12 +1706,28 @@
    return crun_make_error (err, 0, "unknown cgroup mode `%d`", cgroup_mode);
  }
  
@@ -88,17 +88,22 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
 +                                  { "/dev/fuse", "c", 10, 229, 0666, 0, 0 },
 +                                  { "/dev/kvm", "c", 10, 232, 0666, 0, 0 },
 +                                  { "/dev/vhost-net", "c", 10, 238, 0666, 0, 0 },
++                                  { "/dev/vhost-vsock", "c", 10, 241, 0666, 0, 0 },
++                                  { "/dev/vsock", "c", 10, 122, 0666, 0, 0 },
 +                                  { "/dev/net/tun", "c", 10, 200, 0666, 0, 0 },
++                                  { "/dev/rfkill", "c", 10, 242, 0666, 0, 0 },
                                    {} };
  
  /* Check if the specified path is a direct child of /dev.  If it is
-@@ -1823,12 +1845,32 @@
+@@ -1921,12 +1946,34 @@
          return ret;
      }
  
 -  for (it = needed_devs; it->path; it++)
 +  if ((!access("/dev/kvm", F_OK)) &&
 +      (!access("/dev/vhost-net", F_OK)) &&
++      (!access("/dev/vhost-vsock", F_OK)) &&
++      (!access("/dev/vsock", F_OK)) &&
 +      (!access("/dev/net/tun", F_OK)))
 +    {
 +    if (access("/dev/fuse", F_OK))
@@ -130,7 +135,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
      }
  
    for (i = 0; symlinks[i].target; i++)
-@@ -2005,9 +2047,9 @@
+@@ -2103,9 +2150,9 @@
    if (strcmp (destination, "/dev/pts") == 0)
      {
        if (container->host_uid == 0)

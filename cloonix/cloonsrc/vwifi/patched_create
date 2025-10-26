@@ -1,0 +1,16 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=../../../targz_store
+
+cd ${TARGZ}
+VWIFI=$(ls vwifi_*)
+VWIFI=${VWIFI%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${VWIFI}.tar.gz
+
+mv vwifi vwifi_tainted
+cd vwifi_tainted
+patch -p1 < ${HERE}/vwifi.patch
+
+

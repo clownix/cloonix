@@ -67,7 +67,8 @@ fct_create_32G_mount_wkmntloops $ROOTFS
 #-----------------------------------------------------------------------#
 list_pkt="linux-image-amd64,grub2,openssh-client,vim,"
 list_pkt+="bash-completion,net-tools,file,qemu-guest-agent,"
-list_pkt+="locales,x11-apps,strace"
+list_pkt+="locales,x11-apps,strace,"
+list_pkt+="hostapd,wpasupplicant,iw,tcpdump"
 
 debootstrap --no-check-certificate \
 	    --no-check-gpg \

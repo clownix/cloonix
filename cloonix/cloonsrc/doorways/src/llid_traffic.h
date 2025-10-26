@@ -18,7 +18,6 @@
 void llid_traf_tx_to_client(char *name, int dido_llid,  
                             int len, int type, int val, 
                             char  *buf);
-char *get_gbuf(void);
 int llid_traf_get_display_port(int dido_llid); 
 void llid_traf_delete(int dido_llid);
 void llid_traf_rx_from_client(int dido_llid, int len, char *buf);

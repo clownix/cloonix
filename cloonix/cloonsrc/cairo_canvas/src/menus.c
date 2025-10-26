@@ -1038,23 +1038,24 @@ void node_ctx_menu(t_bank_item *bitem)
 /****************************************************************************/
 void cnt_ctx_menu(t_bank_item *bitem)
 {
-  GtkWidget *item_rsh, *item_info, *item_delete, *item_xephyr;
+  GtkWidget *item_rsh, *item_info, *item_delete;
+//  GtkWidget *item_xephyr;
   GtkWidget *menu = gtk_menu_new();
   t_item_ident *pm = get_and_init_pm(bitem);
   bitem->pbi.menu_on = 1;
   if (bitem->bank_type != bank_type_cnt)
     KOUT("%s", bitem->name);
-  if ((!strcmp(bitem->pbi.pbi_cnt->brandtype, "brandcvm")) &&
-      (!pthexec_running_in_crun(NULL)))
-    item_xephyr = gtk_menu_item_new_with_label("xephyr");
+//  if ((!strcmp(bitem->pbi.pbi_cnt->brandtype, "brandcvm")) &&
+//      (!pthexec_running_in_crun(NULL)))
+//    item_xephyr = gtk_menu_item_new_with_label("xephyr");
   item_rsh = gtk_menu_item_new_with_label("remote console");
   item_info = gtk_menu_item_new_with_label("info");
   item_delete = gtk_menu_item_new_with_label("delete");
 
-  if ((!strcmp(bitem->pbi.pbi_cnt->brandtype, "brandcvm")) &&
-      (!pthexec_running_in_crun(NULL)))
-    g_signal_connect(G_OBJECT(item_xephyr), "activate",
-                     G_CALLBACK(crun_item_xephyr), (gpointer) pm);
+//  if ((!strcmp(bitem->pbi.pbi_cnt->brandtype, "brandcvm")) &&
+//      (!pthexec_running_in_crun(NULL)))
+//    g_signal_connect(G_OBJECT(item_xephyr), "activate",
+//                     G_CALLBACK(crun_item_xephyr), (gpointer) pm);
 
   g_signal_connect(G_OBJECT(item_rsh), "activate",
                    G_CALLBACK(crun_item_rsh), (gpointer) pm);
@@ -1066,9 +1067,9 @@ void cnt_ctx_menu(t_bank_item *bitem)
   g_signal_connect(G_OBJECT(menu), "hide",
                    G_CALLBACK(menu_hidden), (gpointer) pm);
 
-  if ((!strcmp(bitem->pbi.pbi_cnt->brandtype, "brandcvm")) &&
-      (!pthexec_running_in_crun(NULL)))
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_xephyr);
+//  if ((!strcmp(bitem->pbi.pbi_cnt->brandtype, "brandcvm")) &&
+//      (!pthexec_running_in_crun(NULL)))
+//    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_xephyr);
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_rsh);
 
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_info);

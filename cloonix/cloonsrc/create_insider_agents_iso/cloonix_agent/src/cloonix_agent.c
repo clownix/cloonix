@@ -41,32 +41,19 @@
 #include "commun.h"
 #include "x11_channels.h"
 #include "nonblock.h"
+#include "vwifi.h"
 
 static int  g_time_count;
+static int  g_vwifi_run;
 static int  g_fd_virtio;
-static char g_buf[MAX_A2D_LEN];
+static int  g_fd_listen_vwifi_cli;
+static int  g_fd_listen_vwifi_spy;
+static int  g_fd_listen_vwifi_ctr;
+static int  g_rand_id;
 
 
-
-
-typedef struct t_rx_pktbuf
-{
-  char rawbuf[MAX_A2D_LEN];
-  int  offset;
-  int  paylen;
-  int  dido_llid;
-  int  type;
-  int  val;
-  char *payload;
-} t_rx_pktbuf;
 
 t_rx_pktbuf g_rx_pktbuf;
-
-
-char *get_g_buf(void)
-{
-  return g_buf;
-}
 
 
 /****************************************************************************/
@@ -99,6 +86,12 @@ static int get_biggest_fd(void)
   int res, result = x11_get_biggest_fd();
   if (g_fd_virtio > result)
     result = g_fd_virtio;
+  if (g_fd_listen_vwifi_cli > result)
+    result = g_fd_listen_vwifi_cli;
+  if (g_fd_listen_vwifi_spy > result)
+    result = g_fd_listen_vwifi_spy;
+  if (g_fd_listen_vwifi_ctr > result)
+    result = g_fd_listen_vwifi_ctr;
   res = action_get_biggest_fd();
   if (res > result)
     result = res;
@@ -107,16 +100,17 @@ static int get_biggest_fd(void)
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-void send_to_virtio(int dido_llid, int len, int type, int var, char *buf)
+void send_to_virtio(int dido_llid, int vwifi_base, int vwifi_cid,
+                    int type, int var, int len, char *buf)
 {
   char *payload;
   int headsize = sock_header_get_size();
   if (len > MAX_A2D_LEN - headsize)
     KOUT("%d", len);
-  sock_header_set_info(g_buf, dido_llid, len, type, var, &payload);
-  if (g_buf != buf)
-    KOUT("%p %p", g_buf, buf);
-  nonblock_send(g_fd_virtio, g_buf, len + headsize);
+  sock_header_set_info(buf, dido_llid,
+                       vwifi_base, vwifi_cid,
+                       type, var, len, &payload);
+  nonblock_send(g_fd_virtio, buf, len + headsize);
 }
 /*--------------------------------------------------------------------------*/
 
@@ -200,16 +194,18 @@ static int rx_pktbuf_fill(int *len, char  *buf, t_rx_pktbuf *rx_pktbuf)
 static int rx_pktbuf_get_paylen(t_rx_pktbuf *rx_pktbuf)
 {
   int result = 0;
-  if (sock_header_get_info(rx_pktbuf->rawbuf,
-                           &(rx_pktbuf->dido_llid), &(rx_pktbuf->paylen),
+  if (sock_header_get_info(rx_pktbuf->rawbuf, &(rx_pktbuf->dido_llid),
+                           &(rx_pktbuf->vwifi_base), &(rx_pktbuf->vwifi_cid),
                            &(rx_pktbuf->type), &(rx_pktbuf->val),
-                           &(rx_pktbuf->payload)))
+                           &(rx_pktbuf->paylen), &(rx_pktbuf->payload)))
     {
     KERR("NOT IN SYNC");
     rx_pktbuf->offset = 0;
     rx_pktbuf->paylen = 0;
     rx_pktbuf->payload = NULL;
     rx_pktbuf->dido_llid = 0;
+    rx_pktbuf->vwifi_base = 0;
+    rx_pktbuf->vwifi_cid = 0;
     result = -1;
     }
   return result;
@@ -224,8 +220,10 @@ static void rx_pktbuf_process(t_rx_pktbuf *rx_pktbuf)
   if (rx_pktbuf->type == header_type_x11)
     x11_write(rx_pktbuf->val, rx_pktbuf->paylen, rx_pktbuf->payload);
   else
-    action_rx_virtio(rx_pktbuf->dido_llid, rx_pktbuf->paylen,
-                     rx_pktbuf->type, rx_pktbuf->val, rx_pktbuf->payload);
+    action_rx_virtio(rx_pktbuf->dido_llid,
+                     rx_pktbuf->vwifi_base, rx_pktbuf->vwifi_cid,
+                     rx_pktbuf->type, rx_pktbuf->val,
+                     rx_pktbuf->paylen, rx_pktbuf->payload);
   rx_pktbuf->offset = 0;
   rx_pktbuf->paylen = 0;
   rx_pktbuf->payload = NULL;
@@ -276,10 +274,23 @@ static int prepare_fd_set(fd_set *infd, fd_set *outfd)
   FD_ZERO(infd);
   FD_ZERO(outfd);
   FD_SET(g_fd_virtio, infd);
+  if (g_vwifi_run)
+    {
+    if (!vwifi_listen_locked(g_fd_listen_vwifi_cli))
+      FD_SET(g_fd_listen_vwifi_cli, infd);
+    if (!vwifi_listen_locked(g_fd_listen_vwifi_spy))
+      FD_SET(g_fd_listen_vwifi_spy, infd);
+    if (!vwifi_listen_locked(g_fd_listen_vwifi_ctr))
+      FD_SET(g_fd_listen_vwifi_ctr, infd);
+    }
   nonblock_prepare_fd_set(g_fd_virtio, outfd);
   x11_prepare_fd_set(infd, outfd);
   action_prepare_fd_set(infd, outfd);
   result = get_biggest_fd();
+  if (g_vwifi_run)
+    {
+    result = vwifi_trafic_fd_set(infd, result);
+    }
   return result;
 }
 /*--------------------------------------------------------------------------*/
@@ -302,17 +313,29 @@ static void select_wait_and_switch(void)
     }
   else 
     {
+    if (g_vwifi_run)
+      vwifi_trafic_fd_isset(&infd);
     nonblock_process_events(&outfd);
     if (FD_ISSET(g_fd_virtio, &infd))
       events_from_virtio(g_fd_virtio);
     x11_process_events(&infd);
     action_events(&infd);
+    if (g_vwifi_run)
+      {
+      if (FD_ISSET(g_fd_listen_vwifi_cli, &infd))
+        vwifi_client_syn_cli(g_rand_id, g_fd_listen_vwifi_cli);
+      if (FD_ISSET(g_fd_listen_vwifi_spy, &infd))
+        vwifi_client_syn_spy(g_rand_id, g_fd_listen_vwifi_spy);
+      if (FD_ISSET(g_fd_listen_vwifi_ctr, &infd))
+        vwifi_client_syn_ctr(g_rand_id, g_fd_listen_vwifi_ctr);
+      }
     }
   cur_sec = my_second();
   if (cur_sec != g_time_count)
     {
     g_time_count = cur_sec;
     action_heartbeat(cur_sec);
+    vwifi_heartbeat(cur_sec);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -379,11 +402,24 @@ static int is_a_crun(void)
 /*---------------------------------------------------------------------------*/
 
 /****************************************************************************/
+void vwifi_start_ok(void)
+{
+  g_vwifi_run = 1;
+}
+/*---------------------------------------------------------------------------*/
+
+/****************************************************************************/
 int main(int argc, char *argv[])
 { 
   int fd_listen;
   fd_set infd;
-
+  struct timeval last_tv;
+  gettimeofday(&last_tv, NULL);
+  srand((int) (last_tv.tv_usec & 0xFFFF));
+  g_rand_id = 0;
+  while (g_rand_id < 0x100)
+    g_rand_id = rand() & 0xF00;
+  g_vwifi_run = 0;
   daemon(0,0);
   umask(0000);
   nonblock_init();
@@ -415,6 +451,19 @@ int main(int argc, char *argv[])
   purge();
   no_signal_pipe();
   nonblock_add_fd(g_fd_virtio);
+  vwifi_init(g_rand_id);
+  unlink(UNIX_VWIFI_CLI);
+  unlink(UNIX_VWIFI_SPY);
+  unlink(UNIX_VWIFI_CTR);
+  g_fd_listen_vwifi_cli = util_socket_listen_unix(UNIX_VWIFI_CLI);
+  if (g_fd_listen_vwifi_cli == -1)
+    KERR("ERROR LISTEN %s", UNIX_VWIFI_CLI);
+  g_fd_listen_vwifi_spy = util_socket_listen_unix(UNIX_VWIFI_SPY);
+  if (g_fd_listen_vwifi_spy == -1)
+    KERR("ERROR LISTEN %s", UNIX_VWIFI_SPY);
+  g_fd_listen_vwifi_ctr = util_socket_listen_unix(UNIX_VWIFI_CTR);
+  if (g_fd_listen_vwifi_ctr == -1)
+    KERR("ERROR LISTEN %s", UNIX_VWIFI_CTR);
   for (;;)
     select_wait_and_switch();
   return 0;

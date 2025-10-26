@@ -32,7 +32,8 @@
 #include "main_timer_loop.h"
 
 /****************************************************************************/
-#define START_POS 100
+#define START_POS_X 50
+#define START_POS_Y 20
 void topo_get_matrix_inv_transform_point(double *x, double *y);
 /*--------------------------------------------------------------------------*/
 
@@ -164,8 +165,8 @@ void get_node_layout_x_y(char *name,
     }
   else
     {
-    *x = START_POS;
-    *y = START_POS;
+    *x = START_POS_X + (rand() % 150) ;
+    *y = START_POS_Y + (rand() % 150);
     *hidden_on_graph = 0;
     memset(tx, 0, (MAX_ETH_VM)*sizeof(double));
     memset(ty, 0, (MAX_ETH_VM)*sizeof(double));
@@ -230,8 +231,8 @@ void get_gene_layout_x_y(int bank_type, char *name,
     }
   if (!cur)
     {
-    *x = START_POS;
-    *y = START_POS;
+    *x = START_POS_X + (rand() % 150) ;
+    *y = START_POS_Y + (rand() % 150);
     *xa = 0;
     *ya = 0;
     *xb = 0;

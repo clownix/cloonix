@@ -6,6 +6,19 @@ Software Release Information
 ============================
 
 
+
+v53-00
+======
+
+This version includes vwifi to have wlan interfaces for wifi
+simulation. It is based on: https://github.com/Raizo62/vwifi
+This release is again a beta version.
+If anybody knows how to connect the wlan0 interface of a kvm
+to a wlan0 interface of a container, send a message.
+
+As usual no time for real doc update ... progress is slow!
+
+
 v51-00
 ======
 
@@ -108,12 +121,11 @@ to all IP and graphic X11 display.
 Note that for the sound, if you have a "$XDG_RUNTIME_DIR/pulse" directory,
 it is shared by the crun process and the sound flow works through it.
 
-For the software to be the same in the self-extracting rootless
-frr-toy.sh case and the usual classical /usr/libexec/cloonix/
-installation, the proxymous process exists in both run, rootless or classical.
-In the rootless case it is launched in the namespace before the crun that
-launches the rest of cloonix, in the classical case, it is launched by the
-main cloonix server.
+For the software to be the same in the self-extracting rootless case and
+the usual classical /usr/libexec/cloonix/ installation, the proxymous process
+exists in both run, rootless or classical. In the rootless case it is
+launched in the namespace before the crun that launches the rest of cloonix,
+in the classical case, it is launched by the main cloonix server.
 
 v43-00
 ======

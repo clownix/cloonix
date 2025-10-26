@@ -60,7 +60,7 @@ cloonix_ssh ${NET} ${NAME} "cd /root/sources; ./doitall"
 cloonix_ssh ${NET} ${NAME} "cd /root/cloonix-bundle-${VERSION_NUM}; ./install_cloonfs"
 cloonix_ssh ${NET} ${NAME} "cd /root/sources/quickstart/self_extracting; ./create_self_extracting.sh"
 #----------------------------------------------------------------------
-cloonix_scp ${NET} ${NAME}:/root/frr-toy-${VERSION_NUM}.sh ${HOME}
+cloonix_scp ${NET} ${NAME}:/root/cloonix-toy-${VERSION_NUM}.sh ${HOME}
 cloonix_scp ${NET} ${NAME}:/root/cloonix-bundle-${VERSION_NUM}.tar.gz ${HOME}
 #----------------------------------------------------------------------
 

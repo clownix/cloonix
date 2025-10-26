@@ -193,6 +193,7 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
   char *image;
   char *cnt_dir = utils_get_cnt_dir();
   unsigned char *mac;
+  unsigned char mac_vwif[6];
   char option1[MAX_PATH_LEN];
   char option2[MAX_PATH_LEN];
   char *bulk = cfg_get_bulk();
@@ -212,12 +213,21 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
         KERR("ERROR %s and %s do not exist", option1, option2);
       }
     }
+
+  for (i=0; i<6; i++)
+    mac_vwif[i] = cnt->eth_table[0].mac_addr[i];
+  mac_vwif[5] = (unsigned char) cnt->nb_tot_eth; 
+  mac_vwif[3] += 1;
+
   memset(req, 0, 2*MAX_PATH_LEN);
   snprintf(req, 2*MAX_PATH_LEN-1, 
   "cloonsuid_crun_create_net name=%s "
-  "bulk=%s image=%s nb=%d vm_id=%d cnt_dir=%s "
+  "bulk=%s image=%s nb_vwif=%d "
+  "mac_vwif=0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx "
+  "nb=%d vm_id=%d cnt_dir=%s "
   "agent_dir=%s is_persistent=%d is_privileged=%d brandtype=%s",
-  cnt->name, bulk, image, cnt->nb_tot_eth,
+  cnt->name, bulk, image, cnt->nb_tot_nb_vwif, mac_vwif[0], mac_vwif[1],
+  mac_vwif[2], mac_vwif[3], mac_vwif[4], mac_vwif[5], cnt->nb_tot_eth,
   vm_id, cnt_dir, agent, cnt->is_persistent, cnt->is_privileged,
   cnt->brandtype);
   if (send_sig_suid_power(llid, req))
@@ -228,19 +238,35 @@ int crun_create(int llid, int vm_id, t_topo_cnt *cnt, char *agent)
   else
     {
     result = 0;
-    for (i=0; i<cnt->nb_tot_eth; i++)
+    if (cnt->nb_tot_eth == 0)
       {
       memset(req, 0, 2*MAX_PATH_LEN);
-      mac = cnt->eth_table[i].mac_addr;
       snprintf(req, 2*MAX_PATH_LEN-1,
-      "cloonsuid_crun_create_eth name=%s num=%d "
-      "mac=0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx",
-      cnt->name, i, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      "cloonsuid_crun_create_eth name=%s num=-1 mac=00:00:00:00:00:00",
+      cnt->name);
       if (send_sig_suid_power(llid, req))
         {
         KERR("ERROR %s", cnt->name);
         cnt_free_cnt(cnt->name);
         result = -1;
+        }
+      }
+    else
+      {
+      for (i=0; i<cnt->nb_tot_eth; i++)
+        {
+        memset(req, 0, 2*MAX_PATH_LEN);
+        mac = cnt->eth_table[i].mac_addr;
+        snprintf(req, 2*MAX_PATH_LEN-1,
+        "cloonsuid_crun_create_eth name=%s num=%d "
+        "mac=0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx:0x%02hhx",
+        cnt->name, i, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        if (send_sig_suid_power(llid, req))
+          {
+          KERR("ERROR %s", cnt->name);
+          cnt_free_cnt(cnt->name);
+          result = -1;
+          }
         }
       }
     }

@@ -15,7 +15,6 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
-int ovs_cmd_system_promisc(char *ovs_bin, char *ovs_dir, char *vhost);
 int ovs_cmd_vhost_up(char *ovs_bin, char *ovs_dir,
                      char *name, int num, char *vhost);
 int ovs_cmd_add_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,

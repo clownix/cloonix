@@ -38,6 +38,7 @@
 #include "doorways_sock.h"
 #include "dispach.h"
 #include "pid_clone.h"
+#include "vwifi.h"
 /*--------------------------------------------------------------------------*/
 static int  g_doorways_llid;
 static char g_net_name[MAX_NAME_LEN];
@@ -62,6 +63,36 @@ char *get_switch_path(void)
 {
   static char path[2*MAX_PATH_LEN];
   snprintf(path, 2*MAX_PATH_LEN,  "%s/%s", g_root_work, CLOONIX_SWITCH);
+  path[MAX_PATH_LEN-1] = 0;
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *get_vwifi_server_path_cli(void)
+{
+  static char path[2*MAX_PATH_LEN];
+  snprintf(path, 2*MAX_PATH_LEN, "%s/%s/unix_client", g_root_work, VWIFI_DIR);
+  path[MAX_PATH_LEN-1] = 0;
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *get_vwifi_server_path_spy(void)
+{
+  static char path[2*MAX_PATH_LEN];
+  snprintf(path, 2*MAX_PATH_LEN, "%s/%s/unix_spy", g_root_work, VWIFI_DIR);
+  path[MAX_PATH_LEN-1] = 0;
+  return path;
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+char *get_vwifi_server_path_ctr(void)
+{
+  static char path[2*MAX_PATH_LEN];
+  snprintf(path, 2*MAX_PATH_LEN, "%s/%s/unix_ctrl", g_root_work, VWIFI_DIR);
   path[MAX_PATH_LEN-1] = 0;
   return path;
 }
@@ -105,6 +136,7 @@ static void heartbeat (int delta)
     {
     g_time_count += 1;
     //stats_heartbeat(cur_sec);
+    vwifi_heartbeat(g_time_count);
     }
 
 }

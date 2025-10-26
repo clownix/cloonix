@@ -347,7 +347,8 @@ static void nginx_ko(void *unused_data, int status, char *name)
       kill(pid2, SIGKILL);
       }
     }
-  KERR("ERROR nginx TERMINATION KO");
+  if (!g_terminate)
+    KERR("ERROR nginx TERMINATION KO");
   g_pid_nginx_master = 0;
   g_pid_nginx_worker = 0;
 }
@@ -437,7 +438,9 @@ static int websockify(void *data)
   char websockify_ascii_port[MAX_NAME_LEN];
   char *websock = pthexec_bin_websockify();
   char *web = pthexec_web();
-  char *argv[]={websock, web, websockify_ascii_port, addr_display, NULL};
+  char *cert = pthexec_cert();
+  char *argv[]={websock, "--run-once", web, cert,
+                websockify_ascii_port, addr_display, NULL};
 
   if (g_terminate)
     return 0;

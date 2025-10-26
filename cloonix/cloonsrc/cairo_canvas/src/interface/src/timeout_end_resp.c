@@ -46,7 +46,7 @@ static void create_node_resp(t_topo_kvm *kvm)
 
   bank_node_create(kvm->name, kvm->linux_kernel, kvm->rootfs_used, 
                    kvm->rootfs_backing,  kvm->install_cdrom,
-                   kvm->added_cdrom, kvm->added_disk, 
+                   kvm->added_cdrom, kvm->added_disk, kvm->nb_tot_nb_vwif,
                    kvm->nb_tot_eth, kvm->eth_table, 
                    kvm->color, kvm->vm_id, kvm->vm_config_flags,
                    x, y, hidden_on_graph, tx, ty, thidden_on_graph);
@@ -66,8 +66,9 @@ static void create_cnt_resp(t_topo_cnt *cnt)
                       tx, ty, thidden_on_graph, 0);
 
   bank_cnt_create(cnt->brandtype, cnt->name, cnt->image, cnt->vm_id, 
-                  cnt->ping_ok, cnt->nb_tot_eth, cnt->eth_table,
-                  x, y, hidden_on_graph, tx, ty, thidden_on_graph);
+                  cnt->ping_ok, cnt->nb_tot_nb_vwif, cnt->nb_tot_eth,
+                  cnt->eth_table, x, y, hidden_on_graph, tx, ty,
+                  thidden_on_graph);
 }
 /*--------------------------------------------------------------------------*/
 

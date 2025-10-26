@@ -108,7 +108,8 @@ static void is_privileged_toggle_cvm(GtkToggleButton *togglebutton,
 static void update_cust_brandzip(t_custom_cnt *cust,
                                  GtkWidget *entry_name,
                                  GtkWidget *entry_startup_env,
-                                 GtkWidget *entry_vmount)
+                                 GtkWidget *entry_vmount,
+                                 GtkWidget *entry_wif)
 {
   int len;
   char *tmp;
@@ -122,16 +123,19 @@ static void update_cust_brandzip(t_custom_cnt *cust,
   len = strspn(tmp, " \r\n\t");
   memset(cust->vmount, 0, MAX_SIZE_VMOUNT);
   strncpy(cust->vmount, tmp+len, MAX_SIZE_VMOUNT-1);
+  cust->nb_tot_nb_vwif = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_wif));
 }
 /*--------------------------------------------------------------------------*/
 
 /****************************************************************************/
-static void update_cust_brandcvm(t_custom_cnt *cust, GtkWidget *entry_name)
+static void update_cust_brandcvm(t_custom_cnt *cust, GtkWidget *entry_name,
+                                 GtkWidget *entry_wif)
 {
   char *tmp;
   tmp = (char *) gtk_entry_get_text(GTK_ENTRY(entry_name));
   memset(cust->name, 0, MAX_NAME_LEN);
   strncpy(cust->name, tmp, MAX_NAME_LEN-1);
+  cust->nb_tot_nb_vwif = (int ) gtk_spin_button_get_value(GTK_SPIN_BUTTON(entry_wif));
 }     
 /*--------------------------------------------------------------------------*/
  
@@ -238,6 +242,7 @@ static void custom_vm_dialog_create(void)
   GSList *group = NULL;
   GtkWidget *entry_name, *entry_startup_env, *grid, *parent, *is_persistent;
   GtkWidget *entry_vmount, *rad[ETH_LINE_MAX * ETH_TYPE_MAX];
+  GtkWidget *entry_wif;
   char *lib[ETH_TYPE_MAX] = {"n", "s", "v"};
 
   if (g_custom_dialog)
@@ -294,6 +299,10 @@ static void custom_vm_dialog_create(void)
 */
     }
 
+  entry_wif = gtk_spin_button_new_with_range(0, 3, 1);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(entry_wif), g_custom_cnt.nb_tot_nb_vwif);
+  append_grid(grid, entry_wif, "Wifi:", line_nb++, NULL);
+
 
   for (i=0; i<ETH_LINE_MAX; i++)
     {
@@ -338,10 +347,10 @@ static void custom_vm_dialog_create(void)
   else
     {
     if (!strcmp(get_brandtype_type(), "brandzip"))
-      update_cust_brandzip(&g_custom_cnt, entry_name,
-                           entry_startup_env, entry_vmount);
+      update_cust_brandzip(&g_custom_cnt, entry_name, entry_startup_env,
+                           entry_vmount, entry_wif);
     else
-      update_cust_brandcvm(&g_custom_cnt, entry_name);
+      update_cust_brandcvm(&g_custom_cnt, entry_name, entry_wif);
     }
   gtk_widget_destroy(g_custom_dialog);
   g_custom_dialog = NULL;
@@ -379,6 +388,7 @@ void menu_dialog_cnt_init(void)
   strcpy(g_custom_cnt.name, "Cnt");
   strcpy(g_custom_cnt.startup_env, "NODE_ID=1 CLOONIX=great");
   strcpy(g_custom_cnt.vmount, " ");
+  g_custom_cnt.nb_tot_nb_vwif = 0;
   g_custom_cnt.nb_tot_eth = 3;
   for (i=0; i<g_custom_cnt.nb_tot_eth; i++)
     g_custom_cnt.eth_table[i].endp_type = endp_type_eths;

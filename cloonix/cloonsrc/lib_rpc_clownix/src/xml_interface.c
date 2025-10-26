@@ -24,7 +24,6 @@
 #include "lib_topo.h"
 #include "xml_interface.h"
 #include "rpc_clownix.h"
-#include "header_sock.h"
 
 /*---------------------------------------------------------------------------*/
 static char *sndbuf = NULL;
@@ -719,6 +718,7 @@ static int topo_cnt_format(char *buf, t_topo_cnt *cnt)
                                        cnt->color,
                                        cnt->image,  
                                        cnt->ping_ok,
+                                       cnt->nb_tot_nb_vwif,
                                        cnt->nb_tot_eth);
 
   for (i=0; i < cnt->nb_tot_eth; i++)
@@ -754,6 +754,7 @@ static int topo_kvm_format(char *buf, t_topo_kvm *ikvm)
                                        kvm.vm_config_param,
                                        kvm.mem,
                                        kvm.cpu,
+                                       kvm.nb_tot_nb_vwif,
                                        kvm.nb_tot_eth);
   for (i=0; i < kvm.nb_tot_eth; i++)
     len += topo_eth_format(buf+len, kvm.eth_table[i].endp_type,
@@ -1134,7 +1135,7 @@ void send_add_vm(int llid, int tid, t_topo_kvm *ikvm)
 
   len = sprintf(sndbuf, ADD_KVM_O, tid, kvm.name, kvm.vm_id, kvm.color,
                 kvm.vm_config_flags, kvm.vm_config_param,
-                kvm.mem, kvm.cpu, kvm.nb_tot_eth);
+                kvm.mem, kvm.cpu, kvm.nb_tot_nb_vwif, kvm.nb_tot_eth);
 
   len += make_eth_table(sndbuf+len, kvm.nb_tot_eth, kvm.eth_table);
 
@@ -1446,7 +1447,8 @@ static void helper_fill_topo_cnt(char *msg_in, t_topo_cnt *cnt)
                                     &(cnt->color),
                                     cnt->image,  
                                     &(cnt->ping_ok),
-                                    &(cnt->nb_tot_eth)) != 9)
+                                    &(cnt->nb_tot_nb_vwif),
+                                    &(cnt->nb_tot_eth)) != 10)
     KOUT("%s", msg);
   get_eth_table(msg, cnt->nb_tot_eth, cnt->eth_table);
 
@@ -1499,7 +1501,8 @@ static void helper_fill_topo_kvm(char *msg, t_topo_kvm *kvm)
                                     &(ikvm.vm_config_param),
                                     &(ikvm.mem),
                                     &(ikvm.cpu),
-                                    &(ikvm.nb_tot_eth)) != 14)
+                                    &(ikvm.nb_tot_nb_vwif),
+                                    &(ikvm.nb_tot_eth)) != 15)
     KOUT("%s", msg);
   get_eth_table(msg, ikvm.nb_tot_eth, ikvm.eth_table);
   topo_kvm_swapoff(kvm, &ikvm);
@@ -2019,7 +2022,7 @@ void send_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     KOUT(" ");
   len = sprintf(sndbuf, ADD_CNT_O, tid, cnt->brandtype, cnt->name,
                 cnt->is_persistent, cnt->is_privileged, cnt->vm_id,
-                cnt->color, cnt->ping_ok, cnt->nb_tot_eth);
+                cnt->color, cnt->ping_ok, cnt->nb_tot_nb_vwif,  cnt->nb_tot_eth);
   len += make_eth_table(sndbuf+len, cnt->nb_tot_eth, cnt->eth_table);
   len += sprintf(sndbuf+len, ADD_CNT_C, cnt->startup_env,
                  cnt->vmount, cnt->image);
@@ -2514,7 +2517,7 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       if (sscanf(msg, ADD_KVM_O, &tid, ikvm.name, &(ikvm.vm_id),
                  &(ikvm.color), &(ikvm.vm_config_flags),
                  &(ikvm.vm_config_param), &(ikvm.mem), &(ikvm.cpu),
-                 &(ikvm.nb_tot_eth)) != 9)
+                 &(ikvm.nb_tot_nb_vwif) ,&(ikvm.nb_tot_eth)) != 10)
         KOUT("%s", msg);
       get_eth_table(msg, ikvm.nb_tot_eth, ikvm.eth_table);
       ptr = strstr(msg, "<linux_kernel>");
@@ -2730,8 +2733,8 @@ static void dispatcher(int llid, int bnd_evt, char *msg)
       memset(&cnt, 0, sizeof(t_topo_cnt));
       if (sscanf(msg, ADD_CNT_O, &tid, cnt.brandtype, cnt.name,
                  &(cnt.is_persistent), &(cnt.is_privileged),
-                 &(cnt.vm_id), &(cnt.color),
-                 &(cnt.ping_ok), &(cnt.nb_tot_eth)) != 9)
+                 &(cnt.vm_id), &(cnt.color), &(cnt.ping_ok),
+                 &(cnt.nb_tot_nb_vwif),  &(cnt.nb_tot_eth)) != 10)
         KOUT("%s", msg);
       get_eth_table(msg, cnt.nb_tot_eth, cnt.eth_table);
       startup_env_get(msg, &cnt);
