@@ -5,6 +5,15 @@
 Software Release Information
 ============================
 
+v53-01
+======
+
+Main evolution is the installation change for the self-extracting
+cloonix-toy, which is now replaced by a simple untar followed
+by a setup.sh script that can be viewed before launch for more
+transparent launch.
+
+The rest is mostly debug of existing...
 
 
 v53-00

@@ -22,9 +22,9 @@ The most important external software components include **openvswitch**,
 For the transfer of the gui to a web browser, other software used are:
 **nginx**, **noVNC**, **xorg**.
 
-For the self-extracting rootless install and run version component of
-cloonix named **cloonix-toy-__LAST__.sh** in the download zone,
-**makeself.sh** is used for packaging.
+For the wifi emulation between qemu-kvm virtual machines, **vwifi** is used.
+For the wifi emulation between containers, the iw command is used to put
+the phy device in the container namespace.
 
 Cloonix's first goal is an easy usage of the emulated network linking virtual
 machines and containers. The network links are based on an openvswitch
@@ -133,13 +133,17 @@ Directories in which cloonix is installed for classic use
 */var/lib/cloonix/<net-name>* for run-time storage of temporary files.
 
 
-Directory in which cloonix is installed in the self_extracting case
-===================================================================
+Directory in which cloonix is installed in the cloonix-toy case
+===============================================================
 
-In this case, after the call to **cloonix-toy-__LAST__.sh**, a new
-directory is present in the current directory, called
-**dir_self_extracted**. For this installation or to run this version
-of cloonix, you do not need the root or admin privileges.
+In this case, after the tar xvf cloonix-toy-__LAST__.tar.gz, the
+directory cloonix-toy-__LAST__ is present. Inside a setup.sh
+must be called before any other action.
+
+Upon setup.sh a text to help use the toy is shown.
+
+For this installation or to run this version of cloonix, you do
+not need the root or admin privileges.
 
 
 

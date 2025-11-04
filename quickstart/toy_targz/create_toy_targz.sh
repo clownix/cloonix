@@ -13,7 +13,8 @@ VERSION_NUM=$(cat ${CLOONIX_CFG} | grep CLOONIX_VERSION)
 VERSION_NUM=${VERSION_NUM#*=}
 VERSION_NUM=${VERSION_NUM%-*}
 #----------------------------------------------------------------------
-RESULT="${HOME}/cloonix-toy-${VERSION_NUM}.sh"
+NAME="cloonix-toy-${VERSION_NUM}"
+EXTRACT="/tmp/${NAME}"
 PATCHELF="/usr/libexec/cloonix/cloonfs/bin/cloonix-patchelf"
 CRUN="/usr/libexec/cloonix/cloonfs/bin/cloonix-crun"
 PROXY="/usr/libexec/cloonix/cloonfs/bin/cloonix-proxymous"
@@ -23,12 +24,10 @@ COMMON_LIBS="/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu"
 #-----------------------------------------------------------------------------
 INIT_CRUN="${HERE}/tools_crun/cloonix-init-starter-crun"
 TEMPLATE="${HERE}/tools_crun/config.json.template"
-STARTUP="${HERE}/tools_crun/readme.sh"
-SBININITSHARED="${HERE}/tools_crun/cloonixsbininitshared"
-MAKESELF="${HERE}/makeself/makeself.sh"
+SETUP="${HERE}/tools_crun/setup.sh"
+SBININIT="${HERE}/tools_crun/cloonixsbininitshared"
 DEMOS="${HERE}/demos"
 #-----------------------------------------------------------------------------
-EXTRACT="/tmp/dir_self_extracted"
 CLOONIX="${EXTRACT}/rootfs/cloonix"
 CONFIG="${EXTRACT}/config"
 BIN="${EXTRACT}/bin"
@@ -50,8 +49,8 @@ LISTSO="libsystemd.so.0 \
         libgcc_s.so.1 \
         libc.so.6"
 #-----------------------------------------------------------------------------
-for i in ${ZIPBASIC} ${CRUN} ${LD} ${PROXY} ${XAUTH} ${SBININITSHARED} \
-         ${TEMPLATE} ${INIT_CRUN} ${STARTUP} ${MAKESELF} ; do
+for i in ${ZIPBASIC} ${CRUN} ${LD} ${PROXY} ${XAUTH} ${SBININIT} \
+         ${TEMPLATE} ${INIT_CRUN} ${SETUP} ; do
   if [ ! -e ${i} ]; then 
     echo ${i} missing 
     exit 1
@@ -65,13 +64,10 @@ for i in ${LISTSO}; do
   fi
 done
 #-----------------------------------------------------------------------------
-for i in ${EXTRACT} ${RESULT} ; do
-  if [ -e ${i} ]; then 
-    echo ${i} already exists, removing it 
-    rm -rf ${i}
-    sleep 2
-  fi
-done
+if [ -e ${EXTRACT} ]; then 
+  echo ${EXTRACT} already exists, removing it 
+  rm -rf ${EXTRACT}
+fi
 #-----------------------------------------------------------------------------
 cd ${HERE}
 mkdir -p ${CLOONIX}
@@ -95,10 +91,10 @@ for i in ${LD} ${CRUN} ${PROXY} ${PATCHELF} ${XAUTH} ; do
   cp -f ${i} ${BIN}
 done
 #-----------------------------------------------------------------------------
+cp -f  ${SETUP}     ${EXTRACT}
 cp -f  ${TEMPLATE}  ${CONFIG}
 cp -f  ${INIT_CRUN} ${CONFIG}
-cp -f  ${STARTUP}   ${CONFIG}
-cp -f  ${SBININITSHARED} ${CONFIG}
+cp -f  ${SBININIT}  ${CONFIG}
 cp -rf ${DEMOS}     ${CONFIG}
 #-----------------------------------------------------------------------------
 ${PATCHELF} --force-rpath --set-rpath ./bin                      ${BIN}/cloonix-patchelf
@@ -138,13 +134,13 @@ for j in "bin" \
     done
   fi
 done
-#---------------------------------------------------------------------------
-OPTIONS="--nooverwrite --notemp --nomd5 --nocrc --tar-quietly --quiet"
-${MAKESELF} ${OPTIONS} ${EXTRACT} ${RESULT} "cloonix" ./config/readme.sh
 #-----------------------------------------------------------------------------
+echo ${EXTRACT}
+cd /tmp
+tar zcvf ${NAME}.tar.gz ${NAME}
+mv ${NAME}.tar.gz ${HOME}
 rm -rf ${EXTRACT}
-#-----------------------------------------------------------------------------
-echo END SCRIPT
+echo END SCRIPT ${HOME}/${NAME}.tar.gz DONE 
 #-----------------------------------------------------------------------------
 
 

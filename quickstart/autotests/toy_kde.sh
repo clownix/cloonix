@@ -4,7 +4,7 @@ HERE=`pwd`
 NET="nemo"
 BULK="/var/lib/cloonix/bulk"
 EXTRACTOR="cloonix-toy-53.sh"
-LIST="trixie_lxde trixie_gnome fedora42_kde"
+LIST="fedora42_kde"
 #----------------------------------------------------------------------------#
 set +e
 is_started=$(cloonix_cli ${NET} pid |grep cloonix_server)
@@ -21,7 +21,7 @@ cloonix_cli ${NET} add lan nemotap1 0 lan
 sudo ifconfig nemotap1 1.1.1.1/24 up
 #----------------------------------------------------------------------------#
 for i in ${LIST}; do
-  cloonix_cli $NET add kvm ${i} ram=5000 cpu=4 eth=s desktop_${i}.qcow2 &
+  cloonix_cli $NET add kvm ${i} ram=5000 cpu=4 eth=s ${i}.qcow2 &
   cloonix_cli $NET add lan ${i} 0 lan
 done
 #----------------------------------------------------------------------------
@@ -42,11 +42,16 @@ for i in ${LIST}; do
   cloonix_ssh $NET ${i} "chown user:user /home/user/${EXTRACTOR}"
   cloonix_ssh $NET ${i} "su -c 'chmod +x /home/user/${EXTRACTOR}' user"
   cloonix_ssh $NET ${i} "mkdir -p /var/lib/cloonix/bulk"
+  cloonix_ssh $NET ${i} "chmod -R 777 /var/lib/cloonix"
   cloonix_scp $NET ${BULK}/trixie.zip ${i}:/${BULK}
   cloonix_scp $NET ${BULK}/trixie.qcow2 ${i}:/${BULK}
   cloonix_scp $NET ${BULK}/trixie.tar.gz ${i}:/${BULK}
   cloonix_ssh $NET ${i} "cd ${BULK}; tar xvf trixie.tar.gz"
   cloonix_ssh $NET ${i} "rm ${BULK}/trixie.tar.gz"
+  cloonix_ssh $NET ${i} "chown user:user ${BULK}/trixie.zip"
+  cloonix_ssh $NET ${i} "chmod 666 ${BULK}/trixie.zip"
+  cloonix_ssh $NET ${i} "chown user:user ${BULK}/trixie.qcow2"
+  cloonix_ssh $NET ${i} "chmod 666 ${BULK}/trixie.qcow2"
   cloonix_ssh $NET ${i} "chown -R user:user ${BULK}/trixie"
   cloonix_ssh $NET ${i} "systemctl stop NetworkManager.service 1>/dev/null 2>&1"
   cloonix_ssh $NET ${i} "ip addr add dev eth0 1.1.1.${num}/24"

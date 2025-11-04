@@ -136,7 +136,8 @@ static void heartbeat (int delta)
     {
     g_time_count += 1;
     //stats_heartbeat(cur_sec);
-    vwifi_heartbeat(g_time_count);
+    if ((g_time_count % 10) == 0)
+      vwifi_heartbeat(g_time_count);
     }
 
 }

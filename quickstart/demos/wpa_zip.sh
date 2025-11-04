@@ -56,6 +56,8 @@ network={
 }
 EOF"
 #----------------------------------------------------------------------
+sleep 10
+#----------------------------------------------------------------------
 cloonix_ssh nemo cnt2 "wpa_supplicant -B -Dnl80211 -iwlan0 -c /etc/wpa_supplicant.conf"
 cloonix_ssh nemo cnt3 "wpa_supplicant -B -Dnl80211 -iwlan0 -c /etc/wpa_supplicant.conf"
 cloonix_ssh nemo cnt1 "hostapd -B /etc/hostapd.conf"

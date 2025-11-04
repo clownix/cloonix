@@ -6,16 +6,6 @@ if [ $# = 1 ]; then
 else
   IDENT="nemo"
 fi
-cd ${EXTRACT}/..
-HERE=`pwd`
-if [ -e ${HERE}/dir_${IDENT}_extracted ]; then
-  echo ERROR: ${HERE}/dir_${IDENT}_extracted exists, must be erased.
-  echo erase both ${EXTRACT} and ${HERE}/dir_${IDENT}_extracted and try again.
-  exit 
-fi
-mv ${EXTRACT} ${HERE}/dir_${IDENT}_extracted 
-cd ${HERE}/dir_${IDENT}_extracted
-EXTRACT=`pwd`
 ROOTFS="${EXTRACT}/rootfs"
 #-----------------------------------------------------------------------------
 CLOONIX_CFG="${ROOTFS}/cloonix/cloonfs/etc/cloonix.cfg"
@@ -66,6 +56,7 @@ else
   sed -i s"%__HOST_PULSE_PRESENT__.*%%"               ${CONFIG}/config.json
 fi
 #-----------------------------------------------------------------------------
+sed -i s"%__IDENT__%${IDENT}%"                     ${EXTRACT}/setup.sh
 sed -i s"%__IDENT__%${IDENT}%"                     ${CLOONFS}/etc/systemd/system/cloonix_server.service
 sed -i s"%__IDENT__%${IDENT}%"                     ${ROOTFS}/cloonix/cloonix-init-${IDENT}
 sed -i s"%__USER__%${USER}%"                       ${ROOTFS}/cloonix/cloonix-init-${IDENT}
@@ -76,9 +67,11 @@ sed -i s"%__PROXYSHARE_OUT__%${PROXYSHARE_OUT}%"   ${CONFIG}/config.json
 sed -i s"%__ROOTFS__%${ROOTFS}%"                   ${CONFIG}/config.json
 sed -i s"%__USER_UID__%${USER_UID}%"               ${CONFIG}/config.json
 sed -i s"%__USER_GID__%${USER_GID}%"               ${CONFIG}/config.json
-sed -i s"%__IDENT__%${IDENT}%"                     ${CONFIG}/readme.sh
-for i in $(ls ${CONFIG}/demos); do
+for i in "frrline" "frrsquare" "frrspider"; do
   sed -i s"%__IDENT__%${IDENT}%" ${CONFIG}/demos/${i}/demo.sh
+done
+for i in $(ls ${CONFIG}/demos/*.sh); do
+  sed -i s"%__IDENT__%${IDENT}%" ${i}
 done
 mkdir -p ${ROOTFS}/root
 mv ${CONFIG}/demos ${ROOTFS}/root
@@ -119,24 +112,9 @@ else
   fi
 fi  
 #-----------------------------------------------------------------------------
-cat > ${EXTRACT}/../${IDENT}cmd << EOF
+cat > ${EXTRACT}/${IDENT}cmd << EOF
 #!/bin/sh
 
-if [ \${#} -ne 1 ]; then
-  printf "\n\tCHOICE:\n"
-  printf "./${IDENT}cmd start\n"
-  printf "./${IDENT}cmd stop\n"
-  printf "./${IDENT}cmd shell\n"
-  printf "./${IDENT}cmd canvas\n"
-  printf "./${IDENT}cmd web_on\n"
-  printf "./${IDENT}cmd web_off\n"
-  printf "./${IDENT}cmd wpa_hwsim\n"
-  printf "./${IDENT}cmd frrline\n"
-  printf "./${IDENT}cmd frrsquare\n"
-  printf "./${IDENT}cmd frrspider\n"
-  exit 
-fi
-cmd=\$1
 export LC_ALL=C.UTF-8
 IDENT="${IDENT}"
 USER="${USER}"
@@ -152,6 +130,46 @@ CGROUPM_ON="--cgroup-manager=systemd"
 CGROUPM="--cgroup-manager=disabled"
 
 #-----------------------------------------------------------------------------
+usage_cmd() {
+  printf "\n\tCHOICE:\n"
+  printf "./${IDENT}cmd start\n"
+  printf "./${IDENT}cmd stop\n"
+  printf "./${IDENT}cmd clean\n"
+  printf "./${IDENT}cmd shell\n"
+  printf "./${IDENT}cmd canvas\n"
+  printf "./${IDENT}cmd web_on\n"
+  printf "./${IDENT}cmd web_off\n"
+  printf "./${IDENT}cmd demo <param>\n"
+  exit 
+}
+
+usage_demo() {
+  for i in \$(ls \${EXTRACT}/rootfs/root/demos) ; do
+    printf "./${IDENT}cmd demo \${i}\n"
+  done
+  exit 
+}
+#-----------------------------------------------------------------------------
+
+if [ \${#} -eq 1 ]; then
+  cmd=\$1
+  if [ "\${cmd}" = "demo" ]; then
+    usage_demo
+  fi 
+else
+  if [ \${#} -eq 2 ]; then
+    cmd=\$1
+    if [ "\${cmd}" = "demo" ]; then
+      param=\$2
+    else
+      usage_cmd
+    fi
+  else
+    usage_cmd
+  fi
+fi
+#-----------------------------------------------------------------------------
+
 case \$cmd in
 
   start)
@@ -235,6 +253,10 @@ case \$cmd in
     rm -rf \${PROXYSHARE_OUT}
   ;;
 
+  clean)
+    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} rma
+  ;;
+
   web_on)
     echo Port for http in browser: \$WEB_PORT
     \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} cloonix_cli \${IDENT} cnf web on
@@ -256,22 +278,24 @@ case \$cmd in
     fi
   ;;
 
-  wpa_hwsim)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/wpa_hwsim/demo.sh
-  ;;
-
-  frrline)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/frrline/demo.sh
-  ;;
-  frrsquare)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/frrsquare/demo.sh
-  ;;
-  frrspider)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/frrspider/demo.sh
-  ;;
-
+  demo)
+    case \${param} in
+      frrline)
+        \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/frrline/demo.sh
+      ;;
+      frrsquare)
+        \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/frrsquare/demo.sh
+      ;;
+      frrspider)
+        \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/frrspider/demo.sh
+      ;;
+      *)
+        \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec \${IDENT} /root/demos/\${param}
+      ;;
+    esac
+    ;;
   *)
-  echo wrong cmd
+    echo wrong cmd \${cmd}
   ;;
 esac
 EOF
@@ -281,16 +305,44 @@ chmod -R u-s ${EXTRACT}
 chmod -R g-s ${EXTRACT}
 chmod -R o-s ${EXTRACT}
 #-----------------------------------------------------------------------------
-chmod +x ${EXTRACT}/../${IDENT}cmd
+if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then 
+  printf "\n\t/dev/kvm usable as ${USER}"
+  if [ -r /dev/vhost-net ] && [ -w /dev/vhost-net ]; then 
+    printf "\n\t/dev/vhost-net usable as ${USER}"
+    if [ -r /dev/net/tun ] && [ -w /dev/net/tun ]; then 
+      printf "\n\t/dev/net/tun usable as ${USER}"
+      printf "\n\t${USER} should be able to use kvm (qemu)"
+      if [ -r "/var/lib/cloonix/bulk/trixie.qcow2" ]; then
+        printf "\n\ttrixie.qcow exists in bulk, kvm demos should work"
+      else
+        printf "\n\ttrixie.qcow does not exist in bulk, kvm demos will not work"
+      fi
+    else
+      printf "\n\t/dev/net/tun not usable, to use qemu try:"
+      printf "\n\tchmod 666 /dev/net/tun"
+    fi
+  else
+    printf "\n\t/dev/vhost-net not usable, to use qemu try:"
+    printf "\n\tusermod -a -G kvm ${USER}"
+  fi
+else
+  printf "\n\t/dev/kvm not usable, to use qemu try:"
+  printf "\n\tusermod -a -G kvm ${USER}"
+fi
+if lsmod | grep -wq mac80211_hwsim; then
+  printf "\n\tmac80211_hwsim loaded wifi emulation should work\n\n"
+else
+  printf "\n\tmac80211_hwsim not loaded wifi emulation will not work\n\n"
+fi
+#-----------------------------------------------------------------------------
+chmod +x ${EXTRACT}/${IDENT}cmd
 printf "\n\tCHOICE:\n"
 printf "./${IDENT}cmd start\n"
 printf "./${IDENT}cmd stop\n"
+printf "./${IDENT}cmd clean\n"
 printf "./${IDENT}cmd shell\n"
 printf "./${IDENT}cmd canvas\n"
 printf "./${IDENT}cmd web_on\n"
 printf "./${IDENT}cmd web_off\n"
-printf "./${IDENT}cmd wpa_hwsim\n"
-printf "./${IDENT}cmd frrline\n"
-printf "./${IDENT}cmd frrquare\n"
-printf "./${IDENT}cmd frrspider\n"
+printf "./${IDENT}cmd demo <param>\n"
 #-----------------------------------------------------------------------------

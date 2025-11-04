@@ -347,8 +347,6 @@ static void nginx_ko(void *unused_data, int status, char *name)
       kill(pid2, SIGKILL);
       }
     }
-  if (!g_terminate)
-    KERR("ERROR nginx TERMINATION KO");
   g_pid_nginx_master = 0;
   g_pid_nginx_worker = 0;
 }
@@ -664,8 +662,7 @@ static int check_before_start(void)
       }
     nostart = 1;
     }
-  if (!unlink(lock_file))
-    KERR("WARNING ERASE OF LOCK FILE OF XVFB file: %s", lock_file);
+  unlink(lock_file);
   return nostart;
 }
 /*--------------------------------------------------------------------------*/

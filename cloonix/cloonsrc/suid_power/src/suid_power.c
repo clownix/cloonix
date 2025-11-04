@@ -607,7 +607,9 @@ static void connect_from_ctrl_client(int llid, int llid_new)
 static void timer_heartbeat(void *data)
 {
   static int count = 0;
+  static int module_count = 0;
   count += 1;
+  module_count += 1;
   if (g_watchdog_ok == 1)
     count = 1;
   if (count == 8)
@@ -620,6 +622,12 @@ static void timer_heartbeat(void *data)
       }
     g_watchdog_ok = 0;
     }
+  if (module_count == 3)
+    {
+    module_count = 0;
+    vwifi_check_module_inserted();
+    }
+  clownix_timeout_add(200, timer_heartbeat, NULL, NULL, NULL);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -172,7 +172,8 @@ static void delete_record(t_vwifi_record *cur)
     cur->prev->next = cur->next;
   if (cur->next)
     cur->next->prev = cur->prev;
-  g_head_record = cur->next;
+  if (g_head_record == cur)
+    g_head_record = cur->next;
   bvm = llid_backdoor_vm_get_with_name(cur->name);
   if (bvm != NULL)
     to_agent_tx(bvm, cur->type, header_val_vwifi_trf_ko,
@@ -207,6 +208,13 @@ static int vwifi_rx_cb(int llid, int fd)
     bvm = llid_backdoor_vm_get_with_name(cur->name);
     if (bvm == NULL)
       {
+      KERR("ERROR NO BACKDOOR VM NAME %d", llid);
+      delete_record(cur);
+      }
+    else if ((bvm->cloonix_up_and_running == 0) ||
+             (!llid_backdoor_ping_status_is_ok(cur->name)))
+      {
+      KERR("ERROR BACKDOOR VM NAME NOT REACHABLE %d", llid);
       delete_record(cur);
       }
     else
@@ -228,8 +236,6 @@ static int vwifi_rx_cb(int llid, int fd)
         }
       else
         {
-        //KERR("DOORWAY TO KVM CID:%d %s llid:%d len:%d",
-        //     cur->vwifi_cid, cur->name, llid, len); 
         to_agent_tx(bvm, cur->type, header_val_vwifi_trf_ok,
                     cur->vwifi_base, cur->vwifi_cid, len, buf);
         }
@@ -238,6 +244,8 @@ static int vwifi_rx_cb(int llid, int fd)
 
   return len;
 }
+/*--------------------------------------------------------------------------*/
+
 /****************************************************************************/
 static void vwifi_err_cb(int llid, int err, int from)
 {
@@ -300,9 +308,11 @@ static void local_rx_from_agent(t_backdoor_vm *bvm, char *path, int type,
       }
     else
       {
-      watch_tx_sync(cur->llid, paylen, payload);
-      //KERR("KVM TO DOORWAY CID:%d %s llid:%d len:%d",
-      //        cur->vwifi_cid, cur->name, cur->llid, paylen);
+      if (watch_tx_sync(cur->llid, paylen, payload) != paylen)
+        {
+        KERR("ERROR %d %d errno: %d", vwifi_cid, llid, errno);
+        delete_record(cur);
+        }
       }
     }
   else if (val == header_val_vwifi_trf_ko)
@@ -311,6 +321,7 @@ static void local_rx_from_agent(t_backdoor_vm *bvm, char *path, int type,
       KERR("ERROR %s cid:%d", bvm->name, vwifi_cid);
     else
       {
+      KERR("TRAFFIC KO %s  CID:%d", cur->name, cur->vwifi_cid);
       delete_record(cur);
       }
     }
@@ -320,6 +331,7 @@ static void local_rx_from_agent(t_backdoor_vm *bvm, char *path, int type,
       KERR("ERROR %s cid:%d", bvm->name, vwifi_cid);
     else
       {
+      KERR("OTHERC KO %s  CID:%d", cur->name, cur->vwifi_cid);
       delete_record(cur);
       }
     }
@@ -341,10 +353,15 @@ static void delayed_rx_from_agent(void *data)
   int  paylen     = cur->paylen;
   char *payload   = cur->payload;
   t_backdoor_vm *bvm = llid_backdoor_vm_get_with_name(name);
+  t_vwifi_record *orig = find_record(name, vwifi_cid);
 
   if (!bvm)
     {
     KERR("ERROR %s %d %d", name, vwifi_cid, paylen);
+    if (orig)
+      {
+      delete_record(orig);
+      }
     free(cur->payload);
     free(cur);
     return;
@@ -408,6 +425,22 @@ void vwifi_heartbeat(int count)
     cur = cur->next;
     }
 */
+}
+/*--------------------------------------------------------------------------*/
+
+/****************************************************************************/
+void vwifi_bvm_down(char *name)
+{
+  t_vwifi_record *next, *cur = g_head_record;
+  while(cur)
+    {
+    next = cur->next;
+    if (!strcmp(name, cur->name))
+      {
+      delete_record(cur);
+      }
+    cur = next;
+    }
 }
 /*--------------------------------------------------------------------------*/
 

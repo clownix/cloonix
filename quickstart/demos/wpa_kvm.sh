@@ -59,6 +59,8 @@ network={
 }
 EOF"
 #----------------------------------------------------------------------
+sleep 10
+#----------------------------------------------------------------------
 cloonix_ssh nemo kvm2 "wpa_supplicant -B -Dnl80211 -iwlan0 -c /etc/wpa_supplicant.conf"
 cloonix_ssh nemo kvm3 "wpa_supplicant -B -Dnl80211 -iwlan0 -c /etc/wpa_supplicant.conf"
 cloonix_ssh nemo kvm1 "hostapd -B /etc/hostapd.conf"

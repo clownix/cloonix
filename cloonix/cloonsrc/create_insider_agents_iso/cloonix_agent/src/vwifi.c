@@ -285,37 +285,29 @@ void vwifi_trafic_fd_isset(fd_set *infd)
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-static void local_syn_ok(int cid, int state)
+static void local_syn_ok(t_vwifi_cid *cur, int state)
 {
-  t_vwifi_cid *cur = find_cid(cid);
   int newfd;
-
   char tx[2];
-  tx[0] = ((cid & 0xFF00) >> 8) & 0xFF;
-  tx[1] = cid & 0xFF;
-
-  if (!cur)
-    KERR("ERROR %d", cid);
+  tx[0] = ((cur->vwifi_cid & 0xFF00) >> 8) & 0xFF;
+  tx[1] = cur->vwifi_cid & 0xFF;
+  newfd = sock_fd_accept(cur->fd_listen);
+  if (newfd < 0)
+    {
+    KERR("ERROR SYN BAD ACCEPT DELETE %d", cur->vwifi_cid);
+    clean_on_error_base(cur);
+    }
+  else if (write(newfd, tx, 2) != 2)
+    {
+    KERR("ERROR SEND 2 FIRST BYTES %d", cur->vwifi_cid);
+    cur->fd_traffic = newfd;
+    clean_on_error_traf(cur);
+    }
   else
     {
-    newfd = sock_fd_accept(cur->fd_listen);
-    if (newfd < 0)
-      {
-      KERR("ERROR SYN BAD ACCEPT DELETE %d", cid);
-      clean_on_error_base(cur);
-      }
-    else if (write(newfd, tx, 2) != 2)
-      {
-      KERR("ERROR SEND 2 FIRST BYTES %d", cid);
-      cur->fd_traffic = newfd;
-      clean_on_error_traf(cur);
-      }
-    else
-      {
-      KERR("SYN OK TRAF OPEN CID %d", cid);
-      cur->fd_traffic = newfd;
-      cur->state = state;
-      }
+    KERR("VIPTRACE RECV SYN OK TRAF OPEN CIDr:%d", cur->vwifi_cid);
+    cur->fd_traffic = newfd;
+    cur->state = state;
     }
 }
 /*---------------------------------------------------------------------------*/
@@ -323,69 +315,111 @@ static void local_syn_ok(int cid, int state)
 /*****************************************************************************/
 void vwifi_virtio_syn_ok_cli(int vwifi_cid)
 {
-  local_syn_ok(vwifi_cid, state_vwifi_traf_cli);
+  t_vwifi_cid *cur = find_cid(vwifi_cid);
+  if (!cur)
+    {
+    KERR("ERROR %d", vwifi_cid);
+    ko_to_virtio(g_vwifi_base, vwifi_cid, header_type_vwifi_cli,
+                                          header_val_vwifi_bad_ko);
+    }
+  else
+    local_syn_ok(cur, state_vwifi_traf_cli);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_virtio_syn_ok_spy(int vwifi_cid)
 {
-  local_syn_ok(vwifi_cid, state_vwifi_traf_spy);
+  t_vwifi_cid *cur = find_cid(vwifi_cid);
+  if (!cur)
+    {
+    KERR("ERROR %d", vwifi_cid);
+    ko_to_virtio(g_vwifi_base, vwifi_cid, header_type_vwifi_spy,
+                                          header_val_vwifi_bad_ko);
+    }
+  else
+    local_syn_ok(cur, state_vwifi_traf_spy);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_virtio_syn_ok_ctr(int vwifi_cid)
 {
-  local_syn_ok(vwifi_cid, state_vwifi_traf_ctr);
+  t_vwifi_cid *cur = find_cid(vwifi_cid);
+  if (!cur)
+    {
+    KERR("ERROR %d", vwifi_cid);
+    ko_to_virtio(g_vwifi_base, vwifi_cid, header_type_vwifi_ctr,
+                                          header_val_vwifi_bad_ko);
+    }
+  else
+    local_syn_ok(cur, state_vwifi_traf_ctr);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void local_virtio_syn_ko(int vwifi_cid)
+void local_virtio_syn_ko(t_vwifi_cid *cur)
 {
   int newfd;
-  t_vwifi_cid *cur = find_cid(vwifi_cid);
-  if (!cur)
-    KERR("ERROR %d", vwifi_cid);
+  if ((cur->state == state_vwifi_traf_cli) ||
+      (cur->state == state_vwifi_traf_spy) ||
+      (cur->state == state_vwifi_traf_ctr))
+    {
+    KERR("ERROR TRAF REQUEST CLOSE DELETE %d", cur->vwifi_cid);
+    close(cur->fd_traffic);
+    }
   else
     {
-    if ((cur->state == state_vwifi_traf_cli) ||
-        (cur->state == state_vwifi_traf_spy) ||
-        (cur->state == state_vwifi_traf_ctr))
-      {
-      KERR("ERROR TRAF REQUEST CLOSE DELETE %d", vwifi_cid);
-      close(cur->fd_traffic);
-      }
-    else
-      {
-      KERR("ERROR SYN REQUEST CLOSE DELETE %d", vwifi_cid);
-      newfd = sock_fd_accept(cur->fd_listen);
-      close(newfd);
-      }
-    clean_on_error_base(cur);
+    KERR("ERROR SYN REQUEST CLOSE DELETE %d", cur->vwifi_cid);
+    newfd = sock_fd_accept(cur->fd_listen);
+    close(newfd);
     }
+  clean_on_error_base(cur);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_virtio_syn_ko_cli(int vwifi_cid)
 {
-  local_virtio_syn_ko(vwifi_cid);
+  t_vwifi_cid *cur = find_cid(vwifi_cid);
+  if (!cur)
+    {
+    KERR("ERROR %d", vwifi_cid);
+    ko_to_virtio(g_vwifi_base, vwifi_cid, header_type_vwifi_cli,
+                                          header_val_vwifi_bad_ko);
+    }
+  else
+    local_virtio_syn_ko(cur);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_virtio_syn_ko_spy(int vwifi_cid)
 {
-  local_virtio_syn_ko(vwifi_cid);
+  t_vwifi_cid *cur = find_cid(vwifi_cid);
+  if (!cur)
+    {
+    KERR("ERROR %d", vwifi_cid);
+    ko_to_virtio(g_vwifi_base, vwifi_cid, header_type_vwifi_spy,
+                                          header_val_vwifi_bad_ko);
+    }
+  else
+    local_virtio_syn_ko(cur);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_virtio_syn_ko_ctr(int vwifi_cid)
 {
-  local_virtio_syn_ko(vwifi_cid);
+  t_vwifi_cid *cur = find_cid(vwifi_cid);
+  if (!cur)
+    {
+    KERR("ERROR %d", vwifi_cid);
+    ko_to_virtio(g_vwifi_base, vwifi_cid, header_type_vwifi_ctr,
+                                          header_val_vwifi_bad_ko);
+    }
+  else
+    local_virtio_syn_ko(cur);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -413,7 +447,7 @@ static void local_client_syn(int vwifi_base, int fd, int state, int type)
     cur->fd_listen = fd;
     cur->type = type;
     cur->state = state;
-    KERR("ALLOC SYN CID:%d", cid);
+    KERR("VIPTRACE FIRST ALLOC SEND SYN CID:%d", cid);
     if (g_head_cid)
       g_head_cid->prev = cur;
     cur->next = g_head_cid;
@@ -427,51 +461,43 @@ static void local_client_syn(int vwifi_base, int fd, int state, int type)
 /*****************************************************************************/
 void vwifi_client_syn_cli(int vwifi_base, int fd)
 {
-  local_client_syn(vwifi_base,fd,state_vwifi_syn_cli,header_type_vwifi_cli);
+  local_client_syn(vwifi_base, fd, state_vwifi_syn_cli, header_type_vwifi_cli);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_client_syn_spy(int vwifi_base, int fd)
 {
-  local_client_syn(vwifi_base,fd,state_vwifi_syn_spy,header_type_vwifi_spy);
+  local_client_syn(vwifi_base, fd, state_vwifi_syn_spy, header_type_vwifi_spy);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_client_syn_ctr(int vwifi_base, int fd)
 {
-  local_client_syn(vwifi_base,fd,state_vwifi_syn_ctr,header_type_vwifi_ctr);
+  local_client_syn(vwifi_base, fd, state_vwifi_syn_ctr, header_type_vwifi_ctr);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-void local_virtio_traf(int cid, char *rx, int len, int type)
+void local_virtio_traf(t_vwifi_cid *cur, char *rx, int len, int type)
 {
-  t_vwifi_cid *cur = find_cid(cid);
   int txlen;
-
-  if (!cur)
-    {
-    KERR("ERROR %d %d", cid,  len);
-    ko_to_virtio(g_vwifi_base, cid, type, header_val_vwifi_bad_ko);
-    }
-  else if (cur->state == state_vwifi_traf_cli)
+  if (cur->state == state_vwifi_traf_cli)
     {
     txlen = write(cur->fd_traffic, rx, len);
     if (txlen != len)
       {
-      KERR("ERROR TRAF WRITE BAD DELETE CID:%d len:%d errno:%d", cid, txlen, errno);
+      KERR("ERROR TRAF CID:%d len:%d errno:%d",cur->vwifi_cid,txlen,errno);
       clean_on_error_traf(cur);
       }
-    //KERR("DOORWAY TO KVM CID:%d len:%d", cid, txlen);
     }
   else if (cur->state == state_vwifi_traf_spy)
     {
     txlen = write(cur->fd_traffic, rx, len);
     if (txlen != len)
       {
-      KERR("ERROR TRAF WRITE BAD DELETE CID:%d len:%d errno:%d", cid, txlen, errno);
+      KERR("ERROR TRAF CID:%d len:%d errno:%d",cur->vwifi_cid,txlen,errno);
       clean_on_error_traf(cur);
       }
     }
@@ -480,33 +506,57 @@ void local_virtio_traf(int cid, char *rx, int len, int type)
     txlen = write(cur->fd_traffic, rx, len);
     if (txlen != len)
       {
-      KERR("ERROR TRAF WRITE BAD DELETE CID:%d len:%d errno:%d", cid, txlen, errno);
+      KERR("ERROR TRAF CID:%d len:%d errno:%d",cur->vwifi_cid,txlen,errno);
       clean_on_error_traf(cur);
       }
     }
   else
-    KERR("ERROR %d %d", cid, cur->state);
+    KERR("ERROR %d %d", cur->vwifi_cid, cur->state);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_virtio_traf_cli(int vwifi_cid, char *rx, int len)
 {
-  local_virtio_traf(vwifi_cid, rx, len, header_type_vwifi_cli);
+ t_vwifi_cid *cur = find_cid(vwifi_cid);
+  if (!cur)
+    {
+    KERR("ERROR %d %d", vwifi_cid,  len);
+    ko_to_virtio(g_vwifi_base, vwifi_cid, header_type_vwifi_cli,
+                                          header_val_vwifi_bad_ko);
+    }
+  else 
+    local_virtio_traf(cur, rx, len, header_type_vwifi_cli);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_virtio_traf_spy(int vwifi_cid, char *rx, int len)
 {
-  local_virtio_traf(vwifi_cid, rx, len, header_type_vwifi_spy);
+ t_vwifi_cid *cur = find_cid(vwifi_cid);
+  if (!cur)
+    {
+    KERR("ERROR %d %d", vwifi_cid,  len);
+    ko_to_virtio(g_vwifi_base, vwifi_cid, header_type_vwifi_spy,
+                                          header_val_vwifi_bad_ko);
+    }
+  else
+    local_virtio_traf(cur, rx, len, header_type_vwifi_spy);
 }
 /*---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
 void vwifi_virtio_traf_ctr(int vwifi_cid, char *rx, int len)
 {
-  local_virtio_traf(vwifi_cid, rx, len, header_type_vwifi_ctr);
+ t_vwifi_cid *cur = find_cid(vwifi_cid);
+  if (!cur)
+    {
+    KERR("ERROR %d %d", vwifi_cid,  len);
+    ko_to_virtio(g_vwifi_base, vwifi_cid, header_type_vwifi_ctr,
+                                          header_val_vwifi_bad_ko);
+    }
+  else
+    local_virtio_traf(cur, rx, len, header_type_vwifi_ctr);
 }
 /*---------------------------------------------------------------------------*/
 

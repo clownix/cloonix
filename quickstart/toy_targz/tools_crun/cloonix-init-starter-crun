@@ -24,6 +24,10 @@ for i in "etc" "bin" "sbin" "lib" "lib64" "share" "var" ; do
   ${ECHO} "${MOUNT} --bind /cloonix/cloonfs/${i} /${i}"
 done
 #----------------------------------------------------------------------------
+${MKDIR} -p /lib/modules
+${MOUNT} --bind /cloonix/cloonfs/lib/modules /lib/modules
+${ECHO} "${MOUNT} --bind /cloonix/cloonfs/lib/modules /lib/modules"
+#----------------------------------------------------------------------------
 ${RM} -f /var/run
 ${LN} -s /run /var/run
 ${ECHO} "${LN} -s /run /var/run"

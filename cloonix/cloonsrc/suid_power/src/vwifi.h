@@ -35,4 +35,5 @@ void vwifi_init(void);
 void vwifi_after_suidroot_init(void);
 void vwifi_iw_del_wlan(t_elem_vwifi *cur);
 int vwifi_wlan_delete(int nb_vwif, char mac_vwif[6]);
+void vwifi_check_module_inserted(void);
 /*--------------------------------------------------------------------------*/

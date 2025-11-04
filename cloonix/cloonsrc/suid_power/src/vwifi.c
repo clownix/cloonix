@@ -106,9 +106,7 @@ void net_phy_get_hwsim(void)
   t_elem_vwifi *cur;
 
   free_list_elem_vwifi();
-  if (access(syshwsim, R_OK))
-    KERR("ERROR %s", syshwsim);
-  else
+  if (!access(syshwsim, R_OK))
     {
     dirptr = opendir(syshwsim);
     if (!dirptr)
@@ -369,17 +367,29 @@ void vwifi_after_suidroot_init(void)
   if (vwifi_lsmod_mac80211_hwsim() == 0)
     {
     g_module_mac80211_hwsim_inserted = 1;
-    KERR("MODULE mac80211_hwsim  ALREADY INSERTED");
     }
   else if (vwifi_modprobe_mac80211_hwsim() == 0)
     {
     g_module_mac80211_hwsim_inserted = 1;
-    KERR("WARNING SUCCESSFULL INSERTION MODULE mac80211_hwsim");
+    KERR("WARNING: SUCCESSFULL INSERTION MODULE mac80211_hwsim");
     }
   else
     {
     g_module_mac80211_hwsim_inserted = 0;
-    KERR("WARNING MODULE mac80211_hwsim NOT INSERTED");
+    KERR("WARNING: MODULE mac80211_hwsim NOT INSERTED");
+    KERR("WARNING: NO WIFI EMULATION POSSIBLE FOR CONTAINERS");
+    }
+}
+/*---------------------------------------------------------------------------*/
+
+/*****************************************************************************/
+void vwifi_check_module_inserted(void)
+{
+  if ((g_module_mac80211_hwsim_inserted == 0) &&
+      (vwifi_lsmod_mac80211_hwsim() == 0))
+    {
+    KERR("WARNING: INSERTION MODULE mac80211_hwsim DETECTED");
+    g_module_mac80211_hwsim_inserted = 1;
     }
 }
 /*---------------------------------------------------------------------------*/

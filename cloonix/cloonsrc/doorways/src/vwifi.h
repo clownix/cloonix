@@ -15,6 +15,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*                                                                           */
 /*****************************************************************************/
+void vwifi_bvm_down(char *name);
 void vwifi_heartbeat(int count);
 
 void vwifi_rx_from_agent(char *name, int type, int val,

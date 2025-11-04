@@ -536,8 +536,10 @@ static void rearm_timer_bvm_connect_backdoor(t_backdoor_vm *bvm)
 /****************************************************************************/
 static void vm_end_release(t_backdoor_vm *bvm)
 {
+  KERR("BACKDOOR RELEASE %s", bvm->name);
   if (!bvm)
     KOUT("ERROR");
+  vwifi_bvm_down(bvm->name);
   if (bvm->backdoor_llid)
     llid_unsetup(bvm);
   if (bvm->prev)
@@ -562,6 +564,7 @@ void llid_backdoor_cloonix_down_and_not_running(char *name)
     llid_dido_traf_end_all(bvm);
     clean_connect_timer(bvm);
     bvm->cloonix_up_and_running = 0;
+    vwifi_bvm_down(name);
     }
   else
     KERR("ERROR %s", name);
@@ -710,6 +713,7 @@ static void action_ga_heartbeat_on_working_llid(t_backdoor_vm *bvm)
       bvm->fail_ping_agent_rx = 0;
       doors_send_event(get_doorways_llid(), 0, bvm->name, PING_KO);
       bvm->ping_status = ping_ko;
+      vwifi_bvm_down(bvm->name);
       }
     bvm->last_ping_agent_rx = bvm->ping_agent_rx;
     bvm->ping_id += 1;

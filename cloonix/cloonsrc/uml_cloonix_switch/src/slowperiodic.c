@@ -99,9 +99,11 @@ static int has_sbin_init(char *bulk, char *image)
     result = 1;
   else if (lstat(target_init3, &sb) == 0)
     result = 1;
+  else if (!strcmp(image, "self_rootfs"))
+    result = 1;
   else
-    KERR("ERROR NO INIT %s", image);
-  if (result == 1)
+    KERR("ERROR NO INIT %s/%s", bulk, image);
+  if ((strcmp(image, "self_rootfs")) && (result == 1))
     {
     if (((sb.st_mode & S_IFMT) != S_IFLNK) &&
          ((sb.st_mode & S_IFMT) != S_IFREG))
