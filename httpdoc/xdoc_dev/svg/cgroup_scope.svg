@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" width="900" height="320" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.cpu{fill:#0f3460}
+.cpuo{fill:#ffffff;stroke:#7a8695;stroke-width:1.2}
+</style>
+<rect width="900" height="320" fill="#ffffff"/>
+<rect class="box" x="30" y="40" width="150" height="46" rx="4"/><text x="105" y="68" text-anchor="middle" class="m">nemocmd start</text>
+<rect class="yel" x="30" y="130" width="150" height="46" rx="4"/><text x="105" y="158" text-anchor="middle" class="m">toyscope</text>
+<rect class="box" x="30" y="240" width="150" height="46" rx="4"/><text x="105" y="268" text-anchor="middle" class="m">systemd --user</text>
+<path class="arr" d="M105,86 L105,130"/>
+<path class="arr" d="M105,176 L105,240"/>
+<text x="115" y="112" class="s">1</text><text x="115" y="212" class="s">2</text>
+<rect class="zone" x="260" y="30" width="610" height="270" rx="8"/>
+<text x="565" y="22" text-anchor="middle" class="m">toy-nemo.scope</text>
+<path class="arr" d="M180,263 L260,263"/><text x="215" y="255" class="s">3</text>
+<rect class="grn" x="290" y="60" width="150" height="46" rx="4"/><text x="365" y="88" text-anchor="middle" class="m">proxymous</text>
+<rect class="zoneg" x="470" y="60" width="380" height="220" rx="6"/>
+<text x="660" y="52" text-anchor="middle" class="m">crun, no cgroup asked</text>
+<rect class="box" x="490" y="80" width="160" height="40" rx="4"/><text x="570" y="105" text-anchor="middle" class="m">main-server</text>
+<rect class="box" x="490" y="130" width="160" height="40" rx="4"/><text x="570" y="155" text-anchor="middle" class="m">ovs, a2b, c2c, nat</text>
+<rect class="zone" x="670" y="80" width="160" height="180" rx="6"/>
+<text x="750" y="100" text-anchor="middle" class="m">cnt</text>
+<rect class="grn" x="690" y="115" width="120" height="36" rx="4"/><text x="750" y="138" text-anchor="middle" class="m">systemd</text>
+<rect class="box" x="690" y="160" width="120" height="36" rx="4"/><text x="750" y="183" text-anchor="middle" class="m">init.scope</text>
+<rect class="box" x="690" y="205" width="120" height="36" rx="4"/><text x="750" y="228" text-anchor="middle" class="m">system.slice</text>
+</svg>

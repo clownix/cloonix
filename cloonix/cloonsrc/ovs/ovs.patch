@@ -1,0 +1,31 @@
+diff -Naur ovs/lib/dpif-netlink.c ovs_tainted/lib/dpif-netlink.c
+--- ovs/lib/dpif-netlink.c	2026-07-20 20:56:01.000000000 +0200
++++ ovs_tainted/lib/dpif-netlink.c	2026-07-20 21:22:17.636174970 +0200
+@@ -3755,13 +3755,13 @@
+ dpif_netlink_init(void)
+ {
+     static struct ovsthread_once once = OVSTHREAD_ONCE_INITIALIZER;
+-    static int error;
++    static int error = 0;
+ 
+     if (ovsthread_once_start(&once)) {
+         error = nl_lookup_genl_family(OVS_DATAPATH_FAMILY,
+                                       &ovs_datapath_family);
+         if (error) {
+-            VLOG_INFO("Generic Netlink family '%s' does not exist. "
++            VLOG_ERR("Generic Netlink family '%s' does not exist. "
+                       "The Open vSwitch kernel module is probably not loaded.",
+                       OVS_DATAPATH_FAMILY);
+         }
+diff -Naur ovs/ofproto/ofproto-dpif.c ovs_tainted/ofproto/ofproto-dpif.c
+--- ovs/ofproto/ofproto-dpif.c	2026-07-20 20:56:01.000000000 +0200
++++ ovs_tainted/ofproto/ofproto-dpif.c	2026-07-20 21:22:17.640174954 +0200
+@@ -754,7 +754,7 @@
+         return 0;
+     }
+ 
+-    backer_name = xasprintf("ovs-%s", type);
++    backer_name = xasprintf("%s-%s", getenv("CLOONIX_NET"), type);
+ 
+     /* Remove any existing datapaths, since we assume we're the only
+      * userspace controlling the datapath. */

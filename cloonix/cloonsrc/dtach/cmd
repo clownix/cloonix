@@ -1,0 +1,5 @@
+#!/bin/bash
+# set -e: a step that fails must stop this script.
+set -e
+make clean
+make

@@ -1,0 +1,6 @@
+#!/bin/bash
+HERE=`pwd`
+rm -f cloonix-qemu-system
+rm -rf ${HERE}/tainted_qemu
+rm -rf ${HERE}/pc-bios
+

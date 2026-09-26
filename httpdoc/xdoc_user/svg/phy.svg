@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" width="900" height="220" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.cross{stroke:#e94560;stroke-width:3}
+</style>
+<rect width="900" height="220" fill="#ffffff"/>
+<rect class="zone" x="20" y="20" width="400" height="180" rx="12"/>
+<text x="30" y="36" text-anchor="start" class="s">absorb</text>
+<rect class="gry" x="40" y="60" width="120" height="34" rx="6"/>
+<text x="100" y="81" text-anchor="middle" class="m">host</text>
+<rect class="acc" x="200" y="60" width="200" height="34" rx="6"/>
+<text x="300" y="81" text-anchor="middle" class="m">enp6s0</text>
+<path class="arr" d="M300,94 L300,130"/>
+<rect class="zoneg" x="180" y="130" width="220" height="60" rx="12"/>
+<text x="190" y="146" text-anchor="start" class="s">netns cloonix_nemo</text>
+<rect class="box" x="240" y="150" width="100" height="30" rx="6"/>
+<text x="290" y="169" text-anchor="middle" class="m">enp6s0_0</text>
+<rect class="zone" x="480" y="20" width="400" height="180" rx="12"/>
+<text x="490" y="36" text-anchor="start" class="s">macvlan</text>
+<rect class="gry" x="500" y="60" width="120" height="34" rx="6"/>
+<text x="560" y="81" text-anchor="middle" class="m">host</text>
+<rect class="box" x="660" y="60" width="200" height="34" rx="6"/>
+<text x="760" y="81" text-anchor="middle" class="m">enp6s0</text>
+<rect class="zoneg" x="640" y="130" width="220" height="60" rx="12"/>
+<text x="650" y="146" text-anchor="start" class="s">netns cloonix_nemo</text>
+<rect class="box" x="660" y="150" width="85" height="30" rx="6"/>
+<text x="702.5" y="169" text-anchor="middle" class="m">enp6s0_1</text>
+<rect class="box" x="760" y="150" width="85" height="30" rx="6"/>
+<text x="802.5" y="169" text-anchor="middle" class="m">enp6s0_2</text>
+<path class="arr" d="M720,94 L702,150"/>
+<path class="arr" d="M800,94 L802,150"/>
+</svg>

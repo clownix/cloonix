@@ -1,0 +1,115 @@
+<!-- Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>cloonix terminal</title>
+<link rel="stylesheet" href="/xterm/xterm.css"/>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #0d1117; overflow: hidden;
+               display: flex; flex-direction: column; }
+  #titlebar {
+    height: 28px; flex-shrink: 0;
+    background: #161b22; border-bottom: 1px solid #30363d;
+    display: flex; align-items: center; padding: 0 12px;
+    font: 12px 'SF Mono', 'Fira Code', monospace; color: #8b949e;
+    user-select: none;
+  }
+  #titlebar span { color: #58a6ff; margin-right: 6px; }
+  #terminal-container { flex: 1; padding: 4px; min-height: 0; }
+</style>
+</head>
+<body>
+<div id="titlebar"><span id="title-text">cloonix terminal</span></div>
+<div id="terminal-container"></div>
+
+<script src="/xterm/xterm.js"></script>
+<script src="/xterm/addon-fit.js"></script>
+<script>
+const parts = location.pathname.split('/').filter(Boolean);
+// parts: ["sh-nemo", "ssh", "Cloon1"]
+const net  = (parts[0] || 'sh-').replace(/^sh-/, '');
+// No default kind: the server refuses a console naming no kind and no guest.
+const kind = parts[1] || '';
+const vm   = parts[2] || '';
+
+const label = vm ? `${net} / ${vm} [${kind}]` : `${net} [${kind}]`;
+// Browser tab title: ssh -> "ssh_<vm>", console kinds -> "console_<vm>"
+const tabTitle = (kind === 'ssh') ? `ssh_${vm}` : `console_${vm}`;
+document.title = tabTitle;
+document.getElementById('title-text').textContent = '⬡ ' + label;
+
+const wsUri = (location.protocol === 'https:' ? 'wss://' : 'ws://')
+              + location.host + location.pathname.replace(/\/$/, '') + '/ws';
+
+const term = new Terminal({
+  cursorBlink: true, fontSize: 14,
+  fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
+  theme: {
+    background:'#0d1117', foreground:'#e6edf3', cursor:'#58a6ff',
+    // Same selection colours as the inline panels.
+    selectionBackground:'#2f6feb',
+    selectionForeground:'#ffffff',
+    selectionInactiveBackground:'#26456e',
+    black:'#21262d', red:'#ff7b72', green:'#3fb950', yellow:'#d29922',
+    blue:'#388bfd', magenta:'#bc8cff', cyan:'#39c5cf', white:'#b1bac4',
+    brightBlack:'#484f58', brightRed:'#ffa198', brightGreen:'#56d364',
+    brightYellow:'#e3b341', brightBlue:'#79c0ff', brightMagenta:'#d2a8ff',
+    brightCyan:'#56d4dd', brightWhite:'#f0f6fc',
+  },
+  scrollback: 5000,
+});
+
+const fitAddon = new FitAddon.FitAddon();
+term.loadAddon(fitAddon);
+term.open(document.getElementById('terminal-container'));
+fitAddon.fit();
+
+let ws = null;
+// A refusal (guest with no byte pipes) stops the retry.
+let refused = false;
+
+function sendResize() {
+  if (ws && ws.readyState === WebSocket.OPEN)
+    ws.send(JSON.stringify({ cols: term.cols, rows: term.rows }));
+}
+
+function connect() {
+  term.write('\r\n\x1b[33mConnecting to ' + wsUri + '\x1b[0m\r\n');
+  ws = new WebSocket(wsUri, ['binary']);
+  ws.binaryType = 'arraybuffer';
+  ws.onopen  = () => { term.write('\x1b[32mConnected\x1b[0m\r\n'); sendResize(); };
+  ws.onmessage = (e) => {
+    const txt = (e.data instanceof ArrayBuffer)
+                ? new TextDecoder().decode(new Uint8Array(e.data))
+                : String(e.data);
+    if (txt.includes('refused the leg')) refused = true;
+    term.write(e.data instanceof ArrayBuffer ? new Uint8Array(e.data) : e.data);
+  };
+  ws.onclose = () => {
+    if (refused) {
+      term.write('\r\n\x1b[31mThis machine has no shell leg. A windows guest '
+               + 'has no cloonix exec server: use its desktop instead.'
+               + '\x1b[0m\r\n');
+      return;
+    }
+    term.write('\r\n\x1b[31mDisconnected — reconnecting in 3s\x1b[0m\r\n');
+    setTimeout(connect, 3000);
+  };
+  ws.onerror = () => term.write('\r\n\x1b[31mWebSocket error\x1b[0m\r\n');
+}
+
+term.onData(data => {
+  if (ws && ws.readyState === WebSocket.OPEN)
+    ws.send(new TextEncoder().encode(data));
+});
+
+window.addEventListener('resize', () => { fitAddon.fit(); sendResize(); });
+term.onResize(() => sendResize());
+
+connect();
+</script>
+</body>
+</html>

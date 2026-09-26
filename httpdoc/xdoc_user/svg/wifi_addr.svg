@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 250" width="900" height="250" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e08a1e"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.fib{stroke:#c8a24a;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.ink{fill:#0f3460}
+.pink{fill:#e94560}
+.t{font-size:13px;font-weight:bold;fill:#0f3460}
+.big{font-size:15px;font-weight:bold;fill:#0f3460}
+.cabd{stroke:#3498db;stroke-width:2.5;fill:none;stroke-dasharray:6 4}
+.air{fill:#fff8ec;stroke:#e08a1e;stroke-width:1.5;stroke-dasharray:3 3}
+.arro{stroke:#e08a1e;stroke-width:2;fill:none;marker-end:url(#ao)}
+.org{fill:#e08a1e}
+</style>
+<rect width="900" height="250" fill="#ffffff"/>
+<rect class="grn" x="30" y="90" width="110" height="44" rx="6"/>
+<text x="85" y="116" text-anchor="middle" class="m">sta</text>
+<rect class="acc" x="330" y="90" width="110" height="44" rx="6"/>
+<text x="385" y="116" text-anchor="middle" class="m">ap</text>
+<rect class="box" x="630" y="90" width="110" height="44" rx="6"/>
+<text x="685" y="116" text-anchor="middle" class="m">srv</text>
+<text x="85" y="150" text-anchor="middle" class="s">02:..:10</text>
+<text x="385" y="150" text-anchor="middle" class="s">BSSID 02:..:01</text>
+<text x="685" y="150" text-anchor="middle" class="s">on the cable</text>
+<line class="arro" x1="140" y1="105" x2="330" y2="105"/>
+<text x="235" y="70" text-anchor="middle" class="t">to DS = 1</text>
+<text x="235" y="88" text-anchor="middle" class="s">802.11 over the air</text>
+<path class="cab" d="M440,112 L630,112"/>
+<text x="535" y="88" text-anchor="middle" class="s">ethernet on the lan</text>
+<text x="235" y="180" text-anchor="middle" class="m">Address 1  receiver = the ap, BSSID</text>
+<text x="235" y="198" text-anchor="middle" class="m">Address 2  transmitter = sta</text>
+<text x="235" y="216" text-anchor="middle" class="m">Address 3  final destination = srv</text>
+<text x="535" y="180" text-anchor="middle" class="m">destination mac = srv</text>
+<text x="535" y="198" text-anchor="middle" class="m">source mac = sta</text>
+<text x="535" y="216" text-anchor="middle" class="s">the bridge of the ap rewrote it</text>
+</svg>

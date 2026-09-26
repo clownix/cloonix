@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 170" width="900" height="170" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.cross{stroke:#e94560;stroke-width:3}
+</style>
+<rect width="900" height="170" fill="#ffffff"/>
+<rect class="box" x="30" y="60" width="160" height="40" rx="6"/>
+<text x="110" y="84" text-anchor="middle" class="m">get_&lt;distro&gt;.sh</text>
+<rect class="box" x="240" y="60" width="200" height="40" rx="6"/>
+<text x="340" y="84" text-anchor="middle" class="m">/var/www/html/&lt;distro&gt;</text>
+<rect class="box" x="500" y="60" width="160" height="40" rx="6"/>
+<text x="580" y="80" text-anchor="middle" class="m">cnt_&lt;distro&gt;.sh</text>
+<text x="580" y="92" text-anchor="middle" class="s">127.0.0.1</text>
+<rect class="box" x="710" y="60" width="160" height="40" rx="6"/>
+<text x="790" y="80" text-anchor="middle" class="m">guest</text>
+<text x="790" y="92" text-anchor="middle" class="s">10.117.0.1</text>
+<path class="arr" d="M190,80 L240,80"/>
+<path class="arr" d="M440,80 L500,80"/>
+<path class="arg" d="M440,90 L710,90"/>
+</svg>

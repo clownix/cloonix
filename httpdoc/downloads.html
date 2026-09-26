@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloonix &mdash; downloads</title>
+<meta name="description" content="The cloonix tarballs, source, bundle and toy, and the guest images, containers and virtual machines, ready for /var/lib/cloonix/bulk.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="index.html">CLOONIX</a>
+    <a href="index.html">Overview</a>
+    <a href="learn.html">Learn</a>
+    <a href="demos.html">Demos</a>
+    <a href="start.html">Get started</a>
+    <a href="downloads.html" class="on">Downloads</a>
+    <a href="build_user/user.html">Documentation</a>
+    <a href="build_dev/dev.html">Developers</a>
+    <a href="https://github.com/clownix/cloonix">Source</a>
+  </nav>
+</header>
+
+<section class="wrap top">
+<h1>Downloads</h1>
+<p class="lead">The toy, the bundle, the sources with the store they compile
+from, and four directories of guest images to put in
+<code>/var/lib/cloonix/bulk</code>.</p>
+
+<h2>Cloonix</h2>
+<table>
+  <tr><td><a href="downloads/cloonix-toy-100.tar.gz"><code>cloonix-toy-100.tar.gz</code></a></td>
+      <td>cloonix inside its own container. No root, nothing installed: extract,
+      <code>./setup.sh nemo</code>, <code>./nemocmd start</code>.
+      <a href="start.html">Get started</a> uses this one.</td></tr>
+  <tr><td><a href="downloads/cloonix-bundle-100.tar.gz"><code>cloonix-bundle-100.tar.gz</code></a></td>
+      <td>the compiled run-time for a machine several people share. Installed once
+      as root by <code>sudo ./install_cloonfs</code>, under
+      <code>/usr/libexec/cloonix</code>.</td></tr>
+  <tr><td><a href="downloads/cloonix-source-100.tar.gz"><code>cloonix-source-100.tar.gz</code></a></td>
+      <td>the source tree: cloonix, the demos, the image builders of
+      <code>vm_create</code>, the tests, the two books. The same tree as
+      <a href="https://github.com/clownix/cloonix">github.com/clownix/cloonix</a>;
+      <code>./doitall</code> at its root builds the bundle,
+      <code>toy_targz/create_toy_targz.sh</code> the toy.</td></tr>
+  <tr><td><a href="downloads/cloonix-targz_store-100.tar.gz"><code>cloonix-targz_store-100.tar.gz</code></a></td>
+      <td>goes with the sources, and is needed before anything compiles: the
+      open sources cloonix rebuilds, qemu, open vswitch, crun, passt and
+      patchelf, each at the commit this version was made with, and the base
+      root file-system. Extracted at the root of the source tree it is the
+      <code>targz_store</code> directory, which <code>./doitall</code> reads
+      instead of the internet.</td></tr>
+</table>
+<p>To compile, the two together:</p>
+<pre><code>wget https://clownix.net/downloads/cloonix-source-100.tar.gz
+wget https://clownix.net/downloads/cloonix-targz_store-100.tar.gz
+tar xf cloonix-source-100.tar.gz
+cd cloonix-source-100
+tar xf ../cloonix-targz_store-100.tar.gz
+./doitall</code></pre>
+<p>The build runs inside a debian trixie machine made by
+<code>build_tools/vmbuild/doitall.sh</code>; the chapter on building of the
+<a href="build_user/user.html">documentation</a> has the steps. To run cloonix and not
+compile it, the toy alone:</p>
+<pre><code>wget https://clownix.net/downloads/cloonix-toy-100.tar.gz
+tar xf cloonix-toy-100.tar.gz</code></pre>
+
+<h2>Guest images</h2>
+<p>A guest needs an image in <code>/var/lib/cloonix/bulk</code>, the same
+directory for the bundle and for the toy. The four directories below hold what
+<code>vm_create/allbulk.sh</code> of the source tree builds, from a local mirror
+of each distribution, without root.</p>
+
+<div class="cols2">
+  <div class="card">
+    <h3>A container image: <code>.tar.gz</code></h3>
+    <p>Copied into bulk as it is. The first <code>add cnt</code> on it extracts
+    it once, into <code>&lt;image&gt;_targz</code>, for every network and every
+    user of the machine.</p>
+<pre><code>cd /var/lib/cloonix/bulk
+wget https://clownix.net/downloads/cnt_bulk/trixie.tar.gz
+cloonix cli nemo add cnt c1 eth=1 trixie</code></pre>
+    <p class="note">The extracted tree is never modified and takes no
+    <code>--persistent</code>. For an image to change, extract it under another
+    name: <code>mkdir mytrixie &amp;&amp; tar xpf trixie.tar.gz -C mytrixie</code>.</p>
+  </div>
+  <div class="card">
+    <h3>A machine image: <code>.qcow2.gz</code></h3>
+    <p>Gunzipped into bulk. A machine started on it writes to a disk of its own
+    derived from the image, which stays as downloaded.</p>
+<pre><code>cd /var/lib/cloonix/bulk
+wget https://clownix.net/downloads/kvm_bulk/trixie.qcow2.gz
+gunzip trixie.qcow2.gz
+cloonix cli nemo add kvm k1 ram=1000 cpu=2 eth=1 trixie.qcow2</code></pre>
+    <p class="note">The account needs <code>/dev/kvm</code>,
+    <code>/dev/vhost-net</code> and <code>/dev/net/tun</code>:
+    <a href="start.html">step 1</a>.</p>
+  </div>
+</div>
+
+<h2><a href="downloads/cnt_bulk/">cnt_bulk</a> &mdash; the distributions, as containers</h2>
+<table>
+  <tr><td><a href="downloads/cnt_bulk/alpine.tar.gz"><code>alpine.tar.gz</code></a></td><td>alpine linux</td></tr>
+  <tr><td><a href="downloads/cnt_bulk/trixie.tar.gz"><code>trixie.tar.gz</code></a></td><td>debian 13; the image of the first demos, cloonix/cnt.py, and of the switching demos</td></tr>
+  <tr><td><a href="downloads/cnt_bulk/resolute.tar.gz"><code>resolute.tar.gz</code></a></td><td>ubuntu 26.04</td></tr>
+  <tr><td><a href="downloads/cnt_bulk/rocky.tar.gz"><code>rocky.tar.gz</code></a></td><td>rocky linux</td></tr>
+  <tr><td><a href="downloads/cnt_bulk/fedora44.tar.gz"><code>fedora44.tar.gz</code></a></td><td>fedora 44</td></tr>
+  <tr><td><a href="downloads/cnt_bulk/arch.tar.gz"><code>arch.tar.gz</code></a></td><td>arch linux</td></tr>
+  <tr><td><a href="downloads/cnt_bulk/tumbleweed.tar.gz"><code>tumbleweed.tar.gz</code></a></td><td>opensuse tumbleweed</td></tr>
+  <tr><td><a href="downloads/cnt_bulk/trixie_systemd.tar.gz"><code>trixie_systemd.tar.gz</code></a></td><td>debian 13 started with systemd as its init</td></tr>
+</table>
+
+<h2><a href="downloads/kvm_bulk/">kvm_bulk</a> &mdash; the distributions, as virtual machines</h2>
+<p>Seven base machines with a serial console, then the desktops, each built from
+the base of its distribution and shown by the canvas in a noVNC panel.</p>
+<table>
+  <tr><td><a href="downloads/kvm_bulk/alpine.qcow2.gz"><code>alpine.qcow2.gz</code></a></td><td>alpine linux</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/trixie.qcow2.gz"><code>trixie.qcow2.gz</code></a></td><td>debian 13; cloonix/kvm.py, and the machine the bundle is built in</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/resolute.qcow2.gz"><code>resolute.qcow2.gz</code></a></td><td>ubuntu 26.04</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/rocky.qcow2.gz"><code>rocky.qcow2.gz</code></a></td><td>rocky linux</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/fedora44.qcow2.gz"><code>fedora44.qcow2.gz</code></a></td><td>fedora 44</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/arch.qcow2.gz"><code>arch.qcow2.gz</code></a></td><td>arch linux</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/tumbleweed.qcow2.gz"><code>tumbleweed.qcow2.gz</code></a></td><td>opensuse tumbleweed</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/alpine_xfce.qcow2.gz"><code>alpine_xfce.qcow2.gz</code></a></td><td>alpine with the xfce desktop</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/trixie_lxde.qcow2.gz"><code>trixie_lxde.qcow2.gz</code></a></td><td>debian 13 with the lxde desktop</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/trixie_gnome.qcow2.gz"><code>trixie_gnome.qcow2.gz</code></a></td><td>debian 13 with the gnome desktop</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/resolute_gnome.qcow2.gz"><code>resolute_gnome.qcow2.gz</code></a></td><td>ubuntu 26.04 with the gnome desktop</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/rocky_gnome.qcow2.gz"><code>rocky_gnome.qcow2.gz</code></a></td><td>rocky with the gnome desktop</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/fedora44_gnome.qcow2.gz"><code>fedora44_gnome.qcow2.gz</code></a></td><td>fedora 44 with the gnome desktop</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/arch_plasma.qcow2.gz"><code>arch_plasma.qcow2.gz</code></a></td><td>arch with the plasma desktop</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/tumbleweed_plasma.qcow2.gz"><code>tumbleweed_plasma.qcow2.gz</code></a></td><td>tumbleweed with the plasma desktop</td></tr>
+</table>
+
+<h2><a href="downloads/cnt_demo_bulk/">cnt_demo_bulk</a> &mdash; one container image per subject</h2>
+<p>Each is the <code>trixie</code> container plus the packages of one subject, and
+nothing else. The third column names the demos of <code>demos/</code> that ask
+for it.</p>
+<table>
+  <tr><th>image</th><th>trixie plus</th><th>demos</th></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/frr_trixie.tar.gz"><code>frr_trixie.tar.gz</code></a></td><td>frr</td><td><code>routing/frrspider.py frrspider_bgp.py frrmix.py isis.py address/ipv6.py switching/vxlan.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/bird_trixie.tar.gz"><code>bird_trixie.tar.gz</code></a></td><td>bird</td><td><code>routing/bird.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/babel_trixie.tar.gz"><code>babel_trixie.tar.gz</code></a></td><td>babeld</td><td><code>routing/babel.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/batman_trixie.tar.gz"><code>batman_trixie.tar.gz</code></a></td><td>batctl</td><td><code>routing/batman.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/ovn_trixie.tar.gz"><code>ovn_trixie.tar.gz</code></a></td><td>open vswitch and ovn</td><td><code>switching/ovn.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/arp_trixie.tar.gz"><code>arp_trixie.tar.gz</code></a></td><td>dsniff (arpspoof) and arping</td><td><code>security/arp.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/dns_trixie.tar.gz"><code>dns_trixie.tar.gz</code></a></td><td>bind9, frr, the dns query tools</td><td><code>address/dns.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/unbound_trixie.tar.gz"><code>unbound_trixie.tar.gz</code></a></td><td>unbound, the dnssec tools</td><td><code>address/unbound.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/knot_trixie.tar.gz"><code>knot_trixie.tar.gz</code></a></td><td>knot dns</td><td><code>address/knot.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/dhcp_trixie.tar.gz"><code>dhcp_trixie.tar.gz</code></a></td><td>a dhcp server, a relay, two clients</td><td><code>address/dhcp.py wifi/cntkvm_home.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/ntp_trixie.tar.gz"><code>ntp_trixie.tar.gz</code></a></td><td>chrony</td><td><code>address/ntp.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/wg_trixie.tar.gz"><code>wg_trixie.tar.gz</code></a></td><td>wireguard</td><td><code>security/wg.py cloonix/a2b.py cloonix/snf.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/strongswan_trixie.tar.gz"><code>strongswan_trixie.tar.gz</code></a></td><td>strongswan</td><td><code>security/ipsec.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/libreswan_trixie.tar.gz"><code>libreswan_trixie.tar.gz</code></a></td><td>libreswan</td><td><code>security/ipsec.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/openvpn_trixie.tar.gz"><code>openvpn_trixie.tar.gz</code></a></td><td>openvpn</td><td><code>security/openvpn.py security/tls.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/tinc_trixie.tar.gz"><code>tinc_trixie.tar.gz</code></a></td><td>tinc</td><td><code>security/tinc.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/proxy_trixie.tar.gz"><code>proxy_trixie.tar.gz</code></a></td><td>haproxy, nginx, curl</td><td><code>services/proxy.py cloonix/nginx.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/squid_trixie.tar.gz"><code>squid_trixie.tar.gz</code></a></td><td>squid</td><td><code>services/squid.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/smtp_trixie.tar.gz"><code>smtp_trixie.tar.gz</code></a></td><td>postfix, a name server, the mail tools</td><td><code>services/smtp.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/mqtt_trixie.tar.gz"><code>mqtt_trixie.tar.gz</code></a></td><td>mosquitto and its clients</td><td><code>services/mqtt.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/asterisk_alpine.tar.gz"><code>asterisk_alpine.tar.gz</code></a></td><td>alpine with asterisk and a SIP toolbox</td><td><code>services/asterisk.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/nft_trixie.tar.gz"><code>nft_trixie.tar.gz</code></a></td><td>nftables, the conntrack tools</td><td><code>security/nftables.py cloonix/nat.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/suricata_trixie.tar.gz"><code>suricata_trixie.tar.gz</code></a></td><td>suricata</td><td><code>security/suricata.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/ebpf_trixie.tar.gz"><code>ebpf_trixie.tar.gz</code></a></td><td>the bpf toolchain</td><td><code>security/ebpf.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/radius_trixie.tar.gz"><code>radius_trixie.tar.gz</code></a></td><td>freeradius and a supplicant</td><td><code>security/radius.py wifi/cntkvm_enterprise.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/vrrp_trixie.tar.gz"><code>vrrp_trixie.tar.gz</code></a></td><td>keepalived</td><td><code>availability/vrrp.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/cluster_trixie.tar.gz"><code>cluster_trixie.tar.gz</code></a></td><td>corosync and pacemaker</td><td><code>availability/cluster.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/perf_trixie.tar.gz"><code>perf_trixie.tar.gz</code></a></td><td>the measurement tools</td><td><code>watching/perf.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/flow_trixie.tar.gz"><code>flow_trixie.tar.gz</code></a></td><td>iperf3, trafgen</td><td><code>the flow tests of debug/</code></td></tr>
+</table>
+
+<h2><a href="downloads/kvm_demo_bulk/">kvm_demo_bulk</a> &mdash; the machines of the demos</h2>
+<table>
+  <tr><td><a href="downloads/kvm_demo_bulk/python_trixie.qcow2.gz"><code>python_trixie.qcow2.gz</code></a></td>
+      <td>the <code>trixie</code> machine plus python3, for a guest that runs
+      the cloonix client itself</td><td><code>cloonix/realnet.py cloonix/phy.py</code></td></tr>
+</table>
+
+<h2>Not here</h2>
+<table>
+  <tr><td><code>win.qcow2</code></td><td>a windows disk is prepared once by its owner; the chapter on windows guests of the documentation has the steps</td></tr>
+  <tr><td><code>c8000v.qcow2</code></td><td>the c8000v image comes from cisco; the three steps of <code>vm_create/cisco</code> prepare it</td></tr>
+  <tr><td><code>freebsd.qcow2</code></td><td>built from the internet by <code>vm_create/cnt_kvm/kvm_freebsd.sh</code>, there being no local mirror of it</td></tr>
+</table>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Cloonix is free software under the AGPLv3.
+    <a href="https://github.com/clownix/cloonix">github.com/clownix/cloonix</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

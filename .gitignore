@@ -1,0 +1,5 @@
+targz_store
+**/__pycache__/
+*.pyc
+httpdoc/build_user/
+httpdoc/build_dev/

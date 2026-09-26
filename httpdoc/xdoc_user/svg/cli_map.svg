@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" width="900" height="420" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e08a1e"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.fib{stroke:#c8a24a;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.ink{fill:#0f3460}
+.pink{fill:#e94560}
+.t{font-size:13px;font-weight:bold;fill:#0f3460}
+.big{font-size:15px;font-weight:bold;fill:#0f3460}
+.cabd{stroke:#3498db;stroke-width:2.5;fill:none;stroke-dasharray:6 4}
+.air{fill:#fff8ec;stroke:#e08a1e;stroke-width:1.5;stroke-dasharray:3 3}
+.arro{stroke:#e08a1e;stroke-width:2;fill:none;marker-end:url(#ao)}
+.org{fill:#e08a1e}
+</style>
+<rect width="900" height="420" fill="#ffffff"/>
+<line class="lin" x1="150" y1="140" x2="450" y2="210"/>
+<line class="lin" x1="450" y1="140" x2="450" y2="210"/>
+<line class="lin" x1="750" y1="140" x2="450" y2="210"/>
+<line class="lin" x1="150" y1="290" x2="450" y2="210"/>
+<line class="lin" x1="450" y1="290" x2="450" y2="210"/>
+<line class="lin" x1="750" y1="290" x2="450" y2="210"/>
+<rect class="yel" x="360" y="175" width="180" height="70" rx="6"/>
+<text x="450" y="205" text-anchor="middle" class="t">cloonix cli nemo</text>
+<text x="450" y="225" text-anchor="middle" class="s">one net, its server</text>
+<rect class="grn" x="30" y="30" width="240" height="110" rx="6"/>
+<text x="150" y="52" text-anchor="middle" class="t">build</text>
+<text x="44" y="76" text-anchor="start" class="m">add  kind name ...</text>
+<text x="44" y="94" text-anchor="start" class="m">del  name  |  del all</text>
+<text x="44" y="112" text-anchor="start" class="m">plug  name [itf] lan</text>
+<text x="44" y="130" text-anchor="start" class="m">unplug  name [itf] [lan]</text>
+<rect class="acc" x="330" y="30" width="240" height="110" rx="6"/>
+<text x="450" y="52" text-anchor="middle" class="t">configure</text>
+<text x="344" y="76" text-anchor="start" class="m">cnf  name [itf] key=value</text>
+<text x="344" y="94" text-anchor="start" class="m">sniff= x= y= angle=</text>
+<text x="344" y="112" text-anchor="start" class="m">publish= cpu= ram=</text>
+<text x="344" y="130" text-anchor="start" class="m">rstp= mac_mangle= delay= ...</text>
+<rect class="box" x="630" y="30" width="240" height="110" rx="6"/>
+<text x="750" y="52" text-anchor="middle" class="t">read</text>
+<text x="644" y="76" text-anchor="start" class="m">dump  commands  topo  json</text>
+<text x="644" y="94" text-anchor="start" class="m">dump  drawing  pid  images</text>
+<text x="644" y="112" text-anchor="start" class="m">dump  ip  nat  guest</text>
+<text x="644" y="130" text-anchor="start" class="m">dump  namespaces  ovs-vsctl</text>
+<rect class="gry" x="30" y="290" width="240" height="110" rx="6"/>
+<text x="150" y="312" text-anchor="middle" class="t">inside the guests</text>
+<text x="44" y="336" text-anchor="start" class="m">ssh  guest [command]</text>
+<text x="44" y="354" text-anchor="start" class="m">scp  guest:path  path</text>
+<text x="44" y="372" text-anchor="start" class="m">files  guest [guest]</text>
+<text x="44" y="390" text-anchor="start" class="m">save  kvm  path.qcow2</text>
+<rect class="box" x="330" y="290" width="240" height="110" rx="6"/>
+<text x="450" y="312" text-anchor="middle" class="t">watch</text>
+<text x="344" y="336" text-anchor="start" class="m">sniff  name [itf] [filter]</text>
+<text x="344" y="354" text-anchor="start" class="m">sniff  air</text>
+<text x="344" y="372" text-anchor="start" class="m">trace  qemu json_cli crun</text>
+<text x="344" y="390" text-anchor="start" class="m">trace  probe guest</text>
+<rect class="gry" x="630" y="290" width="240" height="110" rx="6"/>
+<text x="750" y="312" text-anchor="middle" class="t">learn and debug</text>
+<text x="644" y="336" text-anchor="start" class="m">demo  area/demo.py</text>
+<text x="644" y="354" text-anchor="start" class="m">demo  (the list)</text>
+<text x="644" y="372" text-anchor="start" class="m">rpc  '{json}'</text>
+<text x="644" y="390" text-anchor="start" class="m"></text>
+</svg>

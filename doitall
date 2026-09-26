@@ -1,0 +1,81 @@
+#!/bin/bash
+set -e
+export SRC_TREE_ROOT=`pwd`
+if [ ! -e ${SRC_TREE_ROOT}/cloonix/cloonix_config.py ]; then
+  echo NOT FOUND:
+  echo ${SRC_TREE_ROOT}/cloonix/cloonix_config.py
+  exit 1
+fi
+BUILD_CLOONFS="build_cloonfs"
+PACK_CLOONFS="pack_cloonfs"
+BASE_ROOTFS="trixie_base_rootfs"
+FILL_COMMON="fill_common.c"
+# Anchored: the config is a python module now, so a scan of it must take the
+# line that IS the version and not one that mentions it.
+VERSION_NUM=$(grep -m1 '^CLOONIX_VERSION=' ${SRC_TREE_ROOT}/cloonix/cloonix_config.py)
+VERSION_NUM=${VERSION_NUM#*=}
+VERSION_NUM=${VERSION_NUM%-*}
+BUNDLE="${HOME}/cloonix_bundle"
+RESBUNDLE="${HOME}/cloonix-bundle-${VERSION_NUM}"
+TARGZ_STORE="${BUNDLE}/targz_store"
+printf "\n\nCREATE BUNDLE VERSION ${VERSION_NUM}\n\n"
+./allclean
+mkdir -p ${BUNDLE}/cloonfs/bin
+mkdir -p ${RESBUNDLE}
+mkdir -p ${TARGZ_STORE}
+cp -r ${SRC_TREE_ROOT}/targz_store/* ${TARGZ_STORE}
+cp -r ${SRC_TREE_ROOT}/cloonix ${BUNDLE}
+cp -r ${SRC_TREE_ROOT}/demos ${BUNDLE}
+cp  ${SRC_TREE_ROOT}/build_tools/install_cloonfs ${BUNDLE}
+mkdir -p ${BUNDLE}/build_tools
+cp  ${SRC_TREE_ROOT}/build_tools/make_cloonix_cert ${BUNDLE}/build_tools
+cp  ${SRC_TREE_ROOT}/build_tools/toolbox/${FILL_COMMON} ${BUNDLE}
+tar --directory=${BUNDLE} -xf ${TARGZ_STORE}/patchelf_*.tar.gz
+mv  ${BUNDLE}/patchelf ${BUNDLE}/src_patchelf
+cd ${BUNDLE}
+gcc -o copy_libs ${FILL_COMMON}
+rm ${BUNDLE}/${FILL_COMMON}
+cd ${BUNDLE}/src_patchelf
+make
+cp -f ${BUNDLE}/src_patchelf/src/patchelf ${BUNDLE}/cloonfs/bin/patchelf
+mv ${BUNDLE}/src_patchelf/src/patchelf ${BUNDLE}/cloonfs/bin/cloonix-patchelf
+rm -rf ${BUNDLE}/src_patchelf
+strip ${BUNDLE}/cloonfs/bin/patchelf
+strip ${BUNDLE}/cloonfs/bin/cloonix-patchelf
+cd ${SRC_TREE_ROOT}
+printf "\n\nBUILDING BUNDLE VERSION ${VERSION_NUM}\n\n"
+./build_tools/${BUILD_CLOONFS}
+printf "\n\nBUILD DONE OK\n\n"
+printf "\n\nPACKING BUNDLE VERSION ${VERSION_NUM}\n\n"
+tar --directory=${BUNDLE}/cloonfs -xf ${TARGZ_STORE}/${BASE_ROOTFS}.tar.gz
+./build_tools/${PACK_CLOONFS}
+printf "\n\nPACK DONE OK\n\n"
+mv ${BUNDLE}/cloonfs ${RESBUNDLE}
+mv ${BUNDLE}/startup_bin ${RESBUNDLE}
+mv ${BUNDLE}/insider_agents ${RESBUNDLE}
+cp ${SRC_TREE_ROOT}/build_tools/install_cloonfs ${RESBUNDLE}
+CERT_KEEP="${HOME}/.cloonix_cert"
+mkdir -p ${RESBUNDLE}/cert
+mkdir -p ${CERT_KEEP}
+if [ "${CLOONIX_NEW_CERT:-0}" = "1" ]; then
+  rm -f ${CERT_KEEP}/cloonix_cert.pem ${CERT_KEEP}/cloonix_key.pem
+fi
+if [ ! -s ${CERT_KEEP}/cloonix_cert.pem ] || \
+   [ ! -s ${CERT_KEEP}/cloonix_key.pem ]; then
+  if [ -x ${SRC_TREE_ROOT}/build_tools/make_cloonix_cert ]; then
+    ${SRC_TREE_ROOT}/build_tools/make_cloonix_cert ${CERT_KEEP} cloonix
+    echo "certificate made once in ${CERT_KEEP}, reused by every build"
+  else
+    echo "WARNING make_cloonix_cert is missing, this bundle will serve http only"
+  fi
+else
+  echo "certificate reused from ${CERT_KEEP}, browsers keep trusting it"
+fi
+if [ -s ${CERT_KEEP}/cloonix_cert.pem ] && [ -s ${CERT_KEEP}/cloonix_key.pem ]; then
+  cp -f ${CERT_KEEP}/cloonix_cert.pem ${RESBUNDLE}/cert
+  cp -f ${CERT_KEEP}/cloonix_key.pem  ${RESBUNDLE}/cert
+else
+  echo "WARNING no certificate made, this bundle will serve http only"
+fi
+cd ${HOME}
+tar zcvf cloonix-bundle-${VERSION_NUM}.tar.gz cloonix-bundle-${VERSION_NUM}

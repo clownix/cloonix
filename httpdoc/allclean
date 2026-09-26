@@ -1,0 +1,3 @@
+#!/bin/bash
+HERE=$(cd "$(dirname "$0")" && pwd)
+rm -rf "${HERE}/build_user" "${HERE}/build_dev"

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloonix &mdash; {{ title|striptags|e }}</title>
+<link rel="stylesheet" href="{{ pathto('../style.css', 1) }}">
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="{{ pathto('../index.html', 1) }}">CLOONIX</a>
+    <a href="{{ pathto('../index.html', 1) }}">Overview</a>
+    <a href="{{ pathto('../learn.html', 1) }}">Learn</a>
+    <a href="{{ pathto('../demos.html', 1) }}">Demos</a>
+    <a href="{{ pathto('../start.html', 1) }}">Get started</a>
+    <a href="{{ pathto('../downloads.html', 1) }}">Downloads</a>
+    <a href="{{ pathto('../build_user/user.html', 1) }}"{% if master_doc == 'user' %} class="on"{% endif %}>Documentation</a>
+    <a href="{{ pathto('../build_dev/dev.html', 1) }}"{% if master_doc == 'dev' %} class="on"{% endif %}>Developers</a>
+    <a href="https://github.com/clownix/cloonix">Source</a>
+  </nav>
+</header>
+
+{%- macro booknav() %}
+<p class="booknav">
+  <a href="{{ pathto(master_doc) }}">{{ docstitle|e }}</a>
+  {%- if prev %} &nbsp;&lsaquo; <a href="{{ prev.link|e }}">{{ prev.title|striptags|e }}</a>{% endif %}
+  {%- if next %} &nbsp;&rsaquo; <a href="{{ next.link|e }}">{{ next.title|striptags|e }}</a>{% endif %}
+</p>
+{%- endmacro %}
+
+<section class="wrap top book">
+{{ booknav() }}
+{% block body %}{% endblock %}
+{{ booknav() }}
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Cloonix is free software under the AGPLv3.
+    <a href="https://github.com/clownix/cloonix">github.com/clownix/cloonix</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

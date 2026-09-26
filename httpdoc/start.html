@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloonix &mdash; get started</title>
+<meta name="description" content="Install cloonix as a plain user with the toy tarball, or system-wide with the bundle, and start a first network.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="index.html">CLOONIX</a>
+    <a href="index.html">Overview</a>
+    <a href="learn.html">Learn</a>
+    <a href="demos.html">Demos</a>
+    <a href="start.html" class="on">Get started</a>
+    <a href="downloads.html">Downloads</a>
+    <a href="build_user/user.html">Documentation</a>
+    <a href="build_dev/dev.html">Developers</a>
+    <a href="https://github.com/clownix/cloonix">Source</a>
+  </nav>
+</header>
+
+<section class="wrap top">
+<h1>Get started</h1>
+<p class="lead">Ten minutes, no root, nothing left behind if you delete the
+directory afterwards.</p>
+
+<h2>1. Check the host</h2>
+<p>Linux, x86-64. For containers that is all. For virtual machines your
+account must read and write three devices:</p>
+<pre><code>getfacl /dev/kvm /dev/vhost-net /dev/net/tun
+sudo setfacl -m u:${USER}:rw /dev/kvm /dev/vhost-net /dev/net/tun</code></pre>
+<p>A container runs no init unless you ask for one, so the usual topology needs
+nothing here. If you do ask &mdash;
+<code>startup_env=CLOONIX_WITH_SYSTEMD=1</code> &mdash; each systemd wants about five
+inotify instances, counted per user, and the default of 128 runs out near the
+twenty-fourth container. There is no error anywhere: the container starts and
+dies. Raise the limit first:</p>
+<pre><code>sudo sysctl -w fs.inotify.max_user_instances=8192</code></pre>
+
+<h2>2. Take the toy</h2>
+<p>The toy is a tarball that carries cloonix inside its own container. Extract it
+as your normal user:</p>
+<pre><code>tar xf cloonix-toy-100.tar.gz
+cd cloonix-toy-100
+./setup.sh nemo</code></pre>
+<p><code>setup.sh</code> writes a command script named after the network you
+chose &mdash; <code>./nemocmd</code> &mdash; and reports what the machine can and
+cannot do. A line saying wifi emulation is unavailable is not fatal; it tells you
+in advance which demos will not run.</p>
+
+<h2>3. Start it</h2>
+<pre><code>./nemocmd start</code></pre>
+<p>Then open the canvas:</p>
+<pre><code>https://127.0.0.1:4444</code></pre>
+<p>From another machine, <code>https://&lt;ip&gt;:4444</code>. The certificate is
+self-signed: accept the warning once. The page then asks for a user and a
+password:</p>
+<table>
+  <tr><th>page</th><th>user</th><th>password</th></tr>
+  <tr><td><code>https://127.0.0.1:4444</code></td><td><code>nemo</code></td><td><code>nemoclown</code></td></tr>
+</table>
+<p>They are not secret: the user is the name of the network, the password its
+<code>cloonix_passwd</code>, the name of the network followed by
+<code>clown</code>; for the network <code>nemo</code>: user <code>nemo</code>,
+password <code>nemoclown</code>. Both are in the configuration, where they
+can be changed:</p>
+<pre><code>/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg                   the bundle
+&lt;toy directory&gt;/rootfs/cloonix/cloonfs/etc/cloonix.cfg         the toy</code></pre>
+
+<h2>4. Make something</h2>
+<p>Right-click the empty canvas to create a machine, a container or a lan, or
+play one of the demos from the <b>Demo</b> button of the header:</p>
+<pre><code>./nemocmd demo               # list what is available
+./nemocmd demo security/wg.py      # a wireguard tunnel, and a wire that goes blank</code></pre>
+<p>A demo is a python programme taking the name of the network as its only
+argument. It runs on the machine you typed on and drives the server across the
+network, so the server needs no interpreter. <a href="learn.html">What each one
+shows</a>.</p>
+<p>Then double-click a node for a root shell, or a green interface dot for a
+packet capture.</p>
+
+<h2>5. Stop it</h2>
+<pre><code>./nemocmd cloonix cli nemo del all   # destroy every object, keep the server
+./nemocmd stop                   # stop the server and the container</code></pre>
+
+<hr>
+
+<h2>The bundle instead</h2>
+<p>Use the bundle when the machine is a shared server and several people run
+their own networks on it. It installs once, as root:</p>
+<pre><code>tar xf cloonix-bundle-100.tar.gz
+cd cloonix-bundle-100
+sudo ./install_cloonfs</code></pre>
+<p>That puts the run-time under <code>/usr/libexec/cloonix</code>, one command
+<code>cloonix</code> in <code>/usr/bin</code>, the demos in
+<code>/usr/share/cloonix</code>, and copies the certificate of the tarball into
+<code>/usr/share/cloonix/cert</code> for the secure web port. Then:</p>
+<pre><code>cloonix start nemo                        # start a network, in a terminal of its own
+cloonix cli nemo add cnt c1 eth=1 trixie  # a container with one port
+cloonix cli nemo ssh c1                   # a root shell inside it</code></pre>
+
+<h2>Guest images</h2>
+<p>A machine needs a root file-system in <code>/var/lib/cloonix/bulk</code>,
+which the toy reads on the host too; every demo asks for one, <code>trixie</code>
+for the plain containers. <a href="downloads.html">Download it</a>, or build it:</p>
+<pre><code>cd vm_create/cnt_kvm
+./doitall.sh --cnt trixie      # a container image
+./doitall.sh --kvm trixie      # a qemu image</code></pre>
+<p>The demos of <code>demos/</code> ask for one image per subject &mdash; frr,
+asterisk, wireguard and the rest. Those are built next door, and that driver
+takes the demo name:</p>
+<pre><code>cd vm_create/cnt_kvm_demo
+./doitall.sh frr               # the image the frr demos need
+./doitall.sh --all             # every image every demo needs</code></pre>
+
+<h2>From another machine</h2>
+<div class="cols2">
+  <div class="card">
+    <h3>Browser</h3>
+    <p><code>https://&lt;ip&gt;:4444</code>, user <code>nemo</code>, password
+    <code>nemoclown</code>: the name of the network and its
+    <code>cloonix_passwd</code> in
+    <code>/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg</code>.</p>
+  </div>
+  <div class="card">
+    <h3>Command line</h3>
+    <p>The <code>cloonix</code> command is python using only the standard
+    library: the file <code>cloonix</code>, the <code>cloonix_*.py</code> files
+    beside it and <code>cloonix_config.py</code>. Copy them to any linux, macos
+    or windows machine and they run.</p>
+    <p class="note">It authenticates with the same password, and the connection is
+    tls, ended by cloonix on the server side.</p>
+  </div>
+</div>
+
+<h2>When something does not work</h2>
+<table>
+  <tr><td><code>unshare: Operation not permitted</code></td><td>unprivileged user namespaces are locked down &mdash; see the documentation</td></tr>
+  <tr><td>Container starts then dies, no error</td><td>inotify limit &mdash; step 1</td></tr>
+  <tr><td>The browser refuses the certificate</td><td>an older certificate of that address is remembered; delete it in the browser, reload, accept once</td></tr>
+  <tr><td>Demo list is empty</td><td>the demos were not installed; reinstall the bundle</td></tr>
+  <tr><td>A demo says an image is not in bulk</td><td>build it, or <a href="downloads.html">download it</a>, into <code>/var/lib/cloonix/bulk</code></td></tr>
+</table>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Cloonix is free software under the AGPLv3.
+    <a href="https://github.com/clownix/cloonix">github.com/clownix/cloonix</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

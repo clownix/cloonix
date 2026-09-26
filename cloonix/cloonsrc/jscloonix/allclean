@@ -1,0 +1,8 @@
+#!/bin/bash
+HERE=`pwd`
+rm -rf ${HERE}/bin
+cd ${HERE}/jscloonix
+make clean
+cd ${HERE}/jscloonix/webshark
+make clean
+

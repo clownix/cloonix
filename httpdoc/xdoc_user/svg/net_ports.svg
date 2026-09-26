@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" width="900" height="220" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.cross{stroke:#e94560;stroke-width:3}
+</style>
+<rect width="900" height="220" fill="#ffffff"/>
+<rect class="zone" x="20" y="20" width="860" height="180" rx="12"/>
+<text x="30" y="36" text-anchor="start" class="s">net nemo</text>
+<rect class="box" x="60" y="60" width="200" height="40" rx="6"/>
+<text x="160" y="80" text-anchor="middle" class="m">cloonix-proxymous</text>
+<text x="160" y="92" text-anchor="middle" class="s">45211 tls, then doorways hmac</text>
+<rect class="box" x="350" y="60" width="200" height="40" rx="6"/>
+<text x="450" y="80" text-anchor="middle" class="m">cloonix-proxymous</text>
+<text x="450" y="92" text-anchor="middle" class="s">4444 https, then gui-server</text>
+<rect class="box" x="640" y="60" width="200" height="40" rx="6"/>
+<text x="740" y="80" text-anchor="middle" class="m">c2c udp</text>
+<text x="740" y="92" text-anchor="middle" class="s">51713..51812</text>
+<rect class="box" x="60" y="140" width="200" height="34" rx="6"/>
+<text x="160" y="161" text-anchor="middle" class="m">cloonix cli nemo ...</text>
+<rect class="box" x="350" y="140" width="200" height="34" rx="6"/>
+<text x="450" y="161" text-anchor="middle" class="m">https://</text>
+<rect class="box" x="640" y="140" width="200" height="34" rx="6"/>
+<text x="740" y="161" text-anchor="middle" class="m">distant cloonix</text>
+<path class="arr" d="M160,140 L160,100"/>
+<path class="arr" d="M450,140 L450,100"/>
+<path class="arr2" d="M740,140 L740,100"/>
+</svg>

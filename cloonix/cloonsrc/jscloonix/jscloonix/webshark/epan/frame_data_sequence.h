@@ -1,0 +1,43 @@
+/** @file
+ * Implements a sequence of frame_data structures
+ *
+ * Wireshark - Network traffic analyzer
+ * By Gerald Combs <gerald@wireshark.org>
+ * Copyright 1998 Gerald Combs
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+#ifndef __FRAME_DATA_SEQUENCE_H__
+#define __FRAME_DATA_SEQUENCE_H__
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+typedef struct _frame_data_sequence frame_data_sequence;
+
+ frame_data_sequence *new_frame_data_sequence(void);
+
+ frame_data *frame_data_sequence_add(frame_data_sequence *fds,
+    frame_data *fdata);
+
+/*
+ * Find the frame_data for the specified frame number.
+ */
+ frame_data *frame_data_sequence_find(frame_data_sequence *fds,
+    uint32_t num);
+
+/*
+ * Free a frame_data_sequence and all the frame_data structures in it.
+ */
+ void free_frame_data_sequence(frame_data_sequence *fds);
+
+ void find_and_mark_frame_depended_upon(void *key, void *value, void *user_data);
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* __FRAME_DATA_SEQUENCE_H__ */

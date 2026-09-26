@@ -1,0 +1,55 @@
+#!/bin/bash
+# set -e: a step that fails must stop this script.
+set -e
+HERE=`pwd`
+IO_CLOWNIX=../lib_io_clownix
+GLOB_INCLUDE=../glob_include
+RPC_CLOWNIX=../lib_rpc_clownix/
+
+./allclean
+
+if [ ! -f ${IO_CLOWNIX}/libio_clownix.a ]; then
+  ( cd ${IO_CLOWNIX} && make )
+fi
+if [ ! -f ${RPC_CLOWNIX}/librpc_clownix.a ]; then
+  ( cd ${RPC_CLOWNIX} && ./cmd )
+fi
+cd ${HERE}
+
+cat > meson.build << MESONEOF
+project('cloonix-ovs-nat', 'c')
+
+cflags =  ['-mtune=generic']
+cflags += ['-fno-stack-protector']
+cflags += ['-Wno-format-overflow']
+cflags += ['-Wno-format-truncation']
+cflags += ['-g']
+cflags += ['-fPIC']
+cflags += ['-DALLOW_EXPERIMENTAL_API']
+
+incdir = include_directories('${IO_CLOWNIX}/include',
+                             '${RPC_CLOWNIX}/include',
+                             '${GLOB_INCLUDE}')
+
+crypto = dependency('libcrypto')
+cmplr = meson.get_compiler('c')
+io_clownix = cmplr.find_library('libio_clownix', dirs : '${HERE}/${IO_CLOWNIX}')
+
+sources = files('src/ovs_nat_passt.c',
+                'src/tun_tap.c',
+                'src/passt_shuttle.c',
+                'src/machine.c')
+
+executable('cloonix-ovs-nat', sources, include_directories : incdir,
+            dependencies : [io_clownix,crypto],
+            c_args: cflags,
+            install : true)
+
+MESONEOF
+
+meson build
+cd build
+ninja
+DESTDIR=${HERE} ninja install
+cd ${HERE}
+cp -vf build/cloonix-ovs-nat ${HERE}

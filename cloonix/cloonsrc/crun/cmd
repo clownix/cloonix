@@ -1,0 +1,19 @@
+#!/bin/bash
+# set -e: a step that fails must stop this script.
+set -e
+HERE=`pwd`
+./allclean
+./patched_create
+cd ${HERE}/crun_tainted
+./autogen.sh
+./configure --without-shared \
+            --disable-shared \
+            --enable-static \
+            --enable-systemd \
+            --enable-seccomp \
+            --enable-caps \
+            --enable-bpf \
+            --disable-embedded-yajl
+make
+strip ${HERE}/crun_tainted/crun
+

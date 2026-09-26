@@ -1,0 +1,38 @@
+!
+! Read once, at the boot of step3, from the cdrom. Config mode first,
+! then exit, then the exec commands.
+!
+hostname cisco
+!
+! The whole point of the file: move the console from the virtual VGA to
+! the serial port, which is where cloonix launches every guest with
+! -serial. Takes effect at the reload below.
+!
+platform console serial
+!
+! No password, no enable step, no idle logout: what talks to this router
+! is a program on the other end of the serial port. length 0 turns the
+! pager off, which is what a driver reading a long show would hang on.
+!
+line con 0
+ exec-timeout 0 0
+ privilege level 15
+ length 0
+exit
+!
+! Log messages arriving in the middle of a reply is what breaks a driver
+! reading up to the prompt. Remove this line to get them back.
+!
+no logging console
+!
+no ip domain lookup
+!
+exit
+!
+! The interface-to-vNIC table is written at install time and would be
+! inherited by every machine cloned from this image.
+!
+clear platform software vnic-if nvtable
+!
+write
+reload

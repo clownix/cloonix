@@ -1,0 +1,707 @@
+<!-- Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>webshark</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #1e1e2e;
+  --bg2:      #181825;
+  --bg3:      #313244;
+  --sel:      #45475a;
+  --border:   #585b70;
+  --text:     #cdd6f4;
+  --text2:    #bac2de;
+  --text3:    #6c7086;
+  --green:    #a6e3a1;
+  --blue:     #89b4fa;
+  --cyan:     #89dceb;
+  --yellow:   #f9e2af;
+  --red:      #f38ba8;
+  --mauve:    #cba6f7;
+  --peach:    #fab387;
+  --font:     'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+}
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; }
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* toolbar */
+#toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; background: var(--bg2);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+#toolbar h1 { font-size: 15px; color: var(--blue); margin-right: 8px; letter-spacing: 1px; }
+.btn {
+  padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--text); cursor: pointer; font-family: var(--font); font-size: 12px;
+  transition: background .15s;
+}
+.btn:hover { background: var(--sel); }
+.btn.danger { background: var(--red); color: var(--bg2); border-color: var(--red); }
+.btn.danger:hover { opacity: .85; }
+.btn:disabled { opacity: .4; cursor: default; pointer-events: none; }
+#file-label { color: var(--text3); font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* filter bar */
+#filter-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; background: var(--bg2);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+#filter-input {
+  flex: 1; padding: 4px 8px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--text); font-family: var(--font); font-size: 13px; outline: none;
+}
+#filter-input:focus { border-color: var(--blue); }
+#filter-input.bad   { border-color: var(--red); }
+
+/* panes */
+#panes { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+#packet-pane { flex: 3; overflow: auto; border-bottom: 2px solid var(--border); }
+#lower-panes  { display: flex; flex: 2; overflow: hidden; }
+#tree-pane    { flex: 1; overflow: auto; border-right: 2px solid var(--border); padding: 4px; }
+#hex-pane     { flex: 1; overflow: auto; padding: 4px; }
+
+/* packet table */
+#packet-table { width: 100%; border-collapse: collapse; }
+#packet-table th {
+  position: sticky; top: 0; background: var(--bg2);
+  padding: 4px 8px; text-align: left; font-weight: 600;
+  border-bottom: 1px solid var(--border); color: var(--text2); white-space: nowrap;
+}
+#packet-table td { padding: 2px 8px; white-space: nowrap; border-bottom: 1px solid var(--bg3); }
+#packet-table tr:hover td { background: var(--bg3); cursor: pointer; }
+#packet-table tr.selected td { background: var(--sel); color: var(--blue); }
+
+.proto-tcp   { color: var(--green);  }
+.proto-udp   { color: var(--cyan);   }
+.proto-dns   { color: var(--mauve);  }
+.proto-http  { color: var(--yellow); }
+.proto-tls   { color: var(--peach);  }
+.proto-icmp  { color: var(--red);    }
+.proto-arp   { color: var(--blue);   }
+.proto-other { color: var(--text2);  }
+
+/* proto tree */
+.tree-node { padding: 1px 0; }
+.tree-toggle { display: inline-block; width: 14px; cursor: pointer; color: var(--text3); user-select: none; font-size: 11px; }
+.tree-label { color: var(--text); }
+.tree-label:hover { color: var(--blue); cursor: pointer; }
+.tree-children { margin-left: 16px; }
+.tree-children.collapsed { display: none; }
+.tree-field { color: var(--cyan); }
+
+/* hex */
+#hex-view { font-family: var(--font); font-size: 12px; line-height: 1.5; }
+.hex-row { display: flex; gap: 10px; }
+.hex-offset { color: var(--text3); min-width: 50px; }
+.hex-bytes  { color: var(--green); letter-spacing: 1px; min-width: 310px; }
+.hex-ascii  { color: var(--text2); }
+
+/* status bar */
+#statusbar {
+  padding: 3px 10px; background: var(--bg2);
+  border-top: 1px solid var(--border);
+  color: var(--text3); font-size: 11px; flex-shrink: 0;
+  display: flex; justify-content: space-between;
+}
+#statusbar .conn-ok  { color: var(--green); }
+#statusbar .conn-bad { color: var(--red);   }
+
+/* flow bar: shown only while something is being dropped */
+#flow-bar {
+  display: none; padding: 3px 10px; font-size: 11px;
+  background: var(--bg3); border-bottom: 1px solid var(--border);
+  color: var(--yellow); flex-shrink: 0;
+}
+#flow-bar.on   { display: block; }
+#flow-bar.warn { color: var(--red); }
+
+.placeholder {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: var(--text3); font-size: 14px;
+}
+
+/* Save dialog: a path box, the destination is on the capture machine. */
+#save-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: none; align-items: center; justify-content: center; z-index: 50;
+}
+#save-overlay.on { display: flex; }
+#save-box {
+  background: var(--bg2); border: 1px solid var(--sel); border-radius: 6px;
+  padding: 16px 18px; min-width: 520px; max-width: 90vw;
+  font-size: 13px; color: var(--text);
+}
+#save-box h2 { font-size: 13px; margin: 0 0 10px 0; font-weight: normal; }
+#save-path {
+  width: 100%; box-sizing: border-box; padding: 6px 8px;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--sel); border-radius: 3px;
+  font-family: monospace; font-size: 12px;
+}
+#save-label { color: var(--text3); font-size: 11px; margin-bottom: 5px; }
+#save-hint { color: var(--text3); font-size: 11px; margin: 8px 0 12px 0;
+             line-height: 1.5; }
+#save-buttons { display: flex; gap: 8px; justify-content: flex-end;
+                flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="toolbar">
+    <h1>⋄ webshark</h1>
+    <button id="btn-stop" class="btn danger" onclick="UI.stopCapture()">■ Stop</button>
+    <button id="btn-save" class="btn" onclick="UI.saveFile()" disabled>⬇ Save</button>
+    <span id="file-label"></span>
+  </div>
+
+  <div id="save-overlay" onmousedown="if(event.target===this) UI.saveCancel()">
+    <div id="save-box">
+      <h2>Save the capture &mdash; on which machine?</h2>
+      <div id="save-label">Path on the machine running cloonix:</div>
+      <input id="save-path" type="text" spellcheck="false"
+             onkeydown="if(event.key==='Enter') UI.saveConfirm();
+                        if(event.key==='Escape') UI.saveCancel()">
+      <div id="save-hint">
+        <b>Save on the cloonix machine</b> writes the file at the path above,
+        which has to be inside your home directory there.<br>
+        <b>Download to this browser</b> ignores the path and sends the file to
+        the machine this browser is running on, into wherever it puts its
+        downloads.
+      </div>
+      <div id="save-buttons">
+        <button class="btn" onclick="UI.saveCancel()">Cancel</button>
+        <button class="btn" onclick="UI.saveDownload()">Download to this browser</button>
+        <button class="btn" onclick="UI.saveConfirm()">Save on the cloonix machine</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="filter-bar">
+    <span style="color:var(--text3)">Filter:</span>
+    <input id="filter-input" type="text" placeholder="e.g. ip.addr == 192.168.1.1 or tcp.port == 80"
+           spellcheck="false"
+           onkeydown="if(event.key==='Enter') UI.applyFilter()">
+    <button class="btn" onclick="UI.applyFilter()">Apply</button>
+    <button class="btn" onclick="UI.clearFilter()">Clear</button>
+    <button class="btn" id="data-toggle" style="display:none"
+            title="802.11: only the data frames that carry a payload, clear or encrypted, handshake left out; then all again."
+            onclick="UI.toggleData()">Data only</button>
+  </div>
+
+  <div id="flow-bar"></div>
+
+  <div id="panes">
+    <div id="packet-pane">
+      <div class="placeholder" id="packet-placeholder">Waiting for packets…</div>
+      <table id="packet-table" style="display:none">
+        <thead id="packet-thead"></thead>
+        <tbody id="packet-tbody"></tbody>
+      </table>
+    </div>
+    <div id="lower-panes">
+      <div id="tree-pane">
+        <div class="placeholder" id="tree-placeholder">Select a packet</div>
+        <div id="tree-view" style="display:none"></div>
+      </div>
+      <div id="hex-pane">
+        <div class="placeholder" id="hex-placeholder">Select a packet</div>
+        <div id="hex-view" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="statusbar">
+    <span id="status-msg">Connecting…</span>
+    <span id="conn-status" class="conn-bad">● disconnected</span>
+  </div>
+
+</div>
+<script>
+'use strict';
+
+const WS = (() => {
+  let ws = null;
+
+  function notifyParent(state) {
+    /* Connection state to the embedding canvas (cr-topo-panels.js), which auto-closes the panel. */
+    try {
+      if (window.parent && window.parent !== window)
+        window.parent.postMessage({ cloonix_webshark: state }, '*');
+    } catch (e) {}
+  }
+
+  function connect() {
+    const host   = location.host || 'localhost:4444';
+    /* ws endpoint: pathname prefix (/ws-<sock>/ via the gui proxy, / standalone) + "ws". */
+    const base   = location.pathname.replace(/\/$/, '');
+    /* wss over https: a hardcoded ws:// is silently blocked as mixed content. */
+    const proto  = (location.protocol === 'https:') ? 'wss://' : 'ws://';
+    ws = new WebSocket(`${proto}${host}${base}/ws`);
+    ws.onopen = () => { UI.setConnected(true); notifyParent('connected'); };
+    ws.onclose = () => { UI.setConnected(false); notifyParent('disconnected'); setTimeout(connect, 2000); };
+    ws.onerror = () => { ws.close(); };
+    ws.onmessage = (ev) => {
+      let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+      Handlers.dispatch(msg);
+    };
+  }
+
+  function send(obj) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+  }
+
+  connect();
+  return { send };
+})();
+
+// Rows kept in the table (an unbounded table degrades on every insert).
+const MAX_ROWS = 20000;
+// Rows allowed to wait for a frame; past this the oldest go.
+const MAX_PENDING = 20000;
+
+const DATA_FILTER =
+  '(wlan.fc.type_subtype == 0x20 || wlan.fc.type_subtype == 0x28) && !eapol';
+
+const State = {
+  packets:     [],
+  colHeaders:  [],
+  protoIdx:    -1,
+  selectedRow: null,
+  currentFile: null,
+  total:       0,    // packets the server holds
+  truncated:   false,// the server sent the tail of its history, not all of it
+  srvDropped:  0,    // rows the server gave up for this viewer
+  srcDropped:  0,    // packets given up before dissection
+  uiDropped:   0,    // rows this browser gave up before drawing
+  xoff:        false,
+};
+
+// Batches are drawn per animation frame: one insert and one layout.
+const Render = {
+  queue: [],
+  rows:  0,
+  raf:   0,
+
+  push(pkts) {
+    this.queue.push(pkts);
+    this.rows += pkts.length;
+    while (this.rows > MAX_PENDING && this.queue.length > 1) {
+      const gone = this.queue.shift();
+      this.rows -= gone.length;
+      State.uiDropped += gone.length;
+    }
+    if (!this.raf)
+      this.raf = requestAnimationFrame(() => { this.raf = 0; this.draw(); });
+  },
+
+  clear() { this.queue = []; this.rows = 0; },
+
+  draw() {
+    if (!this.queue.length) return;
+    const pkts = (this.queue.length === 1) ? this.queue[0]
+                                           : [].concat(...this.queue);
+    this.clear();
+    State.packets = State.packets.concat(pkts);
+    if (State.packets.length > MAX_ROWS)
+      State.packets.splice(0, State.packets.length - MAX_ROWS);
+    UI.appendRows(pkts);
+    UI.setStatus(UI.statusLine());
+  },
+};
+
+function protoClass(proto) {
+  if (!proto) return 'proto-other';
+  const p = proto.trim().toUpperCase();
+  if (p === 'TCP') return 'proto-tcp';
+  if (p === 'UDP') return 'proto-udp';
+  if (p === 'DNS') return 'proto-dns';
+  if (p.includes('HTTP')) return 'proto-http';
+  if (p.includes('TLS') || p.includes('SSL')) return 'proto-tls';
+  if (p.includes('ICMP')) return 'proto-icmp';
+  if (p === 'ARP') return 'proto-arp';
+  return 'proto-other';
+}
+
+const Handlers = {
+  dispatch(msg) {
+    switch (msg.type) {
+      case 'packet_list': this.packetList(msg); break;
+      case 'flow':        this.flow(msg);       break;
+      case 'proto_tree':  this.protoTree(msg);  break;
+      case 'bytes':       this.bytes(msg);       break;
+      case 'status':      UI.setStatus(msg.msg); break;
+      case 'link':        UI.setLink(msg.linktype); break;
+      case 'error':       UI.setStatus('⚠ ' + msg.msg, true); break;
+      case 'stopped':     UI.onStopped(msg);      break;
+      case 'saved':       UI.onSaved(msg);        break;
+      case 'save_where':  UI.saveAsk(msg);        break;
+    }
+  },
+
+  packetList(msg) {
+    // Header arrives with the first batch (cols set) or with any replay.
+    if (msg.cols && msg.cols.length) {
+      State.colHeaders = msg.cols;
+      State.protoIdx = State.colHeaders.findIndex(h => h.toLowerCase().includes('proto'));
+      UI.buildTableHeader();
+    }
+
+    // A replay ((re)connect or filter) replaces the table.
+    if (msg.replay) UI.resetTable();
+
+    if (typeof msg.total === 'number') State.total = msg.total;
+    if (typeof msg.filter === 'string')
+      document.getElementById('filter-input').value = msg.filter;
+
+    State.truncated = !!(msg.replay && msg.from > 1);
+
+    const pkts = msg.packets || [];
+    if (pkts.length) Render.push(pkts);
+    else            UI.setStatus(UI.statusLine());
+
+    if (msg.file) {
+      State.currentFile = msg.file;
+      document.getElementById('file-label').textContent = msg.file;
+    }
+  },
+
+  // Where the server says it cannot keep the stream to us whole.
+  flow(msg) {
+    if (msg.state === 'xoff') {
+      State.xoff = true;
+      UI.setFlow('this viewer is behind the capture, rows are being dropped '
+                 + 'for it — narrow the filter or stop the capture', true);
+    }
+    else if (msg.state === 'xon') {
+      State.xoff = false;
+      State.srvDropped = msg.total || 0;
+      UI.setFlow(msg.dropped
+        ? `caught up — ${msg.dropped} rows lost while behind `
+          + `(${State.srvDropped} in all)`
+        : '', false);
+    }
+    else if (msg.state === 'source') {
+      State.srcDropped = msg.dropped || 0;
+      UI.setFlow(`the capture is faster than the dissection — `
+                 + `${msg.dropped} of ${msg.seen} packets dropped before the `
+                 + `list`, true);
+    }
+    UI.setStatus(UI.statusLine());
+  },
+
+  protoTree(msg) { UI.renderProtoTree(msg.tree || []); },
+  bytes(msg)     { UI.renderHex(msg.hex || '', msg.len || 0); },
+};
+
+const UI = {
+  setConnected(ok) {
+    const el = document.getElementById('conn-status');
+    el.textContent = ok ? '● connected' : '● disconnected';
+    el.className   = ok ? 'conn-ok'     : 'conn-bad';
+    if (ok) UI.setStatus('Connected — loading…');
+    else    UI.setStatus('Disconnected — retrying…');
+  },
+
+  setStatus(msg, isErr = false) {
+    const el = document.getElementById('status-msg');
+    el.textContent = msg;
+    el.style.color = isErr ? 'var(--red)' : 'var(--text3)';
+  },
+
+  // Every loss has a place it happened, and they are not the same problem.
+  statusLine() {
+    const parts = [`${State.total} packets`];
+    if (State.srcDropped) parts.push(`${State.srcDropped} dropped at capture`);
+    if (State.srvDropped) parts.push(`${State.srvDropped} dropped for this viewer`);
+    if (State.uiDropped)  parts.push(`${State.uiDropped} dropped by this browser`);
+    if (State.truncated || State.packets.length >= MAX_ROWS)
+      parts.push(`showing the most recent ${State.packets.length}`);
+    return parts.join(' · ');
+  },
+
+  setFlow(text, warn) {
+    const el = document.getElementById('flow-bar');
+    el.textContent = text || '';
+    el.classList.toggle('on', !!text);
+    el.classList.toggle('warn', !!warn);
+  },
+
+  resetTable() {
+    Render.clear();
+    State.packets = [];
+    State.selectedRow = null;
+    document.getElementById('packet-tbody').innerHTML = '';
+  },
+
+  stopCapture() {
+    WS.send({ cmd: 'stop' });
+    UI.setStatus('Stopping…');
+    const sb = document.getElementById('btn-stop');
+    if (sb) sb.disabled = true;   // can't stop twice
+  },
+
+  // Server confirms the capture has halted: now a save is meaningful.
+  onStopped(msg) {
+    const frames = (msg && typeof msg.frames === 'number') ? msg.frames : null;
+    if (msg && msg.reason === 'capacity')
+      UI.setFlow(`the capture stopped itself at ${frames} packets, which is `
+                 + `all this viewer holds — save it, then start another`, true);
+    UI.setStatus(frames != null ? `Stopped — ${frames} packets captured` : 'Stopped');
+    const stopBtn = document.getElementById('btn-stop');
+    const saveBtn = document.getElementById('btn-save');
+    if (stopBtn) stopBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = (frames === 0);  // nothing to save if empty
+  },
+
+  // Ask the server for the default path: the file lands on the capture machine.
+  saveFile() {
+    WS.send({ cmd: 'save_where' });
+  },
+
+  saveAsk(msg) {
+    const box = document.getElementById('save-path');
+    box.value = (msg && msg.path) || '';
+    document.getElementById('save-overlay').classList.add('on');
+    box.focus();
+    box.select();
+  },
+
+  saveCancel() {
+    document.getElementById('save-overlay').classList.remove('on');
+  },
+
+  saveConfirm() {
+    const path = document.getElementById('save-path').value.trim();
+    if (!path) return;
+    this.saveCancel();
+    WS.send({ cmd: 'save', path: path });
+    UI.setStatus('Saving on the cloonix machine…');
+  },
+
+  // No path: temp file served over http, the only way for a remote browser.
+  saveDownload() {
+    this.saveCancel();
+    WS.send({ cmd: 'save' });
+    UI.setStatus('Preparing the download for this browser…');
+  },
+
+  // The url is resolved against this document (served under /ws-<sock>/):
+  // an absolute /save.pcap would hit the gui server root and 404.
+  onSaved(msg) {
+    // Saved on the machine: there is no download, just a path to report.
+    if (msg && msg.path) {
+      const frames = (typeof msg.frames === 'number') ? msg.frames : null;
+      UI.setStatus(frames != null
+                   ? `Saved ${frames} packets on the cloonix machine, at ${msg.path}`
+                   : `Saved on the cloonix machine, at ${msg.path}`);
+      return;
+    }
+    const raw  = (msg && msg.url)  || 'save.pcap';
+    const name = (msg && msg.name) || 'capture.pcap';
+    const url  = new URL(String(raw).replace(/^\/+/, ''), document.baseURI);
+    url.searchParams.set('t', Date.now());   // cache-bust
+    const a = document.createElement('a');
+    a.href = url.href;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    const frames = (msg && typeof msg.frames === 'number') ? msg.frames : null;
+    UI.setStatus(frames != null ? `Saved ${frames} packets` : 'Saved');
+  },
+
+  buildTableHeader() {
+    const placeholder = document.getElementById('packet-placeholder');
+    const table       = document.getElementById('packet-table');
+    const thead       = document.getElementById('packet-thead');
+    placeholder.style.display = 'none';
+    table.style.display = '';
+    thead.innerHTML = '<tr>' + State.colHeaders.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>';
+  },
+
+  appendRows(pkts) {
+    const tbody = document.getElementById('packet-tbody');
+    const pane  = document.getElementById('packet-pane');
+    const atBottom = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 40;
+
+    const html = pkts.map(pkt => {
+      const proto = pkt.cols[State.protoIdx] || '';
+      const cls   = protoClass(proto);
+      const cols  = pkt.cols.map((c, ci) => {
+        const cc = (ci === State.protoIdx) ? ` class="${cls}"` : '';
+        return `<td${cc}>${esc(c)}</td>`;
+      }).join('');
+      return `<tr data-num="${pkt.num}">${cols}</tr>`;
+    }).join('');
+
+    tbody.insertAdjacentHTML('beforeend', html);
+    // Ring: drop the oldest rows so the table stays the size it started at.
+    let over = tbody.childElementCount - MAX_ROWS;
+    while ((over-- > 0) && tbody.firstElementChild)
+      tbody.removeChild(tbody.firstElementChild);
+    if (atBottom) pane.scrollTop = pane.scrollHeight;
+  },
+
+  selectPacket(frameNum, row) {
+    if (State.selectedRow) State.selectedRow.classList.remove('selected');
+    row.classList.add('selected');
+    State.selectedRow = row;
+    WS.send({ cmd: 'select', frame: frameNum });
+    WS.send({ cmd: 'bytes',  frame: frameNum });
+  },
+
+  // 105: 802.11, 127: 802.11 with radiotap, the capture of an air
+  setLink(linktype) {
+    const air = (linktype === 105) || (linktype === 127);
+    document.getElementById('data-toggle').style.display = air ? '' : 'none';
+  },
+
+  // Flip-flop: the data frames with a payload (Data, QoS Data), the 4-way
+  // handshake left out; then back to the filter there was before.
+  toggleData() {
+    const btn = document.getElementById('data-toggle');
+    const inp = document.getElementById('filter-input');
+    if (!State.dataOnly) {
+      State.dataSaved = inp.value;
+      State.dataOnly = true;
+      inp.value = DATA_FILTER;
+      btn.textContent = 'Show all';
+      UI.applyFilter();
+    } else {
+      State.dataOnly = false;
+      inp.value = State.dataSaved || '';
+      btn.textContent = 'Data only';
+      if (inp.value.trim()) UI.applyFilter(); else UI.clearFilter();
+    }
+  },
+
+  // a filter typed by hand ends the Data only state
+  dataToggleOff() {
+    State.dataOnly = false;
+    document.getElementById('data-toggle').textContent = 'Data only';
+  },
+
+  applyFilter() {
+    const expr = document.getElementById('filter-input').value.trim();
+    if (State.dataOnly && expr !== DATA_FILTER) UI.dataToggleOff();
+    document.getElementById('filter-input').classList.remove('bad');
+    // Reset state for new filter result
+    UI.resetTable();
+    State.colHeaders = []; State.protoIdx = -1;
+    document.getElementById('packet-thead').innerHTML = '';
+    document.getElementById('packet-table').style.display = 'none';
+    document.getElementById('packet-placeholder').style.display = '';
+    document.getElementById('packet-placeholder').textContent = 'Filtering…';
+    WS.send({ cmd: 'filter', expr });
+  },
+
+  clearFilter() {
+    if (State.dataOnly) UI.dataToggleOff();
+    document.getElementById('filter-input').value = '';
+    document.getElementById('filter-input').classList.remove('bad');
+    UI.resetTable();
+    State.colHeaders = []; State.protoIdx = -1;
+    document.getElementById('packet-thead').innerHTML = '';
+    document.getElementById('packet-table').style.display = 'none';
+    document.getElementById('packet-placeholder').style.display = '';
+    document.getElementById('packet-placeholder').textContent = 'Waiting for packets…';
+    // Re-request the full (unfiltered) list from the server's retained history.
+    WS.send({ cmd: 'filter', expr: '' });
+  },
+
+  renderProtoTree(tree) {
+    document.getElementById('tree-placeholder').style.display = 'none';
+    const view = document.getElementById('tree-view');
+    view.style.display = '';
+    view.innerHTML = tree.map(n => nodeHTML(n)).join('');
+  },
+
+  renderHex(hexStr, totalLen) {
+    document.getElementById('hex-placeholder').style.display = 'none';
+    const view = document.getElementById('hex-view');
+    view.style.display = '';
+    const bytes = [];
+    for (let i = 0; i < hexStr.length; i += 2)
+      bytes.push(parseInt(hexStr.substr(i, 2), 16));
+    const rows = [];
+    for (let off = 0; off < bytes.length; off += 16) {
+      const chunk = bytes.slice(off, off + 16);
+      const hexPart = chunk.map(b => b.toString(16).padStart(2,'0')).join(' ').padEnd(47,' ');
+      const ascPart = chunk.map(b => (b >= 0x20 && b < 0x7f) ? String.fromCharCode(b) : '.').join('');
+      rows.push(
+        `<div class="hex-row">` +
+        `<span class="hex-offset">${off.toString(16).padStart(4,'0')}</span>` +
+        `<span class="hex-bytes">${esc(hexPart)}</span>` +
+        `<span class="hex-ascii">${esc(ascPart)}</span>` +
+        `</div>`
+      );
+    }
+    view.innerHTML = rows.join('');
+  },
+};
+
+let _nid = 0;
+function nodeHTML(node) {
+  const id      = `n${++_nid}`;
+  const hasKids = node.children && node.children.length > 0;
+  const toggle  = hasKids
+    ? `<span class="tree-toggle" onclick="toggleNode('${id}')">▶</span>`
+    : `<span class="tree-toggle"> </span>`;
+  const abbrev  = node.abbrev && node.abbrev !== 'null' ? node.abbrev : '';
+  const labelSpan = abbrev
+    ? `<span class="tree-label"><span class="tree-field">${esc(abbrev)}: </span>${esc(node.label||'')}</span>`
+    : `<span class="tree-label">${esc(node.label||'')}</span>`;
+  let html = `<div class="tree-node">${toggle}${labelSpan}`;
+  if (hasKids)
+    html += `<div class="tree-children collapsed" id="${id}">` +
+      node.children.map(c => nodeHTML(c)).join('') + `</div>`;
+  return html + `</div>`;
+}
+
+function toggleNode(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const collapsed = el.classList.toggle('collapsed');
+  const tog = el.previousElementSibling?.previousElementSibling;
+  if (tog && tog.classList.contains('tree-toggle'))
+    tog.textContent = collapsed ? '▶' : '▼';
+}
+
+// Event delegation for packet row clicks
+document.getElementById('packet-tbody').addEventListener('click', e => {
+  const row = e.target.closest('tr[data-num]');
+  if (!row) return;
+  UI.selectPacket(parseInt(row.dataset.num, 10), row);
+});
+
+// Set page title from URL path: /ws-sock_Cnt2_0/ → "shark_Cnt2_0"
+(function() {
+  const m = location.pathname.match(/\/ws-([^\/]+)/);
+  if (m) {
+    // sock_Cnt2_0 → Cnt2_0, then prefix "shark_"
+    const base = m[1].replace(/^sock_/, '');
+    document.title = 'shark_' + base;
+    document.querySelector('#file-label').textContent = base.replace(/_(\d+)$/, '_Eth$1');
+  }
+})();
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && !e.ctrlKey) { e.preventDefault(); document.getElementById('filter-input').focus(); }
+});
+</script>
+</body>
+</html>

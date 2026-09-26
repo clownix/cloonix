@@ -1,0 +1,7 @@
+#!/bin/bash
+# set -e: a step that fails must stop this script. Without it a failed
+# compile fell through to the copy of a binary that was never rebuilt,
+# and the delivery got the previous one with no warning at all.
+set -e
+./allclean
+make

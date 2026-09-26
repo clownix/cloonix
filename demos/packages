@@ -1,0 +1,97 @@
+# packages - the course of the demos, as the chapter "Learning with cloonix"
+# of the user book gives it: the Demo picker of the canvas shows this list.
+# A package line is "<number> <title>", a demo line "<area>/<demo>.py  <one line>".
+# debug/check_demos.py refuses a difference with learn.rst or with the tree.
+
+0 The first network
+cloonix/cnt.py               two containers, one lan, one ping
+cloonix/kvm.py               the same with two virtual machines
+
+1 The cloonix items
+cloonix/a2b.py               one wire, given loss, delay and a rate
+cloonix/snf.py               four filters, four counts, one interface
+cloonix/nat.py               a guest reaching the internet through the host
+cloonix/c2c.py               three nets, two c2c cables, one ping across both
+cloonix/nginx.py             a kvm and a container serving the same page
+cloonix/mount.py             a host directory inside a guest
+cloonix/limit.py             a container capped in cpu and ram
+cloonix/systemd.py           a container booting systemd
+cloonix/cntwifi.py           two containers, one radio each, a ping over the air cntwifi
+cloonix/kvmwifi.py           two kvm, one radio each, a ping over the air kvmwifi
+cloonix/cntkvmwifi.py        a container and a kvm, one radio each, a ping over the air cntwifi
+
+2 One wire, and what rides it
+switching/vlan.py            one trunk, two 802.1Q tags, two networks
+switching/stp.py             three bridges in a loop, one port blocked
+
+3 Addresses, names, time
+address/dhcp.py              an address handed out across a relay
+address/ipv6.py              an address nobody configured: SLAAC
+address/dns.py               a name resolved once routing is up
+address/unbound.py           a caching resolver
+address/knot.py              an authoritative server and a zone transfer
+address/ntp.py               a client disciplining its clock
+
+4 Routing
+routing/frrspider.py         sixty routers, OSPF
+routing/frrspider_bgp.py     the same sixty, BGP
+routing/frrmix.py            OSPF inside a site, BGP between sites
+routing/bird.py              OSPF with another daemon
+routing/isis.py              the link-state protocol of the carriers
+routing/babel.py             a distance-vector protocol that reroutes
+routing/batman.py            four nodes in a chain, one interface bat0
+
+5 Encryption and tunnels
+security/tls.py              one page over http, then over https
+security/wg.py               WireGuard: a peer is a key and a list of addresses
+security/openvpn.py          a point-to-point tunnel with a shared key
+security/tinc.py             a mesh vpn whose nodes exchange keys
+security/ipsec.py            strongSwan on one end, Libreswan on the other
+
+6 The edge
+security/nftables.py         a stateful firewall: filter, masquerade, dnat
+security/suricata.py         a sensor naming the traffic it sees
+security/ebpf.py             a program in the kernel dropping packets
+security/radius.py           the right password accepted, the wrong one rejected
+security/arp.py              arp poisoning, a machine put in the middle
+
+7 Services
+services/proxy.py            one request, two connections, a health check
+services/squid.py            a caching proxy: a hit, and a refused destination
+services/smtp.py             mail relayed from server to server
+services/mqtt.py             a publish and subscribe broker
+services/asterisk.py         a call set up, carried, released
+
+8 Staying up
+availability/vrrp.py         a gateway address moving to a standby
+availability/cluster.py      Corosync membership, Pacemaker moving a service
+
+9 Overlays and the real network
+switching/vxlan.py           one lan over a routed core, frames in udp 4789
+switching/ovn.py             one logical switch over two hosts, Geneve
+cloonix/phy.py               a real interface taken in: macvlan and absorb
+cloonix/realnet.py           a guest on the real network
+watching/perf.py             where the throughput goes
+
+10 Wifi
+wifi/cnt_wpa2.py             containers: an access point, two stations, WPA2, a station moved to another air
+wifi/cnt_open.py             containers: an open network, every frame readable on the air
+wifi/cnt_wpa3.py             containers: SAE, then only encrypted data on the air
+wifi/cnt_bridge.py           containers: an access point bridging the air to a cable
+wifi/cnt_roaming.py          containers: one SSID, two cells, a station moving between them
+wifi/cnt_mesh.py             containers: three radios in an 802.11s mesh, no access point
+wifi/kvm_wpa2.py             kvm: an access point, two stations, WPA2, a station moved to another air
+wifi/kvm_open.py             kvm: an open network, every frame readable on the air
+wifi/kvm_wpa3.py             kvm: SAE, then only encrypted data on the air
+wifi/kvm_bridge.py           kvm: an access point bridging the air to a cable
+wifi/kvm_roaming.py          kvm: one SSID, two cells, a station moving between them
+wifi/kvm_mesh.py             kvm: three radios in an 802.11s mesh, no access point
+wifi/cntkvm_home.py          cnt and kvm: a home box, the addresses given over the air
+wifi/cntkvm_enterprise.py    cnt and kvm: WPA2-Enterprise, a login per user, RADIUS
+wifi/cntkvm_roaming.py       cnt and kvm: a station roaming from a cnt AP to a kvm AP
+wifi/cntkvm_monitor.py       cnt and kvm: a listener in monitor mode, open then WPA2
+
+11 Other guests
+freebsd.py                   a BSD guest carrying the cloonix agent
+windows.py                   a windows guest, virtio drivers from the added disc
+cisco.py                     a cisco router driven through its serial console

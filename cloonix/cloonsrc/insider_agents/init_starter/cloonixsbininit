@@ -1,0 +1,128 @@
+#!/bin/sh
+# cloonixsbininit - pid 1 of every cloonix container and virtual machine.
+CLOONIX_INIT_LOG=/tmp/cloonix_sbin_init.log
+if [ -d /cloonixmnt/tmp ]; then
+  CLOONIX_INIT_LOG=/cloonixmnt/tmp/cloonix_sbin_init.log
+fi
+# POSIX redirection, not "&>".
+exec > "${CLOONIX_INIT_LOG}" 2>&1
+echo "STARTING cloonixsbininit"
+echo "log is ${CLOONIX_INIT_LOG}"
+/cloonixmnt/cnf_fs/cloonix-agent
+echo "/cloonixmnt/cnf_fs/cloonix-agent"
+/cloonixmnt/cnf_fs/cloonix-cxp-srv
+echo "/cloonixmnt/cnf_fs/cloonix-cxp-srv"
+
+# Keep the two agents alive. This must run whether or not the guest hands over
+# to systemd: a killed cloonix-agent left a container unreachable for ever,
+# because the keep-alive used to live only on the no-systemd branch and the
+# systemd path exec'd init before reaching it. Backgrounded here, it survives
+# that exec and covers every path. A kvm recovers by its own qemu-guest-agent
+# relaunch; a container has only this.
+cloonix_keep_agents_alive() {
+  while true; do
+    sleep 5
+    for a in cloonix-agent cloonix-cxp-srv; do
+      found=0
+      for pp in /proc/[0-9]*; do
+        if [ "$(cat $pp/comm 2>/dev/null)" = "$a" ]; then
+          found=1
+          break
+        fi
+      done
+      if [ $found = 0 ]; then
+        echo "RESTARTING $a"
+        /cloonixmnt/cnf_fs/$a
+      fi
+    done
+  done
+}
+cloonix_keep_agents_alive &
+CLOONIX_KEEP_PID=$!
+if [ -e "/cloonixmnt/cnf_fs/startup_nb_eth" ]; then
+  NB_ETH=$(cat /cloonixmnt/cnf_fs/startup_nb_eth)
+  echo "startup_nb_eth = ${NB_ETH}"
+  NB_ETH=$((NB_ETH-1))
+  for i in $(seq 0 $NB_ETH); do
+    LIST="${LIST} eth$i"
+  done
+  for eth in $LIST; do
+    while [ $(ip link show | egrep -c ": ${eth}") = 0 ]; do
+      sleep 1
+    done
+  done
+fi
+sleep 1
+echo $$ > /run/cloonix_startup.pid
+echo "startup pid $$"
+STARTUP_ENV=""
+if [ -e "/cloonixmnt/cnf_fs/startup_env" ]; then
+  STARTUP_ENV=$(cat /cloonixmnt/cnf_fs/startup_env)
+fi
+WANT_SYSTEMD=0
+case "${STARTUP_ENV}" in
+  *CLOONIX_WITH_SYSTEMD=1*) WANT_SYSTEMD=1 ;;
+esac
+echo "startup_env = '${STARTUP_ENV}', systemd wanted = ${WANT_SYSTEMD}"
+# systemd as pid 1 must create its cgroups. A toy that was given no cgroup
+# of its own (no systemd user manager on the host, or none asked) has none
+# to write in, and systemd would hang there: the container comes up without
+# it and says why.
+if [ "${WANT_SYSTEMD}" = "1" ]; then
+  if mkdir /sys/fs/cgroup/cloonix_probe 2>/dev/null; then
+    rmdir /sys/fs/cgroup/cloonix_probe
+  else
+    WANT_SYSTEMD=0
+    WHY="CLOONIX_WITH_SYSTEMD=1 asked, but /sys/fs/cgroup is not writable here: systemd cannot run, started without it"
+    echo "${WHY}"
+    echo "${WHY}" > /run/cloonix_no_systemd
+  fi
+fi
+if [ "${WANT_SYSTEMD}" = "0" ]; then
+  echo "no systemd (the default); the syslog daemon is started directly"
+  # rsyslogd on every distribution that packages it, syslog-ng where it is not
+  # packaged.
+  for i in /usr/sbin/rsyslogd /sbin/rsyslogd \
+           /usr/sbin/syslog-ng /sbin/syslog-ng /usr/bin/syslog-ng; do
+    if [ -x $i ]; then
+      # pid 1 and the agents are protected from the oom killer, not this.
+      /bin/sh -c "echo 0 > /proc/self/oom_score_adj; exec $i"
+      echo "LAUNCHING $i"
+      break
+    fi
+  done
+  # The keep-alive is already running in the background from the top of this
+  # script; on the no-systemd path there is no init to hand over to, so wait
+  # on it here rather than exiting pid 1.
+  echo "LAUNCHING the keep-alive wait"
+  # Wait on the supervisor specifically: a bare "wait" returns as soon as any
+  # child exits (rsyslogd may daemonize and do just that), which would drop
+  # pid 1 and take the container down. Loop in case wait is interrupted.
+  while kill -0 ${CLOONIX_KEEP_PID} 2>/dev/null; do
+    wait ${CLOONIX_KEEP_PID}
+  done
+fi
+# Say what the inotify budget looks like BEFORE handing over.
+for f in /proc/sys/fs/inotify/max_user_instances \
+         /proc/sys/fs/inotify/max_user_watches; do
+  if [ -r $f ]; then
+    echo "$f = $(cat $f)"
+  fi
+done
+echo "inotify instances already held by uid $(id -u): $(ls -l /proc/*/fd/ 2>/dev/null | grep -c inotify)"
+# An init that does not know it is protected from the oom killer would hand
+# that to everything it starts: under a ram cap nothing could be killed.
+echo 0 > /proc/self/oom_score_adj
+if [ -x /sbin/init ]; then
+  echo "/sbin/init will be launched"
+  exec /sbin/init
+fi
+if [ -x /lib/systemd/systemd ]; then
+  echo "/lib/systemd/systemd will be launched"
+  exec /lib/systemd/systemd
+fi
+echo "No init found in the image, staying up anyway"
+# A loop, not "sleep infinity".
+while true; do
+  sleep 3600
+done

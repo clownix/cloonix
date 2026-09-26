@@ -1,0 +1,821 @@
+/* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/un.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <signal.h>
+#include <errno.h>
+#include <fcntl.h>
+
+#include "io_clownix.h"
+#include "rpc_clownix.h"
+#include "doors_rpc.h"
+#include "llid_traffic.h"
+#include "rx_pktbuf.h"
+#include "llid_backdoor.h"
+#include "dispach.h"
+#include "doorways.h"
+#include "kvmwifi.h"
+
+/* BACKDOOR_TRACE: the per-container backdoor chatter, OFF. */
+#define BACKDOOR_TRACE 0
+#if BACKDOOR_TRACE
+#define BACKDOOR_DBG(format, a...) KERR(format, ## a)
+#else
+#define BACKDOOR_DBG(format, a...) do { } while (0)
+#endif
+
+enum
+{
+  ping_no_state = 0,
+  ping_ok,
+  ping_ko,
+};
+
+int sock_nonblock_client_unix(char *pname);
+static void action_bvm_connect_backdoor(t_backdoor_vm *bvm);
+static void timer_bvm_connect_backdoor(void *data);
+static int working_backdoor_llid(t_backdoor_vm *bvm);
+static t_backdoor_vm *g_llid_backdoor[CLOWNIX_MAX_CHANNELS];
+static t_backdoor_vm *head_bvm;
+static int nb_backdoor;
+
+static void llid_backdoor_low_tx(int llid, int len, char *buf)
+{
+  t_backdoor_vm *bvm = g_llid_backdoor[llid];
+  if (bvm)
+    {
+    if (msg_exist_channel(llid))
+      watch_tx(llid, len, buf);
+    }
+  else
+    KERR("ERROR %d", llid);
+}
+
+static t_backdoor_vm *vm_get_with_name(char *name)
+{
+  t_backdoor_vm *bvm = head_bvm;
+  while (bvm && (strcmp(bvm->name, name)))
+    bvm = bvm->next;
+  return bvm;
+}
+
+static t_backdoor_vm *vm_get_with_backdoor_llid(int llid)
+{
+  t_backdoor_vm *bvm = g_llid_backdoor[llid];
+  return bvm;
+}
+
+static t_backdoor_vm *check_llid_name(int llid, char *name, const char *fct)
+{
+  t_backdoor_vm *bvm = vm_get_with_backdoor_llid(llid);
+  if (bvm)
+    {
+    if (bvm->backdoor_llid != llid)
+      KOUT("ERROR");
+    if (strcmp(bvm->name, name))
+      KOUT("ERROR %s %s %s", bvm->name, name, fct);
+    }
+  return bvm;
+}
+
+static void local_backdoor_tx(t_backdoor_vm *bvm, int dido_llid,
+                              int len, int type, int val, char  *buf)
+{
+  char *payload;
+  int llid, headsize = sock_header_get_size();
+  if (len > MAX_A2D_LEN - headsize)
+    KOUT("ERROR %d", len);
+  if (bvm->cloonix_up_and_running)
+    {
+    sock_header_set_info(buf, dido_llid, 0, 0, type, val, len, &payload);
+    if (payload != buf + headsize)
+      KOUT("ERROR %p %p", payload, buf);
+    llid = bvm->backdoor_llid;
+    llid_backdoor_low_tx(llid, len + headsize, buf);
+    }
+  else
+    KERR("ERROR %d %s", dido_llid, bvm->name);
+}
+
+void llid_backdoor_tx_bvm(t_backdoor_vm *bvm, int len, int type, int val,
+                          char *buf)
+{
+  if (bvm->cloonix_up_and_running && working_backdoor_llid(bvm))
+    local_backdoor_tx(bvm, 0, len, type, val, buf);
+}
+
+t_backdoor_vm *llid_backdoor_get_bvm(char *name)
+{
+  return vm_get_with_name(name);
+}
+
+t_backdoor_vm *llid_backdoor_get_first(void)
+{
+  return head_bvm;
+}
+
+void llid_backdoor_tx(char *name, int llid_backdoor, int dido_llid,
+                      int len, int type, int val, char  *buf)
+{
+  t_backdoor_vm *bvm;
+  char *payload;
+  int  headsize = sock_header_get_size();
+  if (len > MAX_A2D_LEN - headsize)
+    KOUT("ERROR %d", len);
+  bvm = check_llid_name(llid_backdoor, name, __FUNCTION__);
+  if (bvm) 
+    {
+    if (bvm->cloonix_up_and_running)
+      {
+      sock_header_set_info(buf, dido_llid, 0, 0, type, val, len, &payload);
+      if (payload != buf + headsize)
+        KOUT("ERROR %p %p", payload, buf);
+      if (llid_backdoor != bvm->backdoor_llid)
+        KOUT("ERROR  ");
+      llid_backdoor_low_tx(llid_backdoor, len + headsize, buf);
+      }
+    }
+}
+
+void llid_backdoor_tx_reboot_to_agent(char *name)
+{
+  char buf[MAX_A2D_LEN];
+  int  headsize = sock_header_get_size();
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if ((bvm) && (bvm->cloonix_up_and_running))
+    {
+    bvm->reboot_id += 1;
+    snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, LABOOT, bvm->reboot_id);
+    local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
+                      header_type_ctrl, header_val_reboot, buf);
+    }
+}
+
+void llid_backdoor_tx_clip_set_to_agent(char *name, char *txt)
+{
+  char buf[MAX_A2D_LEN];
+  int  headsize = sock_header_get_size();
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if ((bvm) && (bvm->cloonix_up_and_running) && (txt) && (txt[0]))
+    {
+    snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, "%s", txt);
+    local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
+                      header_type_ctrl, header_val_clip_set, buf);
+    }
+}
+
+void llid_backdoor_tx_clip_get_to_agent(char *name)
+{
+  char buf[MAX_A2D_LEN];
+  int  headsize = sock_header_get_size();
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if ((bvm) && (bvm->cloonix_up_and_running))
+    {
+    snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, "%s", CLIPBOARD_GET);
+    local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
+                      header_type_ctrl, header_val_clip_get, buf);
+    }
+}
+
+void llid_backdoor_tx_halt_to_agent(char *name)
+{
+  char buf[MAX_A2D_LEN];
+  int  headsize = sock_header_get_size();
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if ((bvm) && (bvm->cloonix_up_and_running))
+    {
+    bvm->halt_id += 1;
+    snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, LAHALT, bvm->halt_id);
+    local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
+                      header_type_ctrl, header_val_halt, buf);
+    }
+}
+
+static t_llid_dido *bvm_traf_find_llid(t_backdoor_vm *bvm, int dido_llid)
+{
+  t_llid_dido *cur;
+  cur = bvm->llid_dido_traf;
+  while (cur)
+    {
+    if (dido_llid == cur->dido_llid)
+      break;
+    cur = cur->next;
+    }
+  return cur;
+}
+
+static void bvm_traf_add_llid(t_backdoor_vm *bvm, int dido_llid)
+{
+  t_llid_dido *cur;
+  cur = (t_llid_dido *) clownix_malloc(sizeof(t_llid_dido), 9);
+  memset(cur, 0, sizeof(t_llid_dido));
+  cur->dido_llid = dido_llid;
+  if (bvm->llid_dido_traf)
+    bvm->llid_dido_traf->prev = cur;
+  cur->next = bvm->llid_dido_traf;
+  bvm->llid_dido_traf = cur;
+}
+
+static void bvm_traf_del_llid(t_backdoor_vm *bvm, t_llid_dido *cur)
+{
+  if (cur->prev)
+    cur->prev->next = cur->next;
+  if (cur->next)
+    cur->next->prev = cur->prev;
+  if (cur == bvm->llid_dido_traf)
+    bvm->llid_dido_traf = cur->next;
+  clownix_free(cur, __FUNCTION__);
+}
+
+static void llid_setup(t_backdoor_vm *bvm, int llid, int fd)
+{
+  if (g_llid_backdoor[llid])
+    KOUT("ERROR  ");
+  if (bvm->backdoor_llid)
+    KOUT("ERROR  ");
+  bvm->backdoor_llid = llid;
+  bvm->backdoor_fd   = fd;
+  g_llid_backdoor[llid] = bvm;
+}
+
+static void llid_dido_traf_end_all(t_backdoor_vm *bvm)
+{
+  t_llid_dido *cur, *next;
+  cur = bvm->llid_dido_traf;
+  while(cur)
+    {
+    next = cur->next;
+    llid_traf_delete(cur->dido_llid);
+    cur = next;
+    }
+}
+
+static void llid_unsetup(t_backdoor_vm *bvm)
+{
+  if (g_llid_backdoor[bvm->backdoor_llid] != bvm)
+    KOUT("ERROR  %p %p", g_llid_backdoor[bvm->backdoor_llid], bvm);
+  llid_dido_traf_end_all(bvm);
+  if (msg_exist_channel(bvm->backdoor_llid))
+    msg_delete_channel(bvm->backdoor_llid);
+  g_llid_backdoor[bvm->backdoor_llid] = NULL;
+  bvm->backdoor_llid = 0;
+  bvm->backdoor_fd = 0;
+}
+
+/* A KERR line of the agent, for the syslog of the net: control bytes
+   replaced, cut at GUEST_KERR_MAX, KERR_BURST lines per window per guest. */
+#define GUEST_KERR_MAX 400
+static void guest_kerr(t_backdoor_vm *bvm, int len, char *payload)
+{
+  char evt[GUEST_KERR_MAX + 128], note[64];
+  int i, n = strlen(AGENT_KERR);
+  unsigned char c;
+  if (!kerr_gate(&(bvm->kerr_gate), note, sizeof(note)))
+    return;
+  memcpy(evt, AGENT_KERR, n);
+  for (i = 0; (i < len) && (i < GUEST_KERR_MAX) && payload[i]; i++)
+    {
+    c = (unsigned char) payload[i];
+    evt[n + i] = ((c < 0x20) || (c == 0x7f)) ? '?' : c;
+    }
+  if (i == 0)
+    evt[n + i++] = '-';
+  evt[n + i] = 0;
+  strncat(evt, note, sizeof(evt) - strlen(evt) - 1);
+  doors_send_event(get_doorways_llid(), 0, bvm->name, evt);
+}
+
+static void rx_from_agent_conclusion_zero_llid(t_backdoor_vm *bvm, 
+                                               int type, int val, 
+                                               int paylen, char *payload)
+{
+  int val_id;
+  if (type == header_type_ctrl) 
+    {
+    switch (val)
+      {
+      case header_val_ping:
+        if (sscanf(payload, LAPING, &val_id) == 1)
+          {
+          if (val_id == bvm->ping_id)
+            {
+            if (bvm->ping_status != ping_ok)
+              {
+              bvm->ping_status = ping_ok;
+              KTRC("%s: the agent answered ping %d, it is alive",
+                   bvm->name, val_id);
+              doors_send_event(get_doorways_llid(), 0, bvm->name, PING_OK);
+              }
+            bvm->ping_agent_rx += 1;
+            kvmwifi_agent_alive(bvm);
+            }
+          }
+        else
+          KERR("ERROR %s", payload);
+        break;
+
+      case header_val_clip_txt:
+        {
+        char evt[MAX_A2D_LEN];
+        snprintf(evt, sizeof(evt)-1, "%s %s", CLIPBOARD_TXT, payload);
+        doors_send_event(get_doorways_llid(), 0, bvm->name, evt);
+        }
+        break;
+
+      default:
+        KERR("ERROR %d", val);
+        break;
+      }
+    }
+  else if (type == header_type_wifi_ctrl)
+    kvmwifi_rx_ctrl(bvm, val, paylen, payload);
+  else if (type == header_type_wifi_frame)
+    kvmwifi_rx_frame(bvm, paylen, payload);
+  else if (type == header_type_kerr)
+    guest_kerr(bvm, paylen, payload);
+  else
+    KERR("ERROR %s sent a frame of type %d that nothing handles", bvm->name, type);
+}
+
+static void rx_from_agent_conclusion(t_backdoor_vm *bvm, 
+                                     int type, int val, int dido_llid,
+                                     int vwifi_base, int vwifi_cid,
+                                     int paylen, char *payload)
+{
+  bvm->ping_agent_rx += 1;
+
+  if ((dido_llid == 0) && (vwifi_cid == 0))
+    rx_from_agent_conclusion_zero_llid(bvm, type, val, paylen, payload);
+  else if (type == header_type_ctrl) 
+    {
+    KERR("ERROR %d", val);
+    }
+  else
+    {
+    llid_traf_tx_to_client(bvm->name, dido_llid, paylen, type, val, payload); 
+    }
+}
+
+static void backdoor_frame(void *ctx, t_rx_pktbuf *rp)
+{
+  t_backdoor_vm *bvm = (t_backdoor_vm *) ctx;
+  rx_from_agent_conclusion(bvm, rp->type, rp->val, rp->dido_llid,
+                           rp->vwifi_base, rp->vwifi_cid,
+                           rp->paylen, rp->payload);
+}
+
+static void backdoor_desync(void *ctx)
+{
+  t_backdoor_vm *bvm = (t_backdoor_vm *) ctx;
+  bvm->ping_status = ping_ko;
+  doors_send_event(get_doorways_llid(), 0, bvm->name, PING_KO);
+  KERR("ERROR %s NOT IN SYNC LOST", bvm->name);
+  llid_backdoor_cloonix_down_and_not_running(bvm->name);
+}
+
+static void backdoor_rx(t_backdoor_vm *bvm, int len, char  *buf)
+{
+  rx_pktbuf_feed(&(bvm->rx_pktbuf), len, buf, bvm,
+                 backdoor_frame, backdoor_desync);
+}
+
+static void clean_connect_timer(t_backdoor_vm *bvm)
+{
+  if (bvm->connect_abs_beat_timer)
+    clownix_timeout_del(bvm->connect_abs_beat_timer, bvm->connect_ref_timer,
+                        __FILE__, __LINE__);
+  bvm->connect_abs_beat_timer = 0;
+  bvm->connect_ref_timer = 0;
+}
+
+static void clean_heartbeat_timer(t_backdoor_vm *bvm)
+{
+  if (bvm->heartbeat_abeat)
+    clownix_timeout_del(bvm->heartbeat_abeat, bvm->heartbeat_ref,
+                        __FILE__, __LINE__);
+  bvm->heartbeat_abeat = 0;
+  bvm->heartbeat_ref = 0;
+}
+
+static void rearm_timer_bvm_connect_backdoor(t_backdoor_vm *bvm)
+{
+  clean_connect_timer(bvm);
+  bvm->connect_count += 1;
+  if (bvm->connect_count < 120)
+    {
+    clean_connect_timer(bvm);
+    clownix_timeout_add(100, timer_bvm_connect_backdoor, (void *) bvm,
+                        &(bvm->connect_abs_beat_timer),
+                        &(bvm->connect_ref_timer));
+    }
+}
+
+static void vm_end_release(t_backdoor_vm *bvm)
+{
+  /* Nominal teardown, not an error: one line per container, 380 in a run. */
+  BACKDOOR_DBG("BACKDOOR RELEASE %s", bvm->name);
+  if (!bvm)
+    KOUT("ERROR");
+  kvmwifi_gone(bvm);
+  if (bvm->backdoor_llid)
+    llid_unsetup(bvm);
+  if (bvm->prev)
+    bvm->prev->next = bvm->next;
+  if (bvm->next)
+    bvm->next->prev = bvm->prev;
+  if (bvm == head_bvm)
+    head_bvm = bvm->next;
+  if (nb_backdoor == 0)
+    KOUT("ERROR");
+  clownix_free(bvm, __FUNCTION__);
+  nb_backdoor--;
+}
+
+void llid_backdoor_cloonix_down_and_not_running(char *name)
+{
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if (bvm)
+    {
+    bvm->cloonix_up_and_running = 0;
+    kvmwifi_agent_down(bvm);
+    /* Backdoor dropped: the agent is relaunched (qga in a kvm, init in a cnt)
+       on the same socket, so keep retrying: drop the llid, reset the count,
+       re-arm. plug_to_backdoor_llid sets up_and_running again on success. */
+    if (bvm->backdoor_llid)
+      llid_unsetup(bvm);
+    else
+      llid_dido_traf_end_all(bvm);
+    bvm->connect_count = 0;
+    rearm_timer_bvm_connect_backdoor(bvm);
+    }
+  else
+    KERR("ERROR %s", name);
+}
+
+static void differed_vm_release(t_backdoor_vm *bvm)
+{
+  clean_connect_timer(bvm);
+  clean_heartbeat_timer(bvm);
+  vm_end_release(bvm);
+}   
+
+static t_backdoor_vm *vm_alloc(char *name, char *path)
+{
+  t_backdoor_vm *bvm = NULL;
+  int i;
+  bvm = (t_backdoor_vm *) clownix_malloc(sizeof(t_backdoor_vm), 5);
+  memset(bvm, 0, sizeof(t_backdoor_vm));
+  /* no peers told yet, see kvmwifi.c */
+  for (i = 0; i < MAX_VWIF; i++)
+    bvm->wifi_nb_peers[i] = -1;
+  strncpy(bvm->name, name, MAX_NAME_LEN-1);
+  strncpy(bvm->backdoor, path, MAX_PATH_LEN-1);
+  if (head_bvm)
+    head_bvm->prev = bvm;
+  bvm->next = head_bvm;
+  head_bvm = bvm;
+  nb_backdoor++;
+  kvmwifi_born(bvm);
+  return bvm;
+}
+
+static void vm_err_cb (int llid, int err, int from)
+{
+  t_backdoor_vm *bvm;
+  if (msg_exist_channel(llid))
+    msg_delete_channel(llid);
+  bvm = vm_get_with_backdoor_llid(llid);
+  if (bvm)
+    {
+    if ((err == ECONNRESET) || (err == EPIPE))
+      KERR("WARNING %s: its backdoor closed, the guest is gone (reset, "
+           "data was in flight)", bvm->name);
+    else
+      KERR("WARNING %s: its backdoor channel llid %d closed (err=%d "
+           "from=%d)", bvm->name, llid, err, from);
+    if ((llid != bvm->backdoor_llid))
+      KERR("ERROR %s: llid %d is not its backdoor llid %d",
+           bvm->name, llid, bvm->backdoor_llid);
+    if (bvm->backdoor_llid)
+      {
+      if (llid != bvm->backdoor_llid)
+        KOUT("ERROR");
+      llid_backdoor_cloonix_down_and_not_running(bvm->name);
+      }
+    }
+  else
+    KERR("WARNING backdoor channel llid %d closed (err=%d from=%d), no vm holds it",
+         llid, err, from);
+}
+
+static int vm_rx_cb(int llid, int fd)
+{
+  int len;
+  char buf[MAX_A2D_LEN];
+  t_backdoor_vm *bvm = vm_get_with_backdoor_llid(llid);
+
+  if (!bvm)
+    {
+    KERR("ERROR");
+    if (msg_exist_channel(llid))
+      msg_delete_channel(llid);
+    return 0;
+    } 
+
+  if (!bvm->cloonix_up_and_running)
+    { 
+    KERR("ERROR %s %d %d", bvm->name, llid, fd);
+    if (msg_exist_channel(llid))
+      msg_delete_channel(llid);
+    return 0;
+    } 
+
+  if (llid != bvm->backdoor_llid)
+    {
+    KERR("ERROR %s %d %d", bvm->name, llid, fd);
+    if (msg_exist_channel(llid))
+      msg_delete_channel(llid);
+    return 0;
+    } 
+
+  len = read (fd, buf, MAX_A2D_LEN);
+  if (len == 0)
+    {
+    if (msg_exist_channel(llid))
+      msg_delete_channel(llid);
+    if (bvm)
+      {
+      KERR("WARNING %s: its backdoor closed, the guest is gone", bvm->name);
+      llid_backdoor_cloonix_down_and_not_running(bvm->name);
+      }
+    }
+  else if (len < 0)
+    {
+    len = 0;
+    if ((errno != EAGAIN) && (errno != EINTR))
+      {
+      KERR("ERROR BAD BACKDOOR 4 %s errno:%d", bvm->name, errno);
+      if (msg_exist_channel(llid))
+        msg_delete_channel(llid);
+      llid_backdoor_cloonix_down_and_not_running(bvm->name);
+      }
+    }
+  else
+    {
+    backdoor_rx(bvm, len, buf);
+    }
+  return len;
+}
+
+static int working_backdoor_llid(t_backdoor_vm *bvm)
+{
+  int result = 0;
+  if (bvm->backdoor_llid)
+    {
+    if (msg_exist_channel(bvm->backdoor_llid))
+      result = 1;
+    }
+  return result;
+}
+
+static void action_ga_heartbeat_on_working_llid(t_backdoor_vm *bvm)
+{
+  char buf[MAX_A2D_LEN];
+  int  headsize = sock_header_get_size();
+  if (!bvm->cloonix_up_and_running)
+    {
+    if (!bvm->said_not_up)
+      {
+      bvm->said_not_up = 1;
+      KERR("WARNING %s: not up and running, no ping is being sent to its "
+           "agent", bvm->name);
+      }
+    }
+  if (bvm->cloonix_up_and_running)
+    {
+    bvm->said_not_up = 0;
+    if (bvm->last_ping_agent_rx == bvm->ping_agent_rx)
+      {
+      bvm->fail_ping_agent_rx += 1;
+      }
+    else
+      bvm->fail_ping_agent_rx = 0;
+    if (bvm->fail_ping_agent_rx > 30)
+      {
+      if (cloonix_get_msec() - bvm->reboot_ms < REBOOT_QUIET_MS)
+        KTRC("%s: the agent is silent after the reboot asked for",
+             bvm->name);
+      else
+        KERR("WARNING %s: %d pings sent to the agent, none answered",
+             bvm->name, bvm->ping_id);
+      bvm->fail_ping_agent_rx = 0;
+      doors_send_event(get_doorways_llid(), 0, bvm->name, PING_KO);
+      bvm->ping_status = ping_ko;
+      }
+    bvm->last_ping_agent_rx = bvm->ping_agent_rx;
+    bvm->ping_id += 1;
+    snprintf(buf+headsize, MAX_A2D_LEN-headsize-1, LAPING, bvm->ping_id);
+    local_backdoor_tx(bvm, 0, strlen(buf+headsize) + 1,
+                      header_type_ctrl, header_val_ping, buf);
+    }
+}
+
+static void timer_ga_heartbeat(void *data)
+{
+  char *name = (char *) data;
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if (bvm)
+    {
+    bvm->heartbeat_abeat = 0;
+    bvm->heartbeat_ref = 0;
+    if (bvm->cloonix_not_yet_connected)
+      {
+      bvm->cloonix_not_yet_connected = 0;
+      action_bvm_connect_backdoor(bvm);
+      }
+    else
+      {
+      if (bvm->cloonix_up_and_running)
+        {
+        if (working_backdoor_llid(bvm))
+          action_ga_heartbeat_on_working_llid(bvm);
+        }
+      }
+    clownix_timeout_add(50, timer_ga_heartbeat, (void *) name,
+                        &(bvm->heartbeat_abeat), &(bvm->heartbeat_ref));
+    }
+  else
+    KERR("ERROR %p", data);
+}
+
+int llid_backdoor_ping_status_is_ok(char *name)
+{
+  int result = 0;
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if ((bvm) && (bvm->ping_status == ping_ok))
+    {
+    if (bvm->ping_agent_rx > 1)
+      result = 1;
+    else
+      KERR("ERROR %s %d", name, bvm->ping_agent_rx);
+    }
+  return result;
+}
+
+static void plug_to_backdoor_llid(t_backdoor_vm *bvm)
+{
+  char nousebuf[MAX_PATH_LEN];
+  int fd, llid, len;
+  fd = sock_nonblock_client_unix(bvm->backdoor);
+  if (fd >= 0)
+    {
+    do
+      {
+      len = read(fd, nousebuf, MAX_PATH_LEN);
+      if (len && (len != -1))
+        KERR("ERROR %d", len);
+      }
+    while (len > 0);
+    llid = msg_watch_fd(fd, vm_rx_cb, vm_err_cb, "cloon");
+    if (llid == 0)
+      KOUT("ERROR");
+    llid_setup(bvm, llid, fd);
+    }
+}
+
+static void action_bvm_connect_backdoor(t_backdoor_vm *bvm)
+{
+  if (!(bvm->backdoor_llid))
+    plug_to_backdoor_llid(bvm);
+  if (!(working_backdoor_llid(bvm)))
+    {
+    rearm_timer_bvm_connect_backdoor(bvm);
+    doors_send_event(get_doorways_llid(), 0, bvm->name, BACKDOOR_DISCONNECTED);
+    }
+  else
+    {
+    doors_send_event(get_doorways_llid(), 0, bvm->name, BACKDOOR_CONNECTED);
+    }
+}
+
+static void timer_bvm_connect_backdoor(void *data)
+{ 
+  t_backdoor_vm *bvm = (t_backdoor_vm *) data;
+  if (!bvm)
+    KOUT("ERROR");
+  bvm->connect_abs_beat_timer = 0;
+  bvm->connect_ref_timer = 0;
+  action_bvm_connect_backdoor(bvm);
+}
+
+int llid_backdoor_get_info(char *name, int *llid_backdoor)
+{
+  int result = -1;
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if (bvm)
+    {
+    result = -2;
+    if (working_backdoor_llid(bvm))
+      {
+      *llid_backdoor = bvm->backdoor_llid;
+      result = 0;
+      }
+    }
+  return result;
+}
+
+void llid_backdoor_add_traf(char *name, int llid_backdoor, int dido_llid)
+{
+  t_backdoor_vm *bvm;
+  t_llid_dido *cur;
+  if (llid_backdoor)
+    {
+    bvm = check_llid_name(llid_backdoor, name, __FUNCTION__);
+    if (!bvm)
+      KERR("ERROR");
+    else
+      {
+      cur = bvm_traf_find_llid(bvm, dido_llid);
+      if (cur)
+        KOUT("ERROR");
+      bvm_traf_add_llid(bvm, dido_llid);
+      }
+    }
+  else
+    KOUT("ERROR");
+}
+
+void llid_backdoor_del_traf(char *name, int llid_backdoor, int dido_llid)
+{
+  t_backdoor_vm *bvm;
+  t_llid_dido *cur;  
+  if (llid_backdoor)
+    {
+    bvm = check_llid_name(llid_backdoor, name, __FUNCTION__);
+    if (!bvm)
+      KERR("WARNING %s: session %d ends after its backdoor closed",
+           name, dido_llid);
+    else
+      {
+      cur = bvm_traf_find_llid(bvm, dido_llid);
+      if (!cur)
+        KERR("ERROR %s: session %d is not listed on its backdoor",
+             name, dido_llid);
+      else
+        bvm_traf_del_llid(bvm, cur);
+      }
+    }
+  else
+    KOUT("ERROR");
+}
+
+void llid_backdoor_begin_unix(char *name, char *path)
+{
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  char *vmname;
+  if (!bvm)
+    {
+    bvm = vm_alloc(name, path);
+    vmname = (char *) clownix_malloc(MAX_NAME_LEN, 8);
+    memset(vmname, 0, MAX_NAME_LEN);
+    strncpy(vmname, name, MAX_NAME_LEN-1);
+    bvm->cloonix_not_yet_connected = 1;
+    clownix_timeout_add(300, timer_ga_heartbeat, (void *) vmname,
+                        &(bvm->heartbeat_abeat), &(bvm->heartbeat_ref));
+    }
+}
+
+void llid_backdoor_end_unix(char *name)
+{
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if (bvm)
+    {
+    differed_vm_release(bvm);
+    }
+}
+
+void llid_backdoor_cloonix_up_vport_and_running(char *name)
+{
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if (bvm)
+    bvm->cloonix_up_and_running = 1;
+}
+
+void llid_backdoor_reboot_announced(char *name)
+{
+  t_backdoor_vm *bvm = vm_get_with_name(name);
+  if (bvm)
+    bvm->reboot_ms = cloonix_get_msec();
+}
+
+void llid_backdoor_init(void)
+{
+  head_bvm = NULL;
+  nb_backdoor = 0;
+}
+

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+</style>
+<rect width="900" height="300" fill="#ffffff"/>
+
+<rect class="zone" x="20" y="20" width="270" height="260" rx="12"/>
+<text x="30" y="36" class="s">cloonix: the host</text>
+<rect class="box" x="40" y="50" width="230" height="30" rx="6"/>
+<text x="155" y="70" text-anchor="middle" class="m">python3, a browser</text>
+<rect class="grn" x="40" y="92" width="230" height="176" rx="8"/>
+<text x="155" y="110" text-anchor="middle" class="m">/usr/libexec/cloonix/cloonfs</text>
+<rect class="box" x="55" y="122" width="200" height="24" rx="5"/>
+<text x="155" y="139" text-anchor="middle" class="m">cloonix daemons</text>
+<rect class="box" x="55" y="152" width="200" height="24" rx="5"/>
+<text x="155" y="169" text-anchor="middle" class="m">qemu-kvm  openvswitch</text>
+<rect class="box" x="55" y="182" width="200" height="24" rx="5"/>
+<text x="155" y="199" text-anchor="middle" class="m">crun  passt  wireshark dissectors</text>
+<rect class="box" x="55" y="212" width="200" height="24" rx="5"/>
+<text x="155" y="229" text-anchor="middle" class="m">loader and every library</text>
+<text x="155" y="258" text-anchor="middle" class="s">one tar.gz, one setuid binary</text>
+
+<rect class="zoneg" x="315" y="20" width="270" height="260" rx="12"/>
+<text x="325" y="36" class="s">gns3, eve-ng: the host or a dedicated vm</text>
+<rect class="box" x="335" y="50" width="230" height="30" rx="6"/>
+<text x="450" y="70" text-anchor="middle" class="m">qt gui, or a browser</text>
+<rect class="box" x="335" y="92" width="230" height="30" rx="6"/>
+<text x="450" y="112" text-anchor="middle" class="m">gns3server / eve-ng web</text>
+<rect class="gry" x="335" y="134" width="230" height="134" rx="8"/>
+<text x="450" y="152" text-anchor="middle" class="s">installed and updated apart</text>
+<rect class="box" x="350" y="164" width="200" height="24" rx="5"/>
+<text x="450" y="181" text-anchor="middle" class="m">qemu  docker daemon</text>
+<rect class="box" x="350" y="194" width="200" height="24" rx="5"/>
+<text x="450" y="211" text-anchor="middle" class="m">dynamips  iou / iol  ubridge</text>
+<rect class="box" x="350" y="224" width="200" height="24" rx="5"/>
+<text x="450" y="241" text-anchor="middle" class="m">wireshark on the client</text>
+
+<rect class="zoneg" x="610" y="20" width="270" height="260" rx="12"/>
+<text x="620" y="36" class="s">containerlab, mininet: the host</text>
+<rect class="box" x="630" y="50" width="230" height="30" rx="6"/>
+<text x="745" y="70" text-anchor="middle" class="m">a terminal on the host</text>
+<rect class="box" x="630" y="92" width="230" height="30" rx="6"/>
+<text x="745" y="112" text-anchor="middle" class="m">containerlab binary / mininet lib</text>
+<rect class="gry" x="630" y="134" width="230" height="134" rx="8"/>
+<text x="745" y="152" text-anchor="middle" class="s">installed and updated apart</text>
+<rect class="box" x="645" y="164" width="200" height="24" rx="5"/>
+<text x="745" y="181" text-anchor="middle" class="m">docker or podman daemon</text>
+<rect class="box" x="645" y="194" width="200" height="24" rx="5"/>
+<text x="745" y="211" text-anchor="middle" class="m">openvswitch, tc, tcpdump</text>
+<rect class="box" x="645" y="224" width="200" height="24" rx="5"/>
+<text x="745" y="241" text-anchor="middle" class="m">the host kernel, its namespaces</text>
+</svg>

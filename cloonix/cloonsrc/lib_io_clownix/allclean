@@ -1,0 +1,5 @@
+#!/bin/bash
+HERE=`pwd`
+cd $HERE
+make clean
+

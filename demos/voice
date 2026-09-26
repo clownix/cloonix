@@ -1,0 +1,85 @@
+# voice - what the Demo panel says when a demo starts, one line per demo,
+# in the order of demos/packages. A line is "<area>/<demo>.py  <phrase>".
+# The phrase is spoken as written: a word the voice reads wrong is spelled
+# for the ear (O S P F, system D). After a change: debug/demo_voice.py
+
+cloonix/cnt.py               Two containers on one lan, and a ping between them.
+cloonix/kvm.py               Two virtual machines on one lan, and a ping between them.
+
+cloonix/a2b.py               Wire with loss, delay and a rate limit done with the a 2 b.
+cloonix/snf.py               An interface can be spied upon.
+cloonix/nat.py               A guest reaches the host's internet through the nat item.
+cloonix/c2c.py               Cloonix nets can be linked with c 2 c cables, one ping across three nets.
+cloonix/nginx.py             The host serves a page through a port going into a container.
+cloonix/mount.py             A directory of the host can be mounted inside a guest.
+cloonix/limit.py             A container can have processor and memory limits capped.
+cloonix/systemd.py           A container can boot with system D as first process.
+cloonix/cntwifi.py           Wifi between containers. Two containers with a radio each, and a ping over the air.
+cloonix/kvmwifi.py           Wifi between virtual machines. Two virtual machines with a radio each, and a ping over the air.
+cloonix/cntkvmwifi.py        Wifi between a container and a virtual machine. One radio each, and a ping over the air.
+
+switching/vlan.py            V lan. One trunk, two tags, two separate networks on one cable.
+switching/stp.py             Spanning tree. Three bridges in a loop, and one port blocked.
+
+address/dhcp.py              DHCP. An address handed out across a relay.
+address/ipv6.py              I P v 6. An address that nobody configured.
+address/dns.py               DNS. A name resolved, once routing is up.
+address/unbound.py           Unbound. A caching resolver.
+address/knot.py              Knot DNS. An authoritative server, and a zone transfer.
+address/ntp.py               A client setting its clock from a N T P time server.
+
+routing/frrspider.py         Sixty routers learn their routes through O S P F protocol by F R R routing open source.
+routing/frrspider_bgp.py     Sixty routers learn their routes through B G P protocol by F R R routing open source.
+routing/frrmix.py            O S P F inside each site, B G P between the sites with F R R routing open source.
+routing/bird.py              O S P F with routing daemon based on bird open source.
+routing/isis.py              I S I S. The link state protocol of the operators.
+routing/babel.py             Babel. A distance vector protocol that finds a new route.
+routing/batman.py            Batman. Four mesh nodes in a chain, seen as one interface.
+
+security/tls.py              One page over http, then over https for TLS demo.
+security/wg.py               WireGuard. A tunnel where a peer is a key and a list of addresses.
+security/openvpn.py          OpenVPN. A point to point tunnel with a shared key.
+security/tinc.py             Tinc. A mesh VPN whose nodes exchange keys.
+security/ipsec.py            IPsec. StrongSwan on one end, Libreswan on the other.
+
+security/nftables.py         Nftables. A stateful firewall that filters, masquerades and forwards.
+security/suricata.py         Suricata. A sensor that names the traffic it sees.
+security/ebpf.py             e B P F. A program in the kernel that drops packets.
+security/radius.py           Radius. The right password accepted, the wrong one rejected.
+security/arp.py              ARP poisoning. A machine put in the middle.
+
+services/proxy.py            A proxy. One request, two connections, and a health check.
+services/squid.py            Squid. A caching proxy, a hit, and a refused destination.
+services/smtp.py             Mail. A message relayed from server to server.
+services/mqtt.py             MQTT. A broker for publish and subscribe.
+services/asterisk.py         Asterisk. A phone call set up, carried, and released.
+
+availability/vrrp.py         VRRP. A gateway address moving to a standby router.
+availability/cluster.py      A cluster. Corosync membership, and Pacemaker moving a service.
+
+switching/vxlan.py           V X lan. One lan carried over a routed core.
+switching/ovn.py             O V N. One logical switch over two hosts.
+cloonix/phy.py               A real interface. Taken in by mac V lan, then absorbed.
+cloonix/realnet.py           The real network. A guest placed on the real network.
+watching/perf.py             Performance. Where the throughput goes.
+
+wifi/cnt_wpa2.py             W P A 2 between containers. An access point, two stations, and a station moved to another air.
+wifi/cnt_open.py             An open wifi between containers. Every frame can be read on the air.
+wifi/cnt_wpa3.py             W P A 3 between containers. The S A E exchange, then only encrypted frames on the air.
+wifi/cnt_bridge.py           A container access point bridging the air to a cable, one subnet for both.
+wifi/cnt_roaming.py          One network, two cells, containers. A station moves, and keeps its address.
+wifi/cnt_mesh.py             A wifi mesh of containers. Three radios relaying for each other, no access point.
+wifi/kvm_wpa2.py             W P A 2 between virtual machines. An access point, two stations, and a station moved to another air.
+wifi/kvm_open.py             An open wifi between virtual machines. Every frame can be read on the air.
+wifi/kvm_wpa3.py             W P A 3 between virtual machines. The S A E exchange, then only encrypted frames on the air.
+wifi/kvm_bridge.py           A virtual machine access point bridging the air to a cable, one subnet for both.
+wifi/kvm_roaming.py          One network, two cells, virtual machines. A station moves, and keeps its address.
+wifi/kvm_mesh.py             A wifi mesh of virtual machines. Three radios relaying for each other, no access point.
+wifi/cntkvm_home.py          A home box. A virtual machine access point gives a container and a virtual machine their address over the air.
+wifi/cntkvm_enterprise.py    W P A 2 Enterprise. A login per user, checked by a radius server, for a container and a virtual machine.
+wifi/cntkvm_roaming.py       One network, two cells, a container access point and a virtual machine access point. The station keeps its address.
+wifi/cntkvm_monitor.py       Listening to the air. A virtual machine in monitor mode reads an open network, and not a W P A 2 one.
+
+freebsd.py                   FreeBSD. A BSD guest running the cloonix agent.
+windows.py                   Windows. A Windows guest, with virtio drivers from an added disc.
+cisco.py                     Cisco. A Cisco router driven through its serial console.

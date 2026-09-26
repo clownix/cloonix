@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 330" width="900" height="330" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<style>
+text{fill:#1a1a2e;font-size:11px}
+.n{font-size:15px;font-weight:bold;fill:#0f3460}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5}
+.loop{fill:none;stroke:#e94560;stroke-width:1.5;stroke-dasharray:4 3}
+</style>
+<rect class="grn" x="20" y="275" width="69" height="40" rx="3"/>
+<text class="n" x="54" y="293" text-anchor="middle">0</text>
+<text class="s" x="54" y="307" text-anchor="middle">first net</text>
+<rect class="grn" x="92" y="255" width="69" height="60" rx="3"/>
+<text class="n" x="126" y="273" text-anchor="middle">1</text>
+<text class="s" x="126" y="287" text-anchor="middle">cloonix items</text>
+<rect class="grn" x="164" y="235" width="69" height="80" rx="3"/>
+<text class="n" x="198" y="253" text-anchor="middle">2</text>
+<text class="s" x="198" y="267" text-anchor="middle">one wire</text>
+<rect class="grn" x="236" y="215" width="69" height="100" rx="3"/>
+<text class="n" x="270" y="233" text-anchor="middle">3</text>
+<text class="s" x="270" y="247" text-anchor="middle">addresses</text>
+<rect class="box" x="308" y="195" width="69" height="120" rx="3"/>
+<text class="n" x="342" y="213" text-anchor="middle">4</text>
+<text class="s" x="342" y="227" text-anchor="middle">routing</text>
+<rect class="yel" x="380" y="175" width="69" height="140" rx="3"/>
+<text class="n" x="414" y="193" text-anchor="middle">5</text>
+<text class="s" x="414" y="207" text-anchor="middle">tunnels</text>
+<rect class="yel" x="452" y="155" width="69" height="160" rx="3"/>
+<text class="n" x="486" y="173" text-anchor="middle">6</text>
+<text class="s" x="486" y="187" text-anchor="middle">the edge</text>
+<rect class="acc" x="524" y="135" width="69" height="180" rx="3"/>
+<text class="n" x="558" y="153" text-anchor="middle">7</text>
+<text class="s" x="558" y="167" text-anchor="middle">services</text>
+<rect class="acc" x="596" y="115" width="69" height="200" rx="3"/>
+<text class="n" x="630" y="133" text-anchor="middle">8</text>
+<text class="s" x="630" y="147" text-anchor="middle">failover</text>
+<rect class="zone" x="668" y="95" width="69" height="220" rx="3"/>
+<text class="n" x="702" y="113" text-anchor="middle">9</text>
+<text class="s" x="702" y="127" text-anchor="middle">overlays</text>
+<rect class="zone" x="740" y="75" width="69" height="240" rx="3"/>
+<text class="n" x="774" y="93" text-anchor="middle">10</text>
+<text class="s" x="774" y="107" text-anchor="middle">wifi</text>
+<rect class="gry" x="812" y="55" width="69" height="260" rx="3"/>
+<text class="n" x="846" y="73" text-anchor="middle">11</text>
+<text class="s" x="846" y="87" text-anchor="middle">other guests</text>
+<rect class="loop" x="20" y="12" width="330" height="84" rx="6"/>
+<text x="30" y="30" font-weight="bold">on every step</text>
+<text class="s" x="30" y="46" style="font-size:11px">1  run the demo</text>
+<text class="s" x="30" y="59" style="font-size:11px">2  read the canvas and the History popup</text>
+<text class="s" x="30" y="72" style="font-size:11px">3  catch the packet with sniff</text>
+<text class="s" x="30" y="85" style="font-size:11px">4  break one thing, watch, repair</text>
+</svg>

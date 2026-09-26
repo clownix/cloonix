@@ -1,0 +1,66 @@
+# FROZEN at cloonix 76. Every value that goes on the wire, as it was when
+# the promise in glob_wire.h was made.
+#
+# debug/check_wire.sh compares glob_wire.h against this file and fails if a
+# name that is here has changed value, or has gone. That is rule 1 and rule
+# 2 of the promise, enforced rather than remembered: a value that moves
+# breaks every peer of an earlier release, and it breaks them silently.
+#
+# A NEW value added at the end of an enum is not a failure. Append its line
+# here in the same pass, and say in the release notes that the wire version
+# went up.
+#
+# NEVER edit an existing line to make the check pass. If a value had to
+# move, the promise is broken and CLOONIX_WIRE_VERSION_MIN has to move with
+# it, deliberately.
+#
+# The *_max sentinels are deliberately NOT here. They are array bounds, never
+# sent, and appending a value at the end of an enum moves them by one -- which
+# is the allowed change, not a breakage. Everything else is frozen, including
+# the *_begin and *_end range markers: those ARE compared against on both
+# sides, so moving one deserves the failure it gets.
+doors_type_dbssh 107
+doors_type_high_prio_begin 103
+doors_type_high_prio_end 105
+doors_type_listen_server 101
+doors_type_low_prio_begin 106
+doors_type_low_prio_end 110
+doors_type_min 100
+doors_type_openssh 108
+doors_type_server 102
+doors_type_switch 104
+doors_type_vnc 109
+doors_val_c2c 201
+doors_val_init_link 204
+doors_val_link_ko 206
+doors_val_link_ok 205
+doors_val_min 200
+doors_val_none 202
+doors_val_sig 203
+header_type_ctrl 1003
+header_type_ctrl_agent 1004
+header_type_stats 1005
+header_type_traffic 999
+header_type_vwifi_cli 1000
+header_type_vwifi_ctr 1002
+header_type_vwifi_spy 1001
+header_val_ack 786
+header_val_add_dido_llid 783
+header_val_del_dido_llid 784
+header_val_halt 788
+header_val_none 777
+header_val_ping 785
+header_val_reboot 787
+header_val_sysinfo 789
+header_val_sysinfo_df 790
+header_val_vwifi_bad_ko 782
+header_val_vwifi_syn_ko 779
+header_val_vwifi_syn_ok 778
+header_val_vwifi_trf_ko 781
+header_val_vwifi_trf_ok 780
+header_type_wifi_frame 1006
+header_type_wifi_ctrl 1007
+header_val_wifi_on 794
+header_val_wifi_ko 795
+header_val_wifi_off 796
+header_val_wifi_peers 797

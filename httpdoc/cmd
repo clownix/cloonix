@@ -1,0 +1,50 @@
+#!/bin/bash
+# Builds the two books where the pages link to them: build_user, build_dev.
+set -e
+HERE=$(cd "$(dirname "$0")" && pwd)
+CFG="${HERE}/../cloonix/cloonix_config.py"
+if [ ! -e "${CFG}" ]; then
+  echo NOT FOUND:
+  echo "${CFG}"
+  exit 1
+fi
+if ! command -v sphinx-build >/dev/null 2>&1; then
+  printf "\n\tERROR: sphinx-build not found.\n\n"
+  printf "\tdebian, ubuntu : sudo apt install python3-sphinx\n"
+  printf "\tfedora, rocky  : sudo dnf install python3-sphinx\n"
+  printf "\tarch           : sudo pacman -S python-sphinx\n"
+  printf "\tany distro     : pip install --user sphinx\n\n"
+  exit 1
+fi
+VERSION_NUM=$(grep -m1 '^CLOONIX_VERSION=' "${CFG}")
+VERSION_NUM=${VERSION_NUM#*=}
+VERSION_NUM=${VERSION_NUM%-*}
+
+build_book()
+{
+  local src="${HERE}/xdoc_$1"
+  local out="${HERE}/build_$1"
+  local i
+  for i in conf.py $1.rst doc svg ; do
+    if [ ! -e "${src}/${i}" ]; then
+      echo "NOT FOUND: ${src}/${i}"
+      exit 1
+    fi
+  done
+  echo "Building ${out} for cloonix ${VERSION_NUM}"
+  rm -rf "${out}"
+  mkdir -p "${out}/stage"
+  cp -rf "${src}/conf.py" "${src}/$1.rst" "${src}/doc" "${src}/svg" "${out}/stage"
+  grep -rl "__LAST__" "${out}/stage" | while read -r f; do
+    sed -i "s/__LAST__/${VERSION_NUM}/g" "${f}"
+  done
+  sphinx-build -q -W -b html -d "${out}/stage/doctrees" "${out}/stage" "${out}"
+  # the pages link to no search, no sphinx script, no sphinx stylesheet
+  rm -rf "${out}/stage" "${out}/_static" "${out}/_sources" "${out}/search.html" \
+         "${out}/searchindex.js" "${out}/objects.inv" "${out}/.buildinfo"
+}
+
+build_book user
+build_book dev
+printf "\n\tDONE, open:\n\n"
+printf "${HERE}/index.html\n\n"

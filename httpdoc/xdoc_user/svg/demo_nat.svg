@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 170" width="900" height="170" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.cross{stroke:#e94560;stroke-width:3}
+</style>
+<rect width="900" height="170" fill="#ffffff"/>
+<circle cx="70" cy="100" r="18" fill="#6666cc" stroke="#9999ff" stroke-width="2"/>
+<text x="70" y="104" text-anchor="middle" class="w">inside1</text>
+<circle cx="70" cy="82" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<text x="70" y="85.5" text-anchor="middle" class="w" font-size="9">0</text>
+<circle cx="260" cy="100" r="14" fill="#555555" stroke="#888888" stroke-width="2"/>
+<text x="260" y="81" text-anchor="middle" class="m">lanA</text>
+<circle cx="450" cy="100" r="18" fill="#6666cc" stroke="#9999ff" stroke-width="2"/>
+<text x="450" y="104" text-anchor="middle" class="w">gw</text>
+<circle cx="450" cy="82" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<text x="450" y="85.5" text-anchor="middle" class="w" font-size="9">0</text>
+<circle cx="640" cy="100" r="14" fill="#555555" stroke="#888888" stroke-width="2"/>
+<text x="640" y="81" text-anchor="middle" class="m">lanB</text>
+<rect x="808" y="86" width="44" height="28" rx="5" fill="#f39c12" stroke="#b9770e" stroke-width="1.5"/>
+<text x="830" y="104" text-anchor="middle" class="w">nat</text>
+<text x="830" y="128" text-anchor="middle" class="m">nat1</text>
+<path class="cab" d="M70,100 L260,100"/>
+<path class="cab" d="M260,100 L450,100"/>
+<path class="cab" d="M450,100 L640,100"/>
+<path class="cab" d="M640,100 L830,100"/>
+<text x="800" y="150" text-anchor="middle" class="m">10.117.0.1</text>
+</svg>

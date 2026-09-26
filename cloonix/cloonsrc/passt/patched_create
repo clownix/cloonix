@@ -1,0 +1,17 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=../../../targz_store
+
+cd ${TARGZ}
+PASST=$(ls passt_*)
+PASST=${PASST%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${PASST}.tar.gz
+mv passt passt_tainted
+cd passt_tainted
+
+# Thin patch series (qemu/crun style). Empty today -- unmodified upstream.
+if [ -f ${HERE}/passt.patch ]; then
+  patch -p1 < ${HERE}/passt.patch
+fi

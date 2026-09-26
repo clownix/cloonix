@@ -1,0 +1,157 @@
+/* clownix.net — one stylesheet, no framework, no webfont, no javascript.
+   Everything is system fonts and flat colour so the pages load instantly
+   and stay readable when they are twenty years old. */
+
+:root {
+  --ink:      #1a1a2e;
+  --ink-soft: #55606f;
+  --line:     #d9dee6;
+  --band:     #f4f6fa;
+  --blue:     #0f3460;
+  --blue-mid: #3b6ea5;
+  --accent:   #e94560;
+  --code-bg:  #f2f4f8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background: #fff;
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "DejaVu Sans", Helvetica, Arial, sans-serif;
+}
+
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+/* header */
+header { border-bottom: 1px solid var(--line); background: #fff; }
+nav {
+  max-width: 880px; margin: 0 auto; padding: 14px 24px;
+  display: flex; gap: 22px; align-items: baseline; flex-wrap: wrap;
+}
+nav a { color: var(--ink-soft); text-decoration: none; font-size: 15px; }
+nav a:hover { color: var(--blue); }
+nav a.on { color: var(--ink); font-weight: 600; }
+nav .brand {
+  font-weight: 700; letter-spacing: 2px; color: var(--accent);
+  margin-right: 8px; font-size: 17px;
+}
+
+/* hero */
+.hero { max-width: 880px; margin: 0 auto; padding: 60px 24px 48px; }
+.hero h1 { font-size: 38px; line-height: 1.2; margin: 0 0 18px; letter-spacing: -0.5px; }
+.lead { font-size: 19px; color: var(--ink-soft); margin: 0 0 26px; max-width: 44em; }
+.cta { margin: 0 0 18px; }
+.ver { color: var(--ink-soft); font-size: 14px; margin: 0; }
+
+.btn {
+  display: inline-block; padding: 10px 20px; margin: 0 10px 8px 0;
+  background: var(--blue); color: #fff; text-decoration: none;
+  border-radius: 5px; font-size: 15px; border: 1px solid var(--blue);
+}
+.btn:hover { background: #143f75; }
+.btn.ghost { background: #fff; color: var(--blue); }
+.btn.ghost:hover { background: var(--band); }
+
+/* sections */
+section { padding: 34px 0; }
+section.top { padding-top: 40px; }
+.band { background: var(--band); border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line); }
+
+h1 { font-size: 32px; margin: 0 0 16px; }
+h2 { font-size: 22px; margin: 34px 0 12px; }
+h3 { font-size: 16px; margin: 0 0 8px; }
+p  { margin: 0 0 14px; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 40px 0; }
+
+.cols  { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+.cols2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.cols p, .cols2 p { font-size: 15px; color: var(--ink-soft); }
+
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px;
+        background: #fff; }
+.note { font-size: 14px !important; color: var(--blue-mid) !important;
+        margin-bottom: 0 !important; }
+
+/* code */
+pre {
+  background: var(--code-bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px;
+}
+code {
+  font: 13.5px/1.6 "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  color: var(--blue);
+}
+p code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+
+/* table */
+table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; }
+th { text-align: left; font-size: 13px; color: var(--ink-soft);
+     padding: 4px 10px; font-weight: 600; }
+td { border-top: 1px solid var(--line); padding: 9px 10px; font-size: 15px;
+     vertical-align: top; }
+td:first-child { width: 42%; color: var(--ink); }
+td:last-child  { color: var(--ink-soft); }
+table.course td:first-child { width: 4%; }
+table.course td:nth-child(2) { width: 20%; }
+table.course td:nth-child(3) { width: 40%; }
+
+/* figures */
+.fig { width: 100%; height: auto; margin: 6px 0 10px; }
+.fbox { fill: #f7f8fa; stroke: var(--blue); stroke-width: 1.5; }
+.facc { fill: #fdeef1; stroke: var(--accent); stroke-width: 1.5; }
+.fzone { fill: #eef4ff; stroke: var(--blue-mid); stroke-width: 1.5;
+         stroke-dasharray: 7 4; }
+.ft { font-size: 14px; fill: var(--ink); }
+.fs { font-size: 11.5px; fill: var(--ink-soft); }
+.fm { font-size: 13px; font-family: "DejaVu Sans Mono", monospace;
+      fill: var(--blue); }
+.fz { font-size: 12px; font-weight: bold; fill: var(--blue-mid); }
+.farr { stroke: var(--blue-mid); stroke-width: 2; fill: none;
+        marker-end: url(#ar); }
+
+/* the two books, sphinx body under the same header and footer */
+.book section { padding: 0; }
+.book pre { font: 13.5px/1.6 "DejaVu Sans Mono", Menlo, Consolas, monospace;
+            color: var(--blue); }
+.book img { max-width: 100%; height: auto; margin: 6px 0 10px; }
+.book a { color: var(--blue-mid); }
+.book h1 { margin-top: 10px; }
+.book h3 { margin: 22px 0 8px; }
+.book em { color: var(--blue); }
+.book li { margin: 0 0 4px; }
+.book li p { margin: 0; }
+.book blockquote { margin: 0 0 14px; }
+.book dl.field-list { display: grid; grid-template-columns: max-content auto;
+                      gap: 0 12px; margin: 0 0 18px; font-size: 14px;
+                      color: var(--ink-soft); }
+.book dl.field-list dd { margin: 0; }
+.book dl.field-list p { margin: 0; }
+.book .toctree-wrapper ul { list-style: none; padding: 0; columns: 2; }
+.book .toctree-wrapper li { padding: 5px 0; border-top: 1px solid var(--line);
+                            margin: 0; break-inside: avoid; }
+.book .toctree-wrapper a { text-decoration: none; }
+.book td:first-child { width: auto; }
+.book td p { margin: 0; }
+.booknav { font-size: 14px; color: var(--ink-soft); margin: 0 0 22px; }
+.booknav a { text-decoration: none; }
+.booknav:last-child { margin: 30px 0 0; padding-top: 14px;
+                      border-top: 1px solid var(--line); }
+
+/* footer */
+footer { border-top: 1px solid var(--line); padding: 26px 0; margin-top: 30px; }
+footer p { font-size: 14px; color: var(--ink-soft); margin: 0; }
+footer a { color: var(--blue-mid); }
+
+/* narrow screens */
+@media (max-width: 700px) {
+  .cols, .cols2 { grid-template-columns: 1fr; gap: 22px; }
+  .hero { padding: 40px 24px 34px; }
+  .hero h1 { font-size: 30px; }
+  .lead { font-size: 17px; }
+  td:first-child { width: 45%; }
+  .book .toctree-wrapper ul { columns: 1; }
+}

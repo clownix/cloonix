@@ -1,0 +1,175 @@
+<!-- Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>cloonix desktop</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; background:#0d1117; overflow:hidden; }
+  #screen { width:100%; height:100%; }
+  #status {
+    position:fixed; bottom:0; left:0; right:0;
+    font:11px monospace; color:#69f0ae; background:rgba(13,17,23,0.85);
+    padding:2px 8px; pointer-events:none; z-index:10;
+    transition:opacity 0.4s ease;
+  }
+  /* When connected the status bar is removed entirely so the desktop (and
+     its bottom taskbar / last LXDE row) can use the full panel height. It
+     reappears on disconnect. display:none (not just opacity) guarantees it
+     never overlaps the bottom row. */
+  #status.hidden { display:none; }
+  /* Ctrl+Alt+Del cannot be typed: the browser and the host desktop both
+     take it before the canvas ever sees it, so a windows login screen is
+     unreachable without a button. It is the only way in, so it is drawn to
+     be found: a faint 11px chip was missed by people looking straight at
+     it. It still sits in the top right corner, over desktop pixels that
+     hold nothing on a login screen. */
+  #cad {
+    position:fixed; top:6px; right:6px; z-index:20;
+    font:bold 14px/1 monospace; letter-spacing:1px; color:#69f0ae;
+    background:rgba(13,17,23,0.80); border:2px solid rgba(105,240,174,0.70);
+    border-radius:5px; padding:8px 13px; cursor:pointer;
+    box-shadow:0 1px 5px rgba(0,0,0,0.55);
+    opacity:0.85; transition:opacity 0.15s ease, background 0.15s ease;
+  }
+  #cad:hover { opacity:1; background:rgba(105,240,174,0.22); }
+  #cad:active { background:rgba(105,240,174,0.40); }
+  #cad.hidden { display:none; }
+</style>
+</head>
+<body>
+<div id="screen"></div>
+<button id="cad" class="hidden" title="send Ctrl+Alt+Del to the guest">C-A-D</button>
+<div id="status">Loading…</div>
+
+<script>
+window.addEventListener('error', function(e) {
+  var s = document.getElementById('status');
+  if (s) s.textContent =
+    'JS error: ' + e.message + ' (' +
+    (e.filename ? e.filename.split('/').pop() : '?') + ':' + e.lineno + ')';
+});
+</script>
+
+<!-- noVNC is a standard ES-module library; load RFB directly. The whole
+     novnc/core tree is served by the GUI server under this same /vnc-<vm>/
+     path. We build an ABSOLUTE base ("/vnc-<vm>") from the URL so the import
+     resolves whether or not the document path carries a trailing slash. -->
+<script type="module">
+// Absolute path to this VM's vnc mount, e.g. "/vnc-Cloon4"
+const _seg = location.pathname.split('/').filter(p => p.startsWith('vnc-'))[0] || '';
+const _vncBase = '/' + _seg;
+const status_el = document.getElementById('status');
+const screen_el = document.getElementById('screen');
+const cad_el    = document.getElementById('cad');
+
+let RFB;
+try {
+  RFB = (await import(_vncBase + '/novnc/core/rfb.js')).default;
+} catch (e) {
+  status_el.textContent = 'Failed to load noVNC: ' + (e && e.message ? e.message : e);
+  throw e;
+}
+
+// vm name comes from the /vnc-<name>/ path segment
+const vm_name = _seg ? _seg.slice(4) : 'desktop';
+document.title = 'vnc_' + vm_name;
+
+// The GUI server bridges <base>/ws  ->  the VM's VNC Unix socket.
+const uri  = (location.protocol === 'https:' ? 'wss://' : 'ws://')
+             + location.host + _vncBase + '/ws';
+
+let rfb = null;
+
+function connect() {
+  status_el.classList.remove('hidden');
+  status_el.textContent = 'Connecting…';
+  try {
+    // The C bridge forwards raw bytes and negotiates the "binary" subprotocol.
+    rfb = new RFB(screen_el, uri, { wsProtocols: ['binary'] });
+
+    // Fit the remote framebuffer into the panel and follow its size.
+    rfb.scaleViewport = true;
+    rfb.resizeSession = false;        // do not ask QEMU to resize the guest
+    rfb.clipViewport  = false;
+    rfb.focusOnClick  = true;
+    rfb.viewOnly      = false;        // ensure the keyboard is grabbed
+    rfb.background    = '#0d1117';
+
+    rfb.addEventListener('connect', () => {
+      status_el.textContent = 'Connected';
+      status_el.classList.add('hidden');   // free the bottom row for the desktop
+      // Pull keyboard focus into the canvas as soon as we are live, so the
+      // user can type without first having to click. Inside an <iframe> the
+      // canvas keydown listener only fires when the iframe document holds
+      // focus, so we focus the window first, then the RFB canvas.
+      try { window.focus(); } catch(_) {}
+      try { rfb.focus(); } catch(_) {}
+      cad_el.classList.remove('hidden');
+    });
+    rfb.addEventListener('disconnect', (e) => {
+      const clean = e && e.detail && e.detail.clean;
+      status_el.classList.remove('hidden');
+      status_el.textContent = (clean ? 'Disconnected' : 'Connection lost')
+                              + ' — retrying…';
+      cad_el.classList.add('hidden');
+      try { rfb.disconnect(); } catch(_) {}
+      rfb = null;
+      setTimeout(connect, 3000);
+    });
+    rfb.addEventListener('securityfailure', (e) => {
+      const reason = (e && e.detail && e.detail.reason) || 'unknown';
+      status_el.textContent = 'Security failure: ' + reason;
+    });
+  } catch (e) {
+    status_el.textContent = 'Failed: ' + e;
+    setTimeout(connect, 3000);
+  }
+}
+
+// Keep the framebuffer fitted when the iframe/panel is resized.
+window.addEventListener('resize', () => {
+  if (rfb) { try { rfb.scaleViewport = true; } catch(_) {} }
+});
+
+// Any click/tap inside the desktop must reclaim keyboard focus for the
+// canvas. The parent topology page (and the panel drag handler) can hold
+// focus otherwise, which leaves the VNC keyboard dead even though the
+// pointer works. Capturing on the window catches it before anything else.
+function _grabFocus() {
+  try { window.focus(); } catch(_) {}
+  if (rfb) { try { rfb.focus(); } catch(_) {} }
+}
+
+// The mouse buttons belong to the guest, all three of them.
+//
+// noVNC forwards every button and suppresses the browser menu on the canvas
+// itself, but a right click that lands a pixel outside it -- or a middle
+// click anywhere -- is still the browser's: a context menu over the desktop,
+// or the autoscroll ring. Neither is wanted here, and both steal the button
+// the guest was meant to get. preventDefault only: the event still reaches
+// noVNC, which needs to see it.
+window.addEventListener('contextmenu', (e) => { e.preventDefault(); }, true);
+window.addEventListener('auxclick', (e) => { e.preventDefault(); }, true);
+window.addEventListener('mousedown', (e) => {
+  if (e.button === 1) e.preventDefault();
+}, true);
+
+// The key goes to the guest, then the canvas takes the keyboard back: the
+// button holds focus otherwise and the next keystroke is lost.
+cad_el.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (rfb) { try { rfb.sendCtrlAltDel(); } catch(_) {} }
+  _grabFocus();
+});
+
+window.addEventListener('mousedown', _grabFocus, true);
+window.addEventListener('touchstart', _grabFocus, true);
+window.addEventListener('focus', _grabFocus);
+
+connect();
+</script>
+</body>
+</html>

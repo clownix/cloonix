@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 200" width="900" height="200" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#27ae60"/></marker>
+<marker id="ay" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.b{font-weight:bold;font-size:12.5px}
+.s{font-size:10px;fill:#5a6472}
+.sm{font-family:monospace;font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.life{stroke:#9aa3ad;stroke-width:1.2;stroke-dasharray:4 4}
+.arr{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.ard{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar)}
+.ard2{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar);marker-start:url(#ar)}
+.arg{stroke:#27ae60;stroke-width:1.8;fill:none;marker-end:url(#ag)}
+.ary{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ay)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.act{fill:#dfe8f7;stroke:#0f3460;stroke-width:1}
+</style>
+<rect width="900" height="200" fill="#ffffff"/>
+
+<rect class="zoner" x="10" y="10" width="300" height="185" rx="10"/>
+<text x="20" y="26" text-anchor="start" class="s">net A</text>
+<rect class="zoner" x="590" y="10" width="300" height="185" rx="10"/>
+<text x="600" y="26" text-anchor="start" class="s">net B</text>
+<rect class="box" x="25" y="50" width="90" height="36" rx="6"/>
+<text x="70" y="72" text-anchor="middle" class="m">lan</text>
+<rect class="box" x="140" y="50" width="155" height="40" rx="6"/>
+<text x="217.5" y="67" text-anchor="middle" class="m">cloonix-ovs-c2c</text>
+<text x="217.5" y="81" text-anchor="middle" class="s">arp mangle</text>
+<rect class="gry" x="160" y="125" width="135" height="40" rx="6"/>
+<text x="227.5" y="142" text-anchor="middle" class="m">proxymous A</text>
+<text x="227.5" y="156" text-anchor="middle" class="s">udp_proxy.c</text>
+<path class="ard2" d="M115,68 L140,70"/>
+<path class="ard2" d="M270,90 L270,125"/>
+<text x="25" y="182" text-anchor="start" class="sm">dgram_c2c_&lt;port&gt;_tx.sock, _rx.sock</text>
+<rect class="box" x="605" y="50" width="155" height="40" rx="6"/>
+<text x="682.5" y="67" text-anchor="middle" class="m">cloonix-ovs-c2c</text>
+<text x="682.5" y="81" text-anchor="middle" class="s">arp mangle</text>
+<rect class="box" x="785" y="50" width="90" height="36" rx="6"/>
+<text x="830" y="72" text-anchor="middle" class="m">lan</text>
+<rect class="gry" x="605" y="125" width="135" height="40" rx="6"/>
+<text x="672.5" y="142" text-anchor="middle" class="m">proxymous B</text>
+<text x="672.5" y="156" text-anchor="middle" class="s">udp_proxy.c</text>
+<path class="ard2" d="M760,70 L785,68"/>
+<path class="ard2" d="M625,125 L625,90"/>
+<text x="605" y="182" text-anchor="start" class="sm">dgram_c2c_&lt;port&gt;_tx.sock, _rx.sock</text>
+<path class="ard2" d="M295,145 L605,145"/>
+<text x="450" y="137" text-anchor="middle" class="s">udp, one datagram per frame</text>
+</svg>

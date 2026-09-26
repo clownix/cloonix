@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" width="900" height="380" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e08a1e"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.fib{stroke:#c8a24a;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.ink{fill:#0f3460}
+.pink{fill:#e94560}
+.t{font-size:13px;font-weight:bold;fill:#0f3460}
+.big{font-size:15px;font-weight:bold;fill:#0f3460}
+.cabd{stroke:#3498db;stroke-width:2.5;fill:none;stroke-dasharray:6 4}
+.air{fill:#fff8ec;stroke:#e08a1e;stroke-width:1.5;stroke-dasharray:3 3}
+.arro{stroke:#e08a1e;stroke-width:2;fill:none;marker-end:url(#ao)}
+.org{fill:#e08a1e}
+</style>
+<rect width="900" height="380" fill="#ffffff"/>
+<rect class="yel" x="20" y="30" width="200" height="50" rx="6"/>
+<text x="120" y="51.5" text-anchor="middle" class="t">cloonix (client)</text>
+<text x="120" y="66.5" text-anchor="middle" class="t">to_json, build_cnf</text>
+<rect class="box" x="20" y="150" width="200" height="50" rx="6"/>
+<text x="120" y="171.5" text-anchor="middle" class="m">cable_first</text>
+<text x="120" y="186.5" text-anchor="middle" class="m">reads dump commands</text>
+<rect class="box" x="20" y="270" width="200" height="50" rx="6"/>
+<text x="120" y="291.5" text-anchor="middle" class="m">do_sniff</text>
+<text x="120" y="306.5" text-anchor="middle" class="m">arms, then opens</text>
+<rect class="acc" x="350" y="150" width="220" height="60" rx="6"/>
+<text x="460" y="176.5" text-anchor="middle" class="t">cloonix-main-server</text>
+<text x="460" y="191.5" text-anchor="middle" class="t">one message per request</text>
+<rect class="grn" x="660" y="30" width="220" height="54" rx="6"/>
+<text x="770" y="53.5" text-anchor="middle" class="m">list_commands.c</text>
+<text x="770" y="68.5" text-anchor="middle" class="m">dump commands</text>
+<rect class="grn" x="660" y="120" width="220" height="54" rx="6"/>
+<text x="770" y="143.5" text-anchor="middle" class="m">records of settings</text>
+<text x="770" y="158.5" text-anchor="middle" class="m">a2b, caps, rstp, mac</text>
+<rect class="gry" x="660" y="210" width="220" height="54" rx="6"/>
+<text x="770" y="233.5" text-anchor="middle" class="m">the processes</text>
+<text x="770" y="248.5" text-anchor="middle" class="m">a2b, snf, suid-power</text>
+<rect class="gry" x="660" y="300" width="220" height="54" rx="6"/>
+<text x="770" y="323.5" text-anchor="middle" class="m">ok only when true</text>
+<text x="770" y="338.5" text-anchor="middle" class="m">answers of the processes</text>
+<line class="arr" x1="120" y1="80" x2="120" y2="150"/>
+<line class="arr" x1="120" y1="200" x2="120" y2="270"/>
+<line class="arr" x1="220" y1="175" x2="350" y2="175"/>
+<line class="arr" x1="220" y1="295" x2="350" y2="195"/>
+<line class="arr" x1="220" y1="55" x2="350" y2="165"/>
+<line class="arr" x1="570" y1="165" x2="660" y2="57"/>
+<line class="arrr" x1="660" y1="147" x2="570" y2="175"/>
+<line class="arr" x1="570" y1="185" x2="660" y2="237"/>
+<line class="arrr" x1="660" y1="327" x2="570" y2="200"/>
+<text x="430" y="330" text-anchor="middle" class="s">a setting is recorded when its process answers ok</text>
+</svg>

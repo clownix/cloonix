@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.cpu{fill:#0f3460}
+.cpuo{fill:#ffffff;stroke:#7a8695;stroke-width:1.2}
+</style>
+<rect width="900" height="300" fill="#ffffff"/>
+<rect class="zoneg" x="20" y="20" width="410" height="260" rx="8"/>
+<rect class="zone" x="40" y="60" width="150" height="150" rx="6"/>
+<text x="115" y="52" text-anchor="middle" class="m">session-c1.scope</text>
+<rect class="acc" x="60" y="95" width="110" height="40" rx="4"/><text x="115" y="120" text-anchor="middle" class="m">proxymous</text>
+<rect class="box" x="60" y="150" width="110" height="40" rx="4"/><text x="115" y="175" text-anchor="middle" class="m">cli, scp</text>
+<rect class="zoner" x="230" y="60" width="180" height="150" rx="6"/>
+<text x="320" y="52" text-anchor="middle" class="m">crun-nemo.scope</text>
+<rect class="box" x="250" y="80" width="140" height="32" rx="4"/><text x="320" y="101" text-anchor="middle" class="m">main-server</text>
+<rect class="box" x="250" y="120" width="140" height="32" rx="4"/><text x="320" y="141" text-anchor="middle" class="m">ovs, a2b, c2c, nat</text>
+<rect class="yel" x="250" y="160" width="140" height="32" rx="4"/><text x="320" y="181" text-anchor="middle" class="m">iperf3, trafgen, qemu</text>
+<rect class="cpu" x="250" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="268" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="286" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="304" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="322" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="340" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="358" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="376" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="60" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="78" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="96" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="114" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="132" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="150" y="232" width="14" height="14" rx="2"/>
+<rect class="zoneg" x="470" y="20" width="410" height="260" rx="8"/>
+<rect class="zone" x="500" y="60" width="350" height="150" rx="6"/>
+<text x="675" y="52" text-anchor="middle" class="m">session-c1.scope</text>
+<rect class="grn" x="520" y="95" width="110" height="40" rx="4"/><text x="575" y="120" text-anchor="middle" class="m">proxymous</text>
+<rect class="box" x="520" y="150" width="110" height="40" rx="4"/><text x="575" y="175" text-anchor="middle" class="m">cli, scp</text>
+<rect class="box" x="660" y="80" width="170" height="32" rx="4"/><text x="745" y="101" text-anchor="middle" class="m">main-server</text>
+<rect class="box" x="660" y="120" width="170" height="32" rx="4"/><text x="745" y="141" text-anchor="middle" class="m">ovs, a2b, c2c, nat</text>
+<rect class="yel" x="660" y="160" width="170" height="32" rx="4"/><text x="745" y="181" text-anchor="middle" class="m">iperf3, trafgen, qemu</text>
+<rect class="cpu" x="520" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="538" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="556" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="574" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="592" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="610" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="660" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="678" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="696" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="714" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="732" y="232" width="14" height="14" rx="2"/>
+<rect class="cpu" x="750" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="768" y="232" width="14" height="14" rx="2"/>
+<rect class="cpuo" x="786" y="232" width="14" height="14" rx="2"/>
+</svg>

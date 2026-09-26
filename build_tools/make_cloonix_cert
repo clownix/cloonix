@@ -1,0 +1,61 @@
+#!/bin/bash
+# make_cloonix_cert <dir> [cn] Writes cloonix_cert.pem and cloonix_key.pem
+# into <dir>, self-signed, ten years, unless they are already there.
+DIR="$1"
+CN="$2"
+
+if [ -z "${DIR}" ]; then
+  echo "usage: make_cloonix_cert <dir> [common-name]"
+  exit 1
+fi
+if [ -z "${CN}" ]; then
+  CN="cloonix-$(hostname 2>/dev/null || echo local)"
+fi
+
+CERT="${DIR}/cloonix_cert.pem"
+KEY="${DIR}/cloonix_key.pem"
+
+if [ -s "${CERT}" ] && [ -s "${KEY}" ]; then
+  exit 0
+fi
+
+if ! command -v openssl >/dev/null 2>&1; then
+  echo "  no openssl on this machine, https will not be served"
+  echo "  install openssl and run: make_cloonix_cert ${DIR}"
+  exit 1
+fi
+
+mkdir -p "${DIR}" || exit 1
+
+SAN="IP:127.0.0.1,IP:::1,DNS:localhost"
+HOST=$(hostname 2>/dev/null)
+if [ -n "${HOST}" ]; then
+  SAN="${SAN},DNS:${HOST}"
+fi
+for ip in $(ip -o -4 addr show 2>/dev/null | awk '{print $4}' | cut -d/ -f1); do
+  if [ "${ip}" != "127.0.0.1" ]; then
+    SAN="${SAN},IP:${ip}"
+  fi
+done
+
+umask 077
+# 398 days, and not longer, because of Safari.
+openssl req -x509 -newkey rsa:2048 -nodes -days 398 \
+        -keyout "${KEY}" -out "${CERT}" \
+        -subj "/CN=${CN}" \
+        -addext "subjectAltName=${SAN}" \
+        -addext "basicConstraints=critical,CA:FALSE" \
+        -addext "keyUsage=critical,digitalSignature,keyEncipherment" \
+        -addext "extendedKeyUsage=serverAuth" \
+        >/dev/null 2>&1
+
+if [ ! -s "${CERT}" ] || [ ! -s "${KEY}" ]; then
+  echo "  ERROR openssl could not write ${CERT}"
+  rm -f "${CERT}" "${KEY}"
+  exit 1
+fi
+
+chmod 644 "${CERT}"
+chmod 600 "${KEY}"
+echo "  certificate written: ${CERT}"
+exit 0

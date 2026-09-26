@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 240" width="900" height="240" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.cross{stroke:#e94560;stroke-width:3}
+</style>
+<rect width="900" height="240" fill="#ffffff"/>
+<path class="cab" d="M80,60 L162,70"/>
+<path class="cab" d="M80,60 L80,120"/>
+<path class="cab" d="M162,70 L244,60"/>
+<path class="cab" d="M162,70 L162,130"/>
+<path class="cab" d="M244,60 L326,70"/>
+<path class="cab" d="M244,60 L244,120"/>
+<path class="cab" d="M408,60 L490,70"/>
+<path class="cab" d="M408,60 L408,120"/>
+<path class="cab" d="M490,70 L572,60"/>
+<path class="cab" d="M490,70 L490,130"/>
+<path class="cab" d="M572,60 L654,70"/>
+<path class="cab" d="M572,60 L572,120"/>
+<path class="cab" d="M654,70 L736,60"/>
+<path class="cab" d="M818,70 L818,130"/>
+<path class="cab" d="M80,120 L162,130"/>
+<path class="cab" d="M80,120 L80,180"/>
+<path class="cab" d="M162,130 L244,120"/>
+<path class="cab" d="M244,120 L244,180"/>
+<path class="cab" d="M326,130 L408,120"/>
+<path class="cab" d="M326,130 L326,190"/>
+<path class="cab" d="M408,120 L490,130"/>
+<path class="cab" d="M408,120 L408,180"/>
+<path class="cab" d="M490,130 L572,120"/>
+<path class="cab" d="M490,130 L490,190"/>
+<path class="cab" d="M654,130 L736,120"/>
+<path class="cab" d="M654,130 L654,190"/>
+<path class="cab" d="M736,120 L736,180"/>
+<path class="cab" d="M80,180 L162,190"/>
+<path class="cab" d="M162,190 L244,180"/>
+<path class="cab" d="M244,180 L326,190"/>
+<path class="cab" d="M326,190 L408,180"/>
+<path class="cab" d="M408,180 L490,190"/>
+<path class="cab" d="M490,190 L572,180"/>
+<path class="cab" d="M654,190 L736,180"/>
+<path class="cab" d="M736,180 L818,190"/>
+<circle cx="80" cy="60" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="162" cy="70" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="244" cy="60" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="326" cy="70" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="408" cy="60" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="490" cy="70" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="572" cy="60" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="654" cy="70" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="736" cy="60" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="818" cy="70" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="80" cy="120" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="162" cy="130" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="244" cy="120" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="326" cy="130" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="408" cy="120" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="490" cy="130" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="572" cy="120" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="654" cy="130" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="736" cy="120" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="818" cy="130" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="80" cy="180" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="162" cy="190" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="244" cy="180" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="326" cy="190" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="408" cy="180" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="490" cy="190" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="572" cy="180" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="654" cy="190" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="736" cy="180" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<circle cx="818" cy="190" r="11" fill="#6666cc" stroke="#9999ff" stroke-width="1.5"/>
+<text x="450" y="230" text-anchor="middle" class="s">sixty routers, ospf area 0</text>
+</svg>

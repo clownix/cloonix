@@ -1,0 +1,118 @@
+#!/bin/bash
+set -e
+FROM_HERE=`pwd`
+BUNDLE="/root/cloonix_bundle"
+ROOTFS="${BUNDLE}/cloonfs"
+PATCHELF="${ROOTFS}/bin/patchelf"
+CLOONSRC="${BUNDLE}/cloonix/cloonsrc"
+if [ ! -e ${BUNDLE}/cloonix/cloonix_config.py ]; then
+  echo NOT FOUND:
+  echo ${BUNDLE}/cloonix/cloonix_config.py
+  exit 1   
+fi  
+printf "\n\nPACKING ${pretty_name} ${ROOTFS}\n\n"
+cp_built()
+{
+  local bin="$1"
+  local dst="$2"
+  local dir newest
+  if [ ! -e "${bin}" ]; then
+    echo "MISSING BINARY: ${bin}"
+    echo "the build of its directory did not produce it"
+    exit 1
+  fi
+  dir=$(dirname "${bin}")
+  newest=$(find "${dir}" -name '*.c' -o -name '*.h' 2>/dev/null \
+           | xargs -r ls -t 2>/dev/null | head -1)
+  if [ -n "${newest}" ] && [ "${newest}" -nt "${bin}" ]; then
+    echo "STALE BINARY: ${bin}"
+    echo "it is older than ${newest}"
+    echo "the last build of that directory did not succeed; fix it and rebuild"
+    exit 1
+  fi
+  cp -f "${bin}" "${dst}"
+}
+cp -f ${BUNDLE}/cloonix/cloonix ${ROOTFS}/bin
+chmod 755 ${ROOTFS}/bin/cloonix
+for i in ${BUNDLE}/cloonix/cloonix_*.py; do
+  cp -f ${i} ${ROOTFS}/bin
+  chmod 755 ${ROOTFS}/bin/$(basename ${i})
+done
+mkdir -p ${ROOTFS}/bin/qemu
+cp -f ${BUNDLE}/cloonix/cloonix_config.py ${ROOTFS}/etc/cloonix.cfg
+# No unit file for the toy any more.
+cp_built ${CLOONSRC}/cxp_cli/cloonix-cxp-cli ${ROOTFS}/bin
+cp_built ${CLOONSRC}/dtach/cloonix-dtach ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs/cloonix-vswitch.ovsschema ${ROOTFS}/bin/ovsschema
+# The iso, not the directory it is built in: that directory now holds the
+# agent sources as well, and copying it whole would put them in the delivery.
+mkdir -p ${BUNDLE}/insider_agents
+cp_built ${CLOONSRC}/insider_agents/insider_agent_x86_64.iso \
+         ${BUNDLE}/insider_agents
+cp_built ${CLOONSRC}/insider_agents/insider_agent_win_x86_64.iso \
+         ${BUNDLE}/insider_agents
+cp_built ${CLOONSRC}/insider_agents/insider_agent_bsd_x86_64.iso \
+         ${BUNDLE}/insider_agents
+cp_built ${CLOONSRC}/suid_power/cloonix-suid-power ${ROOTFS}/bin
+cp_built ${CLOONSRC}/doorways/cloonix-doorways ${ROOTFS}/bin
+cp_built ${CLOONSRC}/uml_cloonix_switch/cloonix-main-server ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs/bin/cloonix-ovsdb-server ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs/bin/cloonix-ovs-vswitchd ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs/bin/cloonix-ovsdb-tool ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs/bin/cloonix-ovs-vsctl ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs_c2c/cloonix-ovs-c2c ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs_a2b/cloonix-ovs-a2b ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs_drv/cloonix-ovs-drv ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs_nat_passt/cloonix-ovs-nat ${ROOTFS}/bin
+cp_built ${CLOONSRC}/ovs_snf/cloonix-ovs-snf ${ROOTFS}/bin
+cp_built ${CLOONSRC}/proxymous_passt/cloonix-proxymous ${ROOTFS}/bin
+cp_built ${CLOONSRC}/crun/crun_tainted/crun ${ROOTFS}/bin/cloonix-crun
+cp_built ${CLOONSRC}/passt/passt_tainted/passt ${ROOTFS}/bin/cloonix-passt
+cp_built ${CLOONSRC}/qemu/cloonix-qemu-system ${ROOTFS}/bin
+cp -fr ${CLOONSRC}/qemu/pc-bios/* ${ROOTFS}/bin/qemu
+cp -fr ${CLOONSRC}/jscloonix/bin ${ROOTFS}/bin/jscloonix
+# The demos are data, not part of the bin/ payload and not part of the gui
+# either: the source of truth is the demos directory at the top of the...
+mkdir -p ${ROOTFS}/share/cloonix
+cp -fr ${BUNDLE}/demos ${ROOTFS}/share/cloonix/demos
+cp -f ${BUNDLE}/build_tools/make_cloonix_cert ${ROOTFS}/bin
+chmod 755 ${ROOTFS}/bin/make_cloonix_cert
+printf "\n\nGET ALL LIBRARIES ${ROOTFS}\n\n"
+cd ${BUNDLE}
+./copy_libs ${ROOTFS}
+printf "\n\nPATCHELF ${ROOTFS}\n\n"
+LDLINUX="/usr/libexec/cloonix/cloonfs/lib64/ld-linux-x86-64.so.2"
+RPATH_LIB="/usr/libexec/cloonix/cloonfs/lib"
+RPATH_LIB="${RPATH_LIB}:/usr/libexec/cloonix/cloonfs/lib/x86_64-linux-gnu"
+set +e
+
+for i in "cloonix-dumpcap" \
+         "cloonix-webshark" \
+         "cloonix-gui-server" ;
+do
+    j="${ROOTFS}/bin/jscloonix/${i}"
+    ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${j} 2>/dev/null
+    ${PATCHELF} --set-interpreter ${LDLINUX} ${j} 2>/dev/null
+done
+for j in "bin" \
+         "sbin" \
+         "lib" \
+         "lib/systemd" \
+         "lib/x86_64-linux-gnu" \
+         "lib/x86_64-linux-gnu/rsyslog" \
+         "lib/x86_64-linux-gnu/systemd" ; do
+
+  if [ -e ${ROOTFS}/${j} ]; then
+    for i in `find ${ROOTFS}/${j} -maxdepth 1 -type f` ; do
+      ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${i} 2>/dev/null
+      ${PATCHELF} --set-interpreter ${LDLINUX} ${i} 2>/dev/null
+    done
+  fi
+done
+mkdir -p ${BUNDLE}/startup_bin
+for i in "bash" "sleep" "mkdir" "cat" \
+         "ln" "mount" "echo" "rm" "touch" ; do
+  cp -f ${ROOTFS}/bin/${i} ${BUNDLE}/startup_bin
+done     
+echo PACK DONE OK TO END
+

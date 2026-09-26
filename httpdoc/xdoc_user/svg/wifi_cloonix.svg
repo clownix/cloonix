@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" width="900" height="420" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e08a1e"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.fib{stroke:#c8a24a;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.ink{fill:#0f3460}
+.pink{fill:#e94560}
+.t{font-size:13px;font-weight:bold;fill:#0f3460}
+.big{font-size:15px;font-weight:bold;fill:#0f3460}
+.cabd{stroke:#3498db;stroke-width:2.5;fill:none;stroke-dasharray:6 4}
+.air{fill:#fff8ec;stroke:#e08a1e;stroke-width:1.5;stroke-dasharray:3 3}
+.arro{stroke:#e08a1e;stroke-width:2;fill:none;marker-end:url(#ao)}
+.org{fill:#e08a1e}
+</style>
+<rect width="900" height="420" fill="#ffffff"/>
+<rect class="zone" x="20" y="20" width="270" height="250" rx="12"/>
+<text x="155" y="42" text-anchor="middle" class="t">containers</text>
+<rect class="zoner" x="610" y="20" width="270" height="250" rx="12"/>
+<text x="745" y="42" text-anchor="middle" class="t">kvm guests</text>
+<rect class="grn" x="45" y="70" width="220" height="50" rx="6"/>
+<text x="155" y="91.5" text-anchor="middle" class="m">cnt1 wlan0</text>
+<text x="155" y="106.5" text-anchor="middle" class="m">mac80211_hwsim radio</text>
+<rect class="grn" x="45" y="160" width="220" height="50" rx="6"/>
+<text x="155" y="181.5" text-anchor="middle" class="m">cnt2 wlan0</text>
+<text x="155" y="196.5" text-anchor="middle" class="m">mac80211_hwsim radio</text>
+<rect class="grn" x="635" y="70" width="220" height="50" rx="6"/>
+<text x="745" y="91.5" text-anchor="middle" class="m">kvm1 wlan0</text>
+<text x="745" y="106.5" text-anchor="middle" class="m">hwsim radio + cloonix agent</text>
+<rect class="grn" x="635" y="160" width="220" height="50" rx="6"/>
+<text x="745" y="181.5" text-anchor="middle" class="m">kvm2 wlan0</text>
+<text x="745" y="196.5" text-anchor="middle" class="m">hwsim radio + cloonix agent</text>
+<rect class="box" x="640" y="320" width="210" height="50" rx="6"/>
+<text x="745" y="341.5" text-anchor="middle" class="m">cloonix-doorways</text>
+<text x="745" y="356.5" text-anchor="middle" class="m">the air link</text>
+<path class="arro" d="M855,95 L870,95 L870,345 L850,345"/>
+<line class="arro" x1="745" y1="210" x2="745" y2="320"/>
+<rect class="acc" x="335" y="90" width="230" height="70" rx="6"/>
+<text x="450" y="121.5" text-anchor="middle" class="t">cloonix-suid-power</text>
+<text x="450" y="136.5" text-anchor="middle" class="t">the medium of every air</text>
+<line class="arro" x1="265" y1="95" x2="335" y2="115"/>
+<line class="arro" x1="265" y1="185" x2="335" y2="140"/>
+<path class="arro" d="M640,345 L600,345 L600,140 L565,140"/>
+<text x="460" y="185" text-anchor="start" class="s">a frame goes to the radios</text>
+<text x="460" y="200" text-anchor="start" class="s">of its air only</text>
+<rect class="yel" x="335" y="230" width="230" height="44" rx="6"/>
+<text x="450" y="248.5" text-anchor="middle" class="m">snf/&lt;air&gt;_0</text>
+<text x="450" y="263.5" text-anchor="middle" class="m">radiotap pcap</text>
+<line class="arg" x1="450" y1="160" x2="450" y2="230"/>
+<rect class="box" x="335" y="300" width="110" height="34" rx="6"/>
+<text x="390" y="321" text-anchor="middle" class="m">dumpcap</text>
+<rect class="box" x="455" y="300" width="110" height="34" rx="6"/>
+<text x="510" y="321" text-anchor="middle" class="s">sniff, webshark</text>
+<line class="arg" x1="390" y1="274" x2="390" y2="300"/>
+<line class="arg" x1="445" y1="317" x2="455" y2="317"/>
+<text x="155" y="300" text-anchor="middle" class="s">radios made in the namespace</text>
+<text x="155" y="316" text-anchor="middle" class="s">of the net by suid-power</text>
+<text x="745" y="400" text-anchor="middle" class="s">frames over the backdoor of each guest</text>
+</svg>

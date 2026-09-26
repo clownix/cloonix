@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloonix &mdash; five demos on the canvas</title>
+<meta name="description" content="Five cloonix demos as they appear in the browser: sixty OSPF routers, an OSPF and BGP core, a wireguard tunnel captured on both sides, a windows guest, a shaped cable.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="index.html">CLOONIX</a>
+    <a href="index.html">Overview</a>
+    <a href="learn.html">Learn</a>
+    <a href="demos.html" class="on">Demos</a>
+    <a href="start.html">Get started</a>
+    <a href="downloads.html">Downloads</a>
+    <a href="build_user/user.html">Documentation</a>
+    <a href="build_dev/dev.html">Developers</a>
+    <a href="https://github.com/clownix/cloonix">Source</a>
+  </nav>
+</header>
+
+<section class="wrap top">
+<h1>Five demos, as the browser shows them</h1>
+<p class="lead">Each picture is the web canvas after the demo script ended. The
+script is one python file in <code>demos/</code>, run with one command; the
+network it built stays up, and every window on the canvas is one click on an
+item.</p>
+
+<h2>routing/frrspider.py &mdash; sixty OSPF routers</h2>
+<img class="fig" src="img/demo_frrspider.png" alt="the cloonix canvas holding sixty routers and forty-five lans laid out as a spider web">
+<p>Sixty <code>frr_trixie</code> containers and forty-five lans, in rings: a
+core of five, a ring of cod and nod routers, an outer ring of lod and sod
+leaves. The shape is two tables in the script and the rest is loops; the
+routers are configured in parallel, and the whole web is up in about a
+minute. Every one of them runs ospfd, and the routes in any of them come from
+the fifty-nine others.</p>
+<pre>cloonix cli nemo demo routing/frrspider.py
+cloonix cli nemo cnf cod1 eth0 sniff=on
+cloonix cli nemo sniff cod1 eth0 --dump not tcp and not udp and not icmp</pre>
+<p>OSPF is IP protocol 89, so the filter reaches it by exclusion. Cut a lan
+with <code>unplug</code> and the capture shows the reconvergence.</p>
+
+<h2>routing/frrmix.py &mdash; OSPF inside, BGP between</h2>
+<img class="fig" src="img/demo_frrmix.png" alt="four autonomous systems of four routers each, the borders joined by lans, a webshark window listing BGP packets on a border interface">
+<p>Sixteen routers in four autonomous systems: OSPF inside each, BGP between
+the borders, each border joined by a lan to a border of the next AS. The sniffer
+window is on <code>b42 eth2</code>, a border-to-border wire, and lists the
+tcp 179 session between two neighbours. The last line of the script pings a
+loopback of AS 1 from a router of AS 4 that runs no BGP at all: the default
+it learned from its border by OSPF is what carries it.</p>
+<pre>cloonix cli nemo demo routing/frrmix.py
+cloonix cli nemo ssh b11 vtysh -c "show bgp summary"
+cloonix cli nemo ssh i41 ping -c 5 10.1.0.1</pre>
+<p>Remove the discard route from one border and every session still reports
+itself established while the prefix it covered is no longer announced.</p>
+
+<h2>security/wg.py &mdash; the same packet on both sides of a tunnel</h2>
+<img class="fig" src="img/demo_wg.png" alt="hostA, gwA, gwB, hostB on three lans; two webshark windows, one showing icmp echo on hostA eth0, the other showing only udp 51820 on gwA eth1">
+<p>Two sites and a middle lan that plays the internet. The two gateways
+build a wireguard tunnel across it and route each site through the other.
+The two capture windows are the demonstration: on <code>hostA eth0</code>
+the ping to 10.2.0.10 is icmp, request and reply; on <code>gwA eth1</code>,
+the wire an eavesdropper would have, the same traffic is udp port 51820,
+128 bytes of payload each, and nothing else.</p>
+<pre>cloonix cli nemo demo security/wg.py
+cloonix cli nemo sniff hostA eth0 --dump
+cloonix cli nemo sniff gwA eth1 --dump</pre>
+<p>The script ends with what to try: take the tunnel down and watch the
+same fetch become readable on the middle lan, or change one byte of a peer
+key and watch <code>wg show</code> never complete a handshake.</p>
+
+<h2>windows.py &mdash; a windows guest on the lan</h2>
+<img class="fig" src="img/demo_windows.png" alt="Win1, lan1, trix1 and trix2 on the canvas; the demo player reports the ping ok both ways; the windows desktop with Server Manager open in a browser panel">
+<p>A windows kvm and two trixie containers on one lan. The demo player on
+the left is the end of the script: the interface of Win1 configured over
+<code>cloonix cli ssh</code> through the cloonix agent the insider disc
+carries, then the ping ok both ways. The panel on the right is the desktop
+of the guest in the browser. What windows needs before it answers a ping
+&mdash; an adapter that may be disabled, an address, a firewall rule for
+echo request &mdash; is the content of the demo.</p>
+<img class="fig" src="img/demo_windows_lock.png" alt="the same canvas with the windows lock screen in the panel, asking for Ctrl+Alt+Delete, and the C-A-D button of the panel">
+<p>Before the login the panel shows the lock screen; the <code>C-A-D</code>
+button in its corner sends the Ctrl+Alt+Delete the browser would keep for
+itself.</p>
+<pre>cloonix cli nemo demo windows.py
+cloonix cli nemo ssh Win1 "ipconfig"
+cloonix cli nemo ssh trix1 "ping -c 5 10.0.0.1"</pre>
+
+<h2>cloonix/a2b.py &mdash; a cable told to be bad</h2>
+<img class="fig" src="img/demo_a2b.png" alt="hostA and hostB joined through an a2b cable; the a2b shaping panel shows loss and delay sliders, and a console shows ping times of 1541 ms">
+<p>Two machines and one <code>a2b</code> between them: a piece of wire with
+loss, delay, rate and silence settable in each direction apart. The panel on
+the left is direction A2B with 1540 ms of delay and half the packets dropped;
+the console on the right is the ping from hostA at that moment, 1541 ms a
+reply and sequence numbers missing where the loss took them. The same
+settings are one line from the command line.</p>
+<pre>cloonix cli nemo demo cloonix/a2b.py
+cloonix cli nemo cnf cable A2B delay=100
+cloonix cli nemo cnf cable A2B loss=100</pre>
+<p>The script measures a tcp transfer at each setting, so what tcp does about
+a delayed, lossy or capped line is read off the numbers.</p>
+
+<p><a class="btn" href="start.html">Get started</a>
+   <a class="btn ghost" href="learn.html">What you can learn</a></p>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Cloonix is free software under the AGPLv3.
+    <a href="https://github.com/clownix/cloonix">github.com/clownix/cloonix</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+#!/bin/bash
+HERE=`pwd`
+cd $HERE/../lib_io_clownix/
+make clean
+
+cd $HERE
+make clean
+
+rm -rf $HERE/build
+rm -f meson.build
+

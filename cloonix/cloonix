@@ -1,0 +1,3274 @@
+#!/usr/bin/env python3
+# cloonix - an autonomous cloonix client.
+
+import argparse
+import base64
+import hashlib
+import hmac
+import importlib
+import json
+import os
+import re
+import select
+import shlex
+import signal
+import time
+import socket
+import ssl
+import struct
+import sys
+import threading
+
+NET_RE = re.compile(r"CLOONIX_NET\s*:\s*(\S+)\s*\{(.*?)\}", re.S)
+VER_RE = re.compile(r"CLOONIX_VERSION\s*=\s*(\S+)")
+
+def cfg_version(text):
+    m = VER_RE.search(text)
+    return m.group(1) if m else "unknown"
+
+CFG_VERSION = "?"
+
+def parse_cfg(text):
+    """Return {net_name: {key: value}} from a cloonix.cfg body."""
+    nets = {}
+    for name, block in NET_RE.findall(text):
+        entry = {}
+        for line in block.splitlines():
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                key, val = parts
+                entry[key] = val.strip()
+        if entry:
+            nets[name] = entry
+    return nets
+
+def load_config(explicit=None):
+    """The nets of cloonix_config.py, or of the file --cfg names.
+
+    Returns (nets, where they came from). No config is not fatal: -s names a
+    server itself, and every verb that needs a net says what is missing."""
+    global CFG_VERSION
+    nets, origin = {}, "none"
+    cfg = load_sibling("cloonix_config")
+    if cfg:
+        nets = parse_cfg(cfg.CONFIG)
+        origin = "cloonix_config.py"
+        CFG_VERSION = cfg_version(cfg.CONFIG)
+    if explicit:
+        if not os.path.isfile(explicit):
+            raise SystemExit("no such config file: %s" % explicit)
+        try:
+            with open(explicit, "r") as f:
+                text = f.read()
+        except OSError as err:
+            raise SystemExit("cannot read %s: %s" % (explicit, err))
+        nets.update(parse_cfg(text))
+        origin = explicit
+        CFG_VERSION = cfg_version(text)
+    return nets, origin
+
+def resolve(net, nets, override=None):
+    """(ip, port, passwd) for a net name, or from a host:port:passwd string."""
+    if override:
+        bits = override.split(":")
+        if len(bits) != 3:
+            raise SystemExit("-s wants host:port:passwd")
+        return bits[0], int(bits[1]), bits[2]
+    if not nets:
+        raise SystemExit(
+            "no configuration: cloonix_config.py is not beside this client.\n"
+            "It carries the nets, their ports and their passwords, and the\n"
+            "install puts it in /usr/bin with cloonix. Copy it there, or name\n"
+            "another with --cfg, or give the server with -s host:port:passwd.")
+    if net not in nets:
+        raise SystemExit("unknown net '%s' (known: %s)"
+                         % (net, ", ".join(sorted(nets))))
+    e = nets[net]
+    try:
+        return e["cloonix_ip"], int(e["cloonix_port"]), e["cloonix_passwd"]
+    except (KeyError, ValueError):
+        raise SystemExit("net '%s' is missing ip, port or passwd" % net)
+MSG_DIGEST_LEN = 32
+HDR = 16 + MSG_DIGEST_LEN                  # doorways_header_size() == 48
+MAX_BUF = 50000                            # MAX_DOORWAYS_BUF_LEN
+
+# Must match CLOONIX_WIRE_VERSION in cloonsrc/glob_include/glob_wire.h, and
+# the constants below must match the enums there; debug/check_wire.sh...
+CLOONIX_WIRE_VERSION = 79
+
+DOORS_TYPE_SWITCH = 104                    # doors_type_switch
+DOORS_TYPE_DBSSH = 107                     # doors_type_dbssh
+DOORS_VAL_NONE = 202                       # doors_val_none
+DOORS_VAL_C2C = 201                        # doors_val_c2c
+DOORS_VAL_INIT_LINK = 204                  # doors_val_init_link
+DOORS_VAL_LINK_OK = 205                    # doors_val_link_ok
+DOORS_VAL_LINK_KO = 206                    # doors_val_link_ko
+# The leg request has a mandatory cookie field, and doorways drops its first 4
+# characters before relaying it.
+CXP_COOKIE = "0000cxp"
+
+JSON_MAGIC = b"\xca\xfe\xde\xca\xca\xfe\xde\xca"
+
+def hmac_key(passwd):
+    return passwd.encode()[:MSG_DIGEST_LEN].ljust(MSG_DIGEST_LEN, b"\0")
+
+def frame(passwd, payload, tid=0, type_=DOORS_TYPE_SWITCH,
+          val=DOORS_VAL_NONE, nb_pkt=1):
+    if isinstance(payload, str):
+        payload = payload.encode()
+    digest = hmac.new(hmac_key(passwd), payload, hashlib.sha256).digest()
+    return (b"\xca\xfe"
+            + struct.pack(">HIHHH", tid & 0xFFFF, len(payload),
+                          type_ & 0xFFFF, val & 0xFFFF, nb_pkt & 0xFFFF)
+            + digest + b"\xde\xca" + payload)
+
+def unframe(buf, passwd, check=True):
+    """(consumed, tid, type, val, payload) or (0, ...) when incomplete."""
+    if len(buf) < HDR:
+        return 0, None, None, None, None
+    if buf[0] != 0xCA or buf[1] != 0xFE:
+        raise IOError("bad doorways magic %02x%02x" % (buf[0], buf[1]))
+    tid, ln, type_, val, _nb = struct.unpack(">HIHHH", buf[2:14])
+    if buf[46] != 0xDE or buf[47] != 0xCA:
+        raise IOError("bad doorways header tail")
+    if ln > MAX_BUF:
+        raise IOError("doorways length %d out of range" % ln)
+    if len(buf) < HDR + ln:
+        return 0, None, None, None, None
+    payload = buf[HDR:HDR + ln]
+    if check:
+        want = hmac.new(hmac_key(passwd), payload, hashlib.sha256).digest()
+        if not hmac.compare_digest(want, bytes(buf[14:46])):
+            raise IOError("doorways hmac mismatch: wrong cloonix_passwd?")
+    return HDR + ln, tid, type_, val, payload
+
+def tls_connect(ip, port, timeout):
+    """The doors tcp socket, wrapped in tls.
+
+    The certificate is the self-signed one made at install time on the
+    server, so it is not verified: the hmac on every frame is what
+    authenticates the two ends, tls is there for the confidentiality. A
+    server that does not answer the client hello -- a cloonix before this
+    one, or one without a certificate -- closes the socket during the
+    handshake; the connection is then made again in clear, and said so,
+    unless CLOONIX_REQUIRE_TLS=1 is set, which refuses it.
+    """
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    # Only a server that CLOSES on the hello is one without tls.
+    why = ""
+    for attempt in (1, 2):
+        sock = socket.create_connection((ip, port), timeout)
+        try:
+            return ctx.wrap_socket(sock)
+        except socket.timeout:
+            sock.close()
+            raise
+        except (ssl.SSLEOFError, ConnectionResetError, BrokenPipeError):
+            sock.close()
+            why = "closed the socket on the client hello"
+            break
+        except (ssl.SSLError, OSError) as err:
+            sock.close()
+            why = str(err)
+    if os.environ.get("CLOONIX_REQUIRE_TLS") == "1":
+        raise IOError("%s:%d does not speak tls (%s) and CLOONIX_REQUIRE_TLS=1 "
+                      "refuses an unencrypted connection" % (ip, port, why))
+    sys.stderr.write("cloonix: %s:%d does not speak tls (%s), the connection "
+                     "is not encrypted\n" % (ip, port, why))
+    return socket.create_connection((ip, port), timeout)
+
+class Doorways:
+    """A client leg of the cloonix doorways tcp port."""
+
+    def __init__(self, ip, port, passwd, timeout=15):
+        self.passwd = passwd
+        self.timeout = timeout
+        self.nb_pkt = 0
+        self.quiet = False
+        self.buf = bytearray()
+        self.sock = tls_connect(ip, port, timeout)
+        self.sock.settimeout(timeout)
+        self._open_link()
+
+    def _open_link(self):
+        """doorways_sig_bufraw(.., doors_type_switch, doors_val_init_link,
+        "OK"), then the answer. dispach.c replies doors_val_link_ok.
+
+        A CLOSE instead is ambiguous, and this used to claim it meant a
+        wrong password. It does not. The server also closes without a word
+        when it is shutting down or refusing new clients -- that is
+        recv_from_client.c returning early on get_inhib_new_clients() --
+        and under load a soak saw exactly that with the password
+        untouched and nothing installed. The message said WRONG PASSWORD
+        and sent two people looking for a config problem that did not
+        exist.
+        """
+        self.send_raw("OK", val=DOORS_VAL_INIT_LINK)
+        self.sock.settimeout(min(5, self.sock.gettimeout() or 5))
+        try:
+            got = self.recv()
+        except IOError as err:
+            raise IOError("%s" % err)
+        finally:
+            self.sock.settimeout(self.timeout)
+        if got is None:
+            raise IOError("the server closed the connection right after the "
+                          "link request, without saying why. Two things do "
+                          "that: a cloonix_passwd that does not match the "
+                          "running server, or a server that is shutting "
+                          "down or refusing new clients. If nothing changed "
+                          "the config, it is the second")
+        _type, val, _payload = got
+        if val == DOORS_VAL_LINK_KO:
+            raise IOError("the server refused the link")
+
+    def send_raw(self, payload, tid=0, type_=DOORS_TYPE_SWITCH,
+                 val=DOORS_VAL_NONE):
+        self.nb_pkt = 1 if self.nb_pkt >= 0xFFFF else self.nb_pkt + 1
+        self.sock.sendall(frame(self.passwd, payload, tid, type_, val,
+                                self.nb_pkt))
+
+    def send_json(self, obj, val=DOORS_VAL_NONE):
+        self.send_raw(JSON_MAGIC + json.dumps(obj, separators=(",", ":"))
+                      .encode(), val=val)
+
+    def recv(self):
+        """Next (type, val, payload_bytes), or None.
+
+        None is two different things and the caller usually does not care:
+        the peer closed, or the timeout expired with nothing on the wire.
+        quiet says which -- True for silence, False for a close. Nothing
+        but probe reads it, and probe exists because the difference is the
+        whole answer there: a far end that says nothing is healthy, a far
+        end that hangs up is not.
+        """
+        self.quiet = False
+        while True:
+            consumed, _tid, type_, val, payload = unframe(self.buf, self.passwd)
+            if consumed:
+                del self.buf[:consumed]
+                return type_, val, payload
+            try:
+                chunk = self.sock.recv(65536)
+            except socket.timeout:
+                self.quiet = True
+                return None
+            if not chunk:
+                return None
+            self.buf += chunk
+
+    def recv_json(self):
+        """Next decodable json payload, skipping link keepalives."""
+        while True:
+            got = self.recv()
+            if got is None:
+                return None
+            _type, val, payload = got
+            if val in (DOORS_VAL_INIT_LINK, DOORS_VAL_LINK_OK):
+                continue
+            if val == DOORS_VAL_LINK_KO:
+                raise IOError("server refused the link (bad password?)")
+            # The answer carries the same magic in front of the text.
+            body = payload
+            pos = body.find(JSON_MAGIC)
+            if pos >= 0:
+                body = body[pos + len(JSON_MAGIC):]
+            try:
+                return json.loads(body.decode("utf-8", "replace"))
+            except ValueError:
+                return {"raw": body.decode("utf-8", "replace")}
+
+    def no_timeout(self):
+        """Block indefinitely on reads.
+
+        The timeout above is there to bound connecting and the short
+        request/answer exchanges of cli. A session -- a shell, a command, a
+        file transfer -- must not be bounded: a command that prints nothing
+        for a while is working, not stuck, and a compilation can be quiet for
+        many minutes. With a timeout still set, recv() returns None on
+        silence, pump() reads that as a dead pipe and gives up with 255 while
+        the guest is still busy."""
+        self.sock.settimeout(None)
+
+    def close(self):
+        try:
+            self.sock.close()
+        except OSError:
+            pass
+ENDP_NONE, ENDP_ETHS, ENDP_ETHV = 13, 14, 15
+FLAG_PERSISTENT    = 0x00001
+FLAG_FULL_VIRT     = 0x00008
+FLAG_INSTALL_CDROM = 0x00020
+FLAG_NO_REBOOT     = 0x00040
+FLAG_ADDED_CDROM   = 0x00080
+FLAG_ADDED_DISK    = 0x00100
+FLAG_NO_QEMU_GA    = 0x00200
+FLAG_WINDOWS       = 0x00400
+FLAG_UEFI          = 0x00800
+FLAG_FREEBSD       = 0x01000
+
+WINDOWS_DRIVER_ISO = "virtio-win.iso"
+
+def eth_letters(desc):
+    """eth=<n>: n interfaces, born not capturable; cnf <name> eth<i>
+    sniff=on makes one so. The letters s and v of older scripts are still
+    taken."""
+    return "v" * int(desc) if desc.isdigit() else desc
+
+def eth_table(desc, macs=None):
+    """'ssv' -> the eth_table list add_vm and cnt_add expect.
+
+    macs is {index: [6 bytes]} from mac_addr=. An interface named there
+    gets randmac 0 and that address; every other one keeps a random mac,
+    which is what the daemon does with randmac 1.
+    """
+    table = []
+    macs = macs or {}
+    for i, ch in enumerate(desc):
+        if ch == "s":
+            t = ENDP_ETHS
+        elif ch == "v":
+            t = ENDP_ETHV
+        else:
+            raise SystemExit("eth= takes only s and v, got '%s'" % ch)
+        mac = macs.get(i)
+        table.append({"endp_type": t, "randmac": 0 if mac else 1,
+                      "ifname": "noname", "mac": mac or [0, 0, 0, 0, 0, 0]})
+    return table
+
+def parse_mac_addr(spec, nb_eth):
+    """'eth0:aa:bb:cc:dd:ee:ff' -> (0, [0xaa, ...]), the way lst prints it."""
+    head, _, rest = spec.partition(":")
+    if not head.startswith("eth") or not head[3:].isdigit():
+        raise SystemExit("mac_addr= wants eth<n>:<6 bytes>, got '%s'" % spec)
+    idx = int(head[3:])
+    if idx >= nb_eth:
+        raise SystemExit("mac_addr=%s names an interface this machine has "
+                         "not got: eth= gives %d" % (spec, nb_eth))
+    try:
+        mac = [int(b, 16) for b in rest.split(":")]
+    except ValueError:
+        raise SystemExit("mac_addr= wants hex bytes, got '%s'" % spec)
+    if len(mac) != 6 or any(b > 0xFF or b < 0 for b in mac):
+        raise SystemExit("mac_addr= wants 6 bytes, got '%s'" % spec)
+    return idx, mac
+
+def parse_kv(args):
+    """Split ram=/cpu=/eth= and --flags out of a positional argument list.
+
+    A key may repeat: mac_addr= names one interface, so a machine with
+    three forced macs gives it three times. The values are kept as a list
+    and the readers take the last one where only one makes sense.
+    """
+    kv, flags, rest = {}, [], []
+    for a in args:
+        # --key=value is a value, not a flag: refuse_unknown names it, where
+        # dropping it among the flags built a guest without a word.
+        if a.startswith("--") and "=" in a:
+            k, _, v = a.partition("=")
+            kv.setdefault(k, []).append(v)
+        elif a.startswith("--"):
+            flags.append(a)
+        elif "=" in a and not a.startswith("-"):
+            k, _, v = a.partition("=")
+            kv.setdefault(k, []).append(v)
+        else:
+            rest.append(a)
+    return kv, flags, rest
+
+MAX_PUBLISH = 16
+
+def build_nat_ports(kv):
+    """The publish= values of a nat, as the one string sent.
+
+    publish=none is how a nat is told to publish nothing, which only cnf
+    has any use for: an add with no publish= at all already means that.
+    """
+    given = kv.get("publish", [])
+    if any(w.lower() == "none" for w in given):
+        if len(given) > 1:
+            sys.exit("publish=none takes the ports away, so it cannot be "
+                     "given beside one")
+        return "none"
+    out = []
+    for spec in given:
+        body, _, proto = spec.partition("/")
+        proto = (proto or "tcp").lower()
+        host, sep, guest = body.partition(":")
+        if proto not in ("tcp", "udp"):
+            sys.exit("publish=%s: the protocol is tcp or udp, not %r"
+                     % (spec, proto))
+        if not sep or not host.isdigit() or not guest.isdigit():
+            sys.exit("publish=%s: expected hostport:guestport, the way\n"
+                     "  docker publishes one:  publish=8080:80" % spec)
+        for port in (int(host), int(guest)):
+            if not 1 <= port <= 65535:
+                sys.exit("publish=%s: %d is not a port" % (spec, port))
+        out.append("%s:%d:%d" % (proto, int(host), int(guest)))
+    if len(out) > MAX_PUBLISH:
+        sys.exit("publish= given %d times; %d is the most a nat takes"
+                 % (len(out), MAX_PUBLISH))
+    return ",".join(out) if out else "none"
+
+def one(kv, key, default=""):
+    """The last value given for a key, or the default."""
+    got = kv.get(key)
+    return got[-1] if got else default
+
+def refuse_unknown(kind, kv, flags, known_kv, known_flags):
+    """Stop on a word this client would otherwise drop in silence.
+
+    Every option here has to be READ as well as parsed. install_cdrom=,
+    added_disk=, --no_reboot and mac_addr= were accepted, ignored and never
+    mentioned, so a "dump commands" line replayed into a machine that was
+    not the one listed. An option nobody reads must say so rather than
+    build a different guest without a word.
+    """
+    bad = ([k + "=" for k in kv if k not in known_kv]
+           + [f for f in flags if f not in known_flags])
+    if bad:
+        raise SystemExit("add %s does not take %s\n"
+                         "it takes: %s"
+                         % (kind, " ".join(sorted(bad)),
+                            " ".join(sorted([k + "=" for k in known_kv]
+                                            + known_flags))))
+
+KVM_FLAGS = ["--persistent", "--no_qemu_ga", "--fullvirt",
+             "--uefi", "--no_reboot"]
+KVM_KV = {"install_cdrom": FLAG_INSTALL_CDROM,
+          "added_cdrom": FLAG_ADDED_CDROM,
+          "added_disk": FLAG_ADDED_DISK}
+KVM_FLAG_BIT = {"--persistent": FLAG_PERSISTENT,
+                "--no_qemu_ga": FLAG_NO_QEMU_GA,
+                "--fullvirt": FLAG_FULL_VIRT,
+                "--uefi": FLAG_UEFI,
+                "--freebsd": FLAG_FREEBSD,
+                "--no_reboot": FLAG_NO_REBOOT}
+
+def wlan_count(kv):
+    """wlan=N, the radios."""
+    return int(one(kv, "wlan", 0) or 0)
+
+def megabytes(text, what):
+    """ram=2000, ram=512M, ram=2G: megabytes."""
+    m = re.match(r"^(\d+)([mMgG]?)[bB]?$", str(text))
+    if not m:
+        sys.exit("%s=%s: megabytes, or a number followed by M or G"
+                 % (what, text))
+    return int(m.group(1)) * (1024 if m.group(2).lower() == "g" else 1)
+
+def build_add_vm(name, kv, flags, rootfs, kind=()):
+    """kind: the flags add win and add freebsd stand for."""
+    refuse_unknown("kvm", kv, flags,
+                   list(KVM_KV) + ["mac_addr", "wlan", "ram", "cpu", "eth"],
+                   KVM_FLAGS)
+    flags = flags + list(kind)
+    cfg_flags = 0
+    for f in flags:
+        cfg_flags |= KVM_FLAG_BIT.get(f, 0)
+    disc = dict((k, one(kv, k)) for k in KVM_KV)
+    if "--windows" in flags:
+        cfg_flags |= FLAG_WINDOWS | FLAG_FULL_VIRT
+        if not disc["added_cdrom"]:
+            disc["added_cdrom"] = WINDOWS_DRIVER_ISO
+    for opt, bit in KVM_KV.items():
+        if disc[opt]:
+            cfg_flags |= bit
+    eth_desc = eth_letters(one(kv, "eth"))
+    macs = dict(parse_mac_addr(m, len(eth_desc))
+                for m in kv.get("mac_addr", []))
+    eth = eth_table(eth_desc, macs)
+    return {"fctident": "add_vm", "tid": 0, "name": name, "vm_id": 0,
+            "color": 0, "vm_config_flags": cfg_flags,
+            "mem": megabytes(one(kv, "ram", 1000), "ram"),
+            "cpu": int(one(kv, "cpu", 1)),
+            "nb_tot_nb_vwif": wlan_count(kv),
+            "nb_tot_eth": len(eth), "eth_table": eth,
+            "rootfs_input": rootfs,
+            "install_cdrom": disc["install_cdrom"],
+            "added_cdrom": disc["added_cdrom"],
+            "added_disk": disc["added_disk"],
+            "rootfs_used": "", "rootfs_backing": ""}
+
+def build_cnt_add(name, kv, flags, image):
+    refuse_unknown("cnt", kv, flags,
+                   ["startup_env", "vmount", "wlan", "mac_addr", "eth"],
+                   ["--persistent"])
+    eth_desc = eth_letters(one(kv, "eth"))
+    macs = dict(parse_mac_addr(m, len(eth_desc))
+                for m in kv.get("mac_addr", []))
+    eth = eth_table(eth_desc, macs)
+    return {"fctident": "cnt_add", "tid": 0, "brandtype": "brandcnt",
+            "name": name,
+            "is_persistent": 1 if "--persistent" in flags else 0,
+            "is_privileged": 0,
+            "vm_id": 0, "color": 0, "image": image, "ping_ok": 0,
+            "nb_tot_nb_vwif": wlan_count(kv),
+            "nb_tot_eth": len(eth), "eth_table": eth,
+            "startup_env": one(kv, "startup_env"),
+            "vmount": one(kv, "vmount")}
+
+CFG_ORIGIN = "none"
+
+def connect_error(ip, port, err, net=None):
+    """Say what went wrong, and tell a refusal apart from an outage.
+
+    Every failure to open a connection printed "cannot reach cloonix at
+    <ip>:<port>", including the one case where the server is perfectly
+    healthy and simply will not talk to us: a password mismatch. That
+    reads as "the server is down" and sends people looking at the server.
+
+    It cost real time. A soak run reported the net as gone, with every
+    process alive and idle, and the switch was investigated for a wedge
+    that did not exist -- the password had stopped matching mid-run.
+
+    The usual cause is the config being replaced while a net is running:
+    the server keeps the password it started with, and the client reads
+    the new one from disk. Reinstalling on top of a live net does exactly
+    that, so the message says so.
+    """
+    text = str(err)
+    if "hmac" in text:
+        # An hmac mismatch is the ONE case the server states outright, so it
+        # is the only one this claims.
+        return ("the server rejected our signature: WRONG PASSWORD for %s"
+                % (net or "this net"),
+                "the password this client used came from: %s\n"
+                "it must match cloonix_passwd where that server was\n"
+                "installed -- cloonfs/etc/cloonix.cfg there, the same file\n"
+                "as this one when both machines run the same delivery"
+                % CFG_ORIGIN,
+                ("cloonix cli %s dump config" % (net or "<net>"),))
+    return ("cannot reach the cloonix server", text,
+            ("cloonix start %s" % (net or "<net>"),
+             "cloonix list      to see which nets answer"))
+
+def ip_to_int(text):
+    """The encoding ip_string_to_int() uses in msg_layer.c: the four bytes
+    packed big-endian into a uint32."""
+    parts = (text or "").split(".")
+    if len(parts) != 4:
+        raise SystemExit("bad ip in the config: %r" % text)
+    n = 0
+    for p in parts:
+        v = int(p)
+        if not 0 <= v <= 255:
+            raise SystemExit("bad ip in the config: %r" % text)
+        n = (n << 8) + v
+    return n
+
+def build_c2c_add(name, slave_net, nets, local_net):
+    """add c2c <name> <distant_net>.
+
+    The message carries the settings of both ends, exactly as cmd_add_c2c()
+    in ctrl assembles them: this side contributes the udp address and the
+    bottom of its udp port range, the far side its address, port, password
+    and udp address."""
+    if not local_net:
+        raise SystemExit("add c2c needs the net name, so the local udp "
+                         "settings can be read: use a net rather than -s")
+    if local_net not in nets:
+        raise SystemExit("unknown local net '%s'" % local_net)
+    if slave_net not in nets:
+        raise SystemExit("unknown c2c destination '%s' (known: %s)"
+                         % (slave_net, ", ".join(sorted(nets))))
+    here, there = nets[local_net], nets[slave_net]
+    try:
+        return {"fctident": "c2c_add", "tid": 0, "name": name,
+                "local_udp_ip": ip_to_int(here["c2c_udp_ip"]),
+                "slave_net": slave_net,
+                "ip": ip_to_int(there["cloonix_ip"]),
+                "port": int(there["cloonix_port"]) & 0xFFFF,
+                "passwd": there["cloonix_passwd"],
+                "udp_ip": ip_to_int(there["c2c_udp_ip"]),
+                "c2c_udp_port_low": int(here["c2c_udp_port_low"])}
+    except KeyError as err:
+        raise SystemExit("net %s or %s is missing %s in the config"
+                         % (local_net, slave_net, err))
+
+def to_json(argv, nets=None, local_net=None):
+    """One command line -> the json to put on the wire, or None.
+
+    The net has already been taken off the front, so argv[0] is the verb and
+    what follows is its own.
+    """
+    if not argv:
+        return None
+    verb = argv[0]
+    a = argv[1:]
+
+    if verb == "add":
+        if not a:
+            return None
+        what, rest = a[0], a[1:]
+        kv, flags, pos = parse_kv(rest)
+        if what == "kvm" and len(pos) >= 2:
+            return build_add_vm(pos[0], kv, flags, pos[-1])
+        if what == "win" and len(pos) >= 2:
+            return build_add_vm(pos[0], kv, flags, pos[-1],
+                                ("--windows", "--uefi"))
+        if what == "freebsd" and len(pos) >= 2:
+            return build_add_vm(pos[0], kv, flags, pos[-1], ("--freebsd",))
+        if what == "cisco" and len(pos) >= 2:
+            return build_add_vm(pos[0], kv, flags + ["--no_qemu_ga"],
+                                pos[-1])
+        if what == "cnt" and len(pos) >= 2:
+            return build_cnt_add(pos[0], kv, flags, pos[-1])
+        if what == "tap" and pos:
+            return {"fctident": "tap_add", "tid": 0, "name": pos[0]}
+        if what == "nat" and len(pos) == 1:
+            if flags or any(k != "publish" for k in kv):
+                sys.exit("add nat takes publish=hostport:guestport[/udp] "
+                         "and nothing else")
+            return {"fctident": "nat_add", "tid": 0, "name": pos[0],
+                    "ports": build_nat_ports(kv)}
+        if what == "a2b" and pos:
+            return {"fctident": "a2b_add", "tid": 0, "name": pos[0]}
+        if what == "c2c" and len(pos) == 2:
+            return build_c2c_add(pos[0], pos[1], nets or {}, local_net)
+        if what == "phy" and pos:
+            # absorbed by default, --macvlan leaves it to the host
+            if len(pos) > 1 or kv or any(f != "--macvlan" for f in flags):
+                sys.exit("add phy <host interface> [--macvlan], nothing else")
+            return {"fctident": "phy_add", "tid": 0, "name": pos[0],
+                    "type": ENDP_PHYMV if flags else ENDP_PHYAV}
+        return None
+
+    # plug <n> [<interface>] <lan>; unplug <n> [<interface>] [<lan>], the
+    # lan of an unplug found in the topology when not given
+    if verb == "plug" and len(a) in (2, 3):
+        if is_iface(a[-1]):
+            sys.exit("plug %s: %s%s is the word of an interface, and a lan "
+                     "or an air is never named so"
+                     % (spoken(a), "the lan is missing; " if len(a) == 2
+                        else "", a[-1]))
+        return {"fctident": "add_lan_endp", "tid": 0, "name": a[0],
+                "num": iface_num(a[1]) if len(a) == 3 else 0, "lan": a[-1]}
+    if verb == "unplug" and len(a) in (1, 2, 3):
+        itf = a[1] if len(a) > 1 and is_iface(a[1]) else None
+        lan = a[2] if len(a) == 3 else (a[1] if len(a) == 2 and not itf
+                                        else "")
+        if len(a) == 3 and not itf:
+            return None
+        return {"fctident": "del_lan_endp", "tid": 0, "name": a[0],
+                "num": iface_num(itf) if itf else 0, "lan": lan}
+
+    if verb == "del" and len(a) == 1:
+        if a[0] == "all":
+            return {"fctident": "del_all", "tid": 0}
+        return {"fctident": "del_name", "tid": 0, "name": a[0]}
+
+    if verb == "cnf":
+        return build_cnf(a)
+
+    if verb == "save" and len(a) == 2:
+        return {"fctident": "sav_vm", "tid": 0, "name": a[0], "path": a[1]}
+    if verb == "stop":
+        return {"fctident": "kill_uml_clownix", "tid": 0}
+    if verb == "dump" and a:
+        if a[0] in OVS_TOOLS:
+            if len(a) == 1:
+                return None
+            return {"fctident": "ovs_cmd_req", "tid": 0, "tool": a[0],
+                    "args": " ".join(a[1:])}
+        # ip <nat> <guest>: the address the nat gave the guest
+        if a[0] == "ip" and len(a) == 3:
+            return {"fctident": "nat_cnf", "tid": 0, "name": a[1],
+                    "cmd": "whatip=" + a[2]}
+        if a[0] == "namespaces" and len(a) == 1:
+            return {"fctident": "ovs_cmd_req", "tid": 0,
+                    "tool": "namespaces", "args": ""}
+        if len(a) == 1:
+            return DUMP_REQ.get(a[0])
+    return None
+
+# The airs the radios start on, cnt and kvm.
+CNTWIFI = "cntwifi"
+KVMWIFI = "kvmwifi"
+
+ENDP_PHYAV = 23
+ENDP_PHYMV = 25
+WLAN_NUM_BASE = 256
+
+A2B_SIDE = {"A": 0, "B": 1}
+A2B_DIR = {"A2B": 0, "B2A": 1}
+
+def is_iface(word):
+    """eth<i>, wlan<i> of a guest, A or B of an a2b."""
+    return bool(re.match(r"^(eth|wlan)\d+$", word)) or word in A2B_SIDE
+
+def iface_num(word):
+    """An interface as the wire carries it: eth<i> is i, wlan<i> is
+    WLAN_NUM_BASE + i, side A of an a2b 0 and B 1."""
+    for pfx, base in (("eth", 0), ("wlan", WLAN_NUM_BASE)):
+        if word.startswith(pfx) and word[len(pfx):].isdigit():
+            return base + int(word[len(pfx):])
+    if word in A2B_SIDE:
+        return A2B_SIDE[word]
+    sys.stderr.write("'%s' is not an interface: eth<i> or wlan<i> of a "
+                     "guest, A or B of an a2b\n" % word)
+    sys.exit(EXIT_LOCAL)
+
+A2B_SETTINGS = ("delay", "loss", "rate", "silentms", "qsize", "bsize")
+
+def a2b_cmd(words):
+    """cnf <a2b> A2B|B2A delay=50, or replace_ipsrc <ip> with <ip>, or
+    unreplace_ipdst, as the server reads it: dir=0 cmd=delay val=50."""
+    d, rest = A2B_DIR[words[0]], words[1:]
+    k, eq, v = rest[0].partition("=") if rest else ("", "", "")
+    if len(rest) == 1 and eq and k in A2B_SETTINGS and v.isdigit():
+        return "dir=%d cmd=%s val=%s" % (d, k, v)
+    if rest and rest[0] in ("replace_ipsrc", "replace_ipdst",
+                            "unreplace_ipsrc", "unreplace_ipdst"):
+        return " ".join(["dir=%d" % d] + rest)
+    sys.exit("cnf <a2b> %s: one of %s=<n>, or replace_ipsrc|replace_ipdst "
+             "<ip> with <ip>, or unreplace_ipsrc|unreplace_ipdst"
+             % (words[0], "=<n>, ".join(A2B_SETTINGS)))
+
+# The keys of cnf, and the kind of object each is for: no two kinds share a
+# key, so the kind of the name is read from what is asked of it.
+CNF_KEYS = {
+    "sniff":      "sniff",
+    "angle":      "angle",
+    "x":          "place",
+    "y":          "place",
+    "publish":    "nat",
+    "cpu":        "cnt",
+    "ram":        "cnt",
+    "rstp":       "lan",
+    "mac_mangle": "c2c",
+}
+
+CNF_SYNTAX = ("cnf <name> [eth<i>|A|B] sniff=on|off\n"
+              "cnf <name> x=<x> y=<y>, on the canvas and pinned there\n"
+              "cnf <name> [eth<i>|wlan<i>|A|B] angle=<degrees>, 0 top, 90 "
+              "right\n"
+              "cnf <a2b> A2B|B2A delay|loss|rate|silentms|qsize|bsize=<n>\n"
+              "cnf <nat> publish=hostport:guestport[/udp]|none\n"
+              "cnf <cnt> [cpu=<percent of a core>] [ram=<megabytes>], 0 lifts "
+              "a cap\n"
+              "cnf <lan> rstp=on|off\n"
+              "cnf <c2c> mac_mangle=xx:xx:xx:xx:xx:xx")
+
+def build_cnf(a):
+    """cnf <name> [<interface>|A2B|B2A] key=value ... -> its message."""
+    # "A2B delay=100" given as one word is the same line
+    a = a[:1] + " ".join(a[1:]).split()
+    if len(a) < 2:
+        return None
+    name, rest = a[0], a[1:]
+    if rest[0] in A2B_DIR:
+        return {"fctident": "a2b_cnf", "tid": 0, "name": name,
+                "cmd": a2b_cmd(rest)}
+    num = None
+    if is_iface(rest[0]):
+        num, rest = iface_num(rest[0]), rest[1:]
+    kv, flags, pos = parse_kv(rest)
+    kinds = set(CNF_KEYS.get(k) for k in kv)
+    if flags or pos or len(kinds) != 1 or None in kinds:
+        sys.exit("cnf %s: not a setting cloonix knows\n%s"
+                 % (spoken(a), CNF_SYNTAX))
+    kind = kinds.pop()
+    if num is not None and kind not in ("sniff", "angle"):
+        sys.exit("cnf %s: an interface is named for sniff= and angle= only"
+                 % spoken(a))
+    try:
+        if kind == "place":
+            return {"fctident": "item_pos", "tid": 0, "name": name,
+                    "x": int(kv["x"][-1]), "y": int(kv["y"][-1])}
+        if kind == "angle":
+            return {"fctident": "item_poseth", "tid": 0, "name": name,
+                    "num": num or 0, "deg": int(one(kv, "angle"))}
+    except KeyError:
+        sys.exit("cnf %s: x= and y= together" % spoken(a))
+    except ValueError:
+        sys.exit("cnf %s: whole numbers" % spoken(a))
+    if kind == "sniff":
+        val = {"on": 1, "off": 0}.get(one(kv, "sniff"))
+        if val is None:
+            sys.exit("cnf %s: sniff=on or sniff=off" % spoken(a))
+        return {"fctident": "snf_add", "tid": 0, "name": name,
+                "num": num or 0, "val": val}
+    if kind == "nat":
+        return {"fctident": "nat_cnf", "tid": 0, "name": name,
+                "cmd": "publish=" + build_nat_ports(kv)}
+    if kind == "cnt":
+        # a cap not named keeps its value
+        cmd = []
+        if "cpu" in kv:
+            try:
+                cmd.append("cpu=%d" % int(one(kv, "cpu")))
+            except ValueError:
+                sys.exit("cnf %s: cpu= wants a whole number" % spoken(a))
+        if "ram" in kv:
+            cmd.append("ram=%d" % megabytes(one(kv, "ram"), "ram"))
+        return {"fctident": "cnt_cnf", "tid": 0, "name": name,
+                "cmd": " ".join(cmd)}
+    if kind == "lan":
+        if one(kv, "rstp") not in ("on", "off"):
+            sys.exit("cnf %s: rstp=on or rstp=off" % spoken(a))
+        return {"fctident": "lan_cnf", "tid": 0, "name": name,
+                "cmd": "rstp=" + one(kv, "rstp")}
+    return {"fctident": "c2c_cnf", "tid": 0, "name": name,
+            "cmd": "mac_mangle=" + one(kv, "mac_mangle")}
+
+ENDP_TYPE = {
+    13: "none",  14: "eth-s",  15: "eth-v",
+    16: "tap-s", 17: "tap-v",  18: "nat-s", 19: "nat-v",
+    20: "c2c-s", 21: "c2c-v",
+    22: "phya-s", 23: "phya-v", 24: "phym-s", 25: "phym-v",
+    26: "a2b",
+}
+
+def render_topo_short(topo):
+    """The topology as names, types and the lans that join them.
+
+    "dmp" prints the whole event_topo, which is complete and unreadable:
+    several hundred lines of json for a dozen objects. This prints the
+    three things you actually want when something looks wrong -- what
+    exists, what kind it is, and what is wired to what.
+
+    The lans are the point. Each endpoint entry carries the lans its
+    interface sits on, so the same lan name appearing under two interfaces
+    IS the cable, and a lan appearing under only one is a cable with an end
+    missing -- which is worth seeing at a glance rather than reconstructing
+    from a replay script.
+    """
+    out = []
+    net = topo.get("network", "?")
+    kinds = (("cnt", "cnt"), ("kvm", "kvm"), ("c2c", "c2c"), ("tap", "tap"),
+             ("nat", "nat"), ("a2b", "a2b"), ("phy", "phy"))
+    out.append("net %s" % net)
+    total = 0
+    for key, label in kinds:
+        for obj in topo.get(key, []) or []:
+            name = obj.get("name", "?")
+            extra = ""
+            if key in ("cnt", "kvm"):
+                extra = " eth=%d" % obj.get("nb_tot_eth", 0)
+                if obj.get("ping_ok") == 0:
+                    extra += " (not answering)"
+            out.append("  %-4s %-20s%s" % (label, name, extra))
+            total += 1
+    if not total:
+        out.append("  (no objects)")
+    phys = topo.get("info_phy", []) or []
+    if phys:
+        out.append("  host interfaces a phy can take: %s" % " ".join(phys))
+
+    # lan -> the interfaces on it, those of a cnt or kvm by their name
+    guests = set(obj.get("name") for key in ("cnt", "kvm")
+                 for obj in topo.get(key, []) or [])
+    a2bs = set(obj.get("name") for obj in topo.get("a2b", []) or [])
+    lans = {}
+    for e in topo.get("endp", []) or []:
+        nm, num = e.get("name", "?"), e.get("num", 0)
+        if nm in guests:
+            who = "%s eth%d" % (nm, num)
+        elif nm in a2bs and num in (0, 1):
+            who = "%s %s" % (nm, "AB"[num])
+        else:
+            who = nm if num == 0 else "%s %d" % (nm, num)
+        kind = ENDP_TYPE.get(e.get("type", 0), "type %s" % e.get("type"))
+        for lan in e.get("lans", []) or []:
+            lans.setdefault(lan, []).append("%s (%s)" % (who, kind))
+    if lans:
+        out.append("  lans:")
+        for lan in sorted(lans):
+            ends = lans[lan]
+            # Only a lan with a single member is worth flagging.
+            mark = "   <-- ONLY ONE END" if len(ends) == 1 else ""
+            out.append("    %-14s %s%s" % (lan, ", ".join(ends), mark))
+    else:
+        out.append("  lans: (none)")
+    return "\n".join(out)
+
+def render_ovs(reply):
+    """The lines the ovs tool printed, as it printed them.
+
+    No reformatting: the shape of fdb/show and of dump-ports is what a
+    person already knows from running them by hand, and a client that
+    rearranged it would make the two look like different tools."""
+    lines = [i for i in reply.get("items", [])]
+    while lines and not lines[-1].strip():
+        lines.pop()
+    if not lines:
+        return "(nothing came back)"
+    return "\n".join(lines)
+
+def render_pid(reply):
+    """dump pid: every process of the net, and what it has cost.
+
+    cpu is the average over the whole life of the process, of ONE core, so
+    a guest using two processors flat reads 200.0 -- the same convention
+    ps uses in its %CPU column, and the same number it would print.
+
+    An older server sends no cpu and no rss, and those columns are then
+    zero everywhere rather than absent: said once at the foot instead of
+    being guessed at per line.
+    """
+    items = reply.get("items") or []
+    if not items:
+        return "(nothing came back)"
+    npad = max(len(str(i.get("name", ""))) for i in items)
+    npad = max(npad, 4)
+    out = ["  %-*s %8s %8s %12s" % (npad, "name", "pid", "cpu%", "rss")]
+    out.append("  " + "-" * (npad + 31))
+    total_rss = 0
+    measured = False
+    for item in items:
+        cpu = item.get("cpu")
+        rss = item.get("rss")
+        if cpu or rss:
+            measured = True
+        total_rss += (rss or 0)
+        out.append("  %-*s %8s %8s %12s"
+                   % (npad, item.get("name", ""), item.get("pid", 0),
+                      "%.1f" % ((cpu or 0) / 10.0),
+                      "%.1f M" % ((rss or 0) / 1024.0)))
+    out.append("  " + "-" * (npad + 31))
+    out.append("  %-*s %12s"
+               % (npad + 18,
+                  "%d process%s" % (len(items),
+                                    "" if len(items) == 1 else "es"),
+                  "%.1f M" % (total_rss / 1024.0)))
+    if not measured:
+        out.append("")
+        out.append("  no cpu or rss came back: this server predates them.")
+    return "\n".join(out)
+
+def render_images(reply):
+    """dump images: everything add can take, and who it belongs to.
+
+    A persistent container writes into its image, so the image must be his
+    who runs the net; anybody's serves read-only. A qcow2 is only ever
+    copied on write, so its owner is shown for the same reason without the
+    persistent column applying to it.
+    """
+    items = reply.get("items") or []
+    runner = reply.get("runner", "")
+    if not items:
+        return "  bulk holds nothing add can take"
+    npad = max(len(i.get("name", "")) for i in items)
+    out = ["  %-6s %-*s %-12s %s" % ("kind", npad, "name", "owner",
+                                    "persistent")]
+    for i in sorted(items, key=lambda x: (x.get("kind"), x.get("name"))):
+        kind, name, owner = i.get("kind"), i.get("name", ""), i.get("owner")
+        if kind != "cnt":
+            pers = "-"
+        elif owner == runner:
+            pers = "possible"
+        else:
+            pers = "no, the net runs as %s" % runner
+        out.append("  %-6s %-*s %-12s %s" % (kind, npad, name, owner, pers))
+    return "\n".join(out)
+
+DUMP_REQ = {
+    "config":   {"fctident": "work_dir_req", "tid": 0},
+    "topo":     {"fctident": "event_topo_sub", "tid": 0},
+    "json":     {"fctident": "event_topo_sub", "tid": 0},
+    "drawing":  {"fctident": "event_topo_sub", "tid": 0},
+    "commands": {"fctident": "list_commands_req", "tid": 0, "is_layout": 0},
+    "pid":    {"fctident": "list_pid_req", "tid": 0},
+    "images": {"fctident": "images_req", "tid": 0},
+}
+
+EXPECT = {
+    "config":   "work_dir_resp",
+    "topo":     "event_topo",
+    "json":     "event_topo",
+    "drawing":  "event_topo",
+    "commands": "list_commands_resp",
+    "pid":    "list_pid_resp",
+    "images": "images_resp",
+}
+
+def render_atop(topo):
+    """dump drawing: the drawing from cloonix_atop.py, or why there is none."""
+    atop = load_sibling("cloonix_atop")
+    if not atop:
+        return ("drawing needs cloonix_atop.py beside this client\n"
+                "cli <net> dump topo says the same thing in text")
+    return atop.render(sys.modules[__name__], topo)
+
+def do_complete(nets, words, mode):
+    """Hand the question to cloonix_completion.py, or answer nothing.
+
+    The words are written out first: a tab after "dum" is a tab after dump,
+    and a place that answered nothing there would make the short form look
+    like a different command.
+    """
+    words = expand(words)
+    comp = load_sibling("cloonix_completion")
+    if not comp:
+        if mode == "hook":
+            sys.stderr.write("cloonix_completion.py is not beside this "
+                             "client, so there is no hook to print\n")
+            return 2
+        return 0
+    return comp.run(sys.modules[__name__], nets, words, mode)
+
+def pcap_link_type(hdr):
+    """Link type out of the 24 byte pcap file header, either byte order."""
+    if len(hdr) < 24:
+        return -1
+    magic = int.from_bytes(hdr[0:4], "little")
+    little = magic in (0xa1b2c3d4, 0xa1b23c4d)
+    return int.from_bytes(hdr[20:24], "little" if little else "big")
+
+def spaced_bytes(data):
+    """The packet as one byte per field, for a scenario to slice up.
+
+    Two hex digits per byte, one space between, nothing else -- so the whole
+    line splits on whitespace and every field is at a fixed index. In python:
+
+        f = line.split()
+        nb   = int(f[1])
+        when = float(f[2])
+        pkt  = bytes(int(x, 16) for x in f[4:])
+        if pkt[12:14] == b"\x08\x00":      # IPv4
+            ...
+
+    Padded to two digits so the offset of a field in the line is a fixed
+    multiple of three, and a scenario can index into the text without
+    converting anything when it just wants to look at one byte.
+    """
+    return " ".join("%02x" % b for b in data)
+
+def hex_dump(pkt_nb, sec, usec, t_zero, caplen, wire_len, data):
+    """The packet as webshark shows it in its raw pane, byte for byte.
+
+    Same layout as renderHex() in webshark.html: a four digit offset, sixteen
+    bytes as two hex digits separated by one space, then the printable
+    characters with a dot for the rest. It is copied rather than improved on
+    purpose -- the point is that a packet read here and the same packet in the
+    browser look alike enough to recognise at a glance, and any prettier
+    layout of mine would defeat that.
+
+    The heading carries what the packet list column of webshark carries and
+    this side actually knows: the number, the time both absolute and relative
+    to the first packet seen, and the two lengths. Source, destination and
+    protocol are not guessed: webshark has wireshark's dissectors behind it
+    and this has the bytes, so inventing those columns would produce
+    something that disagreed with the browser exactly when it mattered.
+    """
+    rel = (sec + usec / 1000000.0) - t_zero
+    out = ["No. %-6d Time %d.%06d (+%.6f)   Length %d captured of %d"
+           % (pkt_nb, sec, usec, rel, caplen, wire_len)]
+    for off in range(0, len(data), 16):
+        chunk = data[off:off+16]
+        hexs = " ".join("%02x" % b for b in chunk).ljust(47)
+        asc = "".join(chr(b) if 0x20 <= b < 0x7f else "." for b in chunk)
+        out.append("%04x   %s   %s" % (off, hexs, asc))
+    out.append("")
+    return "\n".join(out) + "\n"
+
+TRACE_KIND = {
+    "qemu": (1, "the command line every kvm is created with"),
+    "json_cli": (2, "every json message the server receives and sends"),
+    "crun": (3, "the command line every container is launched with"),
+    "nspace": (4, "the namespaces containers are given and give up"),
+}
+
+# probe is a trace too, and is not in the table above because the table maps a
+# word to a wire kind of trace_sub and probe subscribes to nothing: it...
+TRACE_WORDS = "|".join(TRACE_KIND) + "|probe"
+
+def do_trace(ip, port, passwd, argv, nets=None, local_net=None):
+    """cli <net> trace <kind> -- report a kind of trace as it happens.
+
+    Like sniff and unlike everything else, this subscribes and then STAYS:
+    the server has nothing to answer until a creation happens, which may be
+    in an hour or never. It prints one block per event and exits on ctrl-c.
+
+    A trace is not a dump. dump asks what the server has NOW and is done;
+    trace asks to be told what the server DOES from now on, so a creation
+    that happened before the subscription is not reported. Start it, then
+    make the thing happen.
+    """
+    if not argv:
+        sys.stderr.write("trace wants a kind: %s\n" % TRACE_WORDS)
+        return 2
+    word = argv[0]
+    if word not in TRACE_KIND:
+        sys.stderr.write("no trace called '%s', pick one of %s\n"
+                         % (word, TRACE_WORDS))
+        return 2
+    kind = TRACE_KIND[word][0]
+    try:
+        door = Doorways(ip, port, passwd, None)
+    except OSError as err:
+        what, why, hints = connect_error(ip, port, err, local_net)
+        return fault(what, why, hints)
+    try:
+        pending = []
+        door.send_json({"fctident": "trace_sub", "tid": 0,
+                        "kind": kind, "sub_on": 1})
+        while True:
+            reply = door.recv_json()
+            if reply is None:
+                sys.stderr.write("the server closed the connection\n")
+                return 1
+            ident = reply.get("fctident", "")
+            if ident == "status_ko":
+                why = reply.get("reason") or reply.get("txt") or "(none given)"
+                sys.stderr.write("refused by the cloonix server: %s\n" % why)
+                return 1
+            if ident == "status_ok":
+                break
+            if ident == "trace":
+                # A trace before the acknowledgement means the subscription is
+                # live.
+                pending.append(reply)
+                break
+        # No timeout from here: nothing happening is not an error, it is a net
+        # where nothing is being created, and this verb exists to wait.
+        door.sock.settimeout(None)
+        sys.stdout.write("# waiting for %s, ctrl-c to stop\n"
+                         % TRACE_KIND[word][1])
+        sys.stdout.write("# what happened before this subscription is not"
+                         " reported\n")
+        sys.stdout.flush()
+        while True:
+            reply = pending.pop(0) if pending else door.recv_json()
+            if reply is None:
+                sys.stderr.write("the server closed the connection\n")
+                return 1
+            ident = reply.get("fctident", "")
+            if ident == "status_ko":
+                why = reply.get("txt") or reply.get("reason") or "(none given)"
+                sys.stderr.write("refused by the cloonix server: %s\n" % why)
+                return 1
+            if ident != "trace" or reply.get("kind") != kind:
+                continue
+            # The name on its own line and the command verbatim on the next,
+            # so the second line pastes into a shell as it stands.
+            sys.stdout.write("%s %s\n%s\n\n"
+                             % (word, reply.get("name", "?"),
+                                reply.get("txt", "")))
+            sys.stdout.flush()
+    except KeyboardInterrupt:
+        try:
+            door.send_json({"fctident": "trace_sub", "tid": 0,
+                            "kind": kind, "sub_on": 0})
+        except Exception:
+            pass
+        sys.stdout.write("\n")
+        return 0
+    except IOError as err:
+        if isinstance(err, BrokenPipeError) and stdout_gone():
+            raise
+        sys.stderr.write("%s\n" % err)
+        return 2
+    finally:
+        door.close()
+
+SNIFF_OPEN_TRIES = 10
+SNIFF_OPEN_PAUSE = 0.5
+
+def sniff_open_answer(door, pending):
+    """None once the server says yes to a pcap_open, or why it said no."""
+    while True:
+        reply = door.recv_json()
+        if reply is None:
+            return "the server closed the connection"
+        ident = reply.get("fctident", "")
+        if ident == "status_ko":
+            return reply.get("reason") or reply.get("txt") or "(none given)"
+        if ident == "status_ok":
+            return None
+        if ident == "pcap_traffic":
+            # Traffic before the acknowledgement means the subscription is
+            # plainly live, so stop waiting -- but KEEP the packet.
+            pending.append(reply)
+            return None
+
+def sniffed_in(lines, name, itf):
+    """True when dump commands has <name> [<itf>] sniff=on."""
+    return any(len(w) > 5 and w[3] == "cnf" and w[4] == name and
+               w[5:-1] == ([itf] if itf else []) and w[-1] == "sniff=on"
+               for w in lines)
+
+def sniff_arm(door, name, num):
+    """cnf <name> [<interface>] sniff=on on the connection of the sniff:
+    0 once the server says it is done."""
+    door.send_json({"fctident": "snf_add", "tid": 0, "name": name,
+                    "num": num, "val": 1})
+    door.sock.settimeout(ACK_BY_VERB["cnf"])
+    try:
+        while True:
+            reply = door.recv_json()
+            if reply is None:
+                return 1
+            ident = reply.get("fctident", "")
+            if ident in ("status_ok", "status_ko"):
+                return 0 if ident == "status_ok" else 1
+    except socket.timeout:
+        return 1
+    finally:
+        door.sock.settimeout(None)
+
+def do_sniff(ip, port, passwd, argv, nets=None, local_net=None):
+    """cli <net> sniff <name> [ethN|wlanN|A|B] -- the packets of an interface.
+
+    This is the receive, and it WAITS. Every other verb sends one message
+    and is done; this one subscribes and then stays, printing a line per
+    packet as each arrives, until ctrl-c. That is the whole point of it: a
+    test scenario runs it, does something on the network, and reads what
+    comes out.
+
+    The stream is the one the cloonix-dumpcap of that snf serves. It is
+    multiplexed on the doors connection with everything else, so there is no
+    second port and nothing new to reach.
+
+    One line per packet, in a shape meant to be parsed as much as read:
+
+        hdr <48 hex chars>                 the pcap file header, once
+        pkt <n> <sec>.<usec> <caplen>/<len> <hex of the packet>
+
+    <n> counts from 1 for THIS subscription, not from the start of the
+    capture: it is what you were sent, not where the packet sits in the whole.
+    A gap in it is packets the server dropped for you because your connection
+    was behind (8 MB queued); --count decodes nothing and prints, every
+    second, what arrived and what was dropped, to see what the chain carries.
+    """
+    modes = []
+    args = list(argv)
+    for flag, mode in (("--dump", "dump"), ("--bytes", "bytes"),
+                       ("--line", "line"), ("--count", "count")):
+        while flag in args:
+            args.remove(flag)
+            if mode not in modes:
+                modes.append(mode)
+    if len(modes) > 1:
+        sys.stderr.write("pick one of --dump, --bytes, --line, --count, "
+                         "not %s\n"
+                         % " ".join("--" + m for m in modes))
+        return 2
+    mode = modes[0] if modes else "dump"
+    if not args:
+        sys.stderr.write("sniff wants a name, then eth<i> or wlan<i> of a "
+                         "guest, A or B of an a2b\n")
+        return 2
+    name = args.pop(0)
+    # the interface is left out for an item of one interface, an air too
+    iface = args.pop(0) if (args and is_iface(args[0])) else ""
+    num = iface_num(iface) if iface else 0
+    # Everything after the interface is the filter, joined back into one
+    # string.
+    filt = " ".join(args)
+    t_zero = None
+    try:
+        door = Doorways(ip, port, passwd, None)
+    except OSError as err:
+        what, why, hints = connect_error(ip, port, err, local_net)
+        return fault(what, why, hints)
+    try:
+        # Anything that arrives during the handshake and is not part of it.
+        pending = []
+        armed = False
+        tries = 0
+        # what dump commands says first, so a nominal sniff is never refused
+        lines = commands_now(door)
+        if iface.startswith("wlan") and lan_of(lines, name, iface):
+            air = lan_of(lines, name, iface)
+            sys.stderr.write("cloonix: %s %s is captured with its air, "
+                             "sniffing %s\n" % (name, iface, air))
+            name, iface, num = air, "", 0
+        if not sniffed_in(lines, name, iface):
+            armed = True
+            said = spoken([name] + ([iface] if iface else []))
+            if not sniff_arm(door, name, num):
+                sys.stderr.write("cloonix: %s was not sniffed, done now: "
+                                 "cnf %s sniff=on\n" % (said, said))
+        while True:
+            door.send_json({"fctident": "pcap_open", "tid": 0,
+                            "name": name, "num": num, "filter": filt})
+            why = sniff_open_answer(door, pending)
+            if why is None:
+                break
+            # a wlan is captured with its air: the air is sniffed
+            if "is captured with its air: sniff " in why and iface:
+                air = why.rsplit(" ", 1)[1]
+                sys.stderr.write("cloonix: %s %s is captured with its air, "
+                                 "sniffing %s\n" % (name, iface, air))
+                name, iface, num = air, "", 0
+                continue
+            # Not sniffed: the user asked to sniff it, so it is made so.
+            if not armed and ("not sniffed" in why or "not captured" in why):
+                armed = True
+                said = spoken([name] + ([iface] if iface else []))
+                if sniff_arm(door, name, num):
+                    sys.stderr.write("refused by the cloonix server: %s\n"
+                                     % why)
+                    return 1
+                sys.stderr.write("cloonix: %s was not sniffed, done now: "
+                                 "cnf %s sniff=on\n" % (said, said))
+                continue
+            # Armed a moment ago: its capture may still be starting.
+            tries += 1
+            if not armed or tries > SNIFF_OPEN_TRIES:
+                sys.stderr.write("refused by the cloonix server: %s\n" % why)
+                return 1
+            time.sleep(SNIFF_OPEN_PAUSE)
+
+        # No timeout from here: a quiet interface is not an error, it is an
+        # interface with nothing on it, and this verb exists to wait.
+        door.sock.settimeout(None)
+        cnt_pkt = cnt_bytes = cnt_gap = 0
+        tot_pkt = tot_bytes = tot_gap = 0
+        last_nb = 0
+        cnt_t0 = t_start = time.time()
+        if filt:
+            sys.stdout.write("# waiting on %s %d for packets matching: %s\n"
+                             % (name, num, filt))
+            sys.stdout.write("# everything else is dropped by the server and"
+                             " never crosses the wire\n")
+        else:
+            sys.stdout.write("# waiting for packets on %s %d, ctrl-c to"
+                             " stop\n" % (name, num))
+        sys.stdout.flush()
+        while True:
+            reply = pending.pop(0) if pending else door.recv_json()
+            if reply is None:
+                sys.stderr.write("the server closed the connection\n")
+                return 1
+            ident = reply.get("fctident", "")
+            if ident == "status_ko":
+                why = reply.get("txt") or reply.get("reason") or "(none given)"
+                sys.stderr.write("refused by the cloonix server: %s\n" % why)
+                return 1
+            if ident != "pcap_traffic":
+                continue
+            if reply.get("name") != name or reply.get("num") != num:
+                continue
+            if mode == "count":
+                # Nothing decoded: the cheapest consumer there is, to see what
+                # the chain delivers and what it dropped on the way.
+                if reply.get("type", 1) == 0:
+                    continue
+                nb = reply.get("pkt_nb", 0)
+                if last_nb and nb > last_nb + 1:
+                    cnt_gap += nb - last_nb - 1
+                last_nb = nb
+                cnt_pkt += 1
+                cnt_bytes += reply.get("len", 0)
+                now = time.time()
+                if now - cnt_t0 >= 1.0:
+                    dt = now - cnt_t0
+                    sys.stdout.write("%d pkt/s  %.1f Mbit/s  %d dropped\n"
+                                     % (cnt_pkt / dt, cnt_bytes * 8 / dt / 1e6,
+                                        cnt_gap))
+                    sys.stdout.flush()
+                    tot_pkt += cnt_pkt
+                    tot_bytes += cnt_bytes
+                    tot_gap += cnt_gap
+                    cnt_pkt = cnt_bytes = cnt_gap = 0
+                    cnt_t0 = now
+                continue
+            try:
+                raw_bytes = base64.b64decode(reply.get("data", ""))
+            except Exception:
+                sys.stderr.write("a packet did not decode, skipped\n")
+                continue
+            if reply.get("type", 1) == 0:
+                if mode == "line":
+                    sys.stdout.write("hdr %s\n" % raw_bytes.hex())
+                elif mode == "bytes":
+                    sys.stdout.write("hdr %s\n" % spaced_bytes(raw_bytes))
+                else:
+                    sys.stdout.write("# pcap file header, link type %d\n"
+                                     % pcap_link_type(raw_bytes))
+                sys.stdout.flush()
+                continue
+            sec  = reply.get("sec", 0)
+            usec = reply.get("usec", 0)
+            if t_zero is None:
+                t_zero = sec + usec / 1000000.0
+            if mode in ("line", "bytes"):
+                body = (raw_bytes.hex() if mode == "line"
+                        else spaced_bytes(raw_bytes))
+                sys.stdout.write("pkt %d %d.%06d %d/%d %s\n"
+                                 % (reply.get("pkt_nb", 0), sec, usec,
+                                    reply.get("caplen", len(raw_bytes)),
+                                    reply.get("len", len(raw_bytes)),
+                                    body))
+            else:
+                sys.stdout.write(hex_dump(reply.get("pkt_nb", 0), sec, usec,
+                                          t_zero,
+                                          reply.get("caplen", len(raw_bytes)),
+                                          reply.get("len", len(raw_bytes)),
+                                          raw_bytes))
+            sys.stdout.flush()
+    except KeyboardInterrupt:
+        try:
+            door.send_json({"fctident": "pcap_close", "tid": 0,
+                            "name": name, "num": num})
+        except Exception:
+            pass
+        if mode == "count":
+            tot_pkt += cnt_pkt
+            tot_bytes += cnt_bytes
+            tot_gap += cnt_gap
+            dt = max(time.time() - t_start, 0.001)
+            sys.stdout.write("total %d packets %.1f MB in %.1fs: %d pkt/s "
+                             "%.1f Mbit/s, %d dropped on the way\n"
+                             % (tot_pkt, tot_bytes / 1e6, dt, tot_pkt / dt,
+                                tot_bytes * 8 / dt / 1e6, tot_gap))
+        sys.stdout.write("\n")
+        return 0
+    except IOError as err:
+        if isinstance(err, BrokenPipeError) and stdout_gone():
+            raise
+        sys.stderr.write("%s\n" % err)
+        return 2
+    finally:
+        door.close()
+
+# A cnf may start a process too (a snf for sniff=on, a passt for publish=),
+# and the server answers when it is up.
+ACK_BY_VERB = {
+    "add":    60.0,
+    "del":    30.0,
+    "plug":   30.0,
+    "unplug": 30.0,
+    "cnf":    30.0,
+    "save":   60.0,
+}
+ACK_DEFAULT = 2.0
+
+ACK_MUST_ANSWER = ("add", "del", "plug", "unplug", "cnf", "save")
+
+# The wait of a question that is not a mutation, and of every connect.
+WAIT_DEFAULT = 15.0
+
+def ack_budget(argv, wait):
+    """Seconds to wait for the answer of a mutation: --wait, when given."""
+    if wait is not None:
+        return wait
+    if argv[:2] == ["dump", "ip"]:
+        return ACK_BY_VERB["cnf"]
+    return ACK_BY_VERB.get(argv[0] if argv else "", ACK_DEFAULT)
+
+def spoken(argv):
+    """The command as it was typed, for a message about it."""
+    return " ".join(str(a) for a in argv)
+
+# What is said when a verb does not succeed.
+EXIT_OK, EXIT_REFUSED, EXIT_LOCAL, EXIT_BUG = 0, 1, 2, 3
+
+CTX = {"argv": [], "net": "", "ip": "", "port": 0}
+
+def ctx_set(**kw):
+    CTX.update((k, v) for k, v in kw.items() if v not in (None, ""))
+
+def fault(what, reason="", hints=(), code=EXIT_LOCAL):
+    """Print the standard block and give back the exit code.
+
+    what   -- one line, what did not happen
+    reason -- the detail, usually from the far end or from the OS
+    hints  -- commands to try, printed as commands
+    """
+    out = ["cloonix: %s" % what]
+    if CTX["argv"]:
+        out.append("  asked : %s" % spoken(CTX["argv"]))
+    where = ""
+    if CTX["net"]:
+        where = "net %s" % CTX["net"]
+    if CTX["ip"]:
+        where += "%sthe server at %s:%s" % (" -- " if where else "",
+                                            CTX["ip"], CTX["port"])
+    if where:
+        out.append("  where : %s" % where)
+    if reason:
+        for i, line in enumerate(str(reason).rstrip().splitlines()):
+            out.append("  %s %s" % ("reason:" if i == 0 else "       ", line))
+    for h in hints:
+        out.append("  try   : %s" % h)
+    sys.stderr.write("\n".join(out) + "\n")
+    return code
+
+def refused(ip, port, argv, msg, reply):
+    """The server said no. Print what was asked and what came back."""
+    why = reply.get("txt") or reply.get("reason") or ""
+    sys.stderr.write("REFUSED by the cloonix server at %s:%d\n" % (ip, port))
+    sys.stderr.write("  asked : %s\n" % spoken(argv))
+    sys.stderr.write("  reason: %s\n" % (why or "(the server gave none)"))
+    if why and why == msg.get("name"):
+        sys.stderr.write("  that is the object name and nothing else, so "
+                         "the server has no '%s'\n" % why)
+    if why.startswith("CNT ERROR"):
+        sys.stderr.write("  the container was refused by suid_power; the "
+                         "lines before its refusal are in the server log:\n")
+        sys.stderr.write("    bundle: sudo journalctl -b | grep -i "
+                         "\"suid\\|crun\"\n")
+        sys.stderr.write("    toy:    ./<net>cmd shell, then "
+                         "grep -i \"suid\\|crun\" /var/log/syslog\n")
+    return 1
+
+def no_answer(ip, port, argv, msg, budget, waited=0.0):
+    """Nothing came back. Silence is NOT success for these verbs.
+
+    It was, and that is the whole reason this function exists: an add that
+    the server refused three seconds later printed nothing and exited 0,
+    and every script built on that exit code believed it.
+    """
+    verb = argv[0] if argv else ""
+    if verb not in ACK_MUST_ANSWER and argv[:2] != ["dump", "ip"]:
+        return 0
+    sys.stderr.write("NO ANSWER from the cloonix server at %s:%d "
+                     "after %.1fs (waited up to %gs)\n"
+                     % (ip, port, waited, budget))
+    sys.stderr.write("  asked : %s\n" % spoken(argv))
+    if waited < budget * 0.5:
+        sys.stderr.write("  It came back well before the wait ran out, so "
+                         "the server closed the\n"
+                         "  connection rather than took too long.\n")
+    else:
+        sys.stderr.write("  This verb is answered when it has worked and "
+                         "when it has failed,\n"
+                         "  so neither happened in that time.\n")
+    sys.stderr.write("  What the server has now:\n")
+    sys.stderr.write("    cloonix cli <net> dump commands\n")
+    sys.stderr.write("  The server side:\n")
+    sys.stderr.write("    bundle: sudo journalctl -b | grep -i "
+                     "\"cloonix\\|suid\\|crun\"\n")
+    sys.stderr.write("    toy:    ./<net>cmd shell, then grep -i "
+                     "\"cloonix\\|suid\\|crun\" /var/log/syslog\n")
+    sys.stderr.write("  Longer, if the machine is simply slow:\n")
+    sys.stderr.write("    cloonix --wait %g cli ...\n" % (budget * 4))
+    return 1
+
+def commands_now(door):
+    """The lines of dump commands, one round trip, answered on the spot."""
+    door.send_json({"fctident": "list_commands_req", "tid": 0,
+                    "is_layout": 0})
+    while True:
+        got = door.recv_json()
+        if got is None:
+            return []
+        if got.get("fctident") == "list_commands_resp":
+            return [l.split() for l in got.get("items") or []]
+
+def lan_of(lines, name, itf):
+    """The lan, or air, of an interface as dump commands has it, "" on
+    none. A wlan on the air of its kind is in no plug line."""
+    kind, nb_wlan = "", 0
+    for w in lines:
+        if len(w) < 6 or w[4] != name and w[5:6] != [name]:
+            continue
+        if w[3] == "add" and w[5] == name:
+            kind = w[4]
+            nb_wlan = int(dict(x.split("=", 1) for x in w if "=" in x)
+                          .get("wlan", 0))
+        elif w[3] == "plug" and w[4] == name and w[5:-1] == ([itf] if itf
+                                                            else []):
+            return w[-1]
+        elif w[3] == "unplug" and w[4] == name and w[5:6] == [itf]:
+            return ""
+    if itf.startswith("wlan") and int(itf[4:]) < nb_wlan:
+        return CNTWIFI if kind == "cnt" else KVMWIFI
+    return ""
+
+def cable_first(door, msg, budget, itf):
+    """What the net settles before a plug or an unplug: an unplug without
+    a lan finds it, a plug onto the lan it is on is done already, a plug of
+    an eth cabled elsewhere unplugs it first. None to go on, else the exit
+    code."""
+    name = msg["name"]
+    said = " ".join([name] + ([itf] if itf else []))
+    now = lan_of(commands_now(door), name, itf)
+    if msg["fctident"] == "del_lan_endp":
+        if not msg["lan"]:
+            if not now:
+                sys.stderr.write("cloonix: %s is on no lan, nothing to "
+                                 "unplug\n" % said)
+                return 0
+            msg["lan"] = now
+        return None
+    if now == msg["lan"]:
+        sys.stderr.write("cloonix: %s is on %s already\n" % (said, now))
+        return 0
+    # a wlan changes air in one move of the server
+    if not now or itf.startswith("wlan"):
+        return None
+    got = cable_ask(door, dict(msg, fctident="del_lan_endp", lan=now), budget)
+    if got.get("fctident") != "status_ok":
+        return fault("%s: the unplug from %s was refused" % (said, now),
+                     got.get("txt") or "no answer", (), EXIT_REFUSED)
+    got = cable_ask(door, msg, budget)
+    if got.get("fctident") == "status_ok":
+        sys.stderr.write("cloonix: %s was on %s, moved to %s\n"
+                         % (said, now, msg["lan"]))
+        return 0
+    # refused where it was going: put back where it was
+    back = cable_ask(door, dict(msg, lan=now), budget)
+    return fault("%s: the plug onto %s was refused" % (said, msg["lan"]),
+                 got.get("txt") or got.get("reason") or "no answer",
+                 () if back.get("fctident") == "status_ok" else
+                 ("cloonix cli %s plug %s %s" % (CTX["net"] or "<net>", said,
+                                                 now),), EXIT_REFUSED)
+
+def cable_ask(door, msg, budget):
+    """One plug or unplug and its answer, {} when none came."""
+    door.send_json(msg)
+    door.sock.settimeout(budget)
+    while True:
+        try:
+            got = door.recv_json()
+        except socket.timeout:
+            return {}
+        if got is None:
+            return {}
+        if got.get("fctident") in ("status_ok", "status_ko"):
+            return got
+
+def cable(ip, port, door, argv, msg, budget, raw):
+    """A plug or an unplug, asked again while the same interface is being
+    cabled or uncabled by an earlier request."""
+    itf = argv[2] if len(argv) > 2 and is_iface(argv[2]) else ""
+    deadline = time.time() + budget
+    while True:
+        said = cable_first(door, msg, budget, itf)
+        if said is not None:
+            return said
+        got = cable_ask(door, msg, max(deadline - time.time(), 1.0))
+        why = got.get("txt") or got.get("reason") or ""
+        if got.get("fctident") != "status_ko" or \
+           not ("is being" in why or "already waiting" in why) or \
+           time.time() > deadline:
+            break
+        time.sleep(0.5)
+    if not got:
+        return no_answer(ip, port, argv, msg, budget, budget)
+    if got.get("fctident") == "status_ko":
+        return refused(ip, port, argv, msg, got)
+    if raw:
+        print(json.dumps(got, indent=2, sort_keys=True))
+    return 0
+
+def do_msg(ip, port, passwd, argv, timeout, raw, wait=None,
+           nets=None, local_net=None):
+    """Send one message, and print what comes back.
+
+    argv[0] is the verb, the net having been resolved by the caller. Only
+    dump waits for an answer of its own; everything else is a mutation and
+    the server says status_ok or nothing.
+    """
+    if not argv:
+        return 2
+
+    if argv[0] == "rpc":
+        if len(argv) != 2:
+            sys.stderr.write("rpc wants one json argument\n")
+            return 2
+        try:
+            msg = json.loads(argv[1])
+        except ValueError as err:
+            sys.stderr.write("that is not valid json: %s\n" % err)
+            return 2
+        expect = None
+    else:
+        msg = to_json(argv, nets, local_net)
+        if msg is None:
+            sys.stderr.write("cannot map that to a message: %s\n"
+                             % " ".join(argv))
+            return 2
+        # to_json has already refused a dump with nothing after it, so argv[1]
+        # is there whenever the verb is dump.
+        if argv[0] == "dump":
+            expect = ("ovs_cmd_resp"
+                      if (argv[1] in OVS_TOOLS or argv[1] == "namespaces")
+                      else EXPECT.get(argv[1]))
+        else:
+            expect = None
+
+    try:
+        door = Doorways(ip, port, passwd, timeout)
+    except OSError as err:
+        what, why, hints = connect_error(ip, port, err, local_net)
+        return fault(what, why, hints)
+    try:
+        # a wlan is captured with its air: the air is armed
+        if argv[0] == "cnf" and msg.get("fctident") == "snf_add" and \
+           msg.get("num", 0) >= WLAN_NUM_BASE:
+            itf = "wlan%d" % (msg["num"] - WLAN_NUM_BASE)
+            air = lan_of(commands_now(door), msg["name"], itf)
+            if not air:
+                return fault("%s %s is on no air, nothing to capture"
+                             % (msg["name"], itf))
+            sys.stderr.write("cloonix: %s %s is captured with its air: cnf "
+                             "%s sniff=%s\n" % (msg["name"], itf, air,
+                             "on" if msg["val"] else "off"))
+            msg = dict(msg, name=air, num=0)
+        # rpc is sent as it is
+        if argv[0] != "rpc" and \
+           msg.get("fctident") in ("add_lan_endp", "del_lan_endp"):
+            return cable(ip, port, door, argv, msg, ack_budget(argv, wait),
+                         raw)
+        if msg.get("fctident") == "c2c_add":
+            door.send_json(msg, val=DOORS_VAL_C2C)
+        else:
+            door.send_json(msg)
+        if expect is None:
+            budget = ack_budget(argv, wait)
+            deadline = time.time() + budget
+            reply = None
+            while True:
+                left = deadline - time.time()
+                if left <= 0:
+                    break
+                door.sock.settimeout(left)
+                got = door.recv_json()
+                if got is None:
+                    break
+                ident = got.get("fctident", "")
+                if ident in ("status_ok", "status_ko"):
+                    reply = got
+                    break
+                if "raw" in got:
+                    sys.stderr.write("undecodable answer from the server: "
+                                     "%r\n" % got["raw"][:300])
+                if raw:
+                    print(json.dumps(got, indent=2, sort_keys=True))
+
+            if reply is None:
+                return no_answer(ip, port, argv, msg, budget,
+                                 budget - max(deadline - time.time(), 0))
+
+            ident = reply.get("fctident", "")
+            if ident == "status_ko":
+                return refused(ip, port, argv, msg, reply)
+            if raw:
+                print(json.dumps(reply, indent=2, sort_keys=True))
+            # whatip= is a question: its answer is the text of the ok
+            elif str(msg.get("cmd", "")).startswith("whatip="):
+                said = reply.get("txt") or reply.get("reason") or ""
+                print(said[3:] if said.startswith("OK=") else said)
+            return 0
+        while True:
+            reply = door.recv_json()
+            if reply is None:
+                return fault(
+                    "no answer to %s within the %gs timeout" % (argv[0],
+                                                               timeout),
+                    "the server never sent a %s" % expect,
+                    ("cloonix --wait 60 cli %s %s" % (CTX["net"] or "<net>",
+                                                      spoken(argv)),
+                     "cloonix cli %s dump commands" % (CTX["net"] or "<net>")),
+                    EXIT_REFUSED)
+            if reply.get("fctident") == expect:
+                if expect == "ovs_cmd_resp" and not raw:
+                    print(render_ovs(reply))
+                    return 1 if reply.get("status") else 0
+                if argv[1] == "pid" and not raw:
+                    print(render_pid(reply))
+                elif argv[1] == "images" and not raw:
+                    print(render_images(reply))
+                elif argv[1] == "commands" and not raw:
+                    # One command per line, so the output is the script the
+                    # help says it is: sh on it rebuilds the net.
+                    print("\n".join(reply.get("items") or []))
+                elif argv[1] == "topo" and not raw:
+                    print(render_topo_short(reply))
+                elif argv[1] == "drawing" and not raw:
+                    print(render_atop(reply))
+                else:
+                    print(json.dumps(reply, indent=2, sort_keys=True))
+                return 0
+    except IOError as err:
+        if isinstance(err, BrokenPipeError) and stdout_gone():
+            raise
+        sys.stderr.write("%s\n" % err)
+        return 2
+    finally:
+        door.close()
+
+class GuestLeg(Doorways):
+    """A doorways leg wired through to a program inside one guest."""
+
+    def __init__(self, ip, port, passwd, vm, timeout=15):
+        self.vm = vm
+        Doorways.__init__(self, ip, port, passwd, timeout)
+
+    def _open_link(self):
+        req = "DBSSH_CLI_DOORS_REQ name=%s cookie=%s wire=%d\0" % (
+              self.vm, CXP_COOKIE, CLOONIX_WIRE_VERSION)
+        self.send_raw(req.encode("utf-8"), type_=DOORS_TYPE_DBSSH,
+                      val=DOORS_VAL_INIT_LINK)
+        got = self.recv()
+        if got is None:
+            raise IOError("no answer to the leg request: wrong password, or "
+                          "the server is not listening")
+        _type, val, payload = got
+        txt = payload.decode("utf-8", "replace").rstrip("\0")
+        if val == DOORS_VAL_LINK_KO or txt.startswith("KO"):
+            raise IOError("cloonix refused the leg to '%s': %s" % (self.vm, txt))
+        if not txt.startswith("OK"):
+            raise IOError("unexpected answer to the leg request: %r" % txt)
+
+    def write(self, data):
+        """Raw bytes toward the program inside the guest."""
+        if isinstance(data, str):
+            data = data.encode()
+        room = MAX_BUF - HDR
+        while data:
+            self.send_raw(data[:room], type_=DOORS_TYPE_DBSSH,
+                          val=DOORS_VAL_NONE)
+            data = data[room:]
+
+    def read(self):
+        """Next chunk of raw bytes from the guest, or None at end."""
+        got = self.recv()
+        if got is None:
+            return None
+        _type, val, payload = got
+        if val in (DOORS_VAL_LINK_OK, DOORS_VAL_INIT_LINK):
+            return b""
+        return payload
+
+class UnixLeg:
+    """The same read/write contract as GuestLeg, but straight onto a unix
+    socket. Used with --via-unix to exercise cloonix-cxp-srv on its own,
+    inside the guest or on a workstation, with no cloonix in the path."""
+
+    def __init__(self, path, timeout=15):
+        self.timeout = timeout
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.settimeout(timeout)
+        self.sock.connect(path)
+
+    def write(self, data):
+        if isinstance(data, str):
+            data = data.encode()
+        self.sock.sendall(data)
+
+    def read(self):
+        try:
+            data = self.sock.recv(65536)
+        except socket.timeout:
+            return b""
+        return data if data else None
+
+    def no_timeout(self):
+        self.sock.settimeout(None)
+
+    def close(self):
+        try:
+            self.sock.close()
+        except OSError:
+            pass
+
+def do_probe(ip, port, passwd, vm, timeout):
+    """cli <net> trace probe <guest> -- where the pipe into a guest breaks.
+
+    ssh, scp and files cross five things at once: the tcp to proxymous, the
+    hmac on every frame, the leg the server routes by guest name, the agent
+    on the virtio channel, and the program the agent hands the bytes to.
+    When one of them breaks, the message names the verb and not the layer,
+    so the search starts at the wrong end. This crosses them one at a time
+    and prints how far it got.
+
+    It never speaks. cloonix-cxp-srv answers and says nothing of its own, so
+    SILENCE AT THE FAR END IS THE HEALTHY ANSWER -- which is the repair
+    here: Doorways.recv gives None for a timeout and for a close alike, this
+    read the None as a close, and so reported "the guest closed the pipe" on
+    every working guest. It now asks recv.quiet which of the two it was.
+    """
+    wait = min(timeout, 5.0)
+    print("probe '%s' through the cloonix at %s:%d" % (vm, ip, port))
+
+    def step(name, verdict, note=""):
+        print("  %-20s %-14s %s" % (name, verdict, note))
+
+    try:
+        leg = GuestLeg(ip, port, passwd, vm, timeout)
+    except OSError as err:
+        # IOError is OSError in python3, so the two cannot be told apart by
+        # type.
+        if getattr(err, "errno", None) is not None:
+            step("tcp to proxymous", "FAILED", err)
+            print("\nnothing is listening there, so no layer above it was "
+                  "reached and the")
+            print("guest is not implicated at all.")
+            print("  try   : cloonix start %s"
+                  % (CTX["net"] or "<net>"))
+        else:
+            step("tcp to proxymous", "ok", "something is listening")
+            step("leg to '%s'" % vm, "FAILED", err)
+            print("\nthe tcp is up, so the server is refusing the leg and "
+                  "the network is not")
+            print("at fault. Three things do that: a cloonix_passwd this "
+                  "server does not")
+            print("share, a guest name it does not have, or a wire version "
+                  "it does not")
+            print("speak.")
+            print("  try   : cloonix cli %s dump topo   the guests it does "
+                  "have" % (CTX["net"] or "<net>"))
+        return 2
+
+    step("tcp to proxymous", "ok", "something is listening")
+    step("hmac on the frame", "ok", "the cloonix_passwd of this net matches")
+    step("leg to '%s'" % vm, "ok", "the server knows the guest and routed it")
+
+    try:
+        got, quiet = b"", False
+        deadline = time.time() + wait
+        while True:
+            left = deadline - time.time()
+            if left <= 0:
+                quiet = True
+                break
+            leg.sock.settimeout(left)
+            data = leg.read()
+            if data is None:
+                quiet = leg.quiet
+                break
+            if data:
+                got = data
+                break
+
+        if quiet:
+            step("agent + virtio", "ok", "the leg stayed up for %.1fs" % wait)
+            step("far end", "silent", "which is what cloonix-cxp-srv does")
+            print("\nthe pipe is whole end to end. ssh, scp and files to "
+                  "'%s' have nothing" % vm)
+            print("in their way, so a failure of one of those is in what it "
+                  "asks for and")
+            print("not in how it gets there.")
+            return 0
+
+        if not got:
+            step("agent + virtio", "ok", "the server routed the leg")
+            step("far end", "CLOSED", "it hung up without a word")
+            print("\nthe guest side dropped the leg, so the agent could not "
+                  "hand the bytes")
+            print("to cloonix-cxp-srv inside '%s': it is not running there, "
+                  "or the" % vm)
+            print("insider-agents iso in that guest is not the one this "
+                  "client speaks to.")
+            return 1
+
+        step("agent + virtio", "ok", "%d bytes came back" % len(got))
+        if got.startswith(b"SSH-"):
+            step("far end", "WRONG", bytes(got[:40]))
+            print("\nthat is an ssh banner, so the far end is dropbear and "
+                  "not cloonix-cxp-srv.")
+            print("Every layer under it works. Build and install the "
+                  "insider-agents iso and")
+            print("reboot '%s' -- the program comes from the iso, so no "
+                  "guest image has to" % vm)
+            print("be rebuilt.")
+            return 1
+
+        step("far end", "spoke first", bytes(got[:40]))
+        print("\ncloonix-cxp-srv is silent until it is spoken to, so "
+              "something else is on")
+        print("the other end of the cookie. The bytes above are what it "
+              "said.")
+        return 1
+    finally:
+        leg.close()
+
+OP_EXEC, OP_PTY, OP_STDIN, OP_EOF, OP_WINCH = 1, 2, 3, 4, 5
+OP_PUT, OP_DATA, OP_END, OP_GET = 6, 7, 8, 9
+OP_STDOUT, OP_STDERR, OP_EXIT, OP_ERROR = 0x81, 0x82, 0x83, 0x84
+OP_META, OP_GDATA, OP_GEND = 0x85, 0x86, 0x87
+OP_PUTTREE, OP_ENTRY, OP_GETTREE, OP_GENTRY = 0x0A, 0x0B, 0x0C, 0x8B
+OP_LIST = 0x0D
+
+class Cxp:
+    """The message layer above a GuestLeg."""
+
+    def __init__(self, leg):
+        self.leg = leg
+        self.buf = bytearray()
+        self.greeted = None
+        self.lock = threading.Lock()
+        # The guest reports in its EXIT payload where a transfer actually
+        # landed, which is not always where the caller thinks: there is no
+        # shell in the...
+        self.exit_info = {}
+
+    def send(self, op, payload=b""):
+        if isinstance(payload, dict):
+            payload = json.dumps(payload, separators=(",", ":")).encode()
+        elif isinstance(payload, str):
+            payload = payload.encode()
+        with self.lock:
+            self.leg.write(struct.pack(">IB", len(payload) + 1, op) + payload)
+
+    def recv(self):
+        """(op, payload) or None when the pipe closes."""
+        while True:
+            # The first four bytes say whether this is a frame at all.
+            if (self.greeted is None) and (len(self.buf) >= 4):
+                self.greeted = bytes(self.buf[:4])
+                if self.greeted == b"SSH-":
+                    raise NeedCxp()
+            if len(self.buf) >= 5:
+                ln = struct.unpack(">I", self.buf[:4])[0]
+                if len(self.buf) >= 4 + ln:
+                    op = self.buf[4]
+                    payload = bytes(self.buf[5:4 + ln])
+                    del self.buf[:4 + ln]
+                    return op, payload
+            chunk = self.leg.read()
+            if chunk is None:
+                return None
+            self.buf += chunk
+
+    def pump(self, on_out, on_err):
+        """Run until EXIT or ERROR. Returns the exit code."""
+        while True:
+            got = self.recv()
+            if got is None:
+                return 255
+            op, payload = got
+            if op == OP_STDOUT:
+                on_out(payload)
+            elif op == OP_STDERR:
+                on_err(payload)
+            elif op == OP_EXIT:
+                try:
+                    info = json.loads(payload.decode())
+                except ValueError:
+                    return 0
+                self.exit_info = info if isinstance(info, dict) else {}
+                return int(self.exit_info.get("code", 0))
+            elif op == OP_ERROR:
+                try:
+                    txt = json.loads(payload.decode()).get("txt", "")
+                except ValueError:
+                    txt = payload.decode("utf-8", "replace")
+                sys.stderr.write("guest: %s\n" % txt)
+                return 255
+
+def start_stdin_thread(cxp):
+    """Pump our stdin into the running command, then close it. A command that
+    reads stdin, wc for instance, needs the EOF or it waits for ever; one that
+    ignores stdin is unaffected. The thread is a daemon, so it never holds the
+    process open after the command has exited."""
+    def run():
+        try:
+            while True:
+                # os.read on the raw descriptor, not sys.stdin.buffer: a
+                # daemon thread parked inside a BufferedReader still holds its
+                # lock when the interpreter...
+                data = os.read(0, 32768)
+                if not data:
+                    break
+                cxp.send(OP_STDIN, data)
+        except (OSError, ValueError):
+            pass
+        try:
+            cxp.send(OP_EOF)
+        except (OSError, IOError):
+            pass
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    return t
+
+def term_size():
+    try:
+        import shutil
+        sz = shutil.get_terminal_size((80, 24))
+        return sz.columns, sz.lines
+    except Exception:
+        return 80, 24
+
+_WIN_STD_INPUT          = 0xFFFFFFF6      # -10
+_WIN_STD_OUTPUT         = 0xFFFFFFF5      # -11
+_WIN_INVALID_HANDLE     = -1
+_WIN_ENABLE_PROCESSED_INPUT   = 0x0001   # ctrl-c handled locally
+_WIN_ENABLE_LINE_INPUT        = 0x0002   # wait for the return key
+_WIN_ENABLE_ECHO_INPUT        = 0x0004   # print what is typed
+_WIN_ENABLE_VIRTUAL_TERMINAL_INPUT = 0x0200   # keys as escape sequences
+_WIN_ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004  # honour escapes on output
+
+def _win_raw_mode_on():
+    """The windows half of raw_mode_on. Two handles have to be changed, not
+    one: the input handle so that keys arrive unbuffered, unechoed and as
+    escape sequences rather than as key events, and the output handle so
+    that the escapes the guest sends are acted on instead of printed. The
+    second is what makes vtysh, top and anything full screen usable."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+    except ImportError:
+        return None
+    try:
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.GetStdHandle.argtypes = [wintypes.DWORD]
+        k32.GetStdHandle.restype = wintypes.HANDLE
+        k32.GetConsoleMode.argtypes = [wintypes.HANDLE,
+                                       ctypes.POINTER(wintypes.DWORD)]
+        k32.GetConsoleMode.restype = wintypes.BOOL
+        k32.SetConsoleMode.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+        k32.SetConsoleMode.restype = wintypes.BOOL
+
+        hin = k32.GetStdHandle(_WIN_STD_INPUT)
+        hout = k32.GetStdHandle(_WIN_STD_OUTPUT)
+        if (not hin) or (not hout):
+            return None
+        if (hin == _WIN_INVALID_HANDLE) or (hout == _WIN_INVALID_HANDLE):
+            return None
+        in_mode = wintypes.DWORD()
+        out_mode = wintypes.DWORD()
+        # GetConsoleMode fails when the handle is not a console at all -- a
+        # pipe, or the mintty terminal that git bash uses.
+        if not k32.GetConsoleMode(hin, ctypes.byref(in_mode)):
+            return None
+        if not k32.GetConsoleMode(hout, ctypes.byref(out_mode)):
+            return None
+        new_in = in_mode.value
+        new_in &= ~(_WIN_ENABLE_PROCESSED_INPUT |
+                    _WIN_ENABLE_LINE_INPUT |
+                    _WIN_ENABLE_ECHO_INPUT)
+        new_in |= _WIN_ENABLE_VIRTUAL_TERMINAL_INPUT
+        new_out = out_mode.value | _WIN_ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        if not k32.SetConsoleMode(hin, new_in):
+            return None
+        if not k32.SetConsoleMode(hout, new_out):
+            k32.SetConsoleMode(hin, in_mode.value)
+            return None
+        return ("win", k32, hin, in_mode.value, hout, out_mode.value)
+    except Exception:
+        return None
+
+def raw_mode_on():
+    """Hand every keystroke straight to the guest: no local echo, no line
+    buffering, no local interpretation of ctrl-c. Returns what to restore,
+    or None when there is no terminal to change (a pipe, or a console the
+    api refused). Windows is handled too, through the console api, since it
+    has no termios: without it an interactive shell keeps local echo and
+    line buffering and nothing full screen works."""
+    if not sys.stdin.isatty():
+        return None
+    try:
+        import termios, tty
+    except ImportError:
+        return _win_raw_mode_on()
+    try:
+        fd = sys.stdin.fileno()
+        saved = termios.tcgetattr(fd)
+        tty.setraw(fd)
+        return ("posix", fd, saved)
+    except Exception:
+        return None
+
+def raw_mode_off(saved):
+    if not saved:
+        return
+    try:
+        if saved[0] == "win":
+            _, k32, hin, in_mode, hout, out_mode = saved
+            k32.SetConsoleMode(hin, in_mode)
+            k32.SetConsoleMode(hout, out_mode)
+            return
+        import termios
+        _, fd, attrs = saved
+        termios.tcsetattr(fd, termios.TCSADRAIN, attrs)
+    except Exception:
+        pass
+
+def _winch_poll(cxp):
+    """Windows has no SIGWINCH, so the size is watched instead of waited on.
+    A daemon thread, half a second apart, sending only on a change: nothing
+    to stop at the end, and no traffic while the window sits still."""
+    def loop():
+        last = term_size()
+        while True:
+            time.sleep(0.5)
+            try:
+                now = term_size()
+            except Exception:
+                return
+            if now == last:
+                continue
+            last = now
+            try:
+                cxp.send(OP_WINCH, {"cols": now[0], "rows": now[1]})
+            except (OSError, IOError):
+                return
+            except Exception:
+                return
+    th = threading.Thread(target=loop)
+    th.daemon = True
+    th.start()
+
+def winch_on(cxp):
+    """Tell the guest when the local window is resized, so full screen
+    programs inside it redraw at the right size."""
+    if not hasattr(signal, "SIGWINCH"):
+        _winch_poll(cxp)
+        return
+
+    def handler(_sig, _frm):
+        cols, rows = term_size()
+        try:
+            cxp.send(OP_WINCH, {"cols": cols, "rows": rows})
+        except (OSError, IOError):
+            pass
+    try:
+        signal.signal(signal.SIGWINCH, handler)
+    except (ValueError, OSError):
+        _winch_poll(cxp)
+
+def human(n):
+    """A size a person reads at a glance."""
+    n = float(n)
+    for unit in ("B", "KB", "MB", "GB"):
+        if (n < 1024.0) or (unit == "GB"):
+            if unit == "B":
+                return "%d B" % int(n)
+            return "%.1f %s" % (n, unit)
+        n /= 1024.0
+
+class Progress:
+    """One line, rewritten in place, while a transfer runs.
+
+    On stderr and only when stderr is a terminal: stdout stays exactly what
+    the command produced, so a redirect or a pipe carries no decoration at
+    all. It exists because a tunnel into a guest is not fast and a client
+    that prints nothing until it finishes leaves the person unable to tell
+    work from a hang."""
+
+    GAP = 0.15
+
+    def __init__(self, what, total=None):
+        self.on = sys.stderr.isatty()
+        self.what = what
+        self.total = total
+        self.done = 0
+        self.items = 0
+        self.t0 = time.time()
+        self.last = 0.0
+
+    def item(self):
+        self.items += 1
+
+    def add(self, n):
+        self.done += n
+        self._show(False)
+
+    def _line(self):
+        el = time.time() - self.t0
+        out = "%s  %s" % (self.what, human(self.done))
+        if self.total:
+            out += " / %s  %d%%" % (human(self.total),
+                                    int(100.0 * self.done /
+                                        max(self.total, 1)))
+        if self.items:
+            out += "  %d file%s" % (self.items,
+                                    "" if self.items == 1 else "s")
+        # Below a fifth of a second the figure is noise, not a rate.
+        if el > 0.2:
+            out += "  %s/s" % human(self.done / el)
+        return out + "  %.1fs" % el
+
+    def _show(self, force):
+        if not self.on:
+            return
+        now = time.time()
+        if (not force) and (now - self.last < self.GAP):
+            return
+        self.last = now
+        sys.stderr.write("\r\033[K" + self._line())
+        sys.stderr.flush()
+
+    def end(self):
+        self._show(True)
+        if self.on:
+            sys.stderr.write("\n")
+            sys.stderr.flush()
+
+class NeedCxp(Exception):
+    """The far end of the leg greeted us with an ssh banner, so it is not
+    cloonix-cxp-srv.
+
+    This used to be a question asked before every command: wait two seconds,
+    and take silence as the answer. cloonix-cxp-srv is silent by design, so
+    that timeout expired in full on every ssh and every scp -- two seconds of
+    nothing before any work began. The banner, when there is one, arrives on
+    its own; Cxp.recv now notices it on the first bytes it reads and costs
+    nothing when there is none."""
+
+NEED_CXP = """the guest is still answering with the banner, so the far
+end of the pipe is not cloonix-cxp-srv.
+
+Build and install the replacement, then reboot the guest: the program comes
+from the insider-agents iso, so no guest image has to be rebuilt.
+"""
+
+def do_ssh(mkleg, argv):
+    try:
+        leg = mkleg()
+    except (OSError, IOError) as err:
+        sys.stderr.write("%s\n" % err)
+        return 2
+    try:
+        # From here the guest drives the pace, however long it takes.
+        leg.no_timeout()
+        cxp = Cxp(leg)
+        out = sys.stdout.buffer
+        err = sys.stderr.buffer
+        if len(argv) == 1:
+            cmd = argv[0]
+        else:
+            cmd = " ".join(shlex.quote(a) for a in argv)
+        if cmd:
+            cxp.send(OP_EXEC, {"cmd": cmd})
+            # Forward stdin from a separate thread.
+            start_stdin_thread(cxp)
+            return cxp.pump(lambda b: (out.write(b), out.flush()),
+                            lambda b: (err.write(b), err.flush()))
+
+        # Interactive: a shell on a pty in the guest.
+        cols, rows = term_size()
+        cxp.send(OP_PTY, {"cmd": "", "cols": cols, "rows": rows})
+        saved = raw_mode_on()
+        winch_on(cxp)
+        try:
+            start_stdin_thread(cxp)
+            # A pty merges stderr into stdout, exactly as a terminal does.
+            return cxp.pump(lambda b: (out.write(b), out.flush()),
+                            lambda b: (out.write(b), out.flush()))
+        finally:
+            raw_mode_off(saved)
+    finally:
+        leg.close()
+
+def do_scp(mkleg_for, argv):
+    """cloonix cli scp [-r] <net> <src> <dst>, one side being <vm>:<path>."""
+    recursive = False
+    rest = []
+    for a in argv:
+        if a in ("-r", "-R", "--recursive"):
+            recursive = True
+        else:
+            rest.append(a)
+    if len(rest) != 2:
+        sys.stderr.write("scp wants a source and a destination\n"
+                         "  cloonix cli <net> scp <file> <vm>:<path>\n"
+                         "  cloonix cli <net> scp <vm>:<path> <file>\n"
+                         "  cloonix cli <net> scp -r <dir> <vm>:<path>\n")
+        return 2
+    src, dst = rest
+    if ":" in src and not src.startswith("/"):
+        vm, _, rpath = src.partition(":")
+        if recursive:
+            return scp_get_dir(mkleg_for(vm), rpath, dst)
+        return scp_get(mkleg_for(vm), rpath, dst)
+    if ":" in dst and not dst.startswith("/"):
+        vm, _, rpath = dst.partition(":")
+        if recursive:
+            return scp_put_dir(mkleg_for(vm), src, rpath)
+        if os.path.isdir(src):
+            sys.stderr.write("%s is a directory, add -r to copy it whole\n"
+                             % src)
+            return 2
+        return scp_put(mkleg_for(vm), src, rpath)
+    sys.stderr.write("one of the two paths must be <vm>:<path>\n")
+    return 2
+
+def scp_put(mkleg, local, rpath):
+    try:
+        st = os.stat(local)
+        src = open(local, "rb")
+    except OSError as err:
+        sys.stderr.write("%s\n" % err)
+        return 2
+    try:
+        leg = mkleg()
+    except (OSError, IOError) as err:
+        src.close()
+        sys.stderr.write("%s\n" % err)
+        return 2
+    try:
+        # From here the guest drives the pace, however long it takes.
+        leg.no_timeout()
+        cxp = Cxp(leg)
+        prog = Progress(os.path.basename(local), st.st_size)
+        cxp.send(OP_PUT, {"path": rpath,
+                          "name": os.path.basename(local),
+                          "mode": st.st_mode & 0o777,
+                          "size": st.st_size})
+        try:
+            while True:
+                chunk = src.read(32768)
+                if not chunk:
+                    break
+                cxp.send(OP_DATA, chunk)
+                prog.add(len(chunk))
+            cxp.send(OP_END)
+        except (OSError, IOError) as err:
+            sys.stderr.write("the guest closed the transfer: %s\n" % err)
+            return 2
+        rc = cxp.pump(lambda b: None,
+                      lambda b: sys.stderr.buffer.write(b))
+        # After the pump, so the time shown is the whole of it: the guest is
+        # still writing the last of the file when our side has finished.
+        prog.end()
+        landed = cxp.exit_info.get("path", "")
+        if (rc == 0) and landed:
+            sys.stderr.write("%s\n" % landed)
+        return rc
+    finally:
+        src.close()
+        leg.close()
+
+def scp_get(mkleg, rpath, local):
+    try:
+        leg = mkleg()
+    except (OSError, IOError) as err:
+        sys.stderr.write("%s\n" % err)
+        return 2
+    try:
+        # From here the guest drives the pace, however long it takes.
+        leg.no_timeout()
+        cxp = Cxp(leg)
+        cxp.send(OP_GET, {"path": rpath})
+        if os.path.isdir(local):
+            local = os.path.join(local, os.path.basename(rpath))
+        prog = Progress(os.path.basename(rpath))
+        mode = 0o644
+        out = None
+        try:
+            while True:
+                got = cxp.recv()
+                if got is None:
+                    sys.stderr.write("the pipe closed during the transfer\n")
+                    return 2
+                op, payload = got
+                if op == OP_META:
+                    try:
+                        meta = json.loads(payload.decode())
+                        mode = int(meta.get("mode", 0o644))
+                        prog.total = int(meta.get("size", 0)) or None
+                    except ValueError:
+                        pass
+                elif op == OP_GDATA:
+                    if out is None:
+                        out = open(local, "wb")
+                    out.write(payload)
+                    prog.add(len(payload))
+                elif op == OP_GEND:
+                    if out is None:
+                        out = open(local, "wb")
+                    break
+                elif op == OP_ERROR:
+                    try:
+                        txt = json.loads(payload.decode()).get("txt", "")
+                    except ValueError:
+                        txt = payload.decode("utf-8", "replace")
+                    sys.stderr.write("guest: %s\n" % txt)
+                    return 1
+        finally:
+            if out is not None:
+                out.close()
+        prog.end()
+        try:
+            os.chmod(local, mode)
+        except OSError:
+            pass
+        return 0
+    finally:
+        leg.close()
+
+def load_sibling(name):
+    """The module of that name beside this file, or None if it is not there.
+
+    The directory of this file is put on the path rather than trusted to be
+    there: python does put the directory of a script first, but not when the
+    client is reached through a link, and not under -P."""
+    here = os.path.dirname(os.path.realpath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        return importlib.import_module(name)
+    except PermissionError:
+        raise SystemExit(
+            "%s.py is there but not readable by this shell: it is limited\n"
+            "to the group cloonix, and a session opened before you were added\n"
+            "to that group does not have it. Open a new terminal, or run:\n"
+            "  newgrp cloonix" % name)
+    except ImportError:
+        return None
+
+def do_files(mkleg_for, argv):
+    """cloonix cli <net> files <guest> [<guest>]: two panes, copy between.
+
+    One name and the left pane is this machine. Two names and both panes
+    are guests, a copy then going down into a temporary directory here and
+    up into the other guest, no opcode carrying a file straight across.
+
+    The screen itself is cloonix_files.py beside this file."""
+    if not argv:
+        sys.stderr.write("files wants a guest name\n"
+                         "cloonix cli <net> files <guest> [<guest>]\n")
+        return 2
+    files = load_sibling("cloonix_files")
+    if not files:
+        sys.stderr.write("files needs cloonix_files.py beside this "
+                         "client\n")
+        return 2
+    return files.run(sys.modules[__name__], mkleg_for, argv[:2])
+
+def safe_rel_path(name):
+    """Refuse a member name that would escape the destination. Applied to
+    what we send and to what the guest sends back."""
+    if (not name) or name.startswith("/") or "\\" in name:
+        return False
+    parts = name.split("/")
+    return all(p and p != ".." for p in parts)
+
+def scp_put_dir(mkleg, local, rpath):
+    local = local.rstrip("/")
+    if not os.path.isdir(local):
+        sys.stderr.write("%s is not a directory\n" % local)
+        return 2
+    base = os.path.basename(local)
+    try:
+        leg = mkleg()
+    except (OSError, IOError) as err:
+        sys.stderr.write("%s\n" % err)
+        return 2
+    try:
+        # From here the guest drives the pace, however long it takes.
+        leg.no_timeout()
+        cxp = Cxp(leg)
+        prog = Progress(base)
+        cxp.send(OP_PUTTREE, {"path": rpath})
+
+        def entry(rel, path):
+            st = os.lstat(path)
+            if not safe_rel_path(rel):
+                raise ValueError("refusing to send %s" % rel)
+            if os.path.islink(path):
+                cxp.send(OP_ENTRY, {"name": rel, "type": "l",
+                                    "link": os.readlink(path)})
+            elif os.path.isdir(path):
+                cxp.send(OP_ENTRY, {"name": rel, "type": "d",
+                                    "mode": st.st_mode & 0o777})
+            elif os.path.isfile(path):
+                cxp.send(OP_ENTRY, {"name": rel, "type": "f",
+                                    "mode": st.st_mode & 0o777,
+                                    "size": st.st_size})
+                prog.item()
+                with open(path, "rb") as f:
+                    while True:
+                        chunk = f.read(32768)
+                        if not chunk:
+                            break
+                        cxp.send(OP_DATA, chunk)
+                        prog.add(len(chunk))
+            # anything else (socket, fifo, device) is skipped
+
+        entry(base, local)
+        for root, dirs, files in os.walk(local):
+            rel_root = os.path.relpath(root, local)
+            prefix = base if rel_root == "." else base + "/" + rel_root
+            for d in sorted(dirs):
+                entry(prefix + "/" + d, os.path.join(root, d))
+            for f in sorted(files):
+                entry(prefix + "/" + f, os.path.join(root, f))
+        cxp.send(OP_END)
+        rc = cxp.pump(lambda b: sys.stdout.buffer.write(b),
+                      lambda b: sys.stderr.buffer.write(b))
+        prog.end()
+        return rc
+    except (OSError, ValueError) as err:
+        if isinstance(err, BrokenPipeError) and stdout_gone():
+            raise
+        sys.stderr.write("%s\n" % err)
+        return 2
+    finally:
+        leg.close()
+
+def scp_get_dir(mkleg, rpath, local):
+    if not os.path.isdir(local):
+        sys.stderr.write("%s must be an existing directory\n" % local)
+        return 2
+    try:
+        leg = mkleg()
+    except (OSError, IOError) as err:
+        sys.stderr.write("%s\n" % err)
+        return 2
+    out = None
+    try:
+        # From here the guest drives the pace, however long it takes.
+        leg.no_timeout()
+        cxp = Cxp(leg)
+        prog = Progress(os.path.basename(rpath.rstrip("/\\")) or rpath)
+        cxp.send(OP_GETTREE, {"path": rpath})
+        pending_mode = None
+        pending_path = None
+        while True:
+            got = cxp.recv()
+            if got is None:
+                sys.stderr.write("the pipe closed during the transfer\n")
+                return 2
+            op, payload = got
+            if op == OP_GENTRY:
+                if out is not None:
+                    out.close()
+                    if pending_mode is not None:
+                        try:
+                            os.chmod(pending_path, pending_mode)
+                        except OSError:
+                            pass
+                    out = None
+                try:
+                    e = json.loads(payload.decode())
+                except ValueError:
+                    sys.stderr.write("bad entry from the guest\n")
+                    return 1
+                name = e.get("name", "")
+                if not safe_rel_path(name):
+                    sys.stderr.write("guest sent a refused member name: %r\n"
+                                     % name)
+                    return 1
+                dest = os.path.join(local, *name.split("/"))
+                kind = e.get("type", "f")
+                if kind == "d":
+                    os.makedirs(dest, exist_ok=True)
+                    try:
+                        os.chmod(dest, int(e.get("mode", 0o755)))
+                    except OSError:
+                        pass
+                elif kind == "l":
+                    os.makedirs(os.path.dirname(dest), exist_ok=True)
+                    if os.path.lexists(dest):
+                        os.unlink(dest)
+                    os.symlink(e.get("link", ""), dest)
+                else:
+                    os.makedirs(os.path.dirname(dest), exist_ok=True)
+                    out = open(dest, "wb")
+                    pending_mode = int(e.get("mode", 0o644))
+                    pending_path = dest
+                    prog.item()
+            elif op == OP_GDATA:
+                if out is not None:
+                    out.write(payload)
+                prog.add(len(payload))
+            elif op == OP_GEND:
+                break
+            elif op == OP_ERROR:
+                try:
+                    txt = json.loads(payload.decode()).get("txt", "")
+                except ValueError:
+                    txt = payload.decode("utf-8", "replace")
+                sys.stderr.write("guest: %s\n" % txt)
+                return 1
+        prog.end()
+        return 0
+    except OSError as err:
+        sys.stderr.write("%s\n" % err)
+        return 2
+    finally:
+        if out is not None:
+            out.close()
+            if pending_mode is not None:
+                try:
+                    os.chmod(pending_path, pending_mode)
+                except OSError:
+                    pass
+        leg.close()
+
+CLOONFS_ROOTS = ["/cloonix/cloonfs", "/usr/libexec/cloonix/cloonfs"]
+
+def find_cloonfs():
+    """The tree the installation put on this machine, or None when cloonix is
+    not installed here."""
+    for root in CLOONFS_ROOTS:
+        if os.path.isfile(os.path.join(root, "etc", "cloonix.cfg")):
+            return root
+    return None
+
+def server_version(entry, timeout):
+    """The CLOONIX_VERSION a running server answers with, or None.
+
+    work_dir_req is the question to ask: recv_from_client.c answers it on
+    the spot, one round trip, nothing subscribed.
+
+    Not event_topo_sub, which an earlier version of this used. That one
+    subscribes and then calls cfg_hysteresis_send_topo_info, which arms a
+    100 beat timer -- a beat is 10 ms, so a full second at best, and longer
+    when a send is already pending, since the request is coalesced into it.
+    A client that gave up before then called a running net dead.
+    """
+    door = None
+    try:
+        door = Doorways(entry["cloonix_ip"], int(entry["cloonix_port"]),
+                        entry["cloonix_passwd"], timeout)
+        door.send_json({"fctident": "work_dir_req", "tid": 0})
+        while True:
+            reply = door.recv_json()
+            if reply is None:
+                return None
+            if reply.get("fctident") == "work_dir_resp":
+                return reply.get("version") or "?"
+    except (OSError, IOError, ValueError, KeyError):
+        return None
+    finally:
+        if door:
+            door.close()
+
+LIST_WAIT = 5.0
+
+def probe_net(entry, timeout):
+    """Ask one net for its version, and time what that took.
+
+    (version, seconds, why) -- version None when the connect or the wire
+    failed, why saying what failed; seconds None when nothing came back
+    inside the timeout.
+    """
+    t0 = time.monotonic()
+    door = None
+    try:
+        door = Doorways(entry["cloonix_ip"], int(entry["cloonix_port"]),
+                        entry["cloonix_passwd"], timeout)
+        door.send_json({"fctident": "work_dir_req", "tid": 0})
+        while True:
+            reply = door.recv_json()
+            if reply is None:
+                return None, None, ""
+            if reply.get("fctident") == "work_dir_resp":
+                return (reply.get("version") or "?",
+                        time.monotonic() - t0, "")
+    except socket.timeout:
+        return None, None, ""
+    except (OSError, IOError, ValueError, KeyError) as err:
+        # The errno number says nothing the text does not.
+        why = getattr(err, "strerror", None) or str(err) or type(err).__name__
+        return None, time.monotonic() - t0, why
+    finally:
+        if door:
+            door.close()
+
+def do_list(nets, wait, override=None):
+    """Every net of the config, asked at once: its version and how long it
+    took. Then this client and the cloonix installed here.
+
+    Every net is given the whole wait; the verb returns before it only when
+    every net has answered. wait 0 asks nothing and prints the config alone.
+    """
+    cfg_nets = nets
+    if override:
+        ip, port, passwd = resolve(None, nets, override)
+        nets = {"-s": {"cloonix_ip": ip, "cloonix_port": str(port),
+                       "cloonix_passwd": passwd}}
+    got = {}
+
+    def ask(name):
+        got[name] = probe_net(nets[name], wait)
+
+    if wait:
+        threads = [threading.Thread(target=ask, args=(n,), daemon=True)
+                   for n in nets]
+        for t in threads:
+            t.start()
+        end = time.monotonic() + wait
+        while time.monotonic() < end and len(got) < len(nets):
+            time.sleep(0.05)
+
+    rows = []
+    for name in sorted(nets):
+        e = nets[name]
+        version, secs, why = got.get(name, (None, None, ""))
+        if not wait:
+            resp, status = "-", "-"
+        elif version:
+            resp, status = "%.3fs" % secs, "version %s" % version
+        elif secs is None:
+            resp, status = "> %gs" % wait, "timeout"
+        else:
+            resp, status = "%.3fs" % secs, "error %s" % why
+        rows.append((name, e.get("cloonix_ip", "?"),
+                     e.get("cloonix_port", "?"), e.get("cloonix_web", "?"),
+                     resp, status))
+    head = ("net", "ip", "cli_port", "https", "resp_time", "status")
+    pads = [max(len(r[i]) for r in rows + [head]) for i in range(6)]
+    line = lambda r: "  ".join("%-*s" % (pads[i], r[i]) for i in range(6))
+    width = len(line(head))
+    print()
+    print("+-" + "-" * width + "-+")
+    print("| " + line(head) + " |")
+    print("| " + "-" * width + " |")
+    for r in rows:
+        print("| " + line(r) + " |")
+    print("+-" + "-" * width + "-+")
+    local_versions(cfg_nets)
+    print()
+    return 0
+
+def local_versions(nets):
+    """This client, and the cloonix installed here.
+
+    The three -- client, installation, server -- can differ and the drift
+    is silent otherwise. The client and the config cannot any more, they
+    are one file since cloonix_config.py.
+    """
+    print("  client     %s" % CFG_VERSION)
+    root = find_cloonfs()
+    if root:
+        found, other = "?", None
+        try:
+            with open(os.path.join(root, "etc", "cloonix.cfg"), "r") as f:
+                text = f.read()
+            found, other = cfg_version(text), parse_cfg(text)
+        except OSError:
+            pass
+        print("  installed  %s   %s" % (found, root))
+        if other is not None and CFG_ORIGIN == "cloonix_config.py":
+            differ = sorted(n for n in set(other) | set(nets)
+                            if other.get(n) != nets.get(n))
+            if differ:
+                print("  they disagree on %s -- one of the two was edited "
+                      "by hand" % ", ".join(differ))
+                print("  %s and %s"
+                      % (os.path.join(root, "etc", "cloonix.cfg"),
+                         os.path.join(os.path.dirname(
+                             os.path.realpath(__file__)),
+                             "cloonix_config.py")))
+
+def do_start(argv, nets):
+    root = find_cloonfs()
+    if not root:
+        sys.stderr.write(
+            "cloonix is not installed on this machine, so no server can be\n"
+            "started here. Looked for:\n  %s\n"
+            "Every other verb does without it: they reach a cloonix running\n"
+            "somewhere else.\n" % "\n  ".join(
+                os.path.join(r, "etc", "cloonix.cfg") for r in CLOONFS_ROOTS))
+        return 2
+    cfg = os.path.join(root, "etc", "cloonix.cfg")
+    binary = os.path.join(root, "bin", "cloonix-main-server")
+    if not os.access(binary, os.X_OK):
+        sys.stderr.write("ERROR: %s not found\n" % binary)
+        return 1
+    if not argv:
+        try:
+            with open(cfg, "r") as f:
+                found = sorted(parse_cfg(f.read()))
+        except OSError:
+            found = sorted(nets)
+        sys.stderr.write("start wants a net name: %s\n" % " ".join(found))
+        return 1
+    try:
+        os.execv(binary, [binary, cfg, argv[0]])
+    except OSError as err:
+        sys.stderr.write("cannot start %s: %s\n" % (binary, err))
+        return 1
+    return 0
+
+VERBS = {
+    "list":   "every net of the config: up or not, its version, its time",
+    "start":  "start the server of a net on this machine",
+    "stop":   "destroy everything of a net and stop its server",
+    "cli":    "do something to one net: cloonix cli <net> <verb> ...",
+}
+
+CLI_VERBS = {
+    "demo":     "list the demos, or play one",
+    "ssh":      "open a shell on a guest",
+    "scp":      "copy files to or from a guest",
+    "files":    "two panes: a guest and this machine, or two guests",
+    "dump":     "read: config, topo, json, drawing, commands, pid, images, "
+                "ip, namespaces, ovs-vsctl",
+    "trace":    "debug: watch qemu, json_cli, crun, nspace -- or probe a "
+                "guest",
+    "add":      "add one object to the net",
+    "del":      "delete one object, or all of them",
+    "plug":     "put an interface on a lan, or a wlan on an air",
+    "unplug":   "take an interface off its lan, or a wlan off its air",
+    "cnf":      "configure an object: cnf <name> [<interface>] key=value",
+    "sniff":    "receive the packets of an interface or of an air",
+    "save":     "save a machine in qcow2",
+    "rpc":      "send one json_interface.c message verbatim",
+}
+
+ADD_KINDS = {
+    "kvm": "add kvm (virtualized machine)",
+    "win": "add kvm with what a windows disk always needs",
+    "freebsd": "add kvm with what a freebsd disk always needs",
+    "cisco": "add kvm with what a cisco ios-xe disk always needs",
+    "cnt": "add container crun",
+    "tap": "add tap (host network interface)",
+    "nat": "add nat (access host ip, publish= for a way back in)",
+    "a2b": "add a2b (traffic delay shaping)",
+    "c2c": "add c2c (cloonix 2 cloonix cable)",
+    "phy": "add phy (real host network interface)",
+}
+
+DEL_KINDS = {
+    "all": "every object of the net, the server stays",
+}
+
+
+# The two kinds of "dump" that are not one of DUMP_REQ: one message each, with
+# the tool in it.
+OVS_TOOLS = ("ovs-vsctl",)
+
+ABBREV_MIN = 3
+
+def unabbrev(word, menu):
+    """The whole word, where a short one starts one word of the menu only."""
+    if not menu or not word or word in menu or len(word) < ABBREV_MIN:
+        return word
+    fit = [w for w in menu if w.startswith(word)]
+    return fit[0] if len(fit) == 1 else word
+
+def menu_at(fixed):
+    """The words this client owns at the place after the ones given."""
+    n = len(fixed)
+    if n == 0:
+        return VERBS
+    if fixed[0] != "cli":
+        return ()
+    if n == 2:
+        return CLI_VERBS
+    if n == 3:
+        verb = fixed[2]
+        if verb == "dump":
+            return list(DUMP_REQ) + list(OVS_TOOLS) + ["ip", "namespaces"]
+        if verb == "trace":
+            return TRACE_WORDS.split("|")
+        return {"add": ADD_KINDS, "del": DEL_KINDS}.get(verb, ())
+    return ()
+
+def expand(words, net=True):
+    """The line with every short verb of it written out in full.
+
+    Read left to right: a place is known from the words before it, so the
+    menu of one word is what the word before it opened.
+
+    net is false for -s and --via-unix, which name the server themselves and
+    leave the place of the net empty. A filler stands there so that what
+    follows is counted where it always is.
+    """
+    words = list(words)
+    hole = not net and words[:1] == ["cli"]
+    if hole:
+        words.insert(1, "")
+    out = []
+    for word in words:
+        out.append(unabbrev(word, menu_at(out)))
+    if hole:
+        del out[1]
+    return out
+
+USAGE_HEAD = """usage: cloonix <verb> ...
+
+Verb can be:
+"""
+
+CLI_USAGE_HEAD = """usage: cloonix cli <net> <verb> ...
+
+Verb can be:
+"""
+
+def two_columns(table):
+    """A word and its one line, one pair per line.
+
+    Words with nothing to say are put together on one line instead, so a
+    list of guest names does not become a column of empty descriptions.
+    """
+    if not table:
+        return ""
+    if not any(table.values()):
+        return "  " + "  ".join(table) + "\n"
+    pad = max(len(w) for w in table) + 2
+    return "".join("  %-*s%s\n" % (pad, w, d or "") for w, d in table.items())
+
+def usage():
+    return USAGE_HEAD + two_columns(VERBS)
+
+def cli_usage():
+    return CLI_USAGE_HEAD + two_columns(CLI_VERBS)
+
+def main():
+    argv = sys.argv[1:]
+    if argv and argv[0] in ("help", "-h", "--help"):
+        sys.stdout.write(usage())
+        return 0
+    # --version is not an option and is not listed: list gives the versions.
+    if argv and argv[0] == "--version":
+        sys.argv[1] = argv[0] = "list"
+
+    # add_help is off and every option is hidden: argparse parses, it does not
+    # describe.
+    ap = argparse.ArgumentParser(prog="cloonix", add_help=False,
+                                 usage="cloonix <verb> ...")
+    ap.add_argument("--cfg", help=argparse.SUPPRESS)
+    ap.add_argument("-s", "--server", help=argparse.SUPPRESS)
+    # No default here on purpose: None means "the client picks, verb by
+    # verb", and a value means the caller has chosen and knows what it is
+    # doing.
+    ap.add_argument("--wait", type=float, default=None,
+                    help=argparse.SUPPRESS)
+    ap.add_argument("--via-unix", metavar="PATH", help=argparse.SUPPRESS)
+    ap.add_argument("--raw", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--completion", action="store_true",
+                    help=argparse.SUPPRESS)
+    ap.add_argument("--complete", action="store_true",
+                    help=argparse.SUPPRESS)
+    ap.add_argument("--complete-usage", action="store_true",
+                    help=argparse.SUPPRESS)
+    ap.add_argument("verb", nargs="?", help=argparse.SUPPRESS)
+    ap.add_argument("args", nargs=argparse.REMAINDER, help=argparse.SUPPRESS)
+    opt = ap.parse_args()
+    timeout = opt.wait if opt.wait is not None else WAIT_DEFAULT
+
+    nets, cfg_origin = load_config(opt.cfg)
+    global CFG_ORIGIN
+    CFG_ORIGIN = cfg_origin
+
+    if opt.completion:
+        return do_complete(nets, [], "hook")
+    if opt.complete or opt.complete_usage:
+        words = ([opt.verb] if opt.verb else []) + list(opt.args)
+        return do_complete(nets, words,
+                           "usage" if opt.complete_usage else "words")
+
+    words = ([opt.verb] + list(opt.args)) if opt.verb else []
+    if words:
+        words = expand(words, net=not (opt.server or opt.via_unix))
+        opt.verb, opt.args = words[0], words[1:]
+    if not words:
+        sys.stdout.write(usage())
+    if (sys.stdin.isatty() and sys.stdout.isatty()
+            and not opt.server and not opt.via_unix):
+        comp = load_sibling("cloonix_completion")
+        # A wrong verb comes here too, and is not held back by a check on this
+        # side: the guide drops what no place takes and asks that place again,
+        # which is...
+        if comp and not comp.line_is_command(sys.modules[__name__], words):
+            words = comp.guide(sys.modules[__name__], nets, words,
+                               hinted=not words)
+            if not words:
+                return 2
+            opt.verb, opt.args = words[0], words[1:]
+    if not opt.verb:
+        return 2
+
+    if opt.verb not in VERBS:
+        sys.stderr.write("unknown verb '%s'\n%s" % (opt.verb, usage()))
+        return 2
+
+    # The one that asks every net and takes none.
+    if opt.verb == "list":
+        try:
+            wait = LIST_WAIT if not opt.args else float(opt.args[0])
+        except ValueError:
+            sys.stderr.write("list takes a number of seconds, got '%s'\n"
+                             % opt.args[0])
+            return 2
+        return do_list(nets, max(wait, 0.0), opt.server)
+
+    if opt.verb == "start":
+        return do_start(opt.args, nets)
+
+    if opt.verb == "stop":
+        if opt.server:
+            net, rest = None, opt.args
+        elif not opt.args:
+            sys.stderr.write("stop wants a net name\n")
+            return 2
+        else:
+            net, rest = opt.args[0], opt.args[1:]
+        if rest:
+            sys.stderr.write("stop takes the net and nothing else\n")
+            return 2
+        if net is not None and nets and net not in nets:
+            return fault("'%s' is not a net of the config" % net,
+                         "the nets are: %s" % ", ".join(sorted(nets)))
+        ctx_set(net=net, argv=["stop"])
+        ip, port, passwd = resolve(net, nets, opt.server)
+        ctx_set(ip=ip, port=port)
+        return do_msg(ip, port, passwd, ["stop"], timeout, opt.raw,
+                      opt.wait, nets, net)
+
+    if opt.verb != "cli":
+        sys.stderr.write("unknown verb '%s'\n%s" % (opt.verb, usage()))
+        return 2
+
+    # cli: the net is named ONCE, here, and every verb after it is about that
+    # net.
+    rest = opt.args
+    if not (opt.server or opt.via_unix):
+        if not rest:
+            sys.stderr.write("cli wants a net name\n")
+            return 2
+        net, rest = rest[0], rest[1:]
+    else:
+        net = None
+    if net is not None and nets and net not in nets:
+        hint = ()
+        if net in VERBS:
+            hint = (("cloonix %s %s" % (net, spoken(rest))).rstrip(),)
+        elif net in CLI_VERBS:
+            hint = (("cloonix cli <net> %s %s" % (net, spoken(rest))).rstrip(),)
+        code = fault("'%s' is not a net of the config" % net,
+                     "the nets are: %s" % ", ".join(sorted(nets)), hint)
+        if not rest:
+            sys.stderr.write(cli_usage())
+        return code
+    ctx_set(net=net)
+    if not rest:
+        sys.stderr.write(cli_usage())
+        return EXIT_LOCAL
+    verb, rest = rest[0], rest[1:]
+    ctx_set(argv=[verb] + list(rest))
+    if verb not in CLI_VERBS:
+        moved = {"ovs-vsctl": "dump", "probe": "trace"}
+        if verb in moved:
+            code = fault("'%s' is a kind of %s now" % (verb, moved[verb]), "",
+                         ("cloonix cli %s %s %s %s" % (net or "<net>",
+                                                       moved[verb], verb,
+                                                       spoken(rest)),))
+            sys.stderr.write(cli_usage())
+            return code
+        fit = [v for v in CLI_VERBS if verb and v.startswith(verb)]
+        near = fit or [v for v in CLI_VERBS if verb
+                       and v.startswith(verb[:2])]
+        code = fault("no verb called '%s'" % verb,
+                     ("a verb may be written short, three letters at least, "
+                      "where they fit one verb only: '%s' fits %s"
+                      % (verb, ", ".join(fit))) if fit else "",
+                     ("cloonix cli %s %s ..." % (net or "<net>", near[0]),)
+                     if near else ())
+        sys.stderr.write(cli_usage())
+        return code
+
+    if opt.via_unix:
+        if verb not in ("ssh", "scp", "files"):
+            sys.stderr.write("--via-unix is for ssh, scp and files\n")
+            return 2
+        mkleg_for = lambda _vm: (lambda: UnixLeg(opt.via_unix, timeout))
+        if verb == "scp":
+            return do_scp(mkleg_for, rest)
+        if verb == "files":
+            # One socket reaches one guest, so there is no second pane to name
+            # here.
+            if len(rest) > 1:
+                sys.stderr.write("--via-unix reaches one guest: files "
+                                 "takes one name with it\n")
+                return 2
+            return do_files(mkleg_for, rest or ["unix"])
+        return do_ssh(mkleg_for(None), rest)
+
+    # demo runs a programme here that drives the server as this client does,
+    # so it needs the name of the net and nothing opened towards it.
+    if verb == "demo":
+        demo = load_sibling("cloonix_demo")
+        if not demo:
+            sys.stderr.write("demo needs cloonix_demo.py beside this "
+                             "client\n")
+            return 2
+        return demo.run(sys.modules[__name__], net, rest)
+
+    ip, port, passwd = resolve(net, nets, opt.server)
+    ctx_set(ip=ip, port=port)
+
+    if verb in ("ssh", "scp", "files"):
+        mkleg_for = (lambda vm:
+                     lambda: GuestLeg(ip, port, passwd, vm, timeout))
+        if verb == "scp":
+            return do_scp(mkleg_for, rest)
+        if not rest:
+            sys.stderr.write("%s wants a guest name\n" % verb)
+            return 2
+        if verb == "files":
+            return do_files(mkleg_for, rest)
+        return do_ssh(mkleg_for(rest[0]), rest[1:])
+
+    if verb == "sniff":
+        return do_sniff(ip, port, passwd, rest, nets, net)
+
+    if verb == "trace":
+        if rest[:1] == ["probe"]:
+            if len(rest) < 2:
+                sys.stderr.write("trace probe wants a guest name\n")
+                return 2
+            return do_probe(ip, port, passwd, rest[1], timeout)
+        return do_trace(ip, port, passwd, rest, nets, net)
+
+    return do_msg(ip, port, passwd, [verb] + rest, timeout, opt.raw,
+                  opt.wait, nets, net)
+
+def stdout_gone():
+    """True when stdout is a pipe whose reader has closed: a broken pipe on
+    it is the reader's choice, one on a socket is a failure to report."""
+    try:
+        poll = select.poll()
+        poll.register(sys.stdout.fileno(), select.POLLOUT)
+        return any(ev & select.POLLERR for _, ev in poll.poll(0))
+    except (OSError, ValueError):
+        return False
+
+
+def reader_gone():
+    """The reader of stdout has gone (head, less): what is left goes to
+    /dev/null, so the flush at exit has nowhere to fail."""
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+    except OSError:
+        pass
+
+
+def flush_out():
+    """stdout flushed now, where a closed pipe is caught, not at exit."""
+    try:
+        sys.stdout.flush()
+    except BrokenPipeError:
+        reader_gone()
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    try:
+        code = main()
+        flush_out()
+        sys.exit(code)
+    except NeedCxp:
+        sys.stderr.write(NEED_CXP)
+        sys.exit(EXIT_BUG)
+    except SystemExit as stop:
+        if isinstance(stop.code, str):
+            sys.exit(fault(stop.code))
+        flush_out()
+        raise
+    except KeyboardInterrupt:
+        sys.stderr.write("\ninterrupted\n")
+        sys.exit(130)
+    except BrokenPipeError as err:
+        # before OSError, which it is a kind of; a socket's is a failure
+        if stdout_gone():
+            reader_gone()
+            sys.exit(0)
+        sys.exit(fault("the connection or a file failed", err,
+                       ("cloonix cli %s dump commands"
+                        % (CTX["net"] or "<net>"),)))
+    except (OSError, IOError) as err:
+        sys.exit(fault("the connection or a file failed", err,
+                       ("cloonix cli %s dump commands"
+                        % (CTX["net"] or "<net>"),)))
+    except Exception as err:
+        # A traceback is the worst error report there is: it names a line of
+        # this client and not one thing the reader can act on.
+        code = fault("the client itself broke, which is a bug",
+                     "%s: %s" % (type(err).__name__, err),
+                     ("cloonix --raw ... to see the whole traceback",),
+                     EXIT_BUG)
+        if "--raw" in sys.argv:
+            import traceback
+            traceback.print_exc()
+        sys.exit(code)

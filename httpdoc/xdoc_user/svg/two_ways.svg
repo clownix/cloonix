@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" width="900" height="260" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.cross{stroke:#e94560;stroke-width:3}
+</style>
+<rect width="900" height="260" fill="#ffffff"/>
+<rect class="zone" x="20" y="20" width="410" height="220" rx="12"/>
+<text x="30" y="36" text-anchor="start" class="s">way 1: bundle</text>
+<rect class="box" x="40" y="60" width="170" height="34" rx="6"/>
+<text x="125" y="81" text-anchor="middle" class="m">/usr/bin/cloonix</text>
+<rect class="box" x="40" y="110" width="370" height="34" rx="6"/>
+<text x="225" y="131" text-anchor="middle" class="m">/usr/libexec/cloonix/cloonfs</text>
+<rect class="box" x="40" y="160" width="370" height="34" rx="6"/>
+<text x="225" y="181" text-anchor="middle" class="m">/var/lib/cloonix/{bulk,&lt;net&gt;}</text>
+<rect class="box" x="230" y="60" width="180" height="34" rx="6"/>
+<text x="320" y="81" text-anchor="middle" class="m">/usr/share/cloonix</text>
+<text x="225" y="224" text-anchor="middle" class="m">sudo ./install_cloonfs</text>
+<rect class="zone" x="470" y="20" width="410" height="220" rx="12"/>
+<text x="480" y="36" text-anchor="start" class="s">way 2: toy</text>
+<rect class="box" x="490" y="60" width="370" height="34" rx="6"/>
+<text x="675" y="81" text-anchor="middle" class="m">cloonix-toy-__LAST__/</text>
+<rect class="zoneg" x="510" y="110" width="330" height="110" rx="12"/>
+<text x="520" y="126" text-anchor="start" class="s">crun (user uid)</text>
+<rect class="box" x="530" y="140" width="290" height="34" rx="6"/>
+<text x="675" y="161" text-anchor="middle" class="m">rootfs/cloonix/cloonfs</text>
+<rect class="box" x="530" y="180" width="130" height="30" rx="6"/>
+<text x="595" y="199" text-anchor="middle" class="m">worktmp/</text>
+<rect class="box" x="690" y="180" width="130" height="30" rx="6"/>
+<text x="755" y="199" text-anchor="middle" class="m">config/</text>
+<text x="675" y="224" text-anchor="middle" class="m">./setup.sh</text>
+</svg>

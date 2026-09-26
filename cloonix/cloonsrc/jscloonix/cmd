@@ -1,0 +1,38 @@
+#!/bin/bash
+set -e
+HERE=`pwd`
+./allclean
+mkdir -p ${HERE}/bin
+
+cd ${HERE}/jscloonix
+
+# Build cloonix-gui-server via Makefile CLOONIX_ROOT: two levels up from
+# jscloonix/jscloonix/ inside the source tree
+CLOONIX_ROOT=$(realpath ${HERE}/..)
+make clean
+make CLOONIX_ROOT=${CLOONIX_ROOT}
+cp cloonix-gui-server ${HERE}/bin/cloonix-gui-server
+make clean
+
+# Copy JS and HTML files
+cp *.js ${HERE}/bin
+cp *.html ${HERE}/bin
+
+JS_BUILD=$(date "+%b %e %Y %H:%M:%S")
+sed -i "s/__JS_BUILD__/${JS_BUILD}/" ${HERE}/bin/cr-topo-menu.js
+if grep -q "__JS_BUILD__" ${HERE}/bin/cr-topo-menu.js; then
+  echo "WARNING the js build stamp was not substituted"
+fi
+cp -r novnc ${HERE}/bin/
+cp -r xterm ${HERE}/bin/
+cp -r audio ${HERE}/bin/
+# NOTE: the demos are NOT here at all any more.
+
+# Build webshark
+cd ${HERE}/jscloonix/webshark
+make clean
+make -j4
+cp build/bin/dumpcap ${HERE}/bin/cloonix-dumpcap
+cp build/bin/webshark ${HERE}/bin/cloonix-webshark
+strip ${HERE}/bin/cloonix-dumpcap
+strip ${HERE}/bin/cloonix-webshark

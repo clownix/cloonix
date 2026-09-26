@@ -1,0 +1,11 @@
+#!/bin/bash
+# set -e: a step that fails must stop this script.
+set -e
+HERE=`pwd`
+./allclean
+./patched_create
+cd ${HERE}/passt_tainted
+# passt is a plain make, no autogen/configure, no external deps.
+make
+# resulting binaries: passt (and pasta symlink).
+strip ${HERE}/passt_tainted/passt

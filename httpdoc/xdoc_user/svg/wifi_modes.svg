@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e08a1e"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.fib{stroke:#c8a24a;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.ink{fill:#0f3460}
+.pink{fill:#e94560}
+.t{font-size:13px;font-weight:bold;fill:#0f3460}
+.big{font-size:15px;font-weight:bold;fill:#0f3460}
+.cabd{stroke:#3498db;stroke-width:2.5;fill:none;stroke-dasharray:6 4}
+.air{fill:#fff8ec;stroke:#e08a1e;stroke-width:1.5;stroke-dasharray:3 3}
+.arro{stroke:#e08a1e;stroke-width:2;fill:none;marker-end:url(#ao)}
+.org{fill:#e08a1e}
+</style>
+<rect width="900" height="300" fill="#ffffff"/>
+<rect class="air" x="10" y="20" width="210" height="260" rx="12"/>
+<text x="115" y="44" text-anchor="middle" class="t">infrastructure</text>
+<text x="115" y="62" text-anchor="middle" class="s">an access point, stations</text>
+<rect class="air" x="232" y="20" width="210" height="260" rx="12"/>
+<text x="337" y="44" text-anchor="middle" class="t">ad hoc, IBSS</text>
+<text x="337" y="62" text-anchor="middle" class="s">stations only, one cell</text>
+<rect class="air" x="454" y="20" width="210" height="260" rx="12"/>
+<text x="559" y="44" text-anchor="middle" class="t">mesh, 802.11s</text>
+<text x="559" y="62" text-anchor="middle" class="s">every radio a relay</text>
+<rect class="air" x="676" y="20" width="210" height="260" rx="12"/>
+<text x="781" y="44" text-anchor="middle" class="t">monitor</text>
+<text x="781" y="62" text-anchor="middle" class="s">a radio that only listens</text>
+<rect class="acc" x="77" y="102" width="76" height="36" rx="6"/>
+<text x="115" y="124" text-anchor="middle" class="m">ap</text>
+<path class="air" style="fill:none" d="M159,130 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M165,136 q12,-16 0,-32"/>
+<rect class="grn" x="22" y="197" width="76" height="36" rx="6"/>
+<text x="60" y="219" text-anchor="middle" class="m">sta1</text>
+<path class="air" style="fill:none" d="M104,225 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M110,231 q12,-16 0,-32"/>
+<rect class="grn" x="132" y="197" width="76" height="36" rx="6"/>
+<text x="170" y="219" text-anchor="middle" class="m">sta2</text>
+<path class="air" style="fill:none" d="M214,225 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M220,231 q12,-16 0,-32"/>
+<line class="arg" x1="70" y1="195" x2="110" y2="140"/>
+<line class="arg" x1="160" y1="195" x2="120" y2="140"/>
+<rect class="grn" x="254" y="122" width="76" height="36" rx="6"/>
+<text x="292" y="144" text-anchor="middle" class="m">k1</text>
+<path class="air" style="fill:none" d="M336,150 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M342,156 q12,-16 0,-32"/>
+<rect class="grn" x="344" y="192" width="76" height="36" rx="6"/>
+<text x="382" y="214" text-anchor="middle" class="m">k2</text>
+<path class="air" style="fill:none" d="M426,220 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M432,226 q12,-16 0,-32"/>
+<line class="arg" x1="307" y1="160" x2="367" y2="190"/>
+<line class="arg" x1="367" y1="190" x2="307" y2="160"/>
+<rect class="grn" x="471" y="97" width="76" height="36" rx="6"/>
+<text x="509" y="119" text-anchor="middle" class="m">m1</text>
+<path class="air" style="fill:none" d="M553,125 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M559,131 q12,-16 0,-32"/>
+<rect class="grn" x="571" y="132" width="76" height="36" rx="6"/>
+<text x="609" y="154" text-anchor="middle" class="m">m2</text>
+<path class="air" style="fill:none" d="M653,160 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M659,166 q12,-16 0,-32"/>
+<rect class="grn" x="486" y="207" width="76" height="36" rx="6"/>
+<text x="524" y="229" text-anchor="middle" class="m">m3</text>
+<path class="air" style="fill:none" d="M568,235 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M574,241 q12,-16 0,-32"/>
+<line class="lin" x1="529" y1="125" x2="589" y2="145"/>
+<line class="lin" x1="599" y1="170" x2="544" y2="215"/>
+<line class="lin" x1="514" y1="135" x2="519" y2="205"/>
+<rect class="acc" x="693" y="112" width="76" height="36" rx="6"/>
+<text x="731" y="134" text-anchor="middle" class="m">ap</text>
+<path class="air" style="fill:none" d="M775,140 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M781,146 q12,-16 0,-32"/>
+<rect class="grn" x="793" y="112" width="76" height="36" rx="6"/>
+<text x="831" y="134" text-anchor="middle" class="m">sta</text>
+<path class="air" style="fill:none" d="M875,140 q8,-10 0,-20"/>
+<path class="air" style="fill:none" d="M881,146 q12,-16 0,-32"/>
+<line class="arg" x1="751" y1="130" x2="811" y2="130"/>
+<rect class="yel" x="736" y="200" width="90" height="36" rx="6"/>
+<text x="781" y="222" text-anchor="middle" class="m">mon0</text>
+<text x="781" y="252" text-anchor="middle" class="s">every frame, no reply</text>
+<line class="arro" x1="756" y1="150" x2="771" y2="198"/>
+<line class="arro" x1="826" y1="150" x2="791" y2="198"/>
+</svg>

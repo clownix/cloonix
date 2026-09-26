@@ -1,0 +1,321 @@
+#!/bin/bash
+# The insider agents iso, built from the sources beside this script.
+HERE=`pwd`
+set -e
+
+TARGZ_STORE=${HERE}/../../../targz_store
+tar --directory=/tmp -xf ${TARGZ_STORE}/patchelf_*.tar.gz
+cd /tmp/patchelf
+make
+
+TARGET="${HERE}"
+ISO_NAME="insider_agent_x86_64.iso"
+ISO_WIN_NAME="insider_agent_win_x86_64.iso"
+ISO_BSD_NAME="insider_agent_bsd_x86_64.iso"
+XORRISO="/usr/bin/xorrisofs"
+CDROM="${TARGET}/cdrom"
+CDROM_WIN="${TARGET}/cdrom_win"
+CDROM_BSD="${TARGET}/cdrom_bsd"
+
+rm -f ${TARGET}/${ISO_NAME} ${TARGET}/${ISO_WIN_NAME} ${TARGET}/${ISO_BSD_NAME}
+rm -rf ${CDROM} ${CDROM_WIN} ${CDROM_BSD}
+
+mkdir -p ${CDROM}/lib
+mkdir -p ${CDROM_WIN}
+mkdir -p ${CDROM_BSD}
+
+export CC=gcc
+export AR=ar
+export RANLIB=ranlib
+export CFLAGS=""
+
+cd ${HERE}/cloonix_agent
+make clean
+make
+cp cloonix-agent ${CDROM}
+make clean
+
+if ! which x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+  echo "##########################################################" >&2
+  echo "#####  ERROR: NO x86_64-w64-mingw32-gcc ON THIS HOST  #####" >&2
+  echo "##########################################################" >&2
+  echo "cloonix-agent.exe and cloonix-cxp-srv.exe cannot be built," >&2
+  echo "so ${ISO_WIN_NAME} would go out with no agent on it and" >&2
+  echo "every windows guest would stay red for ever -- with nothing" >&2
+  echo "on this terminal to say why. That is what this build used to" >&2
+  echo "do, and finding it afterwards cost a day on another machine." >&2
+  echo "" >&2
+  echo "  apt install gcc-mingw-w64-x86-64" >&2
+  echo "" >&2
+  echo "##########################################################" >&2
+  exit 1
+fi
+cd ${HERE}/cloonix_agent_win
+make clean
+make
+cp cloonix-agent.exe ${CDROM_WIN}
+make clean
+cd ${HERE}/cloonix_cxp_srv_win
+make clean
+make
+cp cloonix-cxp-srv.exe ${CDROM_WIN}
+make clean
+
+cd ${HERE}/cloonix_cxp_srv
+make clean
+make
+cp cloonix-cxp-srv ${CDROM}
+strip ${CDROM}/cloonix-cxp-srv
+make clean
+
+for i in clang ld.lld llvm-strip; do
+  if ! which ${i} >/dev/null 2>&1; then
+    echo "##########################################################" >&2
+    echo "#####  ERROR: NO ${i} ON THIS HOST" >&2
+    echo "##########################################################" >&2
+    echo "clang is the cross compiler for the freebsd agents: it needs" >&2
+    echo "no second toolchain, only the target and the sysroot. Without" >&2
+    echo "it ${ISO_BSD_NAME} would go out with no" >&2
+    echo "agent on it and every freebsd guest would stay red for ever." >&2
+    echo "" >&2
+    echo "  apt install clang lld llvm" >&2
+    echo "" >&2
+    echo "##########################################################" >&2
+    exit 1
+  fi
+done
+BSD_SYSROOT_TGZ=$(ls ${TARGZ_STORE}/freebsd_sysroot_*.tar.gz 2>/dev/null \
+                 | head -n1)
+if [ -z "${BSD_SYSROOT_TGZ}" ]; then
+  echo "##########################################################" >&2
+  echo "#####  ERROR: NO freebsd_sysroot_*.tar.gz IN THE STORE  ###" >&2
+  echo "##########################################################" >&2
+  echo "cloonix-agent and cloonix-cxp-srv cannot be built for" >&2
+  echo "freebsd, so ${ISO_BSD_NAME} would go out" >&2
+  echo "with no agent on it and every freebsd guest would stay red" >&2
+  echo "for ever -- with nothing on this terminal to say why." >&2
+  echo "" >&2
+  echo "  ./rootfs_targz_store_freebsd.sh" >&2
+  echo "" >&2
+  echo "in the SOURCE TREE, once. Two directories are called" >&2
+  echo "targz_store and this is not the one to fill:" >&2
+  echo "" >&2
+  echo "  <source tree>/targz_store    that script fills this one" >&2
+  echo "        |" >&2
+  echo "        |  copied by doitall, at the start of every build" >&2
+  echo "        v" >&2
+  echo "  ${TARGZ_STORE}" >&2
+  echo "                               is what this build reads, and" >&2
+  echo "                               it now holds:" >&2
+  ls -1 ${TARGZ_STORE} 2>/dev/null | sed "s/^/      /" >&2
+  echo "" >&2
+  echo "So the fetch goes in the source tree and ./doitall carries it" >&2
+  echo "over. Filling the path above by hand would be undone by the" >&2
+  echo "next build." >&2
+  echo "" >&2
+  echo "##########################################################" >&2
+  exit 1
+fi
+rm -rf /tmp/cloonix_bsd_sysroot
+mkdir -p /tmp/cloonix_bsd_sysroot
+tar --directory=/tmp/cloonix_bsd_sysroot -xf ${BSD_SYSROOT_TGZ}
+BSD_SYSROOT=$(ls -d /tmp/cloonix_bsd_sysroot/freebsd_sysroot_* 2>/dev/null \
+             | head -n1)
+if [ -z "${BSD_SYSROOT}" ]; then
+  echo "NOTHING CAME OUT OF ${BSD_SYSROOT_TGZ}" >&2
+  exit 1
+fi
+BSD_TARGET=$(cat ${BSD_SYSROOT}/CLOONIX_TARGET 2>/dev/null)
+if [ -z "${BSD_TARGET}" ]; then
+  echo "NO CLOONIX_TARGET IN ${BSD_SYSROOT_TGZ}" >&2
+  exit 1
+fi
+# What the LINK opens, checked on the unpacked sysroot before anything is
+# compiled against it.
+BSD_MISSING=""
+for i in usr/include/stdio.h \
+         usr/lib/libc.a \
+         usr/lib/libutil.a \
+         usr/lib/libgcc.a \
+         usr/lib/crt1.o \
+         usr/lib/crti.o \
+         usr/lib/crtn.o \
+         usr/lib/crtbeginT.o \
+         usr/lib/crtend.o; do
+  [ -e "${BSD_SYSROOT}/${i}" ] || BSD_MISSING="${BSD_MISSING} ${i}"
+done
+if [ -n "${BSD_MISSING}" ]; then
+  echo "##########################################################" >&2
+  echo "#####  ERROR: THE FREEBSD SYSROOT IS INCOMPLETE  #####" >&2
+  echo "##########################################################" >&2
+  echo "${BSD_SYSROOT_TGZ}" >&2
+  echo "unpacks without these, and the link opens every one of them:" >&2
+  for i in ${BSD_MISSING}; do echo "    ${i}" >&2; done
+  echo "" >&2
+  echo "That tarball was made by an older rootfs_targz_store_freebsd.sh." >&2
+  echo "Run the one in this delivery, in the SOURCE TREE, and build" >&2
+  echo "again:" >&2
+  echo "" >&2
+  echo "  ./rootfs_targz_store_freebsd.sh" >&2
+  echo "" >&2
+  echo "It keeps base.txz in /tmp/cloonix_freebsd_base, so a rerun" >&2
+  echo "after this one is an extraction and not a download." >&2
+  echo "" >&2
+  echo "##########################################################" >&2
+  exit 1
+fi
+echo "freebsd agents: ${BSD_TARGET} against ${BSD_SYSROOT}"
+export CC="clang"
+export STRIP="llvm-strip"
+export CFLAGS="--target=${BSD_TARGET} --sysroot=${BSD_SYSROOT}"
+export LDFLAGS="--target=${BSD_TARGET} --sysroot=${BSD_SYSROOT}"
+# rtlib=libgcc: a linux clang carries no freebsd build of its own compiler-rt,
+# so the default runtime library would be one it cannot find.
+export LDFLAGS="${LDFLAGS} -fuse-ld=lld -static --rtlib=libgcc"
+export LDFLAGS="${LDFLAGS} -Wno-unused-command-line-argument"
+cd ${HERE}/cloonix_agent
+make clean
+make
+cp cloonix-agent ${CDROM_BSD}
+make clean
+cd ${HERE}/cloonix_cxp_srv
+make clean
+make
+cp cloonix-cxp-srv ${CDROM_BSD}
+make clean
+export CC=gcc
+export STRIP=strip
+export CFLAGS=""
+export LDFLAGS=""
+
+LIB_DST="/cloonixmnt/cnf_fs/lib"
+RPATH_LIB="${LIB_DST}"
+PATCHELF="/tmp/patchelf/src/patchelf"
+
+LIBC=$(ldd ${CDROM}/cloonix-cxp-srv | grep libc.so |awk '{print $3}')
+LIBD=$(ldd ${CDROM}/cloonix-cxp-srv | grep ld-linux |awk '{print $1}')
+LDLINUX="${LIB_DST}/ld-linux-x86-64.so.2"
+cp -vf ${LIBD} ${CDROM}/lib
+cp -vf ${LIBC} ${CDROM}/lib
+
+echo $LIBC
+echo $LIBD
+
+set +e
+for i in "cloonix-agent" \
+         "cloonix-cxp-srv" \
+         ; do
+  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CDROM}/${i}
+  ${PATCHELF} --set-interpreter ${LDLINUX} ${CDROM}/${i}
+done
+set -e
+
+cp ${HERE}/init_starter/* ${CDROM}
+${XORRISO} -J -o ${TARGET}/${ISO_NAME} ${CDROM}
+${XORRISO} -J -o ${TARGET}/${ISO_WIN_NAME} ${CDROM_WIN}
+${XORRISO} -J -o ${TARGET}/${ISO_BSD_NAME} ${CDROM_BSD}
+
+# What is on the disc, checked on the disc and not in the staging tree.
+for iso in ${TARGET}/${ISO_NAME} ${TARGET}/${ISO_WIN_NAME} \
+           ${TARGET}/${ISO_BSD_NAME}; do
+  if [ ! -s ${iso} ]; then
+    echo "THE ISO WAS NOT WRITTEN: ${iso}" >&2
+    exit 1
+  fi
+done
+ISO_LIST=$(xorriso -indev ${TARGET}/${ISO_NAME} -find / 2>/dev/null || true)
+ISO_WIN_LIST=$(xorriso -indev ${TARGET}/${ISO_WIN_NAME} -find / \
+               2>/dev/null || true)
+ISO_BSD_LIST=$(xorriso -indev ${TARGET}/${ISO_BSD_NAME} -find / \
+               2>/dev/null || true)
+ISO_OFFERS=$(xorriso -indev ${TARGET}/${ISO_WIN_NAME} -toc 2>&1 \
+             | grep "^ISO offers" || true)
+for i in "cloonix-agent" "cloonix-cxp-srv" "cloonixsbininit"; do
+  if ! echo "${ISO_LIST}" | grep -q "'/${i}'"; then
+    echo "MISSING ON THE ISO: ${i}" >&2
+    exit 1
+  fi
+done
+for i in "cloonix-agent.exe" "cloonix-cxp-srv.exe"; do
+  if echo "${ISO_LIST}" | grep -q "'/${i}'"; then
+    echo "ON THE LINUX ISO AND SHOULD NOT BE: ${i}" >&2
+    exit 1
+  fi
+done
+for i in "cloonix-agent" "cloonix-cxp-srv" "cloonixsbininit" "lib"; do
+  if echo "${ISO_WIN_LIST}" | grep -q "'/${i}'"; then
+    echo "ON THE WINDOWS ISO AND SHOULD NOT BE: ${i}" >&2
+    exit 1
+  fi
+done
+for i in "cloonix-agent.exe" "cloonix-cxp-srv.exe"; do
+  if ! echo "${ISO_WIN_LIST}" | grep -q "'/${i}'"; then
+    echo "MISSING ON THE WINDOWS ISO: ${i}" >&2
+    exit 1
+  fi
+done
+for i in "cloonix-agent" "cloonix-cxp-srv"; do
+  if ! echo "${ISO_BSD_LIST}" | grep -q "'/${i}'"; then
+    echo "MISSING ON THE FREEBSD ISO: ${i}" >&2
+    exit 1
+  fi
+done
+for i in "cloonix-agent.exe" "cloonix-cxp-srv.exe" "cloonixsbininit" "lib"; do
+  if echo "${ISO_BSD_LIST}" | grep -q "'/${i}'"; then
+    echo "ON THE FREEBSD ISO AND SHOULD NOT BE: ${i}" >&2
+    exit 1
+  fi
+done
+rm -rf /tmp/cloonix_iso_bsd_check
+mkdir -p /tmp/cloonix_iso_bsd_check
+xorriso -osirrox on -indev ${TARGET}/${ISO_BSD_NAME} \
+        -extract / /tmp/cloonix_iso_bsd_check >/dev/null 2>&1 || true
+for i in "cloonix-agent" "cloonix-cxp-srv"; do
+  BIN="/tmp/cloonix_iso_bsd_check/${i}"
+  ABI=$(llvm-readelf -h ${BIN} 2>/dev/null | grep "OS/ABI:" || true)
+  INTERP=$(llvm-readelf -l ${BIN} 2>/dev/null | grep "INTERP" || true)
+  case "${ABI}" in
+    *FreeBSD*) : ;;
+    *)
+      echo "##########################################################" >&2
+      echo "NOT A FREEBSD BINARY ON THE FREEBSD ISO: ${i}" >&2
+      echo "  ${ABI:-llvm-readelf said nothing about the abi}" >&2
+      echo "The cross build fell back to the host compiler, so this" >&2
+      echo "disc carries a binary the guest cannot exec. The guest" >&2
+      echo "would report it as a missing agent, which it is not." >&2
+      echo "##########################################################" >&2
+      rm -rf /tmp/cloonix_iso_bsd_check
+      exit 1
+      ;;
+  esac
+  if [ -n "${INTERP}" ]; then
+    echo "##########################################################" >&2
+    echo "NOT A STATIC BINARY ON THE FREEBSD ISO: ${i}" >&2
+    echo "  ${INTERP}" >&2
+    echo "It wants an interpreter, and there is no rtld and no libc" >&2
+    echo "on this disc to give it one. The -static did not take." >&2
+    echo "##########################################################" >&2
+    rm -rf /tmp/cloonix_iso_bsd_check
+    exit 1
+  fi
+done
+rm -rf /tmp/cloonix_iso_bsd_check
+case "${ISO_OFFERS}" in
+  *Joliet*)
+    echo "iso ok: ${ISO_WIN_NAME} has both exe on it and joliet is there"
+    ;;
+  *)
+    echo "##########################################################" >&2
+    echo "THE WINDOWS ISO HAS NO JOLIET: ${ISO_OFFERS}" >&2
+    echo "Windows then reads the iso9660 records, where the name is" >&2
+    echo "CLOONIX_.EXE, and the launcher looking for the long name" >&2
+    echo "finds nothing and the node stays red. -J is what adds it." >&2
+    echo "##########################################################" >&2
+    exit 1
+    ;;
+esac
+
+# The staging trees are scratch: everything in them is inside the iso, which
+# is the only thing read at run time -- suid_power extracts it with osirrox.
+rm -rf ${CDROM} ${CDROM_WIN} ${CDROM_BSD}
+rm -rf /tmp/cloonix_bsd_sysroot

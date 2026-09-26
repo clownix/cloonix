@@ -1,0 +1,22 @@
+# Names the docs may use that pack_cloonfs does not list literally.
+# Guest side, delivered inside the agent iso, not in cloonfs/bin:
+cloonix-agent
+cloonix-cxp-srv
+cloonix-init-starter-crun
+# A file the agent writes in a guest with radios,
+# /run/systemd/network/00-cloonix-radio.network:
+cloonix-radio
+# Built by their own cmd under a name pack does not spell out:
+cloonix-dtach
+cloonix-crun
+cloonix-qemu-system
+cloonix-patchelf
+# Build-time helpers, never delivered:
+cloonix-kvm-build
+# A running process is named "cloonix-proxymous-<net>", so the docs show one
+# with a net in it:
+cloonix-proxymous-nemo
+# Named on purpose as gone, so a reader who meets either in an old log or an
+# old diagram knows why. Remove these two once nobody remembers them:
+cloonix-xwy-srv
+cloonix-xwycli

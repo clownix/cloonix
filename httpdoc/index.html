@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloonix &mdash; virtual networks of VMs and containers</title>
+<meta name="description" content="Cloonix builds a virtual network of QEMU/KVM machines and crun containers on one Linux host. Open vSwitch links, packet capture in the browser, AGPLv3.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="index.html">CLOONIX</a>
+    <a href="index.html" class="on">Overview</a>
+    <a href="learn.html">Learn</a>
+    <a href="demos.html">Demos</a>
+    <a href="start.html">Get started</a>
+    <a href="downloads.html">Downloads</a>
+    <a href="build_user/user.html">Documentation</a>
+    <a href="build_dev/dev.html">Developers</a>
+    <a href="https://github.com/clownix/cloonix">Source</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <h1>A network you can draw, on one machine.</h1>
+  <p class="lead">Cloonix runs virtual machines and containers on a Linux host and
+  wires them together through Open vSwitch. You get the topology on a canvas in
+  your browser, a root shell in any node, and a packet capture on any cable.</p>
+  <p class="cta">
+    <a class="btn" href="start.html">Get started</a>
+    <a class="btn" href="downloads.html">Downloads</a>
+    <a class="btn ghost" href="learn.html">What you can learn</a>
+    <a class="btn ghost" href="build_user/user.html">Documentation</a>
+  </p>
+  <p class="ver">AGPLv3 &middot; version 100 &middot; Linux host, any browser</p>
+</section>
+
+<section class="band">
+<div class="wrap">
+<h2>What it is</h2>
+
+<div class="cols">
+  <div>
+    <h3>Two kinds of node</h3>
+    <p><b>kvm</b> is a QEMU/KVM machine with its own kernel. <b>cnt</b> is a crun
+    container sharing the host kernel. Both take the same commands and appear the
+    same way on the canvas.</p>
+  </div>
+  <div>
+    <h3>Real switching</h3>
+    <p>Links are Open vSwitch ports in a private net namespace. The packets are
+    ethernet frames on a bridge, so routing daemons, DHCP and wifi emulation
+    behave as they do on hardware.</p>
+  </div>
+  <div>
+    <h3>Nothing installed</h3>
+    <p>Cloonix ships its own QEMU, Open vSwitch, crun and passt, and loads no
+    library from the host. The host needs none of them.</p>
+  </div>
+</div>
+</div>
+</section>
+
+<section class="wrap">
+<h2>The canvas</h2>
+<p>The graphical interface is a web page served by cloonix itself. There is
+nothing to install on the machine you browse from.</p>
+<p><code>https://127.0.0.1:4444</code>, user <code>nemo</code>, password
+<code>nemoclown</code>: not secret, they are in
+<code>/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg</code>, where they can be
+changed.</p>
+
+<svg viewBox="0 0 840 300" class="fig" role="img" aria-label="Browser talking to the cloonix host">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#3b6ea5"/></marker></defs>
+  <rect x="20" y="60" width="200" height="120" rx="8" class="fbox"/>
+  <text x="120" y="92" class="ft" text-anchor="middle">Your browser</text>
+  <text x="120" y="118" class="fm" text-anchor="middle">canvas</text>
+  <text x="120" y="138" class="fm" text-anchor="middle">shell in any node</text>
+  <text x="120" y="158" class="fm" text-anchor="middle">packet capture</text>
+
+  <rect x="320" y="30" width="500" height="240" rx="10" class="fzone"/>
+  <text x="340" y="54" class="fz">one linux host</text>
+
+  <rect x="345" y="70" width="200" height="52" rx="6" class="fbox"/>
+  <text x="445" y="101" class="fm" text-anchor="middle">cloonix-main-server</text>
+
+  <rect x="565" y="70" width="230" height="52" rx="6" class="fbox"/>
+  <text x="680" y="94" class="fm" text-anchor="middle">open vswitch</text>
+  <text x="680" y="112" class="fs" text-anchor="middle">private net namespace</text>
+
+  <rect x="345" y="150" width="130" height="90" rx="6" class="facc"/>
+  <text x="410" y="180" class="ft" text-anchor="middle">kvm</text>
+  <text x="410" y="202" class="fs" text-anchor="middle">qemu machine</text>
+  <text x="410" y="220" class="fs" text-anchor="middle">own kernel</text>
+
+  <rect x="495" y="150" width="130" height="90" rx="6" class="facc"/>
+  <text x="560" y="180" class="ft" text-anchor="middle">cnt</text>
+  <text x="560" y="202" class="fs" text-anchor="middle">crun container</text>
+  <text x="560" y="220" class="fs" text-anchor="middle">host kernel</text>
+
+  <rect x="645" y="150" width="150" height="90" rx="6" class="fbox"/>
+  <text x="720" y="180" class="ft" text-anchor="middle">lan, tap, nat</text>
+  <text x="720" y="202" class="fs" text-anchor="middle">c2c to another</text>
+  <text x="720" y="220" class="fs" text-anchor="middle">cloonix, wifi</text>
+
+  <path class="farr" d="M222,110 L340,96"/>
+  <path class="farr" d="M445,124 L445,146"/>
+  <path class="farr" d="M545,96 L561,96"/>
+</svg>
+</section>
+
+<section class="band">
+<div class="wrap">
+<h2>The items, and how they cable together</h2>
+<p>An item owns one or more <b>ports</b>. Each port carries one connection, drawn
+as a line to a crossroad called a <b>lan</b> &mdash; which is an Open vSwitch
+bridge. Everything on this list plugs into everything else the same way.</p>
+
+<svg viewBox="0 0 840 250" class="fig" role="img" aria-label="The eight cloonix items around a lan">
+  <g stroke="#3498db" stroke-width="2.5" fill="none">
+    <path d="M150,60 L400,112"/><path d="M150,128 L394,128"/>
+    <path d="M150,196 L400,144"/><path d="M690,60 L440,112"/>
+    <path d="M690,128 L446,128"/><path d="M690,196 L440,144"/>
+  </g>
+  <circle cx="420" cy="128" r="26" fill="#555555" stroke="#888888" stroke-width="2"/>
+  <text x="420" y="133" text-anchor="middle" font-size="11.5" fill="#ffffff">lan</text>
+  <text x="420" y="240" class="fs" text-anchor="middle">an openvswitch bridge: a frame in on one port leaves by the others</text>
+
+  <rect x="20" y="42" width="130" height="36" rx="6" class="facc"/>
+  <text x="85" y="60" class="fm" text-anchor="middle">kvm</text>
+  <text x="85" y="74" class="fs" text-anchor="middle">a qemu machine</text>
+  <rect x="20" y="110" width="130" height="36" rx="6" class="facc"/>
+  <text x="85" y="128" class="fm" text-anchor="middle">cnt</text>
+  <text x="85" y="142" class="fs" text-anchor="middle">a crun container</text>
+  <rect x="20" y="178" width="130" height="36" rx="6" class="fbox"/>
+  <text x="85" y="196" class="fm" text-anchor="middle">nat</text>
+  <text x="85" y="210" class="fs" text-anchor="middle">a way to the internet</text>
+
+  <rect x="690" y="42" width="130" height="36" rx="6" class="fbox"/>
+  <text x="755" y="60" class="fm" text-anchor="middle">a2b</text>
+  <text x="755" y="74" class="fs" text-anchor="middle">loss, delay, rate</text>
+  <rect x="690" y="110" width="130" height="36" rx="6" class="fbox"/>
+  <text x="755" y="128" class="fm" text-anchor="middle">c2c</text>
+  <text x="755" y="142" class="fs" text-anchor="middle">to another cloonix</text>
+  <rect x="690" y="178" width="130" height="36" rx="6" class="fbox"/>
+  <text x="755" y="196" class="fm" text-anchor="middle">tap, phy</text>
+  <text x="755" y="210" class="fs" text-anchor="middle">out to the host</text>
+</svg>
+</div>
+</section>
+
+<section class="wrap">
+<h2>What you do with it</h2>
+<div class="cols">
+  <div>
+    <h3>Test routing</h3>
+    <p>Sixty FRR routers in a spider topology start in about a minute. Watch OSPF
+    converge, cut a cable, watch it reconverge.</p>
+  </div>
+  <div>
+    <h3>Read the wire</h3>
+    <p>Double-click a green interface dot to capture it. The dissection engine is
+    wireshark's, the viewer is a web page &mdash; no Qt, no X forwarding.</p>
+  </div>
+  <div>
+    <h3>Reproduce a bug</h3>
+    <p>A topology is a python file of a few lines. Send it to somebody and they
+    get the same network.</p>
+  </div>
+</div>
+
+<h2>Or learn what a network does</h2>
+<p><code>demos/</code> holds subject areas, and under each one python file per
+demo: a running topology, every cloonix command printed as it is typed, and
+the packet that shows the protocol at work.</p>
+
+<table>
+  <tr><td><code>cloonix</code></td><td>cloonix under itself</td><td>a2b c2c cnt cntkvmwifi cntwifi kvm kvmwifi limit mount nat nginx phy realnet snf systemd</td></tr>
+  <tr><td><code>switching</code></td><td>one wire, several networks</td><td>ovn stp vlan vxlan</td></tr>
+  <tr><td><code>routing</code></td><td>how a packet finds a way</td><td>babel batman bird frrmix frrspider frrspider_bgp isis</td></tr>
+  <tr><td><code>address</code></td><td>an address, a name</td><td>dhcp dns ipv6 knot ntp unbound</td></tr>
+  <tr><td><code>security</code></td><td>tunnels, filters, who is let in</td><td>arp ebpf ipsec nftables openvpn radius suricata tinc tls wg</td></tr>
+  <tr><td><code>services</code></td><td>the machines in the middle</td><td>asterisk mqtt proxy smtp squid</td></tr>
+  <tr><td><code>availability</code></td><td>staying up when one stops</td><td>cluster vrrp</td></tr>
+  <tr><td><code>watching</code></td><td>what the path carries, and what it costs</td><td>perf</td></tr>
+  <tr><td><code>wifi</code></td><td>the air, before the ip stack</td><td>cnt_open cnt_wpa2 cnt_wpa3 cnt_bridge cnt_roaming cnt_mesh, their kvm_ twins, cntkvm_home cntkvm_enterprise cntkvm_roaming cntkvm_monitor</td></tr>
+  <tr><td><code>windows.py</code></td><td>a guest with no agent</td><td>the firewall rule everyone forgets</td></tr>
+  <tr><td><code>freebsd.py</code></td><td>a guest that is not linux</td><td>the agent on a disc of its own</td></tr>
+  <tr><td><code>cisco.py</code></td><td>a guest driven over its console</td><td>three ios-xe routers in ospf</td></tr>
+</table>
+
+<p><a class="btn" href="learn.html">What you can learn</a></p>
+</section>
+
+<section class="band">
+<div class="wrap">
+<h2>Two ways to install</h2>
+<div class="cols2">
+  <div class="card">
+    <h3>The toy</h3>
+    <p>A tarball you extract as a normal user. Cloonix runs inside a container it
+    brings with it. No root, nothing written outside the directory, and deleting
+    the directory removes it.</p>
+    <p class="note">Everything on this page works in the toy.</p>
+  </div>
+  <div class="card">
+    <h3>The bundle</h3>
+    <p>An installation under <code>/usr/libexec/cloonix</code>, done once as root.
+    Several users share it, each running their own networks.</p>
+    <p class="note">One installation serves every user of the machine.</p>
+  </div>
+</div>
+<p><a class="btn" href="start.html">Get started</a></p>
+</div>
+</section>
+
+<section class="band">
+<div class="wrap">
+<h2>Downloads</h2>
+<div class="cols">
+  <div>
+    <h3><a href="downloads/cloonix-toy-100.tar.gz">cloonix-toy-100.tar.gz</a></h3>
+    <p>Cloonix inside its own container. No root, nothing installed; delete the
+    directory and it is gone. <a href="start.html">Get started</a> uses it.</p>
+  </div>
+  <div>
+    <h3><a href="downloads/cloonix-bundle-100.tar.gz">cloonix-bundle-100.tar.gz</a></h3>
+    <p>The compiled run-time, installed once as root under
+    <code>/usr/libexec/cloonix</code>, for a machine several people share.</p>
+  </div>
+  <div>
+    <h3><a href="downloads/cloonix-source-100.tar.gz">cloonix-source-100.tar.gz</a></h3>
+    <p>The source tree: cloonix, the demos, the image builders, the tests, the
+    two books. It compiles from
+    <a href="downloads/cloonix-targz_store-100.tar.gz">cloonix-targz_store-100.tar.gz</a>,
+    the open sources it rebuilds, extracted at its root first.</p>
+  </div>
+</div>
+<h3>Guest images, for <code>/var/lib/cloonix/bulk</code></h3>
+<table>
+  <tr><td><a href="downloads/cnt_bulk/">cnt_bulk</a></td><td>8 container images: alpine, debian trixie, ubuntu, rocky, fedora, arch, tumbleweed, and trixie with systemd</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/">kvm_bulk</a></td><td>15 machine images: the same seven distributions, and eight desktops</td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/">cnt_demo_bulk</a></td><td>29 container images, one per subject of the demos: frr, wireguard, dns, dhcp, mqtt, &hellip;</td></tr>
+  <tr><td><a href="downloads/kvm_demo_bulk/">kvm_demo_bulk</a></td><td>the machine image of the demos that run the cloonix client in a guest</td></tr>
+</table>
+<p><a href="downloads.html">Every file, what it holds and how to put it in place</a>.</p>
+</div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Cloonix is free software under the AGPLv3.
+    <a href="https://github.com/clownix/cloonix">github.com/clownix/cloonix</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

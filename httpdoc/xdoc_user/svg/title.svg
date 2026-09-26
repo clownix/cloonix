@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 150" width="900" height="150" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<rect width="900" height="150" rx="10" fill="#16213e"/>
+<text x="40" y="72" font-size="40" font-weight="bold" fill="#e94560" letter-spacing="7">CLOONIX</text>
+<text x="42" y="102" font-size="15" fill="#8fa8c8" letter-spacing="1">networks of virtual machines and containers</text>
+<text x="42" y="126" font-size="13" fill="#5a7fbf">version __LAST__</text>
+<circle cx="620" cy="76" r="26" fill="#8080ff" stroke="#9999ff" stroke-width="2"/>
+<circle cx="620" cy="50" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<circle cx="646" cy="76" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<circle cx="740" cy="76" r="14" fill="#555555" stroke="#888888" stroke-width="2"/>
+<line x1="656" y1="76" x2="724" y2="76" stroke="#3498db" stroke-width="2.5"/>
+<circle cx="840" cy="76" r="20" fill="#8080ff" stroke="#9999ff" stroke-width="2"/>
+<circle cx="820" cy="76" r="7" fill="#16a3a3" stroke="#33ffff" stroke-width="1.5"/>
+<line x1="756" y1="76" x2="812" y2="76" stroke="#3498db" stroke-width="2.5"/>
+</svg>

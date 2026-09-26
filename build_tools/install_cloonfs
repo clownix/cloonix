@@ -1,0 +1,92 @@
+#!/bin/bash
+if [ $UID != 0 ]; then
+  printf "\n\tERROR: root privileges needed.\n\n"
+  exit 1
+fi
+if [ ! -e cloonfs/etc/cloonix.cfg ]; then
+  echo NOT FOUND:
+  echo cloonfs/etc/cloonix.cfg
+  exit
+fi
+rm -rf /usr/libexec/cloonix
+# Every /usr/bin/cloonix* goes, not just the names this version uses.
+rm -f  /usr/bin/cloonix*
+mkdir -p /usr/libexec/cloonix
+for i in "cloonfs" "startup_bin" "insider_agents"; do
+  cp -rf ${i} /usr/libexec/cloonix
+done
+chown -R root:root /usr/libexec/cloonix
+cp -vf /usr/libexec/cloonix/cloonfs/bin/cloonix /usr/bin
+cp -vf /usr/libexec/cloonix/cloonfs/bin/cloonix_*.py /usr/bin
+chmod 755 /usr/bin/cloonix /usr/bin/cloonix_*.py
+rm -f /usr/share/bash-completion/completions/cloonix
+rm -f /etc/bash_completion.d/cloonix
+chmod -R 755 /usr/libexec/cloonix/
+# /var/lib/cloonix is sticky like /tmp: any user creates a net directory, only
+# its owner removes or renames it.
+mkdir -p /var/lib/cloonix/bulk
+chmod 1777 /var/lib/cloonix
+chmod 777  /var/lib/cloonix/bulk
+# Who may run cloonix: everyone, as before, unless the group cloonix exists.
+if getent group cloonix >/dev/null; then
+  echo "  group cloonix exists: only its members and root may run a net"
+  if [ -n "${SUDO_USER}" ] && [ "${SUDO_USER}" != "root" ]; then
+    if ! id -nG ${SUDO_USER} | tr " " "\n" | grep -qx cloonix; then
+      echo "  WARNING ${SUDO_USER} is not in it: usermod -aG cloonix ${SUDO_USER}"
+    fi
+  fi
+fi
+mkdir -p /usr/share/cloonix/cert
+if [ -s /usr/share/cloonix/cert/cloonix_cert.pem ] && \
+   [ -s /usr/share/cloonix/cert/cloonix_key.pem ] && \
+   [ "${CLOONIX_REPLACE_CERT}" != "1" ]; then
+  echo "  keeping the certificate already in /usr/share/cloonix/cert"
+  echo "  so browsers that accepted it do not have to be told again"
+  echo "  (sudo CLOONIX_REPLACE_CERT=1 ./install_cloonfs to take this"
+  echo "   tarball's certificate instead)"
+elif [ -s ./cert/cloonix_cert.pem ] && [ -s ./cert/cloonix_key.pem ]; then
+  cp -f ./cert/cloonix_cert.pem /usr/share/cloonix/cert
+  cp -f ./cert/cloonix_key.pem  /usr/share/cloonix/cert
+  echo "  certificate installed from the tarball: /usr/share/cloonix/cert"
+  echo "  replace it with your own if this is not a private machine"
+else
+  echo "  WARNING no certificate in this tarball and none installed,"
+  echo "          https will not be served. To make one:"
+  echo "          /usr/libexec/cloonix/cloonfs/bin/make_cloonix_cert \\"
+  echo "                                       /usr/share/cloonix/cert"
+fi
+chmod 755 /usr/share/cloonix/cert
+if [ -s /usr/share/cloonix/cert/cloonix_key.pem ]; then
+  chmod 644 /usr/share/cloonix/cert/cloonix_key.pem
+  chmod 644 /usr/share/cloonix/cert/cloonix_cert.pem
+fi
+mkdir -p /usr/share/cloonix/demos
+mkdir -p /usr/share/cloonix/pcap
+if [ -d /usr/libexec/cloonix/cloonfs/share/cloonix/demos ]; then
+  cp -rf /usr/libexec/cloonix/cloonfs/share/cloonix/demos/. \
+         /usr/share/cloonix/demos/ 2>/dev/null
+fi
+chmod 755 /usr/share/cloonix
+chmod 1777 /usr/share/cloonix/demos /usr/share/cloonix/pcap
+# The shipped demos stay root owned and read only for everybody else.
+if [ -d /usr/libexec/cloonix/cloonfs/share/cloonix/demos ]; then
+  for i in /usr/libexec/cloonix/cloonfs/share/cloonix/demos/*; do
+    [ -e "${i}" ] || continue
+    j="/usr/share/cloonix/demos/$(basename ${i})"
+    if [ -d "${j}" ]; then
+      chmod -R 755 "${j}" 2>/dev/null
+      chown -R root:root "${j}" 2>/dev/null
+    elif [ -e "${j}" ]; then
+      chmod 644 "${j}" 2>/dev/null
+      chown root:root "${j}" 2>/dev/null
+    fi
+  done
+fi
+# cloonix-suid-power is the only setuid-root binary.
+chmod u+s /usr/libexec/cloonix/cloonfs/bin/cloonix-suid-power
+chmod 644 /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg \
+          /usr/bin/cloonix_config.py
+if grep -q "clown$" /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg; then
+  echo "  the cloonix_passwd of the nets are the ones shipped in the tarball:"
+  echo "  change them in cloonix_config.py before opening a port to others"
+fi

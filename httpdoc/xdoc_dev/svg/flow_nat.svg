@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 250" width="900" height="250" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#27ae60"/></marker>
+<marker id="ay" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.b{font-weight:bold;font-size:12.5px}
+.s{font-size:10px;fill:#5a6472}
+.sm{font-family:monospace;font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.life{stroke:#9aa3ad;stroke-width:1.2;stroke-dasharray:4 4}
+.arr{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.ard{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar)}
+.ard2{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar);marker-start:url(#ar)}
+.arg{stroke:#27ae60;stroke-width:1.8;fill:none;marker-end:url(#ag)}
+.ary{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ay)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.act{fill:#dfe8f7;stroke:#0f3460;stroke-width:1}
+</style>
+<rect width="900" height="250" fill="#ffffff"/>
+
+<rect class="zoner" x="10" y="10" width="560" height="110" rx="10"/>
+<text x="20" y="26" text-anchor="start" class="s">namespace cloonix_&lt;net&gt;</text>
+<rect class="box" x="25" y="60" width="100" height="36" rx="6"/>
+<text x="75" y="82" text-anchor="middle" class="m">guest eth</text>
+<rect class="acc" x="150" y="60" width="110" height="36" rx="6"/>
+<text x="205" y="82" text-anchor="middle" class="m">bridge</text>
+<rect class="box" x="290" y="40" width="120" height="40" rx="6"/>
+<text x="350" y="57" text-anchor="middle" class="m">tap child</text>
+<text x="350" y="71" text-anchor="middle" class="s">tun_tap.c</text>
+<rect class="box" x="430" y="40" width="125" height="40" rx="6"/>
+<text x="492.5" y="57" text-anchor="middle" class="m">passt_shuttle</text>
+<text x="492.5" y="71" text-anchor="middle" class="s">cloonix-ovs-nat</text>
+<path class="ard2" d="M125,78 L150,78"/>
+<path class="ard2" d="M260,72 L290,62"/>
+<path class="ard2" d="M410,60 L430,60"/>
+<text x="420" y="100" text-anchor="middle" class="s">pipe, seqtap</text>
+<rect class="box" x="615" y="40" width="130" height="40" rx="6"/>
+<text x="680" y="57" text-anchor="middle" class="m">cloonix-passt</text>
+<text x="680" y="71" text-anchor="middle" class="s">on the host</text>
+<path class="ard2" d="M555,60 L615,60"/>
+<text x="585" y="34" text-anchor="middle" class="sm">u32 + frame</text>
+<rect class="box" x="770" y="40" width="115" height="40" rx="6"/>
+<text x="827.5" y="64" text-anchor="middle" class="m">host sockets</text>
+<path class="ard2" d="M745,60 L770,60"/>
+<rect class="gry" x="430" y="150" width="125" height="40" rx="6"/>
+<text x="492.5" y="167" text-anchor="middle" class="m">proxymous</text>
+<text x="492.5" y="181" text-anchor="middle" class="s">passt_spawn.c</text>
+<path class="ary" d="M492,150 L680,80"/>
+<text x="640" y="135" text-anchor="middle" class="s">starts it, -t -u ports</text>
+<rect class="gry" x="150" y="150" width="130" height="40" rx="6"/>
+<text x="215" y="167" text-anchor="middle" class="m">main-server</text>
+<text x="215" y="181" text-anchor="middle" class="s">ovs_nat_main.c</text>
+<path class="ary" d="M280,170 L430,170"/>
+<text x="290" y="225" text-anchor="middle" class="s">backlog toward passt bounded: past the high mark the tap is stopped</text>
+</svg>

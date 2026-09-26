@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 130" width="900" height="130" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<style>
+.m{font-family:monospace;font-size:11px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+</style>
+<rect width="900" height="130" fill="#ffffff"/>
+<path class="cab" d="M88,60 L197,60"/>
+<path class="cab" d="M305,60 L197,60"/>
+<path class="cab" d="M341,60 L450,60"/>
+<path class="cab" d="M559,60 L450,60"/>
+<path class="cab" d="M595,60 L703,60"/>
+<path class="cab" d="M812,60 L703,60"/>
+<circle cx="70" cy="60" r="18" fill="#6666cc" stroke="#9999ff" stroke-width="2"/>
+<text x="70" y="64" text-anchor="middle" class="w">n1</text>
+<circle cx="88" cy="60" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<text x="88" y="63.5" text-anchor="middle" class="w" font-size="9">0</text>
+<text x="70" y="102" text-anchor="middle" class="m"></text>
+<circle cx="197" cy="60" r="14" fill="#555555" stroke="#888888" stroke-width="2"/>
+<text x="197" y="41" text-anchor="middle" class="m">lanA</text>
+<circle cx="323" cy="60" r="18" fill="#6666cc" stroke="#9999ff" stroke-width="2"/>
+<text x="323" y="64" text-anchor="middle" class="w">n2</text>
+<circle cx="305" cy="60" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<text x="305" y="63.5" text-anchor="middle" class="w" font-size="9">0</text>
+<circle cx="341" cy="60" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<text x="341" y="63.5" text-anchor="middle" class="w" font-size="9">1</text>
+<text x="323" y="102" text-anchor="middle" class="m"></text>
+<circle cx="450" cy="60" r="14" fill="#555555" stroke="#888888" stroke-width="2"/>
+<text x="450" y="41" text-anchor="middle" class="m">lanB</text>
+<circle cx="577" cy="60" r="18" fill="#6666cc" stroke="#9999ff" stroke-width="2"/>
+<text x="577" y="64" text-anchor="middle" class="w">n3</text>
+<circle cx="559" cy="60" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<text x="559" y="63.5" text-anchor="middle" class="w" font-size="9">0</text>
+<circle cx="595" cy="60" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<text x="595" y="63.5" text-anchor="middle" class="w" font-size="9">1</text>
+<text x="577" y="102" text-anchor="middle" class="m"></text>
+<circle cx="703" cy="60" r="14" fill="#555555" stroke="#888888" stroke-width="2"/>
+<text x="703" y="41" text-anchor="middle" class="m">lanC</text>
+<circle cx="830" cy="60" r="18" fill="#6666cc" stroke="#9999ff" stroke-width="2"/>
+<text x="830" y="64" text-anchor="middle" class="w">n4</text>
+<circle cx="812" cy="60" r="7" fill="#27ae60" stroke="#54ff54" stroke-width="1.5"/>
+<text x="812" y="63.5" text-anchor="middle" class="w" font-size="9">0</text>
+<text x="830" y="102" text-anchor="middle" class="m"></text>
+</svg>

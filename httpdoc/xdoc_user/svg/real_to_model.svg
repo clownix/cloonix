@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" width="900" height="340" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.fib{stroke:#c8a24a;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.ink{fill:#0f3460}
+.pink{fill:#e94560}
+</style>
+<rect width="900" height="340" fill="#ffffff"/>
+<rect class="zone" x="20" y="20" width="860" height="120" rx="12"/><text x="30" y="36" text-anchor="start" class="s">the real network</text><rect class="zoneg" x="20" y="200" width="860" height="130" rx="12"/><text x="30" y="216" text-anchor="start" class="s">the same network in cloonix</text><rect class="box" x="88" y="48" width="44" height="30" rx="3"/><rect class="ink" x="94" y="53" width="32" height="18" rx="1" opacity="0.15"/><rect class="ink" x="96" y="81" width="28" height="4" rx="1"/><text x="110" y="100" text-anchor="middle" class="m">a machine</text><rect class="grn" x="225" y="60" width="90" height="24" rx="4"/><rect class="ink" x="233" y="68" width="8" height="8" opacity="0.35"/><rect class="ink" x="246" y="68" width="8" height="8" opacity="0.35"/><rect class="ink" x="259" y="68" width="8" height="8" opacity="0.35"/><rect class="ink" x="272" y="68" width="8" height="8" opacity="0.35"/><rect class="ink" x="285" y="68" width="8" height="8" opacity="0.35"/><rect class="ink" x="298" y="68" width="8" height="8" opacity="0.35"/><text x="323" y="72" text-anchor="start" class="m">a switch</text><circle class="acc" cx="430" cy="70" r="20"/><path class="lin" d="M420,70 L440,70 M430,60 L430,80"/><path class="pink" d="M436,66 L441,70 L436,74 z M424,66 L419,70 L424,74 z"/><text x="430" y="106" text-anchor="middle" class="m">a router</text><path class="cab" d="M550,72 L630,72"/><text x="590" y="96" text-anchor="middle" class="m">a cable</text><circle class="yel" cx="750" cy="70" r="20"/><text x="750" y="74" text-anchor="middle" class="m">?</text><text x="750" y="106" text-anchor="middle" class="m">a probe on a cable</text><path class="arr" d="M110,150 L110,195"/><path class="arr" d="M270,150 L270,195"/><path class="arr" d="M430,150 L430,195"/><path class="arr" d="M590,150 L590,195"/><path class="arr" d="M750,150 L750,195"/><rect class="box" x="35" y="230" width="150" height="40" rx="6"/><text x="110" y="248" text-anchor="middle" class="m">kvm or cnt</text><text x="110" y="262" text-anchor="middle" class="s">a machine or a container</text><rect class="box" x="195" y="230" width="150" height="40" rx="6"/><text x="270" y="248" text-anchor="middle" class="m">lan</text><text x="270" y="262" text-anchor="middle" class="s">an openvswitch bridge</text><rect class="box" x="355" y="230" width="150" height="40" rx="6"/><text x="430" y="248" text-anchor="middle" class="m">kvm or cnt</text><text x="430" y="262" text-anchor="middle" class="s">running frr or bird</text><rect class="box" x="515" y="230" width="150" height="40" rx="6"/><text x="590" y="248" text-anchor="middle" class="m">plug</text><text x="590" y="262" text-anchor="middle" class="s">one port of an item, one lan</text><rect class="box" x="675" y="230" width="150" height="40" rx="6"/><text x="750" y="248" text-anchor="middle" class="m">cnf sniff=, sniff</text><text x="750" y="262" text-anchor="middle" class="s">the packets of one interface</text><text x="450" y="305" text-anchor="middle" class="s">the way out of the emulated network toward the machine and the internet is a nat item</text></svg>

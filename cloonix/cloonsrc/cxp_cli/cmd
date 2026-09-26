@@ -1,0 +1,6 @@
+# set -e: a step that fails must stop this script.
+set -e
+# /bin/bash
+
+./allclean
+make

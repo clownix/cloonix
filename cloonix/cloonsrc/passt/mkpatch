@@ -1,0 +1,11 @@
+#!/bin/bash
+HERE=`pwd`
+TARGZ=../../../targz_store
+
+cd ${TARGZ}
+PASST=$(ls passt_*)
+PASST=${PASST%%.*}
+cd ${HERE}
+
+tar xvf ${TARGZ}/${PASST}.tar.gz
+diff -Naur passt passt_tainted > ${HERE}/tmp_passt.patch

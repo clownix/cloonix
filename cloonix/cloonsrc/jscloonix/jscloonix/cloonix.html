@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!-- Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cloonix Network Topology</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: #1a1a2e; color: #e0e0e0;
+                 font-family: monospace; overflow: hidden; }
+    #header { display: flex; align-items: center; gap: 12px;
+              padding: 8px 16px; background: #16213e; border-bottom: 1px solid #0f3460; }
+    #header h1 { font-size: 1rem; color: #e94560; letter-spacing: 2px; }
+    #status  { font-size: 0.75rem; color: #888; margin-left: auto; }
+    #canvas-wrap { width: 100%; height: calc(100% - 40px); position: relative; }
+    canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 400; }
+    .ssh-panel-term .xterm { height: 100%; }
+    .ssh-panel-term .xterm-viewport { overflow-y: auto; }
+  </style>
+  <link rel="stylesheet" href="/xterm/xterm.css"/>
+  <script src="/xterm/xterm.js"></script>
+  <script src="/xterm/addon-fit.js"></script>
+</head>
+<body>
+  <div id="header">
+    <h1>CLOONIX</h1>
+    <span id="status">connecting…</span>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="topo-canvas"></canvas>
+  </div>
+  <script src="cr-topo-core.js"></script>
+  <script src="cr-topo-draw.js"></script>
+  <script src="cr-topo-panels.js"></script>
+  <script src="cr-topo-menu.js"></script>
+  <script src="cr-traffic.js"></script>
+  <script src="cr-play.js"></script>
+  <script src="cr-pcaprec.js"></script>
+  <script src="cr-tune.js"></script>
+  <script src="cr-rma.js"></script>
+  <script src="cr-a2b.js"></script>
+</body>
+</html>

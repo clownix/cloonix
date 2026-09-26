@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 310" width="900" height="310" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#27ae60"/></marker>
+<marker id="ay" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.b{font-weight:bold;font-size:12.5px}
+.s{font-size:10px;fill:#5a6472}
+.sm{font-family:monospace;font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.life{stroke:#9aa3ad;stroke-width:1.2;stroke-dasharray:4 4}
+.arr{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.ard{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar)}
+.ard2{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar);marker-start:url(#ar)}
+.arg{stroke:#27ae60;stroke-width:1.8;fill:none;marker-end:url(#ag)}
+.ary{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ay)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.act{fill:#dfe8f7;stroke:#0f3460;stroke-width:1}
+.cab{stroke:#555555;stroke-width:2.2;fill:none}
+</style>
+<rect width="900" height="310" fill="#ffffff"/>
+<path class="life" d="M90,50 L90,300"/><path class="life" d="M290,50 L290,300"/><path class="life" d="M530,50 L530,300"/><path class="life" d="M770,50 L770,300"/>
+<rect class="acc" x="20" y="40" width="140" height="34" rx="6"/>
+<text x="90" y="61" text-anchor="middle" class="m">cloonix-ovs-snf</text>
+<rect class="box" x="220" y="40" width="140" height="34" rx="6"/>
+<text x="290" y="61" text-anchor="middle" class="m">cloonix-dumpcap</text>
+<rect class="box" x="440" y="40" width="180" height="34" rx="6"/>
+<text x="530" y="61" text-anchor="middle" class="m">main-server ovs_snf.c</text>
+<rect class="grn" x="690" y="40" width="160" height="34" rx="6"/>
+<text x="770" y="61" text-anchor="middle" class="m">the new snf</text>
+<path d="M78,88 L102,112 M102,88 L78,112" stroke="#e94560" stroke-width="3"/>
+<text x="90" y="128" text-anchor="middle" class="s">killed</text>
+<path class="ard" d="M90,145 L290,145"/>
+<text x="190" y="138" text-anchor="middle" class="sm">fifo: end of file</text>
+<path class="ard" d="M290,170 L530,170"/>
+<text x="410" y="163" text-anchor="middle" class="sm">status 0, snf pid gone</text>
+<rect class="gry" x="545" y="158" width="200" height="24" rx="4"/>
+<text x="645" y="174" text-anchor="middle" class="sm">history only</text>
+<path class="ard" d="M90,205 L530,205"/>
+<text x="310" y="198" text-anchor="middle" class="sm">channel closed, seen at the next 500 ms beat</text>
+<rect class="acc" x="545" y="193" width="200" height="24" rx="4"/>
+<text x="645" y="209" text-anchor="middle" class="sm">free_snf: history, one WARNING</text>
+<path class="arg" d="M530,250 L770,250"/>
+<text x="650" y="243" text-anchor="middle" class="sm">200 ms later, same eth, same lan</text>
+<rect class="grn" x="660" y="262" width="220" height="30" rx="4"/>
+<text x="770" y="281" text-anchor="middle" class="sm">old socket erased, fifo kept</text>
+</svg>

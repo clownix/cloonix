@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.cross{stroke:#e94560;stroke-width:3}
+</style>
+<rect width="900" height="170" fill="#ffffff"/>
+<rect class="box" x="30" y="60" width="130" height="40" rx="6"/>
+<text x="95" y="80" text-anchor="middle" class="m">sources</text>
+<rect width="900" height="300" fill="#ffffff"/>
+<rect class="zoneg" x="15" y="15" width="870" height="270" rx="8"/>
+<text x="30" y="35" class="s">host: cloonix start nemo, debug/autotest/autotest.sh</text>
+<rect class="yel" x="30" y="50" width="170" height="40" rx="6"/>
+<text x="115" y="70" text-anchor="middle" class="m">kvm_autotest_&lt;distro&gt;.qcow2</text>
+<text x="115" y="82" text-anchor="middle" class="s">one per distro, made once</text>
+<rect class="box" x="30" y="105" width="120" height="40" rx="6"/>
+<text x="90" y="125" text-anchor="middle" class="m">bulk</text>
+<text x="90" y="137" text-anchor="middle" class="s">IMAGES of the suites</text>
+<rect class="box" x="30" y="160" width="120" height="40" rx="6"/>
+<text x="90" y="180" text-anchor="middle" class="m">$HOME</text>
+<text x="90" y="192" text-anchor="middle" class="s">bundle, toy tar.gz</text>
+<rect class="box" x="30" y="215" width="120" height="40" rx="6"/>
+<text x="90" y="235" text-anchor="middle" class="m">sources</text>
+<text x="90" y="247" text-anchor="middle" class="s">debug/, demos/, books</text>
+<path class="arr" d="M150,125 L215,125"/>
+<path class="arr" d="M150,180 L215,180"/>
+<path class="arr" d="M150,235 L215,235"/>
+<rect class="grn" x="220" y="105" width="70" height="150" rx="6"/>
+<text x="255" y="185" text-anchor="middle" class="m">scp</text>
+<text x="255" y="197" text-anchor="middle" class="s">agent</text>
+<path class="arrr" d="M290,150 L330,150"/>
+<path class="arrr" d="M290,245 C450,300 650,300 745,228"/>
+<path class="arg" d="M200,70 L330,70"/>
+<path class="arg" d="M200,62 C400,20 600,20 640,60"/>
+<text x="240" y="62" text-anchor="middle" class="s">add kvm, 4 GB, 4 cpu</text>
+<rect class="zone" x="330" y="45" width="250" height="180" rx="8"/>
+<text x="345" y="65" class="m">kvm1</text>
+<text x="345" y="80" class="s">bundle installed, nested nemo + mito</text>
+<rect class="box" x="345" y="95" width="220" height="30" rx="6"/>
+<text x="455" y="114" text-anchor="middle" class="m">user: ./testitall.sh</text>
+<rect class="acc" x="345" y="145" width="220" height="30" rx="6"/>
+<text x="455" y="164" text-anchor="middle" class="m">results_outputs.log, tst_max.sh</text>
+<text x="455" y="205" text-anchor="middle" class="s">eth0 10.9.9.1, autolan, autotap 10.9.9.3</text>
+<rect class="zone" x="620" y="45" width="250" height="180" rx="8"/>
+<text x="635" y="65" class="m">kvm2</text>
+<text x="635" y="80" class="s">toy in /home/user, toys nemo + mito</text>
+<rect class="box" x="635" y="95" width="220" height="30" rx="6"/>
+<text x="745" y="114" text-anchor="middle" class="m">user: ./testitalltoy.sh</text>
+<rect class="acc" x="635" y="145" width="220" height="30" rx="6"/>
+<text x="745" y="164" text-anchor="middle" class="m">results_outputs.log, tst_maxtoy.sh</text>
+<text x="745" y="205" text-anchor="middle" class="s">eth0 10.9.9.2, autolan, autotap 10.9.9.3</text>
+<text x="600" y="245" text-anchor="middle" class="s">one tail per kvm: cloonix cli nemo ssh kvm1 | kvm2 "tail -f results_outputs.log"</text>
+</svg>

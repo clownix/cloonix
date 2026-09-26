@@ -1,0 +1,110 @@
+#!/bin/bash
+set -e
+HERE=`pwd`
+# Minimal cloonix QEMU build.
+./allclean
+./patched_create
+
+cd ${HERE}/tainted_qemu/
+
+# Second trimming list below the enables: five options whose meson default is
+# NOT "auto", so --without-default-features leaves them on.
+CONFIGURATION_OPTS="--prefix=/usr/local
+                    --python=/usr/bin/python3
+                    --target-list=x86_64-softmmu
+                    --without-default-features
+                    --without-default-devices
+                    --enable-kvm
+                    --enable-vnc
+                    --enable-vhost-net
+                    --enable-vhost-kernel
+                    --enable-tools
+                    --enable-pixman
+                    --enable-linux-io-uring
+                    --enable-linux-aio
+                    --enable-gio
+                    --disable-tcg
+                    --disable-fdt
+                    --disable-docs
+                    --disable-qom-cast-debug
+                    --enable-trace-backends=nop
+                    --audio-drv-list=
+                    --disable-download
+                    --disable-pie"
+
+DEVMAK="configs/devices/x86_64-softmmu/default.mak"
+echo "Writing minimal device list to ${DEVMAK}"
+cat > ${DEVMAK} << 'MAK_EOF'
+# Minimal cloonix device set: top-level devices only, buses come by Kconfig
+# select. Names must be real 'config NAME' entries or minikconf aborts.
+CONFIG_Q35=y
+CONFIG_AHCI_ICH9=y
+# The firmware flash of a uefi guest: -drive if=pflash. hw/i386 may select it
+# already through PC, but this build turns default devices off, and an
+# implicit select is a thing to discover at run time with a bad error.
+CONFIG_PFLASH_CFI01=y
+CONFIG_VIRTIO_PCI=y
+CONFIG_VIRTIO_NET=y
+CONFIG_VIRTIO_SCSI=y
+CONFIG_VIRTIO_BLK=y
+CONFIG_VIRTIO_SERIAL=y
+CONFIG_VIRTIO_BALLOON=y
+CONFIG_VIRTIO_RNG=y
+CONFIG_USB_XHCI_PCI=y
+CONFIG_USB_HID=y
+CONFIG_VGA_PCI=y
+MAK_EOF
+
+export CFLAGS="-mtune=generic -fno-stack-protector -g \
+               -ffunction-sections -fdata-sections \
+               -fno-asynchronous-unwind-tables"
+export LDFLAGS="-lstdc++ -no-pie -Wl,--gc-sections"
+echo Doing CONFIGURE
+./configure $CONFIGURATION_OPTS
+
+echo Doing QEMU
+make -j 6 qemu-system-x86_64
+
+echo MOVING QEMU RESULT BIN
+
+mv build/qemu-system-x86_64   ${HERE}/cloonix-qemu-system
+strip ${HERE}/cloonix-qemu-system
+mkdir -p ${HERE}/pc-bios
+cp pc-bios/bios-256k.bin      ${HERE}/pc-bios
+cp pc-bios/kvmvapic.bin       ${HERE}/pc-bios
+cp pc-bios/vgabios-stdvga.bin ${HERE}/pc-bios
+# UEFI firmware for a gpt disk with an efi loader (every prebuilt microsoft image;
+# seabios cannot start those). The vars template (edk2-i386-vars.fd, older trees)
+# is copied per vm as the second pflash unit; trees since 2025 ship none and the
+# server starts with the code alone. The names below are what the server looks for.
+uefi_get() {
+  want=$1
+  shift
+  for cand in "$@"; do
+    if [ -f pc-bios/${cand}.fd ]; then
+      cp pc-bios/${cand}.fd ${HERE}/pc-bios/${want}.fd
+      return 0
+    elif [ -f pc-bios/${cand}.fd.bz2 ]; then
+      bunzip2 -c pc-bios/${cand}.fd.bz2 > ${HERE}/pc-bios/${want}.fd
+      return 0
+    fi
+  done
+  return 1
+}
+if ! uefi_get edk2-x86_64-code edk2-x86_64-code; then
+  echo "ERROR no pc-bios/edk2-x86_64-code.fd in this qemu tree:"
+  ls pc-bios | grep -i "edk2\|ovmf" | sed 's/^/       pc-bios\//'
+  echo "       uefi guests, windows among them, cannot boot without it"
+  exit 1
+fi
+if uefi_get edk2-i386-vars edk2-i386-vars edk2-x86_64-vars; then
+  echo "uefi: code and variables template, one variables copy per vm"
+else
+  echo "uefi: code only, this tree ships no x86 variables template: stateless"
+fi
+# A keymap file is read only when -k is on the cmdline (system/vl.c sets
+# keyboard_layout nowhere else, and ui/curses.c is not compiled).
+mkdir -p ${HERE}/pc-bios/keymaps
+cp pc-bios/keymaps/en-us      ${HERE}/pc-bios/keymaps/
+cd ${HERE}
+rm -rf ${HERE}/tainted_qemu

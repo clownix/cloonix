@@ -1,0 +1,64 @@
+cloonix-dtach
+=============
+
+This is dtach 0.9 by Ned T. Crigler (https://github.com/crigler/dtach),
+reduced to what cloonix uses. GPL-2, see COPYING. Upstream has not released
+since May 2016.
+
+It used to live here as dtach_source.tar.gz, which also carried a shallow
+.git clone, config.log, config.status and an editor swap file, and the build
+ran ./configure every time. The four source files are now in src/ and a
+plain Makefile builds them.
+
+
+What it does for cloonix
+------------------------
+
+It holds a pty when nobody is watching it. That is what makes a console
+survive the browser tab that opened it: open a console, close the panel,
+open it again, and the same shell is there with its scrollback.
+
+All three consoles use it the same way. The session is created detached:
+
+  cloonix-dtach -n <socket> <command...>
+
+for qemu by the main server, and for a container by cloonix-suid-power,
+which is what has the right to enter the namespaces. The gui server then
+attaches to it, unprivileged:
+
+  cloonix-dtach -a <socket> -E -z
+
+
+What was removed, and why
+-------------------------
+
+Modes. Only -n and -a are used, so -c, -A, -N and -p are gone, and with
+them the master's waitattach and dontfork paths and push_main().
+
+Options. -E and -z are used. -e is gone: an empty argument to it set the
+detach character to NUL, which a terminal sends for Ctrl-Space, so a
+console detached on a plausible keystroke. -r is gone with the redraw
+methods it selected; only ctrl_l is left, which is the one cloonix used.
+
+Portability. cloonix is Linux only, so autoconf goes with it: no configure,
+no config.h, no Makefile.in. The BROKEN_MASTER arms were for Solaris, and
+the openpty/forkpty fallbacks at the end of master.c were for systems
+without them. glibc has them.
+
+
+Two upstream bugs fixed here
+----------------------------
+
+A short read was acted on. client_activity() read into an uninitialised
+struct packet and did not check how much arrived, so one byte from a client
+was enough to push whatever the stack held into the pty, or to set a window
+size out of it. The packet is cleared and a partial read is now refused.
+
+Output was doubled with two attached clients. pty_activity() re-sent the
+same buffer on its "try again" path, including to clients that had already
+received it, so one slow client made a fast one show everything twice. Each
+client is now marked once served for the buffer in flight.
+
+Neither is likely to bite a single attached console, which is why they
+survived. Both are reachable now that container sessions persist and two
+browser tabs can attach at once.

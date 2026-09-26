@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 350" width="900" height="350" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e08a1e"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.w{fill:#ffffff;font-size:11px;font-weight:bold}
+.s{font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.fib{stroke:#c8a24a;stroke-width:2.5;fill:none}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arrr{stroke:#e94560;stroke-width:2;fill:none;marker-end:url(#ar)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.ink{fill:#0f3460}
+.pink{fill:#e94560}
+.t{font-size:13px;font-weight:bold;fill:#0f3460}
+.big{font-size:15px;font-weight:bold;fill:#0f3460}
+.cabd{stroke:#3498db;stroke-width:2.5;fill:none;stroke-dasharray:6 4}
+.air{fill:#fff8ec;stroke:#e08a1e;stroke-width:1.5;stroke-dasharray:3 3}
+.arro{stroke:#e08a1e;stroke-width:2;fill:none;marker-end:url(#ao)}
+.org{fill:#e08a1e}
+</style>
+<rect width="900" height="350" fill="#ffffff"/>
+<text x="20" y="28" text-anchor="start" class="t">what a capture of an air holds: radiotap, then the 802.11 frame</text>
+<rect class="yel" x="20" y="50" width="90" height="44" rx="6"/>
+<text x="65" y="76" text-anchor="middle" class="s">radiotap</text>
+<text x="65" y="112" text-anchor="middle" class="s">its length</text>
+<rect class="acc" x="112" y="50" width="100" height="44" rx="6"/>
+<text x="162" y="76" text-anchor="middle" class="s">Frame Control</text>
+<text x="162" y="112" text-anchor="middle" class="s">2 bytes</text>
+<rect class="box" x="214" y="50" width="70" height="44" rx="6"/>
+<text x="249" y="76" text-anchor="middle" class="s">Duration</text>
+<text x="249" y="112" text-anchor="middle" class="s">2 bytes</text>
+<rect class="grn" x="286" y="50" width="80" height="44" rx="6"/>
+<text x="326" y="76" text-anchor="middle" class="s">Address 1</text>
+<text x="326" y="112" text-anchor="middle" class="s">6 bytes</text>
+<rect class="grn" x="368" y="50" width="80" height="44" rx="6"/>
+<text x="408" y="76" text-anchor="middle" class="s">Address 2</text>
+<text x="408" y="112" text-anchor="middle" class="s">6 bytes</text>
+<rect class="grn" x="450" y="50" width="80" height="44" rx="6"/>
+<text x="490" y="76" text-anchor="middle" class="s">Address 3</text>
+<text x="490" y="112" text-anchor="middle" class="s">6 bytes</text>
+<rect class="box" x="532" y="50" width="60" height="44" rx="6"/>
+<text x="562" y="76" text-anchor="middle" class="s">Seq Ctl</text>
+<text x="562" y="112" text-anchor="middle" class="s">2 bytes</text>
+<rect class="gry" x="594" y="50" width="75" height="44" rx="6"/>
+<text x="631.5" y="76" text-anchor="middle" class="s">Address 4</text>
+<text x="631.5" y="112" text-anchor="middle" class="s">6 bytes</text>
+<rect class="gry" x="671" y="50" width="45" height="44" rx="6"/>
+<text x="693.5" y="76" text-anchor="middle" class="s">QoS</text>
+<text x="693.5" y="112" text-anchor="middle" class="s">2 bytes</text>
+<rect class="box" x="718" y="50" width="100" height="44" rx="6"/>
+<text x="768" y="76" text-anchor="middle" class="s">body</text>
+<text x="768" y="112" text-anchor="middle" class="s">0-2304 bytes</text>
+<rect class="box" x="820" y="50" width="50" height="44" rx="6"/>
+<text x="845" y="76" text-anchor="middle" class="s">FCS</text>
+<text x="845" y="112" text-anchor="middle" class="s">4 bytes</text>
+<text x="20" y="140" text-anchor="start" class="s">Address 4 on a frame between two relays only, QoS on QoS data frames only</text>
+<text x="20" y="178" text-anchor="start" class="t">the two bytes of Frame Control, bit by bit</text>
+<rect class="box" x="20" y="195" width="74" height="40" rx="6"/>
+<text x="57" y="219" text-anchor="middle" class="s">version</text>
+<text x="57" y="252" text-anchor="middle" class="s">2 bits</text>
+<rect class="acc" x="96" y="195" width="74" height="40" rx="6"/>
+<text x="133" y="219" text-anchor="middle" class="s">type</text>
+<text x="133" y="252" text-anchor="middle" class="s">2 bits</text>
+<rect class="acc" x="172" y="195" width="120" height="40" rx="6"/>
+<text x="232" y="219" text-anchor="middle" class="s">subtype</text>
+<text x="232" y="252" text-anchor="middle" class="s">4 bits</text>
+<rect class="grn" x="294" y="195" width="68" height="40" rx="6"/>
+<text x="328" y="219" text-anchor="middle" class="s">to DS</text>
+<text x="328" y="252" text-anchor="middle" class="s">1 bit</text>
+<rect class="grn" x="364" y="195" width="68" height="40" rx="6"/>
+<text x="398" y="219" text-anchor="middle" class="s">from DS</text>
+<text x="398" y="252" text-anchor="middle" class="s">1 bit</text>
+<rect class="box" x="434" y="195" width="68" height="40" rx="6"/>
+<text x="468" y="219" text-anchor="middle" class="s">more frag</text>
+<text x="468" y="252" text-anchor="middle" class="s">1 bit</text>
+<rect class="box" x="504" y="195" width="68" height="40" rx="6"/>
+<text x="538" y="219" text-anchor="middle" class="s">retry</text>
+<text x="538" y="252" text-anchor="middle" class="s">1 bit</text>
+<rect class="box" x="574" y="195" width="68" height="40" rx="6"/>
+<text x="608" y="219" text-anchor="middle" class="s">power mgt</text>
+<text x="608" y="252" text-anchor="middle" class="s">1 bit</text>
+<rect class="box" x="644" y="195" width="68" height="40" rx="6"/>
+<text x="678" y="219" text-anchor="middle" class="s">more data</text>
+<text x="678" y="252" text-anchor="middle" class="s">1 bit</text>
+<rect class="yel" x="714" y="195" width="68" height="40" rx="6"/>
+<text x="748" y="219" text-anchor="middle" class="s">protected</text>
+<text x="748" y="252" text-anchor="middle" class="s">1 bit</text>
+<rect class="box" x="784" y="195" width="68" height="40" rx="6"/>
+<text x="818" y="219" text-anchor="middle" class="s">+HTC</text>
+<text x="818" y="252" text-anchor="middle" class="s">1 bit</text>
+<text x="20" y="292" text-anchor="start" class="m">type 0 management: beacon 8, probe 4 and 5, authentication 11, association 0 and 1, action 13</text>
+<text x="20" y="312" text-anchor="start" class="m">type 1 control: ack 13, rts 11, cts 12</text>
+<text x="20" y="332" text-anchor="start" class="m">type 2 data: data 0, QoS data 8</text>
+</svg>

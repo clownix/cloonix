@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#27ae60"/></marker>
+<marker id="ay" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.b{font-weight:bold;font-size:12.5px}
+.s{font-size:10px;fill:#5a6472}
+.sm{font-family:monospace;font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.life{stroke:#9aa3ad;stroke-width:1.2;stroke-dasharray:4 4}
+.arr{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.ard{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar)}
+.ard2{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar);marker-start:url(#ar)}
+.arg{stroke:#27ae60;stroke-width:1.8;fill:none;marker-end:url(#ag)}
+.ary{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ay)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.act{fill:#dfe8f7;stroke:#0f3460;stroke-width:1}
+</style>
+<rect width="900" height="470" fill="#ffffff"/>
+
+<rect class="zone" x="10" y="10" width="880" height="215" rx="10"/>
+<text x="20" y="26" text-anchor="start" class="s">control plane: one text rpc, json lines, every hop a socket</text>
+<rect class="box" x="25" y="45" width="120" height="36" rx="6"/>
+<text x="85" y="67" text-anchor="middle" class="m">cloonix cli</text>
+<rect class="box" x="25" y="120" width="120" height="36" rx="6"/>
+<text x="85" y="142" text-anchor="middle" class="m">browser</text>
+<rect class="acc" x="185" y="70" width="150" height="52" rx="6"/>
+<text x="260" y="93" text-anchor="middle" class="m">cloonix-proxymous</text>
+<text x="260" y="107" text-anchor="middle" class="s">45211 tls   4444 https</text>
+<rect class="box" x="380" y="40" width="150" height="40" rx="6"/>
+<text x="455" y="57" text-anchor="middle" class="m">cloonix-doorways</text>
+<text x="455" y="71" text-anchor="middle" class="s">proxy_pmain.sock</text>
+<rect class="box" x="380" y="125" width="150" height="40" rx="6"/>
+<text x="455" y="142" text-anchor="middle" class="m">cloonix-gui-server</text>
+<text x="455" y="156" text-anchor="middle" class="s">proxy_pjsweb.sock</text>
+<rect class="acc" x="575" y="80" width="150" height="46" rx="6"/>
+<text x="650" y="100" text-anchor="middle" class="m">cloonix-main-server</text>
+<text x="650" y="114" text-anchor="middle" class="s">the topology</text>
+<rect class="box" x="760" y="35" width="120" height="36" rx="6"/>
+<text x="820" y="57" text-anchor="middle" class="m">suid-power</text>
+<rect class="box" x="760" y="85" width="120" height="36" rx="6"/>
+<text x="820" y="107" text-anchor="middle" class="m">ovs-drv</text>
+<rect class="box" x="760" y="135" width="120" height="36" rx="6"/>
+<text x="820" y="150" text-anchor="middle" class="m">satellites</text>
+<text x="820" y="164" text-anchor="middle" class="s">snf a2b c2c nat</text>
+<path class="arr2" d="M145,63 L185,85"/>
+<path class="arr2" d="M145,138 L185,108"/>
+<path class="arr2" d="M335,88 L380,60"/>
+<path class="arr2" d="M335,105 L380,145"/>
+<path class="arr2" d="M530,60 L575,95"/>
+<path class="arr2" d="M530,145 L575,112"/>
+<path class="arr2" d="M725,95 L760,53"/>
+<path class="arr2" d="M725,103 L760,103"/>
+<path class="arr2" d="M725,112 L760,152"/>
+<text x="450" y="200" text-anchor="middle" class="s">nothing is changed but by the main server; every answer comes back the same way</text>
+<rect class="zoner" x="10" y="240" width="880" height="220" rx="10"/>
+<text x="20" y="256" text-anchor="start" class="s">data plane: namespace cloonix_&lt;net&gt;, frames only</text>
+<rect class="box" x="25" y="280" width="110" height="34" rx="6"/>
+<text x="80" y="301" text-anchor="middle" class="m">kvm eth</text>
+<rect class="box" x="25" y="330" width="110" height="34" rx="6"/>
+<text x="80" y="351" text-anchor="middle" class="m">cnt eth</text>
+<rect class="acc" x="210" y="295" width="190" height="56" rx="6"/>
+<text x="305" y="320" text-anchor="middle" class="m">cloonix-ovs-vswitchd</text>
+<text x="305" y="334" text-anchor="middle" class="s">one bridge per lan</text>
+<rect class="box" x="480" y="265" width="160" height="34" rx="6"/>
+<text x="560" y="279" text-anchor="middle" class="m">cloonix-ovs-snf</text>
+<text x="560" y="293" text-anchor="middle" class="s">mirror -&gt; pcap</text>
+<rect class="box" x="480" y="310" width="160" height="34" rx="6"/>
+<text x="560" y="324" text-anchor="middle" class="m">cloonix-ovs-a2b</text>
+<text x="560" y="338" text-anchor="middle" class="s">delay, loss, rate</text>
+<rect class="box" x="480" y="355" width="160" height="34" rx="6"/>
+<text x="560" y="369" text-anchor="middle" class="m">cloonix-ovs-nat</text>
+<text x="560" y="383" text-anchor="middle" class="s">-&gt; cloonix-passt</text>
+<rect class="box" x="480" y="400" width="160" height="34" rx="6"/>
+<text x="560" y="414" text-anchor="middle" class="m">cloonix-ovs-c2c</text>
+<text x="560" y="428" text-anchor="middle" class="s">-&gt; udp relay</text>
+<rect class="box" x="720" y="265" width="160" height="34" rx="6"/>
+<text x="800" y="286" text-anchor="middle" class="m">client, webshark</text>
+<rect class="box" x="720" y="355" width="160" height="34" rx="6"/>
+<text x="800" y="376" text-anchor="middle" class="m">host sockets</text>
+<rect class="box" x="720" y="400" width="160" height="34" rx="6"/>
+<text x="800" y="421" text-anchor="middle" class="m">peer net</text>
+<path class="ard2" d="M135,297 L210,315"/>
+<path class="ard2" d="M135,347 L210,330"/>
+<path class="ard" d="M400,305 L480,282"/>
+<path class="ard" d="M400,318 L480,327"/>
+<path class="ard" d="M400,331 L480,372"/>
+<path class="ard" d="M400,344 L480,417"/>
+<path class="ard" d="M640,282 L720,282"/>
+<path class="ard2" d="M640,372 L720,372"/>
+<path class="ard2" d="M640,417 L720,417"/>
+</svg>

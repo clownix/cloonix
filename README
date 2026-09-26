@@ -1,0 +1,326 @@
+==============================================================================
+                               v100-00
+==============================================================================
+                               GENERAL
+==============================================================================
+Cloonix is an AGPLv3 software that creates networks of kvm virtual machines
+and crun containers.  It is a network virtualisation hypervisor: the topology
+is built, driven and observed from a web browser, on an interactive canvas.
+
+The network that links the guests together is an openvswitch instance running
+inside a private linux net namespace, so the network configuration of your
+host is never modified by cloonix.
+
+Everything cloonix needs is embedded in the delivery: no library of the host
+is used and nothing else has to be installed.  The binaries are compiled
+inside a debian trixie virtual machine.
+
+Two packagings are provided, both are plain tar.gz files:
+
+  cloonix-bundle-100.tar.gz   system-wide install, root needed at install time
+  cloonix-toy-100.tar.gz      user-land only, root never needed
+
+2 brandtypes of guests run in cloonix:
+
+  kvm    real virtualisation run by qemu-kvm, root file-system is a .qcow2
+  cnt    container run by crun, root file-system is a directory
+
+The graphical interface is a web page served by cloonix itself.  There is no
+gtk client any more, no X11 forwarding, and no wireshark or spice binary to
+install on the host: the packet capture viewer (webshark) and the guest
+desktop (noVNC) both live inside the browser page.
+
+The canvas is served on one https port, https://<ip>:4444, reachable from
+anywhere.  The certificate is self-signed, the browser warns once.
+
+The web page asks for a user and a password.  They are not secret, they are
+shipped in the configuration, and they can be changed there:
+
+  https://127.0.0.1:4444      user  nemo      password  nemoclown
+
+  the file, bundle      /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg
+  the file, toy         <toy directory>/rootfs/cloonix/cloonfs/etc/cloonix.cfg
+
+The user is the name of the net, the password its cloonix_passwd in that
+file: the name of the net followed by clown.  For the net nemo: user nemo,
+password nemoclown.
+
+See clownix.net for the documentation:
+https://clownix.net/build_user/user.html
+
+
+==============================================================================
+                          BUNDLE INSTALLATION
+==============================================================================
+The bundle installation is based on cloonix-bundle-100.tar.gz, it copies the
+binaries to /usr/libexec/cloonix/cloonfs, puts the cloonix command and the
+cloonix_*.py files it imports in /usr/bin, and uses /var/lib/cloonix as work
+zone.
+
+Root privileges are necessary for the installation, and since some cloonix
+actions deal with namespaces and network interfaces, one binary,
+cloonix-suid-power, gets the suid root permission.
+
+1) Download and install:
+------------------------
+
+wget https://clownix.net/downloads/cloonix-bundle-100.tar.gz
+tar xvf cloonix-bundle-100.tar.gz
+cd cloonix-bundle-100
+sudo ./install_cloonfs
+
+To uninstall:
+
+sudo rm -f /usr/bin/cloonix*
+sudo rm -rf /usr/libexec/cloonix
+sudo rm -rf /var/lib/cloonix
+sudo rm -rf /usr/share/cloonix
+
+The install erases every /usr/bin/cloonix* before it copies: cloonix is the
+one name to type, and a name used by an older release must not stay on the
+PATH. Beside it go the cloonix_*.py files it imports, one per verb that is
+large enough to be worth keeping out of the entrance -- files, the demo
+player, the drawing of a topology, the words a tab offers.
+
+
+2) Download the guest root file-systems:
+----------------------------------------
+
+mkdir -p /var/lib/cloonix/bulk
+cd /var/lib/cloonix/bulk
+
+qcow2 (virtual machine for qemu-kvm):
+wget https://clownix.net/downloads/kvm_bulk/trixie.qcow2.gz
+gunzip trixie.qcow2.gz
+
+cnt (container directory for crun):
+wget https://clownix.net/downloads/cnt_bulk/trixie.tar.gz
+tar xvf trixie.tar.gz
+
+
+3) Start a network and open the canvas:
+---------------------------------------
+
+cloonix start nemo
+
+Then point a browser at:
+
+    https://127.0.0.1:4444
+
+The port is the "cloonix_web" value of the net in cloonix.cfg, it is 4444 for
+nemo, 4454 for mito, 4464 for fido.
+
+
+4) Play a demo:
+---------------
+
+cloonix cli nemo demo                        lists what is installed
+cloonix cli nemo demo security/wg.py      plays one
+
+The demos are in /usr/share/cloonix/demos: a subject area, then one python
+file per demo, and the windows, freebsd and cisco demos at the top.  The name
+can be shortened to the programme (wg or wg.py).
+
+
+==============================================================================
+                            TOY INSTALLATION
+==============================================================================
+The cloonix-toy needs no privileges, neither at install nor at run time.
+It is a user land application, it only needs a linux distribution to run.
+Cloonix runs inside a rootless crun container, the whole file tree stays in
+the directory you extracted.
+------------------------------------------------------------------------------
+
+1) Download:
+------------
+wget https://clownix.net/downloads/cloonix-toy-100.tar.gz
+
+2) Extract the directory:
+-------------------------
+tar zxvf cloonix-toy-100.tar.gz
+
+3) Call the setup.sh script to adapt the tool to its env:
+---------------------------------------------------------
+cd cloonix-toy-100
+./setup.sh
+
+The setup.sh takes an optional cloonix net name, "nemo" is the default:
+
+./setup.sh mito
+
+It creates a command script named after the chosen net: ./nemocmd, and it
+prints a small report on the host devices it will need.
+
+4) Start the server:
+--------------------
+./nemocmd start
+
+5) Open the canvas in a browser:
+--------------------------------
+https://127.0.0.1:4444
+
+6) Dump the demos available:
+----------------------------
+./nemocmd demo
+
+7) Call a demo:
+---------------
+./nemocmd demo security/wg.py
+
+8) Enter the container that hosts cloonix:
+------------------------------------------
+./nemocmd shell
+
+9) Erase all the objects without stopping the server:
+-----------------------------------------------------
+./nemocmd cloonix cli nemo del all
+
+10) Kill all:
+-------------
+./nemocmd stop
+
+
+NOTE:
+=====
+For cloonix to be able to run the qcow2 files, the devices /dev/kvm,
+/dev/vhost-net and /dev/net/tun must have read/write access for the user
+launching the demonstration:
+
+sudo setfacl -m u:${USER}:rw /dev/kvm
+sudo setfacl -m u:${USER}:rw /dev/vhost-net
+sudo setfacl -m u:${USER}:rw /dev/net/tun
+
+For cloonix to be able to use the wifi emulation, the module mac80211_hwsim
+must be inserted in the kernel:
+
+sudo modprobe mac80211_hwsim radios=0
+
+On ubuntu the unprivileged user namespaces may have to be unlocked:
+
+    kernel.unprivileged_userns_clone=1
+    kernel.apparmor_restrict_unprivileged_userns=0
+
+On fedora and centos, selinux may have to be set to disabled in
+/etc/sysconfig/selinux.
+
+-----------------------------------------------------------------------------
+
+
+==============================================================================
+                          NOTES FOR THE CANVAS GUI
+==============================================================================
+
+https://127.0.0.1:4444 gives the canvas gui.  A right-click on the empty
+canvas gives the creation menu: kvm, cnt, lan, tap, nat, a2b, c2c, and phy
+with one line per physical interface of the server.
+
+To cable an item to a lan: double-click the lan (it turns purple, it is
+selected) then single-click the small numbered circle on the border of the
+machine.  That small circle is an ethernet interface.  An interface is born
+without capture capability and its circle is cyan; "Sniff on" in its menu
+adds the capability and the circle turns green, "Sniff off" removes it.
+
+A double-click on a machine opens a root shell inside the browser page.
+A double-click on a green interface opens webshark, the embedded packet
+capture viewer.
+A right-click on a kvm gives its menu: Desktop (noVNC), Console, Save,
+Reboot, Delete, Info; on a cnt: remote console, info, delete.
+A right-click on an interface gives PlotTraffic, a live throughput plot, and
+Sniff on / Sniff off.
+A right-click on an a2b item gives Tune a2b: loss, delay and rate per
+direction.
+
+The header bar has the "Demo" button, which opens the Demo panel: Play
+picks a demo from the packages of the course, Commands prints the commands
+that rebuild the current topology.  The "PcapRec" button records all the
+capturable interfaces at once into .pcap files, and the "Delete all" button
+erases every object of the net.
+
+==============================================================================
+
+
+==============================================================================
+                              CLIENT COMMANDS
+==============================================================================
+
+There is a single command, cloonix, and it takes a verb:
+
+cloonix list                            every net of the config, and the versions
+cloonix start <net>                     starts the server of a cloonix network
+cloonix stop <net>                      destroys every object and the server
+cloonix cli <net> <verb> ...            add del plug unplug cnf dump sniff save ...
+cloonix cli <net> ssh <name> ["cmd"]    root shell inside a guest, no ip needed
+cloonix cli <net> scp <src> <dst>       file transfer to and from a guest
+cloonix cli <net> files <n> [<n>]       two panes, host and guest or two guests
+cloonix cli <net> demo [name]           list the demos, or play one
+cloonix cli <net> trace probe <name>    where the pipe into a guest breaks
+
+The <net> is one of the names declared in cloonix.cfg: nemo, mito, fido ...
+
+A verb may be written short where the letters typed fit one verb only, three
+of them at least: "cloonix cli nemo tra qem" is trace qemu, "cloonix cli nemo
+dum top" is dump topo. Names are typed whole.
+
+Every command begins with cloonix; there is no shell of its own to sit in.
+
+Nothing is installed in any shell and no directory of the machine is touched
+for it, but tab is there for whoever wants it, in a bash or a zsh:
+
+eval "$(cloonix --completion)"
+
+Then tab after "cloonix " offers the verbs, and tab further along offers the
+nets, the cli verbs and the guests of a running net. The words come from
+cloonix_completion.py of the delivery, so what is offered is what the client
+accepts.
+
+A line short of a word asks for the rest at a prompt of its own, runs what
+it ends up with, and is gone. What it built is not handed to the history of
+the shell: up at the shell gives back what was typed there, the bare
+"cloonix" that opened the prompt.
+
+cloonix writes nothing on the machine it runs on and reaches into nothing of
+it -- no history file, no config file, nothing under the home directory, and
+nothing added to the shell that launched it. A command ends on its own
+report and on nothing else.
+
+cloonix is python3 using nothing but the standard library -- the cloonix
+file, the cloonix_*.py files beside it and cloonix_config.py -- so the same
+files run on windows and on macos as well as on linux, with nothing to
+install on the client machine. It reaches a cloonix running elsewhere over
+the tcp port of the net.
+
+Away from linux: windows has no termios, so raw keystrokes are taken through
+its console api instead, and an interactive shell and the full screen
+programs inside it work there as they do here -- in a real console, the api
+refusing a pipe and the mintty of git bash; pulling a directory that contains
+symlinks needs windows developer mode; and cloonix start, which starts a
+server, is local to the linux machine that hosts cloonix. Commands, cli and
+file transfer are unaffected.
+
+win_client/ installs that client on windows 10 and windows 11, for the case
+where a cloonix command is wanted rather than a file to name a python with:
+
+./win_client/make_win_zip.sh
+
+writes /tmp/cloonix-client-win-<v>.zip.
+
+Carry the zip to the windows machine, extract it, run install.bat. It takes
+the newest python there, 3.7 or later, copies the client and the demos under
+%LOCALAPPDATA%, puts cloonix on the PATH and registers an uninstall. No
+administrator, nothing compiled, nothing downloaded, no package installed.
+
+Example of a two machine network, the server started in a terminal of its
+own and the other commands typed in a second one:
+
+cloonix start nemo
+cloonix cli nemo add kvm kvm1 ram=1000 cpu=2 eth=1 trixie.qcow2
+cloonix cli nemo add kvm kvm2 ram=1000 cpu=2 eth=1 trixie.qcow2
+cloonix cli nemo plug kvm1 eth0 lan1
+cloonix cli nemo plug kvm2 eth0 lan1
+cloonix cli nemo ssh kvm1 "ip addr add dev eth0 1.1.1.1/24"
+cloonix cli nemo ssh kvm1 "ip link set dev eth0 up"
+cloonix cli nemo ssh kvm2 "ip addr add dev eth0 1.1.1.2/24"
+cloonix cli nemo ssh kvm2 "ip link set dev eth0 up"
+cloonix cli nemo ssh kvm1 "ping -c 5 1.1.1.2"
+
+==============================================================================

@@ -1,0 +1,85 @@
+Howto build a cisco image for cloonix.
+
+The Cisco Catalyst 8000V iso comes from Cisco, with a CCO account, and is
+not redistributable: nothing here downloads it. The newest train at the
+time of writing is 17.18, named c8000v-universalk9.17.18.01a.iso.
+
+  ./doitall.sh --all /path/to/c8000v-universalk9.17.18.01a.iso
+
+which is these three, in order:
+
+  1) ./step1_dayzero_iso.sh
+     configs/iosxe_config.txt into /tmp/cisco_dayzero/iosxe_config.iso
+
+  2) ./step2_make_qcow2.sh <iso>
+     installs into /var/lib/cloonix/bulk/c8000v.qcow2. Watch it with a
+     vnc client on 127.0.0.1:5910 and take the default grub entry.
+
+  3) ./step3_apply_dayzero.sh
+     boots that image once with the day-0 disc, which sets the console
+     on the serial port, clears the vNIC table, writes and reloads.
+
+Then:
+
+  cloonix cli <net> add cisco cisco1 ram=6000 cpu=4 eth=3 c8000v.qcow2
+
+"add cisco" is "add kvm --no_qemu_ga": no agent channel, no reboot when
+nothing answers, and the rootfs on virtio-scsi under the uuid the image
+was installed with. The machine stays red on the canvas -- blue is the
+cloonix agent answering, and there is none inside a cisco.
+
+
+Loading a config, and the demo
+------------------------------
+Both live with the demo, in demos/cisco/. The console driver is
+carried by the demo script itself, so it needs nothing built to be used
+on a router that is already up:
+
+  cloonix cli <net> demo cisco.py
+  ./cisco.py <net> --conf cisco1 my.cfg
+  ./cisco.py <net> --show cisco1 "show ip route"
+
+It attaches to the dtach socket of the guest, the same one the Console
+panel of the canvas uses, and plays a config in one line at a time. See
+the docstring of demos/cisco.py for why that is the only way into a cisco.
+
+Pasting into the console panel works too, and needs nothing at all.
+
+A per-router disc is a third way, and untested:
+
+  ./step1_dayzero_iso.sh some.cfg cisco1.iso
+  cloonix cli <net> add cisco cisco1 ... added_cdrom=cisco1.iso
+
+added_cdrom= resolves against bulk like a rootfs does. Whether IOS-XE
+reads the disc when the image already carries a startup-config is the
+open question, and this image does since step3 wrote one.
+
+
+Interface numbering
+-------------------
+The three cloonix eths are GigabitEthernet1, 2, 3, in order, and they
+come up shut. The old configs started at Gi2 because Gi1 was the nat
+management interface; there is none now, so everything shifts by one.
+
+
+What is not here
+----------------
+There is no agent inside the router and there will not be one. What the
+old --natplug scheme did -- a dhcp address on the nat, then ssh and scp
+from the host with a key baked into the config -- cannot come back: the
+nat is passt now and runs egress only, so nothing reaches a router from
+outside the topology.
+
+Access is the serial console, which is why the day-0 config exists and
+why it ends with "platform console serial". Everything else, the per
+router configuration included, goes over it. From inside the topology a
+neighbouring guest reaches the router by whatever the router itself
+serves, ssh included, once an interface is addressed.
+
+
+The uuid
+--------
+qemu_automaton.c gives every --no_qemu_ga guest the fixed uuid found in
+DRIVE_PARAMS_CISCO, and cisco_common.sh repeats it for the install.
+IOS-XE ties its licence and its interface table to it. The two must
+agree, so a change to either is a change to both.

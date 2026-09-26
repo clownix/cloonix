@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 270" width="900" height="270" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#27ae60"/></marker>
+<marker id="ay" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.b{font-weight:bold;font-size:12.5px}
+.s{font-size:10px;fill:#5a6472}
+.sm{font-family:monospace;font-size:10px;fill:#5a6472}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.zoner{fill:#fff5f7;stroke:#e94560;stroke-width:1.5;stroke-dasharray:7 4}
+.zoneg{fill:#f6f7f8;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:7 4}
+.life{stroke:#9aa3ad;stroke-width:1.2;stroke-dasharray:4 4}
+.arr{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a)}
+.arr2{stroke:#0f3460;stroke-width:1.8;fill:none;marker-end:url(#a);marker-start:url(#a)}
+.ard{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar)}
+.ard2{stroke:#e94560;stroke-width:2.4;fill:none;marker-end:url(#ar);marker-start:url(#ar)}
+.arg{stroke:#27ae60;stroke-width:1.8;fill:none;marker-end:url(#ag)}
+.ary{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ay)}
+.lin{stroke:#0f3460;stroke-width:1.5;fill:none}
+.act{fill:#dfe8f7;stroke:#0f3460;stroke-width:1}
+.cab{stroke:#555555;stroke-width:2.2;fill:none}
+</style>
+<rect width="900" height="270" fill="#ffffff"/>
+<rect class="zone" x="10" y="10" width="880" height="250" rx="10"/>
+<text x="20" y="26" text-anchor="start" class="s">namespace cloonix_nemo, vswitchd</text>
+<rect class="box" x="30" y="50" width="130" height="40" rx="6"/>
+<text x="95" y="68" text-anchor="middle" class="m">Cloon1</text>
+<text x="95" y="82" text-anchor="middle" class="s">eth0, s</text>
+<rect class="box" x="30" y="170" width="130" height="40" rx="6"/>
+<text x="95" y="188" text-anchor="middle" class="m">Cloon2</text>
+<text x="95" y="202" text-anchor="middle" class="s">eth0, s</text>
+<rect class="box" x="230" y="50" width="150" height="40" rx="6"/>
+<text x="305" y="68" text-anchor="middle" class="m">_k_1_1_0</text>
+<text x="305" y="82" text-anchor="middle" class="s">rank, obj_id, eth</text>
+<rect class="box" x="230" y="170" width="150" height="40" rx="6"/>
+<text x="305" y="188" text-anchor="middle" class="m">_k_1_2_0</text>
+<text x="305" y="202" text-anchor="middle" class="s">rank, obj_id, eth</text>
+<path class="arr2" d="M160,70 L230,70"/>
+<path class="arr2" d="M160,190 L230,190"/>
+<circle cx="500" cy="130" r="26" fill="#555555" stroke="#888888" stroke-width="2"/>
+<text x="500" y="176" text-anchor="middle" class="m">_b_lan01</text>
+<path class="arr2" d="M380,70 L478,118"/>
+<path class="arr2" d="M380,190 L478,142"/>
+<rect class="acc" x="620" y="50" width="150" height="40" rx="6"/>
+<text x="695" y="68" text-anchor="middle" class="m">s_k_1_1_0</text>
+<text x="695" y="82" text-anchor="middle" class="s">mirror port</text>
+<rect class="acc" x="620" y="170" width="150" height="40" rx="6"/>
+<text x="695" y="188" text-anchor="middle" class="m">s_k_1_2_0</text>
+<text x="695" y="202" text-anchor="middle" class="s">mirror port</text>
+<path class="ard" d="M524,120 L620,72"/>
+<path class="ard" d="M524,140 L620,188"/>
+<rect class="box" x="795" y="50" width="85" height="40" rx="6"/>
+<text x="837" y="68" text-anchor="middle" class="m">snf</text>
+<text x="837" y="82" text-anchor="middle" class="s">capture</text>
+<rect class="box" x="795" y="170" width="85" height="40" rx="6"/>
+<text x="837" y="188" text-anchor="middle" class="m">snf</text>
+<text x="837" y="202" text-anchor="middle" class="s">capture</text>
+<path class="ary" d="M770,70 L795,70"/>
+<path class="ary" d="M770,190 L795,190"/>
+</svg>

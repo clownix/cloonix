@@ -1,0 +1,101 @@
+#!/bin/bash
+# get_bsd_sysroot -- the freebsd headers and static libraries the insider
+# agents are cross compiled against.
+set -e
+
+FBSD_REL="14.3-RELEASE"
+FBSD_MAJ="14"
+FBSD_URL="https://download.freebsd.org/releases/amd64/${FBSD_REL}/base.txz"
+
+SYSROOT="${CLOONIX_FREEBSD_SYSROOT:-${HOME}/.cloonix_freebsd_sysroot}"
+WORK="/tmp/cloonix_bsd_sysroot_work"
+
+case "${1:-}" in
+  --path|-path)
+    echo "${SYSROOT}"
+    exit 0 ;;
+  --force|-force)
+    rm -rf "${SYSROOT}" ;;
+  -h|--help|-help|help)
+    sed -n '3,12p' "$0" | sed 's/^# \?//'
+    exit 0 ;;
+esac
+
+# Already there is the normal case, and it must cost nothing.
+if [ -s "${SYSROOT}/CLOONIX_TARGET" ]; then
+  HAVE=$(cat "${SYSROOT}/CLOONIX_RELEASE" 2>/dev/null || true)
+  if [ "${HAVE}" = "${FBSD_REL}" ]; then
+    echo "freebsd sysroot: ${SYSROOT} (${FBSD_REL}), already there"
+    exit 0
+  fi
+  echo "freebsd sysroot: ${SYSROOT} holds ${HAVE:-nothing}, wanted"
+  echo "                 ${FBSD_REL} -- making it again"
+  rm -rf "${SYSROOT}"
+fi
+
+for t in wget tar; do
+  command -v "$t" >/dev/null 2>&1 || { echo "FATAL: $t not found"; exit 1; }
+done
+
+echo "----------------------------------------------------------------------"
+echo " freebsd sysroot ${FBSD_REL}"
+echo "   from  : ${FBSD_URL}"
+echo "   into  : ${SYSROOT}"
+echo "   This is a one-time download of about 200M. What is kept is a few"
+echo "   tens of megabytes; the rest goes with the tarball. Every later"
+echo "   build on this machine reuses what is kept and downloads nothing."
+echo "----------------------------------------------------------------------"
+
+rm -rf "${WORK}"
+mkdir -p "${WORK}"
+mkdir -p "${SYSROOT}"
+
+wget -O "${WORK}/base.txz.part" "${FBSD_URL}"
+mv "${WORK}/base.txz.part" "${WORK}/base.txz"
+
+set +e
+tar --directory="${SYSROOT}" -xf "${WORK}/base.txz" \
+    --wildcards \
+    --exclude './usr/include/c++/*' \
+    './usr/include/*' \
+    './usr/lib/*.a' \
+    './usr/lib/*.o'
+TAR_RC=$?
+set -e
+
+echo "x86_64-unknown-freebsd${FBSD_MAJ}" > "${SYSROOT}/CLOONIX_TARGET"
+echo "${FBSD_REL}" > "${SYSROOT}/CLOONIX_RELEASE"
+
+rm -rf "${WORK}"
+
+# Checked here, on the extracted tree, and not left to the link that would
+# fail later.
+MISSING=""
+for i in usr/include/stdio.h \
+         usr/include/sys/sysctl.h \
+         usr/include/libutil.h \
+         usr/lib/libc.a \
+         usr/lib/libutil.a \
+         usr/lib/libgcc.a \
+         usr/lib/crt1.o \
+         usr/lib/crti.o; do
+  [ -e "${SYSROOT}/${i}" ] || MISSING="${MISSING} ${i}"
+done
+if [ -n "${MISSING}" ] || [ "${TAR_RC}" != "0" ]; then
+  echo "##########################################################" >&2
+  echo "THE SYSROOT IS INCOMPLETE" >&2
+  if [ "${TAR_RC}" != "0" ]; then
+    echo "  tar exited ${TAR_RC}: a pattern matched nothing" >&2
+  fi
+  for i in ${MISSING}; do echo "    missing: ${i}" >&2; done
+  echo "" >&2
+  echo "base.txz did not hold what a static cross link needs, or the" >&2
+  echo "extraction patterns above no longer match its layout. Rather" >&2
+  echo "than leave a sysroot that compiles and does not link, this" >&2
+  echo "is removed: ${SYSROOT}" >&2
+  echo "##########################################################" >&2
+  rm -rf "${SYSROOT}"
+  exit 1
+fi
+
+echo "freebsd sysroot: ${SYSROOT} (${FBSD_REL})  $(du -sh ${SYSROOT} | cut -f1)"

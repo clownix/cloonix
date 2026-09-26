@@ -1,0 +1,163 @@
+#!/bin/bash
+set -e
+BUNDLE="${HOME}/cloonix_bundle"
+if [ ! -e ${BUNDLE}/cloonix/cloonix_config.py ]; then
+  echo NOT FOUND:
+  echo ${BUNDLE}/cloonix/cloonix_config.py
+  exit 1
+fi
+CLOONSRC=${BUNDLE}/cloonix/cloonsrc
+# Everything this machine must have, checked before anything is compiled.
+g_miss=0
+miss()
+{
+  if [ ${g_miss} -eq 0 ]; then
+    echo
+    echo "############################################################"
+    echo "#####  THIS MACHINE CANNOT BUILD CLOONIX"
+    echo "############################################################"
+    printf "  %-26s %-30s %s\n" "MISSING" "INSTALL / RUN" "NEEDED BY"
+  fi
+  g_miss=$((g_miss + 1))
+  printf "  %-26s %-30s %s\n" "$1" "$2" "$3"
+}
+need_tool()   { which "$1" >/dev/null 2>&1 || miss "$1" "$2" "$3"; }
+need_pkg()    { pkg-config --exists "$1" 2>/dev/null || miss "pkg-config $1" "$2" "$3"; }
+need_header() { echo "#include <$1>" | gcc -E -x c - >/dev/null 2>&1 \
+                || miss "$1" "$2" "$3"; }
+need_tool "gcc"        "build-essential"  "everything"
+need_tool "pkg-config" "pkg-config"       "the checks below, webshark, crun"
+if [ ${g_miss} -ne 0 ]; then
+  echo
+  echo "  Nothing has been compiled."
+  echo "############################################################"
+  exit 1
+fi
+need_tool "g++"          "g++"              "webshark"
+need_tool "make"         "build-essential"  "everything"
+need_tool "ar"           "binutils"         "the two libraries"
+need_tool "ranlib"       "binutils"         "the two libraries"
+need_tool "strip"        "binutils"         "every cmd script"
+need_tool "ldd"          "libc-bin"         "cmd_mk_iso, copy_libs"
+need_tool "patch"        "patch"            "qemu, ovs, crun, passt"
+need_tool "tar"          "tar"              "qemu, ovs, patchelf"
+need_tool "bunzip2"      "bzip2"            "qemu, the edk2 firmware"
+need_tool "realpath"     "coreutils"        "jscloonix"
+need_tool "python3"      "python3"          "qemu configure"
+need_tool "meson"        "meson"            "the five ovs_ daemons"
+need_tool "ninja"        "ninja-build"      "the five ovs_ daemons"
+need_tool "autoconf"     "autoconf"         "ovs boot.sh, crun autogen.sh"
+need_tool "autoreconf"   "autoconf"         "ovs boot.sh, crun autogen.sh"
+need_tool "aclocal"      "automake"         "ovs boot.sh, crun autogen.sh"
+need_tool "automake"     "automake"         "ovs boot.sh, crun autogen.sh"
+# libtoolize and NOT libtool: debian splits them, the libtool package ships
+# libtoolize and the m4 macros while libtool-bin ships /usr/bin/libtool.
+need_tool "libtoolize"   "libtool"          "ovs boot.sh, crun autogen.sh"
+need_tool "flex"         "flex"             "ovs, webshark"
+need_tool "bison"        "bison"            "ovs, webshark"
+# Only cmd_mk_iso uses these, and cmd_mk_iso is the last step of all.
+need_tool "xorrisofs"                "xorriso"              "cmd_mk_iso"
+need_tool "xorriso"                  "xorriso"              "cmd_mk_iso"
+need_tool "x86_64-w64-mingw32-gcc"   "gcc-mingw-w64-x86-64" "the windows agent"
+need_tool "x86_64-w64-mingw32-strip" "gcc-mingw-w64-x86-64" "the windows agent"
+# The freebsd agent is cross compiled by clang against a freebsd sysroot, so
+# there is no second toolchain to install -- only the target, the linker...
+need_tool "clang"                    "clang"                "the freebsd agent"
+need_tool "ld.lld"                   "lld"                  "the freebsd agent"
+need_tool "llvm-strip"               "llvm"                 "the freebsd agent"
+if ! ls ${BUNDLE}/targz_store/freebsd_sysroot_*.tar.gz >/dev/null 2>&1; then
+  miss "freebsd_sysroot_*.tar.gz" \
+       "./rootfs_targz_store_freebsd.sh" "the freebsd agent"
+fi
+need_pkg "openssl"         "libssl-dev"        "lib_io_clownix, doorways"
+need_pkg "libnl-3.0"       "libnl-3-dev"       "suid_power vwifi"
+need_pkg "libnl-genl-3.0"  "libnl-3-dev"       "suid_power vwifi"
+need_pkg "glib-2.0"        "libglib2.0-dev"    "qemu, webshark"
+need_pkg "gthread-2.0"     "libglib2.0-dev"    "webshark"
+need_pkg "libpcre2-8"      "libpcre2-dev"      "webshark"
+need_pkg "zlib"            "zlib1g-dev"        "webshark"
+need_pkg "pixman-1"        "libpixman-1-dev"   "qemu"
+need_pkg "liburing"        "liburing-dev"      "qemu"
+need_pkg "libcap"          "libcap-dev"        "crun"
+need_pkg "libseccomp"      "libseccomp-dev"    "crun"
+need_pkg "yajl"            "libyajl-dev"       "crun"
+need_pkg "libsystemd"      "libsystemd-dev"    "crun"
+need_pkg "libbpf"          "libbpf-dev"        "crun"
+# No .pc to ask, or one that is not everywhere: the header is the test.
+need_header "pcap.h"       "libpcap-dev"       "ovs, webshark"
+need_header "libaio.h"     "libaio-dev"        "qemu"
+need_header "numa.h"       "libnuma-dev"       "ovs"
+need_header "libunwind.h"  "libunwind-dev"     "ovs"
+if [ ${g_miss} -ne 0 ]; then
+  echo
+  echo "  ${g_miss} missing. Nothing has been compiled."
+  echo "  Install them all at once and run this again."
+  echo "############################################################"
+  exit 1
+fi
+printf "\n\nBUILD PREREQUISITES OK\n\n"
+build_one()
+{
+  local dir="$1"
+  echo
+  echo DOING:
+  echo ${CLOONSRC}/${dir}
+  echo ${CLOONSRC}/${dir} >>/tmp/buildlog.txt
+  echo ${CLOONSRC}/${dir} >>/tmp/buildlog.err
+  echo
+  cd ${CLOONSRC}/${dir}
+  if ! ./cmd 1>>/tmp/buildlog.txt 2>>/tmp/buildlog.err; then
+    echo
+    echo "############################################################"
+    echo "BUILD FAILED: ${CLOONSRC}/${dir}"
+    echo "############################################################"
+    tail -n 30 /tmp/buildlog.err
+    echo "############################################################"
+    echo "full logs: /tmp/buildlog.txt and /tmp/buildlog.err"
+    exit 1
+  fi
+}
+echo "\n\nBUILDING CLOONSRC\n\n" > /tmp/buildlog.txt
+echo "\n\nBUILDING CLOONSRC\n\n" > /tmp/buildlog.err
+printf "\n\nBUILDING CLOONSRC\n\n"
+for i in "lib_io_clownix" \
+         "lib_rpc_clownix" ; do
+
+    build_one "${i}"
+done
+printf "\n\nBUILDING CLOONSRC\n\n"
+build_one "cxp_cli"
+printf "\n\nBUILDING CLOONSRC\n\n"
+  for i in  "jscloonix" \
+            "crun" \
+            "passt" \
+            "dtach" \
+            "proxymous_passt" \
+            "ovs" \
+            "doorways" \
+            "suid_power" \
+            "uml_cloonix_switch" \
+            "ovs_drv" \
+            "ovs_snf" \
+            "ovs_nat_passt" \
+            "ovs_a2b" \
+            "ovs_c2c" ; do
+    build_one "${i}"
+  done
+  build_one "qemu"
+  echo DOING:
+  echo ${CLOONSRC}/insider_agents
+  echo ${CLOONSRC}/insider_agents >>/tmp/buildlog.txt
+  echo ${CLOONSRC}/insider_agents >>/tmp/buildlog.err
+  cd ${CLOONSRC}/insider_agents
+  if ! ./cmd_mk_iso 1>>/tmp/buildlog.txt 2>>/tmp/buildlog.err; then
+    echo
+    echo "############################################################"
+    echo "BUILD FAILED: ${CLOONSRC}/insider_agents"
+    echo "############################################################"
+    tail -n 30 /tmp/buildlog.err
+    exit 1
+  fi
+printf "\n\nBUILDING ALL OK\n\n"
+printf "\n\nBUILDING ALL OK\n\n" >>/tmp/buildlog.txt
+printf "\n\nBUILDING ALL OK\n\n" >>/tmp/buildlog.err

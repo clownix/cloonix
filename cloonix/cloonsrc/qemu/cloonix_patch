@@ -1,0 +1,170 @@
+diff -Naur qemu_vip/block/meson.build tainted_qemu/block/meson.build
+--- qemu_vip/block/meson.build	2026-09-18 21:23:33.000000000 +0200
++++ tainted_qemu/block/meson.build	2026-09-19 09:21:22.947925527 +0200
+@@ -4,9 +4,6 @@
+   'aio_task.c',
+   'amend.c',
+   'backup.c',
+-  'blkdebug.c',
+-  'blklogwrites.c',
+-  'blkverify.c',
+   'block-backend.c',
+   'block-copy.c',
+   'commit.c',
+@@ -15,13 +12,10 @@
+   'create.c',
+   'crypto.c',
+   'dirty-bitmap.c',
+-  'filter-compress.c',
+   'graph-lock.c',
+   'io.c',
+   'mirror.c',
+   'nbd.c',
+-  'null.c',
+-  'preallocate.c',
+   'progress_meter.c',
+   'qapi.c',
+   'qcow2.c',
+@@ -31,12 +25,9 @@
+   'qcow2-refcount.c',
+   'qcow2-snapshot.c',
+   'qcow2-threads.c',
+-  'quorum.c',
+   'raw-format.c',
+   'reqlist.c',
+   'snapshot.c',
+-  'snapshot-access.c',
+-  'throttle.c',
+   'throttle-groups.c',
+   'write-threshold.c',
+ ), zstd, zlib)
+@@ -94,9 +85,6 @@
+   block_ss.add(files('file-posix.c'), coref, iokit)
+ endif
+ block_ss.add(when: libiscsi, if_true: files('iscsi-opts.c'))
+-if host_os == 'linux'
+-  block_ss.add(files('nvme.c'))
+-endif
+ if get_option('replication').allowed()
+   block_ss.add(files('replication.c'))
+ endif
+diff -Naur qemu_vip/hw/virtio/vhost.c tainted_qemu/hw/virtio/vhost.c
+--- qemu_vip/hw/virtio/vhost.c	2026-09-18 21:23:33.000000000 +0200
++++ tainted_qemu/hw/virtio/vhost.c	2026-09-19 09:21:22.947925527 +0200
+@@ -1504,8 +1504,13 @@
+                                    bool skip_drain)
+ {
+     if (skip_drain) {
++#ifdef CONFIG_VHOST_USER
+         assert(vhost_user_has_protocol_feature(dev,
+                VHOST_USER_PROTOCOL_F_GET_VRING_BASE_SKIP_DRAIN));
++#else
++        /* only a vhost-user backend asks to skip the drain */
++        g_assert_not_reached();
++#endif
+     }
+     int vhost_vq_index = dev->vhost_ops->vhost_get_vq_index(dev, idx);
+     struct vhost_vring_state state = {
+diff -Naur qemu_vip/include/qemu/error-report.h tainted_qemu/include/qemu/error-report.h
+--- qemu_vip/include/qemu/error-report.h	2026-09-18 21:23:33.000000000 +0200
++++ tainted_qemu/include/qemu/error-report.h	2026-09-19 09:21:22.947925527 +0200
+@@ -13,6 +13,26 @@
+ #ifndef QEMU_ERROR_REPORT_H
+ #define QEMU_ERROR_REPORT_H
+ 
++#include <syslog.h>
++#define error_report(format, a...)                    \
++ do {                                                    \
++    printf("\n%s line:%d " format,         \
++    __FUNCTION__,__LINE__, ## a);                \
++    syslog(LOG_ERR, "ERROR %s line:%d " format, \
++    __FUNCTION__,__LINE__, ## a);              \
++    exit(-1);                                            \
++    } while (0)
++
++#define warn_report(format, a...)             \
++ do {                                         \
++     printf("\n%s line:%d " format,         \
++      __FUNCTION__,__LINE__, ## a);           \
++     syslog(LOG_ERR, "WARNING %s line:%d " format, \
++     __FUNCTION__,__LINE__, ## a);            \
++     } while (0)
++
++
++
+ typedef struct Location {
+     /* all members are private to qemu-error.c */
+     enum { LOC_NONE, LOC_CMDLINE, LOC_FILE } kind;
+@@ -37,8 +57,6 @@
+ void warn_vreport(const char *fmt, va_list ap) G_GNUC_PRINTF(1, 0);
+ void info_vreport(const char *fmt, va_list ap) G_GNUC_PRINTF(1, 0);
+ 
+-void error_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
+-void warn_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
+ void info_report(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
+ 
+ bool error_report_once_cond(bool *printed, const char *fmt, ...)
+diff -Naur qemu_vip/ui/meson.build tainted_qemu/ui/meson.build
+--- qemu_vip/ui/meson.build	2026-09-18 21:23:33.000000000 +0200
++++ tainted_qemu/ui/meson.build	2026-09-19 09:21:22.947925527 +0200
+@@ -54,7 +54,6 @@
+ ui = declare_dependency(objects: libui.extract_all_objects(recursive: false), dependencies: [pixman])
+ system_ss.add(png)
+ system_ss.add(files(
+-  'input-barrier.c',
+   'input.c',
+   'ui-qmp-cmds.c',
+   'util.c',
+@@ -70,7 +69,7 @@
+ system_ss.add(when: spice_protocol, if_true: files('vdagent.c'))
+ 
+ if host_os == 'linux'
+-  system_ss.add(files('input-linux.c', 'udmabuf.c'))
++  system_ss.add(files('udmabuf.c'))
+ endif
+ system_ss.add(when: cocoa, if_true: files('cocoa.m'))
+ 
+diff -Naur qemu_vip/util/error-report.c tainted_qemu/util/error-report.c
+--- qemu_vip/util/error-report.c	2026-09-18 21:23:33.000000000 +0200
++++ tainted_qemu/util/error-report.c	2026-09-19 09:21:22.947925527 +0200
+@@ -311,14 +311,6 @@
+  * Prepend the current location and append a newline.
+  * It's wrong to call this in a QMP monitor.  Use error_setg() there.
+  */
+-void error_report(const char *fmt, ...)
+-{
+-    va_list ap;
+-
+-    va_start(ap, fmt);
+-    vreport(REPORT_TYPE_ERROR, fmt, ap);
+-    va_end(ap);
+-}
+ 
+ /*
+  * Print a warning message to current HMP monitor if we have one, else
+@@ -327,14 +319,6 @@
+  * single phrase, with no newline or trailing punctuation.
+  * Prepend the current location and append a newline.
+  */
+-void warn_report(const char *fmt, ...)
+-{
+-    va_list ap;
+-
+-    va_start(ap, fmt);
+-    vreport(REPORT_TYPE_WARNING, fmt, ap);
+-    va_end(ap);
+-}
+ 
+ /*
+  * Print an information message to current HMP monitor if we have one,
+@@ -420,8 +404,8 @@
+ 
+         break;
+     case G_LOG_LEVEL_WARNING:
+-        warn_report("%s%s%s",
+-                    log_domain ?: "", log_domain ? ": " : "", message);
++        //warn_report("%s%s%s",
++        //            log_domain ?: "", log_domain ? ": " : "", message);
+         break;
+     case G_LOG_LEVEL_CRITICAL:
+     case G_LOG_LEVEL_ERROR:
